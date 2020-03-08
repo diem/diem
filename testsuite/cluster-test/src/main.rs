@@ -23,7 +23,7 @@ use cluster_test::{
     effects::{Action, Effect, Reboot, RemoveNetworkEffects, StopContainer},
     experiments::{get_experiment, Context, Experiment},
     github::GitHub,
-    health::{DebugPortLogThread, HealthCheckRunner, LogTail, PrintFailures, TraceTail},
+    health::{DebugPortLogWorker, HealthCheckRunner, LogTail, PrintFailures, TraceTail},
     instance::Instance,
     prometheus::Prometheus,
     report::SuiteReport,
@@ -492,13 +492,21 @@ impl ClusterTestRunner {
         let cluster = util.cluster;
         let aws = util.aws;
         let cluster_swarm = util.cluster_swarm;
+        let runtime = Builder::new()
+            .threaded_scheduler()
+            .core_threads(num_cpus::get())
+            .thread_name("ct-tokio")
+            .enable_all()
+            .build()
+            .expect("Failed to create tokio runtime");
         let log_tail_started = Instant::now();
-        let (logs, trace_tail) = DebugPortLogThread::spawn_new(&cluster);
+        let (logs, trace_tail) = DebugPortLogWorker::spawn_new(&cluster, &runtime);
         let log_tail_startup_time = Instant::now() - log_tail_started;
         info!(
             "Log tail thread started in {} ms",
             log_tail_startup_time.as_millis()
         );
+
         let health_check_runner = HealthCheckRunner::new_all(cluster.clone());
         let experiment_interval_sec = match env::var("EXPERIMENT_INTERVAL") {
             Ok(s) => s.parse().expect("EXPERIMENT_INTERVAL env is not a number"),
@@ -514,13 +522,7 @@ impl ClusterTestRunner {
         let prometheus = util.prometheus;
         let github = GitHub::new();
         let report = SuiteReport::new();
-        let runtime = Builder::new()
-            .threaded_scheduler()
-            .core_threads(num_cpus::get())
-            .thread_name("ct-tokio")
-            .enable_all()
-            .build()
-            .expect("Failed to create tokio runtime");
+
         let global_emit_job_request = EmitJobRequest {
             instances: vec![],
             accounts_per_client: args.accounts_per_client,
