@@ -9,7 +9,9 @@ use libra_types::{
         SentPaymentEvent,
     },
     contract_event::ContractEvent,
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     language_storage::TypeTag,
+    proof::AccumulatorConsistencyProof,
     transaction::{Transaction, TransactionArgument, TransactionPayload},
 };
 use serde::{Deserialize, Serialize};
@@ -110,6 +112,13 @@ pub struct BlockMetadata {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct BytesView(String);
+
+impl BytesView {
+    #[cfg(test)]
+    pub fn into_bytes(self) -> Result<Vec<u8>, Error> {
+        Ok(hex::decode(self.0)?)
+    }
+}
 
 impl From<&[u8]> for BytesView {
     fn from(bytes: &[u8]) -> Self {
@@ -214,5 +223,38 @@ impl From<TransactionPayload> for ScriptView {
             _ => Err(format_err!("Unknown scripts")),
         };
         res.unwrap_or(ScriptView::Unknown {})
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct StateProofView {
+    pub ledger_info_with_signatures: BytesView,
+    pub validator_change_proof: BytesView,
+    pub ledger_consistency_proof: BytesView,
+}
+
+impl
+    TryFrom<(
+        LedgerInfoWithSignatures,
+        ValidatorChangeProof,
+        AccumulatorConsistencyProof,
+    )> for StateProofView
+{
+    type Error = Error;
+
+    fn try_from(
+        (ledger_info_with_signatures, validator_change_proof, ledger_consistency_proof): (
+            LedgerInfoWithSignatures,
+            ValidatorChangeProof,
+            AccumulatorConsistencyProof,
+        ),
+    ) -> Result<StateProofView, Error> {
+        Ok(StateProofView {
+            ledger_info_with_signatures: BytesView::from(&lcs::to_bytes(
+                &ledger_info_with_signatures,
+            )?),
+            validator_change_proof: BytesView::from(&lcs::to_bytes(&validator_change_proof)?),
+            ledger_consistency_proof: BytesView::from(&lcs::to_bytes(&ledger_consistency_proof)?),
+        })
     }
 }

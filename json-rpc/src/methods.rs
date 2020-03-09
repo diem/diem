@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Module contains RPC method handlers for Full Node JSON-RPC interface
-use crate::views::{AccountView, BlockMetadata, EventView, TransactionView};
+use crate::views::{AccountView, BlockMetadata, EventView, StateProofView, TransactionView};
 use anyhow::{ensure, format_err, Result};
 use core::future::Future;
 use futures::{channel::oneshot, SinkExt};
@@ -153,6 +153,12 @@ async fn get_events(service: JsonRpcService, params: Vec<Value>) -> Result<Vec<E
     Ok(events)
 }
 
+/// Returns proof of new state relative to version known to client
+async fn get_state_proof(service: JsonRpcService, params: Vec<Value>) -> Result<StateProofView> {
+    let known_version: u64 = serde_json::from_value(params[0].clone())?;
+    StateProofView::try_from(service.db.get_state_proof(known_version)?)
+}
+
 /// Builds registry of all available RPC methods
 /// To register new RPC method, add it via `register_rpc_method!` macros call
 /// Note that RPC method name will equal to name of function
@@ -164,5 +170,8 @@ pub(crate) fn build_registry() -> RpcRegistry {
     register_rpc_method!(registry, get_transactions, 3);
     register_rpc_method!(registry, get_account_transaction, 3);
     register_rpc_method!(registry, get_events, 3);
+
+    register_rpc_method!(registry, get_state_proof, 1);
+
     registry
 }
