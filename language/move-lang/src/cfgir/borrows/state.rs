@@ -28,7 +28,7 @@ enum Label {
 
 type BorrowGraph = borrow_graph::graph::BorrowGraph<Loc, Label>;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Value {
     NonRef,
     Ref(RefID),
