@@ -5,8 +5,11 @@ use crate::{
     client::{JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse},
     runtime::bootstrap,
     tests::mock_db::MockLibraDB,
-    views::{BlockMetadata, EventView, StateProofView, TransactionDataView, TransactionView},
+    views::{
+        BlockMetadata, BytesView, EventView, StateProofView, TransactionDataView, TransactionView,
+    },
 };
+use anyhow::format_err;
 use futures::{channel::mpsc::channel, StreamExt};
 use hex;
 use libra_config::utils;
@@ -323,7 +326,7 @@ fn test_get_transactions_impl(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoW
     let page = 800usize;
 
     for base_version in (0..version).map(u64::from).take(page).collect::<Vec<_>>() {
-        let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_transactions", "params": [base_version, page as u64, false], "id": 1});
+        let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_transactions", "params": [base_version, page as u64, true], "id": 1});
         let resp = client.post(&url).json(&request).send().unwrap();
         assert_eq!(resp.status(), 200);
         let data = fetch_result(resp.json().unwrap());
@@ -341,29 +344,50 @@ fn test_get_transactions_impl(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoW
                         Some(version)
                     );
                     let tx = &mock_db.all_txns[version as usize];
-                    let view = response.as_object().unwrap().get("transaction").unwrap();
+
+                    let view: TransactionView =
+                        serde_json::from_value(response.clone()).expect("Invalid result");
+
+                    // Check we returned correct events
+                    let expected_events = mock_db
+                        .events
+                        .iter()
+                        .filter(|(v, _)| *v == view.version)
+                        .map(|(_, e)| e)
+                        .collect::<Vec<_>>();
+
+                    assert_eq!(expected_events.len(), view.events.len());
+
+                    for (i, event_view) in view.events.iter().enumerate() {
+                        let expected_event =
+                            expected_events.get(i).expect("Expected event didn't find");
+                        assert_eq!(event_view.sequence_number, expected_event.sequence_number());
+                        assert_eq!(event_view.transaction_version, version);
+                        assert_eq!(
+                            event_view.key.0,
+                            BytesView::from(expected_event.key().as_bytes()).0
+                        );
+                        // TODO: check event_data
+                    }
+
                     match tx {
-                        Transaction::BlockMetadata(t) => {
-                            assert_eq!(
-                                "blockmetadata",
-                                view.get("type").unwrap().as_str().unwrap()
-                            );
-                            assert_eq!(
-                                t.clone().into_inner().unwrap().1,
-                                view.get("timestamp_usecs").unwrap().as_u64().unwrap()
-                            );
-                        }
-                        Transaction::WriteSet(_) => {
-                            assert_eq!("writeset", view.get("type").unwrap().as_str().unwrap());
-                        }
-                        Transaction::UserTransaction(t) => {
-                            assert_eq!("user", view.get("type").unwrap().as_str().unwrap());
-                            assert_eq!(
-                                t.sender().to_string(),
-                                view.get("sender").unwrap().as_str().unwrap()
-                            );
-                            // TODO: verify every field
-                        }
+                        Transaction::BlockMetadata(t) => match view.transaction {
+                            TransactionDataView::BlockMetadata { timestamp_usecs } => {
+                                assert_eq!(t.clone().into_inner().unwrap().1, timestamp_usecs);
+                            }
+                            _ => panic!("Returned value doesn't match!"),
+                        },
+                        Transaction::WriteSet(_) => match view.transaction {
+                            TransactionDataView::WriteSet { .. } => {}
+                            _ => panic!("Returned value doesn't match!"),
+                        },
+                        Transaction::UserTransaction(t) => match view.transaction {
+                            TransactionDataView::UserTransaction { sender, .. } => {
+                                assert_eq!(t.sender().to_string(), sender);
+                                // TODO: verify every field
+                            }
+                            _ => panic!("Returned value doesn't match!"),
+                        },
                     }
                 }
             }
@@ -412,14 +436,38 @@ fn test_get_account_transaction_impl(
         let ar = AccountResource::try_from(blob).unwrap();
         for seq in 1..ar.sequence_number() {
             let p_addr = String::from(acc);
-            let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_account_transaction", "params": [p_addr, seq, false], "id": 1});
+            let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_account_transaction", "params": [p_addr, seq, true], "id": 1});
             let resp = client.post(&url).json(&request).send().unwrap();
             assert_eq!(resp.status(), 200);
 
             let data: Option<TransactionView> = fetch_data(resp);
-            let view = data.unwrap().transaction;
+            let tx_view = data.expect("Transaction didn't exists!");
+
+            // Check we returned correct events
+            let expected_events = mock_db
+                .events
+                .iter()
+                .filter(|(ev, _)| *ev == tx_view.version)
+                .map(|(_, e)| e)
+                .collect::<Vec<_>>();
+
+            assert_eq!(tx_view.events.len(), expected_events.len());
+
+            for (i, event_view) in tx_view.events.iter().enumerate() {
+                let expected_event = expected_events.get(i).expect("Expected event didn't find");
+                assert_eq!(event_view.sequence_number, expected_event.sequence_number());
+                assert_eq!(event_view.transaction_version, tx_view.version);
+                assert_eq!(
+                    event_view.key.0,
+                    BytesView::from(expected_event.key().as_bytes()).0
+                );
+                // TODO: check event_data
+            }
+
+            let tx_data_view = tx_view.transaction;
+
             // Always user transaction
-            match view {
+            match tx_data_view {
                 TransactionDataView::UserTransaction {
                     sender,
                     sequence_number,
@@ -443,7 +491,13 @@ where
 }
 
 fn fetch_result(data: JsonMap) -> Value {
-    let result: Value = serde_json::from_value(data.get("result").unwrap().clone()).unwrap();
+    let result: Value = serde_json::from_value(
+        data.get("result")
+            .ok_or_else(|| format_err!("Unexpected response: {:?}", data))
+            .unwrap()
+            .clone(),
+    )
+    .unwrap();
     assert_eq!(
         data.get("jsonrpc").unwrap(),
         &serde_json::Value::String("2.0".to_string())

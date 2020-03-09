@@ -54,22 +54,34 @@ impl LibraDBTrait for MockLibraDB {
         address: AccountAddress,
         seq_num: u64,
         _ledger_version: u64,
-        _fetch_events: bool,
+        fetch_events: bool,
     ) -> Result<Option<TransactionWithProof>, Error> {
         Ok(self
             .all_txns
             .iter()
-            .find(|x| {
+            .enumerate()
+            .find(|(_, x)| {
                 if let Ok(t) = x.as_signed_user_txn() {
                     t.sender() == address && t.sequence_number() == seq_num
                 } else {
                     false
                 }
             })
-            .map(|x| TransactionWithProof {
-                version: 0,
+            .map(|(v, x)| TransactionWithProof {
+                version: v as u64,
                 transaction: x.clone(),
-                events: None,
+                events: if fetch_events {
+                    Some(
+                        self.events
+                            .iter()
+                            .filter(|(ev, _)| *ev == v as u64)
+                            .map(|(_, e)| e)
+                            .cloned()
+                            .collect(),
+                    )
+                } else {
+                    None
+                },
                 proof: TransactionProof::new(
                     TransactionAccumulatorProof::new(vec![]),
                     TransactionInfo::new(
@@ -92,7 +104,7 @@ impl LibraDBTrait for MockLibraDB {
         start_version: u64,
         limit: u64,
         _ledger_version: u64,
-        _fetch_events: bool,
+        fetch_events: bool,
     ) -> Result<TransactionListWithProof, Error> {
         let transactions: Vec<Transaction> = self
             .all_txns
@@ -104,7 +116,22 @@ impl LibraDBTrait for MockLibraDB {
         let first_transaction_version = transactions.first().map(|_| start_version);
         Ok(TransactionListWithProof {
             transactions,
-            events: None,
+            events: if fetch_events {
+                Some(
+                    (start_version..start_version + limit)
+                        .map(|version| {
+                            self.events
+                                .iter()
+                                .filter(|(v, _)| *v == version)
+                                .map(|(_, e)| e)
+                                .cloned()
+                                .collect()
+                        })
+                        .collect(),
+                )
+            } else {
+                None
+            },
             first_transaction_version,
             proof: TransactionListProof::new_empty(),
         })
