@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 bytes = "0.5.4"
-chrono = { version = "0.4.7", default-features = false, features = ["clock"] }
+chrono = { version = "0.4.11", default-features = false, features = ["clock"] }
 hex = "0.4.2"
 itertools = { version = "0.9.0", default-features = false }
 once_cell = "1.3.1"
