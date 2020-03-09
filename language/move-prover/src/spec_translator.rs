@@ -278,7 +278,7 @@ impl<'env> SpecTranslator<'env> {
         }
         emitln!(
             self.writer,
-            "procedure {{:inline 1}} ${}_update_inv($before: Value, $after: Value) {{",
+            "procedure {{:inline 1}} {}_update_inv($before: Value, $after: Value) {{",
             boogie_struct_name(struct_env)
         );
         self.writer.indent();
@@ -303,7 +303,7 @@ impl<'env> SpecTranslator<'env> {
     }
 
     pub fn emit_pack_invariants(&self, struct_env: &StructEnv<'env>, target: &str) {
-        self.emit_invariants_assume_or_assert(target, "", true, struct_env.get_data_invariants());
+        self.emit_invariants_assume_or_assert(target, "", false, struct_env.get_data_invariants());
         self.emit_spec_var_updates(target, "", struct_env.get_pack_invariants());
     }
 
@@ -322,6 +322,7 @@ impl<'env> SpecTranslator<'env> {
     ) {
         for inv in invariants {
             if inv.target.is_none() {
+                self.writer.set_location(&inv.loc);
                 if assume {
                     emit!(self.writer, "assume b#Boolean(");
                 } else {
@@ -337,6 +338,7 @@ impl<'env> SpecTranslator<'env> {
     fn emit_spec_var_updates(&self, target: &str, old_target: &str, invariants: &[Invariant]) {
         for inv in invariants {
             if let Some((module_id, spec_var_id)) = &inv.target {
+                self.writer.set_location(&inv.loc);
                 let module_env = self.module_env.env.get_module(*module_id);
                 let spec_var = module_env.get_spec_var(*spec_var_id);
                 emit!(

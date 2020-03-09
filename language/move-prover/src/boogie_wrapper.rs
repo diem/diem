@@ -158,35 +158,45 @@ impl<'env> BoogieWrapper<'env> {
             let cleaned_trace = error
                 .execution_trace
                 .iter()
-                .filter_map(|(trace_pos, kind, msg)| {
+                .filter_map(|(orig_pos, kind, msg)| {
                     // If trace entry has no source location or is from prelude, skip
-                    let trace_loc =
-                        self.to_proper_source_location(self.get_locations(*trace_pos).1)?;
-                    Some((trace_pos, trace_loc, kind, msg))
+                    let source_loc =
+                        self.to_proper_source_location(self.get_locations(*orig_pos).1)?;
+
+                    // If trace entry points to non-function location, skip
+                    self.env.get_enclosing_function(source_loc.clone())?;
+
+                    // Get file/location info; if not available, skip.
+                    let source_pos = self.env.get_position(source_loc.clone())?;
+                    Some((orig_pos, source_loc, source_pos, kind, msg))
                 })
-                .dedup_by(|(_, location1, _, _), (_, location2, kind2, _)| {
+                .dedup_by(|(_, _, source_pos1, _, _), (_, _, source_pos2, kind2, _)| {
                     // Removes consecutive entries which point to the same location if trace
                     // minimization is active.
-                    self.options.minimize_execution_trace
-                        && location1 == location2
+                    if !self.options.minimize_execution_trace {
+                        return false;
+                    }
+                    if *kind2 != &TraceKind::Regular {
                         // Only dedup regular trace infos.
-                        && *kind2 == &TraceKind::Regular
+                        return false;
+                    }
+                    source_pos1.1.line == source_pos2.1.line
                 })
                 // Cut the trace after abort -- the remaining only propagates the abort up
                 // the call stack and isn't useful.
-                .filter_map(|(trace_pos, trace_loc, mut kind, msg)| {
+                .filter_map(|(orig_pos, source_loc, source_pos, mut kind, msg)| {
                     if aborted {
                         return None;
                     }
                     aborted = error
                         .model
                         .as_ref()
-                        .map(|model| model.tracked_aborts.get(&trace_loc).is_some())
+                        .map(|model| model.tracked_aborts.get(&source_loc).is_some())
                         .unwrap_or(false);
                     if aborted {
                         kind = &TraceKind::Aborted
                     }
-                    Some((trace_pos, trace_loc, kind, msg))
+                    Some((orig_pos, source_loc, source_pos, kind, msg))
                 })
                 .collect_vec();
 
@@ -194,30 +204,27 @@ impl<'env> BoogieWrapper<'env> {
             let trace = cleaned_trace
                 .into_iter()
                 .enumerate()
-                .map(|(i, (trace_pos, trace_loc, kind, msg))| {
+                .map(|(i, (orig_pos, source_loc, source_pos, kind, msg))| {
                     if on_source {
-                        if let Some((source_file, source_pos)) =
-                            self.env.get_position(trace_loc.clone())
-                        {
-                            return self.render_trace_info(
-                                source_file,
-                                source_pos,
-                                self.pretty_trace_info(
-                                    trace_loc,
-                                    error.model.as_ref(),
-                                    &mut locals_shown,
-                                    *kind,
-                                    i == n - 1,
-                                ),
-                            );
-                        }
-                    };
-                    // Fall back to report on boogie level
-                    self.render_trace_info(
-                        self.options.output_path.clone(),
-                        *trace_pos,
-                        PrettyDoc::text(format!("<boogie>: {}", msg)),
-                    )
+                        self.render_trace_info(
+                            source_pos.0,
+                            source_pos.1,
+                            self.pretty_trace_info(
+                                source_loc,
+                                error.model.as_ref(),
+                                &mut locals_shown,
+                                *kind,
+                                i == n - 1,
+                            ),
+                        )
+                    } else {
+                        // Fall back to report on boogie level
+                        self.render_trace_info(
+                            self.options.output_path.clone(),
+                            *orig_pos,
+                            PrettyDoc::text(format!("<boogie>: {}", msg)),
+                        )
+                    }
                 })
                 .flat_map(|entry| {
                     str::lines(entry.as_str())
@@ -300,7 +307,7 @@ impl<'env> BoogieWrapper<'env> {
                     .iter()
                     .map(|(var, val)| {
                         let ty = self.get_type_of_local_or_return(&func_env, var.var_idx);
-                        var.pretty(self.env, &func_env, model, &ty, val)
+                        var.pretty(self, &func_env, model, &ty, val)
                     })
                     .collect_vec();
                 has_info = !displayed_info.is_empty();
@@ -658,20 +665,25 @@ impl Model {
         func_env: &FunctionEnv<'_>,
         loc: Loc,
         locals_shown: &mut BTreeSet<(Loc, LocalDescriptor)>,
-    ) -> Vec<(LocalDescriptor, ModelValue)> {
+    ) -> BTreeSet<(LocalDescriptor, ModelValue)> {
         let func_loc = func_env.get_loc();
         self.tracked_locals
             .range(func_loc.at_start()..loc.at_end())
             .flat_map(|(loc, vars)| {
                 let mut res = vec![];
                 for (var, val) in vars {
+                    let var_name = func_env.get_local_name(var.var_idx);
+                    if func_env.symbol_pool().string(var_name).contains("$$") {
+                        // Do not show temporaries generated by the move compiler.
+                        continue;
+                    }
                     if locals_shown.insert((loc.clone(), var.clone())) {
                         res.push((var.clone(), val.clone()))
                     }
                 }
                 res
             })
-            .collect_vec()
+            .collect()
     }
 }
 
@@ -781,15 +793,18 @@ impl ModelValue {
 
     /// Pretty prints the given model value which has given type. If printing fails, falls
     /// back to print the debug value.
-    pub fn pretty_or_raw<'env>(&self, env: &'env GlobalEnv, model: &Model, ty: &Type) -> PrettyDoc {
-        self.pretty(env, model, ty).unwrap_or_else(|| {
+    pub fn pretty_or_raw(&self, wrapper: &BoogieWrapper, model: &Model, ty: &Type) -> PrettyDoc {
+        if wrapper.options.stable_test_output {
+            return PrettyDoc::text("<redacted>");
+        }
+        self.pretty(wrapper, model, ty).unwrap_or_else(|| {
             // Print the raw debug value.
             PrettyDoc::text(format!("<? {:?}>", self))
         })
     }
 
     /// Pretty prints the given model value which has given type.
-    pub fn pretty(&self, env: &GlobalEnv, model: &Model, ty: &Type) -> Option<PrettyDoc> {
+    pub fn pretty(&self, wrapper: &BoogieWrapper, model: &Model, ty: &Type) -> Option<PrettyDoc> {
         if self.extract_list("Error").is_some() {
             // This is an undefined value
             return Some(PrettyDoc::text("<undef>"));
@@ -831,12 +846,12 @@ impl ModelValue {
                 };
                 Some(PrettyDoc::text(format!("<bytearray {}>", display)))
             }
-            Type::Vector(param) => self.pretty_vector(env, model, param),
+            Type::Vector(param) => self.pretty_vector(wrapper, model, param),
             Type::Struct(module_id, struct_id, params) => {
-                self.pretty_struct(env, model, *module_id, *struct_id, &params)
+                self.pretty_struct(wrapper, model, *module_id, *struct_id, &params)
             }
             Type::Reference(_, bt) => {
-                Some(PrettyDoc::text("&").append(self.pretty(env, model, &*bt)?))
+                Some(PrettyDoc::text("&").append(self.pretty(wrapper, model, &*bt)?))
             }
             Type::TypeParameter(_) => {
                 // The value of a generic cannot be easily displayed because we do not know the
@@ -865,11 +880,16 @@ impl ModelValue {
     }
 
     /// Pretty prints a vector.
-    pub fn pretty_vector(&self, env: &GlobalEnv, model: &Model, param: &Type) -> Option<PrettyDoc> {
+    pub fn pretty_vector(
+        &self,
+        wrapper: &BoogieWrapper,
+        model: &Model,
+        param: &Type,
+    ) -> Option<PrettyDoc> {
         let values = self.extract_vector(model)?;
         let entries = values
             .iter()
-            .map(|v| v.pretty_or_raw(env, model, param))
+            .map(|v| v.pretty_or_raw(wrapper, model, param))
             .collect_vec();
         Some(PrettyDoc::text("Vector").append(Self::pretty_vec_or_struct_body(entries)))
     }
@@ -877,14 +897,14 @@ impl ModelValue {
     /// Pretty prints a struct.
     pub fn pretty_struct(
         &self,
-        env: &GlobalEnv,
+        wrapper: &BoogieWrapper,
         model: &Model,
         module_id: ModuleId,
         struct_id: StructId,
         params: &[Type],
     ) -> Option<PrettyDoc> {
         let error = ModelValue::error();
-        let module_env = env.get_module(module_id);
+        let module_env = wrapper.env.get_module(module_id);
         let struct_env = module_env.get_struct(struct_id);
         let values = self.extract_vector(model)?;
         let entries = struct_env
@@ -893,7 +913,7 @@ impl ModelValue {
             .map(|(i, f)| {
                 let ty = f.get_type().instantiate(params);
                 let v = if i < values.len() { &values[i] } else { &error };
-                let vp = v.pretty_or_raw(env, model, &ty);
+                let vp = v.pretty_or_raw(wrapper, model, &ty);
                 PrettyDoc::text(format!(
                     "{}",
                     f.get_name().display(struct_env.symbol_pool())
@@ -929,7 +949,7 @@ impl LocalDescriptor {
     /// Pretty prints a tracked local.
     fn pretty(
         &self,
-        env: &GlobalEnv,
+        wrapper: &BoogieWrapper,
         func_env: &FunctionEnv<'_>,
         model: &Model,
         ty: &Type,
@@ -938,9 +958,9 @@ impl LocalDescriptor {
         let n = func_env.get_local_count();
         let var_name = if self.var_idx >= n {
             if func_env.get_return_count() > 1 {
-                format!("RET({})", self.var_idx - n)
+                format!("result_{}", self.var_idx - n)
             } else {
-                "RET".to_string()
+                "result".to_string()
             }
         } else {
             format!(
@@ -955,7 +975,7 @@ impl LocalDescriptor {
             .append(PrettyDoc::text("="))
             .append(
                 PrettyDoc::line()
-                    .append(resolved_value.pretty_or_raw(env, model, ty))
+                    .append(resolved_value.pretty_or_raw(wrapper, model, ty))
                     .nest(2)
                     .group(),
             )

@@ -321,16 +321,8 @@ function {:constructor} Global(t: TypeValue, a: Address): Location;
 function {:constructor} Local(i: int): Location;
 
 type {:datatype} Reference;
-function {:constructor} Reference(l: Location, t: TypeValue, p: Path): Reference;
+function {:constructor} Reference(l: Location, p: Path): Reference;
 const DefaultReference: Reference;
-
-function {:inline} RootReferenceType(r: Reference): TypeValue {
-  t#Reference(r)
-}
-
-function {:inline} RootReference(r: Reference): Reference {
-  Reference(l#Reference(r), t#Reference(r), EmptyPath)
-}
 
 function {:inline} $IsValidReferenceParameter(m: Memory, local_counter: int, r: Reference): bool {
   // If the reference parameter is for a local, its index must be less than the current
@@ -400,7 +392,7 @@ function {:inline} $ExistsResource(m: Memory, resource: TypeValue, addr: Address
 
 // Obtains reference to the given resource.
 function {:inline} $GetResourceReference(resource: TypeValue, addr: Address): Reference {
-    Reference(Global(resource, addr), resource, EmptyPath)
+    Reference(Global(resource, addr), EmptyPath)
 }
 
 // Obtains value of given resource.
@@ -483,12 +475,12 @@ procedure {:inline 1} BorrowGlobal(address: Value, ta: TypeValue) returns (dst: 
         $abort_flag := true;
         return;
     }
-    dst := Reference(l, ta, EmptyPath);
+    dst := Reference(l, EmptyPath);
 }
 
-procedure {:inline 1} BorrowLoc(l: int, t: TypeValue) returns (dst: Reference)
+procedure {:inline 1} BorrowLoc(l: int) returns (dst: Reference)
 {
-    dst := Reference(Local(l), t, EmptyPath);
+    dst := Reference(Local(l), EmptyPath);
 }
 
 procedure {:inline 1} BorrowField(src: Reference, f: FieldName) returns (dst: Reference)
@@ -499,7 +491,7 @@ procedure {:inline 1} BorrowField(src: Reference, f: FieldName) returns (dst: Re
     p := p#Reference(src);
     size := size#Path(p);
 	p := Path(p#Path(p)[size := f], size+1);
-    dst := Reference(l#Reference(src), t#Reference(src), p);
+    dst := Reference(l#Reference(src), p);
 }
 
 procedure {:inline 1} WriteRef(to: Reference, new_v: Value)
@@ -867,7 +859,7 @@ procedure {:inline 1} $Vector_borrow_mut(ta: TypeValue, src: Reference, index: V
     p := p#Reference(src);
     size := size#Path(p);
 	p := Path(p#Path(p)[size := i_ind], size+1);
-    dst := Reference(l#Reference(src), t#Reference(src), p);
+    dst := Reference(l#Reference(src), p);
 }
 
 procedure {:inline 1} $Vector_destroy_empty(ta: TypeValue, v: Value) {

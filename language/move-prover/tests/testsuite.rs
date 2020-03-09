@@ -17,7 +17,8 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         !no_boogie || !extract_test_directives(path, "// no-boogie-test")?.is_empty();
     let mut sources = extract_test_directives(path, "// dep:")?;
     sources.push(path.to_string_lossy().to_string());
-    let mut args = vec!["-v=debug".to_string()];
+    // The first argument in the args list is interpreted as program name, so set something here.
+    let mut args = vec!["mvp_test".to_string()];
     args.extend_from_slice(&sources);
     let mut options = Options::default();
     options.initialize_from_args(&args);
@@ -25,6 +26,7 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     if no_boogie {
         options.generate_only = true;
     }
+    options.stable_test_output = true;
 
     let temp_path = TempPath::new();
     temp_path.create_as_dir()?;

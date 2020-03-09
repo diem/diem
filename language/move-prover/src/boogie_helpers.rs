@@ -188,15 +188,6 @@ pub fn boogie_declare_global(env: &GlobalEnv, name: &str, ty: &Type) -> String {
     )
 }
 
-/// Returns the name of the invariant target value.
-pub fn boogie_invariant_target(for_old: bool) -> String {
-    if for_old {
-        "$inv_target_old".to_string()
-    } else {
-        "$inv_target".to_string()
-    }
-}
-
 pub fn boogie_var_before_borrow(idx: usize) -> String {
     format!("$before_borrow_{}", idx)
 }

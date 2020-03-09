@@ -21,6 +21,9 @@ pub mod symbol;
 mod translate;
 pub mod ty;
 
+#[allow(unused_imports)]
+use log::{info, warn};
+
 // =================================================================================================
 // Entry Point
 
@@ -100,6 +103,10 @@ fn run_spec_checker(
                     let expanded_module = eprog.modules.remove(&module_id).unwrap();
                     Some((module_id, expanded_module, compiled_module, source_map))
                 } else {
+                    warn!(
+                        "[internal] cannot associate bytecode module `{}` with AST",
+                        name.0.value
+                    );
                     None
                 }
             } else {
