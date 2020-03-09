@@ -2,12 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{Error, Result};
+use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
+    block_info::BlockInfo,
     contract_event::ContractEvent,
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     event::EventKey,
-    proof::{TransactionAccumulatorProof, TransactionListProof, TransactionProof},
+    ledger_info::LedgerInfo,
+    proof::{
+        AccumulatorConsistencyProof, TransactionAccumulatorProof, TransactionListProof,
+        TransactionProof,
+    },
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionWithProof, Version,
     },
@@ -120,5 +127,32 @@ impl LibraDBTrait for MockLibraDB {
             .cloned()
             .collect();
         Ok(events)
+    }
+
+    fn get_state_proof(
+        &self,
+        known_version: u64,
+    ) -> Result<(
+        LedgerInfoWithSignatures,
+        ValidatorChangeProof,
+        AccumulatorConsistencyProof,
+    )> {
+        let li = LedgerInfo::new(
+            BlockInfo::new(
+                0,
+                known_version,
+                HashValue::zero(),
+                HashValue::zero(),
+                known_version,
+                0,
+                None,
+            ),
+            HashValue::zero(),
+        );
+        Ok((
+            LedgerInfoWithSignatures::new(li, BTreeMap::new()),
+            ValidatorChangeProof::new(vec![], false),
+            AccumulatorConsistencyProof::new(vec![]),
+        ))
     }
 }

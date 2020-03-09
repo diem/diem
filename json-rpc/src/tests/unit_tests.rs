@@ -4,7 +4,7 @@
 use crate::{
     runtime::bootstrap,
     tests::mock_db::MockLibraDB,
-    views::{AccountView, BlockMetadata, TransactionDataView, TransactionView},
+    views::{AccountView, BlockMetadata, StateProofView, TransactionDataView, TransactionView},
 };
 use futures::{channel::mpsc::channel, StreamExt};
 use hex;
@@ -391,6 +391,26 @@ fn test_get_transactions_impl(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoW
             _ => panic!("invalid server response format"),
         }
     }
+}
+
+#[test]
+fn test_get_state_proof() {
+    let address = format!("0.0.0.0:{}", utils::get_available_port());
+    let _runtime = bootstrap(
+        address.parse().unwrap(),
+        Arc::new(mock_db(vec![])),
+        channel(1024).0,
+    );
+    let client = reqwest::blocking::Client::new();
+    let url = format!("http://{}", address);
+
+    let version = 10;
+    let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_state_proof", "params": [version], "id": 1});
+    let resp = client.post(&url).json(&request).send().unwrap();
+    let proof: StateProofView = fetch_data(resp);
+    let li: LedgerInfoWithSignatures =
+        lcs::from_bytes(&proof.ledger_info_with_signatures.into_bytes().unwrap()).unwrap();
+    assert_eq!(li.ledger_info().version(), version);
 }
 
 fn test_get_account_transaction_impl(

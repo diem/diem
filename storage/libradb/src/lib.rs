@@ -154,6 +154,16 @@ pub trait LibraDBTrait: Send + Sync {
         start: u64,
         limit: u64,
     ) -> Result<Vec<(u64, ContractEvent)>>;
+
+    /// Returns proof of new state relative to version known to client
+    fn get_state_proof(
+        &self,
+        known_version: u64,
+    ) -> Result<(
+        LedgerInfoWithSignatures,
+        ValidatorChangeProof,
+        AccumulatorConsistencyProof,
+    )>;
 }
 
 /// This holds a handle to the underlying DB responsible for physical storage and provides APIs for
@@ -973,6 +983,37 @@ impl LibraDBTrait for LibraDB {
             .map(|e| (e.transaction_version, e.event))
             .collect();
         Ok(events)
+    }
+
+    fn get_state_proof(
+        &self,
+        known_version: u64,
+    ) -> Result<(
+        LedgerInfoWithSignatures,
+        ValidatorChangeProof,
+        AccumulatorConsistencyProof,
+    )> {
+        let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
+        let ledger_info = ledger_info_with_sigs.ledger_info();
+        let known_epoch = self.ledger_store.get_epoch(known_version)?;
+        let validator_change_proof = if known_epoch < ledger_info.epoch() {
+            let (ledger_infos_with_sigs, more) = self.get_epoch_change_ledger_infos(
+                known_epoch,
+                self.ledger_store.get_epoch(ledger_info.version())?,
+            )?;
+            ValidatorChangeProof::new(ledger_infos_with_sigs, more)
+        } else {
+            ValidatorChangeProof::new(vec![], /* more = */ false)
+        };
+
+        let ledger_consistency_proof = self
+            .ledger_store
+            .get_consistency_proof(known_version, ledger_info.version())?;
+        Ok((
+            ledger_info_with_sigs,
+            validator_change_proof,
+            ledger_consistency_proof,
+        ))
     }
 }
 
