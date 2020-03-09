@@ -54,47 +54,55 @@ pub struct EventView {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum EventDataView {
+    #[serde(rename = "receivedpayment")]
     ReceivedPayment {
         amount: u64,
         sender: BytesView,
         metadata: BytesView,
     },
+    #[serde(rename = "sentpayment")]
     SentPayment {
         amount: u64,
         receiver: BytesView,
         metadata: BytesView,
     },
-    SystemEvent,
+    #[serde(rename = "unknown")]
+    Unknown {},
 }
 
-impl TryFrom<(u64, ContractEvent)> for EventView {
-    type Error = Error;
-
+impl From<(u64, ContractEvent)> for EventView {
     /// Tries to convert the provided byte array into Event Key.
-    fn try_from((txn_version, event): (u64, ContractEvent)) -> Result<EventView, Error> {
+    fn from((txn_version, event): (u64, ContractEvent)) -> EventView {
         let event_data = if event.type_tag() == &TypeTag::Struct(received_payment_tag()) {
-            let received_event = ReceivedPaymentEvent::try_from(&event)?;
-            EventDataView::ReceivedPayment {
-                amount: received_event.amount(),
-                sender: BytesView::from(received_event.sender().as_ref()),
-                metadata: BytesView::from(received_event.metadata()),
+            if let Ok(received_event) = ReceivedPaymentEvent::try_from(&event) {
+                Ok(EventDataView::ReceivedPayment {
+                    amount: received_event.amount(),
+                    sender: BytesView::from(received_event.sender().as_ref()),
+                    metadata: BytesView::from(received_event.metadata()),
+                })
+            } else {
+                Err(format_err!("Unable to parse ReceivedPaymentEvent"))
             }
         } else if event.type_tag() == &TypeTag::Struct(sent_payment_tag()) {
-            let sent_event = SentPaymentEvent::try_from(&event)?;
-            EventDataView::SentPayment {
-                amount: sent_event.amount(),
-                receiver: BytesView::from(sent_event.receiver().as_ref()),
-                metadata: BytesView::from(sent_event.metadata()),
+            if let Ok(sent_event) = SentPaymentEvent::try_from(&event) {
+                Ok(EventDataView::SentPayment {
+                    amount: sent_event.amount(),
+                    receiver: BytesView::from(sent_event.receiver().as_ref()),
+                    metadata: BytesView::from(sent_event.metadata()),
+                })
+            } else {
+                Err(format_err!("Unable to parse ReceivedPaymentEvent"))
             }
         } else {
-            EventDataView::SystemEvent
+            Err(format_err!("Unknown events"))
         };
-        Ok(EventView {
+
+        EventView {
             key: BytesView::from(event.key().as_bytes()),
             sequence_number: event.sequence_number(),
             transaction_version: txn_version,
-            data: event_data,
-        })
+            data: event_data.unwrap_or(EventDataView::Unknown {}),
+        }
     }
 }
 
@@ -129,6 +137,7 @@ impl From<&Vec<u8>> for BytesView {
 pub struct TransactionView {
     pub version: u64,
     pub transaction: TransactionDataView,
+    pub events: Vec<EventView>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -241,7 +250,7 @@ impl
             ValidatorChangeProof,
             AccumulatorConsistencyProof,
         ),
-    ) -> Result<StateProofView, Error> {
+    ) -> Result<StateProofView, Self::Error> {
         Ok(StateProofView {
             ledger_info_with_signatures: BytesView::from(&lcs::to_bytes(
                 &ledger_info_with_signatures,

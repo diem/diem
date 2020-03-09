@@ -103,10 +103,30 @@ async fn get_transactions(
 
     let mut result = vec![];
 
+    let all_events = if include_events {
+        txs.events
+            .ok_or_else(|| format_err!("Storage layer didn't return events when requested!"))?
+    } else {
+        vec![]
+    };
+
     for (v, tx) in txs.transactions.into_iter().enumerate() {
+        let events = if include_events {
+            all_events
+                .get(v)
+                .ok_or_else(|| format_err!("Missing events for version: {}", v))?
+                .iter()
+                .cloned()
+                .map(|x| (start_version + v as u64, x).into())
+                .collect()
+        } else {
+            vec![]
+        };
+
         result.push(TransactionView {
             version: start_version + v as u64,
             transaction: tx.into(),
+            events,
         });
     }
     Ok(result)
@@ -123,18 +143,36 @@ async fn get_account_transaction(
 
     let account = AccountAddress::try_from(p_account)?;
 
-    Ok(service
+    let version = service.db.get_latest_version()?;
+
+    let tx = service
         .db
-        .get_txn_by_account(
-            account,
-            sequence,
-            service.db.get_latest_version()?,
-            include_events,
-        )?
-        .map(|tx| TransactionView {
-            version: tx.version,
+        .get_txn_by_account(account, sequence, version, include_events)?;
+
+    if let Some(tx) = tx {
+        if include_events {
+            ensure!(
+                tx.events.is_some(),
+                "Storage layer didn't return events when requested!"
+            );
+        }
+        let tx_version = tx.version;
+
+        let events = tx
+            .events
+            .unwrap_or_default()
+            .into_iter()
+            .map(|x| ((tx_version, x).into()))
+            .collect();
+
+        Ok(Some(TransactionView {
+            version: tx_version,
             transaction: tx.transaction.into(),
+            events,
         }))
+    } else {
+        Ok(None)
+    }
 }
 
 /// Returns events by given access path
@@ -148,7 +186,7 @@ async fn get_events(service: JsonRpcService, params: Vec<Value>) -> Result<Vec<E
 
     let mut events = vec![];
     for (version, event) in events_with_proof {
-        events.push(EventView::try_from((version, event))?);
+        events.push((version, event).into());
     }
     Ok(events)
 }
