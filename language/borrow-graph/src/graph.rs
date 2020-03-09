@@ -12,7 +12,7 @@ use std::collections::{BTreeMap, BTreeSet};
 // Definitions
 //**************************************************************************************************
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct BorrowGraph<Loc: Copy, Lbl: Clone + Ord>(BTreeMap<RefID, Ref<Loc, Lbl>>);
 
 //**************************************************************************************************
@@ -37,7 +37,7 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
         assert!(self.0.insert(id, Ref::new(mutable)).is_none(), "{}", id.0)
     }
 
-    /// Return the refrences borrowing the `id` reference
+    /// Return the references borrowing the `id` reference
     /// The borrows are collected by first label in the borrow edge
     /// `BTreeMap<RefID, Loc>` represents all of the "full" or "epsilon" borrows (non field borrows)
     /// `BTreeMap<Lbl, BTreeMap<RefID, Loc>>)` represents the field borrows, collected over the

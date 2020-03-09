@@ -9,12 +9,10 @@
 pub mod absint;
 pub mod abstract_state;
 pub mod acquires_list_verifier;
-pub mod borrow_graph;
 pub mod check_duplication;
 pub mod code_unit_verifier;
 pub mod control_flow_graph;
 pub mod instantiation_loops;
-pub mod ref_id;
 pub mod resources;
 pub mod signature;
 pub mod stack_usage_verifier;
