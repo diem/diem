@@ -36,7 +36,7 @@ pub enum CryptoMaterialError {
     /// A curve point (i.e., a public key) does not satisfy the curve equation.
     PointNotOnCurveError,
     /// BitVec errors in accountable multi-sig schemes.
-    BitVecError,
+    BitVecError(String),
 }
 
 /// The serialized length of the data that enables macro derived serialization and deserialization.
