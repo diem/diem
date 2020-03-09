@@ -10,8 +10,8 @@ use crate::{
     },
     abstract_state::{AbstractState, AbstractValue, TypedAbstractValue},
     control_flow_graph::VMControlFlowGraph,
-    ref_id::RefID,
 };
+use borrow_graph::references::RefID;
 use libra_types::vm_error::{StatusCode, VMStatus};
 use mirai_annotations::checked_verify;
 use std::collections::BTreeSet;
@@ -178,7 +178,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 value: AbstractValue::Reference(id),
             });
             let operand_id = operand.value.extract_id().unwrap();
-            state.remove(operand_id);
+            state.release(operand_id);
         } else {
             errors.push(err_at_offset(
                 StatusCode::BORROWFIELD_EXISTS_MUTABLE_BORROW_ERROR,
@@ -292,7 +292,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 }
 
                 if let AbstractValue::Reference(id) = operand.value {
-                    state.remove(id);
+                    state.release(id);
                 }
             }
 
@@ -380,10 +380,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 let operand = self.stack.pop().unwrap();
                 if let SignatureToken::MutableReference(signature) = operand.signature {
                     let operand_id = operand.value.extract_id().unwrap();
-                    if state.is_freezable(operand_id) {
+                    if let Some(frozen_id) = state.freeze_ref(operand_id) {
                         self.stack.push(TypedAbstractValue {
                             signature: SignatureToken::Reference(signature),
-                            value: operand.value,
+                            value: AbstractValue::Reference(frozen_id),
                         });
                     } else {
                         errors.push(err_at_offset(
@@ -454,7 +454,8 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 if !state.is_available(*idx) {
                     errors.push(err_at_offset(StatusCode::COPYLOC_UNAVAILABLE_ERROR, offset))
                 } else if signature_view.is_reference() {
-                    let id = state.borrow_local_reference(*idx);
+                    let id =
+                        state.borrow_local_reference(*idx, signature_view.is_mutable_reference());
                     self.stack.push(TypedAbstractValue {
                         signature: signature_view.as_inner().clone(),
                         value: AbstractValue::Reference(id),
@@ -545,9 +546,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 for return_type_view in function_signature_view.return_tokens() {
                     if return_type_view.is_reference() {
                         let id = if return_type_view.is_mutable_reference() {
-                            state.borrow_from(&mutable_references_to_borrow_from)
+                            state.borrow_from(&mutable_references_to_borrow_from, true)
                         } else {
-                            state.borrow_from(&all_references_to_borrow_from)
+                            state.borrow_from(&all_references_to_borrow_from, false)
                         };
                         self.stack.push(TypedAbstractValue {
                             signature: return_type_view.as_inner().substitute(type_actuals),
@@ -564,7 +565,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     }
                 }
                 for id in all_references_to_borrow_from {
-                    state.remove(id);
+                    state.release(id);
                 }
             }
 
@@ -693,7 +694,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                             signature: inner_signature,
                             value: AbstractValue::Value(Kind::Unrestricted),
                         });
-                        state.remove(operand_id);
+                        state.release(operand_id);
                     }
                 }
             }
@@ -717,7 +718,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                             } else {
                                 let ref_operand_id = ref_operand.value.extract_id().unwrap();
                                 if !state.is_borrowed(ref_operand_id) {
-                                    state.remove(ref_operand_id);
+                                    state.release(ref_operand_id);
                                 } else {
                                     errors.push(err_at_offset(
                                         StatusCode::WRITEREF_EXISTS_BORROW_ERROR,
@@ -857,20 +858,14 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     .kind(self.type_formals());
                 let is_copyable = kind1 == Kind::Unrestricted;
                 if is_copyable && operand1.signature == operand2.signature {
-                    if let AbstractValue::Reference(id) = operand1.value {
-                        if Self::is_readable_reference(state, &operand1.signature, id) {
-                            state.remove(id);
-                        } else {
-                            errors.push(err_at_offset(
-                                StatusCode::READREF_EXISTS_MUTABLE_BORROW_ERROR,
-                                offset,
-                            ));
-                            return;
-                        }
-                    }
-                    if let AbstractValue::Reference(id) = operand2.value {
-                        if Self::is_readable_reference(state, &operand2.signature, id) {
-                            state.remove(id);
+                    if let (AbstractValue::Reference(id1), AbstractValue::Reference(id2)) =
+                        (operand1.value, operand2.value)
+                    {
+                        if Self::is_readable_reference(state, &operand1.signature, id1)
+                            && Self::is_readable_reference(state, &operand2.signature, id2)
+                        {
+                            state.release(id1);
+                            state.release(id2);
                         } else {
                             errors.push(err_at_offset(
                                 StatusCode::READREF_EXISTS_MUTABLE_BORROW_ERROR,

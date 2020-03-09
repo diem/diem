@@ -2,11 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module defines the abstract state for the type and memory safety analysis.
-use crate::{
-    absint::{AbstractDomain, JoinResult},
-    borrow_graph::BorrowGraph,
-    ref_id::RefID,
-};
+use crate::absint::{AbstractDomain, JoinResult};
+use borrow_graph::references::RefID;
 use mirai_annotations::{checked_postcondition, checked_precondition, checked_verify};
 use std::collections::{BTreeMap, BTreeSet};
 use vm::{
@@ -16,6 +13,8 @@ use vm::{
     },
     views::{FunctionDefinitionView, ViewInternals},
 };
+
+type BorrowGraph = borrow_graph::graph::BorrowGraph<(), LabelElem>;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TypedAbstractValue {
@@ -87,10 +86,10 @@ impl Default for LabelElem {
 }
 
 /// AbstractState is the analysis state over which abstract interpretation is performed.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct AbstractState {
     locals: BTreeMap<LocalIndex, TypedAbstractValue>,
-    borrow_graph: BorrowGraph<LabelElem>,
+    borrow_graph: BorrowGraph,
     num_locals: usize,
     next_id: usize,
 }
@@ -104,7 +103,7 @@ impl AbstractState {
         for (arg_idx, arg_type_view) in function_signature_view.arg_tokens().enumerate() {
             if arg_type_view.is_reference() {
                 let id = RefID::new(arg_idx);
-                borrow_graph.add(id);
+                borrow_graph.new_ref(id, arg_type_view.is_mutable_reference());
                 locals.insert(
                     arg_idx as LocalIndex,
                     TypedAbstractValue {
@@ -133,7 +132,7 @@ impl AbstractState {
             num_locals,
             next_id,
         };
-        new_state.borrow_graph.add(new_state.frame_root());
+        new_state.borrow_graph.new_ref(new_state.frame_root(), true);
         new_state
     }
 
@@ -181,7 +180,7 @@ impl AbstractState {
         checked_precondition!(self.is_local_safe_to_destroy(idx));
         let local = self.locals.remove(&idx).unwrap();
         match local.value {
-            AbstractValue::Reference(id) => self.remove(id),
+            AbstractValue::Reference(id) => self.release(id),
             AbstractValue::Value(kind) => {
                 checked_verify!(kind == Kind::Unrestricted);
             }
@@ -194,50 +193,57 @@ impl AbstractState {
     }
 
     /// adds and returns new id to borrow graph
-    pub fn add(&mut self) -> RefID {
+    pub fn add(&mut self, mut_: bool) -> RefID {
         let id = RefID::new(self.next_id);
-        self.borrow_graph.add(id);
+        self.borrow_graph.new_ref(id, mut_);
         self.next_id += 1;
         id
     }
 
     /// removes `id` from borrow graph
-    pub fn remove(&mut self, id: RefID) {
-        self.borrow_graph.remove(id);
+    pub fn release(&mut self, id: RefID) {
+        self.borrow_graph.release(id);
     }
 
     /// checks if `id` is borrowed
     pub fn is_borrowed(&self, id: RefID) -> bool {
-        !self.borrow_graph.all_borrows(id).is_empty()
-    }
-
-    fn local_borrows(&self, idx: LocalIndex) -> BTreeSet<RefID> {
-        self.borrow_graph
-            .consistent_borrows(self.frame_root(), LabelElem::Local(idx))
+        let (epsilon_borrows, field_borrows) = self.borrow_graph.borrowed_by(id);
+        !epsilon_borrows.is_empty() || field_borrows.values().any(|x| !x.is_empty())
     }
 
     /// checks if local@idx is borrowed
     pub fn is_local_borrowed(&self, idx: LocalIndex) -> bool {
-        !self.local_borrows(idx).is_empty()
+        self.has_consistent_borrows(self.frame_root(), LabelElem::Local(idx))
     }
 
     /// checks if local@idx is mutably borrowed
     pub fn is_local_mutably_borrowed(&self, idx: LocalIndex) -> bool {
-        !self.all_immutable(self.local_borrows(idx))
+        self.has_mutable_consistent_borrows(self.frame_root(), LabelElem::Local(idx))
     }
 
     /// checks if global@idx is borrowed
     pub fn is_global_borrowed(&self, idx: StructDefinitionIndex) -> bool {
-        !self
-            .borrow_graph
-            .consistent_borrows(self.frame_root(), LabelElem::Global(idx))
-            .is_empty()
+        self.has_consistent_borrows(self.frame_root(), LabelElem::Global(idx))
     }
 
     /// checks if `id` is freezable
     pub fn is_freezable(&self, id: RefID) -> bool {
-        let borrows = self.borrow_graph.all_borrows(id);
-        self.all_immutable(borrows)
+        let (epsilon_borrows, field_borrows) = self.borrow_graph.borrowed_by(id);
+        self.all_immutable(&epsilon_borrows)
+            && field_borrows.values().all(|x| self.all_immutable(x))
+    }
+
+    /// if `id` is freezable, return the frozen version of `id`
+    pub fn freeze_ref(&mut self, id: RefID) -> Option<RefID> {
+        checked_precondition!(self.borrow_graph.is_mutable(id));
+        if self.is_freezable(id) {
+            let new_id = self.add(false);
+            self.borrow_graph.add_strong_borrow((), id, new_id);
+            self.release(id);
+            Some(new_id)
+        } else {
+            None
+        }
     }
 
     /// update self to reflect a borrow of global@idx by a fresh id that is returned
@@ -246,17 +252,16 @@ impl AbstractState {
             if self.is_global_borrowed(idx) {
                 return None;
             }
-        } else {
-            let borrowed_ids = self
-                .borrow_graph
-                .consistent_borrows(self.frame_root(), LabelElem::Global(idx));
-            if !self.all_immutable(borrowed_ids) {
-                return None;
-            }
+        } else if self.has_mutable_consistent_borrows(self.frame_root(), LabelElem::Global(idx)) {
+            return None;
         }
-        let new_id = self.add();
-        self.borrow_graph
-            .add_weak_edge(self.frame_root(), vec![LabelElem::Global(idx)], new_id);
+        let new_id = self.add(mut_);
+        self.borrow_graph.add_weak_field_borrow(
+            (),
+            self.frame_root(),
+            LabelElem::Global(idx),
+            new_id,
+        );
         Some(new_id)
     }
 
@@ -269,20 +274,17 @@ impl AbstractState {
     ) -> Option<RefID> {
         let id = operand.value.extract_id().unwrap();
         if mut_ {
-            if !self.borrow_graph.nil_borrows(id).is_empty() {
+            if self.has_epsilon_borrows(id) {
                 return None;
             }
-        } else if operand.signature.is_mutable_reference() {
-            let borrowed_ids = self
-                .borrow_graph
-                .consistent_borrows(id, LabelElem::Field(idx));
-            if !self.all_immutable(borrowed_ids) {
-                return None;
-            }
+        } else if operand.signature.is_mutable_reference()
+            && self.has_mutable_consistent_borrows(id, LabelElem::Field(idx))
+        {
+            return None;
         }
-        let new_id = self.add();
+        let new_id = self.add(mut_);
         self.borrow_graph
-            .add_strong_edge(id, vec![LabelElem::Field(idx)], new_id);
+            .add_strong_field_borrow((), id, LabelElem::Field(idx), new_id);
         Some(new_id)
     }
 
@@ -290,37 +292,38 @@ impl AbstractState {
     pub fn borrow_local_value(&mut self, mut_: bool, idx: LocalIndex) -> Option<RefID> {
         checked_precondition!(self.locals[&idx].value.is_value());
         if !mut_ {
-            // nothing to check in case borrow is mutable since the frame cannot have a NIL outgoing edge
-            let borrowed_ids = self
-                .borrow_graph
-                .consistent_borrows(self.frame_root(), LabelElem::Local(idx));
-            if !self.all_immutable(borrowed_ids) {
+            // nothing to check in case borrow is mutable since the frame cannot have an epsilon outgoing edge
+            if self.has_mutable_consistent_borrows(self.frame_root(), LabelElem::Local(idx)) {
                 return None;
             }
         }
-        let new_id = self.add();
-        self.borrow_graph
-            .add_strong_edge(self.frame_root(), vec![LabelElem::Local(idx)], new_id);
+        let new_id = self.add(mut_);
+        self.borrow_graph.add_strong_field_borrow(
+            (),
+            self.frame_root(),
+            LabelElem::Local(idx),
+            new_id,
+        );
         Some(new_id)
     }
 
     /// update self to reflect a borrow of local@idx (which must be a reference) by a fresh id that is returned
-    pub fn borrow_local_reference(&mut self, idx: LocalIndex) -> RefID {
+    pub fn borrow_local_reference(&mut self, idx: LocalIndex, mut_: bool) -> RefID {
         checked_precondition!(self.locals[&idx].value.is_reference());
-        let new_id = self.add();
-        self.borrow_graph.add_strong_edge(
+        let new_id = self.add(mut_);
+        self.borrow_graph.add_strong_borrow(
+            (),
             self.locals[&idx].value.extract_id().unwrap(),
-            vec![],
             new_id,
         );
         new_id
     }
 
     /// update self to reflect a borrow from each id in to_borrow_from by a fresh id that is returned
-    pub fn borrow_from(&mut self, to_borrow_from: &BTreeSet<RefID>) -> RefID {
-        let new_id = self.add();
+    pub fn borrow_from(&mut self, to_borrow_from: &BTreeSet<RefID>, mut_: bool) -> RefID {
+        let new_id = self.add(mut_);
         for id in to_borrow_from {
-            self.borrow_graph.add_weak_edge(*id, vec![], new_id);
+            self.borrow_graph.add_weak_borrow((), *id, new_id);
         }
         new_id
     }
@@ -348,9 +351,11 @@ impl AbstractState {
             })
             .collect::<BTreeMap<_, _>>();
         checked_verify!(self.locals.len() == locals.len());
+        let mut borrow_graph = self.borrow_graph.clone();
+        borrow_graph.remap_refs(&id_map);
         let canonical_state = AbstractState {
             locals,
-            borrow_graph: self.borrow_graph.rename_ids(id_map),
+            borrow_graph,
             num_locals: self.num_locals,
             next_id: self.num_locals + 1,
         };
@@ -358,11 +363,8 @@ impl AbstractState {
         canonical_state
     }
 
-    fn all_immutable(&self, borrows: BTreeSet<RefID>) -> bool {
-        !self.locals.values().any(|abs_type| {
-            abs_type.signature.is_mutable_reference()
-                && borrows.contains(&abs_type.value.extract_id().unwrap())
-        })
+    fn all_immutable(&self, borrows: &BTreeMap<RefID, ()>) -> bool {
+        !borrows.keys().any(|x| self.borrow_graph.is_mutable(*x))
     }
 
     fn is_canonical(&self) -> bool {
@@ -374,6 +376,29 @@ impl AbstractState {
 
     fn iter_locals(&self) -> impl Iterator<Item = LocalIndex> {
         0..self.num_locals as LocalIndex
+    }
+
+    fn has_epsilon_borrows(&self, id: RefID) -> bool {
+        let (epsilon_borrows, _) = self.borrow_graph.borrowed_by(id);
+        !epsilon_borrows.is_empty()
+    }
+
+    fn has_consistent_borrows(&self, id: RefID, label: LabelElem) -> bool {
+        let (epsilon_borrows, field_borrows) = self.borrow_graph.borrowed_by(id);
+        !epsilon_borrows.is_empty()
+            || (match field_borrows.get(&label) {
+                Some(x) => !x.is_empty(),
+                None => false,
+            })
+    }
+
+    fn has_mutable_consistent_borrows(&self, id: RefID, label: LabelElem) -> bool {
+        let (epsilon_borrows, field_borrows) = self.borrow_graph.borrowed_by(id);
+        !self.all_immutable(&epsilon_borrows)
+            || (match field_borrows.get(&label) {
+                Some(x) => !self.all_immutable(x),
+                None => false,
+            })
     }
 
     /// returns `Some` of the self joined with other,
@@ -399,13 +424,13 @@ impl AbstractState {
                 (Some(v), None) => {
                     // A reference exists on one side, but not the other. Release
                     if let AbstractValue::Reference(id) = &v.value {
-                        self_graph.remove(*id);
+                        self_graph.release(*id);
                     }
                 }
                 (None, Some(v)) => {
                     // A reference exists on one side, but not the other. Release
                     if let AbstractValue::Reference(id) = &v.value {
-                        other_graph.remove(*id);
+                        other_graph.release(*id);
                     }
                 }
 
@@ -418,10 +443,7 @@ impl AbstractState {
             }
         }
 
-        let borrow_graph = {
-            self_graph.join(&other_graph);
-            self_graph
-        };
+        let borrow_graph = self_graph.join(&other_graph);
         let next_id = self.next_id;
         let num_locals = self.num_locals;
 
@@ -445,7 +467,7 @@ impl AbstractDomain for AbstractState {
         let locals_unchanged = self
             .iter_locals()
             .all(|idx| self.locals.get(&idx) == joined.locals.get(&idx));
-        let borrow_graph_unchanged = self.borrow_graph.abstracts(&joined.borrow_graph);
+        let borrow_graph_unchanged = self.borrow_graph.leq(&joined.borrow_graph);
         if locals_unchanged && borrow_graph_unchanged {
             JoinResult::Unchanged
         } else {
