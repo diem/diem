@@ -9,6 +9,7 @@ use libra_crypto::{
     x25519::X25519StaticPublicKey,
     ValidKey, ValidKeyStringExt,
 };
+use libra_json_rpc::views::{AccountView, EventView};
 use libra_logger::prelude::*;
 use libra_temppath::TempPath;
 use libra_types::{
@@ -19,8 +20,8 @@ use libra_types::{
         CORE_CODE_ADDRESS,
     },
     account_state::AccountState,
-    account_state_blob::{AccountStateBlob, AccountStateWithProof},
-    contract_event::{ContractEvent, EventWithProof},
+    account_state_blob::AccountStateBlob,
+    contract_event::ContractEvent,
     crypto_proxies::LedgerInfoWithSignatures,
     transaction::{
         helpers::{create_unsigned_txn, create_user_txn, TransactionSigner},
@@ -803,7 +804,7 @@ impl ClientProxy {
     pub fn get_events_by_account_and_type(
         &mut self,
         space_delim_strings: &[&str],
-    ) -> Result<(Vec<EventWithProof>, AccountStateWithProof)> {
+    ) -> Result<(Vec<EventView>, AccountView)> {
         ensure!(
             space_delim_strings.len() == 6,
             "Invalid number of arguments to get events by access path"
@@ -826,9 +827,6 @@ impl ClientProxy {
                 error,
             )
         })?;
-        let ascending = parse_bool(space_delim_strings[4]).map_err(|error| {
-            format_parse_data_error("ascending", InputType::Bool, space_delim_strings[4], error)
-        })?;
         let limit = space_delim_strings[5].parse::<u64>().map_err(|error| {
             format_parse_data_error(
                 "start_seq_number",
@@ -838,7 +836,7 @@ impl ClientProxy {
             )
         })?;
         self.client
-            .get_events_by_access_path(access_path, start_seq_number, ascending, limit)
+            .get_events_by_access_path(access_path, start_seq_number, limit)
     }
 
     /// Write mnemonic recover to the file specified.
