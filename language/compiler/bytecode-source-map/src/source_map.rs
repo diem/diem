@@ -317,13 +317,13 @@ impl<Location: Clone + Eq> ModuleSourceMap<Location> {
 
     pub fn add_code_mapping(
         &mut self,
-        function_definition_index: FunctionDefinitionIndex,
+        fdef_idx: FunctionDefinitionIndex,
         start_offset: CodeOffset,
         location: Location,
     ) -> Result<()> {
         let func_entry = self
             .function_map
-            .get_mut(&function_definition_index.0)
+            .get_mut(&fdef_idx.0)
             .ok_or_else(|| format_err!("Tried to add code mapping to undefined function index"))?;
         func_entry.add_code_mapping(start_offset, location);
         Ok(())
@@ -333,11 +333,11 @@ impl<Location: Clone + Eq> ModuleSourceMap<Location> {
     /// the location in the source code associated with the instruction at that offset.
     pub fn get_code_location(
         &self,
-        function_definition_index: FunctionDefinitionIndex,
+        fdef_idx: FunctionDefinitionIndex,
         offset: CodeOffset,
     ) -> Result<Location> {
         self.function_map
-            .get(&function_definition_index.0)
+            .get(&fdef_idx.0)
             .and_then(|function_source_map| function_source_map.get_code_location(offset))
             .ok_or_else(|| format_err!("Tried to get code location from undefined function index"))
     }
@@ -401,11 +401,11 @@ impl<Location: Clone + Eq> ModuleSourceMap<Location> {
 
     pub fn add_struct_type_parameter_mapping(
         &mut self,
-        fdef_idx: StructDefinitionIndex,
+        struct_def_idx: StructDefinitionIndex,
         name: SourceName<Location>,
     ) -> Result<()> {
-        let struct_entry = self.struct_map.get_mut(&fdef_idx.0).ok_or_else(|| {
-            format_err!("Tried to add function type parameter mapping to undefined function index")
+        let struct_entry = self.struct_map.get_mut(&struct_def_idx.0).ok_or_else(|| {
+            format_err!("Tried to add struct type parameter mapping to undefined struct index")
         })?;
         struct_entry.add_type_parameter(name);
         Ok(())
@@ -413,15 +413,15 @@ impl<Location: Clone + Eq> ModuleSourceMap<Location> {
 
     pub fn get_struct_type_parameter_name(
         &self,
-        fdef_idx: StructDefinitionIndex,
+        struct_def_idx: StructDefinitionIndex,
         type_parameter_idx: usize,
     ) -> Result<SourceName<Location>> {
         self.struct_map
-            .get(&fdef_idx.0)
+            .get(&struct_def_idx.0)
             .and_then(|struct_source_map| {
                 struct_source_map.get_type_parameter_name(type_parameter_idx)
             })
-            .ok_or_else(|| format_err!("Unable to get function type parameter name"))
+            .ok_or_else(|| format_err!("Unable to get struct type parameter name"))
     }
 
     pub fn get_function_source_map(
@@ -435,10 +435,10 @@ impl<Location: Clone + Eq> ModuleSourceMap<Location> {
 
     pub fn get_struct_source_map(
         &self,
-        fdef_idx: StructDefinitionIndex,
+        struct_def_idx: StructDefinitionIndex,
     ) -> Result<&StructSourceMap<Location>> {
         self.struct_map
-            .get(&fdef_idx.0)
+            .get(&struct_def_idx.0)
             .ok_or_else(|| format_err!("Unable to get struct source map"))
     }
 
