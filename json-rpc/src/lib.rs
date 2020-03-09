@@ -19,7 +19,7 @@ mod util;
 
 mod methods;
 mod runtime;
-mod views;
+pub mod views;
 
 pub use runtime::bootstrap_from_config;
 

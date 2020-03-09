@@ -4,17 +4,16 @@
 use crate::AccountData;
 use admission_control_proto::proto::AdmissionControlClientBlocking;
 use anyhow::{bail, ensure, format_err, Result};
+use libra_json_rpc::views::{AccountView, BytesView, EventView};
 use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::AccountResource,
-    account_state_blob::{AccountStateBlob, AccountStateWithProof},
-    contract_event::{ContractEvent, EventWithProof},
+    account_config::{AccountResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH},
+    account_state_blob::AccountStateBlob,
+    contract_event::ContractEvent,
     crypto_proxies::LedgerInfoWithSignatures,
-    get_with_proof::{
-        RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
-    },
+    get_with_proof::{RequestItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse},
     transaction::{SignedTransaction, Transaction, Version},
     trusted_state::{TrustedState, TrustedStateChange},
     waypoint::Waypoint,
@@ -204,6 +203,51 @@ impl LibraClient {
         }
     }
 
+    pub fn get_account_state(&mut self, account: AccountAddress) -> Result<Option<AccountView>> {
+        let params = vec![account.to_string()];
+
+        match self
+            .json_rpc_client
+            .send_libra_request("get_account_state".to_string(), params)
+        {
+            Ok(result) => {
+                let account_view = match result {
+                    serde_json::Value::Null => None,
+                    _ => {
+                        let account_view: AccountView = serde_json::from_value(result)?;
+                        Some(account_view)
+                    }
+                };
+                Ok(account_view)
+            }
+            Err(e) => bail!(
+                "Failed to get account state for account address {} with error: {:?}",
+                account,
+                e
+            ),
+        }
+    }
+
+    pub fn get_events(
+        &mut self,
+        event_key: String,
+        start: u64,
+        limit: u64,
+    ) -> Result<Vec<EventView>> {
+        let params = vec![event_key, start.to_string(), limit.to_string()];
+
+        match self
+            .json_rpc_client
+            .send_libra_request("get_events".to_string(), params)
+        {
+            Ok(result) => {
+                let events: Vec<EventView> = serde_json::from_value(result)?;
+                Ok(events)
+            }
+            Err(e) => bail!("Failed to get events with error: {:?}", e),
+        }
+    }
+
     fn get_with_proof(
         &mut self,
         requested_items: Vec<RequestItem>,
@@ -356,34 +400,31 @@ impl LibraClient {
         Ok(itertools::zip_eq(txn_list_with_proof.transactions, event_lists).collect())
     }
 
-    /// Get event by access path from validator. AccountStateWithProof will be returned if
-    /// 1. No event is available. 2. Ascending and available event number < limit.
-    /// 3. Descending and start_seq_num > latest account event sequence number.
     pub fn get_events_by_access_path(
         &mut self,
         access_path: AccessPath,
         start_event_seq_num: u64,
-        ascending: bool,
         limit: u64,
-    ) -> Result<(Vec<EventWithProof>, AccountStateWithProof)> {
-        let req_item = RequestItem::GetEventsByEventAccessPath {
-            access_path,
-            start_event_seq_num,
-            ascending,
-            limit,
-        };
+    ) -> Result<(Vec<EventView>, AccountView)> {
+        // get event key from access_path
+        match self.get_account_state(access_path.address)? {
+            None => bail!("No account found for address {:?}", access_path.address),
+            Some(account_view) => {
+                let path = access_path.path;
+                let event_key = if path == ACCOUNT_SENT_EVENT_PATH.to_vec() {
+                    let BytesView(sent_events_key) = &account_view.sent_events_key;
+                    sent_events_key
+                } else if path == ACCOUNT_RECEIVED_EVENT_PATH.to_vec() {
+                    let BytesView(received_events_key) = &account_view.received_events_key;
+                    received_events_key
+                } else {
+                    bail!("Unexpected event path found in access path");
+                };
 
-        let mut response = self.get_with_proof_sync(vec![req_item])?;
-        let value_with_proof = response.response_items.remove(0);
-        match value_with_proof {
-            ResponseItem::GetEventsByEventAccessPath {
-                events_with_proof,
-                proof_of_latest_event,
-            } => Ok((events_with_proof, proof_of_latest_event)),
-            _ => bail!(
-                "Incorrect type of response returned: {:?}",
-                value_with_proof
-            ),
+                // get_events
+                let events = self.get_events(event_key.to_string(), start_event_seq_num, limit)?;
+                Ok((events, account_view))
+            }
         }
     }
 }

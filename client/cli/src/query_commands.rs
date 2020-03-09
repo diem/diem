@@ -205,7 +205,7 @@ impl Command for QueryCommandGetEvent {
         vec!["event", "ev"]
     }
     fn get_params_help(&self) -> &'static str {
-        "<account_ref_id>|<account_address> <sent|received> <start_sequence_number> <ascending=true|false> <limit>"
+        "<account_ref_id>|<account_address> <sent|received> <start_sequence_number> <limit>"
     }
     fn get_description(&self) -> &'static str {
         "Get events by account and event type (sent|received)."
@@ -218,7 +218,7 @@ impl Command for QueryCommandGetEvent {
                     println!("No events returned");
                 } else {
                     for event in events {
-                        println!("{}", event);
+                        println!("{:?}", event);
                     }
                 }
                 println!("Last event state: {:#?}", last_event_state);

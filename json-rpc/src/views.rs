@@ -47,7 +47,7 @@ impl AccountView {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct EventView {
     pub key: BytesView,
     pub sequence_number: u64,
@@ -55,7 +55,7 @@ pub struct EventView {
     pub data: EventDataView,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum EventDataView {
     ReceivedPayment {
@@ -109,7 +109,7 @@ pub struct BlockMetadata {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub struct BytesView(String);
+pub struct BytesView(pub String);
 
 impl From<&[u8]> for BytesView {
     fn from(bytes: &[u8]) -> Self {
