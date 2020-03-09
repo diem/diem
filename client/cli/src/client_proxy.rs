@@ -1,13 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{commands::is_address, grpc_client::GRPCClient, AccountData, AccountStatus};
-use admission_control_proto::proto::admission_control::SubmitTransactionRequest;
+use crate::{commands::is_address, libra_client::LibraClient, AccountData, AccountStatus};
 use anyhow::{bail, ensure, format_err, Error, Result};
-use libra_crypto::x25519::X25519StaticPublicKey;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     test_utils::KeyPair,
+    x25519::X25519StaticPublicKey,
     ValidKey, ValidKeyStringExt,
 };
 use libra_logger::prelude::*;
@@ -37,6 +36,7 @@ use num_traits::{
 };
 use parity_multiaddr::Multiaddr;
 use rust_decimal::Decimal;
+use serde_json;
 use std::{
     collections::HashMap,
     convert::TryFrom,
@@ -90,7 +90,7 @@ pub struct IndexAndSequence {
 /// Proxy handling CLI commands/inputs.
 pub struct ClientProxy {
     /// client for admission control interface.
-    pub client: GRPCClient,
+    pub client: LibraClient,
     /// Created accounts.
     pub accounts: Vec<AccountData>,
     /// Address to account_ref_id map.
@@ -113,13 +113,14 @@ impl ClientProxy {
     pub fn new(
         host: &str,
         ac_port: u16,
+        json_rpc_port: u16,
         faucet_account_file: &str,
         sync_on_wallet_recovery: bool,
         faucet_server: Option<String>,
         mnemonic_file: Option<String>,
         waypoint: Option<Waypoint>,
     ) -> Result<Self> {
-        let mut client = GRPCClient::new(host, ac_port, waypoint)?;
+        let mut client = LibraClient::new(host, ac_port, json_rpc_port, waypoint)?;
 
         let accounts = vec![];
 
@@ -381,13 +382,9 @@ impl ClientProxy {
             fullnode_identity_key.to_bytes(),
             fullnode_network_address.to_vec(),
         );
-        let req = self.create_submit_transaction_req(
-            TransactionPayload::Script(program),
-            &sender,
-            None,
-            None,
-        )?;
-        self.client.submit_transaction(Some(&mut sender), &req)?;
+        let txn =
+            self.create_txn_to_submit(TransactionPayload::Script(program), &sender, None, None)?;
+        self.client.submit_transaction(Some(&mut sender), txn)?;
         if is_blocking {
             self.wait_for_transaction(sender.address, sender.sequence_number);
         }
@@ -449,7 +446,7 @@ impl ClientProxy {
             })?;
 
             let program = transaction_builder::encode_transfer_script(&receiver_address, num_coins);
-            let req = self.create_submit_transaction_req(
+            let txn = self.create_txn_to_submit(
                 TransactionPayload::Script(program),
                 sender,
                 max_gas_amount, /* max_gas_amount */
@@ -461,7 +458,7 @@ impl ClientProxy {
                 .ok_or_else(|| {
                     format_err!("Unable to find sender account: {}", sender_account_ref_id)
                 })?;
-            self.client.submit_transaction(Some(sender_mut), &req)?;
+            self.client.submit_transaction(Some(sender_mut), txn)?;
             sender_address = sender_mut.address;
             sender_sequence = sender_mut.sequence_number;
         }
@@ -645,12 +642,10 @@ impl ClientProxy {
     ) -> Result<()> {
         let transaction = SignedTransaction::new(raw_txn, public_key, signature);
 
-        let mut req = SubmitTransactionRequest::default();
         let sender_address = transaction.sender();
         let sender_sequence = transaction.sequence_number();
 
-        req.transaction = Some(transaction.into());
-        self.client.submit_transaction(None, &req)?;
+        self.client.submit_transaction(None, transaction)?;
         // blocking by default (until transaction completion)
         self.wait_for_transaction(sender_address, sender_sequence + 1);
 
@@ -667,10 +662,10 @@ impl ClientProxy {
         let sender = self.accounts.get(sender_ref_id).unwrap();
         let sequence_number = sender.sequence_number;
 
-        let req = self.create_submit_transaction_req(program, &sender, None, None)?;
+        let txn = self.create_txn_to_submit(program, &sender, None, None)?;
 
         self.client
-            .submit_transaction(self.accounts.get_mut(sender_ref_id), &req)?;
+            .submit_transaction(self.accounts.get_mut(sender_ref_id), txn)?;
         self.wait_for_transaction(sender_address, sequence_number + 1);
 
         Ok(())
@@ -947,7 +942,7 @@ impl ClientProxy {
     /// Sync with validator for account sequence number in case it is already created on chain.
     /// This assumes we have a very low probability of mnemonic word conflict.
     fn get_account_data_from_address(
-        client: &mut GRPCClient,
+        client: &mut LibraClient,
         address: AccountAddress,
         sync_with_validator: bool,
         key_pair: Option<KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
@@ -1041,14 +1036,10 @@ impl ClientProxy {
         ensure!(self.faucet_account.is_some(), "No faucet account loaded");
         let sender = self.faucet_account.as_ref().unwrap();
         let sender_address = sender.address;
-        let req = self.create_submit_transaction_req(
-            TransactionPayload::Script(program),
-            sender,
-            None,
-            None,
-        )?;
+        let txn =
+            self.create_txn_to_submit(TransactionPayload::Script(program), sender, None, None)?;
         let mut sender_mut = self.faucet_account.as_mut().unwrap();
-        let resp = self.client.submit_transaction(Some(&mut sender_mut), &req);
+        let resp = self.client.submit_transaction(Some(&mut sender_mut), txn);
         if is_blocking {
             self.wait_for_transaction(
                 sender_address,
@@ -1116,19 +1107,19 @@ impl ClientProxy {
         value.to_u64().ok_or_else(|| format_err!("invalid value"))
     }
 
-    /// Craft a transaction request.
-    fn create_submit_transaction_req(
+    /// Craft a transaction to be submitted.
+    fn create_txn_to_submit(
         &self,
         program: TransactionPayload,
         sender_account: &AccountData,
         max_gas_amount: Option<u64>,
         gas_unit_price: Option<u64>,
-    ) -> Result<SubmitTransactionRequest> {
+    ) -> Result<SignedTransaction> {
         let signer: Box<&dyn TransactionSigner> = match &sender_account.key_pair {
             Some(key_pair) => Box::new(key_pair),
             None => Box::new(&self.wallet),
         };
-        let transaction = create_user_txn(
+        create_user_txn(
             *signer,
             program,
             sender_account.address,
@@ -1137,10 +1128,6 @@ impl ClientProxy {
             gas_unit_price.unwrap_or(GAS_UNIT_PRICE),
             TX_EXPIRATION,
         )
-        .unwrap();
-        let mut req = SubmitTransactionRequest::default();
-        req.transaction = Some(transaction.into());
-        Ok(req)
     }
 
     fn mut_account_from_parameter(&mut self, para: &str) -> Result<&mut AccountData> {
@@ -1220,7 +1207,8 @@ mod tests {
         // generate random accounts
         let mut client_proxy = ClientProxy::new(
             "", /* host */
-            0,  /* port */
+            0,  /* Admission Control (gRPC) port */
+            1,  /* JSON RPC port*/
             &"",
             false,
             None,
