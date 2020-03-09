@@ -26,7 +26,7 @@ serde_yaml = "0.8.11"
 termion = "1.5.3"
 serde = { version = "1.0.89", features = ["derive"] }
 structopt = "0.3.2"
-chrono = { version = "0.4.7" }
+chrono = { version = "0.4.11" }
 
 slog = { version = "2.5.0", features = ["max_level_debug", "release_max_level_debug"] }
 slog-term = "2.4.1"
