@@ -870,7 +870,8 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
         | TE::BinopExp(tl, op @ sp!(_, BinOp_::Neq), toperand_ty, tr) => {
             let operand_ty = type_(context, *toperand_ty);
             let (el, er) = {
-                let tes = vec![(*tl, Some(operand_ty.clone())), (*tr, Some(operand_ty))];
+                let frozen_ty = freeze_ty(operand_ty);
+                let tes = vec![(*tl, Some(frozen_ty.clone())), (*tr, Some(frozen_ty))];
                 let mut es = exp_evaluation_order(context, result, tes);
                 assert!(es.len() == 2, "ICE exp_evaluation_order changed arity");
                 let er = es.pop().unwrap();
@@ -1264,7 +1265,7 @@ fn freeze_ty(sp!(tloc, t): H::Type) -> H::Type {
     use H::Type_ as T;
     match t {
         T::Single(s) => sp(tloc, T::Single(freeze_single(s))),
-        t => panic!("ICE MULTIPLE freezing anything but a mutable ref: {:#?}", t),
+        t => sp(tloc, t),
     }
 }
 
@@ -1272,6 +1273,6 @@ fn freeze_single(sp!(sloc, s): H::SingleType) -> H::SingleType {
     use H::SingleType_ as S;
     match s {
         S::Ref(true, inner) => sp(sloc, S::Ref(false, inner)),
-        t => panic!("ICE SINGLE freezing anything but a mutable ref: {:#?}", t),
+        s => sp(sloc, s),
     }
 }
