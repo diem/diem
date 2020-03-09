@@ -112,7 +112,12 @@ impl TestEnvironment {
         panic!("Max out {} attempts to launch test swarm", num_attempts);
     }
 
-    fn get_ac_client(&self, port: u16, waypoint: Option<Waypoint>) -> ClientProxy {
+    fn get_ac_client(
+        &self,
+        ac_port: u16,
+        json_rpc_port: u16,
+        waypoint: Option<Waypoint>,
+    ) -> ClientProxy {
         let mnemonic_file_path = self
             .mnemonic_file
             .path()
@@ -125,7 +130,8 @@ impl TestEnvironment {
 
         ClientProxy::new(
             "localhost",
-            port,
+            ac_port,
+            json_rpc_port,
             &self.faucet_key.1,
             false,
             /* faucet server */ None,
@@ -140,8 +146,8 @@ impl TestEnvironment {
         node_index: usize,
         waypoint: Option<Waypoint>,
     ) -> ClientProxy {
-        let port = self.validator_swarm.get_ac_port(node_index);
-        self.get_ac_client(port, waypoint)
+        let (ac_port, json_rpc_port) = self.validator_swarm.get_client_ports(node_index);
+        self.get_ac_client(ac_port, json_rpc_port, waypoint)
     }
 
     fn get_full_node_ac_client(
@@ -151,8 +157,8 @@ impl TestEnvironment {
     ) -> ClientProxy {
         match &self.full_node_swarm {
             Some(swarm) => {
-                let port = swarm.get_ac_port(node_index);
-                self.get_ac_client(port, waypoint)
+                let (ac_port, json_rpc_port) = swarm.get_client_ports(node_index);
+                self.get_ac_client(ac_port, json_rpc_port, waypoint)
             }
             None => {
                 panic!("Full Node swarm is not initialized");

@@ -39,7 +39,8 @@ impl Drop for InteractiveClient {
 
 impl InteractiveClient {
     pub fn new_with_inherit_io(
-        port: u16,
+        ac_port: u16,
+        json_rpc_port: u16,
         faucet_key_file_path: &Path,
         mnemonic_file_path: &Path,
     ) -> Self {
@@ -52,7 +53,9 @@ impl InteractiveClient {
                 Command::new(workspace_builder::get_bin("cli"))
                     .current_dir(workspace_builder::workspace_root())
                     .arg("-p")
-                    .arg(port.to_string())
+                    .arg(ac_port.to_string())
+                    .arg("-j")
+                    .arg(json_rpc_port.to_string())
                     .arg("-m")
                     .arg(
                         faucet_key_file_path
@@ -141,12 +144,18 @@ pub struct InProcessTestClient {
 }
 
 impl InProcessTestClient {
-    pub fn new(port: u16, faucet_key_file_path: &Path, mnemonic_file_path: &str) -> Self {
+    pub fn new(
+        ac_port: u16,
+        json_rpc_port: u16,
+        faucet_key_file_path: &Path,
+        mnemonic_file_path: &str,
+    ) -> Self {
         let (_, alias_to_cmd) = commands::get_commands(true);
         Self {
             client: ClientProxy::new(
                 "localhost",
-                port,
+                ac_port,
+                json_rpc_port,
                 faucet_key_file_path
                     .canonicalize()
                     .expect("Unable to get canonical path of faucet key file")

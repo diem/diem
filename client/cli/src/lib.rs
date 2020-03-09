@@ -23,8 +23,8 @@ pub mod client_proxy;
 /// Command struct to interact with client.
 pub mod commands;
 mod dev_commands;
-/// gRPC client wrapper to connect to validator.
-mod grpc_client;
+/// Client wrapper to connect to validator.
+mod libra_client;
 mod query_commands;
 mod transfer_commands;
 

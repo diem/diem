@@ -2,11 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::AccountData;
-use admission_control_proto::{
-    proto::{admission_control::SubmitTransactionRequest, AdmissionControlClientBlocking},
-    AdmissionControlStatus, SubmitTransactionResponse,
-};
-use anyhow::{bail, Result};
+use admission_control_proto::proto::AdmissionControlClientBlocking;
+use anyhow::{bail, ensure, format_err, Result};
 use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
@@ -18,33 +15,37 @@ use libra_types::{
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
-    transaction::{Transaction, Version},
+    transaction::{SignedTransaction, Transaction, Version},
     trusted_state::{TrustedState, TrustedStateChange},
-    vm_error::StatusCode,
     waypoint::Waypoint,
 };
-use std::convert::TryFrom;
+use rand::Rng;
+use reqwest::blocking::Client;
+use std::{convert::TryFrom, time::Duration};
 
+const JSON_RPC_TIMEOUT_MS: u64 = 5_000;
 const MAX_GRPC_RETRY_COUNT: u64 = 2;
 
-/// A gRPC client connection to an AdmissionControl (AC) service. `GRPCClient` also
+/// A client connection to an AdmissionControl (AC) service. `LibraClient` also
 /// handles verifying the server's responses, retrying on non-fatal failures, and
 /// ratcheting our latest verified state, which includes the latest verified
 /// version and latest verified epoch change ledger info.
 ///
 /// ### Note
 ///
-/// `GRPCClient` will reject out-of-date responses. For example, this can happen if
+/// `LibraClient` will reject out-of-date responses. For example, this can happen if
 ///
 /// 1. We make a request to the remote AC service.
 /// 2. The remote service crashes and it forgets the most recent state or an
 ///    out-of-date replica takes its place.
 /// 3. We make another request to the remote AC service. In this case, the remote
 ///    AC will be behind us and we will reject their response as stale.
-pub struct GRPCClient {
+pub struct LibraClient {
     /// The client connection to an AdmissionControl service. We will only connect
     /// when the first request is made.
+    /// TODO deprecate this completely once migration to JSON RPC is complete
     client: AdmissionControlClientBlocking,
+    json_rpc_client: JsonRpcClient,
     /// The latest verified chain state.
     trusted_state: TrustedState,
     /// The most recent epoch change ledger info. This is `None` if we only know
@@ -53,19 +54,118 @@ pub struct GRPCClient {
     latest_epoch_change_li: Option<LedgerInfoWithSignatures>,
 }
 
-impl GRPCClient {
+pub struct JsonRpcClient {
+    addr: String,
+    client: Client,
+}
+
+impl JsonRpcClient {
+    pub fn new(host: &str, port: u16) -> Self {
+        let addr = format!("http://{}:{}", host, port);
+        let client = Client::new();
+
+        Self { client, addr }
+    }
+
+    /// Sends JSON request `request`, performs basic checks on the payload, and returns Ok(`result`),
+    /// where `result` is the payload under the key "result" in the JSON RPC response
+    /// If there is an error payload in the JSON RPC response, throw an Err with message describing the error
+    /// payload
+    pub fn send_libra_request(
+        &mut self,
+        method: String,
+        params: Vec<String>,
+    ) -> Result<serde_json::Value> {
+        let id: u64 = rand::thread_rng().gen();
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params,
+            "id": id,
+        });
+
+        let response = self
+            .send_with_retry(request)?
+            .error_for_status()
+            .map_err(|e| format_err!("Server returned error: {:?}", e))?;
+
+        // check payload
+        let data: serde_json::Value = response.json()?;
+
+        // check JSON RPC protocol
+        let json_rpc_protocol = data.get("jsonrpc");
+        ensure!(
+            json_rpc_protocol == Some(&serde_json::Value::String("2.0".to_string())),
+            "JSON RPC response with incorrect protocol: {:?}",
+            json_rpc_protocol
+        );
+
+        // check ID
+        let response_id = data.get("id");
+        ensure!(
+            response_id == Some(&serde_json::json!(id)),
+            "JSON RPC response ID {:?} does not match request ID {}",
+            response_id,
+            id
+        );
+
+        if let Some(error) = data.get("error") {
+            bail!("Error in JSON RPC response: {:?}", error);
+        }
+
+        if let Some(result) = data.get("result") {
+            Ok(result.clone())
+        } else {
+            bail!("Received JSON RPC response with no result payload");
+        }
+    }
+
+    // send with retry
+    pub fn send_with_retry(
+        &mut self,
+        request: serde_json::Value,
+    ) -> Result<reqwest::blocking::Response> {
+        let mut response = self.send(&request);
+        let mut try_cnt = 0;
+
+        // retry if send fails
+        while try_cnt < MAX_GRPC_RETRY_COUNT && response.is_err() {
+            response = self.send(&request);
+            try_cnt += 1;
+        }
+        response
+    }
+
+    fn send(&mut self, request: &serde_json::Value) -> Result<reqwest::blocking::Response> {
+        self.client
+            .post(&self.addr)
+            .json(request)
+            .timeout(Duration::from_millis(JSON_RPC_TIMEOUT_MS))
+            .send()
+            .map_err(Into::into)
+    }
+}
+
+impl LibraClient {
     /// Construct a new Client instance.
     // TODO(philiphayes/dmitrip): Waypoint should not be optional
-    pub fn new(host: &str, port: u16, waypoint: Option<Waypoint>) -> Result<Self> {
-        let client = AdmissionControlClientBlocking::new(host, port);
+    pub fn new(
+        host: &str,
+        ac_port: u16,
+        json_rpc_port: u16,
+        waypoint: Option<Waypoint>,
+    ) -> Result<Self> {
+        let client = AdmissionControlClientBlocking::new(host, ac_port);
         // If waypoint is present, use it for initial verification, otherwise the initial
         // verification is essentially empty.
         let initial_trusted_state = match waypoint {
             Some(waypoint) => TrustedState::from_waypoint(waypoint),
             None => TrustedState::new_trust_any_genesis_WARNING_UNSAFE(),
         };
-        Ok(GRPCClient {
+        let json_rpc_client = JsonRpcClient::new(host, json_rpc_port);
+        Ok(LibraClient {
             client,
+            json_rpc_client,
             trusted_state: initial_trusted_state,
             latest_epoch_change_li: None,
         })
@@ -76,57 +176,32 @@ impl GRPCClient {
     pub fn submit_transaction(
         &mut self,
         sender_account_opt: Option<&mut AccountData>,
-        req: &SubmitTransactionRequest,
+        transaction: SignedTransaction,
     ) -> Result<()> {
-        let mut resp = self
-            .client
-            .submit_transaction(req.clone())
-            .map_err(Into::into);
+        // form request
+        let payload = hex::encode(lcs::to_bytes(&transaction).unwrap());
+        let params = vec![payload];
 
-        let mut try_cnt = 0;
-        while Self::need_to_retry(try_cnt, &resp) {
-            resp = self
-                .client
-                .submit_transaction(req.clone())
-                .map_err(Into::into);
-            try_cnt += 1;
-        }
-
-        let completed_resp = SubmitTransactionResponse::try_from(resp?)?;
-
-        if let Some(ac_status) = completed_resp.ac_status {
-            if ac_status == AdmissionControlStatus::Accepted {
+        match self
+            .json_rpc_client
+            .send_libra_request("submit".to_string(), params)
+        {
+            Ok(result) => {
+                ensure!(
+                    result == serde_json::Value::Null,
+                    "Received unexpected result payload from txn submission: {:?}",
+                    result
+                );
                 if let Some(sender_account) = sender_account_opt {
                     // Bump up sequence_number if transaction is accepted.
                     sender_account.sequence_number += 1;
                 }
-            } else {
-                bail!("Transaction failed with AC status: {:?}", ac_status,);
+                Ok(())
             }
-        } else if let Some(vm_error) = completed_resp.vm_error {
-            if vm_error.major_status == StatusCode::SEQUENCE_NUMBER_TOO_OLD {
-                if let Some(sender_account) = sender_account_opt {
-                    sender_account.sequence_number =
-                        self.get_sequence_number(sender_account.address)?;
-                    bail!(
-                        "Transaction failed with vm status: {:?}, please retry your transaction.",
-                        vm_error
-                    );
-                }
+            Err(e) => {
+                bail!("Transaction submission failed with error: {:?}", e);
             }
-            bail!("Transaction failed with vm status: {:?}", vm_error);
-        } else if let Some(mempool_error) = completed_resp.mempool_error {
-            bail!(
-                "Transaction failed with mempool status: {:?}",
-                mempool_error,
-            );
-        } else {
-            bail!(
-                "Malformed SubmitTransactionResponse which has no status set, {:?}",
-                completed_resp,
-            );
         }
-        Ok(())
     }
 
     fn get_with_proof(

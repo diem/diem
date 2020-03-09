@@ -84,8 +84,9 @@ fn main() {
     let validator_config = NodeConfig::load(&validator_swarm.config.config_files[0]).unwrap();
     println!("To run the Libra CLI client in a separate process and connect to the validator nodes you just spawned, use this command:");
     println!(
-        "\tcargo run --bin cli -- -a localhost -p {} -m {:?}",
+        "\tcargo run --bin cli -- -a localhost -p {} -j {} -m {:?}",
         validator_config.admission_control.address.port(),
+        validator_config.rpc.address.port(),
         faucet_key_file_path,
     );
     let node_address_list = validator_swarm
@@ -111,8 +112,9 @@ fn main() {
         let full_node_config = NodeConfig::load(&swarm.config.config_files[0]).unwrap();
         println!("To connect to the full nodes you just spawned, use this command:");
         println!(
-            "\tcargo run --bin cli -- -a localhost -p {} -m {:?}",
+            "\tcargo run --bin cli -- -a localhost -p {} - j {} -m {:?}",
             full_node_config.admission_control.address.port(),
+            full_node_config.rpc.address.port(),
             faucet_key_file_path,
         );
     }
@@ -120,8 +122,10 @@ fn main() {
     let tmp_mnemonic_file = TempPath::new();
     tmp_mnemonic_file.create_as_file().unwrap();
     if args.start_client {
+        let (ac_port, json_rpc_port) = validator_swarm.get_client_ports(0);
         let client = client::InteractiveClient::new_with_inherit_io(
-            validator_swarm.get_ac_port(0),
+            ac_port,
+            json_rpc_port,
             Path::new(&faucet_key_file_path),
             &tmp_mnemonic_file.path(),
         );
