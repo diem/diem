@@ -13,12 +13,28 @@ use std::{
 
 const GENESIS_DEFAULT: &str = "genesis.blob";
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ExecutionConfig {
     #[serde(skip)]
     pub genesis: Option<Transaction>,
     pub genesis_file_location: PathBuf,
+}
+
+impl std::fmt::Debug for ExecutionConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ExecutionConfig {{ genesis: ")?;
+        if self.genesis.is_some() {
+            write!(f, "Some(...)")?;
+        } else {
+            write!(f, "None")?;
+        }
+        write!(
+            f,
+            ", genesis_file_location: {:?} }}",
+            self.genesis_file_location
+        )
+    }
 }
 
 impl Default for ExecutionConfig {
