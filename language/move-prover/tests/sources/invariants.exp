@@ -1,0 +1,98 @@
+Move prover returns: exiting with boogie verification errors
+error:  This assertion might not hold.
+
+    ┌── tests/sources/invariants.move:11:7 ───
+    │
+ 11 │       invariant x > 1;
+    │       ^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/invariants.move:27:5: invalid_R_pack (entry)
+
+error:  This assertion might not hold.
+
+    ┌── tests/sources/invariants.move:14:7 ───
+    │
+ 14 │       invariant update x <= old(x);
+    │       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/invariants.move:46:5: invalid_R_update (entry)
+    =     at tests/sources/invariants.move:47:13: invalid_R_update
+    =     at tests/sources/invariants.move:48:17: invalid_R_update
+    =         r = <redacted>,
+    =         t = <redacted>
+    =     at tests/sources/invariants.move:49:20: invalid_R_update
+    =         t = <redacted>
+
+error:  This assertion might not hold.
+
+    ┌── tests/sources/invariants.move:14:7 ───
+    │
+ 14 │       invariant update x <= old(x);
+    │       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/invariants.move:66:5: invalid_R_update_indirectly (entry)
+    =     at tests/sources/invariants.move:67:13: invalid_R_update_indirectly
+    =     at tests/sources/invariants.move:68:28: invalid_R_update_indirectly
+    =         t = <redacted>,
+    =         t = <redacted>
+    =     at tests/sources/invariants.move:71:5: update_helper (entry)
+    =     at tests/sources/invariants.move:72:9: update_helper
+    =         r = <redacted>,
+    =         r = <redacted>
+    =     at tests/sources/invariants.move:68:9: invalid_R_update_indirectly
+
+error:  This assertion might not hold.
+
+    ┌── tests/sources/invariants.move:14:7 ───
+    │
+ 14 │       invariant update x <= old(x);
+    │       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/invariants.move:56:5: invalid_R_update_ref (entry)
+    =     at tests/sources/invariants.move:57:13: invalid_R_update_ref
+    =     at tests/sources/invariants.move:58:22: invalid_R_update_ref
+    =         r = <redacted>,
+    =         t = <redacted>
+    =     at tests/sources/invariants.move:59:14: invalid_R_update_ref
+    =         t = <redacted>
+
+error:  This assertion might not hold.
+
+    ┌── tests/sources/invariants.move:11:7 ───
+    │
+ 11 │       invariant x > 1;
+    │       ^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/invariants.move:77:5: lifetime_invalid_R (entry)
+    =     at tests/sources/invariants.move:78:13: lifetime_invalid_R
+    =     at tests/sources/invariants.move:79:21: lifetime_invalid_R
+    =         r = <redacted>,
+    =         r_ref = <redacted>
+    =     at tests/sources/invariants.move:80:26: lifetime_invalid_R
+    =         x_ref = <redacted>
+    =     at tests/sources/invariants.move:81:18: lifetime_invalid_R
+    =         r = <redacted>
+
+error:  This assertion might not hold.
+
+    ┌── tests/sources/invariants.move:94:9 ───
+    │
+ 94 │         invariant y > 1;
+    │         ^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/invariants.move:97:5: lifetime_invalid_S_branching (entry)
+    =     at tests/sources/invariants.move:98:11: lifetime_invalid_S_branching
+    =         cond = <redacted>
+    =     at tests/sources/invariants.move:99:21: lifetime_invalid_S_branching
+    =         a = <redacted>,
+    =         b = <redacted>
+    =     at tests/sources/invariants.move:100:19: lifetime_invalid_S_branching
+    =         a_ref = <redacted>
+    =     at tests/sources/invariants.move:101:19: lifetime_invalid_S_branching
+    =         b_ref = <redacted>
+    =     at tests/sources/invariants.move:102:23: lifetime_invalid_S_branching
+    =         x_ref = <redacted>
+    =     at tests/sources/invariants.move:104:11: lifetime_invalid_S_branching
+    =     at tests/sources/invariants.move:107:11: lifetime_invalid_S_branching
+    =         a = <redacted>,
+    =         b = <redacted>

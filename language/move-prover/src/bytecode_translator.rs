@@ -20,11 +20,10 @@ use crate::cli::Options;
 use crate::spec_translator::SpecTranslator;
 use crate::{
     boogie_helpers::{
-        boogie_field_name, boogie_function_name, boogie_invariant_target, boogie_local_type,
-        boogie_struct_name, boogie_struct_type_value, boogie_type_check, boogie_type_value,
-        boogie_type_values, boogie_var_before_borrow,
+        boogie_field_name, boogie_function_name, boogie_local_type, boogie_struct_name,
+        boogie_struct_type_value, boogie_type_check, boogie_type_value, boogie_type_values,
+        boogie_var_before_borrow,
     },
-    cli::InvariantModel,
     code_writer::CodeWriter,
 };
 use bytecode_to_boogie::lifetime_analysis::LifetimeAnalysis;
@@ -204,7 +203,7 @@ impl<'env> ModuleTranslator<'env> {
             .join(", ");
         emitln!(
             self.writer,
-            "procedure {{:inline 1}} Pack_{}($file_id: int, $byte_index: int, $var_idx: int, {}) returns ($struct: Value)\n{{",
+            "procedure {{:inline 1}} {}_pack($file_id: int, $byte_index: int, $var_idx: int, {}) returns ($struct: Value)\n{{",
             boogie_struct_name(struct_env),
             separate(vec![type_args_str, args_str.clone()], ", ")
         );
@@ -242,7 +241,7 @@ impl<'env> ModuleTranslator<'env> {
         // Unpack function
         emitln!(
             self.writer,
-            "procedure {{:inline 1}} Unpack_{}($struct: Value) returns ({})\n{{",
+            "procedure {{:inline 1}} {}_unpack($struct: Value) returns ({})\n{{",
             boogie_struct_name(struct_env),
             args_str
         );
@@ -490,13 +489,9 @@ impl<'env> ModuleTranslator<'env> {
             BorrowLoc(dest, src) => {
                 emitln!(
                     self.writer,
-                    "call $t{} := BorrowLoc($frame + {}, {});",
+                    "call $t{} := BorrowLoc($frame + {});",
                     dest,
                     src,
-                    boogie_type_value(
-                        func_env.module_env.env,
-                        &func_env.get_local_type(*src as usize)
-                    )
                 );
                 save_borrowed_value(dest);
             }
@@ -626,7 +621,7 @@ impl<'env> ModuleTranslator<'env> {
                     .join(", ");
                 emitln!(
                     self.writer,
-                    "call $tmp := Pack_{}({}, {});",
+                    "call $tmp := {}_pack({}, {});",
                     boogie_struct_name(&struct_env),
                     track_args,
                     args_str
@@ -652,7 +647,7 @@ impl<'env> ModuleTranslator<'env> {
                 }
                 emitln!(
                     self.writer,
-                    "call {} := Unpack_{}($GetLocal($m, $frame + {}));",
+                    "call {} := {}_unpack($GetLocal($m, $frame + {}));",
                     dests_str,
                     boogie_struct_name(struct_env),
                     src,
@@ -1199,19 +1194,10 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "var $tmp: Value;");
         emitln!(self.writer, "var $frame: int;");
         emitln!(self.writer, "var $saved_m: Memory;");
-        if self.options.invariant_model == InvariantModel::WriteRefBased {
-            emitln!(
-                self.writer,
-                "var {}: Value;",
-                boogie_invariant_target(false)
-            );
-            emitln!(self.writer, "var {}: Value;", boogie_invariant_target(true));
-        } else {
-            for idx in 0..num_mut_refs {
-                let name = boogie_var_before_borrow(idx);
-                emitln!(self.writer, "var {}: Value;", name);
-                emitln!(self.writer, "var {}_ref: Reference;", name);
-            }
+        for idx in 0..num_mut_refs {
+            let name = boogie_var_before_borrow(idx);
+            emitln!(self.writer, "var {}: Value;", name);
+            emitln!(self.writer, "var {}_ref: Reference;", name);
         }
 
         emitln!(self.writer, "\n// initialize function execution");
@@ -1335,19 +1321,17 @@ impl<'env> ModuleTranslator<'env> {
     /// Determines whether this type has update invariants that shall be
     /// enforced on mutual reference release.
     fn has_update_invariant_on_release(&'env self, ty: &Type) -> bool {
-        if self.options.invariant_model == InvariantModel::LifetimeBased {
-            if let Type::Reference(true, bt) = &ty {
-                if let Type::Struct(module_idx, struct_idx, _) = bt.as_ref() {
-                    let struct_env = self
-                        .module_env
-                        .env
-                        .get_module(*module_idx)
-                        .into_struct(*struct_idx);
-                    if !struct_env.get_data_invariants().is_empty()
-                        || !struct_env.get_update_invariants().is_empty()
-                    {
-                        return true;
-                    }
+        if let Type::Reference(true, bt) = &ty {
+            if let Type::Struct(module_idx, struct_idx, _) = bt.as_ref() {
+                let struct_env = self
+                    .module_env
+                    .env
+                    .get_module(*module_idx)
+                    .into_struct(*struct_idx);
+                if !struct_env.get_data_invariants().is_empty()
+                    || !struct_env.get_update_invariants().is_empty()
+                {
+                    return true;
                 }
             }
         }
@@ -1366,7 +1350,7 @@ impl<'env> ModuleTranslator<'env> {
                     .into_struct(*struct_idx);
                 emitln!(
                     self.writer,
-                    "call ${}_update_inv({}, $Dereference($m, {}_ref));",
+                    "call {}_update_inv({}, $Dereference($m, {}_ref));",
                     boogie_struct_name(&struct_env),
                     var_name,
                     var_name
@@ -1409,8 +1393,10 @@ impl<'env> ModuleTranslator<'env> {
         if let Type::Reference(_, bt) = ty {
             let deref = format!("$Dereference($m, {})", value);
             let type_check = boogie_type_check(self.module_env.env, &deref, &*bt);
+            // Below we introduce a dummy `if` for $DebugTrackAbort to ensure boogie creates
+            // a execution trace entry for this statement.
             format!(
-                "{}assume $DebugTrackLocal({}, {}, {}, {});",
+                "{}if (true) {{ assume $DebugTrackLocal({}, {}, {}, {}); }}",
                 type_check,
                 func_env.module_env.env.file_id_to_idx(loc.file_id()),
                 loc.span().start(),
@@ -1419,7 +1405,7 @@ impl<'env> ModuleTranslator<'env> {
             )
         } else {
             format!(
-                "assume $DebugTrackLocal({}, {}, {}, {});",
+                "if (true) {{ assume $DebugTrackLocal({}, {}, {}, {}); }}",
                 func_env.module_env.env.file_id_to_idx(loc.file_id()),
                 loc.span().start(),
                 idx,

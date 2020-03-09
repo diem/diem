@@ -65,16 +65,11 @@ pub struct Options {
     pub minimize_execution_trace: bool,
     /// Whether to omit debug information in generated model.
     pub omit_model_debug: bool,
-    /// The model use for invariant enforcement.
-    pub invariant_model: InvariantModel,
     /// Whether to use native array theory.
     pub use_array_theory: bool,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InvariantModel {
-    LifetimeBased,
-    WriteRefBased,
+    /// Whether output for e.g. diagnosis shall be stable/redacted so it can be used in test
+    /// output.
+    pub stable_test_output: bool,
 }
 
 impl Default for Options {
@@ -83,7 +78,7 @@ impl Default for Options {
             prelude_path: INLINE_PRELUDE.to_string(),
             output_path: "output.bpl".to_string(),
             account_address: "0x234567".to_string(),
-            verbosity_level: LevelFilter::Info,
+            verbosity_level: LevelFilter::Warn,
             move_sources: vec![],
             boogie_exe: "".to_string(),
             z3_exe: "".to_string(),
@@ -94,8 +89,8 @@ impl Default for Options {
             native_stubs: false,
             minimize_execution_trace: true,
             omit_model_debug: false,
-            invariant_model: InvariantModel::LifetimeBased,
             use_array_theory: false,
+            stable_test_output: false,
         }
     }
 }
@@ -139,7 +134,7 @@ impl Options {
                     .short("v")
                     .long("verbose")
                     .possible_values(&["error", "warn", "info", "debug"])
-                    .default_value("info")
+                    .default_value("warn")
                     .help("verbosity level"),
             )
             .arg(
@@ -157,13 +152,6 @@ impl Options {
                 Arg::with_name("omit-model-debug")
                     .long("omit-model-debug")
                     .help("whether to omit code for model debugging"),
-            )
-            .arg(
-                Arg::with_name("invariant-model")
-                    .long("invariant-model")
-                    .possible_values(&["lifetime", "writeref"])
-                    .default_value("lifetime")
-                    .help("invariant enforcement model used"),
             )
             .arg(
                 Arg::with_name("boogie-exe")
@@ -215,6 +203,13 @@ impl Options {
                     .help("specifies a flag to be passed on to boogie"),
             )
             .arg(
+                Arg::with_name("stable-test-output")
+                    .long("stable-test-output")
+                    .help(
+                        "whether diagnosis output should be stable/redacted so it can be used in baseline tests",
+                    ),
+            )
+            .arg(
                 Arg::with_name("sources")
                     .multiple(true)
                     .value_name("MVIR_FILE")
@@ -246,11 +241,6 @@ impl Options {
         self.generate_only = matches.is_present("generate-only");
         self.native_stubs = matches.is_present("native-stubs");
         self.omit_model_debug = matches.is_present("omit-model-debug");
-        self.invariant_model = match get_with_default("invariant-model").as_str() {
-            "lifetime" => InvariantModel::LifetimeBased,
-            "writeref" => InvariantModel::WriteRefBased,
-            _ => unreachable!("should not happen"),
-        };
         self.use_cvc4 = matches.is_present("use-cvc4");
         self.boogie_exe = get_with_default("boogie-exe");
         self.z3_exe = get_with_default("z3-exe");
@@ -258,6 +248,7 @@ impl Options {
         self.boogie_flags = get_vec("boogie-flags");
         self.move_sources = get_vec("sources");
         self.use_array_theory = matches.is_present("use-array-theory");
+        self.stable_test_output = matches.is_present("stable-test-output");
     }
 
     /// Sets up logging based on provided options. This should be called as early as possible
