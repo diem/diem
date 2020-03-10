@@ -38,7 +38,7 @@ join_env_vars() {
 }
 
 kube_init_context () {
-  aws eks --region us-west-2 list-clusters &> /dev/null || (echo "Failed to access codebuild, try awsmfa?"; exit 1)
+  aws eks --region us-west-2 describe-cluster --name ct-0-k8s-testnet &>/dev/null || (echo "Failed to access EKS, try awsmfa?"; exit 1)
   local highest_pool_index=$(($K8S_POOL_SIZE - 1))
   local context=${K8S_CONTEXT_PATTERN/CLUSTERNAME/ct-${highest_pool_index}}
   if kubectl config get-contexts ${context} &> /dev/null; then
@@ -202,6 +202,7 @@ else
   echo "Running cluster-test on Kubernetes"
   kube_init_context
   pod_name="cluster-test-$(whoami)-$(date +%s)"
+  pod_name=${pod_name/_/-} #underscore not allowed in pod name
   specfile=$(mktemp)
   echo "Pod Spec : ${specfile}"
   join_args $*
