@@ -108,7 +108,6 @@ pub struct BlockMetadata {
 pub struct BytesView(pub String);
 
 impl BytesView {
-    #[cfg(test)]
     pub fn into_bytes(self) -> Result<Vec<u8>, Error> {
         Ok(hex::decode(self.0)?)
     }

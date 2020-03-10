@@ -22,11 +22,10 @@ use libra_types::{
         AccountAddress, AuthenticationKey, ADDRESS_LENGTH, AUTHENTICATION_KEY_LENGTH,
     },
     account_config::{
-        association_address, AccountResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
+        association_address, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
         CORE_CODE_ADDRESS,
     },
     account_state::AccountState,
-    account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
     crypto_proxies::LedgerInfoWithSignatures,
     transaction::{
@@ -257,8 +256,8 @@ impl ClientProxy {
         );
         let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
         self.get_account_resource_and_update(address).map(|res| {
-            let whole_num = res.balance() / 1_000_000;
-            let remainder = res.balance() % 1_000_000;
+            let whole_num = res.balance / 1_000_000;
+            let remainder = res.balance % 1_000_000;
             format!("{}.{:0>6}", whole_num.to_string(), remainder.to_string())
         })
     }
@@ -272,7 +271,7 @@ impl ClientProxy {
         let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let sequence_number = self
             .get_account_resource_and_update(address)?
-            .sequence_number();
+            .sequence_number;
 
         let reset_sequence_number = if space_delim_strings.len() == 3 {
             parse_bool(space_delim_strings[2]).map_err(|error| {
@@ -729,7 +728,7 @@ impl ClientProxy {
     pub fn get_latest_account_state(
         &mut self,
         space_delim_strings: &[&str],
-    ) -> Result<(Option<AccountStateBlob>, Version)> {
+    ) -> Result<(Option<AccountView>, Version)> {
         ensure!(
             space_delim_strings.len() == 2,
             "Invalid number of arguments to get latest account state"
@@ -954,8 +953,8 @@ impl ClientProxy {
     fn get_account_state_and_update(
         &mut self,
         address: AccountAddress,
-    ) -> Result<(Option<AccountStateBlob>, Version)> {
-        let account_state = self.client.get_account_blob(address)?;
+    ) -> Result<(Option<AccountView>, Version)> {
+        let account_state = self.client.get_account_state(address, true)?;
         if self.address_to_ref_id.contains_key(&address) {
             let account_ref_id = self
                 .address_to_ref_id
@@ -972,13 +971,10 @@ impl ClientProxy {
     }
 
     /// Get account resource from validator and update status of account if it is cached locally.
-    fn get_account_resource_and_update(
-        &mut self,
-        address: AccountAddress,
-    ) -> Result<AccountResource> {
+    fn get_account_resource_and_update(&mut self, address: AccountAddress) -> Result<AccountView> {
         let account_state = self.get_account_state_and_update(address)?;
-        if let Some(blob) = account_state.0 {
-            AccountResource::try_from(&blob)
+        if let Some(view) = account_state.0 {
+            Ok(view)
         } else {
             bail!("No account exists at {:?}", address)
         }
@@ -995,17 +991,13 @@ impl ClientProxy {
         authentication_key_opt: Option<Vec<u8>>,
     ) -> Result<AccountData> {
         let (sequence_number, authentication_key, status) = if sync_with_validator {
-            match client.get_account_blob(address) {
+            match client.get_account_state(address, true) {
                 Ok(resp) => match resp.0 {
-                    Some(account_state_blob) => {
-                        let account_resource = AccountResource::try_from(&account_state_blob)?;
-
-                        (
-                            account_resource.sequence_number(),
-                            Some(account_resource.authentication_key().to_vec()),
-                            AccountStatus::Persisted,
-                        )
-                    }
+                    Some(account_view) => (
+                        account_view.sequence_number,
+                        Some(account_view.authentication_key.into_bytes()?),
+                        AccountStatus::Persisted,
+                    ),
                     None => (0, authentication_key_opt, AccountStatus::Local),
                 },
                 Err(e) => {
