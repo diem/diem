@@ -98,6 +98,7 @@ function {:constructor} Address(a: Address): Value;
 function {:constructor} ByteArray(b: ByteArray): Value;
 function {:constructor} Str(a: String): Value;
 function {:constructor} Vector(v: ValueArray): Value; // used to both represent move Struct and Vector
+function {:constructor} $Range(lb: Value, ub: Value): Value;
 function {:constructor} Error(): Value;
 const DefaultValue: Value;
 axiom DefaultValue == Error();
@@ -281,6 +282,10 @@ function {:inline} $vmap(v: Value): [int]Value {
 function {:inline} $vlen(v: Value): int {
     l#ValueArray(v#Vector(v))
 }
+// Sometimes, we need the length as a Value, not an int.
+function {:inline} $vlen_value(v: Value): Value {
+    Integer($vlen(v))
+}
 function {:inline} mk_vector(): Value {
     Vector(EmptyValueArray)
 }
@@ -302,6 +307,10 @@ function {:inline} $update_vector(v: Value, i: int, elem: Value): Value {
 function {:inline} $select_vector(v: Value, i: int) : Value {
     $vmap(v)[i]
 }
+// $select_vector_by_value requires index to be a Value, not int.
+function {:inline} $select_vector_by_value(v: Value, i: Value) : Value {
+    $vmap(v)[i#Integer(i)]
+}
 function {:inline} swap_vector(v: Value, i: int, j: int): Value {
     Vector(SwapValueArray(v#Vector(v), i, j))
 }
@@ -312,6 +321,10 @@ function {:inline} $slice_vector(v: Value, i: int, j: int) : Value {
 function {:inline} $InVectorRange(v: Value, i: int): bool {
     i >= 0 && i < $vlen(v)
 }
+function {:inline} $InRange(r: Value, i: int): bool {
+   i#Integer(lb#$Range(r)) <= i && i < i#Integer(ub#$Range(r))
+}
+
 
 // ============================================================================================
 // Memory

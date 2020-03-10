@@ -32,6 +32,9 @@ pub struct SpecTranslator<'env> {
     in_old: RefCell<bool>,
     /// The current target for invariant fields, a pair of strings for current and old value.
     invariant_target: RefCell<(String, String)>,
+    /// Counter for generating fresh variables.  It's a RefCell so we can increment it without
+    /// making a ton of &self arguments mutable.
+    fresh_var_count: RefCell<u64>,
 }
 
 // General
@@ -50,6 +53,7 @@ impl<'env> SpecTranslator<'env> {
             supports_native_old,
             in_old: RefCell::new(false),
             invariant_target: RefCell::new(("".to_string(), "".to_string())),
+            fresh_var_count: RefCell::new(0),
         }
     }
 
@@ -81,6 +85,14 @@ impl<'env> SpecTranslator<'env> {
         let res = if *self.in_old.borrow() { old } else { current };
         assert!(!res.is_empty());
         res
+    }
+
+    /// Generate a fresh variable name
+    fn fresh_var_name(&self, prefix: &str) -> String {
+        let mut fvc_ref = self.fresh_var_count.borrow_mut();
+        let name_str = format!("${}_{}", prefix, *fvc_ref);
+        *fvc_ref += 1;
+        name_str
     }
 
     /// Translates a sequence of items seperated by `sep`.
@@ -466,9 +478,9 @@ impl<'env> SpecTranslator<'env> {
                 self.translate_select(*module_id, *struct_id, *field_id, args)
             }
             Operation::Result(pos) => emit!(self.writer, "$ret{}", pos),
-            Operation::Index => self.translate_primitive_call("$select_vector", args),
+            Operation::Index => self.translate_primitive_call("$select_vector_by_value", args),
             Operation::Slice => self.translate_primitive_call("$slice_vector", args),
-            Operation::Range => self.error(&loc, "range not yet supported"),
+            Operation::Range => self.translate_primitive_call("$Range", args),
 
             // Binary operators
             Operation::Add => self.translate_arith_op("+", args),
@@ -497,7 +509,7 @@ impl<'env> SpecTranslator<'env> {
             // Builtin functions
             Operation::Global => self.translate_resource_access(node_id, args),
             Operation::Exists => self.translate_resource_exists(node_id, args),
-            Operation::Len => self.translate_primitive_call("$vlen", args),
+            Operation::Len => self.translate_primitive_call("$vlen_value", args),
             Operation::All => self.translate_all_or_exists(&loc, true, args),
             Operation::Any => self.translate_all_or_exists(&loc, false, args),
             Operation::Update => self.translate_primitive_call("$update_vector", args),
@@ -581,29 +593,38 @@ impl<'env> SpecTranslator<'env> {
         if let Exp::Lambda(_, vars, exp) = &args[1] {
             if let Some((var, _)) = self.get_decl_var(loc, vars) {
                 let var_name = self.module_env.symbol_pool().string(var);
+                let quant_var = self.fresh_var_name("i");
                 let is_vector = match quant_ty {
                     Type::Vector(..) => true,
                     Type::Primitive(PrimitiveType::Range) => false,
                     _ => panic!("unexpected type"),
                 };
-                emit!(self.writer, "Boolean((var $r := ");
+                let range_tmp = self.fresh_var_name("range");
+                emit!(self.writer, "Boolean((var {} := ", range_tmp);
                 self.translate_exp(&args[0]);
                 if is_all {
-                    emit!(self.writer, "; (forall $i: int :: ");
+                    emit!(self.writer, "; (forall {}: int :: ", quant_var);
                 } else {
-                    emit!(self.writer, "; (exists $i: int :: ");
+                    emit!(self.writer, "; (exists {}: int :: ", quant_var);
                 }
                 if is_vector {
                     emit!(
                         self.writer,
-                        "$InVectorRange($r, $i) ==> (var {} := $select_vector($r, $i); ",
-                        var_name
+                        "$InVectorRange({}, {}) ==> (var {} := $select_vector({}, {}); ",
+                        range_tmp,
+                        quant_var,
+                        var_name,
+                        range_tmp,
+                        quant_var,
                     );
                 } else {
                     emit!(
                         self.writer,
-                        "$InRange($r, $i) ==> (var {} := $i; ",
-                        var_name
+                        "$InRange({}, {}) ==> (var {} := Integer({}); ",
+                        range_tmp,
+                        quant_var,
+                        var_name,
+                        quant_var,
                     );
                 }
                 emit!(self.writer, "b#Boolean(");
