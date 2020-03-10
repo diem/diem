@@ -20,9 +20,9 @@ use transaction_builder::get_transaction_name;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct AccountView {
-    balance: u64,
-    sequence_number: u64,
-    authentication_key: BytesView,
+    pub balance: u64,
+    pub sequence_number: u64,
+    pub authentication_key: BytesView,
     pub sent_events_key: BytesView,
     pub received_events_key: BytesView,
     delegated_key_rotation_capability: bool,
@@ -114,7 +114,6 @@ pub struct BlockMetadata {
 pub struct BytesView(pub String);
 
 impl BytesView {
-    #[cfg(test)]
     pub fn into_bytes(self) -> Result<Vec<u8>, Error> {
         Ok(hex::decode(self.0)?)
     }

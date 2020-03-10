@@ -4,18 +4,19 @@
 use crate::AccountData;
 use admission_control_proto::proto::AdmissionControlClientBlocking;
 use anyhow::{bail, ensure, format_err, Result};
-use libra_json_rpc::views::{AccountView, BytesView, EventView};
+use libra_json_rpc::views::{AccountView, BytesView, EventView, StateProofView};
 use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::{AccountResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH},
+    account_config::{ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH},
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
     crypto_proxies::LedgerInfoWithSignatures,
     get_with_proof::{RequestItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse},
     transaction::{SignedTransaction, Transaction, Version},
     trusted_state::{TrustedState, TrustedStateChange},
+    validator_change::ValidatorChangeProof,
     waypoint::Waypoint,
 };
 use rand::Rng;
@@ -90,33 +91,100 @@ impl JsonRpcClient {
 
         // check payload
         let data: serde_json::Value = response.json()?;
+        let (response_id, result) = Self::process_single_response(data)?;
 
+        // check ID
+        ensure!(
+            response_id == id,
+            "JSON RPC response ID {} does not match request ID {}",
+            response_id,
+            id
+        );
+
+        Ok(result)
+    }
+
+    /// processes a single JSON RPC response
+    fn process_single_response(response: serde_json::Value) -> Result<(u64, serde_json::Value)> {
         // check JSON RPC protocol
-        let json_rpc_protocol = data.get("jsonrpc");
+        let json_rpc_protocol = response.get("jsonrpc");
         ensure!(
             json_rpc_protocol == Some(&serde_json::Value::String("2.0".to_string())),
             "JSON RPC response with incorrect protocol: {:?}",
             json_rpc_protocol
         );
 
-        // check ID
-        let response_id = data.get("id");
-        ensure!(
-            response_id == Some(&serde_json::json!(id)),
-            "JSON RPC response ID {:?} does not match request ID {}",
-            response_id,
-            id
-        );
-
-        if let Some(error) = data.get("error") {
+        if let Some(error) = response.get("error") {
             bail!("Error in JSON RPC response: {:?}", error);
         }
 
-        if let Some(result) = data.get("result") {
-            Ok(result.clone())
+        if let Some(result) = response.get("result") {
+            let response_id: u64 = serde_json::from_value(response.get("id").unwrap().clone())?;
+            Ok((response_id, result.clone()))
         } else {
             bail!("Received JSON RPC response with no result payload");
         }
+    }
+
+    /// Sends a batch JSON RPC request.
+    /// Returns a vector of responses s.t. response order matches the request order
+    /// Throws error if any of the responses are not valid JSON RPC responses or any of the valid JSON RPC responses
+    /// contain an `error` payload
+    pub fn send_libra_batch_request(
+        &mut self,
+        batch_requests: Vec<(String, serde_json::Value)>,
+    ) -> Result<Vec<serde_json::Value>> {
+        if batch_requests.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let mut req_id: u64 = 0;
+        // convert requests to JSON
+        let request = batch_requests
+            .into_iter()
+            .map(|(method, params)| {
+                req_id += 1;
+                let request = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "method": method,
+                    "params": params,
+                    "id": req_id,
+                });
+                request
+            })
+            .collect();
+
+        //retry send
+        let response = self
+            .send_with_retry(serde_json::Value::Array(request))?
+            .error_for_status()
+            .map_err(|e| format_err!("Server returned error: {:?}", e))?;
+
+        // basic process payload
+        let mut processed_responses = vec![];
+        match response.json()? {
+            serde_json::Value::Array(responses) => {
+                for response in responses {
+                    let (id, result) = Self::process_single_response(response)?;
+                    // check ID
+                    ensure!(
+                        0 < id && id <= req_id,
+                        "Unexpected JSON RPC response ID {:?}",
+                        id
+                    );
+
+                    processed_responses.push((id, result));
+                }
+            }
+            _ => bail!("invalid JSON RPC server response format"),
+        }
+
+        // sort response by ID
+        processed_responses.sort_by_key(|(idx, _result)| *idx);
+        Ok(processed_responses
+            .into_iter()
+            .map(|(_idx, result)| result)
+            .collect())
     }
 
     // send with retry
@@ -203,13 +271,23 @@ impl LibraClient {
         }
     }
 
-    pub fn get_account_state(&mut self, account: AccountAddress) -> Result<Option<AccountView>> {
+    // Retrieves and
+    // - If `with_state_change`, will also retrieve state proof from node and update trusted_state accordingly
+    pub fn get_account_state(
+        &mut self,
+        account: AccountAddress,
+        with_state_proof: bool,
+    ) -> Result<(Option<AccountView>, Version)> {
+        let method = "get_account_state".to_string();
         let params = vec![account.to_string()];
 
-        match self
-            .json_rpc_client
-            .send_libra_request("get_account_state".to_string(), params)
-        {
+        let response = if with_state_proof {
+            self.get_with_state_proof(method, serde_json::json!(params))
+        } else {
+            self.json_rpc_client.send_libra_request(method, params)
+        };
+
+        match response {
             Ok(result) => {
                 let account_view = match result {
                     serde_json::Value::Null => None,
@@ -218,7 +296,7 @@ impl LibraClient {
                         Some(account_view)
                     }
                 };
-                Ok(account_view)
+                Ok((account_view, self.trusted_state.latest_version()))
             }
             Err(e) => bail!(
                 "Failed to get account state for account address {} with error: {:?}",
@@ -245,6 +323,74 @@ impl LibraClient {
                 Ok(events)
             }
             Err(e) => bail!("Failed to get events with error: {:?}", e),
+        }
+    }
+
+    fn get_with_state_proof(
+        &mut self,
+        method: String,
+        params: serde_json::Value,
+    ) -> Result<serde_json::Value> {
+        let client_version = self.trusted_state.latest_version();
+
+        // form batch requests
+        let batch_requests = vec![
+            (method, params),
+            (
+                "get_state_proof".to_string(),
+                serde_json::json!(vec![client_version]),
+            ),
+        ];
+
+        // batch send
+        match self
+            .json_rpc_client
+            .send_libra_batch_request(batch_requests)
+        {
+            Err(e) => bail!("Failed to get with state proof, error: {:?}", e),
+            Ok(responses) => {
+                // verify and update trusted state here
+                let proof: StateProofView = serde_json::from_value(responses[1].clone())?;
+                let li: LedgerInfoWithSignatures =
+                    lcs::from_bytes(&proof.ledger_info_with_signatures.into_bytes()?)?;
+                let validator_change_proof: ValidatorChangeProof =
+                    lcs::from_bytes(&proof.validator_change_proof.into_bytes()?)?;
+
+                // check ledger info version
+                ensure!(
+                    li.ledger_info().version() >= client_version,
+                    "Got stale ledger_info with version {}, known version: {}",
+                    li.ledger_info().version(),
+                    client_version,
+                );
+
+                // trusted_state_change
+                match self
+                    .trusted_state
+                    .verify_and_ratchet(&li, &validator_change_proof)?
+                {
+                    TrustedStateChange::Epoch {
+                        new_state,
+                        latest_epoch_change_li,
+                        latest_validator_set,
+                        ..
+                    } => {
+                        info!(
+                            "Verified epoch change to epoch: {}, validator set: [{}]",
+                            latest_epoch_change_li.ledger_info().epoch(),
+                            latest_validator_set
+                        );
+                        // Update client state
+                        self.trusted_state = new_state;
+                        self.latest_epoch_change_li = Some(latest_epoch_change_li.clone());
+                    }
+                    TrustedStateChange::Version { new_state, .. } => {
+                        self.trusted_state = new_state;
+                    }
+                }
+                // verify sub-response - responsibility of each call to subresponse
+                Ok(responses[0].clone())
+            }
         }
     }
 
@@ -320,14 +466,6 @@ impl LibraClient {
         }
 
         resp
-    }
-
-    /// Get the latest account sequence number for the account specified.
-    pub fn get_sequence_number(&mut self, address: AccountAddress) -> Result<u64> {
-        Ok(match self.get_account_blob(address)?.0 {
-            Some(blob) => AccountResource::try_from(&blob)?.sequence_number(),
-            None => 0,
-        })
     }
 
     /// Get the latest account state blob from validator.
@@ -407,7 +545,7 @@ impl LibraClient {
         limit: u64,
     ) -> Result<(Vec<EventView>, AccountView)> {
         // get event key from access_path
-        match self.get_account_state(access_path.address)? {
+        match self.get_account_state(access_path.address, false)?.0 {
             None => bail!("No account found for address {:?}", access_path.address),
             Some(account_view) => {
                 let path = access_path.path;
