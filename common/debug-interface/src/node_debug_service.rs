@@ -57,13 +57,16 @@ impl NodeDebugInterface for NodeDebugService {
 pub fn parse_events(events: Vec<Event>) -> Vec<JsonLogEntry> {
     let mut ret = vec![];
     for event in events.into_iter() {
-        let json = serde_json::from_str(&event.json).expect("Failed to parse json");
-        let entry = JsonLogEntry {
-            name: Box::leak(event.name.into_boxed_str()),
-            timestamp: event.timestamp as u128,
-            json,
-        };
-        ret.push(entry);
+        ret.push(parse_event(event));
     }
     ret
+}
+
+pub fn parse_event(event: Event) -> JsonLogEntry {
+    let json = serde_json::from_str(&event.json).expect("Failed to parse json");
+    JsonLogEntry {
+        name: Box::leak(event.name.into_boxed_str()),
+        timestamp: event.timestamp as u128,
+        json,
+    }
 }

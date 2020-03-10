@@ -7,7 +7,7 @@ use std::{cmp::min, env};
 use crate::{
     cluster::Cluster,
     experiments::{
-        CpuFlamegraphParams, Experiment, ExperimentParam, PerformanceBenchmarkNodesDownParams,
+        CpuFlamegraphParams, Experiment, ExperimentParam, PerformanceBenchmarkParams,
         PerformanceBenchmarkThreeRegionSimulationParams, RebootRandomValidatorsParams,
         RecoveryTimeParams,
     },
@@ -35,10 +35,10 @@ impl ExperimentSuite {
             experiments.push(b);
         }
         experiments.push(Box::new(
-            PerformanceBenchmarkNodesDownParams::new_nodes_down(0).build(cluster),
+            PerformanceBenchmarkParams::new_nodes_down(0).build(cluster),
         ));
         experiments.push(Box::new(
-            PerformanceBenchmarkNodesDownParams::new_nodes_down(10).build(cluster),
+            PerformanceBenchmarkParams::new_nodes_down(10).build(cluster),
         ));
         experiments.push(Box::new(
             PerformanceBenchmarkThreeRegionSimulationParams {}.build(cluster),
@@ -52,10 +52,10 @@ impl ExperimentSuite {
     pub fn new_perf_suite(cluster: &Cluster) -> Self {
         let mut experiments: Vec<Box<dyn Experiment>> = vec![];
         experiments.push(Box::new(
-            PerformanceBenchmarkNodesDownParams::new_nodes_down(0).build(cluster),
+            PerformanceBenchmarkParams::new_nodes_down(0).build(cluster),
         ));
         experiments.push(Box::new(
-            PerformanceBenchmarkNodesDownParams::new_nodes_down(10).build(cluster),
+            PerformanceBenchmarkParams::new_nodes_down(10).build(cluster),
         ));
         experiments.push(Box::new(
             PerformanceBenchmarkThreeRegionSimulationParams {}.build(cluster),

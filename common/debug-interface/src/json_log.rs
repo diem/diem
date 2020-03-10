@@ -11,7 +11,7 @@ pub struct JsonLogEntry {
     pub json: json::Value,
 }
 
-const MAX_EVENTS_IN_QUEUE: usize = 1_000;
+const MAX_EVENTS_IN_QUEUE: usize = 10_000;
 
 /// Writes event to event stream
 /// Example:
