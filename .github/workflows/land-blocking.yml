@@ -23,6 +23,11 @@ jobs:
             echo "::set-output name=should_run::false";
           else
             echo "::set-output name=should_run::true";
+          fi;
+          if ${{ secrets.ACTIONS_LBT_USE_K8S }} ; then
+            echo "::set-env name=USE_K8S::true";
+          else
+            echo "::set-env name=USE_K8S::false";
           fi
       - name: Build, tag and push images
         if: steps.check_ks.outputs.should_run == 'true'
@@ -34,12 +39,23 @@ jobs:
         run: |
           export CTI_OUTPUT_LOG=$(mktemp)
           echo "::set-env name=CTI_OUTPUT_LOG::$CTI_OUTPUT_LOG"
-          JUMPHOST=${{secrets.CLUSTER_TEST_JUMPHOST}} \
-          ./scripts/cti \
-            --marker land \
-            --tag ${TEST_TAG} \
-            --report report.json \
-            --run bench
+          if [[ ${USE_K8S} == true ]]; then
+            ./scripts/cti \
+              --k8s \
+              --marker land \
+              --tag ${TEST_TAG} \
+              --report report.json \
+              --run bench \
+              --k8s-fullnodes-per-validator=0 \
+              --k8s-num-validators=100
+          else
+            JUMPHOST=${{secrets.CLUSTER_TEST_JUMPHOST}} \
+              ./scripts/cti \
+              --marker land \
+              --tag ${TEST_TAG} \
+              --report report.json \
+              --run bench
+          fi
       - name: Post test results on PR
         if: always()
         uses: actions/github-script@0.4.0
@@ -115,9 +131,15 @@ jobs:
             // Add repro cmd to message
             try {
               body += "\nRepro cmd:\n";
-              body += `
-                ./scripts/cti --tag ${env_vars.TEST_TAG} --run bench
-              `;
+              if (${{secrets.ACTIONS_LBT_USE_K8S}}) {
+                body += `
+                  ./scripts/cti --k8s --tag ${env_vars.TEST_TAG} --run bench --k8s-fullnodes-per-validator=0 --k8s-num-validators=100
+                `;
+              } else {
+                body += `
+                  ./scripts/cti --tag ${env_vars.TEST_TAG} --run bench
+                `;
+              }
             } catch (err) {
               if (err.code === 'ReferenceError') {
                 console.error("env var $LIBRA_GIT_REV is not set.");

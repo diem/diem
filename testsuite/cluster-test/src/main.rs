@@ -646,9 +646,10 @@ impl ClusterTestRunner {
     pub fn print_report(&self) {
         let json_report =
             serde_json::to_string_pretty(&self.report).expect("Failed to serialize report to json");
-        println!("====json-report-begin===");
-        println!("{}", json_report);
-        println!("====json-report-end===");
+        info!(
+            "\n====json-report-begin===\n{}\n====json-report-end===",
+            json_report
+        );
     }
 
     pub fn perf_run(&mut self) -> String {
