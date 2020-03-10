@@ -87,6 +87,13 @@ module Invariants {
         r
     }
 
+    struct T {
+        x: u64
+    }
+    spec struct T {
+        invariant x > 1;
+    }
+
     struct S {
         y: u64
     }
@@ -94,8 +101,8 @@ module Invariants {
         invariant y > 1;
     }
 
-    fun lifetime_invalid_S_branching(cond: bool): (R, S) {
-      let a = R {x: 3};
+    fun lifetime_invalid_S_branching(cond: bool): (T, S) {
+      let a = T {x: 3};
       let b = S {y: 4};
       let a_ref = &mut a;
       let b_ref = &mut b;
@@ -105,7 +112,7 @@ module Invariants {
           *x_ref = 2;
       } else {
           *x_ref = 0;  // only S's invariant should fail
-      }; // <-- TODO: file a parser bug that the semicolon here is needed
+      };
 
       (a, b)
     }

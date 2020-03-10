@@ -11,7 +11,6 @@ module GlobalVars {
       invariant pack sum_of_T = sum_of_T + i;
       invariant unpack sum_of_T = sum_of_T - i;
       invariant update sum_of_T = sum_of_T - old(i) + i;
-
     }
 
     // Pack tests
@@ -80,4 +79,41 @@ module GlobalVars {
         // sum should change because we have ended mutating t
         ensures sum_of_T == old(sum_of_T);
     }
+
+
+    // Test with pack/unpack in the absence of update.
+
+    struct S {
+      x: u64
+    }
+    spec struct S {
+        global sum_of_S: u64;
+        // If there are no update invariants, unpack and pack is used during mutation.
+        invariant pack sum_of_S = sum_of_S + x;
+        invariant unpack sum_of_S = sum_of_S - x;
+    }
+
+    fun update_valid_S(): S {
+        let s = S {x: 0};
+        let r = &mut s;
+        r.x = 2;
+        s
+    }
+    spec fun update_valid_S {
+        ensures sum_of_S == old(sum_of_S) + 2;
+    }
+
+    fun update_invalid_S(): S {
+        let s = S {x: 0};
+        let r = &mut s;
+        r.x = 2;
+        s
+    }
+    spec fun update_invalid_S {
+        ensures sum_of_S == old(sum_of_S) + 1;
+    }
+
+
+
+
 }

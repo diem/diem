@@ -1,49 +1,59 @@
 Move prover returns: exiting with boogie verification errors
 error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/global_vars.move:30:9 ───
+    ┌── tests/sources/global_vars.move:29:9 ───
     │
- 30 │         ensures sum_of_T == old(sum_of_T) + 1;
+ 29 │         ensures sum_of_T == old(sum_of_T) + 1;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/global_vars.move:26:5: pack_invalid (entry)
-    =     at tests/sources/global_vars.move:27:9: pack_invalid
-    =         result = <redacted>
-    =     at tests/sources/global_vars.move:26:5: pack_invalid (exit)
+    =     at tests/sources/global_vars.move:25:5: pack_invalid (entry)
+    =     at tests/sources/global_vars.move:25:5: pack_invalid (exit)
 
 error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/global_vars.move:50:9 ───
+    ┌── tests/sources/global_vars.move:49:9 ───
     │
- 50 │         ensures sum_of_T == old(sum_of_T);
+ 49 │         ensures sum_of_T == old(sum_of_T);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/global_vars.move:45:5: unpack_invalid (entry)
-    =     at tests/sources/global_vars.move:46:19: unpack_invalid
+    =     at tests/sources/global_vars.move:44:5: unpack_invalid (entry)
+    =     at tests/sources/global_vars.move:45:19: unpack_invalid
     =         t = <redacted>
-    =     at tests/sources/global_vars.move:47:9: unpack_invalid
+    =     at tests/sources/global_vars.move:46:9: unpack_invalid
     =         x = <redacted>
-    =     at tests/sources/global_vars.move:45:5: unpack_invalid (exit)
-    =         result = <redacted>
+    =     at tests/sources/global_vars.move:44:5: unpack_invalid (exit)
 
 error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/global_vars.move:81:9 ───
+    ┌── tests/sources/global_vars.move:80:9 ───
     │
- 81 │         ensures sum_of_T == old(sum_of_T);
+ 80 │         ensures sum_of_T == old(sum_of_T);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/global_vars.move:74:5: update_invalid (entry)
-    =     at tests/sources/global_vars.move:75:13: update_invalid
-    =     at tests/sources/global_vars.move:76:37: update_invalid
+    =     at tests/sources/global_vars.move:73:5: update_invalid (entry)
+    =     at tests/sources/global_vars.move:74:13: update_invalid
+    =     at tests/sources/global_vars.move:75:37: update_invalid
+    =         t = <redacted>
+    =     at tests/sources/global_vars.move:55:5: update_valid_still_mutating (entry)
+    =     at tests/sources/global_vars.move:56:19: update_valid_still_mutating
     =         t = <redacted>,
     =         t = <redacted>
-    =     at tests/sources/global_vars.move:56:5: update_valid_still_mutating (entry)
-    =     at tests/sources/global_vars.move:57:19: update_valid_still_mutating
-    =         t = <redacted>,
-    =         t = <redacted>
-    =     at tests/sources/global_vars.move:56:5: update_valid_still_mutating (exit)
-    =     at tests/sources/global_vars.move:76:9: update_invalid
-    =     at tests/sources/global_vars.move:77:9: update_invalid
-    =     at tests/sources/global_vars.move:74:5: update_invalid (exit)
-    =         result = <redacted>
+    =     at tests/sources/global_vars.move:55:5: update_valid_still_mutating (exit)
+    =     at tests/sources/global_vars.move:75:9: update_invalid
+    =     at tests/sources/global_vars.move:73:5: update_invalid (exit)
+
+error:  A postcondition might not hold on this return path.
+
+     ┌── tests/sources/global_vars.move:113:9 ───
+     │
+ 113 │         ensures sum_of_S == old(sum_of_S) + 1;
+     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/global_vars.move:106:5: update_invalid_S (entry)
+     =     at tests/sources/global_vars.move:107:13: update_invalid_S
+     =     at tests/sources/global_vars.move:108:17: update_invalid_S
+     =         r = <redacted>,
+     =         s = <redacted>
+     =     at tests/sources/global_vars.move:109:15: update_invalid_S
+     =         r = <redacted>
+     =     at tests/sources/global_vars.move:106:5: update_invalid_S (exit)
