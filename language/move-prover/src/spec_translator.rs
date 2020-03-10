@@ -244,10 +244,11 @@ impl<'env> SpecTranslator<'env> {
     /// Emitting invariant functions
     /// ----------------------------
 
-    /// Emits functions amd procedures needed for invariants.
+    /// Emits functions and procedures needed for invariants.
     pub fn translate_invariant_functions(&self, struct_env: &StructEnv<'env>) {
         self.translate_assume_well_formed(struct_env);
-        self.translate_update_invariant(struct_env);
+        self.translate_before_update_invariant(struct_env);
+        self.translate_after_update_invariant(struct_env);
     }
 
     /// Generates a function which assumes the struct to be well-formed. This generates
@@ -282,22 +283,71 @@ impl<'env> SpecTranslator<'env> {
         emitln!(self.writer);
     }
 
-    /// Generates a procedure which asserts the update invariants of the struct.
+    /// Determines whether a before-update invariant is trivial, and can therefore be omitted.
     ///
-    pub fn translate_update_invariant(&self, struct_env: &StructEnv<'env>) {
-        if struct_env.get_update_invariants().is_empty()
-            && struct_env.get_data_invariants().is_empty()
-        {
+    /// We currently support two models for dealing with global spec var updates.
+    /// If the specification has explicitly provided update invariants for spec vars, we use those.
+    /// If not, we use the unpack invariants before the update, and the pack invariants
+    /// after. This function is only true for the later case.
+    pub fn has_before_update_invariant(struct_env: &StructEnv<'_>) -> bool {
+        !struct_env
+            .get_update_invariants()
+            .iter()
+            .any(Self::is_invariant_spec_var_update)
+            && !struct_env.get_unpack_invariants().is_empty()
+    }
+
+    /// Helper to determine whether an invariant is a spec var update.
+    fn is_invariant_spec_var_update(inv: &Invariant) -> bool {
+        inv.target.is_some()
+    }
+
+    /// Generates a procedure which asserts the before-update invariants of the struct.
+    pub fn translate_before_update_invariant(&self, struct_env: &StructEnv<'env>) {
+        if !Self::has_before_update_invariant(struct_env) {
             return;
         }
         emitln!(
             self.writer,
-            "procedure {{:inline 1}} {}_update_inv($before: Value, $after: Value) {{",
+            "procedure {{:inline 1}} {}_before_update_inv($before: Value) {{",
+            boogie_struct_name(struct_env)
+        );
+        self.writer.indent();
+        self.emit_spec_var_updates("$before", "", struct_env.get_unpack_invariants());
+        self.writer.unindent();
+        emitln!(self.writer, "}");
+        emitln!(self.writer);
+    }
+
+    /// Determines whether the after-update invariant is trivial, and can therefore be omitted.
+    pub fn has_after_update_invariant(struct_env: &StructEnv<'_>) -> bool {
+        !struct_env.get_update_invariants().is_empty()
+            || !struct_env.get_pack_invariants().is_empty()
+            || !struct_env.get_data_invariants().is_empty()
+    }
+
+    /// Generates a procedure which asserts the after-update invariants of the struct.
+    pub fn translate_after_update_invariant(&self, struct_env: &StructEnv<'env>) {
+        if !Self::has_after_update_invariant(struct_env) {
+            return;
+        }
+        emitln!(
+            self.writer,
+            "procedure {{:inline 1}} {}_after_update_inv($before: Value, $after: Value) {{",
             boogie_struct_name(struct_env)
         );
         self.writer.indent();
 
-        self.emit_spec_var_updates("$after", "$before", struct_env.get_update_invariants());
+        if struct_env
+            .get_update_invariants()
+            .iter()
+            .any(Self::is_invariant_spec_var_update)
+        {
+            self.emit_spec_var_updates("$after", "$before", struct_env.get_update_invariants());
+        } else {
+            // Use the pack invariants to update spec vars.
+            self.emit_spec_var_updates("$after", "", struct_env.get_pack_invariants());
+        }
         self.emit_invariants_assume_or_assert(
             "$after",
             "$before",

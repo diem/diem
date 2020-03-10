@@ -32,6 +32,7 @@ use bytecode_to_boogie::{
     lifetime_analysis::LifetimeAnalysis, stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use num::Zero;
+use vm::file_format::{CodeOffset, LocalIndex};
 
 pub struct BoogieTranslator<'env> {
     env: &'env GlobalEnv,
@@ -44,6 +45,45 @@ pub struct ModuleTranslator<'env> {
     options: &'env Options,
     module_env: ModuleEnv<'env>,
     stackless_bytecode: Vec<StacklessFunction>,
+}
+
+/// A struct encapsulating information which is threaded through translating the bytecodes of
+/// a single function. This holds information which is relevant across multiple bytecode
+/// instructions, like borrowing information and label offsets.
+struct BytecodeContext<'l> {
+    /// The stackless bytecode.
+    code: &'l StacklessFunction,
+    /// The bytecode offsets which require a label because they are branched to.
+    branching_targets: BTreeSet<CodeOffset>,
+    /// Set of mutual references, represented by local index. Used for debug tracking. Currently,
+    /// after each mutation (either by an instruction or by call to a function with mutable
+    /// parameters), we dump tracking info for all the variables in this set. This is a vast
+    /// over-approximation; however, the execution trace visualizer will remove redundant
+    /// entries, so it is more of a performance concern.
+    mutual_refs: BTreeSet<usize>,
+    /// A map from local indices  to the before borrow index. Every root which is borrowed in this
+    /// function has an entry here. For every BorrowLoc(d) | BorrowGlobal(d), we have an entry
+    /// d -> i and construct variables $before_borrow_i to remember the value before borrowing,
+    /// and $before_borrow_i_ref to remember the reference. We also track aliasing, i.e. if
+    /// we have MoveLoc(d', d) we add d' -> i as well.
+    borrowed_to_before_index: BTreeMap<usize, usize>,
+    /// As determined by lifetime analysis, the set of references which become dead
+    /// at a given bytecode offset.
+    /// TODO: the analysis currently represents references via `LocalIndex == u8`, but this might(?)
+    /// overflow because the stackless bytcode can introduce temporaries larger than u8.
+    offset_to_dead_refs: BTreeMap<CodeOffset, BTreeSet<LocalIndex>>,
+}
+
+impl<'l> BytecodeContext<'l> {
+    fn new(code: &'l StacklessFunction) -> Self {
+        Self {
+            code,
+            branching_targets: BTreeSet::new(),
+            mutual_refs: BTreeSet::new(),
+            borrowed_to_before_index: BTreeMap::new(),
+            offset_to_dead_refs: BTreeMap::new(),
+        }
+    }
 }
 
 impl<'env> BoogieTranslator<'env> {
@@ -305,7 +345,9 @@ impl<'env> ModuleTranslator<'env> {
             );
         }
     }
+}
 
+impl<'env> ModuleTranslator<'env> {
     /// Translates the given function.
     fn translate_function(&self, func_env: &FunctionEnv<'_>) {
         if func_env.is_native() {
@@ -330,26 +372,288 @@ impl<'env> ModuleTranslator<'env> {
         self.generate_verify_function_body(func_env); // function body just calls inlined version
     }
 
+    /// Return a string for a boogie procedure header.
+    /// if inline = true, add the inline attribute and use the plain function name
+    /// for the procedure name. Also inject pre/post conditions if defined.
+    /// Else, generate the function signature without the ":inline" attribute, and
+    /// append _verify to the function name.
+    fn generate_function_sig(&self, func_env: &FunctionEnv<'_>, inline: bool) {
+        let (args, rets) = self.generate_function_args_and_returns(func_env);
+        if inline {
+            emit!(
+                self.writer,
+                "procedure {{:inline 1}} {} ({}) returns ({})",
+                boogie_function_name(func_env),
+                args,
+                rets,
+            )
+        } else {
+            emit!(
+                self.writer,
+                "procedure {}_verify ({}) returns ({})",
+                boogie_function_name(func_env),
+                args,
+                rets
+            )
+        }
+    }
+
+    /// Generate boogie representation of function args and return args.
+    fn generate_function_args_and_returns(&self, func_env: &FunctionEnv<'_>) -> (String, String) {
+        let args = func_env
+            .get_type_parameters()
+            .iter()
+            .map(|TypeParameter(s, _)| format!("{}: TypeValue", s.display(func_env.symbol_pool())))
+            .chain(func_env.get_parameters().iter().map(|Parameter(s, ty)| {
+                format!(
+                    "{}: {}",
+                    s.display(func_env.symbol_pool()),
+                    boogie_local_type(ty)
+                )
+            }))
+            .join(", ");
+        let rets = func_env
+            .get_return_types()
+            .iter()
+            .enumerate()
+            .map(|(i, ref s)| format!("$ret{}: {}", i, boogie_local_type(s)))
+            .join(", ");
+        (args, rets)
+    }
+
+    /// Return string for the function specification.
+    fn generate_function_spec(&self, func_env: &FunctionEnv<'_>) {
+        emitln!(self.writer);
+        SpecTranslator::new(self.writer, &func_env.module_env, true).translate_conditions(func_env);
+    }
+
+    /// Return string for body of verify function, which is just a call to the
+    /// inline version of the function.
+    fn generate_verify_function_body(&self, func_env: &FunctionEnv<'_>) {
+        // Set the location to internal so it won't be counted for execution traces
+        self.writer
+            .set_location(&self.module_env.env.internal_loc());
+
+        let args = func_env
+            .get_type_parameters()
+            .iter()
+            .map(|TypeParameter(s, _)| format!("{}", s.display(func_env.symbol_pool())))
+            .chain(
+                func_env
+                    .get_parameters()
+                    .iter()
+                    .map(|Parameter(s, _)| format!("{}", s.display(func_env.symbol_pool()))),
+            )
+            .join(", ");
+        let rets = (0..func_env.get_return_count())
+            .map(|i| format!("$ret{}", i))
+            .join(", ");
+        let assumptions = "    call $InitVerification();\n";
+        if rets.is_empty() {
+            emit!(
+                self.writer,
+                "\n{{\n{}    call {}({});\n}}\n\n",
+                assumptions,
+                boogie_function_name(func_env),
+                args
+            )
+        } else {
+            emit!(
+                self.writer,
+                "\n{{\n{}    call {} := {}({});\n}}\n\n",
+                assumptions,
+                rets,
+                boogie_function_name(func_env),
+                args
+            )
+        }
+    }
+
+    /// This generates boogie code for everything after the function signature
+    /// The function body is only generated for the "inline" version of the function.
+    fn generate_inline_function_body(&self, func_env: &FunctionEnv<'_>) {
+        let code = &self.stackless_bytecode[func_env.get_def_idx().0 as usize];
+
+        // Construct context for bytecode translation.
+        let mut context = BytecodeContext::new(code);
+
+        // (a) Perform lifetime analysis.
+        let cfg = StacklessControlFlowGraph::new(&code.code);
+        context.offset_to_dead_refs =
+            LifetimeAnalysis::analyze(&cfg, &code.code, &code.local_types);
+
+        // (b) Walk over the bytecode and collect various context information.
+        let mut before_borrow_counter = 0;
+        for bytecode in code.code.iter() {
+            match bytecode {
+                Branch(target) | BrTrue(target, _) | BrFalse(target, _) => {
+                    // Track that target requires a label.
+                    context.branching_targets.insert(*target);
+                }
+                BorrowLoc(dst, ..) | BorrowGlobal(dst, ..) => {
+                    let ty = self.get_local_type(func_env, *dst);
+                    if ty.is_mutual_reference() {
+                        // Track that we create a mutual reference here.
+                        context.mutual_refs.insert(*dst);
+                        if self.has_after_update_invariant(&ty) {
+                            // Create a new borrow index.
+                            context
+                                .borrowed_to_before_index
+                                .insert(*dst, before_borrow_counter);
+                            before_borrow_counter += 1;
+                        }
+                    }
+                }
+                BorrowField(dst, ..) => {
+                    let ty = self.get_local_type(func_env, *dst);
+                    if ty.is_mutual_reference() {
+                        // Track that we create a mutual reference here.
+                        context.mutual_refs.insert(*dst);
+                    }
+                }
+                MoveLoc(dst, src) => {
+                    // Propagate information from src to dst.
+                    let src = &(*src as usize);
+                    if context.mutual_refs.contains(src) {
+                        context.mutual_refs.insert(*dst);
+                    }
+                    if let Some(idx) = context.borrowed_to_before_index.get(src) {
+                        // dst becomes an alias for src
+                        let idx = *idx;
+                        context.borrowed_to_before_index.insert(*dst, idx);
+                    }
+                }
+                StLoc(dst, src) => {
+                    // Propagate information from src to dst.
+                    let dst = &(*dst as usize);
+                    if context.mutual_refs.contains(src) {
+                        context.mutual_refs.insert(*dst);
+                    }
+                    if let Some(idx) = context.borrowed_to_before_index.get(src) {
+                        // dst becomes an alias for src
+                        let idx = *idx;
+                        context.borrowed_to_before_index.insert(*dst, idx);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // Be sure to set back location to the whole function definition as a default, otherwise
+        // we may get unassigned code locations associated with condition locations.
+        self.writer.set_location(&func_env.get_loc());
+
+        emitln!(self.writer, "{");
+        self.writer.indent();
+
+        // Generate local variable declarations. They need to appear first in boogie.
+        emitln!(self.writer, "// declare local variables");
+        let num_args = func_env.get_parameters().len();
+        for i in num_args..code.local_types.len() {
+            let local_name = func_env.get_local_name(i);
+            let local_type = &self.module_env.globalize_signature(&code.local_types[i]);
+            emitln!(
+                self.writer,
+                "var {}: {}; // {}",
+                local_name.display(func_env.symbol_pool()),
+                boogie_local_type(local_type),
+                boogie_type_value(self.module_env.env, local_type)
+            );
+        }
+        emitln!(self.writer, "var $tmp: Value;");
+        emitln!(self.writer, "var $frame: int;");
+        emitln!(self.writer, "var $saved_m: Memory;");
+        for idx in context.borrowed_to_before_index.values().unique().sorted() {
+            // Declare before borrow variables.
+            let name = boogie_var_before_borrow(*idx);
+            emitln!(self.writer, "var {}: Value;", name);
+            emitln!(self.writer, "var {}_ref: Reference;", name);
+        }
+
+        emitln!(self.writer, "\n// initialize function execution");
+        emitln!(self.writer, "assume !$abort_flag;");
+        emitln!(self.writer, "$saved_m := $m;");
+        emitln!(self.writer, "$frame := $local_counter;");
+
+        emitln!(self.writer, "\n// process and type check arguments");
+        for i in 0..num_args {
+            let local_name = func_env.get_local_name(i);
+            let local_str = format!("{}", local_name.display(func_env.symbol_pool()));
+            let local_type = &self.module_env.globalize_signature(&code.local_types[i]);
+            let type_check = boogie_type_check(self.module_env.env, &local_str, local_type);
+            emit!(self.writer, &type_check);
+            if !local_type.is_reference() {
+                emitln!(
+                    self.writer,
+                    &self.update_and_track_local(func_env, func_env.get_loc(), i, &local_str)
+                );
+            } else {
+                emitln!(
+                    self.writer,
+                    &self.track_local(func_env, func_env.get_loc(), i, &local_str)
+                );
+            }
+        }
+
+        emitln!(self.writer, "\n// increase the local counter ");
+        emitln!(
+            self.writer,
+            "$local_counter := $local_counter + {};",
+            code.local_types.len()
+        );
+
+        emitln!(self.writer, "\n// bytecode translation starts here");
+
+        // Generate bytecode
+        for (offset, bytecode) in code.code.iter().enumerate() {
+            self.translate_bytecode(func_env, &mut context, offset as CodeOffset, bytecode);
+        }
+
+        // Generate abort exit.
+        let end_loc = func_env.get_loc().at_end();
+        self.writer.set_location(&end_loc);
+        self.writer.unindent();
+        emitln!(self.writer, "Label_Abort:");
+        self.writer.indent();
+        emitln!(self.writer, "$abort_flag := true;");
+        emitln!(self.writer, "$m := $saved_m;");
+        for (i, ty) in func_env.get_return_types().iter().enumerate() {
+            let ret_str = format!("$ret{}", i);
+            if ty.is_reference() {
+                emitln!(self.writer, "{} := DefaultReference;", &ret_str);
+            } else {
+                emitln!(self.writer, "{} := DefaultValue;", &ret_str);
+            }
+        }
+        self.writer.unindent();
+        emitln!(self.writer, "}");
+    }
+
     /// Translates one bytecode instruction.
-    fn translate_bytecode<F: Fn(usize) -> usize>(
+    fn translate_bytecode(
         &'env self,
         func_env: &FunctionEnv<'_>,
+        ctx: &mut BytecodeContext<'_>,
         offset: u16,
         bytecode: &StacklessBytecode,
-        effective_dest_func: F,
-        mutual_local_borrows: &BTreeSet<usize>,
-        local_to_before_borrow_idx: &BTreeMap<usize, usize>,
-        released_before_borrows: &BTreeSet<usize>,
     ) {
         // Set location of this code in the CodeWriter.
         let loc = func_env.get_bytecode_loc(offset);
         self.writer.set_location(&loc);
-        // emitln!(self.writer, "// {}", loc); // DEBUG
+        emitln!(self.writer, "// {:?}", bytecode); // DEBUG
 
-        // Helper functions to update a local including debug information.
+        // A boolean indicating whether we have evaluated invariants for refs going out of scope.
+        let mut invariants_evaluated = false;
+
+        // Helper function to get an Rc<String> for a local.
+        let str_local = |idx: &usize| func_env.symbol_pool().string(func_env.get_local_name(*idx));
+
+        // Helper functions to update a local including debug tracking.
         let update_and_track_local = |idx: usize, value: &str| {
             self.update_and_track_local(func_env, loc.clone(), idx, value)
         };
+
+        // Helper functions to debug track a local.
         let track_local = |idx: usize, value: &str| {
             if idx < func_env.get_local_count() {
                 self.track_local(func_env, loc.clone(), idx, value)
@@ -357,6 +661,8 @@ impl<'env> ModuleTranslator<'env> {
                 "".to_string()
             }
         };
+
+        // Helper functions to debug track a return value.
         let track_return = |idx: usize| {
             self.track_local(
                 func_env,
@@ -366,75 +672,100 @@ impl<'env> ModuleTranslator<'env> {
             )
         };
 
-        // Helper function to update debug info for potential updates of references.
-        let track_mutual_refs = || {
-            let mut res = vec![];
-            for idx in mutual_local_borrows {
-                res.push(self.track_local(
-                    func_env,
-                    loc.clone(),
-                    *idx,
-                    &format!("$GetLocal($m, $frame + {})", idx),
-                ));
-            }
-            for (idx, Parameter(_, ty)) in func_env.get_parameters().iter().enumerate() {
-                if ty.is_mutual_reference() {
-                    // Add reference parameter because we also want to debug track them when
-                    // references are written.
-                    res.push(self.track_local(
-                        func_env,
-                        loc.clone(),
-                        idx,
-                        &format!(
-                                "{}",
-                                func_env
-                                    .get_local_name(idx)
-                                    .display(self.module_env.symbol_pool())
-                            ),
-                    ));
+        // Helper function to debug track potential updates of references.
+        let track_mutual_refs = |ctx: &mut BytecodeContext<'_>| {
+            for idx in &ctx.mutual_refs {
+                if *idx < func_env.get_local_count() {
+                    let s = self.track_local(func_env, loc.clone(), *idx, str_local(&idx).as_str());
+                    if !s.is_empty() {
+                        emitln!(self.writer, &s);
+                    }
                 }
             }
-            res.join("\n")
+            // Add reference parameter because we also want to debug track them when
+            // references are written.
+            for (idx, Parameter(_, ty)) in func_env.get_parameters().iter().enumerate() {
+                if ty.is_mutual_reference() {
+                    let s = self.track_local(func_env, loc.clone(), idx, str_local(&idx).as_str());
+                    if !s.is_empty() {
+                        emitln!(self.writer, &s);
+                    }
+                }
+            }
         };
 
         // Helper to save a borrowed value before mutation starts.
-        let save_borrowed_value = |dest: &usize| {
-            if let Some(idx) = local_to_before_borrow_idx.get(dest) {
-                // Save the value before mutation happens.
+        let save_borrowed_value = |ctx: &mut BytecodeContext<'_>, dest: &usize| {
+            if let Some(idx) = ctx.borrowed_to_before_index.get(dest) {
+                // Save the value before mutation happens. We also need to save the reference,
+                // because the bytecode may reuse it for some other purpose, so we can construct
+                // the after-value from it when the update invariant is executed.
                 let name = boogie_var_before_borrow(*idx);
-                emitln!(self.writer, "{} := $Dereference($m, $t{});", name, dest);
-                emitln!(self.writer, "{}_ref := $t{};", name, dest);
+                emitln!(
+                    self.writer,
+                    "{} := $Dereference($m, {});",
+                    name,
+                    str_local(dest)
+                );
+                emitln!(self.writer, "{}_ref := {};", name, str_local(dest));
+                // Enforce the before update invariant (if any).
+                self.enforce_before_update_invariant(
+                    &func_env,
+                    &self.get_local_type(func_env, *dest),
+                    *idx,
+                );
             }
         };
 
-        let propagate_abort = &format!(
-            "if ($abort_flag) {{\n  assume $DebugTrackAbort({}, {});\n  goto Label_Abort;\n}}",
-            func_env.module_env.env.file_id_to_idx(loc.file_id()),
-            loc.span().start(),
-        );
+        let propagate_abort = || {
+            format!(
+                "if ($abort_flag) {{\n  assume $DebugTrackAbort({}, {});\n  goto Label_Abort;\n}}",
+                func_env.module_env.env.file_id_to_idx(loc.file_id()),
+                loc.span().start(),
+            )
+        };
+
+        // Insert labels for branching targets
+        if ctx.branching_targets.contains(&offset) {
+            self.writer.unindent();
+            emitln!(self.writer, "Label_{}:", offset);
+            self.writer.indent();
+        }
+
+        // Translate the bytecode instruction.
         match bytecode {
-            Branch(target) => emitln!(self.writer, "goto Label_{};", target),
-            BrTrue(target, idx) => emitln!(
-                self.writer,
-                "$tmp := $GetLocal($m, $frame + {});\nif (b#Boolean($tmp)) {{ goto Label_{}; }}",
-                idx,
-                target,
-            ),
-            BrFalse(target, idx) => emitln!(
-                self.writer,
-                "$tmp := $GetLocal($m, $frame + {});\nif (!b#Boolean($tmp)) {{ goto Label_{}; }}",
-                idx,
-                target,
-            ),
+            Branch(target) => {
+                // In contrast to other instructions, we need to evaluate invariants BEFORE
+                // the branch.
+                self.enforce_invariants_for_dead_refs(func_env, ctx, offset);
+                invariants_evaluated = true;
+                emitln!(self.writer, "goto Label_{};", target)
+            }
+            BrTrue(target, idx) => {
+                self.enforce_invariants_for_dead_refs(func_env, ctx, offset);
+                invariants_evaluated = true;
+                emitln!(
+                    self.writer,
+                    "$tmp := $GetLocal($m, $frame + {});\nif (b#Boolean($tmp)) {{ goto Label_{}; }}",
+                    idx,
+                    target)
+            }
+            BrFalse(target, idx) => {
+                self.enforce_invariants_for_dead_refs(func_env, ctx, offset);
+                invariants_evaluated = true;
+                emitln!(
+                    self.writer,
+                    "$tmp := $GetLocal($m, $frame + {});\nif (!b#Boolean($tmp)) {{ goto Label_{}; }}",
+                    idx,
+                    target)
+            }
             MoveLoc(dest, src) => {
                 if self.get_local_type(func_env, *dest).is_reference() {
                     emitln!(
                         self.writer,
-                        "call $t{} := CopyOrMoveRef({});",
-                        dest,
-                        func_env
-                            .get_local_name(*src as usize)
-                            .display(func_env.symbol_pool())
+                        "call {} := CopyOrMoveRef({});",
+                        str_local(dest),
+                        str_local(&(*src as usize))
                     );
                 } else {
                     emitln!(
@@ -449,11 +780,9 @@ impl<'env> ModuleTranslator<'env> {
                 if self.get_local_type(func_env, *dest).is_reference() {
                     emitln!(
                         self.writer,
-                        "call $t{} := CopyOrMoveRef({});",
-                        dest,
-                        func_env
-                            .get_local_name(*src as usize)
-                            .display(func_env.symbol_pool())
+                        "call {} := CopyOrMoveRef({});",
+                        str_local(dest),
+                        str_local(&(*src as usize))
                     )
                 } else {
                     emitln!(
@@ -466,20 +795,14 @@ impl<'env> ModuleTranslator<'env> {
             }
             StLoc(dest, src) => {
                 if self.get_local_type(func_env, *dest as usize).is_reference() {
-                    let name = func_env.get_local_name(*dest as usize);
+                    let dest = *dest as usize;
                     emitln!(
                         self.writer,
-                        "call {} := CopyOrMoveRef($t{});",
-                        name.display(func_env.symbol_pool()),
-                        src
+                        "call {} := CopyOrMoveRef({});",
+                        str_local(&dest),
+                        str_local(src)
                     );
-                    emitln!(
-                        self.writer,
-                        &track_local(
-                            *dest as usize,
-                            &format!("{}", name.display(func_env.symbol_pool()))
-                        )
-                    );
+                    emitln!(self.writer, &track_local(dest, str_local(&dest).as_str()));
                 } else {
                     emitln!(
                         self.writer,
@@ -492,14 +815,14 @@ impl<'env> ModuleTranslator<'env> {
             BorrowLoc(dest, src) => {
                 emitln!(
                     self.writer,
-                    "call $t{} := BorrowLoc($frame + {});",
-                    dest,
+                    "call {} := BorrowLoc($frame + {});",
+                    str_local(dest),
                     src,
                 );
-                save_borrowed_value(dest);
+                save_borrowed_value(ctx, dest);
             }
             ReadRef(dest, src) => {
-                emitln!(self.writer, "call $tmp := ReadRef($t{});", src);
+                emitln!(self.writer, "call $tmp := ReadRef({});", str_local(src));
                 emit!(
                     self.writer,
                     &boogie_type_check(
@@ -513,15 +836,18 @@ impl<'env> ModuleTranslator<'env> {
             WriteRef(dest, src) => {
                 emitln!(
                     self.writer,
-                    "call WriteRef($t{}, $GetLocal($m, $frame + {}));\n{}",
-                    dest,
+                    "call WriteRef({}, $GetLocal($m, $frame + {}));",
+                    str_local(dest),
                     src,
-                    track_mutual_refs()
                 );
+                track_mutual_refs(ctx);
             }
-            FreezeRef(dest, src) => {
-                emitln!(self.writer, "call $t{} := FreezeRef($t{});", dest, src)
-            }
+            FreezeRef(dest, src) => emitln!(
+                self.writer,
+                "call {} := FreezeRef({});",
+                str_local(dest),
+                str_local(src),
+            ),
             Call(dests, callee_index, type_actuals, args) => {
                 let callee_env = self.module_env.get_called_function(*callee_index);
                 let mut dest_str = String::new();
@@ -541,7 +867,7 @@ impl<'env> ModuleTranslator<'env> {
                         .iter()
                         .map(|arg_idx| {
                             if self.get_local_type(func_env, *arg_idx).is_reference() {
-                                format!("$t{}", arg_idx)
+                                format!("{}", str_local(arg_idx))
                             } else {
                                 format!("$GetLocal($m, $frame + {})", arg_idx)
                             }
@@ -552,7 +878,7 @@ impl<'env> ModuleTranslator<'env> {
                     &dests
                         .iter()
                         .map(|dest_idx| {
-                            let dest = format!("$t{}", dest_idx);
+                            let dest = str_local(dest_idx).to_string();
                             let dest_type = &self.get_local_type(func_env, *dest_idx);
                             dest_type_assumptions.push(boogie_type_check(
                                 self.module_env.env,
@@ -584,7 +910,7 @@ impl<'env> ModuleTranslator<'env> {
                         args_str
                     );
                 }
-                emitln!(self.writer, propagate_abort);
+                emitln!(self.writer, &propagate_abort());
                 for s in &dest_type_assumptions {
                     emitln!(self.writer, s);
                 }
@@ -592,21 +918,18 @@ impl<'env> ModuleTranslator<'env> {
                     emitln!(self.writer, s);
                 }
                 if callee_env.is_mutating() {
-                    let s = track_mutual_refs();
-                    if !s.is_empty() {
-                        emitln!(self.writer, &s);
-                    }
+                    track_mutual_refs(ctx);
                 }
             }
             Pack(dest, struct_def_index, type_actuals, fields) => {
                 let struct_env = func_env.module_env.get_struct_by_def_idx(*struct_def_index);
-                let effective_dest = effective_dest_func(*dest);
+                let effective_dest = self.compute_effective_dest(func_env, ctx.code, offset, *dest);
                 let track_args = if effective_dest < func_env.get_local_count() {
                     format!(
                         "{}, {}, {}",
                         func_env.module_env.env.file_id_to_idx(loc.file_id()),
                         loc.span().start(),
-                        effective_dest_func(*dest),
+                        self.compute_effective_dest(func_env, ctx.code, offset, *dest),
                     )
                 } else {
                     "0, 0, 0".to_string()
@@ -639,9 +962,9 @@ impl<'env> ModuleTranslator<'env> {
                     if !dests_str.is_empty() {
                         dests_str.push_str(", ");
                     }
-                    let dest_str = &format!("$t{}", dest);
+                    let dest_str = str_local(dest);
                     let dest_type = &self.get_local_type(func_env, *dest);
-                    dests_str.push_str(dest_str);
+                    dests_str.push_str(dest_str.as_str());
                     if !dest_type.is_reference() {
                         tmp_assignments.push(update_and_track_local(*dest, &dest_str));
                     } else {
@@ -664,12 +987,11 @@ impl<'env> ModuleTranslator<'env> {
                 let field_env = &struct_env.get_field_by_def_idx(*field_def_index);
                 emitln!(
                     self.writer,
-                    "call $t{} := BorrowField($t{}, {});",
-                    dest,
-                    src,
+                    "call {} := BorrowField({}, {});",
+                    str_local(dest),
+                    str_local(src),
                     boogie_field_name(field_env)
                 );
-                save_borrowed_value(dest);
             }
             Exists(dest, addr, struct_def_index, type_actuals) => {
                 let resource_type = boogie_struct_type_value(
@@ -695,13 +1017,13 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emitln!(
                     self.writer,
-                    "call $t{} := BorrowGlobal($GetLocal($m, $frame + {}), {});",
-                    dest,
+                    "call {} := BorrowGlobal($GetLocal($m, $frame + {}), {});",
+                    str_local(dest),
                     addr,
                     resource_type,
                 );
-                emitln!(self.writer, propagate_abort);
-                save_borrowed_value(dest);
+                emitln!(self.writer, &propagate_abort());
+                save_borrowed_value(ctx, dest);
             }
             MoveToSender(src, struct_def_index, type_actuals) => {
                 let resource_type = boogie_struct_type_value(
@@ -716,7 +1038,7 @@ impl<'env> ModuleTranslator<'env> {
                     resource_type,
                     src,
                 );
-                emitln!(self.writer, propagate_abort);
+                emitln!(self.writer, &propagate_abort());
             }
             MoveFrom(dest, src, struct_def_index, type_actuals) => {
                 let resource_type = boogie_struct_type_value(
@@ -736,35 +1058,19 @@ impl<'env> ModuleTranslator<'env> {
                     self.writer,
                     &boogie_type_check(
                         self.module_env.env,
-                        &format!("$t{}", dest),
+                        str_local(dest).as_str(),
                         &self.get_local_type(func_env, *dest)
                     )
                 );
-                emitln!(self.writer, propagate_abort);
+                emitln!(self.writer, &propagate_abort());
             }
             Ret(rets) => {
-                // Enforce invariants on mutable references not returned.
-                let mut before_borrows_to_check = BTreeMap::new();
-                for (local_idx, before_borrow_idx) in local_to_before_borrow_idx {
-                    if !before_borrows_to_check.contains_key(before_borrow_idx) {
-                        let ty = self.get_local_type(func_env, *local_idx);
-                        before_borrows_to_check.insert(before_borrow_idx, ty);
-                    }
-                }
-                for ret in rets {
-                    if let Some(before_borrow_idx) = local_to_before_borrow_idx.get(ret) {
-                        before_borrows_to_check.remove(&before_borrow_idx);
-                    }
-                }
-
-                for (before_borrow_idx, ty) in before_borrows_to_check {
-                    if !released_before_borrows.contains(before_borrow_idx) {
-                        self.enforce_borrowed_invariant(func_env, &ty, *before_borrow_idx);
-                    }
-                }
+                // In contrast to other instructions, we need to evaluate invariants BEFORE
+                // the return.
+                self.enforce_invariants_for_dead_refs(func_env, ctx, offset);
                 for (i, r) in rets.iter().enumerate() {
                     if self.get_local_type(func_env, *r).is_reference() {
-                        emitln!(self.writer, "$ret{} := $t{};", i, r);
+                        emitln!(self.writer, "$ret{} := {};", i, str_local(r));
                     } else {
                         emitln!(self.writer, "$ret{} := $GetLocal($m, $frame + {});", i, r);
                     }
@@ -798,7 +1104,7 @@ impl<'env> ModuleTranslator<'env> {
                     "call $tmp := CastU8($GetLocal($m, $frame + {}));",
                     src
                 );
-                emitln!(self.writer, propagate_abort);
+                emitln!(self.writer, &propagate_abort());
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
             CastU64(dest, src) => {
@@ -807,7 +1113,7 @@ impl<'env> ModuleTranslator<'env> {
                     "call $tmp := CastU64($GetLocal($m, $frame + {}));",
                     src
                 );
-                emitln!(self.writer, propagate_abort);
+                emitln!(self.writer, &propagate_abort());
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
             CastU128(dest, src) => {
@@ -816,7 +1122,7 @@ impl<'env> ModuleTranslator<'env> {
                     "call $tmp := CastU128($GetLocal($m, $frame + {}));",
                     src
                 );
-                emitln!(self.writer, propagate_abort);
+                emitln!(self.writer, &propagate_abort());
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
             LdAddr(idx, addr_idx) => {
@@ -846,7 +1152,7 @@ impl<'env> ModuleTranslator<'env> {
                     op1,
                     op2
                 );
-                emitln!(self.writer, propagate_abort);
+                emitln!(self.writer, &propagate_abort());
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
             Sub(dest, op1, op2) => {
@@ -856,7 +1162,7 @@ impl<'env> ModuleTranslator<'env> {
                     op1,
                     op2
                 );
-                emitln!(self.writer, propagate_abort);
+                emitln!(self.writer, &propagate_abort());
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
             Mul(dest, op1, op2) => {
@@ -873,7 +1179,7 @@ impl<'env> ModuleTranslator<'env> {
                     op1,
                     op2
                 );
-                emitln!(self.writer, propagate_abort);
+                emitln!(self.writer, &propagate_abort());
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
             Div(dest, op1, op2) => {
@@ -883,7 +1189,7 @@ impl<'env> ModuleTranslator<'env> {
                     op1,
                     op2
                 );
-                emitln!(self.writer, propagate_abort);
+                emitln!(self.writer, &propagate_abort());
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
             Mod(dest, op1, op2) => {
@@ -893,7 +1199,7 @@ impl<'env> ModuleTranslator<'env> {
                     op1,
                     op2
                 );
-                emitln!(self.writer, propagate_abort);
+                emitln!(self.writer, &propagate_abort());
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
             Lt(dest, op1, op2) => {
@@ -1010,308 +1316,79 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, "call $tmp := GetTxnGasUnitPrice();");
                 emitln!(self.writer, &update_and_track_local(*idx, "$tmp"));
             }
+            Pop(..) => {}
             _ => emitln!(self.writer, "// unimplemented instruction: {:?}", bytecode),
         }
+
+        // Enforce invariants for references going out of scope after this instruction,
+        // EXCEPT if it is a control flow statement (return, branch, etc.) For that one
+        // we must enforce them before we actually jump, but after we did other
+        // things.
+        if !invariants_evaluated {
+            self.enforce_invariants_for_dead_refs(func_env, ctx, offset);
+        }
+
         emitln!(self.writer);
     }
 
-    /// Return a string for a boogie procedure header.
-    /// if inline = true, add the inline attribute and use the plain function name
-    /// for the procedure name. Also inject pre/post conditions if defined.
-    /// Else, generate the function signature without the ":inline" attribute, and
-    /// append _verify to the function name.
-    fn generate_function_sig(&self, func_env: &FunctionEnv<'_>, inline: bool) {
-        let (args, rets) = self.generate_function_args_and_returns(func_env);
-        if inline {
-            emit!(
-                self.writer,
-                "procedure {{:inline 1}} {} ({}) returns ({})",
-                boogie_function_name(func_env),
-                args,
-                rets,
-            )
-        } else {
-            emit!(
-                self.writer,
-                "procedure {}_verify ({}) returns ({})",
-                boogie_function_name(func_env),
-                args,
-                rets
-            )
-        }
-    }
-
-    /// Generate boogie representation of function args and return args.
-    fn generate_function_args_and_returns(&self, func_env: &FunctionEnv<'_>) -> (String, String) {
-        let args = func_env
-            .get_type_parameters()
-            .iter()
-            .map(|TypeParameter(s, _)| format!("{}: TypeValue", s.display(func_env.symbol_pool())))
-            .chain(func_env.get_parameters().iter().map(|Parameter(s, ty)| {
-                format!(
-                    "{}: {}",
-                    s.display(func_env.symbol_pool()),
-                    boogie_local_type(ty)
-                )
-            }))
-            .join(", ");
-        let rets = func_env
-            .get_return_types()
-            .iter()
-            .enumerate()
-            .map(|(i, ref s)| format!("$ret{}: {}", i, boogie_local_type(s)))
-            .join(", ");
-        (args, rets)
-    }
-
-    /// Return string for the function specification.
-    fn generate_function_spec(&self, func_env: &FunctionEnv<'_>) {
-        emitln!(self.writer);
-        SpecTranslator::new(self.writer, &func_env.module_env, true).translate_conditions(func_env);
-    }
-
-    /// Return string for body of verify function, which is just a call to the
-    /// inline version of the function.
-    fn generate_verify_function_body(&self, func_env: &FunctionEnv<'_>) {
-        // Set the location to internal so it won't be counted for execution traces
-        self.writer
-            .set_location(&self.module_env.env.internal_loc());
-
-        let args = func_env
-            .get_type_parameters()
-            .iter()
-            .map(|TypeParameter(s, _)| format!("{}", s.display(func_env.symbol_pool())))
-            .chain(
-                func_env
-                    .get_parameters()
-                    .iter()
-                    .map(|Parameter(s, _)| format!("{}", s.display(func_env.symbol_pool()))),
-            )
-            .join(", ");
-        let rets = (0..func_env.get_return_count())
-            .map(|i| format!("$ret{}", i))
-            .join(", ");
-        let assumptions = "    call $InitVerification();\n";
-        if rets.is_empty() {
-            emit!(
-                self.writer,
-                "\n{{\n{}    call {}({});\n}}\n\n",
-                assumptions,
-                boogie_function_name(func_env),
-                args
-            )
-        } else {
-            emit!(
-                self.writer,
-                "\n{{\n{}    call {} := {}({});\n}}\n\n",
-                assumptions,
-                rets,
-                boogie_function_name(func_env),
-                args
-            )
-        }
-    }
-
-    /// This generates boogie code for everything after the function signature
-    /// The function body is only generated for the "inline" version of the function.
-    fn generate_inline_function_body(&self, func_env: &FunctionEnv<'_>) {
-        let code = &self.stackless_bytecode[func_env.get_def_idx().0 as usize];
-
-        // Identify all the branching targets so we can insert labels in front of them. Also
-        // calculate mutual borrows.
-        let mut branching_targets = BTreeSet::new();
-        let mut mutual_local_borrows = BTreeSet::new();
-
-        // Map from local indices to indices of before_borrow variables.
-        let mut local_to_before_borrow_idx = BTreeMap::new();
-        let mut released_before_borrows = BTreeSet::new();
-        let mut num_mut_refs = 0;
-        let cfg = StacklessControlFlowGraph::new(&code.code);
-
-        // Set of dead refs at each code offset.
-        let offset_to_dead_refs = LifetimeAnalysis::analyze(&cfg, &code.code, &code.local_types);
-
-        for bytecode in code.code.iter() {
-            match bytecode {
-                Branch(target) | BrTrue(target, _) | BrFalse(target, _) => {
-                    branching_targets.insert(*target as usize);
-                }
-                BorrowLoc(dst, src) => {
-                    let ty = self.get_local_type(func_env, *dst);
-                    if ty.is_mutual_reference() {
-                        mutual_local_borrows.insert(*src as usize);
-                        if self.has_update_invariant_on_release(&ty) {
-                            local_to_before_borrow_idx.insert(*dst, num_mut_refs);
-                            num_mut_refs += 1;
-                        }
-                    }
-                }
-                BorrowGlobal(dst, ..) | BorrowField(dst, ..) => {
-                    let ty = self.get_local_type(func_env, *dst);
-                    if ty.is_mutual_reference() && self.has_update_invariant_on_release(&ty) {
-                        local_to_before_borrow_idx.insert(*dst, num_mut_refs);
-                        num_mut_refs += 1;
-                    }
-                }
-                MoveLoc(dst, src) => {
-                    // If src has update invariants to check for then insert the dst to
-                    // the map and point to the same before_borrow index so that we can
-                    // later use dst to find the before_borrow index
-                    let src_idx = *src as usize;
-                    if local_to_before_borrow_idx.contains_key(&src_idx) {
-                        let idx = local_to_before_borrow_idx[&src_idx];
-                        local_to_before_borrow_idx.insert(*dst, idx);
-                    }
-                }
-                StLoc(dst, src) => {
-                    if local_to_before_borrow_idx.contains_key(src) {
-                        let idx = local_to_before_borrow_idx[src];
-                        local_to_before_borrow_idx.insert(*dst as usize, idx);
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        // Be sure to set back location to the whole function definition as a default, otherwise
-        // we may get unassigned code locations associated with condition locations.
-        self.writer.set_location(&func_env.get_loc());
-
-        emitln!(self.writer, "{");
-        self.writer.indent();
-
-        // Generate local variable declarations. They need to appear first in boogie.
-        emitln!(self.writer, "// declare local variables");
-        let num_args = func_env.get_parameters().len();
-        for i in num_args..code.local_types.len() {
-            let local_name = func_env.get_local_name(i);
-            let local_type = &self.module_env.globalize_signature(&code.local_types[i]);
-            emitln!(
-                self.writer,
-                "var {}: {}; // {}",
-                local_name.display(func_env.symbol_pool()),
-                boogie_local_type(local_type),
-                boogie_type_value(self.module_env.env, local_type)
-            );
-        }
-        emitln!(self.writer, "var $tmp: Value;");
-        emitln!(self.writer, "var $frame: int;");
-        emitln!(self.writer, "var $saved_m: Memory;");
-        for idx in 0..num_mut_refs {
-            let name = boogie_var_before_borrow(idx);
-            emitln!(self.writer, "var {}: Value;", name);
-            emitln!(self.writer, "var {}_ref: Reference;", name);
-        }
-
-        emitln!(self.writer, "\n// initialize function execution");
-        emitln!(self.writer, "assume !$abort_flag;");
-        emitln!(self.writer, "$saved_m := $m;");
-        emitln!(self.writer, "$frame := $local_counter;");
-
-        emitln!(self.writer, "\n// process and type check arguments");
-        for i in 0..num_args {
-            let local_name = func_env.get_local_name(i);
-            let local_str = format!("{}", local_name.display(func_env.symbol_pool()));
-            let local_type = &self.module_env.globalize_signature(&code.local_types[i]);
-            let type_check = boogie_type_check(self.module_env.env, &local_str, local_type);
-            emit!(self.writer, &type_check);
-            if !local_type.is_reference() {
+    // Enforce invariants on references going out of scope
+    fn enforce_invariants_for_dead_refs(
+        &self,
+        func_env: &FunctionEnv,
+        context: &mut BytecodeContext,
+        offset: CodeOffset,
+    ) {
+        if let Some(dead_refs) = context.offset_to_dead_refs.get(&(offset as u16)) {
+            if !dead_refs.is_empty() {
                 emitln!(
                     self.writer,
-                    &self.update_and_track_local(func_env, func_env.get_loc(), i, &local_str)
+                    "// dead refs {:?}, borrowed_to_before_index {:?}",
+                    dead_refs,
+                    context.borrowed_to_before_index
                 );
-            } else {
-                emitln!(
-                    self.writer,
-                    &self.track_local(func_env, func_env.get_loc(), i, &local_str)
-                );
+            }
+            for ref_idx in dead_refs {
+                let ref_idx = *ref_idx as usize;
+                if let Some(idx) = context.borrowed_to_before_index.get(&ref_idx) {
+                    let ty = self.get_local_type(func_env, ref_idx);
+                    self.enforce_after_update_invariant(func_env, &ty, *idx);
+                }
             }
         }
+    }
 
-        emitln!(self.writer, "\n// increase the local counter ");
-        emitln!(
-            self.writer,
-            "$local_counter := $local_counter + {};",
-            code.local_types.len()
-        );
-
-        emitln!(self.writer, "\n// bytecode translation starts here");
-
-        // Generate bytecode
-        for (offset, bytecode) in code.code.iter().enumerate() {
-            // insert labels for branching targets
-            if branching_targets.contains(&offset) {
-                self.writer.unindent();
-                emitln!(self.writer, "Label_{}:", offset);
-                self.writer.indent();
-            }
-            // Compute effective destination to enhance debug experience. This looks ahead
-            // at the next instructions to detect a simple aliasing via copy or move and use that
-            // destination as it might be a user variable whereas this instruction has a temporary
-            // destination introduced by stackless bytecode transformation.
-            // TODO: the stackless bytecode should optimize away unnecessary copy/moves, so we
-            // don't need this. The below transformation is only correct for stackless code
-            // of certain shape
-            let effective_dest_func = |dest: usize| -> usize {
-                if dest >= func_env.get_local_count() && offset + 1 < code.code.len() {
-                    if let Pack(temp_dest, ..) = &code.code[offset] {
-                        match &code.code[offset + 1] {
-                            MoveLoc(effective_dest, src) | CopyLoc(effective_dest, src) => {
-                                if *src as usize == *temp_dest {
-                                    return *effective_dest;
-                                }
-                            }
-                            StLoc(effective_dest, src) => {
-                                if *src == *temp_dest {
-                                    return *effective_dest as usize;
-                                }
-                            }
-                            _ => {}
+    // Compute effective destination to enhance debug experience. This looks ahead
+    // at the next instructions to detect a simple aliasing via copy or move and use that
+    // destination as it might be a user variable whereas this instruction has a temporary
+    // destination introduced by stackless bytecode transformation.
+    // TODO: the stackless bytecode should optimize away unnecessary copy/moves, so we
+    // don't need this. The below transformation is only correct for stackless code
+    // of certain shape
+    fn compute_effective_dest(
+        &self,
+        func_env: &FunctionEnv,
+        code: &StacklessFunction,
+        offset: CodeOffset,
+        dest: usize,
+    ) -> usize {
+        if dest >= func_env.get_local_count() && offset as usize + 1 < code.code.len() {
+            if let Pack(temp_dest, ..) = &code.code[offset as usize] {
+                match &code.code[offset as usize + 1] {
+                    MoveLoc(effective_dest, src) | CopyLoc(effective_dest, src) => {
+                        if *src as usize == *temp_dest {
+                            return *effective_dest;
                         }
                     }
-                }
-                dest
-            };
-            self.translate_bytecode(
-                func_env,
-                offset as u16,
-                bytecode,
-                effective_dest_func,
-                &mutual_local_borrows,
-                &local_to_before_borrow_idx,
-                &released_before_borrows,
-            );
-
-            // Enforce invariants on references going out of scope.
-            if let Some(dead_refs) = offset_to_dead_refs.get(&(offset as u16)) {
-                for ref_idx in dead_refs {
-                    if let Some(idx) = local_to_before_borrow_idx.get(&(*ref_idx as usize)) {
-                        let ty = self.get_local_type(func_env, *ref_idx as usize);
-                        self.enforce_borrowed_invariant(func_env, &ty, *idx);
-                        released_before_borrows.insert(*idx);
+                    StLoc(effective_dest, src) => {
+                        if *src == *temp_dest {
+                            return *effective_dest as usize;
+                        }
                     }
+                    _ => {}
                 }
             }
         }
-
-        // Generate abort exit.
-        let end_loc = func_env.get_loc().at_end();
-        self.writer.set_location(&end_loc);
-        self.writer.unindent();
-        emitln!(self.writer, "Label_Abort:");
-        self.writer.indent();
-        emitln!(self.writer, "$abort_flag := true;");
-        emitln!(self.writer, "$m := $saved_m;");
-        for (i, ty) in func_env.get_return_types().iter().enumerate() {
-            let ret_str = format!("$ret{}", i);
-            if ty.is_reference() {
-                emitln!(self.writer, "{} := DefaultReference;", &ret_str);
-            } else {
-                emitln!(self.writer, "{} := DefaultValue;", &ret_str);
-            }
-        }
-        self.writer.unindent();
-        emitln!(self.writer, "}");
+        dest
     }
 
     /// Looks up the type of a local in the stackless bytecode representation.
@@ -1321,42 +1398,55 @@ impl<'env> ModuleTranslator<'env> {
         )
     }
 
-    /// Determines whether this type has update invariants that shall be
-    /// enforced on mutual reference release.
-    fn has_update_invariant_on_release(&'env self, ty: &Type) -> bool {
-        if let Type::Reference(true, bt) = &ty {
-            if let Type::Struct(module_idx, struct_idx, _) = bt.as_ref() {
-                let struct_env = self
-                    .module_env
-                    .env
-                    .get_module(*module_idx)
-                    .into_struct(*struct_idx);
-                if !struct_env.get_data_invariants().is_empty()
-                    || !struct_env.get_update_invariants().is_empty()
-                {
-                    return true;
-                }
-            }
-        }
-        false
+    /// Determines whether this type has after-update invariants.
+    fn has_after_update_invariant(&'env self, ty: &Type) -> bool {
+        self.get_referred_struct(ty)
+            .map(|struct_env| SpecTranslator::has_after_update_invariant(&struct_env))
+            .unwrap_or(false)
     }
 
-    // Enforce the invariant of a borrowed value after mutation ended.
-    fn enforce_borrowed_invariant(&self, func_env: &FunctionEnv<'_>, ty: &Type, idx: usize) {
-        let var_name = boogie_var_before_borrow(idx);
-        if let Type::Reference(true, bt) = ty {
+    /// If ty is a mutable reference to a struct, return its environment.
+    fn get_referred_struct(&self, ty: &Type) -> Option<StructEnv<'_>> {
+        if let Type::Reference(true, bt) = &ty {
             if let Type::Struct(module_idx, struct_idx, _) = bt.as_ref() {
-                let struct_env = func_env
-                    .module_env
-                    .env
-                    .get_module(*module_idx)
-                    .into_struct(*struct_idx);
+                return Some(
+                    self.module_env
+                        .env
+                        .get_module(*module_idx)
+                        .into_struct(*struct_idx),
+                );
+            }
+        }
+        None
+    }
+
+    // Enforce the invariant of an updated value before mutation starts. Does nothing if there
+    // is no before-update invariant.
+    fn enforce_before_update_invariant(&self, _func_env: &FunctionEnv<'_>, ty: &Type, idx: usize) {
+        if let Some(struct_env) = self.get_referred_struct(ty) {
+            if SpecTranslator::has_before_update_invariant(&struct_env) {
                 emitln!(
                     self.writer,
-                    "call {}_update_inv({}, $Dereference($m, {}_ref));",
+                    "call {}_before_update_inv({});",
                     boogie_struct_name(&struct_env),
-                    var_name,
-                    var_name
+                    boogie_var_before_borrow(idx)
+                );
+            }
+        }
+    }
+
+    // Enforce the invariant of an updated value after mutation ended. Does nothing if there is
+    // no after-update invariant.
+    fn enforce_after_update_invariant(&self, _func_env: &FunctionEnv<'_>, ty: &Type, idx: usize) {
+        if let Some(struct_env) = self.get_referred_struct(ty) {
+            if SpecTranslator::has_after_update_invariant(&struct_env) {
+                let name = &boogie_var_before_borrow(idx);
+                emitln!(
+                    self.writer,
+                    "call {}_after_update_inv({}, $Dereference($m, {}_ref));",
+                    boogie_struct_name(&struct_env),
+                    name,
+                    name
                 );
             }
         }
@@ -1385,7 +1475,7 @@ impl<'env> ModuleTranslator<'env> {
 
     /// Generates an update of the model debug variable at given location.
     fn track_local(&self, func_env: &FunctionEnv<'_>, loc: Loc, idx: usize, value: &str) -> String {
-        if self.options.omit_model_debug {
+        if idx >= func_env.get_local_count() {
             return "".to_string();
         }
         let ty = if idx < func_env.get_local_count() {
@@ -1393,28 +1483,18 @@ impl<'env> ModuleTranslator<'env> {
         } else {
             func_env.get_return_types()[idx - func_env.get_local_count()].clone()
         };
-        if let Type::Reference(_, bt) = ty {
-            let deref = format!("$Dereference($m, {})", value);
-            let type_check = boogie_type_check(self.module_env.env, &deref, &*bt);
-            // Below we introduce a dummy `if` for $DebugTrackAbort to ensure boogie creates
-            // a execution trace entry for this statement.
-            format!(
-                "{}if (true) {{ assume $DebugTrackLocal({}, {}, {}, {}); }}",
-                type_check,
-                func_env.module_env.env.file_id_to_idx(loc.file_id()),
-                loc.span().start(),
-                idx,
-                deref
-            )
+        let value = if ty.is_reference() {
+            format!("$Dereference($m, {})", value)
         } else {
-            format!(
-                "if (true) {{ assume $DebugTrackLocal({}, {}, {}, {}); }}",
-                func_env.module_env.env.file_id_to_idx(loc.file_id()),
-                loc.span().start(),
-                idx,
-                value
-            )
-        }
+            value.to_string()
+        };
+        format!(
+            "if (true) {{ assume $DebugTrackLocal({}, {}, {}, {}); }}",
+            func_env.module_env.env.file_id_to_idx(loc.file_id()),
+            loc.span().start(),
+            idx,
+            value
+        )
     }
 }
 
