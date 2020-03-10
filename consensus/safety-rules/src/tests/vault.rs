@@ -20,10 +20,10 @@ fn safety_rules<T: Payload>() -> (Box<dyn TSafetyRules<T>>, ValidatorSigner) {
     let host = "http://localhost:8200".to_string();
     let token = "root_token".to_string();
 
-    let storage = VaultStorage::new(host, token);
-    storage.reset().unwrap();
-    let storage =
-        PersistentSafetyStorage::initialize(Box::new(storage), signer.private_key().clone());
+    let storage = PersistentSafetyStorage::initialize(
+        VaultStorage::new_boxed_vault_storage(host, token),
+        signer.private_key().clone(),
+    );
     let safety_rules_manager = SafetyRulesManager::new_local(signer.author(), storage);
     let safety_rules = safety_rules_manager.client();
     (safety_rules, signer)

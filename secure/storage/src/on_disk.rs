@@ -1,7 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, policy::Policy, storage::Storage, value::Value};
+use crate::{
+    error::Error, kv_storage::KVStorage, policy::Policy, value::Value, CryptoKVStorage, Storage,
+};
 use libra_temppath::TempPath;
 use std::{
     collections::HashMap,
@@ -55,9 +57,14 @@ impl OnDiskStorage {
         fs::rename(&self.temp_path, &self.file_path)?;
         Ok(())
     }
+
+    /// Public convenience function to return a new OnDiskStorage based Storage.
+    pub fn new_boxed_on_disk_storage(path_buf: PathBuf) -> Box<dyn Storage> {
+        Box::new(OnDiskStorage::new(path_buf))
+    }
 }
 
-impl Storage for OnDiskStorage {
+impl KVStorage for OnDiskStorage {
     fn available(&self) -> bool {
         true
     }
@@ -91,3 +98,5 @@ impl Storage for OnDiskStorage {
         self.write(&HashMap::new())
     }
 }
+
+impl CryptoKVStorage for OnDiskStorage {}

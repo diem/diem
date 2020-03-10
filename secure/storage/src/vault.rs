@@ -1,7 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Capability, Error, Identity, Policy, Storage, Value};
+use crate::{
+    kv_storage::KVStorage, Capability, CryptoKVStorage, Error, Identity, Policy, Storage, Value,
+};
 use libra_vault_client::{self as vault, Client};
 
 /// VaultStorage utilizes Vault for maintaining encrypted, authenticated data for Libra. This
@@ -67,9 +69,14 @@ impl VaultStorage {
         self.client.set_policy(policy_name, &vault_policy)?;
         Ok(())
     }
+
+    /// Public convenience function to return a new Vault based Storage.
+    pub fn new_boxed_vault_storage(host: String, token: String) -> Box<dyn Storage> {
+        Box::new(VaultStorage::new(host, token))
+    }
 }
 
-impl Storage for VaultStorage {
+impl KVStorage for VaultStorage {
     fn available(&self) -> bool {
         self.client.unsealed().unwrap_or(false)
     }
@@ -111,3 +118,5 @@ impl Storage for VaultStorage {
         self.reset()
     }
 }
+
+impl CryptoKVStorage for VaultStorage {}
