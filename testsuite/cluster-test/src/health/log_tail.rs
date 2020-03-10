@@ -4,11 +4,12 @@
 #![forbid(unsafe_code)]
 
 use crate::{health::ValidatorEvent, util::unix_timestamp_now};
+use debug_interface::proto::Event as DebugInterfaceEvent;
 use libra_logger::*;
 use std::{
     sync::{
-        atomic::{AtomicI64, Ordering},
-        mpsc, Arc,
+        atomic::{AtomicBool, AtomicI64, Ordering},
+        mpsc, Arc, Mutex,
     },
     thread,
     time::{Duration, Instant},
@@ -17,6 +18,11 @@ use std::{
 pub struct LogTail {
     pub event_receiver: mpsc::Receiver<ValidatorEvent>,
     pub pending_messages: Arc<AtomicI64>,
+}
+
+pub struct TraceTail {
+    pub trace_receiver: Mutex<mpsc::Receiver<(String, DebugInterfaceEvent)>>,
+    pub trace_enabled: Arc<AtomicBool>,
 }
 
 impl LogTail {
@@ -54,6 +60,19 @@ impl LogTail {
         let mut events = vec![];
         while let Ok(event) = self.event_receiver.try_recv() {
             self.pending_messages.fetch_sub(1, Ordering::Relaxed);
+            events.push(event);
+        }
+        events
+    }
+}
+
+impl TraceTail {
+    pub async fn capture_trace(&self, duration: Duration) -> Vec<(String, DebugInterfaceEvent)> {
+        self.trace_enabled.store(true, Ordering::Relaxed);
+        tokio::time::delay_for(duration).await;
+        self.trace_enabled.store(false, Ordering::Relaxed);
+        let mut events = vec![];
+        while let Ok(event) = self.trace_receiver.lock().unwrap().try_recv() {
             events.push(event);
         }
         events

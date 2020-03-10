@@ -8,12 +8,13 @@ use crate::views::{
 };
 use anyhow::{ensure, format_err, Result};
 use core::future::Future;
+use debug_interface::prelude::*;
 use futures::{channel::oneshot, SinkExt};
 use hex;
 use libra_mempool::MempoolClientSender;
 use libra_types::{
     account_address::AccountAddress, account_state::AccountState, event::EventKey,
-    mempool_status::MempoolStatusCode,
+    mempool_status::MempoolStatusCode, transaction::SignedTransaction,
 };
 use libradb::LibraDBTrait;
 use serde_json::Value;
@@ -39,7 +40,8 @@ pub(crate) type RpcRegistry = HashMap<String, RpcHandler>;
 /// Submits transaction to full node
 async fn submit(mut service: JsonRpcService, params: Vec<Value>) -> Result<()> {
     let txn_payload: String = serde_json::from_value(params[0].clone())?;
-    let transaction = lcs::from_bytes(&hex::decode(txn_payload)?)?;
+    let transaction: SignedTransaction = lcs::from_bytes(&hex::decode(txn_payload)?)?;
+    trace_code_block!("json-rpc::submit", {"txn", transaction.sender(), transaction.sequence_number()});
 
     let (req_sender, callback) = oneshot::channel();
     service
