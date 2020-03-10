@@ -23,7 +23,7 @@ use cluster_test::{
     effects::{Action, Effect, Reboot, RemoveNetworkEffects, StopContainer},
     experiments::{get_experiment, Context, Experiment},
     github::GitHub,
-    health::{DebugPortLogThread, HealthCheckRunner, LogTail, PrintFailures},
+    health::{DebugPortLogThread, HealthCheckRunner, LogTail, PrintFailures, TraceTail},
     instance::Instance,
     prometheus::Prometheus,
     report::SuiteReport,
@@ -281,6 +281,7 @@ struct ClusterUtil {
 
 struct ClusterTestRunner {
     logs: LogTail,
+    trace_tail: TraceTail,
     cluster: Cluster,
     health_check_runner: HealthCheckRunner,
     deployment_manager: DeploymentManager,
@@ -492,7 +493,7 @@ impl ClusterTestRunner {
         let aws = util.aws;
         let cluster_swarm = util.cluster_swarm;
         let log_tail_started = Instant::now();
-        let logs = DebugPortLogThread::spawn_new(&cluster);
+        let (logs, trace_tail) = DebugPortLogThread::spawn_new(&cluster);
         let log_tail_startup_time = Instant::now() - log_tail_started;
         info!(
             "Log tail thread started in {} ms",
@@ -537,6 +538,7 @@ impl ClusterTestRunner {
             };
         Self {
             logs,
+            trace_tail,
             cluster,
             health_check_runner,
             deployment_manager,
@@ -698,6 +700,7 @@ impl ClusterTestRunner {
         let experiment_deadline = Instant::now() + deadline;
         let context = Context::new(
             &mut self.tx_emitter,
+            &mut self.trace_tail,
             &self.prometheus,
             &self.cluster,
             &mut self.report,

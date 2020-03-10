@@ -6,7 +6,7 @@
 mod cpu_flamegraph;
 mod multi_region_network_simulation;
 mod packet_loss_random_validators;
-mod performance_benchmark_nodes_down;
+mod performance_benchmark;
 mod performance_benchmark_three_region_simulation;
 mod reboot_random_validator;
 mod recovery_time;
@@ -17,9 +17,7 @@ pub use multi_region_network_simulation::{MultiRegionSimulation, MultiRegionSimu
 pub use packet_loss_random_validators::{
     PacketLossRandomValidators, PacketLossRandomValidatorsParams,
 };
-pub use performance_benchmark_nodes_down::{
-    PerformanceBenchmarkNodesDown, PerformanceBenchmarkNodesDownParams,
-};
+pub use performance_benchmark::{PerformanceBenchmark, PerformanceBenchmarkParams};
 pub use performance_benchmark_three_region_simulation::{
     PerformanceBenchmarkThreeRegionSimulation, PerformanceBenchmarkThreeRegionSimulationParams,
 };
@@ -33,6 +31,7 @@ use crate::{
     tx_emitter::{EmitJobRequest, TxEmitter},
 };
 
+use crate::health::TraceTail;
 use async_trait::async_trait;
 pub use cpu_flamegraph::{CpuFlamegraph, CpuFlamegraphParams};
 use std::collections::HashMap;
@@ -53,17 +52,19 @@ pub trait ExperimentParam {
 }
 
 pub struct Context<'a> {
-    tx_emitter: &'a mut TxEmitter,
-    prometheus: &'a Prometheus,
-    cluster: &'a Cluster,
-    report: &'a mut SuiteReport,
-    global_emit_job_request: &'a mut Option<EmitJobRequest>,
-    emit_to_validator: bool,
+    pub tx_emitter: &'a mut TxEmitter,
+    pub trace_tail: &'a mut TraceTail,
+    pub prometheus: &'a Prometheus,
+    pub cluster: &'a Cluster,
+    pub report: &'a mut SuiteReport,
+    pub global_emit_job_request: &'a mut Option<EmitJobRequest>,
+    pub emit_to_validator: bool,
 }
 
 impl<'a> Context<'a> {
     pub fn new(
         tx_emitter: &'a mut TxEmitter,
+        trace_tail: &'a mut TraceTail,
         prometheus: &'a Prometheus,
         cluster: &'a Cluster,
         report: &'a mut SuiteReport,
@@ -72,6 +73,7 @@ impl<'a> Context<'a> {
     ) -> Self {
         Context {
             tx_emitter,
+            trace_tail,
             prometheus,
             cluster,
             report,
@@ -112,7 +114,7 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
         "packet_loss_random_validators",
         f::<PacketLossRandomValidatorsParams>(),
     );
-    known_experiments.insert("bench", f::<PerformanceBenchmarkNodesDownParams>());
+    known_experiments.insert("bench", f::<PerformanceBenchmarkParams>());
     known_experiments.insert(
         "bench_three_region",
         f::<PerformanceBenchmarkThreeRegionSimulationParams>(),

@@ -2,13 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::json_log::JsonLogEntry;
-use once_cell::sync::Lazy;
 use std::time::Instant;
 
 pub const TRACE_EVENT: &str = "trace_event";
 pub const TRACE_EDGE: &str = "trace_edge";
-
-pub static TRACE_START: Lazy<Instant> = Lazy::new(Instant::now);
 
 #[macro_export]
 macro_rules! trace_event {
@@ -16,12 +13,10 @@ macro_rules! trace_event {
         trace_event!($stage; {$crate::format_node!($node), module_path!(), Option::<u64>::None})
     };
     ($stage:expr; {$node:expr, $path:expr, $duration:expr}) => {
-        let trace_start = *$crate::libra_trace::TRACE_START;
         $crate::json_log::send_json_log($crate::json_log::JsonLogEntry::new(
             $crate::libra_trace::TRACE_EVENT,
             serde_json::json!({
                "path": $path,
-               "reltime": std::time::Instant::now().duration_since(trace_start).as_micros() as u64,
                "node": $node,
                "stage": $stage,
                "duration": $duration,
@@ -84,12 +79,10 @@ impl Drop for TraceBlockGuard {
 #[macro_export]
 macro_rules! end_trace {
     ($stage:expr, $node:tt) => {
-        let trace_start = *$crate::libra_trace::TRACE_START;
         $crate::json_log::send_json_log($crate::json_log::JsonLogEntry::new(
             $crate::libra_trace::TRACE_EVENT,
             serde_json::json!({
                "path": module_path!(),
-               "reltime": std::time::Instant::now().duration_since(trace_start).as_micros() as u64,
                "node": $crate::format_node!($node),
                "stage": $stage,
                "end": true,
@@ -101,12 +94,10 @@ macro_rules! end_trace {
 #[macro_export]
 macro_rules! trace_edge {
     ($stage:expr, $node_from:tt, $node_to:tt) => {
-        let trace_start = *$crate::libra_trace::TRACE_START;
         $crate::json_log::send_json_log($crate::json_log::JsonLogEntry::new(
             $crate::libra_trace::TRACE_EDGE,
             serde_json::json!({
                "path": module_path!(),
-               "reltime": std::time::Instant::now().duration_since(trace_start).as_micros() as u64,
                "node": $crate::format_node!($node_from),
                "node_to": $crate::format_node!($node_to),
                "stage": $stage,
@@ -130,7 +121,7 @@ macro_rules! __trace_fmt_gen {
     ($p:expr, $($par:expr),+) => {concat!("{}::", $crate::__trace_fmt_gen!($($par),+))}
 }
 
-pub fn random_node(entries: &[JsonLogEntry], prefix: &str) -> Option<String> {
+pub fn random_node(entries: &[JsonLogEntry], f_stage: &str, prefix: &str) -> Option<String> {
     for entry in entries {
         if entry.name != TRACE_EVENT {
             continue;
@@ -141,7 +132,13 @@ pub fn random_node(entries: &[JsonLogEntry], prefix: &str) -> Option<String> {
             .expect("TRACE_EVENT::node not found")
             .as_str()
             .expect("TRACE_EVENT::node is not a string");
-        if node.starts_with(prefix) {
+        let stage = entry
+            .json
+            .get("stage")
+            .expect("TRACE_EVENT::stage not found")
+            .as_str()
+            .expect("TRACE_EVENT::stage is not a string");
+        if node.starts_with(prefix) && stage == f_stage {
             return Some(node.to_string());
         }
     }
@@ -185,16 +182,17 @@ pub fn trace_node(entries: &[JsonLogEntry], node_name: &str) {
         if !nodes.contains(&node) {
             continue;
         }
-        let reltime = entry
+
+        let ts = entry.timestamp as u64;
+        let peer = entry
             .json
-            .get("reltime")
-            .expect("::reltime not found")
-            .as_u64()
-            .expect("::reltime is not an u64");
+            .get("peer")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
         if start_time.is_none() {
-            start_time = Some(reltime);
+            start_time = Some(ts);
         }
-        let trace_time = (reltime - start_time.unwrap()) / 1000; // micros -> ms
+        let trace_time = ts - start_time.unwrap();
         let stage = entry
             .json
             .get("stage")
@@ -223,10 +221,11 @@ pub fn trace_node(entries: &[JsonLogEntry], node_name: &str) {
                     let duration_str = duration.map_or("".to_string(), |d| format!(" [{}]", d));
 
                     println!(
-                        "{}[{:^11}] +{:05} {} {}{}{}{}",
+                        "{}[{:^11}] +{:05} {:*^10} {} {}{}{}{}",
                         crate_color(crate_name),
                         crate_name,
                         trace_time,
+                        peer,
                         node,
                         stage,
                         duration_str,
@@ -246,10 +245,11 @@ pub fn trace_node(entries: &[JsonLogEntry], node_name: &str) {
                     .as_str()
                     .expect("TRACE_EDGE::node_to is not a string");
                 println!(
-                    "{}[{:^11}] +{:05} {}->{} {}{}",
+                    "{}[{:^11}] +{:05} {:*^10} {}->{} {}{}",
                     crate_color(crate_name),
                     crate_name,
                     trace_time,
+                    peer,
                     node,
                     node_to,
                     stage,
@@ -271,6 +271,7 @@ fn crate_color(path: &str) -> &'static str {
         "mempool" => "\x1B[46m",
         "executor" => "\x1B[104m",
         "ac" => "\x1B[103m",
+        "json_rpc" => "\x1B[103m",
         "vm" => "\x1B[45m",
         _ => "\x1B[49m",
     }

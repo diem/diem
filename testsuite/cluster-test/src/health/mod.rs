@@ -14,7 +14,7 @@ pub use commit_check::CommitHistoryHealthCheck;
 pub use debug_interface_log_tail::DebugPortLogThread;
 use itertools::Itertools;
 pub use liveness_check::LivenessHealthCheck;
-pub use log_tail::LogTail;
+pub use log_tail::{LogTail, TraceTail};
 use std::{
     collections::{HashMap, HashSet},
     env, fmt,
