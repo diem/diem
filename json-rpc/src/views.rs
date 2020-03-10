@@ -20,13 +20,13 @@ use transaction_builder::get_transaction_name;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct AccountView {
-    balance: u64,
-    sequence_number: u64,
-    authentication_key: BytesView,
+    pub balance: u64,
+    pub sequence_number: u64,
+    pub authentication_key: BytesView,
     pub sent_events_key: BytesView,
     pub received_events_key: BytesView,
-    delegated_key_rotation_capability: bool,
-    delegated_withdrawal_capability: bool,
+    pub delegated_key_rotation_capability: bool,
+    pub delegated_withdrawal_capability: bool,
 }
 
 impl AccountView {
@@ -40,12 +40,6 @@ impl AccountView {
             delegated_key_rotation_capability: account.delegated_key_rotation_capability(),
             delegated_withdrawal_capability: account.delegated_withdrawal_capability(),
         }
-    }
-
-    // TODO remove test tag once used by CLI client
-    #[cfg(test)]
-    pub(crate) fn balance(&self) -> u64 {
-        self.balance
     }
 }
 

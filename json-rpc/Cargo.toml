@@ -16,6 +16,7 @@ serde_json = "1.0.40"
 serde = { version = "1.0.99", default-features = false }
 warp = "0.2.2"
 futures = "0.3.0"
+reqwest = { version = "0.10.4", features = ["blocking", "json"], default_features = false }
 tokio = { version = "0.2.13", features = ["full"] }
 
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
@@ -31,7 +32,6 @@ transaction-builder = { path = "../language/transaction-builder", version = "0.1
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-temppath = { path = "../common/temppath", version = "0.1.0" }
 proptest = "0.9.2"
-reqwest = { version = "0.10.4", features = ["blocking", "json"], default_features = false }
 vm-validator = { path = "../vm-validator", version = "0.1.0" }
 
 [features]

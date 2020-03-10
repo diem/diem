@@ -2,11 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    client::{JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse},
     runtime::bootstrap,
     tests::mock_db::MockLibraDB,
-    views::{
-        AccountView, BlockMetadata, EventView, StateProofView, TransactionDataView, TransactionView,
-    },
+    views::{BlockMetadata, EventView, StateProofView, TransactionDataView, TransactionView},
 };
 use futures::{channel::mpsc::channel, StreamExt};
 use hex;
@@ -26,7 +25,7 @@ use proptest::prelude::*;
 use reqwest;
 use serde_json::{self, Value};
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, HashMap},
     convert::TryFrom,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
@@ -148,10 +147,10 @@ fn test_transaction_submission() {
     let (mp_sender, mut mp_events) = channel(1);
     let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
-    let address = format!("0.0.0.0:{}", utils::get_available_port());
-    let runtime = bootstrap(address.parse().unwrap(), Arc::new(db), mp_sender);
-    let client = reqwest::blocking::Client::new();
-    let url = format!("http://{}", address);
+    let port = utils::get_available_port();
+    let address = format!("0.0.0.0:{}", port);
+    let mut runtime = bootstrap(address.parse().unwrap(), Arc::new(db), mp_sender);
+    let client = JsonRpcAsyncClient::new("0.0.0.0", port);
 
     // future that mocks shared mempool execution
     runtime.spawn(async move {
@@ -168,23 +167,21 @@ fn test_transaction_submission() {
     });
 
     // closure that checks transaction submission for given account
-    let txn_submission = move |sender| {
+    let mut txn_submission = move |sender| {
         let keypair = compat::generate_keypair(None);
         let txn = get_test_signed_txn(sender, 0, &keypair.0, keypair.1, None);
-        let payload = hex::encode(lcs::to_bytes(&txn).unwrap());
-        let request =
-            serde_json::json!({"jsonrpc": "2.0", "method": "submit", "params": [payload], "id": 1});
-        client.post(&url).json(&request).send().unwrap()
+        let mut batch = JsonRpcBatch::default();
+        batch.add_submit_request(txn).unwrap();
+        runtime.block_on(client.execute(batch)).unwrap()
     };
 
     // check successful submission
     let sender = AccountAddress::new([9; ADDRESS_LENGTH]);
-    let data: JsonMap = txn_submission(sender).json().unwrap();
-    assert_eq!(data.get("result").unwrap(), &serde_json::Value::Null);
+    assert!(txn_submission(sender)[0].as_ref().unwrap() == &JsonRpcResponse::SubmissionResponse);
 
     // check vm error submission
     let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
-    assert_eq!(fetch_error(txn_submission(sender)), -32000);
+    assert!(txn_submission(sender)[0].is_err());
 }
 
 proptest! {
@@ -196,75 +193,50 @@ proptest! {
         let mock_db = mock_db(blocks);
 
         // set up JSON RPC
-        let address = format!("0.0.0.0:{}", utils::get_available_port());
+        let port = utils::get_available_port();
+        let address = format!("0.0.0.0:{}", port);
         let mp_sender = channel(1024).0;
-        let _runtime = bootstrap(address.parse().unwrap(), Arc::new(mock_db.clone()), mp_sender);
-        let client = reqwest::blocking::Client::new();
-        let url = format!("http://{}", address);
+        let mut rt = bootstrap(address.parse().unwrap(), Arc::new(mock_db.clone()), mp_sender);
+        let client = JsonRpcAsyncClient::new("0.0.0.0", port);
 
         // test case 1: single call
         let (first_account, blob) = mock_db.all_accounts.iter().next().unwrap();
-        let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_account_state", "params": [first_account], "id": 1});
-        let resp = client.post(&url).json(&request).send().unwrap();
-        assert_eq!(resp.status(), 200);
         let expected_resource = AccountResource::try_from(blob).unwrap();
-        let data = fetch_result(resp.json().unwrap());
-        assert_eq!(data.get("balance").unwrap().as_u64(), Some(expected_resource.balance()));
-        assert_eq!(data.get("sequence_number").unwrap().as_u64(), Some(expected_resource.sequence_number()));
+
+        let mut batch = JsonRpcBatch::default();
+        batch.add_get_account_state_request(*first_account);
+        let result = rt.block_on(client.execute(batch)).unwrap().remove(0).unwrap();
+        match result {
+            JsonRpcResponse::AccountResponse(account) => {
+                assert_eq!(account.balance, expected_resource.balance());
+                assert_eq!(account.sequence_number, expected_resource.sequence_number());
+            }
+            _ => panic!("unexpected response")
+        }
 
         // test case 2: batch call
-        let mut batch_accounts = vec![];
-        let mut ids_expected = HashSet::new();
-        let mut id = 0;
-        let mut account_resources = HashMap::new();
+        let mut batch = JsonRpcBatch::default();
+        let mut resources = vec![];
 
         for (account, blob) in mock_db.all_accounts.iter() {
             if account == first_account {
                 continue;
             }
-            batch_accounts.push(account);
-            account_resources.insert(id, AccountResource::try_from(blob).unwrap());
-            ids_expected.insert(id);
-            id += 1;
-            if id == 3 { break; }
+            resources.push(AccountResource::try_from(blob).unwrap());
+            batch.add_get_account_state_request(*account);
         }
-        let requests = batch_accounts
-        .iter()
-        .enumerate()
-        .map(|(id, address)|
-            serde_json::json!({"jsonrpc": "2.0", "method": "get_account_state", "params": [address], "id": id})
-        )
-        .collect();
 
-        let resp = client
-            .post(&url)
-            .json(&serde_json::Value::Array(requests))
-            .send()
-            .unwrap();
-        assert_eq!(resp.status(), 200);
-        match resp.json().unwrap() {
-            serde_json::Value::Array(responses) => {
-                let mut ids = HashSet::new();
-                for response in responses {
-                    let id = response.get("id").unwrap().as_u64().unwrap();
-                    ids.insert(id);
-                    let result: JsonMap = serde_json::from_value(
-                        response.as_object().unwrap().get("result").unwrap().clone(),
-                    )
-                    .unwrap();
-                    let account_resource = account_resources.get(&id).unwrap();
-                    assert_eq!(result.get("balance").unwrap().as_u64(), Some(account_resource.balance()));
+        let responses = rt.block_on(client.execute(batch)).unwrap();
+        assert_eq!(responses.len(), resources.len());
 
-                    // deserialize
-                    let result_view: AccountView =
-                        serde_json::from_value(response.get("result").unwrap().clone()).unwrap();
-                    let expected_view = AccountView::new(account_resource);
-                    assert_eq!(result_view, expected_view);
-                    assert_eq!(result_view.balance(), account_resource.balance());
+        for (idx, response) in responses.into_iter().enumerate() {
+            match response.unwrap() {
+                JsonRpcResponse::AccountResponse(account) => {
+                    assert_eq!(account.balance, resources[idx].balance());
+                    assert_eq!(account.sequence_number, resources[idx].sequence_number());
                 }
-                assert_eq!(ids, ids_expected);
+                _ => panic!("unexpected response")
             }
-            _ => panic!("invalid server response format"),
         }
     }
 
