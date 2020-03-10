@@ -27,7 +27,7 @@ pub enum NetworkMessage {
 /// Unique identifier associated with each application protocol.
 /// New application protocols can be added without bumping up the MessagingProtocolVersion.
 #[repr(u8)]
-#[derive(Clone, Debug, Deserialize_repr, Serialize_repr)]
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Deserialize_repr, Serialize_repr)]
 pub enum ProtocolId {
     ConsensusRpc = 0,
     ConsensusDirectSend = 1,

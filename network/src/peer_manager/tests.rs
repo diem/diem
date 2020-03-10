@@ -33,7 +33,7 @@ use std::{
 };
 use tokio::runtime::Handle;
 
-const HELLO_PROTOCOL: &[u8] = b"/hello-world/1.0.0";
+const TEST_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
 
 // Builds a concrete typed transport (instead of using impl Trait) for testing PeerManager.
 // Specifically this transport is compatible with the `build_test_connection` test helper making
@@ -92,7 +92,6 @@ fn build_test_peer_manager(
     libra_channel::Sender<PeerId, ConnectionRequest>,
     libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
 ) {
-    let hello_protocol = ProtocolId::from_static(HELLO_PROTOCOL);
     let (peer_manager_request_tx, peer_manager_request_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (connection_reqs_tx, connection_reqs_rx) =
@@ -108,9 +107,9 @@ fn build_test_peer_manager(
         "/memory/0".parse().unwrap(),
         peer_manager_request_rx,
         connection_reqs_rx,
-        HashSet::from_iter([hello_protocol.clone()].iter().cloned()), /* rpc protocols */
-        HashSet::new(),                                               /* direct-send protocols */
-        HashMap::from_iter([(hello_protocol, hello_tx)].iter().cloned()),
+        HashSet::from_iter([TEST_PROTOCOL].iter().cloned()), /* rpc protocols */
+        HashSet::new(),                                      /* direct-send protocols */
+        HashMap::from_iter([(TEST_PROTOCOL, hello_tx)].iter().cloned()),
         vec![],
         1024, /* max concurrent network requests */
         1024, /* max concurrent network notifications */
@@ -127,7 +126,8 @@ fn build_test_peer_manager(
 
 async fn open_hello_substream<T: Control>(connection: &mut T) -> io::Result<()> {
     let outbound = connection.open_stream().await?;
-    let (_, _) = negotiate_outbound_interactive(outbound, [HELLO_PROTOCOL]).await?;
+    let (_, _) =
+        negotiate_outbound_interactive(outbound, [lcs::to_bytes(&TEST_PROTOCOL).unwrap()]).await?;
     Ok(())
 }
 

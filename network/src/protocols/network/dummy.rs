@@ -24,17 +24,17 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, time::Duration};
 use tokio::runtime::Runtime;
 
+const TEST_RPC_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
+const TEST_DIRECT_SEND_PROTOCOL: ProtocolId = ProtocolId::ConsensusDirectSend;
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct DummyMsg(pub Vec<u8>);
-
-pub const TEST_RPC_PROTOCOL: &[u8] = b"/libra/rpc/0.1.0/test/0.1.0";
-pub const TEST_DIRECT_SENDER_PROTOCOL: &[u8] = b"/libra/ds/0.1.0/test/0.1.0";
 
 fn add_to_network(network: &mut NetworkBuilder) -> (DummyNetworkSender, DummyNetworkEvents) {
     let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
         .add_protocol_handler(
-            vec![ProtocolId::from_static(TEST_RPC_PROTOCOL)],
-            vec![ProtocolId::from_static(TEST_DIRECT_SENDER_PROTOCOL)],
+            vec![TEST_RPC_PROTOCOL],
+            vec![TEST_DIRECT_SEND_PROTOCOL],
             QueueStyle::LIFO,
             None,
         );
@@ -64,7 +64,7 @@ impl DummyNetworkSender {
     }
 
     pub fn send_to(&mut self, recipient: PeerId, message: DummyMsg) -> Result<(), NetworkError> {
-        let protocol = ProtocolId::from_static(TEST_DIRECT_SENDER_PROTOCOL);
+        let protocol = TEST_DIRECT_SEND_PROTOCOL;
         self.inner.send_to(recipient, protocol, message)
     }
 
@@ -74,7 +74,7 @@ impl DummyNetworkSender {
         message: DummyMsg,
         timeout: Duration,
     ) -> Result<DummyMsg, RpcError> {
-        let protocol = ProtocolId::from_static(TEST_RPC_PROTOCOL);
+        let protocol = TEST_RPC_PROTOCOL;
         self.inner
             .send_rpc(recipient, protocol, message, timeout)
             .await

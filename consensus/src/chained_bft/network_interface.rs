@@ -57,11 +57,6 @@ pub enum ConsensusMsg<T> {
     VoteMsg(Box<VoteMsg>),
 }
 
-/// Protocol id for consensus direct-send calls
-pub const CONSENSUS_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/direct-send/0.1.0/consensus/0.1.0";
-/// Protocol id for consensus RPC calls
-pub const CONSENSUS_RPC_PROTOCOL: &[u8] = b"/libra/rpc/0.1.0/consensus/0.1.0";
-
 /// The interface from Network to Consensus layer.
 ///
 /// `ConsensusNetworkEvents` is a `Stream` of `PeerManagerNotification` where the
@@ -80,7 +75,7 @@ pub type ConsensusNetworkEvents<T> = NetworkEvents<ConsensusMsg<T>>;
 /// requires the `ConsensusNetworkSender` to be `Clone` and `Send`.
 #[derive(Clone)]
 pub struct ConsensusNetworkSender<T> {
-    peer_mgr_reqs_tx: NetworkSender<ConsensusMsg<T>>,
+    network_sender: NetworkSender<ConsensusMsg<T>>,
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
 }
 
@@ -92,8 +87,8 @@ pub fn add_to_network<T: Payload>(
 ) -> (ConsensusNetworkSender<T>, ConsensusNetworkEvents<T>) {
     let (network_sender, network_receiver, connection_reqs_tx, connection_notifs_rx) = network
         .add_protocol_handler(
-            vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)],
-            vec![ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL)],
+            vec![ProtocolId::ConsensusRpc],
+            vec![ProtocolId::ConsensusDirectSend],
             QueueStyle::LIFO,
             Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
         );
@@ -118,7 +113,7 @@ impl<T: Payload> ConsensusNetworkSender<T> {
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     ) -> Self {
         Self {
-            peer_mgr_reqs_tx: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
+            network_sender: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
             conn_mgr_reqs_tx,
         }
     }
@@ -130,8 +125,8 @@ impl<T: Payload> ConsensusNetworkSender<T> {
         recipient: PeerId,
         message: ConsensusMsg<T>,
     ) -> Result<(), NetworkError> {
-        let protocol = ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL);
-        self.peer_mgr_reqs_tx.send_to(recipient, protocol, message)
+        let protocol = ProtocolId::ConsensusDirectSend;
+        self.network_sender.send_to(recipient, protocol, message)
     }
 
     /// Send a single message to the destination peers using the `CONSENSUS_DIRECT_SEND_PROTOCOL`
@@ -141,8 +136,8 @@ impl<T: Payload> ConsensusNetworkSender<T> {
         recipients: impl Iterator<Item = PeerId>,
         message: ConsensusMsg<T>,
     ) -> Result<(), NetworkError> {
-        let protocol = ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL);
-        self.peer_mgr_reqs_tx
+        let protocol = ProtocolId::ConsensusDirectSend;
+        self.network_sender
             .send_to_many(recipients, protocol, message)
     }
 
@@ -153,8 +148,8 @@ impl<T: Payload> ConsensusNetworkSender<T> {
         message: ConsensusMsg<T>,
         timeout: Duration,
     ) -> Result<ConsensusMsg<T>, RpcError> {
-        let protocol = ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL);
-        self.peer_mgr_reqs_tx
+        let protocol = ProtocolId::ConsensusRpc;
+        self.network_sender
             .send_rpc(recipient, protocol, message, timeout)
             .await
     }

@@ -26,7 +26,7 @@ use parity_multiaddr::Multiaddr;
 use std::{collections::HashSet, fmt::Debug, iter::FromIterator, str::FromStr, time::Duration};
 use tokio::time::timeout;
 
-const HELLO_PROTOCOL: &[u8] = b"/hello-world/1.0.0";
+static RPC_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
 
 fn build_test_connection() -> (Yamux<MemorySocket>, Yamux<MemorySocket>) {
     let (dialer, listener) = MemorySocket::new_pair();
@@ -66,7 +66,7 @@ fn build_test_peer(
         a,
         peer_req_rx,
         peer_notifs_tx,
-        HashSet::from_iter(vec![ProtocolId::from_static(HELLO_PROTOCOL)].into_iter()), /* rpc protocols */
+        HashSet::from_iter(vec![RPC_PROTOCOL].into_iter()), /* rpc protocols */
         peer_rpc_notifs_tx,
         HashSet::new(), /* direct_send protocols */
         peer_direct_send_notifs_tx,
@@ -192,10 +192,12 @@ async fn peer_open_substream() {
     let server = async move {
         let (mut substream_listener, _) = connection.start().await;
         let substream = substream_listener.next().await;
-        let (mut substream, _protocol) =
-            negotiate_inbound(substream.unwrap().unwrap(), [HELLO_PROTOCOL])
-                .await
-                .unwrap();
+        let (mut substream, _protocol) = negotiate_inbound(
+            substream.unwrap().unwrap(),
+            &[lcs::to_bytes(&RPC_PROTOCOL).unwrap()],
+        )
+        .await
+        .unwrap();
         substream.write_all(b"hello world").await.unwrap();
         substream.flush().await.unwrap();
         substream.close().await.unwrap();
@@ -207,10 +209,7 @@ async fn peer_open_substream() {
     };
 
     let client = async move {
-        let mut substream = peer_handle
-            .open_substream(ProtocolId::from_static(HELLO_PROTOCOL))
-            .await
-            .unwrap();
+        let mut substream = peer_handle.open_substream(RPC_PROTOCOL).await.unwrap();
         let mut buf = Vec::new();
         substream.read_to_end(&mut buf).await.unwrap();
         substream.close().await.unwrap();
@@ -244,8 +243,8 @@ async fn peer_open_substream_simultaneous() {
 
     let test = async move {
         // Send open substream requests to both peer_a and peer_b
-        let substream_rx_a = peer_handle_a.open_substream(ProtocolId::from_static(HELLO_PROTOCOL));
-        let substream_rx_b = peer_handle_b.open_substream(ProtocolId::from_static(HELLO_PROTOCOL));
+        let substream_rx_a = peer_handle_a.open_substream(RPC_PROTOCOL);
+        let substream_rx_b = peer_handle_b.open_substream(RPC_PROTOCOL);
         // These both should complete, but in the event they deadlock wrap them in a timeout
         let timeout_a = timeout(Duration::from_secs(10), substream_rx_a);
         let timeout_b = timeout(Duration::from_secs(10), substream_rx_b);

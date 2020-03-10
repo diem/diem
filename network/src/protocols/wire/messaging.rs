@@ -2,4 +2,4 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // v1 of the LibraNet messaging protocol.
-mod v1;
+pub(crate) mod v1;

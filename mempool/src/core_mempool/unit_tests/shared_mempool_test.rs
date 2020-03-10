@@ -7,9 +7,7 @@ use crate::{
         CoreMempool, TimelineState,
     },
     mocks::MockSharedMempool,
-    network::{
-        MempoolNetworkEvents, MempoolNetworkSender, MempoolSyncMsg, MEMPOOL_DIRECT_SEND_PROTOCOL,
-    },
+    network::{MempoolNetworkEvents, MempoolNetworkSender, MempoolSyncMsg},
     shared_mempool::{
         start_shared_mempool, ConsensusRequest, SharedMempoolNotification, SyncEvent,
     },
@@ -202,7 +200,7 @@ impl SharedMempoolNetwork {
                 let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&peer_id).unwrap();
                 receiver_network_notif_tx
                     .push(
-                        (*peer, ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)),
+                        (*peer, ProtocolId::MempoolDirectSend),
                         PeerManagerNotification::RecvMessage(*peer, msg),
                     )
                     .unwrap();
@@ -240,7 +238,7 @@ impl SharedMempoolNetwork {
                 let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&peer_id).unwrap();
                 receiver_network_notif_tx
                     .push(
-                        (*peer, ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)),
+                        (*peer, ProtocolId::MempoolDirectSend),
                         PeerManagerNotification::RecvMessage(*peer, msg),
                     )
                     .unwrap();

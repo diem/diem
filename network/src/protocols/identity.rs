@@ -111,17 +111,13 @@ mod tests {
         let server_identity = Identity::new(
             PeerId::random(),
             vec![
-                ProtocolId::from_static(b"/proto/1.0.0"),
-                ProtocolId::from_static(b"/proto/2.0.0"),
+                ProtocolId::ConsensusDirectSend,
+                ProtocolId::MempoolDirectSend,
             ],
         );
         let client_identity = Identity::new(
             PeerId::random(),
-            vec![
-                ProtocolId::from_static(b"/proto/1.0.0"),
-                ProtocolId::from_static(b"/proto/2.0.0"),
-                ProtocolId::from_static(b"/proto/3.0.0"),
-            ],
+            vec![ProtocolId::ConsensusRpc, ProtocolId::ConsensusDirectSend],
         );
         let server_identity_config = server_identity.clone();
         let client_identity_config = client_identity.clone();

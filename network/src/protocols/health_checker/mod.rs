@@ -44,9 +44,6 @@ use std::{collections::HashMap, time::Duration};
 #[cfg(test)]
 mod test;
 
-/// Protocol id for HealthChecker RPC calls
-pub const HEALTH_CHECKER_RPC_PROTOCOL: &[u8] = b"/libra/rpc/0.1.0/health-checker/0.1.0";
-
 /// The interface from Network to HealthChecker layer.
 ///
 /// `HealthCheckerNetworkEvents` is a `Stream` of `PeerManagerNotification` where the
@@ -73,7 +70,7 @@ pub fn add_to_network(
 ) -> (HealthCheckerNetworkSender, HealthCheckerNetworkEvents) {
     let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
         .add_protocol_handler(
-            vec![ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL)],
+            vec![ProtocolId::HealthCheckerRpc],
             vec![],
             QueueStyle::LIFO,
             Some(&counters::PENDING_HEALTH_CHECKER_NETWORK_EVENTS),
@@ -105,7 +102,7 @@ impl HealthCheckerNetworkSender {
         req_msg: HealthCheckerMsg,
         timeout: Duration,
     ) -> Result<HealthCheckerMsg, RpcError> {
-        let protocol = ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL);
+        let protocol = ProtocolId::HealthCheckerRpc;
         self.inner
             .send_rpc(recipient, protocol, req_msg, timeout)
             .await
