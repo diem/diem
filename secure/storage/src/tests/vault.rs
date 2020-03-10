@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    tests::suite, vault::VaultStorage, Capability, Error, Identity, Permission, Policy, Storage,
+    tests::suite, vault::VaultStorage, Capability, Error, Identity, KVStorage, Permission, Policy,
     Value,
 };
 

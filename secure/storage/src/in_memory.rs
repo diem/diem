@@ -1,7 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, policy::Policy, storage::Storage, value::Value};
+use crate::{
+    error::Error, kv_storage::KVStorage, policy::Policy, value::Value, CryptoKVStorage, Storage,
+};
 use std::collections::HashMap;
 
 /// InMemoryStorage represents a key value store that is purely in memory and intended for single
@@ -21,9 +23,14 @@ impl InMemoryStorage {
             data: HashMap::new(),
         }
     }
+
+    /// Public convenience function to return a new InMemoryStorage based Storage.
+    pub fn new_boxed_in_memory_storage() -> Box<dyn Storage> {
+        Box::new(InMemoryStorage::new())
+    }
 }
 
-impl Storage for InMemoryStorage {
+impl KVStorage for InMemoryStorage {
     fn available(&self) -> bool {
         true
     }
@@ -69,3 +76,5 @@ impl Storage for InMemoryStorage {
         Ok(())
     }
 }
+
+impl CryptoKVStorage for InMemoryStorage {}
