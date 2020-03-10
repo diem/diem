@@ -36,5 +36,6 @@ module TestVector {
 
     spec fun vector_of_proper_positives {
       ensures all(result, |n| n > 0);
+      ensures all(0..len(result), (|i| all(0..len(result), (|j| result[i] == result[j] ==> i == j))));
     }
 }
