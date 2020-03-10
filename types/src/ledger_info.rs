@@ -137,11 +137,10 @@ impl TryFrom<crate::proto::types::LedgerInfo> for LedgerInfo {
         let round = proto.round;
         let timestamp_usecs = proto.timestamp_usecs;
 
-        let next_validator_set = if let Some(validator_set_proto) = proto.next_validator_set {
-            Some(ValidatorSet::try_from(validator_set_proto)?)
-        } else {
-            None
-        };
+        let next_validator_set = proto
+            .next_validator_set
+            .map(ValidatorSet::try_from)
+            .transpose()?;
         Ok(LedgerInfo::new(
             BlockInfo::new(
                 epoch,

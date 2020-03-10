@@ -30,11 +30,10 @@ pub fn run_spec_lang_compiler(
     deps: Vec<String>,
     address_opt: Option<&str>,
 ) -> anyhow::Result<GlobalEnv> {
-    let address_opt = if let Some(s) = address_opt {
-        Some(Address::parse_str(s).map_err(|s| anyhow!(s))?)
-    } else {
-        None
-    };
+    let address_opt = address_opt
+        .map(Address::parse_str)
+        .transpose()
+        .map_err(|s| anyhow!(s))?;
 
     let mut env = GlobalEnv::new();
     // First pass: compile move code.

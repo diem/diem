@@ -199,10 +199,8 @@ fn module(
     };
     let deps: Vec<&F::CompiledModule> = vec![];
     let (compiled_module, source_map) =
-        match ir_to_bytecode::compiler::compile_module(addr, ir_module, deps) {
-            Ok(res) => res,
-            Err(e) => return Err(vec![(ident.loc(), format!("IR ERROR: {}", e))]),
-        };
+        ir_to_bytecode::compiler::compile_module(addr, ir_module, deps)
+            .map_err(|e| vec![(ident.loc(), format!("IR ERROR: {}", e))])?;
     Ok((mname, compiled_module, source_map))
 }
 
