@@ -721,14 +721,10 @@ impl<'env> ModuleEnv<'env> {
     /// Gets a FunctionEnv in this module by name.
     pub fn find_function(&self, name: Symbol) -> Option<FunctionEnv<'env>> {
         let id = FunId(name);
-        if let Some(data) = self.data.function_data.get(&id) {
-            Some(FunctionEnv {
-                module_env: self.clone(),
-                data,
-            })
-        } else {
-            None
-        }
+        self.data.function_data.get(&id).map(|data| FunctionEnv {
+            module_env: self.clone(),
+            data,
+        })
     }
 
     /// Gets a FunctionEnv by id.
@@ -782,14 +778,10 @@ impl<'env> ModuleEnv<'env> {
     /// Gets a StructEnv in this module by name.
     pub fn find_struct(&self, name: Symbol) -> Option<StructEnv<'_>> {
         let id = StructId(name);
-        if let Some(data) = self.data.struct_data.get(&id) {
-            Some(StructEnv {
-                module_env: self.clone(),
-                data,
-            })
-        } else {
-            None
-        }
+        self.data.struct_data.get(&id).map(|data| StructEnv {
+            module_env: self.clone(),
+            data,
+        })
     }
 
     /// Gets the struct id from a definition index which must be valid for this environment.
@@ -1100,14 +1092,10 @@ impl<'env> StructEnv<'env> {
     /// Find a field by its name.
     pub fn find_field(&'env self, name: Symbol) -> Option<FieldEnv<'env>> {
         let id = FieldId(name);
-        if let Some(data) = self.data.field_data.get(&id) {
-            Some(FieldEnv {
-                struct_env: self.clone(),
-                data,
-            })
-        } else {
-            None
-        }
+        self.data.field_data.get(&id).map(|data| FieldEnv {
+            struct_env: self.clone(),
+            data,
+        })
     }
 
     /// Returns the type parameters associated with this struct.

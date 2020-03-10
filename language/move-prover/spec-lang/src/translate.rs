@@ -1938,11 +1938,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         expected_type: &Type,
     ) -> Exp {
         // Translate generic arguments, if any.
-        let generics = if let Some(ts) = generics {
-            Some(self.translate_single_types(&ts))
-        } else {
-            None
-        };
+        let generics = generics.as_ref().map(|ts| self.translate_single_types(&ts));
         // Translate arguments.
         let (arg_types, args) = self.translate_exp_list(args);
         // Lookup candidates.
@@ -2117,11 +2113,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     ) -> Exp {
         let struct_name = self.parent.module_access_to_qualified(maccess);
         let struct_name_loc = self.to_loc(&maccess.loc);
-        let generics = if let Some(ts) = generics {
-            Some(self.translate_single_types(&ts))
-        } else {
-            None
-        };
+        let generics = generics.as_ref().map(|ts| self.translate_single_types(&ts));
         if let Some(entry) = self.parent.parent.struct_table.get(&struct_name) {
             let entry = entry.clone();
             let (instantiation, diag) = self.make_instantiation(entry.type_params.len(), generics);
