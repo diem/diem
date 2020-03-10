@@ -29,13 +29,13 @@ fn gen_peer_info() -> PeerInfo {
 
 fn get_raw_message(msg: DiscoveryMsg) -> Message {
     Message {
-        protocol: ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
+        protocol: ProtocolId::DiscoveryDirectSend,
         mdata: lcs::to_bytes(&msg).unwrap().into(),
     }
 }
 
 fn parse_raw_message(msg: Message) -> Result<DiscoveryMsg, NetworkError> {
-    assert_eq!(msg.protocol, DISCOVERY_DIRECT_SEND_PROTOCOL);
+    assert_eq!(msg.protocol, ProtocolId::DiscoveryDirectSend);
     let msg: DiscoveryMsg = lcs::from_bytes(&msg.mdata)
         .map_err(|err| anyhow!(err).context(NetworkErrorKind::ParsingError))?;
     Ok(msg)
@@ -170,10 +170,7 @@ fn inbound() {
         let msg = DiscoveryMsg {
             notes: vec![other_note],
         };
-        let msg_key = (
-            other_peer_id,
-            ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
-        );
+        let msg_key = (other_peer_id, ProtocolId::DiscoveryDirectSend);
         let (delivered_tx, delivered_rx) = oneshot::channel();
         network_notifs_tx
             .push_with_feedback(
@@ -357,10 +354,7 @@ fn old_note_higher_epoch() {
         let msg = DiscoveryMsg {
             notes: vec![old_note],
         };
-        let msg_key = (
-            other_peer_id,
-            ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
-        );
+        let msg_key = (other_peer_id, ProtocolId::DiscoveryDirectSend);
         let (delivered_tx, delivered_rx) = oneshot::channel();
         network_notifs_tx
             .push_with_feedback(
@@ -446,10 +440,7 @@ fn old_note_max_epoch() {
         let msg = DiscoveryMsg {
             notes: vec![old_note],
         };
-        let msg_key = (
-            other_peer_id,
-            ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
-        );
+        let msg_key = (other_peer_id, ProtocolId::DiscoveryDirectSend);
         let (delivered_tx, delivered_rx) = oneshot::channel();
         network_notifs_tx
             .push_with_feedback(

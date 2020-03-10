@@ -22,10 +22,6 @@ pub enum StateSynchronizerMsg {
     GetChunkResponse(Box<GetChunkResponse>),
 }
 
-/// Protocol id for state-synchronizer direct-send calls
-pub const STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL: &[u8] =
-    b"/libra/direct-send/0.1.0/state-synchronizer/0.1.0";
-
 /// The interface from Network to StateSynchronizer layer.
 ///
 /// `StateSynchronizerEvents` is a `Stream` of `PeerManagerNotification` where the
@@ -53,9 +49,7 @@ pub fn add_to_network(
     let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
         .add_protocol_handler(
             vec![],
-            vec![ProtocolId::from_static(
-                STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
-            )],
+            vec![ProtocolId::StateSynchronizerDirectSend],
             QueueStyle::FIFO,
             Some(&counters::PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS),
         );
@@ -80,7 +74,7 @@ impl StateSynchronizerSender {
         recipient: PeerId,
         message: StateSynchronizerMsg,
     ) -> Result<(), NetworkError> {
-        let protocol = ProtocolId::from_static(STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL);
+        let protocol = ProtocolId::StateSynchronizerDirectSend;
         self.inner.send_to(recipient, protocol, message)
     }
 }

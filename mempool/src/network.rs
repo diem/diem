@@ -65,7 +65,7 @@ pub fn add_to_network(
     let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
         .add_protocol_handler(
             vec![],
-            vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)],
+            vec![ProtocolId::MempoolDirectSend],
             QueueStyle::LIFO,
             Some(&counters::PENDING_MEMPOOL_NETWORK_EVENTS),
         );
@@ -93,7 +93,7 @@ impl MempoolNetworkSender {
         recipient: PeerId,
         message: MempoolSyncMsg,
     ) -> Result<(), NetworkError> {
-        let protocol = ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL);
+        let protocol = ProtocolId::MempoolDirectSend;
         self.inner.send_to(recipient, protocol, message)
     }
 }

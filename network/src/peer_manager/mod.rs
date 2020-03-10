@@ -119,7 +119,7 @@ impl PeerManagerRequestSender {
         mdata: Bytes,
     ) -> Result<(), PeerManagerError> {
         self.inner.push(
-            (peer_id, protocol.clone()),
+            (peer_id, protocol),
             PeerManagerRequest::SendMessage(peer_id, Message { protocol, mdata }),
         )?;
         Ok(())
@@ -142,17 +142,14 @@ impl PeerManagerRequestSender {
         protocol: ProtocolId,
         mdata: Bytes,
     ) -> Result<(), PeerManagerError> {
-        let msg = Message {
-            protocol: protocol.clone(),
-            mdata,
-        };
+        let msg = Message { protocol, mdata };
         for recipient in recipients {
             // We return `Err` early here if the send fails. Since sending will
             // only fail if the queue is unexpectedly shutdown (i.e., receiver
             // dropped early), we know that we can't make further progress if
             // this send fails.
             self.inner.push(
-                (recipient, protocol.clone()),
+                (recipient, protocol),
                 PeerManagerRequest::SendMessage(recipient, msg.clone()),
             )?;
         }
@@ -169,7 +166,7 @@ impl PeerManagerRequestSender {
     ) -> Result<Bytes, RpcError> {
         let (res_tx, res_rx) = oneshot::channel();
         let request = OutboundRpcRequest {
-            protocol: protocol.clone(),
+            protocol,
             data: req,
             res_tx,
             timeout,
@@ -272,6 +269,7 @@ where
     TMuxer: StreamMultiplexer + 'static,
 {
     /// Construct a new PeerManager actor
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         executor: Handle,
         transport: TTransport,
@@ -466,9 +464,7 @@ where
         match request {
             PeerManagerRequest::SendMessage(peer_id, msg) => {
                 if let Some((_, _, sender)) = self.active_peers.get_mut(&peer_id) {
-                    if let Err(err) =
-                        sender.push(msg.protocol.clone(), NetworkRequest::SendMessage(msg))
-                    {
+                    if let Err(err) = sender.push(msg.protocol, NetworkRequest::SendMessage(msg)) {
                         info!(
                             "Failed to forward outbound message to downstream actor. Error:
                               {:?}",
@@ -481,9 +477,7 @@ where
             }
             PeerManagerRequest::SendRpc(peer_id, req) => {
                 if let Some((_, _, sender)) = self.active_peers.get_mut(&peer_id) {
-                    if let Err(err) =
-                        sender.push(req.protocol.clone(), NetworkRequest::SendRpc(req))
-                    {
+                    if let Err(err) = sender.push(req.protocol, NetworkRequest::SendRpc(req)) {
                         info!(
                             "Failed to forward outbound rpc to downstream actor. Error:
                             {:?}",
@@ -671,11 +665,11 @@ where
     ) {
         match inbound_event {
             NetworkNotification::RecvMessage(msg) => {
-                let protocol = msg.protocol.clone();
+                let protocol = msg.protocol;
                 if let Some(handler) = upstream_handlers.get_mut(&protocol) {
                     // Send over libra channel for fairness.
                     if let Err(err) = handler.push(
-                        (peer_id, protocol.clone()),
+                        (peer_id, protocol),
                         PeerManagerNotification::RecvMessage(peer_id, msg),
                     ) {
                         warn!(
@@ -689,11 +683,11 @@ where
                 }
             }
             NetworkNotification::RecvRpc(rpc_req) => {
-                let protocol = rpc_req.protocol.clone();
+                let protocol = rpc_req.protocol;
                 if let Some(handler) = upstream_handlers.get_mut(&protocol) {
                     // Send over libra channel for fairness.
                     if let Err(err) = handler.push(
-                        (peer_id, protocol.clone()),
+                        (peer_id, protocol),
                         PeerManagerNotification::RecvRpc(peer_id, rpc_req),
                     ) {
                         warn!(

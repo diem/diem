@@ -3,10 +3,7 @@
 
 use crate::chained_bft::{
     network::{NetworkReceivers, NetworkSender},
-    network_interface::{
-        ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender,
-        CONSENSUS_DIRECT_SEND_PROTOCOL, CONSENSUS_RPC_PROTOCOL,
-    },
+    network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
     test_utils::{self, consensus_runtime, placeholder_ledger_info},
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
@@ -135,7 +132,7 @@ impl NetworkPlayground {
 
                     node_consensus_tx
                         .push(
-                            (src, ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)),
+                            (src, ProtocolId::ConsensusRpc),
                             PeerManagerNotification::RecvRpc(src, inbound_req),
                         )
                         .unwrap();
@@ -228,10 +225,7 @@ impl NetworkPlayground {
         };
 
         node_consensus_tx
-            .push(
-                (src, ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL)),
-                msg_notif,
-            )
+            .push((src, ProtocolId::ConsensusDirectSend), msg_notif)
             .unwrap();
         msg_copy
     }

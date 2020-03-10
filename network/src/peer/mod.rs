@@ -174,7 +174,7 @@ where
     ) {
         match negotiated_subststream {
             Ok(negotiated_substream) => {
-                let protocol = negotiated_substream.protocol.clone();
+                let protocol = negotiated_substream.protocol;
                 let event =
                     PeerNotification::NewSubstream(self.identity.peer_id(), negotiated_substream);
                 if self.rpc_protocols.contains(&protocol) {
@@ -233,7 +233,7 @@ where
         control: TMuxer::Control,
         channel: oneshot::Sender<Result<TMuxer::Substream, PeerManagerError>>,
     ) -> BoxFuture<'static, ()> {
-        let optimistic_negotiation = self.identity.is_protocol_supported(&protocol);
+        let optimistic_negotiation = self.identity.is_protocol_supported(protocol);
         Self::negotiate_outbound_substream(
             self.identity.peer_id(),
             control,
@@ -257,14 +257,14 @@ where
                 // substream even though we know for a fact that the Identity struct of this Peer
                 // doesn't include the protocol we're interested in.
                 if optimistic_negotiation {
-                    negotiate_outbound_select(substream, &protocol).await
+                    negotiate_outbound_select(substream, lcs::to_bytes(&protocol).unwrap()).await
                 } else {
                     warn!(
                         "Negotiating outbound substream interactively: Protocol({:?}) PeerId({})",
                         protocol,
                         peer_id.short_str()
                     );
-                    negotiate_outbound_interactive(substream, [&protocol])
+                    negotiate_outbound_interactive(substream, &[lcs::to_bytes(&protocol).unwrap()])
                         .await
                         .map(|(substream, _protocol)| substream)
                 }
@@ -300,9 +300,16 @@ where
         substream: TMuxer::Substream,
         own_supported_protocols: Vec<ProtocolId>,
     ) -> Result<NegotiatedSubstream<TMuxer::Substream>, PeerManagerError> {
-        let (substream, protocol) = negotiate_inbound(substream, own_supported_protocols).await?;
+        let (substream, protocol) = negotiate_inbound(
+            substream,
+            own_supported_protocols
+                .into_iter()
+                .map(|p| lcs::to_bytes(&p).unwrap())
+                .collect::<Vec<_>>(),
+        )
+        .await?;
         Ok(NegotiatedSubstream {
-            protocol,
+            protocol: lcs::from_bytes(&protocol).unwrap(),
             substream,
         })
     }

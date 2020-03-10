@@ -85,10 +85,7 @@ async fn expect_ping(
     let req_data = rpc_req.data;
     let res_tx = rpc_req.res_tx;
 
-    assert_eq!(
-        protocol,
-        ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL)
-    );
+    assert_eq!(protocol, ProtocolId::HealthCheckerRpc,);
 
     match lcs::from_bytes(&req_data).unwrap() {
         HealthCheckerMsg::Ping(ping) => (ping, res_tx),
@@ -125,7 +122,7 @@ async fn send_inbound_ping(
     ping: u32,
     network_notifs_tx: &mut libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
 ) -> oneshot::Receiver<Result<Bytes, RpcError>> {
-    let protocol = ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL);
+    let protocol = ProtocolId::HealthCheckerRpc;
     let data = lcs::to_bytes(&HealthCheckerMsg::Ping(Ping(ping)))
         .unwrap()
         .into();
@@ -135,10 +132,7 @@ async fn send_inbound_ping(
         data,
         res_tx,
     };
-    let key = (
-        peer_id,
-        ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL),
-    );
+    let key = (peer_id, ProtocolId::HealthCheckerRpc);
     let (delivered_tx, delivered_rx) = oneshot::channel();
     network_notifs_tx
         .push_with_feedback(

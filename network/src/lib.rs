@@ -26,7 +26,6 @@ mod peer;
 mod sink;
 mod transport;
 
-/// Type for unique identifier associated with each network protocol
-pub type ProtocolId = bytes::Bytes;
 pub type DisconnectReason = peer::DisconnectReason;
 pub type ConnectivityRequest = connectivity_manager::ConnectivityRequest;
+pub type ProtocolId = protocols::wire::messaging::v1::ProtocolId;

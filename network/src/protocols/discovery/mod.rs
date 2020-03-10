@@ -68,8 +68,6 @@ use std::{
 #[cfg(test)]
 mod test;
 
-pub const DISCOVERY_DIRECT_SEND_PROTOCOL: &[u8] = b"/libra/direct-send/0.1.0/discovery/0.1.0";
-
 /// The interface from Network to Discovery module.
 ///
 /// `DiscoveryNetworkEvents` is a `Stream` of `PeerManagerNotification` where the
@@ -99,7 +97,7 @@ pub fn add_to_network(
     let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
         .add_protocol_handler(
             vec![],
-            vec![ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL)],
+            vec![ProtocolId::DiscoveryDirectSend],
             QueueStyle::LIFO,
             Some(&counters::PENDING_DISCOVERY_NETWORK_EVENTS),
         );
@@ -122,11 +120,8 @@ impl DiscoveryNetworkSender {
 
     /// Send a DiscoveryMsg to a peer.
     pub fn send_to(&mut self, peer: PeerId, msg: DiscoveryMsg) -> Result<(), NetworkError> {
-        self.inner.send_to(
-            peer,
-            ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL),
-            msg,
-        )
+        self.inner
+            .send_to(peer, ProtocolId::DiscoveryDirectSend, msg)
     }
 }
 
