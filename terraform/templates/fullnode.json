@@ -12,6 +12,7 @@
             {"containerPort": 6180, "hostPort": 6180},
             {"containerPort": 6181, "hostPort": 6181},
             {"containerPort": 8000, "hostPort": 8000},
+            {"containerPort": 8080, "hostPort": 8080},
             {"containerPort": 9101, "hostPort": 9101},
             {"containerPort": 6191, "hostPort": 6191}
         ],
