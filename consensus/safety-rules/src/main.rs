@@ -22,6 +22,12 @@ fn main() {
         process::exit(1);
     });
 
+    libra_logger::Logger::new()
+        .channel_size(config.logger.chan_size)
+        .is_async(config.logger.is_async)
+        .level(config.logger.level)
+        .init();
+
     let mut service = Process::new(config);
     service.start();
 }
