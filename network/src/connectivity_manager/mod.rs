@@ -57,7 +57,7 @@ pub struct ConnectivityManager<TTicker, TBackoff> {
     /// Channel to send requests to PeerManager.
     peer_mgr_reqs_tx: PeerManagerRequestSender,
     /// Channel to receive notifications from PeerManager.
-    control_notifs_rx: conn_status_channel::Receiver,
+    connection_notifs_rx: conn_status_channel::Receiver,
     /// Channel over which we receive requests from other actors.
     requests_rx: channel::Receiver<ConnectivityRequest>,
     /// Peers queued to be dialed, potentially with some delay. The dial can be cancelled by
@@ -116,7 +116,7 @@ where
         seed_peers: HashMap<PeerId, Vec<Multiaddr>>,
         ticker: TTicker,
         peer_mgr_reqs_tx: PeerManagerRequestSender,
-        control_notifs_rx: conn_status_channel::Receiver,
+        connection_notifs_rx: conn_status_channel::Receiver,
         requests_rx: channel::Receiver<ConnectivityRequest>,
         backoff_strategy: TBackoff,
         max_delay_ms: u64,
@@ -136,7 +136,7 @@ where
             peer_addresses,
             ticker,
             peer_mgr_reqs_tx,
-            control_notifs_rx,
+            connection_notifs_rx,
             requests_rx,
             dial_queue: HashMap::new(),
             dial_states: HashMap::new(),
@@ -172,7 +172,7 @@ where
                     trace!("Event Id: {}, type: ConnectivityRequest, req: {:?}", self.event_id, req);
                     self.handle_request(req);
                 },
-                notif = self.control_notifs_rx.select_next_some() => {
+                notif = self.connection_notifs_rx.select_next_some() => {
                     trace!("Event Id: {}, type: peer_manager::ConnectionStatusNotification, notif: {:?}", self.event_id, notif);
                     self.handle_control_notification(notif);
                 },

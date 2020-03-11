@@ -62,7 +62,7 @@ pub struct MempoolNetworkSender {
 pub fn add_to_network(
     network: &mut NetworkBuilder,
 ) -> (MempoolNetworkSender, MempoolNetworkEvents) {
-    let (sender, receiver, control_notifs_rx) = network.add_protocol_handler(
+    let (sender, receiver, connection_notifs_rx) = network.add_protocol_handler(
         vec![],
         vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)],
         QueueStyle::LIFO,
@@ -70,7 +70,7 @@ pub fn add_to_network(
     );
     (
         MempoolNetworkSender::new(sender),
-        MempoolNetworkEvents::new(receiver, control_notifs_rx),
+        MempoolNetworkEvents::new(receiver, connection_notifs_rx),
     )
 }
 

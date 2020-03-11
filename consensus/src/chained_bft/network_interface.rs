@@ -90,7 +90,7 @@ pub struct ConsensusNetworkSender<T> {
 pub fn add_to_network<T: Payload>(
     network: &mut NetworkBuilder,
 ) -> (ConsensusNetworkSender<T>, ConsensusNetworkEvents<T>) {
-    let (network_sender, network_receiver, control_notifs_rx) = network.add_protocol_handler(
+    let (network_sender, network_receiver, connection_notifs_rx) = network.add_protocol_handler(
         vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)],
         vec![ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL)],
         QueueStyle::LIFO,
@@ -103,7 +103,7 @@ pub fn add_to_network<T: Payload>(
                 .conn_mgr_reqs_tx()
                 .expect("ConnecitivtyManager not enabled"),
         ),
-        ConsensusNetworkEvents::new(network_receiver, control_notifs_rx),
+        ConsensusNetworkEvents::new(network_receiver, connection_notifs_rx),
     )
 }
 

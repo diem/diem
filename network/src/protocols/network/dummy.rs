@@ -31,7 +31,7 @@ pub const TEST_RPC_PROTOCOL: &[u8] = b"/libra/rpc/0.1.0/test/0.1.0";
 pub const TEST_DIRECT_SENDER_PROTOCOL: &[u8] = b"/libra/ds/0.1.0/test/0.1.0";
 
 fn add_to_network(network: &mut NetworkBuilder) -> (DummyNetworkSender, DummyNetworkEvents) {
-    let (sender, receiver, control_notifs_rx) = network.add_protocol_handler(
+    let (sender, receiver, connection_notifs_rx) = network.add_protocol_handler(
         vec![ProtocolId::from_static(TEST_RPC_PROTOCOL)],
         vec![ProtocolId::from_static(TEST_DIRECT_SENDER_PROTOCOL)],
         QueueStyle::LIFO,
@@ -39,7 +39,7 @@ fn add_to_network(network: &mut NetworkBuilder) -> (DummyNetworkSender, DummyNet
     );
     (
         DummyNetworkSender::new(sender),
-        DummyNetworkEvents::new(receiver, control_notifs_rx),
+        DummyNetworkEvents::new(receiver, connection_notifs_rx),
     )
 }
 

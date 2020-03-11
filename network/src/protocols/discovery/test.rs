@@ -56,7 +56,7 @@ fn setup_discovery(
     let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(1);
     let (network_notifs_tx, network_notifs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
-    let (control_notifs_tx, control_notifs_rx) = conn_status_channel::new();
+    let (connection_notifs_tx, connection_notifs_rx) = conn_status_channel::new();
     let (ticker_tx, ticker_rx) = channel::new_test(0);
     let role = RoleType::Validator;
     let discovery = {
@@ -68,7 +68,7 @@ fn setup_discovery(
             trusted_peers,
             ticker_rx,
             DiscoveryNetworkSender::new(network_reqs_tx),
-            DiscoveryNetworkEvents::new(network_notifs_rx, control_notifs_rx),
+            DiscoveryNetworkEvents::new(network_notifs_rx, connection_notifs_rx),
             conn_mgr_reqs_tx,
         )
     };
@@ -77,7 +77,7 @@ fn setup_discovery(
         network_reqs_rx,
         conn_mgr_reqs_rx,
         network_notifs_tx,
-        control_notifs_tx,
+        connection_notifs_tx,
         ticker_tx,
     )
 }
@@ -252,7 +252,7 @@ fn outbound() {
         mut network_reqs_rx,
         _conn_mgr_req_rx,
         _network_notifs_tx,
-        mut control_notifs_tx,
+        mut connection_notifs_tx,
         mut ticker_tx,
     ) = setup_discovery(&mut rt, peer_id, addrs.clone(), self_signer, trusted_peers);
 
@@ -260,7 +260,7 @@ fn outbound() {
     let f_network = async move {
         let (delivered_tx, delivered_rx) = oneshot::channel();
         // Notify discovery actor of connection to other peer.
-        control_notifs_tx
+        connection_notifs_tx
             .push_with_feedback(
                 other_peer_id,
                 peer_manager::ConnectionStatusNotification::NewPeer(
@@ -316,14 +316,14 @@ fn old_note_higher_epoch() {
     ));
 
     // Setup discovery.
-    let (mut network_reqs_rx, _, mut network_notifs_tx, mut control_notifs_tx, mut ticker_tx) =
+    let (mut network_reqs_rx, _, mut network_notifs_tx, mut connection_notifs_tx, mut ticker_tx) =
         setup_discovery(&mut rt, peer_id, addrs, self_signer.clone(), trusted_peers);
 
     // Fake connectivity manager and dialer.
     let f_network = async move {
         // Notify discovery actor of connection to other peer.
         let (delivered_tx, delivered_rx) = oneshot::channel();
-        control_notifs_tx
+        connection_notifs_tx
             .push_with_feedback(
                 other_peer_id,
                 peer_manager::ConnectionStatusNotification::NewPeer(
@@ -406,14 +406,14 @@ fn old_note_max_epoch() {
     ));
 
     // Setup discovery.
-    let (mut network_reqs_rx, _, mut network_notifs_tx, mut control_notifs_tx, mut ticker_tx) =
+    let (mut network_reqs_rx, _, mut network_notifs_tx, mut connection_notifs_tx, mut ticker_tx) =
         setup_discovery(&mut rt, peer_id, addrs, self_signer.clone(), trusted_peers);
 
     // Fake connectivity manager and dialer.
     let f_network = async move {
         // Notify discovery actor of connection to other peer.
         let (delivered_tx, delivered_rx) = oneshot::channel();
-        control_notifs_tx
+        connection_notifs_tx
             .push_with_feedback(
                 other_peer_id,
                 peer_manager::ConnectionStatusNotification::NewPeer(
