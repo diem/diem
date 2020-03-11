@@ -5232,6 +5232,7 @@ dependencies = [
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
+ "libra-json-rpc 0.1.0",
  "libra-logger 0.1.0",
  "libra-swarm 0.1.0",
  "libra-temppath 0.1.0",
