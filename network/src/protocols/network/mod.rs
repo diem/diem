@@ -245,7 +245,7 @@ impl<TMessage: Message> NetworkSender<TMessage> {
     /// Send a protobuf rpc request to a single recipient while handling
     /// serialization and deserialization of the request and response respectively.
     /// Assumes that the request and response both have the same message type.
-    pub async fn unary_rpc(
+    pub async fn send_rpc(
         &mut self,
         recipient: PeerId,
         protocol: ProtocolId,
@@ -256,7 +256,7 @@ impl<TMessage: Message> NetworkSender<TMessage> {
         let req_data = lcs::to_bytes(&req_msg)?.into();
         let res_data = self
             .inner
-            .unary_rpc(recipient, protocol, req_data, timeout)
+            .send_rpc(recipient, protocol, req_data, timeout)
             .await?;
         let res_msg: TMessage = lcs::from_bytes(&res_data)?;
         Ok(res_msg)
