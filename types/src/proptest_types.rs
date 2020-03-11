@@ -4,7 +4,7 @@
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::AccountResource,
+    account_config::{AccountResource, BalanceResource},
     account_state_blob::AccountStateBlob,
     block_info::{BlockInfo, Round},
     block_metadata::BlockMetadata,
@@ -639,7 +639,6 @@ impl ContractEventGen {
 
 #[derive(Arbitrary, Debug)]
 struct AccountResourceGen {
-    balance: u64,
     delegated_key_rotation_capability: bool,
     delegated_withdrawal_capability: bool,
 }
@@ -653,7 +652,6 @@ impl AccountResourceGen {
         let account_info = universe.get_account_info(account_index);
 
         AccountResource::new(
-            self.balance,
             account_info.sequence_number,
             account_info.public_key.to_bytes().to_vec(),
             self.delegated_key_rotation_capability,
@@ -666,8 +664,20 @@ impl AccountResourceGen {
 }
 
 #[derive(Arbitrary, Debug)]
+struct BalanceResourceGen {
+    coin: u64,
+}
+
+impl BalanceResourceGen {
+    pub fn materialize(self) -> BalanceResource {
+        BalanceResource::new(self.coin)
+    }
+}
+
+#[derive(Arbitrary, Debug)]
 struct AccountStateBlobGen {
     account_resource_gen: AccountResourceGen,
+    balance_resource_gen: BalanceResourceGen,
 }
 
 impl AccountStateBlobGen {
@@ -679,7 +689,8 @@ impl AccountStateBlobGen {
         let account_resource = self
             .account_resource_gen
             .materialize(account_index, universe);
-        AccountStateBlob::try_from(&account_resource).unwrap()
+        let balance_resource = self.balance_resource_gen.materialize();
+        AccountStateBlob::try_from((&account_resource, &balance_resource)).unwrap()
     }
 }
 

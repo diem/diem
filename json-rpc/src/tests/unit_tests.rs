@@ -15,6 +15,7 @@ use libra_temppath::TempPath;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_config::AccountResource,
+    account_state::AccountState,
     crypto_proxies::LedgerInfoWithSignatures,
     mempool_status::{MempoolStatus, MempoolStatusCode},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
@@ -201,39 +202,39 @@ proptest! {
 
         // test case 1: single call
         let (first_account, blob) = mock_db.all_accounts.iter().next().unwrap();
-        let expected_resource = AccountResource::try_from(blob).unwrap();
+        let expected_resource = AccountState::try_from(blob).unwrap();
 
         let mut batch = JsonRpcBatch::default();
         batch.add_get_account_state_request(*first_account);
         let result = rt.block_on(client.execute(batch)).unwrap().remove(0).unwrap();
         match result {
             JsonRpcResponse::AccountResponse(account) => {
-                assert_eq!(account.balance, expected_resource.balance());
-                assert_eq!(account.sequence_number, expected_resource.sequence_number());
+                assert_eq!(account.balance, expected_resource.get_balance_resource().unwrap().unwrap().coin());
+                assert_eq!(account.sequence_number, expected_resource.get_account_resource().unwrap().unwrap().sequence_number());
             }
             _ => panic!("unexpected response")
         }
 
         // test case 2: batch call
         let mut batch = JsonRpcBatch::default();
-        let mut resources = vec![];
+        let mut states = vec![];
 
         for (account, blob) in mock_db.all_accounts.iter() {
             if account == first_account {
                 continue;
             }
-            resources.push(AccountResource::try_from(blob).unwrap());
+            states.push(AccountState::try_from(blob).unwrap());
             batch.add_get_account_state_request(*account);
         }
 
         let responses = rt.block_on(client.execute(batch)).unwrap();
-        assert_eq!(responses.len(), resources.len());
+        assert_eq!(responses.len(), states.len());
 
         for (idx, response) in responses.into_iter().enumerate() {
             match response.unwrap() {
                 JsonRpcResponse::AccountResponse(account) => {
-                    assert_eq!(account.balance, resources[idx].balance());
-                    assert_eq!(account.sequence_number, resources[idx].sequence_number());
+                    assert_eq!(account.balance, states[idx].get_balance_resource().unwrap().unwrap().coin());
+                    assert_eq!(account.sequence_number, states[idx].get_account_resource().unwrap().unwrap().sequence_number());
                 }
                 _ => panic!("unexpected response")
             }

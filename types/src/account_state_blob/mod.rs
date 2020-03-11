@@ -2,8 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account_address::AccountAddress, account_config::AccountResource, account_state::AccountState,
-    event::EventKey, ledger_info::LedgerInfo, proof::AccountStateProof, transaction::Version,
+    account_address::AccountAddress,
+    account_config::{AccountResource, BalanceResource},
+    account_state::AccountState,
+    event::EventKey,
+    ledger_info::LedgerInfo,
+    proof::AccountStateProof,
+    transaction::Version,
 };
 use anyhow::{anyhow, ensure, format_err, Error, Result};
 use libra_crypto::{
@@ -94,11 +99,16 @@ impl TryFrom<&AccountStateBlob> for AccountState {
     }
 }
 
-impl TryFrom<&AccountResource> for AccountStateBlob {
+impl TryFrom<(&AccountResource, &BalanceResource)> for AccountStateBlob {
     type Error = Error;
 
-    fn try_from(account_resource: &AccountResource) -> Result<Self> {
-        Self::try_from(&AccountState::try_from(account_resource)?)
+    fn try_from(
+        (account_resource, balance_resource): (&AccountResource, &BalanceResource),
+    ) -> Result<Self> {
+        Self::try_from(&AccountState::try_from((
+            account_resource,
+            balance_resource,
+        ))?)
     }
 }
 
@@ -124,8 +134,8 @@ impl CryptoHash for AccountStateBlob {
 
 #[cfg(any(test, feature = "fuzzing"))]
 prop_compose! {
-    fn account_state_blob_strategy()(account_resource in any::<AccountResource>()) -> AccountStateBlob {
-        AccountStateBlob::try_from(&account_resource).unwrap()
+    fn account_state_blob_strategy()(account_resource in any::<AccountResource>(), balance_resource in any::<BalanceResource>()) -> AccountStateBlob {
+        AccountStateBlob::try_from((&account_resource, &balance_resource)).unwrap()
     }
 }
 

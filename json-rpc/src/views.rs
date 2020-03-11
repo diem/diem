@@ -5,8 +5,8 @@ use anyhow::{format_err, Error};
 use hex;
 use libra_types::{
     account_config::{
-        received_payment_tag, sent_payment_tag, AccountResource, ReceivedPaymentEvent,
-        SentPaymentEvent,
+        received_payment_tag, sent_payment_tag, AccountResource, BalanceResource,
+        ReceivedPaymentEvent, SentPaymentEvent,
     },
     contract_event::ContractEvent,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
@@ -30,9 +30,9 @@ pub struct AccountView {
 }
 
 impl AccountView {
-    pub fn new(account: &AccountResource) -> Self {
+    pub fn new(account: &AccountResource, balance: &BalanceResource) -> Self {
         Self {
-            balance: account.balance(),
+            balance: balance.coin(),
             sequence_number: account.sequence_number(),
             authentication_key: BytesView::from(account.authentication_key()),
             sent_events_key: BytesView::from(account.sent_events().key().as_bytes()),

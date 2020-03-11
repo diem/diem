@@ -5,6 +5,7 @@ use anyhow::{ensure, format_err, Result};
 use executor_utils::create_storage_service_and_executor;
 use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey};
+use libra_types::account_state::AccountState;
 use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, AuthenticationKey},
@@ -815,7 +816,10 @@ where
     F: Fn(u64) -> bool,
 {
     let balance = if let Some(blob) = &account_state_with_proof.blob {
-        AccountResource::try_from(blob)?.balance()
+        AccountState::try_from(blob)?
+            .get_balance_resource()?
+            .map(|b| b.coin())
+            .unwrap_or(0)
     } else {
         0
     };

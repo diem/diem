@@ -224,7 +224,6 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
 
 fn get_mock_account_state_blob() -> AccountStateBlob {
     let account_resource = libra_types::account_config::AccountResource::new(
-        100,
         0,
         vec![],
         false,

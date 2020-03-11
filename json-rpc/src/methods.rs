@@ -9,7 +9,7 @@ use futures::{channel::oneshot, SinkExt};
 use hex;
 use libra_mempool::MempoolClientSender;
 use libra_types::{
-    account_address::AccountAddress, account_config::AccountResource, event::EventKey,
+    account_address::AccountAddress, account_state::AccountState, event::EventKey,
     mempool_status::MempoolStatusCode,
 };
 use libradb::LibraDBTrait;
@@ -66,8 +66,11 @@ async fn get_account_state(
     let account_address = AccountAddress::from_str(&address)?;
     let response = service.db.get_latest_account_state(account_address)?;
     if let Some(blob) = response {
-        if let Ok(account) = AccountResource::try_from(&blob) {
-            return Ok(Some(AccountView::new(&account)));
+        let account_state = AccountState::try_from(&blob)?;
+        if let Some(account) = account_state.get_account_resource()? {
+            if let Some(balance) = account_state.get_balance_resource()? {
+                return Ok(Some(AccountView::new(&account, &balance)));
+            }
         }
     }
     Ok(None)
