@@ -132,9 +132,8 @@ pub fn received_payment_tag() -> StructTag {
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccountResource {
     authentication_key: Vec<u8>,
-    // TODO: remove this field from the account resource, and depend upon the [`BalanceResource`]
-    // defined in this file for this information.
-    balance: u64,
+    // TODO: should be unused by now
+    _deprecated_balance: u64,
     delegated_key_rotation_capability: bool,
     delegated_withdrawal_capability: bool,
     received_events: EventHandle,
@@ -146,7 +145,6 @@ pub struct AccountResource {
 impl AccountResource {
     /// Constructs an Account resource.
     pub fn new(
-        balance: u64,
         sequence_number: u64,
         authentication_key: Vec<u8>,
         delegated_key_rotation_capability: bool,
@@ -156,8 +154,8 @@ impl AccountResource {
         event_generator: u64,
     ) -> Self {
         AccountResource {
-            balance,
             sequence_number,
+            _deprecated_balance: 0,
             authentication_key,
             delegated_key_rotation_capability,
             delegated_withdrawal_capability,
@@ -170,11 +168,6 @@ impl AccountResource {
     /// Return the sequence_number field for the given AccountResource
     pub fn sequence_number(&self) -> u64 {
         self.sequence_number
-    }
-
-    /// Return the balance field for the given AccountResource
-    pub fn balance(&self) -> u64 {
-        self.balance
     }
 
     /// Return the authentication_key field for the given AccountResource
@@ -224,6 +217,11 @@ impl BalanceResource {
 /// It can be used to create an AccessPath for an Account resource.
 pub static ACCOUNT_RESOURCE_PATH: Lazy<Vec<u8>> =
     Lazy::new(|| AccessPath::resource_access_vec(&account_struct_tag(), &Accesses::empty()));
+
+/// Path to the Balance resource
+pub static BALANCE_RESOURCE_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
+    AccessPath::resource_access_vec(&account_balance_struct_tag(), &Accesses::empty())
+});
 
 /// The path to the sent event counter for an Account resource.
 /// It can be used to query the event DB for the given event.

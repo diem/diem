@@ -6,7 +6,7 @@ use crate::{
 };
 use libra_crypto::ed25519::ED25519_PUBLIC_KEY_LENGTH;
 use libra_types::{
-    account_config::AccountResource, account_state_blob::AccountStateBlob, event::EVENT_KEY_LENGTH,
+    account_state::AccountState, account_state_blob::AccountStateBlob, event::EVENT_KEY_LENGTH,
 };
 use std::{convert::TryFrom, slice};
 
@@ -14,46 +14,48 @@ pub fn libra_LibraAccountResource_from_safe(
     blob: AccountStateBlob,
 ) -> Result<LibraAccountResource, LibraStatus> {
     clear_error();
-    match AccountResource::try_from(&blob) {
-        Ok(account_resource) => {
-            let mut authentication_key = [0u8; ED25519_PUBLIC_KEY_LENGTH];
-            authentication_key.copy_from_slice(account_resource.authentication_key());
+    if let Ok(account_state) = AccountState::try_from(&blob) {
+        if let Ok(Some(account_resource)) = account_state.get_account_resource() {
+            if let Ok(Some(balance_resource)) = account_state.get_balance_resource() {
+                let mut authentication_key = [0u8; ED25519_PUBLIC_KEY_LENGTH];
+                authentication_key.copy_from_slice(account_resource.authentication_key());
 
-            let mut sent_key_copy = [0u8; EVENT_KEY_LENGTH];
-            sent_key_copy.copy_from_slice(account_resource.sent_events().key().as_bytes());
+                let mut sent_key_copy = [0u8; EVENT_KEY_LENGTH];
+                sent_key_copy.copy_from_slice(account_resource.sent_events().key().as_bytes());
 
-            let sent_events = LibraEventHandle {
-                count: account_resource.sent_events().count(),
-                key: sent_key_copy,
-            };
+                let sent_events = LibraEventHandle {
+                    count: account_resource.sent_events().count(),
+                    key: sent_key_copy,
+                };
 
-            let mut received_key_copy = [0u8; EVENT_KEY_LENGTH];
-            received_key_copy.copy_from_slice(account_resource.received_events().key().as_bytes());
+                let mut received_key_copy = [0u8; EVENT_KEY_LENGTH];
+                received_key_copy
+                    .copy_from_slice(account_resource.received_events().key().as_bytes());
 
-            let received_events = LibraEventHandle {
-                count: account_resource.received_events().count(),
-                key: received_key_copy,
-            };
+                let received_events = LibraEventHandle {
+                    count: account_resource.received_events().count(),
+                    key: received_key_copy,
+                };
 
-            Ok(LibraAccountResource {
-                balance: account_resource.balance(),
-                sequence: account_resource.sequence_number(),
-                delegated_key_rotation_capability: account_resource
-                    .delegated_key_rotation_capability(),
-                delegated_withdrawal_capability: account_resource.delegated_withdrawal_capability(),
-                sent_events,
-                received_events,
-                authentication_key,
-            })
-        }
-        Err(e) => {
-            update_last_error(format!(
-                "Error deserializing account state blob: {}",
-                e.to_string()
-            ));
-            Err(LibraStatus::InvalidArgument)
+                return Ok(LibraAccountResource {
+                    balance: balance_resource.coin(),
+                    sequence: account_resource.sequence_number(),
+                    delegated_key_rotation_capability: account_resource
+                        .delegated_key_rotation_capability(),
+                    delegated_withdrawal_capability: account_resource
+                        .delegated_withdrawal_capability(),
+                    sent_events,
+                    received_events,
+                    authentication_key,
+                });
+            }
         }
     }
+    update_last_error(format!(
+        "Error deserializing account state blob: {:?}",
+        blob
+    ));
+    Err(LibraStatus::InvalidArgument)
 }
 
 #[no_mangle]
@@ -87,7 +89,9 @@ mod tests {
         use libra_crypto::ed25519::compat;
         use libra_types::{
             account_address::AuthenticationKey,
-            account_config::{AccountResource, ACCOUNT_RESOURCE_PATH},
+            account_config::{
+                AccountResource, BalanceResource, ACCOUNT_RESOURCE_PATH, BALANCE_RESOURCE_PATH,
+            },
             event::{EventHandle, EventKey},
         };
         use std::collections::BTreeMap;
@@ -99,7 +103,6 @@ mod tests {
         let auth_key = AuthenticationKey::from_public_key(&keypair.1);
         let addr = auth_key.derived_address();
         let ar = AccountResource::new(
-            987_654_321,
             123_456_789,
             auth_key.to_vec(),
             true,
@@ -108,11 +111,16 @@ mod tests {
             EventHandle::new(EventKey::new_from_address(&addr, 0), 888),
             0,
         );
+        let br = BalanceResource::new(100);
 
         // Fill in data
         map.insert(
             ACCOUNT_RESOURCE_PATH.to_vec(),
             lcs::to_bytes(&ar).expect("Account resource lcs serialization was not successful"),
+        );
+        map.insert(
+            BALANCE_RESOURCE_PATH.to_vec(),
+            lcs::to_bytes(&br).expect("Balance resource lcs serialization was not successful"),
         );
 
         let account_state_blob = lcs::to_bytes(&map).expect("LCS serialization failed");
@@ -126,7 +134,6 @@ mod tests {
             )
         });
 
-        assert_eq!(result.balance, ar.balance());
         assert_eq!(result.sequence, ar.sequence_number());
         assert_eq!(result.authentication_key, ar.authentication_key());
         assert_eq!(

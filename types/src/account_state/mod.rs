@@ -3,8 +3,8 @@
 
 use crate::{
     account_config::{
-        AccountResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_RESOURCE_PATH,
-        ACCOUNT_SENT_EVENT_PATH,
+        AccountResource, BalanceResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_RESOURCE_PATH,
+        ACCOUNT_SENT_EVENT_PATH, BALANCE_RESOURCE_PATH,
     },
     discovery_set::{
         DiscoverySetResource, DISCOVERY_SET_CHANGE_EVENT_PATH, DISCOVERY_SET_RESOURCE_PATH,
@@ -22,6 +22,14 @@ impl AccountState {
     pub fn get_account_resource(&self) -> Result<Option<AccountResource>> {
         self.0
             .get(&*ACCOUNT_RESOURCE_PATH)
+            .map(|bytes| lcs::from_bytes(bytes))
+            .transpose()
+            .map_err(Into::into)
+    }
+
+    pub fn get_balance_resource(&self) -> Result<Option<BalanceResource>> {
+        self.0
+            .get(&*BALANCE_RESOURCE_PATH)
             .map(|bytes| lcs::from_bytes(bytes))
             .transpose()
             .map_err(Into::into)
@@ -81,14 +89,20 @@ impl fmt::Debug for AccountState {
     }
 }
 
-impl TryFrom<&AccountResource> for AccountState {
+impl TryFrom<(&AccountResource, &BalanceResource)> for AccountState {
     type Error = Error;
 
-    fn try_from(account_resource: &AccountResource) -> Result<Self> {
+    fn try_from(
+        (account_resource, balance_resource): (&AccountResource, &BalanceResource),
+    ) -> Result<Self> {
         let mut btree_map: BTreeMap<Vec<u8>, Vec<u8>> = BTreeMap::new();
         btree_map.insert(
             ACCOUNT_RESOURCE_PATH.to_vec(),
             lcs::to_bytes(account_resource)?,
+        );
+        btree_map.insert(
+            BALANCE_RESOURCE_PATH.to_vec(),
+            lcs::to_bytes(balance_resource)?,
         );
 
         Ok(Self(btree_map))
