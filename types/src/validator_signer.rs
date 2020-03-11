@@ -19,17 +19,10 @@ pub struct ValidatorSigner<PrivateKey: SigningKey> {
 }
 
 impl<PrivateKey: SigningKey> ValidatorSigner<PrivateKey> {
-    pub fn new(
-        opt_account_address: impl Into<Option<AccountAddress>>,
-        private_key: PrivateKey,
-    ) -> Self {
+    pub fn new(author: AccountAddress, private_key: PrivateKey) -> Self {
         let public_key: PrivateKey::VerifyingKeyMaterial = private_key.public_key();
-
-        let account_address = opt_account_address
-            .into()
-            .unwrap_or_else(|| AccountAddress::from_public_key(&public_key));
         ValidatorSigner {
-            author: account_address,
+            author,
             public_key,
             private_key,
         }
@@ -57,14 +50,6 @@ impl<PrivateKey: SigningKey> ValidatorSigner<PrivateKey> {
     }
 }
 
-impl<PrivateKey: SigningKey + Genesis> ValidatorSigner<PrivateKey> {
-    /// Generate the genesis block signer information.
-    pub fn genesis() -> Self {
-        let genesis_key = PrivateKey::genesis();
-        Self::new(None, genesis_key)
-    }
-}
-
 impl<PrivateKey: SigningKey + Uniform> ValidatorSigner<PrivateKey> {
     /// Generate a random set of public and private keys and author
     /// information.
@@ -72,8 +57,10 @@ impl<PrivateKey: SigningKey + Uniform> ValidatorSigner<PrivateKey> {
     /// `test_utils::TEST_SEED` if passed `None`
     pub fn random(opt_rng_seed: impl for<'a> Into<Option<[u8; 32]>>) -> Self {
         let mut rng = StdRng::from_seed(opt_rng_seed.into().unwrap_or(TEST_SEED));
-        let private_key = PrivateKey::generate_for_testing(&mut rng);
-        Self::new(None, private_key)
+        Self::new(
+            AccountAddress::random(),
+            PrivateKey::generate_for_testing(&mut rng),
+        )
     }
 
     /// For test only - makes signer with nicely looking account address that has specified integer
@@ -108,7 +95,8 @@ pub mod proptests {
     pub fn signer_strategy<PrivateKey: SigningKey + Uniform + Genesis>(
         signing_key_strategy: impl Strategy<Value = PrivateKey>,
     ) -> impl Strategy<Value = ValidatorSigner<PrivateKey>> {
-        signing_key_strategy.prop_map(|signing_key| ValidatorSigner::new(None, signing_key))
+        signing_key_strategy
+            .prop_map(|signing_key| ValidatorSigner::new(AccountAddress::random(), signing_key))
     }
 
     #[allow(clippy::redundant_closure)]
@@ -120,7 +108,13 @@ pub mod proptests {
     #[allow(clippy::redundant_closure)]
     pub fn arb_signer<PrivateKey: SigningKey + Uniform + Genesis + 'static>(
     ) -> impl Strategy<Value = ValidatorSigner<PrivateKey>> {
-        prop_oneof![rand_signer(), LazyJust::new(|| ValidatorSigner::genesis()),]
+        prop_oneof![
+            rand_signer(),
+            LazyJust::new(|| {
+                let genesis_key = PrivateKey::genesis();
+                ValidatorSigner::new(AccountAddress::random(), genesis_key)
+            })
+        ]
     }
 
     fn select_keypair<PrivateKey: SigningKey + Uniform + Genesis + Clone + 'static>(
@@ -142,7 +136,7 @@ pub mod proptests {
         #[test]
         fn test_new_signer(signing_key in arb_signing_key::<Ed25519PrivateKey>()){
             let public_key = signing_key.public_key();
-            let signer = ValidatorSigner::new(None, signing_key);
+            let signer = ValidatorSigner::new(AccountAddress::random(), signing_key);
             prop_assert_eq!(public_key, signer.public_key());
         }
 
