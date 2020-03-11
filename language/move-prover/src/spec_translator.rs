@@ -437,15 +437,24 @@ impl<'env> SpecTranslator<'env> {
     }
 
     fn translate_local_var(&self, node_id: NodeId, name: Symbol) {
+        self.auto_dref(node_id, || {
+            emit!(
+                self.writer,
+                self.module_env.symbol_pool().string(name).as_ref()
+            );
+        });
+    }
+
+    fn auto_dref<F>(&self, node_id: NodeId, f: F)
+    where
+        F: Fn(),
+    {
         let ty = self.module_env.get_node_type(node_id);
         if ty.is_reference() {
             // Automatically dereference
             emit!(self.writer, "$Dereference($m, ");
         }
-        emit!(
-            self.writer,
-            self.module_env.symbol_pool().string(name).as_ref()
-        );
+        f();
         if ty.is_reference() {
             emit!(self.writer, ")")
         }
@@ -479,7 +488,9 @@ impl<'env> SpecTranslator<'env> {
             Operation::Select(module_id, struct_id, field_id) => {
                 self.translate_select(*module_id, *struct_id, *field_id, args)
             }
-            Operation::Result(pos) => emit!(self.writer, "$ret{}", pos),
+            Operation::Result(pos) => self.auto_dref(node_id, || {
+                emit!(self.writer, "$ret{}", pos);
+            }),
             Operation::Index => self.translate_primitive_call("$select_vector_by_value", args),
             Operation::Slice => self.translate_primitive_call("$slice_vector", args),
             Operation::Range => self.translate_primitive_call("$Range", args),

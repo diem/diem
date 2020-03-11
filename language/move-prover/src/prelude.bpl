@@ -985,7 +985,7 @@ procedure {:inline 1} $Hash_sha3_256(val: Value) returns (res: Value)  {
 
 // TODO: implement the below methods
 
-procedure {:inline 1} $LibraAccount_save_account(addr: Value, account: Value) {
+procedure {:inline 1} $LibraAccount_save_account(balance: Value, account: Value, addr: Value) {
     $abort_flag := true;
 }
 
