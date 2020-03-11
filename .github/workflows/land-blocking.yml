@@ -123,6 +123,7 @@ jobs:
                 }
               } else {
                 body = "Cluster Test failed - test report processing failed.";
+                console.error(err);
               }
               body += " See https://github.com/libra/libra/actions/runs/${{github.run_id}}";
               // Post comment on PR then fail this workflow
