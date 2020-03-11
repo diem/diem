@@ -28,13 +28,9 @@ pub fn verify(errors: &mut Errors, modules: &mut UniqueMap<ModuleIdent, N::Modul
             report_cycle(context, cycle_ident)
         }
         Ok(ordered_ids) => {
-            let ordering = ordered_ids
-                .into_iter()
-                .filter(|m| imm_modules.get(m).unwrap().is_source_module.is_some())
-                .cloned()
-                .collect::<Vec<_>>();
-            for (order, mident) in ordering.into_iter().rev().enumerate() {
-                modules.get_mut(&mident).unwrap().is_source_module = Some(order)
+            let ordered_ids = ordered_ids.into_iter().cloned().collect::<Vec<_>>();
+            for (order, mident) in ordered_ids.into_iter().rev().enumerate() {
+                modules.get_mut(&mident).unwrap().dependency_order = order
             }
         }
     }

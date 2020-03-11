@@ -327,7 +327,8 @@ fn module(
     context.restore_unscoped(outer_unscoped);
     N::ModuleDefinition {
         uses,
-        is_source_module: if is_source_module { Some(0) } else { None },
+        is_source_module,
+        dependency_order: 0,
         structs,
         functions,
     }

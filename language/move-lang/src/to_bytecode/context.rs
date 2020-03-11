@@ -6,15 +6,15 @@ use libra_types::account_address::AccountAddress as LibraAddress;
 use move_ir_types::ast as IR;
 use std::{
     clone::Clone,
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
 };
 
 /// Compilation context for a single compilation unit (module or script).
 /// Contains all of the dependencies actually used in the module
 pub struct Context<'a> {
     current_module: Option<&'a ModuleIdent>,
-    seen_structs: HashSet<(ModuleIdent, StructName)>,
-    seen_functions: HashSet<(ModuleIdent, FunctionName)>,
+    seen_structs: BTreeSet<(ModuleIdent, StructName)>,
+    seen_functions: BTreeSet<(ModuleIdent, FunctionName)>,
 }
 
 impl<'a> Context<'a> {
@@ -24,8 +24,8 @@ impl<'a> Context<'a> {
     pub fn new(current_module: Option<&'a ModuleIdent>) -> Self {
         Self {
             current_module,
-            seen_structs: HashSet::new(),
-            seen_functions: HashSet::new(),
+            seen_structs: BTreeSet::new(),
+            seen_functions: BTreeSet::new(),
         }
     }
 
@@ -38,11 +38,12 @@ impl<'a> Context<'a> {
     }
 
     //**********************************************************************************************
-    // Depedency item building
+    // Dependency item building
     //**********************************************************************************************
 
     pub fn materialize(
         self,
+        dependency_orderings: &HashMap<ModuleIdent, usize>,
         struct_declarations: &HashMap<
             (ModuleIdent, StructName),
             (bool, Vec<(IR::TypeVar, IR::Kind)>),
@@ -54,7 +55,7 @@ impl<'a> Context<'a> {
             seen_structs,
             seen_functions,
         } = self;
-        let mut module_dependencies = HashMap::new();
+        let mut module_dependencies = BTreeMap::new();
         for (module, sname) in seen_structs {
             let struct_dep = Self::struct_dependency(struct_declarations, &module, sname);
             module_dependencies
@@ -72,17 +73,23 @@ impl<'a> Context<'a> {
                 .push(function_dep);
         }
         let mut imports = vec![];
-        let mut dependencies = vec![];
+        let mut ordered_dependencies = vec![];
         for (module, (structs, functions)) in module_dependencies {
+            let dependency_order = dependency_orderings[&module];
             let ir_name = Self::ir_module_alias(&module);
             let ir_ident = Self::translate_module_ident(module);
             imports.push(IR::ImportDefinition::new(ir_ident, Some(ir_name.clone())));
-            dependencies.push(IR::ModuleDependency {
-                name: ir_name,
-                structs,
-                functions,
-            });
+            ordered_dependencies.push((
+                dependency_order,
+                IR::ModuleDependency {
+                    name: ir_name,
+                    structs,
+                    functions,
+                },
+            ));
         }
+        ordered_dependencies.sort_by_key(|(ordering, _)| *ordering);
+        let dependencies = ordered_dependencies.into_iter().map(|(_, m)| m).collect();
         (imports, dependencies)
     }
 

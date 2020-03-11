@@ -1326,7 +1326,7 @@ impl fmt::Display for ImportDefinition {
 
 impl fmt::Display for ModuleDependency {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Depedency({}, ", &self.name)?;
+        write!(f, "Dependency({}, ", &self.name)?;
         for sdep in &self.structs {
             writeln!(f, "{}, ", sdep)?
         }

@@ -165,6 +165,7 @@ fn module(
     mdef: T::ModuleDefinition,
 ) -> (ModuleIdent, H::ModuleDefinition) {
     let is_source_module = mdef.is_source_module;
+    let dependency_order = mdef.dependency_order;
 
     let structs = mdef.structs.map(|name, s| struct_def(context, name, s));
 
@@ -176,6 +177,7 @@ fn module(
         module_ident,
         H::ModuleDefinition {
             is_source_module,
+            dependency_order,
             structs,
             functions,
         },
