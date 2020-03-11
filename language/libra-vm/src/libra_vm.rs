@@ -4,7 +4,7 @@
 use crate::{counters::*, system_module_names::*, VMExecutor, VMVerifier};
 use debug_interface::prelude::*;
 use libra_config::config::{VMConfig, VMPublishingOption};
-use libra_crypto::HashValue;
+use libra_crypto::{multi_ed25519::MultiEd25519PublicKey, HashValue};
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
@@ -459,7 +459,14 @@ impl LibraVM {
         txn_data: &TransactionMetadata,
     ) -> VMResult<()> {
         let txn_sequence_number = txn_data.sequence_number();
-        let txn_public_key = txn_data.public_key().to_bytes().to_vec();
+        // TODO: parse these from tx once we change the format
+        let txn_public_keys = vec![txn_data.public_key().clone()];
+        // TODO: parse this from tx once we change the format
+        let threshold = 1u8;
+        let txn_public_key = MultiEd25519PublicKey::new(txn_public_keys, threshold)
+            // TODO: this error will be covered by signature checking once we change the tx format
+            .map_err(|_| VMStatus::new(StatusCode::INVALID_SIGNATURE))?
+            .to_bytes();
         let txn_gas_price = txn_data.gas_unit_price().get();
         let txn_max_gas_units = txn_data.max_gas_amount().get();
         let txn_expiration_time = txn_data.expiration_time();

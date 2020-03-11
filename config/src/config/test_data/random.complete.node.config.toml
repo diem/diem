@@ -71,7 +71,7 @@ private_key = "87572b6c1ac0bc9f5245d04f7963c35db0713f0f08685f038d55f8c22a5c45b9"
 public_key = "7fb83ee67e2b16f89510cdd7c061b32a482d68465d24df70acc65b074b3f7862"
 
 [validator_network]
-peer_id = "d5ca8fb56c820b5856ee531acb8fa654"
+peer_id = "d14c29ace5531c24de9bd7124bd2ae60"
 listen_address = "/ip4/0.0.0.0/tcp/6180"
 advertised_address = "/ip4/127.0.0.1/tcp/6180"
 discovery_interval_ms = 1000
@@ -79,7 +79,7 @@ connectivity_check_interval_ms = 5000
 enable_noise = true
 enable_remote_authentication = true
 network_peers_file = ""
-seed_peers_file = "d5ca8fb56c820b5856ee531acb8fa654.seed_peers.toml"
+seed_peers_file = "d14c29ace5531c24de9bd7124bd2ae60.seed_peers.toml"
 
 [validator_network.network_keypairs.signing_keys]
 private_key = "55f8f8956dde49b412e105460193381bf3fca57565a8a096e60ac7bdd6a0953f"

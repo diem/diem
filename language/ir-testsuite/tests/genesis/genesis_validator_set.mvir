@@ -7,15 +7,7 @@ main() {
     assert(LibraAccount.exists(0x1D8), 77);
     assert(LibraSystem.validator_set_size() == 10, 78);
 
-    // check that one of the addresses we expect is in there...
-    assert(
-        LibraSystem.is_validator(
-            0x89b9f9d1fadc027cf9532d6f99041522
-        ),
-        79
-    );
-
-    // ... and that unexpected addresses aren't
+    // check that unexpected addresses aren't in the validator set
     assert(!LibraSystem.is_validator(0x88), 80);
 
     // registering a new *candidate* validator shouldn't change the validator set size

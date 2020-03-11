@@ -4,8 +4,10 @@
 use anyhow::{ensure, Error, Result};
 use bytes::Bytes;
 use libra_crypto::{
+    ed25519::Ed25519PublicKey,
     hash::{CryptoHash, CryptoHasher},
-    HashValue, VerifyingKey,
+    multi_ed25519::MultiEd25519PublicKey,
+    HashValue,
 };
 use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -46,14 +48,16 @@ impl AccountAddress {
         self.0.to_vec()
     }
 
-    pub fn authentication_key<PublicKey: VerifyingKey>(
-        public_key: &PublicKey,
-    ) -> AuthenticationKey {
+    pub fn authentication_key(public_key: &Ed25519PublicKey) -> AuthenticationKey {
         AuthenticationKey::from_public_key(public_key)
     }
 
-    pub fn from_public_key<PublicKey: VerifyingKey>(public_key: &PublicKey) -> Self {
+    pub fn from_public_key(public_key: &Ed25519PublicKey) -> Self {
         AccountAddress::authentication_key(public_key).derived_address()
+    }
+
+    pub fn from_multisig_key(public_key: &MultiEd25519PublicKey) -> Self {
+        AuthenticationKey::from_multisig_key(public_key).derived_address()
     }
 
     pub fn from_hex_literal(literal: &str) -> Result<Self> {
@@ -100,8 +104,24 @@ impl AuthenticationKey {
         AuthenticationKey::new(buf)
     }
 
-    /// Create an authentication key from a public key by taking its sha3 hash
-    pub fn from_public_key<PublicKey: VerifyingKey>(public_key: &PublicKey) -> Self {
+    /// Create an authentication key from a single public key by interpreting it as a 1-of-1 of
+    /// multikey
+    pub fn from_public_key(public_key: &Ed25519PublicKey) -> Self {
+        Self::from_public_keys(vec![public_key.clone()])
+    }
+
+    /// Create an authentication key from a vector of public keys by interpreting the n-length
+    /// vector as a n-of-n multikey
+    fn from_public_keys(public_keys: Vec<Ed25519PublicKey>) -> Self {
+        let threshold = public_keys.len() as u8;
+        Self::from_multisig_key(
+            &MultiEd25519PublicKey::new(public_keys, threshold)
+                .expect("Failed to create multisig key"),
+        )
+    }
+
+    /// Create an authentication key from a multikey by computing its SHA3 hash
+    pub fn from_multisig_key(public_key: &MultiEd25519PublicKey) -> Self {
         Self(*HashValue::from_sha3_256(&public_key.to_bytes()).as_ref())
     }
 
