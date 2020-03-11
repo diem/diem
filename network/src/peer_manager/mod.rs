@@ -178,7 +178,7 @@ impl PeerManagerRequestSender {
     }
 
     /// Sends a unary RPC to a remote peer and waits to either receive a response or times out.
-    pub async fn unary_rpc(
+    pub async fn send_rpc(
         &mut self,
         peer_id: PeerId,
         protocol: ProtocolId,

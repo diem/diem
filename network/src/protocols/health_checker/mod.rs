@@ -103,7 +103,7 @@ impl HealthCheckerNetworkSender {
     ) -> Result<HealthCheckerMsg, RpcError> {
         let protocol = ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL);
         self.inner
-            .unary_rpc(recipient, protocol, req_msg, timeout)
+            .send_rpc(recipient, protocol, req_msg, timeout)
             .await
     }
 

@@ -152,7 +152,7 @@ impl<T: Payload> ConsensusNetworkSender<T> {
     ) -> Result<ConsensusMsg<T>, RpcError> {
         let protocol = ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL);
         self.peer_mgr_reqs_tx
-            .unary_rpc(recipient, protocol, message, timeout)
+            .send_rpc(recipient, protocol, message, timeout)
             .await
     }
 
