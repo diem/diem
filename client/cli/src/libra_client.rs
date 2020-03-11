@@ -4,17 +4,16 @@
 use crate::AccountData;
 use admission_control_proto::proto::AdmissionControlClientBlocking;
 use anyhow::{bail, ensure, format_err, Result};
-use libra_json_rpc::views::{AccountView, BytesView, EventView, StateProofView};
+use libra_json_rpc::views::{AccountView, BytesView, EventView, StateProofView, TransactionView};
 use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH},
     account_state_blob::AccountStateBlob,
-    contract_event::ContractEvent,
     crypto_proxies::LedgerInfoWithSignatures,
     get_with_proof::{RequestItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse},
-    transaction::{SignedTransaction, Transaction, Version},
+    transaction::{SignedTransaction, Version},
     trusted_state::{TrustedState, TrustedStateChange},
     validator_change::ValidatorChangeProof,
     waypoint::Waypoint,
@@ -74,7 +73,7 @@ impl JsonRpcClient {
     pub fn send_libra_request(
         &mut self,
         method: String,
-        params: Vec<String>,
+        params: Vec<serde_json::Value>,
     ) -> Result<serde_json::Value> {
         let id: u64 = rand::thread_rng().gen();
         let request = serde_json::json!({
@@ -247,7 +246,7 @@ impl LibraClient {
     ) -> Result<()> {
         // form request
         let payload = hex::encode(lcs::to_bytes(&transaction).unwrap());
-        let params = vec![payload];
+        let params = vec![serde_json::json!(payload)];
 
         match self
             .json_rpc_client
@@ -265,9 +264,7 @@ impl LibraClient {
                 }
                 Ok(())
             }
-            Err(e) => {
-                bail!("Transaction submission failed with error: {:?}", e);
-            }
+            Err(e) => bail!("Transaction submission failed with error: {:?}", e),
         }
     }
 
@@ -279,7 +276,7 @@ impl LibraClient {
         with_state_proof: bool,
     ) -> Result<(Option<AccountView>, Version)> {
         let method = "get_account_state".to_string();
-        let params = vec![account.to_string()];
+        let params = vec![serde_json::json!(account)];
 
         let response = if with_state_proof {
             self.get_with_state_proof(method, serde_json::json!(params))
@@ -312,7 +309,11 @@ impl LibraClient {
         start: u64,
         limit: u64,
     ) -> Result<Vec<EventView>> {
-        let params = vec![event_key, start.to_string(), limit.to_string()];
+        let params = vec![
+            serde_json::json!(event_key),
+            serde_json::json!(start),
+            serde_json::json!(limit),
+        ];
 
         match self
             .json_rpc_client
@@ -493,20 +494,27 @@ impl LibraClient {
         account: AccountAddress,
         sequence_number: u64,
         fetch_events: bool,
-    ) -> Result<Option<(Transaction, Option<Vec<ContractEvent>>)>> {
-        let req_item = RequestItem::GetAccountTransactionBySequenceNumber {
-            account,
-            sequence_number,
-            fetch_events,
-        };
-
-        let mut response = self.get_with_proof_sync(vec![req_item])?;
-        let (txn_with_proof, _) = response
-            .response_items
-            .remove(0)
-            .into_get_account_txn_by_seq_num_response()?;
-
-        Ok(txn_with_proof.map(|t| (t.transaction, t.events)))
+    ) -> Result<Option<TransactionView>> {
+        let params = vec![
+            serde_json::json!(account),
+            serde_json::json!(sequence_number),
+            serde_json::json!(fetch_events),
+        ];
+        match self.get_with_state_proof(
+            "get_account_transaction".to_string(),
+            serde_json::json!(params),
+        ) {
+            Ok(result) => {
+                let txn = if result == serde_json::Value::Null {
+                    None
+                } else {
+                    let txn_view: TransactionView = serde_json::from_value(result)?;
+                    Some(txn_view)
+                };
+                Ok(txn)
+            }
+            Err(e) => bail!("Failed to get account txn with error: {:?}", e),
+        }
     }
 
     /// Get transactions in range (start_version..start_version + limit - 1) from validator.
@@ -515,27 +523,20 @@ impl LibraClient {
         start_version: u64,
         limit: u64,
         fetch_events: bool,
-    ) -> Result<Vec<(Transaction, Option<Vec<ContractEvent>>)>> {
-        // Make the request.
-        let req_item = RequestItem::GetTransactions {
-            start_version,
-            limit,
-            fetch_events,
-        };
-        let mut response = self.get_with_proof_sync(vec![req_item])?;
-        let txn_list_with_proof = response
-            .response_items
-            .remove(0)
-            .into_get_transactions_response()?;
+    ) -> Result<Vec<TransactionView>> {
+        let params = vec![
+            serde_json::json!(start_version),
+            serde_json::json!(limit),
+            serde_json::json!(fetch_events),
+        ];
 
-        // Transform the response.
-        let num_txns = txn_list_with_proof.transactions.len();
-        let event_lists = txn_list_with_proof
-            .events
-            .map(|event_lists| event_lists.into_iter().map(Some).collect())
-            .unwrap_or_else(|| vec![None; num_txns]);
-
-        Ok(itertools::zip_eq(txn_list_with_proof.transactions, event_lists).collect())
+        match self.get_with_state_proof("get_transactions".to_string(), serde_json::json!(params)) {
+            Ok(result) => {
+                let txns: Vec<TransactionView> = serde_json::from_value(result)?;
+                Ok(txns)
+            }
+            Err(e) => bail!("Failed to get transactions with error: {:?}", e),
+        }
     }
 
     pub fn get_events_by_access_path(

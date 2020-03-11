@@ -6,6 +6,7 @@ use debug_interface::node_debug_service::parse_events;
 use debug_interface::{libra_trace, NodeDebugClient};
 use libra_config::config::{NodeConfig, RoleType, VMPublishingOption};
 use libra_crypto::{ed25519::*, hash::CryptoHash, test_utils::KeyPair, SigningKey};
+use libra_json_rpc::views::{ScriptView, TransactionDataView};
 use libra_logger::prelude::*;
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
@@ -13,7 +14,6 @@ use libra_types::{
     account_address::{AccountAddress, AuthenticationKey},
     account_config::association_address,
     ledger_info::LedgerInfo,
-    transaction::{TransactionArgument, TransactionPayload},
     waypoint::Waypoint,
 };
 use num_traits::cast::FromPrimitive;
@@ -716,37 +716,40 @@ fn test_external_transaction_signer() {
             "false",
         ])
         .unwrap()
-        .unwrap()
-        .0;
-    let submitted_signed_txn = txn
-        .as_signed_user_txn()
-        .expect("Query should get user transaction.");
+        .unwrap();
 
-    assert_eq!(submitted_signed_txn.sender(), sender_address);
-    assert_eq!(submitted_signed_txn.sequence_number(), sequence_number);
-    assert_eq!(submitted_signed_txn.gas_unit_price(), gas_unit_price);
-    assert_eq!(submitted_signed_txn.max_gas_amount(), max_gas_amount);
-    match submitted_signed_txn.payload() {
-        TransactionPayload::Script(program) => match program.args().len() {
-            3 => match (&program.args()[0], &program.args()[1], &program.args()[2]) {
-                (
-                    TransactionArgument::Address(arg_receiver),
-                    TransactionArgument::U8Vector(arg_auth_key_prefix),
-                    TransactionArgument::U64(arg_amount),
-                ) => {
-                    assert_eq!(arg_receiver.clone(), receiver_address);
-                    assert_eq!(arg_auth_key_prefix.clone(), receiver_auth_key.prefix());
-                    assert_eq!(arg_amount.clone(), amount);
+    match txn.transaction {
+        TransactionDataView::UserTransaction {
+            sender: p_sender,
+            sequence_number: p_sequence_number,
+            gas_unit_price: p_gas_unit_price,
+            max_gas_amount: p_max_gas_amount,
+            script,
+            ..
+        } => {
+            assert_eq!(p_sender, sender_address.to_string());
+            assert_eq!(p_sequence_number, sequence_number);
+            assert_eq!(p_gas_unit_price, gas_unit_price);
+            assert_eq!(p_max_gas_amount, max_gas_amount);
+            match script {
+                ScriptView::PeerToPeer {
+                    receiver: p_receiver,
+                    amount: p_amount,
+                    arg_auth_key_prefix,
+                } => {
+                    assert_eq!(p_receiver, receiver_address.to_string());
+                    assert_eq!(p_amount, amount);
+                    assert_eq!(
+                        arg_auth_key_prefix
+                            .into_bytes()
+                            .expect("failed to turn key to bytes"),
+                        receiver_auth_key.prefix()
+                    );
                 }
-                _ => panic!(
-                    "The first argument for payment transaction must be recipient address, \
-                     the second argument must be recipient auth key prefix, and the third \
-                     must be amount."
-                ),
-            },
-            _ => panic!("Signed transaction payload arguments must have three arguments."),
-        },
-        _ => panic!("Signed transaction payload expected to be of struct Script"),
+                _ => panic!("Expected peer-to-peer script for user txn"),
+            }
+        }
+        _ => panic!("Query should get user transaction"),
     }
 }
 

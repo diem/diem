@@ -162,14 +162,39 @@ pub enum TransactionDataView {
     UnknownTransaction {},
 }
 
-#[derive(Deserialize, Serialize)]
+impl TransactionView {
+    pub fn get_transaction_name(&self) -> String {
+        if let TransactionDataView::UserTransaction { script, .. } = &self.transaction {
+            script.get_name()
+        } else {
+            "".to_string()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "type")]
+// TODO cover all script types
 pub enum ScriptView {
     #[serde(rename = "peer_to_peer_transaction")]
-    PeerToPeer { receiver: String, amount: u64 },
+    PeerToPeer {
+        receiver: String,
+        arg_auth_key_prefix: BytesView,
+        amount: u64,
+    },
 
     #[serde(rename = "unknown_transaction")]
     Unknown {},
+}
+
+impl ScriptView {
+    // TODO cover all script types
+    pub fn get_name(&self) -> String {
+        match self {
+            ScriptView::PeerToPeer { .. } => "peer to peer transaction".to_string(),
+            ScriptView::Unknown {} => "unknown transaction".to_string(),
+        }
+    }
 }
 
 impl From<Transaction> for TransactionDataView {
@@ -210,12 +235,13 @@ impl From<TransactionPayload> for ScriptView {
         };
 
         let res = match code.as_str() {
-            "PeerToPeer" => {
-                if let [TransactionArgument::Address(receiver), TransactionArgument::U64(amount)] =
+            "peer_to_peer_transaction" => {
+                if let [TransactionArgument::Address(receiver), TransactionArgument::U8Vector(arg_auth_key_prefix), TransactionArgument::U64(amount)] =
                     &args[..]
                 {
                     Ok(ScriptView::PeerToPeer {
                         receiver: receiver.to_string(),
+                        arg_auth_key_prefix: BytesView::from(arg_auth_key_prefix),
                         amount: *amount,
                     })
                 } else {

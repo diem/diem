@@ -13,7 +13,7 @@ use libra_crypto::{
     x25519::X25519StaticPublicKey,
     ValidKey, ValidKeyStringExt,
 };
-use libra_json_rpc::views::{AccountView, EventView};
+use libra_json_rpc::views::{AccountView, EventView, TransactionView};
 use libra_logger::prelude::*;
 use libra_temppath::TempPath;
 use libra_types::{
@@ -26,11 +26,10 @@ use libra_types::{
         CORE_CODE_ADDRESS,
     },
     account_state::AccountState,
-    contract_event::ContractEvent,
     crypto_proxies::LedgerInfoWithSignatures,
     transaction::{
         helpers::{create_unsigned_txn, create_user_txn, TransactionSigner},
-        parse_as_transaction_argument, RawTransaction, Script, SignedTransaction, Transaction,
+        parse_as_transaction_argument, RawTransaction, Script, SignedTransaction,
         TransactionArgument, TransactionPayload, Version,
     },
     waypoint::Waypoint,
@@ -423,9 +422,9 @@ impl ClientProxy {
                 .client
                 .get_txn_by_acc_seq(account, sequence_number - 1, true)
             {
-                Ok(Some((_, Some(events)))) => {
+                Ok(Some(txn_view)) => {
                     println!("transaction is stored!");
-                    if events.is_empty() {
+                    if txn_view.events.is_empty() {
                         println!("no events emitted");
                     }
                     break;
@@ -741,7 +740,7 @@ impl ClientProxy {
     pub fn get_committed_txn_by_acc_seq(
         &mut self,
         space_delim_strings: &[&str],
-    ) -> Result<Option<(Transaction, Option<Vec<ContractEvent>>)>> {
+    ) -> Result<Option<TransactionView>> {
         ensure!(
             space_delim_strings.len() == 4,
             "Invalid number of arguments to get transaction by account and sequence number"
@@ -773,7 +772,7 @@ impl ClientProxy {
     pub fn get_committed_txn_by_range(
         &mut self,
         space_delim_strings: &[&str],
-    ) -> Result<Vec<(Transaction, Option<Vec<ContractEvent>>)>> {
+    ) -> Result<Vec<TransactionView>> {
         ensure!(
             space_delim_strings.len() == 4,
             "Invalid number of arguments to get transaction by range"

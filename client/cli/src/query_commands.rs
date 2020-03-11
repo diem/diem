@@ -5,7 +5,6 @@ use crate::{
     client_proxy::ClientProxy,
     commands::{report_error, subcommand_execute, Command},
 };
-use transaction_builder::get_transaction_name;
 
 /// Major command for query operations.
 pub struct QueryCommand {}
@@ -128,17 +127,14 @@ impl Command for QueryCommandGetTxnByAccountSeq {
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
         println!(">> Getting committed transaction by account and sequence number");
         match client.get_committed_txn_by_acc_seq(&params) {
-            Ok(txn_and_events) => {
-                match txn_and_events {
-                    Some((comm_txn, events)) => {
-                        println!(
-                            "Committed transaction: {}",
-                            comm_txn.format_for_client(get_transaction_name)
-                        );
-                        if let Some(events_inner) = &events {
+            Ok(txn_view) => {
+                match txn_view {
+                    Some(txn_view) => {
+                        println!("Committed transaction: {}", txn_view.get_transaction_name(),);
+                        if !txn_view.events.is_empty() {
                             println!("Events: ");
-                            for event in events_inner {
-                                println!("{}", event);
+                            for event in txn_view.events {
+                                println!("{:?}", event)
                             }
                         }
                     }
@@ -174,19 +170,18 @@ impl Command for QueryCommandGetTxnByRange {
                 // Note that this should never panic because we shouldn't return items
                 // if the version wasn't able to be parsed in the first place
                 let mut cur_version = params[1].parse::<u64>().expect("Unable to parse version");
-                for (txn, opt_events) in comm_txns_and_events {
+                for txn_view in comm_txns_and_events {
                     println!(
                         "Transaction at version {}: {}",
                         cur_version,
-                        txn.format_for_client(get_transaction_name)
+                        txn_view.get_transaction_name(),
                     );
-                    if let Some(events) = opt_events {
-                        if events.is_empty() {
-                            println!("No events returned");
-                        } else {
-                            for event in events {
-                                println!("{}", event);
-                            }
+                    let events = txn_view.events;
+                    if events.is_empty() {
+                        println!("No events returned");
+                    } else {
+                        for event in events {
+                            println!("{:?}", event);
                         }
                     }
                     cur_version += 1;
