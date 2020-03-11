@@ -24,7 +24,7 @@ impl Default for VMConfig {
             "8e9b9e1a99dda2458e6e631f2e44a6cdae1b7f7132f41f9dbfacb2fe90aac149",
             "183b5a04393e8faccb9871374cca13c3f4a56466a48c49379698cbde19ade542",
             "137c1aacd8484d2a98cdfc1eb32d387cb3f8b72bdbb8769941f8f12cba98962c",
-            "279cee92b3e4335911467a11641063ec2b24ed04eb02aeec64055b2db6498f3c"
+            "279cee92b3e4335911467a11641063ec2b24ed04eb02aeec64055b2db6498f3c",
         ]
         .iter()
         .map(|s| string_to_script_hash(s))
