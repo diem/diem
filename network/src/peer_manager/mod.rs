@@ -290,16 +290,14 @@ where
         //TODO now that you can only listen on a socket inside of a tokio runtime we'll need to
         // rethink how we init the PeerManager so we don't have to do this funny thing.
         let connection_handler_notifs_tx = connection_notifs_tx.clone();
-        let (connection_handler, listen_addr) =
-            futures::executor::block_on(executor.spawn(async move {
-                ConnectionHandler::new(
-                    transport,
-                    listen_addr,
-                    dial_request_rx,
-                    connection_handler_notifs_tx.clone(),
-                )
-            }))
-            .unwrap();
+        let (connection_handler, listen_addr) = executor.enter(|| {
+            ConnectionHandler::new(
+                transport,
+                listen_addr,
+                dial_request_rx,
+                connection_handler_notifs_tx.clone(),
+            )
+        });
         Self {
             executor,
             own_peer_id,
@@ -427,27 +425,12 @@ where
             PeerManagerRequest::DisconnectPeer(peer_id, resp_tx) => {
                 // Send a CloseConnection request to NetworkProvider and drop the send end of the
                 // NetworkRequest channel.
-                if let Some((_, _, mut sender)) = self.active_peers.remove(&peer_id) {
-                    if let Err(close_err) = sender.push(
-                        ProtocolId::from_static(b"DisconnectPeer"),
-                        NetworkRequest::CloseConnection,
-                    ) {
-                        info!(
-                            "Failed to initiate connection close. CloseConnection request could not be delivered. Error: {:?}",
-                            close_err
-                        );
-                        if let Err(send_err) = resp_tx.send(Err(PeerManagerError::from(close_err)))
-                        {
-                            info!(
-                                "Failed to send connection close error. Error: {:?}",
-                                send_err
-                            );
-                        }
-                    } else {
-                        // Add to outstanding disconnect requests.
-                        self.outstanding_disconnect_requests
-                            .insert(peer_id, resp_tx);
-                    }
+                if let Some((_, _, sender)) = self.active_peers.remove(&peer_id) {
+                    // This should trigger a disconnect.
+                    drop(sender);
+                    // Add to outstanding disconnect requests.
+                    self.outstanding_disconnect_requests
+                        .insert(peer_id, resp_tx);
                 } else {
                     info!(
                         "Connection with peer: {} is already closed",
@@ -538,22 +521,11 @@ where
 
         let mut send_new_peer_notification = true;
         // Check for and handle simultaneous dialing
-        if let Some((curr_origin, curr_addr, mut peer_handle)) = self.active_peers.remove(&peer_id)
-        {
+        if let Some((curr_origin, curr_addr, peer_handle)) = self.active_peers.remove(&peer_id) {
             if Self::simultaneous_dial_tie_breaking(self.own_peer_id, peer_id, curr_origin, origin)
             {
                 // Drop the existing connection and replace it with the new connection
-                if let Err(err) = peer_handle.push(
-                    ProtocolId::from_static(b"DisconnectPeer"),
-                    NetworkRequest::CloseConnection,
-                ) {
-                    // Clean shutdown failed, but connection will be closed once existing handle to
-                    // NetworkProvider is dropped.
-                    warn!(
-                        "Unable to send CloseConnection request to downstream. Error: {:?}",
-                        err
-                    );
-                }
+                drop(peer_handle);
                 info!(
                     "Closing existing connection with Peer {} to mitigate simultaneous dial",
                     peer_id.short_str()

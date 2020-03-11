@@ -183,7 +183,13 @@ async fn check_correct_connection_is_live(
     }
 
     assert!(open_hello_substream(&mut dropped_connection).await.is_err());
-    assert!(open_hello_substream(&mut live_connection).await.is_ok());
+    if let Err(err) = open_hello_substream(&mut live_connection).await {
+        assert!(
+            false,
+            "Failed to open substream on connection that should be live: {:?}",
+            err
+        );
+    }
 
     live_connection.close().await.unwrap();
     assert_peer_disconnected_event(
@@ -381,6 +387,7 @@ fn peer_manager_simultaneous_dial_outbound_inbound_remote_id_larger() {
 
 #[test]
 fn peer_manager_simultaneous_dial_outbound_inbound_own_id_larger() {
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
@@ -427,6 +434,7 @@ fn peer_manager_simultaneous_dial_outbound_inbound_own_id_larger() {
 
 #[test]
 fn peer_manager_simultaneous_dial_two_outbound() {
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut runtime = ::tokio::runtime::Runtime::new().unwrap();
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
@@ -465,7 +473,6 @@ fn peer_manager_simultaneous_dial_two_outbound() {
         )
         .await;
     };
-
     runtime.block_on(test);
 }
 
@@ -544,5 +551,6 @@ fn test_dial_disconnect() {
         // Sender of disconnect request should receive acknowledgement once connection is closed.
         disconnect_resp_rx.await.unwrap().unwrap();
     };
+
     runtime.block_on(test);
 }
