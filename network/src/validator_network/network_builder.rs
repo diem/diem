@@ -320,13 +320,13 @@ impl NetworkBuilder {
             self.upstream_handlers
                 .insert(protocol, network_notifs_tx.clone());
         }
-        let (control_notifs_tx, control_notifs_rx) = conn_status_channel::new();
+        let (connection_notifs_tx, connection_notifs_rx) = conn_status_channel::new();
         // Auto-subscribe all application level handlers to connection events.
-        self.connection_event_handlers.push(control_notifs_tx);
+        self.connection_event_handlers.push(connection_notifs_tx);
         (
             self.pm_reqs_tx.clone(),
             network_notifs_rx,
-            control_notifs_rx,
+            connection_notifs_rx,
         )
     }
 

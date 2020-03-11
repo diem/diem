@@ -50,7 +50,7 @@ pub struct StateSynchronizerSender {
 pub fn add_to_network(
     network: &mut NetworkBuilder,
 ) -> (StateSynchronizerSender, StateSynchronizerEvents) {
-    let (sender, receiver, control_notifs_rx) = network.add_protocol_handler(
+    let (sender, receiver, connection_notifs_rx) = network.add_protocol_handler(
         vec![],
         vec![ProtocolId::from_static(
             STATE_SYNCHRONIZER_DIRECT_SEND_PROTOCOL,
@@ -60,7 +60,7 @@ pub fn add_to_network(
     );
     (
         StateSynchronizerSender::new(sender),
-        StateSynchronizerEvents::new(receiver, control_notifs_rx),
+        StateSynchronizerEvents::new(receiver, connection_notifs_rx),
     )
 }
 

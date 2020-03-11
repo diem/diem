@@ -96,7 +96,7 @@ pub struct NetworkEvents<TMessage> {
 impl<TMessage: Message> NetworkEvents<TMessage> {
     pub fn new(
         peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
-        control_notifs_rx: libra_channel::Receiver<
+        connection_notifs_rx: libra_channel::Receiver<
             PeerId,
             peer_manager::ConnectionStatusNotification,
         >,
@@ -105,7 +105,7 @@ impl<TMessage: Message> NetworkEvents<TMessage> {
             peer_mgr_notif_to_event
                 as fn(PeerManagerNotification) -> Result<Event<TMessage>, NetworkError>,
         );
-        let control_event_stream = control_notifs_rx.map(
+        let control_event_stream = connection_notifs_rx.map(
             control_msg_to_event
                 as fn(
                     peer_manager::ConnectionStatusNotification,

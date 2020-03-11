@@ -71,7 +71,7 @@ pub struct HealthCheckerNetworkSender {
 pub fn add_to_network(
     network: &mut NetworkBuilder,
 ) -> (HealthCheckerNetworkSender, HealthCheckerNetworkEvents) {
-    let (sender, receiver, control_notifs_rx) = network.add_protocol_handler(
+    let (sender, receiver, connection_notifs_rx) = network.add_protocol_handler(
         vec![ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL)],
         vec![],
         QueueStyle::LIFO,
@@ -79,7 +79,7 @@ pub fn add_to_network(
     );
     (
         HealthCheckerNetworkSender::new(sender),
-        HealthCheckerNetworkEvents::new(receiver, control_notifs_rx),
+        HealthCheckerNetworkEvents::new(receiver, connection_notifs_rx),
     )
 }
 
