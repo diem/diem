@@ -7,6 +7,7 @@ use libra_types::{account_address::AccountAddress, transaction::SignedTransactio
 use reqwest::Client;
 use serde_json::Value;
 use std::convert::TryFrom;
+use std::fmt;
 
 #[derive(Default)]
 pub struct JsonRpcBatch {
@@ -14,6 +15,10 @@ pub struct JsonRpcBatch {
 }
 
 impl JsonRpcBatch {
+    pub fn new() -> Self {
+        Self { requests: vec![] }
+    }
+
     pub fn add_request(&mut self, method_name: String, parameters: Vec<Value>) {
         self.requests.push((method_name, parameters));
     }
@@ -32,16 +37,49 @@ impl JsonRpcBatch {
     }
 }
 
+#[derive(Clone)]
 pub struct JsonRpcAsyncClient {
     address: String,
     client: Client,
 }
 
 impl JsonRpcAsyncClient {
-    pub fn new(host: &str, port: u16) -> Self {
+    pub fn new(client: Client, host: &str, port: u16) -> Self {
         let address = format!("http://{}:{}", host, port);
-        let client = Client::new();
         Self { address, client }
+    }
+
+    pub async fn get_accounts_state(
+        &self,
+        accounts: &[AccountAddress],
+    ) -> Result<Vec<AccountView>> {
+        let mut batch = JsonRpcBatch::new();
+        for account in accounts {
+            batch.add_get_account_state_request(*account);
+        }
+        let exec_results = self.execute(batch).await?;
+        let mut results = vec![];
+        for exec_result in exec_results {
+            let exec_result = exec_result?;
+            if let JsonRpcResponse::AccountResponse(r) = exec_result {
+                results.push(r);
+            } else {
+                panic!(
+                    "Unexpected response for get_accounts_state {:?}",
+                    exec_result
+                )
+            }
+        }
+        assert!(results.len() == accounts.len());
+        Ok(results)
+    }
+
+    pub async fn submit_transaction(&self, txn: SignedTransaction) -> Result<()> {
+        let mut batch = JsonRpcBatch::new();
+        batch.add_submit_request(txn)?;
+        let mut exec_result = self.execute(batch).await?;
+        assert!(exec_result.len() == 1);
+        exec_result.remove(0).map(|_| ())
     }
 
     pub async fn execute(&self, batch: JsonRpcBatch) -> Result<Vec<Result<JsonRpcResponse>>> {
@@ -98,7 +136,13 @@ impl JsonRpcAsyncClient {
     }
 }
 
-#[derive(PartialEq)]
+impl fmt::Debug for JsonRpcAsyncClient {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.address)
+    }
+}
+
+#[derive(PartialEq, Debug)]
 pub enum JsonRpcResponse {
     SubmissionResponse,
     AccountResponse(AccountView),

@@ -153,7 +153,7 @@ fn test_transaction_submission() {
     let port = utils::get_available_port();
     let address = format!("0.0.0.0:{}", port);
     let mut runtime = bootstrap(address.parse().unwrap(), Arc::new(db), mp_sender);
-    let client = JsonRpcAsyncClient::new("0.0.0.0", port);
+    let client = JsonRpcAsyncClient::new(reqwest::Client::new(), "0.0.0.0", port);
 
     // future that mocks shared mempool execution
     runtime.spawn(async move {
@@ -200,7 +200,7 @@ proptest! {
         let address = format!("0.0.0.0:{}", port);
         let mp_sender = channel(1024).0;
         let mut rt = bootstrap(address.parse().unwrap(), Arc::new(mock_db.clone()), mp_sender);
-        let client = JsonRpcAsyncClient::new("0.0.0.0", port);
+        let client = JsonRpcAsyncClient::new(reqwest::Client::new(), "0.0.0.0", port);
 
         // test case 1: single call
         let (first_account, blob) = mock_db.all_accounts.iter().next().unwrap();

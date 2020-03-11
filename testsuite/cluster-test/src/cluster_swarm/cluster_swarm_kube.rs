@@ -19,7 +19,7 @@ use util::retry;
 
 use crate::{cluster_swarm::ClusterSwarm, instance::Instance};
 use kube::api::ListParams;
-use libra_config::config::AdmissionControlConfig;
+use libra_config::config::DEFAULT_JSON_RPC_PORT;
 
 const DEFAULT_NAMESPACE: &str = "default";
 
@@ -240,7 +240,7 @@ impl ClusterSwarm for ClusterSwarmKube {
         }
         if node_name.is_empty() {
             let (node_name, pod_ip) = self.get_pod_node_and_ip(&pod_name).await?;
-            let ac_port = AdmissionControlConfig::default().address.port() as u32;
+            let ac_port = DEFAULT_JSON_RPC_PORT as u32;
             let instance = Instance::new_k8s(pod_name, pod_ip, ac_port, Some(node_name));
             self.validator_to_node.lock().await.insert(index, instance);
         }
@@ -303,7 +303,7 @@ impl ClusterSwarm for ClusterSwarmKube {
         }
         if node_name.is_empty() {
             let (node_name, pod_ip) = self.get_pod_node_and_ip(&pod_name).await?;
-            let ac_port = AdmissionControlConfig::default().address.port() as u32;
+            let ac_port = DEFAULT_JSON_RPC_PORT as u32;
             let instance = Instance::new_k8s(pod_name, pod_ip, ac_port, Some(node_name));
             self.fullnode_to_node
                 .lock()
