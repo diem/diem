@@ -1525,12 +1525,21 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         };
         match &exp.value {
             EA::Exp_::Value(v) => match &v.value {
-                PA::Value_::Address(addr) => make_value(
-                    Value::Address(
-                        BigUint::from_str_radix(&format!("{}", addr), 16).expect("valid address"),
-                    ),
-                    Type::new_prim(PrimitiveType::Address),
-                ),
+                PA::Value_::Address(addr) => {
+                    let addr_str = &format!("{}", addr);
+                    if &addr_str[0..2] == "0x" {
+                        let digits_only = &addr_str[2..];
+                        make_value(
+                            Value::Address(
+                                BigUint::from_str_radix(digits_only, 16).expect("valid address"),
+                            ),
+                            Type::new_prim(PrimitiveType::Address),
+                        )
+                    } else {
+                        self.error(&loc, "address string does not begin with '0x'");
+                        self.new_error_exp()
+                    }
+                }
                 PA::Value_::U8(x) => make_value(
                     Value::Number(BigUint::from_u8(*x).unwrap()),
                     Type::new_prim(PrimitiveType::U8),
