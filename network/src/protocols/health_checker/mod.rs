@@ -20,7 +20,7 @@
 use crate::{
     counters,
     error::NetworkError,
-    peer_manager::{PeerManagerRequest, PeerManagerRequestSender},
+    peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::{
         network::{Event, NetworkEvents, NetworkSender},
         rpc::error::RpcError,
@@ -29,7 +29,7 @@ use crate::{
     ProtocolId,
 };
 use bytes::Bytes;
-use channel::{libra_channel, message_queues::QueueStyle};
+use channel::message_queues::QueueStyle;
 use futures::{
     channel::oneshot,
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
@@ -71,22 +71,26 @@ pub struct HealthCheckerNetworkSender {
 pub fn add_to_network(
     network: &mut NetworkBuilder,
 ) -> (HealthCheckerNetworkSender, HealthCheckerNetworkEvents) {
-    let (sender, receiver, connection_notifs_rx) = network.add_protocol_handler(
-        vec![ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL)],
-        vec![],
-        QueueStyle::LIFO,
-        Some(&counters::PENDING_HEALTH_CHECKER_NETWORK_EVENTS),
-    );
+    let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
+        .add_protocol_handler(
+            vec![ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL)],
+            vec![],
+            QueueStyle::LIFO,
+            Some(&counters::PENDING_HEALTH_CHECKER_NETWORK_EVENTS),
+        );
     (
-        HealthCheckerNetworkSender::new(sender),
+        HealthCheckerNetworkSender::new(sender, connection_reqs_tx),
         HealthCheckerNetworkEvents::new(receiver, connection_notifs_rx),
     )
 }
 
 impl HealthCheckerNetworkSender {
-    pub fn new(inner: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>) -> Self {
+    pub fn new(
+        peer_mgr_reqs_tx: PeerManagerRequestSender,
+        connection_reqs_tx: ConnectionRequestSender,
+    ) -> Self {
         Self {
-            inner: NetworkSender::new(PeerManagerRequestSender::new(inner)),
+            inner: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
         }
     }
 

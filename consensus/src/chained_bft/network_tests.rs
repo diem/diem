@@ -22,7 +22,10 @@ use consensus_types::{
 use futures::{channel::mpsc, executor::block_on, SinkExt, StreamExt};
 use libra_types::{block_info::BlockInfo, PeerId};
 use network::{
-    peer_manager::{conn_status_channel, PeerManagerNotification, PeerManagerRequest},
+    peer_manager::{
+        conn_status_channel, ConnectionRequestSender, PeerManagerNotification, PeerManagerRequest,
+        PeerManagerRequestSender,
+    },
     protocols::rpc::InboundRpcRequest,
     ProtocolId,
 };
@@ -339,7 +342,6 @@ impl DropConfig {
         match net_req {
             PeerManagerRequest::SendMessage(dst, _) => self.0.get(src).unwrap().contains(&dst),
             PeerManagerRequest::SendRpc(dst, _) => self.0.get(src).unwrap().contains(&dst),
-            _ => true,
         }
     }
 
@@ -377,11 +379,17 @@ fn test_network_api() {
     for peer in &peers {
         let (network_reqs_tx, network_reqs_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        let (connection_reqs_tx, _) =
+            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (consensus_tx, consensus_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
         let (_, conn_status_rx) = conn_status_channel::new();
-        let network_sender = ConsensusNetworkSender::new(network_reqs_tx, conn_mgr_reqs_tx);
+        let network_sender = ConsensusNetworkSender::new(
+            PeerManagerRequestSender::new(network_reqs_tx),
+            ConnectionRequestSender::new(connection_reqs_tx),
+            conn_mgr_reqs_tx,
+        );
         let network_events = ConsensusNetworkEvents::new(consensus_rx, conn_status_rx);
 
         playground.add_node(*peer, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
@@ -448,11 +456,17 @@ fn test_rpc() {
     for peer in peers.iter() {
         let (network_reqs_tx, network_reqs_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        let (connection_reqs_tx, _) =
+            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (consensus_tx, consensus_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
         let (_, conn_status_rx) = conn_status_channel::new();
-        let network_sender = ConsensusNetworkSender::new(network_reqs_tx, conn_mgr_reqs_tx);
+        let network_sender = ConsensusNetworkSender::new(
+            PeerManagerRequestSender::new(network_reqs_tx),
+            ConnectionRequestSender::new(connection_reqs_tx),
+            conn_mgr_reqs_tx,
+        );
         let network_events = ConsensusNetworkEvents::new(consensus_rx, conn_status_rx);
 
         playground.add_node(*peer, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);

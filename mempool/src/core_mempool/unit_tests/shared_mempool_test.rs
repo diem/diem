@@ -29,8 +29,8 @@ use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     peer_manager::{
-        conn_status_channel, ConnectionStatusNotification, PeerManagerNotification,
-        PeerManagerRequest,
+        conn_status_channel, ConnectionRequestSender, ConnectionStatusNotification,
+        PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
     },
     DisconnectReason, ProtocolId,
 };
@@ -64,10 +64,15 @@ fn init_single_shared_mempool(smp: &mut SharedMempoolNetwork, peer_id: PeerId, c
     let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
     let (network_reqs_tx, network_reqs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+    let (connection_reqs_tx, _) =
+        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let (network_notifs_tx, network_notifs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let (conn_status_tx, conn_status_rx) = conn_status_channel::new();
-    let network_sender = MempoolNetworkSender::new(network_reqs_tx);
+    let network_sender = MempoolNetworkSender::new(
+        PeerManagerRequestSender::new(network_reqs_tx),
+        ConnectionRequestSender::new(connection_reqs_tx),
+    );
     let network_events = MempoolNetworkEvents::new(network_notifs_rx, conn_status_rx);
     let (sender, subscriber) = unbounded();
     let (timer_sender, timer_receiver) = unbounded();

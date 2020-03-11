@@ -14,7 +14,9 @@ use futures::channel::{
 };
 use libra_config::config::{NetworkConfig, NodeConfig};
 use libra_types::{mempool_status::MempoolStatusCode, transaction::SignedTransaction, PeerId};
-use network::peer_manager::conn_status_channel;
+use network::peer_manager::{
+    conn_status_channel, ConnectionRequestSender, PeerManagerRequestSender,
+};
 use std::{
     num::NonZeroUsize,
     sync::{Arc, Mutex},
@@ -57,10 +59,15 @@ impl MockSharedMempool {
         let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
         let (network_reqs_tx, _network_reqs_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        let (connection_reqs_tx, _) =
+            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (_network_notifs_tx, network_notifs_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (_, conn_notifs_rx) = conn_status_channel::new();
-        let network_sender = MempoolNetworkSender::new(network_reqs_tx);
+        let network_sender = MempoolNetworkSender::new(
+            PeerManagerRequestSender::new(network_reqs_tx),
+            ConnectionRequestSender::new(connection_reqs_tx),
+        );
         let network_events = MempoolNetworkEvents::new(network_notifs_rx, conn_notifs_rx);
         let (sender, _subscriber) = unbounded();
         let (ac_client, client_events) = mpsc::channel(1_024);

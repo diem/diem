@@ -54,12 +54,6 @@ pub use self::error::PeerManagerError;
 /// Request received by PeerManager from upstream actors.
 #[derive(Debug)]
 pub enum PeerManagerRequest {
-    DialPeer(
-        PeerId,
-        Multiaddr,
-        oneshot::Sender<Result<(), PeerManagerError>>,
-    ),
-    DisconnectPeer(PeerId, oneshot::Sender<Result<(), PeerManagerError>>),
     /// Send an RPC request to a remote peer.
     SendRpc(PeerId, OutboundRpcRequest),
     /// Fire-and-forget style message send to a remote peer.
@@ -75,6 +69,16 @@ pub enum PeerManagerNotification {
     RecvMessage(PeerId, Message),
 }
 
+#[derive(Debug)]
+pub enum ConnectionRequest {
+    DialPeer(
+        PeerId,
+        Multiaddr,
+        oneshot::Sender<Result<(), PeerManagerError>>,
+    ),
+    DisconnectPeer(PeerId, oneshot::Sender<Result<(), PeerManagerError>>),
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum ConnectionStatusNotification {
     /// Connection with a new peer has been established.
@@ -83,46 +87,24 @@ pub enum ConnectionStatusNotification {
     LostPeer(PeerId, Multiaddr, DisconnectReason),
 }
 
-/// Convenience wrapper around a `channel::Sender<PeerManagerRequest>` which makes it easy to issue
-/// requests and await the responses from PeerManager
+/// Convenience wrapper which makes it easy to issue communication requests and await the responses
+/// from PeerManager.
 #[derive(Clone)]
 pub struct PeerManagerRequestSender {
     inner: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
+}
+
+/// Convenience wrapper which makes it easy to issue connection requests and await the responses
+/// from PeerManager.
+#[derive(Clone)]
+pub struct ConnectionRequestSender {
+    inner: libra_channel::Sender<PeerId, ConnectionRequest>,
 }
 
 impl PeerManagerRequestSender {
     /// Construct a new PeerManagerRequestSender with a raw channel::Sender
     pub fn new(inner: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>) -> Self {
         Self { inner }
-    }
-
-    /// Request that a given Peer be dialed at the provided `Multiaddr` and synchronously wait for
-    /// the request to be performed.
-    pub async fn dial_peer(
-        &mut self,
-        peer_id: PeerId,
-        addr: Multiaddr,
-    ) -> Result<(), PeerManagerError> {
-        let (oneshot_tx, oneshot_rx) = oneshot::channel();
-        let request = PeerManagerRequest::DialPeer(peer_id, addr, oneshot_tx);
-        self.inner
-            .push((peer_id, ProtocolId::from_static(b"DialPeer")), request)
-            .unwrap();
-        oneshot_rx.await?
-    }
-
-    /// Request that a given Peer be disconnected and synchronously wait for the request to be
-    /// performed.
-    pub async fn disconnect_peer(&mut self, peer_id: PeerId) -> Result<(), PeerManagerError> {
-        let (oneshot_tx, oneshot_rx) = oneshot::channel();
-        let request = PeerManagerRequest::DisconnectPeer(peer_id, oneshot_tx);
-        self.inner
-            .push(
-                (peer_id, ProtocolId::from_static(b"DisconnectPeer")),
-                request,
-            )
-            .unwrap();
-        oneshot_rx.await?
     }
 
     /// Send a fire-and-forget direct-send message to remote peer.
@@ -202,6 +184,31 @@ impl PeerManagerRequestSender {
     }
 }
 
+impl ConnectionRequestSender {
+    /// Construct a new ConnectionRequestSender with a raw libra_channel::Sender
+    pub fn new(inner: libra_channel::Sender<PeerId, ConnectionRequest>) -> Self {
+        Self { inner }
+    }
+
+    pub async fn dial_peer(
+        &mut self,
+        peer: PeerId,
+        addr: Multiaddr,
+    ) -> Result<(), PeerManagerError> {
+        let (oneshot_tx, oneshot_rx) = oneshot::channel();
+        self.inner
+            .push(peer, ConnectionRequest::DialPeer(peer, addr, oneshot_tx))?;
+        oneshot_rx.await?
+    }
+
+    pub async fn disconnect_peer(&mut self, peer: PeerId) -> Result<(), PeerManagerError> {
+        let (oneshot_tx, oneshot_rx) = oneshot::channel();
+        self.inner
+            .push(peer, ConnectionRequest::DisconnectPeer(peer, oneshot_tx))?;
+        oneshot_rx.await?
+    }
+}
+
 /// Responsible for handling and maintaining connections to other Peers
 pub struct PeerManager<TTransport, TMuxer>
 where
@@ -243,6 +250,8 @@ where
     dial_request_tx: channel::Sender<ConnectionHandlerRequest>,
     /// Sender for connection events.
     connection_notifs_tx: channel::Sender<ConnectionNotification<TMuxer>>,
+    /// Receiver for connection requests.
+    connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
     /// Receiver for connection events.
     connection_notifs_rx: channel::Receiver<ConnectionNotification<TMuxer>>,
     /// A map of outstanding disconnect requests
@@ -270,6 +279,7 @@ where
         role: RoleType,
         listen_addr: Multiaddr,
         requests_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
+        connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
         rpc_protocols: HashSet<ProtocolId>,
         direct_send_protocols: HashSet<ProtocolId>,
         upstream_handlers: HashMap<
@@ -306,6 +316,7 @@ where
             connection_handler: Some(connection_handler),
             active_peers: HashMap::new(),
             requests_rx,
+            connection_reqs_rx,
             rpc_protocols,
             direct_send_protocols,
             dial_request_tx,
@@ -337,6 +348,9 @@ where
                 }
                 request = self.requests_rx.select_next_some() => {
                   self.handle_request(request).await;
+                }
+                connection_request = self.connection_reqs_rx.select_next_some() => {
+                  self.handle_connection_request(connection_request).await;
                 }
                 complete => {
                   // TODO: This should be ok when running in client mode.
@@ -399,10 +413,10 @@ where
         }
     }
 
-    async fn handle_request(&mut self, request: PeerManagerRequest) {
+    async fn handle_connection_request(&mut self, request: ConnectionRequest) {
         trace!("PeerManagerRequest::{:?}", request);
         match request {
-            PeerManagerRequest::DialPeer(requested_peer_id, addr, response_tx) => {
+            ConnectionRequest::DialPeer(requested_peer_id, addr, response_tx) => {
                 // Only dial peers which we aren't already connected with
                 if let Some((_, prev_addr, _)) = self.active_peers.get(&requested_peer_id) {
                     let error = PeerManagerError::AlreadyConnected(prev_addr.clone());
@@ -422,7 +436,7 @@ where
                     self.dial_peer(requested_peer_id, addr, response_tx).await;
                 };
             }
-            PeerManagerRequest::DisconnectPeer(peer_id, resp_tx) => {
+            ConnectionRequest::DisconnectPeer(peer_id, resp_tx) => {
                 // Send a CloseConnection request to NetworkProvider and drop the send end of the
                 // NetworkRequest channel.
                 if let Some((_, _, sender)) = self.active_peers.remove(&peer_id) {
@@ -444,6 +458,12 @@ where
                     }
                 }
             }
+        }
+    }
+
+    async fn handle_request(&mut self, request: PeerManagerRequest) {
+        trace!("PeerManagerRequest::{:?}", request);
+        match request {
             PeerManagerRequest::SendMessage(peer_id, msg) => {
                 if let Some((_, _, sender)) = self.active_peers.get_mut(&peer_id) {
                     if let Err(err) =

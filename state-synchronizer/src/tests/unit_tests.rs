@@ -7,6 +7,7 @@ use crate::{
     PeerId,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
+use network::peer_manager::{ConnectionRequestSender, PeerManagerRequestSender};
 use std::{collections::HashMap, num::NonZeroUsize};
 
 #[test]
@@ -18,9 +19,14 @@ fn test_peer_manager() {
         PeerId::random(),
     ];
     let mut peer_manager = PeerManager::new(peers.clone());
-    let (network_reqs_tx, _) =
+    let (peer_mgr_reqs_tx, _) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
-    let sender = StateSynchronizerSender::new(network_reqs_tx);
+    let (connection_reqs_tx, _) =
+        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+    let sender = StateSynchronizerSender::new(
+        PeerManagerRequestSender::new(peer_mgr_reqs_tx),
+        ConnectionRequestSender::new(connection_reqs_tx),
+    );
     for peer_id in peers.clone() {
         peer_manager.enable_peer(peer_id, sender.clone());
     }

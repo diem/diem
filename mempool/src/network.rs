@@ -4,11 +4,11 @@
 //! Interface between Mempool and Network layers.
 
 use crate::counters;
-use channel::{libra_channel, message_queues::QueueStyle};
+use channel::message_queues::QueueStyle;
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     error::NetworkError,
-    peer_manager::{PeerManagerRequest, PeerManagerRequestSender},
+    peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NetworkEvents, NetworkSender},
     validator_network::network_builder::NetworkBuilder,
     ProtocolId,
@@ -62,23 +62,27 @@ pub struct MempoolNetworkSender {
 pub fn add_to_network(
     network: &mut NetworkBuilder,
 ) -> (MempoolNetworkSender, MempoolNetworkEvents) {
-    let (sender, receiver, connection_notifs_rx) = network.add_protocol_handler(
-        vec![],
-        vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)],
-        QueueStyle::LIFO,
-        Some(&counters::PENDING_MEMPOOL_NETWORK_EVENTS),
-    );
+    let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
+        .add_protocol_handler(
+            vec![],
+            vec![ProtocolId::from_static(MEMPOOL_DIRECT_SEND_PROTOCOL)],
+            QueueStyle::LIFO,
+            Some(&counters::PENDING_MEMPOOL_NETWORK_EVENTS),
+        );
     (
-        MempoolNetworkSender::new(sender),
+        MempoolNetworkSender::new(sender, connection_reqs_tx),
         MempoolNetworkEvents::new(receiver, connection_notifs_rx),
     )
 }
 
 impl MempoolNetworkSender {
     /// Returns a Sender that only sends for the `MEMPOOL_DIRECT_SEND_PROTOCOL` ProtocolId.
-    pub fn new(inner: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>) -> Self {
+    pub fn new(
+        peer_mgr_reqs_tx: PeerManagerRequestSender,
+        connection_reqs_tx: ConnectionRequestSender,
+    ) -> Self {
         Self {
-            inner: NetworkSender::new(PeerManagerRequestSender::new(inner)),
+            inner: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
         }
     }
 
