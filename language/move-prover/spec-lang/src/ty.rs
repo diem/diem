@@ -101,14 +101,6 @@ impl Type {
         false
     }
 
-    pub fn drop_references(&self) -> Type {
-        let mut ty = self.clone();
-        while let Type::Reference(_, bt) = &ty {
-            ty = *bt.clone();
-        }
-        ty
-    }
-
     /// Instantiates type parameters in this type.
     pub fn instantiate(&self, params: &[Type]) -> Type {
         self.replace(Some(params), None)
@@ -219,8 +211,26 @@ impl Substitution {
         t1: &Type,
         t2: &Type,
     ) -> Result<Type, TypeError> {
-        let t1 = t1.drop_references();
-        let t2 = t2.drop_references();
+        // If any of the arguments is a reference, drop it for unification, but ensure
+        // it is put back since we need to maintain this information for later phases.
+        if let Type::Reference(is_mut, bt1) = t1 {
+            // Avoid creating nested references.
+            let t2 = if let Type::Reference(_, bt2) = t2 {
+                bt2.as_ref()
+            } else {
+                t2
+            };
+            return Ok(Type::Reference(
+                *is_mut,
+                Box::new(self.unify(display_context, bt1.as_ref(), t2)?),
+            ));
+        }
+        if let Type::Reference(is_mut, bt2) = t2 {
+            return Ok(Type::Reference(
+                *is_mut,
+                Box::new(self.unify(display_context, t1, bt2.as_ref())?),
+            ));
+        }
 
         // Substitute or assign variables.
         if let Some(rt) = self.try_substitute_or_assign(display_context, false, &t1, &t2)? {
@@ -231,20 +241,20 @@ impl Substitution {
         }
 
         // Accept any error type.
-        if t1 == Type::Error {
-            return Ok(t2);
+        if t1 == &Type::Error {
+            return Ok(t2.clone());
         }
-        if t2 == Type::Error {
-            return Ok(t1);
+        if t2 == &Type::Error {
+            return Ok(t1.clone());
         }
 
         // All number types are currently compatible.
         if t1.is_number() && t2.is_number() {
-            return Ok(t1);
+            return Ok(t1.clone());
         }
 
         // Unify matching structured types.
-        match (&t1, &t2) {
+        match (t1, t2) {
             (Type::Primitive(p1), Type::Primitive(p2)) => {
                 if p1 == p2 {
                     return Ok(t1.clone());
