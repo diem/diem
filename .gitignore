@@ -40,3 +40,7 @@ language/tools/vm-genesis/genesis/vm_config.toml
 
 # Terraform
 .terraform/
+
+#Python
+__pycache__/
+*.pyc
