@@ -75,8 +75,14 @@ submit_build() {
 }
 
 get_build_status() {
+    BUILD_STATUS=""
+    CURRENT_PHASE=""
     local BUILD_ID="${1}"
     local BUILD_JSON=$(aws codebuild batch-get-builds --ids ${BUILD_ID})
+    if [[ $? -gt 0 ]]; then
+      echo "aws codebuild batch-get-builds failed"
+      return $?
+    fi
     BUILD_STATUS=$(echo $BUILD_JSON | jq -r '.builds[0].buildStatus')
     CURRENT_PHASE=$(echo $BUILD_JSON | jq -r '.builds[0].currentPhase')
 }
@@ -94,16 +100,17 @@ while true; do
     for (( i=0; i < ${#BUILD_PROJECTS[@]}; i++ ));
     do
         get_build_status ${BUILD_IDS[$i]}
-        if [ $BUILD_STATUS = "FAILED" ] || [ $BUILD_STATUS = "FAULT" ] || [ $BUILD_STATUS = "TIMED_OUT" ] || [ $BUILD_STATUS = "STOPPED" ]; then
-            echo "${BUILD_PROJECTS[$i]} build failed with status ${BUILD_STATUS}"
-            exit 1
-        fi
-        if [ $BUILD_STATUS != "SUCCEEDED" ]; then
-            ALL_SUCCEEDED=false
+        if [[ $? -gt 0 ]] || [[ ${BUILD_STATUS} == "" ]]; then
+          ALL_SUCCEEDED=false
+        elif [[ $BUILD_STATUS == "FAILED" ]] || [[ $BUILD_STATUS == "FAULT" ]] || [[ $BUILD_STATUS == "TIMED_OUT" ]] || [[ $BUILD_STATUS == "STOPPED" ]]; then
+          echo "${BUILD_PROJECTS[$i]} build failed with status ${BUILD_STATUS}"
+          exit 1
+        elif [[ ${BUILD_STATUS} != "SUCCEEDED" ]]; then
+          ALL_SUCCEEDED=false
         fi
         echo "${BUILD_PROJECTS[$i]} current phase: ${CURRENT_PHASE}"
     done
-    if [ $ALL_SUCCEEDED = true ]; then
+    if [[ $ALL_SUCCEEDED == true ]]; then
         echo "All builds completed successfully"
         exit 0
     fi
