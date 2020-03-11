@@ -732,6 +732,7 @@ dependencies = [
  "kube 0.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
+ "libra-json-rpc 0.1.0",
  "libra-logger 0.1.0",
  "libra-types 0.1.0",
  "libra-util 0.1.0",

@@ -30,6 +30,7 @@ structopt = "0.3.2"
 chrono = { version = "0.4.11" }
 
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0"}
+libra-json-rpc = { path = "../../json-rpc", version = "0.1.0"}
 admission-control-proto = { path = "../../admission_control/admission-control-proto", version = "0.1.0" }
 util = { path = "../../common/util", version = "0.1.0", package = "libra-util" }
 num_cpus = "1.11.1"
