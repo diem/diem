@@ -5,7 +5,7 @@
 
 use crate::{
     error::NetworkError,
-    peer_manager::{PeerManagerRequest, PeerManagerRequestSender},
+    peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::{
         network::{Event, NetworkEvents, NetworkSender},
         rpc::error::RpcError,
@@ -13,7 +13,7 @@ use crate::{
     validator_network::network_builder::{NetworkBuilder, TransportType},
     NetworkPublicKeys, ProtocolId,
 };
-use channel::{libra_channel, message_queues::QueueStyle};
+use channel::message_queues::QueueStyle;
 use futures::{executor::block_on, StreamExt};
 use libra_config::config::RoleType;
 use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
@@ -31,14 +31,15 @@ pub const TEST_RPC_PROTOCOL: &[u8] = b"/libra/rpc/0.1.0/test/0.1.0";
 pub const TEST_DIRECT_SENDER_PROTOCOL: &[u8] = b"/libra/ds/0.1.0/test/0.1.0";
 
 fn add_to_network(network: &mut NetworkBuilder) -> (DummyNetworkSender, DummyNetworkEvents) {
-    let (sender, receiver, connection_notifs_rx) = network.add_protocol_handler(
-        vec![ProtocolId::from_static(TEST_RPC_PROTOCOL)],
-        vec![ProtocolId::from_static(TEST_DIRECT_SENDER_PROTOCOL)],
-        QueueStyle::LIFO,
-        None,
-    );
+    let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
+        .add_protocol_handler(
+            vec![ProtocolId::from_static(TEST_RPC_PROTOCOL)],
+            vec![ProtocolId::from_static(TEST_DIRECT_SENDER_PROTOCOL)],
+            QueueStyle::LIFO,
+            None,
+        );
     (
-        DummyNetworkSender::new(sender),
+        DummyNetworkSender::new(sender, connection_reqs_tx),
         DummyNetworkEvents::new(receiver, connection_notifs_rx),
     )
 }
@@ -49,21 +50,22 @@ pub type DummyNetworkEvents = NetworkEvents<DummyMsg>;
 
 #[derive(Clone)]
 pub struct DummyNetworkSender {
-    peer_mgr_reqs_tx: NetworkSender<DummyMsg>,
+    inner: NetworkSender<DummyMsg>,
 }
 
 impl DummyNetworkSender {
     pub fn new(
-        peer_mgr_reqs_tx: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
+        peer_mgr_reqs_tx: PeerManagerRequestSender,
+        connection_reqs_tx: ConnectionRequestSender,
     ) -> Self {
         Self {
-            peer_mgr_reqs_tx: NetworkSender::new(PeerManagerRequestSender::new(peer_mgr_reqs_tx)),
+            inner: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
         }
     }
 
     pub fn send_to(&mut self, recipient: PeerId, message: DummyMsg) -> Result<(), NetworkError> {
         let protocol = ProtocolId::from_static(TEST_DIRECT_SENDER_PROTOCOL);
-        self.peer_mgr_reqs_tx.send_to(recipient, protocol, message)
+        self.inner.send_to(recipient, protocol, message)
     }
 
     pub async fn send_rpc(
@@ -73,7 +75,7 @@ impl DummyNetworkSender {
         timeout: Duration,
     ) -> Result<DummyMsg, RpcError> {
         let protocol = ProtocolId::from_static(TEST_RPC_PROTOCOL);
-        self.peer_mgr_reqs_tx
+        self.inner
             .send_rpc(recipient, protocol, message, timeout)
             .await
     }

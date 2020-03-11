@@ -14,8 +14,8 @@ use crate::{
     connectivity_manager::{ConnectivityManager, ConnectivityRequest},
     counters,
     peer_manager::{
-        conn_status_channel, PeerManager, PeerManagerNotification, PeerManagerRequest,
-        PeerManagerRequestSender,
+        conn_status_channel, ConnectionRequest, ConnectionRequestSender, PeerManager,
+        PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
     },
     protocols::{
         discovery::{self, Discovery},
@@ -99,6 +99,8 @@ pub struct NetworkBuilder {
     connection_event_handlers: Vec<conn_status_channel::Sender>,
     pm_reqs_tx: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
     pm_reqs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
+    connection_reqs_tx: libra_channel::Sender<PeerId, ConnectionRequest>,
+    connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
     conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
     connectivity_check_interval_ms: u64,
     inbound_rpc_timeout_ms: u64,
@@ -125,6 +127,12 @@ impl NetworkBuilder {
             NonZeroUsize::new(NETWORK_CHANNEL_SIZE).unwrap(),
             Some(&counters::PENDING_PEER_MANAGER_REQUESTS),
         );
+        // Setup channel to send connection requests to peer manager.
+        let (connection_reqs_tx, connection_reqs_rx) = libra_channel::new(
+            QueueStyle::FIFO,
+            NonZeroUsize::new(NETWORK_CHANNEL_SIZE).unwrap(),
+            None,
+        );
         NetworkBuilder {
             executor,
             peer_id,
@@ -140,6 +148,8 @@ impl NetworkBuilder {
             connection_event_handlers: Vec::new(),
             pm_reqs_tx,
             pm_reqs_rx,
+            connection_reqs_tx,
+            connection_reqs_rx,
             conn_mgr_reqs_tx: None,
             transport: TransportType::Memory,
             discovery_interval_ms: DISCOVERY_INTERVAL_MS,
@@ -300,8 +310,9 @@ impl NetworkBuilder {
         queue_preference: QueueStyle,
         counter: Option<&'static IntCounterVec>,
     ) -> (
-        libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
+        PeerManagerRequestSender,
         libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+        ConnectionRequestSender,
         conn_status_channel::Receiver,
     ) {
         self.direct_send_protocols
@@ -324,21 +335,17 @@ impl NetworkBuilder {
         // Auto-subscribe all application level handlers to connection events.
         self.connection_event_handlers.push(connection_notifs_tx);
         (
-            self.pm_reqs_tx.clone(),
+            PeerManagerRequestSender::new(self.pm_reqs_tx.clone()),
             network_notifs_rx,
+            ConnectionRequestSender::new(self.connection_reqs_tx.clone()),
             connection_notifs_rx,
         )
     }
 
-    pub fn add_connection_event_listener(
-        &mut self,
-    ) -> (
-        libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
-        conn_status_channel::Receiver,
-    ) {
+    pub fn add_connection_event_listener(&mut self) -> conn_status_channel::Receiver {
         let (tx, rx) = conn_status_channel::new();
         self.connection_event_handlers.push(tx);
-        (self.pm_reqs_tx.clone(), rx)
+        rx
     }
 
     pub fn add_discovery(&mut self) -> &mut Self {
@@ -355,14 +362,14 @@ impl NetworkBuilder {
         let seed_peers = self.seed_peers.clone();
         let max_connection_delay_ms = self.max_connection_delay_ms;
         let connectivity_check_interval_ms = self.connectivity_check_interval_ms;
-        let (pm_reqs_tx, pm_conn_mgr_notifs_rx) = self.add_connection_event_listener();
+        let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
         let conn_mgr = self.executor.enter(|| {
             ConnectivityManager::new(
                 peer_id,
                 trusted_peers,
                 seed_peers,
                 interval(Duration::from_millis(connectivity_check_interval_ms)).fuse(),
-                PeerManagerRequestSender::new(pm_reqs_tx),
+                ConnectionRequestSender::new(self.connection_reqs_tx.clone()),
                 pm_conn_mgr_notifs_rx,
                 conn_mgr_reqs_rx,
                 ExponentialBackoff::from_millis(2).factor(1000),
@@ -474,6 +481,7 @@ impl NetworkBuilder {
             self.role,
             self.addr,
             self.pm_reqs_rx,
+            self.connection_reqs_rx,
             HashSet::from_iter(self.rpc_protocols.into_iter()),
             HashSet::from_iter(self.direct_send_protocols.into_iter()),
             self.upstream_handlers,

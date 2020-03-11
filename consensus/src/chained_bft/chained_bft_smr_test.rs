@@ -28,7 +28,9 @@ use libra_config::{
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet, ValidatorVerifier};
-use network::peer_manager::conn_status_channel;
+use network::peer_manager::{
+    conn_status_channel, ConnectionRequestSender, PeerManagerRequestSender,
+};
 use std::{num::NonZeroUsize, sync::Arc};
 
 /// Auxiliary struct that is preparing SMR for the test
@@ -54,11 +56,17 @@ impl SMRNode {
 
         let (network_reqs_tx, network_reqs_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+        let (connection_reqs_tx, _) =
+            libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (consensus_tx, consensus_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(8);
         let (_, conn_status_rx) = conn_status_channel::new();
-        let network_sender = ConsensusNetworkSender::new(network_reqs_tx, conn_mgr_reqs_tx);
+        let network_sender = ConsensusNetworkSender::new(
+            PeerManagerRequestSender::new(network_reqs_tx),
+            ConnectionRequestSender::new(connection_reqs_tx),
+            conn_mgr_reqs_tx,
+        );
         let network_events = ConsensusNetworkEvents::new(consensus_rx, conn_status_rx);
         playground.add_node(author, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
         let (state_sync_client, state_sync) = mpsc::unbounded();

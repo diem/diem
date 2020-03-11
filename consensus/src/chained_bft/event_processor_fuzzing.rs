@@ -21,6 +21,7 @@ use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::proposal_msg::ProposalMsg;
 use futures::{channel::mpsc, executor::block_on};
 use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
+use network::peer_manager::{ConnectionRequestSender, PeerManagerRequestSender};
 use once_cell::sync::Lazy;
 use safety_rules::{PersistentSafetyStorage, SafetyRules};
 use std::{num::NonZeroUsize, sync::Arc};
@@ -91,8 +92,14 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     // TODO: mock channels
     let (network_reqs_tx, _network_reqs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+    let (connection_reqs_tx, _) =
+        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let (conn_mgr_reqs_tx, _conn_mgr_reqs_rx) = channel::new_test(8);
-    let network_sender = ConsensusNetworkSender::new(network_reqs_tx, conn_mgr_reqs_tx);
+    let network_sender = ConsensusNetworkSender::new(
+        PeerManagerRequestSender::new(network_reqs_tx),
+        ConnectionRequestSender::new(connection_reqs_tx),
+        conn_mgr_reqs_tx,
+    );
     let (self_sender, _self_receiver) = channel::new_test(8);
     let network = NetworkSender::new(
         signer.author(),

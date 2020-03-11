@@ -3,7 +3,10 @@
 
 use super::*;
 use crate::{
-    peer_manager::{self, conn_status_channel, PeerManagerNotification, PeerManagerRequest},
+    peer_manager::{
+        self, conn_status_channel, ConnectionRequestSender, PeerManagerNotification,
+        PeerManagerRequest,
+    },
     protocols::direct_send::Message,
     ProtocolId,
 };
@@ -51,7 +54,9 @@ fn setup_discovery(
     conn_status_channel::Sender,
     channel::Sender<()>,
 ) {
-    let (network_reqs_tx, network_reqs_rx) =
+    let (peer_mgr_reqs_tx, peer_mgr_reqs_rx) =
+        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
+    let (connection_reqs_tx, _) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(1);
     let (network_notifs_tx, network_notifs_rx) =
@@ -67,14 +72,17 @@ fn setup_discovery(
             signer,
             trusted_peers,
             ticker_rx,
-            DiscoveryNetworkSender::new(network_reqs_tx),
+            DiscoveryNetworkSender::new(
+                PeerManagerRequestSender::new(peer_mgr_reqs_tx),
+                ConnectionRequestSender::new(connection_reqs_tx),
+            ),
             DiscoveryNetworkEvents::new(network_notifs_rx, connection_notifs_rx),
             conn_mgr_reqs_tx,
         )
     };
     rt.spawn(discovery.start());
     (
-        network_reqs_rx,
+        peer_mgr_reqs_rx,
         conn_mgr_reqs_rx,
         network_notifs_tx,
         connection_notifs_tx,

@@ -34,13 +34,13 @@ use crate::{
     connectivity_manager::ConnectivityRequest,
     counters,
     error::{NetworkError, NetworkErrorKind},
-    peer_manager::{PeerManagerRequest, PeerManagerRequestSender},
+    peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{Event, NetworkEvents, NetworkSender},
     validator_network::network_builder::NetworkBuilder,
     NetworkPublicKeys, ProtocolId,
 };
 use bytes::Bytes;
-use channel::{libra_channel, message_queues::QueueStyle};
+use channel::message_queues::QueueStyle;
 use futures::{
     sink::SinkExt,
     stream::{FusedStream, Stream, StreamExt},
@@ -96,23 +96,27 @@ pub struct DiscoveryNetworkSender {
 pub fn add_to_network(
     network: &mut NetworkBuilder,
 ) -> (DiscoveryNetworkSender, DiscoveryNetworkEvents) {
-    let (sender, receiver, connection_notifs_rx) = network.add_protocol_handler(
-        vec![],
-        vec![ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL)],
-        QueueStyle::LIFO,
-        Some(&counters::PENDING_DISCOVERY_NETWORK_EVENTS),
-    );
+    let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
+        .add_protocol_handler(
+            vec![],
+            vec![ProtocolId::from_static(DISCOVERY_DIRECT_SEND_PROTOCOL)],
+            QueueStyle::LIFO,
+            Some(&counters::PENDING_DISCOVERY_NETWORK_EVENTS),
+        );
     (
-        DiscoveryNetworkSender::new(sender),
+        DiscoveryNetworkSender::new(sender, connection_reqs_tx),
         DiscoveryNetworkEvents::new(receiver, connection_notifs_rx),
     )
 }
 
 impl DiscoveryNetworkSender {
     /// Create a new Discovery sender
-    pub fn new(inner: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>) -> Self {
+    pub fn new(
+        peer_mgr_reqs_tx: PeerManagerRequestSender,
+        connection_reqs_tx: ConnectionRequestSender,
+    ) -> Self {
         Self {
-            inner: NetworkSender::new(PeerManagerRequestSender::new(inner)),
+            inner: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
         }
     }
 

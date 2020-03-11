@@ -4,7 +4,7 @@
 //! Interface between Consensus and Network layers.
 
 use crate::counters;
-use channel::{libra_channel, message_queues::QueueStyle};
+use channel::message_queues::QueueStyle;
 use consensus_types::{
     block_retrieval::{BlockRetrievalRequest, BlockRetrievalResponse},
     common::Payload,
@@ -22,7 +22,7 @@ use network::{
     common::NetworkPublicKeys,
     connectivity_manager::ConnectivityRequest,
     error::NetworkError,
-    peer_manager::{PeerManagerRequest, PeerManagerRequestSender},
+    peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::{
         network::{NetworkEvents, NetworkSender},
         rpc::error::RpcError,
@@ -90,15 +90,17 @@ pub struct ConsensusNetworkSender<T> {
 pub fn add_to_network<T: Payload>(
     network: &mut NetworkBuilder,
 ) -> (ConsensusNetworkSender<T>, ConsensusNetworkEvents<T>) {
-    let (network_sender, network_receiver, connection_notifs_rx) = network.add_protocol_handler(
-        vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)],
-        vec![ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL)],
-        QueueStyle::LIFO,
-        Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
-    );
+    let (network_sender, network_receiver, connection_reqs_tx, connection_notifs_rx) = network
+        .add_protocol_handler(
+            vec![ProtocolId::from_static(CONSENSUS_RPC_PROTOCOL)],
+            vec![ProtocolId::from_static(CONSENSUS_DIRECT_SEND_PROTOCOL)],
+            QueueStyle::LIFO,
+            Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
+        );
     (
         ConsensusNetworkSender::new(
             network_sender,
+            connection_reqs_tx,
             network
                 .conn_mgr_reqs_tx()
                 .expect("ConnecitivtyManager not enabled"),
@@ -111,11 +113,12 @@ impl<T: Payload> ConsensusNetworkSender<T> {
     /// Returns a Sender that only sends for the `CONSENSUS_DIRECT_SEND_PROTOCOL` and
     /// `CONSENSUS_RPC_PROTOCOL` ProtocolId.
     pub fn new(
-        peer_mgr_reqs_tx: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
+        peer_mgr_reqs_tx: PeerManagerRequestSender,
+        connection_reqs_tx: ConnectionRequestSender,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     ) -> Self {
         Self {
-            peer_mgr_reqs_tx: NetworkSender::new(PeerManagerRequestSender::new(peer_mgr_reqs_tx)),
+            peer_mgr_reqs_tx: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
             conn_mgr_reqs_tx,
         }
     }

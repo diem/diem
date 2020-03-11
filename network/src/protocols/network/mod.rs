@@ -6,7 +6,10 @@
 pub use crate::protocols::rpc::error::RpcError;
 use crate::{
     error::NetworkError,
-    peer_manager::{self, PeerManagerNotification, PeerManagerRequestSender},
+    peer_manager::{
+        ConnectionRequestSender, ConnectionStatusNotification, PeerManagerNotification,
+        PeerManagerRequestSender,
+    },
     ProtocolId,
 };
 use bytes::Bytes;
@@ -86,8 +89,8 @@ pub struct NetworkEvents<TMessage> {
             fn(PeerManagerNotification) -> Result<Event<TMessage>, NetworkError>,
         >,
         Map<
-            libra_channel::Receiver<PeerId, peer_manager::ConnectionStatusNotification>,
-            fn(peer_manager::ConnectionStatusNotification) -> Result<Event<TMessage>, NetworkError>,
+            libra_channel::Receiver<PeerId, ConnectionStatusNotification>,
+            fn(ConnectionStatusNotification) -> Result<Event<TMessage>, NetworkError>,
         >,
     >,
     _marker: PhantomData<TMessage>,
@@ -96,10 +99,7 @@ pub struct NetworkEvents<TMessage> {
 impl<TMessage: Message> NetworkEvents<TMessage> {
     pub fn new(
         peer_mgr_notifs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
-        connection_notifs_rx: libra_channel::Receiver<
-            PeerId,
-            peer_manager::ConnectionStatusNotification,
-        >,
+        connection_notifs_rx: libra_channel::Receiver<PeerId, ConnectionStatusNotification>,
     ) -> Self {
         let data_event_stream = peer_mgr_notifs_rx.map(
             peer_mgr_notif_to_event
@@ -107,9 +107,7 @@ impl<TMessage: Message> NetworkEvents<TMessage> {
         );
         let control_event_stream = connection_notifs_rx.map(
             control_msg_to_event
-                as fn(
-                    peer_manager::ConnectionStatusNotification,
-                ) -> Result<Event<TMessage>, NetworkError>,
+                as fn(ConnectionStatusNotification) -> Result<Event<TMessage>, NetworkError>,
         );
         Self {
             event_stream: ::futures::stream::select(data_event_stream, control_event_stream),
@@ -146,13 +144,11 @@ fn peer_mgr_notif_to_event<TMessage: Message>(
 }
 
 fn control_msg_to_event<TMessage>(
-    notif: peer_manager::ConnectionStatusNotification,
+    notif: ConnectionStatusNotification,
 ) -> Result<Event<TMessage>, NetworkError> {
     match notif {
-        peer_manager::ConnectionStatusNotification::NewPeer(peer_id, _addr) => {
-            Ok(Event::NewPeer(peer_id))
-        }
-        peer_manager::ConnectionStatusNotification::LostPeer(peer_id, _addr, _reason) => {
+        ConnectionStatusNotification::NewPeer(peer_id, _addr) => Ok(Event::NewPeer(peer_id)),
+        ConnectionStatusNotification::LostPeer(peer_id, _addr, _reason) => {
             Ok(Event::LostPeer(peer_id))
         }
     }
@@ -181,35 +177,34 @@ impl<TMessage> FusedStream for NetworkEvents<TMessage> {
 /// The `TMessage` generic is a protobuf message type (`prost::Message`).
 #[derive(Clone)]
 pub struct NetworkSender<TMessage> {
-    inner: PeerManagerRequestSender,
+    peer_mgr_reqs_tx: PeerManagerRequestSender,
+    connection_reqs_tx: ConnectionRequestSender,
     _marker: PhantomData<TMessage>,
 }
 
 impl<TMessage> NetworkSender<TMessage> {
-    pub fn new(inner: PeerManagerRequestSender) -> Self {
+    pub fn new(
+        peer_mgr_reqs_tx: PeerManagerRequestSender,
+        connection_reqs_tx: ConnectionRequestSender,
+    ) -> Self {
         Self {
-            inner,
+            peer_mgr_reqs_tx,
+            connection_reqs_tx,
             _marker: PhantomData,
         }
     }
 
-    /// Unwrap the `NetworkSender` into the underlying `PeerManagerRequestSender`.
-    pub fn into_inner(self) -> PeerManagerRequestSender {
-        self.inner
-    }
-
-    /// Get a mutable reference to the underlying `PeerManagerRequestSender`.
-    pub fn get_mut(&mut self) -> &mut PeerManagerRequestSender {
-        &mut self.inner
-    }
-
+    /// Request that a given Peer be dialed at the provided `Multiaddr` and synchronously wait for
+    /// the request to be performed.
     pub async fn dial_peer(&mut self, peer: PeerId, addr: Multiaddr) -> Result<(), NetworkError> {
-        self.inner.dial_peer(peer, addr).await?;
+        self.connection_reqs_tx.dial_peer(peer, addr).await?;
         Ok(())
     }
 
+    /// Request that a given Peer be disconnected and synchronously wait for the request to be
+    /// performed.
     pub async fn disconnect_peer(&mut self, peer: PeerId) -> Result<(), NetworkError> {
-        self.inner.disconnect_peer(peer).await?;
+        self.connection_reqs_tx.disconnect_peer(peer).await?;
         Ok(())
     }
 }
@@ -224,7 +219,7 @@ impl<TMessage: Message> NetworkSender<TMessage> {
         message: TMessage,
     ) -> Result<(), NetworkError> {
         let mdata = lcs::to_bytes(&message)?.into();
-        self.inner.send_to(recipient, protocol, mdata)?;
+        self.peer_mgr_reqs_tx.send_to(recipient, protocol, mdata)?;
         Ok(())
     }
 
@@ -238,7 +233,8 @@ impl<TMessage: Message> NetworkSender<TMessage> {
     ) -> Result<(), NetworkError> {
         // Serialize message.
         let mdata = lcs::to_bytes(&message)?.into();
-        self.inner.send_to_many(recipients, protocol, mdata)?;
+        self.peer_mgr_reqs_tx
+            .send_to_many(recipients, protocol, mdata)?;
         Ok(())
     }
 
@@ -255,7 +251,7 @@ impl<TMessage: Message> NetworkSender<TMessage> {
         // serialize request
         let req_data = lcs::to_bytes(&req_msg)?.into();
         let res_data = self
-            .inner
+            .peer_mgr_reqs_tx
             .send_rpc(recipient, protocol, req_data, timeout)
             .await?;
         let res_msg: TMessage = lcs::from_bytes(&res_data)?;

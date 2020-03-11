@@ -4,7 +4,8 @@
 use crate::{
     peer::DisconnectReason,
     peer_manager::{
-        ConnectionNotification, PeerManager, PeerManagerNotification, PeerManagerRequest,
+        ConnectionNotification, ConnectionRequest, PeerManager, PeerManagerNotification,
+        PeerManagerRequest,
     },
     protocols::identity::{exchange_identity, Identity},
     ProtocolId,
@@ -88,10 +89,13 @@ fn build_test_peer_manager(
         Yamux<MemorySocket>,
     >,
     libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
+    libra_channel::Sender<PeerId, ConnectionRequest>,
     libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
 ) {
     let hello_protocol = ProtocolId::from_static(HELLO_PROTOCOL);
     let (peer_manager_request_tx, peer_manager_request_rx) =
+        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
+    let (connection_reqs_tx, connection_reqs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (hello_tx, hello_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
@@ -103,6 +107,7 @@ fn build_test_peer_manager(
         RoleType::Validator,
         "/memory/0".parse().unwrap(),
         peer_manager_request_rx,
+        connection_reqs_rx,
         HashSet::from_iter([hello_protocol.clone()].iter().cloned()), /* rpc protocols */
         HashSet::new(),                                               /* direct-send protocols */
         HashMap::from_iter([(hello_protocol, hello_tx)].iter().cloned()),
@@ -112,7 +117,12 @@ fn build_test_peer_manager(
         1024, /* channel size */
     );
 
-    (peer_manager, peer_manager_request_tx, hello_rx)
+    (
+        peer_manager,
+        peer_manager_request_tx,
+        connection_reqs_tx,
+        hello_rx,
+    )
 }
 
 async fn open_hello_substream<T: Control>(connection: &mut T) -> io::Result<()> {
@@ -208,7 +218,7 @@ fn peer_manager_simultaneous_dial_two_inbound() {
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
-    let (mut peer_manager, _request_tx, _hello_rx) =
+    let (mut peer_manager, _request_tx, _connection_reqs_tx, _hello_rx) =
         build_test_peer_manager(runtime.handle().clone(), ids[1]);
 
     let test = async move {
@@ -253,7 +263,7 @@ fn peer_manager_simultaneous_dial_inbound_outbound_remote_id_larger() {
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
-    let (mut peer_manager, _request_tx, _hello_rx) =
+    let (mut peer_manager, _request_tx, _connection_reqs_tx, _hello_rx) =
         build_test_peer_manager(runtime.handle().clone(), ids[0]);
 
     let test = async move {
@@ -299,7 +309,7 @@ fn peer_manager_simultaneous_dial_inbound_outbound_own_id_larger() {
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
-    let (mut peer_manager, _request_tx, _hello_rx) =
+    let (mut peer_manager, _request_tx, _connection_reqs_tx, _hello_rx) =
         build_test_peer_manager(runtime.handle().clone(), ids[1]);
 
     let test = async move {
@@ -345,7 +355,7 @@ fn peer_manager_simultaneous_dial_outbound_inbound_remote_id_larger() {
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
-    let (mut peer_manager, _request_tx, _hello_rx) =
+    let (mut peer_manager, _request_tx, _connection_reqs_tx, _hello_rx) =
         build_test_peer_manager(runtime.handle().clone(), ids[0]);
 
     let test = async move {
@@ -392,7 +402,7 @@ fn peer_manager_simultaneous_dial_outbound_inbound_own_id_larger() {
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
-    let (mut peer_manager, _request_tx, _hello_rx) =
+    let (mut peer_manager, _request_tx, _connection_reqs_tx, _hello_rx) =
         build_test_peer_manager(runtime.handle().clone(), ids[1]);
 
     let test = async move {
@@ -439,7 +449,7 @@ fn peer_manager_simultaneous_dial_two_outbound() {
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
-    let (mut peer_manager, _request_tx, _hello_rx) =
+    let (mut peer_manager, _request_tx, _connection_reqs_tx, _hello_rx) =
         build_test_peer_manager(runtime.handle().clone(), ids[1]);
 
     let test = async move {
@@ -482,7 +492,7 @@ fn peer_manager_simultaneous_dial_disconnect_event() {
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
-    let (mut peer_manager, _request_tx, _hello_rx) =
+    let (mut peer_manager, _request_tx, _connection_reqs_tx, _hello_rx) =
         build_test_peer_manager(runtime.handle().clone(), ids[1]);
 
     let test = async move {
@@ -517,7 +527,7 @@ fn test_dial_disconnect() {
 
     // Create a list of ordered PeerIds so we can ensure how PeerIds will be compared.
     let ids = ordered_peer_ids(2);
-    let (mut peer_manager, _request_tx, _hello_rx) =
+    let (mut peer_manager, _request_tx, _connection_reqs_tx, _hello_rx) =
         build_test_peer_manager(runtime.handle().clone(), ids[1]);
 
     let test = async move {
@@ -533,7 +543,7 @@ fn test_dial_disconnect() {
         // Send DisconnectPeer request to PeerManager.
         let (disconnect_resp_tx, disconnect_resp_rx) = oneshot::channel();
         peer_manager
-            .handle_request(PeerManagerRequest::DisconnectPeer(
+            .handle_connection_request(ConnectionRequest::DisconnectPeer(
                 ids[0],
                 disconnect_resp_tx,
             ))

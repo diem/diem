@@ -4,8 +4,7 @@
 use super::*;
 use crate::{
     peer::DisconnectReason,
-    peer_manager::{conn_status_channel, PeerManagerRequest},
-    ProtocolId,
+    peer_manager::{conn_status_channel, ConnectionRequest},
 };
 use channel::{libra_channel, message_queues::QueueStyle};
 use core::str::FromStr;
@@ -22,13 +21,13 @@ fn setup_conn_mgr(
     eligible_peers: Vec<PeerId>,
     seed_peers: HashMap<PeerId, Vec<Multiaddr>>,
 ) -> (
-    libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
+    libra_channel::Receiver<PeerId, ConnectionRequest>,
     conn_status_channel::Sender,
     channel::Sender<ConnectivityRequest>,
     channel::Sender<()>,
 ) {
     let self_peer_id = PeerId::random();
-    let (peer_mgr_reqs_tx, peer_mgr_reqs_rx) =
+    let (connection_reqs_tx, connection_reqs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (connection_notifs_tx, connection_notifs_rx) = conn_status_channel::new();
     let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(0);
@@ -54,7 +53,7 @@ fn setup_conn_mgr(
             Arc::new(RwLock::new(eligible_peers)),
             seed_peers,
             ticker_rx,
-            PeerManagerRequestSender::new(peer_mgr_reqs_tx),
+            ConnectionRequestSender::new(connection_reqs_tx),
             connection_notifs_rx,
             conn_mgr_reqs_rx,
             FixedInterval::from_millis(100),
@@ -63,7 +62,7 @@ fn setup_conn_mgr(
     };
     rt.spawn(conn_mgr.start());
     (
-        peer_mgr_reqs_rx,
+        connection_reqs_rx,
         connection_notifs_tx,
         conn_mgr_reqs_tx,
         ticker_tx,
@@ -106,15 +105,15 @@ async fn send_notification_await_delivery(
 }
 
 async fn expect_disconnect_request(
-    peer_mgr_reqs_rx: &mut libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
+    connection_reqs_rx: &mut libra_channel::Receiver<PeerId, ConnectionRequest>,
     connection_notifs_tx: &mut conn_status_channel::Sender,
     peer_id: PeerId,
     address: Multiaddr,
     result: Result<(), PeerManagerError>,
 ) {
     let success = result.is_ok();
-    match peer_mgr_reqs_rx.next().await.unwrap() {
-        PeerManagerRequest::DisconnectPeer(p, error_tx) => {
+    match connection_reqs_rx.next().await.unwrap() {
+        ConnectionRequest::DisconnectPeer(p, error_tx) => {
             assert_eq!(peer_id, p);
             error_tx.send(result).unwrap();
         }
@@ -137,7 +136,7 @@ async fn expect_disconnect_request(
 }
 
 async fn expect_dial_request(
-    peer_mgr_reqs_rx: &mut libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
+    connection_reqs_rx: &mut libra_channel::Receiver<PeerId, ConnectionRequest>,
     connection_notifs_tx: &mut conn_status_channel::Sender,
     conn_mgr_reqs_tx: &mut channel::Sender<ConnectivityRequest>,
     peer_id: PeerId,
@@ -145,8 +144,8 @@ async fn expect_dial_request(
     result: Result<(), PeerManagerError>,
 ) {
     let success = result.is_ok();
-    match peer_mgr_reqs_rx.next().await.unwrap() {
-        PeerManagerRequest::DialPeer(p, addr, error_tx) => {
+    match connection_reqs_rx.next().await.unwrap() {
+        ConnectionRequest::DialPeer(p, addr, error_tx) => {
             assert_eq!(peer_id, p);
             assert_eq!(address, addr);
             error_tx.send(result).unwrap();
@@ -192,7 +191,7 @@ fn connect_to_seeds_on_startup() {
     let eligible_peers = vec![seed_peer_id];
 
     info!("Seed peer_id is {}", seed_peer_id.short_str());
-    let (mut peer_mgr_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
+    let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
         setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     // Fake peer manager and discovery.
@@ -200,7 +199,7 @@ fn connect_to_seeds_on_startup() {
         // Peer manager receives a request to connect to the other peer.
         info!("Waiting to receive dial request");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
@@ -259,7 +258,7 @@ fn connect_to_seeds_on_startup() {
         // We should try to connect to both the new address and seed address.
         info!("Waiting to receive dial request to seed peer at new address");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
@@ -276,7 +275,7 @@ fn connect_to_seeds_on_startup() {
 
         info!("Waiting to receive dial request to seed peer at seed address");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             seed_peer_id,
@@ -296,7 +295,7 @@ fn addr_change() {
     let eligible_peers = vec![other_peer_id];
     let seed_peers = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
-    let (mut peer_mgr_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
+    let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
         setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     // Fake peer manager and discovery.
@@ -320,7 +319,7 @@ fn addr_change() {
         // Peer manager receives a request to connect to the other peer.
         info!("Waiting to receive dial request");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
@@ -381,7 +380,7 @@ fn addr_change() {
         // Peer manager then receives a request to connect to the other peer at new address.
         info!("Waiting to receive dial request to other peer at new address");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
@@ -401,7 +400,7 @@ fn lost_connection() {
     let eligible_peers = vec![other_peer_id];
     let seed_peers = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
-    let (mut peer_mgr_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
+    let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
         setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     // Fake peer manager and discovery.
@@ -425,7 +424,7 @@ fn lost_connection() {
         // Peer manager receives a request to connect to the other peer.
         info!("Waiting to receive dial request");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
@@ -455,7 +454,7 @@ fn lost_connection() {
         // connection.
         info!("Waiting to receive dial request");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
@@ -475,7 +474,7 @@ fn disconnect() {
     let eligible_peers = vec![other_peer_id];
     let seed_peers = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
-    let (mut peer_mgr_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
+    let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
         setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     let events_f = async move {
@@ -498,7 +497,7 @@ fn disconnect() {
         // Peer manager receives a request to connect to the other peer.
         info!("Waiting to receive dial request");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
@@ -521,7 +520,7 @@ fn disconnect() {
         // Peer manager receives a request to connect to the other peer.
         info!("Waiting to receive disconnect request");
         expect_disconnect_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             other_peer_id,
             other_address.clone(),
@@ -541,7 +540,7 @@ fn retry_on_failure() {
     let eligible_peers = vec![other_peer_id];
     let seed_peers = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
-    let (mut peer_mgr_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
+    let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
         setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     let events_f = async move {
@@ -564,7 +563,7 @@ fn retry_on_failure() {
         // Peer manager receives a request to connect to the other peer.
         info!("Waiting to receive dial request");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
@@ -582,7 +581,7 @@ fn retry_on_failure() {
         // Peer manager again receives a request to connect to the other peer.
         info!("Waiting to receive dial request");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
@@ -605,7 +604,7 @@ fn retry_on_failure() {
         // Peer manager receives a request to disconnect from the other peer, which fails.
         info!("Waiting to receive disconnect request");
         expect_disconnect_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             other_peer_id,
             other_address.clone(),
@@ -623,7 +622,7 @@ fn retry_on_failure() {
         // succeeds.
         info!("Waiting to receive disconnect request");
         expect_disconnect_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             other_peer_id,
             other_address.clone(),
@@ -644,7 +643,7 @@ fn no_op_requests() {
     let eligible_peers = vec![other_peer_id];
     let seed_peers = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
-    let (mut peer_mgr_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
+    let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
         setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     let events_f = async move {
@@ -667,7 +666,7 @@ fn no_op_requests() {
         // Peer manager receives a request to connect to the other peer.
         info!("Waiting to receive dial request");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
@@ -706,7 +705,7 @@ fn no_op_requests() {
         // Peer manager receives a request to disconnect from the other peer, which fails.
         info!("Waiting to receive disconnect request");
         expect_disconnect_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             other_peer_id,
             other_address.clone(),
@@ -741,7 +740,7 @@ fn backoff_on_failure() {
     let mut rt = Runtime::new().unwrap();
     let eligible_peers = vec![];
     let seed_peers = HashMap::new();
-    let (mut peer_mgr_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
+    let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
         setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     let events_f = async move {
@@ -800,7 +799,7 @@ fn backoff_on_failure() {
             // Peer manager receives a request to connect to the seed peer.
             info!("Waiting to receive dial request");
             expect_dial_request(
-                &mut peer_mgr_reqs_rx,
+                &mut connection_reqs_rx,
                 &mut connection_notifs_tx,
                 &mut conn_mgr_reqs_tx,
                 peer_a,
@@ -828,7 +827,7 @@ fn multiple_addrs_basic() {
     let eligible_peers = vec![other_peer_id];
     let seed_peers = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
-    let (mut peer_mgr_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
+    let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
         setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     // Fake peer manager and discovery.
@@ -855,7 +854,7 @@ fn multiple_addrs_basic() {
         // Assume that the first listen addr fails to connect.
         info!("Waiting to receive dial request");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
@@ -875,7 +874,7 @@ fn multiple_addrs_basic() {
         // succeeds and we should connect to the peer.
         info!("Waiting to receive dial request");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
@@ -897,7 +896,7 @@ fn multiple_addrs_wrapping() {
     let eligible_peers = vec![other_peer_id];
     let seed_peers = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
-    let (mut peer_mgr_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
+    let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
         setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     // Fake peer manager and discovery.
@@ -922,7 +921,7 @@ fn multiple_addrs_wrapping() {
         // Assume that the first listen addr fails to connect.
         info!("Waiting to receive dial request");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
@@ -940,7 +939,7 @@ fn multiple_addrs_wrapping() {
         // The second attempt also fails.
         info!("Waiting to receive dial request");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
@@ -958,7 +957,7 @@ fn multiple_addrs_wrapping() {
         // Our next attempt should wrap around to the first address.
         info!("Waiting to receive dial request");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
@@ -980,7 +979,7 @@ fn multiple_addrs_shrinking() {
     let eligible_peers = vec![other_peer_id];
     let seed_peers = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
-    let (mut peer_mgr_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
+    let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
         setup_conn_mgr(&mut rt, eligible_peers, seed_peers);
 
     // Fake peer manager and discovery.
@@ -1010,7 +1009,7 @@ fn multiple_addrs_shrinking() {
         // Assume that the first listen addr fails to connect.
         info!("Waiting to receive dial request");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
@@ -1042,7 +1041,7 @@ fn multiple_addrs_shrinking() {
         // other_addr_4 in this case.
         info!("Waiting to receive dial request");
         expect_dial_request(
-            &mut peer_mgr_reqs_rx,
+            &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
