@@ -114,7 +114,11 @@ pub fn verify_units(units: Vec<CompiledUnit>) -> (Vec<CompiledUnit>, Errors) {
 pub fn program(prog: G::Program) -> Result<Vec<CompiledUnit>, Errors> {
     let mut units = vec![];
     let mut errors = vec![];
-
+    let orderings = prog
+        .modules
+        .iter()
+        .map(|(m, mdef)| (m, mdef.dependency_order))
+        .collect();
     let sdecls = prog
         .modules
         .iter()
@@ -144,17 +148,17 @@ pub fn program(prog: G::Program) -> Result<Vec<CompiledUnit>, Errors> {
     let mut source_modules = prog
         .modules
         .into_iter()
-        .filter(|(_, mdef)| mdef.is_source_module.is_some())
+        .filter(|(_, mdef)| mdef.is_source_module)
         .collect::<Vec<_>>();
-    source_modules.sort_by_key(|(_, mdef)| mdef.is_source_module.unwrap());
+    source_modules.sort_by_key(|(_, mdef)| mdef.dependency_order);
     for (m, mdef) in source_modules {
-        match module(m, mdef, &sdecls, &fdecls) {
+        match module(m, mdef, &orderings, &sdecls, &fdecls) {
             Ok((n, cm, map)) => units.push(CompiledUnit::Module(n, cm, map)),
             Err(err) => errors.push(err),
         }
     }
     if let Some((addr, n, fdef)) = prog.main {
-        match main(addr, n.clone(), fdef, &sdecls, &fdecls) {
+        match main(addr, n.clone(), fdef, &orderings, &sdecls, &fdecls) {
             Ok((cs, map)) => units.push(CompiledUnit::Script(n.loc(), cs, map)),
             Err(err) => errors.push(err),
         }
@@ -169,6 +173,7 @@ pub fn program(prog: G::Program) -> Result<Vec<CompiledUnit>, Errors> {
 fn module(
     ident: ModuleIdent,
     mdef: G::ModuleDefinition,
+    dependency_orderings: &HashMap<ModuleIdent, usize>,
     struct_declarations: &HashMap<(ModuleIdent, StructName), (bool, Vec<(IR::TypeVar, IR::Kind)>)>,
     function_declarations: &HashMap<(ModuleIdent, FunctionName), IR::FunctionSignature>,
 ) -> Result<(ModuleName, F::CompiledModule, ModuleSourceMap<Loc>), Error> {
@@ -187,8 +192,11 @@ fn module(
 
     let addr = LibraAddress::new(ident.0.value.address.to_u8());
     let mname = ident.0.value.name.clone();
-    let (imports, explicit_dependency_declarations) =
-        context.materialize(struct_declarations, function_declarations);
+    let (imports, explicit_dependency_declarations) = context.materialize(
+        dependency_orderings,
+        struct_declarations,
+        function_declarations,
+    );
     let ir_module = IR::ModuleDefinition {
         name: IR::ModuleName::new(mname.0.value.clone()),
         imports,
@@ -210,6 +218,7 @@ fn main(
     addr: Address,
     main_name: FunctionName,
     fdef: G::Function,
+    dependency_orderings: &HashMap<ModuleIdent, usize>,
     struct_declarations: &HashMap<(ModuleIdent, StructName), (bool, Vec<(IR::TypeVar, IR::Kind)>)>,
     function_declarations: &HashMap<(ModuleIdent, FunctionName), IR::FunctionSignature>,
 ) -> Result<(F::CompiledScript, ModuleSourceMap<Loc>), Error> {
@@ -218,8 +227,11 @@ fn main(
 
     let (_, main) = function(&mut context, None, main_name, fdef);
 
-    let (imports, explicit_dependency_declarations) =
-        context.materialize(struct_declarations, function_declarations);
+    let (imports, explicit_dependency_declarations) = context.materialize(
+        dependency_orderings,
+        struct_declarations,
+        function_declarations,
+    );
     let ir_script = IR::Script {
         imports,
         explicit_dependency_declarations,

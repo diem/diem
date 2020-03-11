@@ -46,6 +46,7 @@ fn module(
     context.current_module = Some(ident);
     let N::ModuleDefinition {
         is_source_module,
+        dependency_order,
         mut structs,
         functions: n_functions,
         ..
@@ -57,6 +58,7 @@ fn module(
     assert!(context.constraints.is_empty());
     T::ModuleDefinition {
         is_source_module,
+        dependency_order,
         structs,
         functions,
     }
