@@ -117,7 +117,7 @@ pub mod event_processor_fuzzing;
 
 /// During the event of the node can't recover from local data, StartupSyncProcessor is responsible
 /// for processing the events carrying sync info and use the info to retrieve blocks from peers
-pub struct StartupSyncProcessor<T> {
+pub struct SyncProcessor<T> {
     epoch_info: EpochInfo,
     network: NetworkSender<T>,
     storage: Arc<dyn PersistentLivenessStorage<T>>,
@@ -125,7 +125,7 @@ pub struct StartupSyncProcessor<T> {
     ledger_recovery_data: LedgerRecoveryData,
 }
 
-impl<T: Payload> StartupSyncProcessor<T> {
+impl<T: Payload> SyncProcessor<T> {
     pub fn new(
         epoch_info: EpochInfo,
         network: NetworkSender<T>,
@@ -133,7 +133,7 @@ impl<T: Payload> StartupSyncProcessor<T> {
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         ledger_recovery_data: LedgerRecoveryData,
     ) -> Self {
-        StartupSyncProcessor {
+        SyncProcessor {
             epoch_info,
             network,
             storage,
@@ -158,6 +158,7 @@ impl<T: Payload> StartupSyncProcessor<T> {
     }
 
     async fn sync_up(&mut self, sync_info: &SyncInfo, peer: Author) -> Result<RecoveryData<T>> {
+        sync_info.verify(&self.epoch_info.verifier)?;
         ensure!(
             sync_info.highest_round() > self.ledger_recovery_data.commit_round(),
             "Received sync info has lower round number than committed block"

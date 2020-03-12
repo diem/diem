@@ -4,7 +4,7 @@
 use crate::{
     chained_bft::{
         block_storage::{BlockReader, BlockStore},
-        event_processor::{EventProcessor, StartupSyncProcessor, UnverifiedEvent, VerifiedEvent},
+        event_processor::{EventProcessor, SyncProcessor, UnverifiedEvent, VerifiedEvent},
         liveness::{
             multi_proposer_election::MultiProposer,
             pacemaker::{ExponentialTimeInterval, Pacemaker},
@@ -39,12 +39,12 @@ use safety_rules::SafetyRulesManager;
 use std::{cmp::Ordering, sync::Arc, time::Duration};
 
 /// The enum contains two processor
-/// StartupSyncProcessor is used to process events in order to sync up with peer if we can't recover from local consensusdb
+/// SyncProcessor is used to process events in order to sync up with peer if we can't recover from local consensusdb
 /// EventProcessor is used for normal event handling.
 /// We suppress clippy warning here because we expect most of the time we will have EventProcessor
 #[allow(clippy::large_enum_variant)]
 pub enum Processor<T> {
-    StartupSyncProcessor(StartupSyncProcessor<T>),
+    SyncProcessor(SyncProcessor<T>),
     EventProcessor(EventProcessor<T>),
 }
 
@@ -113,7 +113,7 @@ impl<T: Payload> EpochManager<T> {
             .expect("EpochManager not started yet")
         {
             Processor::EventProcessor(p) => p.epoch_info(),
-            Processor::StartupSyncProcessor(p) => p.epoch_info(),
+            Processor::SyncProcessor(p) => p.epoch_info(),
         }
     }
 
@@ -335,7 +335,7 @@ impl<T: Payload> EpochManager<T> {
             self.self_sender.clone(),
             epoch_info.verifier.clone(),
         );
-        self.processor = Some(Processor::StartupSyncProcessor(StartupSyncProcessor::new(
+        self.processor = Some(Processor::SyncProcessor(SyncProcessor::new(
             epoch_info,
             network_sender,
             self.storage.clone(),
@@ -407,14 +407,18 @@ impl<T: Payload> EpochManager<T> {
 
     async fn process_event(&mut self, peer_id: AccountAddress, event: VerifiedEvent<T>) {
         match self.processor_mut() {
-            Processor::StartupSyncProcessor(p) => {
-                if let Ok(data) = match event {
+            Processor::SyncProcessor(p) => {
+                let result = match event {
                     VerifiedEvent::ProposalMsg(proposal) => p.process_proposal_msg(*proposal).await,
                     VerifiedEvent::VoteMsg(vote) => p.process_vote(*vote).await,
                     _ => Err(anyhow!("Unexpected VerifiedEvent during startup")),
-                } {
-                    info!("Recovered from StartupSyncProcessor");
-                    self.start_event_processor(data).await
+                };
+                match result {
+                    Ok(data) => {
+                        info!("Recovered from SyncProcessor");
+                        self.start_event_processor(data).await
+                    }
+                    Err(e) => error!("{:?}", e),
                 }
             }
             Processor::EventProcessor(p) => match event {

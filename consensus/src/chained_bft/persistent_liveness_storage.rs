@@ -15,10 +15,9 @@ use executor_types::ExecutedTrees;
 use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
-use libra_types::crypto_proxies::EpochInfo;
 use libra_types::{
     block_info::Round,
-    crypto_proxies::{ValidatorPublicKeys, ValidatorSet, ValidatorVerifier},
+    crypto_proxies::{EpochInfo, ValidatorPublicKeys, ValidatorSet, ValidatorVerifier},
     ledger_info::LedgerInfo,
 };
 use std::{collections::HashSet, sync::Arc};
