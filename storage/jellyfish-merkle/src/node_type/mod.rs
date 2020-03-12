@@ -597,10 +597,7 @@ impl Node {
 
     /// Returns `true` if the node is a leaf node.
     pub fn is_leaf(&self) -> bool {
-        match self {
-            Node::Leaf(_) => true,
-            _ => false,
-        }
+        matches!(self, Node::Leaf(_))
     }
 
     /// Serializes to bytes for physical storage.

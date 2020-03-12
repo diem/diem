@@ -116,10 +116,7 @@ pub enum EvaluationOutput {
 
 impl EvaluationOutput {
     pub fn is_error(&self) -> bool {
-        match self {
-            Self::Error(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Error(_))
     }
 }
 

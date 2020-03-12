@@ -72,10 +72,7 @@ impl Type {
 
     /// Determines whether this is a reference.
     pub fn is_reference(&self) -> bool {
-        match self {
-            Type::Reference(_, _) => true,
-            _ => false,
-        }
+        matches!(self, Type::Reference(_, _))
     }
 
     /// Determines whether this is a mutual reference.

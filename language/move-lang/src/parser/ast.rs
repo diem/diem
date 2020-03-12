@@ -612,10 +612,7 @@ impl BinOp_ {
 
     pub fn is_spec_only(&self) -> bool {
         use BinOp_ as B;
-        match self {
-            B::Range | B::Implies => true,
-            _ => false,
-        }
+        matches!(self, B::Range | B::Implies)
     }
 }
 

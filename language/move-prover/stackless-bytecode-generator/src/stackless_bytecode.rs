@@ -120,10 +120,10 @@ impl StacklessBytecode {
     }
 
     pub fn is_conditional_branch(&self) -> bool {
-        match self {
-            StacklessBytecode::BrFalse(_, _) | StacklessBytecode::BrTrue(_, _) => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            StacklessBytecode::BrFalse(_, _) | StacklessBytecode::BrTrue(_, _)
+        )
     }
 
     pub fn is_branch(&self) -> bool {

@@ -658,14 +658,8 @@ proptest! {
                 HashValue::zero(), block.txns, &committed_trees, &committed_trees,
             ).unwrap();
         let retry_iter = output.transaction_data().iter().map(TransactionData::status)
-            .skip_while(|status| match *status {
-                TransactionStatus::Keep(_) => true,
-                _ => false
-            });
-            prop_assert_eq!(retry_iter.take_while(|status| match *status {
-                TransactionStatus::Retry => true,
-                _ => false
-            }).count() as u64, num_txns - reconfig_txn_index - 1);
+            .skip_while(|status| matches!(*status, TransactionStatus::Keep(_)));
+            prop_assert_eq!(retry_iter.take_while(|status| matches!(*status,TransactionStatus::Retry)).count() as u64, num_txns - reconfig_txn_index - 1);
         }
 
     #[test]

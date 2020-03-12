@@ -66,17 +66,11 @@ proptest! {
         let errs = unused_entry_checker.verify();
 
         let has_unused_fields = errs.iter().any(|err| {
-            match err.major_status {
-                StatusCode::UNUSED_FIELD => true,
-                _ => false,
-            }
+            matches!(err.major_status, StatusCode::UNUSED_FIELD)
         });
 
         let has_unused_type_signature = errs.iter().any(|err| {
-            match err.major_status {
-                StatusCode::UNUSED_TYPE_SIGNATURE => true,
-                _ => false,
-            }
+            matches!(err.major_status, StatusCode::UNUSED_TYPE_SIGNATURE)
         });
 
         prop_assert!(has_unused_fields && has_unused_type_signature);

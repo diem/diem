@@ -80,10 +80,7 @@ impl AbstractValue {
     /// Create a new struct `AbstractValue` given its type and kind
     pub fn new_struct(token: SignatureToken, kind: Kind) -> AbstractValue {
         checked_precondition!(
-            match token {
-                SignatureToken::Struct(_, _) => true,
-                _ => false,
-            },
+            matches!(token, SignatureToken::Struct(_, _)),
             "AbstractValue::new_struct must be applied with a struct type"
         );
         AbstractValue { token, kind }

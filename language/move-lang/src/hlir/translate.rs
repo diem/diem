@@ -1225,10 +1225,7 @@ fn needs_freeze(sp!(_, actual): &H::Type, sp!(_, expected): &H::Type) -> Freeze 
 
 fn needs_freeze_single(sp!(_, actual): &H::SingleType, sp!(_, expected): &H::SingleType) -> bool {
     use H::SingleType_ as T;
-    match (actual, expected) {
-        (T::Ref(true, _), T::Ref(false, _)) => true,
-        _ => false,
-    }
+    matches!((actual, expected), (T::Ref(true, _), T::Ref(false, _)))
 }
 
 fn freeze(context: &mut Context, result: &mut Block, expected_type: &H::Type, e: H::Exp) -> H::Exp {
