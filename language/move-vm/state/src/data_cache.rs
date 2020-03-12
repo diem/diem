@@ -123,10 +123,7 @@ impl<'txn> TransactionDataCache<'txn> {
     pub fn exists_module(&self, m: &ModuleId) -> bool {
         self.module_map.contains_key(m) || {
             let ap = AccessPath::from(m);
-            match self.data_cache.get(&ap) {
-                Ok(Some(_)) => true,
-                _ => false,
-            }
+            matches!(self.data_cache.get(&ap), Ok(Some(_)))
         }
     }
 

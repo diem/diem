@@ -47,12 +47,9 @@ pub(super) fn has_trailing_whitespace(
 }
 
 fn skip_whitespace_checks(file: &Path) -> bool {
-    match file
+    let ext = file
         .extension()
         .map(OsStr::to_str)
-        .and_then(convert::identity)
-    {
-        Some("exp") => true,
-        _ => false,
-    }
+        .and_then(convert::identity);
+    matches!(ext, Some("exp"))
 }
