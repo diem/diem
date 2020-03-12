@@ -5,6 +5,10 @@ on:
   push:
     branches:
       - auto
+    paths-ignore:
+      - 'language/move-prover/**'
+      - '**README.md'
+      - 'documentation/**'
 
 jobs:
   build-and-run-cluster-test:
