@@ -15,9 +15,6 @@ module LibraAccount {
         // The current authentication key.
         // This can be different than the key used to create the account
         authentication_key: vector<u8>,
-        // TODO/XXX: Remove this once the AccountResource in account_config is
-        // updated.
-        balance: u64,
         // If true, the authority to rotate the authentication key of this account resides elsewhere
         delegated_key_rotation_capability: bool,
         // If true, the authority to withdraw funds from this account resides elsewhere
@@ -112,13 +109,6 @@ module LibraAccount {
         );
     }
 
-    // Updates the account value to track the balance.
-    // TODO/XXX: Remove this function once the AccountResource in account_config.rs
-    // is updated and the `balance` field is removed from the T resource.
-    fun update_account_value(account: &mut T, balance: &Balance) {
-        account.balance = LibraCoin::value(&balance.coin);
-    }
-
     // Deposits the `to_deposit` coin into the `payee`'s account balance with the attached `metadata` and
     // sender address
     fun deposit_with_sender_and_metadata(
@@ -148,9 +138,6 @@ module LibraAccount {
         let payee_balance = borrow_global_mut<Balance>(payee);
         // Deposit the `to_deposit` coin
         LibraCoin::deposit(&mut payee_balance.coin, to_deposit);
-        // TODO/XXX: Remove this once the AccountResource in
-        // account_config.rs is updated.
-        update_account_value(payee_account_ref, payee_balance);
         // Log a received event
         emit_event<ReceivedPaymentEvent>(
             &mut payee_account_ref.received_events,
@@ -192,23 +179,15 @@ module LibraAccount {
         // The sender has delegated the privilege to withdraw from her account elsewhere--abort.
         Transaction::assert(!sender_account.delegated_withdrawal_capability, 11);
         // The sender has retained her withdrawal privileges--proceed.
-        let coins = withdraw_from_balance(sender_balance, amount);
-        // TODO/XXX: Remove this once the AccountResource in
-        // account_config.rs is updated.
-        update_account_value(sender_account, sender_balance);
-        coins
+        withdraw_from_balance(sender_balance, amount)
     }
 
     // Withdraw `amount` LibraCoin::T from the account under cap.account_address
     public fun withdraw_with_capability(
         cap: &WithdrawalCapability, amount: u64
-    ): LibraCoin::T acquires Balance, T {
+    ): LibraCoin::T acquires Balance {
         let balance = borrow_global_mut<Balance>(cap.account_address);
-        let coins = withdraw_from_balance(balance , amount);
-        // TODO/XXX: Remove this once the AccountResource in
-        // account_config.rs is updated.
-        update_account_value(borrow_global_mut<T>(cap.account_address), balance);
-        coins
+        withdraw_from_balance(balance , amount)
     }
 
     // Return a unique capability granting permission to withdraw from the sender's account balance.
@@ -353,9 +332,6 @@ module LibraAccount {
             },
             T {
                 authentication_key,
-                // TODO/XXX: Remove this once we update the AccountResource
-                // struct in account_config.rs
-                balance: 0,
                 delegated_key_rotation_capability: false,
                 delegated_withdrawal_capability: false,
                 received_events: new_event_handle_impl<ReceivedPaymentEvent>(&mut generator, fresh_address),
@@ -498,18 +474,11 @@ module LibraAccount {
                 transaction_fee_amount
             );
 
-        // TODO/XXX: Remove this once the AccountResource in
-        // account_config.rs is updated.
-        update_account_value(sender_account, sender_balance);
-
         // Bump the sequence number
         sender_account.sequence_number = txn_sequence_number + 1;
         // Pay the transaction fee into the transaction fee balance
         let transaction_fee_balance = borrow_global_mut<Balance>(0xFEE);
         LibraCoin::deposit(&mut transaction_fee_balance.coin, transaction_fee);
-        // TODO/XXX: Remove this once the AccountResource in
-        // account_config.rs is updated.
-        update_account_value(borrow_global_mut<T>(0xFEE), transaction_fee_balance);
     }
 
     /// Events

@@ -24,6 +24,7 @@ module BalanceHolder {
 
 //! new-transaction
 //! sender: alice
+//! gas-price: 0
 
 import 0x0.LibraSystem;
 import 0x0.LibraAccount;
@@ -64,7 +65,6 @@ main() {
   BalanceHolder.publish(move(balances));
   return;
 }
-//! check: gas_used: 67378
 //! check: EXECUTED
 
 //! block-prologue
@@ -94,7 +94,7 @@ main() {
      new_balance = LibraAccount.balance(move(addr));
      old_balance = BalanceHolder.get_balance(copy(index));
      index = move(index) + 1;
-     assert(move(new_balance) == (move(old_balance) + 10 + 67378 / copy(number_of_validators)), 77);
+     assert(move(new_balance) == (move(old_balance) + 10), 77);
   }
 
   // The remainder in 0xFEE's balance must be less than the number of validators.

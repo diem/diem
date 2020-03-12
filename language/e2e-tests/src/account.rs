@@ -368,9 +368,6 @@ impl AccountData {
     pub fn account_layout() -> StructDef {
         StructDef::new(vec![
             Type::Vector(Box::new(Type::U8)),
-            // TODO/XXX: Remove this once the balance field is removed from the AccountResource in
-            // account_config.rs.
-            Type::U64,
             Type::Bool,
             Type::Bool,
             Type::Struct(StructDef::new(vec![
@@ -398,10 +395,6 @@ impl AccountData {
         let account = Value::struct_(Struct::pack(vec![
             // TODO: this needs to compute the auth key instead
             Value::vector_u8(AccountAddress::authentication_key(&self.account.pubkey).to_vec()),
-            // TODO/XXX: Remove this once the AccountResource in account_config.rs is updated.
-            // Make sure this doesn't track the correct balance so that we can't get away with
-            // things accidentally.
-            Value::u64(0),
             Value::bool(self.delegated_key_rotation_capability),
             Value::bool(self.delegated_withdrawal_capability),
             Value::struct_(Struct::pack(vec![

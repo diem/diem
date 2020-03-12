@@ -287,7 +287,7 @@ fn get_transaction_parameters<'a>(
         max_gas_amount: config.max_gas.unwrap_or_else(|| {
             std::cmp::min(MAXIMUM_NUMBER_OF_GAS_UNITS.get(), account_balance.coin())
         }),
-        gas_unit_price: 1,
+        gas_unit_price: config.gas_price.unwrap_or(1),
         // TTL is 86400s. Initial time was set to 0.
         expiration_time: config
             .expiration_time
