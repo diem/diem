@@ -24,6 +24,11 @@ impl Cargo {
         }
     }
 
+    pub fn all(&mut self) -> &mut Self {
+        self.inner.arg("--all");
+        self
+    }
+
     pub fn workspace(&mut self) -> &mut Self {
         self.inner.arg("--workspace");
         self

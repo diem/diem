@@ -2,4 +2,5 @@
 x = "run --package x --bin x --"
 xcheck = "run --package x --bin x -- check"
 xclippy = "run --package x --bin x -- clippy"
+xfmt = "run --package x --bin x -- fmt"
 xtest = "run --package x --bin x -- test"
