@@ -6,8 +6,7 @@ use anyhow::{ensure, format_err, Error, Result};
 use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use reqwest::Client;
 use serde_json::Value;
-use std::convert::TryFrom;
-use std::fmt;
+use std::{convert::TryFrom, fmt};
 
 #[derive(Default)]
 pub struct JsonRpcBatch {

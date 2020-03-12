@@ -41,7 +41,7 @@ fn test_ir_test_coverage() {
         ));
         msg.push_str(&format!(
             "Replace the extension '.{}' with '.{}' to mark the test as present, but it will not \
-            be run.\n\n",
+             be run.\n\n",
             MOVE_EXTENSION, TODO_EXTENSION
         ));
         msg.push_str("Running the following tool may help with the migration:\n");

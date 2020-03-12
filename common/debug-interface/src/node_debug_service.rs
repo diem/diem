@@ -3,9 +3,9 @@
 
 //! Debug interface to access information in a specific node.
 
-use crate::json_log::JsonLogEntry;
 use crate::{
     json_log,
+    json_log::JsonLogEntry,
     proto::{
         node_debug_interface_server::NodeDebugInterface, Event, GetEventsRequest,
         GetEventsResponse, GetNodeDetailsRequest, GetNodeDetailsResponse,

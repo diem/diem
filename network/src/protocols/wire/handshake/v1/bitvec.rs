@@ -113,8 +113,7 @@ impl<'de> Deserialize<'de> for BitVec {
 mod test {
 
     use super::*;
-    use proptest::prelude::*;
-    use proptest::{arbitrary::any, collection::vec};
+    use proptest::{arbitrary::any, collection::vec, prelude::*};
 
     #[test]
     fn test_empty() {

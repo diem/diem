@@ -25,7 +25,8 @@ use libra_config::config::VMConfig;
 use libra_logger::{debug, error, info};
 use libra_state_view::StateView;
 use libra_types::{
-    account_address::AccountAddress, account_address::ADDRESS_LENGTH, byte_array::ByteArray,
+    account_address::{AccountAddress, ADDRESS_LENGTH},
+    byte_array::ByteArray,
     vm_error::StatusCode,
 };
 use libra_vm::LibraVM;

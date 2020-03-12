@@ -4,11 +4,13 @@
 //! Contains definitions of symbols -- internalized strings which support fast hashing and
 //! comparison.
 
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::fmt;
-use std::fmt::{Error, Formatter};
-use std::rc::Rc;
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    fmt,
+    fmt::{Error, Formatter},
+    rc::Rc,
+};
 
 /// Representation of a symbol.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]

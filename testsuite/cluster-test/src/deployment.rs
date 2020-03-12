@@ -3,8 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use crate::instance::Instance;
-use crate::{aws::Aws, cluster::Cluster};
+use crate::{aws::Aws, cluster::Cluster, instance::Instance};
 use anyhow::{bail, format_err, Result};
 use libra_logger::{info, warn};
 use rusoto_core::RusotoError;

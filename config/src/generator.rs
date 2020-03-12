@@ -4,10 +4,10 @@
 //! Convenience structs and functions for generating a random set of Libra ndoes without the
 //! genesis.blob.
 
-use crate::config::SafetyRulesService;
 use crate::{
     config::{
-        NodeConfig, OnDiskStorageConfig, SafetyRulesBackend, SeedPeersConfig, VMPublishingOption,
+        NodeConfig, OnDiskStorageConfig, SafetyRulesBackend, SafetyRulesService, SeedPeersConfig,
+        VMPublishingOption,
     },
     utils,
 };

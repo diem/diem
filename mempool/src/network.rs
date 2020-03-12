@@ -5,8 +5,7 @@
 
 use crate::counters;
 use channel::{libra_channel, message_queues::QueueStyle};
-use libra_types::transaction::SignedTransaction;
-use libra_types::PeerId;
+use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     error::NetworkError,
     peer_manager::{PeerManagerRequest, PeerManagerRequestSender},

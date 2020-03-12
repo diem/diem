@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use cli::client_proxy::ClientProxy;
-use debug_interface::node_debug_service::parse_events;
-use debug_interface::{libra_trace, NodeDebugClient};
+use debug_interface::{libra_trace, node_debug_service::parse_events, NodeDebugClient};
 use libra_config::config::{NodeConfig, RoleType, VMPublishingOption};
 use libra_crypto::{ed25519::*, hash::CryptoHash, test_utils::KeyPair, SigningKey};
 use libra_json_rpc::views::{ScriptView, TransactionDataView};

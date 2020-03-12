@@ -3,15 +3,16 @@
 
 #![forbid(unsafe_code)]
 
-use crate::boogie_wrapper::BoogieWrapper;
-use crate::bytecode_translator::BoogieTranslator;
-use crate::cli::{Options, INLINE_PRELUDE};
-use crate::code_writer::CodeWriter;
+use crate::{
+    boogie_wrapper::BoogieWrapper,
+    bytecode_translator::BoogieTranslator,
+    cli::{Options, INLINE_PRELUDE},
+    code_writer::CodeWriter,
+};
 use anyhow::anyhow;
 use codespan_reporting::term::termcolor::WriteColor;
 use log::info;
-use spec_lang::env::GlobalEnv;
-use spec_lang::run_spec_lang_compiler;
+use spec_lang::{env::GlobalEnv, run_spec_lang_compiler};
 use std::fs;
 
 // TODO: remove pub below. Having it for now to supress warnings.

@@ -5,11 +5,15 @@
 
 use num::{BigUint, Num};
 
-use crate::env::{FieldId, Loc, ModuleId, NodeId, SpecFunId, SpecVarId, StructId};
-use crate::symbol::{Symbol, SymbolPool};
-use crate::ty::Type;
-use std::fmt;
-use std::fmt::{Error, Formatter};
+use crate::{
+    env::{FieldId, Loc, ModuleId, NodeId, SpecFunId, SpecVarId, StructId},
+    symbol::{Symbol, SymbolPool},
+    ty::Type,
+};
+use std::{
+    fmt,
+    fmt::{Error, Formatter},
+};
 
 // =================================================================================================
 /// # Declarations

@@ -9,8 +9,7 @@ use libra_types::{
 };
 use move_vm_types::{
     identifier::{create_access_path, resource_storage_key},
-    loaded_data::struct_def::StructDef,
-    loaded_data::types::Type,
+    loaded_data::{struct_def::StructDef, types::Type},
     values::{Struct, Value},
 };
 use rand::{

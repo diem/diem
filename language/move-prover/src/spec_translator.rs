@@ -5,10 +5,10 @@
 
 use std::cell::RefCell;
 
-use spec_lang::env::{
-    FieldId, FunctionEnv, Loc, ModuleEnv, ModuleId, NodeId, SpecFunId, StructEnv, StructId,
+use spec_lang::{
+    env::{FieldId, FunctionEnv, Loc, ModuleEnv, ModuleId, NodeId, SpecFunId, StructEnv, StructId},
+    ty::{PrimitiveType, Type},
 };
-use spec_lang::ty::{PrimitiveType, Type};
 
 use crate::{
     boogie_helpers::{
@@ -18,8 +18,10 @@ use crate::{
     code_writer::CodeWriter,
 };
 use itertools::Itertools;
-use spec_lang::ast::{ConditionKind, Exp, Invariant, LocalVarDecl, Operation, Value};
-use spec_lang::symbol::Symbol;
+use spec_lang::{
+    ast::{ConditionKind, Exp, Invariant, LocalVarDecl, Operation, Value},
+    symbol::Symbol,
+};
 
 pub struct SpecTranslator<'env> {
     /// The module in which context translation happens.
