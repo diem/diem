@@ -1,10 +1,7 @@
 ---
 name: Land-blocking Test
 
-on:
-  push:
-    branches:
-      - auto
+on: push
 
 jobs:
   build-and-run-cluster-test:
@@ -15,15 +12,11 @@ jobs:
       - name: Setup env
         run: |
           echo "::set-env name=LIBRA_GIT_REV::$(git rev-parse --short=8 HEAD)"
-          echo "::set-env name=TEST_TAG::land_$(git rev-parse --short=8 HEAD)"
+          echo "::set-env name=TEST_TAG::land_d527db47"
       - name: Check kill switch
         id: check_ks
         run:
-          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }} ; then
-            echo "::set-output name=should_run::false";
-          else
-            echo "::set-output name=should_run::true";
-          fi;
+          echo "::set-output name=should_run::true";
           if ${{ secrets.ACTIONS_LBT_USE_K8S }} ; then
             echo "::set-env name=USE_K8S::true";
           else
@@ -32,7 +25,7 @@ jobs:
       - name: Build, tag and push images
         if: steps.check_ks.outputs.should_run == 'true'
         run: |
-          docker/build-aws.sh --build-all --version $LIBRA_GIT_REV --addl_tags canary,${TEST_TAG}
+          echo skipping
       - name: Launch cluster test
         if: steps.check_ks.outputs.should_run == 'true'
         # NOTE Remember to update PR comment payload if cti cmd is updated.
@@ -56,6 +49,9 @@ jobs:
               --report report.json \
               --run bench
           fi
+          echo "report.json start"
+          cat report.json
+          echo "report.json end"
       - name: Post test results on PR
         if: always()
         uses: actions/github-script@0.4.0
@@ -63,10 +59,6 @@ jobs:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             // Check kill switch
-            if (${{secrets.KILL_SWITCH_LAND_BLOCKING_TEST}}) {
-              console.log('Kill switch is set. Will skip this step.');
-              return;
-            }
             // Find the number of the pull request that trigggers this push
             let pr_num = 0;
             let commit_message = context.payload.head_commit.message;
