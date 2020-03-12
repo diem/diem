@@ -2423,6 +2423,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-key-manager"
+version = "0.1.0"
+dependencies = [
+ "libra-crypto 0.1.0",
+ "libra-secure-storage 0.1.0",
+]
+
+[[package]]
 name = "libra-logger"
 version = "0.1.0"
 dependencies = [

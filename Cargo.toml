@@ -79,6 +79,7 @@ members = [
     "network/noise",
     "network/socket-bench-server",
     "mempool",
+    "secure/key-manager",
     "secure/net",
     "secure/storage",
     "state-synchronizer",
