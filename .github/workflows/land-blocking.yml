@@ -56,6 +56,9 @@ jobs:
               --report report.json \
               --run bench
           fi
+          echo "report.json start"
+          cat report.json
+          echo "report.json end"
       - name: Post test results on PR
         if: always()
         uses: actions/github-script@0.4.0
