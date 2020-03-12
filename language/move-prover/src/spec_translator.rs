@@ -211,7 +211,7 @@ impl<'env> SpecTranslator<'env> {
         if !aborts_if.is_empty() {
             self.writer.set_location(&aborts_if[0].loc);
             emit!(self.writer, "ensures ");
-            self.translate_seq(aborts_if.iter(), " && ", |c| {
+            self.translate_seq(aborts_if.iter(), " || ", |c| {
                 emit!(self.writer, "b#Boolean(old(");
                 self.translate_exp_parenthesised(&c.exp);
                 emit!(self.writer, "))")
