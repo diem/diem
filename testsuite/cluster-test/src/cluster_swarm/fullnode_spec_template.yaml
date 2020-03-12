@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: fullnode-{validator_index}-{fullnode_index}
+  name: fn-{validator_index}-{fullnode_index}
   labels:
     app: libra-fullnode
     libra-node: "true"
@@ -52,7 +52,7 @@ spec:
       [FILTER]
           Name record_modifier
           Match *
-          Record kubernetes.pod_name fullnode-{validator_index}-{fullnode_index}
+          Record kubernetes.pod_name fn-{validator_index}-{fullnode_index}
 
       [OUTPUT]
           Name            es
@@ -64,11 +64,11 @@ spec:
           Retry_Limit     False
           Logstash_Prefix kubernetes_cluster
       EOF
-      CFG_SEED_PEER_IP=$(kubectl get pod/validator-{validator_index} -o=jsonpath='{{.status.podIP}}');
+      CFG_SEED_PEER_IP=$(kubectl get pod/val-{validator_index} -o=jsonpath='{{.status.podIP}}');
       while [ -z "${{CFG_SEED_PEER_IP}}" ]; do
         sleep 5;
-        CFG_SEED_PEER_IP=$(kubectl get pod/validator-{validator_index} -o=jsonpath='{{.status.podIP}}');
-        echo "Waiting for pod/validator-{validator_index} IP Address";
+        CFG_SEED_PEER_IP=$(kubectl get pod/val-{validator_index} -o=jsonpath='{{.status.podIP}}');
+        echo "Waiting for pod/val-{validator_index} IP Address";
       done;
       echo -n "${{CFG_SEED_PEER_IP}}" > /opt/libra/data/seed_peer_ip
   containers:

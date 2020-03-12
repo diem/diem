@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: validator-{index}
+  name: val-{index}
   labels:
     app: libra-validator
     libra-node: "true"
@@ -52,7 +52,7 @@ spec:
       [FILTER]
           Name record_modifier
           Match *
-          Record kubernetes.pod_name validator-{index}
+          Record kubernetes.pod_name val-{index}
 
       [OUTPUT]
           Name            es
@@ -64,14 +64,14 @@ spec:
           Retry_Limit     False
           Logstash_Prefix kubernetes_cluster
       EOF
-      CFG_SEED_PEER_IP=$(kubectl get pod/validator-0 -o=jsonpath='{{.status.podIP}}');
+      CFG_SEED_PEER_IP=$(kubectl get pod/val-0 -o=jsonpath='{{.status.podIP}}');
       while [ -z "${{CFG_SEED_PEER_IP}}" ]; do
         sleep 5;
-        CFG_SEED_PEER_IP=$(kubectl get pod/validator-0 -o=jsonpath='{{.status.podIP}}');
-        echo "Waiting for pod/validator-0 IP Address";
+        CFG_SEED_PEER_IP=$(kubectl get pod/val-0 -o=jsonpath='{{.status.podIP}}');
+        echo "Waiting for pod/val-0 IP Address";
       done;
       echo -n "${{CFG_SEED_PEER_IP}}" > /opt/libra/data/seed_peer_ip
-      until [ $(kubectl get pods -l app=libra-validator | grep ^validator | grep -e Init -e Running | wc -l) = "{num_validators}" ]; do
+      until [ $(kubectl get pods -l app=libra-validator | grep ^val | grep -e Init -e Running | wc -l) = "{num_validators}" ]; do
         sleep 3;
         echo "Waiting for all validator pods to be scheduled";
       done
