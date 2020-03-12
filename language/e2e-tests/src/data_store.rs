@@ -15,12 +15,16 @@ use libra_types::{
 use move_vm_state::data_cache::RemoteCache;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
+use stdlib::StdLibOptions;
 use vm::{errors::*, CompiledModule};
-use vm_genesis;
+use vm_genesis::generate_genesis_change_set_for_testing;
 
 /// Dummy genesis ChangeSet for testing
 pub static GENESIS_CHANGE_SET: Lazy<ChangeSet> =
-    Lazy::new(vm_genesis::generate_genesis_change_set_for_testing);
+    Lazy::new(|| generate_genesis_change_set_for_testing(StdLibOptions::Staged));
+
+pub static GENESIS_CHANGE_SET_FRESH: Lazy<ChangeSet> =
+    Lazy::new(|| generate_genesis_change_set_for_testing(StdLibOptions::Fresh));
 
 /// An in-memory implementation of [`StateView`] and [`RemoteCache`] for the VM.
 ///

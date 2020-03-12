@@ -18,6 +18,8 @@ pub const TODO_EXTENSION: &str = "move_TODO";
 pub const MOVE_EXTENSION: &str = "move";
 pub const IR_EXTENSION: &str = "mvir";
 
+pub const DEBUG_MODULE_FILE_NAME: &str = "debug.move";
+
 pub const COMPLETED_DIRECTORIES: &[&str; 2] = &["borrow_tests", "commands"];
 
 /// We need to replicate the specification of the (non-staged) stdlib files here since we can't

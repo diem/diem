@@ -31,6 +31,7 @@ use std::{
     str::FromStr,
     time::Duration,
 };
+use stdlib::{stdlib_modules, StdLibOptions};
 use vm::{
     file_format::{CompiledModule, CompiledScript},
     gas_schedule::{GasAlgebra, MAXIMUM_NUMBER_OF_GAS_UNITS},
@@ -557,13 +558,12 @@ pub fn eval<TComp: Compiler>(
 
     // Set up a fake executor with the genesis block and create the accounts.
     let mut exec = if config.validator_set.payload().is_empty() {
-        // use the default validator set. this uses a precomputed validator set and is cheap
-        FakeExecutor::custom_genesis(TComp::stdlib(), None, VMPublishingOption::Open)
+        FakeExecutor::from_fresh_genesis()
     } else {
         // use custom validator set. this requires dynamically generating a new genesis tx and
         // is thus more expensive.
         FakeExecutor::custom_genesis(
-            TComp::stdlib(),
+            stdlib_modules(StdLibOptions::Fresh).to_vec(),
             Some(config.validator_set.clone()),
             VMPublishingOption::Open,
         )

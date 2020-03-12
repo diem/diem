@@ -4,7 +4,7 @@
 use super::{hash, lcs, signature};
 use crate::{
     loaded_data::types::Type,
-    values::{vector, Value},
+    values::{debug, vector, Value},
 };
 use libra_types::{
     account_address::AccountAddress,
@@ -67,44 +67,57 @@ pub fn native_gas(table: &CostTable, key: NativeCostIndex, size: usize) -> GasUn
     gas_amt.total().mul(memory_size)
 }
 
-macro_rules! decl_native_function_enum {
-    {$($variant:ident = $pat:pat),*} => {
-        /// Enum representing a native function known by the VM
-        #[derive(Debug, Clone, Copy)]
-        pub enum NativeFunction {
-            $($variant,)*
-        }
-
-        impl NativeFunction {
-            /// Looks up the expected native function definition from the module id
-            // (address and module) and function name where it was expected to be declared.
-            pub fn resolve(module: &ModuleId, function_name: &IdentStr) -> Option<Self> {
-                let case = (module.address(), module.name().as_str(), function_name.as_str());
-                match case {
-                    $($pat => Some(Self::$variant), )*
-                    _ => None
-                }
-            }
-        }
-    }
+#[derive(Debug, Clone, Copy)]
+pub enum NativeFunction {
+    HashSha2_256,
+    HashSha3_256,
+    LCSToBytes,
+    SigED25519Verify,
+    SigED25519ThresholdVerify,
+    VectorLength,
+    VectorEmpty,
+    VectorBorrow,
+    VectorBorrowMut,
+    VectorPushBack,
+    VectorPopBack,
+    VectorDestroyEmpty,
+    VectorSwap,
+    AccountWriteEvent,
+    AccountSaveAccount,
+    DebugPrint,
 }
 
-decl_native_function_enum! {
-    HashSha2_256 = (&CORE_CODE_ADDRESS, "Hash", "sha2_256"),
-    HashSha3_256 = (&CORE_CODE_ADDRESS, "Hash", "sha3_256"),
-    LCSToBytes = (&CORE_CODE_ADDRESS, "LCS", "to_bytes"),
-    SigED25519Verify = (&CORE_CODE_ADDRESS, "Signature", "ed25519_verify"),
-    SigED25519ThresholdVerify = (&CORE_CODE_ADDRESS, "Signature", "ed25519_threshold_verify"),
-    VectorLength = (&CORE_CODE_ADDRESS, "Vector", "length"),
-    VectorEmpty = (&CORE_CODE_ADDRESS, "Vector", "empty"),
-    VectorBorrow = (&CORE_CODE_ADDRESS, "Vector", "borrow"),
-    VectorBorrowMut = (&CORE_CODE_ADDRESS, "Vector", "borrow_mut"),
-    VectorPushBack = (&CORE_CODE_ADDRESS, "Vector", "push_back"),
-    VectorPopBack = (&CORE_CODE_ADDRESS, "Vector", "pop_back"),
-    VectorDestroyEmpty = (&CORE_CODE_ADDRESS, "Vector", "destroy_empty"),
-    VectorSwap = (&CORE_CODE_ADDRESS, "Vector", "swap"),
-    AccountWriteEvent = (&CORE_CODE_ADDRESS, "LibraAccount", "write_to_event_store"),
-    AccountSaveAccount = (&CORE_CODE_ADDRESS, "LibraAccount", "save_account")
+impl NativeFunction {
+    pub fn resolve(module: &ModuleId, function_name: &IdentStr) -> Option<Self> {
+        use NativeFunction::*;
+
+        let case = (
+            module.address(),
+            module.name().as_str(),
+            function_name.as_str(),
+        );
+        Some(match case {
+            (&CORE_CODE_ADDRESS, "Hash", "sha2_256") => HashSha2_256,
+            (&CORE_CODE_ADDRESS, "Hash", "sha3_256") => HashSha3_256,
+            (&CORE_CODE_ADDRESS, "LCS", "to_bytes") => LCSToBytes,
+            (&CORE_CODE_ADDRESS, "Signature", "ed25519_verify") => SigED25519Verify,
+            (&CORE_CODE_ADDRESS, "Signature", "ed25519_threshold_verify") => {
+                SigED25519ThresholdVerify
+            }
+            (&CORE_CODE_ADDRESS, "Vector", "length") => VectorLength,
+            (&CORE_CODE_ADDRESS, "Vector", "empty") => VectorEmpty,
+            (&CORE_CODE_ADDRESS, "Vector", "borrow") => VectorBorrow,
+            (&CORE_CODE_ADDRESS, "Vector", "borrow_mut") => VectorBorrowMut,
+            (&CORE_CODE_ADDRESS, "Vector", "push_back") => VectorPushBack,
+            (&CORE_CODE_ADDRESS, "Vector", "pop_back") => VectorPopBack,
+            (&CORE_CODE_ADDRESS, "Vector", "destroy_empty") => VectorDestroyEmpty,
+            (&CORE_CODE_ADDRESS, "Vector", "swap") => VectorSwap,
+            (&CORE_CODE_ADDRESS, "LibraAccount", "write_to_event_store") => AccountWriteEvent,
+            (&CORE_CODE_ADDRESS, "LibraAccount", "save_account") => AccountSaveAccount,
+            (&CORE_CODE_ADDRESS, "Debug", "print") => DebugPrint,
+            _ => return None,
+        })
+    }
 }
 
 impl NativeFunction {
@@ -136,6 +149,7 @@ impl NativeFunction {
             )),
             Self::AccountSaveAccount => Err(VMStatus::new(StatusCode::UNREACHABLE)
                 .with_message("save_account does not have a native implementation".to_string())),
+            Self::DebugPrint => debug::native_print(t, v, c),
         }
     }
 
@@ -158,6 +172,7 @@ impl NativeFunction {
             Self::VectorSwap => 3,
             Self::AccountWriteEvent => 3,
             Self::AccountSaveAccount => 3,
+            Self::DebugPrint => 1,
         }
     }
 
@@ -340,6 +355,11 @@ impl NativeFunction {
                     return_,
                 }
             }
+            Self::DebugPrint => simple!(
+                vec![Kind::All],
+                vec![Reference(Box::new(TypeParameter(0)))],
+                vec![]
+            ),
         })
     }
 }
