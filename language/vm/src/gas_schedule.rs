@@ -137,6 +137,9 @@ define_gas_unit! {
     doc: "A newtype wrapper around the gas price for each unit of gas consumed."
 }
 
+/// Zero cost.
+pub const ZERO_GAS_UNITS: GasUnits<GasCarrier> = GasUnits(0);
+
 /// The cost per-byte written to global storage.
 /// TODO: Fill this in with a proper number once it's determined.
 pub const GLOBAL_MEMORY_PER_BYTE_COST: GasUnits<GasCarrier> = GasUnits(8);

@@ -28,3 +28,4 @@ proptest = "0.9"
 [features]
 default = []
 fuzzing = ["proptest", "libra-types/fuzzing", "vm/fuzzing"]
+debug_module = []

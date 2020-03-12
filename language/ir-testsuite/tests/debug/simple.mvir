@@ -1,0 +1,48 @@
+//! debug
+
+module M {
+    import 0x0.Debug;
+    import 0x0.Vector;
+
+    struct Foo { x: bool }
+    struct Bar { x: u128, y: Self.Foo, z: bool }
+    struct Box<T> { x: T }
+
+    public test() {
+        let x: u64;
+        let v: vector<u64>;
+        let foo: Self.Foo;
+        let bar: Self.Bar;
+        let box: Self.Box<Self.Foo>;
+
+        x = 42;
+        Debug.print<u64>(&x);
+
+        v = Vector.empty<u64>();
+        Vector.push_back<u64>(&mut v, 100);
+        Vector.push_back<u64>(&mut v, 200);
+        Vector.push_back<u64>(&mut v, 300);
+        Debug.print<vector<u64>>(&v);
+
+        foo = Foo { x: false };
+        Debug.print<Self.Foo>(&foo);
+
+        bar = Bar { x: 404u128, y: Foo { x: false }, z: true };
+        Debug.print<Self.Bar>(&bar);
+
+        box = Box<Self.Foo> { x: Foo { x: false } };
+        Debug.print<Self.Box<Self.Foo>>(&box);
+
+        return;
+    }
+}
+// check: EXECUTED
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    M.test();
+    return;
+}
+// check: EXECUTED

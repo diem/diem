@@ -40,7 +40,8 @@ fn main() {
 
     let txn_source_files =
         datatest_stable::utils::iterate_directory(Path::new(TRANSACTION_SCRIPTS));
-    let transaction_files = filter_move_files(txn_source_files);
+    let transaction_files = filter_move_files(txn_source_files)
+        .flat_map(|path| path.into_os_string().into_string().ok());
     for txn_file in transaction_files {
         let compiled_script = compile_script(txn_file.clone());
         let mut txn_path = PathBuf::from(STAGED_OUTPUT_PATH);

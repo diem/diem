@@ -1340,29 +1340,29 @@ impl IntegerValue {
 *
 **************************************************************************************/
 
+macro_rules! ensure_len {
+    ($v: expr, $expected_len: expr, $type: expr, $fn: expr) => {{
+        let actual_len = $v.len();
+        let expected_len = $expected_len;
+        if actual_len != expected_len {
+            let msg = format!(
+                "wrong number of {} for {} expected {} found {}",
+                ($type),
+                ($fn),
+                expected_len,
+                actual_len,
+            );
+            return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(msg));
+        }
+    }};
+}
+
 pub mod vector {
     use super::*;
 
     pub const INDEX_OUT_OF_BOUNDS: u64 = NFE_VECTOR_ERROR_BASE + 1;
     pub const POP_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 2;
     pub const DESTROY_NON_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 3;
-
-    macro_rules! ensure_len {
-        ($v: expr, $expected_len: expr, $type: expr, $fn: expr) => {{
-            let actual_len = $v.len();
-            let expected_len = $expected_len;
-            if actual_len != expected_len {
-                let msg = format!(
-                    "wrong number of {} for {} expected {} found {}",
-                    ($type),
-                    ($fn),
-                    expected_len,
-                    actual_len,
-                );
-                return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(msg));
-            }
-        }};
-    }
 
     macro_rules! pop_arg_front {
         ($arguments:ident, $t:ty) => {
@@ -1896,6 +1896,193 @@ impl Display for Locals {
             ),
             _ => unreachable!(),
         }
+    }
+}
+
+#[allow(dead_code)]
+pub mod debug {
+    use super::*;
+    use std::fmt::Write;
+    use vm::gas_schedule::ZERO_GAS_UNITS;
+
+    macro_rules! debug_write {
+        ($buf: expr, $($toks: tt)*) => {
+            write!($buf, $($toks)*).map_err(|_|
+                VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("failed to write to buffer".to_string())
+            )
+        };
+    }
+
+    fn print_value_impl<B: Write>(buf: &mut B, ty: &Type, val: &ValueImpl) -> VMResult<()> {
+        match (ty, val) {
+            (Type::U8, ValueImpl::U8(x)) => debug_write!(buf, "{}u8", x),
+            (Type::U64, ValueImpl::U64(x)) => debug_write!(buf, "{}u64", x),
+            (Type::U128, ValueImpl::U128(x)) => debug_write!(buf, "{}u128", x),
+            (Type::Bool, ValueImpl::Bool(x)) => debug_write!(buf, "{}", x),
+            (Type::Address, ValueImpl::Address(x)) => debug_write!(buf, "{}", x),
+
+            (Type::Vector(elem_ty), ValueImpl::Container(r)) => {
+                print_vector(buf, elem_ty, &*r.borrow())
+            }
+
+            (Type::Struct(struct_ty), ValueImpl::Container(r)) => {
+                print_struct(buf, struct_ty, &*r.borrow())
+            }
+
+            _ => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                .with_message(format!("cannot print value {:?} as type {:?}", val, ty))),
+        }
+    }
+
+    fn print_vector<B: Write>(buf: &mut B, elem_ty: &Type, v: &Container) -> VMResult<()> {
+        macro_rules! print_vector {
+            ($v: expr, $suffix: expr) => {{
+                let suffix = &$suffix;
+                debug_write!(buf, "[")?;
+                let mut it = $v.iter();
+                if let Some(x) = it.next() {
+                    debug_write!(buf, "{}{}", x, suffix)?;
+                    for x in it {
+                        debug_write!(buf, ", {}{}", x, suffix)?;
+                    }
+                }
+                debug_write!(buf, "]")
+            }};
+        }
+
+        match (elem_ty, v) {
+            (Type::U8, Container::U8(v)) => print_vector!(v, "u8"),
+            (Type::U64, Container::U64(v)) => print_vector!(v, "u64"),
+            (Type::U128, Container::U128(v)) => print_vector!(v, "u128"),
+            (Type::Bool, Container::Bool(v)) => print_vector!(v, ""),
+
+            (Type::Address, Container::General(v)) | (Type::Struct(_), Container::General(v)) => {
+                debug_write!(buf, "[")?;
+                let mut it = v.iter();
+                if let Some(x) = it.next() {
+                    print_value_impl(buf, elem_ty, x)?;
+                    for x in it {
+                        debug_write!(buf, ", ")?;
+                        print_value_impl(buf, elem_ty, x)?;
+                    }
+                }
+                debug_write!(buf, "]")
+            }
+
+            _ => Err(
+                VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
+                    "cannot print container {:?} as vector with element type {:?}",
+                    v, elem_ty
+                )),
+            ),
+        }
+    }
+
+    fn print_struct<B: Write>(buf: &mut B, struct_ty: &StructType, s: &Container) -> VMResult<()> {
+        let v = match s {
+            Container::General(v) => v,
+            _ => {
+                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                    .with_message(format!("invalid container {:?} as struct", s)))
+            }
+        };
+        let layout = &struct_ty.layout;
+        if layout.len() != v.len() {
+            return Err(
+                VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
+                    "cannot print container {:?} as struct type {:?}, expected {} fields, got {}",
+                    v,
+                    struct_ty,
+                    layout.len(),
+                    v.len()
+                )),
+            );
+        }
+        debug_write!(buf, "{}::{} {{ ", struct_ty.module, struct_ty.name)?;
+        let mut it = layout.iter().zip(v.iter());
+        if let Some((ty, val)) = it.next() {
+            print_value_impl(buf, ty, val)?;
+            for (ty, val) in it {
+                debug_write!(buf, ", ")?;
+                print_value_impl(buf, ty, val)?;
+            }
+        }
+        debug_write!(buf, " }}")
+    }
+
+    fn print_reference<B: Write>(buf: &mut B, val_ty: &Type, r: &Reference) -> VMResult<()> {
+        macro_rules! print_vector_elem {
+            ($v: expr, $idx: expr, $suffix: expr) => {
+                match $v.get($idx) {
+                    Some(x) => debug_write!(buf, "{}{}", x, $suffix),
+                    None => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message("ref index out of bounds".to_string())),
+                }
+            };
+        }
+
+        match &r.0 {
+            ReferenceImpl::ContainerRef(r) => match val_ty {
+                Type::Vector(elem_ty) => print_vector(buf, elem_ty, &*r.borrow()),
+                Type::Struct(struct_ty) => print_struct(buf, struct_ty, &*r.borrow()),
+                _ => Err(
+                    VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
+                        "cannot print container {:?} as type {:?}",
+                        &*r.borrow(),
+                        val_ty
+                    )),
+                ),
+            },
+            ReferenceImpl::IndexedRef(IndexedRef { idx, container_ref }) => {
+                let idx = *idx;
+                match (val_ty, &*container_ref.borrow()) {
+                    (Type::U8, Container::U8(v)) => print_vector_elem!(v, idx, "u8"),
+                    (Type::U64, Container::U64(v)) => print_vector_elem!(v, idx, "u64"),
+                    (Type::U128, Container::U128(v)) => print_vector_elem!(v, idx, "u128"),
+                    (Type::Bool, Container::Bool(v)) => print_vector_elem!(v, idx, ""),
+
+                    (Type::U8, Container::General(v))
+                    | (Type::U64, Container::General(v))
+                    | (Type::U128, Container::General(v))
+                    | (Type::Bool, Container::General(v))
+                    | (Type::Address, Container::General(v)) => match v.get(idx) {
+                        Some(val) => print_value_impl(buf, val_ty, val),
+                        None => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .with_message("ref index out of bounds".to_string())),
+                    },
+
+                    (_, container) => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                        .with_message(format!(
+                            "cannot print element {} of container {:?} as {:?}",
+                            idx, container, val_ty
+                        ))),
+                }
+            }
+        }
+    }
+
+    #[allow(unused_mut)]
+    pub fn native_print(
+        mut ty_args: Vec<Type>,
+        mut args: VecDeque<Value>,
+        _cost_table: &CostTable,
+    ) -> VMResult<NativeResult> {
+        ensure_len!(ty_args, 1, "type arguments", "print");
+        ensure_len!(args, 1, "arguments", "print");
+
+        // No-op if the feature flag is not present.
+        #[cfg(feature = "debug_module")]
+        {
+            let ty = ty_args.pop().unwrap();
+            let r: Reference = args.pop_back().unwrap().value_as()?;
+
+            let mut buf = String::new();
+            print_reference(&mut buf, &ty, &r)?;
+            println!("[debug] {}", buf);
+        }
+
+        Ok(NativeResult::ok(ZERO_GAS_UNITS, vec![]))
     }
 }
 

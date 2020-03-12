@@ -14,7 +14,7 @@ use ir_to_bytecode::{
 use libra_types::account_address::AccountAddress;
 use move_ir_types::ast;
 use std::path::Path;
-use stdlib::{env_stdlib_modules, stdlib_modules, use_staged, StdLibOptions};
+use stdlib::{stdlib_modules, StdLibOptions};
 
 struct IRCompiler {
     deps: Vec<VerifiedModule>,
@@ -51,23 +51,13 @@ impl Compiler for IRCompiler {
             }
         })
     }
-
-    // Use the staged genesis/stdlib unless the the
-    // MOVE_NO_USE_STAGED environment variable is set.
-    fn stdlib() -> Option<Vec<VerifiedModule>> {
-        if !use_staged() {
-            Some(env_stdlib_modules().to_vec())
-        } else {
-            None
-        }
-    }
 }
 
 fn run_test(path: &Path) -> datatest_stable::Result<()> {
-    // The IR tests always run with the staged stdlib
-    let stdlib = stdlib_modules(StdLibOptions::Staged);
-    let compiler = IRCompiler::new(stdlib.to_vec());
-    testsuite::functional_tests(compiler, path)
+    testsuite::functional_tests(
+        IRCompiler::new(stdlib_modules(StdLibOptions::Fresh).to_vec()),
+        path,
+    )
 }
 
 datatest_stable::harness!(run_test, "tests", r".*\.mvir");
