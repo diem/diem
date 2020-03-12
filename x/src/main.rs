@@ -10,6 +10,7 @@ mod cargo;
 mod check;
 mod clippy;
 mod config;
+mod fmt;
 mod lint;
 mod test;
 mod utils;
@@ -33,6 +34,9 @@ enum Command {
     #[structopt(name = "clippy")]
     /// Run `cargo clippy`
     Clippy(clippy::Args),
+    #[structopt(name = "fmt")]
+    /// Run `cargo fmt`
+    Fmt(fmt::Args),
     #[structopt(name = "test")]
     /// Run tests
     Test(test::Args),
@@ -49,6 +53,7 @@ fn main() -> Result<()> {
         Command::Test(args) => test::run(args, config),
         Command::Check(args) => check::run(args, config),
         Command::Clippy(args) => clippy::run(args, config),
+        Command::Fmt(args) => fmt::run(args, config),
         Command::Bench(args) => bench::run(args, config),
         Command::Lint(args) => lint::run(args, config),
     }
