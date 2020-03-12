@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-itertools = { version = "0.8.0", default-features = false }
+itertools = { version = "0.9.0", default-features = false }
 rand = "0.6.5"
 rayon = "1"
 structopt = "0.3"
