@@ -4,7 +4,9 @@
 use crate::AccountData;
 use admission_control_proto::proto::AdmissionControlClientBlocking;
 use anyhow::{bail, ensure, format_err, Result};
-use libra_json_rpc::views::{AccountView, BytesView, EventView, StateProofView, TransactionView};
+use libra_json_rpc::views::{
+    AccountStateWithProofView, AccountView, BytesView, EventView, StateProofView, TransactionView,
+};
 use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
@@ -473,19 +475,27 @@ impl LibraClient {
     pub(crate) fn get_account_blob(
         &mut self,
         address: AccountAddress,
-    ) -> Result<(Option<AccountStateBlob>, Version)> {
-        let req_item = RequestItem::GetAccountState { address };
+    ) -> Result<Option<AccountStateBlob>> {
+        let version = serde_json::json!(self.trusted_state.latest_version());
+        let params = vec![serde_json::json!(address), version.clone(), version];
 
-        let mut response = self.get_with_proof_sync(vec![req_item])?;
-        let account_state_with_proof = response
-            .response_items
-            .remove(0)
-            .into_get_account_state_response()?;
-
-        Ok((
-            account_state_with_proof.blob,
-            response.ledger_info_with_sigs.ledger_info().version(),
-        ))
+        match self
+            .json_rpc_client
+            .send_libra_request("get_account_state_with_proof".to_string(), params)
+        {
+            Ok(result) => {
+                let account_state_with_proof: AccountStateWithProofView =
+                    serde_json::from_value(result)?;
+                let account_blob = if let Some(blob) = account_state_with_proof.blob {
+                    let account_blob: AccountStateBlob = lcs::from_bytes(&blob.into_bytes()?)?;
+                    Some(account_blob)
+                } else {
+                    None
+                };
+                Ok(account_blob)
+            }
+            Err(e) => bail!("Failed to get account state blob with error: {:?}", e),
+        }
     }
 
     /// Get transaction from validator by account and sequence number.
