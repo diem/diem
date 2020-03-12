@@ -126,7 +126,7 @@ impl PendingVotes {
         let tc = self
             .round_to_tc
             .entry(timeout.round())
-            .or_insert_with(|| TimeoutCertificate::new(timeout, HashMap::new()));
+            .or_insert_with(|| TimeoutCertificate::new(timeout));
         tc.add_signature(vote.author(), timeout_signature);
         match validator_verifier.check_voting_power(tc.signatures().keys()) {
             Ok(_) => Some(VoteReceptionResult::NewTimeoutCertificate(Arc::new(

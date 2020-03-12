@@ -9,14 +9,14 @@ use anyhow::Context;
 use libra_crypto::hash::CryptoHash;
 use libra_types::crypto_proxies::{Signature, ValidatorVerifier};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt};
+use std::{collections::BTreeMap, fmt};
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 /// TimeoutCertificate is a proof that 2f+1 participants in epoch i
 /// have voted in round r and we can now move to round r+1.
 pub struct TimeoutCertificate {
     timeout: Timeout,
-    signatures: HashMap<Author, Signature>,
+    signatures: BTreeMap<Author, Signature>,
 }
 
 impl fmt::Display for TimeoutCertificate {
@@ -32,10 +32,10 @@ impl fmt::Display for TimeoutCertificate {
 
 impl TimeoutCertificate {
     /// Creates new TimeoutCertificate
-    pub fn new(timeout: Timeout, signatures: HashMap<Author, Signature>) -> Self {
+    pub fn new(timeout: Timeout) -> Self {
         Self {
             timeout,
-            signatures,
+            signatures: BTreeMap::new(),
         }
     }
 
@@ -62,7 +62,7 @@ impl TimeoutCertificate {
     }
 
     /// Returns the signatures certifying the round
-    pub fn signatures(&self) -> &HashMap<Author, Signature> {
+    pub fn signatures(&self) -> &BTreeMap<Author, Signature> {
         &self.signatures
     }
 
