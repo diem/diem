@@ -80,7 +80,6 @@ function {:inline} ExtendTypeValueArray(ta: TypeValueArray, tv: TypeValue): Type
 // Values
 // ------
 
-type Address = int;
 type ByteArray;
 type String;
 type {:datatype} Value;
@@ -94,7 +93,7 @@ axiom MAX_U128 == 340282366920938463463374607431768211456;
 
 function {:constructor} Boolean(b: bool): Value;
 function {:constructor} Integer(i: int): Value;
-function {:constructor} Address(a: Address): Value;
+function {:constructor} Address(a: int): Value;
 function {:constructor} ByteArray(b: ByteArray): Value;
 function {:constructor} Str(a: String): Value;
 function {:constructor} Vector(v: ValueArray): Value; // used to both represent move Struct and Vector
@@ -330,7 +329,7 @@ function {:inline} $InRange(r: Value, i: int): bool {
 // Memory
 
 type {:datatype} Location;
-function {:constructor} Global(t: TypeValue, a: Address): Location;
+function {:constructor} Global(t: TypeValue, a: int): Location;
 function {:constructor} Local(i: int): Location;
 
 type {:datatype} Reference;
@@ -396,21 +395,21 @@ procedure {:inline 1} $InitVerification() {
 // TODO: unify some of this with instruction procedures to avoid duplication
 
 // Tests whether resource exists.
-function {:inline} $ExistsResourceRaw(m: Memory, resource: TypeValue, addr: Address): bool {
+function {:inline} $ResourceExistsRaw(m: Memory, resource: TypeValue, addr: int): bool {
     domain#Memory(m)[Global(resource, addr)]
 }
-function {:inline} $ExistsResource(m: Memory, resource: TypeValue, addr: Address): Value {
-    Boolean($ExistsResourceRaw(m, resource, addr))
+function {:inline} $ResourceExists(m: Memory, resource: TypeValue, address: Value): Value {
+    Boolean($ResourceExistsRaw(m, resource, a#Address(address)))
 }
 
 // Obtains reference to the given resource.
-function {:inline} $GetResourceReference(resource: TypeValue, addr: Address): Reference {
+function {:inline} $GetResourceReference(resource: TypeValue, addr: int): Reference {
     Reference(Global(resource, addr), EmptyPath)
 }
 
 // Obtains value of given resource.
-function {:inline} $ResoureValue(m: Memory, resource: TypeValue, addr: Address): Value {
-  contents#Memory(m)[Global(resource, addr)]
+function {:inline} $ResourceValue(m: Memory, resource: TypeValue, address: Value): Value {
+  contents#Memory(m)[Global(resource, a#Address(address))]
 }
 
 // Applies a field selection to a value.
@@ -433,7 +432,7 @@ function {:inline} $ExistsTxnSenderAccount(m: Memory, txn: Transaction): bool {
 function LibraAccount_T_type_value(): TypeValue;
 
 // Returns sender address.
-function {:inline} TxnSenderAddress(txn: Transaction): Address {
+function {:inline} TxnSenderAddress(txn: Transaction): int {
   sender#Transaction(txn)
 }
 
@@ -444,17 +443,17 @@ function {:inline} TxnSenderAddress(txn: Transaction): Address {
 procedure {:inline 1} Exists(address: Value, t: TypeValue) returns (dst: Value)
 {
     assume is#Address(address);
-    dst := $ExistsResource($m, t, a#Address(address));
+    dst := $ResourceExists($m, t, address);
 }
 
 procedure {:inline 1} MoveToSender(ta: TypeValue, v: Value)
 {
-    var a: Address;
+    var a: int;
     var l: Location;
 
     a := sender#Transaction($txn);
     l := Global(ta, a);
-    if ($ExistsResourceRaw($m, ta, a)) {
+    if ($ResourceExistsRaw($m, ta, a)) {
         $abort_flag := true;
         return;
     }
@@ -463,12 +462,12 @@ procedure {:inline 1} MoveToSender(ta: TypeValue, v: Value)
 
 procedure {:inline 1} MoveFrom(address: Value, ta: TypeValue) returns (dst: Value)
 {
-    var a: Address;
+    var a: int;
     var l: Location;
     assume is#Address(address);
     a := a#Address(address);
     l := Global(ta, a);
-    if (!$ExistsResourceRaw($m, ta, a)) {
+    if (!$ResourceExistsRaw($m, ta, a)) {
         $abort_flag := true;
         return;
     }
@@ -478,13 +477,13 @@ procedure {:inline 1} MoveFrom(address: Value, ta: TypeValue) returns (dst: Valu
 
 procedure {:inline 1} BorrowGlobal(address: Value, ta: TypeValue) returns (dst: Reference)
 {
-    var a: Address;
+    var a: int;
     var v: Value;
     var l: Location;
     assume is#Address(address);
     a := a#Address(address);
     l := Global(ta, a);
-    if (!$ExistsResourceRaw($m, ta, a)) {
+    if (!$ResourceExistsRaw($m, ta, a)) {
         $abort_flag := true;
         return;
     }
@@ -707,7 +706,7 @@ procedure {:inline 1} LdConst(val: int) returns (ret: Value)
     ret := Integer(val);
 }
 
-procedure {:inline 1} LdAddr(val: Address) returns (ret: Value)
+procedure {:inline 1} LdAddr(val: int) returns (ret: Value)
 {
     ret := Address(val);
 }
@@ -739,14 +738,15 @@ type {:datatype} Transaction;
 var $txn: Transaction;
 function {:constructor} Transaction(
   gas_unit_price: int, max_gas_units: int, public_key: ByteArray,
-  sender: Address, sequence_number: int, gas_remaining: int) : Transaction;
+  sender: int, sequence_number: int, gas_remaining: int) : Transaction;
 
 
 const some_key: ByteArray;
 
-procedure {:inline 1} InitTransaction(sender: Address) {
-  $txn := Transaction(1, 1000, some_key, sender, 0, 1000);
-}
+// DD: This doesn't seem to be used.  Commenting it out for now in case I'm wrong.
+// procedure {:inline 1} InitTransaction(sender: Value) {
+//   $txn := Transaction(1, 1000, some_key, sender, 0, 1000);
+// }
 
 procedure {:inline 1} GetGasRemaining() returns (ret_gas_remaining: Value)
 {
