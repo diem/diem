@@ -586,7 +586,7 @@ impl<'env> SpecTranslator<'env> {
     fn translate_resource_access(&self, node_id: NodeId, args: &[Exp]) {
         let rty = &self.module_env.get_node_instantiation(node_id)[0];
         let type_value = boogie_type_value(self.module_env.env, rty);
-        emit!(self.writer, "$ResourceExists($m, {}, ", type_value);
+        emit!(self.writer, "$ResourceValue($m, {}, ", type_value);
         self.translate_exp(&args[0]);
         emit!(self.writer, ")");
     }
@@ -594,7 +594,7 @@ impl<'env> SpecTranslator<'env> {
     fn translate_resource_exists(&self, node_id: NodeId, args: &[Exp]) {
         let rty = &self.module_env.get_node_instantiation(node_id)[0];
         let type_value = boogie_type_value(self.module_env.env, rty);
-        emit!(self.writer, "$ResourceValue($m, {}, ", type_value);
+        emit!(self.writer, "$ResourceExists($m, {}, ", type_value);
         self.translate_exp(&args[0]);
         emit!(self.writer, ")");
     }
