@@ -7,4 +7,6 @@ testsuite = { path = "testsuite", system = true }
 allowed = [
     # Deriving Arbitrary often causes this warning to show up.
     "clippy::unit_arg",
+    # Known to have false positive at the moment,
+    "clippy::mutable_key_type",
 ]

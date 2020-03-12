@@ -365,7 +365,7 @@ impl ClusterUtil {
             };
             let cluster = if let Some(cluster_swarm) = cluster_swarm.as_ref() {
                 cluster_swarm.delete_all().await.expect("delete_all failed");
-                let image_tag = args.deploy.as_ref().map(|x| x.as_str()).unwrap_or("master");
+                let image_tag = args.deploy.as_deref().unwrap_or("master");
                 info!(
                     "Deploying with {} tag for validators and fullnodes",
                     image_tag
