@@ -71,19 +71,12 @@ pub enum GlobalType {
 impl GlobalType {
     /// Determines whether this is a reference.
     pub fn is_reference(&self) -> bool {
-        match self {
-            GlobalType::Reference(_) | GlobalType::MutableReference(_) => true,
-            _ => false,
-        }
+        matches!(self, GlobalType::Reference(_) | GlobalType::MutableReference(_))
     }
 
     /// Determines whether this is a mutual reference.
     pub fn is_mutual_reference(&self) -> bool {
-        if let GlobalType::MutableReference(_) = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, GlobalType::MutableReference(_))
     }
 
     /// Instantiates type parameters in this type.

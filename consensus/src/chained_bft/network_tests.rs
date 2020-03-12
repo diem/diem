@@ -272,18 +272,12 @@ impl NetworkPlayground {
 
     /// Returns true for proposal messages only.
     pub fn proposals_only<T>(msg: &(Author, ConsensusMsg<T>)) -> bool {
-        match &msg.1 {
-            ConsensusMsg::ProposalMsg(_) => true,
-            _ => false,
-        }
+        matches!(&msg.1, ConsensusMsg::ProposalMsg(_))
     }
 
     /// Returns true for vote messages only.
     pub fn votes_only<T>(msg: &(Author, ConsensusMsg<T>)) -> bool {
-        match &msg.1 {
-            ConsensusMsg::VoteMsg(_) => true,
-            _ => false,
-        }
+        matches!(&msg.1, ConsensusMsg::VoteMsg(_))
     }
 
     /// Returns true for vote messages that carry round signatures only.
@@ -297,17 +291,11 @@ impl NetworkPlayground {
 
     /// Returns true for sync info messages only.
     pub fn sync_info_only<T>(msg: &(Author, ConsensusMsg<T>)) -> bool {
-        match &msg.1 {
-            ConsensusMsg::SyncInfo(_) => true,
-            _ => false,
-        }
+        matches!(&msg.1, ConsensusMsg::SyncInfo(_))
     }
 
     pub fn epoch_change_only<T>(msg: &(Author, ConsensusMsg<T>)) -> bool {
-        match &msg.1 {
-            ConsensusMsg::ValidatorChangeProof(_) => true,
-            _ => false,
-        }
+        matches!(&msg.1, ConsensusMsg::ValidatorChangeProof(_))
     }
 
     fn is_message_dropped(&self, src: &Author, net_req: &PeerManagerRequest) -> bool {

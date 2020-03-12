@@ -238,17 +238,11 @@ pub enum MatchStatus {
 
 impl MatchStatus {
     pub fn is_success(&self) -> bool {
-        match self {
-            Self::Success => true,
-            _ => false,
-        }
+        matches!(self, Self::Success)
     }
 
     pub fn is_failure(&self) -> bool {
-        match self {
-            Self::Failure(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Failure(_))
     }
 }
 

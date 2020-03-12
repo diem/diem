@@ -69,10 +69,7 @@ pub enum VMPublishingOption {
 
 impl VMPublishingOption {
     pub fn is_open(&self) -> bool {
-        match self {
-            VMPublishingOption::Open => true,
-            _ => false,
-        }
+        matches!(self, VMPublishingOption::Open)
     }
 
     pub fn get_whitelist_set(&self) -> Option<&HashSet<[u8; SCRIPT_HASH_LENGTH]>> {

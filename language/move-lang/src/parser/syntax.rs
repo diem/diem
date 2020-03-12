@@ -733,13 +733,13 @@ fn parse_call_args<'input>(tokens: &mut Lexer<'input>) -> Result<Spanned<Vec<Exp
 // This is needed, for example, to check for the optional Exp argument to
 // a return (where "return" is itself an Exp).
 fn at_end_of_exp<'input>(tokens: &mut Lexer<'input>) -> bool {
-    match tokens.peek() {
+    matches!(
+        tokens.peek(),
         // These are the tokens that can occur after an Exp. If the grammar
         // changes, we need to make sure that these are kept up to date and that
         // none of these tokens can occur at the beginning of an Exp.
-        Tok::Else | Tok::RBrace | Tok::RParen | Tok::Comma | Tok::Colon | Tok::Semicolon => true,
-        _ => false,
-    }
+        Tok::Else | Tok::RBrace | Tok::RParen | Tok::Comma | Tok::Colon | Tok::Semicolon
+    )
 }
 
 // Parse an expression:
@@ -1179,10 +1179,7 @@ fn parse_function_decl<'input>(
     // ("acquires" (<ModuleAccess> ",")* <ModuleAccess> ","?
     let mut acquires = vec![];
     if match_token(tokens, Tok::Acquires)? {
-        let follows_acquire = |tok| match tok {
-            Tok::Semicolon | Tok::LBrace => true,
-            _ => false,
-        };
+        let follows_acquire = |tok| matches!(tok, Tok::Semicolon | Tok::LBrace);
         loop {
             acquires.push(parse_module_access(tokens, || {
                 "a resource struct name".to_string()

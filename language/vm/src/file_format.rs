@@ -461,10 +461,7 @@ impl Kind {
     pub fn is_sub_kind_of(self, k: Kind) -> bool {
         use Kind::*;
 
-        match (self, k) {
-            (_, All) | (Resource, Resource) | (Unrestricted, Unrestricted) => true,
-            _ => false,
-        }
+        matches!((self, k), (_, All) | (Resource, Resource) | (Unrestricted, Unrestricted))
     }
 
     /// Helper function to determine the kind of a struct instance by taking the kind of a type
@@ -673,20 +670,14 @@ impl SignatureToken {
     pub fn is_reference(&self) -> bool {
         use SignatureToken::*;
 
-        match self {
-            Reference(_) | MutableReference(_) => true,
-            _ => false,
-        }
+        matches!(self, Reference(_) | MutableReference(_))
     }
 
     /// Returns true if the `SignatureToken` is a mutable reference.
     pub fn is_mutable_reference(&self) -> bool {
         use SignatureToken::*;
 
-        match self {
-            MutableReference(_) => true,
-            _ => false,
-        }
+        matches!(self, MutableReference(_))
     }
 
     /// Set the index to this one. Useful for random testing.
@@ -1303,19 +1294,13 @@ impl ::std::fmt::Debug for Bytecode {
 impl Bytecode {
     /// Return true if this bytecode instruction always branches
     pub fn is_unconditional_branch(&self) -> bool {
-        match self {
-            Bytecode::Ret | Bytecode::Abort | Bytecode::Branch(_) => true,
-            _ => false,
-        }
+        matches!(self, Bytecode::Ret | Bytecode::Abort | Bytecode::Branch(_))
     }
 
     /// Return true if the branching behavior of this bytecode instruction depends on a runtime
     /// value
     pub fn is_conditional_branch(&self) -> bool {
-        match self {
-            Bytecode::BrFalse(_) | Bytecode::BrTrue(_) => true,
-            _ => false,
-        }
+        matches!(self, Bytecode::BrFalse(_) | Bytecode::BrTrue(_))
     }
 
     /// Returns true if this bytecode instruction is either a conditional or an unconditional branch

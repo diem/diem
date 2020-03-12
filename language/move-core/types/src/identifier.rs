@@ -39,10 +39,7 @@ use std::{borrow::Borrow, fmt, ops::Deref};
 // TODO: "<SELF>" is coded as an exception. It should be removed once CompiledScript goes away.
 fn is_valid(s: &str) -> bool {
     fn is_underscore_alpha_or_digit(c: char) -> bool {
-        match c {
-            '_' | 'a'..='z' | 'A'..='Z' | '0'..='9' => true,
-            _ => false,
-        }
+        matches!(c, '_' | 'a'..='z' | 'A'..='Z' | '0'..='9')
     }
 
     if s == "<SELF>" {
