@@ -6,7 +6,8 @@ use crate::{
     runtime::bootstrap,
     tests::mock_db::MockLibraDB,
     views::{
-        BlockMetadata, BytesView, EventView, StateProofView, TransactionDataView, TransactionView,
+        AccountStateWithProofView, BlockMetadata, BytesView, EventView, StateProofView,
+        TransactionDataView, TransactionView,
     },
 };
 use anyhow::format_err;
@@ -19,10 +20,12 @@ use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_config::AccountResource,
     account_state::AccountState,
+    account_state_blob::{AccountStateBlob, AccountStateWithProof},
     crypto_proxies::LedgerInfoWithSignatures,
     mempool_status::{MempoolStatus, MempoolStatusCode},
+    proof::{SparseMerkleProof, TransactionAccumulatorProof},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{Transaction, TransactionToCommit},
+    transaction::{Transaction, TransactionInfo, TransactionToCommit},
 };
 use libradb::{test_helper::arb_blocks_to_commit, LibraDB, LibraDBTrait};
 use proptest::prelude::*;
@@ -94,7 +97,10 @@ fn test_json_rpc_protocol() {
 }
 
 // returns MockLibraDB for unit-testing
-fn mock_db(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>) -> MockLibraDB {
+fn mock_db(
+    blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>,
+    account_state_with_proof: Option<AccountStateWithProof>,
+) -> MockLibraDB {
     let mut version = 0;
     let mut all_accounts = BTreeMap::new();
     let mut all_txns = vec![];
@@ -137,12 +143,23 @@ fn mock_db(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>) ->
         );
     }
 
+    let account_state_with_proof = if let Some(mut proof) = account_state_with_proof {
+        if proof.blob.is_none() {
+            let (_, blob) = all_accounts.iter().next().unwrap();
+            proof.blob = Some(blob.clone());
+        }
+        vec![proof]
+    } else {
+        vec![]
+    };
+
     MockLibraDB {
         timestamp,
         version: version as u64,
         all_accounts,
         all_txns,
         events,
+        account_state_with_proof,
     }
 }
 
@@ -194,7 +211,7 @@ proptest! {
     #[test]
     fn test_get_account_state(blocks in arb_blocks_to_commit()) {
         // set up MockLibraDB
-        let mock_db = mock_db(blocks);
+        let mock_db = mock_db(blocks, None);
 
         // set up JSON RPC
         let port = utils::get_available_port();
@@ -247,7 +264,7 @@ proptest! {
     #[test]
     fn test_get_metadata(blocks in arb_blocks_to_commit()) {
         // set up MockLibraDB
-        let mock_db = mock_db(blocks);
+        let mock_db = mock_db(blocks, None);
 
         // set up JSON RPC
         let address = format!("0.0.0.0:{}", utils::get_available_port());
@@ -276,7 +293,7 @@ proptest! {
     #[test]
     fn test_get_events(blocks in arb_blocks_to_commit()) {
         // set up MockLibraDB
-        let mock_db = mock_db(blocks);
+        let mock_db = mock_db(blocks, None);
 
         // set up JSON RPC
         let address = format!("0.0.0.0:{}", utils::get_available_port());
@@ -307,11 +324,19 @@ proptest! {
     fn test_get_account_transaction(blocks in arb_blocks_to_commit()) {
         test_get_account_transaction_impl(blocks);
     }
+
+    #[test]
+    fn test_get_account_state_with_proof(
+        blocks in arb_blocks_to_commit(),
+        account_state_with_proof in any::<AccountStateWithProof>(),
+    ) {
+        test_get_account_state_with_proof_impl(blocks, account_state_with_proof);
+    }
 }
 
 fn test_get_transactions_impl(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>) {
     // set up MockLibraDB
-    let mock_db = mock_db(blocks);
+    let mock_db = mock_db(blocks, None);
 
     // set up JSON RPC
     let address = format!("0.0.0.0:{}", utils::get_available_port());
@@ -402,7 +427,7 @@ fn test_get_state_proof() {
     let address = format!("0.0.0.0:{}", utils::get_available_port());
     let _runtime = bootstrap(
         address.parse().unwrap(),
-        Arc::new(mock_db(vec![])),
+        Arc::new(mock_db(vec![], None)),
         channel(1024).0,
     );
     let client = reqwest::blocking::Client::new();
@@ -421,7 +446,7 @@ fn test_get_account_transaction_impl(
     blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>,
 ) {
     // set up MockLibraDB
-    let mock_db = mock_db(blocks);
+    let mock_db = mock_db(blocks, None);
 
     // set up JSON RPC
     let address = format!("0.0.0.0:{}", utils::get_available_port());
@@ -481,6 +506,74 @@ fn test_get_account_transaction_impl(
             }
         }
     }
+}
+
+fn test_get_account_state_with_proof_impl(
+    blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>,
+    account_state_with_proof: AccountStateWithProof,
+) {
+    // set up MockLibraDB
+    let mock_db = mock_db(blocks, Some(account_state_with_proof));
+
+    // set up JSON RPC
+    let address = format!("0.0.0.0:{}", utils::get_available_port());
+    let _runtime = bootstrap(
+        address.parse().unwrap(),
+        Arc::new(mock_db.clone()),
+        channel(1).0,
+    );
+    let client = reqwest::blocking::Client::new();
+    let url = format!("http://{}", address);
+
+    let account = mock_db
+        .all_accounts
+        .keys()
+        .next()
+        .expect("mock DB missing account");
+    let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_account_state_with_proof", "params": [account, 0, 0], "id": 1});
+    let resp = client.post(&url).json(&request).send().unwrap();
+    assert_eq!(resp.status(), 200);
+
+    let received_proof: AccountStateWithProofView = fetch_data(resp);
+    let expected_proof = mock_db
+        .account_state_with_proof
+        .get(0)
+        .expect("mock DB missing account state with proof");
+    let expected_blob = expected_proof.blob.as_ref().unwrap();
+    let expected_sm_proof = expected_proof.proof.transaction_info_to_account_proof();
+    let expected_txn_info = expected_proof.proof.transaction_info();
+    let expected_li_proof = expected_proof.proof.ledger_info_to_transaction_info_proof();
+
+    //version
+    assert_eq!(received_proof.version, expected_proof.version);
+
+    // blob
+    let account_blob: AccountStateBlob =
+        lcs::from_bytes(&received_proof.blob.unwrap().into_bytes().unwrap()).unwrap();
+    assert_eq!(account_blob, *expected_blob);
+
+    // proof
+    let sm_proof: SparseMerkleProof = lcs::from_bytes(
+        &received_proof
+            .proof
+            .transaction_info_to_account_proof
+            .into_bytes()
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(sm_proof, *expected_sm_proof);
+    let txn_info: TransactionInfo =
+        lcs::from_bytes(&received_proof.proof.transaction_info.into_bytes().unwrap()).unwrap();
+    assert_eq!(txn_info, *expected_txn_info);
+    let li_proof: TransactionAccumulatorProof = lcs::from_bytes(
+        &received_proof
+            .proof
+            .ledger_info_to_transaction_info_proof
+            .into_bytes()
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(li_proof, *expected_li_proof);
 }
 
 fn fetch_data<T>(response: reqwest::blocking::Response) -> T
