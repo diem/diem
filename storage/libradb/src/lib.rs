@@ -164,6 +164,15 @@ pub trait LibraDBTrait: Send + Sync {
         ValidatorChangeProof,
         AccumulatorConsistencyProof,
     )>;
+
+    /// Returns the account state corresponding to the given version and account address with proof
+    /// based on `ledger_version`
+    fn get_account_state_with_proof(
+        &self,
+        address: AccountAddress,
+        version: Version,
+        ledger_version: Version,
+    ) -> Result<AccountStateWithProof>;
 }
 
 /// This holds a handle to the underlying DB responsible for physical storage and provides APIs for
@@ -255,41 +264,6 @@ impl LibraDB {
     }
 
     // ================================== Public API ==================================
-    /// Returns the account state corresponding to the given version and account address with proof
-    /// based on `ledger_version`
-    fn get_account_state_with_proof(
-        &self,
-        address: AccountAddress,
-        version: Version,
-        ledger_version: Version,
-    ) -> Result<AccountStateWithProof> {
-        ensure!(
-            version <= ledger_version,
-            "The queried version {} should be equal to or older than ledger version {}.",
-            version,
-            ledger_version
-        );
-        let latest_version = self.get_latest_version()?;
-        ensure!(
-            ledger_version <= latest_version,
-            "The ledger version {} is greater than the latest version currently in ledger: {}",
-            ledger_version,
-            latest_version
-        );
-
-        let (txn_info, txn_info_accumulator_proof) = self
-            .ledger_store
-            .get_transaction_info_with_proof(version, ledger_version)?;
-        let (account_state_blob, sparse_merkle_proof) = self
-            .state_store
-            .get_account_state_with_proof_by_version(address, version)?;
-        Ok(AccountStateWithProof::new(
-            version,
-            account_state_blob,
-            AccountStateProof::new(txn_info_accumulator_proof, txn_info, sparse_merkle_proof),
-        ))
-    }
-
     /// Returns events specified by `query_path` with sequence number in range designated by
     /// `start_seq_num`, `ascending` and `limit`. If ascending is true this query will return up to
     /// `limit` events that were emitted after `start_event_seq_num`. Otherwise, it will return up
@@ -1013,6 +987,39 @@ impl LibraDBTrait for LibraDB {
             ledger_info_with_sigs,
             validator_change_proof,
             ledger_consistency_proof,
+        ))
+    }
+
+    fn get_account_state_with_proof(
+        &self,
+        address: AccountAddress,
+        version: Version,
+        ledger_version: Version,
+    ) -> Result<AccountStateWithProof> {
+        ensure!(
+            version <= ledger_version,
+            "The queried version {} should be equal to or older than ledger version {}.",
+            version,
+            ledger_version
+        );
+        let latest_version = self.get_latest_version()?;
+        ensure!(
+            ledger_version <= latest_version,
+            "The ledger version {} is greater than the latest version currently in ledger: {}",
+            ledger_version,
+            latest_version
+        );
+
+        let (txn_info, txn_info_accumulator_proof) = self
+            .ledger_store
+            .get_transaction_info_with_proof(version, ledger_version)?;
+        let (account_state_blob, sparse_merkle_proof) = self
+            .state_store
+            .get_account_state_with_proof_by_version(address, version)?;
+        Ok(AccountStateWithProof::new(
+            version,
+            account_state_blob,
+            AccountStateProof::new(txn_info_accumulator_proof, txn_info, sparse_merkle_proof),
         ))
     }
 }

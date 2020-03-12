@@ -8,10 +8,11 @@ use libra_types::{
         received_payment_tag, sent_payment_tag, AccountResource, BalanceResource,
         ReceivedPaymentEvent, SentPaymentEvent,
     },
+    account_state_blob::AccountStateWithProof,
     contract_event::ContractEvent,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     language_storage::TypeTag,
-    proof::AccumulatorConsistencyProof,
+    proof::{AccountStateProof, AccumulatorConsistencyProof},
     transaction::{Transaction, TransactionArgument, TransactionPayload},
 };
 use serde::{Deserialize, Serialize};
@@ -283,6 +284,57 @@ impl
             )?),
             validator_change_proof: BytesView::from(&lcs::to_bytes(&validator_change_proof)?),
             ledger_consistency_proof: BytesView::from(&lcs::to_bytes(&ledger_consistency_proof)?),
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AccountStateWithProofView {
+    pub version: u64,
+    pub blob: Option<BytesView>,
+    pub proof: AccountStateProofView,
+}
+
+impl TryFrom<AccountStateWithProof> for AccountStateWithProofView {
+    type Error = Error;
+
+    fn try_from(
+        account_state_with_proof: AccountStateWithProof,
+    ) -> Result<AccountStateWithProofView, Error> {
+        let blob = if let Some(account_blob) = account_state_with_proof.blob {
+            Some(BytesView::from(&lcs::to_bytes(&account_blob)?))
+        } else {
+            None
+        };
+        Ok(AccountStateWithProofView {
+            version: account_state_with_proof.version,
+            blob,
+            proof: AccountStateProofView::try_from(account_state_with_proof.proof)?,
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct AccountStateProofView {
+    pub ledger_info_to_transaction_info_proof: BytesView,
+    pub transaction_info: BytesView,
+    pub transaction_info_to_account_proof: BytesView,
+}
+
+impl TryFrom<AccountStateProof> for AccountStateProofView {
+    type Error = Error;
+
+    fn try_from(account_state_proof: AccountStateProof) -> Result<AccountStateProofView, Error> {
+        Ok(AccountStateProofView {
+            ledger_info_to_transaction_info_proof: BytesView::from(&lcs::to_bytes(
+                account_state_proof.ledger_info_to_transaction_info_proof(),
+            )?),
+            transaction_info: BytesView::from(&lcs::to_bytes(
+                account_state_proof.transaction_info(),
+            )?),
+            transaction_info_to_account_proof: BytesView::from(&lcs::to_bytes(
+                account_state_proof.transaction_info_to_account_proof(),
+            )?),
         })
     }
 }

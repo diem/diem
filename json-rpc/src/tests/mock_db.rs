@@ -5,7 +5,7 @@ use anyhow::{Error, Result};
 use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
-    account_state_blob::AccountStateBlob,
+    account_state_blob::{AccountStateBlob, AccountStateWithProof},
     block_info::BlockInfo,
     contract_event::ContractEvent,
     crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
@@ -31,6 +31,7 @@ pub(crate) struct MockLibraDB {
     pub all_accounts: BTreeMap<AccountAddress, AccountStateBlob>,
     pub all_txns: Vec<Transaction>,
     pub events: Vec<(u64, ContractEvent)>,
+    pub account_state_with_proof: Vec<AccountStateWithProof>,
 }
 
 impl LibraDBTrait for MockLibraDB {
@@ -181,5 +182,14 @@ impl LibraDBTrait for MockLibraDB {
             ValidatorChangeProof::new(vec![], false),
             AccumulatorConsistencyProof::new(vec![]),
         ))
+    }
+
+    fn get_account_state_with_proof(
+        &self,
+        _address: AccountAddress,
+        _version: Version,
+        _ledger_version: Version,
+    ) -> Result<AccountStateWithProof> {
+        Ok(self.account_state_with_proof[0].clone())
     }
 }
