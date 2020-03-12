@@ -3,6 +3,7 @@
 
 use anyhow::{format_err, Error};
 use hex;
+use libra_crypto::HashValue;
 use libra_types::{
     account_config::{
         received_payment_tag, sent_payment_tag, AccountResource, BalanceResource,
@@ -158,6 +159,7 @@ pub enum TransactionDataView {
         max_gas_amount: u64,
         gas_unit_price: u64,
         expiration_time: u64,
+        script_hash: String,
         script: ScriptView,
     },
     #[serde(rename = "unknown")]
@@ -181,7 +183,7 @@ pub enum ScriptView {
     #[serde(rename = "peer_to_peer_transaction")]
     PeerToPeer {
         receiver: String,
-        arg_auth_key_prefix: BytesView,
+        auth_key_prefix: BytesView,
         amount: u64,
     },
 
@@ -194,7 +196,7 @@ impl ScriptView {
     pub fn get_name(&self) -> String {
         match self {
             ScriptView::PeerToPeer { .. } => "peer to peer transaction".to_string(),
-            ScriptView::Unknown {} => "unknown transaction".to_string(),
+            ScriptView::Unknown { .. } => "unknown transaction".to_string(),
         }
     }
 }
@@ -208,16 +210,25 @@ impl From<Transaction> for TransactionDataView {
                 })
             }
             Transaction::WriteSet(_) => Ok(TransactionDataView::WriteSet {}),
-            Transaction::UserTransaction(t) => Ok(TransactionDataView::UserTransaction {
-                sender: t.sender().to_string(),
-                signature: t.signature().to_string(),
-                public_key: t.public_key().to_string(),
-                sequence_number: t.sequence_number(),
-                max_gas_amount: t.max_gas_amount(),
-                gas_unit_price: t.gas_unit_price(),
-                expiration_time: t.expiration_time().as_secs(),
-                script: t.into_raw_transaction().into_payload().into(),
-            }),
+            Transaction::UserTransaction(t) => {
+                let script_hash = match t.payload() {
+                    TransactionPayload::Script(s) => HashValue::from_sha3_256(s.code()),
+                    _ => HashValue::zero(),
+                }
+                .to_hex();
+
+                Ok(TransactionDataView::UserTransaction {
+                    sender: t.sender().to_string(),
+                    signature: t.signature().to_string(),
+                    public_key: t.public_key().to_string(),
+                    sequence_number: t.sequence_number(),
+                    max_gas_amount: t.max_gas_amount(),
+                    gas_unit_price: t.gas_unit_price(),
+                    expiration_time: t.expiration_time().as_secs(),
+                    script_hash,
+                    script: t.into_raw_transaction().into_payload().into(),
+                })
+            }
         };
 
         x.unwrap_or(TransactionDataView::UnknownTransaction {})
@@ -227,6 +238,7 @@ impl From<Transaction> for TransactionDataView {
 impl From<TransactionPayload> for ScriptView {
     fn from(value: TransactionPayload) -> Self {
         let empty_vec: Vec<TransactionArgument> = vec![];
+
         let (code, args) = match value {
             TransactionPayload::Program => ("deprecated".to_string(), empty_vec),
             TransactionPayload::WriteSet(_) => ("genesis".to_string(), empty_vec),
@@ -238,12 +250,12 @@ impl From<TransactionPayload> for ScriptView {
 
         let res = match code.as_str() {
             "peer_to_peer_transaction" => {
-                if let [TransactionArgument::Address(receiver), TransactionArgument::U8Vector(arg_auth_key_prefix), TransactionArgument::U64(amount)] =
+                if let [TransactionArgument::Address(receiver), TransactionArgument::U8Vector(auth_key_prefix), TransactionArgument::U64(amount)] =
                     &args[..]
                 {
                     Ok(ScriptView::PeerToPeer {
                         receiver: receiver.to_string(),
-                        arg_auth_key_prefix: BytesView::from(arg_auth_key_prefix),
+                        auth_key_prefix: BytesView::from(auth_key_prefix),
                         amount: *amount,
                     })
                 } else {
