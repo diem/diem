@@ -646,7 +646,7 @@ impl ClientProxy {
         let mut dependencies = vec![];
         for path in paths {
             if path.address != CORE_CODE_ADDRESS {
-                if let (Some(blob), _) = self.client.get_account_blob(path.address)? {
+                if let Some(blob) = self.client.get_account_blob(path.address)? {
                     let account_state = AccountState::try_from(&blob)?;
                     if let Some(code) = account_state.get(&path.path) {
                         dependencies.push(code.clone());
