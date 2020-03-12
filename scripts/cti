@@ -55,7 +55,10 @@ kube_select_cluster () {
     for ((i = 0; i < ${K8S_POOL_SIZE}; i++)); do
       local context=${K8S_CONTEXT_PATTERN/CLUSTERNAME/ct-${i}}
       local running_pods=$(kubectl --context="${context}" get pods -l app=cluster-test --field-selector=status.phase==Running 2> /dev/null | wc -l)
-      if [[ $running_pods -eq 0 ]]; then
+      local prometheus_healthy_containers=$(kubectl --context="${context}" get pod/libra-testnet-prometheus-server-0 | grep 'libra-testnet-prometheus-server-0' | awk '{print $2}')
+      if [[ ${prometheus_healthy_containers} != "2/2" ]]; then
+        echo "prometheus is not healthy for ct-${i}"
+      elif [[ $running_pods -eq 0 ]] && [[ ${prometheus_healthy_containers} == "2/2" ]]; then
         retval_kube_select_cluster="ct-${i}"
         return
       fi
@@ -223,7 +226,6 @@ else
   kube_wait_pod ${pod_name} ${context}
   echo "**********"
   echo "${BLUE}Dashboard:${RESTORE} http://grafana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/"
-  echo "Dashboard Username: admin. Password: $(kubectl get secret grafana-admin-credentials -o jsonpath="{.data.admin-password}" | base64 --decode)"
   echo "${BLUE}'validator-0' Logs:${RESTORE} http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))&_a=(columns:!(log,kubernetes.pod_name),filters:!(('\$state':(store:appState),meta:(alias:!n,disabled:!f,key:kubernetes.pod_name,negate:!f,params:(query:validator-0),type:phrase),query:(match:(kubernetes.pod_name:(query:validator-0,type:phrase))))),interval:auto,query:(language:kuery,query:''),sort:!(!('@timestamp',desc)))"
   echo
   echo "${BLUE}'fullnode-0-0' Logs:${RESTORE} http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))&_a=(columns:!(log,kubernetes.pod_name),filters:!(('\$state':(store:appState),meta:(alias:!n,disabled:!f,key:kubernetes.pod_name,negate:!f,params:(query:fullnode-0-0),type:phrase),query:(match:(kubernetes.pod_name:(query:fullnode-0-0,type:phrase))))),interval:auto,query:(language:kuery,query:''),sort:!(!('@timestamp',desc)))"
