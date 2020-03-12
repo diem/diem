@@ -282,11 +282,11 @@ impl NetworkPlayground {
 
     /// Returns true for vote messages that carry round signatures only.
     pub fn timeout_votes_only<T>(msg: &(Author, ConsensusMsg<T>)) -> bool {
-        match &msg.1 {
+        matches!(
+            &msg.1,
             // Timeout votes carry non-empty round signatures.
-            ConsensusMsg::VoteMsg(vote_msg) => vote_msg.vote().timeout_signature().is_some(),
-            _ => false,
-        }
+            ConsensusMsg::VoteMsg(vote_msg) if vote_msg.vote().timeout_signature().is_some()
+        )
     }
 
     /// Returns true for sync info messages only.
