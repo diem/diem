@@ -9,11 +9,13 @@ use crate::{
 use core::convert::TryFrom;
 use rand::{rngs::StdRng, SeedableRng};
 
-use crate::ed25519::{compat, ED25519_PUBLIC_KEY_LENGTH};
-use crate::hash::HashValue;
-use crate::multi_ed25519::{MultiEd25519PrivateKey, MultiEd25519PublicKey};
-use crate::test_utils::TEST_SEED;
-use crate::CryptoMaterialError::{ValidationError, WrongLengthError};
+use crate::{
+    ed25519::{compat, ED25519_PUBLIC_KEY_LENGTH},
+    hash::HashValue,
+    multi_ed25519::{MultiEd25519PrivateKey, MultiEd25519PublicKey},
+    test_utils::TEST_SEED,
+    CryptoMaterialError::{ValidationError, WrongLengthError},
+};
 
 // Helper function to generate N key pairs.
 fn generate_key_pairs(n: usize) -> Vec<(Ed25519PrivateKey, Ed25519PublicKey)> {

@@ -5,11 +5,12 @@
 
 use crate::read_bool_env_var;
 use anyhow::{anyhow, Context, Result};
-use prettydiff::basic::DiffOp;
-use prettydiff::diff_lines;
-use std::fs::File;
-use std::io::{Read, Write};
-use std::path::Path;
+use prettydiff::{basic::DiffOp, diff_lines};
+use std::{
+    fs::File,
+    io::{Read, Write},
+    path::Path,
+};
 
 /// Verifies or updates baseline file for the given generated text.
 pub fn verify_or_update_baseline(baseline_file_name: &Path, text: &str) -> Result<()> {

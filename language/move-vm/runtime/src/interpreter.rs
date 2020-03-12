@@ -25,8 +25,8 @@ use libra_types::{
     vm_error::{StatusCode, StatusType, VMStatus},
 };
 use move_core_types::identifier::IdentStr;
-use move_vm_types::identifier::{create_access_path, resource_storage_key};
 use move_vm_types::{
+    identifier::{create_access_path, resource_storage_key},
     loaded_data::{struct_def::StructDef, types::Type},
     native_functions::dispatch::NativeFunction,
     type_context::TypeContext,

@@ -9,25 +9,28 @@ use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info};
 
-use spec_lang::env::{FunctionEnv, GlobalEnv, Loc, ModuleEnv, Parameter, StructEnv, TypeParameter};
-use spec_lang::ty::{PrimitiveType, Type};
+use spec_lang::{
+    env::{FunctionEnv, GlobalEnv, Loc, ModuleEnv, Parameter, StructEnv, TypeParameter},
+    ty::{PrimitiveType, Type},
+};
 use stackless_bytecode_generator::{
     stackless_bytecode::StacklessBytecode::{self, *},
     stackless_bytecode_generator::{StacklessFunction, StacklessModuleGenerator},
 };
 
-use crate::cli::Options;
-use crate::spec_translator::SpecTranslator;
 use crate::{
     boogie_helpers::{
         boogie_field_name, boogie_function_name, boogie_local_type, boogie_struct_name,
         boogie_struct_type_value, boogie_type_check, boogie_type_value, boogie_type_values,
         boogie_var_before_borrow,
     },
+    cli::Options,
     code_writer::CodeWriter,
+    spec_translator::SpecTranslator,
 };
-use bytecode_to_boogie::lifetime_analysis::LifetimeAnalysis;
-use bytecode_to_boogie::stackless_control_flow_graph::StacklessControlFlowGraph;
+use bytecode_to_boogie::{
+    lifetime_analysis::LifetimeAnalysis, stackless_control_flow_graph::StacklessControlFlowGraph,
+};
 use num::Zero;
 
 pub struct BoogieTranslator<'env> {

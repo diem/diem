@@ -5,11 +5,11 @@ use anyhow::{ensure, format_err, Result};
 use executor_utils::create_storage_service_and_executor;
 use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey};
-use libra_types::account_state::AccountState;
 use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, AuthenticationKey},
     account_config::{association_address, AccountResource},
+    account_state::AccountState,
     account_state_blob::AccountStateWithProof,
     block_info::BlockInfo,
     block_metadata::BlockMetadata,

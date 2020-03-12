@@ -20,11 +20,12 @@ use num::BigInt;
 use pretty::RcDoc;
 use regex::Regex;
 
-use spec_lang::env::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleId, StructId};
-use spec_lang::ty::{PrimitiveType, Type};
+use spec_lang::{
+    env::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleId, StructId},
+    ty::{PrimitiveType, Type},
+};
 
-use crate::cli::Options;
-use crate::code_writer::CodeWriter;
+use crate::{cli::Options, code_writer::CodeWriter};
 
 /// A type alias for the way how we use crate `pretty`'s document type. `pretty` is a
 /// Wadler-style pretty printer. Our simple usage doesn't require any lifetime management.

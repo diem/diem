@@ -5,8 +5,7 @@
 
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 
-use move_prover::cli::Options;
-use move_prover::run_move_prover;
+use move_prover::{cli::Options, run_move_prover};
 use std::env;
 
 fn main() -> anyhow::Result<()> {

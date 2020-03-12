@@ -6,11 +6,14 @@
 //!
 //! Signature verification also checks and rejects non-canonical signatures.
 
-use crate::ed25519::{
-    Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature, ED25519_PRIVATE_KEY_LENGTH,
-    ED25519_PUBLIC_KEY_LENGTH, ED25519_SIGNATURE_LENGTH,
+use crate::{
+    ed25519::{
+        Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature, ED25519_PRIVATE_KEY_LENGTH,
+        ED25519_PUBLIC_KEY_LENGTH, ED25519_SIGNATURE_LENGTH,
+    },
+    traits::*,
+    HashValue,
 };
-use crate::{traits::*, HashValue};
 use anyhow::{anyhow, Result};
 use bit_vec::BitVec;
 use core::convert::TryFrom;

@@ -4,11 +4,11 @@
 //! Helpers for emitting Boogie code.
 
 use itertools::Itertools;
-use spec_lang::env::{
-    FieldEnv, FunctionEnv, GlobalEnv, ModuleEnv, ModuleId, SpecFunId, StructEnv, StructId,
+use spec_lang::{
+    env::{FieldEnv, FunctionEnv, GlobalEnv, ModuleEnv, ModuleId, SpecFunId, StructEnv, StructId},
+    symbol::Symbol,
+    ty::{PrimitiveType, Type},
 };
-use spec_lang::symbol::Symbol;
-use spec_lang::ty::{PrimitiveType, Type};
 
 /// Return boogie name of given structure.
 pub fn boogie_struct_name(env: &StructEnv<'_>) -> String {

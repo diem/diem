@@ -3,12 +3,12 @@
 
 //! Contains types and related functions.
 
-use crate::ast::QualifiedSymbol;
-use crate::env::{ModuleId, StructId};
-use crate::symbol::SymbolPool;
-use std::collections::BTreeMap;
-use std::fmt;
-use std::fmt::Formatter;
+use crate::{
+    ast::QualifiedSymbol,
+    env::{ModuleId, StructId},
+    symbol::SymbolPool,
+};
+use std::{collections::BTreeMap, fmt, fmt::Formatter};
 
 /// Represents a type.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]

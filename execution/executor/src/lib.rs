@@ -14,9 +14,8 @@ use debug_interface::prelude::*;
 use executor_types::{ExecutedTrees, ProcessedVMOutput, ProofReader, TransactionData};
 use futures::executor::block_on;
 use libra_config::config::{NodeConfig, VMConfig};
-use libra_crypto::hash::GENESIS_BLOCK_ID;
 use libra_crypto::{
-    hash::{CryptoHash, EventAccumulatorHasher},
+    hash::{CryptoHash, EventAccumulatorHasher, GENESIS_BLOCK_ID},
     HashValue,
 };
 use libra_logger::prelude::*;

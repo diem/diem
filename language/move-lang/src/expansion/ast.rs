@@ -1,11 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::parser::ast::{InvariantKind, SpecBlockTarget, SpecConditionKind};
 use crate::{
     parser::ast::{
-        BinOp, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, ModuleName, ResourceLoc,
-        StructName, UnaryOp, Value, Var,
+        BinOp, Field, FunctionName, FunctionVisibility, InvariantKind, Kind, ModuleIdent,
+        ModuleName, ResourceLoc, SpecBlockTarget, SpecConditionKind, StructName, UnaryOp, Value,
+        Var,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, *},
 };

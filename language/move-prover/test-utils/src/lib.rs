@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use regex::Regex;
-use std::fs::File;
-use std::io::Read;
-use std::path::Path;
+use std::{fs::File, io::Read, path::Path};
 
 pub mod baseline_test;
 

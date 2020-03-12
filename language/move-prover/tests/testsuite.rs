@@ -6,10 +6,8 @@ use std::path::Path;
 use codespan_reporting::term::termcolor::Buffer;
 
 use libra_temppath::TempPath;
-use move_prover::cli::Options;
-use move_prover::run_move_prover;
-use test_utils::baseline_test::verify_or_update_baseline;
-use test_utils::{extract_test_directives, read_env_var};
+use move_prover::{cli::Options, run_move_prover};
+use test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives, read_env_var};
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let no_boogie = read_env_var("BOOGIE_EXE").is_empty() || read_env_var("Z3_EXE").is_empty();
