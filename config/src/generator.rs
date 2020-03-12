@@ -7,7 +7,7 @@
 use crate::{
     config::{
         NodeConfig, OnDiskStorageConfig, SafetyRulesBackend, SafetyRulesService, SeedPeersConfig,
-        VMPublishingOption,
+        TestConfig,
     },
     utils,
 };
@@ -82,6 +82,6 @@ pub fn validator_swarm(
 
 pub fn validator_swarm_for_testing(nodes: usize) -> ValidatorSwarm {
     let mut config = NodeConfig::default();
-    config.vm_config.publishing_options = VMPublishingOption::Open;
+    config.test = Some(TestConfig::open_module());
     validator_swarm(&NodeConfig::default(), nodes, [1u8; 32], true)
 }

@@ -194,6 +194,10 @@ impl ValidatorConfig {
                 &validator_swarm.nodes,
                 validator_set,
                 discovery_set,
+                self.template
+                    .test
+                    .as_ref()
+                    .and_then(|config| config.publishing_option.clone()),
             )
             .into_inner(),
         ));

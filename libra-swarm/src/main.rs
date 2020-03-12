@@ -3,9 +3,10 @@
 
 #![forbid(unsafe_code)]
 
-use libra_config::config::{NodeConfig, RoleType, VMPublishingOption};
+use libra_config::config::{NodeConfig, RoleType, TestConfig};
 use libra_swarm::{client, swarm::LibraSwarm};
 use libra_temppath::TempPath;
+use libra_types::on_chain_config::VMPublishingOption;
 use std::path::Path;
 use structopt::StructOpt;
 
@@ -37,7 +38,11 @@ fn main() {
     let num_nodes = args.num_nodes;
     let num_full_nodes = args.num_full_nodes;
     let mut dev_config = NodeConfig::default();
-    dev_config.vm_config.publishing_options = VMPublishingOption::Open;
+    dev_config.test = Some({
+        let mut config = TestConfig::default();
+        config.publishing_option = Some(VMPublishingOption::Open);
+        config
+    });
 
     libra_logger::Logger::new().init();
 

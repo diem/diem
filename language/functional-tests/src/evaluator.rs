@@ -10,7 +10,6 @@ use bytecode_verifier::verifier::{
     verify_module_dependencies, verify_script_dependencies, VerifiedModule, VerifiedScript,
 };
 use language_e2e_tests::executor::FakeExecutor;
-use libra_config::config::VMPublishingOption;
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use libra_state_view::StateView;
 use libra_types::{
@@ -18,6 +17,7 @@ use libra_types::{
     account_address::AccountAddress,
     block_metadata::BlockMetadata,
     language_storage::ModuleId,
+    on_chain_config::VMPublishingOption,
     transaction::{
         Module as TransactionModule, RawTransaction, Script as TransactionScript,
         SignedTransaction, Transaction as LibraTransaction, TransactionOutput, TransactionStatus,

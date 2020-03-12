@@ -335,14 +335,20 @@ module LibraSystem {
    }
 
    fun reconfigure_() acquires ValidatorSet {
+       // Do not do anything if time is not set up yet.
+       if(LibraTimestamp::is_genesis()) {
+           return ()
+       };
+
        let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
-       let current_block_time = LibraTimestamp::now_microseconds();
 
        // Ensure that there is at most one reconfiguration per transaction. This ensures that there is a 1-1
        // correspondence between system reconfigurations and emitted ReconfigurationEvents.
-       Transaction::assert(current_block_time > validator_set_ref.last_reconfiguration_time, 23);
 
+       let current_block_time = LibraTimestamp::now_microseconds();
+       Transaction::assert(current_block_time > validator_set_ref.last_reconfiguration_time, 23);
        validator_set_ref.last_reconfiguration_time = current_block_time;
+
        emit_reconfiguration_event();
    }
 
