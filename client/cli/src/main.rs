@@ -28,7 +28,7 @@ use structopt::StructOpt;
 )]
 struct Args {
     /// JSON RPC port to connect to.
-    #[structopt(short = "p", long, default_value = "5000")]
+    #[structopt(short = "p", long, default_value = "8080")]
     pub port: NonZeroU16,
     /// Host address/name to connect to.
     #[structopt(short = "a", long)]
@@ -227,8 +227,8 @@ mod tests {
     #[test]
     fn test_args_port() {
         let args = Args::from_iter(&["test", "--host=h"]);
-        assert_eq!(args.port.get(), 8000);
-        assert_eq!(format!("{}:{}", args.host, args.port.get()), "h:8000");
+        assert_eq!(args.port.get(), 8080);
+        assert_eq!(format!("{}:{}", args.host, args.port.get()), "h:8080");
         let args = Args::from_iter(&["test", "--port=65535", "--host=h"]);
         assert_eq!(args.port.get(), 65535);
     }
