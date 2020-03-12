@@ -268,7 +268,10 @@ impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage<T> {
             None,
         ) {
             Ok(recovery_data) => LivenessStorageData::RecoveryData(recovery_data),
-            Err(_e) => panic!("Construct recovery data during genesis should never fail"),
+            Err(e) => {
+                eprintln!("{}", e);
+                panic!("Construct recovery data during genesis should never fail");
+            }
         }
     }
     fn save_highest_timeout_cert(&self, _: TimeoutCertificate) -> Result<()> {
