@@ -46,6 +46,7 @@ resource "aws_lb_listener" "validator-ac" {
 resource "aws_lb" "json-rpc" {
   name                             = "${terraform.workspace}-jsonrpc"
   load_balancer_type               = "application"
+  ip_address_type                  = "dualstack"
   enable_cross_zone_load_balancing = true
   subnets                          = aws_subnet.testnet.*.id
   security_groups                  = [aws_security_group.validator.id]
@@ -130,6 +131,19 @@ resource "aws_route53_record" "json-rpc" {
   zone_id = local.zone_id
   name    = "client${local.dns_suffix}"
   type    = "A"
+
+  alias {
+    name                   = aws_lb.json-rpc.dns_name
+    zone_id                = aws_lb.json-rpc.zone_id
+    evaluate_target_health = true
+  }
+}
+
+resource "aws_route53_record" "json-rpc-ipv6" {
+  count   = local.zone_id == "" ? 0 : 1
+  zone_id = local.zone_id
+  name    = "client${local.dns_suffix}"
+  type    = "AAAA"
 
   alias {
     name                   = aws_lb.json-rpc.dns_name
