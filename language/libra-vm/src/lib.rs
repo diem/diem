@@ -114,7 +114,7 @@ mod unit_tests;
 
 pub mod system_module_names;
 
-pub use libra_vm::LibraVM;
+pub use crate::libra_vm::LibraVM;
 
 use libra_config::config::VMConfig;
 use libra_state_view::StateView;
