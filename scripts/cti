@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 set -e
 set -o pipefail
+set -x
 
 TAG=""
 PR=""
@@ -192,7 +193,7 @@ if [[ -z "${K8S}" ]]; then
       DEPLOY_CMD=""
   fi
 
-  ssh -t $JUMPHOST ssh -i /libra_rsa ec2-user@ct.priv.${WORKSPACE}.aws.hlw3truzy4ls.com env $ENV CTI_MARKER=$MARKER REMOTE_USER=$MARKER ct -c cluster-test-ci --image "853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:$TAG" $DEPLOY_CMD $* | tee $OUTPUT_TEE
+  ssh -t $JUMPHOST ssh -i /libra_rsa ec2-user@ct.priv.${WORKSPACE}.aws.hlw3truzy4ls.com env $ENV CTI_MARKER=$MARKER REMOTE_USER=$MARKER ct -c cluster-test-ci --image "853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:$TAG" $DEPLOY_CMD $* 2>&1 | tee $OUTPUT_TEE
 
 else
   if ! which kubectl &>/dev/null; then
@@ -233,6 +234,13 @@ else
   kubectl --context=${context} logs -f "${pod_name}" | tee $OUTPUT_TEE
 fi
 
+echo "OUTPUT_TEE start"
+cat $OUTPUT_TEE
+echo "OUTPUT_TEE end"
 if [ ! -z "$REPORT" ]; then
     cat $OUTPUT_TEE | awk '/====json-report-begin===/{f=1;next} /====json-report-end===/{f=0} f' > $REPORT
+    echo "$REPORT start"
+    cat $REPORT
+    echo "$REPORT end"
+    pwd
 fi
