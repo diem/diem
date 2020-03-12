@@ -14,7 +14,7 @@ use anyhow::format_err;
 use futures::{channel::mpsc::channel, StreamExt};
 use hex;
 use libra_config::utils;
-use libra_crypto::ed25519::*;
+use libra_crypto::{ed25519::*, HashValue};
 use libra_temppath::TempPath;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
@@ -26,7 +26,7 @@ use libra_types::{
     mempool_status::{MempoolStatus, MempoolStatusCode},
     proof::{SparseMerkleProof, TransactionAccumulatorProof},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{Transaction, TransactionInfo, TransactionToCommit},
+    transaction::{Transaction, TransactionInfo, TransactionPayload, TransactionToCommit},
 };
 use libradb::{test_helper::arb_blocks_to_commit, LibraDB, LibraDBTrait};
 use proptest::prelude::*;
@@ -410,9 +410,19 @@ fn test_get_transactions_impl(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoW
                             _ => panic!("Returned value doesn't match!"),
                         },
                         Transaction::UserTransaction(t) => match view.transaction {
-                            TransactionDataView::UserTransaction { sender, .. } => {
+                            TransactionDataView::UserTransaction {
+                                sender,
+                                script_hash,
+                                ..
+                            } => {
                                 assert_eq!(t.sender().to_string(), sender);
                                 // TODO: verify every field
+                                if let TransactionPayload::Script(s) = t.payload() {
+                                    assert_eq!(
+                                        script_hash,
+                                        HashValue::from_sha3_256(s.code()).to_hex()
+                                    );
+                                }
                             }
                             _ => panic!("Returned value doesn't match!"),
                         },
@@ -471,6 +481,20 @@ fn test_get_account_transaction_impl(
             let data: Option<TransactionView> = fetch_data(resp);
             let tx_view = data.expect("Transaction didn't exists!");
 
+            let expected_tx = mock_db
+                .all_txns
+                .iter()
+                .find_map(|t| {
+                    if let Ok(x) = t.as_signed_user_txn() {
+                        if x.sender() == *acc && x.sequence_number() == seq {
+                            return Some(x);
+                        }
+                    }
+                    None
+                })
+                .cloned()
+                .expect("Couldn't find tx");
+
             // Check we returned correct events
             let expected_events = mock_db
                 .events
@@ -499,10 +523,15 @@ fn test_get_account_transaction_impl(
                 TransactionDataView::UserTransaction {
                     sender,
                     sequence_number,
+                    script_hash,
                     ..
                 } => {
                     assert_eq!(acc.to_string(), sender);
                     assert_eq!(seq, sequence_number);
+
+                    if let TransactionPayload::Script(s) = expected_tx.payload() {
+                        assert_eq!(script_hash, HashValue::from_sha3_256(s.code()).to_hex());
+                    }
                 }
                 _ => panic!("wrong type"),
             }

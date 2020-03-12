@@ -728,12 +728,12 @@ fn test_external_transaction_signer() {
                 ScriptView::PeerToPeer {
                     receiver: p_receiver,
                     amount: p_amount,
-                    arg_auth_key_prefix,
+                    auth_key_prefix,
                 } => {
                     assert_eq!(p_receiver, receiver_address.to_string());
                     assert_eq!(p_amount, amount);
                     assert_eq!(
-                        arg_auth_key_prefix
+                        auth_key_prefix
                             .into_bytes()
                             .expect("failed to turn key to bytes"),
                         receiver_auth_key.prefix()
