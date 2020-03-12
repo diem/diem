@@ -23,6 +23,8 @@ use libra_types::{
     crypto_proxies::ValidatorSet,
     discovery_info::DiscoveryInfo,
     discovery_set::DiscoverySet,
+    language_storage::ModuleId,
+    on_chain_config::VMPublishingOption,
     transaction::{
         authenticator::AuthenticationKey, ChangeSet, RawTransaction, SignatureCheckedTransaction,
     },
@@ -40,6 +42,7 @@ use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
 use std::str::FromStr;
 use stdlib::{stdlib_modules, StdLibOptions};
+use transaction_builder::allowing_script_hashes;
 use vm::{
     access::ModuleAccess,
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
@@ -88,6 +91,20 @@ static ROTATE_AUTHENTICATION_KEY: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("rotate_authentication_key").unwrap());
 static EPILOGUE: Lazy<Identifier> = Lazy::new(|| Identifier::new("epilogue").unwrap());
 
+static SCRIPT_WHITELIST_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+    ModuleId::new(
+        account_config::CORE_CODE_ADDRESS,
+        Identifier::new("ScriptWhitelist").unwrap(),
+    )
+});
+
+static LIBRA_TIME_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+    ModuleId::new(
+        account_config::CORE_CODE_ADDRESS,
+        Identifier::new("LibraTimestamp").unwrap(),
+    )
+});
+
 // TODO(philiphayes): remove this after integrating on-chain discovery with config.
 /// Make a placeholder `DiscoverySet` from the `ValidatorSet`.
 pub fn make_placeholder_discovery_set(validator_set: &ValidatorSet) -> DiscoverySet {
@@ -113,24 +130,28 @@ pub fn encode_genesis_transaction_with_validator(
     nodes: &[NodeConfig],
     validator_set: ValidatorSet,
     discovery_set: DiscoverySet,
+    vm_publishing_option: Option<VMPublishingOption>,
 ) -> SignatureCheckedTransaction {
-    encode_genesis_transaction_with_validator_and_modules(
+    encode_genesis_transaction(
         private_key,
         public_key,
         nodes,
         validator_set,
         discovery_set,
         stdlib_modules(StdLibOptions::Staged), // Must use staged stdlib
+        vm_publishing_option
+            .unwrap_or_else(|| VMPublishingOption::Locked(allowing_script_hashes())),
     )
 }
 
-pub fn encode_genesis_transaction_with_validator_and_modules(
+pub fn encode_genesis_transaction(
     private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     nodes: &[NodeConfig],
     validator_set: ValidatorSet,
     discovery_set: DiscoverySet,
     stdlib_modules: &[VerifiedModule],
+    vm_publishing_option: VMPublishingOption,
 ) -> SignatureCheckedTransaction {
     // create a MoveVM
     let move_vm = MoveVM::new();
@@ -170,6 +191,12 @@ pub fn encode_genesis_transaction_with_validator_and_modules(
                 &nodes,
                 &validator_set,
                 &discovery_set,
+            );
+            setup_publishing_option(
+                &move_vm,
+                &gas_schedule,
+                &mut interpreter_context,
+                vm_publishing_option,
             );
             reconfigure(&move_vm, &gas_schedule, &mut interpreter_context);
             publish_stdlib(&mut interpreter_context, stdlib_modules);
@@ -558,6 +585,29 @@ fn initialize_validators(
     }
 }
 
+fn setup_publishing_option(
+    move_vm: &MoveVM,
+    gas_schedule: &CostTable,
+    interpreter_context: &mut TransactionExecutionContext,
+    publishing_option: VMPublishingOption,
+) {
+    let mut txn_data = TransactionMetadata::default();
+    txn_data.sender = account_config::association_address();
+
+    let option_bytes =
+        lcs::to_bytes(&publishing_option).expect("Cannot serialize publishing option");
+    move_vm
+        .execute_function(
+            &SCRIPT_WHITELIST_MODULE,
+            &INITIALIZE,
+            &gas_schedule,
+            interpreter_context,
+            &txn_data,
+            vec![Value::vector_u8(option_bytes)],
+        )
+        .expect("Failure setting up publishing option");
+}
+
 /// Publish the standard library.
 fn publish_stdlib(interpreter_context: &mut dyn ChainState, stdlib: &[VerifiedModule]) {
     for module in stdlib {
@@ -575,7 +625,19 @@ fn reconfigure(
     gas_schedule: &CostTable,
     interpreter_context: &mut TransactionExecutionContext,
 ) {
-    let txn_data = TransactionMetadata::default();
+    let mut txn_data = TransactionMetadata::default();
+    txn_data.sender = account_config::association_address();
+
+    move_vm
+        .execute_function(
+            &LIBRA_TIME_MODULE,
+            &INITIALIZE,
+            &gas_schedule,
+            interpreter_context,
+            &txn_data,
+            vec![],
+        )
+        .expect("Failure reconfiguring the system");
 
     move_vm
         .execute_function(

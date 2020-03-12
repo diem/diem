@@ -3,7 +3,6 @@
 
 #![forbid(unsafe_code)]
 
-use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::HashValue;
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
@@ -13,7 +12,6 @@ use libra_types::{
         SCRIPT_HASH_LENGTH,
     },
 };
-use std::{collections::HashSet, iter::FromIterator};
 use stdlib::transaction_scripts::{
     ADD_VALIDATOR_TXN, CREATE_ACCOUNT_TXN, MINT_TXN, PEER_TO_PEER_TRANSFER_TXN,
     PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN, REGISTER_VALIDATOR_TXN, REMOVE_VALIDATOR_TXN,
@@ -245,12 +243,4 @@ pub fn allowing_script_hashes() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
     .into_iter()
     .map(|s| *HashValue::from_sha3_256(&s).as_ref())
     .collect()
-}
-
-pub fn default_config() -> VMConfig {
-    VMConfig {
-        publishing_options: VMPublishingOption::Locked(HashSet::from_iter(
-            allowing_script_hashes().into_iter(),
-        )),
-    }
 }

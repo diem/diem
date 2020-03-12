@@ -8,10 +8,7 @@ use crate::{
     data_store::{FakeDataStore, GENESIS_WRITE_SET},
 };
 use bytecode_verifier::VerifiedModule;
-use libra_config::{
-    config::{VMConfig, VMPublishingOption},
-    generator,
-};
+use libra_config::{config::VMConfig, generator};
 use libra_crypto::HashValue;
 use libra_state_view::StateView;
 use libra_types::{
@@ -20,6 +17,7 @@ use libra_types::{
     block_metadata::BlockMetadata,
     crypto_proxies::ValidatorSet,
     language_storage::ModuleId,
+    on_chain_config::VMPublishingOption,
     transaction::{
         SignedTransaction, Transaction, TransactionOutput, TransactionPayload, TransactionStatus,
     },
@@ -29,6 +27,7 @@ use libra_types::{
 use libra_vm::{LibraVM, VMExecutor, VMVerifier};
 use std::collections::BTreeMap;
 use stdlib::{stdlib_modules, StdLibOptions};
+use transaction_builder::allowing_script_hashes;
 use vm::CompiledModule;
 use vm_genesis::GENESIS_KEYPAIR;
 
@@ -42,49 +41,10 @@ pub struct FakeExecutor {
     block_time: u64,
 }
 
-pub fn test_all_genesis_impl<T, F>(
-    publishing_options: Option<VMPublishingOption>,
-    test_fn: F,
-) -> Result<(), T>
-where
-    F: Fn(FakeExecutor) -> Result<(), T>,
-{
-    let genesis: Vec<&WriteSet> = vec![&GENESIS_WRITE_SET];
-    genesis
-        .iter()
-        .map(|ws| test_fn(FakeExecutor::from_genesis(ws, publishing_options.clone())))
-        .collect()
-}
-
-pub fn test_all_genesis_default(test_fn: fn(FakeExecutor) -> ()) {
-    let result: Result<(), ()> = test_all_genesis_impl(None, |executor| {
-        test_fn(executor);
-        Ok(())
-    });
-    result.unwrap()
-}
-
-pub fn test_all_genesis(
-    publishing_options: Option<VMPublishingOption>,
-    test_fn: fn(FakeExecutor) -> (),
-) {
-    let result: Result<(), ()> = test_all_genesis_impl(publishing_options, |executor| {
-        test_fn(executor);
-        Ok(())
-    });
-    result.unwrap()
-}
-
 impl FakeExecutor {
     /// Creates an executor from a genesis [`WriteSet`].
-    pub fn from_genesis(
-        write_set: &WriteSet,
-        publishing_options: Option<VMPublishingOption>,
-    ) -> Self {
-        let mut config = VMConfig::default();
-        if let Some(vm_publishing_options) = publishing_options {
-            config.publishing_options = vm_publishing_options;
-        }
+    pub fn from_genesis(write_set: &WriteSet) -> Self {
+        let config = VMConfig::default();
 
         let mut executor = FakeExecutor {
             config,
@@ -97,7 +57,15 @@ impl FakeExecutor {
 
     /// Creates an executor from the genesis file GENESIS_FILE_LOCATION
     pub fn from_genesis_file() -> Self {
-        Self::from_genesis(&GENESIS_WRITE_SET, None)
+        Self::from_genesis(&GENESIS_WRITE_SET)
+    }
+
+    pub fn whitelist_genesis() -> Self {
+        Self::custom_genesis(
+            Some(stdlib_modules(StdLibOptions::Staged).to_vec()),
+            None,
+            VMPublishingOption::Locked(allowing_script_hashes()),
+        )
     }
 
     /// Creates an executor from the genesis file GENESIS_FILE_LOCATION with script/module
@@ -107,7 +75,12 @@ impl FakeExecutor {
         if let VMPublishingOption::Locked(_) = publishing_options {
             panic!("Whitelisted transactions are not supported as a publishing option")
         }
-        Self::from_genesis(&GENESIS_WRITE_SET, Some(publishing_options))
+
+        Self::custom_genesis(
+            Some(stdlib_modules(StdLibOptions::Staged).to_vec()),
+            None,
+            publishing_options,
+        )
     }
 
     /// Creates an executor in which no genesis state has been applied yet.
@@ -135,13 +108,14 @@ impl FakeExecutor {
             let discovery_set = vm_genesis::make_placeholder_discovery_set(&validator_set);
             let stdlib_modules =
                 genesis_modules.unwrap_or_else(|| stdlib_modules(StdLibOptions::Staged).to_vec());
-            match vm_genesis::encode_genesis_transaction_with_validator_and_modules(
+            match vm_genesis::encode_genesis_transaction(
                 &GENESIS_KEYPAIR.0,
                 GENESIS_KEYPAIR.1.clone(),
                 &swarm.nodes,
                 validator_set,
                 discovery_set,
                 &stdlib_modules,
+                publishing_options,
             )
             .payload()
             {
@@ -149,7 +123,7 @@ impl FakeExecutor {
                 _ => panic!("Expected writeset txn in genesis txn"),
             }
         };
-        Self::from_genesis(&genesis_write_set, Some(publishing_options))
+        Self::from_genesis(&genesis_write_set)
     }
 
     /// Creates a number of [`Account`] instances all with the same balance and sequence number,

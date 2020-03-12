@@ -11,7 +11,7 @@ use crate::{
         AccountCurrent, AccountPairGen, AccountPickStyle, AccountUniverse, AccountUniverseGen,
         RotateKeyGen,
     },
-    executor::{test_all_genesis_impl, FakeExecutor},
+    executor::FakeExecutor,
     transaction_status_eq,
 };
 use proptest::{collection::vec, prelude::*};
@@ -102,32 +102,28 @@ pub(crate) fn run_and_assert_gas_cost_stability(
     universe: AccountUniverseGen,
     transaction_gens: Vec<impl AUTransactionGen + Clone>,
 ) -> Result<(), TestCaseError> {
-    test_all_genesis_impl(None, {
-        |mut executor| {
-            let mut universe = universe.clone().setup_gas_cost_stability(&mut executor);
-            let (transactions, expected_values): (Vec<_>, Vec<_>) = transaction_gens
-                .iter()
-                .map(|transaction_gen| transaction_gen.clone().apply(&mut universe))
-                .unzip();
-            let outputs = executor.execute_block(transactions).unwrap();
+    let mut executor = FakeExecutor::from_genesis_file();
+    let mut universe = universe.setup_gas_cost_stability(&mut executor);
+    let (transactions, expected_values): (Vec<_>, Vec<_>) = transaction_gens
+        .iter()
+        .map(|transaction_gen| transaction_gen.clone().apply(&mut universe))
+        .unzip();
+    let outputs = executor.execute_block(transactions).unwrap();
 
-            for (idx, (output, expected_value)) in outputs.iter().zip(&expected_values).enumerate()
-            {
-                prop_assert!(
-                    transaction_status_eq(output.status(), &expected_value.0),
-                    "unexpected status for transaction {}",
-                    idx
-                );
-                prop_assert_eq!(
-                    output.gas_used(),
-                    expected_value.1,
-                    "transaction at idx {} did not have expected gas cost",
-                    idx,
-                );
-            }
-            Ok(())
-        }
-    })
+    for (idx, (output, expected_value)) in outputs.iter().zip(&expected_values).enumerate() {
+        prop_assert!(
+            transaction_status_eq(output.status(), &expected_value.0),
+            "unexpected status for transaction {}",
+            idx
+        );
+        prop_assert_eq!(
+            output.gas_used(),
+            expected_value.1,
+            "transaction at idx {} did not have expected gas cost",
+            idx,
+        );
+    }
+    Ok(())
 }
 
 /// Run these transactions and verify the expected output.
@@ -135,29 +131,26 @@ pub(crate) fn run_and_assert_universe(
     universe: AccountUniverseGen,
     transaction_gens: Vec<impl AUTransactionGen + Clone>,
 ) -> Result<(), TestCaseError> {
-    test_all_genesis_impl(None, {
-        |mut executor| {
-            let mut universe = universe.clone().setup(&mut executor);
-            let (transactions, expected_values): (Vec<_>, Vec<_>) = transaction_gens
-                .iter()
-                .map(|transaction_gen| transaction_gen.clone().apply(&mut universe))
-                .unzip();
-            let outputs = executor.execute_block(transactions).unwrap();
+    let mut executor = FakeExecutor::from_genesis_file();
+    let mut universe = universe.setup(&mut executor);
+    let (transactions, expected_values): (Vec<_>, Vec<_>) = transaction_gens
+        .iter()
+        .map(|transaction_gen| transaction_gen.clone().apply(&mut universe))
+        .unzip();
+    let outputs = executor.execute_block(transactions).unwrap();
 
-            prop_assert_eq!(outputs.len(), expected_values.len());
+    prop_assert_eq!(outputs.len(), expected_values.len());
 
-            for (idx, (output, expected)) in outputs.iter().zip(&expected_values).enumerate() {
-                prop_assert!(
-                    transaction_status_eq(output.status(), &expected.0),
-                    "unexpected status for transaction {}",
-                    idx
-                );
-                executor.apply_write_set(output.write_set());
-            }
+    for (idx, (output, expected)) in outputs.iter().zip(&expected_values).enumerate() {
+        prop_assert!(
+            transaction_status_eq(output.status(), &expected.0),
+            "unexpected status for transaction {}",
+            idx
+        );
+        executor.apply_write_set(output.write_set());
+    }
 
-            assert_accounts_match(&universe, &executor)
-        }
-    })
+    assert_accounts_match(&universe, &executor)
 }
 
 /// Verify that the account information in the universe matches the information in the executor.

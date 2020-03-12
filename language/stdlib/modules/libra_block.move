@@ -47,7 +47,6 @@ module LibraBlock {
         proposer: 0xA550C18,
         new_block_events: LibraAccount::new_event_handle<Self::NewBlockEvent>(),
       });
-      LibraTimestamp::initialize_timer();
     }
 
     // Set the metadata for the current block.

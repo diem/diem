@@ -3,7 +3,6 @@
 
 use anyhow::{ensure, format_err, Result};
 use executor_utils::create_storage_service_and_executor;
-use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey};
 use libra_types::{
     access_path::AccessPath,
@@ -16,6 +15,7 @@ use libra_types::{
     discovery_set::{DISCOVERY_SET_CHANGE_EVENT_PATH, GLOBAL_DISCOVERY_SET_CHANGE_EVENT_PATH},
     get_with_proof::{verify_update_to_latest_ledger_response, RequestItem},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    on_chain_config::VMPublishingOption,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{
         authenticator::AuthenticationKey, Script, Transaction, TransactionListWithProof,
@@ -142,9 +142,10 @@ fn test_reconfiguration() {
     // validator set
 
     let (mut config, genesis_key) = config_builder::test_config();
-    config.vm_config = VMConfig {
-        publishing_options: VMPublishingOption::CustomScripts,
-    };
+    if let Some(test_config) = config.test.as_mut() {
+        test_config.publishing_option = Some(VMPublishingOption::CustomScripts);
+    }
+
     let (_storage_server_handle, executor, committed_trees) =
         create_storage_service_and_executor(&config);
 

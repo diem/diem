@@ -1,9 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{counters::*, system_module_names::*, VMExecutor, VMVerifier};
+use crate::{
+    counters::*, on_chain_configs::VMConfig as OnlineConfig, system_module_names::*, VMExecutor,
+    VMVerifier,
+};
 use debug_interface::prelude::*;
-use libra_config::config::{VMConfig, VMPublishingOption};
+use libra_config::config::VMConfig as LocalConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
@@ -39,16 +42,16 @@ use vm::{
 pub struct LibraVM {
     move_vm: Arc<MoveVM>,
     gas_schedule: Option<CostTable>,
-    config: VMConfig,
+    on_chain_config: Option<OnlineConfig>,
 }
 
 impl LibraVM {
-    pub fn new(config: &VMConfig) -> Self {
+    pub fn new(_config: &LocalConfig) -> Self {
         let inner = MoveVM::new();
         Self {
             move_vm: Arc::new(inner),
             gas_schedule: None,
-            config: config.clone(),
+            on_chain_config: None,
         }
     }
 
@@ -61,8 +64,15 @@ impl LibraVM {
         self.load_configs_impl(&RemoteStorage::new(state))
     }
 
+    fn on_chain_config(&self) -> VMResult<&OnlineConfig> {
+        self.on_chain_config
+            .as_ref()
+            .ok_or_else(|| VMStatus::new(StatusCode::VM_STARTUP_FAILURE))
+    }
+
     fn load_configs_impl(&mut self, data_cache: &dyn RemoteCache) {
         self.gas_schedule = self.fetch_gas_schedule(data_cache).ok();
+        self.on_chain_config = OnlineConfig::load_on_chain_config(data_cache);
     }
 
     fn fetch_gas_schedule(&mut self, data_cache: &dyn RemoteCache) -> VMResult<CostTable> {
@@ -114,7 +124,11 @@ impl LibraVM {
                 self.check_change_set(change_set, state_view)
             }
             TransactionPayload::Script(script) => {
-                if !is_allowed_script(&self.config.publishing_options, &script.code()) {
+                if !self
+                    .on_chain_config()?
+                    .publishing_options
+                    .is_allowed_script(&script.code())
+                {
                     warn!("[VM] Custom scripts not allowed: {:?}", &script.code());
                     Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT))
                 } else {
@@ -122,7 +136,7 @@ impl LibraVM {
                 }
             }
             TransactionPayload::Module(_module) => {
-                if !&self.config.publishing_options.is_open() {
+                if !&self.on_chain_config()?.publishing_options.is_open() {
                     warn!("[VM] Custom modules not allowed");
                     Err(VMStatus::new(StatusCode::UNKNOWN_MODULE))
                 } else {
@@ -651,7 +665,7 @@ impl VMExecutor for LibraVM {
     /// transaction output.
     fn execute_block(
         transactions: Vec<Transaction>,
-        config: &VMConfig,
+        config: &LocalConfig,
         state_view: &dyn StateView,
     ) -> VMResult<Vec<TransactionOutput>> {
         let mut vm = LibraVM::new(config);
@@ -672,11 +686,6 @@ impl<'a> LibraVMInternals<'a> {
     /// Returns the internal gas schedule if it has been loaded, or an error if it hasn't.
     pub fn gas_schedule(self) -> VMResult<&'a CostTable> {
         self.0.get_gas_schedule()
-    }
-
-    /// Returns the configuration.
-    pub fn config(self) -> &'a VMConfig {
-        &self.0.config
     }
 
     /// Executes the given code within the context of a transaction.
@@ -746,16 +755,6 @@ pub fn chunk_block_transactions(txns: Vec<Transaction>) -> Vec<TransactionBlock>
 enum VerifiedTranscationPayload {
     Script(Vec<u8>, Vec<TransactionArgument>),
     Module(Vec<u8>),
-}
-
-pub fn is_allowed_script(publishing_option: &VMPublishingOption, program: &[u8]) -> bool {
-    match publishing_option {
-        VMPublishingOption::Open | VMPublishingOption::CustomScripts => true,
-        VMPublishingOption::Locked(whitelist) => {
-            let hash_value = HashValue::from_sha3_256(program);
-            whitelist.contains(hash_value.as_ref())
-        }
-    }
 }
 
 /// Convert the transaction arguments into move values.
