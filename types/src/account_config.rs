@@ -132,8 +132,6 @@ pub fn received_payment_tag() -> StructTag {
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccountResource {
     authentication_key: Vec<u8>,
-    // TODO: should be unused by now
-    _deprecated_balance: u64,
     delegated_key_rotation_capability: bool,
     delegated_withdrawal_capability: bool,
     received_events: EventHandle,
@@ -155,7 +153,6 @@ impl AccountResource {
     ) -> Self {
         AccountResource {
             sequence_number,
-            _deprecated_balance: 0,
             authentication_key,
             delegated_key_rotation_capability,
             delegated_withdrawal_capability,

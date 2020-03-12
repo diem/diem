@@ -34,6 +34,7 @@ pub enum Entry {
     Sender(String),
     Arguments(Vec<Argument>),
     MaxGas(u64),
+    GasPrice(u64),
     SequenceNumber(u64),
     ExpirationTime(u64),
 }
@@ -73,6 +74,9 @@ impl FromStr for Entry {
         }
         if let Some(s) = strip(s, "max-gas:") {
             return Ok(Entry::MaxGas(s.parse::<u64>()?));
+        }
+        if let Some(s) = strip(s, "gas-price:") {
+            return Ok(Entry::GasPrice(s.parse::<u64>()?));
         }
         if let Some(s) = strip(s, "sequence-number:") {
             return Ok(Entry::SequenceNumber(s.parse::<u64>()?));
@@ -115,6 +119,7 @@ pub struct Config<'a> {
     pub sender: &'a Account,
     pub args: Vec<TransactionArgument>,
     pub max_gas: Option<u64>,
+    pub gas_price: Option<u64>,
     pub sequence_number: Option<u64>,
     pub expiration_time: Option<Duration>,
 }
@@ -126,6 +131,7 @@ impl<'a> Config<'a> {
         let mut sender = None;
         let mut args = None;
         let mut max_gas = None;
+        let mut gas_price = None;
         let mut sequence_number = None;
         let mut expiration_time = None;
 
@@ -175,6 +181,12 @@ impl<'a> Config<'a> {
                         )
                     }
                 },
+                Entry::GasPrice(n) => match gas_price {
+                    None => gas_price = Some(*n),
+                    Some(_) => {
+                        return Err(ErrorKind::Other("gas price already set".to_string()).into())
+                    }
+                },
                 Entry::SequenceNumber(sn) => match sequence_number {
                     None => sequence_number = Some(*sn),
                     Some(_) => {
@@ -199,6 +211,7 @@ impl<'a> Config<'a> {
             sender: sender.unwrap_or_else(|| config.accounts.get("default").unwrap().account()),
             args: args.unwrap_or_else(|| vec![]),
             max_gas,
+            gas_price,
             sequence_number,
             expiration_time,
         })

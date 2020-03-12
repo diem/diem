@@ -3,6 +3,7 @@
 //! account: vivian, 1000000, 0, validator
 //! account: valentina, 1000000, 0, validator
 //! sender: vivian
+//! gas-price: 0
 
 import 0x0.LibraSystem;
 import 0x0.LibraAccount;
