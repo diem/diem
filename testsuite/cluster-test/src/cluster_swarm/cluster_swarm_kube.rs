@@ -204,7 +204,7 @@ impl ClusterSwarm for ClusterSwarmKube {
         image_tag: &str,
         delete_data: bool,
     ) -> Result<()> {
-        let pod_name = format!("validator-{}", index);
+        let pod_name = format!("val-{}", index);
         let pod_api = Api::v1Pod(self.client.clone()).within(DEFAULT_NAMESPACE);
         if pod_api.get(&pod_name).await.is_ok() {
             self.delete_pod(&pod_name).await?;
@@ -248,7 +248,7 @@ impl ClusterSwarm for ClusterSwarmKube {
     }
 
     async fn delete_validator(&self, index: u32) -> Result<()> {
-        let pod_name = format!("validator-{}", index);
+        let pod_name = format!("val-{}", index);
         self.delete_pod(&pod_name).await
     }
 
@@ -261,7 +261,7 @@ impl ClusterSwarm for ClusterSwarmKube {
         image_tag: &str,
         delete_data: bool,
     ) -> Result<()> {
-        let pod_name = format!("fullnode-{}-{}", validator_index, fullnode_index);
+        let pod_name = format!("fn-{}-{}", validator_index, fullnode_index);
         let pod_api = Api::v1Pod(self.client.clone()).within(DEFAULT_NAMESPACE);
         if pod_api.get(&pod_name).await.is_ok() {
             self.delete_pod(&pod_name).await?;
@@ -314,7 +314,7 @@ impl ClusterSwarm for ClusterSwarmKube {
     }
 
     async fn delete_fullnode(&self, fullnode_index: u32, validator_index: u32) -> Result<()> {
-        let pod_name = format!("fullnode-{}-{}", validator_index, fullnode_index);
+        let pod_name = format!("fn-{}-{}", validator_index, fullnode_index);
         self.delete_pod(&pod_name).await
     }
 
