@@ -151,6 +151,7 @@ impl Logger {
         // Even if there is an existing logger, update the logging level
         log::set_max_level(filter.filter());
 
+        /*
         if self.is_async {
             let (sender, receiver) = mpsc::sync_channel(self.channel_size);
 
@@ -164,12 +165,13 @@ impl Logger {
 
             thread::spawn(move || service.log_handler());
         } else {
+        */
             let logger = SyncLogger { filter, writer };
             if let Err(e) = log::set_boxed_logger(Box::new(logger)) {
                 eprintln!("Unable to set logger: {}", e);
                 return;
             };
-        }
+        //}
     }
 }
 
