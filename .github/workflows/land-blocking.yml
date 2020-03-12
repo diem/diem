@@ -32,7 +32,24 @@ jobs:
       - name: Build, tag and push images
         if: steps.check_ks.outputs.should_run == 'true'
         run: |
-          docker/build-aws.sh --build-all --version $LIBRA_GIT_REV --addl_tags canary,${TEST_TAG}
+          set +e
+          RETRYABLE_EXIT_CODE=2
+          for ((i = 0; i < 3; i++)); do
+            echo "Build attempt $i"
+            docker/build-aws.sh --build-all --version $LIBRA_GIT_REV --addl_tags canary,${TEST_TAG}
+            return_code=$?
+            if [[ $return_code -eq 0 ]]; then
+              echo "Build successful"
+              exit 0
+            fi
+            if [[ $return_code -ne ${RETRYABLE_EXIT_CODE} ]]; then
+              echo "Build failed"
+              exit 1
+            fi
+            echo "Retrying build"
+          done
+          echo "Build failed after retries"
+          exit 1
       - name: Launch cluster test
         if: steps.check_ks.outputs.should_run == 'true'
         # NOTE Remember to update PR comment payload if cti cmd is updated.
