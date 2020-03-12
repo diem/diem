@@ -15,9 +15,9 @@ use executor_types::ExecutedTrees;
 use futures::executor::block_on;
 use libra_crypto::HashValue;
 use libra_types::{crypto_proxies::ValidatorSet, ledger_info::LedgerInfo};
-use std::marker::PhantomData;
 use std::{
     collections::HashMap,
+    marker::PhantomData,
     sync::{Arc, Mutex},
 };
 
