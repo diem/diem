@@ -3,6 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # build-aws-base.sh is a common script shared by mutiple build-aws.sh scripts
 
+NON_RETRY_EXIT_CODE=1
+RETRYABLE_EXIT_CODE=2
+
 if ! which jq &>/dev/null; then
   echo "jq is not installed. Please install jq"
   exit 1
@@ -77,6 +80,7 @@ submit_build() {
 get_build_status() {
     BUILD_STATUS=""
     CURRENT_PHASE=""
+    DOWNLOAD_SOURCE_STATUS=""
     local BUILD_ID="${1}"
     local BUILD_JSON=$(aws codebuild batch-get-builds --ids ${BUILD_ID})
     if [[ $? -gt 0 ]]; then
@@ -85,6 +89,7 @@ get_build_status() {
     fi
     BUILD_STATUS=$(echo $BUILD_JSON | jq -r '.builds[0].buildStatus')
     CURRENT_PHASE=$(echo $BUILD_JSON | jq -r '.builds[0].currentPhase')
+    DOWNLOAD_SOURCE_STATUS=$(echo $BUILD_JSON | jq -r '.builds[0].phases[] | select(.phaseType == "DOWNLOAD_SOURCE") | .phaseStatus')
 }
 
 # not using bash associative arrays because OSX ships with old bash version which does not support this
@@ -100,11 +105,14 @@ while true; do
     for (( i=0; i < ${#BUILD_PROJECTS[@]}; i++ ));
     do
         get_build_status ${BUILD_IDS[$i]}
+        if [[ ${DOWNLOAD_SOURCE_STATUS} == "FAILED" ]] || [[ $BUILD_STATUS == "TIMED_OUT" ]]; then
+          exit ${RETRYABLE_EXIT_CODE}
+        fi
         if [[ $? -gt 0 ]] || [[ ${BUILD_STATUS} == "" ]]; then
           ALL_SUCCEEDED=false
-        elif [[ $BUILD_STATUS == "FAILED" ]] || [[ $BUILD_STATUS == "FAULT" ]] || [[ $BUILD_STATUS == "TIMED_OUT" ]] || [[ $BUILD_STATUS == "STOPPED" ]]; then
+        elif [[ $BUILD_STATUS == "FAILED" ]] || [[ $BUILD_STATUS == "FAULT" ]] || [[ $BUILD_STATUS == "STOPPED" ]]; then
           echo "${BUILD_PROJECTS[$i]} build failed with status ${BUILD_STATUS}"
-          exit 1
+          exit ${NON_RETRY_EXIT_CODE}
         elif [[ ${BUILD_STATUS} != "SUCCEEDED" ]]; then
           ALL_SUCCEEDED=false
         fi
