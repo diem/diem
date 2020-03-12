@@ -55,7 +55,7 @@ use network::peer_manager::{
     conn_status_channel, ConnectionRequestSender, PeerManagerRequestSender,
 };
 use safety_rules::{ConsensusState, PersistentSafetyStorage as SafetyStorage, SafetyRulesManager};
-use std::{collections::HashMap, num::NonZeroUsize, sync::Arc, time::Duration};
+use std::{num::NonZeroUsize, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
 /// Auxiliary struct that is setting up node environment for the test.
@@ -605,7 +605,7 @@ fn process_timeout_certificate_test() {
     let timeout = Timeout::new(1, 1);
     let timeout_signature = timeout.sign(&node.signer);
 
-    let mut tc = TimeoutCertificate::new(timeout, HashMap::new());
+    let mut tc = TimeoutCertificate::new(timeout);
     tc.add_signature(node.signer.author(), timeout_signature);
 
     block_on(async move {
