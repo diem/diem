@@ -15,6 +15,7 @@ use executor_types::ExecutedTrees;
 use futures::executor::block_on;
 use libra_crypto::HashValue;
 use libra_types::{crypto_proxies::ValidatorSet, ledger_info::LedgerInfo};
+use std::marker::PhantomData;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -80,7 +81,7 @@ impl<T: Payload> MockStorage<T> {
         }
     }
 
-    pub fn get_ledger_recovery_data(&self) -> LedgerRecoveryData<T> {
+    pub fn get_ledger_recovery_data(&self) -> LedgerRecoveryData {
         LedgerRecoveryData::new(
             self.storage_ledger.lock().unwrap().clone(),
             self.shared_storage.validator_set.clone(),
@@ -113,7 +114,6 @@ impl<T: Payload> MockStorage<T> {
             ledger_recovery_data,
             blocks,
             quorum_certs,
-            &self.storage_ledger.lock().unwrap(),
             ExecutedTrees::new_empty(),
             self.shared_storage
                 .highest_timeout_certificate
@@ -196,7 +196,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for MockStorage<T> {
         Ok(())
     }
 
-    async fn recover_from_ledger(&self) -> LedgerRecoveryData<T> {
+    async fn recover_from_ledger(&self) -> LedgerRecoveryData {
         self.get_ledger_recovery_data()
     }
 
@@ -221,11 +221,19 @@ impl<T: Payload> PersistentLivenessStorage<T> for MockStorage<T> {
 }
 
 /// A storage that ignores any requests, used in the tests that don't care about the storage.
-pub struct EmptyStorage;
+pub struct EmptyStorage<T> {
+    _phantom: PhantomData<T>,
+}
 
-impl EmptyStorage {
-    pub fn start_for_testing<T: Payload>() -> (RecoveryData<T>, Arc<Self>) {
-        let storage = Arc::new(EmptyStorage);
+impl<T: Payload> EmptyStorage<T> {
+    pub fn new() -> Self {
+        Self {
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn start_for_testing() -> (RecoveryData<T>, Arc<Self>) {
+        let storage = Arc::new(EmptyStorage::new());
         let recovery_data = block_on(storage.start())
             .expect_recovery_data("Empty storage should never fail constructing recovery data");
         (recovery_data, storage)
@@ -233,7 +241,7 @@ impl EmptyStorage {
 }
 
 #[async_trait::async_trait]
-impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage {
+impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage<T> {
     fn save_tree(&self, _: Vec<Block<T>>, _: Vec<QuorumCert>) -> Result<()> {
         Ok(())
     }
@@ -246,7 +254,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage {
         Ok(())
     }
 
-    async fn recover_from_ledger(&self) -> LedgerRecoveryData<T> {
+    async fn recover_from_ledger(&self) -> LedgerRecoveryData {
         LedgerRecoveryData::new(LedgerInfo::mock_genesis(), ValidatorSet::new(vec![]))
     }
 
@@ -256,7 +264,6 @@ impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage {
             self.recover_from_ledger().await,
             vec![],
             vec![],
-            &LedgerInfo::mock_genesis(),
             ExecutedTrees::new_empty(),
             None,
         ) {

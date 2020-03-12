@@ -122,7 +122,7 @@ pub struct StartupSyncProcessor<T> {
     network: NetworkSender<T>,
     storage: Arc<dyn PersistentLivenessStorage<T>>,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
-    ledger_recovery_data: LedgerRecoveryData<T>,
+    ledger_recovery_data: LedgerRecoveryData,
 }
 
 impl<T: Payload> StartupSyncProcessor<T> {
@@ -131,7 +131,7 @@ impl<T: Payload> StartupSyncProcessor<T> {
         network: NetworkSender<T>,
         storage: Arc<dyn PersistentLivenessStorage<T>>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
-        ledger_recovery_data: LedgerRecoveryData<T>,
+        ledger_recovery_data: LedgerRecoveryData,
     ) -> Self {
         StartupSyncProcessor {
             epoch_info,
@@ -163,7 +163,7 @@ impl<T: Payload> StartupSyncProcessor<T> {
             "Received sync info has lower round number than committed block"
         );
         ensure!(
-            sync_info.epoch() == self.ledger_recovery_data.epoch(),
+            sync_info.epoch() == self.epoch_info.epoch,
             "Received sync info is in different epoch than committed block"
         );
         let mut retriever = BlockRetriever::new(

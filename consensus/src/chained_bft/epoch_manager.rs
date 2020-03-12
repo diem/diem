@@ -50,7 +50,7 @@ pub enum Processor<T> {
 
 pub enum LivenessStorageData<T> {
     RecoveryData(RecoveryData<T>),
-    LedgerRecoveryData(LedgerRecoveryData<T>),
+    LedgerRecoveryData(LedgerRecoveryData),
 }
 
 impl<T: Payload> LivenessStorageData<T> {
@@ -246,14 +246,10 @@ impl<T: Payload> EpochManager<T> {
     async fn start_event_processor(&mut self, recovery_data: RecoveryData<T>) {
         // Release the previous EventProcessor, especially the SafetyRule client
         self.processor = None;
-        let validators = recovery_data.validators();
-        let epoch_info = EpochInfo {
-            epoch: recovery_data.epoch(),
-            verifier: recovery_data.validators(),
-        };
+        let epoch_info = recovery_data.epoch_info();
         counters::EPOCH.set(epoch_info.epoch as i64);
-        counters::CURRENT_EPOCH_VALIDATORS.set(validators.len() as i64);
-        counters::CURRENT_EPOCH_QUORUM_SIZE.set(validators.quorum_voting_power() as i64);
+        counters::CURRENT_EPOCH_VALIDATORS.set(epoch_info.verifier.len() as i64);
+        counters::CURRENT_EPOCH_QUORUM_SIZE.set(epoch_info.verifier.quorum_voting_power() as i64);
         info!(
             "Starting {} with genesis {}",
             epoch_info,
@@ -302,7 +298,7 @@ impl<T: Payload> EpochManager<T> {
             self.author,
             self.network_sender.clone(),
             self.self_sender.clone(),
-            validators.clone(),
+            epoch_info.verifier.clone(),
         );
 
         let mut processor = EventProcessor::new(
@@ -327,20 +323,17 @@ impl<T: Payload> EpochManager<T> {
     // event processor at startup. If we need to sync up with peers for blocks to construct
     // a valid block store, which is required to construct an event processor, we will take
     // care of the sync up here.
-    async fn start_sync_processor(&mut self, ledger_recovery_data: LedgerRecoveryData<T>) {
-        let epoch_info = EpochInfo {
-            epoch: ledger_recovery_data.epoch(),
-            verifier: ledger_recovery_data.validators(),
-        };
+    async fn start_sync_processor(&mut self, ledger_recovery_data: LedgerRecoveryData) {
+        let epoch_info = ledger_recovery_data.epoch_info();
         self.network_sender
-            .update_eligible_nodes(ledger_recovery_data.validator_keys().to_vec())
+            .update_eligible_nodes(ledger_recovery_data.validator_keys())
             .await
             .expect("Unable to update network's eligible peers");
         let network_sender = NetworkSender::new(
             self.author,
             self.network_sender.clone(),
             self.self_sender.clone(),
-            ledger_recovery_data.validators(),
+            epoch_info.verifier.clone(),
         );
         self.processor = Some(Processor::StartupSyncProcessor(StartupSyncProcessor::new(
             epoch_info,

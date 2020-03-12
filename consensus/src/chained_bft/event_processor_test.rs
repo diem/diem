@@ -48,8 +48,7 @@ use libra_crypto::HashValue;
 use libra_types::{
     block_info::BlockInfo,
     crypto_proxies::{
-        random_validator_verifier, EpochInfo, LedgerInfoWithSignatures, ValidatorSigner,
-        ValidatorVerifier,
+        random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
     },
 };
 use network::peer_manager::{
@@ -123,11 +122,8 @@ impl NodeSetup {
         initial_data: RecoveryData<TestPayload>,
         safety_rules_manager: SafetyRulesManager<TestPayload>,
     ) -> Self {
-        let validators = initial_data.validators();
-        let epoch_info = EpochInfo {
-            epoch: initial_data.epoch(),
-            verifier: initial_data.validators(),
-        };
+        let epoch_info = initial_data.epoch_info();
+        let validators = epoch_info.verifier.clone();
         let (network_reqs_tx, network_reqs_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (connection_reqs_tx, _) =
@@ -147,12 +143,7 @@ impl NodeSetup {
         playground.add_node(author, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
 
         let (self_sender, self_receiver) = channel::new_test(8);
-        let network = NetworkSender::new(
-            author,
-            network_sender,
-            self_sender,
-            initial_data.validators(),
-        );
+        let network = NetworkSender::new(author, network_sender, self_sender, validators.clone());
 
         let (task, _receiver) = NetworkTask::<TestPayload>::new(network_events, self_receiver);
 

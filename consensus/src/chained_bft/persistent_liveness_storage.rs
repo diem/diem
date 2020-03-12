@@ -15,6 +15,7 @@ use executor_types::ExecutedTrees;
 use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
+use libra_types::crypto_proxies::EpochInfo;
 use libra_types::{
     block_info::Round,
     crypto_proxies::{ValidatorPublicKeys, ValidatorSet, ValidatorVerifier},
@@ -40,7 +41,7 @@ pub trait PersistentLivenessStorage<T>: Send + Sync {
     fn save_state(&self, vote: &Vote) -> Result<()>;
 
     /// Construct data that can be recovered from ledger
-    async fn recover_from_ledger(&self) -> LedgerRecoveryData<T>;
+    async fn recover_from_ledger(&self) -> LedgerRecoveryData;
 
     /// Construct necessary data to start consensus.
     async fn start(&self) -> LivenessStorageData<T>;
@@ -53,66 +54,104 @@ pub trait PersistentLivenessStorage<T>: Send + Sync {
 #[derive(Clone)]
 pub struct RootInfo<T>(pub Block<T>, pub QuorumCert, pub QuorumCert);
 
-/// LedgerRecoveryData is a subset of RecoveryData that we can get solely from ledger info
-/// In the case of an epoch boundary ledger info(i.e. it has validator set), we generate the virtual genesis block.
+/// LedgerRecoveryData is a subset of RecoveryData that we can get solely from ledger info.
 #[derive(Clone)]
-pub struct LedgerRecoveryData<T> {
+pub struct LedgerRecoveryData {
     epoch: u64,
     validators: Arc<ValidatorVerifier>,
     validator_keys: ValidatorSet,
     storage_ledger: LedgerInfo,
-    genesis_root: Option<RootInfo<T>>,
 }
 
-impl<T: Payload> LedgerRecoveryData<T> {
+impl LedgerRecoveryData {
     pub fn new(storage_ledger: LedgerInfo, validator_keys: ValidatorSet) -> Self {
-        let mut epoch = storage_ledger.epoch();
-        let genesis_root = if storage_ledger.next_validator_set().is_some() {
-            let genesis_block = Block::make_genesis_block_from_ledger_info(&storage_ledger);
-            let genesis_qc = QuorumCert::certificate_for_genesis_from_ledger_info(
-                &storage_ledger,
-                genesis_block.id(),
-            );
-            epoch = genesis_block.epoch();
-            Some(RootInfo(genesis_block, genesis_qc.clone(), genesis_qc))
+        let epoch = if storage_ledger.next_validator_set().is_some() {
+            storage_ledger.epoch() + 1
         } else {
-            None
+            storage_ledger.epoch()
         };
-
         LedgerRecoveryData {
             epoch,
             validators: Arc::new((&validator_keys).into()),
             validator_keys,
             storage_ledger,
-            genesis_root,
         }
     }
 
-    pub fn epoch(&self) -> u64 {
-        self.epoch
+    pub fn epoch_info(&self) -> EpochInfo {
+        EpochInfo {
+            epoch: self.epoch,
+            verifier: Arc::clone(&self.validators),
+        }
     }
 
     pub fn commit_round(&self) -> Round {
         self.storage_ledger.round()
     }
 
-    pub fn genesis_root(&self) -> Option<RootInfo<T>> {
-        self.genesis_root.clone()
+    pub fn validator_keys(&self) -> Vec<ValidatorPublicKeys> {
+        self.validator_keys.clone().to_vec()
     }
 
-    pub fn validators(&self) -> Arc<ValidatorVerifier> {
-        Arc::clone(&self.validators)
-    }
+    /// Finds the root (last committed block) and returns the root block, the QC to the root block
+    /// and the ledger info for the root block, return an error if it can not be found.
+    ///
+    /// We guarantee that the block corresponding to the storage's latest ledger info always exists.
+    fn find_root<T: Payload>(
+        &self,
+        blocks: &mut Vec<Block<T>>,
+        quorum_certs: &mut Vec<QuorumCert>,
+    ) -> Result<RootInfo<T>> {
+        info!(
+            "The last committed block id as recorded in storage: {}",
+            self.storage_ledger
+        );
 
-    pub fn validator_keys(&self) -> ValidatorSet {
-        self.validator_keys.clone()
+        // We start from the block that storage's latest ledger info, if storage has end-epoch
+        // LedgerInfo, we generate the virtual genesis block
+        let root_id = if self.storage_ledger.next_validator_set().is_some() {
+            let genesis = Block::make_genesis_block_from_ledger_info(&self.storage_ledger);
+            let genesis_qc = QuorumCert::certificate_for_genesis_from_ledger_info(
+                &self.storage_ledger,
+                genesis.id(),
+            );
+            let genesis_id = genesis.id();
+            blocks.push(genesis);
+            quorum_certs.push(genesis_qc);
+            genesis_id
+        } else {
+            self.storage_ledger.consensus_block_id()
+        };
+
+        // sort by (epoch, round) to guarantee the topological order of parent <- child
+        blocks.sort_by_key(|b| (b.epoch(), b.round()));
+
+        let root_idx = blocks
+            .iter()
+            .position(|block| block.id() == root_id)
+            .ok_or_else(|| format_err!("unable to find root: {}", root_id))?;
+        let root_block = blocks.remove(root_idx);
+        let root_quorum_cert = quorum_certs
+            .iter()
+            .find(|qc| qc.certified_block().id() == root_block.id())
+            .ok_or_else(|| format_err!("No QC found for root: {}", root_id))?
+            .clone();
+        let root_ledger_info = quorum_certs
+            .iter()
+            .find(|qc| qc.commit_info().id() == root_block.id())
+            .ok_or_else(|| format_err!("No LI found for root: {}", root_id))?
+            .clone();
+
+        info!("Consensus root block is {}", root_block);
+
+        Ok(RootInfo(root_block, root_quorum_cert, root_ledger_info))
     }
 }
 
 /// The recovery data constructed from raw consensusdb data, it'll find the root value and
 /// blocks that need cleanup or return error if the input data is inconsistent.
 pub struct RecoveryData<T> {
-    epoch: u64,
+    ledger_recovery_data: LedgerRecoveryData,
     // The last vote message sent by this validator.
     last_vote: Option<Vote>,
     root: RootInfo<T>,
@@ -125,36 +164,25 @@ pub struct RecoveryData<T> {
 
     // Liveness data
     highest_timeout_certificate: Option<TimeoutCertificate>,
-    validator_keys: ValidatorSet,
-    validators: Arc<ValidatorVerifier>,
 }
 
 impl<T: Payload> RecoveryData<T> {
     pub fn new(
         last_vote: Option<Vote>,
-        ledger_recovery_data: LedgerRecoveryData<T>,
+        ledger_recovery_data: LedgerRecoveryData,
         mut blocks: Vec<Block<T>>,
         mut quorum_certs: Vec<QuorumCert>,
-        storage_ledger: &LedgerInfo,
         root_executed_trees: ExecutedTrees,
         highest_timeout_certificate: Option<TimeoutCertificate>,
     ) -> Result<Self> {
-        let genesis_root = ledger_recovery_data.genesis_root();
-        let validators = ledger_recovery_data.validators();
-        let validator_keys = ledger_recovery_data.validator_keys();
-        let root = match genesis_root {
-            Some(root) => root,
-            None => Self::find_root(
-                &mut blocks,
-                &mut quorum_certs,
-                storage_ledger.consensus_block_id(),
-            )
+        let root = ledger_recovery_data
+            .find_root(&mut blocks, &mut quorum_certs)
             .with_context(|| {
                 // for better readability
                 quorum_certs.sort_by_key(|qc| qc.certified_block().round());
                 format!(
                     "\nRoot id: {}\nBlocks in db: {}\nQuorum Certs in db: {}\n",
-                    storage_ledger.consensus_block_id(),
+                    ledger_recovery_data.storage_ledger.consensus_block_id(),
                     blocks
                         .iter()
                         .map(|b| format!("\n\t{}", b))
@@ -166,8 +194,7 @@ impl<T: Payload> RecoveryData<T> {
                         .collect::<Vec<String>>()
                         .concat(),
                 )
-            })?,
-        };
+            })?;
 
         let blocks_to_prune = Some(Self::find_blocks_to_prune(
             root.0.id(),
@@ -176,7 +203,7 @@ impl<T: Payload> RecoveryData<T> {
         ));
         let epoch = root.0.epoch();
         Ok(RecoveryData {
-            epoch,
+            ledger_recovery_data,
             last_vote: match last_vote {
                 Some(v) if v.epoch() == epoch => Some(v),
                 _ => None,
@@ -190,13 +217,11 @@ impl<T: Payload> RecoveryData<T> {
                 Some(tc) if tc.epoch() == epoch => Some(tc),
                 _ => None,
             },
-            validators,
-            validator_keys,
         })
     }
 
-    pub fn epoch(&self) -> u64 {
-        self.epoch
+    pub fn epoch_info(&self) -> EpochInfo {
+        self.ledger_recovery_data.epoch_info()
     }
 
     pub fn root_block(&self) -> &Block<T> {
@@ -226,50 +251,8 @@ impl<T: Payload> RecoveryData<T> {
         self.highest_timeout_certificate.clone()
     }
 
-    pub fn validators(&self) -> Arc<ValidatorVerifier> {
-        Arc::clone(&self.validators)
-    }
-
     pub fn validator_keys(&self) -> Vec<ValidatorPublicKeys> {
-        self.validator_keys.to_vec()
-    }
-
-    /// Finds the root (last committed block) and returns the root block, the QC to the root block
-    /// and the ledger info for the root block, return an error if it can not be found.
-    ///
-    /// We guarantee that the block corresponding to the storage's latest ledger info always exists.
-    fn find_root(
-        blocks: &mut Vec<Block<T>>,
-        quorum_certs: &mut Vec<QuorumCert>,
-        root_id: HashValue,
-    ) -> Result<RootInfo<T>> {
-        info!(
-            "The last committed block id as recorded in storage: {}",
-            root_id
-        );
-
-        // sort by (epoch, round) to guarantee the topological order of parent <- child
-        blocks.sort_by_key(|b| (b.epoch(), b.round()));
-
-        let root_idx = blocks
-            .iter()
-            .position(|block| block.id() == root_id)
-            .ok_or_else(|| format_err!("unable to find root: {}", root_id))?;
-        let root_block = blocks.remove(root_idx);
-        let root_quorum_cert = quorum_certs
-            .iter()
-            .find(|qc| qc.certified_block().id() == root_block.id())
-            .ok_or_else(|| format_err!("No QC found for root: {}", root_id))?
-            .clone();
-        let root_ledger_info = quorum_certs
-            .iter()
-            .find(|qc| qc.commit_info().id() == root_block.id())
-            .ok_or_else(|| format_err!("No LI found for root: {}", root_id))?
-            .clone();
-
-        info!("Consensus root block is {}", root_block);
-
-        Ok(RootInfo(root_block, root_quorum_cert, root_ledger_info))
+        self.ledger_recovery_data.validator_keys()
     }
 
     fn find_blocks_to_prune(
@@ -334,7 +317,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
         self.db.save_state(lcs::to_bytes(vote)?)
     }
 
-    async fn recover_from_ledger(&self) -> LedgerRecoveryData<T> {
+    async fn recover_from_ledger(&self) -> LedgerRecoveryData {
         let startup_info = self
             .read_client
             .get_startup_info()
@@ -396,7 +379,6 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
             ledger_recovery_data.clone(),
             blocks,
             quorum_certs,
-            startup_info.latest_ledger_info.ledger_info(),
             root_executed_trees,
             highest_timeout_certificate,
         ) {

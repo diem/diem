@@ -21,7 +21,7 @@ use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::proposal_msg::ProposalMsg;
 use futures::{channel::mpsc, executor::block_on};
 use libra_types::crypto_proxies::{
-    EpochInfo, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
+    LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
 };
 use network::peer_manager::{ConnectionRequestSender, PeerManagerRequestSender};
 use once_cell::sync::Lazy;
@@ -103,18 +103,14 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         conn_mgr_reqs_tx,
     );
     let (self_sender, _self_receiver) = channel::new_test(8);
+
+    let epoch_info = initial_data.epoch_info();
     let network = NetworkSender::new(
         signer.author(),
         network_sender,
         self_sender,
-        initial_data.validators(),
+        epoch_info.verifier.clone(),
     );
-
-    let validators = initial_data.validators();
-    let epoch_info = EpochInfo {
-        epoch: initial_data.epoch(),
-        verifier: validators,
-    };
 
     // TODO: mock
     let block_store = build_empty_store(storage.clone(), initial_data);
