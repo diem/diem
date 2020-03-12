@@ -48,7 +48,8 @@ use libra_crypto::HashValue;
 use libra_types::{
     block_info::BlockInfo,
     crypto_proxies::{
-        random_validator_verifier, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
+        random_validator_verifier, EpochInfo, LedgerInfoWithSignatures, ValidatorSigner,
+        ValidatorVerifier,
     },
 };
 use network::peer_manager::{
@@ -123,6 +124,10 @@ impl NodeSetup {
         safety_rules_manager: SafetyRulesManager<TestPayload>,
     ) -> Self {
         let validators = initial_data.validators();
+        let epoch_info = EpochInfo {
+            epoch: initial_data.epoch(),
+            verifier: initial_data.validators(),
+        };
         let (network_reqs_tx, network_reqs_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
         let (connection_reqs_tx, _) =
@@ -184,6 +189,7 @@ impl NodeSetup {
         let proposer_election = Self::create_proposer_election(proposer_author);
 
         let mut event_processor = EventProcessor::new(
+            epoch_info,
             Arc::clone(&block_store),
             last_vote_sent,
             pacemaker,
@@ -194,7 +200,6 @@ impl NodeSetup {
             Box::new(MockTransactionManager::new(None)),
             storage.clone(),
             time_service,
-            validators.clone(),
         );
         block_on(event_processor.start());
         Self {

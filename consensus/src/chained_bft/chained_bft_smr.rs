@@ -4,7 +4,7 @@
 use crate::{
     chained_bft::{
         block_storage::BlockStore,
-        epoch_manager::{EpochManager, LivenessStorageData},
+        epoch_manager::EpochManager,
         network::{NetworkReceivers, NetworkTask},
         network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
         persistent_liveness_storage::PersistentLivenessStorage,
@@ -138,13 +138,8 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
             channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
 
-        let liveness_storage_data: LivenessStorageData<T> = runtime.block_on(self.storage.start());
-
-        let epoch_info = liveness_storage_data.epoch_info();
-
         let mut epoch_mgr = EpochManager::new(
             self.author,
-            epoch_info,
             input.config,
             time_service,
             self_sender,
@@ -159,7 +154,7 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
         let (network_task, network_receiver) =
             NetworkTask::new(input.network_events, self_receiver);
 
-        runtime.block_on(epoch_mgr.start(liveness_storage_data));
+        runtime.block_on(epoch_mgr.start_processor());
 
         // TODO: this is for testing, remove
         self.block_store = epoch_mgr.block_store();
