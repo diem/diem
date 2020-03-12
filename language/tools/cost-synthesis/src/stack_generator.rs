@@ -170,19 +170,23 @@ impl<'txn> RandomStackGenerator<'txn> {
     // transitions, or from the type signatures available in the module(s).
     fn is_module_specific_op(&self) -> bool {
         use Bytecode::*;
-        match self.op {
-            MoveToSender(_, _)
-            | MoveFrom(_, _)
-            | ImmBorrowGlobal(_, _)
-            | MutBorrowGlobal(_, _)
-            | Exists(_, _)
-            | Unpack(_, _)
-            | Pack(_, _)
-            | Call(_, _) => true,
-            CopyLoc(_) | MoveLoc(_) | StLoc(_) | MutBorrowLoc(_) | ImmBorrowLoc(_)
-            | ImmBorrowField(_) | MutBorrowField(_) => true,
-            _ => false,
-        }
+        matches!(self.op,
+            MoveToSender(_, _) |
+            MoveFrom(_, _) |
+            ImmBorrowGlobal(_, _) |
+            MutBorrowGlobal(_, _) |
+            Exists(_, _) |
+            Unpack(_, _) |
+            Pack(_, _) |
+            Call(_, _) |
+            CopyLoc(_) |
+            MoveLoc(_) |
+            StLoc(_) |
+            MutBorrowLoc(_) |
+            ImmBorrowLoc(_) |
+            ImmBorrowField(_) |
+            MutBorrowField(_)
+        )
     }
 
     // TODO: merge the following three.

@@ -231,10 +231,7 @@ fn bytecode_movefrom() {
     );
     let struct_value = state2.stack_peek(0).expect("struct not added to stack");
     assert!(
-        match struct_value.token {
-            SignatureToken::Struct(struct_handle, _) => struct_handle == struct_def.struct_handle,
-            _ => false,
-        },
+        matches!(struct_value.token, SignatureToken::Struct(struct_handle, _) if struct_handle == struct_def.struct_handle),
         "stack type postcondition not met"
     );
 }

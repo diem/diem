@@ -223,11 +223,7 @@ impl Context {
     }
 
     pub fn is_current_function(&self, m: &ModuleIdent, f: &FunctionName) -> bool {
-        self.is_current_module(m)
-            && match &self.current_function {
-                Some(curf) => curf == f,
-                _ => false,
-            }
+        self.is_current_module(m) && matches!(&self.current_function, Some(curf) if curf == f)
     }
 
     fn module_info(&self, m: &ModuleIdent) -> &ModuleInfo {

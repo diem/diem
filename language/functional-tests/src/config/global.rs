@@ -59,13 +59,13 @@ pub enum Entry {
 
 impl Entry {
     pub fn is_validator(&self) -> bool {
-        match self {
+        matches!(
+            self,
             Entry::AccountDefinition(AccountDefinition {
                 role: Some(Role::Validator),
                 ..
-            }) => true,
-            _ => false,
-        }
+            })
+        )
     }
 }
 

@@ -33,10 +33,7 @@ proptest! {
         let check = txns.iter().zip(result.iter()).all(|(l, r)| {
             if let Transaction::UserTransaction(txn) = l {
                 if let TransactionPayload::WriteSet(ws_l) = txn.payload() {
-                    return match r {
-                        Transaction::WriteSet(ws_r) => ws_l == ws_r,
-                        _ => false,
-                    }
+                    return matches!(r, Transaction::WriteSet(ws_r) if ws_l == ws_r);
                 }
             }
             l == r

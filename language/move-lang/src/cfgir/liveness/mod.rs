@@ -324,10 +324,10 @@ mod last_usage {
                 // Non-references might still be borrowed
                 // Switching such non-locals to a copy is an optimization and not
                 // needed for this refinement
-                let is_reference = match &parent_e.ty.value {
-                    Type_::Single(sp!(_, SingleType_::Ref(_, _))) => true,
-                    _ => false,
-                };
+                let is_reference = matches!(
+                    &parent_e.ty.value,
+                    Type_::Single(sp!(_, SingleType_::Ref(_, _)))
+                );
                 if var_is_dead && is_reference && !*from_user {
                     parent_e.exp.value = E::Move {
                         var: var.clone(),

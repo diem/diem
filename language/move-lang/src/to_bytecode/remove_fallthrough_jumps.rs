@@ -23,10 +23,8 @@ fn remove_fall_through(blocks: &mut IR::BytecodeBlocks) -> bool {
     for idx in 0..(blocks.len() - 1) {
         let next_block = blocks.get(idx + 1).unwrap().0.clone();
         let (_, block) = blocks.get_mut(idx).unwrap();
-        let remove_last = match &block.last().unwrap().value {
-            B::Branch(lbl) if lbl == &next_block => true,
-            _ => false,
-        };
+        let remove_last =
+            matches!(&block.last().unwrap().value, B::Branch(lbl) if lbl == &next_block);
         if remove_last {
             changed = true;
             block.pop();

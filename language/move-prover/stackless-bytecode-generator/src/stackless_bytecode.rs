@@ -111,12 +111,10 @@ pub enum StacklessBytecode {
 
 impl StacklessBytecode {
     pub fn is_unconditional_branch(&self) -> bool {
-        match self {
-            StacklessBytecode::Ret(_)
-            | StacklessBytecode::Abort(_)
-            | StacklessBytecode::Branch(_) => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            StacklessBytecode::Ret(_) | StacklessBytecode::Abort(_) | StacklessBytecode::Branch(_)
+        )
     }
 
     pub fn is_conditional_branch(&self) -> bool {
