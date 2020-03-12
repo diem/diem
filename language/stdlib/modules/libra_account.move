@@ -387,7 +387,12 @@ module LibraAccount {
         sequence_number_for_account(borrow_global<T>(addr))
     }
 
-   // Return true if the account at `addr` has delegated its key rotation capability
+    // Return the authentication key for this account
+    public fun authentication_key(addr: address): vector<u8> acquires T {
+        *&borrow_global<T>(addr).authentication_key
+    }
+
+    // Return true if the account at `addr` has delegated its key rotation capability
     public fun delegated_key_rotation_capability(addr: address): bool acquires T {
         borrow_global<T>(addr).delegated_key_rotation_capability
     }
@@ -396,7 +401,6 @@ module LibraAccount {
     public fun delegated_withdrawal_capability(addr: address): bool acquires T {
         borrow_global<T>(addr).delegated_withdrawal_capability
     }
-
 
     // Return a reference to the address associated with the given withdrawal capability
     public fun withdrawal_capability_address(cap: &WithdrawalCapability): &address {
