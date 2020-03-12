@@ -113,7 +113,7 @@ pub struct BlockMetadata {
     pub timestamp: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct BytesView(pub String);
 
 impl BytesView {

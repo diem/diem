@@ -117,15 +117,14 @@ impl ClientProxy {
     /// Construct a new TestClient.
     pub fn new(
         host: &str,
-        ac_port: u16,
-        json_rpc_port: u16,
+        port: u16,
         faucet_account_file: &str,
         sync_on_wallet_recovery: bool,
         faucet_server: Option<String>,
         mnemonic_file: Option<String>,
         waypoint: Option<Waypoint>,
     ) -> Result<Self> {
-        let mut client = LibraClient::new(host, ac_port, json_rpc_port, waypoint)?;
+        let mut client = LibraClient::new(host, port, waypoint)?;
 
         let accounts = vec![];
 
@@ -943,9 +942,7 @@ impl ClientProxy {
 
     /// Test gRPC client connection with validator.
     pub fn test_validator_connection(&mut self) -> Result<LedgerInfoWithSignatures> {
-        self.client
-            .get_with_proof_sync(vec![])
-            .map(|res| res.ledger_info_with_sigs)
+        self.client.get_state_proof()
     }
 
     /// Get account state from validator and update status of account if it is cached locally.
@@ -1268,8 +1265,7 @@ mod tests {
         // generate random accounts
         let mut client_proxy = ClientProxy::new(
             "", /* host */
-            0,  /* Admission Control (gRPC) port */
-            1,  /* JSON RPC port*/
+            0,  /* JSON RPC port*/
             &"",
             false,
             None,
