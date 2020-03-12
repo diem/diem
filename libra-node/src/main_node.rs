@@ -213,17 +213,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         debug!("Network started for peer_id: {}", full_node_network.peer_id);
     }
 
-    let debug_if = setup_debug_interface(&node_config);
-
-    let metrics_port = node_config.debug_interface.metrics_server_port;
-    let metric_host = node_config.debug_interface.address.clone();
-    thread::spawn(move || metric_server::start_server(metric_host, metrics_port, false));
-    let public_metrics_port = node_config.debug_interface.public_metrics_server_port;
-    let public_metric_host = node_config.debug_interface.address.clone();
-    thread::spawn(move || {
-        metric_server::start_server(public_metric_host, public_metrics_port, true)
-    });
-
     // for state sync to send requests to mempool
     let (state_sync_to_mempool_sender, state_sync_requests) =
         channel(INTRA_NODE_CHANNEL_BUFFER_SIZE);
@@ -295,6 +284,17 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         consensus = Some(consensus_provider);
         debug!("Consensus started in {} ms", instant.elapsed().as_millis());
     }
+
+    let debug_if = setup_debug_interface(&node_config);
+
+    let metrics_port = node_config.debug_interface.metrics_server_port;
+    let metric_host = node_config.debug_interface.address.clone();
+    thread::spawn(move || metric_server::start_server(metric_host, metrics_port, false));
+    let public_metrics_port = node_config.debug_interface.public_metrics_server_port;
+    let public_metric_host = node_config.debug_interface.address.clone();
+    thread::spawn(move || {
+        metric_server::start_server(public_metric_host, public_metrics_port, true)
+    });
 
     LibraHandle {
         _network_runtimes: network_runtimes,
