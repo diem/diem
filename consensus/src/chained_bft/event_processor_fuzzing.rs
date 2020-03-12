@@ -20,7 +20,9 @@ use crate::{
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::proposal_msg::ProposalMsg;
 use futures::{channel::mpsc, executor::block_on};
-use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
+use libra_types::crypto_proxies::{
+    EpochInfo, LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier,
+};
 use network::peer_manager::{ConnectionRequestSender, PeerManagerRequestSender};
 use once_cell::sync::Lazy;
 use safety_rules::{PersistentSafetyStorage, SafetyRules};
@@ -109,6 +111,10 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     );
 
     let validators = initial_data.validators();
+    let epoch_info = EpochInfo {
+        epoch: initial_data.epoch(),
+        verifier: validators,
+    };
 
     // TODO: mock
     let block_store = build_empty_store(storage.clone(), initial_data);
@@ -133,6 +139,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
 
     // event processor
     EventProcessor::new(
+        epoch_info,
         Arc::clone(&block_store),
         None,
         pacemaker,
@@ -143,7 +150,6 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         Box::new(MockTransactionManager::new(None)),
         storage,
         time_service,
-        validators,
     )
 }
 

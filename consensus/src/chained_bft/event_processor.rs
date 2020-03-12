@@ -43,7 +43,9 @@ use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorVerifier},
+    crypto_proxies::{
+        EpochInfo, LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorVerifier,
+    },
     transaction::TransactionStatus,
 };
 #[cfg(test)]
@@ -115,23 +117,24 @@ pub mod event_processor_fuzzing;
 
 /// During the event of the node can't recover from local data, StartupSyncProcessor is responsible
 /// for processing the events carrying sync info and use the info to retrieve blocks from peers
-#[allow(dead_code)]
 pub struct StartupSyncProcessor<T> {
+    epoch_info: EpochInfo,
     network: NetworkSender<T>,
     storage: Arc<dyn PersistentLivenessStorage<T>>,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
     ledger_recovery_data: LedgerRecoveryData<T>,
 }
 
-#[allow(dead_code)]
 impl<T: Payload> StartupSyncProcessor<T> {
     pub fn new(
+        epoch_info: EpochInfo,
         network: NetworkSender<T>,
         storage: Arc<dyn PersistentLivenessStorage<T>>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         ledger_recovery_data: LedgerRecoveryData<T>,
     ) -> Self {
         StartupSyncProcessor {
+            epoch_info,
             network,
             storage,
             state_computer,
@@ -179,6 +182,10 @@ impl<T: Payload> StartupSyncProcessor<T> {
 
         Ok(recovery_data)
     }
+
+    pub fn epoch_info(&self) -> &EpochInfo {
+        &self.epoch_info
+    }
 }
 
 /// Consensus SMR is working in an event based fashion: EventProcessor is responsible for
@@ -187,6 +194,7 @@ impl<T: Payload> StartupSyncProcessor<T> {
 /// The caller is responsible for running the event loops and driving the execution via some
 /// executors.
 pub struct EventProcessor<T> {
+    epoch_info: EpochInfo,
     block_store: Arc<BlockStore<T>>,
     pending_votes: PendingVotes,
     pacemaker: Pacemaker,
@@ -199,11 +207,11 @@ pub struct EventProcessor<T> {
     time_service: Arc<dyn TimeService>,
     // Cache of the last sent vote message.
     last_vote_sent: Option<(Vote, Round)>,
-    validators: Arc<ValidatorVerifier>,
 }
 
 impl<T: Payload> EventProcessor<T> {
     pub fn new(
+        epoch_info: EpochInfo,
         block_store: Arc<BlockStore<T>>,
         last_vote: Option<Vote>,
         pacemaker: Pacemaker,
@@ -214,7 +222,6 @@ impl<T: Payload> EventProcessor<T> {
         txn_manager: Box<dyn TxnManager<Payload = T>>,
         storage: Arc<dyn PersistentLivenessStorage<T>>,
         time_service: Arc<dyn TimeService>,
-        validators: Arc<ValidatorVerifier>,
     ) -> Self {
         counters::BLOCK_RETRIEVAL_COUNT.get();
         counters::STATE_SYNC_COUNT.get();
@@ -225,6 +232,7 @@ impl<T: Payload> EventProcessor<T> {
         let pending_votes = PendingVotes::new();
 
         Self {
+            epoch_info,
             block_store,
             pending_votes,
             pacemaker,
@@ -236,7 +244,6 @@ impl<T: Payload> EventProcessor<T> {
             storage,
             time_service,
             last_vote_sent,
-            validators,
         }
     }
 
@@ -430,7 +437,7 @@ impl<T: Payload> EventProcessor<T> {
 
         // Some information in SyncInfo is ahead of what we have locally.
         // First verify the SyncInfo (didn't verify it in the yet).
-        sync_info.verify(self.validators.as_ref()).map_err(|e| {
+        sync_info.verify(&self.epoch_info().verifier).map_err(|e| {
             security_log(SecurityEvent::InvalidSyncInfoMsg)
                 .error(&e)
                 .data(&sync_info)
@@ -835,7 +842,9 @@ impl<T: Payload> EventProcessor<T> {
             return Ok(());
         }
         // Add the vote and check whether it completes a new QC or a TC
-        let res = self.pending_votes.insert_vote(vote, &self.validators);
+        let res = self
+            .pending_votes
+            .insert_vote(vote, &self.epoch_info.verifier);
         match res {
             VoteReceptionResult::NewQuorumCertificate(qc) => {
                 // Note that the block might not be present locally, in which case we cannot calculate
@@ -1028,5 +1037,9 @@ impl<T: Payload> EventProcessor<T> {
 
     pub fn block_store(&self) -> Arc<BlockStore<T>> {
         self.block_store.clone()
+    }
+
+    pub fn epoch_info(&self) -> &EpochInfo {
+        &self.epoch_info
     }
 }
