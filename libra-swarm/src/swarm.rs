@@ -27,8 +27,7 @@ pub struct LibraNode {
     validator_peer_id: Option<AccountAddress>,
     role: RoleType,
     debug_client: NodeDebugClient,
-    ac_port: u16,
-    json_rpc_port: u16,
+    port: u16,
     log: PathBuf,
 }
 
@@ -93,8 +92,7 @@ impl LibraNode {
             validator_peer_id,
             role,
             debug_client,
-            ac_port: config.admission_control.address.port(),
-            json_rpc_port: config.rpc.address.port(),
+            port: config.rpc.address.port(),
             log: log_path,
         })
     }
@@ -103,12 +101,8 @@ impl LibraNode {
         self.validator_peer_id
     }
 
-    pub fn ac_port(&self) -> u16 {
-        self.ac_port
-    }
-
-    pub fn json_rpc_port(&self) -> u16 {
-        self.json_rpc_port
+    pub fn port(&self) -> u16 {
+        self.port
     }
 
     pub fn get_log_contents(&self) -> Result<String> {
@@ -510,14 +504,10 @@ impl LibraSwarm {
         false
     }
 
-    /// A specific public ports of a validator or a full node.
-    /// Returns (AC port, JSON RPC port)
-    pub fn get_client_ports(&self, index: usize) -> (u16, u16) {
+    /// A specific public JSON RPC port of a validator or a full node.
+    pub fn get_client_port(&self, index: usize) -> u16 {
         let node_id = format!("{}", index);
-        self.nodes
-            .get(&node_id)
-            .map(|node| (node.ac_port(), node.json_rpc_port()))
-            .unwrap()
+        self.nodes.get(&node_id).map(|node| node.port()).unwrap()
     }
 
     /// Vector with the peer ids of the validators in the swarm.

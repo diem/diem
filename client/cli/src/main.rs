@@ -27,13 +27,9 @@ use structopt::StructOpt;
     about = "Libra client to connect to a specific validator"
 )]
 struct Args {
-    /// Admission Control port to connect to.
-    /// TODO deprecate this completely once migration to JSON RPC is complete
-    #[structopt(short = "p", long, default_value = "8000")]
-    pub port: NonZeroU16,
     /// JSON RPC port to connect to.
-    #[structopt(short = "j", long, default_value = "5000")]
-    pub json_rpc_port: NonZeroU16,
+    #[structopt(short = "p", long, default_value = "5000")]
+    pub port: NonZeroU16,
     /// Host address/name to connect to.
     #[structopt(short = "a", long)]
     pub host: String,
@@ -100,7 +96,6 @@ fn main() {
     let mut client_proxy = ClientProxy::new(
         &args.host,
         args.port.get(),
-        args.json_rpc_port.get(),
         &faucet_account_file,
         args.sync,
         args.faucet_server.clone(),

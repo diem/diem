@@ -13,7 +13,7 @@ source "$HOME/.cargo/env"
 
 SCRIPT_PATH="$(dirname $0)"
 
-RUN_PARAMS="--host ac.testnet.libra.org --port 8000 --json-rpc-port 5000 "
+RUN_PARAMS="--host ac.testnet.libra.org --port 5000 "
 RELEASE=""
 
 while [[ ! -z "$1" ]]; do

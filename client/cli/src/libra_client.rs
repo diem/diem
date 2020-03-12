@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::AccountData;
-use admission_control_proto::proto::AdmissionControlClientBlocking;
 use anyhow::{bail, ensure, format_err, Result};
 use libra_json_rpc::views::{
     AccountStateWithProofView, AccountView, BytesView, EventView, StateProofView, TransactionView,
@@ -14,7 +13,6 @@ use libra_types::{
     account_config::{ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH},
     account_state_blob::AccountStateBlob,
     crypto_proxies::LedgerInfoWithSignatures,
-    get_with_proof::{RequestItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse},
     transaction::{SignedTransaction, Version},
     trusted_state::{TrustedState, TrustedStateChange},
     validator_change::ValidatorChangeProof,
@@ -22,10 +20,10 @@ use libra_types::{
 };
 use rand::Rng;
 use reqwest::blocking::Client;
-use std::{convert::TryFrom, time::Duration};
+use std::time::Duration;
 
 const JSON_RPC_TIMEOUT_MS: u64 = 5_000;
-const MAX_GRPC_RETRY_COUNT: u64 = 2;
+const MAX_JSON_RPC_RETRY_COUNT: u64 = 2;
 
 /// A client connection to an AdmissionControl (AC) service. `LibraClient` also
 /// handles verifying the server's responses, retrying on non-fatal failures, and
@@ -42,11 +40,7 @@ const MAX_GRPC_RETRY_COUNT: u64 = 2;
 /// 3. We make another request to the remote AC service. In this case, the remote
 ///    AC will be behind us and we will reject their response as stale.
 pub struct LibraClient {
-    /// The client connection to an AdmissionControl service. We will only connect
-    /// when the first request is made.
-    /// TODO deprecate this completely once migration to JSON RPC is complete
-    client: AdmissionControlClientBlocking,
-    json_rpc_client: JsonRpcClient,
+    client: JsonRpcClient,
     /// The latest verified chain state.
     trusted_state: TrustedState,
     /// The most recent epoch change ledger info. This is `None` if we only know
@@ -197,7 +191,7 @@ impl JsonRpcClient {
         let mut try_cnt = 0;
 
         // retry if send fails
-        while try_cnt < MAX_GRPC_RETRY_COUNT && response.is_err() {
+        while try_cnt < MAX_JSON_RPC_RETRY_COUNT && response.is_err() {
             response = self.send(&request);
             try_cnt += 1;
         }
@@ -217,23 +211,16 @@ impl JsonRpcClient {
 impl LibraClient {
     /// Construct a new Client instance.
     // TODO(philiphayes/dmitrip): Waypoint should not be optional
-    pub fn new(
-        host: &str,
-        ac_port: u16,
-        json_rpc_port: u16,
-        waypoint: Option<Waypoint>,
-    ) -> Result<Self> {
-        let client = AdmissionControlClientBlocking::new(host, ac_port);
+    pub fn new(host: &str, port: u16, waypoint: Option<Waypoint>) -> Result<Self> {
         // If waypoint is present, use it for initial verification, otherwise the initial
         // verification is essentially empty.
         let initial_trusted_state = match waypoint {
             Some(waypoint) => TrustedState::from_waypoint(waypoint),
             None => TrustedState::new_trust_any_genesis_WARNING_UNSAFE(),
         };
-        let json_rpc_client = JsonRpcClient::new(host, json_rpc_port);
+        let client = JsonRpcClient::new(host, port);
         Ok(LibraClient {
             client,
-            json_rpc_client,
             trusted_state: initial_trusted_state,
             latest_epoch_change_li: None,
         })
@@ -250,10 +237,7 @@ impl LibraClient {
         let payload = hex::encode(lcs::to_bytes(&transaction).unwrap());
         let params = vec![serde_json::json!(payload)];
 
-        match self
-            .json_rpc_client
-            .send_libra_request("submit".to_string(), params)
-        {
+        match self.client.send_libra_request("submit".to_string(), params) {
             Ok(result) => {
                 ensure!(
                     result == serde_json::Value::Null,
@@ -283,7 +267,7 @@ impl LibraClient {
         let response = if with_state_proof {
             self.get_with_state_proof(method, serde_json::json!(params))
         } else {
-            self.json_rpc_client.send_libra_request(method, params)
+            self.client.send_libra_request(method, params)
         };
 
         match response {
@@ -318,7 +302,7 @@ impl LibraClient {
         ];
 
         match self
-            .json_rpc_client
+            .client
             .send_libra_request("get_events".to_string(), params)
         {
             Ok(result) => {
@@ -329,87 +313,43 @@ impl LibraClient {
         }
     }
 
-    fn get_with_state_proof(
-        &mut self,
-        method: String,
-        params: serde_json::Value,
-    ) -> Result<serde_json::Value> {
+    pub fn get_state_proof(&mut self) -> Result<LedgerInfoWithSignatures> {
         let client_version = self.trusted_state.latest_version();
-
-        // form batch requests
-        let batch_requests = vec![
-            (method, params),
-            (
-                "get_state_proof".to_string(),
-                serde_json::json!(vec![client_version]),
-            ),
-        ];
-
-        // batch send
-        match self
-            .json_rpc_client
-            .send_libra_batch_request(batch_requests)
-        {
-            Err(e) => bail!("Failed to get with state proof, error: {:?}", e),
-            Ok(responses) => {
-                // verify and update trusted state here
-                let proof: StateProofView = serde_json::from_value(responses[1].clone())?;
+        match self.client.send_libra_request(
+            "get_state_proof".to_string(),
+            vec![serde_json::json!(client_version)],
+        ) {
+            Ok(response) => {
+                let proof: StateProofView = serde_json::from_value(response)?;
                 let li: LedgerInfoWithSignatures =
-                    lcs::from_bytes(&proof.ledger_info_with_signatures.into_bytes()?)?;
-                let validator_change_proof: ValidatorChangeProof =
-                    lcs::from_bytes(&proof.validator_change_proof.into_bytes()?)?;
-
-                // check ledger info version
-                ensure!(
-                    li.ledger_info().version() >= client_version,
-                    "Got stale ledger_info with version {}, known version: {}",
-                    li.ledger_info().version(),
-                    client_version,
-                );
-
-                // trusted_state_change
-                match self
-                    .trusted_state
-                    .verify_and_ratchet(&li, &validator_change_proof)?
-                {
-                    TrustedStateChange::Epoch {
-                        new_state,
-                        latest_epoch_change_li,
-                        latest_validator_set,
-                        ..
-                    } => {
-                        info!(
-                            "Verified epoch change to epoch: {}, validator set: [{}]",
-                            latest_epoch_change_li.ledger_info().epoch(),
-                            latest_validator_set
-                        );
-                        // Update client state
-                        self.trusted_state = new_state;
-                        self.latest_epoch_change_li = Some(latest_epoch_change_li.clone());
-                    }
-                    TrustedStateChange::Version { new_state, .. } => {
-                        self.trusted_state = new_state;
-                    }
-                }
-                // verify sub-response - responsibility of each call to subresponse
-                Ok(responses[0].clone())
+                    lcs::from_bytes(&proof.ledger_info_with_signatures.clone().into_bytes()?)?;
+                self.verify_state_proof(proof)?;
+                Ok(li)
             }
+            Err(e) => bail!("Failed to get state proof with error: {:?}", e),
         }
     }
 
-    fn get_with_proof(
-        &mut self,
-        requested_items: Vec<RequestItem>,
-    ) -> Result<UpdateToLatestLedgerResponse> {
-        let req =
-            UpdateToLatestLedgerRequest::new(self.trusted_state.latest_version(), requested_items);
+    fn verify_state_proof(&mut self, state_proof: StateProofView) -> Result<()> {
+        let client_version = self.trusted_state.latest_version();
+        let li: LedgerInfoWithSignatures =
+            lcs::from_bytes(&state_proof.ledger_info_with_signatures.into_bytes()?)?;
+        let validator_change_proof: ValidatorChangeProof =
+            lcs::from_bytes(&state_proof.validator_change_proof.into_bytes()?)?;
 
-        trace!("get_with_proof with request: {:?}", req);
-        let proto_req = req.clone().into();
-        let resp = self.client.update_to_latest_ledger(proto_req)?;
-        let resp = UpdateToLatestLedgerResponse::try_from(resp)?;
+        // check ledger info version
+        ensure!(
+            li.ledger_info().version() >= client_version,
+            "Got stale ledger_info with version {}, known version: {}",
+            li.ledger_info().version(),
+            client_version,
+        );
 
-        match resp.verify(&self.trusted_state, &req)? {
+        // trusted_state_change
+        match self
+            .trusted_state
+            .verify_and_ratchet(&li, &validator_change_proof)?
+        {
             TrustedStateChange::Epoch {
                 new_state,
                 latest_epoch_change_li,
@@ -429,46 +369,40 @@ impl LibraClient {
                 self.trusted_state = new_state;
             }
         }
-
-        Ok(resp)
+        Ok(())
     }
 
-    fn need_to_retry<T>(try_cnt: u64, ret: &Result<T>) -> bool {
-        if try_cnt >= MAX_GRPC_RETRY_COUNT {
-            return false;
-        }
+    fn get_with_state_proof(
+        &mut self,
+        method: String,
+        params: serde_json::Value,
+    ) -> Result<serde_json::Value> {
+        let client_version = self.trusted_state.latest_version();
 
-        if let Err(error) = ret {
-            if let Some(grpc_error) = error.downcast_ref::<tonic::Status>() {
-                // Only retry when the connection is down to make sure we won't
-                // send one txn twice.
-                return grpc_error.code() == tonic::Code::Unavailable
-                    || grpc_error.code() == tonic::Code::Unknown;
+        let batch_requests = vec![
+            (method, params),
+            (
+                "get_state_proof".to_string(),
+                serde_json::json!(vec![client_version]),
+            ),
+        ];
+
+        // batch send
+        match self.client.send_libra_batch_request(batch_requests) {
+            Err(e) => bail!("Failed to get with state proof, error: {:?}", e),
+            Ok(responses) => {
+                // verify and update trusted state
+                let proof: StateProofView = serde_json::from_value(responses[1].clone())?;
+                self.verify_state_proof(proof)?;
+                // verify sub-response - responsibility of each call to subresponse
+                Ok(responses[0].clone())
             }
         }
-
-        false
     }
 
     /// LedgerInfo corresponding to the latest epoch change.
     pub(crate) fn latest_epoch_change_li(&self) -> Option<&LedgerInfoWithSignatures> {
         self.latest_epoch_change_li.as_ref()
-    }
-
-    /// Sync version of get_with_proof
-    pub(crate) fn get_with_proof_sync(
-        &mut self,
-        requested_items: Vec<RequestItem>,
-    ) -> Result<UpdateToLatestLedgerResponse> {
-        let mut resp = self.get_with_proof(requested_items.clone());
-
-        let mut try_cnt = 0;
-        while Self::need_to_retry(try_cnt, &resp) {
-            resp = self.get_with_proof(requested_items.clone());
-            try_cnt += 1;
-        }
-
-        resp
     }
 
     /// Get the latest account state blob from validator.
@@ -480,7 +414,7 @@ impl LibraClient {
         let params = vec![serde_json::json!(address), version.clone(), version];
 
         match self
-            .json_rpc_client
+            .client
             .send_libra_request("get_account_state_with_proof".to_string(), params)
         {
             Ok(result) => {
