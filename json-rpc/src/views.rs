@@ -153,8 +153,7 @@ pub enum TransactionDataView {
     #[serde(rename = "user")]
     UserTransaction {
         sender: String,
-        signature: String,
-        public_key: String,
+        authenticator: String,
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
@@ -219,8 +218,7 @@ impl From<Transaction> for TransactionDataView {
 
                 Ok(TransactionDataView::UserTransaction {
                     sender: t.sender().to_string(),
-                    signature: t.signature().to_string(),
-                    public_key: t.public_key().to_string(),
+                    authenticator: t.authenticator().to_string(),
                     sequence_number: t.sequence_number(),
                     max_gas_amount: t.max_gas_amount(),
                     gas_unit_price: t.gas_unit_price(),

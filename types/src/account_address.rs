@@ -1,11 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::transaction::authenticator::TransactionAuthenticator;
 use anyhow::{ensure, Error, Result};
 use bytes::Bytes;
 use libra_crypto::{
+    ed25519::Ed25519PublicKey,
     hash::{CryptoHash, CryptoHasher},
-    HashValue, VerifyingKey,
+    HashValue,
 };
 use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -46,13 +48,11 @@ impl AccountAddress {
         self.0.to_vec()
     }
 
-    pub fn authentication_key<PublicKey: VerifyingKey>(
-        public_key: &PublicKey,
-    ) -> AuthenticationKey {
+    pub fn authentication_key(public_key: &Ed25519PublicKey) -> AuthenticationKey {
         AuthenticationKey::from_public_key(public_key)
     }
 
-    pub fn from_public_key<PublicKey: VerifyingKey>(public_key: &PublicKey) -> Self {
+    pub fn from_public_key(public_key: &Ed25519PublicKey) -> Self {
         AccountAddress::authentication_key(public_key).derived_address()
     }
 
@@ -101,8 +101,9 @@ impl AuthenticationKey {
     }
 
     /// Create an authentication key from a public key by taking its sha3 hash
-    pub fn from_public_key<PublicKey: VerifyingKey>(public_key: &PublicKey) -> Self {
-        Self(*HashValue::from_sha3_256(&public_key.to_bytes()).as_ref())
+    pub fn from_public_key(public_key: &Ed25519PublicKey) -> Self {
+        let preimage = TransactionAuthenticator::ed25519_authentication_key_preimage(&public_key).0;
+        Self(*HashValue::from_sha3_256(&preimage).as_ref())
     }
 
     /// Return an address derived from the last ADDRESS_LENGTH bytes of this authentication key

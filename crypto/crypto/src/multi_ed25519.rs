@@ -336,7 +336,7 @@ impl MultiEd25519Signature {
         let mut sorted_signatures = signatures;
         sorted_signatures.sort_by(|a, b| a.1.cmp(&b.1));
 
-        let mut sigvec: Vec<Ed25519Signature> = Vec::with_capacity(num_of_sigs);
+        let mut sigvec = Vec::new();
         let mut bitvec = BitVec::from_elem(MAX_NUM_OF_KEYS, false);
 
         // Check if all indexes are unique and < MAX_NUM_OF_KEYS
@@ -349,8 +349,8 @@ impl MultiEd25519Signature {
                         "Duplicate signature index".to_string(),
                     ));
                 } else {
-                    sigvec[i] = item.0;
-                    bitvec.set(i, true);
+                    sigvec.push(item.0);
+                    bitvec.set(item.1 as usize, true);
                 }
             } else {
                 return Err(CryptoMaterialError::BitVecError(
