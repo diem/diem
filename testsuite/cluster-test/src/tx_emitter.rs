@@ -389,6 +389,7 @@ async fn wait_for_accounts_sequence(
                 if Instant::now() > deadline {
                     for (account, sequence_number) in zip(accounts, &sequence_numbers) {
                         if account.sequence_number != *sequence_number {
+                            warn!("Wait deadline exceeded for account {}, expected sequence {}, got from server: {}", account.address, account.sequence_number, sequence_number);
                             uncommitted.push((account.address, *sequence_number));
                             account.sequence_number = *sequence_number;
                         }
@@ -530,7 +531,11 @@ async fn execute_and_wait_transactions(
             let c = client.clone();
             let client_name = format!("{:?}", client);
             Box::pin(async move {
+                let txn_str = format!("{}::{}", request.sender(), request.sequence_number());
+                debug!("Submitting txn {}", txn_str);
                 let resp = c.submit_transaction(request).await;
+                debug!("txn {} status: {:?}", txn_str, resp);
+
                 resp.map_err(|e| format_err!("[{}] Failed to submit request: {:?}", client_name, e))
             })
         })
