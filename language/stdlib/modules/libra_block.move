@@ -6,6 +6,7 @@ module LibraBlock {
     use 0x0::TransactionFee;
     use 0x0::U64Util;
     use 0x0::LibraSystem;
+    use 0x0::LibraAccount;
 
     resource struct BlockMetadata {
       // Height of the current block
@@ -17,6 +18,18 @@ module LibraBlock {
 
       // Proposer of the current block.
       proposer: address,
+
+      // Handle where events with the time of new blocks are emitted
+      new_block_events: LibraAccount::EventHandle<Self::NewBlockEvent>,
+    }
+
+    struct NewBlockEvent {
+      height: u64,
+      proposer: address,
+      previous_block_votes: vector<u8>,
+
+      // On-chain time during  he block at the given height
+      time_microseconds: u64,
     }
 
     // This can only be invoked by the Association address, and only a single time.
@@ -32,6 +45,7 @@ module LibraBlock {
         // FIXME: Update this once we have byte vector literals
         id: U64Util::u64_to_bytes(0),
         proposer: 0xA550C18,
+        new_block_events: LibraAccount::new_event_handle<Self::NewBlockEvent>(),
       });
       LibraTimestamp::initialize_timer();
     }
@@ -69,10 +83,21 @@ module LibraBlock {
         // TODO: Figure out a story for errors in the system transactions.
         if(proposer != 0x0) Transaction::assert(LibraSystem::is_validator(proposer), 5002);
         LibraTimestamp::update_global_time(proposer, timestamp);
+        let height = block_metadata_ref.height;
 
         block_metadata_ref.id = new_block_hash;
         block_metadata_ref.proposer = proposer;
         block_metadata_ref.height = block_metadata_ref.height + 1;
+
+        LibraAccount::emit_event<NewBlockEvent>(
+          &mut block_metadata_ref.new_block_events,
+          NewBlockEvent {
+            height: height,
+            proposer: proposer,
+            previous_block_votes: previous_block_votes,
+            time_microseconds: timestamp,
+          }
+        );
     }
 
     // Get the current block height

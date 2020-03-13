@@ -4,6 +4,9 @@
 //! proposer: vivian
 //! block-time: 1000000
 
+// check: NewBlockEvent
+// check: 1000000
+
 //! new-transaction
 import 0x0.LibraTimestamp;
 import 0x0.LibraBlock;
