@@ -7,8 +7,8 @@ on:
       - auto
 
 jobs:
-  build-and-run-cluster-test:
-    name: Build images and run cluster test
+  build-images:
+    name: Build images
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v1
@@ -45,6 +45,24 @@ jobs:
           done
           echo "Build failed after retries"
           exit 1
+  build-and-run-cluster-test:
+    name: Build images and run cluster test
+    needs: build-images
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v1
+      - name: Setup env
+        run: |
+          echo "::set-env name=LIBRA_GIT_REV::$(git rev-parse --short=8 HEAD)"
+          echo "::set-env name=TEST_TAG::land_$(git rev-parse --short=8 HEAD)"
+      - name: Check kill switch
+        id: check_ks
+        run: |
+          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }} ; then
+            echo "::set-output name=should_run::false";
+          else
+            echo "::set-output name=should_run::true";
+          fi;
       - name: Launch cluster test
         if: steps.check_ks.outputs.should_run == 'true'
         # NOTE Remember to update PR comment payload if cti cmd is updated.
@@ -172,7 +190,7 @@ jobs:
             }
   build-and-run-cluster-test-k8s:
     name: Run cluster test on k8s
-    needs: build-and-run-cluster-test
+    needs: build-images
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v1
