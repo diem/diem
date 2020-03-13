@@ -1,1 +1,13 @@
-Move prover all good, no errors!
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/defines.move:16:9 ───
+    │
+ 16 │         aborts_if !in_range(x + y, 0, 9223372036854775807);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/defines.move:13:5: add (entry)
+    =     at tests/sources/defines.move:13:5: add (exit)
+    =         x = <redacted>,
+    =         y = <redacted>,
+    =         result = <redacted>
