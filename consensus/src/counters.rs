@@ -37,6 +37,15 @@ pub static LAST_COMMITTED_VERSION: Lazy<IntGauge> = Lazy::new(|| {
     .unwrap()
 });
 
+/// The counter corresponds to the version of the last committed ledger info.
+pub static LAST_COMMITTED_TIMESTAMP: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_consensus_last_committed_timestamp",
+        "The counter corresponds to the timestamp of the last committed ledger info."
+    )
+    .unwrap()
+});
+
 /// This counter is set to the round of the highest voted block.
 pub static LAST_VOTE_ROUND: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(

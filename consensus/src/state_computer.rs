@@ -101,6 +101,8 @@ impl StateComputer for ExecutionProxy {
     ) -> Result<()> {
         let version = finality_proof.ledger_info().version();
         counters::LAST_COMMITTED_VERSION.set(version as i64);
+        let timestamp = finality_proof.ledger_info().timestamp_usecs();
+        counters::LAST_COMMITTED_TIMESTAMP.set(timestamp as i64);
 
         let pre_commit_instant = Instant::now();
 

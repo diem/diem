@@ -69,6 +69,10 @@ impl SynchronizerState {
         }
     }
 
+    pub fn highest_local_timestamp(&self) -> u64 {
+        self.highest_local_li.timestamp_usecs()
+    }
+
     /// The highest available version in the local storage (even if it's not covered by the LI).
     pub fn highest_version_in_local_storage(&self) -> u64 {
         self.synced_trees.version().unwrap_or(0)

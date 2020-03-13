@@ -86,6 +86,15 @@ pub static COMMITTED_VERSION: Lazy<IntGauge> = Lazy::new(|| {
     .unwrap()
 });
 
+/// Most recent version that has been committed
+pub static COMMITTED_TIMESTAMP: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_state_sync_committed_timestamp",
+        "Most recent timestamp that has been committed"
+    )
+    .unwrap()
+});
+
 /// How long it takes to make progress, from requesting a chunk to processing the response and
 /// committing the block
 pub static SYNC_PROGRESS_DURATION: Lazy<DurationHistogram> = Lazy::new(|| {

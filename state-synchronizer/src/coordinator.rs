@@ -340,6 +340,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         self.sync_state_with_local_storage().await?;
         let local_version = self.local_state.highest_version_in_local_storage();
         counters::COMMITTED_VERSION.set(local_version as i64);
+        let local_timestamp = self.local_state.highest_local_timestamp();
+        counters::COMMITTED_TIMESTAMP.set(local_timestamp as i64);
         let block_timestamp_usecs = self
             .local_state
             .highest_local_li
