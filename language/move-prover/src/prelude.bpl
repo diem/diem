@@ -88,9 +88,9 @@ type {:datatype} Value;
 const MAX_U8: int;
 axiom MAX_U8 == 255;
 const MAX_U64: int;
-axiom MAX_U64 == 9223372036854775807;
+axiom MAX_U64 == 18446744073709551615;
 const MAX_U128: int;
-axiom MAX_U128 == 340282366920938463463374607431768211456;
+axiom MAX_U128 == 340282366920938463463374607431768211455;
 
 function {:constructor} Boolean(b: bool): Value;
 function {:constructor} Integer(i: int): Value;
@@ -106,14 +106,6 @@ function {:builtin "MapConst"} MapConstValue(v: Value): [int]Value;
 
 function {:inline} $IsValidU8(v: Value): bool {
   is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= MAX_U8
-}
-
-function {:inline} max_u64(): Value {
-  Integer(9223372036854775807)
-}
-
-function {:inline} $IsValidInteger(v: Value): bool {
-  is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= i#Integer(max_u64())
 }
 
 function {:inline} $IsValidU64(v: Value): bool {
