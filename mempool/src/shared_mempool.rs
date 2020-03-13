@@ -257,6 +257,8 @@ async fn sync_with_peers<'a>(
         .clone();
     let mut state_updates = vec![];
 
+    debug!("[shared mempool] upstream peers: {:?}", peer_info_copy.len());
+
     for (peer_id, peer_state) in peer_info_copy.into_iter() {
         if peer_state.is_alive {
             let timeline_id = peer_state.timeline_id;
@@ -266,11 +268,12 @@ async fn sync_with_peers<'a>(
                 .read_timeline(timeline_id, batch_size);
 
             if !transactions.is_empty() {
+                debug!("[shared mempool] broadcasting {} txns to smp", transactions.len());
                 counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST.inc_by(transactions.len() as i64);
 
                 let network_sender = network_senders
                     .get_mut(&peer_state.network_id)
-                    .expect("[shared mempool] missign network sender")
+                    .expect("[shared mempool] missing network sender")
                     .clone();
                 if let Err(e) = send_mempool_sync_msg(
                     MempoolSyncMsg::BroadcastTransactionsRequest(
@@ -281,7 +284,7 @@ async fn sync_with_peers<'a>(
                     network_sender,
                 ) {
                     error!(
-                        "[shared mempool] error broadcasting transations to peer {}: {}",
+                        "[shared mempool] error broadcasting transactions to peer {}: {}",
                         peer_id, e
                     );
                 } else {
@@ -313,6 +316,7 @@ async fn process_incoming_transactions<V>(
 where
     V: TransactionValidation,
 {
+    debug!("[shared mempool] processing incoming txns");
     let mut statuses = vec![];
 
     let seq_numbers = join_all(
@@ -377,6 +381,7 @@ where
         }
     }
     notify_subscribers(SharedMempoolNotification::NewTransactions, &smp.subscribers);
+    debug!("[shared mempool] insertion statuses: {:?}", statuses);
     statuses
 }
 
@@ -470,6 +475,7 @@ fn process_broadcast_ack<V>(smp: SharedMempool<V>, start_id: u64, end_id: u64, i
 where
     V: TransactionValidation,
 {
+    debug!("[shared mempool] received ACK");
     if is_validator {
         return;
     }
@@ -480,6 +486,7 @@ where
             .expect("[shared mempool] failed to acquire mempool lock");
 
         for txn in mempool.timeline_range(start_id, end_id).iter() {
+            debug!("[shared mempool] removing txn from ACK {:?} {:?}", txn.sender(), txn.sequence_number());
             mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
         }
     } else {
@@ -634,6 +641,7 @@ async fn inbound_network_task<V>(
         ::futures::select! {
             (mut msg, callback) = client_events.select_next_some() => {
                 trace_event!("mempool::client_event", {"txn", msg.sender(), msg.sequence_number()});
+                debug!("mempool::client_event::txn {:?} {:?}", msg.sender(), msg.sequence_number());
                 bounded_executor
                 .spawn(process_client_transaction_submission(
                     smp.clone(),
