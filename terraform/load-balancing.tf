@@ -49,7 +49,7 @@ resource "aws_lb" "json-rpc" {
   ip_address_type                  = "dualstack"
   enable_cross_zone_load_balancing = true
   subnets                          = aws_subnet.testnet.*.id
-  security_groups                  = [aws_security_group.validator.id]
+  security_groups                  = [aws_security_group.jsonrpc-lb.id]
 }
 
 resource "aws_lb_target_group" "json-rpc" {
