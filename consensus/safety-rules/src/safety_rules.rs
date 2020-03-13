@@ -15,12 +15,10 @@ use consensus_types::{
     vote_data::VoteData,
     vote_proposal::VoteProposal,
 };
-use libra_crypto::hash::HashValue;
+use libra_crypto::{ed25519::Ed25519Signature, hash::HashValue};
 use libra_logger::debug;
 use libra_types::{
-    block_info::BlockInfo,
-    crypto_proxies::{Signature, ValidatorSigner},
-    ledger_info::LedgerInfo,
+    block_info::BlockInfo, crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo,
 };
 use std::marker::PhantomData;
 
@@ -192,7 +190,7 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
 
     /// @TODO only sign a timeout if it matches last_voted_round or last_voted_round + 1
     /// @TODO update last_voted_round
-    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Signature, Error> {
+    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
         debug!("Incoming timeout message to sign.");
         Ok(timeout.sign(&self.validator_signer))
     }

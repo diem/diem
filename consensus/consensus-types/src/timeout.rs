@@ -2,9 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{block::Block, common::Round};
-use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
+use libra_crypto::{
+    ed25519::Ed25519Signature,
+    hash::{CryptoHash, CryptoHasher, HashValue},
+};
 use libra_crypto_derive::CryptoHasher;
-use libra_types::crypto_proxies::{Signature, ValidatorSigner};
+use libra_types::crypto_proxies::ValidatorSigner;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
@@ -38,11 +41,10 @@ impl Timeout {
         self.round
     }
 
-    pub fn sign(&self, signer: &ValidatorSigner) -> Signature {
+    pub fn sign(&self, signer: &ValidatorSigner) -> Ed25519Signature {
         signer
             .sign_message(self.hash())
             .expect("Failed to sign Timeout")
-            .into()
     }
 }
 

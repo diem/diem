@@ -6,8 +6,8 @@ use crate::{
     timeout::Timeout,
 };
 use anyhow::Context;
-use libra_crypto::hash::CryptoHash;
-use libra_types::crypto_proxies::{Signature, ValidatorVerifier};
+use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash};
+use libra_types::crypto_proxies::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt};
 
@@ -16,7 +16,7 @@ use std::{collections::BTreeMap, fmt};
 /// have voted in round r and we can now move to round r+1.
 pub struct TimeoutCertificate {
     timeout: Timeout,
-    signatures: BTreeMap<Author, Signature>,
+    signatures: BTreeMap<Author, Ed25519Signature>,
 }
 
 impl fmt::Display for TimeoutCertificate {
@@ -41,13 +41,10 @@ impl TimeoutCertificate {
 
     /// Verifies the signatures for the round
     pub fn verify(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {
-        validator.check_voting_power(self.signatures().keys())?;
         let timeout_hash = self.timeout.hash();
-        for (author, signature) in self.signatures() {
-            signature
-                .verify(validator, *author, timeout_hash)
-                .context("Fail to verify TimeoutCertificate")?;
-        }
+        validator
+            .verify_aggregated_signature(timeout_hash, &self.signatures)
+            .context("Failed to verify TimeoutCertificate")?;
         Ok(())
     }
 
@@ -62,11 +59,11 @@ impl TimeoutCertificate {
     }
 
     /// Returns the signatures certifying the round
-    pub fn signatures(&self) -> &BTreeMap<Author, Signature> {
+    pub fn signatures(&self) -> &BTreeMap<Author, Ed25519Signature> {
         &self.signatures
     }
 
-    pub fn add_signature(&mut self, author: Author, signature: Signature) {
+    pub fn add_signature(&mut self, author: Author, signature: Ed25519Signature) {
         self.signatures.entry(author).or_insert(signature);
     }
 

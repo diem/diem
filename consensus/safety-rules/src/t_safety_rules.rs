@@ -6,7 +6,7 @@ use consensus_types::{
     block::Block, block_data::BlockData, quorum_cert::QuorumCert, timeout::Timeout, vote::Vote,
     vote_proposal::VoteProposal,
 };
-use libra_types::crypto_proxies::Signature;
+use libra_crypto::ed25519::Ed25519Signature;
 
 /// Interface for SafetyRules
 pub trait TSafetyRules<T> {
@@ -30,5 +30,5 @@ pub trait TSafetyRules<T> {
 
     /// As the holder of the private key, SafetyRules also signs what is effectively a
     /// timeout message. This returns the signature for that timeout message.
-    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Signature, Error>;
+    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error>;
 }

@@ -93,11 +93,7 @@ impl PendingVotes {
         let li_with_sig = self.li_digest_to_votes.entry(li_digest).or_insert_with(|| {
             LedgerInfoWithSignatures::new(vote.ledger_info().clone(), BTreeMap::new())
         });
-        // TODO: we'd prefer to use LedgerInfoWithSignatures::add_signature instead, but the
-        // CryptoProxy types should be properly updated first.
-        vote.signature()
-            .clone()
-            .add_to_li(vote.author(), li_with_sig);
+        li_with_sig.add_signature(vote.author(), vote.signature().clone());
 
         match validator_verifier.check_voting_power(li_with_sig.signatures().keys()) {
             Ok(_) => VoteReceptionResult::NewQuorumCertificate(Arc::new(QuorumCert::new(

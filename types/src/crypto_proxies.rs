@@ -20,53 +20,14 @@
 //!   as generic types are seen as hindering readability.
 
 use crate::{
-    account_address::AccountAddress,
     ledger_info::LedgerInfoWithSignatures as RawLedgerInfoWithSignatures,
     validator_public_keys::ValidatorPublicKeys as RawValidatorPublicKeys,
     validator_set::ValidatorSet as RawValidatorSet,
     validator_signer::ValidatorSigner as RawValidatorSigner,
     validator_verifier::{
-        ValidatorInfo as RawValidatorInfo, ValidatorVerifier as RawValidatorVerifier, VerifyError,
+        ValidatorInfo as RawValidatorInfo, ValidatorVerifier as RawValidatorVerifier,
     },
 };
-use libra_crypto::{hash::HashValue, traits::Signature as RawSignature};
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
-pub struct SignatureWrapper<Sig: RawSignature>(Sig);
-
-impl<Sig: RawSignature> SignatureWrapper<Sig> {
-    pub fn verify(
-        &self,
-        validator_verifier: &RawValidatorVerifier<Sig::VerifyingKeyMaterial>,
-        author: AccountAddress,
-        message: HashValue,
-    ) -> std::result::Result<(), VerifyError> {
-        validator_verifier.verify_signature(author, message, &self.0)
-    }
-
-    pub fn try_from(bytes: &[u8]) -> Result<Self, libra_crypto::traits::CryptoMaterialError> {
-        Sig::try_from(bytes).map(SignatureWrapper)
-    }
-
-    pub fn to_bytes(&self) -> Vec<u8> {
-        self.0.to_bytes()
-    }
-
-    pub fn add_to_li(
-        self,
-        author: AccountAddress,
-        li_with_sig: &mut RawLedgerInfoWithSignatures<Sig>,
-    ) {
-        li_with_sig.add_signature(author, self.0)
-    }
-}
-
-impl<Sig: RawSignature> From<Sig> for SignatureWrapper<Sig> {
-    fn from(s: Sig) -> Self {
-        SignatureWrapper(s)
-    }
-}
 
 // This sets the types containing cryptographic materials used in the
 // consensus crate. It is intended as a one-stop shop for changing the
@@ -79,14 +40,13 @@ impl<Sig: RawSignature> From<Sig> for SignatureWrapper<Sig> {
 // types that do not go through the instantiated polymorphic structures
 // below is banned.
 
-use libra_crypto::ed25519::*;
+use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature};
 use std::{collections::BTreeMap, fmt};
 
 // used in chained_bft::consensus_types::block_test
 #[cfg(any(test, feature = "fuzzing"))]
 pub type SecretKey = Ed25519PrivateKey;
 
-pub type Signature = SignatureWrapper<Ed25519Signature>;
 pub type LedgerInfoWithSignatures = RawLedgerInfoWithSignatures<Ed25519Signature>;
 pub type ValidatorInfo = RawValidatorInfo<Ed25519PublicKey>;
 pub type ValidatorVerifier = RawValidatorVerifier<Ed25519PublicKey>;
