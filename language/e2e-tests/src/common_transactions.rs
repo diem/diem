@@ -4,7 +4,10 @@
 //! Support for encoding transactions for common situations.
 
 use crate::{account::Account, gas_costs};
-use libra_types::transaction::{SignedTransaction, TransactionArgument};
+use libra_types::{
+    account_address::AccountAddress,
+    transaction::{RawTransaction, SignedTransaction, TransactionArgument},
+};
 use stdlib::transaction_scripts::{
     ADD_VALIDATOR_TXN, CREATE_ACCOUNT_TXN, MINT_TXN, PEER_TO_PEER_TRANSFER_TXN,
     REGISTER_VALIDATOR_TXN, ROTATE_AUTHENTICATION_KEY_TXN, ROTATE_CONSENSUS_PUBKEY_TXN,
@@ -104,6 +107,23 @@ pub fn register_validator_txn(
 pub fn rotate_key_txn(sender: &Account, new_key_hash: Vec<u8>, seq_num: u64) -> SignedTransaction {
     let args = vec![TransactionArgument::U8Vector(new_key_hash)];
     sender.create_signed_txn_with_args(
+        ROTATE_AUTHENTICATION_KEY_TXN.clone(),
+        args,
+        seq_num,
+        gas_costs::TXN_RESERVED,
+        1,
+    )
+}
+
+/// Returns a transaction to change the keys for the given account.
+pub fn raw_rotate_key_txn(
+    sender: AccountAddress,
+    new_key_hash: Vec<u8>,
+    seq_num: u64,
+) -> RawTransaction {
+    let args = vec![TransactionArgument::U8Vector(new_key_hash)];
+    Account::create_raw_txn_with_args(
+        sender,
         ROTATE_AUTHENTICATION_KEY_TXN.clone(),
         args,
         seq_num,

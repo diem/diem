@@ -152,9 +152,28 @@ impl Account {
         max_gas_amount: u64,
         gas_unit_price: u64,
     ) -> SignedTransaction {
-        let raw_txn = match payload {
+        Self::create_raw_user_txn(
+            *self.address(),
+            payload,
+            sequence_number,
+            max_gas_amount,
+            gas_unit_price,
+        )
+        .sign(&self.privkey, self.pubkey.clone())
+        .unwrap()
+        .into_inner()
+    }
+
+    pub fn create_raw_user_txn(
+        address: AccountAddress,
+        payload: TransactionPayload,
+        sequence_number: u64,
+        max_gas_amount: u64,
+        gas_unit_price: u64,
+    ) -> RawTransaction {
+        match payload {
             TransactionPayload::Program => RawTransaction::new(
-                *self.address(),
+                address,
                 sequence_number,
                 TransactionPayload::Program,
                 max_gas_amount,
@@ -162,10 +181,10 @@ impl Account {
                 Duration::from_secs(DEFAULT_EXPIRATION_TIME),
             ),
             TransactionPayload::WriteSet(writeset) => {
-                RawTransaction::new_change_set(*self.address(), sequence_number, writeset)
+                RawTransaction::new_change_set(address, sequence_number, writeset)
             }
             TransactionPayload::Module(module) => RawTransaction::new_module(
-                *self.address(),
+                address,
                 sequence_number,
                 module,
                 max_gas_amount,
@@ -173,19 +192,14 @@ impl Account {
                 Duration::from_secs(DEFAULT_EXPIRATION_TIME),
             ),
             TransactionPayload::Script(script) => RawTransaction::new_script(
-                *self.address(),
+                address,
                 sequence_number,
                 script,
                 max_gas_amount,
                 gas_unit_price,
                 Duration::from_secs(DEFAULT_EXPIRATION_TIME),
             ),
-        };
-
-        raw_txn
-            .sign(&self.privkey, self.pubkey.clone())
-            .unwrap()
-            .into_inner()
+        }
     }
 
     /// Returns a [`SignedTransaction`] with the arguments defined in `args` and this account as
@@ -200,6 +214,23 @@ impl Account {
     ) -> SignedTransaction {
         self.create_signed_txn_impl(
             *self.address(),
+            TransactionPayload::Script(Script::new(program, args)),
+            sequence_number,
+            max_gas_amount,
+            gas_unit_price,
+        )
+    }
+
+    pub fn create_raw_txn_with_args(
+        address: AccountAddress,
+        program: Vec<u8>,
+        args: Vec<TransactionArgument>,
+        sequence_number: u64,
+        max_gas_amount: u64,
+        gas_unit_price: u64,
+    ) -> RawTransaction {
+        Self::create_raw_txn_impl(
+            address,
             TransactionPayload::Script(Script::new(program, args)),
             sequence_number,
             max_gas_amount,
@@ -228,6 +259,23 @@ impl Account {
         )
     }
 
+    pub fn create_raw_txn_with_args_and_sender(
+        sender: AccountAddress,
+        program: Vec<u8>,
+        args: Vec<TransactionArgument>,
+        sequence_number: u64,
+        max_gas_amount: u64,
+        gas_unit_price: u64,
+    ) -> RawTransaction {
+        Self::create_raw_txn_impl(
+            sender,
+            TransactionPayload::Script(Script::new(program, args)),
+            sequence_number,
+            max_gas_amount,
+            gas_unit_price,
+        )
+    }
+
     /// Returns a [`SignedTransaction`] with the arguments defined in `args` and a custom sender.
     ///
     /// The transaction is signed with the key corresponding to this account, not the custom sender.
@@ -239,6 +287,25 @@ impl Account {
         max_gas_amount: u64,
         gas_unit_price: u64,
     ) -> SignedTransaction {
+        Self::create_raw_txn_impl(
+            sender,
+            program,
+            sequence_number,
+            max_gas_amount,
+            gas_unit_price,
+        )
+        .sign(&self.privkey, self.pubkey.clone())
+        .unwrap()
+        .into_inner()
+    }
+
+    pub fn create_raw_txn_impl(
+        sender: AccountAddress,
+        program: TransactionPayload,
+        sequence_number: u64,
+        max_gas_amount: u64,
+        gas_unit_price: u64,
+    ) -> RawTransaction {
         RawTransaction::new(
             sender,
             sequence_number,
@@ -248,9 +315,6 @@ impl Account {
             // TTL is 86400s. Initial time was set to 0.
             Duration::from_secs(DEFAULT_EXPIRATION_TIME),
         )
-        .sign(&self.privkey, self.pubkey.clone())
-        .unwrap()
-        .into_inner()
     }
 }
 

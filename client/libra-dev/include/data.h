@@ -12,6 +12,7 @@ extern "C" {
 
 #define LIBRA_PUBKEY_SIZE 32
 #define LIBRA_PRIVKEY_SIZE 32
+#define LIBRA_SIGNATURE_SIZE 64
 #define LIBRA_ADDRESS_SIZE 16
 #define LIBRA_EVENT_KEY_SIZE 24
 
@@ -65,7 +66,7 @@ struct LibraRawTransaction {
 struct LibraSignedTransaction {
     struct LibraRawTransaction raw_txn;
     uint8_t public_key[LIBRA_PUBKEY_SIZE];
-    uint8_t signature[64];
+    uint8_t signature[LIBRA_SIGNATURE_SIZE];
 };
 
 struct LibraAccountKey {

@@ -23,7 +23,7 @@ pub fn get_signed_transactions_digest(signed_txns: &[ProtoSignedTransaction]) ->
     for transaction in signed_txns {
         let signed_txn: SignedTransaction = lcs::from_bytes(&transaction.txn_bytes)
             .expect("Unable to deserialize SignedTransaction");
-        signatures.extend_from_slice(&signed_txn.signature().to_bytes());
+        signatures.extend_from_slice(&signed_txn.authenticator().signature_bytes());
     }
     signatures.test_only_hash()
 }
