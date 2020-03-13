@@ -9,6 +9,7 @@ use anyhow::{bail, format_err, Result};
 use async_trait::async_trait;
 
 use futures::{future::try_join_all, lock::Mutex};
+use k8s_openapi::api::core::v1::{ConfigMap, Pod};
 use kube::{
     api::{Api, PostParams},
     client::APIClient,
@@ -18,6 +19,7 @@ use libra_logger::*;
 use util::retry;
 
 use crate::{cluster_swarm::ClusterSwarm, instance::Instance};
+
 use kube::api::ListParams;
 use libra_config::config::DEFAULT_JSON_RPC_PORT;
 
@@ -59,7 +61,7 @@ impl ClusterSwarmKube {
         node_name: &str,
         image_tag: &str,
         delete_data: bool,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Pod> {
         let cfg_fullnode_seed = if num_fullnodes > 0 {
             CFG_FULLNODE_SEED
         } else {
@@ -80,7 +82,9 @@ impl ClusterSwarmKube {
             fluentbit_enabled = fluentbit_enabled,
         );
         let pod_spec: serde_yaml::Value = serde_yaml::from_str(&pod_yaml)?;
-        serde_json::to_vec(&pod_spec).map_err(|e| format_err!("serde_json::to_vec failed: {}", e))
+        let pod_spec = serde_json::value::to_value(pod_spec)?;
+        serde_json::from_value(pod_spec)
+            .map_err(|e| format_err!("serde_json::from_value failed: {}", e))
     }
 
     fn fullnode_spec(
@@ -92,7 +96,7 @@ impl ClusterSwarmKube {
         node_name: &str,
         image_tag: &str,
         delete_data: bool,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Pod> {
         let fluentbit_enabled = if validator_index % 10 == 0 {
             "true"
         } else {
@@ -113,19 +117,25 @@ impl ClusterSwarmKube {
             fluentbit_enabled = fluentbit_enabled,
         );
         let pod_spec: serde_yaml::Value = serde_yaml::from_str(&pod_yaml)?;
-        serde_json::to_vec(&pod_spec).map_err(|e| format_err!("serde_json::to_vec failed: {}", e))
+        let pod_spec = serde_json::value::to_value(pod_spec)?;
+        serde_json::from_value(pod_spec)
+            .map_err(|e| format_err!("serde_json::from_value failed: {}", e))
     }
 
     async fn get_pod_node_and_ip(&self, pod_name: &str) -> Result<(String, String)> {
         retry::retry_async(retry::fixed_retry_strategy(10000, 60), || {
-            let pod_api = Api::v1Pod(self.client.clone()).within(DEFAULT_NAMESPACE);
+            let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
             let pod_name = pod_name.to_string();
             Box::pin(async move {
                 match pod_api.get(&pod_name).await {
                     Ok(o) => {
-                        let node_name = o.spec.node_name.ok_or_else(|| {
-                            format_err!("node_name not found for pod {}", pod_name)
-                        })?;
+                        let node_name = o
+                            .spec
+                            .ok_or_else(|| format_err!("spec not found for pod {}", pod_name))?
+                            .node_name
+                            .ok_or_else(|| {
+                                format_err!("node_name not found for pod {}", pod_name)
+                            })?;
                         let pod_ip = o
                             .status
                             .ok_or_else(|| format_err!("status not found for pod {}", pod_name))?
@@ -149,7 +159,7 @@ impl ClusterSwarmKube {
 
     async fn delete_pod(&self, name: &str) -> Result<()> {
         debug!("Deleting Pod {}", name);
-        let pod_api = Api::v1Pod(self.client.clone()).within(DEFAULT_NAMESPACE);
+        let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         pod_api.delete(name, &Default::default()).await?;
         retry::retry_async(retry::fixed_retry_strategy(5000, 30), || {
             let pod_api = pod_api.clone();
@@ -205,7 +215,7 @@ impl ClusterSwarm for ClusterSwarmKube {
         delete_data: bool,
     ) -> Result<()> {
         let pod_name = format!("val-{}", index);
-        let pod_api = Api::v1Pod(self.client.clone()).within(DEFAULT_NAMESPACE);
+        let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         if pod_api.get(&pod_name).await.is_ok() {
             self.delete_pod(&pod_name).await?;
         }
@@ -219,22 +229,23 @@ impl ClusterSwarm for ClusterSwarmKube {
             "".to_string()
         };
         debug!("Creating pod {} on node {:?}", pod_name, node_name);
-        match pod_api
-            .create(
-                &PostParams::default(),
-                self.validator_spec(
-                    index,
-                    num_validators,
-                    num_fullnodes,
-                    &node_name,
-                    image_tag,
-                    delete_data,
-                )?,
-            )
-            .await
-        {
+        let p: Pod = self.validator_spec(
+            index,
+            num_validators,
+            num_fullnodes,
+            &node_name,
+            image_tag,
+            delete_data,
+        )?;
+        match pod_api.create(&PostParams::default(), &p).await {
             Ok(o) => {
-                debug!("Created {}", o.metadata.name);
+                debug!(
+                    "Created {}",
+                    o.metadata
+                        .ok_or_else(|| { format_err!("metadata not found for pod {}", pod_name) })?
+                        .name
+                        .ok_or_else(|| { format_err!("name not found for pod {}", pod_name) })?
+                );
             }
             Err(e) => bail!("Failed to create pod {} : {}", pod_name, e),
         }
@@ -262,7 +273,7 @@ impl ClusterSwarm for ClusterSwarmKube {
         delete_data: bool,
     ) -> Result<()> {
         let pod_name = format!("fn-{}-{}", validator_index, fullnode_index);
-        let pod_api = Api::v1Pod(self.client.clone()).within(DEFAULT_NAMESPACE);
+        let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         if pod_api.get(&pod_name).await.is_ok() {
             self.delete_pod(&pod_name).await?;
         }
@@ -281,23 +292,24 @@ impl ClusterSwarm for ClusterSwarmKube {
             "".to_string()
         };
         debug!("Creating pod {} on node {:?}", pod_name, node_name);
-        match pod_api
-            .create(
-                &PostParams::default(),
-                self.fullnode_spec(
-                    fullnode_index,
-                    num_fullnodes_per_validator,
-                    validator_index,
-                    num_validators,
-                    &node_name,
-                    image_tag,
-                    delete_data,
-                )?,
-            )
-            .await
-        {
+        let p: Pod = self.fullnode_spec(
+            fullnode_index,
+            num_fullnodes_per_validator,
+            validator_index,
+            num_validators,
+            &node_name,
+            image_tag,
+            delete_data,
+        )?;
+        match pod_api.create(&PostParams::default(), &p).await {
             Ok(o) => {
-                debug!("Created {}", o.metadata.name);
+                debug!(
+                    "Created {}",
+                    o.metadata
+                        .ok_or_else(|| { format_err!("metadata not found for pod {}", pod_name) })?
+                        .name
+                        .ok_or_else(|| { format_err!("name not found for pod {}", pod_name) })?
+                );
             }
             Err(e) => bail!("Failed to create pod {} : {}", pod_name, e),
         }
@@ -319,27 +331,37 @@ impl ClusterSwarm for ClusterSwarmKube {
     }
 
     async fn delete_all(&self) -> Result<()> {
-        let pod_api = Api::v1Pod(self.client.clone()).within(DEFAULT_NAMESPACE);
-        let pod_names: Vec<_> = pod_api
+        let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
+        let pod_names: Vec<String> = pod_api
             .list(&ListParams {
                 label_selector: Some("libra-node=true".to_string()),
                 ..Default::default()
             })
             .await?
             .iter()
-            .map(|pod| pod.metadata.name.clone())
-            .collect();
+            .map(|pod| -> Result<String, anyhow::Error> {
+                Ok(pod
+                    .metadata
+                    .as_ref()
+                    .ok_or_else(|| format_err!("metadata not found for pod"))?
+                    .name
+                    .as_ref()
+                    .ok_or_else(|| format_err!("name not found for pod"))?
+                    .clone())
+            })
+            .collect::<Result<_, _>>()?;
         let delete_futures = pod_names.iter().map(|pod_name| self.delete_pod(pod_name));
         try_join_all(delete_futures).await?;
         Ok(())
     }
 
     async fn get_grafana_baseurl(&self) -> Result<String> {
-        let data = Api::v1ConfigMap(self.client.clone())
-            .within(DEFAULT_NAMESPACE)
+        let cm_api: Api<ConfigMap> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
+        let data = cm_api
             .get("workspace")
             .await?
-            .data;
+            .data
+            .ok_or_else(|| format_err!("data not found for ConfigMap"))?;
         let workspace = data
             .get("workspace")
             .ok_or_else(|| format_err!("Failed to find workspace"))?;
