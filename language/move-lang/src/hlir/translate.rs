@@ -334,7 +334,7 @@ fn base_type(context: &Context, sp!(loc, nb_): N::Type) -> H::BaseType {
         NT::Apply(Some(k), n, nbs) => HB::Apply(k, type_name(context, n), base_types(context, nbs)),
         NT::Param(tp) => HB::Param(tp),
         NT::UnresolvedError => HB::UnresolvedError,
-        NT::Anything => HB::UnresolvedError,
+        NT::Anything => HB::Unreachable,
         NT::Ref(_, _) | NT::Unit => {
             panic!("ICE type constraints failed {}:{}", loc.file(), loc.span())
         }
@@ -1388,7 +1388,7 @@ fn check_unused_locals(
     unused
 }
 
-fn remove_unused_bindings(unused: &BTreeSet<Var>, block: &mut H::Block) {
+fn remove_unused_bindings(unused: &BTreeSet<Var>, block: &mut Block) {
     block
         .iter_mut()
         .for_each(|s| remove_unused_bindings_statement(unused, s))

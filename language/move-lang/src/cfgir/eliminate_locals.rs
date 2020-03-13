@@ -36,7 +36,7 @@ fn count(cfg: &BlockCFG) -> BTreeSet<Var> {
 
 mod count {
     use crate::{
-        cfgir::ast::*,
+        hlir::ast::*,
         parser::ast::{BinOp, UnaryOp, Var},
         shared::*,
     };
@@ -111,6 +111,7 @@ mod count {
             | C::JumpIf { cond: e, .. } => exp(context, e),
 
             C::Jump(_) => (),
+            C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
         }
     }
 
@@ -277,7 +278,7 @@ fn eliminate(cfg: &mut BlockCFG, ssa_temps: BTreeSet<Var>) {
 
 mod eliminate {
     use crate::{
-        cfgir::{ast, ast::*},
+        hlir::ast::{self as H, *},
         parser::ast::Var,
     };
     use move_ir_types::location::*;
@@ -319,6 +320,7 @@ mod eliminate {
             | C::JumpIf { cond: e, .. } => exp(context, e),
 
             C::Jump(_) => (),
+            C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
         }
     }
 
@@ -453,6 +455,6 @@ mod eliminate {
     }
 
     fn unit(loc: Loc) -> Exp {
-        ast::exp(sp(loc, Type_::Unit), sp(loc, UnannotatedExp_::Unit))
+        H::exp(sp(loc, Type_::Unit), sp(loc, UnannotatedExp_::Unit))
     }
 }

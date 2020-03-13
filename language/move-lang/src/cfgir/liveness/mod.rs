@@ -5,12 +5,15 @@ mod state;
 
 use super::{
     absint::*,
-    ast,
-    ast::*,
     cfg::{BlockCFG, ReverseBlockCFG, CFG},
     locals,
 };
-use crate::{errors::*, parser::ast::Var, shared::unique_map::UniqueMap};
+use crate::{
+    errors::*,
+    hlir::ast::{self as H, *},
+    parser::ast::Var,
+    shared::unique_map::UniqueMap,
+};
 use move_ir_types::location::*;
 use state::*;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -93,6 +96,7 @@ fn command(state: &mut LivenessState, sp!(_, cmd_): &Command) {
         }
 
         C::Jump(_) => (),
+        C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
     }
 }
 
@@ -173,9 +177,12 @@ pub fn last_usage(
 
 mod last_usage {
     use crate::{
-        cfgir::{ast::*, liveness::state::LivenessState},
+        cfgir::liveness::state::LivenessState,
         errors::*,
-        hlir::translate::{display_var, DisplayVar},
+        hlir::{
+            ast::*,
+            translate::{display_var, DisplayVar},
+        },
         parser::ast::Var,
         shared::{unique_map::*, *},
     };
@@ -265,6 +272,7 @@ mod last_usage {
             | C::JumpIf { cond: e, .. } => exp(context, e),
 
             C::Jump(_) => (),
+            C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
         }
     }
 
@@ -471,7 +479,7 @@ fn pop_ref(loc: Loc, var: Var, ty: SingleType) -> Command {
         from_user: false,
         var,
     };
-    let move_e = ast::exp(Type_::single(ty), sp(loc, move_e_));
+    let move_e = H::exp(Type_::single(ty), sp(loc, move_e_));
     let pop_ = C::IgnoreAndPop {
         pop_num: 1,
         exp: move_e,
