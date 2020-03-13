@@ -4,6 +4,10 @@
 //! proposer: vivian
 //! block-time: 1000000
 
+// check: EventKey([2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24])
+// check: NewBlockEvent
+// check: 1000000
+
 //! new-transaction
 import 0x0.LibraTimestamp;
 import 0x0.LibraBlock;
