@@ -22,7 +22,8 @@ use libra_crypto::{
     HashValue,
 };
 use libra_types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet},
+    crypto_proxies::ValidatorSet,
+    ledger_info::LedgerInfoWithSignatures,
     proof::{
         position::Position, AccumulatorConsistencyProof, TransactionAccumulatorProof,
         TransactionAccumulatorRangeProof,

@@ -19,10 +19,11 @@ use libra_crypto::{
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
     crypto_proxies::{
-        random_validator_verifier, LedgerInfoWithSignatures, ValidatorChangeProof,
-        ValidatorPublicKeys, ValidatorSet, ValidatorSigner,
+        random_validator_verifier, ValidatorChangeProof, ValidatorPublicKeys, ValidatorSet,
+        ValidatorSigner,
     },
     event_subscription::EventSubscription,
+    ledger_info::LedgerInfoWithSignatures,
     proof::TransactionListProof,
     transaction::TransactionListWithProof,
     waypoint::Waypoint,

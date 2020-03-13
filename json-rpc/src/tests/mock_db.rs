@@ -8,9 +8,9 @@ use libra_types::{
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     block_info::BlockInfo,
     contract_event::ContractEvent,
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
+    crypto_proxies::ValidatorChangeProof,
     event::EventKey,
-    ledger_info::LedgerInfo,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::{
         AccumulatorConsistencyProof, TransactionAccumulatorProof, TransactionListProof,
         TransactionProof,

@@ -8,8 +8,7 @@ use libra_crypto::hash::CryptoHash;
 use libra_temppath::TempPath;
 use libra_types::{
     block_info::BlockInfo,
-    crypto_proxies::LedgerInfoWithSignatures,
-    ledger_info::LedgerInfo,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proptest_types::{AccountInfoUniverse, LedgerInfoWithSignaturesGen, TransactionToCommitGen},
 };
 use proptest::{collection::vec, prelude::*};

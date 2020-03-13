@@ -13,8 +13,8 @@ use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     block_info::BlockInfo,
     block_metadata::BlockMetadata,
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet, ValidatorSigner, ValidatorVerifier},
-    ledger_info::LedgerInfo,
+    crypto_proxies::{ValidatorSet, ValidatorSigner, ValidatorVerifier},
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::Version,
 };
 use mirai_annotations::debug_checked_verify_eq;

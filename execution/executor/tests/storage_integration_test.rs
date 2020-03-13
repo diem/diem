@@ -37,7 +37,7 @@ fn gen_ledger_info_with_sigs(
     version: u64,
     root_hash: HashValue,
     commit_block_id: HashValue,
-) -> LedgerInfoWithSignatures<Ed25519Signature> {
+) -> LedgerInfoWithSignatures {
     let ledger_info = LedgerInfo::new(
         BlockInfo::new(0, 0, commit_block_id, root_hash, version, 0, None),
         HashValue::zero(),

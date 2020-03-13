@@ -15,7 +15,7 @@
 use crate::schema::ensure_slice_len_eq;
 use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt};
-use libra_types::crypto_proxies::LedgerInfoWithSignatures;
+use libra_types::ledger_info::LedgerInfoWithSignatures;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},

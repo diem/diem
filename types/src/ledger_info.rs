@@ -10,8 +10,8 @@ use crate::{
 };
 use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::{
-    hash::{CryptoHash, CryptoHasher},
-    HashValue, *,
+    ed25519::{Ed25519PublicKey, Ed25519Signature},
+    hash::{CryptoHash, CryptoHasher, HashValue},
 };
 use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -187,21 +187,24 @@ impl CryptoHash for LedgerInfo {
 /// again when the client performs a query, those are only there for the client
 /// to be able to verify the state
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct LedgerInfoWithSignatures<Sig> {
+pub struct LedgerInfoWithSignatures {
     ledger_info: LedgerInfo,
     /// The validator is identified by its account address: in order to verify a signature
     /// one needs to retrieve the public key of the validator for the given epoch.
-    signatures: BTreeMap<AccountAddress, Sig>,
+    signatures: BTreeMap<AccountAddress, Ed25519Signature>,
 }
 
-impl<Sig> Display for LedgerInfoWithSignatures<Sig> {
+impl Display for LedgerInfoWithSignatures {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{}", self.ledger_info)
     }
 }
 
-impl<Sig: Signature> LedgerInfoWithSignatures<Sig> {
-    pub fn new(ledger_info: LedgerInfo, signatures: BTreeMap<AccountAddress, Sig>) -> Self {
+impl LedgerInfoWithSignatures {
+    pub fn new(
+        ledger_info: LedgerInfo,
+        signatures: BTreeMap<AccountAddress, Ed25519Signature>,
+    ) -> Self {
         LedgerInfoWithSignatures {
             ledger_info,
             signatures,
@@ -226,7 +229,7 @@ impl<Sig: Signature> LedgerInfoWithSignatures<Sig> {
         &self.ledger_info
     }
 
-    pub fn add_signature(&mut self, validator: AccountAddress, signature: Sig) {
+    pub fn add_signature(&mut self, validator: AccountAddress, signature: Ed25519Signature) {
         self.signatures.entry(validator).or_insert(signature);
     }
 
@@ -234,22 +237,20 @@ impl<Sig: Signature> LedgerInfoWithSignatures<Sig> {
         self.signatures.remove(&validator);
     }
 
-    pub fn signatures(&self) -> &BTreeMap<AccountAddress, Sig> {
+    pub fn signatures(&self) -> &BTreeMap<AccountAddress, Ed25519Signature> {
         &self.signatures
     }
 
     pub fn verify_signatures(
         &self,
-        validator: &ValidatorVerifier<Sig::VerifyingKeyMaterial>,
+        validator: &ValidatorVerifier<Ed25519PublicKey>,
     ) -> ::std::result::Result<(), VerifyError> {
         let ledger_hash = self.ledger_info().hash();
         validator.batch_verify_aggregated_signature(ledger_hash, self.signatures())
     }
 }
 
-impl<Sig: Signature> TryFrom<crate::proto::types::LedgerInfoWithSignatures>
-    for LedgerInfoWithSignatures<Sig>
-{
+impl TryFrom<crate::proto::types::LedgerInfoWithSignatures> for LedgerInfoWithSignatures {
     type Error = Error;
 
     fn try_from(proto: crate::proto::types::LedgerInfoWithSignatures) -> Result<Self> {
@@ -265,7 +266,7 @@ impl<Sig: Signature> TryFrom<crate::proto::types::LedgerInfoWithSignatures>
             .map(|proto| {
                 let validator_id = AccountAddress::try_from(proto.validator_id)?;
                 let signature_bytes: &[u8] = proto.signature.as_ref();
-                let signature = Sig::try_from(signature_bytes)?;
+                let signature = Ed25519Signature::try_from(signature_bytes)?;
                 Ok((validator_id, signature))
             })
             .collect::<Result<BTreeMap<_, _>>>()?;
@@ -281,10 +282,8 @@ impl<Sig: Signature> TryFrom<crate::proto::types::LedgerInfoWithSignatures>
     }
 }
 
-impl<Sig: Signature> From<LedgerInfoWithSignatures<Sig>>
-    for crate::proto::types::LedgerInfoWithSignatures
-{
-    fn from(ledger_info_with_sigs: LedgerInfoWithSignatures<Sig>) -> Self {
+impl From<LedgerInfoWithSignatures> for crate::proto::types::LedgerInfoWithSignatures {
+    fn from(ledger_info_with_sigs: LedgerInfoWithSignatures) -> Self {
         let ledger_info = Some(ledger_info_with_sigs.ledger_info.into());
         let signatures = ledger_info_with_sigs
             .signatures

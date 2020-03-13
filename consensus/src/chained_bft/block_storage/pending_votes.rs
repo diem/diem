@@ -11,7 +11,7 @@ use consensus_types::{
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_logger::prelude::*;
 use libra_types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
+    crypto_proxies::ValidatorVerifier, ledger_info::LedgerInfoWithSignatures,
     validator_verifier::VerifyError,
 };
 use std::{

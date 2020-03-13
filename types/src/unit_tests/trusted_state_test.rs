@@ -5,10 +5,9 @@ use crate::{
     account_address::AccountAddress,
     block_info::BlockInfo,
     crypto_proxies::{
-        random_validator_verifier, LedgerInfoWithSignatures, ValidatorPublicKeys, ValidatorSet,
-        ValidatorSigner,
+        random_validator_verifier, ValidatorPublicKeys, ValidatorSet, ValidatorSigner,
     },
-    ledger_info::LedgerInfo,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::Version,
     trusted_state::{TrustedState, TrustedStateChange},
     validator_change::ValidatorChangeProof,

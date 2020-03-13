@@ -24,7 +24,8 @@ use libra_types::{
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet},
+    crypto_proxies::ValidatorSet,
+    ledger_info::LedgerInfoWithSignatures,
     proof::{accumulator::InMemoryAccumulator, definition::LeafCount, SparseMerkleProof},
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionOutput,
