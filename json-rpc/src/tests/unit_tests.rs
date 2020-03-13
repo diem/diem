@@ -21,6 +21,7 @@ use libra_types::{
     account_config::AccountResource,
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
+    contract_event::ContractEvent,
     crypto_proxies::LedgerInfoWithSignatures,
     mempool_status::{MempoolStatus, MempoolStatusCode},
     proof::{SparseMerkleProof, TransactionAccumulatorProof},
@@ -291,9 +292,10 @@ proptest! {
 
 
     #[test]
-    fn test_get_events(blocks in arb_blocks_to_commit()) {
+    fn test_get_events(blocks in arb_blocks_to_commit(), event in any::<ContractEvent>(),) {
         // set up MockLibraDB
-        let mock_db = mock_db(blocks, None);
+        let mut mock_db = mock_db(blocks, None);
+        mock_db.add_event(event);
 
         // set up JSON RPC
         let address = format!("0.0.0.0:{}", utils::get_available_port());
