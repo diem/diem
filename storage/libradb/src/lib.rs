@@ -55,9 +55,10 @@ use libra_types::{
     account_address::AccountAddress,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
+    crypto_proxies::ValidatorChangeProof,
     event::EventKey,
     get_with_proof::{RequestItem, ResponseItem},
+    ledger_info::LedgerInfoWithSignatures,
     proof::{
         AccountStateProof, AccumulatorConsistencyProof, EventProof, SparseMerkleProof,
         SparseMerkleRangeProof, TransactionListProof, TransactionProof,

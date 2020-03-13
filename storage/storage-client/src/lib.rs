@@ -18,10 +18,11 @@ use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
+    crypto_proxies::ValidatorChangeProof,
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
+    ledger_info::LedgerInfoWithSignatures,
     proof::{AccumulatorConsistencyProof, SparseMerkleProof, SparseMerkleRangeProof},
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
 };

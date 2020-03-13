@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_types::{
-    crypto_proxies::LedgerInfoWithSignatures,
+    ledger_info::LedgerInfoWithSignatures,
     transaction::{TransactionListWithProof, Version},
 };
 use serde::{Deserialize, Serialize};

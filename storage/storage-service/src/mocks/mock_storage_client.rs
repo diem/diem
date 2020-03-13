@@ -10,9 +10,10 @@ use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
+    crypto_proxies::ValidatorChangeProof,
     event::EventHandle,
     get_with_proof::{RequestItem, ResponseItem},
+    ledger_info::LedgerInfoWithSignatures,
     proof::{AccumulatorConsistencyProof, SparseMerkleProof, SparseMerkleRangeProof},
     proto::types::{
         request_item::RequestedItems, response_item::ResponseItems, AccountStateWithProof,

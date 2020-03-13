@@ -20,7 +20,6 @@
 //!   as generic types are seen as hindering readability.
 
 use crate::{
-    ledger_info::LedgerInfoWithSignatures as RawLedgerInfoWithSignatures,
     validator_public_keys::ValidatorPublicKeys as RawValidatorPublicKeys,
     validator_set::ValidatorSet as RawValidatorSet,
     validator_signer::ValidatorSigner as RawValidatorSigner,
@@ -40,14 +39,13 @@ use crate::{
 // types that do not go through the instantiated polymorphic structures
 // below is banned.
 
-use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature};
+use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use std::{collections::BTreeMap, fmt};
 
 // used in chained_bft::consensus_types::block_test
 #[cfg(any(test, feature = "fuzzing"))]
 pub type SecretKey = Ed25519PrivateKey;
 
-pub type LedgerInfoWithSignatures = RawLedgerInfoWithSignatures<Ed25519Signature>;
 pub type ValidatorInfo = RawValidatorInfo<Ed25519PublicKey>;
 pub type ValidatorVerifier = RawValidatorVerifier<Ed25519PublicKey>;
 pub type ValidatorSigner = RawValidatorSigner<Ed25519PrivateKey>;

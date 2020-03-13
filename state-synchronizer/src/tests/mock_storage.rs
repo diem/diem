@@ -8,11 +8,8 @@ use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
     account_address::{AccountAddress, AuthenticationKey},
     block_info::BlockInfo,
-    crypto_proxies::{
-        LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorSet, ValidatorSigner,
-        ValidatorVerifier,
-    },
-    ledger_info::LedgerInfo,
+    crypto_proxies::{ValidatorChangeProof, ValidatorSet, ValidatorSigner, ValidatorVerifier},
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{SignedTransaction, Transaction},
 };

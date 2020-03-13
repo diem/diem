@@ -12,7 +12,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_config::{ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH},
     account_state_blob::AccountStateBlob,
-    crypto_proxies::LedgerInfoWithSignatures,
+    ledger_info::LedgerInfoWithSignatures,
     transaction::{SignedTransaction, Version},
     trusted_state::{TrustedState, TrustedStateChange},
     validator_change::ValidatorChangeProof,

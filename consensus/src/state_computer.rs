@@ -8,7 +8,8 @@ use executor::Executor;
 use executor_types::{ExecutedTrees, ProcessedVMOutput};
 use libra_logger::prelude::*;
 use libra_types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
+    crypto_proxies::ValidatorChangeProof,
+    ledger_info::LedgerInfoWithSignatures,
     transaction::{SignedTransaction, Transaction},
 };
 use libra_vm::LibraVM;

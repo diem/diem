@@ -9,8 +9,8 @@ use crate::{
     account_config::AccountResource,
     account_state_blob::AccountStateWithProof,
     contract_event::EventWithProof,
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
-    ledger_info::LedgerInfo,
+    crypto_proxies::ValidatorChangeProof,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::AccumulatorConsistencyProof,
     proto::types::{
         GetAccountStateRequest, GetAccountStateResponse,

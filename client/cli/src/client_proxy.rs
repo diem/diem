@@ -26,7 +26,7 @@ use libra_types::{
         CORE_CODE_ADDRESS,
     },
     account_state::AccountState,
-    crypto_proxies::LedgerInfoWithSignatures,
+    ledger_info::LedgerInfoWithSignatures,
     transaction::{
         helpers::{create_unsigned_txn, create_user_txn, TransactionSigner},
         parse_as_transaction_argument, RawTransaction, Script, SignedTransaction,

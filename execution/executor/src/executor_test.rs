@@ -14,8 +14,7 @@ use libra_crypto::{ed25519::Ed25519PrivateKey, hash::PRE_GENESIS_BLOCK_ID, HashV
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     block_info::BlockInfo,
-    crypto_proxies::LedgerInfoWithSignatures,
-    ledger_info::LedgerInfo,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::{Transaction, TransactionListWithProof, Version},
 };
 use proptest::prelude::*;

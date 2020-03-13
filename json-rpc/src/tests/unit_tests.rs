@@ -22,7 +22,7 @@ use libra_types::{
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::ContractEvent,
-    crypto_proxies::LedgerInfoWithSignatures,
+    ledger_info::LedgerInfoWithSignatures,
     mempool_status::{MempoolStatus, MempoolStatusCode},
     proof::{SparseMerkleProof, TransactionAccumulatorProof},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
