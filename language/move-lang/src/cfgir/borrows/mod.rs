@@ -3,9 +3,10 @@
 
 mod state;
 
-use super::{absint::*, ast::*};
+use super::absint::*;
 use crate::{
     errors::*,
+    hlir::ast::*,
     parser::ast::{BinOp_, StructName, Var},
     shared::unique_map::UniqueMap,
 };
@@ -130,6 +131,7 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
             context.borrow_state.abort()
         }
         C::Jump(_) => (),
+        C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
     }
 }
 

@@ -1,8 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::ast::*;
-use crate::{errors::*, shared::ast_debug::*};
+use crate::{
+    cfgir::ast::{BasicBlock, BasicBlocks},
+    errors::*,
+    hlir::ast::{Command, Command_, Exp, ExpListItem, Label, UnannotatedExp_},
+    shared::ast_debug::*,
+};
 use move_ir_types::location::*;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
@@ -26,13 +30,13 @@ pub trait CFG {
 #[derive(Debug)]
 pub struct BlockCFG<'a> {
     start: Label,
-    blocks: &'a mut Blocks,
+    blocks: &'a mut BasicBlocks,
     successor_map: BTreeMap<Label, BTreeSet<Label>>,
     predecessor_map: BTreeMap<Label, BTreeSet<Label>>,
 }
 
 impl<'a> BlockCFG<'a> {
-    pub fn new(start: Label, blocks: &'a mut Blocks) -> (BlockCFG, Errors) {
+    pub fn new(start: Label, blocks: &'a mut BasicBlocks) -> (BlockCFG, Errors) {
         let mut seen = BTreeSet::new();
         let mut work_list = VecDeque::new();
         seen.insert(start);
@@ -89,11 +93,11 @@ impl<'a> BlockCFG<'a> {
         (cfg, errors)
     }
 
-    pub fn blocks(&self) -> &Blocks {
+    pub fn blocks(&self) -> &BasicBlocks {
         &self.blocks
     }
 
-    pub fn blocks_mut(&mut self) -> &mut Blocks {
+    pub fn blocks_mut(&mut self) -> &mut BasicBlocks {
         &mut self.blocks
     }
 
@@ -163,6 +167,7 @@ fn unreachable_loc(sp!(_, cmd_): &Command) -> Option<Loc> {
             unreachable_loc_exp(e)
         }
         C::Jump(_) => None,
+        C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
     }
 }
 
@@ -204,14 +209,14 @@ fn unreachable_loc_item(item: &ExpListItem) -> Option<Loc> {
 #[derive(Debug)]
 pub struct ReverseBlockCFG<'a> {
     start: Label,
-    blocks: &'a mut Blocks,
+    blocks: &'a mut BasicBlocks,
     successor_map: &'a mut BTreeMap<Label, BTreeSet<Label>>,
     predecessor_map: &'a mut BTreeMap<Label, BTreeSet<Label>>,
 }
 
 impl<'a> ReverseBlockCFG<'a> {
     pub fn new(forward_cfg: &'a mut BlockCFG, infinite_loop_starts: &BTreeSet<Label>) -> Self {
-        let blocks: &'a mut Blocks = &mut forward_cfg.blocks;
+        let blocks: &'a mut BasicBlocks = &mut forward_cfg.blocks;
         let forward_successors = &mut forward_cfg.successor_map;
         let forward_predecessor = &mut forward_cfg.predecessor_map;
         let end_blocks = {
@@ -257,7 +262,7 @@ impl<'a> ReverseBlockCFG<'a> {
         }
     }
 
-    pub fn blocks(&self) -> &Blocks {
+    pub fn blocks(&self) -> &BasicBlocks {
         &self.blocks
     }
 
@@ -352,7 +357,7 @@ impl AstDebug for ReverseBlockCFG<'_> {
 fn ast_debug_cfg<'a>(
     w: &mut AstWriter,
     start: Label,
-    blocks: &Blocks,
+    blocks: &BasicBlocks,
     successor_map: impl Iterator<Item = (&'a Label, &'a BTreeSet<Label>)>,
     predecessor_map: impl Iterator<Item = (&'a Label, &'a BTreeSet<Label>)>,
 ) {

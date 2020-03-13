@@ -5,7 +5,7 @@ use super::{context::*, remove_fallthrough_jumps};
 use crate::{
     cfgir::ast as G,
     errors::*,
-    hlir::ast::TypeName_,
+    hlir::ast::{self as H},
     naming::ast::{BuiltinTypeName_, TParam},
     parser::ast::{
         BinOp, BinOp_, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent,
@@ -248,9 +248,9 @@ fn struct_def(
     context: &mut Context,
     m: &ModuleIdent,
     s: StructName,
-    sdef: G::StructDefinition,
+    sdef: H::StructDefinition,
 ) -> IR::StructDefinition {
-    let G::StructDefinition {
+    let H::StructDefinition {
         resource_opt,
         type_parameters: tys,
         fields,
@@ -275,21 +275,21 @@ fn struct_def(
 fn struct_fields(
     context: &mut Context,
     loc: Loc,
-    gfields: G::StructFields,
+    gfields: H::StructFields,
 ) -> IR::StructDefinitionFields {
-    use G::StructFields as GF;
+    use H::StructFields as HF;
     use IR::StructDefinitionFields as IRF;
     match gfields {
-        GF::Native(_) => IRF::Native,
-        GF::Defined(field_vec) if field_vec.is_empty() => {
+        HF::Native(_) => IRF::Native,
+        HF::Defined(field_vec) if field_vec.is_empty() => {
             // empty fields are not allowed in the bytecode, add a dummy field
             let fake_field = vec![(
                 Field(sp(loc, "dummy_field".to_string())),
-                G::BaseType_::bool(loc),
+                H::BaseType_::bool(loc),
             )];
-            struct_fields(context, loc, GF::Defined(fake_field))
+            struct_fields(context, loc, HF::Defined(fake_field))
         }
-        GF::Defined(field_vec) => {
+        HF::Defined(field_vec) => {
             let fields = field_vec
                 .into_iter()
                 .map(|(f, ty)| (field(f), base_type(context, ty)))
@@ -352,7 +352,7 @@ fn visibility(v: FunctionVisibility) -> IR::FunctionVisibility {
     }
 }
 
-fn function_signature(context: &mut Context, sig: G::FunctionSignature) -> IR::FunctionSignature {
+fn function_signature(context: &mut Context, sig: H::FunctionSignature) -> IR::FunctionSignature {
     let return_type = types(context, sig.return_type);
     let formals = sig
         .parameters
@@ -369,10 +369,10 @@ fn function_signature(context: &mut Context, sig: G::FunctionSignature) -> IR::F
 
 fn function_body(
     context: &mut Context,
-    parameters: Vec<(Var, G::SingleType)>,
-    mut locals_map: UniqueMap<Var, G::SingleType>,
-    start: G::Label,
-    blocks: G::Blocks,
+    parameters: Vec<(Var, H::SingleType)>,
+    mut locals_map: UniqueMap<Var, H::SingleType>,
+    start: H::Label,
+    blocks: H::BasicBlocks,
 ) -> (Vec<(IR::Var, IR::Type)>, IR::BytecodeBlocks) {
     parameters
         .iter()
@@ -418,20 +418,20 @@ fn field(f: Field) -> IR::Field {
 
 fn struct_definition_name(
     context: &mut Context,
-    sp!(_, t_): G::Type,
+    sp!(_, t_): H::Type,
 ) -> (IR::StructName, Vec<IR::Type>) {
     match t_ {
-        G::Type_::Single(st) => struct_definition_name_single(context, st),
+        H::Type_::Single(st) => struct_definition_name_single(context, st),
         _ => panic!("ICE expected single type"),
     }
 }
 
 fn struct_definition_name_single(
     context: &mut Context,
-    sp!(_, st_): G::SingleType,
+    sp!(_, st_): H::SingleType,
 ) -> (IR::StructName, Vec<IR::Type>) {
     match st_ {
-        G::SingleType_::Ref(_, bt) | G::SingleType_::Base(bt) => {
+        H::SingleType_::Ref(_, bt) | H::SingleType_::Base(bt) => {
             struct_definition_name_base(context, bt)
         }
     }
@@ -439,10 +439,9 @@ fn struct_definition_name_single(
 
 fn struct_definition_name_base(
     context: &mut Context,
-    sp!(_, bt_): G::BaseType,
+    sp!(_, bt_): H::BaseType,
 ) -> (IR::StructName, Vec<IR::Type>) {
-    use TypeName_ as TN;
-    use G::BaseType_ as B;
+    use H::{BaseType_ as B, TypeName_ as TN};
     match bt_ {
         B::Apply(_, sp!(_, TN::ModuleType(m, s)), tys) => (
             context.struct_definition_name(&m, s),
@@ -472,17 +471,18 @@ fn type_parameters(tps: Vec<TParam>) -> Vec<(IR::TypeVar, IR::Kind)> {
         .collect()
 }
 
-fn base_types(context: &mut Context, bs: Vec<G::BaseType>) -> Vec<IR::Type> {
+fn base_types(context: &mut Context, bs: Vec<H::BaseType>) -> Vec<IR::Type> {
     bs.into_iter().map(|b| base_type(context, b)).collect()
 }
 
-fn base_type(context: &mut Context, sp!(_, bt_): G::BaseType) -> IR::Type {
+fn base_type(context: &mut Context, sp!(_, bt_): H::BaseType) -> IR::Type {
     use BuiltinTypeName_ as BT;
-    use TypeName_ as TN;
-    use G::BaseType_ as B;
+    use H::{BaseType_ as B, TypeName_ as TN};
     use IR::Type as IRT;
     match bt_ {
-        B::UnresolvedError => panic!("ICE should not have reached compilation if there are errors"),
+        B::Unreachable | B::UnresolvedError => {
+            panic!("ICE should not have reached compilation if there are errors")
+        }
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::Address))), _) => IRT::Address,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U8))), _) => IRT::U8,
         B::Apply(_, sp!(_, TN::Builtin(sp!(_, BT::U64))), _) => IRT::U64,
@@ -505,8 +505,8 @@ fn base_type(context: &mut Context, sp!(_, bt_): G::BaseType) -> IR::Type {
     }
 }
 
-fn single_type(context: &mut Context, sp!(_, st_): G::SingleType) -> IR::Type {
-    use G::SingleType_ as S;
+fn single_type(context: &mut Context, sp!(_, st_): H::SingleType) -> IR::Type {
+    use H::SingleType_ as S;
     use IR::Type as IRT;
     match st_ {
         S::Base(bt) => base_type(context, bt),
@@ -514,8 +514,8 @@ fn single_type(context: &mut Context, sp!(_, st_): G::SingleType) -> IR::Type {
     }
 }
 
-fn types(context: &mut Context, sp!(_, t_): G::Type) -> Vec<IR::Type> {
-    use G::Type_ as T;
+fn types(context: &mut Context, sp!(_, t_): H::Type) -> Vec<IR::Type> {
+    use H::Type_ as T;
     match t_ {
         T::Unit => vec![],
         T::Single(st) => vec![single_type(context, st)],
@@ -527,12 +527,12 @@ fn types(context: &mut Context, sp!(_, t_): G::Type) -> Vec<IR::Type> {
 // Commands
 //**************************************************************************************************
 
-fn label(lbl: G::Label) -> IR::Label {
+fn label(lbl: H::Label) -> IR::Label {
     IR::Label(format!("{}", lbl))
 }
 
-fn command(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, cmd_): G::Command) {
-    use G::Command_ as C;
+fn command(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, cmd_): H::Command) {
+    use H::Command_ as C;
     use IR::Bytecode_ as B;
     match cmd_ {
         C::Assign(ls, e) => {
@@ -568,25 +568,26 @@ fn command(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, cmd_): 
             code.push(sp(loc, B::BrTrue(label(if_true))));
             code.push(sp(loc, B::Branch(label(if_false))));
         }
+        C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
     }
 }
 
-fn lvalues(context: &mut Context, code: &mut IR::BytecodeBlock, ls: Vec<G::LValue>) {
+fn lvalues(context: &mut Context, code: &mut IR::BytecodeBlock, ls: Vec<H::LValue>) {
     lvalues_(context, code, ls.into_iter())
 }
 
 fn lvalues_(
     context: &mut Context,
     code: &mut IR::BytecodeBlock,
-    ls: impl std::iter::DoubleEndedIterator<Item = G::LValue>,
+    ls: impl std::iter::DoubleEndedIterator<Item = H::LValue>,
 ) {
     for l in ls.rev() {
         lvalue(context, code, l)
     }
 }
 
-fn lvalue(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, l_): G::LValue) {
-    use G::LValue_ as L;
+fn lvalue(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, l_): H::LValue) {
+    use H::LValue_ as L;
     use IR::Bytecode_ as B;
     match l_ {
         L::Ignore => {
@@ -615,13 +616,13 @@ fn lvalue(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, l_): G::
 // Expressions
 //**************************************************************************************************
 
-fn exp(context: &mut Context, code: &mut IR::BytecodeBlock, e: Box<G::Exp>) {
+fn exp(context: &mut Context, code: &mut IR::BytecodeBlock, e: Box<H::Exp>) {
     exp_(context, code, *e)
 }
 
-fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: G::Exp) {
+fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
     use Value_ as V;
-    use G::UnannotatedExp_ as E;
+    use H::UnannotatedExp_ as E;
     use IR::Bytecode_ as B;
     let sp!(loc, e_) = e.exp;
     match e_ {
@@ -711,7 +712,7 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: G::Exp) {
         E::ExpList(items) => {
             for item in items {
                 let ei = match item {
-                    G::ExpListItem::Single(ei, _) | G::ExpListItem::Splat(_, ei, _) => ei,
+                    H::ExpListItem::Single(ei, _) | H::ExpListItem::Splat(_, ei, _) => ei,
                 };
                 exp_(context, code, ei);
             }
@@ -756,7 +757,7 @@ fn call(
     code: &mut IR::BytecodeBlock,
     m: ModuleIdent,
     f: FunctionName,
-    tys: Vec<G::BaseType>,
+    tys: Vec<H::BaseType>,
 ) {
     use crate::shared::fake_natives::transaction as TXN;
     use Address as A;
@@ -775,7 +776,7 @@ fn module_call(
     code: &mut IR::BytecodeBlock,
     mident: ModuleIdent,
     fname: FunctionName,
-    tys: Vec<G::BaseType>,
+    tys: Vec<H::BaseType>,
 ) {
     use IR::Bytecode_ as B;
     let loc = fname.loc();
@@ -783,29 +784,29 @@ fn module_call(
     code.push(sp(loc, B::Call(m, n, base_types(context, tys))))
 }
 
-fn builtin(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, b_): G::BuiltinFunction) {
-    use G::BuiltinFunction_ as GB;
+fn builtin(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, b_): H::BuiltinFunction) {
+    use H::BuiltinFunction_ as HB;
     use IR::Bytecode_ as B;
     code.push(sp(
         loc,
         match b_ {
-            GB::MoveToSender(bt) => {
+            HB::MoveToSender(bt) => {
                 let (n, tys) = struct_definition_name_base(context, bt);
                 B::MoveToSender(n, tys)
             }
-            GB::MoveFrom(bt) => {
+            HB::MoveFrom(bt) => {
                 let (n, tys) = struct_definition_name_base(context, bt);
                 B::MoveFrom(n, tys)
             }
-            GB::BorrowGlobal(false, bt) => {
+            HB::BorrowGlobal(false, bt) => {
                 let (n, tys) = struct_definition_name_base(context, bt);
                 B::ImmBorrowGlobal(n, tys)
             }
-            GB::BorrowGlobal(true, bt) => {
+            HB::BorrowGlobal(true, bt) => {
                 let (n, tys) = struct_definition_name_base(context, bt);
                 B::MutBorrowGlobal(n, tys)
             }
-            GB::Exists(bt) => {
+            HB::Exists(bt) => {
                 let (n, tys) = struct_definition_name_base(context, bt);
                 B::Exists(n, tys)
             }
