@@ -38,10 +38,10 @@ impl Identity {
         self.peer_id
     }
 
-    pub fn is_protocol_supported(&self, protocol: &ProtocolId) -> bool {
+    pub fn is_protocol_supported(&self, protocol: ProtocolId) -> bool {
         self.supported_protocols
             .iter()
-            .any(|proto| proto == protocol)
+            .any(|proto| *proto == protocol)
     }
 
     pub fn supported_protocols(&self) -> &[ProtocolId] {

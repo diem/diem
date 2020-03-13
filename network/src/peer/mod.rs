@@ -174,7 +174,7 @@ where
     ) {
         match negotiated_subststream {
             Ok(negotiated_substream) => {
-                let protocol = negotiated_substream.protocol.clone();
+                let protocol = negotiated_substream.protocol;
                 let event =
                     PeerNotification::NewSubstream(self.identity.peer_id(), negotiated_substream);
                 if self.rpc_protocols.contains(&protocol) {
@@ -233,7 +233,7 @@ where
         control: TMuxer::Control,
         channel: oneshot::Sender<Result<TMuxer::Substream, PeerManagerError>>,
     ) -> BoxFuture<'static, ()> {
-        let optimistic_negotiation = self.identity.is_protocol_supported(&protocol);
+        let optimistic_negotiation = self.identity.is_protocol_supported(protocol);
         Self::negotiate_outbound_substream(
             self.identity.peer_id(),
             control,
