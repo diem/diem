@@ -8,14 +8,12 @@ use crate::{
     vote_data::VoteData,
 };
 use anyhow::{bail, ensure, format_err};
-use libra_crypto::hash::{CryptoHash, HashValue};
+use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash, HashValue};
 use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     block_info::BlockInfo,
     block_metadata::BlockMetadata,
-    crypto_proxies::{
-        LedgerInfoWithSignatures, Signature, ValidatorSet, ValidatorSigner, ValidatorVerifier,
-    },
+    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet, ValidatorSigner, ValidatorVerifier},
     ledger_info::LedgerInfo,
     transaction::Version,
 };
@@ -45,7 +43,7 @@ pub struct Block<T> {
     block_data: BlockData<T>,
     /// Signature that the hash of this block has been authored by the owner of the private key,
     /// this is only set within Proposal blocks
-    signature: Option<Signature>,
+    signature: Option<Ed25519Signature>,
 }
 
 impl<T: PartialEq> Display for Block<T> {
@@ -98,7 +96,7 @@ impl<T> Block<T> {
         self.block_data.round()
     }
 
-    pub fn signature(&self) -> Option<&Signature> {
+    pub fn signature(&self) -> Option<&Ed25519Signature> {
         self.signature.as_ref()
     }
 
@@ -221,7 +219,7 @@ where
         Block {
             id,
             block_data,
-            signature: Some(signature.into()),
+            signature: Some(signature),
         }
     }
 
@@ -236,7 +234,7 @@ where
                     .signature
                     .as_ref()
                     .ok_or_else(|| format_err!("Missing signature in Proposal"))?;
-                signature.verify(validator, *author, self.id())?;
+                validator.verify_signature(*author, self.id(), signature)?;
                 self.quorum_cert().verify(validator)
             }
         }
@@ -297,7 +295,7 @@ impl<'de, T: DeserializeOwned + Serialize> Deserialize<'de> for Block<T> {
         struct BlockWithoutId<T> {
             #[serde(bound(deserialize = "BlockData<T>: Deserialize<'de>"))]
             block_data: BlockData<T>,
-            signature: Option<Signature>,
+            signature: Option<Ed25519Signature>,
         };
 
         let BlockWithoutId {

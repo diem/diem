@@ -126,9 +126,7 @@ pub fn make_proposal_with_parent<P: Payload>(
     let mut ledger_info_with_signatures =
         LedgerInfoWithSignatures::new(vote.ledger_info().clone(), BTreeMap::new());
 
-    vote.signature()
-        .clone()
-        .add_to_li(vote.author(), &mut ledger_info_with_signatures);
+    ledger_info_with_signatures.add_signature(vote.author(), vote.signature().clone());
 
     let qc = QuorumCert::new(vote_data, ledger_info_with_signatures);
 
