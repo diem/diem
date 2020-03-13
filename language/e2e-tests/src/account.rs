@@ -3,6 +3,7 @@
 
 //! Test infrastructure for modeling Libra accounts.
 
+use crate::keygen::KeyGen;
 use libra_crypto::ed25519::*;
 use libra_types::{
     access_path::AccessPath,
@@ -19,7 +20,6 @@ use move_vm_types::{
     loaded_data::{struct_def::StructDef, types::Type},
     values::{Struct, Value},
 };
-use rand::{Rng, SeedableRng};
 use std::time::Duration;
 use vm_genesis::GENESIS_KEYPAIR;
 
@@ -48,13 +48,7 @@ impl Account {
     /// [`FakeExecutor::add_account_data`][crate::executor::FakeExecutor::add_account_data].
     /// This function returns distinct values upon every call.
     pub fn new() -> Self {
-        let mut seed_rng = rand::rngs::OsRng::new().expect("can't access OsRng");
-        let seed_buf: [u8; 32] = seed_rng.gen();
-        let mut rng = rand::rngs::StdRng::from_seed(seed_buf);
-
-        // replace `&mut rng` by None (making the function deterministic) and watch the
-        // functional_tests fail!
-        let (privkey, pubkey) = compat::generate_keypair(&mut rng);
+        let (privkey, pubkey) = KeyGen::from_os_rng().generate_keypair();
         Self::with_keypair(privkey, pubkey)
     }
 
