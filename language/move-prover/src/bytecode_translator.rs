@@ -929,7 +929,7 @@ impl<'env> ModuleTranslator<'env> {
                         "{}, {}, {}",
                         func_env.module_env.env.file_id_to_idx(loc.file_id()),
                         loc.span().start(),
-                        self.compute_effective_dest(func_env, ctx.code, offset, *dest),
+                        effective_dest,
                     )
                 } else {
                     "0, 0, 0".to_string()
@@ -1068,6 +1068,7 @@ impl<'env> ModuleTranslator<'env> {
                 // In contrast to other instructions, we need to evaluate invariants BEFORE
                 // the return.
                 self.enforce_invariants_for_dead_refs(func_env, ctx, offset);
+                invariants_evaluated = true;
                 for (i, r) in rets.iter().enumerate() {
                     if self.get_local_type(func_env, *r).is_reference() {
                         emitln!(self.writer, "$ret{} := {};", i, str_local(r));

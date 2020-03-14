@@ -9,5 +9,4 @@ error:  A postcondition might not hold on this return path.
     =     at tests/sources/defines.move:13:5: add (entry)
     =     at tests/sources/defines.move:13:5: add (exit)
     =         x = <redacted>,
-    =         y = <redacted>,
-    =         result = <redacted>
+    =         y = <redacted>

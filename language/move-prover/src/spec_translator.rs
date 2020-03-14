@@ -283,7 +283,7 @@ impl<'env> SpecTranslator<'env> {
         emitln!(self.writer);
     }
 
-    /// Determines whether a before-update invariant is trivial, and can therefore be omitted.
+    /// Determines whether a before-update invariant is generated.
     ///
     /// We currently support two models for dealing with global spec var updates.
     /// If the specification has explicitly provided update invariants for spec vars, we use those.
@@ -319,7 +319,7 @@ impl<'env> SpecTranslator<'env> {
         emitln!(self.writer);
     }
 
-    /// Determines whether the after-update invariant is trivial, and can therefore be omitted.
+    /// Determines whether a after-update invariant is generated.
     pub fn has_after_update_invariant(struct_env: &StructEnv<'_>) -> bool {
         !struct_env.get_update_invariants().is_empty()
             || !struct_env.get_pack_invariants().is_empty()
