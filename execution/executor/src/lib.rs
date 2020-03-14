@@ -217,8 +217,6 @@ where
         // transactions in A, B and C whose status == TransactionStatus::Keep.
         // This must be done before calculate potential skipping of transactions in idempotent commit.
         let mut txns_to_keep = vec![];
-        let mut blocks_txns = vec![];
-        let mut reconfig_events = vec![];
         for (txn, txn_data) in blocks
             .iter()
             .flat_map(|block| itertools::zip_eq(&block.0, block.1.transaction_data()))
@@ -233,10 +231,6 @@ where
                         txn_data.status().vm_status().major_status,
                     ),
                     txn_data.num_account_created(),
-                ));
-                blocks_txns.push(txn.clone());
-                reconfig_events.append(&mut Self::extract_reconfig_events(
-                    txn_data.events().to_vec(),
                 ));
             }
         }
@@ -296,10 +290,11 @@ where
             OP_COUNTERS.observe("storage_save_transactions.count", num_txns_to_commit as f64);
             assert_eq!(first_version_to_commit, version + 1 - num_txns_to_commit);
             let write_client = self.storage_write_client.clone();
+            let txns_to_commit_copy = txns_to_commit.clone();
             block_on(self.rt.spawn(async move {
                 write_client
                     .save_transactions(
-                        txns_to_commit,
+                        txns_to_commit_copy,
                         first_version_to_commit,
                         Some(ledger_info_with_sigs),
                     )
@@ -310,13 +305,21 @@ where
         // Only bump the counter when the commit succeeds.
         OP_COUNTERS.inc_by("num_accounts", list_num_account_created.into_iter().sum());
 
+        // Calculate committed transactions and reconfig events now that commit has succeeded
+        let mut committed_txns = vec![];
+        let mut reconfig_events = vec![];
+        for txn in txns_to_commit.iter() {
+            committed_txns.push(txn.transaction().clone());
+            reconfig_events.append(&mut Self::extract_reconfig_events(txn.events().to_vec()));
+        }
+
         for block in blocks {
             for txn_data in block.1.transaction_data() {
                 txn_data.prune_state_tree();
             }
         }
         // Now that the blocks are persisted successfully, we can reply to consensus
-        Ok((blocks_txns, reconfig_events))
+        Ok((committed_txns, reconfig_events))
     }
 
     /// Verifies the transactions based on the provided proofs and ledger info. If the transactions
