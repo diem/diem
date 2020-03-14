@@ -31,8 +31,6 @@ pub struct Compiler {
     pub address: AccountAddress,
     /// Skip stdlib dependencies if true.
     pub skip_stdlib_deps: bool,
-    /// The address to use for stdlib.
-    pub stdlib_address: AccountAddress,
     /// Extra dependencies to compile with.
     pub extra_deps: Vec<VerifiedModule>,
 
