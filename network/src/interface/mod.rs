@@ -18,16 +18,12 @@ use crate::{
     protocols::{
         direct_send::{DirectSend, DirectSendNotification, DirectSendRequest, Message},
         identity::Identity,
-        rpc::{InboundRpcRequest, OutboundRpcRequest, Rpc, RpcNotification, RpcRequest},
+        rpc::{InboundRpcRequest, OutboundRpcRequest, Rpc, RpcNotification},
     },
     validator_network, ProtocolId,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use futures::{
-    io::{AsyncRead, AsyncWrite},
-    stream::StreamExt,
-    FutureExt, SinkExt,
-};
+use futures::{stream::StreamExt, FutureExt, SinkExt};
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::{multiplexing::StreamMultiplexer, transport::ConnectionOrigin};
@@ -65,10 +61,9 @@ where
     phantom_muxer: PhantomData<TMuxer>,
 }
 
-impl<TMuxer, TSubstream> NetworkProvider<TMuxer>
+impl<TMuxer> NetworkProvider<TMuxer>
 where
-    TMuxer: StreamMultiplexer<Substream = TSubstream> + 'static,
-    TSubstream: AsyncRead + AsyncWrite + Send + Debug + Unpin + 'static,
+    TMuxer: StreamMultiplexer + 'static,
 {
     pub fn start(
         executor: Handle,
@@ -142,7 +137,6 @@ where
                 .peer_gauge(&counters::PENDING_RPC_REQUESTS, &peer_id.short_str()),
         );
         let rpc = Rpc::new(
-            executor.clone(),
             peer_handle.clone(),
             rpc_reqs_rx,
             peer_rpc_notifs_rx,
@@ -169,7 +163,6 @@ where
             ),
         );
         let ds = DirectSend::new(
-            executor.clone(),
             peer_handle.clone(),
             ds_reqs_rx,
             ds_notifs_tx,
@@ -243,12 +236,12 @@ where
     async fn handle_network_request(
         peer_id: PeerId,
         req: NetworkRequest,
-        mut rpc_reqs_tx: channel::Sender<RpcRequest>,
+        mut rpc_reqs_tx: channel::Sender<OutboundRpcRequest>,
         mut ds_reqs_tx: channel::Sender<DirectSendRequest>,
     ) {
         match req {
             NetworkRequest::SendRpc(req) => {
-                if let Err(e) = rpc_reqs_tx.send(RpcRequest::SendRpc(req)).await {
+                if let Err(e) = rpc_reqs_tx.send(req).await {
                     error!(
                         "Failed to send RPC to peer: {}. Error: {:?}",
                         peer_id.short_str(),
@@ -309,7 +302,7 @@ where
     }
 
     async fn handle_peer_notification(
-        notif: PeerNotification<TSubstream>,
+        notif: PeerNotification,
         mut connection_notifs_tx: channel::Sender<ConnectionNotification<TMuxer>>,
     ) {
         match notif {

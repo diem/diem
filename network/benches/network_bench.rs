@@ -8,6 +8,7 @@
 // Allow writing 1 * KiB or 1 * MiB
 #![allow(clippy::identity_op)]
 
+use bytes::Bytes;
 use criterion::{
     criterion_group, criterion_main, AxisScale, Bencher, Criterion, ParameterizedBenchmark,
     PlotConfiguration, Throughput,
@@ -82,15 +83,16 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
     // Compose RequestBlock message and RespondBlock message with `msg_len` bytes payload
     let req = DummyMsg(vec![]);
     let res = DummyMsg(vec![0u8; *msg_len]);
+    let res: Bytes = lcs::to_bytes(&res)
+        .expect("failed to serialize message")
+        .into();
 
     // The listener side keeps receiving RPC requests and sending responses back
     let f_listener = async move {
         while let Some(Ok(event)) = listener_events.next().await {
             match event {
                 Event::RpcRequest((_, _, res_tx)) => res_tx
-                    .send(Ok(lcs::to_bytes(&res)
-                        .expect("fail to serialize proto")
-                        .into()))
+                    .send(Ok(res.clone()))
                     .expect("fail to send rpc response to network"),
                 event => panic!("Unexpected event: {:?}", event),
             }

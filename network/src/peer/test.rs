@@ -1,32 +1,43 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+// NB: The following tests can be added, but are left out since we will remove stream handing from
+// Peer in the next phase of migration to new wire protocol.
+// TODO: Test handling of inbound msg if stream fails negotiation.
+// TODO: Test handling of inbound msg if stream negotiated but then closed.
+// TODO: Test handling of outbound msg if stream fails negotiation.
+// TODO: Test handling of outbound msg if stream negotiated but then closed.
+// TODO: Test handling of inbound msg without unknown protocol_id.
+
 use crate::{
     peer::{DisconnectReason, Peer, PeerHandle, PeerNotification},
-    protocols::identity::Identity,
+    protocols::{
+        identity::Identity,
+        wire::messaging::v1::{DirectSendMsg, NetworkMessage},
+    },
     ProtocolId,
 };
-use futures::{
-    executor::block_on,
-    future::join,
-    io::{AsyncReadExt, AsyncWriteExt},
-    stream::StreamExt,
-};
+use bytes::Bytes;
+use futures::{executor::block_on, future::join, stream::StreamExt, SinkExt};
 use libra_types::PeerId;
 use memsocket::MemorySocket;
 use netcore::{
+    compat::IoCompat,
     multiplexing::{
-        yamux::{Mode, StreamHandle, Yamux},
-        StreamMultiplexer,
+        yamux::{Mode, Yamux},
+        Control, StreamMultiplexer,
     },
-    negotiate::negotiate_inbound,
+    negotiate::{negotiate_inbound, negotiate_outbound_select},
     transport::ConnectionOrigin,
 };
 use parity_multiaddr::Multiaddr;
-use std::{collections::HashSet, fmt::Debug, iter::FromIterator, str::FromStr, time::Duration};
+use std::{
+    collections::HashSet, iter::FromIterator, mem::ManuallyDrop, str::FromStr, time::Duration,
+};
 use tokio::time::timeout;
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
-static RPC_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
+static PROTOCOL: ProtocolId = ProtocolId::MempoolDirectSend;
 
 fn build_test_connection() -> (Yamux<MemorySocket>, Yamux<MemorySocket>) {
     let (dialer, listener) = MemorySocket::new_pair();
@@ -45,11 +56,11 @@ fn build_test_peer(
     origin: ConnectionOrigin,
 ) -> (
     Peer<Yamux<MemorySocket>>,
-    PeerHandle<StreamHandle>,
+    PeerHandle,
     Yamux<MemorySocket>,
-    channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
-    channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
-    channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
+    channel::Receiver<PeerNotification>,
+    channel::Receiver<PeerNotification>,
+    channel::Receiver<PeerNotification>,
 ) {
     let (a, b) = build_test_connection();
     let identity = build_test_identity(PeerId::random());
@@ -66,9 +77,9 @@ fn build_test_peer(
         a,
         peer_req_rx,
         peer_notifs_tx,
-        HashSet::from_iter(vec![RPC_PROTOCOL].into_iter()), /* rpc protocols */
+        HashSet::new(), /* rpc protocols */
         peer_rpc_notifs_tx,
-        HashSet::new(), /* direct_send protocols */
+        HashSet::from_iter(vec![PROTOCOL].into_iter()), /* direct_send protocols */
         peer_direct_send_notifs_tx,
     );
     let peer_handle = PeerHandle::new(peer_id, Multiaddr::empty(), peer_req_tx);
@@ -86,17 +97,17 @@ fn build_test_peer(
 fn build_test_connected_peers() -> (
     (
         Peer<Yamux<MemorySocket>>,
-        PeerHandle<StreamHandle>,
-        channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
-        channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
-        channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
+        PeerHandle,
+        channel::Receiver<PeerNotification>,
+        channel::Receiver<PeerNotification>,
+        channel::Receiver<PeerNotification>,
     ),
     (
         Peer<Yamux<MemorySocket>>,
-        PeerHandle<StreamHandle>,
-        channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
-        channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
-        channel::Receiver<PeerNotification<<Yamux<MemorySocket> as StreamMultiplexer>::Substream>>,
+        PeerHandle,
+        channel::Receiver<PeerNotification>,
+        channel::Receiver<PeerNotification>,
+        channel::Receiver<PeerNotification>,
     ),
 ) {
     let (
@@ -135,29 +146,20 @@ fn build_test_connected_peers() -> (
     )
 }
 
-async fn assert_new_substream_event<TSubstream>(
-    peer_id: PeerId,
-    peer_notifs_rx: &mut channel::Receiver<PeerNotification<TSubstream>>,
-) where
-    TSubstream: Debug,
-{
-    match peer_notifs_rx.next().await {
-        Some(PeerNotification::NewSubstream(actual_peer_id, _)) => {
-            assert_eq!(actual_peer_id, peer_id);
-        }
-        event => {
-            panic!("Expected a NewSubstream, received: {:?}", event);
-        }
-    }
+async fn assert_new_message_event(peer_notifs_rx: &mut channel::Receiver<PeerNotification>) {
+    let event = peer_notifs_rx.next().await;
+    assert!(
+        matches!(event, Some(PeerNotification::NewMessage(_))),
+        "Expected NewMessage event. Received: {:?}",
+        event
+    );
 }
 
-async fn assert_peer_disconnected_event<TSubstream>(
+async fn assert_peer_disconnected_event(
     peer_id: PeerId,
     reason: DisconnectReason,
-    peer_notifs_rx: &mut channel::Receiver<PeerNotification<TSubstream>>,
-) where
-    TSubstream: Debug,
-{
+    peer_notifs_rx: &mut channel::Receiver<PeerNotification>,
+) {
     match peer_notifs_rx.next().await {
         Some(PeerNotification::PeerDisconnected(
             actual_identity,
@@ -178,7 +180,7 @@ async fn assert_peer_disconnected_event<TSubstream>(
 }
 
 #[tokio::test]
-async fn peer_open_substream() {
+async fn peer_send_message() {
     ::libra_logger::Logger::new().environment_only(true).init();
     let (
         peer,
@@ -189,31 +191,87 @@ async fn peer_open_substream() {
         _peer_direct_send_notifs_rx,
     ) = build_test_peer(ConnectionOrigin::Inbound);
 
+    let send_msg = NetworkMessage::DirectSendMsg(DirectSendMsg {
+        protocol_id: PROTOCOL,
+        priority: 0,
+        raw_msg: Bytes::from_static(b"hello world"),
+    });
+    let recv_msg = send_msg.clone();
+
     let server = async move {
         let (mut substream_listener, _) = connection.start().await;
         let substream = substream_listener.next().await;
-        let (mut substream, _protocol) = negotiate_inbound(
+        // Drive the connection.
+        let driver = async move { while let Some(_) = substream_listener.next().await {} };
+        tokio::spawn(driver);
+        // First, the client should negotiate protocol.
+        let (substream, _protocol) = negotiate_inbound(
             substream.unwrap().unwrap(),
-            &[lcs::to_bytes(&RPC_PROTOCOL).unwrap()],
+            &[lcs::to_bytes(&PROTOCOL).unwrap()],
         )
         .await
         .unwrap();
-        substream.write_all(b"hello world").await.unwrap();
-        substream.flush().await.unwrap();
+        // The client should then send the network message.
+        let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
+        let msg = substream.next().await.unwrap();
+        let msg: NetworkMessage = lcs::from_bytes(&msg.unwrap().freeze()).unwrap();
+        assert_eq!(msg, recv_msg);
         substream.close().await.unwrap();
-        // Wait to read EOF from the other side in order to hold open the connection for
-        // the remote side to read
-        let mut buf = Vec::new();
-        substream.read_to_end(&mut buf).await.unwrap();
-        assert_eq!(buf.len(), 0);
     };
 
     let client = async move {
-        let mut substream = peer_handle.open_substream(RPC_PROTOCOL).await.unwrap();
-        let mut buf = Vec::new();
-        substream.read_to_end(&mut buf).await.unwrap();
+        peer_handle.send_message(send_msg, PROTOCOL).await.unwrap();
+        ManuallyDrop::new(peer_handle);
+    };
+    tokio::spawn(peer.start());
+    join(server, client).await;
+}
+
+#[tokio::test]
+async fn peer_recv_message() {
+    ::libra_logger::Logger::new().environment_only(true).init();
+    let (
+        peer,
+        _peer_handle,
+        connection,
+        _peer_notifs_rx,
+        _peer_rpc_notifs_rx,
+        mut peer_direct_send_notifs_rx,
+    ) = build_test_peer(ConnectionOrigin::Inbound);
+
+    let send_msg = NetworkMessage::DirectSendMsg(DirectSendMsg {
+        protocol_id: PROTOCOL,
+        priority: 0,
+        raw_msg: Bytes::from_static(b"hello world"),
+    });
+    let recv_msg = send_msg.clone();
+
+    let server = async move {
+        let (mut substream_listener, mut control) = connection.start().await;
+        // Drive the connection.
+        let driver = async move { while let Some(_) = substream_listener.next().await {} };
+        tokio::spawn(driver);
+        let substream = control.open_stream().await.unwrap();
+        // First, the client should negotiate protocol.
+        let substream = negotiate_outbound_select(substream, lcs::to_bytes(&PROTOCOL).unwrap())
+            .await
+            .unwrap();
+        // The client should then send the network message.
+        let mut substream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
+        substream
+            .send(lcs::to_bytes(&send_msg).unwrap().into())
+            .await
+            .unwrap();
+        // Client then closes substream.
         substream.close().await.unwrap();
-        assert_eq!(buf, b"hello world");
+    };
+
+    let client = async move {
+        // Wait to receive notification of DirectSendMsg from Peer.
+        let received = peer_direct_send_notifs_rx.next().await.unwrap();
+        assert!(
+            matches!(received, PeerNotification::NewMessage(received_msg) if received_msg == recv_msg)
+        );
     };
     tokio::spawn(peer.start());
     join(server, client).await;
@@ -229,31 +287,42 @@ async fn peer_open_substream_simultaneous() {
             peer_a,
             mut peer_handle_a,
             mut peer_notifs_rx_a,
-            mut peer_rpc_notifs_rx_a,
-            _peer_direct_send_notifs_rx_a,
+            _peer_rpc_notifs_rx_a,
+            mut peer_direct_send_notifs_rx_a,
         ),
         (
             peer_b,
             mut peer_handle_b,
             mut peer_notifs_rx_b,
-            mut peer_rpc_notifs_rx_b,
-            _peer_direct_send_notifs_rx_b,
+            _peer_rpc_notifs_rx_b,
+            mut peer_direct_send_notifs_rx_b,
         ),
     ) = build_test_connected_peers();
 
     let test = async move {
+        let msg_a = NetworkMessage::DirectSendMsg(DirectSendMsg {
+            protocol_id: PROTOCOL,
+            priority: 0,
+            raw_msg: Bytes::from_static(b"hello world"),
+        });
+        let msg_b = NetworkMessage::DirectSendMsg(DirectSendMsg {
+            protocol_id: PROTOCOL,
+            priority: 0,
+            raw_msg: Bytes::from_static(b"namaste"),
+        });
+
         // Send open substream requests to both peer_a and peer_b
-        let substream_rx_a = peer_handle_a.open_substream(RPC_PROTOCOL);
-        let substream_rx_b = peer_handle_b.open_substream(RPC_PROTOCOL);
+        let send_msg_a = peer_handle_a.send_message(msg_a, PROTOCOL);
+        let send_msg_b = peer_handle_b.send_message(msg_b, PROTOCOL);
         // These both should complete, but in the event they deadlock wrap them in a timeout
-        let timeout_a = timeout(Duration::from_secs(10), substream_rx_a);
-        let timeout_b = timeout(Duration::from_secs(10), substream_rx_b);
-        let _a = timeout_a.await.unwrap().unwrap();
-        let _b = timeout_b.await.unwrap().unwrap();
+        let timeout_a = timeout(Duration::from_secs(10), send_msg_a);
+        let timeout_b = timeout(Duration::from_secs(10), send_msg_b);
+        timeout_a.await.unwrap().unwrap();
+        timeout_b.await.unwrap().unwrap();
 
         // Check that we received the new inbound substream for both peers
-        assert_new_substream_event(peer_handle_a.peer_id, &mut peer_rpc_notifs_rx_a).await;
-        assert_new_substream_event(peer_handle_b.peer_id, &mut peer_rpc_notifs_rx_b).await;
+        assert_new_message_event(&mut peer_direct_send_notifs_rx_a).await;
+        assert_new_message_event(&mut peer_direct_send_notifs_rx_b).await;
 
         // Shut one peers and the other should shutdown due to ConnectionLost
         peer_handle_a.disconnect().await;

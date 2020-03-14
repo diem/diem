@@ -2,12 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! The Peer actor owns the underlying connection and is responsible for listening for
-//!  and opening substreams as well as negotiating particular protocols on those substreams.
+//! and opening substreams as well as negotiating particular protocols on those substreams.
 use crate::{
-    common::NegotiatedSubstream, peer_manager::PeerManagerError, protocols::identity::Identity,
+    common::NegotiatedSubstream,
+    peer_manager::PeerManagerError,
+    protocols::{identity::Identity, wire::messaging::v1::NetworkMessage},
+    sink::NetworkSinkExt,
     transport, ProtocolId,
 };
 use futures::{
+    self,
     channel::oneshot,
     future::BoxFuture,
     stream::{FuturesUnordered, StreamExt},
@@ -16,21 +20,24 @@ use futures::{
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::{
+    compat::IoCompat,
     multiplexing::{Control, StreamMultiplexer},
     negotiate::{negotiate_inbound, negotiate_outbound_interactive, negotiate_outbound_select},
     transport::ConnectionOrigin,
 };
 use parity_multiaddr::Multiaddr;
 use std::{collections::HashSet, fmt::Debug, iter::FromIterator};
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 #[cfg(test)]
 mod test;
 
 #[derive(Debug)]
-pub enum PeerRequest<TSubstream> {
-    OpenSubstream(
+pub enum PeerRequest {
+    SendMessage(
+        NetworkMessage,
         ProtocolId,
-        oneshot::Sender<Result<TSubstream, PeerManagerError>>,
+        oneshot::Sender<Result<(), PeerManagerError>>,
     ),
     CloseConnection,
 }
@@ -42,8 +49,8 @@ pub enum DisconnectReason {
 }
 
 #[derive(Debug)]
-pub enum PeerNotification<TSubstream> {
-    NewSubstream(PeerId, NegotiatedSubstream<TSubstream>),
+pub enum PeerNotification {
+    NewMessage(NetworkMessage),
     PeerDisconnected(Identity, Multiaddr, ConnectionOrigin, DisconnectReason),
 }
 
@@ -60,17 +67,17 @@ where
     /// Underlying connection.
     connection: Option<TMuxer>,
     /// Channel to receive requests for opening new outbound substreams.
-    requests_rx: channel::Receiver<PeerRequest<TMuxer::Substream>>,
+    requests_rx: channel::Receiver<PeerRequest>,
     /// Channel to send peer notifications to PeerManager.
-    peer_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
+    peer_notifs_tx: channel::Sender<PeerNotification>,
     /// RPC protocols supported by self.
     rpc_protocols: HashSet<ProtocolId>,
     /// Channel to notify about new inbound RPC substreams.
-    rpc_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
+    rpc_notifs_tx: channel::Sender<PeerNotification>,
     /// DirectSend protocols supported by self.
     direct_send_protocols: HashSet<ProtocolId>,
     /// Channel to notify about new inbound DirectSend substreams.
-    direct_send_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
+    direct_send_notifs_tx: channel::Sender<PeerNotification>,
     /// All supported protocols. This is derived from `rpc_protocols` and `direct_send_protocols`
     /// at the time this struct is constructed.
     own_supported_protocols: Vec<ProtocolId>,
@@ -88,12 +95,12 @@ where
         address: Multiaddr,
         origin: ConnectionOrigin,
         connection: TMuxer,
-        requests_rx: channel::Receiver<PeerRequest<TMuxer::Substream>>,
-        peer_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
+        requests_rx: channel::Receiver<PeerRequest>,
+        peer_notifs_tx: channel::Sender<PeerNotification>,
         rpc_protocols: HashSet<ProtocolId>,
-        rpc_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
+        rpc_notifs_tx: channel::Sender<PeerNotification>,
         direct_send_protocols: HashSet<ProtocolId>,
-        direct_send_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
+        direct_send_notifs_tx: channel::Sender<PeerNotification>,
     ) -> Self {
         let own_supported_protocols = Vec::from_iter(
             rpc_protocols
@@ -155,10 +162,12 @@ where
                     }
                 },
                 negotiated_subststream = pending_inbound_substreams.select_next_some() => {
-                    self.handle_negotiated_substream(negotiated_subststream).await;
+                    if let Err(err) = self.handle_negotiated_substream(negotiated_subststream).await {
+                        warn!("Error in handling inbound substream from peer: {:?}. Error: {:?}",
+                            self_peer_id.short_str(), err);
+                    }
                 },
-                _ = pending_outbound_substreams.select_next_some() => {
-                    // Do nothing since these futures have an output of "()"
+                () = pending_outbound_substreams.select_next_some() => {
                 },
             }
         }
@@ -171,12 +180,28 @@ where
     async fn handle_negotiated_substream(
         &mut self,
         negotiated_subststream: Result<NegotiatedSubstream<TMuxer::Substream>, PeerManagerError>,
-    ) {
+    ) -> Result<(), PeerManagerError> {
         match negotiated_subststream {
             Ok(negotiated_substream) => {
                 let protocol = negotiated_substream.protocol;
-                let event =
-                    PeerNotification::NewSubstream(self.identity.peer_id(), negotiated_substream);
+                debug!(
+                    "Successfully negotiated inbound substream '{:?}' with Peer {}",
+                    protocol,
+                    self.identity.peer_id().short_str()
+                );
+                let mut stream = Framed::new(
+                    IoCompat::new(negotiated_substream.substream),
+                    LengthDelimitedCodec::new(),
+                );
+                // Read inbound message from stream.
+                let message = stream
+                    .next()
+                    .await
+                    .ok_or_else(|| anyhow::anyhow!("stream terminated"))??;
+                let message = message.freeze();
+                let message: NetworkMessage = lcs::from_bytes(&message)?;
+                let event = PeerNotification::NewMessage(message);
+                debug!("Notifying upstream about new event: {:?}", event);
                 if self.rpc_protocols.contains(&protocol) {
                     if let Err(err) = self.rpc_notifs_tx.send(event).await {
                         warn!("Failed to send notification to RPC actor. Error: {:?}", err);
@@ -193,6 +218,8 @@ where
                     // branch is unreachable.
                     unreachable!("Negotiated unsupported protocol");
                 }
+                // Half-close our end of stream.
+                stream.close().await?;
             }
             Err(e) => {
                 error!(
@@ -202,13 +229,14 @@ where
                 );
             }
         }
+        Ok(())
     }
 
     async fn handle_request<'a>(
         &'a mut self,
         control: TMuxer::Control,
         pending: &'a mut FuturesUnordered<BoxFuture<'static, ()>>,
-        request: PeerRequest<TMuxer::Substream>,
+        request: PeerRequest,
     ) {
         trace!(
             "Peer {} PeerRequest::{:?}",
@@ -216,9 +244,24 @@ where
             request
         );
         match request {
-            PeerRequest::OpenSubstream(protocol, channel) => {
-                pending
-                    .push(self.handle_open_outbound_substream_request(protocol, control, channel));
+            PeerRequest::SendMessage(message, protocol, channel) => {
+                let identity = self.identity.clone();
+                let f = async move {
+                    let result =
+                        Self::send_message(message, protocol, identity.clone(), control).await.map_err(|e| {
+                            info!("Failed to send message for protocol {:?} to peer: {:?}. Error: {:?}",
+                                protocol, identity.peer_id().short_str(), e);
+                            e
+                        });
+                    if channel.send(result).is_err() {
+                        info!(
+                            "oneshot channel receiver dropped for new substream with peer {} for protocol {:?}",
+                            identity.peer_id().short_str(),
+                            protocol
+                        );
+                    }
+                };
+                pending.push(f.boxed());
             }
             PeerRequest::CloseConnection => {
                 self.close_connection(control, DisconnectReason::Requested)
@@ -227,73 +270,61 @@ where
         }
     }
 
-    fn handle_open_outbound_substream_request(
-        &self,
+    async fn send_message(
+        message: NetworkMessage,
         protocol: ProtocolId,
-        control: TMuxer::Control,
-        channel: oneshot::Sender<Result<TMuxer::Substream, PeerManagerError>>,
-    ) -> BoxFuture<'static, ()> {
-        let optimistic_negotiation = self.identity.is_protocol_supported(protocol);
-        Self::negotiate_outbound_substream(
-            self.identity.peer_id(),
-            control,
-            protocol,
-            optimistic_negotiation,
-            channel,
-        )
-        .boxed()
-    }
-
-    async fn negotiate_outbound_substream(
-        peer_id: PeerId,
+        identity: Identity,
         mut control: TMuxer::Control,
-        protocol: ProtocolId,
-        optimistic_negotiation: bool,
-        channel: oneshot::Sender<Result<TMuxer::Substream, PeerManagerError>>,
-    ) {
-        let response = match control.open_stream().await {
-            Ok(substream) => {
-                // TODO(bmwill) Evaluate if we should still try to open and negotiate an outbound
-                // substream even though we know for a fact that the Identity struct of this Peer
-                // doesn't include the protocol we're interested in.
-                if optimistic_negotiation {
-                    negotiate_outbound_select(substream, lcs::to_bytes(&protocol).unwrap()).await
-                } else {
-                    warn!(
-                        "Negotiating outbound substream interactively: Protocol({:?}) PeerId({})",
-                        protocol,
-                        peer_id.short_str()
-                    );
-                    negotiate_outbound_interactive(substream, &[lcs::to_bytes(&protocol).unwrap()])
-                        .await
-                        .map(|(substream, _protocol)| substream)
-                }
+    ) -> Result<(), PeerManagerError> {
+        let peer_id = identity.peer_id();
+        // Open substream.
+        let substream = control.open_stream().await?;
+        // Negotiate protocol on opened substream.
+        let negotiated_stream = {
+            let optimistic_negotiation = identity.is_protocol_supported(protocol);
+            // TODO(bmwill) Evaluate if we should still try to open and negotiate an outbound
+            // substream even though we know for a fact that the Identity struct of this Peer
+            // doesn't include the protocol we're interested in.
+            if optimistic_negotiation {
+                negotiate_outbound_select(substream, lcs::to_bytes(&protocol)?).await
+            } else {
+                warn!(
+                    "Negotiating outbound substream interactively: Protocol({:?}) PeerId({})",
+                    protocol,
+                    peer_id.short_str()
+                );
+                negotiate_outbound_interactive(substream, &[lcs::to_bytes(&protocol)?])
+                    .await
+                    .map(|(substream, _protocol)| substream)
             }
-            Err(e) => Err(e),
         }
-        .map_err(Into::into);
-
-        match response {
-            Ok(_) => debug!(
-                "Successfully negotiated outbound substream '{:?}' with Peer {}",
-                protocol,
-                peer_id.short_str()
-            ),
-            Err(ref e) => debug!(
+        .map_err(|e| {
+            debug!(
                 "Unable to negotiated outbound substream '{:?}' with Peer {}: {}",
                 protocol,
                 peer_id.short_str(),
                 e
-            ),
-        }
-
-        if channel.send(response).is_err() {
-            warn!(
-                "oneshot channel receiver dropped for new substream with peer {} for protocol {:?}",
-                peer_id.short_str(),
-                protocol
             );
-        }
+            e
+        })?;
+        debug!(
+            "Successfully negotiated outbound substream '{:?}' with Peer {}",
+            protocol,
+            peer_id.short_str()
+        );
+        // Frame substream sends by length prefixing.
+        let mut stream = Framed::new(
+            IoCompat::new(negotiated_stream),
+            LengthDelimitedCodec::new(),
+        );
+        // Send the message.
+        stream
+            .buffered_send(lcs::to_bytes(&message)?.into())
+            .await?;
+        // Half-close our end of stream.
+        stream.close().await?;
+
+        Ok(())
     }
 
     async fn negotiate_inbound_substream(
@@ -304,12 +335,12 @@ where
             substream,
             own_supported_protocols
                 .into_iter()
-                .map(|p| lcs::to_bytes(&p).unwrap())
-                .collect::<Vec<_>>(),
+                .map(|p| lcs::to_bytes(&p))
+                .collect::<Result<Vec<_>, _>>()?,
         )
         .await?;
         Ok(NegotiatedSubstream {
-            protocol: lcs::from_bytes(&protocol).unwrap(),
+            protocol: lcs::from_bytes(&protocol)?,
             substream,
         })
     }
@@ -356,13 +387,13 @@ where
     }
 }
 
-pub struct PeerHandle<TSubstream> {
+pub struct PeerHandle {
     peer_id: PeerId,
-    sender: channel::Sender<PeerRequest<TSubstream>>,
+    sender: channel::Sender<PeerRequest>,
     address: Multiaddr,
 }
 
-impl<TSubstream> Clone for PeerHandle<TSubstream> {
+impl Clone for PeerHandle {
     fn clone(&self) -> Self {
         Self {
             peer_id: self.peer_id,
@@ -372,12 +403,8 @@ impl<TSubstream> Clone for PeerHandle<TSubstream> {
     }
 }
 
-impl<TSubstream> PeerHandle<TSubstream> {
-    pub fn new(
-        peer_id: PeerId,
-        address: Multiaddr,
-        sender: channel::Sender<PeerRequest<TSubstream>>,
-    ) -> Self {
+impl PeerHandle {
+    pub fn new(peer_id: PeerId, address: Multiaddr, sender: channel::Sender<PeerRequest>) -> Self {
         Self {
             peer_id,
             address,
@@ -393,27 +420,28 @@ impl<TSubstream> PeerHandle<TSubstream> {
         self.peer_id
     }
 
-    pub async fn open_substream(
+    pub async fn send_message(
         &mut self,
+        message: NetworkMessage,
         protocol: ProtocolId,
-    ) -> Result<TSubstream, PeerManagerError> {
+    ) -> Result<(), PeerManagerError> {
         // If we fail to send the request to the Peer, then it must have already been shutdown.
         let (oneshot_tx, oneshot_rx) = oneshot::channel();
         if self
             .sender
-            .send(PeerRequest::OpenSubstream(protocol, oneshot_tx))
+            .send(PeerRequest::SendMessage(message, protocol, oneshot_tx))
             .await
             .is_err()
         {
             error!(
-                "Sending OpenSubstream request to Peer {} \
+                "Sending message to Peer {} \
                  failed because it has already been shutdown.",
                 self.peer_id.short_str()
             );
         }
         oneshot_rx
             .await
-            // The open_substream request can get dropped/canceled if the peer
+            // The send_message request can get dropped/canceled if the peer
             // connection is in the process of shutting down.
             .map_err(|_| PeerManagerError::NotConnected(self.peer_id))?
     }
