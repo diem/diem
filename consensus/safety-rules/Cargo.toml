@@ -20,6 +20,7 @@ libra-types = { path = "../../types", version = "0.1.0" }
 serde = { version = "1.0.99", default-features = false }
 thiserror = "1.0"
 workspace-builder = { path = "../../common/workspace-builder", version = "0.1.0" }
+ureq = { version = "0.11.3", features = ["json"] }
 
 [dev-dependencies]
 criterion = "0.3"

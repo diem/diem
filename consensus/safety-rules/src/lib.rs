@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 mod consensus_state;
+pub mod counters;
 mod error;
 mod local_client;
 mod persistent_safety_storage;
@@ -12,6 +13,7 @@ mod remote_service;
 mod safety_rules;
 mod safety_rules_manager;
 mod serializer;
+pub mod simple_push_metrics;
 mod spawned_process;
 mod t_safety_rules;
 mod thread;
