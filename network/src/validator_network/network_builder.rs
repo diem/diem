@@ -48,6 +48,10 @@ use std::{
 use tokio::{runtime::Handle, time::interval};
 use tokio_retry::strategy::ExponentialBackoff;
 
+// NB: Almost all of these values are educated guesses, and not determined using any empirical
+// data. If you run into a limit and believe that it is unreasonably tight, please submit a PR
+// with your use-case. If you do change a value, please add a comment linking to the PR which
+// advocated the change.
 pub const NETWORK_CHANNEL_SIZE: usize = 1024;
 pub const DISCOVERY_INTERVAL_MS: u64 = 1000;
 pub const PING_INTERVAL_MS: u64 = 1000;

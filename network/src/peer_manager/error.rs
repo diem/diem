@@ -10,7 +10,7 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum PeerManagerError {
-    #[error("Error: {0}")]
+    #[error("Error: {0:?}")]
     Error(#[from] anyhow::Error),
 
     #[error("IO error: {0}")]
@@ -30,6 +30,9 @@ pub enum PeerManagerError {
 
     #[error("Sending end of oneshot dropped")]
     OneshotSenderDropped,
+
+    #[error("Serialization error {0}")]
+    LcsError(lcs::Error),
 }
 
 impl PeerManagerError {
@@ -41,5 +44,11 @@ impl PeerManagerError {
 impl From<oneshot::Canceled> for PeerManagerError {
     fn from(_: oneshot::Canceled) -> Self {
         PeerManagerError::OneshotSenderDropped
+    }
+}
+
+impl From<lcs::Error> for PeerManagerError {
+    fn from(e: lcs::Error) -> Self {
+        PeerManagerError::LcsError(e)
     }
 }

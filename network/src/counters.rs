@@ -156,9 +156,6 @@ pub static PENDING_RPC_NOTIFICATIONS: &str = "pending_rpc_notifications";
 /// Counter of pending requests for each remote peer
 pub static PENDING_PEER_REQUESTS: &str = "pending_peer_requests";
 
-/// Counter of pending outbound messages in Direct Send for each remote peer
-pub static PENDING_DIRECT_SEND_OUTBOUND_MESSAGES: &str = "pending_direct_send_outbound_messages";
-
 /// Counter of pending RPC events from Peer to Rpc actor.
 pub static PENDING_PEER_RPC_NOTIFICATIONS: &str = "pending_peer_rpc_notifications";
 

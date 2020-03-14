@@ -14,7 +14,7 @@ mod test;
 
 /// Message variants that are sent on the wire.
 /// New variants cannot be added without bumping up the MessagingProtocolVersion.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum NetworkMessage {
     Error(ErrorCode),
     Ping(Nonce),
@@ -40,7 +40,7 @@ pub enum ProtocolId {
 
 /// Enum representing various error codes that can be embedded in NetworkMessage.
 /// New variants cannot be added without bumping up the MessagingProtocolVersion.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum ErrorCode {
     /// Failed to parse NetworkMessage when interpreting according to provided protocol version.
     ParsingError(MessagingProtocolVersion, Box<NetworkMessage>),
@@ -49,38 +49,44 @@ pub enum ErrorCode {
 }
 
 /// Nonces used by Ping and Pong message types.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Nonce(u32);
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+/// Create alias RequestId for u32.
+pub type RequestId = u32;
+
+/// Create alias Priority for u8.
+pub type Priority = u8;
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct RpcRequest {
     /// RequestId for the RPC Request.
-    pub request_id: u32,
+    pub request_id: RequestId,
     /// `protocol_id` is a variant of the ProtocolId enum.
     pub protocol_id: ProtocolId,
     /// Request priority in the range 0..=255.
-    pub priority: u8,
+    pub priority: Priority,
     /// Request payload. This will be parsed by the application-level handler.
     pub raw_request: Bytes,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct RpcResponse {
     /// RequestId for corresponding request. This is copied as is from the RpcRequest.
-    pub request_id: u32,
+    pub request_id: RequestId,
     /// Response priority in the range 0..=255. This will likely be same as the priority of
     /// corresponding request.
-    pub priority: u8,
+    pub priority: Priority,
     /// Response payload.
     pub raw_response: Bytes,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct DirectSendMsg {
     /// `protocol_id` is a variant of the ProtocolId enum.
     pub protocol_id: ProtocolId,
     /// Message priority in the range 0..=255.
-    pub priority: u8,
+    pub priority: Priority,
     /// Message payload.
     pub raw_msg: Bytes,
 }
