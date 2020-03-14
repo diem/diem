@@ -47,13 +47,13 @@ use futures::{
 };
 use libra_config::config::RoleType;
 use libra_crypto::{
-    ed25519::*,
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     hash::{CryptoHasher, DiscoveryMsgHasher},
-    HashValue, Signature,
+    HashValue, Signature, SigningKey,
 };
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
-use libra_types::{crypto_proxies::ValidatorSigner as Signer, PeerId};
+use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::SmallRng, FromEntropy, Rng};
 use serde::{Deserialize, Serialize};
@@ -139,8 +139,8 @@ pub struct Discovery<TTicker> {
     dns_seed_addr: Bytes,
     /// Validator for verifying signatures on messages.
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
-    /// Signer for signing notes.
-    signer: Signer,
+    /// Ed25519PrivateKey for signing notes.
+    signer: Ed25519PrivateKey,
     /// Current state, maintaining the most recent Note for each peer, alongside parsed PeerInfo.
     known_peers: HashMap<PeerId, VerifiedNote>,
     /// Currently connected peers.
@@ -166,7 +166,7 @@ where
         self_peer_id: PeerId,
         role: RoleType,
         self_addrs: Vec<Multiaddr>,
-        signer: Signer,
+        signer: Ed25519PrivateKey,
         trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
         ticker: TTicker,
         network_reqs_tx: DiscoveryNetworkSender,
@@ -437,7 +437,7 @@ pub struct Note {
 
 impl Note {
     fn new(
-        signer: &Signer,
+        signer: &Ed25519PrivateKey,
         peer_id: PeerId,
         addrs: Vec<Multiaddr>,
         dns_seed_addr: &[u8],
@@ -511,11 +511,9 @@ pub struct PeerInfo {
 }
 
 impl PeerInfo {
-    fn sign(self, signer: &Signer) -> SignedPeerInfo {
+    fn sign(self, signer: &Ed25519PrivateKey) -> SignedPeerInfo {
         let peer_info_bytes = lcs::to_bytes(&self).expect("LCS serialization fails");
-        let signature = signer
-            .sign_message(get_hash(&peer_info_bytes))
-            .expect("Message signing fails");
+        let signature = signer.sign_message(&get_hash(&peer_info_bytes));
         SignedPeerInfo {
             peer_info: self,
             signature,
@@ -556,11 +554,9 @@ pub struct FullNodeInfo {
 }
 
 impl FullNodeInfo {
-    fn sign(self, signer: &Signer) -> SignedFullNodeInfo {
+    fn sign(self, signer: &Ed25519PrivateKey) -> SignedFullNodeInfo {
         let full_node_info_bytes = lcs::to_bytes(&self).expect("LCS serialization failed");
-        let signature = signer
-            .sign_message(get_hash(&full_node_info_bytes))
-            .expect("Message signing fails");
+        let signature = signer.sign_message(&get_hash(&full_node_info_bytes));
         SignedFullNodeInfo {
             full_node_info: self,
             signature,
