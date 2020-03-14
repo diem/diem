@@ -29,12 +29,12 @@ use channel::{self, libra_channel, message_queues::QueueStyle};
 use futures::stream::StreamExt;
 use libra_config::config::RoleType;
 use libra_crypto::{
-    ed25519::*,
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
 };
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
-use libra_types::{validator_signer::ValidatorSigner, PeerId};
+use libra_types::PeerId;
 use netcore::{multiplexing::StreamMultiplexer, transport::Transport};
 use parity_multiaddr::Multiaddr;
 use std::{
@@ -384,8 +384,6 @@ impl NetworkBuilder {
         // Initialize and start Discovery actor.
         let (signing_private_key, _signing_public_key) =
             self.signing_keys.take().expect("Signing keys not set");
-        // Setup signer from keys.
-        let signer = ValidatorSigner::new(self.peer_id, signing_private_key);
         // Get handles for network events and sender.
         let (discovery_network_tx, discovery_network_rx) = discovery::add_to_network(self);
         let addrs = vec![self
@@ -400,7 +398,7 @@ impl NetworkBuilder {
                 peer_id,
                 role,
                 addrs,
-                signer,
+                signing_private_key,
                 trusted_peers,
                 interval(Duration::from_millis(discovery_interval_ms)).fuse(),
                 discovery_network_tx,
