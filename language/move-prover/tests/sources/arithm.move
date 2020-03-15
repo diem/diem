@@ -14,7 +14,7 @@ module Arithmetic {
 		(z, res)
 	}
 	spec fun add_two_number {
-	    aborts_if x + y > 18446744073709551615;
+	    aborts_if x + y > max_u64();
 	    ensures result_1 == 3;
 	    ensures result_2 == x + y;
 	}
@@ -113,7 +113,7 @@ module Arithmetic {
         x + y
     }
     spec fun overflow_u8_add_ok {
-        aborts_if x + y > 255u8; // U8_MAX
+        aborts_if x + y > max_u8();
     }
 
     // fails.
@@ -129,7 +129,7 @@ module Arithmetic {
         x + y
     }
     spec fun overflow_u64_add_ok {
-        aborts_if x + y > 18446744073709551615u64; // U64_MAX
+        aborts_if x + y > max_u64();
     }
 
     // fails.
@@ -145,7 +145,7 @@ module Arithmetic {
         x + y
     }
     spec fun overflow_u128_add_ok {
-        aborts_if x + y > 340282366920938463463374607431768211455u128; // U128_MAX
+        aborts_if x + y > max_u128();
     }
 
 
@@ -166,7 +166,7 @@ module Arithmetic {
         x * y
     }
     spec fun overflow_u8_mul_ok {
-        aborts_if x * y > 255u8; // U8_MAX
+        aborts_if x * y > max_u8();
     }
 
     // fails.
@@ -182,7 +182,7 @@ module Arithmetic {
         x * y
     }
     spec fun overflow_u64_mul_ok {
-        //aborts_if x * y > 18446744073709551615u64; // U64_MAX
+        //aborts_if x * y > max_u64();
     }
 
     // fails.
@@ -198,6 +198,6 @@ module Arithmetic {
         x * y
     }
     spec fun overflow_u128_mul_ok {
-        //aborts_if x * y > 340282366920938463463374607431768211455u128; // U128_MAX
+        //aborts_if x * y > max_u128(); // U128_MAX
     }
 }

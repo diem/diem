@@ -353,6 +353,56 @@ impl<'env> Translator<'env> {
             let pred_t = &Type::Fun(vec![param_t.clone()], Box::new(bool_t.clone()));
             let pred_num_t = &Type::Fun(vec![num_t.clone()], Box::new(bool_t.clone()));
 
+            // Transaction metadata
+            add_builtin(
+                self,
+                self.builtin_fun_symbol("sender"),
+                SpecFunEntry {
+                    loc: loc.clone(),
+                    oper: Operation::Sender,
+                    type_params: vec![],
+                    arg_types: vec![],
+                    result_type: address_t.clone(),
+                },
+            );
+
+            // constants (max_u8(), etc.)
+            add_builtin(
+                self,
+                self.builtin_fun_symbol("max_u8"),
+                SpecFunEntry {
+                    loc: loc.clone(),
+                    oper: Operation::MaxU8,
+                    type_params: vec![],
+                    arg_types: vec![],
+                    result_type: num_t.clone(),
+                },
+            );
+
+            add_builtin(
+                self,
+                self.builtin_fun_symbol("max_u64"),
+                SpecFunEntry {
+                    loc: loc.clone(),
+                    oper: Operation::MaxU64,
+                    type_params: vec![],
+                    arg_types: vec![],
+                    result_type: num_t.clone(),
+                },
+            );
+
+            add_builtin(
+                self,
+                self.builtin_fun_symbol("max_u128"),
+                SpecFunEntry {
+                    loc: loc.clone(),
+                    oper: Operation::MaxU128,
+                    type_params: vec![],
+                    arg_types: vec![],
+                    result_type: num_t.clone(),
+                },
+            );
+
             // Vectors
             add_builtin(
                 self,

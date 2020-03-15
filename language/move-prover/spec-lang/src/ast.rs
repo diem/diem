@@ -147,6 +147,10 @@ pub enum Operation {
     Exists,
     Old,
     Update,
+    Sender,
+    MaxU8,
+    MaxU64,
+    MaxU128,
 }
 
 #[derive(Debug)]

@@ -575,10 +575,14 @@ impl<'env> SpecTranslator<'env> {
             Operation::Global => self.translate_resource_access(node_id, args),
             Operation::Exists => self.translate_resource_exists(node_id, args),
             Operation::Len => self.translate_primitive_call("$vlen_value", args),
+            Operation::Sender => emit!(self.writer, "$TxnSender($txn)"),
             Operation::All => self.translate_all_or_exists(&loc, true, args),
             Operation::Any => self.translate_all_or_exists(&loc, false, args),
             Operation::Update => self.translate_primitive_call("$update_vector", args),
             Operation::Old => self.translate_old(args),
+            Operation::MaxU8 => emit!(self.writer, "Integer(MAX_U8)"),
+            Operation::MaxU64 => emit!(self.writer, "Integer(MAX_U64)"),
+            Operation::MaxU128 => emit!(self.writer, "Integer(MAX_U128)"),
         }
     }
 
