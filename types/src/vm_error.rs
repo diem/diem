@@ -8,7 +8,7 @@ use anyhow::{Error, Result};
 use proptest::prelude::*;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
-use serde::{de, ser};
+use serde::{de, ser, Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
 
 /// The minimum status code for validation statuses
@@ -43,7 +43,7 @@ pub static EXECUTION_STATUS_MAX_CODE: u64 = 4999;
 
 /// A `VMStatus` is represented as a required major status that is semantic coupled with with
 /// an optional sub status and message.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
 pub struct VMStatus {

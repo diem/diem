@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::views::AccountView;
+use crate::{errors::JsonRpcError, views::AccountView};
 use anyhow::{ensure, format_err, Error, Result};
 use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use reqwest::Client;
@@ -113,8 +113,8 @@ impl JsonRpcAsyncClient {
             if let Ok(req_id) = self.fetch_id(&response) {
                 if req_id < result.len() {
                     if let Some(err_data) = response.get("error") {
-                        result[req_id] =
-                            Err(format_err!("JSON-RPC error {:?}", err_data.get("message")));
+                        let err_json: JsonRpcError = serde_json::from_value(err_data.clone())?;
+                        result[req_id] = Err(Error::new(err_json));
                         continue;
                     }
                     if let Some(data) = response.get("result") {

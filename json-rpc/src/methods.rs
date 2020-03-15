@@ -2,11 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Module contains RPC method handlers for Full Node JSON-RPC interface
-use crate::views::{
-    AccountStateWithProofView, AccountView, BlockMetadata, EventView, StateProofView,
-    TransactionView,
+use crate::{
+    errors::JsonRpcError,
+    views::{
+        AccountStateWithProofView, AccountView, BlockMetadata, EventView, StateProofView,
+        TransactionView,
+    },
 };
-use anyhow::{ensure, format_err, Result};
+use anyhow::{ensure, format_err, Error, Result};
 use core::future::Future;
 use debug_interface::prelude::*;
 use futures::{channel::oneshot, SinkExt};
@@ -51,7 +54,7 @@ async fn submit(mut service: JsonRpcService, params: Vec<Value>) -> Result<()> {
     let (mempool_status, vm_status) = callback.await??;
 
     if let Some(vm_error) = vm_status {
-        Err(format_err!("VM validation error: {:?}", vm_error))
+        Err(Error::new(JsonRpcError::vm_error(vm_error)))
     } else if mempool_status.code == MempoolStatusCode::Accepted {
         Ok(())
     } else {

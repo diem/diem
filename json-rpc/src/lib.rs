@@ -18,6 +18,7 @@
 mod util;
 
 mod client;
+mod errors;
 mod methods;
 mod runtime;
 pub mod views;
