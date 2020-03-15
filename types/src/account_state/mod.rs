@@ -10,8 +10,12 @@ use crate::{
         DiscoverySetResource, DISCOVERY_SET_CHANGE_EVENT_PATH, DISCOVERY_SET_RESOURCE_PATH,
     },
     event::EventHandle,
+    validator_set::{
+        ValidatorSetResource, VALIDATOR_SET_CHANGE_EVENT_PATH, VALIDATOR_SET_RESOURCE_PATH,
+    },
 };
 use anyhow::{bail, Error, Result};
+use libra_crypto::ed25519::Ed25519PublicKey;
 use serde::{export::Formatter, Deserialize, Serialize};
 use std::{collections::btree_map::BTreeMap, convert::TryFrom, fmt};
 
@@ -43,6 +47,16 @@ impl AccountState {
             .map_err(Into::into)
     }
 
+    pub fn get_validator_set_resource(
+        &self,
+    ) -> Result<Option<ValidatorSetResource<Ed25519PublicKey>>> {
+        self.0
+            .get(&*VALIDATOR_SET_RESOURCE_PATH)
+            .map(|bytes| lcs::from_bytes(bytes))
+            .transpose()
+            .map_err(Into::into)
+    }
+
     pub fn get_event_handle_by_query_path(&self, query_path: &[u8]) -> Result<Option<EventHandle>> {
         let event_handle = if *ACCOUNT_RECEIVED_EVENT_PATH == query_path {
             self.get_account_resource()?
@@ -53,6 +67,9 @@ impl AccountState {
         } else if *DISCOVERY_SET_CHANGE_EVENT_PATH == query_path {
             self.get_discovery_set_resource()?
                 .map(|discovery_set_resource| discovery_set_resource.change_events().clone())
+        } else if *VALIDATOR_SET_CHANGE_EVENT_PATH == query_path {
+            self.get_validator_set_resource()?
+                .map(|validator_set_resource| validator_set_resource.change_events().clone())
         } else {
             bail!("Unrecognized query path: {:?}", query_path);
         };
@@ -79,13 +96,31 @@ impl AccountState {
 
 impl fmt::Debug for AccountState {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        // TODO: add support for other types of resources
         let account_resource_str = self
             .get_account_resource()
             .map(|account_resource_opt| format!("{:#?}", account_resource_opt))
             .unwrap_or_else(|e| format!("parse error: {:#?}", e));
-        // TODO: add support for other types of resources
 
-        write!(f, "AccountResource {{ {} }}", account_resource_str)
+        let discovery_set_str = self
+            .get_discovery_set_resource()
+            .map(|discovery_set_opt| format!("{:#?}", discovery_set_opt))
+            .unwrap_or_else(|e| format!("parse error: {:#?}", e));
+
+        let validator_set_str = self
+            .get_validator_set_resource()
+            .map(|validator_set_opt| format!("{:#?}", validator_set_opt))
+            .unwrap_or_else(|e| format!("parse error: {:#?}", e));
+
+        write!(
+            f,
+            "{{ \n \
+             AccountResource {{ {} }} \n \
+             DiscoverySet {{ {} }} \n \
+             ValidatorSet {{ {} }} \n \
+             }}",
+            account_resource_str, discovery_set_str, validator_set_str,
+        )
     }
 }
 
