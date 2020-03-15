@@ -83,6 +83,7 @@ members = [
     "mempool",
     "secure/net",
     "secure/storage",
+    "secure/transaction-scripts",
     "state-synchronizer",
     "storage/accumulator",
     "storage/backup-restore",

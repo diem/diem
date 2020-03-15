@@ -1,0 +1,14 @@
+[package]
+name = "libra-transaction-scripts"
+version = "0.1.0"
+edition = "2018"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra transaction scripts"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+once_cell = "1.3.1"
+include_dir = "0.5.0"
