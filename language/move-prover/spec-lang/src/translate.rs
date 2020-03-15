@@ -680,6 +680,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     /// Creates a SpecBlockContext from the given SpecBlockTarget
     fn get_spec_block_context(&self, target: &PA::SpecBlockTarget) -> Option<SpecBlockContext> {
         match &target.value {
+            PA::SpecBlockTarget_::Code => unimplemented!(),
             PA::SpecBlockTarget_::Function(name) => {
                 let qsym = self.qualified_by_module(self.symbol_pool().make(&name.0.value));
                 if self.parent.fun_table.contains_key(&qsym) {
@@ -949,6 +950,9 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             let translated = et.translate_exp(exp, &BOOL_TYPE);
             et.finalize_types();
             let kind = match kind {
+                PA::SpecConditionKind::Assert => unimplemented!(),
+                PA::SpecConditionKind::Assume => unimplemented!(),
+                PA::SpecConditionKind::Decreases => unimplemented!(),
                 PA::SpecConditionKind::Ensures => ConditionKind::Ensures,
                 PA::SpecConditionKind::AbortsIf => ConditionKind::AbortsIf,
             };

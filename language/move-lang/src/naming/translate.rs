@@ -842,7 +842,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
                 },
             }
         }
-
+        EE::Spec(u) => NE::Spec(u),
         EE::UnresolvedError => {
             assert!(context.has_errors());
             NE::UnresolvedError

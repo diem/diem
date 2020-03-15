@@ -273,6 +273,7 @@ fn exp(context: &mut Context, sp!(loc, e_): &N::Exp) {
         | E::UnresolvedError
         | E::Break
         | E::Continue
+        | E::Spec(_)
         | E::InferredNum(_)
         | E::Value(_)
         | E::Move(_)

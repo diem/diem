@@ -222,7 +222,7 @@ fn exp(context: &mut Context, parent_e: &Exp) {
     use UnannotatedExp_ as E;
     let eloc = &parent_e.exp.loc;
     match &parent_e.exp.value {
-        E::Unit | E::Value(_) | E::UnresolvedError => (),
+        E::Unit | E::Value(_) | E::Spec(_) | E::UnresolvedError => (),
 
         E::BorrowLocal(_, var) | E::Copy { var, .. } => use_local(context, eloc, var),
 

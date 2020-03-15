@@ -790,6 +790,7 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             );
             (rhs.clone(), TE::Annotate(el, Box::new(rhs)))
         }
+        NE::Spec(u) => (sp(eloc, Type_::Unit), TE::Spec(u)),
         NE::UnresolvedError => {
             assert!(context.has_errors());
             (context.error_type(eloc), TE::UnresolvedError)

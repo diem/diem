@@ -663,6 +663,11 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             Exp_::GlobalCall(n, tys, rhs)
         }
 
+        Tok::Spec => {
+            let spec_block = parse_spec_block(tokens)?;
+            Exp_::Spec(spec_block)
+        }
+
         _ => {
             return Err(unexpected_token_error(tokens, "an expression term"));
         }
@@ -1386,7 +1391,7 @@ fn parse_module<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleDefinition, 
 //**************************************************************************************************
 
 // Parse an optional specification block:
-//     SpecBlock = "spec" ( "fun" <Name> | "struct <Name> | "module" ) "{" SpecBlockMember* "}"
+//     SpecBlock = "spec" ( "fun" <Name> | "struct <Name> | "module" )? "{" SpecBlockMember* "}"
 fn parse_spec_block<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlock, Error> {
     let start_loc = tokens.start_loc();
     consume_token(tokens, Tok::Spec)?;
@@ -1406,6 +1411,7 @@ fn parse_spec_block<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlock, Err
             tokens.advance()?;
             SpecBlockTarget_::Module
         }
+        Tok::LBrace => SpecBlockTarget_::Code,
         _ => {
             return Err(unexpected_token_error(
                 tokens,
@@ -1416,7 +1422,10 @@ fn parse_spec_block<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlock, Err
     let target = spanned(
         tokens.file_name(),
         target_start_loc,
-        tokens.previous_end_loc(),
+        match target_ {
+            SpecBlockTarget_::Code => target_start_loc,
+            _ => tokens.previous_end_loc(),
+        },
         target_,
     );
 
@@ -1443,19 +1452,19 @@ fn parse_spec_block<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlock, Err
 }
 
 // Parse a spec block member:
-//     SpecBlockMember = <Invariant> | <Condition> | <SpecFunction> | <SpecVariable>
+//    SpecBlockMember = <Invariant> | <Condition> | <SpecFunction> | <SpecVariable>
 fn parse_spec_block_member<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
     match tokens.peek() {
         Tok::Invariant => parse_invariant(tokens),
-        Tok::AbortsIf | Tok::Ensures => parse_condition(tokens),
         Tok::Define | Tok::Native => parse_spec_function(tokens),
-        Tok::NameValue => {
-            if tokens.content() == "global" {
-                parse_spec_variable(tokens)
-            } else {
-                Err(unexpected_token_error(tokens, "`global`"))
-            }
-        }
+        Tok::NameValue => match tokens.content() {
+            "assert" | "assume" | "decreases" | "aborts_if" | "ensures" => parse_condition(tokens),
+            "global" => parse_spec_variable(tokens),
+            _ => Err(unexpected_token_error(
+                tokens,
+                "`assert`, `assume`, `decreases`, `aborts_if`, `ensures`, `global`",
+            )),
+        },
         _ => Err(unexpected_token_error(
             tokens,
             "a specification block member",
@@ -1464,16 +1473,18 @@ fn parse_spec_block_member<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlo
 }
 
 // Parse a specification condition:
-//      SpecCondition = "aborts_if" <Exp> ";" | "ensures" <Exp> ";"
+//    SpecCondition = ("assert" | "assume" | "decreases" | "aborts_if" | "ensures") <Exp> ";"
 fn parse_condition<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
     let start_loc = tokens.start_loc();
-    let kind = if tokens.peek() == Tok::AbortsIf {
-        tokens.advance()?;
-        SpecConditionKind::AbortsIf
-    } else {
-        consume_token(tokens, Tok::Ensures)?;
-        SpecConditionKind::Ensures
+    let kind = match tokens.content() {
+        "assert" => SpecConditionKind::Assert,
+        "assume" => SpecConditionKind::Assume,
+        "decreases" => SpecConditionKind::Decreases,
+        "aborts_if" => SpecConditionKind::AbortsIf,
+        "ensures" => SpecConditionKind::Ensures,
+        _ => unreachable!(),
     };
+    tokens.advance()?;
     let exp = parse_exp(tokens)?;
     consume_token(tokens, Tok::Semicolon)?;
     let end_loc = tokens.previous_end_loc();

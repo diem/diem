@@ -79,6 +79,9 @@ pub enum FunctionBody_ {
 }
 pub type FunctionBody = Spanned<FunctionBody_>;
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub struct SpecId(usize);
+
 #[derive(PartialEq, Debug)]
 pub struct Function {
     pub loc: Loc,
@@ -86,6 +89,7 @@ pub struct Function {
     pub signature: FunctionSignature,
     pub acquires: Vec<ModuleAccess>,
     pub body: FunctionBody,
+    pub specs: BTreeMap<SpecId, SpecBlock>,
 }
 
 //**************************************************************************************************
@@ -211,6 +215,8 @@ pub enum Exp_ {
     Cast(Box<Exp>, Type),
     Annotate(Box<Exp>, Type),
 
+    Spec(SpecId),
+
     UnresolvedError,
 }
 pub type Exp = Spanned<Exp_>;
@@ -223,6 +229,20 @@ pub enum SequenceItem_ {
     Bind(LValueList, Exp),
 }
 pub type SequenceItem = Spanned<SequenceItem_>;
+
+//**************************************************************************************************
+// impls
+//**************************************************************************************************
+
+impl SpecId {
+    pub fn new(u: usize) -> Self {
+        SpecId(u)
+    }
+
+    pub fn inner(self) -> usize {
+        self.0
+    }
+}
 
 //**************************************************************************************************
 // Display
@@ -261,6 +281,12 @@ impl fmt::Display for Type_ {
                 write!(f, ")")
             }
         }
+    }
+}
+
+impl fmt::Display for SpecId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -389,6 +415,9 @@ impl AstDebug for SpecBlockMember_ {
         match self {
             SpecBlockMember_::Condition { kind, exp } => {
                 match kind {
+                    SpecConditionKind::Assert => w.write("assert "),
+                    SpecConditionKind::Assume => w.write("assume "),
+                    SpecConditionKind::Decreases => w.write("decreases "),
                     SpecConditionKind::AbortsIf => w.write("aborts_if "),
                     SpecConditionKind::Ensures => w.write("ensures "),
                 }
@@ -439,6 +468,7 @@ impl AstDebug for (FunctionName, &Function) {
                 signature,
                 acquires,
                 body,
+                ..
             },
         ) = self;
         visibility.ast_debug(w);
@@ -704,6 +734,7 @@ impl AstDebug for Exp_ {
                 ty.ast_debug(w);
                 w.write(")");
             }
+            E::Spec(u) => w.write(&format!("spec({})", u)),
             E::UnresolvedError => w.write("_|_"),
         }
     }

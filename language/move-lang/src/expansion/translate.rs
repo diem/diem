@@ -3,7 +3,7 @@
 
 use crate::{
     errors::*,
-    expansion::ast::{self as E, Fields},
+    expansion::ast::{self as E, Fields, SpecId},
     parser::ast::{
         self as P, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, ModuleIdent_,
         ModuleName, StructName, Var,
@@ -24,6 +24,7 @@ struct Context {
     address: Option<Address>,
     aliases: AliasMap,
     in_spec_context: bool,
+    exp_specs: BTreeMap<SpecId, E::SpecBlock>,
 }
 impl Context {
     fn new() -> Self {
@@ -32,6 +33,7 @@ impl Context {
             address: None,
             aliases: AliasMap::new(),
             in_spec_context: false,
+            exp_specs: BTreeMap::new(),
         }
     }
 
@@ -95,6 +97,18 @@ impl Context {
             )]);
             false
         }
+    }
+
+    pub fn bind_exp_spec(&mut self, spec_block: P::SpecBlock) -> SpecId {
+        let len = self.exp_specs.len();
+        let id = SpecId::new(len);
+        let espec_block = spec(self, spec_block);
+        self.exp_specs.insert(id, espec_block);
+        id
+    }
+
+    pub fn extract_exp_specs(&mut self) -> BTreeMap<SpecId, E::SpecBlock> {
+        std::mem::replace(&mut self.exp_specs, BTreeMap::new())
     }
 }
 
@@ -481,18 +495,21 @@ fn function_def(context: &mut Context, pfunction: P::Function) -> (FunctionName,
         body: pbody,
         acquires,
     } = pfunction;
+    assert!(context.exp_specs.is_empty());
     let signature = function_signature(context, psignature);
     let acquires = acquires
         .into_iter()
         .flat_map(|a| module_access(context, a))
         .collect();
     let body = function_body(context, pbody);
+    let specs = context.extract_exp_specs();
     let fdef = E::Function {
         loc,
         visibility,
         signature,
         acquires,
         body,
+        specs,
     };
 
     (name, fdef)
@@ -877,6 +894,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
             }
         }
         PE::Annotate(e, ty) => EE::Annotate(exp(context, *e), type_(context, ty)),
+        PE::Spec(spec_block) => EE::Spec(context.bind_exp_spec(spec_block)),
         PE::UnresolvedError => panic!("ICE error should have been thrown"),
     };
     sp(loc, e_)

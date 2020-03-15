@@ -90,6 +90,7 @@ fn exp(
         | E::BorrowLocal(_, _)
         | E::Break
         | E::Continue
+        | E::Spec(_)
         | E::UnresolvedError => (),
 
         E::ModuleCall(call) if is_current_function(context, call) => {
