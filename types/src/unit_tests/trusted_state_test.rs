@@ -4,9 +4,7 @@
 use crate::{
     account_address::AccountAddress,
     block_info::BlockInfo,
-    crypto_proxies::{
-        random_validator_verifier, ValidatorPublicKeys, ValidatorSet, ValidatorSigner,
-    },
+    crypto_proxies::{random_validator_verifier, ValidatorInfo, ValidatorSet, ValidatorSigner},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::Version,
     trusted_state::{TrustedState, TrustedStateChange},
@@ -61,7 +59,7 @@ fn into_validator_set(signers: &[ValidatorSigner]) -> ValidatorSet {
         signers
             .iter()
             .map(|signer| {
-                ValidatorPublicKeys::new_with_random_network_keys(
+                ValidatorInfo::new_with_random_network_keys(
                     signer.author(),
                     signer.public_key(),
                     1, /* voting power */

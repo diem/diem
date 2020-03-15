@@ -302,12 +302,12 @@ impl<PublicKey: VerifyingKey> From<&ValidatorSet<PublicKey>> for ValidatorVerifi
 #[cfg(any(test, feature = "fuzzing"))]
 impl<PublicKey: VerifyingKey> From<&ValidatorVerifier<PublicKey>> for ValidatorSet<PublicKey> {
     fn from(verifier: &ValidatorVerifier<PublicKey>) -> Self {
-        use crate::validator_public_keys::ValidatorPublicKeys;
+        use crate::validator_info::ValidatorInfo;
         ValidatorSet::new(
             verifier
                 .get_ordered_account_addresses_iter()
                 .map(|addr| {
-                    ValidatorPublicKeys::new_with_random_network_keys(
+                    ValidatorInfo::new_with_random_network_keys(
                         addr,
                         verifier.get_public_key(&addr).unwrap(),
                         verifier.get_voting_power(&addr).unwrap(),

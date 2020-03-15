@@ -12,7 +12,7 @@ use crate::{
     utils,
 };
 use libra_types::{
-    crypto_proxies::{ValidatorPublicKeys, ValidatorSet},
+    crypto_proxies::{ValidatorInfo, ValidatorSet},
     discovery_info::DiscoveryInfo,
     discovery_set::DiscoverySet,
 };
@@ -60,7 +60,7 @@ pub fn validator_swarm(
             .as_ref()
             .expect("Network keypairs are not defined");
 
-        validator_keys.push(ValidatorPublicKeys::new(
+        validator_keys.push(ValidatorInfo::new(
             network.peer_id,
             consensus_pubkey,
             1, // @TODO: Add support for dynamic weights

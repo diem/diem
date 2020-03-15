@@ -17,7 +17,7 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
     block_info::Round,
-    crypto_proxies::{EpochInfo, ValidatorPublicKeys, ValidatorSet, ValidatorVerifier},
+    crypto_proxies::{EpochInfo, ValidatorInfo, ValidatorSet, ValidatorVerifier},
     ledger_info::LedgerInfo,
 };
 use std::{collections::HashSet, sync::Arc};
@@ -88,7 +88,7 @@ impl LedgerRecoveryData {
         self.storage_ledger.round()
     }
 
-    pub fn validator_keys(&self) -> Vec<ValidatorPublicKeys> {
+    pub fn validator_keys(&self) -> Vec<ValidatorInfo> {
         self.validator_keys.clone().to_vec()
     }
 
@@ -250,7 +250,7 @@ impl<T: Payload> RecoveryData<T> {
         self.highest_timeout_certificate.clone()
     }
 
-    pub fn validator_keys(&self) -> Vec<ValidatorPublicKeys> {
+    pub fn validator_keys(&self) -> Vec<ValidatorInfo> {
         self.ledger_recovery_data.validator_keys()
     }
 
