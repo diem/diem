@@ -37,18 +37,13 @@
 
 use crate::{
     account_address::AccountAddress,
-    account_config::{
-        association_address, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_RESOURCE_PATH,
-        ACCOUNT_SENT_EVENT_PATH,
-    },
+    account_config::{ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_RESOURCE_PATH, ACCOUNT_SENT_EVENT_PATH},
     language_storage::{ModuleId, ResourceKey, StructTag},
-    validator_set::validator_set_path,
 };
 use anyhow::{Error, Result};
 use libra_crypto::hash::{CryptoHash, HashValue};
 use mirai_annotations::*;
 use move_core_types::identifier::{IdentStr, Identifier};
-use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use radix_trie::TrieKey;
@@ -195,10 +190,6 @@ impl TrieKey for Accesses {
         self.as_separated_string().into_bytes()
     }
 }
-
-/// The access path where the Validator Set resource is stored.
-pub static VALIDATOR_SET_ACCESS_PATH: Lazy<AccessPath> =
-    Lazy::new(|| AccessPath::new(association_address(), validator_set_path()));
 
 #[derive(Clone, Eq, PartialEq, Default, Hash, Serialize, Deserialize, Ord, PartialOrd)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]

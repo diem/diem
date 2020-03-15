@@ -4,7 +4,7 @@
 use crate::{
     access_path::{AccessPath, Accesses},
     account_config,
-    event::EventKey,
+    event::{EventHandle, EventKey},
     language_storage::StructTag,
     validator_public_keys::ValidatorPublicKeys,
 };
@@ -38,15 +38,35 @@ pub fn validator_set_struct_name() -> &'static IdentStr {
 
 pub fn validator_set_tag() -> StructTag {
     StructTag {
-        name: validator_set_struct_name().to_owned(),
         address: account_config::CORE_CODE_ADDRESS,
+        name: validator_set_struct_name().to_owned(),
         module: validator_set_module_name().to_owned(),
         type_params: vec![],
     }
 }
 
-pub(crate) fn validator_set_path() -> Vec<u8> {
-    AccessPath::resource_access_vec(&validator_set_tag(), &Accesses::empty())
+/// The access path where the Validator Set resource is stored.
+pub static VALIDATOR_SET_RESOURCE_PATH: Lazy<Vec<u8>> =
+    Lazy::new(|| AccessPath::resource_access_vec(&validator_set_tag(), &Accesses::empty()));
+
+/// The path to the validator set change event handle under a ValidatorSetResource.
+pub static VALIDATOR_SET_CHANGE_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
+    let mut path = VALIDATOR_SET_RESOURCE_PATH.to_vec();
+    path.extend_from_slice(b"/change_events_count/");
+    path
+});
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ValidatorSetResource<PublicKey> {
+    validator_set: ValidatorSet<PublicKey>,
+    last_reconfiguration_time: u64,
+    change_events: EventHandle,
+}
+
+impl<PublicKey> ValidatorSetResource<PublicKey> {
+    pub fn change_events(&self) -> &EventHandle {
+        &self.change_events
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
