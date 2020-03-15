@@ -17,7 +17,7 @@ use crate::{
 };
 use anyhow::{bail, Error, Result};
 use libra_crypto::ed25519::Ed25519PublicKey;
-use serde::{export::Formatter, Deserialize, Serialize};
+use serde::{de::DeserializeOwned, export::Formatter, Deserialize, Serialize};
 use std::{collections::btree_map::BTreeMap, convert::TryFrom, fmt};
 
 #[derive(Default, Deserialize, Serialize)]
@@ -25,45 +25,25 @@ pub struct AccountState(BTreeMap<Vec<u8>, Vec<u8>>);
 
 impl AccountState {
     pub fn get_account_resource(&self) -> Result<Option<AccountResource>> {
-        self.0
-            .get(&*ACCOUNT_RESOURCE_PATH)
-            .map(|bytes| lcs::from_bytes(bytes))
-            .transpose()
-            .map_err(Into::into)
+        self.get_resource(&*ACCOUNT_RESOURCE_PATH)
     }
 
     pub fn get_balance_resource(&self) -> Result<Option<BalanceResource>> {
-        self.0
-            .get(&*BALANCE_RESOURCE_PATH)
-            .map(|bytes| lcs::from_bytes(bytes))
-            .transpose()
-            .map_err(Into::into)
+        self.get_resource(&*BALANCE_RESOURCE_PATH)
     }
 
     pub fn get_discovery_set_resource(&self) -> Result<Option<DiscoverySetResource>> {
-        self.0
-            .get(&*DISCOVERY_SET_RESOURCE_PATH)
-            .map(|bytes| lcs::from_bytes(bytes))
-            .transpose()
-            .map_err(Into::into)
+        self.get_resource(&*DISCOVERY_SET_RESOURCE_PATH)
     }
 
     pub fn get_validator_config_resource(&self) -> Result<Option<ValidatorConfigResource>> {
-        self.0
-            .get(&*VALIDATOR_CONFIG_RESOURCE_PATH)
-            .map(|bytes| lcs::from_bytes(bytes))
-            .transpose()
-            .map_err(Into::into)
+        self.get_resource(&*VALIDATOR_CONFIG_RESOURCE_PATH)
     }
 
     pub fn get_validator_set_resource(
         &self,
     ) -> Result<Option<ValidatorSetResource<Ed25519PublicKey>>> {
-        self.0
-            .get(&*VALIDATOR_SET_RESOURCE_PATH)
-            .map(|bytes| lcs::from_bytes(bytes))
-            .transpose()
-            .map_err(Into::into)
+        self.get_resource(&*VALIDATOR_SET_RESOURCE_PATH)
     }
 
     pub fn get_event_handle_by_query_path(&self, query_path: &[u8]) -> Result<Option<EventHandle>> {
@@ -88,6 +68,14 @@ impl AccountState {
 
     pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
         self.0.get(key)
+    }
+
+    pub fn get_resource<T: DeserializeOwned>(&self, key: &[u8]) -> Result<Option<T>> {
+        self.0
+            .get(key)
+            .map(|bytes| lcs::from_bytes(bytes))
+            .transpose()
+            .map_err(Into::into)
     }
 
     pub fn insert(&mut self, key: Vec<u8>, value: Vec<u8>) -> Option<Vec<u8>> {
