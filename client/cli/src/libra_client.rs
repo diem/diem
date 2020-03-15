@@ -2,9 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::AccountData;
-use anyhow::{bail, ensure, format_err, Result};
-use libra_json_rpc::views::{
-    AccountStateWithProofView, AccountView, BytesView, EventView, StateProofView, TransactionView,
+use anyhow::{bail, ensure, format_err, Error, Result};
+use libra_json_rpc::{
+    errors::JsonRpcError,
+    views::{
+        AccountStateWithProofView, AccountView, BytesView, EventView, StateProofView,
+        TransactionView,
+    },
 };
 use libra_logger::prelude::*;
 use libra_types::{
@@ -16,6 +20,7 @@ use libra_types::{
     transaction::{SignedTransaction, Version},
     trusted_state::{TrustedState, TrustedStateChange},
     validator_change::ValidatorChangeProof,
+    vm_error::StatusCode,
     waypoint::Waypoint,
 };
 use rand::Rng;
@@ -110,7 +115,8 @@ impl JsonRpcClient {
         );
 
         if let Some(error) = response.get("error") {
-            bail!("Error in JSON RPC response: {:?}", error);
+            let json_error: JsonRpcError = serde_json::from_value(error.clone())?;
+            return Err(Error::new(json_error));
         }
 
         if let Some(result) = response.get("result") {
@@ -250,7 +256,20 @@ impl LibraClient {
                 }
                 Ok(())
             }
-            Err(e) => bail!("Transaction submission failed with error: {:?}", e),
+            Err(e) => {
+                if let Some(error) = e.downcast_ref::<JsonRpcError>() {
+                    // check VM status
+                    if let Some(vm_error) = error.get_vm_error() {
+                        if vm_error.major_status == StatusCode::SEQUENCE_NUMBER_TOO_OLD {
+                            if let Some(sender_account) = sender_account_opt {
+                                sender_account.sequence_number =
+                                    self.get_sequence_number(sender_account.address)?;
+                            }
+                        }
+                    }
+                }
+                bail!("Transaction submission failed with error: {:?}", e)
+            }
         }
     }
 
@@ -480,6 +499,13 @@ impl LibraClient {
                 Ok(txns)
             }
             Err(e) => bail!("Failed to get transactions with error: {:?}", e),
+        }
+    }
+
+    fn get_sequence_number(&mut self, account: AccountAddress) -> Result<u64> {
+        match self.get_account_state(account, true)?.0 {
+            None => bail!("No account found for address {:?}", account),
+            Some(account_view) => Ok(account_view.sequence_number),
         }
     }
 

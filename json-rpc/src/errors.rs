@@ -21,7 +21,7 @@ pub enum ServerCode {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub(crate) struct JsonRpcError {
+pub struct JsonRpcError {
     pub code: i16,
     pub message: String,
     pub data: Option<Value>,
@@ -89,5 +89,14 @@ impl JsonRpcError {
             message: format!("Server error: VM {} error: {:?}", vm_status_type, error),
             data: Some(serde_json::json!(error)),
         }
+    }
+
+    pub fn get_vm_error(&self) -> Option<VMStatus> {
+        if let Some(data) = &self.data {
+            if let Ok(vm_error) = serde_json::from_value::<VMStatus>(data.clone()) {
+                return Some(vm_error);
+            }
+        }
+        None
     }
 }
