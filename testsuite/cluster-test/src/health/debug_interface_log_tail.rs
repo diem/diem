@@ -9,7 +9,7 @@ use crate::{
     instance::Instance,
     util::unix_timestamp_now,
 };
-use debug_interface::{proto::Event as DebugInterfaceEvent, NodeDebugClient};
+use debug_interface::{proto::Event as DebugInterfaceEvent, AsyncNodeDebugClient};
 use libra_logger::*;
 use futures::future::FutureExt;
 use serde_json::{self, value as json};
@@ -19,14 +19,13 @@ use std::{
         atomic::{AtomicBool, AtomicI64, Ordering},
         mpsc, Arc, Mutex,
     },
-    thread,
     time::Duration,
 };
 use tokio::time;
 
 pub struct DebugPortLogWorker {
     instance: Instance,
-    client: NodeDebugClient,
+    client: AsyncNodeDebugClient,
     event_sender: mpsc::Sender<ValidatorEvent>,
     started_sender: Option<mpsc::Sender<()>>,
     pending_messages: Arc<AtomicI64>,
@@ -44,7 +43,7 @@ impl DebugPortLogWorker {
         for instance in cluster.all_instances() {
             let (started_sender, started_receiver) = mpsc::channel();
             started_receivers.push(started_receiver);
-            let client = NodeDebugClient::new(instance.ip(), 6191);
+            let client = AsyncNodeDebugClient::new(instance.ip(), 6191);
             let debug_port_log_worker = DebugPortLogWorker {
                 instance: instance.clone(),
                 client,
@@ -78,7 +77,7 @@ impl DebugPortLogWorker {
     pub async fn run(mut self) {
         let print_failures = env::var("VERBOSE").is_ok();
         loop {
-            match self.client.get_events() {
+            match self.client.get_events().await {
                 Err(e) => {
                     if print_failures {
                         info!("Failed to get events from {}: {:?}", self.instance, e);

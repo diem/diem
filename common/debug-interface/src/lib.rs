@@ -100,3 +100,69 @@ impl NodeDebugClient {
         Ok(response.into_inner())
     }
 }
+
+/// Implement default utility client for AsyncNodeDebugInterface 
+pub struct AsyncNodeDebugClient {
+    addr: String,
+    client: Option<NodeDebugInterfaceClient<tonic::transport::Channel>>,
+  }
+  
+  impl AsyncNodeDebugClient {
+    /// Create AsyncNodeDebugInterface from a valid socket address.
+    pub fn new<A: AsRef<str>>(address: A, port: u16) -> Self {
+        let addr = format!("http://{}:{}", address.as_ref(), port);
+  
+        Self {
+            client: None,
+            addr,
+        }
+    }
+  
+    async fn client(
+        &mut self,
+    ) -> Result<
+        &mut NodeDebugInterfaceClient<tonic::transport::Channel>,
+    > {
+        if self.client.is_none() {
+            self.client = Some(
+              NodeDebugInterfaceClient::connect(self.addr.clone()).await?
+            );
+        }
+  
+        // client is guaranteed to be populated by the time we reach here
+        Ok(self.client.as_mut().unwrap())
+    }
+  
+    pub async fn get_node_metric<S: AsRef<str>>(&mut self, metric: S) -> Result<Option<i64>> {
+        let metrics = self.get_node_metrics().await?;
+        Ok(metrics.get(metric.as_ref()).cloned())
+    }
+  
+    pub async fn get_node_metrics(&mut self) -> Result<HashMap<String, i64>> {
+        let client = self.client().await?;
+        let response = client.get_node_details(GetNodeDetailsRequest::default()).await
+            .context("Unable to query Node metrics")?;
+  
+        response
+            .into_inner()
+            .stats
+            .into_iter()
+            .map(|(k, v)| match v.parse::<i64>() {
+                Ok(v) => Ok((k, v)),
+                Err(_) => Err(anyhow::format_err!(
+                    "Failed to parse stat value to i64 {}: {}",
+                    &k,
+                    &v
+                )),
+            })
+            .collect()
+    }
+  
+    pub async fn get_events(&mut self) -> Result<GetEventsResponse> {
+        let client = self.client().await?;
+        let response = client.get_events(GetEventsRequest::default()).await
+            .context("Unable to query Node events")?;
+        Ok(response.into_inner())
+    }
+  }
+  
