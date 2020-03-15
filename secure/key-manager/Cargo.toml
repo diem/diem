@@ -1,0 +1,28 @@
+[package]
+name = "libra-key-manager"
+version = "0.1.0"
+edition = "2018"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra Key Manager"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+libra-logger = { path = "../../common/logger", version = "0.1.0" }
+libra-secure-storage = { path = "../../secure/storage", version = "0.1.0" }
+libra-transaction-scripts = { path = "../transaction-scripts", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
+
+[dev-dependencies]
+tokio = { version = "0.2.12", features = ["full"] }
+
+config-builder = { path = "../../config/config-builder", version = "0.1.0" }
+executor = { path = "../../execution/executor", version = "0.1.0" }
+libradb = { path = "../../storage/libradb", version = "0.1.0" }
+libra-config = { path = "../../config", version = "0.1.0" }
+libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
+storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
+storage-service = { path = "../../storage/storage-service", version = "0.1.0" }

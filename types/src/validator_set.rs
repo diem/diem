@@ -67,6 +67,10 @@ impl<PublicKey> ValidatorSetResource<PublicKey> {
     pub fn change_events(&self) -> &EventHandle {
         &self.change_events
     }
+
+    pub fn validator_set(&self) -> &ValidatorSet<PublicKey> {
+        &self.validator_set
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

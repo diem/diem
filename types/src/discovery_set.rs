@@ -68,6 +68,10 @@ impl DiscoverySetResource {
     pub fn change_events(&self) -> &EventHandle {
         &self.change_events
     }
+
+    pub fn discovery_set(&self) -> &DiscoverySet {
+        &self.discovery_set
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
