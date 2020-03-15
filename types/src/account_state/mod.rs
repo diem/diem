@@ -10,6 +10,7 @@ use crate::{
         DiscoverySetResource, DISCOVERY_SET_CHANGE_EVENT_PATH, DISCOVERY_SET_RESOURCE_PATH,
     },
     event::EventHandle,
+    validator_config::{ValidatorConfigResource, VALIDATOR_CONFIG_RESOURCE_PATH},
     validator_set::{
         ValidatorSetResource, VALIDATOR_SET_CHANGE_EVENT_PATH, VALIDATOR_SET_RESOURCE_PATH,
     },
@@ -42,6 +43,14 @@ impl AccountState {
     pub fn get_discovery_set_resource(&self) -> Result<Option<DiscoverySetResource>> {
         self.0
             .get(&*DISCOVERY_SET_RESOURCE_PATH)
+            .map(|bytes| lcs::from_bytes(bytes))
+            .transpose()
+            .map_err(Into::into)
+    }
+
+    pub fn get_validator_config_resource(&self) -> Result<Option<ValidatorConfigResource>> {
+        self.0
+            .get(&*VALIDATOR_CONFIG_RESOURCE_PATH)
             .map(|bytes| lcs::from_bytes(bytes))
             .transpose()
             .map_err(Into::into)
@@ -107,6 +116,11 @@ impl fmt::Debug for AccountState {
             .map(|discovery_set_opt| format!("{:#?}", discovery_set_opt))
             .unwrap_or_else(|e| format!("parse error: {:#?}", e));
 
+        let validator_config_str = self
+            .get_validator_config_resource()
+            .map(|validator_config_opt| format!("{:#?}", validator_config_opt))
+            .unwrap_or_else(|e| format!("parse error: {:#?}", e));
+
         let validator_set_str = self
             .get_validator_set_resource()
             .map(|validator_set_opt| format!("{:#?}", validator_set_opt))
@@ -117,9 +131,10 @@ impl fmt::Debug for AccountState {
             "{{ \n \
              AccountResource {{ {} }} \n \
              DiscoverySet {{ {} }} \n \
+             ValidatorConfig {{ {} }} \n \
              ValidatorSet {{ {} }} \n \
              }}",
-            account_resource_str, discovery_set_str, validator_set_str,
+            account_resource_str, discovery_set_str, validator_config_str, validator_set_str,
         )
     }
 }
