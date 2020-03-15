@@ -133,7 +133,7 @@ mod count {
     fn exp(context: &mut Context, parent_e: &Exp) {
         use UnannotatedExp_ as E;
         match &parent_e.exp.value {
-            E::Unit | E::Value(_) | E::UnresolvedError => (),
+            E::Unit | E::Value(_) | E::Spec(_) | E::UnresolvedError => (),
 
             E::BorrowLocal(_, var) => context.used(var, true),
 
@@ -193,6 +193,7 @@ mod count {
         use UnannotatedExp_ as E;
         match &parent_e.exp.value {
             E::UnresolvedError
+            | E::Spec(_)
             | E::BorrowLocal(_, _)
             | E::Copy { .. }
             | E::Builtin(_, _)
@@ -366,7 +367,7 @@ mod eliminate {
                 }
             }
 
-            E::Unit | E::Value(_) | E::UnresolvedError | E::BorrowLocal(_, _) => (),
+            E::Unit | E::Value(_) | E::Spec(_) | E::UnresolvedError | E::BorrowLocal(_, _) => (),
 
             E::ModuleCall(mcall) => exp(context, &mut mcall.arguments),
             E::Builtin(_, e)

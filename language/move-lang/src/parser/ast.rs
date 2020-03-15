@@ -176,6 +176,7 @@ pub struct SpecBlock_ {
 
 #[derive(Debug, PartialEq)]
 pub enum SpecBlockTarget_ {
+    Code,
     Module,
     Function(FunctionName),
     Structure(StructName),
@@ -211,6 +212,9 @@ pub type SpecBlockMember = Spanned<SpecBlockMember_>;
 // Specification condition kind.
 #[derive(PartialEq, Debug)]
 pub enum SpecConditionKind {
+    Assert,
+    Assume,
+    Decreases,
     AbortsIf,
     Ensures,
 }
@@ -432,6 +436,9 @@ pub enum Exp_ {
     Cast(Box<Exp>, Type),
     // (e: t)
     Annotate(Box<Exp>, Type),
+
+    // spec { ... }
+    Spec(SpecBlock),
 
     // Internal node marking an error was added to the error list
     // This is here so the pass can continue even when an error is hit
@@ -781,6 +788,7 @@ impl AstDebug for SpecBlock_ {
 impl AstDebug for SpecBlockTarget_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
+            SpecBlockTarget_::Code => {}
             SpecBlockTarget_::Module => w.write("module "),
             SpecBlockTarget_::Function(n) => w.write(&format!("fun {} ", n.0.value)),
             SpecBlockTarget_::Structure(n) => w.write(&format!("struct {} ", n.0.value)),
@@ -793,6 +801,9 @@ impl AstDebug for SpecBlockMember_ {
         match self {
             SpecBlockMember_::Condition { kind, exp } => {
                 match kind {
+                    SpecConditionKind::Assert => w.write("assert "),
+                    SpecConditionKind::Assume => w.write("assume "),
+                    SpecConditionKind::Decreases => w.write("decreases "),
                     SpecConditionKind::AbortsIf => w.write("aborts_if "),
                     SpecConditionKind::Ensures => w.write("ensures "),
                 }
@@ -1155,6 +1166,11 @@ impl AstDebug for Exp_ {
                 w.write(": ");
                 ty.ast_debug(w);
                 w.write(")");
+            }
+            E::Spec(s) => {
+                w.write("spec {");
+                s.ast_debug(w);
+                w.write("}");
             }
             E::UnresolvedError => w.write("_|_"),
         }

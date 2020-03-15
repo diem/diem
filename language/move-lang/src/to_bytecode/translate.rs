@@ -628,6 +628,7 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
     match e_ {
         E::Unreachable => panic!("ICE should not compile dead code"),
         E::UnresolvedError => panic!("ICE should not have reached compilation if there are errors"),
+        E::Spec(_) => (),
         E::Unit => (),
         E::Value(v) => {
             code.push(sp(

@@ -1039,6 +1039,7 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
             let expected_ty = type_(context, *rhs_ty);
             return exp_(context, result, Some(&expected_ty), *te);
         }
+        TE::Spec(u) => HE::Spec(u),
         TE::UnresolvedError => {
             assert!(context.has_errors());
             HE::UnresolvedError
@@ -1340,6 +1341,7 @@ fn bind_for_short_circuit(e: &T::Exp) -> bool {
         | TE::BinopExp(_, _, _, _) => true,
 
         TE::Unit
+        | TE::Spec(_)
         | TE::Assign(_, _, _)
         | TE::Mutate(_, _)
         | TE::Pack(_, _, _, _)

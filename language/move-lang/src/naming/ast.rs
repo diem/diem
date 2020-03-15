@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    expansion::ast::Fields,
+    expansion::ast::{Fields, SpecId},
     parser::ast::{
         BinOp, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent, ResourceLoc,
         StructName, UnaryOp, Value, Value_, Var,
@@ -223,6 +223,8 @@ pub enum Exp_ {
 
     Cast(Box<Exp>, Type),
     Annotate(Box<Exp>, Type),
+
+    Spec(SpecId),
 
     UnresolvedError,
 }
@@ -837,6 +839,7 @@ impl AstDebug for Exp_ {
                 ty.ast_debug(w);
                 w.write(")");
             }
+            E::Spec(u) => w.write(&format!("spec({})", u)),
             E::UnresolvedError => w.write("_|_"),
         }
     }
