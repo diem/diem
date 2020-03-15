@@ -20,7 +20,7 @@
 //!   as generic types are seen as hindering readability.
 
 use crate::{
-    validator_public_keys::ValidatorPublicKeys as RawValidatorPublicKeys,
+    validator_info::ValidatorInfo as RawValidatorInfo,
     validator_set::ValidatorSet as RawValidatorSet,
     validator_signer::ValidatorSigner as RawValidatorSigner,
     validator_verifier::ValidatorVerifier as RawValidatorVerifier,
@@ -44,10 +44,10 @@ use std::{collections::BTreeMap, fmt};
 #[cfg(any(test, feature = "fuzzing"))]
 pub type SecretKey = Ed25519PrivateKey;
 
-pub type ValidatorVerifier = RawValidatorVerifier<Ed25519PublicKey>;
+pub type ValidatorInfo = RawValidatorInfo<Ed25519PublicKey>;
 pub type ValidatorSigner = RawValidatorSigner<Ed25519PrivateKey>;
-pub type ValidatorPublicKeys = RawValidatorPublicKeys<Ed25519PublicKey>;
 pub type ValidatorSet = RawValidatorSet<Ed25519PublicKey>;
+pub type ValidatorVerifier = RawValidatorVerifier<Ed25519PublicKey>;
 pub use crate::validator_change::ValidatorChangeProof;
 use std::sync::Arc;
 

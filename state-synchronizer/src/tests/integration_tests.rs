@@ -19,7 +19,7 @@ use libra_crypto::{
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
     crypto_proxies::{
-        random_validator_verifier, ValidatorChangeProof, ValidatorPublicKeys, ValidatorSet,
+        random_validator_verifier, ValidatorChangeProof, ValidatorInfo, ValidatorSet,
         ValidatorSigner,
     },
     event_subscription::EventSubscription,
@@ -121,7 +121,7 @@ struct SynchronizerEnv {
     storage_proxies: Vec<Arc<RwLock<MockStorage>>>, // to directly modify peers storage
     signers: Vec<ValidatorSigner>,
     network_signers: Vec<Ed25519PrivateKey>,
-    public_keys: Vec<ValidatorPublicKeys>,
+    public_keys: Vec<ValidatorInfo>,
     peer_ids: Vec<PeerId>,
     peer_addresses: Vec<Multiaddr>,
     mempools: Vec<MockSharedMempool>,
@@ -134,7 +134,7 @@ impl SynchronizerEnv {
     ) -> (
         Vec<ValidatorSigner>,
         Vec<Ed25519PrivateKey>,
-        Vec<ValidatorPublicKeys>,
+        Vec<ValidatorInfo>,
     ) {
         let (signers, _verifier) = random_validator_verifier(count, None, true);
 
@@ -152,14 +152,14 @@ impl SynchronizerEnv {
         // The voting power of peer 0 is enough to generate an LI that passes validation.
         for (idx, signer) in signers.iter().enumerate() {
             let voting_power = if idx == 0 { 1000 } else { 1 };
-            let validator_public_keys = ValidatorPublicKeys::new(
+            let validator_info = ValidatorInfo::new(
                 signer.author(),
                 signer.public_key(),
                 voting_power,
                 signing_keys[idx].1.clone(),
                 identity_keys[idx].1.clone(),
             );
-            validators_keys.push(validator_public_keys);
+            validators_keys.push(validator_info);
         }
         (
             signers,
@@ -182,7 +182,7 @@ impl SynchronizerEnv {
             .iter()
             .enumerate()
             .map(|(idx, validator_keys)| {
-                ValidatorPublicKeys::new(
+                ValidatorInfo::new(
                     signers[idx].author(),
                     signers[idx].public_key(),
                     validator_keys.consensus_voting_power(),
@@ -190,7 +190,7 @@ impl SynchronizerEnv {
                     validator_keys.network_identity_public_key().clone(),
                 )
             })
-            .collect::<Vec<ValidatorPublicKeys>>();
+            .collect::<Vec<ValidatorInfo>>();
         let validator_set = ValidatorSet::new(new_keys);
         self.storage_proxies[0]
             .write()
@@ -198,7 +198,7 @@ impl SynchronizerEnv {
             .move_to_next_epoch(signers[0].clone(), validator_set);
     }
 
-    fn genesis_li(validators: &[ValidatorPublicKeys]) -> LedgerInfoWithSignatures {
+    fn genesis_li(validators: &[ValidatorInfo]) -> LedgerInfoWithSignatures {
         LedgerInfoWithSignatures::genesis(
             *ACCUMULATOR_PLACEHOLDER_HASH,
             ValidatorSet::new(validators.to_vec()),

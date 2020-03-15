@@ -8,7 +8,7 @@ fn main() {
         "src/proto/mempool_status.proto",
         "src/proto/proof.proto",
         "src/proto/transaction.proto",
-        "src/proto/validator_public_keys.proto",
+        "src/proto/validator_info.proto",
         "src/proto/vm_errors.proto",
         "src/proto/account_state_blob.proto",
         "src/proto/get_with_proof.proto",

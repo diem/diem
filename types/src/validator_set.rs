@@ -6,7 +6,7 @@ use crate::{
     account_config,
     event::{EventHandle, EventKey},
     language_storage::StructTag,
-    validator_public_keys::ValidatorPublicKeys,
+    validator_info::ValidatorInfo,
 };
 use anyhow::{Error, Result};
 use libra_crypto::VerifyingKey;
@@ -71,7 +71,7 @@ impl<PublicKey> ValidatorSetResource<PublicKey> {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct ValidatorSet<PublicKey>(Vec<ValidatorPublicKeys<PublicKey>>);
+pub struct ValidatorSet<PublicKey>(Vec<ValidatorInfo<PublicKey>>);
 
 impl<PublicKey> fmt::Display for ValidatorSet<PublicKey> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -85,7 +85,7 @@ impl<PublicKey> fmt::Display for ValidatorSet<PublicKey> {
 
 impl<PublicKey: VerifyingKey> ValidatorSet<PublicKey> {
     /// Constructs a ValidatorSet resource.
-    pub fn new(payload: Vec<ValidatorPublicKeys<PublicKey>>) -> Self {
+    pub fn new(payload: Vec<ValidatorInfo<PublicKey>>) -> Self {
         ValidatorSet(payload)
     }
 
@@ -103,7 +103,7 @@ impl<PublicKey: VerifyingKey> ValidatorSet<PublicKey> {
 }
 
 impl<PublicKey> Deref for ValidatorSet<PublicKey> {
-    type Target = [ValidatorPublicKeys<PublicKey>];
+    type Target = [ValidatorInfo<PublicKey>];
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -111,7 +111,7 @@ impl<PublicKey> Deref for ValidatorSet<PublicKey> {
 }
 
 impl<PublicKey> IntoIterator for ValidatorSet<PublicKey> {
-    type Item = ValidatorPublicKeys<PublicKey>;
+    type Item = ValidatorInfo<PublicKey>;
     type IntoIter = vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -127,7 +127,7 @@ impl<PublicKey: VerifyingKey> TryFrom<crate::proto::types::ValidatorSet>
     fn try_from(proto: crate::proto::types::ValidatorSet) -> Result<Self> {
         Ok(ValidatorSet::new(
             proto
-                .validator_public_keys
+                .validator_info
                 .into_iter()
                 .map(TryInto::try_into)
                 .collect::<Result<Vec<_>>>()?,
@@ -138,7 +138,7 @@ impl<PublicKey: VerifyingKey> TryFrom<crate::proto::types::ValidatorSet>
 impl<PublicKey: VerifyingKey> From<ValidatorSet<PublicKey>> for crate::proto::types::ValidatorSet {
     fn from(set: ValidatorSet<PublicKey>) -> Self {
         Self {
-            validator_public_keys: set.0.into_iter().map(Into::into).collect(),
+            validator_info: set.0.into_iter().map(Into::into).collect(),
         }
     }
 }

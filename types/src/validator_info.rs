@@ -20,7 +20,7 @@ use std::{convert::TryFrom, fmt};
 /// their public keys and voting power may or may not change between epochs.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct ValidatorPublicKeys<PublicKey> {
+pub struct ValidatorInfo<PublicKey> {
     // The validator's account address. AccountAddresses are initially derived from the account
     // auth pubkey; however, the auth key can be rotated, so one should not rely on this
     // initial property.
@@ -36,13 +36,13 @@ pub struct ValidatorPublicKeys<PublicKey> {
     network_identity_public_key: X25519StaticPublicKey,
 }
 
-impl<PublicKey> fmt::Display for ValidatorPublicKeys<PublicKey> {
+impl<PublicKey> fmt::Display for ValidatorInfo<PublicKey> {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         write!(f, "account_address: {}", self.account_address.short_str())
     }
 }
 
-impl<PublicKey> ValidatorPublicKeys<PublicKey> {
+impl<PublicKey> ValidatorInfo<PublicKey> {
     pub fn new(
         account_address: AccountAddress,
         consensus_public_key: PublicKey,
@@ -50,7 +50,7 @@ impl<PublicKey> ValidatorPublicKeys<PublicKey> {
         network_signing_public_key: Ed25519PublicKey,
         network_identity_public_key: X25519StaticPublicKey,
     ) -> Self {
-        ValidatorPublicKeys {
+        ValidatorInfo {
             account_address,
             consensus_public_key,
             consensus_voting_power,
@@ -67,7 +67,7 @@ impl<PublicKey> ValidatorPublicKeys<PublicKey> {
     ) -> Self {
         let (_, network_signing_public_key) = generate_ed25519_keypair(None);
         let (_, network_identity_public_key) = generate_x25519_keypair(None);
-        ValidatorPublicKeys {
+        ValidatorInfo {
             account_address,
             consensus_public_key,
             consensus_voting_power,
@@ -103,12 +103,12 @@ impl<PublicKey> ValidatorPublicKeys<PublicKey> {
     }
 }
 
-impl<PublicKey: VerifyingKey> TryFrom<crate::proto::types::ValidatorPublicKeys>
-    for ValidatorPublicKeys<PublicKey>
+impl<PublicKey: VerifyingKey> TryFrom<crate::proto::types::ValidatorInfo>
+    for ValidatorInfo<PublicKey>
 {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::types::ValidatorPublicKeys) -> Result<Self> {
+    fn try_from(proto: crate::proto::types::ValidatorInfo) -> Result<Self> {
         let account_address = AccountAddress::try_from(proto.account_address)?;
         let consensus_public_key = PublicKey::try_from(&proto.consensus_public_key[..])?;
         let consensus_voting_power = proto.consensus_voting_power;
@@ -126,10 +126,10 @@ impl<PublicKey: VerifyingKey> TryFrom<crate::proto::types::ValidatorPublicKeys>
     }
 }
 
-impl<PublicKey: VerifyingKey> From<ValidatorPublicKeys<PublicKey>>
-    for crate::proto::types::ValidatorPublicKeys
+impl<PublicKey: VerifyingKey> From<ValidatorInfo<PublicKey>>
+    for crate::proto::types::ValidatorInfo
 {
-    fn from(keys: ValidatorPublicKeys<PublicKey>) -> Self {
+    fn from(keys: ValidatorInfo<PublicKey>) -> Self {
         Self {
             account_address: keys.account_address.to_vec(),
             consensus_public_key: keys.consensus_public_key.to_bytes().to_vec(),
