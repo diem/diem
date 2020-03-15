@@ -22,7 +22,7 @@ lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canoni
 once_cell = "1.3.1"
 proptest = "0.9.4"
 proptest-derive = "0.1.2"
-regex = "1.3.1"
+regex = "1.3.5"
 serde_json = "1.0.48"
 
 [features]
