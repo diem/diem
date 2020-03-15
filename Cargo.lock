@@ -2441,6 +2441,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-key-manager"
+version = "0.1.0"
+dependencies = [
+ "config-builder 0.1.0",
+ "executor 0.1.0",
+ "libra-config 0.1.0",
+ "libra-crypto 0.1.0",
+ "libra-logger 0.1.0",
+ "libra-secure-storage 0.1.0",
+ "libra-transaction-scripts 0.1.0",
+ "libra-types 0.1.0",
+ "libra-vm 0.1.0",
+ "libradb 0.1.0",
+ "storage-client 0.1.0",
+ "storage-service 0.1.0",
+ "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "libra-logger"
 version = "0.1.0"
 dependencies = [
