@@ -3,6 +3,7 @@
 
 use crate::{
     client::{JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse},
+    errors::{JsonRpcError, ServerCode},
     runtime::bootstrap,
     tests::mock_db::MockLibraDB,
     views::{
@@ -27,6 +28,7 @@ use libra_types::{
     proof::{SparseMerkleProof, TransactionAccumulatorProof},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{Transaction, TransactionInfo, TransactionPayload, TransactionToCommit},
+    vm_error::{StatusCode, VMStatus},
 };
 use libradb::{test_helper::arb_blocks_to_commit, LibraDB, LibraDBTrait};
 use proptest::prelude::*;
@@ -203,7 +205,23 @@ fn test_transaction_submission() {
 
     // check vm error submission
     let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
-    assert!(txn_submission(sender)[0].is_err());
+    let response = &txn_submission(sender)[0];
+
+    if let Err(e) = response {
+        if let Some(error) = e.downcast_ref::<JsonRpcError>() {
+            assert_eq!(error.code, ServerCode::VmValidationError as i16);
+            let vm_error: VMStatus =
+                serde_json::from_value(error.data.as_ref().unwrap().clone()).unwrap();
+            assert_eq!(
+                vm_error.major_status,
+                StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST
+            );
+        } else {
+            panic!("unexpected error format");
+        }
+    } else {
+        panic!("expected error");
+    }
 }
 
 proptest! {

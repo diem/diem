@@ -1,12 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::methods::{build_registry, JsonRpcService, RpcRegistry};
+use crate::{
+    errors::JsonRpcError,
+    methods::{build_registry, JsonRpcService, RpcRegistry},
+};
 use futures::future::join_all;
 use libra_config::config::NodeConfig;
 use libra_mempool::MempoolClientSender;
 use libradb::LibraDBTrait;
-use serde::Serialize;
 use serde_json::{map::Map, Value};
 use std::{net::SocketAddr, sync::Arc};
 use tokio::runtime::{Builder, Runtime};
@@ -148,10 +150,15 @@ async fn rpc_request_handler(
                     response.insert("result".to_string(), result);
                 }
                 Err(err) => {
-                    response.insert(
-                        "error".to_string(),
-                        JsonRpcError::internal_error(err.to_string()).serialize(),
-                    );
+                    // check for custom error
+                    if let Some(custom_error) = err.downcast_ref::<JsonRpcError>() {
+                        response.insert("error".to_string(), custom_error.clone().serialize());
+                    } else {
+                        response.insert(
+                            "error".to_string(),
+                            JsonRpcError::internal_error(err.to_string()).serialize(),
+                        );
+                    }
                 }
             },
             None => {
@@ -170,46 +177,6 @@ async fn rpc_request_handler(
     }
 
     Value::Object(response)
-}
-
-#[derive(Serialize)]
-struct JsonRpcError {
-    code: i16,
-    message: String,
-}
-
-impl JsonRpcError {
-    fn serialize(self) -> Value {
-        serde_json::to_value(self).unwrap_or(Value::Null)
-    }
-
-    fn invalid_request() -> Self {
-        Self {
-            code: -32600,
-            message: "Invalid Request".to_string(),
-        }
-    }
-
-    fn invalid_params() -> Self {
-        Self {
-            code: -32602,
-            message: "Invalid params".to_string(),
-        }
-    }
-
-    fn method_not_found() -> Self {
-        Self {
-            code: -32601,
-            message: "Method not found".to_string(),
-        }
-    }
-
-    fn internal_error(message: String) -> Self {
-        Self {
-            code: -32000,
-            message: format!("Server error: {}", message),
-        }
-    }
 }
 
 fn parse_request_id(request: &Map<String, Value>) -> Result<Value, JsonRpcError> {
