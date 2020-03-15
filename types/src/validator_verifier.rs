@@ -39,14 +39,14 @@ pub enum VerifyError {
 
 /// Helper struct to manage validator information for validation
 #[derive(Clone, Debug)]
-pub struct ValidatorInfo<PublicKey> {
+pub struct ValidatorConsensusInfo<PublicKey> {
     public_key: PublicKey,
     voting_power: u64,
 }
 
-impl<PublicKey: VerifyingKey> ValidatorInfo<PublicKey> {
+impl<PublicKey: VerifyingKey> ValidatorConsensusInfo<PublicKey> {
     pub fn new(public_key: PublicKey, voting_power: u64) -> Self {
-        ValidatorInfo {
+        ValidatorConsensusInfo {
             public_key,
             voting_power,
         }
@@ -68,7 +68,7 @@ impl<PublicKey: VerifyingKey> ValidatorInfo<PublicKey> {
 pub struct ValidatorVerifier<PublicKey> {
     /// An ordered map of each validator's on-chain account address to its pubkeys
     /// and voting power.
-    address_to_validator_info: BTreeMap<AccountAddress, ValidatorInfo<PublicKey>>,
+    address_to_validator_info: BTreeMap<AccountAddress, ValidatorConsensusInfo<PublicKey>>,
     /// The minimum voting power required to achieve a quorum
     quorum_voting_power: u64,
     /// Total voting power of all validators (cached from address_to_validator_info)
@@ -79,7 +79,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
     /// Initialize with a map of account address to validator info and set quorum size to
     /// default (`2f + 1`) or zero if `address_to_validator_info` is empty.
     pub fn new(
-        address_to_validator_info: BTreeMap<AccountAddress, ValidatorInfo<PublicKey>>,
+        address_to_validator_info: BTreeMap<AccountAddress, ValidatorConsensusInfo<PublicKey>>,
     ) -> Self {
         let total_voting_power = address_to_validator_info
             .values()
@@ -99,7 +99,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
 
     /// Initializes a validator verifier with a specified quorum voting power.
     pub fn new_with_quorum_voting_power(
-        address_to_validator_info: BTreeMap<AccountAddress, ValidatorInfo<PublicKey>>,
+        address_to_validator_info: BTreeMap<AccountAddress, ValidatorConsensusInfo<PublicKey>>,
         quorum_voting_power: u64,
     ) -> Result<Self> {
         let total_voting_power = address_to_validator_info.values().fold(0, |sum, x| {
@@ -124,7 +124,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
     /// Helper method to initialize with a single author and public key with quorum voting power 1.
     pub fn new_single(author: AccountAddress, public_key: PublicKey) -> Self {
         let mut author_to_validator_info = BTreeMap::new();
-        author_to_validator_info.insert(author, ValidatorInfo::new(public_key, 1));
+        author_to_validator_info.insert(author, ValidatorConsensusInfo::new(public_key, 1));
         Self::new(author_to_validator_info)
     }
 
@@ -289,7 +289,7 @@ impl<PublicKey: VerifyingKey> From<&ValidatorSet<PublicKey>> for ValidatorVerifi
         ValidatorVerifier::new(validator_set.iter().fold(BTreeMap::new(), |mut map, key| {
             map.insert(
                 key.account_address().clone(),
-                ValidatorInfo::new(
+                ValidatorConsensusInfo::new(
                     key.consensus_public_key().clone(),
                     key.consensus_voting_power(),
                 ),
@@ -320,13 +320,8 @@ impl<PublicKey: VerifyingKey> From<&ValidatorVerifier<PublicKey>> for ValidatorS
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        crypto_proxies::random_validator_verifier,
-        validator_signer::ValidatorSigner,
-        validator_verifier::{
-            ValidatorInfo, ValidatorVerifier, VerifyError, VerifyError::TooLittleVotingPower,
-        },
-    };
+    use super::*;
+    use crate::{crypto_proxies::random_validator_verifier, validator_signer::ValidatorSigner};
     use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue};
     use std::collections::BTreeMap;
 
@@ -339,7 +334,7 @@ mod tests {
             validator_verifier
                 .check_voting_power(author_to_signature_map.keys())
                 .unwrap_err(),
-            TooLittleVotingPower {
+            VerifyError::TooLittleVotingPower {
                 voting_power: 0,
                 quorum_voting_power: 2,
             }
@@ -400,7 +395,7 @@ mod tests {
         for validator in validator_signers.iter() {
             author_to_public_key_map.insert(
                 validator.author(),
-                ValidatorInfo::new(validator.public_key(), 1),
+                ValidatorConsensusInfo::new(validator.public_key(), 1),
             );
         }
 
@@ -510,7 +505,7 @@ mod tests {
         for (i, validator_signer) in validator_signers.iter().enumerate() {
             author_to_public_key_map.insert(
                 validator_signer.author(),
-                ValidatorInfo::new(validator_signer.public_key(), i as u64),
+                ValidatorConsensusInfo::new(validator_signer.public_key(), i as u64),
             );
             author_to_signature_map.insert(
                 validator_signer.author(),
