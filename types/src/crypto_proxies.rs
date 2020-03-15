@@ -23,9 +23,7 @@ use crate::{
     validator_public_keys::ValidatorPublicKeys as RawValidatorPublicKeys,
     validator_set::ValidatorSet as RawValidatorSet,
     validator_signer::ValidatorSigner as RawValidatorSigner,
-    validator_verifier::{
-        ValidatorInfo as RawValidatorInfo, ValidatorVerifier as RawValidatorVerifier,
-    },
+    validator_verifier::ValidatorVerifier as RawValidatorVerifier,
 };
 
 // This sets the types containing cryptographic materials used in the
@@ -46,7 +44,6 @@ use std::{collections::BTreeMap, fmt};
 #[cfg(any(test, feature = "fuzzing"))]
 pub type SecretKey = Ed25519PrivateKey;
 
-pub type ValidatorInfo = RawValidatorInfo<Ed25519PublicKey>;
 pub type ValidatorVerifier = RawValidatorVerifier<Ed25519PublicKey>;
 pub type ValidatorSigner = RawValidatorSigner<Ed25519PrivateKey>;
 pub type ValidatorPublicKeys = RawValidatorPublicKeys<Ed25519PublicKey>;
@@ -100,7 +97,7 @@ pub fn random_validator_verifier(
         };
         account_address_to_validator_info.insert(
             random_signer.author(),
-            ValidatorInfo::new(random_signer.public_key(), 1),
+            crate::validator_verifier::ValidatorConsensusInfo::new(random_signer.public_key(), 1),
         );
         signers.push(random_signer);
     }
