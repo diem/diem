@@ -14,7 +14,6 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::collections::HashMap;
 
-mod bitvec;
 #[cfg(test)]
 mod test;
 
