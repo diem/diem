@@ -562,7 +562,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "cached"
-version = "0.11.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -819,7 +819,7 @@ dependencies = [
  "async-trait 0.1.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytes 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "cached 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cached 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "channel 0.1.0",
  "consensus-types 0.1.0",
  "crash-handler 0.1.0",
@@ -6645,7 +6645,7 @@ dependencies = [
 "checksum bzip2-sys 0.1.8+1.0.8 (git+https://github.com/alexcrichton/bzip2-rs.git)" = "<none>"
 "checksum c2-chacha 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "214238caa1bf3a496ec3392968969cab8549f96ff30652c9e56885329315f6bb"
 "checksum c_linked_list 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4964518bd3b4a8190e832886cdc0da9794f12e8e6c1613a9e90ff331c4c8724b"
-"checksum cached 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7b052fd10f32987c3bd028d91ef86190b36fba5c8fccb5515d42083f061e6104"
+"checksum cached 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)" = "083dc50149e37dfaab1ffe2c3af03576b79550f1e419a5091b28a7191db1c45b"
 "checksum cast 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "4b9434b9a5aa1450faa3f9cb14ea0e8c53bb5d2b3c1bfd1ab4fc03e9f33fbfb0"
 "checksum cc 1.0.50 (registry+https://github.com/rust-lang/crates.io-index)" = "95e28fa049fda1c330bcf9d723be7663a899c4679724b34c81e9f5a326aab8cd"
 "checksum cexpr 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)" = "fce5b5fb86b0c57c20c834c1b412fd09c77c8a59b9473f86272709e78874cd1d"
