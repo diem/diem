@@ -26,11 +26,7 @@ libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
 
-proptest = { version = "0.9.4", optional = true }
 libra-mempool = { path = "../../mempool", version = "0.1.0"}
-libra-proptest-helpers = { path = "../../common/proptest-helpers", optional = true }
-libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0", optional = true }
-storage-service = { path = "../../storage/storage-service", optional = true }
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0" }
 serde_json = "1.0"
 
@@ -40,4 +36,3 @@ vm-validator = { path = "../../vm-validator", version = "0.1.0" }
 
 [features]
 default = []
-fuzzing = ["proptest", "libra-mempool/fuzzing", "libra-proptest-helpers", "libra-prost-ext", "libra-types/fuzzing", "storage-service", "storage-service/fuzzing"]

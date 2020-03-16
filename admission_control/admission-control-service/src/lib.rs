@@ -19,9 +19,6 @@ extern crate prometheus;
 #[path = "unit_tests/admission_control_service_test.rs"]
 mod admission_control_service_test;
 
-#[cfg(any(feature = "fuzzing", test))]
-/// Fuzzer for admission control
-pub mod admission_control_fuzzing;
 /// AC gRPC service.
 pub mod admission_control_service;
 mod counters;
