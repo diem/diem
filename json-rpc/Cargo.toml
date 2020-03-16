@@ -19,21 +19,22 @@ futures = "0.3.0"
 reqwest = { version = "0.10.4", features = ["blocking", "json"], default_features = false }
 tokio = { version = "0.2.13", features = ["full"] }
 
+proptest = { version = "0.9.4", optional = true }
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-config = { path = "../config", version = "0.1.0" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-mempool = { path = "../mempool", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
+libra-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
 libra-types = { path = "../types", version = "0.1.0" }
 libradb = { path = "../storage/libradb", version = "0.1.0" }
 transaction-builder = { path = "../language/transaction-builder", version = "0.1.0"}
 debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
+libra-temppath = { path = "../common/temppath", version = "0.1.0", optional = true }
 
 [dev-dependencies]
-libra-temppath = { path = "../common/temppath", version = "0.1.0" }
-proptest = "0.9.2"
 vm-validator = { path = "../vm-validator", version = "0.1.0" }
 
 [features]
-fuzzing = ["libradb/fuzzing"]
+fuzzing = ["proptest", "libra-mempool/fuzzing", "libra-proptest-helpers", "libra-temppath", "libradb/fuzzing"]
