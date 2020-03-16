@@ -4,37 +4,23 @@
 #![forbid(unsafe_code)]
 
 use bytecode_verifier::VerifiedModule;
-use libra_config::{
-    config::{NodeConfig, PersistableConfig, VMPublishingOption},
-    generator,
-};
+use libra_config::{config::PersistableConfig, generator};
 use libra_types::transaction::Transaction;
 use std::{fs::File, io::prelude::*};
 use stdlib::{stdlib_modules, StdLibOptions};
 use transaction_builder::default_config;
-use vm_genesis::{encode_genesis_transaction_with_validator_and_modules, GENESIS_KEYPAIR};
+use vm_genesis::{
+    encode_genesis_transaction_with_validator_and_modules, make_placeholder_discovery_set,
+    GENESIS_KEYPAIR,
+};
 
 const CONFIG_LOCATION: &str = "genesis/vm_config.toml";
 const GENESIS_LOCATION: &str = "genesis/genesis.blob";
 
 /// Generate the genesis blob used by the Libra blockchain
 fn generate_genesis_blob(stdlib_modules: &'static [VerifiedModule]) -> Vec<u8> {
-    let mut config_template = NodeConfig::default();
-    config_template.vm_config.publishing_options = VMPublishingOption::Open;
-    let nodes = 10;
-    let seed = [1u8; 32];
-    let randomize_service_ports = false;
-    // With onchain-discovery, the genesis tx stores network addresses onchain.
-    // Since generating the genesis blob must be deterministic for the test below
-    // to pass, we have to disable randomizing the ports.
-    let randomize_libranet_ports = false;
-    let swarm = generator::validator_swarm(
-        &config_template,
-        nodes,
-        seed,
-        randomize_service_ports,
-        randomize_libranet_ports,
-    );
+    let swarm = generator::validator_swarm_for_testing(10);
+    let discovery_set = make_placeholder_discovery_set(&swarm.validator_set);
 
     lcs::to_bytes(&Transaction::UserTransaction(
         encode_genesis_transaction_with_validator_and_modules(
@@ -42,7 +28,7 @@ fn generate_genesis_blob(stdlib_modules: &'static [VerifiedModule]) -> Vec<u8> {
             GENESIS_KEYPAIR.1.clone(),
             &swarm.nodes,
             swarm.validator_set,
-            swarm.discovery_set,
+            discovery_set,
             stdlib_modules,
         )
         .into_inner(),

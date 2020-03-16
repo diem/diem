@@ -11,34 +11,27 @@ use crate::{
     },
     utils,
 };
-use libra_types::{
-    crypto_proxies::{ValidatorInfo, ValidatorSet},
-    discovery_info::DiscoveryInfo,
-    discovery_set::DiscoverySet,
-};
+use libra_types::crypto_proxies::{ValidatorInfo, ValidatorSet};
 use rand::{rngs::StdRng, SeedableRng};
 
 pub struct ValidatorSwarm {
     pub nodes: Vec<NodeConfig>,
     pub validator_set: ValidatorSet,
-    pub discovery_set: DiscoverySet,
 }
 
 pub fn validator_swarm(
     template: &NodeConfig,
     count: usize,
     seed: [u8; 32],
-    randomize_service_ports: bool,
-    randomize_libranet_ports: bool,
+    randomize_ports: bool,
 ) -> ValidatorSwarm {
     let mut rng = StdRng::from_seed(seed);
     let mut validator_keys = Vec::new();
-    let mut discovery_infos = Vec::new();
     let mut nodes = Vec::new();
 
     for _index in 0..count {
         let mut node = NodeConfig::random_with_template(template, &mut rng);
-        if randomize_service_ports {
+        if randomize_ports {
             node.randomize_ports();
         }
 
@@ -48,10 +41,8 @@ pub fn validator_swarm(
         node.consensus.safety_rules.backend = SafetyRulesBackend::OnDiskStorage(storage_config);
 
         let network = node.validator_network.as_mut().unwrap();
-        if randomize_libranet_ports {
-            network.listen_address = utils::get_available_port_in_multiaddr(true);
-            network.advertised_address = network.listen_address.clone();
-        }
+        network.listen_address = utils::get_available_port_in_multiaddr(true);
+        network.advertised_address = network.listen_address.clone();
 
         let test = node.test.as_ref().unwrap();
         let consensus_pubkey = test.consensus_keypair.as_ref().unwrap().public().clone();
@@ -68,17 +59,6 @@ pub fn validator_swarm(
             network_keypairs.identity_keys.public().clone(),
         ));
 
-        // TODO(philiphayes): as a temporary hack, we'll just duplicate the
-        // validator info into the fullnode info until we can handle deserializing
-        // empty fullnode info.
-        discovery_infos.push(DiscoveryInfo {
-            account_address: network.peer_id,
-            validator_network_identity_pubkey: network_keypairs.identity_keys.public().clone(),
-            validator_network_address: network.advertised_address.clone(),
-            fullnodes_network_identity_pubkey: network_keypairs.identity_keys.public().clone(),
-            fullnodes_network_address: network.advertised_address.clone(),
-        });
-
         nodes.push(node);
     }
 
@@ -94,16 +74,14 @@ pub fn validator_swarm(
     }
 
     validator_keys.sort_by(|k1, k2| k1.account_address().cmp(k2.account_address()));
-    discovery_infos.sort_by(|k1, k2| k1.account_address.cmp(&k2.account_address));
     ValidatorSwarm {
         nodes,
         validator_set: ValidatorSet::new(validator_keys),
-        discovery_set: DiscoverySet::new(discovery_infos),
     }
 }
 
 pub fn validator_swarm_for_testing(nodes: usize) -> ValidatorSwarm {
     let mut config = NodeConfig::default();
     config.vm_config.publishing_options = VMPublishingOption::Open;
-    validator_swarm(&NodeConfig::default(), nodes, [1u8; 32], true, true)
+    validator_swarm(&NodeConfig::default(), nodes, [1u8; 32], true)
 }
