@@ -35,28 +35,43 @@ impl<K: TName, V> UniqueMap<K, V> {
     }
 
     pub fn contains_key(&self, key: &K) -> bool {
-        let key_ = key.clone_drop_loc().1;
-        self.0.contains_key(&key_)
+        self.contains_key_(&key.clone_drop_loc().1)
+    }
+
+    pub fn contains_key_(&self, key_: &K::Key) -> bool {
+        self.0.contains_key(key_)
     }
 
     pub fn get(&self, key: &K) -> Option<&V> {
-        let key_ = key.clone_drop_loc().1;
-        self.0.get(&key_).map(|loc_value| &loc_value.1)
+        self.get_(&key.clone_drop_loc().1)
+    }
+
+    pub fn get_(&self, key_: &K::Key) -> Option<&V> {
+        self.0.get(key_).map(|loc_value| &loc_value.1)
     }
 
     pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
-        let key_ = key.clone_drop_loc().1;
-        self.0.get_mut(&key_).map(|loc_value| &mut loc_value.1)
+        self.get_mut_(&key.clone_drop_loc().1)
+    }
+
+    pub fn get_mut_(&mut self, key_: &K::Key) -> Option<&mut V> {
+        self.0.get_mut(key_).map(|loc_value| &mut loc_value.1)
     }
 
     pub fn get_loc(&self, key: &K) -> Option<&K::Loc> {
-        let key_ = key.clone_drop_loc().1;
-        self.0.get(&key_).map(|loc_value| &loc_value.0)
+        self.get_loc_(&key.clone_drop_loc().1)
+    }
+
+    pub fn get_loc_(&self, key_: &K::Key) -> Option<&K::Loc> {
+        self.0.get(key_).map(|loc_value| &loc_value.0)
     }
 
     pub fn remove(&mut self, key: &K) -> Option<V> {
-        let key_ = key.clone_drop_loc().1;
-        self.0.remove(&key_).map(|loc_value| loc_value.1)
+        self.remove_(&key.clone_drop_loc().1)
+    }
+
+    pub fn remove_(&mut self, key_: &K::Key) -> Option<V> {
+        self.0.remove(key_).map(|loc_value| loc_value.1)
     }
 
     pub fn map<V2, F>(self, mut f: F) -> UniqueMap<K, V2>

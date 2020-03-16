@@ -40,6 +40,10 @@ impl<K: TName, V> RememberingUniqueMap<K, V> {
         self.map.contains_key(key)
     }
 
+    pub fn contains_key_(&self, key_: &K::Key) -> bool {
+        self.map.contains_key_(key_)
+    }
+
     pub fn get(&mut self, key: &K) -> Option<&V> {
         self.gotten_keys.insert(key.clone());
         self.map.get(key)

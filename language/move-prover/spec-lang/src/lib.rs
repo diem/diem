@@ -10,7 +10,6 @@ use crate::{
 };
 use anyhow::anyhow;
 use codespan_reporting::diagnostic::{Diagnostic, Label};
-use itertools::Itertools;
 use move_lang::{
     compiled_unit::{self, CompiledUnit},
     errors::Errors,
@@ -96,12 +95,13 @@ fn run_spec_checker(
     let modules = units
         .into_iter()
         .filter_map(|unit| {
-            let (module_id, compiled_module, source_map) = match unit {
+            let (module_id, compiled_module, source_map, spec_id_offsets) = match unit {
                 CompiledUnit::Module {
                     ident,
                     module,
                     source_map,
-                } => (ident, module, source_map),
+                    spec_id_offsets,
+                } => (ident, module, source_map, spec_id_offsets),
                 CompiledUnit::Script { .. } => return None,
             };
             let expanded_module = match eprog.modules.remove(&module_id) {
@@ -114,11 +114,19 @@ fn run_spec_checker(
                     return None;
                 }
             };
-            Some((module_id, expanded_module, compiled_module, source_map))
+            Some((
+                module_id,
+                expanded_module,
+                compiled_module,
+                source_map,
+                spec_id_offsets,
+            ))
         })
-        .collect_vec();
-    for (module_count, (module_id, expanded_module, compiled_module, source_map)) in
-        modules.into_iter().enumerate()
+        .enumerate();
+    for (
+        module_count,
+        (module_id, expanded_module, compiled_module, source_map, _spec_id_offsets),
+    ) in modules
     {
         let loc = translator.to_loc(&expanded_module.loc);
         let module_name = ModuleName::from_str(

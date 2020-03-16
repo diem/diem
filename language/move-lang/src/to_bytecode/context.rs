@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::parser::ast::{FunctionName, ModuleIdent, ModuleIdent_, ModuleName, StructName};
+use crate::{
+    expansion::ast::SpecId,
+    parser::ast::{FunctionName, ModuleIdent, ModuleIdent_, ModuleName, StructName},
+};
 use libra_types::account_address::AccountAddress as LibraAddress;
 use move_ir_types::ast as IR;
 use std::{
@@ -15,6 +18,7 @@ pub struct Context<'a> {
     current_module: Option<&'a ModuleIdent>,
     seen_structs: BTreeSet<(ModuleIdent, StructName)>,
     seen_functions: BTreeSet<(ModuleIdent, FunctionName)>,
+    nop_labels: BTreeMap<SpecId, IR::NopLabel>,
 }
 
 impl<'a> Context<'a> {
@@ -26,6 +30,7 @@ impl<'a> Context<'a> {
             current_module,
             seen_structs: BTreeSet::new(),
             seen_functions: BTreeSet::new(),
+            nop_labels: BTreeMap::new(),
         }
     }
 
@@ -35,6 +40,10 @@ impl<'a> Context<'a> {
 
     fn is_current_module(&self, m: &ModuleIdent) -> bool {
         self.current_module.map(|cur| cur == m).unwrap_or(false)
+    }
+
+    pub fn finish_function(&mut self) -> BTreeMap<SpecId, IR::NopLabel> {
+        std::mem::replace(&mut self.nop_labels, BTreeMap::new())
     }
 
     //**********************************************************************************************
@@ -54,6 +63,7 @@ impl<'a> Context<'a> {
             current_module: _current_module,
             seen_structs,
             seen_functions,
+            ..
         } = self;
         let mut module_dependencies = BTreeMap::new();
         for (module, sname) in seen_structs {
@@ -204,5 +214,15 @@ impl<'a> Context<'a> {
         };
         let n = Self::translate_function_name(f);
         (mname, n)
+    }
+
+    //**********************************************************************************************
+    // Nops
+    //**********************************************************************************************
+
+    pub fn nop_label(&mut self, id: SpecId) -> IR::NopLabel {
+        let label = IR::NopLabel(format!("{}", id));
+        assert!(self.nop_labels.insert(id, label.clone()).is_none());
+        label
     }
 }
