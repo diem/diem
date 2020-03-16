@@ -17,7 +17,7 @@ itertools = "0.9.0"
 rand = "0.6.5"
 regex = { version = "1.3.5", default-features = false, features = ["std", "perf"] }
 reqwest = { version="0.10.4", features=["blocking", "json", "rustls-tls"], default_features = false }
-rusoto_core = {version = "0.42.0", features=["rustls"], default_features = false}
+rusoto_core = {version = "0.43.0", features=["rustls"], default_features = false}
 rusoto_ec2 = {version = "0.42.0", features=["rustls"], default_features = false}
 rusoto_ecr = {version = "0.42.0", features=["rustls"], default_features = false}
 rusoto_ecs = {version = "0.42.0", features=["rustls"], default_features = false}
