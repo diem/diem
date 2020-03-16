@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account_address::AccountAddress,
-    account_config::association_address,
-    event::EventKey,
+    account_address::AccountAddress, account_config::association_address, event::EventKey,
 };
 use anyhow::Result;
 use libra_crypto::{ed25519::Ed25519Signature, HashValue};
