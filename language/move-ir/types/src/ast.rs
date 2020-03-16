@@ -9,6 +9,7 @@ use anyhow::Result;
 use libra_types::{account_address::AccountAddress, language_storage::ModuleId};
 use move_core_types::identifier::Identifier;
 use once_cell::sync::Lazy;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashSet, VecDeque},
     fmt,
@@ -595,19 +596,23 @@ pub type Exp = Spanned<Exp_>;
 // Bytecode
 //**************************************************************************************************
 
-pub type BytecodeBlocks = Vec<(Label, BytecodeBlock)>;
+pub type BytecodeBlocks = Vec<(BlockLabel, BytecodeBlock)>;
 pub type BytecodeBlock = Vec<Bytecode>;
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
-pub struct Label(pub String);
+#[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct BlockLabel(pub String);
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct NopLabel(pub String);
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Bytecode_ {
     Pop,
     Ret,
-    BrTrue(Label),
-    BrFalse(Label),
-    Branch(Label),
+    Nop(Option<NopLabel>),
+    BrTrue(BlockLabel),
+    BrFalse(BlockLabel),
+    Branch(BlockLabel),
     LdU8(u8),
     LdU64(u64),
     LdU128(u128),
@@ -1752,6 +1757,8 @@ impl fmt::Display for Bytecode_ {
         match self {
             Bytecode_::Pop => write!(f, "Pop"),
             Bytecode_::Ret => write!(f, "Ret"),
+            Bytecode_::Nop(None) => write!(f, "Nop"),
+            Bytecode_::Nop(Some(s)) => write!(f, "Nop {}", &s.0),
             Bytecode_::BrTrue(lbl) => write!(f, "BrTrue {}", &lbl.0),
             Bytecode_::BrFalse(lbl) => write!(f, "BrFalse {}", &lbl.0),
             Bytecode_::Branch(lbl) => write!(f, "Branch {}", &lbl.0),

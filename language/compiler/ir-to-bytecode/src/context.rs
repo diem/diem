@@ -172,7 +172,7 @@ pub struct Context<'a> {
     modules: HashMap<ModuleName, (QualifiedModuleIdent, ModuleHandle)>,
     structs: HashMap<QualifiedStructIdent, StructHandle>,
     struct_defs: HashMap<StructName, TableIndex>,
-    labels: HashMap<Label, u16>,
+    labels: HashMap<BlockLabel, u16>,
 
     // queryable pools
     fields: HashMap<(StructHandleIndex, Field_), (TableIndex, SignatureToken, usize)>,
@@ -302,7 +302,7 @@ impl<'a> Context<'a> {
 
     pub fn build_index_remapping(
         &mut self,
-        label_to_index: HashMap<Label, u16>,
+        label_to_index: HashMap<BlockLabel, u16>,
     ) -> HashMap<u16, u16> {
         let labels = std::mem::replace(&mut self.labels, HashMap::new());
         label_to_index
@@ -357,7 +357,7 @@ impl<'a> Context<'a> {
     }
 
     /// Get the fake offset for the label. Labels will be fixed to real offsets after compilation
-    pub fn label_index(&mut self, label: Label) -> Result<CodeOffset> {
+    pub fn label_index(&mut self, label: BlockLabel) -> Result<CodeOffset> {
         Ok(get_or_add_item(&mut self.labels, label)?)
     }
 

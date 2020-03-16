@@ -92,6 +92,21 @@ macro_rules! make_push_instr {
     };
 }
 
+macro_rules! make_record_nop_label {
+    ($context:ident, $code:ident) => {
+        macro_rules! record_nop_label {
+            ($label:expr) => {{
+                let code_offset = $code.len() as CodeOffset;
+                $context.source_map.add_nop_mapping(
+                    $context.current_function_definition_index(),
+                    $label,
+                    code_offset,
+                )?;
+            }};
+        }
+    };
+}
+
 #[derive(Debug, Default)]
 struct LoopInfo {
     start_loc: usize,
@@ -1433,7 +1448,7 @@ fn compile_function_body_bytecode(
     let sig_idx = context.locals_signature_index(locals_signature)?;
 
     let mut code = vec![];
-    let mut label_to_index: HashMap<Label, u16> = HashMap::new();
+    let mut label_to_index: HashMap<BlockLabel, u16> = HashMap::new();
     for (label, block) in blocks {
         label_to_index.insert(label.clone(), code.len() as u16);
         context.label_index(label)?;
@@ -1468,9 +1483,15 @@ fn compile_bytecode(
     sp!(loc, instr_): IRBytecode,
 ) -> Result<()> {
     make_push_instr!(context, code);
+    make_record_nop_label!(context, code);
     let ff_instr = match instr_ {
         IRBytecode_::Pop => Bytecode::Pop,
         IRBytecode_::Ret => Bytecode::Ret,
+        IRBytecode_::Nop(None) => return Ok(()),
+        IRBytecode_::Nop(Some(lbl)) => {
+            record_nop_label!(lbl);
+            return Ok(());
+        }
         IRBytecode_::BrTrue(lbl) => Bytecode::BrTrue(context.label_index(lbl)?),
         IRBytecode_::BrFalse(lbl) => Bytecode::BrFalse(context.label_index(lbl)?),
         IRBytecode_::Branch(lbl) => Bytecode::Branch(context.label_index(lbl)?),

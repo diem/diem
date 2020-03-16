@@ -1,10 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{errors::*, parser::ast::ModuleIdent};
+use crate::{
+    errors::*,
+    expansion::ast::SpecId,
+    parser::ast::{FunctionName, ModuleIdent},
+    shared::unique_map::UniqueMap,
+};
 use bytecode_source_map::source_map::ModuleSourceMap;
 use move_ir_types::location::*;
 use move_vm::file_format as F;
+use std::collections::BTreeMap;
 
 //**************************************************************************************************
 // Compiled Unit
@@ -16,11 +22,13 @@ pub enum CompiledUnit {
         ident: ModuleIdent,
         module: F::CompiledModule,
         source_map: ModuleSourceMap<Loc>,
+        spec_id_offsets: UniqueMap<FunctionName, BTreeMap<SpecId, F::CodeOffset>>,
     },
     Script {
         loc: Loc,
         script: F::CompiledScript,
         source_map: ModuleSourceMap<Loc>,
+        spec_id_offsets: BTreeMap<SpecId, F::CodeOffset>,
     },
 }
 
@@ -56,12 +64,14 @@ impl CompiledUnit {
                 ident,
                 module,
                 source_map,
+                spec_id_offsets,
             } => {
                 let (module, errors) = verify_module(ident.loc(), module);
                 let verified = CompiledUnit::Module {
                     ident,
                     module,
                     source_map,
+                    spec_id_offsets,
                 };
                 (verified, errors)
             }
@@ -69,12 +79,14 @@ impl CompiledUnit {
                 loc,
                 script,
                 source_map,
+                spec_id_offsets,
             } => {
                 let (script, errors) = verify_script(loc, script);
                 let verified = CompiledUnit::Script {
                     loc,
                     script,
                     source_map,
+                    spec_id_offsets,
                 };
                 (verified, errors)
             }

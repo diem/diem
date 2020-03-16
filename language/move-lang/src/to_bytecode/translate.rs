@@ -6,6 +6,7 @@ use crate::{
     cfgir::ast as G,
     compiled_unit::*,
     errors::*,
+    expansion::ast::SpecId,
     hlir::ast::{self as H},
     naming::ast::{BuiltinTypeName_, TParam},
     parser::ast::{
@@ -14,10 +15,11 @@ use crate::{
     },
     shared::{unique_map::UniqueMap, *},
 };
+use bytecode_source_map::source_map::ModuleSourceMap;
 use libra_types::account_address::AccountAddress as LibraAddress;
 use move_ir_types::{ast as IR, location::*};
 use move_vm::file_format as F;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 //**************************************************************************************************
 // Entry
@@ -93,10 +95,15 @@ fn module(
         .map(|(s, sdef)| struct_def(&mut context, &ident, s, sdef))
         .collect();
 
+    let mut function_nop_labels = UniqueMap::new();
     let functions = mdef
         .functions
         .into_iter()
-        .map(|(f, fdef)| function(&mut context, Some(&ident), f, fdef))
+        .map(|(f, fdef)| {
+            let (res, nop_labels) = function(&mut context, Some(&ident), f.clone(), fdef);
+            function_nop_labels.add(f, nop_labels).unwrap();
+            res
+        })
         .collect();
 
     let addr = LibraAddress::new(ident.0.value.address.to_u8());
@@ -117,10 +124,17 @@ fn module(
     let deps: Vec<&F::CompiledModule> = vec![];
     let (module, source_map) = ir_to_bytecode::compiler::compile_module(addr, ir_module, deps)
         .map_err(|e| vec![(ident.loc(), format!("IR ERROR: {}", e))])?;
+    let spec_id_offsets =
+        UniqueMap::maybe_from_iter((0..module.as_inner().function_defs.len()).map(|i| {
+            let idx = F::FunctionDefinitionIndex(i as F::TableIndex);
+            function_spec_id_map(&module, &source_map, &function_nop_labels, idx)
+        }))
+        .unwrap();
     Ok(CompiledUnit::Module {
         ident,
         module,
         source_map,
+        spec_id_offsets,
     })
 }
 
@@ -135,7 +149,7 @@ fn main(
     let loc = main_name.loc();
     let mut context = Context::new(None);
 
-    let (_, main) = function(&mut context, None, main_name, fdef);
+    let ((_, main), nop_labels) = function(&mut context, None, main_name, fdef);
 
     let (imports, explicit_dependency_declarations) = context.materialize(
         dependency_orderings,
@@ -151,11 +165,51 @@ fn main(
     let deps: Vec<&F::CompiledModule> = vec![];
     let (script, source_map) = ir_to_bytecode::compiler::compile_script(addr, ir_script, deps)
         .map_err(|e| vec![(loc, format!("IR ERROR: {}", e))])?;
+    let spec_id_offsets = main_spec_id_map(&source_map, nop_labels);
     Ok(CompiledUnit::Script {
         loc,
         script,
         source_map,
+        spec_id_offsets,
     })
+}
+
+fn function_spec_id_map(
+    compile_module: &F::CompiledModule,
+    source_map: &ModuleSourceMap<Loc>,
+    function_nop_labels: &UniqueMap<FunctionName, BTreeMap<SpecId, IR::NopLabel>>,
+    idx: F::FunctionDefinitionIndex,
+) -> (FunctionName, BTreeMap<SpecId, F::CodeOffset>) {
+    let module = compile_module.as_inner();
+    let handle_idx = module.function_defs[idx.0 as usize].function;
+    let name_idx = module.function_handles[handle_idx.0 as usize].name;
+    let name = module.identifiers[name_idx.0 as usize]
+        .clone()
+        .into_string();
+
+    let function_source_map = source_map.get_function_source_map(idx).unwrap();
+    let spec_ids = function_nop_labels
+        .get_(&name)
+        .unwrap()
+        .iter()
+        .map(|(id, label)| (*id, *function_source_map.nops.get(label).unwrap()))
+        .collect();
+
+    let name_loc = *function_nop_labels.get_loc_(&name).unwrap();
+    let function_name = FunctionName(sp(name_loc, name));
+    (function_name, spec_ids)
+}
+
+fn main_spec_id_map(
+    source_map: &ModuleSourceMap<Loc>,
+    nop_labels: BTreeMap<SpecId, IR::NopLabel>,
+) -> BTreeMap<SpecId, F::CodeOffset> {
+    let idx = F::FunctionDefinitionIndex(0);
+    let function_source_map = source_map.get_function_source_map(idx).unwrap();
+    nop_labels
+        .into_iter()
+        .map(|(id, label)| (id, *function_source_map.nops.get(&label).unwrap()))
+        .collect()
 }
 
 //**************************************************************************************************
@@ -226,7 +280,10 @@ fn function(
     m: Option<&ModuleIdent>,
     f: FunctionName,
     fdef: G::Function,
-) -> (IR::FunctionName, IR::Function) {
+) -> (
+    (IR::FunctionName, IR::Function),
+    BTreeMap<SpecId, IR::NopLabel>,
+) {
     let G::Function {
         visibility: v,
         signature,
@@ -260,7 +317,7 @@ fn function(
         specifications: vec![],
         body,
     };
-    (name, sp(loc, ir_function))
+    ((name, sp(loc, ir_function)), context.finish_function())
 }
 
 fn visibility(v: FunctionVisibility) -> IR::FunctionVisibility {
@@ -445,8 +502,8 @@ fn types(context: &mut Context, sp!(_, t_): H::Type) -> Vec<IR::Type> {
 // Commands
 //**************************************************************************************************
 
-fn label(lbl: H::Label) -> IR::Label {
-    IR::Label(format!("{}", lbl))
+fn label(lbl: H::Label) -> IR::BlockLabel {
+    IR::BlockLabel(format!("{}", lbl))
 }
 
 fn command(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, cmd_): H::Command) {
@@ -546,8 +603,8 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
     match e_ {
         E::Unreachable => panic!("ICE should not compile dead code"),
         E::UnresolvedError => panic!("ICE should not have reached compilation if there are errors"),
-        E::Spec(_) => (),
         E::Unit => (),
+        E::Spec(id) => code.push(sp(loc, B::Nop(Some(context.nop_label(id))))),
         E::Value(v) => {
             code.push(sp(
                 loc,
