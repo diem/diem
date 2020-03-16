@@ -20,7 +20,7 @@ reqwest = { version="0.10.4", features=["blocking", "json", "rustls-tls"], defau
 rusoto_core = {version = "0.42.0", features=["rustls"], default_features = false}
 rusoto_ec2 = {version = "0.42.0", features=["rustls"], default_features = false}
 rusoto_ecr = {version = "0.42.0", features=["rustls"], default_features = false}
-rusoto_ecs = {version = "0.42.0", features=["rustls"], default_features = false}
+rusoto_ecs = {version = "0.43.0", features=["rustls"], default_features = false}
 rusoto_s3 = {version = "0.42.0", features=["rustls"], default_features = false}
 serde_json = "1.0"
 serde_yaml = "0.8.11"
