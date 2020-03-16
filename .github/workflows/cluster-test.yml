@@ -10,24 +10,31 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: Check Membership and kill switch
+        id: check_ks
         run: |
-          token=$(curl https://gist.githubusercontent.com/ankushagarwal/85360f1c15ba9b19701d3398f137acc4/raw/9096574b971fb435ea93350d1b6a3153369a25cb/gistfile1.txt)
-          curl --head -H "Authorization: token $token" https://api.github.com/orgs/libra/members/${{ github.actor }} | grep "Status: 204 No Content"
+          token=$(curl https://gist.githubusercontent.com/ankushagarwal/85360f1c15ba9b19701d3398f137acc4/raw/9096574b971fb435ea93350d1b6a3153369a25cb/gistfile1.txt 2>/dev/null)
+          curl --head -H "Authorization: token $token" https://api.github.com/orgs/libra/members/${{ github.actor }} 2>/dev/null | grep "Status: 204 No Content" &>/dev/null
           is_a_member=$?
           if [[ $is_a_member -gt 0 ]]; then
             echo "::set-output name=should_run::false";
-            echo "${{ github.actor }} is a not member";
             exit
           fi
-          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }} ; then
-            echo "::set-output name=should_run::false";
-          else
-            echo "::set-output name=should_run::true";
-          fi;
+          echo "::set-output name=should_run::true";
+          # if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }} ; then
+          #   echo "::set-output name=should_run::false";
+          # else
+          #   echo "::set-output name=should_run::true";
+          # fi;
+      - name: Setup env
+        if: ${{ steps.check_ks.outputs.should_run }} == 'true'
+        run: |
+          echo "::set-env name=LIBRA_GIT_REV::$(git rev-parse --short=8 HEAD)"
+          echo "::set-env name=TEST_TAG::land_$(git rev-parse --short=8 HEAD)"
       - name: Build, tag and push images
-        if: steps.check_ks.outputs.should_run == 'true'
+        if: ${{ steps.check_ks.outputs.should_run }} == 'true'
         run: |
           set +e
+          set -x
           RETRYABLE_EXIT_CODE=2
           for ((i = 0; i < 3; i++)); do
             echo "Build attempt $i"
@@ -46,7 +53,7 @@ jobs:
           echo "Build failed after retries"
           exit 1
       - name: Launch cluster test
-        if: steps.check_ks.outputs.should_run == 'true'
+        if: ${{ steps.check_ks.outputs.should_run }} == 'true'
         run: |
           export CTI_OUTPUT_LOG=$(mktemp)
           ./scripts/cti \
@@ -68,10 +75,10 @@ jobs:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             // Check kill switch
-            if (${{secrets.KILL_SWITCH_LAND_BLOCKING_TEST}}) {
-              console.log('Kill switch is set. Will skip this step.');
-              return;
-            }
+            # if (${{secrets.KILL_SWITCH_LAND_BLOCKING_TEST}}) {
+            #   console.log('Kill switch is set. Will skip this step.');
+            #   return;
+            # }
             // Read and check cluster test results
             let should_fail = false;
             let env_vars = process.env;
