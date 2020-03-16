@@ -1,7 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::account_address::AccountAddress;
+use crate::{
+    account_address::AccountAddress,
+    account_config::association_address,
+    event::EventKey,
+};
 use anyhow::Result;
 use libra_crypto::{ed25519::Ed25519Signature, HashValue};
 use serde::{Deserialize, Serialize};
@@ -53,4 +57,8 @@ impl BlockMetadata {
         let vote_maps = lcs::to_bytes(&self.previous_block_votes)?;
         Ok((id, self.timestamp_usecs, vote_maps, self.proposer))
     }
+}
+
+pub fn new_block_event_key() -> EventKey {
+    EventKey::new_from_address(&association_address(), 2)
 }
