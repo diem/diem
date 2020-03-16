@@ -3,7 +3,6 @@
 
 //! This library defines a BitVec struct that represents a bit vector.
 
-use bytes::{BufMut, BytesMut};
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
 use std::ops::BitAnd;
 
@@ -14,7 +13,7 @@ const MAX_BUCKETS: usize = 32;
 /// BitVec represents a bit vector that upports only 2 operations:
 /// 1. Marking a position as set, and
 /// 2. Checking if a position is set.
-/// Internally, it stores a vector of u8's (as Bytes).
+/// Internally, it stores a vector of u8's (as Vec<u8>).
 /// * The first 8 positions of the bit vector are encoded in the first element of the vector, the
 ///   next 8 are encoded in the second element, and so on.
 /// * Each bit of a u8 is set to 1 if the position is set and to 0 if it's not.
@@ -45,7 +44,7 @@ const MAX_BUCKETS: usize = 32;
 /// ```
 #[derive(Clone, Default, Debug, PartialEq, Serialize)]
 pub struct BitVec {
-    inner: BytesMut,
+    inner: Vec<u8>,
 }
 
 impl BitVec {
@@ -85,10 +84,10 @@ impl BitAnd for BitVec {
     fn bitand(self, other: Self) -> Self {
         let len = std::cmp::min(self.inner.len(), other.inner.len());
         let mut ret = BitVec {
-            inner: BytesMut::with_capacity(len),
+            inner: Vec::with_capacity(len),
         };
         for i in 0..len {
-            ret.inner.put_u8(self.inner[i] & other.inner[i]);
+            ret.inner.push(self.inner[i] & other.inner[i]);
         }
         ret
     }
@@ -101,7 +100,7 @@ impl<'de> Deserialize<'de> for BitVec {
     where
         D: Deserializer<'de>,
     {
-        let v = <BytesMut>::deserialize(deserializer)?;
+        let v = <Vec<u8>>::deserialize(deserializer)?;
         if v.len() > MAX_BUCKETS {
             return Err(D::Error::custom(format!("BitVec too long: {}", v.len())));
         }
@@ -144,7 +143,7 @@ mod test {
         let mut bytes = [0u8; 36];
         bytes[0] = 32;
         let bv = BitVec {
-            inner: BytesMut::from([0u8; 32].as_ref()),
+            inner: Vec::from([0u8; 32].as_ref()),
         };
         assert_eq!(Ok(bv), lcs::from_bytes::<BitVec>(&bytes));
     }
