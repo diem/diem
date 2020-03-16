@@ -3,6 +3,7 @@
 
 use crate::error::{Error, Result};
 use serde::de::{self, Deserialize, DeserializeSeed, IntoDeserializer, Visitor};
+use std::convert::TryFrom;
 
 /// Deserializes a `&[u8]` into a type.
 ///
@@ -132,8 +133,30 @@ impl<'de> Deserializer<'de> {
         Ok(u128::from_le_bytes(le_bytes))
     }
 
+    fn parse_u32_from_uleb128(&mut self) -> Result<u32> {
+        let mut value: u64 = 0;
+        for shift in (0..32).step_by(7) {
+            let byte = self.next()?;
+            let digit = byte & 0x7f;
+            value |= u64::from(digit) << shift;
+            // If the highest bit of `byte` is 0, return the final value.
+            if digit == byte {
+                if shift > 0 && digit == 0 {
+                    // We only accept canonical ULEB128 encodings, therefore the
+                    // heaviest (and last) base-128 digit must be non-zero.
+                    return Err(Error::NonCanonicalUleb128Encoding);
+                }
+                // Decoded integer must not overflow.
+                return u32::try_from(value)
+                    .map_err(|_| Error::IntegerOverflowDuringUleb128Decoding);
+            }
+        }
+        // Decoded integer must not overflow.
+        Err(Error::IntegerOverflowDuringUleb128Decoding)
+    }
+
     fn parse_bytes(&mut self) -> Result<&'de [u8]> {
-        let len = self.parse_u32()? as usize;
+        let len = self.parse_u32_from_uleb128()? as usize;
         if len > crate::MAX_SEQUENCE_LENGTH {
             return Err(Error::ExceededMaxLen(len));
         }
@@ -324,7 +347,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        let len = self.parse_u32()? as usize;
+        let len = self.parse_u32_from_uleb128()? as usize;
         if len > crate::MAX_SEQUENCE_LENGTH {
             return Err(Error::ExceededMaxLen(len));
         }
@@ -355,7 +378,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        let len = self.parse_u32()? as usize;
+        let len = self.parse_u32_from_uleb128()? as usize;
         if len > crate::MAX_SEQUENCE_LENGTH {
             return Err(Error::ExceededMaxLen(len));
         }
@@ -501,7 +524,7 @@ impl<'de, 'a> de::EnumAccess<'de> for &'a mut Deserializer<'de> {
     where
         V: DeserializeSeed<'de>,
     {
-        let variant_index = self.parse_u32()?;
+        let variant_index = self.parse_u32_from_uleb128()?;
         let value = seed.deserialize(variant_index.into_deserializer())?;
         Ok((value, self))
     }

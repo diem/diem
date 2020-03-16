@@ -33,6 +33,10 @@ pub enum Error {
     RemainingInput,
     #[error("malformed utf8")]
     Utf8,
+    #[error("ULEB128 encoding was not minimal in size")]
+    NonCanonicalUleb128Encoding,
+    #[error("ULEB128-encoded integer did not fit in the target size")]
+    IntegerOverflowDuringUleb128Decoding,
 }
 
 impl ser::Error for Error {
