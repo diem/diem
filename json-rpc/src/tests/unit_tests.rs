@@ -23,6 +23,8 @@ use libra_types::{
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::ContractEvent,
+    event::EventKey,
+    language_storage::TypeTag,
     ledger_info::LedgerInfoWithSignatures,
     mempool_status::{MempoolStatus, MempoolStatusCode},
     proof::{SparseMerkleProof, TransactionAccumulatorProof},
@@ -155,6 +157,16 @@ fn mock_db(
     } else {
         vec![]
     };
+    if events.is_empty() {
+        // mock the first event
+        let mock_event = ContractEvent::new(
+            EventKey::new_from_address(&AccountAddress::random(), 0),
+            0,
+            TypeTag::Bool,
+            b"event_data".to_vec(),
+        );
+        events.push((version as u64, mock_event));
+    }
 
     MockLibraDB {
         timestamp,
@@ -310,10 +322,9 @@ proptest! {
 
 
     #[test]
-    fn test_get_events(blocks in arb_blocks_to_commit(), event in any::<ContractEvent>(),) {
+    fn test_get_events(blocks in arb_blocks_to_commit()) {
         // set up MockLibraDB
-        let mut mock_db = mock_db(blocks, None);
-        mock_db.add_event(event);
+        let mock_db = mock_db(blocks, None);
 
         // set up JSON RPC
         let address = format!("0.0.0.0:{}", utils::get_available_port());
@@ -321,12 +332,11 @@ proptest! {
         let client = reqwest::blocking::Client::new();
         let url = format!("http://{}", address);
 
-
         let event_index = 0;
         let mock_db_events = mock_db.events;
         let (first_event_version, first_event) = mock_db_events[event_index].clone();
         let event_key = hex::encode(first_event.key().as_bytes());
-        let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_events", "params": [event_key, 0, 10], "id": 1});
+        let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_events", "params": [event_key, first_event.sequence_number(), first_event.sequence_number() + 10], "id": 1});
         let resp = client.post(&url).json(&request).send().unwrap();
         let events: Vec<EventView> = fetch_data(resp);
 

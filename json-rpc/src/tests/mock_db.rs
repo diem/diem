@@ -34,14 +34,6 @@ pub(crate) struct MockLibraDB {
     pub account_state_with_proof: Vec<AccountStateWithProof>,
 }
 
-impl MockLibraDB {
-    pub(crate) fn add_event(&mut self, event: ContractEvent) {
-        if self.events.is_empty() {
-            self.events.push((0, event));
-        }
-    }
-}
-
 impl LibraDBTrait for MockLibraDB {
     fn get_latest_account_state(
         &self,
