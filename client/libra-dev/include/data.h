@@ -39,6 +39,7 @@ struct LibraAccountResource {
 struct LibraP2PTransferTransactionArgument {
     uint64_t value;
     uint8_t address[LIBRA_ADDRESS_SIZE];
+    uint8_t auth_key_prefix[LIBRA_PUBKEY_SIZE - LIBRA_ADDRESS_SIZE];
 };
 
 enum TransactionType {

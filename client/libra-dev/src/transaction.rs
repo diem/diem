@@ -310,61 +310,32 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
 
     if let TransactionPayload::Script(script) = payload {
         match get_transaction_name(script.code()).as_str() {
-            "peer_to_peer_transaction" => {
+            "peer_to_peer_transaction" | "mint_transaction" => {
                 let args = script.args();
-                let mut value = None;
-                let mut address = None;
-                args.iter().for_each(|txn_arg| match txn_arg {
-                    TransactionArgument::U64(val) => {
-                        value = Some(*val);
-                    }
-                    TransactionArgument::Address(addr) => {
-                        let mut addr_buffer = [0u8; ADDRESS_LENGTH];
-                        addr_buffer.copy_from_slice(addr.as_ref());
-                        address = Some(addr_buffer);
-                    }
-                    _ => {}
-                });
-                if let (Some(val), Some(add)) = (value, address) {
+                if let [TransactionArgument::Address(addr), TransactionArgument::U8Vector(auth_key_prefix), TransactionArgument::U64(amount)] =
+                    &args[..]
+                {
+                    let mut addr_buffer = [0u8; ADDRESS_LENGTH];
+                    addr_buffer.copy_from_slice(addr.as_ref());
+
+                    let mut auth_key_prefix_buffer =
+                        [0u8; AUTHENTICATION_KEY_LENGTH - ADDRESS_LENGTH];
+                    auth_key_prefix_buffer.copy_from_slice(auth_key_prefix.as_slice());
+
                     txn_payload = Some(LibraTransactionPayload {
                         txn_type: TransactionType::PeerToPeer,
                         args: LibraP2PTransferTransactionArgument {
-                            value: val,
-                            address: add,
+                            value: *amount,
+                            address: addr_buffer,
+                            auth_key_prefix: auth_key_prefix_buffer,
                         },
                     });
                 } else {
+                    update_last_error("Fail to decode transaction payload".to_string());
                     return LibraStatus::InternalError;
                 }
             }
-            "mint_transaction" => {
-                let args = script.args();
-                let mut value = None;
-                let mut address = None;
-                args.iter().for_each(|txn_arg| match txn_arg {
-                    TransactionArgument::U64(val) => {
-                        value = Some(*val);
-                    }
-                    TransactionArgument::Address(addr) => {
-                        let mut addr_buffer = [0u8; ADDRESS_LENGTH];
-                        addr_buffer.copy_from_slice(addr.as_ref());
-                        address = Some(addr_buffer);
-                    }
-                    _ => {}
-                });
-                if let (Some(val), Some(add)) = (value, address) {
-                    txn_payload = Some(LibraTransactionPayload {
-                        txn_type: TransactionType::Mint,
-                        args: LibraP2PTransferTransactionArgument {
-                            value: val,
-                            address: add,
-                        },
-                    });
-                } else {
-                    return LibraStatus::InternalError;
-                }
-            }
-            &_ => {
+            _ => {
                 update_last_error("Transaction type not supported".to_string());
                 return LibraStatus::InternalError;
             }
