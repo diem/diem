@@ -104,36 +104,3 @@ impl IntoIterator for DiscoverySet {
         self.0.into_iter()
     }
 }
-
-#[cfg(any(test, feature = "fuzzing"))]
-pub mod mock {
-    use super::*;
-
-    use crate::crypto_proxies::ValidatorSet;
-    use libra_crypto::x25519::X25519StaticPrivateKey;
-    use parity_multiaddr::Multiaddr;
-    use std::str::FromStr;
-
-    pub fn mock_discovery_set(validator_set: &ValidatorSet) -> DiscoverySet {
-        let salt = None;
-        let seed = [69u8; 32];
-        let app_info = None;
-        let (_, mock_pubkey) =
-            X25519StaticPrivateKey::derive_keypair_from_seed(salt, &seed, app_info);
-        let mock_addr = Multiaddr::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
-
-        let discovery_set = validator_set
-            .iter()
-            .map(|validator_pubkeys| DiscoveryInfo {
-                account_address: *validator_pubkeys.account_address(),
-                validator_network_identity_pubkey: validator_pubkeys
-                    .network_identity_public_key()
-                    .clone(),
-                validator_network_address: mock_addr.clone(),
-                fullnodes_network_identity_pubkey: mock_pubkey.clone(),
-                fullnodes_network_address: mock_addr.clone(),
-            })
-            .collect::<Vec<_>>();
-        DiscoverySet::new(discovery_set)
-    }
-}
