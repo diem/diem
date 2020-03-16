@@ -14,9 +14,9 @@ type ConsensusKeyPair = KeyPair<Ed25519PrivateKey>;
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct TestConfig {
     pub account_keypair: Option<AccountKeyPair>,
+    pub consensus_keypair: Option<ConsensusKeyPair>,
     // Used only to prevent a potentially temporary data_dir from being deleted. This should
     // eventually be moved to be owned by something outside the config.
-    pub consensus_keypair: Option<ConsensusKeyPair>,
     #[serde(skip)]
     temp_dir: Option<TempPath>,
 }
