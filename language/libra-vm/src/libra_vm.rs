@@ -535,7 +535,6 @@ impl LibraVM {
         let mut result = vec![];
         let blocks = chunk_block_transactions(transactions);
         let mut data_cache = BlockDataCache::new(state_view);
-        self.load_configs_impl(&data_cache);
         let mut execute_block_trace_guard = vec![];
         let mut current_block_id = HashValue::zero();
         for block in blocks {
@@ -573,6 +572,7 @@ impl LibraVM {
         data_cache: &mut BlockDataCache<'_>,
         state_view: &dyn StateView,
     ) -> VMResult<Vec<TransactionOutput>> {
+        self.load_configs_impl(data_cache);
         let signature_verified_block: Vec<Result<SignatureCheckedTransaction, VMStatus>>;
         {
             trace_code_block!("libra_vm::verify_signatures", {"block", block_id});
