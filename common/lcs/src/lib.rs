@@ -11,10 +11,10 @@
 //! ## Background
 //!
 //! In Libra, participants pass around messages or data structures that often times need to be
-//! signed by a prover and verified by one or more verifiers.  Serialization in this context refers
+//! signed by a prover and verified by one or more verifiers. Serialization in this context refers
 //! to the process of converting a message into a byte array. Many serialization approaches support
 //! loose standards such that two implementations can produce two different byte streams that would
-//! represent the same, identical message.  While for many applications, non-deterministic
+//! represent the same, identical message. While for many applications, non-deterministic
 //! serialization causes no issues, it does so for applications using serialization for
 //! cryptographic purposes. For example, given a signature and a message, a verifier may not unable
 //! to produce the same serialized byte array constructed by the prover when the prover signed the
@@ -23,7 +23,7 @@
 //! serialized bytes or risk losing the ability to verify messages. This creates a burden requiring
 //! participants to maintain both a copy of the serialized bytes and the deserialized message often
 //! leading to confusion about safety and correctness. While there exist a handful of existing
-//! deterministic serialization formats, there is no obvious choice.  To address this, we propose
+//! deterministic serialization formats, there is no obvious choice. To address this, we propose
 //! Libra Canonical Serialization that defines a deterministic means for translating a message into
 //! bytes and back again.
 //!
@@ -35,6 +35,7 @@
 //! * Signed 8-bit, 16-bit, 32-bit, 64-bit, and 128-bit integers
 //! * Unsigned 8-bit, 16-bit, 32-bit, 64-bit, and 128-bit integers
 //! * Option
+//! * Unit (an empty value)
 //! * Fixed and variable length sequences
 //! * UTF-8 Encoded Strings
 //! * Tuples
@@ -44,7 +45,7 @@
 //!
 //! ## General structure
 //!
-//! LCS is not a self-describing format and as such, in order to deserialize a message you must
+//! LCS is not a self-describing format and as such, in order to deserialize a message, one must
 //! know the message type and layout ahead of time.
 //!
 //! Unless specified, all numbers are stored in little endian, two's complement format.
@@ -62,6 +63,32 @@
 //! |32-bit unsigned integer    |305419896              |0x12345678         |[78563412]         |
 //! |64-bit signed integer      |-1311768467750121216   |0xEDCBA98754321100 |[0011325487A9CBED] |
 //! |64-bit unsigned integer    |1311768467750121216    |0x12345678ABCDEF00 |[00EFCDAB78563412] |
+//!
+//! ### ULEB128-Encoded Integers
+//!
+//! The LCS format also uses the [ULEB128 encoding](https://en.wikipedia.org/wiki/LEB128) internally
+//! to represent unsigned 32-bit integers in two cases where small values are usually expected:
+//! (1) lengths of variable-length sequences and (2) tags of enum values (see the corresponding
+//! sections below).
+//!
+//! |Type                       |Original data          |Hex representation |Serialized format  |
+//! |---                        |---                    |---                |---                |
+//! |ULEB128-encoded u32-integer|2^0 = 1                |0x00000001         |[01]               |
+//! |                           |2^7 = 128              |0x00000080         |[8001]             |
+//! |                           |2^14 = 16384           |0x00004000         |[808001]           |
+//! |                           |2^21 = 2097152         |0x00200000         |[80808001]         |
+//! |                           |2^28 = 268435456       |0x10000000         |[8080808001]       |
+//! |                           |9687                   |0x0000250f         |[8f4a]             |
+//!
+//! In general, a ULEB128 encoding consists of a little-endian sequence of base-128 (7-bit)
+//! digits. Each digit is completed into a byte by setting the highest bit to 1, except for the
+//! last (highest-significance) digit whose highest bit is set to 0.
+//!
+//! In LCS, the result of decoding ULEB128 bytes is required to fit into a 32-bit unsigned
+//! integer and be in canonical form. For instance, the following values are rejected:
+//! * `[808080808001]` (2^36) is too large.
+//! * `[8080808010]` (2^33) is too large.
+//! * `[8000]` is not a minimal encoding of 0.
 //!
 //! ### Optional Data
 //!
@@ -86,9 +113,9 @@
 //! elements in the sequence must be of the same type. If the length of a sequence is fixed and
 //! well known then LCS represents this as just the concatenation of the serialized form of each
 //! individual element in the sequence. If the length of the sequence can be variable, then the
-//! serialized sequence is length prefixed with a 32-bit unsigned integer indicating the number of
-//! elements in the sequence. All variable length sequences must be `MAX_SEQUENCE_LENGTH` elements
-//! long or less.
+//! serialized sequence is length prefixed with a ULEB128-encoded unsigned integer indicating
+//! the number of elements in the sequence. All variable length sequences must be
+//! `MAX_SEQUENCE_LENGTH` elements long or less.
 //!
 //! ```rust
 //! # use libra_canonical_serialization::{Result, to_bytes};
@@ -97,14 +124,17 @@
 //! assert_eq!(to_bytes(&fixed)?, vec![1, 0, 2, 0, 3, 0]);
 //!
 //! let variable: Vec<u16> = vec![1, 2];
-//! assert_eq!(to_bytes(&variable)?, vec![2, 0, 0, 0, 1, 0, 2, 0]);
+//! assert_eq!(to_bytes(&variable)?, vec![2, 1, 0, 2, 0]);
+//!
+//! let large_variable_length: Vec<()> = vec![(); 9_487];
+//! assert_eq!(to_bytes(&large_variable_length)?, vec![0x8f, 0x4a]);
 //! # Ok(())}
 //! ```
 //!
 //! ### Strings
 //!
 //! Only valid UTF-8 Strings are supported. LCS serializes such strings as a variable length byte
-//! sequence, i.e. length prefixed with a 32-bit unsigned integer followed by the byte
+//! sequence, i.e. length prefixed with a ULEB128-encoded unsigned integer followed by the byte
 //! representation of the string.
 //!
 //! ```rust
@@ -113,7 +143,7 @@
 //! // Note that this string has 10 characters but has a byte length of 24
 //! let utf8_str = "çå∞≠¢õß∂ƒ∫";
 //! let expecting = vec![
-//!     24, 0, 0, 0, 0xc3, 0xa7, 0xc3, 0xa5, 0xe2, 0x88, 0x9e, 0xe2, 0x89, 0xa0, 0xc2,
+//!     24, 0xc3, 0xa7, 0xc3, 0xa5, 0xe2, 0x88, 0x9e, 0xe2, 0x89, 0xa0, 0xc2,
 //!     0xa2, 0xc3, 0xb5, 0xc3, 0x9f, 0xe2, 0x88, 0x82, 0xc6, 0x92, 0xe2, 0x88, 0xab,
 //! ];
 //! assert_eq!(to_bytes(&utf8_str)?, expecting);
@@ -132,7 +162,7 @@
 //! # use libra_canonical_serialization::{Result, to_bytes};
 //! # fn main() -> Result<()> {
 //! let tuple = (-1i8, "libra");
-//! let expecting = vec![0xFF, 5, 0, 0, 0, b'l', b'i', b'b', b'r', b'a'];
+//! let expecting = vec![0xFF, 5, b'l', b'i', b'b', b'r', b'a'];
 //! assert_eq!(to_bytes(&tuple)?, expecting);
 //! # Ok(())}
 //! ```
@@ -169,7 +199,7 @@
 //!     label: "a".to_owned(),
 //! };
 //! let s_bytes = to_bytes(&s)?;
-//! let mut expecting = vec![1, 2, 0, 0, 0, 0xC0, 0xDE, 1, 0, 0, 0, b'a'];
+//! let mut expecting = vec![1, 2, 0xC0, 0xDE, 1, b'a'];
 //! assert_eq!(s_bytes, expecting);
 //!
 //! let w = Wrapper {
@@ -179,7 +209,7 @@
 //! let w_bytes = to_bytes(&w)?;
 //! assert!(w_bytes.starts_with(&s_bytes));
 //!
-//! expecting.append(&mut vec![1, 0, 0, 0, b'b']);
+//! expecting.append(&mut vec![1, b'b']);
 //! assert_eq!(w_bytes, expecting);
 //! # Ok(())}
 //! ```
@@ -187,8 +217,8 @@
 //! ### Externally Tagged Enumerations
 //!
 //! An enumeration is typically represented as a type that can take one of potentially many
-//! different variants. In LCS, each variant is mapped to a variant index, an unsigned 32-bit
-//! integer, followed by optionally serialized data if the type has an associated value. An
+//! different variants. In LCS, each variant is mapped to a variant index, a ULEB128-encoded 32-bit unsigned
+//! integer, followed by serialized data if the type has an associated value. An
 //! associated type can be any LCS supported type. The variant index is determined based on the
 //! ordering of the variants in the canonical enum definition, where the first variant has an index
 //! of `0`, the second an index of `1`, etc.
@@ -208,9 +238,9 @@
 //! let v1 = E::Variant1(255);
 //! let v2 = E::Variant2("e".to_owned());
 //!
-//! assert_eq!(to_bytes(&v0)?, vec![0, 0, 0, 0, 0x40, 0x1F]);
-//! assert_eq!(to_bytes(&v1)?, vec![1, 0, 0, 0, 0xFF]);
-//! assert_eq!(to_bytes(&v2)?, vec![2, 0, 0, 0, 1, 0, 0, 0, b'e']);
+//! assert_eq!(to_bytes(&v0)?, vec![0, 0x40, 0x1F]);
+//! assert_eq!(to_bytes(&v1)?, vec![1, 0xFF]);
+//! assert_eq!(to_bytes(&v2)?, vec![2, 1, b'e']);
 //! # Ok(())}
 //! ```
 //!
@@ -218,10 +248,10 @@
 //!
 //! ### Maps (Key / Value Stores)
 //!
-//! Maps can be considered a variable length array of length two tuples where Key points to Value is
-//! represented as (Key, Value). Hence they should be serialized first with the length of number of
-//! entries followed by each entry in lexicographical order as defined by the byte representation of
-//! the LCS serialized key.
+//! Maps are represented as a variable-length, sorted sequence of (Key, Value) tuples. Keys must be
+//! unique and the tuples sorted by increasing lexicographical order on the LCS bytes of each key.
+//! The representation is otherwise similar to that of a variable-length sequence. In particular,
+//! it is preceded by the number of tuples, encoded in ULEB128.
 //!
 //! ```rust
 //! # use libra_canonical_serialization::{Result, to_bytes};

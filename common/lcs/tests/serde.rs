@@ -35,22 +35,22 @@ enum E {
 #[test]
 fn test_enum() {
     let u = E::Unit;
-    let expected = vec![0, 0, 0, 0];
+    let expected = vec![0];
     assert_eq!(to_bytes(&u).unwrap(), expected);
     is_same(u);
 
     let n = E::Newtype(1);
-    let expected = vec![1, 0, 0, 0, 1, 0];
+    let expected = vec![1, 1, 0];
     assert_eq!(to_bytes(&n).unwrap(), expected);
     is_same(n);
 
     let t = E::Tuple(1, 2);
-    let expected = vec![2, 0, 0, 0, 1, 0, 2, 0];
+    let expected = vec![2, 1, 0, 2, 0];
     assert_eq!(to_bytes(&t).unwrap(), expected);
     is_same(t);
 
     let s = E::Struct { a: 1 };
-    let expected = vec![3, 0, 0, 0, 1, 0, 0, 0];
+    let expected = vec![3, 1, 0, 0, 0];
     assert_eq!(to_bytes(&s).unwrap(), expected);
     is_same(s);
 }
@@ -133,7 +133,9 @@ proptest! {
     #[test]
     fn proptest_string(v in any::<String>()) {
         let mut expected = Vec::with_capacity(v.len() + 4);
-        expected.extend_from_slice(&(v.len() as u32).to_le_bytes());
+        // Larger lengths have more complex uleb128 encodings.
+        prop_assume!(v.len() < 128);
+        expected.extend_from_slice(&(v.len() as u8).to_le_bytes());
         expected.extend_from_slice(v.as_bytes());
         assert_eq!(to_bytes(&v)?, expected);
 
@@ -143,7 +145,9 @@ proptest! {
     #[test]
     fn proptest_vec(v in any::<Vec<u8>>()) {
         let mut expected = Vec::with_capacity(v.len() + 4);
-        expected.extend_from_slice(&(v.len() as u32).to_le_bytes());
+        // Larger lengths have more complex uleb128 encodings.
+        prop_assume!(v.len() < 128);
+        expected.extend_from_slice(&(v.len() as u8).to_le_bytes());
         expected.extend_from_slice(&v);
         assert_eq!(to_bytes(&v)?, expected);
 
@@ -186,22 +190,30 @@ proptest! {
     #[test]
     fn proptest_lexicographic_order(v in any::<BTreeMap<Vec<u8>, Vec<u8>>>()) {
         let bytes = to_bytes(&v).unwrap();
+        // This test assumes small maps and small vectors.
+        // This is what proptest always generates in practice but we will make
+        // the assumptions explicit anyway.
+        prop_assume!(v.len() < 128);
 
-        let v: BTreeMap<Vec<u8>, Vec<u8>> = v.into_iter().map(|(k, v)| {
+        let m : BTreeMap<Vec<u8>, Vec<u8>> = v.iter().filter_map(|(k, v)| {
+            if k.len() >= 128 || v.len() >= 128 {
+                return None;
+            }
             let mut k_bytes = Vec::with_capacity(k.len() + 4);
-            k_bytes.extend_from_slice(&(k.len() as u32).to_le_bytes());
-            k_bytes.extend(k.into_iter());
+            k_bytes.extend_from_slice(&(k.len() as u8).to_le_bytes());
+            k_bytes.extend(k.iter());
             let mut v_bytes = Vec::with_capacity(v.len() + 4);
-            v_bytes.extend_from_slice(&(v.len() as u32).to_le_bytes());
-            v_bytes.extend(v.into_iter());
+            v_bytes.extend_from_slice(&(v.len() as u8).to_le_bytes());
+            v_bytes.extend(v.iter());
 
-            (k_bytes, v_bytes)
+            Some((k_bytes, v_bytes))
         })
         .collect();
+        prop_assume!(v.len() == m.len());
 
         let mut expected = Vec::with_capacity(bytes.len());
-        expected.extend_from_slice(&(v.len() as u32).to_le_bytes());
-        for (key, value) in v {
+        expected.extend_from_slice(&(m.len() as u8).to_le_bytes());
+        for (key, value) in m {
             expected.extend(key.into_iter());
             expected.extend(value.into_iter());
         }
@@ -237,24 +249,63 @@ proptest! {
 
 #[test]
 fn invalid_utf8() {
-    let invalid_utf8 = vec![1, 0, 0, 0, 0xFF];
+    let invalid_utf8 = vec![1, 0xFF];
     assert_eq!(from_bytes::<String>(&invalid_utf8), Err(Error::Utf8));
 }
 
 #[test]
-fn invalid_variant() {
-    #[derive(Serialize, Deserialize, Debug)]
+fn uleb_encoding_and_variant() {
+    #[derive(Serialize, Deserialize, Debug, PartialEq)]
     enum Test {
         One,
         Two,
     };
 
-    let invalid_variant = vec![5, 0, 0, 0];
-    match from_bytes::<Test>(&invalid_variant).unwrap_err() {
-        // Error message comes from serde
-        Error::Custom(_) => {}
-        _ => panic!(),
-    }
+    let valid_variant = vec![1];
+    from_bytes::<Test>(&valid_variant).unwrap();
+
+    let invalid_variant = vec![5];
+    // Error comes from serde
+    assert_eq!(
+        from_bytes::<Test>(&invalid_variant),
+        Err(Error::Custom(
+            "invalid value: integer `5`, expected variant index 0 <= i < 2".into()
+        ))
+    );
+
+    let invalid_bytes = vec![0x80, 0x80, 0x80, 0x80];
+    // Error is due to EOF.
+    assert_eq!(from_bytes::<Test>(&invalid_bytes), Err(Error::Eof));
+
+    let invalid_uleb = vec![0x80, 0x80, 0x80, 0x80, 0x80];
+    // Error comes from uleb decoder because u32 are never that long.
+    assert_eq!(
+        from_bytes::<Test>(&invalid_uleb),
+        Err(Error::IntegerOverflowDuringUleb128Decoding)
+    );
+
+    let invalid_uleb = vec![0x80, 0x80, 0x80, 0x80, 0x1f];
+    // Error comes from uleb decoder because we are truncating a larger integer into u32.
+    assert_eq!(
+        from_bytes::<Test>(&invalid_uleb),
+        Err(Error::IntegerOverflowDuringUleb128Decoding)
+    );
+
+    let invalid_uleb = vec![0x80, 0x80, 0x80, 0x80, 0x0f];
+    // Error comes from Serde because ULEB integer is valid.
+    assert_eq!(
+        from_bytes::<Test>(&invalid_uleb),
+        Err(Error::Custom(
+            "invalid value: integer `4026531840`, expected variant index 0 <= i < 2".into()
+        ))
+    );
+
+    let invalid_uleb = vec![0x80, 0x80, 0x80, 0x00];
+    // Uleb decoder must reject non-canonical forms.
+    assert_eq!(
+        from_bytes::<Test>(&invalid_uleb),
+        Err(Error::NonCanonicalUleb128Encoding)
+    );
 }
 
 #[test]
@@ -285,8 +336,19 @@ fn sequence_too_long() {
 }
 
 #[test]
+fn variable_lengths() {
+    assert_eq!(to_bytes(&vec![(); 1]).unwrap(), vec![0x01]);
+    assert_eq!(to_bytes(&vec![(); 128]).unwrap(), vec![0x80, 0x01]);
+    assert_eq!(to_bytes(&vec![(); 255]).unwrap(), vec![0xff, 0x01]);
+    assert_eq!(
+        to_bytes(&vec![(); 786_432]).unwrap(),
+        vec![0x80, 0x80, 0x30]
+    );
+}
+
+#[test]
 fn sequence_not_long_enough() {
-    let seq = vec![5, 0, 0, 0, 1, 2, 3, 4]; // Missing 5th element
+    let seq = vec![5, 1, 2, 3, 4]; // Missing 5th element
     assert_eq!(from_bytes::<Vec<u8>>(&seq), Err(Error::Eof));
 }
 
@@ -295,16 +357,16 @@ fn map_not_canonical() {
     let mut map = BTreeMap::new();
     map.insert(4u8, ());
     map.insert(5u8, ());
-    let seq = vec![2, 0, 0, 0, 4, 5];
+    let seq = vec![2, 4, 5];
     assert_eq!(from_bytes::<BTreeMap<u8, ()>>(&seq), Ok(map));
     // Make sure out-of-order keys are rejected.
-    let seq = vec![2, 0, 0, 0, 5, 4];
+    let seq = vec![2, 5, 4];
     assert_eq!(
         from_bytes::<BTreeMap<u8, ()>>(&seq),
         Err(Error::NonCanonicalMap)
     );
     // Make sure duplicate keys are rejected.
-    let seq = vec![2, 0, 0, 0, 5, 5];
+    let seq = vec![2, 5, 5];
     assert_eq!(
         from_bytes::<BTreeMap<u8, ()>>(&seq),
         Err(Error::NonCanonicalMap)
@@ -318,18 +380,18 @@ fn by_default_btreesets_are_serialized_as_sequences() {
     let mut set = BTreeSet::new();
     set.insert(4u8);
     set.insert(5u8);
-    let seq = vec![2, 0, 0, 0, 4, 5];
+    let seq = vec![2, 4, 5];
     assert_eq!(from_bytes::<BTreeSet<u8>>(&seq), Ok(set.clone()));
-    let seq = vec![2, 0, 0, 0, 5, 4];
+    let seq = vec![2, 5, 4];
     assert_eq!(from_bytes::<BTreeSet<u8>>(&seq), Ok(set.clone()));
     // Duplicate keys are just ok.
-    let seq = vec![3, 0, 0, 0, 5, 5, 4];
+    let seq = vec![3, 5, 5, 4];
     assert_eq!(from_bytes::<BTreeSet<u8>>(&seq), Ok(set));
 }
 
 #[test]
 fn leftover_bytes() {
-    let seq = vec![5, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // 5 extra elements
+    let seq = vec![5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // 5 extra elements
     assert_eq!(from_bytes::<Vec<u8>>(&seq), Err(Error::RemainingInput));
 }
 
@@ -361,7 +423,7 @@ fn zero_copy_parse() {
         borrowed_bytes: &[0, 1, 2, 3],
     };
     {
-        let expected = vec![2, 0, 0, 0, b'h', b'i', 4, 0, 0, 0, 0, 1, 2, 3];
+        let expected = vec![2, b'h', b'i', 4, 0, 1, 2, 3];
         let encoded = to_bytes(&f).unwrap();
         assert_eq!(expected, encoded);
         let out: Foo = from_bytes(&encoded[..]).unwrap();
@@ -487,15 +549,13 @@ fn serde_known_vector() {
     let bytes = to_bytes(&f).unwrap();
 
     let test_vector = vec![
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x06, 0x00, 0x00, 0x00, 0x64, 0x63, 0x58,
-        0x4d, 0x42, 0x37, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00,
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05,
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x06, 0x64, 0x63, 0x58, 0x4d, 0x42, 0x37,
+        0x64, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
+        0x06, 0x07, 0x08, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05,
         0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05,
-        0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x63, 0x00, 0x00, 0x00,
-        0x01, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x03, 0x00, 0x00, 0x00, 0x16,
-        0x15, 0x43, 0x03, 0x00, 0x00, 0x00, 0x00, 0x38, 0x15, 0x03, 0x00, 0x00, 0x00, 0x16, 0x0a,
-        0x05, 0x04, 0x00, 0x00, 0x00, 0x14, 0x15, 0x59, 0x69, 0x03, 0x00, 0x00, 0x00, 0xc9, 0x17,
-        0x5a,
+        0x05, 0x05, 0x05, 0x05, 0x05, 0x63, 0x00, 0x00, 0x00, 0x01, 0x03, 0x01, 0x01, 0x03, 0x16,
+        0x15, 0x43, 0x03, 0x00, 0x38, 0x15, 0x03, 0x16, 0x0a, 0x05, 0x04, 0x14, 0x15, 0x59, 0x69,
+        0x03, 0xc9, 0x17, 0x5a,
     ];
 
     // make sure we serialize into exact same bytes as before
