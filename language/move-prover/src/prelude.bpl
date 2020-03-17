@@ -305,13 +305,13 @@ function {:inline} $select_vector_by_value(v: Value, i: Value) : Value {
 function {:inline} swap_vector(v: Value, i: int, j: int): Value {
     Vector(SwapValueArray(v#Vector(v), i, j))
 }
-function {:inline} $slice_vector(v: Value, i: int, j: int) : Value {
-    Vector(SliceValueArray(v#Vector(v), i, j))
+function {:inline} $slice_vector(v: Value, r: Value) : Value {
+    Vector(SliceValueArray(v#Vector(v), i#Integer(lb#$Range(r)), i#Integer(ub#$Range(r))))
 }
-
 function {:inline} $InVectorRange(v: Value, i: int): bool {
     i >= 0 && i < $vlen(v)
 }
+
 function {:inline} $InRange(r: Value, i: int): bool {
    i#Integer(lb#$Range(r)) <= i && i < i#Integer(ub#$Range(r))
 }
@@ -781,7 +781,7 @@ function {:inline} $Vector_type_value(tv: TypeValue): TypeValue {
 }
 
 function {:inline} $Vector_is_well_formed(v: Value): bool {
-    is#Vector(v)
+    is#Vector(v) && l#ValueArray(v#Vector(v)) >= 0
 }
 
 procedure {:inline 1} $Vector_empty(ta: TypeValue) returns (v: Value) {

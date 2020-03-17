@@ -1,4 +1,4 @@
-module Invariants {
+module TestInvariants {
 
     // General invariant checking.
 
@@ -7,15 +7,17 @@ module Invariants {
     }
 
     spec struct R {
-      // We must always have a value greater one.
-      invariant x > 1;
+        // We must always have a value greater one.
+        invariant x > 1;
 
-      // When we update via a reference, the new value must be smaller or equal the old one.
-      invariant update x <= old(x);
+        // When we update via a reference, the new value must be smaller or equal the old one.
+        invariant update x <= old(x);
     }
 
 
+    // ----------
     // Pack tests
+    // ----------
 
     fun valid_R_pack(): R {
         R {x: 2}
@@ -31,7 +33,10 @@ module Invariants {
         ensures result.x == 1;
     }
 
+
+    // ------------
     // Update tests
+    // ------------
 
     fun valid_R_update(): R {
         let t = R {x: 3};
@@ -72,7 +77,9 @@ module Invariants {
         *r = 4;
     }
 
+    // -----------------------
     // Lifetime analysis tests
+    // -----------------------
 
     fun lifetime_invalid_R() : R {
         let r = R {x: 3};
@@ -83,6 +90,20 @@ module Invariants {
         r_ref = &mut r;
         x_ref = &mut r_ref.x;
         *x_ref = 2;
+
+        r
+    }
+
+    fun lifetime_invalid_R_2() : R {
+        let r = R {x: 4};
+        let r_ref = &mut r;
+        let x_ref = &mut r_ref.x;
+        *x_ref = 0;
+        *x_ref = 2; // r_ref goes out of scope here
+
+        r_ref = &mut r;
+        x_ref = &mut r_ref.x;
+        *x_ref = 3;
 
         r
     }
