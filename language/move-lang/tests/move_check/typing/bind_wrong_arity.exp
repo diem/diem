@@ -6,7 +6,7 @@ error:
    │             ^ Invalid type for local
    ·
  5 │         let x: () = ();
-   │             - Expected a single type, but found expression list type: '()'
+   │                -- Expected a single type, but found expression list type: '()'
    │
 
 error: 

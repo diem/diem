@@ -237,11 +237,15 @@ fn typing_error<T: Into<String>, F: FnOnce() -> T>(
     let subst = &context.subst;
     let error = match e {
         SubtypeError(t1, t2) => {
+            let loc1 = core::best_loc(subst, &t1);
+            let loc2 = core::best_loc(subst, &t2);
             let m1 = format!("The type: {}", core::error_format(&t1, subst));
             let m2 = format!("Is not a subtype of: {}", core::error_format(&t2, subst));
-            vec![(loc, msg().into()), (t1.loc, m1), (t2.loc, m2)]
+            vec![(loc, msg().into()), (loc1, m1), (loc2, m2)]
         }
         ArityMismatch(n1, t1, n2, t2) => {
+            let loc1 = core::best_loc(subst, &t1);
+            let loc2 = core::best_loc(subst, &t2);
             let msg1 = format!(
                 "The expression list type of length {}: {}",
                 n1,
@@ -252,12 +256,14 @@ fn typing_error<T: Into<String>, F: FnOnce() -> T>(
                 n2,
                 core::error_format(&t2, subst)
             );
-            vec![(loc, msg().into()), (t1.loc, msg1), (t2.loc, msg2)]
+            vec![(loc, msg().into()), (loc1, msg1), (loc2, msg2)]
         }
         Incompatible(t1, t2) => {
+            let loc1 = core::best_loc(subst, &t1);
+            let loc2 = core::best_loc(subst, &t2);
             let m1 = format!("The type: {}", core::error_format(&t1, subst));
             let m2 = format!("Is not compatible with: {}", core::error_format(&t2, subst));
-            vec![(loc, msg().into()), (t1.loc, m1), (t2.loc, m2)]
+            vec![(loc, msg().into()), (loc1, m1), (loc2, m2)]
         }
         RecursiveType(rloc) => vec![
             (loc, msg().into()),
@@ -541,9 +547,10 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         }
 
         NE::FieldMutate(ndotted, nr) => {
+            let lhsloc = ndotted.loc;
             let er = exp(context, *nr);
             let (edotted, _) = exp_dotted(context, "mutation", ndotted);
-            let eborrow = exp_dotted_to_borrow(context, eloc, true, edotted);
+            let eborrow = exp_dotted_to_borrow(context, lhsloc, true, edotted);
             check_mutation(context, eborrow.exp.loc, eborrow.ty.clone(), &er.ty);
             (sp(eloc, Type_::Unit), TE::Mutate(Box::new(eborrow), er))
         }
@@ -1204,9 +1211,9 @@ fn exp_dotted(
 
 fn exp_dotted_to_borrow(
     context: &mut Context,
-    eloc: Loc,
+    loc: Loc,
     mut_: bool,
-    sp!(loc, dot_): ExpDotted,
+    sp!(dloc, dot_): ExpDotted,
 ) -> T::Exp {
     use Type_::*;
     use T::UnannotatedExp_ as TE;
@@ -1227,12 +1234,13 @@ fn exp_dotted_to_borrow(
                     TE::TempBorrow(mut_, Box::new(T::exp(eb_ty, sp(ebloc, eb_))))
                 }
             };
-            let ty = sp(eloc, Ref(mut_, desired_inner_ty));
-            T::exp(ty, sp(loc, e_))
+            let ty = sp(loc, Ref(mut_, desired_inner_ty));
+            T::exp(ty, sp(dloc, e_))
         }
         ExpDotted_::Dot(lhs, field, field_ty) => {
-            let lhs_borrow = exp_dotted_to_borrow(context, eloc, mut_, *lhs);
-            let lhs_mut = match core::unfold_type(&context.subst, lhs_borrow.ty.clone()).value {
+            let lhs_borrow = exp_dotted_to_borrow(context, dloc, mut_, *lhs);
+            let sp!(tyloc, unfolded_) = core::unfold_type(&context.subst, lhs_borrow.ty.clone());
+            let lhs_mut = match unfolded_ {
                 Ref(lhs_mut, _) => lhs_mut,
                 _ => panic!(
                     "ICE expected a ref from exp_dotted borrow, otherwise should have gotten a \
@@ -1242,13 +1250,13 @@ fn exp_dotted_to_borrow(
             // lhs is immutable and current borrow is mutable
             if !lhs_mut && mut_ {
                 context.error(vec![
-                    (eloc, "Invalid mutable borrow from an immutable reference"),
-                    (lhs_borrow.ty.loc, "Immutable because of this position"),
+                    (loc, "Invalid mutable borrow from an immutable reference"),
+                    (tyloc, "Immutable because of this position"),
                 ])
             }
             let e_ = TE::Borrow(mut_, Box::new(lhs_borrow), field);
-            let ty = sp(eloc, Ref(mut_, field_ty));
-            T::exp(ty, sp(loc, e_))
+            let ty = sp(loc, Ref(mut_, field_ty));
+            T::exp(ty, sp(dloc, e_))
         }
     }
 }

@@ -41,8 +41,8 @@ error:
  43 │         let () = X::bing(X::baz(X::bar(X::foo())));
     │                          ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
     ·
- 43 │         let () = X::bing(X::baz(X::bar(X::foo())));
-    │                          ------------------------ Expected a single non-reference type, but found: '(address, u64)'
+  5 │     public fun bar(x: u64): (address, u64) {
+    │                             -------------- Expected a single non-reference type, but found: '(address, u64)'
     │
 
 error: 
@@ -88,8 +88,8 @@ error:
  44 │         let () = X::bing (X::baz (X::bar (X::foo())));
     │                           ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
     ·
- 44 │         let () = X::bing (X::baz (X::bar (X::foo())));
-    │                           -------------------------- Expected a single non-reference type, but found: '(address, u64)'
+  5 │     public fun bar(x: u64): (address, u64) {
+    │                             -------------- Expected a single non-reference type, but found: '(address, u64)'
     │
 
 error: 
@@ -135,8 +135,8 @@ error:
  45 │         let () = X::bing (X::baz (X::bar(1)));
     │                           ^^^^^^^^^^^^^^^^^^ Invalid type argument
     ·
- 45 │         let () = X::bing (X::baz (X::bar(1)));
-    │                           ------------------ Expected a single non-reference type, but found: '(address, u64)'
+  5 │     public fun bar(x: u64): (address, u64) {
+    │                             -------------- Expected a single non-reference type, but found: '(address, u64)'
     │
 
 error: 
@@ -207,8 +207,8 @@ error:
  51 │         let () = bing(baz(bar(foo())));
     │                       ^^^^^^^^^^^^^^^ Invalid type argument
     ·
- 51 │         let () = bing(baz(bar(foo())));
-    │                       --------------- Expected a single non-reference type, but found: '(address, u64)'
+ 19 │     fun bar(x: u64): (address, u64) {
+    │                      -------------- Expected a single non-reference type, but found: '(address, u64)'
     │
 
 error: 
@@ -254,8 +254,8 @@ error:
  52 │         let () = bing (baz (bar (foo())));
     │                        ^^^^^^^^^^^^^^^^^ Invalid type argument
     ·
- 52 │         let () = bing (baz (bar (foo())));
-    │                        ----------------- Expected a single non-reference type, but found: '(address, u64)'
+ 19 │     fun bar(x: u64): (address, u64) {
+    │                      -------------- Expected a single non-reference type, but found: '(address, u64)'
     │
 
 error: 
@@ -301,8 +301,8 @@ error:
  53 │         let () = bing (baz (bar(1)));
     │                        ^^^^^^^^^^^^ Invalid type argument
     ·
- 53 │         let () = bing (baz (bar(1)));
-    │                        ------------ Expected a single non-reference type, but found: '(address, u64)'
+ 19 │     fun bar(x: u64): (address, u64) {
+    │                      -------------- Expected a single non-reference type, but found: '(address, u64)'
     │
 
 error: 

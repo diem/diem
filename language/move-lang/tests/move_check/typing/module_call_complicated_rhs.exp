@@ -28,7 +28,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
     ·
  13 │         baz (if (cond) (false, 0x0) else (true, 0x1));
-    │         --------------------------------------------- Expected a single non-reference type, but found: '(bool, address)'
+    │                                          ----------- Expected a single non-reference type, but found: '(bool, address)'
     │
 
 error: 
@@ -61,7 +61,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
     ·
  19 │         baz(if (cond) (false, 0x0) else (true, 0x1));
-    │         -------------------------------------------- Expected a single non-reference type, but found: '(bool, address)'
+    │                                         ----------- Expected a single non-reference type, but found: '(bool, address)'
     │
 
 error: 
@@ -105,7 +105,7 @@ error:
     │         ^^^^^^^^^^^^^^^ Invalid type argument
     ·
  31 │         baz({ (a, x) });
-    │         --------------- Expected a single non-reference type, but found: '(address, u64)'
+    │               ------ Expected a single non-reference type, but found: '(address, u64)'
     │
 
 error: 
@@ -127,7 +127,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
     ·
  32 │         baz({ let a = false; (a, x) });
-    │         ------------------------------ Expected a single non-reference type, but found: '(bool, u64)'
+    │                              ------ Expected a single non-reference type, but found: '(bool, u64)'
     │
 
 error: 
@@ -171,7 +171,7 @@ error:
     │         ^^^^^^^^^^^^^^^ Invalid type argument
     ·
  44 │         baz({ (a, x) });
-    │         --------------- Expected a single non-reference type, but found: '(address, u64)'
+    │               ------ Expected a single non-reference type, but found: '(address, u64)'
     │
 
 error: 
@@ -193,6 +193,6 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
     ·
  45 │         baz({ let a = false; (a, x) });
-    │         ------------------------------ Expected a single non-reference type, but found: '(bool, u64)'
+    │                              ------ Expected a single non-reference type, but found: '(bool, u64)'
     │
 

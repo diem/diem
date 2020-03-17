@@ -5,8 +5,8 @@ error:
  5 │         let x;
    │             ^ Invalid type for local
    ·
- 5 │         let x;
-   │             - Expected a single type, but found expression list type: '()'
+ 6 │         x = ();
+   │             -- Expected a single type, but found expression list type: '()'
    │
 
 error: 
@@ -17,7 +17,7 @@ error:
    │         ^ Invalid type for local
    ·
  6 │         x = ();
-   │         - Expected a single type, but found expression list type: '()'
+   │             -- Expected a single type, but found expression list type: '()'
    │
 
 error: 
@@ -42,7 +42,7 @@ error:
    │         ^ Invalid type for local
    ·
  7 │         x = (0, 1, 2);
-   │         - Expected a single type, but found expression list type: '(u64, u64, u64)'
+   │             --------- Expected a single type, but found expression list type: '(u64, u64, u64)'
    │
 
 error: 

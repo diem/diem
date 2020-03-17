@@ -20,6 +20,6 @@ error:
     │         ^^^ Invalid type for local
     ·
  14 │         (_) = ();
-    │         --- Expected a single type, but found expression list type: '()'
+    │               -- Expected a single type, but found expression list type: '()'
     │
 

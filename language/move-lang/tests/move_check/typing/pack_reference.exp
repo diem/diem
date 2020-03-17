@@ -5,8 +5,8 @@ error:
  5 │         Box { f: r_imm };
    │         ^^^^^^^^^^^^^^^^ Invalid type argument
    ·
- 5 │         Box { f: r_imm };
-   │         ---------------- Expected a single non-reference type, but found: '&u64'
+ 4 │     fun t0(r_imm: &u64, r_mut: &mut u64) {
+   │                   ---- Expected a single non-reference type, but found: '&u64'
    │
 
 error: 
@@ -16,7 +16,7 @@ error:
  6 │         Box { f: r_mut };
    │         ^^^^^^^^^^^^^^^^ Invalid type argument
    ·
- 6 │         Box { f: r_mut };
-   │         ---------------- Expected a single non-reference type, but found: '&mut u64'
+ 4 │     fun t0(r_imm: &u64, r_mut: &mut u64) {
+   │                                -------- Expected a single non-reference type, but found: '&mut u64'
    │
 

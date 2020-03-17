@@ -34,7 +34,7 @@ error:
     │             ^ Invalid type for local
     ·
  11 │         let x = ();
-    │             - Expected a single type, but found expression list type: '()'
+    │                 -- Expected a single type, but found expression list type: '()'
     │
 
 error: 
@@ -87,7 +87,7 @@ error:
     │             ^ Invalid type for local
     ·
  18 │         let x: () = 0;
-    │             - Expected a single type, but found expression list type: '()'
+    │                -- Expected a single type, but found expression list type: '()'
     │
 
 error: 
