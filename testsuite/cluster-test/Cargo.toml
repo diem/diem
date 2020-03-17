@@ -39,7 +39,7 @@ config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 generate-keypair = { path = "../../config/generate-keypair", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
-libra-logger = { path = "../../common/logger", version = "0.1.0" }
+libra-logger = { path = "../../common/logger", version = "0.1.0", features = ["no_struct_log"] }
 libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 

@@ -403,8 +403,10 @@ impl ClusterSwarm for ClusterSwarmKube {
                 debug!(
                     "Created {}",
                     o.metadata
+                        .as_ref()
                         .ok_or_else(|| { format_err!("metadata not found for pod {}", pod_name) })?
                         .name
+                        .as_ref()
                         .ok_or_else(|| { format_err!("name not found for pod {}", pod_name) })?
                 );
             }

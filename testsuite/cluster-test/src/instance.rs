@@ -190,6 +190,12 @@ impl fmt::Display for Instance {
     }
 }
 
+impl fmt::Debug for Instance {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 pub fn instancelist_to_set(instances: &[Instance]) -> HashSet<String> {
     let mut r = HashSet::new();
     for instance in instances {

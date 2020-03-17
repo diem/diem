@@ -1,363 +1,325 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
+//! This crates provides API for both structured and not structured(text) logging
+//!
+//! # Text logging
+//!
+//! Text logging is configured via RUST_LOG macro and have exactly same facade as rust log crate
+//!
+//! # Structured logging
+//!
+//! This crate contains two levels of API for structured logging
+//!
+//! 1) StructuredLogEntry class and send_struct_log! macro for directly composing structured log
+//! 2) Bridge between traditional log! macro and structured logging API
+//!
+//! ## Direct API
+//!
+//! ```pseudo
+//! use std::collections::HashMap;
+//! use serde_json::Value;
+//!
+//! pub struct StructuredLogEntry {
+//!     text: Option<String>,
+//!     pattern: Option<&'static str>,
+//!     name: Option<&'static str>,
+//!     module: Option<&'static str>,
+//!     location: Option<&'static str>,
+//!     git_rev: Option<&'static str>,
+//!     data: HashMap<&'static str, Value>,
+//! }
+//!
+//! impl StructuredLogEntry {
+//!     pub fn new_unnamed() -> Self { /* ... */ }
+//!     pub fn new_named(name: &'static str) -> Self { /* ... */ }
+//!     /* ..Bunch of builder style setters for chained initialization such as
+//!         entry.data(a, b).data(x, y).. */
+//! }
+//!
+//! // Usage:
+//! send_struct_log!(StructuredLogEntry::new_named("Committed")
+//!    .data("block", &block)
+//!    .data("autor", &author))
+//! ```
+//!
+//! Arguments passed to .data will be serialized into json, and as such should implement Serialize.
+//! Only static strings are allowed as field names.
+//!
+//! send_struct_log! should be used to send structured log entry.
+//! This macro populates metadata such as git_rev, location and module, and also skips evaluation of StructuredLogEntry entirely, if structured logging is disabled
+//!
+//! ## Log macro bridge
+//!
+//! Crate owners are not required to rewrite their code right away to support new structured logging.
+//! Importing logger crate will automatically emit structured logging on every log(debug!, info!, etc) macro invocation, unless no_struct_log feature was enabled on this crate.
+//!
+//! Note: Only enable 'no_struct_log' on leaf binary crates, never on library, as it might disable structured logging for other crates, due to how cargo handles features at this moment.
+//!
+//! So
+//! ```pseudo
+//! info!("Committing {}", block);
+//! // Will emit(in addition to regular text log) structured log such as
+//! // {
+//! //   pattern: "Committing {}",
+//! //   data: {
+//! //     block: "<id>"
+//! //   },
+//! //   ...metadata...
+//! // }
+//! ```
+//!
+//! There are few caveats to automatic structured logging generation
+//!
+//! 1) Argument values for structured logging will be serialized with Debug implementation(vs proper json serialization if send_struct_log! macro is used), regardless of what formatter is used for textual log. As a consequence, this means, that every log argument must implement Debug. In theory, this is extra limitation, but in practice currently in libra node crate and it's dependencies there was no single log argument that would not satisfy this criteria.
+//!
+//! 2) Field names will be automatically evaluated if expression is a single identifier, as in example above field block will get human readable name in json. However, if more complex expression is passed, structured log field name will be based on position of argument: "_0", "_1", etc:
+//!
+//! ```pseudo
+//! info!("Committing {}", block.id());
+//! //->
+//! // {
+//! //  data: {
+//! //    "_0": "<id>"
+//! //  },
+//! //  ...metadata...
+//! // }
+//! ```
+//! Another way to set proper name to json fields is to use named format arguments:
+//! ```pseudo
+//! info!("Committing {id}", id=block.id());
+//! //->
+//! // {
+//! //  data: {
+//! //    "id": "<id>"
+//! //  },
+//! //  ...metadata...
+//! // }
+//! ```
+//!
+//! Structured log sink
+//! Application must define implementation of StructLogSink interface in order to direct structured logs emitted by send_struct_log and other macros. This sink can be only initialized once, by calling set_struct_logger function.
+//!
+//! Currently 3 implementations for StructLogSink exist:
+//!
+//! 1) `NopStructLog` ignores structured logs
+//! 2) `PrintStructLog` immediately prints structured logs to stdout
+//! 3) `FileStructLog` prints structured logs into provided file. Using this logger creates separate thread for writing files and structured logging itself is asynchronous in this case.
 
-use chrono::Utc;
-use env_logger::filter;
-pub use log::{self, Level, Log, Metadata, Record};
-use std::{
-    env,
-    fmt::{self, Write},
-    sync::mpsc::{self, Receiver, RecvError, SyncSender, TrySendError},
-    thread,
-};
+pub use log;
 
 pub mod prelude {
     pub use crate::{crit, debug, error, info, trace, warn};
 }
 
-pub const CHANNEL_SIZE: usize = 256;
-pub const DEFAULT_TARGET: &str = "libra";
-const RUST_LOG: &str = "RUST_LOG";
+mod struct_log;
+
+pub use struct_log::{
+    set_struct_logger, struct_logger_enabled, FileStructLog, PrintStructLog, StructLogSink,
+    StructuredLogEntry,
+};
+
+mod text_log;
+pub use log::Level;
+pub use text_log::{Logger, CHANNEL_SIZE, DEFAULT_TARGET};
 
 /// Define crit macro that specify libra as the target
 // TODO Remove historical crit from code base since it isn't supported in Rust Log.
 #[macro_export]
 macro_rules! crit {
-    ($($arg:tt)+) => (
+    ($($arg:tt)+) => ({
+        if $crate::struct_log_enabled!($crate::log::Level::Error) {
+            $crate::struct_log!($($arg)+);
+        }
         $crate::log::error!(target: $crate::DEFAULT_TARGET, $($arg)+);
-    )
+    })
 }
 
 /// Define debug macro that specify libra as the target
 // TODO Remove historical crit from code base since it isn't supported in Rust Log.
 #[macro_export]
 macro_rules! debug {
-    ($($arg:tt)+) => (
+    ($($arg:tt)+) => ({
+        if $crate::struct_log_enabled!($crate::log::Level::Debug) {
+            $crate::struct_log!($($arg)+);
+        }
         $crate::log::debug!(target: $crate::DEFAULT_TARGET, $($arg)+);
-    )
+    })
 }
 
 /// Define  macro that specify libra as the target
 #[macro_export]
 macro_rules! error {
-    ($($arg:tt)+) => (
+    ($($arg:tt)+) => ({
+        if $crate::struct_log_enabled!($crate::log::Level::Error) {
+            $crate::struct_log!($($arg)+);
+        }
         $crate::log::error!(target: $crate::DEFAULT_TARGET, $($arg)+);
-    )
+    })
 }
 
 /// Define info macro that specify libra as the target
 #[macro_export]
 macro_rules! info {
-    ($($arg:tt)+) => (
+    ($($arg:tt)+) => ({
+        if $crate::struct_log_enabled!($crate::log::Level::Info) {
+            $crate::struct_log!($($arg)+);
+        }
         $crate::log::info!(target: $crate::DEFAULT_TARGET, $($arg)+);
-    )
+    })
 }
 
 /// Define trace macro that specify libra as the target
 #[macro_export]
 macro_rules! trace {
-    ($($arg:tt)+) => (
+    ($($arg:tt)+) => ({
+        if $crate::struct_log_enabled!($crate::log::Level::Trace) {
+            $crate::struct_log!($($arg)+);
+        }
         $crate::log::trace!(target: $crate::DEFAULT_TARGET, $($arg)+);
-    )
+    })
 }
 
 /// Define warn macro that specify libra as the target
 #[macro_export]
 macro_rules! warn {
-    ($($arg:tt)+) => (
+    ($($arg:tt)+) => ({
+        if $crate::struct_log_enabled!($crate::log::Level::Warn) {
+            $crate::struct_log!($($arg)+);
+        }
         $crate::log::warn!(target: $crate::DEFAULT_TARGET, $($arg)+);
-    )
+    })
 }
 
-/// Logging framework for Libra that encapsulates a minimal dependency logger with support for
-/// environmental variable (RUST_LOG) and asynchronous logging.
-/// Note: only a single logger can be instantiated at a time. Repeated instantiates of the loggers
-/// will only adjust the global logging level but will not change the initial filter.
-pub struct Logger {
-    /// Channel size for sending logs to async handler.
-    channel_size: usize,
-    /// Only instantiate a logger if the environment is properly set
-    environment_only: bool,
-    /// Use a dedicated thread for logging.
-    is_async: bool,
-    /// The default logging level.
-    level: Level,
-    /// Override RUST_LOG even if set
-    override_rust_log: bool,
+#[macro_export]
+#[cfg(feature = "no_struct_log")]
+macro_rules! struct_log_enabled {
+    ($level:expr) => {
+        false
+    };
 }
 
-impl Logger {
-    pub fn new() -> Self {
-        Self {
-            channel_size: CHANNEL_SIZE,
-            environment_only: false,
-            is_async: false,
-            level: Level::Info,
-            override_rust_log: false,
+#[macro_export]
+#[cfg(not(feature = "no_struct_log"))]
+macro_rules! struct_log_enabled {
+    ($level:expr) => {
+        $crate::log::log_enabled!(target: $crate::DEFAULT_TARGET, $level)
+            && $crate::struct_logger_enabled()
+    };
+}
+
+#[macro_export]
+#[cfg(feature = "no_struct_log")]
+macro_rules! struct_log {
+    ($($arg:tt)+) => {};
+}
+
+#[macro_export]
+#[cfg(not(feature = "no_struct_log"))]
+macro_rules! struct_log {
+    ($($arg:tt)+) => {
+        let mut entry = $crate::StructuredLogEntry::new_unnamed();
+        $crate::format_struct_args_and_pattern!(entry, $($arg)+);
+        $crate::send_struct_log!(entry);
+    }
+}
+
+#[macro_export]
+macro_rules! send_struct_log {
+    ($entry:expr) => {
+        if $crate::struct_logger_enabled() {
+            let mut entry = $entry;
+            entry.module(module_path!());
+            entry.location($crate::location!());
+            entry.git_rev($crate::git_rev!());
+            entry.send();
         }
-    }
+    };
+}
 
-    pub fn channel_size(&mut self, channel_size: usize) -> &mut Self {
-        self.channel_size = channel_size;
-        self
-    }
+#[macro_export]
+macro_rules! location {
+    () => {
+        concat!(file!(), ":", line!())
+    };
+}
 
-    pub fn environment_only(&mut self, environment_only: bool) -> &mut Self {
-        self.environment_only = environment_only;
-        self
-    }
+// GIT_REV env need to be set during _compile_ time to have this var populated
+#[macro_export]
+macro_rules! git_rev {
+    () => {
+        option_env!("GIT_REV")
+    };
+}
 
-    pub fn is_async(&mut self, is_async: bool) -> &mut Self {
-        self.is_async = is_async;
-        self
-    }
-
-    pub fn level(&mut self, level: Level) -> &mut Self {
-        self.level = level;
-        self
-    }
-
-    pub fn override_rust_log(&mut self, override_rust_log: bool) -> &mut Self {
-        self.override_rust_log = override_rust_log;
-        self
-    }
-
-    pub fn init(&mut self) {
-        self.internal_init(StderrWriter {});
-    }
-
-    fn internal_init<W: 'static + Writer>(&mut self, writer: W) {
-        // Always prefer RUST_LOG
-        let mut use_level = self.override_rust_log;
-        let mut filter_builder = filter::Builder::new();
-
-        if let Ok(s) = env::var(RUST_LOG) {
-            filter_builder.parse(&s);
-        } else if self.environment_only {
-            // Turn off in case there was an active logger
-            log::set_max_level(::log::LevelFilter::Off);
-            return;
-        } else {
-            use_level = true;
-        }
-
-        if use_level {
-            filter_builder.filter(None, self.level.to_level_filter());
-        }
-
-        let filter = filter_builder.build();
-        // Even if there is an existing logger, update the logging level
-        log::set_max_level(filter.filter());
-
-        if self.is_async {
-            let (sender, receiver) = mpsc::sync_channel(self.channel_size);
-
-            let client = AsyncLogClient { filter, sender };
-            if let Err(e) = log::set_boxed_logger(Box::new(client)) {
-                eprintln!("Unable to set logger: {}", e);
-                return;
-            };
-
-            let service = AsyncLogService { receiver, writer };
-
-            thread::spawn(move || service.log_handler());
-        } else {
-            let logger = SyncLogger { filter, writer };
-            if let Err(e) = log::set_boxed_logger(Box::new(logger)) {
-                eprintln!("Unable to set logger: {}", e);
-                return;
-            };
-        }
+#[macro_export]
+macro_rules! format_struct_args_and_pattern {
+    ($entry:ident, $fmt:expr) => {
+        $entry.pattern($fmt);
+    };
+    ($entry:ident, $fmt:expr,) => {
+        $entry.pattern($fmt);
+    };
+    ($entry:ident, $fmt:expr, $($arg:tt)+) => {
+        $entry.pattern($fmt);
+        $crate::format_struct_args!($entry, 0, $($arg)+);
     }
 }
 
-impl Default for Logger {
-    fn default() -> Self {
-        Self::new()
-    }
+#[macro_export]
+macro_rules! format_struct_args {
+    ($entry:ident, $acc:tt, $arg:ident) => {$crate::format_struct_arg!($entry, $acc, $arg)};
+    ($entry:ident, $acc:tt, $arg:ident,) => {$crate::format_struct_arg!($entry, $acc, $arg)};
+    ($entry:ident, $acc:tt, $arg:ident,$($rest:tt)+) => {
+        $crate::format_struct_arg!($entry, $acc, $arg);
+        $crate::format_struct_args!($entry, ($acc + 1), $($rest)+);
+    };
+    // Block below is same as block above except arg is expr instead of ident.
+    // This is needed because of how rust handles idents/expressions
+    ($entry:ident, $acc:tt, $arg:expr) => {$crate::format_struct_arg!($entry, $acc, $arg)};
+    ($entry:ident, $acc:tt, $arg:expr,) => {$crate::format_struct_arg!($entry, $acc, $arg)};
+    ($entry:ident, $acc:tt, $arg:expr,$($rest:tt)+) => {
+        $crate::format_struct_arg!($entry, $acc, $arg);
+        $crate::format_struct_args!($entry, ($acc + 1), $($rest)+);
+    };
+    // And one more repetition for name: expr
+    ($entry:ident, $acc:tt, $arg_name:ident=$arg:expr) => {$crate::format_struct_arg!($entry, $acc, $arg_name: $arg)};
+    ($entry:ident, $acc:tt, $arg_name:ident=$arg:expr,) => {$crate::format_struct_arg!($entry, $acc, $arg_name: $arg)};
+    ($entry:ident, $acc:tt, $arg_name:ident=$arg:expr,$($rest:tt)+) => {
+        $crate::format_struct_arg!($entry, $acc, $arg_name=$arg);
+        $crate::format_struct_args!($entry, ($acc + 1), $($rest)+);
+    };
 }
 
-/// Provies the log::Log for Libra's synchronous logger
-struct SyncLogger<W> {
-    filter: filter::Filter,
-    writer: W,
+#[macro_export]
+macro_rules! format_struct_arg {
+    ($entry:ident, $acc:tt, $arg_name:ident=$arg:expr) => {
+        $entry.data(stringify!($arg_name), format!("{:?}", $arg));
+    };
+    ($entry:ident, $acc:tt, $arg:ident) => {
+        $entry.data(stringify!($arg), format!("{:?}", $arg));
+    };
+    ($entry:ident, $acc:tt, $arg:expr) => {
+        $entry.data($crate::format_index!($acc), format!("{:?}", $arg));
+    };
 }
 
-impl<W: Writer> Log for SyncLogger<W> {
-    /// Determines if a log message with the specified metadata would be logged.
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        self.filter.enabled(metadata)
-    }
-
-    /// Logs the provided record but first evaluates the filters and then writes it.
-    fn log(&self, record: &Record) {
-        // The following filters out everything that does not deal with Libra
-        if record.metadata().target() != DEFAULT_TARGET {
-            return;
-        }
-
-        if !self.filter.matches(record) {
-            return;
-        }
-
-        match format(record) {
-            Ok(formatted) => self.writer.write(formatted),
-            Err(e) => self
-                .writer
-                .write(format!("Unable to format log {:?}: {}", record, e)),
-        };
-    }
-
-    /// In this logger, this doesn't do anything.
-    fn flush(&self) {}
+// This is a very fun macro indeed
+#[macro_export]
+#[cfg(not(feature = "names_required"))]
+macro_rules! format_index {
+    (0) => ("_0");
+    ((0+1)) => ("_1");
+    (((0+1)+1)) => ("_2");
+    ((((0+1)+1)+1)) => ("_3");
+    (((((0+1)+1)+1)+1)) => ("_4");
+    ($expr:tt) => (compile_error!("You have surprisingly long list of log args, please use named args [e.g. log!(\"{x}\", x=value)], instead of indexes"));
 }
 
-/// Operations between the AsyncLogClient and AsyncLogService
-enum LogOp {
-    /// Send a line to log to the writer.
-    Log(String),
-}
-
-/// Provides the backend to the asynchronous interface for logging. This part actually writes the
-/// log to the writer.
-struct AsyncLogService<W> {
-    receiver: Receiver<LogOp>,
-    writer: W,
-}
-
-impl<W: Writer> AsyncLogService<W> {
-    /// Loop for handling logging
-    fn log_handler(mut self) {
-        loop {
-            if let Err(e) = self.handle_recv() {
-                // TODO write an error record and then exit
-                self.writer.write(format!("Unrecoverable error: {}", e));
-                return;
-            }
-        }
-    }
-
-    fn handle_recv(&mut self) -> Result<(), RecvError> {
-        match self.receiver.recv()? {
-            LogOp::Log(line) => self.writer.write(line),
-        };
-        Ok(())
-    }
-}
-
-/// Provides the log::Log interface for Libra's asynchronous logger
-struct AsyncLogClient {
-    filter: filter::Filter,
-    sender: SyncSender<LogOp>,
-}
-
-impl Log for AsyncLogClient {
-    /// Determines if a log message with the specified metadata would be logged.
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        self.filter.enabled(metadata)
-    }
-
-    /// Logs the provided record but first evaluates the filters and then sending it to the
-    /// AsyncLogService via a SyncSender.
-    fn log(&self, record: &Record) {
-        // The following filters out everything that does not deal with Libra
-        if record.metadata().target() != DEFAULT_TARGET {
-            return;
-        }
-
-        if !self.filter.matches(record) {
-            return;
-        }
-
-        let formatted = match format(record) {
-            Ok(formatted) => formatted,
-            Err(e) => format!("Unable to format log {:?} due to {}", record, e),
-        };
-        if let Err(e) = self.sender.try_send(LogOp::Log(formatted)) {
-            match e {
-                TrySendError::Disconnected(_) => {
-                    eprintln!("Unable to log {:?} due to {}", record, e)
-                }
-                TrySendError::Full(_) => eprintln!("Unable to log, queue full"),
-            }
-        };
-    }
-
-    /// In this logger, this doesn't do anything.
-    fn flush(&self) {}
-}
-
-/// Converts a record into a string representation:
-/// UNIX_TIMESTAMP LOG_LEVEL FILE:LINE MESSAGE
-/// Example:
-/// 1583392627 INFO common/libra-logger/src/lib.rs:261 Hello
-fn format(record: &Record) -> Result<String, fmt::Error> {
-    let mut buffer = String::new();
-
-    write!(buffer, "{} ", record.metadata().level())?;
-    write!(buffer, "{} ", Utc::now().format("%F %T"))?;
-
-    if let Some(file) = record.file() {
-        write!(buffer, "{}", file)?;
-        if let Some(line) = record.line() {
-            write!(buffer, ":{}", line)?;
-        }
-        write!(buffer, " ")?;
-    }
-
-    write!(buffer, "{}", record.args())?;
-
-    Ok(buffer)
-}
-
-/// An trait encapsulating the operations required for writing logs.
-trait Writer: Send + Sync {
-    /// Write the log.
-    fn write(&self, log: String);
-}
-
-/// A struct for writing logs to stderr
-struct StderrWriter {}
-
-impl Writer for StderrWriter {
-    /// Write log to stderr
-    fn write(&self, log: String) {
-        eprintln!("{}", log);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::{Arc, RwLock};
-
-    #[derive(Default)]
-    struct VecWriter {
-        logs: Arc<RwLock<Vec<String>>>,
-    }
-
-    impl Writer for VecWriter {
-        fn write(&self, log: String) {
-            self.logs.write().unwrap().push(log)
-        }
-    }
-
-    #[test]
-    fn verify_end_to_end() {
-        let writer = VecWriter::default();
-        let logs = writer.logs.clone();
-        Logger::new().override_rust_log(true).internal_init(writer);
-
-        assert_eq!(logs.read().unwrap().len(), 0);
-        info!("Hello");
-        assert_eq!(logs.read().unwrap().len(), 1);
-        // Ensure that libra target filtering works
-        log::info!("Hello");
-        assert_eq!(logs.read().unwrap().len(), 1);
-        let string = logs.write().unwrap().remove(0);
-        assert!(string.contains("INFO"));
-        assert!(string.ends_with("Hello"));
-    }
+#[macro_export]
+#[cfg(feature = "names_required")]
+macro_rules! format_index {
+    ($idx:expr) => {
+        compile_error!("names_required feature is set, all log entries require a name")
+    };
 }

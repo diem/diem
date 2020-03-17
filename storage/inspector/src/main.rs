@@ -55,6 +55,7 @@ fn print_head(db: &LibraDB) -> Result<()> {
     info!(
         "Current Validator Set: {}",
         si.latest_validator_set
+            .as_ref()
             .expect("Unable to determine validator set, DB incorrect")
     );
 
