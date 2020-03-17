@@ -321,7 +321,7 @@ impl ClientProxy {
                 ),
                 is_blocking,
             ),
-            None => self.mint_coins_with_faucet_service(&receiver, num_coins, is_blocking),
+            None => self.mint_coins_with_faucet_service(receiver_auth_key, num_coins, is_blocking),
         }
     }
 
@@ -1109,7 +1109,7 @@ impl ClientProxy {
 
     fn mint_coins_with_faucet_service(
         &mut self,
-        receiver: &AccountAddress,
+        receiver: AuthenticationKey,
         num_coins: u64,
         is_blocking: bool,
     ) -> Result<()> {
@@ -1119,7 +1119,7 @@ impl ClientProxy {
             format!("http://{}", self.faucet_server).as_str(),
             &[
                 ("amount", num_coins.to_string().as_str()),
-                ("address", format!("{:?}", receiver).as_str()),
+                ("auth_key", &hex::encode(receiver)),
             ],
         )?;
 
