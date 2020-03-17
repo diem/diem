@@ -854,8 +854,8 @@ fn solve_builtin_type_constraint(
 ) {
     use TypeName_::*;
     use Type_::*;
-    let tloc = ty.loc;
     let t = unfold_type(&context.subst, ty);
+    let tloc = t.loc;
     let tmsg = || {
         let set_msg = if builtin_set.is_empty() {
             "the operation is not yet supported on any type".to_string()
@@ -891,12 +891,13 @@ fn solve_builtin_type_constraint(
 fn solve_base_type_constraint(context: &mut Context, loc: Loc, msg: String, ty: &Type) {
     use TypeName_::*;
     use Type_::*;
-    match unfold_type(&context.subst, ty.clone()).value {
+    let sp!(tyloc, unfolded_) = unfold_type(&context.subst, ty.clone());
+    match unfolded_ {
         Var(_) => unreachable!(),
         Unit | Ref(_, _) | Apply(_, sp!(_, Multiple(_)), _) => {
             let tystr = error_format(ty, &context.subst);
             let tmsg = format!("Expected a single non-reference type, but found: {}", tystr);
-            context.error(vec![(loc, msg), (ty.loc, tmsg)])
+            context.error(vec![(loc, msg), (tyloc, tmsg)])
         }
         UnresolvedError | Anything | Param(_) | Apply(_, _, _) => (),
     }
@@ -905,7 +906,8 @@ fn solve_base_type_constraint(context: &mut Context, loc: Loc, msg: String, ty: 
 fn solve_single_type_constraint(context: &mut Context, loc: Loc, msg: String, ty: &Type) {
     use TypeName_::*;
     use Type_::*;
-    match unfold_type(&context.subst, ty.clone()).value {
+    let sp!(tyloc, unfolded_) = unfold_type(&context.subst, ty.clone());
+    match unfolded_ {
         Var(_) => unreachable!(),
         Unit | Apply(_, sp!(_, Multiple(_)), _) => {
             let tystr = error_format(ty, &context.subst);
@@ -913,7 +915,7 @@ fn solve_single_type_constraint(context: &mut Context, loc: Loc, msg: String, ty
                 "Expected a single type, but found expression list type: {}",
                 tystr
             );
-            context.error(vec![(loc, msg), (ty.loc, tmsg)])
+            context.error(vec![(loc, msg), (tyloc, tmsg)])
         }
         UnresolvedError | Anything | Ref(_, _) | Param(_) | Apply(_, _, _) => (),
     }
@@ -930,6 +932,19 @@ pub fn unfold_type(subst: &Subst, sp!(loc, t_): Type) -> Type {
             Some(inner) => unfold_type(subst, inner.clone()),
         },
         x => sp(loc, x),
+    }
+}
+
+// Equivelent to unfold_type, but only returns the loc.
+// The hope is to point to the last loc in a chain of type var's, giving the loc closest to the
+// actual type in the source code
+pub fn best_loc(subst: &Subst, sp!(loc, t_): &Type) -> Loc {
+    match t_ {
+        Type_::Var(i) => match subst.get(*i) {
+            None => *loc,
+            Some(inner) => best_loc(subst, inner),
+        },
+        _ => *loc,
     }
 }
 

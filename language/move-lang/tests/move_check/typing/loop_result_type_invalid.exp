@@ -48,7 +48,7 @@ error:
     │             ^ Invalid type for local
     ·
  25 │         let x = loop { break };
-    │             - Expected a single type, but found expression list type: '()'
+    │                 -------------- Expected a single type, but found expression list type: '()'
     │
 
 error: 

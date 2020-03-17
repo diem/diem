@@ -6,6 +6,6 @@ error:
    │         ^^^^^^^^^^^^^ Invalid type argument
    ·
  5 │         Box { f: () };
-   │         ------------- Expected a single non-reference type, but found: '()'
+   │                  -- Expected a single non-reference type, but found: '()'
    │
 
