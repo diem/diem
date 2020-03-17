@@ -6,7 +6,7 @@ use anyhow::{bail, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use libra_proptest_helpers::ValueGenerator;
 use move_vm_types::{
-    loaded_data::types::Type,
+    loaded_data::{struct_def::StructDef, types::Type},
     values::{prop::layout_and_value_strategy, Value},
 };
 use std::io::Cursor;
@@ -45,6 +45,27 @@ impl FuzzTargetImpl for ValueTarget {
     }
 }
 
+fn is_valid_layout(layout: &Type) -> bool {
+    use Type::*;
+
+    match layout {
+        Bool | U8 | U64 | U128 | Address => true,
+
+        Reference(_) | MutableReference(_) | TypeVariable(_) => false,
+
+        Vector(layout) => is_valid_layout(layout),
+
+        Struct(StructDef::Struct(inner)) => {
+            let field_layouts = inner.field_definitions();
+            if field_layouts.is_empty() {
+                return false;
+            }
+            field_layouts.iter().all(is_valid_layout)
+        }
+        Struct(StructDef::Native(_)) => false,
+    }
+}
+
 fn deserialize(data: &[u8]) -> Result<()> {
     let mut data = Cursor::new(data);
     // Read the length of the layout blob.
@@ -59,6 +80,12 @@ fn deserialize(data: &[u8]) -> Result<()> {
     let value_data = &data[len..];
 
     let layout: Type = lcs::from_bytes(layout_data)?;
+    // The fuzzer may alter the raw bytes, resulting in invalid layouts that will not
+    // pass the bytecode verifier. We need to filter these out as they can show up as
+    // false positives.
+    if !is_valid_layout(&layout) {
+        bail!("invalid layout");
+    }
     let _ = Value::simple_deserialize(value_data, layout);
     Ok(())
 }
