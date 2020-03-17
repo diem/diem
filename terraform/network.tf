@@ -125,12 +125,12 @@ resource "aws_security_group_rule" "validator-ac" {
 }
 
 resource "aws_security_group_rule" "validator-jsonrpc" {
-  security_group_id        = aws_security_group.validator.id
-  type                     = "ingress"
-  from_port                = 8080
-  to_port                  = 8080
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.jsonrpc-lb.id
+  security_group_id = aws_security_group.validator.id
+  type              = "ingress"
+  from_port         = 8080
+  to_port           = 8080
+  protocol          = "tcp"
+  cidr_blocks       = [aws_vpc.testnet.cidr_block]
 }
 
 resource "aws_security_group" "jsonrpc-lb" {
