@@ -42,11 +42,11 @@ create_client()
 
 @application.route("/", methods=('POST',))
 def send_transaction():
-    address = flask.request.args['address']
+    auth_key = flask.request.args['auth_key']
 
-    # Return immediately if address is invalid
-    if re.match('^[a-f0-9]{32}$', address) is None:
-        return 'Malformed address', 400
+    # Return immediately if auth_key is invalid
+    if re.match('^[a-f0-9]{64}$', auth_key) is None:
+        return 'Malformed auth_key', 400
 
     try:
         amount = decimal.Decimal(flask.request.args['amount'])
@@ -59,7 +59,7 @@ def send_transaction():
     try:
         create_client()
         application.client.sendline(
-            "a m {} {}".format(address, amount / (10 ** 6)))
+            "a m {} {}".format(auth_key, amount / (10 ** 6)))
         application.client.expect("Mint request submitted", timeout=2)
 
         application.client.sendline("a la")
