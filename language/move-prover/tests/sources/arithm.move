@@ -1,4 +1,4 @@
-module Arithmetic {
+module TestArithmetic {
 
     // --------------------------
     // Basic arithmetic operation

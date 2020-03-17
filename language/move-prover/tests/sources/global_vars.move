@@ -1,4 +1,4 @@
-module GlobalVars {
+module TestGlobalVars {
 
     spec module {
         global sum_of_T: u64;
@@ -13,7 +13,10 @@ module GlobalVars {
       invariant update sum_of_T = sum_of_T - old(i) + i;
     }
 
+
+    // ----------
     // Pack tests
+    // ----------
 
     fun pack_valid(): T {
         T {i: 2}
@@ -30,7 +33,10 @@ module GlobalVars {
         ensures result.i == 2;
     }
 
+
+    // ------------
     // Unpack tests
+    // ------------
 
     fun unpack_valid(t: T): u64 {
         let T {i: x} = t;
@@ -50,7 +56,10 @@ module GlobalVars {
         ensures result == old(t.i);
     }
 
-    // Update tests.
+
+    // ------------
+    // Update tests
+    // ------------
 
     fun update_valid_still_mutating(t: &mut T) {
         t.i = t.i + 3;
@@ -81,7 +90,9 @@ module GlobalVars {
     }
 
 
-    // Test with pack/unpack in the absence of update.
+    // ----------------------------------------------
+    // Test with pack/unpack in the absence of update
+    // ----------------------------------------------
 
     struct S {
       x: u64
@@ -112,8 +123,4 @@ module GlobalVars {
     spec fun update_invalid_S {
         ensures sum_of_S == old(sum_of_S) + 1;
     }
-
-
-
-
 }

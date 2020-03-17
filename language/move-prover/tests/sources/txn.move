@@ -1,7 +1,7 @@
 // dep: ../stdlib/modules/transaction.move
 address 0x0:
 
-module Txn {
+module TestTransaction {
     use 0x0::Transaction;
 
     resource struct T {
@@ -14,7 +14,6 @@ module Txn {
     spec fun check_sender1 {
         aborts_if sender() != 0xdeadbeef;
     }
-
 
     fun check_sender2() acquires T {
 	borrow_global<T>(Transaction::sender());
