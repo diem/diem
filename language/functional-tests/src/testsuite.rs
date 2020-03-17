@@ -11,6 +11,8 @@ use crate::{
 use std::{env, fs::read_to_string, io::Write, iter, path::Path};
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
 
+pub const PRETTY: &str = "PRETTY";
+
 fn at_most_n_chars(s: impl IntoIterator<Item = char>, n: usize) -> String {
     let mut it = s.into_iter();
     let mut s = String::new();
@@ -49,7 +51,7 @@ fn env_var(var_name: &str) -> String {
 }
 
 fn pretty_mode() -> bool {
-    let pretty = env_var("PRETTY");
+    let pretty = env_var(PRETTY);
     pretty == "1" || pretty == "true"
 }
 
