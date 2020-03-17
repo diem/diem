@@ -7,7 +7,9 @@ use crate::{
 };
 use anyhow::Error;
 use libra_metrics::counters::*;
-use libra_types::account_address::{ADDRESS_LENGTH, AUTHENTICATION_KEY_LENGTH};
+use libra_types::{
+    account_address::ADDRESS_LENGTH, transaction::authenticator::AUTHENTICATION_KEY_LENGTH,
+};
 use std::{collections::HashMap, sync::Arc};
 
 /// Print the error and bump up error counter.

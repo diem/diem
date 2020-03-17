@@ -10,10 +10,8 @@ use libra_logger::prelude::*;
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
 use libra_types::{
-    account_address::{AccountAddress, AuthenticationKey},
-    account_config::association_address,
-    ledger_info::LedgerInfo,
-    waypoint::Waypoint,
+    account_address::AccountAddress, account_config::association_address, ledger_info::LedgerInfo,
+    transaction::authenticator::AuthenticationKey, waypoint::Waypoint,
 };
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
@@ -651,7 +649,7 @@ fn test_external_transaction_signer() {
     let public_key = key_pair.1;
 
     // create transfer parameters
-    let sender_auth_key = AuthenticationKey::from_public_key(&public_key);
+    let sender_auth_key = AuthenticationKey::ed25519(&public_key);
     let sender_address = sender_auth_key.derived_address();
     let (receiver_address, receiver_auth_key_opt) = client_proxy
         .get_account_address_from_parameter(

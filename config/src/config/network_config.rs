@@ -12,7 +12,7 @@ use libra_crypto::{
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
     Uniform, ValidKey,
 };
-use libra_types::{account_address::AuthenticationKey, PeerId};
+use libra_types::{transaction::authenticator::AuthenticationKey, PeerId};
 use parity_multiaddr::Multiaddr;
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};

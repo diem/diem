@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::transaction::authenticator::TransactionAuthenticator;
+use crate::transaction::authenticator::AuthenticationKey;
 use anyhow::{ensure, Error, Result};
 use bytes::Bytes;
 use libra_crypto::{
@@ -17,7 +17,6 @@ use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 use std::{convert::TryFrom, fmt, str::FromStr};
 
 pub const ADDRESS_LENGTH: usize = 16;
-pub const AUTHENTICATION_KEY_LENGTH: usize = ADDRESS_LENGTH * 2;
 
 const SHORT_STRING_LENGTH: usize = 4;
 
@@ -49,7 +48,7 @@ impl AccountAddress {
     }
 
     pub fn authentication_key(public_key: &Ed25519PublicKey) -> AuthenticationKey {
-        AuthenticationKey::from_public_key(public_key)
+        AuthenticationKey::ed25519(public_key)
     }
 
     pub fn from_public_key(public_key: &Ed25519PublicKey) -> Self {
@@ -80,53 +79,6 @@ impl AccountAddress {
         };
 
         AccountAddress::try_from(padded_result)
-    }
-}
-
-/// A struct that represents an account authentication key. An account's address is the last 16
-/// bytes of authentication key used to create it
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash, Clone, Copy, CryptoHasher)]
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct AuthenticationKey([u8; AUTHENTICATION_KEY_LENGTH]);
-
-impl AuthenticationKey {
-    pub const fn new(bytes: [u8; AUTHENTICATION_KEY_LENGTH]) -> Self {
-        Self(bytes)
-    }
-
-    pub fn random() -> Self {
-        let mut rng = OsRng::new().expect("can't access OsRng");
-        let buf: [u8; AUTHENTICATION_KEY_LENGTH] = rng.gen();
-        AuthenticationKey::new(buf)
-    }
-
-    /// Create an authentication key from a public key by taking its sha3 hash
-    pub fn from_public_key(public_key: &Ed25519PublicKey) -> Self {
-        let preimage = TransactionAuthenticator::ed25519_authentication_key_preimage(&public_key).0;
-        Self(*HashValue::from_sha3_256(&preimage).as_ref())
-    }
-
-    /// Return an address derived from the last ADDRESS_LENGTH bytes of this authentication key
-    pub fn derived_address(&self) -> AccountAddress {
-        // keep only last 16 bytes
-        let mut array = [0u8; ADDRESS_LENGTH];
-        array.copy_from_slice(&self.0[AUTHENTICATION_KEY_LENGTH - ADDRESS_LENGTH..]);
-        AccountAddress::new(array)
-    }
-
-    /// Return the first ADDRESS_LENGTH bytes of this authentication key
-    pub fn prefix(&self) -> [u8; ADDRESS_LENGTH] {
-        let mut array = [0u8; ADDRESS_LENGTH];
-        array.copy_from_slice(&self.0[..ADDRESS_LENGTH]);
-        array
-    }
-
-    pub fn short_str(&self) -> String {
-        hex::encode(&self.0[..SHORT_STRING_LENGTH])
-    }
-
-    pub fn to_vec(&self) -> Vec<u8> {
-        self.0.to_vec()
     }
 }
 
@@ -283,57 +235,5 @@ impl Serialize for AccountAddress {
         } else {
             self.0.serialize(serializer)
         }
-    }
-}
-
-impl TryFrom<&[u8]> for AuthenticationKey {
-    type Error = Error;
-
-    fn try_from(bytes: &[u8]) -> Result<AuthenticationKey> {
-        ensure!(
-            bytes.len() == AUTHENTICATION_KEY_LENGTH,
-            "The authentication key {:?} is of invalid length",
-            bytes
-        );
-        let mut addr = [0u8; AUTHENTICATION_KEY_LENGTH];
-        addr.copy_from_slice(bytes);
-        Ok(AuthenticationKey(addr))
-    }
-}
-
-impl TryFrom<Vec<u8>> for AuthenticationKey {
-    type Error = Error;
-
-    fn try_from(bytes: Vec<u8>) -> Result<AuthenticationKey> {
-        AuthenticationKey::try_from(&bytes[..])
-    }
-}
-
-impl FromStr for AuthenticationKey {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        assert!(!s.is_empty());
-        let bytes_out = ::hex::decode(s)?;
-        AuthenticationKey::try_from(bytes_out.as_slice())
-    }
-}
-
-impl AsRef<[u8]> for AuthenticationKey {
-    fn as_ref(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl fmt::LowerHex for AuthenticationKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", hex::encode(&self.0))
-    }
-}
-
-impl fmt::Display for AuthenticationKey {
-    fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        // Forward to the LowerHex impl with a "0x" prepended (the # flag).
-        write!(f, "{:#x}", self)
     }
 }

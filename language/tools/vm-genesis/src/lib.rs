@@ -17,13 +17,15 @@ use libra_crypto::{
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
-    account_address::{AccountAddress, AuthenticationKey},
+    account_address::AccountAddress,
     account_config,
     contract_event::ContractEvent,
     crypto_proxies::ValidatorSet,
     discovery_info::DiscoveryInfo,
     discovery_set::DiscoverySet,
-    transaction::{ChangeSet, RawTransaction, SignatureCheckedTransaction},
+    transaction::{
+        authenticator::AuthenticationKey, ChangeSet, RawTransaction, SignatureCheckedTransaction,
+    },
 };
 use libra_vm::system_module_names::*;
 use move_core_types::identifier::Identifier;
@@ -298,7 +300,7 @@ fn create_and_initialize_main_accounts(
         )
         .expect("Failure minting to association");
 
-    let genesis_auth_key = AuthenticationKey::from_public_key(public_key).to_vec();
+    let genesis_auth_key = AuthenticationKey::ed25519(public_key).to_vec();
     move_vm
         .execute_function(
             &account_config::ACCOUNT_MODULE,
@@ -462,7 +464,7 @@ fn get_validator_authentication_key(
             .as_ref()
             .unwrap()
             .public();
-        let validator_authentication_key = AuthenticationKey::from_public_key(public_key);
+        let validator_authentication_key = AuthenticationKey::ed25519(public_key);
         let derived_address = validator_authentication_key.derived_address();
         if derived_address == *address {
             return Some(validator_authentication_key);

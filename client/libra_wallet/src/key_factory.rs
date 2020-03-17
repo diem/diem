@@ -25,7 +25,7 @@ use libra_crypto::{
     hkdf::Hkdf,
     traits::SigningKey,
 };
-use libra_types::account_address::{AccountAddress, AuthenticationKey};
+use libra_types::{account_address::AccountAddress, transaction::authenticator::AuthenticationKey};
 use mirai_annotations::*;
 use pbkdf2::pbkdf2;
 use serde::{Deserialize, Serialize};
@@ -106,7 +106,7 @@ impl ExtendedPrivKey {
 
     /// Compute the authentication key for this account's public key
     pub fn get_authentication_key(&self) -> AuthenticationKey {
-        AuthenticationKey::from_public_key(&self.get_public())
+        AuthenticationKey::ed25519(&self.get_public())
     }
 
     /// Libra specific sign function that is capable of signing an arbitrary HashValue

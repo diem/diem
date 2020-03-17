@@ -7,12 +7,13 @@ use crate::keygen::KeyGen;
 use libra_crypto::ed25519::*;
 use libra_types::{
     access_path::AccessPath,
-    account_address::{AccountAddress, AuthenticationKey},
+    account_address::AccountAddress,
     account_config,
     event::EventHandle,
     language_storage::StructTag,
     transaction::{
-        RawTransaction, Script, SignedTransaction, TransactionArgument, TransactionPayload,
+        authenticator::AuthenticationKey, RawTransaction, Script, SignedTransaction,
+        TransactionArgument, TransactionPayload,
     },
 };
 use move_vm_types::{
@@ -123,14 +124,12 @@ impl Account {
     ///
     /// This is the same as the account's address if the keys have never been rotated.
     pub fn auth_key(&self) -> Vec<u8> {
-        AuthenticationKey::from_public_key(&self.pubkey).to_vec()
+        AuthenticationKey::ed25519(&self.pubkey).to_vec()
     }
 
     /// Return the first 16 bytes of the account's auth key
     pub fn auth_key_prefix(&self) -> Vec<u8> {
-        AuthenticationKey::from_public_key(&self.pubkey)
-            .prefix()
-            .to_vec()
+        AuthenticationKey::ed25519(&self.pubkey).prefix().to_vec()
     }
 
     //

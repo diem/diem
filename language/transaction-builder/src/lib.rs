@@ -6,9 +6,12 @@
 use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::HashValue;
 use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH, AUTHENTICATION_KEY_LENGTH},
+    account_address::{AccountAddress, ADDRESS_LENGTH},
     block_metadata::BlockMetadata,
-    transaction::{Script, Transaction, TransactionArgument, SCRIPT_HASH_LENGTH},
+    transaction::{
+        authenticator::AUTHENTICATION_KEY_LENGTH, Script, Transaction, TransactionArgument,
+        SCRIPT_HASH_LENGTH,
+    },
 };
 use std::{collections::HashSet, iter::FromIterator};
 use stdlib::transaction_scripts::{

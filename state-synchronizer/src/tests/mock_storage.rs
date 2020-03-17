@@ -6,12 +6,12 @@ use anyhow::{bail, Result};
 use executor_types::ExecutedTrees;
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
-    account_address::{AccountAddress, AuthenticationKey},
+    account_address::AccountAddress,
     block_info::BlockInfo,
     crypto_proxies::{ValidatorChangeProof, ValidatorSet, ValidatorSigner, ValidatorVerifier},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{SignedTransaction, Transaction},
+    transaction::{authenticator::AuthenticationKey, SignedTransaction, Transaction},
 };
 use std::collections::{BTreeMap, HashMap};
 use transaction_builder::encode_transfer_script;
