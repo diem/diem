@@ -10,9 +10,11 @@ use std::ops::BitAnd;
 const BUCKET_SIZE: usize = 8;
 const MAX_BUCKETS: usize = 32;
 
-/// BitVec represents a bit vector that upports only 2 operations:
-/// 1. Marking a position as set, and
+/// BitVec represents a bit vector that supports 4 operations:
+/// 1. Marking a position as set.
 /// 2. Checking if a position is set.
+/// 3. Count set bits.
+/// 4. Get the index of the last set bit.
 /// Internally, it stores a vector of u8's (as Vec<u8>).
 /// * The first 8 positions of the bit vector are encoded in the first element of the vector, the
 ///   next 8 are encoded in the second element, and so on.
@@ -31,12 +33,14 @@ const MAX_BUCKETS: usize = 32;
 /// assert!(bv.is_set(2));
 /// assert!(bv.is_set(5));
 /// assert_eq!(false, bv.is_set(0));
+/// assert_eq!(bv1.count_ones(), 2);
+/// assert_eq!(bv1.last_set_bit(), 3);
 ///
 /// // A bitwise AND of BitVec can be performed by using the `&` operator.
-/// let bv1 = BitVec::default();
+/// let mut bv1 = BitVec::default();
 /// bv1.set(2);
 /// bv1.set(3);
-/// let bv2 = BitVec::default();
+/// let mut bv2 = BitVec::default();
 /// bv2.set(2);
 /// let intersection = bv1 & bv2;
 /// assert!(intersection.is_set(2));
@@ -75,6 +79,27 @@ impl BitVec {
         let bucket_pos = pos as usize - (bucket * BUCKET_SIZE);
         (self.inner[bucket] & (0x01 << bucket_pos)) != 0
     }
+
+    // TODO(kostas): Remove after applying it to multi-sig.
+    #[allow(dead_code)]
+    /// Returns the number of set bits.
+    pub fn count_ones(&self) -> u32 {
+        self.inner.iter().map(|a| a.count_ones()).sum()
+    }
+
+    // TODO(kostas): Remove after applying it to multi-sig.
+    #[allow(dead_code)]
+    /// Returns the index of the last set bit.
+    pub fn last_set_bit(&self) -> Option<u8> {
+        self.inner
+            .iter()
+            .rev()
+            .enumerate()
+            .find(|(_, byte)| byte != &&0u8)
+            .map(|(i, byte)| {
+                (8 * (self.inner.len() - i) - byte.trailing_zeros() as usize - 1) as u8
+            })
+    }
 }
 
 impl BitAnd for BitVec {
@@ -93,8 +118,8 @@ impl BitAnd for BitVec {
     }
 }
 
-// We impl custom deseriazation to ensure that the length of inner vector does not exceed 32 (=
-// 256 / 8).
+// We impl custom deserialization to ensure that the length of inner vector does not exceed
+// 32 (= 256 / 8).
 impl<'de> Deserialize<'de> for BitVec {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -113,6 +138,62 @@ mod test {
 
     use super::*;
     use proptest::{arbitrary::any, collection::vec, prelude::*};
+
+    #[test]
+    fn test_count_ones() {
+        let p0 = BitVec::default();
+        assert_eq!(p0.count_ones(), 0);
+        // 7 = b'0000111' and 240 = b'00001111'
+        let p1 = BitVec {
+            inner: vec![7u8, 15u8],
+        };
+        assert_eq!(p1.count_ones(), 7);
+
+        let p2 = BitVec {
+            inner: vec![7u8; MAX_BUCKETS],
+        };
+        assert_eq!(p2.count_ones(), 3 * MAX_BUCKETS as u32);
+
+        // 255 = b'11111111'
+        let p3 = BitVec {
+            inner: vec![255u8; MAX_BUCKETS],
+        };
+        assert_eq!(p3.count_ones(), 8 * MAX_BUCKETS as u32);
+
+        // 0 = b'00000000'
+        let p4 = BitVec {
+            inner: vec![0u8; MAX_BUCKETS],
+        };
+        assert_eq!(p4.count_ones(), 0);
+    }
+
+    #[test]
+    fn test_last_set_bit() {
+        let p0 = BitVec::default();
+        assert_eq!(p0.last_set_bit(), None);
+        // 224 = b'11100000'
+        let p1 = BitVec { inner: vec![224u8] };
+        assert_eq!(p1.inner.len(), 1);
+        assert_eq!(p1.last_set_bit(), Some(2));
+
+        // 128 = b'10000000'
+        let p2 = BitVec {
+            inner: vec![7u8, 128u8],
+        };
+        assert_eq!(p2.inner.len(), 2);
+        assert_eq!(p2.last_set_bit(), Some(8));
+
+        let p3 = BitVec {
+            inner: vec![255u8; MAX_BUCKETS],
+        };
+        assert_eq!(p3.inner.len(), MAX_BUCKETS);
+        assert_eq!(p3.last_set_bit(), Some(255));
+
+        let p4 = BitVec {
+            inner: vec![0u8; MAX_BUCKETS],
+        };
+        assert_eq!(p4.last_set_bit(), None);
+    }
 
     #[test]
     fn test_empty() {
