@@ -71,7 +71,7 @@ impl TxnManager for MempoolProxy {
         compute_results: &StateComputeResult,
     ) -> Result<()> {
         let mut rejected_txns = vec![];
-        for (txn, status) in txns.iter().zip(compute_results.compute_status.iter()) {
+        for (txn, status) in txns.iter().zip(compute_results.compute_status().iter()) {
             if let TransactionStatus::Discard(_) = status {
                 rejected_txns.push(CommittedTransaction {
                     sender: txn.sender(),
