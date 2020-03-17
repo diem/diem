@@ -15,8 +15,7 @@ use core::convert::TryFrom;
 use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, SeedableRng};
 
-static MESSAGE: &'static [u8] = b"Test Message";
-static MESSAGE_HASH: Lazy<HashValue> = Lazy::new(|| HashValue::from_sha3_256(MESSAGE));
+static MESSAGE_HASH: Lazy<HashValue> = Lazy::new(|| HashValue::from_sha3_256(b"Test Message"));
 
 // Helper function to generate N key pairs.
 fn generate_key_pairs(n: usize) -> Vec<(Ed25519PrivateKey, Ed25519PublicKey)> {
@@ -45,6 +44,22 @@ fn test_failed_public_key_serialization(
 ) {
     assert!(result.is_err());
     assert_eq!(result.err().unwrap(), expected_error);
+}
+
+fn test_successful_signature_serialization(private_keys: &[Ed25519PrivateKey], threshold: u8) {
+    let multi_private_key = MultiEd25519PrivateKey::new(private_keys.to_vec(), threshold).unwrap();
+    let multi_public_key = MultiEd25519PublicKey::from(&multi_private_key);
+    let multi_signature = multi_private_key.sign_message(&MESSAGE_HASH);
+
+    // Serialize then Deserialize.
+    let multi_signature_serialized =
+        MultiEd25519Signature::try_from(&multi_signature.to_bytes()[..]);
+    assert!(multi_signature_serialized.is_ok());
+    let multi_signature_serialized_unwrapped = multi_signature_serialized.unwrap();
+    assert_eq!(multi_signature, multi_signature_serialized_unwrapped);
+    assert!(multi_signature_serialized_unwrapped
+        .verify(&MESSAGE_HASH, &multi_public_key)
+        .is_ok());
 }
 
 // Test multi-sig Ed25519 public key serialization.
@@ -159,22 +174,6 @@ fn test_publickey_smallorder() {
     );
 }
 
-fn test_successful_signature_serialization(private_keys: &[Ed25519PrivateKey], threshold: u8) {
-    let multi_private_key = MultiEd25519PrivateKey::new(private_keys.to_vec(), threshold).unwrap();
-    let multi_public_key = MultiEd25519PublicKey::from(&multi_private_key);
-    let multi_signature = multi_private_key.sign_message(&MESSAGE_HASH);
-
-    // Serialize then Deserialize.
-    let multi_signature_serialized =
-        MultiEd25519Signature::try_from(&multi_signature.to_bytes()[..]);
-    assert!(multi_signature_serialized.is_ok());
-    let multi_signature_serialized_unwrapped = multi_signature_serialized.unwrap();
-    assert_eq!(multi_signature, multi_signature_serialized_unwrapped);
-    assert!(multi_signature_serialized_unwrapped
-        .verify(&MESSAGE_HASH, &multi_public_key)
-        .is_ok());
-}
-
 // Test multi-sig Ed25519 signature serialization.
 #[allow(clippy::redundant_clone)]
 #[test]
@@ -188,6 +187,13 @@ fn test_multi_ed25519_signature_serialization() {
     test_successful_signature_serialization(&priv_keys_3, 2);
     // Test 3 of 3
     test_successful_signature_serialization(&priv_keys_3, 3);
+
+    let keypairs_32 = generate_key_pairs(32);
+    let priv_keys_32: Vec<Ed25519PrivateKey> = keypairs_32.iter().map(|x| x.0.clone()).collect();
+    // Test 1 of 32
+    test_successful_signature_serialization(&priv_keys_32, 1);
+    // Test 32 of 32
+    test_successful_signature_serialization(&priv_keys_32, 32);
 
     // Construct from single Ed25519Signature.
     let single_signature = priv_keys_3[0].sign_message(&MESSAGE_HASH);
