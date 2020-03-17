@@ -11,10 +11,16 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 pub enum Error {
     #[error("{0}")]
     Custom(String),
+    #[error("{0}")]
+    NotSupported(&'static str),
+    #[error("Failed to deserialize {0}")]
+    DeserializationError(&'static str),
     #[error("Incompatible formats detected: {0} {1}")]
     Incompatible(String, String),
     #[error("Incomplete tracing detected")]
     UnknownFormat,
+    #[error("Missing variants detected for specific enums")]
+    MissingVariants(Vec<String>),
 }
 
 impl ser::Error for Error {
