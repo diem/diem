@@ -5,8 +5,7 @@ use crate::{common::Author, timeout::Timeout, vote_data::VoteData};
 use anyhow::{ensure, Context};
 use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash};
 use libra_types::{
-    crypto_proxies::{ValidatorSigner, ValidatorVerifier},
-    ledger_info::LedgerInfo,
+    crypto_proxies::ValidatorVerifier, ledger_info::LedgerInfo, validator_signer::ValidatorSigner,
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
@@ -52,9 +51,7 @@ impl Vote {
         validator_signer: &ValidatorSigner,
     ) -> Self {
         ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
-        let li_sig = validator_signer
-            .sign_message(ledger_info_placeholder.hash())
-            .expect("Failed to sign LedgerInfo");
+        let li_sig = validator_signer.sign_message(ledger_info_placeholder.hash());
         Self {
             vote_data,
             author,

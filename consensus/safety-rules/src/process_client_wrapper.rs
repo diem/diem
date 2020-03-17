@@ -16,7 +16,7 @@ use libra_config::{
     utils,
 };
 use libra_crypto::ed25519::Ed25519Signature;
-use libra_types::crypto_proxies::ValidatorSigner;
+use libra_types::validator_signer::ValidatorSigner;
 use std::{
     any::TypeId,
     net::{IpAddr, Ipv4Addr, SocketAddr},

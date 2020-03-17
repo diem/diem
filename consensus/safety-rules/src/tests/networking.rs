@@ -3,7 +3,7 @@
 
 use crate::{PersistentSafetyStorage, SafetyRulesManager};
 use consensus_types::common::Round;
-use libra_types::crypto_proxies::ValidatorSigner;
+use libra_types::validator_signer::ValidatorSigner;
 
 #[test]
 fn test_reconnect() {

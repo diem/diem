@@ -238,7 +238,7 @@ mod tests {
             );
             let signatures = current_signers
                 .iter()
-                .map(|s| (s.author(), s.sign_message(ledger_info.hash()).unwrap()))
+                .map(|s| (s.author(), s.sign_message(ledger_info.hash())))
                 .collect();
             valid_ledger_info.push(LedgerInfoWithSignatures::new(ledger_info, signatures));
             current_signers = next_signers;

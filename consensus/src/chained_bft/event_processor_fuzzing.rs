@@ -21,8 +21,8 @@ use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::proposal_msg::ProposalMsg;
 use futures::{channel::mpsc, executor::block_on};
 use libra_types::{
-    crypto_proxies::{ValidatorSigner, ValidatorVerifier},
-    ledger_info::LedgerInfoWithSignatures,
+    crypto_proxies::ValidatorVerifier, ledger_info::LedgerInfoWithSignatures,
+    validator_signer::ValidatorSigner,
 };
 use network::peer_manager::{ConnectionRequestSender, PeerManagerRequestSender};
 use once_cell::sync::Lazy;

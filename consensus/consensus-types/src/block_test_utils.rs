@@ -5,12 +5,14 @@ use crate::{
     block::Block, block_data::BlockData, common::Round, quorum_cert::QuorumCert,
     vote_data::VoteData,
 };
-use libra_crypto::hash::{CryptoHash, HashValue};
+use libra_crypto::{
+    ed25519::Ed25519PrivateKey,
+    hash::{CryptoHash, HashValue},
+};
 use libra_types::{
     block_info::BlockInfo,
-    crypto_proxies::{SecretKey, ValidatorSigner},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    validator_signer::proptests,
+    validator_signer::{proptests, ValidatorSigner},
 };
 use proptest::prelude::*;
 use std::{
@@ -147,7 +149,7 @@ prop_compose! {
 /// vector
 fn block_forest_from_keys(
     depth: u32,
-    keypairs: Vec<SecretKey>,
+    keypairs: Vec<Ed25519PrivateKey>,
 ) -> impl Strategy<Value = LinearizedBlockForest<Vec<usize>>> {
     let leaf = leaf_strategy().prop_map(|block| vec![block]);
     // Note that having `expected_branch_size` of 1 seems to generate significantly larger trees
@@ -162,7 +164,7 @@ fn block_forest_from_keys(
 pub fn block_forest_and_its_keys(
     quorum_size: usize,
     depth: u32,
-) -> impl Strategy<Value = (Vec<SecretKey>, LinearizedBlockForest<Vec<usize>>)> {
+) -> impl Strategy<Value = (Vec<Ed25519PrivateKey>, LinearizedBlockForest<Vec<usize>>)> {
     proptest::collection::vec(proptests::arb_signing_key(), quorum_size).prop_flat_map(
         move |private_key| {
             (
@@ -203,9 +205,7 @@ pub fn gen_test_certificate(
 
     let mut signatures = BTreeMap::new();
     for signer in signers {
-        let li_sig = signer
-            .sign_message(ledger_info.hash())
-            .expect("Failed to sign LedgerInfo");
+        let li_sig = signer.sign_message(ledger_info.hash());
         signatures.insert(signer.author(), li_sig);
     }
 
@@ -253,9 +253,7 @@ pub fn placeholder_certificate_for_block(
 
     let mut signatures = BTreeMap::new();
     for signer in signers {
-        let li_sig = signer
-            .sign_message(ledger_info_placeholder.hash())
-            .expect("Failed to sign LedgerInfo");
+        let li_sig = signer.sign_message(ledger_info_placeholder.hash());
         signatures.insert(signer.author(), li_sig);
     }
 

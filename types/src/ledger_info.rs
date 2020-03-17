@@ -305,13 +305,8 @@ impl From<LedgerInfoWithSignatures> for crate::proto::types::LedgerInfoWithSigna
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        block_info::BlockInfo,
-        ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-        validator_signer::ValidatorSigner,
-    };
-    use libra_crypto::{ed25519::*, HashValue};
-    use std::collections::BTreeMap;
+    use super::*;
+    use crate::validator_signer::ValidatorSigner;
 
     #[test]
     fn test_signatures_hash() {
@@ -320,15 +315,12 @@ mod tests {
         let random_hash = HashValue::random();
         const NUM_SIGNERS: u8 = 7;
         // Generate NUM_SIGNERS random signers.
-        let validator_signers: Vec<ValidatorSigner<Ed25519PrivateKey>> = (0..NUM_SIGNERS)
+        let validator_signers: Vec<ValidatorSigner> = (0..NUM_SIGNERS)
             .map(|i| ValidatorSigner::random([i; 32]))
             .collect();
         let mut author_to_signature_map = BTreeMap::new();
         for validator in validator_signers.iter() {
-            author_to_signature_map.insert(
-                validator.author(),
-                validator.sign_message(random_hash).unwrap(),
-            );
+            author_to_signature_map.insert(validator.author(), validator.sign_message(random_hash));
         }
 
         let ledger_info_with_signatures =
@@ -337,10 +329,7 @@ mod tests {
         // Add the signatures in reverse order and ensure the serialization matches
         let mut author_to_signature_map = BTreeMap::new();
         for validator in validator_signers.iter().rev() {
-            author_to_signature_map.insert(
-                validator.author(),
-                validator.sign_message(random_hash).unwrap(),
-            );
+            author_to_signature_map.insert(validator.author(), validator.sign_message(random_hash));
         }
 
         let ledger_info_with_signatures_reversed =

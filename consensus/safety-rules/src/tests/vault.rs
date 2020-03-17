@@ -4,7 +4,7 @@
 use crate::{tests::suite, PersistentSafetyStorage, SafetyRulesManager, TSafetyRules};
 use consensus_types::common::{Payload, Round};
 use libra_secure_storage::VaultStorage;
-use libra_types::crypto_proxies::ValidatorSigner;
+use libra_types::validator_signer::ValidatorSigner;
 
 /// A test for verifying VaultStorage properly supports the SafetyRule backend.  This test
 /// depends on running Vault, which can be done by using the provided docker run script in

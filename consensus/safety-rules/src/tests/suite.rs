@@ -10,7 +10,7 @@ use consensus_types::{
     vote_proposal::VoteProposal,
 };
 use libra_crypto::hash::{CryptoHash, HashValue};
-use libra_types::crypto_proxies::ValidatorSigner;
+use libra_types::validator_signer::ValidatorSigner;
 use rand::Rng;
 
 type Proof = test_utils::Proof;

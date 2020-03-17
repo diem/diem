@@ -18,7 +18,7 @@ use consensus_types::{
 use libra_crypto::{ed25519::Ed25519Signature, hash::HashValue};
 use libra_logger::debug;
 use libra_types::{
-    block_info::BlockInfo, crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo,
+    block_info::BlockInfo, ledger_info::LedgerInfo, validator_signer::ValidatorSigner,
 };
 use std::marker::PhantomData;
 

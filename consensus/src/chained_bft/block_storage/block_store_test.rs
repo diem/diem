@@ -21,8 +21,8 @@ use consensus_types::{
 };
 use libra_crypto::{HashValue, PrivateKey};
 use libra_types::{
-    account_address::AccountAddress,
-    crypto_proxies::{random_validator_verifier, ValidatorSigner},
+    account_address::AccountAddress, crypto_proxies::random_validator_verifier,
+    validator_signer::ValidatorSigner,
 };
 use proptest::prelude::*;
 use std::{cmp::min, collections::HashSet};

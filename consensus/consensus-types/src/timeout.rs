@@ -7,7 +7,7 @@ use libra_crypto::{
     hash::{CryptoHash, CryptoHasher, HashValue},
 };
 use libra_crypto_derive::CryptoHasher;
-use libra_types::crypto_proxies::ValidatorSigner;
+use libra_types::validator_signer::ValidatorSigner;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
@@ -42,9 +42,7 @@ impl Timeout {
     }
 
     pub fn sign(&self, signer: &ValidatorSigner) -> Ed25519Signature {
-        signer
-            .sign_message(self.hash())
-            .expect("Failed to sign Timeout")
+        signer.sign_message(self.hash())
     }
 }
 

@@ -4,11 +4,12 @@
 use crate::{
     account_address::AccountAddress,
     block_info::BlockInfo,
-    crypto_proxies::{random_validator_verifier, ValidatorInfo, ValidatorSet, ValidatorSigner},
+    crypto_proxies::{random_validator_verifier, ValidatorInfo, ValidatorSet},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::Version,
     trusted_state::{TrustedState, TrustedStateChange},
     validator_change::ValidatorChangeProof,
+    validator_signer::ValidatorSigner,
     waypoint::Waypoint,
 };
 use libra_crypto::{
@@ -77,7 +78,7 @@ fn sign_ledger_info(
 ) -> BTreeMap<AccountAddress, Ed25519Signature> {
     signers
         .iter()
-        .map(|s| (s.author(), s.sign_message(ledger_info.hash()).unwrap()))
+        .map(|s| (s.author(), s.sign_message(ledger_info.hash())))
         .collect()
 }
 
