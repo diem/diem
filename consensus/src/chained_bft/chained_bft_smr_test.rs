@@ -157,6 +157,8 @@ impl SMRNode {
             node_config.consensus.proposer_type = proposer_type;
             // Use in memory storage for testing
             node_config.consensus.safety_rules = SafetyRulesConfig::default();
+            // Set higher timeout value in test.
+            node_config.consensus.pacemaker_initial_timeout_ms = 5000;
 
             let (_, storage) = MockStorage::start_for_testing(validator_set.clone());
             smr_nodes.push(Self::start(
