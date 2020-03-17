@@ -95,6 +95,11 @@ module LibraAccount {
         deposit_with_metadata(payee, to_deposit, Vector::empty());
     }
 
+    // Deposits the `to_deposit` coin into the sender's account balance
+    public fun deposit_to_sender(to_deposit: LibraCoin::T) acquires T, Balance {
+        deposit(Transaction::sender(), to_deposit)
+    }
+
     // Deposits the `to_deposit` coin into the `payee`'s account balance with the attached `metadata`
     public fun deposit_with_metadata(
         payee: address,
@@ -164,7 +169,16 @@ module LibraAccount {
         };
 
         // Mint and deposit the coin
-        deposit(payee, LibraCoin::mint_with_default_capability(amount));
+        deposit(payee, LibraCoin::mint(amount));
+    }
+
+    // Cancel the oldest burn request from `preburn_address` and return the funds.
+    // Fails if the sender does not have a published MintCapability.
+    public fun cancel_burn(
+        preburn_address: address,
+    ) acquires T, Balance {
+        let to_return = LibraCoin::cancel_burn(preburn_address);
+        deposit(preburn_address, to_return)
     }
 
     // Helper to withdraw `amount` from the given account balance and return the withdrawn LibraCoin::T
