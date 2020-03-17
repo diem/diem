@@ -116,7 +116,7 @@ enum LibraStatus libra_LibraAccountResource_from(const uint8_t *buf, size_t len,
  * To get the serialized transaction in a memory safe manner, the client needs to pass in a pointer to a pointer to the allocated memory in rust
  * and call free on the memory address with `libra_free_bytes_buffer`.
  * @param[in] sender_private_key is sender's private key
- * @param[in] receiver is the receiver's address.
+ * @param[in] receiver is the receiver's authentication key.
  * @param[in] sequence is the sequence number of this transaction corresponding to sender's account.
  * @param[in] num_coins is the amount of money to be sent.
  * @param[in] max_gas_amount is the maximal total gas specified by wallet to spend for this transaction.
@@ -125,7 +125,7 @@ enum LibraStatus libra_LibraAccountResource_from(const uint8_t *buf, size_t len,
  * @param[out] ptr_buf is the pointer that will be filled with the memory address of the transaction allocated in rust. User takes ownership of pointer returned by *buf, which needs to be freed using libra_free_bytes_buffer
  * @param[out] ptr_len is the length of the signed transaction memory buffer.
 */
-enum LibraStatus libra_SignedTransactionBytes_from(const uint8_t sender_private_key[LIBRA_PRIVKEY_SIZE], const uint8_t receiver[LIBRA_ADDRESS_SIZE], uint64_t sequence, uint64_t num_coins, uint64_t max_gas_amount, uint64_t gas_unit_price, uint64_t expiration_time_secs, uint8_t **ptr_buf, size_t *ptr_len);
+enum LibraStatus libra_SignedTransactionBytes_from(const uint8_t sender_private_key[LIBRA_PRIVKEY_SIZE], const uint8_t receiver[LIBRA_PUBKEY_SIZE], uint64_t sequence, uint64_t num_coins, uint64_t max_gas_amount, uint64_t gas_unit_price, uint64_t expiration_time_secs, uint8_t **ptr_buf, size_t *ptr_len);
 
 /*!
  * Function to free the allocation memory in rust for bytes
@@ -150,7 +150,7 @@ enum LibraStatus libra_LibraSignedTransaction_from(const uint8_t *buf, size_t le
  * To get the serialized raw transaction in a memory safe manner, the client needs to pass in a pointer to a pointer to the allocated memory in rust
  * and call free on the memory address with `libra_free_bytes_buffer`.
  * @param[in] sender is the sender's address
- * @param[in] receiver is the receiver's address.
+ * @param[in] receiver is the receiver's authentication key.
  * @param[in] sequence is the sequence number of this transaction corresponding to sender's account.
  * @param[in] num_coins is the amount of money to be sent.
  * @param[in] max_gas_amount is the maximal total gas specified by wallet to spend for this transaction.
@@ -159,7 +159,7 @@ enum LibraStatus libra_LibraSignedTransaction_from(const uint8_t *buf, size_t le
  * @param[out] buf is the pointer that will be filled with the memory address of the transaction allocated in rust. User takes ownership of pointer returned by *buf, which needs to be freed using libra_free_bytes_buffer
  * @param[out] len is the length of the raw transaction memory buffer.
 */
-enum LibraStatus libra_RawTransactionBytes_from(const uint8_t sender[LIBRA_ADDRESS_SIZE], const uint8_t receiver[LIBRA_ADDRESS_SIZE], uint64_t sequence, uint64_t num_coins, uint64_t max_gas_amount, uint64_t gas_unit_price, uint64_t expiration_time_secs, uint8_t **buf, size_t *len);
+enum LibraStatus libra_RawTransactionBytes_from(const uint8_t sender[LIBRA_ADDRESS_SIZE], const uint8_t receiver[LIBRA_PUBKEY_SIZE], uint64_t sequence, uint64_t num_coins, uint64_t max_gas_amount, uint64_t gas_unit_price, uint64_t expiration_time_secs, uint8_t **buf, size_t *len);
 
 /*!
  * This function takes in a raw transaction, public key and signature in bytes, and return a signed transaction in bytes.
