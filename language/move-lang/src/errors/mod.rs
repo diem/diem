@@ -34,6 +34,12 @@ pub fn report_errors_to_buffer(files: FilesSourceText, errors: Errors) -> Vec<u8
     writer.into_inner()
 }
 
+pub fn report_errors_to_color_buffer(files: FilesSourceText, errors: Errors) -> Vec<u8> {
+    let mut writer = Buffer::ansi();
+    output_errors(&mut writer, files, errors);
+    writer.into_inner()
+}
+
 fn output_errors<W: WriteColor>(writer: &mut W, sources: FilesSourceText, errors: Errors) {
     assert!(!errors.is_empty());
     let mut files = Files::new();

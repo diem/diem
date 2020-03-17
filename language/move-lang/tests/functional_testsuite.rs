@@ -11,7 +11,7 @@ use move_bytecode_verifier::{batch_verify_modules, VerifiedModule};
 use move_lang::{
     move_compile, move_compile_no_report,
     shared::Address,
-    test_utils::{stdlib_files, FUNCTIONAL_TEST_DIR},
+    test_utils::{read_bool_var, stdlib_files, FUNCTIONAL_TEST_DIR},
     to_bytecode::translate::CompiledUnit,
 };
 use std::{convert::TryFrom, fmt, io::Write, path::Path};
@@ -60,7 +60,11 @@ impl Compiler for MoveSourceCompiler {
         let (files, units_or_errors) = move_compile_no_report(targets, &self.deps, sender)?;
         let unit = match units_or_errors {
             Err(errors) => {
-                let error_buffer = move_lang::errors::report_errors_to_buffer(files, errors);
+                let error_buffer = if read_bool_var(testsuite::PRETTY) {
+                    move_lang::errors::report_errors_to_color_buffer(files, errors)
+                } else {
+                    move_lang::errors::report_errors_to_buffer(files, errors)
+                };
                 return Err(
                     MoveSourceCompilerError(String::from_utf8(error_buffer).unwrap()).into(),
                 );
