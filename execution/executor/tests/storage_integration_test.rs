@@ -7,7 +7,7 @@ use libra_config::config::{VMConfig, VMPublishingOption};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey};
 use libra_types::{
     access_path::AccessPath,
-    account_address::{AccountAddress, AuthenticationKey},
+    account_address::AccountAddress,
     account_config::{association_address, AccountResource},
     account_state::AccountState,
     account_state_blob::AccountStateWithProof,
@@ -17,7 +17,10 @@ use libra_types::{
     get_with_proof::{verify_update_to_latest_ledger_response, RequestItem},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{Script, Transaction, TransactionListWithProof, TransactionWithProof},
+    transaction::{
+        authenticator::AuthenticationKey, Script, Transaction, TransactionListWithProof,
+        TransactionWithProof,
+    },
     trusted_state::TrustedState,
 };
 use rand::SeedableRng;
@@ -157,7 +160,7 @@ fn test_reconfiguration() {
         .unwrap();
     let validator_privkey = keys.take_private().unwrap();
     let validator_pubkey = keys.public().clone();
-    let auth_key = AuthenticationKey::from_public_key(&validator_pubkey);
+    let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
     let validator_auth_key_prefix = auth_key.prefix().to_vec();
     assert!(
         auth_key.derived_address() == validator_account,
@@ -253,16 +256,16 @@ fn test_execution_with_storage() {
     assert!(seed != TEST_SEED);
     let mut rng = ::rand::rngs::StdRng::from_seed(seed);
     let (privkey1, pubkey1) = compat::generate_keypair(&mut rng);
-    let account1_auth_key = AuthenticationKey::from_public_key(&pubkey1);
+    let account1_auth_key = AuthenticationKey::ed25519(&pubkey1);
     let account1 = account1_auth_key.derived_address();
     let (privkey2, pubkey2) = compat::generate_keypair(&mut rng);
-    let account2_auth_key = AuthenticationKey::from_public_key(&pubkey2);
+    let account2_auth_key = AuthenticationKey::ed25519(&pubkey2);
     let account2 = account2_auth_key.derived_address();
     let (_privkey3, pubkey3) = compat::generate_keypair(&mut rng);
-    let account3_auth_key = AuthenticationKey::from_public_key(&pubkey3);
+    let account3_auth_key = AuthenticationKey::ed25519(&pubkey3);
     let account3 = account3_auth_key.derived_address();
     let (_privkey4, pubkey4) = compat::generate_keypair(&mut rng);
-    let account4_auth_key = AuthenticationKey::from_public_key(&pubkey4); // non-existent account
+    let account4_auth_key = AuthenticationKey::ed25519(&pubkey4); // non-existent account
     let account4 = account4_auth_key.derived_address();
     let genesis_account = association_address();
 

@@ -5,7 +5,7 @@ use crate::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasPrice, 
 use libra_crypto::ed25519::compat;
 use libra_types::{
     account_address::AccountAddress,
-    transaction::{authenticator::TransactionAuthenticator, SignedTransaction},
+    transaction::{authenticator::AuthenticationKeyPreimage, SignedTransaction},
 };
 use std::time::Duration;
 
@@ -23,7 +23,10 @@ impl TransactionMetadata {
     pub fn new(txn: &SignedTransaction) -> Self {
         Self {
             sender: txn.sender(),
-            authentication_key_preimage: txn.authenticator().authentication_key_preimage().0,
+            authentication_key_preimage: txn
+                .authenticator()
+                .authentication_key_preimage()
+                .into_vec(),
             sequence_number: txn.sequence_number(),
             max_gas_amount: GasUnits::new(txn.max_gas_amount()),
             gas_unit_price: GasPrice::new(txn.gas_unit_price()),
@@ -66,8 +69,7 @@ impl Default for TransactionMetadata {
         let (_, public_key) = compat::generate_genesis_keypair();
         TransactionMetadata {
             sender: AccountAddress::default(),
-            authentication_key_preimage:
-                TransactionAuthenticator::ed25519_authentication_key_preimage(&public_key).0,
+            authentication_key_preimage: AuthenticationKeyPreimage::ed25519(&public_key).into_vec(),
             sequence_number: 0,
             max_gas_amount: GasUnits::new(100_000_000),
             gas_unit_price: GasPrice::new(0),

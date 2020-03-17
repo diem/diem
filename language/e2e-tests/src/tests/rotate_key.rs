@@ -15,7 +15,7 @@ use libra_crypto::{
 };
 use libra_types::{
     account_address::AccountAddress,
-    transaction::{authenticator::TransactionAuthenticator, SignedTransaction, TransactionStatus},
+    transaction::{authenticator::AuthenticationKey, SignedTransaction, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
 };
 
@@ -85,8 +85,7 @@ fn rotate_ed25519_multisig_key() {
         let threshold = 1;
         let multi_ed_public_key =
             MultiEd25519PublicKey::new(vec![pubkey1, pubkey2], threshold).unwrap();
-        let new_auth_key =
-            TransactionAuthenticator::multi_ed25519_authentication_key(&multi_ed_public_key);
+        let new_auth_key = AuthenticationKey::multi_ed25519(&multi_ed_public_key);
 
         // (1) rotate key to multisig
         let output = &executor.execute_transaction(rotate_key_txn(

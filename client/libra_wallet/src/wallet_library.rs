@@ -20,8 +20,11 @@ use crate::{
 use anyhow::Result;
 use libra_crypto::hash::CryptoHash;
 use libra_types::{
-    account_address::{AccountAddress, AuthenticationKey},
-    transaction::{helpers::TransactionSigner, RawTransaction, SignedTransaction},
+    account_address::AccountAddress,
+    transaction::{
+        authenticator::AuthenticationKey, helpers::TransactionSigner, RawTransaction,
+        SignedTransaction,
+    },
 };
 use rand::{rngs::EntropyRng, Rng};
 use std::{collections::HashMap, path::Path};

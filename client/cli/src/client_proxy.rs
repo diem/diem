@@ -18,9 +18,7 @@ use libra_logger::prelude::*;
 use libra_temppath::TempPath;
 use libra_types::{
     access_path::AccessPath,
-    account_address::{
-        AccountAddress, AuthenticationKey, ADDRESS_LENGTH, AUTHENTICATION_KEY_LENGTH,
-    },
+    account_address::{AccountAddress, ADDRESS_LENGTH},
     account_config::{
         association_address, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
         CORE_CODE_ADDRESS,
@@ -28,6 +26,7 @@ use libra_types::{
     account_state::AccountState,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{
+        authenticator::{AuthenticationKey, AUTHENTICATION_KEY_LENGTH},
         helpers::{create_unsigned_txn, create_user_txn, TransactionSigner},
         parse_as_transaction_argument, RawTransaction, Script, SignedTransaction,
         TransactionArgument, TransactionPayload, Version,

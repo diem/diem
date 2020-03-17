@@ -20,9 +20,11 @@ use libra_crypto::{
 };
 use libra_logger::*;
 use libra_types::{
-    account_address::{AccountAddress, AuthenticationKey},
+    account_address::AccountAddress,
     account_config::association_address,
-    transaction::{helpers::create_user_txn, Script, TransactionPayload},
+    transaction::{
+        authenticator::AuthenticationKey, helpers::create_user_txn, Script, TransactionPayload,
+    },
 };
 use rand::{
     prelude::ThreadRng,
@@ -605,7 +607,7 @@ struct AccountData {
 
 impl AccountData {
     pub fn auth_key_prefix(&self) -> Vec<u8> {
-        AuthenticationKey::from_public_key(&self.key_pair.public_key)
+        AuthenticationKey::ed25519(&self.key_pair.public_key)
             .prefix()
             .to_vec()
     }
