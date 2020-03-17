@@ -114,10 +114,6 @@ jobs:
           command: |
             [[ $CIRCLE_NODE_INDEX =~ [023] ]] || RUST_BACKTRACE=1 cargo build -j 16 --release
       - run:
-          name: Run Cluster Smoke Test
-          command: |
-            [[ $CIRCLE_NODE_INDEX =~ [023] ]] || scripts/smoke-test-swarm-cluster.sh
-      - run:
           name: Build Dev
           command: |
             [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16
