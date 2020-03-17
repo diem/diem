@@ -42,6 +42,7 @@ libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0", features = ["no_struct_log"] }
 libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 
 futures = "0.3.0"

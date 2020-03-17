@@ -17,6 +17,7 @@ prost = "0.6"
 
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 [build-dependencies]
 tonic-build = "0.2"

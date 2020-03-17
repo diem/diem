@@ -32,6 +32,7 @@ x25519-dalek = { git = "https://github.com/calibra/x25519-dalek.git", branch = "
 libra-crypto-derive = { path = "../crypto-derive", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-nibble = { path = "../../common/nibble", version = "0.1.0" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 [dev-dependencies]
 bitvec = "0.17.3"

@@ -11,4 +11,5 @@ edition = "2018"
 
 [dependencies]
 hex = "0.4.2"
+libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 rand = "0.6.5"

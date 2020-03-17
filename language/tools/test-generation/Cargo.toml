@@ -23,6 +23,7 @@ bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 libra-config = { path = "../../../config", version = "0.1.0" }
 libra-logger = { path = "../../../common/logger", version = "0.1.0" }
 libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
+libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 move-vm-cache = { path = "../../move-vm/cache", version = "0.1.0" }
 move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }

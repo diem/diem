@@ -10,6 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
+libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 typed-arena = "2.0.1"
 
 [dev-dependencies]

@@ -29,6 +29,7 @@ libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
 libra-state-view = { path = "../../storage/state-view", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 scratchpad = { path = "../../storage/scratchpad", version = "0.1.0" }
 serde_json = "1.0"
 storage-client = { path = "../../storage/storage-client", version = "0.1.0" }

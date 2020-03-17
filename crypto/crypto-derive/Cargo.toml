@@ -12,6 +12,7 @@ edition = "2018"
 proc_macro = true
 
 [dependencies]
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 syn = { version = "1.0.17", features = ["derive"] }
 quote = "1.0.3"
 proc-macro2 = "1.0.10"

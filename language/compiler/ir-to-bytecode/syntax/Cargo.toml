@@ -16,6 +16,7 @@ hex = "0.4.2"
 move-ir-types = { path = "../../../move-ir/types", version = "0.1.0" }
 move-core-types = { path = "../../../move-core/types", version = "0.1.0" }
 libra-types = { path = "../../../../types", version = "0.1.0" }
+libra-workspace-hack = { path = "../../../../common/workspace-hack", version = "0.1.0" }
 
 [features]
 default = []

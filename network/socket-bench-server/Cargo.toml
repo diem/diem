@@ -18,6 +18,7 @@ tokio-util = { version = "0.3", features = ["codec"] }
 rand = "0.6.5"
 libra-crypto = { path = "../../crypto/crypto" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 memsocket = { path = "../memsocket", version = "0.1.0" }
 netcore = { path = "../netcore", version = "0.1.0" }
 noise = { path = "../noise", version = "0.1.0", features = ["testing"] }

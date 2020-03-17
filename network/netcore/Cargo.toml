@@ -13,6 +13,7 @@ edition = "2018"
 async-trait = "0.1"
 bytes = "0.5.4"
 futures = { version = "0.3.4"  }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 memsocket = { path = "../memsocket", version = "0.1.0" }
 parity-multiaddr = { version = "0.8.0", default-features = false }
 pin-project = "0.4.2"
