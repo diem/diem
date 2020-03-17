@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bincode;
-use libra_serde_reflection::{Format, Named, Tracer, VariantFormat};
-use serde::Serialize;
+use libra_serde_reflection::{DTracer, Format, Named, Tracer, VariantFormat};
+use serde::{Deserialize, Serialize};
 use serde_json;
 use serde_yaml;
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 enum E {
     Unit,
     Newtype(u16),
@@ -17,7 +17,7 @@ enum E {
 }
 
 #[test]
-fn test_tracer() {
+fn test_tracers() {
     let mut tracer = Tracer::new(/* is_human_readable */ false);
     let ident = Format::TypeName("E".into());
 
@@ -92,4 +92,25 @@ fn test_tracer() {
     let data = bincode::serialize(format).unwrap();
     let format4 = bincode::deserialize(&data).unwrap();
     assert_eq!(*format, format4);
+
+    // DTracer
+    let mut dtracer = DTracer::new(/* is_human_readable */ false);
+    let ident = Format::TypeName("E".into());
+
+    assert_eq!(dtracer.trace::<E>().unwrap(), ident);
+    assert_eq!(dtracer.registry().unwrap().get("E").unwrap(), format);
+
+    // Sampling values with DTracer
+    let mut dtracer = DTracer::new(/* is_human_readable */ false);
+    let values = dtracer.sample::<E>().unwrap();
+    assert_eq!(
+        values,
+        vec![
+            E::Unit,
+            E::Newtype(0),
+            E::Tuple(0, 0),
+            E::Struct { a: 0 },
+            E::NewTupleArray((0, 0, 0))
+        ]
+    );
 }

@@ -10,7 +10,7 @@ use serde::{
 use std::collections::{btree_map::Entry, BTreeMap};
 
 /// Description of a Serde-based serialization format.
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Eq, Clone, PartialEq)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum Format {
     /// Placeholder for an unknown format (e.g. after tracing `None` value)
@@ -70,7 +70,7 @@ pub enum Format {
     Variant(BTreeMap<u32, Named<VariantFormat>>),
 }
 
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
 /// A named value.
 /// Used for named fields or variant cases.
 pub struct Named<T> {
@@ -78,10 +78,11 @@ pub struct Named<T> {
     pub value: T,
 }
 
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 #[serde(rename_all = "UPPERCASE")]
 /// Description of a variant case.
 pub enum VariantFormat {
+    Unknown,
     Unit,
     NewType(Box<Format>),
     Tuple(Vec<Format>),
@@ -111,7 +112,12 @@ impl FormatHolder for VariantFormat {
         // See also https://github.com/rust-lang/rust/issues/68354
         // We make it work using std::mem::take (and the Default trait).
         match (&mut *self, &mut format) {
-            (Self::Unit, Self::Unit) => (),
+            (format1 @ Self::Unknown, format2) => {
+                let format2 = std::mem::take(format2);
+                *format1 = format2;
+            }
+
+            (_, Self::Unknown) | (Self::Unit, Self::Unit) => (),
 
             (Self::NewType(format1), Self::NewType(format2)) => {
                 let format2 = std::mem::take(format2.as_mut());
@@ -149,6 +155,9 @@ impl FormatHolder for VariantFormat {
 
     fn normalize(&mut self) -> Result<()> {
         match self {
+            Self::Unknown => {
+                return Err(Error::UnknownFormat);
+            }
             Self::Unit => Ok(()),
             Self::NewType(format) => format.normalize(),
             Self::Tuple(formats) => {
@@ -386,7 +395,7 @@ impl Default for Format {
 
 impl Default for VariantFormat {
     fn default() -> Self {
-        Self::Unit
+        Self::Unknown
     }
 }
 
