@@ -36,13 +36,13 @@ struct Args {
     #[structopt(long = "skip-basic-blocks")]
     pub skip_basic_blocks: bool,
 
-    /// The path to the bytecode file to disassemble; let's call it file.mv. We assume that two
-    /// other files reside under the same directory: a source map file.mvsm (possibly) and the Move
-    /// source code file.move.
+    /// Treat input file as a script (default is to treat file as a module)
     #[structopt(short = "s", long = "script")]
     pub is_script: bool,
 
-    /// The path to the bytecode file.
+    /// The path to the bytecode file to disassemble; let's call it file.mv. We assume that two
+    /// other files reside under the same directory: a source map file.mvsm (possibly) and the Move
+    /// source code file.move.
     #[structopt(short = "b", long = "bytecode")]
     pub bytecode_file_path: String,
 }
