@@ -22,14 +22,14 @@ fn main() {
 
     runner
         .run(&any::<transaction::Transaction>(), |v| {
-            tracer.lock().unwrap().trace(&v)?;
+            tracer.lock().unwrap().trace_value(&v)?;
             Ok(())
         })
         .unwrap();
 
     runner
         .run(&any::<contract_event::ContractEvent>(), |v| {
-            tracer.lock().unwrap().trace(&v)?;
+            tracer.lock().unwrap().trace_value(&v)?;
             Ok(())
         })
         .unwrap();
