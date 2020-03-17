@@ -18,6 +18,7 @@ libc = "0.2.68"
 move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
 once_cell = "1.3.1"
 static_assertions = "1.0.0"
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 [dev-dependencies]
 rand = "0.6.5"

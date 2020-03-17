@@ -19,6 +19,7 @@ datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
 move-vm = { path = "../vm", package = "vm" }
 move-bytecode-verifier = { path = "../bytecode-verifier", package = "bytecode-verifier" }
 libra-types = { path = "../../types" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 move-ir-types = {path = "../move-ir/types" }
 ir-to-bytecode = {path = "../compiler/ir-to-bytecode" }
 borrow-graph = { path = "../borrow-graph" }

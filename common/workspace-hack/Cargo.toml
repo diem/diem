@@ -1,0 +1,22 @@
+[package]
+name = "libra-workspace-hack"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra workspace hack"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+bytes = { version = "0.5.4", features = ["serde", "std"] }
+cc = { version = "1.0.50", features = ["jobserver", "parallel"] }
+log = { version = "0.4.8", features = ["serde", "std"] }
+memchr = { version = "2.3.3", features = ["std", "use_std"] }
+num-traits = { version = "0.2.11", features = ["std"] }
+petgraph = { version = "0.5.0", features = ["graphmap", "matrix_graph", "stable_graph"] }
+serde = { version = "1.0.96", features = ["derive", "rc"] }
+sha-1 = { version = "0.8.2", features = ["std"] }
+subtle = { version = "2.2.2", features = ["i128", "std"] }
+syn = { version = "1.0.16", features = ["clone-impls", "derive", "extra-traits", "fold", "full", "parsing", "printing", "proc-macro", "quote", "visit", "visit-mut"] }

@@ -12,6 +12,7 @@ edition = "2018"
 [dependencies]
 lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-types = { path = "../../../types", version = "0.1.0" }
+libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
 
 structopt = "0.3.13"

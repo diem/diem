@@ -35,6 +35,7 @@ storage-proto = { path = "../storage-proto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0", optional = true }
 libra-temppath = { path = "../../common/temppath", version = "0.1.0", optional = true }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 num-variants = { path = "../../common/num-variants", version = "0.1.0" }
 
 [dev-dependencies]

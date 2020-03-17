@@ -15,6 +15,7 @@ snow = { version = "0.6.1", features=["ring-accelerated"]}
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 netcore = { path = "../netcore", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 # used by fuzzing
 libra-proptest-helpers = { path = "../../common/proptest-helpers", optional = true }

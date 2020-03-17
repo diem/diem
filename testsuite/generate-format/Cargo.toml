@@ -14,8 +14,9 @@ proptest = "0.9.6"
 serde_yaml = "0.8"
 structopt = "0.3.13"
 
-libra-types = { path = "../../types", version = "0.1.0", features=["fuzzing"] }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-types = { path = "../../types", version = "0.1.0", features=["fuzzing"] }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 serde-reflection = { path = "../../common/serde-reflection", version = "0.1.0" }
 
 [[bin]]

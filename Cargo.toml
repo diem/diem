@@ -27,6 +27,7 @@ members = [
     "common/temppath",
     "common/util",
     "common/workspace-builder",
+    "common/workspace-hack",
     "config",
     "config/config-builder",
     "config/generate-keypair",
