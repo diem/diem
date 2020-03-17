@@ -342,10 +342,7 @@ mod tests {
 
         let random_hash = HashValue::random();
         for validator in validator_signers.iter() {
-            author_to_signature_map.insert(
-                validator.author(),
-                validator.sign_message(random_hash).unwrap(),
-            );
+            author_to_signature_map.insert(validator.author(), validator.sign_message(random_hash));
         }
 
         assert_eq!(
@@ -356,17 +353,17 @@ mod tests {
 
     #[test]
     fn test_validator() {
-        let validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random(TEST_SEED);
+        let validator_signer = ValidatorSigner::random(TEST_SEED);
         let random_hash = HashValue::random();
-        let signature = validator_signer.sign_message(random_hash).unwrap();
+        let signature = validator_signer.sign_message(random_hash);
         let validator =
             ValidatorVerifier::new_single(validator_signer.author(), validator_signer.public_key());
         assert_eq!(
             validator.verify_signature(validator_signer.author(), random_hash, &signature),
             Ok(())
         );
-        let unknown_validator_signer = ValidatorSigner::<Ed25519PrivateKey>::random([1; 32]);
-        let unknown_signature = unknown_validator_signer.sign_message(random_hash).unwrap();
+        let unknown_validator_signer = ValidatorSigner::random([1; 32]);
+        let unknown_signature = unknown_validator_signer.sign_message(random_hash);
         assert_eq!(
             validator.verify_signature(
                 unknown_validator_signer.author(),
@@ -385,7 +382,7 @@ mod tests {
     fn test_equal_vote_quorum_validators() {
         const NUM_SIGNERS: u8 = 7;
         // Generate NUM_SIGNERS random signers.
-        let validator_signers: Vec<ValidatorSigner<Ed25519PrivateKey>> = (0..NUM_SIGNERS)
+        let validator_signers: Vec<ValidatorSigner> = (0..NUM_SIGNERS)
             .map(|i| ValidatorSigner::random([i; 32]))
             .collect();
         let random_hash = HashValue::random();
@@ -402,10 +399,7 @@ mod tests {
         // Create a map from author to signatures.
         let mut author_to_signature_map = BTreeMap::new();
         for validator in validator_signers.iter() {
-            author_to_signature_map.insert(
-                validator.author(),
-                validator.sign_message(random_hash).unwrap(),
-            );
+            author_to_signature_map.insert(validator.author(), validator.sign_message(random_hash));
         }
 
         // Let's assume our verifier needs to satisfy at least 5 signatures from the original
@@ -425,9 +419,8 @@ mod tests {
         );
 
         // Add an extra unknown signer, signatures > N; this will fail.
-        let unknown_validator_signer =
-            ValidatorSigner::<Ed25519PrivateKey>::random([NUM_SIGNERS + 1; 32]);
-        let unknown_signature = unknown_validator_signer.sign_message(random_hash).unwrap();
+        let unknown_validator_signer = ValidatorSigner::random([NUM_SIGNERS + 1; 32]);
+        let unknown_signature = unknown_validator_signer.sign_message(random_hash);
         author_to_signature_map
             .insert(unknown_validator_signer.author(), unknown_signature.clone());
         assert_eq!(
@@ -442,10 +435,7 @@ mod tests {
         // Add 5 valid signers only (quorum threshold is met); this will pass.
         author_to_signature_map.clear();
         for validator in validator_signers.iter().take(5) {
-            author_to_signature_map.insert(
-                validator.author(),
-                validator.sign_message(random_hash).unwrap(),
-            );
+            author_to_signature_map.insert(validator.author(), validator.sign_message(random_hash));
         }
         assert_eq!(
             validator_verifier
@@ -466,10 +456,7 @@ mod tests {
         // Add 4 valid signers only (quorum threshold is NOT met); this will fail.
         author_to_signature_map.clear();
         for validator in validator_signers.iter().take(4) {
-            author_to_signature_map.insert(
-                validator.author(),
-                validator.sign_message(random_hash).unwrap(),
-            );
+            author_to_signature_map.insert(validator.author(), validator.sign_message(random_hash));
         }
         assert_eq!(
             validator_verifier
@@ -493,7 +480,7 @@ mod tests {
     fn test_unequal_vote_quorum_validators() {
         const NUM_SIGNERS: u8 = 4;
         // Generate NUM_SIGNERS random signers.
-        let validator_signers: Vec<ValidatorSigner<Ed25519PrivateKey>> = (0..NUM_SIGNERS)
+        let validator_signers: Vec<ValidatorSigner> = (0..NUM_SIGNERS)
             .map(|i| ValidatorSigner::random([i; 32]))
             .collect();
         let random_hash = HashValue::random();
@@ -509,7 +496,7 @@ mod tests {
             );
             author_to_signature_map.insert(
                 validator_signer.author(),
-                validator_signer.sign_message(random_hash).unwrap(),
+                validator_signer.sign_message(random_hash),
             );
         }
 
@@ -529,9 +516,8 @@ mod tests {
         );
 
         // Add an extra unknown signer, signatures > N; this will fail.
-        let unknown_validator_signer =
-            ValidatorSigner::<Ed25519PrivateKey>::random([NUM_SIGNERS + 1; 32]);
-        let unknown_signature = unknown_validator_signer.sign_message(random_hash).unwrap();
+        let unknown_validator_signer = ValidatorSigner::random([NUM_SIGNERS + 1; 32]);
+        let unknown_signature = unknown_validator_signer.sign_message(random_hash);
         author_to_signature_map
             .insert(unknown_validator_signer.author(), unknown_signature.clone());
         assert_eq!(
@@ -546,10 +532,7 @@ mod tests {
         // Add 5 voting power signers only (quorum threshold is met) with (2, 3) ; this will pass.
         author_to_signature_map.clear();
         for validator in validator_signers.iter().skip(2) {
-            author_to_signature_map.insert(
-                validator.author(),
-                validator.sign_message(random_hash).unwrap(),
-            );
+            author_to_signature_map.insert(validator.author(), validator.sign_message(random_hash));
         }
         assert_eq!(
             validator_verifier
@@ -570,10 +553,7 @@ mod tests {
         // Add first 3 valid signers only (quorum threshold is NOT met); this will fail.
         author_to_signature_map.clear();
         for validator in validator_signers.iter().take(3) {
-            author_to_signature_map.insert(
-                validator.author(),
-                validator.sign_message(random_hash).unwrap(),
-            );
+            author_to_signature_map.insert(validator.author(), validator.sign_message(random_hash));
         }
         assert_eq!(
             validator_verifier

@@ -20,12 +20,12 @@ use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
     crypto_proxies::{
         random_validator_verifier, ValidatorChangeProof, ValidatorInfo, ValidatorSet,
-        ValidatorSigner,
     },
     event_subscription::EventSubscription,
     ledger_info::LedgerInfoWithSignatures,
     proof::TransactionListProof,
     transaction::TransactionListWithProof,
+    validator_signer::ValidatorSigner,
     waypoint::Waypoint,
 };
 use network::{

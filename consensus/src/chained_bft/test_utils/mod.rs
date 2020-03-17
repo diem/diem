@@ -11,7 +11,7 @@ use consensus_types::{
 };
 use libra_crypto::HashValue;
 use libra_logger::Level;
-use libra_types::{crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo};
+use libra_types::{ledger_info::LedgerInfo, validator_signer::ValidatorSigner};
 use std::sync::Arc;
 use tokio::runtime;
 

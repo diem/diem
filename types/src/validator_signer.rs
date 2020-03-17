@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::{AccountAddress, ADDRESS_LENGTH};
-use anyhow::Error;
-use libra_crypto::{test_utils::TEST_SEED, HashValue, *};
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
+    test_utils::TEST_SEED,
+    HashValue, PrivateKey, SigningKey, Uniform,
+};
 use rand::{rngs::StdRng, SeedableRng};
 use std::convert::TryFrom;
 
@@ -12,25 +15,22 @@ use std::convert::TryFrom;
 /// signing, respectively.
 #[derive(Debug)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
-pub struct ValidatorSigner<PrivateKey: SigningKey> {
+pub struct ValidatorSigner {
     author: AccountAddress,
-    public_key: PrivateKey::VerifyingKeyMaterial,
-    private_key: PrivateKey,
+    private_key: Ed25519PrivateKey,
 }
 
-impl<PrivateKey: SigningKey> ValidatorSigner<PrivateKey> {
-    pub fn new(author: AccountAddress, private_key: PrivateKey) -> Self {
-        let public_key: PrivateKey::VerifyingKeyMaterial = private_key.public_key();
+impl ValidatorSigner {
+    pub fn new(author: AccountAddress, private_key: Ed25519PrivateKey) -> Self {
         ValidatorSigner {
             author,
-            public_key,
             private_key,
         }
     }
 
     /// Constructs a signature for `message` using `private_key`.
-    pub fn sign_message(&self, message: HashValue) -> Result<PrivateKey::SignatureMaterial, Error> {
-        Ok(self.private_key.sign_message(&message))
+    pub fn sign_message(&self, message: HashValue) -> Ed25519Signature {
+        self.private_key.sign_message(&message)
     }
 
     /// Returns the author associated with this signer.
@@ -39,18 +39,18 @@ impl<PrivateKey: SigningKey> ValidatorSigner<PrivateKey> {
     }
 
     /// Returns the public key associated with this signer.
-    pub fn public_key(&self) -> PrivateKey::VerifyingKeyMaterial {
-        self.public_key.clone()
+    pub fn public_key(&self) -> Ed25519PublicKey {
+        self.private_key.public_key()
     }
 
     /// Returns the private key associated with this signer. Only available for testing purposes.
     #[cfg(any(test, feature = "fuzzing"))]
-    pub fn private_key(&self) -> &PrivateKey {
+    pub fn private_key(&self) -> &Ed25519PrivateKey {
         &self.private_key
     }
 }
 
-impl<PrivateKey: SigningKey + Uniform> ValidatorSigner<PrivateKey> {
+impl ValidatorSigner {
     /// Generate a random set of public and private keys and author
     /// information.
     /// This takes an optional seed, which it initializes to
@@ -59,7 +59,7 @@ impl<PrivateKey: SigningKey + Uniform> ValidatorSigner<PrivateKey> {
         let mut rng = StdRng::from_seed(opt_rng_seed.into().unwrap_or(TEST_SEED));
         Self::new(
             AccountAddress::random(),
-            PrivateKey::generate_for_testing(&mut rng),
+            Ed25519PrivateKey::generate_for_testing(&mut rng),
         )
     }
 
@@ -69,7 +69,7 @@ impl<PrivateKey: SigningKey + Uniform> ValidatorSigner<PrivateKey> {
         let mut address = [0; ADDRESS_LENGTH];
         address[0] = num;
         let mut rng = StdRng::from_seed(TEST_SEED);
-        let private_key = PrivateKey::generate_for_testing(&mut rng);
+        let private_key = Ed25519PrivateKey::generate_for_testing(&mut rng);
         Self::new(AccountAddress::try_from(&address[..]).unwrap(), private_key)
     }
 }
@@ -77,55 +77,51 @@ impl<PrivateKey: SigningKey + Uniform> ValidatorSigner<PrivateKey> {
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod proptests {
     use super::*;
-    #[cfg(test)]
-    use libra_crypto::ed25519::*;
+    use libra_crypto::Genesis;
     use proptest::{prelude::*, sample, strategy::LazyJust};
 
     #[allow(clippy::redundant_closure)]
-    pub fn arb_signing_key<PrivateKey: SigningKey + Uniform + Genesis + 'static>(
-    ) -> impl Strategy<Value = PrivateKey> {
+    pub fn arb_signing_key() -> impl Strategy<Value = Ed25519PrivateKey> {
         prop_oneof![
             // The no_shrink here reflects that particular keypair choices out
             // of random options are irrelevant.
-            LazyJust::new(|| PrivateKey::generate_for_testing(&mut StdRng::from_seed(TEST_SEED))),
-            LazyJust::new(|| PrivateKey::genesis()),
+            LazyJust::new(
+                || Ed25519PrivateKey::generate_for_testing(&mut StdRng::from_seed(TEST_SEED))
+            ),
+            LazyJust::new(|| Ed25519PrivateKey::genesis()),
         ]
     }
 
-    pub fn signer_strategy<PrivateKey: SigningKey + Uniform + Genesis>(
-        signing_key_strategy: impl Strategy<Value = PrivateKey>,
-    ) -> impl Strategy<Value = ValidatorSigner<PrivateKey>> {
+    pub fn signer_strategy(
+        signing_key_strategy: impl Strategy<Value = Ed25519PrivateKey>,
+    ) -> impl Strategy<Value = ValidatorSigner> {
         signing_key_strategy
             .prop_map(|signing_key| ValidatorSigner::new(AccountAddress::random(), signing_key))
     }
 
     #[allow(clippy::redundant_closure)]
-    pub fn rand_signer<PrivateKey: SigningKey + Uniform + Genesis + 'static>(
-    ) -> impl Strategy<Value = ValidatorSigner<PrivateKey>> {
+    pub fn rand_signer() -> impl Strategy<Value = ValidatorSigner> {
         signer_strategy(arb_signing_key())
     }
 
     #[allow(clippy::redundant_closure)]
-    pub fn arb_signer<PrivateKey: SigningKey + Uniform + Genesis + 'static>(
-    ) -> impl Strategy<Value = ValidatorSigner<PrivateKey>> {
+    pub fn arb_signer() -> impl Strategy<Value = ValidatorSigner> {
         prop_oneof![
             rand_signer(),
             LazyJust::new(|| {
-                let genesis_key = PrivateKey::genesis();
+                let genesis_key = Ed25519PrivateKey::genesis();
                 ValidatorSigner::new(AccountAddress::random(), genesis_key)
             })
         ]
     }
 
-    fn select_keypair<PrivateKey: SigningKey + Uniform + Genesis + Clone + 'static>(
-        keys: Vec<PrivateKey>,
-    ) -> impl Strategy<Value = PrivateKey> {
+    fn select_keypair(keys: Vec<Ed25519PrivateKey>) -> impl Strategy<Value = Ed25519PrivateKey> {
         sample::select(keys)
     }
 
-    pub fn mostly_in_keypair_pool<PrivateKey: SigningKey + Uniform + Genesis + Clone + 'static>(
-        keys: Vec<PrivateKey>,
-    ) -> impl Strategy<Value = ValidatorSigner<PrivateKey>> {
+    pub fn mostly_in_keypair_pool(
+        keys: Vec<Ed25519PrivateKey>,
+    ) -> impl Strategy<Value = ValidatorSigner> {
         prop::strategy::Union::new_weighted(vec![
             (9, signer_strategy(select_keypair(keys)).boxed()),
             (1, arb_signer().boxed()),
@@ -134,7 +130,7 @@ pub mod proptests {
 
     proptest! {
         #[test]
-        fn test_new_signer(signing_key in arb_signing_key::<Ed25519PrivateKey>()){
+        fn test_new_signer(signing_key in arb_signing_key()){
             let public_key = signing_key.public_key();
             let signer = ValidatorSigner::new(AccountAddress::random(), signing_key);
             prop_assert_eq!(public_key, signer.public_key());

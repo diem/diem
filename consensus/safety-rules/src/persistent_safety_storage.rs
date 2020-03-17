@@ -109,7 +109,7 @@ impl PersistentSafetyStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use libra_types::crypto_proxies::ValidatorSigner;
+    use libra_types::validator_signer::ValidatorSigner;
 
     #[test]
     fn test() {

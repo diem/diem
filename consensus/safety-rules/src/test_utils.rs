@@ -14,8 +14,8 @@ use consensus_types::{
 use libra_crypto::hash::{CryptoHash, TransactionAccumulatorHasher};
 use libra_types::{
     block_info::BlockInfo,
-    crypto_proxies::ValidatorSigner,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    validator_signer::ValidatorSigner,
 };
 use std::{
     collections::BTreeMap,

@@ -5,7 +5,7 @@ use consensus_types::block::{block_test_utils, Block};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use libra_config::config::{OnDiskStorageConfig, SafetyRulesBackend};
 use libra_secure_storage::{InMemoryStorage, OnDiskStorage};
-use libra_types::crypto_proxies::ValidatorSigner;
+use libra_types::validator_signer::ValidatorSigner;
 use rand::Rng;
 use safety_rules::{
     process_client_wrapper::ProcessClientWrapper, test_utils, PersistentSafetyStorage,

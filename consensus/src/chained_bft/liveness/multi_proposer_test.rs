@@ -6,7 +6,6 @@ use crate::chained_bft::liveness::{
     proposer_election::ProposerElection,
 };
 use consensus_types::block::{block_test_utils::certificate_for_genesis, Block};
-use libra_crypto::ed25519::*;
 use libra_types::validator_signer::ValidatorSigner;
 
 #[test]
@@ -15,7 +14,7 @@ fn test_multi_proposer() {
     let mut signers = vec![];
     let mut proposers = vec![];
     for i in 0..8 {
-        let signer = ValidatorSigner::<Ed25519PrivateKey>::random([i; 32]);
+        let signer = ValidatorSigner::random([i; 32]);
         proposers.push(signer.author());
         signers.push(signer);
     }
@@ -76,7 +75,7 @@ fn test_multi_proposer_take_all() {
     let mut signers = vec![];
     let mut proposers = vec![];
     for i in 0..8 {
-        let signer = ValidatorSigner::<Ed25519PrivateKey>::random([i; 32]);
+        let signer = ValidatorSigner::random([i; 32]);
         proposers.push(signer.author());
         signers.push(signer);
     }

@@ -14,7 +14,7 @@ use consensus_types::block::{
     Block,
 };
 use futures::executor::block_on;
-use libra_types::crypto_proxies::ValidatorSigner;
+use libra_types::validator_signer::ValidatorSigner;
 use std::{
     sync::Arc,
     time::{Duration, Instant},

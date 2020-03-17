@@ -22,7 +22,6 @@
 use crate::{
     validator_info::ValidatorInfo as RawValidatorInfo,
     validator_set::ValidatorSet as RawValidatorSet,
-    validator_signer::ValidatorSigner as RawValidatorSigner,
     validator_verifier::ValidatorVerifier as RawValidatorVerifier,
 };
 
@@ -37,15 +36,10 @@ use crate::{
 // types that do not go through the instantiated polymorphic structures
 // below is banned.
 
-use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
+use libra_crypto::ed25519::Ed25519PublicKey;
 use std::{collections::BTreeMap, fmt};
 
-// used in chained_bft::consensus_types::block_test
-#[cfg(any(test, feature = "fuzzing"))]
-pub type SecretKey = Ed25519PrivateKey;
-
 pub type ValidatorInfo = RawValidatorInfo<Ed25519PublicKey>;
-pub type ValidatorSigner = RawValidatorSigner<Ed25519PrivateKey>;
 pub type ValidatorSet = RawValidatorSet<Ed25519PublicKey>;
 pub type ValidatorVerifier = RawValidatorVerifier<Ed25519PublicKey>;
 pub use crate::validator_change::ValidatorChangeProof;
@@ -77,6 +71,9 @@ impl fmt::Display for EpochInfo {
         )
     }
 }
+
+#[cfg(any(test, feature = "fuzzing"))]
+use crate::validator_signer::ValidatorSigner;
 
 /// Helper function to get random validator signers and a corresponding validator verifier for
 /// testing.  If custom_voting_power_quorum is not None, set a custom voting power quorum amount.

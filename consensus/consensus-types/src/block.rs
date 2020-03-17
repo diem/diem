@@ -13,9 +13,10 @@ use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     block_info::BlockInfo,
     block_metadata::BlockMetadata,
-    crypto_proxies::{ValidatorSet, ValidatorSigner, ValidatorVerifier},
+    crypto_proxies::{ValidatorSet, ValidatorVerifier},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::Version,
+    validator_signer::ValidatorSigner,
 };
 use mirai_annotations::debug_checked_verify_eq;
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
@@ -212,9 +213,7 @@ where
         validator_signer: &ValidatorSigner,
     ) -> Self {
         let id = block_data.hash();
-        let signature = validator_signer
-            .sign_message(id)
-            .expect("Failed to sign message");
+        let signature = validator_signer.sign_message(id);
 
         Block {
             id,
