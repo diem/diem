@@ -44,7 +44,7 @@ RUN apt-get update && apt-get install -y procps
 
 # TEST docker-run.sh
 #   GIVEN necessary environment arguments to run docker-run.sh
-ARG AC_PORT="8000"
+ARG AC_PORT="8080"
 ARG AC_HOST="172.18.0.13"
 ARG LOG_LEVEL="info"
 
