@@ -28,7 +28,7 @@ pub fn verify_or_update_baseline(baseline_file_name: &Path, text: &str) -> Resul
             .with_context(||
                 format!("Cannot read baseline file at `{}`. To create a new baseline, call this test with env var UPBL=1.", baseline_file_name.to_string_lossy()))?;
         file.read_to_string(&mut contents)?;
-        diff(text, &contents)
+        diff(clean_for_baseline(text).as_ref(), &contents)
     }
 }
 
