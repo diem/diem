@@ -261,16 +261,14 @@ fn basic_new_rank_event_test() {
         );
         assert_eq!(pending_proposals[0].proposer(), node.signer.author());
 
-        let executed_state = &a1.compute_result().executed_state;
-
         // Simulate a case with a1 receiving enough votes for a QC: a new proposal
         // should be a child of a1 and carry its QC.
         let vote = Vote::new(
             VoteData::new(
                 a1.block().gen_block_info(
-                    executed_state.state_id,
-                    executed_state.version,
-                    executed_state.validators.clone(),
+                    a1.compute_result().state_id(),
+                    a1.compute_result().version(),
+                    a1.compute_result().validators().clone(),
                 ),
                 a1.quorum_cert().certified_block().clone(),
             ),
@@ -281,9 +279,9 @@ fn basic_new_rank_event_test() {
         let vote1 = Vote::new(
             VoteData::new(
                 a1.block().gen_block_info(
-                    executed_state.state_id,
-                    executed_state.version,
-                    executed_state.validators.clone(),
+                    a1.compute_result().state_id(),
+                    a1.compute_result().version(),
+                    a1.compute_result().validators().clone(),
                 ),
                 a1.quorum_cert().certified_block().clone(),
             ),
@@ -643,17 +641,16 @@ fn process_votes_basic_test() {
     let genesis = node.block_store.root();
     let mut inserter = TreeInserter::new_with_store(node.signer.clone(), node.block_store.clone());
     let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
-    let executed_state = &a1.compute_result().executed_state;
 
     let vote_data = VoteData::new(
         BlockInfo::new(
             a1.quorum_cert().certified_block().epoch(),
             a1.round(),
             a1.id(),
-            executed_state.state_id,
-            executed_state.version,
+            a1.compute_result().state_id(),
+            a1.compute_result().version(),
             a1.timestamp_usecs(),
-            executed_state.validators.clone(),
+            a1.compute_result().validators().clone(),
         ),
         a1.quorum_cert().certified_block().clone(),
     );

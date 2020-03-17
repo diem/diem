@@ -765,7 +765,7 @@ impl<T: Payload> EventProcessor<T> {
                 executed_block.transaction_info_hashes(),
             ),
             block.clone(),
-            executed_block.compute_result().executed_state.validators,
+            executed_block.compute_result().validators().clone(),
         );
 
         let vote = self
@@ -956,7 +956,7 @@ impl<T: Payload> EventProcessor<T> {
                     }
                 }
             }
-            for status in block.compute_result().compute_status.iter() {
+            for status in block.compute_result().compute_status().iter() {
                 match status {
                     TransactionStatus::Keep(_) => {
                         counters::COMMITTED_TXNS_COUNT

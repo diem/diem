@@ -166,7 +166,7 @@ fn test_executor_status() {
             KEEP_STATUS.clone(),
             DISCARD_STATUS.clone()
         ],
-        *output.state_compute_result().status()
+        *output.state_compute_result().compute_status()
     );
 }
 

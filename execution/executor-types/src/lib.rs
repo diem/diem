@@ -4,10 +4,7 @@
 #![forbid(unsafe_code)]
 
 use libra_crypto::{
-    hash::{
-        EventAccumulatorHasher, TransactionAccumulatorHasher, ACCUMULATOR_PLACEHOLDER_HASH,
-        SPARSE_MERKLE_PLACEHOLDER_HASH,
-    },
+    hash::{EventAccumulatorHasher, TransactionAccumulatorHasher, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
 use libra_types::{
@@ -19,8 +16,7 @@ use libra_types::{
     transaction::{TransactionStatus, Version},
 };
 use scratchpad::{ProofRead, SparseMerkleTree};
-use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, sync::Arc};
+use std::{cmp::max, collections::HashMap, sync::Arc};
 use storage_proto::TreeState;
 
 /// A structure that summarizes the result of the execution needed for consensus to agree on.
@@ -33,53 +29,66 @@ use storage_proto::TreeState;
 /// which is going to simply pass the results between StateComputer and TxnManager.
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct StateComputeResult {
-    pub executed_state: ExecutedState,
+    /// `accu_root_hash`(transaction accumulator root hash) is identified as `state_id` in Consensus.
+    accu_root_hash: HashValue,
+    /// Represents the roots of all the full subtrees from left to right in this accumulator
+    /// after the execution. For details, please see [`InMemoryAccumulator`](accumulator::InMemoryAccumulator).
+    frozen_subtree_roots: Vec<HashValue>,
+    /// The number of leaves of the transaction accumulator after executing a proposed block.
+    /// This state must be persisted to ensure that on restart that the version is calculated correctly.
+    num_leaves: u64,
+    /// If set, this is the validator set that should be changed to if this block is committed.
+    /// TODO [Reconfiguration] the validators are currently ignored, no reconfiguration yet.
+    validators: Option<ValidatorSet>,
     /// The compute status (success/failure) of the given payload. The specific details are opaque
     /// for StateMachineReplication, which is merely passing it between StateComputer and
     /// TxnManager.
-    pub compute_status: Vec<TransactionStatus>,
+    compute_status: Vec<TransactionStatus>,
 }
 
 impl StateComputeResult {
+    pub fn new(
+        accu_root_hash: HashValue,
+        frozen_subtree_roots: Vec<HashValue>,
+        num_leaves: u64,
+        validators: Option<ValidatorSet>,
+        compute_status: Vec<TransactionStatus>,
+    ) -> Self {
+        Self {
+            accu_root_hash,
+            frozen_subtree_roots,
+            num_leaves,
+            validators,
+            compute_status,
+        }
+    }
+
     pub fn version(&self) -> Version {
-        self.executed_state.version
+        max(self.num_leaves, 1) - 1
     }
 
-    pub fn root_hash(&self) -> HashValue {
-        self.executed_state.state_id
+    pub fn state_id(&self) -> HashValue {
+        self.accu_root_hash
     }
 
-    pub fn status(&self) -> &Vec<TransactionStatus> {
+    pub fn compute_status(&self) -> &Vec<TransactionStatus> {
         &self.compute_status
     }
 
-    pub fn has_reconfiguration(&self) -> bool {
-        self.executed_state.validators.is_some()
+    pub fn validators(&self) -> &Option<ValidatorSet> {
+        &self.validators
     }
-}
 
-/// Executed state derived from StateComputeResult that is maintained with every proposed block.
-/// `state_id`(transaction accumulator root hash) summarized both the information of the version and
-/// the validators.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ExecutedState {
-    /// Tracks the execution state of a proposed block
-    pub state_id: HashValue,
-    /// Version of after executing a proposed block.  This state must be persisted to ensure
-    /// that on restart that the version is calculated correctly
-    pub version: Version,
-    /// If set, this is the validator set that should be changed to if this block is committed.
-    /// TODO [Reconfiguration] the validators are currently ignored, no reconfiguration yet.
-    pub validators: Option<ValidatorSet>,
-}
+    pub fn num_leaves(&self) -> u64 {
+        self.num_leaves
+    }
 
-impl ExecutedState {
-    pub fn state_for_genesis() -> Self {
-        ExecutedState {
-            state_id: *ACCUMULATOR_PLACEHOLDER_HASH,
-            version: 0,
-            validators: None,
-        }
+    pub fn frozen_subtree_roots(&self) -> &Vec<HashValue> {
+        &self.frozen_subtree_roots
+    }
+
+    pub fn has_reconfiguration(&self) -> bool {
+        self.validators.is_some()
     }
 }
 
@@ -232,18 +241,16 @@ impl ProcessedVMOutput {
     }
 
     pub fn state_compute_result(&self) -> StateComputeResult {
-        let num_leaves = self.executed_trees().txn_accumulator().num_leaves();
-        let version = if num_leaves == 0 { 0 } else { num_leaves - 1 };
+        let txn_accu = self.executed_trees().txn_accumulator();
         StateComputeResult {
             // Now that we have the root hash and execution status we can send the response to
             // consensus.
             // TODO: The VM will support a special transaction to set the validators for the
             // next epoch that is part of a block execution.
-            executed_state: ExecutedState {
-                state_id: self.accu_root(),
-                version,
-                validators: self.validators.clone(),
-            },
+            accu_root_hash: self.accu_root(),
+            num_leaves: txn_accu.num_leaves(),
+            validators: self.validators.clone(),
+            frozen_subtree_roots: txn_accu.frozen_subtree_roots().clone(),
             compute_status: self
                 .transaction_data()
                 .iter()

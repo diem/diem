@@ -98,11 +98,10 @@ impl<T> ExecutedBlock<T> {
     }
 
     pub fn block_info(&self) -> BlockInfo {
-        let executed_state = self.compute_result().executed_state;
         self.block().gen_block_info(
-            executed_state.state_id,
-            executed_state.version,
-            executed_state.validators,
+            self.compute_result().state_id(),
+            self.compute_result().version(),
+            self.compute_result().validators().clone(),
         )
     }
 }
