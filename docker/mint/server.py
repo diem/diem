@@ -45,7 +45,7 @@ def send_transaction():
     address = flask.request.args['address']
 
     # Return immediately if address is invalid
-    if re.match('^[a-f0-9]{64}$', address) is None:
+    if re.match('^[a-f0-9]{32}$', address) is None:
         return 'Malformed address', 400
 
     try:
