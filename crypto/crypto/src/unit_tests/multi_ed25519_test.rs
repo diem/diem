@@ -2,20 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    traits::*,
-};
-
-use core::convert::TryFrom;
-use rand::{rngs::StdRng, SeedableRng};
-
-use crate::{
-    ed25519::{compat, ED25519_PUBLIC_KEY_LENGTH},
+    ed25519::{compat, Ed25519PrivateKey, Ed25519PublicKey, ED25519_PUBLIC_KEY_LENGTH},
     hash::HashValue,
     multi_ed25519::{MultiEd25519PrivateKey, MultiEd25519PublicKey},
     test_utils::TEST_SEED,
+    traits::*,
     CryptoMaterialError::{ValidationError, WrongLengthError},
 };
+
+use crate::multi_ed25519::MultiEd25519Signature;
+use core::convert::TryFrom;
+use once_cell::sync::Lazy;
+use rand::{rngs::StdRng, SeedableRng};
+
+static MESSAGE: &'static [u8] = b"Test Message";
+static MESSAGE_HASH: Lazy<HashValue> = Lazy::new(|| HashValue::from_sha3_256(MESSAGE));
 
 // Helper function to generate N key pairs.
 fn generate_key_pairs(n: usize) -> Vec<(Ed25519PrivateKey, Ed25519PublicKey)> {
@@ -158,6 +159,48 @@ fn test_publickey_smallorder() {
     );
 }
 
+fn test_successful_signature_serialization(private_keys: &[Ed25519PrivateKey], threshold: u8) {
+    let multi_private_key = MultiEd25519PrivateKey::new(private_keys.to_vec(), threshold).unwrap();
+    let multi_public_key = MultiEd25519PublicKey::from(&multi_private_key);
+    let multi_signature = multi_private_key.sign_message(&MESSAGE_HASH);
+
+    // Serialize then Deserialize.
+    let multi_signature_serialized =
+        MultiEd25519Signature::try_from(&multi_signature.to_bytes()[..]);
+    assert!(multi_signature_serialized.is_ok());
+    let multi_signature_serialized_unwrapped = multi_signature_serialized.unwrap();
+    assert_eq!(multi_signature, multi_signature_serialized_unwrapped);
+    assert!(multi_signature_serialized_unwrapped
+        .verify(&MESSAGE_HASH, &multi_public_key)
+        .is_ok());
+}
+
+// Test multi-sig Ed25519 signature serialization.
+#[allow(clippy::redundant_clone)]
+#[test]
+fn test_multi_ed25519_signature_serialization() {
+    let keypairs_3 = generate_key_pairs(3);
+    let priv_keys_3: Vec<Ed25519PrivateKey> = keypairs_3.iter().map(|x| x.0.clone()).collect();
+
+    // Test 1 of 3
+    test_successful_signature_serialization(&priv_keys_3, 1);
+    // Test 2 of 3
+    test_successful_signature_serialization(&priv_keys_3, 2);
+    // Test 3 of 3
+    test_successful_signature_serialization(&priv_keys_3, 3);
+
+    // Construct from single Ed25519Signature.
+    let single_signature = priv_keys_3[0].sign_message(&MESSAGE_HASH);
+    let multi_signature = MultiEd25519Signature::from(&single_signature);
+    assert_eq!(1, multi_signature.signatures().len());
+    assert_eq!(multi_signature.signatures()[0], single_signature);
+    let multi_priv_key_1of3 = MultiEd25519PrivateKey::new(priv_keys_3.to_vec(), 1).unwrap();
+    let multi_pub_key_1of3 = MultiEd25519PublicKey::from(&multi_priv_key_1of3);
+    assert!(multi_signature
+        .verify(&MESSAGE_HASH, &multi_pub_key_1of3)
+        .is_ok());
+}
+
 // Test multi-sig Ed25519 signature verification.
 #[allow(clippy::redundant_clone)]
 #[test]
@@ -169,25 +212,22 @@ fn test_multi_ed25519_signature_verification() {
     let multi_private_key_7of10 = MultiEd25519PrivateKey::new(priv_keys_10.clone(), 7).unwrap();
     let multi_public_key_7of10 = MultiEd25519PublicKey::from(&multi_private_key_7of10);
 
-    let message = b"Test Message";
-    let message_hash = HashValue::from_sha3_256(message);
-
     // Verifying a 7-of-10 signature against a public key with the same threshold should pass.
-    let multi_signature_7of10 = multi_private_key_7of10.sign_message(&message_hash);
+    let multi_signature_7of10 = multi_private_key_7of10.sign_message(&MESSAGE_HASH);
     assert!(multi_signature_7of10
-        .verify(&message_hash, &multi_public_key_7of10)
+        .verify(&MESSAGE_HASH, &multi_public_key_7of10)
         .is_ok());
 
     // Verifying a 7-of-10 signature against a public key with bigger threshold (i.e., 8) should fail.
     let multi_public_key_8of10 = MultiEd25519PublicKey::new(pub_keys_10.clone(), 8).unwrap();
     assert!(multi_signature_7of10
-        .verify(&message_hash, &multi_public_key_8of10)
+        .verify(&MESSAGE_HASH, &multi_public_key_8of10)
         .is_err());
 
     // Verifying a 7-of-10 signature against a public key with smaller threshold (i.e., 6) should pass.
     let multi_public_key_6of10 = MultiEd25519PublicKey::new(pub_keys_10.clone(), 6).unwrap();
     assert!(multi_signature_7of10
-        .verify(&message_hash, &multi_public_key_6of10)
+        .verify(&MESSAGE_HASH, &multi_public_key_6of10)
         .is_ok());
 
     // Verifying a 7-of-10 signature against a reordered MultiEd25519PublicKey should fail.
@@ -198,6 +238,6 @@ fn test_multi_ed25519_signature_verification() {
     let multi_public_key_7of10_reversed =
         MultiEd25519PublicKey::new(pub_keys_10_reversed, 7).unwrap();
     assert!(multi_signature_7of10
-        .verify(&message_hash, &multi_public_key_7of10_reversed)
+        .verify(&MESSAGE_HASH, &multi_public_key_7of10_reversed)
         .is_err());
 }
