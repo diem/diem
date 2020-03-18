@@ -216,13 +216,13 @@ pub fn main() {
     } else if args.run_ci_suite {
         perf_msg = Some(exit_on_error(runner.run_ci_suite()));
     } else if let Some(experiment_name) = args.run {
-        runner
-            .cleanup_and_run(get_experiment(
-                &experiment_name,
-                &args.last,
-                &runner.cluster,
-            ))
-            .unwrap();
+        let result = runner.cleanup_and_run(get_experiment(
+            &experiment_name,
+            &args.last,
+            &runner.cluster,
+        ));
+        runner.cleanup();
+        result.unwrap();
         info!(
             "{}Experiment Result: {}{}",
             style::Bold,
@@ -706,6 +706,7 @@ impl ClusterTestRunner {
             &mut self.report,
             &mut global_emit_job_request,
             self.emit_to_validator,
+            &self.cluster_swarm,
         );
         {
             let logs = &mut self.logs;
@@ -950,7 +951,11 @@ impl ClusterTestRunner {
     }
 
     fn cleanup(&mut self) {
-        if self.cluster_swarm.is_none() {
+        if let Some(cluster_swarm) = (&self.cluster_swarm).as_ref() {
+            self.runtime
+                .block_on(cluster_swarm.remove_all_network_effects())
+                .expect("remove_all_network_effects failed on cluster_swarm");
+        } else {
             let futures = self.cluster.all_instances().map(|instance| async move {
                 RemoveNetworkEffects::new(instance.clone())
                     .apply()

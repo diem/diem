@@ -9,7 +9,7 @@ use anyhow::{bail, format_err, Result};
 use async_trait::async_trait;
 
 use futures::{future::try_join_all, lock::Mutex};
-use k8s_openapi::api::core::v1::{ConfigMap, Pod};
+use k8s_openapi::api::core::v1::{ConfigMap, Node, Pod};
 use kube::{
     api::{Api, PostParams},
     client::APIClient,
@@ -19,7 +19,9 @@ use libra_logger::*;
 use util::retry;
 
 use crate::{cluster_swarm::ClusterSwarm, instance::Instance};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
+use k8s_openapi::api::batch::v1::Job;
 use kube::api::ListParams;
 use libra_config::config::DEFAULT_JSON_RPC_PORT;
 
@@ -122,6 +124,61 @@ impl ClusterSwarmKube {
             .map_err(|e| format_err!("serde_json::from_value failed: {}", e))
     }
 
+    async fn wait_job_completion(&self, job_name: &str, back_off_limit: u32) -> Result<bool> {
+        retry::retry_async(retry::fixed_retry_strategy(5000, 60), || {
+            let job_api: Api<Job> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
+            let job_name = job_name.to_string();
+            Box::pin(async move {
+                match job_api.get(&job_name).await {
+                    Ok(job) => {
+                        let job_status = job
+                            .status
+                            .ok_or_else(|| format_err!("status not found for job {}", job_name))?;
+                        if let Some(succeeded) = job_status.succeeded {
+                            if succeeded == 1 {
+                                return Ok(true);
+                            }
+                        }
+                        if let Some(failed) = job_status.succeeded {
+                            if failed as u32 == back_off_limit + 1 {
+                                error!("job {} failed to complete", job_name);
+                                return Ok(false);
+                            }
+                        }
+                        bail!("job in still in progress {}", job_name)
+                    }
+                    Err(e) => bail!("job_api.get failed for job {} : {:?}", job_name, e),
+                }
+            })
+        })
+        .await
+    }
+
+    async fn run_jobs(&self, jobs: Vec<Job>, back_off_limit: u32) -> Result<()> {
+        let pp = PostParams::default();
+        let job_api: Api<Job> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
+        let create_jobs_futures = jobs.iter().map(|job| job_api.create(&pp, job));
+        let job_names: Vec<String> = try_join_all(create_jobs_futures)
+            .await?
+            .into_iter()
+            .map(|job| -> Result<String, anyhow::Error> {
+                Ok(job
+                    .metadata
+                    .ok_or_else(|| format_err!("metadata not found for job"))?
+                    .name
+                    .ok_or_else(|| format_err!("name not found for job"))?)
+            })
+            .collect::<Result<_, _>>()?;
+        let wait_jobs_futures = job_names
+            .iter()
+            .map(|job_name| self.wait_job_completion(job_name, back_off_limit));
+        let wait_jobs_results = try_join_all(wait_jobs_futures).await?;
+        if wait_jobs_results.into_iter().any(|r| !r) {
+            bail!("one of the jobs failed")
+        }
+        Ok(())
+    }
+
     async fn get_pod_node_and_ip(&self, pod_name: &str) -> Result<(String, String)> {
         retry::retry_async(retry::fixed_retry_strategy(10000, 60), || {
             let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
@@ -188,6 +245,83 @@ impl ClusterSwarmKube {
 
 #[async_trait]
 impl ClusterSwarm for ClusterSwarmKube {
+    async fn remove_all_network_effects(&self) -> Result<()> {
+        debug!("Trying to remove_all_network_effects");
+        let back_off_limit = 2;
+
+        let node_api: Api<Node> = Api::all(self.client.clone());
+        let lp = ListParams::default().labels("nodeType=validators");
+        let jobs: Vec<Job> = node_api
+            .list(&lp)
+            .await?
+            .iter()
+            .map(|node| -> Result<Job, anyhow::Error> {
+                let node_name = node
+                    .metadata
+                    .as_ref()
+                    .ok_or_else(|| format_err!("metadata not found for node"))?
+                    .name
+                    .as_ref()
+                    .ok_or_else(|| format_err!("name not found for node"))?
+                    .clone();
+                let suffix = thread_rng()
+                    .sample_iter(&Alphanumeric)
+                    .take(10)
+                    .collect::<String>()
+                    .to_ascii_lowercase();
+                let job_name = format!("remove-network-effects-{}", suffix);
+                let job_yaml = format!(
+                    include_str!("job_template.yaml"),
+                    name = &job_name,
+                    label = "remove-network-effects",
+                    image = "853397791086.dkr.ecr.us-west-2.amazonaws.com/iproute2:latest",
+                    node_name = node_name,
+                    command = "tc qdisc delete dev eth0 root || true",
+                    back_off_limit = back_off_limit,
+                );
+                debug!("Removing network effects from node {}", node_name);
+                let job_spec: serde_yaml::Value = serde_yaml::from_str(&job_yaml)?;
+                let job_spec = serde_json::value::to_value(job_spec)?;
+                serde_json::from_value(job_spec)
+                    .map_err(|e| format_err!("serde_json::from_value failed: {}", e))
+            })
+            .collect::<Result<_, _>>()?;
+        self.run_jobs(jobs, back_off_limit).await
+    }
+
+    async fn run(
+        &self,
+        instance: &Instance,
+        docker_image: &str,
+        command: String,
+        job_name: &str,
+    ) -> Result<()> {
+        let back_off_limit = 0;
+        let suffix = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(10)
+            .collect::<String>()
+            .to_ascii_lowercase();
+        let job_full_name = format!("{}-{}", job_name, suffix);
+        let job_yaml = format!(
+            include_str!("job_template.yaml"),
+            name = &job_full_name,
+            label = job_name,
+            image = docker_image,
+            node_name = instance
+                .k8s_node()
+                .ok_or_else(|| { format_err!("k8s_node not found for Instance") })?,
+            command = &command,
+            back_off_limit = back_off_limit,
+        );
+        let job_spec: serde_yaml::Value = serde_yaml::from_str(&job_yaml)?;
+        let job_spec = serde_json::value::to_value(job_spec)?;
+        let job_spec = serde_json::from_value(job_spec)
+            .map_err(|e| format_err!("serde_json::from_value failed: {}", e))?;
+        debug!("Running job {} for instance {}", job_name, instance);
+        self.run_jobs(vec![job_spec], back_off_limit).await
+    }
+
     async fn validator_instances(&self) -> Vec<Instance> {
         self.validator_to_node
             .lock()

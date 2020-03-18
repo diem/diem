@@ -31,7 +31,7 @@ use crate::{
     tx_emitter::{EmitJobRequest, TxEmitter},
 };
 
-use crate::health::TraceTail;
+use crate::{cluster_swarm::cluster_swarm_kube::ClusterSwarmKube, health::TraceTail};
 use async_trait::async_trait;
 pub use cpu_flamegraph::{CpuFlamegraph, CpuFlamegraphParams};
 use std::collections::HashMap;
@@ -59,6 +59,7 @@ pub struct Context<'a> {
     pub report: &'a mut SuiteReport,
     pub global_emit_job_request: &'a mut Option<EmitJobRequest>,
     pub emit_to_validator: bool,
+    pub cluster_swarm: &'a Option<ClusterSwarmKube>,
 }
 
 impl<'a> Context<'a> {
@@ -70,6 +71,7 @@ impl<'a> Context<'a> {
         report: &'a mut SuiteReport,
         emit_job_request: &'a mut Option<EmitJobRequest>,
         emit_to_validator: bool,
+        cluster_swarm: &'a Option<ClusterSwarmKube>,
     ) -> Self {
         Context {
             tx_emitter,
@@ -79,6 +81,7 @@ impl<'a> Context<'a> {
             report,
             global_emit_job_request: emit_job_request,
             emit_to_validator,
+            cluster_swarm,
         }
     }
 }
