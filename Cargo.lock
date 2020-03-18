@@ -1594,6 +1594,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "generate-format"
 version = "0.1.0"
 dependencies = [
+ "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-serde-reflection 0.1.0",
  "libra-types 0.1.0",
