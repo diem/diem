@@ -10,6 +10,17 @@ use futures::{future::try_join_all, try_join};
 
 #[async_trait]
 pub trait ClusterSwarm {
+    async fn remove_all_network_effects(&self) -> Result<()>;
+
+    /// Runs the given command in a container against the given Instance
+    async fn run(
+        &self,
+        instance: &Instance,
+        docker_image: &str,
+        command: String,
+        job_name: &str,
+    ) -> Result<()>;
+
     async fn validator_instances(&self) -> Vec<Instance>;
 
     async fn fullnode_instances(&self) -> Vec<Instance>;

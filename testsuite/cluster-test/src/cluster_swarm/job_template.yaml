@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {name}
+  labels:
+    app: {label}
+spec:
+  template:
+    metadata:
+      labels:
+        app: {label}
+    spec:
+      nodeName: {node_name}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: main
+        image: {image}
+        command: ["sh",  "-c", "{command}"]
+        securityContext:
+          privileged: true
+          capabilities:
+            add: ["SYS_ADMIN"]
+      restartPolicy: Never
+  backoffLimit: {back_off_limit}
