@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use crate::{
-    crypto_proxies::EpochInfo,
+    epoch_info::EpochInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     waypoint::Waypoint,
 };

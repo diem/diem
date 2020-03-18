@@ -17,7 +17,8 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
     block_info::Round,
-    crypto_proxies::{EpochInfo, ValidatorInfo, ValidatorSet},
+    crypto_proxies::{ValidatorInfo, ValidatorSet},
+    epoch_info::EpochInfo,
     ledger_info::LedgerInfo,
     validator_verifier::ValidatorVerifier,
 };

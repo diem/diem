@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    crypto_proxies::{EpochInfo, ValidatorSet},
+    crypto_proxies::ValidatorSet,
+    epoch_info::EpochInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::Version,
     validator_change::{ValidatorChangeProof, VerifierType},

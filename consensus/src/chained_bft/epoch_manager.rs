@@ -31,7 +31,7 @@ use libra_config::config::{ConsensusConfig, ConsensusProposerType};
 use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
-    crypto_proxies::EpochInfo,
+    epoch_info::EpochInfo,
     validator_change::{ValidatorChangeProof, VerifierType},
 };
 use network::protocols::network::Event;

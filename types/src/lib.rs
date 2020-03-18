@@ -16,6 +16,7 @@ pub mod discovery_info;
 pub mod discovery_set;
 pub mod event;
 pub mod event_subscription;
+pub mod epoch_info;
 pub mod get_with_proof;
 pub mod language_storage;
 pub mod ledger_info;
