@@ -55,6 +55,14 @@ impl BlockMetadata {
         let vote_maps = lcs::to_bytes(&self.previous_block_votes)?;
         Ok((id, self.timestamp_usecs, vote_maps, self.proposer))
     }
+
+    pub fn proposer(&self) -> AccountAddress {
+        self.proposer
+    }
+
+    pub fn voters(&self) -> Vec<AccountAddress> {
+        self.previous_block_votes.keys().cloned().collect()
+    }
 }
 
 pub fn new_block_event_key() -> EventKey {
