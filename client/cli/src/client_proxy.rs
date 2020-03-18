@@ -26,7 +26,7 @@ use libra_types::{
     account_state::AccountState,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{
-        authenticator::{AuthenticationKey, AUTHENTICATION_KEY_LENGTH},
+        authenticator::AuthenticationKey,
         helpers::{create_unsigned_txn, create_user_txn, TransactionSigner},
         parse_as_transaction_argument, RawTransaction, Script, SignedTransaction,
         TransactionArgument, TransactionPayload, Version,
@@ -1074,7 +1074,7 @@ impl ClientProxy {
     fn authentication_key_from_string(data: &str) -> Result<AuthenticationKey> {
         let bytes_vec: Vec<u8> = hex::decode(data.parse::<String>()?)?;
         ensure!(
-            bytes_vec.len() == AUTHENTICATION_KEY_LENGTH,
+            bytes_vec.len() == AuthenticationKey::LENGTH,
             "The authentication key string {:?} is of invalid length. Authentication keys must be 32-bytes long"
         );
 
