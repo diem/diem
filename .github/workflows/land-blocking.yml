@@ -19,7 +19,7 @@ jobs:
       - name: Check kill switch
         id: check_ks
         run: |
-          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }} ; then
+          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }} || ! .circleci/should_run_lbt.sh ; then
             echo "::set-output name=should_run::false";
           else
             echo "::set-output name=should_run::true";
@@ -58,7 +58,7 @@ jobs:
       - name: Check kill switch
         id: check_ks
         run: |
-          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }} ; then
+          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }} || ! .circleci/should_run_lbt.sh ; then
             echo "::set-output name=should_run::false";
           else
             echo "::set-output name=should_run::true";
@@ -85,7 +85,7 @@ jobs:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             // Check kill switch
-            if (${{secrets.KILL_SWITCH_LAND_BLOCKING_TEST}}) {
+            if (${{secrets.KILL_SWITCH_LAND_BLOCKING_TEST}} || ${{steps.check_ks.outputs.should_run}} != 'true') {
               console.log('Kill switch is set. Will skip this step.');
               return;
             }
@@ -201,7 +201,7 @@ jobs:
       - name: Check kill switch
         id: check_ks
         run: |
-          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }} ; then
+          if [[ ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }} || ! .circleci/should_run_lbt.sh ]] ; then
             echo "::set-output name=should_run::false";
           else
             echo "::set-output name=should_run::true";
@@ -230,7 +230,7 @@ jobs:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             // Check kill switch
-            if (${{secrets.KILL_SWITCH_LAND_BLOCKING_TEST}}) {
+            if (${{secrets.KILL_SWITCH_LAND_BLOCKING_TEST}} || ${{steps.check_ks.outputs.should_run}} != 'true') {
               console.log('Kill switch is set. Will skip this step.');
               return;
             }
