@@ -7,8 +7,8 @@ use executor::Executor;
 use executor_types::ExecutedTrees;
 use libra_config::config::NodeConfig;
 use libra_types::{
-    crypto_proxies::ValidatorChangeProof, event_subscription::EventSubscription,
-    ledger_info::LedgerInfoWithSignatures, transaction::TransactionListWithProof,
+    event_subscription::EventSubscription, ledger_info::LedgerInfoWithSignatures,
+    transaction::TransactionListWithProof, validator_change::ValidatorChangeProof,
 };
 use libra_vm::LibraVM;
 use std::sync::Arc;

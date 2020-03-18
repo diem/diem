@@ -10,7 +10,6 @@ use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
-    crypto_proxies::ValidatorChangeProof,
     event::EventHandle,
     get_with_proof::{RequestItem, ResponseItem},
     ledger_info::LedgerInfoWithSignatures,
@@ -24,6 +23,7 @@ use libra_types::{
     },
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{Transaction, Version},
+    validator_change::ValidatorChangeProof,
     vm_error::StatusCode,
 };
 use rand::{

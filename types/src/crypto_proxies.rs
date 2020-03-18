@@ -40,7 +40,6 @@ use std::{collections::BTreeMap, fmt};
 
 pub type ValidatorInfo = RawValidatorInfo<Ed25519PublicKey>;
 pub type ValidatorSet = RawValidatorSet<Ed25519PublicKey>;
-pub use crate::validator_change::ValidatorChangeProof;
 use std::sync::Arc;
 
 #[derive(Clone, Debug)]

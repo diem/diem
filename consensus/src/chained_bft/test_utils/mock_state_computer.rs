@@ -11,8 +11,8 @@ use executor_types::{ExecutedTrees, ProcessedVMOutput};
 use futures::channel::mpsc;
 use libra_logger::prelude::*;
 use libra_types::{
-    crypto_proxies::{ValidatorChangeProof, ValidatorSet},
-    ledger_info::LedgerInfoWithSignatures,
+    crypto_proxies::ValidatorSet, ledger_info::LedgerInfoWithSignatures,
+    validator_change::ValidatorChangeProof,
 };
 use std::sync::Arc;
 use termion::color::*;

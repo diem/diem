@@ -16,9 +16,9 @@ use futures::{
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
 use libra_mempool::{CommitNotification, CommitResponse};
 use libra_types::{
-    contract_event::ContractEvent, crypto_proxies::ValidatorChangeProof,
-    event_subscription::EventSubscription, ledger_info::LedgerInfoWithSignatures,
-    transaction::Transaction, waypoint::Waypoint,
+    contract_event::ContractEvent, event_subscription::EventSubscription,
+    ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
+    validator_change::ValidatorChangeProof, waypoint::Waypoint,
 };
 use libra_vm::LibraVM;
 use std::{sync::Arc, time::Duration};
