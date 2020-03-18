@@ -447,7 +447,7 @@ impl<'env> ModuleTranslator<'env> {
                         self.writer,
                         "call __t{} := CopyOrMoveRef({});",
                         dest,
-                        func_env.get_local_name(*src as usize)
+                        func_env.get_local_name(*src)
                     );
                 } else {
                     emitln!(
@@ -464,7 +464,7 @@ impl<'env> ModuleTranslator<'env> {
                         self.writer,
                         "call __t{} := CopyOrMoveRef({});",
                         dest,
-                        func_env.get_local_name(*src as usize)
+                        func_env.get_local_name(*src)
                     )
                 } else {
                     emitln!(
@@ -476,22 +476,22 @@ impl<'env> ModuleTranslator<'env> {
                 }
             }
             StLoc(dest, src) => {
-                if self.get_local_type(func_env, *dest as usize).is_reference() {
-                    let name = func_env.get_local_name(*dest as usize);
+                if self.get_local_type(func_env, *dest).is_reference() {
+                    let name = func_env.get_local_name(*dest);
                     emitln!(
                         self.writer,
                         "call {} := CopyOrMoveRef(__t{});",
                         &name,
                         src
                     );
-                    emitln!(self.writer, &track_local(*dest as usize, &name))
+                    emitln!(self.writer, &track_local(*dest, &name))
                 } else {
                     emitln!(
                         self.writer,
                         "call __tmp := CopyOrMoveValue(GetLocal(__m, __frame + {}));",
                         src
                     );
-                    emitln!(self.writer, &update_and_track_local(*dest as usize, "__tmp"));
+                    emitln!(self.writer, &update_and_track_local(*dest, "__tmp"));
                 }
             }
             BorrowLoc(dest, src) => {
@@ -501,7 +501,7 @@ impl<'env> ModuleTranslator<'env> {
                     dest,
                     src,
                     boogie_type_value(func_env.module_env.env,
-                       &func_env.get_local_type(*src as usize))
+                       &func_env.get_local_type(*src))
                 );
                 save_borrowed_value(dest);
             }
@@ -1175,7 +1175,7 @@ impl<'env> ModuleTranslator<'env> {
                 BorrowLoc(dst, src) => {
                     let ty = self.get_local_type(func_env, *dst);
                     if ty.is_mutual_reference() {
-                        mutual_local_borrows.insert(*src as usize);
+                        mutual_local_borrows.insert(*src);
                         if self.has_update_invariant_on_release(&ty) {
                             local_to_before_borrow_idx.insert(*dst, num_mut_refs);
                             num_mut_refs += 1;
@@ -1193,16 +1193,15 @@ impl<'env> ModuleTranslator<'env> {
                     // If src has update invariants to check for then insert the dst to
                     // the map and point to the same before_borrow index so that we can
                     // later use dst to find the before_borrow index
-                    let src_idx = *src as usize;
-                    if local_to_before_borrow_idx.contains_key(&src_idx) {
-                        let idx = local_to_before_borrow_idx[&src_idx];
+                    if local_to_before_borrow_idx.contains_key(src) {
+                        let idx = local_to_before_borrow_idx[src];
                         local_to_before_borrow_idx.insert(*dst, idx);
                     }
                 }
                 StLoc(dst, src) => {
                     if local_to_before_borrow_idx.contains_key(src) {
                         let idx = local_to_before_borrow_idx[src];
-                        local_to_before_borrow_idx.insert(*dst as usize, idx);
+                        local_to_before_borrow_idx.insert(*dst, idx);
                     }
                 }
                 _ => {}
@@ -1302,13 +1301,13 @@ impl<'env> ModuleTranslator<'env> {
                     if let Pack(temp_dest, ..) = &code.code[offset] {
                         match &code.code[offset + 1] {
                             MoveLoc(effective_dest, src) | CopyLoc(effective_dest, src) => {
-                                if *src as usize == *temp_dest {
+                                if *src == *temp_dest {
                                     return *effective_dest;
                                 }
                             }
                             StLoc(effective_dest, src) => {
                                 if *src == *temp_dest {
-                                    return *effective_dest as usize;
+                                    return *effective_dest;
                                 }
                             }
                             _ => {}
@@ -1330,8 +1329,8 @@ impl<'env> ModuleTranslator<'env> {
             // Enforce invariants on references going out of scope.
             if let Some(dead_refs) = offset_to_dead_refs.get(&(offset as u16)) {
                 for ref_idx in dead_refs {
-                    if let Some(idx) = local_to_before_borrow_idx.get(&(*ref_idx as usize)) {
-                        let ty = self.get_local_type(func_env, *ref_idx as usize);
+                    if let Some(idx) = local_to_before_borrow_idx.get(ref_idx) {
+                        let ty = self.get_local_type(func_env, *ref_idx);
                         self.enforce_borrowed_invariant(func_env, &ty, *idx);
                         released_before_borrows.insert(*idx);
                     }

@@ -8,10 +8,11 @@ use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::{compiler::compile_module, parser::parse_module};
 use libra_types::account_address::AccountAddress;
 use stackless_bytecode_generator::{
-    stackless_bytecode::StacklessBytecode, stackless_bytecode_generator::StacklessModuleGenerator,
+    stackless_bytecode::{StacklessBytecode, TempIndex},
+    stackless_bytecode_generator::StacklessModuleGenerator,
 };
 use std::collections::BTreeSet;
-use vm::file_format::{LocalIndex, SignatureToken};
+use vm::file_format::SignatureToken;
 
 #[test]
 fn test_branching() {
@@ -55,7 +56,7 @@ fn test_branching() {
         // Check that t_ref and value_ref go out of scope only at the second last line.
         // Notice that s_ref is still alive aftr function returns.
         if code_offset == 17 {
-            let expected: BTreeSet<LocalIndex> = vec![11, 14].iter().cloned().collect();
+            let expected: BTreeSet<TempIndex> = vec![11, 14].iter().cloned().collect();
             assert_eq!(dead_refs, expected);
         } else {
             assert!(dead_refs.is_empty());
@@ -99,7 +100,7 @@ fn test_loop() {
     for (code_offset, dead_refs) in res {
         // check that all three mutable references go out of scope only at WriteRef
         if code_offset == 15 {
-            let expected: BTreeSet<LocalIndex> = vec![9, 11, 14].iter().cloned().collect();
+            let expected: BTreeSet<TempIndex> = vec![9, 11, 14].iter().cloned().collect();
             assert_eq!(dead_refs, expected);
         } else {
             assert!(dead_refs.is_empty());
@@ -142,7 +143,7 @@ fn test_borrowloc_call() {
     for (code_offset, dead_refs) in res {
         // check that all three mutable references go out of scope only at WriteRef
         if code_offset == 10 {
-            let expected: BTreeSet<LocalIndex> = vec![6, 9].iter().cloned().collect();
+            let expected: BTreeSet<TempIndex> = vec![6, 9].iter().cloned().collect();
             assert_eq!(dead_refs, expected);
         } else {
             assert!(dead_refs.is_empty());

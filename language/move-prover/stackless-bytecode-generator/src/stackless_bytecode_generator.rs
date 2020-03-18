@@ -1,12 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::stackless_bytecode::StacklessBytecode;
+use crate::stackless_bytecode::{
+    StacklessBytecode::{self, *},
+    TempIndex,
+};
+use std::collections::BTreeMap;
 use vm::{
     access::ModuleAccess,
     file_format::{
-        Bytecode, CompiledModule, CompiledProgram, FieldDefinitionIndex, FunctionDefinition,
-        LocalsSignatureIndex, SignatureToken,
+        Bytecode, CodeOffset, CompiledModule, CompiledProgram, FieldDefinitionIndex,
+        FunctionDefinition, LocalsSignatureIndex, SignatureToken,
     },
     views::{
         FieldDefinitionView, FunctionDefinitionView, FunctionSignatureView, StructDefinitionView,
@@ -24,7 +28,7 @@ pub struct StacklessProgram {
     pub compiled_modules: Vec<CompiledModule>,
 }
 
-struct StacklessBytecodeGenerator<'a> {
+pub struct StacklessBytecodeGenerator<'a> {
     module: &'a CompiledModule,
     function_definition_view: FunctionDefinitionView<'a, CompiledModule>,
     temp_count: usize,
@@ -153,7 +157,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             Bytecode::StLoc(idx) => {
                 let operand_index = self.temp_stack.pop().unwrap();
                 self.code
-                    .push(StacklessBytecode::StLoc(*idx, operand_index));
+                    .push(StacklessBytecode::StLoc(*idx as TempIndex, operand_index));
             }
 
             Bytecode::Ret => {
@@ -345,7 +349,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(signature); // same type as the value copied
-                self.code.push(StacklessBytecode::CopyLoc(temp_index, *idx));
+                self.code
+                    .push(StacklessBytecode::CopyLoc(temp_index, *idx as TempIndex));
                 self.temp_count += 1;
             }
 
@@ -355,7 +360,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 self.local_types.push(signature); // same type as the value copied
-                self.code.push(StacklessBytecode::MoveLoc(temp_index, *idx));
+                self.code
+                    .push(StacklessBytecode::MoveLoc(temp_index, *idx as TempIndex));
                 self.temp_count += 1;
             }
 
@@ -367,7 +373,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.local_types
                     .push(SignatureToken::MutableReference(Box::new(signature)));
                 self.code
-                    .push(StacklessBytecode::BorrowLoc(temp_index, *idx));
+                    .push(StacklessBytecode::BorrowLoc(temp_index, *idx as TempIndex));
                 self.temp_count += 1;
             }
 
@@ -379,7 +385,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.local_types
                     .push(SignatureToken::Reference(Box::new(signature)));
                 self.code
-                    .push(StacklessBytecode::BorrowLoc(temp_index, *idx));
+                    .push(StacklessBytecode::BorrowLoc(temp_index, *idx as TempIndex));
                 self.temp_count += 1;
             }
 
@@ -791,5 +797,275 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             ),
             _ => sig.clone(),
         }
+    }
+
+    /// Remove MoveLoc, StLoc and CopyLoc from Stackless Bytecode
+    pub fn simplify_bytecode(code: &[StacklessBytecode]) -> Vec<StacklessBytecode> {
+        let mut new_code = vec![];
+        let mut new_offsets = BTreeMap::new(); // Used later to decide the new offset to branch to
+        let mut equiv_temps = BTreeMap::new(); // Stores temp->local mappings
+        let mut new_offset = 0;
+
+        for (i, bytecode) in code.iter().enumerate() {
+            match bytecode {
+                StacklessBytecode::MoveLoc(dest, src) | StacklessBytecode::CopyLoc(dest, src) => {
+                    equiv_temps.insert(*dest, *src);
+                    new_offsets.insert(i as CodeOffset, new_offset); // jump to the next instruction
+                }
+                StacklessBytecode::StLoc(dest, src) => {
+                    equiv_temps.insert(*src, *dest);
+                    // StLoc can never be the beginning of a basic block so there's no need
+                    // to record its new offset
+                }
+                _ => {
+                    new_offsets.insert(i as CodeOffset, new_offset);
+                    new_offset += 1;
+                }
+            }
+        }
+
+        let temp_to_local = |t: &TempIndex| -> TempIndex { *equiv_temps.get(t).unwrap_or(t) };
+
+        for bytecode in code {
+            match bytecode {
+                BorrowLoc(dest, src) => {
+                    new_code.push(BorrowLoc(temp_to_local(dest), temp_to_local(src)));
+                }
+                ReadRef(dest, src) => {
+                    new_code.push(ReadRef(temp_to_local(dest), temp_to_local(src)));
+                }
+                WriteRef(dest, src) => {
+                    new_code.push(WriteRef(temp_to_local(dest), temp_to_local(src)));
+                }
+                FreezeRef(dest, src) => {
+                    new_code.push(FreezeRef(temp_to_local(dest), temp_to_local(src)));
+                }
+                Call(dest_vec, f, l, src_vec) => {
+                    let new_dest_vec = dest_vec.iter().map(|t| temp_to_local(t)).collect();
+                    let new_src_vec = src_vec.iter().map(|t| temp_to_local(t)).collect();
+                    new_code.push(Call(new_dest_vec, *f, *l, new_src_vec));
+                }
+                Ret(v) => {
+                    new_code.push(Ret(v.iter().map(|t| temp_to_local(t)).collect()));
+                }
+                Pack(dest, s, l, src_vec) => {
+                    let new_src_vec = src_vec.iter().map(|t| temp_to_local(t)).collect();
+                    new_code.push(Pack(temp_to_local(dest), *s, *l, new_src_vec));
+                }
+                Unpack(dest_vec, s, l, src) => {
+                    let new_dest_vec = dest_vec.iter().map(|t| temp_to_local(t)).collect();
+                    new_code.push(Unpack(new_dest_vec, *s, *l, temp_to_local(src)));
+                }
+                BorrowField(dest, src, f) => {
+                    new_code.push(BorrowField(temp_to_local(dest), temp_to_local(src), *f));
+                }
+                MoveToSender(t, s, l) => {
+                    new_code.push(MoveToSender(temp_to_local(t), *s, *l));
+                }
+                MoveFrom(dest, a, s, l) => {
+                    new_code.push(MoveFrom(temp_to_local(dest), temp_to_local(a), *s, *l));
+                }
+                BorrowGlobal(dest, a, s, l) => {
+                    new_code.push(BorrowGlobal(temp_to_local(dest), temp_to_local(a), *s, *l));
+                }
+                Exists(dest, a, s, l) => {
+                    new_code.push(Exists(temp_to_local(dest), temp_to_local(a), *s, *l));
+                }
+                GetGasRemaining(t) => {
+                    new_code.push(GetGasRemaining(temp_to_local(t)));
+                }
+                GetTxnSequenceNumber(t) => {
+                    new_code.push(GetTxnSequenceNumber(temp_to_local(t)));
+                }
+                GetTxnPublicKey(t) => {
+                    new_code.push(GetTxnPublicKey(temp_to_local(t)));
+                }
+                GetTxnSenderAddress(t) => {
+                    new_code.push(GetTxnSenderAddress(temp_to_local(t)));
+                }
+                GetTxnMaxGasUnits(t) => {
+                    new_code.push(GetTxnMaxGasUnits(temp_to_local(t)));
+                }
+                GetTxnGasUnitPrice(t) => {
+                    new_code.push(GetTxnGasUnitPrice(temp_to_local(t)));
+                }
+                LdTrue(t) => {
+                    new_code.push(LdTrue(temp_to_local(t)));
+                }
+                LdFalse(t) => {
+                    new_code.push(LdFalse(temp_to_local(t)));
+                }
+                LdU8(t, val) => {
+                    new_code.push(LdU8(temp_to_local(t), *val));
+                }
+                LdU64(t, val) => {
+                    new_code.push(LdU64(temp_to_local(t), *val));
+                }
+                LdU128(t, val) => {
+                    new_code.push(LdU128(temp_to_local(t), *val));
+                }
+                LdAddr(t, a) => {
+                    new_code.push(LdAddr(temp_to_local(t), *a));
+                }
+                LdByteArray(t, b) => {
+                    new_code.push(LdByteArray(temp_to_local(t), *b));
+                }
+                CastU8(dest, src) => {
+                    new_code.push(CastU8(temp_to_local(dest), temp_to_local(src)));
+                }
+                CastU64(dest, src) => {
+                    new_code.push(CastU64(temp_to_local(dest), temp_to_local(src)));
+                }
+                CastU128(dest, src) => {
+                    new_code.push(CastU128(temp_to_local(dest), temp_to_local(src)));
+                }
+                Not(dest, src) => {
+                    new_code.push(Not(temp_to_local(dest), temp_to_local(src)));
+                }
+                Add(dest, op1, op2) => {
+                    new_code.push(Add(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                Sub(dest, op1, op2) => {
+                    new_code.push(Sub(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                Mul(dest, op1, op2) => {
+                    new_code.push(Mul(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                Div(dest, op1, op2) => {
+                    new_code.push(Div(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                Mod(dest, op1, op2) => {
+                    new_code.push(Mod(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                BitOr(dest, op1, op2) => {
+                    new_code.push(BitOr(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                BitAnd(dest, op1, op2) => {
+                    new_code.push(BitAnd(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                Xor(dest, op1, op2) => {
+                    new_code.push(Xor(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                Shl(dest, op1, op2) => {
+                    new_code.push(Shl(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                Shr(dest, op1, op2) => {
+                    new_code.push(Shr(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                Lt(dest, op1, op2) => {
+                    new_code.push(Lt(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                Gt(dest, op1, op2) => {
+                    new_code.push(Gt(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                Le(dest, op1, op2) => {
+                    new_code.push(Le(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                Ge(dest, op1, op2) => {
+                    new_code.push(Ge(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                Or(dest, op1, op2) => {
+                    new_code.push(Or(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                And(dest, op1, op2) => {
+                    new_code.push(And(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                Eq(dest, op1, op2) => {
+                    new_code.push(Eq(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                Neq(dest, op1, op2) => {
+                    new_code.push(Neq(
+                        temp_to_local(dest),
+                        temp_to_local(op1),
+                        temp_to_local(op2),
+                    ));
+                }
+                Branch(offset) => {
+                    new_code.push(Branch(*new_offsets.get(offset).unwrap()));
+                }
+                BrTrue(offset, t) => {
+                    new_code.push(BrTrue(*new_offsets.get(offset).unwrap(), temp_to_local(t)));
+                }
+                BrFalse(offset, t) => {
+                    new_code.push(BrFalse(*new_offsets.get(offset).unwrap(), temp_to_local(t)));
+                }
+                Abort(t) => {
+                    new_code.push(Abort(temp_to_local(t)));
+                }
+                Pop(t) => {
+                    new_code.push(Pop(temp_to_local(t)));
+                }
+                _ => {}
+            }
+        }
+        new_code
     }
 }

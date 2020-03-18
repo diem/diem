@@ -5,7 +5,7 @@ use ir_to_bytecode::{compiler::compile_program, parser::parse_program};
 use libra_types::account_address::AccountAddress;
 use stackless_bytecode_generator::{
     stackless_bytecode::StacklessBytecode::{self, *},
-    stackless_bytecode_generator::StacklessProgramGenerator,
+    stackless_bytecode_generator::{StacklessBytecodeGenerator, StacklessProgramGenerator},
 };
 use stdlib::{stdlib_modules, StdLibOptions};
 use vm::file_format::{
@@ -612,12 +612,81 @@ fn transform_program_with_generics() {
     assert_eq!(actual_types, expected_types);
 }
 
+#[test]
+fn transform_and_simplify() {
+    let code = String::from(
+        "
+        module M {
+            struct S {
+                x: u64,
+            }
+
+            struct T {
+                x: u64,
+            }
+
+            bar(cond: bool) {
+                let s_ref: &mut Self.S;
+                let s: Self.S;
+                let t_ref: &mut Self.T;
+                let t: Self.T;
+                let x_ref: &mut u64;
+
+                s = S{x:3};
+                t = T{x:4};
+                s_ref = &mut s;
+                t_ref = &mut t;
+
+                if (copy(cond)) {
+                    x_ref = &mut copy(s_ref).x;
+                } else {
+                    x_ref = &mut move(t_ref).x;
+                }
+
+                *move(x_ref) = 10;
+                return;
+            }
+        }
+
+        ",
+    );
+    let (actual_code, _) = generate_code_from_string(code);
+    let actual_simplified_code = StacklessBytecodeGenerator::simplify_bytecode(&actual_code);
+    // simplified bytecode without unnecessary moves
+    let expected_simplified_code = vec![
+        LdU64(6, 3),
+        Pack(
+            2,
+            StructDefinitionIndex::new(0),
+            LocalsSignatureIndex::new(1),
+            vec![6],
+        ),
+        LdU64(8, 4),
+        Pack(
+            4,
+            StructDefinitionIndex::new(1),
+            LocalsSignatureIndex::new(1),
+            vec![8],
+        ),
+        BorrowLoc(1, 2),
+        BorrowLoc(3, 4),
+        BrFalse(9, 0),
+        BorrowField(5, 1, FieldDefinitionIndex::new(0)),
+        Branch(10),
+        BorrowField(5, 3, FieldDefinitionIndex::new(1)),
+        LdU64(17, 10),
+        WriteRef(5, 17),
+        Ret(vec![]),
+    ];
+
+    assert_eq!(actual_simplified_code, expected_simplified_code);
+}
+
 fn generate_code_from_string(code: String) -> (Vec<StacklessBytecode>, Vec<SignatureToken>) {
     let address = AccountAddress::default();
     let program = parse_program("file_name", &code).unwrap();
     let deps = stdlib_modules(StdLibOptions::Staged);
     let compiled_program = compile_program(address, program, deps).unwrap().0;
-    println!("{:?}", compiled_program);
     let res = StacklessProgramGenerator::new(compiled_program).generate_program();
     let code = res.module_functions[0][0].code.clone();
     let types = res.module_functions[0][0].local_types.clone();
