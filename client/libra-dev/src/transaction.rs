@@ -14,9 +14,8 @@ use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_types::{
     account_address::AccountAddress,
     transaction::{
-        authenticator::{AuthenticationKey, AUTHENTICATION_KEY_LENGTH},
-        helpers::TransactionSigner,
-        RawTransaction, SignedTransaction, TransactionArgument, TransactionPayload,
+        authenticator::AuthenticationKey, helpers::TransactionSigner, RawTransaction,
+        SignedTransaction, TransactionArgument, TransactionPayload,
     },
 };
 use std::{convert::TryFrom, slice, time::Duration};
@@ -57,7 +56,7 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
         update_last_error("receiver parameter must not be null.".to_string());
         return LibraStatus::InvalidArgument;
     }
-    let receiver_buf = slice::from_raw_parts(receiver, AUTHENTICATION_KEY_LENGTH);
+    let receiver_buf = slice::from_raw_parts(receiver, AuthenticationKey::LENGTH);
     let receiver_auth_key = match AuthenticationKey::try_from(receiver_buf) {
         Ok(result) => result,
         Err(e) => {
@@ -152,7 +151,7 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
         update_last_error("receiver parameter must not be null.".to_string());
         return LibraStatus::InvalidArgument;
     }
-    let receiver_buf = slice::from_raw_parts(receiver, AUTHENTICATION_KEY_LENGTH);
+    let receiver_buf = slice::from_raw_parts(receiver, AuthenticationKey::LENGTH);
     let receiver_auth_key = match AuthenticationKey::try_from(receiver_buf) {
         Ok(result) => result,
         Err(e) => {
@@ -326,7 +325,7 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
                     &args[..]
                 {
                     let mut auth_key_prefix_buffer =
-                        [0u8; AUTHENTICATION_KEY_LENGTH - AccountAddress::LENGTH];
+                        [0u8; AuthenticationKey::LENGTH - AccountAddress::LENGTH];
                     auth_key_prefix_buffer.copy_from_slice(auth_key_prefix.as_slice());
 
                     txn_payload = Some(LibraTransactionPayload {

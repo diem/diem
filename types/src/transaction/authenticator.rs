@@ -121,19 +121,20 @@ impl TransactionAuthenticator {
     }
 }
 
-pub const AUTHENTICATION_KEY_LENGTH: usize = 32;
-
 /// A struct that represents an account authentication key. An account's address is the last 16
 /// bytes of authentication key used to create it
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash, Clone, Copy, CryptoHasher)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct AuthenticationKey([u8; AUTHENTICATION_KEY_LENGTH]);
+pub struct AuthenticationKey([u8; AuthenticationKey::LENGTH]);
 
 impl AuthenticationKey {
     /// Create an authentication key from `bytes`
-    pub const fn new(bytes: [u8; AUTHENTICATION_KEY_LENGTH]) -> Self {
+    pub const fn new(bytes: [u8; Self::LENGTH]) -> Self {
         Self(bytes)
     }
+
+    /// The number of bytes in an authentication key.
+    pub const LENGTH: usize = 32;
 
     /// Create an authentication key from a preimage by taking its sha3 hash
     pub fn from_preimage(preimage: &AuthenticationKeyPreimage) -> AuthenticationKey {
@@ -155,7 +156,7 @@ impl AuthenticationKey {
     pub fn derived_address(&self) -> AccountAddress {
         // keep only last 16 bytes
         let mut array = [0u8; AccountAddress::LENGTH];
-        array.copy_from_slice(&self.0[AUTHENTICATION_KEY_LENGTH - AccountAddress::LENGTH..]);
+        array.copy_from_slice(&self.0[Self::LENGTH - AccountAddress::LENGTH..]);
         AccountAddress::new(array)
     }
 
@@ -179,7 +180,7 @@ impl AuthenticationKey {
     /// Create a random authentication key. For testing only
     pub fn random() -> Self {
         let mut rng = OsRng::new().expect("can't access OsRng");
-        let buf: [u8; AUTHENTICATION_KEY_LENGTH] = rng.gen();
+        let buf: [u8; Self::LENGTH] = rng.gen();
         AuthenticationKey::new(buf)
     }
 }
@@ -232,11 +233,11 @@ impl TryFrom<&[u8]> for AuthenticationKey {
 
     fn try_from(bytes: &[u8]) -> Result<AuthenticationKey> {
         ensure!(
-            bytes.len() == AUTHENTICATION_KEY_LENGTH,
+            bytes.len() == Self::LENGTH,
             "The authentication key {:?} is of invalid length",
             bytes
         );
-        let mut addr = [0u8; AUTHENTICATION_KEY_LENGTH];
+        let mut addr = [0u8; Self::LENGTH];
         addr.copy_from_slice(bytes);
         Ok(AuthenticationKey(addr))
     }
