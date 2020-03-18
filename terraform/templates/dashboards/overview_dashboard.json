@@ -371,7 +371,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(libra_admission_control_service_requests_count{type='submit_transaction'}[1m])",
+          "expr": "irate(libra_client_service_requests_count{type='submit'}[1m])",
           "format": "time_series",
           "instant": false,
           "interval": "",

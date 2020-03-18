@@ -17,7 +17,11 @@
 #[macro_use]
 mod util;
 
+#[macro_use]
+extern crate prometheus;
+
 mod client;
+mod counters;
 pub mod errors;
 mod methods;
 mod runtime;

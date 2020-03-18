@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    counters,
     errors::JsonRpcError,
     methods::{build_registry, JsonRpcService, RpcRegistry},
 };
@@ -106,6 +107,9 @@ async fn rpc_request_handler(
                 "error".to_string(),
                 JsonRpcError::invalid_request().serialize(),
             );
+            counters::INVALID_REQUESTS
+                .with_label_values(&["invalid_format"])
+                .inc();
             return Value::Object(response);
         }
     }
@@ -117,6 +121,9 @@ async fn rpc_request_handler(
         }
         Err(err) => {
             response.insert("error".to_string(), err.serialize());
+            counters::INVALID_REQUESTS
+                .with_label_values(&["invalid_format"])
+                .inc();
             return Value::Object(response);
         }
     };
@@ -124,6 +131,9 @@ async fn rpc_request_handler(
     // verify protocol version
     if let Err(err) = verify_protocol(&request) {
         response.insert("error".to_string(), err.serialize());
+        counters::INVALID_REQUESTS
+            .with_label_values(&["invalid_format"])
+            .inc();
         return Value::Object(response);
     }
 
@@ -138,6 +148,9 @@ async fn rpc_request_handler(
                 "error".to_string(),
                 JsonRpcError::invalid_params().serialize(),
             );
+            counters::INVALID_REQUESTS
+                .with_label_values(&["invalid_params"])
+                .inc();
             return Value::Object(response);
         }
     }
@@ -148,6 +161,9 @@ async fn rpc_request_handler(
             Some(handler) => match handler(service, params).await {
                 Ok(result) => {
                     response.insert("result".to_string(), result);
+                    counters::REQUESTS
+                        .with_label_values(&[name, "success"])
+                        .inc();
                 }
                 Err(err) => {
                     // check for custom error
@@ -159,6 +175,7 @@ async fn rpc_request_handler(
                             JsonRpcError::internal_error(err.to_string()).serialize(),
                         );
                     }
+                    counters::REQUESTS.with_label_values(&[name, "fail"]).inc();
                 }
             },
             None => {
@@ -166,6 +183,9 @@ async fn rpc_request_handler(
                     "error".to_string(),
                     JsonRpcError::method_not_found().serialize(),
                 );
+                counters::INVALID_REQUESTS
+                    .with_label_values(&["method_not_found"])
+                    .inc();
             }
         },
         _ => {
@@ -173,6 +193,9 @@ async fn rpc_request_handler(
                 "error".to_string(),
                 JsonRpcError::invalid_request().serialize(),
             );
+            counters::INVALID_REQUESTS
+                .with_label_values(&["invalid_method"])
+                .inc();
         }
     }
 
