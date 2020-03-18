@@ -6,10 +6,7 @@ use crate::{pruner, LibraDB};
 use jellyfish_merkle::restore::JellyfishMerkleRestore;
 use libra_crypto::hash::CryptoHash;
 use libra_temppath::TempPath;
-use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
-    account_state_blob::AccountStateBlob,
-};
+use libra_types::{account_address::AccountAddress, account_state_blob::AccountStateBlob};
 use proptest::{collection::hash_map, prelude::*};
 
 fn put_account_state_set(
@@ -84,7 +81,7 @@ fn test_empty_store() {
     let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
     let store = &db.state_store;
-    let address = AccountAddress::new([1u8; ADDRESS_LENGTH]);
+    let address = AccountAddress::new([1u8; AccountAddress::LENGTH]);
     assert!(store
         .get_account_state_with_proof_by_version(address, 0)
         .is_err());
@@ -95,9 +92,9 @@ fn test_state_store_reader_writer() {
     let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
     let store = &db.state_store;
-    let address1 = AccountAddress::new([1u8; ADDRESS_LENGTH]);
-    let address2 = AccountAddress::new([2u8; ADDRESS_LENGTH]);
-    let address3 = AccountAddress::new([3u8; ADDRESS_LENGTH]);
+    let address1 = AccountAddress::new([1u8; AccountAddress::LENGTH]);
+    let address2 = AccountAddress::new([2u8; AccountAddress::LENGTH]);
+    let address3 = AccountAddress::new([3u8; AccountAddress::LENGTH]);
     let value1 = AccountStateBlob::from(vec![0x01]);
     let value1_update = AccountStateBlob::from(vec![0x00]);
     let value2 = AccountStateBlob::from(vec![0x02]);
@@ -137,9 +134,9 @@ fn test_state_store_reader_writer() {
 
 #[test]
 fn test_retired_records() {
-    let address1 = AccountAddress::new([1u8; ADDRESS_LENGTH]);
-    let address2 = AccountAddress::new([2u8; ADDRESS_LENGTH]);
-    let address3 = AccountAddress::new([3u8; ADDRESS_LENGTH]);
+    let address1 = AccountAddress::new([1u8; AccountAddress::LENGTH]);
+    let address2 = AccountAddress::new([2u8; AccountAddress::LENGTH]);
+    let address3 = AccountAddress::new([3u8; AccountAddress::LENGTH]);
     let value1 = AccountStateBlob::from(vec![0x01]);
     let value2 = AccountStateBlob::from(vec![0x02]);
     let value2_update = AccountStateBlob::from(vec![0x12]);

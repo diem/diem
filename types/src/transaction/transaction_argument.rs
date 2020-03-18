@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::account_address::{AccountAddress, ADDRESS_LENGTH};
+use crate::account_address::AccountAddress;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
@@ -47,15 +47,15 @@ pub fn parse_as_address(s: &str) -> Result<TransactionArgument> {
         s = format!("0x0{}", &s[2..]);
     }
     let mut addr = hex::decode(&s[2..])?;
-    if addr.len() > ADDRESS_LENGTH {
+    if addr.len() > AccountAddress::LENGTH {
         return Err(ErrorKind::ParseError(format!(
             "address must be {} bytes or less",
-            ADDRESS_LENGTH
+            AccountAddress::LENGTH
         ))
         .into());
     }
-    if addr.len() < ADDRESS_LENGTH {
-        addr = vec![0u8; ADDRESS_LENGTH - addr.len()]
+    if addr.len() < AccountAddress::LENGTH {
+        addr = vec![0u8; AccountAddress::LENGTH - addr.len()]
             .into_iter()
             .chain(addr.into_iter())
             .collect();

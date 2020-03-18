@@ -10,7 +10,6 @@ use crate::{
 use anyhow::{bail, ensure, format_err};
 use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash, HashValue};
 use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
     block_info::BlockInfo,
     block_metadata::BlockMetadata,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -318,9 +317,7 @@ impl<T> From<&Block<T>> for BlockMetadata {
             block.timestamp_usecs(),
             block.quorum_cert().ledger_info().signatures().clone(),
             // For nil block, we use 0x0 which is convention for nil address in move.
-            block
-                .author()
-                .unwrap_or_else(|| AccountAddress::new([0u8; ADDRESS_LENGTH])),
+            block.author().unwrap_or_default(),
         )
     }
 }

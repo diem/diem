@@ -6,7 +6,7 @@ use crate::{
     native_functions::dispatch::{native_gas, NativeResult},
 };
 use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
+    account_address::AccountAddress,
     language_storage::TypeTag,
     vm_error::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode, VMStatus},
 };
@@ -1631,7 +1631,7 @@ impl ValueImpl {
 
         match self {
             Invalid | U8(_) | U64(_) | U128(_) | Bool(_) => CONST_SIZE,
-            Address(_) => AbstractMemorySize::new(ADDRESS_LENGTH as u64),
+            Address(_) => AbstractMemorySize::new(AccountAddress::LENGTH as u64),
             ContainerRef(r) => r.size(),
             IndexedRef(r) => r.size(),
             // TODO: in case the borrow fails the VM will panic.

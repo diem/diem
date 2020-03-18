@@ -5,7 +5,7 @@
 
 use libra_crypto::HashValue;
 use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
+    account_address::AccountAddress,
     block_metadata::BlockMetadata,
     transaction::{
         authenticator::AUTHENTICATION_KEY_LENGTH, Script, Transaction, TransactionArgument,
@@ -24,7 +24,7 @@ fn validate_auth_key_prefix(auth_key_prefix: &[u8]) {
     let auth_key_prefix_length = auth_key_prefix.len();
     assert!(
         auth_key_prefix_length == 0
-            || auth_key_prefix_length == AUTHENTICATION_KEY_LENGTH - ADDRESS_LENGTH,
+            || auth_key_prefix_length == AUTHENTICATION_KEY_LENGTH - AccountAddress::LENGTH,
         "Bad auth key prefix length {}",
         auth_key_prefix_length
     );

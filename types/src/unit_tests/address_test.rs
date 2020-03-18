@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::account_address::{AccountAddress, ADDRESS_LENGTH};
+use crate::account_address::AccountAddress;
 use hex::FromHex;
 use libra_crypto::{hash::CryptoHash, HashValue};
 use proptest::prelude::*;
@@ -14,11 +14,11 @@ fn test_address_bytes() {
 
     assert_eq!(
         hex.len(),
-        ADDRESS_LENGTH as usize,
+        AccountAddress::LENGTH as usize,
         "Address {:?} is not {}-bytes long. Addresses must be {} bytes",
         hex,
-        ADDRESS_LENGTH,
-        ADDRESS_LENGTH,
+        AccountAddress::LENGTH,
+        AccountAddress::LENGTH,
     );
     let address = AccountAddress::try_from(&hex[..]).unwrap_or_else(|_| {
         panic!(
@@ -37,11 +37,11 @@ fn test_address() {
 
     assert_eq!(
         hex.len(),
-        ADDRESS_LENGTH as usize,
+        AccountAddress::LENGTH as usize,
         "Address {:?} is not {}-bytes long. Addresses must be {} bytes",
         hex,
-        ADDRESS_LENGTH,
-        ADDRESS_LENGTH,
+        AccountAddress::LENGTH,
+        AccountAddress::LENGTH,
     );
 
     let address: AccountAddress = AccountAddress::try_from(&hex[..]).unwrap_or_else(|_| {
@@ -65,7 +65,7 @@ fn test_address() {
 
 #[test]
 fn test_ref() {
-    let address = AccountAddress::new([1u8; ADDRESS_LENGTH]);
+    let address = AccountAddress::new([1u8; AccountAddress::LENGTH]);
     let _: &[u8] = address.as_ref();
 }
 

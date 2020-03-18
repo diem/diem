@@ -9,7 +9,7 @@ use libra_crypto::ed25519::compat;
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
-    account_address::{AccountAddress, ADDRESS_LENGTH},
+    account_address::AccountAddress,
     contract_event::ContractEvent,
     event::EventKey,
     language_storage::TypeTag,
@@ -143,7 +143,7 @@ impl VMExecutor for MockVM {
                     ));
                 }
                 MockVMTransaction::Reconfiguration => {
-                    let account = AccountAddress::new([0xff; ADDRESS_LENGTH]);
+                    let account = AccountAddress::new([0xff; AccountAddress::LENGTH]);
                     let balance_access_path = balance_ap(account);
                     read_balance_from_storage(state_view, &balance_access_path);
                     outputs.push(TransactionOutput::new(
@@ -221,7 +221,7 @@ fn seqnum_ap(account: AccountAddress) -> AccessPath {
 }
 
 fn gen_genesis_writeset() -> WriteSet {
-    let address = AccountAddress::new([0xff; ADDRESS_LENGTH]);
+    let address = AccountAddress::new([0xff; AccountAddress::LENGTH]);
     let path = b"hello".to_vec();
     let mut write_set = WriteSetMut::default();
     write_set.push((

@@ -6,7 +6,7 @@ use crate::{
     error::*,
 };
 use libra_crypto::ed25519::*;
-use libra_types::account_address::{AccountAddress, ADDRESS_LENGTH};
+use libra_types::account_address::AccountAddress;
 use std::{convert::TryFrom, slice};
 
 /// Takes in private key in bytes and return the associated public key and address
@@ -34,11 +34,8 @@ pub unsafe extern "C" fn libra_LibraAccountKey_from(
     let public_key: Ed25519PublicKey = (&private_key).into();
     let address = AccountAddress::from_public_key(&public_key);
 
-    let mut address_bytes = [0u8; ADDRESS_LENGTH];
-    address_bytes.copy_from_slice(address.as_ref());
-
     *out = LibraAccountKey {
-        address: address_bytes,
+        address: address.into(),
         private_key: private_key.to_bytes(),
         public_key: public_key.to_bytes(),
     };

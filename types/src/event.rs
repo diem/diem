@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::account_address::{AccountAddress, ADDRESS_LENGTH};
+use crate::account_address::AccountAddress;
 use anyhow::{ensure, Error, Result};
 #[cfg(feature = "fuzzing")]
 use rand::{rngs::OsRng, RngCore};
@@ -14,7 +14,7 @@ use std::{
 };
 
 /// Size of an event key.
-pub const EVENT_KEY_LENGTH: usize = ADDRESS_LENGTH + 8;
+pub const EVENT_KEY_LENGTH: usize = AccountAddress::LENGTH + 8;
 
 /// A struct that represents a globally unique id for an Event stream that a user can listen to.
 pub struct EventKey([u8; EVENT_KEY_LENGTH]);

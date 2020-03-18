@@ -13,10 +13,7 @@
 use crate::schema::{ensure_slice_len_eq, TRANSACTION_BY_ACCOUNT_CF_NAME};
 use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
-    transaction::Version,
-};
+use libra_types::{account_address::AccountAddress, transaction::Version};
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
@@ -46,8 +43,8 @@ impl KeyCodec<TransactionByAccountSchema> for Key {
     fn decode_key(data: &[u8]) -> Result<Self> {
         ensure_slice_len_eq(data, size_of::<Self>())?;
 
-        let address = AccountAddress::try_from(&data[..ADDRESS_LENGTH])?;
-        let seq_num = (&data[ADDRESS_LENGTH..]).read_u64::<BigEndian>()?;
+        let address = AccountAddress::try_from(&data[..AccountAddress::LENGTH])?;
+        let seq_num = (&data[AccountAddress::LENGTH..]).read_u64::<BigEndian>()?;
 
         Ok((address, seq_num))
     }

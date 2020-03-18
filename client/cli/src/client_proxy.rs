@@ -18,7 +18,7 @@ use libra_logger::prelude::*;
 use libra_temppath::TempPath;
 use libra_types::{
     access_path::AccessPath,
-    account_address::{AccountAddress, ADDRESS_LENGTH},
+    account_address::AccountAddress,
     account_config::{
         association_address, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
         CORE_CODE_ADDRESS,
@@ -1058,7 +1058,7 @@ impl ClientProxy {
     fn address_from_strings(data: &str) -> Result<AccountAddress> {
         let account_vec: Vec<u8> = hex::decode(data.parse::<String>()?)?;
         ensure!(
-            account_vec.len() == ADDRESS_LENGTH,
+            account_vec.len() == AccountAddress::LENGTH,
             "The address {:?} is of invalid length. Addresses must be 16-bytes long"
         );
         let account = AccountAddress::try_from(&account_vec[..]).map_err(|error| {

@@ -13,7 +13,7 @@ use futures::{
     stream::StreamExt,
 };
 use libra_proptest_helpers::ValueGenerator;
-use libra_types::{account_address::ADDRESS_LENGTH, PeerId};
+use libra_types::PeerId;
 use memsocket::MemorySocket;
 use proptest::{arbitrary::any, collection::vec, prop_oneof, strategy::Strategy};
 use std::{io, time::Duration};
@@ -27,7 +27,7 @@ const MAX_UVI_PREFIX_BYTES: usize = 19;
 const MAX_SMALL_MSG_BYTES: usize = 32;
 const MAX_MEDIUM_MSG_BYTES: usize = 280;
 
-const MOCK_PEER_ID: PeerId = PeerId::new([0u8; ADDRESS_LENGTH]);
+const MOCK_PEER_ID: PeerId = PeerId::DEFAULT;
 const INBOUND_RPC_TIMEOUT: Duration = Duration::from_secs(30);
 const TEST_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
 

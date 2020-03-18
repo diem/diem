@@ -8,7 +8,7 @@ use futures::{
     future::{join, FutureExt},
     stream::{FusedStream, StreamExt},
 };
-use libra_types::account_address::{AccountAddress, ADDRESS_LENGTH};
+use libra_types::account_address::AccountAddress;
 use std::{num::NonZeroUsize, time::Duration};
 use tokio::{runtime::Runtime, time::delay_for};
 
@@ -103,7 +103,7 @@ fn test_multiple_validators_helper(
         for validator in 0..num_validators {
             sender
                 .push(
-                    AccountAddress::new([validator as u8; ADDRESS_LENGTH]),
+                    AccountAddress::new([validator as u8; AccountAddress::LENGTH]),
                     (validator, message),
                 )
                 .unwrap();

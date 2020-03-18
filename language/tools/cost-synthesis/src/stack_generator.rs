@@ -9,10 +9,7 @@ use crate::{
     bytecode_specifications::{frame_transition_info::frame_transitions, stack_transition_info::*},
     common::*,
 };
-use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
-    language_storage::ModuleId,
-};
+use libra_types::{account_address::AccountAddress, language_storage::ModuleId};
 use move_core_types::identifier::Identifier;
 use move_vm_runtime::{
     interpreter::InterpreterForCostSynthesis, loaded_data::loaded_module::LoadedModule, MoveVM,
@@ -386,7 +383,7 @@ impl<'txn> RandomStackGenerator<'txn> {
                 let bytearray_size = self.root_module.byte_array_at(bytearray_idx).len();
                 (LdByteArray(bytearray_idx), bytearray_size)
             }
-            LdAddr(_) => (LdAddr(self.next_address_idx()), ADDRESS_LENGTH),
+            LdAddr(_) => (LdAddr(self.next_address_idx()), AccountAddress::LENGTH),
             _ => (self.op.clone(), 0),
         }
     }

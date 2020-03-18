@@ -6,10 +6,7 @@ use invalid_mutations::signature::{
     ApplySignatureDoubleRefContext, ApplySignatureFieldRefContext, DoubleRefMutation,
     FieldRefMutation,
 };
-use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
-    vm_error::StatusCode,
-};
+use libra_types::{account_address::AccountAddress, vm_error::StatusCode};
 use move_core_types::identifier::Identifier;
 use proptest::{collection::vec, prelude::*};
 use vm::file_format::{Bytecode::*, CompiledModule, SignatureToken::*, *};
@@ -135,7 +132,7 @@ fn no_verify_locals_good() {
             Identifier::new("foo").unwrap(),
         ],
         byte_array_pool: vec![],
-        address_pool: vec![AccountAddress::new([0; ADDRESS_LENGTH])],
+        address_pool: vec![AccountAddress::new([0; AccountAddress::LENGTH])],
         struct_defs: vec![],
         field_defs: vec![],
         function_defs: vec![
@@ -193,7 +190,7 @@ fn no_verify_locals_bad1() {
             Identifier::new("blah").unwrap(),
         ],
         byte_array_pool: vec![],
-        address_pool: vec![AccountAddress::new([0; ADDRESS_LENGTH])],
+        address_pool: vec![AccountAddress::new([0; AccountAddress::LENGTH])],
         struct_defs: vec![],
         field_defs: vec![],
         function_defs: vec![FunctionDefinition {
@@ -238,7 +235,7 @@ fn no_verify_locals_bad2() {
             Identifier::new("blah").unwrap(),
         ],
         byte_array_pool: vec![],
-        address_pool: vec![AccountAddress::new([0; ADDRESS_LENGTH])],
+        address_pool: vec![AccountAddress::new([0; AccountAddress::LENGTH])],
         struct_defs: vec![],
         field_defs: vec![],
         function_defs: vec![FunctionDefinition {
@@ -284,7 +281,7 @@ fn no_verify_locals_bad3() {
             Identifier::new("blah").unwrap(),
         ],
         byte_array_pool: vec![],
-        address_pool: vec![AccountAddress::new([0; ADDRESS_LENGTH])],
+        address_pool: vec![AccountAddress::new([0; AccountAddress::LENGTH])],
         struct_defs: vec![],
         field_defs: vec![],
         function_defs: vec![FunctionDefinition {
@@ -330,7 +327,7 @@ fn no_verify_locals_bad4() {
             Identifier::new("blah").unwrap(),
         ],
         byte_array_pool: vec![],
-        address_pool: vec![AccountAddress::new([0; ADDRESS_LENGTH])],
+        address_pool: vec![AccountAddress::new([0; AccountAddress::LENGTH])],
         struct_defs: vec![],
         field_defs: vec![],
         function_defs: vec![FunctionDefinition {

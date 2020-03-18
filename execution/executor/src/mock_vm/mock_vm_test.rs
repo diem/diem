@@ -5,15 +5,11 @@ use super::{balance_ap, encode_mint_transaction, encode_transfer_transaction, se
 use anyhow::Result;
 use libra_config::config::VMConfig;
 use libra_state_view::StateView;
-use libra_types::{
-    access_path::AccessPath,
-    account_address::{AccountAddress, ADDRESS_LENGTH},
-    write_set::WriteOp,
-};
+use libra_types::{access_path::AccessPath, account_address::AccountAddress, write_set::WriteOp};
 use libra_vm::VMExecutor;
 
 fn gen_address(index: u8) -> AccountAddress {
-    AccountAddress::new([index; ADDRESS_LENGTH])
+    AccountAddress::new([index; AccountAddress::LENGTH])
 }
 
 struct MockStateView;
