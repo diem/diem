@@ -2,5 +2,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
 pub mod ast;
-pub mod translate;
+pub(crate) mod translate;
 mod uses;

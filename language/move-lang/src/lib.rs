@@ -6,24 +6,22 @@
 #[macro_use(sp)]
 extern crate move_ir_types;
 
-pub mod shared;
-
-pub mod errors;
-
 pub mod cfgir;
+pub mod command_line;
+pub mod compiled_unit;
+pub mod errors;
 pub mod expansion;
 pub mod hlir;
+pub mod ir_translation;
 pub mod naming;
 pub mod parser;
-pub mod to_bytecode;
+pub mod shared;
+pub mod test_utils;
+mod to_bytecode;
 pub mod typing;
 
-pub mod command_line;
-
-pub mod ir_translation;
-pub mod test_utils;
-
 use codespan::{ByteIndex, Span};
+use compiled_unit::CompiledUnit;
 use errors::*;
 use move_ir_types::location::*;
 use parser::syntax::parse_file_string;
@@ -77,7 +75,7 @@ pub fn move_compile(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
-) -> io::Result<(FilesSourceText, Vec<to_bytecode::translate::CompiledUnit>)> {
+) -> io::Result<(FilesSourceText, Vec<CompiledUnit>)> {
     let (files, pprog_res) = parse_program(targets, deps)?;
     match compile_program(pprog_res, sender_opt) {
         Err(errors) => errors::report_errors(files, errors),
@@ -90,10 +88,7 @@ pub fn move_compile_no_report(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
-) -> io::Result<(
-    FilesSourceText,
-    Result<Vec<to_bytecode::translate::CompiledUnit>, Errors>,
-)> {
+) -> io::Result<(FilesSourceText, Result<Vec<CompiledUnit>, Errors>)> {
     let (files, pprog_res) = parse_program(targets, deps)?;
     Ok(match compile_program(pprog_res, sender_opt) {
         Err(errors) => (files, Err(errors)),
@@ -108,26 +103,22 @@ pub fn move_compile_to_expansion_no_report(
     sender_opt: Option<Address>,
 ) -> io::Result<(FilesSourceText, Result<expansion::ast::Program, Errors>)> {
     let (files, pprog_res) = parse_program(targets, deps)?;
-    Ok(match pprog_res {
-        Ok(pprog) => {
-            let (eprog, errors) = expansion::translate::program(pprog, sender_opt);
-            if errors.is_empty() {
-                (files, Ok(eprog))
-            } else {
-                (files, Err(errors))
-            }
-        }
-        Err(errors) => (files, Err(errors)),
-    })
+    let res = pprog_res.and_then(|pprog| {
+        let (eprog, errors) = expansion::translate::program(pprog, sender_opt);
+        check_errors(errors)?;
+        Ok(eprog)
+    });
+    Ok((files, res))
 }
+
+//**************************************************************************************************
+// Utils
+//**************************************************************************************************
 
 /// Runs the bytecode verifier on the compiled units
 /// Fails if the bytecode verifier errors
-pub fn sanity_check_compiled_units(
-    files: FilesSourceText,
-    compiled_units: Vec<to_bytecode::translate::CompiledUnit>,
-) {
-    let (_, ice_errors) = to_bytecode::translate::verify_units(compiled_units);
+pub fn sanity_check_compiled_units(files: FilesSourceText, compiled_units: Vec<CompiledUnit>) {
+    let (_, ice_errors) = compiled_unit::verify_units(compiled_units);
     if !ice_errors.is_empty() {
         errors::report_errors(files, ice_errors)
     }
@@ -136,11 +127,11 @@ pub fn sanity_check_compiled_units(
 /// Given a file map and a set of compiled programs, saves the compiled programs to disk
 pub fn output_compiled_units(
     files: FilesSourceText,
-    compiled_units: Vec<to_bytecode::translate::CompiledUnit>,
+    compiled_units: Vec<CompiledUnit>,
     out_dir: &str,
 ) -> io::Result<()> {
     std::fs::create_dir_all(out_dir)?;
-    let (compiled_units, ice_errors) = to_bytecode::translate::verify_units(compiled_units);
+    let (compiled_units, ice_errors) = compiled_unit::verify_units(compiled_units);
     let files_and_units = compiled_units
         .into_iter()
         .enumerate()
@@ -164,6 +155,10 @@ pub fn output_compiled_units(
     Ok(())
 }
 
+//**************************************************************************************************
+// Translations
+//**************************************************************************************************
+
 fn check_program(
     prog: Result<parser::ast::Program, Errors>,
     sender_opt: Option<Address>,
@@ -181,17 +176,9 @@ fn check_program(
 fn compile_program(
     prog: Result<parser::ast::Program, Errors>,
     sender_opt: Option<Address>,
-) -> Result<Vec<to_bytecode::translate::CompiledUnit>, Errors> {
+) -> Result<Vec<CompiledUnit>, Errors> {
     let cprog = check_program(prog, sender_opt)?;
     to_bytecode::translate::program(cprog)
-}
-
-fn check_errors(errors: Errors) -> Result<(), Errors> {
-    if errors.is_empty() {
-        Ok(())
-    } else {
-        Err(errors)
-    }
 }
 
 //**************************************************************************************************

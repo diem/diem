@@ -12,8 +12,11 @@ use anyhow::anyhow;
 use codespan_reporting::diagnostic::{Diagnostic, Label};
 use itertools::Itertools;
 use move_lang::{
-    errors::Errors, expansion::ast::Program, move_compile_no_report,
-    move_compile_to_expansion_no_report, shared::Address, to_bytecode::translate::CompiledUnit,
+    compiled_unit::{self, CompiledUnit},
+    errors::Errors,
+    expansion::ast::Program,
+    move_compile_no_report, move_compile_to_expansion_no_report,
+    shared::Address,
 };
 
 pub mod ast;
@@ -49,7 +52,7 @@ pub fn run_spec_lang_compiler(
             add_move_lang_errors(&mut env, errors);
         }
         Ok(units) => {
-            let (verified_units, errors) = move_lang::to_bytecode::translate::verify_units(units);
+            let (verified_units, errors) = compiled_unit::verify_units(units);
             if !errors.is_empty() {
                 add_move_lang_errors(&mut env, errors);
             } else {
@@ -92,26 +95,26 @@ fn run_spec_checker(
     // units which is topological w.r.t. use relation.
     let modules = units
         .into_iter()
-        .filter_map(|u| {
-            if let CompiledUnit::Module(name, compiled_module, source_map) = u {
-                let expanded_id = eprog
-                    .modules
-                    .iter()
-                    .map(|(module_id, _)| module_id)
-                    .find(|module_id| module_id.0.value.name.0.value == name.0.value);
-                if let Some(module_id) = expanded_id {
-                    let expanded_module = eprog.modules.remove(&module_id).unwrap();
-                    Some((module_id, expanded_module, compiled_module, source_map))
-                } else {
+        .filter_map(|unit| {
+            let (module_id, compiled_module, source_map) = match unit {
+                CompiledUnit::Module {
+                    ident,
+                    module,
+                    source_map,
+                } => (ident, module, source_map),
+                CompiledUnit::Script { .. } => return None,
+            };
+            let expanded_module = match eprog.modules.remove(&module_id) {
+                Some(m) => m,
+                None => {
                     warn!(
                         "[internal] cannot associate bytecode module `{}` with AST",
-                        name.0.value
+                        module_id
                     );
-                    None
+                    return None;
                 }
-            } else {
-                None
-            }
+            };
+            Some((module_id, expanded_module, compiled_module, source_map))
         })
         .collect_vec();
     for (module_count, (module_id, expanded_module, compiled_module, source_map)) in

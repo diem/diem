@@ -262,10 +262,6 @@ impl Context {
             .get(n)
             .expect("ICE should have failed in naming")
     }
-
-    pub fn function_acquires(&mut self, m: &ModuleIdent, n: &FunctionName) -> BTreeSet<StructName> {
-        self.function_info(m, n).acquires.clone()
-    }
 }
 
 //**************************************************************************************************

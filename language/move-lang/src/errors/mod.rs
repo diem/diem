@@ -13,6 +13,10 @@ use codespan_reporting::{
 use move_ir_types::location::*;
 use std::collections::{HashMap, HashSet};
 
+//**************************************************************************************************
+// Types
+//**************************************************************************************************
+
 pub type Errors = Vec<Error>;
 pub type Error = Vec<(Loc, String)>;
 pub type ErrorSlice = [(Loc, String)];
@@ -21,6 +25,22 @@ pub type HashableError = Vec<(&'static str, usize, usize, String)>;
 pub type FilesSourceText = HashMap<&'static str, String>;
 
 type FileMapping = HashMap<&'static str, FileId>;
+
+//**************************************************************************************************
+// Utils
+//**************************************************************************************************
+
+pub fn check_errors(errors: Errors) -> Result<(), Errors> {
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(errors)
+    }
+}
+
+//**************************************************************************************************
+// Reporting
+//**************************************************************************************************
 
 pub fn report_errors(files: FilesSourceText, errors: Errors) -> ! {
     let mut writer = StandardStream::stderr(ColorChoice::Auto);
