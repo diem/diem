@@ -696,6 +696,17 @@ pub enum ModelValue {
     Map(BTreeMap<ModelValue, ModelValue>),
 }
 
+/// Represents a spare representation of a model value vector.
+#[derive(Debug)]
+pub struct ModelValueVector {
+    /// The size of the vector.
+    size: usize,
+    /// Those indices 0..size which have a value appear here.
+    values: BTreeMap<usize, ModelValue>,
+    /// Others in this range have assigned this value.
+    default: ModelValue,
+}
+
 impl ModelValue {
     /// Makes a literal from a str.
     fn literal(s: &str) -> ModelValue {
@@ -709,7 +720,7 @@ impl ModelValue {
 
     /// Extracts a vector from `(Vector value_array)`. This follows indirections in the model
     /// to extract the actual values.
-    fn extract_vector(&self, model: &Model) -> Option<Vec<ModelValue>> {
+    fn extract_vector(&self, model: &Model) -> Option<ModelValueVector> {
         let args = self.extract_list("Vector")?;
         if args.len() != 1 {
             return None;
@@ -718,8 +729,16 @@ impl ModelValue {
     }
 
     /// Extracts a value array from `(ValueArray map_key size)`. This follows indirections in the
-    /// model. We find the value array map at `Select_[$int]Value`.
-    fn extract_value_array(&self, model: &Model) -> Option<Vec<ModelValue>> {
+    /// model. We find the value array map at `Select_[$int]Value`. This has e.g. the form
+    ///
+    /// ```model
+    ///   Select_[$int]Value -> {
+    //      |T@[Int]Value!val!1| 0 -> (Integer 2)
+    //      |T@[Int]Value!val!1| 22 -> (Integer 2)
+    //      else -> (Integer 0)
+    //    }
+    // ```
+    fn extract_value_array(&self, model: &Model) -> Option<ModelValueVector> {
         let args = self.extract_list("ValueArray")?;
         if args.len() != 2 {
             return None;
@@ -730,21 +749,24 @@ impl ModelValue {
             .vars
             .get(&ModelValue::literal("Select_[$int]Value"))?
             .extract_map()?;
-
-        Some(
-            (0..size)
-                .map(|i| {
-                    let key = ModelValue::List(vec![
-                        map_key.clone(),
-                        ModelValue::literal(&i.to_string()),
-                    ]);
-                    value_array_map
-                        .get(&key)
-                        .cloned()
-                        .unwrap_or_else(ModelValue::error)
-                })
-                .collect_vec(),
-        )
+        let mut values = BTreeMap::new();
+        let mut default = ModelValue::error();
+        for (key, value) in value_array_map {
+            if let ModelValue::List(elems) = key {
+                if elems.len() == 2 && &elems[0] == map_key {
+                    if let Some(idx) = elems[1].extract_number() {
+                        values.insert(idx, value.clone());
+                    }
+                }
+            } else if key == &ModelValue::literal("else") {
+                default = value.clone();
+            }
+        }
+        Some(ModelValueVector {
+            size,
+            values,
+            default,
+        })
     }
 
     fn extract_map(&self) -> Option<&BTreeMap<ModelValue, ModelValue>> {
@@ -877,11 +899,26 @@ impl ModelValue {
         param: &Type,
     ) -> Option<PrettyDoc> {
         let values = self.extract_vector(model)?;
-        let entries = values
-            .iter()
-            .map(|v| v.pretty_or_raw(wrapper, model, param))
-            .collect_vec();
-        Some(PrettyDoc::text("Vector").append(Self::pretty_vec_or_struct_body(entries)))
+        let mut entries = vec![];
+        let mut next = 0;
+        let mut sparse = false;
+        for idx in values.values.keys().sorted() {
+            let mut p = values.values.get(idx)?.pretty_or_raw(wrapper, model, param);
+            if *idx > next {
+                p = PrettyDoc::text(format!("{}: ", idx)).append(p);
+                sparse = true;
+            }
+            next = *idx + 1;
+            entries.push(p);
+        }
+        if next < values.size || sparse {
+            let default = values
+                .default
+                .pretty(wrapper, model, param)
+                .unwrap_or_else(|| PrettyDoc::text("undef"));
+            entries.push(PrettyDoc::text("else: ").append(default));
+        }
+        Some(PrettyDoc::text("vector").append(Self::pretty_vec_or_struct_body(entries)))
     }
 
     /// Pretty prints a struct.
@@ -893,7 +930,6 @@ impl ModelValue {
         struct_id: StructId,
         params: &[Type],
     ) -> Option<PrettyDoc> {
-        let error = ModelValue::error();
         let module_env = wrapper.env.get_module(module_id);
         let struct_env = module_env.get_struct(struct_id);
         let values = self.extract_vector(model)?;
@@ -902,7 +938,7 @@ impl ModelValue {
             .enumerate()
             .map(|(i, f)| {
                 let ty = f.get_type().instantiate(params);
-                let v = if i < values.len() { &values[i] } else { &error };
+                let v = values.values.get(&i).unwrap_or(&values.default);
                 let vp = v.pretty_or_raw(wrapper, model, &ty);
                 PrettyDoc::text(format!(
                     "{}",
