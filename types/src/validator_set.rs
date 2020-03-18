@@ -9,7 +9,6 @@ use crate::{
     validator_info::ValidatorInfo,
 };
 use anyhow::{Error, Result};
-use libra_crypto::VerifyingKey;
 use move_core_types::identifier::{IdentStr, Identifier};
 use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -57,27 +56,27 @@ pub static VALIDATOR_SET_CHANGE_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
 });
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct ValidatorSetResource<PublicKey> {
-    validator_set: ValidatorSet<PublicKey>,
+pub struct ValidatorSetResource {
+    validator_set: ValidatorSet,
     last_reconfiguration_time: u64,
     change_events: EventHandle,
 }
 
-impl<PublicKey> ValidatorSetResource<PublicKey> {
+impl ValidatorSetResource {
     pub fn change_events(&self) -> &EventHandle {
         &self.change_events
     }
 
-    pub fn validator_set(&self) -> &ValidatorSet<PublicKey> {
+    pub fn validator_set(&self) -> &ValidatorSet {
         &self.validator_set
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct ValidatorSet<PublicKey>(Vec<ValidatorInfo<PublicKey>>);
+pub struct ValidatorSet(Vec<ValidatorInfo>);
 
-impl<PublicKey> fmt::Display for ValidatorSet<PublicKey> {
+impl fmt::Display for ValidatorSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[")?;
         for validator in &self.0 {
@@ -87,9 +86,9 @@ impl<PublicKey> fmt::Display for ValidatorSet<PublicKey> {
     }
 }
 
-impl<PublicKey: VerifyingKey> ValidatorSet<PublicKey> {
+impl ValidatorSet {
     /// Constructs a ValidatorSet resource.
-    pub fn new(payload: Vec<ValidatorInfo<PublicKey>>) -> Self {
+    pub fn new(payload: Vec<ValidatorInfo>) -> Self {
         ValidatorSet(payload)
     }
 
@@ -106,16 +105,16 @@ impl<PublicKey: VerifyingKey> ValidatorSet<PublicKey> {
     }
 }
 
-impl<PublicKey> Deref for ValidatorSet<PublicKey> {
-    type Target = [ValidatorInfo<PublicKey>];
+impl Deref for ValidatorSet {
+    type Target = [ValidatorInfo];
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<PublicKey> IntoIterator for ValidatorSet<PublicKey> {
-    type Item = ValidatorInfo<PublicKey>;
+impl IntoIterator for ValidatorSet {
+    type Item = ValidatorInfo;
     type IntoIter = vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -123,9 +122,7 @@ impl<PublicKey> IntoIterator for ValidatorSet<PublicKey> {
     }
 }
 
-impl<PublicKey: VerifyingKey> TryFrom<crate::proto::types::ValidatorSet>
-    for ValidatorSet<PublicKey>
-{
+impl TryFrom<crate::proto::types::ValidatorSet> for ValidatorSet {
     type Error = Error;
 
     fn try_from(proto: crate::proto::types::ValidatorSet) -> Result<Self> {
@@ -139,8 +136,8 @@ impl<PublicKey: VerifyingKey> TryFrom<crate::proto::types::ValidatorSet>
     }
 }
 
-impl<PublicKey: VerifyingKey> From<ValidatorSet<PublicKey>> for crate::proto::types::ValidatorSet {
-    fn from(set: ValidatorSet<PublicKey>) -> Self {
+impl From<ValidatorSet> for crate::proto::types::ValidatorSet {
+    fn from(set: ValidatorSet) -> Self {
         Self {
             validator_info: set.0.into_iter().map(Into::into).collect(),
         }

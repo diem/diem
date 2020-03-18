@@ -18,11 +18,11 @@ use libra_types::{
     access_path::AccessPath,
     account_config::{AccountResource, BalanceResource},
     block_metadata::BlockMetadata,
-    crypto_proxies::ValidatorSet,
     language_storage::ModuleId,
     transaction::{
         SignedTransaction, Transaction, TransactionOutput, TransactionPayload, TransactionStatus,
     },
+    validator_set::ValidatorSet,
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };

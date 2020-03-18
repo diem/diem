@@ -16,7 +16,6 @@ use crate::{
     },
 };
 use anyhow::{bail, Error, Result};
-use libra_crypto::ed25519::Ed25519PublicKey;
 use serde::{de::DeserializeOwned, export::Formatter, Deserialize, Serialize};
 use std::{collections::btree_map::BTreeMap, convert::TryFrom, fmt};
 
@@ -40,9 +39,7 @@ impl AccountState {
         self.get_resource(&*VALIDATOR_CONFIG_RESOURCE_PATH)
     }
 
-    pub fn get_validator_set_resource(
-        &self,
-    ) -> Result<Option<ValidatorSetResource<Ed25519PublicKey>>> {
+    pub fn get_validator_set_resource(&self) -> Result<Option<ValidatorSetResource>> {
         self.get_resource(&*VALIDATOR_SET_RESOURCE_PATH)
     }
 

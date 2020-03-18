@@ -11,13 +11,13 @@ use libra_types::{
     access_path::AccessPath,
     account_address::{AccountAddress, ADDRESS_LENGTH},
     contract_event::ContractEvent,
-    crypto_proxies::ValidatorSet,
     event::EventKey,
     language_storage::TypeTag,
     transaction::{
         RawTransaction, Script, SignedTransaction, Transaction, TransactionArgument,
         TransactionOutput, TransactionPayload, TransactionStatus,
     },
+    validator_set::ValidatorSet,
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };

@@ -14,7 +14,7 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use futures::sink::SinkExt;
-use libra_types::{crypto_proxies::ValidatorInfo, validator_change::ValidatorChangeProof, PeerId};
+use libra_types::{validator_change::ValidatorChangeProof, validator_info::ValidatorInfo, PeerId};
 use network::{
     common::NetworkPublicKeys,
     connectivity_manager::ConnectivityRequest,

@@ -11,7 +11,7 @@ use crate::{
     },
     utils,
 };
-use libra_types::crypto_proxies::{ValidatorInfo, ValidatorSet};
+use libra_types::{validator_info::ValidatorInfo, validator_set::ValidatorSet};
 use rand::{rngs::StdRng, SeedableRng};
 
 pub struct ValidatorSwarm {

@@ -7,7 +7,7 @@ use anyhow::{Error, Result};
 use libra_crypto::ed25519::compat::generate_keypair as generate_ed25519_keypair;
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_crypto::x25519::compat::generate_keypair as generate_x25519_keypair;
-use libra_crypto::{ed25519::*, x25519::X25519StaticPublicKey, ValidKey, VerifyingKey};
+use libra_crypto::{ed25519::*, x25519::X25519StaticPublicKey, ValidKey};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -20,13 +20,13 @@ use std::{convert::TryFrom, fmt};
 /// their public keys and voting power may or may not change between epochs.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct ValidatorInfo<PublicKey> {
+pub struct ValidatorInfo {
     // The validator's account address. AccountAddresses are initially derived from the account
     // auth pubkey; however, the auth key can be rotated, so one should not rely on this
     // initial property.
     account_address: AccountAddress,
     // This key can validate messages sent from this validator
-    consensus_public_key: PublicKey,
+    consensus_public_key: Ed25519PublicKey,
     // Voting power of this validator
     consensus_voting_power: u64,
     // This key can validate signed messages at the network layer
@@ -36,16 +36,16 @@ pub struct ValidatorInfo<PublicKey> {
     network_identity_public_key: X25519StaticPublicKey,
 }
 
-impl<PublicKey> fmt::Display for ValidatorInfo<PublicKey> {
+impl fmt::Display for ValidatorInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         write!(f, "account_address: {}", self.account_address.short_str())
     }
 }
 
-impl<PublicKey> ValidatorInfo<PublicKey> {
+impl ValidatorInfo {
     pub fn new(
         account_address: AccountAddress,
-        consensus_public_key: PublicKey,
+        consensus_public_key: Ed25519PublicKey,
         consensus_voting_power: u64,
         network_signing_public_key: Ed25519PublicKey,
         network_identity_public_key: X25519StaticPublicKey,
@@ -62,7 +62,7 @@ impl<PublicKey> ValidatorInfo<PublicKey> {
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn new_with_random_network_keys(
         account_address: AccountAddress,
-        consensus_public_key: PublicKey,
+        consensus_public_key: Ed25519PublicKey,
         consensus_voting_power: u64,
     ) -> Self {
         let (_, network_signing_public_key) = generate_ed25519_keypair(None);
@@ -83,7 +83,7 @@ impl<PublicKey> ValidatorInfo<PublicKey> {
     }
 
     /// Returns the key for validating signed messages from this validator
-    pub fn consensus_public_key(&self) -> &PublicKey {
+    pub fn consensus_public_key(&self) -> &Ed25519PublicKey {
         &self.consensus_public_key
     }
 
@@ -103,14 +103,12 @@ impl<PublicKey> ValidatorInfo<PublicKey> {
     }
 }
 
-impl<PublicKey: VerifyingKey> TryFrom<crate::proto::types::ValidatorInfo>
-    for ValidatorInfo<PublicKey>
-{
+impl TryFrom<crate::proto::types::ValidatorInfo> for ValidatorInfo {
     type Error = Error;
 
     fn try_from(proto: crate::proto::types::ValidatorInfo) -> Result<Self> {
         let account_address = AccountAddress::try_from(proto.account_address)?;
-        let consensus_public_key = PublicKey::try_from(&proto.consensus_public_key[..])?;
+        let consensus_public_key = Ed25519PublicKey::try_from(&proto.consensus_public_key[..])?;
         let consensus_voting_power = proto.consensus_voting_power;
         let network_signing_public_key =
             Ed25519PublicKey::try_from(&proto.network_signing_public_key[..])?;
@@ -126,10 +124,8 @@ impl<PublicKey: VerifyingKey> TryFrom<crate::proto::types::ValidatorInfo>
     }
 }
 
-impl<PublicKey: VerifyingKey> From<ValidatorInfo<PublicKey>>
-    for crate::proto::types::ValidatorInfo
-{
-    fn from(keys: ValidatorInfo<PublicKey>) -> Self {
+impl From<ValidatorInfo> for crate::proto::types::ValidatorInfo {
+    fn from(keys: ValidatorInfo) -> Self {
         Self {
             account_address: keys.account_address.to_vec(),
             consensus_public_key: keys.consensus_public_key.to_bytes().to_vec(),

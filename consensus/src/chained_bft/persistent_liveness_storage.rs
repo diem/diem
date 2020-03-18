@@ -16,10 +16,8 @@ use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
-    block_info::Round,
-    crypto_proxies::{ValidatorInfo, ValidatorSet},
-    epoch_info::EpochInfo,
-    ledger_info::LedgerInfo,
+    block_info::Round, epoch_info::EpochInfo, ledger_info::LedgerInfo,
+    validator_info::ValidatorInfo, validator_set::ValidatorSet,
     validator_verifier::ValidatorVerifier,
 };
 use std::{collections::HashSet, sync::Arc};

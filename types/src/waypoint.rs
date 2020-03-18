@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{crypto_proxies::ValidatorSet, ledger_info::LedgerInfo, transaction::Version};
+use crate::{ledger_info::LedgerInfo, transaction::Version, validator_set::ValidatorSet};
 use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
 use libra_crypto_derive::CryptoHasher;
@@ -136,9 +136,8 @@ impl CryptoHash for Ledger2WaypointConverter {
 
 #[cfg(test)]
 mod test {
-    use super::Waypoint;
-    use crate::{block_info::BlockInfo, crypto_proxies::ValidatorSet, ledger_info::LedgerInfo};
-    use libra_crypto::HashValue;
+    use super::*;
+    use crate::block_info::BlockInfo;
     use std::str::FromStr;
 
     #[test]

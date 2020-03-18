@@ -20,12 +20,12 @@ use libra_types::{
     account_address::AccountAddress,
     account_config,
     contract_event::ContractEvent,
-    crypto_proxies::ValidatorSet,
     discovery_info::DiscoveryInfo,
     discovery_set::DiscoverySet,
     transaction::{
         authenticator::AuthenticationKey, ChangeSet, RawTransaction, SignatureCheckedTransaction,
     },
+    validator_set::ValidatorSet,
 };
 use libra_vm::system_module_names::*;
 use move_core_types::identifier::Identifier;

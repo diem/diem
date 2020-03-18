@@ -277,8 +277,8 @@ impl fmt::Display for ValidatorVerifier {
     }
 }
 
-impl From<&ValidatorSet<Ed25519PublicKey>> for ValidatorVerifier {
-    fn from(validator_set: &ValidatorSet<Ed25519PublicKey>) -> Self {
+impl From<&ValidatorSet> for ValidatorVerifier {
+    fn from(validator_set: &ValidatorSet) -> Self {
         ValidatorVerifier::new(validator_set.iter().fold(BTreeMap::new(), |mut map, key| {
             map.insert(
                 key.account_address().clone(),
@@ -293,7 +293,7 @@ impl From<&ValidatorSet<Ed25519PublicKey>> for ValidatorVerifier {
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
-impl From<&ValidatorVerifier> for ValidatorSet<Ed25519PublicKey> {
+impl From<&ValidatorVerifier> for ValidatorSet {
     fn from(verifier: &ValidatorVerifier) -> Self {
         ValidatorSet::new(
             verifier

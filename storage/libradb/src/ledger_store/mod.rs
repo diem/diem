@@ -22,13 +22,13 @@ use libra_crypto::{
     HashValue,
 };
 use libra_types::{
-    crypto_proxies::ValidatorSet,
     ledger_info::LedgerInfoWithSignatures,
     proof::{
         position::Position, AccumulatorConsistencyProof, TransactionAccumulatorProof,
         TransactionAccumulatorRangeProof,
     },
     transaction::{TransactionInfo, Version},
+    validator_set::ValidatorSet,
 };
 use schemadb::{ReadOptions, SchemaIterator, DB};
 use std::{ops::Deref, sync::Arc};
