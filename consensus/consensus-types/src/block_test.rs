@@ -9,7 +9,7 @@ use crate::{
     quorum_cert::QuorumCert,
 };
 use libra_crypto::hash::{CryptoHash, HashValue};
-use libra_types::{crypto_proxies::ValidatorVerifier, validator_signer::ValidatorSigner};
+use libra_types::{validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier};
 use std::{collections::BTreeMap, panic, sync::Arc};
 
 #[test]

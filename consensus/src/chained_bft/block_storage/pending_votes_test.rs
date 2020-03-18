@@ -5,7 +5,7 @@ use crate::chained_bft::block_storage::{pending_votes::PendingVotes, VoteRecepti
 use consensus_types::{common::Round, vote::Vote, vote_data::VoteData};
 use libra_crypto::HashValue;
 use libra_types::{
-    block_info::BlockInfo, crypto_proxies::random_validator_verifier, ledger_info::LedgerInfo,
+    block_info::BlockInfo, ledger_info::LedgerInfo, validator_verifier::random_validator_verifier,
 };
 
 fn random_ledger_info() -> LedgerInfo {

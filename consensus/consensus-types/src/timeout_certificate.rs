@@ -7,7 +7,7 @@ use crate::{
 };
 use anyhow::Context;
 use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash};
-use libra_types::crypto_proxies::ValidatorVerifier;
+use libra_types::validator_verifier::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt};
 

@@ -207,7 +207,7 @@ mod tests {
 
     #[test]
     fn verify_validator_set_change_proof() {
-        use crate::{crypto_proxies::random_validator_verifier, ledger_info::LedgerInfo};
+        use crate::{ledger_info::LedgerInfo, validator_verifier::random_validator_verifier};
         use libra_crypto::hash::{CryptoHash, HashValue};
         use std::collections::BTreeMap;
 

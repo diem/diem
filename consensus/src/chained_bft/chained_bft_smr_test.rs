@@ -28,8 +28,8 @@ use libra_config::{
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
-    crypto_proxies::{ValidatorSet, ValidatorVerifier},
-    ledger_info::LedgerInfoWithSignatures,
+    crypto_proxies::ValidatorSet, ledger_info::LedgerInfoWithSignatures,
+    validator_verifier::ValidatorVerifier,
 };
 use network::peer_manager::{
     conn_status_channel, ConnectionRequestSender, PeerManagerRequestSender,

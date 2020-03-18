@@ -8,11 +8,12 @@ use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
     account_address::AccountAddress,
     block_info::BlockInfo,
-    crypto_proxies::{ValidatorChangeProof, ValidatorSet, ValidatorVerifier},
+    crypto_proxies::{ValidatorChangeProof, ValidatorSet},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{authenticator::AuthenticationKey, SignedTransaction, Transaction},
     validator_signer::ValidatorSigner,
+    validator_verifier::ValidatorVerifier,
 };
 use std::collections::{BTreeMap, HashMap};
 use transaction_builder::encode_transfer_script;
