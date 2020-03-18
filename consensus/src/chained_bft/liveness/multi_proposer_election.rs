@@ -1,25 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::liveness::proposer_election::ProposerElection;
+use crate::chained_bft::liveness::proposer_election::{next, ProposerElection};
 use consensus_types::{
     block::Block,
     common::{Author, Payload, Round},
 };
 use libra_logger::prelude::*;
-
-// next continuously mutates a state and returns a u64-index
-pub fn next(state: &mut Vec<u8>) -> u64 {
-    // state = SHA-3-256(state)
-    std::mem::replace(
-        state,
-        libra_crypto::HashValue::from_sha3_256(state).to_vec(),
-    );
-    let mut temp = [0u8; 8];
-    temp.copy_from_slice(&state[..8]);
-    // return state[0..8]
-    u64::from_le_bytes(temp)
-}
 
 /// The MultiProposer maps a round to an ordered list of authors.
 /// The primary proposer is determined by an index of hash(round) % num_proposers.

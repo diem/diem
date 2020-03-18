@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::chained_bft::liveness::{
-    multi_proposer_election::{self, MultiProposer},
-    proposer_election::ProposerElection,
+    multi_proposer_election::MultiProposer,
+    proposer_election::{next, ProposerElection},
 };
 use consensus_types::block::{block_test_utils::certificate_for_genesis, Block};
 use libra_types::validator_signer::ValidatorSigner;
@@ -23,9 +23,9 @@ fn test_multi_proposer() {
     let round = 1u64;
     let mut state = epoch.to_le_bytes().to_vec();
     state.extend_from_slice(&round.to_le_bytes());
-    let primary_idx = multi_proposer_election::next(&mut state);
+    let primary_idx = next(&mut state);
     let primary_idx = (primary_idx % 8) as usize;
-    let secondary_idx = multi_proposer_election::next(&mut state);
+    let secondary_idx = next(&mut state);
     let secondary_idx = (secondary_idx % 7) as usize; // assuming no collisions in this case
 
     let primary_proposer = proposers[primary_idx];
@@ -95,7 +95,7 @@ fn test_multi_proposer_hash() {
     for round in 0..10000 {
         let mut state = epoch.to_le_bytes().to_vec();
         state.extend_from_slice(&(round as u64).to_le_bytes());
-        let idx = multi_proposer_election::next(&mut state) % (counts.len() as u64);
+        let idx = next(&mut state) % (counts.len() as u64);
         counts[idx as usize] += 1;
     }
     for c in counts {
