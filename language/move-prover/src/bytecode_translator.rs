@@ -14,7 +14,10 @@ use spec_lang::{
     ty::{PrimitiveType, Type},
 };
 use stackless_bytecode_generator::{
-    stackless_bytecode::StacklessBytecode::{self, *},
+    stackless_bytecode::{
+        StacklessBytecode::{self, *},
+        TempIndex,
+    },
     stackless_bytecode_generator::{StacklessFunction, StacklessModuleGenerator},
 };
 
@@ -32,7 +35,7 @@ use bytecode_to_boogie::{
     lifetime_analysis::LifetimeAnalysis, stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use num::Zero;
-use vm::file_format::{CodeOffset, LocalIndex};
+use vm::file_format::CodeOffset;
 
 pub struct BoogieTranslator<'env> {
     env: &'env GlobalEnv,
@@ -71,7 +74,7 @@ struct BytecodeContext<'l> {
     /// at a given bytecode offset.
     /// TODO: the analysis currently represents references via `LocalIndex == u8`, but this might(?)
     /// overflow because the stackless bytcode can introduce temporaries larger than u8.
-    offset_to_dead_refs: BTreeMap<CodeOffset, BTreeSet<LocalIndex>>,
+    offset_to_dead_refs: BTreeMap<CodeOffset, BTreeSet<TempIndex>>,
 }
 
 impl<'l> BytecodeContext<'l> {

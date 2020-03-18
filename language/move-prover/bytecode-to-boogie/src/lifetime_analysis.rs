@@ -6,9 +6,12 @@ use crate::{
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use bytecode_verifier::absint::{AbstractDomain, JoinResult};
-use stackless_bytecode_generator::stackless_bytecode::StacklessBytecode::{self, *};
+use stackless_bytecode_generator::stackless_bytecode::{
+    StacklessBytecode::{self, *},
+    TempIndex,
+};
 use std::collections::{BTreeMap, BTreeSet};
-use vm::file_format::{CodeOffset, LocalIndex, SignatureToken};
+use vm::file_format::{CodeOffset, SignatureToken};
 
 /// Represents a node in the borrow graph.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -19,14 +22,14 @@ pub enum Node {
 
     /// Node representing a local. When BorrowField(dest, src), an edge between Local(src)
     /// and Local(dest) is added
-    Local(LocalIndex),
+    Local(TempIndex),
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct BorrowGraph {
     graph: BTreeMap<Node, BTreeSet<Node>>,
     reverse_graph: BTreeMap<Node, BTreeSet<Node>>,
-    moved_locals: BTreeSet<LocalIndex>,
+    moved_locals: BTreeSet<TempIndex>,
 }
 
 impl BorrowGraph {
@@ -59,7 +62,7 @@ impl BorrowGraph {
 
     /// Mark a local as moved. Notice that moving the local doesn't mean
     /// it's dead and can be removed
-    pub fn move_local(&mut self, local: LocalIndex) {
+    pub fn move_local(&mut self, local: TempIndex) {
         let node = Node::Local(local);
 
         // Only mark local if it actually exists in the graph
@@ -174,7 +177,7 @@ impl BorrowGraph {
 
     /// Trim the borrow graph by iteratively deleting moved sink nodes from the graph
     /// Return the deleted nodes
-    pub fn trim_graph(&mut self) -> BTreeSet<LocalIndex> {
+    pub fn trim_graph(&mut self) -> BTreeSet<TempIndex> {
         let mut sink_nodes = self.find_sink_nodes();
         let mut trimmed_nodes = BTreeSet::new();
         while !sink_nodes.is_empty() {
@@ -199,7 +202,7 @@ pub struct LifetimeState {
     borrow_graph: BorrowGraph,
 
     /// Mutable references that * just * go out of scope at the end of line CodeOffset
-    dead_refs: BTreeMap<CodeOffset, BTreeSet<LocalIndex>>,
+    dead_refs: BTreeMap<CodeOffset, BTreeSet<TempIndex>>,
 }
 
 impl LifetimeState {
@@ -207,8 +210,8 @@ impl LifetimeState {
     /// e.g., if one = {1: {2,3}, 2: {4}} and other = {1: {2,4}, 3: {5}},
     ///       then this function will mutate one into {1: {2,3,4}, 2: {4}, 3: {5}}
     fn dead_ref_join(
-        one: &mut BTreeMap<CodeOffset, BTreeSet<LocalIndex>>,
-        other: &BTreeMap<CodeOffset, BTreeSet<LocalIndex>>,
+        one: &mut BTreeMap<CodeOffset, BTreeSet<TempIndex>>,
+        other: &BTreeMap<CodeOffset, BTreeSet<TempIndex>>,
     ) {
         for (k, v) in other {
             one.entry(*k)
@@ -241,7 +244,7 @@ impl<'a> LifetimeAnalysis<'a> {
         cfg: &StacklessControlFlowGraph,
         instrs: &[StacklessBytecode],
         local_types: &'a [SignatureToken],
-    ) -> BTreeMap<CodeOffset, BTreeSet<LocalIndex>> {
+    ) -> BTreeMap<CodeOffset, BTreeSet<TempIndex>> {
         let mut analyzer = Self { local_types };
         let initial_state = LifetimeState {
             borrow_graph: BorrowGraph::new(),
@@ -254,7 +257,7 @@ impl<'a> LifetimeAnalysis<'a> {
     /// Union the set of dead references at each CodeOffset
     fn post_process(
         state_map: StateMap<LifetimeState>,
-    ) -> BTreeMap<CodeOffset, BTreeSet<LocalIndex>> {
+    ) -> BTreeMap<CodeOffset, BTreeSet<TempIndex>> {
         let mut res = BTreeMap::new();
         for (_, v) in state_map {
             LifetimeState::dead_ref_join(&mut res, &v.post.dead_refs);
@@ -280,14 +283,14 @@ impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
                 if self.local_types[*t].is_mutable_reference() {
                     after_state
                         .borrow_graph
-                        .replace_local(Node::Local(*l), Node::Local(*t as LocalIndex));
+                        .replace_local(Node::Local(*l), Node::Local(*t));
                 }
             }
             CopyLoc(t, l) => {
                 if self.local_types[*t].is_mutable_reference() {
                     after_state
                         .borrow_graph
-                        .copy_local(Node::Local(*l), Node::Local(*t as LocalIndex));
+                        .copy_local(Node::Local(*l), Node::Local(*t));
                 }
             }
             StLoc(l, t) => {
@@ -295,43 +298,42 @@ impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
                     after_state.borrow_graph.move_local(*l);
                     after_state
                         .borrow_graph
-                        .replace_local(Node::Local(*t as LocalIndex), Node::Local(*l));
+                        .replace_local(Node::Local(*t), Node::Local(*l));
                 }
             }
             BorrowLoc(t, _) => {
                 if self.local_types[*t].is_mutable_reference() {
                     after_state
                         .borrow_graph
-                        .add_edge(Node::Root, Node::Local(*t as LocalIndex));
+                        .add_edge(Node::Root, Node::Local(*t));
                 }
             }
             BorrowGlobal(t, _, _, _) => {
                 if self.local_types[*t].is_mutable_reference() {
                     after_state
                         .borrow_graph
-                        .add_edge(Node::Root, Node::Local(*t as LocalIndex));
+                        .add_edge(Node::Root, Node::Local(*t));
                 }
             }
             BorrowField(dest, src, _) => {
                 if self.local_types[*src].is_mutable_reference() {
-                    after_state.borrow_graph.move_local(*src as LocalIndex);
+                    after_state.borrow_graph.move_local(*src);
                 }
                 if self.local_types[*dest].is_mutable_reference() {
-                    after_state.borrow_graph.add_edge(
-                        Node::Local(*src as LocalIndex),
-                        Node::Local(*dest as LocalIndex),
-                    );
+                    after_state
+                        .borrow_graph
+                        .add_edge(Node::Local(*src), Node::Local(*dest));
                 }
             }
             FreezeRef(_, src) => {
-                after_state.borrow_graph.move_local(*src as LocalIndex);
+                after_state.borrow_graph.move_local(*src);
             }
             WriteRef(t, _) => {
-                after_state.borrow_graph.move_local(*t as LocalIndex);
+                after_state.borrow_graph.move_local(*t);
             }
             ReadRef(_, src) => {
                 if self.local_types[*src].is_mutable_reference() {
-                    after_state.borrow_graph.move_local(*src as LocalIndex);
+                    after_state.borrow_graph.move_local(*src);
                 }
             }
             Call(dest_vec, _, _, src_vec) => {
@@ -340,7 +342,7 @@ impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
                 let mut src_mut_refs = src_vec.clone();
                 src_mut_refs.retain(|s| self.local_types[*s].is_mutable_reference());
                 for s in src_mut_refs {
-                    after_state.borrow_graph.move_local(s as LocalIndex);
+                    after_state.borrow_graph.move_local(s);
                     // this is over approximating right now
                     // we only need to add an edge if it's possible for d to come from s
                     // for example, if d is an address ref but s is LibraCoin ref then
@@ -348,12 +350,12 @@ impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
                     for d in &dest_mut_refs {
                         after_state
                             .borrow_graph
-                            .add_edge(Node::Local(s as LocalIndex), Node::Local(*d as LocalIndex));
+                            .add_edge(Node::Local(s), Node::Local(*d));
                     }
                 }
             }
             Pop(t) => {
-                after_state.borrow_graph.move_local(*t as LocalIndex);
+                after_state.borrow_graph.move_local(*t);
             }
             _ => {
                 // Other instructions don't deal with mutable references
