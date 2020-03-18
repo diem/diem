@@ -10,6 +10,7 @@ jobs:
   build-images:
     name: Build images
     runs-on: self-hosted
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v1
       - name: Setup env
@@ -49,6 +50,7 @@ jobs:
     name: Build images and run cluster test
     needs: build-images
     runs-on: self-hosted
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v1
       - name: Setup env
@@ -192,6 +194,7 @@ jobs:
     name: Run cluster test on k8s
     needs: build-images
     runs-on: self-hosted
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v1
       - name: Setup env
