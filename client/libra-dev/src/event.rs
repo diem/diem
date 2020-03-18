@@ -9,7 +9,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_config::{ReceivedPaymentEvent, SentPaymentEvent},
     contract_event::ContractEvent,
-    event::{EventKey, EVENT_KEY_LENGTH},
+    event::EventKey,
     language_storage::TypeTag,
 };
 use std::{convert::TryFrom, ffi::CString, ops::Deref, slice};
@@ -44,7 +44,7 @@ pub unsafe extern "C" fn libra_LibraEvent_from(
     let buffer_data: &[u8] = slice::from_raw_parts(buf_data, len_data);
     let buffer_type_tag: &[u8] = slice::from_raw_parts(buf_type_tag, len_type_tag);
 
-    let mut key = [0u8; EVENT_KEY_LENGTH];
+    let mut key = [0u8; EventKey::LENGTH];
     key.copy_from_slice(buffer_key);
 
     let (_salt, event_address) = buffer_key.split_at(8);
