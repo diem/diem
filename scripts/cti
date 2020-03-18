@@ -222,7 +222,7 @@ else
   sed -e "s/{pod_name}/${pod_name}/g" \
       -e "s/{image_tag}/${TAG}/g" \
       -e "s/{cluster_test_image_tag}/${CLUSTER_TEST_TAG}/g" \
-      -e "s/{env_variables}/${retval_join_env_vars}/g" \
+      -e "s^{env_variables}^${retval_join_env_vars}^g" \
       -e "s/{extra_args}/${retval_join_args}/g" \
       ${DIR}/cluster_test_pod_template.yaml > ${specfile}
   if [[ -z "${WORKSPACE}" ]]; then

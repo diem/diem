@@ -10,12 +10,15 @@ spec:
       labels:
         app: {label}
     spec:
+      serviceAccountName: clustertest
       nodeName: {node_name}
       hostNetwork: true
+      hostPID: true
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: main
         image: {image}
+        imagePullPolicy: Always
         command: ["sh",  "-c", "{command}"]
         securityContext:
           privileged: true

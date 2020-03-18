@@ -18,6 +18,7 @@ use async_trait::async_trait;
 use crate::{
     aws,
     cluster::Cluster,
+    cluster_swarm::ClusterSwarm,
     effects::{Action, GenerateCpuFlamegraph},
     experiments::{Context, Experiment, ExperimentParam},
     instance,
@@ -68,14 +69,6 @@ impl Experiment for CpuFlamegraph {
             .tx_emitter
             .emit_txn_for(tx_emitter_duration, emit_job_request)
             .boxed();
-        let flame_graph =
-            GenerateCpuFlamegraph::new(self.perf_instance.clone(), self.duration_secs);
-        let flame_graph_future = tokio::time::delay_for(buffer)
-            .then(|_| flame_graph.apply())
-            .boxed();
-        let (emit_result, flame_graph_result) = join!(emit_future, flame_graph_future);
-        emit_result.map_err(|e| format_err!("Emiting tx failed: {:?}", e))?;
-        flame_graph_result.map_err(|e| format_err!("Failed to generate flamegraph: {:?}", e))?;
         let filename = format!(
             "{}-libra-node-perf.svg",
             thread_rng()
@@ -83,12 +76,38 @@ impl Experiment for CpuFlamegraph {
                 .take(30)
                 .collect::<String>()
         );
-        aws::upload_to_s3(
-            "perf-kernel.svg",
-            "toro-cluster-test-flamegraphs",
-            filename.as_str(),
-            Some("image/svg+xml".to_string()),
-        )?;
+        if let Some(cluster_swarm) = context.cluster_swarm {
+            let command = generate_perf_flamegraph_command(&filename, self.duration_secs);
+            let flame_graph = cluster_swarm.run(
+                &self.perf_instance,
+                "853397791086.dkr.ecr.us-west-2.amazonaws.com/cluster-test-util:latest",
+                command,
+                "generate-flamegraph",
+            );
+            let flame_graph_future = tokio::time::delay_for(buffer)
+                .then(|_| async move { flame_graph.await })
+                .boxed();
+            let (emit_result, flame_graph_result) = join!(emit_future, flame_graph_future);
+            emit_result.map_err(|e| format_err!("Emiting tx failed: {:?}", e))?;
+            flame_graph_result
+                .map_err(|e| format_err!("Failed to generate flamegraph: {:?}", e))?;
+        } else {
+            let flame_graph =
+                GenerateCpuFlamegraph::new(self.perf_instance.clone(), self.duration_secs);
+            let flame_graph_future = tokio::time::delay_for(buffer)
+                .then(|_| flame_graph.apply())
+                .boxed();
+            let (emit_result, flame_graph_result) = join!(emit_future, flame_graph_future);
+            emit_result.map_err(|e| format_err!("Emiting tx failed: {:?}", e))?;
+            flame_graph_result
+                .map_err(|e| format_err!("Failed to generate flamegraph: {:?}", e))?;
+            aws::upload_to_s3(
+                "perf-kernel.svg",
+                "toro-cluster-test-flamegraphs",
+                filename.as_str(),
+                Some("image/svg+xml".to_string()),
+            )?;
+        }
         context.report.report_text(format!(
             "perf flamegraph : https://toro-cluster-test-flamegraphs.s3-us-west-2.amazonaws.com/{}",
             filename
@@ -105,4 +124,20 @@ impl Display for CpuFlamegraph {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         write!(f, "Generating CpuFlamegraph on {}", self.perf_instance)
     }
+}
+
+fn generate_perf_flamegraph_command(filename: &str, duration_secs: usize) -> String {
+    format!(
+        r#"
+        set -xe;
+        rm -rf /tmp/perf-data;
+        mkdir /tmp/perf-data;
+        cd /tmp/perf-data;
+        perf record -F 99 -p $(ps aux | grep libra-node | grep -v grep | awk '{{print $2}}') --output=perf.data --call-graph dwarf -- sleep {duration_secs};
+        perf script --input=perf.data | /usr/local/etc/FlameGraph/stackcollapse-perf.pl > out.perf-folded;
+        /usr/local/etc/FlameGraph/flamegraph.pl out.perf-folded > {filename};
+        aws s3 cp {filename} s3://toro-cluster-test-flamegraphs/{filename};"#,
+        duration_secs = duration_secs,
+        filename = filename,
+    )
 }
