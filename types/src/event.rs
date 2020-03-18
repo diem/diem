@@ -10,19 +10,19 @@ use rand::{rngs::OsRng, RngCore};
 use serde::{de, ser, Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
 
-/// Size of an event key.
-pub const EVENT_KEY_LENGTH: usize = AccountAddress::LENGTH + 8;
-
 /// A struct that represents a globally unique id for an Event stream that a user can listen to.e
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[cfg_attr(feature = "fuzzing", derive(Arbitrary))]
-pub struct EventKey([u8; EVENT_KEY_LENGTH]);
+pub struct EventKey([u8; EventKey::LENGTH]);
 
 impl EventKey {
     /// Construct a new EventKey from a byte array slice.
-    pub fn new(key: [u8; EVENT_KEY_LENGTH]) -> Self {
+    pub fn new(key: [u8; Self::LENGTH]) -> Self {
         EventKey(key)
     }
+
+    /// The number of bytes in an EventKey.
+    pub const LENGTH: usize = AccountAddress::LENGTH + 8;
 
     /// Get the byte representation of the event key.
     pub fn as_bytes(&self) -> &[u8] {
@@ -44,11 +44,23 @@ impl EventKey {
 
     /// Create a unique handle by using an AccountAddress and a counter.
     pub fn new_from_address(addr: &AccountAddress, salt: u64) -> Self {
-        let mut output_bytes = [0; EVENT_KEY_LENGTH];
+        let mut output_bytes = [0; Self::LENGTH];
         let (lhs, rhs) = output_bytes.split_at_mut(8);
         lhs.copy_from_slice(&salt.to_le_bytes());
         rhs.copy_from_slice(addr.as_ref());
         EventKey(output_bytes)
+    }
+}
+
+impl From<EventKey> for [u8; EventKey::LENGTH] {
+    fn from(event_key: EventKey) -> Self {
+        event_key.0
+    }
+}
+
+impl From<&EventKey> for [u8; EventKey::LENGTH] {
+    fn from(event_key: &EventKey) -> Self {
+        event_key.0
     }
 }
 
@@ -94,11 +106,11 @@ impl TryFrom<&[u8]> for EventKey {
     /// Tries to convert the provided byte array into Event Key.
     fn try_from(bytes: &[u8]) -> Result<EventKey> {
         ensure!(
-            bytes.len() == EVENT_KEY_LENGTH,
+            bytes.len() == Self::LENGTH,
             "The Address {:?} is of invalid length",
             bytes
         );
-        let mut addr = [0u8; EVENT_KEY_LENGTH];
+        let mut addr = [0u8; Self::LENGTH];
         addr.copy_from_slice(bytes);
         Ok(EventKey(addr))
     }
