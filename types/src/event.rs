@@ -4,6 +4,8 @@
 use crate::account_address::AccountAddress;
 use anyhow::{ensure, Error, Result};
 #[cfg(feature = "fuzzing")]
+use proptest_derive::Arbitrary;
+#[cfg(feature = "fuzzing")]
 use rand::{rngs::OsRng, RngCore};
 use serde::{de, ser, Deserialize, Serialize};
 use std::{
@@ -17,6 +19,7 @@ use std::{
 pub const EVENT_KEY_LENGTH: usize = AccountAddress::LENGTH + 8;
 
 /// A struct that represents a globally unique id for an Event stream that a user can listen to.
+#[cfg_attr(feature = "fuzzing", derive(Arbitrary))]
 pub struct EventKey([u8; EVENT_KEY_LENGTH]);
 
 impl EventKey {
