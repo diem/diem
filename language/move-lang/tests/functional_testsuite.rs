@@ -9,10 +9,10 @@ use functional_tests::{
 use libra_types::account_address::AccountAddress as LibraAddress;
 use move_bytecode_verifier::{batch_verify_modules, VerifiedModule};
 use move_lang::{
+    compiled_unit::CompiledUnit,
     move_compile, move_compile_no_report,
     shared::Address,
     test_utils::{read_bool_var, stdlib_files, FUNCTIONAL_TEST_DIR},
-    to_bytecode::translate::CompiledUnit,
 };
 use std::{convert::TryFrom, fmt, io::Write, path::Path};
 use tempfile::NamedTempFile;
@@ -79,13 +79,13 @@ impl Compiler for MoveSourceCompiler {
         };
 
         Ok(match unit {
-            CompiledUnit::Script(_, compiled_script, _) => ScriptOrModule::Script(compiled_script),
-            CompiledUnit::Module(_, compiled_module, _) => {
+            CompiledUnit::Script { script, .. } => ScriptOrModule::Script(script),
+            CompiledUnit::Module { module, .. } => {
                 let input = format!("address {}:\n{}", sender_addr, input);
                 cur_file.reopen()?.write_all(input.as_bytes())?;
                 self.temp_files.push(cur_file);
                 self.deps.push(cur_path);
-                ScriptOrModule::Module(compiled_module)
+                ScriptOrModule::Module(module)
             }
         })
     }
@@ -97,8 +97,8 @@ impl Compiler for MoveSourceCompiler {
             compiled_units
                 .into_iter()
                 .map(|compiled_unit| match compiled_unit {
-                    CompiledUnit::Module(_, m, _) => m,
-                    CompiledUnit::Script(_, _, _) => panic!("Unexpected Script in stdlib"),
+                    CompiledUnit::Module { module, .. } => module,
+                    CompiledUnit::Script { .. } => panic!("Unexpected Script in stdlib"),
                 })
                 .collect(),
         ))

@@ -9,7 +9,7 @@ use libra_types::{
     access_path::AccessPath, account_address::AccountAddress, language_storage::ModuleId,
 };
 use move_core_types::identifier::{IdentStr, Identifier};
-use move_lang::{shared::Address, to_bytecode::translate::CompiledUnit};
+use move_lang::{compiled_unit::CompiledUnit, shared::Address};
 use move_vm_runtime::MoveVM;
 use move_vm_state::{data_cache::BlockDataCache, execution_context::TransactionExecutionContext};
 use std::path::PathBuf;
@@ -36,10 +36,10 @@ fn compile_module() -> VerifiedModule {
     let (_, mut modules) =
         move_lang::move_compile(&[s], &[], Some(Address::default())).expect("Error compiling...");
     match modules.remove(0) {
-        CompiledUnit::Module(_, module, _) => {
+        CompiledUnit::Module { module, .. } => {
             VerifiedModule::new(module).expect("Cannot verify code in file")
         }
-        _ => panic!("no module compiled, is the file empty?"),
+        CompiledUnit::Script { .. } => panic!("Expected a module but received a script"),
     }
 }
 
