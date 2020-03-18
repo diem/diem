@@ -18,13 +18,13 @@ use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
-    crypto_proxies::ValidatorChangeProof,
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccumulatorConsistencyProof, SparseMerkleProof, SparseMerkleRangeProof},
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
+    validator_change::ValidatorChangeProof,
 };
 use std::{convert::TryFrom, net::SocketAddr, sync::Mutex};
 use storage_proto::{

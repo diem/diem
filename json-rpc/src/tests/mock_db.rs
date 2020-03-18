@@ -8,7 +8,6 @@ use libra_types::{
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     block_info::BlockInfo,
     contract_event::ContractEvent,
-    crypto_proxies::ValidatorChangeProof,
     event::EventKey,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::{
@@ -18,6 +17,7 @@ use libra_types::{
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionWithProof, Version,
     },
+    validator_change::ValidatorChangeProof,
     vm_error::StatusCode,
 };
 use libradb::LibraDBTrait;

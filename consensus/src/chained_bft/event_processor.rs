@@ -43,9 +43,8 @@ use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{
-    crypto_proxies::{EpochInfo, ValidatorChangeProof},
-    ledger_info::LedgerInfoWithSignatures,
-    transaction::TransactionStatus,
+    crypto_proxies::EpochInfo, ledger_info::LedgerInfoWithSignatures,
+    transaction::TransactionStatus, validator_change::ValidatorChangeProof,
     validator_verifier::ValidatorVerifier,
 };
 #[cfg(test)]

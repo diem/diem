@@ -9,7 +9,6 @@ use crate::{
     account_config::AccountResource,
     account_state_blob::AccountStateWithProof,
     contract_event::EventWithProof,
-    crypto_proxies::ValidatorChangeProof,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::AccumulatorConsistencyProof,
     proto::types::{
@@ -20,6 +19,7 @@ use crate::{
     },
     transaction::{TransactionListWithProof, TransactionWithProof, Version},
     trusted_state::{TrustedState, TrustedStateChange},
+    validator_change::ValidatorChangeProof,
 };
 use anyhow::{bail, ensure, format_err, Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]

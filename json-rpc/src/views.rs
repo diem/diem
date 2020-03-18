@@ -11,11 +11,11 @@ use libra_types::{
     },
     account_state_blob::AccountStateWithProof,
     contract_event::ContractEvent,
-    crypto_proxies::ValidatorChangeProof,
     language_storage::TypeTag,
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccountStateProof, AccumulatorConsistencyProof},
     transaction::{Transaction, TransactionArgument, TransactionPayload},
+    validator_change::ValidatorChangeProof,
 };
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;

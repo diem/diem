@@ -55,7 +55,6 @@ use libra_types::{
     account_address::AccountAddress,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
-    crypto_proxies::ValidatorChangeProof,
     event::EventKey,
     get_with_proof::{RequestItem, ResponseItem},
     ledger_info::LedgerInfoWithSignatures,
@@ -67,6 +66,7 @@ use libra_types::{
         TransactionInfo, TransactionListWithProof, TransactionToCommit, TransactionWithProof,
         Version,
     },
+    validator_change::ValidatorChangeProof,
 };
 use once_cell::sync::Lazy;
 use prometheus::{IntCounter, IntGauge, IntGaugeVec};

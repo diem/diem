@@ -21,11 +21,10 @@ use libra_logger::prelude::*;
 use libra_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
 use libra_types::{
     contract_event::ContractEvent,
-    crypto_proxies::ValidatorChangeProof,
     event_subscription::EventSubscription,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{Transaction, TransactionListWithProof, Version},
-    validator_change::VerifierType,
+    validator_change::{ValidatorChangeProof, VerifierType},
     waypoint::Waypoint,
 };
 use network::protocols::network::Event;

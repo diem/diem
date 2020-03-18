@@ -9,7 +9,7 @@ use crate::{
     block_info::{BlockInfo, Round},
     block_metadata::BlockMetadata,
     contract_event::ContractEvent,
-    crypto_proxies::{ValidatorChangeProof, ValidatorSet},
+    crypto_proxies::ValidatorSet,
     discovery_info::DiscoveryInfo,
     event::{EventHandle, EventKey, EVENT_KEY_LENGTH},
     get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
@@ -21,6 +21,7 @@ use crate::{
         Transaction, TransactionArgument, TransactionListWithProof, TransactionPayload,
         TransactionStatus, TransactionToCommit, Version,
     },
+    validator_change::ValidatorChangeProof,
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };

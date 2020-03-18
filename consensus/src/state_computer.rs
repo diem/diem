@@ -8,9 +8,9 @@ use executor::Executor;
 use executor_types::{ExecutedTrees, ProcessedVMOutput};
 use libra_logger::prelude::*;
 use libra_types::{
-    crypto_proxies::ValidatorChangeProof,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{SignedTransaction, Transaction},
+    validator_change::ValidatorChangeProof,
 };
 use libra_vm::LibraVM;
 use state_synchronizer::StateSyncClient;

@@ -21,7 +21,7 @@ use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryS
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{
-    account_address::AccountAddress, crypto_proxies::ValidatorChangeProof,
+    account_address::AccountAddress, validator_change::ValidatorChangeProof,
     validator_verifier::ValidatorVerifier,
 };
 use network::protocols::{network::Event, rpc::error::RpcError};
