@@ -162,7 +162,7 @@ async fn add_network_delay_k8s(
     cluster_swarm
         .run(
             &instance,
-            "853397791086.dkr.ecr.us-west-2.amazonaws.com/iproute2:latest",
+            "853397791086.dkr.ecr.us-west-2.amazonaws.com/cluster-test-util:latest",
             command,
             "add-network-delay",
         )

@@ -275,7 +275,7 @@ impl ClusterSwarm for ClusterSwarmKube {
                     include_str!("job_template.yaml"),
                     name = &job_name,
                     label = "remove-network-effects",
-                    image = "853397791086.dkr.ecr.us-west-2.amazonaws.com/iproute2:latest",
+                    image = "853397791086.dkr.ecr.us-west-2.amazonaws.com/cluster-test-util:latest",
                     node_name = node_name,
                     command = "tc qdisc delete dev eth0 root || true",
                     back_off_limit = back_off_limit,
