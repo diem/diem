@@ -10,7 +10,7 @@ use crate::{
     block_metadata::BlockMetadata,
     contract_event::ContractEvent,
     discovery_info::DiscoveryInfo,
-    event::{EventHandle, EventKey, EVENT_KEY_LENGTH},
+    event::{EventHandle, EventKey},
     get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
     language_storage::{StructTag, TypeTag},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -676,22 +676,6 @@ impl AccountStateBlobGen {
             .materialize(account_index, universe);
         let balance_resource = self.balance_resource_gen.materialize();
         AccountStateBlob::try_from((&account_resource, &balance_resource)).unwrap()
-    }
-}
-
-#[cfg(feature = "fuzzing")]
-impl Arbitrary for EventKey {
-    type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        (vec(any::<u8>(), EVENT_KEY_LENGTH))
-            .prop_map(|v| {
-                let mut bytes = [0; EVENT_KEY_LENGTH];
-                bytes.copy_from_slice(v.as_slice());
-                EventKey::new(bytes)
-            })
-            .boxed()
     }
 }
 
