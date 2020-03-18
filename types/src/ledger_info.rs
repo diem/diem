@@ -10,7 +10,7 @@ use crate::{
 };
 use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::{
-    ed25519::{Ed25519PublicKey, Ed25519Signature},
+    ed25519::Ed25519Signature,
     hash::{CryptoHash, CryptoHasher, HashValue},
 };
 use libra_crypto_derive::CryptoHasher;
@@ -243,7 +243,7 @@ impl LedgerInfoWithSignatures {
 
     pub fn verify_signatures(
         &self,
-        validator: &ValidatorVerifier<Ed25519PublicKey>,
+        validator: &ValidatorVerifier,
     ) -> ::std::result::Result<(), VerifyError> {
         let ledger_hash = self.ledger_info().hash();
         validator.batch_verify_aggregated_signature(ledger_hash, self.signatures())

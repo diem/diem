@@ -21,8 +21,7 @@
 
 use crate::{
     validator_info::ValidatorInfo as RawValidatorInfo,
-    validator_set::ValidatorSet as RawValidatorSet,
-    validator_verifier::ValidatorVerifier as RawValidatorVerifier,
+    validator_set::ValidatorSet as RawValidatorSet, validator_verifier::ValidatorVerifier,
 };
 
 // This sets the types containing cryptographic materials used in the
@@ -41,7 +40,6 @@ use std::{collections::BTreeMap, fmt};
 
 pub type ValidatorInfo = RawValidatorInfo<Ed25519PublicKey>;
 pub type ValidatorSet = RawValidatorSet<Ed25519PublicKey>;
-pub type ValidatorVerifier = RawValidatorVerifier<Ed25519PublicKey>;
 pub use crate::validator_change::ValidatorChangeProof;
 use std::sync::Arc;
 
@@ -70,43 +68,4 @@ impl fmt::Display for EpochInfo {
             self.epoch, self.verifier
         )
     }
-}
-
-#[cfg(any(test, feature = "fuzzing"))]
-use crate::validator_signer::ValidatorSigner;
-
-/// Helper function to get random validator signers and a corresponding validator verifier for
-/// testing.  If custom_voting_power_quorum is not None, set a custom voting power quorum amount.
-/// With pseudo_random_account_address enabled, logs show 0 -> [0000], 1 -> [1000]
-#[cfg(any(test, feature = "fuzzing"))]
-pub fn random_validator_verifier(
-    count: usize,
-    custom_voting_power_quorum: Option<u64>,
-    pseudo_random_account_address: bool,
-) -> (Vec<ValidatorSigner>, ValidatorVerifier) {
-    let mut signers = Vec::new();
-    let mut account_address_to_validator_info = BTreeMap::new();
-    for i in 0..count {
-        let random_signer = if pseudo_random_account_address {
-            ValidatorSigner::from_int(i as u8)
-        } else {
-            ValidatorSigner::random([i as u8; 32])
-        };
-        account_address_to_validator_info.insert(
-            random_signer.author(),
-            crate::validator_verifier::ValidatorConsensusInfo::new(random_signer.public_key(), 1),
-        );
-        signers.push(random_signer);
-    }
-    (
-        signers,
-        match custom_voting_power_quorum {
-            Some(custom_voting_power_quorum) => ValidatorVerifier::new_with_quorum_voting_power(
-                account_address_to_validator_info,
-                custom_voting_power_quorum,
-            )
-            .expect("Unable to create testing validator verifier"),
-            None => ValidatorVerifier::new(account_address_to_validator_info),
-        },
-    )
 }

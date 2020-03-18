@@ -47,9 +47,9 @@ use futures::{
 use libra_crypto::HashValue;
 use libra_types::{
     block_info::BlockInfo,
-    crypto_proxies::{random_validator_verifier, ValidatorVerifier},
     ledger_info::LedgerInfoWithSignatures,
     validator_signer::ValidatorSigner,
+    validator_verifier::{random_validator_verifier, ValidatorVerifier},
 };
 use network::peer_manager::{
     conn_status_channel, ConnectionRequestSender, PeerManagerRequestSender,

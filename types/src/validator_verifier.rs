@@ -3,7 +3,10 @@
 
 use crate::{account_address::AccountAddress, validator_set::ValidatorSet};
 use anyhow::{ensure, Result};
-use libra_crypto::*;
+use libra_crypto::{
+    ed25519::{Ed25519PublicKey, Ed25519Signature},
+    HashValue, VerifyingKey,
+};
 use mirai_annotations::*;
 use std::{collections::BTreeMap, fmt};
 use thiserror::Error;
@@ -39,20 +42,20 @@ pub enum VerifyError {
 
 /// Helper struct to manage validator information for validation
 #[derive(Clone, Debug)]
-pub struct ValidatorConsensusInfo<PublicKey> {
-    public_key: PublicKey,
+pub struct ValidatorConsensusInfo {
+    public_key: Ed25519PublicKey,
     voting_power: u64,
 }
 
-impl<PublicKey: VerifyingKey> ValidatorConsensusInfo<PublicKey> {
-    pub fn new(public_key: PublicKey, voting_power: u64) -> Self {
+impl ValidatorConsensusInfo {
+    pub fn new(public_key: Ed25519PublicKey, voting_power: u64) -> Self {
         ValidatorConsensusInfo {
             public_key,
             voting_power,
         }
     }
 
-    pub fn public_key(&self) -> &PublicKey {
+    pub fn public_key(&self) -> &Ed25519PublicKey {
         &self.public_key
     }
 
@@ -65,21 +68,21 @@ impl<PublicKey: VerifyingKey> ValidatorConsensusInfo<PublicKey> {
 /// can be used for all signature verification operations including block and network signature
 /// verification, respectively.
 #[derive(Clone, Debug)]
-pub struct ValidatorVerifier<PublicKey> {
+pub struct ValidatorVerifier {
     /// An ordered map of each validator's on-chain account address to its pubkeys
     /// and voting power.
-    address_to_validator_info: BTreeMap<AccountAddress, ValidatorConsensusInfo<PublicKey>>,
+    address_to_validator_info: BTreeMap<AccountAddress, ValidatorConsensusInfo>,
     /// The minimum voting power required to achieve a quorum
     quorum_voting_power: u64,
     /// Total voting power of all validators (cached from address_to_validator_info)
     total_voting_power: u64,
 }
 
-impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
+impl ValidatorVerifier {
     /// Initialize with a map of account address to validator info and set quorum size to
     /// default (`2f + 1`) or zero if `address_to_validator_info` is empty.
     pub fn new(
-        address_to_validator_info: BTreeMap<AccountAddress, ValidatorConsensusInfo<PublicKey>>,
+        address_to_validator_info: BTreeMap<AccountAddress, ValidatorConsensusInfo>,
     ) -> Self {
         let total_voting_power = address_to_validator_info
             .values()
@@ -99,7 +102,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
 
     /// Initializes a validator verifier with a specified quorum voting power.
     pub fn new_with_quorum_voting_power(
-        address_to_validator_info: BTreeMap<AccountAddress, ValidatorConsensusInfo<PublicKey>>,
+        address_to_validator_info: BTreeMap<AccountAddress, ValidatorConsensusInfo>,
         quorum_voting_power: u64,
     ) -> Result<Self> {
         let total_voting_power = address_to_validator_info.values().fold(0, |sum, x| {
@@ -122,7 +125,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
     }
 
     /// Helper method to initialize with a single author and public key with quorum voting power 1.
-    pub fn new_single(author: AccountAddress, public_key: PublicKey) -> Self {
+    pub fn new_single(author: AccountAddress, public_key: Ed25519PublicKey) -> Self {
         let mut author_to_validator_info = BTreeMap::new();
         author_to_validator_info.insert(author, ValidatorConsensusInfo::new(public_key, 1));
         Self::new(author_to_validator_info)
@@ -133,7 +136,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
         &self,
         author: AccountAddress,
         hash: HashValue,
-        signature: &PublicKey::SignatureMaterial,
+        signature: &Ed25519Signature,
     ) -> std::result::Result<(), VerifyError> {
         match self.get_public_key(&author) {
             Some(public_key) => {
@@ -152,57 +155,47 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
     /// attached signatures is invalid or it does not correspond to a known author. The latter is to
     /// prevent malicious users from adding arbitrary content to the signature payload that would go
     /// unnoticed.
-    pub fn verify_aggregated_signature<T>(
+    pub fn verify_aggregated_signature(
         &self,
         hash: HashValue,
-        aggregated_signature: &BTreeMap<AccountAddress, T>,
-    ) -> std::result::Result<(), VerifyError>
-    where
-        T: Into<PublicKey::SignatureMaterial> + Clone,
-    {
-        self.check_num_of_signatures(&aggregated_signature)?;
+        aggregated_signature: &BTreeMap<AccountAddress, Ed25519Signature>,
+    ) -> std::result::Result<(), VerifyError> {
+        self.check_num_of_signatures(aggregated_signature)?;
         self.check_voting_power(aggregated_signature.keys())?;
         for (author, signature) in aggregated_signature {
-            self.verify_signature(*author, hash, &signature.clone().into())?;
+            self.verify_signature(*author, hash, &signature.clone())?;
         }
         Ok(())
     }
 
     /// This function will try batch signature verification and falls back to normal
     /// iterated verification if batching fails.
-    pub fn batch_verify_aggregated_signature<T>(
+    pub fn batch_verify_aggregated_signature(
         &self,
         hash: HashValue,
-        aggregated_signature: &BTreeMap<AccountAddress, T>,
-    ) -> std::result::Result<(), VerifyError>
-    where
-        T: Into<PublicKey::SignatureMaterial> + Clone,
-    {
+        aggregated_signature: &BTreeMap<AccountAddress, Ed25519Signature>,
+    ) -> std::result::Result<(), VerifyError> {
         self.check_num_of_signatures(aggregated_signature)?;
         self.check_voting_power(aggregated_signature.keys())?;
-        let keys_and_signatures: Vec<(PublicKey, PublicKey::SignatureMaterial)> =
-            aggregated_signature
-                .iter()
-                .flat_map(|(address, signature)| {
-                    let sig: PublicKey::SignatureMaterial = signature.clone().into();
-                    self.get_public_key(&address).map(|pub_key| (pub_key, sig))
-                })
-                .collect();
+        let keys_and_signatures: Vec<(Ed25519PublicKey, Ed25519Signature)> = aggregated_signature
+            .iter()
+            .flat_map(|(address, signature)| {
+                let sig = signature.clone();
+                self.get_public_key(&address).map(|pub_key| (pub_key, sig))
+            })
+            .collect();
         // Fallback is required to identify the source of the problem if batching fails.
-        if PublicKey::batch_verify_signatures(&hash, keys_and_signatures).is_err() {
+        if Ed25519PublicKey::batch_verify_signatures(&hash, keys_and_signatures).is_err() {
             self.verify_aggregated_signature(hash, aggregated_signature)?
         }
         Ok(())
     }
 
     /// Ensure there are not more than the maximum expected signatures (all possible signatures).
-    fn check_num_of_signatures<T>(
+    fn check_num_of_signatures(
         &self,
-        aggregated_signature: &BTreeMap<AccountAddress, T>,
-    ) -> std::result::Result<(), VerifyError>
-    where
-        T: Into<PublicKey::SignatureMaterial> + Clone,
-    {
+        aggregated_signature: &BTreeMap<AccountAddress, Ed25519Signature>,
+    ) -> std::result::Result<(), VerifyError> {
         let num_of_signatures = aggregated_signature.len();
         if num_of_signatures > self.len() {
             return Err(VerifyError::TooManySignatures {
@@ -238,7 +231,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
     }
 
     /// Returns the public key for this address.
-    pub fn get_public_key(&self, author: &AccountAddress) -> Option<PublicKey> {
+    pub fn get_public_key(&self, author: &AccountAddress) -> Option<Ed25519PublicKey> {
         self.address_to_validator_info
             .get(&author)
             .map(|validator_info| validator_info.public_key.clone())
@@ -274,7 +267,7 @@ impl<PublicKey: VerifyingKey> ValidatorVerifier<PublicKey> {
     }
 }
 
-impl<PublicKey> fmt::Display for ValidatorVerifier<PublicKey> {
+impl fmt::Display for ValidatorVerifier {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         write!(f, "ValidatorSet: [")?;
         for (addr, info) in &self.address_to_validator_info {
@@ -284,8 +277,8 @@ impl<PublicKey> fmt::Display for ValidatorVerifier<PublicKey> {
     }
 }
 
-impl<PublicKey: VerifyingKey> From<&ValidatorSet<PublicKey>> for ValidatorVerifier<PublicKey> {
-    fn from(validator_set: &ValidatorSet<PublicKey>) -> Self {
+impl From<&ValidatorSet<Ed25519PublicKey>> for ValidatorVerifier {
+    fn from(validator_set: &ValidatorSet<Ed25519PublicKey>) -> Self {
         ValidatorVerifier::new(validator_set.iter().fold(BTreeMap::new(), |mut map, key| {
             map.insert(
                 key.account_address().clone(),
@@ -300,14 +293,13 @@ impl<PublicKey: VerifyingKey> From<&ValidatorSet<PublicKey>> for ValidatorVerifi
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
-impl<PublicKey: VerifyingKey> From<&ValidatorVerifier<PublicKey>> for ValidatorSet<PublicKey> {
-    fn from(verifier: &ValidatorVerifier<PublicKey>) -> Self {
-        use crate::validator_info::ValidatorInfo;
+impl From<&ValidatorVerifier> for ValidatorSet<Ed25519PublicKey> {
+    fn from(verifier: &ValidatorVerifier) -> Self {
         ValidatorSet::new(
             verifier
                 .get_ordered_account_addresses_iter()
                 .map(|addr| {
-                    ValidatorInfo::new_with_random_network_keys(
+                    crate::validator_info::ValidatorInfo::new_with_random_network_keys(
                         addr,
                         verifier.get_public_key(&addr).unwrap(),
                         verifier.get_voting_power(&addr).unwrap(),
@@ -318,11 +310,50 @@ impl<PublicKey: VerifyingKey> From<&ValidatorVerifier<PublicKey>> for ValidatorS
     }
 }
 
+/// Helper function to get random validator signers and a corresponding validator verifier for
+/// testing.  If custom_voting_power_quorum is not None, set a custom voting power quorum amount.
+/// With pseudo_random_account_address enabled, logs show 0 -> [0000], 1 -> [1000]
+#[cfg(any(test, feature = "fuzzing"))]
+pub fn random_validator_verifier(
+    count: usize,
+    custom_voting_power_quorum: Option<u64>,
+    pseudo_random_account_address: bool,
+) -> (
+    Vec<crate::validator_signer::ValidatorSigner>,
+    ValidatorVerifier,
+) {
+    let mut signers = Vec::new();
+    let mut account_address_to_validator_info = BTreeMap::new();
+    for i in 0..count {
+        let random_signer = if pseudo_random_account_address {
+            crate::validator_signer::ValidatorSigner::from_int(i as u8)
+        } else {
+            crate::validator_signer::ValidatorSigner::random([i as u8; 32])
+        };
+        account_address_to_validator_info.insert(
+            random_signer.author(),
+            crate::validator_verifier::ValidatorConsensusInfo::new(random_signer.public_key(), 1),
+        );
+        signers.push(random_signer);
+    }
+    (
+        signers,
+        match custom_voting_power_quorum {
+            Some(custom_voting_power_quorum) => ValidatorVerifier::new_with_quorum_voting_power(
+                account_address_to_validator_info,
+                custom_voting_power_quorum,
+            )
+            .expect("Unable to create testing validator verifier"),
+            None => ValidatorVerifier::new(account_address_to_validator_info),
+        },
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{crypto_proxies::random_validator_verifier, validator_signer::ValidatorSigner};
-    use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue};
+    use crate::validator_signer::ValidatorSigner;
+    use libra_crypto::{test_utils::TEST_SEED, HashValue};
     use std::collections::BTreeMap;
 
     #[test]
@@ -405,11 +436,8 @@ mod tests {
         // Let's assume our verifier needs to satisfy at least 5 signatures from the original
         // NUM_SIGNERS.
         let validator_verifier =
-            ValidatorVerifier::<Ed25519PublicKey>::new_with_quorum_voting_power(
-                author_to_public_key_map,
-                5,
-            )
-            .expect("Incorrect quorum size.");
+            ValidatorVerifier::new_with_quorum_voting_power(author_to_public_key_map, 5)
+                .expect("Incorrect quorum size.");
 
         // Check against signatures == N; this will pass.
         assert_eq!(
@@ -502,11 +530,8 @@ mod tests {
 
         // Let's assume our verifier needs to satisfy at least 5 quorum voting power
         let validator_verifier =
-            ValidatorVerifier::<Ed25519PublicKey>::new_with_quorum_voting_power(
-                author_to_public_key_map,
-                5,
-            )
-            .expect("Incorrect quorum size.");
+            ValidatorVerifier::new_with_quorum_voting_power(author_to_public_key_map, 5)
+                .expect("Incorrect quorum size.");
 
         // Check against all signatures (6 voting power); this will pass.
         assert_eq!(

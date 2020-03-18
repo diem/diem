@@ -5,7 +5,8 @@ use crate::{common::Author, timeout::Timeout, vote_data::VoteData};
 use anyhow::{ensure, Context};
 use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash};
 use libra_types::{
-    crypto_proxies::ValidatorVerifier, ledger_info::LedgerInfo, validator_signer::ValidatorSigner,
+    ledger_info::LedgerInfo, validator_signer::ValidatorSigner,
+    validator_verifier::ValidatorVerifier,
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};

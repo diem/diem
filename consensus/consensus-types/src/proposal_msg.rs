@@ -7,7 +7,7 @@ use crate::{
     sync_info::SyncInfo,
 };
 use anyhow::{ensure, format_err, Context, Result};
-use libra_types::crypto_proxies::ValidatorVerifier;
+use libra_types::validator_verifier::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

@@ -4,7 +4,7 @@
 use crate::{sync_info::SyncInfo, vote::Vote};
 use anyhow::ensure;
 use libra_crypto::HashValue;
-use libra_types::crypto_proxies::ValidatorVerifier;
+use libra_types::validator_verifier::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 

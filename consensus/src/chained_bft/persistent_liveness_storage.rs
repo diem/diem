@@ -17,8 +17,9 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
     block_info::Round,
-    crypto_proxies::{EpochInfo, ValidatorInfo, ValidatorSet, ValidatorVerifier},
+    crypto_proxies::{EpochInfo, ValidatorInfo, ValidatorSet},
     ledger_info::LedgerInfo,
+    validator_verifier::ValidatorVerifier,
 };
 use std::{collections::HashSet, sync::Arc};
 use storage_client::StorageRead;

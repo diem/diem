@@ -4,12 +4,13 @@
 use crate::{
     account_address::AccountAddress,
     block_info::BlockInfo,
-    crypto_proxies::{random_validator_verifier, ValidatorInfo, ValidatorSet},
+    crypto_proxies::{ValidatorInfo, ValidatorSet},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::Version,
     trusted_state::{TrustedState, TrustedStateChange},
     validator_change::ValidatorChangeProof,
     validator_signer::ValidatorSigner,
+    validator_verifier::random_validator_verifier,
     waypoint::Waypoint,
 };
 use libra_crypto::{

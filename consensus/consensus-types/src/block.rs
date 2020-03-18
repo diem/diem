@@ -13,10 +13,11 @@ use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     block_info::BlockInfo,
     block_metadata::BlockMetadata,
-    crypto_proxies::{ValidatorSet, ValidatorVerifier},
+    crypto_proxies::ValidatorSet,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::Version,
     validator_signer::ValidatorSigner,
+    validator_verifier::ValidatorVerifier,
 };
 use mirai_annotations::debug_checked_verify_eq;
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
