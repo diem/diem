@@ -12,7 +12,7 @@ use crate::{
 use lcs::to_bytes;
 use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
+    account_address::AccountAddress,
     transaction::{
         authenticator::{AuthenticationKey, AUTHENTICATION_KEY_LENGTH},
         helpers::TransactionSigner,
@@ -139,7 +139,7 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
         update_last_error("sender parameter must not be null.".to_string());
         return LibraStatus::InvalidArgument;
     }
-    let sender_buf = slice::from_raw_parts(sender, ADDRESS_LENGTH);
+    let sender_buf = slice::from_raw_parts(sender, AccountAddress::LENGTH);
     let sender_address = match AccountAddress::try_from(sender_buf) {
         Ok(result) => result,
         Err(e) => {
@@ -296,8 +296,7 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
         }
     };
 
-    let mut sender = [0u8; ADDRESS_LENGTH];
-    sender.copy_from_slice(signed_txn.sender().as_ref());
+    let sender = signed_txn.sender().into();
     let sequence_number = signed_txn.sequence_number();
     let payload = signed_txn.payload();
     let max_gas_amount = signed_txn.max_gas_amount();
@@ -326,18 +325,15 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
                 if let [TransactionArgument::Address(addr), TransactionArgument::U8Vector(auth_key_prefix), TransactionArgument::U64(amount)] =
                     &args[..]
                 {
-                    let mut addr_buffer = [0u8; ADDRESS_LENGTH];
-                    addr_buffer.copy_from_slice(addr.as_ref());
-
                     let mut auth_key_prefix_buffer =
-                        [0u8; AUTHENTICATION_KEY_LENGTH - ADDRESS_LENGTH];
+                        [0u8; AUTHENTICATION_KEY_LENGTH - AccountAddress::LENGTH];
                     auth_key_prefix_buffer.copy_from_slice(auth_key_prefix.as_slice());
 
                     txn_payload = Some(LibraTransactionPayload {
                         txn_type: TransactionType::PeerToPeer,
                         args: LibraP2PTransferTransactionArgument {
                             value: *amount,
-                            address: addr_buffer,
+                            address: addr.into(),
                             auth_key_prefix: auth_key_prefix_buffer,
                         },
                     });

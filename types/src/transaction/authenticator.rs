@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::account_address::{AccountAddress, ADDRESS_LENGTH};
+use crate::account_address::AccountAddress;
 use anyhow::{ensure, Error, Result};
 use libra_crypto::{
     ed25519::{Ed25519PublicKey, Ed25519Signature},
@@ -150,18 +150,19 @@ impl AuthenticationKey {
         Self::from_preimage(&AuthenticationKeyPreimage::multi_ed25519(public_key))
     }
 
-    /// Return an address derived from the last ADDRESS_LENGTH bytes of this authentication key
+    /// Return an address derived from the last `AccountAddress::LENGTH` bytes of this
+    /// authentication key.
     pub fn derived_address(&self) -> AccountAddress {
         // keep only last 16 bytes
-        let mut array = [0u8; ADDRESS_LENGTH];
-        array.copy_from_slice(&self.0[AUTHENTICATION_KEY_LENGTH - ADDRESS_LENGTH..]);
+        let mut array = [0u8; AccountAddress::LENGTH];
+        array.copy_from_slice(&self.0[AUTHENTICATION_KEY_LENGTH - AccountAddress::LENGTH..]);
         AccountAddress::new(array)
     }
 
-    /// Return the first ADDRESS_LENGTH bytes of this authentication key
-    pub fn prefix(&self) -> [u8; ADDRESS_LENGTH] {
-        let mut array = [0u8; ADDRESS_LENGTH];
-        array.copy_from_slice(&self.0[..ADDRESS_LENGTH]);
+    /// Return the first AccountAddress::LENGTH bytes of this authentication key
+    pub fn prefix(&self) -> [u8; AccountAddress::LENGTH] {
+        let mut array = [0u8; AccountAddress::LENGTH];
+        array.copy_from_slice(&self.0[..AccountAddress::LENGTH]);
         array
     }
 

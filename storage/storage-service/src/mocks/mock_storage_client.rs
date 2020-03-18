@@ -7,7 +7,7 @@ use anyhow::{Error, Result};
 use futures::stream::BoxStream;
 use libra_crypto::{ed25519::*, HashValue};
 use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
+    account_address::AccountAddress,
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
     event::EventHandle,
@@ -207,7 +207,7 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
             }
             RequestedItems::GetTransactionsRequest(request) => {
                 let mut ret = TransactionListWithProof::default();
-                let sender = AccountAddress::new([1; ADDRESS_LENGTH]);
+                let sender = AccountAddress::new([1; AccountAddress::LENGTH]);
                 if request.limit > 0 {
                     let txns = get_mock_txn_data(sender, 0, request.limit - 1);
                     ret.transactions = txns;

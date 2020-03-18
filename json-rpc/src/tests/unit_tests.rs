@@ -18,7 +18,7 @@ use libra_config::utils;
 use libra_crypto::{ed25519::*, HashValue};
 use libra_temppath::TempPath;
 use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
+    account_address::AccountAddress,
     account_config::AccountResource,
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
@@ -212,11 +212,11 @@ fn test_transaction_submission() {
     };
 
     // check successful submission
-    let sender = AccountAddress::new([9; ADDRESS_LENGTH]);
+    let sender = AccountAddress::new([9; AccountAddress::LENGTH]);
     assert!(txn_submission(sender)[0].as_ref().unwrap() == &JsonRpcResponse::SubmissionResponse);
 
     // check vm error submission
-    let sender = AccountAddress::new([0; ADDRESS_LENGTH]);
+    let sender = AccountAddress::new([0; AccountAddress::LENGTH]);
     let response = &txn_submission(sender)[0];
 
     if let Err(e) = response {

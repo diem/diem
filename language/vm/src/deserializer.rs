@@ -4,7 +4,7 @@
 use crate::{errors::*, file_format::*, file_format_common::*};
 use byteorder::{LittleEndian, ReadBytesExt};
 use libra_types::{
-    account_address::ADDRESS_LENGTH,
+    account_address::AccountAddress,
     vm_error::{StatusCode, VMStatus},
 };
 use move_core_types::identifier::Identifier;
@@ -493,11 +493,11 @@ fn load_address_pool(
     addresses: &mut AddressPool,
 ) -> BinaryLoaderResult<()> {
     let mut start = table.offset as usize;
-    if table.count as usize % ADDRESS_LENGTH != 0 {
+    if table.count as usize % AccountAddress::LENGTH != 0 {
         return Err(VMStatus::new(StatusCode::MALFORMED));
     }
-    for _i in 0..table.count as usize / ADDRESS_LENGTH {
-        let end_addr = start + ADDRESS_LENGTH;
+    for _i in 0..table.count as usize / AccountAddress::LENGTH {
+        let end_addr = start + AccountAddress::LENGTH;
         let address = (&binary[start..end_addr]).try_into();
         if address.is_err() {
             return Err(VMStatus::new(StatusCode::MALFORMED));

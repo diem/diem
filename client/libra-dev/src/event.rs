@@ -6,7 +6,7 @@ use crate::{
     error::*,
 };
 use libra_types::{
-    account_address::ADDRESS_LENGTH,
+    account_address::AccountAddress,
     account_config::{ReceivedPaymentEvent, SentPaymentEvent},
     contract_event::ContractEvent,
     event::{EventKey, EVENT_KEY_LENGTH},
@@ -48,7 +48,7 @@ pub unsafe extern "C" fn libra_LibraEvent_from(
     key.copy_from_slice(buffer_key);
 
     let (_salt, event_address) = buffer_key.split_at(8);
-    let mut key_address = [0u8; ADDRESS_LENGTH];
+    let mut key_address = [0u8; AccountAddress::LENGTH];
     key_address.copy_from_slice(event_address);
 
     let type_tag: TypeTag = match lcs::from_bytes(buffer_type_tag) {
@@ -101,9 +101,6 @@ pub unsafe extern "C" fn libra_LibraEvent_from(
         Ok(res) => {
             event_enum = LibraEventType::SentPaymentEvent;
 
-            let mut addr = [0u8; ADDRESS_LENGTH];
-            addr.copy_from_slice(res.receiver().as_ref());
-
             let metadata_len = (*res.metadata()).len();
             let metadata_ptr = if metadata_len > 0 {
                 let metadata = res.metadata().clone().into_boxed_slice();
@@ -114,7 +111,7 @@ pub unsafe extern "C" fn libra_LibraEvent_from(
 
             event_data = Some(LibraPaymentEvent {
                 sender_address: key_address,
-                receiver_address: addr,
+                receiver_address: res.receiver().into(),
                 amount: res.amount(),
                 metadata: metadata_ptr,
                 metadata_len,
@@ -130,9 +127,6 @@ pub unsafe extern "C" fn libra_LibraEvent_from(
         Ok(res) => {
             event_enum = LibraEventType::ReceivedPaymentEvent;
 
-            let mut addr = [0u8; ADDRESS_LENGTH];
-            addr.copy_from_slice(res.sender().as_ref());
-
             let metadata_len = (*res.metadata()).len();
             let metadata_ptr = if metadata_len > 0 {
                 let metadata = res.metadata().clone().into_boxed_slice();
@@ -142,7 +136,7 @@ pub unsafe extern "C" fn libra_LibraEvent_from(
             };
 
             event_data = Some(LibraPaymentEvent {
-                sender_address: addr,
+                sender_address: res.sender().into(),
                 receiver_address: key_address,
                 amount: res.amount(),
                 metadata: metadata_ptr,
@@ -201,7 +195,7 @@ fn test_libra_LibraEvent_from() {
     let name = "SentPaymentEvent";
 
     let type_tag = Struct(StructTag {
-        address: AccountAddress::new([0; ADDRESS_LENGTH]),
+        address: AccountAddress::new([0; AccountAddress::LENGTH]),
         module: Identifier::new(module).unwrap(),
         name: Identifier::new(name).unwrap(),
         type_params: [].to_vec(),

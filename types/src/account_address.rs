@@ -16,25 +16,26 @@ use rand::{rngs::OsRng, Rng};
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 use std::{convert::TryFrom, fmt, str::FromStr};
 
-pub const ADDRESS_LENGTH: usize = 16;
-
 const SHORT_STRING_LENGTH: usize = 4;
 
 /// A struct that represents an account address.
 #[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Clone, Copy, CryptoHasher)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct AccountAddress([u8; ADDRESS_LENGTH]);
+pub struct AccountAddress([u8; AccountAddress::LENGTH]);
 
 impl AccountAddress {
-    pub const fn new(address: [u8; ADDRESS_LENGTH]) -> Self {
+    pub const fn new(address: [u8; Self::LENGTH]) -> Self {
         AccountAddress(address)
     }
 
-    pub const DEFAULT: Self = Self([0u8; ADDRESS_LENGTH]);
+    /// The number of bytes in an address.
+    pub const LENGTH: usize = 16;
+
+    pub const DEFAULT: Self = Self([0u8; AccountAddress::LENGTH]);
 
     pub fn random() -> Self {
         let mut rng = OsRng::new().expect("can't access OsRng");
-        let buf: [u8; ADDRESS_LENGTH] = rng.gen();
+        let buf: [u8; Self::LENGTH] = rng.gen();
         AccountAddress::new(buf)
     }
 
@@ -69,9 +70,9 @@ impl AccountAddress {
         };
 
         let len = result.len();
-        let padded_result = if len < ADDRESS_LENGTH {
-            let mut padded = Vec::with_capacity(ADDRESS_LENGTH);
-            padded.resize(ADDRESS_LENGTH - len, 0u8);
+        let padded_result = if len < Self::LENGTH {
+            let mut padded = Vec::with_capacity(Self::LENGTH);
+            padded.resize(Self::LENGTH - len, 0u8);
             padded.append(&mut result);
             padded
         } else {
@@ -130,21 +131,21 @@ impl TryFrom<&[u8]> for AccountAddress {
     /// Tries to convert the provided byte array into Address.
     fn try_from(bytes: &[u8]) -> Result<AccountAddress> {
         ensure!(
-            bytes.len() == ADDRESS_LENGTH,
+            bytes.len() == Self::LENGTH,
             "The Address {:?} is of invalid length",
             bytes
         );
-        let mut addr = [0u8; ADDRESS_LENGTH];
+        let mut addr = [0u8; Self::LENGTH];
         addr.copy_from_slice(bytes);
         Ok(AccountAddress(addr))
     }
 }
 
-impl TryFrom<&[u8; ADDRESS_LENGTH]> for AccountAddress {
+impl TryFrom<&[u8; AccountAddress::LENGTH]> for AccountAddress {
     type Error = Error;
 
     /// Tries to convert the provided byte array into Address.
-    fn try_from(bytes: &[u8; ADDRESS_LENGTH]) -> Result<AccountAddress> {
+    fn try_from(bytes: &[u8; Self::LENGTH]) -> Result<AccountAddress> {
         AccountAddress::try_from(&bytes[..])
     }
 }
@@ -167,6 +168,18 @@ impl From<AccountAddress> for Vec<u8> {
 impl From<&AccountAddress> for Vec<u8> {
     fn from(addr: &AccountAddress) -> Vec<u8> {
         addr.0.to_vec()
+    }
+}
+
+impl From<AccountAddress> for [u8; AccountAddress::LENGTH] {
+    fn from(addr: AccountAddress) -> Self {
+        addr.0
+    }
+}
+
+impl From<&AccountAddress> for [u8; AccountAddress::LENGTH] {
+    fn from(addr: &AccountAddress) -> Self {
+        addr.0
     }
 }
 
@@ -219,7 +232,7 @@ impl<'de> Deserialize<'de> for AccountAddress {
             let s = <&str>::deserialize(deserializer)?;
             AccountAddress::from_str(s).map_err(D::Error::custom)
         } else {
-            let b = <[u8; ADDRESS_LENGTH]>::deserialize(deserializer)?;
+            let b = <[u8; Self::LENGTH]>::deserialize(deserializer)?;
             Ok(AccountAddress::new(b))
         }
     }

@@ -12,7 +12,7 @@ use crate::{
 use libra_config::config::NodeConfig;
 use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
 use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
+    account_address::AccountAddress,
     block_info::BlockInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::{Transaction, TransactionListWithProof, Version},
@@ -110,8 +110,8 @@ impl Drop for TestExecutor {
 
 fn gen_address(index: u64) -> AccountAddress {
     let bytes = index.to_be_bytes();
-    let mut buf = [0; ADDRESS_LENGTH];
-    buf[ADDRESS_LENGTH - 8..].copy_from_slice(&bytes);
+    let mut buf = [0; AccountAddress::LENGTH];
+    buf[AccountAddress::LENGTH - 8..].copy_from_slice(&bytes);
     AccountAddress::new(buf)
 }
 

@@ -12,7 +12,7 @@ use anyhow::Result;
 use futures::executor::block_on;
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED};
 use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
+    account_address::AccountAddress,
     mempool_status::MempoolStatusCode,
     proto::types::{
         MempoolStatus, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
@@ -119,10 +119,10 @@ impl AdmissionControl for MockAdmissionControlService {
             }
             Ok(None) => {
                 let mut status = MempoolStatus::default();
-                let invalid_seq_add = [101_u8; ADDRESS_LENGTH];
-                let sys_error_add = [102_u8; ADDRESS_LENGTH];
-                let accepted_add = [103_u8; ADDRESS_LENGTH];
-                let mempool_full = [104_u8; ADDRESS_LENGTH];
+                let invalid_seq_add = [101_u8; AccountAddress::LENGTH];
+                let sys_error_add = [102_u8; AccountAddress::LENGTH];
+                let accepted_add = [103_u8; AccountAddress::LENGTH];
+                let mempool_full = [104_u8; AccountAddress::LENGTH];
                 let transaction = SignedTransaction::try_from(req.transaction.unwrap()).unwrap();
                 let sender = transaction.sender();
                 let sender_ref = sender.as_ref();
@@ -181,7 +181,7 @@ fn test_submit_txn_inner_vm() {
     ];
     for (sender_id, status, are_keys_valid) in test_cases.into_iter() {
         test_vm_status_submission(
-            AccountAddress::new([sender_id as u8; ADDRESS_LENGTH]),
+            AccountAddress::new([sender_id as u8; AccountAddress::LENGTH]),
             &ac_service,
             status,
             are_keys_valid,
@@ -201,7 +201,7 @@ fn test_submit_txn_inner_mempool() {
     ];
     for (sender_id, status) in test_cases.into_iter() {
         test_mempool_status_submission(
-            AccountAddress::new([sender_id as u8; ADDRESS_LENGTH]),
+            AccountAddress::new([sender_id as u8; AccountAddress::LENGTH]),
             &ac_service,
             status,
         );
