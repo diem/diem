@@ -14,7 +14,7 @@ use consensus_types::{
 use executor_types::ExecutedTrees;
 use futures::executor::block_on;
 use libra_crypto::HashValue;
-use libra_types::{crypto_proxies::ValidatorSet, ledger_info::LedgerInfo};
+use libra_types::{ledger_info::LedgerInfo, validator_set::ValidatorSet};
 use std::{
     collections::HashMap,
     marker::PhantomData,

@@ -18,15 +18,11 @@ use libra_crypto::{
 };
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
-    crypto_proxies::{ValidatorInfo, ValidatorSet},
-    event_subscription::EventSubscription,
-    ledger_info::LedgerInfoWithSignatures,
-    proof::TransactionListProof,
-    transaction::TransactionListWithProof,
-    validator_change::ValidatorChangeProof,
-    validator_signer::ValidatorSigner,
-    validator_verifier::random_validator_verifier,
-    waypoint::Waypoint,
+    event_subscription::EventSubscription, ledger_info::LedgerInfoWithSignatures,
+    proof::TransactionListProof, transaction::TransactionListWithProof,
+    validator_change::ValidatorChangeProof, validator_info::ValidatorInfo,
+    validator_set::ValidatorSet, validator_signer::ValidatorSigner,
+    validator_verifier::random_validator_verifier, waypoint::Waypoint,
 };
 use network::{
     validator_network::network_builder::{NetworkBuilder, TransportType},

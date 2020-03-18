@@ -4,10 +4,7 @@
 use executor::Executor;
 use executor_types::ExecutedTrees;
 use libra_config::config::NodeConfig;
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    HashValue, PrivateKey, Uniform,
-};
+use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use libra_types::{
     account_address::AccountAddress,
     account_config,
@@ -73,7 +70,7 @@ fn get_validator_config(storage: &Arc<LibraDB>, account: AccountAddress) -> Vali
         .validator_config
 }
 
-fn get_validator_set(storage: &Arc<LibraDB>) -> ValidatorSet<Ed25519PublicKey> {
+fn get_validator_set(storage: &Arc<LibraDB>) -> ValidatorSet {
     let account = account_config::validator_set_address();
     let blob = storage.get_latest_account_state(account).unwrap().unwrap();
     let account_state = AccountState::try_from(&blob).unwrap();

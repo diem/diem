@@ -18,9 +18,9 @@ use debug_interface::prelude::*;
 use executor_types::{ExecutedTrees, ProcessedVMOutput};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
-#[cfg(any(test, feature = "fuzzing"))]
-use libra_types::crypto_proxies::ValidatorSet;
 use libra_types::ledger_info::LedgerInfoWithSignatures;
+#[cfg(any(test, feature = "fuzzing"))]
+use libra_types::validator_set::ValidatorSet;
 use std::{
     collections::{vec_deque::VecDeque, HashMap},
     sync::{Arc, RwLock},

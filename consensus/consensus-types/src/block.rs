@@ -13,9 +13,9 @@ use libra_types::{
     account_address::{AccountAddress, ADDRESS_LENGTH},
     block_info::BlockInfo,
     block_metadata::BlockMetadata,
-    crypto_proxies::ValidatorSet,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::Version,
+    validator_set::ValidatorSet,
     validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
 };

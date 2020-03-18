@@ -7,8 +7,8 @@ use crate::{
     executor::FakeExecutor,
 };
 use libra_types::{
-    crypto_proxies::ValidatorSet,
     transaction::TransactionStatus,
+    validator_set::ValidatorSet,
     vm_error::{StatusCode, VMStatus},
 };
 
