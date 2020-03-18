@@ -7,12 +7,38 @@ use anyhow::{ensure, format_err, Result};
 use serde_json::Value;
 use std::{collections::HashSet, ffi::OsStr, fmt, process::Stdio};
 
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub enum InstanceConfig {
+    Validator(ValidatorConfig),
+    Fullnode(FullnodeConfig),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct ValidatorConfig {
+    pub index: u32,
+    pub num_validators: u32,
+    pub num_fullnodes: u32,
+    pub image_tag: String,
+    pub config_overrides: Vec<String>,
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct FullnodeConfig {
+    pub fullnode_index: u32,
+    pub num_fullnodes_per_validator: u32,
+    pub validator_index: u32,
+    pub num_validators: u32,
+    pub image_tag: String,
+    pub config_overrides: Vec<String>,
+}
+
 #[derive(Clone)]
 pub struct Instance {
     peer_name: String,
     ip: String,
     ac_port: u32,
     k8s_node: Option<String>,
+    instance_config: Option<InstanceConfig>,
 }
 
 impl Instance {
@@ -22,6 +48,7 @@ impl Instance {
             ip,
             ac_port,
             k8s_node: None,
+            instance_config: None,
         }
     }
 
@@ -30,12 +57,14 @@ impl Instance {
         ip: String,
         ac_port: u32,
         k8s_node: Option<String>,
+        instance_config: InstanceConfig,
     ) -> Instance {
         Instance {
             peer_name,
             ip,
             ac_port,
             k8s_node,
+            instance_config: Some(instance_config),
         }
     }
 
@@ -149,6 +178,10 @@ impl Instance {
     pub fn k8s_node(&self) -> Option<&String> {
         self.k8s_node.as_ref()
     }
+
+    pub fn instance_config(&self) -> Option<&InstanceConfig> {
+        self.instance_config.as_ref()
+    }
 }
 
 impl fmt::Display for Instance {
@@ -163,4 +196,15 @@ pub fn instancelist_to_set(instances: &[Instance]) -> HashSet<String> {
         r.insert(instance.peer_name().clone());
     }
     r
+}
+
+pub fn instance_configs(instances: &[Instance]) -> Result<Vec<&InstanceConfig>> {
+    instances
+        .iter()
+        .map(|instance| -> Result<&InstanceConfig> {
+            instance
+                .instance_config()
+                .ok_or_else(|| format_err!("Failed to find instance_config"))
+        })
+        .collect::<Result<_, _>>()
 }

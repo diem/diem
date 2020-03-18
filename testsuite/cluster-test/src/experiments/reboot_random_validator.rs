@@ -11,13 +11,14 @@ use anyhow::{bail, Result};
 
 use crate::{
     cluster::Cluster,
+    cluster_swarm::ClusterSwarm,
     effects::{Action, Reboot},
     experiments::{Context, Experiment, ExperimentParam},
     instance,
     instance::Instance,
 };
 use async_trait::async_trait;
-use futures::future::join_all;
+use futures::future::{join_all, try_join_all};
 use libra_logger::warn;
 use structopt::StructOpt;
 
@@ -58,17 +59,32 @@ impl Experiment for RebootRandomValidators {
         instance::instancelist_to_set(&self.instances)
     }
 
-    async fn run(&mut self, _context: &mut Context<'_>) -> anyhow::Result<()> {
-        let futures = self.instances.iter().map(|instance| async move {
-            let reboot = Reboot::new(instance.clone());
-            reboot
-                .apply()
-                .await
-                .map_err(|e| warn!("Failed to reboot {}: {}", instance, e))
-        });
-        let results = join_all(futures).await;
-        if results.iter().any(Result::is_err) {
-            bail!("Failed to reboot one of nodes");
+    async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
+        if let Some(cluster_swarm) = context.cluster_swarm {
+            let instance_configs = instance::instance_configs(&self.instances)?;
+            let futures: Vec<_> = instance_configs
+                .clone()
+                .into_iter()
+                .map(|ic| cluster_swarm.delete_node(ic.clone()))
+                .collect();
+            try_join_all(futures).await?;
+            let futures: Vec<_> = instance_configs
+                .into_iter()
+                .map(|ic| cluster_swarm.upsert_node(ic.clone(), false))
+                .collect();
+            try_join_all(futures).await?;
+        } else {
+            let futures = self.instances.iter().map(|instance| async move {
+                let reboot = Reboot::new(instance.clone());
+                reboot
+                    .apply()
+                    .await
+                    .map_err(|e| warn!("Failed to reboot {}: {}", instance, e))
+            });
+            let results = join_all(futures).await;
+            if results.iter().any(Result::is_err) {
+                bail!("Failed to reboot one of nodes");
+            }
         }
         Ok(())
     }
