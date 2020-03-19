@@ -208,3 +208,9 @@ variable "permissions_boundary_policy" {
   default     = ""
   description = "ARN of IAM policy to set as permissions boundary on created roles"
 }
+
+variable "override_image_tags" {
+  type        = list(string)
+  default     = []
+  description = "List of Docker image tags to be used in record and replay test, overrides image_tag"
+}
