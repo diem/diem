@@ -133,9 +133,13 @@ axiom v#ValueArray(EmptyValueArray) == MapConstValue(DefaultValue);
 function {:inline} AddValueArray(a: ValueArray, v: Value): ValueArray {
     ValueArray(v#ValueArray(a)[l#ValueArray(a) := v], l#ValueArray(a) + 1)
 }
-
 function {:inline} RemoveValueArray(a: ValueArray): ValueArray {
     ValueArray(v#ValueArray(a)[l#ValueArray(a) - 1 := DefaultValue], l#ValueArray(a) - 1)
+}
+function {:inline} RemoveIndexValueArray(a: ValueArray, i: int): ValueArray {
+    ValueArray(
+        (lambda j: int :: if j < i then v#ValueArray(a)[j] else v#ValueArray(a)[j+1]),
+        l#ValueArray(a) - 1)
 }
 function {:inline} ConcatValueArray(a1: ValueArray, a2: ValueArray): ValueArray {
     ValueArray(
@@ -149,7 +153,7 @@ function {:inline} ReverseValueArray(a: ValueArray): ValueArray {
     )
 }
 function {:inline} SliceValueArray(a: ValueArray, i: int, j: int): ValueArray { // return the sliced vector of a for the range [i, j)
-    ValueArray((lambda k:int :: if k < j-i then v#ValueArray(a)[i+k] else DefaultValue), j-i)
+    ValueArray((lambda k:int :: if 0 <= k && k < j-i then v#ValueArray(a)[i+k] else DefaultValue), (if j-i < 0 then 0 else j-i))
 }
 function {:inline} ExtendValueArray(a: ValueArray, elem: Value): ValueArray {
     ValueArray(v#ValueArray(a)[l#ValueArray(a) := elem], l#ValueArray(a) + 1)
@@ -277,23 +281,27 @@ function {:inline} $vlen(v: Value): int {
 function {:inline} $vlen_value(v: Value): Value {
     Integer($vlen(v))
 }
-function {:inline} mk_vector(): Value {
+function {:inline} $mk_vector(): Value {
     Vector(EmptyValueArray)
 }
-function {:inline} push_back_vector(v: Value, elem: Value): Value {
+function {:inline} $push_back_vector(v: Value, elem: Value): Value {
     Vector(AddValueArray(v#Vector(v), elem))
 }
-function {:inline} pop_back_vector(v: Value): Value {
+function {:inline} $pop_back_vector(v: Value): Value {
     Vector(RemoveValueArray(v#Vector(v)))
 }
-function {:inline} append_vector(v1: Value, v2: Value): Value {
+function {:inline} $append_vector(v1: Value, v2: Value): Value {
     Vector(ConcatValueArray(v#Vector(v1), v#Vector(v2)))
 }
-function {:inline} reverse_vector(v: Value): Value {
+function {:inline} $reverse_vector(v: Value): Value {
     Vector(ReverseValueArray(v#Vector(v)))
 }
 function {:inline} $update_vector(v: Value, i: int, elem: Value): Value {
     Vector(UpdateValueArray(v#Vector(v), i, elem))
+}
+// $update_vector_by_value requires index to be a Value, not int.
+function {:inline} $update_vector_by_value(v: Value, i: Value, elem: Value): Value {
+    Vector(UpdateValueArray(v#Vector(v), i#Integer(i), elem))
 }
 function {:inline} $select_vector(v: Value, i: int) : Value {
     $vmap(v)[i]
@@ -302,7 +310,7 @@ function {:inline} $select_vector(v: Value, i: int) : Value {
 function {:inline} $select_vector_by_value(v: Value, i: Value) : Value {
     $vmap(v)[i#Integer(i)]
 }
-function {:inline} swap_vector(v: Value, i: int, j: int): Value {
+function {:inline} $swap_vector(v: Value, i: int, j: int): Value {
     Vector(SwapValueArray(v#Vector(v), i, j))
 }
 function {:inline} $slice_vector(v: Value, r: Value) : Value {
@@ -310,6 +318,12 @@ function {:inline} $slice_vector(v: Value, r: Value) : Value {
 }
 function {:inline} $InVectorRange(v: Value, i: int): bool {
     i >= 0 && i < $vlen(v)
+}
+function {:inline} $remove_vector(v: Value, i:int): Value {
+    Vector(RemoveIndexValueArray(v#Vector(v), i))
+}
+function {:inline} $contains_vector(v: Value, e: Value): bool {
+    (exists i:int :: 0<=i && i<$vlen(v) && IsEqual($vmap(v)[i], e))
 }
 
 function {:inline} $InRange(r: Value, i: int): bool {
@@ -781,11 +795,16 @@ function {:inline} $Vector_type_value(tv: TypeValue): TypeValue {
 }
 
 function {:inline} $Vector_is_well_formed(v: Value): bool {
-    is#Vector(v) && l#ValueArray(v#Vector(v)) >= 0
+    is#Vector(v) && $vlen(v) >= 0 &&
+    (
+        var va := v#Vector(v);
+        0 <= l#ValueArray(va) &&
+        (forall x: int :: (0 <= x && x < l#ValueArray(va)) || v#ValueArray(va)[x] == DefaultValue)
+    )
 }
 
 procedure {:inline 1} $Vector_empty(ta: TypeValue) returns (v: Value) {
-    v := mk_vector();
+    v := $mk_vector();
 }
 
 procedure {:inline 1} $Vector_is_empty(ta: TypeValue, r: Reference) returns (b: Value) {
@@ -801,7 +820,7 @@ procedure {:inline 1} $Vector_push_back(ta: TypeValue, r: Reference, val: Value)
     v := $Dereference($m, r);
     assume is#Vector(v);
     assume $IsValidReferenceParameter($m, $local_counter, r);
-    call WriteRef(r, push_back_vector(v, val));
+    call WriteRef(r, $push_back_vector(v, val));
 }
 
 procedure {:inline 1} $Vector_pop_back(ta: TypeValue, r: Reference) returns (e: Value) {
@@ -816,7 +835,7 @@ procedure {:inline 1} $Vector_pop_back(ta: TypeValue, r: Reference) returns (e: 
         return;
     }
     e := $vmap(v)[len-1];
-    call WriteRef(r, pop_back_vector(v));
+    call WriteRef(r, $pop_back_vector(v));
 }
 
 procedure {:inline 1} $Vector_append(ta: TypeValue, r: Reference, other: Value) {
@@ -825,7 +844,7 @@ procedure {:inline 1} $Vector_append(ta: TypeValue, r: Reference, other: Value) 
     assume is#Vector(v);
     assume $IsValidReferenceParameter($m, $local_counter, r);
     assume is#Vector(other);
-    call WriteRef(r, append_vector(v, other));
+    call WriteRef(r, $append_vector(v, other));
 }
 
 procedure {:inline 1} $Vector_reverse(ta: TypeValue, r: Reference) {
@@ -833,7 +852,7 @@ procedure {:inline 1} $Vector_reverse(ta: TypeValue, r: Reference) {
     v := $Dereference($m, r);
     assume is#Vector(v);
     assume $IsValidReferenceParameter($m, $local_counter, r);
-    call WriteRef(r, reverse_vector(v));
+    call WriteRef(r, $reverse_vector(v));
 }
 
 procedure {:inline 1} $Vector_length(ta: TypeValue, r: Reference) returns (l: Value) {
@@ -891,7 +910,7 @@ procedure {:inline 1} $Vector_swap(ta: TypeValue, src: Reference, i: Value, j: V
         $abort_flag := true;
         return;
     }
-    v := swap_vector(v, i_ind, j_ind);
+    v := $swap_vector(v, i_ind, j_ind);
     call WriteRef(src, v);
 }
 
@@ -928,17 +947,59 @@ procedure {:inline 1} $Vector_set(ta: TypeValue, src: Reference, i: Value, e: Va
     call WriteRef(src, v);
 }
 
-// TODO: implement the below vector methods
+procedure {:inline 1} $Vector_remove(ta: TypeValue, r: Reference, i: Value) returns (e: Value) {
+    var i_ind: int;
+    var v: Value;
+    var len: int;
+
+    assume is#Integer(i);
+    i_ind := i#Integer(i);
+
+    v := $Dereference($m, r);
+    assume is#Vector(v);
+    assume $IsValidReferenceParameter($m, $local_counter, r);
+    len := $vlen(v);
+    if (i_ind < 0 || i_ind >= len) {
+        $abort_flag := true;
+        return;
+    }
+    e := $vmap(v)[len-1];
+    call WriteRef(r, $remove_vector(v, i_ind));
+}
+
+procedure {:inline 1} $Vector_swap_remove(ta: TypeValue, r: Reference, i: Value) returns (e: Value) {
+    var i_ind: int;
+    var v: Value;
+    var len: int;
+
+    assume is#Integer(i);
+    i_ind := i#Integer(i);
+
+    v := $Dereference($m, r);
+    assume is#Vector(v);
+    assume $IsValidReferenceParameter($m, $local_counter, r);
+    len := $vlen(v);
+    if (i_ind < 0 || i_ind >= len) {
+        $abort_flag := true;
+        return;
+    }
+    e := $vmap(v)[len-1];
+    call WriteRef(r, $pop_back_vector($swap_vector(v, i_ind, len-1)));
+}
 
 procedure {:inline 1} $Vector_contains(ta: TypeValue, vr: Reference, er: Reference) returns (res: Value)  {
-    res := DefaultValue;
-    assert false; // $Vector_contains not implemented
+    var v: Value;
+    var e: Value;
+
+    v := $Dereference($m, vr);
+    e := $Dereference($m, er);
+    assume $IsValidReferenceParameter($m, $local_counter, vr);
+    assume $IsValidReferenceParameter($m, $local_counter, er);
+    assume is#Vector(v);
+
+    res := Boolean($contains_vector(v, e));
 }
 
-procedure {:inline 1} $Vector_swap_remove(ta: TypeValue, vr: Reference, idx: Value) returns (res: Value)  {
-    res := DefaultValue;
-    assert false; // $Vector_swap_remove not implemented
-}
 
 // ==================================================================================
 // Native address_util
