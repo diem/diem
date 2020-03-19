@@ -13,7 +13,7 @@ source "$HOME/.cargo/env"
 
 SCRIPT_PATH="$(dirname $0)"
 
-RUN_PARAMS="--host client.testnet.libra.org --port 80 "
+RUN_PARAMS="--host https://client.testnet.libra.org --port 443 "
 RELEASE=""
 
 while [[ ! -z "$1" ]]; do

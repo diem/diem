@@ -148,7 +148,10 @@ impl ClientProxy {
 
         let faucet_server = match faucet_server {
             Some(server) => server,
-            None => host.replace("client", "faucet"),
+            None => host
+                .replace("http://", "")
+                .replace("https://", "")
+                .replace("client", "faucet"),
         };
 
         let address_to_ref_id = accounts
