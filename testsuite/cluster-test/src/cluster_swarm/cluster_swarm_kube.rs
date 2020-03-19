@@ -69,7 +69,7 @@ impl ClusterSwarmKube {
         } else {
             ""
         };
-        let fluentbit_enabled = if index % 10 == 0 { "true" } else { "false" };
+        let fluentbit_enabled = "true";
         let pod_yaml = format!(
             include_str!("validator_spec_template.yaml"),
             index = index,
@@ -100,11 +100,7 @@ impl ClusterSwarmKube {
         cfg_overrides: &str,
         delete_data: bool,
     ) -> Result<Pod> {
-        let fluentbit_enabled = if validator_index % 10 == 0 {
-            "true"
-        } else {
-            "false"
-        };
+        let fluentbit_enabled = "true";
         let pod_yaml = format!(
             include_str!("fullnode_spec_template.yaml"),
             fullnode_index = fullnode_index,

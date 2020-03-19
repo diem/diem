@@ -6,12 +6,15 @@ use log;
 use serde_json;
 use std::io::Write as IoWrite;
 
+use once_cell::sync::Lazy;
 use serde::Serialize;
 use serde_json::Value;
 use std::{
     collections::HashMap,
+    env,
     fs::{File, OpenOptions},
     io,
+    str::FromStr,
     sync::{
         atomic::{AtomicUsize, Ordering},
         mpsc::{self, Receiver, SyncSender},
@@ -36,7 +39,7 @@ const INITIALIZED: usize = 2;
 #[derive(Default, Serialize)]
 pub struct StructuredLogEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
-    text: Option<String>,
+    log: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pattern: Option<&'static str>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -68,8 +71,8 @@ impl StructuredLogEntry {
         ret
     }
 
-    pub fn text(&mut self, text: String) -> &mut Self {
-        self.text = Some(text);
+    pub fn log(&mut self, log: String) -> &mut Self {
+        self.log = Some(log);
         self
     }
 
@@ -137,9 +140,51 @@ pub fn set_struct_logger(logger: &'static dyn StructLogSink) -> Result<(), ()> {
     }
 }
 
+static STRUCT_LOG_LEVEL: Lazy<log::Level> = Lazy::new(|| {
+    let level = env::var("STRUCT_LOG_LEVEL").unwrap_or_else(|_| "debug".to_string());
+    log::Level::from_str(&level).expect("Failed to parse log level")
+});
+
+/// Checks if structured logging is enabled for level
+pub fn struct_logger_enabled(level: log::Level) -> bool {
+    struct_logger_set() && level <= *STRUCT_LOG_LEVEL
+}
+
 /// Checks if structured logging is enabled
-pub fn struct_logger_enabled() -> bool {
+pub fn struct_logger_set() -> bool {
     STRUCT_LOGGER_STATE.load(Ordering::SeqCst) == INITIALIZED
+}
+
+/// Initializes struct logger from STRUCT_LOG_FILE env var
+/// Can only be called once
+pub fn init_struct_log_from_env() -> Result<(), InitFileLoggerError> {
+    if let Ok(file) = env::var("STRUCT_LOG_FILE") {
+        init_file_struct_log(file)
+    } else {
+        Ok(())
+    }
+}
+
+/// Initializes struct logger sink that writes to specified file
+/// Can only be called once
+pub fn init_file_struct_log(file_path: String) -> Result<(), InitFileLoggerError> {
+    let logger = FileStructLog::start_new(file_path).map_err(InitFileLoggerError::IoError)?;
+    let logger = Box::leak(Box::new(logger));
+    set_struct_logger(logger).map_err(|_| InitFileLoggerError::StructLoggerAlreadySet)
+}
+
+/// Initialize struct logger sink that prints all structured logs to stdout
+/// Can only be called once
+pub fn init_println_struct_log() -> Result<(), ()> {
+    let logger = PrintStructLog {};
+    let logger = Box::leak(Box::new(logger));
+    set_struct_logger(logger)
+}
+
+#[derive(Debug)]
+pub enum InitFileLoggerError {
+    IoError(io::Error),
+    StructLoggerAlreadySet,
 }
 
 // This is exact copy of similar function in log crate
@@ -159,8 +204,7 @@ impl StructLogSink for NopStructLog {
     fn send(&self, _entry: StructuredLogEntry) {}
 }
 
-/// Sink that prints all structured logs to stdout
-pub struct PrintStructLog {}
+struct PrintStructLog {}
 
 impl StructLogSink for PrintStructLog {
     fn send(&self, entry: StructuredLogEntry) {
@@ -169,7 +213,7 @@ impl StructLogSink for PrintStructLog {
 }
 
 /// Sink that prints all structured logs to specified file
-pub struct FileStructLog {
+struct FileStructLog {
     sender: SyncSender<StructuredLogEntry>,
 }
 
