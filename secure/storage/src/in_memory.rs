@@ -25,7 +25,7 @@ impl InMemoryStorage {
     }
 
     /// Public convenience function to return a new InMemoryStorage based Storage.
-    pub fn new_boxed_in_memory_storage() -> Box<dyn Storage> {
+    pub fn new_storage() -> Box<dyn Storage> {
         Box::new(InMemoryStorage::new())
     }
 }
@@ -71,7 +71,6 @@ impl KVStorage for InMemoryStorage {
         Ok(())
     }
 
-    #[cfg(test)]
     fn reset_and_clear(&mut self) -> Result<(), Error> {
         self.data.clear();
         Ok(())

@@ -19,19 +19,11 @@ pub struct VaultStorage {
 }
 
 impl VaultStorage {
-    pub fn new(host: String, token: String) -> Self {
+    pub fn new(host: String, token: String, namespace: Option<String>) -> Self {
         Self {
             client: Client::new(host, token),
-            namespace: None,
+            namespace,
         }
-    }
-
-    /// A namespace is an optional portion of the path to a key stored within Vault. For example,
-    /// a secret, S, without a namespace would be available in secret/data/S, with a namespace, N, it
-    /// would be in secret/data/N/S.
-    pub fn set_namespace(mut self, namespace: Option<String>) -> Self {
-        self.namespace = namespace;
-        self
     }
 
     pub fn namespace(&self) -> Option<String> {
@@ -127,8 +119,8 @@ impl VaultStorage {
     }
 
     /// Public convenience function to return a new Vault based Storage.
-    pub fn new_boxed_vault_storage(host: String, token: String) -> Box<dyn Storage> {
-        Box::new(VaultStorage::new(host, token))
+    pub fn new_storage(host: String, token: String, namespace: Option<String>) -> Box<dyn Storage> {
+        Box::new(VaultStorage::new(host, token, namespace))
     }
 }
 
@@ -169,7 +161,6 @@ impl KVStorage for VaultStorage {
         Ok(())
     }
 
-    #[cfg(test)]
     fn reset_and_clear(&mut self) -> Result<(), Error> {
         self.reset()
     }

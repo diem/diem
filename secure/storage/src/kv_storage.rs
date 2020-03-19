@@ -36,9 +36,9 @@ pub trait KVStorage: Send + Sync {
     /// Sets a value in storage and fails if invalid permissions or it does not exist
     fn set(&mut self, key: &str, value: Value) -> Result<(), Error>;
 
+    // @TODO(davidiw): Make this accessible only to tests.
     /// Resets and clears all data held in the storage engine.
     /// Note: this should only be exposed and used for testing. Resetting the storage engine is not
     /// something that should be supported in production.
-    #[cfg(test)]
     fn reset_and_clear(&mut self) -> Result<(), Error>;
 }
