@@ -114,13 +114,14 @@ impl Hash for EventKey {
         Hash::hash(self.as_bytes(), state)
     }
 }
+
 // TODO(#1307)
 impl ser::Serialize for EventKey {
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
     {
-        serializer.serialize_bytes(&self.0)
+        serializer.serialize_newtype_struct("EventKey", &self.0[..])
     }
 }
 
@@ -129,24 +130,12 @@ impl<'de> de::Deserialize<'de> for EventKey {
     where
         D: de::Deserializer<'de>,
     {
-        struct EventKeyVisitor;
+        #[derive(::serde::Deserialize)]
+        #[serde(rename = "EventKey")]
+        struct _Value<'a>(&'a [u8]);
 
-        impl<'de> de::Visitor<'de> for EventKeyVisitor {
-            type Value = EventKey;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("EventKey in bytes")
-            }
-
-            fn visit_bytes<E>(self, value: &[u8]) -> std::result::Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                EventKey::try_from(value).map_err(E::custom)
-            }
-        }
-
-        deserializer.deserialize_bytes(EventKeyVisitor)
+        let value = <_Value>::deserialize(deserializer)?;
+        Self::try_from(value.0).map_err(<D::Error as ::serde::de::Error>::custom)
     }
 }
 
@@ -157,7 +146,7 @@ impl TryFrom<&[u8]> for EventKey {
     fn try_from(bytes: &[u8]) -> Result<EventKey> {
         ensure!(
             bytes.len() == EVENT_KEY_LENGTH,
-            "The Address {:?} is of invalid length",
+            "The Event Key {:?} is of invalid length",
             bytes
         );
         let mut addr = [0u8; EVENT_KEY_LENGTH];

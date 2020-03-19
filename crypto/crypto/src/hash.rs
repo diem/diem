@@ -272,7 +272,7 @@ impl ser::Serialize for HashValue {
         if serializer.is_human_readable() {
             serializer.serialize_str(&self.to_hex())
         } else {
-            serializer.serialize_bytes(&self.hash[..])
+            serializer.serialize_newtype_struct("HashValue", &self.hash[..])
         }
     }
 }
@@ -282,12 +282,16 @@ impl<'de> de::Deserialize<'de> for HashValue {
     where
         D: de::Deserializer<'de>,
     {
+        #[derive(::serde::Deserialize)]
+        #[serde(rename = "HashValue")]
+        struct _Value<'a>(&'a [u8]);
+
         if deserializer.is_human_readable() {
             let encoded_hash: &str = ::serde::Deserialize::deserialize(deserializer)?;
             HashValue::from_hex(encoded_hash).map_err(<D::Error as ::serde::de::Error>::custom)
         } else {
-            let b = <&[u8]>::deserialize(deserializer)?;
-            Self::from_slice(b).map_err(<D::Error as ::serde::de::Error>::custom)
+            let value = <_Value>::deserialize(deserializer)?;
+            Self::from_slice(value.0).map_err(<D::Error as ::serde::de::Error>::custom)
         }
     }
 }
