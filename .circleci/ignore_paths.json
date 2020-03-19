@@ -1,7 +1,5 @@
 {
   "ignore_paths": [
-    ".circleci/",
-    ".github/",
     "README.md",
     "language/move-prover/"
   ]
