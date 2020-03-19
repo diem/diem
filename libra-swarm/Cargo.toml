@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 ctrlc = { version = "3.1.4", default-features = false }
-structopt = "0.3.2"
+structopt = "0.3.12"
 thiserror = "1.0"
 
 cli = { path = "../client/cli", version = "0.1.0" }

@@ -14,4 +14,4 @@ lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canoni
 libra-types = { path = "../../../types", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
 
-structopt = "0.3.2"
+structopt = "0.3.12"

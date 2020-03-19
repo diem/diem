@@ -21,7 +21,7 @@ libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }
 prost = "0.6"
 rusty-fork = { version = "0.2.2", default-features = false }
 sha-1 = { version = "0.8.1", default-features = false }
-structopt = "0.3.2"
+structopt = "0.3.12"
 
 # List out modules with data structures being fuzzed here.
 consensus = { path = "../../consensus", version = "0.1.0", features = ["fuzzing"] }
