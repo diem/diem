@@ -558,7 +558,11 @@ impl ClusterTestRunner {
 
     pub fn run_ci_suite(&mut self) -> Result<String> {
         let suite = ExperimentSuite::new_pre_release(&self.cluster);
-        self.run_suite(suite)?;
+        let result = self.run_suite(suite);
+        if let Some(cluster_swarm) = self.cluster_swarm.as_ref() {
+            self.runtime.block_on(cluster_swarm.delete_all())?;
+        }
+        result?;
         let perf_msg = format!("Performance report:\n```\n{}\n```", self.report);
         Ok(perf_msg)
     }
