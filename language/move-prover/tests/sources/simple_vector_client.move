@@ -1,4 +1,8 @@
 // dep: tests/sources/stdlib/modules/vector.move
+
+// This file consists of a series of test cases which are client functions
+// using the standard vector module.
+
 module TestVector {
     use 0x0::Vector;
 
@@ -6,6 +10,20 @@ module TestVector {
     // -----------------------------
     // Testing with concrete vectors
     // -----------------------------
+
+    fun test_vector_equal(v: vector<u64>, w: &mut vector<u64>) {
+    }
+    spec fun test_vector_equal {
+        aborts_if false;
+        ensures v == v;
+        ensures old(v) == old(v);
+        ensures v == v[0..len(v)];
+        ensures old(v) == old(v[0..len(v)]);
+        ensures w == w;
+        ensures old(w) == old(w);
+        ensures w == w[0..len(w)];
+        ensures old(w) == old(w[0..len(w)]);
+    }
 
     // succeeds. [] == [].
     fun test_empty() : (vector<u64>, vector<u64>)
@@ -236,6 +254,35 @@ module TestVector {
         ensures result_1[0..2] == result_2[4..6];
         ensures result_1[1..2] == result_2[2..3];
         ensures result_2[1..3] == result_2[4..6];
+    }
+
+    fun test_contains() : (vector<u64>, bool, bool)
+    {
+        let b1: bool;
+        let b2: bool;
+        let ev1 = Vector::empty<u64>();
+        Vector::push_back(&mut ev1, 1);
+        Vector::push_back(&mut ev1, 2);
+        Vector::push_back(&mut ev1, 3);
+        Vector::push_back(&mut ev1, 5);
+        b1 = Vector::contains(&ev1, &3);
+        b2 = Vector::contains(&ev1, &4);
+        (ev1, b1, b2)
+    }
+    spec fun test_contains {
+        aborts_if false;
+        ensures result_2 == true;
+        ensures result_3 == false;
+        ensures len(result_1) == 4;
+        ensures result_1[0] == 1;
+        ensures result_1[1] == 2;
+        ensures result_1[2] == 3;
+        ensures result_1[3] == 5;
+        ensures any(result_1,|x| x==1);
+        ensures any(result_1,|x| x==2);
+        ensures any(result_1,|x| x==3);
+        ensures !any(result_1,|x| x==4);
+        ensures any(result_1,|x| x==5);
     }
 
 

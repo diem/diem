@@ -667,8 +667,8 @@ impl<'env> SpecTranslator<'env> {
             Operation::Le => self.translate_rel_op("<=", args),
             Operation::Gt => self.translate_rel_op(">", args),
             Operation::Ge => self.translate_rel_op(">=", args),
-            Operation::Eq => self.translate_eq_neq("==", "IsEqual", args),
-            Operation::Neq => self.translate_eq_neq("!=", "!IsEqual", args),
+            Operation::Eq => self.translate_eq_neq("IsEqual", args),
+            Operation::Neq => self.translate_eq_neq("!IsEqual", args),
 
             // Unary operators
             Operation::Not => self.translate_logical_unary_op("!", args),
@@ -680,7 +680,7 @@ impl<'env> SpecTranslator<'env> {
             Operation::Sender => emit!(self.writer, "$TxnSender($txn)"),
             Operation::All => self.translate_all_or_exists(&loc, true, args),
             Operation::Any => self.translate_all_or_exists(&loc, false, args),
-            Operation::Update => self.translate_primitive_call("$update_vector", args),
+            Operation::Update => self.translate_primitive_call("$update_vector_by_value", args),
             Operation::Old => self.translate_old(args),
             Operation::MaxU8 => emit!(self.writer, "Integer(MAX_U8)"),
             Operation::MaxU64 => emit!(self.writer, "Integer(MAX_U64)"),
@@ -760,7 +760,12 @@ impl<'env> SpecTranslator<'env> {
         //      (var $r := v; forall $i: int :: $InVectorRange($v, $i) ==> (var x:=$r[$i]; x > 0))
         // all(r, |x| x > 0) -->
         //      (var $r := r; forall $i: int :: $InRange($r, $i) ==> (var x:=$i; x > 0))
+        // any(v, |x| x > 0) -->
+        //      (var $r := v; exists $i: int :: $InVectorRange($v, $i) && (var x:=$r[$i]; x > 0))
+        // any(r, |x| x > 0) -->
+        //      (var $r := r; exists $i: int :: $InRange($r, $i) && (var x:=$i; x > 0))
         let quant_ty = self.module_env.get_node_type(args[0].node_id());
+        let connective = if is_all { "==>" } else { "&&" };
         if let Exp::Lambda(_, vars, exp) = &args[1] {
             if let Some((var, _)) = self.get_decl_var(loc, vars) {
                 let var_name = self.module_env.symbol_pool().string(var);
@@ -768,6 +773,13 @@ impl<'env> SpecTranslator<'env> {
                 let is_vector = match quant_ty {
                     Type::Vector(..) => true,
                     Type::Primitive(PrimitiveType::Range) => false,
+                    Type::Reference(_, b) => {
+                        if let Type::Vector(..) = *b {
+                            true
+                        } else {
+                            panic!("unexpected type")
+                        }
+                    }
                     _ => panic!("unexpected type"),
                 };
                 let range_tmp = self.fresh_var_name("range");
@@ -781,9 +793,10 @@ impl<'env> SpecTranslator<'env> {
                 if is_vector {
                     emit!(
                         self.writer,
-                        "$InVectorRange({}, {}) ==> (var {} := $select_vector({}, {}); ",
+                        "$InVectorRange({}, {}) {} (var {} := $select_vector({}, {}); ",
                         range_tmp,
                         quant_var,
+                        connective,
                         var_name,
                         range_tmp,
                         quant_var,
@@ -791,9 +804,10 @@ impl<'env> SpecTranslator<'env> {
                 } else {
                     emit!(
                         self.writer,
-                        "$InRange({}, {}) ==> (var {} := Integer({}); ",
+                        "$InRange({}, {}) {} (var {} := Integer({}); ",
                         range_tmp,
                         quant_var,
+                        connective,
                         var_name,
                         quant_var,
                     );
@@ -832,29 +846,13 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
-    fn translate_eq_neq(&self, boogie_ref_op: &str, boogie_val_fun: &str, args: &[Exp]) {
-        let is_ref = self
-            .module_env
-            .get_node_type(args[0].node_id())
-            .is_reference()
-            || self
-                .module_env
-                .get_node_type(args[1].node_id())
-                .is_reference();
+    fn translate_eq_neq(&self, boogie_val_fun: &str, args: &[Exp]) {
         emit!(self.writer, "Boolean(");
-        if is_ref {
-            emit!(self.writer, "(");
-            self.translate_exp(&args[0]);
-            emit!(self.writer, ") {} (", boogie_ref_op);
-            self.translate_exp(&args[1]);
-            emit!(self.writer, ")");
-        } else {
-            emit!(self.writer, "{}(", boogie_val_fun);
-            self.translate_exp(&args[0]);
-            emit!(self.writer, ", ");
-            self.translate_exp(&args[1]);
-            emit!(self.writer, ")");
-        }
+        emit!(self.writer, "{}(", boogie_val_fun);
+        self.translate_exp(&args[0]);
+        emit!(self.writer, ", ");
+        self.translate_exp(&args[1]);
+        emit!(self.writer, ")");
         emit!(self.writer, ")");
     }
 
