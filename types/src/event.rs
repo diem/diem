@@ -70,7 +70,10 @@ impl ser::Serialize for EventKey {
     where
         S: ser::Serializer,
     {
-        serializer.serialize_bytes(&self.0)
+        // In order to preserve the Serde data model and help analysis tools,
+        // make sure to wrap our value in a container with the same name
+        // as the original type.
+        serializer.serialize_newtype_struct("EventKey", &self.0[..])
     }
 }
 
@@ -79,24 +82,13 @@ impl<'de> de::Deserialize<'de> for EventKey {
     where
         D: de::Deserializer<'de>,
     {
-        struct EventKeyVisitor;
+        // See comment in serialize.
+        #[derive(::serde::Deserialize)]
+        #[serde(rename = "EventKey")]
+        struct Value<'a>(&'a [u8]);
 
-        impl<'de> de::Visitor<'de> for EventKeyVisitor {
-            type Value = EventKey;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("EventKey in bytes")
-            }
-
-            fn visit_bytes<E>(self, value: &[u8]) -> std::result::Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                EventKey::try_from(value).map_err(E::custom)
-            }
-        }
-
-        deserializer.deserialize_bytes(EventKeyVisitor)
+        let value = Value::deserialize(deserializer)?;
+        Self::try_from(value.0).map_err(<D::Error as ::serde::de::Error>::custom)
     }
 }
 
@@ -107,7 +99,7 @@ impl TryFrom<&[u8]> for EventKey {
     fn try_from(bytes: &[u8]) -> Result<EventKey> {
         ensure!(
             bytes.len() == Self::LENGTH,
-            "The Address {:?} is of invalid length",
+            "The Event Key {:?} is of invalid length",
             bytes
         );
         let mut addr = [0u8; Self::LENGTH];

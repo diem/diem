@@ -232,8 +232,15 @@ impl<'de> Deserialize<'de> for AccountAddress {
             let s = <&str>::deserialize(deserializer)?;
             AccountAddress::from_str(s).map_err(D::Error::custom)
         } else {
-            let b = <[u8; Self::LENGTH]>::deserialize(deserializer)?;
-            Ok(AccountAddress::new(b))
+            // In order to preserve the Serde data model and help analysis tools,
+            // make sure to wrap our value in a container with the same name
+            // as the original type.
+            #[derive(::serde::Deserialize)]
+            #[serde(rename = "AccountAddress")]
+            struct Value([u8; AccountAddress::LENGTH]);
+
+            let value = Value::deserialize(deserializer)?;
+            Ok(AccountAddress::new(value.0))
         }
     }
 }
@@ -246,7 +253,8 @@ impl Serialize for AccountAddress {
         if serializer.is_human_readable() {
             self.to_string().serialize(serializer)
         } else {
-            self.0.serialize(serializer)
+            // See comment in deserialize.
+            serializer.serialize_newtype_struct("AccountAddress", &self.0)
         }
     }
 }
