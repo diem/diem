@@ -41,11 +41,15 @@ pub fn fuzzer(data: &[u8]) {
 
     let client = Client::new();
     let url = format!("http://{}", address);
-    let request: serde_json::Value =
-        serde_json::from_slice(data).expect("failed to convert byte array to JSON");
+    let json_request;
+    match serde_json::from_slice::<serde_json::Value>(data) {
+        Err(_) => return, // should not throw error or panic on invalid fuzzer inputs
+        Ok(request) => json_request = request,
+    };
+
     let response = client
         .post(&url) // address
-        .json(&request)
+        .json(&json_request)
         .send()
         .expect("failed to send request to JSON RPC server");
 
