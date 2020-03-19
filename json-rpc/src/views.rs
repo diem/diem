@@ -136,14 +136,14 @@ impl From<&Vec<u8>> for BytesView {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct TransactionView {
     pub version: u64,
     pub transaction: TransactionDataView,
     pub events: Vec<EventView>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "type")]
 pub enum TransactionDataView {
     #[serde(rename = "blockmetadata")]
