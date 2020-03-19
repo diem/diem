@@ -14,36 +14,81 @@ use libra_vault_client::{self as vault, Client};
 /// calls pointers to data keys, Vault has actually a secret that contains multiple key value
 /// pairs.
 pub struct VaultStorage {
-    pub(crate) client: Client,
+    client: Client,
+    namespace: Option<String>,
 }
 
 impl VaultStorage {
     pub fn new(host: String, token: String) -> Self {
         Self {
             client: Client::new(host, token),
+            namespace: None,
         }
+    }
+
+    /// A namespace is an optional portion of the path to a key stored within Vault. For example,
+    /// a secret, S, without a namespace would be available in secret/data/S, with a namespace, N, it
+    /// would be in secret/data/N/S.
+    pub fn set_namespace(mut self, namespace: Option<String>) -> Self {
+        self.namespace = namespace;
+        self
+    }
+
+    pub fn namespace(&self) -> Option<String> {
+        self.namespace.clone()
     }
 
     /// Erase all secrets and keys from the vault storage. Use with caution.
     pub fn reset(&self) -> Result<(), Error> {
-        let secrets = self.client.list_secrets("")?;
+        self.reset_helper("")
+    }
+
+    fn reset_helper(&self, path: &str) -> Result<(), Error> {
+        let secrets = self.client.list_secrets(path)?;
         for secret in secrets {
-            self.client.delete_secret(&secret)?;
+            if secret.ends_with('/') {
+                self.reset_helper(&secret)?;
+            } else {
+                self.client.delete_secret(&format!("{}{}", path, secret))?;
+            }
         }
         Ok(())
+    }
+
+    /// Creates a token but uses the namespace for policies
+    pub fn create_token(&self, policies: Vec<&str>) -> Result<String, Error> {
+        let result = if let Some(ns) = &self.namespace {
+            let policies: Vec<_> = policies.iter().map(|p| format!("{}/{}", ns, p)).collect();
+            self.client
+                .create_token(policies.iter().map(|p| &**p).collect())?
+        } else {
+            self.client.create_token(policies)?
+        };
+        Ok(result)
     }
 
     /// Retrieves a key from a given secret. Libra Secure Storage inserts each key into its own
     /// distinct secret store and thus the secret and key have the same identifier.
     fn get_secret(&self, key: &str) -> Result<Value, Error> {
-        let value = self.client.read_secret(key, key)?;
+        let secret = if let Some(namespace) = &self.namespace {
+            format!("{}/{}", namespace, key)
+        } else {
+            key.to_string()
+        };
+        let value = self.client.read_secret(&secret, key)?;
         let v = Value::from_base64(&value).unwrap();
         Ok(v)
     }
 
     /// Inserts a key, value pair into a secret that shares the name of the key.
     fn set_secret(&self, key: &str, value: Value) -> Result<(), Error> {
-        self.client.write_secret(key, key, &value.to_base64()?)?;
+        let secret = if let Some(namespace) = &self.namespace {
+            format!("{}/{}", namespace, key)
+        } else {
+            key.to_string()
+        };
+        self.client
+            .write_secret(&secret, key, &value.to_base64()?)?;
         Ok(())
     }
 
@@ -56,7 +101,18 @@ impl VaultStorage {
         key: &str,
         capabilities: &[Capability],
     ) -> Result<(), Error> {
-        let path = format!("secret/data/{}", key);
+        let (path, policy_name) = if let Some(namespace) = &self.namespace {
+            let path = format!("secret/data/{}/{}", namespace, key);
+            let policy_name = if policy_name == "default" {
+                policy_name.to_string()
+            } else {
+                format!("{}/{}", namespace, policy_name)
+            };
+            (path, policy_name)
+        } else {
+            (format!("secret/data/{}", key), policy_name.to_string())
+        };
+
         let mut vault_policy = self.client.read_policy(&policy_name).unwrap_or_default();
         let vault_capabilities: Vec<vault::Capability> = capabilities
             .iter()
@@ -66,7 +122,7 @@ impl VaultStorage {
             })
             .collect();
         vault_policy.add_policy(&path, vault_capabilities);
-        self.client.set_policy(policy_name, &vault_policy)?;
+        self.client.set_policy(&policy_name, &vault_policy)?;
         Ok(())
     }
 
