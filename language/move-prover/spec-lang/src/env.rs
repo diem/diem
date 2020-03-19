@@ -385,6 +385,7 @@ impl GlobalEnv {
         function_data: BTreeMap<FunId, FunctionData>,
         spec_vars: Vec<SpecVarDecl>,
         spec_funs: Vec<SpecFunDecl>,
+        module_invariants: Vec<Invariant>,
         loc_map: BTreeMap<NodeId, Loc>,
         type_map: BTreeMap<NodeId, Type>,
         instantiation_map: BTreeMap<NodeId, Vec<Type>>,
@@ -423,6 +424,7 @@ impl GlobalEnv {
             function_idx_to_id,
             spec_vars,
             spec_funs,
+            module_invariants,
             source_map,
             loc,
             loc_map,
@@ -499,6 +501,7 @@ impl GlobalEnv {
                 InvariantKind::Update => update_invariants.push(inv),
                 InvariantKind::Pack => pack_invariants.push(inv),
                 InvariantKind::Unpack => unpack_invariants.push(inv),
+                _ => panic!("unexpected invariant kind"),
             }
         }
         StructData {
@@ -676,6 +679,9 @@ pub struct ModuleData {
 
     /// Specification functions, in SpecFunId order.
     pub spec_funs: BTreeMap<SpecFunId, SpecFunDecl>,
+
+    /// Module level invariants.
+    pub module_invariants: Vec<Invariant>,
 
     /// Module source location information.
     pub source_map: ModuleSourceMap<MoveIrLoc>,
@@ -937,6 +943,11 @@ impl<'env> ModuleEnv<'env> {
     /// Gets spec fun by id.
     pub fn get_spec_fun(&self, id: SpecFunId) -> &SpecFunDecl {
         self.data.spec_funs.get(&id).expect("spec fun id defined")
+    }
+
+    /// Gets module invariants.
+    pub fn get_module_invariants(&self) -> &[Invariant] {
+        &self.data.module_invariants
     }
 
     /// Get all spec fun overloads with the given name.
@@ -1287,6 +1298,12 @@ impl<'env> FunctionEnv<'env> {
     pub fn is_native(&self) -> bool {
         let view = self.definition_view();
         view.is_native()
+    }
+
+    /// Returns true if this function is public.
+    pub fn is_public(&self) -> bool {
+        let view = self.definition_view();
+        view.is_public()
     }
 
     /// Returns true if this function mutates any references (i.e. has &mut parameters).

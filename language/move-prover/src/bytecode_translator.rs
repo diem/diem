@@ -433,7 +433,11 @@ impl<'env> ModuleTranslator<'env> {
         // Set the location to internal so it won't be counted for execution traces
         self.writer
             .set_location(&self.module_env.env.internal_loc());
-
+        emitln!(self.writer, "{");
+        self.writer.indent();
+        emitln!(self.writer, "call $InitVerification();");
+        let spec_translator = SpecTranslator::new(self.writer, &func_env.module_env, false);
+        spec_translator.assume_module_invariants(func_env);
         let args = func_env
             .get_type_parameters()
             .iter()
@@ -448,25 +452,25 @@ impl<'env> ModuleTranslator<'env> {
         let rets = (0..func_env.get_return_count())
             .map(|i| format!("$ret{}", i))
             .join(", ");
-        let assumptions = "    call $InitVerification();\n";
         if rets.is_empty() {
-            emit!(
+            emitln!(
                 self.writer,
-                "\n{{\n{}    call {}({});\n}}\n\n",
-                assumptions,
+                "call {}({});",
                 boogie_function_name(func_env),
                 args
             )
         } else {
-            emit!(
+            emitln!(
                 self.writer,
-                "\n{{\n{}    call {} := {}({});\n}}\n\n",
-                assumptions,
+                "call {} := {}({});",
                 rets,
                 boogie_function_name(func_env),
                 args
             )
         }
+        self.writer.unindent();
+        emitln!(self.writer, "}");
+        emitln!(self.writer);
     }
 
     /// This generates boogie code for everything after the function signature
@@ -819,6 +823,14 @@ impl<'env> ModuleTranslator<'env> {
                     str_local(dest),
                     src,
                 );
+                emit!(
+                    self.writer,
+                    &boogie_type_check(
+                        self.module_env.env,
+                        str_local(dest).as_str(),
+                        &self.get_local_type(func_env, *dest)
+                    )
+                );
                 save_borrowed_value(ctx, dest);
             }
             ReadRef(dest, src) => {
@@ -992,6 +1004,14 @@ impl<'env> ModuleTranslator<'env> {
                     str_local(src),
                     boogie_field_name(field_env)
                 );
+                emit!(
+                    self.writer,
+                    &boogie_type_check(
+                        self.module_env.env,
+                        str_local(dest).as_str(),
+                        &self.get_local_type(func_env, *dest)
+                    )
+                );
             }
             Exists(dest, addr, struct_def_index, type_actuals) => {
                 let resource_type = boogie_struct_type_value(
@@ -1021,6 +1041,14 @@ impl<'env> ModuleTranslator<'env> {
                     str_local(dest),
                     addr,
                     resource_type,
+                );
+                emit!(
+                    self.writer,
+                    &boogie_type_check(
+                        self.module_env.env,
+                        str_local(dest).as_str(),
+                        &self.get_local_type(func_env, *dest)
+                    )
                 );
                 emitln!(self.writer, &propagate_abort());
                 save_borrowed_value(ctx, dest);

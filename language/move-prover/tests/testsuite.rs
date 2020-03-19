@@ -13,10 +13,14 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let no_boogie = read_env_var("BOOGIE_EXE").is_empty() || read_env_var("Z3_EXE").is_empty();
     let baseline_valid =
         !no_boogie || !extract_test_directives(path, "// no-boogie-test")?.is_empty();
+    let no_verify = !extract_test_directives(path, "// no-verify")?.is_empty();
     let mut sources = extract_test_directives(path, "// dep:")?;
     sources.push(path.to_string_lossy().to_string());
     // The first argument in the args list is interpreted as program name, so set something here.
     let mut args = vec!["mvp_test".to_string()];
+    if no_verify {
+        args.push("--boogie=-noVerify".to_string());
+    }
     args.extend_from_slice(&sources);
     let mut options = Options::default();
     options.initialize_from_args(&args);

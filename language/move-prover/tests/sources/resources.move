@@ -1,4 +1,4 @@
-// dep: ../stdlib/modules/transaction.move
+// dep: tests/sources/stdlib/modules/transaction.move
 
 module TestResources {
     use 0x0::Transaction;
