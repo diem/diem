@@ -437,7 +437,7 @@ impl<'env> ModuleTranslator<'env> {
         self.writer.indent();
         emitln!(self.writer, "call $InitVerification();");
         let spec_translator = SpecTranslator::new(self.writer, &func_env.module_env, false);
-        spec_translator.assume_module_invariants(func_env);
+        spec_translator.assume_preconditions(func_env);
         let args = func_env
             .get_type_parameters()
             .iter()

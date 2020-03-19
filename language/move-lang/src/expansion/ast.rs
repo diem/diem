@@ -420,6 +420,7 @@ impl AstDebug for SpecBlockMember_ {
                     SpecConditionKind::Decreases => w.write("decreases "),
                     SpecConditionKind::AbortsIf => w.write("aborts_if "),
                     SpecConditionKind::Ensures => w.write("ensures "),
+                    SpecConditionKind::Requires => w.write("requires "),
                 }
                 exp.ast_debug(w);
             }

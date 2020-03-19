@@ -203,6 +203,21 @@ impl<'env> SpecTranslator<'env> {
         let conds = func_env.get_specification();
         emitln!(self.writer, "requires $ExistsTxnSenderAccount($m, $txn);");
 
+        // Generate requires.
+        let requires = conds
+            .iter()
+            .filter(|c| c.kind == ConditionKind::Requires)
+            .collect_vec();
+        if !requires.is_empty() {
+            self.translate_seq(requires.iter(), "\n", |cond| {
+                self.writer.set_location(&cond.loc);
+                emit!(self.writer, "requires b#Boolean(");
+                self.translate_exp(&cond.exp);
+                emit!(self.writer, ");")
+            });
+            emitln!(self.writer);
+        }
+
         // Generate aborts_if
         // abort_if P means function abort if P holds.
         // multiple abort_if conditions are "or"ed. If no condition holds, function does not abort.
@@ -259,16 +274,37 @@ impl<'env> SpecTranslator<'env> {
     }
 
     /// Assumes module invariants.
-    pub fn assume_module_invariants(&self, func_env: &FunctionEnv<'_>) {
-        if func_env.is_public() {
-            let invariants = func_env.module_env.get_module_invariants();
-            self.translate_seq(invariants.iter(), "\n", |inv| {
-                self.writer.set_location(&inv.loc);
+    pub fn assume_preconditions(&self, func_env: &FunctionEnv<'_>) {
+        emitln!(self.writer, "assume $ExistsTxnSenderAccount($m, $txn);");
+
+        // Explicit pre-conditions.
+        let requires = func_env
+            .get_specification()
+            .iter()
+            .filter(|cond| cond.kind == ConditionKind::Requires)
+            .collect_vec();
+        if !requires.is_empty() {
+            self.translate_seq(requires.iter(), "\n", |cond| {
+                self.writer.set_location(&cond.loc);
                 emit!(self.writer, "assume b#Boolean(");
-                self.translate_exp(&inv.exp);
+                self.translate_exp(&cond.exp);
                 emit!(self.writer, ");")
             });
             emitln!(self.writer);
+        }
+
+        // Implicit module invariants.
+        if func_env.is_public() {
+            let invariants = func_env.module_env.get_module_invariants();
+            if !invariants.is_empty() {
+                self.translate_seq(invariants.iter(), "\n", |inv| {
+                    self.writer.set_location(&inv.loc);
+                    emit!(self.writer, "assume b#Boolean(");
+                    self.translate_exp(&inv.exp);
+                    emit!(self.writer, ");")
+                });
+                emitln!(self.writer);
+            }
         }
     }
 }
