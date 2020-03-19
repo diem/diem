@@ -41,6 +41,7 @@ fn main() {
             .is_async(config.logger.is_async)
             .level(config.logger.level)
             .init();
+        libra_logger::init_struct_log_from_env().expect("Failed to initialize structured logging");
     }
 
     if config.metrics.enabled {

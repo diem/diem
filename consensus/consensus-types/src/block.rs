@@ -23,7 +23,7 @@ use mirai_annotations::debug_checked_verify_eq;
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
 use std::{
     collections::BTreeMap,
-    fmt::{Display, Formatter},
+    fmt::{self, Display, Formatter},
 };
 
 #[path = "block_test_utils.rs"]
@@ -34,7 +34,7 @@ pub mod block_test_utils;
 #[path = "block_test.rs"]
 pub mod block_test;
 
-#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Clone, PartialEq, Eq)]
 /// Block has the core data of a consensus block that should be persistent when necessary.
 /// Each block must know the id of its parent and keep the QuorurmCertificate to that parent.
 pub struct Block<T> {
@@ -48,7 +48,13 @@ pub struct Block<T> {
     signature: Option<Ed25519Signature>,
 }
 
-impl<T: PartialEq> Display for Block<T> {
+impl<T> fmt::Debug for Block<T> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl<T> Display for Block<T> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         let nil_marker = if self.is_nil_block() { " (NIL)" } else { "" };
         write!(
@@ -124,10 +130,7 @@ impl<T> Block<T> {
     }
 }
 
-impl<T> Block<T>
-where
-    T: PartialEq,
-{
+impl<T> Block<T> {
     pub fn is_genesis_block(&self) -> bool {
         self.block_data.is_genesis_block()
     }

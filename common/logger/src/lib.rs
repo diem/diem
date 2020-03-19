@@ -14,6 +14,15 @@
 //! 1) StructuredLogEntry class and send_struct_log! macro for directly composing structured log
 //! 2) Bridge between traditional log! macro and structured logging API
 //!
+//! ## Configuration
+//!
+//! Structured logger has separate log levels, configured with `STRUCT_LOG_LEVEL`.
+//! It is set to debug by default, but it only has effect if structured logger is initialized.
+//!
+//! Structured logger can be initialized manually with one of `init_XXX_struct_log` functions.
+//! Preferred way to initialize structured logging is by using `init_struct_log_from_env`.
+//! In this case `STRUCT_LOG_FILE` environment variable is used to set file name for structured logs
+//!
 //! ## Direct API
 //!
 //! ```pseudo
@@ -115,8 +124,8 @@ pub mod prelude {
 mod struct_log;
 
 pub use struct_log::{
-    set_struct_logger, struct_logger_enabled, FileStructLog, PrintStructLog, StructLogSink,
-    StructuredLogEntry,
+    init_file_struct_log, init_println_struct_log, init_struct_log_from_env, set_struct_logger,
+    struct_logger_enabled, struct_logger_set, StructLogSink, StructuredLogEntry,
 };
 
 mod text_log;
@@ -203,8 +212,7 @@ macro_rules! struct_log_enabled {
 #[cfg(not(feature = "no_struct_log"))]
 macro_rules! struct_log_enabled {
     ($level:expr) => {
-        $crate::log::log_enabled!(target: $crate::DEFAULT_TARGET, $level)
-            && $crate::struct_logger_enabled()
+        $crate::struct_logger_enabled($level)
     };
 }
 
@@ -227,7 +235,7 @@ macro_rules! struct_log {
 #[macro_export]
 macro_rules! send_struct_log {
     ($entry:expr) => {
-        if $crate::struct_logger_enabled() {
+        if $crate::struct_logger_set() {
             let mut entry = $entry;
             entry.module(module_path!());
             entry.location($crate::location!());
@@ -255,12 +263,15 @@ macro_rules! git_rev {
 #[macro_export]
 macro_rules! format_struct_args_and_pattern {
     ($entry:ident, $fmt:expr) => {
+        $entry.log(format!($fmt));
         $entry.pattern($fmt);
     };
     ($entry:ident, $fmt:expr,) => {
+        $entry.log(format!($fmt));
         $entry.pattern($fmt);
     };
     ($entry:ident, $fmt:expr, $($arg:tt)+) => {
+        $entry.log(format!($fmt, $($arg)+));
         $entry.pattern($fmt);
         $crate::format_struct_args!($entry, 0, $($arg)+);
     }

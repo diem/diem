@@ -35,11 +35,20 @@ spec:
       else
         libra_log_file="non_existent_file"
       fi
-      cat << EOF > /opt/libra/data/fluent-bit.conf
+      mkdir -p /opt/libra/data/fluent-bit/
+      cat << EOF > /opt/libra/data/fluent-bit/parsers.conf
+      [PARSER]
+        Name        events
+        Format      json
+        Time_Key    timestamp
+        Time_Format %Y-%m-%d %H:%M:%S
+      EOF
+      cat << EOF > /opt/libra/data/fluent-bit/fluent-bit.conf
       [SERVICE]
           Flush         5
           Log_Level     info
           Daemon        off
+          Parsers_File  /opt/libra/data/fluent-bit/parsers.conf
 
       [INPUT]
           Name              tail
@@ -48,6 +57,15 @@ spec:
           Mem_Buf_Limit     5MB
           Refresh_Interval  10
           Skip_Long_Lines   On
+
+      [INPUT]
+          Name              tail
+          Tag               validator-events
+          Path              /opt/libra/data/events.log
+          Mem_Buf_Limit     5MB
+          Refresh_Interval  10
+          Skip_Long_Lines   On
+          Parser            events
 
       [FILTER]
           Name record_modifier
@@ -75,7 +93,7 @@ spec:
   - name: fluent-bit
     image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/fluent-bit:1.3.9
     imagePullPolicy: IfNotPresent
-    command: ["/fluent-bit/bin/fluent-bit", "-c", "/opt/libra/data/fluent-bit.conf"]
+    command: ["/fluent-bit/bin/fluent-bit", "-c", "/opt/libra/data/fluent-bit/fluent-bit.conf"]
     volumeMounts:
     - mountPath: /opt/libra/data
       name: data
@@ -106,6 +124,10 @@ spec:
     - name: CFG_FULLNODE_SEED
       value: "{cfg_fullnode_seed}"
     - name: RUST_LOG
+      value: "warn"
+    - name: STRUCT_LOG_FILE
+      value: "/opt/libra/data/events.log"
+    - name: STRUCT_LOG_LEVEL
       value: "debug"
     - name: RUST_BACKTRACE
       value: "1"

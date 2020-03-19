@@ -109,16 +109,13 @@ impl<T> BlockData<T> {
     }
 }
 
-impl<T> BlockData<T>
-where
-    T: PartialEq,
-{
+impl<T> BlockData<T> {
     pub fn is_genesis_block(&self) -> bool {
-        self.block_type == BlockType::Genesis
+        matches!(self.block_type, BlockType::Genesis)
     }
 
     pub fn is_nil_block(&self) -> bool {
-        self.block_type == BlockType::NilBlock
+        matches!(self.block_type, BlockType::NilBlock)
     }
 }
 
