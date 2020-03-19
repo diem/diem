@@ -30,6 +30,7 @@ pub struct ValidatorConfig {
     safety_rules_addr: Option<SocketAddr>,
     safety_rules_backend: Option<String>,
     safety_rules_host: Option<String>,
+    safety_rules_namespace: Option<String>,
     safety_rules_token: Option<String>,
     seed: [u8; 32],
     template: NodeConfig,
@@ -47,6 +48,7 @@ impl Default for ValidatorConfig {
             safety_rules_addr: None,
             safety_rules_backend: None,
             safety_rules_host: None,
+            safety_rules_namespace: None,
             safety_rules_token: None,
             seed: DEFAULT_SEED,
             template: NodeConfig::default(),
@@ -101,6 +103,11 @@ impl ValidatorConfig {
 
     pub fn safety_rules_host(&mut self, safety_rules_host: Option<String>) -> &mut Self {
         self.safety_rules_host = safety_rules_host;
+        self
+    }
+
+    pub fn safety_rules_namespace(&mut self, safety_rules_namespace: Option<String>) -> &mut Self {
+        self.safety_rules_namespace = safety_rules_namespace;
         self
     }
 
@@ -231,6 +238,7 @@ impl ValidatorConfig {
                 "on-disk" => safety_rules_config.backend.clone(),
                 "vault" => SafetyRulesBackend::Vault(VaultConfig {
                     default: true,
+                    namespace: self.safety_rules_namespace.clone(),
                     server: self
                         .safety_rules_host
                         .as_ref()

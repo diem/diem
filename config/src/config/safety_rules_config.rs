@@ -77,6 +77,10 @@ pub struct VaultConfig {
     /// In testing scenarios this will install baseline data if it is not specified. Note: this can
     /// only be used if the token provided has root or sudo access.
     pub default: bool,
+    /// A namespace is an optional portion of the path to a key stored within Vault. For example,
+    /// a secret, S, without a namespace would be available in secret/data/S, with a namespace, N, it
+    /// would be in secret/data/N/S.
+    pub namespace: Option<String>,
     /// Vault's URL, note: only HTTP is currently supported.
     pub server: String,
     /// The authorization token for access secrets

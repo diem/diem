@@ -28,16 +28,17 @@ pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSaf
 
     let backend = &config.consensus.safety_rules.backend;
     let (initialize, internal_storage): (bool, Box<dyn Storage>) = match backend {
-        SafetyRulesBackend::InMemoryStorage => {
-            (true, InMemoryStorage::new_boxed_in_memory_storage())
+        SafetyRulesBackend::InMemoryStorage => (true, InMemoryStorage::new_storage()),
+        SafetyRulesBackend::OnDiskStorage(config) => {
+            (config.default, OnDiskStorage::new_storage(config.path()))
         }
-        SafetyRulesBackend::OnDiskStorage(config) => (
-            config.default,
-            OnDiskStorage::new_boxed_on_disk_storage(config.path()),
-        ),
         SafetyRulesBackend::Vault(config) => (
             config.default,
-            VaultStorage::new_boxed_vault_storage(config.server.clone(), config.token.clone()),
+            VaultStorage::new_storage(
+                config.server.clone(),
+                config.token.clone(),
+                config.namespace.clone(),
+            ),
         ),
     };
 

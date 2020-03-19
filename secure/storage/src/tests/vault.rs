@@ -15,7 +15,7 @@ const VAULT_ROOT_TOKEN: &str = "root_token";
 #[test]
 #[ignore]
 fn execute_storage_tests_vault() {
-    let mut storage = VaultStorage::new(VAULT_HOST.to_string(), VAULT_ROOT_TOKEN.to_string());
+    let mut storage = VaultStorage::new(VAULT_HOST.into(), VAULT_ROOT_TOKEN.into(), None);
     storage.reset_and_clear().unwrap();
 
     test_vault(&mut storage);
@@ -26,10 +26,16 @@ fn execute_storage_tests_vault() {
 #[test]
 #[ignore]
 fn execute_storage_tests_vault_with_namespace() {
-    let mut storage = VaultStorage::new(VAULT_HOST.to_string(), VAULT_ROOT_TOKEN.to_string())
-        .set_namespace(Some("test".to_string()));
-    let mut storage1 = VaultStorage::new(VAULT_HOST.to_string(), VAULT_ROOT_TOKEN.to_string())
-        .set_namespace(Some("uhh".to_string()));
+    let mut storage = VaultStorage::new(
+        VAULT_HOST.into(),
+        VAULT_ROOT_TOKEN.into(),
+        Some("test".into()),
+    );
+    let mut storage1 = VaultStorage::new(
+        VAULT_HOST.into(),
+        VAULT_ROOT_TOKEN.into(),
+        Some("test1".into()),
+    );
     storage.reset_and_clear().unwrap();
 
     test_vault(&mut storage);
@@ -44,8 +50,8 @@ pub fn test_vault(storage: &mut VaultStorage) {
     // TODO(davidiw,joshlind): evaluate other systems and determine if create_token can be on the
     // Storage / KV interface. And then refactor this method to make it cleaner and easier to reason
     // about.
-    let reader: String = "reader".to_string();
-    let writer: String = "writer".to_string();
+    let reader: String = "reader".into();
+    let writer: String = "writer".into();
 
     let anyone = Policy::public();
     let root = Policy::new(vec![]);
@@ -82,16 +88,14 @@ pub fn test_vault(storage: &mut VaultStorage) {
     assert_eq!(storage.get("full"), Ok(Value::U64(4)));
 
     let writer_token = storage.create_token(vec![&writer]).unwrap();
-    let mut writer =
-        VaultStorage::new(VAULT_HOST.to_string(), writer_token).set_namespace(storage.namespace());
+    let mut writer = VaultStorage::new(VAULT_HOST.into(), writer_token, storage.namespace());
     assert_eq!(writer.get("anyone"), Ok(Value::U64(1)));
     assert_eq!(writer.get("root"), Err(Error::PermissionDenied));
     assert_eq!(writer.get("partial"), Ok(Value::U64(3)));
     assert_eq!(writer.get("full"), Ok(Value::U64(4)));
 
     let reader_token = storage.create_token(vec![&reader]).unwrap();
-    let mut reader =
-        VaultStorage::new(VAULT_HOST.to_string(), reader_token).set_namespace(storage.namespace());
+    let mut reader = VaultStorage::new(VAULT_HOST.into(), reader_token, storage.namespace());
     assert_eq!(reader.get("anyone"), Ok(Value::U64(1)));
     assert_eq!(reader.get("root"), Err(Error::PermissionDenied));
     assert_eq!(reader.get("partial"), Ok(Value::U64(3)));

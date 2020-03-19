@@ -22,7 +22,7 @@ const PREFERRED_ROUND: &str = "preferred_round";
 
 impl PersistentSafetyStorage {
     pub fn in_memory(private_key: Ed25519PrivateKey) -> Self {
-        let storage = InMemoryStorage::new_boxed_in_memory_storage();
+        let storage = InMemoryStorage::new_storage();
         Self::initialize(storage, private_key)
     }
 
@@ -114,7 +114,7 @@ mod tests {
     #[test]
     fn test() {
         let private_key = ValidatorSigner::from_int(0).private_key().clone();
-        let internal = InMemoryStorage::new_boxed_in_memory_storage();
+        let internal = InMemoryStorage::new_storage();
         let mut storage = PersistentSafetyStorage::initialize(internal, private_key);
         assert_eq!(storage.epoch().unwrap(), 1);
         assert_eq!(storage.last_voted_round().unwrap(), 0);

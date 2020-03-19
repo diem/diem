@@ -59,7 +59,7 @@ impl OnDiskStorage {
     }
 
     /// Public convenience function to return a new OnDiskStorage based Storage.
-    pub fn new_boxed_on_disk_storage(path_buf: PathBuf) -> Box<dyn Storage> {
+    pub fn new_storage(path_buf: PathBuf) -> Box<dyn Storage> {
         Box::new(OnDiskStorage::new(path_buf))
     }
 }
@@ -93,7 +93,6 @@ impl KVStorage for OnDiskStorage {
         self.write(&data)
     }
 
-    #[cfg(test)]
     fn reset_and_clear(&mut self) -> Result<(), Error> {
         self.write(&HashMap::new())
     }
