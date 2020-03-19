@@ -129,7 +129,7 @@ data "template_file" "user_data" {
 locals {
   image_repo                 = var.image_repo
   image_version              = substr(var.image_tag, 0, 6) == "sha256" ? "@${var.image_tag}" : ":${var.image_tag}"
-  mix_image_versions         = [for img in var.mix_image_tags: substr(img, 0, 6) == "sha256" ? "@${img}" : ":${img}"]
+  override_image_versions    = [for img in var.override_image_tags: substr(img, 0, 6) == "sha256" ? "@${img}" : ":${img}"]
   safety_rules_image_repo    = var.safety_rules_image_repo
   safety_rules_image_version = substr(var.safety_rules_image_tag, 0, 6) == "sha256" ? "@${var.safety_rules_image_tag}" : ":${var.safety_rules_image_tag}"
   instance_public_ip         = true
@@ -196,7 +196,7 @@ data "template_file" "ecs_task_definition" {
 
   vars = {
     image                         = local.image_repo
-    image_version                 = var.mix_validators ? local.mix_image_versions[count.index % length(local.mix_image_versions)] : local.image_version
+    image_version                 = local.override_image_versions == [] ? local.image_version : local.override_image_versions[count.index % length(local.override_image_versions)]
     cpu                           = (var.enable_logstash ? local.cpu_by_instance[var.validator_type] - 584 : local.cpu_by_instance[var.validator_type]) - 512
     mem                           = (var.enable_logstash ? local.mem_by_instance[var.validator_type] - 1024 : local.mem_by_instance[var.validator_type]) - 256
     cfg_base_config               = jsonencode(data.template_file.validator_config.rendered)
