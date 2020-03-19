@@ -121,7 +121,12 @@ async fn get_transactions(
         vec![]
     };
 
-    for (v, tx) in txs.transactions.into_iter().enumerate() {
+    let txs_with_info = txs
+        .transactions
+        .into_iter()
+        .zip(txs.proof.transaction_infos().iter());
+
+    for (v, (tx, info)) in txs_with_info.enumerate() {
         let events = if include_events {
             all_events
                 .get(v)
@@ -138,6 +143,7 @@ async fn get_transactions(
             version: start_version + v as u64,
             transaction: tx.into(),
             events,
+            vm_status: info.major_status(),
         });
     }
     Ok(result)
@@ -180,6 +186,7 @@ async fn get_account_transaction(
             version: tx_version,
             transaction: tx.transaction.into(),
             events,
+            vm_status: tx.proof.transaction_info().major_status(),
         }))
     } else {
         Ok(None)

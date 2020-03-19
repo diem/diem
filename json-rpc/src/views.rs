@@ -16,6 +16,7 @@ use libra_types::{
     proof::{AccountStateProof, AccumulatorConsistencyProof},
     transaction::{Transaction, TransactionArgument, TransactionPayload},
     validator_change::ValidatorChangeProof,
+    vm_error::StatusCode,
 };
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -141,6 +142,7 @@ pub struct TransactionView {
     pub version: u64,
     pub transaction: TransactionDataView,
     pub events: Vec<EventView>,
+    pub vm_status: StatusCode,
 }
 
 #[derive(Deserialize, Serialize)]

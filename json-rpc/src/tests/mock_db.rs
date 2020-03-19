@@ -11,8 +11,8 @@ use libra_types::{
     event::EventKey,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::{
-        AccumulatorConsistencyProof, TransactionAccumulatorProof, TransactionListProof,
-        TransactionProof,
+        AccumulatorConsistencyProof, AccumulatorRangeProof, TransactionAccumulatorProof,
+        TransactionListProof, TransactionProof,
     },
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionWithProof, Version,
@@ -29,7 +29,7 @@ pub(crate) struct MockLibraDB {
     pub version: u64,
     pub timestamp: u64,
     pub all_accounts: BTreeMap<AccountAddress, AccountStateBlob>,
-    pub all_txns: Vec<Transaction>,
+    pub all_txns: Vec<(Transaction, StatusCode)>,
     pub events: Vec<(u64, ContractEvent)>,
     pub account_state_with_proof: Vec<AccountStateWithProof>,
 }
@@ -61,14 +61,14 @@ impl LibraDBTrait for MockLibraDB {
             .all_txns
             .iter()
             .enumerate()
-            .find(|(_, x)| {
+            .find(|(_, (x, _))| {
                 if let Ok(t) = x.as_signed_user_txn() {
                     t.sender() == address && t.sequence_number() == seq_num
                 } else {
                     false
                 }
             })
-            .map(|(v, x)| TransactionWithProof {
+            .map(|(v, (x, status))| TransactionWithProof {
                 version: v as u64,
                 transaction: x.clone(),
                 events: if fetch_events {
@@ -90,7 +90,7 @@ impl LibraDBTrait for MockLibraDB {
                         Default::default(),
                         Default::default(),
                         0,
-                        StatusCode::EXECUTED,
+                        *status,
                     ),
                 ),
             }))
@@ -107,14 +107,25 @@ impl LibraDBTrait for MockLibraDB {
         _ledger_version: u64,
         fetch_events: bool,
     ) -> Result<TransactionListWithProof, Error> {
-        let transactions: Vec<Transaction> = self
-            .all_txns
+        let mut transactions = vec![];
+        let mut txn_infos = vec![];
+        self.all_txns
             .iter()
             .skip(start_version as usize)
             .take(limit as usize)
-            .cloned()
-            .collect();
+            .for_each(|(t, status)| {
+                transactions.push(t.clone());
+                txn_infos.push(TransactionInfo::new(
+                    Default::default(),
+                    Default::default(),
+                    Default::default(),
+                    0,
+                    *status,
+                ));
+            });
         let first_transaction_version = transactions.first().map(|_| start_version);
+        let proof = TransactionListProof::new(AccumulatorRangeProof::new_empty(), txn_infos);
+
         Ok(TransactionListWithProof {
             transactions,
             events: if fetch_events {
@@ -134,7 +145,7 @@ impl LibraDBTrait for MockLibraDB {
                 None
             },
             first_transaction_version,
-            proof: TransactionListProof::new_empty(),
+            proof,
         })
     }
 

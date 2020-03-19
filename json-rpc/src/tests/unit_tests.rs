@@ -141,11 +141,12 @@ fn mock_db(
         }
 
         // Record all transactions.
-        all_txns.extend(
-            txns_to_commit
-                .iter()
-                .map(|txn_to_commit| txn_to_commit.transaction().clone()),
-        );
+        all_txns.extend(txns_to_commit.iter().map(|txn_to_commit| {
+            (
+                txn_to_commit.transaction().clone(),
+                txn_to_commit.major_status(),
+            )
+        }));
     }
 
     let account_state_with_proof = if let Some(mut proof) = account_state_with_proof {
@@ -399,7 +400,7 @@ fn test_get_transactions_impl(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoW
                             .as_u64(),
                         Some(version)
                     );
-                    let tx = &mock_db.all_txns[version as usize];
+                    let (tx, status) = &mock_db.all_txns[version as usize];
 
                     let view: TransactionView =
                         serde_json::from_value(response.clone()).expect("Invalid result");
@@ -413,6 +414,7 @@ fn test_get_transactions_impl(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoW
                         .collect::<Vec<_>>();
 
                     assert_eq!(expected_events.len(), view.events.len());
+                    assert_eq!(status, &view.vm_status);
 
                     for (i, event_view) in view.events.iter().enumerate() {
                         let expected_event =
@@ -509,18 +511,17 @@ fn test_get_account_transaction_impl(
             let data: Option<TransactionView> = fetch_data(resp);
             let tx_view = data.expect("Transaction didn't exists!");
 
-            let expected_tx = mock_db
+            let (expected_tx, expected_status) = mock_db
                 .all_txns
                 .iter()
-                .find_map(|t| {
+                .find_map(|(t, status)| {
                     if let Ok(x) = t.as_signed_user_txn() {
                         if x.sender() == *acc && x.sequence_number() == seq {
-                            return Some(x);
+                            return Some((x, status));
                         }
                     }
                     None
                 })
-                .cloned()
                 .expect("Couldn't find tx");
 
             // Check we returned correct events
@@ -532,6 +533,9 @@ fn test_get_account_transaction_impl(
                 .collect::<Vec<_>>();
 
             assert_eq!(tx_view.events.len(), expected_events.len());
+
+            // check VM major status
+            assert_eq!(&tx_view.vm_status, expected_status);
 
             for (i, event_view) in tx_view.events.iter().enumerate() {
                 let expected_event = expected_events.get(i).expect("Expected event didn't find");
