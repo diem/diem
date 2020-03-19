@@ -67,7 +67,7 @@ error:  This assertion might not hold.
     =     at tests/sources/invariants.move:86:21: lifetime_invalid_R
     =         r = <redacted>,
     =         r_ref = <redacted>
-    =     at tests/sources/invariants.move:87:13: lifetime_invalid_R
+    =     at tests/sources/invariants.move:87:26: lifetime_invalid_R
     =         x_ref = <redacted>
     =     at tests/sources/invariants.move:88:18: lifetime_invalid_R
     =         r_ref = <redacted>,
@@ -85,7 +85,7 @@ error:  This assertion might not hold.
     =     at tests/sources/invariants.move:99:21: lifetime_invalid_R_2
     =         r = <redacted>,
     =         r_ref = <redacted>
-    =     at tests/sources/invariants.move:100:13: lifetime_invalid_R_2
+    =     at tests/sources/invariants.move:100:26: lifetime_invalid_R_2
     =         x_ref = <redacted>
     =     at tests/sources/invariants.move:101:18: lifetime_invalid_R_2
     =         r_ref = <redacted>,
@@ -95,7 +95,7 @@ error:  This assertion might not hold.
     =         x_ref = <redacted>
     =     at tests/sources/invariants.move:104:9: lifetime_invalid_R_2
     =         r_ref = <redacted>
-    =     at tests/sources/invariants.move:105:9: lifetime_invalid_R_2
+    =     at tests/sources/invariants.move:105:22: lifetime_invalid_R_2
     =         x_ref = <redacted>
     =     at tests/sources/invariants.move:106:18: lifetime_invalid_R_2
     =         r_ref = <redacted>,

@@ -9,6 +9,7 @@
 // dep: tests/sources/stdlib/modules/hash.move
 // dep: tests/sources/stdlib/modules/libra_time.move
 // dep: tests/sources/stdlib/modules/libra_transaction_timeout.move
+// no-verify
 address 0x0:
 
 module TransactionFee {

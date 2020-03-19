@@ -577,6 +577,8 @@ pub struct ModuleTranslator<'env, 'translator> {
     fun_conds: BTreeMap<Symbol, Vec<Condition>>,
     /// Translated struct invariants.
     struct_invariants: BTreeMap<Symbol, Vec<Invariant>>,
+    /// Translated module invariants
+    module_invariants: Vec<Invariant>,
 }
 
 /// # Entry Points
@@ -598,6 +600,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             spec_funs: vec![],
             spec_fun_index: 0,
             spec_vars: vec![],
+            module_invariants: vec![],
             fun_conds: BTreeMap::new(),
             struct_invariants: BTreeMap::new(),
         }
@@ -976,103 +979,130 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         kind: &PA::InvariantKind,
         exp: &EA::Exp,
     ) {
-        if let SpecBlockContext::Struct(name) = context {
-            // We ensured that SpecBlockContext only contains resolvable names.
-            let entry = &self
-                .parent
-                .struct_table
-                .get(name)
-                .expect("invalid spec block context")
-                .clone();
+        match context {
+            SpecBlockContext::Struct(name) => {
+                // We ensured that SpecBlockContext only contains resolvable names.
+                let entry = &self
+                    .parent
+                    .struct_table
+                    .get(name)
+                    .expect("invalid spec block context")
+                    .clone();
 
-            if let Some(fields) = &entry.fields {
-                let (old_status, kind) = match kind {
-                    PA::InvariantKind::Data => (OldExpStatus::NotSupported, InvariantKind::Data),
-                    PA::InvariantKind::Update => (OldExpStatus::OutsideOld, InvariantKind::Update),
-                    PA::InvariantKind::Pack => (OldExpStatus::OutsideOld, InvariantKind::Pack),
-                    PA::InvariantKind::Unpack => (OldExpStatus::OutsideOld, InvariantKind::Unpack),
-                };
-                let mut et = ExpTranslator::new(self, old_status);
-                for (n, ty) in &entry.type_params {
-                    et.define_type_param(loc, *n, ty.clone());
-                }
-                et.enter_scope();
-                for (n, ty) in fields {
-                    et.define_local(
-                        loc,
-                        *n,
-                        ty.clone(),
-                        Some(Operation::Select(
-                            entry.module_id,
-                            entry.struct_id,
-                            FieldId::new(*n),
-                        )),
-                    );
-                }
-                // Process assignment for a spec var.
-                let (exp, expected_type, target) = if let EA::Exp_::Assign(list, exp) = &exp.value {
-                    if kind == InvariantKind::Data {
-                        et.error(
-                            loc,
-                            "assignment to spec globals not allowed for data invariants",
-                        );
-                        return;
+                if let Some(fields) = &entry.fields {
+                    let (old_status, kind) = match kind {
+                        PA::InvariantKind::Data => {
+                            (OldExpStatus::NotSupported, InvariantKind::Data)
+                        }
+                        PA::InvariantKind::Update => {
+                            (OldExpStatus::OutsideOld, InvariantKind::Update)
+                        }
+                        PA::InvariantKind::Pack => (OldExpStatus::OutsideOld, InvariantKind::Pack),
+                        PA::InvariantKind::Unpack => {
+                            (OldExpStatus::OutsideOld, InvariantKind::Unpack)
+                        }
+                    };
+                    let mut et = ExpTranslator::new(self, old_status);
+                    for (n, ty) in &entry.type_params {
+                        et.define_type_param(loc, *n, ty.clone());
                     }
-                    if let Some(name) = et.extract_assign_target(list) {
-                        let var_loc = et.to_loc(&list.loc);
-                        let var_name = et.parent.qualified_by_module(name);
-                        if let Some(spec_var) = et.parent.parent.spec_var_table.get(&var_name) {
-                            (
-                                exp.as_ref(),
-                                spec_var.type_.clone(),
-                                Some((spec_var.module_id, spec_var.var_id)),
-                            )
-                        } else {
+                    et.enter_scope();
+                    for (n, ty) in fields {
+                        et.define_local(
+                            loc,
+                            *n,
+                            ty.clone(),
+                            Some(Operation::Select(
+                                entry.module_id,
+                                entry.struct_id,
+                                FieldId::new(*n),
+                            )),
+                        );
+                    }
+                    // Process assignment for a spec var.
+                    let (exp, expected_type, target) = if let EA::Exp_::Assign(list, exp) =
+                        &exp.value
+                    {
+                        if kind == InvariantKind::Data {
                             et.error(
-                                &var_loc,
-                                &format!(
-                                    "spec global `{}` undeclared",
-                                    var_name.display(et.symbol_pool())
-                                ),
+                                loc,
+                                "assignment to spec globals not allowed for data invariants",
                             );
                             return;
                         }
+                        if let Some(name) = et.extract_assign_target(list) {
+                            let var_loc = et.to_loc(&list.loc);
+                            let var_name = et.parent.qualified_by_module(name);
+                            if let Some(spec_var) = et.parent.parent.spec_var_table.get(&var_name) {
+                                (
+                                    exp.as_ref(),
+                                    spec_var.type_.clone(),
+                                    Some((spec_var.module_id, spec_var.var_id)),
+                                )
+                            } else {
+                                et.error(
+                                    &var_loc,
+                                    &format!(
+                                        "spec global `{}` undeclared",
+                                        var_name.display(et.symbol_pool())
+                                    ),
+                                );
+                                return;
+                            }
+                        } else {
+                            // Error has been reported.
+                            return;
+                        }
                     } else {
-                        // Error has been reported.
-                        return;
-                    }
-                } else {
-                    // There is no assignment, but Pack and Unpack need one.
-                    if let InvariantKind::Pack | InvariantKind::Unpack = kind {
-                        et.error(
-                            loc,
-                            "pack/unpack invariants must be assignments to spec globals",
-                        );
-                        return;
-                    }
-                    (exp, BOOL_TYPE.clone(), None)
-                };
+                        // There is no assignment, but Pack and Unpack need one.
+                        if let InvariantKind::Pack | InvariantKind::Unpack = kind {
+                            et.error(
+                                loc,
+                                "pack/unpack invariants must be assignments to spec globals",
+                            );
+                            return;
+                        }
+                        (exp, BOOL_TYPE.clone(), None)
+                    };
 
-                let translated = et.translate_exp(exp, &expected_type);
-                et.finalize_types();
-                if !self.struct_invariants.contains_key(&name.symbol) {
-                    self.struct_invariants.insert(name.symbol.clone(), vec![]);
+                    let translated = et.translate_exp(exp, &expected_type);
+                    et.finalize_types();
+                    if !self.struct_invariants.contains_key(&name.symbol) {
+                        self.struct_invariants.insert(name.symbol.clone(), vec![]);
+                    }
+                    self.struct_invariants
+                        .entry(name.symbol)
+                        .or_insert_with(|| vec![])
+                        .push(Invariant {
+                            loc: loc.clone(),
+                            kind,
+                            target,
+                            exp: translated,
+                        });
+                } else {
+                    self.parent
+                        .error(loc, "native structs cannot have invariants");
                 }
-                self.struct_invariants
-                    .entry(name.symbol)
-                    .or_insert_with(|| vec![])
-                    .push(Invariant {
-                        loc: loc.clone(),
-                        kind,
-                        target,
-                        exp: translated,
-                    });
-            } else {
-                self.parent
-                    .error(loc, "native structs cannot have invariants");
             }
-        } else {
-            self.parent.error(loc, "item only allowed in struct spec");
+            SpecBlockContext::Module => {
+                let mut et = ExpTranslator::new(self, OldExpStatus::NotSupported);
+                if kind != &PA::InvariantKind::Data {
+                    et.error(loc, "module invariant cannot be pack/unpack/update");
+                    return;
+                }
+                let translated = et.translate_exp(exp, &BOOL_TYPE);
+                et.finalize_types();
+                self.module_invariants.push(Invariant {
+                    loc: loc.clone(),
+                    kind: InvariantKind::Data,
+                    target: None,
+                    exp: translated,
+                });
+            }
+            _ => {
+                self.parent
+                    .error(loc, "item only allowed in struct or module spec");
+            }
         }
     }
 
@@ -1189,6 +1219,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             function_data,
             spec_vars,
             spec_funs,
+            std::mem::replace(&mut self.module_invariants, vec![]),
             loc_map,
             type_map,
             instantiation_map,

@@ -227,12 +227,48 @@ impl<'env> SpecTranslator<'env> {
             .filter(|c| c.kind == ConditionKind::Ensures)
             .collect_vec();
         if !ensures.is_empty() {
-            self.writer.set_location(&ensures[0].loc);
             self.translate_seq(ensures.iter(), "\n", |cond| {
-                emit!(self.writer, "ensures !$abort_flag ==> b#Boolean(");
+                self.writer.set_location(&cond.loc);
+                emit!(self.writer, "ensures !$abort_flag ==> (b#Boolean(");
                 self.translate_exp(&cond.exp);
+                emit!(self.writer, "));")
+            });
+            emitln!(self.writer);
+        }
+
+        // Generate implicit requires/ensures from module invariants if this is a public function.
+        if func_env.is_public() {
+            let invariants = func_env.module_env.get_module_invariants();
+            if !invariants.is_empty() {
+                self.translate_seq(invariants.iter(), "\n", |inv| {
+                    self.writer.set_location(&inv.loc);
+                    emit!(self.writer, "requires b#Boolean(");
+                    self.translate_exp(&inv.exp);
+                    emit!(self.writer, ");")
+                });
+                emitln!(self.writer);
+                self.translate_seq(invariants.iter(), "\n", |inv| {
+                    self.writer.set_location(&inv.loc);
+                    emit!(self.writer, "ensures !$abort_flag ==> (b#Boolean(");
+                    self.translate_exp(&inv.exp);
+                    emit!(self.writer, "));")
+                });
+                emitln!(self.writer);
+            }
+        }
+    }
+
+    /// Assumes module invariants.
+    pub fn assume_module_invariants(&self, func_env: &FunctionEnv<'_>) {
+        if func_env.is_public() {
+            let invariants = func_env.module_env.get_module_invariants();
+            self.translate_seq(invariants.iter(), "\n", |inv| {
+                self.writer.set_location(&inv.loc);
+                emit!(self.writer, "assume b#Boolean(");
+                self.translate_exp(&inv.exp);
                 emit!(self.writer, ");")
             });
+            emitln!(self.writer);
         }
     }
 }

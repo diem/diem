@@ -60,6 +60,7 @@ pub enum InvariantKind {
     Update,
     Pack,
     Unpack,
+    Module,
 }
 
 #[derive(Debug)]

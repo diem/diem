@@ -10,6 +10,7 @@
 // dep: tests/sources/stdlib/modules/libra_account.move
 // dep: tests/sources/stdlib/modules/validator_config.move
 // dep: tests/sources/stdlib/modules/address_util.move
+// no-verify
 
 address 0x0:
 

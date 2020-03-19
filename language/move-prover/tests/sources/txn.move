@@ -1,4 +1,4 @@
-// dep: ../stdlib/modules/transaction.move
+// dep: tests/sources/stdlib/modules/transaction.move
 address 0x0:
 
 module TestTransaction {

@@ -1,4 +1,4 @@
-// dep: ../stdlib/modules/vector.move
+// dep: tests/sources/stdlib/modules/vector.move
 module TestVector {
     use 0x0::Vector;
 
