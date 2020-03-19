@@ -87,7 +87,7 @@ jobs:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             // Check kill switch
-            if (${{secrets.KILL_SWITCH_LAND_BLOCKING_TEST}} || ${{steps.check_ks.outputs.should_run}} != 'true') {
+            if (${{secrets.KILL_SWITCH_LAND_BLOCKING_TEST}} || ${{steps.check_ks.outputs.should_run}} == 'false') {
               console.log('Kill switch is set. Will skip this step.');
               return;
             }
@@ -233,7 +233,7 @@ jobs:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             // Check kill switch
-            if (${{secrets.KILL_SWITCH_LAND_BLOCKING_TEST}} || ${{steps.check_ks.outputs.should_run}} != 'true') {
+            if (${{secrets.KILL_SWITCH_LAND_BLOCKING_TEST}} || ${{steps.check_ks.outputs.should_run}} == 'false') {
               console.log('Kill switch is set. Will skip this step.');
               return;
             }
