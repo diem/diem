@@ -24,7 +24,7 @@ use libra_types::{
     waypoint::Waypoint,
 };
 use rand::Rng;
-use reqwest::blocking::Client;
+use reqwest::blocking::{Client, ClientBuilder};
 use std::time::Duration;
 
 const JSON_RPC_TIMEOUT_MS: u64 = 5_000;
@@ -60,11 +60,15 @@ pub struct JsonRpcClient {
 }
 
 impl JsonRpcClient {
-    pub fn new(host: &str, port: u16) -> Self {
-        let addr = format!("http://{}:{}", host, port);
-        let client = Client::new();
+    pub fn new(host: &str, port: u16) -> Result<Self> {
+        let addr = if host.starts_with("https://") || host.starts_with("http://") {
+            format!("{}:{}", host, port)
+        } else {
+            format!("http://{}:{}", host, port)
+        };
+        let client = ClientBuilder::new().use_rustls_tls().build()?;
 
-        Self { client, addr }
+        Ok(Self { client, addr })
     }
 
     /// Sends JSON request `request`, performs basic checks on the payload, and returns Ok(`result`),
@@ -224,7 +228,7 @@ impl LibraClient {
             Some(waypoint) => TrustedState::from_waypoint(waypoint),
             None => TrustedState::new_trust_any_genesis_WARNING_UNSAFE(),
         };
-        let client = JsonRpcClient::new(host, port);
+        let client = JsonRpcClient::new(host, port)?;
         Ok(LibraClient {
             client,
             trusted_state: initial_trusted_state,

@@ -30,7 +30,9 @@ struct Args {
     /// JSON RPC port to connect to.
     #[structopt(short = "p", long, default_value = "8080")]
     pub port: NonZeroU16,
-    /// Host address/name to connect to.
+    /// Host address/name to connect to. Default protocol is http
+    /// To specify http protocol (e.g. https), must pass in base URL with full prefix,
+    /// and URL should not include trailing `/` or port number)
     #[structopt(short = "a", long)]
     pub host: String,
     /// Path to the generated keypair for the faucet account. The faucet account can be used to
