@@ -37,6 +37,16 @@ pub enum Scheme {
     // ... add more schemes here
 }
 
+impl fmt::Display for Scheme {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let display = match self {
+            Scheme::Ed25519 => "Ed25519",
+            Scheme::MultiEd25519 => "MultiEd25519",
+        };
+        write!(f, "Scheme::{}", display)
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum TransactionAuthenticator {
     /// Single signature
