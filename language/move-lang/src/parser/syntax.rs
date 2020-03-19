@@ -1458,11 +1458,13 @@ fn parse_spec_block_member<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlo
         Tok::Invariant => parse_invariant(tokens),
         Tok::Define | Tok::Native => parse_spec_function(tokens),
         Tok::NameValue => match tokens.content() {
-            "assert" | "assume" | "decreases" | "aborts_if" | "ensures" => parse_condition(tokens),
+            "assert" | "assume" | "decreases" | "aborts_if" | "ensures" | "requires" => {
+                parse_condition(tokens)
+            }
             "global" => parse_spec_variable(tokens),
             _ => Err(unexpected_token_error(
                 tokens,
-                "`assert`, `assume`, `decreases`, `aborts_if`, `ensures`, `global`",
+                "`assert`, `assume`, `decreases`, `aborts_if`, `ensures`, `requires`, `global`",
             )),
         },
         _ => Err(unexpected_token_error(
@@ -1473,7 +1475,7 @@ fn parse_spec_block_member<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlo
 }
 
 // Parse a specification condition:
-//    SpecCondition = ("assert" | "assume" | "decreases" | "aborts_if" | "ensures") <Exp> ";"
+//    SpecCondition = ("assert" | "assume" | "decreases" | "aborts_if" | "ensures" | "requires" ) <Exp> ";"
 fn parse_condition<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
     let start_loc = tokens.start_loc();
     let kind = match tokens.content() {
@@ -1482,6 +1484,7 @@ fn parse_condition<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember
         "decreases" => SpecConditionKind::Decreases,
         "aborts_if" => SpecConditionKind::AbortsIf,
         "ensures" => SpecConditionKind::Ensures,
+        "requires" => SpecConditionKind::Requires,
         _ => unreachable!(),
     };
     tokens.advance()?;

@@ -48,4 +48,13 @@ module TestModuleInvariants {
        let x = new_S();
        x
     }
+
+    // Private function calling a public function with correct precondition.
+    fun private_calls_public(): S acquires SCounter {
+        let x = new_S();
+        x
+    }
+    spec fun private_calls_public {
+        requires global<SCounter>(0x0).n == spec_count;
+    }
 }

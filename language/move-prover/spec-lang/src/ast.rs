@@ -42,6 +42,7 @@ pub struct SpecFunDecl {
 pub enum ConditionKind {
     AbortsIf,
     Ensures,
+    Requires,
 }
 
 #[derive(Debug)]

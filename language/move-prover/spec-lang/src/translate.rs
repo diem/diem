@@ -926,7 +926,15 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 .get(name)
                 .expect("invalid spec block context")
                 .clone();
-            let mut et = ExpTranslator::new(self, OldExpStatus::OutsideOld);
+            let is_precond = kind == &PA::SpecConditionKind::Requires;
+            let mut et = ExpTranslator::new(
+                self,
+                if is_precond {
+                    OldExpStatus::NotSupported
+                } else {
+                    OldExpStatus::OutsideOld
+                },
+            );
             for (n, ty) in &entry.type_params {
                 et.define_type_param(loc, *n, ty.clone());
             }
@@ -935,20 +943,22 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 et.define_local(loc, *n, ty.clone(), None);
             }
             // Define the placeholders for the result values of a function.
-            et.enter_scope();
-            if let Type::Tuple(ts) = &entry.result_type {
-                for (i, ty) in ts.iter().enumerate() {
-                    let name = et.symbol_pool().make(&format!("result_{}", i + 1));
-                    et.define_local(loc, name, ty.clone(), Some(Operation::Result(i)));
+            if !is_precond {
+                et.enter_scope();
+                if let Type::Tuple(ts) = &entry.result_type {
+                    for (i, ty) in ts.iter().enumerate() {
+                        let name = et.symbol_pool().make(&format!("result_{}", i + 1));
+                        et.define_local(loc, name, ty.clone(), Some(Operation::Result(i)));
+                    }
+                } else {
+                    let name = et.symbol_pool().make("result");
+                    et.define_local(
+                        loc,
+                        name,
+                        entry.result_type.clone(),
+                        Some(Operation::Result(0)),
+                    );
                 }
-            } else {
-                let name = et.symbol_pool().make("result");
-                et.define_local(
-                    loc,
-                    name,
-                    entry.result_type.clone(),
-                    Some(Operation::Result(0)),
-                );
             }
             let translated = et.translate_exp(exp, &BOOL_TYPE);
             et.finalize_types();
@@ -957,6 +967,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 PA::SpecConditionKind::Assume => unimplemented!(),
                 PA::SpecConditionKind::Decreases => unimplemented!(),
                 PA::SpecConditionKind::Ensures => ConditionKind::Ensures,
+                PA::SpecConditionKind::Requires => ConditionKind::Requires,
                 PA::SpecConditionKind::AbortsIf => ConditionKind::AbortsIf,
             };
             self.fun_conds
