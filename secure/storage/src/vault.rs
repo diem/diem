@@ -14,7 +14,7 @@ use libra_vault_client::{self as vault, Client};
 /// calls pointers to data keys, Vault has actually a secret that contains multiple key value
 /// pairs.
 pub struct VaultStorage {
-    pub client: Client,
+    pub(crate) client: Client,
 }
 
 impl VaultStorage {
