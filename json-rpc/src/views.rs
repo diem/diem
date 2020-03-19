@@ -145,6 +145,7 @@ pub struct TransactionView {
     pub vm_status: StatusCode,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "type")]
 pub enum TransactionDataView {
@@ -155,7 +156,9 @@ pub enum TransactionDataView {
     #[serde(rename = "user")]
     UserTransaction {
         sender: String,
-        authenticator: String,
+        signature_scheme: String,
+        signature: String,
+        public_key: String,
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
@@ -220,7 +223,9 @@ impl From<Transaction> for TransactionDataView {
 
                 Ok(TransactionDataView::UserTransaction {
                     sender: t.sender().to_string(),
-                    authenticator: t.authenticator().to_string(),
+                    signature_scheme: t.authenticator().scheme().to_string(),
+                    signature: hex::encode(t.authenticator().signature_bytes()),
+                    public_key: hex::encode(t.authenticator().public_key_bytes()),
                     sequence_number: t.sequence_number(),
                     max_gas_amount: t.max_gas_amount(),
                     gas_unit_price: t.gas_unit_price(),
