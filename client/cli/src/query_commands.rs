@@ -130,13 +130,7 @@ impl Command for QueryCommandGetTxnByAccountSeq {
             Ok(txn_view) => {
                 match txn_view {
                     Some(txn_view) => {
-                        println!("Committed transaction: {}", txn_view.get_transaction_name(),);
-                        if !txn_view.events.is_empty() {
-                            println!("Events: ");
-                            for event in txn_view.events {
-                                println!("{:?}", event)
-                            }
-                        }
+                        println!("Committed transaction: {:#?}", txn_view);
                     }
                     None => println!("Transaction not available"),
                 };
@@ -171,19 +165,7 @@ impl Command for QueryCommandGetTxnByRange {
                 // if the version wasn't able to be parsed in the first place
                 let mut cur_version = params[1].parse::<u64>().expect("Unable to parse version");
                 for txn_view in comm_txns_and_events {
-                    println!(
-                        "Transaction at version {}: {}",
-                        cur_version,
-                        txn_view.get_transaction_name(),
-                    );
-                    let events = txn_view.events;
-                    if events.is_empty() {
-                        println!("No events returned");
-                    } else {
-                        for event in events {
-                            println!("{:?}", event);
-                        }
-                    }
+                    println!("Transaction at version {}: {:#?}", cur_version, txn_view,);
                     cur_version += 1;
                 }
             }
