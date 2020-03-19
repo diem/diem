@@ -4,7 +4,6 @@
 #[cfg(test)]
 mod mock_vm_test;
 
-use libra_config::config::VMConfig;
 use libra_crypto::ed25519::compat;
 use libra_state_view::StateView;
 use libra_types::{
@@ -52,7 +51,6 @@ pub struct MockVM;
 impl VMExecutor for MockVM {
     fn execute_block(
         transactions: Vec<Transaction>,
-        _config: &VMConfig,
         state_view: &dyn StateView,
     ) -> Result<Vec<TransactionOutput>, VMStatus> {
         if state_view.is_genesis() {

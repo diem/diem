@@ -8,7 +8,7 @@ use crate::{
     data_store::{FakeDataStore, GENESIS_WRITE_SET},
 };
 use bytecode_verifier::VerifiedModule;
-use libra_config::{config::VMConfig, generator};
+use libra_config::generator;
 use libra_crypto::HashValue;
 use libra_state_view::StateView;
 use libra_types::{
@@ -36,7 +36,6 @@ use vm_genesis::GENESIS_KEYPAIR;
 /// This struct is a mock in-memory implementation of the Libra executor.
 #[derive(Debug)]
 pub struct FakeExecutor {
-    config: VMConfig,
     data_store: FakeDataStore,
     block_time: u64,
 }
@@ -44,10 +43,7 @@ pub struct FakeExecutor {
 impl FakeExecutor {
     /// Creates an executor from a genesis [`WriteSet`].
     pub fn from_genesis(write_set: &WriteSet) -> Self {
-        let config = VMConfig::default();
-
         let mut executor = FakeExecutor {
-            config,
             data_store: FakeDataStore::default(),
             block_time: 0,
         };
@@ -86,7 +82,6 @@ impl FakeExecutor {
     /// Creates an executor in which no genesis state has been applied yet.
     pub fn no_genesis() -> Self {
         FakeExecutor {
-            config: VMConfig::default(),
             data_store: FakeDataStore::default(),
             block_time: 0,
         }
@@ -195,7 +190,6 @@ impl FakeExecutor {
                 .into_iter()
                 .map(Transaction::UserTransaction)
                 .collect(),
-            &self.config,
             &self.data_store,
         )
     }
@@ -225,7 +219,7 @@ impl FakeExecutor {
         &self,
         txn_block: Vec<Transaction>,
     ) -> Result<Vec<TransactionOutput>, VMStatus> {
-        LibraVM::execute_block(txn_block, &self.config, &self.data_store)
+        LibraVM::execute_block(txn_block, &self.data_store)
     }
 
     pub fn execute_transaction(&self, txn: SignedTransaction) -> TransactionOutput {
@@ -245,16 +239,13 @@ impl FakeExecutor {
 
     /// Verifies the given transaction by running it through the VM verifier.
     pub fn verify_transaction(&self, txn: SignedTransaction) -> Option<VMStatus> {
-        let mut vm = LibraVM::new(&self.config);
+        let mut vm = LibraVM::new();
         vm.load_configs(self.get_state_view());
         vm.validate_transaction(txn, &self.data_store)
     }
 
     pub fn get_state_view(&self) -> &FakeDataStore {
         &self.data_store
-    }
-    pub fn config(&self) -> &VMConfig {
-        &self.config
     }
 
     pub fn new_block(&mut self) {

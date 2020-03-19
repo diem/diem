@@ -154,8 +154,6 @@ and other network configuration parameters
 - StateSyncConfig - Specifies parameters around state sycnhronization and the
   set of peers that provide the data
 - StorageConfig - Where the LibraDB is stored and its gRPC service endpoints
-- VMConfig - Specifies the permitted publishing options and scripts that can be
-  executed
 
 ### Client Configuration
 

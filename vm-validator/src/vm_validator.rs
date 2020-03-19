@@ -3,7 +3,6 @@
 
 use anyhow::Result;
 use futures::executor::block_on;
-use libra_config::config::NodeConfig;
 use libra_types::{
     account_address::AccountAddress, account_config::AccountResource,
     transaction::SignedTransaction, vm_error::VMStatus,
@@ -34,11 +33,10 @@ pub struct VMValidator {
 
 impl VMValidator {
     pub fn new(
-        config: &NodeConfig,
         storage_read_client: Arc<dyn StorageRead>,
         rt_handle: Handle,
     ) -> Self {
-        let mut vm = LibraVM::new(&config.vm_config);
+        let mut vm = LibraVM::new();
         let client = storage_read_client.clone();
         let (version, state_root) =
             block_on(rt_handle.spawn(async move { client.get_latest_state_root().await }))

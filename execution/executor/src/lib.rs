@@ -13,7 +13,7 @@ use anyhow::{bail, ensure, format_err, Result};
 use debug_interface::prelude::*;
 use executor_types::{ExecutedTrees, ProcessedVMOutput, ProofReader, TransactionData};
 use futures::executor::block_on;
-use libra_config::config::{NodeConfig, VMConfig};
+use libra_config::config::NodeConfig;
 use libra_crypto::{
     hash::{CryptoHash, EventAccumulatorHasher, GENESIS_BLOCK_ID},
     HashValue,
@@ -56,9 +56,6 @@ pub struct Executor<V> {
     storage_read_client: Arc<dyn StorageRead>,
     storage_write_client: Arc<dyn StorageWrite>,
 
-    /// Configuration for the VM. The block processor currently creates a new VM for each block.
-    vm_config: VMConfig,
-
     phantom: PhantomData<V>,
 }
 
@@ -83,7 +80,6 @@ where
             rt,
             storage_read_client: storage_read_client.clone(),
             storage_write_client,
-            vm_config: config.vm_config.clone(),
             phantom: PhantomData,
         };
 
@@ -163,7 +159,7 @@ where
         let vm_outputs = {
             trace_code_block!("executor::execute_block", {"block", block_id});
             let _timer = OP_COUNTERS.timer("vm_execute_block_time_s");
-            V::execute_block(transactions.clone(), &self.vm_config, &state_view)?
+            V::execute_block(transactions.clone(), &state_view)?
         };
 
         trace_code_block!("executor::process_vm_outputs", {"block", block_id});
@@ -367,7 +363,7 @@ where
         );
         let vm_outputs = {
             let _timer = OP_COUNTERS.timer("vm_execute_chunk_time_s");
-            V::execute_block(transactions.to_vec(), &self.vm_config, &state_view)?
+            V::execute_block(transactions.to_vec(), &state_view)?
         };
 
         // Since other validators have committed these transactions, their status should all be

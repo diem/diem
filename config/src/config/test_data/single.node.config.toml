@@ -78,5 +78,3 @@ upstream_peers = []
 is_async = true
 chan_size = 256
 level = "INFO"
-
-[vm_config]

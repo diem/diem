@@ -39,10 +39,8 @@ pub use storage_config::*;
 mod safety_rules_config;
 pub use safety_rules_config::*;
 mod test_config;
-pub use test_config::*;
-mod vm_config;
 use libra_types::waypoint::Waypoint;
-pub use vm_config::*;
+pub use test_config::*;
 
 /// Config pulls in configuration information from the config file.
 /// This is used to set up the nodes and configure various parameters.
@@ -80,8 +78,6 @@ pub struct NodeConfig {
     pub test: Option<TestConfig>,
     #[serde(default)]
     pub validator_network: Option<NetworkConfig>,
-    #[serde(default)]
-    pub vm_config: VMConfig,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -181,7 +177,6 @@ impl NodeConfig {
                 .validator_network
                 .as_ref()
                 .map(|n| n.clone_for_template()),
-            vm_config: self.vm_config.clone(),
         }
     }
 
@@ -448,7 +443,6 @@ mod test {
         assert_eq!(actual.storage, expected.storage);
         assert_eq!(actual.test, expected.test);
         assert_eq!(actual.validator_network, expected.validator_network);
-        assert_eq!(actual.vm_config, expected.vm_config);
         assert_eq!(actual, expected);
     }
 
