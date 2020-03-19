@@ -6,7 +6,6 @@ use crate::{
     VMVerifier,
 };
 use debug_interface::prelude::*;
-use libra_config::config::VMConfig as LocalConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
@@ -46,7 +45,8 @@ pub struct LibraVM {
 }
 
 impl LibraVM {
-    pub fn new(_config: &LocalConfig) -> Self {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
         let inner = MoveVM::new();
         Self {
             move_vm: Arc::new(inner),
@@ -665,10 +665,9 @@ impl VMExecutor for LibraVM {
     /// transaction output.
     fn execute_block(
         transactions: Vec<Transaction>,
-        config: &LocalConfig,
         state_view: &dyn StateView,
     ) -> VMResult<Vec<TransactionOutput>> {
-        let mut vm = LibraVM::new(config);
+        let mut vm = LibraVM::new();
         vm.execute_block_impl(transactions, state_view)
     }
 }

@@ -44,7 +44,7 @@ impl TestValidator {
         // run on another runtime which will be dropped before this function returns.
         let read_client: Arc<dyn StorageRead> =
             Arc::new(StorageReadServiceClient::new(&config.storage.address));
-        let vm_validator = VMValidator::new(config, read_client, rt.handle().clone());
+        let vm_validator = VMValidator::new(read_client, rt.handle().clone());
 
         (
             TestValidator {

@@ -831,7 +831,6 @@ pub fn bootstrap(
     let storage_client: Arc<dyn StorageRead> =
         Arc::new(StorageReadServiceClient::new(&config.storage.address));
     let vm_validator = Arc::new(VMValidator::new(
-        &config,
         Arc::clone(&storage_client),
         executor.clone(),
     ));

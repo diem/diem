@@ -117,7 +117,6 @@ pub mod system_module_names;
 
 pub use crate::libra_vm::LibraVM;
 
-use libra_config::config::VMConfig;
 use libra_state_view::StateView;
 use libra_types::{
     transaction::{SignedTransaction, Transaction, TransactionOutput},
@@ -146,7 +145,6 @@ pub trait VMExecutor {
     /// Executes a block of transactions and returns output for each one of them.
     fn execute_block(
         transactions: Vec<Transaction>,
-        config: &VMConfig,
         state_view: &dyn StateView,
     ) -> Result<Vec<TransactionOutput>, VMStatus>;
 }

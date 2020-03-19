@@ -21,7 +21,6 @@ use bytecode_verifier::VerifiedModule;
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use getrandom::getrandom;
 use language_e2e_tests::executor::FakeExecutor;
-use libra_config::config::VMConfig;
 use libra_logger::{debug, error, info};
 use libra_state_view::StateView;
 use libra_types::{account_address::AccountAddress, vm_error::StatusCode};
@@ -88,7 +87,7 @@ fn execute_function_in_module(
         module.identifier_at(entry_name_idx)
     };
     {
-        let mut libra_vm = LibraVM::new(&VMConfig::default());
+        let mut libra_vm = LibraVM::new();
         libra_vm.load_configs(state_view);
 
         let internals = libra_vm.internals();
