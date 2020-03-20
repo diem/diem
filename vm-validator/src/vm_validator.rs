@@ -32,10 +32,7 @@ pub struct VMValidator {
 }
 
 impl VMValidator {
-    pub fn new(
-        storage_read_client: Arc<dyn StorageRead>,
-        rt_handle: Handle,
-    ) -> Self {
+    pub fn new(storage_read_client: Arc<dyn StorageRead>, rt_handle: Handle) -> Self {
         let mut vm = LibraVM::new();
         let client = storage_read_client.clone();
         let (version, state_root) =
