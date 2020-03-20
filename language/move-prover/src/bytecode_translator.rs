@@ -862,6 +862,15 @@ impl<'env> ModuleTranslator<'env> {
             ),
             Call(dests, callee_index, type_actuals, args) => {
                 let callee_env = self.module_env.get_called_function(*callee_index);
+                // If this is a call to a function from another module, assume the module invariants
+                // if any.
+                if callee_env.module_env.get_id() != func_env.module_env.get_id()
+                    && !callee_env.module_env.get_module_invariants().is_empty()
+                {
+                    let spec_translator =
+                        SpecTranslator::new(self.writer, &callee_env.module_env, false);
+                    spec_translator.assume_module_invariants(&callee_env);
+                }
                 let mut dest_str = String::new();
                 let mut args_str = String::new();
                 let mut dest_type_assumptions = vec![];
