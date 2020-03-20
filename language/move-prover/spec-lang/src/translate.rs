@@ -12,17 +12,23 @@ use itertools::Itertools;
 use num::{BigUint, FromPrimitive, Num};
 
 use bytecode_source_map::source_map::ModuleSourceMap;
-use move_lang::{expansion::ast as EA, parser::ast as PA, shared::Name};
+use move_lang::{
+    expansion::ast as EA,
+    parser::ast as PA,
+    shared::{unique_map::UniqueMap, Name},
+};
 use vm::{
     access::ModuleAccess,
-    file_format::{FunctionDefinitionIndex, StructDefinitionIndex},
+    file_format::{CodeOffset, FunctionDefinitionIndex, StructDefinitionIndex},
     views::{FunctionHandleView, StructHandleView},
     CompiledModule,
 };
+use EA::SpecId;
+use PA::FunctionName;
 
 use crate::{
     ast::{
-        Condition, ConditionKind, Exp, Invariant, InvariantKind, LocalVarDecl, ModuleName,
+        Condition, ConditionKind, Exp, FunSpec, Invariant, InvariantKind, LocalVarDecl, ModuleName,
         Operation, QualifiedSymbol, SpecFunDecl, SpecVarDecl, Value,
     },
     env::{
@@ -31,7 +37,7 @@ use crate::{
     },
     project_1st, project_2nd,
     symbol::{Symbol, SymbolPool},
-    ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, BOOL_TYPE},
+    ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, BOOL_TYPE, NUM_TYPE},
 };
 
 // =================================================================================================
@@ -573,8 +579,8 @@ pub struct ModuleTranslator<'env, 'translator> {
     spec_fun_index: usize,
     /// Translated specification variables.
     spec_vars: Vec<SpecVarDecl>,
-    /// Translated function conditions.
-    fun_conds: BTreeMap<Symbol, Vec<Condition>>,
+    /// Translated function specifications.
+    fun_specs: BTreeMap<Symbol, FunSpec>,
     /// Translated struct invariants.
     struct_invariants: BTreeMap<Symbol, Vec<Invariant>>,
     /// Translated module invariants
@@ -600,9 +606,9 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             spec_funs: vec![],
             spec_fun_index: 0,
             spec_vars: vec![],
-            module_invariants: vec![],
-            fun_conds: BTreeMap::new(),
+            fun_specs: BTreeMap::new(),
             struct_invariants: BTreeMap::new(),
+            module_invariants: vec![],
         }
     }
 
@@ -615,10 +621,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         loc: Loc,
         module_def: EA::ModuleDefinition,
         compiled_module: CompiledModule,
-        source_map: Option<ModuleSourceMap<MoveIrLoc>>,
+        source_map: ModuleSourceMap<MoveIrLoc>,
+        spec_id_offsets: UniqueMap<FunctionName, BTreeMap<SpecId, CodeOffset>>,
     ) {
         self.decl_ana(&module_def);
-        self.def_ana(&module_def);
+        self.def_ana(&module_def, spec_id_offsets);
         self.populate_env_from_result(loc, compiled_module, source_map);
     }
 }
@@ -632,6 +639,7 @@ enum SpecBlockContext {
     Module,
     Struct(QualifiedSymbol),
     Function(QualifiedSymbol),
+    FunctionImpl(QualifiedSymbol, CodeOffset),
 }
 
 impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
@@ -683,7 +691,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     /// Creates a SpecBlockContext from the given SpecBlockTarget
     fn get_spec_block_context(&self, target: &PA::SpecBlockTarget) -> Option<SpecBlockContext> {
         match &target.value {
-            PA::SpecBlockTarget_::Code => unimplemented!(),
+            PA::SpecBlockTarget_::Code => None,
             PA::SpecBlockTarget_::Function(name) => {
                 let qsym = self.qualified_by_module(self.symbol_pool().make(&name.0.value));
                 if self.parent.fun_table.contains_key(&qsym) {
@@ -848,7 +856,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 /// # Definition Analysis
 
 impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
-    fn def_ana(&mut self, module_def: &EA::ModuleDefinition) {
+    fn def_ana(
+        &mut self,
+        module_def: &EA::ModuleDefinition,
+        spec_id_offsets: UniqueMap<FunctionName, BTreeMap<SpecId, CodeOffset>>,
+    ) {
         for (name, def) in &module_def.structs {
             self.def_ana_struct(&name, def);
         }
@@ -858,6 +870,16 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             } else {
                 let loc = self.parent.env.to_loc(&spec.value.target.loc);
                 self.parent.error(&loc, "unresolved spec target");
+            }
+        }
+        for (name, fun_def) in &module_def.functions {
+            let fun_spec_id_offsets = spec_id_offsets.get(&name).unwrap();
+            let qsym = self.qualified_by_module(self.symbol_pool().make(&name.0.value));
+            for (spec_id, spec_block) in fun_def.specs.iter() {
+                self.def_ana_spec_block(
+                    &SpecBlockContext::FunctionImpl(qsym.clone(), fun_spec_id_offsets[spec_id]),
+                    spec_block,
+                );
             }
         }
     }
@@ -918,7 +940,12 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         kind: &PA::SpecConditionKind,
         exp: &EA::Exp,
     ) {
-        if let SpecBlockContext::Function(name) = context {
+        let (name, code_offset) = match context {
+            SpecBlockContext::Function(n) => (Some(n), None),
+            SpecBlockContext::FunctionImpl(n, code_offset) => (Some(n), Some(code_offset)),
+            _ => (None, None),
+        };
+        if let Some(name) = name {
             // We ensured that SpecBlockContext only contains resolvable names.
             let entry = &self
                 .parent
@@ -960,24 +987,38 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     );
                 }
             }
-            let translated = et.translate_exp(exp, &BOOL_TYPE);
+            let expected_type = match kind {
+                PA::SpecConditionKind::Decreases => NUM_TYPE,
+                _ => BOOL_TYPE,
+            };
+            let translated = et.translate_exp(exp, &expected_type);
             et.finalize_types();
             let kind = match kind {
-                PA::SpecConditionKind::Assert => unimplemented!(),
-                PA::SpecConditionKind::Assume => unimplemented!(),
-                PA::SpecConditionKind::Decreases => unimplemented!(),
+                PA::SpecConditionKind::Assert => ConditionKind::Assert,
+                PA::SpecConditionKind::Assume => ConditionKind::Assume,
+                PA::SpecConditionKind::Decreases => ConditionKind::Decreases,
                 PA::SpecConditionKind::Ensures => ConditionKind::Ensures,
                 PA::SpecConditionKind::Requires => ConditionKind::Requires,
                 PA::SpecConditionKind::AbortsIf => ConditionKind::AbortsIf,
             };
-            self.fun_conds
+            let cond = Condition {
+                loc: loc.clone(),
+                kind,
+                exp: translated,
+            };
+            let fun_spec = self
+                .fun_specs
                 .entry(name.symbol)
-                .or_insert_with(|| vec![])
-                .push(Condition {
-                    loc: loc.clone(),
-                    kind,
-                    exp: translated,
-                });
+                .or_insert_with(FunSpec::default);
+            if let Some(code_offset) = code_offset {
+                fun_spec
+                    .on_impl
+                    .entry(*code_offset)
+                    .or_insert_with(|| vec![])
+                    .push(cond);
+            } else {
+                fun_spec.on_decl.push(cond);
+            }
         } else {
             self.parent.error(loc, "item only allowed in function spec");
         }
@@ -1148,7 +1189,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         &mut self,
         loc: Loc,
         module: CompiledModule,
-        source_map: Option<ModuleSourceMap<MoveIrLoc>>,
+        source_map: ModuleSourceMap<MoveIrLoc>,
     ) {
         let struct_data: BTreeMap<StructId, StructData> = (0..module.struct_defs().len())
             .filter_map(|idx| {
@@ -1191,7 +1232,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 let handle = module.function_handle_at(handle_idx);
                 let view = FunctionHandleView::new(&module, handle);
                 let name = self.symbol_pool().make(view.name().as_str());
-                let conditions = self.fun_conds.remove(&name).unwrap_or_else(|| vec![]);
+                let fun_spec = self.fun_specs.remove(&name).unwrap_or_else(FunSpec::default);
                 if let Some(entry) = self.parent.fun_table.get(&self.qualified_by_module(name)) {
                     let arg_names = project_1st(&entry.params);
                     let type_arg_names = project_1st(&entry.type_params);
@@ -1202,7 +1243,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                         entry.loc.clone(),
                         arg_names,
                         type_arg_names,
-                        conditions,
+                        fun_spec,
                     )))
                 } else {
                     self.parent.error(
@@ -1212,11 +1253,6 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 }
             })
             .collect();
-        let source_map = source_map.unwrap_or_else(|| {
-            let default = self.parent.env.unknown_move_ir_loc();
-            ModuleSourceMap::dummy_from_module(&module, default)
-                .expect("cannot create dummy source map")
-        });
         let spec_vars = std::mem::replace(&mut self.spec_vars, vec![]);
         let spec_funs = std::mem::replace(&mut self.spec_funs, vec![]);
         let loc_map = std::mem::replace(&mut self.loc_map, BTreeMap::new());

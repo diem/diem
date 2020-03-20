@@ -125,7 +125,7 @@ fn run_spec_checker(
         .enumerate();
     for (
         module_count,
-        (module_id, expanded_module, compiled_module, source_map, _spec_id_offsets),
+        (module_id, expanded_module, compiled_module, source_map, spec_id_offsets),
     ) in modules
     {
         let loc = translator.to_loc(&expanded_module.loc);
@@ -138,7 +138,13 @@ fn run_spec_checker(
         );
         let module_id = ModuleId::new(module_count);
         let mut module_translator = ModuleTranslator::new(&mut translator, module_id, module_name);
-        module_translator.translate(loc, expanded_module, compiled_module, Some(source_map));
+        module_translator.translate(
+            loc,
+            expanded_module,
+            compiled_module,
+            source_map,
+            spec_id_offsets,
+        );
     }
     Ok(())
 }

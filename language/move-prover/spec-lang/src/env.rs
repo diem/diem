@@ -33,7 +33,7 @@ use vm::{
 };
 
 use crate::{
-    ast::{Condition, Invariant, InvariantKind, ModuleName, SpecFunDecl, SpecVarDecl},
+    ast::{Condition, FunSpec, Invariant, InvariantKind, ModuleName, SpecFunDecl, SpecVarDecl},
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type},
 };
@@ -443,7 +443,7 @@ impl GlobalEnv {
         loc: Loc,
         arg_names: Vec<Symbol>,
         type_arg_names: Vec<Symbol>,
-        spec: Vec<Condition>,
+        spec: FunSpec,
     ) -> FunctionData {
         let handle_idx = module.function_def_at(def_idx).function;
         FunctionData {
@@ -1241,7 +1241,7 @@ pub struct FunctionData {
     type_arg_names: Vec<Symbol>,
 
     /// List of specification conditions. Not in bytecode but obtained from AST.
-    spec: Vec<Condition>,
+    spec: FunSpec,
 }
 
 #[derive(Debug, Clone)]
@@ -1409,7 +1409,7 @@ impl<'env> FunctionEnv<'env> {
 
     /// Returns specification conditions associated with this function.
     pub fn get_specification(&'env self) -> &'env [Condition] {
-        &self.data.spec
+        &self.data.spec.on_decl
     }
 
     fn definition_view(&'env self) -> FunctionDefinitionView<'env, CompiledModule> {
