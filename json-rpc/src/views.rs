@@ -149,7 +149,7 @@ pub struct TransactionView {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "type")]
 pub enum TransactionDataView {
-    #[serde(rename = "blockmetadata")]
+    #[serde(rename = "blockmetadata1")]
     BlockMetadata { timestamp_usecs: u64 },
     #[serde(rename = "writeset")]
     WriteSet {},
