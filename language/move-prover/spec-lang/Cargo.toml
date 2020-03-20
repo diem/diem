@@ -17,7 +17,7 @@ stdlib = { path = "../../stdlib", version = "0.1.0" }
 
 # external dependencies
 codespan = "0.8.0"
-codespan-reporting = "0.8.0"
+codespan-reporting = "0.9.0"
 itertools = "0.9.0"
 log = "0.4.8"
 num = "0.2.0"
