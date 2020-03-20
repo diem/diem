@@ -6,6 +6,7 @@
 use libra_types::{
     account_address::AccountAddress,
     block_metadata::BlockMetadata,
+    on_chain_config::VMPublishingOption,
     transaction::{authenticator::AuthenticationKey, Script, Transaction, TransactionArgument},
 };
 use std::convert::TryFrom;
@@ -197,6 +198,16 @@ pub fn encode_mint_script(
             TransactionArgument::U8Vector(auth_key_prefix),
             TransactionArgument::U64(amount),
         ],
+    )
+}
+
+pub fn encode_publishing_option_script(config: VMPublishingOption) -> Script {
+    let bytes = lcs::to_bytes(&config).expect("Cannot deserialize VMPublishingOption");
+    Script::new(
+        StdlibScript::ModifyPublishingOption
+            .compiled_bytes()
+            .into_vec(),
+        vec![TransactionArgument::U8Vector(bytes)],
     )
 }
 

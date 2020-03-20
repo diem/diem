@@ -33,6 +33,7 @@ pub enum StdlibScript {
     RemoveValidator,
     RotateAuthenticationKey,
     RotateConsensusPubkey,
+    ModifyPublishingOption,
     // ...add new scripts here
 }
 
@@ -51,6 +52,7 @@ impl StdlibScript {
             Self::RemoveValidator,
             Self::RotateAuthenticationKey,
             Self::RotateConsensusPubkey,
+            Self::ModifyPublishingOption,
             // ...add new scripts here
         ]
     }
@@ -157,6 +159,7 @@ impl fmt::Display for StdlibScript {
                 Self::RemoveValidator => "remove_validator",
                 Self::RotateAuthenticationKey => "rotate_authentication_key",
                 Self::RotateConsensusPubkey => "rotate_consensus_pubkey",
+                Self::ModifyPublishingOption => "modify_publishing_option",
             }
         )
     }
