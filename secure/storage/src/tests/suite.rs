@@ -28,6 +28,7 @@ const STORAGE_TESTS: &[fn(&mut dyn Storage)] = &[
     test_get_set_non_existent,
     test_get_uncreated_key_pair,
     test_hash_value,
+    test_timestamp,
     test_verify_incorrect_value_types_unwrap,
 ];
 
@@ -82,6 +83,7 @@ fn test_create_get_set_unwrap(storage: &mut dyn Storage) {
     storage
         .create_if_not_exists(U64_KEY, Value::U64(u64_1), &policy)
         .unwrap();
+
     storage
         .create(
             CRYPTO_KEY,
@@ -90,11 +92,12 @@ fn test_create_get_set_unwrap(storage: &mut dyn Storage) {
         )
         .unwrap();
 
-    assert_eq!(storage.get(U64_KEY).unwrap().u64().unwrap(), u64_1);
+    assert_eq!(storage.get(U64_KEY).unwrap().value.u64().unwrap(), u64_1);
     assert_eq!(
         &storage
             .get(CRYPTO_KEY)
             .unwrap()
+            .value
             .ed25519_private_key()
             .unwrap(),
         &crypto_private_1
@@ -108,11 +111,12 @@ fn test_create_get_set_unwrap(storage: &mut dyn Storage) {
         )
         .unwrap();
 
-    assert_eq!(storage.get(U64_KEY).unwrap().u64().unwrap(), u64_2);
+    assert_eq!(storage.get(U64_KEY).unwrap().value.u64().unwrap(), u64_2);
     assert_eq!(
         &storage
             .get(CRYPTO_KEY)
             .unwrap()
+            .value
             .ed25519_private_key()
             .unwrap(),
         &crypto_private_2
@@ -137,12 +141,13 @@ fn test_verify_incorrect_value_types_unwrap(storage: &mut dyn Storage) {
         storage
             .get(U64_KEY)
             .unwrap()
+            .value
             .ed25519_private_key()
             .unwrap_err(),
         Error::UnexpectedValueType
     );
     assert_eq!(
-        storage.get(CRYPTO_KEY).unwrap().u64().unwrap_err(),
+        storage.get(CRYPTO_KEY).unwrap().value.u64().unwrap_err(),
         Error::UnexpectedValueType
     );
 }
@@ -210,7 +215,12 @@ fn test_hash_value(storage: &mut dyn Storage) {
     storage
         .create(hash_value_key, Value::HashValue(hash_value_value), &policy)
         .unwrap();
-    let out_value = storage.get(hash_value_key).unwrap().hash_value().unwrap();
+    let out_value = storage
+        .get(hash_value_key)
+        .unwrap()
+        .value
+        .hash_value()
+        .unwrap();
     assert_eq!(hash_value_value, out_value);
 }
 
@@ -323,6 +333,7 @@ fn test_create_key_pair_and_perform_get_set_get(storage: &mut dyn Storage) {
         storage
             .get(CRYPTO_KEYPAIR_NAME)
             .expect("Failed to get the new private key!")
+            .value
             .ed25519_private_key()
             .unwrap(),
         private_key,
@@ -340,6 +351,7 @@ fn test_create_key_pair_and_perform_get_set_get(storage: &mut dyn Storage) {
         storage
             .get(CRYPTO_KEYPAIR_NAME)
             .expect("Failed to get the newly set private key!")
+            .value
             .ed25519_private_key()
             .unwrap(),
         new_private_key,
@@ -373,4 +385,21 @@ fn test_create_sign_rotate_sign(storage: &mut dyn Storage) {
 fn create_ed25519_key_for_testing() -> Ed25519PrivateKey {
     let mut rng = StdRng::from_seed([13u8; 32]);
     Ed25519PrivateKey::generate_for_testing(&mut rng)
+}
+
+/// This test verifies that timestamps increase with successive writes
+fn test_timestamp(storage: &mut dyn Storage) {
+    let key = "timestamp_u64";
+    let value0 = 442;
+    let value1 = 450;
+    let policy = Policy::public();
+
+    storage.create(key, Value::U64(value0), &policy).unwrap();
+    let first = storage.get(key).unwrap();
+    std::thread::sleep(std::time::Duration::from_secs(1));
+    storage.set(key, Value::U64(value1)).unwrap();
+    let second = storage.get(key).unwrap();
+
+    assert!(first.value != second.value);
+    assert!(first.last_update != second.last_update);
 }

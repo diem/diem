@@ -19,7 +19,7 @@ pub use crate::{
     crypto_storage::CryptoStorage,
     error::Error,
     in_memory::InMemoryStorage,
-    kv_storage::KVStorage,
+    kv_storage::{GetResponse, KVStorage},
     on_disk::OnDiskStorage,
     policy::{Capability, Identity, Permission, Policy},
     storage::Storage,

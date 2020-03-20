@@ -144,7 +144,7 @@ impl Client {
     }
 
     /// Read a key/value pair from a given secret store.
-    pub fn read_secret(&self, secret: &str, key: &str) -> Result<String, Error> {
+    pub fn read_secret(&self, secret: &str, key: &str) -> Result<(String, String), Error> {
         let response = ureq::get(&format!("{}/v1/secret/data/{}", self.host, secret))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
@@ -153,12 +153,13 @@ impl Client {
             200 => {
                 let mut response: ReadSecretResponse =
                     serde_json::from_str(&response.into_string()?)?;
-                let value = response
-                    .data
+                let data = &mut response.data;
+                let value = data
                     .data
                     .remove(key)
                     .ok_or_else(|| Error::NotFound(secret.into(), key.into()))?;
-                Ok(value)
+                let created_time = data.metadata.created_time.clone();
+                Ok((value, created_time))
             }
             404 => Err(Error::NotFound(secret.into(), key.into())),
             _ => Err(response.into()),
@@ -275,6 +276,13 @@ struct ReadSecretResponse {
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 struct ReadSecretData {
     data: HashMap<String, String>,
+    metadata: ReadSecretMetadata,
+}
+
+/// See ReadPolicyResponse
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct ReadSecretMetadata {
+    created_time: String,
 }
 
 /// This data structure is used to represent both policies read from Vault and written to Vault.

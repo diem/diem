@@ -1,9 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    error::Error, kv_storage::KVStorage, policy::Policy, value::Value, CryptoKVStorage, Storage,
-};
+use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Policy, Storage, Value};
 use libra_temppath::TempPath;
 use std::{
     collections::HashMap,
@@ -42,7 +40,7 @@ impl OnDiskStorage {
         }
     }
 
-    fn read(&self) -> Result<HashMap<String, Value>, Error> {
+    fn read(&self) -> Result<HashMap<String, GetResponse>, Error> {
         let mut file = File::open(&self.file_path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
@@ -50,7 +48,7 @@ impl OnDiskStorage {
         Ok(data)
     }
 
-    fn write(&self, data: &HashMap<String, Value>) -> Result<(), Error> {
+    fn write(&self, data: &HashMap<String, GetResponse>) -> Result<(), Error> {
         let contents = toml::to_vec(data)?;
         let mut file = File::create(self.temp_path.path())?;
         file.write_all(&contents)?;
@@ -74,11 +72,11 @@ impl KVStorage for OnDiskStorage {
         if data.contains_key(key) {
             return Err(Error::KeyAlreadyExists(key.to_string()));
         }
-        data.insert(key.to_string(), value);
+        data.insert(key.to_string(), GetResponse::new(value));
         self.write(&data)
     }
 
-    fn get(&self, key: &str) -> Result<Value, Error> {
+    fn get(&self, key: &str) -> Result<GetResponse, Error> {
         let mut data = self.read()?;
         data.remove(key)
             .ok_or_else(|| Error::KeyNotSet(key.to_string()))
@@ -89,7 +87,7 @@ impl KVStorage for OnDiskStorage {
         if !data.contains_key(key) {
             return Err(Error::KeyNotSet(key.to_string()));
         }
-        data.insert(key.to_string(), value);
+        data.insert(key.to_string(), GetResponse::new(value));
         self.write(&data)
     }
 
