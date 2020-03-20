@@ -1,6 +1,7 @@
 module PaymentChannel {
     import 0x0.Signature;
-    import 0x0.LibraCoin;
+import 0x0.LBR;
+    import 0x0.Libra;
     import 0x0.LibraAccount;
     import 0x0.U64Util;
     import 0x0.Vector;
@@ -9,8 +10,8 @@ module PaymentChannel {
     // It keeps track of the balances for funder and counterparty
     //
     resource T {
-        funder_capacity: LibraCoin.T,
-        counterparty_capacity: LibraCoin.T,
+        funder_capacity: Libra.T<LBR.T>,
+        counterparty_capacity: Libra.T<LBR.T>,
         seq_id: u64,
         funder_pk: vector<u8>,
         counterparty_pk: vector<u8>,
@@ -19,17 +20,17 @@ module PaymentChannel {
 
     counterparty_balance(this: &Self.T): u64 {
         let counterparty_balance: u64;
-        let counterparty_capacity_ref: &LibraCoin.T;
+        let counterparty_capacity_ref: &Libra.T<LBR.T>;
         counterparty_capacity_ref = &move(this).counterparty_capacity;
-        counterparty_balance = LibraCoin.value(move(counterparty_capacity_ref));
+        counterparty_balance = Libra.value<LBR.T>(move(counterparty_capacity_ref));
         return move(counterparty_balance);
     }
 
     funder_balance(this: &Self.T): u64 {
         let funder_balance: u64;
-        let funder_capacity_ref: &LibraCoin.T;
+        let funder_capacity_ref: &Libra.T<LBR.T>;
         funder_capacity_ref = &move(this).funder_capacity;
-        funder_balance = LibraCoin.value(move(funder_capacity_ref));
+        funder_balance = Libra.value<LBR.T>(move(funder_capacity_ref));
         return move(funder_balance);
     }
 
@@ -57,11 +58,11 @@ module PaymentChannel {
         return move(funder);
     }
 
-    public new_payment_channel(funding: LibraCoin.T, funder_pk: vector<u8>, counterparty_pk: vector<u8>): Self.T {
+    public new_payment_channel(funding: Libra.T<LBR.T>, funder_pk: vector<u8>, counterparty_pk: vector<u8>): Self.T {
 	let sender: address;
-        let counterparty_capacity: LibraCoin.T;
+        let counterparty_capacity: Libra.T<LBR.T>;
 	sender = get_txn_sender();
-        counterparty_capacity = LibraCoin.zero();
+        counterparty_capacity = Libra.zero<LBR.T>();
 
         return T{
             funder_capacity: move(funding),
@@ -99,7 +100,7 @@ module PaymentChannel {
         let ver_funder: bool;
         let ver_counterparty: bool;
         let ref: &Self.T;
-        let transfer_amt: LibraCoin.T;
+        let transfer_amt: Libra.T<LBR.T>;
         let funder_pk: vector<u8>;
         let counterparty_pk: vector<u8>;
 
@@ -114,8 +115,8 @@ module PaymentChannel {
         assert(move(ver_funder) == true, 42);
         assert(move(ver_counterparty) == true, 42);
 
-        transfer_amt = LibraCoin.withdraw(&mut copy(this).funder_capacity, copy(amt_to_transfer));
-        LibraCoin.deposit(&mut copy(this).counterparty_capacity, move(transfer_amt));
+        transfer_amt = Libra.withdraw<LBR.T>(&mut copy(this).funder_capacity, copy(amt_to_transfer));
+        Libra.deposit<LBR.T>(&mut copy(this).counterparty_capacity, move(transfer_amt));
 
         *(&mut move(this).seq_id) = move(new_seq_id);
 
@@ -126,14 +127,14 @@ module PaymentChannel {
         let funder_addr: address;
         let counterparty_addr: address;
 
-        let funder_capacity_ref: &mut LibraCoin.T;
-        let counterparty_capacity_ref: &mut LibraCoin.T;
+        let funder_capacity_ref: &mut Libra.T<LBR.T>;
+        let counterparty_capacity_ref: &mut Libra.T<LBR.T>;
 
         let funder_balance: u64;
         let counterparty_balance: u64;
 
-        let funder_to_withdraw: LibraCoin.T;
-        let counterparty_to_withdraw: LibraCoin.T;
+        let funder_to_withdraw: Libra.T<LBR.T>;
+        let counterparty_to_withdraw: Libra.T<LBR.T>;
 
         let ref: &Self.T;
 
@@ -145,8 +146,8 @@ module PaymentChannel {
         counterparty_balance = Self.counterparty_balance(move(ref));
 
         counterparty_capacity_ref = &mut copy(this).counterparty_capacity;
-        counterparty_to_withdraw = LibraCoin.withdraw(move(counterparty_capacity_ref), move(counterparty_balance));
-        LibraAccount.deposit(move(counterparty_addr), move(counterparty_to_withdraw));
+        counterparty_to_withdraw = Libra.withdraw<LBR.T>(move(counterparty_capacity_ref), move(counterparty_balance));
+        LibraAccount.deposit<LBR.T>(move(counterparty_addr), move(counterparty_to_withdraw));
 
         ref = freeze(copy(this));
 
@@ -154,8 +155,8 @@ module PaymentChannel {
         funder_balance = Self.counterparty_balance(move(ref));
 
         funder_capacity_ref = &mut move(this).funder_capacity;
-        funder_to_withdraw = LibraCoin.withdraw(move(funder_capacity_ref), move(funder_balance));
-        LibraAccount.deposit(move(funder_addr), move(funder_to_withdraw));
+        funder_to_withdraw = Libra.withdraw<LBR.T>(move(funder_capacity_ref), move(funder_balance));
+        LibraAccount.deposit<LBR.T>(move(funder_addr), move(funder_to_withdraw));
 
         return;
     }

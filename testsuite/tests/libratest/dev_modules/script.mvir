@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.Libra;
+import 0x0.LBR;
 import {{sender}}.MyModule;
 
 main(recipient: address, amount: u64) {
-  let coin: LibraCoin.T;
-  coin = LibraAccount.withdraw_from_sender(move(amount));
-  LibraAccount.deposit(move(recipient), MyModule.id(move(coin)));
+  let coin: Libra.T<LBR.T>;
+  coin = LibraAccount.withdraw_from_sender<LBR.T>(move(amount));
+  LibraAccount.deposit<LBR.T>(move(recipient), MyModule.id(move(coin)));
   return;
 }

@@ -2,23 +2,24 @@
 // Any changes to this code should also be reflected there.
 
 // A module for earmarking a coin for a specific recipient
-module EarmarkedLibraCoin {
-  import 0x0.LibraCoin;
+module EarmarkedLibra {
+  import 0x0.LBR;
+  import 0x0.Libra;
 
   // A wrapper containing a Libra coin and the address of the recipient the
   // coin is earmarked for.
   resource T {
-    coin: LibraCoin.T,
+    coin: Libra.T<LBR.T>,
     recipient: address
   }
 
   // Create a new earmarked coin with the given `recipient`.
   // Publish the coin under the transaction sender's account address.
-  public create(coin: LibraCoin.T, recipient: address) {
+  public create(coin: Libra.T<LBR.T>, recipient: address) {
     let t: Self.T;
 
     // Construct or "pack" a new resource of type T. Only procedures of the
-    // `EarmarkedLibraCoin` module can create an `EarmarkedLibraCoin.T`.
+    // `EarmarkedLibraCoin` module can create an `EarmarkedLibra.T<LBR.T>`.
     t = T {
       coin: move(coin),
       recipient: move(recipient),
@@ -65,8 +66,8 @@ module EarmarkedLibraCoin {
   }
 
   // Extract the Libra coin from its wrapper and return it to the caller.
-  public unwrap(t: Self.T): LibraCoin.T {
-    let coin: LibraCoin.T;
+  public unwrap(t: Self.T): Libra.T<LBR.T> {
+    let coin: Libra.T<LBR.T>;
     let recipient: address;
 
     // This "unpacks" a resource type by destroying the outer resource, but
@@ -83,23 +84,24 @@ module EarmarkedLibraCoin {
 //! new-transaction
 
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
-import {{default}}.EarmarkedLibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
+import {{default}}.EarmarkedLibra;
 
 main() {
   let recipient_address: address;
-  let coin: LibraCoin.T;
-  let earmarked_coin: EarmarkedLibraCoin.T;
+  let coin: Libra.T<LBR.T>;
+  let earmarked_coin: EarmarkedLibra.T;
   let sender: address;
 
   recipient_address = 0xb0b;
-  coin = LibraAccount.withdraw_from_sender(1000);
-  EarmarkedLibraCoin.create(move(coin), move(recipient_address));
+  coin = LibraAccount.withdraw_from_sender<LBR.T>(1000);
+  EarmarkedLibra.create(move(coin), move(recipient_address));
 
-  earmarked_coin = EarmarkedLibraCoin.claim_for_creator();
-  coin = EarmarkedLibraCoin.unwrap(move(earmarked_coin));
+  earmarked_coin = EarmarkedLibra.claim_for_creator();
+  coin = EarmarkedLibra.unwrap(move(earmarked_coin));
   sender = get_txn_sender();
-  LibraAccount.deposit(move(sender), move(coin));
+  LibraAccount.deposit<LBR.T>(move(sender), move(coin));
 
   return;
 }

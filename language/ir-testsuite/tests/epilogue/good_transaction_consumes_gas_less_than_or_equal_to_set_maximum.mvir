@@ -8,11 +8,12 @@ main() {
 
 //! new-transaction
 import 0x0.LibraAccount;
+import 0x0.LBR;
 
 main() {
     // Ensures that the account was deducted for the gas fee.
-    assert(LibraAccount.balance(get_txn_sender()) < 10000, 42);
+    assert(LibraAccount.balance<LBR.T>(get_txn_sender()) < 10000, 42);
     // Ensures that we are not just charging max_gas for the transaction.
-    assert(LibraAccount.balance(get_txn_sender()) >= 5000, 42);
+    assert(LibraAccount.balance<LBR.T>(get_txn_sender()) >= 5000, 42);
     return;
 }

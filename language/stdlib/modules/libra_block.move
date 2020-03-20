@@ -1,11 +1,12 @@
 address 0x0:
 
 module LibraBlock {
+    use 0x0::LBR;
+    use 0x0::LibraAccount;
+    use 0x0::LibraSystem;
     use 0x0::LibraTimestamp;
     use 0x0::Transaction;
     use 0x0::TransactionFee;
-    use 0x0::LibraSystem;
-    use 0x0::LibraAccount;
 
     resource struct BlockMetadata {
       // Height of the current block
@@ -54,7 +55,7 @@ module LibraBlock {
 
       // Currently distribute once per-block.
       // TODO: Once we have a better on-chain representation of epochs we will make this per-epoch.
-      TransactionFee::distribute_transaction_fees();
+      TransactionFee::distribute_transaction_fees<LBR::T>();
     }
 
     // Update the BlockMetadata resource with the new blockmetada coming from the consensus.

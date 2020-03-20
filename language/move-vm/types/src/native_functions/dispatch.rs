@@ -286,7 +286,7 @@ impl NativeFunction {
                 vec![]
             ),
             Self::AccountSaveAccount => {
-                let type_formals = vec![];
+                let type_formals = vec![Kind::All];
                 let self_t_idx = struct_handle_idx(
                     m?,
                     &CORE_CODE_ADDRESS,
@@ -300,7 +300,7 @@ impl NativeFunction {
                     account_balance_struct_name().as_str(),
                 )?;
                 let arg_types = vec![
-                    Struct(balance_t_idx, vec![]),
+                    Struct(balance_t_idx, vec![TypeParameter(0)]),
                     Struct(self_t_idx, vec![]),
                     Address,
                 ];

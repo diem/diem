@@ -1,7 +1,8 @@
 //! account: default, 100000
 
 module M {
-    import 0x0.LibraCoin;
+    import 0x0.LBR;
+    import 0x0.Libra;
     import 0x0.LibraAccount;
 
     resource R<T: resource> { x: T }
@@ -27,12 +28,12 @@ module M {
 
     public become_rich() acquires R {
         let fake: Self.FakeCoin;
-        let real: LibraCoin.T;
+        let real: Libra.T<LBR.T>;
 
         fake = FakeCoin { value: 400000 };
-        real = Self.transmute<Self.FakeCoin, LibraCoin.T>(move(fake));
+        real = Self.transmute<Self.FakeCoin, Libra.T<LBR.T>>(move(fake));
 
-        LibraAccount.deposit(get_txn_sender(), move(real));
+        LibraAccount.deposit<LBR.T>(get_txn_sender(), move(real));
 
         return;
     }
@@ -41,10 +42,11 @@ module M {
 //! new-transaction
 import {{default}}.M;
 import 0x0.LibraAccount;
+import 0x0.LBR;
 
 main() {
     M.become_rich();
-    assert(LibraAccount.balance(get_txn_sender()) == 500000, 42);
+    assert(LibraAccount.balance<LBR.T>(get_txn_sender()) == 500000, 42);
     return;
 }
 

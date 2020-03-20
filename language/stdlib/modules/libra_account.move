@@ -2,12 +2,13 @@ address 0x0:
 
 // The module for the account resource that governs every Libra account
 module LibraAccount {
-    use 0x0::LibraCoin;
-    use 0x0::Hash;
-    use 0x0::U64Util;
     use 0x0::AddressUtil;
+    use 0x0::Hash;
+    use 0x0::LBR;
+    use 0x0::Libra;
     use 0x0::LibraTransactionTimeout;
     use 0x0::Transaction;
+    use 0x0::U64Util;
     use 0x0::Vector;
 
     // Every Libra account has a LibraAccount::T resource
@@ -30,9 +31,9 @@ module LibraAccount {
         event_generator: EventHandleGenerator,
     }
 
-    // A resource that holds the libra coins stored in this account
-    resource struct Balance {
-        coin: LibraCoin::T,
+    // A resource that holds the coins stored in this account
+    resource struct Balance<Token> {
+        coin: Libra::T<Token>,
     }
 
     // The holder of WithdrawalCapability for account_address can withdraw Libra from
@@ -51,7 +52,7 @@ module LibraAccount {
 
     // Message for sent events
     struct SentPaymentEvent {
-        // The amount of LibraCoin::T sent
+        // The amount of Libra::T<Token> sent
         amount: u64,
         // The address that was paid
         payee: address,
@@ -61,7 +62,7 @@ module LibraAccount {
 
     // Message for received events
     struct ReceivedPaymentEvent {
-        // The amount of LibraCoin::T received
+        // The amount of Libra::T<Token> received
         amount: u64,
         // The address that sent the coin
         payer: address,
@@ -88,7 +89,7 @@ module LibraAccount {
     }
 
     // Deposits the `to_deposit` coin into the `payee`'s account balance
-    public fun deposit(payee: address, to_deposit: LibraCoin::T) acquires T, Balance {
+    public fun deposit<Token>(payee: address, to_deposit: Libra::T<Token>) acquires T, Balance {
         // Since we don't have vector<u8> literals in the source language at
         // the moment.
         // FIXME: Update this once we have vector<u8> literals
@@ -96,14 +97,14 @@ module LibraAccount {
     }
 
     // Deposits the `to_deposit` coin into the sender's account balance
-    public fun deposit_to_sender(to_deposit: LibraCoin::T) acquires T, Balance {
+    public fun deposit_to_sender<Token>(to_deposit: Libra::T<Token>) acquires T, Balance {
         deposit(Transaction::sender(), to_deposit)
     }
 
     // Deposits the `to_deposit` coin into the `payee`'s account balance with the attached `metadata`
-    public fun deposit_with_metadata(
+    public fun deposit_with_metadata<Token>(
         payee: address,
-        to_deposit: LibraCoin::T,
+        to_deposit: Libra::T<Token>,
         metadata: vector<u8>
     ) acquires T, Balance {
         deposit_with_sender_and_metadata(
@@ -116,14 +117,14 @@ module LibraAccount {
 
     // Deposits the `to_deposit` coin into the `payee`'s account balance with the attached `metadata` and
     // sender address
-    fun deposit_with_sender_and_metadata(
+    fun deposit_with_sender_and_metadata<Token>(
         payee: address,
         sender: address,
-        to_deposit: LibraCoin::T,
+        to_deposit: Libra::T<Token>,
         metadata: vector<u8>
     ) acquires T, Balance {
         // Check that the `to_deposit` coin is non-zero
-        let deposit_value = LibraCoin::value(&to_deposit);
+        let deposit_value = Libra::value(&to_deposit);
         Transaction::assert(deposit_value > 0, 7);
 
         // Load the sender's account
@@ -140,9 +141,9 @@ module LibraAccount {
 
         // Load the payee's account
         let payee_account_ref = borrow_global_mut<T>(payee);
-        let payee_balance = borrow_global_mut<Balance>(payee);
+        let payee_balance = borrow_global_mut<Balance<Token>>(payee);
         // Deposit the `to_deposit` coin
-        LibraCoin::deposit(&mut payee_balance.coin, to_deposit);
+        Libra::deposit(&mut payee_balance.coin, to_deposit);
         // Log a received event
         emit_event<ReceivedPaymentEvent>(
             &mut payee_account_ref.received_events,
@@ -169,39 +170,39 @@ module LibraAccount {
         };
 
         // Mint and deposit the coin
-        deposit(payee, LibraCoin::mint(amount));
+        deposit(payee, Libra::mint<LBR::T>(amount));
     }
 
     // Cancel the oldest burn request from `preburn_address` and return the funds.
     // Fails if the sender does not have a published MintCapability.
-    public fun cancel_burn(
+    public fun cancel_burn<Token>(
         preburn_address: address,
     ) acquires T, Balance {
-        let to_return = LibraCoin::cancel_burn(preburn_address);
+        let to_return = Libra::cancel_burn<Token>(preburn_address);
         deposit(preburn_address, to_return)
     }
 
-    // Helper to withdraw `amount` from the given account balance and return the withdrawn LibraCoin::T
-    fun withdraw_from_balance(balance: &mut Balance, amount: u64): LibraCoin::T {
-        LibraCoin::withdraw(&mut balance.coin, amount)
+    // Helper to withdraw `amount` from the given account balance and return the withdrawn Libra::T<Token>
+    fun withdraw_from_balance<Token>(balance: &mut Balance<Token>, amount: u64): Libra::T<Token> {
+        Libra::withdraw(&mut balance.coin, amount)
     }
 
-    // Withdraw `amount` LibraCoin::T from the transaction sender's account balance
-    public fun withdraw_from_sender(amount: u64): LibraCoin::T acquires T, Balance {
+    // Withdraw `amount` Libra::T<Token> from the transaction sender's account balance
+    public fun withdraw_from_sender<Token>(amount: u64): Libra::T<Token> acquires T, Balance {
         let sender_account = borrow_global_mut<T>(Transaction::sender());
-        let sender_balance = borrow_global_mut<Balance>(Transaction::sender());
+        let sender_balance = borrow_global_mut<Balance<Token>>(Transaction::sender());
         // The sender has delegated the privilege to withdraw from her account elsewhere--abort.
         Transaction::assert(!sender_account.delegated_withdrawal_capability, 11);
         // The sender has retained her withdrawal privileges--proceed.
-        withdraw_from_balance(sender_balance, amount)
+        withdraw_from_balance<Token>(sender_balance, amount)
     }
 
-    // Withdraw `amount` LibraCoin::T from the account under cap.account_address
-    public fun withdraw_with_capability(
+    // Withdraw `amount` Libra::T<Token> from the account under cap.account_address
+    public fun withdraw_with_capability<Token>(
         cap: &WithdrawalCapability, amount: u64
-    ): LibraCoin::T acquires Balance {
-        let balance = borrow_global_mut<Balance>(cap.account_address);
-        withdraw_from_balance(balance , amount)
+    ): Libra::T<Token> acquires Balance {
+        let balance = borrow_global_mut<Balance<Token>>(cap.account_address);
+        withdraw_from_balance<Token>(balance , amount)
     }
 
     // Return a unique capability granting permission to withdraw from the sender's account balance.
@@ -228,9 +229,9 @@ module LibraAccount {
         account.delegated_withdrawal_capability = false;
     }
 
-    // Withdraws `amount` LibraCoin::T using the passed in WithdrawalCapability, and deposits it
+    // Withdraws `amount` Libra::T<Token> using the passed in WithdrawalCapability, and deposits it
     // into the `payee`'s account balance. Creates the `payee` account if it doesn't exist.
-    public fun pay_from_capability(
+    public fun pay_from_capability<Token>(
         payee: address,
         auth_key_prefix: vector<u8>,
         cap: &WithdrawalCapability,
@@ -240,7 +241,7 @@ module LibraAccount {
         if (!exists(payee)) {
             create_account(payee, auth_key_prefix);
         };
-        deposit_with_sender_and_metadata(
+        deposit_with_sender_and_metadata<Token>(
             payee,
             *&cap.account_address,
             withdraw_with_capability(cap, amount),
@@ -248,10 +249,10 @@ module LibraAccount {
         );
     }
 
-    // Withdraw `amount` LibraCoin::T from the transaction sender's
+    // Withdraw `amount` Libra::T<Token> from the transaction sender's
     // account balance and send the coin to the `payee` address with the
     // attached `metadata` Creates the `payee` account if it does not exist
-    public fun pay_from_sender_with_metadata(
+    public fun pay_from_sender_with_metadata<Token>(
         payee: address,
         auth_key_prefix: vector<u8>,
         amount: u64,
@@ -260,23 +261,23 @@ module LibraAccount {
         if (!exists(payee)) {
             create_account(payee, auth_key_prefix);
         };
-        deposit_with_metadata(
+        deposit_with_metadata<Token>(
             payee,
             withdraw_from_sender(amount),
             metadata
         );
     }
 
-    // Withdraw `amount` LibraCoin::T from the transaction sender's
+    // Withdraw `amount` Libra::T<Token> from the transaction sender's
     // account balance  and send the coin to the `payee` address
     // Creates the `payee` account if it does not exist
-    public fun pay_from_sender(
+    public fun pay_from_sender<Token>(
         payee: address,
         auth_key_prefix: vector<u8>,
         amount: u64
     ) acquires T, Balance {
         // FIXME: Update this once we have vector<u8> literals
-        pay_from_sender_with_metadata(payee, auth_key_prefix, amount, Vector::empty());
+        pay_from_sender_with_metadata<Token>(payee, auth_key_prefix, amount, Vector::empty());
     }
 
     fun rotate_authentication_key_for_account(account: &mut T, new_authentication_key: vector<u8>) {
@@ -342,7 +343,7 @@ module LibraAccount {
 
         save_account(
             Balance{
-                coin: LibraCoin::zero()
+                coin: Libra::zero<LBR::T>()
             },
             T {
                 authentication_key,
@@ -359,7 +360,7 @@ module LibraAccount {
 
     // Creates a new account at `fresh_address` with the `initial_balance` deducted from the
     // transaction sender's account
-    public fun create_new_account(
+    public fun create_new_account<Token>(
         fresh_address: address,
         auth_key_prefix: vector<u8>,
         initial_balance: u64
@@ -368,27 +369,27 @@ module LibraAccount {
         if (initial_balance > 0) {
             deposit_with_metadata(
                 fresh_address,
-                withdraw_from_sender(initial_balance),
+                withdraw_from_sender<Token>(initial_balance),
                 Vector::empty(),
             );
         }
     }
 
     // Save an account to a given address if the address does not have account resources yet
-    native fun save_account(
-        balance: Balance,
+    native fun save_account<Token>(
+        balance: Balance<Token>,
         account: Self::T,
         addr: address,
     );
 
     // Helper to return the u64 value of the `balance` for `account`
-    fun balance_for(balance: &Balance): u64 {
-        LibraCoin::value(&balance.coin)
+    fun balance_for<Token>(balance: &Balance<Token>): u64 {
+        Libra::value<Token>(&balance.coin)
     }
 
     // Return the current balance of the account at `addr`.
-    public fun balance(addr: address): u64 acquires Balance {
-        balance_for(borrow_global<Balance>(addr))
+    public fun balance<Token>(addr: address): u64 acquires Balance {
+        balance_for(borrow_global<Balance<Token>>(addr))
     }
 
     // Helper to return the sequence number field for given `account`
@@ -460,7 +461,7 @@ module LibraAccount {
 
         // Check that the account has enough balance for all of the gas
         let max_transaction_fee = txn_gas_price * txn_max_gas_units;
-        let balance_amount = balance(transaction_sender);
+        let balance_amount = balance<LBR::T>(transaction_sender);
         Transaction::assert(balance_amount >= max_transaction_fee, 6);
 
         // Check that the transaction sequence number matches the sequence number of the account
@@ -479,7 +480,7 @@ module LibraAccount {
     ) acquires T, Balance {
         // Load the transaction sender's account and balance resources
         let sender_account = borrow_global_mut<T>(Transaction::sender());
-        let sender_balance = borrow_global_mut<Balance>(Transaction::sender());
+        let sender_balance = borrow_global_mut<Balance<LBR::T>>(Transaction::sender());
 
         // Charge for gas
         let transaction_fee_amount = txn_gas_price * (txn_max_gas_units - gas_units_remaining);
@@ -495,8 +496,8 @@ module LibraAccount {
         // Bump the sequence number
         sender_account.sequence_number = txn_sequence_number + 1;
         // Pay the transaction fee into the transaction fee balance
-        let transaction_fee_balance = borrow_global_mut<Balance>(0xFEE);
-        LibraCoin::deposit(&mut transaction_fee_balance.coin, transaction_fee);
+        let transaction_fee_balance = borrow_global_mut<Balance<LBR::T>>(0xFEE);
+        Libra::deposit(&mut transaction_fee_balance.coin, transaction_fee);
     }
 
     /// Events

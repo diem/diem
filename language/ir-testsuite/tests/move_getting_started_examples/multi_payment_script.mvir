@@ -1,24 +1,25 @@
 //! no-run: runtime
 
 // Multiple payee example. This is written in a slightly verbose way to
-// emphasize the ability to split a `LibraCoin.T` resource. The more concise
+// emphasize the ability to split a `Libra.T<LBR.T>` resource. The more concise
 // way would be to use multiple calls to `LibraAccount.withdraw_from_sender`.
 
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 main(payee1: address, amount1: u64, payee2: address, amount2: u64) {
-  let coin1: LibraCoin.T;
-  let coin2: LibraCoin.T;
+  let coin1: Libra.T<LBR.T>;
+  let coin2: Libra.T<LBR.T>;
   let total: u64;
 
   total = move(amount1) + copy(amount2);
-  coin1 = LibraAccount.withdraw_from_sender(move(total));
+  coin1 = LibraAccount.withdraw_from_sender<LBR.T>(move(total));
   // This mutates `coin1`, which now has value `amount1`.
   // `coin2` has value `amount2`.
-  coin2 = LibraCoin.withdraw(&mut coin1, move(amount2));
+  coin2 = Libra.withdraw<LBR.T>(&mut coin1, move(amount2));
 
   // Perform the payments
-  LibraAccount.deposit(move(payee1), move(coin1));
-  LibraAccount.deposit(move(payee2), move(coin2));
+  LibraAccount.deposit<LBR.T>(move(payee1), move(coin1));
+  LibraAccount.deposit<LBR.T>(move(payee2), move(coin2));
   return;
 }

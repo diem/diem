@@ -791,8 +791,8 @@ impl<'txn> Interpreter<'txn> {
         &mut self,
         runtime: &'txn VMRuntime<'_>,
         context: &mut dyn InterpreterContext,
-        _type_actual_tags: Vec<TypeTag>,
-        _type_actuals: Vec<Type>,
+        type_actual_tags: Vec<TypeTag>,
+        type_actuals: Vec<Type>,
     ) -> VMResult<()> {
         gas!(
             consume: context,
@@ -818,8 +818,9 @@ impl<'txn> Interpreter<'txn> {
         Self::save_under_address(
             runtime,
             context,
-            vec![],
-            vec![],
+            // TODO: This is brittle
+            vec![type_actual_tags[0].clone()],
+            type_actuals,
             account_module,
             account_config::account_balance_struct_name(),
             self.operand_stack.pop_as::<Struct>()?,

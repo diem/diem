@@ -10,10 +10,11 @@
 //! sender: alice
 //! args: 1000000
 import 0x0.LibraAccount;
+import 0x0.LBR;
 import 0x0.Vector;
 
 main(amount: u64) {
-    LibraAccount.pay_from_sender({{carol}}, Vector.empty<u8>(), move(amount));
+    LibraAccount.pay_from_sender<LBR.T>({{carol}}, Vector.empty<u8>(), move(amount));
     return;
 }
 
@@ -28,10 +29,11 @@ main(amount: u64) {
 //! sender: bob
 //! args: 1000
 import 0x0.LibraAccount;
+import 0x0.LBR;
 import 0x0.Vector;
 
 main(amount: u64) {
-    LibraAccount.pay_from_sender({{carol}}, Vector.empty<u8>(), move(amount));
+    LibraAccount.pay_from_sender<LBR.T>({{carol}}, Vector.empty<u8>(), move(amount));
     return;
 }
 
@@ -44,10 +46,11 @@ main(amount: u64) {
 
 //! new-transaction
 import 0x0.LibraAccount;
+import 0x0.LBR;
 
 main() {
-    assert(LibraAccount.balance({{carol}}) == 1000, 42);
-    assert(LibraAccount.balance({{alice}}) == LibraAccount.balance({{bob}}) + 1000, 43)
+    assert(LibraAccount.balance<LBR.T>({{carol}}) == 1000, 42);
+    assert(LibraAccount.balance<LBR.T>({{alice}}) == LibraAccount.balance<LBR.T>({{bob}}) + 1000, 43)
     return;
 }
 

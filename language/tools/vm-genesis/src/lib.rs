@@ -227,6 +227,18 @@ fn create_and_initialize_main_accounts(
     let mut txn_data = TransactionMetadata::default();
     txn_data.sender = association_addr;
 
+    // create  the LBR module
+    move_vm
+        .execute_function(
+            &account_config::LBR_MODULE,
+            &INITIALIZE,
+            &gas_schedule,
+            interpreter_context,
+            &txn_data,
+            vec![],
+        )
+        .expect("Failure initializing LBR");
+
     // create the association account
     move_vm
         .execute_function(
@@ -267,17 +279,6 @@ fn create_and_initialize_main_accounts(
                 transaction_fee_address, e
             )
         });
-
-    move_vm
-        .execute_function(
-            &account_config::COIN_MODULE,
-            &INITIALIZE,
-            &gas_schedule,
-            interpreter_context,
-            &txn_data,
-            vec![],
-        )
-        .expect("Failure initializing LibraCoin");
 
     move_vm
         .execute_function(

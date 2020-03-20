@@ -5,7 +5,7 @@ use crate::{
     access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
     event::EventHandle,
-    language_storage::{ModuleId, StructTag},
+    language_storage::{ModuleId, StructTag, TypeTag},
 };
 use anyhow::Result;
 use move_core_types::identifier::{IdentStr, Identifier};
@@ -14,13 +14,17 @@ use once_cell::sync::Lazy;
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 
-// LibraCoin
-static COIN_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("LibraCoin").unwrap());
+// Libra
+static COIN_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("Libra").unwrap());
 static COIN_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
-
-/// The ModuleId for the LibraCoin module.
 pub static COIN_MODULE: Lazy<ModuleId> =
     Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, COIN_MODULE_NAME.clone()));
+
+// LBR
+static LBR_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("LBR").unwrap());
+static LBR_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
+pub static LBR_MODULE: Lazy<ModuleId> =
+    Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, LBR_MODULE_NAME.clone()));
 
 // Account
 static ACCOUNT_MODULE_NAME: Lazy<Identifier> =
@@ -57,6 +61,14 @@ pub fn account_struct_name() -> &'static IdentStr {
 
 pub fn account_balance_struct_name() -> &'static IdentStr {
     &*ACCOUNT_BALANCE_STRUCT_NAME
+}
+
+pub fn lbr_module_name() -> &'static IdentStr {
+    &*LBR_MODULE_NAME
+}
+
+pub fn lbr_struct_name() -> &'static IdentStr {
+    &*LBR_STRUCT_NAME
 }
 
 pub fn sent_event_name() -> &'static IdentStr {
@@ -103,6 +115,15 @@ pub fn account_balance_struct_tag() -> StructTag {
         address: CORE_CODE_ADDRESS,
         module: account_module_name().to_owned(),
         name: account_balance_struct_name().to_owned(),
+        type_params: vec![TypeTag::Struct(lbr_struct_tag())],
+    }
+}
+
+pub fn lbr_struct_tag() -> StructTag {
+    StructTag {
+        address: CORE_CODE_ADDRESS,
+        module: lbr_module_name().to_owned(),
+        name: lbr_struct_name().to_owned(),
         type_params: vec![],
     }
 }

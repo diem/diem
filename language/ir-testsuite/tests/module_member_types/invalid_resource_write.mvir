@@ -1,20 +1,21 @@
 module RTest {
-    import 0x0.LibraCoin;
-    resource T{fr: LibraCoin.T}
+import 0x0.LBR;
+    import 0x0.Libra;
+    resource T{fr: Libra.T<LBR.T>}
 
-    public new(y: LibraCoin.T): Self.T {
+    public new(y: Libra.T<LBR.T>): Self.T {
         return T{fr: move(y)};
     }
 
     public destroy(t: Self.T){
-        let fr: LibraCoin.T;
+        let fr: Libra.T<LBR.T>;
         T { fr } = move(t);
-        LibraCoin.destroy_zero(move(fr));
+        Libra.destroy_zero<LBR.T>(move(fr));
         return;
     }
 
-    public t4(t: &mut Self.T, i: LibraCoin.T) {
-        let x: &mut LibraCoin.T;
+    public t4(t: &mut Self.T, i: Libra.T<LBR.T>) {
+        let x: &mut Libra.T<LBR.T>;
         x = &mut move(t).fr;
         *move(x) = move(i);
         return;

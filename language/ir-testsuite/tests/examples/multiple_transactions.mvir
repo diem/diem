@@ -6,13 +6,14 @@
 //! args: {{bob}}
 
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 main(receiver: address) {
-    let coins: LibraCoin.T;
+    let coins: Libra.T<LBR.T>;
 
-    coins = LibraAccount.withdraw_from_sender(200);
-    LibraAccount.deposit(move(receiver), move(coins));
+    coins = LibraAccount.withdraw_from_sender<LBR.T>(200);
+    LibraAccount.deposit<LBR.T>(move(receiver), move(coins));
 
     return;
 }
@@ -24,13 +25,14 @@ main(receiver: address) {
 //! sender: alice
 
 import 0x0.LibraAccount;
+import 0x0.LBR;
 
 main() {
     let balance: u64;
     let sender: address;
 
     sender = get_txn_sender();
-    balance = LibraAccount.balance(move(sender));
+    balance = LibraAccount.balance<LBR.T>(move(sender));
     assert(move(balance) < 89800, 42);
 
     return;
@@ -42,13 +44,14 @@ main() {
 //! new-transaction
 //! sender: bob
 import 0x0.LibraAccount;
+import 0x0.LBR;
 
 main() {
     let balance: u64;
     let sender: address;
 
     sender = get_txn_sender();
-    balance = LibraAccount.balance(move(sender));
+    balance = LibraAccount.balance<LBR.T>(move(sender));
     assert(move(balance) == 90200, 42);
 
     return;

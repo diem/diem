@@ -37,12 +37,12 @@ module TransactionFee {
         });
     }
 
-    public fun distribute_transaction_fees() acquires TransactionFees {
+    public fun distribute_transaction_fees<Token>() acquires TransactionFees {
       // Can only be invoked by LibraVM privilege.
       Transaction::assert(Transaction::sender() == 0x0, 33);
 
       let num_validators = LibraSystem::validator_set_size();
-      let amount_collected = LibraAccount::balance(0xFEE);
+      let amount_collected = LibraAccount::balance<Token>(0xFEE);
 
       // If amount_collected == 0, this will also return early
       if (amount_collected < num_validators) return ();
@@ -54,7 +54,7 @@ module TransactionFee {
       );
 
       // Iterate through the validators distributing fees equally
-      distribute_transaction_fees_internal(
+      distribute_transaction_fees_internal<Token>(
           amount_to_distribute_per_validator,
           num_validators,
       );
@@ -65,7 +65,7 @@ module TransactionFee {
     // any remainder (in the case that the number of validators does not
     // evenly divide the transaction fee pot) is distributed to the first
     // validator.
-    fun distribute_transaction_fees_internal(
+    fun distribute_transaction_fees_internal<Token>(
         amount_to_distribute_per_validator: u64,
         num_validators: u64
     ) acquires TransactionFees {
@@ -78,7 +78,7 @@ module TransactionFee {
             // Increment the index into the validator set.
             index = index + 1;
 
-            LibraAccount::pay_from_capability(
+            LibraAccount::pay_from_capability<Token>(
                 addr,
                 Vector::empty(),
                 &distribution_resource.fee_withdrawal_capability,

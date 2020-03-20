@@ -1,9 +1,10 @@
 module Test {
-    import 0x0.LibraCoin;
+    import 0x0.LBR;
+    import 0x0.Libra;
     resource B{b: bool}
     resource T{ft: Self.B}
 
-    public t1(x: LibraCoin.T): Self.T {
+    public t1(x: Libra.T<LBR.T>): Self.T {
         return T{ft: move(x)};
     }
 
