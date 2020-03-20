@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{kv_storage::KVStorage, CryptoStorage, Error, Policy, Value};
+use crate::{CryptoStorage, Error, KVStorage, Policy, PublicKeyResponse, Value};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     HashValue, PrivateKey, SigningKey, Uniform,
@@ -14,90 +14,89 @@ use rand::{rngs::OsRng, Rng, SeedableRng};
 pub trait CryptoKVStorage: KVStorage {}
 
 impl<T: CryptoKVStorage> CryptoStorage for T {
-    fn generate_new_ed25519_key_pair(
-        &mut self,
-        key_pair_name: &str,
-        policy: &Policy,
-    ) -> Result<Ed25519PublicKey, Error> {
+    fn generate_new_key(&mut self, name: &str, policy: &Policy) -> Result<Ed25519PublicKey, Error> {
         // Generate and store the new named key pair
         let (private_key, public_key) = new_ed25519_key_pair()?;
-        self.create(key_pair_name, Value::Ed25519PrivateKey(private_key), policy)?;
+        self.create(name, Value::Ed25519PrivateKey(private_key), policy)?;
 
         // Set the previous key pair version to be the newly generated key pair. This is useful so
         // that we can also set the appropriate policy permissions on the previous key pair version
         // now, and not have to do it later on a rotation.
         self.create(
-            &get_previous_version_name(key_pair_name),
-            Value::Ed25519PrivateKey(self.get_private_key_for_name(key_pair_name)?),
+            &get_previous_version_name(name),
+            Value::Ed25519PrivateKey(self.get_private_key(name)?),
             policy,
         )?;
 
         Ok(public_key)
     }
 
-    fn get_public_key_for_name(&self, key_pair_name: &str) -> Result<Ed25519PublicKey, Error> {
-        self.get_private_key_for_name(key_pair_name)
-            .map(|e| e.public_key())
+    fn get_public_key(&self, name: &str) -> Result<PublicKeyResponse, Error> {
+        let response = self.get(name)?;
+
+        let public_key = match &response.value {
+            Value::Ed25519PrivateKey(private_key) => private_key.public_key(),
+            _ => return Err(Error::UnexpectedValueType),
+        };
+
+        Ok(PublicKeyResponse {
+            last_update: response.last_update,
+            public_key,
+        })
     }
 
-    fn get_private_key_for_name(&self, key_pair_name: &str) -> Result<Ed25519PrivateKey, Error> {
-        match self.get(key_pair_name)?.value {
+    fn get_private_key(&self, name: &str) -> Result<Ed25519PrivateKey, Error> {
+        match self.get(name)?.value {
             Value::Ed25519PrivateKey(private_key) => Ok(private_key),
             _ => Err(Error::UnexpectedValueType),
         }
     }
 
-    fn get_private_key_for_name_and_version(
+    fn get_private_key_for_version(
         &self,
-        key_pair_name: &str,
-        key_pair_version: Ed25519PublicKey,
+        name: &str,
+        version: Ed25519PublicKey,
     ) -> Result<Ed25519PrivateKey, Error> {
-        let current_private_key = self.get_private_key_for_name(key_pair_name)?;
-        if current_private_key.public_key().eq(&key_pair_version) {
+        let current_private_key = self.get_private_key(name)?;
+        if current_private_key.public_key().eq(&version) {
             return Ok(current_private_key);
         }
 
-        let previous_private_key =
-            self.get_private_key_for_name(&get_previous_version_name(key_pair_name))?;
-        if previous_private_key.public_key().eq(&key_pair_version) {
+        let previous_private_key = self.get_private_key(&get_previous_version_name(name))?;
+        if previous_private_key.public_key().eq(&version) {
             return Ok(previous_private_key);
         }
 
-        Err(Error::KeyVersionNotFound(key_pair_version.to_string()))
+        Err(Error::KeyVersionNotFound(version.to_string()))
     }
 
-    fn rotate_key_pair(&mut self, key_pair_name: &str) -> Result<Ed25519PublicKey, Error> {
-        match self.get(key_pair_name)?.value {
+    fn rotate_key_pair(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
+        match self.get(name)?.value {
             Value::Ed25519PrivateKey(private_key) => {
                 let (new_private_key, new_public_key) = new_ed25519_key_pair()?;
                 self.set(
-                    &get_previous_version_name(key_pair_name),
+                    &get_previous_version_name(name),
                     Value::Ed25519PrivateKey(private_key),
                 )?;
-                self.set(key_pair_name, Value::Ed25519PrivateKey(new_private_key))?;
+                self.set(name, Value::Ed25519PrivateKey(new_private_key))?;
                 Ok(new_public_key)
             }
             _ => Err(Error::UnexpectedValueType),
         }
     }
 
-    fn sign_message(
-        &mut self,
-        key_pair_name: &str,
-        message: &HashValue,
-    ) -> Result<Ed25519Signature, Error> {
-        let private_key = self.get_private_key_for_name(key_pair_name)?;
+    fn sign_message(&mut self, name: &str, message: &HashValue) -> Result<Ed25519Signature, Error> {
+        let private_key = self.get_private_key(name)?;
         Ok(private_key.sign_message(message))
     }
 
     fn sign_message_using_version(
         &mut self,
-        key_pair_name: &str,
-        key_pair_version: Ed25519PublicKey,
+        name: &str,
+        version: Ed25519PublicKey,
         message: &HashValue,
     ) -> Result<Ed25519Signature, Error> {
-        let private_key =
-            self.get_private_key_for_name_and_version(key_pair_name, key_pair_version)?;
+        let private_key = self.get_private_key_for_version(name, version)?;
         Ok(private_key.sign_message(message))
     }
 }
@@ -113,6 +112,6 @@ fn new_ed25519_key_pair() -> Result<(Ed25519PrivateKey, Ed25519PublicKey), Error
 
 /// Private helper method to get the name of the previous version of the given key pair, as held in
 /// secure cryptographic storage.
-fn get_previous_version_name(key_pair_name: &str) -> String {
-    format!("{}_previous", key_pair_name)
+fn get_previous_version_name(name: &str) -> String {
+    format!("{}_previous", name)
 }

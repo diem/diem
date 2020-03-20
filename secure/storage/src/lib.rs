@@ -16,7 +16,7 @@ mod vault;
 
 pub use crate::{
     crypto_kv_storage::CryptoKVStorage,
-    crypto_storage::CryptoStorage,
+    crypto_storage::{CryptoStorage, PublicKeyResponse},
     error::Error,
     in_memory::InMemoryStorage,
     kv_storage::{GetResponse, KVStorage},
