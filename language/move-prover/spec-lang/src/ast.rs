@@ -11,9 +11,11 @@ use crate::{
     ty::Type,
 };
 use std::{
+    collections::BTreeMap,
     fmt,
     fmt::{Error, Formatter},
 };
+use vm::file_format::CodeOffset;
 
 // =================================================================================================
 /// # Declarations
@@ -40,6 +42,9 @@ pub struct SpecFunDecl {
 
 #[derive(Debug, PartialEq)]
 pub enum ConditionKind {
+    Assert,
+    Assume,
+    Decreases,
     AbortsIf,
     Ensures,
     Requires,
@@ -50,6 +55,12 @@ pub struct Condition {
     pub loc: Loc,
     pub kind: ConditionKind,
     pub exp: Exp,
+}
+
+#[derive(Debug, Default)]
+pub struct FunSpec {
+    pub on_decl: Vec<Condition>,
+    pub on_impl: BTreeMap<CodeOffset, Vec<Condition>>,
 }
 
 // =================================================================================================

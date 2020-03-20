@@ -31,6 +31,7 @@ pub enum Type {
 }
 
 pub const BOOL_TYPE: Type = Type::Primitive(PrimitiveType::Bool);
+pub const NUM_TYPE: Type = Type::Primitive(PrimitiveType::Num);
 
 /// Represents a primitive (builtin) type.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
