@@ -6,7 +6,7 @@ use crate::loaded_data::function::FunctionDef;
 use bytecode_verifier::VerifiedModule;
 use libra_types::vm_error::{StatusCode, VMStatus};
 use move_core_types::identifier::{IdentStr, Identifier};
-use move_vm_types::loaded_data::struct_def::StructDef;
+use move_vm_types::loaded_data::types::StructType;
 use std::{collections::HashMap, sync::RwLock};
 use vm::{
     access::ModuleAccess,
@@ -46,7 +46,7 @@ impl ModuleAccess for LoadedModule {
 struct LoadedModuleCache {
     // TODO: this can probably be made lock-free by using AtomicPtr or the "atom" crate. Consider
     // doing so in the future.
-    struct_defs: Vec<RwLock<Option<StructDef>>>,
+    struct_defs: Vec<RwLock<Option<StructType>>>,
 }
 
 impl PartialEq for LoadedModuleCache {
@@ -125,7 +125,7 @@ impl LoadedModule {
     }
 
     /// Return a cached copy of the struct def at this index, if available.
-    pub fn cached_struct_def_at(&self, idx: StructDefinitionIndex) -> Option<StructDef> {
+    pub fn cached_struct_def_at(&self, idx: StructDefinitionIndex) -> Option<StructType> {
         let cached = self.cache.struct_defs[idx.into_index()]
             .read()
             .expect("lock poisoned");
@@ -133,13 +133,13 @@ impl LoadedModule {
     }
 
     /// Cache this struct def at this location.
-    pub fn cache_struct_def(&self, idx: StructDefinitionIndex, def: StructDef) {
+    pub fn cache_struct_def(&self, idx: StructDefinitionIndex, ty: StructType) {
         let mut cached = self.cache.struct_defs[idx.into_index()]
             .write()
             .expect("lock poisoned");
         // XXX If multiple writers call this at the same time, the last write wins. Is this
         // desirable?
-        cached.replace(def);
+        cached.replace(ty);
     }
 
     pub fn get_field_offset(&self, idx: FieldDefinitionIndex) -> VMResult<TableIndex> {

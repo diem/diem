@@ -2,14 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    loaded_data::types::Type,
     native_functions::dispatch::{native_gas, NativeResult},
     values::Value,
 };
 use libra_crypto::HashValue;
-use libra_types::{
-    language_storage::TypeTag,
-    vm_error::{StatusCode, VMStatus},
-};
+use libra_types::vm_error::{StatusCode, VMStatus};
 use sha2::{Digest, Sha256};
 use std::collections::VecDeque;
 use vm::{
@@ -18,7 +16,7 @@ use vm::{
 };
 
 pub fn native_sha2_256(
-    _ty_args: Vec<TypeTag>,
+    _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
     cost_table: &CostTable,
 ) -> VMResult<NativeResult> {
@@ -37,7 +35,7 @@ pub fn native_sha2_256(
 }
 
 pub fn native_sha3_256(
-    _ty_args: Vec<TypeTag>,
+    _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
     cost_table: &CostTable,
 ) -> VMResult<NativeResult> {

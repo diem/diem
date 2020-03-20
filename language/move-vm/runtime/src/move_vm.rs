@@ -6,11 +6,15 @@ use crate::{
     runtime::VMRuntime,
 };
 use bytecode_verifier::VerifiedModule;
-use libra_types::language_storage::{ModuleId, StructTag};
+use libra_types::language_storage::ModuleId;
 use move_core_types::identifier::{IdentStr, Identifier};
 use move_vm_cache::Arena;
 use move_vm_definition::MoveVMImpl;
-use move_vm_types::{chain_state::ChainState, loaded_data::struct_def::StructDef, values::Value};
+use move_vm_types::{
+    chain_state::ChainState,
+    loaded_data::types::{StructType, Type},
+    values::Value,
+};
 use vm::{errors::VMResult, gas_schedule::CostTable, transaction_metadata::TransactionMetadata};
 
 rental! {
@@ -83,24 +87,16 @@ impl MoveVM {
         self.0.rent(|runtime| runtime.cache_module(module))
     }
 
-    pub fn resolve_struct_tag_by_name<S: ChainState>(
-        &self,
-        module_id: &ModuleId,
-        name: &Identifier,
-        chain_state: &mut S,
-    ) -> VMResult<StructTag> {
-        self.0
-            .rent(|runtime| runtime.resolve_struct_tag_by_name(module_id, name, chain_state))
-    }
-
     pub fn resolve_struct_def_by_name<S: ChainState>(
         &self,
         module_id: &ModuleId,
         name: &Identifier,
         chain_state: &mut S,
-    ) -> VMResult<StructDef> {
-        self.0
-            .rent(|runtime| runtime.resolve_struct_def_by_name(module_id, name, chain_state))
+        ty_args: &[Type],
+    ) -> VMResult<StructType> {
+        self.0.rent(|runtime| {
+            runtime.resolve_struct_def_by_name(module_id, name, ty_args, chain_state)
+        })
     }
 
     /// This is an internal method that is exposed only for tests and cost synthesis.

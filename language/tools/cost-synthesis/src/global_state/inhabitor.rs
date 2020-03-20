@@ -7,7 +7,7 @@ use move_core_types::identifier::Identifier;
 use move_vm_runtime::{loaded_data::loaded_module::LoadedModule, MoveVM};
 use move_vm_state::execution_context::SystemExecutionContext;
 use move_vm_types::{
-    loaded_data::{struct_def::StructDef, types::Type},
+    loaded_data::types::{StructType, Type},
     values::*,
 };
 use rand::{rngs::StdRng, Rng, SeedableRng};
@@ -167,7 +167,13 @@ impl<'txn> RandomInhabitor<'txn> {
                     })
                     .unzip();
                 (
-                    Type::Struct(StructDef::new(layouts)),
+                    Type::Struct(Box::new(StructType {
+                        address: AccountAddress::from_hex_literal("0x0").unwrap(),
+                        module: Identifier::new("unimplemented").unwrap(),
+                        name: Identifier::new("unimplemented").unwrap(),
+                        ty_args: vec![],
+                        layout: layouts,
+                    })),
                     Value::struct_(Struct::pack(values)),
                 )
             }

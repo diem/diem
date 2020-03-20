@@ -16,11 +16,7 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use move_vm_cache::{Arena, CacheRefMap};
-use move_vm_types::{
-    loaded_data::{struct_def::StructDef, types::Type},
-    native_structs::dispatch::resolve_native_struct,
-    type_context::TypeContext,
-};
+use move_vm_types::loaded_data::types::{StructType, Type};
 use vm::{
     access::ModuleAccess,
     errors::*,
@@ -80,82 +76,88 @@ impl<'alloc> VMModuleCache<'alloc> {
         }
     }
 
-    /// Resolve a StructDefinitionIndex into a StructDef. This process will be recursive so we may
-    /// charge gas on each recursive step.
+    /// Loads a `StructDefinition`, constructs and caches the corresponding `StructType`.
+    /// Note this does not perform type substitution for the type parameters.
+    ///
+    /// This process will be recursive so we may charge gas on each recursive step.
     ///
     /// Returns:
     ///
-    /// * `Ok(StructDef)` if such struct exists.
+    /// * `Ok(StructType)` if such struct exists.
     /// * `Err(...)` for a verification or other issue in a resolved dependency, out of gas, or for
     ///   a VM invariant violation.
+    fn load_struct_def(
+        &self,
+        module: &LoadedModule,
+        idx: StructDefinitionIndex,
+        data_view: &dyn InterpreterContext,
+    ) -> VMResult<StructType> {
+        if let Some(ty) = module.cached_struct_def_at(idx) {
+            return Ok(ty);
+        }
+
+        let struct_def = module.struct_def_at(idx);
+        let struct_handle = module.struct_handle_at(struct_def.struct_handle);
+        let struct_name = module.identifier_at(struct_handle.name);
+
+        let (field_count, fields) = match &struct_def.field_information {
+            StructFieldInformation::Native => unreachable!("native structs have been removed"),
+            StructFieldInformation::Declared {
+                field_count,
+                fields,
+            } => (*field_count, *fields),
+        };
+
+        let ty_args: Vec<_> = (0..struct_handle.type_formals.len())
+            .map(|idx| Type::TyParam(idx as usize))
+            .collect();
+
+        let mut field_tys = vec![];
+        for field in module.field_def_range(field_count, fields) {
+            let ty = self.resolve_signature_token(
+                module,
+                &module.type_signature_at(field.signature).0,
+                &ty_args,
+                data_view,
+            )?;
+            // `field_types` is initally empty, a single element is pushed
+            // per loop iteration and the number of iterations is bound to
+            // the max size of `module.field_def_range()`.
+            // MIRAI cannot currently check this bound in terms of
+            // `field_count`.
+            assume!(field_tys.len() < usize::max_value());
+            field_tys.push(ty);
+        }
+
+        let struct_ty = StructType {
+            address: *module.address(),
+            module: module.name().to_owned(),
+            name: struct_name.to_owned(),
+            ty_args,
+            layout: field_tys,
+        };
+
+        // If multiple writers write to def at the same time, the last one will win. It's possible
+        // to have multiple copies of a struct def floating around, but that probably isn't going
+        // to be a big deal.
+        module.cache_struct_def(idx, struct_ty.clone());
+        Ok(struct_ty)
+    }
+
+    /// Resolve a StructDefinitionIndex into a StructType.
     pub fn resolve_struct_def(
         &self,
         module: &LoadedModule,
         idx: StructDefinitionIndex,
+        ty_args: &[Type],
         data_view: &dyn InterpreterContext,
-    ) -> VMResult<StructDef> {
-        if let Some(def) = module.cached_struct_def_at(idx) {
-            return Ok(def);
+    ) -> VMResult<StructType> {
+        let struct_ty = self.load_struct_def(module, idx, data_view)?;
+        if ty_args.is_empty() {
+            Ok(struct_ty)
+        } else {
+            struct_ty.subst(ty_args)
         }
-        let def = {
-            let struct_def = module.struct_def_at(idx);
-            let struct_handle = module.struct_handle_at(struct_def.struct_handle);
-            let type_context =
-                TypeContext::identity_mapping(struct_handle.type_formals.len() as u16);
-            match &struct_def.field_information {
-                // TODO we might want a more informative error here
-                StructFieldInformation::Native => {
-                    let struct_name = module.identifier_at(struct_handle.name);
-                    let struct_def_module_id =
-                        StructHandleView::new(module, struct_handle).module_id();
-                    StructDef::Native(
-                        resolve_native_struct(&struct_def_module_id, struct_name)
-                            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?
-                            .struct_type
-                            .clone(),
-                    )
-                }
-                StructFieldInformation::Declared {
-                    field_count,
-                    fields,
-                } => {
-                    let mut field_types = vec![];
-                    for field in module.field_def_range(*field_count, *fields) {
-                        let ty = self.resolve_signature_token(
-                            module,
-                            &module.type_signature_at(field.signature).0,
-                            &type_context,
-                            data_view,
-                        )?;
-                        // `field_types` is initally empty, a single element is pushed
-                        // per loop iteration and the number of iterations is bound to
-                        // the max size of `module.field_def_range()`.
-                        // MIRAI cannot currently check this bound in terms of
-                        // `field_count`.
-                        assume!(field_types.len() < usize::max_value());
-                        field_types.push(ty);
-                    }
-                    StructDef::new(field_types)
-                }
-            }
-        };
-        // If multiple writers write to def at the same time, the last one will win. It's possible
-        // to have multiple copies of a struct def floating around, but that probably isn't going
-        // to be a big deal.
-        module.cache_struct_def(idx, def.clone());
-        Ok(def)
-    }
-
-    pub fn instantiate_struct_def(
-        &self,
-        module: &LoadedModule,
-        idx: StructDefinitionIndex,
-        type_instantiation: Vec<Type>,
-        data_view: &dyn InterpreterContext,
-    ) -> VMResult<StructDef> {
-        let struct_def = self.resolve_struct_def(module, idx, data_view)?;
-        let type_context = TypeContext::new(type_instantiation);
-        type_context.subst_struct_def(&struct_def)
     }
 
     /// Resolve a ModuleId into a LoadedModule if the module has been cached already.
@@ -184,20 +186,21 @@ impl<'alloc> VMModuleCache<'alloc> {
         self.map.or_insert(module_id, loaded_module);
     }
 
-    /// Resolve a StructHandle into a StructDef recursively in either the cache or the `fetcher`.
+    /// Resolve a StructHandle into a StructType recursively in either the cache or the `fetcher`.
     fn resolve_struct_handle(
         &self,
         module: &LoadedModule,
         idx: StructHandleIndex,
+        ty_args: &[Type],
         data_view: &dyn InterpreterContext,
-    ) -> VMResult<StructDef> {
+    ) -> VMResult<StructType> {
         let struct_handle = module.struct_handle_at(idx);
         let struct_name = module.identifier_at(struct_handle.name);
         let struct_def_module_id = StructHandleView::new(module, struct_handle).module_id();
         match self.get_loaded_module(&struct_def_module_id, data_view) {
             Ok(module) => {
                 let struct_def_idx = module.get_struct_def_index(struct_name)?;
-                self.resolve_struct_def(module, *struct_def_idx, data_view)
+                self.resolve_struct_def(module, *struct_def_idx, ty_args, data_view)
             }
             Err(errors) => Err(errors),
         }
@@ -208,46 +211,48 @@ impl<'alloc> VMModuleCache<'alloc> {
         &self,
         module: &LoadedModule,
         tok: &SignatureToken,
-        type_context: &TypeContext,
+        ty_args: &[Type],
         data_view: &dyn InterpreterContext,
     ) -> VMResult<Type> {
-        match tok {
-            SignatureToken::Bool => Ok(Type::Bool),
-            SignatureToken::U8 => Ok(Type::U8),
-            SignatureToken::U64 => Ok(Type::U64),
-            SignatureToken::U128 => Ok(Type::U128),
-            SignatureToken::Address => Ok(Type::Address),
-            SignatureToken::TypeParameter(idx) => Ok(type_context.get_type(*idx)?),
+        let res = match tok {
+            SignatureToken::Bool => Type::Bool,
+            SignatureToken::U8 => Type::U8,
+            SignatureToken::U64 => Type::U64,
+            SignatureToken::U128 => Type::U128,
+            SignatureToken::Address => Type::Address,
+            SignatureToken::TypeParameter(idx) => match ty_args.get(*idx as usize) {
+                Some(ty) => ty.clone(),
+                None => {
+                    return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(format!(
+                            "type parameter index out of bounds, len {} got {}",
+                            ty_args.len(),
+                            idx
+                        )));
+                }
+            },
             SignatureToken::Vector(sub_tok) => {
-                let inner_ty =
-                    self.resolve_signature_token(module, sub_tok, type_context, data_view)?;
-                Ok(Type::Vector(Box::new(inner_ty)))
-            }
-            SignatureToken::Struct(sh_idx, tys) => {
-                let ctx = {
-                    let mut ctx = vec![];
-                    for ty in tys.iter() {
-                        let resolved_type =
-                            self.resolve_signature_token(module, ty, type_context, data_view)?;
-                        ctx.push(resolved_type);
-                    }
-                    TypeContext::new(ctx)
-                };
-                let struct_def =
-                    ctx.subst_struct_def(&self.resolve_struct_handle(module, *sh_idx, data_view)?)?;
-                Ok(Type::Struct(struct_def))
+                let inner_ty = self.resolve_signature_token(module, sub_tok, ty_args, data_view)?;
+                Type::Vector(Box::new(inner_ty))
             }
             SignatureToken::Reference(sub_tok) => {
-                let inner_ty =
-                    self.resolve_signature_token(module, sub_tok, type_context, data_view)?;
-                Ok(Type::Reference(Box::new(inner_ty)))
+                let inner_ty = self.resolve_signature_token(module, sub_tok, ty_args, data_view)?;
+                Type::Reference(Box::new(inner_ty))
             }
             SignatureToken::MutableReference(sub_tok) => {
-                let inner_ty =
-                    self.resolve_signature_token(module, sub_tok, type_context, data_view)?;
-                Ok(Type::MutableReference(Box::new(inner_ty)))
+                let inner_ty = self.resolve_signature_token(module, sub_tok, ty_args, data_view)?;
+                Type::MutableReference(Box::new(inner_ty))
             }
-        }
+            SignatureToken::Struct(sh_idx, tys) => {
+                let ty_args: Vec<_> = tys
+                    .iter()
+                    .map(|tok| self.resolve_signature_token(module, tok, ty_args, data_view))
+                    .collect::<VMResult<_>>()?;
+                let struct_ty = self.resolve_struct_handle(module, *sh_idx, &ty_args, data_view)?;
+                Type::Struct(Box::new(struct_ty))
+            }
+        };
+        Ok(res)
     }
 }
 

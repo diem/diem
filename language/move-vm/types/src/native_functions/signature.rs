@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    loaded_data::types::Type,
     native_functions::dispatch::{native_gas, NativeResult},
     values::Value,
 };
@@ -11,10 +12,7 @@ use libra_crypto::{
     traits::*,
     HashValue,
 };
-use libra_types::{
-    language_storage::TypeTag,
-    vm_error::{StatusCode, VMStatus},
-};
+use libra_types::vm_error::{StatusCode, VMStatus};
 use std::{collections::VecDeque, convert::TryFrom};
 use vm::{
     errors::VMResult,
@@ -45,7 +43,7 @@ const OVERSIZED_PUBLIC_KEY_SIZE_FAILURE: u64 = DEFAULT_ERROR_CODE + 8;
 const INVALID_PUBLIC_KEY_SIZE_FAILURE: u64 = DEFAULT_ERROR_CODE + 9;
 
 pub fn native_ed25519_signature_verification(
-    _ty_args: Vec<TypeTag>,
+    _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
     cost_table: &CostTable,
 ) -> VMResult<NativeResult> {
@@ -90,7 +88,7 @@ pub fn native_ed25519_signature_verification(
 
 /// Batch verify a collection of signatures using a bitmap for matching signatures to keys.
 pub fn native_ed25519_threshold_signature_verification(
-    _ty_args: Vec<TypeTag>,
+    _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
     cost_table: &CostTable,
 ) -> VMResult<NativeResult> {

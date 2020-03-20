@@ -13,15 +13,13 @@ use crate::{
 use bytecode_verifier::VerifiedModule;
 use libra_logger::prelude::*;
 use libra_types::{
-    language_storage::{ModuleId, StructTag},
+    language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
 use move_core_types::identifier::{IdentStr, Identifier};
 use move_vm_cache::Arena;
 use move_vm_types::{
-    identifier::resource_storage_key,
-    loaded_data::{struct_def::StructDef, types::Type},
-    type_context::TypeContext,
+    loaded_data::types::{StructType, Type},
     values::Value,
 };
 use vm::{
@@ -149,50 +147,28 @@ impl<'alloc> VMRuntime<'alloc> {
         self.code_cache.cache_module(module);
     }
 
-    pub fn resolve_struct_tag_by_name(
-        &self,
-        module_id: &ModuleId,
-        name: &Identifier,
-        context: &mut dyn InterpreterContext,
-    ) -> VMResult<StructTag> {
-        let gas_module = self.code_cache.get_loaded_module(&module_id, context)?;
-
-        let gas_struct_def_idx = gas_module.get_struct_def_index(&name)?;
-        Ok(resource_storage_key(
-            gas_module,
-            *gas_struct_def_idx,
-            vec![],
-        ))
-    }
-
     pub fn resolve_struct_def_by_name(
         &self,
         module_id: &ModuleId,
         name: &Identifier,
+        ty_args: &[Type],
         context: &mut dyn InterpreterContext,
-    ) -> VMResult<StructDef> {
-        let module = self
-            .code_cache
-            .get_loaded_module(module_id, context)
-            .unwrap();
-        let struct_idx = module.get_struct_def_index(name).unwrap();
+    ) -> VMResult<StructType> {
+        let module = self.code_cache.get_loaded_module(module_id, context)?;
+        let struct_idx = module.get_struct_def_index(name)?;
         self.code_cache
-            .resolve_struct_def(module, *struct_idx, context)
+            .resolve_struct_def(module, *struct_idx, ty_args, context)
     }
 
     pub fn resolve_struct_def(
         &self,
         module: &LoadedModule,
         idx: StructDefinitionIndex,
-        type_actuals: Vec<Type>,
+        ty_args: &[Type],
         data_view: &dyn InterpreterContext,
-    ) -> VMResult<StructDef> {
-        if type_actuals.is_empty() {
-            self.code_cache.resolve_struct_def(module, idx, data_view)
-        } else {
-            self.code_cache
-                .instantiate_struct_def(module, idx, type_actuals, data_view)
-        }
+    ) -> VMResult<StructType> {
+        self.code_cache
+            .resolve_struct_def(module, idx, ty_args, data_view)
     }
 
     pub fn resolve_function_ref(
@@ -209,11 +185,11 @@ impl<'alloc> VMRuntime<'alloc> {
         &self,
         module: &LoadedModule,
         tok: &SignatureToken,
-        type_context: &TypeContext,
+        ty_args: &[Type],
         data_view: &dyn InterpreterContext,
     ) -> VMResult<Type> {
         self.code_cache
-            .resolve_signature_token(module, tok, type_context, data_view)
+            .resolve_signature_token(module, tok, ty_args, data_view)
     }
 
     pub fn get_loaded_module(

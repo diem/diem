@@ -19,12 +19,13 @@ use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, StatusType},
 };
+use move_core_types::identifier::Identifier;
 use move_vm_cache::Arena;
 use move_vm_state::{
     data_cache::{BlockDataCache, RemoteCache},
     execution_context::{SystemExecutionContext, TransactionExecutionContext},
 };
-use move_vm_types::loaded_data::{struct_def::StructDef, types::Type};
+use move_vm_types::loaded_data::types::{StructType, Type};
 use std::collections::HashMap;
 use vm::{
     access::ModuleAccess,
@@ -508,19 +509,27 @@ fn test_same_module_struct_resolution() {
     let block_data_cache = BlockDataCache::new(&NullStateView);
     let context = TransactionExecutionContext::new(GasUnits::new(100_000_000), &block_data_cache);
     let struct_x = vm_cache
-        .resolve_struct_def(module_ref, StructDefinitionIndex::new(0), &context)
+        .resolve_struct_def(module_ref, StructDefinitionIndex::new(0), &[], &context)
         .unwrap();
     let struct_t = vm_cache
-        .resolve_struct_def(module_ref, StructDefinitionIndex::new(1), &context)
+        .resolve_struct_def(module_ref, StructDefinitionIndex::new(1), &[], &context)
         .unwrap();
-    assert_eq!(struct_x, StructDef::new(vec![Type::Bool]));
-    assert_eq!(
-        struct_t,
-        StructDef::new(vec![
-            Type::U64,
-            Type::Struct(StructDef::new(vec![Type::Bool]))
-        ]),
-    );
+    let struct_x_expected_ty = StructType {
+        address: AccountAddress::from_hex_literal("0x0").unwrap(),
+        module: Identifier::new("M1").unwrap(),
+        name: Identifier::new("X").unwrap(),
+        ty_args: vec![],
+        layout: vec![Type::Bool],
+    };
+    assert_eq!(struct_x, struct_x_expected_ty);
+    let struct_t_expected_ty = StructType {
+        address: AccountAddress::from_hex_literal("0x0").unwrap(),
+        module: Identifier::new("M1").unwrap(),
+        name: Identifier::new("T").unwrap(),
+        ty_args: vec![],
+        layout: vec![Type::U64, Type::Struct(Box::new(struct_x_expected_ty))],
+    };
+    assert_eq!(struct_t, struct_t_expected_ty);
 }
 
 #[test]
@@ -564,15 +573,24 @@ fn test_multi_module_struct_resolution() {
     let context = TransactionExecutionContext::new(GasUnits::new(100_000_000), &block_data_cache);
 
     let struct_t = vm_cache
-        .resolve_struct_def(module2_ref, StructDefinitionIndex::new(0), &context)
+        .resolve_struct_def(module2_ref, StructDefinitionIndex::new(0), &[], &context)
         .unwrap();
-    assert_eq!(
-        struct_t,
-        StructDef::new(vec![
-            Type::U64,
-            Type::Struct(StructDef::new(vec![Type::Bool]))
-        ]),
-    );
+
+    let struct_x_expected_ty = StructType {
+        address: AccountAddress::from_hex_literal("0x0").unwrap(),
+        module: Identifier::new("M1").unwrap(),
+        name: Identifier::new("X").unwrap(),
+        ty_args: vec![],
+        layout: vec![Type::Bool],
+    };
+    let struct_t_expected_ty = StructType {
+        address: AccountAddress::from_hex_literal("0x0").unwrap(),
+        module: Identifier::new("M2").unwrap(),
+        name: Identifier::new("T").unwrap(),
+        ty_args: vec![],
+        layout: vec![Type::U64, Type::Struct(Box::new(struct_x_expected_ty))],
+    };
+    assert_eq!(struct_t, struct_t_expected_ty,);
 }
 
 #[test]

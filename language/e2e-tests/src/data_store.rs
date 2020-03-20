@@ -88,12 +88,12 @@ impl FakeDataStore {
         let account = account_blob
             .value_as::<Struct>()
             .unwrap()
-            .simple_serialize(&AccountData::account_layout())
+            .simple_serialize(&AccountData::account_type())
             .unwrap();
         let balance = balance_blob
             .value_as::<Struct>()
             .unwrap()
-            .simple_serialize(&AccountData::balance_layout())
+            .simple_serialize(&AccountData::balance_type())
             .unwrap();
         self.set(account_data.make_account_access_path(), account);
         self.set(account_data.make_balance_access_path(), balance);

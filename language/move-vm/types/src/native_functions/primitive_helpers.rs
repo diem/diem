@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    loaded_data::types::Type,
     native_functions::dispatch::{native_gas, NativeResult},
     values::Value,
 };
 use libra_types::{
     account_address::AccountAddress,
-    language_storage::TypeTag,
     vm_error::{StatusCode, VMStatus},
 };
 use std::collections::VecDeque;
@@ -17,7 +17,7 @@ use vm::{
 };
 
 pub fn native_address_to_bytes(
-    _ty_args: Vec<TypeTag>,
+    _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
     cost_table: &CostTable,
 ) -> VMResult<NativeResult> {
@@ -41,7 +41,7 @@ pub fn native_address_to_bytes(
 }
 
 pub fn native_u64_to_bytes(
-    _ty_args: Vec<TypeTag>,
+    _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
     cost_table: &CostTable,
 ) -> VMResult<NativeResult> {

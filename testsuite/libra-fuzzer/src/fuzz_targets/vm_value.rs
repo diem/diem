@@ -6,7 +6,7 @@ use anyhow::{bail, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use libra_proptest_helpers::ValueGenerator;
 use move_vm_types::{
-    loaded_data::{struct_def::StructDef, types::Type},
+    loaded_data::types::Type,
     values::{prop::layout_and_value_strategy, Value},
 };
 use std::io::Cursor;
@@ -45,24 +45,23 @@ impl FuzzTargetImpl for ValueTarget {
     }
 }
 
-fn is_valid_layout(layout: &Type) -> bool {
+fn is_valid_type(ty: &Type) -> bool {
     use Type::*;
 
-    match layout {
+    match ty {
         Bool | U8 | U64 | U128 | Address => true,
 
-        Reference(_) | MutableReference(_) | TypeVariable(_) => false,
+        Reference(_) | MutableReference(_) | TyParam(_) => false,
 
-        Vector(layout) => is_valid_layout(layout),
+        Vector(ty) => is_valid_type(ty),
 
-        Struct(StructDef::Struct(inner)) => {
-            let field_layouts = inner.field_definitions();
-            if field_layouts.is_empty() {
+        Struct(struct_ty) => {
+            if struct_ty.layout.is_empty() {
                 return false;
             }
-            field_layouts.iter().all(is_valid_layout)
+            struct_ty.layout.iter().all(is_valid_type)
+                && struct_ty.ty_args.iter().all(is_valid_type)
         }
-        Struct(StructDef::Native(_)) => false,
     }
 }
 
@@ -79,13 +78,13 @@ fn deserialize(data: &[u8]) -> Result<()> {
     let layout_data = &data[0..len];
     let value_data = &data[len..];
 
-    let layout: Type = lcs::from_bytes(layout_data)?;
+    let ty: Type = lcs::from_bytes(layout_data)?;
     // The fuzzer may alter the raw bytes, resulting in invalid layouts that will not
     // pass the bytecode verifier. We need to filter these out as they can show up as
     // false positives.
-    if !is_valid_layout(&layout) {
+    if !is_valid_type(&ty) {
         bail!("invalid layout");
     }
-    let _ = Value::simple_deserialize(value_data, layout);
+    let _ = Value::simple_deserialize(value_data, ty);
     Ok(())
 }

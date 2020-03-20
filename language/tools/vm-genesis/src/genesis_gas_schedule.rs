@@ -118,12 +118,13 @@ static INITIAL_GAS_SCHEDULE: Lazy<Vec<u8>> = Lazy::new(|| {
 });
 
 pub(crate) fn initial_gas_schedule(move_vm: &MoveVM, data_view: &dyn RemoteCache) -> Value {
-    let struct_def = move_vm
+    let struct_ty = move_vm
         .resolve_struct_def_by_name(
             &GAS_SCHEDULE_MODULE,
             &GAS_SCHEDULE_NAME,
             &mut TransactionExecutionContext::new(MAXIMUM_NUMBER_OF_GAS_UNITS, data_view),
+            &[],
         )
         .expect("GasSchedule Module must exist");
-    Value::simple_deserialize(&INITIAL_GAS_SCHEDULE, Type::Struct(struct_def)).unwrap()
+    Value::simple_deserialize(&INITIAL_GAS_SCHEDULE, Type::Struct(Box::new(struct_ty))).unwrap()
 }

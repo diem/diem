@@ -12,9 +12,7 @@ use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
-use move_vm_types::{
-    native_functions::dispatch::NativeFunction, native_structs::dispatch::resolve_native_struct,
-};
+use move_vm_types::native_functions::dispatch::NativeFunction;
 use std::{collections::BTreeMap, fmt};
 use vm::{
     access::{ModuleAccess, ScriptAccess},
@@ -297,46 +295,16 @@ fn verify_native_functions(module_view: &ModuleView<VerifiedModule>) -> Vec<VMSt
     errors
 }
 
+// TODO: native structs have been partially removed. Revisit.
 fn verify_native_structs(module_view: &ModuleView<VerifiedModule>) -> Vec<VMStatus> {
-    let mut errors = vec![];
-
-    let module_id = module_view.id();
-    for (idx, native_struct_definition_view) in module_view
+    module_view
         .structs()
         .enumerate()
         .filter(|sdv| sdv.1.is_native())
-    {
-        let struct_name = native_struct_definition_view.name();
-
-        match resolve_native_struct(&module_id, struct_name) {
-            None => errors.push(verification_error(
-                IndexKind::StructHandle,
-                idx,
-                StatusCode::MISSING_DEPENDENCY,
-            )),
-            Some(vm_native_struct) => {
-                let declared_index = idx as u16;
-                let declared_is_nominal_resource =
-                    native_struct_definition_view.is_nominal_resource();
-                let declared_type_formals = native_struct_definition_view.type_formals();
-
-                let expected_index = vm_native_struct.expected_index.0;
-                let expected_is_nominal_resource = vm_native_struct.expected_nominal_resource;
-                let expected_type_formals = &vm_native_struct.expected_type_formals;
-                if declared_index != expected_index
-                    || declared_is_nominal_resource != expected_is_nominal_resource
-                    || declared_type_formals != expected_type_formals
-                {
-                    errors.push(verification_error(
-                        IndexKind::StructHandle,
-                        idx,
-                        StatusCode::TYPE_MISMATCH,
-                    ))
-                }
-            }
-        }
-    }
-    errors
+        .map(|(idx, _)| {
+            verification_error(IndexKind::StructHandle, idx, StatusCode::MISSING_DEPENDENCY)
+        })
+        .collect()
 }
 
 fn verify_all_dependencies_provided(
