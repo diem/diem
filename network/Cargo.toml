@@ -18,7 +18,7 @@ parity-multiaddr = "0.7.2"
 pin-project = "0.4.2"
 prometheus = { version = "0.8.0", default-features = false }
 rand = "0.6.5"
-serde = { version = "1.0.99", default-features = false }
+serde = { version = "1.0.105", default-features = false }
 serde_repr = "0.1"
 thiserror = "1.0"
 tokio = { version = "0.2.13", features = ["full"] }

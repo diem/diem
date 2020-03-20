@@ -13,7 +13,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 codespan = { version = "0.8.0", features = ["serialization"] }
-serde = { version = "1.0.96", features = ["derive"] }
+serde = { version = "1.0.105", features = ["derive"] }
 hex = "0.4.2"
 once_cell = "1.3.1"
 

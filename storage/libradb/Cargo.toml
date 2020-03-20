@@ -23,7 +23,7 @@ prometheus = { version = "0.8.0", default-features = false }
 rand = "0.6.5"
 strum = "0.18.0"
 strum_macros = "0.18.0"
-serde = "1.0.96"
+serde = "1.0.105"
 thiserror = "1.0"
 
 accumulator = { path = "../accumulator", version = "0.1.0" }

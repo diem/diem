@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-serde = { version = "1.0.99", default-features = false }
+serde = { version = "1.0.105", default-features = false }
 
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
