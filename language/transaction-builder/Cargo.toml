@@ -13,6 +13,7 @@ libra-config = { path = "../../config", version = "0.1.0" }
 stdlib = { path = "../stdlib", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 vm = { path = "../vm", version = "0.1.0" }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 
 [features]
 default = []

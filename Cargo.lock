@@ -5967,6 +5967,7 @@ dependencies = [
 name = "transaction-builder"
 version = "0.1.0"
 dependencies = [
+ "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-types 0.1.0",
  "stdlib 0.1.0",
