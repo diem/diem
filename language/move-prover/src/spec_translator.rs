@@ -273,7 +273,7 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
-    /// Assumes module invariants.
+    /// Assumes preconditions for function.
     pub fn assume_preconditions(&self, func_env: &FunctionEnv<'_>) {
         emitln!(self.writer, "assume $ExistsTxnSenderAccount($m, $txn);");
 
@@ -293,7 +293,12 @@ impl<'env> SpecTranslator<'env> {
             emitln!(self.writer);
         }
 
-        // Implicit module invariants.
+        // Implict module invariants.
+        self.assume_module_invariants(func_env);
+    }
+
+    /// Assume module invariants of function.
+    pub fn assume_module_invariants(&self, func_env: &FunctionEnv<'_>) {
         if func_env.is_public() {
             let invariants = func_env.module_env.get_module_invariants();
             if !invariants.is_empty() {

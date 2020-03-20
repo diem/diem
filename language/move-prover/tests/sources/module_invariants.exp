@@ -1,21 +1,21 @@
 Move prover returns: exiting with boogie verification errors
 error:  A postcondition might not hold on this return path.
 
-    ┌── tests/sources/module_invariants.move:23:9 ───
+    ┌── tests/sources/module_invariants.move:24:9 ───
     │
- 23 │         invariant global<SCounter>(0x0).n == spec_count;
+ 24 │         invariant global<SCounter>(0x0).n == spec_count;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/module_invariants.move:41:5: delete_S_invalid (entry)
-    =     at tests/sources/module_invariants.move:41:5: delete_S_invalid (exit)
+    =     at tests/sources/module_invariants.move:42:5: delete_S_invalid (entry)
+    =     at tests/sources/module_invariants.move:42:5: delete_S_invalid (exit)
     =         x = <redacted>
 
 error:  A precondition for this call might not hold.
 
-    ┌── tests/sources/module_invariants.move:23:9 ───
+    ┌── tests/sources/module_invariants.move:24:9 ───
     │
- 23 │         invariant global<SCounter>(0x0).n == spec_count;
+ 24 │         invariant global<SCounter>(0x0).n == spec_count;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/module_invariants.move:47:5: private_calls_public_invalid (entry)
-    =     at tests/sources/module_invariants.move:27:5: new_S (entry)
+    =     at tests/sources/module_invariants.move:48:5: private_calls_public_invalid (entry)
+    =     at tests/sources/module_invariants.move:28:5: new_S (entry)

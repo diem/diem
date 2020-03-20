@@ -1,3 +1,4 @@
+address 0x1:
 module TestModuleInvariants {
 
     // Some structure.
@@ -42,8 +43,8 @@ module TestModuleInvariants {
         let S{} = x;
     }
 
-    // Private function calling a public function and (currently) failing because we can't enforce the pre-condition
-    // of the public function.
+    // Private function calling a public function and failing because the pre-condition of the public function
+    // does not hold.
     fun private_calls_public_invalid(): S acquires SCounter {
        let x = new_S();
        x
@@ -56,5 +57,15 @@ module TestModuleInvariants {
     }
     spec fun private_calls_public {
         requires global<SCounter>(0x0).n == spec_count;
+    }
+}
+
+module TestModuleInvariantsExternal {
+    use 0x1::TestModuleInvariants;
+
+    public fun call_other() {
+        // Module invariant satisfied because we call from other module.
+        let x = TestModuleInvariants::new_S();
+        TestModuleInvariants::delete_S(x);
     }
 }
