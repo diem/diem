@@ -1,9 +1,9 @@
-import 0x0.LibraCoin;
+import 0x0.LBR;
 
 main() {
 
     // This will fail because the sender is not 0x0
-    LibraCoin.initialize();
+    LBR.initialize();
 
     return;
 }

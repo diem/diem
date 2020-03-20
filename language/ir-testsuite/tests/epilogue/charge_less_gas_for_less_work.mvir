@@ -18,9 +18,10 @@ main() {
 
 //! new-transaction
 import 0x0.LibraAccount;
+import 0x0.LBR;
 
 main() {
     // Alice did less work than bob so she should pay less gas.
-    assert(LibraAccount.balance({{bob}}) < LibraAccount.balance({{alice}}), 42);
+    assert(LibraAccount.balance<LBR.T>({{bob}}) < LibraAccount.balance<LBR.T>({{alice}}), 42);
     return;
 }

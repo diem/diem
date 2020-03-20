@@ -1,6 +1,7 @@
 //! account: bob, 1000000
 
 import 0x0.LibraAccount;
+import 0x0.LBR;
 import 0x0.Vector;
 
 main() {
@@ -13,12 +14,12 @@ main() {
 
     sender_addr = get_txn_sender();
     recipient_addr = {{bob}};
-    sender_original_balance = LibraAccount.balance(copy(sender_addr));
-    recipient_original_balance = LibraAccount.balance(copy(recipient_addr));
-    LibraAccount.pay_from_sender(copy(recipient_addr), Vector.empty<u8>(), 5);
+    sender_original_balance = LibraAccount.balance<LBR.T>(copy(sender_addr));
+    recipient_original_balance = LibraAccount.balance<LBR.T>(copy(recipient_addr));
+    LibraAccount.pay_from_sender<LBR.T>(copy(recipient_addr), Vector.empty<u8>(), 5);
 
-    sender_new_balance = LibraAccount.balance(move(sender_addr));
-    recipient_new_balance = LibraAccount.balance(move(recipient_addr));
+    sender_new_balance = LibraAccount.balance<LBR.T>(move(sender_addr));
+    recipient_new_balance = LibraAccount.balance<LBR.T>(move(recipient_addr));
     assert(copy(sender_new_balance) == copy(sender_original_balance) - 5, 77);
     assert(copy(recipient_new_balance) == copy(recipient_original_balance) + 5, 77);
 

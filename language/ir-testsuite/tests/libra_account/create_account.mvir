@@ -1,11 +1,12 @@
 import 0x0.AddressUtil;
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 main() {
     let addr: address;
     let account_exists: bool;
-    let ten_coins: LibraCoin.T;
+    let ten_coins: Libra.T<LBR.T>;
     let account_exists_now: bool;
     let account2_balance: u64;
     let account2_sequence_number: u64;
@@ -14,13 +15,13 @@ main() {
     account_exists = LibraAccount.exists(copy(addr));
     assert(!move(account_exists), 83);
 
-    ten_coins = LibraAccount.withdraw_from_sender(10);
+    ten_coins = LibraAccount.withdraw_from_sender<LBR.T>(10);
     LibraAccount.create_account(copy(addr), AddressUtil.address_to_bytes(copy(addr)));
-    LibraAccount.deposit(copy(addr), move(ten_coins));
+    LibraAccount.deposit<LBR.T>(copy(addr), move(ten_coins));
 
     account_exists_now = LibraAccount.exists(copy(addr));
     assert(move(account_exists_now), 84);
-    account2_balance = LibraAccount.balance(copy(addr));
+    account2_balance = LibraAccount.balance<LBR.T>(copy(addr));
     assert(move(account2_balance) == 10, 84);
     account2_sequence_number = LibraAccount.sequence_number(move(addr));
     assert(move(account2_sequence_number) == 0, 84);

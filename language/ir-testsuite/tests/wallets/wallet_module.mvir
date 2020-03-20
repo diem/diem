@@ -70,13 +70,14 @@ module ColdWallet {
     import 0x0.AddressUtil;
     import 0x0.U64Util;
     import 0x0.Hash;
-    import 0x0.LibraCoin;
+    import 0x0.LBR;
+    import 0x0.Libra;
     import 0x0.LibraAccount;
     import 0x0.Vector;
     import {{default}}.ApprovalGroup;
 
     resource T {
-        balance: LibraCoin.T,
+        balance: Libra.T<LBR.T>,
         sequence_num: u64,
         genesis_group: ApprovalGroup.T,
     }
@@ -87,15 +88,15 @@ module ColdWallet {
 
         // The address that is going to be paid
         payee: address,
-        // The amount of LibraCoin.T sent
+        // The amount of Libra.T<LBR.T> sent
         amount: u64
     }
 
     // create a new ColdWallet with a dafault genesis group
     public create(genesis_group: ApprovalGroup.T) {
-        let zero_balance: LibraCoin.T;
+        let zero_balance: Libra.T<LBR.T>;
         let wallet: Self.T;
-        zero_balance = LibraCoin.zero();
+        zero_balance = Libra.zero<LBR.T>();
         wallet = T {
             balance: move(zero_balance),
             sequence_num: 0,
@@ -111,13 +112,13 @@ module ColdWallet {
     }
 
     // deposit money into a payee's cold wallet
-    public deposit(payee: address, to_deposit: LibraCoin.T) acquires T {
+    public deposit(payee: address, to_deposit: Libra.T<LBR.T>) acquires T {
 
         let payee_wallet_ref: &mut Self.T;
         // Load the payee's account
         payee_wallet_ref = borrow_global_mut<T>(move(payee));
         // Deposit the `to_deposit` coin
-        LibraCoin.deposit(&mut move(payee_wallet_ref).balance, move(to_deposit));
+        Libra.deposit<LBR.T>(&mut move(payee_wallet_ref).balance, move(to_deposit));
         return;
     }
 
@@ -139,12 +140,12 @@ module ColdWallet {
         let prefix: vector<u8>;
         let hash: vector<u8>;
         let seq: u64;
-        let withdraw_amount: LibraCoin.T;
+        let withdraw_amount: Libra.T<LBR.T>;
         let has_authority: bool;
         let account_balance: u64;
 
         payer_ref = borrow_global_mut<T>(copy(payer));
-        account_balance = LibraCoin.value(&copy(payer_ref).balance);
+        account_balance = Libra.value<LBR.T>(&copy(payer_ref).balance);
         assert(copy(amount) <= move(account_balance), 1001);
 
         // obtain the expected serialization of the transaction struct
@@ -162,8 +163,8 @@ module ColdWallet {
             seq = *&copy(payer_ref).sequence_num;
             *(&mut copy(payer_ref).sequence_num) = move(seq) + 1;
 
-            withdraw_amount = LibraCoin.withdraw(&mut copy(payer_ref).balance, move(amount));
-            LibraAccount.deposit(move(payee), move(withdraw_amount));
+            withdraw_amount = Libra.withdraw<LBR.T>(&mut copy(payer_ref).balance, move(amount));
+            LibraAccount.deposit<LBR.T>(move(payee), move(withdraw_amount));
 
         } else {
             // how to handle error?

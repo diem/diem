@@ -5,7 +5,8 @@
 //! sender: alice
 module AlicePays {
     import 0x0.LibraAccount;
-    import 0x0.LibraCoin;
+    import 0x0.LBR;
+    import 0x0.Libra;
     import 0x0.Vector;
 
     resource T {
@@ -22,7 +23,7 @@ module AlicePays {
     public pay(payee: address, amount: u64) acquires T {
         let cap: &Self.T;
         cap = borrow_global<T>({{alice}});
-        LibraAccount.pay_from_capability(move(payee), Vector.empty<u8>(), &move(cap).cap, move(amount), h"0A11CE");
+        LibraAccount.pay_from_capability<LBR.T>(move(payee), Vector.empty<u8>(), &move(cap).cap, move(amount), h"0A11CE");
         return;
     }
 }
@@ -40,15 +41,16 @@ main() {
 //! sender: bob
 import {{alice}}.AlicePays;
 import 0x0.LibraAccount;
+import 0x0.LBR;
 
 main() {
     let carol_prev_balance: u64;
     let alice_prev_balance: u64;
-    carol_prev_balance = LibraAccount.balance({{carol}});
-    alice_prev_balance = LibraAccount.balance({{alice}});
+    carol_prev_balance = LibraAccount.balance<LBR.T>({{carol}});
+    alice_prev_balance = LibraAccount.balance<LBR.T>({{alice}});
     AlicePays.pay({{carol}}, 10);
-    assert(move(carol_prev_balance) + 10 == LibraAccount.balance({{carol}}), 0);
-    assert(move(alice_prev_balance) - 10 == LibraAccount.balance({{alice}}), 1);
+    assert(move(carol_prev_balance) + 10 == LibraAccount.balance<LBR.T>({{carol}}), 0);
+    assert(move(alice_prev_balance) - 10 == LibraAccount.balance<LBR.T>({{alice}}), 1);
     return;
 }
 

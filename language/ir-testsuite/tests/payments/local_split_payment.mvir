@@ -2,7 +2,8 @@
 //! account: carol, 1000000
 
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 main() {
     let addr1: address;
@@ -11,9 +12,9 @@ main() {
     let struct1_original_balance: u64;
     let struct2_original_balance: u64;
     let struct3_original_balance: u64;
-    let five_coins1: LibraCoin.T;
-    let fc_ref: &mut LibraCoin.T;
-    let five_coins2: LibraCoin.T;
+    let five_coins1: Libra.T<LBR.T>;
+    let fc_ref: &mut Libra.T<LBR.T>;
+    let five_coins2: Libra.T<LBR.T>;
     let struct1_new_balance: u64;
     let struct2_new_balance: u64;
     let struct3_new_balance: u64;
@@ -22,20 +23,20 @@ main() {
     addr2 = {{bob}};
     addr3 = {{carol}};
 
-    struct1_original_balance = LibraAccount.balance(copy(addr1));
-    struct2_original_balance = LibraAccount.balance(copy(addr2));
-    struct3_original_balance = LibraAccount.balance(copy(addr3));
+    struct1_original_balance = LibraAccount.balance<LBR.T>(copy(addr1));
+    struct2_original_balance = LibraAccount.balance<LBR.T>(copy(addr2));
+    struct3_original_balance = LibraAccount.balance<LBR.T>(copy(addr3));
 
-    five_coins1 = LibraAccount.withdraw_from_sender(10);
+    five_coins1 = LibraAccount.withdraw_from_sender<LBR.T>(10);
     fc_ref = &mut five_coins1;
-    five_coins2 = LibraCoin.withdraw(move(fc_ref), 5);
+    five_coins2 = Libra.withdraw<LBR.T>(move(fc_ref), 5);
 
-    LibraAccount.deposit(copy(addr2), move(five_coins1));
-    LibraAccount.deposit(copy(addr3), move(five_coins2));
+    LibraAccount.deposit<LBR.T>(copy(addr2), move(five_coins1));
+    LibraAccount.deposit<LBR.T>(copy(addr3), move(five_coins2));
 
-    struct1_new_balance = LibraAccount.balance(copy(addr1));
-    struct2_new_balance = LibraAccount.balance(copy(addr2));
-    struct3_new_balance = LibraAccount.balance(copy(addr3));
+    struct1_new_balance = LibraAccount.balance<LBR.T>(copy(addr1));
+    struct2_new_balance = LibraAccount.balance<LBR.T>(copy(addr2));
+    struct3_new_balance = LibraAccount.balance<LBR.T>(copy(addr3));
 
     assert(copy(struct1_new_balance) == copy(struct1_original_balance) - 10, 41);
     assert(copy(struct2_new_balance) == copy(struct2_original_balance) + 5, 42);

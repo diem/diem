@@ -1,15 +1,16 @@
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 main() {
-    let ten_coins: LibraCoin.T;
+    let ten_coins: Libra.T<LBR.T>;
     let addr: address;
 
     addr = get_txn_sender();
-    ten_coins = LibraAccount.withdraw_from_sender(10);
+    ten_coins = LibraAccount.withdraw_from_sender<LBR.T>(10);
 
-    LibraAccount.deposit(copy(addr), move(ten_coins));
-    LibraAccount.deposit(copy(addr), move(ten_coins));
+    LibraAccount.deposit<LBR.T>(copy(addr), move(ten_coins));
+    LibraAccount.deposit<LBR.T>(copy(addr), move(ten_coins));
 
     return;
 }

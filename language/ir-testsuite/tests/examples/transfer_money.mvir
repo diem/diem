@@ -2,13 +2,14 @@
 //! account: Bob, 1000000
 
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 main() {
-    let coins: LibraCoin.T;
+    let coins: Libra.T<LBR.T>;
 
-    coins = LibraAccount.withdraw_from_sender(42);
-    LibraAccount.deposit({{bob}}, move(coins));
+    coins = LibraAccount.withdraw_from_sender<LBR.T>(42);
+    LibraAccount.deposit<LBR.T>({{bob}}, move(coins));
 
     return;
 }

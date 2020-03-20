@@ -8,10 +8,11 @@
 
 // offer preburn resource to alice
 //! sender: association
-use 0x0::LibraCoin;
+use 0x0::LBR;
+use 0x0::Libra;
 use 0x0::Offer;
 fun main() {
-    let preburn = LibraCoin::new_preburn();
+    let preburn = Libra::new_preburn<LBR::T>();
     Offer::create(preburn, {{alice}})
 }
 
@@ -21,14 +22,15 @@ fun main() {
 //! new-transaction
 //! sender: alice
 use 0x0::LibraAccount;
-use 0x0::LibraCoin;
+use 0x0::LBR;
+use 0x0::Libra;
 use 0x0::Offer;
 use 0x0::Transaction;
 fun main() {
-    LibraCoin::publish_preburn(Offer::redeem({{association}}));
-    let coin = LibraAccount::withdraw_from_sender(100);
-    LibraCoin::preburn(coin);
-    Transaction::assert(LibraCoin::preburn_value() == 100, 8001)
+    Libra::publish_preburn<LBR::T>(Offer::redeem({{association}}));
+    let coin = LibraAccount::withdraw_from_sender<LBR::T>(100);
+    Libra::preburn<LBR::T>(coin);
+    Transaction::assert(Libra::preburn_value<LBR::T>() == 100, 8001)
 }
 
 // check: EXECUTED
@@ -36,10 +38,11 @@ fun main() {
 // offer preburn resource to bob
 //! new-transaction
 //! sender: association
-use 0x0::LibraCoin;
+use 0x0::LBR;
+use 0x0::Libra;
 use 0x0::Offer;
 fun main() {
-    let preburn = LibraCoin::new_preburn();
+    let preburn = Libra::new_preburn<LBR::T>();
     Offer::create(preburn, {{bob}})
 }
 
@@ -49,14 +52,15 @@ fun main() {
 //! new-transaction
 //! sender: bob
 use 0x0::LibraAccount;
-use 0x0::LibraCoin;
+use 0x0::LBR;
+use 0x0::Libra;
 use 0x0::Offer;
 use 0x0::Transaction;
 fun main() {
-    LibraCoin::publish_preburn(Offer::redeem({{association}}));
-    let coin = LibraAccount::withdraw_from_sender(200);
-    LibraCoin::preburn(coin);
-    Transaction::assert(LibraCoin::preburn_value() == 300, 8002)
+    Libra::publish_preburn<LBR::T>(Offer::redeem({{association}}));
+    let coin = LibraAccount::withdraw_from_sender<LBR::T>(200);
+    Libra::preburn<LBR::T>(coin);
+    Transaction::assert(Libra::preburn_value<LBR::T>() == 300, 8002)
 }
 
 // check: EXECUTED
@@ -66,10 +70,11 @@ fun main() {
 //! new-transaction
 //! sender: carol
 use 0x0::LibraAccount;
-use 0x0::LibraCoin;
+use 0x0::LBR;
+use 0x0::Libra;
 fun main() {
-    let coin = LibraAccount::withdraw_from_sender(200);
-    LibraCoin::preburn(coin);
+    let coin = LibraAccount::withdraw_from_sender<LBR::T>(200);
+    Libra::preburn<LBR::T>(coin);
 }
 
 // check: Keep
@@ -79,9 +84,10 @@ fun main() {
 // will fail with MISSING_DATA because sender doesn't have the mint capability
 //! new-transaction
 //! sender: carol
-use 0x0::LibraCoin;
+use 0x0::LBR;
+use 0x0::Libra;
 fun main() {
-    LibraCoin::burn({{bob}})
+    Libra::burn<LBR::T>({{bob}})
 }
 
 // check: Keep
@@ -90,9 +96,10 @@ fun main() {
 // ensure that the preburner bob cannot burn
 //! new-transaction
 //! sender: bob
-use 0x0::LibraCoin;
+use 0x0::LBR;
+use 0x0::Libra;
 fun main() {
-    LibraCoin::burn({{bob}})
+    Libra::burn<LBR::T>({{bob}})
 }
 
 // check: Keep
@@ -101,13 +108,14 @@ fun main() {
 // burn bob's funds, then alice's
 //! new-transaction
 //! sender: association
-use 0x0::LibraCoin;
+use 0x0::LBR;
+use 0x0::Libra;
 use 0x0::Transaction;
 fun main() {
-    LibraCoin::burn({{bob}});
-    Transaction::assert(LibraCoin::preburn_value() == 100, 8003);
-    LibraCoin::burn({{alice}});
-    Transaction::assert(LibraCoin::preburn_value() == 0, 8004)
+    Libra::burn<LBR::T>({{bob}});
+    Transaction::assert(Libra::preburn_value<LBR::T>() == 100, 8003);
+    Libra::burn<LBR::T>({{alice}});
+    Transaction::assert(Libra::preburn_value<LBR::T>() == 0, 8004)
 }
 
 // check: EXECUTED
@@ -116,12 +124,13 @@ fun main() {
 //! new-transaction
 //! sender: alice
 use 0x0::LibraAccount;
-use 0x0::LibraCoin;
+use 0x0::LBR;
+use 0x0::Libra;
 use 0x0::Transaction;
 fun main() {
-    let coin = LibraAccount::withdraw_from_sender(100);
-    LibraCoin::preburn(coin);
-    Transaction::assert(LibraCoin::preburn_value() == 100, 8005)
+    let coin = LibraAccount::withdraw_from_sender<LBR::T>(100);
+    Libra::preburn<LBR::T>(coin);
+    Transaction::assert(Libra::preburn_value<LBR::T>() == 100, 8005)
 }
 
 // check: EXECUTED
@@ -130,13 +139,14 @@ fun main() {
 //! new-transaction
 //! sender: association
 use 0x0::LibraAccount;
-use 0x0::LibraCoin;
+use 0x0::LBR;
+use 0x0::Libra;
 use 0x0::Transaction;
 fun main() {
-    let old_balance = LibraAccount::balance({{alice}});
-    LibraAccount::cancel_burn({{alice}});
-    Transaction::assert(LibraCoin::preburn_value() == 0, 8006);
-    Transaction::assert(LibraAccount::balance({{alice}}) == old_balance + 100, 8007)
+    let old_balance = LibraAccount::balance<LBR::T>({{alice}});
+    LibraAccount::cancel_burn<LBR::T>({{alice}});
+    Transaction::assert(Libra::preburn_value<LBR::T>() == 0, 8006);
+    Transaction::assert(LibraAccount::balance<LBR::T>({{alice}}) == old_balance + 100, 8007)
 }
 
 // check: EXECUTED

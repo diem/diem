@@ -28,12 +28,13 @@ module BalanceHolder {
 
 import 0x0.LibraSystem;
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 import 0x0.Vector;
 import {{vivian}}.BalanceHolder;
 
 main() {
-  let lib_coin: LibraCoin.T;
+  let lib_coin: Libra.T<LBR.T>;
   let number_of_validators: u64;
   let index: u64;
   let addr: address;
@@ -47,7 +48,7 @@ main() {
   number_of_validators = LibraSystem.validator_set_size();
   // Withdraw now so that the new account balance for {{vivian}}'s account is recorded in the
   // balances vector.
-  lib_coin = LibraAccount.withdraw_from_sender(copy(number_of_validators) * 10);
+  lib_coin = LibraAccount.withdraw_from_sender<LBR.T>(copy(number_of_validators) * 10);
 
   // Make the distribution check agnostic to the starting balances of the validators
   while (copy(index) < copy(number_of_validators)) {
@@ -55,12 +56,12 @@ main() {
       index = move(index) + 1;
       Vector.push_back<u64>(
           &mut balances,
-          LibraAccount.balance(move(addr))
+          LibraAccount.balance<LBR.T>(move(addr))
       );
   }
 
   BalanceHolder.publish(move(balances));
-  LibraAccount.deposit({{fees}}, move(lib_coin));
+  LibraAccount.deposit<LBR.T>({{fees}}, move(lib_coin));
   return;
 }
 //! check: EXECUTED
@@ -73,6 +74,7 @@ main() {
 //! sender: alice
 import 0x0.LibraSystem;
 import 0x0.LibraAccount;
+import 0x0.LBR;
 import {{vivian}}.BalanceHolder;
 
 main() {
@@ -87,13 +89,13 @@ main() {
 
   while (copy(index) < copy(number_of_validators)) {
      addr = LibraSystem.get_ith_validator_address(copy(index));
-     new_balance = LibraAccount.balance(move(addr));
+     new_balance = LibraAccount.balance<LBR.T>(move(addr));
      old_balance = BalanceHolder.get_balance(copy(index));
      index = move(index) + 1;
      assert(copy(new_balance) == (copy(old_balance) + 10), 77);
   }
 
-  assert(LibraAccount.balance({{fees}}) == 0, 10000);
+  assert(LibraAccount.balance<LBR.T>({{fees}}) == 0, 10000);
 
   return;
 }

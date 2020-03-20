@@ -1,6 +1,7 @@
 module PaymentChannel {
     import 0x0.Signature;
-    import 0x0.LibraCoin;
+import 0x0.LBR;
+    import 0x0.Libra;
     import 0x0.LibraAccount;
     import 0x0.AddressUtil;
     import 0x0.U64Util;
@@ -16,8 +17,8 @@ module PaymentChannel {
     // Note further that the funder_addr is known on-chain as the funder
     // instantiated the payment channel resource.
     resource T {
-        funder_capacity: LibraCoin.T,
-        counterparty_capacity: LibraCoin.T,
+        funder_capacity: Libra.T<LBR.T>,
+        counterparty_capacity: Libra.T<LBR.T>,
         seq_id: u64,
         funder_pk: vector<u8>,
         counterparty_pk: vector<u8>,
@@ -27,18 +28,18 @@ module PaymentChannel {
     // Getter for the balance of the counterparty_capacity resource value
     counterparty_balance(this: &Self.T): u64 {
         let counterparty_balance: u64;
-        let counterparty_capacity_ref: &LibraCoin.T;
+        let counterparty_capacity_ref: &Libra.T<LBR.T>;
         counterparty_capacity_ref = &move(this).counterparty_capacity;
-        counterparty_balance = LibraCoin.value(move(counterparty_capacity_ref));
+        counterparty_balance = Libra.value<LBR.T>(move(counterparty_capacity_ref));
         return move(counterparty_balance);
     }
 
     // Getter for the balance of the funder_capacity resource value
     funder_balance(this: &Self.T): u64 {
         let funder_balance: u64;
-        let funder_capacity_ref: &LibraCoin.T;
+        let funder_capacity_ref: &Libra.T<LBR.T>;
         funder_capacity_ref = &move(this).funder_capacity;
-        funder_balance = LibraCoin.value(move(funder_capacity_ref));
+        funder_balance = Libra.value<LBR.T>(move(funder_capacity_ref));
         return move(funder_balance);
     }
 
@@ -74,11 +75,11 @@ module PaymentChannel {
     // Constructor for the new payment channel
     // Due to the lack of a time API in the Move VM, this payment channel is forced to be
     // uni-directional. Therefore, only the funder is funding the channel.
-    public new_payment_channel(funding: LibraCoin.T, funder_pk: vector<u8>, counterparty_pk: vector<u8>): Self.T {
+    public new_payment_channel(funding: Libra.T<LBR.T>, funder_pk: vector<u8>, counterparty_pk: vector<u8>): Self.T {
 	let sender: address;
-        let counterparty_capacity: LibraCoin.T;
+        let counterparty_capacity: Libra.T<LBR.T>;
 	sender = get_txn_sender();
-        counterparty_capacity = LibraCoin.zero();
+        counterparty_capacity = Libra.zero<LBR.T>();
 
         return T{
             funder_capacity: move(funding),
@@ -153,13 +154,13 @@ module PaymentChannel {
 
     // Public on-chain update function that allows to update the internal state of the payment channel.
     // This function is called by the `close` method before withdrawing the funds in order to update the
-    // on-chain state of the contract before moving the LibraCoin resources to their respective parties.
+    // on-chain state of the contract before moving the Libra resources to their respective parties.
     public update(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: vector<u8>, counterparty_signature: vector<u8>, preimage: vector<u8>) {
         let sender: address;
         let ver_funder: bool;
         let ver_counterparty: bool;
         let ref: &Self.T;
-        let transfer_amt: LibraCoin.T;
+        let transfer_amt: Libra.T<LBR.T>;
         let funder_pk: vector<u8>;
         let counterparty_pk: vector<u8>;
 
@@ -175,27 +176,27 @@ module PaymentChannel {
         assert(move(ver_funder) == true, 42);
         assert(move(ver_counterparty) == true, 42);
 
-        transfer_amt = LibraCoin.withdraw(&mut copy(this).funder_capacity, copy(amt_to_transfer));
-        LibraCoin.deposit(&mut copy(this).counterparty_capacity, move(transfer_amt));
+        transfer_amt = Libra.withdraw<LBR.T>(&mut copy(this).funder_capacity, copy(amt_to_transfer));
+        Libra.deposit<LBR.T>(&mut copy(this).counterparty_capacity, move(transfer_amt));
 
         *(&mut move(this).seq_id) = move(new_seq_id);
 
         return;
     }
 
-    // Public method for closing the channel. Invokes the update method and then pays out the LibraCoin to each party
+    // Public method for closing the channel. Invokes the update method and then pays out the Libra to each party
     public close(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: vector<u8>, counterparty_signature: vector<u8>, preimage: vector<u8>) {
         let funder_addr: address;
         let counterparty_addr: address;
 
-        let funder_capacity_ref: &mut LibraCoin.T;
-        let counterparty_capacity_ref: &mut LibraCoin.T;
+        let funder_capacity_ref: &mut Libra.T<LBR.T>;
+        let counterparty_capacity_ref: &mut Libra.T<LBR.T>;
 
         let funder_balance: u64;
         let counterparty_balance: u64;
 
-        let funder_to_withdraw: LibraCoin.T;
-        let counterparty_to_withdraw: LibraCoin.T;
+        let funder_to_withdraw: Libra.T<LBR.T>;
+        let counterparty_to_withdraw: Libra.T<LBR.T>;
 
         let ref: &Self.T;
 
@@ -207,8 +208,8 @@ module PaymentChannel {
         counterparty_balance = Self.counterparty_balance(move(ref));
 
         counterparty_capacity_ref = &mut copy(this).counterparty_capacity;
-        counterparty_to_withdraw = LibraCoin.withdraw(move(counterparty_capacity_ref), move(counterparty_balance));
-        LibraAccount.deposit(move(counterparty_addr), move(counterparty_to_withdraw));
+        counterparty_to_withdraw = Libra.withdraw<LBR.T>(move(counterparty_capacity_ref), move(counterparty_balance));
+        LibraAccount.deposit<LBR.T>(move(counterparty_addr), move(counterparty_to_withdraw));
 
         ref = freeze(copy(this));
 
@@ -216,8 +217,8 @@ module PaymentChannel {
         funder_balance = Self.counterparty_balance(move(ref));
 
         funder_capacity_ref = &mut move(this).funder_capacity;
-        funder_to_withdraw = LibraCoin.withdraw(move(funder_capacity_ref), move(funder_balance));
-        LibraAccount.deposit(move(funder_addr), move(funder_to_withdraw));
+        funder_to_withdraw = Libra.withdraw<LBR.T>(move(funder_capacity_ref), move(funder_balance));
+        LibraAccount.deposit<LBR.T>(move(funder_addr), move(funder_to_withdraw));
 
         return;
     }
