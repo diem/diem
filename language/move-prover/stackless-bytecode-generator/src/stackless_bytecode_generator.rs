@@ -9,8 +9,8 @@ use std::collections::BTreeMap;
 use vm::{
     access::ModuleAccess,
     file_format::{
-        Bytecode, CodeOffset, CompiledModule, CompiledProgram, FieldDefinitionIndex,
-        FunctionDefinition, LocalsSignatureIndex, SignatureToken,
+        Bytecode, CodeOffset, CompiledModule, FieldDefinitionIndex, FunctionDefinition,
+        LocalsSignatureIndex, SignatureToken,
     },
     views::{
         FieldDefinitionView, FunctionDefinitionView, FunctionSignatureView, StructDefinitionView,
@@ -23,11 +23,6 @@ pub struct StacklessFunction {
     pub code: Vec<StacklessBytecode>,
 }
 
-pub struct StacklessProgram {
-    pub module_functions: Vec<Vec<StacklessFunction>>,
-    pub compiled_modules: Vec<CompiledModule>,
-}
-
 pub struct StacklessBytecodeGenerator<'a> {
     module: &'a CompiledModule,
     function_definition_view: FunctionDefinitionView<'a, CompiledModule>,
@@ -35,30 +30,6 @@ pub struct StacklessBytecodeGenerator<'a> {
     temp_stack: Vec<usize>,
     local_types: Vec<SignatureToken>,
     code: Vec<StacklessBytecode>,
-}
-
-pub struct StacklessProgramGenerator {
-    program: CompiledProgram,
-}
-
-impl StacklessProgramGenerator {
-    pub fn new(program: CompiledProgram) -> Self {
-        StacklessProgramGenerator { program }
-    }
-
-    pub fn generate_program(self) -> StacklessProgram {
-        let script_module = self.program.script.into_module();
-        let mut compiled_modules = self.program.modules;
-        compiled_modules.push(script_module);
-        let module_functions = compiled_modules
-            .iter()
-            .map(move |module| StacklessModuleGenerator::new(&module).generate_module())
-            .collect();
-        StacklessProgram {
-            module_functions,
-            compiled_modules,
-        }
-    }
 }
 
 pub struct StacklessModuleGenerator<'a> {
