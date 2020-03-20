@@ -12,6 +12,7 @@ const VAULT_ROOT_TOKEN: &str = "root_token";
 /// A test for verifying VaultStorage properly implements the LibraSecureStorage API. This test
 /// depends on running Vault, which can be done by using the provided docker run script in
 /// `docker/vault/run.sh`
+// There can only be one vault test as reset called on one instance can break another test
 #[test]
 #[ignore]
 fn execute_storage_tests_vault() {
@@ -20,27 +21,21 @@ fn execute_storage_tests_vault() {
 
     test_vault(&mut storage);
     suite::execute_all_storage_tests(&mut storage);
-    storage.reset_and_clear().unwrap();
-}
 
-#[test]
-#[ignore]
-fn execute_storage_tests_vault_with_namespace() {
-    let mut storage = VaultStorage::new(
+    let mut storage0 = VaultStorage::new(
         VAULT_HOST.into(),
         VAULT_ROOT_TOKEN.into(),
-        Some("test".into()),
+        Some("test0".into()),
     );
     let mut storage1 = VaultStorage::new(
         VAULT_HOST.into(),
         VAULT_ROOT_TOKEN.into(),
         Some("test1".into()),
     );
-    storage.reset_and_clear().unwrap();
 
-    test_vault(&mut storage);
+    test_vault(&mut storage0);
     test_vault(&mut storage1);
-    suite::execute_all_storage_tests(&mut storage);
+    suite::execute_all_storage_tests(&mut storage0);
     suite::execute_all_storage_tests(&mut storage1);
     storage.reset_and_clear().unwrap();
 }
