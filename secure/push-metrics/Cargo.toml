@@ -10,5 +10,5 @@ publish = false
 edition = "2018"
 
 [dependencies]
-ureq = { version = "0.11.3", features = ["json"] }
+ureq = { version = "0.12.0", features = ["json"] }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
