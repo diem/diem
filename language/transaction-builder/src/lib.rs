@@ -24,6 +24,13 @@ fn validate_auth_key_prefix(auth_key_prefix: &[u8]) {
     );
 }
 
+/// Encode `stdlib_script` with arguments `args`.
+/// Note: this is not type-safe; the individual type-safe wrappers below should be used when
+/// possible.
+pub fn encode_stdlib_script(stdlib_script: StdlibScript, args: Vec<TransactionArgument>) -> Script {
+    Script::new(stdlib_script.compiled_bytes().into_vec(), args)
+}
+
 /// Encode a program adding `new_validator` to the pending validator set. Fails if the
 /// `new_validator` address is already in the validator set, already in the pending valdiator set,
 /// or does not have a `ValidatorConfig` resource stored at the address
@@ -31,6 +38,25 @@ pub fn encode_add_validator_script(new_validator: &AccountAddress) -> Script {
     Script::new(
         StdlibScript::AddValidator.compiled_bytes().into_vec(),
         vec![TransactionArgument::Address(*new_validator)],
+    )
+}
+
+/// Permanently destroy the coins stored in the oldest burn request under the `Preburn` resource
+/// stored at `preburn_address`. This will only succeed if the sender has a `MintCapability` stored
+/// under their account and `preburn_address` has a pending burn request
+pub fn encode_burn_script(preburn_address: AccountAddress) -> Script {
+    Script::new(
+        StdlibScript::Burn.compiled_bytes().into_vec(),
+        vec![TransactionArgument::Address(preburn_address)],
+    )
+}
+
+/// Cancel the oldest burn request from `preburn_address` and return the funds to `preburn_address`.
+/// Fails if the sender does not have a published `MintCapability`.
+pub fn encode_cancel_burn_script(preburn_address: AccountAddress) -> Script {
+    Script::new(
+        StdlibScript::CancelBurn.compiled_bytes().into_vec(),
+        vec![TransactionArgument::Address(preburn_address)],
     )
 }
 
@@ -109,6 +135,15 @@ pub fn encode_transfer_script_with_padding(
     )
 }
 
+/// Preburn `amount` coins from the sender's account.
+/// This will only succeed if the sender already has a published `Preburn` resource.
+pub fn encode_preburn_script(amount: u64) -> Script {
+    Script::new(
+        StdlibScript::Preburn.compiled_bytes().into_vec(),
+        vec![TransactionArgument::U64(amount)],
+    )
+}
+
 /// Encode a program creating a fresh account at `account_address` with `initial_balance` coins
 /// transferred from the sender's account balance. Fails if there is already an account at
 /// `account_address` or if the sender's balance is lower than `initial_balance`.
@@ -125,6 +160,15 @@ pub fn encode_create_account_script(
             TransactionArgument::U8Vector(auth_key_prefix),
             TransactionArgument::U64(initial_balance),
         ],
+    )
+}
+
+/// Publish a newly created `Preburn` resource under the sender's account.
+/// This will fail if the sender already has a published `Preburn` resource.
+pub fn encode_register_preburner_script() -> Script {
+    Script::new(
+        StdlibScript::RegisterPreburner.compiled_bytes().into_vec(),
+        vec![],
     )
 }
 

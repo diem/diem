@@ -6,8 +6,7 @@
 use 0x0::LBR;
 use 0x0::Libra;
 fun main() {
-    let preburn = Libra::new_preburn<LBR::T>();
-    Libra::publish_preburn<LBR::T>(preburn)
+    Libra::publish_preburn(Libra::new_preburn<LBR::T>())
 }
 
 // check: EXECUTED
@@ -24,7 +23,7 @@ fun main() {
     let old_market_cap = Libra::market_cap<LBR::T>();
     // send the coins to the preburn bucket. market cap should not be affected, but the preburn
     // bucket should increase in size by 100
-    Libra::preburn<LBR::T>(coin);
+    Libra::preburn_to_sender<LBR::T>(coin);
     Transaction::assert(Libra::market_cap<LBR::T>() == old_market_cap, 8002);
     Transaction::assert(Libra::preburn_value<LBR::T>() == 100, 8003);
 }
