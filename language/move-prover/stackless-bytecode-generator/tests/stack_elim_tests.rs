@@ -1,11 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use ir_to_bytecode::{compiler::compile_program, parser::parse_program};
+use ir_to_bytecode::{
+    compiler::{compile_module, compile_script},
+    parser::{parse_module, parse_script},
+};
 use libra_types::account_address::AccountAddress;
 use stackless_bytecode_generator::{
     stackless_bytecode::StacklessBytecode::{self, *},
-    stackless_bytecode_generator::{StacklessBytecodeGenerator, StacklessProgramGenerator},
+    stackless_bytecode_generator::{StacklessBytecodeGenerator, StacklessModuleGenerator},
 };
 use stdlib::{stdlib_modules, StdLibOptions};
 use vm::file_format::{
@@ -33,7 +36,7 @@ fn transform_code_with_refs() {
         ",
     );
 
-    let (actual_code, actual_types) = generate_code_from_string(code);
+    let (actual_code, actual_types) = generate_module_from_string(code);
     let expected_code = vec![
         LdU64(5, 0),
         MoveLoc(6, 1),
@@ -106,7 +109,7 @@ fn transform_code_with_arithmetic_ops() {
         ",
     );
 
-    let (actual_code, actual_types) = generate_code_from_string(code);
+    let (actual_code, actual_types) = generate_module_from_string(code);
     let expected_code = vec![
         CopyLoc(3, 0),
         MoveLoc(4, 1),
@@ -156,7 +159,7 @@ fn transform_code_with_pack_unpack() {
         }
         ",
     );
-    let (actual_code, actual_types) = generate_code_from_string(code);
+    let (actual_code, actual_types) = generate_module_from_string(code);
     let expected_code = vec![
         LdU64(4, 42),
         MoveLoc(5, 0),
@@ -213,7 +216,7 @@ fn transform_code_with_ld_instrs() {
         }
         ",
     );
-    let (actual_code, actual_types) = generate_code_from_string(code);
+    let (actual_code, actual_types) = generate_module_from_string(code);
     let expected_code = vec![
         LdByteArray(3, ByteArrayPoolIndex::new(0)),
         StLoc(0, 3),
@@ -258,7 +261,7 @@ fn transform_code_with_easy_branching() {
         }
         ",
     );
-    let (actual_code, actual_types) = generate_code_from_string(code);
+    let (actual_code, actual_types) = generate_module_from_string(code);
     let expected_code = vec![
         LdTrue(0),
         BrFalse(4, 0),
@@ -302,7 +305,7 @@ fn transform_code_with_bool_ops() {
         }
         ",
     );
-    let (actual_code, actual_types) = generate_code_from_string(code);
+    let (actual_code, actual_types) = generate_module_from_string(code);
     let expected_code = vec![
         CopyLoc(4, 0),
         CopyLoc(5, 1),
@@ -374,7 +377,7 @@ fn transform_code_with_txn_builtins() {
         }
         ",
     );
-    let (actual_code, actual_types) = generate_code_from_string(code);
+    let (actual_code, actual_types) = generate_module_from_string(code);
     let expected_code = vec![GetTxnSenderAddress(1), StLoc(0, 1), Ret(vec![])];
     let expected_types = vec![SignatureToken::Address, SignatureToken::Address];
     assert_eq!(actual_code, expected_code);
@@ -401,7 +404,7 @@ fn transform_code_with_function_call() {
         }
         ",
     );
-    let (actual_code, actual_types) = generate_code_from_string(code);
+    let (actual_code, actual_types) = generate_module_from_string(code);
     let expected_code = vec![
         MoveLoc(6, 2),
         MoveLoc(7, 0),
@@ -458,7 +461,7 @@ fn transform_code_with_module_builtins() {
         }
         ",
     );
-    let (actual_code, actual_types) = generate_code_from_string(code);
+    let (actual_code, actual_types) = generate_module_from_string(code);
     let expected_code = vec![
         CopyLoc(4, 0),
         Exists(
@@ -531,7 +534,7 @@ fn transform_program_with_script() {
         }
         ",
     );
-    let (actual_code, actual_types) = generate_code_from_string(code);
+    let (actual_code, actual_types) = generate_script_from_string(code);
     let expected_code = vec![
         MoveLoc(3, 0),
         MoveLoc(4, 1),
@@ -575,7 +578,7 @@ fn transform_program_with_generics() {
 
         ",
     );
-    let (actual_code, actual_types) = generate_code_from_string(code);
+    let (actual_code, actual_types) = generate_module_from_string(code);
     let expected_code = vec![
         BorrowLoc(4, 0),
         BorrowField(5, 4, FieldDefinitionIndex::new(0)),
@@ -650,7 +653,7 @@ fn transform_and_simplify() {
 
         ",
     );
-    let (actual_code, _) = generate_code_from_string(code);
+    let (actual_code, _) = generate_module_from_string(code);
     let actual_simplified_code = StacklessBytecodeGenerator::simplify_bytecode(&actual_code);
     // simplified bytecode without unnecessary moves
     let expected_simplified_code = vec![
@@ -682,13 +685,24 @@ fn transform_and_simplify() {
     assert_eq!(actual_simplified_code, expected_simplified_code);
 }
 
-fn generate_code_from_string(code: String) -> (Vec<StacklessBytecode>, Vec<SignatureToken>) {
+fn generate_module_from_string(code: String) -> (Vec<StacklessBytecode>, Vec<SignatureToken>) {
     let address = AccountAddress::default();
-    let program = parse_program("file_name", &code).unwrap();
+    let module = parse_module("file_name", &code).unwrap();
     let deps = stdlib_modules(StdLibOptions::Staged);
-    let compiled_program = compile_program(address, program, deps).unwrap().0;
-    let res = StacklessProgramGenerator::new(compiled_program).generate_program();
-    let code = res.module_functions[0][0].code.clone();
-    let types = res.module_functions[0][0].local_types.clone();
+    let compiled_module = compile_module(address, module, deps).unwrap().0;
+    let res = StacklessModuleGenerator::new(&compiled_module).generate_module();
+    let code = res[0].code.clone();
+    let types = res[0].local_types.clone();
+    (code, types)
+}
+
+fn generate_script_from_string(code: String) -> (Vec<StacklessBytecode>, Vec<SignatureToken>) {
+    let address = AccountAddress::default();
+    let script = parse_script("file_name", &code).unwrap();
+    let deps = stdlib_modules(StdLibOptions::Staged);
+    let compiled_script = compile_script(address, script, deps).unwrap().0;
+    let res = StacklessModuleGenerator::new(&compiled_script.into_module()).generate_module();
+    let code = res[0].code.clone();
+    let types = res[0].local_types.clone();
     (code, types)
 }
