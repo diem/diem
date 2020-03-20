@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 base64 = "0.12.0"
+chrono = "0.4.9"
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }

@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    kv_storage::KVStorage, Capability, CryptoKVStorage, Error, Identity, Policy, Storage, Value,
+    Capability, CryptoKVStorage, Error, GetResponse, Identity, KVStorage, Policy, Storage, Value,
 };
+use chrono::DateTime;
 use libra_vault_client::{self as vault, Client};
 
 /// VaultStorage utilizes Vault for maintaining encrypted, authenticated data for Libra. This
@@ -61,15 +62,16 @@ impl VaultStorage {
 
     /// Retrieves a key from a given secret. Libra Secure Storage inserts each key into its own
     /// distinct secret store and thus the secret and key have the same identifier.
-    fn get_secret(&self, key: &str) -> Result<Value, Error> {
+    fn get_secret(&self, key: &str) -> Result<GetResponse, Error> {
         let secret = if let Some(namespace) = &self.namespace {
             format!("{}/{}", namespace, key)
         } else {
             key.to_string()
         };
-        let value = self.client.read_secret(&secret, key)?;
-        let v = Value::from_base64(&value).unwrap();
-        Ok(v)
+        let (value, created_time) = self.client.read_secret(&secret, key)?;
+        let last_update = DateTime::parse_from_rfc3339(&created_time)?.timestamp() as u64;
+        let value = Value::from_base64(&value).unwrap();
+        Ok(GetResponse { last_update, value })
     }
 
     /// Inserts a key, value pair into a secret that shares the name of the key.
@@ -149,7 +151,7 @@ impl KVStorage for VaultStorage {
         Ok(())
     }
 
-    fn get(&self, key: &str) -> Result<Value, Error> {
+    fn get(&self, key: &str) -> Result<GetResponse, Error> {
         self.get_secret(&key)
     }
 

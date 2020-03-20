@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{Error, Policy, Value};
+use serde::{Deserialize, Serialize};
+use std::time::{Duration, SystemTime};
 
 /// A secure key/value storage engine. Create takes a policy that is enforced internally by the
 /// actual backend. The policy contains public identities that the backend can translate into a
@@ -31,7 +33,7 @@ pub trait KVStorage: Send + Sync {
     }
 
     /// Retrieves a value from storage and fails if invalid permissions or it does not exist
-    fn get(&self, key: &str) -> Result<Value, Error>;
+    fn get(&self, key: &str) -> Result<GetResponse, Error>;
 
     /// Sets a value in storage and fails if invalid permissions or it does not exist
     fn set(&mut self, key: &str, value: Value) -> Result<(), Error>;
@@ -41,4 +43,32 @@ pub trait KVStorage: Send + Sync {
     /// Note: this should only be exposed and used for testing. Resetting the storage engine is not
     /// something that should be supported in production.
     fn reset_and_clear(&mut self) -> Result<(), Error>;
+}
+
+/// A container for a get response that contains relevant metadata and the value stored at the
+/// given key.
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[serde(tag = "data")]
+pub struct GetResponse {
+    /// Time since Unix Epoch in seconds.
+    pub last_update: u64,
+    /// Value stored at the provided key
+    pub value: Value,
+}
+
+impl GetResponse {
+    /// Creates a GetResponse using the current time for the timestamp
+    pub fn new(value: Value) -> Self {
+        Self {
+            value,
+            last_update: Self::now().as_secs(),
+        }
+    }
+
+    /// Returns back a Duration encompassing the current system time less the Unix Epoch
+    fn now() -> Duration {
+        SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+    }
 }

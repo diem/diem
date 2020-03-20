@@ -31,6 +31,12 @@ impl From<base64::DecodeError> for Error {
     }
 }
 
+impl From<chrono::format::ParseError> for Error {
+    fn from(error: chrono::format::ParseError) -> Self {
+        Self::SerializationError(format!("{}", error))
+    }
+}
+
 impl From<io::Error> for Error {
     fn from(error: io::Error) -> Self {
         Self::InternalError(format!("{}", error))

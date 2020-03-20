@@ -41,7 +41,7 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
     }
 
     fn get_private_key_for_name(&self, key_pair_name: &str) -> Result<Ed25519PrivateKey, Error> {
-        match self.get(key_pair_name)? {
+        match self.get(key_pair_name)?.value {
             Value::Ed25519PrivateKey(private_key) => Ok(private_key),
             _ => Err(Error::UnexpectedValueType),
         }
@@ -67,7 +67,7 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
     }
 
     fn rotate_key_pair(&mut self, key_pair_name: &str) -> Result<Ed25519PublicKey, Error> {
-        match self.get(key_pair_name)? {
+        match self.get(key_pair_name)?.value {
             Value::Ed25519PrivateKey(private_key) => {
                 let (new_private_key, new_public_key) = new_ed25519_key_pair()?;
                 self.set(

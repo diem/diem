@@ -58,7 +58,7 @@ impl PersistentSafetyStorage {
         Ok(self
             .internal_store
             .get(CONSENSUS_KEY)
-            .and_then(|value| value.ed25519_private_key())?)
+            .and_then(|r| r.value.ed25519_private_key())?)
     }
 
     pub fn set_consensus_key(&mut self, consensus_key: Ed25519PrivateKey) -> Result<()> {
@@ -68,10 +68,7 @@ impl PersistentSafetyStorage {
     }
 
     pub fn epoch(&self) -> Result<u64> {
-        Ok(self
-            .internal_store
-            .get(EPOCH)
-            .and_then(|value| value.u64())?)
+        Ok(self.internal_store.get(EPOCH).and_then(|r| r.value.u64())?)
     }
 
     pub fn set_epoch(&mut self, epoch: u64) -> Result<()> {
@@ -83,7 +80,7 @@ impl PersistentSafetyStorage {
         Ok(self
             .internal_store
             .get(LAST_VOTED_ROUND)
-            .and_then(|value| value.u64())?)
+            .and_then(|r| r.value.u64())?)
     }
 
     pub fn set_last_voted_round(&mut self, last_voted_round: Round) -> Result<()> {
@@ -96,7 +93,7 @@ impl PersistentSafetyStorage {
         Ok(self
             .internal_store
             .get(PREFERRED_ROUND)
-            .and_then(|value| value.u64())?)
+            .and_then(|r| r.value.u64())?)
     }
 
     pub fn set_preferred_round(&mut self, preferred_round: Round) -> Result<()> {

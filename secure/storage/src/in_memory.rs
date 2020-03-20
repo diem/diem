@@ -1,9 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    error::Error, kv_storage::KVStorage, policy::Policy, value::Value, CryptoKVStorage, Storage,
-};
+use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Policy, Storage, Value};
 use std::collections::HashMap;
 
 /// InMemoryStorage represents a key value store that is purely in memory and intended for single
@@ -14,7 +12,7 @@ use std::collections::HashMap;
 /// securely handle key material. This should not be used in production.
 #[derive(Default)]
 pub struct InMemoryStorage {
-    data: HashMap<String, Value>,
+    data: HashMap<String, GetResponse>,
 }
 
 impl InMemoryStorage {
@@ -39,20 +37,20 @@ impl KVStorage for InMemoryStorage {
         if self.data.contains_key(key) {
             return Err(Error::KeyAlreadyExists(key.to_string()));
         }
-        self.data.insert(key.to_string(), value);
+        self.data.insert(key.to_string(), GetResponse::new(value));
         Ok(())
     }
 
-    fn get(&self, key: &str) -> Result<Value, Error> {
-        let value = self
+    fn get(&self, key: &str) -> Result<GetResponse, Error> {
+        let response = self
             .data
             .get(key)
             .ok_or_else(|| Error::KeyNotSet(key.to_string()))?;
 
-        let value = match value {
+        let value = match &response.value {
             Value::Ed25519PrivateKey(value) => {
                 // Hack because Ed25519PrivateKey does not support clone / copy
-                let bytes = lcs::to_bytes(value)?;
+                let bytes = lcs::to_bytes(&value)?;
                 let key = lcs::from_bytes(&bytes)?;
                 Value::Ed25519PrivateKey(key)
             }
@@ -60,14 +58,15 @@ impl KVStorage for InMemoryStorage {
             Value::U64(value) => Value::U64(*value),
         };
 
-        Ok(value)
+        let last_update = response.last_update;
+        Ok(GetResponse { value, last_update })
     }
 
     fn set(&mut self, key: &str, value: Value) -> Result<(), Error> {
         if !self.data.contains_key(key) {
             return Err(Error::KeyNotSet(key.to_string()));
         }
-        self.data.insert(key.to_string(), value);
+        self.data.insert(key.to_string(), GetResponse::new(value));
         Ok(())
     }
 
