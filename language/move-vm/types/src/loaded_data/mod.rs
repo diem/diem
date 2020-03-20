@@ -4,7 +4,6 @@
 //!
 //! This module contains the loaded definition of code data used in runtime.
 
-pub mod struct_def;
 pub mod types;
 
 #[cfg(all(test, feature = "fuzzing"))]

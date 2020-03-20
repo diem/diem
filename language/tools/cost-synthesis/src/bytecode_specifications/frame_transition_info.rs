@@ -31,12 +31,12 @@ pub(crate) fn frame_transitions<'txn>(
     if should_push_frame(instr) {
         let empty_frame = FunctionRef::new(module, FunctionDefinitionIndex::new(0));
         // We push a frame here since it won't pop anything off of the value stack.
-        interpreter.push_frame(empty_frame, vec![], vec![]);
+        interpreter.push_frame(empty_frame, vec![]);
     }
 
     if let Some(function_idx) = module_info.1 {
         let func = FunctionRef::new(module, function_idx);
         // NB: push_call will pop |function_args| number of values off of the value stack.
-        interpreter.push_frame(func, vec![], vec![]);
+        interpreter.push_frame(func, vec![]);
     }
 }

@@ -7,8 +7,6 @@ pub mod chain_state;
 pub mod identifier;
 pub mod loaded_data;
 pub mod native_functions;
-pub mod native_structs;
-pub mod type_context;
 pub mod values;
 
 #[cfg(test)]

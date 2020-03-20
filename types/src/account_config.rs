@@ -32,6 +32,10 @@ static ACCOUNT_MODULE_NAME: Lazy<Identifier> =
 static ACCOUNT_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
 static ACCOUNT_BALANCE_STRUCT_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("Balance").unwrap());
+static ACCOUNT_EVENT_HANDLE_STRUCT_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("EventHandle").unwrap());
+static ACCOUNT_EVENT_HANDLE_GENERATOR_STRUCT_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("EventHandleGenerator").unwrap());
 
 /// The ModuleId for the Account module.
 pub static ACCOUNT_MODULE: Lazy<ModuleId> =
@@ -69,6 +73,14 @@ pub fn lbr_module_name() -> &'static IdentStr {
 
 pub fn lbr_struct_name() -> &'static IdentStr {
     &*LBR_STRUCT_NAME
+}
+
+pub fn account_event_handle_struct_name() -> &'static IdentStr {
+    &*ACCOUNT_EVENT_HANDLE_STRUCT_NAME
+}
+
+pub fn account_event_handle_generator_struct_name() -> &'static IdentStr {
+    &*ACCOUNT_EVENT_HANDLE_GENERATOR_STRUCT_NAME
 }
 
 pub fn sent_event_name() -> &'static IdentStr {

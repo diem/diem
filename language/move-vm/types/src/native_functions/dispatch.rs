@@ -2,13 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{hash, primitive_helpers, signature};
-use crate::values::{vector, Value};
+use crate::{
+    loaded_data::types::Type,
+    values::{vector, Value},
+};
 use libra_types::{
     account_address::AccountAddress,
     account_config::{
         account_balance_struct_name, account_module_name, account_struct_name, CORE_CODE_ADDRESS,
     },
-    language_storage::{ModuleId, TypeTag},
+    language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
 use move_core_types::identifier::IdentStr;
@@ -109,7 +112,7 @@ impl NativeFunction {
     /// Given the vector of aguments, it executes the native function.
     pub fn dispatch(
         self,
-        t: Vec<TypeTag>,
+        t: Vec<Type>,
         v: VecDeque<Value>,
         c: &CostTable,
     ) -> VMResult<NativeResult> {

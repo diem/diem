@@ -18,7 +18,7 @@ use libra_types::{
 };
 use move_vm_types::{
     identifier::create_access_path,
-    loaded_data::{struct_def::StructDef, types::Type},
+    loaded_data::types::{StructType, Type},
     values::{Struct, Value},
 };
 use std::time::Duration;
@@ -110,8 +110,8 @@ impl Account {
 
     // TODO: plug in the account type
     fn make_access_path(&self, tag: StructTag) -> AccessPath {
-        // TODO: we need a way to get the type (StructDef) of the Account in place
-        create_access_path(&self.addr, tag)
+        // TODO: we need a way to get the type (StructType) of the Account in place
+        create_access_path(self.addr, tag)
     }
 
     /// Changes the keys for this account to the provided ones.
@@ -346,8 +346,14 @@ impl Balance {
     }
 
     /// Returns the value layout for the account balance
-    pub fn layout() -> StructDef {
-        StructDef::new(vec![Type::U64])
+    pub fn type_() -> StructType {
+        StructType {
+            address: account_config::CORE_CODE_ADDRESS,
+            module: account_config::account_module_name().to_owned(),
+            name: account_config::account_balance_struct_name().to_owned(),
+            ty_args: vec![],
+            layout: vec![Type::U64],
+        }
     }
 }
 
@@ -421,28 +427,72 @@ impl AccountData {
         self.account.rotate_key(privkey, pubkey)
     }
 
+    pub fn sent_payment_event_type() -> StructType {
+        StructType {
+            address: account_config::CORE_CODE_ADDRESS,
+            module: account_config::account_module_name().to_owned(),
+            name: account_config::sent_event_name().to_owned(),
+            ty_args: vec![],
+            layout: vec![Type::U64, Type::Address, Type::Vector(Box::new(Type::U8))],
+        }
+    }
+
+    pub fn received_payment_event_type() -> StructType {
+        StructType {
+            address: account_config::CORE_CODE_ADDRESS,
+            module: account_config::account_module_name().to_owned(),
+            name: account_config::received_event_name().to_owned(),
+            ty_args: vec![],
+            layout: vec![Type::U64, Type::Address, Type::Vector(Box::new(Type::U8))],
+        }
+    }
+
+    pub fn event_handle_type(ty: Type) -> StructType {
+        StructType {
+            address: account_config::CORE_CODE_ADDRESS,
+            module: account_config::account_module_name().to_owned(),
+            name: account_config::account_event_handle_struct_name().to_owned(),
+            ty_args: vec![ty],
+            layout: vec![Type::U64, Type::Vector(Box::new(Type::U8))],
+        }
+    }
+
+    pub fn event_handle_generator_type() -> StructType {
+        StructType {
+            address: account_config::CORE_CODE_ADDRESS,
+            module: account_config::account_module_name().to_owned(),
+            name: account_config::account_event_handle_generator_struct_name().to_owned(),
+            ty_args: vec![],
+            layout: vec![Type::U64],
+        }
+    }
+
     /// Returns the (Move value) layout of the LibraAccount::T struct
-    pub fn account_layout() -> StructDef {
-        StructDef::new(vec![
-            Type::Vector(Box::new(Type::U8)),
-            Type::Bool,
-            Type::Bool,
-            Type::Struct(StructDef::new(vec![
-                Type::U64,
+    pub fn account_type() -> StructType {
+        StructType {
+            address: account_config::CORE_CODE_ADDRESS,
+            module: account_config::account_module_name().to_owned(),
+            name: account_config::account_struct_name().to_owned(),
+            ty_args: vec![],
+            layout: vec![
                 Type::Vector(Box::new(Type::U8)),
-            ])),
-            Type::Struct(StructDef::new(vec![
+                Type::Bool,
+                Type::Bool,
+                Type::Struct(Box::new(Self::event_handle_type(Type::Struct(Box::new(
+                    Self::sent_payment_event_type(),
+                ))))),
+                Type::Struct(Box::new(Self::event_handle_type(Type::Struct(Box::new(
+                    Self::received_payment_event_type(),
+                ))))),
                 Type::U64,
-                Type::Vector(Box::new(Type::U8)),
-            ])),
-            Type::U64,
-            Type::Struct(StructDef::new(vec![Type::U64])),
-        ])
+                Type::Struct(Box::new(Self::event_handle_generator_type())),
+            ],
+        }
     }
 
     /// Returns the layout for the LibraAccount::Balance struct
-    pub fn balance_layout() -> StructDef {
-        Balance::layout()
+    pub fn balance_type() -> StructType {
+        Balance::type_()
     }
 
     /// Creates and returns a resource [`Value`] for this data.

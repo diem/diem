@@ -10,7 +10,7 @@ use libra_types::{
 };
 use move_vm_types::{
     chain_state::ChainState,
-    loaded_data::struct_def::StructDef,
+    loaded_data::types::StructType,
     values::{GlobalValue, Struct, Value},
 };
 use vm::{
@@ -24,19 +24,19 @@ pub trait InterpreterContext {
     fn move_resource_to(
         &mut self,
         ap: &AccessPath,
-        def: StructDef,
+        ty: StructType,
         resource: Struct,
     ) -> VMResult<()>;
 
-    fn move_resource_from(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<Value>;
+    fn move_resource_from(&mut self, ap: &AccessPath, ty: StructType) -> VMResult<Value>;
 
     fn resource_exists(
         &mut self,
         ap: &AccessPath,
-        def: StructDef,
+        ty: StructType,
     ) -> VMResult<(bool, AbstractMemorySize<GasCarrier>)>;
 
-    fn borrow_global(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<&GlobalValue>;
+    fn borrow_global(&mut self, ap: &AccessPath, ty: StructType) -> VMResult<&GlobalValue>;
 
     fn push_event(&mut self, event: ContractEvent);
 
@@ -55,12 +55,12 @@ impl<T: ChainState> InterpreterContext for T {
     fn move_resource_to(
         &mut self,
         ap: &AccessPath,
-        def: StructDef,
+        ty: StructType,
         resource: Struct,
     ) -> VMResult<()> {
         // a resource can be written to an AccessPath if the data does not exists or
         // it was deleted (MoveFrom)
-        let can_write = match self.borrow_resource(ap, def.clone()) {
+        let can_write = match self.borrow_resource(ap, ty.clone()) {
             Ok(None) => true,
             Ok(Some(_)) => false,
             Err(e) => match e.major_status {
@@ -71,7 +71,7 @@ impl<T: ChainState> InterpreterContext for T {
         if can_write {
             let new_root = GlobalValue::new(Value::struct_(resource))?;
             new_root.mark_dirty()?;
-            self.publish_resource(ap, (def, new_root))
+            self.publish_resource(ap, (ty, new_root))
         } else {
             warn!("[VM] Cannot write over existing resource {}", ap);
             Err(vm_error(
@@ -81,8 +81,8 @@ impl<T: ChainState> InterpreterContext for T {
         }
     }
 
-    fn move_resource_from(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<Value> {
-        let root_value = match ChainState::move_resource_from(self, ap, def) {
+    fn move_resource_from(&mut self, ap: &AccessPath, ty: StructType) -> VMResult<Value> {
+        let root_value = match ChainState::move_resource_from(self, ap, ty) {
             Ok(g) => g,
             Err(e) => {
                 warn!("[VM] (MoveFrom) Error reading data for {}: {:?}", ap, e);
@@ -102,16 +102,16 @@ impl<T: ChainState> InterpreterContext for T {
     fn resource_exists(
         &mut self,
         ap: &AccessPath,
-        def: StructDef,
+        ty: StructType,
     ) -> VMResult<(bool, AbstractMemorySize<GasCarrier>)> {
-        Ok(match self.borrow_resource(ap, def) {
+        Ok(match self.borrow_resource(ap, ty) {
             Ok(Some(gref)) => (true, gref.size()),
             Ok(None) | Err(_) => (false, AbstractMemorySize::new(0)),
         })
     }
 
-    fn borrow_global(&mut self, ap: &AccessPath, def: StructDef) -> VMResult<&GlobalValue> {
-        match self.borrow_resource(ap, def) {
+    fn borrow_global(&mut self, ap: &AccessPath, ty: StructType) -> VMResult<&GlobalValue> {
+        match self.borrow_resource(ap, ty) {
             Ok(Some(g)) => Ok(g),
             Ok(None) => Err(
                 // TODO: wrong status code?

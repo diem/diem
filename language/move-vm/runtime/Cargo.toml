@@ -30,6 +30,8 @@ anyhow = "1.0"
 hex = "0.4.2"
 proptest = "0.9"
 
+move-vm-types = { path = "../types", version = "0.1.0", features = ["fuzzing"] }
+
 compiler = { path = "../../compiler", version = "0.1.0" }
 libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
 move-vm-state = { path = "../state", version = "0.1.0" }
