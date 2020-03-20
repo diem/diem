@@ -24,16 +24,20 @@ const STAGED_TXN_SCRIPTS_DIR: Dir = include_dir!("staged/transaction_scripts");
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum StdlibScript {
     AddValidator,
+    Burn,
+    CancelBurn,
     CreateAccount,
     EmptyScript,
     Mint,
+    ModifyPublishingOption,
     PeerToPeer,
     PeerToPeerWithMetadata,
+    Preburn,
+    RegisterPreburner,
     RegisterValidator,
     RemoveValidator,
     RotateAuthenticationKey,
     RotateConsensusPubkey,
-    ModifyPublishingOption,
     // ...add new scripts here
 }
 
@@ -43,16 +47,20 @@ impl StdlibScript {
     pub fn all() -> Vec<Self> {
         vec![
             Self::AddValidator,
+            Self::Burn,
+            Self::CancelBurn,
             Self::CreateAccount,
             Self::EmptyScript,
             Self::Mint,
+            Self::ModifyPublishingOption,
             Self::PeerToPeer,
             Self::PeerToPeerWithMetadata,
+            Self::Preburn,
+            Self::RegisterPreburner,
             Self::RegisterValidator,
             Self::RemoveValidator,
             Self::RotateAuthenticationKey,
             Self::RotateConsensusPubkey,
-            Self::ModifyPublishingOption,
             // ...add new scripts here
         ]
     }
@@ -150,16 +158,20 @@ impl fmt::Display for StdlibScript {
             "{}",
             match self {
                 Self::AddValidator => "add_validator",
+                Self::Burn => "burn",
+                Self::CancelBurn => "cancel_burn",
                 Self::CreateAccount => "create_account",
                 Self::EmptyScript => "empty_script",
                 Self::Mint => "mint",
+                Self::ModifyPublishingOption => "modify_publishing_option",
                 Self::PeerToPeer => "peer_to_peer",
                 Self::PeerToPeerWithMetadata => "peer_to_peer_with_metadata",
+                Self::Preburn => "preburn",
+                Self::RegisterPreburner => "register_preburner",
                 Self::RegisterValidator => "register_validator",
                 Self::RemoveValidator => "remove_validator",
                 Self::RotateAuthenticationKey => "rotate_authentication_key",
                 Self::RotateConsensusPubkey => "rotate_consensus_pubkey",
-                Self::ModifyPublishingOption => "modify_publishing_option",
             }
         )
     }
@@ -178,7 +190,12 @@ mod test {
         assert_eq!(
             files.len(),
             scripts.len(),
-            "Mismatch between stdlib script files and StdlibScript enum"
+            "Mismatch between stdlib script files and StdlibScript enum. {}",
+            if files.len() > scripts.len() {
+                "Did you forget to extend the StdlibScript enum?"
+            } else {
+                "Did you forget to rebuild the standard library?"
+            }
         );
         for file in files {
             assert!(

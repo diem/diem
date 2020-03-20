@@ -27,11 +27,14 @@ module Libra {
     // resolved by the holder of the MintCapability by either (1) burning the funds, or (2)
     // returning the funds to the account that initiated the burn request.
     // This design supports multiple preburn requests in flight at the same time, including multiple
-    // burn requests from the same account. However, burn requests initiaing from the same account
-    // must be resolved in FIFO order.
+    // burn requests from the same account. However, burn requests from the same account must be
+    // resolved in FIFO order.
     resource struct Preburn<Token> {
         // Queue of pending burn requests
         requests: vector<T<Token>>,
+        // Boolean that is true if the holder of the MintCapability has approved this account as a
+        // preburner
+        is_approved: bool,
     }
 
     public fun register<Token>() {
@@ -73,10 +76,10 @@ module Libra {
         )
     }
 
-    // Create a new Preburn resource.
-    // Fails if the sender does not have a published MintCapability.
-    public fun new_preburn<Token>(): Preburn<Token> acquires MintCapability {
-        new_preburn_with_capability(borrow_global<MintCapability<Token>>(Transaction::sender()))
+    // Create a new Preburn resource
+    public fun new_preburn<Token>(): Preburn<Token> {
+        assert_is_registered<Token>();
+        Preburn<Token> { requests: Vector::empty(), is_approved: false, }
     }
 
     // Mint a new Libra::T worth `value`. The caller must have a reference to a MintCapability.
@@ -100,25 +103,26 @@ module Libra {
         T<Token> { value }
     }
 
-    // Create a new Preburn resource.
-    // Can only be called by the holder of the MintCapability.
-    public fun new_preburn_with_capability<Token>(
-        _capability: &MintCapability<Token>
-    ): Preburn<Token> {
-        assert_is_registered<Token>();
-        Preburn<Token> { requests: Vector::empty() }
-    }
-
-    // Send coin to the preburn holding area, where it will wait to be burned.
-    // Fails if the sender does not have a published Preburn resource
-    public fun preburn<Token>(coin: T<Token>) acquires Info, Preburn {
+    // Send coin to the preburn holding area `preburn_ref`, where it will wait to be burned.
+    public fun preburn<Token>(
+        preburn_ref: &mut Preburn<Token>,
+        coin: T<Token>
+    ) acquires Info {
+        // TODO: bring this back once we can automate approvals in testnet
+        // Transaction::assert(preburn_ref.is_approved, 13);
         let coin_value = value(&coin);
         Vector::push_back(
-            &mut borrow_global_mut<Preburn<Token>>(Transaction::sender()).requests,
+            &mut preburn_ref.requests,
             coin
         );
         let market_cap = borrow_global_mut<Info<Token>>(0xA550C18);
         market_cap.preburn_value = market_cap.preburn_value + coin_value
+    }
+
+    // Send coin to the preburn holding area, where it will wait to be burned.
+    // Fails if the sender does not have a published Preburn resource
+    public fun preburn_to_sender<Token>(coin: T<Token>) acquires Info, Preburn {
+        preburn(borrow_global_mut<Preburn<Token>>(Transaction::sender()), coin)
     }
 
     // Permanently remove the coins held in the `Preburn` resource stored at `preburn_address` and
@@ -161,6 +165,18 @@ module Libra {
     // Publish `preburn` under the sender's account
     public fun publish_preburn<Token>(preburn: Preburn<Token>) {
         move_to_sender(preburn)
+    }
+
+    // Remove and return the `Preburn` resource under the sender's account
+    public fun remove_preburn<Token>(): Preburn<Token> acquires Preburn {
+        move_from<Preburn<Token>>(Transaction::sender())
+    }
+
+    // Destroys the given preburn resource.
+    // Aborts if `requests` is non-empty
+    public fun destroy_preburn<Token>(preburn: Preburn<Token>) {
+        let Preburn { requests, is_approved: _ } = preburn;
+        Vector::destroy_empty(requests)
     }
 
     // Publish `capability` under the sender's account

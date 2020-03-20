@@ -3,7 +3,7 @@
 
 //! Test infrastructure for modeling Libra accounts.
 
-use crate::keygen::KeyGen;
+use crate::{gas_costs, keygen::KeyGen};
 use libra_crypto::ed25519::*;
 use libra_types::{
     access_path::AccessPath,
@@ -312,6 +312,19 @@ impl Account {
         .sign(&self.privkey, self.pubkey.clone())
         .unwrap()
         .into_inner()
+    }
+
+    /// Create a transaction containing `script` signed by `sender` with default values for gas
+    /// cost, gas price, expiration time, and currency type.
+    pub fn signed_script_txn(&self, script: Script, sequence_number: u64) -> SignedTransaction {
+        self.create_signed_txn_impl(
+            *self.address(),
+            TransactionPayload::Script(script),
+            sequence_number,
+            gas_costs::TXN_RESERVED,
+            0, // gas price
+            account_config::lbr_type_tag(),
+        )
     }
 
     pub fn create_raw_txn_impl(
