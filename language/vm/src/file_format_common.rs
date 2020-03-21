@@ -302,13 +302,16 @@ pub fn write_u128(binary: &mut BinaryData, value: u128) -> Result<()> {
 ///
 /// Return an error on an invalid representation.
 pub fn read_uleb128_as_u16(cursor: &mut Cursor<&[u8]>) -> Result<u16> {
-    let mut value: u16 = 0;
+    let mut value: u32 = 0;
     let mut shift: u8 = 0;
     while let Ok(byte) = cursor.read_u8() {
         let val = byte & 0x7f;
-        value |= u16::from(val) << shift;
+        value |= u32::from(val) << shift;
         if val == byte {
-            return Ok(value);
+            if (shift > 0 && val == 0) || value > std::u16::MAX.into() {
+                bail!("invalid ULEB128 representation for u16");
+            }
+            return Ok(value as u16);
         }
         shift += 7;
         if shift > 14 {
@@ -326,13 +329,16 @@ pub fn read_uleb128_as_u16(cursor: &mut Cursor<&[u8]>) -> Result<u16> {
 ///
 /// Return an error on an invalid representation.
 pub fn read_uleb128_as_u32(cursor: &mut Cursor<&[u8]>) -> Result<u32> {
-    let mut value: u32 = 0;
+    let mut value: u64 = 0;
     let mut shift: u8 = 0;
     while let Ok(byte) = cursor.read_u8() {
         let val = byte & 0x7f;
-        value |= u32::from(val) << shift;
+        value |= u64::from(val) << shift;
         if val == byte {
-            return Ok(value);
+            if (shift > 0 && val == 0) || value > std::u32::MAX.into() {
+                bail!("invalid ULEB128 representation for u32");
+            }
+            return Ok(value as u32);
         }
         shift += 7;
         if shift > 28 {
