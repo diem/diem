@@ -254,6 +254,7 @@ impl FakeExecutor {
         self.block_time += 1;
         let new_block = BlockMetadata::new(
             HashValue::zero(),
+            0,
             self.block_time,
             BTreeMap::new(),
             validator_address,

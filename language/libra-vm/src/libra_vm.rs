@@ -435,10 +435,10 @@ impl LibraVM {
         //       time by a reasonable amount.
         let gas_schedule = CostTable::zero();
 
-        if let Ok((id, timestamp, previous_vote, proposer)) = block_metadata.into_inner() {
+        if let Ok((round, timestamp, previous_vote, proposer)) = block_metadata.into_inner() {
             let args = vec![
+                Value::u64(round),
                 Value::u64(timestamp),
-                Value::vector_u8(id),
                 Value::vector_u8(previous_vote),
                 Value::address(proposer),
             ];
