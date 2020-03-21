@@ -17,9 +17,6 @@ bytecode-source-map = { path = "../compiler/bytecode-source-map", version = "0.1
 move-ir-types = { path = "../move-ir/types", version = "0.1.0" }
 stdlib = { path = "../stdlib", version = "0.1.0" }
 
-# transitional dependencies
-bytecode-to-boogie = { path = "bytecode-to-boogie", version = "0.1.0"}
-
 
 # external dependencies
 anyhow = "1.0.*"
