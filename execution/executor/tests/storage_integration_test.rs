@@ -49,7 +49,13 @@ fn gen_ledger_info_with_sigs(
 }
 
 fn gen_block_metadata(index: u8, proposer: AccountAddress) -> BlockMetadata {
-    BlockMetadata::new(gen_block_id(index), index as u64, BTreeMap::new(), proposer)
+    BlockMetadata::new(
+        gen_block_id(index),
+        index as u64,
+        index as u64,
+        BTreeMap::new(),
+        proposer,
+    )
 }
 
 fn get_test_signed_transaction(

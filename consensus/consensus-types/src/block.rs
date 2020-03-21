@@ -317,6 +317,7 @@ impl<T> From<&Block<T>> for BlockMetadata {
     fn from(block: &Block<T>) -> Self {
         Self::new(
             block.id(),
+            block.round(),
             block.timestamp_usecs(),
             block.quorum_cert().ledger_info().signatures().clone(),
             // For nil block, we use 0x0 which is convention for nil address in move.

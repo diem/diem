@@ -10,7 +10,6 @@ import 0x0.LibraTimestamp;
 
 main() {
     assert(LibraBlock.get_current_block_height() == 1, 76);
-    assert(LibraBlock.get_current_proposer() == {{vivian}}, 79);
     assert(LibraTimestamp.now_microseconds() == 100000000, 77);
     return;
 }

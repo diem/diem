@@ -44,7 +44,7 @@ fn create_block(proposer: Author, voters: Vec<&ValidatorSigner>) -> BlockMetadat
     for v in voters {
         votes.insert(v.author(), v.sign_message(HashValue::zero()));
     }
-    BlockMetadata::new(HashValue::zero(), 0, votes, proposer)
+    BlockMetadata::new(HashValue::zero(), 0, 0, votes, proposer)
 }
 
 #[test]

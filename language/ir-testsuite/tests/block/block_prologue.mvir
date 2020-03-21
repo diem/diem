@@ -14,7 +14,6 @@ import 0x0.LibraBlock;
 
 main() {
     assert(LibraBlock.get_current_block_height() == 1, 73);
-    assert(LibraBlock.get_current_proposer() == {{vivian}}, 75);
     assert(LibraTimestamp.now_microseconds() == 1000000, 76);
 
     return;
@@ -34,7 +33,7 @@ import 0x0.LibraBlock;
 import 0x0.LibraTimestamp;
 
 main() {
-    LibraBlock.block_prologue(10, h"aa", h"bb", {{vivian}});
+    LibraBlock.block_prologue(1, 10, h"aa", {{vivian}});
 
     return;
 }

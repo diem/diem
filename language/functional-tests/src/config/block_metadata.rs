@@ -73,6 +73,7 @@ pub fn build_block_metadata(config: &GlobalConfig, entries: &[Entry]) -> Result<
         // TODO: Add parser for hash value and vote maps.
         Ok(BlockMetadata::new(
             HashValue::zero(),
+            0,
             *t,
             BTreeMap::new(),
             addr,

@@ -940,11 +940,18 @@ impl Arbitrary for BlockMetadata {
         (
             any::<HashValue>(),
             any::<u64>(),
+            any::<u64>(),
             signature_strategy,
             any::<AccountAddress>(),
         )
-            .prop_map(|(id, timestamp, signatures, proposer)| {
-                BlockMetadata::new(id, timestamp, signatures.into_iter().collect(), proposer)
+            .prop_map(|(id, round, timestamp, signatures, proposer)| {
+                BlockMetadata::new(
+                    id,
+                    round,
+                    timestamp,
+                    signatures.into_iter().collect(),
+                    proposer,
+                )
             })
             .boxed()
     }
