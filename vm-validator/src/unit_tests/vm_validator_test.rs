@@ -255,8 +255,13 @@ fn test_validate_unknown_script() {
     let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let transaction =
-        transaction_test_helpers::get_test_signed_txn(address, 1, &key, key.public_key(), None);
+    let transaction = transaction_test_helpers::get_test_signed_txn(
+        address,
+        1,
+        &key,
+        key.public_key(),
+        Some(Script::new(vec![], vec![])),
+    );
     let ret = rt
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();

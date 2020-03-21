@@ -1,74 +1,193 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! Rust representation of a Move transaction script that can be executed on the Libra blockchain.
+//! Libra does not allow arbitrary transaction scripts; only scripts whose hashes are present in
+//! the on-chain script whitelist. The genesis whitelist is derived from this file, and the
+//! `Stdlib` script enum will be modified to reflect changes in the on-chain whitelist as time goes
+//! on.
+
 use crate::{compile_script, use_staged, MOVE_EXTENSION, STAGED_EXTENSION, TRANSACTION_SCRIPTS};
+use anyhow::{anyhow, Error, Result};
 use include_dir::{include_dir, Dir};
-use once_cell::sync::Lazy;
-use std::path::PathBuf;
+use libra_crypto::HashValue;
+use libra_types::transaction::SCRIPT_HASH_LENGTH;
+use std::{convert::TryFrom, env, fmt, path::PathBuf};
 
-// Encodes the absolute path for the transaction scripts directory.
-static TXN_SCRIPTS_DIR: Lazy<PathBuf> = Lazy::new(|| {
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push(PathBuf::from(TRANSACTION_SCRIPTS));
-    path
-});
-
-/// We include the compiled transaction scripts as binaries since the docker files do not copy any
-/// source files over. This could then cause issues when the client wishes to use a pre-packaged
-/// transaction script.
+// This includes the compiled transaction scripts as binaries. We must use this hack to work around
+// a problem with Docker, which does not copy over the Move source files that would be be used to
+// produce these binaries at runtime.
+#[allow(dead_code)]
 const STAGED_TXN_SCRIPTS_DIR: Dir = include_dir!("staged/transaction_scripts");
 
-fn compiled_script(script_name: &str) -> Vec<u8> {
-    if use_staged() {
-        from_staged(script_name)
-    } else {
-        from_current_source(script_name)
+/// All of the Move transaction scripts that can be executed on the Libra blockchain
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub enum StdlibScript {
+    AddValidator,
+    CreateAccount,
+    EmptyScript,
+    Mint,
+    PeerToPeer,
+    PeerToPeerWithMetadata,
+    PlaceholderScript,
+    RegisterValidator,
+    RemoveValidator,
+    RotateAuthenticationKey,
+    RotateConsensusPubkey,
+    // ...add new scripts here
+}
+
+impl StdlibScript {
+    // TODO: audit/cleanup. There is some cruft here; e.g., PlaceholderScript and EmptyScript are
+    // the same.
+    /// Return a vector containing all of the standard library scripts (i.e., all inhabitants of the
+    /// StdlibScript enum)
+    pub fn all() -> Vec<Self> {
+        vec![
+            Self::AddValidator,
+            Self::CreateAccount,
+            Self::EmptyScript,
+            Self::Mint,
+            Self::PeerToPeer,
+            Self::PeerToPeerWithMetadata,
+            Self::PlaceholderScript,
+            Self::RegisterValidator,
+            Self::RemoveValidator,
+            Self::RotateAuthenticationKey,
+            Self::RotateConsensusPubkey,
+            // ...add new scripts here
+        ]
+    }
+
+    /// Construct the whitelist of script hashes used to determine whether a transaction script can
+    /// be executed on the Libra blockchain
+    pub fn whitelist() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
+        StdlibScript::all()
+            .iter()
+            .map(|script| *script.compiled_bytes().hash().as_ref())
+            .collect()
+    }
+
+    /// Return a lowercase-underscore style name for this script
+    pub fn name(self) -> String {
+        self.to_string()
+    }
+
+    /// Return true if `code_bytes` is the bytecode of one of the standard library scripts
+    pub fn is(code_bytes: &[u8]) -> bool {
+        Self::try_from(code_bytes).is_ok()
+    }
+
+    /// Return the Move bytecode produced by compiling this script. This will almost always read
+    /// from disk rather invoking the compiler; genesis is the only exception.
+    pub fn compiled_bytes(self) -> CompiledBytes {
+        if use_staged() {
+            // read from disk
+            let mut path = PathBuf::from(self.name());
+            path.set_extension(STAGED_EXTENSION);
+            CompiledBytes(
+                STAGED_TXN_SCRIPTS_DIR
+                    .get_file(path)
+                    .unwrap()
+                    .contents()
+                    .to_vec(),
+            )
+        } else {
+            // compile from .move source file
+            let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            path.push(PathBuf::from(TRANSACTION_SCRIPTS));
+            path.push(PathBuf::from(self.name()));
+            path.set_extension(MOVE_EXTENSION);
+            let final_path = path.into_os_string().into_string().unwrap();
+            CompiledBytes(compile_script(final_path))
+        }
+    }
+
+    /// Return the sha3-256 hash of the compiled script bytes
+    pub fn hash(self) -> HashValue {
+        self.compiled_bytes().hash()
     }
 }
 
-fn from_staged(script_name: &str) -> Vec<u8> {
-    let mut path = PathBuf::from(script_name);
-    path.set_extension(STAGED_EXTENSION);
-    STAGED_TXN_SCRIPTS_DIR
-        .get_file(path)
-        .unwrap()
-        .contents()
-        .to_vec()
+/// Bytes produced by compiling a Move source language script into Move bytecode
+#[derive(Clone)]
+pub struct CompiledBytes(Vec<u8>);
+
+impl CompiledBytes {
+    /// Return the sha3-256 hash of the script bytes
+    pub fn hash(&self) -> HashValue {
+        Self::hash_bytes(&self.0)
+    }
+
+    /// Return the sha3-256 hash of the script bytes
+    fn hash_bytes(bytes: &[u8]) -> HashValue {
+        HashValue::from_sha3_256(bytes)
+    }
+
+    /// Convert this newtype wrapper into a vector of bytes
+    pub fn into_vec(self) -> Vec<u8> {
+        self.0
+    }
 }
 
-// Prepends the directory for the transaction scripts, adds the move file suffix to the given
-// source file locatio, and then compiles this.
-fn from_current_source(script_name: &str) -> Vec<u8> {
-    let mut path = TXN_SCRIPTS_DIR.clone();
-    path.push(PathBuf::from(script_name));
-    path.set_extension(MOVE_EXTENSION);
-    let final_path = path.into_os_string().into_string().unwrap();
-    compile_script(final_path)
+impl TryFrom<&[u8]> for StdlibScript {
+    type Error = Error;
+
+    /// Return `Some(<script_name>)` if  `code_bytes` is the bytecode of one of the standard library
+    /// scripts, None otherwise.
+    fn try_from(code_bytes: &[u8]) -> Result<Self> {
+        let hash = CompiledBytes::hash_bytes(code_bytes);
+        Self::all()
+            .iter()
+            .find(|script| script.hash() == hash)
+            .cloned()
+            .ok_or_else(|| anyhow!("Could not create standard library script from bytes"))
+    }
 }
 
-pub static ADD_VALIDATOR_TXN: Lazy<Vec<u8>> = Lazy::new(|| compiled_script("add_validator"));
+impl fmt::Display for StdlibScript {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::AddValidator => "add_validator",
+                Self::CreateAccount => "create_account",
+                Self::EmptyScript => "empty_script",
+                Self::Mint => "mint",
+                Self::PeerToPeer => "peer_to_peer",
+                Self::PeerToPeerWithMetadata => "peer_to_peer_with_metadata",
+                Self::PlaceholderScript => "placeholder_script",
+                Self::RegisterValidator => "register_validator",
+                Self::RemoveValidator => "remove_validator",
+                Self::RotateAuthenticationKey => "rotate_authentication_key",
+                Self::RotateConsensusPubkey => "rotate_consensus_pubkey",
+            }
+        )
+    }
+}
 
-pub static PEER_TO_PEER_TRANSFER_TXN: Lazy<Vec<u8>> =
-    Lazy::new(|| compiled_script("peer_to_peer_transfer"));
+#[cfg(test)]
+mod test {
+    use super::*;
 
-pub static PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN: Lazy<Vec<u8>> =
-    Lazy::new(|| compiled_script("peer_to_peer_transfer_with_metadata"));
-
-pub static CREATE_ACCOUNT_TXN: Lazy<Vec<u8>> = Lazy::new(|| compiled_script("create_account"));
-
-pub static REGISTER_VALIDATOR_TXN: Lazy<Vec<u8>> =
-    Lazy::new(|| compiled_script("register_validator"));
-
-pub static REMOVE_VALIDATOR_TXN: Lazy<Vec<u8>> = Lazy::new(|| compiled_script("remove_validator"));
-
-pub static ROTATE_CONSENSUS_PUBKEY_TXN: Lazy<Vec<u8>> =
-    Lazy::new(|| compiled_script("rotate_consensus_pubkey"));
-
-pub static ROTATE_AUTHENTICATION_KEY_TXN: Lazy<Vec<u8>> =
-    Lazy::new(|| compiled_script("rotate_authentication_key"));
-
-pub static MINT_TXN: Lazy<Vec<u8>> = Lazy::new(|| compiled_script("mint"));
-
-pub static BLOCK_PROLOGUE_TXN: Lazy<Vec<u8>> = Lazy::new(|| compiled_script("block_prologue"));
-
-pub static EMPTY_TXN: Lazy<Vec<u8>> = Lazy::new(|| compiled_script("empty_script"));
+    #[test]
+    fn test_file_correspondence() {
+        // make sure that every file under transaction_scripts/ is represented in
+        // StdlibScript::all() (and vice versa)
+        let files = STAGED_TXN_SCRIPTS_DIR.files();
+        let scripts = StdlibScript::all();
+        assert_eq!(
+            files.len(),
+            scripts.len(),
+            "Mismatch between stdlib script files and StdlibScript enum"
+        );
+        for file in files {
+            assert!(
+                StdlibScript::is(file.contents()),
+                "File {} missing from StdlibScript enum",
+                file.path().display()
+            )
+        }
+    }
+}

@@ -10,8 +10,10 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
+anyhow = "1.0"
 bytecode-verifier = { path = "../bytecode-verifier", version = "0.1.0" }
 move-lang = { path = "../move-lang" }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }

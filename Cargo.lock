@@ -4976,10 +4976,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "stdlib"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytecode-verifier 0.1.0",
  "datatest-stable 0.1.0",
  "include_dir 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
+ "libra-crypto 0.1.0",
  "libra-types 0.1.0",
  "move-lang 0.0.1",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5973,7 +5975,6 @@ name = "transaction-builder"
 version = "0.1.0"
 dependencies = [
  "libra-config 0.1.0",
- "libra-crypto 0.1.0",
  "libra-types 0.1.0",
  "stdlib 0.1.0",
  "vm 0.1.0",

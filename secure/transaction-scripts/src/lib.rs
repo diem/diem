@@ -24,10 +24,10 @@ fn script(script_name: &str) -> Vec<u8> {
 
 pub static ADD_VALIDATOR_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("add_validator"));
 
-pub static PEER_TO_PEER_TRANSFER_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("peer_to_peer_transfer"));
+pub static PEER_TO_PEER_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("peer_to_peer"));
 
-pub static PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN: Lazy<Vec<u8>> =
-    Lazy::new(|| script("peer_to_peer_transfer_with_metadata"));
+pub static PEER_TO_PEER_WITH_METADATA_TXN: Lazy<Vec<u8>> =
+    Lazy::new(|| script("peer_to_peer_with_metadata"));
 
 pub static CREATE_ACCOUNT_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("create_account"));
 
@@ -43,8 +43,6 @@ pub static ROTATE_AUTHENTICATION_KEY_TXN: Lazy<Vec<u8>> =
 
 pub static MINT_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("mint"));
 
-pub static BLOCK_PROLOGUE_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("block_prologue"));
-
 pub static EMPTY_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("empty_script"));
 
 #[cfg(test)]
@@ -55,15 +53,14 @@ mod test {
     fn verify_txn_scripts() {
         let txn_scripts = &[
             &ADD_VALIDATOR_TXN,
-            &PEER_TO_PEER_TRANSFER_TXN,
-            &PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN,
+            &PEER_TO_PEER_TXN,
+            &PEER_TO_PEER_WITH_METADATA_TXN,
             &CREATE_ACCOUNT_TXN,
             &REGISTER_VALIDATOR_TXN,
             &REMOVE_VALIDATOR_TXN,
             &ROTATE_CONSENSUS_PUBKEY_TXN,
             &ROTATE_AUTHENTICATION_KEY_TXN,
             &MINT_TXN,
-            &BLOCK_PROLOGUE_TXN,
             &EMPTY_TXN,
         ];
 
