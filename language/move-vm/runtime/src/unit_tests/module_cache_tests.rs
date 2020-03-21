@@ -470,15 +470,19 @@ fn test_multi_level_cache_write_back() {
     assert_eq!(func2_ref.code_definition(), vec![Bytecode::Ret].as_slice());
 }
 
-fn parse_and_compile_modules(s: impl AsRef<str>) -> Vec<CompiledModule> {
+fn parse_and_compile_module(s: impl AsRef<str>, deps: Vec<CompiledModule>) -> CompiledModule {
+    let extra_deps = deps
+        .iter()
+        .map(|m| VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(m.clone()))
+        .collect();
     let compiler = Compiler {
         skip_stdlib_deps: true,
+        extra_deps,
         ..Compiler::default()
     };
     compiler
-        .into_compiled_program("file_name", s.as_ref())
-        .expect("Failed to compile program")
-        .modules
+        .into_compiled_module("file_name", s.as_ref())
+        .expect("Failed to compile module")
 }
 
 #[test]
@@ -487,22 +491,15 @@ fn test_same_module_struct_resolution() {
     let vm_cache = VMModuleCache::new(&allocator);
 
     let code = "
-        modules:
         module M1 {
             struct X { b: bool }
             struct T { i: u64, x: Self.X }
         }
-        script:
-        main() {
-            return;
-        }
         ";
 
     let mut data_cache = FakeDataCache::default();
-    let modules = parse_and_compile_modules(code);
-    for module in modules {
-        data_cache.set(module);
-    }
+    let module = parse_and_compile_module(code, vec![]);
+    data_cache.set(module);
     let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
 
     let module_id = ModuleId::new(AccountAddress::default(), ident("M1"));
@@ -531,29 +528,26 @@ fn test_multi_module_struct_resolution() {
     let allocator = Arena::new();
     let vm_cache = VMModuleCache::new(&allocator);
 
-    let code = format!(
+    let code1 = "
+        module M1 {
+            struct X { b: bool }
+        }
+        ";
+    let code2 = format!(
         "
-        modules:
-        module M1 {{
-            struct X {{ b: bool }}
-        }}
         module M2 {{
             import 0x{0}.M1;
             struct T {{ i: u64, x: M1.X }}
-        }}
-        script:
-        main() {{
-            return;
         }}
         ",
         hex::encode(AccountAddress::default())
     );
 
     let mut data_cache = FakeDataCache::default();
-    let modules = parse_and_compile_modules(&code);
-    for module in modules {
-        data_cache.set(module);
-    }
+    let module1 = parse_and_compile_module(&code1, vec![]);
+    data_cache.set(module1.clone());
+    let module2 = parse_and_compile_module(&code2, vec![module1]);
+    data_cache.set(module2);
     let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
 
     // load both modules in the cache
@@ -587,22 +581,15 @@ fn test_field_offset_resolution() {
     let vm_cache = VMModuleCache::new(&allocator);
 
     let code = "
-        modules:
         module M1 {
             struct X { f: u64, g: bool}
             struct T { i: u64, x: Self.X, y: u64 }
         }
-        script:
-        main() {
-            return;
-        }
         ";
 
     let mut data_cache = FakeDataCache::default();
-    let modules = parse_and_compile_modules(code);
-    for module in modules {
-        data_cache.set(module);
-    }
+    let module = parse_and_compile_module(code, vec![]);
+    data_cache.set(module);
     let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
 
     let module_id = ModuleId::new(AccountAddress::default(), ident("M1"));
@@ -633,7 +620,6 @@ fn test_dependency_fails_verification() {
     // it made its way onto the chain somehow (e.g. there was a bug in an older version of the
     // bytecode verifier).
     let code = "
-    modules:
     module Test {
         resource R1 { b: bool }
         struct S1 { r1: Self.R1 }
@@ -646,17 +632,11 @@ fn test_dependency_fails_verification() {
             return move(s);
         }
     }
-
-    script:
-    main() {
-    }
     ";
 
     let mut data_cache = FakeDataCache::default();
-    let modules = parse_and_compile_modules(code);
-    for module in modules {
-        data_cache.set(module);
-    }
+    let module = parse_and_compile_module(code, vec![]);
+    data_cache.set(module);
     let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
 
     let module_id = ModuleId::new(AccountAddress::default(), ident("Test"));
