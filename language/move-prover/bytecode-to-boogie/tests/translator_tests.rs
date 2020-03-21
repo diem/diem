@@ -35,54 +35,10 @@ fn test_struct() {
 }
 
 #[test]
-fn test_access_path() {
-    test(
-        &["--native-stubs"],
-        &[
-            &std_mvir("vector"),
-            &std_mvir("u64_util"),
-            &std_mvir("address_util"),
-            &std_mvir("hash"),
-            &std_mvir("libra_coin"),
-            &std_mvir("libra_time"),
-            &std_mvir("libra_transaction_timeout"),
-            &std_mvir("libra_account"),
-            "test_mvir/test-access-path.mvir",
-        ],
-    );
-}
-
-#[test]
-fn test_lib() {
-    test(
-        // We have not yet created .prover.bpl stubs for native functions in library, so instruct
-        // translator to generate them.
-        &["--native-stubs", "-B=-noVerify"],
-        &[
-            &std_mvir("vector"),
-            &std_mvir("u64_util"),
-            &std_mvir("address_util"),
-            &std_mvir("hash"),
-            &std_mvir("signature"),
-            &std_mvir("gas_schedule"),
-            &std_mvir("validator_config"),
-            &std_mvir("libra_coin"),
-            &std_mvir("libra_time"),
-            &std_mvir("libra_transaction_timeout"),
-            &std_mvir("libra_account"),
-            // TODO(wrwg): this currently fails with boogie compilation errors
-            //   call to undeclared procedure: Vector_contains (etc)
-            // &std_mvir("libra_system"),
-            "test_mvir/test-lib.mvir",
-        ],
-    );
-}
-
-#[test]
 fn test_generics() {
     test(
         NO_VERIFY,
-        &[&std_mvir("vector"), "test_mvir/test-generics.mvir"],
+        &[&verified_std_mvir("vector"), "test_mvir/test-generics.mvir"],
     );
 }
 

@@ -999,14 +999,13 @@ fn test_malformed_script() {
         .mint_coins(&["mintb", "0", "100"], true)
         .unwrap();
 
-    let script_path = workspace_builder::workspace_root().join(
-        "language/compiler/src/ir_stdlib/transaction_scripts/peer_to_peer_transfer_with_metadata.mvir",
-    );
+    let script_path = workspace_builder::workspace_root()
+        .join("testsuite/tests/libratest/dev_modules/test_script.mvir");
     let unwrapped_script_path = script_path.to_str().unwrap();
     let script_params = &["execute", "0", unwrapped_script_path, "script"];
     let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
 
-    // P2P script is expecting three arguments. Passing only one in the test.
+    // the script expects two arguments. Passing only one in the test, which will cause a failure.
     client_proxy
         .execute_script(&["execute", "0", &script_compiled_path[..], "10"])
         .unwrap();
