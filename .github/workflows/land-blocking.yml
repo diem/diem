@@ -81,16 +81,11 @@ jobs:
           cat report.json
           echo "report.json end"
       - name: Post test results on PR
-        if: always()
+        if: steps.check_ks.outputs.should_run == 'true'
         uses: actions/github-script@0.4.0
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
-            // Check kill switch
-            if (${{secrets.KILL_SWITCH_LAND_BLOCKING_TEST}} || ${{steps.check_ks.outputs.should_run}} == 'false') {
-              console.log('Kill switch is set. Will skip this step.');
-              return;
-            }
             // Find the number of the pull request that trigggers this push
             let pr_num = 0;
             let commit_message = context.payload.head_commit.message;
@@ -227,16 +222,11 @@ jobs:
           cat report-k8s.json
           echo "report-k8s.json end"
       - name: Verify TPS Nubmers
-        if: always()
+        if: steps.check_ks.outputs.should_run == 'true'
         uses: actions/github-script@0.4.0
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
-            // Check kill switch
-            if (${{secrets.KILL_SWITCH_LAND_BLOCKING_TEST}} || ${{steps.check_ks.outputs.should_run}} == 'false') {
-              console.log('Kill switch is set. Will skip this step.');
-              return;
-            }
             // Read and check cluster test results
             let should_fail = false;
             let msg = "";
