@@ -1534,7 +1534,7 @@ ensures old(b#Boolean(Boolean(!(b#Boolean(ExistsResource(__m, LibraAccount_T_typ
     // declare local variables
     var __t2: Value; // AddressType()
     var __t3: Value; // LibraCoin_T_type_value()
-    var __t4: Value; // ByteArrayType()
+    var __t4: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -2414,7 +2414,7 @@ ensures b#Boolean(Boolean(b#Boolean(Boolean(!(b#Boolean(Boolean(!(b#Boolean(old(
     var __t12: Reference; // ReferenceType(LibraAccount_WithdrawalCapability_type_value())
     var __t13: Value; // IntegerType()
     var __t14: Value; // LibraCoin_T_type_value()
-    var __t15: Value; // ByteArrayType()
+    var __t15: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;
@@ -2657,7 +2657,7 @@ ensures old(b#Boolean(SelectField(Dereference(__m, GetResourceReference(LibraAcc
     var __t6: Value; // IntegerType()
     var __t7: Value; // AddressType()
     var __t8: Value; // IntegerType()
-    var __t9: Value; // ByteArrayType()
+    var __t9: Value; // Vector_T_type_value(IntegerType())
     var __tmp: Value;
     var __frame: int;
     var __saved_m: Memory;

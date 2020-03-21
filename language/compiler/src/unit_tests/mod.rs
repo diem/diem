@@ -11,4 +11,3 @@ mod expression_tests;
 mod function_tests;
 mod import_tests;
 mod serializer_tests;
-mod stdlib_scripts;

@@ -1,4 +1,0 @@
-module Hash {
-    native public sha2_256(data: vector<u8>): vector<u8>;
-    native public sha3_256(data: vector<u8>): vector<u8>;
-}
