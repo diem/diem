@@ -26,8 +26,7 @@ use libra_types::{
 };
 use libra_vm::{LibraVM, VMExecutor, VMVerifier};
 use std::collections::BTreeMap;
-use stdlib::{stdlib_modules, StdLibOptions};
-use transaction_builder::allowing_script_hashes;
+use stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use vm::CompiledModule;
 use vm_genesis::GENESIS_KEYPAIR;
 
@@ -60,7 +59,7 @@ impl FakeExecutor {
         Self::custom_genesis(
             Some(stdlib_modules(StdLibOptions::Staged).to_vec()),
             None,
-            VMPublishingOption::Locked(allowing_script_hashes()),
+            VMPublishingOption::Locked(StdlibScript::whitelist()),
         )
     }
 

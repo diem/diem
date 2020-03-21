@@ -10,7 +10,6 @@ edition = "2018"
 
 [dependencies]
 libra-config = { path = "../../config", version = "0.1.0" }
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 stdlib = { path = "../stdlib", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 vm = { path = "../vm", version = "0.1.0" }

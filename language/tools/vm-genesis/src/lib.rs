@@ -41,8 +41,7 @@ use once_cell::sync::Lazy;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
 use std::str::FromStr;
-use stdlib::{stdlib_modules, StdLibOptions};
-use transaction_builder::allowing_script_hashes;
+use stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use vm::{
     access::ModuleAccess,
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
@@ -140,7 +139,7 @@ pub fn encode_genesis_transaction_with_validator(
         discovery_set,
         stdlib_modules(StdLibOptions::Staged), // Must use staged stdlib
         vm_publishing_option
-            .unwrap_or_else(|| VMPublishingOption::Locked(allowing_script_hashes())),
+            .unwrap_or_else(|| VMPublishingOption::Locked(StdlibScript::whitelist())),
     )
 }
 
