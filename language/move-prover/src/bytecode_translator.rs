@@ -31,10 +31,10 @@ use crate::{
     code_writer::CodeWriter,
     spec_translator::SpecTranslator,
 };
-use bytecode_to_boogie::{
+use num::Zero;
+use stackless_bytecode_generator::{
     lifetime_analysis::LifetimeAnalysis, stackless_control_flow_graph::StacklessControlFlowGraph,
 };
-use num::Zero;
 use vm::file_format::CodeOffset;
 
 pub struct BoogieTranslator<'env> {

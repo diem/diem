@@ -4,8 +4,8 @@
 //! Adapted from control_flow_graph for Bytecode, this module defines the control-flow graph on
 //! Stackless Bytecode used in analysis as part of Move prover.
 
+use crate::stackless_bytecode::StacklessBytecode;
 use bytecode_verifier::control_flow_graph::{BlockId, ControlFlowGraph};
-use stackless_bytecode_generator::stackless_bytecode::StacklessBytecode;
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 

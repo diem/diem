@@ -1,17 +1,19 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use std::collections::{BTreeMap, BTreeSet};
+
+use bytecode_verifier::absint::{AbstractDomain, JoinResult};
+use vm::file_format::{CodeOffset, SignatureToken};
+
 use crate::{
     dataflow_analysis::{DataflowAnalysis, StateMap, TransferFunctions},
+    stackless_bytecode::{
+        StacklessBytecode::{self, *},
+        TempIndex,
+    },
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
-use bytecode_verifier::absint::{AbstractDomain, JoinResult};
-use stackless_bytecode_generator::stackless_bytecode::{
-    StacklessBytecode::{self, *},
-    TempIndex,
-};
-use std::collections::{BTreeMap, BTreeSet};
-use vm::file_format::{CodeOffset, SignatureToken};
 
 /// Represents a node in the borrow graph.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]

@@ -121,7 +121,6 @@ jobs:
             [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p cluster-test
             [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p libra-fuzzer
             [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p language_benchmarks
-            [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p bytecode-to-boogie
             [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p cost-synthesis
             [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p test-generation
       - run:
