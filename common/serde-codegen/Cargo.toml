@@ -1,0 +1,19 @@
+[package]
+name = "serde-codegen"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Serde Codegen"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.8"
+structopt = "0.3.12"
+
+serde-reflection = { path = "../serde-reflection", version = "0.1.0" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
