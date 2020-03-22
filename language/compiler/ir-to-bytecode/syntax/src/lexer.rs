@@ -80,7 +80,6 @@ pub enum Tok {
     Loop,
     Main,
     Module,
-    Modules,
     Move,
     MoveFrom,
     MoveToSender,
@@ -93,7 +92,6 @@ pub enum Tok {
     SpecReturn,
     /// Return statement in the Move language
     Return,
-    Script,
     Struct,
     SucceedsIf,
     Synthetic,
@@ -260,11 +258,6 @@ impl<'input> Lexer<'input> {
                             "assert" => (Tok::Assert, len + 1),
                             "copy" => (Tok::Copy, len + 1),
                             "move" => (Tok::Move, len + 1),
-                            _ => (get_name_token(name), len),
-                        },
-                        Some(':') => match name {
-                            "modules" => (Tok::Modules, len + 1),
-                            "script" => (Tok::Script, len + 1),
                             _ => (get_name_token(name), len),
                         },
                         _ => (get_name_token(name), len),

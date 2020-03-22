@@ -90,14 +90,6 @@ pub fn parse_script_or_module(file_name: &str, s: &str) -> Result<ast::ScriptOrM
         .or_else(|e| handle_error(e, s))
 }
 
-/// Given the raw input of a file, creates a `Program` struct
-/// Fails with `Err(_)` if the text cannot be parsed
-pub fn parse_program(file_name: &str, program_str: &str) -> Result<ast::Program> {
-    let stripped_string = &strip_comments_and_verify(program_str)?;
-    syntax::parse_program_string(file_name, stripped_string)
-        .or_else(|e| handle_error(e, stripped_string))
-}
-
 /// Given the raw input of a file, creates a `Script` struct
 /// Fails with `Err(_)` if the text cannot be parsed
 pub fn parse_script(file_name: &str, script_str: &str) -> Result<ast::Script> {

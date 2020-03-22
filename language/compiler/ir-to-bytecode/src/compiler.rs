@@ -7,7 +7,7 @@ use crate::{
 };
 
 use anyhow::{bail, format_err, Result};
-use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
+use bytecode_source_map::source_map::ModuleSourceMap;
 use libra_types::account_address::AccountAddress;
 use move_ir_types::{
     ast::{self, Bytecode as IRBytecode, Bytecode_ as IRBytecode_, *},
@@ -25,10 +25,10 @@ use std::{
 use vm::{
     access::ModuleAccess,
     file_format::{
-        self, Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledModuleMut, CompiledProgram,
-        CompiledScript, CompiledScriptMut, FieldDefinition, FieldDefinitionIndex,
-        FunctionDefinition, FunctionSignature, Kind, LocalsSignature, MemberCount, SignatureToken,
-        StructDefinition, StructFieldInformation, StructHandleIndex, TableIndex,
+        self, Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledModuleMut, CompiledScript,
+        CompiledScriptMut, FieldDefinition, FieldDefinitionIndex, FunctionDefinition,
+        FunctionSignature, Kind, LocalsSignature, MemberCount, SignatureToken, StructDefinition,
+        StructFieldInformation, StructHandleIndex, TableIndex,
     },
 };
 
@@ -314,34 +314,6 @@ impl FunctionFrame {
             None => bail!("Impossible: failed to get loop breaks (no loops in stack)"),
         }
     }
-}
-
-/// Compile a transaction program.
-pub fn compile_program<'a, T: 'a + ModuleAccess>(
-    address: AccountAddress,
-    program: Program,
-    deps: impl IntoIterator<Item = &'a T>,
-) -> Result<(CompiledProgram, SourceMap<Loc>)> {
-    let deps = deps
-        .into_iter()
-        .map(|dep| dep.as_module())
-        .collect::<Vec<_>>();
-    // This is separate to avoid unnecessary code gen due to monomorphization.
-    let mut modules = vec![];
-    let mut source_maps = vec![];
-    for m in program.modules {
-        let (module, source_map) = {
-            let deps = deps.iter().copied().chain(&modules);
-            compile_module(address, m, deps)?
-        };
-        modules.push(module);
-        source_maps.push(source_map);
-    }
-
-    let deps = deps.into_iter().chain(modules.iter());
-    let (script, source_map) = compile_script(address, program.script, deps)?;
-    source_maps.push(source_map);
-    Ok((CompiledProgram { modules, script }, source_maps))
 }
 
 /// Compile a transaction script.
