@@ -1,43 +1,24 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+/// How to record the format of interesting Libra types.
+/// See API documentation with `cargo doc -p libra-serde-reflection --open`
 use libra_types::{contract_event, transaction};
 use proptest::{
     prelude::*,
     test_runner::{Config, FileFailurePersistence, TestRunner},
 };
 use serde_reflection::Tracer;
-use serde_yaml;
 use std::sync::{Arc, Mutex};
-use structopt::StructOpt;
 
-#[derive(Debug, StructOpt)]
-#[structopt(
-    name = "Libra format generator",
-    about = "Trace serde (de)serialization to generate format descriptions for Libra types"
-)]
-struct Options {
-    #[structopt(short, long)]
-    with_deserialize: bool,
-}
+/// Default output file.
+pub static FILE_PATH: &str = "tests/staged/libra.yaml";
 
-fn main() {
-    let options = Options::from_args();
-
-    let mut tracer = Tracer::new(lcs::is_human_readable());
-    tracer = add_proptest_serialization_tracing(tracer);
-    if options.with_deserialize {
-        tracer = add_deserialization_tracing(tracer);
-    }
-
-    let registry = tracer.registry().unwrap();
-    let output = serde_yaml::to_string(&registry).unwrap();
-    println!("{}", output);
-}
-
-// Below constitutes the tool's knowledge of the interesting Libra types to analyze.
-
-fn add_proptest_serialization_tracing(tracer: Tracer) -> Tracer {
+/// Which Libra values to record with the serialization tracing API.
+///
+/// This step is useful to inject well-formed values that must pass
+/// custom-validation checks (e.g. keys).
+pub fn add_proptest_serialization_tracing(tracer: Tracer) -> Tracer {
     let mut runner = TestRunner::new(Config {
         failure_persistence: Some(Box::new(FileFailurePersistence::Off)),
         ..Config::default()
@@ -64,7 +45,11 @@ fn add_proptest_serialization_tracing(tracer: Tracer) -> Tracer {
     Arc::try_unwrap(tracer).unwrap().into_inner().unwrap()
 }
 
-fn add_deserialization_tracing(mut tracer: Tracer) -> Tracer {
+/// Which Libra types to record with the deserialization tracing API.
+///
+/// This step is useful to guarantee coverage of the analysis but it may
+/// fail if the previous step missed some custom types.
+pub fn add_deserialization_tracing(mut tracer: Tracer) -> Tracer {
     tracer.trace_type::<transaction::Transaction>().unwrap();
     tracer
         .trace_type::<contract_event::ContractEvent>()

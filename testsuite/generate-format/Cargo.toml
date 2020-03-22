@@ -17,3 +17,8 @@ structopt = "0.3.12"
 libra_types = { path = "../../types", version = "0.1.0", package = "libra-types", features=["fuzzing"] }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 serde_reflection = { path = "../../common/serde-reflection", version = "0.1.0", package = "libra-serde-reflection" }
+
+[[bin]]
+name = "compute"
+path = "src/compute.rs"
+test = false
