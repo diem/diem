@@ -21,6 +21,7 @@ members = [
     "common/proptest-helpers",
     "common/prost-ext",
     "common/security-logger",
+    "common/serde-codegen",
     "common/serde-reflection",
     "common/temppath",
     "common/util",
