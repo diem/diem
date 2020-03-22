@@ -1,0 +1,186 @@
+---
+AccessPath:
+  STRUCT:
+    - address:
+        TYPENAME: AccountAddress
+    - path:
+        SEQ: U8
+AccountAddress:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+BlockMetadata:
+  STRUCT:
+    - id:
+        TYPENAME: HashValue
+    - round: U64
+    - timestamp_usecs: U64
+    - previous_block_votes:
+        SEQ:
+          TYPENAME: AccountAddress
+    - proposer:
+        TYPENAME: AccountAddress
+ChangeSet:
+  STRUCT:
+    - write_set:
+        TYPENAME: WriteSet
+    - events:
+        SEQ:
+          TYPENAME: ContractEvent
+ContractEvent:
+  STRUCT:
+    - key:
+        TYPENAME: EventKey
+    - sequence_number: U64
+    - type_tag:
+        TYPENAME: TypeTag
+    - event_data:
+        SEQ: U8
+Ed25519PublicKey:
+  NEWTYPESTRUCT:
+    SEQ: U8
+Ed25519Signature:
+  NEWTYPESTRUCT:
+    SEQ: U8
+EventKey:
+  NEWTYPESTRUCT:
+    SEQ: U8
+HashValue:
+  NEWTYPESTRUCT:
+    SEQ: U8
+Identifier:
+  NEWTYPESTRUCT: STR
+Module:
+  STRUCT:
+    - code:
+        SEQ: U8
+RawTransaction:
+  STRUCT:
+    - sender:
+        TYPENAME: AccountAddress
+    - sequence_number: U64
+    - payload:
+        TYPENAME: TransactionPayload
+    - max_gas_amount: U64
+    - gas_unit_price: U64
+    - gas_specifier:
+        TYPENAME: TypeTag
+    - expiration_time: U64
+Script:
+  STRUCT:
+    - code:
+        SEQ: U8
+    - args:
+        SEQ:
+          TYPENAME: TransactionArgument
+SignedTransaction:
+  STRUCT:
+    - raw_txn:
+        TYPENAME: RawTransaction
+    - authenticator:
+        TYPENAME: TransactionAuthenticator
+StructTag:
+  STRUCT:
+    - address:
+        TYPENAME: AccountAddress
+    - module:
+        TYPENAME: Identifier
+    - name:
+        TYPENAME: Identifier
+    - type_params:
+        SEQ:
+          TYPENAME: TypeTag
+Transaction:
+  ENUM:
+    0:
+      UserTransaction:
+        NEWTYPE:
+          TYPENAME: SignedTransaction
+    1:
+      WriteSet:
+        NEWTYPE:
+          TYPENAME: ChangeSet
+    2:
+      BlockMetadata:
+        NEWTYPE:
+          TYPENAME: BlockMetadata
+TransactionArgument:
+  ENUM:
+    0:
+      U64:
+        NEWTYPE: U64
+    1:
+      Address:
+        NEWTYPE:
+          TYPENAME: AccountAddress
+    2:
+      U8Vector:
+        NEWTYPE:
+          SEQ: U8
+    3:
+      Bool:
+        NEWTYPE: BOOL
+TransactionAuthenticator:
+  ENUM:
+    0:
+      Ed25519:
+        STRUCT:
+          - public_key:
+              TYPENAME: Ed25519PublicKey
+          - signature:
+              TYPENAME: Ed25519Signature
+TransactionPayload:
+  ENUM:
+    0:
+      Program: UNIT
+    1:
+      WriteSet:
+        NEWTYPE:
+          TYPENAME: ChangeSet
+    2:
+      Script:
+        NEWTYPE:
+          TYPENAME: Script
+    3:
+      Module:
+        NEWTYPE:
+          TYPENAME: Module
+TypeTag:
+  ENUM:
+    0:
+      Bool: UNIT
+    1:
+      U8: UNIT
+    2:
+      U64: UNIT
+    3:
+      U128: UNIT
+    4:
+      Address: UNIT
+    5:
+      Vector:
+        NEWTYPE:
+          TYPENAME: TypeTag
+    6:
+      Struct:
+        NEWTYPE:
+          TYPENAME: StructTag
+WriteOp:
+  ENUM:
+    0:
+      Deletion: UNIT
+    1:
+      Value:
+        NEWTYPE:
+          SEQ: U8
+WriteSet:
+  NEWTYPESTRUCT:
+    TYPENAME: WriteSetMut
+WriteSetMut:
+  STRUCT:
+    - write_set:
+        SEQ:
+          TUPLE:
+            - TYPENAME: AccessPath
+            - TYPENAME: WriteOp
