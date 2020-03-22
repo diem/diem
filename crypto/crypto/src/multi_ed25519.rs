@@ -15,17 +15,13 @@ use crate::{
     HashValue,
 };
 use anyhow::{anyhow, Result};
-use bit_vec::BitVec;
 use core::convert::TryFrom;
 use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
-use once_cell::sync::Lazy;
 use rand::Rng;
-use std::fmt;
+use std::{convert::TryInto, fmt};
 
 const MAX_NUM_OF_KEYS: usize = 32;
-const BITVEC_NUM_OF_BYTES: usize = MAX_NUM_OF_KEYS / 8;
-static BITVEC_FIRST_KEY_SET: Lazy<BitVec> =
-    Lazy::new(|| BitVec::from_bytes(&[0b1000_0000, 0b0000_0000, 0b0000_0000, 0b0000_0000]));
+const BITMAP_NUM_OF_BYTES: usize = 4;
 
 /// Vector of private keys in the multi-key Ed25519 structure along with the threshold.
 #[derive(DeserializeKey, Eq, PartialEq, SilentDisplay, SilentDebug, SerializeKey)]
@@ -44,12 +40,15 @@ pub struct MultiEd25519PublicKey {
     threshold: u8,
 }
 
-/// Vector of the multi-key signatures along with their index required to map signatures with
-/// their corresponding public keys.
+/// Vector of the multi-key signatures along with a 32bit [u8; 4] bitmap required to map signatures
+/// with their corresponding public keys.
+///
+/// Note that bits are read from left to right. For instance, in the following bitmap
+/// [0b0001_0000, 0b0000_0000, 0b0000_0000, 0b0000_0001], the 3rd and 31st positions are set.
 #[derive(Clone, DeserializeKey, Eq, PartialEq, SerializeKey)]
 pub struct MultiEd25519Signature {
     signatures: Vec<Ed25519Signature>,
-    bit_vector: BitVec,
+    bitmap: [u8; BITMAP_NUM_OF_BYTES],
 }
 
 impl MultiEd25519PrivateKey {
@@ -141,22 +140,18 @@ impl SigningKey for MultiEd25519PrivateKey {
     // Sign a message with the minimum amount of keys to meet threshold (starting from left-most keys).
     fn sign_message(&self, message: &HashValue) -> MultiEd25519Signature {
         let mut signatures: Vec<Ed25519Signature> = Vec::with_capacity(self.threshold as usize);
-        let mut bit_vector = BitVec::from_elem(MAX_NUM_OF_KEYS, false);
-
+        let mut bitmap = [0u8; BITMAP_NUM_OF_BYTES];
         signatures.extend(
             self.private_keys
                 .iter()
                 .take(self.threshold as usize)
                 .enumerate()
                 .map(|(i, item)| {
-                    bit_vector.set(i, true);
+                    bitmap_set_bit(&mut bitmap, i);
                     item.sign_message(message)
                 }),
         );
-        MultiEd25519Signature {
-            signatures,
-            bit_vector,
-        }
+        MultiEd25519Signature { signatures, bitmap }
     }
 }
 
@@ -168,7 +163,7 @@ impl Uniform for MultiEd25519PrivateKey {
     {
         let num_of_keys = rng.gen_range(1, MAX_NUM_OF_KEYS + 1);
         let mut private_keys: Vec<Ed25519PrivateKey> = Vec::with_capacity(num_of_keys);
-        for _ in 1..=num_of_keys {
+        for _ in 0..num_of_keys {
             private_keys.push(
                 Ed25519PrivateKey::try_from(
                     &ed25519_dalek::SecretKey::generate(rng).to_bytes()[..],
@@ -336,21 +331,20 @@ impl MultiEd25519Signature {
         let mut sorted_signatures = signatures;
         sorted_signatures.sort_by(|a, b| a.1.cmp(&b.1));
 
-        let mut bitvec = BitVec::from_elem(MAX_NUM_OF_KEYS, false);
+        let mut bitmap = [0u8; BITMAP_NUM_OF_BYTES];
 
         // Check if all indexes are unique and < MAX_NUM_OF_KEYS
         let (sigs, indexes): (Vec<_>, Vec<_>) = sorted_signatures.iter().cloned().unzip();
-        for index in indexes {
-            let i = index as usize;
+        for i in indexes {
             // If an index is out of range.
-            if i < MAX_NUM_OF_KEYS {
+            if i < MAX_NUM_OF_KEYS as u8 {
                 // if an index has been set already (thus, there is a duplicate).
-                if bitvec[i] {
+                if bitmap_get_bit(bitmap, i as usize) {
                     return Err(CryptoMaterialError::BitVecError(
                         "Duplicate signature index".to_string(),
                     ));
                 } else {
-                    bitvec.set(i, true);
+                    bitmap_set_bit(&mut bitmap, i as usize);
                 }
             } else {
                 return Err(CryptoMaterialError::BitVecError(
@@ -360,28 +354,28 @@ impl MultiEd25519Signature {
         }
         Ok(MultiEd25519Signature {
             signatures: sigs,
-            bit_vector: bitvec,
+            bitmap,
         })
     }
 
-    /// Getter signatures
+    /// Getter signatures.
     pub fn signatures(&self) -> &Vec<Ed25519Signature> {
         &self.signatures
     }
 
-    /// Getter bit_vector
-    pub fn bit_vector(&self) -> &BitVec {
-        &self.bit_vector
+    /// Getter bitmap.
+    pub fn bitmap(&self) -> &[u8; BITMAP_NUM_OF_BYTES] {
+        &self.bitmap
     }
 
-    /// Serialize a MultiEd25519Signature in the form of sig0||sig1||..sigN||bitvec.
+    /// Serialize a MultiEd25519Signature in the form of sig0||sig1||..sigN||bitmap.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes: Vec<u8> = self
             .signatures
             .iter()
             .flat_map(|sig| sig.to_bytes().to_vec())
             .collect();
-        bytes.extend(self.bit_vector.to_bytes());
+        bytes.extend(&self.bitmap[..]);
         bytes
     }
 }
@@ -394,21 +388,21 @@ impl TryFrom<&[u8]> for MultiEd25519Signature {
     type Error = CryptoMaterialError;
 
     /// Deserialize a MultiEd25519Signature. This method will also check for malleable signatures
-    /// and bit_vector validity.
+    /// and bitmap validity.
     fn try_from(bytes: &[u8]) -> std::result::Result<MultiEd25519Signature, CryptoMaterialError> {
         let length = bytes.len();
-        let bitvec_num_of_bytes = length % ED25519_SIGNATURE_LENGTH;
+        let bitmap_num_of_bytes = length % ED25519_SIGNATURE_LENGTH;
         let num_of_sigs = length / ED25519_SIGNATURE_LENGTH;
 
         if num_of_sigs == 0
             || num_of_sigs > MAX_NUM_OF_KEYS
-            || bitvec_num_of_bytes != BITVEC_NUM_OF_BYTES
+            || bitmap_num_of_bytes != BITMAP_NUM_OF_BYTES
         {
             return Err(CryptoMaterialError::WrongLengthError);
         }
 
-        let bit_vector = BitVec::from_bytes(&bytes[length - BITVEC_NUM_OF_BYTES..]);
-        if count_set_bits(&bit_vector) != num_of_sigs {
+        let bitmap = bytes[length - BITMAP_NUM_OF_BYTES..].try_into().unwrap();
+        if bitmap_count_ones(bitmap) != num_of_sigs as u32 {
             return Err(CryptoMaterialError::DeserializationError);
         }
 
@@ -416,16 +410,13 @@ impl TryFrom<&[u8]> for MultiEd25519Signature {
             .chunks_exact(ED25519_SIGNATURE_LENGTH)
             .map(Ed25519Signature::try_from)
             .collect();
-        signatures.map(|signatures| MultiEd25519Signature {
-            signatures,
-            bit_vector,
-        })
+        signatures.map(|signatures| MultiEd25519Signature { signatures, bitmap })
     }
 }
 
 impl Length for MultiEd25519Signature {
     fn length(&self) -> usize {
-        self.signatures.len() * ED25519_SIGNATURE_LENGTH + BITVEC_NUM_OF_BYTES
+        self.signatures.len() * ED25519_SIGNATURE_LENGTH + BITMAP_NUM_OF_BYTES
     }
 }
 
@@ -472,13 +463,14 @@ impl Signature for MultiEd25519Signature {
         message: &[u8],
         public_key: &MultiEd25519PublicKey,
     ) -> Result<()> {
-        if last_bit_set(&self.bit_vector) > public_key.length() {
+        let last_bit = bitmap_last_set_bit(self.bitmap);
+        if last_bit == None || last_bit.unwrap() as usize > public_key.length() {
             return Err(anyhow!(
                 "{}",
                 CryptoMaterialError::BitVecError("Signature index is out of range".to_string())
             ));
         }
-        if count_set_bits(&self.bit_vector) < public_key.threshold as usize {
+        if bitmap_count_ones(self.bitmap) < public_key.threshold as u32 {
             return Err(anyhow!(
                 "{}",
                 CryptoMaterialError::BitVecError(
@@ -486,14 +478,14 @@ impl Signature for MultiEd25519Signature {
                 )
             ));
         }
-        let mut bitvec_index = 0;
+        let mut bitmap_index = 0;
         // TODO use deterministic batch verification when gets available.
         for sig in &self.signatures {
-            while !self.bit_vector[bitvec_index] {
-                bitvec_index += 1;
+            while !bitmap_get_bit(self.bitmap, bitmap_index) {
+                bitmap_index += 1;
             }
-            sig.verify_arbitrary_msg(message, &public_key.public_keys[bitvec_index])?;
-            bitvec_index += 1;
+            sig.verify_arbitrary_msg(message, &public_key.public_keys[bitmap_index as usize])?;
+            bitmap_index += 1;
         }
         Ok(())
     }
@@ -507,7 +499,8 @@ impl From<&Ed25519Signature> for MultiEd25519Signature {
     fn from(ed_signature: &Ed25519Signature) -> Self {
         MultiEd25519Signature {
             signatures: vec![ed_signature.clone()],
-            bit_vector: BITVEC_FIRST_KEY_SET.clone(),
+            // "1000_0000 0000_0000 0000_0000 0000_0000"
+            bitmap: [0b1000_0000u8, 0u8, 0u8, 0u8],
         }
     }
 }
@@ -521,21 +514,6 @@ fn to_bytes<T: ValidKey>(keys: &[T], threshold: u8) -> Vec<u8> {
     let mut bytes: Vec<u8> = keys.iter().flat_map(ValidKey::to_bytes).collect();
     bytes.push(threshold);
     bytes
-}
-
-// Helper method to count bitvec's set bits in MultiEd25519 signatures.
-fn count_set_bits(bitvec: &BitVec) -> usize {
-    bitvec.iter().filter(|bit| *bit).count()
-}
-
-fn last_bit_set(bitvec: &BitVec) -> usize {
-    let mut last_bit: usize = 0; // This is fine as we expect at least one set bit.
-    for (i, bit) in bitvec.iter().enumerate() {
-        if bit {
-            last_bit = i;
-        }
-    }
-    last_bit
 }
 
 // Helper method to get threshold from a serialized MultiEd25519 key payload.
@@ -558,4 +536,54 @@ fn check_and_get_threshold(
     } else {
         Ok(threshold_byte)
     }
+}
+
+fn bitmap_set_bit(input: &mut [u8; BITMAP_NUM_OF_BYTES], index: usize) {
+    let bucket = index / 8;
+    // It's always invoked with index < 32, thus there is no need to check range.
+    let bucket_pos = index - (bucket * 8);
+    input[bucket] |= 128 >> bucket_pos as u8;
+}
+
+// Helper method to get the input's bit at index.
+fn bitmap_get_bit(input: [u8; BITMAP_NUM_OF_BYTES], index: usize) -> bool {
+    let bucket = index / 8;
+    // It's always invoked with index < 32, thus there is no need to check range.
+    let bucket_pos = index - (bucket * 8);
+    (input[bucket] & (128 >> bucket_pos as u8)) != 0
+}
+
+// Returns the number of set bits.
+fn bitmap_count_ones(input: [u8; BITMAP_NUM_OF_BYTES]) -> u32 {
+    input.iter().map(|a| a.count_ones()).sum()
+}
+
+// Find the last set bit.
+fn bitmap_last_set_bit(input: [u8; BITMAP_NUM_OF_BYTES]) -> Option<u8> {
+    input
+        .iter()
+        .rev()
+        .enumerate()
+        .find(|(_, byte)| byte != &&0u8)
+        .map(|(i, byte)| (8 * (BITMAP_NUM_OF_BYTES - i) - byte.trailing_zeros() as usize - 1) as u8)
+}
+
+#[test]
+fn bitmap_tests() {
+    let mut bitmap = [0b0100_0000u8, 0b1111_1111u8, 0u8, 0b1000_0000u8];
+    assert!(!bitmap_get_bit(bitmap, 0));
+    assert!(bitmap_get_bit(bitmap, 1));
+    for i in 8..16 {
+        assert!(bitmap_get_bit(bitmap, i));
+    }
+    for i in 16..24 {
+        assert!(!bitmap_get_bit(bitmap, i));
+    }
+    assert!(bitmap_get_bit(bitmap, 24));
+    assert!(!bitmap_get_bit(bitmap, 31));
+    assert_eq!(bitmap_last_set_bit(bitmap), Some(24));
+
+    bitmap_set_bit(&mut bitmap, 30);
+    assert!(bitmap_get_bit(bitmap, 30));
+    assert_eq!(bitmap_last_set_bit(bitmap), Some(30));
 }
