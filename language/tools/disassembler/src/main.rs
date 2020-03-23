@@ -6,7 +6,7 @@
 use bytecode_source_map::{
     mapping::SourceMapping,
     source_map::SourceMap,
-    utils::{module_source_map_from_file, remap_owned_loc_to_loc, OwnedLoc},
+    utils::{remap_owned_loc_to_loc, source_map_from_file, OwnedLoc},
 };
 use disassembler::disassembler::{Disassembler, DisassemblerOptions};
 use move_ir_types::location::Spanned;
@@ -70,7 +70,7 @@ fn main() {
 
     let source_path = Path::new(&args.bytecode_file_path).with_extension(move_extension);
     let source = fs::read_to_string(&source_path).ok();
-    let source_map = module_source_map_from_file::<OwnedLoc>(
+    let source_map = source_map_from_file::<OwnedLoc>(
         &Path::new(&args.bytecode_file_path).with_extension(source_map_extension),
     )
     .map(remap_owned_loc_to_loc);

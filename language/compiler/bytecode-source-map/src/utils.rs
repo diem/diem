@@ -19,7 +19,7 @@ use std::{collections::HashMap, fs::File, path::Path};
 pub type Error = (Loc, String);
 pub type Errors = Vec<Error>;
 
-pub fn module_source_map_from_file<Location>(file_path: &Path) -> Result<SourceMap<Location>>
+pub fn source_map_from_file<Location>(file_path: &Path) -> Result<SourceMap<Location>>
 where
     Location: Clone + Eq + Default + DeserializeOwned,
 {
