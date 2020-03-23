@@ -65,3 +65,12 @@ fn malformed_simple() {
         StatusCode::UNKNOWN_VERSION
     );
 }
+
+// Ensure that we can deserialize a script from disk
+static EMPTY_SCRIPT: &[u8] =
+    include_bytes!("../../../stdlib/staged/transaction_scripts/empty_script.mv");
+
+#[test]
+fn deserialize_file() {
+    CompiledScript::deserialize(EMPTY_SCRIPT).expect("script should deserialize properly");
+}
