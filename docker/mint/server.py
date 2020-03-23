@@ -22,11 +22,11 @@ def create_client():
         ac_hosts = os.environ['AC_HOST'].split(',')
         ac_host = random.choice(ac_hosts)
         ac_port = os.environ['AC_PORT']
+        url = "http://{}:{}".format(ac_host, ac_port)
 
-        print("Connecting to ac on: {}:{}".format(ac_host, ac_port))
-        cmd = "/opt/libra/bin/cli --host {} --port {} -m {}".format(
-            ac_host,
-            ac_port,
+        print("Connecting to ac on: {}".format(url))
+        cmd = "/opt/libra/bin/cli --url {} -m {}".format(
+            url,
             "/opt/libra/etc/mint.key")
 
         application.client = pexpect.spawn(cmd)

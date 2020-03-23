@@ -14,7 +14,6 @@ use cli::{
 use libra_types::waypoint::Waypoint;
 use rustyline::{config::CompletionType, error::ReadlineError, Config, Editor};
 use std::{
-    num::NonZeroU16,
     str::FromStr,
     time::{Duration, UNIX_EPOCH},
 };
@@ -27,14 +26,9 @@ use structopt::StructOpt;
     about = "Libra client to connect to a specific validator"
 )]
 struct Args {
-    /// JSON RPC port to connect to.
-    #[structopt(short = "p", long, default_value = "8080")]
-    pub port: NonZeroU16,
-    /// Host address/name to connect to. Default protocol is http
-    /// To specify http protocol (e.g. https), must pass in base URL with full prefix,
-    /// and URL should not include trailing `/` or port number)
-    #[structopt(short = "a", long)]
-    pub host: String,
+    /// Full URL address to connect to - should include port number, if applicable
+    #[structopt(short = "u", long)]
+    pub url: String,
     /// Path to the generated keypair for the faucet account. The faucet account can be used to
     /// mint coins. If not passed, a new keypair will be generated for
     /// you and placed in a temporary directory.
@@ -96,8 +90,7 @@ fn main() {
         })
     });
     let mut client_proxy = ClientProxy::new(
-        &args.host,
-        args.port.get(),
+        &args.url,
         &faucet_account_file,
         args.sync,
         args.faucet_server.clone(),
@@ -111,8 +104,8 @@ fn main() {
         .test_validator_connection()
         .unwrap_or_else(|e| {
             panic!(
-                "Not able to connect to validator at {}:{}. Error: {}",
-                args.host, args.port, e,
+                "Not able to connect to validator at {}. Error: {}",
+                args.url, e,
             )
         });
     let ledger_info_str = format!(
@@ -123,8 +116,8 @@ fn main() {
         )
     );
     let cli_info = format!(
-        "Connected to validator at: {}:{}, {}",
-        args.host, args.port, ledger_info_str
+        "Connected to validator at: {}, {}",
+        args.url, ledger_info_str
     );
     if args.mnemonic_file.is_some() {
         match client_proxy.recover_accounts_in_wallet() {
@@ -219,37 +212,5 @@ fn retrieve_waypoint(url_str: &str) -> anyhow::Result<Waypoint> {
             url_str,
             response.status_line()
         )),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_args_port() {
-        let args = Args::from_iter(&["test", "--host=h"]);
-        assert_eq!(args.port.get(), 8080);
-        assert_eq!(format!("{}:{}", args.host, args.port.get()), "h:8080");
-        let args = Args::from_iter(&["test", "--port=65535", "--host=h"]);
-        assert_eq!(args.port.get(), 65535);
-    }
-
-    #[test]
-    fn test_args_port_too_large() {
-        let result = Args::from_iter_safe(&["test", "--port=65536", "--host=h"]);
-        assert_eq!(result.is_ok(), false);
-    }
-
-    #[test]
-    fn test_args_port_invalid() {
-        let result = Args::from_iter_safe(&["test", "--port=abc", "--host=h"]);
-        assert_eq!(result.is_ok(), false);
-    }
-
-    #[test]
-    fn test_args_port_zero() {
-        let result = Args::from_iter_safe(&["test", "--port=0", "--host=h"]);
-        assert_eq!(result.is_ok(), false);
     }
 }

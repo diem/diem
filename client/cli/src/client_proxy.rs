@@ -39,6 +39,7 @@ use num_traits::{
     identities::Zero,
 };
 use parity_multiaddr::Multiaddr;
+use reqwest::Url;
 use rust_decimal::Decimal;
 use serde_json;
 use std::{
@@ -115,15 +116,16 @@ pub struct ClientProxy {
 impl ClientProxy {
     /// Construct a new TestClient.
     pub fn new(
-        host: &str,
-        port: u16,
+        url: &str,
         faucet_account_file: &str,
         sync_on_wallet_recovery: bool,
         faucet_server: Option<String>,
         mnemonic_file: Option<String>,
         waypoint: Option<Waypoint>,
     ) -> Result<Self> {
-        let mut client = LibraClient::new(host, port, waypoint)?;
+        // fail fast if url is not valid
+        let url = Url::parse(url)?;
+        let mut client = LibraClient::new(url.clone(), waypoint)?;
 
         let accounts = vec![];
 
@@ -148,9 +150,9 @@ impl ClientProxy {
 
         let faucet_server = match faucet_server {
             Some(server) => server,
-            None => host
-                .replace("http://", "")
-                .replace("https://", "")
+            None => url
+                .host_str()
+                .ok_or_else(|| format_err!("Missing host in URL"))?
                 .replace("client", "faucet"),
         };
 
@@ -1117,7 +1119,7 @@ impl ClientProxy {
     ) -> Result<()> {
         let client = reqwest::blocking::ClientBuilder::new().build()?;
 
-        let url = reqwest::Url::parse_with_params(
+        let url = Url::parse_with_params(
             format!("http://{}", self.faucet_server).as_str(),
             &[
                 ("amount", num_coins.to_string().as_str()),
@@ -1263,11 +1265,10 @@ mod tests {
         let file = TempPath::new();
         let mnemonic_path = file.path().to_str().unwrap().to_string();
 
-        // We don't need to specify host/port since the client won't be used to connect, only to
+        // Note: `client_proxy` won't actually connect to URL - it will be used only to
         // generate random accounts
         let mut client_proxy = ClientProxy::new(
-            "", /* host */
-            0,  /* JSON RPC port*/
+            "http://localhost:8080",
             &"",
             false,
             None,

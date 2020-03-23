@@ -89,8 +89,8 @@ fn main() {
     let validator_config = NodeConfig::load(&validator_swarm.config.config_files[0]).unwrap();
     println!("To run the Libra CLI client in a separate process and connect to the validator nodes you just spawned, use this command:");
     println!(
-        "\tcargo run --bin cli -- -a localhost -p {} -m {:?}",
-        validator_config.rpc.address.port(),
+        "\tcargo run --bin cli -- -u {} -m {:?}",
+        format!("http://localhost:{}", validator_config.rpc.address.port()),
         faucet_key_file_path,
     );
     let node_address_list = validator_swarm
@@ -112,8 +112,8 @@ fn main() {
         let full_node_config = NodeConfig::load(&swarm.config.config_files[0]).unwrap();
         println!("To connect to the full nodes you just spawned, use this command:");
         println!(
-            "\tcargo run --bin cli -- -a localhost -p {} -m {:?}",
-            full_node_config.rpc.address.port(),
+            "\tcargo run --bin cli -- -u {} -m {:?}",
+            format!("http://localhost:{}", full_node_config.rpc.address.port()),
             faucet_key_file_path,
         );
     }
