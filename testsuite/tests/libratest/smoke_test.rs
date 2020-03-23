@@ -123,8 +123,7 @@ impl TestEnvironment {
             .to_string();
 
         ClientProxy::new(
-            "localhost",
-            port,
+            &format!("http://localhost:{}", port),
             &self.faucet_key.1,
             false,
             /* faucet server */ None,

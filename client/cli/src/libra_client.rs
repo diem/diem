@@ -24,7 +24,10 @@ use libra_types::{
     waypoint::Waypoint,
 };
 use rand::Rng;
-use reqwest::blocking::{Client, ClientBuilder};
+use reqwest::{
+    blocking::{Client, ClientBuilder},
+    Url,
+};
 use std::time::Duration;
 
 const JSON_RPC_TIMEOUT_MS: u64 = 5_000;
@@ -55,20 +58,16 @@ pub struct LibraClient {
 }
 
 pub struct JsonRpcClient {
-    addr: String,
+    url: Url,
     client: Client,
 }
 
 impl JsonRpcClient {
-    pub fn new(host: &str, port: u16) -> Result<Self> {
-        let addr = if host.starts_with("https://") || host.starts_with("http://") {
-            format!("{}:{}", host, port)
-        } else {
-            format!("http://{}:{}", host, port)
-        };
-        let client = ClientBuilder::new().use_rustls_tls().build()?;
-
-        Ok(Self { client, addr })
+    pub fn new(url: Url) -> Result<Self> {
+        Ok(Self {
+            client: ClientBuilder::new().use_rustls_tls().build()?,
+            url,
+        })
     }
 
     /// Sends JSON request `request`, performs basic checks on the payload, and returns Ok(`result`),
@@ -210,7 +209,7 @@ impl JsonRpcClient {
 
     fn send(&mut self, request: &serde_json::Value) -> Result<reqwest::blocking::Response> {
         self.client
-            .post(&self.addr)
+            .post(self.url.clone())
             .json(request)
             .timeout(Duration::from_millis(JSON_RPC_TIMEOUT_MS))
             .send()
@@ -221,14 +220,14 @@ impl JsonRpcClient {
 impl LibraClient {
     /// Construct a new Client instance.
     // TODO(philiphayes/dmitrip): Waypoint should not be optional
-    pub fn new(host: &str, port: u16, waypoint: Option<Waypoint>) -> Result<Self> {
+    pub fn new(url: Url, waypoint: Option<Waypoint>) -> Result<Self> {
         // If waypoint is present, use it for initial verification, otherwise the initial
         // verification is essentially empty.
         let initial_trusted_state = match waypoint {
             Some(waypoint) => TrustedState::from_waypoint(waypoint),
             None => TrustedState::new_trust_any_genesis_WARNING_UNSAFE(),
         };
-        let client = JsonRpcClient::new(host, port)?;
+        let client = JsonRpcClient::new(url)?;
         Ok(LibraClient {
             client,
             trusted_state: initial_trusted_state,
