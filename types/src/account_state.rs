@@ -10,6 +10,7 @@ use crate::{
         DiscoverySetResource, DISCOVERY_SET_CHANGE_EVENT_PATH, DISCOVERY_SET_RESOURCE_PATH,
     },
     event::EventHandle,
+    libra_timestamp::{LibraTimestampResource, LIBRA_TIMESTAMP_RESOURCE_PATH},
     validator_config::{ValidatorConfigResource, VALIDATOR_CONFIG_RESOURCE_PATH},
     validator_set::{
         ValidatorSetResource, VALIDATOR_SET_CHANGE_EVENT_PATH, VALIDATOR_SET_RESOURCE_PATH,
@@ -33,6 +34,10 @@ impl AccountState {
 
     pub fn get_discovery_set_resource(&self) -> Result<Option<DiscoverySetResource>> {
         self.get_resource(&*DISCOVERY_SET_RESOURCE_PATH)
+    }
+
+    pub fn get_libra_timestamp_resource(&self) -> Result<Option<LibraTimestampResource>> {
+        self.get_resource(&*LIBRA_TIMESTAMP_RESOURCE_PATH)
     }
 
     pub fn get_validator_config_resource(&self) -> Result<Option<ValidatorConfigResource>> {
@@ -101,6 +106,11 @@ impl fmt::Debug for AccountState {
             .map(|discovery_set_opt| format!("{:#?}", discovery_set_opt))
             .unwrap_or_else(|e| format!("parse error: {:#?}", e));
 
+        let libra_timestamp_str = self
+            .get_libra_timestamp_resource()
+            .map(|libra_timestamp_opt| format!("{:#?}", libra_timestamp_opt))
+            .unwrap_or_else(|e| format!("parse: {:#?}", e));
+
         let validator_config_str = self
             .get_validator_config_resource()
             .map(|validator_config_opt| format!("{:#?}", validator_config_opt))
@@ -116,10 +126,15 @@ impl fmt::Debug for AccountState {
             "{{ \n \
              AccountResource {{ {} }} \n \
              DiscoverySet {{ {} }} \n \
+             LibraTimestamp {{ {} }} \n \
              ValidatorConfig {{ {} }} \n \
              ValidatorSet {{ {} }} \n \
              }}",
-            account_resource_str, discovery_set_str, validator_config_str, validator_set_str,
+            account_resource_str,
+            discovery_set_str,
+            libra_timestamp_str,
+            validator_config_str,
+            validator_set_str,
         )
     }
 }

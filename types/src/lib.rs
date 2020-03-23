@@ -19,6 +19,7 @@ pub mod event_subscription;
 pub mod get_with_proof;
 pub mod language_storage;
 pub mod ledger_info;
+pub mod libra_timestamp;
 pub mod mempool_status;
 pub mod on_chain_config;
 pub mod proof;
