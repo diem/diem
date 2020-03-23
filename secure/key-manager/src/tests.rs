@@ -171,7 +171,7 @@ fn execute_and_commit(node: &Node, mut block: Vec<Transaction>) {
 
     // This will set the current clock to be equal to the current version + 1, this guarantees that
     // the clock is always refreshed for this set of transactions.
-    let block_metadata = BlockMetadata::new(block_id, 0, clock, BTreeMap::new(), node.account);
+    let block_metadata = BlockMetadata::new(block_id, 0, clock, vec![], node.account);
     let prologue = Transaction::BlockMetadata(block_metadata);
     block.insert(0, prologue);
 

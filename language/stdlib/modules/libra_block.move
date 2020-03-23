@@ -19,7 +19,7 @@ module LibraBlock {
     struct NewBlockEvent {
       round: u64,
       proposer: address,
-      previous_block_votes: vector<u8>,
+      previous_block_votes: vector<address>,
 
       // On-chain time during  he block at the given height
       time_microseconds: u64,
@@ -45,7 +45,7 @@ module LibraBlock {
     public fun block_prologue(
         round: u64,
         timestamp: u64,
-        previous_block_votes: vector<u8>,
+        previous_block_votes: vector<address>,
         proposer: address
     ) acquires BlockMetadata {
       // Can only be invoked by LibraVM privilege.
@@ -62,7 +62,7 @@ module LibraBlock {
     fun process_block_prologue(
         round: u64,
         timestamp: u64,
-        previous_block_votes: vector<u8>,
+        previous_block_votes: vector<address>,
         proposer: address
     ) acquires BlockMetadata {
         let block_metadata_ref = borrow_global_mut<BlockMetadata>(0xA550C18);

@@ -949,7 +949,7 @@ impl Arbitrary for BlockMetadata {
                     id,
                     round,
                     timestamp,
-                    signatures.into_iter().collect(),
+                    signatures.into_iter().map(|(addr, _)| addr).collect(),
                     proposer,
                 )
             })

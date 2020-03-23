@@ -16,7 +16,7 @@ use consensus_types::{
 };
 use libra_crypto::HashValue;
 use libra_types::{block_metadata::BlockMetadata, validator_signer::ValidatorSigner};
-use std::{collections::BTreeMap, sync::Arc};
+use std::sync::Arc;
 
 struct MockHistory {
     data: Vec<BlockMetadata>,
@@ -40,11 +40,13 @@ impl MetadataBackend for MockHistory {
 }
 
 fn create_block(proposer: Author, voters: Vec<&ValidatorSigner>) -> BlockMetadata {
-    let mut votes = BTreeMap::new();
-    for v in voters {
-        votes.insert(v.author(), v.sign_message(HashValue::zero()));
-    }
-    BlockMetadata::new(HashValue::zero(), 0, 0, votes, proposer)
+    BlockMetadata::new(
+        HashValue::zero(),
+        0,
+        0,
+        voters.iter().map(|v| v.author()).collect(),
+        proposer,
+    )
 }
 
 #[test]

@@ -5,9 +5,8 @@ use crate::{
     account_address::AccountAddress, account_config::association_address, event::EventKey,
 };
 use anyhow::Result;
-use libra_crypto::{ed25519::Ed25519Signature, HashValue};
+use libra_crypto::HashValue;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 
 /// Struct that will be persisted on chain to store the information of the current block.
 ///
@@ -25,10 +24,8 @@ pub struct BlockMetadata {
     id: HashValue,
     round: u64,
     timestamp_usecs: u64,
-    // Since Move doesn't support hashmaps, this vote map would be stored as a vector of key value
-    // pairs in the Move module. Thus we need a BTreeMap here to define how the values are being
-    // ordered.
-    previous_block_votes: BTreeMap<AccountAddress, Ed25519Signature>,
+    // The vector has to be sorted to ensure consistent result among all nodes
+    previous_block_votes: Vec<AccountAddress>,
     proposer: AccountAddress,
 }
 
@@ -37,7 +34,7 @@ impl BlockMetadata {
         id: HashValue,
         round: u64,
         timestamp_usecs: u64,
-        previous_block_votes: BTreeMap<AccountAddress, Ed25519Signature>,
+        previous_block_votes: Vec<AccountAddress>,
         proposer: AccountAddress,
     ) -> Self {
         Self {
@@ -53,9 +50,13 @@ impl BlockMetadata {
         self.id
     }
 
-    pub fn into_inner(self) -> Result<(u64, u64, Vec<u8>, AccountAddress)> {
-        let vote_maps = lcs::to_bytes(&self.previous_block_votes)?;
-        Ok((self.round, self.timestamp_usecs, vote_maps, self.proposer))
+    pub fn into_inner(self) -> Result<(u64, u64, Vec<AccountAddress>, AccountAddress)> {
+        Ok((
+            self.round,
+            self.timestamp_usecs,
+            self.previous_block_votes.clone(),
+            self.proposer,
+        ))
     }
 
     pub fn proposer(&self) -> AccountAddress {
@@ -63,7 +64,7 @@ impl BlockMetadata {
     }
 
     pub fn voters(&self) -> Vec<AccountAddress> {
-        self.previous_block_votes.keys().cloned().collect()
+        self.previous_block_votes.clone()
     }
 }
 

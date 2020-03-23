@@ -289,7 +289,14 @@ impl<T> From<&Block<T>> for BlockMetadata {
             block.id(),
             block.round(),
             block.timestamp_usecs(),
-            block.quorum_cert().ledger_info().signatures().clone(),
+            // an ordered vector of voters' account address
+            block
+                .quorum_cert()
+                .ledger_info()
+                .signatures()
+                .keys()
+                .cloned()
+                .collect(),
             // For nil block, we use 0x0 which is convention for nil address in move.
             block.author().unwrap_or_default(),
         )
