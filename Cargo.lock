@@ -2558,6 +2558,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-secure-push-metrics"
+version = "0.1.0"
+dependencies = [
+ "libra-logger 0.1.0",
+ "ureq 0.11.4 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "libra-secure-storage"
 version = "0.1.0"
 dependencies = [
@@ -4549,11 +4557,13 @@ dependencies = [
  "anyhow 1.0.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "consensus-types 0.1.0",
  "criterion 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-logger 0.1.0",
  "libra-secure-net 0.1.0",
+ "libra-secure-push-metrics 0.1.0",
  "libra-secure-storage 0.1.0",
  "libra-temppath 0.1.0",
  "libra-types 0.1.0",
