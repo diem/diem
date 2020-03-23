@@ -5,8 +5,8 @@
 
 use bytecode_source_map::{
     mapping::SourceMapping,
-    source_map::ModuleSourceMap,
-    utils::{module_source_map_from_file, remap_owned_loc_to_loc, OwnedLoc},
+    source_map::SourceMap,
+    utils::{remap_owned_loc_to_loc, source_map_from_file, OwnedLoc},
 };
 use disassembler::disassembler::{Disassembler, DisassemblerOptions};
 use move_ir_types::location::Spanned;
@@ -70,7 +70,7 @@ fn main() {
 
     let source_path = Path::new(&args.bytecode_file_path).with_extension(move_extension);
     let source = fs::read_to_string(&source_path).ok();
-    let source_map = module_source_map_from_file::<OwnedLoc>(
+    let source_map = source_map_from_file::<OwnedLoc>(
         &Path::new(&args.bytecode_file_path).with_extension(source_map_extension),
     )
     .map(remap_owned_loc_to_loc);
@@ -87,14 +87,14 @@ fn main() {
         let compiled_script = CompiledScript::deserialize(&bytecode_bytes)
             .expect("Script blob can't be deserialized");
         source_map
-            .or_else(|_| ModuleSourceMap::dummy_from_script(&compiled_script, no_loc))
+            .or_else(|_| SourceMap::dummy_from_script(&compiled_script, no_loc))
             .and_then(|source_map| Ok(SourceMapping::new_from_script(source_map, compiled_script)))
             .expect("Unable to build source mapping for compiled script")
     } else {
         let compiled_module = CompiledModule::deserialize(&bytecode_bytes)
             .expect("Module blob can't be deserialized");
         source_map
-            .or_else(|_| ModuleSourceMap::dummy_from_module(&compiled_module, no_loc))
+            .or_else(|_| SourceMap::dummy_from_module(&compiled_module, no_loc))
             .and_then(|source_map| Ok(SourceMapping::new(source_map, compiled_module)))
             .expect("Unable to build source mapping for compiled module")
     };

@@ -17,7 +17,7 @@ use codespan_reporting::{
 use itertools::Itertools;
 use num::{BigUint, Num};
 
-use bytecode_source_map::source_map::ModuleSourceMap;
+use bytecode_source_map::source_map::SourceMap;
 use libra_types::language_storage;
 use vm::{
     access::ModuleAccess,
@@ -380,7 +380,7 @@ impl GlobalEnv {
         &mut self,
         loc: Loc,
         module: CompiledModule,
-        source_map: ModuleSourceMap<MoveIrLoc>,
+        source_map: SourceMap<MoveIrLoc>,
         struct_data: BTreeMap<StructId, StructData>,
         function_data: BTreeMap<FunId, FunctionData>,
         spec_vars: Vec<SpecVarDecl>,
@@ -684,7 +684,7 @@ pub struct ModuleData {
     pub module_invariants: Vec<Invariant>,
 
     /// Module source location information.
-    pub source_map: ModuleSourceMap<MoveIrLoc>,
+    pub source_map: SourceMap<MoveIrLoc>,
 
     /// The location of this module.
     pub loc: Loc,

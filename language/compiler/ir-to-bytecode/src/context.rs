@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, format_err, Result};
-use bytecode_source_map::source_map::ModuleSourceMap;
+use bytecode_source_map::source_map::SourceMap;
 use libra_types::account_address::AccountAddress;
 use move_core_types::identifier::{IdentStr, Identifier};
 use move_ir_types::{ast::*, location::*};
@@ -197,7 +197,7 @@ pub struct Context<'a> {
     current_function_index: FunctionDefinitionIndex,
 
     // Source location mapping for this module
-    pub source_map: ModuleSourceMap<Loc>,
+    pub source_map: SourceMap<Loc>,
 }
 
 impl<'a> Context<'a> {
@@ -238,7 +238,7 @@ impl<'a> Context<'a> {
             address_pool: HashMap::new(),
             type_formals: HashMap::new(),
             current_function_index: FunctionDefinitionIndex(0),
-            source_map: ModuleSourceMap::new(current_module.clone()),
+            source_map: SourceMap::new(current_module.clone()),
         };
         let self_name = ModuleName::new(ModuleName::self_name().into());
         context.declare_import(current_module, self_name)?;
@@ -263,7 +263,7 @@ impl<'a> Context<'a> {
     }
 
     /// Finish compilation, and materialize the pools for file format.
-    pub fn materialize_pools(self) -> (MaterializedPools, ModuleSourceMap<Loc>) {
+    pub fn materialize_pools(self) -> (MaterializedPools, SourceMap<Loc>) {
         let num_functions = self.function_handles.len();
         assert!(num_functions == self.function_signatures.len());
         let function_handles = Self::materialize_pool(

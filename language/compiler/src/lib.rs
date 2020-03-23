@@ -9,7 +9,7 @@ pub mod util;
 mod unit_tests;
 
 use anyhow::Result;
-use bytecode_source_map::source_map::ModuleSourceMap;
+use bytecode_source_map::source_map::SourceMap;
 use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
@@ -49,7 +49,7 @@ impl Compiler {
         mut self,
         file_name: &str,
         code: &str,
-    ) -> Result<(CompiledScript, ModuleSourceMap<Loc>)> {
+    ) -> Result<(CompiledScript, SourceMap<Loc>)> {
         let (compiled_script, source_map, _) = self.compile_script(file_name, code)?;
         Ok((compiled_script, source_map))
     }
@@ -81,7 +81,7 @@ impl Compiler {
         &mut self,
         file_name: &str,
         code: &str,
-    ) -> Result<(CompiledScript, ModuleSourceMap<Loc>, Vec<VerifiedModule>)> {
+    ) -> Result<(CompiledScript, SourceMap<Loc>, Vec<VerifiedModule>)> {
         let parsed_script = parse_script(file_name, code)?;
         let deps = self.deps();
         let (compiled_script, source_map) = compile_script(self.address, parsed_script, &deps)?;
@@ -92,7 +92,7 @@ impl Compiler {
         &mut self,
         file_name: &str,
         code: &str,
-    ) -> Result<(CompiledModule, ModuleSourceMap<Loc>, Vec<VerifiedModule>)> {
+    ) -> Result<(CompiledModule, SourceMap<Loc>, Vec<VerifiedModule>)> {
         let parsed_module = parse_module(file_name, code)?;
         let deps = self.deps();
         let (compiled_module, source_map) = compile_module(self.address, parsed_module, &deps)?;
