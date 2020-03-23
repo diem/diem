@@ -18,6 +18,7 @@ use libra_types::{
     transaction::Transaction,
     validator_config::ValidatorConfig,
     validator_info::ValidatorInfo,
+    validator_set::ValidatorSetResource,
 };
 use libra_vm::LibraVM;
 use libradb::{LibraDB, LibraDBTrait};
@@ -95,10 +96,27 @@ impl TestLibraInterface {
             .discovery_set()
             .clone())
     }
+
+    fn retrieve_validator_set_resource(&self) -> Result<ValidatorSetResource, Error> {
+        let set_account = account_config::validator_set_address();
+        let blob = self
+            .storage
+            .get_latest_account_state(set_account)?
+            .ok_or(Error::DataDoesNotExist("AccountState"))?;
+        let account_state = AccountState::try_from(&blob)?;
+        account_state
+            .get_validator_set_resource()?
+            .ok_or(Error::DataDoesNotExist("ValidatorSetResource"))
+    }
 }
 
 impl LibraInterface for TestLibraInterface {
     fn last_reconfiguration(&self) -> Result<u64, Error> {
+        self.retrieve_validator_set_resource()
+            .map(|v| v.last_reconfiguration_time())
+    }
+
+    fn libra_timestamp(&self) -> Result<u64, Error> {
         let account = account_config::association_address();
         let blob = self
             .storage
@@ -107,7 +125,7 @@ impl LibraInterface for TestLibraInterface {
         let account_state = AccountState::try_from(&blob).unwrap();
         Ok(account_state
             .get_libra_timestamp_resource()?
-            .ok_or(Error::DataDoesNotExist("ValidatorConfigResource"))?
+            .ok_or(Error::DataDoesNotExist("LibraTimestampResource"))?
             .libra_timestamp
             .microseconds)
     }
@@ -136,16 +154,7 @@ impl LibraInterface for TestLibraInterface {
         &self,
         validator_account: AccountAddress,
     ) -> Result<ValidatorInfo, Error> {
-        let set_account = account_config::validator_set_address();
-        let blob = self
-            .storage
-            .get_latest_account_state(set_account)?
-            .ok_or(Error::DataDoesNotExist("AccountState"))?;
-        let account_state = AccountState::try_from(&blob)?;
-        let validator_set_resource = account_state
-            .get_validator_set_resource()?
-            .ok_or(Error::DataDoesNotExist("ValidatorSetResource"))?;
-        validator_set_resource
+        self.retrieve_validator_set_resource()?
             .validator_set()
             .iter()
             .find(|vi| vi.account_address() == &validator_account)
@@ -248,4 +257,6 @@ fn test_key_manager_init() {
     assert!(now - 600 <= node.key_manager.last_rotation().unwrap());
     // No reconfiguration yet
     assert_eq!(0, node.key_manager.last_reconfiguration().unwrap());
+    // No executions yet
+    assert_eq!(0, node.key_manager.libra_timestamp().unwrap());
 }
