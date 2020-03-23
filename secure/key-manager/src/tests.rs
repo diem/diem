@@ -98,6 +98,20 @@ impl TestLibraInterface {
 }
 
 impl LibraInterface for TestLibraInterface {
+    fn last_reconfiguration(&self) -> Result<u64, Error> {
+        let account = account_config::association_address();
+        let blob = self
+            .storage
+            .get_latest_account_state(account)?
+            .ok_or(Error::DataDoesNotExist("AccountState"))?;
+        let account_state = AccountState::try_from(&blob).unwrap();
+        Ok(account_state
+            .get_libra_timestamp_resource()?
+            .ok_or(Error::DataDoesNotExist("ValidatorConfigResource"))?
+            .libra_timestamp
+            .microseconds)
+    }
+
     fn retrieve_sequence_id(&self, _account: AccountAddress) -> Result<u64, Error> {
         Ok(0)
     }
@@ -177,6 +191,7 @@ fn test_ability_to_read_move_data() {
     let (config, _genesis_key) = config_builder::test_config();
     let node = setup(&config);
 
+    node.libra.last_reconfiguration().unwrap();
     node.libra.retrieve_discovery_set().unwrap();
     node.libra.retrieve_validator_config(node.account).unwrap();
     node.libra.retrieve_discovery_set().unwrap();
@@ -231,4 +246,6 @@ fn test_key_manager_init() {
         .unwrap()
         .as_secs();
     assert!(now - 600 <= node.key_manager.last_rotation().unwrap());
+    // No reconfiguration yet
+    assert_eq!(0, node.key_manager.last_reconfiguration().unwrap());
 }

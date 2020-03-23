@@ -72,7 +72,10 @@ impl From<anyhow::Error> for Error {
 /// will be talking to a JSON-RPC service. For tests, this may be an executor and storage directly.
 #[cfg(test)]
 trait LibraInterface {
-    /// Retrieve current sequence id for the provided account
+    /// Retrieves the current time from the blockchain, this is returned as microseconds.
+    fn last_reconfiguration(&self) -> Result<u64, Error>;
+
+    /// Retrieve current sequence id for the provided account.
     fn retrieve_sequence_id(&self, account: AccountAddress) -> Result<u64, Error>;
 
     /// Submits a transaction to the block chain and returns successfully if the transaction was
@@ -107,6 +110,11 @@ where
             libra,
             storage,
         }
+    }
+
+    pub fn last_reconfiguration(&self) -> Result<u64, Error> {
+        // Convert the time to seconds
+        Ok(self.libra.last_reconfiguration()? / 1_000_000)
     }
 
     pub fn last_rotation(&self) -> Result<u64, Error> {
