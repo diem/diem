@@ -7,7 +7,7 @@ use crate::{
     parser::ast::{FunctionName, ModuleIdent},
     shared::unique_map::UniqueMap,
 };
-use bytecode_source_map::source_map::ModuleSourceMap;
+use bytecode_source_map::source_map::SourceMap;
 use move_ir_types::location::*;
 use move_vm::file_format as F;
 use std::collections::BTreeMap;
@@ -21,13 +21,13 @@ pub enum CompiledUnit {
     Module {
         ident: ModuleIdent,
         module: F::CompiledModule,
-        source_map: ModuleSourceMap<Loc>,
+        source_map: SourceMap<Loc>,
         spec_id_offsets: UniqueMap<FunctionName, BTreeMap<SpecId, F::CodeOffset>>,
     },
     Script {
         loc: Loc,
         script: F::CompiledScript,
-        source_map: ModuleSourceMap<Loc>,
+        source_map: SourceMap<Loc>,
         spec_id_offsets: BTreeMap<SpecId, F::CodeOffset>,
     },
 }

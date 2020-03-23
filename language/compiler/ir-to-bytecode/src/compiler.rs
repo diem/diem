@@ -7,7 +7,7 @@ use crate::{
 };
 
 use anyhow::{bail, format_err, Result};
-use bytecode_source_map::source_map::ModuleSourceMap;
+use bytecode_source_map::source_map::SourceMap;
 use libra_types::account_address::AccountAddress;
 use move_ir_types::{
     ast::{self, Bytecode as IRBytecode, Bytecode_ as IRBytecode_, *},
@@ -321,7 +321,7 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
     address: AccountAddress,
     script: Script,
     dependencies: impl IntoIterator<Item = &'a T>,
-) -> Result<(CompiledScript, ModuleSourceMap<Loc>)> {
+) -> Result<(CompiledScript, SourceMap<Loc>)> {
     let current_module = QualifiedModuleIdent {
         address,
         name: ModuleName::new(file_format::self_module_name().to_string()),
@@ -378,7 +378,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
     address: AccountAddress,
     module: ModuleDefinition,
     dependencies: impl IntoIterator<Item = &'a T>,
-) -> Result<(CompiledModule, ModuleSourceMap<Loc>)> {
+) -> Result<(CompiledModule, SourceMap<Loc>)> {
     let current_module = QualifiedModuleIdent {
         address,
         name: module.name,

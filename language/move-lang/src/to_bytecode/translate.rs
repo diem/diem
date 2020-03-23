@@ -15,7 +15,7 @@ use crate::{
     },
     shared::{unique_map::UniqueMap, *},
 };
-use bytecode_source_map::source_map::ModuleSourceMap;
+use bytecode_source_map::source_map::SourceMap;
 use libra_types::account_address::AccountAddress as LibraAddress;
 use move_ir_types::{ast as IR, location::*};
 use move_vm::file_format as F;
@@ -176,7 +176,7 @@ fn main(
 
 fn function_spec_id_map(
     compile_module: &F::CompiledModule,
-    source_map: &ModuleSourceMap<Loc>,
+    source_map: &SourceMap<Loc>,
     function_nop_labels: &UniqueMap<FunctionName, BTreeMap<SpecId, IR::NopLabel>>,
     idx: F::FunctionDefinitionIndex,
 ) -> (FunctionName, BTreeMap<SpecId, F::CodeOffset>) {
@@ -201,7 +201,7 @@ fn function_spec_id_map(
 }
 
 fn main_spec_id_map(
-    source_map: &ModuleSourceMap<Loc>,
+    source_map: &SourceMap<Loc>,
     nop_labels: BTreeMap<SpecId, IR::NopLabel>,
 ) -> BTreeMap<SpecId, F::CodeOffset> {
     let idx = F::FunctionDefinitionIndex(0);

@@ -59,8 +59,8 @@ pub struct FunctionSourceMap<Location: Clone + Eq> {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ModuleSourceMap<Location: Clone + Eq> {
-    /// The name <address.module_name> for module that this source map is for
+pub struct SourceMap<Location: Clone + Eq> {
+    /// The name <address.module_name> for module/script that this source map is for
     pub module_name: (AccountAddress, Identifier),
 
     // A mapping of StructDefinitionIndex to source map for each struct/resource
@@ -78,9 +78,9 @@ pub fn remap_locations_source_name<Location: Clone + Eq, Other: Clone + Eq>(
 }
 
 pub fn remap_locations_source_map<Location: Clone + Eq, Other: Clone + Eq>(
-    map: Vec<ModuleSourceMap<Location>>,
+    map: Vec<SourceMap<Location>>,
     f: &mut impl FnMut(Location) -> Other,
-) -> Vec<ModuleSourceMap<Other>> {
+) -> Vec<SourceMap<Other>> {
     map.into_iter().map(|m| m.remap_locations(f)).collect()
 }
 
@@ -281,7 +281,7 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
     }
 }
 
-impl<Location: Clone + Eq> ModuleSourceMap<Location> {
+impl<Location: Clone + Eq> SourceMap<Location> {
     pub fn new(module_name: QualifiedModuleIdent) -> Self {
         let ident = Identifier::new(module_name.name.into_inner()).unwrap();
         Self {
@@ -511,8 +511,8 @@ impl<Location: Clone + Eq> ModuleSourceMap<Location> {
     pub fn remap_locations<Other: Clone + Eq>(
         self,
         f: &mut impl FnMut(Location) -> Other,
-    ) -> ModuleSourceMap<Other> {
-        let ModuleSourceMap {
+    ) -> SourceMap<Other> {
+        let SourceMap {
             module_name,
             struct_map,
             function_map,
@@ -525,7 +525,7 @@ impl<Location: Clone + Eq> ModuleSourceMap<Location> {
             .into_iter()
             .map(|(n, m)| (n, m.remap_locations(f)))
             .collect();
-        ModuleSourceMap {
+        SourceMap {
             module_name,
             struct_map,
             function_map,

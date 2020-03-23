@@ -5,7 +5,7 @@
 
 use bytecode_source_map::{
     mapping::SourceMapping,
-    source_map::ModuleSourceMap,
+    source_map::SourceMap,
     utils::{module_source_map_from_file, remap_owned_loc_to_loc, OwnedLoc},
 };
 use disassembler::disassembler::{Disassembler, DisassemblerOptions};
@@ -87,14 +87,14 @@ fn main() {
         let compiled_script = CompiledScript::deserialize(&bytecode_bytes)
             .expect("Script blob can't be deserialized");
         source_map
-            .or_else(|_| ModuleSourceMap::dummy_from_script(&compiled_script, no_loc))
+            .or_else(|_| SourceMap::dummy_from_script(&compiled_script, no_loc))
             .and_then(|source_map| Ok(SourceMapping::new_from_script(source_map, compiled_script)))
             .expect("Unable to build source mapping for compiled script")
     } else {
         let compiled_module = CompiledModule::deserialize(&bytecode_bytes)
             .expect("Module blob can't be deserialized");
         source_map
-            .or_else(|_| ModuleSourceMap::dummy_from_module(&compiled_module, no_loc))
+            .or_else(|_| SourceMap::dummy_from_module(&compiled_module, no_loc))
             .and_then(|source_map| Ok(SourceMapping::new(source_map, compiled_module)))
             .expect("Unable to build source mapping for compiled module")
     };

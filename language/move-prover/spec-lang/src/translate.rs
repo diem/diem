@@ -11,7 +11,7 @@ use std::collections::{BTreeMap, BTreeSet, LinkedList};
 use itertools::Itertools;
 use num::{BigUint, FromPrimitive, Num};
 
-use bytecode_source_map::source_map::ModuleSourceMap;
+use bytecode_source_map::source_map::SourceMap;
 use move_lang::{
     expansion::ast as EA,
     parser::ast as PA,
@@ -621,7 +621,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         loc: Loc,
         module_def: EA::ModuleDefinition,
         compiled_module: CompiledModule,
-        source_map: ModuleSourceMap<MoveIrLoc>,
+        source_map: SourceMap<MoveIrLoc>,
         spec_id_offsets: UniqueMap<FunctionName, BTreeMap<SpecId, CodeOffset>>,
     ) {
         self.decl_ana(&module_def);
@@ -1189,7 +1189,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         &mut self,
         loc: Loc,
         module: CompiledModule,
-        source_map: ModuleSourceMap<MoveIrLoc>,
+        source_map: SourceMap<MoveIrLoc>,
     ) {
         let struct_data: BTreeMap<StructId, StructData> = (0..module.struct_defs().len())
             .filter_map(|idx| {
