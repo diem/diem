@@ -29,7 +29,6 @@ pub enum StdlibScript {
     Mint,
     PeerToPeer,
     PeerToPeerWithMetadata,
-    PlaceholderScript,
     RegisterValidator,
     RemoveValidator,
     RotateAuthenticationKey,
@@ -38,8 +37,6 @@ pub enum StdlibScript {
 }
 
 impl StdlibScript {
-    // TODO: audit/cleanup. There is some cruft here; e.g., PlaceholderScript and EmptyScript are
-    // the same.
     /// Return a vector containing all of the standard library scripts (i.e., all inhabitants of the
     /// StdlibScript enum)
     pub fn all() -> Vec<Self> {
@@ -50,7 +47,6 @@ impl StdlibScript {
             Self::Mint,
             Self::PeerToPeer,
             Self::PeerToPeerWithMetadata,
-            Self::PlaceholderScript,
             Self::RegisterValidator,
             Self::RemoveValidator,
             Self::RotateAuthenticationKey,
@@ -157,7 +153,6 @@ impl fmt::Display for StdlibScript {
                 Self::Mint => "mint",
                 Self::PeerToPeer => "peer_to_peer",
                 Self::PeerToPeerWithMetadata => "peer_to_peer_with_metadata",
-                Self::PlaceholderScript => "placeholder_script",
                 Self::RegisterValidator => "register_validator",
                 Self::RemoveValidator => "remove_validator",
                 Self::RotateAuthenticationKey => "rotate_authentication_key",
