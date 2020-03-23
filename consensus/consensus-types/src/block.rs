@@ -5,25 +5,17 @@ use crate::{
     block_data::{BlockData, BlockType},
     common::{Author, Round},
     quorum_cert::QuorumCert,
-    vote_data::VoteData,
 };
 use anyhow::{bail, ensure, format_err};
 use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash, HashValue};
 use libra_types::{
-    block_info::BlockInfo,
-    block_metadata::BlockMetadata,
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    transaction::Version,
-    validator_set::ValidatorSet,
-    validator_signer::ValidatorSigner,
+    block_info::BlockInfo, block_metadata::BlockMetadata, ledger_info::LedgerInfo,
+    transaction::Version, validator_set::ValidatorSet, validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
 };
 use mirai_annotations::debug_checked_verify_eq;
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
-use std::{
-    collections::BTreeMap,
-    fmt::{self, Display, Formatter},
-};
+use std::fmt::{self, Display, Formatter};
 
 #[path = "block_test_utils.rs"]
 #[cfg(any(test, feature = "fuzzing"))]
@@ -151,29 +143,7 @@ where
     /// Construct new genesis block for next epoch deterministically from the end-epoch LedgerInfo
     /// We carry over most fields except round and block id
     pub fn make_genesis_block_from_ledger_info(ledger_info: &LedgerInfo) -> Self {
-        assert!(ledger_info.next_validator_set().is_some());
-        let ancestor = BlockInfo::new(
-            ledger_info.epoch(),
-            0,
-            HashValue::zero(),
-            ledger_info.transaction_accumulator_hash(),
-            ledger_info.version(),
-            ledger_info.timestamp_usecs(),
-            None,
-        );
-
-        // Genesis carries a placeholder quorum certificate to its parent id with LedgerInfo
-        // carrying information about version from the last LedgerInfo of previous epoch.
-        let genesis_quorum_cert = QuorumCert::new(
-            VoteData::new(ancestor.clone(), ancestor.clone()),
-            LedgerInfoWithSignatures::new(
-                LedgerInfo::new(ancestor, HashValue::zero()),
-                BTreeMap::new(),
-            ),
-        );
-
-        let block_data = BlockData::new_genesis(ledger_info.timestamp_usecs(), genesis_quorum_cert);
-
+        let block_data = BlockData::new_genesis_from_ledger_info(ledger_info);
         Block {
             id: block_data.hash(),
             block_data,
