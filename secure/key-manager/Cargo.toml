@@ -15,8 +15,10 @@ libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-secure-storage = { path = "../../secure/storage", version = "0.1.0" }
 libra-transaction-scripts = { path = "../transaction-scripts", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
+thiserror = "1.0"
 
 [dev-dependencies]
+anyhow = "1.0"
 rand = "0.6.5"
 tokio = { version = "0.2.12", features = ["full"] }
 
@@ -24,7 +26,7 @@ config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 executor = { path = "../../execution/executor", version = "0.1.0" }
 executor-types = { path = "../../execution/executor-types", version = "0.1.0" }
 libradb = { path = "../../storage/libradb", version = "0.1.0" }
-libra-config = { path = "../../config", version = "0.1.0" }
+libra-config = { path = "../../config", version = "0.1.0", features = ["fuzzing"]}
 libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
 storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
 storage-service = { path = "../../storage/storage-service", version = "0.1.0" }

@@ -2409,6 +2409,7 @@ dependencies = [
 name = "libra-key-manager"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "config-builder 0.1.0",
  "executor 0.1.0",
  "executor-types 0.1.0",
@@ -2423,6 +2424,7 @@ dependencies = [
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-client 0.1.0",
  "storage-service 0.1.0",
+ "thiserror 1.0.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
