@@ -107,7 +107,7 @@ jobs:
             [[ $CIRCLE_NODE_INDEX =~ [1234] ]] || cargo x lint
             [[ $CIRCLE_NODE_INDEX =~ [1234] ]] || cargo xclippy --workspace --all-targets
             [[ $CIRCLE_NODE_INDEX =~ [1234] ]] || cargo xfmt --check
-            [[ $CIRCLE_NODE_INDEX =~ [1234] ]] || cargo install cargo-guppy --git http://github.com/calibra/cargo-guppy --rev aa68df82cc3104d72dfb917d3757abc18116d922
+            [[ $CIRCLE_NODE_INDEX =~ [1234] ]] || cargo install cargo-guppy --git http://github.com/calibra/cargo-guppy --rev 8b2bc45c0cd6323a7a2b8170ddad6d2a5b79047b
             [[ $CIRCLE_NODE_INDEX =~ [1234] ]] || [[ -z $(cargo guppy dups --target x86_64-unknown-linux-gnu --kind directthirdparty) ]]
       - run:
           name: Build Release
