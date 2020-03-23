@@ -439,7 +439,7 @@ impl LibraVM {
             let args = vec![
                 Value::u64(round),
                 Value::u64(timestamp),
-                Value::vector_u8(previous_vote),
+                Value::vector_address(previous_vote),
                 Value::address(proposer),
             ];
             self.move_vm.execute_function(

@@ -4,7 +4,7 @@
 use crate::{common::strip, config::global::Config as GlobalConfig, errors::*};
 use libra_crypto::HashValue;
 use libra_types::block_metadata::BlockMetadata;
-use std::{collections::btree_map::BTreeMap, str::FromStr};
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub enum Entry {
@@ -71,13 +71,7 @@ pub fn build_block_metadata(config: &GlobalConfig, entries: &[Entry]) -> Result<
     }
     if let (Some(t), Some(addr)) = (timestamp, proposer) {
         // TODO: Add parser for hash value and vote maps.
-        Ok(BlockMetadata::new(
-            HashValue::zero(),
-            0,
-            *t,
-            BTreeMap::new(),
-            addr,
-        ))
+        Ok(BlockMetadata::new(HashValue::zero(), 0, *t, vec![], addr))
     } else {
         Err(ErrorKind::Other("Cannot generate block metadata".to_string()).into())
     }

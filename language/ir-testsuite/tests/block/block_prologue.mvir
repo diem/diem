@@ -31,9 +31,10 @@ main() {
 //! sender: vivian
 import 0x0.LibraBlock;
 import 0x0.LibraTimestamp;
+import 0x0.Vector;
 
 main() {
-    LibraBlock.block_prologue(1, 10, h"aa", {{vivian}});
+    LibraBlock.block_prologue(1, 10, Vector.empty<address>(), {{vivian}});
 
     return;
 }

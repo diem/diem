@@ -25,7 +25,6 @@ use libra_types::{
     write_set::WriteSet,
 };
 use libra_vm::{LibraVM, VMExecutor, VMVerifier};
-use std::collections::BTreeMap;
 use stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use vm::CompiledModule;
 use vm_genesis::GENESIS_KEYPAIR;
@@ -255,7 +254,7 @@ impl FakeExecutor {
             HashValue::zero(),
             0,
             self.block_time,
-            BTreeMap::new(),
+            vec![],
             validator_address,
         );
         self.apply_write_set(
