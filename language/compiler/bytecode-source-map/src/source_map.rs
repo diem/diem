@@ -21,7 +21,6 @@ use vm::{
 // Source location mapping
 //***************************************************************************
 
-pub type SourceMap<Location> = Vec<ModuleSourceMap<Location>>;
 pub type SourceName<Location> = (String, Location);
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -79,9 +78,9 @@ pub fn remap_locations_source_name<Location: Clone + Eq, Other: Clone + Eq>(
 }
 
 pub fn remap_locations_source_map<Location: Clone + Eq, Other: Clone + Eq>(
-    map: SourceMap<Location>,
+    map: Vec<ModuleSourceMap<Location>>,
     f: &mut impl FnMut(Location) -> Other,
-) -> SourceMap<Other> {
+) -> Vec<ModuleSourceMap<Other>> {
     map.into_iter().map(|m| m.remap_locations(f)).collect()
 }
 

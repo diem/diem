@@ -3,7 +3,7 @@
 
 use crate::{
     mapping::SourceMapping,
-    source_map::{ModuleSourceMap, SourceMap},
+    source_map::ModuleSourceMap,
 };
 use anyhow::{format_err, Result};
 use codespan::{FileId, Files, Span};
@@ -23,16 +23,6 @@ pub type Error = (Loc, String);
 pub type Errors = Vec<Error>;
 
 pub fn module_source_map_from_file<Location>(file_path: &Path) -> Result<ModuleSourceMap<Location>>
-where
-    Location: Clone + Eq + Default + DeserializeOwned,
-{
-    File::open(file_path)
-        .ok()
-        .and_then(|file| serde_json::from_reader(file).ok())
-        .ok_or_else(|| format_err!("Error while reading in source map information"))
-}
-
-pub fn source_map_from_file<Location>(file_path: &Path) -> Result<SourceMap<Location>>
 where
     Location: Clone + Eq + Default + DeserializeOwned,
 {
