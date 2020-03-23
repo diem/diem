@@ -840,9 +840,35 @@ impl Value {
         Self(ValueImpl::new_container(s.0))
     }
 
-    // TODO: consider whether we want to replace this with fn vector(v: Vec<Value>).
-    pub fn vector_u8(v: Vec<u8>) -> Self {
-        Self(ValueImpl::new_container(Container::U8(v)))
+    // TODO: consider whether we want to replace these with fn vector(v: Vec<Value>).
+    pub fn vector_u8(it: impl IntoIterator<Item = u8>) -> Self {
+        Self(ValueImpl::new_container(Container::U8(
+            it.into_iter().collect(),
+        )))
+    }
+
+    pub fn vector_u64(it: impl IntoIterator<Item = u64>) -> Self {
+        Self(ValueImpl::new_container(Container::U64(
+            it.into_iter().collect(),
+        )))
+    }
+
+    pub fn vector_u128(it: impl IntoIterator<Item = u128>) -> Self {
+        Self(ValueImpl::new_container(Container::U128(
+            it.into_iter().collect(),
+        )))
+    }
+
+    pub fn vector_bool(it: impl IntoIterator<Item = bool>) -> Self {
+        Self(ValueImpl::new_container(Container::Bool(
+            it.into_iter().collect(),
+        )))
+    }
+
+    pub fn vector_address(it: impl IntoIterator<Item = AccountAddress>) -> Self {
+        Self(ValueImpl::new_container(Container::General(
+            it.into_iter().map(ValueImpl::Address).collect(),
+        )))
     }
 }
 
