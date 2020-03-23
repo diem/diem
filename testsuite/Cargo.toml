@@ -12,7 +12,7 @@ edition = "2018"
 [dev-dependencies]
 num = "0.2.0"
 num-traits = "0.2"
-rust_decimal = "1.3.0"
+rust_decimal = "1.4.0"
 statistical = "1"
 rusty-fork = "0.2.1"
 workspace-builder = { path = "../common/workspace-builder", version = "0.1.0" }
