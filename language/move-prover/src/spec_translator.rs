@@ -333,7 +333,7 @@ impl<'env> SpecTranslator<'env> {
     fn translate_assume_well_formed(&self, struct_env: &StructEnv<'env>) {
         emitln!(
             self.writer,
-            "function {{:inline 1}} ${}_is_well_formed($this: Value): bool {{",
+            "function {{:inline}} ${}_is_well_formed($this: Value): bool {{",
             boogie_struct_name(struct_env),
         );
         self.writer.indent();
