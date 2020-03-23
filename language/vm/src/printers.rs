@@ -194,16 +194,6 @@ impl TableAccess for CompiledModuleMut {
     }
 }
 
-impl fmt::Display for CompiledProgram {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "CompiledProgram: {{\nModules: [\n")?;
-        for m in &self.modules {
-            writeln!(f, "{},", m)?;
-        }
-        write!(f, "],\nScript: {}\n}}", self.script)
-    }
-}
-
 impl fmt::Display for CompiledScript {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let inner = self.as_inner();

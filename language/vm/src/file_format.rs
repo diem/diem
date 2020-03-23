@@ -1353,23 +1353,6 @@ impl Bytecode {
     }
 }
 
-/// A `CompiledProgram` defines the structure of a transaction to execute.
-/// It has two parts: modules to be published and a transaction script.
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub struct CompiledProgram {
-    /// The modules to be published
-    pub modules: Vec<CompiledModule>,
-    /// The transaction script to execute
-    pub script: CompiledScript,
-}
-
-impl CompiledProgram {
-    /// Creates a new compiled program from compiled modules and script
-    pub fn new(modules: Vec<CompiledModule>, script: CompiledScript) -> Self {
-        CompiledProgram { modules, script }
-    }
-}
-
 // Note that this doesn't derive either `Arbitrary` or `Default` while `CompiledScriptMut` does.
 // That's because a CompiledScript is guaranteed to be valid while a CompiledScriptMut isn't.
 /// Contains the main function to execute and its dependencies.
