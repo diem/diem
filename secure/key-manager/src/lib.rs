@@ -26,6 +26,7 @@ use libra_crypto::{
 use libra_transaction_scripts;
 use libra_types::{
     account_address::AccountAddress,
+    account_config::lbr_type_tag,
     transaction::{RawTransaction, Script, Transaction, TransactionArgument},
 };
 use std::time::{Duration, SystemTime};
@@ -178,6 +179,7 @@ pub fn build_transaction(
         script,
         MAX_GAS_AMOUNT,
         GAS_UNIT_PRICE,
+        lbr_type_tag(),
         expiration_time(TXN_EXPIRATION),
     );
     let signed_txn = raw_txn.sign(signing_key, signing_key.public_key()).unwrap();

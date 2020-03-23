@@ -9,7 +9,7 @@ use bytecode_verifier::VerifiedModule;
 use compiler::Compiler;
 use libra_crypto::ed25519::*;
 use libra_types::{
-    account_config::CORE_CODE_ADDRESS,
+    account_config::{lbr_type_tag, CORE_CODE_ADDRESS},
     on_chain_config::VMPublishingOption,
     test_helpers::transaction_test_helpers,
     transaction::{
@@ -114,6 +114,7 @@ fn verify_simple_payment() {
         10, // this should be programmable but for now is 1 more than the setup
         100_000,
         1,
+        lbr_type_tag(),
     );
     assert_eq!(executor.verify_transaction(txn), None);
 
@@ -125,6 +126,7 @@ fn verify_simple_payment() {
         10, // this should be programmable but for now is 1 more than the setup
         100_000,
         1,
+        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
@@ -139,6 +141,7 @@ fn verify_simple_payment() {
         1,
         100_000,
         1,
+        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
@@ -153,6 +156,7 @@ fn verify_simple_payment() {
         11,
         100_000,
         1,
+        lbr_type_tag(),
     );
     assert_prologue_disparity!(
         executor.verify_transaction(txn.clone()) => None,
@@ -169,6 +173,7 @@ fn verify_simple_payment() {
         10,
         1_000_000,
         1,
+        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
@@ -189,6 +194,7 @@ fn verify_simple_payment() {
         10,
         10_000,
         1,
+        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
@@ -211,6 +217,7 @@ fn verify_simple_payment() {
         10,
         1_000_000,
         gas_schedule::MAX_PRICE_PER_GAS_UNIT.get() + 1,
+        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
@@ -240,6 +247,7 @@ fn verify_simple_payment() {
         10,
         1,
         gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
@@ -253,6 +261,7 @@ fn verify_simple_payment() {
         10,
         gas_schedule::MIN_TRANSACTION_GAS_UNITS.get() - 1,
         gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
@@ -266,6 +275,7 @@ fn verify_simple_payment() {
         10,
         gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
         gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
@@ -279,6 +289,7 @@ fn verify_simple_payment() {
         10,
         gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
         gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
@@ -291,10 +302,14 @@ fn verify_simple_payment() {
     args.push(TransactionArgument::U64(transfer_amount));
     args.push(TransactionArgument::Address(*receiver.address()));
 
-    let txn =
-        sender
-            .account()
-            .create_signed_txn_with_args(p2p_script.clone(), args, 10, 100_000, 1);
+    let txn = sender.account().create_signed_txn_with_args(
+        p2p_script.clone(),
+        args,
+        10,
+        100_000,
+        1,
+        lbr_type_tag(),
+    );
     assert_eq!(
         executor.execute_transaction(txn).status(),
         &TransactionStatus::Keep(
@@ -304,9 +319,15 @@ fn verify_simple_payment() {
     );
 
     // Create a new transaction that has no argument.
-    let txn = sender
-        .account()
-        .create_signed_txn_with_args(p2p_script, vec![], 10, 100_000, 1);
+    let txn = sender.account().create_signed_txn_with_args(
+        p2p_script,
+        vec![],
+        10,
+        100_000,
+        1,
+        lbr_type_tag(),
+    );
+
     assert_eq!(
         executor.execute_transaction(txn).status(),
         &TransactionStatus::Keep(
@@ -326,9 +347,15 @@ pub fn test_whitelist() {
 
     // When CustomScripts is off, a garbage script should be rejected with Keep(UnknownScript)
     let random_script = vec![];
-    let txn = sender
-        .account()
-        .create_signed_txn_with_args(random_script, vec![], 10, 100_000, 1);
+    let txn = sender.account().create_signed_txn_with_args(
+        random_script,
+        vec![],
+        10,
+        100_000,
+        1,
+        lbr_type_tag(),
+    );
+
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
         executor.execute_transaction(txn).status(),
@@ -348,9 +375,15 @@ pub fn test_arbitrary_script_execution() {
     // If CustomScripts is on, result should be Keep(DeserializationError). If it's off, the
     // result should be Keep(UnknownScript)
     let random_script = vec![];
-    let txn = sender
-        .account()
-        .create_signed_txn_with_args(random_script, vec![], 10, 100_000, 1);
+    let txn = sender.account().create_signed_txn_with_args(
+        random_script,
+        vec![],
+        10,
+        100_000,
+        1,
+        lbr_type_tag(),
+    );
+
     assert_eq!(executor.verify_transaction(txn.clone()), None);
     let status = executor.execute_transaction(txn).status().clone();
     assert!(!status.is_discarded());
@@ -393,7 +426,7 @@ pub fn test_no_publishing() {
     let random_module = compile_module_with_address(sender.address(), "file_name", &module);
     let txn = sender
         .account()
-        .create_user_txn(random_module, 10, 100_000, 1);
+        .create_user_txn(random_module, 10, 100_000, 1, lbr_type_tag());
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
         executor.execute_transaction(txn).status(),
@@ -436,7 +469,7 @@ pub fn test_open_publishing_invalid_address() {
     let random_module = compile_module_with_address(receiver.address(), "file_name", &module);
     let txn = sender
         .account()
-        .create_user_txn(random_module, 10, 100_000, 1);
+        .create_user_txn(random_module, 10, 100_000, 1, lbr_type_tag());
 
     // TODO: This is not verified for now.
     // verify and fail because the addresses don't match
@@ -487,7 +520,7 @@ pub fn test_open_publishing() {
     let random_module = compile_module_with_address(sender.address(), "file_name", &program);
     let txn = sender
         .account()
-        .create_user_txn(random_module, 10, 100_000, 1);
+        .create_user_txn(random_module, 10, 100_000, 1, lbr_type_tag());
     assert_eq!(executor.verify_transaction(txn.clone()), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
@@ -552,6 +585,7 @@ fn test_dependency_fails_verification() {
         10,
         100_000,
         1,
+        lbr_type_tag(),
     );
     // As of now, we don't verify dependencies in verify_transaction.
     assert_eq!(executor.verify_transaction(txn.clone()), None);

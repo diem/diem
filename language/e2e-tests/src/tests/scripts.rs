@@ -3,8 +3,8 @@
 
 use crate::{account::AccountData, executor::FakeExecutor, gas_costs};
 use libra_types::{
-    account_address::AccountAddress, on_chain_config::VMPublishingOption,
-    transaction::TransactionStatus, vm_error::StatusCode,
+    account_address::AccountAddress, account_config::lbr_type_tag,
+    on_chain_config::VMPublishingOption, transaction::TransactionStatus, vm_error::StatusCode,
 };
 use move_core_types::identifier::Identifier;
 use vm::file_format::{
@@ -24,10 +24,14 @@ fn script_code_unverifiable() {
     script.main.code.code = vec![Bytecode::LdU8(0), Bytecode::Add, Bytecode::Ret];
     let mut blob = vec![];
     script.serialize(&mut blob).expect("script must serialize");
-    let txn =
-        sender
-            .account()
-            .create_signed_txn_with_args(blob, vec![], 10, gas_costs::TXN_RESERVED, 1);
+    let txn = sender.account().create_signed_txn_with_args(
+        blob,
+        vec![],
+        10,
+        gas_costs::TXN_RESERVED,
+        1,
+        lbr_type_tag(),
+    );
 
     // execute transaction
     let output = &executor.execute_transaction(txn);
@@ -89,10 +93,14 @@ fn script_none_existing_module_dep() {
     ];
     let mut blob = vec![];
     script.serialize(&mut blob).expect("script must serialize");
-    let txn =
-        sender
-            .account()
-            .create_signed_txn_with_args(blob, vec![], 10, gas_costs::TXN_RESERVED, 1);
+    let txn = sender.account().create_signed_txn_with_args(
+        blob,
+        vec![],
+        10,
+        gas_costs::TXN_RESERVED,
+        1,
+        lbr_type_tag(),
+    );
 
     // execute transaction
     let output = &executor.execute_transaction(txn);
@@ -153,10 +161,14 @@ fn script_non_existing_function_dep() {
     ];
     let mut blob = vec![];
     script.serialize(&mut blob).expect("script must serialize");
-    let txn =
-        sender
-            .account()
-            .create_signed_txn_with_args(blob, vec![], 10, gas_costs::TXN_RESERVED, 1);
+    let txn = sender.account().create_signed_txn_with_args(
+        blob,
+        vec![],
+        10,
+        gas_costs::TXN_RESERVED,
+        1,
+        lbr_type_tag(),
+    );
 
     // execute transaction
     let output = &executor.execute_transaction(txn);
@@ -219,10 +231,14 @@ fn script_bad_sig_function_dep() {
     ];
     let mut blob = vec![];
     script.serialize(&mut blob).expect("script must serialize");
-    let txn =
-        sender
-            .account()
-            .create_signed_txn_with_args(blob, vec![], 10, gas_costs::TXN_RESERVED, 1);
+    let txn = sender.account().create_signed_txn_with_args(
+        blob,
+        vec![],
+        10,
+        gas_costs::TXN_RESERVED,
+        1,
+        lbr_type_tag(),
+    );
 
     // execute transaction
     let output = &executor.execute_transaction(txn);

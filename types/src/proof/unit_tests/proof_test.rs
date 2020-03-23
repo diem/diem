@@ -3,6 +3,7 @@
 
 use crate::{
     account_address::AccountAddress,
+    account_config::lbr_type_tag,
     account_state_blob::AccountStateBlob,
     block_info::BlockInfo,
     ledger_info::LedgerInfo,
@@ -343,6 +344,7 @@ fn test_verify_account_state_and_event() {
             Script::new(vec![], vec![]),
             /* max_gas_amount = */ 0,
             /* gas_unit_price = */ 0,
+            /* gas_specifier = */ lbr_type_tag(),
             /* expiration_time = */ std::time::Duration::new(0, 0),
         )
         .sign(&privkey, pubkey)

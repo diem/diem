@@ -7,6 +7,7 @@ use libra_config::config::NodeConfig;
 use libra_crypto::ed25519::*;
 use libra_types::{
     account_address::AccountAddress,
+    account_config::lbr_type_tag,
     mempool_status::MempoolStatusCode,
     transaction::{RawTransaction, Script, SignedTransaction},
 };
@@ -72,6 +73,7 @@ impl TestTransaction {
             Script::new(vec![], vec![]),
             max_gas_amount,
             self.gas_price,
+            lbr_type_tag(),
             exp_time,
         );
         let mut seed: [u8; 32] = [0u8; 32];
