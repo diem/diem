@@ -3,7 +3,7 @@
 
 use crate::{
     consensus_state::ConsensusState, error::Error,
-    persistent_safety_storage::PersistentSafetyStorage, t_safety_rules::TSafetyRules,
+    persistent_safety_storage::PersistentSafetyStorage, t_safety_rules::TSafetyRules, COUNTERS,
 };
 use consensus_types::{
     block::Block,
@@ -182,6 +182,7 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
     /// @TODO verify QC matches preferred round
     fn sign_proposal(&mut self, block_data: BlockData<T>) -> Result<Block<T>, Error> {
         debug!("Incoming proposal to sign.");
+        COUNTERS.sign_proposal.inc();
         Ok(Block::new_proposal_from_block_data(
             block_data,
             &self.validator_signer,
@@ -191,6 +192,7 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
     /// @TODO only sign a timeout if it matches last_voted_round or last_voted_round + 1
     /// @TODO update last_voted_round
     fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
+        COUNTERS.sign_timeout.inc();
         debug!("Incoming timeout message to sign.");
         Ok(timeout.sign(&self.validator_signer))
     }

@@ -8,12 +8,15 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+lazy_static = "1.4.0"
+
 consensus-types = { path = "../consensus-types", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-config = { path = "../../config", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-secure-net = { path = "../../secure/net", version = "0.1.0" }
+libra-secure-push-metrics = { path = "../../secure/push-metrics", version = "0.1.0" }
 libra-secure-storage = { path = "../../secure/storage", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
