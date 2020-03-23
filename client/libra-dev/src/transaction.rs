@@ -13,6 +13,7 @@ use lcs::to_bytes;
 use libra_crypto::{ed25519::*, test_utils::KeyPair};
 use libra_types::{
     account_address::AccountAddress,
+    account_config::lbr_type_tag,
     transaction::{
         authenticator::AuthenticationKey, helpers::TransactionSigner, RawTransaction,
         SignedTransaction, TransactionArgument, TransactionPayload,
@@ -82,6 +83,7 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
         payload,
         max_gas_amount,
         gas_unit_price,
+        lbr_type_tag(),
         expiration_time,
     );
 
@@ -177,6 +179,7 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
         payload,
         max_gas_amount,
         gas_unit_price,
+        lbr_type_tag(),
         expiration_time,
     );
 
@@ -601,6 +604,7 @@ fn test_libra_signed_transaction_deserialize() {
             program,
             max_gas_amount,
             gas_unit_price,
+            lbr_type_tag(),
             Duration::from_secs(expiration_time_secs),
         ),
         public_key.clone(),

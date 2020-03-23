@@ -9,6 +9,7 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
+    account_config::lbr_type_tag,
     contract_event::ContractEvent,
     event::EventKey,
     language_storage::TypeTag,
@@ -302,8 +303,15 @@ pub fn encode_transfer_transaction(
 }
 
 fn encode_transaction(sender: AccountAddress, program: Script) -> Transaction {
-    let raw_transaction =
-        RawTransaction::new_script(sender, 0, program, 0, 0, std::time::Duration::from_secs(0));
+    let raw_transaction = RawTransaction::new_script(
+        sender,
+        0,
+        program,
+        0,
+        0,
+        lbr_type_tag(),
+        std::time::Duration::from_secs(0),
+    );
 
     let (privkey, pubkey) = compat::generate_keypair(None);
     Transaction::UserTransaction(

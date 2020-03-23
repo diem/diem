@@ -127,8 +127,12 @@ pub fn account_balance_struct_tag() -> StructTag {
         address: CORE_CODE_ADDRESS,
         module: account_module_name().to_owned(),
         name: account_balance_struct_name().to_owned(),
-        type_params: vec![TypeTag::Struct(lbr_struct_tag())],
+        type_params: vec![lbr_type_tag()],
     }
+}
+
+pub fn lbr_type_tag() -> TypeTag {
+    TypeTag::Struct(lbr_struct_tag())
 }
 
 pub fn lbr_struct_tag() -> StructTag {
