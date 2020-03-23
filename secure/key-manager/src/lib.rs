@@ -73,6 +73,10 @@ impl From<anyhow::Error> for Error {
 #[cfg(test)]
 trait LibraInterface {
     /// Retrieves the current time from the blockchain, this is returned as microseconds.
+    fn libra_timestamp(&self) -> Result<u64, Error>;
+
+    /// Retrieves the last reconfiguration time from the blockchain, this is returned as
+    /// microseconds.
     fn last_reconfiguration(&self) -> Result<u64, Error>;
 
     /// Retrieve current sequence id for the provided account.
@@ -119,6 +123,11 @@ where
 
     pub fn last_rotation(&self) -> Result<u64, Error> {
         Ok(self.storage.get_public_key(&self.key_name)?.last_update)
+    }
+
+    pub fn libra_timestamp(&self) -> Result<u64, Error> {
+        // Convert the time to seconds
+        Ok(self.libra.last_reconfiguration()? / 1_000_000)
     }
 
     pub fn compare_storage_to_config(&self) -> Result<(), Error> {
