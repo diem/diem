@@ -1,10 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::{Error, KeyManager, LibraInterface};
 use executor::Executor;
 use executor_types::ExecutedTrees;
 use libra_config::config::NodeConfig;
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
+use libra_secure_storage::{InMemoryStorage, KVStorage, Policy, Value};
 use libra_types::{
     account_address::AccountAddress,
     account_config,
@@ -15,20 +17,34 @@ use libra_types::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::Transaction,
     validator_config::ValidatorConfig,
-    validator_set::ValidatorSet,
+    validator_info::ValidatorInfo,
 };
 use libra_vm::LibraVM;
 use libradb::{LibraDB, LibraDBTrait};
 use rand::{rngs::StdRng, SeedableRng};
-use std::{collections::BTreeMap, convert::TryFrom, sync::Arc};
+use std::{collections::BTreeMap, convert::TryFrom, sync::Arc, time::SystemTime};
 use storage_client::{StorageReadServiceClient, StorageWriteServiceClient};
 use tokio::runtime::Runtime;
 
 struct Node {
     account: AccountAddress,
     executor: Arc<Executor<LibraVM>>,
+    libra: TestLibraInterface,
+    key_manager: KeyManager<TestLibraInterface, InMemoryStorage>,
     storage: Arc<LibraDB>,
     _storage_service: Runtime,
+}
+
+fn setup_secure_storage(config: &NodeConfig) -> InMemoryStorage {
+    let test_config = config.clone().test.unwrap();
+    let mut keypair = test_config.consensus_keypair.unwrap();
+    let prikey = Value::Ed25519PrivateKey(keypair.take_private().unwrap());
+
+    let mut sec_storage = InMemoryStorage::new();
+    sec_storage
+        .create(crate::CONSENSUS_KEY, prikey, &Policy::public())
+        .unwrap();
+    sec_storage
 }
 
 fn setup(config: &NodeConfig) -> Node {
@@ -39,47 +55,89 @@ fn setup(config: &NodeConfig) -> Node {
         Arc::new(StorageWriteServiceClient::new(&config.storage.address)),
         config,
     ));
+    let libra = TestLibraInterface {
+        storage: storage.clone(),
+    };
+    let account = config.validator_network.as_ref().unwrap().peer_id;
+    let key_manager = KeyManager::new(
+        account,
+        "consensus_key".to_owned(),
+        libra.clone(),
+        setup_secure_storage(&config),
+    );
 
     Node {
-        account: config.validator_network.as_ref().unwrap().peer_id,
+        account,
         executor,
+        key_manager,
+        libra,
         storage,
         _storage_service: storage_service,
     }
 }
 
-fn get_discovery_set(storage: &Arc<LibraDB>) -> DiscoverySet {
-    let account = account_config::discovery_set_address();
-    let blob = storage.get_latest_account_state(account).unwrap().unwrap();
-    let account_state = AccountState::try_from(&blob).unwrap();
-    account_state
-        .get_discovery_set_resource()
-        .unwrap()
-        .unwrap()
-        .discovery_set()
-        .clone()
+#[derive(Clone)]
+struct TestLibraInterface {
+    storage: Arc<LibraDB>,
 }
 
-fn get_validator_config(storage: &Arc<LibraDB>, account: AccountAddress) -> ValidatorConfig {
-    let blob = storage.get_latest_account_state(account).unwrap().unwrap();
-    let account_state = AccountState::try_from(&blob).unwrap();
-    account_state
-        .get_validator_config_resource()
-        .unwrap()
-        .unwrap()
-        .validator_config
+impl TestLibraInterface {
+    fn retrieve_discovery_set(&self) -> Result<DiscoverySet, Error> {
+        let account = account_config::discovery_set_address();
+        let blob = self
+            .storage
+            .get_latest_account_state(account)?
+            .ok_or(Error::DataDoesNotExist("AccountState"))?;
+        let account_state = AccountState::try_from(&blob).unwrap();
+        Ok(account_state
+            .get_discovery_set_resource()?
+            .ok_or(Error::DataDoesNotExist("DiscoverySetResource"))?
+            .discovery_set()
+            .clone())
+    }
 }
 
-fn get_validator_set(storage: &Arc<LibraDB>) -> ValidatorSet {
-    let account = account_config::validator_set_address();
-    let blob = storage.get_latest_account_state(account).unwrap().unwrap();
-    let account_state = AccountState::try_from(&blob).unwrap();
-    account_state
-        .get_validator_set_resource()
-        .unwrap()
-        .unwrap()
-        .validator_set()
-        .clone()
+impl LibraInterface for TestLibraInterface {
+    fn retrieve_sequence_id(&self, _account: AccountAddress) -> Result<u64, Error> {
+        Ok(0)
+    }
+
+    fn submit_transaction(&self, _transaction: Transaction) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn retrieve_validator_config(&self, account: AccountAddress) -> Result<ValidatorConfig, Error> {
+        let blob = self
+            .storage
+            .get_latest_account_state(account)?
+            .ok_or(Error::DataDoesNotExist("AccountState"))?;
+        let account_state = AccountState::try_from(&blob).unwrap();
+        Ok(account_state
+            .get_validator_config_resource()?
+            .ok_or(Error::DataDoesNotExist("ValidatorConfigResource"))?
+            .validator_config)
+    }
+
+    fn retrieve_validator_info(
+        &self,
+        validator_account: AccountAddress,
+    ) -> Result<ValidatorInfo, Error> {
+        let set_account = account_config::validator_set_address();
+        let blob = self
+            .storage
+            .get_latest_account_state(set_account)?
+            .ok_or(Error::DataDoesNotExist("AccountState"))?;
+        let account_state = AccountState::try_from(&blob)?;
+        let validator_set_resource = account_state
+            .get_validator_set_resource()?
+            .ok_or(Error::DataDoesNotExist("ValidatorSetResource"))?;
+        validator_set_resource
+            .validator_set()
+            .iter()
+            .find(|vi| vi.account_address() == &validator_account)
+            .cloned()
+            .ok_or(Error::ValidatorInfoNotFound(validator_account))
+    }
 }
 
 fn execute_and_commit(node: &Node, mut block: Vec<Transaction>) {
@@ -115,13 +173,14 @@ fn execute_and_commit(node: &Node, mut block: Vec<Transaction>) {
 
 #[test]
 // This simple test just proves that genesis took effect and the values are in storage
-fn test() {
+fn test_ability_to_read_move_data() {
     let (config, _genesis_key) = config_builder::test_config();
     let node = setup(&config);
 
-    get_discovery_set(&node.storage);
-    get_validator_config(&node.storage, node.account);
-    get_validator_set(&node.storage);
+    node.libra.retrieve_discovery_set().unwrap();
+    node.libra.retrieve_validator_config(node.account).unwrap();
+    node.libra.retrieve_discovery_set().unwrap();
+    node.libra.retrieve_validator_info(node.account).unwrap();
 }
 
 #[test]
@@ -137,12 +196,12 @@ fn test_consensus_rotation() {
     let genesis_pubkey = genesis_prikey.public_key();
     let account_prikey = test_config.account_keypair.unwrap().take_private().unwrap();
 
-    let genesis_config = get_validator_config(&node.storage, node.account);
-    let genesis_set = get_validator_set(&node.storage);
+    let genesis_config = node.libra.retrieve_validator_config(node.account).unwrap();
+    let genesis_info = node.libra.retrieve_validator_info(node.account).unwrap();
 
     assert_eq!(genesis_pubkey, genesis_config.consensus_pubkey);
-    assert_eq!(&genesis_pubkey, genesis_set[0].consensus_public_key());
-    assert_eq!(&node.account, genesis_set[0].account_address());
+    assert_eq!(&genesis_pubkey, genesis_info.consensus_public_key());
+    assert_eq!(&node.account, genesis_info.account_address());
 
     let mut rng = StdRng::from_seed([44u8; 32]);
     let new_prikey = Ed25519PrivateKey::generate_for_testing(&mut rng);
@@ -152,10 +211,24 @@ fn test_consensus_rotation() {
 
     execute_and_commit(&node, vec![txn]);
 
-    let new_config = get_validator_config(&node.storage, node.account);
-    let new_set = get_validator_set(&node.storage);
+    let new_config = node.libra.retrieve_validator_config(node.account).unwrap();
+    let new_info = node.libra.retrieve_validator_info(node.account).unwrap();
 
     assert!(new_pubkey != genesis_pubkey);
     assert_eq!(new_pubkey, new_config.consensus_pubkey);
-    assert_eq!(&new_pubkey, new_set[0].consensus_public_key());
+    assert_eq!(&new_pubkey, new_info.consensus_public_key());
+}
+
+#[test]
+// This verifies the key manager is properly setup
+fn test_key_manager_init() {
+    let (config, _genesis_key) = config_builder::test_config();
+    let node = setup(&config);
+    node.key_manager.compare_storage_to_config().unwrap();
+    node.key_manager.compare_info_to_config().unwrap();
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    assert!(now - 600 <= node.key_manager.last_rotation().unwrap());
 }
