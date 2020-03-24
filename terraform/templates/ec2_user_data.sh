@@ -44,6 +44,14 @@ ${host_log_path} {
 	delaycompress
 	copytruncate
 }
+
+${host_structlog_path} {
+	maxsize 500M
+	rotate 100
+	compress
+	delaycompress
+	copytruncate
+}
 EOF
 sudo mv /etc/cron.daily/logrotate /etc/cron.hourly/
 {% end %}
