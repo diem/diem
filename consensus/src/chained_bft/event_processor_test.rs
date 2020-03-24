@@ -16,8 +16,8 @@ use crate::{
         network_tests::NetworkPlayground,
         persistent_liveness_storage::RecoveryData,
         test_utils::{
-            self, consensus_runtime, MockStateComputer, MockStorage, MockTransactionManager,
-            TestPayload, TreeInserter,
+            self, consensus_runtime, timed_block_on, MockStateComputer, MockStorage,
+            MockTransactionManager, TestPayload, TreeInserter,
         },
     },
     util::time_service::{ClockTimeService, TimeService},
@@ -223,7 +223,7 @@ impl NodeSetup {
 
 #[test]
 fn basic_new_rank_event_test() {
-    let runtime = consensus_runtime();
+    let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
     let node1 = nodes.pop().unwrap();
@@ -231,7 +231,7 @@ fn basic_new_rank_event_test() {
     let genesis = node.block_store.root();
     let mut inserter = TreeInserter::new_with_store(node.signer.clone(), node.block_store.clone());
     let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
-    block_on(async move {
+    timed_block_on(&mut runtime, async {
         let new_round = 1;
         node.event_processor
             .process_new_round_event(NewRoundEvent {
@@ -328,7 +328,7 @@ fn basic_new_rank_event_test() {
 #[test]
 /// If the proposal is valid, a vote should be sent
 fn process_successful_proposal_test() {
-    let runtime = consensus_runtime();
+    let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
@@ -336,7 +336,7 @@ fn process_successful_proposal_test() {
     let node = &mut nodes[1];
 
     let genesis_qc = certificate_for_genesis();
-    block_on(async move {
+    timed_block_on(&mut runtime, async {
         let proposal = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
         let proposal_id = proposal.id();
         node.event_processor.process_proposed_block(proposal).await;
@@ -376,7 +376,7 @@ fn process_successful_proposal_test() {
 /// If the proposal does not pass voting rules,
 /// No votes are sent, but the block is still added to the block tree.
 fn process_old_proposal_test() {
-    let runtime = consensus_runtime();
+    let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
@@ -387,7 +387,7 @@ fn process_old_proposal_test() {
     let new_block_id = new_block.id();
     let old_block = Block::new_proposal(vec![1], 1, 2, genesis_qc, &node.signer);
     let old_block_id = old_block.id();
-    block_on(async move {
+    timed_block_on(&mut runtime, async {
         node.event_processor.process_proposed_block(new_block).await;
         node.event_processor.process_proposed_block(old_block).await;
         let pending_messages = playground
@@ -422,7 +422,7 @@ fn process_old_proposal_test() {
 /// Basically it checks that adversary can not send proposal and skip rounds violating pacemaker
 /// rules
 fn process_round_mismatch_test() {
-    let runtime = consensus_runtime();
+    let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
@@ -432,7 +432,7 @@ fn process_round_mismatch_test() {
     let genesis_qc = certificate_for_genesis();
     let correct_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let block_skip_round = Block::new_proposal(vec![1], 2, 2, genesis_qc.clone(), &node.signer);
-    block_on(async move {
+    timed_block_on(&mut runtime, async {
         let bad_proposal = ProposalMsg::<TestPayload>::new(
             block_skip_round,
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
@@ -460,7 +460,7 @@ fn process_round_mismatch_test() {
 /// Ensure that after the vote messages are broadcasted upon timeout, the receivers
 /// have the highest quorum certificate (carried by the SyncInfo of the vote message)
 fn process_vote_timeout_msg_test() {
-    let runtime = consensus_runtime();
+    let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
     let non_proposer = nodes.pop().unwrap();
@@ -527,7 +527,8 @@ fn process_vote_timeout_msg_test() {
         vote_on_timeout,
         SyncInfo::new(block_0_quorum_cert, certificate_for_genesis(), None),
     );
-    block_on(
+    timed_block_on(
+        &mut runtime,
         static_proposer
             .event_processor
             .process_vote(vote_msg_on_timeout),
@@ -546,7 +547,7 @@ fn process_vote_timeout_msg_test() {
 #[test]
 /// We don't vote for proposals that comes from proposers that are not valid proposers for round
 fn process_proposer_mismatch_test() {
-    let runtime = consensus_runtime();
+    let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
@@ -562,7 +563,7 @@ fn process_proposer_mismatch_test() {
         genesis_qc.clone(),
         &incorrect_proposer.signer,
     );
-    block_on(async move {
+    timed_block_on(&mut runtime, async {
         let bad_proposal = ProposalMsg::<TestPayload>::new(
             block_incorrect_proposer,
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
@@ -590,7 +591,7 @@ fn process_proposer_mismatch_test() {
 #[test]
 /// We allow to 'skip' round if proposal carries timeout certificate for next round
 fn process_timeout_certificate_test() {
-    let runtime = consensus_runtime();
+    let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
     // node (which will send the votes to the proposer).
@@ -606,7 +607,7 @@ fn process_timeout_certificate_test() {
     let mut tc = TimeoutCertificate::new(timeout);
     tc.add_signature(node.signer.author(), timeout_signature);
 
-    block_on(async move {
+    timed_block_on(&mut runtime, async {
         let skip_round_proposal = ProposalMsg::<TestPayload>::new(
             block_skip_round,
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), Some(tc)),
@@ -634,7 +635,7 @@ fn process_timeout_certificate_test() {
 /// Happy path for vote processing:
 /// 1) if a new QC is formed and a block is present send a PM event
 fn process_votes_basic_test() {
-    let runtime = consensus_runtime();
+    let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut node = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1)
         .pop()
@@ -666,7 +667,7 @@ fn process_votes_basic_test() {
         test_utils::placeholder_sync_info(),
     );
 
-    block_on(async move {
+    timed_block_on(&mut runtime, async {
         node.event_processor.process_vote(vote_msg).await;
         // The new QC is aggregated
         assert_eq!(
@@ -681,7 +682,7 @@ fn process_votes_basic_test() {
 
 #[test]
 fn process_block_retrieval() {
-    let runtime = consensus_runtime();
+    let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut node = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1)
         .pop()
@@ -691,7 +692,7 @@ fn process_block_retrieval() {
     let block = Block::new_proposal(vec![1], 1, 1, genesis_qc, &node.signer);
     let block_id = block.id();
 
-    block_on(async move {
+    timed_block_on(&mut runtime, async {
         node.event_processor
             .process_certificates(block.quorum_cert(), None)
             .await
@@ -771,7 +772,7 @@ fn process_block_retrieval() {
 #[test]
 /// rebuild a node from previous storage without violating safety guarantees.
 fn basic_restart_test() {
-    let runtime = consensus_runtime();
+    let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut node = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1)
         .pop()
@@ -791,13 +792,15 @@ fn basic_restart_test() {
         proposals.push(proposal);
     }
     for proposal in &proposals {
-        block_on(
+        timed_block_on(
+            &mut runtime,
             node_mut
                 .event_processor
                 .process_certificates(proposal.quorum_cert(), None),
         )
         .expect("Failed to process certificates");
-        block_on(
+        timed_block_on(
+            &mut runtime,
             node_mut
                 .event_processor
                 .process_proposed_block(proposal.block().clone()),
@@ -817,12 +820,12 @@ fn basic_restart_test() {
 #[test]
 /// Generate a NIL vote extending HQC upon timeout if no votes have been sent in the round.
 fn nil_vote_on_timeout() {
-    let runtime = consensus_runtime();
+    let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // It needs 2 nodes to test network message.
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
     let node = &mut nodes[0];
-    block_on(async move {
+    timed_block_on(&mut runtime, async {
         // Process the outgoing vote message and verify that it contains a round signature
         // and that the vote extends genesis.
         node.event_processor.process_local_timeout(1).await;

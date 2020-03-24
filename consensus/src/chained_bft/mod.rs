@@ -23,5 +23,5 @@ mod liveness;
 
 mod event_processor;
 
-#[cfg(feature = "fuzzing")]
+#[cfg(any(test, feature = "fuzzing"))]
 pub use event_processor::event_processor_fuzzing;
