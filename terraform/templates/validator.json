@@ -43,7 +43,7 @@
             {"name": "CFG_NUM_VALIDATORS_IN_GENESIS", "value": "${cfg_num_validators_in_genesis}"},
             {"name": "CFG_SEED", "value": "${cfg_seed}"},
             {"name": "CFG_SEED_PEER_IP", "value": "${cfg_seed_peer_ip}"},
-        %{ if slog_path != "" }
+        %{ if structlog_path != "" }
             {"name": "STRUCT_LOG_FILE", "value": "${structlog_path}"},
         %{ endif }
             {"name": "RUST_LOG", "value": "${log_level}"}
