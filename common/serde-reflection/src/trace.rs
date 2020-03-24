@@ -49,7 +49,7 @@ impl Tracer {
     }
 
     /// Trace the serialization of a particular value.
-    /// Nested containers will be added to the global registry, indexed by
+    /// Nested containers will be added to the tracing registry, indexed by
     /// their (non-qualified) name.
     pub fn trace_value<T>(&mut self, value: &T) -> Result<(Format, Value)>
     where
@@ -60,8 +60,12 @@ impl Tracer {
     }
 
     /// Trace a single deserialization of a particular type.
-    /// Nested containers will be added to the global registry, indexed by
+    /// Nested containers will be added to the tracing registry, indexed by
     /// their (non-qualified) name.
+    /// Tracing deserialization of a type may fail if this type or some dependencies
+    /// have implemented a custom deserializer that validates data. In this case,
+    /// `trace_value` must be called first on the relevant user types to provide valid
+    /// examples.
     pub fn trace_type_once<'de, T>(&mut self) -> Result<Format>
     where
         T: Deserialize<'de>,
@@ -72,7 +76,7 @@ impl Tracer {
         Ok(format)
     }
 
-    /// Same as trace_type_once for seeded deserialization.
+    /// Same as `trace_type_once` for seeded deserialization.
     pub fn trace_type_once_with_seed<'de, T>(&mut self, seed: T) -> Result<Format>
     where
         T: DeserializeSeed<'de>,
@@ -83,8 +87,8 @@ impl Tracer {
         Ok(format)
     }
 
-    /// Same as trace_type_once but if `T` is an enum, we repeat the process
-    /// until all variants are covered.
+    /// Same as `trace_type_once` but if `T` is an enum, we repeat the process
+    /// until all variants of `T` are covered.
     pub fn trace_type<'de, T>(&mut self) -> Result<Format>
     where
         T: Deserialize<'de>,
@@ -120,7 +124,7 @@ impl Tracer {
 
     /// Compute a default value for `T`.
     /// Return true if `T` is an enum and more values are needed to cover
-    /// all variant cases.
+    /// all variant cases. Otherwise similar to `trace_type_once`.
     pub fn sample_type_once<'de, T>(&mut self) -> Result<(T, bool)>
     where
         T: Deserialize<'de>,
@@ -143,7 +147,7 @@ impl Tracer {
     }
 
     /// Same as sample_type_once but if `T` is an enum, we repeat the process
-    /// until all variants are covered.
+    /// until all variants are covered. Otherwise similar to `trace_type`.
     pub fn sample_type<'de, T>(&mut self) -> Result<Vec<T>>
     where
         T: Deserialize<'de>,
@@ -159,10 +163,17 @@ impl Tracer {
     }
 
     /// Finish tracing and recover a map of normalized formats.
+    /// Returns an error if we detect incompletely traced types.
+    /// This may happen in a few of cases:
+    /// * We traced serialization only and the sampled values missed some variant, the content
+    ///   of an option type, the content of a sequence type, the key or the value of a dictionary type.
+    /// * We trace deserialization of some types but not every enum type was explicitly traced.
     pub fn registry(self) -> Result<Registry> {
         let mut registry = self.registry;
-        for format in registry.values_mut() {
-            format.normalize()?;
+        for (name, format) in registry.iter_mut() {
+            format
+                .normalize()
+                .map_err(|_| Error::UnknownFormatInContainer(name))?;
         }
         if self.incomplete_enums.is_empty() {
             Ok(registry)

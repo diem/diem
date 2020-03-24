@@ -9,8 +9,7 @@ use serde::{
 };
 use std::collections::{btree_map::Entry, BTreeMap};
 
-/// Description of a Serde-based serialization format.
-/// First, the formats of anonymous "value" types.
+/// Serde-based serialization format for anonymous "value" types.
 #[derive(Serialize, Deserialize, Debug, Eq, Clone, PartialEq)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum Format {
@@ -60,7 +59,7 @@ pub enum Format {
     },
 }
 
-/// Second, the formats of named "container" types.
+/// Serde-based serialization format for named "container" types.
 /// In Rust, those are enums and structs.
 #[derive(Serialize, Deserialize, Debug, Eq, Clone, PartialEq)]
 #[serde(rename_all = "UPPERCASE")]
@@ -80,7 +79,7 @@ pub enum ContainerFormat {
 
 #[derive(Debug, Clone, Default, Eq, PartialEq)]
 /// A named value.
-/// Used for named parameters or variant cases.
+/// Used for named parameters or variants.
 pub struct Named<T> {
     pub name: String,
     pub value: T,

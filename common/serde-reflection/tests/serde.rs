@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bincode;
-use libra_serde_reflection::{ContainerFormat, Format, Named, Tracer, Value, VariantFormat};
+use libra_serde_reflection::{ContainerFormat, Error, Format, Named, Tracer, Value, VariantFormat};
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use serde_json;
 use serde_yaml;
+use std::collections::BTreeMap;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 enum E {
@@ -145,5 +146,117 @@ fn test_tracers() {
             E::Struct { a: 0 },
             E::NewTupleArray((0, 0, 0))
         ]
+    );
+}
+
+#[derive(Serialize, PartialEq, Eq, Debug, Clone)]
+struct Name(String);
+
+impl<'de> Deserialize<'de> for Name {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: ::serde::Deserializer<'de>,
+    {
+        // Make sure to wrap our value in a container with the same name
+        // as the original type.
+        #[derive(Deserialize)]
+        #[serde(rename = "Name")]
+        struct InternalValue(String);
+
+        let value = InternalValue::deserialize(deserializer)?.0;
+        // Enforce some custom invariant
+        if value.len() >= 2 && value.chars().all(char::is_alphabetic) {
+            Ok(Name(value))
+        } else {
+            Err(<D::Error as ::serde::de::Error>::custom(format!(
+                "Invalid name {}",
+                value
+            )))
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+enum Person {
+    NickName(Name),
+    FullName { first: Name, last: Name },
+}
+
+#[test]
+fn test_type_deserialization_with_custom_invariants() {
+    let mut tracer = Tracer::new(/* is_human_readable */ false);
+    // Type trace alone cannot guess a valid value for `Name`.
+    assert_eq!(
+        tracer.trace_type::<Person>().unwrap_err(),
+        Error::Custom(format!("Invalid name {}", "")),
+    );
+
+    // Let's trace a sample Rust value first. We obtain an abstract value as a side effect.
+    let bob = Name("Bob".into());
+    let (format, value) = tracer.trace_value(&bob).unwrap();
+    assert_eq!(format, Format::TypeName("Name".into()));
+    assert_eq!(value, Value::Str("Bob".into()));
+
+    // Now try again.
+    let format = tracer.trace_type::<Person>().unwrap();
+    assert_eq!(format, Format::TypeName("Person".into()));
+
+    // We can request a value for `Person`.
+    let (person, has_more) = tracer.sample_type_once::<Person>().unwrap();
+    assert_eq!(person, Person::NickName(bob.clone()));
+    assert!(!has_more);
+
+    // We cannot sample all values with this tracer any more.
+    let persons = tracer.sample_type::<Person>().unwrap();
+    assert_eq!(persons.len(), 1);
+
+    // .. but it would work if start from scratch.
+    let mut tracer = Tracer::new(/* is_human_readable */ false);
+    tracer.trace_value(&bob).unwrap();
+    let persons = tracer.sample_type::<Person>().unwrap();
+    assert_eq!(
+        persons,
+        vec![
+            Person::NickName(bob.clone()),
+            Person::FullName {
+                first: bob.clone(),
+                last: bob,
+            }
+        ]
+    );
+
+    // We now have a description of all Serde formats under `Person`.
+    let registry = tracer.registry().unwrap();
+    assert_eq!(
+        registry.get("Name").unwrap(),
+        &ContainerFormat::NewTypeStruct(Box::new(Format::Str))
+    );
+    let mut variants: BTreeMap<_, _> = BTreeMap::new();
+    variants.insert(
+        0,
+        Named {
+            name: "NickName".into(),
+            value: VariantFormat::NewType(Box::new(Format::TypeName("Name".into()))),
+        },
+    );
+    variants.insert(
+        1,
+        Named {
+            name: "FullName".into(),
+            value: VariantFormat::Struct(vec![
+                Named {
+                    name: "first".into(),
+                    value: Format::TypeName("Name".into()),
+                },
+                Named {
+                    name: "last".into(),
+                    value: Format::TypeName("Name".into()),
+                },
+            ]),
+        },
+    );
+    assert_eq!(
+        registry.get("Person").unwrap(),
+        &ContainerFormat::Enum(variants)
     );
 }
