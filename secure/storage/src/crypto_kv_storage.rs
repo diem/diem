@@ -70,7 +70,7 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
         Err(Error::KeyVersionNotFound(version.to_string()))
     }
 
-    fn rotate_key_pair(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
+    fn rotate_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
         match self.get(name)?.value {
             Value::Ed25519PrivateKey(private_key) => {
                 let (new_private_key, new_public_key) = new_ed25519_key_pair()?;

@@ -49,7 +49,7 @@ pub trait CryptoStorage: Send + Sync {
     /// If the key pair doesn't exist, or the caller doesn't have the appropriate permissions to
     /// retrieve the public key, this call will fail with an error. Otherwise, the new public
     /// key for the rotated key pair is returned.
-    fn rotate_key_pair(&mut self, name: &str) -> Result<Ed25519PublicKey, Error>;
+    fn rotate_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error>;
 
     /// Signs the given message using the private key associated with the given 'name'.
     /// If the key pair doesn't exist, or the caller doesn't have the appropriate
