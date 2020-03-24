@@ -19,7 +19,7 @@ use bytecode_source_map::source_map::SourceMap;
 use libra_types::account_address::AccountAddress as LibraAddress;
 use move_ir_types::{ast as IR, location::*};
 use move_vm::file_format as F;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 //**************************************************************************************************
 // Entry
@@ -51,10 +51,9 @@ pub fn program(prog: G::Program) -> Result<Vec<CompiledUnit>, Errors> {
         .flat_map(|(m, mdef)| {
             mdef.functions.iter().map(move |(f, fdef)| {
                 let key = (m.clone(), f);
-                (
-                    key,
-                    function_signature(&mut Context::new(None), fdef.signature.clone()),
-                )
+                let seen = seen_structs(&fdef.signature);
+                let sig = function_signature(&mut Context::new(None), fdef.signature.clone());
+                (key, (seen, sig))
             })
         })
         .collect();
@@ -86,7 +85,10 @@ fn module(
     mdef: G::ModuleDefinition,
     dependency_orderings: &HashMap<ModuleIdent, usize>,
     struct_declarations: &HashMap<(ModuleIdent, StructName), (bool, Vec<(IR::TypeVar, IR::Kind)>)>,
-    function_declarations: &HashMap<(ModuleIdent, FunctionName), IR::FunctionSignature>,
+    function_declarations: &HashMap<
+        (ModuleIdent, FunctionName),
+        (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
+    >,
 ) -> Result<CompiledUnit, Error> {
     let mut context = Context::new(Some(&ident));
     let structs = mdef
@@ -144,7 +146,10 @@ fn main(
     fdef: G::Function,
     dependency_orderings: &HashMap<ModuleIdent, usize>,
     struct_declarations: &HashMap<(ModuleIdent, StructName), (bool, Vec<(IR::TypeVar, IR::Kind)>)>,
-    function_declarations: &HashMap<(ModuleIdent, FunctionName), IR::FunctionSignature>,
+    function_declarations: &HashMap<
+        (ModuleIdent, FunctionName),
+        (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
+    >,
 ) -> Result<CompiledUnit, Error> {
     let loc = main_name.loc();
     let mut context = Context::new(None);
@@ -339,6 +344,53 @@ fn function_signature(context: &mut Context, sig: H::FunctionSignature) -> IR::F
         return_type,
         formals,
         type_formals,
+    }
+}
+
+fn seen_structs(sig: &H::FunctionSignature) -> BTreeSet<(ModuleIdent, StructName)> {
+    let mut seen = BTreeSet::new();
+    seen_structs_type(&mut seen, &sig.return_type);
+    sig.parameters
+        .iter()
+        .for_each(|(_, st)| seen_structs_single_type(&mut seen, st));
+    seen
+}
+
+fn seen_structs_type(seen: &mut BTreeSet<(ModuleIdent, StructName)>, sp!(_, t_): &H::Type) {
+    use H::Type_ as T;
+    match t_ {
+        T::Unit => (),
+        T::Single(st) => seen_structs_single_type(seen, st),
+        T::Multiple(ss) => ss.iter().for_each(|st| seen_structs_single_type(seen, st)),
+    }
+}
+
+fn seen_structs_single_type(
+    seen: &mut BTreeSet<(ModuleIdent, StructName)>,
+    sp!(_, st_): &H::SingleType,
+) {
+    use H::SingleType_ as S;
+    match st_ {
+        S::Base(bt) | S::Ref(_, bt) => seen_structs_base_type(seen, bt),
+    }
+}
+
+fn seen_structs_base_type(
+    seen: &mut BTreeSet<(ModuleIdent, StructName)>,
+    sp!(_, bt_): &H::BaseType,
+) {
+    use H::{BaseType_ as B, TypeName_ as TN};
+    match bt_ {
+        B::Unreachable | B::UnresolvedError => {
+            panic!("ICE should not have reached compilation if there are errors")
+        }
+        B::Apply(_, sp!(_, tn_), tys) => {
+            if let TN::ModuleType(m, s) = tn_ {
+                seen.insert((m.clone(), s.clone()));
+            }
+            tys.iter().for_each(|st| seen_structs_base_type(seen, st))
+        }
+        B::Param(TParam { .. }) => (),
     }
 }
 
