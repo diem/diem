@@ -216,11 +216,12 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
+        self.format.merge(Format::TypeName(name.into()))?;
         // If a newtype struct was visited by the serialization tracer, use the recorded value.
         if let Some(hint) = self.tracer.get_value(name) {
+            // Hints are recorded during serialization-tracing therefore the registry is already accurate.
             return visitor.visit_newtype_struct(hint.clone().into_deserializer());
         }
-        self.format.merge(Format::TypeName(name.into()))?;
         self.tracer
             .registry
             .entry(name)
