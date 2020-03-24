@@ -18,8 +18,6 @@ use vm::{
     },
 };
 
-type TypeFormalMap = HashMap<TypeVar_, TableIndex>;
-
 macro_rules! get_or_add_item_macro {
     ($m:ident, $k_get:expr, $k_insert:expr) => {{
         let k_key = $k_get;
@@ -37,7 +35,7 @@ macro_rules! get_or_add_item_macro {
     }};
 }
 
-const TABLE_MAX_SIZE: usize = u16::max_value() as usize;
+pub const TABLE_MAX_SIZE: usize = u16::max_value() as usize;
 fn get_or_add_item_ref<K: Clone + Eq + Hash>(
     m: &mut HashMap<K, TableIndex>,
     k: &K,
@@ -190,9 +188,6 @@ pub struct Context<'a> {
     byte_array_pool: HashMap<Vec<u8>, TableIndex>,
     address_pool: HashMap<AccountAddress, TableIndex>,
 
-    // Current generic/type formal context
-    type_formals: TypeFormalMap,
-
     // The current function index that we are on
     current_function_index: FunctionDefinitionIndex,
 
@@ -236,7 +231,6 @@ impl<'a> Context<'a> {
             identifiers: HashMap::new(),
             byte_array_pool: HashMap::new(),
             address_pool: HashMap::new(),
-            type_formals: HashMap::new(),
             current_function_index: FunctionDefinitionIndex(0),
             source_map: SourceMap::new(current_module.clone()),
         };
@@ -286,20 +280,6 @@ impl<'a> Context<'a> {
         (materialized_pools, self.source_map)
     }
 
-    /// Bind the type formals into a "pool" for the current context.
-    pub fn bind_type_formals(&mut self, m: HashMap<TypeVar_, usize>) -> Result<()> {
-        self.type_formals = m
-            .into_iter()
-            .map(|(k, idx)| {
-                if idx > TABLE_MAX_SIZE {
-                    bail!("Too many type parameters")
-                }
-                Ok((k, idx as TableIndex))
-            })
-            .collect::<Result<_>>()?;
-        Ok(())
-    }
-
     pub fn build_index_remapping(
         &mut self,
         label_to_index: HashMap<BlockLabel, u16>,
@@ -346,14 +326,6 @@ impl<'a> Context<'a> {
                 .get(self.module_handle(module_name)?)
                 .unwrap(),
         ))
-    }
-
-    /// Get the type formal index, fails if it is not bound.
-    pub fn type_formal_index(&mut self, t: &TypeVar_) -> Result<TableIndex> {
-        match self.type_formals.get(&t) {
-            None => bail!("Unbound type parameter {}", t),
-            Some(idx) => Ok(*idx),
-        }
     }
 
     /// Get the fake offset for the label. Labels will be fixed to real offsets after compilation
