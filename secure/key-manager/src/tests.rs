@@ -12,7 +12,7 @@ use libra_types::{
     account_config,
     account_state::AccountState,
     block_info::BlockInfo,
-    block_metadata::BlockMetadata,
+    block_metadata::{BlockMetadata, LibraBlockResource},
     discovery_set::DiscoverySet,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::Transaction,
@@ -107,6 +107,18 @@ impl TestLibraInterface {
         account_state
             .get_validator_set_resource()?
             .ok_or(Error::DataDoesNotExist("ValidatorSetResource"))
+    }
+
+    fn retrieve_libra_block_resource(&self) -> Result<LibraBlockResource, Error> {
+        let account = account_config::association_address();
+        let blob = self
+            .storage
+            .get_latest_account_state(account)?
+            .ok_or(Error::DataDoesNotExist("AccountState"))?;
+        let account_state = AccountState::try_from(&blob)?;
+        account_state
+            .get_libra_block_resource()?
+            .ok_or(Error::DataDoesNotExist("BlockMetadata"))
     }
 }
 
@@ -205,6 +217,7 @@ fn test_ability_to_read_move_data() {
     node.libra.retrieve_validator_config(node.account).unwrap();
     node.libra.retrieve_discovery_set().unwrap();
     node.libra.retrieve_validator_info(node.account).unwrap();
+    assert!(node.libra.retrieve_libra_block_resource().is_ok());
 }
 
 #[test]

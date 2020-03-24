@@ -2,10 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account_address::AccountAddress, account_config::association_address, event::EventKey,
+    access_path::{AccessPath, Accesses},
+    account_address::AccountAddress,
+    account_config,
+    account_config::association_address,
+    event::{EventHandle, EventKey},
+    language_storage::StructTag,
 };
 use anyhow::Result;
 use libra_crypto::HashValue;
+use move_core_types::identifier::{IdentStr, Identifier};
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 /// Struct that will be persisted on chain to store the information of the current block.
@@ -70,4 +77,58 @@ impl BlockMetadata {
 
 pub fn new_block_event_key() -> EventKey {
     EventKey::new_from_address(&association_address(), 2)
+}
+
+static LIBRA_BLOCK_MODULE_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("LibraBlock").unwrap());
+static BLOCK_STRUCT_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("BlockMetadata").unwrap());
+
+pub fn libra_block_module_name() -> &'static IdentStr {
+    &*LIBRA_BLOCK_MODULE_NAME
+}
+
+pub fn block_struct_name() -> &'static IdentStr {
+    &*BLOCK_STRUCT_NAME
+}
+
+pub fn libra_block_tag() -> StructTag {
+    StructTag {
+        address: account_config::CORE_CODE_ADDRESS,
+        name: block_struct_name().to_owned(),
+        module: libra_block_module_name().to_owned(),
+        type_params: vec![],
+    }
+}
+
+/// The access path where the BlockMetadata resource is stored.
+pub static LIBRA_BLOCK_RESOURCE_PATH: Lazy<Vec<u8>> =
+    Lazy::new(|| AccessPath::resource_access_vec(&libra_block_tag(), &Accesses::empty()));
+
+/// The path to the new block event handle under a LibraBlock::BlockMetadata resource.
+pub static NEW_BLOCK_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
+    let mut path = LIBRA_BLOCK_RESOURCE_PATH.to_vec();
+    // it can be anything as long as it's referenced in AccountState::get_event_handle_by_query_path
+    path.extend_from_slice(b"/new_block_event/");
+    path
+});
+
+#[derive(Deserialize, Serialize)]
+pub struct LibraBlockResource {
+    height: u64,
+    new_block_events: EventHandle,
+}
+
+impl LibraBlockResource {
+    pub fn new_block_events(&self) -> &EventHandle {
+        &self.new_block_events
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct NewBlockEvent {
+    round: u64,
+    proposer: AccountAddress,
+    votes: Vec<AccountAddress>,
+    timestamp: u64,
 }
