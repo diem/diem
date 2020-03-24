@@ -204,7 +204,9 @@ pub fn encode_mint_script(
 pub fn encode_publishing_option_script(config: VMPublishingOption) -> Script {
     let bytes = lcs::to_bytes(&config).expect("Cannot deserialize VMPublishingOption");
     Script::new(
-        StdlibScript::ModifyPublishingOption.compiled_bytes().into_vec(),
+        StdlibScript::ModifyPublishingOption
+            .compiled_bytes()
+            .into_vec(),
         vec![TransactionArgument::U8Vector(bytes)],
     )
 }

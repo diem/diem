@@ -1315,6 +1315,7 @@ dependencies = [
  "scratchpad 0.1.0",
  "serde 1.0.105 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.48 (registry+https://github.com/rust-lang/crates.io-index)",
+ "stdlib 0.1.0",
  "storage-client 0.1.0",
  "storage-proto 0.1.0",
  "storage-service 0.1.0",

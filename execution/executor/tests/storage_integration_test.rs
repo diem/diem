@@ -25,6 +25,7 @@ use libra_types::{
 };
 use rand::SeedableRng;
 use std::{collections::BTreeMap, convert::TryFrom, sync::Arc};
+use stdlib::transaction_scripts::StdlibScript;
 use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::Runtime;
 use transaction_builder::{
@@ -570,7 +571,7 @@ fn test_extend_whitelist() {
 
     // Add script1 to whitelist.
     let new_whitelist = {
-        let mut existing_list = transaction_builder::allowing_script_hashes();
+        let mut existing_list = StdlibScript::whitelist();
         existing_list.push(*HashValue::from_sha3_256(&vec![]).as_ref());
         existing_list
     };
