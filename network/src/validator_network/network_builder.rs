@@ -26,7 +26,10 @@ use crate::{
     ProtocolId,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use futures::stream::StreamExt;
+use futures::{
+    io::{AsyncRead, AsyncWrite},
+    stream::StreamExt,
+};
 use libra_config::config::RoleType;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
@@ -35,11 +38,12 @@ use libra_crypto::{
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
 use libra_types::PeerId;
-use netcore::{multiplexing::StreamMultiplexer, transport::Transport};
+use netcore::transport::Transport;
 use parity_multiaddr::Multiaddr;
 use std::{
     clone::Clone,
     collections::{HashMap, HashSet},
+    fmt::Debug,
     iter::FromIterator,
     num::NonZeroUsize,
     sync::{Arc, RwLock},
@@ -471,10 +475,10 @@ impl NetworkBuilder {
 
     /// Given a transport build and launch PeerManager.
     /// Return the actual Multiaddr over which this peer is listening.
-    fn build_with_transport<TTransport, TMuxer>(self, transport: TTransport) -> Multiaddr
+    fn build_with_transport<TTransport, TSocket>(self, transport: TTransport) -> Multiaddr
     where
-        TTransport: Transport<Output = (Identity, TMuxer)> + Send + 'static,
-        TMuxer: StreamMultiplexer + 'static,
+        TTransport: Transport<Output = (Identity, TSocket)> + Send + 'static,
+        TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + Sync + 'static,
     {
         let peer_mgr = PeerManager::new(
             self.executor.clone(),
