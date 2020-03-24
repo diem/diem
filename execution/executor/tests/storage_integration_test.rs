@@ -442,7 +442,7 @@ fn test_change_publishing_option_to_custom() {
         .commit_blocks(
             vec![(block2.clone(), Arc::new(output2))],
             ledger_info_with_sigs,
-            &committed_tree,
+            &committed_trees,
         )
         .unwrap();
 
