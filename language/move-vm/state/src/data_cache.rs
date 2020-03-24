@@ -7,6 +7,7 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     language_storage::ModuleId,
+    on_chain_config::ConfigStorage,
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
@@ -72,6 +73,14 @@ impl<'block> BlockDataCache<'block> {
 /// Unit and integration tests should use this to mock implementations of "storage"
 pub trait RemoteCache {
     fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>>;
+}
+
+impl ConfigStorage for Box<&dyn RemoteCache> {
+    fn fetch_config(&self, access_path: AccessPath) -> Option<Vec<u8>> {
+        self.get(&access_path)
+            .ok()?
+            .and_then(|bytes| lcs::from_bytes::<Vec<u8>>(&bytes).ok())
+    }
 }
 
 impl<'block> RemoteCache for BlockDataCache<'block> {

@@ -13,15 +13,21 @@ mod state_view;
 
 pub use crate::state_view::VerifiedStateView;
 use anyhow::{Error, Result};
-use futures::stream::{BoxStream, StreamExt};
+use futures::{
+    executor::block_on,
+    stream::{BoxStream, StreamExt},
+};
 use libra_crypto::HashValue;
 use libra_types::{
+    access_path::AccessPath,
     account_address::AccountAddress,
+    account_state::AccountState,
     account_state_blob::AccountStateBlob,
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
     ledger_info::LedgerInfoWithSignatures,
+    on_chain_config::ConfigStorage,
     proof::{AccumulatorConsistencyProof, SparseMerkleProof, SparseMerkleRangeProof},
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
     validator_change::ValidatorChangeProof,
@@ -429,6 +435,25 @@ pub trait StorageRead: Send + Sync {
         start_version: Version,
         num_transaction_infos: u64,
     ) -> Result<BoxStream<'_, Result<BackupTransactionInfoResponse, Error>>>;
+}
+
+impl ConfigStorage for Box<&dyn StorageRead> {
+    fn fetch_config(&self, access_path: AccessPath) -> Option<Vec<u8>> {
+        let account_state_blob = async {
+            self.get_latest_account_state(access_path.address)
+                .await
+                .ok()?
+        };
+        let result = block_on(account_state_blob);
+        if let Some(blob) = result {
+            if let Ok(account_state) = AccountState::try_from(&blob) {
+                if let Some(config) = account_state.get(&access_path.path) {
+                    return Some(config.clone());
+                }
+            }
+        }
+        None
+    }
 }
 
 /// This trait defines interfaces to be implemented by a storage write client.
