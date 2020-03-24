@@ -727,6 +727,7 @@ fn test_external_transaction_signer() {
                     receiver: p_receiver,
                     amount: p_amount,
                     auth_key_prefix,
+                    metadata,
                 } => {
                     assert_eq!(p_receiver, receiver_address.to_string());
                     assert_eq!(p_amount, amount);
@@ -735,6 +736,12 @@ fn test_external_transaction_signer() {
                             .into_bytes()
                             .expect("failed to turn key to bytes"),
                         receiver_auth_key.prefix()
+                    );
+                    assert_eq!(
+                        metadata
+                            .into_bytes()
+                            .expect("failed to turn metadata to bytes"),
+                        Vec::<u8>::new()
                     );
                 }
                 _ => panic!("Expected peer-to-peer script for user txn"),

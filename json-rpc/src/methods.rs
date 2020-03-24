@@ -144,6 +144,7 @@ async fn get_transactions(
             transaction: tx.into(),
             events,
             vm_status: info.major_status(),
+            gas_used: info.gas_used(),
         });
     }
     Ok(result)
@@ -187,6 +188,7 @@ async fn get_account_transaction(
             transaction: tx.transaction.into(),
             events,
             vm_status: tx.proof.transaction_info().major_status(),
+            gas_used: tx.proof.transaction_info().gas_used(),
         }))
     } else {
         Ok(None)
