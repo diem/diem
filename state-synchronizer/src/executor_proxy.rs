@@ -11,7 +11,7 @@ use libra_types::{
     transaction::TransactionListWithProof, validator_change::ValidatorChangeProof,
 };
 use libra_vm::LibraVM;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use storage_client::{StorageRead, StorageReadServiceClient};
 
 /// Proxies interactions with execution and storage for state synchronization
@@ -22,7 +22,7 @@ pub trait ExecutorProxyTrait: Sync + Send {
 
     /// Execute and commit a batch of transactions
     async fn execute_chunk(
-        &self,
+        &mut self,
         txn_list_with_proof: TransactionListWithProof,
         verified_target_li: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
@@ -51,11 +51,11 @@ pub trait ExecutorProxyTrait: Sync + Send {
 
 pub(crate) struct ExecutorProxy {
     storage_read_client: Arc<StorageReadServiceClient>,
-    executor: Arc<Executor<LibraVM>>,
+    executor: Arc<Mutex<Executor<LibraVM>>>,
 }
 
 impl ExecutorProxy {
-    pub(crate) fn new(executor: Arc<Executor<LibraVM>>, config: &NodeConfig) -> Self {
+    pub(crate) fn new(executor: Arc<Mutex<Executor<LibraVM>>>, config: &NodeConfig) -> Self {
         let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
         Self {
             storage_read_client,
@@ -89,18 +89,17 @@ impl ExecutorProxyTrait for ExecutorProxy {
     }
 
     async fn execute_chunk(
-        &self,
+        &mut self,
         txn_list_with_proof: TransactionListWithProof,
         verified_target_li: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
-        synced_trees: &mut ExecutedTrees,
+        _synced_trees: &mut ExecutedTrees,
         reconfig_event_subscriptions: &mut [Box<dyn EventSubscription>],
     ) -> Result<()> {
-        let reconfig_events = self.executor.execute_and_commit_chunk(
+        let reconfig_events = self.executor.lock().unwrap().execute_and_commit_chunk(
             txn_list_with_proof,
             verified_target_li,
             intermediate_end_of_epoch_li,
-            synced_trees,
         )?;
 
         // TODO add per-subscription filter logic

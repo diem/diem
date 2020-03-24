@@ -19,6 +19,7 @@ serde = { version = "1.0.105", default-features = false }
 tokio = { version = "0.2.12", features = ["full"] }
 
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
+consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0"}
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0" }
 executor-types = { path = "../executor-types", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
@@ -47,4 +48,4 @@ vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }
 
 [features]
 default = []
-fuzzing = ["libra-config/fuzzing", "libra-crypto/fuzzing", "libra-types/fuzzing"]
+fuzzing = ["consensus-types/fuzzing", "libra-config/fuzzing", "libra-crypto/fuzzing", "libra-types/fuzzing"]

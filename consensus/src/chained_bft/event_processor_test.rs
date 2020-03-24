@@ -267,7 +267,7 @@ fn basic_new_rank_event_test() {
         let vote = Vote::new(
             VoteData::new(
                 a1.block().gen_block_info(
-                    a1.compute_result().state_id(),
+                    a1.compute_result().root_hash(),
                     a1.compute_result().version(),
                     a1.compute_result().validators().clone(),
                 ),
@@ -280,7 +280,7 @@ fn basic_new_rank_event_test() {
         let vote1 = Vote::new(
             VoteData::new(
                 a1.block().gen_block_info(
-                    a1.compute_result().state_id(),
+                    a1.compute_result().root_hash(),
                     a1.compute_result().version(),
                     a1.compute_result().validators().clone(),
                 ),
@@ -481,6 +481,7 @@ fn process_vote_timeout_msg_test() {
     // Populate block_0 and a quorum certificate for block_0 on non_proposer
     let block_0_quorum_cert = gen_test_certificate(
         vec![&static_proposer.signer, &non_proposer.signer],
+        // Follow MockStateComputer implementation
         block_0.gen_block_info(
             parent_block_info.executed_state_id(),
             parent_block_info.version(),
@@ -649,7 +650,7 @@ fn process_votes_basic_test() {
             a1.quorum_cert().certified_block().epoch(),
             a1.round(),
             a1.id(),
-            a1.compute_result().state_id(),
+            a1.compute_result().root_hash(),
             a1.compute_result().version(),
             a1.timestamp_usecs(),
             a1.compute_result().validators().clone(),

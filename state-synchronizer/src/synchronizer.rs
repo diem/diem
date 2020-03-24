@@ -21,7 +21,10 @@ use libra_types::{
     validator_change::ValidatorChangeProof, waypoint::Waypoint,
 };
 use libra_vm::LibraVM;
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 use tokio::{
     runtime::{Builder, Runtime},
     time::timeout,
@@ -37,7 +40,7 @@ impl StateSynchronizer {
     pub fn bootstrap(
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
-        executor: Arc<Executor<LibraVM>>,
+        executor: Arc<Mutex<Executor<LibraVM>>>,
         config: &NodeConfig,
         reconfig_event_subscriptions: Vec<Box<dyn EventSubscription>>,
     ) -> Self {

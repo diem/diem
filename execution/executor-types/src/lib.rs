@@ -29,8 +29,8 @@ use storage_proto::TreeState;
 /// which is going to simply pass the results between StateComputer and TxnManager.
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct StateComputeResult {
-    /// `accu_root_hash`(transaction accumulator root hash) is identified as `state_id` in Consensus.
-    accu_root_hash: HashValue,
+    /// transaction accumulator root hash is identified as `state_id` in Consensus.
+    root_hash: HashValue,
     /// Represents the roots of all the full subtrees from left to right in this accumulator
     /// after the execution. For details, please see [`InMemoryAccumulator`](accumulator::InMemoryAccumulator).
     frozen_subtree_roots: Vec<HashValue>,
@@ -44,31 +44,37 @@ pub struct StateComputeResult {
     /// for StateMachineReplication, which is merely passing it between StateComputer and
     /// TxnManager.
     compute_status: Vec<TransactionStatus>,
+    /// The transaction info hashes of all success txns.
+    transaction_info_hashes: Vec<HashValue>,
 }
 
 impl StateComputeResult {
     pub fn new(
-        accu_root_hash: HashValue,
+        root_hash: HashValue,
         frozen_subtree_roots: Vec<HashValue>,
         num_leaves: u64,
         validators: Option<ValidatorSet>,
         compute_status: Vec<TransactionStatus>,
+        transaction_info_hashes: Vec<HashValue>,
     ) -> Self {
         Self {
-            accu_root_hash,
+            root_hash,
             frozen_subtree_roots,
             num_leaves,
             validators,
             compute_status,
+            transaction_info_hashes,
         }
     }
+}
 
+impl StateComputeResult {
     pub fn version(&self) -> Version {
         max(self.num_leaves, 1) - 1
     }
 
-    pub fn state_id(&self) -> HashValue {
-        self.accu_root_hash
+    pub fn root_hash(&self) -> HashValue {
+        self.root_hash
     }
 
     pub fn compute_status(&self) -> &Vec<TransactionStatus> {
@@ -77,6 +83,10 @@ impl StateComputeResult {
 
     pub fn validators(&self) -> &Option<ValidatorSet> {
         &self.validators
+    }
+
+    pub fn transaction_info_hashes(&self) -> &Vec<HashValue> {
+        &self.transaction_info_hashes
     }
 
     pub fn num_leaves(&self) -> u64 {
@@ -224,7 +234,7 @@ impl ProcessedVMOutput {
     }
 
     pub fn accu_root(&self) -> HashValue {
-        self.executed_trees().txn_accumulator().root_hash()
+        self.executed_trees().state_id()
     }
 
     pub fn version(&self) -> Option<Version> {
@@ -235,11 +245,6 @@ impl ProcessedVMOutput {
         &self.validators
     }
 
-    // This method should only be called by tests.
-    pub fn set_validators(&mut self, validator_set: ValidatorSet) {
-        self.validators = Some(validator_set)
-    }
-
     pub fn state_compute_result(&self) -> StateComputeResult {
         let txn_accu = self.executed_trees().txn_accumulator();
         StateComputeResult {
@@ -247,7 +252,7 @@ impl ProcessedVMOutput {
             // consensus.
             // TODO: The VM will support a special transaction to set the validators for the
             // next epoch that is part of a block execution.
-            accu_root_hash: self.accu_root(),
+            root_hash: self.accu_root(),
             num_leaves: txn_accu.num_leaves(),
             validators: self.validators.clone(),
             frozen_subtree_roots: txn_accu.frozen_subtree_roots().clone(),
@@ -256,6 +261,11 @@ impl ProcessedVMOutput {
                 .iter()
                 .map(|txn_data| txn_data.status())
                 .cloned()
+                .collect(),
+            transaction_info_hashes: self
+                .transaction_data()
+                .iter()
+                .filter_map(|x| x.txn_info_hash())
                 .collect(),
         }
     }

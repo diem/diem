@@ -6,15 +6,19 @@ use crate::{
     state_replication::StateComputer,
 };
 use anyhow::{format_err, Result};
-use consensus_types::{block::Block, executed_block::ExecutedBlock};
-use executor_types::{ExecutedTrees, ProcessedVMOutput};
+use consensus_types::block::Block;
+use executor_types::StateComputeResult;
 use futures::channel::mpsc;
+use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use libra_logger::prelude::*;
 use libra_types::{
     ledger_info::LedgerInfoWithSignatures, validator_change::ValidatorChangeProof,
     validator_set::ValidatorSet,
 };
-use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 use termion::color::*;
 
 pub struct MockStateComputer {
@@ -22,6 +26,7 @@ pub struct MockStateComputer {
     commit_callback: mpsc::UnboundedSender<LedgerInfoWithSignatures>,
     consensus_db: Arc<MockStorage<TestPayload>>,
     reconfig: Option<ValidatorSet>,
+    block_cache: Mutex<HashMap<HashValue, Vec<usize>>>,
 }
 
 impl MockStateComputer {
@@ -36,6 +41,7 @@ impl MockStateComputer {
             commit_callback,
             consensus_db,
             reconfig,
+            block_cache: Mutex::new(HashMap::new()),
         }
     }
 }
@@ -45,33 +51,41 @@ impl StateComputer for MockStateComputer {
     type Payload = Vec<usize>;
     fn compute(
         &self,
-        _block: &Block<Self::Payload>,
-        _parent_executed_trees: &ExecutedTrees,
-        _committed_trees: &ExecutedTrees,
-    ) -> Result<ProcessedVMOutput> {
-        Ok(ProcessedVMOutput::new(
+        block: &Block<Self::Payload>,
+        _parent_block_id: HashValue,
+    ) -> Result<StateComputeResult> {
+        self.block_cache
+            .lock()
+            .unwrap()
+            .insert(block.id(), block.payload().unwrap_or(&vec![]).clone());
+        Ok(StateComputeResult::new(
+            *ACCUMULATOR_PLACEHOLDER_HASH,
             vec![],
-            ExecutedTrees::new_empty(),
+            0,
             self.reconfig.clone(),
+            vec![],
+            vec![],
         ))
     }
 
     async fn commit(
         &self,
-        blocks: Vec<&ExecutedBlock<Self::Payload>>,
+        block_ids: Vec<HashValue>,
         commit: LedgerInfoWithSignatures,
-        _synced_trees: &ExecutedTrees,
     ) -> Result<()> {
         self.consensus_db
             .commit_to_storage(commit.ledger_info().clone());
 
         // mock sending commit notif to state sync
         let mut txns = vec![];
-        for block in blocks {
-            let payload = block.payload();
-            if let Some(inner) = payload {
-                txns.append(&mut inner.clone());
-            }
+        for block_id in block_ids {
+            let mut payload = self
+                .block_cache
+                .lock()
+                .unwrap()
+                .remove(&block_id)
+                .ok_or_else(|| format_err!("Cannot find block"))?;
+            txns.append(&mut payload);
         }
         self.state_sync_client
             .unbounded_send(txns)
@@ -117,21 +131,22 @@ impl StateComputer for EmptyStateComputer {
     fn compute(
         &self,
         _block: &Block<Self::Payload>,
-        _parent_executed_trees: &ExecutedTrees,
-        _committed_trees: &ExecutedTrees,
-    ) -> Result<ProcessedVMOutput> {
-        Ok(ProcessedVMOutput::new(
+        _parent_block_id: HashValue,
+    ) -> Result<StateComputeResult> {
+        Ok(StateComputeResult::new(
+            *ACCUMULATOR_PLACEHOLDER_HASH,
             vec![],
-            ExecutedTrees::new_empty(),
+            0,
             None,
+            vec![],
+            vec![],
         ))
     }
 
     async fn commit(
         &self,
-        _blocks: Vec<&ExecutedBlock<Self::Payload>>,
+        _block_ids: Vec<HashValue>,
         _commit: LedgerInfoWithSignatures,
-        _synced_trees: &ExecutedTrees,
     ) -> Result<()> {
         Ok(())
     }

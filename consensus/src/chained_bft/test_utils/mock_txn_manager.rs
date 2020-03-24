@@ -76,11 +76,12 @@ impl TxnManager for MockTransactionManager {
     ) -> Result<()> {
         if self.mempool_proxy.is_some() {
             let mock_compute_result = StateComputeResult::new(
-                compute_results.state_id(),
+                compute_results.root_hash(),
                 compute_results.frozen_subtree_roots().clone(),
                 compute_results.num_leaves(),
                 compute_results.validators().clone(),
                 mock_transaction_status(txns.len()),
+                compute_results.transaction_info_hashes().clone(),
             );
             assert!(self
                 .mempool_proxy

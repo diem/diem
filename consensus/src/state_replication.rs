@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use consensus_types::{block::Block, executed_block::ExecutedBlock};
-use executor_types::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
+use consensus_types::block::Block;
+use executor_types::StateComputeResult;
 use libra_crypto::HashValue;
 use libra_types::{ledger_info::LedgerInfoWithSignatures, validator_change::ValidatorChangeProof};
 
@@ -56,18 +56,15 @@ pub trait StateComputer: Send + Sync {
         &self,
         // The block that will be computed.
         block: &Block<Self::Payload>,
-        // The executed trees of parent block.
-        parent_executed_trees: &ExecutedTrees,
-        // The last committed trees.
-        committed_trees: &ExecutedTrees,
-    ) -> Result<ProcessedVMOutput>;
+        // The parent block root hash.
+        parent_block_id: HashValue,
+    ) -> Result<StateComputeResult>;
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     async fn commit(
         &self,
-        blocks: Vec<&ExecutedBlock<Self::Payload>>,
+        block_ids: Vec<HashValue>,
         finality_proof: LedgerInfoWithSignatures,
-        synced_trees: &ExecutedTrees,
     ) -> Result<()>;
 
     /// Best effort state synchronization to the given target LedgerInfo.

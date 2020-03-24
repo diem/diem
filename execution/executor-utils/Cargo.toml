@@ -13,7 +13,6 @@ edition = "2018"
 tokio = { version = "0.2.12", features = ["full"] }
 
 executor = { path = "../executor", version = "0.1.0" }
-executor-types = { path = "../executor-types", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
 storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
 storage-service = { path = "../../storage/storage-service", version = "0.1.0" }
