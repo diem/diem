@@ -40,6 +40,7 @@ use libra_types::{validator_config::ValidatorConfig, validator_info::ValidatorIn
 #[cfg(test)]
 mod tests;
 
+pub const ACCOUNT_KEY: &str = "account_key";
 pub const CONSENSUS_KEY: &str = "consensus_key";
 const GAS_UNIT_PRICE: u64 = 0;
 const MAX_GAS_AMOUNT: u64 = 400_000;
@@ -80,8 +81,8 @@ trait LibraInterface {
     /// microseconds.
     fn last_reconfiguration(&self) -> Result<u64, Error>;
 
-    /// Retrieve current sequence id for the provided account.
-    fn retrieve_sequence_id(&self, account: AccountAddress) -> Result<u64, Error>;
+    /// Retrieve current sequence number for the provided account.
+    fn retrieve_sequence_number(&self, account: AccountAddress) -> Result<u64, Error>;
 
     /// Submits a transaction to the block chain and returns successfully if the transaction was
     /// successfully submitted. It does not necessarily mean the transaction successfully executed.
@@ -117,20 +118,6 @@ where
         }
     }
 
-    pub fn last_reconfiguration(&self) -> Result<u64, Error> {
-        // Convert the time to seconds
-        Ok(self.libra.last_reconfiguration()? / 1_000_000)
-    }
-
-    pub fn last_rotation(&self) -> Result<u64, Error> {
-        Ok(self.storage.get_public_key(&self.key_name)?.last_update)
-    }
-
-    pub fn libra_timestamp(&self) -> Result<u64, Error> {
-        // Convert the time to seconds
-        Ok(self.libra.last_reconfiguration()? / 1_000_000)
-    }
-
     pub fn compare_storage_to_config(&self) -> Result<(), Error> {
         let storage_key = self.storage.get_public_key(&self.key_name)?.public_key;
         let validator_config = self.libra.retrieve_validator_config(self.account)?;
@@ -152,6 +139,29 @@ where
             return Ok(());
         }
         Err(Error::ConfigInfoKeyMismatch(config_key, info_key.clone()))
+    }
+
+    pub fn last_reconfiguration(&self) -> Result<u64, Error> {
+        // Convert the time to seconds
+        Ok(self.libra.last_reconfiguration()? / 1_000_000)
+    }
+
+    pub fn last_rotation(&self) -> Result<u64, Error> {
+        Ok(self.storage.get_public_key(&self.key_name)?.last_update)
+    }
+
+    pub fn libra_timestamp(&self) -> Result<u64, Error> {
+        // Convert the time to seconds
+        Ok(self.libra.libra_timestamp()? / 1_000_000)
+    }
+
+    pub fn rotate_consensus_key(&mut self) -> Result<Ed25519PublicKey, Error> {
+        let new_key = self.storage.rotate_key(CONSENSUS_KEY)?;
+        let account_prikey = self.storage.get_private_key(ACCOUNT_KEY)?;
+        let seq_id = self.libra.retrieve_sequence_number(self.account)?;
+        let transaction = build_transaction(self.account, seq_id, &account_prikey, &new_key);
+        self.libra.submit_transaction(transaction)?;
+        Ok(new_key)
     }
 }
 

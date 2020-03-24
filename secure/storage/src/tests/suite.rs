@@ -260,7 +260,7 @@ fn test_create_rotate_and_check_key_pair(storage: &mut dyn Storage) {
 
     // Rotate key pair, fetch new public and private keys and verify relationship
     let new_public_key = storage
-        .rotate_key_pair(CRYPTO_NAME)
+        .rotate_key(CRYPTO_NAME)
         .expect("Failed to rotate a valid key pair!");
     let new_private_key = storage
         .get_private_key(CRYPTO_NAME)
@@ -297,7 +297,7 @@ fn test_create_key_pair_and_perform_rotations(storage: &mut dyn Storage) {
 
     for _ in 0..num_rotations {
         let new_public_key = storage
-            .rotate_key_pair(CRYPTO_NAME)
+            .rotate_key(CRYPTO_NAME)
             .expect("Failed to rotate a valid key pair!");
         let new_private_key = storage
             .get_private_key(CRYPTO_NAME)
@@ -372,7 +372,7 @@ fn test_create_sign_rotate_sign(storage: &mut dyn Storage) {
     assert!(message_signature.verify(&message, &public_key).is_ok());
 
     // Rotate the key pair and sign the message again using the previous key pair version
-    let _ = storage.rotate_key_pair(CRYPTO_NAME).unwrap();
+    let _ = storage.rotate_key(CRYPTO_NAME).unwrap();
     let message_signature_previous = storage
         .sign_message_using_version(CRYPTO_NAME, public_key, &message)
         .unwrap();

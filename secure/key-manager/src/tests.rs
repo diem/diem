@@ -23,7 +23,7 @@ use libra_types::{
 use libra_vm::LibraVM;
 use libradb::{LibraDB, LibraDBTrait};
 use rand::{rngs::StdRng, SeedableRng};
-use std::{collections::BTreeMap, convert::TryFrom, sync::Arc, time::SystemTime};
+use std::{cell::RefCell, collections::BTreeMap, convert::TryFrom, sync::Arc, time::SystemTime};
 use storage_client::{StorageReadServiceClient, StorageWriteServiceClient};
 use tokio::runtime::Runtime;
 
@@ -37,13 +37,32 @@ struct Node {
 }
 
 fn setup_secure_storage(config: &NodeConfig) -> InMemoryStorage {
-    let test_config = config.clone().test.unwrap();
-    let mut keypair = test_config.consensus_keypair.unwrap();
-    let prikey = Value::Ed25519PrivateKey(keypair.take_private().unwrap());
-
     let mut sec_storage = InMemoryStorage::new();
+    let test_config = config.clone().test.unwrap();
+
+    let mut a_keypair = test_config.account_keypair.unwrap();
+    let a_prikey = Value::Ed25519PrivateKey(a_keypair.take_private().unwrap());
+
     sec_storage
-        .create(crate::CONSENSUS_KEY, prikey, &Policy::public())
+        .create(crate::ACCOUNT_KEY, a_prikey, &Policy::public())
+        .unwrap();
+
+    let mut c_keypair = test_config.consensus_keypair.unwrap();
+    let c_prikey = c_keypair.take_private().unwrap();
+    let c_prikey0 = Value::Ed25519PrivateKey(c_prikey.clone());
+    let c_prikey1 = Value::Ed25519PrivateKey(c_prikey);
+
+    sec_storage
+        .create(crate::CONSENSUS_KEY, c_prikey0, &Policy::public())
+        .unwrap();
+    // Ugly hack but we need this until we support retrieving a policy from within storage and that
+    // currently is not easy, since we would need to convert from Vault -> Libra policy.
+    sec_storage
+        .create(
+            &format!("{}_previous", crate::CONSENSUS_KEY),
+            c_prikey1,
+            &Policy::public(),
+        )
         .unwrap();
     sec_storage
 }
@@ -57,6 +76,7 @@ fn setup(config: &NodeConfig) -> Node {
         config,
     ));
     let libra = TestLibraInterface {
+        queued_transactions: Arc::new(RefCell::new(Vec::new())),
         storage: storage.clone(),
     };
     let account = config.validator_network.as_ref().unwrap().peer_id;
@@ -79,17 +99,22 @@ fn setup(config: &NodeConfig) -> Node {
 
 #[derive(Clone)]
 struct TestLibraInterface {
+    queued_transactions: Arc<RefCell<Vec<Transaction>>>,
     storage: Arc<LibraDB>,
 }
 
 impl TestLibraInterface {
-    fn retrieve_discovery_set(&self) -> Result<DiscoverySet, Error> {
-        let account = account_config::discovery_set_address();
+    fn retrieve_account_state(&self, account: AccountAddress) -> Result<AccountState, Error> {
         let blob = self
             .storage
             .get_latest_account_state(account)?
             .ok_or(Error::DataDoesNotExist("AccountState"))?;
-        let account_state = AccountState::try_from(&blob).unwrap();
+        Ok(AccountState::try_from(&blob)?)
+    }
+
+    fn retrieve_discovery_set(&self) -> Result<DiscoverySet, Error> {
+        let account = account_config::discovery_set_address();
+        let account_state = self.retrieve_account_state(account)?;
         Ok(account_state
             .get_discovery_set_resource()?
             .ok_or(Error::DataDoesNotExist("DiscoverySetResource"))?
@@ -98,12 +123,8 @@ impl TestLibraInterface {
     }
 
     fn retrieve_validator_set_resource(&self) -> Result<ValidatorSetResource, Error> {
-        let set_account = account_config::validator_set_address();
-        let blob = self
-            .storage
-            .get_latest_account_state(set_account)?
-            .ok_or(Error::DataDoesNotExist("AccountState"))?;
-        let account_state = AccountState::try_from(&blob)?;
+        let account = account_config::validator_set_address();
+        let account_state = self.retrieve_account_state(account)?;
         account_state
             .get_validator_set_resource()?
             .ok_or(Error::DataDoesNotExist("ValidatorSetResource"))
@@ -111,14 +132,14 @@ impl TestLibraInterface {
 
     fn retrieve_libra_block_resource(&self) -> Result<LibraBlockResource, Error> {
         let account = account_config::association_address();
-        let blob = self
-            .storage
-            .get_latest_account_state(account)?
-            .ok_or(Error::DataDoesNotExist("AccountState"))?;
-        let account_state = AccountState::try_from(&blob)?;
+        let account_state = self.retrieve_account_state(account)?;
         account_state
             .get_libra_block_resource()?
             .ok_or(Error::DataDoesNotExist("BlockMetadata"))
+    }
+
+    fn take_all_transactions(&self) -> Vec<Transaction> {
+        self.queued_transactions.borrow_mut().drain(0..).collect()
     }
 }
 
@@ -142,11 +163,20 @@ impl LibraInterface for TestLibraInterface {
             .microseconds)
     }
 
-    fn retrieve_sequence_id(&self, _account: AccountAddress) -> Result<u64, Error> {
-        Ok(0)
+    fn retrieve_sequence_number(&self, account: AccountAddress) -> Result<u64, Error> {
+        let blob = self
+            .storage
+            .get_latest_account_state(account)?
+            .ok_or(Error::DataDoesNotExist("AccountState"))?;
+        let account_state = AccountState::try_from(&blob).unwrap();
+        Ok(account_state
+            .get_account_resource()?
+            .ok_or(Error::DataDoesNotExist("AccountResource"))?
+            .sequence_number())
     }
 
-    fn submit_transaction(&self, _transaction: Transaction) -> Result<(), Error> {
+    fn submit_transaction(&self, transaction: Transaction) -> Result<(), Error> {
+        self.queued_transactions.borrow_mut().push(transaction);
         Ok(())
     }
 
@@ -175,10 +205,13 @@ impl LibraInterface for TestLibraInterface {
     }
 }
 
+// TODO(davidiw): Notify external upon reconfigure and update epoch via ledger_info and also add
+// next validator set if appropriate...
 fn execute_and_commit(node: &Node, mut block: Vec<Transaction>) {
     let block_id = HashValue::zero();
     let startup_info = node.storage.get_startup_info().unwrap().unwrap();
-    let clock = startup_info.committed_tree_state.version + 1;
+    // Clock is supposed to be in microseconds
+    let clock = (startup_info.committed_tree_state.version + 1) * 1_000_000;
     let committed_trees = ExecutedTrees::from(startup_info.committed_tree_state);
 
     // This will set the current clock to be equal to the current version + 1, this guarantees that
@@ -257,10 +290,10 @@ fn test_consensus_rotation() {
 }
 
 #[test]
-// This verifies the key manager is properly setup
-fn test_key_manager_init() {
+// This verifies the key manager is properly setup and that a
+fn test_key_manager_init_and_basic_rotation() {
     let (config, _genesis_key) = config_builder::test_config();
-    let node = setup(&config);
+    let mut node = setup(&config);
     node.key_manager.compare_storage_to_config().unwrap();
     node.key_manager.compare_info_to_config().unwrap();
     let now = SystemTime::now()
@@ -272,4 +305,27 @@ fn test_key_manager_init() {
     assert_eq!(0, node.key_manager.last_reconfiguration().unwrap());
     // No executions yet
     assert_eq!(0, node.key_manager.libra_timestamp().unwrap());
+
+    let genesis_info = node.libra.retrieve_validator_info(node.account).unwrap();
+    let new_key = node.key_manager.rotate_consensus_key().unwrap();
+    let pre_exe_rotated_info = node.libra.retrieve_validator_info(node.account).unwrap();
+    assert!(genesis_info.consensus_public_key() == pre_exe_rotated_info.consensus_public_key());
+    assert!(pre_exe_rotated_info.consensus_public_key() != &new_key);
+
+    execute_and_commit(&node, node.libra.take_all_transactions());
+    let rotated_info = node.libra.retrieve_validator_info(node.account).unwrap();
+    assert!(genesis_info.consensus_public_key() != rotated_info.consensus_public_key());
+    assert!(rotated_info.consensus_public_key() == &new_key);
+
+    // Executions have occurred but nothing after our rotation
+    assert!(0 != node.key_manager.libra_timestamp().unwrap());
+    assert_eq!(
+        node.key_manager.last_reconfiguration(),
+        node.key_manager.libra_timestamp()
+    );
+
+    // TODO(davidiw): Enable once reconfiguration is correclty implemented above...
+    // Executions have occurred after our rotation
+    // execute_and_commit(&node, node.libra.take_all_transactions());
+    // assert!(node.key_manager.last_reconfiguration() != node.key_manager.libra_timestamp());
 }
