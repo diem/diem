@@ -747,12 +747,12 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
         }
 
         E::Borrow(mut_, el, f) => {
-            let (n, _) = struct_definition_name(context, el.ty.clone());
+            let (n, tys) = struct_definition_name(context, el.ty.clone());
             exp(context, code, el);
             let instr = if mut_ {
-                B::MutBorrowField(n, field(f))
+                B::MutBorrowField(n, tys, field(f))
             } else {
-                B::ImmBorrowField(n, field(f))
+                B::ImmBorrowField(n, tys, field(f))
             };
             code.push(sp(loc, instr));
         }

@@ -634,8 +634,8 @@ pub enum Bytecode_ {
     FreezeRef,
     MutBorrowLoc(Var),
     ImmBorrowLoc(Var),
-    MutBorrowField(StructName, Field),
-    ImmBorrowField(StructName, Field),
+    MutBorrowField(StructName, Vec<Type>, Field),
+    ImmBorrowField(StructName, Vec<Type>, Field),
     MutBorrowGlobal(StructName, Vec<Type>),
     ImmBorrowGlobal(StructName, Vec<Type>),
     Add,
@@ -1783,8 +1783,20 @@ impl fmt::Display for Bytecode_ {
             Bytecode_::FreezeRef => write!(f, "FreezeRef"),
             Bytecode_::MutBorrowLoc(v) => write!(f, "MutBorrowLoc {}", v),
             Bytecode_::ImmBorrowLoc(v) => write!(f, "ImmBorrowLoc {}", v),
-            Bytecode_::MutBorrowField(n, field) => write!(f, "MutBorrowField {}.{}", n, field),
-            Bytecode_::ImmBorrowField(n, field) => write!(f, "ImmBorrowField {}.{}", n, field),
+            Bytecode_::MutBorrowField(n, tys, field) => write!(
+                f,
+                "MutBorrowField {}{}.{}",
+                n,
+                format_type_actuals(tys),
+                field
+            ),
+            Bytecode_::ImmBorrowField(n, tys, field) => write!(
+                f,
+                "ImmBorrowField {}{}.{}",
+                n,
+                format_type_actuals(tys),
+                field
+            ),
             Bytecode_::MutBorrowGlobal(n, tys) => {
                 write!(f, "MutBorrowGlobal {}{}", n, format_type_actuals(tys))
             }
