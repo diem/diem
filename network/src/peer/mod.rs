@@ -14,6 +14,7 @@ use futures::{
     self,
     channel::oneshot,
     future::BoxFuture,
+    io::{AsyncRead, AsyncWrite},
     stream::{FuturesUnordered, StreamExt},
     FutureExt, SinkExt,
 };
@@ -21,7 +22,7 @@ use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::{
     compat::IoCompat,
-    multiplexing::{Control, StreamMultiplexer},
+    multiplexing::{yamux::Yamux, Control, StreamMultiplexer},
     negotiate::{negotiate_inbound, negotiate_outbound_interactive, negotiate_outbound_select},
     transport::ConnectionOrigin,
 };
@@ -54,9 +55,9 @@ pub enum PeerNotification {
     PeerDisconnected(Identity, Multiaddr, ConnectionOrigin, DisconnectReason),
 }
 
-pub struct Peer<TMuxer>
+pub struct Peer<TSocket>
 where
-    TMuxer: StreamMultiplexer,
+    TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + Sync + 'static,
 {
     /// Identity of the remote peer
     identity: Identity,
@@ -65,7 +66,7 @@ where
     /// Origin of the connection.
     origin: ConnectionOrigin,
     /// Underlying connection.
-    connection: Option<TMuxer>,
+    connection: Option<TSocket>,
     /// Channel to receive requests for opening new outbound substreams.
     requests_rx: channel::Receiver<PeerRequest>,
     /// Channel to send peer notifications to PeerManager.
@@ -85,16 +86,15 @@ where
     shutting_down: bool,
 }
 
-impl<TMuxer> Peer<TMuxer>
+impl<TSocket> Peer<TSocket>
 where
-    TMuxer: StreamMultiplexer + 'static,
-    TMuxer::Substream: 'static,
+    TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + Sync + 'static,
 {
     pub fn new(
         identity: Identity,
         address: Multiaddr,
         origin: ConnectionOrigin,
-        connection: TMuxer,
+        connection: TSocket,
         requests_rx: channel::Receiver<PeerRequest>,
         peer_notifs_tx: channel::Sender<PeerNotification>,
         rpc_protocols: HashSet<ProtocolId>,
@@ -125,11 +125,24 @@ where
     }
 
     pub async fn start(mut self) {
-        let (substream_rx, control) = self.connection.take().unwrap().start().await;
+        let self_peer_id = self.identity.peer_id();
+        info!(
+            "Starting Peer actor for peer: {:?}",
+            self_peer_id.short_str()
+        );
+        let connection = {
+            match Yamux::upgrade_connection(self.connection.take().unwrap(), self.origin).await {
+                Err(e) => {
+                    warn!("yamux handshake failed. Error: {:?}", e);
+                    return;
+                }
+                Ok(connection) => connection,
+            }
+        };
+        let (substream_rx, control) = connection.start().await;
         let mut substream_rx = substream_rx.fuse();
         let mut pending_outbound_substreams = FuturesUnordered::new();
         let mut pending_inbound_substreams = FuturesUnordered::new();
-        let self_peer_id = self.identity.peer_id();
         while !self.shutting_down {
             futures::select! {
                 maybe_req = self.requests_rx.next() => {
@@ -179,7 +192,10 @@ where
 
     async fn handle_negotiated_substream(
         &mut self,
-        negotiated_subststream: Result<NegotiatedSubstream<TMuxer::Substream>, PeerManagerError>,
+        negotiated_subststream: Result<
+            NegotiatedSubstream<<Yamux<TSocket> as StreamMultiplexer>::Substream>,
+            PeerManagerError,
+        >,
     ) -> Result<(), PeerManagerError> {
         match negotiated_subststream {
             Ok(negotiated_substream) => {
@@ -234,7 +250,7 @@ where
 
     async fn handle_request<'a>(
         &'a mut self,
-        control: TMuxer::Control,
+        control: <Yamux<TSocket> as StreamMultiplexer>::Control,
         pending: &'a mut FuturesUnordered<BoxFuture<'static, ()>>,
         request: PeerRequest,
     ) {
@@ -274,7 +290,7 @@ where
         message: NetworkMessage,
         protocol: ProtocolId,
         identity: Identity,
-        mut control: TMuxer::Control,
+        mut control: <Yamux<TSocket> as StreamMultiplexer>::Control,
     ) -> Result<(), PeerManagerError> {
         let peer_id = identity.peer_id();
         // Open substream.
@@ -328,9 +344,12 @@ where
     }
 
     async fn negotiate_inbound_substream(
-        substream: TMuxer::Substream,
+        substream: <Yamux<TSocket> as StreamMultiplexer>::Substream,
         own_supported_protocols: Vec<ProtocolId>,
-    ) -> Result<NegotiatedSubstream<TMuxer::Substream>, PeerManagerError> {
+    ) -> Result<
+        NegotiatedSubstream<<Yamux<TSocket> as StreamMultiplexer>::Substream>,
+        PeerManagerError,
+    > {
         let (substream, protocol) = negotiate_inbound(
             substream,
             own_supported_protocols
@@ -345,7 +364,11 @@ where
         })
     }
 
-    async fn close_connection(&mut self, mut control: TMuxer::Control, reason: DisconnectReason) {
+    async fn close_connection(
+        &mut self,
+        mut control: <Yamux<TSocket> as StreamMultiplexer>::Control,
+        reason: DisconnectReason,
+    ) {
         match tokio::time::timeout(transport::TRANSPORT_TIMEOUT, control.close()).await {
             Err(e) => {
                 error!(

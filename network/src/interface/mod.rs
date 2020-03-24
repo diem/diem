@@ -23,10 +23,14 @@ use crate::{
     validator_network, ProtocolId,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use futures::{stream::StreamExt, FutureExt, SinkExt};
+use futures::{
+    io::{AsyncRead, AsyncWrite},
+    stream::StreamExt,
+    FutureExt, SinkExt,
+};
 use libra_logger::prelude::*;
 use libra_types::PeerId;
-use netcore::{multiplexing::StreamMultiplexer, transport::ConnectionOrigin};
+use netcore::transport::ConnectionOrigin;
 use parity_multiaddr::Multiaddr;
 use std::{
     collections::HashSet, fmt::Debug, marker::PhantomData, num::NonZeroUsize, time::Duration,
@@ -53,25 +57,25 @@ pub enum NetworkNotification {
     RecvMessage(Message),
 }
 
-pub struct NetworkProvider<TMuxer>
+pub struct NetworkProvider<TSocket>
 where
-    TMuxer: StreamMultiplexer,
+    TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + Sync + 'static,
 {
     /// Pin the muxer type corresponding to this NetworkProvider instance
-    phantom_muxer: PhantomData<TMuxer>,
+    phantom_socket: PhantomData<TSocket>,
 }
 
-impl<TMuxer> NetworkProvider<TMuxer>
+impl<TSocket> NetworkProvider<TSocket>
 where
-    TMuxer: StreamMultiplexer + 'static,
+    TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + Sync + 'static,
 {
     pub fn start(
         executor: Handle,
         identity: Identity,
         address: Multiaddr,
         origin: ConnectionOrigin,
-        connection: TMuxer,
-        connection_notifs_tx: channel::Sender<ConnectionNotification<TMuxer>>,
+        connection: TSocket,
+        connection_notifs_tx: channel::Sender<ConnectionNotification<TSocket>>,
         rpc_protocols: HashSet<ProtocolId>,
         direct_send_protocols: HashSet<ProtocolId>,
         max_concurrent_reqs: usize,
@@ -303,7 +307,7 @@ where
 
     async fn handle_peer_notification(
         notif: PeerNotification,
-        mut connection_notifs_tx: channel::Sender<ConnectionNotification<TMuxer>>,
+        mut connection_notifs_tx: channel::Sender<ConnectionNotification<TSocket>>,
     ) {
         match notif {
             PeerNotification::PeerDisconnected(identity, addr, origin, reason) => {

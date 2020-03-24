@@ -26,19 +26,18 @@ use channel::{self, libra_channel};
 use futures::{
     channel::oneshot,
     future::{BoxFuture, FutureExt},
+    io::{AsyncRead, AsyncWrite, AsyncWriteExt},
     sink::SinkExt,
     stream::{Fuse, FuturesUnordered, StreamExt},
 };
 use libra_config::config::RoleType;
 use libra_logger::prelude::*;
 use libra_types::PeerId;
-use netcore::{
-    multiplexing::{Control, StreamMultiplexer},
-    transport::{ConnectionOrigin, Transport},
-};
+use netcore::transport::{ConnectionOrigin, Transport};
 use parity_multiaddr::Multiaddr;
 use std::{
     collections::{HashMap, HashSet},
+    fmt::Debug,
     marker::PhantomData,
     time::Duration,
 };
@@ -207,10 +206,10 @@ impl ConnectionRequestSender {
 }
 
 /// Responsible for handling and maintaining connections to other Peers
-pub struct PeerManager<TTransport, TMuxer>
+pub struct PeerManager<TTransport, TSocket>
 where
     TTransport: Transport,
-    TMuxer: StreamMultiplexer,
+    TSocket: AsyncRead + AsyncWrite,
 {
     /// A handle to a tokio executor.
     executor: Handle,
@@ -221,7 +220,7 @@ where
     /// Address to listen on for incoming connections.
     listen_addr: Multiaddr,
     /// Connection Listener, listening on `listen_addr`
-    connection_handler: Option<ConnectionHandler<TTransport, TMuxer>>,
+    connection_handler: Option<ConnectionHandler<TTransport, TSocket>>,
     /// Map from PeerId to corresponding Peer object.
     active_peers: HashMap<
         PeerId,
@@ -246,11 +245,11 @@ where
     /// Channel used to send Dial requests to the ConnectionHandler actor
     dial_request_tx: channel::Sender<ConnectionHandlerRequest>,
     /// Sender for connection events.
-    connection_notifs_tx: channel::Sender<ConnectionNotification<TMuxer>>,
+    connection_notifs_tx: channel::Sender<ConnectionNotification<TSocket>>,
     /// Receiver for connection requests.
     connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
     /// Receiver for connection events.
-    connection_notifs_rx: channel::Receiver<ConnectionNotification<TMuxer>>,
+    connection_notifs_rx: channel::Receiver<ConnectionNotification<TSocket>>,
     /// A map of outstanding disconnect requests
     outstanding_disconnect_requests: HashMap<PeerId, oneshot::Sender<Result<(), PeerManagerError>>>,
     /// Pin the transport type corresponding to this PeerManager instance
@@ -263,10 +262,10 @@ where
     channel_size: usize,
 }
 
-impl<TTransport, TMuxer> PeerManager<TTransport, TMuxer>
+impl<TTransport, TSocket> PeerManager<TTransport, TSocket>
 where
-    TTransport: Transport<Output = (Identity, TMuxer)> + Send + 'static,
-    TMuxer: StreamMultiplexer + 'static,
+    TTransport: Transport<Output = (Identity, TSocket)> + Send + 'static,
+    TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + Sync + 'static,
 {
     /// Construct a new PeerManager actor
     #[allow(clippy::too_many_arguments)]
@@ -359,7 +358,7 @@ where
         }
     }
 
-    fn handle_connection_event(&mut self, event: ConnectionNotification<TMuxer>) {
+    fn handle_connection_event(&mut self, event: ConnectionNotification<TSocket>) {
         trace!("ConnectionNotification::{:?}", event);
         match event {
             ConnectionNotification::NewConnection(identity, addr, origin, conn) => {
@@ -528,7 +527,7 @@ where
         identity: Identity,
         address: Multiaddr,
         origin: ConnectionOrigin,
-        connection: TMuxer,
+        connection: TSocket,
     ) {
         let peer_id = identity.peer_id();
         assert_ne!(self.own_peer_id, peer_id);
@@ -552,9 +551,9 @@ where
                 );
                 // Drop the new connection and keep the one already stored in active_peers
                 let drop_fut = async move {
-                    let (_, mut control) = connection.start().await;
+                    let mut connection = connection;
                     if let Err(e) =
-                        tokio::time::timeout(transport::TRANSPORT_TIMEOUT, control.close()).await
+                        tokio::time::timeout(transport::TRANSPORT_TIMEOUT, connection.close()).await
                     {
                         error!(
                             "Closing connection with Peer {} failed with error: {}",
@@ -714,40 +713,40 @@ enum ConnectionHandlerRequest {
 }
 
 #[derive(Debug)]
-pub enum ConnectionNotification<TMuxer>
+pub enum ConnectionNotification<TSocket>
 where
-    TMuxer: StreamMultiplexer,
+    TSocket: AsyncRead + AsyncWrite,
 {
-    NewConnection(Identity, Multiaddr, ConnectionOrigin, TMuxer),
+    NewConnection(Identity, Multiaddr, ConnectionOrigin, TSocket),
     Disconnected(Identity, Multiaddr, ConnectionOrigin, DisconnectReason),
 }
 
 /// Responsible for listening for new incoming connections
-struct ConnectionHandler<TTransport, TMuxer>
+struct ConnectionHandler<TTransport, TSocket>
 where
     TTransport: Transport,
-    TMuxer: StreamMultiplexer,
+    TSocket: AsyncRead + AsyncWrite,
 {
     /// [`Transport`] that is used to establish connections
     transport: TTransport,
     listener: Fuse<TTransport::Listener>,
     dial_request_rx: channel::Receiver<ConnectionHandlerRequest>,
-    connection_notifs_tx: channel::Sender<ConnectionNotification<TMuxer>>,
+    connection_notifs_tx: channel::Sender<ConnectionNotification<TSocket>>,
 }
 
-impl<TTransport, TMuxer> ConnectionHandler<TTransport, TMuxer>
+impl<TTransport, TSocket> ConnectionHandler<TTransport, TSocket>
 where
-    TTransport: Transport<Output = (Identity, TMuxer)>,
+    TTransport: Transport<Output = (Identity, TSocket)>,
     TTransport::Listener: 'static,
     TTransport::Inbound: 'static,
     TTransport::Outbound: 'static,
-    TMuxer: StreamMultiplexer + 'static,
+    TSocket: AsyncRead + AsyncWrite + 'static,
 {
     fn new(
         transport: TTransport,
         listen_addr: Multiaddr,
         dial_request_rx: channel::Receiver<ConnectionHandlerRequest>,
-        connection_notifs_tx: channel::Sender<ConnectionNotification<TMuxer>>,
+        connection_notifs_tx: channel::Sender<ConnectionNotification<TSocket>>,
     ) -> (Self, Multiaddr) {
         let (listener, listen_addr) = transport
             .listen_on(listen_addr)
@@ -808,7 +807,7 @@ where
         BoxFuture<
             'static,
             (
-                Result<(Identity, TMuxer), TTransport::Error>,
+                Result<(Identity, TSocket), TTransport::Error>,
                 Multiaddr,
                 PeerId,
                 oneshot::Sender<Result<(), PeerManagerError>>,
@@ -842,7 +841,7 @@ where
 
     async fn handle_completed_outbound_upgrade(
         &mut self,
-        upgrade: Result<(Identity, TMuxer), TTransport::Error>,
+        upgrade: Result<(Identity, TSocket), TTransport::Error>,
         addr: Multiaddr,
         peer_id: PeerId,
         response_tx: oneshot::Sender<Result<(), PeerManagerError>>,
@@ -901,7 +900,7 @@ where
 
     async fn handle_completed_inbound_upgrade(
         &mut self,
-        upgrade: Result<(Identity, TMuxer), TTransport::Error>,
+        upgrade: Result<(Identity, TSocket), TTransport::Error>,
         addr: Multiaddr,
     ) {
         match upgrade {
