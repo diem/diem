@@ -420,8 +420,8 @@ fn test_change_publishing_option_to_custom() {
     let txn3 = get_test_signed_transaction(
         validator_account,
         /* sequence_number = */ 1,
-        validator_privkey.clone(),
-        validator_pubkey.clone(),
+        validator_privkey,
+        validator_pubkey,
         Some(script2),
     );
 
@@ -438,12 +438,11 @@ fn test_change_publishing_option_to_custom() {
     let block2_id = gen_block_id(2);
 
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(5, output2.accu_root(), block2_id);
-    let committed_trees_copy = committed_trees.clone();
     executor
         .commit_blocks(
             vec![(block2.clone(), Arc::new(output2))],
             ledger_info_with_sigs,
-            &committed_trees_copy,
+            &committed_tree,
         )
         .unwrap();
 
@@ -572,7 +571,7 @@ fn test_extend_whitelist() {
     // Add script1 to whitelist.
     let new_whitelist = {
         let mut existing_list = StdlibScript::whitelist();
-        existing_list.push(*HashValue::from_sha3_256(&vec![]).as_ref());
+        existing_list.push(*HashValue::from_sha3_256(&[]).as_ref());
         existing_list
     };
 
@@ -682,8 +681,8 @@ fn test_extend_whitelist() {
     let txn3 = get_test_signed_transaction(
         validator_account,
         /* sequence_number = */ 1,
-        validator_privkey.clone(),
-        validator_pubkey.clone(),
+        validator_privkey,
+        validator_pubkey,
         Some(script2),
     );
 
