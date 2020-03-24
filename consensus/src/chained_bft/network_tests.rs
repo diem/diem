@@ -4,7 +4,7 @@
 use crate::chained_bft::{
     network::{NetworkReceivers, NetworkSender},
     network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
-    test_utils::{self, consensus_runtime, placeholder_ledger_info},
+    test_utils::{self, consensus_runtime, placeholder_ledger_info, timed_block_on},
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::{
@@ -16,7 +16,7 @@ use consensus_types::{
     vote_data::VoteData,
     vote_msg::VoteMsg,
 };
-use futures::{channel::mpsc, executor::block_on, SinkExt, StreamExt};
+use futures::{channel::mpsc, SinkExt, StreamExt};
 use libra_types::{block_info::BlockInfo, PeerId};
 use network::{
     peer_manager::{
@@ -352,7 +352,7 @@ mod tests {
 
     #[test]
     fn test_network_api() {
-        let runtime = consensus_runtime();
+        let mut runtime = consensus_runtime();
         let num_nodes = 5;
         let mut receivers: Vec<NetworkReceivers<TestPayload>> = Vec::new();
         let mut playground = NetworkPlayground::new(runtime.handle().clone());
@@ -399,7 +399,7 @@ mod tests {
             Block::new_proposal(vec![0], 1, 1, previous_qc.clone(), &signers[0]),
             SyncInfo::new(previous_qc.clone(), previous_qc, None),
         );
-        block_on(async move {
+        timed_block_on(&mut runtime, async {
             nodes[0]
                 .send_vote(vote_msg.clone(), peers[2..5].to_vec())
                 .await;
@@ -429,7 +429,7 @@ mod tests {
 
     #[test]
     fn test_rpc() {
-        let runtime = consensus_runtime();
+        let mut runtime = consensus_runtime();
         let num_nodes = 2;
         let mut senders = Vec::new();
         let mut receivers: Vec<NetworkReceivers<TestPayload>> = Vec::new();
@@ -504,7 +504,7 @@ mod tests {
         };
         runtime.handle().spawn(on_request_block);
         let peer = peers[1];
-        block_on(async move {
+        timed_block_on(&mut runtime, async {
             let response = nodes[0]
                 .request_block(
                     BlockRetrievalRequest::new(HashValue::zero(), 1),

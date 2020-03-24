@@ -109,7 +109,7 @@ pub enum VerifiedEvent<T> {
 #[path = "event_processor_test.rs"]
 mod event_processor_test;
 
-#[cfg(any(feature = "fuzzing", test))]
+#[cfg(any(test, feature = "fuzzing"))]
 #[path = "event_processor_fuzzing.rs"]
 pub mod event_processor_fuzzing;
 

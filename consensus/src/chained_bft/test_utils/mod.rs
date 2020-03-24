@@ -12,8 +12,8 @@ use consensus_types::{
 use libra_crypto::HashValue;
 use libra_logger::Level;
 use libra_types::{ledger_info::LedgerInfo, validator_signer::ValidatorSigner};
-use std::sync::Arc;
-use tokio::runtime;
+use std::{future::Future, sync::Arc, time::Duration};
+use tokio::{runtime, time::timeout};
 
 mod mock_state_computer;
 mod mock_storage;
@@ -25,7 +25,8 @@ use libra_types::block_info::BlockInfo;
 pub use mock_state_computer::{EmptyStateComputer, MockStateComputer};
 pub use mock_storage::{EmptyStorage, MockSharedStorage, MockStorage};
 pub use mock_txn_manager::MockTransactionManager;
-use std::{thread, time::Duration};
+
+pub const TEST_TIMEOUT: Duration = Duration::from_secs(60);
 
 pub type TestPayload = Vec<usize>;
 
@@ -220,17 +221,19 @@ pub fn consensus_runtime() -> runtime::Runtime {
     if nocapture() {
         ::libra_logger::Logger::new().level(Level::Debug).init();
     }
-    // setup timeout for tests
-    crash_handler::setup_panic_handler();
-    thread::spawn(|| {
-        let timeout = 30;
-        thread::sleep(Duration::from_secs(timeout));
-        panic!("Test doesn't finish in {} secs", timeout);
-    });
 
     runtime::Builder::new()
         .threaded_scheduler()
         .enable_all()
         .build()
         .expect("Failed to create Tokio runtime!")
+}
+
+pub fn timed_block_on<F>(runtime: &mut runtime::Runtime, f: F) -> <F as Future>::Output
+where
+    F: Future,
+{
+    runtime
+        .block_on(async { timeout(TEST_TIMEOUT, f).await })
+        .expect("test timed out")
 }
