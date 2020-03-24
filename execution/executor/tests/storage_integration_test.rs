@@ -667,7 +667,8 @@ fn test_extend_whitelist() {
         .unwrap();
     assert!(t2.is_none());
 
-    // Now that the PublishingOption is modified to CustomScript, we can resubmit the script again.
+    // Now that the PublishingOption is modified to whitelist with script1 allowed, we can resubmit
+    // the script again.
 
     let txn2 = get_test_signed_transaction(
         validator_account,
