@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bincode;
-use libra_serde_reflection::{Format, Named, Tracer, Value, VariantFormat};
+use libra_serde_reflection::{ContainerFormat, Format, Named, Tracer, Value, VariantFormat};
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use serde_json;
 use serde_yaml;
@@ -71,7 +71,7 @@ fn test_tracers() {
     let registry = tracer.registry().unwrap();
     let format = registry.get("E").unwrap();
     let variants = match format {
-        Format::Variant(variants) => variants,
+        ContainerFormat::Enum(variants) => variants,
         _ => {
             unreachable!();
         }
@@ -113,12 +113,12 @@ fn test_tracers() {
     // Format values can serialize and deserialize in text and binary encodings.
     let data = serde_json::to_string_pretty(format).unwrap();
     println!("{}\n", data);
-    let format2 = serde_json::from_str::<Format>(&data).unwrap();
+    let format2 = serde_json::from_str::<ContainerFormat>(&data).unwrap();
     assert_eq!(*format, format2);
 
     let data = serde_yaml::to_string(format).unwrap();
     println!("{}\n", data);
-    let format3 = serde_yaml::from_str::<Format>(&data).unwrap();
+    let format3 = serde_yaml::from_str::<ContainerFormat>(&data).unwrap();
     assert_eq!(*format, format3);
 
     let data = bincode::serialize(format).unwrap();

@@ -11,6 +11,14 @@ use crate::{
 use serde::{de::DeserializeSeed, Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
+/// A map of container formats.
+pub type Registry = BTreeMap<&'static str, ContainerFormat>;
+
+/// Similar to `Registry` but compatible with `serde::de::DeserializeOwned`.
+pub type RegistryOwned = BTreeMap<String, ContainerFormat>;
+
+/// Structure to drive the tracing of Serde serialization and deserialization.
+/// This typically aims at computing a `Registry`.
 #[derive(Debug)]
 pub struct Tracer {
     /// Whether to trace the human readable variant of the (De)Serialize traits.
@@ -18,7 +26,7 @@ pub struct Tracer {
 
     /// Formats of the named containers discovered so far, while tracing
     /// serialization and/or deserialization.
-    pub(crate) registry: BTreeMap<&'static str, Format>,
+    pub(crate) registry: Registry,
 
     /// Value samples recorded during serialization.
     /// This will help passing user-defined checks during deserialization.
@@ -151,7 +159,7 @@ impl Tracer {
     }
 
     /// Finish tracing and recover a map of normalized formats.
-    pub fn registry(self) -> Result<BTreeMap<&'static str, Format>> {
+    pub fn registry(self) -> Result<Registry> {
         let mut registry = self.registry;
         for format in registry.values_mut() {
             format.normalize()?;
@@ -167,7 +175,7 @@ impl Tracer {
 
     /// Same as registry but always return a value, even if we detected issues.
     /// This should only be use for debugging.
-    pub fn registry_unchecked(self) -> Result<BTreeMap<&'static str, Format>> {
+    pub fn registry_unchecked(self) -> Result<Registry> {
         let mut registry = self.registry;
         for format in registry.values_mut() {
             format.normalize().unwrap_or(());
@@ -180,11 +188,10 @@ impl Tracer {
     pub(crate) fn record(
         &mut self,
         name: &'static str,
-        format: Format,
+        format: ContainerFormat,
         value: Value,
     ) -> Result<(Format, Value)> {
-        let entry = self.registry.entry(name).or_insert(Format::Unknown);
-        entry.merge(format)?;
+        self.registry.entry(name).merge(format)?;
         self.values.insert(name, value.clone());
         Ok((Format::TypeName(name.into()), value))
     }
@@ -205,7 +212,7 @@ impl Tracer {
                 value: variant,
             },
         );
-        let format = Format::Variant(variants);
+        let format = ContainerFormat::Enum(variants);
         let value = Value::Variant(variant_index, Box::new(variant_value));
         self.record(name, format, value)
     }

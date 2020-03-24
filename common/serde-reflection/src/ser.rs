@@ -114,7 +114,8 @@ impl<'a> ser::Serializer for Serializer<'a> {
     }
 
     fn serialize_unit_struct(self, name: &'static str) -> Result<(Format, Value)> {
-        self.tracer.record(name, Format::UnitStruct, Value::Unit)
+        self.tracer
+            .record(name, ContainerFormat::UnitStruct, Value::Unit)
     }
 
     fn serialize_unit_variant(
@@ -141,8 +142,11 @@ impl<'a> ser::Serializer for Serializer<'a> {
         T: ?Sized + Serialize,
     {
         let (format, value) = value.serialize(Serializer::new(&mut self.tracer))?;
-        self.tracer
-            .record(name, Format::NewTypeStruct(Box::new(format)), value)
+        self.tracer.record(
+            name,
+            ContainerFormat::NewTypeStruct(Box::new(format)),
+            value,
+        )
     }
 
     fn serialize_newtype_variant<T>(
@@ -323,7 +327,7 @@ impl<'a> ser::SerializeTupleStruct for TupleStructSerializer<'a> {
     }
 
     fn end(self) -> Result<(Format, Value)> {
-        let format = Format::TupleStruct(self.formats);
+        let format = ContainerFormat::TupleStruct(self.formats);
         let value = Value::Seq(self.values);
         self.tracer.record(self.name, format, value)
     }
@@ -431,7 +435,7 @@ impl<'a> ser::SerializeStruct for StructSerializer<'a> {
     }
 
     fn end(self) -> Result<(Format, Value)> {
-        let format = Format::Struct(self.fields);
+        let format = ContainerFormat::Struct(self.fields);
         let value = Value::Seq(self.values);
         self.tracer.record(self.name, format, value)
     }

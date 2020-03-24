@@ -16,6 +16,6 @@ mod trace;
 mod value;
 
 pub use error::{Error, Result};
-pub use format::{Format, Named, VariantFormat};
-pub use trace::Tracer;
+pub use format::{ContainerFormat, Format, Named, VariantFormat};
+pub use trace::{Registry, RegistryOwned, Tracer};
 pub use value::Value;
