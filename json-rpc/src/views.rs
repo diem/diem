@@ -143,6 +143,7 @@ pub struct TransactionView {
     pub transaction: TransactionDataView,
     pub events: Vec<EventView>,
     pub vm_status: StatusCode,
+    pub gas_used: u64,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -189,8 +190,14 @@ pub enum ScriptView {
         receiver: String,
         auth_key_prefix: BytesView,
         amount: u64,
+        metadata: BytesView,
     },
-
+    #[serde(rename = "mint_transaction")]
+    Mint {
+        receiver: String,
+        auth_key_prefix: BytesView,
+        amount: u64,
+    },
     #[serde(rename = "unknown_transaction")]
     Unknown {},
 }
@@ -200,6 +207,7 @@ impl ScriptView {
     pub fn get_name(&self) -> String {
         match self {
             ScriptView::PeerToPeer { .. } => "peer to peer transaction".to_string(),
+            ScriptView::Mint { .. } => "mint transaction".to_string(),
             ScriptView::Unknown { .. } => "unknown transaction".to_string(),
         }
     }
@@ -259,6 +267,34 @@ impl From<TransactionPayload> for ScriptView {
                     &args[..]
                 {
                     Ok(ScriptView::PeerToPeer {
+                        receiver: receiver.to_string(),
+                        auth_key_prefix: BytesView::from(auth_key_prefix),
+                        amount: *amount,
+                        metadata: BytesView::from(&[0u8; 0][..]),
+                    })
+                } else {
+                    Err(format_err!("Unable to parse PeerToPeer arguments"))
+                }
+            }
+            "peer_to_peer_with_metadata_transaction" => {
+                if let [TransactionArgument::Address(receiver), TransactionArgument::U8Vector(auth_key_prefix), TransactionArgument::U64(amount), TransactionArgument::U8Vector(metadata)] =
+                    &args[..]
+                {
+                    Ok(ScriptView::PeerToPeer {
+                        receiver: receiver.to_string(),
+                        auth_key_prefix: BytesView::from(auth_key_prefix),
+                        amount: *amount,
+                        metadata: BytesView::from(metadata),
+                    })
+                } else {
+                    Err(format_err!("Unable to parse PeerToPeer arguments"))
+                }
+            }
+            "mint_transaction" => {
+                if let [TransactionArgument::Address(receiver), TransactionArgument::U8Vector(auth_key_prefix), TransactionArgument::U64(amount)] =
+                    &args[..]
+                {
+                    Ok(ScriptView::Mint {
                         receiver: receiver.to_string(),
                         auth_key_prefix: BytesView::from(auth_key_prefix),
                         amount: *amount,
