@@ -1295,6 +1295,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "config-builder 0.1.0",
+ "consensus-types 0.1.0",
  "debug-interface 0.1.0",
  "executor-types 0.1.0",
  "executor-utils 0.1.0",
@@ -1363,7 +1364,6 @@ name = "executor-utils"
 version = "0.1.0"
 dependencies = [
  "executor 0.1.0",
- "executor-types 0.1.0",
  "libra-config 0.1.0",
  "libra-vm 0.1.0",
  "storage-client 0.1.0",

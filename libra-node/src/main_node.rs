@@ -16,7 +16,13 @@ use libra_metrics::metric_server;
 use libra_vm::LibraVM;
 use network::validator_network::network_builder::{NetworkBuilder, TransportType};
 use state_synchronizer::StateSynchronizer;
-use std::{collections::HashMap, net::ToSocketAddrs, sync::Arc, thread, time::Instant};
+use std::{
+    collections::HashMap,
+    net::ToSocketAddrs,
+    sync::{Arc, Mutex},
+    thread,
+    time::Instant,
+};
 use storage_client::{StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::{init_libra_db, start_storage_service_with_db};
 use tokio::runtime::{Builder, Runtime};
@@ -43,15 +49,15 @@ impl Drop for LibraHandle {
     }
 }
 
-fn setup_executor(config: &NodeConfig) -> Arc<Executor<LibraVM>> {
+fn setup_executor(config: &NodeConfig) -> Arc<Mutex<Executor<LibraVM>>> {
     let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
     let storage_write_client = Arc::new(StorageWriteServiceClient::new(&config.storage.address));
 
-    Arc::new(Executor::new(
+    Arc::new(Mutex::new(Executor::new(
         storage_read_client,
         storage_write_client,
         config,
-    ))
+    )))
 }
 
 fn setup_debug_interface(config: &NodeConfig) -> Runtime {

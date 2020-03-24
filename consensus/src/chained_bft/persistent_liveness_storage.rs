@@ -13,12 +13,12 @@ use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
-    block_info::Round, epoch_info::EpochInfo, ledger_info::LedgerInfo,
+    block_info::Round, epoch_info::EpochInfo, ledger_info::LedgerInfo, transaction::Version,
     validator_info::ValidatorInfo, validator_set::ValidatorSet,
     validator_verifier::ValidatorVerifier,
 };
 use libradb::LibraDBTrait;
-use std::{collections::HashSet, sync::Arc};
+use std::{cmp::max, collections::HashSet, sync::Arc};
 
 /// PersistentLivenessStorage is essential for maintaining liveness when a node crashes.  Specifically,
 /// upon a restart, a correct node will recover.  Even if all nodes crash, liveness is
@@ -146,6 +146,31 @@ impl LedgerRecoveryData {
     }
 }
 
+pub struct RootMetadata {
+    pub accu_hash: HashValue,
+    pub frozen_root_hashes: Vec<HashValue>,
+    pub num_leaves: Version,
+}
+
+impl RootMetadata {
+    pub fn new(num_leaves: u64, accu_hash: HashValue, frozen_root_hashes: Vec<HashValue>) -> Self {
+        Self {
+            num_leaves,
+            accu_hash,
+            frozen_root_hashes,
+        }
+    }
+
+    pub fn version(&self) -> Version {
+        max(self.num_leaves, 1) - 1
+    }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn new_empty() -> Self {
+        Self::new(0, *libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH, vec![])
+    }
+}
+
 /// The recovery data constructed from raw consensusdb data, it'll find the root value and
 /// blocks that need cleanup or return error if the input data is inconsistent.
 pub struct RecoveryData<T> {
@@ -153,7 +178,7 @@ pub struct RecoveryData<T> {
     // The last vote message sent by this validator.
     last_vote: Option<Vote>,
     root: RootInfo<T>,
-    root_executed_trees: ExecutedTrees,
+    root_metadata: RootMetadata,
     // 1. the blocks guarantee the topological ordering - parent <- child.
     // 2. all blocks are children of the root.
     blocks: Vec<Block<T>>,
@@ -169,8 +194,8 @@ impl<T: Payload> RecoveryData<T> {
         last_vote: Option<Vote>,
         ledger_recovery_data: LedgerRecoveryData,
         mut blocks: Vec<Block<T>>,
+        root_metadata: RootMetadata,
         mut quorum_certs: Vec<QuorumCert>,
-        root_executed_trees: ExecutedTrees,
         highest_timeout_certificate: Option<TimeoutCertificate>,
     ) -> Result<Self> {
         let root = ledger_recovery_data
@@ -207,7 +232,7 @@ impl<T: Payload> RecoveryData<T> {
                 _ => None,
             },
             root,
-            root_executed_trees,
+            root_metadata,
             blocks,
             quorum_certs,
             blocks_to_prune,
@@ -230,10 +255,10 @@ impl<T: Payload> RecoveryData<T> {
         self.last_vote.clone()
     }
 
-    pub fn take(self) -> (RootInfo<T>, ExecutedTrees, Vec<Block<T>>, Vec<QuorumCert>) {
+    pub fn take(self) -> (RootInfo<T>, RootMetadata, Vec<Block<T>>, Vec<QuorumCert>) {
         (
             self.root,
-            self.root_executed_trees,
+            self.root_metadata,
             self.blocks,
             self.quorum_certs,
         )
@@ -367,13 +392,21 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
             startup_info.latest_ledger_info.ledger_info().clone(),
             validator_set,
         );
+        let frozen_root_hashes = startup_info
+            .committed_tree_state
+            .ledger_frozen_subtree_hashes
+            .clone();
         let root_executed_trees = ExecutedTrees::from(startup_info.committed_tree_state);
         match RecoveryData::new(
             last_vote,
             ledger_recovery_data.clone(),
             blocks,
+            RootMetadata::new(
+                root_executed_trees.txn_accumulator().num_leaves(),
+                root_executed_trees.state_id(),
+                frozen_root_hashes,
+            ),
             quorum_certs,
-            root_executed_trees,
             highest_timeout_certificate,
         ) {
             Ok(mut initial_data) => {

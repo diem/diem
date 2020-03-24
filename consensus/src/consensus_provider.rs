@@ -19,7 +19,7 @@ use libra_types::transaction::SignedTransaction;
 use libra_vm::LibraVM;
 use libradb::LibraDBTrait;
 use state_synchronizer::StateSyncClient;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 /// Public interface to a consensus protocol.
 pub trait ConsensusProvider {
@@ -39,7 +39,7 @@ pub fn make_consensus_provider(
     node_config: &mut NodeConfig,
     network_sender: ConsensusNetworkSender<Vec<SignedTransaction>>,
     network_receiver: ConsensusNetworkEvents<Vec<SignedTransaction>>,
-    executor: Arc<Executor<LibraVM>>,
+    executor: Arc<Mutex<Executor<LibraVM>>>,
     state_sync_client: Arc<StateSyncClient>,
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
     libra_db: Arc<dyn LibraDBTrait>,

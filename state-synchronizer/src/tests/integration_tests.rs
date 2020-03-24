@@ -61,7 +61,7 @@ impl ExecutorProxyTrait for MockExecutorProxy {
     }
 
     async fn execute_chunk(
-        &self,
+        &mut self,
         txn_list_with_proof: TransactionListWithProof,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,

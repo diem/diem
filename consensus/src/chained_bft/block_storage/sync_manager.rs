@@ -142,7 +142,7 @@ impl<T: Payload> BlockStore<T> {
         if !self.need_sync_for_quorum_cert(&highest_commit_cert) {
             return Ok(());
         }
-        let (root, root_executed_trees, blocks, quorum_certs) = Self::fast_forward_sync(
+        let (root, root_metadata, blocks, quorum_certs) = Self::fast_forward_sync(
             &highest_commit_cert,
             retriever,
             self.storage.clone(),
@@ -151,7 +151,7 @@ impl<T: Payload> BlockStore<T> {
         .await?
         .take();
         debug!("{}Sync to{} {}", Fg(Blue), Fg(Reset), root.0);
-        self.rebuild(root, root_executed_trees, blocks, quorum_certs)
+        self.rebuild(root, root_metadata, blocks, quorum_certs)
             .await;
 
         if highest_commit_cert.ends_epoch() {

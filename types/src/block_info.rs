@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{transaction::Version, validator_set::ValidatorSet};
+use libra_crypto::hash::HashValue;
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
-use libra_crypto::hash::{HashValue, PRE_GENESIS_BLOCK_ID};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -102,8 +102,7 @@ impl BlockInfo {
         Self {
             epoch: GENESIS_EPOCH,
             round: GENESIS_ROUND,
-            // We use `PRE_GENESIS_BLOCK_ID` as the parent of the genesis block.
-            id: *PRE_GENESIS_BLOCK_ID,
+            id: HashValue::zero(),
             executed_state_id: genesis_state_root_hash,
             version: GENESIS_VERSION,
             timestamp_usecs: GENESIS_TIMESTAMP_USECS,
@@ -155,10 +154,11 @@ impl Display for BlockInfo {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(
             f,
-            "BlockInfo: [epoch: {}, round: {}, id: {}, version: {}, timestamp (us): {}, next_validator_set: {}]",
+            "BlockInfo: [epoch: {}, round: {}, id: {}, executed_state_id: {}, version: {}, timestamp (us): {}, next_validator_set: {}]",
             self.epoch(),
             self.round(),
             self.id(),
+            self.executed_state_id(),
             self.version(),
             self.timestamp_usecs(),
             self.next_validator_set.as_ref().map_or("None".to_string(), |validator_set| format!("{}", validator_set)),

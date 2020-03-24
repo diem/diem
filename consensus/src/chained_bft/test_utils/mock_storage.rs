@@ -1,17 +1,17 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::persistent_liveness_storage::{
-    LedgerRecoveryData, PersistentLivenessStorage, RecoveryData,
+use crate::chained_bft::{
+    epoch_manager::LivenessStorageData,
+    persistent_liveness_storage::{
+        LedgerRecoveryData, PersistentLivenessStorage, RecoveryData, RootMetadata,
+    },
 };
-
-use crate::chained_bft::epoch_manager::LivenessStorageData;
 use anyhow::Result;
 use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
-use executor_types::ExecutedTrees;
 use libra_crypto::HashValue;
 use libra_types::{ledger_info::LedgerInfo, validator_set::ValidatorSet};
 use libradb::LibraDBTrait;
@@ -113,8 +113,8 @@ impl<T: Payload> MockStorage<T> {
             self.shared_storage.last_vote.lock().unwrap().clone(),
             ledger_recovery_data,
             blocks,
+            RootMetadata::new_empty(),
             quorum_certs,
-            ExecutedTrees::new_empty(),
             self.shared_storage
                 .highest_timeout_certificate
                 .lock()
@@ -267,8 +267,8 @@ impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage<T> {
             None,
             self.recover_from_ledger(),
             vec![],
+            RootMetadata::new_empty(),
             vec![],
-            ExecutedTrees::new_empty(),
             None,
         ) {
             Ok(recovery_data) => LivenessStorageData::RecoveryData(recovery_data),
