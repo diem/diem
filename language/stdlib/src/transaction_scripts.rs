@@ -24,6 +24,7 @@ const STAGED_TXN_SCRIPTS_DIR: Dir = include_dir!("staged/transaction_scripts");
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum StdlibScript {
     AddValidator,
+    ApprovedPayment,
     Burn,
     CancelBurn,
     CreateAccount,
@@ -33,6 +34,7 @@ pub enum StdlibScript {
     PeerToPeer,
     PeerToPeerWithMetadata,
     Preburn,
+    RegisterApprovedPayment,
     RegisterPreburner,
     RegisterValidator,
     RemoveValidator,
@@ -45,22 +47,25 @@ impl StdlibScript {
     /// Return a vector containing all of the standard library scripts (i.e., all inhabitants of the
     /// StdlibScript enum)
     pub fn all() -> Vec<Self> {
+        use StdlibScript::*;
         vec![
-            Self::AddValidator,
-            Self::Burn,
-            Self::CancelBurn,
-            Self::CreateAccount,
-            Self::EmptyScript,
-            Self::Mint,
-            Self::ModifyPublishingOption,
-            Self::PeerToPeer,
-            Self::PeerToPeerWithMetadata,
-            Self::Preburn,
-            Self::RegisterPreburner,
-            Self::RegisterValidator,
-            Self::RemoveValidator,
-            Self::RotateAuthenticationKey,
-            Self::RotateConsensusPubkey,
+            AddValidator,
+            ApprovedPayment,
+            Burn,
+            CancelBurn,
+            CreateAccount,
+            EmptyScript,
+            Mint,
+            ModifyPublishingOption,
+            PeerToPeer,
+            PeerToPeerWithMetadata,
+            Preburn,
+            RegisterApprovedPayment,
+            RegisterPreburner,
+            RegisterValidator,
+            RemoveValidator,
+            RotateAuthenticationKey,
+            RotateConsensusPubkey,
             // ...add new scripts here
         ]
     }
@@ -153,25 +158,28 @@ impl TryFrom<&[u8]> for StdlibScript {
 
 impl fmt::Display for StdlibScript {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use StdlibScript::*;
         write!(
             f,
             "{}",
             match self {
-                Self::AddValidator => "add_validator",
-                Self::Burn => "burn",
-                Self::CancelBurn => "cancel_burn",
-                Self::CreateAccount => "create_account",
-                Self::EmptyScript => "empty_script",
-                Self::Mint => "mint",
-                Self::ModifyPublishingOption => "modify_publishing_option",
-                Self::PeerToPeer => "peer_to_peer",
-                Self::PeerToPeerWithMetadata => "peer_to_peer_with_metadata",
-                Self::Preburn => "preburn",
-                Self::RegisterPreburner => "register_preburner",
-                Self::RegisterValidator => "register_validator",
-                Self::RemoveValidator => "remove_validator",
-                Self::RotateAuthenticationKey => "rotate_authentication_key",
-                Self::RotateConsensusPubkey => "rotate_consensus_pubkey",
+                AddValidator => "add_validator",
+                ApprovedPayment => "approved_payment",
+                Burn => "burn",
+                CancelBurn => "cancel_burn",
+                CreateAccount => "create_account",
+                EmptyScript => "empty_script",
+                Mint => "mint",
+                ModifyPublishingOption => "modify_publishing_option",
+                PeerToPeer => "peer_to_peer",
+                PeerToPeerWithMetadata => "peer_to_peer_with_metadata",
+                Preburn => "preburn",
+                RegisterApprovedPayment => "register_approved_payment",
+                RegisterPreburner => "register_preburner",
+                RegisterValidator => "register_validator",
+                RemoveValidator => "remove_validator",
+                RotateAuthenticationKey => "rotate_authentication_key",
+                RotateConsensusPubkey => "rotate_consensus_pubkey",
             }
         )
     }

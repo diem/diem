@@ -11,7 +11,9 @@
 use crate::{
     account::{Account, AccountData},
     executor::FakeExecutor,
+    keygen::KeyGen,
 };
+use libra_crypto::{hash::HashValue, traits::SigningKey};
 use transaction_builder::*;
 
 #[test]
@@ -43,4 +45,44 @@ fn register_preburn_burn() {
     executor.execute_and_apply(
         association.signed_script_txn(encode_cancel_burn_script(*preburner.address()), 2),
     );
+}
+
+#[test]
+fn approved_payment() {
+    let mut executor = FakeExecutor::from_genesis_file();
+    // account that will receive the approved payment
+    let payment_receiver = {
+        let data = AccountData::new(1_000_000, 0);
+        executor.add_account_data(&data);
+        data.into_account()
+    };
+    // account that will send the approved payment
+    let payment_sender = {
+        let data = AccountData::new(1_000_000, 0);
+        executor.add_account_data(&data);
+        data.into_account()
+    };
+
+    // Register the receiver account
+    let mut keygen = KeyGen::from_seed([9u8; 32]);
+    let (private_key, public_key) = keygen.generate_keypair();
+    executor.execute_and_apply(payment_receiver.signed_script_txn(
+        encode_register_approved_payment_script(public_key.to_bytes().to_vec()),
+        0,
+    ));
+
+    // Do the offline protocol: generate a payment id, sign with the receiver's private key, include
+    // in transaction from sender's account
+    let payment_id = 9999;
+    let message = HashValue::from_sha3_256(&lcs::to_bytes(&payment_id).expect("couldn't hash"));
+    let signature = private_key.sign_message(&message);
+    executor.execute_and_apply(payment_sender.signed_script_txn(
+        encode_approved_payment_script(
+            *payment_receiver.address(),
+            100,
+            message.to_vec(),
+            signature.to_bytes().to_vec(),
+        ),
+        0,
+    ));
 }

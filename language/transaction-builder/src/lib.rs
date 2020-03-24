@@ -41,6 +41,27 @@ pub fn encode_add_validator_script(new_validator: &AccountAddress) -> Script {
     )
 }
 
+/// Encode a program that deposits `amount` LBR in `payee`'s account if the `signature` on the
+/// payment metadata matches the public key stored in the `payee`'s ApprovedPayment` resource.
+/// Aborts if the signature does not match, `payee` does not have an `ApprovedPayment` resource, or
+/// the sender's balance is less than `amount`.
+pub fn encode_approved_payment_script(
+    payee: AccountAddress,
+    amount: u64,
+    metadata: Vec<u8>,
+    signature: Vec<u8>,
+) -> Script {
+    Script::new(
+        StdlibScript::ApprovedPayment.compiled_bytes().into_vec(),
+        vec![
+            TransactionArgument::Address(payee),
+            TransactionArgument::U64(amount),
+            TransactionArgument::U8Vector(metadata),
+            TransactionArgument::U8Vector(signature),
+        ],
+    )
+}
+
 /// Permanently destroy the coins stored in the oldest burn request under the `Preburn` resource
 /// stored at `preburn_address`. This will only succeed if the sender has a `MintCapability` stored
 /// under their account and `preburn_address` has a pending burn request
@@ -160,6 +181,18 @@ pub fn encode_create_account_script(
             TransactionArgument::U8Vector(auth_key_prefix),
             TransactionArgument::U64(initial_balance),
         ],
+    )
+}
+
+/// Publish a newly created `ApprovedPayment` resource under the sender's account with approval key
+/// `public_key`.
+/// Aborts if the sender already has a published `ApprovedPayment` resource.
+pub fn encode_register_approved_payment_script(public_key: Vec<u8>) -> Script {
+    Script::new(
+        StdlibScript::RegisterApprovedPayment
+            .compiled_bytes()
+            .into_vec(),
+        vec![TransactionArgument::U8Vector(public_key)],
     )
 }
 
