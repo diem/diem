@@ -18,6 +18,8 @@ const MAX_BUCKETS: usize = 32;
 /// Internally, it stores a vector of u8's (as Vec<u8>).
 /// * The first 8 positions of the bit vector are encoded in the first element of the vector, the
 ///   next 8 are encoded in the second element, and so on.
+/// * Bits are read from left to right. For instance, in the following bitvec
+///   [0b0001_0000, 0b0000_0000, 0b0000_0000, 0b0000_0001], the 3rd and 31st positions are set.
 /// * Each bit of a u8 is set to 1 if the position is set and to 0 if it's not.
 /// * We only allow setting positions upto u8::MAX. As a result, the size of the inner vector is
 ///   limited to 32 (= 256 / 8).
@@ -63,7 +65,7 @@ impl BitVec {
         }
         // This is optimized to: let bucket_pos = pos | 0x07;
         let bucket_pos = pos as usize - (bucket * BUCKET_SIZE);
-        self.inner[bucket] |= 0x01 << bucket_pos;
+        self.inner[bucket] |= 0b1000_0000 >> bucket_pos as u8;
     }
 
     // TODO(abhayb): Remove after migration to new wire format.
@@ -77,7 +79,7 @@ impl BitVec {
         }
         // This is optimized to: let bucket_pos = pos | 0x07;
         let bucket_pos = pos as usize - (bucket * BUCKET_SIZE);
-        (self.inner[bucket] & (0x01 << bucket_pos)) != 0
+        (self.inner[bucket] & (0b1000_0000 >> bucket_pos as u8)) != 0
     }
 
     // TODO(kostas): Remove after applying it to multi-sig.
@@ -176,7 +178,7 @@ mod test {
         assert_eq!(p1.inner.len(), 1);
         assert_eq!(p1.last_set_bit(), Some(2));
 
-        // 128 = b'10000000'
+        // 128 = 0b1000_0000
         let p2 = BitVec {
             inner: vec![7u8, 128u8],
         };
@@ -193,6 +195,20 @@ mod test {
             inner: vec![0u8; MAX_BUCKETS],
         };
         assert_eq!(p4.last_set_bit(), None);
+
+        // An extra test to ensure left to right encoding.
+        let mut p5 = BitVec {
+            inner: vec![0b0000_0001, 0b0100_0000],
+        };
+        assert_eq!(p5.last_set_bit(), Some(9));
+        assert!(p5.is_set(7));
+        assert!(p5.is_set(9));
+        assert!(!p5.is_set(0));
+
+        p5.set(10);
+        assert!(p5.is_set(10));
+        assert_eq!(p5.last_set_bit(), Some(10));
+        assert_eq!(p5.inner, vec![0b0000_0001, 0b0110_0000])
     }
 
     #[test]
