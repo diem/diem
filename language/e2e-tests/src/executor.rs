@@ -14,7 +14,7 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_config::{AccountResource, BalanceResource},
-    block_metadata::BlockMetadata,
+    block_metadata::{new_block_event_key, BlockMetadata, NewBlockEvent},
     language_storage::ModuleId,
     on_chain_config::VMPublishingOption,
     transaction::{
@@ -257,12 +257,15 @@ impl FakeExecutor {
             vec![],
             validator_address,
         );
-        self.apply_write_set(
-            self.execute_transaction_block(vec![Transaction::BlockMetadata(new_block)])
-                .expect("Executing block prologue should succeed")
-                .get(0)
-                .expect("Failed to get the execution result for Block Prologue")
-                .write_set(),
-        );
+        let output = self
+            .execute_transaction_block(vec![Transaction::BlockMetadata(new_block)])
+            .expect("Executing block prologue should succeed")
+            .pop()
+            .expect("Failed to get the execution result for Block Prologue");
+        // check if we emit the expected event, there might be more events for transaction fees
+        let event = output.events()[0].clone();
+        assert!(event.key() == &new_block_event_key());
+        assert!(lcs::from_bytes::<NewBlockEvent>(event.event_data()).is_ok());
+        self.apply_write_set(output.write_set());
     }
 }

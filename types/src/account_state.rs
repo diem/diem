@@ -6,6 +6,7 @@ use crate::{
         AccountResource, BalanceResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_RESOURCE_PATH,
         ACCOUNT_SENT_EVENT_PATH, BALANCE_RESOURCE_PATH,
     },
+    block_metadata::{LibraBlockResource, LIBRA_BLOCK_RESOURCE_PATH, NEW_BLOCK_EVENT_PATH},
     discovery_set::{
         DiscoverySetResource, DISCOVERY_SET_CHANGE_EVENT_PATH, DISCOVERY_SET_RESOURCE_PATH,
     },
@@ -48,6 +49,10 @@ impl AccountState {
         self.get_resource(&*VALIDATOR_SET_RESOURCE_PATH)
     }
 
+    pub fn get_libra_block_resource(&self) -> Result<Option<LibraBlockResource>> {
+        self.get_resource(&*LIBRA_BLOCK_RESOURCE_PATH)
+    }
+
     pub fn get_event_handle_by_query_path(&self, query_path: &[u8]) -> Result<Option<EventHandle>> {
         let event_handle = if *ACCOUNT_RECEIVED_EVENT_PATH == query_path {
             self.get_account_resource()?
@@ -61,6 +66,9 @@ impl AccountState {
         } else if *VALIDATOR_SET_CHANGE_EVENT_PATH == query_path {
             self.get_validator_set_resource()?
                 .map(|validator_set_resource| validator_set_resource.change_events().clone())
+        } else if *NEW_BLOCK_EVENT_PATH == query_path {
+            self.get_libra_block_resource()?
+                .map(|libra_block_resource| libra_block_resource.new_block_events().clone())
         } else {
             bail!("Unrecognized query path: {:?}", query_path);
         };
