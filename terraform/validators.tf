@@ -121,6 +121,7 @@ data "template_file" "user_data" {
   vars = {
     ecs_cluster      = aws_ecs_cluster.testnet.name
     host_log_path    = "/data/libra/libra.log"
+    host_structlog_path   = "/data/libra/libra_structlog.log"
     enable_logrotate = var.log_to_file || var.enable_logstash
   }
 }
@@ -181,7 +182,7 @@ locals {
   seed_peer_ip           = aws_instance.validator.0.private_ip
   validator_command      = var.log_to_file || var.enable_logstash ? jsonencode(["bash", "-c", "/docker-run-dynamic.sh >> ${var.log_path} 2>&1"]) : ""
   aws_elasticsearch_host = var.enable_logstash ? join(",", aws_elasticsearch_domain.logging.*.endpoint) : ""
-  logstash_config        = "input { file { path => '${var.log_path}'\\n}}\\n output {  amazon_es { \\nhosts => ['https://${local.aws_elasticsearch_host}']\\nregion => 'us-west-2'\\nindex => 'validator-logs-%%{+YYYY.MM.dd}'\\n}}"
+  logstash_config        = "input { file { path => '${var.structlog_path}'\\n codec => 'json'\\n}}\\n filter {  json {  \\nsource => 'message'\\n}}\\n output {  amazon_es { \\nhosts => ['https://${local.aws_elasticsearch_host}']\\nregion => 'us-west-2'\\nindex => 'validator-logs-%%{+YYYY.MM.dd}'\\n}}"
 }
 
 data "template_file" "validator_config" {
@@ -220,6 +221,7 @@ data "template_file" "ecs_task_definition" {
     logstash_config            = local.logstash_config
     safety_rules_image         = local.safety_rules_image_repo
     safety_rules_image_version = local.safety_rules_image_version
+    structlog_path             = var.log_to_file || var.enable_logstash ? var.structlog_path : ""
   }
 }
 
