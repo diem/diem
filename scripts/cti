@@ -12,6 +12,7 @@ ENV=""
 REPORT=""
 MARKER=$(whoami)
 DEPLOY=yes
+EXIT_CODE=0
 
 K8S=""
 K8S_CONTEXT_PATTERN='arn:aws:eks:us-west-2:853397791086:cluster/CLUSTERNAME-k8s-testnet'
@@ -245,8 +246,15 @@ else
   echo "${BLUE}Note:${RESTORE} Because of log volume, logs for only some of the validators and fullnodes are streamed to Kibana."
   echo "**********"
   kubectl --context=${context} logs -f "${pod_name}" | tee $OUTPUT_TEE
+  pod_status=$(kubectl --context=${context} get pods "${pod_name}" -o jsonpath="{.status.phase}")
+  if [[ "${pod_status}" != "Succeeded" ]]; then
+    echo "${pod_name} status: ${pod_status}"
+    EXIT_CODE=1
+  fi
 fi
 
 if [ ! -z "$REPORT" ]; then
     cat $OUTPUT_TEE | awk '/====json-report-begin===/{f=1;next} /====json-report-end===/{f=0} f' > $REPORT
 fi
+
+exit ${EXIT_CODE}
