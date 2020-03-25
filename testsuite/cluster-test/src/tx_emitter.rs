@@ -122,12 +122,28 @@ impl TxEmitter {
         self.accounts.clear();
     }
 
-    fn pick_mint_client(&self, instances: &[Instance]) -> JsonRpcAsyncClient {
+    fn pick_mint_instance<'a, 'b>(&'a self, instances: &'b [Instance]) -> &'b Instance {
         let mut rng = ThreadRng::default();
-        let mint_instance = instances
+        instances
             .choose(&mut rng)
-            .expect("Instances can not be empty");
-        self.make_client(mint_instance)
+            .expect("Instances can not be empty")
+    }
+
+    fn pick_mint_client(&self, instances: &[Instance]) -> JsonRpcAsyncClient {
+        self.make_client(self.pick_mint_instance(instances))
+    }
+
+    pub async fn submit_single_transaction(
+        &self,
+        instance: &Instance,
+        account: &mut AccountData,
+    ) -> Result<Instant> {
+        let client = self.make_client(instance);
+        client
+            .submit_transaction(gen_mint_request(account, 10))
+            .await?;
+        let deadline = Instant::now() + TXN_MAX_WAIT;
+        Ok(deadline)
     }
 
     pub async fn start_job(&mut self, req: EmitJobRequest) -> Result<EmitJob> {
@@ -188,22 +204,35 @@ impl TxEmitter {
         })
     }
 
+    pub async fn load_faucet_account(&self, instance: &Instance) -> Result<AccountData> {
+        let client = self.make_client(instance);
+        let address = association_address();
+        let sequence_number = query_sequence_numbers(&client, &[address])
+            .await
+            .map_err(|e| {
+                format_err!(
+                    "query_sequence_numbers on {:?} for faucet account failed: {}",
+                    client,
+                    e
+                )
+            })?[0];
+        Ok(AccountData {
+            address,
+            key_pair: self.mint_key_pair.clone(),
+            sequence_number,
+        })
+    }
+
     pub async fn mint_accounts(&mut self, req: &EmitJobRequest, num_accounts: usize) -> Result<()> {
         if self.accounts.len() >= num_accounts {
             info!("Not minting accounts");
             return Ok(()); // Early return to skip printing 'Minting ...' logs
         }
-        let mut faucet_account = load_faucet_account(
-            &mut self.pick_mint_client(&req.instances),
-            self.mint_key_pair.clone(),
-        )
-        .await?;
-        let faucet_address = faucet_account.address;
-        let auth_key_prefix = faucet_account.auth_key_prefix();
+        let mut faucet_account = self
+            .load_faucet_account(self.pick_mint_instance(&req.instances))
+            .await?;
         let mint_txn = gen_mint_request(
             &mut faucet_account,
-            &faucet_address,
-            auth_key_prefix,
             LIBRA_PER_NEW_ACCOUNT * num_accounts as u64,
         );
         execute_and_wait_transactions(
@@ -292,6 +321,19 @@ impl TxEmitter {
         tokio::time::delay_for(duration).await;
         let stats = self.stop_job(job);
         Ok(stats)
+    }
+
+    pub async fn query_sequence_numbers(
+        &self,
+        instance: &Instance,
+        address: &AccountAddress,
+    ) -> Result<u64> {
+        let client = self.make_client(instance);
+        let resp = client
+            .get_accounts_state(slice::from_ref(address))
+            .await
+            .map_err(|e| format_err!("[{:?}] get_accounts_state failed: {:?} ", client, e))?;
+        Ok(resp[0].sequence_number)
     }
 }
 
@@ -457,15 +499,12 @@ fn gen_submit_transaction_request(
     transaction
 }
 
-fn gen_mint_request(
-    sender: &mut AccountData,
-    receiver: &AccountAddress,
-    receiver_auth_key_prefix: Vec<u8>,
-    num_coins: u64,
-) -> SignedTransaction {
+fn gen_mint_request(faucet_account: &mut AccountData, num_coins: u64) -> SignedTransaction {
+    let receiver = faucet_account.address;
+    let auth_key_prefix = faucet_account.auth_key_prefix();
     gen_submit_transaction_request(
-        transaction_builder::encode_mint_script(receiver, receiver_auth_key_prefix, num_coins),
-        sender,
+        transaction_builder::encode_mint_script(&receiver, auth_key_prefix, num_coins),
+        faucet_account,
     )
 }
 
@@ -554,27 +593,6 @@ async fn execute_and_wait_transactions(
     r
 }
 
-async fn load_faucet_account(
-    client: &mut JsonRpcAsyncClient,
-    key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
-) -> Result<AccountData> {
-    let address = association_address();
-    let sequence_number = query_sequence_numbers(client, &[address])
-        .await
-        .map_err(|e| {
-            format_err!(
-                "query_sequence_numbers on {:?} for faucet account failed: {}",
-                client,
-                e
-            )
-        })?[0];
-    Ok(AccountData {
-        address,
-        key_pair,
-        sequence_number,
-    })
-}
-
 /// Create `num_new_accounts` by transferring libra from `source_account`. Return Vec of created
 /// accounts
 async fn create_new_accounts(
@@ -600,7 +618,7 @@ async fn create_new_accounts(
 }
 
 #[derive(Clone)]
-struct AccountData {
+pub struct AccountData {
     pub address: AccountAddress,
     pub key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
     pub sequence_number: u64,
