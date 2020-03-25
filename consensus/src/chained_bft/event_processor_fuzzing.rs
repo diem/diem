@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[allow(unused_imports)] // work around compiler bug which incorrect detects this as unused
-use crate::chained_bft::test_utils::consensus_runtime;
 use crate::{
     chained_bft::{
         block_storage::BlockStore,
@@ -21,7 +19,7 @@ use crate::{
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::proposal_msg::ProposalMsg;
-use futures::channel::mpsc;
+use futures::{channel::mpsc, executor::block_on};
 use libra_types::{
     ledger_info::LedgerInfoWithSignatures, validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
@@ -33,17 +31,19 @@ use std::{num::NonZeroUsize, sync::Arc};
 use tokio::runtime::Runtime;
 
 // This generates a proposal for round 1
-pub async fn generate_corpus_proposal() -> Vec<u8> {
+pub fn generate_corpus_proposal() -> Vec<u8> {
     let mut event_processor = create_node_for_fuzzing();
-    let proposal = event_processor
-        .generate_proposal(NewRoundEvent {
-            round: 1,
-            reason: NewRoundReason::QCReady,
-            timeout: std::time::Duration::new(5, 0),
-        })
-        .await;
-    // serialize and return proposal
-    lcs::to_bytes(&proposal.unwrap()).unwrap()
+    block_on(async {
+        let proposal = event_processor
+            .generate_proposal(NewRoundEvent {
+                round: 1,
+                reason: NewRoundReason::QCReady,
+                timeout: std::time::Duration::new(5, 0),
+            })
+            .await;
+        // serialize and return proposal
+        lcs::to_bytes(&proposal.unwrap()).unwrap()
+    })
 }
 
 // optimization for the fuzzer
@@ -151,7 +151,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
 }
 
 // This functions fuzzes a Proposal protobuffer (not a ConsensusMsg)
-pub async fn fuzz_proposal(data: &[u8]) {
+pub fn fuzz_proposal(data: &[u8]) {
     // create node
     let mut event_processor = create_node_for_fuzzing();
 
@@ -175,20 +175,18 @@ pub async fn fuzz_proposal(data: &[u8]) {
         }
     };
 
-    // TODO: make sure this obtains a vote when testing
-    // TODO: make sure that if this obtains a vote, it's for round 1, etc.
-    event_processor.process_proposal_msg(proposal).await;
+    block_on(async move {
+        // TODO: make sure this obtains a vote when testing
+        // TODO: make sure that if this obtains a vote, it's for round 1, etc.
+        event_processor.process_proposal_msg(proposal).await;
+    });
 }
 
 // This test is here so that the fuzzer can be maintained
 #[test]
 fn test_consensus_proposal_fuzzer() {
-    let mut runtime = consensus_runtime();
-
-    runtime.block_on(async {
-        // generate a proposal
-        let proposal = generate_corpus_proposal().await;
-        // successfully parse it
-        fuzz_proposal(&proposal).await;
-    });
+    // generate a proposal
+    let proposal = generate_corpus_proposal();
+    // successfully parse it
+    fuzz_proposal(&proposal);
 }
