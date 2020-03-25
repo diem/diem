@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::{consensusdb::ConsensusDB, epoch_manager::LivenessStorageData},
-    consensus_provider::create_storage_read_client,
-};
+use crate::chained_bft::{consensusdb::ConsensusDB, epoch_manager::LivenessStorageData};
 use anyhow::{format_err, Context, Result};
 use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,
@@ -20,15 +17,14 @@ use libra_types::{
     validator_info::ValidatorInfo, validator_set::ValidatorSet,
     validator_verifier::ValidatorVerifier,
 };
+use libradb::LibraDBTrait;
 use std::{collections::HashSet, sync::Arc};
-use storage_client::StorageRead;
 
 /// PersistentLivenessStorage is essential for maintaining liveness when a node crashes.  Specifically,
 /// upon a restart, a correct node will recover.  Even if all nodes crash, liveness is
 /// guaranteed.
 /// Blocks persisted are proposed but not yet committed.  The committed state is persisted
 /// via StateComputer.
-#[async_trait::async_trait]
 pub trait PersistentLivenessStorage<T>: Send + Sync {
     /// Persist the blocks and quorum certs into storage atomically.
     fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()>;
@@ -40,10 +36,10 @@ pub trait PersistentLivenessStorage<T>: Send + Sync {
     fn save_state(&self, vote: &Vote) -> Result<()>;
 
     /// Construct data that can be recovered from ledger
-    async fn recover_from_ledger(&self) -> LedgerRecoveryData;
+    fn recover_from_ledger(&self) -> LedgerRecoveryData;
 
     /// Construct necessary data to start consensus.
-    async fn start(&self) -> LivenessStorageData<T>;
+    fn start(&self) -> LivenessStorageData<T>;
 
     /// Persist the highest timeout certificate for improved liveness - proof for other replicas
     /// to jump to this round
@@ -281,18 +277,16 @@ impl<T: Payload> RecoveryData<T> {
 /// The proxy we use to persist data in libra db storage service via grpc.
 pub struct StorageWriteProxy {
     db: Arc<ConsensusDB>,
-    read_client: Arc<dyn StorageRead>,
+    libra_db: Arc<dyn LibraDBTrait>,
 }
 
 impl StorageWriteProxy {
-    pub fn new(config: &NodeConfig) -> Self {
-        let read_client = create_storage_read_client(config);
+    pub fn new(config: &NodeConfig, libra_db: Arc<dyn LibraDBTrait>) -> Self {
         let db = Arc::new(ConsensusDB::new(config.storage.dir()));
-        StorageWriteProxy { db, read_client }
+        StorageWriteProxy { db, libra_db }
     }
 }
 
-#[async_trait::async_trait]
 impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
     fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()> {
         let mut trace_batch = vec![];
@@ -316,11 +310,10 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
         self.db.save_state(lcs::to_bytes(vote)?)
     }
 
-    async fn recover_from_ledger(&self) -> LedgerRecoveryData {
+    fn recover_from_ledger(&self) -> LedgerRecoveryData {
         let startup_info = self
-            .read_client
+            .libra_db
             .get_startup_info()
-            .await
             .expect("unable to read ledger info from storage")
             .expect("startup info is None");
 
@@ -330,7 +323,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
         )
     }
 
-    async fn start(&self) -> LivenessStorageData<T> {
+    fn start(&self) -> LivenessStorageData<T> {
         info!("Start consensus recovery.");
         let raw_data = self
             .db
@@ -362,9 +355,8 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
 
         // find the block corresponding to storage latest ledger info
         let startup_info = self
-            .read_client
+            .libra_db
             .get_startup_info()
-            .await
             .expect("unable to read ledger info from storage")
             .expect("startup info is None");
         let validator_set = startup_info.get_validator_set().clone();

@@ -49,7 +49,7 @@ network = { path = "../network", version = "0.1.0" }
 safety-rules = { path = "safety-rules", version = "0.1.0" }
 state-synchronizer = { path = "../state-synchronizer", version = "0.1.0" }
 schemadb = { path = "../storage/schemadb", version = "0.1.0" }
-storage-client = { path = "../storage/storage-client", version = "0.1.0" }
+libradb = { path = "../storage/libradb", version = "0.1.0" }
 libra-vm = { path = "../language/libra-vm", version = "0.1.0" }
 
 [dev-dependencies]

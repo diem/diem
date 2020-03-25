@@ -346,7 +346,7 @@ impl<T: Payload> EpochManager<T> {
     }
 
     pub async fn start_processor(&mut self) {
-        match self.storage.start().await {
+        match self.storage.start() {
             LivenessStorageData::RecoveryData(initial_data) => {
                 self.start_event_processor(initial_data).await
             }
