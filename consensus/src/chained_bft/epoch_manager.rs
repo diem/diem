@@ -167,7 +167,7 @@ impl<T: Payload> EpochManager<T> {
                     proposers.len(),
                     self.storage.libra_db(),
                 ));
-                let heuristic = Box::new(ActiveInactiveHeuristic::new(9, 1));
+                let heuristic = Box::new(ActiveInactiveHeuristic::new(99, 1));
                 Box::new(LeaderReputation::new(proposers, backend, heuristic))
             }
         }
