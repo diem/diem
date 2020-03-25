@@ -28,6 +28,10 @@ data "aws_iam_policy_document" "ecs_extra" {
       "arn:aws:s3:::${aws_s3_bucket.config.id}/*",
     ]
   }
+  statement {
+    actions   = ["kms:Encrypt", "kms:Decrypt", "kms:DescribeKey"]
+    resources = [aws_kms_key.vault.arn]
+  }
 }
 
 resource "aws_iam_role_policy" "ecs_extra" {
