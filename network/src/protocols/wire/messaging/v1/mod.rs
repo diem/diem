@@ -50,7 +50,7 @@ pub enum ErrorCode {
 
 /// Nonces used by Ping and Pong message types.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-pub struct Nonce(u32);
+pub struct Nonce(pub u32);
 
 /// Create alias RequestId for u32.
 pub type RequestId = u32;

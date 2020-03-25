@@ -42,9 +42,8 @@ use netcore::transport::Transport;
 use parity_multiaddr::Multiaddr;
 use std::{
     clone::Clone,
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fmt::Debug,
-    iter::FromIterator,
     num::NonZeroUsize,
     sync::{Arc, RwLock},
     time::Duration,
@@ -488,8 +487,6 @@ impl NetworkBuilder {
             self.addr,
             self.pm_reqs_rx,
             self.connection_reqs_rx,
-            HashSet::from_iter(self.rpc_protocols.into_iter()),
-            HashSet::from_iter(self.direct_send_protocols.into_iter()),
             self.upstream_handlers,
             self.connection_event_handlers,
             self.max_concurrent_network_reqs,

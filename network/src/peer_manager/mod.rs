@@ -35,12 +35,7 @@ use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::transport::{ConnectionOrigin, Transport};
 use parity_multiaddr::Multiaddr;
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-    marker::PhantomData,
-    time::Duration,
-};
+use std::{collections::HashMap, fmt::Debug, marker::PhantomData, time::Duration};
 use tokio::runtime::Handle;
 
 pub mod conn_status_channel;
@@ -232,10 +227,6 @@ where
     >,
     /// Channel to receive requests from other actors.
     requests_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
-    /// RPC Protocols supported by peer.
-    rpc_protocols: HashSet<ProtocolId>,
-    /// DirectSend Protocols supported by peer.
-    direct_send_protocols: HashSet<ProtocolId>,
     /// Upstream handlers for RPC and DirectSend protocols. The handlers are promised fair delivery
     /// of messages across (PeerId, ProtocolId).
     upstream_handlers:
@@ -277,8 +268,6 @@ where
         listen_addr: Multiaddr,
         requests_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
         connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
-        rpc_protocols: HashSet<ProtocolId>,
-        direct_send_protocols: HashSet<ProtocolId>,
         upstream_handlers: HashMap<
             ProtocolId,
             libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
@@ -314,8 +303,6 @@ where
             active_peers: HashMap::new(),
             requests_rx,
             connection_reqs_rx,
-            rpc_protocols,
-            direct_send_protocols,
             dial_request_tx,
             connection_notifs_tx,
             connection_notifs_rx,
@@ -577,8 +564,6 @@ where
             origin,
             connection,
             self.connection_notifs_tx.clone(),
-            self.rpc_protocols.clone(),
-            self.direct_send_protocols.clone(),
             self.max_concurrent_network_reqs,
             self.max_concurrent_network_notifs,
             self.channel_size,

@@ -4,32 +4,28 @@
 use crate::{
     peer::DisconnectReason,
     peer_manager::{
-        ConnectionNotification, ConnectionRequest, PeerManager, PeerManagerNotification,
-        PeerManagerRequest,
+        error::PeerManagerError, ConnectionNotification, ConnectionRequest, PeerManager,
+        PeerManagerNotification, PeerManagerRequest,
     },
-    protocols::identity::{exchange_identity, Identity},
+    protocols::{
+        identity::{exchange_identity, Identity},
+        wire::messaging::v1::{NetworkMessage, Nonce},
+    },
     ProtocolId,
 };
 use channel::{libra_channel, message_queues::QueueStyle};
-use futures::{channel::oneshot, stream::StreamExt};
+use futures::{channel::oneshot, io::AsyncWriteExt, sink::SinkExt, stream::StreamExt};
 use libra_config::config::RoleType;
-use libra_logger::prelude::*;
 use libra_types::PeerId;
 use memsocket::MemorySocket;
 use netcore::{
-    multiplexing::{yamux::Yamux, Control, StreamMultiplexer},
-    negotiate::negotiate_outbound_interactive,
+    compat::IoCompat,
     transport::{boxed::BoxedTransport, memory::MemoryTransport, ConnectionOrigin, TransportExt},
 };
 use parity_multiaddr::Multiaddr;
-use std::{
-    collections::{HashMap, HashSet},
-    io,
-    iter::FromIterator,
-    num::NonZeroUsize,
-    str::FromStr,
-};
+use std::{collections::HashMap, iter::FromIterator, num::NonZeroUsize, str::FromStr};
 use tokio::runtime::Handle;
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 const TEST_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
 
@@ -92,8 +88,6 @@ fn build_test_peer_manager(
         "/memory/0".parse().unwrap(),
         peer_manager_request_rx,
         connection_reqs_rx,
-        HashSet::from_iter([TEST_PROTOCOL].iter().cloned()), /* rpc protocols */
-        HashSet::new(),                                      /* direct-send protocols */
         HashMap::from_iter([(TEST_PROTOCOL, hello_tx)].iter().cloned()),
         vec![],
         1024, /* max concurrent network requests */
@@ -109,34 +103,17 @@ fn build_test_peer_manager(
     )
 }
 
-async fn create_yamux_socket(
-    connection: MemorySocket,
-    origin: ConnectionOrigin,
-) -> io::Result<(
-    <Yamux<MemorySocket> as StreamMultiplexer>::Listener,
-    <Yamux<MemorySocket> as StreamMultiplexer>::Control,
-)> {
-    debug!("Starting yamux upgrade");
-    // Perform yamux upgrade as the opposite end-point.
-    let res = Yamux::upgrade_connection(
-        connection,
-        if origin == ConnectionOrigin::Inbound {
-            ConnectionOrigin::Outbound
-        } else {
-            ConnectionOrigin::Inbound
-        },
-    )
-    .await?
-    .start()
-    .await;
-    debug!("Completed yamux upgrade");
-    Ok(res)
-}
-
-async fn open_hello_substream<T: Control>(connection: &mut T) -> io::Result<()> {
-    let outbound = connection.open_stream().await?;
-    let (_, _) =
-        negotiate_outbound_interactive(outbound, [lcs::to_bytes(&TEST_PROTOCOL).unwrap()]).await?;
+async fn ping_pong(connection: &mut MemorySocket) -> Result<(), PeerManagerError> {
+    let mut connection = Framed::new(IoCompat::new(connection), LengthDelimitedCodec::new());
+    let ping = NetworkMessage::Ping(Nonce(42));
+    connection
+        .send(lcs::to_bytes(&ping).unwrap().into())
+        .await?;
+    let raw_pong = connection.next().await.ok_or_else(|| {
+        PeerManagerError::TransportError(anyhow::anyhow!("Failed to read pong msg"))
+    })??;
+    let pong: NetworkMessage = lcs::from_bytes(&raw_pong)?;
+    assert_eq!(pong, NetworkMessage::Pong(Nonce(42)));
     Ok(())
 }
 
@@ -172,8 +149,8 @@ async fn assert_peer_disconnected_event(
 // to simultaneous dial tie-breaking.  It also checks the correct events were sent from the
 // Peer actors to PeerManager's internal_event_rx.
 async fn check_correct_connection_is_live(
-    live_connection: MemorySocket,
-    dropped_connection: MemorySocket,
+    mut live_connection: MemorySocket,
+    mut dropped_connection: MemorySocket,
     live_connection_origin: ConnectionOrigin,
     dropped_connection_origin: ConnectionOrigin,
     expected_peer_id: PeerId,
@@ -183,17 +160,6 @@ async fn check_correct_connection_is_live(
         MemorySocket,
     >,
 ) {
-    // We should be able to negotiate yamux handshake on both connections.
-    let f_open_stream_on_dropped_conn: io::Result<()> = async move {
-        // Upgrade connection to Yamux.
-        let (_, mut control_dropped) =
-            create_yamux_socket(dropped_connection, dropped_connection_origin).await?;
-        // Open a substream.
-        open_hello_substream(&mut control_dropped).await?;
-        Ok(())
-    }
-    .await;
-    assert!(f_open_stream_on_dropped_conn.is_err());
     // If PeerManager needed to kill the existing connection we'll see a Requested shutdown
     // event
     if requested_shutdown {
@@ -205,15 +171,21 @@ async fn check_correct_connection_is_live(
         )
         .await;
     }
+    // TODO: There's a race here since the connection may not have actually been closed yet.
+    // We should not be able to send a ping on the dropped connection.
+    let f_open_stream_on_dropped_conn: Result<(), PeerManagerError> = async move {
+        // Send ping and wait for pong.
+        ping_pong(&mut dropped_connection).await?;
+        Ok(())
+    }
+    .await;
+    assert!(f_open_stream_on_dropped_conn.is_err());
 
-    let f_open_stream_on_live_conn: io::Result<()> = async move {
-        // Upgrade connection to Yamux.
-        let (_s, mut control_live) =
-            create_yamux_socket(live_connection, live_connection_origin).await?;
-        // Open a substream.
-        open_hello_substream(&mut control_live).await?;
+    let f_open_stream_on_live_conn: Result<(), PeerManagerError> = async move {
+        // Send ping and wait for pong.
+        ping_pong(&mut live_connection).await?;
         // Close the connection.
-        control_live.close().await?;
+        live_connection.close().await?;
         Ok(())
     }
     .await;
