@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/parser/hexstring_bad_value2.move:3:9 ───
+   │
+ 3 │         x"abcdefg"
+   │         ^^^^^^^^ Missing closing quote (") after hex string
+   │
+

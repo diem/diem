@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/parser/hexstring_token_eof1.move:3:10 ───
+   │
+ 3 │         x"
+   │          ^ Invalid character: '"'
+   │
+
