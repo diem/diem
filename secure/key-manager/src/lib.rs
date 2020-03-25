@@ -23,21 +23,18 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey,
 };
+use libra_secure_storage::Storage;
+use libra_secure_time::TimeService;
 use libra_transaction_scripts;
 use libra_types::{
     account_address::AccountAddress,
     account_config::lbr_type_tag,
     transaction::{RawTransaction, Script, Transaction, TransactionArgument},
+    validator_config::ValidatorConfig,
+    validator_info::ValidatorInfo,
 };
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 use thiserror::Error;
-
-#[cfg(test)]
-use libra_secure_storage::Storage;
-#[cfg(test)]
-use libra_secure_time::TimeService;
-#[cfg(test)]
-use libra_types::{validator_config::ValidatorConfig, validator_info::ValidatorInfo};
 
 #[cfg(test)]
 mod tests;
@@ -74,8 +71,7 @@ impl From<anyhow::Error> for Error {
 
 /// This defines a generic trait used to interact with the Libra blockchain. In production, this
 /// will be talking to a JSON-RPC service. For tests, this may be an executor and storage directly.
-#[cfg(test)]
-trait LibraInterface {
+pub trait LibraInterface {
     /// Retrieves the current time from the blockchain, this is returned as microseconds.
     fn libra_timestamp(&self) -> Result<u64, Error>;
 
@@ -97,16 +93,14 @@ trait LibraInterface {
     fn retrieve_validator_info(&self, account: AccountAddress) -> Result<ValidatorInfo, Error>;
 }
 
-#[cfg(test)]
-struct KeyManager<LI, S, T> {
+pub struct KeyManager<LI, S, T> {
     account: AccountAddress,
     key_name: String,
     libra: LI,
     storage: S,
-    _time_service: T,
+    time_service: T,
 }
 
-#[cfg(test)]
 impl<LI, S, T> KeyManager<LI, S, T>
 where
     LI: LibraInterface,
@@ -125,7 +119,7 @@ where
             key_name,
             libra,
             storage,
-            _time_service: time_service,
+            time_service,
         }
     }
 
@@ -170,18 +164,11 @@ where
         let new_key = self.storage.rotate_key(CONSENSUS_KEY)?;
         let account_prikey = self.storage.get_private_key(ACCOUNT_KEY)?;
         let seq_id = self.libra.retrieve_sequence_number(self.account)?;
-        let transaction = build_transaction(self.account, seq_id, &account_prikey, &new_key);
-        self.libra.submit_transaction(transaction)?;
+        let expiration = Duration::from_secs(self.time_service.now() + TXN_EXPIRATION);
+        let txn = build_transaction(self.account, seq_id, &account_prikey, &new_key, expiration);
+        self.libra.submit_transaction(txn)?;
         Ok(new_key)
     }
-}
-
-fn expiration_time(until: u64) -> Duration {
-    let now = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    std::time::Duration::from_secs(now + until)
 }
 
 pub fn build_transaction(
@@ -189,6 +176,7 @@ pub fn build_transaction(
     seq_id: u64,
     signing_key: &Ed25519PrivateKey,
     new_key: &Ed25519PublicKey,
+    expiration: Duration,
 ) -> Transaction {
     let script = Script::new(
         libra_transaction_scripts::ROTATE_CONSENSUS_PUBKEY_TXN.clone(),
@@ -201,7 +189,7 @@ pub fn build_transaction(
         MAX_GAS_AMOUNT,
         GAS_UNIT_PRICE,
         lbr_type_tag(),
-        expiration_time(TXN_EXPIRATION),
+        expiration,
     );
     let signed_txn = raw_txn.sign(signing_key, signing_key.public_key()).unwrap();
     Transaction::UserTransaction(signed_txn.into_inner())

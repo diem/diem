@@ -6,7 +6,7 @@ use executor::Executor;
 use libra_config::config::NodeConfig;
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use libra_secure_storage::{InMemoryStorage, KVStorage, Policy, Value};
-use libra_secure_time::MockTimeService;
+use libra_secure_time::{MockTimeService, TimeService};
 use libra_types::{
     account_address::AccountAddress,
     account_config,
@@ -23,7 +23,13 @@ use libra_types::{
 use libra_vm::LibraVM;
 use libradb::{LibraDB, LibraDBTrait};
 use rand::{rngs::StdRng, SeedableRng};
-use std::{cell::RefCell, collections::BTreeMap, convert::TryFrom, sync::Arc, time::SystemTime};
+use std::{
+    cell::RefCell,
+    collections::BTreeMap,
+    convert::TryFrom,
+    sync::Arc,
+    time::{Duration, SystemTime},
+};
 use storage_client::{StorageReadServiceClient, StorageWriteServiceClient};
 use tokio::runtime::Runtime;
 
@@ -32,9 +38,8 @@ struct Node {
     executor: Executor<LibraVM>,
     libra: TestLibraInterface,
     key_manager: KeyManager<TestLibraInterface, InMemoryStorage, MockTimeService>,
-    storage: Arc<LibraDB>,
     _storage_service: Runtime,
-    _time: MockTimeService,
+    time: MockTimeService,
 }
 
 fn setup_secure_storage(config: &NodeConfig) -> InMemoryStorage {
@@ -80,7 +85,7 @@ impl Node {
         );
         let libra = TestLibraInterface {
             queued_transactions: Arc::new(RefCell::new(Vec::new())),
-            storage: storage.clone(),
+            storage,
         };
         let time = MockTimeService::new();
         let account = config.validator_network.as_ref().unwrap().peer_id;
@@ -97,30 +102,29 @@ impl Node {
             executor,
             key_manager,
             libra,
-            storage,
             _storage_service: storage_service,
-            _time: time,
+            time,
         }
     }
 
-    // TODO(davidiw): Notify external upon reconfigure and update epoch via ledger_info and also add
-    // next validator set if appropriate...
     fn execute_and_commit(&mut self, mut block: Vec<Transaction>) {
-        let block_id = HashValue::zero();
-        let startup_info = self.storage.get_startup_info().unwrap().unwrap();
+        // 1) Update the clock for potential reconfigurations
+        self.time.increment();
         // Clock is supposed to be in microseconds
-        let clock = (startup_info.committed_tree_state.version + 1) * 1_000_000;
+        let clock = self.time.now() * 1_000_000;
 
-        // the clock is always refreshed for this set of transactions.
+        let block_id = HashValue::zero();
         let block_metadata = BlockMetadata::new(block_id, 0, clock, vec![], self.account);
         let prologue = Transaction::BlockMetadata(block_metadata);
         block.insert(0, prologue);
 
+        // 2) Execute the transactions
         let output = self
             .executor
             .execute_block((block_id, block), self.executor.committed_block_id())
             .unwrap();
 
+        // 3) Produce a new LI and commit the executed blocks
         let ledger_info = LedgerInfo::new(
             BlockInfo::new(
                 0,
@@ -262,7 +266,6 @@ fn test_ability_to_read_move_data() {
 }
 
 #[test]
-// This test verifies that a node can rotate its key and it results in a new validator set
 fn test_consensus_rotation() {
     let (config, _genesis_key) = config_builder::test_config();
     let mut node = Node::setup(&config);
@@ -285,7 +288,13 @@ fn test_consensus_rotation() {
     let new_prikey = Ed25519PrivateKey::generate_for_testing(&mut rng);
     let new_pubkey = new_prikey.public_key();
 
-    let txn = crate::build_transaction(node.account, 0, &account_prikey, &new_pubkey);
+    let txn = crate::build_transaction(
+        node.account,
+        0,
+        &account_prikey,
+        &new_pubkey,
+        Duration::from_secs(node.time.now() + 100),
+    );
 
     node.execute_and_commit(vec![txn]);
 
@@ -332,7 +341,6 @@ fn test_key_manager_init_and_basic_rotation() {
         node.key_manager.libra_timestamp()
     );
 
-    // TODO(davidiw): Enable once reconfiguration is correclty implemented above...
     // Executions have occurred after our rotation
     node.execute_and_commit(node.libra.take_all_transactions());
     assert!(node.key_manager.last_reconfiguration() != node.key_manager.libra_timestamp());
