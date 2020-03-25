@@ -83,6 +83,7 @@ members = [
     "secure/key-manager",
     "secure/net",
     "secure/storage",
+    "secure/time",
     "secure/transaction-scripts",
     "state-synchronizer",
     "storage/accumulator",

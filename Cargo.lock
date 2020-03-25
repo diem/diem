@@ -2578,6 +2578,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-secure-time"
+version = "0.1.0"
+
+[[package]]
 name = "libra-security-logger"
 version = "0.1.0"
 dependencies = [
