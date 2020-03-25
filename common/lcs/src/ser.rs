@@ -3,7 +3,6 @@
 
 use crate::error::{Error, Result};
 use serde::{ser, Serialize};
-use std::collections::BTreeMap;
 
 /// Serialize the given data structure as a `Vec<u8>` of LCS.
 ///
@@ -369,7 +368,7 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
 #[doc(hidden)]
 struct MapSerializer<'a> {
     ser: &'a mut Serializer,
-    map: BTreeMap<Vec<u8>, Vec<u8>>,
+    entries: Vec<(Vec<u8>, Vec<u8>)>,
     next_key: Option<Vec<u8>>,
 }
 
@@ -377,7 +376,7 @@ impl<'a> MapSerializer<'a> {
     fn new(ser: &'a mut Serializer) -> Self {
         MapSerializer {
             ser,
-            map: BTreeMap::new(),
+            entries: Vec::new(),
             next_key: None,
         }
     }
@@ -409,7 +408,7 @@ impl<'a> ser::SerializeMap for MapSerializer<'a> {
             Some(key) => {
                 let mut s = Serializer::new();
                 value.serialize(&mut s)?;
-                self.map.insert(key, s.output);
+                self.entries.push((key, s.output));
             }
             None => {
                 return Err(Error::ExpectedMapKey);
@@ -419,15 +418,17 @@ impl<'a> ser::SerializeMap for MapSerializer<'a> {
         Ok(())
     }
 
-    fn end(self) -> Result<()> {
+    fn end(mut self) -> Result<()> {
         if self.next_key.is_some() {
             return Err(Error::ExpectedMapValue);
         }
+        self.entries.sort_by(|e1, e2| e1.0.cmp(&e2.0));
+        self.entries.dedup_by(|e1, e2| e1.0.eq(&e2.0));
 
-        let len = self.map.len();
+        let len = self.entries.len();
         self.ser.serialize_seq_len(len)?;
 
-        for (key, value) in self.map {
+        for (key, value) in self.entries {
             self.ser.output.extend(key.into_iter());
             self.ser.output.extend(value.into_iter());
         }
