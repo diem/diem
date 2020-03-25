@@ -790,7 +790,16 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             );
             (rhs.clone(), TE::Annotate(el, Box::new(rhs)))
         }
-        NE::Spec(u) => (sp(eloc, Type_::Unit), TE::Spec(u)),
+        NE::Spec(u, used_locals) => {
+            let used_local_types = used_locals
+                .into_iter()
+                .filter_map(|v| {
+                    let ty = context.get_local_(&v)?;
+                    Some((v, ty))
+                })
+                .collect();
+            (sp(eloc, Type_::Unit), TE::Spec(u, used_local_types))
+        }
         NE::UnresolvedError => {
             assert!(context.has_errors());
             (context.error_type(eloc), TE::UnresolvedError)

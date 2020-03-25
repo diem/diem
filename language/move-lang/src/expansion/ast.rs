@@ -11,7 +11,7 @@ use crate::{
 };
 use move_ir_types::location::*;
 use std::{
-    collections::{BTreeMap, VecDeque},
+    collections::{BTreeMap, BTreeSet, VecDeque},
     fmt,
 };
 
@@ -215,7 +215,7 @@ pub enum Exp_ {
     Cast(Box<Exp>, Type),
     Annotate(Box<Exp>, Type),
 
-    Spec(SpecId),
+    Spec(SpecId, BTreeSet<Name>),
 
     UnresolvedError,
 }
@@ -735,7 +735,14 @@ impl AstDebug for Exp_ {
                 ty.ast_debug(w);
                 w.write(")");
             }
-            E::Spec(u) => w.write(&format!("spec({})", u)),
+            E::Spec(u, unbound_names) => {
+                w.write(&format!("spec #{}", u));
+                if !unbound_names.is_empty() {
+                    w.write("uses [");
+                    w.comma(unbound_names, |w, n| w.write(&format!("{}", n)));
+                    w.write("]");
+                }
+            }
             E::UnresolvedError => w.write("_|_"),
         }
     }

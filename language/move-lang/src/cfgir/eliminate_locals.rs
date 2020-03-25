@@ -66,8 +66,8 @@ mod count {
             }
         }
 
-        fn used(&mut self, var: &Var, is_borrow_local: bool) {
-            if is_borrow_local {
+        fn used(&mut self, var: &Var, substitutable: bool) {
+            if !substitutable {
                 self.used.insert(var.clone(), None);
                 return;
             }
@@ -133,11 +133,14 @@ mod count {
     fn exp(context: &mut Context, parent_e: &Exp) {
         use UnannotatedExp_ as E;
         match &parent_e.exp.value {
-            E::Unit | E::Value(_) | E::Spec(_) | E::UnresolvedError => (),
+            E::Unit | E::Value(_) | E::UnresolvedError => (),
+            E::Spec(_, used_locals) => {
+                used_locals.keys().for_each(|var| context.used(var, false));
+            }
 
-            E::BorrowLocal(_, var) => context.used(var, true),
+            E::BorrowLocal(_, var) => context.used(var, false),
 
-            E::Copy { var, .. } | E::Move { var, .. } => context.used(var, false),
+            E::Copy { var, .. } | E::Move { var, .. } => context.used(var, true),
 
             E::ModuleCall(mcall) => exp(context, &mcall.arguments),
             E::Builtin(_, e)
@@ -193,7 +196,7 @@ mod count {
         use UnannotatedExp_ as E;
         match &parent_e.exp.value {
             E::UnresolvedError
-            | E::Spec(_)
+            | E::Spec(_, _)
             | E::BorrowLocal(_, _)
             | E::Copy { .. }
             | E::Builtin(_, _)
@@ -367,7 +370,7 @@ mod eliminate {
                 }
             }
 
-            E::Unit | E::Value(_) | E::Spec(_) | E::UnresolvedError | E::BorrowLocal(_, _) => (),
+            E::Unit | E::Value(_) | E::Spec(_, _) | E::UnresolvedError | E::BorrowLocal(_, _) => (),
 
             E::ModuleCall(mcall) => exp(context, &mut mcall.arguments),
             E::Builtin(_, e)

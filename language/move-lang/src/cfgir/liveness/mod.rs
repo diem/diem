@@ -118,11 +118,15 @@ fn lvalue(state: &mut LivenessState, sp!(_, l_): &LValue) {
 fn exp(state: &mut LivenessState, parent_e: &Exp) {
     use UnannotatedExp_ as E;
     match &parent_e.exp.value {
-        E::Unit | E::Value(_) | E::Spec(_) | E::UnresolvedError => (),
+        E::Unit | E::Value(_) | E::UnresolvedError => (),
 
         E::BorrowLocal(_, var) | E::Copy { var, .. } | E::Move { var, .. } => {
             state.0.insert(var.clone());
         }
+
+        E::Spec(_, used_locals) => used_locals.keys().for_each(|v| {
+            state.0.insert(v.clone());
+        }),
 
         E::ModuleCall(mcall) => exp(state, &mcall.arguments),
         E::Builtin(_, e)
@@ -310,11 +314,18 @@ mod last_usage {
     fn exp(context: &mut Context, parent_e: &mut Exp) {
         use UnannotatedExp_ as E;
         match &mut parent_e.exp.value {
-            E::Unit | E::Value(_) | E::Spec(_) | E::UnresolvedError => (),
+            E::Unit | E::Value(_) | E::UnresolvedError => (),
 
             E::BorrowLocal(_, var) | E::Move { var, .. } => {
                 // remove it from context to prevent accidental dropping in previous usages
                 context.dropped_live.remove(var);
+            }
+
+            E::Spec(_, used_locals) => {
+                // remove it from context to prevent accidental dropping in previous usages
+                used_locals.keys().for_each(|var| {
+                    context.dropped_live.remove(var);
+                })
             }
 
             E::Copy { var, from_user } => {
