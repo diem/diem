@@ -6,6 +6,7 @@ use executor::Executor;
 use libra_config::config::NodeConfig;
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use libra_secure_storage::{InMemoryStorage, KVStorage, Policy, Value};
+use libra_secure_time::MockTimeService;
 use libra_types::{
     account_address::AccountAddress,
     account_config,
@@ -30,9 +31,10 @@ struct Node {
     account: AccountAddress,
     executor: Executor<LibraVM>,
     libra: TestLibraInterface,
-    key_manager: KeyManager<TestLibraInterface, InMemoryStorage>,
+    key_manager: KeyManager<TestLibraInterface, InMemoryStorage, MockTimeService>,
     storage: Arc<LibraDB>,
     _storage_service: Runtime,
+    _time: MockTimeService,
 }
 
 fn setup_secure_storage(config: &NodeConfig) -> InMemoryStorage {
@@ -80,12 +82,14 @@ impl Node {
             queued_transactions: Arc::new(RefCell::new(Vec::new())),
             storage: storage.clone(),
         };
+        let time = MockTimeService::new();
         let account = config.validator_network.as_ref().unwrap().peer_id;
         let key_manager = KeyManager::new(
             account,
             "consensus_key".to_owned(),
             libra.clone(),
             setup_secure_storage(&config),
+            time.clone(),
         );
 
         Self {
@@ -95,6 +99,7 @@ impl Node {
             libra,
             storage,
             _storage_service: storage_service,
+            _time: time,
         }
     }
 

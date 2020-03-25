@@ -13,6 +13,7 @@ publish = false
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-secure-storage = { path = "../../secure/storage", version = "0.1.0" }
+libra-secure-time = { path = "../../secure/time", version = "0.1.0" }
 libra-transaction-scripts = { path = "../transaction-scripts", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 thiserror = "1.0"

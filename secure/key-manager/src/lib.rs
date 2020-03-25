@@ -35,6 +35,8 @@ use thiserror::Error;
 #[cfg(test)]
 use libra_secure_storage::Storage;
 #[cfg(test)]
+use libra_secure_time::TimeService;
+#[cfg(test)]
 use libra_types::{validator_config::ValidatorConfig, validator_info::ValidatorInfo};
 
 #[cfg(test)]
@@ -96,25 +98,34 @@ trait LibraInterface {
 }
 
 #[cfg(test)]
-struct KeyManager<LI, S> {
+struct KeyManager<LI, S, T> {
     account: AccountAddress,
     key_name: String,
     libra: LI,
     storage: S,
+    _time_service: T,
 }
 
 #[cfg(test)]
-impl<LI, S> KeyManager<LI, S>
+impl<LI, S, T> KeyManager<LI, S, T>
 where
     LI: LibraInterface,
     S: Storage,
+    T: TimeService,
 {
-    pub fn new(account: AccountAddress, key_name: String, libra: LI, storage: S) -> Self {
+    pub fn new(
+        account: AccountAddress,
+        key_name: String,
+        libra: LI,
+        storage: S,
+        time_service: T,
+    ) -> Self {
         Self {
             account,
             key_name,
             libra,
             storage,
+            _time_service: time_service,
         }
     }
 
