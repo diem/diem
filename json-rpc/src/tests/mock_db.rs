@@ -47,8 +47,22 @@ impl LibraDBTrait for MockLibraDB {
         }
     }
 
-    fn get_latest_commit_metadata(&self) -> Result<(Version, u64)> {
-        Ok((self.version, self.timestamp))
+    fn get_latest_ledger_info(&self) -> Result<LedgerInfoWithSignatures> {
+        Ok(LedgerInfoWithSignatures::new(
+            LedgerInfo::new(
+                BlockInfo::new(
+                    0,
+                    0,
+                    HashValue::zero(),
+                    HashValue::zero(),
+                    self.version,
+                    self.timestamp,
+                    None,
+                ),
+                HashValue::zero(),
+            ),
+            BTreeMap::new(),
+        ))
     }
 
     fn get_txn_by_account(
@@ -95,10 +109,6 @@ impl LibraDBTrait for MockLibraDB {
                     ),
                 ),
             }))
-    }
-
-    fn get_latest_version(&self) -> Result<u64, Error> {
-        Ok(self.version)
     }
 
     fn get_transactions(

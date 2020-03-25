@@ -127,8 +127,15 @@ pub trait LibraDBTrait: Send + Sync {
     fn get_latest_account_state(&self, address: AccountAddress)
         -> Result<Option<AccountStateBlob>>;
 
+    /// Returns the latest ledger info.
+    fn get_latest_ledger_info(&self) -> Result<LedgerInfoWithSignatures>;
+
     /// Returns the latest version and committed block timestamp
-    fn get_latest_commit_metadata(&self) -> Result<(Version, u64)>;
+    fn get_latest_commit_metadata(&self) -> Result<(Version, u64)> {
+        let ledger_info_with_sig = self.get_latest_ledger_info()?;
+        let ledger_info = ledger_info_with_sig.ledger_info();
+        Ok((ledger_info.version(), ledger_info.timestamp_usecs()))
+    }
 
     fn get_txn_by_account(
         &self,
@@ -138,7 +145,9 @@ pub trait LibraDBTrait: Send + Sync {
         fetch_events: bool,
     ) -> Result<Option<TransactionWithProof>>;
 
-    fn get_latest_version(&self) -> Result<Version>;
+    fn get_latest_version(&self) -> Result<Version> {
+        Ok(self.get_latest_ledger_info()?.ledger_info().version())
+    }
 
     fn get_transactions(
         &self,
@@ -807,10 +816,8 @@ impl LibraDBTrait for LibraDB {
         Ok(blob)
     }
 
-    fn get_latest_commit_metadata(&self) -> Result<(Version, u64)> {
-        let latest_ledger_info = self.ledger_store.get_latest_ledger_info()?;
-        let ledger_info = latest_ledger_info.ledger_info();
-        Ok((ledger_info.version(), ledger_info.timestamp_usecs()))
+    fn get_latest_ledger_info(&self) -> Result<LedgerInfoWithSignatures> {
+        self.ledger_store.get_latest_ledger_info()
     }
 
     /// Returns a transaction that is the `seq_num`-th one associated with the given account. If
@@ -826,15 +833,6 @@ impl LibraDBTrait for LibraDB {
             .lookup_transaction_by_account(address, seq_num, ledger_version)?
             .map(|version| self.get_transaction_with_proof(version, ledger_version, fetch_events))
             .transpose()
-    }
-
-    /// Gets the latest version number available in the ledger.
-    fn get_latest_version(&self) -> Result<Version> {
-        Ok(self
-            .ledger_store
-            .get_latest_ledger_info()?
-            .ledger_info()
-            .version())
     }
 
     // ======================= State Synchronizer Internal APIs ===================================
