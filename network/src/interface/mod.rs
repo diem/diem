@@ -32,9 +32,7 @@ use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::transport::ConnectionOrigin;
 use parity_multiaddr::Multiaddr;
-use std::{
-    collections::HashSet, fmt::Debug, marker::PhantomData, num::NonZeroUsize, time::Duration,
-};
+use std::{fmt::Debug, marker::PhantomData, num::NonZeroUsize, time::Duration};
 use tokio::runtime::Handle;
 
 /// Requests [`NetworkProvider`] receives from the network interface.
@@ -76,8 +74,6 @@ where
         origin: ConnectionOrigin,
         connection: TSocket,
         connection_notifs_tx: channel::Sender<ConnectionNotification<TSocket>>,
-        rpc_protocols: HashSet<ProtocolId>,
-        direct_send_protocols: HashSet<ProtocolId>,
         max_concurrent_reqs: usize,
         max_concurrent_notifs: usize,
         channel_size: usize,
@@ -115,15 +111,14 @@ where
             ),
         );
         let peer = Peer::new(
+            executor.clone(),
             identity,
             address.clone(),
             origin,
             connection,
             peer_reqs_rx,
             peer_notifs_tx,
-            rpc_protocols, // RPC protocols.
             peer_rpc_notifs_tx,
-            direct_send_protocols, // Direct Send protocols.
             peer_ds_notifs_tx,
         );
         let peer_handle = PeerHandle::new(peer_id, address, peer_reqs_tx);
