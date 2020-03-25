@@ -162,8 +162,8 @@ variable "log_path" {
 
 variable "structlog_path" {
   description = "Structured log path"
-  type    = string
-  default = "/opt/libra/data/libra_structlog.log"
+  type        = string
+  default     = "/opt/libra/data/libra_structlog.log"
 }
 
 variable "enable_logstash" {
@@ -213,4 +213,14 @@ variable "override_image_tags" {
   type        = list(string)
   default     = []
   description = "List of Docker image tags to be used in record and replay test, overrides image_tag"
+}
+
+variable "vault_type" {
+  description = "EC2 instance type of Vault instances"
+  default     = "c5.large"
+}
+
+variable "safety_rules_use_vault" {
+  description = "Configure safety-rules to use Vault as the backend"
+  default     = false
 }

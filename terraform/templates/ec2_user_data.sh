@@ -15,7 +15,7 @@ if [ -e /dev/nvme1n1 ]; then
 	mount /data
 fi
 
-mkdir -p /opt/libra
+mkdir -p /opt/libra /vault
 
 echo ECS_CLUSTER=${ecs_cluster} >> /etc/ecs/ecs.config
 systemctl try-restart ecs --no-block
