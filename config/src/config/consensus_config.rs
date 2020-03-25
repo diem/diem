@@ -20,7 +20,7 @@ impl Default for ConsensusConfig {
     fn default() -> ConsensusConfig {
         ConsensusConfig {
             max_block_size: 1000,
-            proposer_type: ConsensusProposerType::MultipleOrderedProposers,
+            proposer_type: ConsensusProposerType::LeaderReputation,
             contiguous_rounds: 2,
             max_pruned_blocks_in_mem: 10000,
             pacemaker_initial_timeout_ms: 1000,
@@ -44,4 +44,6 @@ pub enum ConsensusProposerType {
     RotatingProposer,
     // Multiple ordered proposers per round (primary, secondary, etc.)
     MultipleOrderedProposers,
+    // Committed history based proposer election
+    LeaderReputation,
 }

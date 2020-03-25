@@ -14,6 +14,7 @@ use consensus_types::{
 use executor_types::ExecutedTrees;
 use libra_crypto::HashValue;
 use libra_types::{ledger_info::LedgerInfo, validator_set::ValidatorSet};
+use libradb::LibraDBTrait;
 use std::{
     collections::HashMap,
     marker::PhantomData,
@@ -217,6 +218,10 @@ impl<T: Payload> PersistentLivenessStorage<T> for MockStorage<T> {
             .replace(highest_timeout_certificate);
         Ok(())
     }
+
+    fn libra_db(&self) -> Arc<dyn LibraDBTrait> {
+        unimplemented!()
+    }
 }
 
 /// A storage that ignores any requests, used in the tests that don't care about the storage.
@@ -273,7 +278,12 @@ impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage<T> {
             }
         }
     }
+
     fn save_highest_timeout_cert(&self, _: TimeoutCertificate) -> Result<()> {
         Ok(())
+    }
+
+    fn libra_db(&self) -> Arc<dyn LibraDBTrait> {
+        unimplemented!()
     }
 }
