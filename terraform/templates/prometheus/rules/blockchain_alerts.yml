@@ -7,6 +7,12 @@ groups:
     labels:
       severity: high
       summary: "Node {{ $labels.peer_id }} is not producing consensus commits"
+  - alert: Low Transaction Commit Rate
+    expr: absent(avg(rate(libra_consensus_committed_txns_count{role="validator"}[1m])) > 1)
+    for: 20m
+    labels:
+      severity: high
+      summary: "Node {{ $labels.peer_id }} is not reporting committed txns"
   - alert: HighCpuUsage
     expr: (1 - avg by(peer_id)(irate(node_cpu_seconds_total{role='validator',mode='idle'}[5m]))) * 100 > 90
     for: 5m
