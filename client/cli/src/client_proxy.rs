@@ -25,6 +25,7 @@ use libra_types::{
     },
     account_state::AccountState,
     ledger_info::LedgerInfoWithSignatures,
+    on_chain_config::VMPublishingOption,
     transaction::{
         authenticator::AuthenticationKey,
         helpers::{create_unsigned_txn, create_user_txn, TransactionSigner},
@@ -52,6 +53,7 @@ use std::{
     str::{self, FromStr},
     thread, time,
 };
+use stdlib::transaction_scripts::StdlibScript;
 use transaction_builder::encode_register_validator_script;
 
 const CLIENT_WALLET_MNEMONIC_FILE: &str = "client.mnemonic";
@@ -326,6 +328,48 @@ impl ClientProxy {
                 is_blocking,
             ),
             None => self.mint_coins_with_faucet_service(receiver_auth_key, num_coins, is_blocking),
+        }
+    }
+
+    /// Allow executing arbitrary script in the network.
+    pub fn enable_custom_script(
+        &mut self,
+        space_delim_strings: &[&str],
+        is_blocking: bool,
+    ) -> Result<()> {
+        ensure!(
+            space_delim_strings.len() == 1,
+            "Invalid number of arguments for setting publishing option"
+        );
+        match self.faucet_account {
+            Some(_) => self.association_transaction_with_local_faucet_account(
+                transaction_builder::encode_publishing_option_script(
+                    VMPublishingOption::CustomScripts,
+                ),
+                is_blocking,
+            ),
+            None => unimplemented!(),
+        }
+    }
+
+    /// Only allow executing predefined script in the move standard library in the network.
+    pub fn disable_custom_script(
+        &mut self,
+        space_delim_strings: &[&str],
+        is_blocking: bool,
+    ) -> Result<()> {
+        ensure!(
+            space_delim_strings.len() == 1,
+            "Invalid number of arguments for setting publishing option"
+        );
+        match self.faucet_account {
+            Some(_) => self.association_transaction_with_local_faucet_account(
+                transaction_builder::encode_publishing_option_script(VMPublishingOption::Locked(
+                    StdlibScript::whitelist(),
+                )),
+                is_blocking,
+            ),
+            None => unimplemented!(),
         }
     }
 
