@@ -360,7 +360,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
             return Err(Error::ExceededMaxLen(len));
         }
 
-        visitor.visit_map(SeqDeserializer::new(&mut self, len))
+        visitor.visit_map(MapDeserializer::new(&mut self, len))
     }
 
     fn deserialize_struct<V>(
@@ -440,7 +440,23 @@ impl<'de, 'a> de::SeqAccess<'de> for SeqDeserializer<'a, 'de> {
     }
 }
 
-impl<'de, 'a> de::MapAccess<'de> for SeqDeserializer<'a, 'de> {
+struct MapDeserializer<'a, 'de: 'a> {
+    de: &'a mut Deserializer<'de>,
+    remaining: usize,
+    previous_key_bytes: Option<&'a [u8]>,
+}
+
+impl<'a, 'de> MapDeserializer<'a, 'de> {
+    fn new(de: &'a mut Deserializer<'de>, remaining: usize) -> Self {
+        Self {
+            de,
+            remaining,
+            previous_key_bytes: None,
+        }
+    }
+}
+
+impl<'de, 'a> de::MapAccess<'de> for MapDeserializer<'a, 'de> {
     type Error = Error;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>>
@@ -450,8 +466,18 @@ impl<'de, 'a> de::MapAccess<'de> for SeqDeserializer<'a, 'de> {
         if self.remaining == 0 {
             Ok(None)
         } else {
+            let previous_input_slice = &self.de.input[..];
+            let key_value = seed.deserialize(&mut *self.de)?;
+            let key_len = previous_input_slice.len() - self.de.input.len();
+            let key_bytes = &previous_input_slice[0..key_len];
+            if let Some(previous_key_bytes) = self.previous_key_bytes {
+                if previous_key_bytes >= key_bytes {
+                    return Err(Error::NonCanonicalMap);
+                }
+            }
             self.remaining -= 1;
-            seed.deserialize(&mut *self.de).map(Some)
+            self.previous_key_bytes = Some(key_bytes);
+            Ok(Some(key_value))
         }
     }
 
