@@ -163,9 +163,12 @@ impl<T: Payload> EpochManager<T> {
                 ))
             }
             ConsensusProposerType::LeaderReputation => {
-                let backend = Box::new(LibraDBBackend::new(self.storage.libra_db()));
+                let backend = Box::new(LibraDBBackend::new(
+                    proposers.len(),
+                    self.storage.libra_db(),
+                ));
                 let heuristic = Box::new(ActiveInactiveHeuristic::new(9, 1));
-                Box::new(LeaderReputation::new(proposers, backend, 10, heuristic))
+                Box::new(LeaderReputation::new(proposers, backend, heuristic))
             }
         }
     }
