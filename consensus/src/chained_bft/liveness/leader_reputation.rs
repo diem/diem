@@ -9,7 +9,11 @@ use consensus_types::{
 use libra_types::block_metadata::{new_block_event_key, NewBlockEvent};
 use libradb::LibraDBTrait;
 use serde::export::PhantomData;
-use std::{cmp::Ordering, collections::HashSet, sync::Arc};
+use std::{
+    cmp::Ordering,
+    collections::HashSet,
+    sync::{Arc, Mutex},
+};
 
 /// Interface to query committed BlockMetadata.
 pub trait MetadataBackend: Send + Sync {
@@ -21,6 +25,7 @@ pub trait MetadataBackend: Send + Sync {
 pub struct LibraDBBackend {
     window_size: usize,
     libra_db: Arc<dyn LibraDBTrait>,
+    window: Mutex<Vec<(u64, NewBlockEvent)>>,
 }
 
 impl LibraDBBackend {
@@ -28,12 +33,12 @@ impl LibraDBBackend {
         Self {
             window_size,
             libra_db,
+            window: Mutex::new(vec![]),
         }
     }
-}
 
-impl MetadataBackend for LibraDBBackend {
-    fn get_block_metadata(&self, target_round: Round) -> Vec<NewBlockEvent> {
+    fn refresh_window(&self, target_round: Round) {
+        // assumes target round is not too far from latest commit
         let buffer = 10;
         let events = self
             .libra_db
@@ -43,14 +48,38 @@ impl MetadataBackend for LibraDBBackend {
                 self.window_size as u64 + buffer,
             )
             .unwrap();
-        let mut events: Vec<_> = events
+        let events: Vec<_> = events
             .into_iter()
-            .map(|(_, e)| lcs::from_bytes::<NewBlockEvent>(e.event_data()).unwrap())
-            .filter(|e| e.round() <= target_round)
+            .map(|(v, e)| (v, lcs::from_bytes::<NewBlockEvent>(e.event_data()).unwrap()))
+            .filter(|(_, e)| e.round() <= target_round)
             .take(self.window_size)
             .collect();
-        events.sort_by(|a, b| a.round().cmp(&b.round()));
-        events
+        *self.window.lock().unwrap() = events;
+    }
+}
+
+impl MetadataBackend for LibraDBBackend {
+    // assume the target_round only increases
+    fn get_block_metadata(&self, target_round: Round) -> Vec<NewBlockEvent> {
+        let (known_version, known_round) = self
+            .window
+            .lock()
+            .unwrap()
+            .first()
+            .map(|(v, e)| (*v, e.round()))
+            .unwrap_or((0, 0));
+        if !(known_round == target_round
+            || known_version == self.libra_db.get_latest_version().unwrap())
+        {
+            self.refresh_window(target_round);
+        }
+        self.window
+            .lock()
+            .unwrap()
+            .clone()
+            .into_iter()
+            .map(|(_, e)| e)
+            .collect()
     }
 }
 
@@ -66,7 +95,6 @@ pub struct ActiveInactiveHeuristic {
     inactive_weight: u64,
 }
 
-#[allow(dead_code)]
 impl ActiveInactiveHeuristic {
     pub fn new(active_weight: u64, inactive_weight: u64) -> Self {
         Self {
@@ -105,7 +133,6 @@ pub struct LeaderReputation<T> {
     phantom: PhantomData<T>,
 }
 
-#[allow(dead_code)]
 impl<T> LeaderReputation<T> {
     pub fn new(
         proposers: Vec<Author>,
