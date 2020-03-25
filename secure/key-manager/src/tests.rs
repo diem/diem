@@ -66,33 +66,70 @@ fn setup_secure_storage(config: &NodeConfig) -> InMemoryStorage {
     sec_storage
 }
 
-fn setup(config: &NodeConfig) -> Node {
-    let storage = storage_service::init_libra_db(config);
-    let storage_service = storage_service::start_storage_service_with_db(&config, storage.clone());
-    let executor = Executor::new(
-        Arc::new(StorageReadServiceClient::new(&config.storage.address)),
-        Arc::new(StorageWriteServiceClient::new(&config.storage.address)),
-        config,
-    );
-    let libra = TestLibraInterface {
-        queued_transactions: Arc::new(RefCell::new(Vec::new())),
-        storage: storage.clone(),
-    };
-    let account = config.validator_network.as_ref().unwrap().peer_id;
-    let key_manager = KeyManager::new(
-        account,
-        "consensus_key".to_owned(),
-        libra.clone(),
-        setup_secure_storage(&config),
-    );
+impl Node {
+    fn setup(config: &NodeConfig) -> Self {
+        let storage = storage_service::init_libra_db(config);
+        let storage_service =
+            storage_service::start_storage_service_with_db(&config, storage.clone());
+        let executor = Executor::new(
+            Arc::new(StorageReadServiceClient::new(&config.storage.address)),
+            Arc::new(StorageWriteServiceClient::new(&config.storage.address)),
+            config,
+        );
+        let libra = TestLibraInterface {
+            queued_transactions: Arc::new(RefCell::new(Vec::new())),
+            storage: storage.clone(),
+        };
+        let account = config.validator_network.as_ref().unwrap().peer_id;
+        let key_manager = KeyManager::new(
+            account,
+            "consensus_key".to_owned(),
+            libra.clone(),
+            setup_secure_storage(&config),
+        );
 
-    Node {
-        account,
-        executor,
-        key_manager,
-        libra,
-        storage,
-        _storage_service: storage_service,
+        Self {
+            account,
+            executor,
+            key_manager,
+            libra,
+            storage,
+            _storage_service: storage_service,
+        }
+    }
+
+    // TODO(davidiw): Notify external upon reconfigure and update epoch via ledger_info and also add
+    // next validator set if appropriate...
+    fn execute_and_commit(&mut self, mut block: Vec<Transaction>) {
+        let block_id = HashValue::zero();
+        let startup_info = self.storage.get_startup_info().unwrap().unwrap();
+        // Clock is supposed to be in microseconds
+        let clock = (startup_info.committed_tree_state.version + 1) * 1_000_000;
+
+        // the clock is always refreshed for this set of transactions.
+        let block_metadata = BlockMetadata::new(block_id, 0, clock, vec![], self.account);
+        let prologue = Transaction::BlockMetadata(block_metadata);
+        block.insert(0, prologue);
+
+        let output = self
+            .executor
+            .execute_block((block_id, block), self.executor.committed_block_id())
+            .unwrap();
+
+        let ledger_info = LedgerInfo::new(
+            BlockInfo::new(
+                0,
+                0,
+                block_id,
+                output.root_hash(),
+                output.version(),
+                0,
+                output.validators().clone(),
+            ),
+            HashValue::zero(),
+        );
+        let ledger_info_with_sigs = LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new());
+        self.executor.commit_blocks(vec![block_id], ledger_info_with_sigs).unwrap();
     }
 }
 
@@ -204,49 +241,12 @@ impl LibraInterface for TestLibraInterface {
     }
 }
 
-// TODO(davidiw): Notify external upon reconfigure and update epoch via ledger_info and also add
-// next validator set if appropriate...
-fn execute_and_commit(node: &mut Node, mut block: Vec<Transaction>) {
-    let block_id = HashValue::zero();
-    let startup_info = node.storage.get_startup_info().unwrap().unwrap();
-    // Clock is supposed to be in microseconds
-    let clock = (startup_info.committed_tree_state.version + 1) * 1_000_000;
-
-    // This will set the current clock to be equal to the current version + 1, this guarantees that
-    // the clock is always refreshed for this set of transactions.
-    let block_metadata = BlockMetadata::new(block_id, 0, clock, vec![], node.account);
-    let prologue = Transaction::BlockMetadata(block_metadata);
-    block.insert(0, prologue);
-
-    let result = node
-        .executor
-        .execute_block((block_id, block), node.executor.committed_block_id())
-        .unwrap();
-
-    let ledger_info = LedgerInfo::new(
-        BlockInfo::new(
-            0,
-            0,
-            block_id,
-            result.root_hash(),
-            result.version(),
-            0,
-            None,
-        ),
-        HashValue::zero(),
-    );
-    let ledger_info_with_sigs = LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new());
-
-    node.executor
-        .commit_blocks(vec![block_id], ledger_info_with_sigs)
-        .unwrap();
-}
 
 #[test]
 // This simple test just proves that genesis took effect and the values are in storage
 fn test_ability_to_read_move_data() {
     let (config, _genesis_key) = config_builder::test_config();
-    let node = setup(&config);
+    let node = Node::setup(&config);
 
     node.libra.last_reconfiguration().unwrap();
     node.libra.retrieve_discovery_set().unwrap();
@@ -260,7 +260,7 @@ fn test_ability_to_read_move_data() {
 // This test verifies that a node can rotate its key and it results in a new validator set
 fn test_consensus_rotation() {
     let (config, _genesis_key) = config_builder::test_config();
-    let mut node = setup(&config);
+    let mut node = Node::setup(&config);
 
     let test_config = config.test.unwrap();
     let mut keypair = test_config.consensus_keypair.unwrap();
@@ -282,7 +282,7 @@ fn test_consensus_rotation() {
 
     let txn = crate::build_transaction(node.account, 0, &account_prikey, &new_pubkey);
 
-    execute_and_commit(&mut node, vec![txn]);
+    node.execute_and_commit(vec![txn]);
 
     let new_config = node.libra.retrieve_validator_config(node.account).unwrap();
     let new_info = node.libra.retrieve_validator_info(node.account).unwrap();
@@ -296,7 +296,7 @@ fn test_consensus_rotation() {
 // This verifies the key manager is properly setup and that a
 fn test_key_manager_init_and_basic_rotation() {
     let (config, _genesis_key) = config_builder::test_config();
-    let mut node = setup(&config);
+    let mut node = Node::setup(&config);
     node.key_manager.compare_storage_to_config().unwrap();
     node.key_manager.compare_info_to_config().unwrap();
     let now = SystemTime::now()
@@ -315,8 +315,7 @@ fn test_key_manager_init_and_basic_rotation() {
     assert!(genesis_info.consensus_public_key() == pre_exe_rotated_info.consensus_public_key());
     assert!(pre_exe_rotated_info.consensus_public_key() != &new_key);
 
-    let txns = node.libra.take_all_transactions();
-    execute_and_commit(&mut node, txns);
+    node.execute_and_commit(node.libra.take_all_transactions());
     let rotated_info = node.libra.retrieve_validator_info(node.account).unwrap();
     assert!(genesis_info.consensus_public_key() != rotated_info.consensus_public_key());
     assert!(rotated_info.consensus_public_key() == &new_key);
@@ -330,6 +329,6 @@ fn test_key_manager_init_and_basic_rotation() {
 
     // TODO(davidiw): Enable once reconfiguration is correclty implemented above...
     // Executions have occurred after our rotation
-    // execute_and_commit(&node, node.libra.take_all_transactions());
-    // assert!(node.key_manager.last_reconfiguration() != node.key_manager.libra_timestamp());
+    node.execute_and_commit(node.libra.take_all_transactions());
+    assert!(node.key_manager.last_reconfiguration() != node.key_manager.libra_timestamp());
 }
