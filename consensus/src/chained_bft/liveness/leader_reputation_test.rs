@@ -14,39 +14,31 @@ use consensus_types::{
     block::{block_test_utils::certificate_for_genesis, Block},
     common::{Author, Round},
 };
-use libra_crypto::HashValue;
-use libra_types::{block_metadata::BlockMetadata, validator_signer::ValidatorSigner};
-use std::sync::Arc;
+use libra_types::{block_metadata::NewBlockEvent, validator_signer::ValidatorSigner};
 
 struct MockHistory {
-    data: Vec<BlockMetadata>,
+    data: Vec<NewBlockEvent>,
 }
 
 impl MockHistory {
-    fn new(data: Vec<BlockMetadata>) -> Self {
+    fn new(data: Vec<NewBlockEvent>) -> Self {
         Self { data }
     }
 }
 
 impl MetadataBackend for MockHistory {
-    fn get_block_metadata(&self, window_size: u64, _target_round: Round) -> &[BlockMetadata] {
-        let start = if self.data.len() > window_size as usize {
-            self.data.len() - window_size as usize
+    fn get_block_metadata(&self, window_size: usize, _target_round: Round) -> Vec<NewBlockEvent> {
+        let start = if self.data.len() > window_size {
+            self.data.len() - window_size
         } else {
             0
         };
-        &self.data[start..]
+        self.data[start..].to_vec()
     }
 }
 
-fn create_block(proposer: Author, voters: Vec<&ValidatorSigner>) -> BlockMetadata {
-    BlockMetadata::new(
-        HashValue::zero(),
-        0,
-        0,
-        voters.iter().map(|v| v.author()).collect(),
-        proposer,
-    )
+fn create_block(proposer: Author, voters: Vec<&ValidatorSigner>) -> NewBlockEvent {
+    NewBlockEvent::new(0, proposer, voters.iter().map(|v| v.author()).collect(), 0)
 }
 
 #[test]
@@ -104,7 +96,7 @@ fn test_api() {
     ];
     let leader_reputation = LeaderReputation::<TestPayload>::new(
         proposers.clone(),
-        Arc::new(MockHistory::new(history)),
+        Box::new(MockHistory::new(history)),
         window_size,
         Box::new(ActiveInactiveHeuristic::new(active_weight, inactive_weight)),
     );

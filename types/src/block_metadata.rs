@@ -125,10 +125,37 @@ impl LibraBlockResource {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct NewBlockEvent {
     round: u64,
     proposer: AccountAddress,
     votes: Vec<AccountAddress>,
     timestamp: u64,
+}
+
+impl NewBlockEvent {
+    pub fn new(
+        round: u64,
+        proposer: AccountAddress,
+        votes: Vec<AccountAddress>,
+        timestamp: u64,
+    ) -> Self {
+        Self {
+            round,
+            proposer,
+            votes,
+            timestamp,
+        }
+    }
+    pub fn round(&self) -> u64 {
+        self.round
+    }
+
+    pub fn proposer(&self) -> AccountAddress {
+        self.proposer
+    }
+
+    pub fn votes(&self) -> Vec<AccountAddress> {
+        self.votes.clone()
+    }
 }
