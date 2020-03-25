@@ -13,37 +13,41 @@ use std::{cmp::Ordering, collections::HashSet, sync::Arc};
 
 /// Interface to query committed BlockMetadata.
 pub trait MetadataBackend: Send + Sync {
-    /// Return a window_size contiguous BlockMetadata window in which last one is at target_round or
+    /// Return a contiguous BlockMetadata window in which last one is at target_round or
     /// latest committed, return all previous one if not enough.
-    fn get_block_metadata(&self, window_size: usize, target_round: Round) -> Vec<NewBlockEvent>;
+    fn get_block_metadata(&self, target_round: Round) -> Vec<NewBlockEvent>;
 }
 
 pub struct LibraDBBackend {
+    window_size: usize,
     libra_db: Arc<dyn LibraDBTrait>,
 }
 
 impl LibraDBBackend {
-    pub fn new(libra_db: Arc<dyn LibraDBTrait>) -> Self {
-        Self { libra_db }
+    pub fn new(window_size: usize, libra_db: Arc<dyn LibraDBTrait>) -> Self {
+        Self {
+            window_size,
+            libra_db,
+        }
     }
 }
 
 impl MetadataBackend for LibraDBBackend {
-    fn get_block_metadata(&self, window_size: usize, target_round: Round) -> Vec<NewBlockEvent> {
+    fn get_block_metadata(&self, target_round: Round) -> Vec<NewBlockEvent> {
         let buffer = 10;
         let events = self
             .libra_db
             .get_events(
                 &new_block_event_key(),
                 u64::max_value(),
-                window_size as u64 + buffer,
+                self.window_size as u64 + buffer,
             )
             .unwrap();
         let mut events: Vec<_> = events
             .into_iter()
             .map(|(_, e)| lcs::from_bytes::<NewBlockEvent>(e.event_data()).unwrap())
             .filter(|e| e.round() <= target_round)
-            .take(window_size)
+            .take(self.window_size)
             .collect();
         events.sort_by(|a, b| a.round().cmp(&b.round()));
         events
@@ -97,7 +101,6 @@ impl ReputationHeuristic for ActiveInactiveHeuristic {
 pub struct LeaderReputation<T> {
     proposers: Vec<Author>,
     backend: Box<dyn MetadataBackend>,
-    window_size: usize,
     heuristic: Box<dyn ReputationHeuristic>,
     phantom: PhantomData<T>,
 }
@@ -107,13 +110,11 @@ impl<T> LeaderReputation<T> {
     pub fn new(
         proposers: Vec<Author>,
         backend: Box<dyn MetadataBackend>,
-        window_size: usize,
         heuristic: Box<dyn ReputationHeuristic>,
     ) -> Self {
         Self {
             proposers,
             backend,
-            window_size,
             heuristic,
             phantom: PhantomData,
         }
@@ -132,9 +133,7 @@ impl<T> ProposerElection<T> for LeaderReputation<T> {
     fn get_valid_proposers(&self, round: Round) -> Vec<Author> {
         // TODO: configure the round gap
         let target_round = if round >= 4 { round - 4 } else { 0 };
-        let sliding_window = self
-            .backend
-            .get_block_metadata(self.window_size, target_round);
+        let sliding_window = self.backend.get_block_metadata(target_round);
         let mut weights = self.heuristic.get_weights(&self.proposers, &sliding_window);
         assert_eq!(weights.len(), self.proposers.len());
         let mut total_weight = 0;

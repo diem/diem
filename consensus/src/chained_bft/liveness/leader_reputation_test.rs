@@ -17,19 +17,20 @@ use consensus_types::{
 use libra_types::{block_metadata::NewBlockEvent, validator_signer::ValidatorSigner};
 
 struct MockHistory {
+    window_size: usize,
     data: Vec<NewBlockEvent>,
 }
 
 impl MockHistory {
-    fn new(data: Vec<NewBlockEvent>) -> Self {
-        Self { data }
+    fn new(window_size: usize, data: Vec<NewBlockEvent>) -> Self {
+        Self { window_size, data }
     }
 }
 
 impl MetadataBackend for MockHistory {
-    fn get_block_metadata(&self, window_size: usize, _target_round: Round) -> Vec<NewBlockEvent> {
-        let start = if self.data.len() > window_size {
-            self.data.len() - window_size
+    fn get_block_metadata(&self, _target_round: Round) -> Vec<NewBlockEvent> {
+        let start = if self.data.len() > self.window_size {
+            self.data.len() - self.window_size
         } else {
             0
         };
@@ -80,7 +81,6 @@ fn test_simple_heuristic() {
 
 #[test]
 fn test_api() {
-    let window_size = 1;
     let active_weight = 9;
     let inactive_weight = 1;
     let mut proposers = vec![];
@@ -96,8 +96,7 @@ fn test_api() {
     ];
     let leader_reputation = LeaderReputation::<TestPayload>::new(
         proposers.clone(),
-        Box::new(MockHistory::new(history)),
-        window_size,
+        Box::new(MockHistory::new(1, history)),
         Box::new(ActiveInactiveHeuristic::new(active_weight, inactive_weight)),
     );
     let round = 42u64;
