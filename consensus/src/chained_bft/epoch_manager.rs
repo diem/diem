@@ -6,6 +6,7 @@ use crate::{
         block_storage::{BlockReader, BlockStore},
         event_processor::{EventProcessor, SyncProcessor, UnverifiedEvent, VerifiedEvent},
         liveness::{
+            leader_reputation::{ActiveInactiveHeuristic, LeaderReputation, LibraDBBackend},
             multi_proposer_election::MultiProposer,
             pacemaker::{ExponentialTimeInterval, Pacemaker},
             proposal_generator::ProposalGenerator,
@@ -160,6 +161,11 @@ impl<T: Payload> EpochManager<T> {
                     vec![proposer],
                     self.config.contiguous_rounds,
                 ))
+            }
+            ConsensusProposerType::LeaderReputation => {
+                let backend = Box::new(LibraDBBackend::new(self.storage.libra_db()));
+                let heuristic = Box::new(ActiveInactiveHeuristic::new(9, 1));
+                Box::new(LeaderReputation::new(proposers, backend, 10, heuristic))
             }
         }
     }

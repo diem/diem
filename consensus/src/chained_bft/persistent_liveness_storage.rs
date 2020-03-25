@@ -44,6 +44,9 @@ pub trait PersistentLivenessStorage<T>: Send + Sync {
     /// Persist the highest timeout certificate for improved liveness - proof for other replicas
     /// to jump to this round
     fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()>;
+
+    /// Returns a handle of the libradb.
+    fn libra_db(&self) -> Arc<dyn LibraDBTrait>;
 }
 
 #[derive(Clone)]
@@ -405,5 +408,9 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
     fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()> {
         self.db
             .save_highest_timeout_certificate(lcs::to_bytes(&highest_timeout_cert)?)
+    }
+
+    fn libra_db(&self) -> Arc<dyn LibraDBTrait> {
+        self.libra_db.clone()
     }
 }
