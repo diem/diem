@@ -2,12 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::{
-        liveness::pacemaker::{
-            ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker,
-            PacemakerTimeInterval,
-        },
-        test_utils::consensus_runtime,
+    chained_bft::liveness::pacemaker::{
+        ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker, PacemakerTimeInterval,
     },
     util::mock_time_service::SimulatedTimeService,
 };
@@ -29,16 +25,15 @@ fn test_pacemaker_time_interval() {
     assert_eq!(6750, interval.get_round_duration(1000).as_millis());
 }
 
-#[test]
+#[tokio::test]
 /// Verify that Pacemaker properly outputs local timeout events upon timeout
-fn test_basic_timeout() {
-    let mut runtime = consensus_runtime();
+async fn test_basic_timeout() {
     let (mut pm, mut timeout_rx) = make_pacemaker();
 
     // jump start the pacemaker
     pm.process_certificates(Some(0), None, None);
     for _ in 0..2 {
-        let round = runtime.block_on(timeout_rx.next()).unwrap();
+        let round = timeout_rx.next().await.unwrap();
         // Here we just test timeout send retry,
         // round for timeout is not changed as no timeout certificate was gathered at this point
         assert_eq!(1, round);
