@@ -842,7 +842,11 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
                 },
             }
         }
-        EE::Spec(u) => NE::Spec(u),
+        EE::Spec(u, unbound_names) => {
+            // Vars currently aren't shadowable by types/functions
+            let used_locals = unbound_names.into_iter().map(Var).collect();
+            NE::Spec(u, used_locals)
+        }
         EE::UnresolvedError => {
             assert!(context.has_errors());
             NE::UnresolvedError

@@ -224,7 +224,7 @@ pub enum Exp_ {
     Cast(Box<Exp>, Type),
     Annotate(Box<Exp>, Type),
 
-    Spec(SpecId),
+    Spec(SpecId, BTreeSet<Var>),
 
     UnresolvedError,
 }
@@ -839,7 +839,14 @@ impl AstDebug for Exp_ {
                 ty.ast_debug(w);
                 w.write(")");
             }
-            E::Spec(u) => w.write(&format!("spec({})", u)),
+            E::Spec(u, used_locals) => {
+                w.write(&format!("spec #{}", u));
+                if !used_locals.is_empty() {
+                    w.write("uses [");
+                    w.comma(used_locals, |w, n| w.write(&format!("{}", n)));
+                    w.write("]");
+                }
+            }
             E::UnresolvedError => w.write("_|_"),
         }
     }

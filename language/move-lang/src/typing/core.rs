@@ -178,8 +178,12 @@ impl Context {
         self.locals.add(var, status).unwrap();
     }
 
+    pub fn get_local_(&mut self, var: &Var) -> Option<Type> {
+        self.locals.get(var).cloned()
+    }
+
     pub fn get_local(&mut self, loc: Loc, verb: &str, var: &Var) -> Type {
-        match self.locals.get(var).cloned() {
+        match self.get_local_(var) {
             None => {
                 self.error(vec![(
                     loc,

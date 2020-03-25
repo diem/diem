@@ -13,8 +13,9 @@ use num::{BigUint, FromPrimitive, Num};
 
 use bytecode_source_map::source_map::SourceMap;
 use move_lang::{
-    expansion::ast as EA,
-    parser::ast as PA,
+    compiled_unit::SpecInfo,
+    expansion::ast::{self as EA, SpecId},
+    parser::ast::{self as PA, FunctionName},
     shared::{unique_map::UniqueMap, Name},
 };
 use vm::{
@@ -23,8 +24,6 @@ use vm::{
     views::{FunctionHandleView, StructHandleView},
     CompiledModule,
 };
-use EA::SpecId;
-use PA::FunctionName;
 
 use crate::{
     ast::{
@@ -622,10 +621,10 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         module_def: EA::ModuleDefinition,
         compiled_module: CompiledModule,
         source_map: SourceMap<MoveIrLoc>,
-        spec_id_offsets: UniqueMap<FunctionName, BTreeMap<SpecId, CodeOffset>>,
+        spec_info: UniqueMap<FunctionName, BTreeMap<SpecId, SpecInfo>>,
     ) {
         self.decl_ana(&module_def);
-        self.def_ana(&module_def, spec_id_offsets);
+        self.def_ana(&module_def, spec_info);
         self.populate_env_from_result(loc, compiled_module, source_map);
     }
 }
@@ -859,7 +858,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     fn def_ana(
         &mut self,
         module_def: &EA::ModuleDefinition,
-        spec_id_offsets: UniqueMap<FunctionName, BTreeMap<SpecId, CodeOffset>>,
+        spec_info: UniqueMap<FunctionName, BTreeMap<SpecId, SpecInfo>>,
     ) {
         for (name, def) in &module_def.structs {
             self.def_ana_struct(&name, def);
@@ -873,11 +872,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             }
         }
         for (name, fun_def) in &module_def.functions {
-            let fun_spec_id_offsets = spec_id_offsets.get(&name).unwrap();
+            let fun_spec_info = spec_info.get(&name).unwrap();
             let qsym = self.qualified_by_module(self.symbol_pool().make(&name.0.value));
             for (spec_id, spec_block) in fun_def.specs.iter() {
                 self.def_ana_spec_block(
-                    &SpecBlockContext::FunctionImpl(qsym.clone(), fun_spec_id_offsets[spec_id]),
+                    &SpecBlockContext::FunctionImpl(qsym.clone(), fun_spec_info[spec_id].offset),
                     spec_block,
                 );
             }

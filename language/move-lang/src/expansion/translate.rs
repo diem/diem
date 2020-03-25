@@ -11,7 +11,10 @@ use crate::{
     shared::{remembering_unique_map::RememberingUniqueMap, unique_map::UniqueMap, *},
 };
 use move_ir_types::location::*;
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    iter::IntoIterator,
+};
 
 //**************************************************************************************************
 // Context
@@ -99,12 +102,15 @@ impl Context {
         }
     }
 
-    pub fn bind_exp_spec(&mut self, spec_block: P::SpecBlock) -> SpecId {
+    pub fn bind_exp_spec(&mut self, spec_block: P::SpecBlock) -> (SpecId, BTreeSet<Name>) {
         let len = self.exp_specs.len();
         let id = SpecId::new(len);
         let espec_block = spec(self, spec_block);
+        let mut unbound_names = BTreeSet::new();
+        unbound_names_spec_block(&mut unbound_names, &espec_block);
         self.exp_specs.insert(id, espec_block);
-        id
+
+        (id, unbound_names)
     }
 
     pub fn extract_exp_specs(&mut self) -> BTreeMap<SpecId, E::SpecBlock> {
@@ -894,7 +900,10 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
             }
         }
         PE::Annotate(e, ty) => EE::Annotate(exp(context, *e), type_(context, ty)),
-        PE::Spec(spec_block) => EE::Spec(context.bind_exp_spec(spec_block)),
+        PE::Spec(spec_block) => {
+            let (spec_id, unbound_names) = context.bind_exp_spec(spec_block);
+            EE::Spec(spec_id, unbound_names)
+        }
         PE::UnresolvedError => panic!("ICE error should have been thrown"),
     };
     sp(loc, e_)
@@ -1036,4 +1045,158 @@ fn assign_unpack_fields(
         "assignment binding",
         afields,
     ))
+}
+
+//**************************************************************************************************
+// Unbound names
+//**************************************************************************************************
+
+fn unbound_names_spec_block(unbound: &mut BTreeSet<Name>, sp!(_, sb_): &E::SpecBlock) {
+    sb_.members
+        .iter()
+        .for_each(|member| unbound_names_spec_block_member(unbound, member))
+}
+
+fn unbound_names_spec_block_member(unbound: &mut BTreeSet<Name>, sp!(_, m_): &E::SpecBlockMember) {
+    use E::SpecBlockMember_ as M;
+    match m_ {
+        M::Condition { exp, .. } | M::Invariant { exp, .. } => unbound_names_exp(unbound, exp),
+        // No unbound names
+        // And will error in the move prover
+        M::Function { .. } | M::Variable { .. } => (),
+    }
+}
+
+fn unbound_names_exp(unbound: &mut BTreeSet<Name>, sp!(_, e_): &E::Exp) {
+    use E::Exp_ as EE;
+    match e_ {
+        EE::Value(_)
+        | EE::InferredNum(_)
+        | EE::Break
+        | EE::Continue
+        | EE::UnresolvedError
+        | EE::Unit => (),
+        EE::Copy(v) | EE::Move(v) => {
+            unbound.insert(v.0.clone());
+        }
+        EE::Name(n) => {
+            unbound.insert(n.clone());
+        }
+        EE::GlobalCall(_, _, sp!(_, es_)) | EE::Call(_, _, sp!(_, es_)) => {
+            unbound_names_exps(unbound, es_)
+        }
+        EE::Pack(_, _, es) => unbound_names_exps(unbound, es.iter().map(|(_, (_, e))| e)),
+        EE::IfElse(econd, et, ef) => {
+            unbound_names_exp(unbound, ef);
+            unbound_names_exp(unbound, et);
+            unbound_names_exp(unbound, econd)
+        }
+        EE::While(econd, eloop) => {
+            unbound_names_exp(unbound, eloop);
+            unbound_names_exp(unbound, econd)
+        }
+        EE::Loop(eloop) => unbound_names_exp(unbound, eloop),
+
+        EE::Block(seq) => unbound_names_sequence(unbound, seq),
+        EE::Lambda(ls, er) => {
+            unbound_names_exp(unbound, er);
+            // remove anything in `ls`
+            unbound_names_binds(unbound, ls);
+        }
+        EE::Assign(ls, er) => {
+            unbound_names_exp(unbound, er);
+            // remove anything in `ls`
+            unbound_names_assigns(unbound, ls);
+        }
+        EE::Return(e)
+        | EE::Abort(e)
+        | EE::Dereference(e)
+        | EE::UnaryExp(_, e)
+        | EE::Borrow(_, e)
+        | EE::Cast(e, _)
+        | EE::Annotate(e, _) => unbound_names_exp(unbound, e),
+        EE::FieldMutate(ed, er) => {
+            unbound_names_exp(unbound, er);
+            unbound_names_dotted(unbound, ed)
+        }
+        EE::Mutate(el, er) | EE::BinopExp(el, _, er) => {
+            unbound_names_exp(unbound, er);
+            unbound_names_exp(unbound, el)
+        }
+        EE::ExpList(es) => unbound_names_exps(unbound, es),
+        EE::ExpDotted(ed) => unbound_names_dotted(unbound, ed),
+        EE::Index(el, ei) => {
+            unbound_names_exp(unbound, ei);
+            unbound_names_exp(unbound, el)
+        }
+
+        EE::Spec(_, unbound_names) => unbound.extend(unbound_names.iter().cloned()),
+    }
+}
+
+fn unbound_names_exps<'a>(unbound: &mut BTreeSet<Name>, es: impl IntoIterator<Item = &'a E::Exp>) {
+    es.into_iter().for_each(|e| unbound_names_exp(unbound, e))
+}
+
+fn unbound_names_sequence(unbound: &mut BTreeSet<Name>, seq: &E::Sequence) {
+    seq.iter()
+        .rev()
+        .for_each(|s| unbound_names_sequence_item(unbound, s))
+}
+
+fn unbound_names_sequence_item(unbound: &mut BTreeSet<Name>, sp!(_, es_): &E::SequenceItem) {
+    use E::SequenceItem_ as ES;
+    match es_ {
+        ES::Seq(e) => unbound_names_exp(unbound, e),
+        ES::Declare(ls, _) => unbound_names_binds(unbound, ls),
+        ES::Bind(ls, er) => {
+            unbound_names_exp(unbound, er);
+            // remove anything in `ls`
+            unbound_names_binds(unbound, ls);
+        }
+    }
+}
+
+fn unbound_names_binds(unbound: &mut BTreeSet<Name>, sp!(_, ls_): &E::LValueList) {
+    ls_.iter()
+        .rev()
+        .for_each(|l| unbound_names_bind(unbound, l))
+}
+
+fn unbound_names_bind(unbound: &mut BTreeSet<Name>, sp!(_, l_): &E::LValue) {
+    use E::LValue_ as EL;
+    match l_ {
+        EL::Var(v) => {
+            unbound.remove(&v.0);
+        }
+        EL::Unpack(_, _, efields) => efields
+            .iter()
+            .for_each(|(_, (_, l))| unbound_names_bind(unbound, l)),
+    }
+}
+
+fn unbound_names_assigns(unbound: &mut BTreeSet<Name>, sp!(_, ls_): &E::LValueList) {
+    ls_.iter()
+        .rev()
+        .for_each(|l| unbound_names_assign(unbound, l))
+}
+
+fn unbound_names_assign(unbound: &mut BTreeSet<Name>, sp!(_, l_): &E::LValue) {
+    use E::LValue_ as EL;
+    match l_ {
+        EL::Var(v) => {
+            unbound.insert(v.0.clone());
+        }
+        EL::Unpack(_, _, efields) => efields
+            .iter()
+            .for_each(|(_, (_, l))| unbound_names_assign(unbound, l)),
+    }
+}
+
+fn unbound_names_dotted(unbound: &mut BTreeSet<Name>, sp!(_, edot_): &E::ExpDotted) {
+    use E::ExpDotted_ as ED;
+    match edot_ {
+        ED::Exp(e) => unbound_names_exp(unbound, e),
+        ED::Dot(d, _) => unbound_names_dotted(unbound, d),
+    }
 }

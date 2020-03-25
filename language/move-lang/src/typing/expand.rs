@@ -207,6 +207,8 @@ fn exp(context: &mut Context, e: &mut T::Exp) {
             e.exp.value = new_exp;
         }
 
+        E::Spec(_, used_locals) => used_locals.values_mut().for_each(|ty| type_(context, ty)),
+
         E::Unit
         | E::Value(_)
         | E::Move { .. }
@@ -214,7 +216,6 @@ fn exp(context: &mut Context, e: &mut T::Exp) {
         | E::BorrowLocal(_, _)
         | E::Break
         | E::Continue
-        | E::Spec(_)
         | E::UnresolvedError => (),
 
         E::ModuleCall(call) => module_call(context, call),
