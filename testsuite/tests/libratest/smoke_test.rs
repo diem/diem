@@ -931,6 +931,72 @@ fn test_e2e_reconfiguration() {
 }
 
 #[test]
+fn test_e2e_modify_publishing_option() {
+    let (mut env, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+    client_proxy.create_next_account(false).unwrap();
+
+    client_proxy
+        .mint_coins(&["mintb", "0", "10"], true)
+        .unwrap();
+    assert_eq!(
+        Decimal::from_f64(10.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+    let script_path = workspace_builder::workspace_root()
+        .join("testsuite/tests/libratest/dev_modules/test_script.mvir");
+    let unwrapped_script_path = script_path.to_str().unwrap();
+    let script_params = &["execute", "0", unwrapped_script_path, "script"];
+    let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
+
+    // Initially publishing option was set to CustomScript, this transaction should be executed.
+    client_proxy
+        .execute_script(&["execute", "0", &script_compiled_path[..], "10", "0x0"])
+        .unwrap();
+
+    assert_eq!(
+        client_proxy
+            .get_sequence_number(&["sequence", "0", "true"])
+            .unwrap(),
+        1
+    );
+
+    client_proxy
+        .disallow_custom_script(&["disallow_custom_script"], true)
+        .unwrap();
+
+    // TODO: Currently VMValidator didn't restart after reconfiguration. We will manually restart
+    //       the node so that VMValidator is using the new config.
+    let peer_to_restart = 0;
+    // restart node
+    env.validator_swarm.kill_node(peer_to_restart);
+    assert!(env
+        .validator_swarm
+        .add_node(peer_to_restart, RoleType::Validator, false)
+        .is_ok());
+
+    // mint another 10 coins after remove node 0
+    client_proxy
+        .mint_coins(&["mintb", "0", "10"], true)
+        .unwrap();
+    assert_eq!(
+        Decimal::from_f64(20.0),
+        Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
+    );
+
+    // Now that publishing option was changed to locked, this transaction will be rejected.
+    client_proxy
+        .execute_script(&["execute", "0", &script_compiled_path[..], "10", "0x0"])
+        .unwrap_err();
+
+    assert_eq!(
+        client_proxy
+            .get_sequence_number(&["sequence", "0", "true"])
+            .unwrap(),
+        1
+    );
+}
+
+#[test]
 fn test_client_waypoints() {
     let (env, mut client_proxy) = setup_swarm_and_client_proxy(3, 1);
     // Make sure some txns are committed

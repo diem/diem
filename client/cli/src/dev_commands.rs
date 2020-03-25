@@ -115,6 +115,60 @@ impl Command for DevCommandExecute {
     }
 }
 
+pub struct DevCommandAllowCustomScript {}
+
+impl Command for DevCommandAllowCustomScript {
+    fn get_aliases(&self) -> Vec<&'static str> {
+        vec!["allow_custom_script"]
+    }
+
+    fn get_params_help(&self) -> &'static str {
+        ""
+    }
+
+    fn get_description(&self) -> &'static str {
+        "Allow executing arbitrary script in the network."
+    }
+
+    fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
+        if params.len() != 1 {
+            println!("Invalid number of arguments");
+            return;
+        }
+        match client.allow_custom_script(params, true) {
+            Ok(_) => println!("Successfully finished execution"),
+            Err(e) => println!("{}", e),
+        }
+    }
+}
+
+pub struct DevCommandDisallowCustomScript {}
+
+impl Command for DevCommandDisallowCustomScript {
+    fn get_aliases(&self) -> Vec<&'static str> {
+        vec!["disallow_custom_script"]
+    }
+
+    fn get_params_help(&self) -> &'static str {
+        ""
+    }
+
+    fn get_description(&self) -> &'static str {
+        "Only allow executing predefined script in the network."
+    }
+
+    fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
+        if params.len() != 1 {
+            println!("Invalid number of arguments");
+            return;
+        }
+        match client.disallow_custom_script(params, true) {
+            Ok(_) => println!("Successfully finished execution"),
+            Err(e) => println!("{}", e),
+        }
+    }
+}
+
 pub struct DevCommandAddValidator {}
 
 impl Command for DevCommandAddValidator {
