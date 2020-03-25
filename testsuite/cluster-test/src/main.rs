@@ -30,14 +30,16 @@ use cluster_test::{
     slack::SlackClient,
     stats,
     suite::ExperimentSuite,
-    tx_emitter::{EmitJobRequest, EmitThreadParams, TxEmitter},
+    tx_emitter::{AccountData, EmitJobRequest, EmitThreadParams, TxEmitter},
     util::unix_timestamp_now,
 };
 use futures::{
     future::{join_all, FutureExt, TryFutureExt},
     select,
 };
+use itertools::zip;
 use libra_config::config::DEFAULT_JSON_RPC_PORT;
+use std::cmp::min;
 use tokio::{
     runtime::{Builder, Runtime},
     time::{delay_for, delay_until, Instant as TokioInstant},
@@ -79,6 +81,8 @@ struct Args {
     start: bool,
     #[structopt(long, group = "action")]
     emit_tx: bool,
+    #[structopt(long, group = "action", requires = "swarm")]
+    diag: bool,
     #[structopt(long, group = "action")]
     stop_experiment: bool,
     #[structopt(long, group = "action")]
@@ -135,11 +139,16 @@ pub fn main() {
 
     let args = Args::from_args();
 
-    if args.swarm && !args.emit_tx {
-        panic!("Can only use --emit-tx option in --swarm mode");
+    if args.swarm && !(args.emit_tx || args.diag) {
+        panic!("Can only use --emit-tx or --diag in --swarm mode");
     }
 
-    if args.emit_tx {
+    if args.diag {
+        let util = BasicSwarmUtil::setup(&args);
+        let mut rt = Runtime::new().unwrap();
+        exit_on_error(rt.block_on(util.diag()));
+        return;
+    } else if args.emit_tx {
         let mut rt = Runtime::new().unwrap();
         let thread_params = EmitThreadParams {
             wait_millis: args.wait_millis,
@@ -325,6 +334,81 @@ impl BasicSwarmUtil {
         Self {
             cluster: Cluster::from_host_port(parsed_peers, &args.mint_file),
         }
+    }
+
+    pub async fn diag(&self) -> Result<()> {
+        let emitter = TxEmitter::new(&self.cluster);
+        let mut faucet_account: Option<AccountData> = None;
+        let instances: Vec<_> = self.cluster.all_instances().collect();
+        for instance in &instances {
+            print!("Getting faucet account sequence number on {}...", instance);
+            let account = emitter
+                .load_faucet_account(instance)
+                .await
+                .map_err(|e| format_err!("Failed to get faucet account sequence number: {}", e))?;
+            println!("seq={}", account.sequence_number);
+            if let Some(faucet_account) = &faucet_account {
+                if account.sequence_number != faucet_account.sequence_number {
+                    bail!(
+                        "Loaded sequence number {}, which is different from seen before {}",
+                        account.sequence_number,
+                        faucet_account.sequence_number
+                    );
+                }
+            } else {
+                faucet_account = Some(account);
+            }
+        }
+        let mut faucet_account = faucet_account.unwrap();
+        let faucet_account_address = faucet_account.address;
+        for instance in &instances {
+            print!("Submitting txn through {}...", instance);
+            let deadline = emitter
+                .submit_single_transaction(instance, &mut faucet_account)
+                .await
+                .map_err(|e| format_err!("Failed to submit txn through {}: {}", instance, e))?;
+            println!("seq={}", faucet_account.sequence_number);
+            println!(
+                "Waiting all full nodes to get to seq {}",
+                faucet_account.sequence_number
+            );
+            loop {
+                let futures = instances.iter().map(|instance| {
+                    emitter.query_sequence_numbers(instance, &faucet_account_address)
+                });
+                let results = join_all(futures).await;
+                let mut all_good = true;
+                for (instance, result) in zip(instances.iter(), results) {
+                    let seq = result.map_err(|e| {
+                        format_err!("Failed to query sequence number from {}: {}", instance, e)
+                    })?;
+                    let ip = instance.ip();
+                    let color = if seq != faucet_account.sequence_number {
+                        all_good = false;
+                        color::Fg(color::Red).to_string()
+                    } else {
+                        color::Fg(color::Green).to_string()
+                    };
+                    print!(
+                        "[{}{}:{}{}]  ",
+                        color,
+                        &ip[..min(ip.len(), 10)],
+                        seq,
+                        color::Fg(color::Reset)
+                    );
+                }
+                println!();
+                if all_good {
+                    break;
+                }
+                if Instant::now() > deadline {
+                    bail!("Not all full nodes were updated and transaction expired");
+                }
+                tokio::time::delay_for(Duration::from_secs(1)).await;
+            }
+        }
+        println!("Looks like all full nodes are healthy!");
+        Ok(())
     }
 
     pub async fn emit_tx(
