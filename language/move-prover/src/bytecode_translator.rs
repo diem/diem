@@ -70,6 +70,10 @@ struct BytecodeContext<'l> {
     /// and $before_borrow_i_ref to remember the reference. We also track aliasing, i.e. if
     /// we have MoveLoc(d', d) we add d' -> i as well.
     borrowed_to_before_index: BTreeMap<usize, usize>,
+    /// A map of mut ref parameter indices to their before index. This works similar as
+    /// `borrowed_to_before_index` except that those references are passed into a public function
+    /// and not borrowed.
+    inherited_to_before_index: BTreeMap<usize, usize>,
     /// As determined by lifetime analysis, the set of references which become dead
     /// at a given bytecode offset.
     /// TODO: the analysis currently represents references via `LocalIndex == u8`, but this might(?)
@@ -84,6 +88,7 @@ impl<'l> BytecodeContext<'l> {
             branching_targets: BTreeSet::new(),
             mutual_refs: BTreeSet::new(),
             borrowed_to_before_index: BTreeMap::new(),
+            inherited_to_before_index: BTreeMap::new(),
             offset_to_dead_refs: BTreeMap::new(),
         }
     }
@@ -545,6 +550,17 @@ impl<'env> ModuleTranslator<'env> {
                 _ => {}
             }
         }
+        // (c) Walk over parameters and collect mutual references if they have update invariants.
+        if func_env.is_public() {
+            for (i, Parameter(_, ty)) in func_env.get_parameters().iter().enumerate() {
+                if ty.is_mutual_reference() && self.has_after_update_invariant(ty) {
+                    context
+                        .inherited_to_before_index
+                        .insert(i, before_borrow_counter);
+                    before_borrow_counter += 1;
+                }
+            }
+        }
 
         // Be sure to set back location to the whole function definition as a default, otherwise
         // we may get unassigned code locations associated with condition locations.
@@ -570,7 +586,13 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "var $tmp: Value;");
         emitln!(self.writer, "var $frame: int;");
         emitln!(self.writer, "var $saved_m: Memory;");
-        for idx in context.borrowed_to_before_index.values().unique().sorted() {
+        for idx in context
+            .borrowed_to_before_index
+            .values()
+            .chain(context.inherited_to_before_index.values())
+            .unique()
+            .sorted()
+        {
             // Declare before borrow variables.
             let name = boogie_var_before_borrow(*idx);
             emitln!(self.writer, "var {}: Value;", name);
@@ -602,7 +624,17 @@ impl<'env> ModuleTranslator<'env> {
             }
         }
 
-        emitln!(self.writer, "\n// increase the local counter ");
+        if !context.inherited_to_before_index.is_empty() {
+            emitln!(
+                self.writer,
+                "\n// save values and references for mutual ref parameters with invariants"
+            );
+            for (param_idx, before_idx) in context.inherited_to_before_index.iter() {
+                self.save_and_enforce_before_update(&func_env, *param_idx, *before_idx);
+            }
+        }
+
+        emitln!(self.writer, "\n// increase the local counter");
         emitln!(
             self.writer,
             "$local_counter := $local_counter + {};",
@@ -707,20 +739,7 @@ impl<'env> ModuleTranslator<'env> {
                 // Save the value before mutation happens. We also need to save the reference,
                 // because the bytecode may reuse it for some other purpose, so we can construct
                 // the after-value from it when the update invariant is executed.
-                let name = boogie_var_before_borrow(*idx);
-                emitln!(
-                    self.writer,
-                    "{} := $Dereference($m, {});",
-                    name,
-                    str_local(dest)
-                );
-                emitln!(self.writer, "{}_ref := {};", name, str_local(dest));
-                // Enforce the before update invariant (if any).
-                self.enforce_before_update_invariant(
-                    &func_env,
-                    &self.get_local_type(func_env, *dest),
-                    *idx,
-                );
+                self.save_and_enforce_before_update(&func_env, *dest, *idx);
             }
         };
 
@@ -1108,6 +1127,7 @@ impl<'env> ModuleTranslator<'env> {
                 // In contrast to other instructions, we need to evaluate invariants BEFORE
                 // the return.
                 self.enforce_invariants_for_dead_refs(func_env, ctx, offset);
+                self.enforce_invariants_for_inherited_refs(func_env, ctx);
                 invariants_evaluated = true;
                 for (i, r) in rets.iter().enumerate() {
                     if self.get_local_type(func_env, *r).is_reference() {
@@ -1372,6 +1392,33 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer);
     }
 
+    /// Save content of a ref into its before_borrow variable so we can enforce invariants once
+    /// update finished. Also, if there is a before update invariant, evaluate it.
+    fn save_and_enforce_before_update(
+        &'env self,
+        func_env: &FunctionEnv,
+        ref_idx: usize,
+        before_idx: usize,
+    ) {
+        let ref_name = func_env
+            .symbol_pool()
+            .string(func_env.get_local_name(ref_idx));
+        let before_name = boogie_var_before_borrow(before_idx);
+        emitln!(
+            self.writer,
+            "{} := $Dereference($m, {});",
+            before_name,
+            ref_name,
+        );
+        emitln!(self.writer, "{}_ref := {};", before_name, ref_name);
+        // Enforce the before update invariant (if any).
+        self.enforce_before_update_invariant(
+            func_env,
+            &self.get_local_type(func_env, ref_idx),
+            before_idx,
+        );
+    }
+
     // Enforce invariants on references going out of scope
     fn enforce_invariants_for_dead_refs(
         &self,
@@ -1395,6 +1442,18 @@ impl<'env> ModuleTranslator<'env> {
                     self.enforce_after_update_invariant(func_env, &ty, *idx);
                 }
             }
+        }
+    }
+
+    /// Enforce invariants on references inherited as parameters.
+    fn enforce_invariants_for_inherited_refs(
+        &self,
+        func_env: &FunctionEnv,
+        context: &mut BytecodeContext,
+    ) {
+        for (ref_idx, before_idx) in &context.inherited_to_before_index {
+            let ty = self.get_local_type(func_env, *ref_idx);
+            self.enforce_after_update_invariant(func_env, &ty, *before_idx);
         }
     }
 
