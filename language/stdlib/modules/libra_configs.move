@@ -29,4 +29,8 @@ module LibraConfig {
         move_to_sender(T{ payload });
         LibraSystem::reconfigure();
     }
+
+    public fun read_config<Config: copyable>(): Config acquires T {
+        *&borrow_global<T<Config>>(0xA550C18).payload
+    }
 }

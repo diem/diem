@@ -9,7 +9,7 @@ use libra_types::{
     account_address::AccountAddress,
     block_metadata::BlockMetadata,
     language_storage::TypeTag,
-    on_chain_config::VMPublishingOption,
+    on_chain_config::{LibraVersion, VMPublishingOption},
     transaction::{authenticator::AuthenticationKey, Script, Transaction, TransactionArgument},
 };
 use std::convert::TryFrom;
@@ -312,6 +312,14 @@ pub fn encode_publishing_option_script(config: VMPublishingOption) -> Script {
             .into_vec(),
         vec![],
         vec![TransactionArgument::U8Vector(bytes)],
+    )
+}
+
+pub fn encode_update_libra_version(libra_version: LibraVersion) -> Script {
+    Script::new(
+        StdlibScript::UpdateLibraVersion.compiled_bytes().into_vec(),
+        vec![],
+        vec![TransactionArgument::U64(libra_version.major as u64)],
     )
 }
 

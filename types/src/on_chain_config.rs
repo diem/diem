@@ -149,3 +149,13 @@ impl VMPublishingOption {
         }
     }
 }
+
+/// Defines the version of Libra Validator software.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct LibraVersion {
+    pub major: u64,
+}
+
+impl OnChainConfig for LibraVersion {
+    const IDENTIFIER: &'static str = "LibraVersion";
+}

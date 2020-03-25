@@ -13,6 +13,7 @@ use libra_types::{
     account_config,
     block_metadata::BlockMetadata,
     language_storage::{ModuleId, TypeTag},
+    on_chain_config::LibraVersion,
     transaction::{
         ChangeSet, SignatureCheckedTransaction, SignedTransaction, Transaction,
         TransactionArgument, TransactionOutput, TransactionPayload, TransactionStatus,
@@ -115,6 +116,10 @@ impl LibraVM {
             VMStatus::new(StatusCode::VM_STARTUP_FAILURE)
                 .with_sub_status(sub_status::VSF_GAS_SCHEDULE_NOT_FOUND)
         })
+    }
+
+    fn get_libra_version(&self) -> VMResult<LibraVersion> {
+        Ok(self.on_chain_config()?.version.clone())
     }
 
     fn check_payload(
@@ -724,6 +729,11 @@ impl<'a> LibraVMInternals<'a> {
     /// Returns the internal gas schedule if it has been loaded, or an error if it hasn't.
     pub fn gas_schedule(self) -> VMResult<&'a CostTable> {
         self.0.get_gas_schedule()
+    }
+
+    /// Returns the version of Move Runtime.
+    pub fn libra_version(self) -> VMResult<LibraVersion> {
+        self.0.get_libra_version()
     }
 
     /// Executes the given code within the context of a transaction.
