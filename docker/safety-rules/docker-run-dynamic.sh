@@ -29,6 +29,9 @@ fi
 if [ -n "${CFG_SAFETY_RULES_TOKEN}" ]; then
     params+="--safety-rules-token ${CFG_SAFETY_RULES_TOKEN} "
 fi
+if [ -n "${CFG_SAFETY_RULES_NAMESPACE}" ]; then
+    params+="--safety-rules-namespace ${CFG_SAFETY_RULES_NAMESPACE} "
+fi
 
 /opt/libra/bin/config-builder safety-rules \
     --data-dir /opt/libra/data/common \
