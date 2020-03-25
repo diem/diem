@@ -108,3 +108,14 @@ error:
     │               --------- Found: '(u64, u8)'. But expected: 'u8', 'u64', 'u128'
     │
 
+error: 
+
+    ┌── tests/move_check/typing/cast_invalid.move:19:3 ───
+    │
+ 19 │     (x"1234" as u64);
+    │      ^^^^^^^ Invalid argument to 'as'
+    ·
+ 19 │     (x"1234" as u64);
+    │      ------- Found: 'vector<u8>'. But expected: 'u8', 'u64', 'u128'
+    │
+
