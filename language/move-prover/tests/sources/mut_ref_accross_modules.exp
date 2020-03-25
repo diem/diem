@@ -1,0 +1,11 @@
+Move prover returns: exiting with boogie verification errors
+error:  This assertion might not hold.
+
+    ┌── tests/sources/mut_ref_accross_modules.move:19:9 ───
+    │
+ 19 │         invariant global<TSum>(0x0).sum == spec_sum;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/mut_ref_accross_modules.move:50:5: increment_invalid (entry)
+    =     at tests/sources/mut_ref_accross_modules.move:51:27: increment_invalid
+    =     at tests/sources/mut_ref_accross_modules.move:50:5: increment_invalid (exit)

@@ -24,6 +24,9 @@ module TestModuleInvariants {
         invariant global<SCounter>(0x0).n == spec_count;
     }
 
+    // Creating and Deleting Resource
+    // -------------------------------
+
     // Function creating an S instance. Since its public, we expect the module invariant to be satisfied.
     public fun new_S(): S acquires SCounter {
         let counter = borrow_global_mut<SCounter>(0x0);
@@ -38,10 +41,14 @@ module TestModuleInvariants {
         counter.n = counter.n - 1;
     }
 
-    // Function destroying an S instance but not tracking it.
+    // Function destroying an S instance but not tracking it. The module invariant will catch this when the function
+    // exits.
     public fun delete_S_invalid(x: S) {
         let S{} = x;
     }
+
+    // Private Calling Public
+    // -----------------------
 
     // Private function calling a public function and failing because the pre-condition of the public function
     // does not hold.
