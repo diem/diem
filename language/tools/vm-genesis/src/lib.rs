@@ -97,6 +97,13 @@ static SCRIPT_WHITELIST_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     )
 });
 
+static LIBRA_VERSION_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+    ModuleId::new(
+        account_config::CORE_CODE_ADDRESS,
+        Identifier::new("LibraVersion").unwrap(),
+    )
+});
+
 static LIBRA_TIME_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         account_config::CORE_CODE_ADDRESS,
@@ -188,6 +195,7 @@ pub fn encode_genesis_change_set(
         &validator_set,
         &discovery_set,
     );
+    setup_libra_version(&move_vm, &gas_schedule, &mut interpreter_context);
     setup_publishing_option(
         &move_vm,
         &gas_schedule,
@@ -636,6 +644,27 @@ fn setup_publishing_option(
             vec![Value::vector_u8(option_bytes)],
         )
         .expect("Failure setting up publishing option");
+}
+
+fn setup_libra_version(
+    move_vm: &MoveVM,
+    gas_schedule: &CostTable,
+    interpreter_context: &mut TransactionExecutionContext,
+) {
+    let mut txn_data = TransactionMetadata::default();
+    txn_data.sender = account_config::association_address();
+
+    move_vm
+        .execute_function(
+            &LIBRA_VERSION_MODULE,
+            &INITIALIZE,
+            &gas_schedule,
+            interpreter_context,
+            &txn_data,
+            vec![],
+            vec![],
+        )
+        .expect("Failure setting up libra version number");
 }
 
 /// Publish the standard library.
