@@ -8,7 +8,10 @@ use libra_canonical_serialization::{from_bytes, to_bytes, Error, MAX_SEQUENCE_LE
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::{collections::BTreeMap, fmt};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+};
 
 fn is_same<T>(t: T)
 where
@@ -285,6 +288,43 @@ fn sequence_too_long() {
 fn sequence_not_long_enough() {
     let seq = vec![5, 0, 0, 0, 1, 2, 3, 4]; // Missing 5th element
     assert_eq!(from_bytes::<Vec<u8>>(&seq), Err(Error::Eof));
+}
+
+#[test]
+fn map_not_canonical() {
+    let mut map = BTreeMap::new();
+    map.insert(4u8, ());
+    map.insert(5u8, ());
+    let seq = vec![2, 0, 0, 0, 4, 5];
+    assert_eq!(from_bytes::<BTreeMap<u8, ()>>(&seq), Ok(map));
+    // Make sure out-of-order keys are rejected.
+    let seq = vec![2, 0, 0, 0, 5, 4];
+    assert_eq!(
+        from_bytes::<BTreeMap<u8, ()>>(&seq),
+        Err(Error::NonCanonicalMap)
+    );
+    // Make sure duplicate keys are rejected.
+    let seq = vec![2, 0, 0, 0, 5, 5];
+    assert_eq!(
+        from_bytes::<BTreeMap<u8, ()>>(&seq),
+        Err(Error::NonCanonicalMap)
+    );
+}
+
+#[test]
+fn by_default_btreesets_are_serialized_as_sequences() {
+    // See https://docs.serde.rs/src/serde/de/impls.rs.html
+    // This is a big caveat for us, but luckily, generate-format will track this in the YAML output.
+    let mut set = BTreeSet::new();
+    set.insert(4u8);
+    set.insert(5u8);
+    let seq = vec![2, 0, 0, 0, 4, 5];
+    assert_eq!(from_bytes::<BTreeSet<u8>>(&seq), Ok(set.clone()));
+    let seq = vec![2, 0, 0, 0, 5, 4];
+    assert_eq!(from_bytes::<BTreeSet<u8>>(&seq), Ok(set.clone()));
+    // Duplicate keys are just ok.
+    let seq = vec![3, 0, 0, 0, 5, 5, 4];
+    assert_eq!(from_bytes::<BTreeSet<u8>>(&seq), Ok(set));
 }
 
 #[test]

@@ -19,6 +19,8 @@ pub enum Error {
     ExpectedMapKey,
     #[error("expected map value")]
     ExpectedMapValue,
+    #[error("keys of serialized maps must be unique and in increasing order")]
+    NonCanonicalMap,
     #[error("expected option type")]
     ExpectedOption,
     #[error("{0}")]
