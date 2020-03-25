@@ -227,7 +227,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
     let admission_control_runtime =
         AdmissionControlService::bootstrap(&node_config, mp_client_sender.clone());
-    let rpc_runtime = bootstrap_rpc(&node_config, libra_db, mp_client_sender);
+    let rpc_runtime = bootstrap_rpc(&node_config, libra_db.clone(), mp_client_sender);
 
     let mut consensus = None;
     let (consensus_to_mempool_sender, consensus_requests) = channel(INTRA_NODE_CHANNEL_BUFFER_SIZE);
@@ -277,6 +277,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             executor,
             state_synchronizer.create_client(),
             consensus_to_mempool_sender,
+            libra_db,
         );
         consensus_provider
             .start()

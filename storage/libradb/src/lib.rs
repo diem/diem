@@ -174,6 +174,11 @@ pub trait LibraDBTrait: Send + Sync {
         version: Version,
         ledger_version: Version,
     ) -> Result<AccountStateWithProof>;
+
+    /// Gets information needed from storage during the main node startup.
+    ///
+    /// This is used by the libra core (executor, state synchronizer) internally.
+    fn get_startup_info(&self) -> Result<Option<StartupInfo>>;
 }
 
 /// This holds a handle to the underlying DB responsible for physical storage and provides APIs for
@@ -683,64 +688,6 @@ impl LibraDB {
             .get_account_state_with_proof_by_version(address, version)
     }
 
-    /// Gets information needed from storage during the startup of the executor or state
-    /// synchronizer module.
-    ///
-    /// This is used by the libra core (executor, state synchronizer) internally.
-    pub fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
-        // Get the latest ledger info. Return None if not bootstrapped.
-        let (latest_ledger_info, latest_validator_set) =
-            match self.ledger_store.get_startup_info()? {
-                Some(x) => x,
-                None => return Ok(None),
-            };
-
-        let latest_tree_state = {
-            let (latest_version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
-            let account_state_root_hash = txn_info.state_root_hash();
-            let ledger_frozen_subtree_hashes = self
-                .ledger_store
-                .get_ledger_frozen_subtree_hashes(latest_version)?;
-            TreeState::new(
-                latest_version,
-                ledger_frozen_subtree_hashes,
-                account_state_root_hash,
-            )
-        };
-
-        let li_version = latest_ledger_info.ledger_info().version();
-        assert!(latest_tree_state.version >= li_version);
-        let startup_info = if latest_tree_state.version != li_version {
-            // We synced to some version ahead of the version of the latest ledger info. Thus, we are still in sync mode.
-            let committed_version = li_version;
-            let committed_txn_info = self.ledger_store.get_transaction_info(committed_version)?;
-            let committed_account_state_root_hash = committed_txn_info.state_root_hash();
-            let committed_ledger_frozen_subtree_hashes = self
-                .ledger_store
-                .get_ledger_frozen_subtree_hashes(committed_version)?;
-            StartupInfo::new(
-                latest_ledger_info,
-                latest_validator_set,
-                TreeState::new(
-                    committed_version,
-                    committed_ledger_frozen_subtree_hashes,
-                    committed_account_state_root_hash,
-                ),
-                Some(latest_tree_state),
-            )
-        } else {
-            // The version of the latest ledger info matches other data. So the storage is not in sync mode.
-            StartupInfo::new(
-                latest_ledger_info,
-                latest_validator_set,
-                latest_tree_state,
-                None,
-            )
-        };
-
-        Ok(Some(startup_info))
-    }
-
     // ================================== Backup APIs ===================================
 
     /// Gets an instance of `BackupHandler` for data backup purpose.
@@ -1022,6 +969,60 @@ impl LibraDBTrait for LibraDB {
             account_state_blob,
             AccountStateProof::new(txn_info_accumulator_proof, txn_info, sparse_merkle_proof),
         ))
+    }
+
+    fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
+        // Get the latest ledger info. Return None if not bootstrapped.
+        let (latest_ledger_info, latest_validator_set) =
+            match self.ledger_store.get_startup_info()? {
+                Some(x) => x,
+                None => return Ok(None),
+            };
+
+        let latest_tree_state = {
+            let (latest_version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
+            let account_state_root_hash = txn_info.state_root_hash();
+            let ledger_frozen_subtree_hashes = self
+                .ledger_store
+                .get_ledger_frozen_subtree_hashes(latest_version)?;
+            TreeState::new(
+                latest_version,
+                ledger_frozen_subtree_hashes,
+                account_state_root_hash,
+            )
+        };
+
+        let li_version = latest_ledger_info.ledger_info().version();
+        assert!(latest_tree_state.version >= li_version);
+        let startup_info = if latest_tree_state.version != li_version {
+            // We synced to some version ahead of the version of the latest ledger info. Thus, we are still in sync mode.
+            let committed_version = li_version;
+            let committed_txn_info = self.ledger_store.get_transaction_info(committed_version)?;
+            let committed_account_state_root_hash = committed_txn_info.state_root_hash();
+            let committed_ledger_frozen_subtree_hashes = self
+                .ledger_store
+                .get_ledger_frozen_subtree_hashes(committed_version)?;
+            StartupInfo::new(
+                latest_ledger_info,
+                latest_validator_set,
+                TreeState::new(
+                    committed_version,
+                    committed_ledger_frozen_subtree_hashes,
+                    committed_account_state_root_hash,
+                ),
+                Some(latest_tree_state),
+            )
+        } else {
+            // The version of the latest ledger info matches other data. So the storage is not in sync mode.
+            StartupInfo::new(
+                latest_ledger_info,
+                latest_validator_set,
+                latest_tree_state,
+                None,
+            )
+        };
+
+        Ok(Some(startup_info))
     }
 }
 

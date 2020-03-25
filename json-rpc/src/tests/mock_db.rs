@@ -22,6 +22,7 @@ use libra_types::{
 };
 use libradb::LibraDBTrait;
 use std::collections::BTreeMap;
+use storage_proto::StartupInfo;
 
 /// Lightweight mock of LibraDB
 #[derive(Clone)]
@@ -202,5 +203,9 @@ impl LibraDBTrait for MockLibraDB {
         _ledger_version: Version,
     ) -> Result<AccountStateWithProof> {
         Ok(self.account_state_with_proof[0].clone())
+    }
+
+    fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
+        unimplemented!()
     }
 }

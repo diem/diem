@@ -199,7 +199,6 @@ impl<T: Payload> BlockStore<T> {
         counters::STATE_SYNC_DURATION_S.observe_duration(pre_sync_instance.elapsed());
         let recovery_data = storage
             .start()
-            .await
             .expect_recovery_data("Failed to construct recovery data after fast forward sync");
 
         Ok(recovery_data)
