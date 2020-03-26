@@ -69,7 +69,7 @@ impl NetworkClient {
         Ok(())
     }
 
-    /// Blocking read until able to successfully read an entire message
+    /// Blocking write until able to successfully send an entire message
     pub fn write(&mut self, data: &[u8]) -> Result<(), Error> {
         let stream = self.server()?;
         let result = stream.write(data);
@@ -245,11 +245,7 @@ impl NetworkStream {
         }
 
         let returnable_data = remaining_data[..data_size].to_vec();
-        if remaining_data.len() > data_size {
-            self.buffer = remaining_data[data_size + 1..].to_vec();
-        } else {
-            self.buffer = Vec::new();
-        }
+        self.buffer = remaining_data[data_size..].to_vec();
         returnable_data
     }
 
@@ -337,5 +333,21 @@ mod test {
         client.write(&data).unwrap();
         let result = server.read().unwrap();
         assert_eq!(data, result);
+    }
+
+    #[test]
+    fn test_write_two_messages_buffered() {
+        let server_port = utils::get_available_port();
+        let server_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
+        let mut server = NetworkServer::new(server_addr);
+        let mut client = NetworkClient::new(server_addr);
+        let data1 = vec![0, 1, 2, 3];
+        let data2 = vec![4, 5, 6, 7];
+        client.write(&data1).unwrap();
+        client.write(&data2).unwrap();
+        let result1 = server.read().unwrap();
+        let result2 = server.read().unwrap();
+        assert_eq!(data1, result1);
+        assert_eq!(data2, result2);
     }
 }
