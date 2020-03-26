@@ -162,12 +162,15 @@ impl<T: Payload> EpochManager<T> {
                     self.config.contiguous_rounds,
                 ))
             }
-            ConsensusProposerType::LeaderReputation => {
+            ConsensusProposerType::LeaderReputation(heuristic_config) => {
                 let backend = Box::new(LibraDBBackend::new(
                     proposers.len(),
                     self.storage.libra_db(),
                 ));
-                let heuristic = Box::new(ActiveInactiveHeuristic::new(99, 1));
+                let heuristic = Box::new(ActiveInactiveHeuristic::new(
+                    heuristic_config.active_weights,
+                    heuristic_config.inactive_weights,
+                ));
                 Box::new(LeaderReputation::new(proposers, backend, heuristic))
             }
         }
