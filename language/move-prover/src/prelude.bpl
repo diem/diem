@@ -932,12 +932,12 @@ procedure {:inline 1} $Vector_set(ta: TypeValue, src: Reference, i: Value, e: Va
 
 procedure {:inline 1} $Vector_contains(ta: TypeValue, vr: Reference, er: Reference) returns (res: Value)  {
     res := DefaultValue;
-    $abort_flag := true;
+    assert false; // $Vector_contains not implemented
 }
 
 procedure {:inline 1} $Vector_swap_remove(ta: TypeValue, vr: Reference, idx: Value) returns (res: Value)  {
     res := DefaultValue;
-    $abort_flag := true;
+    assert false; // $Vector_swap_remove not implemented
 }
 
 // ==================================================================================
@@ -947,7 +947,7 @@ procedure {:inline 1} $Vector_swap_remove(ta: TypeValue, vr: Reference, idx: Val
 
 procedure {:inline 1} $AddressUtil_address_to_bytes(addr: Value) returns (res: Value)  {
     res := DefaultValue;
-    $abort_flag := true;
+    assert false; // $AddressUtil_address_to_bytes not implemented
 }
 
 // ==================================================================================
@@ -957,7 +957,7 @@ procedure {:inline 1} $AddressUtil_address_to_bytes(addr: Value) returns (res: V
 
 procedure {:inline 1} $U64Util_u64_to_bytes(val: Value) returns (res: Value)  {
     res := DefaultValue;
-    $abort_flag := true;
+    assert false; // $U64Util_u64_to_bytes not implemented
 }
 
 // ==================================================================================
@@ -967,12 +967,12 @@ procedure {:inline 1} $U64Util_u64_to_bytes(val: Value) returns (res: Value)  {
 
 procedure {:inline 1} $Hash_sha2_256(val: Value) returns (res: Value)  {
     res := DefaultValue;
-    $abort_flag := true;
+    assert false; // $Hash_sha2_256 not implemented
 }
 
 procedure {:inline 1} $Hash_sha3_256(val: Value) returns (res: Value)  {
     res := DefaultValue;
-    $abort_flag := true;
+    assert false; // $Hash_sha3_256 not implemented
 }
 
 // ==================================================================================
@@ -981,9 +981,9 @@ procedure {:inline 1} $Hash_sha3_256(val: Value) returns (res: Value)  {
 // TODO: implement the below methods
 
 procedure {:inline 1} $LibraAccount_save_account(balance: Value, account: Value, addr: Value) {
-    $abort_flag := true;
+    assert false; // $LibraAccount_save_account
 }
 
 procedure {:inline 1} $LibraAccount_write_to_event_store(ta: TypeValue, guid: Value, count: Value, msg: Value) {
-    $abort_flag := true;
+    assert false; // $LibraAccount_write_to_event_store not implemented
 }
