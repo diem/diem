@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 proptest = "0.9.4"
 serde_yaml = "0.8"
-clap = "2.33"
+structopt = "0.3.12"
 
 libra_types = { path = "../../types", version = "0.1.0", package = "libra-types", features=["fuzzing"] }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
