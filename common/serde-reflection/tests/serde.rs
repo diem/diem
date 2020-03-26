@@ -260,3 +260,23 @@ fn test_type_deserialization_with_custom_invariants() {
         &ContainerFormat::Enum(variants)
     );
 }
+
+mod foo {
+    #[derive(super::Serialize)]
+    pub struct A;
+}
+
+mod bar {
+    #[derive(super::Serialize)]
+    pub struct A(pub u32);
+}
+
+#[test]
+fn test_name_clash_not_suported() {
+    let mut tracer = Tracer::new(/* is_human_readable */ false);
+    tracer.trace_value(&foo::A).unwrap();
+    // Repeating names is fine.
+    assert!(tracer.trace_value(&foo::A).is_ok());
+    // but format have to match.
+    assert!(tracer.trace_value(&bar::A(0)).is_err());
+}
