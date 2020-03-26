@@ -55,17 +55,14 @@ pub enum NetworkNotification {
     RecvMessage(Message),
 }
 
-pub struct NetworkProvider<TSocket>
-where
-    TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + Sync + 'static,
-{
+pub struct NetworkProvider<TSocket> {
     /// Pin the muxer type corresponding to this NetworkProvider instance
     phantom_socket: PhantomData<TSocket>,
 }
 
 impl<TSocket> NetworkProvider<TSocket>
 where
-    TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + Sync + 'static,
+    TSocket: AsyncRead + AsyncWrite + Send + 'static,
 {
     pub fn start(
         executor: Handle,

@@ -56,10 +56,7 @@ enum State {
     ShuttingDown(DisconnectReason),
 }
 
-pub struct Peer<TSocket>
-where
-    TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + Sync + 'static,
-{
+pub struct Peer<TSocket> {
     /// A handle to a tokio executor.
     executor: Handle,
     /// Identity of the remote peer
@@ -84,7 +81,7 @@ where
 
 impl<TSocket> Peer<TSocket>
 where
-    TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + Sync + 'static,
+    TSocket: AsyncRead + AsyncWrite + Send + 'static,
 {
     pub fn new(
         executor: Handle,
