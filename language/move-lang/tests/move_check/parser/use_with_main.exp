@@ -18,7 +18,7 @@ error:
 
    ┌── tests/move_check/parser/use_with_main.move:3:5 ───
    │
- 3 │ use 0XaBcD::Module as M;
+ 3 │ use 0xaBcD::Module as M;
    │     ^^^^^^^^^^^^^^ Invalid 'use'. Unbound module: '0xabcd::Module'
    │
 
@@ -26,7 +26,7 @@ error:
 
    ┌── tests/move_check/parser/use_with_main.move:3:23 ───
    │
- 3 │ use 0XaBcD::Module as M;
+ 3 │ use 0xaBcD::Module as M;
    │                       ^ Unused 'use' of alias 'M'. Consider removing it
    │
 
