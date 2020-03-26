@@ -224,3 +224,9 @@ variable "safety_rules_use_vault" {
   description = "Configure safety-rules to use Vault as the backend"
   default     = false
 }
+
+variable "persist_libra_data" {
+  type        = bool
+  default     = true
+  description = "Whether to persist libra data on validator and fullnode"
+}
