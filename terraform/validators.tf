@@ -236,7 +236,7 @@ resource "aws_ecs_task_definition" "validator" {
 
   volume {
     name      = "libra-data"
-    host_path = "/data/libra"
+    host_path = var.persist_libra_data ? "/data/libra" : ""
   }
 
   placement_constraints {
