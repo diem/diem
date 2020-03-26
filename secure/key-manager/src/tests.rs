@@ -1,11 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Error, KeyManager, LibraInterface};
+use crate::{Action, Error, KeyManager, LibraInterface};
 use executor::Executor;
 use libra_config::config::NodeConfig;
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
-use libra_secure_storage::{InMemoryStorage, KVStorage, Policy, Value};
+use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Policy, Value};
 use libra_secure_time::{MockTimeService, TimeService};
 use libra_types::{
     account_address::AccountAddress,
@@ -23,13 +23,7 @@ use libra_types::{
 use libra_vm::LibraVM;
 use libradb::{LibraDB, LibraDBTrait};
 use rand::{rngs::StdRng, SeedableRng};
-use std::{
-    cell::RefCell,
-    collections::BTreeMap,
-    convert::TryFrom,
-    sync::Arc,
-    time::{Duration, SystemTime},
-};
+use std::{cell::RefCell, collections::BTreeMap, convert::TryFrom, sync::Arc, time::Duration};
 use storage_client::{StorageReadServiceClient, StorageWriteServiceClient};
 use tokio::runtime::Runtime;
 
@@ -37,13 +31,17 @@ struct Node {
     account: AccountAddress,
     executor: Executor<LibraVM>,
     libra: TestLibraInterface,
-    key_manager: KeyManager<TestLibraInterface, InMemoryStorage, MockTimeService>,
+    key_manager:
+        KeyManager<TestLibraInterface, InMemoryStorageInternal<MockTimeService>, MockTimeService>,
     _storage_service: Runtime,
     time: MockTimeService,
 }
 
-fn setup_secure_storage(config: &NodeConfig) -> InMemoryStorage {
-    let mut sec_storage = InMemoryStorage::new();
+fn setup_secure_storage(
+    config: &NodeConfig,
+    time: MockTimeService,
+) -> InMemoryStorageInternal<MockTimeService> {
+    let mut sec_storage = InMemoryStorageInternal::new_with_time_service(time);
     let test_config = config.clone().test.unwrap();
 
     let mut a_keypair = test_config.account_keypair.unwrap();
@@ -93,7 +91,7 @@ impl Node {
             account,
             "consensus_key".to_owned(),
             libra.clone(),
-            setup_secure_storage(&config),
+            setup_secure_storage(&config, time.clone()),
             time.clone(),
         );
 
@@ -127,7 +125,7 @@ impl Node {
         // 3) Produce a new LI and commit the executed blocks
         let ledger_info = LedgerInfo::new(
             BlockInfo::new(
-                0,
+                1,
                 0,
                 block_id,
                 output.root_hash(),
@@ -138,7 +136,9 @@ impl Node {
             HashValue::zero(),
         );
         let ledger_info_with_sigs = LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new());
-        self.executor.commit_blocks(vec![block_id], ledger_info_with_sigs).unwrap();
+        self.executor
+            .commit_blocks(vec![block_id], ledger_info_with_sigs)
+            .unwrap();
     }
 }
 
@@ -250,7 +250,6 @@ impl LibraInterface for TestLibraInterface {
     }
 }
 
-
 #[test]
 // This simple test just proves that genesis took effect and the values are in storage
 fn test_ability_to_read_move_data() {
@@ -313,11 +312,7 @@ fn test_key_manager_init_and_basic_rotation() {
     let mut node = Node::setup(&config);
     node.key_manager.compare_storage_to_config().unwrap();
     node.key_manager.compare_info_to_config().unwrap();
-    let now = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    assert!(now - 600 <= node.key_manager.last_rotation().unwrap());
+    assert_eq!(node.time.now(), node.key_manager.last_rotation().unwrap());
     // No reconfiguration yet
     assert_eq!(0, node.key_manager.last_reconfiguration().unwrap());
     // No executions yet
@@ -344,4 +339,37 @@ fn test_key_manager_init_and_basic_rotation() {
     // Executions have occurred after our rotation
     node.execute_and_commit(node.libra.take_all_transactions());
     assert!(node.key_manager.last_reconfiguration() != node.key_manager.libra_timestamp());
+}
+
+#[test]
+// This tests the applications main loop to ensure it handles basic operations and reliabilities
+fn test_loop() {
+    let (config, _genesis_key) = config_builder::test_config();
+    let mut node = Node::setup(&config);
+
+    let mut action = node.key_manager.evaluate_status().unwrap();
+    assert_eq!(action, Action::NoAction);
+    node.key_manager.perform_action(action).unwrap();
+
+    node.time.increment_by(crate::ROTATION_PERIOD);
+    action = node.key_manager.evaluate_status().unwrap();
+    assert_eq!(action, Action::FullKeyRotation);
+    node.key_manager.perform_action(action).unwrap();
+
+    action = node.key_manager.evaluate_status().unwrap();
+    assert_eq!(action, Action::NoAction);
+
+    node.time.increment_by(crate::TXN_RETRY);
+    action = node.key_manager.evaluate_status().unwrap();
+    assert_eq!(action, Action::SubmitKeyRotationTransaction);
+
+    // Let's execute the expired transaction! And then a good transaction!
+    node.execute_and_commit(node.libra.take_all_transactions());
+    action = node.key_manager.evaluate_status().unwrap();
+    assert_eq!(action, Action::SubmitKeyRotationTransaction);
+    node.key_manager.perform_action(action).unwrap();
+    node.execute_and_commit(node.libra.take_all_transactions());
+
+    action = node.key_manager.evaluate_status().unwrap();
+    assert_eq!(action, Action::NoAction);
 }

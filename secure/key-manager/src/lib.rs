@@ -43,7 +43,20 @@ pub const ACCOUNT_KEY: &str = "account_key";
 pub const CONSENSUS_KEY: &str = "consensus_key";
 const GAS_UNIT_PRICE: u64 = 0;
 const MAX_GAS_AMOUNT: u64 = 400_000;
-const TXN_EXPIRATION: u64 = 100;
+const ROTATION_PERIOD: u64 = 604_800; // 1 week
+const TXN_EXPIRATION: u64 = 3600; // 1 hour, we'll try again after that
+const TXN_RETRY: u64 = 3600; // 1 hour retry period
+
+/// Defines actions that KeyManager should perform after a check of all associated state.
+#[derive(Debug, PartialEq)]
+pub enum Action {
+    /// The system is in a healthy state and there is no need to perform a rotation
+    NoAction,
+    /// The system is in a healthy state but sufficient time has passed for another key rotation
+    FullKeyRotation,
+    /// Storage and the BlockChain are inconsistent, submit a new rotation
+    SubmitKeyRotationTransaction,
+}
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Error, PartialEq)]
@@ -160,14 +173,61 @@ where
         Ok(self.libra.libra_timestamp()? / 1_000_000)
     }
 
+    pub fn resubmit_consensus_key_transaction(&self) -> Result<(), Error> {
+        let storage_key = self.storage.get_public_key(&self.key_name)?.public_key;
+        self.submit_key_rotation_transaction(storage_key)
+            .map(|_| ())
+    }
+
     pub fn rotate_consensus_key(&mut self) -> Result<Ed25519PublicKey, Error> {
         let new_key = self.storage.rotate_key(CONSENSUS_KEY)?;
+        self.submit_key_rotation_transaction(new_key)
+    }
+
+    pub fn submit_key_rotation_transaction(
+        &self,
+        new_key: Ed25519PublicKey,
+    ) -> Result<Ed25519PublicKey, Error> {
         let account_prikey = self.storage.get_private_key(ACCOUNT_KEY)?;
         let seq_id = self.libra.retrieve_sequence_number(self.account)?;
         let expiration = Duration::from_secs(self.time_service.now() + TXN_EXPIRATION);
         let txn = build_transaction(self.account, seq_id, &account_prikey, &new_key, expiration);
         self.libra.submit_transaction(txn)?;
         Ok(new_key)
+    }
+
+    pub fn evaluate_status(&self) -> Result<Action, Error> {
+        // If this is inconsistent, then we are likely waiting on a reconfiguration.
+        if let Err(Error::ConfigInfoKeyMismatch(..)) = self.compare_info_to_config() {
+            // For now, just assume this is correct, but this needs to compare libra_timestamp with
+            // the current time to ensure that progress is being made. And if not flag an error.
+            return Ok(Action::NoAction);
+        }
+
+        let last_rotation = self.last_rotation()?;
+
+        // If this is inconsistent, then the transaction either failed or was never submitted.
+        if let Err(Error::ConfigStorageKeyMismatch(..)) = self.compare_storage_to_config() {
+            if last_rotation + TXN_RETRY <= self.time_service.now() {
+                return Ok(Action::SubmitKeyRotationTransaction);
+            } else {
+                return Ok(Action::NoAction);
+            }
+        }
+
+        if last_rotation + ROTATION_PERIOD <= self.time_service.now() {
+            Ok(Action::FullKeyRotation)
+        } else {
+            Ok(Action::NoAction)
+        }
+    }
+
+    pub fn perform_action(&mut self, action: Action) -> Result<(), Error> {
+        match action {
+            Action::FullKeyRotation => self.rotate_consensus_key().map(|_| ()),
+            Action::SubmitKeyRotationTransaction => self.resubmit_consensus_key_transaction(),
+            Action::NoAction => Ok(()),
+        }
     }
 }
 
