@@ -7,10 +7,49 @@ use crate::{
     language_storage::{StructTag, TypeTag},
     transaction::SCRIPT_HASH_LENGTH,
 };
-use anyhow::Result;
+use anyhow::{format_err, Result};
 use libra_crypto::HashValue;
 use move_core_types::identifier::Identifier;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::{collections::HashMap, sync::Arc};
+
+/// To register an on-chain config in Rust:
+/// 1. Implement the `OnChainConfig` trait for the Rust representation of the config
+/// 2. Add the config's `ConfigID` to `ON_CHAIN_CONFIG_REGISTRY`
+
+#[derive(Copy, Clone, Eq, Hash, PartialEq)]
+pub struct ConfigID(&'static str);
+
+impl ConfigID {
+    pub fn access_path(self) -> AccessPath {
+        access_path_for_config(Identifier::new(self.0).expect("failed to get Identifier"))
+    }
+}
+
+pub const ON_CHAIN_CONFIG_REGISTRY: &[ConfigID] = &[VMPublishingOption::CONFIG_ID];
+
+#[derive(Clone)]
+pub struct OnChainConfigPayload {
+    configs: Arc<HashMap<ConfigID, Option<Vec<u8>>>>,
+}
+
+impl OnChainConfigPayload {
+    pub fn new(configs: Arc<HashMap<ConfigID, Option<Vec<u8>>>>) -> Self {
+        Self { configs }
+    }
+
+    pub fn get<T: OnChainConfig>(&self) -> Result<T> {
+        if let Some(bytes) = self
+            .configs
+            .get(&T::CONFIG_ID)
+            .ok_or_else(|| format_err!("[on-chain-cfg] config not in payload"))?
+        {
+            T::deserialize_into_config(bytes)
+        } else {
+            Err(format_err!("[on-chain-cfg] missing byte array in payload, potentially caused be failed storage read"))
+        }
+    }
+}
 
 /// Trait to be implemented by a storage type from which to read on-chain configs
 pub trait ConfigStorage {
@@ -19,31 +58,28 @@ pub trait ConfigStorage {
 
 /// Trait to be implemented by a Rust struct representation of an on-chain config
 /// that is stored in storage as a deserialized byte array
-pub trait OnChainConfig {
+pub trait OnChainConfig: Send + Sync + DeserializeOwned {
     const IDENTIFIER: &'static str;
+    const CONFIG_ID: ConfigID = ConfigID(Self::IDENTIFIER);
 
-    fn deserialize_into_config(bytes: &[u8]) -> Result<Self>
-    where
-        Self: DeserializeOwned,
-    {
-        let result = lcs::from_bytes::<Self>(&bytes).map_err(|e| {
-            anyhow::format_err!(
-                "Failed to serialize account blob bytes to on-chain config: {}",
-                e
-            )
-        })?;
-        Ok(result)
+    // Single-round LCS deserialization from bytes to `Self`
+    // This is the expected deserialization pattern for most Rust representations,
+    // but sometimes `deserialize_into_config` may need to be customized
+    // (e.g. `VMPublishingOption` needs an extra round of deserialization)
+    // In the override, we can reuse this default logic via this function
+    // Note: we cannot directly call the default `deserialize_into_config` implementation
+    // in its override - this will just refer to the override implementation itself
+    fn deserialize_default_impl(bytes: &[u8]) -> Result<Self> {
+        lcs::from_bytes::<Self>(&bytes)
+            .map_err(|e| format_err!("[on-chain config] Failed to deserialize into config: {}", e))
     }
 
-    fn fetch_config<U: ConfigStorage>(storage: &U) -> Result<Self>
-    where
-        Self: DeserializeOwned,
-    {
-        let access_path = access_path_for_config(Identifier::new(Self::IDENTIFIER).unwrap());
-        let bytes = storage
-            .fetch_config(access_path)
-            .ok_or_else(|| anyhow::format_err!("no config found"))?;
-        Self::deserialize_into_config(&bytes)
+    // Function for deserializing bytes to `Self`
+    // It will by default try one round of LCS deserialization directly to `Self`
+    // The implementation for the concrete type should override this function if this
+    // logic needs to be customized
+    fn deserialize_into_config(bytes: &[u8]) -> Result<Self> {
+        Self::deserialize_default_impl(bytes)
     }
 }
 
@@ -85,6 +121,17 @@ pub enum VMPublishingOption {
 
 impl OnChainConfig for VMPublishingOption {
     const IDENTIFIER: &'static str = "ScriptWhitelist";
+
+    fn deserialize_into_config(bytes: &[u8]) -> Result<Self> {
+        lcs::from_bytes::<Vec<u8>>(&bytes)
+            .map_err(|e| {
+                format_err!(
+                    "Failed first round of deserialization for VMPublishingOption: {}",
+                    e
+                )
+            })
+            .and_then(|bytes| Self::deserialize_default_impl(&bytes))
+    }
 }
 
 impl VMPublishingOption {

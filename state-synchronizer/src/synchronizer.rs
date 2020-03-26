@@ -44,7 +44,7 @@ impl StateSynchronizer {
         config: &NodeConfig,
         reconfig_event_subscriptions: Vec<Box<dyn EventSubscription>>,
     ) -> Self {
-        let executor_proxy = ExecutorProxy::new(executor, config);
+        let executor_proxy = ExecutorProxy::new(executor, config, reconfig_event_subscriptions);
         Self::bootstrap_with_executor_proxy(
             network,
             state_sync_to_mempool_sender,
@@ -52,7 +52,6 @@ impl StateSynchronizer {
             config.base.waypoint,
             &config.state_sync,
             executor_proxy,
-            reconfig_event_subscriptions,
         )
     }
 
@@ -63,7 +62,6 @@ impl StateSynchronizer {
         waypoint: Option<Waypoint>,
         state_sync_config: &StateSyncConfig,
         executor_proxy: E,
-        reconfig_event_subscriptions: Vec<Box<dyn EventSubscription>>,
     ) -> Self {
         let mut runtime = Builder::new()
             .thread_name("state-sync-")
@@ -85,7 +83,6 @@ impl StateSynchronizer {
             state_sync_config.clone(),
             executor_proxy,
             initial_state,
-            reconfig_event_subscriptions,
         );
         runtime.spawn(coordinator.start(network));
 

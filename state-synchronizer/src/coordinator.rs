@@ -21,7 +21,6 @@ use libra_logger::prelude::*;
 use libra_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
 use libra_types::{
     contract_event::ContractEvent,
-    event_subscription::EventSubscription,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{Transaction, TransactionListWithProof, Version},
     validator_change::{ValidatorChangeProof, VerifierType},
@@ -111,7 +110,6 @@ pub(crate) struct SyncCoordinator<T> {
     // queue of incoming long polling requests
     // peer will be notified about new chunk of transactions if it's available before expiry time
     subscriptions: HashMap<PeerId, PendingRequestInfo>,
-    reconfig_event_subscriptions: Vec<Box<dyn EventSubscription>>,
     executor_proxy: T,
 }
 
@@ -124,7 +122,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         config: StateSyncConfig,
         executor_proxy: T,
         initial_state: SynchronizerState,
-        reconfig_event_subscriptions: Vec<Box<dyn EventSubscription>>,
     ) -> Self {
         let upstream_peers = config.upstream_peers.upstream_peers.clone();
         let retry_timeout_val = match role {
@@ -144,7 +141,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             subscriptions: HashMap::new(),
             sync_request: None,
             initialization_listener: None,
-            reconfig_event_subscriptions,
             executor_proxy,
         }
     }
@@ -175,11 +171,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                             if let Err(e) = self.process_commit(txns, Some(callback)).await {
                                 error!("[state sync] process commit fail: {}", e);
                             }
-                            // TODO add per-subscription filter logic
-                            for event in events {
-                                for subscription in self.reconfig_event_subscriptions.iter_mut() {
-                                    subscription.publish(event.clone());
-                                }
+                            if let Err(e) = self.executor_proxy.publish_on_chain_config_updates(events).await {
+                                error!("[state sync] failed to publish reconfig notification: {}", e);
                             }
                         }
                         CoordinatorMessage::GetState(callback) => {
@@ -852,7 +845,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 target,
                 intermediate_end_of_epoch_li,
                 &mut self.local_state.synced_trees,
-                &mut self.reconfig_event_subscriptions,
             )
             .await?;
         Ok(())

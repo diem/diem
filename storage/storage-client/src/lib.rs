@@ -13,10 +13,7 @@ mod state_view;
 
 pub use crate::state_view::VerifiedStateView;
 use anyhow::{Error, Result};
-use futures::{
-    executor::block_on,
-    stream::{BoxStream, StreamExt},
-};
+use futures::stream::{BoxStream, StreamExt};
 use libra_crypto::HashValue;
 use libra_types::{
     access_path::AccessPath,
@@ -27,12 +24,16 @@ use libra_types::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
     ledger_info::LedgerInfoWithSignatures,
-    on_chain_config::ConfigStorage,
     proof::{AccumulatorConsistencyProof, SparseMerkleProof, SparseMerkleRangeProof},
     transaction::{TransactionListWithProof, TransactionToCommit, Version},
     validator_change::ValidatorChangeProof,
 };
-use std::{convert::TryFrom, net::SocketAddr, sync::Mutex};
+use std::{
+    collections::{HashMap, HashSet},
+    convert::TryFrom,
+    net::SocketAddr,
+    sync::Mutex,
+};
 use storage_proto::{
     proto::storage::{
         storage_client::StorageClient, GetLatestStateRootRequest, GetStartupInfoRequest,
@@ -281,6 +282,48 @@ impl StorageRead for StorageReadServiceClient {
             .boxed();
         Ok(stream)
     }
+
+    // TODO migrate this to `ConfigStorage` trait as non-async
+    // and implement for LibraDBTrait once `StorageRead` is deprecated
+    async fn batch_fetch_config(&self, access_paths: Vec<AccessPath>) -> Vec<Option<Vec<u8>>> {
+        // some access paths can have the same address, so don't duplicate requests for them
+        let addresses: Vec<AccountAddress> = access_paths
+            .iter()
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .map(|path| path.address)
+            .collect();
+
+        let requests: Vec<RequestItem> = addresses
+            .iter()
+            .map(|addr| RequestItem::GetAccountState { address: *addr })
+            .collect();
+
+        let responses = match self.update_to_latest_ledger(0, requests).await {
+            Ok(responses) => responses.0,
+            Err(_) => vec![],
+        };
+        // Account address --> AccountState
+        let mut new_account_states = HashMap::new();
+
+        for (addr, resp) in addresses.into_iter().zip(responses) {
+            if let Ok(account_state) = resp.into_get_account_state_response() {
+                if let Some(blob) = account_state.blob {
+                    if let Ok(account_state) = AccountState::try_from(&blob) {
+                        new_account_states.insert(addr, account_state);
+                    }
+                };
+            }
+        }
+        access_paths
+            .into_iter()
+            .map(|path| {
+                new_account_states
+                    .get(&path.address)
+                    .and_then(|state| state.get(&path.path).cloned())
+            })
+            .collect()
+    }
 }
 
 /// This provides storage write interfaces backed by real storage service.
@@ -435,25 +478,10 @@ pub trait StorageRead: Send + Sync {
         start_version: Version,
         num_transaction_infos: u64,
     ) -> Result<BoxStream<'_, Result<BackupTransactionInfoResponse, Error>>>;
-}
 
-impl ConfigStorage for Box<&dyn StorageRead> {
-    fn fetch_config(&self, access_path: AccessPath) -> Option<Vec<u8>> {
-        let account_state_blob = async {
-            self.get_latest_account_state(access_path.address)
-                .await
-                .ok()?
-        };
-        let result = block_on(account_state_blob);
-        if let Some(blob) = result {
-            if let Ok(account_state) = AccountState::try_from(&blob) {
-                if let Some(config) = account_state.get(&access_path.path) {
-                    return Some(config.clone());
-                }
-            }
-        }
-        None
-    }
+    /// Returns a vector of on-chain configs as serialized byte array
+    /// Order of on-chain configs returned matches the order of `access_path`
+    async fn batch_fetch_config(&self, access_paths: Vec<AccessPath>) -> Vec<Option<Vec<u8>>>;
 }
 
 /// This trait defines interfaces to be implemented by a storage write client.

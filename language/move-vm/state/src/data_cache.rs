@@ -75,11 +75,9 @@ pub trait RemoteCache {
     fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>>;
 }
 
-impl ConfigStorage for Box<&dyn RemoteCache> {
+impl ConfigStorage for &dyn RemoteCache {
     fn fetch_config(&self, access_path: AccessPath) -> Option<Vec<u8>> {
-        self.get(&access_path)
-            .ok()?
-            .and_then(|bytes| lcs::from_bytes::<Vec<u8>>(&bytes).ok())
+        self.get(&access_path).ok()?
     }
 }
 
