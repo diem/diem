@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use clap::{App, Arg};
 use libra_types::{contract_event, transaction};
 use proptest::{
     prelude::*,
@@ -10,6 +9,33 @@ use proptest::{
 use serde_reflection::Tracer;
 use serde_yaml;
 use std::sync::{Arc, Mutex};
+use structopt::StructOpt;
+
+#[derive(Debug, StructOpt)]
+#[structopt(
+    name = "Libra format generator",
+    about = "Trace serde (de)serialization to generate format descriptions for Libra types"
+)]
+struct Options {
+    #[structopt(short, long)]
+    with_deserialize: bool,
+}
+
+fn main() {
+    let options = Options::from_args();
+
+    let mut tracer = Tracer::new(lcs::is_human_readable());
+    tracer = add_proptest_serialization_tracing(tracer);
+    if options.with_deserialize {
+        tracer = add_deserialization_tracing(tracer);
+    }
+
+    let registry = tracer.registry().unwrap();
+    let output = serde_yaml::to_string(&registry).unwrap();
+    println!("{}", output);
+}
+
+// Below constitutes the tool's knowledge of the interesting Libra types to analyze.
 
 fn add_proptest_serialization_tracing(tracer: Tracer) -> Tracer {
     let mut runner = TestRunner::new(Config {
@@ -44,26 +70,4 @@ fn add_deserialization_tracing(mut tracer: Tracer) -> Tracer {
         .trace_type::<contract_event::ContractEvent>()
         .unwrap();
     tracer
-}
-
-fn main() {
-    let matches = App::new("Libra format generator")
-        .about("Trace serde (de)serialization to generate format descriptions for Libra types")
-        .arg(
-            Arg::with_name("with_deserialize")
-                .long("with_deserialize")
-                .help("Trace deserialization instead of serialization"),
-        )
-        .get_matches();
-
-    let mut tracer = Tracer::new(lcs::is_human_readable());
-
-    tracer = add_proptest_serialization_tracing(tracer);
-    if matches.is_present("with_deserialize") {
-        tracer = add_deserialization_tracing(tracer);
-    }
-
-    let registry = tracer.registry().unwrap();
-    let output = serde_yaml::to_string(&registry).unwrap();
-    println!("{}", output);
 }
