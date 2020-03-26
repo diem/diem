@@ -133,6 +133,7 @@ impl<'alloc> VMModuleCache<'alloc> {
             address: *module.address(),
             module: module.name().to_owned(),
             name: struct_name.to_owned(),
+            is_resource: struct_handle.is_nominal_resource,
             ty_args,
             layout: field_tys,
         };
@@ -153,6 +154,13 @@ impl<'alloc> VMModuleCache<'alloc> {
         data_view: &dyn InterpreterContext,
     ) -> VMResult<StructType> {
         let struct_ty = self.load_struct_def(module, idx, data_view)?;
+        if ty_args.len() != struct_ty.ty_args.len() {
+            return Err(
+                VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
+                    "number of type args does not match that of parameters".to_string(),
+                ),
+            );
+        }
         if ty_args.is_empty() {
             Ok(struct_ty)
         } else {

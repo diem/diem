@@ -301,7 +301,7 @@ fn make_script_transaction(
 ) -> Result<SignedTransaction> {
     let mut blob = vec![];
     script.serialize(&mut blob)?;
-    let script = TransactionScript::new(blob, config.args.clone());
+    let script = TransactionScript::new(blob, config.ty_args.clone(), config.args.clone());
 
     let params = get_transaction_parameters(exec, config);
     Ok(RawTransaction::new_script(

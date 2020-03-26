@@ -28,7 +28,7 @@ fn validate_auth_key_prefix(auth_key_prefix: &[u8]) {
 /// Note: this is not type-safe; the individual type-safe wrappers below should be used when
 /// possible.
 pub fn encode_stdlib_script(stdlib_script: StdlibScript, args: Vec<TransactionArgument>) -> Script {
-    Script::new(stdlib_script.compiled_bytes().into_vec(), args)
+    Script::new(stdlib_script.compiled_bytes().into_vec(), vec![], args)
 }
 
 /// Encode a program adding `new_validator` to the pending validator set. Fails if the
@@ -37,6 +37,7 @@ pub fn encode_stdlib_script(stdlib_script: StdlibScript, args: Vec<TransactionAr
 pub fn encode_add_validator_script(new_validator: &AccountAddress) -> Script {
     Script::new(
         StdlibScript::AddValidator.compiled_bytes().into_vec(),
+        vec![],
         vec![TransactionArgument::Address(*new_validator)],
     )
 }
@@ -53,6 +54,7 @@ pub fn encode_approved_payment_script(
 ) -> Script {
     Script::new(
         StdlibScript::ApprovedPayment.compiled_bytes().into_vec(),
+        vec![],
         vec![
             TransactionArgument::Address(payee),
             TransactionArgument::U64(amount),
@@ -68,6 +70,7 @@ pub fn encode_approved_payment_script(
 pub fn encode_burn_script(preburn_address: AccountAddress) -> Script {
     Script::new(
         StdlibScript::Burn.compiled_bytes().into_vec(),
+        vec![],
         vec![TransactionArgument::Address(preburn_address)],
     )
 }
@@ -77,6 +80,7 @@ pub fn encode_burn_script(preburn_address: AccountAddress) -> Script {
 pub fn encode_cancel_burn_script(preburn_address: AccountAddress) -> Script {
     Script::new(
         StdlibScript::CancelBurn.compiled_bytes().into_vec(),
+        vec![],
         vec![TransactionArgument::Address(preburn_address)],
     )
 }
@@ -91,6 +95,7 @@ pub fn encode_transfer_script(
     validate_auth_key_prefix(&auth_key_prefix);
     Script::new(
         StdlibScript::PeerToPeer.compiled_bytes().into_vec(),
+        vec![],
         vec![
             TransactionArgument::Address(*recipient),
             TransactionArgument::U8Vector(auth_key_prefix),
@@ -113,6 +118,7 @@ pub fn encode_transfer_with_metadata_script(
         StdlibScript::PeerToPeerWithMetadata
             .compiled_bytes()
             .into_vec(),
+        vec![],
         vec![
             TransactionArgument::Address(*recipient),
             TransactionArgument::U8Vector(auth_key_prefix),
@@ -148,6 +154,7 @@ pub fn encode_transfer_script_with_padding(
 
     Script::new(
         script_bytes,
+        vec![],
         vec![
             TransactionArgument::Address(*recipient),
             TransactionArgument::U8Vector(vec![]), // use empty auth key prefix
@@ -161,6 +168,7 @@ pub fn encode_transfer_script_with_padding(
 pub fn encode_preburn_script(amount: u64) -> Script {
     Script::new(
         StdlibScript::Preburn.compiled_bytes().into_vec(),
+        vec![],
         vec![TransactionArgument::U64(amount)],
     )
 }
@@ -176,6 +184,7 @@ pub fn encode_create_account_script(
     validate_auth_key_prefix(&auth_key_prefix);
     Script::new(
         StdlibScript::CreateAccount.compiled_bytes().into_vec(),
+        vec![],
         vec![
             TransactionArgument::Address(*account_address),
             TransactionArgument::U8Vector(auth_key_prefix),
@@ -192,6 +201,7 @@ pub fn encode_register_approved_payment_script(public_key: Vec<u8>) -> Script {
         StdlibScript::RegisterApprovedPayment
             .compiled_bytes()
             .into_vec(),
+        vec![],
         vec![TransactionArgument::U8Vector(public_key)],
     )
 }
@@ -201,6 +211,7 @@ pub fn encode_register_approved_payment_script(public_key: Vec<u8>) -> Script {
 pub fn encode_register_preburner_script() -> Script {
     Script::new(
         StdlibScript::RegisterPreburner.compiled_bytes().into_vec(),
+        vec![],
         vec![],
     )
 }
@@ -219,6 +230,7 @@ pub fn encode_register_validator_script(
 ) -> Script {
     Script::new(
         StdlibScript::RegisterValidator.compiled_bytes().into_vec(),
+        vec![],
         vec![
             TransactionArgument::U8Vector(consensus_pubkey),
             TransactionArgument::U8Vector(validator_network_signing_pubkey),
@@ -235,6 +247,7 @@ pub fn encode_register_validator_script(
 pub fn encode_remove_validator_script(to_remove: &AccountAddress) -> Script {
     Script::new(
         StdlibScript::RemoveValidator.compiled_bytes().into_vec(),
+        vec![],
         vec![TransactionArgument::Address(*to_remove)],
     )
 }
@@ -245,6 +258,7 @@ pub fn encode_rotate_consensus_pubkey_script(new_key: Vec<u8>) -> Script {
         StdlibScript::RotateConsensusPubkey
             .compiled_bytes()
             .into_vec(),
+        vec![],
         vec![TransactionArgument::U8Vector(new_key)],
     )
 }
@@ -256,6 +270,7 @@ pub fn rotate_authentication_key_script(new_hashed_key: Vec<u8>) -> Script {
         StdlibScript::RotateAuthenticationKey
             .compiled_bytes()
             .into_vec(),
+        vec![],
         vec![TransactionArgument::U8Vector(new_hashed_key)],
     )
 }
@@ -270,6 +285,7 @@ pub fn encode_mint_script(
     validate_auth_key_prefix(&auth_key_prefix);
     Script::new(
         StdlibScript::Mint.compiled_bytes().into_vec(),
+        vec![],
         vec![
             TransactionArgument::Address(*sender),
             TransactionArgument::U8Vector(auth_key_prefix),
@@ -284,6 +300,7 @@ pub fn encode_publishing_option_script(config: VMPublishingOption) -> Script {
         StdlibScript::ModifyPublishingOption
             .compiled_bytes()
             .into_vec(),
+        vec![],
         vec![TransactionArgument::U8Vector(bytes)],
     )
 }

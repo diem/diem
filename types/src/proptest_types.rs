@@ -553,9 +553,10 @@ impl Arbitrary for Script {
         // The vector sizes are picked out of thin air.
         (
             vec(any::<u8>(), 0..100),
+            vec(any::<TypeTag>(), 0..4),
             vec(any::<TransactionArgument>(), 0..10),
         )
-            .prop_map(|(code, args)| Script::new(code, args))
+            .prop_map(|(code, ty_args, args)| Script::new(code, ty_args, args))
             .boxed()
     }
 }

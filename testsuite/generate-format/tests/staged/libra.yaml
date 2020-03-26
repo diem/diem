@@ -71,6 +71,9 @@ Script:
   STRUCT:
     - code:
         SEQ: U8
+    - ty_args:
+        SEQ:
+          TYPENAME: TypeTag
     - args:
         SEQ:
           TYPENAME: TransactionArgument

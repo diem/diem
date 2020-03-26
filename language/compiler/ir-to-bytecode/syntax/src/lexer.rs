@@ -252,6 +252,7 @@ impl<'input> Lexer<'input> {
                             "exists" => (Tok::Exists, len + 1),
                             "move_from" => (Tok::MoveFrom, len + 1),
                             "move_to_sender" => (Tok::MoveToSender, len + 1),
+                            "main" => (Tok::Main, len),
                             _ => (Tok::NameBeginTyValue, len + 1),
                         },
                         Some('(') => match name {

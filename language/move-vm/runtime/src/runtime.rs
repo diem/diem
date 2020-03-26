@@ -25,7 +25,9 @@ use move_vm_types::{
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, vm_error, Location, VMResult},
-    file_format::{FunctionHandleIndex, FunctionSignature, SignatureToken, StructDefinitionIndex},
+    file_format::{
+        FunctionHandleIndex, FunctionSignature, Kind, SignatureToken, StructDefinitionIndex,
+    },
     gas_schedule::CostTable,
     transaction_metadata::TransactionMetadata,
     CompiledModule, IndexKind,
@@ -111,16 +113,15 @@ impl<'alloc> VMRuntime<'alloc> {
         txn_data: &TransactionMetadata,
         gas_schedule: &CostTable,
         script: Vec<u8>,
+        ty_args: Vec<Type>,
         args: Vec<Value>,
     ) -> VMResult<()> {
         let main = self.script_cache.cache_script(&script, context)?;
 
-        if !verify_actuals(main.signature(), &args) {
-            return Err(VMStatus::new(StatusCode::TYPE_MISMATCH)
-                .with_message("Actual Type Mismatch".to_string()));
-        }
+        verify_ty_args(&main.signature().type_formals, &ty_args)?;
+        verify_args(main.signature(), &args)?;
 
-        Interpreter::entrypoint(context, self, txn_data, gas_schedule, main, args)
+        Interpreter::entrypoint(context, self, txn_data, gas_schedule, main, ty_args, args)
     }
 
     pub fn execute_function(
@@ -130,15 +131,31 @@ impl<'alloc> VMRuntime<'alloc> {
         gas_schedule: &CostTable,
         module: &ModuleId,
         function_name: &IdentStr,
+        ty_args: Vec<Type>,
         args: Vec<Value>,
     ) -> VMResult<()> {
-        Interpreter::execute_function(
+        let loaded_module = self.get_loaded_module(module, context)?;
+        let func_idx = loaded_module
+            .function_defs_table
+            .get(function_name)
+            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
+        let func_def = loaded_module.function_def_at(*func_idx);
+        let func_handle = loaded_module.function_handle_at(func_def.function);
+        let func_sig = loaded_module.function_signature_at(func_handle.signature);
+
+        verify_ty_args(&func_sig.type_formals, &ty_args).map_err(|status| {
+            VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).append(status)
+        })?;
+
+        // TODO: we should also check if args match the parameter types.
+
+        Interpreter::entrypoint(
             context,
             self,
             txn_data,
             gas_schedule,
-            module,
-            function_name,
+            FunctionRef::new(loaded_module, *func_idx),
+            ty_args,
             args,
         )
     }
@@ -156,11 +173,14 @@ impl<'alloc> VMRuntime<'alloc> {
     ) -> VMResult<StructType> {
         let module = self.code_cache.get_loaded_module(module_id, context)?;
         let struct_idx = module.get_struct_def_index(name)?;
+        let def = module.struct_def_at(*struct_idx);
+        let handle = module.struct_handle_at(def.struct_handle);
+        verify_ty_args(&handle.type_formals, ty_args)?;
         self.code_cache
             .resolve_struct_def(module, *struct_idx, ty_args, context)
     }
 
-    pub fn resolve_struct_def(
+    pub(crate) fn resolve_struct_def(
         &self,
         module: &LoadedModule,
         idx: StructDefinitionIndex,
@@ -171,7 +191,7 @@ impl<'alloc> VMRuntime<'alloc> {
             .resolve_struct_def(module, idx, ty_args, data_view)
     }
 
-    pub fn resolve_function_ref(
+    pub(crate) fn resolve_function_ref(
         &self,
         caller_module: &LoadedModule,
         idx: FunctionHandleIndex,
@@ -181,7 +201,7 @@ impl<'alloc> VMRuntime<'alloc> {
             .resolve_function_ref(caller_module, idx, data_view)
     }
 
-    pub fn resolve_signature_token(
+    pub(crate) fn resolve_signature_token(
         &self,
         module: &LoadedModule,
         tok: &SignatureToken,
@@ -201,24 +221,39 @@ impl<'alloc> VMRuntime<'alloc> {
     }
 }
 
-/// Verify if the transaction arguments match the type signature of the main function.
-fn verify_actuals(signature: &FunctionSignature, args: &[Value]) -> bool {
-    if signature.arg_types.len() != args.len() {
-        warn!(
-            "[VM] different argument length: actuals {}, formals {}",
-            args.len(),
-            signature.arg_types.len()
-        );
-        return false;
+fn verify_ty_args(constraints: &[Kind], ty_args: &[Type]) -> VMResult<()> {
+    if constraints.len() != ty_args.len() {
+        return Err(VMStatus::new(StatusCode::NUMBER_OF_TYPE_ACTUALS_MISMATCH));
     }
-    for (ty, arg) in signature.arg_types.iter().zip(args.iter()) {
-        if !arg.is_valid_script_arg(ty) {
-            warn!(
-                "[VM] different argument type: formal {:?}, actual {:?}",
-                ty, arg
-            );
-            return false;
+    for (ty, expected_k) in ty_args.iter().zip(constraints) {
+        let k = if ty.is_resource()? {
+            Kind::Resource
+        } else {
+            Kind::Unrestricted
+        };
+        if !k.is_sub_kind_of(*expected_k) {
+            return Err(VMStatus::new(StatusCode::CONTRAINT_KIND_MISMATCH));
         }
     }
-    true
+    Ok(())
+}
+
+/// Verify if the transaction arguments match the type signature of the main function.
+fn verify_args(signature: &FunctionSignature, args: &[Value]) -> VMResult<()> {
+    if signature.arg_types.len() != args.len() {
+        return Err(
+            VMStatus::new(StatusCode::TYPE_MISMATCH).with_message(format!(
+                "argument length mismatch: expected {} got {}",
+                signature.arg_types.len(),
+                args.len()
+            )),
+        );
+    }
+    for (arg, ty) in args.iter().zip(signature.arg_types.iter()) {
+        if !arg.is_valid_script_arg(ty) {
+            return Err(VMStatus::new(StatusCode::TYPE_MISMATCH)
+                .with_message("argument type mismatch".to_string()));
+        }
+    }
+    Ok(())
 }

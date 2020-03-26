@@ -1826,6 +1826,14 @@ fn parse_script<'input>(
         imports.push(parse_import_decl(tokens)?);
     }
     consume_token(tokens, Tok::Main)?;
+    let type_formals = if tokens.peek() == Tok::Less {
+        consume_token(tokens, Tok::Less)?;
+        let list = parse_comma_list(tokens, &[Tok::Greater], parse_type_formal, true)?;
+        consume_token(tokens, Tok::Greater)?;
+        list
+    } else {
+        vec![]
+    };
     consume_token(tokens, Tok::LParen)?;
     let args = parse_comma_list(tokens, &[Tok::RParen], parse_arg_decl, true)?;
     consume_token(tokens, Tok::RParen)?;
@@ -1835,7 +1843,7 @@ fn parse_script<'input>(
         FunctionVisibility::Public,
         args,
         vec![],
-        vec![],
+        type_formals,
         vec![],
         vec![],
         FunctionBody::Move { locals, code: body },

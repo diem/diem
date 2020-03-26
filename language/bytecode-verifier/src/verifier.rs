@@ -193,6 +193,7 @@ pub fn verify_main_signature(script: &CompiledScript) -> Vec<VMStatus> {
     if !function_signature.return_types.is_empty() {
         return vec![VMStatus::new(StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE)];
     }
+
     for arg_type in &function_signature.arg_types {
         if !(arg_type.is_primitive()
             || *arg_type == SignatureToken::Vector(Box::new(SignatureToken::U8)))

@@ -139,10 +139,14 @@ fn test_validate_known_script_too_large_args() {
         1,
         &key,
         key.public_key(),
-        Some(Script::new(vec![42; MAX_TRANSACTION_SIZE_IN_BYTES], vec![])), /* generate a
-                                                                             * program with args
-                                                                             * longer than the
-                                                                             * max size */
+        Some(Script::new(
+            vec![42; MAX_TRANSACTION_SIZE_IN_BYTES],
+            vec![],
+            vec![],
+        )), /* generate a
+             * program with args
+             * longer than the
+             * max size */
         0,
         0, /* max gas price */
         lbr_type_tag(),
@@ -269,7 +273,7 @@ fn test_validate_unknown_script() {
         1,
         &key,
         key.public_key(),
-        Some(Script::new(vec![], vec![])),
+        Some(Script::new(vec![], vec![], vec![])),
     );
     let ret = rt
         .block_on(vm_validator.validate_transaction(transaction))
@@ -387,7 +391,7 @@ fn test_validate_invalid_arguments() {
 
     let address = account_config::association_address();
     let (program_script, _) = encode_transfer_script(&address, vec![], 100).into_inner();
-    let program = Script::new(program_script, vec![TransactionArgument::U64(42)]);
+    let program = Script::new(program_script, vec![], vec![TransactionArgument::U64(42)]);
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,

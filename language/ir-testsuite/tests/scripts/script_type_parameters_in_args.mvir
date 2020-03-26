@@ -1,0 +1,34 @@
+main<T: unrestricted>(x: T) {
+    return;
+}
+// check: INVALID_MAIN_FUNCTION_SIGNATURE
+
+
+//! new-transaction
+main<T>(x: &T) {
+    return;
+}
+// check: INVALID_MAIN_FUNCTION_SIGNATURE
+
+
+//! new-transaction
+main<T: unrestricted>(v: vector<T>) {
+    return;
+}
+// check: INVALID_MAIN_FUNCTION_SIGNATURE
+
+
+//! new-transaction
+module M {
+    struct Box<T> { x: T }
+}
+// check: EXECUTED
+
+
+//! new-transaction
+import {{default}}.M;
+
+main<T: unrestricted>(x: M.Box<M.Box<T>>) {
+    return;
+}
+// check: INVALID_MAIN_FUNCTION_SIGNATURE

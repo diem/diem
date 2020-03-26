@@ -24,7 +24,7 @@ fn test_invalid_signature() {
         RawTransaction::new_script(
             AccountAddress::random(),
             0,
-            Script::new(vec![], vec![]),
+            Script::new(vec![], vec![], vec![]),
             0,
             0,
             lbr_type_tag(),

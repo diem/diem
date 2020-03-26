@@ -1,0 +1,4 @@
+main<T>() {
+    return;
+}
+// check: NUMBER_OF_TYPE_ACTUALS_MISMATCH

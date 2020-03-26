@@ -237,6 +237,7 @@ fn create_and_initialize_main_accounts(
             interpreter_context,
             &txn_data,
             vec![],
+            vec![],
         )
         .expect("Failure initializing LBR");
 
@@ -248,6 +249,7 @@ fn create_and_initialize_main_accounts(
             gas_schedule,
             interpreter_context,
             &txn_data,
+            vec![],
             vec![
                 Value::address(association_addr),
                 Value::vector_u8(association_addr.to_vec()),
@@ -269,6 +271,7 @@ fn create_and_initialize_main_accounts(
             gas_schedule,
             interpreter_context,
             &txn_data,
+            vec![],
             vec![
                 Value::address(transaction_fee_address),
                 Value::vector_u8(transaction_fee_address.to_vec()),
@@ -289,6 +292,7 @@ fn create_and_initialize_main_accounts(
             interpreter_context,
             &txn_data,
             vec![],
+            vec![],
         )
         .expect("Failure initializing LibraTransactionTimeout");
 
@@ -300,6 +304,7 @@ fn create_and_initialize_main_accounts(
             interpreter_context,
             &txn_data,
             vec![],
+            vec![],
         )
         .expect("Failure initializing block metadata");
 
@@ -310,6 +315,7 @@ fn create_and_initialize_main_accounts(
             &gas_schedule,
             interpreter_context,
             &txn_data,
+            vec![],
             vec![initial_gas_schedule],
         )
         .expect("Failure initializing gas module");
@@ -321,6 +327,7 @@ fn create_and_initialize_main_accounts(
             &gas_schedule,
             interpreter_context,
             &txn_data,
+            vec![],
             vec![
                 Value::address(association_addr),
                 Value::vector_u8(association_addr.to_vec()),
@@ -337,6 +344,7 @@ fn create_and_initialize_main_accounts(
             &gas_schedule,
             interpreter_context,
             &txn_data,
+            vec![],
             vec![Value::vector_u8(genesis_auth_key)],
         )
         .expect("Failure rotating association key");
@@ -352,6 +360,7 @@ fn create_and_initialize_main_accounts(
             &gas_schedule,
             interpreter_context,
             &txn_data,
+            vec![],
             vec![
                 Value::u64(/* txn_sequence_number */ 0),
                 Value::u64(/* txn_gas_price */ 0),
@@ -369,6 +378,7 @@ fn create_and_initialize_main_accounts(
             &gas_schedule,
             interpreter_context,
             &txn_data,
+            vec![],
             vec![],
         )
         .expect("Failure initializing transaction fee");
@@ -412,6 +422,7 @@ fn create_and_initialize_validator_set(
             gas_schedule,
             interpreter_context,
             &txn_data,
+            vec![],
             vec![
                 Value::address(validator_set_address),
                 Value::vector_u8(validator_set_address.to_vec()),
@@ -431,6 +442,7 @@ fn create_and_initialize_validator_set(
             &gas_schedule,
             interpreter_context,
             &txn_data,
+            vec![],
             vec![],
         )
         .expect("Failure initializing validator set");
@@ -453,6 +465,7 @@ fn create_and_initialize_discovery_set(
             gas_schedule,
             interpreter_context,
             &txn_data,
+            vec![],
             vec![
                 Value::address(discovery_set_address),
                 Value::vector_u8(discovery_set_address.to_vec()),
@@ -472,6 +485,7 @@ fn create_and_initialize_discovery_set(
             &gas_schedule,
             interpreter_context,
             &txn_data,
+            vec![],
             vec![],
         )
         .expect("Failure initializing discovery set");
@@ -531,6 +545,7 @@ fn initialize_validators(
                 gas_schedule,
                 interpreter_context,
                 &txn_data,
+                vec![],
                 vec![
                     Value::address(validator_address),
                     Value::vector_u8(validator_authentication_key.prefix().to_vec()),
@@ -552,6 +567,7 @@ fn initialize_validators(
                 &gas_schedule,
                 interpreter_context,
                 &validator_txn_data,
+                vec![],
                 vec![
                     // consensus_pubkey
                     Value::vector_u8(validator_keys.consensus_public_key().to_bytes().to_vec()),
@@ -581,6 +597,7 @@ fn initialize_validators(
                 &gas_schedule,
                 interpreter_context,
                 &txn_data,
+                vec![],
                 vec![Value::address(validator_address)],
             )
             .unwrap_or_else(|_| panic!("Failure adding validator {:?}", validator_address));
@@ -605,6 +622,7 @@ fn setup_publishing_option(
             &gas_schedule,
             interpreter_context,
             &txn_data,
+            vec![],
             vec![Value::vector_u8(option_bytes)],
         )
         .expect("Failure setting up publishing option");
@@ -638,6 +656,7 @@ fn reconfigure(
             interpreter_context,
             &txn_data,
             vec![],
+            vec![],
         )
         .expect("Failure reconfiguring the system");
 
@@ -649,6 +668,7 @@ fn reconfigure(
             interpreter_context,
             &txn_data,
             vec![],
+            vec![],
         )
         .expect("Failure reconfiguring the system");
 
@@ -659,6 +679,7 @@ fn reconfigure(
             &gas_schedule,
             interpreter_context,
             &txn_data,
+            vec![],
             vec![],
         )
         .expect("Failure emitting discovery set change");

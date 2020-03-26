@@ -103,6 +103,7 @@ impl Account {
                 address: account_config::CORE_CODE_ADDRESS,
                 module: account_config::account_module_name().to_owned(),
                 name: account_config::account_struct_name().to_owned(),
+                is_resource: true,
                 ty_args: vec![],
                 layout: vec![
                     Type::Vector(Box::new(Type::U8)),
@@ -110,6 +111,7 @@ impl Account {
                         address: account_config::CORE_CODE_ADDRESS,
                         module: account_config::coin_module_name().to_owned(),
                         name: account_config::coin_struct_name().to_owned(),
+                        is_resource: true,
                         ty_args: vec![],
                         layout: vec![Type::U64],
                     })),

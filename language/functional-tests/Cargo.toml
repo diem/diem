@@ -25,3 +25,4 @@ aho-corasick = "0.7.10"
 termcolor = "1.0.5"
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
 mirai-annotations = "1.6.0"
+move-core-types = { path = "../move-core/types", version = "0.1.0" }

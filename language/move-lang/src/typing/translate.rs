@@ -8,7 +8,7 @@ use super::{
 use crate::{
     errors::Errors,
     expansion::ast::Fields,
-    naming::ast::{self as N, Type, TypeName_, Type_},
+    naming::ast::{self as N, BuiltinTypeName_, Type, TypeName_, Type_},
     parser::ast::{BinOp_, Field, FunctionName, ModuleIdent, StructName, UnaryOp_, Var},
     shared::{unique_map::UniqueMap, *},
     typing::ast as T,
@@ -52,7 +52,7 @@ fn module(
     structs
         .iter_mut()
         .for_each(|(name, s)| struct_def(context, name, s));
-    let functions = n_functions.map(|name, f| function(context, name, f));
+    let functions = n_functions.map(|name, f| function(context, name, f, false));
     assert!(context.constraints.is_empty());
     T::ModuleDefinition {
         is_source_module,
@@ -67,59 +67,45 @@ fn main_function(
     main: Option<(Address, FunctionName, N::Function)>,
 ) -> Option<(Address, FunctionName, T::Function)> {
     context.current_module = None;
-    main.map(|(addr, name, f)| (addr, name.clone(), main_function_(context, name, f)))
-}
-
-fn main_function_(context: &mut Context, name: FunctionName, f: N::Function) -> T::Function {
-    let loc = name.loc();
-    let fdef = function(context, name, f);
-    for (_, param_ty) in &fdef.signature.parameters {
-        check_primitive_main_arg(context, loc, param_ty);
-    }
-    subtype(
-        context,
-        loc,
-        || "Invalid main return type",
-        fdef.signature.return_type.clone(),
-        sp(loc, Type_::Unit),
-    );
-    fdef
+    main.map(|(addr, name, f)| (addr, name.clone(), function(context, name, f, true)))
 }
 
 fn check_primitive_main_arg(context: &mut Context, mloc: Loc, ty: &Type) {
-    let sp!(loc, ty_) = ty;
-    match (ty_.builtin_name(), ty_) {
-        (Some(_), Type_::Apply(_, _, ss)) => ss
-            .iter()
-            .for_each(|s| check_primitive_main_arg(context, mloc, s)),
-        _ => check_primitive_main_arg_error(
-            context,
-            mloc,
-            *loc,
-            core::error_format(ty, &Subst::empty()),
-        ),
-    }
-}
+    use BuiltinTypeName_ as BT;
 
-fn check_primitive_main_arg_error(context: &mut Context, mloc: Loc, tloc: Loc, tystr: String) {
+    let sp!(loc, ty_) = ty;
+    if let Some(bt) = ty_.builtin_name() {
+        match bt.value {
+            BT::U8 | BT::U64 | BT::U128 | BT::Bool | BT::Address => return,
+            BT::Vector => {
+                let vector_u8_ty = Type_::vector(*loc, Type_::u8(*loc));
+                if subtype_no_report(context, ty.clone(), vector_u8_ty).is_ok() {
+                    return;
+                }
+            }
+        }
+    }
+
     let mmsg = format!("Invalid parameter for '{}'", FunctionName::MAIN_NAME);
     let tmsg = format!(
         "Found: {}. But expected: {}",
-        tystr,
-        format_comma(
-            N::BuiltinTypeName_::all_names()
-                .iter()
-                .map(|b| format!("'{}'", b))
-        ),
+        core::error_format(ty, &Subst::empty()),
+        format_comma(&["u8", "u64", "u128", "bool", "address", "vector<u8>"]),
     );
-    context.error(vec![(mloc, mmsg), (tloc, tmsg)])
+    context.error(vec![(mloc, mmsg), (*loc, tmsg)])
 }
 
 //**************************************************************************************************
 // Functions
 //**************************************************************************************************
 
-fn function(context: &mut Context, name: FunctionName, f: N::Function) -> T::Function {
+fn function(
+    context: &mut Context,
+    name: FunctionName,
+    f: N::Function,
+    is_main: bool,
+) -> T::Function {
+    let loc = name.loc();
     context.current_function = Some(name);
     let N::Function {
         visibility,
@@ -131,6 +117,18 @@ fn function(context: &mut Context, name: FunctionName, f: N::Function) -> T::Fun
     context.reset_for_module_item();
 
     function_signature(context, &signature);
+    if is_main {
+        for (_, param_ty) in &signature.parameters {
+            check_primitive_main_arg(context, loc, param_ty);
+        }
+        subtype(
+            context,
+            loc,
+            || "Invalid main return type",
+            signature.return_type.clone(),
+            sp(loc, Type_::Unit),
+        );
+    }
     expand::function_signature(context, &mut signature);
 
     let body = function_body(context, &acquires, n_body);
@@ -274,6 +272,20 @@ fn typing_error<T: Into<String>, F: FnOnce() -> T>(
         ],
     };
     context.error(error);
+}
+
+fn subtype_no_report(
+    context: &mut Context,
+    pre_lhs: Type,
+    pre_rhs: Type,
+) -> Result<Type, core::TypingError> {
+    let subst = std::mem::replace(&mut context.subst, Subst::empty());
+    let lhs = core::ready_tvars(&subst, pre_lhs);
+    let rhs = core::ready_tvars(&subst, pre_rhs);
+    core::subtype(subst, &lhs, &rhs).map(|(next_subst, ty)| {
+        context.subst = next_subst;
+        ty
+    })
 }
 
 fn subtype<T: Into<String>, F: FnOnce() -> T>(

@@ -27,6 +27,7 @@ fn script_code_unverifiable() {
     let txn = sender.account().create_signed_txn_with_args(
         blob,
         vec![],
+        vec![],
         10,
         gas_costs::TXN_RESERVED,
         1,
@@ -96,6 +97,7 @@ fn script_none_existing_module_dep() {
     let txn = sender.account().create_signed_txn_with_args(
         blob,
         vec![],
+        vec![],
         10,
         gas_costs::TXN_RESERVED,
         1,
@@ -163,6 +165,7 @@ fn script_non_existing_function_dep() {
     script.serialize(&mut blob).expect("script must serialize");
     let txn = sender.account().create_signed_txn_with_args(
         blob,
+        vec![],
         vec![],
         10,
         gas_costs::TXN_RESERVED,
@@ -233,6 +236,7 @@ fn script_bad_sig_function_dep() {
     script.serialize(&mut blob).expect("script must serialize");
     let txn = sender.account().create_signed_txn_with_args(
         blob,
+        vec![],
         vec![],
         10,
         gas_costs::TXN_RESERVED,

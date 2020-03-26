@@ -281,13 +281,13 @@ fn gen_events(sender: AccountAddress) -> Vec<ContractEvent> {
 
 pub fn encode_mint_program(amount: u64) -> Script {
     let argument = TransactionArgument::U64(amount);
-    Script::new(vec![], vec![argument])
+    Script::new(vec![], vec![], vec![argument])
 }
 
 pub fn encode_transfer_program(recipient: AccountAddress, amount: u64) -> Script {
     let argument1 = TransactionArgument::Address(recipient);
     let argument2 = TransactionArgument::U64(amount);
-    Script::new(vec![], vec![argument1, argument2])
+    Script::new(vec![], vec![], vec![argument1, argument2])
 }
 
 pub fn encode_mint_transaction(sender: AccountAddress, amount: u64) -> Transaction {

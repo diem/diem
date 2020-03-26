@@ -110,6 +110,7 @@ fn verify_simple_payment() {
     // Create a new transaction that has the exact right sequence number.
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
+        vec![],
         args.clone(),
         10, // this should be programmable but for now is 1 more than the setup
         100_000,
@@ -122,6 +123,7 @@ fn verify_simple_payment() {
     let txn = sender.account().create_signed_txn_with_args_and_sender(
         *receiver.address(),
         p2p_script.clone(),
+        vec![],
         args.clone(),
         10, // this should be programmable but for now is 1 more than the setup
         100_000,
@@ -137,6 +139,7 @@ fn verify_simple_payment() {
     // Create a new transaction that has a old sequence number.
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
+        vec![],
         args.clone(),
         1,
         100_000,
@@ -152,6 +155,7 @@ fn verify_simple_payment() {
     // Create a new transaction that has a too new sequence number.
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
+        vec![],
         args.clone(),
         11,
         100_000,
@@ -169,6 +173,7 @@ fn verify_simple_payment() {
     // Create a new transaction that doesn't have enough balance to pay for gas.
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
+        vec![],
         args.clone(),
         10,
         1_000_000,
@@ -190,6 +195,7 @@ fn verify_simple_payment() {
     let bogus_account = AccountData::new(100_000, 10);
     let txn = bogus_account.account().create_signed_txn_with_args(
         p2p_script.clone(),
+        vec![],
         args.clone(),
         10,
         10_000,
@@ -213,6 +219,7 @@ fn verify_simple_payment() {
     // that we are doing so in the specified order.
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
+        vec![],
         args.clone(),
         10,
         1_000_000,
@@ -243,6 +250,7 @@ fn verify_simple_payment() {
 
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
+        vec![],
         args.clone(),
         10,
         1,
@@ -257,6 +265,7 @@ fn verify_simple_payment() {
 
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
+        vec![],
         args.clone(),
         10,
         gas_schedule::MIN_TRANSACTION_GAS_UNITS.get() - 1,
@@ -271,6 +280,7 @@ fn verify_simple_payment() {
 
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
+        vec![],
         args,
         10,
         gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
@@ -285,6 +295,7 @@ fn verify_simple_payment() {
 
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
+        vec![],
         vec![TransactionArgument::U64(42); MAX_TRANSACTION_SIZE_IN_BYTES],
         10,
         gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
@@ -304,6 +315,7 @@ fn verify_simple_payment() {
 
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
+        vec![],
         args,
         10,
         100_000,
@@ -314,13 +326,14 @@ fn verify_simple_payment() {
         executor.execute_transaction(txn).status(),
         &TransactionStatus::Keep(
             VMStatus::new(StatusCode::TYPE_MISMATCH)
-                .with_message("Actual Type Mismatch".to_string())
+                .with_message("argument length mismatch: expected 3 got 2".to_string())
         )
     );
 
     // Create a new transaction that has no argument.
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script,
+        vec![],
         vec![],
         10,
         100_000,
@@ -332,7 +345,7 @@ fn verify_simple_payment() {
         executor.execute_transaction(txn).status(),
         &TransactionStatus::Keep(
             VMStatus::new(StatusCode::TYPE_MISMATCH)
-                .with_message("Actual Type Mismatch".to_string())
+                .with_message("argument length mismatch: expected 3 got 0".to_string())
         )
     );
 }
@@ -349,6 +362,7 @@ pub fn test_whitelist() {
     let random_script = vec![];
     let txn = sender.account().create_signed_txn_with_args(
         random_script,
+        vec![],
         vec![],
         10,
         100_000,
@@ -377,6 +391,7 @@ pub fn test_arbitrary_script_execution() {
     let random_script = vec![];
     let txn = sender.account().create_signed_txn_with_args(
         random_script,
+        vec![],
         vec![],
         10,
         100_000,
@@ -581,7 +596,7 @@ fn test_dependency_fails_verification() {
         .into_script_blob("file_name", code)
         .expect("Failed to compile");
     let txn = sender.account().create_user_txn(
-        TransactionPayload::Script(Script::new(script, vec![])),
+        TransactionPayload::Script(Script::new(script, vec![], vec![])),
         10,
         100_000,
         1,
