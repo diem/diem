@@ -953,6 +953,7 @@ fn test_e2e_modify_publishing_option() {
         .execute_script(&["execute", "0", &script_compiled_path[..], "10", "0x0"])
         .unwrap();
 
+    // Make sure the transaction is executed by checking if the sequence is bumped to 1.
     assert_eq!(
         client_proxy
             .get_sequence_number(&["sequence", "0", "true"])
@@ -961,7 +962,7 @@ fn test_e2e_modify_publishing_option() {
     );
 
     client_proxy
-        .disallow_custom_script(&["disallow_custom_script"], true)
+        .disable_custom_script(&["disallow_custom_script"], true)
         .unwrap();
 
     // TODO: Currently VMValidator didn't restart after reconfiguration. We will manually restart
@@ -974,7 +975,7 @@ fn test_e2e_modify_publishing_option() {
         .add_node(peer_to_restart, RoleType::Validator, false)
         .is_ok());
 
-    // mint another 10 coins after remove node 0
+    // mint another 10 coins after restart
     client_proxy
         .mint_coins(&["mintb", "0", "10"], true)
         .unwrap();
@@ -984,9 +985,14 @@ fn test_e2e_modify_publishing_option() {
     );
 
     // Now that publishing option was changed to locked, this transaction will be rejected.
-    client_proxy
-        .execute_script(&["execute", "0", &script_compiled_path[..], "10", "0x0"])
-        .unwrap_err();
+    assert!(format!(
+        "{:?}",
+        client_proxy
+            .execute_script(&["execute", "0", &script_compiled_path[..], "10", "0x0"])
+            .unwrap_err()
+            .root_cause()
+    )
+    .contains("UNKNOWN_SCRIPT"));
 
     assert_eq!(
         client_proxy

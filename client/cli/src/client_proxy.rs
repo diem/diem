@@ -332,7 +332,7 @@ impl ClientProxy {
     }
 
     /// Allow executing arbitrary script in the network.
-    pub fn allow_custom_script(
+    pub fn enable_custom_script(
         &mut self,
         space_delim_strings: &[&str],
         is_blocking: bool,
@@ -352,8 +352,8 @@ impl ClientProxy {
         }
     }
 
-    /// Only allow executing predefined script in the network.
-    pub fn disallow_custom_script(
+    /// Only allow executing predefined script in the move standard library in the network.
+    pub fn disable_custom_script(
         &mut self,
         space_delim_strings: &[&str],
         is_blocking: bool,
@@ -478,7 +478,6 @@ impl ClientProxy {
                 }
                 Err(e) => {
                     println!("Response with error: {:?}", e);
-                    break;
                 }
                 _ => {
                     print!(".");

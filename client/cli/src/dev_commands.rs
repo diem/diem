@@ -135,7 +135,7 @@ impl Command for DevCommandAllowCustomScript {
             println!("Invalid number of arguments");
             return;
         }
-        match client.allow_custom_script(params, true) {
+        match client.enable_custom_script(params, true) {
             Ok(_) => println!("Successfully finished execution"),
             Err(e) => println!("{}", e),
         }
@@ -162,7 +162,7 @@ impl Command for DevCommandDisallowCustomScript {
             println!("Invalid number of arguments");
             return;
         }
-        match client.disallow_custom_script(params, true) {
+        match client.disable_custom_script(params, true) {
             Ok(_) => println!("Successfully finished execution"),
             Err(e) => println!("{}", e),
         }
