@@ -6,6 +6,7 @@ use consensus_types::{
     block::Block,
     common::{Author, Round},
 };
+use libra_logger::prelude::*;
 use libra_types::block_metadata::{new_block_event_key, NewBlockEvent};
 use libradb::LibraDBTrait;
 use serde::export::PhantomData;
@@ -37,24 +38,23 @@ impl LibraDBBackend {
         }
     }
 
-    fn refresh_window(&self, target_round: Round) {
+    fn refresh_window(&self, target_round: Round) -> anyhow::Result<()> {
         // assumes target round is not too far from latest commit
         let buffer = 10;
-        let events = self
-            .libra_db
-            .get_events(
-                &new_block_event_key(),
-                u64::max_value(),
-                self.window_size as u64 + buffer,
-            )
-            .unwrap();
-        let events: Vec<_> = events
-            .into_iter()
-            .map(|(v, e)| (v, lcs::from_bytes::<NewBlockEvent>(e.event_data()).unwrap()))
-            .filter(|(_, e)| e.round() <= target_round)
-            .take(self.window_size)
-            .collect();
-        *self.window.lock().unwrap() = events;
+        let events = self.libra_db.get_events(
+            &new_block_event_key(),
+            u64::max_value(),
+            self.window_size as u64 + buffer,
+        )?;
+        let mut result = vec![];
+        for (v, e) in events {
+            let e = lcs::from_bytes::<NewBlockEvent>(e.event_data())?;
+            if e.round() <= target_round && result.len() < self.window_size {
+                result.push((v, e));
+            }
+        }
+        *self.window.lock().unwrap() = result;
+        Ok(())
     }
 }
 
@@ -69,9 +69,12 @@ impl MetadataBackend for LibraDBBackend {
             .map(|(v, e)| (*v, e.round()))
             .unwrap_or((0, 0));
         if !(known_round == target_round
-            || known_version == self.libra_db.get_latest_version().unwrap())
+            || known_version == self.libra_db.get_latest_version().unwrap_or(0))
         {
-            self.refresh_window(target_round);
+            if let Err(e) = self.refresh_window(target_round) {
+                error!("[leader reputation] Fail to refresh window: {:?}", e);
+                return vec![];
+            }
         }
         self.window
             .lock()
