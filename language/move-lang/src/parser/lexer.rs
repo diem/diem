@@ -238,7 +238,7 @@ fn find_token(file: &'static str, text: &str, start_offset: usize) -> Result<(To
     };
     let (tok, len) = match c {
         '0'..='9' => {
-            if (text.starts_with("0x") || text.starts_with("0X")) && text.len() > 2 {
+            if text.starts_with("0x") && text.len() > 2 {
                 let hex_len = get_hex_digits_len(&text[2..]);
                 if hex_len == 0 {
                     // Fall back to treating this as a "0" token.
