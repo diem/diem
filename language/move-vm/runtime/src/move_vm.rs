@@ -45,6 +45,7 @@ impl MoveVM {
         gas_schedule: &CostTable,
         chain_state: &mut S,
         txn_data: &TransactionMetadata,
+        ty_args: Vec<Type>,
         args: Vec<Value>,
     ) -> VMResult<()> {
         self.0.rent(|runtime| {
@@ -54,6 +55,7 @@ impl MoveVM {
                 gas_schedule,
                 module,
                 function_name,
+                ty_args,
                 args,
             )
         })
@@ -66,10 +68,11 @@ impl MoveVM {
         gas_schedule: &CostTable,
         chain_state: &mut S,
         txn_data: &TransactionMetadata,
+        ty_args: Vec<Type>,
         args: Vec<Value>,
     ) -> VMResult<()> {
         self.0.rent(|runtime| {
-            runtime.execute_script(chain_state, txn_data, gas_schedule, script, args)
+            runtime.execute_script(chain_state, txn_data, gas_schedule, script, ty_args, args)
         })
     }
 

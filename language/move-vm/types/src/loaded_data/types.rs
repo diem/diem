@@ -20,6 +20,7 @@ pub struct StructType {
     pub address: AccountAddress,
     pub module: Identifier,
     pub name: Identifier,
+    pub is_resource: bool,
     pub ty_args: Vec<Type>,
     pub layout: Vec<Type>,
 }
@@ -52,6 +53,7 @@ impl StructType {
             address: self.address,
             module: self.module,
             name: self.name,
+            is_resource: self.is_resource,
             ty_args: self
                 .ty_args
                 .into_iter()
@@ -132,6 +134,23 @@ impl Type {
 
         Ok(res)
     }
+
+    pub fn is_resource(&self) -> VMResult<bool> {
+        use Type::*;
+
+        match self {
+            Bool | U8 | U64 | U128 | Address | Reference(_) | MutableReference(_) => Ok(false),
+            Vector(ty) => ty.is_resource(),
+            Struct(struct_ty) => Ok(struct_ty.is_resource),
+            // In the VM, concrete type arguments are required for type resolution and the only place
+            // uninstantiated type parameters can show up is the cache.
+            //
+            // Therefore `is_resource` should only be called upon types outside the cache, in which
+            // case it will always succeed. (Internal invariant violation otherwise.)
+            TyParam(_) => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                .with_message("cannot check if a type parameter is a resource or not".to_string())),
+        }
+    }
 }
 
 #[cfg(feature = "fuzzing")]
@@ -165,19 +184,21 @@ pub mod prop {
                         any::<AccountAddress>(),
                         any::<Identifier>(),
                         any::<Identifier>(),
+                        any::<bool>(),
                         vec(inner.clone(), 0..4),
                         vec(inner, 0..10)
                     )
                         .prop_map(
-                            |(address, module, name, ty_args, layout)| Struct(Box::new(
-                                StructType {
+                            |(address, module, name, is_resource, ty_args, layout)| Struct(
+                                Box::new(StructType {
                                     address,
                                     module,
                                     name,
+                                    is_resource,
                                     ty_args,
                                     layout,
-                                }
-                            ))
+                                })
+                            )
                         ),
                 ]
             })

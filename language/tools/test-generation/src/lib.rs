@@ -25,7 +25,7 @@ use libra_logger::{debug, error, info};
 use libra_state_view::StateView;
 use libra_types::{account_address::AccountAddress, vm_error::StatusCode};
 use libra_vm::LibraVM;
-use move_vm_types::values::Value;
+use move_vm_types::{loaded_data::types::Type, values::Value};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{fs, io::Write, panic, thread};
 use utils::module_generation::generate_module;
@@ -70,7 +70,13 @@ fn run_vm(module: VerifiedModule) -> VMResult<()> {
         .collect();
 
     let executor = FakeExecutor::from_genesis_file();
-    execute_function_in_module(executor.get_state_view(), module, entry_idx, main_args)
+    execute_function_in_module(
+        executor.get_state_view(),
+        module,
+        entry_idx,
+        vec![],
+        main_args,
+    )
 }
 
 /// Execute the first function in a module
@@ -78,6 +84,7 @@ fn execute_function_in_module(
     state_view: &dyn StateView,
     module: VerifiedModule,
     idx: FunctionDefinitionIndex,
+    ty_args: Vec<Type>,
     args: Vec<Value>,
 ) -> VMResult<()> {
     let module_id = module.as_inner().self_id();
@@ -103,6 +110,7 @@ fn execute_function_in_module(
                 gas_schedule,
                 &mut txn_context,
                 &txn_data,
+                ty_args,
                 args,
             )
         })

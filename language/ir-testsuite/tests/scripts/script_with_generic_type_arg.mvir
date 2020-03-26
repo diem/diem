@@ -1,0 +1,5 @@
+//! type-args: 0x0::LibraAccount::Balance<0x0::LibraAccount::Balance<bool>>
+main<T>() {
+    return;
+}
+// check: EXECUTED

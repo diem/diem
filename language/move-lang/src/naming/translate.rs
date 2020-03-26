@@ -353,16 +353,6 @@ fn main_function(
         None => None,
         Some((unused_aliases, addr, name, f)) => {
             check_unused_aliases(context, unused_aliases);
-            if let Some((tparam, _)) = f.signature.type_parameters.get(0) {
-                context.error(vec![(
-                    tparam.loc,
-                    format!(
-                        "Invalid '{}' declaration. Found type parameter \
-                         '{}'. The main function cannot have type parameters",
-                        &name, tparam
-                    ),
-                )]);
-            }
             Some((addr, name.clone(), function(context, name, f)))
         }
     }

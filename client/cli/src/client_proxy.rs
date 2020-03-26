@@ -767,9 +767,10 @@ impl ClientProxy {
             .iter()
             .filter_map(|arg| parse_as_transaction_argument_for_client(arg).ok())
             .collect();
+        // TODO: support type arguments in the client.
         self.submit_program(
             space_delim_strings,
-            TransactionPayload::Script(Script::new(script_bytes, arguments)),
+            TransactionPayload::Script(Script::new(script_bytes, vec![], arguments)),
         )
     }
 

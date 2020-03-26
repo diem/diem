@@ -1,0 +1,5 @@
+//! type-args: u64
+main() {
+    return;
+}
+// check: NUMBER_OF_TYPE_ACTUALS_MISMATCH

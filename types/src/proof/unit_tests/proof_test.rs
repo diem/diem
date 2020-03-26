@@ -342,7 +342,7 @@ fn test_verify_account_state_and_event() {
         RawTransaction::new_script(
             AccountAddress::from_public_key(&pubkey),
             /* sequence_number = */ 0,
-            Script::new(vec![], vec![]),
+            Script::new(vec![], vec![], vec![]),
             /* max_gas_amount = */ 0,
             /* gas_unit_price = */ 0,
             /* gas_specifier = */ lbr_type_tag(),

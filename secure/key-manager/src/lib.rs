@@ -241,6 +241,7 @@ pub fn build_rotation_transaction(
 ) -> Transaction {
     let script = Script::new(
         libra_transaction_scripts::ROTATE_CONSENSUS_PUBKEY_TXN.clone(),
+        vec![],
         vec![TransactionArgument::U8Vector(new_key.to_bytes().to_vec())],
     );
     let raw_txn = RawTransaction::new_script(

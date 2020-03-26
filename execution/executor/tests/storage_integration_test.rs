@@ -284,8 +284,8 @@ fn test_change_publishing_option_to_custom() {
         )),
     );
 
-    let script1 = Script::new(vec![], vec![]);
-    let script2 = Script::new(vec![1], vec![]);
+    let script1 = Script::new(vec![], vec![], vec![]);
+    let script2 = Script::new(vec![1], vec![], vec![]);
 
     // Create a transaction that is not allowed with default publishing option and make sure it is
     // rejected.
@@ -516,8 +516,8 @@ fn test_extend_whitelist() {
         )),
     );
 
-    let script1 = Script::new(vec![], vec![]);
-    let script2 = Script::new(vec![1], vec![]);
+    let script1 = Script::new(vec![], vec![], vec![]);
+    let script2 = Script::new(vec![1], vec![], vec![]);
 
     // Create a transaction that is not allowed with default publishing option and make sure it is
     // rejected.

@@ -518,6 +518,7 @@ fn test_same_module_struct_resolution() {
         address: AccountAddress::from_hex_literal("0x0").unwrap(),
         module: Identifier::new("M1").unwrap(),
         name: Identifier::new("X").unwrap(),
+        is_resource: false,
         ty_args: vec![],
         layout: vec![Type::Bool],
     };
@@ -526,6 +527,7 @@ fn test_same_module_struct_resolution() {
         address: AccountAddress::from_hex_literal("0x0").unwrap(),
         module: Identifier::new("M1").unwrap(),
         name: Identifier::new("T").unwrap(),
+        is_resource: false,
         ty_args: vec![],
         layout: vec![Type::U64, Type::Struct(Box::new(struct_x_expected_ty))],
     };
@@ -580,6 +582,7 @@ fn test_multi_module_struct_resolution() {
         address: AccountAddress::from_hex_literal("0x0").unwrap(),
         module: Identifier::new("M1").unwrap(),
         name: Identifier::new("X").unwrap(),
+        is_resource: false,
         ty_args: vec![],
         layout: vec![Type::Bool],
     };
@@ -587,6 +590,7 @@ fn test_multi_module_struct_resolution() {
         address: AccountAddress::from_hex_literal("0x0").unwrap(),
         module: Identifier::new("M2").unwrap(),
         name: Identifier::new("T").unwrap(),
+        is_resource: false,
         ty_args: vec![],
         layout: vec![Type::U64, Type::Struct(Box::new(struct_x_expected_ty))],
     };

@@ -20,7 +20,6 @@ use libra_types::{
     account_config,
     contract_event::ContractEvent,
     event::EventKey,
-    language_storage::ModuleId,
     transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
     vm_error::{StatusCode, StatusType, VMStatus},
 };
@@ -70,35 +69,6 @@ pub(crate) struct Interpreter<'txn> {
 }
 
 impl<'txn> Interpreter<'txn> {
-    /// Execute a function.
-    /// `module` is an identifier for the name the module is stored in. `function_name` is the name
-    /// of the function. If such function is found, the VM will execute this function with arguments
-    /// `args`. The return value will be placed on the top of the value stack and abort if an error
-    /// occurs.
-    // REVIEW: this should probably disappear or at the very least only one between
-    // `execute_function` and `entrypoint` should exist. It's a bit messy at
-    // the moment given tooling and testing. Once we remove Program transactions and we
-    // clean up the loader we will have a better time cleaning this up.
-    pub(crate) fn execute_function(
-        context: &mut dyn InterpreterContext,
-        runtime: &'txn VMRuntime<'_>,
-        txn_data: &'txn TransactionMetadata,
-        gas_schedule: &'txn CostTable,
-        module: &ModuleId,
-        function_name: &IdentStr,
-        args: Vec<Value>,
-    ) -> VMResult<()> {
-        let mut interp = Self::new(txn_data, gas_schedule);
-        let loaded_module = runtime.get_loaded_module(module, context)?;
-        let func_idx = loaded_module
-            .function_defs_table
-            .get(function_name)
-            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?;
-        let func = FunctionRef::new(loaded_module, *func_idx);
-
-        interp.execute(runtime, context, func, args)
-    }
-
     /// Entrypoint into the interpreter. All external calls need to be routed through this
     /// function.
     pub(crate) fn entrypoint(
@@ -107,6 +77,7 @@ impl<'txn> Interpreter<'txn> {
         txn_data: &'txn TransactionMetadata,
         gas_schedule: &'txn CostTable,
         func: FunctionRef<'txn>,
+        ty_args: Vec<Type>,
         args: Vec<Value>,
     ) -> VMResult<()> {
         // We charge an intrinsic amount of gas based upon the size of the transaction submitted
@@ -121,7 +92,7 @@ impl<'txn> Interpreter<'txn> {
         // setup of the function.
         let mut interp = Self::new(txn_data, gas_schedule);
         gas!(consume: context, calculate_intrinsic_gas(txn_size))?;
-        interp.execute(runtime, context, func, args)
+        interp.execute(runtime, context, func, ty_args, args)
     }
 
     /// Create a new instance of an `Interpreter` in the context of a transaction with a
@@ -141,11 +112,12 @@ impl<'txn> Interpreter<'txn> {
         runtime: &'txn VMRuntime<'_>,
         context: &mut dyn InterpreterContext,
         function: FunctionRef<'txn>,
+        ty_args: Vec<Type>,
         args: Vec<Value>,
     ) -> VMResult<()> {
         // No unwinding of the call stack and value stack need to be done here -- the context will
         // take care of that.
-        self.execute_main(runtime, context, function, args, 0)
+        self.execute_main(runtime, context, function, ty_args, args, 0)
     }
 
     /// Main loop for the execution of a function.
@@ -161,6 +133,7 @@ impl<'txn> Interpreter<'txn> {
         runtime: &'txn VMRuntime<'_>,
         context: &mut dyn InterpreterContext,
         function: FunctionRef<'txn>,
+        ty_args: Vec<Type>,
         args: Vec<Value>,
         create_account_marker: usize,
     ) -> VMResult<()> {
@@ -169,7 +142,7 @@ impl<'txn> Interpreter<'txn> {
         for (i, value) in args.into_iter().enumerate() {
             locals.store_loc(i, value)?;
         }
-        let mut current_frame = Frame::new(function, vec![], locals);
+        let mut current_frame = Frame::new(function, ty_args, locals);
         loop {
             let code = current_frame.code_definition();
             let exit_code = self

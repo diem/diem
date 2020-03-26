@@ -70,7 +70,7 @@ impl TestTransaction {
         let raw_txn = RawTransaction::new_script(
             TestTransaction::get_address(self.address),
             self.sequence_number,
-            Script::new(vec![], vec![]),
+            Script::new(vec![], vec![], vec![]),
             max_gas_amount,
             self.gas_price,
             lbr_type_tag(),

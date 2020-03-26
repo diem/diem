@@ -171,6 +171,8 @@ impl<'txn> RandomInhabitor<'txn> {
                         address: AccountAddress::from_hex_literal("0x0").unwrap(),
                         module: Identifier::new("unimplemented").unwrap(),
                         name: Identifier::new("unimplemented").unwrap(),
+                        // TODO: this is probably incorrect. Fix it.
+                        is_resource: false,
                         ty_args: vec![],
                         layout: layouts,
                     })),
