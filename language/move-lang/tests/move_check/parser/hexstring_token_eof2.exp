@@ -3,6 +3,6 @@ error:
    ┌── tests/move_check/parser/hexstring_token_eof2.move:3:9 ───
    │
  3 │         x"abcd
-   │         ^^^^^^ Missing closing quote (") after hex string
+   │         ^^^^^^ Missing closing quote (") after byte string
    │
 

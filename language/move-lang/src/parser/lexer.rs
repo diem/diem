@@ -12,7 +12,7 @@ pub enum Tok {
     U8Value,
     U64Value,
     U128Value,
-    HexStringValue,
+    ByteStringValue,
     NameValue,
     Exclaim,
     ExclaimEqual,
@@ -86,7 +86,7 @@ impl fmt::Display for Tok {
             U8Value => "[U8]",
             U64Value => "[U64]",
             U128Value => "[U128]",
-            HexStringValue => "[HexString]",
+            ByteStringValue => "[ByteString]",
             NameValue => "[Name]",
             Exclaim => "!",
             ExclaimEqual => "!=",
@@ -251,26 +251,18 @@ fn find_token(file: &'static str, text: &str, start_offset: usize) -> Result<(To
             }
         }
         'A'..='Z' | 'a'..='z' | '_' => {
-            if text.starts_with("x\"") && text.len() > 2 {
-                let hex_len = get_hex_digits_len(&text[2..]);
-                if hex_len == 0 {
-                    let loc = make_loc(file, start_offset + 2, start_offset + 2);
+            if text.starts_with("x\"") {
+                // Search the current source line for a closing quote.
+                let line = text.lines().next().unwrap();
+                let len = line[2..].find('"').unwrap_or_else(|| line.len() - 2);
+                if line.len() == 2 || !&text[(2 + len)..].starts_with('"') {
+                    let loc = make_loc(file, start_offset, start_offset + 2 + len);
                     return Err(vec![(
                         loc,
-                        format!(
-                            "Invalid hexadecimal value: '{}'",
-                            &text[2..].chars().next().unwrap()
-                        ),
+                        "Missing closing quote (\") after byte string".to_string(),
                     )]);
                 }
-                if text.len() <= 2 + hex_len || !&text[(2 + hex_len)..].starts_with('"') {
-                    let loc = make_loc(file, start_offset, start_offset + 2 + hex_len);
-                    return Err(vec![(
-                        loc,
-                        "Missing closing quote (\") after hex string".to_string(),
-                    )]);
-                }
-                (Tok::HexStringValue, 2 + hex_len + 1)
+                (Tok::ByteStringValue, 2 + len + 1)
             } else {
                 let len = get_name_len(&text);
                 (get_name_token(&text[..len]), len)
@@ -398,12 +390,11 @@ fn get_decimal_number(text: &str) -> (Tok, usize) {
 
 // Return the length of the substring containing characters in [0-9a-fA-F].
 fn get_hex_digits_len(text: &str) -> usize {
-    text.chars()
-        .position(|c| match c {
-            'a'..='f' | 'A'..='F' | '0'..='9' => false,
-            _ => true,
-        })
-        .unwrap_or_else(|| text.len())
+    text.find(|c| match c {
+        'a'..='f' | 'A'..='F' | '0'..='9' => false,
+        _ => true,
+    })
+    .unwrap_or_else(|| text.len())
 }
 
 fn get_name_token(name: &str) -> Tok {
