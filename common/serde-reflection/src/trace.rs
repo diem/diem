@@ -105,7 +105,7 @@ impl Tracer {
         }
     }
 
-    /// Same as `trace` for seeded deserialization.
+    /// Same as `trace_type` for seeded deserialization.
     pub fn trace_type_with_seed<'de, T>(&'de mut self, seed: T) -> Result<Format>
     where
         T: DeserializeSeed<'de> + Clone,
@@ -165,9 +165,9 @@ impl Tracer {
     /// Finish tracing and recover a map of normalized formats.
     /// Returns an error if we detect incompletely traced types.
     /// This may happen in a few of cases:
-    /// * We traced serialization only and the sampled values missed some variant, the content
+    /// * We traced serialization of user-provided values but we are still missing the content
     ///   of an option type, the content of a sequence type, the key or the value of a dictionary type.
-    /// * We trace deserialization of some types but not every enum type was explicitly traced.
+    /// * We traced deserialization of an enum type but we detect that some enum variants are still missing.
     pub fn registry(self) -> Result<Registry> {
         let mut registry = self.registry;
         for (name, format) in registry.iter_mut() {
@@ -186,16 +186,14 @@ impl Tracer {
 
     /// Same as registry but always return a value, even if we detected issues.
     /// This should only be use for debugging.
-    pub fn registry_unchecked(self) -> Result<Registry> {
+    pub fn registry_unchecked(self) -> Registry {
         let mut registry = self.registry;
         for format in registry.values_mut() {
             format.normalize().unwrap_or(());
         }
-        Ok(registry)
+        registry
     }
-}
 
-impl Tracer {
     pub(crate) fn record(
         &mut self,
         name: &'static str,

@@ -21,8 +21,8 @@
 //! #     {
 //! #         // Make sure to wrap our value in a container with the same name
 //! #         // as the original type.
-//! #         # [derive(Deserialize)]
-//! #         # [serde(rename = "Name")]
+//! #         #[derive(Deserialize)]
+//! #         #[serde(rename = "Name")]
 //! #         struct InternalValue(String);
 //! #
 //! #         let value = InternalValue::deserialize(deserializer)?.0;
