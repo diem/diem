@@ -187,7 +187,15 @@ impl<T: Payload> BlockStore<T> {
         );
         let mut quorum_certs = vec![];
         quorum_certs.push(highest_commit_cert.clone());
-        quorum_certs.extend(blocks.iter().map(|block| block.quorum_cert().clone()));
+        quorum_certs.extend(
+            blocks
+                .iter()
+                .take(2)
+                .map(|block| block.quorum_cert().clone()),
+        );
+        for (i, block) in blocks.iter().enumerate() {
+            assert_eq!(block.id(), quorum_certs[i].certified_block().id());
+        }
 
         // If a node restarts in the middle of state synchronization, it is going to try to catch up
         // to the stored quorum certs as the new root.
