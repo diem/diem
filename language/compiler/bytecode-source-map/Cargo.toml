@@ -13,7 +13,7 @@ move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 move-ir-types = { path = "../../move-ir/types", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
 codespan = "0.8.0"
-codespan-reporting = "0.8.0"
+codespan-reporting = "0.9.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
