@@ -56,8 +56,8 @@ variable "num_validators" {
 }
 
 variable "num_validators_in_genesis" {
-  default     = 4
-  description = "Number of validator nodes to include in genesis blob"
+  default     = 0
+  description = "Number of validator nodes to include in genesis blob, 0 will default to using num_validators"
 }
 
 # This allows you to use a override number of validators for config generation
