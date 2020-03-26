@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Policy, Storage, Value};
+use libra_secure_time::{RealTimeService, TimeService};
 use libra_temppath::TempPath;
 use std::{
     collections::HashMap,
@@ -17,13 +18,27 @@ use std::{
 /// must make copies of all key material which violates the Libra code base. It violates it because
 /// the anticipation is that data stores would securely handle key material. This should not be used
 /// in production.
-pub struct OnDiskStorage {
+pub type OnDiskStorage = OnDiskStorageInternal<RealTimeService>;
+
+pub struct OnDiskStorageInternal<T> {
     file_path: PathBuf,
     temp_path: TempPath,
+    time_service: T,
 }
 
-impl OnDiskStorage {
+impl OnDiskStorageInternal<RealTimeService> {
     pub fn new(file_path: PathBuf) -> Self {
+        Self::new_with_time_service(file_path, RealTimeService::new())
+    }
+
+    /// Public convenience function to return a new OnDiskStorage based Storage.
+    pub fn new_storage(path_buf: PathBuf) -> Box<dyn Storage> {
+        Box::new(Self::new(path_buf))
+    }
+}
+
+impl<T: TimeService> OnDiskStorageInternal<T> {
+    fn new_with_time_service(file_path: PathBuf, time_service: T) -> Self {
         if !file_path.exists() {
             File::create(&file_path).expect("Unable to create storage");
         }
@@ -37,6 +52,7 @@ impl OnDiskStorage {
         Self {
             file_path,
             temp_path: TempPath::new_with_temp_dir(file_dir),
+            time_service,
         }
     }
 
@@ -55,14 +71,9 @@ impl OnDiskStorage {
         fs::rename(&self.temp_path, &self.file_path)?;
         Ok(())
     }
-
-    /// Public convenience function to return a new OnDiskStorage based Storage.
-    pub fn new_storage(path_buf: PathBuf) -> Box<dyn Storage> {
-        Box::new(OnDiskStorage::new(path_buf))
-    }
 }
 
-impl KVStorage for OnDiskStorage {
+impl<T: Send + Sync + TimeService> KVStorage for OnDiskStorageInternal<T> {
     fn available(&self) -> bool {
         true
     }
@@ -72,7 +83,10 @@ impl KVStorage for OnDiskStorage {
         if data.contains_key(key) {
             return Err(Error::KeyAlreadyExists(key.to_string()));
         }
-        data.insert(key.to_string(), GetResponse::new(value));
+        data.insert(
+            key.to_string(),
+            GetResponse::new(value, self.time_service.now()),
+        );
         self.write(&data)
     }
 
@@ -87,7 +101,10 @@ impl KVStorage for OnDiskStorage {
         if !data.contains_key(key) {
             return Err(Error::KeyNotSet(key.to_string()));
         }
-        data.insert(key.to_string(), GetResponse::new(value));
+        data.insert(
+            key.to_string(),
+            GetResponse::new(value, self.time_service.now()),
+        );
         self.write(&data)
     }
 
@@ -96,4 +113,4 @@ impl KVStorage for OnDiskStorage {
     }
 }
 
-impl CryptoKVStorage for OnDiskStorage {}
+impl<T: TimeService + Send + Sync> CryptoKVStorage for OnDiskStorageInternal<T> {}
