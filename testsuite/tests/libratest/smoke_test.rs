@@ -33,7 +33,6 @@ impl TestEnvironment {
     fn new(num_validators: usize) -> Self {
         ::libra_logger::Logger::new().init();
         let mut template = NodeConfig::default();
-        template.state_sync.chunk_limit = 2;
         template.test = Some(TestConfig::open_module());
 
         let validator_swarm = LibraSwarm::configure_swarm(
