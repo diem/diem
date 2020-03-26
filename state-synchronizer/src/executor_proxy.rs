@@ -7,11 +7,18 @@ use executor::Executor;
 use executor_types::ExecutedTrees;
 use libra_config::config::NodeConfig;
 use libra_types::{
-    event_subscription::EventSubscription, ledger_info::LedgerInfoWithSignatures,
-    transaction::TransactionListWithProof, validator_change::ValidatorChangeProof,
+    contract_event::ContractEvent,
+    event_subscription::EventSubscription,
+    ledger_info::LedgerInfoWithSignatures,
+    on_chain_config::{ConfigID, OnChainConfigPayload, ON_CHAIN_CONFIG_REGISTRY},
+    transaction::TransactionListWithProof,
+    validator_change::ValidatorChangeProof,
 };
 use libra_vm::LibraVM;
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{Arc, Mutex},
+};
 use storage_client::{StorageRead, StorageReadServiceClient};
 
 /// Proxies interactions with execution and storage for state synchronization
@@ -27,7 +34,6 @@ pub trait ExecutorProxyTrait: Sync + Send {
         verified_target_li: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
         synced_trees: &mut ExecutedTrees,
-        reconfig_event_subscriptions: &mut [Box<dyn EventSubscription>],
     ) -> Result<()>;
 
     /// Gets chunk of transactions given the known version, target version and the max limit.
@@ -47,19 +53,38 @@ pub trait ExecutorProxyTrait: Sync + Send {
 
     /// Tries to find a LedgerInfo for a given version.
     async fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures>;
+
+    /// publishes on-chain config updates to subscribed components
+    async fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<()>;
 }
 
 pub(crate) struct ExecutorProxy {
     storage_read_client: Arc<StorageReadServiceClient>,
     executor: Arc<Mutex<Executor<LibraVM>>>,
+    reconfig_subscriptions: Vec<Box<dyn EventSubscription>>,
+    on_chain_configs: Arc<HashMap<ConfigID, Option<Vec<u8>>>>,
 }
 
 impl ExecutorProxy {
-    pub(crate) fn new(executor: Arc<Mutex<Executor<LibraVM>>>, config: &NodeConfig) -> Self {
+    pub(crate) fn new(
+        executor: Arc<Mutex<Executor<LibraVM>>>,
+        config: &NodeConfig,
+        reconfig_subscriptions: Vec<Box<dyn EventSubscription>>,
+    ) -> Self {
         let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
+
+        let on_chain_configs = Arc::new(
+            ON_CHAIN_CONFIG_REGISTRY
+                .iter()
+                .map(|config| (*config, None))
+                .collect(),
+        );
+
         Self {
             storage_read_client,
             executor,
+            reconfig_subscriptions,
+            on_chain_configs,
         }
     }
 }
@@ -94,21 +119,13 @@ impl ExecutorProxyTrait for ExecutorProxy {
         verified_target_li: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
         _synced_trees: &mut ExecutedTrees,
-        reconfig_event_subscriptions: &mut [Box<dyn EventSubscription>],
     ) -> Result<()> {
         let reconfig_events = self.executor.lock().unwrap().execute_and_commit_chunk(
             txn_list_with_proof,
             verified_target_li,
             intermediate_end_of_epoch_li,
         )?;
-
-        // TODO add per-subscription filter logic
-        for event in reconfig_events {
-            for subscription in reconfig_event_subscriptions.iter_mut() {
-                subscription.publish(event.clone());
-            }
-        }
-        Ok(())
+        self.publish_on_chain_config_updates(reconfig_events).await
     }
 
     async fn get_chunk(
@@ -150,5 +167,55 @@ impl ExecutorProxyTrait for ExecutorProxy {
             version
         );
         Ok(waypoint_li.clone())
+    }
+
+    async fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<()> {
+        if events.is_empty() {
+            return Ok(());
+        }
+
+        let access_paths = ON_CHAIN_CONFIG_REGISTRY
+            .iter()
+            .map(|config_id| config_id.access_path())
+            .collect();
+        let curr_configs = self
+            .storage_read_client
+            .batch_fetch_config(access_paths)
+            .await;
+
+        // calculate deltas
+        let mut changed_configs = HashSet::new();
+        let mut new_configs = HashMap::new();
+        for ((id, config), new_config) in self.on_chain_configs.iter().zip(curr_configs) {
+            new_configs.insert(*id, new_config.clone());
+
+            // the byte array is `None` on storage read failure
+            // We should still publish reconfig notification for failed DB read, to indicate that a
+            // reconfig event did happen, regardless of DB failure
+            let mut should_publish = true;
+            if let Some(new_config) = new_config {
+                if let Some(config) = config {
+                    if config == &new_config {
+                        should_publish = false;
+                    }
+                }
+            };
+
+            if should_publish {
+                changed_configs.insert(id.clone());
+            }
+        }
+
+        let new_configs = Arc::new(new_configs);
+        let payload = OnChainConfigPayload::new(new_configs.clone());
+        for subscription in self.reconfig_subscriptions.iter_mut() {
+            // publish updates if *any* of the subscribed configs changed
+            if !changed_configs.is_disjoint(&subscription.subscribed_configs()) {
+                subscription.publish(payload.clone());
+            }
+        }
+
+        self.on_chain_configs = new_configs;
+        Ok(())
     }
 }

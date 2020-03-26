@@ -18,7 +18,7 @@ use libra_crypto::{
 };
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
-    event_subscription::EventSubscription, ledger_info::LedgerInfoWithSignatures,
+    contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures,
     proof::TransactionListProof, transaction::TransactionListWithProof,
     validator_change::ValidatorChangeProof, validator_info::ValidatorInfo,
     validator_set::ValidatorSet, validator_signer::ValidatorSigner,
@@ -66,7 +66,6 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         ledger_info_with_sigs: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
         _synced_trees: &mut ExecutedTrees,
-        _reconfig_event_subscriptions: &mut [Box<dyn EventSubscription>],
     ) -> Result<()> {
         self.storage.write().unwrap().add_txns_with_li(
             txn_list_with_proof.transactions,
@@ -107,6 +106,10 @@ impl ExecutorProxyTrait for MockExecutorProxy {
 
     async fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
         self.storage.read().unwrap().get_ledger_info(version)
+    }
+
+    async fn publish_on_chain_config_updates(&mut self, _events: Vec<ContractEvent>) -> Result<()> {
+        Ok(())
     }
 }
 
@@ -302,7 +305,6 @@ impl SynchronizerEnv {
             waypoint,
             &config.state_sync,
             MockExecutorProxy::new(handler, storage_proxy.clone()),
-            vec![],
         );
         self.mempools
             .push(MockSharedMempool::new(Some(mempool_requests)));

@@ -7,6 +7,7 @@ use anyhow::{Error, Result};
 use futures::stream::BoxStream;
 use libra_crypto::{ed25519::*, HashValue};
 use libra_types::{
+    access_path::AccessPath,
     account_address::AccountAddress,
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
@@ -143,6 +144,10 @@ impl StorageRead for MockStorageReadClient {
         _start_version: Version,
         _num_transaction_infos: u64,
     ) -> Result<BoxStream<'_, Result<BackupTransactionInfoResponse, Error>>> {
+        unimplemented!()
+    }
+
+    async fn batch_fetch_config(&self, _access_paths: Vec<AccessPath>) -> Vec<Option<Vec<u8>>> {
         unimplemented!()
     }
 }
