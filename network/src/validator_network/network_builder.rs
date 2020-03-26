@@ -22,14 +22,12 @@ use crate::{
         health_checker::{self, HealthChecker},
         identity::Identity,
     },
+    transport,
     transport::*,
     ProtocolId,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use futures::{
-    io::{AsyncRead, AsyncWrite},
-    stream::StreamExt,
-};
+use futures::stream::StreamExt;
 use libra_config::config::RoleType;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
@@ -43,7 +41,6 @@ use parity_multiaddr::Multiaddr;
 use std::{
     clone::Clone,
     collections::HashMap,
-    fmt::Debug,
     num::NonZeroUsize,
     sync::{Arc, RwLock},
     time::Duration,
@@ -477,7 +474,7 @@ impl NetworkBuilder {
     fn build_with_transport<TTransport, TSocket>(self, transport: TTransport) -> Multiaddr
     where
         TTransport: Transport<Output = (Identity, TSocket)> + Send + 'static,
-        TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + Sync + 'static,
+        TSocket: transport::TSocket,
     {
         let peer_mgr = PeerManager::new(
             self.executor.clone(),

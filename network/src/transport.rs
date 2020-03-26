@@ -23,8 +23,8 @@ use std::{
     time::Duration,
 };
 
-pub trait TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + Sync + 'static {}
-impl<T> TSocket for T where T: AsyncRead + AsyncWrite + Send + Debug + Unpin + Sync + 'static {}
+pub trait TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + 'static {}
+impl<T> TSocket for T where T: AsyncRead + AsyncWrite + Send + Debug + Unpin + 'static {}
 
 /// A timeout for the connection to open and complete all of the upgrade steps.
 pub const TRANSPORT_TIMEOUT: Duration = Duration::from_secs(30);

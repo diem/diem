@@ -256,7 +256,7 @@ where
 impl<TTransport, TSocket> PeerManager<TTransport, TSocket>
 where
     TTransport: Transport<Output = (Identity, TSocket)> + Send + 'static,
-    TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + Sync + 'static,
+    TSocket: transport::TSocket,
 {
     /// Construct a new PeerManager actor
     #[allow(clippy::too_many_arguments)]
