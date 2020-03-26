@@ -203,7 +203,7 @@ data "template_file" "ecs_task_definition" {
     cfg_listen_addr               = var.validator_use_public_ip == true ? element(aws_instance.validator.*.public_ip, count.index) : element(aws_instance.validator.*.private_ip, count.index)
     cfg_node_index                = count.index
     cfg_num_validators            = var.cfg_num_validators_override == 0 ? var.num_validators : var.cfg_num_validators_override
-    cfg_num_validators_in_genesis = var.num_validators_in_genesis
+    cfg_num_validators_in_genesis = var.num_validators_in_genesis == 0? var.num_validators : var.num_validators_in_genesis
     cfg_seed                      = var.config_seed
     cfg_seed_peer_ip              = local.seed_peer_ip
 
