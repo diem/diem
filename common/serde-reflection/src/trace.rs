@@ -60,105 +60,73 @@ impl Tracer {
     }
 
     /// Trace a single deserialization of a particular type.
-    /// Nested containers will be added to the tracing registry, indexed by
+    /// * Nested containers will be added to the tracing registry, indexed by
     /// their (non-qualified) name.
-    /// Tracing deserialization of a type may fail if this type or some dependencies
+    /// * As a byproduct of deserialization, we also return a value of type `T`.
+    /// * Tracing deserialization of a type may fail if this type or some dependencies
     /// have implemented a custom deserializer that validates data. In this case,
     /// `trace_value` must be called first on the relevant user types to provide valid
     /// examples.
-    pub fn trace_type_once<'de, T>(&mut self) -> Result<Format>
-    where
-        T: Deserialize<'de>,
-    {
-        let mut format = Format::Unknown;
-        let deserializer = Deserializer::new(&mut *self, &mut format);
-        T::deserialize(deserializer)?;
-        Ok(format)
-    }
-
-    /// Same as `trace_type_once` for seeded deserialization.
-    pub fn trace_type_once_with_seed<'de, T>(&mut self, seed: T) -> Result<Format>
-    where
-        T: DeserializeSeed<'de>,
-    {
-        let mut format = Format::Unknown;
-        let deserializer = Deserializer::new(&mut *self, &mut format);
-        seed.deserialize(deserializer)?;
-        Ok(format)
-    }
-
-    /// Same as `trace_type_once` but if `T` is an enum, we repeat the process
-    /// until all variants of `T` are covered.
-    pub fn trace_type<'de, T>(&mut self) -> Result<Format>
-    where
-        T: Deserialize<'de>,
-    {
-        loop {
-            let format = self.trace_type_once::<T>()?;
-            if let Format::TypeName(name) = &format {
-                if self.incomplete_enums.contains(name) {
-                    self.incomplete_enums.remove(name);
-                    continue;
-                }
-            }
-            return Ok(format);
-        }
-    }
-
-    /// Same as `trace_type` for seeded deserialization.
-    pub fn trace_type_with_seed<'de, T>(&'de mut self, seed: T) -> Result<Format>
-    where
-        T: DeserializeSeed<'de> + Clone,
-    {
-        loop {
-            let format = self.trace_type_once_with_seed(seed.clone())?;
-            if let Format::TypeName(name) = &format {
-                if self.incomplete_enums.contains(name) {
-                    self.incomplete_enums.remove(name);
-                    continue;
-                }
-            }
-            return Ok(format);
-        }
-    }
-
-    /// Compute a default value for `T`.
-    /// Return true if `T` is an enum and more values are needed to cover
-    /// all variant cases. Otherwise similar to `trace_type_once`.
-    pub fn sample_type_once<'de, T>(&mut self) -> Result<(T, bool)>
+    pub fn trace_type_once<'de, T>(&mut self) -> Result<(Format, T)>
     where
         T: Deserialize<'de>,
     {
         let mut format = Format::Unknown;
         let deserializer = Deserializer::new(&mut *self, &mut format);
         let value = T::deserialize(deserializer)?;
-        let has_more = match &format {
-            Format::TypeName(name) => {
-                if self.incomplete_enums.contains(name) {
-                    self.incomplete_enums.remove(name);
-                    true
-                } else {
-                    false
-                }
-            }
-            _ => false,
-        };
-        Ok((value, has_more))
+        Ok((format, value))
     }
 
-    /// Same as sample_type_once but if `T` is an enum, we repeat the process
-    /// until all variants are covered. Otherwise similar to `trace_type`.
-    pub fn sample_type<'de, T>(&mut self) -> Result<Vec<T>>
+    /// Same as `trace_type_once` for seeded deserialization.
+    pub fn trace_type_once_with_seed<'de, S>(&mut self, seed: S) -> Result<(Format, S::Value)>
+    where
+        S: DeserializeSeed<'de>,
+    {
+        let mut format = Format::Unknown;
+        let deserializer = Deserializer::new(&mut *self, &mut format);
+        let value = seed.deserialize(deserializer)?;
+        Ok((format, value))
+    }
+
+    /// Same as `trace_type_once` but if `T` is an enum, we repeat the process
+    /// until all variants of `T` are covered.
+    /// We accumulate and return all the sampled values at the end.
+    pub fn trace_type<'de, T>(&mut self) -> Result<(Format, Vec<T>)>
     where
         T: Deserialize<'de>,
     {
         let mut values = Vec::new();
         loop {
-            let (value, has_more) = self.sample_type_once::<T>()?;
+            let (format, value) = self.trace_type_once::<T>()?;
             values.push(value);
-            if !has_more {
-                return Ok(values);
+            if let Format::TypeName(name) = &format {
+                if self.incomplete_enums.contains(name) {
+                    // Restart the analysis to find more variants of T.
+                    self.incomplete_enums.remove(name);
+                    continue;
+                }
             }
+            return Ok((format, values));
+        }
+    }
+
+    /// Same as `trace_type` for seeded deserialization.
+    pub fn trace_type_with_seed<'de, S>(&'de mut self, seed: S) -> Result<(Format, Vec<S::Value>)>
+    where
+        S: DeserializeSeed<'de> + Clone,
+    {
+        let mut values = Vec::new();
+        loop {
+            let (format, value) = self.trace_type_once_with_seed(seed.clone())?;
+            values.push(value);
+            if let Format::TypeName(name) = &format {
+                if self.incomplete_enums.contains(name) {
+                    // Restart the analysis to find more variants of T.
+                    self.incomplete_enums.remove(name);
+                    continue;
+                }
+            }
+            return Ok((format, values));
         }
     }
 
