@@ -19,6 +19,7 @@ use libra_types::{
     on_chain_config::VMPublishingOption,
     transaction::{
         SignedTransaction, Transaction, TransactionOutput, TransactionPayload, TransactionStatus,
+        VMValidatorResult,
     },
     validator_set::ValidatorSet,
     vm_error::{StatusCode, VMStatus},
@@ -236,7 +237,7 @@ impl FakeExecutor {
     }
 
     /// Verifies the given transaction by running it through the VM verifier.
-    pub fn verify_transaction(&self, txn: SignedTransaction) -> Option<VMStatus> {
+    pub fn verify_transaction(&self, txn: SignedTransaction) -> VMValidatorResult {
         let mut vm = LibraVM::new();
         vm.load_configs(self.get_state_view());
         vm.validate_transaction(txn, &self.data_store)

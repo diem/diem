@@ -193,7 +193,7 @@ fn test_transaction_submission() {
     runtime.spawn(async move {
         let validator = MockVMValidator;
         while let Some((txn, cb)) = mp_events.next().await {
-            let vm_status = validator.validate_transaction(txn).await.unwrap();
+            let vm_status = validator.validate_transaction(txn).await.unwrap().status();
             let result = if vm_status.is_some() {
                 (MempoolStatus::new(MempoolStatusCode::VmError), vm_status)
             } else {
