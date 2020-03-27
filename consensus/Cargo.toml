@@ -21,7 +21,6 @@ num-derive = { version = "0.3.0", default-features = false }
 num-traits = { version = "0.2.8", default-features = false }
 parity-multiaddr = { version = "0.7.2", default-features = false }
 rand = { version = "0.6.5", default-features = false }
-rusty-fork = { version = "0.2.2", default-features = false }
 serde = { version = "1.0.105", default-features = false }
 serde_json = "1.0"
 thiserror = "1.0"
