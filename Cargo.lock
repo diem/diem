@@ -819,7 +819,6 @@ dependencies = [
  "prometheus 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "rusty-fork 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "safety-rules 0.1.0",
  "schemadb 0.1.0",
  "serde 1.0.105 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5273,7 +5272,6 @@ dependencies = [
  "num 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "rust_decimal 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rusty-fork 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "statistical 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "workspace-builder 0.1.0",
 ]
