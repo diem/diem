@@ -245,7 +245,7 @@ pub enum ModuleAccess_ {
 }
 pub type ModuleAccess = Spanned<ModuleAccess_>;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum Kind_ {
     // Kind representing all types
     Unknown,

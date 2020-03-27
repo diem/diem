@@ -1639,8 +1639,11 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             naming::ast::BuiltinTypeName_::*,
         };
         match &ty.value {
-            Param(TParam { debug, .. }) => {
-                let sym = self.symbol_pool().make(debug.value.as_str());
+            Param(TParam {
+                user_specified_name,
+                ..
+            }) => {
+                let sym = self.symbol_pool().make(user_specified_name.value.as_str());
                 self.type_params_table[&sym].clone()
             }
             Apply(_, type_name, args) => {
