@@ -21,6 +21,7 @@ use crate::{
 use itertools::Itertools;
 use spec_lang::{
     ast::{Exp, Invariant, LocalVarDecl, Operation, SpecConditionKind, Value},
+    env::GlobalEnv,
     symbol::Symbol,
 };
 use vm::file_format::CodeOffset;
@@ -121,7 +122,7 @@ impl<'env> SpecTranslator<'env> {
         name_str
     }
 
-    /// Translates a sequence of items seperated by `sep`.
+    /// Translates a sequence of items separated by `sep`.
     fn translate_seq<T, F>(&self, items: impl Iterator<Item = T>, sep: &str, f: F)
     where
         F: Fn(T),
@@ -427,18 +428,33 @@ impl<'env> SpecTranslator<'env> {
         emitln!(self.writer);
     }
 
-    /// Determines whether a before-update invariant is generated.
+    /// Determines whether a before-update invariant is generated for this struct.
     ///
     /// We currently support two models for dealing with global spec var updates.
     /// If the specification has explicitly provided update invariants for spec vars, we use those.
     /// If not, we use the unpack invariants before the update, and the pack invariants
     /// after. This function is only true for the later case.
     pub fn has_before_update_invariant(struct_env: &StructEnv<'_>) -> bool {
-        !struct_env
+        let no_explict_update = !struct_env
             .get_update_invariants()
             .iter()
-            .any(Self::is_invariant_spec_var_update)
-            && !struct_env.get_unpack_invariants().is_empty()
+            .any(Self::is_invariant_spec_var_update);
+        let has_pack = !struct_env.get_unpack_invariants().is_empty();
+        no_explict_update && has_pack
+            // If any of the fields has it, it inherits to the struct.
+            || struct_env.get_fields().any(|fe| {
+                Self::has_before_update_invariant_ty(struct_env.module_env.env, &fe.get_type())
+            })
+    }
+
+    /// Determines whether a before-update invariant is generated for this type.
+    pub fn has_before_update_invariant_ty(env: &GlobalEnv, ty: &Type) -> bool {
+        if let Some((struct_env, _)) = ty.get_struct(env) {
+            Self::has_before_update_invariant(&struct_env)
+        } else {
+            // TODO: vectors
+            false
+        }
     }
 
     /// Helper to determine whether an invariant is a spec var update.
@@ -457,17 +473,51 @@ impl<'env> SpecTranslator<'env> {
             boogie_struct_name(struct_env)
         );
         self.writer.indent();
+
+        // Emit call to before update invariant procedure for all fields which have one by their own.
+        for fe in struct_env.get_fields() {
+            if let Some((nested_struct_env, _)) =
+                fe.get_type().get_struct(struct_env.module_env.env)
+            {
+                if Self::has_before_update_invariant(&nested_struct_env) {
+                    let field_name = boogie_field_name(&fe);
+                    emitln!(
+                        self.writer,
+                        "call {}_before_update_inv($SelectField($before, {}));",
+                        boogie_struct_name(&nested_struct_env),
+                        field_name,
+                    );
+                }
+            }
+        }
+
+        // Emit call to spec var updates via unpack invariants.
         self.emit_spec_var_updates("$before", "", struct_env.get_unpack_invariants());
+
         self.writer.unindent();
         emitln!(self.writer, "}");
         emitln!(self.writer);
     }
 
-    /// Determines whether a after-update invariant is generated.
+    /// Determines whether a after-update invariant is generated for this struct.
     pub fn has_after_update_invariant(struct_env: &StructEnv<'_>) -> bool {
         !struct_env.get_update_invariants().is_empty()
             || !struct_env.get_pack_invariants().is_empty()
             || !struct_env.get_data_invariants().is_empty()
+            // If any of the fields has it, it inherits to the struct.
+            || struct_env.get_fields().any(|fe| {
+                Self::has_after_update_invariant_ty(struct_env.module_env.env, &fe.get_type())
+            })
+    }
+
+    /// Determines whether a after-update invariant is generated for this type.
+    pub fn has_after_update_invariant_ty(env: &GlobalEnv, ty: &Type) -> bool {
+        if let Some((struct_env, _)) = ty.get_struct(env) {
+            Self::has_after_update_invariant(&struct_env)
+        } else {
+            // TODO: vectors
+            false
+        }
     }
 
     /// Generates a procedure which asserts the after-update invariants of the struct.
@@ -482,6 +532,32 @@ impl<'env> SpecTranslator<'env> {
         );
         self.writer.indent();
 
+        // Emit call to after update invariant procedure for all fields which have one by their own.
+        for fe in struct_env.get_fields() {
+            if let Some((nested_struct_env, _)) =
+                fe.get_type().get_struct(struct_env.module_env.env)
+            {
+                if Self::has_after_update_invariant(&nested_struct_env) {
+                    let field_name = boogie_field_name(&fe);
+                    emitln!(
+                        self.writer,
+                        "call {}_after_update_inv($SelectField($before, {}), $SelectField($after, {}));",
+                        boogie_struct_name(&nested_struct_env),
+                        field_name, field_name,
+                    );
+                }
+            }
+        }
+
+        // Emit data invariants for this struct.
+        self.emit_invariants_assume_or_assert(
+            "$after",
+            "",
+            false,
+            struct_env.get_data_invariants(),
+        );
+
+        // Emit update invariants for this struct.
         if struct_env
             .get_update_invariants()
             .iter()
@@ -497,12 +573,6 @@ impl<'env> SpecTranslator<'env> {
             "$before",
             false,
             struct_env.get_update_invariants(),
-        );
-        self.emit_invariants_assume_or_assert(
-            "$after",
-            "",
-            false,
-            struct_env.get_data_invariants(),
         );
 
         self.writer.unindent();

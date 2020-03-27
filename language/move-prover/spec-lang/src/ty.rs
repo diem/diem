@@ -5,7 +5,7 @@
 
 use crate::{
     ast::QualifiedSymbol,
-    env::{ModuleId, StructId},
+    env::{GlobalEnv, ModuleId, StructEnv, StructId},
     symbol::SymbolPool,
 };
 use std::{collections::BTreeMap, fmt, fmt::Formatter};
@@ -85,6 +85,7 @@ impl Type {
         }
     }
 
+    /// Returns true if this is any number type.
     pub fn is_number(&self) -> bool {
         if let Type::Primitive(p) = self {
             if let PrimitiveType::U8
@@ -96,6 +97,18 @@ impl Type {
             }
         }
         false
+    }
+
+    /// If this is a struct type, return the associated struct env and type parameters.
+    pub fn get_struct<'env>(
+        &'env self,
+        env: &'env GlobalEnv,
+    ) -> Option<(StructEnv<'env>, &'env [Type])> {
+        if let Type::Struct(module_idx, struct_idx, params) = self {
+            Some((env.get_module(*module_idx).into_struct(*struct_idx), params))
+        } else {
+            None
+        }
     }
 
     /// Instantiates type parameters in this type.
