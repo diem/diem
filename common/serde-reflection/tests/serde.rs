@@ -128,15 +128,9 @@ fn test_tracers() {
 
     // Tracing deserialization
     let mut tracer = Tracer::new(/* is_human_readable */ false);
-    assert_eq!(
-        tracer.trace_type::<E>().unwrap(),
-        Format::TypeName("E".into())
-    );
+    let (ident, values) = tracer.trace_type::<E>().unwrap();
+    assert_eq!(ident, Format::TypeName("E".into()));
     assert_eq!(tracer.registry().unwrap().get("E").unwrap(), format);
-
-    // Sampling values with DTracer
-    let mut tracer = Tracer::new(/* is_human_readable */ false);
-    let values = tracer.sample_type::<E>().unwrap();
     assert_eq!(
         values,
         vec![
@@ -198,24 +192,10 @@ fn test_type_deserialization_with_custom_invariants() {
     assert_eq!(value, Value::Str("Bob".into()));
 
     // Now try again.
-    let format = tracer.trace_type::<Person>().unwrap();
+    let (format, values) = tracer.trace_type::<Person>().unwrap();
     assert_eq!(format, Format::TypeName("Person".into()));
-
-    // We can request a value for `Person`.
-    let (person, has_more) = tracer.sample_type_once::<Person>().unwrap();
-    assert_eq!(person, Person::NickName(bob.clone()));
-    assert!(!has_more);
-
-    // We cannot sample all values with this tracer any more.
-    let persons = tracer.sample_type::<Person>().unwrap();
-    assert_eq!(persons.len(), 1);
-
-    // .. but it would work if start from scratch.
-    let mut tracer = Tracer::new(/* is_human_readable */ false);
-    tracer.trace_value(&bob).unwrap();
-    let persons = tracer.sample_type::<Person>().unwrap();
     assert_eq!(
-        persons,
+        values,
         vec![
             Person::NickName(bob.clone()),
             Person::FullName {
