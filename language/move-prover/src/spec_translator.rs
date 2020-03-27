@@ -22,6 +22,7 @@ use spec_lang::{
     ast::{ConditionKind, Exp, Invariant, LocalVarDecl, Operation, Value},
     symbol::Symbol,
 };
+use vm::file_format::CodeOffset;
 
 pub struct SpecTranslator<'env> {
     /// The module in which context translation happens.
@@ -192,6 +193,34 @@ impl<'env> SpecTranslator<'env> {
 // ===================
 
 impl<'env> SpecTranslator<'env> {
+    // Generate boogie for asserts/assumes inside function bodies
+    pub fn translate_conditions_inside_impl(
+        &self,
+        func_env: &'env FunctionEnv<'env>,
+        offset: CodeOffset,
+    ) {
+        let conds = func_env.get_specification_on_impl(offset);
+        if let Some(conds) = conds {
+            if !conds.is_empty() {
+                self.translate_seq(conds.iter(), "\n", |cond| {
+                    self.writer.set_location(&cond.loc);
+                    emit!(
+                        self.writer,
+                        if cond.kind == ConditionKind::Assert {
+                            "assert "
+                        } else {
+                            "assume "
+                        }
+                    );
+                    emit!(self.writer, "b#Boolean(");
+                    self.translate_exp(&cond.exp);
+                    emit!(self.writer, ");")
+                });
+                emitln!(self.writer);
+            }
+        }
+    }
+
     /// Generates boogie for pre/post conditions.
     pub fn translate_conditions(&self, func_env: &'env FunctionEnv<'env>) {
         // Generate pre-conditions
@@ -200,7 +229,7 @@ impl<'env> SpecTranslator<'env> {
         // the senders account resource (which contains the pubkey)
         // must have existed! So we can assume txn_sender account
         // exists in pre-condition.
-        let conds = func_env.get_specification();
+        let conds = func_env.get_specification_on_decl();
         emitln!(self.writer, "requires $ExistsTxnSenderAccount($m, $txn);");
 
         // Generate requires.
@@ -279,7 +308,7 @@ impl<'env> SpecTranslator<'env> {
 
         // Explicit pre-conditions.
         let requires = func_env
-            .get_specification()
+            .get_specification_on_decl()
             .iter()
             .filter(|cond| cond.kind == ConditionKind::Requires)
             .collect_vec();

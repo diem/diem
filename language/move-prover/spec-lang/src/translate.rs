@@ -37,7 +37,7 @@ use crate::{
     },
     project_1st, project_2nd,
     symbol::{Symbol, SymbolPool},
-    ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, BOOL_TYPE, NUM_TYPE},
+    ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, BOOL_TYPE},
 };
 
 // =================================================================================================
@@ -940,88 +940,139 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         kind: &PA::SpecConditionKind,
         exp: &EA::Exp,
     ) {
-        let (name, code_offset) = match context {
-            SpecBlockContext::Function(n) => (Some(n), None),
-            SpecBlockContext::FunctionImpl(n, code_offset) => (Some(n), Some(code_offset)),
-            _ => (None, None),
+        let kind = match kind {
+            PA::SpecConditionKind::Assert => ConditionKind::Assert,
+            PA::SpecConditionKind::Assume => ConditionKind::Assume,
+            PA::SpecConditionKind::Decreases => ConditionKind::Decreases,
+            PA::SpecConditionKind::Ensures => ConditionKind::Ensures,
+            PA::SpecConditionKind::Requires => ConditionKind::Requires,
+            PA::SpecConditionKind::AbortsIf => ConditionKind::AbortsIf,
         };
-        if let Some(name) = name {
-            // We ensured that SpecBlockContext only contains resolvable names.
-            let entry = &self
-                .parent
-                .fun_table
-                .get(name)
-                .expect("invalid spec block context")
-                .clone();
-            let is_precond = kind == &PA::SpecConditionKind::Requires;
-            let mut et = ExpTranslator::new(
-                self,
-                if is_precond {
-                    OldExpStatus::NotSupported
-                } else {
-                    OldExpStatus::OutsideOld
-                },
-            );
-            for (n, ty) in &entry.type_params {
-                et.define_type_param(loc, *n, ty.clone());
-            }
-            et.enter_scope();
-            for (n, ty) in &entry.params {
-                et.define_local(loc, *n, ty.clone(), None);
-            }
-            // Define the placeholders for the result values of a function.
-            if !is_precond {
-                et.enter_scope();
-                if let Type::Tuple(ts) = &entry.result_type {
-                    for (i, ty) in ts.iter().enumerate() {
-                        let name = et.symbol_pool().make(&format!("result_{}", i + 1));
-                        et.define_local(loc, name, ty.clone(), Some(Operation::Result(i)));
-                    }
-                } else {
-                    let name = et.symbol_pool().make("result");
-                    et.define_local(
-                        loc,
-                        name,
-                        entry.result_type.clone(),
-                        Some(Operation::Result(0)),
-                    );
+        match context {
+            SpecBlockContext::Function(name) => {
+                if kind.on_impl() {
+                    self.parent
+                        .error(loc, "item only allowed inside function body");
+                    return;
                 }
+                self.def_ana_condition_on_decl(name, loc, kind, exp);
             }
-            let expected_type = match kind {
-                PA::SpecConditionKind::Decreases => NUM_TYPE,
-                _ => BOOL_TYPE,
-            };
-            let translated = et.translate_exp(exp, &expected_type);
-            et.finalize_types();
-            let kind = match kind {
-                PA::SpecConditionKind::Assert => ConditionKind::Assert,
-                PA::SpecConditionKind::Assume => ConditionKind::Assume,
-                PA::SpecConditionKind::Decreases => ConditionKind::Decreases,
-                PA::SpecConditionKind::Ensures => ConditionKind::Ensures,
-                PA::SpecConditionKind::Requires => ConditionKind::Requires,
-                PA::SpecConditionKind::AbortsIf => ConditionKind::AbortsIf,
-            };
-            let cond = Condition {
-                loc: loc.clone(),
-                kind,
-                exp: translated,
-            };
-            let fun_spec = self
-                .fun_specs
-                .entry(name.symbol)
-                .or_insert_with(FunSpec::default);
-            if let Some(code_offset) = code_offset {
-                fun_spec
-                    .on_impl
-                    .entry(*code_offset)
-                    .or_insert_with(|| vec![])
-                    .push(cond);
-            } else {
-                fun_spec.on_decl.push(cond);
+            SpecBlockContext::FunctionImpl(name, code_offset) => {
+                if kind.on_decl() {
+                    self.parent
+                        .error(loc, "item only allowed on function declaration");
+                    return;
+                }
+                if kind == ConditionKind::Decreases {
+                    self.parent
+                        .error(loc, "decreases specification not allowed currently");
+                    return;
+                }
+                self.def_ana_condition_on_impl(name, *code_offset, loc, kind, exp);
             }
-        } else {
-            self.parent.error(loc, "item only allowed in function spec");
+            _ => {
+                self.parent.error(loc, "item only allowed in function spec");
+            }
         }
+    }
+
+    fn def_ana_condition_on_decl(
+        &mut self,
+        name: &QualifiedSymbol,
+        loc: &Loc,
+        kind: ConditionKind,
+        exp: &EA::Exp,
+    ) {
+        let entry = &self
+            .parent
+            .fun_table
+            .get(name)
+            .expect("invalid spec block context")
+            .clone();
+        let is_precond = kind == ConditionKind::Requires;
+        let mut et = ExpTranslator::new(
+            self,
+            if is_precond {
+                OldExpStatus::NotSupported
+            } else {
+                OldExpStatus::OutsideOld
+            },
+        );
+        for (n, ty) in &entry.type_params {
+            et.define_type_param(loc, *n, ty.clone());
+        }
+        et.enter_scope();
+        for (n, ty) in &entry.params {
+            et.define_local(loc, *n, ty.clone(), None);
+        }
+        // Define the placeholders for the result values of a function.
+        if !is_precond {
+            et.enter_scope();
+            if let Type::Tuple(ts) = &entry.result_type {
+                for (i, ty) in ts.iter().enumerate() {
+                    let name = et.symbol_pool().make(&format!("result_{}", i + 1));
+                    et.define_local(loc, name, ty.clone(), Some(Operation::Result(i)));
+                }
+            } else {
+                let name = et.symbol_pool().make("result");
+                et.define_local(
+                    loc,
+                    name,
+                    entry.result_type.clone(),
+                    Some(Operation::Result(0)),
+                );
+            }
+        }
+        let translated = et.translate_exp(exp, &BOOL_TYPE);
+        et.finalize_types();
+        let cond = Condition {
+            loc: loc.clone(),
+            kind,
+            exp: translated,
+        };
+        self.fun_specs
+            .entry(name.symbol)
+            .or_insert_with(FunSpec::default)
+            .on_decl
+            .push(cond);
+    }
+
+    fn def_ana_condition_on_impl(
+        &mut self,
+        name: &QualifiedSymbol,
+        code_offset: CodeOffset,
+        loc: &Loc,
+        kind: ConditionKind,
+        exp: &EA::Exp,
+    ) {
+        let entry = &self
+            .parent
+            .fun_table
+            .get(name)
+            .expect("invalid spec block context")
+            .clone();
+        let mut et = ExpTranslator::new(self, OldExpStatus::OutsideOld);
+        for (n, ty) in &entry.type_params {
+            et.define_type_param(loc, *n, ty.clone());
+        }
+        et.enter_scope();
+        for (n, ty) in &entry.params {
+            et.define_local(loc, *n, ty.clone(), None);
+        }
+        let translated = et.translate_exp(exp, &BOOL_TYPE);
+        et.finalize_types();
+        let cond = Condition {
+            loc: loc.clone(),
+            kind,
+            exp: translated,
+        };
+        self.fun_specs
+            .entry(name.symbol)
+            .or_insert_with(FunSpec::default)
+            .on_impl
+            .entry(code_offset)
+            .or_insert_with(|| vec![])
+            .push(cond);
     }
 
     fn def_ana_invariant(
