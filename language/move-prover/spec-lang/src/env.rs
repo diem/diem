@@ -1079,12 +1079,16 @@ impl<'env> StructEnv<'env> {
         handle.is_nominal_resource
     }
 
-    /// Get an iterator for the fields.
+    /// Get an iterator for the fields, ordered by offset.
     pub fn get_fields(&'env self) -> impl Iterator<Item = FieldEnv<'env>> {
-        self.data.field_data.values().map(move |data| FieldEnv {
-            struct_env: self.clone(),
-            data,
-        })
+        self.data
+            .field_data
+            .values()
+            .sorted_by_key(|data| data.offset)
+            .map(move |data| FieldEnv {
+                struct_env: self.clone(),
+                data,
+            })
     }
 
     /// Gets a field by its id.
@@ -1105,7 +1109,7 @@ impl<'env> StructEnv<'env> {
         })
     }
 
-    /// Gets a field by its id.
+    /// Gets a field by its offset.
     pub fn get_field_by_offset(&'env self, offset: usize) -> FieldEnv<'env> {
         for data in self.data.field_data.values() {
             if data.offset == offset {
@@ -1175,6 +1179,8 @@ pub struct FieldData {
 
     /// The struct definition index of this field in its module.
     def_idx: StructDefinitionIndex,
+
+    /// The offset of this field.
     offset: usize,
 }
 
