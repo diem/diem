@@ -365,7 +365,7 @@ impl<'env> BoogieWrapper<'env> {
         let verification_diag_start =
             Regex::new(r"(?m)^.*\((?P<line>\d+),(?P<col>\d+)\): Error BP\d+:(?P<msg>.*)$").unwrap();
         let verification_diag_related =
-            Regex::new(r"(?m)^.+\((?P<line>\d+),(?P<col>\d+)\): Related.*$").unwrap();
+            Regex::new(r"^\n.+\((?P<line>\d+),(?P<col>\d+)\): Related.*\n").unwrap();
         let verification_diag_trace = Regex::new(r"(?m)^Execution trace:$").unwrap();
         let verification_diag_trace_entry =
             Regex::new(r"(?m)^    .*\((?P<line>\d+),(?P<col>\d+)\): (?P<msg>.*)$").unwrap();

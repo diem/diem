@@ -76,8 +76,6 @@ struct BytecodeContext<'l> {
     inherited_to_before_index: BTreeMap<usize, usize>,
     /// As determined by lifetime analysis, the set of references which become dead
     /// at a given bytecode offset.
-    /// TODO: the analysis currently represents references via `LocalIndex == u8`, but this might(?)
-    /// overflow because the stackless bytcode can introduce temporaries larger than u8.
     offset_to_dead_refs: BTreeMap<CodeOffset, BTreeSet<TempIndex>>,
 }
 
@@ -652,7 +650,7 @@ impl<'env> ModuleTranslator<'env> {
 
         // Generate bytecode
         for (offset, bytecode) in code.code.iter().enumerate() {
-            self.translate_bytecode(func_env, &mut context, offset as CodeOffset, bytecode);
+            self.translate_bytecode(func_env, &context, offset as CodeOffset, bytecode);
         }
 
         // Generate abort exit.
@@ -679,7 +677,7 @@ impl<'env> ModuleTranslator<'env> {
     fn translate_bytecode(
         &'env self,
         func_env: &FunctionEnv<'_>,
-        ctx: &mut BytecodeContext<'_>,
+        ctx: &BytecodeContext<'_>,
         offset: u16,
         bytecode: &StacklessBytecode,
     ) {
@@ -719,7 +717,7 @@ impl<'env> ModuleTranslator<'env> {
         };
 
         // Helper function to debug track potential updates of references.
-        let track_mutable_refs = |ctx: &mut BytecodeContext<'_>| {
+        let track_mutable_refs = |ctx: &BytecodeContext<'_>| {
             for idx in &ctx.mutable_refs {
                 if *idx < func_env.get_local_count() {
                     let s = self.track_local(func_env, loc.clone(), *idx, str_local(&idx).as_str());
@@ -741,7 +739,7 @@ impl<'env> ModuleTranslator<'env> {
         };
 
         // Helper to save a borrowed value before mutation starts.
-        let save_borrowed_value = |ctx: &mut BytecodeContext<'_>, dest: &usize| {
+        let save_borrowed_value = |ctx: &BytecodeContext<'_>, dest: &usize| {
             if let Some(idx) = ctx.borrowed_to_before_index.get(dest) {
                 // Save the value before mutation happens. We also need to save the reference,
                 // because the bytecode may reuse it for some other purpose, so we can construct
@@ -895,7 +893,8 @@ impl<'env> ModuleTranslator<'env> {
             Call(dests, callee_index, type_actuals, args) => {
                 let callee_env = self.module_env.get_called_function(*callee_index);
                 // If this is a call to a function from another module, assume the module invariants
-                // if any.
+                // if any. This is correct because module invariants are guaranteed to hold whenever
+                // code outside of the module is executed.
                 if callee_env.module_env.get_id() != func_env.module_env.get_id()
                     && !callee_env.module_env.get_module_invariants().is_empty()
                 {
@@ -903,6 +902,37 @@ impl<'env> ModuleTranslator<'env> {
                         SpecTranslator::new(self.writer, &callee_env.module_env, false);
                     spec_translator.assume_module_invariants(&callee_env);
                 }
+                // If this is a call to a public function within the same module,
+                // and it contains parameters which are mutated currently, we end mutating now,
+                // enforcing the update invariant. At the end of the call, we restart mutating,
+                // re-initializing the before value. This is reflecting the fact that mutable
+                // reference parameters to public functions are consider frozen when passed
+                // around outside of the module. So we need to mimic the same behavior for
+                // calls to these function from inside the module.
+                let frozen_ref_params = if callee_env.is_public()
+                    && callee_env.module_env.get_id() == func_env.module_env.get_id()
+                {
+                    args.iter()
+                        .filter_map(|arg| {
+                            if let Some(before_idx) = ctx.borrowed_to_before_index.get(arg) {
+                                Some((*arg, *before_idx))
+                            } else if let Some(before_idx) = ctx.inherited_to_before_index.get(arg)
+                            {
+                                Some((*arg, *before_idx))
+                            } else {
+                                None
+                            }
+                        })
+                        .collect()
+                } else {
+                    BTreeMap::new()
+                };
+                // Now that we have calculated the frozen refs, enforce update invariants.
+                for (idx, before_idx) in &frozen_ref_params {
+                    let ty = self.get_local_type(func_env, *idx);
+                    self.enforce_after_update_invariant(func_env, &ty, *before_idx);
+                }
+
                 let mut dest_str = String::new();
                 let mut args_str = String::new();
                 let mut dest_type_assumptions = vec![];
@@ -972,6 +1002,10 @@ impl<'env> ModuleTranslator<'env> {
                 }
                 if callee_env.is_mutating() {
                     track_mutable_refs(ctx);
+                }
+                // After the call, save current value as before value and enforce before invariants.
+                for (idx, before_idx) in &frozen_ref_params {
+                    self.save_and_enforce_before_update(func_env, *idx, *before_idx);
                 }
             }
             Pack(dest, struct_def_index, type_actuals, fields) => {
@@ -1433,7 +1467,7 @@ impl<'env> ModuleTranslator<'env> {
     fn enforce_invariants_for_dead_refs(
         &self,
         func_env: &FunctionEnv,
-        context: &mut BytecodeContext,
+        context: &BytecodeContext,
         offset: CodeOffset,
     ) {
         if let Some(dead_refs) = context.offset_to_dead_refs.get(&(offset as u16)) {
@@ -1459,7 +1493,7 @@ impl<'env> ModuleTranslator<'env> {
     fn enforce_invariants_for_inherited_refs(
         &self,
         func_env: &FunctionEnv,
-        context: &mut BytecodeContext,
+        context: &BytecodeContext,
     ) {
         for (ref_idx, before_idx) in &context.inherited_to_before_index {
             let ty = self.get_local_type(func_env, *ref_idx);
