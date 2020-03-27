@@ -228,5 +228,5 @@ variable "safety_rules_use_vault" {
 variable "persist_libra_data" {
   type        = bool
   default     = true
-  description = "Whether to persist libra data on validator and fullnode"
+  description = "Whether to persist libra data on validator and fullnode between restarts"
 }
