@@ -15,7 +15,7 @@ use libra_types::{
     transaction::{
         ChangeSet, SignatureCheckedTransaction, SignedTransaction, Transaction,
         TransactionArgument, TransactionOutput, TransactionPayload, TransactionStatus,
-        MAX_TRANSACTION_SIZE_IN_BYTES,
+        VMValidatorResult, MAX_TRANSACTION_SIZE_IN_BYTES,
     },
     vm_error::{sub_status, StatusCode, VMStatus},
     write_set::WriteSet,
@@ -632,12 +632,13 @@ impl VMVerifier for LibraVM {
         &self,
         transaction: SignedTransaction,
         state_view: &dyn StateView,
-    ) -> Option<VMStatus> {
+    ) -> VMValidatorResult {
         let data_cache = BlockDataCache::new(state_view);
+        let gas_price = transaction.gas_unit_price();
         record_stats! {time_hist | TXN_VALIDATION_TIME_TAKEN | {
                 let signature_verified_txn = match transaction.check_signature() {
                     Ok(t) => t,
-                    Err(_) => return Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)),
+                    Err(_) => return VMValidatorResult::new(Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)), gas_price),
                 };
                 let res = match self.verify_transaction_impl(&signature_verified_txn, state_view, &data_cache) {
                     Ok(_) => None,
@@ -650,7 +651,7 @@ impl VMVerifier for LibraVM {
                     }
                 };
                 report_verification_status(&res);
-                res
+                VMValidatorResult::new(res, gas_price)
             }
         }
     }

@@ -362,17 +362,21 @@ where
             .lock()
             .expect("[shared mempool] failed to acquire mempool lock");
         for (idx, (transaction, sequence_number)) in transactions.into_iter().enumerate() {
-            if let Ok(None) = validations[idx] {
-                let gas_cost = transaction.max_gas_amount();
-
-                let mempool_status =
-                    mempool.add_txn(transaction, gas_cost, sequence_number, timeline_state);
-                statuses.push((mempool_status, None));
-            } else if let Ok(Some(validation_status)) = &validations[idx] {
-                statuses.push((
-                    MempoolStatus::new(MempoolStatusCode::VmError),
-                    Some(validation_status.clone()),
-                ));
+            if let Ok(validation_result) = &validations[idx] {
+                match validation_result.status() {
+                    None => {
+                        let gas_cost = transaction.max_gas_amount();
+                        let mempool_status =
+                            mempool.add_txn(transaction, gas_cost, sequence_number, timeline_state);
+                        statuses.push((mempool_status, None));
+                    }
+                    Some(validation_status) => {
+                        statuses.push((
+                            MempoolStatus::new(MempoolStatusCode::VmError),
+                            Some(validation_status.clone()),
+                        ));
+                    }
+                }
             }
         }
     }

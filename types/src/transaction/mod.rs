@@ -635,6 +635,27 @@ impl From<VMStatus> for TransactionStatus {
     }
 }
 
+/// The result of running the transaction through the VM validator.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct VMValidatorResult {
+    status: Option<VMStatus>,
+    score: u64,
+}
+
+impl VMValidatorResult {
+    pub fn new(status: Option<VMStatus>, score: u64) -> Self {
+        Self { status, score }
+    }
+
+    pub fn status(&self) -> Option<VMStatus> {
+        self.status.clone()
+    }
+
+    pub fn score(&self) -> u64 {
+        self.score
+    }
+}
+
 /// The output of executing a transaction.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TransactionOutput {

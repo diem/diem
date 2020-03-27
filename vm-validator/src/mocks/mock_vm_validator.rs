@@ -6,7 +6,7 @@ use anyhow::Result;
 use libra_state_view::StateView;
 use libra_types::{
     account_address::AccountAddress,
-    transaction::SignedTransaction,
+    transaction::{SignedTransaction, VMValidatorResult},
     vm_error::{StatusCode, VMStatus},
 };
 use libra_vm::VMVerifier;
@@ -20,18 +20,23 @@ impl VMVerifier for MockVMValidator {
         &self,
         _transaction: SignedTransaction,
         _state_view: &dyn StateView,
-    ) -> Option<VMStatus> {
-        None
+    ) -> VMValidatorResult {
+        VMValidatorResult::new(None, 0)
     }
 }
 
 #[async_trait::async_trait]
 impl TransactionValidation for MockVMValidator {
     type ValidationInstance = MockVMValidator;
-    async fn validate_transaction(&self, txn: SignedTransaction) -> Result<Option<VMStatus>> {
+    async fn validate_transaction(&self, txn: SignedTransaction) -> Result<VMValidatorResult> {
         let txn = match txn.check_signature() {
             Ok(txn) => txn,
-            Err(_) => return Ok(Some(VMStatus::new(StatusCode::INVALID_SIGNATURE))),
+            Err(_) => {
+                return Ok(VMValidatorResult::new(
+                    Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)),
+                    0,
+                ))
+            }
         };
 
         let sender = txn.sender();
@@ -68,6 +73,6 @@ impl TransactionValidation for MockVMValidator {
         } else {
             None
         };
-        Ok(ret)
+        Ok(VMValidatorResult::new(ret, 0))
     }
 }

@@ -4,8 +4,9 @@
 use anyhow::Result;
 use futures::executor::block_on;
 use libra_types::{
-    account_address::AccountAddress, account_config::AccountResource,
-    transaction::SignedTransaction, vm_error::VMStatus,
+    account_address::AccountAddress,
+    account_config::AccountResource,
+    transaction::{SignedTransaction, VMValidatorResult},
 };
 use libra_vm::{LibraVM, VMVerifier};
 use scratchpad::SparseMerkleTree;
@@ -21,7 +22,7 @@ mod vm_validator_test;
 pub trait TransactionValidation: Send + Sync + Clone {
     type ValidationInstance: VMVerifier;
     /// Validate a txn from client
-    async fn validate_transaction(&self, _txn: SignedTransaction) -> Result<Option<VMStatus>>;
+    async fn validate_transaction(&self, _txn: SignedTransaction) -> Result<VMValidatorResult>;
 }
 
 #[derive(Clone)]
@@ -61,7 +62,7 @@ impl VMValidator {
 impl TransactionValidation for VMValidator {
     type ValidationInstance = LibraVM;
 
-    async fn validate_transaction(&self, txn: SignedTransaction) -> Result<Option<VMStatus>> {
+    async fn validate_transaction(&self, txn: SignedTransaction) -> Result<VMValidatorResult> {
         let (version, state_root) = self.storage_read_client.get_latest_state_root().await?;
         let client = self.storage_read_client.clone();
         let rt_handle = self.rt_handle.clone();

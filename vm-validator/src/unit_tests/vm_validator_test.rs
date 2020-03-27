@@ -98,7 +98,7 @@ fn test_validate_transaction() {
     let ret = rt
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
-    assert_eq!(ret, None);
+    assert_eq!(ret.status(), None);
 }
 
 #[test]
@@ -122,7 +122,10 @@ fn test_validate_invalid_signature() {
     let ret = rt
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
-    assert_eq!(ret.unwrap().major_status, StatusCode::INVALID_SIGNATURE);
+    assert_eq!(
+        ret.status().unwrap().major_status,
+        StatusCode::INVALID_SIGNATURE
+    );
 }
 
 #[test]
@@ -147,7 +150,7 @@ fn test_validate_known_script_too_large_args() {
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
     assert_eq!(
-        ret.unwrap().major_status,
+        ret.status().unwrap().major_status,
         StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE
     );
 }
@@ -171,7 +174,7 @@ fn test_validate_max_gas_units_above_max() {
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
     assert_eq!(
-        ret.unwrap().major_status,
+        ret.status().unwrap().major_status,
         StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND
     );
 }
@@ -195,7 +198,7 @@ fn test_validate_max_gas_units_below_min() {
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
     assert_eq!(
-        ret.unwrap().major_status,
+        ret.status().unwrap().major_status,
         StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS
     );
 }
@@ -219,7 +222,7 @@ fn test_validate_max_gas_price_above_bounds() {
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
     assert_eq!(
-        ret.unwrap().major_status,
+        ret.status().unwrap().major_status,
         StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND
     );
 }
@@ -247,9 +250,9 @@ fn test_validate_max_gas_price_below_bounds() {
         None,
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
-    assert_eq!(ret, None);
+    assert_eq!(ret.status(), None);
     //assert_eq!(
-    //    ret.unwrap().major_status,
+    //    ret.status().unwrap().major_status,
     //    StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND
     //);
 }
@@ -271,7 +274,10 @@ fn test_validate_unknown_script() {
     let ret = rt
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
-    assert_eq!(ret.unwrap().major_status, StatusCode::UNKNOWN_SCRIPT);
+    assert_eq!(
+        ret.status().unwrap().major_status,
+        StatusCode::UNKNOWN_SCRIPT
+    );
 }
 
 // Make sure that we can't publish non-whitelisted modules
@@ -293,7 +299,10 @@ fn test_validate_module_publishing() {
     let ret = rt
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
-    assert_eq!(ret.unwrap().major_status, StatusCode::UNKNOWN_MODULE);
+    assert_eq!(
+        ret.status().unwrap().major_status,
+        StatusCode::UNKNOWN_MODULE
+    );
 }
 
 #[test]
@@ -317,7 +326,10 @@ fn test_validate_invalid_auth_key() {
     let ret = rt
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
-    assert_eq!(ret.unwrap().major_status, StatusCode::INVALID_AUTH_KEY);
+    assert_eq!(
+        ret.status().unwrap().major_status,
+        StatusCode::INVALID_AUTH_KEY
+    );
 }
 
 #[test]
@@ -343,7 +355,7 @@ fn test_validate_account_doesnt_exist() {
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
     assert_eq!(
-        ret.unwrap().major_status,
+        ret.status().unwrap().major_status,
         StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST
     );
 }
@@ -365,7 +377,7 @@ fn test_validate_sequence_number_too_new() {
     let ret = rt
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
-    assert_eq!(ret, None);
+    assert_eq!(ret.status(), None);
 }
 
 #[test]
@@ -387,7 +399,7 @@ fn test_validate_invalid_arguments() {
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
     // TODO: Script arguement types are now checked at execution time. Is this an idea behavior?
-    // assert_eq!(ret.unwrap().major_status, StatusCode::TYPE_MISMATCH);
+    // assert_eq!(ret.status().unwrap().major_status, StatusCode::TYPE_MISMATCH);
 }
 
 #[test]
@@ -402,5 +414,8 @@ fn test_validate_non_genesis_write_set() {
     let ret = rt
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
-    assert_eq!(ret.unwrap().major_status, StatusCode::REJECTED_WRITE_SET);
+    assert_eq!(
+        ret.status().unwrap().major_status,
+        StatusCode::REJECTED_WRITE_SET
+    );
 }

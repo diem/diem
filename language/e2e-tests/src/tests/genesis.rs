@@ -32,7 +32,7 @@ fn invalid_genesis_write_set() {
     )
     .into_inner();
     assert_prologue_parity!(
-        executor.verify_transaction(txn.clone()),
+        executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
         VMStatus::new(StatusCode::INVALID_WRITE_SET)
     );
