@@ -3,7 +3,7 @@
 
 use super::{
     core::{self, Context, Subst},
-    expand, globals,
+    expand, globals, recursive_structs,
 };
 use crate::{
     errors::Errors,
@@ -26,7 +26,9 @@ pub fn program(prog: N::Program, errors: Errors) -> (T::Program, Errors) {
     let main = main_function(&mut context, prog.main);
 
     assert!(context.constraints.is_empty());
-    (T::Program { modules, main }, context.get_errors())
+    let mut errors = context.get_errors();
+    recursive_structs::modules(&mut errors, &modules);
+    (T::Program { modules, main }, errors)
 }
 
 fn modules(
@@ -212,7 +214,7 @@ fn struct_def(context: &mut Context, _name: StructName, s: &mut N::StructDefinit
 
     for (_field, idx_ty) in field_map.iter() {
         let inst_ty = core::instantiate(context, idx_ty.1.clone());
-        context.add_single_type_constraint(inst_ty.loc, "Invalid field type", inst_ty);
+        context.add_base_type_constraint(inst_ty.loc, "Invalid field type", inst_ty);
     }
     core::solve_constraints(context);
 
