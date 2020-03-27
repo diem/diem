@@ -7,10 +7,9 @@
 //! Used for node restarts, network partitions, full node syncs
 #![recursion_limit = "1024"]
 
-use executor_types::ExecutedTrees;
 use libra_types::{
     account_address::AccountAddress, epoch_info::EpochInfo, ledger_info::LedgerInfoWithSignatures,
-    validator_verifier::ValidatorVerifier,
+    transaction::Version, validator_verifier::ValidatorVerifier,
 };
 use std::sync::Arc;
 pub use synchronizer::{StateSyncClient, StateSynchronizer};
@@ -28,7 +27,6 @@ type PeerId = AccountAddress;
 
 /// The state distinguishes between the following fields:
 /// * highest_local_li is keeping the latest certified ledger info
-/// * synced_trees is keeping the latest state in the transaction accumulator and state tree.
 ///
 /// While `highest_local_li` can be used for helping the others (corresponding to the highest
 /// version we have a proof for), `synced_trees` is used for retrieving missing chunks
@@ -36,16 +34,17 @@ type PeerId = AccountAddress;
 #[derive(Clone)]
 pub struct SynchronizerState {
     pub highest_local_li: LedgerInfoWithSignatures,
-    pub synced_trees: ExecutedTrees,
     // Corresponds to the current epoch if the highest local LI is in the middle of the epoch,
     // or the next epoch if the highest local LI is the final LI in the current epoch.
     pub trusted_epoch: EpochInfo,
+
+    pub highest_sync_version: Version,
 }
 
 impl SynchronizerState {
     pub fn new(
         highest_local_li: LedgerInfoWithSignatures,
-        synced_trees: ExecutedTrees,
+        highest_sync_version: Version,
         current_verifier: ValidatorVerifier,
     ) -> Self {
         let current_epoch = highest_local_li.ledger_info().epoch();
@@ -61,14 +60,14 @@ impl SynchronizerState {
         };
         SynchronizerState {
             highest_local_li,
-            synced_trees,
+            highest_sync_version,
             trusted_epoch,
         }
     }
 
     /// The highest available version in the local storage (even if it's not covered by the LI).
     pub fn highest_version_in_local_storage(&self) -> u64 {
-        self.synced_trees.version().unwrap_or(0)
+        self.highest_sync_version
     }
 
     pub fn epoch(&self) -> u64 {

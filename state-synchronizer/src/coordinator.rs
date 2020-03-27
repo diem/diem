@@ -817,7 +817,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             txn_list_with_proof,
             target,
             intermediate_end_of_epoch_li,
-            &mut self.local_state.synced_trees,
         )?;
         Ok(())
     }

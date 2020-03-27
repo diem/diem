@@ -3,7 +3,6 @@
 
 use crate::SynchronizerState;
 use anyhow::{bail, Result};
-use executor_types::ExecutedTrees;
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
     account_address::AccountAddress,
@@ -13,7 +12,7 @@ use libra_types::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::ValidatorSet,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{authenticator::AuthenticationKey, SignedTransaction, Transaction},
+    transaction::{authenticator::AuthenticationKey, SignedTransaction, Transaction, Version},
     validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
 };
@@ -24,8 +23,6 @@ use vm_genesis::GENESIS_KEYPAIR;
 pub struct MockStorage {
     // some mock transactions in the storage
     transactions: Vec<Transaction>,
-    // the executed trees after applying the txns above.
-    synced_trees: ExecutedTrees,
     // latest ledger info per epoch
     ledger_infos: HashMap<u64, LedgerInfoWithSignatures>,
     // latest epoch number (starts with 1)
@@ -49,7 +46,6 @@ impl MockStorage {
         ledger_infos.insert(0, genesis_li);
         Self {
             transactions: vec![],
-            synced_trees: ExecutedTrees::new_empty(),
             ledger_infos,
             epoch_num,
             signer,
@@ -59,21 +55,10 @@ impl MockStorage {
 
     fn add_txns(&mut self, txns: &mut Vec<Transaction>) {
         self.transactions.append(txns);
-        let num_leaves = self.transactions.len();
-        let frozen_subtree_roots = vec![HashValue::zero(); num_leaves.count_ones() as usize];
-        self.synced_trees = ExecutedTrees::new(
-            HashValue::zero(), /* dummy_state_root */
-            frozen_subtree_roots,
-            num_leaves as u64,
-        );
     }
 
-    pub fn version(&self) -> u64 {
-        self.transactions.len() as u64
-    }
-
-    pub fn synced_trees(&self) -> &ExecutedTrees {
-        &self.synced_trees
+    pub fn version(&self) -> Version {
+        self.transactions.len() as Version
     }
 
     pub fn epoch_num(&self) -> u64 {
@@ -93,7 +78,7 @@ impl MockStorage {
     pub fn get_local_storage_state(&self) -> SynchronizerState {
         SynchronizerState::new(
             self.highest_local_li(),
-            self.synced_trees().clone(),
+            self.version(),
             self.verifier.clone(),
         )
     }

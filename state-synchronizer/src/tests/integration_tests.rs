@@ -6,7 +6,6 @@ use crate::{
     StateSynchronizer, SynchronizerState,
 };
 use anyhow::{bail, Result};
-use executor_types::ExecutedTrees;
 use futures::executor::block_on;
 use libra_config::config::RoleType;
 use libra_crypto::{
@@ -61,7 +60,6 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         txn_list_with_proof: TransactionListWithProof,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
-        _synced_trees: &mut ExecutedTrees,
     ) -> Result<()> {
         self.storage.write().unwrap().add_txns_with_li(
             txn_list_with_proof.transactions,
@@ -355,7 +353,7 @@ impl SynchronizerEnv {
         let max_retries = 30;
         for _ in 0..max_retries {
             let state = block_on(self.clients[peer_id].get_state()).unwrap();
-            if state.synced_trees.version().unwrap_or(0) == target_version {
+            if state.highest_version_in_local_storage() == target_version {
                 return true;
             }
             std::thread::sleep(std::time::Duration::from_millis(1000));

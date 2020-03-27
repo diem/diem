@@ -31,7 +31,6 @@ pub trait ExecutorProxyTrait: Send {
         txn_list_with_proof: TransactionListWithProof,
         verified_target_li: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
-        synced_trees: &mut ExecutedTrees,
     ) -> Result<()>;
 
     /// Gets chunk of transactions given the known version, target version and the max limit.
@@ -129,15 +128,18 @@ impl ExecutorProxyTrait for ExecutorProxy {
 
         let current_verifier = storage_info.get_validator_set().into();
 
-        let synced_trees = if let Some(synced_tree_state) = storage_info.synced_tree_state {
-            ExecutedTrees::from(synced_tree_state)
-        } else {
-            ExecutedTrees::from(storage_info.committed_tree_state)
-        };
+        let highest_synced_version =
+            if let Some(synced_tree_state) = storage_info.synced_tree_state {
+                ExecutedTrees::from(synced_tree_state)
+            } else {
+                ExecutedTrees::from(storage_info.committed_tree_state)
+            }
+            .version()
+            .expect("The highest synced version must exist");
 
         Ok(SynchronizerState::new(
             storage_info.latest_ledger_info,
-            synced_trees,
+            highest_synced_version,
             current_verifier,
         ))
     }
@@ -147,7 +149,6 @@ impl ExecutorProxyTrait for ExecutorProxy {
         txn_list_with_proof: TransactionListWithProof,
         verified_target_li: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
-        _synced_trees: &mut ExecutedTrees,
     ) -> Result<()> {
         let reconfig_events = self.executor.execute_and_commit_chunk(
             txn_list_with_proof,
