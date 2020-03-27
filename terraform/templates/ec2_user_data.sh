@@ -10,9 +10,24 @@ if [ -e /dev/nvme1n1 ]; then
 	cat >> /etc/fstab <<-EOF
 	/dev/nvme1n1  /data  ext4  defaults,noatime,nofail  0  2
 	EOF
-
 	mkdir /data
 	mount /data
+
+	# non-persistent storage is managed by Docker under data-root
+	if ! ${persistent} ; then
+		cat >> /etc/fstab <<-EOF
+		/dev/nvme1n1  /var/lib/docker/volumes  ext4  defaults,noatime,nofail  0  2
+		EOF
+		mkdir -p /var/lib/docker/volumes
+		mount /var/lib/docker/volumes
+
+		# give some helptul tips
+		cat > /data/README <<-EOF
+		In non-persistent mode -- data is not persisted between ECS updates. Showing Docker volumes instead. To find the currently mounted Docker volume:
+		\$ docker container ls -q --filter label=com.amazonaws.ecs.container-name=validator | xargs docker inspect -f '{{ .Mounts }}' | awk '{print \$3}'
+		EOF
+	fi
+
 fi
 
 mkdir -p /opt/libra /vault

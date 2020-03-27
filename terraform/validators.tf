@@ -119,6 +119,7 @@ data "template_file" "user_data" {
   template = file("templates/ec2_user_data.sh")
 
   vars = {
+    persistent       = var.persist_libra_data
     ecs_cluster      = aws_ecs_cluster.testnet.name
     host_log_path    = "/data/libra/libra.log"
     host_structlog_path   = "/data/libra/libra_structlog.log"
