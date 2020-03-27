@@ -50,6 +50,24 @@ pub enum ConditionKind {
     Requires,
 }
 
+impl ConditionKind {
+    pub fn on_decl(&self) -> bool {
+        use ConditionKind::*;
+        match self {
+            AbortsIf | Ensures | Requires => true,
+            _ => false,
+        }
+    }
+
+    pub fn on_impl(&self) -> bool {
+        use ConditionKind::*;
+        match self {
+            Assert | Assume | Decreases => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Condition {
     pub loc: Loc,

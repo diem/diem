@@ -1,0 +1,21 @@
+Move prover returns: exiting with boogie verification errors
+error:  This assertion might not hold.
+
+    ┌── tests/sources/specs-in-fun.move:14:13 ───
+    │
+ 14 │             assert x == y;
+    │             ^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/specs-in-fun.move:11:5: simple2 (entry)
+    =     at tests/sources/specs-in-fun.move:12:9: simple2
+    =         x = <redacted>,
+    =         y = <redacted>
+
+error:  This assertion might not hold.
+
+    ┌── tests/sources/specs-in-fun.move:30:13 ───
+    │
+ 30 │             assert x > y;
+    │             ^^^^^^^^^^^^^
+    │
+    =     at tests/sources/specs-in-fun.move:27:5: simple4 (entry)

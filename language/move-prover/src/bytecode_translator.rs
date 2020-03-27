@@ -336,7 +336,7 @@ impl<'env> ModuleTranslator<'env> {
             if !func_env.is_native() {
                 num_fun += 1;
             }
-            if !func_env.get_specification().is_empty() && !func_env.is_native() {
+            if !func_env.get_specification_on_decl().is_empty() && !func_env.is_native() {
                 num_fun_specified += 1;
             }
             self.writer.set_location(&func_env.get_loc());
@@ -433,6 +433,13 @@ impl<'env> ModuleTranslator<'env> {
     fn generate_function_spec(&self, func_env: &FunctionEnv<'_>) {
         emitln!(self.writer);
         SpecTranslator::new(self.writer, &func_env.module_env, true).translate_conditions(func_env);
+    }
+
+    /// Return string for spec inside function implementation.
+    fn generate_function_spec_inside_impl(&self, func_env: &FunctionEnv<'_>, offset: CodeOffset) {
+        emitln!(self.writer);
+        SpecTranslator::new(self.writer, &func_env.module_env, true)
+            .translate_conditions_inside_impl(func_env, offset);
     }
 
     /// Return string for body of verify function, which is just a call to the
@@ -757,6 +764,9 @@ impl<'env> ModuleTranslator<'env> {
             emitln!(self.writer, "Label_{}:", offset);
             self.writer.indent();
         }
+
+        // Insert any specs at this bytecode offset
+        self.generate_function_spec_inside_impl(func_env, offset);
 
         // Translate the bytecode instruction.
         match bytecode {

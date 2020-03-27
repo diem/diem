@@ -22,9 +22,9 @@ use libra_types::language_storage;
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressPoolIndex, FieldDefinitionIndex, FunctionDefinitionIndex, FunctionHandleIndex, Kind,
-        LocalsSignatureIndex, SignatureToken, StructDefinitionIndex, StructFieldInformation,
-        StructHandleIndex,
+        AddressPoolIndex, CodeOffset, FieldDefinitionIndex, FunctionDefinitionIndex,
+        FunctionHandleIndex, Kind, LocalsSignatureIndex, SignatureToken, StructDefinitionIndex,
+        StructFieldInformation, StructHandleIndex,
     },
     views::{
         FieldDefinitionView, FunctionDefinitionView, FunctionHandleView, SignatureTokenView,
@@ -1408,8 +1408,13 @@ impl<'env> FunctionEnv<'env> {
     }
 
     /// Returns specification conditions associated with this function.
-    pub fn get_specification(&'env self) -> &'env [Condition] {
+    pub fn get_specification_on_decl(&'env self) -> &'env [Condition] {
         &self.data.spec.on_decl
+    }
+
+    /// Returns specification conditions associated with this function at bytecode offset.
+    pub fn get_specification_on_impl(&'env self, offset: CodeOffset) -> Option<&'env [Condition]> {
+        self.data.spec.on_impl.get(&offset).map(|x| x.as_slice())
     }
 
     fn definition_view(&'env self) -> FunctionDefinitionView<'env, CompiledModule> {
