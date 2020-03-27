@@ -115,11 +115,11 @@ impl Command for DevCommandExecute {
     }
 }
 
-pub struct DevCommandAllowCustomScript {}
+pub struct DevCommandEnableCustomScript {}
 
-impl Command for DevCommandAllowCustomScript {
+impl Command for DevCommandEnableCustomScript {
     fn get_aliases(&self) -> Vec<&'static str> {
-        vec!["allow_custom_script"]
+        vec!["enable_custom_script"]
     }
 
     fn get_params_help(&self) -> &'static str {
@@ -142,11 +142,11 @@ impl Command for DevCommandAllowCustomScript {
     }
 }
 
-pub struct DevCommandDisallowCustomScript {}
+pub struct DevCommandDisableCustomScript {}
 
-impl Command for DevCommandDisallowCustomScript {
+impl Command for DevCommandDisableCustomScript {
     fn get_aliases(&self) -> Vec<&'static str> {
-        vec!["disallow_custom_script"]
+        vec!["disable_custom_script"]
     }
 
     fn get_params_help(&self) -> &'static str {
@@ -154,7 +154,7 @@ impl Command for DevCommandDisallowCustomScript {
     }
 
     fn get_description(&self) -> &'static str {
-        "Only allow executing predefined script in the network."
+        "Only allow executing predefined stdlib script in the network."
     }
 
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
