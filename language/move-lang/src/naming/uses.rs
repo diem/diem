@@ -5,13 +5,10 @@ use crate::{
     errors::*,
     naming::ast as N,
     parser::ast::{ModuleIdent, StructName},
-    shared::unique_map::UniqueMap,
+    shared::{unique_map::UniqueMap, *},
 };
 use move_ir_types::location::*;
-use petgraph::{
-    algo::{astar as petgraph_astar, toposort as petgraph_toposort, Cycle},
-    graphmap::DiGraphMap,
-};
+use petgraph::{algo::toposort as petgraph_toposort, graphmap::DiGraphMap};
 use std::collections::{BTreeMap, BTreeSet};
 
 //**************************************************************************************************
@@ -20,12 +17,14 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub fn verify(errors: &mut Errors, modules: &mut UniqueMap<ModuleIdent, N::ModuleDefinition>) {
     let imm_modules = &modules;
-    let context = &mut Context::new(errors, imm_modules);
+    let context = &mut Context::new(imm_modules);
     module_defs(context, modules);
-    match build_ordering(context) {
+    let graph = &context.dependency_graph();
+    match petgraph_toposort(graph, None) {
         Err(cycle_node) => {
             let cycle_ident = cycle_node.node_id().clone();
-            report_cycle(context, cycle_ident)
+            let error = cycle_error(context, cycle_ident);
+            errors.push(error)
         }
         Ok(ordered_ids) => {
             let ordered_ids = ordered_ids.into_iter().cloned().collect::<Vec<_>>();
@@ -37,19 +36,14 @@ pub fn verify(errors: &mut Errors, modules: &mut UniqueMap<ModuleIdent, N::Modul
 }
 
 struct Context<'a> {
-    errors: &'a mut Errors,
     modules: &'a UniqueMap<ModuleIdent, N::ModuleDefinition>,
     neighbors: BTreeMap<ModuleIdent, BTreeMap<ModuleIdent, Loc>>,
     current_module: Option<ModuleIdent>,
 }
 
 impl<'a> Context<'a> {
-    fn new(
-        errors: &'a mut Errors,
-        modules: &'a UniqueMap<ModuleIdent, N::ModuleDefinition>,
-    ) -> Self {
+    fn new(modules: &'a UniqueMap<ModuleIdent, N::ModuleDefinition>) -> Self {
         Context {
-            errors,
             modules,
             neighbors: BTreeMap::new(),
             current_module: None,
@@ -81,13 +75,7 @@ impl<'a> Context<'a> {
     }
 }
 
-fn build_ordering<'a>(
-    context: &'a Context,
-) -> Result<Vec<&'a ModuleIdent>, Cycle<&'a ModuleIdent>> {
-    petgraph_toposort(&context.dependency_graph(), None)
-}
-
-fn report_cycle(context: &mut Context, cycle_ident: ModuleIdent) {
+fn cycle_error(context: &Context, cycle_ident: ModuleIdent) -> Error {
     let cycle = shortest_cycle(&context.dependency_graph(), &cycle_ident);
 
     // For printing uses, sort the cycle by location (earliest first)
@@ -104,39 +92,7 @@ fn report_cycle(context: &mut Context, cycle_ident: ModuleIdent) {
         "Using this module creates a dependency cycle: {}",
         cycle_strings
     );
-    context
-        .errors
-        .push(vec![(used_loc, use_msg), (used_loc, cycle_msg)])
-}
-
-fn shortest_cycle<'a>(
-    dependency_graph: &DiGraphMap<&'a ModuleIdent, ()>,
-    start: &'a ModuleIdent,
-) -> Vec<&'a ModuleIdent> {
-    let shortest_path = dependency_graph
-        .neighbors(start)
-        .fold(None, |shortest_path, neighbor| {
-            let path_opt = petgraph_astar(
-                dependency_graph,
-                neighbor,
-                |finish| finish == start,
-                |_e| 1,
-                |_| 0,
-            );
-            match (shortest_path, path_opt) {
-                (p, None) | (None, p) => p,
-                (Some((acc_len, acc_path)), Some((cur_len, cur_path))) => {
-                    Some(if cur_len < acc_len {
-                        (cur_len, cur_path)
-                    } else {
-                        (acc_len, acc_path)
-                    })
-                }
-            }
-        });
-    let (_, mut path) = shortest_path.unwrap();
-    path.insert(0, start);
-    path
+    vec![(used_loc, use_msg), (used_loc, cycle_msg)]
 }
 
 fn best_cycle_loc<'a>(
