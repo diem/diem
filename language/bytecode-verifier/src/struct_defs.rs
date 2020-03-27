@@ -5,12 +5,14 @@
 //! recursive. Since the module dependency graph is acylic by construction, applying this checker to
 //! each module in isolation guarantees that there is no structural recursion globally.
 use libra_types::vm_error::{StatusCode, VMStatus};
-use petgraph::{algo::toposort, Directed, Graph};
-use std::collections::BTreeMap;
+use petgraph::{algo::toposort, graphmap::DiGraphMap};
+use std::collections::{BTreeMap, BTreeSet};
 use vm::{
     access::ModuleAccess,
-    errors::verification_error,
-    file_format::{CompiledModule, StructDefinitionIndex, StructHandleIndex, TableIndex},
+    errors::{verification_error, VMResult},
+    file_format::{
+        CompiledModule, SignatureToken, StructDefinitionIndex, StructHandleIndex, TableIndex,
+    },
     internals::ModuleIndex,
     views::StructDefinitionView,
     IndexKind,
@@ -26,9 +28,10 @@ impl<'a> RecursiveStructDefChecker<'a> {
     }
 
     pub fn verify(self) -> Vec<VMStatus> {
-        let graph_builder = StructDefGraphBuilder::new(self.module);
-
-        let graph = graph_builder.build();
+        let graph = match StructDefGraphBuilder::new(self.module).build() {
+            Err(status) => return vec![status],
+            Ok(graph) => graph,
+        };
 
         // toposort is iterative while petgraph::algo::is_cyclic_directed is recursive. Prefer
         // the iterative solution here as this code may be dealing with untrusted data.
@@ -37,14 +40,11 @@ impl<'a> RecursiveStructDefChecker<'a> {
                 // Is the result of this useful elsewhere?
                 vec![]
             }
-            Err(cycle) => {
-                let sd_idx = graph[cycle.node_id()];
-                vec![verification_error(
-                    IndexKind::StructDefinition,
-                    sd_idx.into_index(),
-                    StatusCode::RECURSIVE_STRUCT_DEFINITION,
-                )]
-            }
+            Err(cycle) => vec![verification_error(
+                IndexKind::StructDefinition,
+                cycle.node_id().into_index(),
+                StatusCode::RECURSIVE_STRUCT_DEFINITION,
+            )],
         }
     }
 }
@@ -73,44 +73,57 @@ impl<'a> StructDefGraphBuilder<'a> {
         }
     }
 
-    pub fn build(self) -> Graph<StructDefinitionIndex, (), Directed, u32> {
-        let mut graph = Graph::new();
-
-        let struct_def_count = self.module.struct_defs().len();
-
-        let nodes: Vec<_> = (0..struct_def_count)
-            .map(|idx| graph.add_node(StructDefinitionIndex::new(idx as TableIndex)))
-            .collect();
-
-        for idx in 0..struct_def_count {
+    pub fn build(self) -> VMResult<DiGraphMap<StructDefinitionIndex, ()>> {
+        let mut neighbors = BTreeMap::new();
+        for idx in 0..self.module.struct_defs().len() {
             let sd_idx = StructDefinitionIndex::new(idx as TableIndex);
-            for followed_idx in self.member_struct_defs(sd_idx) {
-                graph.add_edge(nodes[idx], nodes[followed_idx.into_index()], ());
-            }
+            self.add_struct_defs(&mut neighbors, sd_idx)?
         }
 
-        graph
+        let edges = neighbors
+            .into_iter()
+            .flat_map(|(parent, children)| children.into_iter().map(move |child| (parent, child)));
+        Ok(DiGraphMap::from_edges(edges))
     }
 
-    fn member_struct_defs(
-        &'a self,
+    fn add_struct_defs(
+        &self,
+        neighbors: &mut BTreeMap<StructDefinitionIndex, BTreeSet<StructDefinitionIndex>>,
         idx: StructDefinitionIndex,
-    ) -> impl Iterator<Item = StructDefinitionIndex> + 'a {
+    ) -> VMResult<()> {
         let struct_def = self.module.struct_def_at(idx);
         let struct_def = StructDefinitionView::new(self.module, struct_def);
         // The fields iterator is an option in the case of native structs. Flatten makes an empty
         // iterator for that case
-        let fields = struct_def.fields().into_iter().flatten();
-        let handle_to_def = &self.handle_to_def;
+        for field in struct_def.fields().into_iter().flatten() {
+            self.add_signature_token(neighbors, idx, field.signature_token())?
+        }
+        Ok(())
+    }
 
-        fields.filter_map(move |field| {
-            let type_signature = field.type_signature();
-            let sh_idx = type_signature.token().struct_index()?;
-            match handle_to_def.get(&sh_idx) {
-                Some(sd_idx) => Some(*sd_idx),
-                None => {
-                    // This field refers to a struct in another module.
-                    None
+    fn add_signature_token(
+        &self,
+        neighbors: &mut BTreeMap<StructDefinitionIndex, BTreeSet<StructDefinitionIndex>>,
+        cur_idx: StructDefinitionIndex,
+        token: &SignatureToken,
+    ) -> VMResult<()> {
+        use SignatureToken as T;
+        Ok(match token {
+            T::Bool | T::U8 | T::U64 | T::U128 | T::Address | T::TypeParameter(_) => (),
+            T::Reference(_) | T::MutableReference(_) => {
+                return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("Reference field when checking recursive structs".to_owned()))
+            }
+            T::Vector(inner) => self.add_signature_token(neighbors, cur_idx, inner)?,
+            T::Struct(sh_idx, inners) => {
+                if let Some(struct_def_idx) = self.handle_to_def.get(sh_idx) {
+                    neighbors
+                        .entry(cur_idx)
+                        .or_insert_with(BTreeSet::new)
+                        .insert(*struct_def_idx);
+                }
+                for t in inners {
+                    self.add_signature_token(neighbors, cur_idx, t)?
                 }
             }
         })
