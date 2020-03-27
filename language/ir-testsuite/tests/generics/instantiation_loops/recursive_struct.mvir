@@ -1,0 +1,63 @@
+module M0 {
+    struct Foo { f: Self.Foo }
+}
+
+// check: RECURSIVE_STRUCT_DEFINITION
+
+//! new-transaction
+
+module M1 {
+    struct Cup<T> { f: T }
+    struct Foo { f: Self.Cup<Self.Foo> }
+
+    // blows up the stack
+    public foo(): Self.Foo {
+        return Foo { f: Cup<Self.Foo> { f: Self.foo() }};
+    }
+
+}
+
+// check: RECURSIVE_STRUCT_DEFINITION
+
+//! new-transaction
+
+module M2 {
+    resource X { y: vector<Self.Y> }
+    resource Y { x: vector<Self.X> }
+
+    // blows up the vm
+    public ex(): bool {
+        return exists<X>(get_txn_sender());
+    }
+
+    // blows up the VM
+    public borrow() acquires X {
+        _ = borrow_global<X>(get_txn_sender());
+        return;
+    }
+}
+
+// check: RECURSIVE_STRUCT_DEFINITION
+
+//! new-transaction
+module M3 {
+    import {{default}}.M1;
+
+    struct Foo { f: M1.Cup<Self.Foo> }
+
+}
+
+// check: RECURSIVE_STRUCT_DEFINITION
+
+//! new-transaction
+module M3 {
+    import {{default}}.M1;
+
+    struct A { b: Self.B }
+    struct B { c: Self.C }
+    struct C { d: vector<Self.D> }
+    struct D { x: M1.Cup<M1.Cup<M1.Cup<Self.A>>> }
+
+}
+
+// check: RECURSIVE_STRUCT_DEFINITION
