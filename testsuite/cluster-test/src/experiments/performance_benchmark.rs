@@ -4,7 +4,7 @@
 use crate::{
     cluster::Cluster,
     cluster_swarm::ClusterSwarm,
-    effects::{Effect, StopContainer},
+    effects::{Effect, NetworkDelay, StopContainer},
     experiments::{Context, Experiment, ExperimentParam},
     instance,
     instance::Instance,
@@ -50,6 +50,8 @@ pub struct PerformanceBenchmarkParams {
     help = "Duration of an experiment in seconds"
     )]
     pub duration: u64,
+    #[structopt(long, help = "Network delay injected for all nodes in millisec")]
+    pub delay: Option<u64>,
 }
 
 pub struct PerformanceBenchmark {
@@ -58,6 +60,7 @@ pub struct PerformanceBenchmark {
     percent_nodes_down: usize,
     duration: Duration,
     trace: bool,
+    delay: Option<Duration>,
 }
 
 pub const DEFAULT_BENCH_DURATION: u64 = 120;
@@ -69,6 +72,7 @@ impl PerformanceBenchmarkParams {
             is_fullnode: false,
             duration: DEFAULT_BENCH_DURATION,
             trace: false,
+            delay: None,
         }
     }
 }
@@ -86,6 +90,7 @@ impl ExperimentParam for PerformanceBenchmarkParams {
                 percent_nodes_down: self.percent_nodes_down,
                 duration: Duration::from_secs(self.duration),
                 trace: self.trace,
+                delay: self.delay.map(Duration::from_millis),
             }
         } else {
             let num_nodes = cluster.validator_instances().len();
@@ -97,6 +102,7 @@ impl ExperimentParam for PerformanceBenchmarkParams {
                 percent_nodes_down: self.percent_nodes_down,
                 duration: Duration::from_secs(self.duration),
                 trace: self.trace,
+                delay: self.delay.map(Duration::from_millis),
             }
         }
     }
@@ -115,6 +121,16 @@ impl Experiment for PerformanceBenchmark {
             .into_iter()
             .map(StopContainer::new)
             .collect();
+        let network_delays_effects: Vec<_> = if let Some(delay) = self.delay {
+            self.up_instances
+                .iter()
+                .map(|instance| {
+                    NetworkDelay::new(instance.clone(), vec![(self.up_instances.clone(), delay)])
+                })
+                .collect()
+        } else {
+            vec![]
+        };
         if let Some(cluster_swarm) = context.cluster_swarm {
             let instance_configs = instance::instance_configs(&self.down_instances)?;
             let futures: Vec<_> = instance_configs
@@ -123,7 +139,10 @@ impl Experiment for PerformanceBenchmark {
                 .collect();
             try_join_all(futures).await?;
         } else {
-            let futures = stop_effects.iter().map(|e| e.activate());
+            let futures = stop_effects
+                .iter()
+                .map(|e| e.activate())
+                .chain(network_delays_effects.iter().map(|e| e.activate()));
             join_all(futures).await;
         }
         let buffer = Duration::from_secs(60);
