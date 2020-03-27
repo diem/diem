@@ -18,6 +18,7 @@ use libra_types::{
     transaction::{Transaction, TransactionListWithProof, Version},
 };
 use proptest::prelude::*;
+use rand::Rng;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::{collections::BTreeMap, sync::Arc};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
@@ -154,7 +155,6 @@ fn test_executor_status() {
 fn test_executor_one_block() {
     let mut executor = TestExecutor::new();
     let parent_block_id = executor.committed_block_id();
-    println!("{:?}", parent_block_id);
     let block_id = gen_block_id(1);
 
     let version = 100;
@@ -434,6 +434,44 @@ fn test_executor_execute_and_commit_chunk_restart() {
     }
 
     drop(storage_server);
+}
+
+#[test]
+fn test_executor_execute_and_commit_chunk_local_result_mismatch() {
+    let first_batch_size = 10;
+    let second_batch_size = 10;
+
+    let (chunks, ledger_info) = {
+        let first_batch_start = 1;
+        let second_batch_start = first_batch_start + first_batch_size;
+        create_transaction_chunks(vec![
+            first_batch_start..first_batch_start + first_batch_size,
+            second_batch_start..second_batch_start + second_batch_size,
+        ])
+    };
+
+    let (config, _) = config_builder::test_config();
+    let _storage_server = start_storage_service(&config);
+    let mut executor = create_executor(&config);
+    // commit 5 txns first.
+    {
+        let parent_block_id = executor.committed_block_id();
+        let block_id = gen_block_id(1);
+        let version = 5;
+        let mut rng = rand::thread_rng();
+        let txns = (0..version)
+            .map(|_| encode_mint_transaction(gen_address(rng.gen::<u64>()), 100))
+            .collect::<Vec<_>>();
+        let output = executor
+            .execute_block((block_id, txns), parent_block_id)
+            .unwrap();
+        let ledger_info = gen_ledger_info(version, output.root_hash(), block_id, 1);
+        executor.commit_blocks(vec![block_id], ledger_info).unwrap();
+    }
+    // Fork starts. Should fail.
+    assert!(executor
+        .execute_and_commit_chunk(chunks[0].clone(), ledger_info, None)
+        .is_err());
 }
 
 struct TestBlock {

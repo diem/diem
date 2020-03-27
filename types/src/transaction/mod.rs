@@ -30,6 +30,7 @@ use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
     fmt,
+    fmt::{Display, Formatter},
     time::Duration,
 };
 
@@ -738,7 +739,7 @@ impl From<TransactionInfo> for crate::proto::types::TransactionInfo {
 
 /// `TransactionInfo` is the object we store in the transaction accumulator. It consists of the
 /// transaction as well as the execution result of this transaction.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
+#[derive(Clone, CryptoHasher, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct TransactionInfo {
     /// The hash of this transaction.
@@ -813,6 +814,16 @@ impl CryptoHash for TransactionInfo {
         let mut state = Self::Hasher::default();
         state.write(&lcs::to_bytes(self).expect("Serialization should work."));
         state.finish()
+    }
+}
+
+impl Display for TransactionInfo {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "TransactionInfo: [txn_hash: {}, state_root_hash: {}, event_root_hash: {}, gas_used: {}, major_status: {:?}]",
+            self.transaction_hash(), self.state_root_hash(), self.event_root_hash(), self.gas_used(), self.major_status(),
+        )
     }
 }
 
