@@ -387,6 +387,14 @@ where
             .skip(num_txns_to_skip as usize)
             .collect();
 
+        // If the proof is verified, then the length of txn_infos and txns must be the same.
+        let transaction_infos: Vec<_> = txn_list_with_proof
+            .proof
+            .transaction_infos()
+            .iter()
+            .skip(num_txns_to_skip as usize)
+            .collect();
+
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
             Arc::clone(&self.storage_read_client),
@@ -422,7 +430,22 @@ where
         // object matches what we have computed locally.
         let mut txns_to_commit = vec![];
         let mut reconfig_events = vec![];
-        for (txn, txn_data) in itertools::zip_eq(transactions, output.transaction_data()) {
+        for ((txn, txn_data), (i, txn_info)) in itertools::zip_eq(
+            itertools::zip_eq(transactions, output.transaction_data()),
+            transaction_infos.into_iter().enumerate(),
+        ) {
+            let generated_txn_info = &TransactionInfo::new(
+                txn.hash(),
+                txn_data.state_root_hash(),
+                txn_data.event_root_hash(),
+                txn_data.gas_used(),
+                txn_data.status().vm_status().major_status,
+            );
+            ensure!(
+                txn_info == generated_txn_info,
+                "txn_info do not match for {}-th transaction in chunk.\nChunk txn_info: {}\nProof txn_info: {}",
+                i, generated_txn_info, txn_info
+            );
             txns_to_commit.push(TransactionToCommit::new(
                 txn,
                 txn_data.account_blobs().clone(),
