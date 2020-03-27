@@ -36,7 +36,7 @@ pub enum Constraint {
     SingleTypeConstraint(Loc, String, Type),
 }
 pub type Constraints = Vec<Constraint>;
-type TParamSubst = HashMap<TParamID, Type>;
+pub type TParamSubst = HashMap<TParamID, Type>;
 
 pub struct FunctionInfo {
     pub defined_loc: Loc,
@@ -346,37 +346,41 @@ pub fn error_format(b: &Type, subst: &Subst) -> String {
     error_format_(b, subst, false)
 }
 
+pub fn error_format_nested(b: &Type, subst: &Subst) -> String {
+    error_format_(b, subst, true)
+}
+
 fn error_format_(sp!(_, b_): &Type, subst: &Subst, nested: bool) -> String {
     use Type_::*;
     let res = match b_ {
         UnresolvedError | Anything => "_".to_string(),
         Unit => "()".to_string(),
         Var(id) => match subst.get(*id) {
-            Some(t) => error_format_(t, subst, true),
+            Some(t) => error_format_nested(t, subst),
             None if nested && subst.is_num_var(*id) => "{integer}".to_string(),
             None if subst.is_num_var(*id) => return "integer".to_string(),
             None => "_".to_string(),
         },
         Apply(_, sp!(_, TypeName_::Multiple(_)), tys) => {
-            let inner = format_comma(tys.iter().map(|s| error_format_(s, subst, true)));
+            let inner = format_comma(tys.iter().map(|s| error_format_nested(s, subst)));
             format!("({})", inner)
         }
         Apply(_, n, tys) => {
             let tys_str = if !tys.is_empty() {
                 format!(
                     "<{}>",
-                    format_comma(tys.iter().map(|t| error_format_(t, subst, true)))
+                    format_comma(tys.iter().map(|t| error_format_nested(t, subst)))
                 )
             } else {
                 "".to_string()
             };
             format!("{}{}", n, tys_str)
         }
-        Param(tp) => tp.debug.value.to_string(),
+        Param(tp) => tp.user_specified_name.value.to_string(),
         Ref(mut_, ty) => format!(
             "&{}{}",
             if *mut_ { "mut " } else { "" },
-            error_format_(ty, subst, true)
+            error_format_nested(ty, subst)
         ),
     };
     if nested {
@@ -958,7 +962,7 @@ fn make_tparam_subst(tps: &[TParam], args: Vec<Type>) -> TParamSubst {
     subst
 }
 
-fn subst_tparams(subst: &TParamSubst, sp!(loc, t_): Type) -> Type {
+pub fn subst_tparams(subst: &TParamSubst, sp!(loc, t_): Type) -> Type {
     use Type_::*;
     match t_ {
         x @ Unit | x @ UnresolvedError | x @ Anything => sp(loc, x),

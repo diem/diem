@@ -1,0 +1,55 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/generics/instantiation_loops/recursive_struct.move:4:21 ───
+   │
+ 4 │     struct Foo { f: Foo }
+   │                     ^^^ Invalid field containing 'Foo' in struct 'Foo'.
+   ·
+ 4 │     struct Foo { f: Foo }
+   │                     --- Using this struct creates a cycle: 'Foo' contains 'Foo'
+   │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/generics/instantiation_loops/recursive_struct.move:10:25 ───
+    │
+ 10 │     struct Foo { f: Cup<Foo> }
+    │                         ^^^ Invalid field containing 'Foo' in struct 'Foo'.
+    ·
+ 10 │     struct Foo { f: Cup<Foo> }
+    │                         --- Using this struct creates a cycle: 'Foo' contains 'Foo'
+    │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/generics/instantiation_loops/recursive_struct.move:20:35 ───
+    │
+ 20 │     resource struct X { y: vector<Y> }
+    │                                   ^ Invalid field containing 'Y' in struct 'X'.
+    ·
+ 20 │     resource struct X { y: vector<Y> }
+    │                                   - Using this struct creates a cycle: 'Y' contains 'X' contains 'Y'
+    │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/generics/instantiation_loops/recursive_struct.move:41:8 ───
+    │
+ 41 │ module M3 {
+    │        ^^ Duplicate definition for module '0x42::M3'
+    ·
+ 34 │ module M3 {
+    │        -- Previously defined here
+    │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/generics/instantiation_loops/recursive_struct.move:46:26 ───
+    │
+ 46 │     struct C { d: vector<D> }
+    │                          ^ Invalid field containing 'D' in struct 'C'.
+    ·
+ 46 │     struct C { d: vector<D> }
+    │                          - Using this struct creates a cycle: 'D' contains 'A' contains 'B' contains 'C' contains 'D'
+    │
+

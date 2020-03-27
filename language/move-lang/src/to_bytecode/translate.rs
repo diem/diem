@@ -565,7 +565,7 @@ fn kind(sp!(_, k_): &Kind) -> IR::Kind {
 
 fn type_parameters(tps: Vec<TParam>) -> Vec<(IR::TypeVar, IR::Kind)> {
     tps.into_iter()
-        .map(|tp| (type_var(tp.debug), kind(&tp.kind)))
+        .map(|tp| (type_var(tp.user_specified_name), kind(&tp.kind)))
         .collect()
 }
 
@@ -599,7 +599,10 @@ fn base_type(context: &mut Context, sp!(_, bt_): H::BaseType) -> IR::Type {
             let tys = base_types(context, tys);
             IRT::Struct(n, tys)
         }
-        B::Param(TParam { debug, .. }) => IRT::TypeParameter(type_var(debug).value),
+        B::Param(TParam {
+            user_specified_name,
+            ..
+        }) => IRT::TypeParameter(type_var(user_specified_name).value),
     }
 }
 

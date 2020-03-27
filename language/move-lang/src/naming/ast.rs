@@ -116,10 +116,10 @@ pub type TypeName = Spanned<TypeName_>;
 #[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Copy, Clone)]
 pub struct TParamID(pub u64);
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TParam {
     pub id: TParamID,
-    pub debug: Name,
+    pub user_specified_name: Name,
     pub kind: Kind,
 }
 
@@ -615,8 +615,12 @@ impl AstDebug for TypeName_ {
 
 impl AstDebug for TParam {
     fn ast_debug(&self, w: &mut AstWriter) {
-        let TParam { id, debug, kind } = self;
-        w.write(&format!("{}#{}", debug, id.0));
+        let TParam {
+            id,
+            user_specified_name,
+            kind,
+        } = self;
+        w.write(&format!("{}#{}", user_specified_name, id.0));
         match &kind.value {
             Kind_::Unknown => (),
             Kind_::Resource => w.write(": resource"),
