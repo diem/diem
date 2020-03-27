@@ -19,7 +19,7 @@ where
     assert_eq!(t, s);
 }
 
-//TODO deriving `Arbitrary` is currently broken for enum types
+// TODO deriving `Arbitrary` is currently broken for enum types
 // Once AltSysrq/proptest#163 is merged we can use `Arbitrary` again.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 enum E {
@@ -63,7 +63,7 @@ struct S {
 proptest! {
     #[test]
     fn proptest_bool(v in any::<bool>()) {
-        assert_eq!(to_bytes(&v)?, vec![v.into()]);
+        assert_eq!(to_bytes(&v)?, vec![u8::from(v)]);
         is_same(v);
     }
 

@@ -1,21 +1,22 @@
 module A {
-    import 0x0.LibraCoin;
-    resource A { c: LibraCoin.T }
-    public new(c: LibraCoin.T): Self.A {
+import 0x0.LBR;
+    import 0x0.Libra;
+    resource A { c: Libra.T<LBR.T> }
+    public new(c: Libra.T<LBR.T>): Self.A {
         return A { c: move(c) };
     }
     public destroy_a(a: Self.A) {
-        let c: LibraCoin.T;
+        let c: Libra.T<LBR.T>;
         A { c } = move(a);
-        LibraCoin.destroy_zero(move(c));
+        Libra.destroy_zero<LBR.T>(move(c));
         return;
     }
     public mutate(a_ref: &mut Self.A) {
-        let ref: &mut LibraCoin.T;
-        let zero: LibraCoin.T;
+        let ref: &mut Libra.T<LBR.T>;
+        let zero: Libra.T<LBR.T>;
 
         ref = &mut move(a_ref).c;
-        zero = LibraCoin.zero();
+        zero = Libra.zero<LBR.T>();
         *move(ref) = move(zero);
 
         return;

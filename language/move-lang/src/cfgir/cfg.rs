@@ -1,8 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::ast::*;
-use crate::errors::*;
+use crate::{
+    cfgir::ast::{BasicBlock, BasicBlocks},
+    errors::*,
+    hlir::ast::{Command, Command_, Exp, ExpListItem, Label, UnannotatedExp_},
+    shared::ast_debug::*,
+};
+use move_ir_types::location::*;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 //**************************************************************************************************
@@ -22,20 +27,16 @@ pub trait CFG {
 // BlockCFG
 //**************************************************************************************************
 
-const DEAD_CODE_ERR: &str =
-    "Unreachable code. This statement (and any following statements) will \
-     not be executed. In some cases, this will result in unused resource values.";
-
 #[derive(Debug)]
 pub struct BlockCFG<'a> {
     start: Label,
-    blocks: &'a mut Blocks,
+    blocks: &'a mut BasicBlocks,
     successor_map: BTreeMap<Label, BTreeSet<Label>>,
     predecessor_map: BTreeMap<Label, BTreeSet<Label>>,
 }
 
 impl<'a> BlockCFG<'a> {
-    pub fn new(start: Label, blocks: &'a mut Blocks) -> (BlockCFG, Errors) {
+    pub fn new(start: Label, blocks: &'a mut BasicBlocks) -> (BlockCFG, Errors) {
         let mut seen = BTreeSet::new();
         let mut work_list = VecDeque::new();
         seen.insert(start);
@@ -73,9 +74,10 @@ impl<'a> BlockCFG<'a> {
         let mut dead_blocks = vec![];
         for label in blocks.keys() {
             if !successor_map.contains_key(label) {
+                assert!(!predecessor_map.contains_key(label));
                 dead_blocks.push(*label);
-                let loc = blocks.get(label).unwrap().front().unwrap().loc;
-                errors.push(vec![(loc, DEAD_CODE_ERR.into())])
+                let err = dead_code_error(blocks.get(label).unwrap());
+                errors.push(err)
             }
         }
         for label in dead_blocks {
@@ -91,11 +93,11 @@ impl<'a> BlockCFG<'a> {
         (cfg, errors)
     }
 
-    pub fn blocks(&self) -> &Blocks {
+    pub fn blocks(&self) -> &BasicBlocks {
         &self.blocks
     }
 
-    pub fn blocks_mut(&mut self) -> &mut Blocks {
+    pub fn blocks_mut(&mut self) -> &mut BasicBlocks {
         &mut self.blocks
     }
 
@@ -140,6 +142,67 @@ impl<'a> CFG for BlockCFG<'a> {
     }
 }
 
+const DEAD_ERR_CMD: &str = "Unreachable code. This statement (and any following statements) will \
+     not be executed. In some cases, this will result in unused resource values.";
+
+const DEAD_ERR_EXP: &str =
+    "Invalid use of a divergent expression. The code following the evaluation of this \
+     expression will be dead and should be removed. In some cases, this is necessary to prevent \
+     unused resource values.";
+
+fn dead_code_error(block: &BasicBlock) -> Error {
+    let first_command = block.front().unwrap();
+    match unreachable_loc(first_command) {
+        None => vec![(first_command.loc, DEAD_ERR_CMD.into())],
+        Some(loc) => vec![(loc, DEAD_ERR_EXP.into())],
+    }
+}
+
+fn unreachable_loc(sp!(_, cmd_): &Command) -> Option<Loc> {
+    use Command_ as C;
+    match cmd_ {
+        C::Assign(_, e) => unreachable_loc_exp(e),
+        C::Mutate(el, er) => unreachable_loc_exp(el).or_else(|| unreachable_loc_exp(er)),
+        C::Return(e) | C::Abort(e) | C::IgnoreAndPop { exp: e, .. } | C::JumpIf { cond: e, .. } => {
+            unreachable_loc_exp(e)
+        }
+        C::Jump(_) => None,
+        C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
+    }
+}
+
+fn unreachable_loc_exp(parent_e: &Exp) -> Option<Loc> {
+    use UnannotatedExp_ as E;
+    match &parent_e.exp.value {
+        E::Unreachable => Some(parent_e.exp.loc),
+        E::Unit
+        | E::Value(_)
+        | E::Spec(_)
+        | E::UnresolvedError
+        | E::BorrowLocal(_, _)
+        | E::Copy { .. }
+        | E::Move { .. } => None,
+        E::ModuleCall(mcall) => unreachable_loc_exp(&mcall.arguments),
+        E::Builtin(_, e)
+        | E::Freeze(e)
+        | E::Dereference(e)
+        | E::UnaryExp(_, e)
+        | E::Borrow(_, e, _)
+        | E::Cast(e, _) => unreachable_loc_exp(e),
+
+        E::BinopExp(e1, _, e2) => unreachable_loc_exp(e1).or_else(|| unreachable_loc_exp(e2)),
+
+        E::Pack(_, _, fields) => fields.iter().find_map(|(_, _, e)| unreachable_loc_exp(e)),
+
+        E::ExpList(es) => es.iter().find_map(|item| unreachable_loc_item(item)),
+    }
+}
+
+fn unreachable_loc_item(item: &ExpListItem) -> Option<Loc> {
+    match item {
+        ExpListItem::Single(e, _) | ExpListItem::Splat(_, e, _) => unreachable_loc_exp(e),
+    }
+}
 //**************************************************************************************************
 // Reverse Traversal Block CFG
 //**************************************************************************************************
@@ -147,14 +210,14 @@ impl<'a> CFG for BlockCFG<'a> {
 #[derive(Debug)]
 pub struct ReverseBlockCFG<'a> {
     start: Label,
-    blocks: &'a mut Blocks,
+    blocks: &'a mut BasicBlocks,
     successor_map: &'a mut BTreeMap<Label, BTreeSet<Label>>,
     predecessor_map: &'a mut BTreeMap<Label, BTreeSet<Label>>,
 }
 
 impl<'a> ReverseBlockCFG<'a> {
     pub fn new(forward_cfg: &'a mut BlockCFG, infinite_loop_starts: &BTreeSet<Label>) -> Self {
-        let blocks: &'a mut Blocks = &mut forward_cfg.blocks;
+        let blocks: &'a mut BasicBlocks = &mut forward_cfg.blocks;
         let forward_successors = &mut forward_cfg.successor_map;
         let forward_predecessor = &mut forward_cfg.predecessor_map;
         let end_blocks = {
@@ -200,7 +263,7 @@ impl<'a> ReverseBlockCFG<'a> {
         }
     }
 
-    pub fn blocks(&self) -> &Blocks {
+    pub fn blocks(&self) -> &BasicBlocks {
         &self.blocks
     }
 
@@ -248,4 +311,76 @@ impl<'a> CFG for ReverseBlockCFG<'a> {
     fn start_block(&self) -> Label {
         self.start
     }
+}
+
+//**************************************************************************************************
+// Debug
+//**************************************************************************************************
+
+impl AstDebug for BlockCFG<'_> {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let BlockCFG {
+            start,
+            blocks,
+            successor_map,
+            predecessor_map,
+        } = self;
+        w.writeln("--BlockCFG--");
+        ast_debug_cfg(
+            w,
+            *start,
+            blocks,
+            successor_map.iter(),
+            predecessor_map.iter(),
+        );
+    }
+}
+
+impl AstDebug for ReverseBlockCFG<'_> {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let ReverseBlockCFG {
+            start,
+            blocks,
+            successor_map,
+            predecessor_map,
+        } = self;
+        w.writeln("--ReverseBlockCFG--");
+        ast_debug_cfg(
+            w,
+            *start,
+            blocks,
+            successor_map.iter(),
+            predecessor_map.iter(),
+        );
+    }
+}
+
+fn ast_debug_cfg<'a>(
+    w: &mut AstWriter,
+    start: Label,
+    blocks: &BasicBlocks,
+    successor_map: impl Iterator<Item = (&'a Label, &'a BTreeSet<Label>)>,
+    predecessor_map: impl Iterator<Item = (&'a Label, &'a BTreeSet<Label>)>,
+) {
+    w.write("successor_map:");
+    w.indent(4, |w| {
+        for (lbl, nexts) in successor_map {
+            w.write(&format!("{} => [", lbl));
+            w.comma(nexts, |w, next| w.write(&format!("{}", next)));
+            w.writeln("]")
+        }
+    });
+
+    w.write("predecessor_map:");
+    w.indent(4, |w| {
+        for (lbl, nexts) in predecessor_map {
+            w.write(&format!("{} <= [", lbl));
+            w.comma(nexts, |w, next| w.write(&format!("{}", next)));
+            w.writeln("]")
+        }
+    });
+
+    w.writeln(&format!("start: {}", start));
+    w.writeln("blocks:");
+    w.indent(4, |w| blocks.ast_debug(w));
 }

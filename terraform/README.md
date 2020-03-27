@@ -14,6 +14,6 @@ This directory contains [Terraform](https://www.terraform.io/) configuration to 
   * `ssh_priv_key_file`: Set this to the filename of your SSH private key.
 5. Run `terraform init`
 6. Run `terraform apply` to startup the system in AWS.
-7. In the AWS console go to the EC2 service in your region, and list the Load Balancers. Note the DNS name of the "default-ac" and "default-faucet" load balancers.
+7. In the AWS console go to the EC2 service in your region, and list the Load Balancers. Note the DNS name of the "default-jsonrpc" and "default-faucet" load balancers.
 8. Run the client as follows:
-  `cargo run -p cli --bin cli -- -a <default-ac LB DNS name> -p 8000 -f <faucet-ac LB DNS name> -s terraform/validator-sets/dev/consensus_peers.config.toml`
+  `cargo run -p cli --bin cli -- -a <default-jsonrpc LB DNS name> -p 80 -f <default-faucet LB DNS name>`

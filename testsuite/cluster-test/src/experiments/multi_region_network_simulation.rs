@@ -5,7 +5,7 @@
 use std::{fmt, time::Duration};
 
 use anyhow::Result;
-use slog_scope::{info, warn};
+use libra_logger::{info, warn};
 use structopt::StructOpt;
 
 use tokio::time;
@@ -13,13 +13,17 @@ use tokio::time;
 /// This module provides an experiment which simulates a multi-region environment.
 /// It undoes the simulation in the cluster after the given duration
 use crate::effects::Effect;
-use crate::effects::NetworkDelay;
-use crate::experiments::{Context, ExperimentParam};
+use crate::{
+    effects::NetworkDelay,
+    experiments::{Context, ExperimentParam},
+};
 
-use crate::cluster::Cluster;
-use crate::experiments::Experiment;
-use crate::tx_emitter::{EmitJobRequest, TxEmitter};
-use crate::util::unix_timestamp_now;
+use crate::{
+    cluster::Cluster,
+    experiments::Experiment,
+    tx_emitter::{EmitJobRequest, TxEmitter},
+    util::unix_timestamp_now,
+};
 use async_trait::async_trait;
 use futures::future::join_all;
 

@@ -5,7 +5,7 @@
 
 use anyhow::Context;
 use bytecode_verifier::{
-    verifier::{verify_module_dependencies, VerifiedProgram},
+    verifier::{verify_module_dependencies, VerifiedScript},
     VerifiedModule,
 };
 use compiler::{util, Compiler};
@@ -16,21 +16,20 @@ use libra_types::{
     transaction::{Module, Script},
     vm_error::VMStatus,
 };
-use serde_json;
 use std::{
     convert::TryFrom,
     fs,
     io::Write,
     path::{Path, PathBuf},
 };
-use stdlib::stdlib_modules;
+use stdlib::{stdlib_modules, StdLibOptions};
 use structopt::StructOpt;
 use vm::file_format::CompiledModule;
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "IR Compiler", about = "Move IR to bytecode compiler.")]
 struct Args {
-    /// Treat input file as a module (default is to treat file as a program)
+    /// Treat input file as a module (default is to treat file as a script)
     #[structopt(short = "m", long = "module")]
     pub module_input: bool,
     /// Account address used for publishing
@@ -105,13 +104,15 @@ fn main() {
         std::process::exit(1);
     }
 
+    let file_name = args.source_path.as_path().as_os_str().to_str().unwrap();
+
     if args.list_dependencies {
         let source = fs::read_to_string(args.source_path.clone()).expect("Unable to read file");
         let dependency_list: Vec<AccessPath> = if args.module_input {
-            let module = parse_module(&source).expect("Unable to parse module");
+            let module = parse_module(file_name, &source).expect("Unable to parse module");
             module.get_external_deps()
         } else {
-            let script = parse_script(&source).expect("Unable to parse module");
+            let script = parse_script(file_name, &source).expect("Unable to parse module");
             script.get_external_deps()
         }
         .into_iter()
@@ -142,7 +143,7 @@ fn main() {
         } else if args.no_stdlib {
             vec![]
         } else {
-            stdlib_modules().to_vec()
+            stdlib_modules(StdLibOptions::Staged).to_vec()
         }
     };
 
@@ -154,21 +155,21 @@ fn main() {
             extra_deps: deps,
             ..Compiler::default()
         };
-        let (compiled_program, source_map, dependencies) = compiler
-            .into_compiled_program_and_source_maps_deps(&source)
-            .expect("Failed to compile program");
+        let (compiled_script, source_map) = compiler
+            .into_compiled_script_and_source_map(file_name, &source)
+            .expect("Failed to compile script");
 
-        let compiled_program = if !args.no_verify {
-            let verified_program = VerifiedProgram::new(compiled_program, &dependencies)
-                .expect("Failed to verify program");
-            verified_program.into_inner()
+        let compiled_script = if !args.no_verify {
+            let verified_script =
+                VerifiedScript::new(compiled_script).expect("Failed to verify script");
+            verified_script.into_inner()
         } else {
-            compiled_program
+            compiled_script
         };
 
         if args.output_source_maps {
             let source_map_bytes = serde_json::to_vec(&source_map)
-                .expect("Unable to serialize source maps for program");
+                .expect("Unable to serialize source maps for script");
             write_output(
                 &source_path.with_extension(source_map_extension),
                 &source_map_bytes,
@@ -176,12 +177,11 @@ fn main() {
         }
 
         let mut script = vec![];
-        compiled_program
-            .script
+        compiled_script
             .serialize(&mut script)
             .expect("Unable to serialize script");
         let payload = Script::new(script, vec![]);
-        let payload_bytes = serde_json::to_vec(&payload).expect("Unable to serialize program");
+        let payload_bytes = serde_json::to_vec(&payload).expect("Unable to serialize script");
         write_output(&source_path.with_extension(mv_extension), &payload_bytes);
     } else {
         let (compiled_module, source_map) =
@@ -195,7 +195,7 @@ fn main() {
 
         if args.output_source_maps {
             let source_map_bytes = serde_json::to_vec(&source_map)
-                .expect("Unable to serialize source maps for program");
+                .expect("Unable to serialize source maps for module");
             write_output(
                 &source_path.with_extension(source_map_extension),
                 &source_map_bytes,
@@ -207,7 +207,7 @@ fn main() {
             .serialize(&mut module)
             .expect("Unable to serialize module");
         let payload = Module::new(module);
-        let payload_bytes = serde_json::to_vec(&payload).expect("Unable to serialize program");
+        let payload_bytes = serde_json::to_vec(&payload).expect("Unable to serialize module");
         write_output(&source_path.with_extension(mv_extension), &payload_bytes);
     }
 }

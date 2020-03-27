@@ -3,15 +3,15 @@
 
 #![forbid(unsafe_code)]
 
-use crate::{aws::Aws, cluster::Cluster};
+use crate::{aws::Aws, cluster::Cluster, instance::Instance};
 use anyhow::{bail, format_err, Result};
+use libra_logger::{info, warn};
 use rusoto_core::RusotoError;
 use rusoto_ecr::{
     BatchGetImageRequest, DescribeImagesRequest, DescribeImagesResponse, Ecr, Image,
     ImageIdentifier, PutImageError, PutImageRequest,
 };
 use rusoto_ecs::{Ecs, UpdateServiceRequest};
-use slog_scope::{info, warn};
 use std::{env, thread, time::Duration};
 use util::retry;
 
@@ -64,19 +64,30 @@ impl DeploymentManager {
 
     pub fn update_all_services(&self) -> Result<()> {
         for instance in self.cluster.all_instances() {
+            self.update_service(instance)?;
+            thread::sleep(Duration::from_millis(200));
+        }
+        Ok(())
+    }
+
+    fn update_service(&self, instance: &Instance) -> Result<()> {
+        for _ in 0..10 {
             let mut request = UpdateServiceRequest::default();
             request.cluster = Some(self.aws.workspace().clone());
             request.force_new_deployment = Some(true);
             request.service = instance.peer_name().to_string();
 
-            self.aws
-                .ecs()
-                .update_service(request)
-                .sync()
-                .map_err(|e| format_err!("Failed to update {}: {:?}", instance, e))?;
-            thread::sleep(Duration::from_millis(200));
+            let res = self.aws.ecs().update_service(request).sync();
+            match res {
+                Ok(..) => return Ok(()),
+                Err(e) => println!("Failed to update {}: {}, retrying", instance, e),
+            }
+            thread::sleep(Duration::from_millis(1000));
         }
-        Ok(())
+        Err(format_err!(
+            "Failed to update {}: no more retries",
+            instance
+        ))
     }
 
     fn image_digest_by_tag(&self, tag: &str) -> Result<String> {

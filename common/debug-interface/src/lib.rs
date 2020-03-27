@@ -14,9 +14,13 @@ use tokio::runtime::{Builder, Runtime};
 // Generated
 pub mod proto;
 
-pub mod node_debug_service;
-#[macro_use]
 pub mod json_log;
+pub mod libra_trace;
+pub mod node_debug_service;
+
+pub mod prelude {
+    pub use crate::{end_trace, event, trace_code_block, trace_edge, trace_event};
+}
 
 /// Implement default utility client for NodeDebugInterface
 pub struct NodeDebugClient {

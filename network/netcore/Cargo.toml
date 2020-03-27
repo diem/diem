@@ -10,12 +10,14 @@ publish = false
 edition = "2018"
 
 [dependencies]
+async-trait = "0.1"
 bytes = "0.5.4"
-futures = { version = "0.3.0", features = ["io-compat", "compat"] }
-futures_01 = { version = "0.1.29", package = "futures" }
-parity-multiaddr = { version = "0.7.1", default-features = false }
-pin-project = "0.4.2"
-tokio = { version = "0.2.8", features = ["full"] }
-yamux = { version = "0.2.2", default-features = false }
-
+futures = { version = "0.3.4"  }
 memsocket = { path = "../memsocket", version = "0.1.0" }
+parity-multiaddr = { version = "0.7.2", default-features = false }
+pin-project = "0.4.2"
+tokio = { version = "0.2.13", features = ["full"] }
+yamux = { version = "0.4.5", default-features = false }
+
+[dev-dependencies]
+libra-logger = { path = "../../common/logger", version = "0.1.0" }

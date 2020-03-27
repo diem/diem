@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/module_call_explicit_type_arguments.move:2:19 ───
+   ┌── tests/move_check/typing/module_call_explicit_type_arguments.move:2:31 ───
    │
  2 │       fun foo<T, U>(x: T, y: U) {
    │ ╭───────────────────────────────^
@@ -8,12 +8,12 @@ error:
    │ ╰─────^ Invalid return
    ·
  2 │     fun foo<T, U>(x: T, y: U) {
-   │                   - The local 'x' might still contain a resource value due to this assignment. The resource must be consumed before the function returns
+   │                   - The parameter 'x' might still contain a resource value. The resource must be consumed before the function returns
    │
 
 error: 
 
-   ┌── tests/move_check/typing/module_call_explicit_type_arguments.move:2:25 ───
+   ┌── tests/move_check/typing/module_call_explicit_type_arguments.move:2:31 ───
    │
  2 │       fun foo<T, U>(x: T, y: U) {
    │ ╭───────────────────────────────^
@@ -21,6 +21,6 @@ error:
    │ ╰─────^ Invalid return
    ·
  2 │     fun foo<T, U>(x: T, y: U) {
-   │                         - The local 'y' might still contain a resource value due to this assignment. The resource must be consumed before the function returns
+   │                         - The parameter 'y' might still contain a resource value. The resource must be consumed before the function returns
    │
 

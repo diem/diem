@@ -3,28 +3,29 @@
 
 #![forbid(unsafe_code)]
 
-use libra_config::{config::PersistableConfig, generator};
-use libra_types::transaction::Transaction;
+use bytecode_verifier::VerifiedModule;
+use libra_config::generator;
+use libra_types::{on_chain_config::VMPublishingOption, transaction::Transaction};
 use std::{fs::File, io::prelude::*};
-use transaction_builder::default_config;
-use vm_genesis::{
-    encode_genesis_transaction_with_validator, make_placeholder_discovery_set, GENESIS_KEYPAIR,
-};
+use stdlib::{stdlib_modules, StdLibOptions};
+use vm_genesis::{encode_genesis_transaction, make_placeholder_discovery_set, GENESIS_KEYPAIR};
 
-const CONFIG_LOCATION: &str = "genesis/vm_config.toml";
 const GENESIS_LOCATION: &str = "genesis/genesis.blob";
 
 /// Generate the genesis blob used by the Libra blockchain
-fn generate_genesis_blob() -> Vec<u8> {
+fn generate_genesis_blob(stdlib_modules: &'static [VerifiedModule]) -> Vec<u8> {
     let swarm = generator::validator_swarm_for_testing(10);
     let discovery_set = make_placeholder_discovery_set(&swarm.validator_set);
 
     lcs::to_bytes(&Transaction::UserTransaction(
-        encode_genesis_transaction_with_validator(
+        encode_genesis_transaction(
             &GENESIS_KEYPAIR.0,
             GENESIS_KEYPAIR.1.clone(),
+            &swarm.nodes,
             swarm.validator_set,
             discovery_set,
+            stdlib_modules,
+            VMPublishingOption::Open,
         )
         .into_inner(),
     ))
@@ -32,17 +33,14 @@ fn generate_genesis_blob() -> Vec<u8> {
 }
 
 fn main() {
-    println!(
-        "Creating genesis binary blob at {} from configuration file {}",
-        GENESIS_LOCATION, CONFIG_LOCATION
-    );
-    let config = default_config();
-    config
-        .save_config(CONFIG_LOCATION)
-        .expect("Unable to save genesis config");
+    println!("Creating genesis binary blob at {}", GENESIS_LOCATION,);
 
     let mut file = File::create(GENESIS_LOCATION).unwrap();
-    file.write_all(&generate_genesis_blob()).unwrap();
+    // Must use staged stdlib files
+    file.write_all(&generate_genesis_blob(stdlib_modules(
+        StdLibOptions::Staged,
+    )))
+    .unwrap();
 }
 
 // A test that fails if the generated genesis blob is different from the one on disk. Intended
@@ -55,6 +53,6 @@ fn genesis_blob_unchanged() {
     let mut genesis_file = File::open(GENESIS_LOCATION).unwrap();
     let mut old_genesis_bytes = vec![];
     genesis_file.read_to_end(&mut old_genesis_bytes).unwrap();
-    assert!(old_genesis_bytes == generate_genesis_blob(),
+    assert!(old_genesis_bytes == generate_genesis_blob(stdlib_modules(StdLibOptions::Staged)),
             format!("The freshly generated genesis file is different from the one on disk at {}. Did you forget to regenerate the genesis file via `cargo run` inside libra/language/tools/vm-genesis?", GENESIS_LOCATION));
 }

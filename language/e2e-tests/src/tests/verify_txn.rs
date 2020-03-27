@@ -2,19 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account::AccountData,
-    assert_prologue_disparity, assert_prologue_parity, assert_status_eq,
-    common_transactions::*,
-    compile::{compile_module_with_address, compile_script},
-    executor::{test_all_genesis_default, FakeExecutor},
-    transaction_status_eq,
+    account::AccountData, assert_prologue_disparity, assert_prologue_parity, assert_status_eq,
+    compile::compile_module_with_address, executor::FakeExecutor, transaction_status_eq,
 };
 use bytecode_verifier::VerifiedModule;
 use compiler::Compiler;
-use libra_config::config::{NodeConfig, VMPublishingOption};
 use libra_crypto::ed25519::*;
 use libra_types::{
-    account_config::core_code_address,
+    account_config::{lbr_type_tag, CORE_CODE_ADDRESS},
+    on_chain_config::VMPublishingOption,
     test_helpers::transaction_test_helpers,
     transaction::{
         Script, TransactionArgument, TransactionPayload, TransactionStatus,
@@ -22,350 +18,349 @@ use libra_types::{
     },
     vm_error::{StatusCode, StatusType, VMStatus},
 };
+use stdlib::transaction_scripts::StdlibScript;
 use transaction_builder::encode_transfer_script;
 use vm::gas_schedule::{self, GasAlgebra};
 
 #[test]
 fn verify_signature() {
-    test_all_genesis_default(|mut executor| {
-        let sender = AccountData::new(900_000, 10);
-        executor.add_account_data(&sender);
-        // Generate a new key pair to try and sign things with.
-        let (private_key, _public_key) = compat::generate_keypair(None);
-        let program = encode_transfer_script(sender.address(), 100);
-        let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
-            *sender.address(),
-            0,
-            &private_key,
-            sender.account().pubkey.clone(),
-            Some(program),
-        );
+    let mut executor = FakeExecutor::from_genesis_file();
+    let sender = AccountData::new(900_000, 10);
+    executor.add_account_data(&sender);
+    // Generate a new key pair to try and sign things with.
+    let (private_key, _public_key) = compat::generate_keypair(None);
+    let program = encode_transfer_script(sender.address(), vec![], 100);
+    let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
+        *sender.address(),
+        0,
+        &private_key,
+        sender.account().pubkey.clone(),
+        Some(program),
+    );
 
-        assert_prologue_parity!(
-            executor.verify_transaction(signed_txn.clone()),
-            executor.execute_transaction(signed_txn).status(),
-            VMStatus::new(StatusCode::INVALID_SIGNATURE)
-        );
-    });
+    assert_prologue_parity!(
+        executor.verify_transaction(signed_txn.clone()),
+        executor.execute_transaction(signed_txn).status(),
+        VMStatus::new(StatusCode::INVALID_SIGNATURE)
+    );
 }
 
 #[test]
 fn verify_reserved_sender() {
-    test_all_genesis_default(|mut executor| {
-        let sender = AccountData::new(900_000, 10);
-        executor.add_account_data(&sender);
-        // Generate a new key pair to try and sign things with.
-        let (private_key, public_key) = compat::generate_keypair(None);
-        let program = encode_transfer_script(sender.address(), 100);
-        let signed_txn = transaction_test_helpers::get_test_signed_txn(
-            core_code_address(),
-            0,
-            &private_key,
-            public_key,
-            Some(program),
-        );
+    let mut executor = FakeExecutor::from_genesis_file();
+    let sender = AccountData::new(900_000, 10);
+    executor.add_account_data(&sender);
+    // Generate a new key pair to try and sign things with.
+    let (private_key, public_key) = compat::generate_keypair(None);
+    let program = encode_transfer_script(sender.address(), vec![], 100);
+    let signed_txn = transaction_test_helpers::get_test_signed_txn(
+        CORE_CODE_ADDRESS,
+        0,
+        &private_key,
+        public_key,
+        Some(program),
+    );
 
-        assert_prologue_parity!(
-            executor.verify_transaction(signed_txn.clone()),
-            executor.execute_transaction(signed_txn).status(),
-            VMStatus::new(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST)
-        );
-    });
+    assert_prologue_parity!(
+        executor.verify_transaction(signed_txn.clone()),
+        executor.execute_transaction(signed_txn).status(),
+        VMStatus::new(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST)
+    );
 }
 
 #[test]
 fn verify_rejected_write_set() {
-    test_all_genesis_default(|mut executor| {
-        let sender = AccountData::new(900_000, 10);
-        executor.add_account_data(&sender);
-        let signed_txn = transaction_test_helpers::get_write_set_txn(
-            *sender.address(),
-            0,
-            &sender.account().privkey,
-            sender.account().pubkey.clone(),
-            None,
-        )
-        .into_inner();
+    let mut executor = FakeExecutor::from_genesis_file();
+    let sender = AccountData::new(900_000, 10);
+    executor.add_account_data(&sender);
+    let signed_txn = transaction_test_helpers::get_write_set_txn(
+        *sender.address(),
+        0,
+        &sender.account().privkey,
+        sender.account().pubkey.clone(),
+        None,
+    )
+    .into_inner();
 
-        assert_prologue_parity!(
-            executor.verify_transaction(signed_txn.clone()),
-            executor.execute_transaction(signed_txn).status(),
-            VMStatus::new(StatusCode::REJECTED_WRITE_SET)
-        );
-    });
-}
-
-#[test]
-fn verify_whitelist() {
-    // Making sure the whitelist's hash matches the current compiled script. If this fails, please
-    // try run `cargo run` under vm_genesis and update the vm_config in node.config.toml and in
-    // config.rs in libra/config crate.
-    let programs = transaction_builder::allowing_script_hashes();
-
-    let config = NodeConfig::random();
-    let whitelist = config
-        .vm_config
-        .publishing_options
-        .get_whitelist_set()
-        .unwrap();
-    assert_eq!(whitelist.len(), programs.len());
-    for program in programs {
-        assert!(whitelist.contains(&program));
-    }
+    assert_prologue_parity!(
+        executor.verify_transaction(signed_txn.clone()),
+        executor.execute_transaction(signed_txn).status(),
+        VMStatus::new(StatusCode::REJECTED_WRITE_SET)
+    );
 }
 
 #[test]
 fn verify_simple_payment() {
     // create a FakeExecutor with a genesis from file
-    test_all_genesis_default(|mut executor| {
-        // create and publish a sender with 1_000_000 coins and a receiver with 100_000 coins
-        let sender = AccountData::new(900_000, 10);
-        let receiver = AccountData::new(100_000, 10);
-        executor.add_account_data(&sender);
-        executor.add_account_data(&receiver);
+    let mut executor = FakeExecutor::from_genesis_file();
+    // create and publish a sender with 1_000_000 coins and a receiver with 100_000 coins
+    let sender = AccountData::new(900_000, 10);
+    let receiver = AccountData::new(100_000, 10);
+    executor.add_account_data(&sender);
+    executor.add_account_data(&receiver);
 
-        // define the arguments to the peer to peer transaction
-        let transfer_amount = 1_000;
-        let mut args: Vec<TransactionArgument> = Vec::new();
-        args.push(TransactionArgument::Address(*receiver.address()));
-        args.push(TransactionArgument::U64(transfer_amount));
+    // define the arguments to the peer to peer transaction
+    let transfer_amount = 1_000;
+    let mut args: Vec<TransactionArgument> = Vec::new();
+    args.push(TransactionArgument::Address(*receiver.address()));
+    args.push(TransactionArgument::U64(transfer_amount));
 
-        // Create a new transaction that has the exact right sequence number.
-        let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
-            args.clone(),
-            10, // this should be programmable but for now is 1 more than the setup
-            100_000,
-            1,
-        );
-        assert_eq!(executor.verify_transaction(txn), None);
+    let p2p_script = StdlibScript::PeerToPeer.compiled_bytes().into_vec();
 
-        // Create a new transaction that has the bad auth key.
-        let txn = sender.account().create_signed_txn_with_args_and_sender(
-            *receiver.address(),
-            PEER_TO_PEER.clone(),
-            args.clone(),
-            10, // this should be programmable but for now is 1 more than the setup
-            100_000,
-            1,
-        );
-        assert_prologue_parity!(
-            executor.verify_transaction(txn.clone()),
-            executor.execute_transaction(txn).status(),
-            VMStatus::new(StatusCode::INVALID_AUTH_KEY)
-        );
+    // Create a new transaction that has the exact right sequence number.
+    let txn = sender.account().create_signed_txn_with_args(
+        p2p_script.clone(),
+        args.clone(),
+        10, // this should be programmable but for now is 1 more than the setup
+        100_000,
+        1,
+        lbr_type_tag(),
+    );
+    assert_eq!(executor.verify_transaction(txn), None);
 
-        // Create a new transaction that has a old sequence number.
-        let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
-            args.clone(),
-            1,
-            100_000,
-            1,
-        );
-        assert_prologue_parity!(
-            executor.verify_transaction(txn.clone()),
-            executor.execute_transaction(txn).status(),
-            VMStatus::new(StatusCode::SEQUENCE_NUMBER_TOO_OLD)
-        );
+    // Create a new transaction that has the bad auth key.
+    let txn = sender.account().create_signed_txn_with_args_and_sender(
+        *receiver.address(),
+        p2p_script.clone(),
+        args.clone(),
+        10, // this should be programmable but for now is 1 more than the setup
+        100_000,
+        1,
+        lbr_type_tag(),
+    );
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()),
+        executor.execute_transaction(txn).status(),
+        VMStatus::new(StatusCode::INVALID_AUTH_KEY)
+    );
 
-        // Create a new transaction that has a too new sequence number.
-        let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
-            args.clone(),
-            11,
-            100_000,
-            1,
-        );
-        assert_prologue_disparity!(
-            executor.verify_transaction(txn.clone()) => None,
-            executor.execute_transaction(txn).status() =>
-            TransactionStatus::Discard(VMStatus::new(
-                    StatusCode::SEQUENCE_NUMBER_TOO_NEW
-            ))
-        );
+    // Create a new transaction that has a old sequence number.
+    let txn = sender.account().create_signed_txn_with_args(
+        p2p_script.clone(),
+        args.clone(),
+        1,
+        100_000,
+        1,
+        lbr_type_tag(),
+    );
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()),
+        executor.execute_transaction(txn).status(),
+        VMStatus::new(StatusCode::SEQUENCE_NUMBER_TOO_OLD)
+    );
 
-        // Create a new transaction that doesn't have enough balance to pay for gas.
-        let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
-            args.clone(),
-            10,
-            1_000_000,
-            1,
-        );
-        assert_prologue_parity!(
-            executor.verify_transaction(txn.clone()),
-            executor.execute_transaction(txn).status(),
-            VMStatus::new(StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE)
-        );
+    // Create a new transaction that has a too new sequence number.
+    let txn = sender.account().create_signed_txn_with_args(
+        p2p_script.clone(),
+        args.clone(),
+        11,
+        100_000,
+        1,
+        lbr_type_tag(),
+    );
+    assert_prologue_disparity!(
+        executor.verify_transaction(txn.clone()) => None,
+        executor.execute_transaction(txn).status() =>
+        TransactionStatus::Discard(VMStatus::new(
+                StatusCode::SEQUENCE_NUMBER_TOO_NEW
+        ))
+    );
 
-        // XXX TZ: TransactionExpired
+    // Create a new transaction that doesn't have enough balance to pay for gas.
+    let txn = sender.account().create_signed_txn_with_args(
+        p2p_script.clone(),
+        args.clone(),
+        10,
+        1_000_000,
+        1,
+        lbr_type_tag(),
+    );
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()),
+        executor.execute_transaction(txn).status(),
+        VMStatus::new(StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE)
+    );
 
-        // RejectedWriteSet is tested in `verify_rejected_write_set`
-        // InvalidWriteSet is tested in genesis.rs
+    // XXX TZ: TransactionExpired
 
-        // Create a new transaction from a bogus account that doesn't exist
-        let bogus_account = AccountData::new(100_000, 10);
-        let txn = bogus_account.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
-            args.clone(),
-            10,
-            10_000,
-            1,
-        );
-        assert_prologue_parity!(
-            executor.verify_transaction(txn.clone()),
-            executor.execute_transaction(txn).status(),
-            VMStatus::new(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST)
-        );
+    // RejectedWriteSet is tested in `verify_rejected_write_set`
+    // InvalidWriteSet is tested in genesis.rs
 
-        // RejectedWriteSet is tested in `verify_rejected_write_set`
-        // InvalidWriteSet is tested in genesis.rs
+    // Create a new transaction from a bogus account that doesn't exist
+    let bogus_account = AccountData::new(100_000, 10);
+    let txn = bogus_account.account().create_signed_txn_with_args(
+        p2p_script.clone(),
+        args.clone(),
+        10,
+        10_000,
+        1,
+        lbr_type_tag(),
+    );
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()),
+        executor.execute_transaction(txn).status(),
+        VMStatus::new(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST)
+    );
 
-        // The next couple tests test transaction size, and bounds on gas price and the number of
-        // gas units that can be submitted with a transaction.
-        //
-        // We test these in the reverse order that they appear in verify_transaction, and build up
-        // the errors one-by-one to make sure that we are both catching all of them, and
-        // that we are doing so in the specified order.
-        let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
-            args.clone(),
-            10,
-            1_000_000,
-            gas_schedule::MAX_PRICE_PER_GAS_UNIT.get() + 1,
-        );
-        assert_prologue_parity!(
-            executor.verify_transaction(txn.clone()),
-            executor.execute_transaction(txn).status(),
-            VMStatus::new(StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND)
-        );
+    // RejectedWriteSet is tested in `verify_rejected_write_set`
+    // InvalidWriteSet is tested in genesis.rs
 
-        // Note: We can't test this at the moment since MIN_PRICE_PER_GAS_UNIT is set to 0 for
-        // testnet. Uncomment this test once we have a non-zero MIN_PRICE_PER_GAS_UNIT.
-        // let txn = sender.account().create_signed_txn_with_args(
-        //     PEER_TO_PEER.clone(),
-        //     args.clone(),
-        //     10,
-        //     1_000_000,
-        //     gas_schedule::MIN_PRICE_PER_GAS_UNIT - 1,
-        // );
-        // assert_eq!(
-        //     executor.verify_transaction(txn),
-        //     Some(VMStatus::new(
-        //         StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND
-        //     ))
-        // );
+    // The next couple tests test transaction size, and bounds on gas price and the number of
+    // gas units that can be submitted with a transaction.
+    //
+    // We test these in the reverse order that they appear in verify_transaction, and build up
+    // the errors one-by-one to make sure that we are both catching all of them, and
+    // that we are doing so in the specified order.
+    let txn = sender.account().create_signed_txn_with_args(
+        p2p_script.clone(),
+        args.clone(),
+        10,
+        1_000_000,
+        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get() + 1,
+        lbr_type_tag(),
+    );
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()),
+        executor.execute_transaction(txn).status(),
+        VMStatus::new(StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND)
+    );
 
-        let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
-            args.clone(),
-            10,
-            1,
-            gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
-        );
-        assert_prologue_parity!(
-            executor.verify_transaction(txn.clone()),
-            executor.execute_transaction(txn).status(),
-            VMStatus::new(StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS)
-        );
+    // Note: We can't test this at the moment since MIN_PRICE_PER_GAS_UNIT is set to 0 for
+    // testnet. Uncomment this test once we have a non-zero MIN_PRICE_PER_GAS_UNIT.
+    // let txn = sender.account().create_signed_txn_with_args(
+    //     p2p_script.clone(),
+    //     args.clone(),
+    //     10,
+    //     1_000_000,
+    //     gas_schedule::MIN_PRICE_PER_GAS_UNIT - 1,
+    // );
+    // assert_eq!(
+    //     executor.verify_transaction(txn),
+    //     Some(VMStatus::new(
+    //         StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND
+    //     ))
+    // );
 
-        let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
-            args.clone(),
-            10,
-            gas_schedule::MIN_TRANSACTION_GAS_UNITS.get() - 1,
-            gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
-        );
-        assert_prologue_parity!(
-            executor.verify_transaction(txn.clone()),
-            executor.execute_transaction(txn).status(),
-            VMStatus::new(StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS)
-        );
+    let txn = sender.account().create_signed_txn_with_args(
+        p2p_script.clone(),
+        args.clone(),
+        10,
+        1,
+        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+        lbr_type_tag(),
+    );
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()),
+        executor.execute_transaction(txn).status(),
+        VMStatus::new(StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS)
+    );
 
-        let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
-            args,
-            10,
-            gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
-            gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
-        );
-        assert_prologue_parity!(
-            executor.verify_transaction(txn.clone()),
-            executor.execute_transaction(txn).status(),
-            VMStatus::new(StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND)
-        );
+    let txn = sender.account().create_signed_txn_with_args(
+        p2p_script.clone(),
+        args.clone(),
+        10,
+        gas_schedule::MIN_TRANSACTION_GAS_UNITS.get() - 1,
+        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+        lbr_type_tag(),
+    );
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()),
+        executor.execute_transaction(txn).status(),
+        VMStatus::new(StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS)
+    );
 
-        let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
-            vec![TransactionArgument::U64(42); MAX_TRANSACTION_SIZE_IN_BYTES],
-            10,
-            gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
-            gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
-        );
-        assert_prologue_parity!(
-            executor.verify_transaction(txn.clone()),
-            executor.execute_transaction(txn).status(),
-            VMStatus::new(StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE)
-        );
+    let txn = sender.account().create_signed_txn_with_args(
+        p2p_script.clone(),
+        args,
+        10,
+        gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
+        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+        lbr_type_tag(),
+    );
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()),
+        executor.execute_transaction(txn).status(),
+        VMStatus::new(StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND)
+    );
 
-        // Create a new transaction that swaps the two arguments.
-        let mut args: Vec<TransactionArgument> = Vec::new();
-        args.push(TransactionArgument::U64(transfer_amount));
-        args.push(TransactionArgument::Address(*receiver.address()));
+    let txn = sender.account().create_signed_txn_with_args(
+        p2p_script.clone(),
+        vec![TransactionArgument::U64(42); MAX_TRANSACTION_SIZE_IN_BYTES],
+        10,
+        gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
+        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+        lbr_type_tag(),
+    );
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()),
+        executor.execute_transaction(txn).status(),
+        VMStatus::new(StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE)
+    );
 
-        let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
-            args,
-            10,
-            100_000,
-            1,
-        );
-        assert_eq!(
-            executor.execute_transaction(txn).status(),
-            &TransactionStatus::Keep(
-                VMStatus::new(StatusCode::TYPE_MISMATCH)
-                    .with_message("Actual Type Mismatch".to_string())
-            )
-        );
+    // Create a new transaction that swaps the two arguments.
+    let mut args: Vec<TransactionArgument> = Vec::new();
+    args.push(TransactionArgument::U64(transfer_amount));
+    args.push(TransactionArgument::Address(*receiver.address()));
 
-        // Create a new transaction that has no argument.
-        let txn = sender.account().create_signed_txn_with_args(
-            PEER_TO_PEER.clone(),
-            vec![],
-            10,
-            100_000,
-            1,
-        );
-        assert_eq!(
-            executor.execute_transaction(txn).status(),
-            &TransactionStatus::Keep(
-                VMStatus::new(StatusCode::TYPE_MISMATCH)
-                    .with_message("Actual Type Mismatch".to_string())
-            )
-        );
-    });
+    let txn = sender.account().create_signed_txn_with_args(
+        p2p_script.clone(),
+        args,
+        10,
+        100_000,
+        1,
+        lbr_type_tag(),
+    );
+    assert_eq!(
+        executor.execute_transaction(txn).status(),
+        &TransactionStatus::Keep(
+            VMStatus::new(StatusCode::TYPE_MISMATCH)
+                .with_message("Actual Type Mismatch".to_string())
+        )
+    );
+
+    // Create a new transaction that has no argument.
+    let txn = sender.account().create_signed_txn_with_args(
+        p2p_script,
+        vec![],
+        10,
+        100_000,
+        1,
+        lbr_type_tag(),
+    );
+
+    assert_eq!(
+        executor.execute_transaction(txn).status(),
+        &TransactionStatus::Keep(
+            VMStatus::new(StatusCode::TYPE_MISMATCH)
+                .with_message("Actual Type Mismatch".to_string())
+        )
+    );
 }
 
 #[test]
 pub fn test_whitelist() {
     // create a FakeExecutor with a genesis from file
-    test_all_genesis_default(|mut executor| {
-        // create an empty transaction
-        let sender = AccountData::new(1_000_000, 10);
-        executor.add_account_data(&sender);
+    let mut executor = FakeExecutor::whitelist_genesis();
+    // create an empty transaction
+    let sender = AccountData::new(1_000_000, 10);
+    executor.add_account_data(&sender);
 
-        let random_script = compile_script("main() {return;}");
-        let txn =
-            sender
-                .account()
-                .create_signed_txn_with_args(random_script, vec![], 10, 100_000, 1);
-        assert_prologue_parity!(
-            executor.verify_transaction(txn.clone()),
-            executor.execute_transaction(txn).status(),
-            VMStatus::new(StatusCode::UNKNOWN_SCRIPT)
-        );
-    });
+    // When CustomScripts is off, a garbage script should be rejected with Keep(UnknownScript)
+    let random_script = vec![];
+    let txn = sender.account().create_signed_txn_with_args(
+        random_script,
+        vec![],
+        10,
+        100_000,
+        1,
+        lbr_type_tag(),
+    );
+
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()),
+        executor.execute_transaction(txn).status(),
+        VMStatus::new(StatusCode::UNKNOWN_SCRIPT)
+    );
 }
 
 #[test]
@@ -377,14 +372,24 @@ pub fn test_arbitrary_script_execution() {
     let sender = AccountData::new(1_000_000, 10);
     executor.add_account_data(&sender);
 
-    let random_script = compile_script("main() {return;}");
-    let txn = sender
-        .account()
-        .create_signed_txn_with_args(random_script, vec![], 10, 100_000, 1);
+    // If CustomScripts is on, result should be Keep(DeserializationError). If it's off, the
+    // result should be Keep(UnknownScript)
+    let random_script = vec![];
+    let txn = sender.account().create_signed_txn_with_args(
+        random_script,
+        vec![],
+        10,
+        100_000,
+        1,
+        lbr_type_tag(),
+    );
+
     assert_eq!(executor.verify_transaction(txn.clone()), None);
+    let status = executor.execute_transaction(txn).status().clone();
+    assert!(!status.is_discarded());
     assert_eq!(
-        executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+        status.vm_status().major_status,
+        StatusCode::CODE_DESERIALIZATION_ERROR,
     );
 }
 
@@ -418,10 +423,10 @@ pub fn test_no_publishing() {
         ",
     );
 
-    let random_module = compile_module_with_address(sender.address(), &module);
+    let random_module = compile_module_with_address(sender.address(), "file_name", &module);
     let txn = sender
         .account()
-        .create_user_txn(random_module, 10, 100_000, 1);
+        .create_user_txn(random_module, 10, 100_000, 1, lbr_type_tag());
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
         executor.execute_transaction(txn).status(),
@@ -461,10 +466,10 @@ pub fn test_open_publishing_invalid_address() {
         ",
     );
 
-    let random_module = compile_module_with_address(receiver.address(), &module);
+    let random_module = compile_module_with_address(receiver.address(), "file_name", &module);
     let txn = sender
         .account()
-        .create_user_txn(random_module, 10, 100_000, 1);
+        .create_user_txn(random_module, 10, 100_000, 1, lbr_type_tag());
 
     // TODO: This is not verified for now.
     // verify and fail because the addresses don't match
@@ -512,10 +517,10 @@ pub fn test_open_publishing() {
         ",
     );
 
-    let random_module = compile_module_with_address(sender.address(), &program);
+    let random_module = compile_module_with_address(sender.address(), "file_name", &program);
     let txn = sender
         .account()
-        .create_user_txn(random_module, 10, 100_000, 1);
+        .create_user_txn(random_module, 10, 100_000, 1, lbr_type_tag());
     assert_eq!(executor.verify_transaction(txn.clone()), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
@@ -546,7 +551,7 @@ fn test_dependency_fails_verification() {
         ..Compiler::default()
     };
     let module = compiler
-        .into_compiled_module(bad_module_code)
+        .into_compiled_module("file_name", bad_module_code)
         .expect("Failed to compile");
     executor.add_module(&module.self_id(), &module);
 
@@ -572,12 +577,15 @@ fn test_dependency_fails_verification() {
         )],
         ..Compiler::default()
     };
-    let script = compiler.into_script_blob(code).expect("Failed to compile");
+    let script = compiler
+        .into_script_blob("file_name", code)
+        .expect("Failed to compile");
     let txn = sender.account().create_user_txn(
         TransactionPayload::Script(Script::new(script, vec![])),
         10,
         100_000,
         1,
+        lbr_type_tag(),
     );
     // As of now, we don't verify dependencies in verify_transaction.
     assert_eq!(executor.verify_transaction(txn.clone()), None);

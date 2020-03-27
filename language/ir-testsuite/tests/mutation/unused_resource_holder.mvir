@@ -1,18 +1,19 @@
 // check: RET_UNSAFE_TO_DESTROY_ERROR
 
 module A {
-    import 0x0.LibraCoin;
+import 0x0.LBR;
+    import 0x0.Libra;
 
-    resource T{g: LibraCoin.T}
+    resource T{g: Libra.T<LBR.T>}
 
-    public new(g: LibraCoin.T): Self.T {
+    public new(g: Libra.T<LBR.T>): Self.T {
         return T{g: move(g)};
     }
 
     public destroy(a: Self.T) {
-        let c: LibraCoin.T;
+        let c: Libra.T<LBR.T>;
         T{g: c} = move(a);
-        LibraCoin.destroy_zero(move(c));
+        Libra.destroy_zero<LBR.T>(move(c));
         return;
     }
 }
@@ -20,12 +21,13 @@ module A {
 //! new-transaction
 
 import {{default}}.A;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 main() {
-    let zero_resource: LibraCoin.T;
+    let zero_resource: Libra.T<LBR.T>;
     let s: A.T;
-    zero_resource = LibraCoin.zero();
+    zero_resource = Libra.zero<LBR.T>();
     s = A.new(move(zero_resource));
 
     return;

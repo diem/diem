@@ -3,7 +3,8 @@
 
 #![forbid(unsafe_code)]
 
-use executable_helpers::helpers::setup_executable;
+use libra_config::config::NodeConfig;
+use libra_types::PeerId;
 use std::{
     path::PathBuf,
     sync::{
@@ -18,7 +19,7 @@ use structopt::StructOpt;
 struct Args {
     #[structopt(short = "f", long, parse(from_os_str))]
     /// Path to NodeConfig
-    config: Option<PathBuf>,
+    config: PathBuf,
     #[structopt(short = "d", long)]
     /// Disable logging
     no_logging: bool,
@@ -30,8 +31,28 @@ static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 fn main() {
     let args = Args::from_args();
 
-    let (mut config, _logger) =
-        setup_executable(args.config.as_ref().map(PathBuf::as_path), args.no_logging);
+    let mut config = NodeConfig::load(args.config).expect("Failed to load node config");
+    println!("Using node config {:?}", &config);
+    crash_handler::setup_panic_handler();
+
+    if !args.no_logging {
+        libra_logger::Logger::new()
+            .channel_size(config.logger.chan_size)
+            .is_async(config.logger.is_async)
+            .level(config.logger.level)
+            .init();
+        libra_logger::init_struct_log_from_env().expect("Failed to initialize structured logging");
+    }
+
+    if config.metrics.enabled {
+        for network in &config.full_node_networks {
+            setup_metrics(network.peer_id, &config);
+        }
+
+        if let Some(network) = config.validator_network.as_ref() {
+            setup_metrics(network.peer_id, &config);
+        }
+    }
 
     let _node_handle = libra_node::main_node::setup_environment(&mut config);
 
@@ -40,4 +61,12 @@ fn main() {
     while !term.load(Ordering::Acquire) {
         std::thread::park();
     }
+}
+
+fn setup_metrics(peer_id: PeerId, config: &NodeConfig) {
+    libra_metrics::dump_all_metrics_to_file_periodically(
+        &config.metrics.dir(),
+        &format!("{}.metrics", peer_id),
+        config.metrics.collection_interval_ms,
+    );
 }

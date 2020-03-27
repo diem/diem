@@ -10,9 +10,8 @@ use crate::instance::Instance;
 use anyhow::Result;
 
 use async_trait::async_trait;
-use slog_scope::debug;
-use std::fmt;
-use std::time::Duration;
+use libra_logger::debug;
+use std::{fmt, time::Duration};
 
 pub struct NetworkDelay {
     instance: Instance,

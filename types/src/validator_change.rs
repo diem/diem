@@ -4,16 +4,18 @@
 #![forbid(unsafe_code)]
 
 use crate::{
-    crypto_proxies::{EpochInfo, LedgerInfoWithSignatures},
-    ledger_info::LedgerInfo,
+    epoch_info::EpochInfo,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     waypoint::Waypoint,
 };
 use anyhow::{ensure, format_err, Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::{collection::vec, prelude::*};
 use serde::{Deserialize, Serialize};
-use std::convert::{TryFrom, TryInto};
-use std::sync::Arc;
+use std::{
+    convert::{TryFrom, TryInto},
+    sync::Arc,
+};
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 /// A vector of LedgerInfo with contiguous increasing epoch numbers to prove a sequence of
@@ -23,7 +25,7 @@ pub struct ValidatorChangeProof {
     pub more: bool,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 /// The verification of the validator change proof starts with some verifier that is trusted by the
 /// client: could be either a waypoint (upon startup) or a known validator verifier.
 pub enum VerifierType {
@@ -40,7 +42,7 @@ impl VerifierType {
                     epoch_info.epoch == ledger_info.ledger_info().epoch(),
                     "LedgerInfo has unexpected epoch"
                 );
-                ledger_info.verify(epoch_info.verifier.as_ref())?;
+                ledger_info.verify_signatures(epoch_info.verifier.as_ref())?;
                 Ok(())
             }
         }
@@ -96,7 +98,7 @@ impl ValidatorChangeProof {
     /// pass a waypoint in case it's not needed).
     ///
     /// We will also skip any stale ledger info's in the [`ValidatorChangeProof`].
-    pub fn verify(&self, verifier: &VerifierType) -> Result<LedgerInfoWithSignatures> {
+    pub fn verify(&self, verifier: &VerifierType) -> Result<&LedgerInfoWithSignatures> {
         ensure!(
             !self.ledger_info_with_sigs.is_empty(),
             "The ValidatorChangeProof is empty"
@@ -151,7 +153,7 @@ impl ValidatorChangeProof {
                     .ok_or_else(|| format_err!("LedgerInfo doesn't carry a ValidatorSet"))
             })?;
 
-        Ok(self.ledger_info_with_sigs.last().unwrap().clone())
+        Ok(self.ledger_info_with_sigs.last().unwrap())
     }
 }
 
@@ -205,8 +207,7 @@ mod tests {
 
     #[test]
     fn verify_validator_set_change_proof() {
-        use crate::crypto_proxies::random_validator_verifier;
-        use crate::ledger_info::LedgerInfo;
+        use crate::{ledger_info::LedgerInfo, validator_verifier::random_validator_verifier};
         use libra_crypto::hash::{CryptoHash, HashValue};
         use std::collections::BTreeMap;
 
@@ -237,7 +238,7 @@ mod tests {
             );
             let signatures = current_signers
                 .iter()
-                .map(|s| (s.author(), s.sign_message(ledger_info.hash()).unwrap()))
+                .map(|s| (s.author(), s.sign_message(ledger_info.hash())))
                 .collect();
             valid_ledger_info.push(LedgerInfoWithSignatures::new(ledger_info, signatures));
             current_signers = next_signers;

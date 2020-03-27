@@ -6,7 +6,6 @@
 //! Upgrading a stream to a particular protocol can be done either using 'protocol-interactive' or
 //! 'protocol-select', both of which use u16 length prefix framing.
 
-mod framing;
 mod inbound;
 mod outbound;
 #[cfg(test)]

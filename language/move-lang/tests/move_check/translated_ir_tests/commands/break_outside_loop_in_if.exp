@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/commands/break_outside_loop_in_if.move:2:15 ───
+   │
+ 2 │     if (true) break
+   │               ^^^^^ Invalid usage of 'break'. 'break' can only be used inside a loop body
+   │
+

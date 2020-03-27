@@ -27,7 +27,7 @@ impl BinaryConstants {
     pub const HEADER_SIZE: usize = BinaryConstants::LIBRA_MAGIC_SIZE + 3;
     /// A (Table Type, Start Offset, Byte Count) size, which is 1 byte for the type and
     /// 4 bytes for the offset/count.
-    pub const TABLE_HEADER_SIZE: u32 = size_of::<u32>() as u32 * 2 + 1;
+    pub const TABLE_HEADER_SIZE: u8 = size_of::<u32>() as u8 * 2 + 1;
 }
 
 /// Constants for table types in the binary.
@@ -79,8 +79,8 @@ pub enum SerializedType {
     REFERENCE               = 0x6,
     MUTABLE_REFERENCE       = 0x7,
     STRUCT                  = 0x8,
-    BYTEARRAY               = 0x9,
-    TYPE_PARAMETER          = 0xA,
+    TYPE_PARAMETER          = 0x9,
+    VECTOR                  = 0xA,
 }
 
 #[rustfmt::skip]
@@ -183,6 +183,7 @@ pub enum Opcodes {
 pub const BINARY_SIZE_LIMIT: usize = usize::max_value();
 
 /// A wrapper for the binary vector
+#[derive(Default)]
 pub struct BinaryData {
     _binary: Vec<u8>,
 }
@@ -205,8 +206,6 @@ impl BinaryData {
 
     pub fn push(&mut self, item: u8) -> Result<()> {
         if self.len().checked_add(1).is_some() {
-            // This assumption tells MIRAI the implication of the success of the check
-            assume!(self._binary.len() < usize::max_value());
             self._binary.push(item);
         } else {
             bail!(
@@ -221,8 +220,6 @@ impl BinaryData {
     pub fn extend(&mut self, vec: &[u8]) -> Result<()> {
         let vec_len: usize = vec.len();
         if self.len().checked_add(vec_len).is_some() {
-            // This assumption tells MIRAI the implication of the success of the check
-            assume!(self._binary.len() <= usize::max_value() - vec_len);
             self._binary.extend(vec);
         } else {
             bail!(
@@ -305,13 +302,16 @@ pub fn write_u128(binary: &mut BinaryData, value: u128) -> Result<()> {
 ///
 /// Return an error on an invalid representation.
 pub fn read_uleb128_as_u16(cursor: &mut Cursor<&[u8]>) -> Result<u16> {
-    let mut value: u16 = 0;
+    let mut value: u32 = 0;
     let mut shift: u8 = 0;
     while let Ok(byte) = cursor.read_u8() {
         let val = byte & 0x7f;
-        value |= u16::from(val) << shift;
+        value |= u32::from(val) << shift;
         if val == byte {
-            return Ok(value);
+            if (shift > 0 && val == 0) || value > std::u16::MAX.into() {
+                bail!("invalid ULEB128 representation for u16");
+            }
+            return Ok(value as u16);
         }
         shift += 7;
         if shift > 14 {
@@ -329,13 +329,16 @@ pub fn read_uleb128_as_u16(cursor: &mut Cursor<&[u8]>) -> Result<u16> {
 ///
 /// Return an error on an invalid representation.
 pub fn read_uleb128_as_u32(cursor: &mut Cursor<&[u8]>) -> Result<u32> {
-    let mut value: u32 = 0;
+    let mut value: u64 = 0;
     let mut shift: u8 = 0;
     while let Ok(byte) = cursor.read_u8() {
         let val = byte & 0x7f;
-        value |= u32::from(val) << shift;
+        value |= u64::from(val) << shift;
         if val == byte {
-            return Ok(value);
+            if (shift > 0 && val == 0) || value > std::u32::MAX.into() {
+                bail!("invalid ULEB128 representation for u32");
+            }
+            return Ok(value as u32);
         }
         shift += 7;
         if shift > 28 {

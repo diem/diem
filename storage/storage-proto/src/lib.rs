@@ -32,11 +32,12 @@ use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet},
+    ledger_info::LedgerInfoWithSignatures,
     proof::{SparseMerkleProof, SparseMerkleRangeProof},
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionToCommit, Version,
     },
+    validator_set::ValidatorSet,
 };
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;

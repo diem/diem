@@ -1,12 +1,13 @@
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 main() {
-    let handle: LibraAccount.EventHandle<LibraCoin.T>;
-    let zero: LibraCoin.T;
-    handle = LibraAccount.new_event_handle<LibraCoin.T>();
-    zero = LibraCoin.zero();
-    LibraAccount.emit_event<LibraCoin.T>(&mut handle, move(zero));
-    LibraAccount.destroy_handle<LibraCoin.T>(move(handle));
+    let handle: LibraAccount.EventHandle<Libra.T<LBR.T>>;
+    let zero: Libra.T<LBR.T>;
+    handle = LibraAccount.new_event_handle<Libra.T<LBR.T>>();
+    zero = Libra.zero<LBR.T>();
+    LibraAccount.emit_event<Libra.T<LBR.T>>(&mut handle, move(zero));
+    LibraAccount.destroy_handle<Libra.T<LBR.T>>(move(handle));
     return;
 }
 

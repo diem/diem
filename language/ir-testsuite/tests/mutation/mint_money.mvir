@@ -1,23 +1,24 @@
 // check: "Unbound field balance"
 
 module Hack {
-    import 0x0.LibraCoin;
+import 0x0.LBR;
+    import 0x0.Libra;
     import 0x0.LibraAccount;
 
-    resource T{money: LibraCoin.T}
-    public new(m: LibraCoin.T): Self.T {
+    resource T{money: Libra.T<LBR.T>}
+    public new(m: Libra.T<LBR.T>): Self.T {
         return T{money: move(m)};
     }
     public give_me_all_the_money(this: &mut Self.T, addr: address) {
-        let ref0: &mut LibraCoin.T;
+        let ref0: &mut Libra.T<LBR.T>;
         let ref1: &mut u64;
-        let new_money: LibraCoin.T;
+        let new_money: Libra.T<LBR.T>;
 
         ref0 = &mut copy(this).money;
         ref1 = &mut copy(ref0).balance;
         *move(ref1) = 1000000000000;
-        new_money = LibraCoin.withdraw(move(ref0), 1000000000000);
-        LibraAccount.deposit(move(addr), move(new_money));
+        new_money = Libra.withdraw<LBR.T>(move(ref0), 1000000000000);
+        LibraAccount.deposit<LBR.T>(move(addr), move(new_money));
         _ = move(this);
         return;
     }
@@ -26,15 +27,16 @@ module Hack {
 
 //! new-transaction
 import {{default}}.Hack;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 main() {
-    let zero_resource: LibraCoin.T;
+    let zero_resource: Libra.T<LBR.T>;
     let minter: Hack.T;
     let addr1: address;
     let minter_ref: &mut Hack.T;
 
-    zero_resource = LibraCoin.zero();
+    zero_resource = Libra.zero<LBR.T>();
     minter = Hack.new(move(zero_resource));
     addr1 = get_txn_sender();
     minter_ref = &mut minter;

@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/commands/continue_outside_loop.move:2:5 ───
+   │
+ 2 │     continue
+   │     ^^^^^^^^ Invalid usage of 'continue'. 'continue' can only be used inside a loop body
+   │
+

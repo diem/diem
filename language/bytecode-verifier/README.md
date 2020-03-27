@@ -57,7 +57,7 @@ The goal of reference safety checking is to ensure that there are no dangling re
 * Reference to a value in a local variable is returned from a function.
 * Reference `r` is taken to a globally published value `v`; `v` is then unpublished.
 
-References can be either exclusive or shared; the latter allow read-only access. A secondary goal of reference safety checking is to ensure that in the execution context of the bytecode program — including the entire evaluation stack and all function frames — if there are two distinct storage locations containing references `r1` and `r2` such that `r2` extends `r1`, then both of the following conditions hold:
+References can be either exclusive or shared; the latter allow read-only access. A secondary goal of reference safety checking is to ensure that in the execution context of the bytecode program, including the entire evaluation stack and all function frames, if there are two distinct storage locations containing references `r1` and `r2` such that `r2` extends `r1`, then both of the following conditions hold:
 
 * If `r1` is tagged as exclusive, then it must be inactive, i.e. it is impossible to reach a control location where `r1` is dereferenced or mutated.
 * If `r1` is shared, then `r2` is shared.
@@ -68,104 +68,10 @@ The two conditions above establish the property of referential transparency, imp
 
 The reference safety analysis is set up as a flow analysis (or abstract interpretation). An abstract state is defined for abstractly executing the code of a basic block. A map is maintained from basic blocks to abstract states. Given an abstract state *S* at the beginning of a basic block *B*, the abstract execution of *B* results in state *S'*. This state *S'* is propagated to all successors of *B* and recorded in the map. If a state already existed for a block, the freshly propagated state is “joined” with the existing state. If the join fails an error is reported. If the join succeeds but the abstract state remains unchanged, no further propagation is done. Otherwise, the state is updated and propagated again through the block. An error may also be reported when an instruction is processed during the propagation of abstract state through a block.
 
-### Abstract State
-
-The abstract state has three components:
-
-* A partial map from locals to abstract values. Locals that are not in the domain of this map are unavailable. Availability is a generalization of the concept of being initialized. A local variable may become unavailable subsequent to initialization as a result of being moved. An abstract value is either *Reference*(*n*) (for variables of reference type) or *Value*(*ns*) (for variables of value type), where *n* is a nonce and *ns* is a set of nonces. A nonce is a constant used to represent a reference. Let *Nonce* represent the set of all nonces. If a local variable *l* is mapped to *Value*(*ns*), it means that there are outstanding borrowed references pointing into the value stored in *l*. For each member *n* of *ns*, there must be a local variable *l* mapped to *Reference*(*n*). If a local variable *x* is mapped to *Reference*(*n*) and there are local variables *y* and *z* mapped to *Value*(*ns1*) and *Value*(*ns2*) respectively, then it is possible that *n* is a member of both *ns1* and *ns2*. This simply means that the analysis is lossy. The special case when *l* is mapped to *Value*({}) means that there are no borrowed references to *l*, and, therefore, *l* may be destroyed or moved.
-* The partial map from locals to abstract values is not enough by itself to check bytecode programs because values manipulated by the bytecode can be large nested structures with references pointing into the middle. A reference pointing into the middle of a value could be extended to produce another reference. Some extensions should be allowed but others should not. To keep track of relative extensions among references, the abstract state has a second component. This component is a map from nonces to one of the following two kinds of borrowed information:
-* A set of nonces.
-* A map from fields to sets of nonces.
-
-The current implementation stores this information as two separate maps with disjointed domains:
-  * *borrowed_by* maps from *Nonce* to *Set*<*Nonce*>.
-  * *fields_borrowed_by* maps from *Nonce* to *Map*<*Field*, *Set*<*Nonce*>>.
-      * If *n2* in *borrowed_by*[*n1*], then it means that the reference represented by *n2* is an extension of the reference represented by *n1*.
-      * If *n2* in *fields_borrowed_by*[*n1*][*f*], it means that the reference represented by *n2* is an extension of the *f*-extension of the reference represented by *n1*. Based on this intuition, it is a sound overapproximation to move a nonce *n* from the domain of *fields_borrowed_by* to the domain of *borrowed_by* by taking the union of all nonce sets corresponding to all fields in the domain of *fields_borrowed_by*[*n*].
-* To propagate an abstract state across the instructions in a block, the values and references on the stack must also be modeled. We had earlier described how we model the usable stack suffix as a stack of types. We now augment the contents of this stack to be a structure containing a type and an abstract value. We maintain the invariant that non-reference values on the stack cannot have pending borrows on them. Therefore, if there is an abstract value *Value*(*ns*) on the stack, then *ns* is empty.
-
-### Values and References
-
-Let us take a closer look at how values and references, shared and exclusive, are modeled.
-
-* A non-reference value is modeled as *Value*(*ns*) where *ns* is a set of nonces representing borrowed references. Destruction/move/copy of this value is deemed safe only if *ns* is empty. Values on the stack trivially satisfy this property, but values in local variables may not.
-* A reference is modeled as *Reference*(*n*), where *n* is a nonce. If the reference is tagged as shared, then read access is always allowed and write access is never allowed. If a reference *Reference*(*n*) is tagged exclusive, write access is allowed only if *n* does not have a borrow, and read access is allowed if all nonces that borrow from *n* reside in references that are tagged as shared. Furthermore, the rules for constructing references guarantee that an extension of a reference tagged as shared must also be tagged as shared. Together, these checks provide the property of referential transparency mentioned earlier.
-
-At the moment, the bytecode language does not contain any direct constructors for shared references. `BorrowLoc` and `BorrowGlobal` create exclusive references. `BorrowField` creates a reference that inherits its tag from the source reference. Move (when applied to a local variable containing a reference) moves the reference from a local variable to the stack. `FreezeRef` is used to convert an existing exclusive reference to a shared reference. In the future, we may add a version of `BorrowGlobal` that generates a shared reference
-
 **Errors.** As mentioned earlier, an error is reported by the checker in one of the following situations:
 
 * An instruction cannot be proven to be safe during the propagation of the abstract state through a block.
 * Join of abstract states propagated via different incoming edges into a block fails.
-
-Let us take a closer look at the second reason for error reporting above. Note that the stack of type and abstract value pairs representing the usable stack suffix is empty at the beginning of a block. So, the join occurs only over the abstract state representing the available local variables and the borrow information. The join fails only in the situation when the set of available local variables is different on the two edges. If the set of available variables is identical, the join itself is straightforward &mdash; the borrow sets are joined point-wise. There are two subtleties worth mentioning though:
-
-* The set of nonces used in the abstract states along the two edges may not have any connection to each other. Since the actual nonce values are immaterial, the nonces are canonically mapped to fixed integers (indices of local variables containing the nonces) before performing the join.
-* During the join, if a nonce *n* is in the domain of borrowed_by on one side and in the domain of fields_borrowed_by on the other side, *n* is moved from fields_borrowed_by to borrowed_by before doing the join.
-
-### Borrowing References
-
-Each of the reference constructors ---`BorrowLoc`, `BorrowField`, `BorrowGlobal`, `FreezeRef`, and `CopyLoc`--- is modeled via the generation of a fresh nonce. While `BorrowLoc` borrows from a value in a local variable, `BorrowGlobal` borrows from the global pool of values. `BorrowField`, `FreezeRef`, and `CopyLoc` (when applied to a local containing a reference) borrow from the source reference. Since each fresh nonce is distinct from all previously-generated nonces, the analysis maintains the invariant that all available local variables and stack locations of reference type have distinct nonces representing their abstract value. Another important invariant is that every nonce referred to in the borrow information must reside in some abstract value representing a local variable or a stack location.
-
-### Releasing References.
-
-References, both global and local, are released by the `ReleaseRef` operation. It is an error to return from a function with unreleased references in a local variable of the function. All references must be explicitly released. Therefore, it is an error to overwrite an available reference using the `StLoc` operation.
-
-References are implicitly released when consumed by the operations `ReadRef`, `WriteRef`, `Eq` and `Neq`.
-
-### Global References
-
-The safety of global references depends on a combination of static and dynamic analysis. The static analysis does not distinguish between global and local references. But the dynamic analysis distinguishes between them and performs reference counting on the global references as follows: the bytecode interpreter maintains a map `M` from an address and fully-qualified resource type pair to a union (Rust enum) comprising the following values:
-
-* `Empty`
-* `RefCount(n)` for some `n` >= 0
-
-Extra state updates and checks are performed by the interpreter for the following operations. In the code below, assert failure indicates a programmer error, and panic failure indicates internal error in the interpreter.
-
-```text
-MoveFrom<T>(addr) {
-    assert M[addr, T] == RefCount(0);
-    M[addr, T] := Empty;
-}
-
-MoveToSender<T>(addr) {
-    assert M[addr, T] == Empty;
-    M[addr, T] := RefCount(0);
-}
-
-BorrowGlobal<T>(addr) {
-    if let RefCount(n) = M[addr, T] then {
-        assert n == 0;
-        M[addr, T] := RefCount(n+1);
-    } else {
-        assert false;
-    }
-}
-
-CopyLoc(ref) {
-    if let Global(addr, T) = ref {
-        if let RefCount(n) = M[addr, T] then {
-            assert n > 0;
-            M[addr, T] := RefCount(n+1);
-        } else {
-            panic false;
-        }
-    }
-}
-
-ReleaseRef(ref) {
-    if let Global(addr, T) = ref {
-        if let RefCount(n) = M[addr, T] then {
-            assert n > 0;
-            M[addr, T] := RefCount(n-1);
-        } else {
-            panic false;
-        }
-    }
-}
-```
-
-A subtle point not explicated by the rules above is that `BorrowField` and `FreezeRef`, when applied to a global reference, leave the reference count unchanged. This is because these instructions consume the reference at the top of the stack while producing an extension of it at the top of the stack. Similarly, since `ReadRef`, `WriteRef`, `Eq`, and `Neq` consume the reference at the top of the stack, they will reduce the reference count by 1.
 
 ## How is this module organized?
 

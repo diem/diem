@@ -10,10 +10,9 @@ use consensus_types::{
     sync_info::SyncInfo,
 };
 use libra_crypto::HashValue;
-use libra_logger::{set_simple_logger, set_simple_logger_prefix};
-use libra_types::{crypto_proxies::ValidatorSigner, ledger_info::LedgerInfo};
+use libra_logger::Level;
+use libra_types::{ledger_info::LedgerInfo, validator_signer::ValidatorSigner};
 use std::sync::Arc;
-use termion::color::*;
 use tokio::runtime;
 
 mod mock_state_computer;
@@ -24,10 +23,9 @@ mod mock_txn_manager;
 use consensus_types::block::block_test_utils::gen_test_certificate;
 use libra_types::block_info::BlockInfo;
 pub use mock_state_computer::{EmptyStateComputer, MockStateComputer};
-pub use mock_storage::{EmptyStorage, MockStorage};
+pub use mock_storage::{EmptyStorage, MockSharedStorage, MockStorage};
 pub use mock_txn_manager::MockTransactionManager;
-use std::thread;
-use std::time::Duration;
+use std::{thread, time::Duration};
 
 pub type TestPayload = Vec<usize>;
 
@@ -220,7 +218,7 @@ fn nocapture() -> bool {
 
 pub fn consensus_runtime() -> runtime::Runtime {
     if nocapture() {
-        set_simple_logger("consensus");
+        ::libra_logger::Logger::new().level(Level::Debug).init();
     }
     // setup timeout for tests
     crash_handler::setup_panic_handler();
@@ -235,8 +233,4 @@ pub fn consensus_runtime() -> runtime::Runtime {
         .enable_all()
         .build()
         .expect("Failed to create Tokio runtime!")
-}
-
-pub fn with_smr_id(id: String) -> impl Fn() {
-    move || set_simple_logger_prefix(format!("{}[{}]{}", Fg(LightBlack), id, Fg(Reset)))
 }

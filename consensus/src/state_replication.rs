@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use consensus_types::block::Block;
-use consensus_types::executed_block::ExecutedBlock;
-use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
-use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof};
+use consensus_types::{block::Block, executed_block::ExecutedBlock};
+use executor_types::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
+use libra_crypto::HashValue;
+use libra_types::{ledger_info::LedgerInfoWithSignatures, validator_change::ValidatorChangeProof};
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
 #[async_trait::async_trait]
@@ -31,6 +31,9 @@ pub trait TxnManager: Send + Sync {
 
     /// Bypass the trait object non-clonable limit.
     fn _clone_box(&self) -> Box<dyn TxnManager<Payload = Self::Payload>>;
+
+    // Helper to trace transactions after block is generated
+    fn trace_transactions(&self, _txns: &Self::Payload, _block_id: HashValue) {}
 }
 
 impl<T> Clone for Box<dyn TxnManager<Payload = T>> {

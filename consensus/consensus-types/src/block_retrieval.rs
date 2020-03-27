@@ -4,7 +4,7 @@
 use crate::{block::Block, common::Payload};
 use anyhow::ensure;
 use libra_crypto::hash::HashValue;
-use libra_types::crypto_proxies::ValidatorVerifier;
+use libra_types::validator_verifier::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

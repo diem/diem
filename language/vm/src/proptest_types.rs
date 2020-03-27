@@ -10,7 +10,8 @@ use crate::file_format::{
     StructHandle, StructHandleIndex, TableIndex, TypeSignature, TypeSignatureIndex,
 };
 use libra_proptest_helpers::GrowingSubset;
-use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
+use libra_types::account_address::AccountAddress;
+use move_core_types::identifier::Identifier;
 use proptest::{
     collection::{vec, SizeRange},
     option,
@@ -105,7 +106,7 @@ impl CompiledModuleStrategyGen {
         let address_pool_strat = vec(any::<AccountAddress>(), 1..=self.size);
         // This ensures that there are no empty ByteArrays
         // TODO: Should we enable empty ByteArrays in Move, e.g. let byte_array = b"";
-        let byte_array_pool_strat = vec(any::<ByteArray>(), 1..=self.size);
+        let byte_array_pool_strat = vec(vec(any::<u8>(), 0..=self.size), 1..=self.size);
         let identifiers_strat = vec(any::<Identifier>(), 1..=self.size);
         let type_signatures_strat = vec(SignatureTokenGen::strategy(), 1..=self.size);
         // Ensure at least one owned non-struct type signature.
@@ -393,8 +394,9 @@ impl StDefnMaterializeState {
                 self.struct_handles[struct_handle_index.0 as usize].is_nominal_resource
                     || targs.iter().any(|t| self.contains_nominal_resource(t))
             }
+            Vector(targ) => self.contains_nominal_resource(targ),
             Reference(token) | MutableReference(token) => self.contains_nominal_resource(token),
-            Bool | U8 | U64 | U128 | ByteArray | Address | TypeParameter(_) => false,
+            Bool | U8 | U64 | U128 | Address | TypeParameter(_) => false,
         }
     }
 }

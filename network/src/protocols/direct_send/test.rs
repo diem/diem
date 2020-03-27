@@ -9,9 +9,8 @@ use crate::{
     ProtocolId,
 };
 use bytes::Bytes;
-use channel;
 use futures::{sink::SinkExt, stream::StreamExt};
-use libra_logger::prelude::*;
+use libra_logger::debug;
 use libra_types::PeerId;
 use memsocket::MemorySocket;
 use netcore::compat::IoCompat;
@@ -20,8 +19,8 @@ use std::str::FromStr;
 use tokio::runtime::{Handle, Runtime};
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
-const PROTOCOL_1: &[u8] = b"/direct_send/1.0.0";
-const PROTOCOL_2: &[u8] = b"/direct_send/2.0.0";
+const PROTOCOL_1: ProtocolId = ProtocolId::ConsensusDirectSend;
+const PROTOCOL_2: ProtocolId = ProtocolId::MempoolDirectSend;
 const MESSAGE_1: &[u8] = b"Direct Send 1";
 const MESSAGE_2: &[u8] = b"Direct Send 2";
 const MESSAGE_3: &[u8] = b"Direct Send 3";
@@ -56,12 +55,12 @@ fn start_direct_send_actor(
 
 async fn expect_network_provider_recv_message(
     ds_notifs_rx: &mut channel::Receiver<DirectSendNotification>,
-    expected_protocol: &'static [u8],
+    expected_protocol: ProtocolId,
     expected_message: &'static [u8],
 ) {
     match ds_notifs_rx.next().await.unwrap() {
         DirectSendNotification::RecvMessage(msg) => {
-            assert_eq!(msg.protocol.as_ref(), expected_protocol);
+            assert_eq!(msg.protocol, expected_protocol);
             assert_eq!(msg.mdata, Bytes::from_static(expected_message));
         }
     }
@@ -69,14 +68,14 @@ async fn expect_network_provider_recv_message(
 
 async fn expect_open_substream_request<TSubstream>(
     peer_reqs_rx: &mut channel::Receiver<PeerRequest<TSubstream>>,
-    expected_protocol: &'static [u8],
+    expected_protocol: ProtocolId,
     response: Result<TSubstream, PeerManagerError>,
 ) where
     TSubstream: std::fmt::Debug,
 {
     match peer_reqs_rx.next().await.unwrap() {
         PeerRequest::OpenSubstream(protocol, substream_tx) => {
-            assert_eq!(protocol.as_ref(), expected_protocol);
+            assert_eq!(protocol, expected_protocol);
             substream_tx.send(response).unwrap();
         }
         _ => panic!("Unexpected event"),
@@ -85,7 +84,7 @@ async fn expect_open_substream_request<TSubstream>(
 
 #[test]
 fn test_inbound_substream() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
 
     let (_ds_requests_tx, mut ds_notifs_rx, mut peer_notifs_tx, _peer_reqs_rx) =
@@ -118,7 +117,7 @@ fn test_inbound_substream() {
             .send(PeerNotification::NewSubstream(
                 peer_id,
                 NegotiatedSubstream {
-                    protocol: ProtocolId::from_static(&PROTOCOL_1[..]),
+                    protocol: PROTOCOL_1,
                     substream: listener_substream,
                 },
             ))
@@ -148,14 +147,14 @@ fn test_outbound_single_protocol() {
         // Send 2 messages with the same protocol
         ds_requests_tx
             .send(DirectSendRequest::SendMessage(Message {
-                protocol: Bytes::from_static(&PROTOCOL_1[..]),
+                protocol: PROTOCOL_1,
                 mdata: Bytes::from_static(MESSAGE_1),
             }))
             .await
             .unwrap();
         ds_requests_tx
             .send(DirectSendRequest::SendMessage(Message {
-                protocol: Bytes::from_static(&PROTOCOL_1[..]),
+                protocol: PROTOCOL_1,
                 mdata: Bytes::from_static(MESSAGE_2),
             }))
             .await
@@ -183,7 +182,7 @@ fn test_outbound_single_protocol() {
 
 #[test]
 fn test_outbound_multiple_protocols() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_notifs_tx, mut peer_reqs_rx) =
@@ -197,7 +196,7 @@ fn test_outbound_multiple_protocols() {
         // Send 2 messages with different protocols to the same peer
         ds_requests_tx
             .send(DirectSendRequest::SendMessage(Message {
-                protocol: Bytes::from_static(&PROTOCOL_1[..]),
+                protocol: PROTOCOL_1,
                 mdata: Bytes::from_static(MESSAGE_1),
             }))
             .await
@@ -206,7 +205,7 @@ fn test_outbound_multiple_protocols() {
         expect_open_substream_request(&mut peer_reqs_rx, PROTOCOL_1, Ok(dialer_substream_1)).await;
         ds_requests_tx
             .send(DirectSendRequest::SendMessage(Message {
-                protocol: Bytes::from_static(&PROTOCOL_2[..]),
+                protocol: PROTOCOL_2,
                 mdata: Bytes::from_static(MESSAGE_2),
             }))
             .await
@@ -237,7 +236,7 @@ fn test_outbound_multiple_protocols() {
 
 #[test]
 fn test_outbound_not_connected() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_notifs_tx, mut peer_reqs_rx) =
@@ -251,7 +250,7 @@ fn test_outbound_not_connected() {
         // Request DirectSend to send the first message
         ds_requests_tx
             .send(DirectSendRequest::SendMessage(Message {
-                protocol: Bytes::from_static(&PROTOCOL_1[..]),
+                protocol: PROTOCOL_1,
                 mdata: Bytes::from_static(MESSAGE_1),
             }))
             .await
@@ -268,7 +267,7 @@ fn test_outbound_not_connected() {
         // Request DirectSend to send the second message
         ds_requests_tx
             .send(DirectSendRequest::SendMessage(Message {
-                protocol: Bytes::from_static(&PROTOCOL_1[..]),
+                protocol: PROTOCOL_1,
                 mdata: Bytes::from_static(MESSAGE_2),
             }))
             .await
@@ -296,7 +295,7 @@ fn test_outbound_not_connected() {
 
 #[test]
 fn test_outbound_connection_closed() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_notifs_tx, mut peer_reqs_rx) =
@@ -311,7 +310,7 @@ fn test_outbound_connection_closed() {
         // Request DirectSend to send the first message
         ds_requests_tx
             .send(DirectSendRequest::SendMessage(Message {
-                protocol: Bytes::from_static(&PROTOCOL_1[..]),
+                protocol: PROTOCOL_1,
                 mdata: Bytes::from_static(MESSAGE_1),
             }))
             .await
@@ -343,7 +342,7 @@ fn test_outbound_connection_closed() {
         // Request DirectSend to send the second message
         ds_requests_tx
             .send(DirectSendRequest::SendMessage(Message {
-                protocol: Bytes::from_static(&PROTOCOL_1[..]),
+                protocol: PROTOCOL_1,
                 mdata: Bytes::from_static(MESSAGE_2),
             }))
             .await
@@ -359,7 +358,7 @@ fn test_outbound_connection_closed() {
         loop {
             ds_requests_tx
                 .send(DirectSendRequest::SendMessage(Message {
-                    protocol: Bytes::from_static(&PROTOCOL_1[..]),
+                    protocol: PROTOCOL_1,
                     mdata: Bytes::from_static(MESSAGE_3),
                 }))
                 .await

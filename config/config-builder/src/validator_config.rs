@@ -11,11 +11,10 @@ use libra_config::{
     generator,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
-use libra_types::transaction::Transaction;
+use libra_types::{transaction::Transaction, validator_set::ValidatorSet};
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{collections::HashMap, net::SocketAddr};
-use vm_genesis;
 
 const DEFAULT_SEED: [u8; 32] = [13u8; 32];
 const DEFAULT_ADVERTISED: &str = "/ip4/127.0.0.1/tcp/6180";
@@ -27,9 +26,11 @@ pub struct ValidatorConfig {
     index: usize,
     listen: Multiaddr,
     nodes: usize,
+    nodes_in_genesis: Option<usize>,
     safety_rules_addr: Option<SocketAddr>,
     safety_rules_backend: Option<String>,
     safety_rules_host: Option<String>,
+    safety_rules_namespace: Option<String>,
     safety_rules_token: Option<String>,
     seed: [u8; 32],
     template: NodeConfig,
@@ -43,9 +44,11 @@ impl Default for ValidatorConfig {
             index: 0,
             listen: DEFAULT_LISTEN.parse::<Multiaddr>().unwrap(),
             nodes: 1,
+            nodes_in_genesis: None,
             safety_rules_addr: None,
             safety_rules_backend: None,
             safety_rules_host: None,
+            safety_rules_namespace: None,
             safety_rules_token: None,
             seed: DEFAULT_SEED,
             template: NodeConfig::default(),
@@ -83,6 +86,11 @@ impl ValidatorConfig {
         self
     }
 
+    pub fn nodes_in_genesis(&mut self, nodes_in_genesis: Option<usize>) -> &mut Self {
+        self.nodes_in_genesis = nodes_in_genesis;
+        self
+    }
+
     pub fn safety_rules_addr(&mut self, safety_rules_addr: Option<SocketAddr>) -> &mut Self {
         self.safety_rules_addr = safety_rules_addr;
         self
@@ -95,6 +103,11 @@ impl ValidatorConfig {
 
     pub fn safety_rules_host(&mut self, safety_rules_host: Option<String>) -> &mut Self {
         self.safety_rules_host = safety_rules_host;
+        self
+    }
+
+    pub fn safety_rules_namespace(&mut self, safety_rules_namespace: Option<String>) -> &mut Self {
+        self.safety_rules_namespace = safety_rules_namespace;
         self
     }
 
@@ -169,16 +182,29 @@ impl ValidatorConfig {
                 found: validator_swarm.nodes.len()
             }
         );
+        let nodes_in_genesis = self.nodes_in_genesis.unwrap_or(self.nodes);
 
-        let validator_set = validator_swarm.validator_set.clone();
+        let validator_set = ValidatorSet::new(
+            validator_swarm
+                .validator_set
+                .clone()
+                .into_iter()
+                .take(nodes_in_genesis)
+                .collect(),
+        );
         let discovery_set = vm_genesis::make_placeholder_discovery_set(&validator_set);
 
         let genesis = Some(Transaction::UserTransaction(
             vm_genesis::encode_genesis_transaction_with_validator(
                 &faucet_key,
                 faucet_key.public_key(),
+                &validator_swarm.nodes,
                 validator_set,
                 discovery_set,
+                self.template
+                    .test
+                    .as_ref()
+                    .and_then(|config| config.publishing_option.clone()),
             )
             .into_inner(),
         ));
@@ -212,6 +238,7 @@ impl ValidatorConfig {
                 "on-disk" => safety_rules_config.backend.clone(),
                 "vault" => SafetyRulesBackend::Vault(VaultConfig {
                     default: true,
+                    namespace: self.safety_rules_namespace.clone(),
                     server: self
                         .safety_rules_host
                         .as_ref()

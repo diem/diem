@@ -30,17 +30,12 @@ main() {
 // check: events: []
 // check: EXECUTED
 
-//! new-transaction
-//! sender: vivian
-import 0x0.LibraSystem;
-
 // Run the block prologue. No reconfiguration should be triggered,
 // since alice is not a validator
-// TODO: trigger a BlockMetadata transaction here instead
-main() {
-    LibraSystem.block_prologue(1, h"aa", h"bb", {{vivian}});
-    return;
-}
+//! block-prologue
+//! proposer: vivian
+//! block-time: 2
+
 // not: ValidatorSetChangeEvent
 // not: DiscoverySetChangeEvent
 // check: EXECUTED
@@ -54,15 +49,10 @@ import 0x0.ValidatorConfig;
 main() {
     let info: LibraSystem.ValidatorInfo;
 
-    ValidatorConfig.rotate_consensus_pubkey(h"40");
-    // check that the validator set contains Vivian's old key before reconfiguration
-    info = LibraSystem.get_ith_validator_info(1);
-    assert(*LibraSystem.get_consensus_pubkey(&info) != h"40", 98);
-    LibraSystem.block_prologue(2, h"aa", h"bb", {{vivian}});
+    LibraSystem.rotate_consensus_pubkey(h"40");
     // check that the validator set contains Vivian's new key after reconfiguration
     info = LibraSystem.get_ith_validator_info(1);
-    assert(*LibraSystem.get_consensus_pubkey(&info) == h"40", 99);
-
+    assert(*LibraSystem.get_consensus_pubkey(&info) == h"40", 98);
     return;
 }
 
@@ -73,13 +63,11 @@ main() {
 //! new-transaction
 //! sender: vivian
 import 0x0.LibraSystem;
-import 0x0.ValidatorConfig;
 // rotate vivian's pubkey to the same value and run the block prologue. No reconfiguration should be
 // triggered. the not "ValidatorSetChangeEvent" check part tests this because reconfiguration always emits a
 // ValidatorSetChange event.
 main() {
-    ValidatorConfig.rotate_consensus_pubkey(h"40");
-    LibraSystem.block_prologue(3, h"aa", h"bb", {{vivian}});
+    LibraSystem.rotate_consensus_pubkey(h"40");
 
     return;
 }
@@ -88,32 +76,40 @@ main() {
 // not: DiscoverySetChangeEvent
 // check: EXECUTED
 
+//! block-prologue
+//! proposer: vivian
+//! block-time: 3
+
 //! new-transaction
 //! sender: viola
 import 0x0.LibraSystem;
-import 0x0.ValidatorConfig;
 // rotate viola's consensus pubkey to a new value
 main() {
-    ValidatorConfig.rotate_consensus_pubkey(h"80");
+    LibraSystem.rotate_consensus_pubkey(h"80");
 
     return;
 }
 
-// check: events: []
+// check: ValidatorSetChangeEvent
+// not: DiscoverySetChangeEvent
 // check: EXECUTED
+
+//! block-prologue
+//! proposer: vivian
+//! block-time: 4
 
 //! new-transaction
 //! sender: vivian
 import 0x0.LibraSystem;
-import 0x0.ValidatorConfig;
 // rotate vivian's consensus pubkey to a new value
 main() {
-    ValidatorConfig.rotate_consensus_pubkey(h"90");
+    LibraSystem.rotate_consensus_pubkey(h"90");
 
     return;
 }
 
-// check: events: []
+// check: ValidatorSetChangeEvent
+// not: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! new-transaction
@@ -125,7 +121,6 @@ import 0x0.ValidatorConfig;
 main() {
     let info: LibraSystem.ValidatorInfo;
 
-    LibraSystem.block_prologue(4, h"aa", h"bb", {{vivian}});
     // check that the validator set contains Viola's new key
     info = LibraSystem.get_ith_validator_info(0);
     assert(*LibraSystem.get_validator_address(&info) == {{viola}}, 14);
@@ -136,7 +131,4 @@ main() {
     assert(*LibraSystem.get_consensus_pubkey(&info) == h"90", 17);
     return;
 }
-
-// check: ValidatorSetChangeEvent
-// not: DiscoverySetChangeEvent
 // check: EXECUTED

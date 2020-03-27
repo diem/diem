@@ -1,7 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared::{ast_debug::*, sp, Address, Identifier, Loc, Name, Spanned, TName};
+use crate::shared::{ast_debug::*, Address, Identifier, Name, TName};
+use move_ir_types::location::*;
 use std::fmt;
 
 macro_rules! new_name {
@@ -88,10 +89,12 @@ pub struct ModuleIdent(pub Spanned<ModuleIdent_>);
 
 #[derive(Debug)]
 pub struct ModuleDefinition {
+    pub loc: Loc,
     pub uses: Vec<(ModuleIdent, Option<ModuleName>)>,
     pub name: ModuleName,
     pub structs: Vec<StructDefinition>,
     pub functions: Vec<Function>,
+    pub specs: Vec<SpecBlock>,
 }
 
 //**************************************************************************************************
@@ -105,6 +108,7 @@ pub type ResourceLoc = Option<Loc>;
 
 #[derive(Debug, PartialEq)]
 pub struct StructDefinition {
+    pub loc: Loc,
     pub resource_opt: ResourceLoc,
     pub name: StructName,
     pub type_parameters: Vec<(Name, Kind)>,
@@ -113,7 +117,7 @@ pub struct StructDefinition {
 
 #[derive(Debug, PartialEq)]
 pub enum StructFields {
-    Defined(Vec<(Field, SingleType)>),
+    Defined(Vec<(Field, Type)>),
     Native(Loc),
 }
 
@@ -126,7 +130,7 @@ new_name!(FunctionName);
 #[derive(PartialEq, Debug)]
 pub struct FunctionSignature {
     pub type_parameters: Vec<(Name, Kind)>,
-    pub parameters: Vec<(Var, SingleType)>,
+    pub parameters: Vec<(Var, Type)>,
     pub return_type: Type,
 }
 
@@ -149,11 +153,80 @@ pub type FunctionBody = Spanned<FunctionBody_>;
 //  }
 // (public?) native foo<T1(: copyable?), ..., TN(: copyable?)>(x1: t1, ..., xn: tn): t1 * ... * tn;
 pub struct Function {
+    pub loc: Loc,
     pub visibility: FunctionVisibility,
     pub signature: FunctionSignature,
     pub acquires: Vec<ModuleAccess>,
     pub name: FunctionName,
     pub body: FunctionBody,
+}
+
+//**************************************************************************************************
+// Specification Blocks
+//**************************************************************************************************
+
+// Specification block:
+//    SpecBlock = "spec" <SpecBlockTarget> "{" SpecBlockMember* "}"
+#[derive(Debug, PartialEq)]
+pub struct SpecBlock_ {
+    pub target: SpecBlockTarget,
+    pub uses: Vec<(ModuleIdent, Option<ModuleName>)>,
+    pub members: Vec<SpecBlockMember>,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum SpecBlockTarget_ {
+    Code,
+    Module,
+    Function(FunctionName),
+    Structure(StructName),
+}
+
+pub type SpecBlockTarget = Spanned<SpecBlockTarget_>;
+
+pub type SpecBlock = Spanned<SpecBlock_>;
+
+#[derive(Debug, PartialEq)]
+pub enum SpecBlockMember_ {
+    Condition {
+        kind: SpecConditionKind,
+        exp: Exp,
+    },
+    Invariant {
+        kind: InvariantKind,
+        exp: Exp,
+    },
+    Function {
+        name: FunctionName,
+        signature: FunctionSignature,
+        body: FunctionBody,
+    },
+    Variable {
+        name: Name,
+        type_: Type,
+    },
+}
+
+pub type SpecBlockMember = Spanned<SpecBlockMember_>;
+
+// Specification condition kind.
+#[derive(PartialEq, Debug)]
+pub enum SpecConditionKind {
+    Assert,
+    Assume,
+    Decreases,
+    AbortsIf,
+    Ensures,
+    Requires,
+}
+
+// Specification invaiant kind.
+#[derive(Debug, PartialEq)]
+pub enum InvariantKind {
+    Data,
+    Update,
+    Pack,
+    Unpack,
 }
 
 //**************************************************************************************************
@@ -186,26 +259,20 @@ pub enum Kind_ {
 pub type Kind = Spanned<Kind_>;
 
 #[derive(Debug, PartialEq)]
-pub enum SingleType_ {
+pub enum Type_ {
     // N
     // N<t1, ... , tn>
-    Apply(ModuleAccess, Vec<SingleType>),
+    Apply(Box<ModuleAccess>, Vec<Type>),
     // &t
     // &mut t
-    Ref(bool, Box<SingleType>),
-}
-pub type SingleType = Spanned<SingleType_>;
-
-#[derive(Debug, PartialEq)]
-#[allow(clippy::large_enum_variant)]
-pub enum Type_ {
+    Ref(bool, Box<Type>),
+    // (t1,...,tn):t
+    Fun(Vec<Type>, Box<Type>),
     // ()
     Unit,
-    // t
-    Single(SingleType),
     // (t1, t2, ... , tn)
     // Used for return values and expression blocks
-    Multiple(Vec<SingleType>),
+    Multiple(Vec<Type>),
 }
 pub type Type = Spanned<Type_>;
 
@@ -221,7 +288,7 @@ pub enum Bind_ {
     Var(Var),
     // T { f1: b1, ... fn: bn }
     // T<t1, ... , tn> { f1: b1, ... fn: bn }
-    Unpack(ModuleAccess, Option<Vec<SingleType>>, Vec<(Field, Bind)>),
+    Unpack(ModuleAccess, Option<Vec<Type>>, Vec<(Field, Bind)>),
 }
 pub type Bind = Spanned<Bind_>;
 // b1, ..., bn
@@ -231,7 +298,12 @@ pub type BindList = Spanned<Vec<Bind>>;
 pub enum Value_ {
     // 0x<hex representation up to 64 digits with padding 0s>
     Address(Address),
+    // <num>u8
+    U8(u8),
+    // <num>u64
     U64(u64),
+    // <num>u128
+    U128(u128),
     // true
     // false
     Bool(bool),
@@ -243,8 +315,6 @@ pub type Value = Spanned<Value_>;
 pub enum UnaryOp_ {
     // !
     Not,
-    // -
-    Neg,
 }
 pub type UnaryOp = Spanned<UnaryOp_>;
 
@@ -267,8 +337,16 @@ pub enum BinOp_ {
     BitAnd,
     // ^
     Xor,
+    // <<
+    Shl,
+    // >>
+    Shr,
+    // ..
+    Range, // spec only
 
     // Bool ops
+    // ==>
+    Implies, // spec only
     // &&
     And,
     // ||
@@ -294,20 +372,22 @@ pub type BinOp = Spanned<BinOp_>;
 #[allow(clippy::large_enum_variant)]
 pub enum Exp_ {
     Value(Value),
+    // <num>
+    InferredNum(u128),
     // move(x)
     Move(Var),
     // copy(x)
     Copy(Var),
     // n
     Name(Name),
-    // .n(e)
-    GlobalCall(Name, Option<Vec<SingleType>>, Spanned<Vec<Exp>>),
+    // ::n(e)
+    GlobalCall(Name, Option<Vec<Type>>, Spanned<Vec<Exp>>),
 
     // f(earg,*)
-    Call(ModuleAccess, Option<Vec<SingleType>>, Spanned<Vec<Exp>>),
+    Call(ModuleAccess, Option<Vec<Type>>, Spanned<Vec<Exp>>),
 
     // tn {f1: e1, ... , f_n: e_n }
-    Pack(ModuleAccess, Option<Vec<SingleType>>, Vec<(Field, Exp)>),
+    Pack(ModuleAccess, Option<Vec<Type>>, Vec<(Field, Exp)>),
 
     // if (eb) et else ef
     IfElse(Box<Exp>, Box<Exp>, Option<Box<Exp>>),
@@ -318,6 +398,8 @@ pub enum Exp_ {
 
     // { seq }
     Block(Sequence),
+    // fun (x1, ..., xn) e
+    Lambda(BindList, Box<Exp>), // spec only
     // (e1, ..., en)
     ExpList(Vec<Exp>),
     // ()
@@ -327,7 +409,7 @@ pub enum Exp_ {
     Assign(Box<Exp>, Box<Exp>),
 
     // return e
-    Return(Box<Exp>),
+    Return(Option<Box<Exp>>),
     // abort e
     Abort(Box<Exp>),
     // break
@@ -345,11 +427,19 @@ pub enum Exp_ {
     // &e
     // &mut e
     Borrow(bool, Box<Exp>),
+
     // e.f
     Dot(Box<Exp>, Name),
+    // e[e']
+    Index(Box<Exp>, Box<Exp>), // spec only
 
+    // (e as t)
+    Cast(Box<Exp>, Type),
     // (e: t)
     Annotate(Box<Exp>, Type),
+
+    // spec { ... }
+    Spec(SpecBlock),
 
     // Internal node marking an error was added to the error list
     // This is here so the pass can continue even when an error is hit
@@ -359,7 +449,8 @@ pub type Exp = Spanned<Exp_>;
 
 // { e1; ... ; en }
 // { e1; ... ; en; }
-pub type Sequence = (Vec<SequenceItem>, Box<Option<Exp>>);
+// The Loc field holds the source location of the final semicolon, if there is one.
+pub type Sequence = (Vec<SequenceItem>, Option<Loc>, Box<Option<Exp>>);
 #[derive(Debug, PartialEq)]
 #[allow(clippy::large_enum_variant)]
 pub enum SequenceItem_ {
@@ -441,11 +532,76 @@ impl Type_ {
     }
 }
 
+impl UnaryOp_ {
+    pub const NOT: &'static str = "!";
+
+    pub fn symbol(&self) -> &'static str {
+        use UnaryOp_ as U;
+        match self {
+            U::Not => U::NOT,
+        }
+    }
+
+    pub fn is_pure(&self) -> bool {
+        use UnaryOp_ as U;
+        match self {
+            U::Not => true,
+        }
+    }
+}
+
 impl BinOp_ {
+    pub const ADD: &'static str = "+";
+    pub const SUB: &'static str = "-";
+    pub const MUL: &'static str = "*";
+    pub const MOD: &'static str = "%";
+    pub const DIV: &'static str = "/";
+    pub const BIT_OR: &'static str = "|";
+    pub const BIT_AND: &'static str = "&";
+    pub const XOR: &'static str = "^";
+    pub const SHL: &'static str = "<<";
+    pub const SHR: &'static str = ">>";
+    pub const AND: &'static str = "&&";
+    pub const OR: &'static str = "||";
+    pub const EQ: &'static str = "==";
+    pub const NEQ: &'static str = "!=";
+    pub const LT: &'static str = "<";
+    pub const GT: &'static str = ">";
+    pub const LE: &'static str = "<=";
+    pub const GE: &'static str = ">=";
+    pub const IMPLIES: &'static str = "==>";
+    pub const RANGE: &'static str = "..";
+
+    pub fn symbol(&self) -> &'static str {
+        use BinOp_ as B;
+        match self {
+            B::Add => B::ADD,
+            B::Sub => B::SUB,
+            B::Mul => B::MUL,
+            B::Mod => B::MOD,
+            B::Div => B::DIV,
+            B::BitOr => B::BIT_OR,
+            B::BitAnd => B::BIT_AND,
+            B::Xor => B::XOR,
+            B::Shl => B::SHL,
+            B::Shr => B::SHR,
+            B::And => B::AND,
+            B::Or => B::OR,
+            B::Eq => B::EQ,
+            B::Neq => B::NEQ,
+            B::Lt => B::LT,
+            B::Gt => B::GT,
+            B::Le => B::LE,
+            B::Ge => B::GE,
+            B::Implies => B::IMPLIES,
+            B::Range => B::RANGE,
+        }
+    }
+
     pub fn is_pure(&self) -> bool {
         use BinOp_ as B;
         match self {
-            B::Add | B::Sub | B::Mul | B::Mod | B::Div => false,
+            B::Add | B::Sub | B::Mul | B::Mod | B::Div | B::Shl | B::Shr => false,
             B::BitOr
             | B::BitAnd
             | B::Xor
@@ -456,17 +612,15 @@ impl BinOp_ {
             | B::Lt
             | B::Gt
             | B::Le
-            | B::Ge => true,
+            | B::Ge
+            | B::Range
+            | B::Implies => true,
         }
     }
-}
 
-impl UnaryOp_ {
-    pub fn is_pure(&self) -> bool {
-        use UnaryOp_ as U;
-        match self {
-            U::Not | U::Neg => true,
-        }
+    pub fn is_spec_only(&self) -> bool {
+        use BinOp_ as B;
+        matches!(self, B::Range | B::Implies)
     }
 }
 
@@ -482,35 +636,13 @@ impl fmt::Display for ModuleIdent {
 
 impl fmt::Display for UnaryOp_ {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        use UnaryOp_::*;
-        match self {
-            Not => write!(f, "!"),
-            Neg => write!(f, "-"),
-        }
+        write!(f, "{}", self.symbol())
     }
 }
 
 impl fmt::Display for BinOp_ {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        use BinOp_::*;
-        match self {
-            Add => write!(f, "+"),
-            Sub => write!(f, "-"),
-            Mul => write!(f, "*"),
-            Mod => write!(f, "%"),
-            Div => write!(f, "/"),
-            BitOr => write!(f, "|"),
-            BitAnd => write!(f, "&"),
-            Xor => write!(f, "^"),
-            And => write!(f, "&&"),
-            Or => write!(f, "||"),
-            Eq => write!(f, "=="),
-            Neq => write!(f, "!="),
-            Lt => write!(f, "<"),
-            Gt => write!(f, ">"),
-            Le => write!(f, "<="),
-            Ge => write!(f, ">="),
-        }
+        write!(f, "{}", self.symbol())
     }
 }
 
@@ -569,10 +701,12 @@ impl AstDebug for ModuleOrAddress {
 impl AstDebug for ModuleDefinition {
     fn ast_debug(&self, w: &mut AstWriter) {
         let ModuleDefinition {
+            loc: _loc,
             uses,
             name,
             structs,
             functions,
+            specs,
         } = self;
         w.write(&format!("module {}", name));
         w.block(|w| {
@@ -583,6 +717,10 @@ impl AstDebug for ModuleDefinition {
             }
             for fdef in functions {
                 fdef.ast_debug(w);
+                w.new_line();
+            }
+            for spec in specs {
+                spec.ast_debug(w);
                 w.new_line();
             }
         });
@@ -610,6 +748,7 @@ impl AstDebug for (ModuleIdent, Option<ModuleName>) {
 impl AstDebug for StructDefinition {
     fn ast_debug(&self, w: &mut AstWriter) {
         let StructDefinition {
+            loc: _loc,
             resource_opt,
             name,
             type_parameters,
@@ -628,8 +767,78 @@ impl AstDebug for StructDefinition {
                 w.semicolon(fields, |w, (f, st)| {
                     w.write(&format!("{}: ", f));
                     st.ast_debug(w);
-                })
+                });
             })
+        }
+    }
+}
+
+impl AstDebug for SpecBlock_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        w.write("spec ");
+        self.target.ast_debug(w);
+        w.write("{");
+        w.semicolon(&self.members, |w, m| m.ast_debug(w));
+        w.write("}");
+    }
+}
+
+impl AstDebug for SpecBlockTarget_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            SpecBlockTarget_::Code => {}
+            SpecBlockTarget_::Module => w.write("module "),
+            SpecBlockTarget_::Function(n) => w.write(&format!("fun {} ", n.0.value)),
+            SpecBlockTarget_::Structure(n) => w.write(&format!("struct {} ", n.0.value)),
+        }
+    }
+}
+
+impl AstDebug for SpecBlockMember_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            SpecBlockMember_::Condition { kind, exp } => {
+                match kind {
+                    SpecConditionKind::Assert => w.write("assert "),
+                    SpecConditionKind::Assume => w.write("assume "),
+                    SpecConditionKind::Decreases => w.write("decreases "),
+                    SpecConditionKind::AbortsIf => w.write("aborts_if "),
+                    SpecConditionKind::Ensures => w.write("ensures "),
+                    SpecConditionKind::Requires => w.write("requires "),
+                }
+                exp.ast_debug(w);
+            }
+            SpecBlockMember_::Invariant { kind, exp } => {
+                w.write("invariant ");
+                match kind {
+                    InvariantKind::Data => {}
+                    InvariantKind::Update => w.write("update "),
+                    InvariantKind::Pack => w.write("pack "),
+                    InvariantKind::Unpack => w.write("unpack "),
+                }
+                exp.ast_debug(w);
+            }
+            SpecBlockMember_::Function {
+                signature,
+                name,
+                body,
+            } => {
+                if let FunctionBody_::Native = &body.value {
+                    w.write("native ");
+                }
+                w.write("fun ");
+                w.write(&format!("{}", name));
+                signature.ast_debug(w);
+                match &body.value {
+                    FunctionBody_::Defined(body) => w.block(|w| body.ast_debug(w)),
+                    FunctionBody_::Native => w.writeln(";"),
+                }
+            }
+            SpecBlockMember_::Variable { name, type_ } => {
+                w.write(&format!("{}", name));
+                w.write(": ");
+                type_.ast_debug(w);
+            }
         }
     }
 }
@@ -637,6 +846,7 @@ impl AstDebug for StructDefinition {
 impl AstDebug for Function {
     fn ast_debug(&self, w: &mut AstWriter) {
         let Function {
+            loc: _loc,
             visibility,
             signature,
             acquires,
@@ -729,20 +939,12 @@ impl AstDebug for Type_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
             Type_::Unit => w.write("()"),
-            Type_::Single(s) => s.ast_debug(w),
             Type_::Multiple(ss) => {
                 w.write("(");
                 ss.ast_debug(w);
                 w.write(")")
             }
-        }
-    }
-}
-
-impl AstDebug for SingleType_ {
-    fn ast_debug(&self, w: &mut AstWriter) {
-        match self {
-            SingleType_::Apply(m, ss) => {
+            Type_::Apply(m, ss) => {
                 m.ast_debug(w);
                 if !ss.is_empty() {
                     w.write("<");
@@ -750,18 +952,24 @@ impl AstDebug for SingleType_ {
                     w.write(">");
                 }
             }
-            SingleType_::Ref(mut_, s) => {
+            Type_::Ref(mut_, s) => {
                 w.write("&");
                 if *mut_ {
                     w.write("mut ");
                 }
                 s.ast_debug(w)
             }
+            Type_::Fun(args, result) => {
+                w.write("(");
+                w.comma(args, |w, ty| ty.ast_debug(w));
+                w.write("):");
+                result.ast_debug(w);
+            }
         }
     }
 }
 
-impl AstDebug for Vec<SingleType> {
+impl AstDebug for Vec<Type> {
     fn ast_debug(&self, w: &mut AstWriter) {
         w.comma(self, |w, s| s.ast_debug(w))
     }
@@ -777,9 +985,9 @@ impl AstDebug for ModuleAccess_ {
     }
 }
 
-impl AstDebug for (Vec<SequenceItem>, Box<Option<Exp>>) {
+impl AstDebug for (Vec<SequenceItem>, Option<Loc>, Box<Option<Exp>>) {
     fn ast_debug(&self, w: &mut AstWriter) {
-        let (seq, last_e) = self;
+        let (seq, _, last_e) = self;
         w.semicolon(seq, |w, item| item.ast_debug(w));
         if !seq.is_empty() {
             w.writeln(";")
@@ -821,6 +1029,7 @@ impl AstDebug for Exp_ {
         match self {
             E::Unit => w.write("()"),
             E::Value(v) => v.ast_debug(w),
+            E::InferredNum(u) => w.write(&format!("{}", u)),
             E::Move(v) => w.write(&format!("move {}", v)),
             E::Copy(v) => w.write(&format!("copy {}", v)),
             E::Name(n) => w.write(&format!("{}", n)),
@@ -881,6 +1090,12 @@ impl AstDebug for Exp_ {
                 e.ast_debug(w);
             }
             E::Block(seq) => w.block(|w| seq.ast_debug(w)),
+            E::Lambda(sp!(_, bs), e) => {
+                w.write("fun ");
+                bs.ast_debug(w);
+                w.write(" ");
+                e.ast_debug(w);
+            }
             E::ExpList(es) => {
                 w.write("(");
                 w.comma(es, |w, e| e.ast_debug(w));
@@ -892,8 +1107,11 @@ impl AstDebug for Exp_ {
                 rhs.ast_debug(w);
             }
             E::Return(e) => {
-                w.write("return ");
-                e.ast_debug(w);
+                w.write("return");
+                if let Some(v) = e {
+                    w.write(" ");
+                    v.ast_debug(w);
+                }
             }
             E::Abort(e) => {
                 w.write("abort ");
@@ -928,12 +1146,30 @@ impl AstDebug for Exp_ {
                 e.ast_debug(w);
                 w.write(&format!(".{}", n));
             }
+            E::Cast(e, ty) => {
+                w.write("(");
+                e.ast_debug(w);
+                w.write(" as ");
+                ty.ast_debug(w);
+                w.write(")");
+            }
+            E::Index(e, i) => {
+                e.ast_debug(w);
+                w.write("[");
+                i.ast_debug(w);
+                w.write("]");
+            }
             E::Annotate(e, ty) => {
                 w.write("(");
                 e.ast_debug(w);
                 w.write(": ");
                 ty.ast_debug(w);
                 w.write(")");
+            }
+            E::Spec(s) => {
+                w.write("spec {");
+                s.ast_debug(w);
+                w.write("}");
             }
             E::UnresolvedError => w.write("_|_"),
         }
@@ -957,7 +1193,9 @@ impl AstDebug for Value_ {
         use Value_ as V;
         w.write(&match self {
             V::Address(addr) => format!("{}", addr),
-            V::U64(u) => format!("{}", u),
+            V::U8(u) => format!("{}u8", u),
+            V::U64(u) => format!("{}u64", u),
+            V::U128(u) => format!("{}u128", u),
             V::Bool(b) => format!("{}", b),
             V::Bytearray(v) => format!("{:?}", v),
         })

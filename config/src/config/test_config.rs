@@ -4,6 +4,7 @@
 use crate::keys::KeyPair;
 use libra_crypto::{ed25519::Ed25519PrivateKey, Uniform};
 use libra_temppath::TempPath;
+use libra_types::on_chain_config::VMPublishingOption;
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -14,11 +15,13 @@ type ConsensusKeyPair = KeyPair<Ed25519PrivateKey>;
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct TestConfig {
     pub account_keypair: Option<AccountKeyPair>,
+    pub consensus_keypair: Option<ConsensusKeyPair>,
     // Used only to prevent a potentially temporary data_dir from being deleted. This should
     // eventually be moved to be owned by something outside the config.
-    pub consensus_keypair: Option<ConsensusKeyPair>,
     #[serde(skip)]
     temp_dir: Option<TempPath>,
+
+    pub publishing_option: Option<VMPublishingOption>,
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
@@ -28,6 +31,7 @@ impl Clone for TestConfig {
             account_keypair: self.account_keypair.clone(),
             consensus_keypair: self.consensus_keypair.clone(),
             temp_dir: None,
+            publishing_option: self.publishing_option.clone(),
         }
     }
 }
@@ -40,6 +44,15 @@ impl PartialEq for TestConfig {
 }
 
 impl TestConfig {
+    pub fn open_module() -> Self {
+        Self {
+            account_keypair: None,
+            consensus_keypair: None,
+            temp_dir: None,
+            publishing_option: Some(VMPublishingOption::Open),
+        }
+    }
+
     pub fn new_with_temp_dir() -> Self {
         let temp_dir = TempPath::new();
         temp_dir.create_as_dir().expect("error creating tempdir");
@@ -47,6 +60,7 @@ impl TestConfig {
             account_keypair: None,
             consensus_keypair: None,
             temp_dir: Some(temp_dir),
+            publishing_option: None,
         }
     }
 
@@ -61,11 +75,7 @@ impl TestConfig {
     }
 
     pub fn temp_dir(&self) -> Option<&Path> {
-        if let Some(temp_dir) = self.temp_dir.as_ref() {
-            Some(temp_dir.path())
-        } else {
-            None
-        }
+        self.temp_dir.as_ref().map(|temp_dir| temp_dir.path())
     }
 }
 

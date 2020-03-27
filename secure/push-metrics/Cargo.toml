@@ -1,0 +1,14 @@
+[package]
+name = "libra-secure-push-metrics"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra libra-util"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+ureq = { version = "0.12.0", features = ["json"] }
+libra-logger = { path = "../../common/logger", version = "0.1.0" }

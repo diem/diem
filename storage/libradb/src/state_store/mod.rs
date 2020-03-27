@@ -118,7 +118,7 @@ impl StateStore {
         let mut iter = self
             .db
             .iter::<JellyfishMerkleNodeSchema>(Default::default())?;
-        iter.seek_to_first();
+        iter.seek_to_first()?;
 
         while let Some((node_key, node)) = iter.next().transpose()? {
             if let Node::Leaf(leaf_node) = node {
@@ -148,7 +148,7 @@ impl TreeReader for StateStore {
         let mut iter = self
             .db
             .iter::<JellyfishMerkleNodeSchema>(Default::default())?;
-        iter.seek_to_first();
+        iter.seek_to_first()?;
         let version = match iter.next().transpose()? {
             Some((node_key, _node)) => node_key.version(),
             None => return Ok(None),

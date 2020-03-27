@@ -24,9 +24,10 @@ main(abrt: u64) {
 
 //! new-transaction
 import 0x0.LibraAccount;
+import 0x0.LBR;
 
 main() {
-    assert(LibraAccount.balance({{bob}}) < LibraAccount.balance({{alice}}), 79);
+    assert(LibraAccount.balance<LBR.T>({{bob}}) < LibraAccount.balance<LBR.T>({{alice}}), 79);
     return;
 }
 

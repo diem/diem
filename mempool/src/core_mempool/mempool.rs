@@ -14,12 +14,14 @@ use crate::{
     OP_COUNTERS,
 };
 use chrono::Utc;
+use debug_interface::prelude::*;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
-use libra_mempool_shared_proto::{
-    proto::mempool_status::MempoolAddTransactionStatusCode, MempoolAddTransactionStatus,
+use libra_types::{
+    account_address::AccountAddress,
+    mempool_status::{MempoolStatus, MempoolStatusCode},
+    transaction::SignedTransaction,
 };
-use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use lru_cache::LruCache;
 use std::{cmp::max, collections::HashSet, convert::TryFrom};
 use ttl_cache::TtlCache;
@@ -56,9 +58,12 @@ impl Mempool {
         sequence_number: u64,
         is_rejected: bool,
     ) {
-        debug!(
+        trace_event!("mempool:remove_transaction", {"txn", sender, sequence_number});
+        trace!(
             "[Mempool] Removing transaction from mempool: {}:{}:{}",
-            sender, sequence_number, is_rejected
+            sender,
+            sequence_number,
+            is_rejected
         );
         self.log_latency(sender.clone(), sequence_number, "e2e.latency");
         self.metrics_cache.remove(&(*sender, sequence_number));
@@ -97,39 +102,22 @@ impl Mempool {
         }
     }
 
-    fn get_required_balance(&mut self, txn: &SignedTransaction, gas_amount: u64) -> u128 {
-        txn.gas_unit_price() as u128 * gas_amount as u128
-            + self.transactions.get_required_balance(&txn.sender()) as u128
-    }
-
     /// Used to add a transaction to the Mempool
-    /// Performs basic validation: checks account's balance and sequence number
+    /// Performs basic validation: checks account's sequence number
     pub(crate) fn add_txn(
         &mut self,
         txn: SignedTransaction,
         gas_amount: u64,
         db_sequence_number: u64,
-        balance: u64,
         timeline_state: TimelineState,
-    ) -> MempoolAddTransactionStatus {
-        debug!(
+    ) -> MempoolStatus {
+        trace_event!("mempool::add_txn", {"txn", txn.sender(), txn.sequence_number()});
+        trace!(
             "[Mempool] Adding transaction to mempool: {}:{}:{}",
             &txn.sender(),
             txn.sequence_number(),
             db_sequence_number,
         );
-
-        let required_balance = self.get_required_balance(&txn, gas_amount);
-        if (balance as u128) < required_balance {
-            return MempoolAddTransactionStatus::new(
-                MempoolAddTransactionStatusCode::InsufficientBalance,
-                format!(
-                    "balance: {}, required_balance: {}, gas_amount: {}",
-                    balance, required_balance, gas_amount
-                ),
-            );
-        }
-
         let cached_value = self.sequence_number_cache.get_mut(&txn.sender());
         let sequence_number =
             cached_value.map_or(db_sequence_number, |value| max(*value, db_sequence_number));
@@ -138,14 +126,11 @@ impl Mempool {
 
         // don't accept old transactions (e.g. seq is less than account's current seq_number)
         if txn.sequence_number() < sequence_number {
-            return MempoolAddTransactionStatus::new(
-                MempoolAddTransactionStatusCode::InvalidSeqNumber,
-                format!(
-                    "transaction sequence number is {}, current sequence number is  {}",
-                    txn.sequence_number(),
-                    sequence_number,
-                ),
-            );
+            return MempoolStatus::new(MempoolStatusCode::InvalidSeqNumber).with_message(format!(
+                "transaction sequence number is {}, current sequence number is  {}",
+                txn.sequence_number(),
+                sequence_number,
+            ));
         }
 
         let expiration_time = SystemTime::now()
@@ -201,6 +186,7 @@ impl Mempool {
             if seen_previous || account_sequence_number == Some(&mut seq) {
                 let ptr = TxnPointer::from(txn);
                 seen.insert(ptr);
+                trace_event!("mempool::get_block", {"txn", txn.address, txn.sequence_number});
                 result.push(ptr);
                 if (result.len() as u64) == batch_size {
                     break;
@@ -257,5 +243,16 @@ impl Mempool {
         count: usize,
     ) -> (Vec<SignedTransaction>, u64) {
         self.transactions.read_timeline(timeline_id, count)
+    }
+
+    /// Read transactions from timeline whose timeline id is in range
+    /// `start_timeline_id` (exclusive) to `end_timeline_id` (inclusive)
+    pub(crate) fn timeline_range(
+        &mut self,
+        start_timeline_id: u64,
+        end_timeline_id: u64,
+    ) -> Vec<SignedTransaction> {
+        self.transactions
+            .timeline_range(start_timeline_id, end_timeline_id)
     }
 }

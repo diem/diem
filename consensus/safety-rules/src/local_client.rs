@@ -6,7 +6,7 @@ use consensus_types::{
     block::Block, block_data::BlockData, common::Payload, quorum_cert::QuorumCert,
     timeout::Timeout, vote::Vote, vote_proposal::VoteProposal,
 };
-use libra_types::crypto_proxies::Signature;
+use libra_crypto::ed25519::Ed25519Signature;
 use std::sync::{Arc, RwLock};
 
 /// A local interface into SafetyRules. Constructed in such a way that the container / caller
@@ -46,7 +46,7 @@ impl<T: Payload> TSafetyRules<T> for LocalClient<T> {
         self.internal.write().unwrap().sign_proposal(block_data)
     }
 
-    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Signature, Error> {
+    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
         self.internal.write().unwrap().sign_timeout(timeout)
     }
 }

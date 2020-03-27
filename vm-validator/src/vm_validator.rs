@@ -2,17 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use libra_config::config::NodeConfig;
+use futures::executor::block_on;
 use libra_types::{
     account_address::AccountAddress, account_config::AccountResource,
     transaction::SignedTransaction, vm_error::VMStatus,
 };
+use libra_vm::{LibraVM, VMVerifier};
 use scratchpad::SparseMerkleTree;
-use std::convert::TryFrom;
-use std::sync::Arc;
+use std::{convert::TryFrom, sync::Arc};
 use storage_client::{StorageRead, VerifiedStateView};
 use tokio::runtime::Handle;
-use vm_runtime::{LibraVM, VMVerifier};
 
 #[cfg(test)]
 #[path = "unit_tests/vm_validator_test.rs"]
@@ -33,15 +32,27 @@ pub struct VMValidator {
 }
 
 impl VMValidator {
-    pub fn new(
-        config: &NodeConfig,
-        storage_read_client: Arc<dyn StorageRead>,
-        rt_handle: Handle,
-    ) -> Self {
+    pub fn new(storage_read_client: Arc<dyn StorageRead>, rt_handle: Handle) -> Self {
+        let mut vm = LibraVM::new();
+        let client = storage_read_client.clone();
+        let (version, state_root) =
+            block_on(rt_handle.spawn(async move { client.get_latest_state_root().await }))
+                .expect("Block error")
+                .expect("Failed to get the latest state");
+        let smt = SparseMerkleTree::new(state_root);
+        let state_view = VerifiedStateView::new(
+            storage_read_client.clone(),
+            rt_handle.clone(),
+            Some(version),
+            state_root,
+            &smt,
+        );
+
+        vm.load_configs(&state_view);
         VMValidator {
             storage_read_client,
             rt_handle,
-            vm: LibraVM::new(&config.vm_config),
+            vm,
         }
     }
 }
@@ -79,21 +90,16 @@ impl TransactionValidation for VMValidator {
     }
 }
 
-/// read account state
-/// returns account's current sequence number and balance
-pub async fn get_account_state(
+/// returns account's sequence number from storage
+pub async fn get_account_sequence_number(
     storage_read_client: Arc<dyn StorageRead>,
     address: AccountAddress,
-) -> Result<(u64, u64)> {
-    let account_state = storage_read_client
+) -> Result<u64> {
+    match storage_read_client
         .get_latest_account_state(address)
-        .await?;
-    Ok(if let Some(blob) = account_state {
-        let account_resource = AccountResource::try_from(&blob)?;
-        let sequence_number = account_resource.sequence_number();
-        let balance = account_resource.balance();
-        (sequence_number, balance)
-    } else {
-        (0, 0)
-    })
+        .await?
+    {
+        Some(blob) => Ok(AccountResource::try_from(&blob)?.sequence_number()),
+        None => Ok(0),
+    }
 }

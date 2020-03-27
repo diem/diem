@@ -8,7 +8,6 @@
 // Allow writing 1 * KiB or 1 * MiB
 #![allow(clippy::identity_op)]
 
-use core::str::FromStr;
 use criterion::{
     criterion_group, criterion_main, AxisScale, Bencher, Criterion, ParameterizedBenchmark,
     PlotConfiguration, Throughput,
@@ -19,130 +18,30 @@ use futures::{
     sink::SinkExt,
     stream::{FuturesUnordered, StreamExt},
 };
-use libra_config::config::RoleType;
-use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
-use libra_prost_ext::MessageExt;
-use network::{
-    proto::ConsensusMsg,
-    protocols::rpc::error::RpcError,
-    validator_network::{
-        self,
-        network_builder::{NetworkBuilder, TransportType},
-        ConsensusNetworkSender, Event,
-    },
-    NetworkPublicKeys,
-};
-use parity_multiaddr::Multiaddr;
-
 use libra_types::PeerId;
-use rand::{rngs::StdRng, SeedableRng};
-use std::{collections::HashMap, time::Duration};
-use tokio::runtime::Runtime;
+use network::protocols::{
+    network::{
+        dummy::{setup_network, DummyMsg, DummyNetworkSender},
+        Event,
+    },
+    rpc::error::RpcError,
+};
+use std::time::Duration;
 
 const KiB: usize = 1 << 10;
 const MiB: usize = 1 << 20;
 const NUM_MSGS: u32 = 100;
 const TOLERANCE: u32 = 20;
-const HOUR_IN_MS: u64 = 60 * 60 * 1000;
 
 fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
-    let runtime = Runtime::new().unwrap();
-    let (dialer_peer_id, dialer_addr) = (
-        PeerId::random(),
-        Multiaddr::from_str("/ip4/127.0.0.1/tcp/0").unwrap(),
-    );
-    let (listener_peer_id, listener_addr) = (
-        PeerId::random(),
-        Multiaddr::from_str("/ip4/127.0.0.1/tcp/0").unwrap(),
-    );
-
-    // Setup keys for dialer.
-    let mut rng = StdRng::from_seed(TEST_SEED);
-    let (dialer_signing_private_key, dialer_signing_public_key) =
-        compat::generate_keypair(&mut rng);
-    let (dialer_identity_private_key, dialer_identity_public_key) =
-        x25519::compat::generate_keypair(&mut rng);
-
-    // Setup keys for listener.
-    let (listener_signing_private_key, listener_signing_public_key) =
-        compat::generate_keypair(&mut rng);
-    let (listener_identity_private_key, listener_identity_public_key) =
-        x25519::compat::generate_keypair(&mut rng);
-
-    // Setup trusted peers.
-    let trusted_peers: HashMap<_, _> = vec![
-        (
-            dialer_peer_id,
-            NetworkPublicKeys {
-                signing_public_key: dialer_signing_public_key.clone(),
-                identity_public_key: dialer_identity_public_key.clone(),
-            },
-        ),
-        (
-            listener_peer_id,
-            NetworkPublicKeys {
-                signing_public_key: listener_signing_public_key.clone(),
-                identity_public_key: listener_identity_public_key.clone(),
-            },
-        ),
-    ]
-    .into_iter()
-    .collect();
-
-    // Set up the listener network
-    let mut network_builder = NetworkBuilder::new(
-        runtime.handle().clone(),
-        listener_peer_id,
-        listener_addr,
-        RoleType::Validator,
-    );
-    network_builder
-        .transport(TransportType::TcpNoise(Some((
-            listener_identity_private_key,
-            listener_identity_public_key,
-        ))))
-        .trusted_peers(trusted_peers.clone())
-        .signing_keys((listener_signing_private_key, listener_signing_public_key))
-        .discovery_interval_ms(HOUR_IN_MS)
-        .add_discovery();
-    let (_listener_sender, mut listener_events) =
-        validator_network::consensus::add_to_network(&mut network_builder);
-    let listen_addr = network_builder.build();
-
-    // Set up the dialer network
-    let mut network_builder = NetworkBuilder::new(
-        runtime.handle().clone(),
-        dialer_peer_id,
-        dialer_addr,
-        RoleType::Validator,
-    );
-    network_builder
-        .transport(TransportType::TcpNoise(Some((
-            dialer_identity_private_key,
-            dialer_identity_public_key,
-        ))))
-        .trusted_peers(trusted_peers)
-        .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
-        .seed_peers(
-            [(listener_peer_id, vec![listen_addr])]
-                .iter()
-                .cloned()
-                .collect(),
-        )
-        .discovery_interval_ms(HOUR_IN_MS)
-        .add_discovery();
-    let (mut dialer_sender, mut dialer_events) =
-        validator_network::consensus::add_to_network(&mut network_builder);
-    let _dialer_addr = network_builder.build();
-
-    // Wait for establishing connection
-    let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();
-    assert_eq!(first_dialer_event, Event::NewPeer(listener_peer_id));
-    let first_listener_event = block_on(listener_events.next()).unwrap().unwrap();
-    assert_eq!(first_listener_event, Event::NewPeer(dialer_peer_id));
+    let tn = setup_network();
+    let runtime = tn.runtime;
+    let mut dialer_sender = tn.dialer_sender;
+    let listener_peer_id = tn.listener_peer_id;
+    let mut listener_events = tn.listener_events;
 
     // Compose Proposal message with `msg_len` bytes payload
-    let msg = compose_proposal(*msg_len);
+    let msg = DummyMsg(vec![0u8; *msg_len]);
 
     let (mut tx, mut rx) = mpsc::channel(0);
     // The listener side keeps receiving messages and send signal back to the bencher to finish
@@ -173,118 +72,25 @@ fn direct_send_bench(b: &mut Bencher, msg_len: &usize) {
     });
 }
 
-fn compose_proposal(msg_len: usize) -> ConsensusMsg {
-    let mut msg = ConsensusMsg::default();
-    msg.message = vec![0u8; msg_len];
-    msg
-}
-
 fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
-    let runtime = Runtime::new().unwrap();
-    let (dialer_peer_id, dialer_addr) = (
-        PeerId::random(),
-        Multiaddr::from_str("/ip4/127.0.0.1/tcp/0").unwrap(),
-    );
-    let (listener_peer_id, listener_addr) = (
-        PeerId::random(),
-        Multiaddr::from_str("/ip4/127.0.0.1/tcp/0").unwrap(),
-    );
-
-    // Setup keys for dialer.
-    let mut rng = StdRng::from_seed(TEST_SEED);
-    let (dialer_signing_private_key, dialer_signing_public_key) =
-        compat::generate_keypair(&mut rng);
-    let (dialer_identity_private_key, dialer_identity_public_key) =
-        x25519::compat::generate_keypair(&mut rng);
-
-    // Setup keys for listener.
-    let (listener_signing_private_key, listener_signing_public_key) =
-        compat::generate_keypair(&mut rng);
-    let (listener_identity_private_key, listener_identity_public_key) =
-        x25519::compat::generate_keypair(&mut rng);
-
-    // Setup trusted peers.
-    let trusted_peers: HashMap<_, _> = vec![
-        (
-            dialer_peer_id,
-            NetworkPublicKeys {
-                signing_public_key: dialer_signing_public_key.clone(),
-                identity_public_key: dialer_identity_public_key.clone(),
-            },
-        ),
-        (
-            listener_peer_id,
-            NetworkPublicKeys {
-                signing_public_key: listener_signing_public_key.clone(),
-                identity_public_key: listener_identity_public_key.clone(),
-            },
-        ),
-    ]
-    .into_iter()
-    .collect();
-
-    // Set up the listener network
-    let mut network_builder = NetworkBuilder::new(
-        runtime.handle().clone(),
-        listener_peer_id,
-        listener_addr,
-        RoleType::Validator,
-    );
-    network_builder
-        .transport(TransportType::TcpNoise(Some((
-            listener_identity_private_key,
-            listener_identity_public_key,
-        ))))
-        .trusted_peers(trusted_peers.clone())
-        .signing_keys((listener_signing_private_key, listener_signing_public_key))
-        .discovery_interval_ms(HOUR_IN_MS)
-        .add_discovery();
-    let (_listener_sender, mut listener_events) =
-        validator_network::consensus::add_to_network(&mut network_builder);
-    let listen_addr = network_builder.build();
-
-    // Set up the dialer network
-    let mut network_builder = NetworkBuilder::new(
-        runtime.handle().clone(),
-        dialer_peer_id,
-        dialer_addr,
-        RoleType::Validator,
-    );
-    network_builder
-        .transport(TransportType::TcpNoise(Some((
-            dialer_identity_private_key,
-            dialer_identity_public_key,
-        ))))
-        .trusted_peers(trusted_peers)
-        .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
-        .seed_peers(
-            [(listener_peer_id, vec![listen_addr])]
-                .iter()
-                .cloned()
-                .collect(),
-        )
-        .discovery_interval_ms(HOUR_IN_MS)
-        .add_discovery();
-    let (dialer_sender, mut dialer_events) =
-        validator_network::consensus::add_to_network(&mut network_builder);
-    let _dialer_addr = network_builder.build();
-
-    // Wait for establishing connection
-    let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();
-    assert_eq!(first_dialer_event, Event::NewPeer(listener_peer_id));
-    let first_listener_event = block_on(listener_events.next()).unwrap().unwrap();
-    assert_eq!(first_listener_event, Event::NewPeer(dialer_peer_id));
+    let tn = setup_network();
+    let runtime = tn.runtime;
+    let dialer_sender = tn.dialer_sender;
+    let listener_peer_id = tn.listener_peer_id;
+    let mut listener_events = tn.listener_events;
 
     // Compose RequestBlock message and RespondBlock message with `msg_len` bytes payload
-    let req = compose_send_rpc();
-    let res = compose_respond_block(*msg_len);
+    let req = DummyMsg(vec![]);
+    let res = DummyMsg(vec![0u8; *msg_len]);
 
     // The listener side keeps receiving RPC requests and sending responses back
     let f_listener = async move {
         while let Some(Ok(event)) = listener_events.next().await {
             match event {
                 Event::RpcRequest((_, _, res_tx)) => res_tx
-                    .send(Ok(res.clone().to_bytes().expect("fail to serialize proto")))
+                    .send(Ok(lcs::to_bytes(&res)
+                        .expect("fail to serialize proto")
+                        .into()))
                     .expect("fail to send rpc response to network"),
                 event => panic!("Unexpected event: {:?}", event),
             }
@@ -310,27 +116,17 @@ fn rpc_bench(b: &mut Bencher, msg_len: &usize) {
 }
 
 async fn send_rpc(
-    mut sender: ConsensusNetworkSender,
+    mut sender: DummyNetworkSender,
     recipient: PeerId,
-    req_msg: ConsensusMsg,
-) -> Result<ConsensusMsg, RpcError> {
+    req_msg: DummyMsg,
+) -> Result<DummyMsg, RpcError> {
     sender
         .send_rpc(recipient, req_msg, Duration::from_secs(15))
         .await
 }
 
-fn compose_send_rpc() -> ConsensusMsg {
-    ConsensusMsg::default()
-}
-
-fn compose_respond_block(msg_len: usize) -> ConsensusMsg {
-    let mut msg = ConsensusMsg::default();
-    msg.message = vec![0u8; msg_len];
-    msg
-}
-
 fn network_crate_benchmark(c: &mut Criterion) {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     // Parameterize benchmarks over the message length.
     let msg_lens = vec![32usize, 256, 1 * KiB, 4 * KiB, 64 * KiB, 256 * KiB, 1 * MiB];

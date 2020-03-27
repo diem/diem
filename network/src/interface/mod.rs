@@ -15,25 +15,26 @@ use crate::{
     counters,
     peer::{Peer, PeerHandle, PeerNotification},
     peer_manager::ConnectionNotification,
-    protocols::identity::Identity,
     protocols::{
         direct_send::{DirectSend, DirectSendNotification, DirectSendRequest, Message},
+        identity::Identity,
         rpc::{InboundRpcRequest, OutboundRpcRequest, Rpc, RpcNotification, RpcRequest},
     },
     validator_network, ProtocolId,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use futures::io::{AsyncRead, AsyncWrite};
-use futures::{stream::StreamExt, FutureExt, SinkExt};
+use futures::{
+    io::{AsyncRead, AsyncWrite},
+    stream::StreamExt,
+    FutureExt, SinkExt,
+};
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::{multiplexing::StreamMultiplexer, transport::ConnectionOrigin};
 use parity_multiaddr::Multiaddr;
-use std::collections::HashSet;
-use std::fmt::Debug;
-use std::marker::PhantomData;
-use std::num::NonZeroUsize;
-use std::time::Duration;
+use std::{
+    collections::HashSet, fmt::Debug, marker::PhantomData, num::NonZeroUsize, time::Duration,
+};
 use tokio::runtime::Handle;
 
 /// Requests [`NetworkProvider`] receives from the network interface.
@@ -43,8 +44,6 @@ pub enum NetworkRequest {
     SendRpc(OutboundRpcRequest),
     /// Fire-and-forget style message send to peer.
     SendMessage(Message),
-    /// Close connection with peer.
-    CloseConnection,
 }
 
 /// Notifications that [`NetworkProvider`] sends to consumers of its API. The
@@ -214,7 +213,8 @@ where
         );
 
         // Handle network requests.
-        executor.spawn(
+        let f = async move {
+            let peer_id_str = peer_id.short_str();
             requests_rx
                 .for_each_concurrent(max_concurrent_reqs, move |req| {
                     Self::handle_network_request(
@@ -222,16 +222,20 @@ where
                         req,
                         rpc_reqs_tx.clone(),
                         ds_reqs_tx.clone(),
-                        peer_handle.clone(),
                     )
                 })
-                .map(move |_| {
+                .then(|_| async move {
                     info!(
-                        "Network provider actor terminated for peer: {}",
-                        peer_id.short_str()
+                        "Network provider actor terminating for peer: {}",
+                        peer_id_str
                     );
-                }),
-        );
+                    // Cleanly close connection with peer.
+                    let mut peer_handle = peer_handle;
+                    peer_handle.disconnect().await;
+                })
+                .await;
+        };
+        executor.spawn(f);
 
         (requests_tx, notifs_rx)
     }
@@ -241,7 +245,6 @@ where
         req: NetworkRequest,
         mut rpc_reqs_tx: channel::Sender<RpcRequest>,
         mut ds_reqs_tx: channel::Sender<DirectSendRequest>,
-        mut peer_handle: PeerHandle<TSubstream>,
     ) {
         match req {
             NetworkRequest::SendRpc(req) => {
@@ -267,10 +270,6 @@ where
                         e
                     );
                 }
-            }
-            NetworkRequest::CloseConnection => {
-                // Cleanly close connection with peer.
-                peer_handle.disconnect().await;
             }
         }
     }

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::abstract_state::{AbstractValue, BorrowState};
+use libra_logger::debug;
 use rand::{rngs::StdRng, Rng};
-use slog_scope::debug;
 use std::collections::{HashMap, VecDeque};
 use vm::file_format::{Bytecode, FunctionSignature, Kind, SignatureToken};
 
@@ -14,7 +14,7 @@ type BlockIDSize = u16;
 type BlockLocals = HashMap<usize, (AbstractValue, BorrowState)>;
 
 /// This represents a basic block in a control flow graph
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct BasicBlock {
     /// The starting locals
     locals_in: BlockLocals,

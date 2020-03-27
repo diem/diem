@@ -14,16 +14,16 @@ pub type BlockId = CodeOffset;
 /// A trait that specifies the basic requirements for a CFG
 pub trait ControlFlowGraph {
     /// Start index of the block ID in the bytecode vector
-    fn block_start(&self, block_id: &BlockId) -> CodeOffset;
+    fn block_start(&self, block_id: BlockId) -> CodeOffset;
 
     /// End index of the block ID in the bytecode vector
-    fn block_end(&self, block_id: &BlockId) -> CodeOffset;
+    fn block_end(&self, block_id: BlockId) -> CodeOffset;
 
     /// Successors of the block ID in the bytecode vector
-    fn successors(&self, block_id: &BlockId) -> &Vec<BlockId>;
+    fn successors(&self, block_id: BlockId) -> &Vec<BlockId>;
 
     /// Iterator over the indexes of instructions in this block
-    fn instr_indexes(&self, block_id: &BlockId) -> Box<dyn Iterator<Item = CodeOffset>>;
+    fn instr_indexes(&self, block_id: BlockId) -> Box<dyn Iterator<Item = CodeOffset>>;
 
     /// Return an iterator over the blocks of the CFG
     fn blocks(&self) -> Vec<BlockId>;
@@ -132,7 +132,7 @@ impl VMControlFlowGraph {
         while index < ret.len() {
             let block_id = ret[index];
             index += 1;
-            let successors = self.successors(&block_id);
+            let successors = self.successors(block_id);
             for block_id in successors.iter() {
                 if !seen.contains(&block_id) {
                     ret.push(*block_id);
@@ -157,23 +157,23 @@ impl ControlFlowGraph for VMControlFlowGraph {
     // Note: it is still possible to get a BlockId from one CFG and use it in another CFG where it
     // is not valid. The design does not attempt to prevent this abuse of the API.
 
-    fn block_start(&self, block_id: &BlockId) -> CodeOffset {
-        self.blocks[block_id].entry
+    fn block_start(&self, block_id: BlockId) -> CodeOffset {
+        self.blocks[&block_id].entry
     }
 
-    fn block_end(&self, block_id: &BlockId) -> CodeOffset {
-        self.blocks[block_id].exit
+    fn block_end(&self, block_id: BlockId) -> CodeOffset {
+        self.blocks[&block_id].exit
     }
 
-    fn successors(&self, block_id: &BlockId) -> &Vec<BlockId> {
-        &self.blocks[block_id].successors
+    fn successors(&self, block_id: BlockId) -> &Vec<BlockId> {
+        &self.blocks[&block_id].successors
     }
 
     fn blocks(&self) -> Vec<BlockId> {
         self.blocks.keys().cloned().collect()
     }
 
-    fn instr_indexes(&self, block_id: &BlockId) -> Box<dyn Iterator<Item = CodeOffset>> {
+    fn instr_indexes(&self, block_id: BlockId) -> Box<dyn Iterator<Item = CodeOffset>> {
         Box::new(self.block_start(block_id)..=self.block_end(block_id))
     }
 

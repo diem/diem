@@ -281,13 +281,14 @@ fn check_signature_no_refs(
     let (struct_handles, _) = context;
 
     match ty {
-        U8 | U64 | U128 | Bool | ByteArray | Address | TypeParameter(_) => vec![],
+        U8 | U64 | U128 | Bool | Address | TypeParameter(_) => vec![],
         Reference(_) | MutableReference(_) => {
             // TODO: Prop tests expect us to NOT check the inner types.
             // Revisit this once we rework prop tests.
             vec![VMStatus::new(StatusCode::INVALID_SIGNATURE_TOKEN)
                 .with_message("reference not allowed".to_string())]
         }
+        Vector(ty) => check_signature_no_refs(context, ty),
         Struct(idx, type_actuals) => {
             let sh = &struct_handles[idx.0 as usize];
             check_generic_instance(context, &sh.type_formals, type_actuals)

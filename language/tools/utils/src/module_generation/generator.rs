@@ -6,8 +6,8 @@ use crate::module_generation::{
 };
 use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::compiler::compile_module;
-use libra_types::{account_address::AccountAddress, identifier::Identifier};
-use move_ir_types::ast::*;
+use libra_types::account_address::AccountAddress;
+use move_ir_types::{ast::*, location::*};
 use rand::{rngs::StdRng, Rng};
 use std::collections::{BTreeSet, VecDeque};
 use vm::file_format::CompiledModule;
@@ -33,11 +33,11 @@ pub fn generate_modules(
     assert!(number > 0, "We cannot generate zero modules");
 
     let table_size = options.min_table_size;
-    let (callee_names, callees): (Set<Identifier>, Vec<ModuleDefinition>) = (0..(number - 1))
+    let (callee_names, callees): (Set<String>, Vec<ModuleDefinition>) = (0..(number - 1))
         .map(|_| {
             let module = ModuleGenerator::create(rng, options.clone(), &Set::new());
             let module_name = module.name.as_inner().to_string();
-            (Identifier::new(module_name).unwrap(), module)
+            (module_name, module)
         })
         .unzip();
 
@@ -93,9 +93,9 @@ impl<'a> ModuleGenerator<'a> {
         self.gen.gen_range(0, bound)
     }
 
-    fn identifier(&mut self) -> Identifier {
+    fn identifier(&mut self) -> String {
         let len = self.gen.gen_range(10, self.options.max_string_size);
-        Identifier::new(random_string(&mut self.gen, len)).unwrap()
+        random_string(&mut self.gen, len)
     }
 
     fn base_type(&mut self, ty_param_context: &[(TypeVar, Kind)]) -> Type {
@@ -109,7 +109,7 @@ impl<'a> ModuleGenerator<'a> {
             .cloned()
             .collect();
 
-        let mut end = 4;
+        let mut end = 5;
         if !ty_param_context.is_empty() {
             end += 1;
         };
@@ -119,10 +119,11 @@ impl<'a> ModuleGenerator<'a> {
 
         match self.index(end) {
             0 => Type::Address,
-            1 => Type::U64,
-            2 => Type::Bool,
-            3 => Type::ByteArray,
-            4 if !structs.is_empty() => {
+            1 => Type::U8,
+            2 => Type::U64,
+            3 => Type::U128,
+            4 => Type::Bool,
+            5 if !structs.is_empty() => {
                 let index = self.index(structs.len());
                 let struct_def = structs[index].value.clone();
                 let ty_instants = {
@@ -167,7 +168,7 @@ impl<'a> ModuleGenerator<'a> {
             init!(
                 num_ty_params,
                 (
-                    Spanned::no_loc(TypeVar_::new(self.identifier())),
+                    Spanned::unsafe_no_loc(TypeVar_::new(self.identifier())),
                     Kind::Unrestricted,
                 )
             )
@@ -180,7 +181,7 @@ impl<'a> ModuleGenerator<'a> {
         let ty_params = self.type_formals();
         let number_of_args = self.index(self.options.max_function_call_size);
         let mut formals: Vec<(Var, Type)> = init!(number_of_args, {
-            let param_name = Spanned::no_loc(Var_::new(self.identifier()));
+            let param_name = Spanned::unsafe_no_loc(Var_::new(self.identifier()));
             let ty = self.typ(&ty_params);
             (param_name, ty)
         });
@@ -189,7 +190,7 @@ impl<'a> ModuleGenerator<'a> {
             let mut ty_formals = ty_params
                 .iter()
                 .map(|(ty_var_, _)| {
-                    let param_name = Spanned::no_loc(Var_::new(self.identifier()));
+                    let param_name = Spanned::unsafe_no_loc(Var_::new(self.identifier()));
                     let ty = Type::TypeParameter(ty_var_.value.clone());
                     (param_name, ty)
                 })
@@ -207,7 +208,7 @@ impl<'a> ModuleGenerator<'a> {
             .gen_range(self.options.min_fields, self.options.max_fields);
         let fields: Fields<Type> = init!(num_fields, {
             (
-                Spanned::no_loc(Field_::new(self.identifier())),
+                Spanned::unsafe_no_loc(Field_::new(self.identifier())),
                 self.base_type(ty_params),
             )
         });
@@ -220,7 +221,7 @@ impl<'a> ModuleGenerator<'a> {
         let num_locals = self.index(self.options.max_locals);
         let locals = init!(num_locals, {
             (
-                Spanned::no_loc(Var_::new(self.identifier())),
+                Spanned::unsafe_no_loc(Var_::new(self.identifier())),
                 self.typ(&signature.type_formals),
             )
         });
@@ -232,16 +233,16 @@ impl<'a> ModuleGenerator<'a> {
             body: FunctionBody::Move {
                 locals,
                 code: Block_ {
-                    stmts: VecDeque::from(vec![Statement::CommandStatement(Spanned::no_loc(
-                        Cmd_::return_empty(),
-                    ))]),
+                    stmts: VecDeque::from(vec![Statement::CommandStatement(
+                        Spanned::unsafe_no_loc(Cmd_::return_empty()),
+                    )]),
                 },
             },
         };
         let fun_name = FunctionName::new(self.identifier());
         self.current_module
             .functions
-            .push((fun_name, Spanned::no_loc(fun)));
+            .push((fun_name, Spanned::unsafe_no_loc(fun)));
     }
 
     fn struct_def(&mut self, is_nominal_resource: bool) {
@@ -255,10 +256,12 @@ impl<'a> ModuleGenerator<'a> {
             fields,
             invariants: vec![],
         };
-        self.current_module.structs.push(Spanned::no_loc(strct))
+        self.current_module
+            .structs
+            .push(Spanned::unsafe_no_loc(strct))
     }
 
-    fn imports(callees: &Set<Identifier>) -> Vec<ImportDefinition> {
+    fn imports(callees: &Set<String>) -> Vec<ImportDefinition> {
         callees
             .iter()
             .map(|ident| {
@@ -298,16 +301,17 @@ impl<'a> ModuleGenerator<'a> {
     pub fn create(
         gen: &'a mut StdRng,
         options: ModuleGeneratorOptions,
-        callable_modules: &Set<Identifier>,
+        callable_modules: &Set<String>,
     ) -> ModuleDefinition {
         // TODO: Generation of struct and function handles to the `callable_modules`
         let module_name = {
             let len = gen.gen_range(10, options.max_string_size);
-            Identifier::new(random_string(gen, len)).unwrap()
+            random_string(gen, len)
         };
         let current_module = ModuleDefinition {
             name: ModuleName::new(module_name),
             imports: Self::imports(callable_modules),
+            explicit_dependency_declarations: Vec::new(),
             structs: Vec::new(),
             functions: Vec::new(),
             synthetics: Vec::new(),

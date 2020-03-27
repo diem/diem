@@ -2,22 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{bail, format_err, Result};
-use bytecode_source_map::source_map::ModuleSourceMap;
-use libra_types::{
-    account_address::AccountAddress,
-    byte_array::ByteArray,
-    identifier::{IdentStr, Identifier},
-};
-use move_ir_types::ast::*;
+use bytecode_source_map::source_map::SourceMap;
+use libra_types::account_address::AccountAddress;
+use move_core_types::identifier::{IdentStr, Identifier};
+use move_ir_types::{ast::*, location::*};
 use std::{clone::Clone, collections::HashMap, hash::Hash};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, FieldDefinitionIndex, FunctionDefinitionIndex,
-        FunctionHandle, FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex,
-        IdentifierIndex, Kind, LocalsSignature, LocalsSignatureIndex, ModuleHandle,
-        ModuleHandleIndex, SignatureToken, StructDefinitionIndex, StructHandle, StructHandleIndex,
-        TableIndex, TypeSignature, TypeSignatureIndex,
+        AddressPoolIndex, ByteArrayPoolIndex, CodeOffset, FieldDefinitionIndex,
+        FunctionDefinitionIndex, FunctionHandle, FunctionHandleIndex, FunctionSignature,
+        FunctionSignatureIndex, IdentifierIndex, Kind, LocalsSignature, LocalsSignatureIndex,
+        ModuleHandle, ModuleHandleIndex, SignatureToken, StructDefinitionIndex, StructHandle,
+        StructHandleIndex, TableIndex, TypeSignature, TypeSignatureIndex,
     },
 };
 
@@ -50,6 +47,10 @@ fn get_or_add_item_ref<K: Clone + Eq + Hash>(
 
 fn get_or_add_item<K: Eq + Hash>(m: &mut HashMap<K, TableIndex>, k: K) -> Result<TableIndex> {
     get_or_add_item_macro!(m, &k, k)
+}
+
+pub fn ident_str(s: &str) -> Result<&IdentStr> {
+    IdentStr::new(s)
 }
 
 struct CompiledDependency<'a> {
@@ -106,25 +107,32 @@ impl<'a> CompiledDependency<'a> {
         let handle = self.struct_pool.get(idx.0 as usize)?;
         let module_handle = self.module_pool.get(handle.module.0 as usize)?;
         let address = *self.address_pool.get(module_handle.address.0 as usize)?;
-        let module = ModuleName::new(self.identifiers.get(module_handle.name.0 as usize)?.clone());
+        let module = ModuleName::new(
+            self.identifiers
+                .get(module_handle.name.0 as usize)?
+                .to_string(),
+        );
         assert!(module.as_inner() != ModuleName::self_name());
         let ident = QualifiedModuleIdent {
             address,
             name: module,
         };
-        let name = StructName::new(self.identifiers.get(handle.name.0 as usize)?.clone());
+        let name = StructName::new(self.identifiers.get(handle.name.0 as usize)?.to_string());
         Some((ident, name))
     }
 
     fn struct_handle(&self, name: &QualifiedStructIdent) -> Option<&'a StructHandle> {
         self.structs
-            .get(&(name.module.as_inner(), name.name.as_inner()))
+            .get(&(
+                ident_str(name.module.as_inner()).ok()?,
+                ident_str(name.name.as_inner()).ok()?,
+            ))
             .and_then(|idx| self.struct_pool.get(*idx as usize))
     }
 
     fn function_signature(&self, name: &FunctionName) -> Option<&'a FunctionSignature> {
         self.functions
-            .get(name.as_inner())
+            .get(ident_str(name.as_inner()).ok()?)
             .and_then(|idx| self.function_signatuire_pool.get(*idx as usize))
     }
 }
@@ -147,7 +155,7 @@ pub struct MaterializedPools {
     /// Identifier pool
     pub identifiers: Vec<Identifier>,
     /// Byte array pool
-    pub byte_array_pool: Vec<ByteArray>,
+    pub byte_array_pool: Vec<Vec<u8>>,
     /// Address pool
     pub address_pool: Vec<AccountAddress>,
 }
@@ -164,6 +172,7 @@ pub struct Context<'a> {
     modules: HashMap<ModuleName, (QualifiedModuleIdent, ModuleHandle)>,
     structs: HashMap<QualifiedStructIdent, StructHandle>,
     struct_defs: HashMap<StructName, TableIndex>,
+    labels: HashMap<BlockLabel, u16>,
 
     // queryable pools
     fields: HashMap<(StructHandleIndex, Field_), (TableIndex, SignatureToken, usize)>,
@@ -178,7 +187,7 @@ pub struct Context<'a> {
     type_signatures: HashMap<TypeSignature, TableIndex>,
     locals_signatures: HashMap<LocalsSignature, TableIndex>,
     identifiers: HashMap<Identifier, TableIndex>,
-    byte_array_pool: HashMap<ByteArray, TableIndex>,
+    byte_array_pool: HashMap<Vec<u8>, TableIndex>,
     address_pool: HashMap<AccountAddress, TableIndex>,
 
     // Current generic/type formal context
@@ -188,7 +197,7 @@ pub struct Context<'a> {
     current_function_index: FunctionDefinitionIndex,
 
     // Source location mapping for this module
-    pub source_map: ModuleSourceMap<Loc>,
+    pub source_map: SourceMap<Loc>,
 }
 
 impl<'a> Context<'a> {
@@ -204,7 +213,7 @@ impl<'a> Context<'a> {
             .map(|dep| {
                 let ident = QualifiedModuleIdent {
                     address: *dep.address(),
-                    name: ModuleName::new(dep.name().into()),
+                    name: ModuleName::new(dep.name().to_string()),
                 };
                 Ok((ident, CompiledDependency::new(dep)?))
             })
@@ -215,6 +224,7 @@ impl<'a> Context<'a> {
             modules: HashMap::new(),
             structs: HashMap::new(),
             struct_defs: HashMap::new(),
+            labels: HashMap::new(),
             fields: HashMap::new(),
             function_handles: HashMap::new(),
             function_signatures: HashMap::new(),
@@ -228,7 +238,7 @@ impl<'a> Context<'a> {
             address_pool: HashMap::new(),
             type_formals: HashMap::new(),
             current_function_index: FunctionDefinitionIndex(0),
-            source_map: ModuleSourceMap::new(current_module.clone()),
+            source_map: SourceMap::new(current_module.clone()),
         };
         let self_name = ModuleName::new(ModuleName::self_name().into());
         context.declare_import(current_module, self_name)?;
@@ -253,7 +263,7 @@ impl<'a> Context<'a> {
     }
 
     /// Finish compilation, and materialize the pools for file format.
-    pub fn materialize_pools(self) -> (MaterializedPools, ModuleSourceMap<Loc>) {
+    pub fn materialize_pools(self) -> (MaterializedPools, SourceMap<Loc>) {
         let num_functions = self.function_handles.len();
         assert!(num_functions == self.function_signatures.len());
         let function_handles = Self::materialize_pool(
@@ -288,6 +298,17 @@ impl<'a> Context<'a> {
             })
             .collect::<Result<_>>()?;
         Ok(())
+    }
+
+    pub fn build_index_remapping(
+        &mut self,
+        label_to_index: HashMap<BlockLabel, u16>,
+    ) -> HashMap<u16, u16> {
+        let labels = std::mem::replace(&mut self.labels, HashMap::new());
+        label_to_index
+            .into_iter()
+            .map(|(lbl, actual_idx)| (labels[&lbl], actual_idx))
+            .collect()
     }
 
     //**********************************************************************************************
@@ -335,6 +356,11 @@ impl<'a> Context<'a> {
         }
     }
 
+    /// Get the fake offset for the label. Labels will be fixed to real offsets after compilation
+    pub fn label_index(&mut self, label: BlockLabel) -> Result<CodeOffset> {
+        Ok(get_or_add_item(&mut self.labels, label)?)
+    }
+
     /// Get the address pool index, adds it if missing.
     pub fn address_index(&mut self, addr: AccountAddress) -> Result<AddressPoolIndex> {
         Ok(AddressPoolIndex(get_or_add_item(
@@ -344,14 +370,16 @@ impl<'a> Context<'a> {
     }
 
     /// Get the identifier pool index, adds it if missing.
-    pub fn identifier_index(&mut self, ident: &IdentStr) -> Result<IdentifierIndex> {
+    pub fn identifier_index(&mut self, s: &str) -> Result<IdentifierIndex> {
+        let ident = ident_str(s)?;
         let m = &mut self.identifiers;
         let idx: Result<TableIndex> = get_or_add_item_macro!(m, ident, ident.to_owned());
         Ok(IdentifierIndex(idx?))
     }
 
     /// Get the byte array pool index, adds it if missing.
-    pub fn byte_array_index(&mut self, byte_array: &ByteArray) -> Result<ByteArrayPoolIndex> {
+    #[allow(clippy::ptr_arg)]
+    pub fn byte_array_index(&mut self, byte_array: &Vec<u8>) -> Result<ByteArrayPoolIndex> {
         Ok(ByteArrayPoolIndex(get_or_add_item_ref(
             &mut self.byte_array_pool,
             byte_array,
@@ -579,9 +607,12 @@ impl<'a> Context<'a> {
             | x @ SignatureToken::U8
             | x @ SignatureToken::U64
             | x @ SignatureToken::U128
-            | x @ SignatureToken::ByteArray
             | x @ SignatureToken::Address
             | x @ SignatureToken::TypeParameter(_) => x,
+            SignatureToken::Vector(inner) => {
+                let correct_inner = self.reindex_signature_token(dep, *inner)?;
+                SignatureToken::Vector(Box::new(correct_inner))
+            }
             SignatureToken::Reference(inner) => {
                 let correct_inner = self.reindex_signature_token(dep, *inner)?;
                 SignatureToken::Reference(Box::new(correct_inner))
@@ -626,7 +657,7 @@ impl<'a> Context<'a> {
             .map(|t| self.reindex_signature_token(dep, t))
             .collect::<Result<_>>()?;
         let type_formals = orig.type_formals;
-        Ok(FunctionSignature {
+        Ok(vm::file_format::FunctionSignature {
             return_types,
             arg_types,
             type_formals,

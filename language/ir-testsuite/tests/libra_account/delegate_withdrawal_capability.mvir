@@ -5,7 +5,8 @@
 //! sender: alice
 module SillyColdWallet {
     import 0x0.LibraAccount;
-    import 0x0.LibraCoin;
+    import 0x0.LBR;
+    import 0x0.Libra;
 
     resource T {
         cap: LibraAccount.WithdrawalCapability,
@@ -20,12 +21,12 @@ module SillyColdWallet {
         return;
     }
 
-    public withdraw(wallet_address: address, amount: u64): LibraCoin.T acquires T {
+    public withdraw(wallet_address: address, amount: u64): Libra.T<LBR.T> acquires T {
         let wallet_ref: &mut Self.T;
 
         wallet_ref = borrow_global_mut<T>(move(wallet_address));
         if (*&copy(wallet_ref).owner == get_txn_sender()) {
-            return LibraAccount.withdraw_with_capability(&move(wallet_ref).cap, move(amount));
+            return LibraAccount.withdraw_with_capability<LBR.T>(&move(wallet_ref).cap, move(amount));
         } else {
             abort(77);
         }
@@ -52,19 +53,20 @@ main() {
 //! sender: bob
 import {{alice}}.SillyColdWallet;
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 // use the cold wallet that Alice created to move funds into Bob's account
 main() {
     let alice_initial_balance: u64;
-    let coin: LibraCoin.T;
+    let coin: Libra.T<LBR.T>;
 
-    alice_initial_balance = LibraAccount.balance({{alice}});
+    alice_initial_balance = LibraAccount.balance<LBR.T>({{alice}});
     coin = SillyColdWallet.withdraw({{alice}}, 1000);
-    LibraAccount.deposit(get_txn_sender(), move(coin));
+    LibraAccount.deposit<LBR.T>(get_txn_sender(), move(coin));
 
     // the withdraw should have debited Alice's account
-    assert(move(alice_initial_balance) - 1000 == LibraAccount.balance({{alice}}), 10);
+    assert(move(alice_initial_balance) - 1000 == LibraAccount.balance<LBR.T>({{alice}}), 10);
 
     return;
 }
@@ -73,14 +75,15 @@ main() {
 //! new-transaction
 //! sender: alice
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 // check that Alice can no longer withdraw from her account
 main() {
-    let coin: LibraCoin.T;
+    let coin: Libra.T<LBR.T>;
 
-    coin = LibraAccount.withdraw_from_sender(1000);
-    LibraAccount.deposit(get_txn_sender(), move(coin));
+    coin = LibraAccount.withdraw_from_sender<LBR.T>(1000);
+    LibraAccount.deposit<LBR.T>(get_txn_sender(), move(coin));
     return;
 }
 
@@ -91,14 +94,15 @@ main() {
 //! new-transaction
 //! sender: bob
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 // check that Bob can still withdraw from his normal account
 main() {
-    let coin: LibraCoin.T;
+    let coin: Libra.T<LBR.T>;
 
-    coin = LibraAccount.withdraw_from_sender(1000);
-    LibraAccount.deposit(get_txn_sender(), move(coin));
+    coin = LibraAccount.withdraw_from_sender<LBR.T>(1000);
+    LibraAccount.deposit<LBR.T>(get_txn_sender(), move(coin));
     return;
 }
 
@@ -106,9 +110,11 @@ main() {
 //! new-transaction
 //! sender: carol
 import 0x0.LibraAccount;
+import 0x0.LBR;
+import 0x0.Vector;
 
 // check that other users can still pay into Alice's account in the normal way
 main() {
-    LibraAccount.pay_from_sender({{alice}}, 1000);
+    LibraAccount.pay_from_sender<LBR.T>({{alice}}, Vector.empty<u8>(), 1000);
     return;
 }

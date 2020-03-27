@@ -6,11 +6,12 @@
 
 use crate::{
     config::{
-        NodeConfig, OnDiskStorageConfig, SafetyRulesBackend, SeedPeersConfig, VMPublishingOption,
+        NodeConfig, OnDiskStorageConfig, SafetyRulesBackend, SafetyRulesService, SeedPeersConfig,
+        TestConfig,
     },
     utils,
 };
-use libra_types::crypto_proxies::{ValidatorPublicKeys, ValidatorSet};
+use libra_types::{validator_info::ValidatorInfo, validator_set::ValidatorSet};
 use rand::{rngs::StdRng, SeedableRng};
 
 pub struct ValidatorSwarm {
@@ -36,6 +37,7 @@ pub fn validator_swarm(
 
         let mut storage_config = OnDiskStorageConfig::default();
         storage_config.default = true;
+        node.consensus.safety_rules.service = SafetyRulesService::Thread;
         node.consensus.safety_rules.backend = SafetyRulesBackend::OnDiskStorage(storage_config);
 
         let network = node.validator_network.as_mut().unwrap();
@@ -49,7 +51,7 @@ pub fn validator_swarm(
             .as_ref()
             .expect("Network keypairs are not defined");
 
-        validator_keys.push(ValidatorPublicKeys::new(
+        validator_keys.push(ValidatorInfo::new(
             network.peer_id,
             consensus_pubkey,
             1, // @TODO: Add support for dynamic weights
@@ -80,6 +82,6 @@ pub fn validator_swarm(
 
 pub fn validator_swarm_for_testing(nodes: usize) -> ValidatorSwarm {
     let mut config = NodeConfig::default();
-    config.vm_config.publishing_options = VMPublishingOption::Open;
+    config.test = Some(TestConfig::open_module());
     validator_swarm(&NodeConfig::default(), nodes, [1u8; 32], true)
 }

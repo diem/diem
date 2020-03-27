@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:12:23 ───
+    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:13:17 ───
     │
  13 │         let x = &s;
     │                 ^^ Invalid borrow of local 's'
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:20:23 ───
+    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:23:9 ───
     │
  23 │         *x;
     │         ^^ Invalid dereference.
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:29:41 ───
+    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:30:17 ───
     │
  30 │         let x = &s;
     │                 ^^ Invalid borrow of local 's'
@@ -33,7 +33,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:37:23 ───
+    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:38:17 ───
     │
  38 │         let y = &s;
     │                 ^^ Invalid borrow of local 's'
@@ -44,7 +44,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:46:23 ───
+    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:48:9 ───
     │
  48 │         *y;
     │         ^^ Invalid dereference.

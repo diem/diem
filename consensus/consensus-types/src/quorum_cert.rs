@@ -6,12 +6,14 @@ use anyhow::{ensure, Context};
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
     block_info::BlockInfo,
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
-    ledger_info::LedgerInfo,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    validator_verifier::ValidatorVerifier,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::fmt::{Display, Formatter};
+use std::{
+    collections::BTreeMap,
+    fmt::{Display, Formatter},
+};
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
 pub struct QuorumCert {
@@ -119,7 +121,7 @@ impl QuorumCert {
             return Ok(());
         }
         self.ledger_info()
-            .verify(validator)
+            .verify_signatures(validator)
             .context("Fail to verify QuorumCert")?;
         Ok(())
     }

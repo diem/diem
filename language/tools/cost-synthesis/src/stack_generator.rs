@@ -9,12 +9,13 @@ use crate::{
     bytecode_specifications::{frame_transition_info::frame_transitions, stack_transition_info::*},
     common::*,
 };
-use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
-    byte_array::ByteArray,
-    identifier::Identifier,
-    language_storage::ModuleId,
+use libra_types::{account_address::AccountAddress, language_storage::ModuleId};
+use move_core_types::identifier::Identifier;
+use move_vm_runtime::{
+    interpreter::InterpreterForCostSynthesis, loaded_data::loaded_module::LoadedModule, MoveVM,
 };
+use move_vm_state::execution_context::{ExecutionContext, SystemExecutionContext};
+use move_vm_types::values::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
 use vm::{
@@ -29,11 +30,6 @@ use vm::{
     },
     gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
 };
-use vm_runtime::{
-    chain_state::SystemExecutionContext, interpreter::InterpreterForCostSynthesis,
-    loaded_data::loaded_module::LoadedModule, runtime::VMRuntime,
-};
-use vm_runtime_types::values::*;
 
 /// Specifies the data to be applied to the execution stack for the next valid stack state.
 ///
@@ -82,10 +78,7 @@ impl<'txn> StackState<'txn> {
 
 /// A wrapper around the instruction being synthesized. Holds the internal state that is
 /// used to generate random valid stack states.
-pub struct RandomStackGenerator<'alloc, 'txn>
-where
-    'alloc: 'txn,
-{
+pub struct RandomStackGenerator<'txn> {
     /// The account address that all resources will be published under
     account_address: &'txn AccountAddress,
 
@@ -102,9 +95,9 @@ where
     /// root module that has pointers to all other modules.
     root_module: &'txn LoadedModule,
 
-    /// The VMRuntime, It contains all of the modules in the universe and used for
+    /// The MoveVM instance, It contains all of the modules in the universe and used for
     /// runtime and loading operations.
-    runtime: &'txn VMRuntime<'alloc>,
+    move_vm: &'txn MoveVM,
 
     /// Context for resolution
     ctx: SystemExecutionContext<'txn>,
@@ -133,10 +126,7 @@ where
     table_size: u16,
 }
 
-impl<'alloc, 'txn> RandomStackGenerator<'alloc, 'txn>
-where
-    'alloc: 'txn,
-{
+impl<'txn> RandomStackGenerator<'txn> {
     /// Create a new random stack state generator.
     ///
     /// It initializes each of the internal resolution tables for structs and function handles to
@@ -144,7 +134,7 @@ where
     pub fn new(
         account_address: &'txn AccountAddress,
         root_module: &'txn LoadedModule,
-        runtime: &'txn VMRuntime<'alloc>,
+        move_vm: &'txn MoveVM,
         ctx: SystemExecutionContext<'txn>,
         op: &Bytecode,
         max_stack_size: u64,
@@ -157,7 +147,7 @@ where
             account_address,
             max_stack_size,
             root_module,
-            runtime,
+            move_vm,
             ctx,
             iters,
             table_size: iters,
@@ -177,19 +167,23 @@ where
     // transitions, or from the type signatures available in the module(s).
     fn is_module_specific_op(&self) -> bool {
         use Bytecode::*;
-        match self.op {
-            MoveToSender(_, _)
-            | MoveFrom(_, _)
-            | ImmBorrowGlobal(_, _)
-            | MutBorrowGlobal(_, _)
-            | Exists(_, _)
-            | Unpack(_, _)
-            | Pack(_, _)
-            | Call(_, _) => true,
-            CopyLoc(_) | MoveLoc(_) | StLoc(_) | MutBorrowLoc(_) | ImmBorrowLoc(_)
-            | ImmBorrowField(_) | MutBorrowField(_) => true,
-            _ => false,
-        }
+        matches!(self.op,
+            MoveToSender(_, _) |
+            MoveFrom(_, _) |
+            ImmBorrowGlobal(_, _) |
+            MutBorrowGlobal(_, _) |
+            Exists(_, _) |
+            Unpack(_, _) |
+            Pack(_, _) |
+            Call(_, _) |
+            CopyLoc(_) |
+            MoveLoc(_) |
+            StLoc(_) |
+            MutBorrowLoc(_) |
+            ImmBorrowLoc(_) |
+            ImmBorrowField(_) |
+            MutBorrowField(_)
+        )
     }
 
     // TODO: merge the following three.
@@ -244,12 +238,6 @@ where
     fn next_bool(&mut self) -> bool {
         // Flip a coin
         self.gen.gen_bool(0.5)
-    }
-
-    fn next_bytearray(&mut self) -> ByteArray {
-        let len: usize = self.gen.gen_range(1, BYTE_ARRAY_MAX_SIZE);
-        let bytes: Vec<u8> = (0..len).map(|_| self.gen.gen::<u8>()).collect();
-        ByteArray::new(bytes)
     }
 
     fn next_addr(&mut self, is_padding: bool) -> AccountAddress {
@@ -311,12 +299,11 @@ where
     }
 
     fn next_stack_value(&mut self, stk: &[Value], is_padding: bool) -> Value {
-        match self.gen.gen_range(0, 6) {
+        match self.gen.gen_range(0, 5) {
             0 => Value::u8(self.next_u8(stk)),
             1 => Value::u64(self.next_u64(stk)),
             2 => Value::u128(self.next_u128(stk)),
             3 => Value::bool(self.next_bool()),
-            4 => Value::byte_array(self.next_bytearray()),
             _ => Value::address(self.next_addr(is_padding)),
         }
     }
@@ -396,7 +383,7 @@ where
                 let bytearray_size = self.root_module.byte_array_at(bytearray_idx).len();
                 (LdByteArray(bytearray_idx), bytearray_size)
             }
-            LdAddr(_) => (LdAddr(self.next_address_idx()), ADDRESS_LENGTH),
+            LdAddr(_) => (LdAddr(self.next_address_idx()), AccountAddress::LENGTH),
             _ => (self.op.clone(), 0),
         }
     }
@@ -414,7 +401,7 @@ where
         let module_handle = self.root_module.module_handle_at(struct_handle.module);
         let module_id = self.to_module_id(module_handle);
         let module = self
-            .runtime
+            .move_vm
             .get_loaded_module(&module_id, &self.ctx)
             .expect("[Module Lookup] Runtime error while looking up module");
         let struct_def_idx = self
@@ -459,7 +446,7 @@ where
         let module_handle = self.root_module.module_handle_at(function_handle.module);
         let module_id = self.to_module_id(module_handle);
         let module = self
-            .runtime
+            .move_vm
             .get_loaded_module(&module_id, &self.ctx)
             .expect("[Module Lookup] Runtime error while looking up module");
         let function_def_idx = *self
@@ -506,7 +493,6 @@ where
                     .unwrap();
                 locals.borrow_loc(0).unwrap()
             }
-            SignatureToken::ByteArray => Value::byte_array(self.next_bytearray()),
             SignatureToken::Struct(struct_handle_idx, _) => {
                 assert!(self.root_module.struct_defs().len() > 1);
                 let struct_definition = self
@@ -532,6 +518,7 @@ where
                 });
                 Value::struct_(Struct::pack(values))
             }
+            SignatureToken::Vector(_) => unimplemented!(),
             SignatureToken::TypeParameter(_) => unimplemented!(),
         }
     }
@@ -847,7 +834,7 @@ where
         interp: &mut InterpreterForCostSynthesis<'txn>,
         code: &[Bytecode],
     ) -> VMResult<()> {
-        interp.execute_code_snippet(self.runtime, &mut self.ctx, code)
+        interp.execute_code_snippet(self.move_vm, &mut self.ctx, code)
     }
 
     /// Applies the `stack_state` to the VM's execution stack.

@@ -11,11 +11,13 @@ use consensus_types::{
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_logger::prelude::*;
 use libra_types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorVerifier},
-    validator_verifier::VerifyError,
+    ledger_info::LedgerInfoWithSignatures,
+    validator_verifier::{ValidatorVerifier, VerifyError},
 };
-use std::collections::BTreeMap;
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::Arc,
+};
 
 #[cfg(test)]
 #[path = "pending_votes_test.rs"]
@@ -91,11 +93,7 @@ impl PendingVotes {
         let li_with_sig = self.li_digest_to_votes.entry(li_digest).or_insert_with(|| {
             LedgerInfoWithSignatures::new(vote.ledger_info().clone(), BTreeMap::new())
         });
-        // TODO: we'd prefer to use LedgerInfoWithSignatures::add_signature instead, but the
-        // CryptoProxy types should be properly updated first.
-        vote.signature()
-            .clone()
-            .add_to_li(vote.author(), li_with_sig);
+        li_with_sig.add_signature(vote.author(), vote.signature().clone());
 
         match validator_verifier.check_voting_power(li_with_sig.signatures().keys()) {
             Ok(_) => VoteReceptionResult::NewQuorumCertificate(Arc::new(QuorumCert::new(
@@ -124,7 +122,7 @@ impl PendingVotes {
         let tc = self
             .round_to_tc
             .entry(timeout.round())
-            .or_insert_with(|| TimeoutCertificate::new(timeout, HashMap::new()));
+            .or_insert_with(|| TimeoutCertificate::new(timeout));
         tc.add_signature(vote.author(), timeout_signature);
         match validator_verifier.check_voting_power(tc.signatures().keys()) {
             Ok(_) => Some(VoteReceptionResult::NewTimeoutCertificate(Arc::new(

@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/commands/dead_return_local.move:3:5 ───
+   │
+ 3 │     0x0::Transaction::assert(false, 42);
+   │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Unreachable code. This statement (and any following statements) will not be executed. In some cases, this will result in unused resource values.
+   │
+

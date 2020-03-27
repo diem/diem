@@ -2,465 +2,294 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    cfgir::ast as G,
-    errors::*,
-    naming::ast::TParamID,
-    parser::ast::{Field, FunctionName, ModuleIdent, StructName},
-    shared::*,
+    expansion::ast::SpecId,
+    parser::ast::{FunctionName, ModuleIdent, ModuleIdent_, ModuleName, StructName},
 };
-use libra_types::{
-    account_address::AccountAddress as LibraAddress, byte_array::ByteArray as LibraByteArray,
-    identifier::Identifier as LibraIdentifier,
+use libra_types::account_address::AccountAddress as LibraAddress;
+use move_ir_types::ast as IR;
+use std::{
+    clone::Clone,
+    collections::{BTreeMap, BTreeSet, HashMap},
 };
-use move_vm::file_format::{
-    self as F, AddressPoolIndex, ByteArrayPoolIndex, FieldDefinitionIndex, FunctionHandle,
-    FunctionHandleIndex, FunctionSignature, FunctionSignatureIndex, IdentifierIndex,
-    LocalsSignature, LocalsSignatureIndex, ModuleHandle, ModuleHandleIndex, SignatureToken,
-    StructDefinitionIndex, StructHandle, StructHandleIndex, TableIndex, TypeSignature,
-    TypeSignatureIndex,
-};
-use std::{clone::Clone, collections::HashMap, hash::Hash};
-
-#[macro_export]
-macro_rules! bail {
-    ($loc:expr, $msg:expr) => {{
-        return Err(vec![($loc, $msg.into())]);
-    }};
-}
-
-pub type Result<T> = std::result::Result<T, Error>;
-
-macro_rules! get_or_add_item_macro {
-    ($loc:expr, $m:ident, $k_get:expr, $k_insert:expr) => {{
-        let k_key = $k_get;
-        Ok(if $m.contains_key(k_key) {
-            *$m.get(k_key).unwrap()
-        } else {
-            let len = $m.len();
-            if len >= TABLE_MAX_SIZE {
-                bail!($loc, "Max table size reached!")
-            }
-            let index = len as TableIndex;
-            $m.insert($k_insert, index);
-            index
-        })
-    }};
-}
-
-const TABLE_MAX_SIZE: usize = TableIndex::max_value() as usize;
-fn get_or_add_item_ref<K: Clone + Eq + Hash>(
-    loc: Loc,
-    m: &mut HashMap<K, TableIndex>,
-    k: &K,
-) -> Result<TableIndex> {
-    get_or_add_item_macro!(loc, m, k, k.clone())
-}
-
-fn get_or_add_item<K: Eq + Hash>(
-    loc: Loc,
-    m: &mut HashMap<K, TableIndex>,
-    k: K,
-) -> Result<TableIndex> {
-    get_or_add_item_macro!(loc, m, &k, k)
-}
-
-/// Represents all of the pools to be used in the file format, both by CompiledModule
-/// and CompiledScript.
-pub struct MaterializedPools {
-    /// Module handle pool
-    pub module_handles: Vec<ModuleHandle>,
-    /// Struct handle pool
-    pub struct_handles: Vec<StructHandle>,
-    /// Function handle pool
-    pub function_handles: Vec<FunctionHandle>,
-    /// Type signature pool
-    pub type_signatures: Vec<TypeSignature>,
-    /// Function signature pool
-    pub function_signatures: Vec<FunctionSignature>,
-    /// Locals signatures pool
-    pub locals_signatures: Vec<LocalsSignature>,
-    /// Identifier pool
-    pub identifiers: Vec<LibraIdentifier>,
-    /// Byte array pool
-    pub byte_array_pool: Vec<LibraByteArray>,
-    /// Address pool
-    pub address_pool: Vec<LibraAddress>,
-}
 
 /// Compilation context for a single compilation unit (module or script).
-/// Contains all of the pools as they are built up.
-/// Specific definitions to CompiledModule or CompiledScript are not stored.
-/// However, some fields, like struct_defs and fields, are not used in CompiledScript.
+/// Contains all of the dependencies actually used in the module
 pub struct Context<'a> {
-    struct_declarations: &'a HashMap<(ModuleIdent, StructName), (bool, Vec<F::Kind>)>,
-    function_declarations: &'a HashMap<(ModuleIdent, FunctionName), G::FunctionSignature>,
-
-    // helpers
-    modules: HashMap<ModuleIdent, ModuleHandle>,
-    functions: HashMap<(ModuleIdent, FunctionName), FunctionHandle>,
-    structs: HashMap<(ModuleIdent, StructName), StructHandle>,
-    struct_defs: HashMap<StructName, TableIndex>,
-
-    // queryable pools
-    fields: HashMap<(StructDefinitionIndex, Field), TableIndex>,
-
-    // Simple pools
-    function_signatures: HashMap<FunctionSignature, TableIndex>,
-    module_handles: HashMap<ModuleHandle, TableIndex>,
-    struct_handles: HashMap<StructHandle, TableIndex>,
-    function_handles: HashMap<FunctionHandle, TableIndex>,
-    type_signatures: HashMap<TypeSignature, TableIndex>,
-    locals_signatures: HashMap<LocalsSignature, TableIndex>,
-    identifiers: HashMap<String, TableIndex>,
-    byte_array_pool: HashMap<Vec<u8>, TableIndex>,
-    address_pool: HashMap<Address, TableIndex>,
-
-    // Current type parameter context
-    type_parameters: HashMap<TParamID, TableIndex>,
+    current_module: Option<&'a ModuleIdent>,
+    seen_structs: BTreeSet<(ModuleIdent, StructName)>,
+    seen_functions: BTreeSet<(ModuleIdent, FunctionName)>,
+    nop_labels: BTreeMap<SpecId, IR::NopLabel>,
 }
 
 impl<'a> Context<'a> {
     /// Given the dependencies and the current module, creates an empty context.
     /// The current module is a dummy `Self` for CompiledScript.
     /// It initializes an "import" of `Self` as the alias for the current_module.
-    pub fn new(
-        current_module: &ModuleIdent,
-        struct_declarations: &'a HashMap<(ModuleIdent, StructName), (bool, Vec<F::Kind>)>,
-        function_declarations: &'a HashMap<(ModuleIdent, FunctionName), G::FunctionSignature>,
-    ) -> Result<Self> {
-        let mut context = Self {
+    pub fn new(current_module: Option<&'a ModuleIdent>) -> Self {
+        Self {
+            current_module,
+            seen_structs: BTreeSet::new(),
+            seen_functions: BTreeSet::new(),
+            nop_labels: BTreeMap::new(),
+        }
+    }
+
+    pub fn current_module(&self) -> Option<&'a ModuleIdent> {
+        self.current_module
+    }
+
+    fn is_current_module(&self, m: &ModuleIdent) -> bool {
+        self.current_module.map(|cur| cur == m).unwrap_or(false)
+    }
+
+    pub fn finish_function(&mut self) -> BTreeMap<SpecId, IR::NopLabel> {
+        std::mem::replace(&mut self.nop_labels, BTreeMap::new())
+    }
+
+    //**********************************************************************************************
+    // Dependency item building
+    //**********************************************************************************************
+
+    pub fn materialize(
+        self,
+        dependency_orderings: &HashMap<ModuleIdent, usize>,
+        struct_declarations: &HashMap<
+            (ModuleIdent, StructName),
+            (bool, Vec<(IR::TypeVar, IR::Kind)>),
+        >,
+        function_declarations: &HashMap<
+            (ModuleIdent, FunctionName),
+            (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
+        >,
+    ) -> (Vec<IR::ImportDefinition>, Vec<IR::ModuleDependency>) {
+        let Context {
+            current_module: _current_module,
+            seen_structs,
+            seen_functions,
+            ..
+        } = self;
+        let mut module_dependencies = BTreeMap::new();
+        Self::struct_dependencies(struct_declarations, &mut module_dependencies, seen_structs);
+        Self::function_dependencies(
             struct_declarations,
             function_declarations,
-            modules: HashMap::new(),
-            functions: HashMap::new(),
-            structs: HashMap::new(),
-            struct_defs: HashMap::new(),
-            fields: HashMap::new(),
-            function_handles: HashMap::new(),
-            function_signatures: HashMap::new(),
-            module_handles: HashMap::new(),
-            struct_handles: HashMap::new(),
-            type_signatures: HashMap::new(),
-            locals_signatures: HashMap::new(),
-            identifiers: HashMap::new(),
-            byte_array_pool: HashMap::new(),
-            address_pool: HashMap::new(),
-            type_parameters: HashMap::new(),
-        };
-        assert!(context.module_handle_index(current_module)?.0 == 0);
-        Ok(context)
-    }
-
-    fn materialize_pool<T: Clone>(
-        size: usize,
-        items: impl IntoIterator<Item = (T, TableIndex)>,
-    ) -> Vec<T> {
-        let mut options = vec![None; size];
-        for (item, idx) in items {
-            assert!(options[idx as usize].is_none());
-            options[idx as usize] = Some(item);
+            &mut module_dependencies,
+            seen_functions,
+        );
+        let mut imports = vec![];
+        let mut ordered_dependencies = vec![];
+        for (module, (structs, functions)) in module_dependencies {
+            let dependency_order = dependency_orderings[&module];
+            let ir_name = Self::ir_module_alias(&module);
+            let ir_ident = Self::translate_module_ident(module);
+            imports.push(IR::ImportDefinition::new(ir_ident, Some(ir_name.clone())));
+            ordered_dependencies.push((
+                dependency_order,
+                IR::ModuleDependency {
+                    name: ir_name,
+                    structs,
+                    functions,
+                },
+            ));
         }
-        options.into_iter().map(|opt| opt.unwrap()).collect()
+        ordered_dependencies.sort_by_key(|(ordering, _)| *ordering);
+        let dependencies = ordered_dependencies.into_iter().map(|(_, m)| m).collect();
+        (imports, dependencies)
     }
 
-    fn materialize_map<T: Clone>(m: HashMap<T, TableIndex>) -> Vec<T> {
-        Self::materialize_pool(m.len(), m.into_iter())
+    fn insert_struct_dependency(
+        module_dependencies: &mut BTreeMap<
+            ModuleIdent,
+            (Vec<IR::StructDependency>, Vec<IR::FunctionDependency>),
+        >,
+        module: ModuleIdent,
+        struct_dep: IR::StructDependency,
+    ) {
+        module_dependencies
+            .entry(module)
+            .or_insert_with(|| (vec![], vec![]))
+            .0
+            .push(struct_dep);
     }
 
-    /// Finish compilation, and materialize the pools for file format.
-    pub fn materialize_pools(self) -> MaterializedPools {
-        let identifiers = self
-            .identifiers
-            .into_iter()
-            .map(|(s, idx)| (LibraIdentifier::new(s).unwrap(), idx))
-            .collect();
-        let addresses = self
-            .address_pool
-            .into_iter()
-            .map(|(addr, idx)| (LibraAddress::new(addr.to_u8()), idx))
-            .collect();
-        let byte_arrays = self
-            .byte_array_pool
-            .into_iter()
-            .map(|(bytes, idx)| (LibraByteArray::new(bytes), idx))
-            .collect();
-        MaterializedPools {
-            function_signatures: Self::materialize_map(self.function_signatures),
-            module_handles: Self::materialize_map(self.module_handles),
-            struct_handles: Self::materialize_map(self.struct_handles),
-            function_handles: Self::materialize_map(self.function_handles),
-            type_signatures: Self::materialize_map(self.type_signatures),
-            locals_signatures: Self::materialize_map(self.locals_signatures),
-            identifiers: Self::materialize_map(identifiers),
-            byte_array_pool: Self::materialize_map(byte_arrays),
-            address_pool: Self::materialize_map(addresses),
-        }
+    fn insert_function_dependency(
+        module_dependencies: &mut BTreeMap<
+            ModuleIdent,
+            (Vec<IR::StructDependency>, Vec<IR::FunctionDependency>),
+        >,
+        module: ModuleIdent,
+        function_dep: IR::FunctionDependency,
+    ) {
+        module_dependencies
+            .entry(module)
+            .or_insert_with(|| (vec![], vec![]))
+            .1
+            .push(function_dep);
     }
 
-    /// Bind the type parameters into a "pool" for the current context.
-    pub fn bind_type_parameters(
-        &mut self,
-        loc: Loc,
-        m: HashMap<TParamID, usize>,
-    ) -> Result<HashMap<TParamID, TableIndex>> {
-        let new_tmap = m
-            .into_iter()
-            .map(|(k, idx)| {
-                if idx >= TABLE_MAX_SIZE {
-                    bail!(loc, "Too many type parameters")
-                }
-                Ok((k, idx as TableIndex))
-            })
-            .collect::<Result<_>>()?;
-        Ok(std::mem::replace(&mut self.type_parameters, new_tmap))
-    }
-
-    //**********************************************************************************************
-    // Pools
-    //**********************************************************************************************
-
-    /// Get the module handle index for the alias
-    pub fn module_handle_index(&mut self, module_ident: &ModuleIdent) -> Result<ModuleHandleIndex> {
-        if !self.modules.contains_key(module_ident) {
-            let address = self.address_index(module_ident.loc(), module_ident.0.value.address)?;
-            let name = self.identifier_index(&module_ident.0.value.name)?;
-            let handle = ModuleHandle { address, name };
-            get_or_add_item(module_ident.loc(), &mut self.module_handles, handle.clone())?;
-            self.modules.insert(module_ident.clone(), handle);
-        }
-        let handle = self.modules.get(module_ident).unwrap();
-        Ok(ModuleHandleIndex(*self.module_handles.get(handle).unwrap()))
-    }
-
-    /// Get the type formal index, fails if it is not bound.
-    pub fn type_formal_index(&mut self, t: TParamID) -> TableIndex {
-        match self.type_parameters.get(&t) {
-            None => panic!("Unbound type parameter"),
-            Some(idx) => *idx,
+    fn struct_dependencies(
+        struct_declarations: &HashMap<
+            (ModuleIdent, StructName),
+            (bool, Vec<(IR::TypeVar, IR::Kind)>),
+        >,
+        module_dependencies: &mut BTreeMap<
+            ModuleIdent,
+            (Vec<IR::StructDependency>, Vec<IR::FunctionDependency>),
+        >,
+        seen_structs: BTreeSet<(ModuleIdent, StructName)>,
+    ) {
+        for (module, sname) in seen_structs {
+            let struct_dep = Self::struct_dependency(struct_declarations, &module, sname);
+            Self::insert_struct_dependency(module_dependencies, module, struct_dep);
         }
     }
 
-    /// Get the address pool index, adds it if missing.
-    pub fn address_index(&mut self, loc: Loc, addr: Address) -> Result<AddressPoolIndex> {
-        Ok(AddressPoolIndex(get_or_add_item(
-            loc,
-            &mut self.address_pool,
-            addr,
-        )?))
-    }
-
-    /// Get the identifier pool index, adds it if missing.
-    pub fn identifier_index<T: Identifier>(&mut self, ident: &T) -> Result<IdentifierIndex> {
-        let m = &mut self.identifiers;
-        let idx: Result<TableIndex> =
-            get_or_add_item_macro!(ident.loc(), m, ident.value(), ident.value().to_owned());
-        Ok(IdentifierIndex(idx?))
-    }
-
-    /// Get the byte array pool index, adds it if missing.
-    pub fn byte_array_index(
-        &mut self,
-        loc: Loc,
-        byte_array: Vec<u8>,
-    ) -> Result<ByteArrayPoolIndex> {
-        Ok(ByteArrayPoolIndex(get_or_add_item(
-            loc,
-            &mut self.byte_array_pool,
-            byte_array,
-        )?))
-    }
-
-    /// Get the field index, fails if it is not bound.
-    pub fn field(&self, s: StructDefinitionIndex, f: Field) -> FieldDefinitionIndex {
-        match self.fields.get(&(s, f.clone())) {
-            None => panic!("Unbound field {}", f),
-            Some(idx) => FieldDefinitionIndex(*idx),
-        }
-    }
-
-    /// Get the type signature index, adds it if it is not bound.
-    pub fn type_signature_index(
-        &mut self,
-        loc: Loc,
-        token: SignatureToken,
-    ) -> Result<TypeSignatureIndex> {
-        Ok(TypeSignatureIndex(get_or_add_item(
-            loc,
-            &mut self.type_signatures,
-            TypeSignature(token),
-        )?))
-    }
-
-    /// Get the struct definition index, fails if it is not bound.
-    pub fn struct_definition_index(&self, s: &StructName) -> StructDefinitionIndex {
-        match self.struct_defs.get(&s) {
-            None => panic!("Missing struct definition for {}", s),
-            Some(idx) => StructDefinitionIndex(*idx),
-        }
-    }
-
-    /// Get the locals signature pool index, adds it if missing.
-    pub fn locals_signature_index(
-        &mut self,
-        loc: Loc,
-        locals: LocalsSignature,
-    ) -> Result<LocalsSignatureIndex> {
-        Ok(LocalsSignatureIndex(get_or_add_item(
-            loc,
-            &mut self.locals_signatures,
-            locals,
-        )?))
-    }
-
-    //**********************************************************************************************
-    // Declarations
-    //**********************************************************************************************
-
-    /// Given an identifier, declare the struct definition index.
-    pub fn declare_struct_definition_index(
-        &mut self,
-        s: StructName,
-    ) -> Result<StructDefinitionIndex> {
-        let idx = self.struct_defs.len();
-        if idx >= TABLE_MAX_SIZE {
-            bail!(s.loc(), format!("too many struct definitions {}", s))
-        }
-        assert!(self.struct_defs.insert(s, idx as TableIndex).is_none());
-        Ok(StructDefinitionIndex(idx as TableIndex))
-    }
-
-    /// Given a struct handle and a field, adds it to the pool.
-    pub fn declare_field(
-        &mut self,
-        s: StructDefinitionIndex,
-        f: Field,
-    ) -> Result<FieldDefinitionIndex> {
-        let idx = self.fields.len();
-        if idx >= TABLE_MAX_SIZE {
-            bail!(f.loc(), format!("too many fields: {}.{}", s, f))
-        }
-        assert!(self.fields.insert((s, f), idx as TableIndex).is_none());
-        Ok(FieldDefinitionIndex(idx as TableIndex))
-    }
-
-    //**********************************************************************************************
-    // Dependency Resolution
-    //**********************************************************************************************
-
-    /// Given an identifier and a signature, creates a function handle and adds it to the pool.
-    /// Finds the index for the signature, or adds it to the pool if an identical one has not yet
-    /// been used.
-    pub fn declare_function(
-        &mut self,
-        mname: ModuleIdent,
-        fname: FunctionName,
-        signature: FunctionSignature,
-    ) -> Result<FunctionHandleIndex> {
-        let module = self.module_handle_index(&mname)?;
-        let name = self.identifier_index(&fname)?;
-
-        let sidx = get_or_add_item(fname.loc(), &mut self.function_signatures, signature)?;
-        let signature_index = FunctionSignatureIndex(sidx);
-
-        let m_f = (mname, fname.clone());
-        let handle = FunctionHandle {
-            module,
+    fn struct_dependency(
+        struct_declarations: &HashMap<
+            (ModuleIdent, StructName),
+            (bool, Vec<(IR::TypeVar, IR::Kind)>),
+        >,
+        module: &ModuleIdent,
+        sname: StructName,
+    ) -> IR::StructDependency {
+        let key = (module.clone(), sname.clone());
+        let (is_nominal_resource, type_formals) = struct_declarations.get(&key).unwrap().clone();
+        let name = Self::translate_struct_name(sname);
+        IR::StructDependency {
             name,
-            signature: signature_index,
-        };
-        assert!(self.functions.insert(m_f, handle.clone()).is_none());
-
-        let hidx = self.function_handles.len();
-        if hidx >= TABLE_MAX_SIZE {
-            bail!(
-                fname.loc(),
-                format!("too many functions: {}.{}", module, fname)
-            )
+            is_nominal_resource,
+            type_formals,
         }
-        assert!(self
-            .function_handles
-            .insert(handle, hidx as TableIndex)
-            .is_none());
-        Ok(FunctionHandleIndex(hidx as TableIndex))
     }
 
-    pub fn declaration_function_signature(
-        &self,
-        mname: &ModuleIdent,
-        fname: &FunctionName,
-    ) -> G::FunctionSignature {
-        self.function_declarations
-            .get(&(mname.clone(), fname.clone()))
-            .unwrap()
-            .clone()
+    fn function_dependencies(
+        struct_declarations: &HashMap<
+            (ModuleIdent, StructName),
+            (bool, Vec<(IR::TypeVar, IR::Kind)>),
+        >,
+        function_declarations: &HashMap<
+            (ModuleIdent, FunctionName),
+            (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
+        >,
+        module_dependencies: &mut BTreeMap<
+            ModuleIdent,
+            (Vec<IR::StructDependency>, Vec<IR::FunctionDependency>),
+        >,
+        seen_functions: BTreeSet<(ModuleIdent, FunctionName)>,
+    ) {
+        for (module, fname) in seen_functions {
+            let (seen_structs, function_dep) =
+                Self::function_dependency(function_declarations, &module, fname);
+            Self::insert_function_dependency(module_dependencies, module, function_dep);
+            Self::struct_dependencies(struct_declarations, module_dependencies, seen_structs)
+        }
     }
 
-    pub fn function_handle_index(
-        &mut self,
-        module_ident: &ModuleIdent,
-        fname: &FunctionName,
-    ) -> Option<FunctionHandleIndex> {
-        let handle = self.functions.get(&(module_ident.clone(), fname.clone()))?;
-        Some(FunctionHandleIndex(
-            *self.function_handles.get(handle).unwrap(),
+    fn function_dependency(
+        function_declarations: &HashMap<
+            (ModuleIdent, FunctionName),
+            (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
+        >,
+        module: &ModuleIdent,
+        fname: FunctionName,
+    ) -> (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionDependency) {
+        let key = (module.clone(), fname.clone());
+        let (seen_structs, signature) = function_declarations.get(&key).unwrap().clone();
+        let name = Self::translate_function_name(fname);
+        (seen_structs, IR::FunctionDependency { name, signature })
+    }
+
+    //**********************************************************************************************
+    // Name translation
+    //**********************************************************************************************
+
+    fn ir_module_alias(ident: &ModuleIdent) -> IR::ModuleName {
+        let ModuleIdent_ { address, name } = &ident.0.value;
+        IR::ModuleName::new(format!("{}::{}", address, name))
+    }
+
+    fn translate_module_ident(ident: ModuleIdent) -> IR::ModuleIdent {
+        let ModuleIdent_ { address, name } = ident.0.value;
+        let name = Self::translate_module_name(name);
+        IR::ModuleIdent::Qualified(IR::QualifiedModuleIdent::new(
+            name,
+            LibraAddress::new(address.to_u8()),
         ))
     }
 
-    /// Given an identifier and basic "signature" information, creates a struct handle
-    /// and adds it to the pool.
-    fn declare_struct_handle_index(
-        &mut self,
-        mname: &ModuleIdent,
-        sname: &StructName,
-        is_nominal_resource: bool,
-        type_formals: Vec<F::Kind>,
-    ) -> Result<StructHandleIndex> {
-        let module = self.module_handle_index(mname)?;
-        let name = self.identifier_index(sname)?;
-        let m_s = (mname.clone(), sname.clone());
-        assert!(self
-            .structs
-            .insert(
-                m_s.clone(),
-                StructHandle {
-                    module,
-                    name,
-                    is_nominal_resource,
-                    type_formals,
-                },
-            )
-            .is_none());
-        Ok(StructHandleIndex(get_or_add_item_ref(
-            sname.loc(),
-            &mut self.struct_handles,
-            self.structs.get(&m_s).unwrap(),
-        )?))
+    fn translate_module_name(n: ModuleName) -> IR::ModuleName {
+        IR::ModuleName::new(n.0.value)
     }
 
-    fn struct_handle_opt(
+    fn translate_struct_name(n: StructName) -> IR::StructName {
+        IR::StructName::new(n.0.value)
+    }
+
+    fn translate_function_name(n: FunctionName) -> IR::FunctionName {
+        IR::FunctionName::new(n.0.value)
+    }
+
+    //**********************************************************************************************
+    // Name resolution
+    //**********************************************************************************************
+
+    pub fn struct_definition_name(&self, m: &ModuleIdent, s: StructName) -> IR::StructName {
+        assert!(
+            self.is_current_module(m),
+            "ICE invalid struct definition lookup"
+        );
+        Self::translate_struct_name(s)
+    }
+
+    pub fn qualified_struct_name(
+        &mut self,
+        m: &ModuleIdent,
+        s: StructName,
+    ) -> IR::QualifiedStructIdent {
+        let mname = if self.is_current_module(m) {
+            IR::ModuleName::module_self()
+        } else {
+            self.seen_structs.insert((m.clone(), s.clone()));
+            Self::ir_module_alias(m)
+        };
+        let n = Self::translate_struct_name(s);
+        IR::QualifiedStructIdent::new(mname, n)
+    }
+
+    pub fn function_definition_name(
         &self,
-        module_ident: &ModuleIdent,
-        sname: &StructName,
-    ) -> Option<StructHandleIndex> {
-        let handle = self.structs.get(&(module_ident.clone(), sname.clone()))?;
-        Some(StructHandleIndex(*self.struct_handles.get(handle).unwrap()))
+        m: Option<&ModuleIdent>,
+        f: FunctionName,
+    ) -> IR::FunctionName {
+        assert!(
+            self.current_module == m,
+            "ICE invalid function definition lookup"
+        );
+        Self::translate_function_name(f)
     }
 
-    pub fn struct_handle_index(
+    pub fn qualified_function_name(
         &mut self,
-        module_ident: &ModuleIdent,
-        sname: &StructName,
-    ) -> Result<StructHandleIndex> {
-        match self.struct_handle_opt(module_ident, sname) {
-            Some(idx) => Ok(idx),
-            None => {
-                let (is_nominal_resource, kinds) = self
-                    .struct_declarations
-                    .get(&(module_ident.clone(), sname.clone()))
-                    .unwrap()
-                    .clone();
-                self.declare_struct_handle_index(module_ident, sname, is_nominal_resource, kinds)
-            }
-        }
+        m: &ModuleIdent,
+        f: FunctionName,
+    ) -> (IR::ModuleName, IR::FunctionName) {
+        let mname = if self.is_current_module(m) {
+            IR::ModuleName::module_self()
+        } else {
+            self.seen_functions.insert((m.clone(), f.clone()));
+            Self::ir_module_alias(m)
+        };
+        let n = Self::translate_function_name(f);
+        (mname, n)
+    }
+
+    //**********************************************************************************************
+    // Nops
+    //**********************************************************************************************
+
+    pub fn nop_label(&mut self, id: SpecId) -> IR::NopLabel {
+        let label = IR::NopLabel(format!("{}", id));
+        assert!(self.nop_labels.insert(id, label.clone()).is_none());
+        label
     }
 }

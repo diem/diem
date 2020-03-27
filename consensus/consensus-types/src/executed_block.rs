@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{block::Block, common::Round, quorum_cert::QuorumCert};
-use executor::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
+use executor_types::{ExecutedTrees, ProcessedVMOutput, StateComputeResult};
 use libra_crypto::hash::HashValue;
 use libra_types::block_info::BlockInfo;
 use std::{
-    fmt::{Display, Formatter},
+    fmt::{Debug, Display, Formatter},
     sync::Arc,
 };
 
 /// ExecutedBlocks are managed in a speculative tree, the committed blocks form a chain. Besides
 /// block data, each executed block also has other derived meta data which could be regenerated from
 /// blocks.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ExecutedBlock<T> {
     /// Block data that cannot be regenerated.
     block: Block<T>,
@@ -31,9 +31,15 @@ impl<T: PartialEq> PartialEq for ExecutedBlock<T> {
 
 impl<T: Eq> Eq for ExecutedBlock<T> where T: PartialEq {}
 
-impl<T: PartialEq> Display for ExecutedBlock<T> {
+impl<T> Debug for ExecutedBlock<T> {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        self.block().fmt(f)
+        write!(f, "{:?}", self.block())
+    }
+}
+
+impl<T> Display for ExecutedBlock<T> {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.block())
     }
 }
 
@@ -98,11 +104,10 @@ impl<T> ExecutedBlock<T> {
     }
 
     pub fn block_info(&self) -> BlockInfo {
-        let executed_state = self.compute_result().executed_state;
         self.block().gen_block_info(
-            executed_state.state_id,
-            executed_state.version,
-            executed_state.validators,
+            self.compute_result().state_id(),
+            self.compute_result().version(),
+            self.compute_result().validators().clone(),
         )
     }
 }

@@ -10,8 +10,7 @@ use libra_types::{
     discovery_set::DISCOVERY_SET_CHANGE_EVENT_PATH, ledger_info::LedgerInfo,
 };
 use proptest::prelude::*;
-use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom};
 
 fn verify_epochs(db: &LibraDB, ledger_infos_with_sigs: &[LedgerInfoWithSignatures]) {
     let (_, latest_li, actual_epoch_change_lis, _) =

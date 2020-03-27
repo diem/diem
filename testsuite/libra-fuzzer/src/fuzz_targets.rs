@@ -56,11 +56,13 @@ macro_rules! proto_fuzz_target {
 
 // List fuzz target modules here.
 mod accumulator_merkle_proof;
-mod admission_control;
 mod compiled_module;
 mod consensus_proposal;
 mod inbound_rpc_protocol;
 mod inner_signed_transaction;
+mod json_rpc_service;
+mod network_noise_initiator;
+mod network_noise_responder;
 mod signed_transaction;
 mod sparse_merkle_proof;
 mod vm_value;
@@ -72,11 +74,12 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(signed_transaction::SignedTransactionTarget::default()),
         Box::new(inner_signed_transaction::SignedTransactionTarget::default()),
         Box::new(sparse_merkle_proof::SparseMerkleProofTarget::default()),
-        Box::new(accumulator_merkle_proof::AccumulatorProofTarget::default()),
         Box::new(vm_value::ValueTarget::default()),
         Box::new(consensus_proposal::ConsensusProposal::default()),
-        Box::new(admission_control::AdmissionControlSubmitTransactionRequest::default()),
+        Box::new(json_rpc_service::JsonRpcSubmitTransactionRequest::default()),
         Box::new(inbound_rpc_protocol::RpcInboundRequest::default()),
+        Box::new(network_noise_initiator::NetworkNoiseInitiator::default()),
+        Box::new(network_noise_responder::NetworkNoiseResponder::default()),
     ];
     targets
         .into_iter()

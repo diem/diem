@@ -1,6 +1,9 @@
 //! account: alice
 //! account: vivian, 1000000, 0, validator
 
+//! block-prologue
+//! proposer: vivian
+//! block-time: 3
 
 //! new-transaction
 //! sender: association
@@ -39,6 +42,8 @@ main() {
     return;
 }
 
+// check: ValidatorSetChangeEvent
+// check: DiscoverySetChangeEvent
 // check: EXECUTED
 
 //! new-transaction
@@ -52,4 +57,4 @@ main() {
 }
 
 // check: ABORTED
-// check: 22
+// check: 21

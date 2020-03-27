@@ -3,7 +3,8 @@
 
 use crate::{sync_info::SyncInfo, vote::Vote};
 use anyhow::ensure;
-use libra_types::crypto_proxies::ValidatorVerifier;
+use libra_crypto::HashValue;
+use libra_types::validator_verifier::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
@@ -42,6 +43,10 @@ impl VoteMsg {
 
     pub fn epoch(&self) -> u64 {
         self.vote.epoch()
+    }
+
+    pub fn proposed_block_id(&self) -> HashValue {
+        self.vote.vote_data().proposed().id()
     }
 
     pub fn verify(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {

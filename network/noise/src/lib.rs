@@ -18,12 +18,14 @@ use snow::{self, params::NoiseParams, Keypair};
 use std::io;
 
 mod socket;
+#[cfg(any(feature = "fuzzing", test))]
+pub use self::socket::noise_fuzzing;
 
 pub use self::socket::NoiseSocket;
 use libra_crypto::ValidKey;
 
 const NOISE_IX_25519_AESGCM_SHA256_PROTOCOL_NAME: &[u8] = b"/noise_ix_25519_aesgcm_sha256/1.0.0";
-const NOISE_IX_PARAMETER: &str = "Noise_IX_25519_AESGCM_SHA256";
+const NOISE_PARAMETER: &str = "Noise_IX_25519_AESGCM_SHA256";
 
 /// The Noise protocol configuration to be used to perform a protocol upgrade on an underlying
 /// socket.
@@ -35,7 +37,7 @@ pub struct NoiseConfig {
 impl NoiseConfig {
     /// Create a new NoiseConfig with the provided keypair
     pub fn new(keypair: (X25519StaticPrivateKey, X25519StaticPublicKey)) -> Self {
-        let parameters: NoiseParams = NOISE_IX_PARAMETER.parse().expect("Invalid protocol name");
+        let parameters: NoiseParams = NOISE_PARAMETER.parse().expect("Invalid protocol name");
         let keypair = Keypair {
             private: keypair.0.to_bytes().to_vec(),
             public: keypair.1.to_bytes().to_vec(),
@@ -47,8 +49,9 @@ impl NoiseConfig {
     }
 
     /// Create a new NoiseConfig with an ephemeral static key.
+    #[cfg(feature = "testing")]
     pub fn new_random() -> Self {
-        let parameters: NoiseParams = NOISE_IX_PARAMETER.parse().expect("Invalid protocol name");
+        let parameters: NoiseParams = NOISE_PARAMETER.parse().expect("Invalid protocol name");
         let keypair = snow::Builder::new(parameters.clone())
             .generate_keypair()
             .expect("Noise failed to generate a random static keypair");

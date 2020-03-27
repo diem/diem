@@ -5,11 +5,13 @@ use crate::{
     checker::*,
     compiler::Compiler,
     config::global::Config as GlobalConfig,
-    evaluator::eval,
+    evaluator::{eval, EvaluationOutput},
     preprocessor::{build_transactions, split_input},
 };
 use std::{env, fs::read_to_string, io::Write, iter, path::Path};
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
+
+pub const PRETTY: &str = "PRETTY";
 
 fn at_most_n_chars(s: impl IntoIterator<Item = char>, n: usize) -> String {
     let mut it = s.into_iter();
@@ -49,7 +51,7 @@ fn env_var(var_name: &str) -> String {
 }
 
 fn pretty_mode() -> bool {
-    let pretty = env_var("PRETTY");
+    let pretty = env_var(PRETTY);
     pretty == "1" || pretty == "true"
 }
 
@@ -64,9 +66,9 @@ pub fn functional_tests<TComp: Compiler>(
 
     let (config, directives, transactions) = split_input(&lines)?;
     let config = GlobalConfig::build(&config)?;
-    let transactions = build_transactions(&config, &transactions)?;
+    let commands = build_transactions(&config, &transactions)?;
 
-    let log = eval(&config, compiler, &transactions)?;
+    let log = eval(&config, compiler, &commands)?;
 
     let res = match_output(&log, &directives);
 
@@ -142,7 +144,18 @@ pub fn functional_tests<TComp: Compiler>(
         writeln!(
             output,
             "{}",
-            format!("{}", log)
+            log.outputs
+                .iter()
+                .enumerate()
+                .map(|(id, entry)| {
+                    match entry {
+                        EvaluationOutput::Error(err) => {
+                            format!("[{}] Error: {}\n", id, err.root_cause())
+                        }
+                        _ => format!("[{}] {}\n", id, entry),
+                    }
+                })
+                .collect::<String>()
                 .lines()
                 .map(|line| format!("    {}\n", line))
                 .collect::<String>()

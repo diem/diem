@@ -1,26 +1,27 @@
 //! account: bob, 1000000
 
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 main() {
     let sender_addr: address;
     let recipient_addr: address;
     let sender_original_balance: u64;
     let recipient_original_balance: u64;
-    let five_coins: LibraCoin.T;
+    let five_coins: Libra.T<LBR.T>;
     let sender_new_balance: u64;
     let recipient_new_balance: u64;
 
     sender_addr = get_txn_sender();
     recipient_addr = {{bob}};
-    sender_original_balance = LibraAccount.balance(copy(sender_addr));
-    recipient_original_balance = LibraAccount.balance(copy(recipient_addr));
-    five_coins = LibraAccount.withdraw_from_sender(5);
-    LibraAccount.deposit(copy(recipient_addr), move(five_coins));
+    sender_original_balance = LibraAccount.balance<LBR.T>(copy(sender_addr));
+    recipient_original_balance = LibraAccount.balance<LBR.T>(copy(recipient_addr));
+    five_coins = LibraAccount.withdraw_from_sender<LBR.T>(5);
+    LibraAccount.deposit<LBR.T>(copy(recipient_addr), move(five_coins));
 
-    sender_new_balance = LibraAccount.balance(move(sender_addr));
-    recipient_new_balance = LibraAccount.balance(move(recipient_addr));
+    sender_new_balance = LibraAccount.balance<LBR.T>(move(sender_addr));
+    recipient_new_balance = LibraAccount.balance<LBR.T>(move(recipient_addr));
 
     assert(move(sender_new_balance) == move(sender_original_balance) - 5, 77);
     assert(move(recipient_new_balance) == move(recipient_original_balance) + 5, 88);

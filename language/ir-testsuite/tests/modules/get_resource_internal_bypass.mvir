@@ -1,4 +1,4 @@
-// check: Invalid token
+// check: Invalid Token
 
 module Token {
     resource T { b: bool }

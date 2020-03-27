@@ -3,11 +3,12 @@
 
 use crate::{account::AccountData, executor::FakeExecutor};
 use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_vm::LibraVM;
+use move_vm_state::data_cache::BlockDataCache;
 use vm::{
     gas_schedule::{GasAlgebra, GasPrice, GasUnits},
     transaction_metadata::TransactionMetadata,
 };
-use vm_runtime::{data_cache::BlockDataCache, LibraVM};
 
 #[test]
 fn failed_transaction_cleanup_test() {
@@ -15,9 +16,9 @@ fn failed_transaction_cleanup_test() {
     let sender = AccountData::new(1_000_000, 10);
     fake_executor.add_account_data(&sender);
 
-    let mut libra_vm = LibraVM::new(fake_executor.config());
+    let mut libra_vm = LibraVM::new();
     let mut data_cache = BlockDataCache::new(fake_executor.get_state_view());
-    libra_vm.load_gas_schedule(&data_cache);
+    libra_vm.load_configs(fake_executor.get_state_view());
 
     let mut txn_data = TransactionMetadata::default();
     txn_data.sender = *sender.address();

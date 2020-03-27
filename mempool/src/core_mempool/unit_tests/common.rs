@@ -5,9 +5,10 @@ use crate::core_mempool::{CoreMempool, TimelineState, TxnPointer};
 use anyhow::{format_err, Result};
 use libra_config::config::NodeConfig;
 use libra_crypto::ed25519::*;
-use libra_mempool_shared_proto::proto::mempool_status::MempoolAddTransactionStatusCode;
 use libra_types::{
     account_address::AccountAddress,
+    account_config::lbr_type_tag,
+    mempool_status::MempoolStatusCode,
     transaction::{RawTransaction, Script, SignedTransaction},
 };
 use once_cell::sync::Lazy;
@@ -72,6 +73,7 @@ impl TestTransaction {
             Script::new(vec![], vec![]),
             max_gas_amount,
             self.gas_price,
+            lbr_type_tag(),
             exp_time,
         );
         let mut seed: [u8; 32] = [0u8; 32];
@@ -97,7 +99,7 @@ pub(crate) fn add_txns_to_mempool(
     let mut transactions = vec![];
     for transaction in txns {
         let txn = transaction.make_signed_transaction();
-        pool.add_txn(txn.clone(), 0, 0, 1000, TimelineState::NotReady);
+        pool.add_txn(txn.clone(), 0, 0, TimelineState::NotReady);
         transactions.push(txn);
     }
     transactions
@@ -109,10 +111,10 @@ pub(crate) fn add_txn(pool: &mut CoreMempool, transaction: TestTransaction) -> R
 
 pub(crate) fn add_signed_txn(pool: &mut CoreMempool, transaction: SignedTransaction) -> Result<()> {
     match pool
-        .add_txn(transaction, 0, 0, 1000, TimelineState::NotReady)
+        .add_txn(transaction, 0, 0, TimelineState::NotReady)
         .code
     {
-        MempoolAddTransactionStatusCode::Valid => Ok(()),
+        MempoolStatusCode::Accepted => Ok(()),
         _ => Err(format_err!("insertion failure")),
     }
 }

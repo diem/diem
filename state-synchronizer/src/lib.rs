@@ -10,9 +10,11 @@
 #[macro_use]
 extern crate prometheus;
 
-use executor::ExecutedTrees;
-use libra_types::crypto_proxies::{EpochInfo, ValidatorVerifier};
-use libra_types::{account_address::AccountAddress, crypto_proxies::LedgerInfoWithSignatures};
+use executor_types::ExecutedTrees;
+use libra_types::{
+    account_address::AccountAddress, epoch_info::EpochInfo, ledger_info::LedgerInfoWithSignatures,
+    validator_verifier::ValidatorVerifier,
+};
 use std::sync::Arc;
 pub use synchronizer::{StateSyncClient, StateSynchronizer};
 
@@ -21,6 +23,7 @@ mod chunk_response;
 mod coordinator;
 mod counters;
 mod executor_proxy;
+pub mod network;
 mod peer_manager;
 mod synchronizer;
 

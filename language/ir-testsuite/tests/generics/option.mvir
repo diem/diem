@@ -2,7 +2,7 @@ module Option {
     import 0x0.Vector;
 
     struct T<E> {
-        v: Vector.T<E>
+        v: vector<E>
     }
 
     public none<E>(): Self.T<E> {
@@ -10,14 +10,14 @@ module Option {
     }
 
     public some<E>(e: E): Self.T<E> {
-        let v: Vector.T<E>;
+        let v: vector<E>;
         v = Vector.empty<E>();
         Vector.push_back<E>(&mut v, move(e));
         return T<E> { v: move(v) };
     }
 
     public unwrap_or<E: unrestricted>(x: Self.T<E>, e: E): E {
-        let v: Vector.T<E>;
+        let v: vector<E>;
         T<E> { v: v } = move(x);
         if (Vector.is_empty<E>(&v)) {
             return move(e);

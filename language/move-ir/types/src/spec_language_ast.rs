@@ -1,9 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::ast::{BinOp, CopyableVal_, Field_, QualifiedStructIdent, Spanned, Type};
+use crate::{
+    ast::{BinOp, CopyableVal_, Field_, QualifiedStructIdent, Type},
+    location::*,
+};
 use libra_types::account_address::AccountAddress;
-use libra_types::identifier::Identifier;
+use move_core_types::identifier::Identifier;
 
 /// AST for the Move Prover specification language.
 
@@ -60,6 +63,8 @@ pub enum SpecExp {
     Not(Box<SpecExp>),
     /// Binary operators also suported by Move
     Binop(Box<SpecExp>, BinOp, Box<SpecExp>),
+    /// Update expr (i := 1 inside [])
+    Update(Box<SpecExp>, Box<SpecExp>),
     /// Value of expression evaluated in the state before function enter.
     Old(Box<SpecExp>),
     /// Call to a helper function.

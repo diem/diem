@@ -6,6 +6,7 @@ mod consensusdb;
 mod block_storage;
 pub mod chained_bft_smr;
 mod network;
+pub mod network_interface;
 
 pub mod epoch_manager;
 pub mod persistent_liveness_storage;

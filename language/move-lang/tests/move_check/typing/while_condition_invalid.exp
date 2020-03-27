@@ -42,7 +42,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/while_condition_invalid.move:8:28 ───
+   ┌── tests/move_check/typing/while_condition_invalid.move:9:16 ───
    │
  9 │         while (x) ();
    │                ^ Invalid while condition
@@ -62,7 +62,7 @@ error:
     │                ^ Invalid while condition
     ·
  10 │         while (0) ();
-    │                - The type: 'u64'
+    │                - The type: integer
     ·
  10 │         while (0) ();
     │                - Is not compatible with: 'bool'
@@ -90,7 +90,7 @@ error:
     │                ^^^^^^^^^^^^^ Invalid while condition
     ·
  15 │         while ((false, true)) ();
-    │                ------------- The type: '(bool,bool)'
+    │                ------------- The type: '(bool, bool)'
     ·
  15 │         while ((false, true)) ();
     │                ------------- Is not compatible with: 'bool'
@@ -104,7 +104,7 @@ error:
     │                ^^^^^^^^^^ Invalid while condition
     ·
  16 │         while ((0, false)) ()
-    │                ---------- The type: '(u64,bool)'
+    │                ---------- The type: '({integer}, bool)'
     ·
  16 │         while ((0, false)) ()
     │                ---------- Is not compatible with: 'bool'

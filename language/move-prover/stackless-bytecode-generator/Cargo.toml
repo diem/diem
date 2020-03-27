@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 vm = { path = "../../vm", version = "0.1.0" }
+bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 ir-to-bytecode = { path = "../../compiler/ir-to-bytecode", version = "0.1.0" }
 stdlib = { path = "../../stdlib", version = "0.1.0" }
 #

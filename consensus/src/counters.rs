@@ -8,6 +8,17 @@ use prometheus::{Histogram, IntCounter, IntCounterVec, IntGauge};
 //////////////////////
 // HEALTH COUNTERS
 //////////////////////
+
+/// Counter of pending network events to Consensus
+pub static PENDING_CONSENSUS_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_consensus_pending_network_events",
+        "Counters(queued,dequeued,dropped) related to pending network notifications to Consensus",
+        &["state"]
+    )
+    .unwrap()
+});
+
 /// This counter is set to the round of the highest committed block.
 pub static LAST_COMMITTED_ROUND: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(
@@ -94,21 +105,11 @@ pub static EVENT_PROCESSING_LOOP_BUSY_DURATION_S: Lazy<DurationHistogram> = Lazy
     )
 });
 
-/// Counters(queued,dequeued,dropped) related to proposals channel
-pub static PROPOSAL_CHANNEL_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
+/// Counters(queued,dequeued,dropped) related to consensus channel
+pub static CONSENSUS_CHANNEL_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
-        "libra_consensus_proposal_channel_msgs_count",
-        "Counters(queued,dequeued,dropped) related to proposals channel",
-        &["state"]
-    )
-    .unwrap()
-});
-
-/// Counters(queued,dequeued,dropped) related to votes channel
-pub static VOTES_CHANNEL_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
-    register_int_counter_vec!(
-        "libra_consensus_votes_channel_msgs_count",
-        "Counters(queued,dequeued,dropped) related to votes channel",
+        "libra_consensus_channel_msgs_count",
+        "Counters(queued,dequeued,dropped) related to consensus channel",
         &["state"]
     )
     .unwrap()
@@ -119,26 +120,6 @@ pub static BLOCK_RETRIEVAL_CHANNEL_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "libra_consensus_block_retrieval_channel_msgs_count",
         "Counters(queued,dequeued,dropped) related to block retrieval channel",
-        &["state"]
-    )
-    .unwrap()
-});
-
-/// Counters(queued,dequeued,dropped) related to sync info channel
-pub static SYNC_INFO_CHANNEL_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
-    register_int_counter_vec!(
-        "libra_consensus_sync_info_dropped_channel_msgs_count",
-        "Counters(queued,dequeued,dropped) related to sync info channel",
-        &["state"]
-    )
-    .unwrap()
-});
-
-/// Counters(queued,dequeued,dropped) related to epoch change channel
-pub static EPOCH_CHANGE_CHANNEL_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
-    register_int_counter_vec!(
-        "libra_consensus_epoch_change_dropped_channel_msgs_count",
-        "Counters(queued,dequeued,dropped) related to epoch change channel",
         &["state"]
     )
     .unwrap()
@@ -318,13 +299,14 @@ pub static BLOCK_EXECUTION_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
     )
 });
 
-pub static UNWRAPPED_PROPOSAL_SIZE_BYTES: Lazy<Histogram> = Lazy::new(|| {
-    register_histogram!(
-        "libra_consensus_unwrapped_proposal_size_bytes",
-        "Histogram of proposal size after LCS but before wrapping with GRPC and libra net."
-    )
-    .unwrap()
-});
+// TODO Consider reintroducing this counter
+// pub static UNWRAPPED_PROPOSAL_SIZE_BYTES: Lazy<Histogram> = Lazy::new(|| {
+//     register_histogram!(
+//         "libra_consensus_unwrapped_proposal_size_bytes",
+//         "Histogram of proposal size after LCS but before wrapping with GRPC and libra net."
+//     )
+//     .unwrap()
+// });
 
 /// Histogram of duration of a commit procedure (the time it takes for the execution / storage to
 /// commit a block once we decide to do so).

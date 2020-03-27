@@ -6,13 +6,14 @@ use crate::{
     state_replication::StateComputer,
 };
 use anyhow::{format_err, Result};
-use consensus_types::block::Block;
-use consensus_types::executed_block::ExecutedBlock;
-use executor::{ExecutedTrees, ProcessedVMOutput};
+use consensus_types::{block::Block, executed_block::ExecutedBlock};
+use executor_types::{ExecutedTrees, ProcessedVMOutput};
 use futures::channel::mpsc;
 use libra_logger::prelude::*;
-use libra_types::crypto_proxies::ValidatorSet;
-use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof};
+use libra_types::{
+    ledger_info::LedgerInfoWithSignatures, validator_change::ValidatorChangeProof,
+    validator_set::ValidatorSet,
+};
 use std::sync::Arc;
 use termion::color::*;
 

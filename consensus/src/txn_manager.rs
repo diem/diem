@@ -3,8 +3,10 @@
 
 use crate::state_replication::TxnManager;
 use anyhow::{format_err, Result};
-use executor::StateComputeResult;
+use debug_interface::prelude::*;
+use executor_types::StateComputeResult;
 use futures::channel::{mpsc, oneshot};
+use libra_crypto::HashValue;
 use libra_mempool::{
     CommittedTransaction, ConsensusRequest, ConsensusResponse, TransactionExclusion,
 };
@@ -69,7 +71,7 @@ impl TxnManager for MempoolProxy {
         compute_results: &StateComputeResult,
     ) -> Result<()> {
         let mut rejected_txns = vec![];
-        for (txn, status) in txns.iter().zip(compute_results.compute_status.iter()) {
+        for (txn, status) in txns.iter().zip(compute_results.compute_status().iter()) {
             if let TransactionStatus::Discard(_) = status {
                 rejected_txns.push(CommittedTransaction {
                     sender: txn.sender(),
@@ -97,5 +99,11 @@ impl TxnManager for MempoolProxy {
 
     fn _clone_box(&self) -> Box<dyn TxnManager<Payload = Self::Payload>> {
         Box::new(self.clone())
+    }
+
+    fn trace_transactions(&self, txns: &Self::Payload, block_id: HashValue) {
+        for txn in txns.iter() {
+            trace_edge!("pull_txns", {"txn", txn.sender(), txn.sequence_number()}, {"block", block_id});
+        }
     }
 }

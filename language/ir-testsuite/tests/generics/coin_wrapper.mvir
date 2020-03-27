@@ -1,21 +1,22 @@
 module M {
-    import 0x0.LibraCoin;
+    import 0x0.LBR;
+    import 0x0.Libra;
     resource Foo<T: resource> { x: T }
-    resource CoinWrapper { f: Self.Foo<LibraCoin.T> }
+    resource CoinWrapper { f: Self.Foo<Libra.T<LBR.T>> }
     resource InnerWrapper { f: Self.Foo<Self.Inner>}
-    resource Inner { b: bytearray }
+    resource Inner { b: vector<u8> }
 
-    public coin_wrapper(c: LibraCoin.T) {
-        let foo: Self.Foo<LibraCoin.T>;
+    public coin_wrapper(c: Libra.T<LBR.T>) {
+        let foo: Self.Foo<Libra.T<LBR.T>>;
         let coin_wrapper: Self.CoinWrapper;
 
-        foo = Foo<LibraCoin.T> {x: move(c)};
+        foo = Foo<Libra.T<LBR.T>> {x: move(c)};
         coin_wrapper = CoinWrapper {f: move(foo)};
         move_to_sender<CoinWrapper>(move(coin_wrapper));
         return;
     }
 
-    public inner_wrapper(b: bytearray) {
+    public inner_wrapper(b: vector<u8>) {
         let foo: Self.Foo<Self.Inner>;
         let inner_wrapper: Self.InnerWrapper;
         let inner: Self.Inner;
@@ -29,17 +30,17 @@ module M {
 
     public get_coin_value(): u64 acquires CoinWrapper {
         let coin_wrapper_ref: &Self.CoinWrapper;
-        let foo_ref: &Self.Foo<LibraCoin.T>;
-        let coin_ref: &LibraCoin.T;
+        let foo_ref: &Self.Foo<Libra.T<LBR.T>>;
+        let coin_ref: &Libra.T<LBR.T>;
 
         coin_wrapper_ref = borrow_global<CoinWrapper>(get_txn_sender());
         foo_ref = &move(coin_wrapper_ref).f;
         coin_ref = &move(foo_ref).x;
 
-        return LibraCoin.value(move(coin_ref));
+        return Libra.value<LBR.T>(move(coin_ref));
     }
 
-    public get_inner(): bytearray acquires InnerWrapper {
+    public get_inner(): vector<u8> acquires InnerWrapper {
         let inner_wrapper_ref: &Self.InnerWrapper;
         let foo_ref: &Self.Foo<Self.Inner>;
         let inner_ref: &Self.Inner;
@@ -52,14 +53,14 @@ module M {
     }
 
 
-    public destroy(): LibraCoin.T acquires CoinWrapper {
+    public destroy(): Libra.T<LBR.T> acquires CoinWrapper {
         let coin_wrapper: Self.CoinWrapper;
-        let f: Self.Foo<LibraCoin.T>;
-        let x: LibraCoin.T;
+        let f: Self.Foo<Libra.T<LBR.T>>;
+        let x: Libra.T<LBR.T>;
 
         coin_wrapper = move_from<CoinWrapper>(get_txn_sender());
         CoinWrapper {f} = move(coin_wrapper);
-        Foo<LibraCoin.T> {x} = move(f);
+        Foo<Libra.T<LBR.T>> {x} = move(f);
         return move(x);
     }
 }
@@ -67,14 +68,15 @@ module M {
 //! new-transaction
 import {{default}}.M;
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 main() {
-  let coin: LibraCoin.T;
-  let byte: bytearray;
+  let coin: Libra.T<LBR.T>;
+  let byte: vector<u8>;
 
   byte = h"bac1ac";
-  coin = LibraAccount.withdraw_from_sender(1000);
+  coin = LibraAccount.withdraw_from_sender<LBR.T>(1000);
 
   M.coin_wrapper(move(coin));
   M.inner_wrapper(move(byte));
@@ -84,11 +86,12 @@ main() {
 
 //! new-transaction
 import {{default}}.M;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 main() {
-  let coin: LibraCoin.T;
-  let byte: bytearray;
+  let coin: Libra.T<LBR.T>;
+  let byte: vector<u8>;
 
   byte = h"bac1ac";
   assert(M.get_coin_value() == 1000, 4);
@@ -98,12 +101,13 @@ main() {
 
 //! new-transaction
 import {{default}}.M;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 import 0x0.LibraAccount;
 
 main() {
-  let coin: LibraCoin.T;
+  let coin: Libra.T<LBR.T>;
   coin = M.destroy();
-  LibraAccount.deposit(get_txn_sender(), move(coin));
+  LibraAccount.deposit<LBR.T>(get_txn_sender(), move(coin));
   return;
 }

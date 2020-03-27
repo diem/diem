@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/constraints_not_satisfied_function_return_type.move:2:20 ───
+   ┌── tests/move_check/typing/constraints_not_satisfied_function_return_type.move:5:17 ───
    │
  5 │     fun foo():  CupC<R> {
    │                 ^^^^^^^ Constraint not satisfied.
@@ -9,7 +9,7 @@ error:
    │                      - The resource type '0x8675309::M::R' does not satisfy the constraint 'copyable'
    ·
  3 │     resource struct R {}
-   │     -------- The type's constraint information was declared here
+   │     -------- The type's constraint information was determined here
    ·
  2 │     struct CupC<T: copyable> {}
    │                    -------- 'copyable' constraint declared here

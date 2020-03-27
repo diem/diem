@@ -51,7 +51,7 @@
 //! ```text
 //! u ∈ Unsigned64        // Unsigned, 64-bit Integer
 //! addr ∈ AccountAddress // addresses of blockchain accounts
-//! bytes ∈ ByteArray     // byte array of arbitrary length
+//! bytes ∈ vector<u8>    // byte array of arbitrary length
 //! v ∈ Value ::=
 //!   | true
 //!   | false

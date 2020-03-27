@@ -3,9 +3,10 @@
 
 #![forbid(unsafe_code)]
 
-use libra_config::config::{NodeConfig, RoleType};
+use libra_config::config::{NodeConfig, RoleType, TestConfig};
 use libra_swarm::{client, swarm::LibraSwarm};
 use libra_temppath::TempPath;
+use libra_types::on_chain_config::VMPublishingOption;
 use std::path::Path;
 use structopt::StructOpt;
 
@@ -36,15 +37,21 @@ fn main() {
     let args = Args::from_args();
     let num_nodes = args.num_nodes;
     let num_full_nodes = args.num_full_nodes;
+    let mut dev_config = NodeConfig::default();
+    dev_config.test = Some({
+        let mut config = TestConfig::default();
+        config.publishing_option = Some(VMPublishingOption::Open);
+        config
+    });
 
-    libra_logger::init_for_e2e_testing();
+    libra_logger::Logger::new().init();
 
     let mut validator_swarm = LibraSwarm::configure_swarm(
         num_nodes,
         RoleType::Validator,
         args.config_dir.clone(),
-        None, /* template config */
-        None, /* upstream_config_dir */
+        Some(dev_config.clone()), /* template config */
+        None,                     /* upstream_config_dir */
     )
     .expect("Failed to configure validator swarm");
 
@@ -53,8 +60,8 @@ fn main() {
             LibraSwarm::configure_swarm(
                 num_full_nodes,
                 RoleType::FullNode,
-                None, /* config dir */
-                None, /* template config */
+                None,             /* config dir */
+                Some(dev_config), /* template config */
                 Some(String::from(
                     validator_swarm
                         .dir
@@ -82,8 +89,8 @@ fn main() {
     let validator_config = NodeConfig::load(&validator_swarm.config.config_files[0]).unwrap();
     println!("To run the Libra CLI client in a separate process and connect to the validator nodes you just spawned, use this command:");
     println!(
-        "\tcargo run --bin cli -- -a localhost -p {} -m {:?}",
-        validator_config.admission_control.address.port(),
+        "\tcargo run --bin cli -- -u {} -m {:?}",
+        format!("http://localhost:{}", validator_config.rpc.address.port()),
         faucet_key_file_path,
     );
     let node_address_list = validator_swarm
@@ -91,26 +98,22 @@ fn main() {
         .config_files
         .iter()
         .map(|config| {
-            let port = NodeConfig::load(config)
-                .unwrap()
-                .admission_control
-                .address
-                .port();
+            let port = NodeConfig::load(config).unwrap().rpc.address.port();
             format!("localhost:{}", port)
         })
         .collect::<Vec<String>>()
         .join(",");
     println!("To run transaction generator run:");
     println!(
-        "\tcargo run -p cluster-test -- --mint-file {:?} --swarm --peers {:?}  --emit-tx",
+        "\tcargo run -p cluster-test -- --mint-file {:?} --swarm --peers {:?} --emit-tx --workers-per-ac 1",
         faucet_key_file_path, node_address_list,
     );
     if let Some(ref swarm) = full_node_swarm {
         let full_node_config = NodeConfig::load(&swarm.config.config_files[0]).unwrap();
         println!("To connect to the full nodes you just spawned, use this command:");
         println!(
-            "\tcargo run --bin cli -- -a localhost -p {} -m {:?}",
-            full_node_config.admission_control.address.port(),
+            "\tcargo run --bin cli -- -u {} -m {:?}",
+            format!("http://localhost:{}", full_node_config.rpc.address.port()),
             faucet_key_file_path,
         );
     }
@@ -118,8 +121,9 @@ fn main() {
     let tmp_mnemonic_file = TempPath::new();
     tmp_mnemonic_file.create_as_file().unwrap();
     if args.start_client {
+        let port = validator_swarm.get_client_port(0);
         let client = client::InteractiveClient::new_with_inherit_io(
-            validator_swarm.get_ac_port(0),
+            port,
             Path::new(&faucet_key_file_path),
             &tmp_mnemonic_file.path(),
         );

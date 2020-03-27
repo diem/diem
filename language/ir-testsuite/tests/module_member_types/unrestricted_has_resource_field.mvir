@@ -1,10 +1,11 @@
 // check: INVALID_RESOURCE_FIELD
 
 module Test {
-    import 0x0.LibraCoin;
+import 0x0.LBR;
+    import 0x0.Libra;
 
     struct T{
-        fc: LibraCoin.T,
+        fc: Libra.T<LBR.T>,
         fint: u64,
     }
 }

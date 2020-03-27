@@ -1,12 +1,12 @@
 error: 
 
-   ┌── tests/move_check/typing/declare_pop_resource.move:2:5 ───
+   ┌── tests/move_check/typing/declare_pop_resource.move:5:13 ───
    │
  5 │         let _: R;
    │             ^ Cannot ignore resource values. The value must be used
    ·
  5 │         let _: R;
-   │                - The type: 0x8675309::M::R
+   │                - The type: '0x8675309::M::R'
    ·
  2 │     resource struct R {f: u64}
    │     -------- Is found to be a non-copyable type here
@@ -14,13 +14,13 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/declare_pop_resource.move:2:5 ───
+   ┌── tests/move_check/typing/declare_pop_resource.move:6:13 ───
    │
  6 │         let _r: R;
    │             ^^ Cannot ignore resource values. The value must be used
    ·
  6 │         let _r: R;
-   │                 - The type: 0x8675309::M::R
+   │                 - The type: '0x8675309::M::R'
    ·
  2 │     resource struct R {f: u64}
    │     -------- Is found to be a non-copyable type here
@@ -28,13 +28,13 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/declare_pop_resource.move:2:5 ───
+   ┌── tests/move_check/typing/declare_pop_resource.move:7:14 ───
    │
  7 │         let (_, _):(R, R);
    │              ^ Cannot ignore resource values. The value must be used
    ·
  7 │         let (_, _):(R, R);
-   │                     - The type: 0x8675309::M::R
+   │                     - The type: '0x8675309::M::R'
    ·
  2 │     resource struct R {f: u64}
    │     -------- Is found to be a non-copyable type here
@@ -42,13 +42,13 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/declare_pop_resource.move:2:5 ───
+   ┌── tests/move_check/typing/declare_pop_resource.move:7:17 ───
    │
  7 │         let (_, _):(R, R);
    │                 ^ Cannot ignore resource values. The value must be used
    ·
  7 │         let (_, _):(R, R);
-   │                        - The type: 0x8675309::M::R
+   │                        - The type: '0x8675309::M::R'
    ·
  2 │     resource struct R {f: u64}
    │     -------- Is found to be a non-copyable type here

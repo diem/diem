@@ -3,7 +3,6 @@
 
 use crate::message_queues::{PerKeyQueue, QueueStyle};
 use libra_types::account_address::AccountAddress;
-use libra_types::account_address::ADDRESS_LENGTH;
 use std::num::NonZeroUsize;
 
 /// This represents a proposal message from a validator
@@ -21,7 +20,7 @@ struct VoteMsg {
 #[test]
 fn test_fifo() {
     let mut q = PerKeyQueue::new(QueueStyle::FIFO, NonZeroUsize::new(3).unwrap(), None);
-    let validator = AccountAddress::new([0u8; ADDRESS_LENGTH]);
+    let validator = AccountAddress::new([0u8; AccountAddress::LENGTH]);
 
     // Test order
     q.push(
@@ -80,7 +79,7 @@ fn test_fifo() {
 #[test]
 fn test_lifo() {
     let mut q = PerKeyQueue::new(QueueStyle::LIFO, NonZeroUsize::new(3).unwrap(), None);
-    let validator = AccountAddress::new([0u8; ADDRESS_LENGTH]);
+    let validator = AccountAddress::new([0u8; AccountAddress::LENGTH]);
 
     // Test order
     q.push(
@@ -139,9 +138,9 @@ fn test_lifo() {
 #[test]
 fn test_fifo_round_robin() {
     let mut q = PerKeyQueue::new(QueueStyle::FIFO, NonZeroUsize::new(3).unwrap(), None);
-    let validator1 = AccountAddress::new([0u8; ADDRESS_LENGTH]);
-    let validator2 = AccountAddress::new([1u8; ADDRESS_LENGTH]);
-    let validator3 = AccountAddress::new([2u8; ADDRESS_LENGTH]);
+    let validator1 = AccountAddress::new([0u8; AccountAddress::LENGTH]);
+    let validator2 = AccountAddress::new([1u8; AccountAddress::LENGTH]);
+    let validator3 = AccountAddress::new([2u8; AccountAddress::LENGTH]);
 
     q.push(
         validator1,
@@ -210,9 +209,9 @@ fn test_fifo_round_robin() {
 #[test]
 fn test_lifo_round_robin() {
     let mut q = PerKeyQueue::new(QueueStyle::LIFO, NonZeroUsize::new(3).unwrap(), None);
-    let validator1 = AccountAddress::new([0u8; ADDRESS_LENGTH]);
-    let validator2 = AccountAddress::new([1u8; ADDRESS_LENGTH]);
-    let validator3 = AccountAddress::new([2u8; ADDRESS_LENGTH]);
+    let validator1 = AccountAddress::new([0u8; AccountAddress::LENGTH]);
+    let validator2 = AccountAddress::new([1u8; AccountAddress::LENGTH]);
+    let validator3 = AccountAddress::new([2u8; AccountAddress::LENGTH]);
 
     q.push(
         validator1,
@@ -281,7 +280,7 @@ fn test_lifo_round_robin() {
 #[test]
 fn test_message_queue_clear() {
     let mut q = PerKeyQueue::new(QueueStyle::LIFO, NonZeroUsize::new(3).unwrap(), None);
-    let validator = AccountAddress::new([0u8; ADDRESS_LENGTH]);
+    let validator = AccountAddress::new([0u8; AccountAddress::LENGTH]);
 
     q.push(
         validator,

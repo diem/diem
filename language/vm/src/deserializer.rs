@@ -4,11 +4,10 @@
 use crate::{errors::*, file_format::*, file_format_common::*};
 use byteorder::{LittleEndian, ReadBytesExt};
 use libra_types::{
-    account_address::ADDRESS_LENGTH,
-    byte_array::ByteArray,
-    identifier::Identifier,
+    account_address::AccountAddress,
     vm_error::{StatusCode, VMStatus},
 };
+use move_core_types::identifier::Identifier;
 use std::{
     collections::HashSet,
     convert::TryInto,
@@ -494,11 +493,11 @@ fn load_address_pool(
     addresses: &mut AddressPool,
 ) -> BinaryLoaderResult<()> {
     let mut start = table.offset as usize;
-    if table.count as usize % ADDRESS_LENGTH != 0 {
+    if table.count as usize % AccountAddress::LENGTH != 0 {
         return Err(VMStatus::new(StatusCode::MALFORMED));
     }
-    for _i in 0..table.count as usize / ADDRESS_LENGTH {
-        let end_addr = start + ADDRESS_LENGTH;
+    for _i in 0..table.count as usize / AccountAddress::LENGTH {
+        let end_addr = start + AccountAddress::LENGTH;
         let address = (&binary[start..end_addr]).try_into();
         if address.is_err() {
             return Err(VMStatus::new(StatusCode::MALFORMED));
@@ -558,7 +557,7 @@ fn load_byte_array_pool(
                 return Err(VMStatus::new(StatusCode::MALFORMED));
             }
 
-            byte_arrays.push(ByteArray::new(byte_array));
+            byte_arrays.push(byte_array);
         }
     }
     Ok(())
@@ -668,8 +667,11 @@ fn load_signature_token(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<Signat
             SerializedType::U8 => Ok(SignatureToken::U8),
             SerializedType::U64 => Ok(SignatureToken::U64),
             SerializedType::U128 => Ok(SignatureToken::U128),
-            SerializedType::BYTEARRAY => Ok(SignatureToken::ByteArray),
             SerializedType::ADDRESS => Ok(SignatureToken::Address),
+            SerializedType::VECTOR => {
+                let ty = load_signature_token(cursor)?;
+                Ok(SignatureToken::Vector(Box::new(ty)))
+            }
             SerializedType::REFERENCE => {
                 let ref_token = load_signature_token(cursor)?;
                 Ok(SignatureToken::Reference(Box::new(ref_token)))
@@ -1111,8 +1113,8 @@ impl SerializedType {
             0x6 => Ok(SerializedType::REFERENCE),
             0x7 => Ok(SerializedType::MUTABLE_REFERENCE),
             0x8 => Ok(SerializedType::STRUCT),
-            0x9 => Ok(SerializedType::BYTEARRAY),
-            0xA => Ok(SerializedType::TYPE_PARAMETER),
+            0x9 => Ok(SerializedType::TYPE_PARAMETER),
+            0xA => Ok(SerializedType::VECTOR),
             _ => Err(VMStatus::new(StatusCode::UNKNOWN_SERIALIZED_TYPE)),
         }
     }

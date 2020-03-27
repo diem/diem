@@ -7,8 +7,7 @@ pub mod proto;
 
 use anyhow::{format_err, Error, Result};
 use libra_logger::prelude::*;
-use libra_mempool_shared_proto::MempoolAddTransactionStatus;
-use libra_types::vm_error::VMStatus;
+use libra_types::{mempool_status::MempoolStatus as LibraMempoolStatus, vm_error::VMStatus};
 use std::convert::TryFrom;
 
 /// AC response status of submit_transaction to clients.
@@ -69,7 +68,7 @@ pub struct SubmitTransactionResponse {
     /// AC status returned to client if any - it can be one of: accepted, blacklisted, or rejected.
     pub ac_status: Option<AdmissionControlStatus>,
     /// Mempool error status if any.
-    pub mempool_error: Option<MempoolAddTransactionStatus>,
+    pub mempool_error: Option<LibraMempoolStatus>,
     /// VM error status if any.
     pub vm_error: Option<VMStatus>,
     /// The id of validator associated with this AC.
@@ -89,11 +88,7 @@ impl TryFrom<crate::proto::admission_control::SubmitTransactionResponse>
         let (ac_status, mempool_error, vm_error) = match status {
             VmStatus(status) => (None, None, Some(VMStatus::try_from(status)?)),
             AcStatus(status) => (Some(AdmissionControlStatus::try_from(status)?), None, None),
-            MempoolStatus(status) => (
-                None,
-                Some(MempoolAddTransactionStatus::try_from(status)?),
-                None,
-            ),
+            MempoolStatus(status) => (None, Some(LibraMempoolStatus::try_from(status)?), None),
         };
         Ok(SubmitTransactionResponse {
             ac_status,

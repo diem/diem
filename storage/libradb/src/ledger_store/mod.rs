@@ -4,12 +4,12 @@
 //! This file defines ledger store APIs that are related to the main ledger accumulator, from the
 //! root(LedgerInfo) to leaf(TransactionInfo).
 
-use crate::schema::epoch_by_version::EpochByVersionSchema;
 use crate::{
     change_set::ChangeSet,
     errors::LibraDbError,
     schema::{
-        ledger_info::LedgerInfoSchema, transaction_accumulator::TransactionAccumulatorSchema,
+        epoch_by_version::EpochByVersionSchema, ledger_info::LedgerInfoSchema,
+        transaction_accumulator::TransactionAccumulatorSchema,
         transaction_info::TransactionInfoSchema,
     },
 };
@@ -22,12 +22,13 @@ use libra_crypto::{
     HashValue,
 };
 use libra_types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorSet},
+    ledger_info::LedgerInfoWithSignatures,
     proof::{
         position::Position, AccumulatorConsistencyProof, TransactionAccumulatorProof,
         TransactionAccumulatorRangeProof,
     },
     transaction::{TransactionInfo, Version},
+    validator_set::ValidatorSet,
 };
 use schemadb::{ReadOptions, SchemaIterator, DB};
 use std::{ops::Deref, sync::Arc};
@@ -48,7 +49,7 @@ impl LedgerStore {
             let mut iter = db
                 .iter::<LedgerInfoSchema>(ReadOptions::default())
                 .expect("Constructing iterator should work.");
-            iter.seek_to_last();
+            iter.seek_to_last().expect("Unable to seek to last entry!");
             iter.next()
                 .transpose()
                 .expect("Reading latest ledger info from DB should work.")
@@ -201,7 +202,7 @@ impl LedgerStore {
         let mut iter = self
             .db
             .iter::<TransactionInfoSchema>(ReadOptions::default())?;
-        iter.seek_to_last();
+        iter.seek_to_last()?;
         iter.next().transpose()
     }
 

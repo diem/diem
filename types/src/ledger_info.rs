@@ -1,24 +1,24 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::block_info::{BlockInfo, Round};
 use crate::{
     account_address::AccountAddress,
-    crypto_proxies::ValidatorSet,
+    block_info::{BlockInfo, Round},
     transaction::Version,
+    validator_set::ValidatorSet,
     validator_verifier::{ValidatorVerifier, VerifyError},
 };
 use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::{
-    hash::{CryptoHash, CryptoHasher},
-    HashValue, *,
+    ed25519::Ed25519Signature,
+    hash::{CryptoHash, CryptoHasher, HashValue},
 };
 use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 use std::{
+    collections::BTreeMap,
     convert::{TryFrom, TryInto},
     fmt::{Display, Formatter},
 };
@@ -65,6 +65,20 @@ impl LedgerInfo {
         }
     }
 
+    /// Create a new LedgerInfo at genesis with the given genesis state and
+    /// initial validator set.
+    pub fn genesis(genesis_state_root_hash: HashValue, validator_set: ValidatorSet) -> Self {
+        Self::new(
+            BlockInfo::genesis(genesis_state_root_hash, validator_set),
+            HashValue::zero(),
+        )
+    }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn mock_genesis() -> Self {
+        Self::new(BlockInfo::mock_genesis(), HashValue::zero())
+    }
+
     /// The `BlockInfo` of a committed block.
     pub fn commit_info(&self) -> &BlockInfo {
         &self.commit_info
@@ -108,12 +122,6 @@ impl LedgerInfo {
     pub fn set_consensus_data_hash(&mut self, consensus_data_hash: HashValue) {
         self.consensus_data_hash = consensus_data_hash;
     }
-
-    /// To bootstrap the system until we execute and commit the genesis txn before start.
-    #[cfg(any(test, feature = "fuzzing"))]
-    pub fn genesis() -> Self {
-        Self::new(BlockInfo::genesis(), HashValue::zero())
-    }
 }
 
 impl TryFrom<crate::proto::types::LedgerInfo> for LedgerInfo {
@@ -129,11 +137,10 @@ impl TryFrom<crate::proto::types::LedgerInfo> for LedgerInfo {
         let round = proto.round;
         let timestamp_usecs = proto.timestamp_usecs;
 
-        let next_validator_set = if let Some(validator_set_proto) = proto.next_validator_set {
-            Some(ValidatorSet::try_from(validator_set_proto)?)
-        } else {
-            None
-        };
+        let next_validator_set = proto
+            .next_validator_set
+            .map(ValidatorSet::try_from)
+            .transpose()?;
         Ok(LedgerInfo::new(
             BlockInfo::new(
                 epoch,
@@ -180,32 +187,49 @@ impl CryptoHash for LedgerInfo {
 /// again when the client performs a query, those are only there for the client
 /// to be able to verify the state
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct LedgerInfoWithSignatures<Sig> {
+pub struct LedgerInfoWithSignatures {
     ledger_info: LedgerInfo,
     /// The validator is identified by its account address: in order to verify a signature
     /// one needs to retrieve the public key of the validator for the given epoch.
-    signatures: BTreeMap<AccountAddress, Sig>,
+    signatures: BTreeMap<AccountAddress, Ed25519Signature>,
 }
 
-impl<Sig> Display for LedgerInfoWithSignatures<Sig> {
+impl Display for LedgerInfoWithSignatures {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{}", self.ledger_info)
     }
 }
 
-impl<Sig: Signature> LedgerInfoWithSignatures<Sig> {
-    pub fn new(ledger_info: LedgerInfo, signatures: BTreeMap<AccountAddress, Sig>) -> Self {
+impl LedgerInfoWithSignatures {
+    pub fn new(
+        ledger_info: LedgerInfo,
+        signatures: BTreeMap<AccountAddress, Ed25519Signature>,
+    ) -> Self {
         LedgerInfoWithSignatures {
             ledger_info,
             signatures,
         }
     }
 
+    /// Create a new `LedgerInfoWithSignatures` at genesis with the given genesis
+    /// state and initial validator set.
+    ///
+    /// Note that the genesis `LedgerInfoWithSignatures` is unsigned. Validators
+    /// and FullNodes are configured with the same genesis transaction and generate
+    /// an identical genesis `LedgerInfoWithSignatures` independently. In contrast,
+    /// Clients will likely use a waypoint generated from the genesis `LedgerInfo`.
+    pub fn genesis(genesis_state_root_hash: HashValue, validator_set: ValidatorSet) -> Self {
+        Self::new(
+            LedgerInfo::genesis(genesis_state_root_hash, validator_set),
+            BTreeMap::new(),
+        )
+    }
+
     pub fn ledger_info(&self) -> &LedgerInfo {
         &self.ledger_info
     }
 
-    pub fn add_signature(&mut self, validator: AccountAddress, signature: Sig) {
+    pub fn add_signature(&mut self, validator: AccountAddress, signature: Ed25519Signature) {
         self.signatures.entry(validator).or_insert(signature);
     }
 
@@ -213,22 +237,20 @@ impl<Sig: Signature> LedgerInfoWithSignatures<Sig> {
         self.signatures.remove(&validator);
     }
 
-    pub fn signatures(&self) -> &BTreeMap<AccountAddress, Sig> {
+    pub fn signatures(&self) -> &BTreeMap<AccountAddress, Ed25519Signature> {
         &self.signatures
     }
 
-    pub fn verify(
+    pub fn verify_signatures(
         &self,
-        validator: &ValidatorVerifier<Sig::VerifyingKeyMaterial>,
+        validator: &ValidatorVerifier,
     ) -> ::std::result::Result<(), VerifyError> {
         let ledger_hash = self.ledger_info().hash();
         validator.batch_verify_aggregated_signature(ledger_hash, self.signatures())
     }
 }
 
-impl<Sig: Signature> TryFrom<crate::proto::types::LedgerInfoWithSignatures>
-    for LedgerInfoWithSignatures<Sig>
-{
+impl TryFrom<crate::proto::types::LedgerInfoWithSignatures> for LedgerInfoWithSignatures {
     type Error = Error;
 
     fn try_from(proto: crate::proto::types::LedgerInfoWithSignatures) -> Result<Self> {
@@ -244,7 +266,7 @@ impl<Sig: Signature> TryFrom<crate::proto::types::LedgerInfoWithSignatures>
             .map(|proto| {
                 let validator_id = AccountAddress::try_from(proto.validator_id)?;
                 let signature_bytes: &[u8] = proto.signature.as_ref();
-                let signature = Sig::try_from(signature_bytes)?;
+                let signature = Ed25519Signature::try_from(signature_bytes)?;
                 Ok((validator_id, signature))
             })
             .collect::<Result<BTreeMap<_, _>>>()?;
@@ -260,10 +282,8 @@ impl<Sig: Signature> TryFrom<crate::proto::types::LedgerInfoWithSignatures>
     }
 }
 
-impl<Sig: Signature> From<LedgerInfoWithSignatures<Sig>>
-    for crate::proto::types::LedgerInfoWithSignatures
-{
-    fn from(ledger_info_with_sigs: LedgerInfoWithSignatures<Sig>) -> Self {
+impl From<LedgerInfoWithSignatures> for crate::proto::types::LedgerInfoWithSignatures {
+    fn from(ledger_info_with_sigs: LedgerInfoWithSignatures) -> Self {
         let ledger_info = Some(ledger_info_with_sigs.ledger_info.into());
         let signatures = ledger_info_with_sigs
             .signatures
@@ -285,11 +305,8 @@ impl<Sig: Signature> From<LedgerInfoWithSignatures<Sig>>
 
 #[cfg(test)]
 mod tests {
-    use crate::block_info::BlockInfo;
-    use crate::ledger_info::{LedgerInfo, LedgerInfoWithSignatures};
+    use super::*;
     use crate::validator_signer::ValidatorSigner;
-    use libra_crypto::{ed25519::*, HashValue};
-    use std::collections::BTreeMap;
 
     #[test]
     fn test_signatures_hash() {
@@ -298,15 +315,12 @@ mod tests {
         let random_hash = HashValue::random();
         const NUM_SIGNERS: u8 = 7;
         // Generate NUM_SIGNERS random signers.
-        let validator_signers: Vec<ValidatorSigner<Ed25519PrivateKey>> = (0..NUM_SIGNERS)
+        let validator_signers: Vec<ValidatorSigner> = (0..NUM_SIGNERS)
             .map(|i| ValidatorSigner::random([i; 32]))
             .collect();
         let mut author_to_signature_map = BTreeMap::new();
         for validator in validator_signers.iter() {
-            author_to_signature_map.insert(
-                validator.author(),
-                validator.sign_message(random_hash).unwrap(),
-            );
+            author_to_signature_map.insert(validator.author(), validator.sign_message(random_hash));
         }
 
         let ledger_info_with_signatures =
@@ -315,10 +329,7 @@ mod tests {
         // Add the signatures in reverse order and ensure the serialization matches
         let mut author_to_signature_map = BTreeMap::new();
         for validator in validator_signers.iter().rev() {
-            author_to_signature_map.insert(
-                validator.author(),
-                validator.sign_message(random_hash).unwrap(),
-            );
+            author_to_signature_map.insert(validator.author(), validator.sign_message(random_hash));
         }
 
         let ledger_info_with_signatures_reversed =

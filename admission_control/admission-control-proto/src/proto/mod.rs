@@ -4,7 +4,6 @@
 #![allow(bare_trait_objects)]
 
 use ::libra_types::proto::*;
-use libra_mempool_shared_proto::proto::mempool_status;
 use tokio::runtime::{Builder, Runtime};
 
 pub mod admission_control {

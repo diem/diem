@@ -4,11 +4,17 @@
 use crate::{
     common::{Author, Round},
     quorum_cert::QuorumCert,
+    vote_data::VoteData,
 };
 use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
 use libra_crypto_derive::CryptoHasher;
+use libra_types::{
+    block_info::BlockInfo,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+};
 use mirai_annotations::*;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub enum BlockType<T> {
@@ -109,16 +115,13 @@ impl<T> BlockData<T> {
     }
 }
 
-impl<T> BlockData<T>
-where
-    T: PartialEq,
-{
+impl<T> BlockData<T> {
     pub fn is_genesis_block(&self) -> bool {
-        self.block_type == BlockType::Genesis
+        matches!(self.block_type, BlockType::Genesis)
     }
 
     pub fn is_nil_block(&self) -> bool {
-        self.block_type == BlockType::NilBlock
+        matches!(self.block_type, BlockType::NilBlock)
     }
 }
 
@@ -126,6 +129,31 @@ impl<T> BlockData<T>
 where
     T: Default + Serialize,
 {
+    pub fn new_genesis_from_ledger_info(ledger_info: &LedgerInfo) -> Self {
+        assert!(ledger_info.next_validator_set().is_some());
+        let ancestor = BlockInfo::new(
+            ledger_info.epoch(),
+            0,                 /* round */
+            HashValue::zero(), /* parent block id */
+            ledger_info.transaction_accumulator_hash(),
+            ledger_info.version(),
+            ledger_info.timestamp_usecs(),
+            None,
+        );
+
+        // Genesis carries a placeholder quorum certificate to its parent id with LedgerInfo
+        // carrying information about version from the last LedgerInfo of previous epoch.
+        let genesis_quorum_cert = QuorumCert::new(
+            VoteData::new(ancestor.clone(), ancestor.clone()),
+            LedgerInfoWithSignatures::new(
+                LedgerInfo::new(ancestor, HashValue::zero()),
+                BTreeMap::new(),
+            ),
+        );
+
+        BlockData::new_genesis(ledger_info.timestamp_usecs(), genesis_quorum_cert)
+    }
+
     pub fn new_genesis(timestamp_usecs: u64, quorum_cert: QuorumCert) -> Self {
         assume!(quorum_cert.certified_block().epoch() < u64::max_value()); // unlikely to be false in this universe
         Self {

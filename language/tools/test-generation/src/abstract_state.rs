@@ -6,10 +6,12 @@ use std::{
     collections::{HashMap, HashSet},
     fmt,
 };
-use vm::access::ModuleAccess;
-use vm::file_format::{
-    empty_module, CompiledModule, CompiledModuleMut, FunctionHandleIndex, Kind, LocalsSignature,
-    LocalsSignatureIndex, SignatureToken, StructDefinitionIndex, TableIndex,
+use vm::{
+    access::ModuleAccess,
+    file_format::{
+        empty_module, CompiledModule, CompiledModuleMut, FunctionHandleIndex, Kind,
+        LocalsSignature, LocalsSignatureIndex, SignatureToken, StructDefinitionIndex, TableIndex,
+    },
 };
 
 /// The BorrowState denotes whether a local is `Available` or
@@ -65,11 +67,7 @@ impl AbstractValue {
     /// Create a new reference `AbstractValue` given its type and kind
     pub fn new_reference(token: SignatureToken, kind: Kind) -> AbstractValue {
         checked_precondition!(
-            match token {
-                SignatureToken::Reference(_) => true,
-                SignatureToken::MutableReference(_) => true,
-                _ => false,
-            },
+            matches!(token, SignatureToken::Reference(_) | SignatureToken::MutableReference(_)),
             "AbstractValue::new_reference must be applied with a reference type"
         );
         AbstractValue { token, kind }
@@ -78,10 +76,7 @@ impl AbstractValue {
     /// Create a new struct `AbstractValue` given its type and kind
     pub fn new_struct(token: SignatureToken, kind: Kind) -> AbstractValue {
         checked_precondition!(
-            match token {
-                SignatureToken::Struct(_, _) => true,
-                _ => false,
-            },
+            matches!(token, SignatureToken::Struct(_, _)),
             "AbstractValue::new_struct must be applied with a struct type"
         );
         AbstractValue { token, kind }
@@ -558,6 +553,12 @@ impl fmt::Display for AbstractState {
             "Stack: {:?} | Locals: {:?} | Instantiation: {:?}",
             self.stack, self.locals, self.instantiation
         )
+    }
+}
+
+impl Default for AbstractState {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

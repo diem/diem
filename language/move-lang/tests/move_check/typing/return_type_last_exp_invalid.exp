@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/return_type_last_exp_invalid.move:4:15 ───
+   ┌── tests/move_check/typing/return_type_last_exp_invalid.move:5:9 ───
    │
  5 │         ()
    │         ^^ Invalid return expression
@@ -14,13 +14,13 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/return_type_last_exp_invalid.move:8:15 ───
+   ┌── tests/move_check/typing/return_type_last_exp_invalid.move:9:9 ───
    │
  9 │         0
    │         ^ Invalid return expression
    ·
  9 │         0
-   │         - The type: 'u64'
+   │         - The type: integer
    ·
  8 │     fun t1(): () {
    │               -- Is not compatible with: '()'
@@ -28,41 +28,41 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/return_type_last_exp_invalid.move:12:15 ───
+    ┌── tests/move_check/typing/return_type_last_exp_invalid.move:13:9 ───
     │
  13 │         (0, false, R{})
     │         ^^^^^^^^^^^^^^^ Invalid return expression
     ·
  13 │         (0, false, R{})
-    │         --------------- The type: '(u64,bool,0x8675309::M::R)'
+    │         --------------- The expression list type of length 3: '({integer}, bool, 0x8675309::M::R)'
     ·
  12 │     fun t2(): (u64, bool) {
-    │               ----------- Is not compatible with: '(u64,bool)'
+    │               ----------- Is not compatible with the expression list type of length 2: '(u64, bool)'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/return_type_last_exp_invalid.move:16:15 ───
+    ┌── tests/move_check/typing/return_type_last_exp_invalid.move:17:9 ───
     │
  17 │         (0, false, R{})
     │         ^^^^^^^^^^^^^^^ Invalid return expression
     ·
  17 │         (0, false, R{})
-    │         --------------- The type: '(u64,bool,0x8675309::M::R)'
+    │         --------------- The expression list type of length 3: '({integer}, bool, 0x8675309::M::R)'
     ·
  16 │     fun t3(): (u64, bool, R, bool) {
-    │               -------------------- Is not compatible with: '(u64,bool,0x8675309::M::R,bool)'
+    │               -------------------- Is not compatible with the expression list type of length 4: '(u64, bool, 0x8675309::M::R, bool)'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/return_type_last_exp_invalid.move:20:16 ───
+    ┌── tests/move_check/typing/return_type_last_exp_invalid.move:21:9 ───
     │
  21 │         (0, false, R{})
     │         ^^^^^^^^^^^^^^^ Invalid return expression
     ·
  21 │         (0, false, R{})
-    │          - The type: 'u64'
+    │          - The type: integer
     ·
  20 │     fun t4(): (bool, u64, R) {
     │                ---- Is not compatible with: 'bool'

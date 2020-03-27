@@ -50,7 +50,6 @@ use crate::{
     ProtocolId,
 };
 use bytes::Bytes;
-use channel;
 use futures::{
     io::{AsyncRead, AsyncWrite},
     sink::SinkExt,
@@ -215,7 +214,7 @@ where
                         .with_label_values(&["received"])
                         .observe(data.len() as f64);
                     let notif = DirectSendNotification::RecvMessage(Message {
-                        protocol: protocol.clone(),
+                        protocol,
                         mdata: data.freeze(),
                     });
                     if let Err(err) = ds_notifs_tx.send(notif).await {
@@ -247,16 +246,13 @@ where
         protocol: ProtocolId,
     ) -> Result<channel::Sender<Bytes>, NetworkError> {
         let peer_id_str = peer_handle.peer_id().short_str();
-        let raw_substream = peer_handle
-            .open_substream(protocol.clone())
-            .await
-            .map_err(|e| {
-                warn!(
-                    "Failed to open substream with peer {} for protocol {:?}",
-                    peer_id_str, protocol
-                );
-                e
-            })?;
+        let raw_substream = peer_handle.open_substream(protocol).await.map_err(|e| {
+            warn!(
+                "Failed to open substream with peer {} for protocol {:?}",
+                peer_id_str, protocol
+            );
+            e
+        })?;
         // Create a channel for the ProtocolId.
         // TODO: Add protocol dimension to metric.
         let (msg_tx, msg_rx) = channel::new::<Bytes>(
@@ -313,14 +309,14 @@ where
     // If the channel is full, simply drop the message on the floor;
     // If the channel is disconnected, remove the message queue from the collection.
     async fn try_send_msg(&mut self, msg: Message) -> Result<(), NetworkError> {
-        let protocol = msg.protocol.clone();
-        let substream_queue_tx = match self.message_queues.entry(protocol.clone()) {
+        let protocol = msg.protocol;
+        let substream_queue_tx = match self.message_queues.entry(protocol) {
             Entry::Occupied(entry) => entry.into_mut(),
             Entry::Vacant(entry) => {
                 let msg_tx = Self::start_message_queue_handler(
                     self.executor.clone(),
                     self.peer_handle.clone(),
-                    protocol.clone(),
+                    protocol,
                 )
                 .await?;
                 entry.insert(msg_tx)

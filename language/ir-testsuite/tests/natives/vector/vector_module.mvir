@@ -1,58 +1,60 @@
 module M {
-    import 0x0.LibraCoin;
+import 0x0.LBR;
+    import 0x0.Libra;
     import 0x0.Vector;
-    resource Coins { f: Vector.T<LibraCoin.T> }
+    resource Coins { f: vector<Libra.T<LBR.T>> }
 
     public new() {
-        let coin_vec: Vector.T<LibraCoin.T>;
+        let coin_vec: vector<Libra.T<LBR.T>>;
         let coins: Self.Coins;
-        coin_vec = Vector.empty<LibraCoin.T>();
+        coin_vec = Vector.empty<Libra.T<LBR.T>>();
         coins = Coins { f: move(coin_vec)};
 
         move_to_sender<Coins>(move(coins));
         return;
     }
 
-    public put_coin(coin: LibraCoin.T) acquires Coins {
+    public put_coin(coin: Libra.T<LBR.T>) acquires Coins {
         let coins_ref: &mut Self.Coins;
-        let v_ref: &mut Vector.T<LibraCoin.T>;
+        let v_ref: &mut vector<Libra.T<LBR.T>>;
 
         coins_ref = borrow_global_mut<Coins>(get_txn_sender());
         v_ref = &mut move(coins_ref).f;
-        Vector.push_back<LibraCoin.T>(move(v_ref), move(coin));
+        Vector.push_back<Libra.T<LBR.T>>(move(v_ref), move(coin));
         return;
     }
 
     public get_value(i: u64): u64 acquires Coins {
         let coins_ref: &Self.Coins;
-        let v_ref: &Vector.T<LibraCoin.T>;
-        let coin_ref: &LibraCoin.T;
+        let v_ref: &vector<Libra.T<LBR.T>>;
+        let coin_ref: &Libra.T<LBR.T>;
 
         coins_ref = borrow_global<Coins>(get_txn_sender());
         v_ref = &move(coins_ref).f;
-        coin_ref = Vector.borrow<LibraCoin.T>(move(v_ref), move(i));
+        coin_ref = Vector.borrow<Libra.T<LBR.T>>(move(v_ref), move(i));
 
-        return LibraCoin.value(move(coin_ref));
+        return Libra.value<LBR.T>(move(coin_ref));
     }
 
-    public pop(): LibraCoin.T acquires Coins {
+    public pop(): Libra.T<LBR.T> acquires Coins {
         let coins_ref: &mut Self.Coins;
-        let v_ref: &mut Vector.T<LibraCoin.T>;
+        let v_ref: &mut vector<Libra.T<LBR.T>>;
 
         coins_ref = borrow_global_mut<Coins>(get_txn_sender());
         v_ref = &mut move(coins_ref).f;
-        return Vector.pop_back<LibraCoin.T>(move(v_ref));
+        return Vector.pop_back<Libra.T<LBR.T>>(move(v_ref));
     }
 }
 
 //! new-transaction
 import {{default}}.M;
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 main() {
-    let coin: LibraCoin.T;
-    coin = LibraAccount.withdraw_from_sender(1000);
+    let coin: Libra.T<LBR.T>;
+    coin = LibraAccount.withdraw_from_sender<LBR.T>(1000);
     M.new();
     M.put_coin(move(coin));
 
@@ -61,14 +63,15 @@ main() {
 
 //! new-transaction
 import {{default}}.M;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 import 0x0.LibraAccount;
 
 main() {
-    let coin: LibraCoin.T;
+    let coin: Libra.T<LBR.T>;
 
     assert(M.get_value(0) == 1000, 4);
-    coin = LibraAccount.withdraw_from_sender(300);
+    coin = LibraAccount.withdraw_from_sender<LBR.T>(300);
     M.put_coin(move(coin));
 
     return;
@@ -77,15 +80,16 @@ main() {
 
 //! new-transaction
 import {{default}}.M;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 import 0x0.LibraAccount;
 
 main() {
-    let coin: LibraCoin.T;
+    let coin: Libra.T<LBR.T>;
 
     assert(M.get_value(0) == 1000, 4);
     assert(M.get_value(1) == 300, 4);
     coin = M.pop();
-    LibraAccount.deposit(get_txn_sender(), move(coin));
+    LibraAccount.deposit<LBR.T>(get_txn_sender(), move(coin));
     return;
 }

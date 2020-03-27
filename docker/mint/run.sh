@@ -10,7 +10,7 @@ set -ex
 
 IMAGE="${1:-libra_mint:latest}"
 AC_HOST="${2:-172.18.0.13}"
-AC_PORT="${3:-8000}"
+AC_PORT="${3:-8080}"
 LOG_LEVEL="${4:-info}"
 CONFIGDIR="$(dirname "$0")/../../terraform/validator-sets/dev"
 

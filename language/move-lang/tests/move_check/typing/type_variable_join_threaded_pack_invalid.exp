@@ -1,29 +1,29 @@
 error: 
 
-    ┌── tests/move_check/typing/type_variable_join_threaded_pack_invalid.move:27:19 ───
+    ┌── tests/move_check/typing/type_variable_join_threaded_pack_invalid.move:42:9 ───
     │
- 32 │         b
+ 42 │         b
     │         ^ Invalid return expression
     ·
- 31 │         Container::put(&mut v, 0);
-    │                                - The type: 'u64'
+ 40 │         let r = Container::get_ref(&v);
+    │                 ---------------------- The type: integer
     ·
- 27 │     fun t0(): Box<bool> {
+ 35 │     fun t0(): Box<bool> {
     │                   ---- Is not compatible with: 'bool'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/type_variable_join_threaded_pack_invalid.move:10:23 ───
+    ┌── tests/move_check/typing/type_variable_join_threaded_pack_invalid.move:47:17 ───
     │
- 37 │         let x = Container::get(&v);
+ 47 │         let x = Container::get(&v);
     │                 ^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     ·
- 39 │         Container::put(&mut v, Box {f1: R{}, f2: R{}});
+ 49 │         Container::put(&mut v, Box {f1: R{}, f2: R{}});
     │                                ---------------------- The resource type '0x1::M::Box<0x1::M::R>' does not satisfy the constraint 'copyable'
     ·
- 24 │     resource struct R{}
-    │     -------- The type's constraint information was declared here
+ 28 │     resource struct R{}
+    │     -------- The type's constraint information was determined here
     ·
  10 │     public fun get<V: copyable>(self: &T<V>): V {
     │                       -------- 'copyable' constraint declared here

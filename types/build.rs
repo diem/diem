@@ -5,10 +5,10 @@ fn main() {
     let proto_files = [
         "src/proto/access_path.proto",
         "src/proto/events.proto",
-        "src/proto/language_storage.proto",
+        "src/proto/mempool_status.proto",
         "src/proto/proof.proto",
         "src/proto/transaction.proto",
-        "src/proto/validator_public_keys.proto",
+        "src/proto/validator_info.proto",
         "src/proto/vm_errors.proto",
         "src/proto/account_state_blob.proto",
         "src/proto/get_with_proof.proto",

@@ -6,11 +6,11 @@ use crate::{
     account_config,
     discovery_info::DiscoveryInfo,
     event::{EventHandle, EventKey},
-    identifier::{IdentStr, Identifier},
     language_storage::StructTag,
     validator_set::validator_set_module_name,
 };
 use anyhow::Result;
+use move_core_types::identifier::{IdentStr, Identifier};
 use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
@@ -30,8 +30,8 @@ pub fn discovery_set_struct_name() -> &'static IdentStr {
 
 pub fn discovery_set_tag() -> StructTag {
     StructTag {
+        address: account_config::CORE_CODE_ADDRESS,
         name: discovery_set_struct_name().to_owned(),
-        address: account_config::core_code_address(),
         module: discovery_set_module_name().to_owned(),
         type_params: vec![],
     }
@@ -56,10 +56,10 @@ pub static GLOBAL_DISCOVERY_SET_CHANGE_EVENT_PATH: Lazy<AccessPath> = Lazy::new(
     )
 });
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct DiscoverySetResource {
     /// The current discovery set. Updated only at epoch boundaries via reconfiguration.
-    discovery_set: Vec<DiscoveryInfo>,
+    discovery_set: DiscoverySet,
     /// Handle where discovery set change events are emitted
     change_events: EventHandle,
 }
@@ -67,6 +67,10 @@ pub struct DiscoverySetResource {
 impl DiscoverySetResource {
     pub fn change_events(&self) -> &EventHandle {
         &self.change_events
+    }
+
+    pub fn discovery_set(&self) -> &DiscoverySet {
+        &self.discovery_set
     }
 }
 

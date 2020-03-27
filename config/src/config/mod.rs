@@ -13,10 +13,11 @@ use std::{
     str::FromStr,
 };
 use thiserror::Error;
-use toml;
 
 mod admission_control_config;
 pub use admission_control_config::*;
+mod rpc_config;
+pub use rpc_config::*;
 mod consensus_config;
 pub use consensus_config::*;
 mod debug_interface_config;
@@ -38,10 +39,8 @@ pub use storage_config::*;
 mod safety_rules_config;
 pub use safety_rules_config::*;
 mod test_config;
-pub use test_config::*;
-mod vm_config;
 use libra_types::waypoint::Waypoint;
-pub use vm_config::*;
+pub use test_config::*;
 
 /// Config pulls in configuration information from the config file.
 /// This is used to set up the nodes and configure various parameters.
@@ -53,6 +52,8 @@ pub use vm_config::*;
 pub struct NodeConfig {
     #[serde(default)]
     pub admission_control: AdmissionControlConfig,
+    #[serde(default)]
+    pub rpc: RpcConfig,
     #[serde(default)]
     pub base: BaseConfig,
     #[serde(default)]
@@ -77,8 +78,6 @@ pub struct NodeConfig {
     pub test: Option<TestConfig>,
     #[serde(default)]
     pub validator_network: Option<NetworkConfig>,
-    #[serde(default)]
-    pub vm_config: VMConfig,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -107,11 +106,11 @@ pub enum RoleType {
 }
 
 impl RoleType {
-    pub fn is_validator(&self) -> bool {
-        *self == RoleType::Validator
+    pub fn is_validator(self) -> bool {
+        self == RoleType::Validator
     }
 
-    pub fn as_str(&self) -> &'static str {
+    pub fn as_str(self) -> &'static str {
         match self {
             RoleType::Validator => "validator",
             RoleType::FullNode => "full_node",
@@ -158,6 +157,7 @@ impl NodeConfig {
     pub fn clone_for_template(&self) -> Self {
         Self {
             admission_control: self.admission_control.clone(),
+            rpc: self.rpc.clone(),
             base: self.base.clone(),
             consensus: self.consensus.clone(),
             debug_interface: self.debug_interface.clone(),
@@ -173,12 +173,10 @@ impl NodeConfig {
             state_sync: self.state_sync.clone(),
             storage: self.storage.clone(),
             test: None,
-            validator_network: if let Some(n) = &self.validator_network {
-                Some(n.clone_for_template())
-            } else {
-                None
-            },
-            vm_config: self.vm_config.clone(),
+            validator_network: self
+                .validator_network
+                .as_ref()
+                .map(|n| n.clone_for_template()),
         }
     }
 
@@ -258,6 +256,7 @@ impl NodeConfig {
         self.admission_control.randomize_ports();
         self.debug_interface.randomize_ports();
         self.storage.randomize_ports();
+        self.rpc.randomize_ports();
     }
 
     pub fn random() -> Self {
@@ -444,7 +443,6 @@ mod test {
         assert_eq!(actual.storage, expected.storage);
         assert_eq!(actual.test, expected.test);
         assert_eq!(actual.validator_network, expected.validator_network);
-        assert_eq!(actual.vm_config, expected.vm_config);
         assert_eq!(actual, expected);
     }
 

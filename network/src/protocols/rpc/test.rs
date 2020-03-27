@@ -13,6 +13,8 @@ use parity_multiaddr::Multiaddr;
 use std::str::FromStr;
 use tokio::runtime::Runtime;
 
+static RPC_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
+
 async fn do_outbound_rpc_req<TSubstream>(
     peer_tx: PeerHandle<TSubstream>,
     protocol: ProtocolId,
@@ -51,11 +53,11 @@ async fn mock_peer<TSubstream: Debug>(
 // Test the rpc substream upgrades.
 #[test]
 fn upgrades() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let listener_peer_id = PeerId::random();
     let dialer_peer_id = PeerId::random();
-    let protocol_id = b"/get_blocks/1.0.0";
+    let protocol_id = RPC_PROTOCOL;
     let req_data = b"hello";
     let res_data = b"goodbye";
 
@@ -76,7 +78,7 @@ fn upgrades() {
         // Handle the inbound rpc request
         match dialer_rpc_notifs_rx.select_next_some().await {
             RpcNotification::RecvRpc(req) => {
-                assert_eq!(req.protocol.as_ref(), protocol_id);
+                assert_eq!(req.protocol, protocol_id);
                 assert_eq!(req.data.as_ref(), req_data);
                 req.res_tx.send(Ok(Bytes::from_static(res_data))).unwrap();
             }
@@ -84,7 +86,7 @@ fn upgrades() {
     };
 
     let substream = NegotiatedSubstream {
-        protocol: ProtocolId::from_static(protocol_id),
+        protocol: protocol_id,
         substream: listener_substream,
     };
     let inbound_notif = PeerNotification::NewSubstream(dialer_peer_id, substream);
@@ -100,7 +102,7 @@ fn upgrades() {
     let f_listener_upgrade = async move {
         let res = do_outbound_rpc_req(
             listener_peer_reqs_tx,
-            ProtocolId::from_static(protocol_id),
+            protocol_id,
             Bytes::from_static(req_data),
             Duration::from_secs(1),
         )
@@ -124,10 +126,10 @@ fn upgrades() {
 // receiving the request.
 #[test]
 fn listener_close_before_response() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let listener_peer_id = PeerId::random();
-    let protocol_id = b"/get_blocks/1.0.0";
+    let protocol_id = RPC_PROTOCOL;
     let req_data = b"hello";
 
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
@@ -145,7 +147,7 @@ fn listener_close_before_response() {
     let f_dialer_upgrade = async move {
         let res = do_outbound_rpc_req(
             listener_peer_reqs_tx,
-            ProtocolId::from_static(protocol_id),
+            protocol_id,
             Bytes::from_static(req_data),
             Duration::from_secs(1),
         )
@@ -186,10 +188,10 @@ fn listener_close_before_response() {
 // negotiation but before the dialer sends their request.
 #[test]
 fn listener_close_before_dialer_send() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let listener_peer_id = PeerId::random();
-    let protocol_id = b"/get_blocks/1.0.0";
+    let protocol_id = RPC_PROTOCOL;
     let req_data = b"hello";
 
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
@@ -210,7 +212,7 @@ fn listener_close_before_dialer_send() {
     let f_listener_upgrade = async move {
         let res = do_outbound_rpc_req(
             listener_peer_reqs_tx,
-            ProtocolId::from_static(protocol_id),
+            protocol_id,
             Bytes::from_static(req_data),
             Duration::from_secs(1),
         )
@@ -232,9 +234,9 @@ fn listener_close_before_dialer_send() {
 // negotiation but before sending their request.
 #[test]
 fn dialer_close_before_listener_recv() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
-    let protocol_id = b"/get_blocks/1.0.0";
+    let protocol_id = RPC_PROTOCOL;
 
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
 
@@ -245,12 +247,8 @@ fn dialer_close_before_listener_recv() {
     let f_listener_upgrade = async move {
         let (notification_tx, _notification_rx) = channel::new_test(8);
         // use inner to get Result
-        let res = handle_inbound_substream_inner(
-            notification_tx,
-            ProtocolId::from_static(protocol_id),
-            listener_substream,
-        )
-        .await;
+        let res =
+            handle_inbound_substream_inner(notification_tx, protocol_id, listener_substream).await;
 
         // Check the error
         let err = res.expect_err("Listener's rpc handler should fail");
@@ -267,9 +265,9 @@ fn dialer_close_before_listener_recv() {
 // reading out the response.
 #[test]
 fn dialer_close_before_listener_send() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
-    let protocol_id = b"/get_blocks/1.0.0";
+    let protocol_id = RPC_PROTOCOL;
     let req_data = b"hello";
     let res_data = b"goodbye";
 
@@ -281,7 +279,7 @@ fn dialer_close_before_listener_send() {
         // Handle the inbound rpc request
         match dialer_rpc_notifs_rx.next().await.unwrap() {
             RpcNotification::RecvRpc(req) => {
-                assert_eq!(req.protocol.as_ref(), protocol_id);
+                assert_eq!(req.protocol, protocol_id);
                 assert_eq!(req.data.as_ref(), req_data);
                 req.res_tx.send(Ok(Bytes::from_static(res_data))).unwrap();
             }
@@ -291,12 +289,9 @@ fn dialer_close_before_listener_send() {
     // Listener handles the inbound substream, but should get a broken pipe error
     let f_listener_upgrade = async move {
         // use inner to get Result
-        let res = handle_inbound_substream_inner(
-            dialer_rpc_notifs_tx,
-            ProtocolId::from_static(protocol_id),
-            listener_substream,
-        )
-        .await;
+        let res =
+            handle_inbound_substream_inner(dialer_rpc_notifs_tx, protocol_id, listener_substream)
+                .await;
 
         // Check the error
         let err = res.expect_err("Listener's rpc handler should fail");
@@ -326,9 +321,9 @@ fn dialer_close_before_listener_send() {
 // Sending two requests should fail
 #[test]
 fn dialer_sends_two_requests_err() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
-    let protocol_id = b"/get_blocks/1.0.0";
+    let protocol_id = RPC_PROTOCOL;
     let req_data = b"hello";
 
     let (dialer_substream, listener_substream) = MemorySocket::new_pair();
@@ -337,12 +332,8 @@ fn dialer_sends_two_requests_err() {
     let f_listener_upgrade = async move {
         let (notification_tx, _notification_rx) = channel::new_test(8);
         // use inner to get Result
-        let res = handle_inbound_substream_inner(
-            notification_tx,
-            ProtocolId::from_static(protocol_id),
-            listener_substream,
-        )
-        .await;
+        let res =
+            handle_inbound_substream_inner(notification_tx, protocol_id, listener_substream).await;
 
         // Check the error
         let err = res.expect_err("Listener's rpc handler should fail");
@@ -382,10 +373,10 @@ fn dialer_sends_two_requests_err() {
 // Test that outbound rpc calls will timeout.
 #[test]
 fn outbound_rpc_timeout() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let listener_peer_id = PeerId::random();
-    let protocol_id = b"/get_blocks/1.0.0";
+    let protocol_id = RPC_PROTOCOL;
     let req_data = b"hello";
 
     // Listener hangs after negotiation
@@ -404,7 +395,7 @@ fn outbound_rpc_timeout() {
     let f_dialer_upgrade = async move {
         let res = do_outbound_rpc_req(
             listener_peer_reqs_tx,
-            ProtocolId::from_static(protocol_id),
+            protocol_id,
             Bytes::from_static(req_data),
             Duration::from_millis(100),
         )
@@ -425,10 +416,10 @@ fn outbound_rpc_timeout() {
 // Test that inbound rpc calls will timeout.
 #[test]
 fn inbound_rpc_timeout() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let dialer_peer_id = PeerId::random();
-    let protocol_id = b"/get_blocks/1.0.0";
+    let protocol_id = RPC_PROTOCOL;
 
     // Dialer hangs after negotiation
     let (_dialer_substream, listener_substream) = MemorySocket::new_pair();
@@ -436,7 +427,7 @@ fn inbound_rpc_timeout() {
 
     // Handle the inbound substream
     let substream = NegotiatedSubstream {
-        protocol: ProtocolId::from_static(protocol_id),
+        protocol: protocol_id,
         substream: listener_substream,
     };
     let inbound_notif = PeerNotification::NewSubstream(dialer_peer_id, substream);
@@ -454,10 +445,10 @@ fn inbound_rpc_timeout() {
 // Test that outbound rpcs can be canceled before sending
 #[test]
 fn outbound_cancellation_before_send() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let listener_peer_id = PeerId::random();
-    let protocol_id = b"/get_blocks/1.0.0";
+    let protocol_id = RPC_PROTOCOL;
     let req_data = b"hello";
 
     // Fake the dialer NetworkProvider channels
@@ -471,7 +462,7 @@ fn outbound_cancellation_before_send() {
     // build the rpc request future
     let (res_tx, res_rx) = oneshot::channel();
     let outbound_req = OutboundRpcRequest {
-        protocol: ProtocolId::from_static(protocol_id),
+        protocol: protocol_id,
         data: Bytes::from_static(req_data),
         res_tx,
         timeout: Duration::from_secs(1),
@@ -490,13 +481,13 @@ fn outbound_cancellation_before_send() {
 // Test that outbound rpcs can be canceled while receiving response data.
 #[test]
 fn outbound_cancellation_recv() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let mut rt = Runtime::new().unwrap();
     let executor = rt.handle().clone();
 
     let listener_peer_id = PeerId::random();
-    let protocol_id = b"/get_blocks/1.0.0";
+    let protocol_id = RPC_PROTOCOL;
     let req_data = b"hello";
     let res_data = b"goodbye";
 
@@ -523,7 +514,7 @@ fn outbound_cancellation_recv() {
         let mut res_rx = res_rx.fuse();
 
         let outbound_req = OutboundRpcRequest {
-            protocol: ProtocolId::from_static(protocol_id),
+            protocol: protocol_id,
             data: Bytes::from_static(req_data),
             res_tx,
             timeout: Duration::from_secs(1),
@@ -586,11 +577,11 @@ fn outbound_cancellation_recv() {
 // Test the full rpc protocol actor.
 #[test]
 fn rpc_protocol() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let listener_peer_id = PeerId::random();
     let dialer_peer_id = PeerId::random();
-    let protocol_id = b"/get_blocks/1.0.0";
+    let protocol_id = RPC_PROTOCOL;
     let req_data = b"hello";
     let res_data = b"goodbye";
 
@@ -624,7 +615,7 @@ fn rpc_protocol() {
         let (res_tx, res_rx) = oneshot::channel();
 
         let req = OutboundRpcRequest {
-            protocol: ProtocolId::from_static(protocol_id),
+            protocol: protocol_id,
             data: Bytes::from_static(req_data),
             res_tx,
             timeout: Duration::from_secs(1),
@@ -636,7 +627,7 @@ fn rpc_protocol() {
         // Fulfill the open substream request
         match dialer_peer_reqs_rx.next().await.unwrap() {
             PeerRequest::OpenSubstream(protocol, substream_tx) => {
-                assert_eq!(protocol.as_ref(), protocol_id);
+                assert_eq!(protocol, protocol_id);
                 substream_tx.send(Ok(dialer_substream)).unwrap();
             }
             _ => {
@@ -678,7 +669,7 @@ fn rpc_protocol() {
             .send(PeerNotification::NewSubstream(
                 dialer_peer_id,
                 NegotiatedSubstream {
-                    protocol: ProtocolId::from_static(protocol_id),
+                    protocol: protocol_id,
                     substream: listener_substream,
                 },
             ))
@@ -688,7 +679,7 @@ fn rpc_protocol() {
         // Handle the inbound rpc request
         match listener_rpc_notifs_rx.next().await.unwrap() {
             RpcNotification::RecvRpc(req) => {
-                assert_eq!(req.protocol.as_ref(), protocol_id);
+                assert_eq!(req.protocol, protocol_id);
                 assert_eq!(req.data.as_ref(), req_data);
                 req.res_tx.send(Ok(Bytes::from_static(res_data))).unwrap();
             }

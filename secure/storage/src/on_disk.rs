@@ -1,22 +1,22 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, policy::Policy, storage::Storage, value::Value};
+use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Policy, Storage, Value};
 use libra_temppath::TempPath;
-use std::collections::HashMap;
 use std::{
+    collections::HashMap,
     fs::{self, File},
     io::{Read, Write},
     path::PathBuf,
 };
-use toml;
 
-/// InMemoryStorage represents a key value store that is purely in memory and intended for single
-/// threads (or must be wrapped by a Arc<RwLock<>>). This provides no permission checks and simply
-/// is a proof of concept to unblock building of applications without more complex data stores.
-/// Internally, it retains all data, which means that it must make copies of all key material which
-/// violates the Libra code base. It violates it because the anticipation is that data stores would
-/// securely handle key material. This should not be used in production.
+/// OnDiskStorage represents a key value store that is persisted to the local filesystem and is
+/// intended for single threads (or must be wrapped by a Arc<RwLock<>>). This provides no permission
+/// checks and simply offers a proof of concept to unblock building of applications without more
+/// complex data stores. Internally, it reads and writes all data to a file, which means that it
+/// must make copies of all key material which violates the Libra code base. It violates it because
+/// the anticipation is that data stores would securely handle key material. This should not be used
+/// in production.
 pub struct OnDiskStorage {
     file_path: PathBuf,
     temp_path: TempPath,
@@ -40,7 +40,7 @@ impl OnDiskStorage {
         }
     }
 
-    fn read(&self) -> Result<HashMap<String, Value>, Error> {
+    fn read(&self) -> Result<HashMap<String, GetResponse>, Error> {
         let mut file = File::open(&self.file_path)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
@@ -48,16 +48,21 @@ impl OnDiskStorage {
         Ok(data)
     }
 
-    fn write(&self, data: &HashMap<String, Value>) -> Result<(), Error> {
+    fn write(&self, data: &HashMap<String, GetResponse>) -> Result<(), Error> {
         let contents = toml::to_vec(data)?;
         let mut file = File::create(self.temp_path.path())?;
         file.write_all(&contents)?;
         fs::rename(&self.temp_path, &self.file_path)?;
         Ok(())
     }
+
+    /// Public convenience function to return a new OnDiskStorage based Storage.
+    pub fn new_storage(path_buf: PathBuf) -> Box<dyn Storage> {
+        Box::new(OnDiskStorage::new(path_buf))
+    }
 }
 
-impl Storage for OnDiskStorage {
+impl KVStorage for OnDiskStorage {
     fn available(&self) -> bool {
         true
     }
@@ -67,11 +72,11 @@ impl Storage for OnDiskStorage {
         if data.contains_key(key) {
             return Err(Error::KeyAlreadyExists(key.to_string()));
         }
-        data.insert(key.to_string(), value);
+        data.insert(key.to_string(), GetResponse::new(value));
         self.write(&data)
     }
 
-    fn get(&self, key: &str) -> Result<Value, Error> {
+    fn get(&self, key: &str) -> Result<GetResponse, Error> {
         let mut data = self.read()?;
         data.remove(key)
             .ok_or_else(|| Error::KeyNotSet(key.to_string()))
@@ -82,7 +87,13 @@ impl Storage for OnDiskStorage {
         if !data.contains_key(key) {
             return Err(Error::KeyNotSet(key.to_string()));
         }
-        data.insert(key.to_string(), value);
+        data.insert(key.to_string(), GetResponse::new(value));
         self.write(&data)
     }
+
+    fn reset_and_clear(&mut self) -> Result<(), Error> {
+        self.write(&HashMap::new())
+    }
 }
+
+impl CryptoKVStorage for OnDiskStorage {}

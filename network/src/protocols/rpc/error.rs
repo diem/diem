@@ -14,14 +14,11 @@ pub enum RpcError {
     #[error("IO error: {0}")]
     IoError(#[from] io::Error),
 
+    #[error("Lcs error: {0:?}")]
+    LcsError(#[from] lcs::Error),
+
     #[error("Failed to open substream, not connected with peer: {0}")]
     NotConnected(PeerId),
-
-    #[error("Error writing protobuf message: {0:?}")]
-    ProstEncodeError(#[from] prost::EncodeError),
-
-    #[error("Error parsing protobuf message: {0:?}")]
-    ProstDecodeError(#[from] prost::DecodeError),
 
     #[error("Received invalid rpc response message")]
     InvalidRpcResponse,

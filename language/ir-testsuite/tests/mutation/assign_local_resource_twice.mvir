@@ -1,10 +1,11 @@
 // check: MOVELOC_EXISTS_BORROW_ERROR
 
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 main() {
-    let resource1: LibraCoin.T;
-    let resource_ref: &mut LibraCoin.T;
-    resource1 = LibraCoin.zero();
+    let resource1: Libra.T<LBR.T>;
+    let resource_ref: &mut Libra.T<LBR.T>;
+    resource1 = Libra.zero<LBR.T>();
     resource_ref = &mut resource1;
     *move(resource_ref) = move(resource1);
     return;

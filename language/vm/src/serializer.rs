@@ -9,8 +9,8 @@
 
 use crate::{file_format::*, file_format_common::*};
 use anyhow::{bail, Result};
-use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
-use std::ops::Deref;
+use libra_types::account_address::AccountAddress;
+use move_core_types::identifier::Identifier;
 
 impl CompiledScript {
     /// Serializes a `CompiledScript` into a binary. The mutable `Vec<u8>` will contain the
@@ -163,7 +163,7 @@ trait CommonTables {
     fn get_function_handles(&self) -> &[FunctionHandle];
     fn get_identifiers(&self) -> &[Identifier];
     fn get_address_pool(&self) -> &[AccountAddress];
-    fn get_byte_array_pool(&self) -> &[ByteArray];
+    fn get_byte_array_pool(&self) -> &[Vec<u8>];
     fn get_type_signatures(&self) -> &[TypeSignature];
     fn get_function_signatures(&self) -> &[FunctionSignature];
     fn get_locals_signatures(&self) -> &[LocalsSignature];
@@ -190,7 +190,7 @@ impl CommonTables for CompiledScriptMut {
         &self.address_pool
     }
 
-    fn get_byte_array_pool(&self) -> &[ByteArray] {
+    fn get_byte_array_pool(&self) -> &[Vec<u8>] {
         &self.byte_array_pool
     }
 
@@ -228,7 +228,7 @@ impl CommonTables for CompiledModuleMut {
         &self.address_pool
     }
 
-    fn get_byte_array_pool(&self) -> &[ByteArray] {
+    fn get_byte_array_pool(&self) -> &[Vec<u8>] {
         &self.byte_array_pool
     }
 
@@ -308,9 +308,8 @@ fn serialize_string(binary: &mut BinaryData, string: &str) -> Result<()> {
 /// A `ByteArray` gets serialized as follows:
 /// - `ByteArray` size as a ULEB128
 /// - `ByteArray` bytes in increasing index order
-fn serialize_byte_array(binary: &mut BinaryData, byte_array: &ByteArray) -> Result<()> {
-    let bytes = byte_array.as_bytes();
-    let len = bytes.len();
+fn serialize_byte_array(binary: &mut BinaryData, byte_array: &[u8]) -> Result<()> {
+    let len = byte_array.len();
     if len > u32::max_value() as usize {
         bail!(
             "byte arrays size ({}) cannot exceed {}",
@@ -319,7 +318,7 @@ fn serialize_byte_array(binary: &mut BinaryData, byte_array: &ByteArray) -> Resu
         )
     }
     write_u32_as_uleb128(binary, len as u32)?;
-    for byte in bytes {
+    for byte in byte_array {
         binary.push(*byte)?;
     }
     Ok(())
@@ -480,8 +479,11 @@ fn serialize_signature_token(binary: &mut BinaryData, token: &SignatureToken) ->
         SignatureToken::U8 => binary.push(SerializedType::U8 as u8)?,
         SignatureToken::U64 => binary.push(SerializedType::U64 as u8)?,
         SignatureToken::U128 => binary.push(SerializedType::U128 as u8)?,
-        SignatureToken::ByteArray => binary.push(SerializedType::BYTEARRAY as u8)?,
         SignatureToken::Address => binary.push(SerializedType::ADDRESS as u8)?,
+        SignatureToken::Vector(boxed_token) => {
+            binary.push(SerializedType::VECTOR as u8)?;
+            serialize_signature_token(binary, boxed_token)?;
+        }
         SignatureToken::Struct(idx, types) => {
             binary.push(SerializedType::STRUCT as u8)?;
             write_u16_as_uleb128(binary, idx.0)?;
@@ -489,11 +491,11 @@ fn serialize_signature_token(binary: &mut BinaryData, token: &SignatureToken) ->
         }
         SignatureToken::Reference(boxed_token) => {
             binary.push(SerializedType::REFERENCE as u8)?;
-            serialize_signature_token(binary, boxed_token.deref())?;
+            serialize_signature_token(binary, boxed_token)?;
         }
         SignatureToken::MutableReference(boxed_token) => {
             binary.push(SerializedType::MUTABLE_REFERENCE as u8)?;
-            serialize_signature_token(binary, boxed_token.deref())?;
+            serialize_signature_token(binary, boxed_token)?;
         }
         SignatureToken::TypeParameter(idx) => {
             binary.push(SerializedType::TYPE_PARAMETER as u8)?;
@@ -739,7 +741,10 @@ impl CommonSerializer {
         binary.push(self.table_count)?;
 
         let start_offset;
-        if let Some(table_count_op) = self.table_count.checked_mul(9) {
+        if let Some(table_count_op) = self
+            .table_count
+            .checked_mul(BinaryConstants::TABLE_HEADER_SIZE)
+        {
             if let Some(checked_start_offset) =
                 check_index_in_binary(binary.len())?.checked_add(u32::from(table_count_op))
             {
@@ -830,11 +835,13 @@ impl CommonSerializer {
         binary: &mut BinaryData,
         tables: &T,
     ) -> Result<()> {
+        verify!(self.table_count == 0); // Should not be necessary, but it helps MIRAI right now
         self.serialize_module_handles(binary, tables.get_module_handles())?;
         self.serialize_struct_handles(binary, tables.get_struct_handles())?;
         self.serialize_function_handles(binary, tables.get_function_handles())?;
         self.serialize_type_signatures(binary, tables.get_type_signatures())?;
         self.serialize_function_signatures(binary, tables.get_function_signatures())?;
+        verify!(self.table_count < 6); // Should not be necessary, but it helps MIRAI right now
         self.serialize_locals_signatures(binary, tables.get_locals_signatures())?;
         self.serialize_identifiers(binary, tables.get_identifiers())?;
         self.serialize_addresses(binary, tables.get_address_pool())?;
@@ -916,7 +923,7 @@ impl CommonSerializer {
     fn serialize_byte_arrays(
         &mut self,
         binary: &mut BinaryData,
-        byte_arrays: &[ByteArray],
+        byte_arrays: &[Vec<u8>],
     ) -> Result<()> {
         if !byte_arrays.is_empty() {
             self.table_count += 1;

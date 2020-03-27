@@ -26,7 +26,7 @@ RUN mkdir -p /opt/libra/bin /opt/libra/etc
 COPY --from=builder /libra/target/release/cli /opt/libra/bin/libra_client
 
 ENTRYPOINT ["/opt/libra/bin/libra_client"]
-CMD ["--host", "ac.testnet.libra.org", "--port", "8000"]
+CMD ["--url", "http://client.testnet.libra.org"]
 
 ARG BUILD_DATE
 ARG GIT_REV

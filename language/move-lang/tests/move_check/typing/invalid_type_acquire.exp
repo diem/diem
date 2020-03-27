@@ -27,7 +27,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:21:9 ───
     │
  21 │         S,
     │         ^ Invalid acquires item. Expected a nominal resource.
@@ -49,7 +49,7 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:30:17 ───
     │
  30 │         destroy(move_from(a));
-    │                 ^^^^^^^^^ Could not infer this type. Try adding an annotation
+    │                 ^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
     │
 
 error: 
@@ -60,7 +60,7 @@ error:
     │                 ^^^^^^^^^^^^^^^ Invalid call to move_from.
     ·
  31 │         destroy(move_from<T>(a));
-    │                           - Expected a nominal resource. Found the type: T
+    │                           - Expected a nominal resource. Found the type: 'T'
     │
 
 error: 
@@ -71,7 +71,7 @@ error:
     │                 ^^^^^^^^^^^^^^^^^ Invalid call to move_from.
     ·
  32 │         destroy(move_from<u64>(a));
-    │                           --- Expected a nominal resource. Found the type: u64
+    │                           --- Expected a nominal resource. Found the type: 'u64'
     │
 
 error: 
@@ -87,13 +87,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:34:17 ───
     │
  34 │         destroy(move_from<S>(a));
     │                 ^^^^^^^^^^^^^^^ Invalid call to move_from.
     ·
  34 │         destroy(move_from<S>(a));
-    │                           - Expected a nominal resource. Found the type: 0x1::M::S
+    │                           - Expected a nominal resource. Found the type: '0x1::M::S'
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here
@@ -104,7 +104,7 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:36:9 ───
     │
  36 │         borrow_global(a);
-    │         ^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
+    │         ^^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
     │
 
 error: 
@@ -115,7 +115,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
     ·
  37 │         borrow_global<T>(a);
-    │                       - Expected a nominal resource. Found the type: T
+    │                       - Expected a nominal resource. Found the type: 'T'
     │
 
 error: 
@@ -126,7 +126,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
     ·
  38 │         borrow_global<u64>(a);
-    │                       --- Expected a nominal resource. Found the type: u64
+    │                       --- Expected a nominal resource. Found the type: 'u64'
     │
 
 error: 
@@ -142,13 +142,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:40:9 ───
     │
  40 │         borrow_global<S>(a);
     │         ^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
     ·
  40 │         borrow_global<S>(a);
-    │                       - Expected a nominal resource. Found the type: 0x1::M::S
+    │                       - Expected a nominal resource. Found the type: '0x1::M::S'
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here
@@ -159,7 +159,7 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:42:9 ───
     │
  42 │         borrow_global_mut(a);
-    │         ^^^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
+    │         ^^^^^^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
     │
 
 error: 
@@ -170,7 +170,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
     ·
  43 │         borrow_global_mut<T>(a);
-    │                           - Expected a nominal resource. Found the type: T
+    │                           - Expected a nominal resource. Found the type: 'T'
     │
 
 error: 
@@ -181,7 +181,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
     ·
  44 │         borrow_global_mut<u64>(a);
-    │                           --- Expected a nominal resource. Found the type: u64
+    │                           --- Expected a nominal resource. Found the type: 'u64'
     │
 
 error: 
@@ -197,13 +197,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:46:9 ───
     │
  46 │         borrow_global_mut<S>(a);
     │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
     ·
  46 │         borrow_global_mut<S>(a);
-    │                           - Expected a nominal resource. Found the type: 0x1::M::S
+    │                           - Expected a nominal resource. Found the type: '0x1::M::S'
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here
@@ -214,7 +214,7 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:48:9 ───
     │
  48 │         exists(a);
-    │         ^^^^^^ Could not infer this type. Try adding an annotation
+    │         ^^^^^^^^^ Could not infer this type. Try adding an annotation
     │
 
 error: 
@@ -225,7 +225,7 @@ error:
     │         ^^^^^^^^^^^^ Invalid call to exists.
     ·
  49 │         exists<T>(a);
-    │                - Expected a nominal resource. Found the type: T
+    │                - Expected a nominal resource. Found the type: 'T'
     │
 
 error: 
@@ -236,7 +236,7 @@ error:
     │         ^^^^^^^^^^^^^^ Invalid call to exists.
     ·
  50 │         exists<u64>(a);
-    │                --- Expected a nominal resource. Found the type: u64
+    │                --- Expected a nominal resource. Found the type: 'u64'
     │
 
 error: 
@@ -252,13 +252,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:52:9 ───
     │
  52 │         exists<S>(a);
     │         ^^^^^^^^^^^^ Invalid call to exists.
     ·
  52 │         exists<S>(a);
-    │                - Expected a nominal resource. Found the type: 0x1::M::S
+    │                - Expected a nominal resource. Found the type: '0x1::M::S'
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here
@@ -269,7 +269,7 @@ error:
     ┌── tests/move_check/typing/invalid_type_acquire.move:54:9 ───
     │
  54 │         move_to_sender(any());
-    │         ^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
+    │         ^^^^^^^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
     │
 
 error: 
@@ -288,7 +288,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
     ·
  55 │         move_to_sender<T>(any());
-    │                        - Expected a nominal resource. Found the type: T
+    │                        - Expected a nominal resource. Found the type: 'T'
     │
 
 error: 
@@ -299,7 +299,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
     ·
  56 │         move_to_sender<u64>(any());
-    │                        --- Expected a nominal resource. Found the type: u64
+    │                        --- Expected a nominal resource. Found the type: 'u64'
     │
 
 error: 
@@ -315,13 +315,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/invalid_type_acquire.move:10:12 ───
+    ┌── tests/move_check/typing/invalid_type_acquire.move:58:9 ───
     │
  58 │         move_to_sender<S>(any());
     │         ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to_sender.
     ·
  58 │         move_to_sender<S>(any());
-    │                        - Expected a nominal resource. Found the type: 0x1::M::S
+    │                        - Expected a nominal resource. Found the type: '0x1::M::S'
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here

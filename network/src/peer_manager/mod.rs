@@ -12,12 +12,13 @@
 //!  * An actor responsible for dialing and listening for new connections.
 use crate::{
     counters,
-    interface::NetworkProvider,
-    interface::{NetworkNotification, NetworkRequest},
+    interface::{NetworkNotification, NetworkProvider, NetworkRequest},
     peer::DisconnectReason,
-    protocols::direct_send::Message,
-    protocols::identity::Identity,
-    protocols::rpc::{error::RpcError, InboundRpcRequest, OutboundRpcRequest},
+    protocols::{
+        direct_send::Message,
+        identity::Identity,
+        rpc::{error::RpcError, InboundRpcRequest, OutboundRpcRequest},
+    },
     transport, ProtocolId,
 };
 use bytes::Bytes;
@@ -28,17 +29,18 @@ use futures::{
     sink::SinkExt,
     stream::{Fuse, FuturesUnordered, StreamExt},
 };
+use libra_config::config::RoleType;
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::{
-    multiplexing::StreamMultiplexer,
+    multiplexing::{Control, StreamMultiplexer},
     transport::{ConnectionOrigin, Transport},
 };
 use parity_multiaddr::Multiaddr;
-use std::time::Duration;
 use std::{
     collections::{HashMap, HashSet},
     marker::PhantomData,
+    time::Duration,
 };
 use tokio::runtime::Handle;
 
@@ -52,12 +54,6 @@ pub use self::error::PeerManagerError;
 /// Request received by PeerManager from upstream actors.
 #[derive(Debug)]
 pub enum PeerManagerRequest {
-    DialPeer(
-        PeerId,
-        Multiaddr,
-        oneshot::Sender<Result<(), PeerManagerError>>,
-    ),
-    DisconnectPeer(PeerId, oneshot::Sender<Result<(), PeerManagerError>>),
     /// Send an RPC request to a remote peer.
     SendRpc(PeerId, OutboundRpcRequest),
     /// Fire-and-forget style message send to a remote peer.
@@ -73,6 +69,16 @@ pub enum PeerManagerNotification {
     RecvMessage(PeerId, Message),
 }
 
+#[derive(Debug)]
+pub enum ConnectionRequest {
+    DialPeer(
+        PeerId,
+        Multiaddr,
+        oneshot::Sender<Result<(), PeerManagerError>>,
+    ),
+    DisconnectPeer(PeerId, oneshot::Sender<Result<(), PeerManagerError>>),
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum ConnectionStatusNotification {
     /// Connection with a new peer has been established.
@@ -81,46 +87,24 @@ pub enum ConnectionStatusNotification {
     LostPeer(PeerId, Multiaddr, DisconnectReason),
 }
 
-/// Convenience wrapper around a `channel::Sender<PeerManagerRequest>` which makes it easy to issue
-/// requests and await the responses from PeerManager
+/// Convenience wrapper which makes it easy to issue communication requests and await the responses
+/// from PeerManager.
 #[derive(Clone)]
 pub struct PeerManagerRequestSender {
     inner: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
+}
+
+/// Convenience wrapper which makes it easy to issue connection requests and await the responses
+/// from PeerManager.
+#[derive(Clone)]
+pub struct ConnectionRequestSender {
+    inner: libra_channel::Sender<PeerId, ConnectionRequest>,
 }
 
 impl PeerManagerRequestSender {
     /// Construct a new PeerManagerRequestSender with a raw channel::Sender
     pub fn new(inner: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>) -> Self {
         Self { inner }
-    }
-
-    /// Request that a given Peer be dialed at the provided `Multiaddr` and synchronously wait for
-    /// the request to be performed.
-    pub async fn dial_peer(
-        &mut self,
-        peer_id: PeerId,
-        addr: Multiaddr,
-    ) -> Result<(), PeerManagerError> {
-        let (oneshot_tx, oneshot_rx) = oneshot::channel();
-        let request = PeerManagerRequest::DialPeer(peer_id, addr, oneshot_tx);
-        self.inner
-            .push((peer_id, ProtocolId::from_static(b"DialPeer")), request)
-            .unwrap();
-        oneshot_rx.await?
-    }
-
-    /// Request that a given Peer be disconnected and synchronously wait for the request to be
-    /// performed.
-    pub async fn disconnect_peer(&mut self, peer_id: PeerId) -> Result<(), PeerManagerError> {
-        let (oneshot_tx, oneshot_rx) = oneshot::channel();
-        let request = PeerManagerRequest::DisconnectPeer(peer_id, oneshot_tx);
-        self.inner
-            .push(
-                (peer_id, ProtocolId::from_static(b"DisconnectPeer")),
-                request,
-            )
-            .unwrap();
-        oneshot_rx.await?
     }
 
     /// Send a fire-and-forget direct-send message to remote peer.
@@ -135,7 +119,7 @@ impl PeerManagerRequestSender {
         mdata: Bytes,
     ) -> Result<(), PeerManagerError> {
         self.inner.push(
-            (peer_id, protocol.clone()),
+            (peer_id, protocol),
             PeerManagerRequest::SendMessage(peer_id, Message { protocol, mdata }),
         )?;
         Ok(())
@@ -158,17 +142,14 @@ impl PeerManagerRequestSender {
         protocol: ProtocolId,
         mdata: Bytes,
     ) -> Result<(), PeerManagerError> {
-        let msg = Message {
-            protocol: protocol.clone(),
-            mdata,
-        };
+        let msg = Message { protocol, mdata };
         for recipient in recipients {
             // We return `Err` early here if the send fails. Since sending will
             // only fail if the queue is unexpectedly shutdown (i.e., receiver
             // dropped early), we know that we can't make further progress if
             // this send fails.
             self.inner.push(
-                (recipient, protocol.clone()),
+                (recipient, protocol),
                 PeerManagerRequest::SendMessage(recipient, msg.clone()),
             )?;
         }
@@ -176,7 +157,7 @@ impl PeerManagerRequestSender {
     }
 
     /// Sends a unary RPC to a remote peer and waits to either receive a response or times out.
-    pub async fn unary_rpc(
+    pub async fn send_rpc(
         &mut self,
         peer_id: PeerId,
         protocol: ProtocolId,
@@ -185,7 +166,7 @@ impl PeerManagerRequestSender {
     ) -> Result<Bytes, RpcError> {
         let (res_tx, res_rx) = oneshot::channel();
         let request = OutboundRpcRequest {
-            protocol: protocol.clone(),
+            protocol,
             data: req,
             res_tx,
             timeout,
@@ -200,6 +181,31 @@ impl PeerManagerRequestSender {
     }
 }
 
+impl ConnectionRequestSender {
+    /// Construct a new ConnectionRequestSender with a raw libra_channel::Sender
+    pub fn new(inner: libra_channel::Sender<PeerId, ConnectionRequest>) -> Self {
+        Self { inner }
+    }
+
+    pub async fn dial_peer(
+        &mut self,
+        peer: PeerId,
+        addr: Multiaddr,
+    ) -> Result<(), PeerManagerError> {
+        let (oneshot_tx, oneshot_rx) = oneshot::channel();
+        self.inner
+            .push(peer, ConnectionRequest::DialPeer(peer, addr, oneshot_tx))?;
+        oneshot_rx.await?
+    }
+
+    pub async fn disconnect_peer(&mut self, peer: PeerId) -> Result<(), PeerManagerError> {
+        let (oneshot_tx, oneshot_rx) = oneshot::channel();
+        self.inner
+            .push(peer, ConnectionRequest::DisconnectPeer(peer, oneshot_tx))?;
+        oneshot_rx.await?
+    }
+}
+
 /// Responsible for handling and maintaining connections to other Peers
 pub struct PeerManager<TTransport, TMuxer>
 where
@@ -210,6 +216,8 @@ where
     executor: Handle,
     /// PeerId of "self".
     own_peer_id: PeerId,
+    /// Our node type.
+    role: RoleType,
     /// Address to listen on for incoming connections.
     listen_addr: Multiaddr,
     /// Connection Listener, listening on `listen_addr`
@@ -239,6 +247,8 @@ where
     dial_request_tx: channel::Sender<ConnectionHandlerRequest>,
     /// Sender for connection events.
     connection_notifs_tx: channel::Sender<ConnectionNotification<TMuxer>>,
+    /// Receiver for connection requests.
+    connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
     /// Receiver for connection events.
     connection_notifs_rx: channel::Receiver<ConnectionNotification<TMuxer>>,
     /// A map of outstanding disconnect requests
@@ -259,12 +269,15 @@ where
     TMuxer: StreamMultiplexer + 'static,
 {
     /// Construct a new PeerManager actor
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         executor: Handle,
         transport: TTransport,
         own_peer_id: PeerId,
+        role: RoleType,
         listen_addr: Multiaddr,
         requests_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
+        connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
         rpc_protocols: HashSet<ProtocolId>,
         direct_send_protocols: HashSet<ProtocolId>,
         upstream_handlers: HashMap<
@@ -285,23 +298,23 @@ where
         //TODO now that you can only listen on a socket inside of a tokio runtime we'll need to
         // rethink how we init the PeerManager so we don't have to do this funny thing.
         let connection_handler_notifs_tx = connection_notifs_tx.clone();
-        let (connection_handler, listen_addr) =
-            futures::executor::block_on(executor.spawn(async move {
-                ConnectionHandler::new(
-                    transport,
-                    listen_addr,
-                    dial_request_rx,
-                    connection_handler_notifs_tx.clone(),
-                )
-            }))
-            .unwrap();
+        let (connection_handler, listen_addr) = executor.enter(|| {
+            ConnectionHandler::new(
+                transport,
+                listen_addr,
+                dial_request_rx,
+                connection_handler_notifs_tx.clone(),
+            )
+        });
         Self {
             executor,
             own_peer_id,
+            role,
             listen_addr,
             connection_handler: Some(connection_handler),
             active_peers: HashMap::new(),
             requests_rx,
+            connection_reqs_rx,
             rpc_protocols,
             direct_send_protocols,
             dial_request_tx,
@@ -333,6 +346,9 @@ where
                 }
                 request = self.requests_rx.select_next_some() => {
                   self.handle_request(request).await;
+                }
+                connection_request = self.connection_reqs_rx.select_next_some() => {
+                  self.handle_connection_request(connection_request).await;
                 }
                 complete => {
                   // TODO: This should be ok when running in client mode.
@@ -395,10 +411,10 @@ where
         }
     }
 
-    async fn handle_request(&mut self, request: PeerManagerRequest) {
+    async fn handle_connection_request(&mut self, request: ConnectionRequest) {
         trace!("PeerManagerRequest::{:?}", request);
         match request {
-            PeerManagerRequest::DialPeer(requested_peer_id, addr, response_tx) => {
+            ConnectionRequest::DialPeer(requested_peer_id, addr, response_tx) => {
                 // Only dial peers which we aren't already connected with
                 if let Some((_, prev_addr, _)) = self.active_peers.get(&requested_peer_id) {
                     let error = PeerManagerError::AlreadyConnected(prev_addr.clone());
@@ -418,30 +434,15 @@ where
                     self.dial_peer(requested_peer_id, addr, response_tx).await;
                 };
             }
-            PeerManagerRequest::DisconnectPeer(peer_id, resp_tx) => {
+            ConnectionRequest::DisconnectPeer(peer_id, resp_tx) => {
                 // Send a CloseConnection request to NetworkProvider and drop the send end of the
                 // NetworkRequest channel.
-                if let Some((_, _, mut sender)) = self.active_peers.remove(&peer_id) {
-                    if let Err(close_err) = sender.push(
-                        ProtocolId::from_static(b"DisconnectPeer"),
-                        NetworkRequest::CloseConnection,
-                    ) {
-                        info!(
-                            "Failed to initiate connection close. CloseConnection request could not be delivered. Error: {:?}",
-                            close_err
-                        );
-                        if let Err(send_err) = resp_tx.send(Err(PeerManagerError::from(close_err)))
-                        {
-                            info!(
-                                "Failed to send connection close error. Error: {:?}",
-                                send_err
-                            );
-                        }
-                    } else {
-                        // Add to outstanding disconnect requests.
-                        self.outstanding_disconnect_requests
-                            .insert(peer_id, resp_tx);
-                    }
+                if let Some((_, _, sender)) = self.active_peers.remove(&peer_id) {
+                    // This should trigger a disconnect.
+                    drop(sender);
+                    // Add to outstanding disconnect requests.
+                    self.outstanding_disconnect_requests
+                        .insert(peer_id, resp_tx);
                 } else {
                     info!(
                         "Connection with peer: {} is already closed",
@@ -455,11 +456,15 @@ where
                     }
                 }
             }
+        }
+    }
+
+    async fn handle_request(&mut self, request: PeerManagerRequest) {
+        trace!("PeerManagerRequest::{:?}", request);
+        match request {
             PeerManagerRequest::SendMessage(peer_id, msg) => {
                 if let Some((_, _, sender)) = self.active_peers.get_mut(&peer_id) {
-                    if let Err(err) =
-                        sender.push(msg.protocol.clone(), NetworkRequest::SendMessage(msg))
-                    {
+                    if let Err(err) = sender.push(msg.protocol, NetworkRequest::SendMessage(msg)) {
                         info!(
                             "Failed to forward outbound message to downstream actor. Error:
                               {:?}",
@@ -472,9 +477,7 @@ where
             }
             PeerManagerRequest::SendRpc(peer_id, req) => {
                 if let Some((_, _, sender)) = self.active_peers.get_mut(&peer_id) {
-                    if let Err(err) =
-                        sender.push(req.protocol.clone(), NetworkRequest::SendRpc(req))
-                    {
+                    if let Err(err) = sender.push(req.protocol, NetworkRequest::SendRpc(req)) {
                         info!(
                             "Failed to forward outbound rpc to downstream actor. Error:
                             {:?}",
@@ -532,22 +535,11 @@ where
 
         let mut send_new_peer_notification = true;
         // Check for and handle simultaneous dialing
-        if let Some((curr_origin, curr_addr, mut peer_handle)) = self.active_peers.remove(&peer_id)
-        {
+        if let Some((curr_origin, curr_addr, peer_handle)) = self.active_peers.remove(&peer_id) {
             if Self::simultaneous_dial_tie_breaking(self.own_peer_id, peer_id, curr_origin, origin)
             {
                 // Drop the existing connection and replace it with the new connection
-                if let Err(err) = peer_handle.push(
-                    ProtocolId::from_static(b"DisconnectPeer"),
-                    NetworkRequest::CloseConnection,
-                ) {
-                    // Clean shutdown failed, but connection will be closed once existing handle to
-                    // NetworkProvider is dropped.
-                    warn!(
-                        "Unable to send CloseConnection request to downstream. Error: {:?}",
-                        err
-                    );
-                }
+                drop(peer_handle);
                 info!(
                     "Closing existing connection with Peer {} to mitigate simultaneous dial",
                     peer_id.short_str()
@@ -560,8 +552,9 @@ where
                 );
                 // Drop the new connection and keep the one already stored in active_peers
                 let drop_fut = async move {
+                    let (_, mut control) = connection.start().await;
                     if let Err(e) =
-                        tokio::time::timeout(transport::TRANSPORT_TIMEOUT, connection.close()).await
+                        tokio::time::timeout(transport::TRANSPORT_TIMEOUT, control.close()).await
                     {
                         error!(
                             "Closing connection with Peer {} failed with error: {}",
@@ -580,7 +573,7 @@ where
         // Initialize a new network stack for this connection.
         let (network_reqs_tx, network_notifs_rx) = NetworkProvider::start(
             self.executor.clone(),
-            identity.clone(),
+            identity,
             address.clone(),
             origin,
             connection,
@@ -609,7 +602,7 @@ where
             }
             // update libra_network_peer counter
             counters::LIBRA_NETWORK_PEERS
-                .with_label_values(&[identity.role().as_str(), "connected"])
+                .with_label_values(&[self.role.as_str(), "connected"])
                 .inc();
         }
     }
@@ -631,7 +624,7 @@ where
         }
         // update libra_network_peer counter
         counters::LIBRA_NETWORK_PEERS
-            .with_label_values(&[identity.role().as_str(), "connected"])
+            .with_label_values(&[self.role.as_str(), "connected"])
             .dec();
         // Remove NetworkRequest sender from `active_peers`.
         self.active_peers.remove(&peer_id);
@@ -672,11 +665,11 @@ where
     ) {
         match inbound_event {
             NetworkNotification::RecvMessage(msg) => {
-                let protocol = msg.protocol.clone();
+                let protocol = msg.protocol;
                 if let Some(handler) = upstream_handlers.get_mut(&protocol) {
                     // Send over libra channel for fairness.
                     if let Err(err) = handler.push(
-                        (peer_id, protocol.clone()),
+                        (peer_id, protocol),
                         PeerManagerNotification::RecvMessage(peer_id, msg),
                     ) {
                         warn!(
@@ -690,11 +683,11 @@ where
                 }
             }
             NetworkNotification::RecvRpc(rpc_req) => {
-                let protocol = rpc_req.protocol.clone();
+                let protocol = rpc_req.protocol;
                 if let Some(handler) = upstream_handlers.get_mut(&protocol) {
                     // Send over libra channel for fairness.
                     if let Err(err) = handler.push(
-                        (peer_id, protocol.clone()),
+                        (peer_id, protocol),
                         PeerManagerNotification::RecvRpc(peer_id, rpc_req),
                     ) {
                         warn!(

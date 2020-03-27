@@ -176,3 +176,9 @@ impl std::fmt::Display for AstWriter {
         Ok(())
     }
 }
+
+impl<T: AstDebug> AstDebug for move_ir_types::location::Spanned<T> {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        self.value.ast_debug(w)
+    }
+}

@@ -12,9 +12,9 @@ use crate::{
 };
 use libra_types::{
     account_address::AccountAddress,
-    identifier::Identifier,
     vm_error::{StatusCode, VMStatus},
 };
+use move_core_types::identifier::Identifier;
 use std::collections::BTreeMap;
 
 /// Resolution context for importing types
@@ -64,9 +64,11 @@ impl Resolver {
             | SignatureToken::U8
             | SignatureToken::U64
             | SignatureToken::U128
-            | SignatureToken::ByteArray
             | SignatureToken::Address
             | SignatureToken::TypeParameter(_) => Ok(sig_token.clone()),
+            SignatureToken::Vector(ty) => Ok(SignatureToken::Vector(Box::new(
+                self.import_signature_token(dependency, ty)?,
+            ))),
             SignatureToken::Struct(sh_idx, types) => {
                 let struct_handle = dependency.struct_handle_at(*sh_idx);
                 let defining_module_handle = dependency.module_handle_at(struct_handle.module);

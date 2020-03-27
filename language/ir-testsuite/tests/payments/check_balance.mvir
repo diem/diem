@@ -1,10 +1,11 @@
 import 0x0.LibraAccount;
+import 0x0.LBR;
 
 main() {
     let addr: address;
     let struct1_original_balance: u64;
     addr = get_txn_sender();
-    struct1_original_balance = LibraAccount.balance(copy(addr));
+    struct1_original_balance = LibraAccount.balance<LBR.T>(copy(addr));
     assert(copy(struct1_original_balance) > 10, 77);
 
     return;

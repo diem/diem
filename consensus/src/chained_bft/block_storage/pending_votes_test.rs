@@ -1,13 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::block_storage::pending_votes::PendingVotes;
-use crate::chained_bft::block_storage::VoteReceptionResult;
+use crate::chained_bft::block_storage::{pending_votes::PendingVotes, VoteReceptionResult};
 use consensus_types::{common::Round, vote::Vote, vote_data::VoteData};
 use libra_crypto::HashValue;
-use libra_types::block_info::BlockInfo;
-use libra_types::crypto_proxies::random_validator_verifier;
-use libra_types::ledger_info::LedgerInfo;
+use libra_types::{
+    block_info::BlockInfo, ledger_info::LedgerInfo, validator_verifier::random_validator_verifier,
+};
 
 fn random_ledger_info() -> LedgerInfo {
     LedgerInfo::new(
@@ -24,7 +23,7 @@ fn random_vote_data(round: Round) -> VoteData {
 #[test]
 /// Verify that votes are properly aggregated to QC based on their LedgerInfo digest
 fn test_qc_aggregation() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let (signers, validator) = random_validator_verifier(4, Some(2), false);
     let mut pending_votes = PendingVotes::new();
 
@@ -85,7 +84,7 @@ fn test_qc_aggregation() {
 #[test]
 /// Verify that only the last votes are kept in the system for qc aggregation
 fn test_qc_aggregation_keep_last_only() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let (signers, validator) = random_validator_verifier(4, Some(2), false);
     let mut pending_votes = PendingVotes::new();
@@ -143,7 +142,7 @@ fn test_qc_aggregation_keep_last_only() {
 #[test]
 /// Verify that votes are properly aggregated to TC based on their rounds
 fn test_tc_aggregation() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let (signers, validator) = random_validator_verifier(4, Some(2), false);
     let mut pending_votes = PendingVotes::new();
@@ -190,7 +189,7 @@ fn test_tc_aggregation() {
 #[test]
 /// Verify that only the last votes are kept in the system for TC aggregation
 fn test_tc_aggregation_keep_last_only() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
 
     let (signers, validator) = random_validator_verifier(4, Some(2), false);
     let mut pending_votes = PendingVotes::new();

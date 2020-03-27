@@ -32,18 +32,17 @@ use crate::{
 };
 use libra_types::{
     account_address::AccountAddress,
-    byte_array::ByteArray,
-    identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
 use mirai_annotations::*;
+use move_core_types::identifier::{IdentStr, Identifier};
 use num_variants::NumVariants;
-use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::{collection::vec, prelude::*, strategy::BoxedStrategy};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
+use ref_cast::RefCast;
 
 /// Generic index into one of the tables in the binary format.
 pub type TableIndex = u16;
@@ -164,7 +163,7 @@ pub type CodeOffset = u16;
 /// The pool of identifiers.
 pub type IdentifierPool = Vec<Identifier>;
 /// The pool of `ByteArray` literals.
-pub type ByteArrayPool = Vec<ByteArray>;
+pub type ByteArrayPool = Vec<Vec<u8>>;
 /// The pool of `AccountAddress` literals.
 ///
 /// Code references have a literal addresses in `ModuleHandle`s. Literal references to data in
@@ -181,10 +180,8 @@ pub type LocalsSignaturePool = Vec<LocalsSignature>;
 
 // TODO: "<SELF>" only passes the validator for identifiers because it is special cased. Whenever
 // "<SELF>" is removed, so should the special case in identifier.rs.
-static SELF_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("<SELF>").unwrap());
-
 pub fn self_module_name() -> &'static IdentStr {
-    &*SELF_MODULE_NAME
+    IdentStr::ref_cast("<SELF>")
 }
 
 /// Index 0 into the LocalsSignaturePool, which is guaranteed to be an empty list.
@@ -195,7 +192,7 @@ pub const NO_TYPE_ACTUALS: LocalsSignatureIndex = LocalsSignatureIndex(0);
 // HANDLES:
 // Handles are structs that accompany opcodes that need references: a type reference,
 // or a function reference (a field reference being available only within the module that
-// defrines the field can be a definition).
+// defines the field can be a definition).
 // Handles refer to both internal and external "entities" and are embedded as indexes
 // in the instruction stream.
 // Handles define resolution. Resolution is assumed to be by (name, signature)
@@ -464,15 +461,12 @@ impl Kind {
     pub fn is_sub_kind_of(self, k: Kind) -> bool {
         use Kind::*;
 
-        match (self, k) {
-            (_, All) | (Resource, Resource) | (Unrestricted, Unrestricted) => true,
-            _ => false,
-        }
+        matches!((self, k), (_, All) | (Resource, Resource) | (Unrestricted, Unrestricted))
     }
 
     /// Helper function to determine the kind of a struct instance by taking the kind of a type
     /// actual and join it with the existing partial result.
-    pub fn join(self, other: &Kind) -> Kind {
+    pub fn join(self, other: Kind) -> Kind {
         match (self, other) {
             (Kind::All, _) | (_, Kind::All) => Kind::All,
             (Kind::Resource, _) | (_, Kind::Resource) => Kind::Resource,
@@ -498,10 +492,10 @@ pub enum SignatureToken {
     U64,
     /// Unsigned integers, 128 bits length.
     U128,
-    /// ByteArray, variable size, immutable byte array.
-    ByteArray,
-    /// Address, a 32 bytes immutable type.
+    /// Address, a 16 bytes immutable type.
     Address,
+    /// Vector
+    Vector(Box<SignatureToken>),
     /// MOVE user type, resource or unrestricted
     Struct(StructHandleIndex, Vec<SignatureToken>),
     /// Reference to a type.
@@ -523,8 +517,9 @@ impl Arbitrary for SignatureToken {
 
         let leaf = prop_oneof![
             Just(Bool),
+            Just(U8),
             Just(U64),
-            Just(ByteArray),
+            Just(U128),
             Just(Address),
             // TODO: generate type actuals when generics is implemented
             any::<StructHandleIndex>().prop_map(|sh_idx| Struct(sh_idx, vec![])),
@@ -536,6 +531,7 @@ impl Arbitrary for SignatureToken {
             1,  // items per collection
             |inner| {
                 prop_oneof![
+                    inner.clone().prop_map(|token| Vector(Box::new(token))),
                     inner.clone().prop_map(|token| Reference(Box::new(token))),
                     inner.prop_map(|token| MutableReference(Box::new(token))),
                 ]
@@ -545,15 +541,15 @@ impl Arbitrary for SignatureToken {
     }
 }
 
-impl ::std::fmt::Debug for SignatureToken {
+impl std::fmt::Debug for SignatureToken {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         match self {
             SignatureToken::Bool => write!(f, "Bool"),
             SignatureToken::U8 => write!(f, "U8"),
             SignatureToken::U64 => write!(f, "U64"),
             SignatureToken::U128 => write!(f, "U128"),
-            SignatureToken::ByteArray => write!(f, "ByteArray"),
             SignatureToken::Address => write!(f, "Address"),
+            SignatureToken::Vector(boxed) => write!(f, "Vector({:?})", boxed),
             SignatureToken::Struct(idx, types) => write!(f, "Struct({:?}, {:?})", idx, types),
             SignatureToken::Reference(boxed) => write!(f, "Reference({:?})", boxed),
             SignatureToken::MutableReference(boxed) => write!(f, "MutableReference({:?})", boxed),
@@ -605,7 +601,7 @@ impl SignatureToken {
         match self {
             Reference(_) => SignatureTokenKind::Reference,
             MutableReference(_) => SignatureTokenKind::MutableReference,
-            Bool | U8 | U64 | U128 | ByteArray | Address | Struct(_, _) => {
+            Bool | U8 | U64 | U128 | Address | Struct(_, _) | Vector(_) => {
                 SignatureTokenKind::Value
             }
             // TODO: This is a temporary hack to please the verifier. SignatureTokenKind will soon
@@ -623,7 +619,7 @@ impl SignatureToken {
         match self {
             Struct(sh_idx, _) => Some(*sh_idx),
             Reference(token) | MutableReference(token) => token.struct_index(),
-            Bool | U8 | U64 | U128 | ByteArray | Address | TypeParameter(_) => None,
+            Bool | U8 | U64 | U128 | Address | Vector(_) | TypeParameter(_) => None,
         }
     }
 
@@ -631,8 +627,10 @@ impl SignatureToken {
     pub fn is_primitive(&self) -> bool {
         use SignatureToken::*;
         match self {
-            Bool | U8 | U64 | U128 | ByteArray | Address => true,
-            Struct(_, _) | Reference(_) | MutableReference(_) | TypeParameter(_) => false,
+            Bool | U8 | U64 | U128 | Address => true,
+            Struct(_, _) | Reference(_) | Vector(_) | MutableReference(_) | TypeParameter(_) => {
+                false
+            }
         }
     }
 
@@ -642,8 +640,8 @@ impl SignatureToken {
         match self {
             U8 | U64 | U128 => true,
             Bool
-            | ByteArray
             | Address
+            | Vector(_)
             | Struct(_, _)
             | Reference(_)
             | MutableReference(_)
@@ -672,20 +670,14 @@ impl SignatureToken {
     pub fn is_reference(&self) -> bool {
         use SignatureToken::*;
 
-        match self {
-            Reference(_) | MutableReference(_) => true,
-            _ => false,
-        }
+        matches!(self, Reference(_) | MutableReference(_))
     }
 
     /// Returns true if the `SignatureToken` is a mutable reference.
     pub fn is_mutable_reference(&self) -> bool {
         use SignatureToken::*;
 
-        match self {
-            MutableReference(_) => true,
-            _ => false,
-        }
+        matches!(self, MutableReference(_))
     }
 
     /// Set the index to this one. Useful for random testing.
@@ -712,8 +704,8 @@ impl SignatureToken {
             U8 => U8,
             U64 => U64,
             U128 => U128,
-            ByteArray => ByteArray,
             Address => Address,
+            Vector(ty) => Vector(Box::new(ty.substitute(tys))),
             Struct(idx, actuals) => Struct(
                 *idx,
                 actuals
@@ -723,7 +715,12 @@ impl SignatureToken {
             ),
             Reference(ty) => Reference(Box::new(ty.substitute(tys))),
             MutableReference(ty) => MutableReference(Box::new(ty.substitute(tys))),
-            TypeParameter(idx) => tys[*idx as usize].clone(),
+            TypeParameter(idx) => {
+                // Assume that the caller has previously parsed and verified the structure of the
+                // file and that this guarantees that type parameter indices are always in bounds.
+                assume!((*idx as usize) < tys.len());
+                tys[*idx as usize].clone()
+            }
         }
     }
 
@@ -737,12 +734,14 @@ impl SignatureToken {
 
         match ty {
             // The primitive types & references have kind unrestricted.
-            Bool | U8 | U64 | U128 | ByteArray | Address | Reference(_) | MutableReference(_) => {
+            Bool | U8 | U64 | U128 | Address | Reference(_) | MutableReference(_) => {
                 Kind::Unrestricted
             }
 
             // To get the kind of a type parameter, we lookup its constraint in the formals.
             TypeParameter(idx) => type_formals[*idx as usize],
+
+            Vector(ty) => Self::kind((struct_handles, type_formals), ty),
 
             Struct(idx, tys) => {
                 // Get the struct handle at idx. Note the index could be out of bounds.
@@ -766,7 +765,7 @@ impl SignatureToken {
                 //       whole, and thus `all`.
                 //   - If none of the type actuals is `all`, then the struct is a resource if
                 //     and only if one of the type actuals is `resource`.
-                kinds.iter().fold(Kind::Unrestricted, Kind::join)
+                kinds.iter().cloned().fold(Kind::Unrestricted, Kind::join)
             }
         }
     }
@@ -1295,19 +1294,13 @@ impl ::std::fmt::Debug for Bytecode {
 impl Bytecode {
     /// Return true if this bytecode instruction always branches
     pub fn is_unconditional_branch(&self) -> bool {
-        match self {
-            Bytecode::Ret | Bytecode::Abort | Bytecode::Branch(_) => true,
-            _ => false,
-        }
+        matches!(self, Bytecode::Ret | Bytecode::Abort | Bytecode::Branch(_))
     }
 
     /// Return true if the branching behavior of this bytecode instruction depends on a runtime
     /// value
     pub fn is_conditional_branch(&self) -> bool {
-        match self {
-            Bytecode::BrFalse(_) | Bytecode::BrTrue(_) => true,
-            _ => false,
-        }
+        matches!(self, Bytecode::BrFalse(_) | Bytecode::BrTrue(_))
     }
 
     /// Returns true if this bytecode instruction is either a conditional or an unconditional branch
@@ -1357,23 +1350,6 @@ impl Bytecode {
         }
 
         v
-    }
-}
-
-/// A `CompiledProgram` defines the structure of a transaction to execute.
-/// It has two parts: modules to be published and a transaction script.
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub struct CompiledProgram {
-    /// The modules to be published
-    pub modules: Vec<CompiledModule>,
-    /// The transaction script to execute
-    pub script: CompiledScript,
-}
-
-impl CompiledProgram {
-    /// Creates a new compiled program from compiled modules and script
-    pub fn new(modules: Vec<CompiledModule>, script: CompiledScript) -> Self {
-        CompiledProgram { modules, script }
     }
 }
 
@@ -1540,7 +1516,7 @@ impl Arbitrary for CompiledScriptMut {
             ),
             (
                 vec(any::<Identifier>(), 0..=size),
-                vec(any::<ByteArray>(), 0..=size),
+                vec(vec(any::<u8>(), 0..=size), 0..=size),
                 vec(any::<AccountAddress>(), 0..=size),
             ),
             any_with::<FunctionDefinition>(size),
@@ -1590,7 +1566,7 @@ impl Arbitrary for CompiledModuleMut {
             ),
             (
                 vec(any::<Identifier>(), 0..=size),
-                vec(any::<ByteArray>(), 0..=size),
+                vec(vec(any::<u8>(), 0..=size), 0..=size),
                 vec(any::<AccountAddress>(), 0..=size),
             ),
             (
@@ -1680,6 +1656,10 @@ impl CompiledModule {
 
     /// Returns the number of items of a specific `IndexKind`.
     pub fn kind_count(&self, kind: IndexKind) -> usize {
+        precondition!(match kind {
+            IndexKind::LocalPool | IndexKind::CodeDefinition | IndexKind::TypeParameter => false,
+            _ => true,
+        });
         self.as_inner().kind_count(kind)
     }
 
@@ -1701,6 +1681,7 @@ impl CompiledModule {
     /// into_module, i.e., script.into_module().into_script() == script.
     pub fn into_script(self) -> CompiledScript {
         let mut inner = self.into_inner();
+        precondition!(!inner.function_defs.is_empty());
         let main = inner.function_defs.remove(0);
         CompiledScript(CompiledScriptMut {
             module_handles: inner.module_handles,
@@ -1832,7 +1813,7 @@ pub fn dummy_procedure_module(code: Vec<Bytecode>) -> CompiledModule {
 
 /// Return a simple script that contains only a return in the main()
 pub fn empty_script() -> CompiledScriptMut {
-    let default_address = AccountAddress::new([3u8; 32]);
+    let default_address = AccountAddress::new([3u8; AccountAddress::LENGTH]);
     let self_module_name = self_module_name().to_owned();
     let main_name = Identifier::new("main").unwrap();
     let void_void_sig = FunctionSignature {

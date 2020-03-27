@@ -1,0 +1,8 @@
+error: 
+
+    ┌── tests/move_check/typing/assign_nested.move:14:19 ───
+    │
+ 14 │         (_, x, _, s.f) = four();
+    │                   ^^^ Invalid assignment lvalue. Expected: a local, a field write, or a deconstructing assignment
+    │
+

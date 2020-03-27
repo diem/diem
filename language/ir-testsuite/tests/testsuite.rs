@@ -14,6 +14,7 @@ use ir_to_bytecode::{
 use libra_types::account_address::AccountAddress;
 use move_ir_types::ast;
 use std::path::Path;
+use stdlib::{env_stdlib_modules, stdlib_modules, use_staged, StdLibOptions};
 
 struct IRCompiler {
     deps: Vec<VerifiedModule>,
@@ -35,7 +36,7 @@ impl Compiler for IRCompiler {
         address: AccountAddress,
         input: &str,
     ) -> Result<ScriptOrModule> {
-        Ok(match parse_script_or_module(input)? {
+        Ok(match parse_script_or_module("unused_file_name", input)? {
             ast::ScriptOrModule::Script(parsed_script) => {
                 log(format!("{}", &parsed_script));
                 ScriptOrModule::Script(compile_script(address, parsed_script, &self.deps)?.0)
@@ -50,10 +51,22 @@ impl Compiler for IRCompiler {
             }
         })
     }
+
+    // Use the staged genesis/stdlib unless the the
+    // MOVE_NO_USE_STAGED environment variable is set.
+    fn stdlib() -> Option<Vec<VerifiedModule>> {
+        if !use_staged() {
+            Some(env_stdlib_modules().to_vec())
+        } else {
+            None
+        }
+    }
 }
 
 fn run_test(path: &Path) -> datatest_stable::Result<()> {
-    let compiler = IRCompiler::new(stdlib::stdlib_modules().to_vec());
+    // The IR tests always run with the staged stdlib
+    let stdlib = stdlib_modules(StdLibOptions::Staged);
+    let compiler = IRCompiler::new(stdlib.to_vec());
     testsuite::functional_tests(compiler, path)
 }
 

@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parser/less_than_space.move:5:14 ───
+   ┌── tests/move_check/parser/less_than_space.move:5:16 ───
    │
  5 │         if (v< 10) return v;
    │                ^^ Unexpected '10'

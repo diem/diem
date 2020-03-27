@@ -1,12 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::paths::{self, Path};
-use crate::shared::*;
-use std::cmp::Ordering;
-use std::collections::{BTreeMap, BTreeSet};
-use std::fmt;
-use std::fmt::Debug;
+use crate::{
+    paths::{self, Path},
+    shared::*,
+};
+use std::{
+    cmp::Ordering,
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+    fmt::Debug,
+};
 
 //**************************************************************************************************
 // Definitions

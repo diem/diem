@@ -2,16 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    expansion::ast::Fields,
-    naming::ast::{BaseType, FunctionSignature, SingleType, StructDefinition, Type, Type_},
+    expansion::ast::{Fields, SpecId},
+    naming::ast::{FunctionSignature, StructDefinition, Type, TypeName_, Type_},
     parser::ast::{
         BinOp, Field, FunctionName, FunctionVisibility, ModuleIdent, StructName, UnaryOp, Value,
         Var,
     },
-    shared::ast_debug::*,
-    shared::unique_map::UniqueMap,
-    shared::*,
+    shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
+use move_ir_types::location::*;
 use std::{
     collections::{BTreeSet, VecDeque},
     fmt,
@@ -33,10 +32,9 @@ pub struct Program {
 
 #[derive(Debug)]
 pub struct ModuleDefinition {
-    /// `None` if it is a library dependency
-    /// `Some(order)` if it is a source file. Where `order` is the topological order/rank in the
-    /// depedency graph
-    pub is_source_module: Option<usize>,
+    pub is_source_module: bool,
+    /// `dependency_order` is the topological order/rank in the dependency graph.
+    pub dependency_order: usize,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub functions: UniqueMap<FunctionName, Function>,
 }
@@ -66,66 +64,40 @@ pub struct Function {
 
 #[derive(Debug, PartialEq)]
 #[allow(clippy::large_enum_variant)]
-pub enum Assign_ {
+pub enum LValue_ {
     Ignore,
-    Var(Var, SingleType),
-    Unpack(
-        ModuleIdent,
-        StructName,
-        Vec<BaseType>,
-        Fields<(BaseType, Assign)>,
-    ),
+    Var(Var, Box<Type>),
+    Unpack(ModuleIdent, StructName, Vec<Type>, Fields<(Type, LValue)>),
     BorrowUnpack(
         bool,
         ModuleIdent,
         StructName,
-        Vec<BaseType>,
-        Fields<(BaseType, Assign)>,
+        Vec<Type>,
+        Fields<(Type, LValue)>,
     ),
 }
-pub type Assign = Spanned<Assign_>;
-pub type AssignList = Spanned<Vec<Assign>>;
-
-#[derive(Debug, PartialEq)]
-#[allow(clippy::large_enum_variant)]
-pub enum Bind_ {
-    Ignore,
-    Var(Var, Option<SingleType>),
-    Unpack(
-        ModuleIdent,
-        StructName,
-        Vec<BaseType>,
-        Fields<(BaseType, Bind)>,
-    ),
-    BorrowUnpack(
-        bool,
-        ModuleIdent,
-        StructName,
-        Vec<BaseType>,
-        Fields<(BaseType, Bind)>,
-    ),
-}
-pub type Bind = Spanned<Bind_>;
-pub type BindList = Spanned<Vec<Bind>>;
+pub type LValue = Spanned<LValue_>;
+pub type LValueList_ = Vec<LValue>;
+pub type LValueList = Spanned<LValueList_>;
 
 #[derive(Debug, PartialEq)]
 pub struct ModuleCall {
     pub module: ModuleIdent,
     pub name: FunctionName,
-    pub type_arguments: Vec<BaseType>,
+    pub type_arguments: Vec<Type>,
     pub arguments: Box<Exp>,
-    pub parameter_types: Vec<SingleType>,
+    pub parameter_types: Vec<Type>,
     pub acquires: BTreeSet<StructName>,
 }
 
 #[derive(Debug, PartialEq)]
 #[allow(clippy::large_enum_variant)]
 pub enum BuiltinFunction_ {
-    MoveToSender(BaseType),
-    MoveFrom(BaseType),
-    BorrowGlobal(bool, BaseType),
-    Exists(BaseType),
-    Freeze(BaseType),
+    MoveToSender(Type),
+    MoveFrom(Type),
+    BorrowGlobal(bool, Type),
+    Exists(Type),
+    Freeze(Type),
     /* GetHeight,
      * GetMaxGasPrice,
      * GetMaxGasUnits,
@@ -140,14 +112,9 @@ pub type BuiltinFunction = Spanned<BuiltinFunction_>;
 pub enum UnannotatedExp_ {
     Unit,
     Value(Value),
-    Move {
-        from_user: bool,
-        var: Var,
-    },
-    Copy {
-        from_user: bool,
-        var: Var,
-    },
+    InferredNum(u128),
+    Move { from_user: bool, var: Var },
+    Copy { from_user: bool, var: Var },
     Use(Var),
 
     ModuleCall(Box<ModuleCall>),
@@ -155,12 +122,9 @@ pub enum UnannotatedExp_ {
 
     IfElse(Box<Exp>, Box<Exp>, Box<Exp>),
     While(Box<Exp>, Box<Exp>),
-    Loop {
-        has_break: bool,
-        body: Box<Exp>,
-    },
+    Loop { has_break: bool, body: Box<Exp> },
     Block(Sequence),
-    Assign(AssignList, Vec<Option<SingleType>>, Box<Exp>),
+    Assign(LValueList, Vec<Option<Type>>, Box<Exp>),
     Mutate(Box<Exp>, Box<Exp>),
     Return(Box<Exp>),
     Abort(Box<Exp>),
@@ -171,19 +135,17 @@ pub enum UnannotatedExp_ {
     UnaryExp(UnaryOp, Box<Exp>),
     BinopExp(Box<Exp>, BinOp, Box<Type>, Box<Exp>),
 
-    Pack(
-        ModuleIdent,
-        StructName,
-        Vec<BaseType>,
-        Fields<(BaseType, Exp)>,
-    ),
+    Pack(ModuleIdent, StructName, Vec<Type>, Fields<(Type, Exp)>),
     ExpList(Vec<ExpListItem>),
 
     Borrow(bool, Box<Exp>, Field),
     TempBorrow(bool, Box<Exp>),
     BorrowLocal(bool, Var),
 
+    Cast(Box<Exp>, Box<Type>),
     Annotate(Box<Exp>, Box<Type>),
+
+    Spec(SpecId),
 
     UnresolvedError,
 }
@@ -201,34 +163,27 @@ pub type Sequence = VecDeque<SequenceItem>;
 #[derive(Debug, PartialEq)]
 pub enum SequenceItem_ {
     Seq(Box<Exp>),
-    Declare(BindList),
-    Bind(BindList, Vec<Option<SingleType>>, Box<Exp>),
+    Declare(LValueList),
+    Bind(LValueList, Vec<Option<Type>>, Box<Exp>),
 }
 pub type SequenceItem = Spanned<SequenceItem_>;
 
 #[derive(Debug, PartialEq)]
 pub enum ExpListItem {
-    Single(Exp, Box<SingleType>),
-    Splat(Loc, Exp, Vec<SingleType>),
+    Single(Exp, Box<Type>),
+    Splat(Loc, Exp, Vec<Type>),
 }
 
 pub fn single_item(e: Exp) -> ExpListItem {
-    single_item_opt(e).expect("ICE invalid call to single_item")
-}
-
-pub fn single_item_opt(e: Exp) -> Option<ExpListItem> {
-    let st = match &e.ty {
-        sp!(_, Type_::Unit) | sp!(_, Type_::Multiple(_)) => return None,
-        sp!(_, Type_::Single(s)) => s.clone(),
-    };
-    Some(ExpListItem::Single(e, Box::new(st)))
+    let ty = Box::new(e.ty.clone());
+    ExpListItem::Single(e, ty)
 }
 
 pub fn splat_item(splat_loc: Loc, e: Exp) -> ExpListItem {
     let ss = match &e.ty {
-        sp!(_, Type_::Single(_)) => panic!("ICE invalid call to splat_item"),
         sp!(_, Type_::Unit) => vec![],
-        sp!(_, Type_::Multiple(ss)) => ss.clone(),
+        sp!(_, Type_::Apply(_, sp!(_, TypeName_::Multiple(_)), ss)) => ss.clone(),
+        _ => panic!("ICE splat of non list type"),
     };
     ExpListItem::Splat(splat_loc, e, ss)
 }
@@ -277,13 +232,16 @@ impl AstDebug for ModuleDefinition {
     fn ast_debug(&self, w: &mut AstWriter) {
         let ModuleDefinition {
             is_source_module,
+            dependency_order,
             structs,
             functions,
         } = self;
-        match is_source_module {
-            None => w.writeln("library module"),
-            Some(ord) => w.writeln(&format!("source moduel #{}", ord)),
+        if *is_source_module {
+            w.writeln("library module")
+        } else {
+            w.writeln("source module")
         }
+        w.writeln(&format!("dependency order #{}", dependency_order));
         for sdef in structs {
             sdef.ast_debug(w);
             w.new_line();
@@ -358,6 +316,7 @@ impl AstDebug for UnannotatedExp_ {
         match self {
             E::Unit => w.write("()"),
             E::Value(v) => v.ast_debug(w),
+            E::InferredNum(u) => w.write(&format!("{}", u)),
             E::Move {
                 from_user: false,
                 var: v,
@@ -493,6 +452,13 @@ impl AstDebug for UnannotatedExp_ {
                 }
                 w.write(&format!("{}", v));
             }
+            E::Cast(e, ty) => {
+                w.write("(");
+                e.ast_debug(w);
+                w.write(" as ");
+                ty.ast_debug(w);
+                w.write(")");
+            }
             E::Annotate(e, ty) => {
                 w.write("annot(");
                 e.ast_debug(w);
@@ -500,6 +466,7 @@ impl AstDebug for UnannotatedExp_ {
                 ty.ast_debug(w);
                 w.write(")");
             }
+            E::Spec(u) => w.write(&format!("spec({})", u)),
             E::UnresolvedError => w.write("_|_"),
         }
     }
@@ -579,72 +546,16 @@ impl AstDebug for ExpListItem {
     }
 }
 
-impl AstDebug for Vec<Bind> {
+impl AstDebug for Vec<Option<Type>> {
     fn ast_debug(&self, w: &mut AstWriter) {
-        let parens = self.len() != 1;
-        if parens {
-            w.write("(");
-        }
-        w.comma(self, |w, b| b.ast_debug(w));
-        if parens {
-            w.write(")");
-        }
-    }
-}
-
-impl AstDebug for Bind_ {
-    fn ast_debug(&self, w: &mut AstWriter) {
-        use Bind_ as B;
-        match self {
-            B::Ignore => w.write("_"),
-            B::Var(v, None) => w.write(&format!("{}", v)),
-            B::Var(v, Some(st)) => w.annotate(|w| w.write(&format!("{}", v)), st),
-            B::Unpack(m, s, tys, fields) => {
-                w.write(&format!("{}::{}", m, s));
-                w.write("<");
-                tys.ast_debug(w);
-                w.write(">");
-                w.write("{");
-                w.comma(fields, |w, (f, idx_bt_b)| {
-                    let (idx, (bt, b)) = idx_bt_b;
-                    w.annotate(|w| w.write(&format!("{}#{}", idx, f)), bt);
-                    w.write(": ");
-                    b.ast_debug(w);
-                });
-                w.write("}");
-            }
-            B::BorrowUnpack(mut_, m, s, tys, fields) => {
-                w.write("&");
-                if *mut_ {
-                    w.write("mut ");
-                }
-                w.write(&format!("{}::{}", m, s));
-                w.write("<");
-                tys.ast_debug(w);
-                w.write(">");
-                w.write("{");
-                w.comma(fields, |w, (f, idx_bt_b)| {
-                    let (idx, (bt, b)) = idx_bt_b;
-                    w.annotate(|w| w.write(&format!("{}#{}", idx, f)), bt);
-                    w.write(": ");
-                    b.ast_debug(w);
-                });
-                w.write("}");
-            }
-        }
-    }
-}
-
-impl AstDebug for Vec<Option<SingleType>> {
-    fn ast_debug(&self, w: &mut AstWriter) {
-        w.comma(self, |w, s_opt| match s_opt {
-            Some(s) => s.ast_debug(w),
+        w.comma(self, |w, t_opt| match t_opt {
+            Some(t) => t.ast_debug(w),
             None => w.write("%no_exp%"),
         })
     }
 }
 
-impl AstDebug for Vec<Assign> {
+impl AstDebug for Vec<LValue> {
     fn ast_debug(&self, w: &mut AstWriter) {
         let parens = self.len() != 1;
         if parens {
@@ -657,13 +568,13 @@ impl AstDebug for Vec<Assign> {
     }
 }
 
-impl AstDebug for Assign_ {
+impl AstDebug for LValue_ {
     fn ast_debug(&self, w: &mut AstWriter) {
-        use Assign_ as A;
+        use LValue_ as L;
         match self {
-            A::Ignore => w.write("_"),
-            A::Var(v, st) => w.annotate(|w| w.write(&format!("{}", v)), st),
-            A::Unpack(m, s, tys, fields) => {
+            L::Ignore => w.write("_"),
+            L::Var(v, st) => w.annotate(|w| w.write(&format!("{}", v)), st),
+            L::Unpack(m, s, tys, fields) => {
                 w.write(&format!("{}::{}", m, s));
                 w.write("<");
                 tys.ast_debug(w);
@@ -677,7 +588,7 @@ impl AstDebug for Assign_ {
                 });
                 w.write("}");
             }
-            A::BorrowUnpack(mut_, m, s, tys, fields) => {
+            L::BorrowUnpack(mut_, m, s, tys, fields) => {
                 w.write("&");
                 if *mut_ {
                     w.write("mut ");

@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/typing/subtype_return_invalid.move:4:15 ───
+   ┌── tests/move_check/typing/subtype_return_invalid.move:5:9 ───
    │
  5 │         u
    │         ^ Invalid return expression
@@ -14,7 +14,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/subtype_return_invalid.move:8:15 ───
+   ┌── tests/move_check/typing/subtype_return_invalid.move:9:9 ───
    │
  9 │         s
    │         ^ Invalid return expression
@@ -28,7 +28,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/subtype_return_invalid.move:12:26 ───
+    ┌── tests/move_check/typing/subtype_return_invalid.move:13:9 ───
     │
  13 │         (u1, u2)
     │         ^^^^^^^^ Invalid return expression
@@ -42,7 +42,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/subtype_return_invalid.move:16:16 ───
+    ┌── tests/move_check/typing/subtype_return_invalid.move:17:9 ───
     │
  17 │         (u1, u2)
     │         ^^^^^^^^ Invalid return expression
@@ -56,7 +56,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/subtype_return_invalid.move:20:16 ───
+    ┌── tests/move_check/typing/subtype_return_invalid.move:21:9 ───
     │
  21 │         (u1, u2)
     │         ^^^^^^^^ Invalid return expression

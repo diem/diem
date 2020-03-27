@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_field_invalid.move:13:17 ───
+    ┌── tests/move_check/borrows/borrow_field_field_invalid.move:14:18 ───
     │
  14 │         let f1 = &inner.f1;
     │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_field_invalid.move:20:17 ───
+    ┌── tests/move_check/borrows/borrow_field_field_invalid.move:21:18 ───
     │
  21 │         let f1 = &inner.f1;
     │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.

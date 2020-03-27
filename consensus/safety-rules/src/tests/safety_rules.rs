@@ -3,7 +3,7 @@
 
 use crate::{tests::suite, PersistentSafetyStorage, SafetyRules, TSafetyRules};
 use consensus_types::common::{Payload, Round};
-use libra_types::crypto_proxies::ValidatorSigner;
+use libra_types::validator_signer::ValidatorSigner;
 
 #[test]
 fn test() {

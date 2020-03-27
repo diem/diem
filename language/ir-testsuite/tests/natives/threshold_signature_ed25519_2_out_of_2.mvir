@@ -1,10 +1,10 @@
 import 0x0.Signature;
 
 main() {
-    let bitmap: bytearray;
-    let signatures: bytearray;
-    let public_keys: bytearray;
-    let message: bytearray;
+    let bitmap: vector<u8>;
+    let signatures: vector<u8>;
+    let public_keys: vector<u8>;
+    let message: vector<u8>;
 
     let output: u64;
     let expected_output: u64;

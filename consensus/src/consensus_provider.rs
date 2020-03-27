@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::{chained_bft_smr::ChainedBftSMR, persistent_liveness_storage::StorageWriteProxy},
+    chained_bft::{
+        chained_bft_smr::ChainedBftSMR,
+        network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
+        persistent_liveness_storage::StorageWriteProxy,
+    },
     state_computer::ExecutionProxy,
     txn_manager::MempoolProxy,
 };
@@ -11,11 +15,11 @@ use executor::Executor;
 use futures::channel::mpsc;
 use libra_config::config::NodeConfig;
 use libra_mempool::ConsensusRequest;
-use network::validator_network::{ConsensusNetworkEvents, ConsensusNetworkSender};
+use libra_types::transaction::SignedTransaction;
+use libra_vm::LibraVM;
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
 use storage_client::{StorageRead, StorageReadServiceClient};
-use vm_runtime::LibraVM;
 
 /// Public interface to a consensus protocol.
 pub trait ConsensusProvider {
@@ -33,8 +37,8 @@ pub trait ConsensusProvider {
 /// Helper function to create a ConsensusProvider based on configuration
 pub fn make_consensus_provider(
     node_config: &mut NodeConfig,
-    network_sender: ConsensusNetworkSender,
-    network_receiver: ConsensusNetworkEvents,
+    network_sender: ConsensusNetworkSender<Vec<SignedTransaction>>,
+    network_receiver: ConsensusNetworkEvents<Vec<SignedTransaction>>,
     executor: Arc<Executor<LibraVM>>,
     state_sync_client: Arc<StateSyncClient>,
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,

@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::negotiate::{
+use crate::{
     framing::{read_u16frame, write_u16frame},
-    PROTOCOL_INTERACTIVE, PROTOCOL_NOT_SUPPORTED, PROTOCOL_SELECT,
+    negotiate::{PROTOCOL_INTERACTIVE, PROTOCOL_NOT_SUPPORTED, PROTOCOL_SELECT},
 };
 use bytes::BytesMut;
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
@@ -114,10 +114,12 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::negotiate::{
+    use crate::{
         framing::{read_u16frame, write_u16frame},
-        inbound::{negotiate_inbound_interactive, negotiate_inbound_select},
-        PROTOCOL_INTERACTIVE, PROTOCOL_NOT_SUPPORTED,
+        negotiate::{
+            inbound::{negotiate_inbound_interactive, negotiate_inbound_select},
+            PROTOCOL_INTERACTIVE, PROTOCOL_NOT_SUPPORTED,
+        },
     };
     use bytes::BytesMut;
     use futures::{executor::block_on, future::join, io::AsyncWriteExt};

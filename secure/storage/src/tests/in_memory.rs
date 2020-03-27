@@ -1,10 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{in_memory::InMemoryStorage, tests::suite};
+use crate::{tests::suite, InMemoryStorage};
 
 #[test]
 fn in_memory() {
-    let storage = Box::new(InMemoryStorage::new());
-    suite::run_test_suite(storage, "InMemoryStorage");
+    let mut storage = InMemoryStorage::new_storage();
+    suite::execute_all_storage_tests(storage.as_mut());
 }

@@ -1,10 +1,11 @@
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 main() {
   let sender: address;
   let cap: LibraAccount.WithdrawalCapability;
-  let coin: LibraCoin.T;
+  let coin: Libra.T<LBR.T>;
 
   sender = get_txn_sender();
 
@@ -20,8 +21,8 @@ main() {
   assert(!LibraAccount.delegated_withdrawal_capability(copy(sender)), 52);
 
   // and the sender should be able to withdraw once again
-  coin = LibraAccount.withdraw_from_sender(100);
-  LibraAccount.deposit(move(sender), move(coin));
+  coin = LibraAccount.withdraw_from_sender<LBR.T>(100);
+  LibraAccount.deposit<LBR.T>(move(sender), move(coin));
 
   return;
 }

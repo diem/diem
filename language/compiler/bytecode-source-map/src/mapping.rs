@@ -1,18 +1,17 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::marking::MarkedSourceMapping;
-use crate::source_map::ModuleSourceMap;
+use crate::{marking::MarkedSourceMapping, source_map::SourceMap};
 use vm::file_format::{CompiledModule, CompiledScript};
 
 /// An object that associates source code with compiled bytecode and source map.
 #[derive(Debug)]
-pub struct SourceMapping<Location: Clone + Eq + Default> {
+pub struct SourceMapping<Location: Clone + Eq> {
     // The resulting bytecode from compiling the source map
     pub bytecode: CompiledModule,
 
     // The source map for the bytecode made w.r.t. to the `source_code`
-    pub source_map: ModuleSourceMap<Location>,
+    pub source_map: SourceMap<Location>,
 
     // The source code for the bytecode. This is not required for disassembly, but it is required
     // for being able to print out corresponding source code for marked functions and structs.
@@ -24,8 +23,8 @@ pub struct SourceMapping<Location: Clone + Eq + Default> {
     pub marks: Option<MarkedSourceMapping>,
 }
 
-impl<Location: Clone + Eq + Default> SourceMapping<Location> {
-    pub fn new(source_map: ModuleSourceMap<Location>, bytecode: CompiledModule) -> Self {
+impl<Location: Clone + Eq> SourceMapping<Location> {
+    pub fn new(source_map: SourceMap<Location>, bytecode: CompiledModule) -> Self {
         Self {
             source_map,
             bytecode,
@@ -34,10 +33,7 @@ impl<Location: Clone + Eq + Default> SourceMapping<Location> {
         }
     }
 
-    pub fn new_from_script(
-        source_map: ModuleSourceMap<Location>,
-        bytecode: CompiledScript,
-    ) -> Self {
+    pub fn new_from_script(source_map: SourceMap<Location>, bytecode: CompiledScript) -> Self {
         Self::new(source_map, bytecode.into_module())
     }
 

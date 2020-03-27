@@ -7,22 +7,26 @@
 
 import 0x0.LibraSystem;
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 import 0x0.Vector;
 
 main() {
-  let lib_coin: LibraCoin.T;
+  let lib_coin: Libra.T<LBR.T>;
   let number_of_validators: u64;
 
   number_of_validators = LibraSystem.validator_set_size();
   assert(copy(number_of_validators) > 1, 0);
-  lib_coin = LibraAccount.withdraw_from_sender(copy(number_of_validators));
+  lib_coin = LibraAccount.withdraw_from_sender<LBR.T>(copy(number_of_validators));
 
-  LibraAccount.deposit({{fees}} , move(lib_coin));
-  LibraSystem.block_prologue(1, h"aa", h"bb", {{vivian}});
+  LibraAccount.deposit<LBR.T>({{fees}} , move(lib_coin));
 
   return;
 }
-// check: "key: EventKey([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 238])"
+
+//! block-prologue
+//! proposer: vivian
+//! block-time: 2
+
 // check: SentPaymentEvent
 // check: 0fee

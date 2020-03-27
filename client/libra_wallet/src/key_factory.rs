@@ -25,7 +25,7 @@ use libra_crypto::{
     hkdf::Hkdf,
     traits::SigningKey,
 };
-use libra_types::account_address::AccountAddress;
+use libra_types::{account_address::AccountAddress, transaction::authenticator::AuthenticationKey};
 use mirai_annotations::*;
 use pbkdf2::pbkdf2;
 use serde::{Deserialize, Serialize};
@@ -99,13 +99,14 @@ impl ExtendedPrivKey {
         (&self.private_key).into()
     }
 
-    /// Computes the sha3 hash of the PublicKey and attempts to construct a Libra AccountAddress
-    /// from the raw bytes of the pubkey hash
-    pub fn get_address(&self) -> Result<AccountAddress> {
-        let public_key = self.get_public();
-        let hash = *HashValue::from_sha3_256(&public_key.to_bytes()).as_ref();
-        let addr = AccountAddress::try_from(&hash[..])?;
-        Ok(addr)
+    /// Compute the account address for this account's public key
+    pub fn get_address(&self) -> AccountAddress {
+        AccountAddress::from_public_key(&self.get_public())
+    }
+
+    /// Compute the authentication key for this account's public key
+    pub fn get_authentication_key(&self) -> AuthenticationKey {
+        AuthenticationKey::ed25519(&self.get_public())
     }
 
     /// Libra specific sign function that is capable of signing an arbitrary HashValue

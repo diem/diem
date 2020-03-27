@@ -7,6 +7,7 @@ use crate::{
     Error, SafetyRules,
 };
 use consensus_types::common::{Author, Payload};
+use libra_logger::warn;
 use libra_secure_net::{NetworkClient, NetworkServer};
 use std::{marker::PhantomData, net::SocketAddr};
 
@@ -31,7 +32,7 @@ pub fn execute<T: Payload>(
 
     loop {
         if let Err(e) = process_one_message(&mut network_server, &mut serializer_service) {
-            eprintln!("Warning: Failed to process message: {}", e);
+            warn!("Warning: Failed to process message: {}", e);
         }
     }
 }

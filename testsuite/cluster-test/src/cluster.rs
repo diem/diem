@@ -7,15 +7,15 @@ use crate::{aws::Aws, instance::Instance};
 use anyhow::{ensure, format_err, Result};
 use config_builder::ValidatorConfig;
 use generate_keypair::load_key_from_file;
-use libra_config::config::AdmissionControlConfig;
-use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
-use libra_crypto::test_utils::KeyPair;
+use libra_config::config::DEFAULT_JSON_RPC_PORT;
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    test_utils::KeyPair,
+};
+use libra_logger::*;
 use rand::prelude::*;
 use rusoto_ec2::{DescribeInstancesRequest, Ec2, Filter, Tag};
-use slog_scope::*;
-use std::collections::HashMap;
-use std::convert::TryInto;
-use std::{thread, time::Duration};
+use std::{collections::HashMap, convert::TryInto, thread, time::Duration};
 
 #[derive(Clone)]
 pub struct Cluster {
@@ -46,6 +46,26 @@ impl Cluster {
             prometheus_ip: None,
             mint_key_pair,
         }
+    }
+
+    fn get_mint_key_pair() -> KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
+        let seed = "1337133713371337133713371337133713371337133713371337133713371337";
+        let seed = hex::decode(seed).expect("Invalid hex in seed.");
+        let seed = seed[..32].try_into().expect("Invalid seed");
+        let mint_key = ValidatorConfig::new().seed(seed).build_faucet_client();
+        KeyPair::from(mint_key)
+    }
+
+    pub fn new_k8s(
+        validator_instances: Vec<Instance>,
+        fullnode_instances: Vec<Instance>,
+    ) -> Result<Self> {
+        Ok(Self {
+            validator_instances,
+            fullnode_instances,
+            prometheus_ip: None,
+            mint_key_pair: Self::get_mint_key_pair(),
+        })
     }
 
     pub fn discover(aws: &Aws) -> Result<Self> {
@@ -90,7 +110,7 @@ impl Cluster {
                 }
                 Ok(r) => r,
             };
-            let ac_port = AdmissionControlConfig::default().address.port() as u32;
+            let ac_port = DEFAULT_JSON_RPC_PORT as u32;
             for reservation in result.reservations.expect("no reservations") {
                 for aws_instance in reservation.instances.expect("no instances") {
                     let ip = aws_instance
@@ -123,11 +143,7 @@ impl Cluster {
         );
         let prometheus_ip =
             prometheus_ip.ok_or_else(|| format_err!("Prometheus was not found in workspace"))?;
-        let seed = "1337133713371337133713371337133713371337133713371337133713371337";
-        let seed = hex::decode(seed).expect("Invalid hex in seed.");
-        let seed = seed[..32].try_into().expect("Invalid seed");
-        let mint_key = ValidatorConfig::new().seed(seed).build_faucet_client();
-        let mint_key_pair = KeyPair::from(mint_key);
+        let mint_key_pair = Self::get_mint_key_pair();
         Ok(Self {
             validator_instances,
             fullnode_instances,
@@ -145,7 +161,7 @@ impl Cluster {
         &self.validator_instances
     }
     pub fn fullnode_instances(&self) -> &[Instance] {
-        &self.validator_instances
+        &self.fullnode_instances
     }
 
     pub fn all_instances(&self) -> impl Iterator<Item = &Instance> {

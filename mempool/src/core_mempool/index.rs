@@ -214,6 +214,22 @@ impl TimelineIndex {
         batch
     }
 
+    /// read all transactions from timeline for timeline id in range (`start_timeline_id`, `end_timeline_id`]
+    pub(crate) fn range(
+        &mut self,
+        start_timeline_id: u64,
+        end_timeline_id: u64,
+    ) -> Vec<(AccountAddress, u64)> {
+        let mut batch = vec![];
+        for (_, &(address, sequence_number)) in self.timeline.range((
+            Bound::Excluded(start_timeline_id),
+            Bound::Included(end_timeline_id),
+        )) {
+            batch.push((address, sequence_number));
+        }
+        batch
+    }
+
     /// add transaction to index
     pub(crate) fn insert(&mut self, txn: &mut MempoolTransaction) {
         self.timeline.insert(

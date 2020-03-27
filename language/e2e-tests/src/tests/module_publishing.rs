@@ -5,8 +5,9 @@ use crate::{
     account::AccountData, assert_prologue_parity, assert_status_eq,
     compile::compile_module_with_address, executor::FakeExecutor, transaction_status_eq,
 };
-use libra_config::config::VMPublishingOption;
 use libra_types::{
+    account_config::lbr_type_tag,
+    on_chain_config::VMPublishingOption,
     transaction::TransactionStatus,
     vm_error::{StatusCode, StatusType, VMStatus},
 };
@@ -32,7 +33,7 @@ fn bad_module_address() {
     );
 
     // compile with account 1's address
-    let compiled_module = compile_module_with_address(account1.address(), &program);
+    let compiled_module = compile_module_with_address(account1.address(), "file_name", &program);
     // send with account 2's address
     let txn = account2.account().create_signed_txn_impl(
         *account2.address(),
@@ -40,6 +41,7 @@ fn bad_module_address() {
         10,
         100_000,
         1,
+        lbr_type_tag(),
     );
 
     // TODO: This is not verified for now.
@@ -76,7 +78,7 @@ fn duplicate_module() {
         }
         ",
     );
-    let compiled_module = compile_module_with_address(account.address(), &program);
+    let compiled_module = compile_module_with_address(account.address(), "file_name", &program);
 
     let txn1 = account.account().create_signed_txn_impl(
         *account.address(),
@@ -84,6 +86,7 @@ fn duplicate_module() {
         sequence_number,
         100_000,
         1,
+        lbr_type_tag(),
     );
 
     let txn2 = account.account().create_signed_txn_impl(
@@ -92,6 +95,7 @@ fn duplicate_module() {
         sequence_number + 1,
         100_000,
         1,
+        lbr_type_tag(),
     );
 
     let output1 = executor.execute_transaction(txn1);
@@ -126,11 +130,15 @@ pub fn test_publishing_no_modules_non_whitelist_script() {
         ",
     );
 
-    let random_script = compile_module_with_address(sender.address(), &program);
-    let txn =
-        sender
-            .account()
-            .create_signed_txn_impl(*sender.address(), random_script, 10, 100_000, 1);
+    let random_script = compile_module_with_address(sender.address(), "file_name", &program);
+    let txn = sender.account().create_signed_txn_impl(
+        *sender.address(),
+        random_script,
+        10,
+        100_000,
+        1,
+        lbr_type_tag(),
+    );
 
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()),
@@ -155,11 +163,15 @@ pub fn test_publishing_allow_modules() {
         ",
     );
 
-    let random_script = compile_module_with_address(sender.address(), &program);
-    let txn =
-        sender
-            .account()
-            .create_signed_txn_impl(*sender.address(), random_script, 10, 100_000, 1);
+    let random_script = compile_module_with_address(sender.address(), "file_name", &program);
+    let txn = sender.account().create_signed_txn_impl(
+        *sender.address(),
+        random_script,
+        10,
+        100_000,
+        1,
+        lbr_type_tag(),
+    );
     assert_eq!(executor.verify_transaction(txn.clone()), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),

@@ -2,6 +2,11 @@ variable "region" {
   default = "us-west-2"
 }
 
+variable "iam_path" {
+  default     = "/testnet/"
+  description = "Path to use when naming IAM objects"
+}
+
 variable "ssh_pub_key" {
   type        = string
   description = "SSH public key for EC2 instance access"
@@ -50,6 +55,11 @@ variable "num_validators" {
   description = "Number of validator nodes to run on this network"
 }
 
+variable "num_validators_in_genesis" {
+  default     = 4
+  description = "Number of validator nodes to include in genesis blob"
+}
+
 # This allows you to use a override number of validators for config generation
 variable "cfg_num_validators_override" {
   default     = 0
@@ -69,25 +79,6 @@ variable "num_fullnode_networks" {
 variable "fullnode_seed" {
   default     = 2674267426742674267426742674267426742674267426742674267426742674
   description = "Default seed for fullnode network"
-}
-
-variable "fullnode_distribution" {
-  type        = list(number)
-  default     = [1, 0, 0, 0]
-  description = "List of number of fullnodes on each validator"
-}
-
-# This is to generate a list of fullnode with validator index to indicate
-# which validator they should be connected to
-locals {
-  validator_index = range(0, length(var.fullnode_distribution))
-  fullnode_pair   = zipmap(local.validator_index, var.fullnode_distribution)
-  expanded_fullnodes = {
-    for key, val in local.fullnode_pair : key => [
-      for i in range(val) : format("%d", key)
-    ]
-  }
-  fullnode_list = flatten(values(local.expanded_fullnodes))
 }
 
 variable "validator_type" {
@@ -169,6 +160,12 @@ variable "log_path" {
   default = "/opt/libra/data/libra.log"
 }
 
+variable "structlog_path" {
+  description = "Structured log path"
+  type    = string
+  default = "/opt/libra/data/libra_structlog.log"
+}
+
 variable "enable_logstash" {
   type        = bool
   description = "Enable logstash instance on validator to send logs to elasticservice, this will enable log_to_file"
@@ -205,4 +202,9 @@ variable "safety_rules_image_tag" {
 variable "restore_vol_id" {
   default     = ""
   description = "volume id to restore validator data from"
+}
+
+variable "permissions_boundary_policy" {
+  default     = ""
+  description = "ARN of IAM policy to set as permissions boundary on created roles"
 }

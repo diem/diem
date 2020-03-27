@@ -8,7 +8,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/locals/unused_resource_explicit_return.move:5:13 ───
+   ┌── tests/move_check/locals/unused_resource_explicit_return.move:6:9 ───
    │
  6 │         return ()
    │         ^^^^^^^^^ Invalid return
@@ -19,7 +19,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource_explicit_return.move:10:13 ───
+    ┌── tests/move_check/locals/unused_resource_explicit_return.move:11:21 ───
     │
  11 │         if (cond) { return () };
     │                     ^^^^^^^^^ Invalid return
@@ -30,7 +30,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource_explicit_return.move:16:13 ───
+    ┌── tests/move_check/locals/unused_resource_explicit_return.move:17:29 ───
     │
  17 │         if (cond) {} else { return () };
     │                             ^^^^^^^^^ Invalid return
@@ -41,7 +41,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource_explicit_return.move:22:13 ───
+    ┌── tests/move_check/locals/unused_resource_explicit_return.move:23:24 ───
     │
  23 │         while (cond) { return () };
     │                        ^^^^^^^^^ Invalid return
@@ -60,7 +60,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource_explicit_return.move:28:13 ───
+    ┌── tests/move_check/locals/unused_resource_explicit_return.move:29:16 ───
     │
  29 │         loop { return () }
     │                ^^^^^^^^^ Invalid return
@@ -79,7 +79,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource_explicit_return.move:33:18 ───
+    ┌── tests/move_check/locals/unused_resource_explicit_return.move:34:9 ───
     │
  34 │         return ()
     │         ^^^^^^^^^ Invalid return
@@ -90,12 +90,12 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource_explicit_return.move:37:15 ───
+    ┌── tests/move_check/locals/unused_resource_explicit_return.move:38:9 ───
     │
  38 │         return ()
     │         ^^^^^^^^^ Invalid return
     ·
  37 │     fun t6<T>(x: T) {
-    │               - The local 'x' might still contain a resource value due to this assignment. The resource must be consumed before the function returns
+    │               - The parameter 'x' might still contain a resource value. The resource must be consumed before the function returns
     │
 

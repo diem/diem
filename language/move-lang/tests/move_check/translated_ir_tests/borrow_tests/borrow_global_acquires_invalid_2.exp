@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_acquires_invalid_2.move:7:17 ───
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_acquires_invalid_2.move:9:9 ───
    │
  9 │         acquires_t1();
    │         ^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_acquires_invalid_2.move:14:17 ───
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_acquires_invalid_2.move:16:9 ───
     │
  16 │         acquires_t1();
     │         ^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_acquires_invalid_2.move:21:17 ───
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_acquires_invalid_2.move:22:9 ───
     │
  22 │         acquires_t1();
     │         ^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'

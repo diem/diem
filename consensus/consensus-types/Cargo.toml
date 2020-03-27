@@ -8,16 +8,15 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-hex = { version = "0.4.1", default-features = false }
+hex = "0.4.2"
 mirai-annotations = { version = "1.5.0", default-features = false }
 proptest = { version = "0.9.4", optional = true }
-rand = { version = "0.6.5", default-features = false }
-serde = { version = "1.0.99", default-features = false }
+serde = { version = "1.0.105", default-features = false }
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
-executor = { path = "../../executor", version = "0.1.0" }
+executor-types = { path = "../../execution/executor-types", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 
 [dev-dependencies]

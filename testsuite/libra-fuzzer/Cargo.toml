@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0"
 byteorder = { version = "1.3.2", default-features = false }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
-hex = { version = "0.4.1", default-features = false }
+hex = "0.4.2"
 once_cell = "1.3.1"
 proptest = { version = "0.9.4", default-features = false }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
@@ -21,16 +21,17 @@ libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }
 prost = "0.6"
 rusty-fork = { version = "0.2.2", default-features = false }
 sha-1 = { version = "0.8.1", default-features = false }
-structopt = "0.3.2"
+structopt = "0.3.12"
 
 # List out modules with data structures being fuzzed here.
-admission-control-service = { path = "../../admission_control/admission-control-service", version = "0.1.0", features = ["fuzzing"] }
 consensus = { path = "../../consensus", version = "0.1.0", features = ["fuzzing"] }
 libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+libra-json-rpc = { path = "../../json-rpc", version = "0.1.0", features = ["fuzzing"] }
+move-vm-types = { path = "../../language/move-vm/types", version = "0.1.0", features = ["fuzzing"] }
 network = { path = "../../network", version = "0.1.0", features = ["fuzzing"] }
 vm = { path = "../../language/vm", version = "0.1.0", features = ["fuzzing"] }
-vm-runtime-types = { path = "../../language/vm/vm-runtime/vm-runtime-types", version = "0.1.0", features = ["fuzzing"] }
 consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0", features = ["fuzzing"] }
+noise = { path = "../../network/noise", features = ["fuzzing"]}
 
 [dev-dependencies]
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }

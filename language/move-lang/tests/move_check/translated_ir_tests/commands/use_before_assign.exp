@@ -1,0 +1,19 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/commands/use_before_assign.move:3:9 ───
+   │
+ 3 │     let y = x;
+   │         ^ Unused assignment or binding for local 'y'. Consider removing or replacing it with '_'
+   │
+
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/commands/use_before_assign.move:3:13 ───
+   │
+ 3 │     let y = x;
+   │             ^ Invalid usage of local 'x'
+   ·
+ 2 │     let x: u64;
+   │         - The local does not have a value due to this position. The local must be assigned a value before being used
+   │
+

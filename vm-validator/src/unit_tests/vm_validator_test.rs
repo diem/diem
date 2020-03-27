@@ -2,23 +2,23 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::vm_validator::{TransactionValidation, VMValidator};
-use config_builder;
 use executor::Executor;
 use libra_config::config::NodeConfig;
 use libra_crypto::{ed25519::*, PrivateKey};
 use libra_types::{
     account_address, account_config,
+    account_config::lbr_type_tag,
     test_helpers::transaction_test_helpers,
     transaction::{Module, Script, TransactionArgument, MAX_TRANSACTION_SIZE_IN_BYTES},
     vm_error::StatusCode,
 };
+use libra_vm::LibraVM;
 use rand::SeedableRng;
 use std::{sync::Arc, u64};
 use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
 use storage_service::start_storage_service;
 use tokio::runtime::Runtime;
 use transaction_builder::encode_transfer_script;
-use vm_runtime::LibraVM;
 
 struct TestValidator {
     _storage: Runtime,
@@ -45,7 +45,7 @@ impl TestValidator {
         // run on another runtime which will be dropped before this function returns.
         let read_client: Arc<dyn StorageRead> =
             Arc::new(StorageReadServiceClient::new(&config.storage.address));
-        let vm_validator = VMValidator::new(config, read_client, rt.handle().clone());
+        let vm_validator = VMValidator::new(read_client, rt.handle().clone());
 
         (
             TestValidator {
@@ -87,7 +87,7 @@ fn test_validate_transaction() {
     let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let program = encode_transfer_script(&address, 100);
+    let program = encode_transfer_script(&address, vec![], 100);
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
@@ -111,7 +111,7 @@ fn test_validate_invalid_signature() {
     // Submit with an account using an different private/public keypair
 
     let address = account_config::association_address();
-    let program = encode_transfer_script(&address, 100);
+    let program = encode_transfer_script(&address, vec![], 100);
     let transaction = transaction_test_helpers::get_test_unchecked_txn(
         address,
         1,
@@ -142,6 +142,7 @@ fn test_validate_known_script_too_large_args() {
                                                                              * max size */
         0,
         0, /* max gas price */
+        lbr_type_tag(),
         None,
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
@@ -164,7 +165,8 @@ fn test_validate_max_gas_units_above_max() {
         key.public_key(),
         None,
         0,
-        0,              /* max gas price */
+        0, /* max gas price */
+        lbr_type_tag(),
         Some(u64::MAX), // Max gas units
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
@@ -187,7 +189,8 @@ fn test_validate_max_gas_units_below_min() {
         key.public_key(),
         None,
         0,
-        0,       /* max gas price */
+        0, /* max gas price */
+        lbr_type_tag(),
         Some(1), // Max gas units
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
@@ -211,6 +214,7 @@ fn test_validate_max_gas_price_above_bounds() {
         None,
         0,
         u64::MAX, /* max gas price */
+        lbr_type_tag(),
         None,
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
@@ -229,7 +233,7 @@ fn test_validate_max_gas_price_below_bounds() {
     let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let program = encode_transfer_script(&address, 100);
+    let program = encode_transfer_script(&address, vec![], 100);
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
@@ -239,6 +243,7 @@ fn test_validate_max_gas_price_below_bounds() {
         // Initial Time was set to 0 with a TTL 86400 secs.
         40000,
         0, /* max gas price */
+        lbr_type_tag(),
         None,
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
@@ -256,8 +261,13 @@ fn test_validate_unknown_script() {
     let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let transaction =
-        transaction_test_helpers::get_test_signed_txn(address, 1, &key, key.public_key(), None);
+    let transaction = transaction_test_helpers::get_test_signed_txn(
+        address,
+        1,
+        &key,
+        key.public_key(),
+        Some(Script::new(vec![], vec![])),
+    );
     let ret = rt
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
@@ -296,7 +306,7 @@ fn test_validate_invalid_auth_key() {
     // Submit with an account using an different private/public keypair
 
     let address = account_config::association_address();
-    let program = encode_transfer_script(&address, 100);
+    let program = encode_transfer_script(&address, vec![], 100);
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
@@ -317,7 +327,7 @@ fn test_validate_account_doesnt_exist() {
 
     let address = account_config::association_address();
     let random_account_addr = account_address::AccountAddress::random();
-    let program = encode_transfer_script(&address, 100);
+    let program = encode_transfer_script(&address, vec![], 100);
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         random_account_addr,
         1,
@@ -326,6 +336,7 @@ fn test_validate_account_doesnt_exist() {
         Some(program),
         0,
         1, /* max gas price */
+        lbr_type_tag(),
         None,
     );
     let ret = rt
@@ -343,7 +354,7 @@ fn test_validate_sequence_number_too_new() {
     let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let program = encode_transfer_script(&address, 100);
+    let program = encode_transfer_script(&address, vec![], 100);
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
@@ -363,7 +374,7 @@ fn test_validate_invalid_arguments() {
     let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let (program_script, _) = encode_transfer_script(&address, 100).into_inner();
+    let (program_script, _) = encode_transfer_script(&address, vec![], 100).into_inner();
     let program = Script::new(program_script, vec![TransactionArgument::U64(42)]);
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,

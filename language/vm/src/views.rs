@@ -25,10 +25,8 @@ use crate::{
 };
 use std::collections::BTreeSet;
 
-use libra_types::{
-    identifier::IdentStr,
-    language_storage::{ModuleId, StructTag},
-};
+use libra_types::language_storage::{ModuleId, StructTag};
+use move_core_types::identifier::IdentStr;
 use std::collections::BTreeMap;
 
 /// Represents a lazily evaluated abstraction over a module.
@@ -614,13 +612,15 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
                         Self::new(self.module, token).contains_nominal_resource(type_formals)
                     })
             }
+            SignatureToken::Vector(ty) => {
+                SignatureTokenView::new(self.module, ty).contains_nominal_resource(type_formals)
+            }
             SignatureToken::Reference(_)
             | SignatureToken::MutableReference(_)
             | SignatureToken::Bool
             | SignatureToken::U8
             | SignatureToken::U64
             | SignatureToken::U128
-            | SignatureToken::ByteArray
             | SignatureToken::Address
             | SignatureToken::TypeParameter(_) => false,
         }

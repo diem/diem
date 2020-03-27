@@ -1,6 +1,6 @@
 error: 
 
-    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:14:17 ───
+    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:15:9 ───
     │
  15 │         (s1, f)
     │         ^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
@@ -11,7 +11,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:18:17 ───
+    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:19:9 ───
     │
  19 │         (s1, f)
     │         ^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
@@ -22,7 +22,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:22:17 ───
+    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:23:9 ───
     │
  23 │         (&mut s1.f, f)
     │         ^^^^^^^^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
@@ -33,7 +33,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:26:17 ───
+    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:27:9 ───
     │
  27 │         (&mut s1.f, f)
     │         ^^^^^^^^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
@@ -55,7 +55,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:34:18 ───
+    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:35:9 ───
     │
  35 │         (s1, f)
     │         ^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
@@ -88,7 +88,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:44:17 ───
+    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:45:9 ───
     │
  45 │         (s1, f)
     │         ^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed

@@ -1,12 +1,13 @@
 module M {
-    import 0x0.LibraCoin;
+    import 0x0.LBR;
+    import 0x0.Libra;
 
     // Currently, checking that stack frame can be torn down safely
     // is done before type checking of return values
 
     t1(): bool {
-        let c: LibraCoin.T;
-        c = LibraCoin.zero();
+        let c: Libra.T<LBR.T>;
+        c = Libra.zero<LBR.T>();
         return 0;
     }
 

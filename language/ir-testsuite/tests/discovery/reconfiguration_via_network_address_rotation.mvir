@@ -27,48 +27,34 @@ main() {
 // check: events: []
 // check: EXECUTED
 
-//! new-transaction
-//! sender: vivian
-import 0x0.LibraSystem;
-
 // Run the block prologue. No reconfiguration should be triggered, since alice is
 // not a validator
-// TODO: trigger a BlockMetadata transaction here instead
-main() {
-    LibraSystem.block_prologue(1, h"aa", h"bb", {{vivian}});
-    return;
-}
+//! block-prologue
+//! proposer: vivian
+//! block-time: 1000000
+
 // check: events: []
 // check: EXECUTED
 
 //! new-transaction
 //! sender: vivian
 import 0x0.LibraSystem;
-import 0x0.ValidatorConfig;
 // rotate vivian's network address
 main() {
     let info: LibraSystem.DiscoveryInfo;
-    ValidatorConfig.rotate_validator_network_address(h"40");
-    // check that the discovery set contains Vivian's old address before reconfiguration
+    LibraSystem.rotate_validator_network_address(h"40");
+    // check that the discovery set contains Vivian new address with reconfiguration
     info = LibraSystem.get_ith_discovery_info(1);
-    assert(*LibraSystem.get_validator_network_address(&info) != h"40", 98);
-    return;
-}
-// check: events: []
-// check: EXECUTED
-
-//! new-transaction
-//! sender: vivian
-import 0x0.LibraSystem;
-import 0x0.ValidatorConfig;
-// the reconfiguration should be triggered
-main() {
-    LibraSystem.block_prologue(2, h"aa", h"bb", {{vivian}});
+    assert(*LibraSystem.get_validator_network_address(&info) == h"40", 98);
     return;
 }
 // not: ValidatorSetChangeEvent
 // check: DiscoverySetChangeEvent
 // check: EXECUTED
+
+//! block-prologue
+//! proposer: vivian
+//! block-time: 2000000
 
 //! new-transaction
 //! sender: vivian
@@ -87,63 +73,47 @@ main() {
 //! new-transaction
 //! sender: vivian
 import 0x0.LibraSystem;
-import 0x0.ValidatorConfig;
 // rotate vivian's network address to the same value
 main() {
-    ValidatorConfig.rotate_validator_network_address(h"40");
+    LibraSystem.rotate_validator_network_address(h"40");
     return;
 }
 // check: events: []
 // check: EXECUTED
 
-//! new-transaction
-//! sender: vivian
-import 0x0.LibraSystem;
-import 0x0.ValidatorConfig;
 // No reconfiguration should be triggered, since the current and previous values
 // are equal
-main() {
-    LibraSystem.block_prologue(3, h"aa", h"bb", {{vivian}});
-    return;
-}
-// check: events: []
-// check: EXECUTED
+//! block-prologue
+//! proposer: vivian
+//! block-time: 3000000
 
 //! new-transaction
 //! sender: viola
 import 0x0.LibraSystem;
-import 0x0.ValidatorConfig;
 // rotate viola's network address to a new value
 main() {
-    ValidatorConfig.rotate_validator_network_address(h"80");
-    return;
-}
-// check: events: []
-// check: EXECUTED
-
-//! new-transaction
-//! sender: vivian
-import 0x0.LibraSystem;
-import 0x0.ValidatorConfig;
-// rotate vivian's network address to a new value
-main() {
-    ValidatorConfig.rotate_validator_network_address(h"90");
-    return;
-}
-// check: events: []
-// check: EXECUTED
-
-//! new-transaction
-//! sender: vivian
-import 0x0.LibraSystem;
-import 0x0.ValidatorConfig;
-main() {
-    LibraSystem.block_prologue(4, h"aa", h"bb", {{vivian}});
+    LibraSystem.rotate_validator_network_address(h"80");
     return;
 }
 // not: ValidatorSetChangeEvent
 // check: DiscoverySetChangeEvent
 // check: EXECUTED
+
+//! new-transaction
+//! sender: vivian
+import 0x0.LibraSystem;
+// rotate vivian's network address to a new value
+main() {
+    LibraSystem.rotate_validator_network_address(h"90");
+    return;
+}
+// not: ValidatorSetChangeEvent
+// check: DiscoverySetChangeEvent
+// check: EXECUTED
+
+//! block-prologue
+//! proposer: vivian
+//! block-time: 4000000
 
 //! new-transaction
 //! sender: vivian

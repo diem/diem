@@ -2,10 +2,11 @@ groups:
 - name: "blockchain alerts"
   rules:
   - alert: Low Block Commit Rate
-    expr: avg(rate(consensus_gauge{op='last_committed_round',role='validator'}[1m])) < 0.2
+    expr: absent(avg(rate(libra_consensus_last_committed_round{role="validator"}[1m])) > 1)
     for: 20m
     labels:
-      severity: warning
+      severity: high
+      summary: "Node {{ $labels.peer_id }} is not producing consensus commits"
   - alert: HighCpuUsage
     expr: (1 - avg by(peer_id)(irate(node_cpu_seconds_total{role='validator',mode='idle'}[5m]))) * 100 > 90
     for: 5m

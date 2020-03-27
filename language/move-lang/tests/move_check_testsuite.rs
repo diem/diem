@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use difference;
 use move_lang::{move_compile_no_report, shared::Address};
 use std::{fs, path::Path};
 
@@ -56,7 +55,7 @@ fn move_check_testsuite(path: &Path) -> datatest_stable::Result<()> {
     let (files, units_or_errors) = move_compile_no_report(&targets, &deps, sender)?;
     let errors = match units_or_errors {
         Err(errors) => errors,
-        Ok(units) => move_lang::to_bytecode::translate::verify_units(units).1,
+        Ok(units) => move_lang::compiled_unit::verify_units(units).1,
     };
     let has_errors = !errors.is_empty();
     let error_buffer = if has_errors {

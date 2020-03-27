@@ -6,13 +6,16 @@
 //**************************************************************************************************
 
 use crate::{
-    cfgir::{absint::*, ast::*},
+    cfgir::absint::*,
     errors::*,
-    hlir::translate::{display_var, DisplayVar},
-    naming::ast::TypeName_,
+    hlir::{
+        ast::{TypeName_, *},
+        translate::{display_var, DisplayVar},
+    },
     parser::ast::{Field, StructName, Var},
     shared::*,
 };
+use move_ir_types::location::*;
 
 use crate::shared::unique_map::UniqueMap;
 use borrow_graph::references::RefID;
@@ -27,7 +30,7 @@ enum Label {
 
 type BorrowGraph = borrow_graph::graph::BorrowGraph<Loc, Label>;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Value {
     NonRef,
     Ref(RefID),

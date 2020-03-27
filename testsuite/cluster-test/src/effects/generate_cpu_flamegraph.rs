@@ -6,7 +6,7 @@
 use crate::{effects::Action, instance::Instance};
 use anyhow::Result;
 use async_trait::async_trait;
-use slog_scope::info;
+use libra_logger::info;
 use std::fmt;
 
 pub struct GenerateCpuFlamegraph {

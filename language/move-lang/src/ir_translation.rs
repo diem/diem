@@ -1,10 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{shared::fake_natives::transaction as TXN, shared::Address};
+use crate::shared::{fake_natives::transaction as TXN, Address};
 use regex::{Captures, NoExpand, Regex};
-use std::fs;
-use std::path::Path;
+use std::{fs, path::Path};
 
 fn txn(n: &str) -> String {
     format!("{}::{}::{}(", Address::LIBRA_CORE, TXN::MOD, n)

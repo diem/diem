@@ -1,0 +1,19 @@
+[package]
+name = "libra-serde-reflection"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra Serde Reflection"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+bincode = "1.2"
+serde_json = "1.0"
+serde_yaml = "0.8"

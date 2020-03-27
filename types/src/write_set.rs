@@ -58,7 +58,7 @@ impl WriteSet {
     }
 
     #[inline]
-    pub fn iter<'a>(&'a self) -> ::std::slice::Iter<'a, (AccessPath, WriteOp)> {
+    pub fn iter(&self) -> ::std::slice::Iter<'_, (AccessPath, WriteOp)> {
         self.into_iter()
     }
 

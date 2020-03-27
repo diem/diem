@@ -1,51 +1,12 @@
 error: 
 
-   ┌── tests/move_check/typing/pack_reference.move:2:16 ───
-   │
- 5 │         Box { f: r_imm };
-   │         ^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
-   ·
- 5 │         Box { f: r_imm };
-   │         ---------------- The type: 0x8675309::M::Box<_>
-   ·
- 2 │     struct Box<T> { f: T }
-   │                - Is found to be a non-copyable type here
-   │
-
-error: 
-
    ┌── tests/move_check/typing/pack_reference.move:5:9 ───
    │
  5 │         Box { f: r_imm };
-   │         ^^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/pack_reference.move:4:19 ───
-   │
- 5 │         Box { f: r_imm };
-   │                  ^^^^^ Invalid argument for field 'f' for '0x8675309::M::Box'
+   │         ^^^^^^^^^^^^^^^^ Invalid type argument
    ·
  4 │     fun t0(r_imm: &u64, r_mut: &mut u64) {
-   │                   ---- The type: '&u64'
-   ·
- 5 │         Box { f: r_imm };
-   │         ---------------- Is not compatible with: '_'
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/pack_reference.move:2:16 ───
-   │
- 6 │         Box { f: r_mut };
-   │         ^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
-   ·
- 6 │         Box { f: r_mut };
-   │         ---------------- The type: 0x8675309::M::Box<_>
-   ·
- 2 │     struct Box<T> { f: T }
-   │                - Is found to be a non-copyable type here
+   │                   ---- Expected a single non-reference type, but found: '&u64'
    │
 
 error: 
@@ -53,20 +14,9 @@ error:
    ┌── tests/move_check/typing/pack_reference.move:6:9 ───
    │
  6 │         Box { f: r_mut };
-   │         ^^^^^^^^^^^^^^^^ Could not infer this type. Try adding an annotation
-   │
-
-error: 
-
-   ┌── tests/move_check/typing/pack_reference.move:4:32 ───
-   │
- 6 │         Box { f: r_mut };
-   │                  ^^^^^ Invalid argument for field 'f' for '0x8675309::M::Box'
+   │         ^^^^^^^^^^^^^^^^ Invalid type argument
    ·
  4 │     fun t0(r_imm: &u64, r_mut: &mut u64) {
-   │                                -------- The type: '&mut u64'
-   ·
- 6 │         Box { f: r_mut };
-   │         ---------------- Is not compatible with: '_'
+   │                                -------- Expected a single non-reference type, but found: '&mut u64'
    │
 

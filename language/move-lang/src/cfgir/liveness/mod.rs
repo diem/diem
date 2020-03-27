@@ -5,17 +5,16 @@ mod state;
 
 use super::{
     absint::*,
-    ast,
-    ast::*,
     cfg::{BlockCFG, ReverseBlockCFG, CFG},
     locals,
 };
-use crate::shared::unique_map::UniqueMap;
 use crate::{
     errors::*,
-    parser::ast::{StructName, Var},
-    shared::*,
+    hlir::ast::{self as H, *},
+    parser::ast::Var,
+    shared::unique_map::UniqueMap,
 };
+use move_ir_types::location::*;
 use state::*;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
@@ -65,25 +64,6 @@ impl TransferFunctions for Liveness {
 
 impl AbstractInterpreter for Liveness {}
 
-pub fn refine_inference_and_verify(
-    errors: &mut Errors,
-    _signature: &FunctionSignature,
-    _acquires: &BTreeSet<StructName>,
-    locals: &UniqueMap<Var, SingleType>,
-    cfg: &mut BlockCFG,
-    infinite_loop_starts: &BTreeSet<Label>,
-) -> FinalInvariants {
-    let (final_invariants, per_command_states) = analyze(cfg, &infinite_loop_starts);
-    last_usage(
-        errors,
-        locals,
-        &final_invariants,
-        per_command_states,
-        cfg.blocks_mut(),
-    );
-    final_invariants
-}
-
 //**************************************************************************************************
 // Analysis
 //**************************************************************************************************
@@ -116,6 +96,7 @@ fn command(state: &mut LivenessState, sp!(_, cmd_): &Command) {
         }
 
         C::Jump(_) => (),
+        C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
     }
 }
 
@@ -137,7 +118,7 @@ fn lvalue(state: &mut LivenessState, sp!(_, l_): &LValue) {
 fn exp(state: &mut LivenessState, parent_e: &Exp) {
     use UnannotatedExp_ as E;
     match &parent_e.exp.value {
-        E::Unit | E::Value(_) | E::UnresolvedError => (),
+        E::Unit | E::Value(_) | E::Spec(_) | E::UnresolvedError => (),
 
         E::BorrowLocal(_, var) | E::Copy { var, .. } | E::Move { var, .. } => {
             state.0.insert(var.clone());
@@ -148,7 +129,8 @@ fn exp(state: &mut LivenessState, parent_e: &Exp) {
         | E::Freeze(e)
         | E::Dereference(e)
         | E::UnaryExp(_, e)
-        | E::Borrow(_, e, _) => exp(state, e),
+        | E::Borrow(_, e, _)
+        | E::Cast(e, _) => exp(state, e),
 
         E::BinopExp(e1, _, e2) => {
             exp(state, e1);
@@ -158,6 +140,8 @@ fn exp(state: &mut LivenessState, parent_e: &Exp) {
         E::Pack(_, _, fields) => fields.iter().for_each(|(_, _, e)| exp(state, e)),
 
         E::ExpList(es) => es.iter().for_each(|item| exp_list_item(state, item)),
+
+        E::Unreachable => panic!("ICE should not analyze dead code"),
     }
 }
 
@@ -177,25 +161,32 @@ fn exp_list_item(state: &mut LivenessState, item: &ExpListItem) {
 /// - Reports an error if an assignment/let was not used
 ///   Switches it to an `Ignore` if it is not a resource (helps with error messages for borrows)
 
-fn last_usage(
+pub fn last_usage(
     errors: &mut Errors,
     locals: &UniqueMap<Var, SingleType>,
-    final_invariants: &FinalInvariants,
-    block_command_states: PerCommandStates,
-    blocks: &mut Blocks,
+    cfg: &mut BlockCFG,
+    infinite_loop_starts: &BTreeSet<Label>,
 ) {
-    for (lbl, block) in blocks {
+    let (final_invariants, per_command_states) = analyze(cfg, &infinite_loop_starts);
+    for (lbl, block) in cfg.blocks_mut() {
         let final_invariant = final_invariants.get(lbl).unwrap();
-        let command_states = block_command_states.get(lbl).unwrap();
+        let command_states = per_command_states.get(lbl).unwrap();
         last_usage::block(errors, locals, final_invariant, command_states, block)
     }
 }
 
 mod last_usage {
-    use crate::cfgir::ast::*;
-    use crate::cfgir::liveness::state::LivenessState;
-    use crate::hlir::translate::{display_var, DisplayVar};
-    use crate::{errors::*, parser::ast::Var, shared::unique_map::*, shared::*};
+    use crate::{
+        cfgir::liveness::state::LivenessState,
+        errors::*,
+        hlir::{
+            ast::*,
+            translate::{display_var, DisplayVar},
+        },
+        parser::ast::Var,
+        shared::{unique_map::*, *},
+    };
+    use move_ir_types::location::*;
     use std::collections::{BTreeSet, VecDeque};
 
     struct Context<'a, 'b> {
@@ -281,6 +272,7 @@ mod last_usage {
             | C::JumpIf { cond: e, .. } => exp(context, e),
 
             C::Jump(_) => (),
+            C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
         }
     }
 
@@ -318,7 +310,7 @@ mod last_usage {
     fn exp(context: &mut Context, parent_e: &mut Exp) {
         use UnannotatedExp_ as E;
         match &mut parent_e.exp.value {
-            E::Unit | E::Value(_) | E::UnresolvedError => (),
+            E::Unit | E::Value(_) | E::Spec(_) | E::UnresolvedError => (),
 
             E::BorrowLocal(_, var) | E::Move { var, .. } => {
                 // remove it from context to prevent accidental dropping in previous usages
@@ -329,7 +321,14 @@ mod last_usage {
                 // Even if not switched to a move:
                 // remove it from dropped_live to prevent accidental dropping in previous usages
                 let var_is_dead = context.dropped_live.remove(var);
-                if var_is_dead && !*from_user {
+                // Non-references might still be borrowed
+                // Switching such non-locals to a copy is an optimization and not
+                // needed for this refinement
+                let is_reference = matches!(
+                    &parent_e.ty.value,
+                    Type_::Single(sp!(_, SingleType_::Ref(_, _)))
+                );
+                if var_is_dead && is_reference && !*from_user {
                     parent_e.exp.value = E::Move {
                         var: var.clone(),
                         from_user: *from_user,
@@ -342,7 +341,8 @@ mod last_usage {
             | E::Freeze(e)
             | E::Dereference(e)
             | E::UnaryExp(_, e)
-            | E::Borrow(_, e, _) => exp(context, e),
+            | E::Borrow(_, e, _)
+            | E::Cast(e, _) => exp(context, e),
 
             E::BinopExp(e1, _, e2) => {
                 exp(context, e2);
@@ -358,6 +358,8 @@ mod last_usage {
                 .iter_mut()
                 .rev()
                 .for_each(|item| exp_list_item(context, item)),
+
+            E::Unreachable => panic!("ICE should not analyze dead code"),
         }
     }
 
@@ -391,12 +393,13 @@ mod last_usage {
 /// satisfies (1) and (2)
 
 pub fn release_dead_refs(
+    locals_pre_states: &BTreeMap<Label, locals::state::LocalStates>,
     locals: &UniqueMap<Var, SingleType>,
     cfg: &mut BlockCFG,
-    liveness_pre_states: &FinalInvariants,
-    locals_pre_states: &BTreeMap<Label, locals::state::LocalStates>,
+    infinite_loop_starts: &BTreeSet<Label>,
 ) {
-    let forward_intersections = build_forward_intersections(cfg, liveness_pre_states);
+    let (liveness_pre_states, _per_command_states) = analyze(cfg, &infinite_loop_starts);
+    let forward_intersections = build_forward_intersections(cfg, &liveness_pre_states);
     for (lbl, block) in cfg.blocks_mut() {
         let locals_pre_state = locals_pre_states.get(lbl).unwrap();
         let liveness_pre_state = liveness_pre_states.get(lbl).unwrap();
@@ -421,8 +424,7 @@ fn build_forward_intersections(
             let mut states = cfg
                 .predecessors(*lbl)
                 .iter()
-                .flat_map(|pred| final_invariants.get(pred))
-                .map(|state| &state.0);
+                .map(|pred| &final_invariants.get(pred).unwrap().0);
             let intersection = states
                 .next()
                 .map(|init| states.fold(init.clone(), |acc, s| &acc & s))
@@ -477,7 +479,7 @@ fn pop_ref(loc: Loc, var: Var, ty: SingleType) -> Command {
         from_user: false,
         var,
     };
-    let move_e = ast::exp(Type_::single(ty), sp(loc, move_e_));
+    let move_e = H::exp(Type_::single(ty), sp(loc, move_e_));
     let pop_ = C::IgnoreAndPop {
         pop_num: 1,
         exp: move_e,

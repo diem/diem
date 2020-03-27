@@ -248,7 +248,7 @@ fn repeat_vec_proptest_impl(
 
     prop_assert_eq!(test_vec.len(), naive_vec.len());
 
-    fn scaled_index(index: &PropIndex, len: usize) -> usize {
+    fn scaled_index(index: PropIndex, len: usize) -> usize {
         // Go roughly 10% beyond the end of the list to also check negative cases.
         let scaled_len = len + (len / 10);
         if scaled_len == 0 {
@@ -264,7 +264,7 @@ fn repeat_vec_proptest_impl(
         match op {
             RepeatVecOp::Get(query) => {
                 // Go beyond the end of the list to also check negative cases.
-                let at = scaled_index(&query, test_vec.len());
+                let at = scaled_index(query, test_vec.len());
                 let test_get = test_vec.get(at);
                 prop_assert_eq!(test_get, naive_vec.get(at));
                 if at >= test_vec.len() {
@@ -278,7 +278,7 @@ fn repeat_vec_proptest_impl(
                 naive_vec.extend(counter.clone(), size);
             }
             RepeatVecOp::Remove(prop_index) => {
-                let logical_index = scaled_index(&prop_index, test_vec.len());
+                let logical_index = scaled_index(prop_index, test_vec.len());
                 test_vec.remove(logical_index);
                 naive_vec.remove(logical_index);
             }
@@ -287,7 +287,7 @@ fn repeat_vec_proptest_impl(
                     .into_iter()
                     .map(|prop_index| {
                         // Go beyond the end of the list to also check out of bounds cases.
-                        scaled_index(&prop_index, test_vec.len())
+                        scaled_index(prop_index, test_vec.len())
                     })
                     .collect();
 

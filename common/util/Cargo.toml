@@ -8,3 +8,6 @@ homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
+
+[dependencies]
+tokio = { version = "0.2.13", features = ["time"] }

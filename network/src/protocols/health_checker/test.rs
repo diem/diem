@@ -3,18 +3,16 @@
 
 use super::*;
 use crate::{
-    peer_manager::{self, conn_status_channel, PeerManagerNotification, PeerManagerRequest},
+    peer_manager::{
+        self, conn_status_channel, ConnectionRequest, PeerManagerNotification, PeerManagerRequest,
+    },
     protocols::rpc::InboundRpcRequest,
-    validator_network::HEALTH_CHECKER_RPC_PROTOCOL,
     ProtocolId,
 };
-use channel::libra_channel;
-use channel::message_queues::QueueStyle;
+use channel::{libra_channel, message_queues::QueueStyle};
 use futures::sink::SinkExt;
 use parity_multiaddr::Multiaddr;
-use prost::Message as _;
-use std::num::NonZeroUsize;
-use std::str::FromStr;
+use std::{num::NonZeroUsize, str::FromStr};
 use tokio::runtime::Runtime;
 
 const PING_TIMEOUT: Duration = Duration::from_millis(500);
@@ -25,19 +23,25 @@ fn setup_permissive_health_checker(
 ) -> (
     libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
+    libra_channel::Receiver<PeerId, ConnectionRequest>,
     conn_status_channel::Sender,
     channel::Sender<()>,
 ) {
     let (ticker_tx, ticker_rx) = channel::new_test(0);
 
-    let (network_reqs_tx, network_reqs_rx) =
+    let (peer_mgr_reqs_tx, peer_mgr_reqs_rx) =
+        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
+    let (connection_reqs_tx, connection_reqs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (network_notifs_tx, network_notifs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
+    let (connection_notifs_tx, connection_notifs_rx) = conn_status_channel::new();
 
-    let hc_network_tx = HealthCheckerNetworkSender::new(network_reqs_tx);
-    let (control_notifs_tx, control_notifs_rx) = conn_status_channel::new();
-    let hc_network_rx = HealthCheckerNetworkEvents::new(network_notifs_rx, control_notifs_rx);
+    let hc_network_tx = HealthCheckerNetworkSender::new(
+        PeerManagerRequestSender::new(peer_mgr_reqs_tx),
+        ConnectionRequestSender::new(connection_reqs_tx),
+    );
+    let hc_network_rx = HealthCheckerNetworkEvents::new(network_notifs_rx, connection_notifs_rx);
 
     let health_checker = HealthChecker::new(
         ticker_rx,
@@ -48,9 +52,10 @@ fn setup_permissive_health_checker(
     );
     rt.spawn(health_checker.start());
     (
-        network_reqs_rx,
+        peer_mgr_reqs_rx,
         network_notifs_tx,
-        control_notifs_tx,
+        connection_reqs_rx,
+        connection_notifs_tx,
         ticker_tx,
     )
 }
@@ -60,6 +65,7 @@ fn setup_strict_health_checker(
 ) -> (
     libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
+    libra_channel::Receiver<PeerId, ConnectionRequest>,
     conn_status_channel::Sender,
     channel::Sender<()>,
 ) {
@@ -79,30 +85,20 @@ async fn expect_ping(
     let req_data = rpc_req.data;
     let res_tx = rpc_req.res_tx;
 
-    assert_eq!(
-        protocol,
-        ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL)
-    );
+    assert_eq!(protocol, ProtocolId::HealthCheckerRpc,);
 
-    let req_msg = HealthCheckerMsg::decode(req_data.as_ref()).unwrap();
-    match req_msg.message {
-        Some(HealthCheckerMsg_oneof::Ping(ping_msg)) => (ping_msg, res_tx),
-        _ => panic!("Unexpected HealthCheckerMsg: {:?}", req_msg),
+    match lcs::from_bytes(&req_data).unwrap() {
+        HealthCheckerMsg::Ping(ping) => (ping, res_tx),
+        msg => panic!("Unexpected HealthCheckerMsg: {:?}", msg),
     }
 }
 
 async fn expect_ping_send_ok(
     network_reqs_rx: &mut libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
 ) {
-    let (ping_msg, res_tx) = expect_ping(network_reqs_rx).await;
-    let pong_msg = Pong {
-        nonce: ping_msg.nonce,
-    };
-    let res_msg_enum = HealthCheckerMsg {
-        message: Some(HealthCheckerMsg_oneof::Pong(pong_msg)),
-    };
-    let res_data = res_msg_enum.to_bytes().unwrap();
-    res_tx.send(Ok(res_data)).unwrap();
+    let (ping, res_tx) = expect_ping(network_reqs_rx).await;
+    let res_data = lcs::to_bytes(&HealthCheckerMsg::Pong(Pong(ping.0))).unwrap();
+    res_tx.send(Ok(res_data.into())).unwrap();
 }
 
 async fn expect_ping_send_notok(
@@ -123,24 +119,20 @@ async fn expect_ping_timeout(
 
 async fn send_inbound_ping(
     peer_id: PeerId,
-    ping_msg: Ping,
+    ping: u32,
     network_notifs_tx: &mut libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
 ) -> oneshot::Receiver<Result<Bytes, RpcError>> {
-    let protocol = ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL);
-    let req_msg_enum = HealthCheckerMsg {
-        message: Some(HealthCheckerMsg_oneof::Ping(ping_msg)),
-    };
-    let data = req_msg_enum.to_bytes().unwrap();
+    let protocol = ProtocolId::HealthCheckerRpc;
+    let data = lcs::to_bytes(&HealthCheckerMsg::Ping(Ping(ping)))
+        .unwrap()
+        .into();
     let (res_tx, res_rx) = oneshot::channel();
     let inbound_rpc_req = InboundRpcRequest {
         protocol,
         data,
         res_tx,
     };
-    let key = (
-        peer_id,
-        ProtocolId::from_static(HEALTH_CHECKER_RPC_PROTOCOL),
-    );
+    let key = (peer_id, ProtocolId::HealthCheckerRpc);
     let (delivered_tx, delivered_rx) = oneshot::channel();
     network_notifs_tx
         .push_with_feedback(
@@ -155,20 +147,19 @@ async fn send_inbound_ping(
 
 async fn expect_pong(res_rx: oneshot::Receiver<Result<Bytes, RpcError>>) {
     let res_data = res_rx.await.unwrap().unwrap();
-    let res_msg = HealthCheckerMsg::decode(res_data.as_ref()).unwrap();
-    match res_msg.message {
-        Some(HealthCheckerMsg_oneof::Pong(_)) => {}
-        _ => panic!("Unexpected HealthCheckerMsg: {:?}", res_msg),
-    }
+    match lcs::from_bytes(&res_data).unwrap() {
+        HealthCheckerMsg::Pong(_) => {}
+        msg => panic!("Unexpected HealthCheckerMsg: {:?}", msg),
+    };
 }
 
 async fn expect_disconnect(
     expected_peer_id: PeerId,
-    network_reqs_rx: &mut libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
+    connection_reqs_rx: &mut libra_channel::Receiver<PeerId, ConnectionRequest>,
 ) {
-    let req = network_reqs_rx.next().await.unwrap();
+    let req = connection_reqs_rx.next().await.unwrap();
     let (peer_id, res_tx) = match req {
-        PeerManagerRequest::DisconnectPeer(peer_id, res_tx) => (peer_id, res_tx),
+        ConnectionRequest::DisconnectPeer(peer_id, res_tx) => (peer_id, res_tx),
         _ => panic!("Unexpected PeerManagerRequest: {:?}", req),
     };
     assert_eq!(peer_id, expected_peer_id);
@@ -177,10 +168,10 @@ async fn expect_disconnect(
 
 async fn send_new_peer_notification(
     peer_id: PeerId,
-    control_notifs_tx: &mut conn_status_channel::Sender,
+    connection_notifs_tx: &mut conn_status_channel::Sender,
 ) {
     let (delivered_tx, delivered_rx) = oneshot::channel();
-    control_notifs_tx
+    connection_notifs_tx
         .push_with_feedback(
             peer_id,
             peer_manager::ConnectionStatusNotification::NewPeer(
@@ -195,9 +186,9 @@ async fn send_new_peer_notification(
 
 #[test]
 fn outbound() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
-    let (mut network_reqs_rx, _, mut control_notifs_tx, mut ticker_tx) =
+    let (mut network_reqs_rx, _, _, mut connection_notifs_tx, mut ticker_tx) =
         setup_strict_health_checker(&mut rt);
 
     let events_f = async move {
@@ -206,7 +197,7 @@ fn outbound() {
 
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
-        send_new_peer_notification(peer_id, &mut control_notifs_tx).await;
+        send_new_peer_notification(peer_id, &mut connection_notifs_tx).await;
 
         // Trigger ping to a peer. This should ping the newly added peer.
         ticker_tx.send(()).await.unwrap();
@@ -219,19 +210,18 @@ fn outbound() {
 
 #[test]
 fn inbound() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
-    let (_network_reqs_rx, mut network_notifs_tx, mut control_notifs_tx, _ticker_tx) =
+    let (_network_reqs_rx, mut network_notifs_tx, _, mut connection_notifs_tx, _ticker_tx) =
         setup_strict_health_checker(&mut rt);
 
     let events_f = async move {
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
-        send_new_peer_notification(peer_id, &mut control_notifs_tx).await;
+        send_new_peer_notification(peer_id, &mut connection_notifs_tx).await;
 
         // Receive ping from peer.
-        let ping_msg = Ping { nonce: 0 };
-        let res_rx = send_inbound_ping(peer_id, ping_msg, &mut network_notifs_tx).await;
+        let res_rx = send_inbound_ping(peer_id, 0, &mut network_notifs_tx).await;
 
         // HealthChecker should respond with a pong.
         expect_pong(res_rx).await;
@@ -241,10 +231,10 @@ fn inbound() {
 
 #[test]
 fn outbound_failure_permissive() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
     let ping_failures_tolerated = 10;
-    let (mut network_reqs_rx, _, mut control_notifs_tx, mut ticker_tx) =
+    let (mut network_reqs_rx, _, mut connection_reqs_rx, mut connection_notifs_tx, mut ticker_tx) =
         setup_permissive_health_checker(&mut rt, ping_failures_tolerated);
 
     let events_f = async move {
@@ -253,7 +243,7 @@ fn outbound_failure_permissive() {
 
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
-        send_new_peer_notification(peer_id, &mut control_notifs_tx).await;
+        send_new_peer_notification(peer_id, &mut connection_notifs_tx).await;
 
         // Trigger pings to a peer. These should ping the newly added peer, but not disconnect from
         // it.
@@ -264,18 +254,18 @@ fn outbound_failure_permissive() {
         }
 
         // Health checker should disconnect from peer after tolerated number of failures
-        expect_disconnect(peer_id, &mut network_reqs_rx).await;
+        expect_disconnect(peer_id, &mut connection_reqs_rx).await;
     };
     rt.block_on(events_f);
 }
 
 #[test]
 fn ping_success_resets_fail_counter() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
     let failures_triggered = 10;
     let ping_failures_tolerated = 2 * 10;
-    let (mut network_reqs_rx, _, mut control_notifs_tx, mut ticker_tx) =
+    let (mut network_reqs_rx, _, mut connection_reqs_rx, mut connection_notifs_tx, mut ticker_tx) =
         setup_permissive_health_checker(&mut rt, ping_failures_tolerated);
 
     let events_f = async move {
@@ -283,7 +273,7 @@ fn ping_success_resets_fail_counter() {
         ticker_tx.send(()).await.unwrap();
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
-        send_new_peer_notification(peer_id, &mut control_notifs_tx).await;
+        send_new_peer_notification(peer_id, &mut connection_notifs_tx).await;
         // Trigger pings to a peer. These should ping the newly added peer, but not disconnect from
         // it.
         {
@@ -310,16 +300,16 @@ fn ping_success_resets_fail_counter() {
             }
         }
         // Health checker should disconnect from peer after tolerated number of failures
-        expect_disconnect(peer_id, &mut network_reqs_rx).await;
+        expect_disconnect(peer_id, &mut connection_reqs_rx).await;
     };
     rt.block_on(events_f);
 }
 
 #[test]
 fn outbound_failure_strict() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
-    let (mut network_reqs_rx, _, mut control_notifs_tx, mut ticker_tx) =
+    let (mut network_reqs_rx, _, mut connection_reqs_rx, mut connection_notifs_tx, mut ticker_tx) =
         setup_strict_health_checker(&mut rt);
 
     let events_f = async move {
@@ -328,7 +318,7 @@ fn outbound_failure_strict() {
 
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
-        send_new_peer_notification(peer_id, &mut control_notifs_tx).await;
+        send_new_peer_notification(peer_id, &mut connection_notifs_tx).await;
 
         // Trigger ping to a peer. This should ping the newly added peer.
         ticker_tx.send(()).await.unwrap();
@@ -337,16 +327,16 @@ fn outbound_failure_strict() {
         expect_ping_send_notok(&mut network_reqs_rx).await;
 
         // Health checker should disconnect from peer.
-        expect_disconnect(peer_id, &mut network_reqs_rx).await;
+        expect_disconnect(peer_id, &mut connection_reqs_rx).await;
     };
     rt.block_on(events_f);
 }
 
 #[test]
 fn ping_timeout() {
-    ::libra_logger::try_init_for_testing();
+    ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
-    let (mut network_reqs_rx, _, mut control_notifs_tx, mut ticker_tx) =
+    let (mut network_reqs_rx, _, mut connection_reqs_rx, mut connection_notifs_tx, mut ticker_tx) =
         setup_strict_health_checker(&mut rt);
 
     let events_f = async move {
@@ -355,7 +345,7 @@ fn ping_timeout() {
 
         // Notify HealthChecker of new connected node.
         let peer_id = PeerId::random();
-        send_new_peer_notification(peer_id, &mut control_notifs_tx).await;
+        send_new_peer_notification(peer_id, &mut connection_notifs_tx).await;
 
         // Trigger ping to a peer. This should ping the newly added peer.
         ticker_tx.send(()).await.unwrap();
@@ -364,7 +354,7 @@ fn ping_timeout() {
         expect_ping_timeout(&mut network_reqs_rx).await;
 
         // Health checker should disconnect from peer.
-        expect_disconnect(peer_id, &mut network_reqs_rx).await;
+        expect_disconnect(peer_id, &mut connection_reqs_rx).await;
     };
     rt.block_on(events_f);
 }

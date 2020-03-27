@@ -11,11 +11,10 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-hex = { version = "0.4.1", default-features = false }
-parity-multiaddr = { version = "0.7.1", default-features = false }
+hex = "0.4.2"
+parity-multiaddr = { version = "0.7.2", default-features = false }
 rand = "0.6.5"
-serde = { version = "1.0.99", default-features = false }
-structopt = "0.3.2"
+structopt = "0.3.12"
 thiserror = "1.0"
 
 libra-config = { path = "..", version = "0.1.0" }

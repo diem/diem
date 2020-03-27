@@ -14,9 +14,15 @@ use cost_synthesis::{
     natives::StackAccessorMocker,
     stack_generator::RandomStackGenerator,
 };
-use csv;
 use language_e2e_tests::data_store::FakeDataStore;
 use libra_types::vm_error::StatusCode;
+use move_vm_runtime::{
+    interpreter::InterpreterForCostSynthesis,
+    loaded_data::function::{FunctionRef, FunctionReference},
+    MoveVM,
+};
+use move_vm_state::execution_context::SystemExecutionContext;
+use move_vm_types::{native_functions::hash, values::Value};
 use std::{
     collections::{HashMap, VecDeque},
     convert::TryFrom,
@@ -24,6 +30,7 @@ use std::{
     time::Instant,
     u64,
 };
+use stdlib::env_stdlib_modules;
 use structopt::StructOpt;
 use vm::{
     access::ModuleAccess,
@@ -34,14 +41,6 @@ use vm::{
     gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
     transaction_metadata::TransactionMetadata,
 };
-use vm_cache_map::Arena;
-use vm_runtime::{
-    chain_state::SystemExecutionContext,
-    interpreter::InterpreterForCostSynthesis,
-    loaded_data::function::{FunctionRef, FunctionReference},
-    runtime::VMRuntime,
-};
-use vm_runtime_types::{native_functions::hash, values::Value};
 
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -161,17 +160,16 @@ fn stack_instructions(options: &Opt) {
 
     // create a set of modules to work with on top of stdlib.
     // The root module is the module based upon how we generate modules.
-    let mut modules = ::stdlib::stdlib_modules().to_vec();
+    let mut modules = env_stdlib_modules().to_vec();
     let (root, mut callee_modules) = generate_padded_modules(3, options.num_iters as usize);
     modules.append(&mut callee_modules);
     let module_id = root.self_id();
     modules.push(root);
 
-    // create a VMRuntime and populate it with generated modules
-    let allocator = Arena::new();
-    let mut runtime = VMRuntime::new(&allocator);
+    // create a Move VM and populate it with generated modules
+    let move_vm = MoveVM::new();
     for m in modules.clone() {
-        runtime.cache_module(m);
+        move_vm.cache_module(m);
     }
 
     // create an InterpreterContext for runtime operations
@@ -179,12 +177,12 @@ fn stack_instructions(options: &Opt) {
     let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
 
     // get the root LoadedModule
-    let loaded_module = runtime
+    let loaded_module = move_vm
         .get_loaded_module(&module_id, &ctx)
         .expect("[Module Lookup] Runtime error while looking up module");
 
     // create the inhabitor to build the resources to be published
-    let mut inhabitor = RandomInhabitor::new(&loaded_module, &runtime, &ctx);
+    let mut inhabitor = RandomInhabitor::new(&loaded_module, &move_vm, &ctx);
     account.modules = modules;
     for (access_path, blob) in account.generate_resources(&mut inhabitor).into_iter() {
         data_cache.set(access_path, blob);
@@ -198,7 +196,7 @@ fn stack_instructions(options: &Opt) {
     // load the entry point
     let entry_idx = FunctionDefinitionIndex::new(0);
     let entry_func = FunctionRef::new(&loaded_module, entry_idx);
-    vm.push_frame(entry_func, vec![], vec![]);
+    vm.push_frame(entry_func, vec![]);
 
     let costs: HashMap<String, Vec<u64>> = stack_opcodes
         .into_iter()
@@ -207,7 +205,7 @@ fn stack_instructions(options: &Opt) {
             let mut stack_gen = RandomStackGenerator::new(
                 &account.addr,
                 &loaded_module,
-                &runtime,
+                &move_vm,
                 SystemExecutionContext::new(&data_cache, GasUnits::new(0)),
                 &instruction,
                 options.max_stack_size,
@@ -219,7 +217,7 @@ fn stack_instructions(options: &Opt) {
                 let (instr, size) = RandomStackGenerator::stack_transition(&mut vm, stack_state);
                 let before = Instant::now();
                 let ignore = stack_gen.execute_code_snippet(&mut vm, &[instr]);
-                //let ignore = vm.execute_code_snippet(&runtime, &mut ctx, &[instr]);
+                //let ignore = vm.execute_code_snippet(&move_vm, &mut ctx, &[instr]);
                 let time = before.elapsed().as_nanos();
                 // Check to make sure we didn't error. Need to special case the abort bytecode.
                 if instruction != Bytecode::Abort {
@@ -264,7 +262,7 @@ macro_rules! bench_native {
                 let time = (0..$iters).fold(0, |acc, _| {
                     let before = Instant::now();
                     let mut args = VecDeque::new();
-                    args.push_front(Value::byte_array(stack_access.next_bytearray()));
+                    args.push_front(Value::vector_u8(stack_access.next_bytearray()));
                     let _ = $function(vec![], args, &cost_table);
                     acc + before.elapsed().as_nanos()
                 });

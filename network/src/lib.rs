@@ -13,22 +13,19 @@ extern crate prometheus;
 pub use common::NetworkPublicKeys;
 pub use interface::NetworkProvider;
 
+pub mod common;
+pub mod connectivity_manager;
+pub mod error;
 pub mod interface;
 pub mod peer_manager;
-pub mod proto;
 pub mod protocols;
 pub mod validator_network;
 
-mod common;
-mod connectivity_manager;
 mod counters;
-mod error;
 mod peer;
 mod sink;
 mod transport;
-mod utils;
 
-/// Type for unique identifier associated with each network protocol
-pub type ProtocolId = bytes::Bytes;
 pub type DisconnectReason = peer::DisconnectReason;
 pub type ConnectivityRequest = connectivity_manager::ConnectivityRequest;
+pub type ProtocolId = protocols::wire::messaging::v1::ProtocolId;

@@ -17,7 +17,7 @@
 pub mod schema;
 
 use crate::schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec};
-use anyhow::{format_err, Result};
+use anyhow::{bail, format_err, Result};
 use libra_metrics::OpMetrics;
 use once_cell::sync::Lazy;
 use rocksdb::{
@@ -108,13 +108,17 @@ where
     }
 
     /// Seeks to the first key.
-    pub fn seek_to_first(&mut self) -> bool {
-        self.db_iter.seek(rocksdb::SeekKey::Start)
+    pub fn seek_to_first(&mut self) -> Result<bool> {
+        self.db_iter
+            .seek(rocksdb::SeekKey::Start)
+            .map_err(convert_rocksdb_err)
     }
 
     /// Seeks to the last key.
-    pub fn seek_to_last(&mut self) -> bool {
-        self.db_iter.seek(rocksdb::SeekKey::End)
+    pub fn seek_to_last(&mut self) -> Result<bool> {
+        self.db_iter
+            .seek(rocksdb::SeekKey::End)
+            .map_err(convert_rocksdb_err)
     }
 
     /// Seeks to the first key whose binary representation is equal to or greater than that of the
@@ -124,7 +128,9 @@ where
         SK: SeekKeyCodec<S>,
     {
         let key = <SK as SeekKeyCodec<S>>::encode_seek_key(seek_key)?;
-        Ok(self.db_iter.seek(rocksdb::SeekKey::Key(&key)))
+        self.db_iter
+            .seek(rocksdb::SeekKey::Key(&key))
+            .map_err(convert_rocksdb_err)
     }
 
     /// Seeks to the last key whose binary representation is less than or equal to that of the
@@ -136,15 +142,13 @@ where
         SK: SeekKeyCodec<S>,
     {
         let key = <SK as SeekKeyCodec<S>>::encode_seek_key(seek_key)?;
-        Ok(self.db_iter.seek_for_prev(rocksdb::SeekKey::Key(&key)))
+        self.db_iter
+            .seek_for_prev(rocksdb::SeekKey::Key(&key))
+            .map_err(convert_rocksdb_err)
     }
 
     fn next_impl(&mut self) -> Result<Option<(S::Key, S::Value)>> {
-        // If the iterator is not valid, we first check if there is an error, then we return None
-        // if there is no error. See
-        // https://github.com/facebook/rocksdb/wiki/Iterator#error-handling
-        self.db_iter.status().map_err(convert_rocksdb_err)?;
-        if !self.db_iter.valid() {
+        if !self.db_iter.valid().map_err(convert_rocksdb_err)? {
             return Ok(None);
         }
 
@@ -152,7 +156,7 @@ where
         let raw_value = self.db_iter.value();
         let key = <S::Key as KeyCodec<S>>::decode_key(&raw_key)?;
         let value = <S::Value as ValueCodec<S>>::decode_value(&raw_value)?;
-        self.db_iter.next();
+        self.db_iter.next().map_err(convert_rocksdb_err)?;
         Ok(Some((key, value)))
     }
 }
@@ -220,6 +224,29 @@ impl DB {
         Ok(db)
     }
 
+    /// Open db in readonly mode
+    pub fn open_readonly<P: AsRef<Path>>(
+        path: P,
+        cf_opts_map: ColumnFamilyOptionsMap,
+        db_log_dir: P,
+    ) -> Result<Self> {
+        if !db_exists(path.as_ref()) {
+            bail!("DB doesn't exists.");
+        }
+
+        let mut db_opts = DBOptions::new();
+
+        db_opts.create_if_missing(false);
+        db_opts.set_db_log_dir(db_log_dir.as_ref().to_str().ok_or_else(|| {
+            format_err!(
+                "db_log_dir {:?} can not be converted to string.",
+                db_log_dir.as_ref()
+            )
+        })?);
+
+        DB::open_cf_readonly(db_opts, &path, cf_opts_map.into_iter().collect())
+    }
+
     fn open_cf<'a, P, T>(opts: DBOptions, path: P, cfds: Vec<T>) -> Result<DB>
     where
         P: AsRef<Path>,
@@ -231,6 +258,24 @@ impl DB {
                 format_err!("Path {:?} can not be converted to string.", path.as_ref())
             })?,
             cfds,
+        )
+        .map_err(convert_rocksdb_err)?;
+
+        Ok(DB { inner })
+    }
+
+    fn open_cf_readonly<'a, P, T>(opts: DBOptions, path: P, cfds: Vec<T>) -> Result<DB>
+    where
+        P: AsRef<Path>,
+        T: Into<ColumnFamilyDescriptor<'a>>,
+    {
+        let inner = rocksdb::DB::open_cf_for_read_only(
+            opts,
+            path.as_ref().to_str().ok_or_else(|| {
+                format_err!("Path {:?} can not be converted to string.", path.as_ref())
+            })?,
+            cfds,
+            false,
         )
         .map_err(convert_rocksdb_err)?;
 

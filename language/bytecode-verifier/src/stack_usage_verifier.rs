@@ -36,12 +36,12 @@ impl<'a> StackUsageVerifier<'a> {
 
         let mut errors = vec![];
         for block_id in cfg.blocks() {
-            errors.append(&mut verifier.verify_block(&block_id, cfg));
+            errors.append(&mut verifier.verify_block(block_id, cfg));
         }
         errors
     }
 
-    fn verify_block(&self, block_id: &BlockId, cfg: &dyn ControlFlowGraph) -> Vec<VMStatus> {
+    fn verify_block(&self, block_id: BlockId, cfg: &dyn ControlFlowGraph) -> Vec<VMStatus> {
         let code = &self.function_definition_view.code().code;
         let mut stack_size_increment = 0;
         let block_start = cfg.block_start(block_id);

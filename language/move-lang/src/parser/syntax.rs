@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use codespan::{ByteIndex, Span};
+use move_ir_types::location::*;
 use std::str::FromStr;
 
-use crate::errors::*;
-use crate::parser::ast::*;
-use crate::parser::lexer::*;
-use crate::shared::*;
+use crate::{
+    errors::*,
+    parser::{ast::*, lexer::*},
+    shared::*,
+};
 
 // In the informal grammar comments in this file, Comma<T> is shorthand for:
 //      (<T> ",")* <T>?
@@ -94,6 +96,16 @@ fn consume_optional_token_with_loc<'input>(
     }
 }
 
+// While parsing a list and expecting a ">" token to mark the end, replace
+// a ">>" token with the expected ">". This handles the situation where there
+// are nested type parameters that result in two adjacent ">" tokens, e.g.,
+// "A<B<C>>".
+fn adjust_token<'input>(tokens: &mut Lexer<'input>, end_token: Tok) {
+    if tokens.peek() == Tok::GreaterGreater && end_token == Tok::Greater {
+        tokens.replace_token(Tok::Greater, 1);
+    }
+}
+
 // Parse a comma-separated list of items, including the specified starting and
 // ending tokens.
 fn parse_comma_list<'input, F, R>(
@@ -131,17 +143,19 @@ fn parse_comma_list_after_start<'input, F, R>(
 where
     F: Fn(&mut Lexer<'input>) -> Result<R, Error>,
 {
+    adjust_token(tokens, end_token);
     if match_token(tokens, end_token)? {
         return Ok(vec![]);
     }
     let mut v = vec![];
     loop {
-        if tokens.peek() == Tok::Comma || tokens.peek() == end_token {
+        if tokens.peek() == Tok::Comma {
             let current_loc = tokens.start_loc();
             let loc = make_loc(tokens.file_name(), current_loc, current_loc);
             return Err(vec![(loc, format!("Expected {}", item_description))]);
         }
         v.push(parse_list_item(tokens)?);
+        adjust_token(tokens, end_token);
         if match_token(tokens, end_token)? {
             break Ok(v);
         }
@@ -154,6 +168,7 @@ where
                 (loc2, format!("To match this '{}'", start_token)),
             ]);
         }
+        adjust_token(tokens, end_token);
         if match_token(tokens, end_token)? {
             break Ok(v);
         }
@@ -296,7 +311,7 @@ fn parse_bind_field<'input>(tokens: &mut Lexer<'input>) -> Result<(Field, Bind),
 // Parse a binding:
 //      Bind =
 //          <Var>
-//          | <ModuleAccess> ("<" Comma<BaseType> ">")? "{" Comma<BindField> "}"
+//          | <ModuleAccess> ("<" Comma<Type> ">")? "{" Comma<BindField> "}"
 fn parse_bind<'input>(tokens: &mut Lexer<'input>) -> Result<Bind, Error> {
     let start_loc = tokens.start_loc();
     if tokens.peek() == Tok::NameValue {
@@ -316,7 +331,7 @@ fn parse_bind<'input>(tokens: &mut Lexer<'input>) -> Result<Bind, Error> {
             tokens,
             Tok::Less,
             Tok::Greater,
-            parse_base_type,
+            parse_type,
             "a type",
         )?)
     } else {
@@ -358,6 +373,22 @@ fn parse_bind_list<'input>(tokens: &mut Lexer<'input>) -> Result<BindList, Error
     Ok(spanned(tokens.file_name(), start_loc, end_loc, b))
 }
 
+// Parse a list of bindings for lambda.
+//      LambdaBindList =
+//          "|" Comma<Bind> "|"
+fn parse_lambda_bind_list<'input>(tokens: &mut Lexer<'input>) -> Result<BindList, Error> {
+    let start_loc = tokens.start_loc();
+    let b = parse_comma_list(
+        tokens,
+        Tok::Pipe,
+        Tok::Pipe,
+        parse_bind,
+        "a variable or structure binding",
+    )?;
+    let end_loc = tokens.previous_end_loc();
+    Ok(spanned(tokens.file_name(), start_loc, end_loc, b))
+}
+
 //**************************************************************************************************
 // Values
 //**************************************************************************************************
@@ -367,7 +398,9 @@ fn parse_bind_list<'input>(tokens: &mut Lexer<'input>) -> Result<BindList, Error
 //          <Address>
 //          | "true"
 //          | "false"
+//          | <U8>
 //          | <U64>
+//          | <U128>
 fn parse_value<'input>(tokens: &mut Lexer<'input>) -> Result<Value, Error> {
     let start_loc = tokens.start_loc();
     let val = match tokens.peek() {
@@ -383,10 +416,32 @@ fn parse_value<'input>(tokens: &mut Lexer<'input>) -> Result<Value, Error> {
             tokens.advance()?;
             Value_::Bool(false)
         }
+        Tok::U8Value => {
+            let mut s = tokens.content();
+            if s.ends_with("u8") {
+                s = &s[..s.len() - 2]
+            }
+            let i = u8::from_str(s).unwrap();
+            tokens.advance()?;
+            Value_::U8(i)
+        }
         Tok::U64Value => {
-            let i = u64::from_str(tokens.content()).unwrap();
+            let mut s = tokens.content();
+            if s.ends_with("u64") {
+                s = &s[..s.len() - 3]
+            }
+            let i = u64::from_str(s).unwrap();
             tokens.advance()?;
             Value_::U64(i)
+        }
+        Tok::U128Value => {
+            let mut s = tokens.content();
+            if s.ends_with("u128") {
+                s = &s[..s.len() - 4]
+            }
+            let i = u128::from_str(s).unwrap();
+            tokens.advance()?;
+            Value_::U128(i)
         }
         _ => unreachable!("parse_value called with invalid token"),
     };
@@ -432,6 +487,7 @@ fn parse_sequence_item<'input>(tokens: &mut Lexer<'input>) -> Result<SequenceIte
 // does consume the closing right brace.
 fn parse_sequence<'input>(tokens: &mut Lexer<'input>) -> Result<Sequence, Error> {
     let mut seq: Vec<SequenceItem> = vec![];
+    let mut last_semicolon_loc = None;
     let mut eopt = None;
     while tokens.peek() != Tok::RBrace {
         let item = parse_sequence_item(tokens)?;
@@ -450,10 +506,11 @@ fn parse_sequence<'input>(tokens: &mut Lexer<'input>) -> Result<Sequence, Error>
             break;
         }
         seq.push(item);
+        last_semicolon_loc = Some(current_token_loc(&tokens));
         consume_token(tokens, Tok::Semicolon)?;
     }
     tokens.advance()?; // consume the RBrace
-    Ok((seq, Box::new(eopt)))
+    Ok((seq, last_semicolon_loc, Box::new(eopt)))
 }
 
 //**************************************************************************************************
@@ -462,31 +519,20 @@ fn parse_sequence<'input>(tokens: &mut Lexer<'input>) -> Result<Sequence, Error>
 
 // Parse an expression term:
 //      Term =
-//          "move" <Var>
-//          | "copy" <Var>
-//          | "break"
+//          "break"
 //          | "continue"
 //          | <Name>
 //          | <Value>
 //          | "(" Comma<Exp> ")"
 //          | "(" <Exp> ":" <Type> ")"
+//          | "(" <Exp> "as" <Type> ")"
 //          | "{" <Sequence>
-//          | <ModuleAccess> ("<" Comma<BaseType> ">")? "{" Comma<ExpField> "}"
-//          | <ModuleAccess> ("<" Comma<BaseType> ">")? "(" Comma<Exp> ")"
-//          | "::" <Name> ("<" Comma<BaseType> ">")? "(" Comma<Exp> ")"
+//          | <ModuleAccess> ("<" Comma<Type> ">")? "{" Comma<ExpField> "}"
+//          | <ModuleAccess> ("<" Comma<Type> ">")? "(" Comma<Exp> ")"
+//          | "::" <Name> ("<" Comma<Type> ">")? "(" Comma<Exp> ")"
 fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
     let start_loc = tokens.start_loc();
     let term = match tokens.peek() {
-        Tok::Move => {
-            tokens.advance()?;
-            Exp_::Move(parse_var(tokens)?)
-        }
-
-        Tok::Copy => {
-            tokens.advance()?;
-            Exp_::Copy(parse_var(tokens)?)
-        }
-
         Tok::Break => {
             tokens.advance()?;
             Exp_::Break
@@ -507,16 +553,12 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
                     // assume that the "<" is a boolean operator.
                     let next_start = tokens.lookahead_start_loc();
                     if next_start == start_loc + tokens.content().len() {
-                        match parse_pack_or_call(tokens) {
-                            Ok(x) => x,
-                            Err(mut e) => {
-                                let loc = make_loc(tokens.file_name(), next_start, next_start);
-                                let msg =
-                                    "Perhaps you need a blank space before this '<' operator?";
-                                e.push((loc, msg.to_owned()));
-                                return Err(e);
-                            }
-                        }
+                        parse_pack_or_call(tokens).or_else(|mut e| {
+                            let loc = make_loc(tokens.file_name(), next_start, next_start);
+                            let msg = "Perhaps you need a blank space before this '<' operator?";
+                            e.push((loc, msg.to_owned()));
+                            Err(e)
+                        })?
                     } else {
                         Exp_::Name(parse_name(tokens)?)
                     }
@@ -534,10 +576,29 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             }
         }
 
-        Tok::True | Tok::False | Tok::U64Value => Exp_::Value(parse_value(tokens)?),
+        Tok::True | Tok::False | Tok::U8Value | Tok::U64Value | Tok::U128Value => {
+            Exp_::Value(parse_value(tokens)?)
+        }
+
+        Tok::NumValue => {
+            let i = match u128::from_str(tokens.content()) {
+                Ok(i) => i,
+                Err(_) => {
+                    let end_loc = start_loc + tokens.content().len();
+                    let loc = make_loc(tokens.file_name(), start_loc, end_loc);
+                    let msg =
+                        "Invalid number literal. The given literal is too large to fit into the \
+                         largest number type 'u128'";
+                    return Err(vec![(loc, msg.to_owned())]);
+                }
+            };
+            tokens.advance()?;
+            Exp_::InferredNum(i)
+        }
 
         // "(" Comma<Exp> ")"
         // "(" <Exp> ":" <Type> ")"
+        // "(" <Exp> "as" <Type> ")"
         Tok::LParen => {
             let list_loc = tokens.start_loc();
             tokens.advance()?; // consume the LParen
@@ -551,6 +612,10 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
                     let ty = parse_type(tokens)?;
                     consume_token(tokens, Tok::RParen)?;
                     Exp_::Annotate(Box::new(e), ty)
+                } else if match_token(tokens, Tok::As)? {
+                    let ty = parse_type(tokens)?;
+                    consume_token(tokens, Tok::RParen)?;
+                    Exp_::Cast(Box::new(e), ty)
                 } else {
                     if tokens.peek() != Tok::RParen {
                         consume_token(tokens, Tok::Comma)?;
@@ -579,7 +644,7 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             Exp_::Block(parse_sequence(tokens)?)
         }
 
-        // "::" <Name> ("<" Comma<BaseType> ">")? "(" Comma<Exp> ")"
+        // "::" <Name> ("<" Comma<Type> ">")? "(" Comma<Exp> ")"
         Tok::ColonColon => {
             tokens.advance()?; // consume the "::"
             let n = parse_name(tokens)?;
@@ -588,7 +653,7 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
                     tokens,
                     Tok::Less,
                     Tok::Greater,
-                    parse_base_type,
+                    parse_type,
                     "a type",
                 )?)
             } else {
@@ -596,6 +661,11 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             };
             let rhs = parse_call_args(tokens)?;
             Exp_::GlobalCall(n, tys, rhs)
+        }
+
+        Tok::Spec => {
+            let spec_block = parse_spec_block(tokens)?;
+            Exp_::Spec(spec_block)
         }
 
         _ => {
@@ -617,14 +687,14 @@ fn parse_pack_or_call<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error>
             tokens,
             Tok::Less,
             Tok::Greater,
-            parse_base_type,
+            parse_type,
             "a type",
         )?)
     } else {
         None
     };
     match tokens.peek() {
-        // <ModuleAccess> ("<" Comma<BaseType> ">")? "{" Comma<ExpField> "}"
+        // <ModuleAccess> ("<" Comma<Type> ">")? "{" Comma<ExpField> "}"
         Tok::LBrace => {
             let fs = parse_comma_list(
                 tokens,
@@ -636,7 +706,7 @@ fn parse_pack_or_call<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error>
             Ok(Exp_::Pack(n, tys, fs))
         }
 
-        // <ModuleAccess> ("<" Comma<BaseType> ">")? "(" Comma<Exp> ")"
+        // <ModuleAccess> ("<" Comma<Type> ">")? "(" Comma<Exp> ")"
         Tok::LParen => {
             let rhs = parse_call_args(tokens)?;
             Ok(Exp_::Call(n, tys, rhs))
@@ -664,18 +734,37 @@ fn parse_call_args<'input>(tokens: &mut Lexer<'input>) -> Result<Spanned<Vec<Exp
     Ok(spanned(tokens.file_name(), start_loc, end_loc, args))
 }
 
+// Return true if the current token is one that might occur after an Exp.
+// This is needed, for example, to check for the optional Exp argument to
+// a return (where "return" is itself an Exp).
+fn at_end_of_exp<'input>(tokens: &mut Lexer<'input>) -> bool {
+    matches!(
+        tokens.peek(),
+        // These are the tokens that can occur after an Exp. If the grammar
+        // changes, we need to make sure that these are kept up to date and that
+        // none of these tokens can occur at the beginning of an Exp.
+        Tok::Else | Tok::RBrace | Tok::RParen | Tok::Comma | Tok::Colon | Tok::Semicolon
+    )
+}
+
 // Parse an expression:
 //      Exp =
-//          "if" "(" <Exp> ")" <Exp> ("else" <Exp>)?
+//            <LambdaBindList> <Exp>                 lambda: spec only
+//          | "if" "(" <Exp> ")" <Exp> ("else" <Exp>)?
 //          | "while" "(" <Exp> ")" <Exp>
 //          | "loop" <Exp>
-//          | <UnaryExp> "=" <Exp>
-//          | "return" <Exp>
+//          | "return" <Exp>?
 //          | "abort" <Exp>
 //          | <BinOpExp>
+//          | <UnaryExp> "=" <Exp>
 fn parse_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
     let start_loc = tokens.start_loc();
     let exp = match tokens.peek() {
+        Tok::Pipe => {
+            let bindings = parse_lambda_bind_list(tokens)?;
+            let body = Box::new(parse_exp(tokens)?);
+            Exp_::Lambda(bindings, body)
+        }
         Tok::If => {
             tokens.advance()?;
             consume_token(tokens, Tok::LParen)?;
@@ -704,7 +793,11 @@ fn parse_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
         }
         Tok::Return => {
             tokens.advance()?;
-            let e = Box::new(parse_exp(tokens)?);
+            let e = if at_end_of_exp(tokens) {
+                None
+            } else {
+                Some(Box::new(parse_exp(tokens)?))
+            };
             Exp_::Return(e)
         }
         Tok::Abort => {
@@ -736,36 +829,44 @@ fn parse_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
 fn get_precedence(token: Tok) -> u32 {
     match token {
         // Reserved minimum precedence value is 1
-        Tok::PipePipe => 2,
-        Tok::AmpAmp => 3,
-        Tok::EqualEqual => 4,
-        Tok::ExclaimEqual => 4,
-        Tok::Less => 4,
-        Tok::Greater => 4,
-        Tok::LessEqual => 4,
-        Tok::GreaterEqual => 4,
-        Tok::Pipe => 5,
-        Tok::Caret => 6,
-        Tok::Amp => 7,
-        Tok::Plus => 8,
-        Tok::Minus => 8,
-        Tok::Star => 9,
-        Tok::Slash => 9,
-        Tok::Percent => 9,
+        Tok::EqualEqualGreater => 2,
+        Tok::PipePipe => 3,
+        Tok::AmpAmp => 4,
+        Tok::EqualEqual => 5,
+        Tok::ExclaimEqual => 5,
+        Tok::Less => 5,
+        Tok::Greater => 5,
+        Tok::LessEqual => 5,
+        Tok::GreaterEqual => 5,
+        Tok::PeriodPeriod => 6,
+        Tok::Pipe => 7,
+        Tok::Caret => 8,
+        Tok::Amp => 9,
+        Tok::LessLess => 10,
+        Tok::GreaterGreater => 10,
+        Tok::Plus => 11,
+        Tok::Minus => 11,
+        Tok::Star => 12,
+        Tok::Slash => 12,
+        Tok::Percent => 12,
         _ => 0, // anything else is not a binary operator
     }
 }
 
 // Parse a binary operator expression:
 //      BinOpExp =
-//          <UnaryExp> <BinOp> <BinOpExp>
+//          <BinOpExp> <BinOp> <BinOpExp>
+//          | <UnaryExp>
 //      BinOp = (listed from lowest to highest precedence)
-//          "||"
+//          "==>"                                       spec only
+//          | "||"
 //          | "&&"
 //          | "==" | "!=" | "<" | ">" | "<=" | ">="
+//          | ".."                                      spec only
 //          | "|"
 //          | "^"
 //          | "&"
+//          | "<<" | ">>"
 //          | "+" | "-"
 //          | "*" | "/" | "%"
 //
@@ -810,11 +911,15 @@ fn parse_binop_exp<'input>(
             Tok::Caret => BinOp_::Xor,
             Tok::Pipe => BinOp_::BitOr,
             Tok::Amp => BinOp_::BitAnd,
+            Tok::LessLess => BinOp_::Shl,
+            Tok::GreaterGreater => BinOp_::Shr,
             Tok::Plus => BinOp_::Add,
             Tok::Minus => BinOp_::Sub,
             Tok::Star => BinOp_::Mul,
             Tok::Slash => BinOp_::Div,
             Tok::Percent => BinOp_::Mod,
+            Tok::PeriodPeriod => BinOp_::Range,
+            Tok::EqualEqualGreater => BinOp_::Implies,
             _ => panic!("Unexpected token that is not a binary operator"),
         };
         let sp_op = spanned(tokens.file_name(), op_start_loc, op_end_loc, op);
@@ -831,11 +936,12 @@ fn parse_binop_exp<'input>(
 // Parse a unary expression:
 //      UnaryExp =
 //          "!" <UnaryExp>
-//          | "-" <UnaryExp>
 //          | "&mut" <UnaryExp>
 //          | "&" <UnaryExp>
 //          | "*" <UnaryExp>
-//          | <DotChain>
+//          | "move" <Var>
+//          | "copy" <Var>
+//          | <DotOrIndexChain>
 fn parse_unary_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
     let start_loc = tokens.start_loc();
     let exp = match tokens.peek() {
@@ -843,13 +949,6 @@ fn parse_unary_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             tokens.advance()?;
             let op_end_loc = tokens.previous_end_loc();
             let op = spanned(tokens.file_name(), start_loc, op_end_loc, UnaryOp_::Not);
-            let e = parse_unary_exp(tokens)?;
-            Exp_::UnaryExp(op, Box::new(e))
-        }
-        Tok::Minus => {
-            tokens.advance()?;
-            let op_end_loc = tokens.previous_end_loc();
-            let op = spanned(tokens.file_name(), start_loc, op_end_loc, UnaryOp_::Neg);
             let e = parse_unary_exp(tokens)?;
             Exp_::UnaryExp(op, Box::new(e))
         }
@@ -868,25 +967,46 @@ fn parse_unary_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             let e = parse_unary_exp(tokens)?;
             Exp_::Dereference(Box::new(e))
         }
+        Tok::Move => {
+            tokens.advance()?;
+            Exp_::Move(parse_var(tokens)?)
+        }
+        Tok::Copy => {
+            tokens.advance()?;
+            Exp_::Copy(parse_var(tokens)?)
+        }
         _ => {
-            return parse_dot_chain(tokens);
+            return parse_dot_or_index_chain(tokens);
         }
     };
     let end_loc = tokens.previous_end_loc();
     Ok(spanned(tokens.file_name(), start_loc, end_loc, exp))
 }
 
-// Parse an expression term optionally followed by a chain of dot accesses:
-//      DotChain =
-//          <DotChain> "." <Name>
+// Parse an expression term optionally followed by a chain of dot or index accesses:
+//      DotOrIndexChain =
+//          <DotOrIndexChain> "." <Name>
+//          | <DotOrIndexChain> "[" <Exp> "]"                      spec only
 //          | <Term>
-fn parse_dot_chain<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
+fn parse_dot_or_index_chain<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
     let start_loc = tokens.start_loc();
     let mut lhs = parse_term(tokens)?;
-
-    while match_token(tokens, Tok::Period)? {
-        let n = parse_name(tokens)?;
-        let exp = Exp_::Dot(Box::new(lhs), n);
+    loop {
+        let exp = match tokens.peek() {
+            Tok::Period => {
+                tokens.advance()?;
+                let n = parse_name(tokens)?;
+                Exp_::Dot(Box::new(lhs), n)
+            }
+            Tok::LBracket => {
+                tokens.advance()?;
+                let index = parse_exp(tokens)?;
+                let exp = Exp_::Index(Box::new(lhs), Box::new(index));
+                consume_token(tokens, Tok::RBracket)?;
+                exp
+            }
+            _ => break,
+        };
         let end_loc = tokens.previous_end_loc();
         lhs = spanned(tokens.file_name(), start_loc, end_loc, exp);
     }
@@ -897,67 +1017,53 @@ fn parse_dot_chain<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
 // Types
 //**************************************************************************************************
 
-// Parse a base type:
-//      BaseType = <ModuleAccess> ("<" Comma<BaseType> ">")?
-fn parse_base_type<'input>(tokens: &mut Lexer<'input>) -> Result<SingleType, Error> {
+// Parse a Type:
+//      Type =
+//          <ModuleAccess> ("<" Comma<Type> ">")?
+//          | "&" <Type>
+//          | "&mut" <Type>
+//          | "|" Comma<Type> "|" Type   (spec only)
+//          | "(" Comma<Type> ")"
+fn parse_type<'input>(tokens: &mut Lexer<'input>) -> Result<Type, Error> {
     let start_loc = tokens.start_loc();
-    let tn = parse_module_access(tokens, || "a type name".to_string())?;
-    let tys = if tokens.peek() == Tok::Less {
-        parse_comma_list(tokens, Tok::Less, Tok::Greater, parse_base_type, "a type")?
-    } else {
-        vec![]
-    };
-    let end_loc = tokens.previous_end_loc();
-    let t = SingleType_::Apply(tn, tys);
-    Ok(spanned(tokens.file_name(), start_loc, end_loc, t))
-}
-
-// Parse a SingleType:
-//      SingleType =
-//          <BaseType>
-//          | "&" <BaseType>
-//          | "&mut" <BaseType>
-fn parse_single_type<'input>(tokens: &mut Lexer<'input>) -> Result<SingleType, Error> {
-    let start_loc = tokens.start_loc();
-    let (b, mutable) = match tokens.peek() {
+    let t = match tokens.peek() {
+        Tok::LParen => {
+            let mut ts = parse_comma_list(tokens, Tok::LParen, Tok::RParen, parse_type, "a type")?;
+            match ts.len() {
+                0 => Type_::Unit,
+                1 => ts.pop().unwrap().value,
+                _ => Type_::Multiple(ts),
+            }
+        }
         Tok::Amp => {
             tokens.advance()?;
-            (parse_base_type(tokens)?, false)
+            let t = parse_type(tokens)?;
+            Type_::Ref(false, Box::new(t))
         }
         Tok::AmpMut => {
             tokens.advance()?;
-            (parse_base_type(tokens)?, true)
+            let t = parse_type(tokens)?;
+            Type_::Ref(true, Box::new(t))
+        }
+        Tok::Pipe => {
+            let args = parse_comma_list(tokens, Tok::Pipe, Tok::Pipe, parse_type, "a type")?;
+            let result = parse_type(tokens)?;
+            return Ok(spanned(
+                tokens.file_name(),
+                start_loc,
+                tokens.previous_end_loc(),
+                Type_::Fun(args, Box::new(result)),
+            ));
         }
         _ => {
-            return parse_base_type(tokens);
+            let tn = parse_module_access(tokens, || "a type name".to_string())?;
+            let tys = if tokens.peek() == Tok::Less {
+                parse_comma_list(tokens, Tok::Less, Tok::Greater, parse_type, "a type")?
+            } else {
+                vec![]
+            };
+            Type_::Apply(Box::new(tn), tys)
         }
-    };
-    let end_loc = tokens.previous_end_loc();
-    let t = SingleType_::Ref(mutable, Box::new(b));
-    Ok(spanned(tokens.file_name(), start_loc, end_loc, t))
-}
-
-// Parse a type:
-//      Type =
-//          <SingleType>
-//          | "(" Comma<SingleType> ")"
-fn parse_type<'input>(tokens: &mut Lexer<'input>) -> Result<Type, Error> {
-    let start_loc = tokens.start_loc();
-    let mut ts = if tokens.peek() == Tok::LParen {
-        parse_comma_list(
-            tokens,
-            Tok::LParen,
-            Tok::RParen,
-            parse_single_type,
-            "a type",
-        )?
-    } else {
-        vec![parse_single_type(tokens)?]
-    };
-    let t = match ts.len() {
-        0 => Type_::Unit,
-        1 => Type_::Single(ts.pop().unwrap()),
-        _ => Type_::Multiple(ts),
     };
     let end_loc = tokens.previous_end_loc();
     Ok(spanned(tokens.file_name(), start_loc, end_loc, t))
@@ -1000,13 +1106,13 @@ fn parse_type_parameter<'input>(tokens: &mut Lexer<'input>) -> Result<(Name, Kin
 //          <NativeFunctionDecl>
 //          | <MoveFunctionDecl>
 //      NativeFunctionDecl =
-//          "native" "public"? "fun"
+//          "native" ( "public" )? "fun"
 //          <FunctionDefName> "(" Comma<Parameter> ")"
 //          (":" <Type>)?
 //          ("acquires" <ModuleAccess> ("," <ModuleAccess>)*)?
 //          ";"
 //      MoveFunctionDecl =
-//          "public"? "fun"
+//          ( "public" )? "fun"
 //          <FunctionDefName> "(" Comma<Parameter> ")"
 //          (":" <Type>)?
 //          ("acquires" <ModuleAccess> ("," <ModuleAccess>)*)?
@@ -1021,6 +1127,7 @@ fn parse_function_decl<'input>(
     tokens: &mut Lexer<'input>,
     allow_native: bool,
 ) -> Result<Function, Error> {
+    let start_loc = tokens.start_loc();
     // Record the source location of the "native" keyword (if there is one).
     let native_opt = if allow_native {
         consume_optional_token_with_loc(tokens, Tok::Native)?
@@ -1035,7 +1142,7 @@ fn parse_function_decl<'input>(
         None
     };
 
-    // <Public>?
+    // (<Public>)?
     let public_opt = consume_optional_token_with_loc(tokens, Tok::Public)?;
     let visibility = if let Some(loc) = public_opt {
         FunctionVisibility::Public(loc)
@@ -1077,15 +1184,16 @@ fn parse_function_decl<'input>(
     // ("acquires" (<ModuleAccess> ",")* <ModuleAccess> ","?
     let mut acquires = vec![];
     if match_token(tokens, Tok::Acquires)? {
+        let follows_acquire = |tok| matches!(tok, Tok::Semicolon | Tok::LBrace);
         loop {
             acquires.push(parse_module_access(tokens, || {
                 "a resource struct name".to_string()
             })?);
-            if tokens.peek() == Tok::Semicolon || tokens.peek() == Tok::LBrace {
+            if follows_acquire(tokens.peek()) {
                 break;
             }
             consume_token(tokens, Tok::Comma)?;
-            if tokens.peek() == Tok::Semicolon || tokens.peek() == Tok::LBrace {
+            if follows_acquire(tokens.peek()) {
                 break;
             }
         }
@@ -1114,7 +1222,9 @@ fn parse_function_decl<'input>(
         return_type,
     };
 
+    let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
     Ok(Function {
+        loc,
         visibility,
         signature,
         acquires,
@@ -1124,11 +1234,11 @@ fn parse_function_decl<'input>(
 }
 
 // Parse a function parameter:
-//      Parameter = <Var> ":" <SingleType>
-fn parse_parameter<'input>(tokens: &mut Lexer<'input>) -> Result<(Var, SingleType), Error> {
+//      Parameter = <Var> ":" <Type>
+fn parse_parameter<'input>(tokens: &mut Lexer<'input>) -> Result<(Var, Type), Error> {
     let v = parse_var(tokens)?;
     consume_token(tokens, Tok::Colon)?;
-    let t = parse_single_type(tokens)?;
+    let t = parse_type(tokens)?;
     Ok((v, t))
 }
 
@@ -1144,6 +1254,8 @@ fn parse_parameter<'input>(tokens: &mut Lexer<'input>) -> Result<(Var, SingleTyp
 //          <Name>
 //          | <Name> "<" Comma<TypeParameter> ">"
 fn parse_struct_definition<'input>(tokens: &mut Lexer<'input>) -> Result<StructDefinition, Error> {
+    let start_loc = tokens.start_loc();
+
     // Record the source location of the "native" keyword (if there is one).
     let native_opt = consume_optional_token_with_loc(tokens, Tok::Native)?;
 
@@ -1183,7 +1295,9 @@ fn parse_struct_definition<'input>(tokens: &mut Lexer<'input>) -> Result<StructD
         }
     };
 
+    let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
     Ok(StructDefinition {
+        loc,
         resource_opt,
         name,
         type_parameters,
@@ -1192,11 +1306,11 @@ fn parse_struct_definition<'input>(tokens: &mut Lexer<'input>) -> Result<StructD
 }
 
 // Parse a field annotated with a type:
-//      FieldAnnot = <Field> ":" <SingleType>
-fn parse_field_annot<'input>(tokens: &mut Lexer<'input>) -> Result<(Field, SingleType), Error> {
+//      FieldAnnot = <Field> ":" <Type>
+fn parse_field_annot<'input>(tokens: &mut Lexer<'input>) -> Result<(Field, Type), Error> {
     let f = parse_field(tokens)?;
     consume_token(tokens, Tok::Colon)?;
-    let st = parse_single_type(tokens)?;
+    let st = parse_type(tokens)?;
     Ok((f, st))
 }
 
@@ -1233,10 +1347,11 @@ fn is_struct_definition<'input>(tokens: &mut Lexer<'input>) -> Result<bool, Erro
 //      Module =
 //          "module" <ModuleName> "{"
 //              <UseDecl>*
-//              <StructDefinition>*
-//              <FunctionDecl>*
+//              ( <StructDefinition> | <FunctionDecl> | <Spec> )*
 //          "}"
 fn parse_module<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleDefinition, Error> {
+    let start_loc = tokens.start_loc();
+
     consume_token(tokens, Tok::Module)?;
     let name = parse_module_name(tokens)?;
     consume_token(tokens, Tok::LBrace)?;
@@ -1247,22 +1362,261 @@ fn parse_module<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleDefinition, 
     }
 
     let mut structs = vec![];
-    while is_struct_definition(tokens)? {
-        structs.push(parse_struct_definition(tokens)?);
-    }
-
     let mut functions = vec![];
+    let mut specs = vec![];
     while tokens.peek() != Tok::RBrace {
-        functions.push(parse_function_decl(tokens, /* allow_native */ true)?);
+        if tokens.peek() == Tok::Spec {
+            specs.push(parse_spec_block(tokens)?);
+        } else if is_struct_definition(tokens)? {
+            structs.push(parse_struct_definition(tokens)?);
+        } else {
+            functions.push(parse_function_decl(tokens, /* allow_native */ true)?);
+        }
     }
     tokens.advance()?; // consume the RBrace
 
+    let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
     Ok(ModuleDefinition {
+        loc,
         uses,
         name,
         structs,
         functions,
+        specs,
     })
+}
+
+//**************************************************************************************************
+// Specification Blocks
+//**************************************************************************************************
+
+// Parse an optional specification block:
+//     SpecBlock = "spec" ( "fun" <Name> | "struct <Name> | "module" )? "{" SpecBlockMember* "}"
+fn parse_spec_block<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlock, Error> {
+    let start_loc = tokens.start_loc();
+    consume_token(tokens, Tok::Spec)?;
+    let target_start_loc = tokens.start_loc();
+    let target_ = match tokens.peek() {
+        Tok::Fun => {
+            tokens.advance()?;
+            let name = FunctionName(parse_name(tokens)?);
+            SpecBlockTarget_::Function(name)
+        }
+        Tok::Struct => {
+            tokens.advance()?;
+            let name = StructName(parse_name(tokens)?);
+            SpecBlockTarget_::Structure(name)
+        }
+        Tok::Module => {
+            tokens.advance()?;
+            SpecBlockTarget_::Module
+        }
+        Tok::LBrace => SpecBlockTarget_::Code,
+        _ => {
+            return Err(unexpected_token_error(
+                tokens,
+                "one of `module`, `struct` or `fun`",
+            ))
+        }
+    };
+    let target = spanned(
+        tokens.file_name(),
+        target_start_loc,
+        match target_ {
+            SpecBlockTarget_::Code => target_start_loc,
+            _ => tokens.previous_end_loc(),
+        },
+        target_,
+    );
+
+    consume_token(tokens, Tok::LBrace)?;
+    let mut uses = vec![];
+    while tokens.peek() == Tok::Use {
+        uses.push(parse_use_decl(tokens)?);
+    }
+    let mut members = vec![];
+    while tokens.peek() != Tok::RBrace {
+        members.push(parse_spec_block_member(tokens)?);
+    }
+    consume_token(tokens, Tok::RBrace)?;
+    Ok(spanned(
+        tokens.file_name(),
+        start_loc,
+        tokens.previous_end_loc(),
+        SpecBlock_ {
+            target,
+            uses,
+            members,
+        },
+    ))
+}
+
+// Parse a spec block member:
+//    SpecBlockMember = <Invariant> | <Condition> | <SpecFunction> | <SpecVariable>
+fn parse_spec_block_member<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
+    match tokens.peek() {
+        Tok::Invariant => parse_invariant(tokens),
+        Tok::Define | Tok::Native => parse_spec_function(tokens),
+        Tok::NameValue => match tokens.content() {
+            "assert" | "assume" | "decreases" | "aborts_if" | "ensures" | "requires" => {
+                parse_condition(tokens)
+            }
+            "global" => parse_spec_variable(tokens),
+            _ => Err(unexpected_token_error(
+                tokens,
+                "`assert`, `assume`, `decreases`, `aborts_if`, `ensures`, `requires`, `global`",
+            )),
+        },
+        _ => Err(unexpected_token_error(
+            tokens,
+            "a specification block member",
+        )),
+    }
+}
+
+// Parse a specification condition:
+//    SpecCondition = ("assert" | "assume" | "decreases" | "aborts_if" | "ensures" | "requires" ) <Exp> ";"
+fn parse_condition<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
+    let start_loc = tokens.start_loc();
+    let kind = match tokens.content() {
+        "assert" => SpecConditionKind::Assert,
+        "assume" => SpecConditionKind::Assume,
+        "decreases" => SpecConditionKind::Decreases,
+        "aborts_if" => SpecConditionKind::AbortsIf,
+        "ensures" => SpecConditionKind::Ensures,
+        "requires" => SpecConditionKind::Requires,
+        _ => unreachable!(),
+    };
+    tokens.advance()?;
+    let exp = parse_exp(tokens)?;
+    consume_token(tokens, Tok::Semicolon)?;
+    let end_loc = tokens.previous_end_loc();
+    Ok(spanned(
+        tokens.file_name(),
+        start_loc,
+        end_loc,
+        SpecBlockMember_::Condition { kind, exp },
+    ))
+}
+
+// Parse an invariant:
+//     Invariant = "invariant" ( "update" | "pack" | "unpack" )? <Exp> ";"
+fn parse_invariant<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
+    let start_loc = tokens.start_loc();
+    consume_token(tokens, Tok::Invariant)?;
+    let kind = if Tok::NameValue == tokens.peek() {
+        // The update/pack/unpack modifiers are 'weak' keywords. They are reserved
+        // only when following an "invariant" token. One can use "invariant (update ...)" to
+        // force interpretation as identifiers in expressions.
+        match tokens.content() {
+            "update" => {
+                tokens.advance()?;
+                InvariantKind::Update
+            }
+            "pack" => {
+                tokens.advance()?;
+                InvariantKind::Pack
+            }
+            "unpack" => {
+                tokens.advance()?;
+                InvariantKind::Unpack
+            }
+            _ => InvariantKind::Data,
+        }
+    } else {
+        InvariantKind::Data
+    };
+    let exp = parse_exp(tokens)?;
+    consume_token(tokens, Tok::Semicolon)?;
+    Ok(spanned(
+        tokens.file_name(),
+        start_loc,
+        tokens.previous_end_loc(),
+        SpecBlockMember_::Invariant { kind, exp },
+    ))
+}
+
+// Parse a specification function.
+//     SpecFunction = "define" <Generics> <Parameters> ":" <Type> "{" <Sequence> "}"
+//                  | "native" "define" <Generics> <Parameters> ":" <Type> ";"
+fn parse_spec_function<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
+    let start_loc = tokens.start_loc();
+    let native_opt = consume_optional_token_with_loc(tokens, Tok::Native)?;
+    consume_token(tokens, Tok::Define)?;
+    let name = FunctionName(parse_name(tokens)?);
+    let type_parameters = if tokens.peek() == Tok::Less {
+        parse_comma_list(
+            tokens,
+            Tok::Less,
+            Tok::Greater,
+            parse_type_parameter,
+            "a type parameter",
+        )?
+    } else {
+        vec![]
+    };
+    // "(" Comma<Parameter> ")"
+    let parameters = parse_comma_list(
+        tokens,
+        Tok::LParen,
+        Tok::RParen,
+        parse_parameter,
+        "a function parameter",
+    )?;
+
+    // ":" <Type>)
+    consume_token(tokens, Tok::Colon)?;
+    let return_type = parse_type(tokens)?;
+
+    let body_start_loc = tokens.start_loc();
+    let body_ = if native_opt.is_some() {
+        consume_token(tokens, Tok::Semicolon)?;
+        FunctionBody_::Native
+    } else {
+        consume_token(tokens, Tok::LBrace)?;
+        let seq = parse_sequence(tokens)?;
+        FunctionBody_::Defined(seq)
+    };
+    let body = spanned(
+        tokens.file_name(),
+        body_start_loc,
+        tokens.previous_end_loc(),
+        body_,
+    );
+
+    let signature = FunctionSignature {
+        type_parameters,
+        parameters,
+        return_type,
+    };
+
+    Ok(spanned(
+        tokens.file_name(),
+        start_loc,
+        tokens.previous_end_loc(),
+        SpecBlockMember_::Function {
+            signature,
+            name,
+            body,
+        },
+    ))
+}
+
+// Parse a specification variable.
+//     SpecVariable = "global" <Name> ":" <Type> ";"
+fn parse_spec_variable<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
+    let start_loc = tokens.start_loc();
+    consume_token(tokens, Tok::NameValue)?;
+    let name = parse_name(tokens)?;
+    consume_token(tokens, Tok::Colon)?;
+    let type_ = parse_type(tokens)?;
+    consume_token(tokens, Tok::Semicolon)?;
+    Ok(spanned(
+        tokens.file_name(),
+        start_loc,
+        tokens.previous_end_loc(),
+        SpecBlockMember_::Variable { name, type_ },
+    ))
 }
 
 //**************************************************************************************************

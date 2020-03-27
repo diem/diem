@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_return_mutable_borrow_bad.move:7:25 ───
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_return_mutable_borrow_bad.move:9:9 ───
    │
  9 │         (ref_x_f, ref_x_f_g)
    │         ^^^^^^^^^^^^^^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed

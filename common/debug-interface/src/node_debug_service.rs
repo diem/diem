@@ -5,6 +5,7 @@
 
 use crate::{
     json_log,
+    json_log::JsonLogEntry,
     proto::{
         node_debug_interface_server::NodeDebugInterface, Event, GetEventsRequest,
         GetEventsResponse, GetNodeDetailsRequest, GetNodeDetailsResponse,
@@ -50,5 +51,22 @@ impl NodeDebugInterface for NodeDebugService {
             response.events.push(response_event);
         }
         Ok(Response::new(response))
+    }
+}
+
+pub fn parse_events(events: Vec<Event>) -> Vec<JsonLogEntry> {
+    let mut ret = vec![];
+    for event in events.into_iter() {
+        ret.push(parse_event(event));
+    }
+    ret
+}
+
+pub fn parse_event(event: Event) -> JsonLogEntry {
+    let json = serde_json::from_str(&event.json).expect("Failed to parse json");
+    JsonLogEntry {
+        name: Box::leak(event.name.into_boxed_str()),
+        timestamp: event.timestamp as u128,
+        json,
     }
 }

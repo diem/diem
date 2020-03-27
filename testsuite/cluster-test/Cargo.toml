@@ -12,38 +12,40 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 flate2 = { version = "1.0", features = ["rust_backend"], default-features = false }
-itertools = "0.8.0"
+hex = "0.4.2"
+itertools = "0.9.0"
 rand = "0.6.5"
-regex = { version = "1.3.0", default-features = false, features = ["std", "perf"] }
-reqwest = { version="0.10.1", features=["blocking", "json", "rustls-tls"], default_features = false }
+regex = { version = "1.3.5", default-features = false, features = ["std", "perf"] }
+reqwest = { version="0.10.4", features=["blocking", "json", "rustls-tls"], default_features = false }
 rusoto_core = {version = "0.42.0", features=["rustls"], default_features = false}
 rusoto_ec2 = {version = "0.42.0", features=["rustls"], default_features = false}
 rusoto_ecr = {version = "0.42.0", features=["rustls"], default_features = false}
 rusoto_ecs = {version = "0.42.0", features=["rustls"], default_features = false}
 rusoto_s3 = {version = "0.42.0", features=["rustls"], default_features = false}
 serde_json = "1.0"
+serde_yaml = "0.8.11"
 termion = "1.5.3"
-serde = { version = "1.0.89", features = ["derive"] }
-structopt = "0.3.2"
-chrono = { version = "0.4.7" }
-
-slog = { version = "2.5.0", features = ["max_level_debug", "release_max_level_debug"] }
-slog-term = "2.4.1"
-slog-scope = "4.0"
-slog-envlogger = "2.1.0"
+serde = { version = "1.0.105", features = ["derive"] }
+structopt = "0.3.12"
+chrono = { version = "0.4.11" }
 
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0"}
+libra-json-rpc = { path = "../../json-rpc", version = "0.1.0"}
 admission-control-proto = { path = "../../admission_control/admission-control-proto", version = "0.1.0" }
 util = { path = "../../common/util", version = "0.1.0", package = "libra-util" }
+num_cpus = "1.11.1"
 
-libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
-transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
-libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-libra-config = { path = "../../config", version = "0.1.0" }
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 generate-keypair = { path = "../../config/generate-keypair", version = "0.1.0" }
-hex = { version = "0.4.1", default-features = false }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+libra-config = { path = "../../config", version = "0.1.0" }
+libra-logger = { path = "../../common/logger", version = "0.1.0", features = ["no_struct_log"] }
+libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 
 futures = "0.3.0"
-tokio = { version = "0.2.8", features = ["full"] }
-async-trait = "0.1.24"
+tokio = { version = "0.2.13", features = ["full"] }
+async-trait = "0.1.26"
+
+kube = "0.30.0"
+k8s-openapi = { version = "0.7.1", default-features = false, features = ["v1_15"] }

@@ -1,6 +1,0 @@
-import 0x0.LibraAccount;
-import 0x0.LibraCoin;
-main(payee: address, amount: u64) {
-  LibraAccount.mint_to_address(move(payee), move(amount));
-  return;
-}

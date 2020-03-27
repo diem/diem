@@ -4,25 +4,42 @@
 use crate::{
     access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
-    byte_array::ByteArray,
     event::EventHandle,
-    identifier::{IdentStr, Identifier},
-    language_storage::StructTag,
+    language_storage::{ModuleId, StructTag, TypeTag},
 };
 use anyhow::Result;
+use move_core_types::identifier::{IdentStr, Identifier};
 use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 
-// LibraCoin
-static COIN_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("LibraCoin").unwrap());
+// Libra
+static COIN_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("Libra").unwrap());
 static COIN_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
+pub static COIN_MODULE: Lazy<ModuleId> =
+    Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, COIN_MODULE_NAME.clone()));
+
+// LBR
+static LBR_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("LBR").unwrap());
+static LBR_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
+pub static LBR_MODULE: Lazy<ModuleId> =
+    Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, LBR_MODULE_NAME.clone()));
 
 // Account
 static ACCOUNT_MODULE_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("LibraAccount").unwrap());
 static ACCOUNT_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
+static ACCOUNT_BALANCE_STRUCT_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("Balance").unwrap());
+static ACCOUNT_EVENT_HANDLE_STRUCT_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("EventHandle").unwrap());
+static ACCOUNT_EVENT_HANDLE_GENERATOR_STRUCT_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("EventHandleGenerator").unwrap());
+
+/// The ModuleId for the Account module.
+pub static ACCOUNT_MODULE: Lazy<ModuleId> =
+    Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, ACCOUNT_MODULE_NAME.clone()));
 
 // Payment Events
 static SENT_EVENT_NAME: Lazy<Identifier> =
@@ -46,6 +63,26 @@ pub fn account_struct_name() -> &'static IdentStr {
     &*ACCOUNT_STRUCT_NAME
 }
 
+pub fn account_balance_struct_name() -> &'static IdentStr {
+    &*ACCOUNT_BALANCE_STRUCT_NAME
+}
+
+pub fn lbr_module_name() -> &'static IdentStr {
+    &*LBR_MODULE_NAME
+}
+
+pub fn lbr_struct_name() -> &'static IdentStr {
+    &*LBR_STRUCT_NAME
+}
+
+pub fn account_event_handle_struct_name() -> &'static IdentStr {
+    &*ACCOUNT_EVENT_HANDLE_STRUCT_NAME
+}
+
+pub fn account_event_handle_generator_struct_name() -> &'static IdentStr {
+    &*ACCOUNT_EVENT_HANDLE_GENERATOR_STRUCT_NAME
+}
+
 pub fn sent_event_name() -> &'static IdentStr {
     &*SENT_EVENT_NAME
 }
@@ -54,9 +91,7 @@ pub fn received_event_name() -> &'static IdentStr {
     &*RECEIVED_EVENT_NAME
 }
 
-pub fn core_code_address() -> AccountAddress {
-    AccountAddress::default()
-}
+pub const CORE_CODE_ADDRESS: AccountAddress = AccountAddress::DEFAULT;
 
 pub fn association_address() -> AccountAddress {
     AccountAddress::from_hex_literal("0xA550C18")
@@ -80,16 +115,38 @@ pub fn discovery_set_address() -> AccountAddress {
 
 pub fn account_struct_tag() -> StructTag {
     StructTag {
-        address: core_code_address(),
+        address: CORE_CODE_ADDRESS,
         module: account_module_name().to_owned(),
         name: account_struct_name().to_owned(),
         type_params: vec![],
     }
 }
 
+pub fn account_balance_struct_tag() -> StructTag {
+    StructTag {
+        address: CORE_CODE_ADDRESS,
+        module: account_module_name().to_owned(),
+        name: account_balance_struct_name().to_owned(),
+        type_params: vec![lbr_type_tag()],
+    }
+}
+
+pub fn lbr_type_tag() -> TypeTag {
+    TypeTag::Struct(lbr_struct_tag())
+}
+
+pub fn lbr_struct_tag() -> StructTag {
+    StructTag {
+        address: CORE_CODE_ADDRESS,
+        module: lbr_module_name().to_owned(),
+        name: lbr_struct_name().to_owned(),
+        type_params: vec![],
+    }
+}
+
 pub fn sent_payment_tag() -> StructTag {
     StructTag {
-        address: core_code_address(),
+        address: CORE_CODE_ADDRESS,
         module: account_module_name().to_owned(),
         name: sent_event_name().to_owned(),
         type_params: vec![],
@@ -98,7 +155,7 @@ pub fn sent_payment_tag() -> StructTag {
 
 pub fn received_payment_tag() -> StructTag {
     StructTag {
-        address: core_code_address(),
+        address: CORE_CODE_ADDRESS,
         module: account_module_name().to_owned(),
         name: received_event_name().to_owned(),
         type_params: vec![],
@@ -110,8 +167,7 @@ pub fn received_payment_tag() -> StructTag {
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccountResource {
-    authentication_key: ByteArray,
-    balance: u64,
+    authentication_key: Vec<u8>,
     delegated_key_rotation_capability: bool,
     delegated_withdrawal_capability: bool,
     received_events: EventHandle,
@@ -123,9 +179,8 @@ pub struct AccountResource {
 impl AccountResource {
     /// Constructs an Account resource.
     pub fn new(
-        balance: u64,
         sequence_number: u64,
-        authentication_key: ByteArray,
+        authentication_key: Vec<u8>,
         delegated_key_rotation_capability: bool,
         delegated_withdrawal_capability: bool,
         sent_events: EventHandle,
@@ -133,7 +188,6 @@ impl AccountResource {
         event_generator: u64,
     ) -> Self {
         AccountResource {
-            balance,
             sequence_number,
             authentication_key,
             delegated_key_rotation_capability,
@@ -149,13 +203,8 @@ impl AccountResource {
         self.sequence_number
     }
 
-    /// Return the balance field for the given AccountResource
-    pub fn balance(&self) -> u64 {
-        self.balance
-    }
-
     /// Return the authentication_key field for the given AccountResource
-    pub fn authentication_key(&self) -> &ByteArray {
+    pub fn authentication_key(&self) -> &[u8] {
         &self.authentication_key
     }
 
@@ -180,10 +229,32 @@ impl AccountResource {
     }
 }
 
+/// The balance resource held under an account.
+#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+pub struct BalanceResource {
+    coin: u64,
+}
+
+impl BalanceResource {
+    pub fn new(coin: u64) -> Self {
+        Self { coin }
+    }
+
+    pub fn coin(&self) -> u64 {
+        self.coin
+    }
+}
+
 /// Path to the Account resource.
 /// It can be used to create an AccessPath for an Account resource.
 pub static ACCOUNT_RESOURCE_PATH: Lazy<Vec<u8>> =
     Lazy::new(|| AccessPath::resource_access_vec(&account_struct_tag(), &Accesses::empty()));
+
+/// Path to the Balance resource
+pub static BALANCE_RESOURCE_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
+    AccessPath::resource_access_vec(&account_balance_struct_tag(), &Accesses::empty())
+});
 
 /// The path to the sent event counter for an Account resource.
 /// It can be used to query the event DB for the given event.

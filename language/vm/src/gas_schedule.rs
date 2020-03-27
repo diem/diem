@@ -11,7 +11,8 @@ use crate::file_format::{
     StructDefinitionIndex, NO_TYPE_ACTUALS, NUMBER_OF_NATIVE_FUNCTIONS,
 };
 pub use crate::file_format_common::Opcodes;
-use libra_types::{identifier::Identifier, transaction::MAX_TRANSACTION_SIZE_IN_BYTES};
+use libra_types::transaction::MAX_TRANSACTION_SIZE_IN_BYTES;
+use move_core_types::identifier::Identifier;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -120,7 +121,7 @@ macro_rules! define_gas_unit {
 define_gas_unit! {
     name: AbstractMemorySize,
     carrier: GasCarrier,
-    doc: "A newtype wrapper that represents the (abstract) memory size that the instruciton will take up."
+    doc: "A newtype wrapper that represents the (abstract) memory size that the instruction will take up."
 }
 
 define_gas_unit! {
@@ -137,59 +138,51 @@ define_gas_unit! {
 
 /// The cost per-byte written to global storage.
 /// TODO: Fill this in with a proper number once it's determined.
-pub static GLOBAL_MEMORY_PER_BYTE_COST: Lazy<GasUnits<GasCarrier>> = Lazy::new(|| GasUnits::new(8));
+pub const GLOBAL_MEMORY_PER_BYTE_COST: GasUnits<GasCarrier> = GasUnits(8);
 
 /// The cost per-byte written to storage.
 /// TODO: Fill this in with a proper number once it's determined.
-pub static GLOBAL_MEMORY_PER_BYTE_WRITE_COST: Lazy<GasUnits<GasCarrier>> =
-    Lazy::new(|| GasUnits::new(8));
+pub const GLOBAL_MEMORY_PER_BYTE_WRITE_COST: GasUnits<GasCarrier> = GasUnits(8);
 
 /// The maximum size representable by AbstractMemorySize
-pub static MAX_ABSTRACT_MEMORY_SIZE: Lazy<AbstractMemorySize<GasCarrier>> =
-    Lazy::new(|| AbstractMemorySize::new(std::u64::MAX));
+pub const MAX_ABSTRACT_MEMORY_SIZE: AbstractMemorySize<GasCarrier> =
+    AbstractMemorySize(std::u64::MAX);
 
 /// The units of gas that should be charged per byte for every transaction.
-pub static INTRINSIC_GAS_PER_BYTE: Lazy<GasUnits<GasCarrier>> = Lazy::new(|| GasUnits::new(8));
+pub const INTRINSIC_GAS_PER_BYTE: GasUnits<GasCarrier> = GasUnits(8);
 
 /// The minimum gas price that a transaction can be submitted with.
-pub static MIN_PRICE_PER_GAS_UNIT: Lazy<GasPrice<GasCarrier>> = Lazy::new(|| GasPrice::new(0));
+pub const MIN_PRICE_PER_GAS_UNIT: GasPrice<GasCarrier> = GasPrice(0);
 
 /// The maximum gas unit price that a transaction can be submitted with.
-pub static MAX_PRICE_PER_GAS_UNIT: Lazy<GasPrice<GasCarrier>> = Lazy::new(|| GasPrice::new(10_000));
+pub const MAX_PRICE_PER_GAS_UNIT: GasPrice<GasCarrier> = GasPrice(10_000);
 
 /// 1 nanosecond should equal one unit of computational gas. We bound the maximum
 /// computational time of any given transaction at 10 milliseconds. We want this number and
 /// `MAX_PRICE_PER_GAS_UNIT` to always satisfy the inequality that
 ///         MAXIMUM_NUMBER_OF_GAS_UNITS * MAX_PRICE_PER_GAS_UNIT < min(u64::MAX, GasUnits<GasCarrier>::MAX)
-pub static MAXIMUM_NUMBER_OF_GAS_UNITS: Lazy<GasUnits<GasCarrier>> =
-    Lazy::new(|| GasUnits::new(1_000_000));
+pub const MAXIMUM_NUMBER_OF_GAS_UNITS: GasUnits<GasCarrier> = GasUnits(1_000_000);
 
 /// We charge one unit of gas per-byte for the first 600 bytes
-pub static MIN_TRANSACTION_GAS_UNITS: Lazy<GasUnits<GasCarrier>> = Lazy::new(|| GasUnits::new(600));
+pub const MIN_TRANSACTION_GAS_UNITS: GasUnits<GasCarrier> = GasUnits(600);
 
 /// The word size that we charge by
-pub static WORD_SIZE: Lazy<AbstractMemorySize<GasCarrier>> =
-    Lazy::new(|| AbstractMemorySize::new(8));
+pub const WORD_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize(8);
 
 /// The size in words for a non-string or address constant on the stack
-pub static CONST_SIZE: Lazy<AbstractMemorySize<GasCarrier>> =
-    Lazy::new(|| AbstractMemorySize::new(1));
+pub const CONST_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize(1);
 
 /// The size in words for a reference on the stack
-pub static REFERENCE_SIZE: Lazy<AbstractMemorySize<GasCarrier>> =
-    Lazy::new(|| AbstractMemorySize::new(8));
+pub const REFERENCE_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize(8);
 
 /// The size of a struct in words
-pub static STRUCT_SIZE: Lazy<AbstractMemorySize<GasCarrier>> =
-    Lazy::new(|| AbstractMemorySize::new(2));
+pub const STRUCT_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize(2);
 
 /// For V1 all accounts will be 32 words
-pub static DEFAULT_ACCOUNT_SIZE: Lazy<AbstractMemorySize<GasCarrier>> =
-    Lazy::new(|| AbstractMemorySize::new(32));
+pub const DEFAULT_ACCOUNT_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize(32);
 
 /// Any transaction over this size will be charged `INTRINSIC_GAS_PER_BYTE` per byte
-pub static LARGE_TRANSACTION_CUTOFF: Lazy<AbstractMemorySize<GasCarrier>> =
-    Lazy::new(|| AbstractMemorySize::new(600));
+pub const LARGE_TRANSACTION_CUTOFF: AbstractMemorySize<GasCarrier> = AbstractMemorySize(600);
 
 pub static GAS_SCHEDULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
 
@@ -300,11 +293,15 @@ impl CostTable {
 
     #[inline]
     pub fn instruction_cost(&self, instr_index: u8) -> &GasCost {
+        precondition!(instr_index > 0 && instr_index <= (self.instruction_table.len() as u8));
         &self.instruction_table[(instr_index - 1) as usize]
     }
 
     #[inline]
     pub fn native_cost(&self, native_index: NativeCostIndex) -> &GasCost {
+        precondition!(
+            native_index as u8 > 0 && native_index as u8 <= (self.instruction_table.len() as u8)
+        );
         &self.native_table[native_index as usize]
     }
 
@@ -462,7 +459,7 @@ impl GasCost {
 pub fn words_in(size: AbstractMemorySize<GasCarrier>) -> AbstractMemorySize<GasCarrier> {
     precondition!(size.get() <= MAX_ABSTRACT_MEMORY_SIZE.get() - (WORD_SIZE.get() + 1));
     // round-up div truncate
-    size.map2(*WORD_SIZE, |size, word_size| {
+    size.map2(WORD_SIZE, |size, word_size| {
         // static invariant
         assume!(word_size > 0);
         // follows from the precondition
@@ -476,10 +473,10 @@ pub fn calculate_intrinsic_gas(
     transaction_size: AbstractMemorySize<GasCarrier>,
 ) -> GasUnits<GasCarrier> {
     precondition!(transaction_size.get() <= MAX_TRANSACTION_SIZE_IN_BYTES as GasCarrier);
-    let min_transaction_fee = *MIN_TRANSACTION_GAS_UNITS;
+    let min_transaction_fee = MIN_TRANSACTION_GAS_UNITS;
 
     if transaction_size.get() > LARGE_TRANSACTION_CUTOFF.get() {
-        let excess = words_in(transaction_size.sub(*LARGE_TRANSACTION_CUTOFF));
+        let excess = words_in(transaction_size.sub(LARGE_TRANSACTION_CUTOFF));
         min_transaction_fee.add(INTRINSIC_GAS_PER_BYTE.mul(excess))
     } else {
         min_transaction_fee.unitary_cast()

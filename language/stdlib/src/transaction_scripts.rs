@@ -1,85 +1,188 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use ir_to_bytecode::parser::parse_program;
-use move_ir_types::ast::Program;
-use once_cell::sync::Lazy;
+//! Rust representation of a Move transaction script that can be executed on the Libra blockchain.
+//! Libra does not allow arbitrary transaction scripts; only scripts whose hashes are present in
+//! the on-chain script whitelist. The genesis whitelist is derived from this file, and the
+//! `Stdlib` script enum will be modified to reflect changes in the on-chain whitelist as time goes
+//! on.
 
-/// Returns the source code for the add validator transaction script
-pub fn add_validator() -> &'static str {
-    include_str!("../transaction_scripts/add_validator.mvir")
+use crate::{compile_script, use_staged, MOVE_EXTENSION, STAGED_EXTENSION, TRANSACTION_SCRIPTS};
+use anyhow::{anyhow, Error, Result};
+use include_dir::{include_dir, Dir};
+use libra_crypto::HashValue;
+use libra_types::transaction::SCRIPT_HASH_LENGTH;
+use std::{convert::TryFrom, env, fmt, path::PathBuf};
+
+// This includes the compiled transaction scripts as binaries. We must use this hack to work around
+// a problem with Docker, which does not copy over the Move source files that would be be used to
+// produce these binaries at runtime.
+#[allow(dead_code)]
+const STAGED_TXN_SCRIPTS_DIR: Dir = include_dir!("staged/transaction_scripts");
+
+/// All of the Move transaction scripts that can be executed on the Libra blockchain
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub enum StdlibScript {
+    AddValidator,
+    CreateAccount,
+    EmptyScript,
+    Mint,
+    PeerToPeer,
+    PeerToPeerWithMetadata,
+    RegisterValidator,
+    RemoveValidator,
+    RotateAuthenticationKey,
+    RotateConsensusPubkey,
+    // ...add new scripts here
 }
 
-/// Returns the source code for peer-to-peer transaction script.
-pub fn peer_to_peer() -> &'static str {
-    include_str!("../transaction_scripts/peer_to_peer_transfer.mvir")
+impl StdlibScript {
+    /// Return a vector containing all of the standard library scripts (i.e., all inhabitants of the
+    /// StdlibScript enum)
+    pub fn all() -> Vec<Self> {
+        vec![
+            Self::AddValidator,
+            Self::CreateAccount,
+            Self::EmptyScript,
+            Self::Mint,
+            Self::PeerToPeer,
+            Self::PeerToPeerWithMetadata,
+            Self::RegisterValidator,
+            Self::RemoveValidator,
+            Self::RotateAuthenticationKey,
+            Self::RotateConsensusPubkey,
+            // ...add new scripts here
+        ]
+    }
+
+    /// Construct the whitelist of script hashes used to determine whether a transaction script can
+    /// be executed on the Libra blockchain
+    pub fn whitelist() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
+        StdlibScript::all()
+            .iter()
+            .map(|script| *script.compiled_bytes().hash().as_ref())
+            .collect()
+    }
+
+    /// Return a lowercase-underscore style name for this script
+    pub fn name(self) -> String {
+        self.to_string()
+    }
+
+    /// Return true if `code_bytes` is the bytecode of one of the standard library scripts
+    pub fn is(code_bytes: &[u8]) -> bool {
+        Self::try_from(code_bytes).is_ok()
+    }
+
+    /// Return the Move bytecode produced by compiling this script. This will almost always read
+    /// from disk rather invoking the compiler; genesis is the only exception.
+    pub fn compiled_bytes(self) -> CompiledBytes {
+        if use_staged() {
+            // read from disk
+            let mut path = PathBuf::from(self.name());
+            path.set_extension(STAGED_EXTENSION);
+            CompiledBytes(
+                STAGED_TXN_SCRIPTS_DIR
+                    .get_file(path)
+                    .unwrap()
+                    .contents()
+                    .to_vec(),
+            )
+        } else {
+            // compile from .move source file
+            let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            path.push(PathBuf::from(TRANSACTION_SCRIPTS));
+            path.push(PathBuf::from(self.name()));
+            path.set_extension(MOVE_EXTENSION);
+            let final_path = path.into_os_string().into_string().unwrap();
+            CompiledBytes(compile_script(final_path))
+        }
+    }
+
+    /// Return the sha3-256 hash of the compiled script bytes
+    pub fn hash(self) -> HashValue {
+        self.compiled_bytes().hash()
+    }
 }
 
-/// Returns the source code for peer-to-peer transaction script with metadata.
-pub fn peer_to_peer_with_metadata() -> &'static str {
-    include_str!("../transaction_scripts/peer_to_peer_transfer_with_metadata.mvir")
+/// Bytes produced by compiling a Move source language script into Move bytecode
+#[derive(Clone)]
+pub struct CompiledBytes(Vec<u8>);
+
+impl CompiledBytes {
+    /// Return the sha3-256 hash of the script bytes
+    pub fn hash(&self) -> HashValue {
+        Self::hash_bytes(&self.0)
+    }
+
+    /// Return the sha3-256 hash of the script bytes
+    fn hash_bytes(bytes: &[u8]) -> HashValue {
+        HashValue::from_sha3_256(bytes)
+    }
+
+    /// Convert this newtype wrapper into a vector of bytes
+    pub fn into_vec(self) -> Vec<u8> {
+        self.0
+    }
 }
 
-/// Returns the source code for create-account transaction script.
-pub fn create_account() -> &'static str {
-    include_str!("../transaction_scripts/create_account.mvir")
+impl TryFrom<&[u8]> for StdlibScript {
+    type Error = Error;
+
+    /// Return `Some(<script_name>)` if  `code_bytes` is the bytecode of one of the standard library
+    /// scripts, None otherwise.
+    fn try_from(code_bytes: &[u8]) -> Result<Self> {
+        let hash = CompiledBytes::hash_bytes(code_bytes);
+        Self::all()
+            .iter()
+            .find(|script| script.hash() == hash)
+            .cloned()
+            .ok_or_else(|| anyhow!("Could not create standard library script from bytes"))
+    }
 }
 
-/// Returns the source code for the register validator transaction script
-pub fn register_validator() -> &'static str {
-    include_str!("../transaction_scripts/register_validator.mvir")
+impl fmt::Display for StdlibScript {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::AddValidator => "add_validator",
+                Self::CreateAccount => "create_account",
+                Self::EmptyScript => "empty_script",
+                Self::Mint => "mint",
+                Self::PeerToPeer => "peer_to_peer",
+                Self::PeerToPeerWithMetadata => "peer_to_peer_with_metadata",
+                Self::RegisterValidator => "register_validator",
+                Self::RemoveValidator => "remove_validator",
+                Self::RotateAuthenticationKey => "rotate_authentication_key",
+                Self::RotateConsensusPubkey => "rotate_consensus_pubkey",
+            }
+        )
+    }
 }
 
-/// Returns the source code for the remove validator transaction script
-pub fn remove_validator() -> &'static str {
-    include_str!("../transaction_scripts/remove_validator.mvir")
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_file_correspondence() {
+        // make sure that every file under transaction_scripts/ is represented in
+        // StdlibScript::all() (and vice versa)
+        let files = STAGED_TXN_SCRIPTS_DIR.files();
+        let scripts = StdlibScript::all();
+        assert_eq!(
+            files.len(),
+            scripts.len(),
+            "Mismatch between stdlib script files and StdlibScript enum"
+        );
+        for file in files {
+            assert!(
+                StdlibScript::is(file.contents()),
+                "File {} missing from StdlibScript enum",
+                file.path().display()
+            )
+        }
+    }
 }
-
-/// Returns the source code for the rotate-consensus-pubkey script.
-pub fn rotate_consensus_pubkey() -> &'static str {
-    include_str!("../transaction_scripts/rotate_consensus_pubkey.mvir")
-}
-
-/// Returns the source code for the rotate-key transaction script.
-pub fn rotate_key() -> &'static str {
-    include_str!("../transaction_scripts/rotate_authentication_key.mvir")
-}
-
-/// Returns the source code for the mint transaction script.
-pub fn mint() -> &'static str {
-    include_str!("../transaction_scripts/mint.mvir")
-}
-
-/// Returns the source code for the block prologue script
-pub fn block_prologue() -> &'static str {
-    include_str!("../transaction_scripts/block_prologue.mvir")
-}
-
-pub static ADD_VALIDATOR_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(add_validator()).unwrap());
-
-pub static PEER_TO_PEER_TRANSFER_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(peer_to_peer()).unwrap());
-
-pub static PEER_TO_PEER_TRANSFER_WITH_METADATA_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(peer_to_peer_with_metadata()).unwrap());
-
-pub static CREATE_ACCOUNT_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(create_account()).unwrap());
-
-pub static REGISTER_VALIDATOR_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(register_validator()).unwrap());
-
-pub static REMOVE_VALIDATOR_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(remove_validator()).unwrap());
-
-pub static ROTATE_CONSENSUS_PUBKEY_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(rotate_consensus_pubkey()).unwrap());
-
-pub static ROTATE_AUTHENTICATION_KEY_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(rotate_key()).unwrap());
-
-pub static MINT_TXN_BODY: Lazy<Program> = Lazy::new(|| parse_program(mint()).unwrap());
-
-pub static BLOCK_PROLOGUE_TXN_BODY: Lazy<Program> =
-    Lazy::new(|| parse_program(block_prologue()).unwrap());

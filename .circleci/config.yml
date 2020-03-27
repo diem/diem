@@ -46,7 +46,7 @@ commands:
           name: Install Dependencies
           command: |
             sudo apt-get update
-            sudo apt-get install -y cmake curl
+            sudo apt-get install -y cmake curl clang llvm
             rustup component add clippy rustfmt
   install_code_coverage_deps:
     steps:
@@ -95,7 +95,7 @@ commands:
 jobs:
   build:
     executor: build-executor
-    parallelism: 4
+    parallelism: 5
     steps:
       - build_setup
       - run:
@@ -104,40 +104,41 @@ jobs:
       - run:
           name: Linting
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [123] ]] || cargo x lint
-            [[ $CIRCLE_NODE_INDEX =~ [123] ]] || cargo xclippy --workspace --all-targets
-            [[ $CIRCLE_NODE_INDEX =~ [123] ]] || cargo fmt -- --check
+            [[ $CIRCLE_NODE_INDEX =~ [1234] ]] || cargo x lint
+            [[ $CIRCLE_NODE_INDEX =~ [1234] ]] || cargo xclippy --workspace --all-targets
+            [[ $CIRCLE_NODE_INDEX =~ [1234] ]] || cargo xfmt --check
+            [[ $CIRCLE_NODE_INDEX =~ [1234] ]] || cargo install cargo-guppy --git http://github.com/calibra/cargo-guppy --rev 8b2bc45c0cd6323a7a2b8170ddad6d2a5b79047b
+            [[ $CIRCLE_NODE_INDEX =~ [1234] ]] || [[ -z $(cargo guppy dups --target x86_64-unknown-linux-gnu --kind directthirdparty) ]]
       - run:
           name: Build Release
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [023] ]] || RUST_BACKTRACE=1 cargo build -j 16 --release
-      - run:
-          name: Run Cluster Smoke Test
-          command: |
-            [[ $CIRCLE_NODE_INDEX =~ [023] ]] || scripts/smoke-test-swarm-cluster.sh
+            [[ $CIRCLE_NODE_INDEX =~ [0234] ]] || RUST_BACKTRACE=1 cargo build -j 16 --release
       - run:
           name: Build Dev
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16
-            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p libra-swarm
-            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p cluster-test
-            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p libra-fuzzer
-            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p language_benchmarks
-            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p bytecode-to-boogie
-            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p cost-synthesis
-            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p test-generation
+            [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16
+            [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p libra-swarm
+            [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p cluster-test
+            [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p libra-fuzzer
+            [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p language_benchmarks
+            [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p cost-synthesis
+            [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p test-generation
       - run:
-          name: Run All Unit Tests
+          name: Run All Non Flaky Unit Tests
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [013] ]] || RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --unit
+            [[ $CIRCLE_NODE_INDEX =~ [0134] ]] || RUST_BACKTRACE=1 $CI_TIMEOUT cargo test --all-features --workspace --exclude libra-node --exclude libra-crypto --exclude testsuite --exclude consensus
       - run:
           name: Run Cryptography Unit Tests with the formally verified backend
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [013] ]] || ( RUST_BACKTRACE=1 cd crypto/crypto && $CI_TIMEOUT cargo test --features='std fiat_u64_backend fuzzing' --no-default-features )
+            [[ $CIRCLE_NODE_INDEX =~ [0134] ]] || ( RUST_BACKTRACE=1 cd crypto/crypto && $CI_TIMEOUT cargo test --features='std fiat_u64_backend fuzzing' --no-default-features )
       - run:
           name: Run All End to End Tests
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [012] ]] || RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --package testsuite -- --test-threads 1
+            [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --package testsuite -- --test-threads 1
+      - run:
+          name: Run Quarantined Unit Tests 3 (consensus) times
+          command: |
+            [[ $CIRCLE_NODE_INDEX =~ [0123] ]] || timeout 20m ./scripts/run_quarantined.sh -c consensus -r 3 -f
       - build_teardown
   validate-cluster-test-dockerfile:
     description: Validate that committed docker files for cluster test are up to date

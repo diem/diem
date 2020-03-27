@@ -1,13 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{crypto_proxies::ValidatorSet, ledger_info::LedgerInfo, transaction::Version};
+use crate::{ledger_info::LedgerInfo, transaction::Version, validator_set::ValidatorSet};
 use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
 use libra_crypto_derive::CryptoHasher;
 use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
-use std::str::FromStr;
+use std::{
+    fmt::{Display, Formatter},
+    str::FromStr,
+};
 
 // The delimiter between the version and the hash.
 const WAYPOINT_DELIMITER: char = ':';
@@ -134,11 +136,8 @@ impl CryptoHash for Ledger2WaypointConverter {
 
 #[cfg(test)]
 mod test {
-    use super::Waypoint;
+    use super::*;
     use crate::block_info::BlockInfo;
-    use crate::crypto_proxies::ValidatorSet;
-    use crate::ledger_info::LedgerInfo;
-    use libra_crypto::HashValue;
     use std::str::FromStr;
 
     #[test]

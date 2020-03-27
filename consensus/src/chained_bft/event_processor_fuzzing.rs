@@ -11,6 +11,7 @@ use crate::{
             rotating_proposer_election::RotatingProposer,
         },
         network::NetworkSender,
+        network_interface::ConsensusNetworkSender,
         persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
         test_utils::{EmptyStateComputer, MockStorage, MockTransactionManager, TestPayload},
     },
@@ -19,8 +20,11 @@ use crate::{
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::proposal_msg::ProposalMsg;
 use futures::{channel::mpsc, executor::block_on};
-use libra_types::crypto_proxies::{LedgerInfoWithSignatures, ValidatorSigner, ValidatorVerifier};
-use network::validator_network::ConsensusNetworkSender;
+use libra_types::{
+    ledger_info::LedgerInfoWithSignatures, validator_signer::ValidatorSigner,
+    validator_verifier::ValidatorVerifier,
+};
+use network::peer_manager::{ConnectionRequestSender, PeerManagerRequestSender};
 use once_cell::sync::Lazy;
 use safety_rules::{PersistentSafetyStorage, SafetyRules};
 use std::{num::NonZeroUsize, sync::Arc};
@@ -91,17 +95,23 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     // TODO: mock channels
     let (network_reqs_tx, _network_reqs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+    let (connection_reqs_tx, _) =
+        libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let (conn_mgr_reqs_tx, _conn_mgr_reqs_rx) = channel::new_test(8);
-    let network_sender = ConsensusNetworkSender::new(network_reqs_tx, conn_mgr_reqs_tx);
+    let network_sender = ConsensusNetworkSender::new(
+        PeerManagerRequestSender::new(network_reqs_tx),
+        ConnectionRequestSender::new(connection_reqs_tx),
+        conn_mgr_reqs_tx,
+    );
     let (self_sender, _self_receiver) = channel::new_test(8);
+
+    let epoch_info = initial_data.epoch_info();
     let network = NetworkSender::new(
         signer.author(),
         network_sender,
         self_sender,
-        initial_data.validators(),
+        epoch_info.verifier.clone(),
     );
-
-    let validators = initial_data.validators();
 
     // TODO: mock
     let block_store = build_empty_store(storage.clone(), initial_data);
@@ -126,6 +136,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
 
     // event processor
     EventProcessor::new(
+        epoch_info,
         Arc::clone(&block_store),
         None,
         pacemaker,
@@ -136,7 +147,6 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
         Box::new(MockTransactionManager::new(None)),
         storage,
         time_service,
-        validators,
     )
 }
 
@@ -156,7 +166,7 @@ pub fn fuzz_proposal(data: &[u8]) {
     };
 
     let proposal = match proposal.verify_well_formed() {
-        Ok(xx) => xx,
+        Ok(_) => proposal,
         Err(_) => {
             if cfg!(test) {
                 panic!();

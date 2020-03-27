@@ -12,132 +12,16 @@ use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
+use move_vm_types::native_functions::dispatch::NativeFunction;
 use std::{collections::BTreeMap, fmt};
 use vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::{append_err_info, verification_error},
-    file_format::{CompiledModule, CompiledProgram, CompiledScript},
+    file_format::{CompiledModule, CompiledScript, SignatureToken},
     resolver::Resolver,
     views::{ModuleView, ViewInternals},
     IndexKind,
 };
-use vm_runtime_types::{
-    native_functions::dispatch::resolve_native_function,
-    native_structs::dispatch::resolve_native_struct,
-};
-
-/// A program that has been verified for internal consistency.
-///
-/// This includes cross-module checking for the base dependencies.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct VerifiedProgram<'a> {
-    script: VerifiedScript,
-    modules: Vec<VerifiedModule>,
-    deps: Vec<&'a VerifiedModule>,
-}
-
-impl<'a> VerifiedProgram<'a> {
-    /// Creates a new `VerifiedProgram` after verifying the provided `CompiledProgram` against
-    /// the provided base dependencies.
-    ///
-    /// On error, returns a list of verification statuses.
-    pub fn new(
-        program: CompiledProgram,
-        deps: impl IntoIterator<Item = &'a VerifiedModule>,
-    ) -> Result<Self, Vec<VMStatus>> {
-        let deps: Vec<&VerifiedModule> = deps.into_iter().collect();
-        // This is done separately to avoid unnecessary codegen due to monomorphization.
-        Self::new_impl(program, deps)
-    }
-
-    fn new_impl(
-        program: CompiledProgram,
-        deps: Vec<&'a VerifiedModule>,
-    ) -> Result<Self, Vec<VMStatus>> {
-        let mut modules = vec![];
-
-        for module in program.modules.into_iter() {
-            let module = match VerifiedModule::new(module) {
-                Ok(module) => module,
-                Err((_, errors)) => {
-                    return Err(errors);
-                }
-            };
-
-            {
-                // Verify against any modules compiled earlier as well.
-                let deps = deps.iter().copied().chain(&modules);
-                let errors = verify_module_dependencies(&module, deps);
-                if !errors.is_empty() {
-                    return Err(errors);
-                }
-            }
-
-            modules.push(module);
-        }
-
-        let script = match VerifiedScript::new(program.script) {
-            Ok(script) => script,
-            Err((_, errors)) => {
-                return Err(errors);
-            }
-        };
-
-        {
-            let deps = deps.iter().copied().chain(&modules);
-            let errors = verify_script_dependencies(&script, deps);
-            if !errors.is_empty() {
-                return Err(errors);
-            }
-        }
-
-        Ok(VerifiedProgram {
-            script,
-            modules,
-            deps,
-        })
-    }
-
-    /// Returns a reference to the script.
-    pub fn script(&self) -> &VerifiedScript {
-        &self.script
-    }
-
-    /// Returns a reference to the modules in this program.
-    pub fn modules(&self) -> &[VerifiedModule] {
-        &self.modules
-    }
-
-    /// Returns the dependencies this program was verified against.
-    pub fn deps(&self) -> &[&'a VerifiedModule] {
-        &self.deps
-    }
-
-    /// Converts this `VerifiedProgram` into a `CompiledProgram` instance.
-    ///
-    /// Converting back would require re-verifying this program.
-    pub fn into_inner(self) -> CompiledProgram {
-        CompiledProgram {
-            modules: self
-                .modules
-                .into_iter()
-                .map(|module| module.into_inner())
-                .collect(),
-            script: self.script.into_inner(),
-        }
-    }
-}
-
-impl<'a> fmt::Display for VerifiedProgram<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "VerifiedProgram: {{\nModules: [\n")?;
-        for m in &self.modules {
-            writeln!(f, "{},", m)?;
-        }
-        // XXX Should this print out dependencies? Trying to avoid that for brevity for now.
-        write!(f, "],\nScript: {},\nDependencies: ...}}", self.script)
-    }
-}
 
 /// A module that has been verified for internal consistency.
 ///
@@ -310,7 +194,9 @@ pub fn verify_main_signature(script: &CompiledScript) -> Vec<VMStatus> {
         return vec![VMStatus::new(StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE)];
     }
     for arg_type in &function_signature.arg_types {
-        if !arg_type.is_primitive() {
+        if !(arg_type.is_primitive()
+            || *arg_type == SignatureToken::Vector(Box::new(SignatureToken::U8)))
+        {
             return vec![VMStatus::new(StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE)];
         }
     }
@@ -375,7 +261,7 @@ fn verify_native_functions(module_view: &ModuleView<VerifiedModule>) -> Vec<VMSt
         .filter(|fdv| fdv.1.is_native())
     {
         let function_name = native_function_definition_view.name();
-        match resolve_native_function(&module_id, function_name) {
+        match NativeFunction::resolve(&module_id, function_name) {
             None => errors.push(verification_error(
                 IndexKind::FunctionHandle,
                 idx,
@@ -384,8 +270,19 @@ fn verify_native_functions(module_view: &ModuleView<VerifiedModule>) -> Vec<VMSt
             Some(vm_native_function) => {
                 let declared_function_signature =
                     native_function_definition_view.signature().as_inner();
-                let expected_function_signature = &vm_native_function.expected_signature;
-                if declared_function_signature != expected_function_signature {
+                let expected_function_signature_res =
+                    vm_native_function.signature(Some(module_view));
+                let expected_function_signature_opt = match expected_function_signature_res {
+                    Ok(opt) => opt,
+                    Err(e) => {
+                        errors.push(e);
+                        continue;
+                    }
+                };
+                let matching_signatures = expected_function_signature_opt
+                    .map(|e| &e == declared_function_signature)
+                    .unwrap_or(false);
+                if !matching_signatures {
                     errors.push(verification_error(
                         IndexKind::FunctionHandle,
                         idx,
@@ -398,46 +295,16 @@ fn verify_native_functions(module_view: &ModuleView<VerifiedModule>) -> Vec<VMSt
     errors
 }
 
+// TODO: native structs have been partially removed. Revisit.
 fn verify_native_structs(module_view: &ModuleView<VerifiedModule>) -> Vec<VMStatus> {
-    let mut errors = vec![];
-
-    let module_id = module_view.id();
-    for (idx, native_struct_definition_view) in module_view
+    module_view
         .structs()
         .enumerate()
         .filter(|sdv| sdv.1.is_native())
-    {
-        let struct_name = native_struct_definition_view.name();
-
-        match resolve_native_struct(&module_id, struct_name) {
-            None => errors.push(verification_error(
-                IndexKind::StructHandle,
-                idx,
-                StatusCode::MISSING_DEPENDENCY,
-            )),
-            Some(vm_native_struct) => {
-                let declared_index = idx as u16;
-                let declared_is_nominal_resource =
-                    native_struct_definition_view.is_nominal_resource();
-                let declared_type_formals = native_struct_definition_view.type_formals();
-
-                let expected_index = vm_native_struct.expected_index.0;
-                let expected_is_nominal_resource = vm_native_struct.expected_nominal_resource;
-                let expected_type_formals = &vm_native_struct.expected_type_formals;
-                if declared_index != expected_index
-                    || declared_is_nominal_resource != expected_is_nominal_resource
-                    || declared_type_formals != expected_type_formals
-                {
-                    errors.push(verification_error(
-                        IndexKind::StructHandle,
-                        idx,
-                        StatusCode::TYPE_MISMATCH,
-                    ))
-                }
-            }
-        }
-    }
-    errors
+        .map(|(idx, _)| {
+            verification_error(IndexKind::StructHandle, idx, StatusCode::MISSING_DEPENDENCY)
+        })
+        .collect()
 }
 
 fn verify_all_dependencies_provided(
@@ -546,4 +413,21 @@ fn verify_function_visibility_and_type(
         }
     }
     errors
+}
+
+/// Batch verify a list of modules and panic on any error. The modules should be topologically
+/// sorted in their dependency order.
+pub fn batch_verify_modules(modules: Vec<CompiledModule>) -> Vec<VerifiedModule> {
+    let mut verified_modules = vec![];
+    for module in modules.into_iter() {
+        let verified_module = VerifiedModule::new(module).expect("stdlib module failed to verify");
+        let verification_errors = verify_module_dependencies(&verified_module, &verified_modules);
+        for e in &verification_errors {
+            println!("{:?} at {:?}", e, verified_module.self_id());
+        }
+        assert!(verification_errors.is_empty());
+
+        verified_modules.push(verified_module);
+    }
+    verified_modules
 }

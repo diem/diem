@@ -9,18 +9,17 @@
 //! [`storage-client`](../storage-client/index.html) instead of via
 //! [`StorageClient`](../storage-proto/proto/storage_grpc/struct.StorageClient.html) directly.
 
-#[cfg(feature = "fuzzing")]
+#[cfg(any(feature = "testing", feature = "fuzzing"))]
 pub mod mocks;
 
 use anyhow::Result;
-use futures::channel::mpsc;
-use futures::sink::SinkExt;
+use futures::{channel::mpsc, sink::SinkExt};
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_types::proto::types::{
     UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse, ValidatorChangeProof,
 };
-use libradb::LibraDB;
+use libradb::{LibraDB, LibraDBTrait};
 use std::{convert::TryFrom, path::Path, sync::Arc};
 use storage_proto::proto::storage::{
     storage_server::{Storage, StorageServer},
@@ -35,23 +34,50 @@ use storage_proto::proto::storage::{
 };
 use tokio::runtime::Runtime;
 
+pub fn init_libra_db(config: &NodeConfig) -> Arc<LibraDB> {
+    Arc::new(LibraDB::new(&config.storage.dir()))
+}
+
+/// Starts storage service with a given LibraDB
+pub fn start_storage_service_with_db(config: &NodeConfig, libra_db: Arc<LibraDB>) -> Runtime {
+    let storage_service = StorageService { db: libra_db };
+    start_storage_service_runtime(config, storage_service)
+}
+
 /// Starts storage service according to config.
 pub fn start_storage_service(config: &NodeConfig) -> Runtime {
-    let rt = tokio::runtime::Builder::new()
+    let storage_service = StorageService::new(&config.storage.dir());
+    start_storage_service_runtime(config, storage_service)
+}
+
+fn start_storage_service_runtime(config: &NodeConfig, storage_service: StorageService) -> Runtime {
+    let mut rt = tokio::runtime::Builder::new()
         .threaded_scheduler()
         .enable_all()
         .thread_name("tokio-storage")
         .build()
         .unwrap();
 
-    let storage_service = StorageService::new(&config.storage.dir());
-
     rt.spawn(
         tonic::transport::Server::builder()
             .add_service(StorageServer::new(storage_service))
             .serve(config.storage.address),
     );
-    rt
+
+    let addr = format!("http://{}", config.storage.address);
+    for _i in 0..100 {
+        if rt
+            .block_on(
+                storage_proto::proto::storage::storage_client::StorageClient::connect(addr.clone()),
+            )
+            .is_ok()
+        {
+            return rt;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+
+    panic!("Failed to start storage service.");
 }
 
 /// The implementation of the storage [GRPC](http://grpc.io) service.
@@ -204,7 +230,7 @@ impl Storage for StorageService {
         &self,
         request: tonic::Request<SaveTransactionsRequest>,
     ) -> Result<tonic::Response<SaveTransactionsResponse>, tonic::Status> {
-        debug!("[GRPC] Storage::save_transactions");
+        trace!("[GRPC] Storage::save_transactions");
         let req = request.into_inner();
         let resp = self
             .save_transactions_inner(req)
@@ -216,7 +242,7 @@ impl Storage for StorageService {
         &self,
         request: tonic::Request<UpdateToLatestLedgerRequest>,
     ) -> Result<tonic::Response<UpdateToLatestLedgerResponse>, tonic::Status> {
-        debug!("[GRPC] Storage::update_to_latest_ledger");
+        trace!("[GRPC] Storage::update_to_latest_ledger");
         let req = request.into_inner();
         let resp = self
             .update_to_latest_ledger_inner(req)
@@ -228,7 +254,7 @@ impl Storage for StorageService {
         &self,
         request: tonic::Request<GetTransactionsRequest>,
     ) -> Result<tonic::Response<GetTransactionsResponse>, tonic::Status> {
-        debug!("[GRPC] Storage::get_transactions");
+        trace!("[GRPC] Storage::get_transactions");
         let req = request.into_inner();
         let resp = self
             .get_transactions_inner(req)
@@ -240,7 +266,7 @@ impl Storage for StorageService {
         &self,
         request: tonic::Request<GetLatestStateRootRequest>,
     ) -> Result<tonic::Response<GetLatestStateRootResponse>, tonic::Status> {
-        debug!("[GRPC] Storage::get_latest_state_root");
+        trace!("[GRPC] Storage::get_latest_state_root");
         let req = request.into_inner();
         let resp = self
             .get_latest_state_root_inner(req)
@@ -252,7 +278,7 @@ impl Storage for StorageService {
         &self,
         request: tonic::Request<GetLatestAccountStateRequest>,
     ) -> Result<tonic::Response<GetLatestAccountStateResponse>, tonic::Status> {
-        debug!("[GRPC] Storage::get_latest_account_state");
+        trace!("[GRPC] Storage::get_latest_account_state");
         let req = request.into_inner();
         let resp = self
             .get_latest_account_state_inner(req)
@@ -264,7 +290,7 @@ impl Storage for StorageService {
         &self,
         request: tonic::Request<GetAccountStateWithProofByVersionRequest>,
     ) -> Result<tonic::Response<GetAccountStateWithProofByVersionResponse>, tonic::Status> {
-        debug!("[GRPC] Storage::get_account_state_with_proof_by_version");
+        trace!("[GRPC] Storage::get_account_state_with_proof_by_version");
         let req = request.into_inner();
         let resp = self
             .get_account_state_with_proof_by_version_inner(req)
@@ -276,7 +302,7 @@ impl Storage for StorageService {
         &self,
         _request: tonic::Request<GetStartupInfoRequest>,
     ) -> Result<tonic::Response<GetStartupInfoResponse>, tonic::Status> {
-        debug!("[GRPC] Storage::get_startup_info");
+        trace!("[GRPC] Storage::get_startup_info");
         let resp = self
             .get_startup_info_inner()
             .map_err(|e| tonic::Status::new(tonic::Code::InvalidArgument, e.to_string()))?;
@@ -287,7 +313,7 @@ impl Storage for StorageService {
         &self,
         request: tonic::Request<GetEpochChangeLedgerInfosRequest>,
     ) -> Result<tonic::Response<ValidatorChangeProof>, tonic::Status> {
-        debug!("[GRPC] Storage::get_epoch_change_ledger_infos");
+        trace!("[GRPC] Storage::get_epoch_change_ledger_infos");
         let req = request.into_inner();
         let resp = self
             .get_epoch_change_ledger_infos_inner(req)
@@ -302,7 +328,7 @@ impl Storage for StorageService {
         &self,
         request: tonic::Request<BackupAccountStateRequest>,
     ) -> Result<tonic::Response<Self::BackupAccountStateStream>, tonic::Status> {
-        debug!("[GRPC] Storage::backup_account_state");
+        trace!("[GRPC] Storage::backup_account_state");
         let req = request.into_inner();
         let iter = self
             .db
@@ -335,7 +361,7 @@ impl Storage for StorageService {
         &self,
         request: tonic::Request<GetAccountStateRangeProofRequest>,
     ) -> Result<tonic::Response<GetAccountStateRangeProofResponse>, tonic::Status> {
-        debug!("[GRPC] Storage::get_account_state_range_proof");
+        trace!("[GRPC] Storage::get_account_state_range_proof");
         let req = request.into_inner();
         let resp = self
             .get_account_state_range_proof_inner(req)
@@ -349,7 +375,7 @@ impl Storage for StorageService {
         &self,
         request: tonic::Request<BackupTransactionRequest>,
     ) -> Result<tonic::Response<Self::BackupTransactionStream>, tonic::Status> {
-        debug!("[GRPC] Storage::backup_transaction");
+        trace!("[GRPC] Storage::backup_transaction");
         let req = request.into_inner();
 
         let backup_handler = self.db.get_backup_handler();
@@ -395,7 +421,7 @@ impl Storage for StorageService {
         &self,
         request: tonic::Request<BackupTransactionInfoRequest>,
     ) -> Result<tonic::Response<Self::BackupTransactionInfoStream>, tonic::Status> {
-        debug!("[GRPC] Storage::backup_transaction_info");
+        trace!("[GRPC] Storage::backup_transaction_info");
         let req = request.into_inner();
 
         let backup_handler = self.db.get_backup_handler();

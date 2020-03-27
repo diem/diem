@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::module_generation::{options::ModuleGeneratorOptions, utils::random_string};
-use libra_types::{account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier};
+use libra_types::account_address::AccountAddress;
+use move_core_types::identifier::Identifier;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use vm::file_format::{Bytecode, CompiledModuleMut, LocalsSignature};
 
@@ -50,8 +51,7 @@ impl Pad {
         module.byte_array_pool = (0..(self.table_size + module.byte_array_pool.len()))
             .map(|_| {
                 let len = self.gen.gen_range(10, self.options.byte_array_max_size);
-                let bytes = (0..len).map(|_| self.gen.gen::<u8>()).collect();
-                ByteArray::new(bytes)
+                (0..len).map(|_| self.gen.gen::<u8>()).collect()
             })
             .collect()
     }

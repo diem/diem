@@ -6,41 +6,32 @@ use crate::{
     StateSynchronizer, SynchronizerState,
 };
 use anyhow::{bail, Result};
-use config_builder;
-use executor::ExecutedTrees;
+use executor_types::ExecutedTrees;
 use futures::executor::block_on;
 use libra_config::config::RoleType;
 use libra_crypto::{
     ed25519::*,
+    hash::ACCUMULATOR_PLACEHOLDER_HASH,
     test_utils::TEST_SEED,
     x25519,
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
-    HashValue,
 };
-use libra_logger::set_simple_logger;
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
-    block_info::BlockInfo,
-    crypto_proxies::{
-        random_validator_verifier, LedgerInfoWithSignatures, ValidatorChangeProof,
-        ValidatorPublicKeys, ValidatorSet, ValidatorSigner,
-    },
-    ledger_info::LedgerInfo,
-    proof::TransactionListProof,
-    transaction::TransactionListWithProof,
-    waypoint::Waypoint,
+    event_subscription::EventSubscription, ledger_info::LedgerInfoWithSignatures,
+    proof::TransactionListProof, transaction::TransactionListWithProof,
+    validator_change::ValidatorChangeProof, validator_info::ValidatorInfo,
+    validator_set::ValidatorSet, validator_signer::ValidatorSigner,
+    validator_verifier::random_validator_verifier, waypoint::Waypoint,
 };
 use network::{
-    validator_network::{
-        self,
-        network_builder::{NetworkBuilder, TransportType},
-    },
+    validator_network::network_builder::{NetworkBuilder, TransportType},
     NetworkPublicKeys,
 };
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc, RwLock,
@@ -75,6 +66,7 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         ledger_info_with_sigs: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
         _synced_trees: &mut ExecutedTrees,
+        _reconfig_event_subscriptions: &mut [Box<dyn EventSubscription>],
     ) -> Result<()> {
         self.storage.write().unwrap().add_txns_with_li(
             txn_list_with_proof.transactions,
@@ -125,7 +117,7 @@ struct SynchronizerEnv {
     storage_proxies: Vec<Arc<RwLock<MockStorage>>>, // to directly modify peers storage
     signers: Vec<ValidatorSigner>,
     network_signers: Vec<Ed25519PrivateKey>,
-    public_keys: Vec<ValidatorPublicKeys>,
+    public_keys: Vec<ValidatorInfo>,
     peer_ids: Vec<PeerId>,
     peer_addresses: Vec<Multiaddr>,
     mempools: Vec<MockSharedMempool>,
@@ -138,7 +130,7 @@ impl SynchronizerEnv {
     ) -> (
         Vec<ValidatorSigner>,
         Vec<Ed25519PrivateKey>,
-        Vec<ValidatorPublicKeys>,
+        Vec<ValidatorInfo>,
     ) {
         let (signers, _verifier) = random_validator_verifier(count, None, true);
 
@@ -156,14 +148,14 @@ impl SynchronizerEnv {
         // The voting power of peer 0 is enough to generate an LI that passes validation.
         for (idx, signer) in signers.iter().enumerate() {
             let voting_power = if idx == 0 { 1000 } else { 1 };
-            let validator_public_keys = ValidatorPublicKeys::new(
+            let validator_info = ValidatorInfo::new(
                 signer.author(),
                 signer.public_key(),
                 voting_power,
                 signing_keys[idx].1.clone(),
                 identity_keys[idx].1.clone(),
             );
-            validators_keys.push(validator_public_keys);
+            validators_keys.push(validator_info);
         }
         (
             signers,
@@ -186,7 +178,7 @@ impl SynchronizerEnv {
             .iter()
             .enumerate()
             .map(|(idx, validator_keys)| {
-                ValidatorPublicKeys::new(
+                ValidatorInfo::new(
                     signers[idx].author(),
                     signers[idx].public_key(),
                     validator_keys.consensus_voting_power(),
@@ -194,7 +186,7 @@ impl SynchronizerEnv {
                     validator_keys.network_identity_public_key().clone(),
                 )
             })
-            .collect::<Vec<ValidatorPublicKeys>>();
+            .collect::<Vec<ValidatorInfo>>();
         let validator_set = ValidatorSet::new(new_keys);
         self.storage_proxies[0]
             .write()
@@ -202,26 +194,15 @@ impl SynchronizerEnv {
             .move_to_next_epoch(signers[0].clone(), validator_set);
     }
 
-    fn genesis_li(validators: &[ValidatorPublicKeys]) -> LedgerInfoWithSignatures {
-        LedgerInfoWithSignatures::new(
-            LedgerInfo::new(
-                BlockInfo::new(
-                    0,
-                    0,
-                    HashValue::zero(),
-                    HashValue::zero(),
-                    0,
-                    0,
-                    Some(ValidatorSet::new(validators.to_owned())),
-                ),
-                HashValue::zero(),
-            ),
-            BTreeMap::new(),
+    fn genesis_li(validators: &[ValidatorInfo]) -> LedgerInfoWithSignatures {
+        LedgerInfoWithSignatures::genesis(
+            *ACCUMULATOR_PLACEHOLDER_HASH,
+            ValidatorSet::new(validators.to_vec()),
         )
     }
 
     fn new(num_peers: usize) -> Self {
-        set_simple_logger("state-sync");
+        ::libra_logger::Logger::new().environment_only(true).init();
         let runtime = Runtime::new().unwrap();
         let (signers, network_signers, public_keys) = Self::initial_setup(num_peers);
         let peer_ids = signers.iter().map(|s| s.author()).collect::<Vec<PeerId>>();
@@ -288,8 +269,7 @@ impl SynchronizerEnv {
             .transport(TransportType::Memory)
             .add_discovery();
 
-        let (sender, events) =
-            validator_network::state_synchronizer::add_to_network(&mut network_builder);
+        let (sender, events) = crate::network::add_to_network(&mut network_builder);
         let peer_addr = network_builder.build();
 
         let mut config = config_builder::test_config().0;
@@ -322,6 +302,7 @@ impl SynchronizerEnv {
             waypoint,
             &config.state_sync,
             MockExecutorProxy::new(handler, storage_proxy.clone()),
+            vec![],
         );
         self.mempools
             .push(MockSharedMempool::new(Some(mempool_requests)));
@@ -354,7 +335,7 @@ impl SynchronizerEnv {
         // in commit()
         assert!(Runtime::new()
             .unwrap()
-            .block_on(self.clients[peer_id].commit(committed_txns))
+            .block_on(self.clients[peer_id].commit(committed_txns, vec![]))
             .is_ok());
         let mempool_txns = self.mempools[peer_id].read_timeline(0, signed_txns.len());
         for txn in signed_txns.iter() {

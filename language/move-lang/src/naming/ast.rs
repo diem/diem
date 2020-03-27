@@ -1,18 +1,17 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared::unique_map::UniqueMap;
 use crate::{
-    expansion::ast::Fields,
+    expansion::ast::{Fields, SpecId},
     parser::ast::{
         BinOp, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent, ResourceLoc,
         StructName, UnaryOp, Value, Value_, Var,
     },
-    shared::ast_debug::*,
-    shared::*,
+    shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
+use move_ir_types::location::*;
 use std::{
-    collections::{BTreeMap, BTreeSet, HashMap, VecDeque},
+    collections::{BTreeMap, BTreeSet, VecDeque},
     fmt,
 };
 
@@ -33,10 +32,10 @@ pub struct Program {
 #[derive(Debug)]
 pub struct ModuleDefinition {
     pub uses: BTreeMap<ModuleIdent, Loc>,
-    /// `None` if it is a library dependency
-    /// `Some(order)` if it is a source file. Where `order` is the topological order/rank in the
-    /// depedency graph. `order` is initialized at `0` and set in the uses pass
-    pub is_source_module: Option<usize>,
+    pub is_source_module: bool,
+    /// `dependency_order` is the topological order/rank in the dependency graph.
+    /// `dependency_order` is initialized at `0` and set in the uses pass
+    pub dependency_order: usize,
     pub structs: UniqueMap<StructName, StructDefinition>,
     pub functions: UniqueMap<FunctionName, Function>,
 }
@@ -54,7 +53,7 @@ pub struct StructDefinition {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum StructFields {
-    Defined(Fields<BaseType>),
+    Defined(Fields<Type>),
     Native(Loc),
 }
 
@@ -65,7 +64,7 @@ pub enum StructFields {
 #[derive(PartialEq, Debug, Clone)]
 pub struct FunctionSignature {
     pub type_parameters: Vec<TParam>,
-    pub parameters: Vec<(Var, SingleType)>,
+    pub parameters: Vec<(Var, Type)>,
     pub return_type: Type,
 }
 
@@ -92,17 +91,23 @@ pub struct Function {
 pub enum BuiltinTypeName_ {
     // address
     Address,
+    // u8
+    U8,
     // u64
     U64,
+    // u128
+    U128,
+    // Vector
+    Vector,
     // bool
     Bool,
-    // bytearray
-    Bytearray,
 }
 pub type BuiltinTypeName = Spanned<BuiltinTypeName_>;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum TypeName_ {
+    // exp-list/tuple type
+    Multiple(usize),
     Builtin(BuiltinTypeName),
     ModuleType(ModuleIdent, StructName),
 }
@@ -121,29 +126,16 @@ pub struct TParam {
 #[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd, Copy, Clone)]
 pub struct TVar(u64);
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
-#[allow(clippy::large_enum_variant)]
-pub enum BaseType_ {
-    Param(TParam),
-    Apply(Option<Kind>, TypeName, Vec<BaseType>),
-    Var(TVar),
-    Anything,
-}
-pub type BaseType = Spanned<BaseType_>;
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum SingleType_ {
-    Base(BaseType),
-    Ref(bool, BaseType),
-}
-pub type SingleType = Spanned<SingleType_>;
-
 #[derive(Debug, PartialEq, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum Type_ {
     Unit,
-    Single(SingleType),
-    Multiple(Vec<SingleType>),
+    Ref(bool, Box<Type>),
+    Param(TParam),
+    Apply(Option<Kind>, TypeName, Vec<Type>),
+    Var(TVar),
+    Anything,
+    UnresolvedError,
 }
 pub type Type = Spanned<Type_>;
 
@@ -152,27 +144,14 @@ pub type Type = Spanned<Type_>;
 //**************************************************************************************************
 
 #[derive(Debug, PartialEq)]
-pub enum Assign_ {
+pub enum LValue_ {
     Ignore,
     Var(Var),
-    Unpack(
-        ModuleIdent,
-        StructName,
-        Option<Vec<BaseType>>,
-        Fields<Assign>,
-    ),
+    Unpack(ModuleIdent, StructName, Option<Vec<Type>>, Fields<LValue>),
 }
-pub type Assign = Spanned<Assign_>;
-pub type AssignList = Spanned<Vec<Assign>>;
-
-#[derive(Debug, PartialEq)]
-pub enum Bind_ {
-    Ignore,
-    Var(Var),
-    Unpack(ModuleIdent, StructName, Option<Vec<BaseType>>, Fields<Bind>),
-}
-pub type Bind = Spanned<Bind_>;
-pub type BindList = Spanned<Vec<Bind>>;
+pub type LValue = Spanned<LValue_>;
+pub type LValueList_ = Vec<LValue>;
+pub type LValueList = Spanned<LValueList_>;
 
 #[derive(Debug, PartialEq)]
 pub enum ExpDotted_ {
@@ -184,11 +163,11 @@ pub type ExpDotted = Spanned<ExpDotted_>;
 #[derive(Debug, PartialEq)]
 #[allow(clippy::large_enum_variant)]
 pub enum BuiltinFunction_ {
-    MoveToSender(Option<BaseType>),
-    MoveFrom(Option<BaseType>),
-    BorrowGlobal(bool, Option<BaseType>),
-    Exists(Option<BaseType>),
-    Freeze(Option<BaseType>),
+    MoveToSender(Option<Type>),
+    MoveFrom(Option<Type>),
+    BorrowGlobal(bool, Option<Type>),
+    Exists(Option<Type>),
+    Freeze(Option<Type>),
     /* TODO move these to a native module
      * GetHeight,
      * GetMaxGasPrice,
@@ -204,19 +183,25 @@ pub type BuiltinFunction = Spanned<BuiltinFunction_>;
 #[allow(clippy::large_enum_variant)]
 pub enum Exp_ {
     Value(Value),
+    InferredNum(u128),
     Move(Var),
     Copy(Var),
     Use(Var),
 
-    ModuleCall(ModuleIdent, FunctionName, Option<Vec<BaseType>>, Box<Exp>),
-    Builtin(BuiltinFunction, Box<Exp>),
+    ModuleCall(
+        ModuleIdent,
+        FunctionName,
+        Option<Vec<Type>>,
+        Spanned<Vec<Exp>>,
+    ),
+    Builtin(BuiltinFunction, Spanned<Vec<Exp>>),
 
     IfElse(Box<Exp>, Box<Exp>, Box<Exp>),
     While(Box<Exp>, Box<Exp>),
     Loop(Box<Exp>),
     Block(Sequence),
 
-    Assign(AssignList, Box<Exp>),
+    Assign(LValueList, Box<Exp>),
     FieldMutate(ExpDotted, Box<Exp>),
     Mutate(Box<Exp>, Box<Exp>),
 
@@ -229,14 +214,17 @@ pub enum Exp_ {
     UnaryExp(UnaryOp, Box<Exp>),
     BinopExp(Box<Exp>, BinOp, Box<Exp>),
 
-    Pack(ModuleIdent, StructName, Option<Vec<BaseType>>, Fields<Exp>),
+    Pack(ModuleIdent, StructName, Option<Vec<Type>>, Fields<Exp>),
     ExpList(Vec<Exp>),
     Unit,
 
     DerefBorrow(ExpDotted),
     Borrow(bool, ExpDotted),
 
+    Cast(Box<Exp>, Type),
     Annotate(Box<Exp>, Type),
+
+    Spec(SpecId),
 
     UnresolvedError,
 }
@@ -246,8 +234,8 @@ pub type Sequence = VecDeque<SequenceItem>;
 #[derive(Debug, PartialEq)]
 pub enum SequenceItem_ {
     Seq(Exp),
-    Declare(BindList, Option<Type>),
-    Bind(BindList, Exp),
+    Declare(LValueList, Option<Type>),
+    Bind(LValueList, Exp),
 }
 pub type SequenceItem = Spanned<SequenceItem_>;
 
@@ -257,65 +245,64 @@ pub type SequenceItem = Spanned<SequenceItem_>;
 
 impl BuiltinTypeName_ {
     pub const ADDRESS: &'static str = "address";
+    pub const U_8: &'static str = "u8";
     pub const U_64: &'static str = "u64";
+    pub const U_128: &'static str = "u128";
     pub const BOOL: &'static str = "bool";
-    pub const BYTE_ARRAY: &'static str = "bytearray";
+    pub const VECTOR: &'static str = "vector";
 
     pub fn all_names() -> BTreeSet<&'static str> {
         let mut s = BTreeSet::new();
         s.insert(Self::ADDRESS);
+        s.insert(Self::U_8);
         s.insert(Self::U_64);
+        s.insert(Self::U_128);
         s.insert(Self::BOOL);
-        s.insert(Self::BYTE_ARRAY);
+        s.insert(Self::VECTOR);
         s
-    }
-
-    pub fn signed() -> BTreeSet<BuiltinTypeName_> {
-        BTreeSet::new()
-        // s.insert(BT::I64);
     }
 
     pub fn numeric() -> BTreeSet<BuiltinTypeName_> {
         use BuiltinTypeName_ as BT;
-        let mut s = BT::signed();
+        let mut s = BTreeSet::new();
+        s.insert(BT::U8);
         s.insert(BT::U64);
-        // s.insert(BT::U256);
+        s.insert(BT::U128);
         s
     }
 
     pub fn bits() -> BTreeSet<BuiltinTypeName_> {
         use BuiltinTypeName_ as BT;
         BT::numeric()
-        // s.insert(BT::U8);
     }
 
     pub fn ordered() -> BTreeSet<BuiltinTypeName_> {
         Self::bits()
     }
 
+    pub fn is_numeric(&self) -> bool {
+        Self::numeric().contains(self)
+    }
+
     pub fn resolve(name_str: &str) -> Option<Self> {
         use BuiltinTypeName_ as BT;
         match name_str {
             BT::ADDRESS => Some(BT::Address),
+            BT::U_8 => Some(BT::U8),
             BT::U_64 => Some(BT::U64),
+            BT::U_128 => Some(BT::U128),
             BT::BOOL => Some(BT::Bool),
-            BT::BYTE_ARRAY => Some(BT::Bytearray),
+            BT::VECTOR => Some(BT::Vector),
             _ => None,
         }
     }
 
-    pub fn kind(&self) -> Kind_ {
-        use BuiltinTypeName_::*;
-        match self {
-            Address | U64 | Bool | Bytearray => Kind_::Unrestricted,
-        }
-    }
-
-    pub fn tparam_constraints(&self, _loc: Loc) -> Vec<Kind> {
+    pub fn tparam_constraints(&self, loc: Loc) -> Vec<Kind> {
         use BuiltinTypeName_::*;
         // Match here to make sure this function is fixed when collections are added
         match self {
-            Address | U64 | Bool | Bytearray => vec![],
+            Address | U8 | U64 | U128 | Bool => vec![],
+            Vector => vec![Spanned::new(loc, Kind_::Unknown)],
         }
     }
 }
@@ -339,13 +326,7 @@ impl BuiltinFunction_ {
     pub const BORROW_GLOBAL_MUT: &'static str = "borrow_global_mut";
     pub const EXISTS: &'static str = "exists";
     pub const FREEZE: &'static str = "freeze";
-    // pub const GET_HEIGHT: &'static str = "get_height";
-    // pub const GET_MAX_GAS_PRICE: &'static str = "get_max_gas_price";
-    // pub const GET_MAX_GAS_UNITS: &'static str = "get_max_gas_units";
-    // pub const GET_PUBLIC_KEY: &'static str = "get_public_key";
-    // pub const GET_SENDER: &'static str = "get_sender";
-    // pub const GET_SEQUENCE_NUMBER: &'static str = "get_sequence_number";
-    // pub const EMIT_EVENT: &'static str = "emit_event";
+
     pub fn all_names() -> BTreeSet<&'static str> {
         let mut s = BTreeSet::new();
         s.insert(Self::MOVE_TO_SENDER);
@@ -357,7 +338,7 @@ impl BuiltinFunction_ {
         s
     }
 
-    pub fn resolve(name_str: &str, arg: Option<BaseType>) -> Option<Self> {
+    pub fn resolve(name_str: &str, arg: Option<Type>) -> Option<Self> {
         use BuiltinFunction_ as BF;
         match name_str {
             BF::MOVE_TO_SENDER => Some(BF::MoveToSender(arg)),
@@ -371,138 +352,77 @@ impl BuiltinFunction_ {
     }
 }
 
-impl BaseType_ {
-    pub fn subst_format(&self, subst: &HashMap<TVar, BaseType>) -> String {
-        use BaseType_::*;
-        match self {
-            Apply(_, n, tys) => {
-                let tys_str = if !tys.is_empty() {
-                    format!(
-                        "<{}>",
-                        format_comma(tys.iter().map(|t| t.value.subst_format(subst)))
-                    )
-                } else {
-                    "".to_string()
-                };
-                format!("{}{}", n, tys_str)
-            }
-            Param(tp) => tp.debug.value.to_string(),
-            Var(id) => match subst.get(id) {
-                Some(t) => t.value.subst_format(subst),
-                None => "_".to_string(),
-            },
-            Anything => "_".to_string(),
-        }
-    }
-
-    pub fn anything(loc: Loc) -> BaseType {
-        sp(loc, BaseType_::Anything)
-    }
-
-    pub fn builtin(loc: Loc, b_: BuiltinTypeName_) -> BaseType {
-        let kind = sp(loc, b_.kind());
-        let n = sp(loc, TypeName_::Builtin(sp(loc, b_)));
-        sp(loc, BaseType_::Apply(Some(kind), n, vec![]))
-    }
-
-    pub fn bool(loc: Loc) -> BaseType {
-        Self::builtin(loc, BuiltinTypeName_::Bool)
-    }
-
-    pub fn address(loc: Loc) -> BaseType {
-        Self::builtin(loc, BuiltinTypeName_::Address)
-    }
-
-    pub fn u64(loc: Loc) -> BaseType {
-        Self::builtin(loc, BuiltinTypeName_::U64)
-    }
-}
-
-impl SingleType_ {
-    pub fn subst_format(&self, subst: &HashMap<TVar, BaseType>) -> String {
-        use SingleType_::*;
-        match self {
-            Ref(mut_, ty) => format!(
-                "&{}{}",
-                if *mut_ { "mut " } else { "" },
-                ty.value.subst_format(subst)
-            ),
-            Base(ty) => ty.value.subst_format(subst),
-        }
-    }
-
-    pub fn base(sp!(loc, b_): BaseType) -> SingleType {
-        sp(loc, SingleType_::Base(sp(loc, b_)))
-    }
-
-    pub fn anything(loc: Loc) -> SingleType {
-        Self::base(BaseType_::anything(loc))
-    }
-
-    pub fn bool(loc: Loc) -> SingleType {
-        Self::base(BaseType_::bool(loc))
-    }
-
-    pub fn address(loc: Loc) -> SingleType {
-        Self::base(BaseType_::address(loc))
-    }
-
-    pub fn u64(loc: Loc) -> SingleType {
-        Self::base(BaseType_::u64(loc))
-    }
-}
-
 impl Type_ {
-    pub fn subst_format(&self, subst: &HashMap<TVar, BaseType>) -> String {
-        use Type_::*;
-        match self {
-            Unit => "()".into(),
-            Single(s) => s.value.subst_format(subst),
-            Multiple(ss) => {
-                let inner = format_comma(ss.iter().map(|s| s.value.subst_format(subst)));
-                format!("({})", inner)
-            }
-        }
+    pub fn builtin_(b: BuiltinTypeName, ty_args: Vec<Type>) -> Type_ {
+        use BuiltinTypeName_::*;
+
+        let kind = match b.value {
+            U8 | U64 | U128 | Address | Bool => Some(sp(b.loc, Kind_::Unrestricted)),
+            Vector => None,
+        };
+        let n = sp(b.loc, TypeName_::Builtin(b));
+        Type_::Apply(kind, n, ty_args)
     }
 
-    pub fn base(b: BaseType) -> Type {
-        Self::single(SingleType_::base(b))
-    }
-
-    pub fn single(sp!(loc, s_): SingleType) -> Type {
-        sp(loc, Type_::Single(sp(loc, s_)))
-    }
-
-    pub fn anything(loc: Loc) -> Type {
-        Self::single(SingleType_::anything(loc))
+    pub fn builtin(loc: Loc, b: BuiltinTypeName, ty_args: Vec<Type>) -> Type {
+        sp(loc, Self::builtin_(b, ty_args))
     }
 
     pub fn bool(loc: Loc) -> Type {
-        Self::single(SingleType_::bool(loc))
+        Self::builtin(loc, sp(loc, BuiltinTypeName_::Bool), vec![])
     }
 
     pub fn address(loc: Loc) -> Type {
-        Self::single(SingleType_::address(loc))
+        Self::builtin(loc, sp(loc, BuiltinTypeName_::Address), vec![])
+    }
+
+    pub fn u8(loc: Loc) -> Type {
+        Self::builtin(loc, sp(loc, BuiltinTypeName_::U8), vec![])
     }
 
     pub fn u64(loc: Loc) -> Type {
-        Self::single(SingleType_::u64(loc))
+        Self::builtin(loc, sp(loc, BuiltinTypeName_::U64), vec![])
+    }
+
+    pub fn u128(loc: Loc) -> Type {
+        Self::builtin(loc, sp(loc, BuiltinTypeName_::U128), vec![])
+    }
+
+    pub fn vector(loc: Loc, elem: Type) -> Type {
+        Self::builtin(loc, sp(loc, BuiltinTypeName_::Vector), vec![elem])
+    }
+
+    pub fn multiple(loc: Loc, tys: Vec<Type>) -> Type {
+        sp(loc, Self::multiple_(loc, tys))
+    }
+
+    pub fn multiple_(loc: Loc, mut tys: Vec<Type>) -> Type_ {
+        match tys.len() {
+            0 => Type_::Unit,
+            1 => tys.pop().unwrap().value,
+            n => Type_::Apply(None, sp(loc, TypeName_::Multiple(n)), tys),
+        }
+    }
+
+    pub fn builtin_name(&self) -> Option<&BuiltinTypeName> {
+        match self {
+            Type_::Apply(_, sp!(_, TypeName_::Builtin(b)), _) => Some(b),
+            _ => None,
+        }
     }
 }
 
 impl Value_ {
-    pub fn type_(&self, loc: Loc) -> BaseType {
-        use BuiltinTypeName_ as T;
+    pub fn type_(&self, loc: Loc) -> Type {
         use Value_::*;
-        let b_ = match self {
-            Address(_) => T::Address,
-            U64(_) => T::U64,
-            Bool(_) => T::Bool,
-            Bytearray(_) => T::Bytearray,
-        };
-        let kind = sp(loc, b_.kind());
-        let n = sp(loc, TypeName_::Builtin(sp(loc, b_)));
-        sp(loc, BaseType_::Apply(Some(kind), n, vec![]))
+        match self {
+            Address(_) => Type_::address(loc),
+            U8(_) => Type_::u8(loc),
+            U64(_) => Type_::u64(loc),
+            U128(_) => Type_::u128(loc),
+            Bool(_) => Type_::bool(loc),
+            Bytearray(_) => Type_::vector(loc, Type_::u8(loc)),
+        }
     }
 }
 
@@ -512,15 +432,17 @@ impl Value_ {
 
 impl fmt::Display for BuiltinTypeName_ {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        use BuiltinTypeName_::*;
+        use BuiltinTypeName_ as BT;
         write!(
             f,
             "{}",
             match self {
-                Address => "address",
-                U64 => "u64",
-                Bool => "bool",
-                Bytearray => "bytearray",
+                BT::Address => BT::ADDRESS,
+                BT::U8 => BT::U_8,
+                BT::U64 => BT::U_64,
+                BT::U128 => BT::U_128,
+                BT::Bool => BT::BOOL,
+                BT::Vector => BT::VECTOR,
             }
         )
     }
@@ -530,6 +452,7 @@ impl fmt::Display for TypeName_ {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         use TypeName_::*;
         match self {
+            Multiple(_) => panic!("ICE cannot display expr-list type name"),
             Builtin(b) => write!(f, "{}", b),
             ModuleType(m, n) => write!(f, "{}::{}", m, n),
         }
@@ -559,15 +482,18 @@ impl AstDebug for Program {
 impl AstDebug for ModuleDefinition {
     fn ast_debug(&self, w: &mut AstWriter) {
         let ModuleDefinition {
-            uses,
             is_source_module,
+            dependency_order,
+            uses,
             structs,
             functions,
         } = self;
-        match is_source_module {
-            None => w.writeln("library module"),
-            Some(ord) => w.writeln(&format!("source moduel #{}", ord)),
+        if *is_source_module {
+            w.writeln("library module")
+        } else {
+            w.writeln("source module")
         }
+        w.writeln(&format!("dependency order #{}", dependency_order));
         if !uses.is_empty() {
             w.writeln("uses: ");
             w.indent(2, |w| w.comma(uses, |w, (m, _)| w.write(&format!("{}", m))))
@@ -680,6 +606,7 @@ impl AstDebug for BuiltinTypeName_ {
 impl AstDebug for TypeName_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
+            TypeName_::Multiple(len) => w.write(&format!("Multiple({})", len)),
             TypeName_::Builtin(bt) => bt.ast_debug(w),
             TypeName_::ModuleType(m, s) => w.write(&format!("{}::{}", m, s)),
         }
@@ -699,11 +626,30 @@ impl AstDebug for TParam {
     }
 }
 
-impl AstDebug for BaseType_ {
+impl AstDebug for Type_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
-            BaseType_::Param(tp) => tp.ast_debug(w),
-            BaseType_::Apply(k_opt, m, ss) => {
+            Type_::Unit => w.write("()"),
+            Type_::Ref(mut_, s) => {
+                w.write("&");
+                if *mut_ {
+                    w.write("mut ");
+                }
+                s.ast_debug(w)
+            }
+            Type_::Param(tp) => tp.ast_debug(w),
+            Type_::Apply(k_opt, sp!(_, TypeName_::Multiple(_)), ss) => {
+                let w_ty = move |w: &mut AstWriter| {
+                    w.write("(");
+                    ss.ast_debug(w);
+                    w.write(")");
+                };
+                match k_opt {
+                    None => w_ty(w),
+                    Some(k) => w.annotate(w_ty, k),
+                }
+            }
+            Type_::Apply(k_opt, m, ss) => {
                 let w_ty = move |w: &mut AstWriter| {
                     m.ast_debug(w);
                     if !ss.is_empty() {
@@ -717,48 +663,14 @@ impl AstDebug for BaseType_ {
                     Some(k) => w.annotate(w_ty, k),
                 }
             }
-            BaseType_::Var(tv) => w.write(&format!("#{}", tv.0)),
-            BaseType_::Anything => w.write("_"),
+            Type_::Var(tv) => w.write(&format!("#{}", tv.0)),
+            Type_::Anything => w.write("_"),
+            Type_::UnresolvedError => w.write("_|_"),
         }
     }
 }
 
-impl AstDebug for SingleType_ {
-    fn ast_debug(&self, w: &mut AstWriter) {
-        match self {
-            SingleType_::Base(b) => b.ast_debug(w),
-            SingleType_::Ref(mut_, s) => {
-                w.write("&");
-                if *mut_ {
-                    w.write("mut ");
-                }
-                s.ast_debug(w)
-            }
-        }
-    }
-}
-
-impl AstDebug for Type_ {
-    fn ast_debug(&self, w: &mut AstWriter) {
-        match self {
-            Type_::Unit => w.write("()"),
-            Type_::Single(s) => s.ast_debug(w),
-            Type_::Multiple(ss) => {
-                w.write("(");
-                ss.ast_debug(w);
-                w.write(")")
-            }
-        }
-    }
-}
-
-impl AstDebug for Vec<SingleType> {
-    fn ast_debug(&self, w: &mut AstWriter) {
-        w.comma(self, |w, s| s.ast_debug(w))
-    }
-}
-
-impl AstDebug for Vec<BaseType> {
+impl AstDebug for Vec<Type> {
     fn ast_debug(&self, w: &mut AstWriter) {
         w.comma(self, |w, s| s.ast_debug(w))
     }
@@ -798,10 +710,11 @@ impl AstDebug for Exp_ {
         match self {
             E::Unit => w.write("()"),
             E::Value(v) => v.ast_debug(w),
+            E::InferredNum(u) => w.write(&format!("{}", u)),
             E::Move(v) => w.write(&format!("move {}", v)),
             E::Copy(v) => w.write(&format!("copy {}", v)),
             E::Use(v) => w.write(&format!("{}", v)),
-            E::ModuleCall(m, f, tys_opt, rhs) => {
+            E::ModuleCall(m, f, tys_opt, sp!(_, rhs)) => {
                 w.write(&format!("{}::{}", m, f));
                 if let Some(ss) = tys_opt {
                     w.write("<");
@@ -809,13 +722,13 @@ impl AstDebug for Exp_ {
                     w.write(">");
                 }
                 w.write("(");
-                rhs.ast_debug(w);
+                w.comma(rhs, |w, e| e.ast_debug(w));
                 w.write(")");
             }
-            E::Builtin(bf, rhs) => {
+            E::Builtin(bf, sp!(_, rhs)) => {
                 bf.ast_debug(w);
                 w.write("(");
-                rhs.ast_debug(w);
+                w.comma(rhs, |w, e| e.ast_debug(w));
                 w.write(")");
             }
             E::Pack(m, s, tys_opt, fields) => {
@@ -912,6 +825,13 @@ impl AstDebug for Exp_ {
                 w.write("(&*)");
                 ed.ast_debug(w)
             }
+            E::Cast(e, ty) => {
+                w.write("(");
+                e.ast_debug(w);
+                w.write(" as ");
+                ty.ast_debug(w);
+                w.write(")");
+            }
             E::Annotate(e, ty) => {
                 w.write("(");
                 e.ast_debug(w);
@@ -919,6 +839,7 @@ impl AstDebug for Exp_ {
                 ty.ast_debug(w);
                 w.write(")");
             }
+            E::Spec(u) => w.write(&format!("spec({})", u)),
             E::UnresolvedError => w.write("_|_"),
         }
     }
@@ -957,7 +878,7 @@ impl AstDebug for ExpDotted_ {
     }
 }
 
-impl AstDebug for Vec<Bind> {
+impl AstDebug for Vec<LValue> {
     fn ast_debug(&self, w: &mut AstWriter) {
         let parens = self.len() != 1;
         if parens {
@@ -970,13 +891,13 @@ impl AstDebug for Vec<Bind> {
     }
 }
 
-impl AstDebug for Bind_ {
+impl AstDebug for LValue_ {
     fn ast_debug(&self, w: &mut AstWriter) {
-        use Bind_ as B;
+        use LValue_ as L;
         match self {
-            B::Ignore => w.write("_"),
-            B::Var(v) => w.write(&format!("{}", v)),
-            B::Unpack(m, s, tys_opt, fields) => {
+            L::Ignore => w.write("_"),
+            L::Var(v) => w.write(&format!("{}", v)),
+            L::Unpack(m, s, tys_opt, fields) => {
                 w.write(&format!("{}::{}", m, s));
                 if let Some(ss) = tys_opt {
                     w.write("<");
@@ -988,44 +909,6 @@ impl AstDebug for Bind_ {
                     let (idx, b) = idx_b;
                     w.write(&format!("{}#{}: ", idx, f));
                     b.ast_debug(w);
-                });
-                w.write("}");
-            }
-        }
-    }
-}
-
-impl AstDebug for Vec<Assign> {
-    fn ast_debug(&self, w: &mut AstWriter) {
-        let parens = self.len() != 1;
-        if parens {
-            w.write("(");
-        }
-        w.comma(self, |w, a| a.ast_debug(w));
-        if parens {
-            w.write(")");
-        }
-    }
-}
-
-impl AstDebug for Assign_ {
-    fn ast_debug(&self, w: &mut AstWriter) {
-        use Assign_ as A;
-        match self {
-            A::Ignore => w.write("_"),
-            A::Var(v) => w.write(&format!("{}", v)),
-            A::Unpack(m, s, tys_opt, fields) => {
-                w.write(&format!("{}::{}", m, s));
-                if let Some(ss) = tys_opt {
-                    w.write("<");
-                    ss.ast_debug(w);
-                    w.write(">");
-                }
-                w.write("{");
-                w.comma(fields, |w, (f, idx_a)| {
-                    let (idx, a) = idx_a;
-                    w.write(&format!("{}#{}: ", idx, f));
-                    a.ast_debug(w);
                 });
                 w.write("}");
             }

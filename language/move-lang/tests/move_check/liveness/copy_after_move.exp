@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/liveness/copy_after_move.move:4:9 ───
+   ┌── tests/move_check/liveness/copy_after_move.move:5:9 ───
    │
  5 │         copy x;
    │         ^^^^^^ Invalid usage of local 'x'

@@ -1,0 +1,25 @@
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/commands/pop_weird.move:13:9 ───
+    │
+ 13 │         (_, _) = ();
+    │         ^^^^^^ Invalid value for assignment
+    ·
+ 13 │         (_, _) = ();
+    │         ------ The type: '(_, _)'
+    ·
+ 13 │         (_, _) = ();
+    │                  -- Is not compatible with: '()'
+    │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/commands/pop_weird.move:14:9 ───
+    │
+ 14 │         (_) = ();
+    │         ^^^ Invalid type for local
+    ·
+ 14 │         (_) = ();
+    │               -- Expected a single type, but found expression list type: '()'
+    │
+

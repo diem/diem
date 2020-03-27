@@ -1,12 +1,12 @@
 error: 
 
-   ┌── tests/move_check/typing/mutate_resource.move:2:5 ───
+   ┌── tests/move_check/typing/mutate_resource.move:5:10 ───
    │
  5 │         *r = R {};
    │          ^ Invalid mutation. Can only assign to references of a copyable type
    ·
- 5 │         *r = R {};
-   │          - The type: 0x8675309::M::R
+ 4 │     fun t0(r: &mut R) {
+   │                    - The type: '0x8675309::M::R'
    ·
  2 │     resource struct R {}
    │     -------- Is found to be a non-copyable type here
@@ -14,13 +14,13 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/mutate_resource.move:8:12 ───
+   ┌── tests/move_check/typing/mutate_resource.move:9:10 ───
    │
  9 │         *r = x;
    │          ^ Invalid mutation. Can only assign to references of a copyable type
    ·
- 9 │         *r = x;
-   │          - The type: T
+ 8 │     fun t1<T>(r: &mut T, x: T) {
+   │                       - The type: 'T'
    ·
  8 │     fun t1<T>(r: &mut T, x: T) {
    │            - Is found to be a non-copyable type here
@@ -28,13 +28,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/mutate_resource.move:12:15 ───
+    ┌── tests/move_check/typing/mutate_resource.move:13:10 ───
     │
  13 │         *r = x;
     │          ^ Invalid mutation. Can only assign to references of a copyable type
     ·
- 13 │         *r = x;
-    │          - The type: T
+ 12 │     fun t2<T: resource>(r: &mut T, x: T) {
+    │                                 - The type: 'T'
     ·
  12 │     fun t2<T: resource>(r: &mut T, x: T) {
     │               -------- Is found to be a non-copyable type here

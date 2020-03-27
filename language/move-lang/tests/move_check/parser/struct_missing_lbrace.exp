@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/parser/struct_missing_lbrace.move:2:14 ───
+   ┌── tests/move_check/parser/struct_missing_lbrace.move:3:5 ───
    │
  3 │     fun f() {}
    │     ^ Expected '}'

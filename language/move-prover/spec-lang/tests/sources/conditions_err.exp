@@ -1,0 +1,23 @@
+error: expected `bool` but found `u64`
+
+   ┌── tests/sources/conditions_err.move:7:15 ───
+   │
+ 7 │     aborts_if x;
+   │               ^
+   │
+
+error: expected `bool` but found `num`
+
+   ┌── tests/sources/conditions_err.move:8:13 ───
+   │
+ 8 │     ensures old(x) + x;
+   │             ^^^^^^^^^^
+   │
+
+error: undeclared `result_1`
+
+    ┌── tests/sources/conditions_err.move:10:13 ───
+    │
+ 10 │     ensures result_1 == 0;
+    │             ^^^^^^^^
+    │

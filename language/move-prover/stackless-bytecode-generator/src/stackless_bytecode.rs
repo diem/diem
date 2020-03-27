@@ -3,17 +3,17 @@
 
 use vm::file_format::{
     AddressPoolIndex, ByteArrayPoolIndex, CodeOffset, FieldDefinitionIndex, FunctionHandleIndex,
-    LocalIndex, LocalsSignatureIndex, StructDefinitionIndex,
+    LocalsSignatureIndex, StructDefinitionIndex,
 };
 
-type TempIndex = usize;
+pub type TempIndex = usize;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StacklessBytecode {
-    MoveLoc(TempIndex, LocalIndex),   // t = move(l)
-    CopyLoc(TempIndex, LocalIndex),   // t = copy(l)
-    StLoc(LocalIndex, TempIndex),     // l = t
-    BorrowLoc(TempIndex, LocalIndex), // t1 = &t2
+    MoveLoc(TempIndex, TempIndex),   // t = move(l)
+    CopyLoc(TempIndex, TempIndex),   // t = copy(l)
+    StLoc(TempIndex, TempIndex),     // l = t
+    BorrowLoc(TempIndex, TempIndex), // t1 = &t2
 
     ReadRef(TempIndex, TempIndex),   // t1 = *t2
     WriteRef(TempIndex, TempIndex),  // *t1 = t2
@@ -106,5 +106,62 @@ pub enum StacklessBytecode {
     BrFalse(CodeOffset, TempIndex), // if(!t) goto code_offset
 
     Abort(TempIndex), // abort t
-    NoOp,
+    Pop(TempIndex),
+}
+
+impl StacklessBytecode {
+    pub fn is_unconditional_branch(&self) -> bool {
+        matches!(
+            self,
+            StacklessBytecode::Ret(_) | StacklessBytecode::Abort(_) | StacklessBytecode::Branch(_)
+        )
+    }
+
+    pub fn is_conditional_branch(&self) -> bool {
+        matches!(
+            self,
+            StacklessBytecode::BrFalse(_, _) | StacklessBytecode::BrTrue(_, _)
+        )
+    }
+
+    pub fn is_branch(&self) -> bool {
+        self.is_conditional_branch() || self.is_unconditional_branch()
+    }
+
+    /// Return the destination of branching if self is a branching instruction
+    pub fn branch_dest(&self) -> Option<&CodeOffset> {
+        match self {
+            StacklessBytecode::BrFalse(offset, _)
+            | StacklessBytecode::BrTrue(offset, _)
+            | StacklessBytecode::Branch(offset) => Some(offset),
+            _ => None,
+        }
+    }
+
+    /// Return the successor offsets of this instruction
+    pub fn get_successors(pc: CodeOffset, code: &[StacklessBytecode]) -> Vec<CodeOffset> {
+        let bytecode = &code[pc as usize];
+        let mut v = vec![];
+
+        if let Some(offset) = bytecode.branch_dest() {
+            v.push(*offset);
+        }
+
+        let next_pc = pc + 1;
+        if next_pc >= code.len() as CodeOffset {
+            return v;
+        }
+
+        if !bytecode.is_unconditional_branch() && !v.contains(&next_pc) {
+            // avoid duplicates
+            v.push(next_pc);
+        }
+
+        // always give successors in ascending order
+        if v.len() > 1 && v[0] > v[1] {
+            v.swap(0, 1);
+        }
+
+        v
+    }
 }

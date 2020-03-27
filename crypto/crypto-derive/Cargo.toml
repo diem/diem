@@ -11,9 +11,9 @@ edition = "2018"
 proc_macro = true
 
 [dependencies]
-syn = { version = "1.0.14", features = ["derive"] }
-quote = "1.0.2"
-proc-macro2 = "1.0.8"
+syn = { version = "1.0.17", features = ["derive"] }
+quote = "1.0.3"
+proc-macro2 = "1.0.9"
 
 [dev-dependencies]
 anyhow = "1.0"

@@ -2,10 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Random valid type inhabitant generation.
-use crate::common::*;
-use libra_types::{
-    account_address::AccountAddress, byte_array::ByteArray, identifier::Identifier,
-    language_storage::ModuleId,
+use libra_types::{account_address::AccountAddress, language_storage::ModuleId};
+use move_core_types::identifier::Identifier;
+use move_vm_runtime::{loaded_data::loaded_module::LoadedModule, MoveVM};
+use move_vm_state::execution_context::SystemExecutionContext;
+use move_vm_types::{
+    loaded_data::types::{StructType, Type},
+    values::*,
 };
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
@@ -16,15 +19,9 @@ use vm::{
         StructFieldInformation, StructHandleIndex, TableIndex,
     },
 };
-use vm_runtime::chain_state::SystemExecutionContext;
-use vm_runtime::{loaded_data::loaded_module::LoadedModule, runtime::VMRuntime};
-use vm_runtime_types::{loaded_data::struct_def::StructDef, loaded_data::types::Type, values::*};
 
 /// A wrapper around state that is used to generate random valid inhabitants for types.
-pub struct RandomInhabitor<'alloc, 'txn>
-where
-    'alloc: 'txn,
-{
+pub struct RandomInhabitor<'txn> {
     /// The source of pseudo-randomness.
     gen: StdRng,
 
@@ -34,9 +31,9 @@ where
     /// root module that has pointers to all other modules.
     root_module: &'txn LoadedModule,
 
-    /// The VMRuntime for all the modules in the universe. We need this in order to
+    /// The Move VM for all the modules in the universe. We need this in order to
     /// resolve struct and function handles to other modules other then the root module.
-    runtime: &'txn VMRuntime<'alloc>,
+    move_vm: &'txn MoveVM,
 
     /// Context for resolution
     ctx: &'txn SystemExecutionContext<'txn>,
@@ -46,24 +43,21 @@ where
     struct_handle_table: HashMap<ModuleId, HashMap<Identifier, StructDefinitionIndex>>,
 }
 
-impl<'alloc, 'txn> RandomInhabitor<'alloc, 'txn>
-where
-    'alloc: 'txn,
-{
+impl<'txn> RandomInhabitor<'txn> {
     /// Create a new random type inhabitor.
     ///
     /// It initializes each of the internal resolution tables for structs and function handles to
     /// be empty.
     pub fn new(
         root_module: &'txn LoadedModule,
-        runtime: &'txn VMRuntime<'alloc>,
+        move_vm: &'txn MoveVM,
         ctx: &'txn SystemExecutionContext<'txn>,
     ) -> Self {
         let seed: [u8; 32] = [0; 32];
         Self {
             gen: StdRng::from_seed(seed),
             root_module,
-            runtime,
+            move_vm,
             ctx,
             struct_handle_table: HashMap::new(),
         }
@@ -92,12 +86,6 @@ where
         self.gen.gen_bool(0.5)
     }
 
-    fn next_bytearray(&mut self) -> ByteArray {
-        let len: usize = self.gen.gen_range(1, BYTE_ARRAY_MAX_SIZE);
-        let bytes: Vec<u8> = (0..len).map(|_| self.gen.gen::<u8>()).collect();
-        ByteArray::new(bytes)
-    }
-
     fn next_addr(&mut self) -> AccountAddress {
         AccountAddress::new(self.gen.gen())
     }
@@ -115,7 +103,7 @@ where
         let module_handle = self.root_module.module_handle_at(struct_handle.module);
         let module_id = self.to_module_id(module_handle);
         let module = self
-            .runtime
+            .move_vm
             .get_loaded_module(&module_id, self.ctx)
             .expect("[Module Lookup] Runtime error while looking up module");
         let struct_def_idx = self
@@ -155,9 +143,6 @@ where
             SignatureToken::Reference(_sig) | SignatureToken::MutableReference(_sig) => {
                 panic!("cannot inhabit references");
             }
-            SignatureToken::ByteArray => {
-                (Type::ByteArray, Value::byte_array(self.next_bytearray()))
-            }
             SignatureToken::Struct(struct_handle_idx, _) => {
                 assert!(self.root_module.struct_defs().len() > 1);
                 let struct_definition = self
@@ -182,10 +167,17 @@ where
                     })
                     .unzip();
                 (
-                    Type::Struct(StructDef::new(layouts)),
+                    Type::Struct(Box::new(StructType {
+                        address: AccountAddress::from_hex_literal("0x0").unwrap(),
+                        module: Identifier::new("unimplemented").unwrap(),
+                        name: Identifier::new("unimplemented").unwrap(),
+                        ty_args: vec![],
+                        layout: layouts,
+                    })),
                     Value::struct_(Struct::pack(values)),
                 )
             }
+            SignatureToken::Vector(_) => unimplemented!(),
             SignatureToken::TypeParameter(_) => unimplemented!(),
         }
     }

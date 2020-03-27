@@ -16,11 +16,10 @@ use crate::{
 };
 use libra_types::{
     account_address::AccountAddress,
-    byte_array::ByteArray,
-    identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
+use move_core_types::identifier::{IdentStr, Identifier};
 
 /// Represents accessors for a compiled module.
 ///
@@ -74,8 +73,8 @@ pub trait ModuleAccess: Sync {
         &self.as_module().as_inner().identifiers[idx.into_index()]
     }
 
-    fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> &ByteArray {
-        &self.as_module().as_inner().byte_array_pool[idx.into_index()]
+    fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> &[u8] {
+        self.as_module().as_inner().byte_array_pool[idx.into_index()].as_slice()
     }
 
     fn address_at(&self, idx: AddressPoolIndex) -> &AccountAddress {
@@ -124,7 +123,7 @@ pub trait ModuleAccess: Sync {
         &self.as_module().as_inner().locals_signatures
     }
 
-    fn byte_array_pool(&self) -> &[ByteArray] {
+    fn byte_array_pool(&self) -> &[Vec<u8>] {
         &self.as_module().as_inner().byte_array_pool
     }
 
@@ -221,8 +220,8 @@ pub trait ScriptAccess: Sync {
         &self.as_script().as_inner().identifiers[idx.into_index()]
     }
 
-    fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> &ByteArray {
-        &self.as_script().as_inner().byte_array_pool[idx.into_index()]
+    fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> &[u8] {
+        self.as_script().as_inner().byte_array_pool[idx.into_index()].as_slice()
     }
 
     fn address_at(&self, idx: AddressPoolIndex) -> &AccountAddress {
@@ -253,7 +252,7 @@ pub trait ScriptAccess: Sync {
         &self.as_script().as_inner().locals_signatures
     }
 
-    fn byte_array_pool(&self) -> &[ByteArray] {
+    fn byte_array_pool(&self) -> &[Vec<u8>] {
         &self.as_script().as_inner().byte_array_pool
     }
 

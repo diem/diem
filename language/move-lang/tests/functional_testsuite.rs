@@ -7,9 +7,14 @@ use functional_tests::{
     testsuite,
 };
 use libra_types::account_address::AccountAddress as LibraAddress;
-use move_lang::test_utils::{stdlib_files, FUNCTIONAL_TEST_DIR};
-use move_lang::{move_compile_no_report, shared::Address, to_bytecode::translate::CompiledUnit};
-use std::{convert::TryFrom, io::Write, path::Path};
+use move_bytecode_verifier::{batch_verify_modules, VerifiedModule};
+use move_lang::{
+    compiled_unit::CompiledUnit,
+    move_compile, move_compile_no_report,
+    shared::Address,
+    test_utils::{read_bool_var, stdlib_files, FUNCTIONAL_TEST_DIR},
+};
+use std::{convert::TryFrom, fmt, io::Write, path::Path};
 use tempfile::NamedTempFile;
 
 struct MoveSourceCompiler {
@@ -25,6 +30,17 @@ impl MoveSourceCompiler {
         }
     }
 }
+
+#[derive(Debug)]
+struct MoveSourceCompilerError(pub String);
+
+impl fmt::Display for MoveSourceCompilerError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "\n\n{}", self.0)
+    }
+}
+
+impl std::error::Error for MoveSourceCompilerError {}
 
 impl Compiler for MoveSourceCompiler {
     /// Compile a transaction script or module.
@@ -44,8 +60,14 @@ impl Compiler for MoveSourceCompiler {
         let (files, units_or_errors) = move_compile_no_report(targets, &self.deps, sender)?;
         let unit = match units_or_errors {
             Err(errors) => {
-                let error_buffer = move_lang::errors::report_errors_to_buffer(files, errors);
-                bail!("{}", String::from_utf8(error_buffer).unwrap())
+                let error_buffer = if read_bool_var(testsuite::PRETTY) {
+                    move_lang::errors::report_errors_to_color_buffer(files, errors)
+                } else {
+                    move_lang::errors::report_errors_to_buffer(files, errors)
+                };
+                return Err(
+                    MoveSourceCompilerError(String::from_utf8(error_buffer).unwrap()).into(),
+                );
             }
             Ok(mut units) => {
                 let len = units.len();
@@ -57,15 +79,29 @@ impl Compiler for MoveSourceCompiler {
         };
 
         Ok(match unit {
-            CompiledUnit::Script(_, compiled_script) => ScriptOrModule::Script(compiled_script),
-            CompiledUnit::Module(_, compiled_module) => {
+            CompiledUnit::Script { script, .. } => ScriptOrModule::Script(script),
+            CompiledUnit::Module { module, .. } => {
                 let input = format!("address {}:\n{}", sender_addr, input);
                 cur_file.reopen()?.write_all(input.as_bytes())?;
                 self.temp_files.push(cur_file);
                 self.deps.push(cur_path);
-                ScriptOrModule::Module(compiled_module)
+                ScriptOrModule::Module(module)
             }
         })
+    }
+
+    fn stdlib() -> Option<Vec<VerifiedModule>> {
+        let (_, compiled_units) =
+            move_compile(&stdlib_files(), &[], Some(Address::LIBRA_CORE)).unwrap();
+        Some(batch_verify_modules(
+            compiled_units
+                .into_iter()
+                .map(|compiled_unit| match compiled_unit {
+                    CompiledUnit::Module { module, .. } => module,
+                    CompiledUnit::Script { .. } => panic!("Unexpected Script in stdlib"),
+                })
+                .collect(),
+        ))
     }
 }
 

@@ -10,13 +10,16 @@ use crate::{
     control_flow_graph::CFG,
     summaries,
 };
+use libra_logger::{debug, error, warn};
 use rand::{rngs::StdRng, Rng};
-use slog_scope::{debug, error, warn};
-use vm::access::ModuleAccess;
-use vm::file_format::{
-    AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CompiledModuleMut,
-    FieldDefinitionIndex, FunctionHandleIndex, FunctionSignature, LocalIndex, LocalsSignatureIndex,
-    SignatureToken, StructDefinitionIndex, StructFieldInformation, TableIndex,
+use vm::{
+    access::ModuleAccess,
+    file_format::{
+        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CompiledModuleMut,
+        FieldDefinitionIndex, FunctionHandleIndex, FunctionSignature, LocalIndex,
+        LocalsSignatureIndex, SignatureToken, StructDefinitionIndex, StructFieldInformation,
+        TableIndex,
+    },
 };
 
 /// This type represents bytecode instructions that take a `LocalIndex`
@@ -825,7 +828,6 @@ impl<'a> BytecodeGenerator<'a> {
             SignatureToken::U8 => vec![Bytecode::LdU8(0)],
             SignatureToken::U128 => vec![Bytecode::LdU128(0)],
             SignatureToken::Bool => vec![Bytecode::LdFalse],
-            SignatureToken::ByteArray => vec![Bytecode::LdByteArray(ByteArrayPoolIndex::new(0))],
             SignatureToken::Struct(handle_idx, instantiation) => {
                 let struct_def_idx = module
                     .module

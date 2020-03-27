@@ -9,7 +9,6 @@ use std::{
     process::{Child, Command, Output, Stdio},
     sync::Arc,
 };
-use workspace_builder;
 
 pub struct InteractiveClient {
     client: Option<Child>,
@@ -52,8 +51,8 @@ impl InteractiveClient {
             client: Some(
                 Command::new(workspace_builder::get_bin("cli"))
                     .current_dir(workspace_builder::workspace_root())
-                    .arg("-p")
-                    .arg(port.to_string())
+                    .arg("-u")
+                    .arg(format!("http://localhost:{}", port))
                     .arg("-m")
                     .arg(
                         faucet_key_file_path
@@ -70,8 +69,6 @@ impl InteractiveClient {
                             .to_str()
                             .unwrap(),
                     )
-                    .arg("-a")
-                    .arg("localhost")
                     .stdin(Stdio::inherit())
                     .stdout(Stdio::inherit())
                     .stderr(Stdio::inherit())
@@ -93,8 +90,8 @@ impl InteractiveClient {
             client: Some(
                 Command::new(workspace_builder::get_bin("cli"))
                     .current_dir(workspace_builder::workspace_root())
-                    .arg("-p")
-                    .arg(port.to_string())
+                    .arg("-u")
+                    .arg(format!("http://localhost:{}", port))
                     .arg("-m")
                     .arg(
                         faucet_key_file_path
@@ -111,8 +108,6 @@ impl InteractiveClient {
                             .to_str()
                             .unwrap(),
                     )
-                    .arg("-a")
-                    .arg("localhost")
                     .stdin(Stdio::piped())
                     .stdout(Stdio::piped())
                     .stderr(Stdio::piped())
@@ -146,8 +141,7 @@ impl InProcessTestClient {
         let (_, alias_to_cmd) = commands::get_commands(true);
         Self {
             client: ClientProxy::new(
-                "localhost",
-                port,
+                &format!("http://localhost:{}", port),
                 faucet_key_file_path
                     .canonicalize()
                     .expect("Unable to get canonical path of faucet key file")

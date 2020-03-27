@@ -9,8 +9,7 @@
 //! and `conn_status_channel::Sender` which behave similarly to existing mpsc data structures.
 
 use crate::peer_manager::ConnectionStatusNotification;
-use channel::libra_channel;
-use channel::message_queues::QueueStyle;
+use channel::{libra_channel, message_queues::QueueStyle};
 use libra_types::PeerId;
 use std::num::NonZeroUsize;
 

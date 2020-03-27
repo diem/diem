@@ -1,18 +1,20 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::json_encoder::JsonEncoder;
-use crate::json_metrics::get_json_metrics;
-use crate::public_metrics::PUBLIC_METRICS;
+use crate::{
+    json_encoder::JsonEncoder, json_metrics::get_json_metrics, public_metrics::PUBLIC_METRICS,
+};
 use futures::future;
 use hyper::{
     service::{make_service_fn, service_fn},
     Body, Method, Request, Response, Server, StatusCode,
 };
 use prometheus::{proto::MetricFamily, Encoder, TextEncoder};
-use std::collections::HashMap;
-use std::net::{SocketAddr, ToSocketAddrs};
-use std::thread;
+use std::{
+    collections::HashMap,
+    net::{SocketAddr, ToSocketAddrs},
+    thread,
+};
 use tokio::runtime;
 
 fn encode_metrics(encoder: impl Encoder, whitelist: &'static [&'static str]) -> Vec<u8> {

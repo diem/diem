@@ -166,15 +166,15 @@ proptest! {
         for i in 0..100u32 {
             db.put::<TestSchema1>(&TestField(i), &TestField(i)).unwrap();
         }
-        let mut should_exist = [true; 100];
+        let mut should_exist_vec = [true; 100];
         for (begin, end) in ranges_to_delete {
             db.range_delete::<TestSchema1, TestField>(&TestField(begin), &TestField(end)).unwrap();
             for i in begin..end {
-                should_exist[i as usize] = false;
+                should_exist_vec[i as usize] = false;
             }
         }
 
-        for (i, should_exist) in should_exist.iter().enumerate() {
+        for (i, should_exist) in should_exist_vec.iter().enumerate() {
             assert_eq!(
                 db.get::<TestSchema1>(&TestField(i as u32)).unwrap().is_some(),
                 *should_exist,
@@ -187,7 +187,7 @@ fn collect_values<S: Schema>(db: &TestDB) -> Vec<(S::Key, S::Value)> {
     let mut iter = db
         .iter::<S>(Default::default())
         .expect("Failed to create iterator.");
-    iter.seek_to_first();
+    iter.seek_to_first().unwrap();
     iter.collect::<Result<Vec<_>>>().unwrap()
 }
 

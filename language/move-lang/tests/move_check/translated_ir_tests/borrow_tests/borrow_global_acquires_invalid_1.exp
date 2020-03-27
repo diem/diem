@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_acquires_invalid_1.move:6:17 ───
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_acquires_invalid_1.move:7:9 ───
    │
  7 │         acquires_t1();
    │         ^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'

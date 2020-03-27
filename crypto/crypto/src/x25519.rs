@@ -61,7 +61,6 @@ use libra_crypto_derive::{Deref, DeserializeKey, SerializeKey, SilentDebug, Sile
 use rand::{rngs::EntropyRng, RngCore};
 use sha2::Sha256;
 use std::{convert::TryFrom, ops::Deref};
-use x25519_dalek;
 
 /// TODO: move traits to the right file (possibly traits.rs)
 
@@ -226,7 +225,9 @@ impl TryFrom<&[u8]> for X25519StaticPrivateKey {
 }
 
 impl Length for X25519StaticPrivateKey {
-    const LENGTH: usize = X25519_PRIVATE_KEY_LENGTH;
+    fn length(&self) -> usize {
+        X25519_PRIVATE_KEY_LENGTH
+    }
 }
 
 impl ValidKey for X25519StaticPrivateKey {
@@ -289,7 +290,9 @@ impl TryFrom<&[u8]> for X25519StaticPublicKey {
 }
 
 impl Length for X25519StaticPublicKey {
-    const LENGTH: usize = X25519_PUBLIC_KEY_LENGTH;
+    fn length(&self) -> usize {
+        X25519_PUBLIC_KEY_LENGTH
+    }
 }
 
 impl ValidKey for X25519StaticPublicKey {

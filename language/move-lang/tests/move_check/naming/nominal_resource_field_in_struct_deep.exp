@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/naming/nominal_resource_field_in_struct_deep.move:2:5 ───
+   ┌── tests/move_check/naming/nominal_resource_field_in_struct_deep.move:6:9 ───
    │
  6 │         f: RCup<R>,
    │         ^ Invalid resource field 'f' for struct 'S'. Structs cannot contain resource types, except through type parameters
@@ -17,7 +17,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/naming/nominal_resource_field_in_struct_deep.move:2:5 ───
+   ┌── tests/move_check/naming/nominal_resource_field_in_struct_deep.move:7:9 ───
    │
  7 │         g: Cup<R>,
    │         ^ Invalid resource field 'g' for struct 'S'. Structs cannot contain resource types, except through type parameters
@@ -34,7 +34,7 @@ error:
 
 error: 
 
-    ┌── tests/move_check/naming/nominal_resource_field_in_struct_deep.move:2:5 ───
+    ┌── tests/move_check/naming/nominal_resource_field_in_struct_deep.move:12:9 ───
     │
  12 │         g1: RCup<RCup<RCup<R>>>,
     │         ^^ Invalid resource field 'g1' for struct 'S2'. Structs cannot contain resource types, except through type parameters
@@ -42,16 +42,16 @@ error:
  12 │         g1: RCup<RCup<RCup<R>>>,
     │                            - Field 'g1' is a resource due to the type: '0x8675309::M::R'
     ·
- 2 │     resource struct R {}
+  2 │     resource struct R {}
     │     -------- Type '0x8675309::M::R' was declared as a resource here
     ·
- 9 │     struct S2<T: resource> {
+  9 │     struct S2<T: resource> {
     │            -- 'S2' declared as a `struct` here
     │
 
 error: 
 
-    ┌── tests/move_check/naming/nominal_resource_field_in_struct_deep.move:2:5 ───
+    ┌── tests/move_check/naming/nominal_resource_field_in_struct_deep.move:13:9 ───
     │
  13 │         g2: Cup<Cup<Cup<R>>>,
     │         ^^ Invalid resource field 'g2' for struct 'S2'. Structs cannot contain resource types, except through type parameters
@@ -59,10 +59,10 @@ error:
  13 │         g2: Cup<Cup<Cup<R>>>,
     │                         - Field 'g2' is a resource due to the type: '0x8675309::M::R'
     ·
- 2 │     resource struct R {}
+  2 │     resource struct R {}
     │     -------- Type '0x8675309::M::R' was declared as a resource here
     ·
- 9 │     struct S2<T: resource> {
+  9 │     struct S2<T: resource> {
     │            -- 'S2' declared as a `struct` here
     │
 

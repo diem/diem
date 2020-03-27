@@ -5,7 +5,6 @@ use crate::{
     client_proxy::ClientProxy,
     commands::{report_error, subcommand_execute, Command},
 };
-use transaction_builder::get_transaction_name;
 
 /// Major command for query operations.
 pub struct QueryCommand {}
@@ -128,19 +127,10 @@ impl Command for QueryCommandGetTxnByAccountSeq {
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
         println!(">> Getting committed transaction by account and sequence number");
         match client.get_committed_txn_by_acc_seq(&params) {
-            Ok(txn_and_events) => {
-                match txn_and_events {
-                    Some((comm_txn, events)) => {
-                        println!(
-                            "Committed transaction: {}",
-                            comm_txn.format_for_client(get_transaction_name)
-                        );
-                        if let Some(events_inner) = &events {
-                            println!("Events: ");
-                            for event in events_inner {
-                                println!("{}", event);
-                            }
-                        }
+            Ok(txn_view) => {
+                match txn_view {
+                    Some(txn_view) => {
+                        println!("Committed transaction: {:#?}", txn_view);
                     }
                     None => println!("Transaction not available"),
                 };
@@ -174,21 +164,8 @@ impl Command for QueryCommandGetTxnByRange {
                 // Note that this should never panic because we shouldn't return items
                 // if the version wasn't able to be parsed in the first place
                 let mut cur_version = params[1].parse::<u64>().expect("Unable to parse version");
-                for (txn, opt_events) in comm_txns_and_events {
-                    println!(
-                        "Transaction at version {}: {}",
-                        cur_version,
-                        txn.format_for_client(get_transaction_name)
-                    );
-                    if let Some(events) = opt_events {
-                        if events.is_empty() {
-                            println!("No events returned");
-                        } else {
-                            for event in events {
-                                println!("{}", event);
-                            }
-                        }
-                    }
+                for txn_view in comm_txns_and_events {
+                    println!("Transaction at version {}: {:#?}", cur_version, txn_view,);
                     cur_version += 1;
                 }
             }
@@ -205,7 +182,7 @@ impl Command for QueryCommandGetEvent {
         vec!["event", "ev"]
     }
     fn get_params_help(&self) -> &'static str {
-        "<account_ref_id>|<account_address> <sent|received> <start_sequence_number> <ascending=true|false> <limit>"
+        "<account_ref_id>|<account_address> <sent|received> <start_sequence_number> <limit>"
     }
     fn get_description(&self) -> &'static str {
         "Get events by account and event type (sent|received)."
@@ -218,7 +195,7 @@ impl Command for QueryCommandGetEvent {
                     println!("No events returned");
                 } else {
                     for event in events {
-                        println!("{}", event);
+                        println!("{:?}", event);
                     }
                 }
                 println!("Last event state: {:#?}", last_event_state);

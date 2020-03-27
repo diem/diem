@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {pod_name}
+  labels:
+    app: cluster-test
+spec:
+  nodeSelector:
+    nodeType: clustertest
+  restartPolicy: Never
+  serviceAccountName: clustertest
+  tolerations:
+  - key: "clustertest"
+    operator: "Exists"
+    effect: "NoSchedule"
+  containers:
+  - name: main
+    image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:{cluster_test_image_tag}
+    imagePullPolicy: Always
+    env: [{env_variables}]
+    command: [cluster-test, --deploy={image_tag} {extra_args}]
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app
+            operator: In
+            values: ["cluster-test"]
+        topologyKey: "kubernetes.io/hostname"

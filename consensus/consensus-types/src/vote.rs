@@ -3,10 +3,10 @@
 
 use crate::{common::Author, timeout::Timeout, vote_data::VoteData};
 use anyhow::{ensure, Context};
-use libra_crypto::hash::CryptoHash;
+use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash};
 use libra_types::{
-    crypto_proxies::{Signature, ValidatorSigner, ValidatorVerifier},
-    ledger_info::LedgerInfo,
+    ledger_info::LedgerInfo, validator_signer::ValidatorSigner,
+    validator_verifier::ValidatorVerifier,
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
@@ -24,9 +24,9 @@ pub struct Vote {
     /// LedgerInfo of a block that is going to be committed in case this vote gathers QC.
     ledger_info: LedgerInfo,
     /// Signature of the LedgerInfo
-    signature: Signature,
+    signature: Ed25519Signature,
     /// The round signatures can be aggregated into a timeout certificate if present.
-    timeout_signature: Option<Signature>,
+    timeout_signature: Option<Ed25519Signature>,
 }
 
 impl Display for Vote {
@@ -52,21 +52,19 @@ impl Vote {
         validator_signer: &ValidatorSigner,
     ) -> Self {
         ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
-        let li_sig = validator_signer
-            .sign_message(ledger_info_placeholder.hash())
-            .expect("Failed to sign LedgerInfo");
+        let li_sig = validator_signer.sign_message(ledger_info_placeholder.hash());
         Self {
             vote_data,
             author,
             ledger_info: ledger_info_placeholder,
-            signature: li_sig.into(),
+            signature: li_sig,
             timeout_signature: None,
         }
     }
 
     /// Generates a round signature, which can then be used for aggregating a timeout certificate.
     /// Typically called for generating vote messages that are sent upon timeouts.
-    pub fn add_timeout_signature(&mut self, signature: Signature) {
+    pub fn add_timeout_signature(&mut self, signature: Ed25519Signature) {
         if self.timeout_signature.is_some() {
             return; // round signature is already set
         }
@@ -89,7 +87,7 @@ impl Vote {
     }
 
     /// Return the signature of the vote
-    pub fn signature(&self) -> &Signature {
+    pub fn signature(&self) -> &Ed25519Signature {
         &self.signature
     }
 
@@ -108,7 +106,7 @@ impl Vote {
 
     /// Returns the signature for the vote_data().proposed().round() that can be aggregated for
     /// TimeoutCertificate.
-    pub fn timeout_signature(&self) -> Option<&Signature> {
+    pub fn timeout_signature(&self) -> Option<&Ed25519Signature> {
         self.timeout_signature.as_ref()
     }
 
@@ -125,13 +123,13 @@ impl Vote {
             self.ledger_info.consensus_data_hash() == self.vote_data.hash(),
             "Vote's hash mismatch with LedgerInfo"
         );
-        self.signature()
-            .verify(validator, self.author(), self.ledger_info.hash())
-            .context("Fail to verify Vote")?;
+        validator
+            .verify_signature(self.author(), self.ledger_info.hash(), &self.signature)
+            .context("Failed to verify Vote")?;
         if let Some(timeout_signature) = &self.timeout_signature {
-            timeout_signature
-                .verify(validator, self.author(), self.timeout().hash())
-                .context("Fail to verify Timeout Vote")?;
+            validator
+                .verify_signature(self.author(), self.timeout().hash(), timeout_signature)
+                .context("Failed to verify Timeout Vote")?;
         }
         Ok(())
     }

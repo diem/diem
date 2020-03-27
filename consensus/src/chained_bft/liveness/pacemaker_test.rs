@@ -8,7 +8,6 @@ use crate::{
     util::mock_time_service::SimulatedTimeService,
 };
 
-use channel;
 use consensus_types::common::Round;
 use futures::{executor::block_on, StreamExt};
 use std::{sync::Arc, time::Duration};

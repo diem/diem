@@ -10,6 +10,7 @@ module M {
 
 
     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
+        (0: u8) != (1: u128);
         0 != false;
         &0 != 1;
         1 != &0;

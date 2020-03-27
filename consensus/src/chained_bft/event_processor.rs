@@ -11,13 +11,14 @@ use crate::{
             proposal_generator::ProposalGenerator,
             proposer_election::ProposerElection,
         },
-        network::{ConsensusTypes, NetworkSender},
+        network::{IncomingBlockRetrievalRequest, NetworkSender},
+        network_interface::ConsensusMsg,
         persistent_liveness_storage::{
             LedgerRecoveryData, PersistentLivenessStorage, RecoveryData,
         },
     },
     counters,
-    state_replication::TxnManager,
+    state_replication::{StateComputer, TxnManager},
     util::time_service::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
     },
@@ -26,7 +27,9 @@ use anyhow::{ensure, format_err, Context, Result};
 use consensus_types::{
     accumulator_extension_proof::AccumulatorExtensionProof,
     block::Block,
+    block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus},
     common::{Author, Payload, Round},
+    executed_block::ExecutedBlock,
     proposal_msg::ProposalMsg,
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
@@ -35,29 +38,72 @@ use consensus_types::{
     vote_msg::VoteMsg,
     vote_proposal::VoteProposal,
 };
+use debug_interface::prelude::*;
 use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
-use libra_prost_ext::MessageExt;
+use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof, ValidatorVerifier},
-    transaction::TransactionStatus,
-};
-use network::proto::ConsensusMsg;
-
-use crate::chained_bft::network::IncomingBlockRetrievalRequest;
-use consensus_types::{
-    block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus},
-    executed_block::ExecutedBlock,
+    epoch_info::EpochInfo, ledger_info::LedgerInfoWithSignatures, transaction::TransactionStatus,
+    validator_change::ValidatorChangeProof, validator_verifier::ValidatorVerifier,
 };
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;
 use std::{
-    convert::TryFrom,
     sync::Arc,
     time::{Duration, Instant},
 };
 use termion::color::*;
+
+pub enum UnverifiedEvent<T> {
+    ProposalMsg(Box<ProposalMsg<T>>),
+    VoteMsg(Box<VoteMsg>),
+    SyncInfo(Box<SyncInfo>),
+}
+
+impl<T: Payload> UnverifiedEvent<T> {
+    pub fn verify(self, validator: &ValidatorVerifier) -> Result<VerifiedEvent<T>> {
+        Ok(match self {
+            UnverifiedEvent::ProposalMsg(p) => {
+                p.verify(validator)?;
+                VerifiedEvent::ProposalMsg(p)
+            }
+            UnverifiedEvent::VoteMsg(v) => {
+                v.verify(validator)?;
+                VerifiedEvent::VoteMsg(v)
+            }
+            UnverifiedEvent::SyncInfo(s) => {
+                s.verify(validator)?;
+                VerifiedEvent::SyncInfo(s)
+            }
+        })
+    }
+
+    pub fn epoch(&self) -> u64 {
+        match self {
+            UnverifiedEvent::ProposalMsg(p) => p.epoch(),
+            UnverifiedEvent::VoteMsg(v) => v.epoch(),
+            UnverifiedEvent::SyncInfo(s) => s.epoch(),
+        }
+    }
+}
+
+impl<T> From<ConsensusMsg<T>> for UnverifiedEvent<T> {
+    fn from(value: ConsensusMsg<T>) -> Self {
+        match value {
+            ConsensusMsg::ProposalMsg(m) => UnverifiedEvent::ProposalMsg(m),
+            ConsensusMsg::VoteMsg(m) => UnverifiedEvent::VoteMsg(m),
+            ConsensusMsg::SyncInfo(m) => UnverifiedEvent::SyncInfo(m),
+            _ => unreachable!("Unexpected conversion"),
+        }
+    }
+}
+
+pub enum VerifiedEvent<T> {
+    ProposalMsg(Box<ProposalMsg<T>>),
+    VoteMsg(Box<VoteMsg>),
+    SyncInfo(Box<SyncInfo>),
+}
 
 #[cfg(test)]
 #[path = "event_processor_test.rs"]
@@ -69,23 +115,27 @@ pub mod event_processor_fuzzing;
 
 /// During the event of the node can't recover from local data, StartupSyncProcessor is responsible
 /// for processing the events carrying sync info and use the info to retrieve blocks from peers
-#[allow(dead_code)]
-pub struct StartupSyncProcessor<T> {
+pub struct SyncProcessor<T> {
+    epoch_info: EpochInfo,
     network: NetworkSender<T>,
     storage: Arc<dyn PersistentLivenessStorage<T>>,
-    ledger_recovery_data: LedgerRecoveryData<T>,
+    state_computer: Arc<dyn StateComputer<Payload = T>>,
+    ledger_recovery_data: LedgerRecoveryData,
 }
 
-#[allow(dead_code)]
-impl<T: Payload> StartupSyncProcessor<T> {
+impl<T: Payload> SyncProcessor<T> {
     pub fn new(
+        epoch_info: EpochInfo,
         network: NetworkSender<T>,
         storage: Arc<dyn PersistentLivenessStorage<T>>,
-        ledger_recovery_data: LedgerRecoveryData<T>,
+        state_computer: Arc<dyn StateComputer<Payload = T>>,
+        ledger_recovery_data: LedgerRecoveryData,
     ) -> Self {
-        StartupSyncProcessor {
+        SyncProcessor {
+            epoch_info,
             network,
             storage,
+            state_computer,
             ledger_recovery_data,
         }
     }
@@ -105,22 +155,14 @@ impl<T: Payload> StartupSyncProcessor<T> {
         self.sync_up(&sync_info, author).await
     }
 
-    pub async fn process_sync_info_msg(
-        &mut self,
-        sync_info: SyncInfo,
-        peer: Author,
-    ) -> Result<RecoveryData<T>> {
-        debug!("Startup Sync received a sync info msg: {}", sync_info);
-        self.sync_up(&sync_info, peer).await
-    }
-
     async fn sync_up(&mut self, sync_info: &SyncInfo, peer: Author) -> Result<RecoveryData<T>> {
+        sync_info.verify(&self.epoch_info.verifier)?;
         ensure!(
             sync_info.highest_round() > self.ledger_recovery_data.commit_round(),
             "Received sync info has lower round number than committed block"
         );
         ensure!(
-            sync_info.epoch() == self.ledger_recovery_data.epoch(),
+            sync_info.epoch() == self.epoch_info.epoch,
             "Received sync info is in different epoch than committed block"
         );
         let mut retriever = BlockRetriever::new(
@@ -129,14 +171,19 @@ impl<T: Payload> StartupSyncProcessor<T> {
             Instant::now() + Duration::new(5, 0),
             peer,
         );
-        let (blocks, quorum_certs) =
-            BlockStore::fast_forward_sync(&sync_info.highest_commit_cert(), &mut retriever)
-                .await
-                .expect("Failed to fast forward sync with peers");
-        self.storage
-            .save_tree(blocks, quorum_certs)
-            .expect("Failed to save retrieved blocks and quorum certs to consensus db");
-        Ok(self.storage.start().await)
+        let recovery_data = BlockStore::fast_forward_sync(
+            &sync_info.highest_commit_cert(),
+            &mut retriever,
+            self.storage.clone(),
+            self.state_computer.clone(),
+        )
+        .await?;
+
+        Ok(recovery_data)
+    }
+
+    pub fn epoch_info(&self) -> &EpochInfo {
+        &self.epoch_info
     }
 }
 
@@ -146,6 +193,7 @@ impl<T: Payload> StartupSyncProcessor<T> {
 /// The caller is responsible for running the event loops and driving the execution via some
 /// executors.
 pub struct EventProcessor<T> {
+    epoch_info: EpochInfo,
     block_store: Arc<BlockStore<T>>,
     pending_votes: PendingVotes,
     pacemaker: Pacemaker,
@@ -158,11 +206,11 @@ pub struct EventProcessor<T> {
     time_service: Arc<dyn TimeService>,
     // Cache of the last sent vote message.
     last_vote_sent: Option<(Vote, Round)>,
-    validators: Arc<ValidatorVerifier>,
 }
 
 impl<T: Payload> EventProcessor<T> {
     pub fn new(
+        epoch_info: EpochInfo,
         block_store: Arc<BlockStore<T>>,
         last_vote: Option<Vote>,
         pacemaker: Pacemaker,
@@ -173,7 +221,6 @@ impl<T: Payload> EventProcessor<T> {
         txn_manager: Box<dyn TxnManager<Payload = T>>,
         storage: Arc<dyn PersistentLivenessStorage<T>>,
         time_service: Arc<dyn TimeService>,
-        validators: Arc<ValidatorVerifier>,
     ) -> Self {
         counters::BLOCK_RETRIEVAL_COUNT.get();
         counters::STATE_SYNC_COUNT.get();
@@ -184,6 +231,7 @@ impl<T: Payload> EventProcessor<T> {
         let pending_votes = PendingVotes::new();
 
         Self {
+            epoch_info,
             block_store,
             pending_votes,
             pacemaker,
@@ -195,7 +243,6 @@ impl<T: Payload> EventProcessor<T> {
             storage,
             time_service,
             last_vote_sent,
-            validators,
         }
     }
 
@@ -259,6 +306,12 @@ impl<T: Payload> EventProcessor<T> {
             )
             .await?;
         let signed_proposal = self.safety_rules.sign_proposal(proposal)?;
+        if let Some(ref payload) = signed_proposal.payload() {
+            self.txn_manager
+                .trace_transactions(payload, signed_proposal.id());
+        }
+        trace_edge!("parent_proposal", {"block", signed_proposal.parent_id()}, {"block", signed_proposal.id()});
+        trace_event!("event_processor::generate_proposal", {"block", signed_proposal.id()});
         debug!("Propose {}", signed_proposal);
         // return proposal
         Ok(ProposalMsg::new(signed_proposal, self.gen_sync_info()))
@@ -279,6 +332,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 2. forwarding the proposals to the ProposerElection queue,
     /// which is going to eventually trigger one winning proposal per round
     async fn pre_process_proposal(&mut self, proposal_msg: ProposalMsg<T>) -> Option<Block<T>> {
+        trace_event!("event_processor::pre_process_proposal", {"block", proposal_msg.proposal().id()});
         // Pacemaker is going to be updated with all the proposal certificates later,
         // but it's known that the pacemaker's round is not going to decrease so we can already
         // filter out the proposals from old rounds.
@@ -382,7 +436,7 @@ impl<T: Payload> EventProcessor<T> {
 
         // Some information in SyncInfo is ahead of what we have locally.
         // First verify the SyncInfo (didn't verify it in the yet).
-        sync_info.verify(self.validators.as_ref()).map_err(|e| {
+        sync_info.verify(&self.epoch_info().verifier).map_err(|e| {
             security_log(SecurityEvent::InvalidSyncInfoMsg)
                 .error(&e)
                 .data(&sync_info)
@@ -674,6 +728,7 @@ impl<T: Payload> EventProcessor<T> {
     ///
     /// This function assumes that it might be called from different tasks concurrently.
     async fn execute_and_vote(&mut self, proposed_block: Block<T>) -> anyhow::Result<Vote> {
+        trace_code_block!("event_processor::execute_and_vote", {"block", proposed_block.id()});
         let executed_block = self
             .block_store
             .execute_and_insert_block(proposed_block)
@@ -709,7 +764,7 @@ impl<T: Payload> EventProcessor<T> {
                 executed_block.transaction_info_hashes(),
             ),
             block.clone(),
-            executed_block.compute_result().executed_state.validators,
+            executed_block.compute_result().validators().clone(),
         );
 
         let vote = self
@@ -733,6 +788,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 2. Add the vote to the store and check whether it finishes a QC.
     /// 3. Once the QC successfully formed, notify the Pacemaker.
     pub async fn process_vote(&mut self, vote_msg: VoteMsg) {
+        trace_code_block!("event_processor::process_vote", {"block", vote_msg.proposed_block_id()});
         // Check whether this validator is a valid recipient of the vote.
         if !vote_msg.vote().is_timeout() {
             // Unlike timeout votes regular votes are sent to the leaders of the next round only.
@@ -774,6 +830,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 1) fetch missing dependencies if required, and then
     /// 2) call process_certificates(), which will start a new round in return.
     async fn add_vote(&mut self, vote: &Vote) -> anyhow::Result<()> {
+        debug!("Add vote: {}", vote);
         let block_id = vote.vote_data().proposed().id();
         // Check if the block already had a QC
         if self
@@ -784,7 +841,9 @@ impl<T: Payload> EventProcessor<T> {
             return Ok(());
         }
         // Add the vote and check whether it completes a new QC or a TC
-        let res = self.pending_votes.insert_vote(vote, &self.validators);
+        let res = self
+            .pending_votes
+            .insert_vote(vote, &self.epoch_info.verifier);
         match res {
             VoteReceptionResult::NewQuorumCertificate(qc) => {
                 // Note that the block might not be present locally, in which case we cannot calculate
@@ -846,6 +905,9 @@ impl<T: Payload> EventProcessor<T> {
                 return;
             }
         };
+        for block in blocks_to_commit.iter() {
+            end_trace!("commit", {"block", block.id()});
+        }
         Self::update_counters_for_committed_blocks(blocks_to_commit.clone());
 
         // notify mempool of rejected txns via txn_manager
@@ -893,7 +955,7 @@ impl<T: Payload> EventProcessor<T> {
                     }
                 }
             }
-            for status in block.compute_result().compute_status.iter() {
+            for status in block.compute_result().compute_status().iter() {
                 match status {
                     TransactionStatus::Keep(_) => {
                         counters::COMMITTED_TXNS_COUNT
@@ -905,6 +967,8 @@ impl<T: Payload> EventProcessor<T> {
                             .with_label_values(&["failed"])
                             .inc();
                     }
+                    // TODO(zekunli): add counter
+                    TransactionStatus::Retry => (),
                 }
             }
         }
@@ -935,13 +999,12 @@ impl<T: Payload> EventProcessor<T> {
         }
 
         let response = Box::new(BlockRetrievalResponse::new(status, blocks));
-        if let Err(e) = ConsensusMsg::try_from(ConsensusTypes::BlockRetrievalResponse(response))
-            .and_then(|proto| Ok(proto.to_bytes()?))
-            .and_then(|bytes| {
+        if let Err(e) =
+            lcs::to_bytes(&ConsensusMsg::BlockRetrievalResponse(response)).and_then(|bytes| {
                 request
                     .response_sender
-                    .send(Ok(bytes))
-                    .map_err(|e| format_err!("{:?}", e))
+                    .send(Ok(bytes.into()))
+                    .map_err(|e| lcs::Error::Custom(format!("{:?}", e)))
             })
         {
             warn!("Failed to serialize BlockRetrievalResponse: {:?}", e);
@@ -973,5 +1036,9 @@ impl<T: Payload> EventProcessor<T> {
 
     pub fn block_store(&self) -> Arc<BlockStore<T>> {
         self.block_store.clone()
+    }
+
+    pub fn epoch_info(&self) -> &EpochInfo {
+        &self.epoch_info
     }
 }

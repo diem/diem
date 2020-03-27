@@ -4,8 +4,7 @@
 #![forbid(unsafe_code)]
 
 use anyhow::{format_err, Result};
-use reqwest::header::USER_AGENT;
-use reqwest::Url;
+use reqwest::{header::USER_AGENT, Url};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -51,5 +50,11 @@ impl GitHub {
             .json()
             .map_err(|e| format_err!("Failed to parse github response: {:?}", e))?;
         Ok(response)
+    }
+}
+
+impl Default for GitHub {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -1,33 +1,54 @@
 //! account: vivian, 1000000, 0, validator
 
-//! new-transaction
-import 0x0.LibraSystem;
+//! block-prologue
+//! proposer: vivian
+//! block-time: 1000000
 
-main() {
-    // TODO: this will stop working once we make the Block prologue private. We should delete this
-    // part (which will be done by the executor) and leave the second assert
-    LibraSystem.block_prologue(1000000, h"aa", h"bb", {{vivian}});
-    return;
-}
+// check: EventKey([2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24])
+// check: NewBlockEvent
+// check: 1000000
 
 //! new-transaction
-import 0x0.LibraSystem;
 import 0x0.LibraTimestamp;
+import 0x0.LibraBlock;
 
 main() {
-    assert(LibraSystem.get_current_block_height() == 1, 77);
-    assert(LibraSystem.get_current_block_id() == h"aa", 77);
-    assert(LibraSystem.get_current_proposer() == {{vivian}}, 77);
-    assert(LibraTimestamp.now_microseconds() == 1000000, 77);
+    assert(LibraBlock.get_current_block_height() == 1, 73);
+    assert(LibraTimestamp.now_microseconds() == 1000000, 76);
 
     return;
 }
 
 //! new-transaction
-import 0x0.LibraSystem;
 import 0x0.LibraTimestamp;
 
 main() {
     assert(LibraTimestamp.now_microseconds() != 2000000, 77);
     return;
 }
+
+//! new-transaction
+//! sender: vivian
+import 0x0.LibraBlock;
+import 0x0.LibraTimestamp;
+import 0x0.Vector;
+
+main() {
+    LibraBlock.block_prologue(1, 10, Vector.empty<address>(), {{vivian}});
+
+    return;
+}
+// check: ABORTED
+// check: 33
+
+//! new-transaction
+//! sender: vivian
+import 0x0.LibraTimestamp;
+
+main() {
+    LibraTimestamp.update_global_time({{vivian}}, 20);
+
+    return;
+}
+// check: ABORTED
+// check: 33

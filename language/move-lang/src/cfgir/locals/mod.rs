@@ -3,14 +3,17 @@
 
 pub mod state;
 
-use super::{absint::*, ast::*};
-use crate::shared::unique_map::UniqueMap;
+use super::absint::*;
 use crate::{
     errors::*,
-    hlir::translate::{display_var, DisplayVar},
+    hlir::{
+        ast::*,
+        translate::{display_var, DisplayVar},
+    },
     parser::ast::{Kind_, StructName, Var},
-    shared::*,
+    shared::{unique_map::UniqueMap, *},
 };
+use move_ir_types::location::*;
 use state::*;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -20,26 +23,33 @@ use std::collections::{BTreeMap, BTreeSet};
 
 struct LocalsSafety<'a> {
     local_types: &'a UniqueMap<Var, SingleType>,
+    signature: &'a FunctionSignature,
 }
 
 impl<'a> LocalsSafety<'a> {
-    fn new(local_types: &'a UniqueMap<Var, SingleType>) -> Self {
-        Self { local_types }
+    fn new(local_types: &'a UniqueMap<Var, SingleType>, signature: &'a FunctionSignature) -> Self {
+        Self {
+            local_types,
+            signature,
+        }
     }
 }
 
 struct Context<'a, 'b> {
     local_types: &'a UniqueMap<Var, SingleType>,
     local_states: &'b mut LocalStates,
+    signature: &'a FunctionSignature,
     errors: Errors,
 }
 
 impl<'a, 'b> Context<'a, 'b> {
     fn new(locals_safety: &'a LocalsSafety, local_states: &'b mut LocalStates) -> Self {
         let local_types = &locals_safety.local_types;
+        let signature = &locals_safety.signature;
         Self {
             local_types,
             local_states,
+            signature,
             errors: vec![],
         }
     }
@@ -92,7 +102,7 @@ pub fn verify(
     cfg: &super::cfg::BlockCFG,
 ) -> BTreeMap<Label, LocalStates> {
     let initial_state = LocalStates::initial(&signature.parameters, locals);
-    let mut locals_safety = LocalsSafety::new(locals);
+    let mut locals_safety = LocalsSafety::new(locals, signature);
     let (final_state, mut es) = locals_safety.analyze_function(cfg, initial_state);
     errors.append(&mut es);
     final_state
@@ -136,10 +146,16 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
                                 DisplayVar::Tmp => {
                                     "The resource is created but not used".to_owned()
                                 }
-                                DisplayVar::Orig(l) => format!(
-                                    "The local '{}' {} a resource value due to this assignment",
-                                    l, verb
-                                ),
+                                DisplayVar::Orig(l) => {
+                                    if context.signature.is_parameter(&local) {
+                                        format!("The parameter '{}' {} a resource value", l, verb)
+                                    } else {
+                                        format!(
+                                            "The local '{}' {} a resource value due to this assignment",
+                                            l, verb
+                                        )
+                                    }
+                                }
                             };
                             let msg = format!(
                                 "{}. The resource must be consumed before the function returns",
@@ -153,6 +169,7 @@ fn command(context: &mut Context, sp!(loc, cmd_): &Command) {
             errors.into_iter().for_each(|error| context.error(error))
         }
         C::Jump(_) => (),
+        C::Break | C::Continue => panic!("ICE break/continue not translated to jumps"),
     }
 }
 
@@ -205,7 +222,7 @@ fn exp(context: &mut Context, parent_e: &Exp) {
     use UnannotatedExp_ as E;
     let eloc = &parent_e.exp.loc;
     match &parent_e.exp.value {
-        E::Unit | E::Value(_) | E::UnresolvedError => (),
+        E::Unit | E::Value(_) | E::Spec(_) | E::UnresolvedError => (),
 
         E::BorrowLocal(_, var) | E::Copy { var, .. } => use_local(context, eloc, var),
 
@@ -219,7 +236,8 @@ fn exp(context: &mut Context, parent_e: &Exp) {
         | E::Freeze(e)
         | E::Dereference(e)
         | E::UnaryExp(_, e)
-        | E::Borrow(_, e, _) => exp(context, e),
+        | E::Borrow(_, e, _)
+        | E::Cast(e, _) => exp(context, e),
 
         E::BinopExp(e1, _, e2) => {
             exp(context, e1);
@@ -229,6 +247,8 @@ fn exp(context: &mut Context, parent_e: &Exp) {
         E::Pack(_, _, fields) => fields.iter().for_each(|(_, _, e)| exp(context, e)),
 
         E::ExpList(es) => es.iter().for_each(|item| exp_list_item(context, item)),
+
+        E::Unreachable => panic!("ICE should not analyze dead code"),
     }
 }
 

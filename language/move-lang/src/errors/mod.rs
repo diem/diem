@@ -1,14 +1,21 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared::Loc;
 use codespan::{FileId, Files, Span};
 use codespan_reporting::{
     diagnostic::{Diagnostic, Label},
-    term::termcolor::{Buffer, ColorChoice, StandardStream, WriteColor},
-    term::{emit, Config},
+    term::{
+        emit,
+        termcolor::{Buffer, ColorChoice, StandardStream, WriteColor},
+        Config,
+    },
 };
+use move_ir_types::location::*;
 use std::collections::{HashMap, HashSet};
+
+//**************************************************************************************************
+// Types
+//**************************************************************************************************
 
 pub type Errors = Vec<Error>;
 pub type Error = Vec<(Loc, String)>;
@@ -19,6 +26,22 @@ pub type FilesSourceText = HashMap<&'static str, String>;
 
 type FileMapping = HashMap<&'static str, FileId>;
 
+//**************************************************************************************************
+// Utils
+//**************************************************************************************************
+
+pub fn check_errors(errors: Errors) -> Result<(), Errors> {
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(errors)
+    }
+}
+
+//**************************************************************************************************
+// Reporting
+//**************************************************************************************************
+
 pub fn report_errors(files: FilesSourceText, errors: Errors) -> ! {
     let mut writer = StandardStream::stderr(ColorChoice::Auto);
     output_errors(&mut writer, files, errors);
@@ -27,6 +50,12 @@ pub fn report_errors(files: FilesSourceText, errors: Errors) -> ! {
 
 pub fn report_errors_to_buffer(files: FilesSourceText, errors: Errors) -> Vec<u8> {
     let mut writer = Buffer::no_color();
+    output_errors(&mut writer, files, errors);
+    writer.into_inner()
+}
+
+pub fn report_errors_to_color_buffer(files: FilesSourceText, errors: Errors) -> Vec<u8> {
+    let mut writer = Buffer::ansi();
     output_errors(&mut writer, files, errors);
     writer.into_inner()
 }
@@ -58,7 +87,7 @@ fn hashable_error(error: &ErrorSlice) -> HashableError {
 
 fn render_errors<W: WriteColor>(
     writer: &mut W,
-    files: &Files,
+    files: &Files<String>,
     file_mapping: &FileMapping,
     mut errors: Errors,
 ) {
@@ -79,7 +108,7 @@ fn render_errors<W: WriteColor>(
     }
 }
 
-fn convert_loc(files: &Files, file_mapping: &FileMapping, loc: Loc) -> (FileId, Span) {
+fn convert_loc(files: &Files<String>, file_mapping: &FileMapping, loc: Loc) -> (FileId, Span) {
     let fname = loc.file();
     let id = *file_mapping.get(fname).unwrap();
     let offset = files.source_span(id).start().to_usize();
@@ -88,7 +117,7 @@ fn convert_loc(files: &Files, file_mapping: &FileMapping, loc: Loc) -> (FileId, 
     (id, Span::new(begin_index, end_index))
 }
 
-fn render_error(files: &Files, file_mapping: &FileMapping, mut error: Error) -> Diagnostic {
+fn render_error(files: &Files<String>, file_mapping: &FileMapping, mut error: Error) -> Diagnostic {
     let mk_lbl = |err: (Loc, String)| -> Label {
         let (id, span) = convert_loc(files, file_mapping, err.0);
         Label::new(id, span, err.1)

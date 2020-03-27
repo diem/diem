@@ -121,6 +121,7 @@ data "template_file" "user_data" {
   vars = {
     ecs_cluster      = aws_ecs_cluster.testnet.name
     host_log_path    = "/data/libra/libra.log"
+    host_structlog_path   = "/data/libra/libra_structlog.log"
     enable_logrotate = var.log_to_file || var.enable_logstash
   }
 }
@@ -135,7 +136,7 @@ locals {
 }
 
 resource "aws_ebs_snapshot" "restore_snapshot" {
-  count = var.restore_vol_id == "" ? 0 : 1
+  count     = var.restore_vol_id == "" ? 0 : 1
   volume_id = var.restore_vol_id
 
   tags = {
@@ -151,7 +152,7 @@ resource "aws_instance" "validator" {
     aws_subnet.testnet.*.id,
     count.index % length(data.aws_availability_zones.available.names),
   )
-  depends_on                  = [aws_main_route_table_association.testnet, aws_iam_role_policy_attachment.ecs_extra]
+  depends_on                  = [aws_main_route_table_association.testnet, aws_iam_role_policy.ecs_extra]
   vpc_security_group_ids      = [aws_security_group.validator.id]
   associate_public_ip_address = local.instance_public_ip
   key_name                    = aws_key_pair.libra.key_name
@@ -159,7 +160,7 @@ resource "aws_instance" "validator" {
   user_data                   = local.user_data
 
   dynamic "ebs_block_device" {
-    for_each = contains(local.ebs_types, split(var.validator_type, ".")[0]) ? [0] : []
+    for_each = contains(local.ebs_types, split(".", var.validator_type)[0]) ? [0] : []
     content {
       device_name = "/dev/xvdb"
       volume_type = "io1"
@@ -181,7 +182,7 @@ locals {
   seed_peer_ip           = aws_instance.validator.0.private_ip
   validator_command      = var.log_to_file || var.enable_logstash ? jsonencode(["bash", "-c", "/docker-run-dynamic.sh >> ${var.log_path} 2>&1"]) : ""
   aws_elasticsearch_host = var.enable_logstash ? join(",", aws_elasticsearch_domain.logging.*.endpoint) : ""
-  logstash_config        = "input { file { path => '${var.log_path}'\\n}}\\n output {  amazon_es { \\nhosts => ['https://${local.aws_elasticsearch_host}']\\nregion => 'us-west-2'\\nindex => 'validator-logs-%%{+YYYY.MM.dd}'\\n}}"
+  logstash_config        = "input { file { path => '${var.structlog_path}'\\n codec => 'json'\\n}}\\n filter {  json {  \\nsource => 'message'\\n}}\\n output {  amazon_es { \\nhosts => ['https://${local.aws_elasticsearch_host}']\\nregion => 'us-west-2'\\nindex => 'validator-logs-%%{+YYYY.MM.dd}'\\n}}"
 }
 
 data "template_file" "validator_config" {
@@ -193,16 +194,17 @@ data "template_file" "ecs_task_definition" {
   template = file("templates/validator.json")
 
   vars = {
-    image              = local.image_repo
-    image_version      = local.image_version
-    cpu                = (var.enable_logstash ? local.cpu_by_instance[var.validator_type] - 584 : local.cpu_by_instance[var.validator_type]) - 512
-    mem                = (var.enable_logstash ? local.mem_by_instance[var.validator_type] - 1024 : local.mem_by_instance[var.validator_type]) - 256
-    cfg_base_config    = jsonencode(data.template_file.validator_config.rendered)
-    cfg_listen_addr    = var.validator_use_public_ip == true ? element(aws_instance.validator.*.public_ip, count.index) : element(aws_instance.validator.*.private_ip, count.index)
-    cfg_node_index     = count.index
-    cfg_num_validators = var.cfg_num_validators_override == 0 ? var.num_validators : var.cfg_num_validators_override
-    cfg_seed           = var.config_seed
-    cfg_seed_peer_ip   = local.seed_peer_ip
+    image                         = local.image_repo
+    image_version                 = local.image_version
+    cpu                           = (var.enable_logstash ? local.cpu_by_instance[var.validator_type] - 584 : local.cpu_by_instance[var.validator_type]) - 512
+    mem                           = (var.enable_logstash ? local.mem_by_instance[var.validator_type] - 1024 : local.mem_by_instance[var.validator_type]) - 256
+    cfg_base_config               = jsonencode(data.template_file.validator_config.rendered)
+    cfg_listen_addr               = var.validator_use_public_ip == true ? element(aws_instance.validator.*.public_ip, count.index) : element(aws_instance.validator.*.private_ip, count.index)
+    cfg_node_index                = count.index
+    cfg_num_validators            = var.cfg_num_validators_override == 0 ? var.num_validators : var.cfg_num_validators_override
+    cfg_num_validators_in_genesis = var.num_validators_in_genesis
+    cfg_seed                      = var.config_seed
+    cfg_seed_peer_ip              = local.seed_peer_ip
 
     cfg_fullnode_seed = count.index < var.num_fullnode_networks ? var.fullnode_seed : ""
     cfg_num_fullnodes = var.num_fullnodes
@@ -219,6 +221,7 @@ data "template_file" "ecs_task_definition" {
     logstash_config            = local.logstash_config
     safety_rules_image         = local.safety_rules_image_repo
     safety_rules_image_version = local.safety_rules_image_version
+    structlog_path             = var.log_to_file || var.enable_logstash ? var.structlog_path : ""
   }
 }
 

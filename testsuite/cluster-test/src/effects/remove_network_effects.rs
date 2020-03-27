@@ -8,7 +8,7 @@ use crate::{effects::Action, instance::Instance};
 use anyhow::Result;
 
 use async_trait::async_trait;
-use slog_scope::debug;
+use libra_logger::debug;
 use std::fmt;
 
 pub struct RemoveNetworkEffects {

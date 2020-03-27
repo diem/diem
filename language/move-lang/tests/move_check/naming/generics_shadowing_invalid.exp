@@ -1,6 +1,6 @@
 error: 
 
-   ┌── tests/move_check/naming/generics_shadowing_invalid.move:6:20 ───
+   ┌── tests/move_check/naming/generics_shadowing_invalid.move:7:14 ───
    │
  7 │         (s1: Self::S);
    │              ^^^^^^^ Invalid type annotation
@@ -14,7 +14,7 @@ error:
 
 error: 
 
-   ┌── tests/move_check/naming/generics_shadowing_invalid.move:6:13 ───
+   ┌── tests/move_check/naming/generics_shadowing_invalid.move:8:20 ───
    │
  8 │         let s: S = S {};
    │                    ^ Invalid construction. Expected a struct name
@@ -25,12 +25,12 @@ error:
 
 error: 
 
-    ┌── tests/move_check/naming/generics_shadowing_invalid.move:6:20 ───
+    ┌── tests/move_check/naming/generics_shadowing_invalid.move:9:9 ───
     │
- 9 │         bar(s1);
+  9 │         bar(s1);
     │         ^^^^^^^ Invalid call of '0x1::M::bar'. Invalid argument for parameter 's'
     ·
- 6 │     fun foo<S>(s1: S, s2: S): S {
+  6 │     fun foo<S>(s1: S, s2: S): S {
     │                    - The type: 'S'
     ·
  13 │     fun bar(s: S) {}
@@ -39,12 +39,12 @@ error:
 
 error: 
 
-    ┌── tests/move_check/naming/generics_shadowing_invalid.move:6:13 ───
+    ┌── tests/move_check/naming/generics_shadowing_invalid.move:10:9 ───
     │
  10 │         S {}
     │         ^ Invalid construction. Expected a struct name
     ·
- 6 │     fun foo<S>(s1: S, s2: S): S {
+  6 │     fun foo<S>(s1: S, s2: S): S {
     │             - But 'S' was declared as a type parameter here
     │
 

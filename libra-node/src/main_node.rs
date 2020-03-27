@@ -10,24 +10,23 @@ use debug_interface::{
 use executor::Executor;
 use futures::{channel::mpsc::channel, executor::block_on};
 use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
+use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
 use libra_metrics::metric_server;
-use network::validator_network::{
-    self,
-    network_builder::{NetworkBuilder, TransportType},
-};
+use libra_vm::LibraVM;
+use network::validator_network::network_builder::{NetworkBuilder, TransportType};
 use state_synchronizer::StateSynchronizer;
 use std::{collections::HashMap, net::ToSocketAddrs, sync::Arc, thread, time::Instant};
 use storage_client::{StorageReadServiceClient, StorageWriteServiceClient};
-use storage_service::start_storage_service;
+use storage_service::{init_libra_db, start_storage_service_with_db};
 use tokio::runtime::{Builder, Runtime};
-use vm_runtime::LibraVM;
 
 const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
 const INTRA_NODE_CHANNEL_BUFFER_SIZE: usize = 1;
 
 pub struct LibraHandle {
     _ac: Runtime,
+    _rpc: Runtime,
     _mempool: Runtime,
     _state_synchronizer: StateSynchronizer,
     _network_runtimes: Vec<Runtime>,
@@ -165,7 +164,9 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         .expect("Building rayon global thread pool should work.");
 
     let mut instant = Instant::now();
-    let storage = start_storage_service(&node_config);
+    let libra_db = init_libra_db(&node_config);
+    let storage = start_storage_service_with_db(&node_config, Arc::clone(&libra_db));
+
     debug!(
         "Storage service started in {} ms",
         instant.elapsed().as_millis()
@@ -178,51 +179,39 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let mut state_sync_network_handles = vec![];
     let mut mempool_network_handles = vec![];
     let mut validator_network_provider = None;
+    let mut reconfig_event_subscriptions = vec![];
+    let (mempool_reconfig_subscription, mempool_reconfig_events) =
+        libra_mempool::generate_reconfig_subscription();
+    reconfig_event_subscriptions.push(mempool_reconfig_subscription);
 
     if let Some(network) = node_config.validator_network.as_mut() {
         let (runtime, mut network_builder) = setup_network(network, RoleType::Validator);
-        state_sync_network_handles.push(validator_network::state_synchronizer::add_to_network(
+        state_sync_network_handles.push(state_synchronizer::network::add_to_network(
             &mut network_builder,
         ));
 
         let (mempool_sender, mempool_events) =
-            validator_network::mempool::add_to_network(&mut network_builder);
+            libra_mempool::network::add_to_network(&mut network_builder);
         mempool_network_handles.push((network.peer_id, mempool_sender, mempool_events));
         validator_network_provider = Some((network.peer_id, runtime, network_builder));
     }
 
-    for i in 0..node_config.full_node_networks.len() {
+    for mut full_node_network in node_config.full_node_networks.iter_mut() {
         let (runtime, mut network_builder) =
-            setup_network(&mut node_config.full_node_networks[i], RoleType::FullNode);
-        state_sync_network_handles.push(validator_network::state_synchronizer::add_to_network(
+            setup_network(&mut full_node_network, RoleType::FullNode);
+
+        network_runtimes.push(runtime);
+        state_sync_network_handles.push(state_synchronizer::network::add_to_network(
             &mut network_builder,
         ));
-
         let (mempool_sender, mempool_events) =
-            validator_network::mempool::add_to_network(&mut network_builder);
-        mempool_network_handles.push((
-            node_config.full_node_networks[i].peer_id,
-            mempool_sender,
-            mempool_events,
-        ));
+            libra_mempool::network::add_to_network(&mut network_builder);
+        mempool_network_handles.push((full_node_network.peer_id, mempool_sender, mempool_events));
 
-        let network = &node_config.full_node_networks[i];
         // Start the network provider.
         let _listen_addr = network_builder.build();
-        network_runtimes.push(runtime);
-        debug!("Network started for peer_id: {}", network.peer_id);
+        debug!("Network started for peer_id: {}", full_node_network.peer_id);
     }
-
-    let debug_if = setup_debug_interface(&node_config);
-
-    let metrics_port = node_config.debug_interface.metrics_server_port;
-    let metric_host = node_config.debug_interface.address.clone();
-    thread::spawn(move || metric_server::start_server(metric_host, metrics_port, false));
-    let public_metrics_port = node_config.debug_interface.public_metrics_server_port;
-    let public_metric_host = node_config.debug_interface.address.clone();
-    thread::spawn(move || {
-        metric_server::start_server(public_metric_host, public_metrics_port, true)
-    });
 
     // for state sync to send requests to mempool
     let (state_sync_to_mempool_sender, state_sync_requests) =
@@ -232,12 +221,27 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         state_sync_to_mempool_sender,
         Arc::clone(&executor),
         &node_config,
+        reconfig_event_subscriptions,
     );
-    let (ac_sender, client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
-    let admission_control_runtime = AdmissionControlService::bootstrap(&node_config, ac_sender);
+    let (mp_client_sender, mp_client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
+
+    let admission_control_runtime =
+        AdmissionControlService::bootstrap(&node_config, mp_client_sender.clone());
+    let rpc_runtime = bootstrap_rpc(&node_config, libra_db, mp_client_sender);
 
     let mut consensus = None;
     let (consensus_to_mempool_sender, consensus_requests) = channel(INTRA_NODE_CHANNEL_BUFFER_SIZE);
+
+    instant = Instant::now();
+    let mempool = libra_mempool::bootstrap(
+        node_config,
+        mempool_network_handles,
+        mp_client_events,
+        consensus_requests,
+        state_sync_requests,
+        mempool_reconfig_events,
+    );
+    debug!("Mempool started in {} ms", instant.elapsed().as_millis());
 
     if let Some((peer_id, runtime, mut network_builder)) = validator_network_provider {
         // Note: We need to start network provider before consensus, because the consensus
@@ -250,7 +254,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         // was observed in GitHub Issue #749. A long term fix might be make
         // consensus initialization async instead of blocking on state synchronizer.
         let (consensus_network_sender, consensus_network_events) =
-            validator_network::consensus::add_to_network(&mut network_builder);
+            consensus::network_interface::add_to_network(&mut network_builder);
         let _listen_addr = network_builder.build();
         network_runtimes.push(runtime);
         debug!("Network started for peer_id: {}", peer_id);
@@ -281,19 +285,21 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         debug!("Consensus started in {} ms", instant.elapsed().as_millis());
     }
 
-    instant = Instant::now();
-    let mempool = libra_mempool::bootstrap(
-        node_config,
-        mempool_network_handles,
-        client_events,
-        consensus_requests,
-        state_sync_requests,
-    );
-    debug!("Mempool started in {} ms", instant.elapsed().as_millis());
+    let debug_if = setup_debug_interface(&node_config);
+
+    let metrics_port = node_config.debug_interface.metrics_server_port;
+    let metric_host = node_config.debug_interface.address.clone();
+    thread::spawn(move || metric_server::start_server(metric_host, metrics_port, false));
+    let public_metrics_port = node_config.debug_interface.public_metrics_server_port;
+    let public_metric_host = node_config.debug_interface.address.clone();
+    thread::spawn(move || {
+        metric_server::start_server(public_metric_host, public_metrics_port, true)
+    });
 
     LibraHandle {
         _network_runtimes: network_runtimes,
         _ac: admission_control_runtime,
+        _rpc: rpc_runtime,
         _mempool: mempool,
         _state_synchronizer: state_synchronizer,
         consensus,

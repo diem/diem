@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extern crate test_generation;
-use libra_types::identifier::Identifier;
+use move_core_types::identifier::Identifier;
 use std::collections::HashMap;
 use test_generation::abstract_state::{AbstractState, AbstractValue, CallGraph};
 use vm::{
@@ -24,7 +24,7 @@ fn generate_module_with_struct(resource: bool) -> CompiledModuleMut {
     module.type_signatures = vec![
         SignatureToken::Bool,
         SignatureToken::U64,
-        SignatureToken::ByteArray,
+        SignatureToken::Vector(Box::new(SignatureToken::U8)),
         SignatureToken::Address,
     ]
     .into_iter()
@@ -231,10 +231,7 @@ fn bytecode_movefrom() {
     );
     let struct_value = state2.stack_peek(0).expect("struct not added to stack");
     assert!(
-        match struct_value.token {
-            SignatureToken::Struct(struct_handle, _) => struct_handle == struct_def.struct_handle,
-            _ => false,
-        },
+        matches!(struct_value.token, SignatureToken::Struct(struct_handle, _) if struct_handle == struct_def.struct_handle),
         "stack type postcondition not met"
     );
 }

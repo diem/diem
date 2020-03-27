@@ -7,79 +7,43 @@ use crate::{
     account::{Account, AccountData},
     data_store::{FakeDataStore, GENESIS_WRITE_SET},
 };
-use libra_config::config::{VMConfig, VMPublishingOption};
+use bytecode_verifier::VerifiedModule;
+use libra_config::generator;
+use libra_crypto::HashValue;
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
-    account_config::AccountResource,
-    crypto_proxies::ValidatorSet,
+    account_config::{AccountResource, BalanceResource},
+    block_metadata::{new_block_event_key, BlockMetadata, NewBlockEvent},
     language_storage::ModuleId,
+    on_chain_config::VMPublishingOption,
     transaction::{
         SignedTransaction, Transaction, TransactionOutput, TransactionPayload, TransactionStatus,
     },
+    validator_set::ValidatorSet,
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
+use libra_vm::{LibraVM, VMExecutor, VMVerifier};
+use stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use vm::CompiledModule;
 use vm_genesis::GENESIS_KEYPAIR;
-use vm_runtime::{LibraVM, VMExecutor, VMVerifier};
 
 /// Provides an environment to run a VM instance.
 ///
 /// This struct is a mock in-memory implementation of the Libra executor.
 #[derive(Debug)]
 pub struct FakeExecutor {
-    config: VMConfig,
     data_store: FakeDataStore,
-}
-
-pub fn test_all_genesis_impl<T, F>(
-    publishing_options: Option<VMPublishingOption>,
-    test_fn: F,
-) -> Result<(), T>
-where
-    F: Fn(FakeExecutor) -> Result<(), T>,
-{
-    let genesis: Vec<&WriteSet> = vec![&GENESIS_WRITE_SET];
-    genesis
-        .iter()
-        .map(|ws| test_fn(FakeExecutor::from_genesis(ws, publishing_options.clone())))
-        .collect()
-}
-
-pub fn test_all_genesis_default(test_fn: fn(FakeExecutor) -> ()) {
-    let result: Result<(), ()> = test_all_genesis_impl(None, |executor| {
-        test_fn(executor);
-        Ok(())
-    });
-    result.unwrap()
-}
-
-pub fn test_all_genesis(
-    publishing_options: Option<VMPublishingOption>,
-    test_fn: fn(FakeExecutor) -> (),
-) {
-    let result: Result<(), ()> = test_all_genesis_impl(publishing_options, |executor| {
-        test_fn(executor);
-        Ok(())
-    });
-    result.unwrap()
+    block_time: u64,
 }
 
 impl FakeExecutor {
     /// Creates an executor from a genesis [`WriteSet`].
-    pub fn from_genesis(
-        write_set: &WriteSet,
-        publishing_options: Option<VMPublishingOption>,
-    ) -> Self {
-        let mut config = VMConfig::default();
-        if let Some(vm_publishing_options) = publishing_options {
-            config.publishing_options = vm_publishing_options;
-        }
-
+    pub fn from_genesis(write_set: &WriteSet) -> Self {
         let mut executor = FakeExecutor {
-            config,
             data_store: FakeDataStore::default(),
+            block_time: 0,
         };
         executor.apply_write_set(write_set);
         executor
@@ -87,7 +51,15 @@ impl FakeExecutor {
 
     /// Creates an executor from the genesis file GENESIS_FILE_LOCATION
     pub fn from_genesis_file() -> Self {
-        Self::from_genesis(&GENESIS_WRITE_SET, None)
+        Self::from_genesis(&GENESIS_WRITE_SET)
+    }
+
+    pub fn whitelist_genesis() -> Self {
+        Self::custom_genesis(
+            Some(stdlib_modules(StdLibOptions::Staged).to_vec()),
+            None,
+            VMPublishingOption::Locked(StdlibScript::whitelist()),
+        )
     }
 
     /// Creates an executor from the genesis file GENESIS_FILE_LOCATION with script/module
@@ -97,34 +69,54 @@ impl FakeExecutor {
         if let VMPublishingOption::Locked(_) = publishing_options {
             panic!("Whitelisted transactions are not supported as a publishing option")
         }
-        Self::from_genesis(&GENESIS_WRITE_SET, Some(publishing_options))
-    }
 
-    pub fn from_validator_set(
-        validator_set: ValidatorSet,
-        publishing_options: VMPublishingOption,
-    ) -> Self {
-        let discovery_set = vm_genesis::make_placeholder_discovery_set(&validator_set);
-        let genesis_write_set = match vm_genesis::encode_genesis_transaction_with_validator(
-            &GENESIS_KEYPAIR.0,
-            GENESIS_KEYPAIR.1.clone(),
-            validator_set,
-            discovery_set,
+        Self::custom_genesis(
+            Some(stdlib_modules(StdLibOptions::Staged).to_vec()),
+            None,
+            publishing_options,
         )
-        .payload()
-        {
-            TransactionPayload::WriteSet(ws) => ws.write_set().clone(),
-            _ => panic!("Expected writeset txn in genesis txn"),
-        };
-        Self::from_genesis(&genesis_write_set, Some(publishing_options))
     }
 
     /// Creates an executor in which no genesis state has been applied yet.
     pub fn no_genesis() -> Self {
         FakeExecutor {
-            config: VMConfig::default(),
             data_store: FakeDataStore::default(),
+            block_time: 0,
         }
+    }
+
+    /// Creates fresh genesis from the stdlib modules passed in. If none are passed in the staged
+    /// genesis write set is used.
+    pub fn custom_genesis(
+        genesis_modules: Option<Vec<VerifiedModule>>,
+        validator_set: Option<ValidatorSet>,
+        publishing_options: VMPublishingOption,
+    ) -> Self {
+        let genesis_write_set = if genesis_modules.is_none() && validator_set.is_none() {
+            GENESIS_WRITE_SET.clone()
+        } else {
+            let validator_set_len: usize = validator_set.as_ref().map_or(10, |s| s.len());
+            let swarm = generator::validator_swarm_for_testing(validator_set_len);
+            let validator_set = validator_set.unwrap_or(swarm.validator_set);
+            let discovery_set = vm_genesis::make_placeholder_discovery_set(&validator_set);
+            let stdlib_modules =
+                genesis_modules.unwrap_or_else(|| stdlib_modules(StdLibOptions::Staged).to_vec());
+            match vm_genesis::encode_genesis_transaction(
+                &GENESIS_KEYPAIR.0,
+                GENESIS_KEYPAIR.1.clone(),
+                &swarm.nodes,
+                validator_set,
+                discovery_set,
+                &stdlib_modules,
+                publishing_options,
+            )
+            .payload()
+            {
+                TransactionPayload::WriteSet(ws) => ws.write_set().clone(),
+                _ => panic!("Expected writeset txn in genesis txn"),
+            }
+        };
+        Self::from_genesis(&genesis_write_set)
     }
 
     /// Creates a number of [`Account`] instances all with the same balance and sequence number,
@@ -158,11 +150,29 @@ impl FakeExecutor {
 
     /// Reads the resource [`Value`] for an account from this executor's data store.
     pub fn read_account_resource(&self, account: &Account) -> Option<AccountResource> {
-        let ap = account.make_access_path();
+        let ap = account.make_account_access_path();
         let data_blob = StateView::get(&self.data_store, &ap)
             .expect("account must exist in data store")
             .expect("data must exist in data store");
         lcs::from_bytes(data_blob.as_slice()).ok()
+    }
+
+    /// Reads the balance resource value for an account from this executor's data store.
+    pub fn read_balance_resource(&self, account: &Account) -> Option<BalanceResource> {
+        let ap = account.make_balance_access_path();
+        let data_blob = StateView::get(&self.data_store, &ap)
+            .expect("account must exist in data store")
+            .expect("data must exist in data store");
+        lcs::from_bytes(data_blob.as_slice()).ok()
+    }
+
+    /// Reads the AccountResource and BalanceResource for this account. These are coupled together.
+    pub fn read_account_info(
+        &self,
+        account: &Account,
+    ) -> Option<(AccountResource, BalanceResource)> {
+        self.read_account_resource(account)
+            .and_then(|ar| self.read_balance_resource(account).map(|br| (ar, br)))
     }
 
     /// Executes the given block of transactions.
@@ -178,7 +188,6 @@ impl FakeExecutor {
                 .into_iter()
                 .map(Transaction::UserTransaction)
                 .collect(),
-            &self.config,
             &self.data_store,
         )
     }
@@ -200,7 +209,15 @@ impl FakeExecutor {
                 output
             }
             TransactionStatus::Discard(status) => panic!("transaction discarded with {:?}", status),
+            TransactionStatus::Retry => panic!("transaction status is retry"),
         }
+    }
+
+    pub fn execute_transaction_block(
+        &self,
+        txn_block: Vec<Transaction>,
+    ) -> Result<Vec<TransactionOutput>, VMStatus> {
+        LibraVM::execute_block(txn_block, &self.data_store)
     }
 
     pub fn execute_transaction(&self, txn: SignedTransaction) -> TransactionOutput {
@@ -220,14 +237,35 @@ impl FakeExecutor {
 
     /// Verifies the given transaction by running it through the VM verifier.
     pub fn verify_transaction(&self, txn: SignedTransaction) -> Option<VMStatus> {
-        let vm = LibraVM::new(&self.config);
+        let mut vm = LibraVM::new();
+        vm.load_configs(self.get_state_view());
         vm.validate_transaction(txn, &self.data_store)
     }
 
     pub fn get_state_view(&self) -> &FakeDataStore {
         &self.data_store
     }
-    pub fn config(&self) -> &VMConfig {
-        &self.config
+
+    pub fn new_block(&mut self) {
+        let validator_address =
+            *generator::validator_swarm_for_testing(10).validator_set[0].account_address();
+        self.block_time += 1;
+        let new_block = BlockMetadata::new(
+            HashValue::zero(),
+            0,
+            self.block_time,
+            vec![],
+            validator_address,
+        );
+        let output = self
+            .execute_transaction_block(vec![Transaction::BlockMetadata(new_block)])
+            .expect("Executing block prologue should succeed")
+            .pop()
+            .expect("Failed to get the execution result for Block Prologue");
+        // check if we emit the expected event, there might be more events for transaction fees
+        let event = output.events()[0].clone();
+        assert!(event.key() == &new_block_event_key());
+        assert!(lcs::from_bytes::<NewBlockEvent>(event.event_data()).is_ok());
+        self.apply_write_set(output.write_set());
     }
 }

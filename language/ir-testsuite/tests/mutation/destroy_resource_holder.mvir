@@ -1,13 +1,14 @@
 module A {
-    import 0x0.LibraCoin;
-    resource A { c: LibraCoin.T }
-    public new(c: LibraCoin.T): Self.A {
+import 0x0.LBR;
+    import 0x0.Libra;
+    resource A { c: Libra.T<LBR.T> }
+    public new(c: Libra.T<LBR.T>): Self.A {
         return A { c: move(c) };
     }
     public destroy_a(a: Self.A) {
-        let c: LibraCoin.T;
+        let c: Libra.T<LBR.T>;
         A { c } = move(a);
-        LibraCoin.destroy_zero(move(c));
+        Libra.destroy_zero<LBR.T>(move(c));
         return;
     }
 }
@@ -15,12 +16,13 @@ module A {
 //! new-transaction
 
 import {{default}}.A;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 main() {
-    let zero_resource: LibraCoin.T;
+    let zero_resource: Libra.T<LBR.T>;
     let s: A.A;
-    zero_resource = LibraCoin.zero();
+    zero_resource = Libra.zero<LBR.T>();
     s = A.new(move(zero_resource));
     A.destroy_a(move(s));
 

@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Capability, Error, Identity, Policy, Storage, Value};
+use crate::{
+    Capability, CryptoKVStorage, Error, GetResponse, Identity, KVStorage, Policy, Storage, Value,
+};
+use chrono::DateTime;
 use libra_vault_client::{self as vault, Client};
 
 /// VaultStorage utilizes Vault for maintaining encrypted, authenticated data for Libra. This
@@ -12,36 +15,74 @@ use libra_vault_client::{self as vault, Client};
 /// calls pointers to data keys, Vault has actually a secret that contains multiple key value
 /// pairs.
 pub struct VaultStorage {
-    pub client: Client,
+    client: Client,
+    namespace: Option<String>,
 }
 
 impl VaultStorage {
-    pub fn new(host: String, token: String) -> Self {
+    pub fn new(host: String, token: String, namespace: Option<String>) -> Self {
         Self {
             client: Client::new(host, token),
+            namespace,
         }
+    }
+
+    pub fn namespace(&self) -> Option<String> {
+        self.namespace.clone()
     }
 
     /// Erase all secrets and keys from the vault storage. Use with caution.
     pub fn reset(&self) -> Result<(), Error> {
-        let secrets = self.client.list_secrets("")?;
+        self.reset_helper("")
+    }
+
+    fn reset_helper(&self, path: &str) -> Result<(), Error> {
+        let secrets = self.client.list_secrets(path)?;
         for secret in secrets {
-            self.client.delete_secret(&secret)?;
+            if secret.ends_with('/') {
+                self.reset_helper(&secret)?;
+            } else {
+                self.client.delete_secret(&format!("{}{}", path, secret))?;
+            }
         }
         Ok(())
     }
 
+    /// Creates a token but uses the namespace for policies
+    pub fn create_token(&self, policies: Vec<&str>) -> Result<String, Error> {
+        let result = if let Some(ns) = &self.namespace {
+            let policies: Vec<_> = policies.iter().map(|p| format!("{}/{}", ns, p)).collect();
+            self.client
+                .create_token(policies.iter().map(|p| &**p).collect())?
+        } else {
+            self.client.create_token(policies)?
+        };
+        Ok(result)
+    }
+
     /// Retrieves a key from a given secret. Libra Secure Storage inserts each key into its own
     /// distinct secret store and thus the secret and key have the same identifier.
-    fn get_secret(&self, key: &str) -> Result<Value, Error> {
-        let value = self.client.read_secret(key, key)?;
-        let v = Value::from_base64(&value).unwrap();
-        Ok(v)
+    fn get_secret(&self, key: &str) -> Result<GetResponse, Error> {
+        let secret = if let Some(namespace) = &self.namespace {
+            format!("{}/{}", namespace, key)
+        } else {
+            key.to_string()
+        };
+        let (value, created_time) = self.client.read_secret(&secret, key)?;
+        let last_update = DateTime::parse_from_rfc3339(&created_time)?.timestamp() as u64;
+        let value = Value::from_base64(&value).unwrap();
+        Ok(GetResponse { last_update, value })
     }
 
     /// Inserts a key, value pair into a secret that shares the name of the key.
     fn set_secret(&self, key: &str, value: Value) -> Result<(), Error> {
-        self.client.write_secret(key, key, &value.to_base64()?)?;
+        let secret = if let Some(namespace) = &self.namespace {
+            format!("{}/{}", namespace, key)
+        } else {
+            key.to_string()
+        };
+        self.client
+            .write_secret(&secret, key, &value.to_base64()?)?;
         Ok(())
     }
 
@@ -54,7 +95,18 @@ impl VaultStorage {
         key: &str,
         capabilities: &[Capability],
     ) -> Result<(), Error> {
-        let path = format!("secret/data/{}", key);
+        let (path, policy_name) = if let Some(namespace) = &self.namespace {
+            let path = format!("secret/data/{}/{}", namespace, key);
+            let policy_name = if policy_name == "default" {
+                policy_name.to_string()
+            } else {
+                format!("{}/{}", namespace, policy_name)
+            };
+            (path, policy_name)
+        } else {
+            (format!("secret/data/{}", key), policy_name.to_string())
+        };
+
         let mut vault_policy = self.client.read_policy(&policy_name).unwrap_or_default();
         let vault_capabilities: Vec<vault::Capability> = capabilities
             .iter()
@@ -64,27 +116,29 @@ impl VaultStorage {
             })
             .collect();
         vault_policy.add_policy(&path, vault_capabilities);
-        self.client.set_policy(policy_name, &vault_policy)?;
+        self.client.set_policy(&policy_name, &vault_policy)?;
         Ok(())
+    }
+
+    /// Public convenience function to return a new Vault based Storage.
+    pub fn new_storage(host: String, token: String, namespace: Option<String>) -> Box<dyn Storage> {
+        Box::new(VaultStorage::new(host, token, namespace))
     }
 }
 
-impl Storage for VaultStorage {
+impl KVStorage for VaultStorage {
     fn available(&self) -> bool {
         self.client.unsealed().unwrap_or(false)
     }
 
     fn create(&mut self, key: &str, value: Value, policy: &Policy) -> Result<(), Error> {
         // Vault internally does not distinguish creation versus update except by permissions. So we
-        // simulate that by first getting the key. If it doesn't exist, we're okay and return back a
-        // fake, but ignored value.
-        self.get_secret(&key).or_else(|e| {
-            if let Error::KeyNotSet(_) = e {
-                Ok(Value::U64(0))
-            } else {
-                Err(e)
-            }
-        })?;
+        // simulate that by first getting the key. If it doesn't exist, we're okay.
+        match self.get_secret(&key) {
+            Ok(_) => return Err(Error::KeyAlreadyExists(key.to_string())),
+            Err(Error::KeyNotSet(_)) => (/* Expected this for new keys! */),
+            Err(e) => return Err(e),
+        }
 
         self.set_secret(&key, value)?;
         for permission in &policy.permissions {
@@ -97,7 +151,7 @@ impl Storage for VaultStorage {
         Ok(())
     }
 
-    fn get(&self, key: &str) -> Result<Value, Error> {
+    fn get(&self, key: &str) -> Result<GetResponse, Error> {
         self.get_secret(&key)
     }
 
@@ -108,4 +162,10 @@ impl Storage for VaultStorage {
         self.set_secret(&key, value)?;
         Ok(())
     }
+
+    fn reset_and_clear(&mut self) -> Result<(), Error> {
+        self.reset()
+    }
 }
+
+impl CryptoKVStorage for VaultStorage {}

@@ -5,10 +5,13 @@
 // A config entry starts with "//!", differentiating it from a directive.
 
 use crate::{common::strip, errors::*, genesis_accounts::make_genesis_accounts};
-use language_e2e_tests::account::{Account, AccountData};
+use language_e2e_tests::{
+    account::{Account, AccountData},
+    keygen::KeyGen,
+};
 use libra_config::generator;
 use libra_crypto::PrivateKey;
-use libra_types::crypto_proxies::ValidatorSet;
+use libra_types::validator_set::ValidatorSet;
 use std::{
     collections::{btree_map, BTreeMap},
     str::FromStr,
@@ -56,13 +59,13 @@ pub enum Entry {
 
 impl Entry {
     pub fn is_validator(&self) -> bool {
-        match self {
+        matches!(
+            self,
             Entry::AccountDefinition(AccountDefinition {
                 role: Some(Role::Validator),
                 ..
-            }) => true,
-            _ => false,
-        }
+            })
+        )
     }
 }
 
@@ -134,6 +137,10 @@ impl Config {
             (BTreeMap::new(), ValidatorSet::new(vec![]))
         };
 
+        // key generator with a fixed seed
+        // this is important as it ensures the tests are deterministic
+        let mut keygen = KeyGen::from_seed([0x1f; 32]);
+
         // initialize the keys of validator entries with the validator set
         // enhance type of config to contain a validator set, use it to initialize genesis
         for entry in entries {
@@ -149,7 +156,10 @@ impl Config {
                             def.sequence_number.unwrap_or(0),
                         )
                     } else {
-                        AccountData::new(
+                        let (privkey, pubkey) = keygen.generate_keypair();
+                        AccountData::with_keypair(
+                            privkey,
+                            pubkey,
                             def.balance.unwrap_or(DEFAULT_BALANCE),
                             def.sequence_number.unwrap_or(0),
                         )
@@ -173,7 +183,10 @@ impl Config {
         }
 
         if let btree_map::Entry::Vacant(entry) = accounts.entry("default".to_string()) {
-            entry.insert(AccountData::new(
+            let (privkey, pubkey) = keygen.generate_keypair();
+            entry.insert(AccountData::with_keypair(
+                privkey,
+                pubkey,
                 DEFAULT_BALANCE,
                 /* sequence_number */ 0,
             ));

@@ -1,0 +1,22 @@
+error: 
+
+   ┌── tests/move_check/typing/ignore_inferred_resource.move:4:9 ───
+   │
+ 4 │         S{};
+   │         ^^^ Cannot ignore resource values. The value must be used
+   ·
+ 4 │         S{};
+   │         --- The type: '0x8675309::M::S<_>'
+   ·
+ 2 │     struct S<T> {}
+   │              - Is found to be a non-copyable type here
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/ignore_inferred_resource.move:4:9 ───
+   │
+ 4 │         S{};
+   │         ^^^ Could not infer this type. Try adding an annotation
+   │
+

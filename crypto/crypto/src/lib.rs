@@ -11,6 +11,7 @@ pub mod ed25519;
 pub mod error;
 pub mod hash;
 pub mod hkdf;
+pub mod multi_ed25519;
 pub mod slip0010;
 pub mod traits;
 pub mod vrf;

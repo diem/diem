@@ -1,13 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::transaction::authenticator::AuthenticationKey;
 use anyhow::{ensure, Error, Result};
-use bech32::{Bech32, FromBase32, ToBase32};
 use bytes::Bytes;
-use hex;
 use libra_crypto::{
+    ed25519::Ed25519PublicKey,
     hash::{CryptoHash, CryptoHasher},
-    HashValue, VerifyingKey,
+    HashValue,
 };
 use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -16,41 +16,44 @@ use rand::{rngs::OsRng, Rng};
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 use std::{convert::TryFrom, fmt, str::FromStr};
 
-pub const ADDRESS_LENGTH: usize = 32;
-
 const SHORT_STRING_LENGTH: usize = 4;
 
-const LIBRA_NETWORK_ID_SHORT: &str = "lb";
-
 /// A struct that represents an account address.
-/// Currently Public Key is used.
-#[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Default, Clone, Copy, CryptoHasher)]
+#[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Clone, Copy, CryptoHasher)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct AccountAddress([u8; ADDRESS_LENGTH]);
+pub struct AccountAddress([u8; AccountAddress::LENGTH]);
 
 impl AccountAddress {
-    pub const fn new(address: [u8; ADDRESS_LENGTH]) -> Self {
+    pub const fn new(address: [u8; Self::LENGTH]) -> Self {
         AccountAddress(address)
     }
 
+    /// The number of bytes in an address.
+    pub const LENGTH: usize = 16;
+
+    pub const DEFAULT: Self = Self([0u8; AccountAddress::LENGTH]);
+
     pub fn random() -> Self {
         let mut rng = OsRng::new().expect("can't access OsRng");
-        let buf: [u8; 32] = rng.gen();
+        let buf: [u8; Self::LENGTH] = rng.gen();
         AccountAddress::new(buf)
     }
 
     // Helpful in log messages
     pub fn short_str(&self) -> String {
-        hex::encode(&self.0[0..SHORT_STRING_LENGTH])
+        hex::encode(&self.0[..SHORT_STRING_LENGTH])
     }
 
     pub fn to_vec(&self) -> Vec<u8> {
         self.0.to_vec()
     }
 
-    pub fn from_public_key<PublicKey: VerifyingKey>(public_key: &PublicKey) -> Self {
-        let hash = *HashValue::from_sha3_256(&public_key.to_bytes()).as_ref();
-        AccountAddress::new(hash)
+    pub fn authentication_key(public_key: &Ed25519PublicKey) -> AuthenticationKey {
+        AuthenticationKey::ed25519(public_key)
+    }
+
+    pub fn from_public_key(public_key: &Ed25519PublicKey) -> Self {
+        AccountAddress::authentication_key(public_key).derived_address()
     }
 
     pub fn from_hex_literal(literal: &str) -> Result<Self> {
@@ -67,9 +70,9 @@ impl AccountAddress {
         };
 
         let len = result.len();
-        let padded_result = if len < ADDRESS_LENGTH {
-            let mut padded = Vec::with_capacity(ADDRESS_LENGTH);
-            padded.resize(ADDRESS_LENGTH - len, 0u8);
+        let padded_result = if len < Self::LENGTH {
+            let mut padded = Vec::with_capacity(Self::LENGTH);
+            padded.resize(Self::LENGTH - len, 0u8);
             padded.append(&mut result);
             padded
         } else {
@@ -77,6 +80,12 @@ impl AccountAddress {
         };
 
         AccountAddress::try_from(padded_result)
+    }
+}
+
+impl Default for AccountAddress {
+    fn default() -> AccountAddress {
+        AccountAddress::DEFAULT
     }
 }
 
@@ -122,21 +131,21 @@ impl TryFrom<&[u8]> for AccountAddress {
     /// Tries to convert the provided byte array into Address.
     fn try_from(bytes: &[u8]) -> Result<AccountAddress> {
         ensure!(
-            bytes.len() == ADDRESS_LENGTH,
+            bytes.len() == Self::LENGTH,
             "The Address {:?} is of invalid length",
             bytes
         );
-        let mut addr = [0u8; ADDRESS_LENGTH];
+        let mut addr = [0u8; Self::LENGTH];
         addr.copy_from_slice(bytes);
         Ok(AccountAddress(addr))
     }
 }
 
-impl TryFrom<&[u8; 32]> for AccountAddress {
+impl TryFrom<&[u8; AccountAddress::LENGTH]> for AccountAddress {
     type Error = Error;
 
     /// Tries to convert the provided byte array into Address.
-    fn try_from(bytes: &[u8; 32]) -> Result<AccountAddress> {
+    fn try_from(bytes: &[u8; Self::LENGTH]) -> Result<AccountAddress> {
         AccountAddress::try_from(&bytes[..])
     }
 }
@@ -159,6 +168,18 @@ impl From<AccountAddress> for Vec<u8> {
 impl From<&AccountAddress> for Vec<u8> {
     fn from(addr: &AccountAddress) -> Vec<u8> {
         addr.0.to_vec()
+    }
+}
+
+impl From<AccountAddress> for [u8; AccountAddress::LENGTH] {
+    fn from(addr: AccountAddress) -> Self {
+        addr.0
+    }
+}
+
+impl From<&AccountAddress> for [u8; AccountAddress::LENGTH] {
+    fn from(addr: &AccountAddress) -> Self {
+        addr.0
     }
 }
 
@@ -192,16 +213,6 @@ impl TryFrom<String> for AccountAddress {
     }
 }
 
-impl TryFrom<Bech32> for AccountAddress {
-    type Error = Error;
-
-    fn try_from(encoded_input: Bech32) -> Result<AccountAddress> {
-        let base32_hash = encoded_input.data();
-        let hash = Vec::from_base32(&base32_hash)?;
-        AccountAddress::try_from(&hash[..])
-    }
-}
-
 impl FromStr for AccountAddress {
     type Err = Error;
 
@@ -209,15 +220,6 @@ impl FromStr for AccountAddress {
         assert!(!s.is_empty());
         let bytes_out = ::hex::decode(s)?;
         AccountAddress::try_from(bytes_out.as_slice())
-    }
-}
-
-impl TryFrom<AccountAddress> for Bech32 {
-    type Error = Error;
-
-    fn try_from(addr: AccountAddress) -> Result<Bech32> {
-        let base32_hash = addr.0.to_base32();
-        bech32::Bech32::new(LIBRA_NETWORK_ID_SHORT.into(), base32_hash).map_err(Into::into)
     }
 }
 
@@ -230,8 +232,15 @@ impl<'de> Deserialize<'de> for AccountAddress {
             let s = <&str>::deserialize(deserializer)?;
             AccountAddress::from_str(s).map_err(D::Error::custom)
         } else {
-            let b = <[u8; ADDRESS_LENGTH]>::deserialize(deserializer)?;
-            Ok(AccountAddress::new(b))
+            // In order to preserve the Serde data model and help analysis tools,
+            // make sure to wrap our value in a container with the same name
+            // as the original type.
+            #[derive(::serde::Deserialize)]
+            #[serde(rename = "AccountAddress")]
+            struct Value([u8; AccountAddress::LENGTH]);
+
+            let value = Value::deserialize(deserializer)?;
+            Ok(AccountAddress::new(value.0))
         }
     }
 }
@@ -244,7 +253,8 @@ impl Serialize for AccountAddress {
         if serializer.is_human_readable() {
             self.to_string().serialize(serializer)
         } else {
-            self.0.serialize(serializer)
+            // See comment in deserialize.
+            serializer.serialize_newtype_struct("AccountAddress", &self.0)
         }
     }
 }

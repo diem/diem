@@ -1,8 +1,9 @@
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 main() {
-    let z: LibraCoin.T;
-    z = LibraCoin.zero();
+    let z: Libra.T<LBR.T>;
+    z = Libra.zero<LBR.T>();
     // z is allowed to be unused
     abort 0;
 }

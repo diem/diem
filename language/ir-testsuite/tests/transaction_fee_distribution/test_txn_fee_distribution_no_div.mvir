@@ -1,22 +1,44 @@
 // Number of validators doesn't evenly divide the transaction fees collected
 
+//! account: alice, 1000000, 0
 //! account: vivian, 1000000, 0, validator
 //! account: valentina, 1000000, 0, validator
+
 //! sender: vivian
+module BalanceHolder {
+    import 0x0.Vector;
+
+    resource T {
+        balances: vector<u64>,
+    }
+
+    public publish(balances: vector<u64>) {
+        move_to_sender<T>(T { balances: move(balances) });
+        return;
+    }
+
+    public get_balance(i: u64): u64 acquires T {
+        return *Vector.borrow<u64>(&borrow_global<T>(get_txn_sender()).balances, copy(i));
+    }
+}
+
+//! new-transaction
+//! sender: alice
+//! gas-price: 0
 
 import 0x0.LibraSystem;
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 import 0x0.Vector;
+import {{vivian}}.BalanceHolder;
 
 main() {
-  let lib_coin: LibraCoin.T;
+  let lib_coin: Libra.T<LBR.T>;
   let number_of_validators: u64;
   let index: u64;
   let addr: address;
-  let balances: Vector.T<u64>;
-  let old_balance: u64;
-  let new_balance: u64;
+  let balances: vector<u64>;
 
   index = 0;
   balances = Vector.empty<u64>();
@@ -26,7 +48,7 @@ main() {
   // balances vector. Withdraw a number that does not evenly divide the number of validators, this
   // also means that we need more than 1 validator in the validator set.
   assert(copy(number_of_validators) > 1, 0);
-  lib_coin = LibraAccount.withdraw_from_sender(copy(number_of_validators) * 10 + 1);
+  lib_coin = LibraAccount.withdraw_from_sender<LBR.T>(copy(number_of_validators) * 10 + 1);
 
   // Make the distribution check agnostic to the starting balances of the validators
   while (copy(index) < copy(number_of_validators)) {
@@ -34,27 +56,53 @@ main() {
       index = move(index) + 1;
       Vector.push_back<u64>(
           &mut balances,
-          LibraAccount.balance(move(addr))
+          LibraAccount.balance<LBR.T>(move(addr))
       );
   }
 
   index = 0;
 
-  LibraAccount.deposit({{fees}} , move(lib_coin));
-  LibraSystem.block_prologue(1, h"aa", h"bb", {{vivian}});
+  LibraAccount.deposit<LBR.T>({{fees}} , move(lib_coin));
+  BalanceHolder.publish(move(balances));
+  return;
+}
+//! check: EXECUTED
+
+//! block-prologue
+//! proposer: vivian
+//! block-time: 2
+
+//! new-transaction
+//! sender: alice
+import 0x0.LibraSystem;
+import 0x0.LibraAccount;
+import 0x0.LBR;
+import 0x0.Libra;
+import 0x0.Vector;
+import {{vivian}}.BalanceHolder;
+
+main() {
+  let addr: address;
+  let index: u64;
+  let number_of_validators: u64;
+  let old_balance: u64;
+  let new_balance: u64;
+
+  index = 0;
+  number_of_validators = LibraSystem.validator_set_size();
 
   while (copy(index) < copy(number_of_validators)) {
      addr = LibraSystem.get_ith_validator_address(copy(index));
-     new_balance = LibraAccount.balance(move(addr));
-     old_balance = *Vector.borrow<u64>(&balances, copy(index));
+     new_balance = LibraAccount.balance<LBR.T>(move(addr));
+     old_balance = BalanceHolder.get_balance(copy(index));
      index = move(index) + 1;
-     assert(move(new_balance) == (move(old_balance) + 10), 1);
+     assert(move(new_balance) == (move(old_balance) + 10), 77);
   }
 
   // The remainder in 0xFEE's balance must be less than the number of validators.
-  assert(LibraAccount.balance({{fees}}) < move(number_of_validators), 2);
+  assert(LibraAccount.balance<LBR.T>({{fees}}) < move(number_of_validators), 2);
   // And in this particular case, must be exactly equal to 1.
-  assert(LibraAccount.balance({{fees}}) == 1, 3);
+  assert(LibraAccount.balance<LBR.T>({{fees}}) == 1, 3);
 
   return;
 }

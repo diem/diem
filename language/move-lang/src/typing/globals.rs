@@ -1,14 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::core::Context;
+use super::core::{self, Context, Subst};
 use crate::{
-    naming::ast::{self as N, BaseType, BaseType_, TypeName_},
+    naming::ast::{self as N, Type, TypeName_, Type_},
     parser::ast::StructName,
     shared::*,
     typing::ast as T,
 };
-use std::collections::{BTreeSet, HashMap};
+use move_ir_types::location::*;
+use std::collections::BTreeSet;
 
 pub type Seen = BTreeSet<StructName>;
 
@@ -80,7 +81,7 @@ fn exp(
 ) {
     use T::UnannotatedExp_ as E;
     match &e.exp.value {
-        E::Use(_) => panic!("ICE should have been expanded"),
+        E::InferredNum(_) | E::Use(_) => panic!("ICE should have been expanded"),
 
         E::Unit
         | E::Value(_)
@@ -89,6 +90,7 @@ fn exp(
         | E::BorrowLocal(_, _)
         | E::Break
         | E::Continue
+        | E::Spec(_)
         | E::UnresolvedError => (),
 
         E::ModuleCall(call) if is_current_function(context, call) => {
@@ -148,7 +150,7 @@ fn exp(
         }
         E::ExpList(el) => exp_list(context, annotated_acquires, seen, el),
 
-        E::Annotate(e, _) => exp(context, annotated_acquires, seen, e),
+        E::Cast(e, _) | E::Annotate(e, _) => exp(context, annotated_acquires, seen, e),
     }
 }
 
@@ -178,10 +180,7 @@ fn exp_list_item(
 }
 
 fn is_current_function(context: &Context, call: &T::ModuleCall) -> bool {
-    match (&context.current_module, &context.current_function) {
-        (Some(m), Some(f)) => m == &call.module && f == &call.name,
-        _ => false,
-    }
+    context.is_current_function(&call.module, &call.name)
 }
 
 fn builtin_function(
@@ -253,7 +252,7 @@ pub fn check_global_access<'a, F>(
     context: &mut Context,
     loc: &Loc,
     msg: F,
-    global_type: &'a BaseType,
+    global_type: &'a Type,
 ) -> Option<&'a StructName>
 where
     F: Fn() -> String,
@@ -271,39 +270,42 @@ fn check_global_access_<'a, F>(
     context: &mut Context,
     loc: &Loc,
     msg: F,
-    global_type: &'a BaseType,
+    global_type: &'a Type,
 ) -> Option<&'a StructName>
 where
     F: Fn() -> String,
 {
-    use BaseType_ as B;
     use TypeName_ as TN;
+    use Type_ as T;
     let tloc = &global_type.loc;
     let (def_loc, declared_module, sn, resource_opt) = match &global_type.value {
-        B::Var(_) => panic!("ICE type expansion failed"),
-        B::Anything => {
-            assert!(context.has_errors());
+        T::Var(_) => panic!("ICE type expansion failed"),
+        T::Anything | T::UnresolvedError => {
             return None;
         }
-        B::Param(_) | B::Apply(_, sp!(_, TN::Builtin(_)), _) => {
-            let ty_debug = global_type.value.subst_format(&HashMap::new());
+        T::Apply(_, sp!(_, TN::ModuleType(m, s)), _args) => {
+            let def_loc = context.struct_declared_loc(m, s);
+            let resource_opt = context.resource_opt(m, s);
+            (def_loc, m.clone(), s, resource_opt)
+        }
+        T::Ref(_, _)
+        | T::Unit
+        | T::Param(_)
+        | T::Apply(_, sp!(_, TN::Multiple(_)), _)
+        | T::Apply(_, sp!(_, TN::Builtin(_)), _) => {
+            let ty_debug = core::error_format(global_type, &Subst::empty());
             let tmsg = format!("Expected a nominal resource. Found the type: {}", ty_debug);
 
             context.error(vec![(*loc, msg()), (*tloc, tmsg)]);
             return None;
         }
-        B::Apply(_, sp!(_, TN::ModuleType(m, s)), _args) => {
-            let def_loc = context.struct_declared_loc(m, s);
-            let resource_opt = context.resource_opt(m, s);
-            (def_loc, m.clone(), s, resource_opt)
-        }
     };
 
     match &context.current_module {
         Some(current_module) if current_module != &declared_module => {
-            let ty_debug = global_type.value.subst_format(&HashMap::new());
+            let ty_debug = core::error_format(global_type, &Subst::empty());
             let tmsg = format!(
-                "The type '{}' was not declared in the current module. Global storage access is \
+                "The type {} was not declared in the current module. Global storage access is \
                  internal to the module'",
                 ty_debug
             );
@@ -314,7 +316,7 @@ where
     }
 
     if resource_opt.is_none() {
-        let ty_debug = global_type.value.subst_format(&HashMap::new());
+        let ty_debug = core::error_format(global_type, &Subst::empty());
         let tmsg = format!("Expected a nominal resource. Found the type: {}", ty_debug);
 
         context.error(vec![

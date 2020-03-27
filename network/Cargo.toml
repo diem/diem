@@ -6,49 +6,49 @@ description = "Libra network"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"
-build = "build.rs"
 publish = false
 edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-bytes = "0.5.4"
+bytes = { version = "0.5.4", features = ["serde"] }
 futures = "0.3.0"
 once_cell = "1.3.1"
-parity-multiaddr = "0.7.1"
+parity-multiaddr = "0.7.2"
 pin-project = "0.4.2"
-prost = "0.6"
-prometheus = { version = "0.7.0", default-features = false }
+prometheus = { version = "0.8.0", default-features = false }
 rand = "0.6.5"
+serde = { version = "1.0.105", default-features = false }
+serde_repr = "0.1"
 thiserror = "1.0"
-tokio = { version = "0.2.8", features = ["full"] }
-tokio-util = { version = "0.2", features = ["codec"] }
+tokio = { version = "0.2.13", features = ["full"] }
+tokio-util = { version = "0.3", features = ["codec"] }
 tokio-retry = "0.2.0"
 
+bitvec = { path = "../common/bitvec", version = "0.1.0", package = "libra-bitvec" }
 channel = { path = "../common/channel", version = "0.1.0" }
+lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-config = { path = "../config", version = "0.1.0" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
-memsocket = { path = "memsocket", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
+libra-security-logger = { path = "../common/security-logger", version = "0.1.0" }
+memsocket = { path = "memsocket", version = "0.1.0" }
 netcore = { path = "netcore", version = "0.1.0" }
 noise = { path = "noise", version = "0.1.0" }
-libra-prost-ext = { path = "../common/prost-ext", version = "0.1.0" }
-
-proptest = { version = "0.9.4", default-features = false, optional = true }
 libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0", optional = true }
+proptest = { version = "0.9.4", default-features = true, optional = true }
 
 [dev-dependencies]
-criterion = "0.3.0"
+criterion = "=0.3.1"
+noise = { path = "noise", version = "0.1.0", features = ["testing"] }
 socket-bench-server = { path = "socket-bench-server", version = "0.1.0" }
-
-[build-dependencies]
-prost-build = "0.6"
 
 [features]
 default = []
 fuzzing = ["proptest", "libra-proptest-helpers", "libra-types/fuzzing"]
+testing = []
 
 [[bench]]
 name = "socket_muxer_bench"

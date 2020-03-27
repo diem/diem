@@ -3,13 +3,12 @@
 
 use super::core::{self, Context};
 use crate::{
-    naming::ast::{
-        BaseType, BaseType_, FunctionSignature, SingleType, SingleType_, TParam, Type, Type_,
-    },
-    parser::ast::{Kind, Kind_},
-    shared::*,
+    naming::ast::{BuiltinTypeName_, FunctionSignature, TParam, Type, Type_},
+    parser::ast::{Kind, Kind_, Value_},
     typing::ast as T,
 };
+use move_ir_types::location::*;
+use std::convert::TryInto;
 
 //**************************************************************************************************
 // Functions
@@ -24,106 +23,73 @@ pub fn function_body_(context: &mut Context, b_: &mut T::FunctionBody_) {
 
 pub fn function_signature(context: &mut Context, sig: &mut FunctionSignature) {
     for (_, st) in &mut sig.parameters {
-        single_type(context, st);
+        type_(context, st);
     }
-    type_(context, &mut sig.return_type)
+    type_(context, &mut sig.return_type);
 }
 
 //**************************************************************************************************
 // Types
 //**************************************************************************************************
 
-fn type_(context: &mut Context, ty: &mut Type) {
-    use Type_::*;
-    match &mut ty.value {
-        Unit => (),
-        Multiple(ss) => single_types(context, ss),
-        Single(s) => single_type(context, s),
-    }
-}
-
-fn expected_types(context: &mut Context, ss: &mut Vec<Option<SingleType>>) {
+fn expected_types(context: &mut Context, ss: &mut Vec<Option<Type>>) {
     for st_opt in ss {
         if let Some(ss) = st_opt {
-            single_type(context, ss)
+            type_(context, ss);
         }
     }
 }
 
-fn single_types(context: &mut Context, ss: &mut Vec<SingleType>) {
+fn types(context: &mut Context, ss: &mut Vec<Type>) {
     for st in ss {
-        single_type(context, st)
+        type_(context, st);
     }
 }
 
-fn single_type(context: &mut Context, st: &mut SingleType) {
-    use SingleType_::*;
-    match &mut st.value {
-        Ref(_, b) | Base(b) => base_type(context, b),
-    }
-}
-
-fn base_types(context: &mut Context, bs: &mut Vec<BaseType>) {
-    for bt in bs {
-        base_type(context, bt)
-    }
-}
-
-pub fn base_type(context: &mut Context, bt: &mut BaseType) {
-    use BaseType_ as B;
-    match &mut bt.value {
-        B::Var(tvar) => {
-            let btvar = sp(bt.loc, B::Var(*tvar));
-            let replacement = core::unfold_type_base(&context.subst, btvar);
-            match &replacement {
-                sp!(_, B::Var(_)) => panic!("ICE unfold_type_base failed to expand"),
-                sp!(_, B::Anything) => {
-                    context.error(
-                        // TODO maybe try to point to which type parameter this tvar is for
-                        vec![(
-                            bt.loc,
-                            "Could not infer this type. Try adding an annotation",
-                        )],
-                    )
+pub fn type_(context: &mut Context, ty: &mut Type) {
+    use Type_::*;
+    match &mut ty.value {
+        Anything | UnresolvedError | Param(_) | Unit => (),
+        Ref(_, b) => type_(context, b),
+        Var(tvar) => {
+            let ty_tvar = sp(ty.loc, Var(*tvar));
+            let replacement = core::unfold_type(&context.subst, ty_tvar);
+            let replacement = match replacement {
+                sp!(_, Var(_)) => panic!("ICE unfold_type_base failed to expand"),
+                sp!(loc, Anything) => {
+                    context.error(vec![(
+                        ty.loc,
+                        "Could not infer this type. Try adding an annotation",
+                    )]);
+                    sp(loc, UnresolvedError)
                 }
-                _ => (),
-            }
-            *bt = replacement;
-            base_type(context, bt)
+                t => t,
+            };
+            *ty = replacement;
+            type_(context, ty);
         }
-        B::Apply(Some(_), _, bs) => base_types(context, bs),
-        B::Apply(_, _, _) => {
-            let kind = core::infer_kind_base(&context, &context.subst, bt.clone()).unwrap();
-            match &mut bt.value {
-                B::Apply(k_opt, _, bs) => {
+        Apply(Some(_), _, tys) => types(context, tys),
+        Apply(_, _, _) => {
+            let kind = core::infer_kind(&context, &context.subst, ty.clone()).unwrap();
+            match &mut ty.value {
+                Apply(k_opt, _, bs) => {
                     *k_opt = Some(kind);
-                    base_types(context, bs);
+                    types(context, bs);
                 }
                 _ => panic!("ICE impossible. tapply switched to nontapply"),
             }
         }
-        B::Param(_) => (),
-        // TODO might want to add a flag to Anything for reporting errors or not
-        B::Anything => (),
     }
 }
 
-fn get_kind(s: &SingleType) -> Kind {
-    use SingleType_ as S;
-    match &s.value {
-        S::Ref(_, _) => sp(s.loc, Kind_::Unrestricted),
-        S::Base(b) => get_kind_base(b),
-    }
-}
-
-fn get_kind_base(b: &BaseType) -> Kind {
-    use BaseType_ as B;
-    match b {
-        sp!(_, B::Var(_)) => panic!("ICE unexpanded type"),
-        sp!(loc, B::Anything) => sp(*loc, Kind_::Unrestricted),
-        sp!(_, B::Param(TParam { kind, .. })) => kind.clone(),
-        sp!(_, B::Apply(Some(kind), _, _)) => kind.clone(),
-        sp!(_, B::Apply(None, _, _)) => panic!("ICE unexpanded type"),
+fn get_kind(sp!(loc, ty_): &Type) -> Kind {
+    use Type_::*;
+    match ty_ {
+        Anything | UnresolvedError | Unit | Ref(_, _) => sp(*loc, Kind_::Unrestricted),
+        Var(_) => panic!("ICE unexpanded type"),
+        Param(TParam { kind, .. }) => kind.clone(),
+        Apply(Some(kind), _, _) => kind.clone(),
+        Apply(None, _, _) => panic!("ICE unexpanded type"),
     }
 }
 
@@ -142,9 +108,9 @@ fn sequence_item(context: &mut Context, item: &mut T::SequenceItem) {
     match &mut item.value {
         S::Seq(te) => exp(context, te),
 
-        S::Declare(tbind) => bind_list(context, tbind),
+        S::Declare(tbind) => lvalues(context, tbind),
         S::Bind(tbind, tys, te) => {
-            bind_list(context, tbind);
+            lvalues(context, tbind);
             expected_types(context, tys);
             exp(context, te)
         }
@@ -153,32 +119,92 @@ fn sequence_item(context: &mut Context, item: &mut T::SequenceItem) {
 
 fn exp(context: &mut Context, e: &mut T::Exp) {
     use T::UnannotatedExp_ as E;
-    // dont expand the type for return or abort
     match &e.exp.value {
-        E::Break | E::Continue | E::Return(_) | E::Abort(_) => match &e.ty.value {
-            Type_::Single(sp!(_, SingleType_::Base(sp!(_, BaseType_::Anything)))) => (),
-            _ => {
-                let t = &mut e.ty;
-                type_(context, t);
-                *t = Type_::anything(t.loc);
+        // dont expand the type for return, abort, break, or continue
+        E::Break | E::Continue | E::Return(_) | E::Abort(_) => {
+            let t = e.ty.clone();
+            match core::unfold_type(&context.subst, t) {
+                sp!(_, Type_::Anything) => (),
+                mut t => {
+                    // report errors if there is an uninferred type argument somewhere
+                    type_(context, &mut t);
+                }
             }
-        },
+            e.ty = sp(e.ty.loc, Type_::Anything)
+        }
+        // Loop's default type is ()
+        E::Loop {
+            has_break: false, ..
+        } => {
+            let t = e.ty.clone();
+            match core::unfold_type(&context.subst, t) {
+                sp!(_, Type_::Anything) => (),
+                mut t => {
+                    // report errors if there is an uninferred type argument somewhere
+                    type_(context, &mut t);
+                }
+            }
+            e.ty = sp(e.ty.loc, Type_::Anything)
+        }
         _ => type_(context, &mut e.ty),
     }
     match &mut e.exp.value {
         E::Use(v) => {
-            let st = match &e.ty.value {
-                Type_::Unit | Type_::Multiple(_) => {
-                    panic!("ICE vars cannot have unit/multiple types")
-                }
-                Type_::Single(st) => st,
-            };
             let from_user = false;
             let var = v.clone();
-            e.exp.value = match get_kind(st).value {
+            e.exp.value = match get_kind(&e.ty).value {
                 Kind_::Unrestricted => E::Copy { from_user, var },
                 Kind_::Unknown | Kind_::Affine | Kind_::Resource => E::Move { from_user, var },
             }
+        }
+        E::InferredNum(v) => {
+            use BuiltinTypeName_ as BT;
+            let bt = match e.ty.value.builtin_name() {
+                Some(sp!(_, bt)) if bt.is_numeric() => bt,
+                _ => panic!("ICE inferred num failed {:?}", &e.ty.value),
+            };
+            let v = *v;
+            let u8_max = std::u8::MAX as u128;
+            let u64_max = std::u64::MAX as u128;
+            let u128_max = std::u128::MAX;
+            let max = match bt {
+                BT::U8 => u8_max,
+                BT::U64 => u64_max,
+                BT::U128 => u128_max,
+                _ => unreachable!(),
+            };
+            let new_exp = if v > max {
+                let msg = format!(
+                    "Expected a literal of type '{}', but the value is too large.",
+                    bt
+                );
+                let fix_bt = if v > u64_max {
+                    BT::U128
+                } else {
+                    assert!(v > u8_max);
+                    BT::U64
+                };
+                let fix = format!(
+                    "Annotating the literal might help inference: '{value}{type}'",
+                    value=v,
+                    type=fix_bt,
+                );
+                context.error(vec![
+                    (e.exp.loc, "Invalid numerical literal".into()),
+                    (e.ty.loc, msg),
+                    (e.exp.loc, fix),
+                ]);
+                E::UnresolvedError
+            } else {
+                let value_ = match bt {
+                    BT::U8 => Value_::U8(v.try_into().unwrap()),
+                    BT::U64 => Value_::U64(v.try_into().unwrap()),
+                    BT::U128 => Value_::U128(v),
+                    _ => unreachable!(),
+                };
+                E::Value(sp(e.exp.loc, value_))
+            };
+            e.exp.value = new_exp;
         }
 
         E::Unit
@@ -188,6 +214,7 @@ fn exp(context: &mut Context, e: &mut T::Exp) {
         | E::BorrowLocal(_, _)
         | E::Break
         | E::Continue
+        | E::Spec(_)
         | E::UnresolvedError => (),
 
         E::ModuleCall(call) => module_call(context, call),
@@ -208,7 +235,7 @@ fn exp(context: &mut Context, e: &mut T::Exp) {
         E::Loop { body: eloop, .. } => exp(context, eloop),
         E::Block(seq) => sequence(context, seq),
         E::Assign(assigns, tys, er) => {
-            assign_list(context, assigns);
+            lvalues(context, assigns);
             expected_types(context, tys);
             exp(context, er);
         }
@@ -226,78 +253,51 @@ fn exp(context: &mut Context, e: &mut T::Exp) {
         E::BinopExp(el, _, operand_ty, er) => {
             exp(context, el);
             exp(context, er);
-            type_(context, operand_ty)
+            type_(context, operand_ty);
         }
 
         E::Pack(_, _, bs, fields) => {
-            base_types(context, bs);
+            types(context, bs);
             for (_, (_, (bt, fe))) in fields.iter_mut() {
-                base_type(context, bt);
+                type_(context, bt);
                 exp(context, fe)
             }
         }
         E::ExpList(el) => exp_list(context, el),
-        E::Annotate(el, rhs_ty) => {
+        E::Cast(el, rhs_ty) | E::Annotate(el, rhs_ty) => {
             exp(context, el);
             type_(context, rhs_ty);
         }
     }
 }
 
-fn bind_list(context: &mut Context, binds: &mut T::BindList) {
+fn lvalues(context: &mut Context, binds: &mut T::LValueList) {
     for b in &mut binds.value {
-        bind(context, b)
+        lvalue(context, b)
     }
 }
 
-fn bind(context: &mut Context, b: &mut T::Bind) {
-    use T::Bind_ as B;
+fn lvalue(context: &mut Context, b: &mut T::LValue) {
+    use T::LValue_ as L;
     match &mut b.value {
-        B::Ignore => (),
-        B::Var(v, None) => {
-            let msg = format!(
-                "Unused local '{0}'. Consider removing or prefixing with an underscore: '_{0}'",
-                v
-            );
-            context.error(vec![(b.loc, msg)]);
-            b.value = B::Ignore
+        L::Ignore => (),
+        L::Var(_, ty) => {
+            type_(context, ty);
         }
-        B::Var(_, Some(st)) => single_type(context, st),
-        B::BorrowUnpack(_, _, _, bts, fields) | B::Unpack(_, _, bts, fields) => {
-            base_types(context, bts);
+        L::BorrowUnpack(_, _, _, bts, fields) | L::Unpack(_, _, bts, fields) => {
+            types(context, bts);
             for (_, (_, (bt, innerb))) in fields.iter_mut() {
-                base_type(context, bt);
-                bind(context, innerb)
-            }
-        }
-    }
-}
-
-fn assign_list(context: &mut Context, assigns: &mut T::AssignList) {
-    for a in &mut assigns.value {
-        assign(context, a)
-    }
-}
-
-fn assign(context: &mut Context, a: &mut T::Assign) {
-    use T::Assign_ as A;
-    match &mut a.value {
-        A::Ignore => (),
-        A::Var(_, st) => single_type(context, st),
-        A::Unpack(_, _, bts, fields) | A::BorrowUnpack(_, _, _, bts, fields) => {
-            base_types(context, bts);
-            for (_, (_, (bt, innera))) in fields.iter_mut() {
-                base_type(context, bt);
-                assign(context, innera)
+                type_(context, bt);
+                lvalue(context, innerb)
             }
         }
     }
 }
 
 fn module_call(context: &mut Context, call: &mut T::ModuleCall) {
-    base_types(context, &mut call.type_arguments);
+    types(context, &mut call.type_arguments);
     exp(context, &mut call.arguments);
-    single_types(context, &mut call.parameter_types)
+    types(context, &mut call.parameter_types)
 }
 
 fn builtin_function(context: &mut Context, b: &mut T::BuiltinFunction) {
@@ -307,7 +307,9 @@ fn builtin_function(context: &mut Context, b: &mut T::BuiltinFunction) {
         | B::MoveFrom(bt)
         | B::BorrowGlobal(_, bt)
         | B::Exists(bt)
-        | B::Freeze(bt) => base_type(context, bt),
+        | B::Freeze(bt) => {
+            type_(context, bt);
+        }
     }
 }
 
@@ -322,11 +324,11 @@ fn exp_list_item(context: &mut Context, item: &mut T::ExpListItem) {
     match item {
         I::Single(e, st) => {
             exp(context, e);
-            single_type(context, st);
+            type_(context, st);
         }
         I::Splat(_, e, ss) => {
             exp(context, e);
-            single_types(context, ss);
+            types(context, ss);
         }
     }
 }

@@ -1,4 +1,5 @@
 module Test {
-    import 0x0.LibraCoin;
-    resource T{fint: LibraCoin.T}
+    import 0x0.LBR;
+    import 0x0.Libra;
+    resource T{fint: Libra.T<LBR.T>}
 }

@@ -6,11 +6,11 @@ publish = false
 edition = "2018"
 
 [dependencies]
-codespan = "0.5.0"
-codespan-reporting = "0.5.0"
-hex = "0.4.1"
-regex = "1.1.6"
-structopt = "0.3.3"
+codespan = "0.8.0"
+codespan-reporting = "0.8.0"
+hex = "0.4.2"
+regex = "1.3.5"
+structopt = "0.3.12"
 difference = "2.0"
 petgraph = "0.5.0"
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
@@ -18,7 +18,11 @@ datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
 move-vm = { path = "../vm", package = "vm" }
 move-bytecode-verifier = { path = "../bytecode-verifier", package = "bytecode-verifier" }
 libra-types = { path = "../../types" }
+move-ir-types = {path = "../move-ir/types" }
+ir-to-bytecode = {path = "../compiler/ir-to-bytecode" }
 borrow-graph = { path = "../borrow-graph" }
+bytecode-source-map = { path = "../compiler/bytecode-source-map" }
+
 
 [dev-dependencies]
 anyhow = "1.0"

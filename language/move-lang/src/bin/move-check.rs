@@ -3,8 +3,10 @@
 
 #![forbid(unsafe_code)]
 
-use move_lang::command_line::{self as cli};
-use move_lang::shared::*;
+use move_lang::{
+    command_line::{self as cli},
+    shared::*,
+};
 use structopt::*;
 
 #[derive(Debug, StructOpt)]

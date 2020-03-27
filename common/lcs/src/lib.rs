@@ -143,7 +143,7 @@
 //! Structures are fixed length sequences consisting of fields with potentially different types.
 //! Each field within a struct is serialized in the order specified by the canonical structure
 //! definition. Structs can exist within other structs and as such, LCS recurses into each struct
-//! ans serializes them in order. There are no labels in the serialized format, the struct ordering
+//! and serializes them in order. There are no labels in the serialized format, the struct ordering
 //! defines the organization within the serialization stream.
 //!
 //! ```rust
@@ -247,10 +247,11 @@
 mod de;
 mod error;
 mod ser;
+pub mod test_helpers;
 
 /// Variable length sequences in LCS are limited to max length of 2^31
 pub const MAX_SEQUENCE_LENGTH: usize = 1 << 31;
 
 pub use de::{from_bytes, from_bytes_seed};
 pub use error::{Error, Result};
-pub use ser::to_bytes;
+pub use ser::{is_human_readable, to_bytes};

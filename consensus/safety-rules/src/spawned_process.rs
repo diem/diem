@@ -10,7 +10,6 @@ use std::{
     net::SocketAddr,
     process::{Child, Command, Stdio},
 };
-use workspace_builder;
 
 const BINARY: &str = "safety-rules";
 

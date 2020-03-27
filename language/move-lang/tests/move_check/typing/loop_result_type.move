@@ -21,8 +21,9 @@ module M {
 
     fun foo(x: u64) {}
 
-    fun t3() {
-        let x = loop { 0; };
+    fun t3(): X::R {
+        let x: X::R = loop { 0; };
+        x
     }
 
     fun t4() {

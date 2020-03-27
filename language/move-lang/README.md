@@ -17,15 +17,44 @@ Move source language is an ergonomic language for writing Modules and Scripts th
 Move source language is an expression-based language that aims to simplify writing Move programs---modules and scripts---without hiding the core concepts in Move bytecode.
 
 Currently, there are command line tools for Move.
+
 * Move Check is used for checking code, but it does not generate bytecode
 * Move Build is used for checking and then compiling to bytecode
+
 In the future there should be other utilities for testing and play grounding the Move modules.
 
 There is unfortunately no documentation for the language syntax or features. See the stdlib for examples.
 
+## Design Principles
+
+### Mission
+
+Deliver a minimalistic, expressive, safe, and transparent language to produce--and link with--Move bytecode.
+
+### Primary Principles
+
+* **More Concise than Bytecode** Move is expression based, which lends itself to concise and composed programs without the need for extra locals or structure. The Move bytecode is stack based (with the addition of local variables), so a language without stack access would need to be more verbose than the bytecode. In the Move source language, expressions allow for programming directly on the stack in a controlled and safe mode, and in that way, the language gives the same level of functionality as the bytecode but in a more concise and readable environment.
+
+* **Move Bytecode Transparency** The Move source language tries to lift up concepts in the Move bytecode into a source language; it is not trying to hide them. The bytecode already has some strong opinions (much stronger than you might expect to find in a bytecode language), and the source language is trying to keep that programming model and line of thinking. The intention of this principle is to remove the need to write bytecode directly. Additionally, this means full interoperability with functions and types declared in published modules.
+
+* **Stricter than Bytecode** The source language often adds additional levels of restrictions. At an expression level, this means no arbitrary manipulation of the stack (only can do so through expressions), and no dead code or unused effects. At a module level, this could mean additional warnings for unused types or un-invocable functions. At a conceptual/program level, this will also mean adding integration for formal verification.
+
+### Secondary Principles
+
+* **Pathway of Learning** Syntax choices and error messages are intended to give a natural flow of learning. For example, some of the choices around expression syntax could be changed to be more familiar to various other languages, but they would hurt the plug-n-play feeling of the expression based syntax, which might hurt developing a deeper understanding of the Move source language.
+
+* **Aiding Common Community Patterns** As Move becomes more heavily used, common patterns for modules are likely to appear. Move might add new language features to make these patterns easier, clearer, or safer. But, they will not be added if it violates some other key design goal/principle of the language.
+
+* **Semantic Preserving Optimizations** Optimizations are an important developer tool, as they let a programmer write code in a more natural way. However, all of the optimizations performed must be semantic preserving, to prevent any catastrophic exploits or errors from occurring in optimized code. That being said, it is not the primary goal of the Move source language to produce *heavily* optimized code, but it is a nice feature to have.
+
+### Non-Principles
+
+* **Heavy Abstractions** The Move source language does not intend to hide the details of the Move bytecode, this ranges from everything of references to global storage. There might be some abstractions that make interacting with these items easier, but they should always be available in Move at their most basic (bytecode equivalent) level. This does not mean that conveniences currently given by the source language, such as easy field access or implicit freezing, are against the core set of principles, but only that conveniences should not be ambiguous or opaque in how they interact at the bytecode level. Note though, this does not preclude the addition of features to the lanugage, such as access modifiers that translate to compiler-generated dynamic checks. It is just that it is not an active goal of the language to add on heavy abstractions just for the sake of obscuring bytecode design choices.
+
 ## Command-line options
 
 The two available programs are Move check and Move build.
+
 * They can be built using `cargo build -p move-lang`
 * Or run directly with
   * `cargo run -p move-lang --bin move-check -- [ARGS]`

@@ -18,13 +18,14 @@ bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 utils = { path = "../utils", version = "0.1.0" }
 stdlib = { path = "../../stdlib", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }
+move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
-vm-runtime = { path = "../../vm/vm-runtime", version = "0.1.0" }
-vm-runtime-types = { path = "../../vm/vm-runtime/vm-runtime-types", version = "0.1.0" }
+move-core-types = { path = "../../move-core/types", version = "0.1.0" }
+move-vm-runtime = { path = "../../move-vm/runtime", version = "0.1.0" }
+move-vm-state = { path = "../../move-vm/state", version = "0.1.0" }
 language-e2e-tests = { path = "../../e2e-tests", version = "0.1.0" }
-vm-cache-map = { path = "../../vm/vm-runtime/vm-cache-map", version = "0.1.0" }
 libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0", features = ["cloneable-private-keys"] }
-structopt = "0.3.2"
+structopt = "0.3.12"
 
 [features]
-default = ["vm-runtime/instruction_synthesis"]
+default = ["move-vm-runtime/instruction_synthesis"]

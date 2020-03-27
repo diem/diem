@@ -5,12 +5,12 @@ use crate::vm_validator::TransactionValidation;
 use anyhow::Result;
 use libra_state_view::StateView;
 use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
+    account_address::AccountAddress,
     transaction::SignedTransaction,
     vm_error::{StatusCode, VMStatus},
 };
+use libra_vm::VMVerifier;
 use std::convert::TryFrom;
-use vm_runtime::VMVerifier;
 
 #[derive(Clone)]
 pub struct MockVMValidator;
@@ -35,18 +35,20 @@ impl TransactionValidation for MockVMValidator {
         };
 
         let sender = txn.sender();
-        let account_dne_test_add = AccountAddress::try_from(&[0 as u8; ADDRESS_LENGTH]).unwrap();
-        let invalid_sig_test_add = AccountAddress::try_from(&[1 as u8; ADDRESS_LENGTH]).unwrap();
+        let account_dne_test_add =
+            AccountAddress::try_from(&[0 as u8; AccountAddress::LENGTH]).unwrap();
+        let invalid_sig_test_add =
+            AccountAddress::try_from(&[1 as u8; AccountAddress::LENGTH]).unwrap();
         let insufficient_balance_test_add =
-            AccountAddress::try_from(&[2 as u8; ADDRESS_LENGTH]).unwrap();
+            AccountAddress::try_from(&[2 as u8; AccountAddress::LENGTH]).unwrap();
         let seq_number_too_new_test_add =
-            AccountAddress::try_from(&[3 as u8; ADDRESS_LENGTH]).unwrap();
+            AccountAddress::try_from(&[3 as u8; AccountAddress::LENGTH]).unwrap();
         let seq_number_too_old_test_add =
-            AccountAddress::try_from(&[4 as u8; ADDRESS_LENGTH]).unwrap();
+            AccountAddress::try_from(&[4 as u8; AccountAddress::LENGTH]).unwrap();
         let txn_expiration_time_test_add =
-            AccountAddress::try_from(&[5 as u8; ADDRESS_LENGTH]).unwrap();
+            AccountAddress::try_from(&[5 as u8; AccountAddress::LENGTH]).unwrap();
         let invalid_auth_key_test_add =
-            AccountAddress::try_from(&[6 as u8; ADDRESS_LENGTH]).unwrap();
+            AccountAddress::try_from(&[6 as u8; AccountAddress::LENGTH]).unwrap();
         let ret = if sender == account_dne_test_add {
             Some(VMStatus::new(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST))
         } else if sender == invalid_sig_test_add {

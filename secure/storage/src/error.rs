@@ -4,15 +4,16 @@
 use serde::{Deserialize, Serialize};
 use std::io;
 use thiserror::Error;
-use toml;
 
 #[derive(Debug, Deserialize, Error, PartialEq, Serialize)]
 pub enum Error {
+    #[error("Entropy error: {0}")]
+    EntropyError(String),
     #[error("Internal error: {0}")]
     InternalError(String),
-    #[error("Key not set: {0}")]
-    KeyAlreadyExists(String),
     #[error("Key already exists: {0}")]
+    KeyAlreadyExists(String),
+    #[error("Key not set: {0}")]
     KeyNotSet(String),
     #[error("Permission denied")]
     PermissionDenied,
@@ -20,10 +21,18 @@ pub enum Error {
     SerializationError(String),
     #[error("Unexpected value type")]
     UnexpectedValueType,
+    #[error("Key version not found: {0}")]
+    KeyVersionNotFound(String),
 }
 
 impl From<base64::DecodeError> for Error {
     fn from(error: base64::DecodeError) -> Self {
+        Self::SerializationError(format!("{}", error))
+    }
+}
+
+impl From<chrono::format::ParseError> for Error {
+    fn from(error: chrono::format::ParseError) -> Self {
         Self::SerializationError(format!("{}", error))
     }
 }

@@ -32,9 +32,8 @@
 use crate::{traits::*, HashValue};
 use anyhow::{anyhow, Result};
 use core::convert::TryFrom;
-use ed25519_dalek;
 use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fmt};
 
 /// The length of the Ed25519PrivateKey
 pub const ED25519_PRIVATE_KEY_LENGTH: usize = ed25519_dalek::SECRET_KEY_LENGTH;
@@ -61,7 +60,7 @@ static_assertions::assert_not_impl_any!(Ed25519PrivateKey: Clone);
 pub struct Ed25519PublicKey(ed25519_dalek::PublicKey);
 
 /// An Ed25519 signature
-#[derive(DeserializeKey, Clone, Debug, SerializeKey)]
+#[derive(DeserializeKey, Clone, SerializeKey)]
 pub struct Ed25519Signature(ed25519_dalek::Signature);
 
 impl Ed25519PrivateKey {
@@ -199,7 +198,9 @@ impl TryFrom<&[u8]> for Ed25519PrivateKey {
 }
 
 impl Length for Ed25519PrivateKey {
-    const LENGTH: usize = ed25519_dalek::SECRET_KEY_LENGTH;
+    fn length(&self) -> usize {
+        ED25519_PRIVATE_KEY_LENGTH
+    }
 }
 
 impl ValidKey for Ed25519PrivateKey {
@@ -222,8 +223,8 @@ impl Genesis for Ed25519PrivateKey {
 
 // Implementing From<&PrivateKey<...>> allows to derive a public key in a more elegant fashion
 impl From<&Ed25519PrivateKey> for Ed25519PublicKey {
-    fn from(secret_key: &Ed25519PrivateKey) -> Self {
-        let secret: &ed25519_dalek::SecretKey = &secret_key.0;
+    fn from(private_key: &Ed25519PrivateKey) -> Self {
+        let secret: &ed25519_dalek::SecretKey = &private_key.0;
         let public: ed25519_dalek::PublicKey = secret.into();
         Ed25519PublicKey(public)
     }
@@ -257,14 +258,14 @@ impl VerifyingKey for Ed25519PublicKey {
     type SignatureMaterial = Ed25519Signature;
 }
 
-impl std::fmt::Display for Ed25519PublicKey {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Ed25519PublicKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", hex::encode(&self.0.as_bytes()))
     }
 }
 
-impl std::fmt::Debug for Ed25519PublicKey {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for Ed25519PublicKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Ed25519PublicKey({})", self)
     }
 }
@@ -303,7 +304,9 @@ impl TryFrom<&[u8]> for Ed25519PublicKey {
 }
 
 impl Length for Ed25519PublicKey {
-    const LENGTH: usize = ed25519_dalek::PUBLIC_KEY_LENGTH;
+    fn length(&self) -> usize {
+        ED25519_PUBLIC_KEY_LENGTH
+    }
 }
 
 impl ValidKey for Ed25519PublicKey {
@@ -368,7 +371,9 @@ impl Signature for Ed25519Signature {
 }
 
 impl Length for Ed25519Signature {
-    const LENGTH: usize = ED25519_SIGNATURE_LENGTH;
+    fn length(&self) -> usize {
+        ED25519_SIGNATURE_LENGTH
+    }
 }
 
 impl ValidKey for Ed25519Signature {
@@ -379,8 +384,8 @@ impl ValidKey for Ed25519Signature {
 
 impl std::hash::Hash for Ed25519Signature {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        let encoded_pubkey = self.to_bytes();
-        state.write(&encoded_pubkey);
+        let encoded_signature = self.to_bytes();
+        state.write(&encoded_signature);
     }
 }
 
@@ -401,6 +406,18 @@ impl PartialEq for Ed25519Signature {
 }
 
 impl Eq for Ed25519Signature {}
+
+impl fmt::Display for Ed25519Signature {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", hex::encode(&self.0.to_bytes()[..]))
+    }
+}
+
+impl fmt::Debug for Ed25519Signature {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Ed25519Signature({})", self)
+    }
+}
 
 /// Check if S < L to capture invalid signatures.
 fn check_s_lt_l(s: &[u8]) -> bool {

@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use futures::{
-    future::Future,
+    future::{self, Future},
     io::{AsyncRead, AsyncWrite},
     sink::SinkExt,
     stream::{Stream, StreamExt},
@@ -12,7 +12,7 @@ use futures::{
 use memsocket::MemorySocket;
 use netcore::{
     compat::IoCompat,
-    multiplexing::{yamux::Yamux, StreamMultiplexer},
+    multiplexing::{yamux::Yamux, Control, StreamMultiplexer},
     transport::{
         memory::MemoryTransport,
         tcp::{TcpSocket, TcpTransport},
@@ -79,13 +79,10 @@ impl Args {
 
 /// Build a MemorySocket + Noise transport
 pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseSocket<MemorySocket>> {
-    MemoryTransport::default().and_then(move |socket, origin| {
-        async move {
-            let noise_config = Arc::new(NoiseConfig::new_random());
-            let (_remote_static_key, socket) =
-                noise_config.upgrade_connection(socket, origin).await?;
-            Ok(socket)
-        }
+    MemoryTransport::default().and_then(move |socket, origin| async move {
+        let noise_config = Arc::new(NoiseConfig::new_random());
+        let (_remote_static_key, socket) = noise_config.upgrade_connection(socket, origin).await?;
+        Ok(socket)
     })
 }
 
@@ -101,14 +98,16 @@ pub fn build_memsocket_dual_muxed_transport() -> impl Transport<Output = impl St
         .and_then(move |socket, origin| {
             async move {
                 let substream;
+                let (mut listener, mut control) = socket.start().await;
                 if origin == ConnectionOrigin::Outbound {
                     // Open outbound substream.
-                    substream = socket.open_outbound().await.unwrap();
+                    substream = control.open_stream().await.unwrap();
                 } else {
                     // Wait for inbound client substream.
-                    let mut inbounds = socket.listen_for_inbound();
-                    substream = inbounds.next().await.unwrap().unwrap();
+                    substream = listener.next().await.unwrap().unwrap();
                 }
+                // Spawn listener to avoid closing the underlying connection.
+                tokio::spawn(listener.for_each(|_| future::ready(())));
                 Yamux::upgrade_connection(substream, origin).await
             }
         })
@@ -117,26 +116,21 @@ pub fn build_memsocket_dual_muxed_transport() -> impl Transport<Output = impl St
 /// Build a MemorySocket + Noise + Muxer transport
 pub fn build_memsocket_noise_muxer_transport() -> impl Transport<Output = impl StreamMultiplexer> {
     MemoryTransport::default()
-        .and_then(move |socket, origin| {
-            async move {
-                let noise_config = Arc::new(NoiseConfig::new_random());
-                let (_remote_static_key, socket) =
-                    noise_config.upgrade_connection(socket, origin).await?;
-                Ok(socket)
-            }
+        .and_then(move |socket, origin| async move {
+            let noise_config = Arc::new(NoiseConfig::new_random());
+            let (_remote_static_key, socket) =
+                noise_config.upgrade_connection(socket, origin).await?;
+            Ok(socket)
         })
         .and_then(Yamux::upgrade_connection)
 }
 
 /// Build a Tcp + Noise transport
 pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseSocket<TcpSocket>> {
-    TcpTransport::default().and_then(move |socket, origin| {
-        async move {
-            let noise_config = Arc::new(NoiseConfig::new_random());
-            let (_remote_static_key, socket) =
-                noise_config.upgrade_connection(socket, origin).await?;
-            Ok(socket)
-        }
+    TcpTransport::default().and_then(move |socket, origin| async move {
+        let noise_config = Arc::new(NoiseConfig::new_random());
+        let (_remote_static_key, socket) = noise_config.upgrade_connection(socket, origin).await?;
+        Ok(socket)
     })
 }
 
@@ -148,13 +142,11 @@ pub fn build_tcp_muxer_transport() -> impl Transport<Output = impl StreamMultipl
 /// Build a Tcp + Noise + Muxer transport
 pub fn build_tcp_noise_muxer_transport() -> impl Transport<Output = impl StreamMultiplexer> {
     TcpTransport::default()
-        .and_then(move |socket, origin| {
-            async move {
-                let noise_config = Arc::new(NoiseConfig::new_random());
-                let (_remote_static_key, socket) =
-                    noise_config.upgrade_connection(socket, origin).await?;
-                Ok(socket)
-            }
+        .and_then(move |socket, origin| async move {
+            let noise_config = Arc::new(NoiseConfig::new_random());
+            let (_remote_static_key, socket) =
+                noise_config.upgrade_connection(socket, origin).await?;
+            Ok(socket)
         })
         .and_then(Yamux::upgrade_connection)
 }
@@ -191,10 +183,9 @@ where
     // Wait for next inbound connection
     while let Some(Ok((f_muxer, _client_addr))) = server_listener.next().await {
         let muxer = f_muxer.await.unwrap();
-
+        let (mut listener, _control) = muxer.start().await;
         // Wait for inbound client substream
-        let mut muxer_inbounds = muxer.listen_for_inbound();
-        let substream = muxer_inbounds.next().await.unwrap().unwrap();
+        let substream = listener.next().await.unwrap().unwrap();
         let mut stream = Framed::new(IoCompat::new(substream), LengthDelimitedCodec::new());
 
         // Drain all messages from the client.

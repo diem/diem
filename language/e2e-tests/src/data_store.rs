@@ -12,18 +12,17 @@ use libra_types::{
     transaction::{Transaction, TransactionPayload},
     write_set::{WriteOp, WriteSet},
 };
+use move_vm_state::data_cache::RemoteCache;
+use move_vm_types::values::Struct;
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, fs::File, io::prelude::*, path::PathBuf};
 use vm::{errors::*, CompiledModule};
-use vm_runtime::data_cache::RemoteCache;
-use vm_runtime_types::values::Struct;
 
 /// The write set encoded in the genesis transaction.
 pub static GENESIS_WRITE_SET: Lazy<WriteSet> = Lazy::new(|| {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.pop();
     path.push("tools/vm-genesis/genesis/genesis.blob");
-
     load_genesis(path)
 });
 
@@ -85,17 +84,19 @@ impl FakeDataStore {
 
     /// Adds an [`AccountData`] to this data store.
     pub fn add_account_data(&mut self, account_data: &AccountData) {
-        match account_data
-            .to_resource()
+        let (account_blob, balance_blob) = account_data.to_account();
+        let account = account_blob
             .value_as::<Struct>()
             .unwrap()
-            .simple_serialize(&AccountData::layout())
-        {
-            Some(blob) => {
-                self.set(account_data.make_access_path(), blob);
-            }
-            None => panic!("can't create Account data"),
-        }
+            .simple_serialize(&AccountData::account_type())
+            .unwrap();
+        let balance = balance_blob
+            .value_as::<Struct>()
+            .unwrap()
+            .simple_serialize(&AccountData::balance_type())
+            .unwrap();
+        self.set(account_data.make_account_access_path(), account);
+        self.set(account_data.make_balance_access_path(), balance);
     }
 
     /// Adds a [`CompiledModule`] to this data store.

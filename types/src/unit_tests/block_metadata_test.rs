@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::block_metadata::BlockMetadata;
-use crate::test_helpers::assert_canonical_encode_decode;
+use lcs::test_helpers::assert_canonical_encode_decode;
 use proptest::prelude::*;
 
 proptest! {

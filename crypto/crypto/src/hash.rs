@@ -269,7 +269,14 @@ impl ser::Serialize for HashValue {
     where
         S: ser::Serializer,
     {
-        serializer.serialize_bytes(&self.hash[..])
+        if serializer.is_human_readable() {
+            serializer.serialize_str(&self.to_hex())
+        } else {
+            // In order to preserve the Serde data model and help analysis tools,
+            // make sure to wrap our value in a container with the same name
+            // as the original type.
+            serializer.serialize_newtype_struct("HashValue", &self.hash[..])
+        }
     }
 }
 
@@ -278,23 +285,18 @@ impl<'de> de::Deserialize<'de> for HashValue {
     where
         D: de::Deserializer<'de>,
     {
-        struct HashValueVisitor;
-        impl<'de> de::Visitor<'de> for HashValueVisitor {
-            type Value = HashValue;
+        if deserializer.is_human_readable() {
+            let encoded_hash = <&str>::deserialize(deserializer)?;
+            HashValue::from_hex(encoded_hash).map_err(<D::Error as ::serde::de::Error>::custom)
+        } else {
+            // See comment in serialize.
+            #[derive(::serde::Deserialize)]
+            #[serde(rename = "HashValue")]
+            struct Value<'a>(&'a [u8]);
 
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("HashValue in bytes")
-            }
-
-            fn visit_bytes<E>(self, value: &[u8]) -> std::result::Result<HashValue, E>
-            where
-                E: de::Error,
-            {
-                HashValue::from_slice(value).map_err(E::custom)
-            }
+            let value = Value::deserialize(deserializer)?;
+            Self::from_slice(value.0).map_err(<D::Error as ::serde::de::Error>::custom)
         }
-
-        deserializer.deserialize_bytes(HashValueVisitor)
     }
 }
 

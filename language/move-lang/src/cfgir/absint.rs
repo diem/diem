@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{ast::*, cfg::CFG};
-use crate::errors::*;
+use super::cfg::CFG;
+use crate::{errors::*, hlir::ast::*};
 use std::collections::BTreeMap;
 
 /// Trait for finite-height abstract domains. Infinite height domains would require a more complex
@@ -11,7 +11,7 @@ pub trait AbstractDomain: Clone + Sized {
     fn join(&mut self, other: &Self) -> JoinResult;
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum JoinResult {
     Unchanged,
     Changed,

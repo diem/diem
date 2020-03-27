@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extern crate test_generation;
-use test_generation::abstract_state::AbstractState;
-use test_generation::transitions::Subst;
+use test_generation::{abstract_state::AbstractState, transitions::Subst};
 use vm::file_format::SignatureToken;
 
 //---------------------------------------------------------------------------
@@ -14,7 +13,7 @@ use vm::file_format::SignatureToken;
 fn unify_no_subst() {
     use SignatureToken::*;
     let state = AbstractState::new();
-    let tys = vec![Bool, U64, ByteArray, Address];
+    let tys = vec![Bool, U64, Vector(Box::new(U8)), Address];
     for tok1 in tys.iter() {
         for tok2 in tys.iter() {
             let should_unify = tok1.clone() == tok2.clone();

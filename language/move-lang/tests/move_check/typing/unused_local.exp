@@ -2,7 +2,7 @@ error:
 
    ┌── tests/move_check/typing/unused_local.move:5:13 ───
    │
- 5 │         let x;
+ 5 │         let x: u64;
    │             ^ Unused local 'x'. Consider removing or prefixing with an underscore: '_x'
    │
 
@@ -10,7 +10,7 @@ error:
 
    ┌── tests/move_check/typing/unused_local.move:9:14 ───
    │
- 9 │         let (x, y);
+ 9 │         let (x, y): (u64, u64);
    │              ^ Unused local 'x'. Consider removing or prefixing with an underscore: '_x'
    │
 
@@ -18,7 +18,23 @@ error:
 
    ┌── tests/move_check/typing/unused_local.move:9:17 ───
    │
- 9 │         let (x, y);
+ 9 │         let (x, y): (u64, u64);
    │                 ^ Unused local 'y'. Consider removing or prefixing with an underscore: '_y'
    │
+
+error: 
+
+    ┌── tests/move_check/typing/unused_local.move:13:16 ───
+    │
+ 13 │         let S{ f, g }: S;
+    │                ^ Unused local 'f'. Consider removing or prefixing with an underscore: '_f'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/unused_local.move:13:19 ───
+    │
+ 13 │         let S{ f, g }: S;
+    │                   ^ Unused local 'g'. Consider removing or prefixing with an underscore: '_g'
+    │
 

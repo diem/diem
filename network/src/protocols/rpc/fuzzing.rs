@@ -7,20 +7,18 @@ use crate::{
     protocols::rpc::{self, RpcNotification},
     ProtocolId,
 };
-use channel;
 use futures::{
     future::{self, FutureExt},
     io::{AsyncReadExt, AsyncWriteExt},
     stream::StreamExt,
 };
 use libra_proptest_helpers::ValueGenerator;
-use libra_types::{account_address::ADDRESS_LENGTH, PeerId};
+use libra_types::PeerId;
 use memsocket::MemorySocket;
 use proptest::{arbitrary::any, collection::vec, prop_oneof, strategy::Strategy};
 use std::{io, time::Duration};
 use tokio::runtime;
-use tokio_util::codec::Encoder;
-use tokio_util::codec::LengthDelimitedCodec;
+use tokio_util::codec::{Encoder, LengthDelimitedCodec};
 
 // Length of unsigned varint prefix in bytes for a u128-sized length
 const MAX_UVI_PREFIX_BYTES: usize = 19;
@@ -29,9 +27,9 @@ const MAX_UVI_PREFIX_BYTES: usize = 19;
 const MAX_SMALL_MSG_BYTES: usize = 32;
 const MAX_MEDIUM_MSG_BYTES: usize = 280;
 
-const MOCK_PEER_ID: PeerId = PeerId::new([0u8; ADDRESS_LENGTH]);
-const MOCK_PROTOCOL_ID: &[u8] = b"/libra/rpc/1.2.3/consensus/1.2.3";
+const MOCK_PEER_ID: PeerId = PeerId::DEFAULT;
 const INBOUND_RPC_TIMEOUT: Duration = Duration::from_secs(30);
+const TEST_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
 
 #[test]
 fn test_fuzzer() {
@@ -67,7 +65,7 @@ pub fn fuzzer(data: &[u8]) {
     let (notification_tx, mut notification_rx) = channel::new_test(8);
     let (mut dialer_substream, listener_substream) = MemorySocket::new_pair();
     let listener_substream = NegotiatedSubstream {
-        protocol: ProtocolId::from_static(MOCK_PROTOCOL_ID),
+        protocol: TEST_PROTOCOL,
         substream: listener_substream,
     };
     let peer_notif = PeerNotification::NewSubstream(MOCK_PEER_ID, listener_substream);
@@ -86,7 +84,7 @@ pub fn fuzzer(data: &[u8]) {
                     let protocol = req.protocol;
                     let data = req.data;
                     let res_tx = req.res_tx;
-                    assert_eq!(protocol.as_ref(), MOCK_PROTOCOL_ID);
+                    assert_eq!(protocol, TEST_PROTOCOL);
                     let _ = res_tx.send(Ok(data));
                 }
             }

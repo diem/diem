@@ -3,9 +3,11 @@
 
 //! sender: alice
 import 0x0.LibraAccount;
+import 0x0.LBR;
+import 0x0.Vector;
 
 main() {
-    LibraAccount.pay_from_sender({{bob}}, 514);
+    LibraAccount.pay_from_sender<LBR.T>({{bob}}, Vector.empty<u8>(), 514);
     assert(false, 42);
     return;
 }
@@ -16,9 +18,10 @@ main() {
 
 //! new-transaction
 import 0x0.LibraAccount;
+import 0x0.LBR;
 
 main() {
-    assert(LibraAccount.balance({{bob}}) == 100000, 43);
+    assert(LibraAccount.balance<LBR.T>({{bob}}) == 100000, 43);
     return;
 }
 

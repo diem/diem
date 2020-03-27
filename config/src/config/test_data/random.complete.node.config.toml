@@ -33,7 +33,7 @@ genesis_file_location = ""
 [logger]
 is_async = true
 chan_size = 256
-filter_level = "INFO"
+level = "INFO"
 
 [metrics]
 collection_interval_ms = 1000
@@ -71,7 +71,7 @@ private_key = "87572b6c1ac0bc9f5245d04f7963c35db0713f0f08685f038d55f8c22a5c45b9"
 public_key = "7fb83ee67e2b16f89510cdd7c061b32a482d68465d24df70acc65b074b3f7862"
 
 [validator_network]
-peer_id = "a1487172bd6670e595f1fd2cf52b6c77d5ca8fb56c820b5856ee531acb8fa654"
+peer_id = "afd41847853f81de4b37cd030195b25a"
 listen_address = "/ip4/0.0.0.0/tcp/6180"
 advertised_address = "/ip4/127.0.0.1/tcp/6180"
 discovery_interval_ms = 1000
@@ -79,7 +79,7 @@ connectivity_check_interval_ms = 5000
 enable_noise = true
 enable_remote_authentication = true
 network_peers_file = ""
-seed_peers_file = "a1487172bd6670e595f1fd2cf52b6c77d5ca8fb56c820b5856ee531acb8fa654.seed_peers.toml"
+seed_peers_file = "afd41847853f81de4b37cd030195b25a.seed_peers.toml"
 
 [validator_network.network_keypairs.signing_keys]
 private_key = "55f8f8956dde49b412e105460193381bf3fca57565a8a096e60ac7bdd6a0953f"
@@ -87,17 +87,3 @@ public_key = "f5c974b9ead1ca6a6d5d93eb3bd5906e2b7cf5f710c8a7c86c8c6e918f42c4b1"
 [validator_network.network_keypairs.identity_keys]
 private_key = "70389b2e9483015d869e620ec46209f1e84b5f94b2339f6d327e0508cd5e3857"
 public_key = "c73d4a865295534a9440275892a0dbcf346c633e7bf3ea7933ed50f4b478030c"
-
-[vm_config.publishing_options]
-type = "Locked"
-whitelist = [
-    "10314990b6f9c1edce753a53866cee17bfde44a7991738b1df0f47e1b2e1b362",
-    "eea7c57e6bce0face0e1f330fee5b15de95a5b96492d2f0388fd95737b224da6",
-    "3e32c930031df5ee1e870f48acd47bf4f4be91455a63280a57843144b672989f",
-    "d620f9bc66513ef600e16333bbe58315921c036809b2c6b1e078a4e13af5cf6a",
-    "81b2f95ae5d4eeb03d732f35b60e6ddf15adc97bef320cbb79deaee748669dd6",
-    "8f81d83dc4ad042f9cdc023e107cf310c2c1e60cc7ac4b901702e5dd7fba7d0d",
-    "aaa23c9d415fc0596a95e1f23f0a45c2ceb3073141fcfc68db279b9cf462827b",
-    "684e9940046ae8da5c23f57c41a5919e6e1296e9de4f2bfefa6bbe12739869a5",
-    "1ee2cdd1fa2f2f68aa06a4a96ef86ab2bb74ed169b9e37e20c11a4c3e0a37e33",
-]

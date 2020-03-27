@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
+    ed25519::{
+        Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature, ED25519_PRIVATE_KEY_LENGTH,
+        ED25519_PUBLIC_KEY_LENGTH, ED25519_SIGNATURE_LENGTH,
+    },
     traits::*,
     unit_tests::uniform_keypair_strategy,
 };
@@ -13,7 +16,6 @@ use core::{
 };
 
 use crate::hash::HashValue;
-use ed25519_dalek;
 use proptest::prelude::*;
 
 proptest! {
@@ -22,14 +24,14 @@ proptest! {
         {
             let encoded = keypair.private_key.to_encoded_string().unwrap();
              // Hex encoding of a 32-bytes key is 64 (2 x 32) characters.
-            prop_assert_eq!(2 * ed25519_dalek::SECRET_KEY_LENGTH, encoded.len());
+            prop_assert_eq!(2 * ED25519_PRIVATE_KEY_LENGTH, encoded.len());
             let decoded = Ed25519PrivateKey::from_encoded_string(&encoded);
             prop_assert_eq!(Some(keypair.private_key), decoded.ok());
         }
         {
             let encoded = keypair.public_key.to_encoded_string().unwrap();
             // Hex encoding of a 32-bytes key is 64 (2 x 32) characters.
-            prop_assert_eq!(2 * ed25519_dalek::PUBLIC_KEY_LENGTH, encoded.len());
+            prop_assert_eq!(2 * ED25519_PUBLIC_KEY_LENGTH, encoded.len());
             let decoded = Ed25519PublicKey::from_encoded_string(&encoded);
             prop_assert_eq!(Some(keypair.public_key), decoded.ok());
         }
@@ -57,13 +59,13 @@ proptest! {
     ) {
         {
             let serialized: &[u8] = &(keypair.private_key.to_bytes());
-            prop_assert_eq!(ed25519_dalek::SECRET_KEY_LENGTH, serialized.len());
+            prop_assert_eq!(ED25519_PRIVATE_KEY_LENGTH, serialized.len());
             let deserialized = Ed25519PrivateKey::try_from(serialized);
             prop_assert_eq!(Some(keypair.private_key), deserialized.ok());
         }
         {
             let serialized: &[u8] = &(keypair.public_key.to_bytes());
-            prop_assert_eq!(ed25519_dalek::PUBLIC_KEY_LENGTH, serialized.len());
+            prop_assert_eq!(ED25519_PUBLIC_KEY_LENGTH, serialized.len());
             let deserialized = Ed25519PublicKey::try_from(serialized);
             prop_assert_eq!(Some(keypair.public_key), deserialized.ok());
         }
@@ -76,7 +78,7 @@ proptest! {
     ) {
         let signature = keypair.private_key.sign_message(&hash);
         let serialized: &[u8] = &(signature.to_bytes());
-        prop_assert_eq!(ed25519_dalek::SIGNATURE_LENGTH, serialized.len());
+        prop_assert_eq!(ED25519_SIGNATURE_LENGTH, serialized.len());
         let deserialized = Ed25519Signature::try_from(serialized).unwrap();
         prop_assert!(keypair.public_key.verify_signature(&hash, &deserialized).is_ok());
     }
@@ -233,7 +235,7 @@ impl Scalar52 {
         let mut words = [0u64; 4];
         for i in 0..4 {
             for j in 0..8 {
-                words[i] |= u64::from(bytes[(i * 8) + j]) << (j * 8);
+                words[i] |= u64::from(bytes[(i * 8) + j]) << (j * 8) as u64;
             }
         }
 

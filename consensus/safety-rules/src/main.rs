@@ -6,7 +6,8 @@
 #![forbid(unsafe_code)]
 
 use libra_config::config::NodeConfig;
-use safety_rules::Process;
+use libra_secure_push_metrics::MetricsPusher;
+use safety_rules::{Process, COUNTERS};
 use std::{env, process};
 
 fn main() {
@@ -22,6 +23,12 @@ fn main() {
         process::exit(1);
     });
 
+    libra_logger::Logger::new()
+        .channel_size(config.logger.chan_size)
+        .is_async(config.logger.is_async)
+        .level(config.logger.level)
+        .init();
+    MetricsPusher::new(COUNTERS.clone()).start();
     let mut service = Process::new(config);
     service.start();
 }

@@ -4,7 +4,7 @@ module M {
     resource R { b: bool}
 
     f() {
-        let v: Vector.T<Self.R>;
+        let v: vector<Self.R>;
         v = Vector.empty<Self.R>();
         return;
     }

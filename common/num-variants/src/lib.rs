@@ -10,9 +10,9 @@ extern crate proc_macro;
 
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::spanned::Spanned;
 use syn::{
-    parse_macro_input, Attribute, Data, DeriveInput, Error, Lit, Meta, MetaNameValue, Result,
+    parse_macro_input, spanned::Spanned, Attribute, Data, DeriveInput, Error, Lit, Meta,
+    MetaNameValue, Result,
 };
 
 /// Derives an associated constant with the number of variants this enum has.

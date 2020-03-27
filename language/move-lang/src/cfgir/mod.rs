@@ -4,19 +4,19 @@
 mod absint;
 pub mod ast;
 mod borrows;
-pub mod cfg;
+pub(crate) mod cfg;
 mod eliminate_locals;
 mod liveness;
 mod locals;
 mod remove_no_ops;
-pub mod translate;
+pub(crate) mod translate;
 
-use crate::shared::unique_map::UniqueMap;
 use crate::{
     errors::Errors,
+    hlir::ast::*,
     parser::ast::{StructName, Var},
+    shared::unique_map::UniqueMap,
 };
-use ast::*;
 use cfg::*;
 use std::collections::BTreeSet;
 
@@ -29,16 +29,11 @@ pub fn refine_inference_and_verify(
     infinite_loop_starts: &BTreeSet<Label>,
 ) {
     remove_no_ops::optimize(cfg);
-    let liveness_states = liveness::refine_inference_and_verify(
-        errors,
-        signature,
-        acquires,
-        locals,
-        cfg,
-        infinite_loop_starts,
-    );
+
+    liveness::last_usage(errors, locals, cfg, infinite_loop_starts);
     let locals_states = locals::verify(errors, signature, acquires, locals, cfg);
-    liveness::release_dead_refs(locals, cfg, &liveness_states, &locals_states);
+
+    liveness::release_dead_refs(&locals_states, locals, cfg, infinite_loop_starts);
     borrows::verify(errors, signature, acquires, locals, cfg);
 }
 

@@ -9,20 +9,17 @@ pub mod util;
 mod unit_tests;
 
 use anyhow::Result;
-use bytecode_source_map::source_map::{ModuleSourceMap, SourceMap};
+use bytecode_source_map::source_map::SourceMap;
 use bytecode_verifier::VerifiedModule;
 use ir_to_bytecode::{
-    compiler::{compile_module, compile_program},
-    parser::parse_program,
+    compiler::{compile_module, compile_script},
+    parser::{parse_module, parse_script},
 };
-use libra_types::{
-    account_address::AccountAddress,
-    transaction::{Script, TransactionArgument},
-};
-use move_ir_types::ast::Loc;
+use libra_types::account_address::AccountAddress;
+use move_ir_types::location::Loc;
 use std::mem;
-use stdlib::stdlib_modules;
-use vm::file_format::{CompiledModule, CompiledProgram, CompiledScript};
+use stdlib::{stdlib_modules, StdLibOptions};
+use vm::file_format::{CompiledModule, CompiledScript};
 
 /// An API for the compiler. Supports setting custom options.
 #[derive(Clone, Debug, Default)]
@@ -31,8 +28,6 @@ pub struct Compiler {
     pub address: AccountAddress,
     /// Skip stdlib dependencies if true.
     pub skip_stdlib_deps: bool,
-    /// The address to use for stdlib.
-    pub stdlib_address: AccountAddress,
     /// Extra dependencies to compile with.
     pub extra_deps: Vec<VerifiedModule>,
 
@@ -49,89 +44,58 @@ pub struct Compiler {
 }
 
 impl Compiler {
-    /// Compiles into a `CompiledProgram` where the bytecode hasn't been serialized.
-    pub fn into_compiled_program(mut self, code: &str) -> Result<CompiledProgram> {
-        Ok(self.compile_impl(code)?.0)
-    }
-
-    pub fn into_compiled_program_and_source_maps(
+    /// Compiles into a `CompiledScript` where the bytecode hasn't been serialized.
+    pub fn into_compiled_script_and_source_map(
         mut self,
+        file_name: &str,
         code: &str,
-    ) -> Result<(CompiledProgram, SourceMap<Loc>)> {
-        let (compiled_program, source_maps, _) = self.compile_impl(code)?;
-        Ok((compiled_program, source_maps))
-    }
-
-    pub fn into_compiled_program_and_source_maps_deps(
-        mut self,
-        code: &str,
-    ) -> Result<(CompiledProgram, SourceMap<Loc>, Vec<VerifiedModule>)> {
-        Ok(self.compile_impl(code)?)
-    }
-
-    /// Compiles into a `CompiledProgram` and also returns the dependencies.
-    pub fn into_compiled_program_and_deps(
-        mut self,
-        code: &str,
-    ) -> Result<(CompiledProgram, Vec<VerifiedModule>)> {
-        let (compiled_program, _, deps) = self.compile_impl(code)?;
-        Ok((compiled_program, deps))
-    }
-
-    /// Compiles into a `CompiledScript`.
-    pub fn into_script(mut self, code: &str) -> Result<CompiledScript> {
-        let compiled_program = self.compile_impl(code)?.0;
-        Ok(compiled_program.script)
+    ) -> Result<(CompiledScript, SourceMap<Loc>)> {
+        let (compiled_script, source_map, _) = self.compile_script(file_name, code)?;
+        Ok((compiled_script, source_map))
     }
 
     /// Compiles the script into a serialized form.
-    pub fn into_script_blob(mut self, code: &str) -> Result<Vec<u8>> {
-        let compiled_program = self.compile_impl(code)?.0;
+    pub fn into_script_blob(mut self, file_name: &str, code: &str) -> Result<Vec<u8>> {
+        let compiled_script = self.compile_script(file_name, code)?.0;
 
         let mut serialized_script = Vec::<u8>::new();
-        compiled_program.script.serialize(&mut serialized_script)?;
+        compiled_script.serialize(&mut serialized_script)?;
         Ok(serialized_script)
     }
 
     /// Compiles the module.
-    pub fn into_compiled_module(mut self, code: &str) -> Result<CompiledModule> {
-        Ok(self.compile_mod(code)?.0)
+    pub fn into_compiled_module(mut self, file_name: &str, code: &str) -> Result<CompiledModule> {
+        Ok(self.compile_mod(file_name, code)?.0)
     }
 
     /// Compiles the module into a serialized form.
-    pub fn into_module_blob(mut self, code: &str) -> Result<Vec<u8>> {
-        let compiled_module = self.compile_mod(code)?.0;
+    pub fn into_module_blob(mut self, file_name: &str, code: &str) -> Result<Vec<u8>> {
+        let compiled_module = self.compile_mod(file_name, code)?.0;
 
         let mut serialized_module = Vec::<u8>::new();
         compiled_module.serialize(&mut serialized_module)?;
         Ok(serialized_module)
     }
 
-    /// Compiles the code and arguments into a `Script` -- the bytecode is serialized.
-    pub fn into_program(self, code: &str, args: Vec<TransactionArgument>) -> Result<Script> {
-        Ok(Script::new(self.into_script_blob(code)?, args))
-    }
-
-    fn compile_impl(
+    fn compile_script(
         &mut self,
+        file_name: &str,
         code: &str,
-    ) -> Result<(CompiledProgram, SourceMap<Loc>, Vec<VerifiedModule>)> {
-        let parsed_program = parse_program(code)?;
+    ) -> Result<(CompiledScript, SourceMap<Loc>, Vec<VerifiedModule>)> {
+        let parsed_script = parse_script(file_name, code)?;
         let deps = self.deps();
-        let (compiled_program, source_maps) = compile_program(self.address, parsed_program, &deps)?;
-        Ok((compiled_program, source_maps, deps))
+        let (compiled_script, source_map) = compile_script(self.address, parsed_script, &deps)?;
+        Ok((compiled_script, source_map, deps))
     }
 
     fn compile_mod(
         &mut self,
+        file_name: &str,
         code: &str,
-    ) -> Result<(CompiledModule, ModuleSourceMap<Loc>, Vec<VerifiedModule>)> {
-        let parsed_program = parse_program(code)?;
+    ) -> Result<(CompiledModule, SourceMap<Loc>, Vec<VerifiedModule>)> {
+        let parsed_module = parse_module(file_name, code)?;
         let deps = self.deps();
-        let mut modules = parsed_program.modules;
-        assert_eq!(modules.len(), 1, "Must have single module");
-        let module = modules.pop().expect("Module must exist");
-        let (compiled_module, source_map) = compile_module(self.address, module, &deps)?;
+        let (compiled_module, source_map) = compile_module(self.address, parsed_module, &deps)?;
         Ok((compiled_module, source_map, deps))
     }
 
@@ -140,7 +104,7 @@ impl Compiler {
         if self.skip_stdlib_deps {
             extra_deps
         } else {
-            let mut deps = stdlib_modules().to_vec();
+            let mut deps = stdlib_modules(StdLibOptions::Staged).to_vec();
             deps.extend(extra_deps);
             deps
         }

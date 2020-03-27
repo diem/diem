@@ -3,7 +3,7 @@
 
 use crate::{state_replication::TxnManager, txn_manager::MempoolProxy};
 use anyhow::Result;
-use executor::StateComputeResult;
+use executor_types::StateComputeResult;
 use futures::channel::mpsc;
 use libra_mempool::ConsensusRequest;
 use libra_types::{
@@ -29,10 +29,7 @@ pub struct MockTransactionManager {
 
 impl MockTransactionManager {
     pub fn new(consensus_to_mempool_sender: Option<mpsc::Sender<ConsensusRequest>>) -> Self {
-        let mempool_proxy = match consensus_to_mempool_sender {
-            Some(sender) => Some(MempoolProxy::new(sender)),
-            None => None,
-        };
+        let mempool_proxy = consensus_to_mempool_sender.map(MempoolProxy::new);
         Self {
             next_val: Arc::new(AtomicUsize::new(0)),
             rejected_txns: vec![],
@@ -78,13 +75,18 @@ impl TxnManager for MockTransactionManager {
         compute_results: &StateComputeResult,
     ) -> Result<()> {
         if self.mempool_proxy.is_some() {
-            let mut compute_results_clone = compute_results.clone();
-            compute_results_clone.compute_status = mock_transaction_status(txns.len());
+            let mock_compute_result = StateComputeResult::new(
+                compute_results.state_id(),
+                compute_results.frozen_subtree_roots().clone(),
+                compute_results.num_leaves(),
+                compute_results.validators().clone(),
+                mock_transaction_status(txns.len()),
+            );
             assert!(self
                 .mempool_proxy
                 .as_mut()
                 .unwrap()
-                .commit_txns(&vec![], &compute_results_clone)
+                .commit_txns(&vec![], &mock_compute_result)
                 .await
                 .is_ok());
         }

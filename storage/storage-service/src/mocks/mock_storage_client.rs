@@ -7,12 +7,12 @@ use anyhow::{Error, Result};
 use futures::stream::BoxStream;
 use libra_crypto::{ed25519::*, HashValue};
 use libra_types::{
-    account_address::{AccountAddress, ADDRESS_LENGTH},
+    account_address::AccountAddress,
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
-    crypto_proxies::{LedgerInfoWithSignatures, ValidatorChangeProof},
     event::EventHandle,
     get_with_proof::{RequestItem, ResponseItem},
+    ledger_info::LedgerInfoWithSignatures,
     proof::{AccumulatorConsistencyProof, SparseMerkleProof, SparseMerkleRangeProof},
     proto::types::{
         request_item::RequestedItems, response_item::ResponseItems, AccountStateWithProof,
@@ -23,6 +23,7 @@ use libra_types::{
     },
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{Transaction, Version},
+    validator_change::ValidatorChangeProof,
     vm_error::StatusCode,
 };
 use rand::{
@@ -206,7 +207,7 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
             }
             RequestedItems::GetTransactionsRequest(request) => {
                 let mut ret = TransactionListWithProof::default();
-                let sender = AccountAddress::new([1; ADDRESS_LENGTH]);
+                let sender = AccountAddress::new([1; AccountAddress::LENGTH]);
                 if request.limit > 0 {
                     let txns = get_mock_txn_data(sender, 0, request.limit - 1);
                     ret.transactions = txns;
@@ -224,9 +225,8 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
 
 fn get_mock_account_state_blob() -> AccountStateBlob {
     let account_resource = libra_types::account_config::AccountResource::new(
-        100,
         0,
-        libra_types::byte_array::ByteArray::new(vec![]),
+        vec![],
         false,
         false,
         EventHandle::random_handle(0),

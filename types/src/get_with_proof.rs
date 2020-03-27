@@ -3,16 +3,13 @@
 
 #![forbid(unsafe_code)]
 
-use crate::crypto_proxies::EpochInfo;
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::AccountResource,
     account_state_blob::AccountStateWithProof,
     contract_event::EventWithProof,
-    crypto_proxies::LedgerInfoWithSignatures,
-    crypto_proxies::ValidatorChangeProof,
-    ledger_info::LedgerInfo,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::AccumulatorConsistencyProof,
     proto::types::{
         GetAccountStateRequest, GetAccountStateResponse,
@@ -21,20 +18,20 @@ use crate::{
         GetEventsByEventAccessPathResponse, GetTransactionsRequest, GetTransactionsResponse,
     },
     transaction::{TransactionListWithProof, TransactionWithProof, Version},
+    trusted_state::{TrustedState, TrustedStateChange},
+    validator_change::ValidatorChangeProof,
 };
-
-use crate::validator_change::VerifierType;
 use anyhow::{bail, ensure, format_err, Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
-use std::sync::Arc;
+use serde::{Deserialize, Serialize};
 use std::{
     cmp,
     convert::{TryFrom, TryInto},
     mem,
 };
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct UpdateToLatestLedgerRequest {
     pub client_known_version: u64,
@@ -78,7 +75,7 @@ impl From<UpdateToLatestLedgerRequest> for crate::proto::types::UpdateToLatestLe
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct UpdateToLatestLedgerResponse {
     pub response_items: Vec<ResponseItem>,
     pub ledger_info_with_sigs: LedgerInfoWithSignatures,
@@ -158,13 +155,13 @@ impl UpdateToLatestLedgerResponse {
     ///
     /// After calling this one can trust the info in the response items without further
     /// verification.
-    pub fn verify(
-        &self,
-        verifier: &VerifierType,
+    pub fn verify<'a>(
+        &'a self,
+        trusted_state: &TrustedState,
         request: &UpdateToLatestLedgerRequest,
-    ) -> Result<Option<EpochInfo>> {
+    ) -> Result<TrustedStateChange<'a>> {
         verify_update_to_latest_ledger_response(
-            verifier,
+            trusted_state,
             request.client_known_version,
             &request.requested_items,
             &self.response_items,
@@ -177,14 +174,14 @@ impl UpdateToLatestLedgerResponse {
 /// Verifies content of an [`UpdateToLatestLedgerResponse`] against the proofs it
 /// carries and the content of the corresponding [`UpdateToLatestLedgerRequest`]
 /// Return EpochInfo if there're validator change events.
-pub fn verify_update_to_latest_ledger_response(
-    verifier: &VerifierType,
+pub fn verify_update_to_latest_ledger_response<'a>(
+    trusted_state: &TrustedState,
     req_client_known_version: u64,
     req_request_items: &[RequestItem],
     response_items: &[ResponseItem],
-    ledger_info_with_sigs: &LedgerInfoWithSignatures,
-    validator_change_proof: &ValidatorChangeProof,
-) -> Result<Option<EpochInfo>> {
+    ledger_info_with_sigs: &'a LedgerInfoWithSignatures,
+    validator_change_proof: &'a ValidatorChangeProof,
+) -> Result<TrustedStateChange<'a>> {
     let ledger_info = ledger_info_with_sigs.ledger_info();
 
     // Verify that the same or a newer ledger info is returned.
@@ -194,6 +191,11 @@ pub fn verify_update_to_latest_ledger_response(
         ledger_info.version(),
         req_client_known_version,
     );
+
+    // Verify any validator change proof and latest ledger info. Provide an
+    // updated trusted state if the proof is correct and not stale.
+    let trusted_state_change =
+        trusted_state.verify_and_ratchet(ledger_info_with_sigs, validator_change_proof)?;
 
     // Verify each sub response.
     ensure!(
@@ -206,25 +208,7 @@ pub fn verify_update_to_latest_ledger_response(
         .map(|(req, res)| verify_response_item(ledger_info, req, res))
         .collect::<Result<Vec<_>>>()?;
 
-    // Verify ledger info signatures and potential epoch changes
-    if verifier.epoch_change_verification_required(ledger_info.epoch()) {
-        let epoch_change_li = validator_change_proof.verify(verifier)?;
-        let new_epoch_info = EpochInfo {
-            epoch: epoch_change_li.ledger_info().epoch() + 1,
-            verifier: Arc::new(
-                epoch_change_li
-                    .ledger_info()
-                    .next_validator_set()
-                    .ok_or_else(|| format_err!("No ValidatorSet in EpochProof"))?
-                    .into(),
-            ),
-        };
-        ledger_info_with_sigs.verify(&new_epoch_info.verifier)?;
-        Ok(Some(new_epoch_info))
-    } else {
-        verifier.verify(ledger_info_with_sigs)?;
-        Ok(None)
-    }
+    Ok(trusted_state_change)
 }
 
 fn verify_response_item(
@@ -445,7 +429,7 @@ fn verify_get_txns_resp(
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub enum RequestItem {
     GetAccountTransactionBySequenceNumber {
@@ -581,7 +565,7 @@ impl From<RequestItem> for crate::proto::types::RequestItem {
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub enum ResponseItem {
     GetAccountTransactionBySequenceNumber {

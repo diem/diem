@@ -145,6 +145,7 @@ pub fn silent_debug(source: TokenStream) -> TokenStream {
 pub fn deserialize_key(source: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(source).expect("Incorrect macro input");
     let name = &ast.ident;
+    let name_string = name.to_string();
     let gen = quote! {
         impl<'de> ::serde::Deserialize<'de> for #name {
             fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
@@ -152,12 +153,21 @@ pub fn deserialize_key(source: TokenStream) -> TokenStream {
                 D: ::serde::Deserializer<'de>,
             {
                 if deserializer.is_human_readable() {
-                    let encoded_key: &str = ::serde::Deserialize::deserialize(deserializer)?;
+                    let encoded_key = <&str>::deserialize(deserializer)?;
                     ValidKeyStringExt::from_encoded_string(encoded_key)
                         .map_err(<D::Error as ::serde::de::Error>::custom)
                 } else {
-                    let b = <&[u8]>::deserialize(deserializer)?;
-                    #name::try_from(b).map_err(<D::Error as ::serde::de::Error>::custom)
+                    // In order to preserve the Serde data model and help analysis tools,
+                    // make sure to wrap our value in a container with the same name
+                    // as the original type.
+                    #[derive(::serde::Deserialize)]
+                    #[serde(rename = #name_string)]
+                    struct Value<'a>(&'a[u8]);
+
+                    let value = Value::deserialize(deserializer)?;
+                    #name::try_from(value.0).map_err(|s| {
+                        <D::Error as ::serde::de::Error>::custom(format!("{} with {}", s, #name_string))
+                    })
                 }
             }
         }
@@ -170,6 +180,7 @@ pub fn deserialize_key(source: TokenStream) -> TokenStream {
 pub fn serialize_key(source: TokenStream) -> TokenStream {
     let ast: DeriveInput = syn::parse(source).expect("Incorrect macro input");
     let name = &ast.ident;
+    let name_string = name.to_string();
     let gen = quote! {
         impl ::serde::Serialize for #name {
             fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -181,7 +192,8 @@ pub fn serialize_key(source: TokenStream) -> TokenStream {
                         .map_err(<S::Error as ::serde::ser::Error>::custom)
                         .and_then(|str| serializer.serialize_str(&str[..]))
                 } else {
-                    serializer.serialize_bytes(&ValidKey::to_bytes(self))
+                    // See comment in deserialize_key.
+                    serializer.serialize_newtype_struct(#name_string, &ValidKey::to_bytes(self))
                 }
             }
         }

@@ -3,28 +3,26 @@
 
 use crate::account_address::AccountAddress;
 use anyhow::{ensure, Error, Result};
-use hex;
+#[cfg(feature = "fuzzing")]
+use proptest_derive::Arbitrary;
 #[cfg(feature = "fuzzing")]
 use rand::{rngs::OsRng, RngCore};
 use serde::{de, ser, Deserialize, Serialize};
-use std::{
-    cmp::{Ord, Ordering, PartialOrd},
-    convert::TryFrom,
-    fmt,
-    hash::Hash,
-};
+use std::{convert::TryFrom, fmt};
 
-/// Size of an event key.
-pub const EVENT_KEY_LENGTH: usize = 40;
-
-/// A struct that represents a globally unique id for an Event stream that a user can listen to.
-pub struct EventKey([u8; EVENT_KEY_LENGTH]);
+/// A struct that represents a globally unique id for an Event stream that a user can listen to.e
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[cfg_attr(feature = "fuzzing", derive(Arbitrary))]
+pub struct EventKey([u8; EventKey::LENGTH]);
 
 impl EventKey {
     /// Construct a new EventKey from a byte array slice.
-    pub fn new(key: [u8; EVENT_KEY_LENGTH]) -> Self {
+    pub fn new(key: [u8; Self::LENGTH]) -> Self {
         EventKey(key)
     }
+
+    /// The number of bytes in an EventKey.
+    pub const LENGTH: usize = AccountAddress::LENGTH + 8;
 
     /// Get the byte representation of the event key.
     pub fn as_bytes(&self) -> &[u8] {
@@ -46,7 +44,7 @@ impl EventKey {
 
     /// Create a unique handle by using an AccountAddress and a counter.
     pub fn new_from_address(addr: &AccountAddress, salt: u64) -> Self {
-        let mut output_bytes = [0; EVENT_KEY_LENGTH];
+        let mut output_bytes = [0; Self::LENGTH];
         let (lhs, rhs) = output_bytes.split_at_mut(8);
         lhs.copy_from_slice(&salt.to_le_bytes());
         rhs.copy_from_slice(addr.as_ref());
@@ -54,74 +52,28 @@ impl EventKey {
     }
 }
 
-// Rust doesn't support deriving traits for array size greater than 32. We'll implement those traits
-// by hand for now
-impl PartialEq for EventKey {
-    #[inline]
-    fn eq(&self, other: &EventKey) -> bool {
-        self.as_bytes() == other.as_bytes()
+impl From<EventKey> for [u8; EventKey::LENGTH] {
+    fn from(event_key: EventKey) -> Self {
+        event_key.0
     }
 }
 
-impl Eq for EventKey {}
-
-impl PartialOrd for EventKey {
-    fn partial_cmp(&self, other: &EventKey) -> Option<Ordering> {
-        PartialOrd::partial_cmp(self.as_bytes(), other.as_bytes())
-    }
-    #[inline]
-    fn lt(&self, other: &EventKey) -> bool {
-        PartialOrd::lt(self.as_bytes(), other.as_bytes())
-    }
-    #[inline]
-    fn le(&self, other: &EventKey) -> bool {
-        PartialOrd::le(self.as_bytes(), other.as_bytes())
-    }
-    #[inline]
-    fn ge(&self, other: &EventKey) -> bool {
-        PartialOrd::ge(self.as_bytes(), other.as_bytes())
-    }
-    #[inline]
-    fn gt(&self, other: &EventKey) -> bool {
-        PartialOrd::gt(self.as_bytes(), other.as_bytes())
+impl From<&EventKey> for [u8; EventKey::LENGTH] {
+    fn from(event_key: &EventKey) -> Self {
+        event_key.0
     }
 }
 
-impl Ord for EventKey {
-    #[inline]
-    fn cmp(&self, other: &EventKey) -> Ordering {
-        Ord::cmp(self.as_bytes(), other.as_bytes())
-    }
-}
-
-impl Clone for EventKey {
-    fn clone(&self) -> Self {
-        let mut key = [0; EVENT_KEY_LENGTH];
-        key.copy_from_slice(self.as_bytes());
-        Self(key)
-    }
-}
-
-impl fmt::Debug for EventKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "EventKey({:?})", self.as_bytes())
-    }
-}
-
-impl Copy for EventKey {}
-
-impl Hash for EventKey {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        Hash::hash(self.as_bytes(), state)
-    }
-}
 // TODO(#1307)
 impl ser::Serialize for EventKey {
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
     {
-        serializer.serialize_bytes(&self.0)
+        // In order to preserve the Serde data model and help analysis tools,
+        // make sure to wrap our value in a container with the same name
+        // as the original type.
+        serializer.serialize_newtype_struct("EventKey", &self.0[..])
     }
 }
 
@@ -130,24 +82,13 @@ impl<'de> de::Deserialize<'de> for EventKey {
     where
         D: de::Deserializer<'de>,
     {
-        struct EventKeyVisitor;
+        // See comment in serialize.
+        #[derive(::serde::Deserialize)]
+        #[serde(rename = "EventKey")]
+        struct Value<'a>(&'a [u8]);
 
-        impl<'de> de::Visitor<'de> for EventKeyVisitor {
-            type Value = EventKey;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("EventKey in bytes")
-            }
-
-            fn visit_bytes<E>(self, value: &[u8]) -> std::result::Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                EventKey::try_from(value).map_err(E::custom)
-            }
-        }
-
-        deserializer.deserialize_bytes(EventKeyVisitor)
+        let value = Value::deserialize(deserializer)?;
+        Self::try_from(value.0).map_err(<D::Error as ::serde::de::Error>::custom)
     }
 }
 
@@ -157,11 +98,11 @@ impl TryFrom<&[u8]> for EventKey {
     /// Tries to convert the provided byte array into Event Key.
     fn try_from(bytes: &[u8]) -> Result<EventKey> {
         ensure!(
-            bytes.len() == EVENT_KEY_LENGTH,
-            "The Address {:?} is of invalid length",
+            bytes.len() == Self::LENGTH,
+            "The Event Key {:?} is of invalid length",
             bytes
         );
-        let mut addr = [0u8; EVENT_KEY_LENGTH];
+        let mut addr = [0u8; Self::LENGTH];
         addr.copy_from_slice(bytes);
         Ok(EventKey(addr))
     }

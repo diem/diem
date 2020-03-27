@@ -11,15 +11,25 @@ main() {
     return;
 }
 
+//! block-prologue
+//! proposer: vivian
+//! block-time: 2
+
 //! new-transaction
 //! sender: vivian
 // rotate Vivian's key
-import 0x0.ValidatorConfig;
+import 0x0.LibraSystem;
 main() {
-    ValidatorConfig.rotate_consensus_pubkey(h"beefbeef");
+    LibraSystem.rotate_consensus_pubkey(h"beefbeef");
 
     return;
 }
+// check: ValidatorSetChangeEvent
+// check: EXECUTED
+
+//! block-prologue
+//! proposer: vivian
+//! block-time: 3
 
 //! new-transaction
 //! sender: association
@@ -28,18 +38,6 @@ import 0x0.LibraSystem;
 main() {
     LibraSystem.add_validator({{alice}});
 
-    return;
-}
-
-
-//! new-transaction
-//! sender: vivian
-// Run the block prologue. Reconfiguration should be triggered, which will both add Alice and rotate
-// Vivian's key
-// TODO: trigger a BlockMetadata transaction here instead
-import 0x0.LibraSystem;
-main() {
-    LibraSystem.block_prologue(1, h"aa", h"bb", {{vivian}});
     return;
 }
 

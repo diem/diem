@@ -9,7 +9,7 @@
             {"containerPort": 8000, "hostPort": 8000}
         ],
         "environment": [
-            {"name": "AC_PORT", "value": "8000"},
+            {"name": "AC_PORT", "value": "8080"},
             {"name": "AC_HOST", "value": "${ac_hosts}"},
 	    {"name": "CFG_SEED", "value": "${cfg_seed}"},
 	    {"name": "CFG_NUM_VALIDATORS", "value": "${cfg_num_validators}"},

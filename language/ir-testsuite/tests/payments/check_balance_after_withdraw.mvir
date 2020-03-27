@@ -1,25 +1,26 @@
 import 0x0.LibraAccount;
-import 0x0.LibraCoin;
+import 0x0.LBR;
+import 0x0.Libra;
 
 main() {
     let addr: address;
     let sender_original_balance: u64;
-    let five_coins: LibraCoin.T;
-    let five_coins_ref: &LibraCoin.T;
+    let five_coins: Libra.T<LBR.T>;
+    let five_coins_ref: &Libra.T<LBR.T>;
     let five_coins_value: u64;
     let sender_new_balance: u64;
 
     addr = get_txn_sender();
-    sender_original_balance = LibraAccount.balance(copy(addr));
-    five_coins = LibraAccount.withdraw_from_sender(5);
+    sender_original_balance = LibraAccount.balance<LBR.T>(copy(addr));
+    five_coins = LibraAccount.withdraw_from_sender<LBR.T>(5);
 
     five_coins_ref = &five_coins;
-    five_coins_value = LibraCoin.value(move(five_coins_ref));
+    five_coins_value = Libra.value<LBR.T>(move(five_coins_ref));
     assert(move(five_coins_value) == 5, 66);
 
-    sender_new_balance = LibraAccount.balance(copy(addr));
+    sender_new_balance = LibraAccount.balance<LBR.T>(copy(addr));
     assert(copy(sender_new_balance) == copy(sender_original_balance) - 5, 77);
-    LibraAccount.deposit(move(addr), move(five_coins));
+    LibraAccount.deposit<LBR.T>(move(addr), move(five_coins));
 
     return;
 }

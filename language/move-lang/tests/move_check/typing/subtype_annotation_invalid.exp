@@ -1,12 +1,12 @@
 error: 
 
-   ┌── tests/move_check/typing/subtype_annotation_invalid.move:5:10 ───
+   ┌── tests/move_check/typing/subtype_annotation_invalid.move:5:14 ───
    │
  5 │         (&0: &mut u64);
    │              ^^^^^^^^ Invalid type annotation
    ·
  5 │         (&0: &mut u64);
-   │          -- The type: '&u64'
+   │          -- The type: '&{integer}'
    ·
  5 │         (&0: &mut u64);
    │              -------- Is not a subtype of: '&mut u64'
@@ -14,13 +14,13 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/subtype_annotation_invalid.move:9:11 ───
+   ┌── tests/move_check/typing/subtype_annotation_invalid.move:9:20 ───
    │
  9 │         ((&0, &0): (&mut u64, &mut u64));
    │                    ^^^^^^^^^^^^^^^^^^^^ Invalid type annotation
    ·
  9 │         ((&0, &0): (&mut u64, &mut u64));
-   │           -- The type: '&u64'
+   │           -- The type: '&{integer}'
    ·
  9 │         ((&0, &0): (&mut u64, &mut u64));
    │                     -------- Is not a subtype of: '&mut u64'
@@ -28,13 +28,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/subtype_annotation_invalid.move:10:11 ───
+    ┌── tests/move_check/typing/subtype_annotation_invalid.move:10:20 ───
     │
  10 │         ((&0, &0): (&mut u64, &u64));
     │                    ^^^^^^^^^^^^^^^^ Invalid type annotation
     ·
  10 │         ((&0, &0): (&mut u64, &u64));
-    │           -- The type: '&u64'
+    │           -- The type: '&{integer}'
     ·
  10 │         ((&0, &0): (&mut u64, &u64));
     │                     -------- Is not a subtype of: '&mut u64'
@@ -42,13 +42,13 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/subtype_annotation_invalid.move:11:15 ───
+    ┌── tests/move_check/typing/subtype_annotation_invalid.move:11:20 ───
     │
  11 │         ((&0, &0): (&u64, &mut u64));
     │                    ^^^^^^^^^^^^^^^^ Invalid type annotation
     ·
  11 │         ((&0, &0): (&u64, &mut u64));
-    │               -- The type: '&u64'
+    │               -- The type: '&{integer}'
     ·
  11 │         ((&0, &0): (&u64, &mut u64));
     │                           -------- Is not a subtype of: '&mut u64'

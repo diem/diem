@@ -1,9 +1,9 @@
 import 0x0.Hash;
 
 main() {
-    let input: bytearray;
-    let output: bytearray;
-    let expected_output: bytearray;
+    let input: vector<u8>;
+    let output: vector<u8>;
+    let expected_output: vector<u8>;
 
     input = h"616263";
     output = Hash.sha2_256(copy(input));

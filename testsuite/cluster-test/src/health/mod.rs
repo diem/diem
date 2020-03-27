@@ -14,10 +14,9 @@ pub use commit_check::CommitHistoryHealthCheck;
 pub use debug_interface_log_tail::DebugPortLogThread;
 use itertools::Itertools;
 pub use liveness_check::LivenessHealthCheck;
-pub use log_tail::LogTail;
+pub use log_tail::{LogTail, TraceTail};
 use std::{
-    collections::HashMap,
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     env, fmt,
     iter::FromIterator,
     time::{Duration, Instant, SystemTime},
@@ -232,5 +231,11 @@ impl HealthCheckContext {
 
     pub fn report_failure(&mut self, validator: String, message: String) {
         self.err_acc.push(HealthCheckError { validator, message })
+    }
+}
+
+impl Default for HealthCheckContext {
+    fn default() -> Self {
+        Self::new()
     }
 }

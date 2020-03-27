@@ -1,11 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{Error, Result};
-use libra_types::crypto_proxies::LedgerInfoWithSignatures;
-use libra_types::transaction::Version;
+use libra_types::{ledger_info::LedgerInfoWithSignatures, transaction::Version};
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 use std::fmt;
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
@@ -60,23 +57,5 @@ impl fmt::Display for GetChunkRequest {
             self.limit,
             self.target(),
         )
-    }
-}
-
-impl TryFrom<network::proto::GetChunkRequest> for GetChunkRequest {
-    type Error = Error;
-
-    fn try_from(proto: network::proto::GetChunkRequest) -> Result<Self> {
-        Ok(lcs::from_bytes(&proto.bytes)?)
-    }
-}
-
-impl TryFrom<GetChunkRequest> for network::proto::GetChunkRequest {
-    type Error = Error;
-
-    fn try_from(chunk_request: GetChunkRequest) -> Result<Self> {
-        Ok(Self {
-            bytes: lcs::to_bytes(&chunk_request)?,
-        })
     }
 }
