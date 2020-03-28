@@ -64,8 +64,8 @@ pub trait OnChainConfig: Send + Sync + DeserializeOwned {
 
     // Single-round LCS deserialization from bytes to `Self`
     // This is the expected deserialization pattern for most Rust representations,
-    // but sometimes `deserialize_into_config` may need to be customized
-    // (e.g. `VMPublishingOption` needs an extra round of deserialization)
+    // but sometimes `deserialize_into_config` may need an extra customized round of deserialization
+    // (e.g. enums like `VMPublishingOption`)
     // In the override, we can reuse this default logic via this function
     // Note: we cannot directly call the default `deserialize_into_config` implementation
     // in its override - this will just refer to the override implementation itself

@@ -108,6 +108,10 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         self.storage.read().unwrap().get_ledger_info(version)
     }
 
+    async fn load_on_chain_configs(&mut self) -> Result<()> {
+        Ok(())
+    }
+
     async fn publish_on_chain_config_updates(&mut self, _events: Vec<ContractEvent>) -> Result<()> {
         Ok(())
     }

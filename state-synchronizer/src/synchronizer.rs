@@ -61,7 +61,7 @@ impl StateSynchronizer {
         role: RoleType,
         waypoint: Option<Waypoint>,
         state_sync_config: &StateSyncConfig,
-        executor_proxy: E,
+        mut executor_proxy: E,
     ) -> Self {
         let mut runtime = Builder::new()
             .thread_name("state-sync-")
@@ -75,6 +75,12 @@ impl StateSynchronizer {
         let initial_state = runtime
             .block_on(executor_proxy.get_local_storage_state())
             .expect("[state sync] Start failure: cannot sync with storage.");
+
+        // initial read of on-chain configs
+        runtime
+            .block_on(executor_proxy.load_on_chain_configs())
+            .expect("[state sync] Failed initial read of on-chain configs");
+
         let coordinator = SyncCoordinator::new(
             coordinator_receiver,
             state_sync_to_mempool_sender,
