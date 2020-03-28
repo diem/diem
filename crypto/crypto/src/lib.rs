@@ -11,13 +11,12 @@ pub mod error;
 pub mod hash;
 pub mod hkdf;
 pub mod multi_ed25519;
+pub mod test_utils;
 pub mod traits;
 pub mod x25519;
 
 #[cfg(test)]
 mod unit_tests;
-
-pub mod test_utils;
 
 pub use self::traits::*;
 pub use hash::HashValue;
