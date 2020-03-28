@@ -21,7 +21,7 @@
 //! let hashed_message = hasher.finish();
 //!
 //! let mut rng: StdRng = SeedableRng::from_seed([0; 32]);
-//! let private_key = Ed25519PrivateKey::generate_for_testing(&mut rng);
+//! let private_key = Ed25519PrivateKey::generate(&mut rng);
 //! let public_key: Ed25519PublicKey = (&private_key).into();
 //! let signature = private_key.sign_message(&hashed_message);
 //! assert!(signature.verify(&hashed_message, &public_key).is_ok());
@@ -165,7 +165,7 @@ impl SigningKey for Ed25519PrivateKey {
 }
 
 impl Uniform for Ed25519PrivateKey {
-    fn generate_for_testing<R>(rng: &mut R) -> Self
+    fn generate<R>(rng: &mut R) -> Self
     where
         R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng,
     {
@@ -467,10 +467,10 @@ pub mod compat {
         T: Into<Option<&'a mut StdRng>> + Sized,
     {
         if let Some(rng_mut_ref) = opt_rng.into() {
-            <(Ed25519PrivateKey, Ed25519PublicKey)>::generate_for_testing(rng_mut_ref)
+            <(Ed25519PrivateKey, Ed25519PublicKey)>::generate(rng_mut_ref)
         } else {
             let mut rng = StdRng::from_seed(crate::test_utils::TEST_SEED);
-            <(Ed25519PrivateKey, Ed25519PublicKey)>::generate_for_testing(&mut rng)
+            <(Ed25519PrivateKey, Ed25519PublicKey)>::generate(&mut rng)
         }
     }
 

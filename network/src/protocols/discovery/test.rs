@@ -108,7 +108,7 @@ async fn expect_address_update(
 
 fn generate_network_pub_keys_and_signer() -> (NetworkPublicKeys, Ed25519PrivateKey) {
     let mut rng = StdRng::from_seed(TEST_SEED);
-    let signing_priv_key = Ed25519PrivateKey::generate_for_testing(&mut rng);
+    let signing_priv_key = Ed25519PrivateKey::generate(&mut rng);
     let (_, identity_pub_key) = x25519::compat::generate_keypair(&mut rng);
     (
         NetworkPublicKeys {

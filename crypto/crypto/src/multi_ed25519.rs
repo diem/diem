@@ -157,7 +157,7 @@ impl SigningKey for MultiEd25519PrivateKey {
 
 // Generating a random K out-of N key for testing.
 impl Uniform for MultiEd25519PrivateKey {
-    fn generate_for_testing<R>(rng: &mut R) -> Self
+    fn generate<R>(rng: &mut R) -> Self
     where
         R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng,
     {

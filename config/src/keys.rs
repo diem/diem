@@ -82,7 +82,7 @@ where
 {
     fn default() -> Self {
         let mut rng = StdRng::from_seed(TEST_SEED);
-        let private_key = T::generate_for_testing(&mut rng);
+        let private_key = T::generate(&mut rng);
         let public_key = private_key.public_key();
         Self {
             private_key: PrivateKeyContainer::Present(private_key),

@@ -39,11 +39,11 @@ where
     S: Uniform,
     for<'a> P: From<&'a S>,
 {
-    fn generate_for_testing<R>(rng: &mut R) -> Self
+    fn generate<R>(rng: &mut R) -> Self
     where
         R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng,
     {
-        let private_key = S::generate_for_testing(rng);
+        let private_key = S::generate(rng);
         private_key.into()
     }
 }
@@ -54,11 +54,11 @@ where
     S: Uniform,
     for<'a> P: From<&'a S>,
 {
-    fn generate_for_testing<R>(rng: &mut R) -> Self
+    fn generate<R>(rng: &mut R) -> Self
     where
         R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng,
     {
-        let private_key = S::generate_for_testing(rng);
+        let private_key = S::generate(rng);
         let public_key = (&private_key).into();
         (private_key, public_key)
     }
@@ -77,9 +77,9 @@ where
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
-use rand::{rngs::StdRng, SeedableRng};
-#[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
+#[cfg(any(test, feature = "fuzzing"))]
+use rand::{rngs::StdRng, SeedableRng};
 
 /// Produces a uniformly random keypair from a seed
 #[cfg(any(test, feature = "fuzzing"))]
@@ -93,7 +93,7 @@ where
     any::<[u8; 32]>()
         .prop_map(|seed| {
             let mut rng = StdRng::from_seed(seed);
-            KeyPair::<Priv, Pub>::generate_for_testing(&mut rng)
+            KeyPair::<Priv, Pub>::generate(&mut rng)
         })
         .no_shrink()
 }

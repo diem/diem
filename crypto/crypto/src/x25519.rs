@@ -43,7 +43,7 @@
 //! use libra_crypto::Uniform;
 //! let seed = [1u8; 32];
 //! let mut rng: StdRng = SeedableRng::from_seed(seed);
-//! let private_key = X25519StaticPrivateKey::generate_for_testing(&mut rng);
+//! let private_key = X25519StaticPrivateKey::generate(&mut rng);
 //! let public_key: X25519StaticPublicKey = (&private_key).into();
 //!
 //! // Generate an X25519 key pair from an RNG and a user-provided seed.
@@ -100,7 +100,7 @@ pub struct X25519SharedKey(x25519_dalek::SharedSecret);
 /////////////////////////
 
 impl Uniform for X25519EphemeralPrivateKey {
-    fn generate_for_testing<R>(rng: &mut R) -> Self
+    fn generate<R>(rng: &mut R) -> Self
     where
         R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng,
     {
@@ -181,7 +181,7 @@ impl X25519StaticPrivateKey {
 }
 
 impl Uniform for X25519StaticPrivateKey {
-    fn generate_for_testing<R>(rng: &mut R) -> Self
+    fn generate<R>(rng: &mut R) -> Self
     where
         R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng,
     {
@@ -352,10 +352,10 @@ pub mod compat {
         T: Into<Option<&'a mut StdRng>> + Sized,
     {
         if let Some(rng_mut_ref) = opt_rng.into() {
-            <(X25519StaticPrivateKey, X25519StaticPublicKey)>::generate_for_testing(rng_mut_ref)
+            <(X25519StaticPrivateKey, X25519StaticPublicKey)>::generate(rng_mut_ref)
         } else {
             let mut rng = StdRng::from_seed(crate::test_utils::TEST_SEED);
-            <(X25519StaticPrivateKey, X25519StaticPublicKey)>::generate_for_testing(&mut rng)
+            <(X25519StaticPrivateKey, X25519StaticPublicKey)>::generate(&mut rng)
         }
     }
 

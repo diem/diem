@@ -175,8 +175,8 @@ impl NetworkConfig {
     }
 
     pub fn random_with_peer_id(&mut self, rng: &mut StdRng, peer_id: Option<PeerId>) {
-        let signing_key = Ed25519PrivateKey::generate_for_testing(rng);
-        let identity_key = X25519StaticPrivateKey::generate_for_testing(rng);
+        let signing_key = Ed25519PrivateKey::generate(rng);
+        let identity_key = X25519StaticPrivateKey::generate(rng);
         let network_keypairs = NetworkKeyPairs::load(signing_key, identity_key);
         self.peer_id = if let Some(peer_id) = peer_id {
             peer_id

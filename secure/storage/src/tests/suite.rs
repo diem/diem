@@ -383,7 +383,7 @@ fn test_create_sign_rotate_sign(storage: &mut dyn Storage) {
 
 fn create_ed25519_key_for_testing() -> Ed25519PrivateKey {
     let mut rng = StdRng::from_seed([13u8; 32]);
-    Ed25519PrivateKey::generate_for_testing(&mut rng)
+    Ed25519PrivateKey::generate(&mut rng)
 }
 
 /// This test verifies that timestamps increase with successive writes
