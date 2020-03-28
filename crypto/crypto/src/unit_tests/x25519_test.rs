@@ -12,12 +12,12 @@ fn test_default_key_pair() {
     let public_key2: X25519StaticPublicKey;
     {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let private_key1 = X25519StaticPrivateKey::generate_for_testing(&mut rng);
+        let private_key1 = X25519StaticPrivateKey::generate(&mut rng);
         public_key1 = (&private_key1).into();
     }
     {
         let mut rng: StdRng = SeedableRng::from_seed(seed);
-        let private_key2 = X25519StaticPrivateKey::generate_for_testing(&mut rng);
+        let private_key2 = X25519StaticPrivateKey::generate(&mut rng);
         public_key2 = (&private_key2).into();
     }
     assert_eq!(public_key1, public_key2);
@@ -66,7 +66,7 @@ fn test_generate_key_pair_with_seed() {
 fn test_serialize_deserialize() {
     let seed: [u8; 32] = [0u8; 32];
     let mut rng: StdRng = SeedableRng::from_seed(seed);
-    let private_key = X25519StaticPrivateKey::generate_for_testing(&mut rng);
+    let private_key = X25519StaticPrivateKey::generate(&mut rng);
     let public_key: X25519StaticPublicKey = (&private_key).into();
 
     let serialized = lcs::to_bytes(&private_key).unwrap();

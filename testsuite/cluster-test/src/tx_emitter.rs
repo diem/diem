@@ -521,7 +521,7 @@ fn gen_transfer_txn_request(
 }
 
 fn gen_random_account(rng: &mut StdRng) -> AccountData {
-    let key_pair = KeyPair::generate_for_testing(rng);
+    let key_pair = KeyPair::generate(rng);
     AccountData {
         address: AccountAddress::from_public_key(&key_pair.public_key),
         key_pair,

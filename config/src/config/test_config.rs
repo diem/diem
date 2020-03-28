@@ -65,12 +65,12 @@ impl TestConfig {
     }
 
     pub fn random_account_key(&mut self, rng: &mut StdRng) {
-        let privkey = Ed25519PrivateKey::generate_for_testing(rng);
+        let privkey = Ed25519PrivateKey::generate(rng);
         self.account_keypair = Some(AccountKeyPair::load(privkey));
     }
 
     pub fn random_consensus_key(&mut self, rng: &mut StdRng) {
-        let privkey = Ed25519PrivateKey::generate_for_testing(rng);
+        let privkey = Ed25519PrivateKey::generate(rng);
         self.consensus_keypair = Some(ConsensusKeyPair::load(privkey));
     }
 

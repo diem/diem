@@ -224,8 +224,10 @@ pub trait Signature:
 /// A type family for schemes which know how to generate key material from
 /// a cryptographically-secure [`CryptoRng`][::rand::CryptoRng].
 pub trait Uniform {
-    /// Generate key material from an RNG for testing purposes.
-    fn generate_for_testing<R>(rng: &mut R) -> Self
+    /// Generate key material from an RNG. This should generally not be used for production
+    /// purposes even with a good source of randomness. When possible use hardware crypto to generate and
+    /// store private keys.
+    fn generate<R>(rng: &mut R) -> Self
     where
         R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng;
 }

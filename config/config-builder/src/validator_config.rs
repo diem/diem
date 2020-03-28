@@ -218,7 +218,7 @@ impl ValidatorConfig {
 
     fn build_faucet(&self) -> (Ed25519PrivateKey, [u8; 32]) {
         let mut faucet_rng = StdRng::from_seed(self.seed);
-        let faucet_key = Ed25519PrivateKey::generate_for_testing(&mut faucet_rng);
+        let faucet_key = Ed25519PrivateKey::generate(&mut faucet_rng);
         let config_seed: [u8; 32] = faucet_rng.gen();
         (faucet_key, config_seed)
     }

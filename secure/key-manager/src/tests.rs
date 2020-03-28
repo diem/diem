@@ -284,7 +284,7 @@ fn test_consensus_rotation() {
     assert_eq!(&node.account, genesis_info.account_address());
 
     let mut rng = StdRng::from_seed([44u8; 32]);
-    let new_prikey = Ed25519PrivateKey::generate_for_testing(&mut rng);
+    let new_prikey = Ed25519PrivateKey::generate(&mut rng);
     let new_pubkey = new_prikey.public_key();
 
     let txn = crate::build_transaction(
