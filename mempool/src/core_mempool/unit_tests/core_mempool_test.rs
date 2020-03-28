@@ -291,7 +291,7 @@ fn test_gc_ready_transaction() {
     // insert in the middle transaction that's going to be expired
     let txn = TestTransaction::new(1, 1, 1)
         .make_signed_transaction_with_expiration_time(Duration::from_secs(0));
-    pool.add_txn(txn, 0, 0, TimelineState::NotReady);
+    pool.add_txn(txn, 0, 1, 0, TimelineState::NotReady);
 
     // insert few transactions after it
     // They supposed to be ready because there's sequential path from 0 to them
@@ -323,7 +323,7 @@ fn test_clean_stuck_transactions() {
     }
     let db_sequence_number = 10;
     let txn = TestTransaction::new(0, db_sequence_number, 1).make_signed_transaction();
-    pool.add_txn(txn, 0, db_sequence_number, TimelineState::NotReady);
+    pool.add_txn(txn, 0, 1, db_sequence_number, TimelineState::NotReady);
     let block = pool.get_block(10, HashSet::new());
     assert_eq!(block.len(), 1);
     assert_eq!(block[0].sequence_number(), 10);
