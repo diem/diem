@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-mod bls12381_test;
 mod cross_test;
 mod ed25519_test;
 mod hkdf_test;
