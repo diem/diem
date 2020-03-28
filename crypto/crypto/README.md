@@ -15,7 +15,6 @@ Libra makes use of several cryptographic algorithms:
 * HKDF: HMAC-based Extract-and-Expand Key Derivation Function (HKDF) based on [RFC 5869](https://tools.ietf.org/html/rfc5869). It is used to generate keys from a salt (optional), seed, and application-info (optional).
 * traits.rs introduces new abstractions for the crypto API.
 * Ed25519 performs signatures using the new API design based on [ed25519-dalek](https://docs.rs/ed25519-dalek/1.0.0-pre.1/ed25519_dalek/) library with additional security checks (e.g. for malleability).
-* ECVRF implements a verifiable random function (VRF) according to [draft-irtf-cfrg-vrf-04](https://tools.ietf.org/html/draft-irtf-cfrg-vrf-04) over curve25519.
 * SLIP-0010 implements universal hierarchical key derivation for Ed25519 according to [SLIP-0010](https://github.com/satoshilabs/slips/blob/master/slip-0010.md).
 * X25519 to perform key exchanges. It is used to secure communications between validators via the [Noise Protocol Framework](http://www.noiseprotocol.org/noise.html). It is based on the x25519-dalek library.
 
@@ -33,9 +32,5 @@ Libra makes use of several cryptographic algorithms:
     ├── x25519.rs           # X25519 keys generation
     ├── test_utils.rs
     ├── traits.rs           # New API design and the necessary abstractions
-    ├── unit_tests/         # Tests
-    └── vrf/
-        ├── ecvrf.rs        # ECVRF implementation using curve25519 and SHA512
-        ├── mod.rs
-        └── unit_tests      # Tests
+    └── unit_tests/         # Tests
 ```

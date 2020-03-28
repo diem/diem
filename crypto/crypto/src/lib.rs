@@ -13,7 +13,6 @@ pub mod hkdf;
 pub mod multi_ed25519;
 pub mod slip0010;
 pub mod traits;
-pub mod vrf;
 pub mod x25519;
 
 #[cfg(test)]
