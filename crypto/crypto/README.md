@@ -32,3 +32,5 @@ Libra makes use of several cryptographic algorithms:
     ├── traits.rs           # New API design and the necessary abstractions
     └── unit_tests/         # Tests
 ```
+
+Note: This crate historically had support for BLS12381, ECVRF, and SlIP-0010, though were removed due to lack of use. The last git revision before there removal is 00301524.
