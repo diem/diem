@@ -108,6 +108,7 @@ impl Mempool {
         &mut self,
         txn: SignedTransaction,
         gas_amount: u64,
+        rankin_score: u64,
         db_sequence_number: u64,
         timeline_state: TimelineState,
     ) -> MempoolStatus {
@@ -145,7 +146,13 @@ impl Mempool {
             );
         }
 
-        let txn_info = MempoolTransaction::new(txn, expiration_time, gas_amount, timeline_state);
+        let txn_info = MempoolTransaction::new(
+            txn,
+            expiration_time,
+            gas_amount,
+            rankin_score,
+            timeline_state,
+        );
 
         let status = self.transactions.insert(txn_info, sequence_number);
         OP_COUNTERS.inc(&format!("insert.{:?}", status));

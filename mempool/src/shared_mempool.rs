@@ -349,7 +349,7 @@ where
             })
             .collect();
 
-    let validations = join_all(
+    let validation_results = join_all(
         transactions
             .iter()
             .map(|t| smp.validator.validate_transaction(t.0.clone())),
@@ -362,12 +362,18 @@ where
             .lock()
             .expect("[shared mempool] failed to acquire mempool lock");
         for (idx, (transaction, sequence_number)) in transactions.into_iter().enumerate() {
-            if let Ok(validation_result) = &validations[idx] {
+            if let Ok(validation_result) = &validation_results[idx] {
                 match validation_result.status() {
                     None => {
-                        let gas_cost = transaction.max_gas_amount();
-                        let mempool_status =
-                            mempool.add_txn(transaction, gas_cost, sequence_number, timeline_state);
+                        let gas_amount = transaction.max_gas_amount();
+                        let rankin_score = validation_result.score();
+                        let mempool_status = mempool.add_txn(
+                            transaction,
+                            gas_amount,
+                            rankin_score,
+                            sequence_number,
+                            timeline_state,
+                        );
                         statuses.push((mempool_status, None));
                     }
                     Some(validation_status) => {

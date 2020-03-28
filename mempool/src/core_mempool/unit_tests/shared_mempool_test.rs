@@ -161,7 +161,13 @@ impl SharedMempoolNetwork {
         let mut mempool = self.mempools.get(peer_id).unwrap().lock().unwrap();
         for txn in txns {
             let transaction = txn.make_signed_transaction_with_max_gas_amount(5);
-            mempool.add_txn(transaction, 0, 0, TimelineState::NotReady);
+            mempool.add_txn(
+                transaction.clone(),
+                0,
+                transaction.gas_unit_price(),
+                0,
+                TimelineState::NotReady,
+            );
         }
     }
 

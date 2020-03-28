@@ -10,6 +10,7 @@ pub struct MempoolTransaction {
     // system expiration time of transaction. It should be removed from mempool by that time
     pub expiration_time: Duration,
     pub gas_amount: u64,
+    pub ranking_score: u64,
     pub timeline_state: TimelineState,
 }
 
@@ -18,11 +19,13 @@ impl MempoolTransaction {
         txn: SignedTransaction,
         expiration_time: Duration,
         gas_amount: u64,
+        ranking_score: u64,
         timeline_state: TimelineState,
     ) -> Self {
         Self {
             txn,
             gas_amount,
+            ranking_score,
             expiration_time,
             timeline_state,
         }

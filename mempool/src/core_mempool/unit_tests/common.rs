@@ -99,7 +99,13 @@ pub(crate) fn add_txns_to_mempool(
     let mut transactions = vec![];
     for transaction in txns {
         let txn = transaction.make_signed_transaction();
-        pool.add_txn(txn.clone(), 0, 0, TimelineState::NotReady);
+        pool.add_txn(
+            txn.clone(),
+            0,
+            txn.gas_unit_price(),
+            0,
+            TimelineState::NotReady,
+        );
         transactions.push(txn);
     }
     transactions
@@ -111,7 +117,13 @@ pub(crate) fn add_txn(pool: &mut CoreMempool, transaction: TestTransaction) -> R
 
 pub(crate) fn add_signed_txn(pool: &mut CoreMempool, transaction: SignedTransaction) -> Result<()> {
     match pool
-        .add_txn(transaction, 0, 0, TimelineState::NotReady)
+        .add_txn(
+            transaction.clone(),
+            0,
+            transaction.gas_unit_price(),
+            0,
+            TimelineState::NotReady,
+        )
         .code
     {
         MempoolStatusCode::Accepted => Ok(()),
