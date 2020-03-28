@@ -7,7 +7,7 @@ use crate::{
         ED25519_PUBLIC_KEY_LENGTH, ED25519_SIGNATURE_LENGTH,
     },
     traits::*,
-    unit_tests::uniform_keypair_strategy,
+    test_utils::uniform_keypair_strategy,
 };
 
 use core::{
