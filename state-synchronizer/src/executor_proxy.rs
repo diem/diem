@@ -54,6 +54,13 @@ pub trait ExecutorProxyTrait: Sync + Send {
     /// Tries to find a LedgerInfo for a given version.
     async fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures>;
 
+    /// Load all on-chain configs from storage
+    /// Note: this method is being exposed as executor proxy trait temporarily because storage read is currently
+    /// using the tonic storage read client, which needs the tokio runtime to block on with no runtime/async issues
+    /// Once we make storage reads sync (by replacing the storage read client with direct LibraDB),
+    /// we can make this entirely internal to `ExecutorProxy`'s initialization procedure
+    async fn load_on_chain_configs(&mut self) -> Result<()>;
+
     /// publishes on-chain config updates to subscribed components
     async fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<()>;
 }
@@ -79,13 +86,31 @@ impl ExecutorProxy {
                 .map(|config| (*config, None))
                 .collect(),
         );
-
         Self {
             storage_read_client,
             executor,
             reconfig_subscriptions,
             on_chain_configs,
         }
+    }
+
+    // TODO make this into more general trait method in `on_chain_config.rs`
+    // once `StorageRead` trait is replaced with `LibraDBTrait` and `batch_fetch_config` method is no longer async
+    async fn fetch_all_configs(&self) -> HashMap<ConfigID, Option<Vec<u8>>> {
+        let access_paths = ON_CHAIN_CONFIG_REGISTRY
+            .iter()
+            .map(|config_id| config_id.access_path())
+            .collect();
+        let configs = self
+            .storage_read_client
+            .batch_fetch_config(access_paths)
+            .await;
+
+        ON_CHAIN_CONFIG_REGISTRY
+            .iter()
+            .cloned()
+            .zip(configs)
+            .collect()
     }
 }
 
@@ -169,43 +194,34 @@ impl ExecutorProxyTrait for ExecutorProxy {
         Ok(waypoint_li.clone())
     }
 
+    async fn load_on_chain_configs(&mut self) -> Result<()> {
+        self.on_chain_configs = Arc::new(self.fetch_all_configs().await);
+        Ok(())
+    }
+
     async fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<()> {
         if events.is_empty() {
             return Ok(());
         }
 
-        let access_paths = ON_CHAIN_CONFIG_REGISTRY
-            .iter()
-            .map(|config_id| config_id.access_path())
-            .collect();
-        let curr_configs = self
-            .storage_read_client
-            .batch_fetch_config(access_paths)
-            .await;
-
         // calculate deltas
-        let mut changed_configs = HashSet::new();
-        let mut new_configs = HashMap::new();
-        for ((id, config), new_config) in self.on_chain_configs.iter().zip(curr_configs) {
-            new_configs.insert(*id, new_config.clone());
+        let new_configs = self.fetch_all_configs().await;
+        let changed_configs = ON_CHAIN_CONFIG_REGISTRY
+            .iter()
+            .cloned()
+            .filter(|id| {
+                // the byte array is `None` on storage read failure
+                // We should still publish reconfig notification for failed DB read, to indicate that a
+                // reconfig event did happen, regardless of DB failure
+                // So, we only do not publish a config if its previous and new values are guaranteed
+                // to be the same
+                let new_cfg = new_configs.get(id).cloned().flatten();
+                let cfg = self.on_chain_configs.get(id).cloned().flatten();
+                !(new_cfg == cfg && new_cfg.is_some())
+            })
+            .collect::<HashSet<_>>();
 
-            // the byte array is `None` on storage read failure
-            // We should still publish reconfig notification for failed DB read, to indicate that a
-            // reconfig event did happen, regardless of DB failure
-            let mut should_publish = true;
-            if let Some(new_config) = new_config {
-                if let Some(config) = config {
-                    if config == &new_config {
-                        should_publish = false;
-                    }
-                }
-            };
-
-            if should_publish {
-                changed_configs.insert(id.clone());
-            }
-        }
-
+        // notify subscribers
         let new_configs = Arc::new(new_configs);
         let payload = OnChainConfigPayload::new(new_configs.clone());
         for subscription in self.reconfig_subscriptions.iter_mut() {
