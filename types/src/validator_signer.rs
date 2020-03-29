@@ -85,9 +85,7 @@ pub mod proptests {
         prop_oneof![
             // The no_shrink here reflects that particular keypair choices out
             // of random options are irrelevant.
-            LazyJust::new(
-                || Ed25519PrivateKey::generate(&mut StdRng::from_seed(TEST_SEED))
-            ),
+            LazyJust::new(|| Ed25519PrivateKey::generate(&mut StdRng::from_seed(TEST_SEED))),
             LazyJust::new(|| Ed25519PrivateKey::genesis()),
         ]
     }

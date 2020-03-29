@@ -9,6 +9,7 @@
 use crate::HashValue;
 use anyhow::Result;
 use core::convert::{From, TryFrom};
+use rand::{rngs::StdRng, CryptoRng, RngCore, SeedableRng};
 use serde::{de::DeserializeOwned, Serialize};
 use std::{fmt::Debug, hash::Hash};
 use thiserror::Error;
@@ -229,7 +230,16 @@ pub trait Uniform {
     /// store private keys.
     fn generate<R>(rng: &mut R) -> Self
     where
-        R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng;
+        R: SeedableRng + RngCore + CryptoRng;
+
+    /// Generate a random key using the shared TEST_SEED
+    fn generate_for_testing() -> Self
+    where
+        Self: Sized,
+    {
+        let mut rng: StdRng = SeedableRng::from_seed(crate::test_utils::TEST_SEED);
+        Self::generate(&mut rng)
+    }
 }
 
 /// A type family with a by-convention notion of genesis private key.
