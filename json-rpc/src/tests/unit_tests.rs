@@ -15,7 +15,7 @@ use anyhow::format_err;
 use futures::{channel::mpsc::channel, StreamExt};
 use hex;
 use libra_config::utils;
-use libra_crypto::{ed25519::*, HashValue};
+use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use libra_temppath::TempPath;
 use libra_types::{
     account_address::AccountAddress,
@@ -205,8 +205,8 @@ fn test_transaction_submission() {
 
     // closure that checks transaction submission for given account
     let mut txn_submission = move |sender| {
-        let keypair = compat::generate_keypair(None);
-        let txn = get_test_signed_txn(sender, 0, &keypair.0, keypair.1, None);
+        let privkey = Ed25519PrivateKey::generate_for_testing();
+        let txn = get_test_signed_txn(sender, 0, &privkey, privkey.public_key(), None);
         let mut batch = JsonRpcBatch::default();
         batch.add_submit_request(txn).unwrap();
         runtime.block_on(client.execute(batch)).unwrap()

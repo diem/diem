@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ed25519::{compat, Ed25519PrivateKey, Ed25519PublicKey, ED25519_PUBLIC_KEY_LENGTH},
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, ED25519_PUBLIC_KEY_LENGTH},
     hash::HashValue,
     multi_ed25519::{MultiEd25519PrivateKey, MultiEd25519PublicKey},
     test_utils::TEST_SEED,
@@ -18,9 +18,11 @@ use rand::{rngs::StdRng, SeedableRng};
 static MESSAGE_HASH: Lazy<HashValue> = Lazy::new(|| HashValue::from_sha3_256(b"Test Message"));
 
 // Helper function to generate N key pairs.
-fn generate_key_pairs(n: usize) -> Vec<(Ed25519PrivateKey, Ed25519PublicKey)> {
+fn generate_keys(n: usize) -> Vec<Ed25519PrivateKey> {
     let mut rng = StdRng::from_seed(TEST_SEED);
-    (0..n).map(|_| compat::generate_keypair(&mut rng)).collect()
+    (0..n)
+        .map(|_| Ed25519PrivateKey::generate(&mut rng))
+        .collect()
 }
 
 // Reused assertions in our tests.
@@ -66,14 +68,10 @@ fn test_successful_signature_serialization(private_keys: &[Ed25519PrivateKey], t
 // Test multi-sig Ed25519 public key serialization.
 #[test]
 fn test_multi_ed25519_public_key_serialization() {
-    let pub_keys_1: Vec<Ed25519PublicKey> =
-        generate_key_pairs(1).iter().map(|x| x.1.clone()).collect();
-    let pub_keys_10: Vec<Ed25519PublicKey> =
-        generate_key_pairs(10).iter().map(|x| x.1.clone()).collect();
-    let pub_keys_32: Vec<Ed25519PublicKey> =
-        generate_key_pairs(32).iter().map(|x| x.1.clone()).collect();
-    let pub_keys_33: Vec<Ed25519PublicKey> =
-        generate_key_pairs(33).iter().map(|x| x.1.clone()).collect();
+    let pub_keys_1: Vec<_> = generate_keys(1).iter().map(|x| x.public_key()).collect();
+    let pub_keys_10: Vec<_> = generate_keys(10).iter().map(|x| x.public_key()).collect();
+    let pub_keys_32: Vec<_> = generate_keys(32).iter().map(|x| x.public_key()).collect();
+    let pub_keys_33: Vec<_> = generate_keys(33).iter().map(|x| x.public_key()).collect();
 
     // Test 1-of-1
     test_successful_public_key_serialization(&pub_keys_1, 1);
@@ -129,9 +127,8 @@ fn test_multi_ed25519_public_key_serialization() {
         MultiEd25519PublicKey::try_from(&[0u8; ED25519_PUBLIC_KEY_LENGTH + 1][..]);
     test_failed_public_key_serialization(multi_key_33_zero_bytes, ValidationError);
 
-    let keypairs_10 = generate_key_pairs(10);
-    let priv_keys_10: Vec<Ed25519PrivateKey> = keypairs_10.iter().map(|x| x.0.clone()).collect();
-    let pub_keys_10: Vec<Ed25519PublicKey> = keypairs_10.iter().map(|x| x.1.clone()).collect();
+    let priv_keys_10 = generate_keys(10);
+    let pub_keys_10: Vec<_> = priv_keys_10.iter().map(|x| x.public_key()).collect();
 
     let multi_private_key_7of10 = MultiEd25519PrivateKey::new(priv_keys_10, 7).unwrap();
     let multi_public_key_7of10 = MultiEd25519PublicKey::new(pub_keys_10, 7).unwrap();
@@ -177,8 +174,7 @@ fn test_publickey_smallorder() {
 // Test multi-sig Ed25519 signature serialization.
 #[test]
 fn test_multi_ed25519_signature_serialization() {
-    let keypairs_3 = generate_key_pairs(3);
-    let priv_keys_3: Vec<Ed25519PrivateKey> = keypairs_3.iter().map(|x| x.0.clone()).collect();
+    let priv_keys_3 = generate_keys(3);
 
     // Test 1 of 3
     test_successful_signature_serialization(&priv_keys_3, 1);
@@ -187,8 +183,7 @@ fn test_multi_ed25519_signature_serialization() {
     // Test 3 of 3
     test_successful_signature_serialization(&priv_keys_3, 3);
 
-    let keypairs_32 = generate_key_pairs(32);
-    let priv_keys_32: Vec<Ed25519PrivateKey> = keypairs_32.iter().map(|x| x.0.clone()).collect();
+    let priv_keys_32 = generate_keys(32);
     // Test 1 of 32
     test_successful_signature_serialization(&priv_keys_32, 1);
     // Test 32 of 32
@@ -270,9 +265,8 @@ fn test_multi_ed25519_signature_serialization() {
 // Test multi-sig Ed25519 signature verification.
 #[test]
 fn test_multi_ed25519_signature_verification() {
-    let keypairs_10 = generate_key_pairs(10);
-    let priv_keys_10: Vec<Ed25519PrivateKey> = keypairs_10.iter().map(|x| x.0.clone()).collect();
-    let pub_keys_10: Vec<Ed25519PublicKey> = keypairs_10.iter().map(|x| x.1.clone()).collect();
+    let priv_keys_10 = generate_keys(10);
+    let pub_keys_10: Vec<_> = priv_keys_10.iter().map(|x| x.public_key()).collect();
 
     let multi_private_key_7of10 = MultiEd25519PrivateKey::new(priv_keys_10.clone(), 7).unwrap();
     let multi_public_key_7of10 = MultiEd25519PublicKey::from(&multi_private_key_7of10);
@@ -310,8 +304,7 @@ fn test_multi_ed25519_signature_verification() {
         .verify(&MESSAGE_HASH, &multi_public_key_7of10_reversed)
         .is_err());
 
-    let keypairs_3 = generate_key_pairs(3);
-    let priv_keys_3: Vec<Ed25519PrivateKey> = keypairs_3.iter().map(|x| x.0.clone()).collect();
+    let priv_keys_3 = generate_keys(3);
 
     let multi_private_key_1of3 = MultiEd25519PrivateKey::new(priv_keys_3.clone(), 1).unwrap();
     let multi_public_key_1of3 = MultiEd25519PublicKey::from(&multi_private_key_1of3);

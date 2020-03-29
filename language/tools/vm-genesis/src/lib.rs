@@ -10,9 +10,9 @@ use anyhow::Result;
 use bytecode_verifier::VerifiedModule;
 use libra_config::config::NodeConfig;
 use libra_crypto::{
-    ed25519::*,
-    traits::ValidKey,
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
+    PrivateKey, Uniform, ValidKey,
 };
 use libra_state_view::StateView;
 use libra_types::{
@@ -56,7 +56,9 @@ pub const ASSOCIATION_INIT_BALANCE: u64 = 1_000_000_000_000_000;
 
 pub static GENESIS_KEYPAIR: Lazy<(Ed25519PrivateKey, Ed25519PublicKey)> = Lazy::new(|| {
     let mut rng = StdRng::from_seed(GENESIS_SEED);
-    compat::generate_keypair(&mut rng)
+    let private_key = Ed25519PrivateKey::generate(&mut rng);
+    let public_key = private_key.public_key();
+    (private_key, public_key)
 });
 // TODO(philiphayes): remove this when we add discovery set to genesis config.
 static PLACEHOLDER_PUBKEY: Lazy<X25519StaticPublicKey> = Lazy::new(|| {

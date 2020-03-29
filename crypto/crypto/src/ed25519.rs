@@ -55,6 +55,14 @@ pub struct Ed25519PrivateKey(ed25519_dalek::SecretKey);
 #[cfg(feature = "assert-private-keys-not-cloneable")]
 static_assertions::assert_not_impl_any!(Ed25519PrivateKey: Clone);
 
+#[cfg(any(test, feature = "cloneable-private-keys"))]
+impl Clone for Ed25519PrivateKey {
+    fn clone(&self) -> Self {
+        let serialized: &[u8] = &(self.to_bytes());
+        Ed25519PrivateKey::try_from(serialized).unwrap()
+    }
+}
+
 /// An Ed25519 public key
 #[derive(DeserializeKey, Clone, SerializeKey)]
 pub struct Ed25519PublicKey(ed25519_dalek::PublicKey);
@@ -64,6 +72,9 @@ pub struct Ed25519PublicKey(ed25519_dalek::PublicKey);
 pub struct Ed25519Signature(ed25519_dalek::Signature);
 
 impl Ed25519PrivateKey {
+    /// The length of the Ed25519PrivateKey
+    pub const LENGTH: usize = ed25519_dalek::SECRET_KEY_LENGTH;
+
     /// Serialize an Ed25519PrivateKey.
     pub fn to_bytes(&self) -> [u8; ED25519_PRIVATE_KEY_LENGTH] {
         self.0.to_bytes()
@@ -98,6 +109,9 @@ impl Ed25519PublicKey {
 }
 
 impl Ed25519Signature {
+    /// The length of the Ed25519Signature
+    pub const LENGTH: usize = ed25519_dalek::SIGNATURE_LENGTH;
+
     /// Serialize an Ed25519Signature.
     pub fn to_bytes(&self) -> [u8; ED25519_SIGNATURE_LENGTH] {
         self.0.to_bytes()
@@ -199,7 +213,7 @@ impl TryFrom<&[u8]> for Ed25519PrivateKey {
 
 impl Length for Ed25519PrivateKey {
     fn length(&self) -> usize {
-        ED25519_PRIVATE_KEY_LENGTH
+        Self::LENGTH
     }
 }
 
@@ -432,79 +446,26 @@ fn check_s_lt_l(s: &[u8]) -> bool {
     false
 }
 
-//////////////////////////
-// Compatibility Traits //
-//////////////////////////
+#[cfg(any(test, feature = "fuzzing"))]
+use crate::test_utils::{self, KeyPair};
 
-/// Those transitory traits are meant to help with the progressive
-/// migration of the code base to the crypto module and will
-/// disappear after
-pub mod compat {
-    use crate::ed25519::*;
-    #[cfg(feature = "fuzzing")]
-    use proptest::strategy::LazyJust;
-    #[cfg(feature = "fuzzing")]
-    use proptest::{prelude::*, strategy::Strategy};
+/// Produces a uniformly random ed25519 keypair from a seed
+#[cfg(any(test, feature = "fuzzing"))]
+pub fn keypair_strategy() -> impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>> {
+    test_utils::uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()
+}
 
-    #[cfg(any(test, feature = "cloneable-private-keys"))]
-    impl Clone for Ed25519PrivateKey {
-        fn clone(&self) -> Self {
-            let serialized: &[u8] = &(self.to_bytes());
-            Ed25519PrivateKey::try_from(serialized).unwrap()
-        }
-    }
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest::prelude::*;
 
-    use crate::Uniform;
-    use rand::{rngs::StdRng, SeedableRng};
+#[cfg(any(test, feature = "fuzzing"))]
+impl proptest::arbitrary::Arbitrary for Ed25519PublicKey {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
 
-    /// Generate an arbitrary key pair, with possible Rng input
-    ///
-    /// Warning: if you pass in None, this will not return distinct
-    /// results every time! Should you want to write non-deterministic
-    /// tests, look at libra_config::config_builder::util::get_test_config
-    pub fn generate_keypair<'a, T>(opt_rng: T) -> (Ed25519PrivateKey, Ed25519PublicKey)
-    where
-        T: Into<Option<&'a mut StdRng>> + Sized,
-    {
-        if let Some(rng_mut_ref) = opt_rng.into() {
-            <(Ed25519PrivateKey, Ed25519PublicKey)>::generate(rng_mut_ref)
-        } else {
-            let mut rng = StdRng::from_seed(crate::test_utils::TEST_SEED);
-            <(Ed25519PrivateKey, Ed25519PublicKey)>::generate(&mut rng)
-        }
-    }
-
-    /// Used to produce keypairs from a seed for testing purposes
-    #[cfg(feature = "fuzzing")]
-    pub fn keypair_strategy() -> impl Strategy<Value = (Ed25519PrivateKey, Ed25519PublicKey)> {
-        // The no_shrink is because keypairs should be fixed -- shrinking would cause a different
-        // keypair to be generated, which appears to not be very useful.
-        any::<[u8; 32]>()
-            .prop_map(|seed| {
-                let mut rng: StdRng = SeedableRng::from_seed(seed);
-                let (private_key, public_key) = generate_keypair(&mut rng);
-                (private_key, public_key)
-            })
-            .no_shrink()
-    }
-
-    /// Generates a well-known keypair `(Ed25519PrivateKey, Ed25519PublicKey)` for special use
-    /// in the genesis block. A genesis block is the first block of a blockchain and it is
-    /// hardcoded as it's a special case in that it does not reference a previous block.
-    pub fn generate_genesis_keypair() -> (Ed25519PrivateKey, Ed25519PublicKey) {
-        let mut buf = [0u8; ED25519_PRIVATE_KEY_LENGTH];
-        buf[ED25519_PRIVATE_KEY_LENGTH - 1] = 1;
-        let private_key = Ed25519PrivateKey::try_from(&buf[..]).unwrap();
-        let public_key = (&private_key).into();
-        (private_key, public_key)
-    }
-
-    #[cfg(feature = "fuzzing")]
-    impl Arbitrary for Ed25519PublicKey {
-        type Parameters = ();
-        fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-            LazyJust::new(|| generate_keypair(None).1).boxed()
-        }
-        type Strategy = BoxedStrategy<Self>;
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        crate::test_utils::uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()
+            .prop_map(|v| v.public_key)
+            .boxed()
     }
 }

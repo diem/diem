@@ -4,9 +4,9 @@
 use executor::Executor;
 use executor_utils::create_storage_service_and_executor;
 use libra_crypto::{
-    ed25519::{self, Ed25519PrivateKey, Ed25519PublicKey},
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     hash::{CryptoHash, HashValue},
-    traits::{PrivateKey, SigningKey},
+    PrivateKey, SigningKey, Uniform,
 };
 use libra_logger::prelude::*;
 use libra_types::{
@@ -70,7 +70,8 @@ impl TransactionGenerator {
 
         let mut accounts = Vec::with_capacity(num_accounts);
         for _i in 0..num_accounts {
-            let (private_key, public_key) = ed25519::compat::generate_keypair(&mut rng);
+            let private_key = Ed25519PrivateKey::generate(&mut rng);
+            let public_key = private_key.public_key();
             let address = AccountAddress::from_public_key(&public_key);
             let account = AccountData {
                 private_key,

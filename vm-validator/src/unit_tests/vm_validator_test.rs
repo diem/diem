@@ -4,7 +4,7 @@
 use crate::vm_validator::{TransactionValidation, VMValidator};
 use executor::Executor;
 use libra_config::config::NodeConfig;
-use libra_crypto::{ed25519::*, PrivateKey};
+use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     account_address, account_config,
     account_config::lbr_type_tag,
@@ -107,7 +107,7 @@ fn test_validate_invalid_signature() {
     let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let mut rng = ::rand::rngs::StdRng::from_seed([1u8; 32]);
-    let (other_private_key, _) = compat::generate_keypair(&mut rng);
+    let other_private_key = Ed25519PrivateKey::generate(&mut rng);
     // Submit with an account using an different private/public keypair
 
     let address = account_config::association_address();
@@ -311,7 +311,7 @@ fn test_validate_invalid_auth_key() {
     let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let mut rng = ::rand::rngs::StdRng::from_seed([1u8; 32]);
-    let (other_private_key, other_public_key) = compat::generate_keypair(&mut rng);
+    let other_private_key = Ed25519PrivateKey::generate(&mut rng);
     // Submit with an account using an different private/public keypair
 
     let address = account_config::association_address();
@@ -320,7 +320,7 @@ fn test_validate_invalid_auth_key() {
         address,
         1,
         &other_private_key,
-        other_public_key,
+        other_private_key.public_key(),
         Some(program),
     );
     let ret = rt

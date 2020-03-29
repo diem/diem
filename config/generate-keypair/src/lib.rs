@@ -4,7 +4,11 @@
 #![forbid(unsafe_code)]
 
 use anyhow::Result;
-use libra_crypto::{ed25519::*, test_utils::KeyPair};
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    test_utils::KeyPair,
+    Uniform,
+};
 use libra_temppath::TempPath;
 use rand::{rngs::OsRng, Rng, SeedableRng};
 use std::{
@@ -23,7 +27,7 @@ pub fn create_faucet_key_file(output_file: &str) -> KeyPair<Ed25519PrivateKey, E
     let mut seed_rng = OsRng::new().expect("can't access OsRng");
     let mut rng = rand::rngs::StdRng::from_seed(seed_rng.gen());
 
-    let (private_key, _) = compat::generate_keypair(&mut rng);
+    let private_key = Ed25519PrivateKey::generate(&mut rng);
     let keypair = KeyPair::from(private_key);
 
     // Write to disk
