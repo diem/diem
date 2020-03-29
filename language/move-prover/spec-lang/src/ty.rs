@@ -76,8 +76,8 @@ impl Type {
         matches!(self, Type::Reference(_, _))
     }
 
-    /// Determines whether this is a mutual reference.
-    pub fn is_mutual_reference(&self) -> bool {
+    /// Determines whether this is a mutable reference.
+    pub fn is_mutable_reference(&self) -> bool {
         if let Type::Reference(true, _) = self {
             true
         } else {
