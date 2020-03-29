@@ -10,7 +10,7 @@ use executor_types::ExecutedTrees;
 use futures::executor::block_on;
 use libra_config::config::RoleType;
 use libra_crypto::{
-    ed25519::*, hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED,
+    ed25519::Ed25519PrivateKey, hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED,
     x25519::X25519StaticPrivateKey, PrivateKey, Uniform,
 };
 use libra_mempool::mocks::MockSharedMempool;
@@ -133,9 +133,9 @@ impl SynchronizerEnv {
 
         // Setup signing public keys.
         let mut rng = StdRng::from_seed(TEST_SEED);
-        let signing_keys = (0..count)
-            .map(|_| compat::generate_keypair(&mut rng))
-            .collect::<Vec<(Ed25519PrivateKey, Ed25519PublicKey)>>();
+        let signing_keys: Vec<_> = (0..count)
+            .map(|_| Ed25519PrivateKey::generate(&mut rng))
+            .collect();
         // Setup identity public keys.
         let identity_keys: Vec<_> = (0..count)
             .map(|_| X25519StaticPrivateKey::generate(&mut rng))
@@ -149,19 +149,12 @@ impl SynchronizerEnv {
                 signer.author(),
                 signer.public_key(),
                 voting_power,
-                signing_keys[idx].1.clone(),
+                signing_keys[idx].public_key(),
                 identity_keys[idx].public_key(),
             );
             validators_keys.push(validator_info);
         }
-        (
-            signers,
-            signing_keys
-                .iter()
-                .map(|(private_key, _)| private_key.clone())
-                .collect::<Vec<Ed25519PrivateKey>>(),
-            validators_keys,
-        )
+        (signers, signing_keys, validators_keys)
     }
 
     // Moves peer 0 to the next epoch. Note that other peers are not going to be able to discover

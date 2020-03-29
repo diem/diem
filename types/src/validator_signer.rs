@@ -68,8 +68,7 @@ impl ValidatorSigner {
     pub fn from_int(num: u8) -> Self {
         let mut address = [0; AccountAddress::LENGTH];
         address[0] = num;
-        let mut rng = StdRng::from_seed(TEST_SEED);
-        let private_key = Ed25519PrivateKey::generate(&mut rng);
+        let private_key = Ed25519PrivateKey::generate_for_testing();
         Self::new(AccountAddress::try_from(&address[..]).unwrap(), private_key)
     }
 }
@@ -85,7 +84,7 @@ pub mod proptests {
         prop_oneof![
             // The no_shrink here reflects that particular keypair choices out
             // of random options are irrelevant.
-            LazyJust::new(|| Ed25519PrivateKey::generate(&mut StdRng::from_seed(TEST_SEED))),
+            LazyJust::new(|| Ed25519PrivateKey::generate_for_testing()),
             LazyJust::new(|| Ed25519PrivateKey::genesis()),
         ]
     }

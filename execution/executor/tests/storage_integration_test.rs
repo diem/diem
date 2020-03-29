@@ -3,7 +3,11 @@
 
 use anyhow::{ensure, format_err, Result};
 use executor_utils::create_storage_service_and_executor;
-use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey};
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    test_utils::TEST_SEED,
+    HashValue, PrivateKey, Uniform,
+};
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -190,8 +194,7 @@ fn test_reconfiguration() {
     let txn2 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
 
     // rotate the validator's connsensus pubkey to trigger a reconfiguration
-    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
-    let (_, new_pubkey) = compat::generate_keypair(&mut rng);
+    let new_pubkey = Ed25519PrivateKey::generate_for_testing().public_key();
     let txn3 = get_test_signed_transaction(
         validator_account,
         /* sequence_number = */ 0,
@@ -724,16 +727,22 @@ fn test_execution_with_storage() {
     // account3} already exists in genesis, the code below will fail.
     assert!(seed != TEST_SEED);
     let mut rng = ::rand::rngs::StdRng::from_seed(seed);
-    let (privkey1, pubkey1) = compat::generate_keypair(&mut rng);
+
+    let privkey1 = Ed25519PrivateKey::generate(&mut rng);
+    let pubkey1 = privkey1.public_key();
     let account1_auth_key = AuthenticationKey::ed25519(&pubkey1);
     let account1 = account1_auth_key.derived_address();
-    let (privkey2, pubkey2) = compat::generate_keypair(&mut rng);
+
+    let privkey2 = Ed25519PrivateKey::generate(&mut rng);
+    let pubkey2 = privkey2.public_key();
     let account2_auth_key = AuthenticationKey::ed25519(&pubkey2);
     let account2 = account2_auth_key.derived_address();
-    let (_privkey3, pubkey3) = compat::generate_keypair(&mut rng);
+
+    let pubkey3 = Ed25519PrivateKey::generate(&mut rng).public_key();
     let account3_auth_key = AuthenticationKey::ed25519(&pubkey3);
     let account3 = account3_auth_key.derived_address();
-    let (_privkey4, pubkey4) = compat::generate_keypair(&mut rng);
+
+    let pubkey4 = Ed25519PrivateKey::generate(&mut rng).public_key();
     let account4_auth_key = AuthenticationKey::ed25519(&pubkey4); // non-existent account
     let account4 = account4_auth_key.derived_address();
     let genesis_account = association_address();

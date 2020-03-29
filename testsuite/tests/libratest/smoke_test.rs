@@ -4,7 +4,12 @@
 use cli::client_proxy::ClientProxy;
 use debug_interface::{libra_trace, node_debug_service::parse_events, NodeDebugClient};
 use libra_config::config::{NodeConfig, RoleType, TestConfig};
-use libra_crypto::{ed25519::*, hash::CryptoHash, test_utils::KeyPair, SigningKey};
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    hash::CryptoHash,
+    test_utils::KeyPair,
+    PrivateKey, SigningKey, Uniform,
+};
 use libra_json_rpc::views::{ScriptView, TransactionDataView};
 use libra_logger::prelude::*;
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
@@ -640,11 +645,8 @@ fn test_external_transaction_signer() {
     let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
 
     // generate key pair
-    let mut seed: [u8; 32] = [0u8; 32];
-    seed[..4].copy_from_slice(&[1, 2, 3, 4]);
-    let key_pair = compat::generate_keypair(None);
-    let private_key = key_pair.0;
-    let public_key = key_pair.1;
+    let private_key = Ed25519PrivateKey::generate_for_testing();
+    let public_key = private_key.public_key();
 
     // create transfer parameters
     let sender_auth_key = AuthenticationKey::ed25519(&public_key);

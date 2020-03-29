@@ -5,7 +5,7 @@ use crate::{
     data::{LibraAccountKey, LibraStatus},
     error::*,
 };
-use libra_crypto::ed25519::*;
+use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey};
 use libra_types::account_address::AccountAddress;
 use std::{convert::TryFrom, slice};
 
@@ -22,7 +22,7 @@ pub unsafe extern "C" fn libra_LibraAccountKey_from(
     }
 
     let private_key_buf: &[u8] =
-        slice::from_raw_parts(private_key_bytes, ED25519_PRIVATE_KEY_LENGTH);
+        slice::from_raw_parts(private_key_bytes, Ed25519PrivateKey::LENGTH);
 
     let private_key = match Ed25519PrivateKey::try_from(private_key_buf) {
         Ok(result) => result,
@@ -31,7 +31,7 @@ pub unsafe extern "C" fn libra_LibraAccountKey_from(
             return LibraStatus::InvalidArgument;
         }
     };
-    let public_key: Ed25519PublicKey = (&private_key).into();
+    let public_key = private_key.public_key();
     let address = AccountAddress::from_public_key(&public_key);
 
     *out = LibraAccountKey {
@@ -46,20 +46,15 @@ pub unsafe extern "C" fn libra_LibraAccountKey_from(
 /// Generate a private key, then get LibraAccount
 #[test]
 fn test_libra_account_from() {
-    use libra_crypto::test_utils::TEST_SEED;
-    use rand::{rngs::StdRng, SeedableRng};
+    use libra_crypto::Uniform;
 
-    // generate key pair
-    let mut rng = StdRng::from_seed(TEST_SEED);
-    let key_pair = compat::generate_keypair(&mut rng);
-    let private_key = key_pair.0;
-
+    let private_key = Ed25519PrivateKey::generate_for_testing();
     let mut libra_account = LibraAccountKey::default();
     let result =
         unsafe { libra_LibraAccountKey_from(private_key.to_bytes().as_ptr(), &mut libra_account) };
     assert_eq!(result, LibraStatus::Ok);
 
-    let public_key = key_pair.1;
+    let public_key = private_key.public_key();
     let address = AccountAddress::from_public_key(&public_key);
 
     assert_eq!(libra_account.public_key, public_key.to_bytes());

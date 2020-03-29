@@ -3,7 +3,10 @@
 
 use crate::global_state::inhabitor::RandomInhabitor;
 use bytecode_verifier::VerifiedModule;
-use libra_crypto::ed25519::{compat, Ed25519PrivateKey, Ed25519PublicKey};
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    PrivateKey, Uniform,
+};
 use libra_types::{access_path::AccessPath, account_address::AccountAddress, account_config};
 use move_vm_types::{
     identifier::create_access_path,
@@ -36,7 +39,8 @@ impl Account {
         let mut seed_rng = OsRng::new().expect("can't access OsRng");
         let seed_buf: [u8; 32] = seed_rng.gen();
         let mut rng = StdRng::from_seed(seed_buf);
-        let (privkey, pubkey) = compat::generate_keypair(&mut rng);
+        let privkey = Ed25519PrivateKey::generate(&mut rng);
+        let pubkey = privkey.public_key();
         let addr = AccountAddress::from_public_key(&pubkey);
         Account {
             addr,

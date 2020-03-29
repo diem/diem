@@ -54,12 +54,10 @@ impl Value {
 mod tests {
     use super::*;
     use libra_crypto::Uniform;
-    use rand::{rngs::StdRng, SeedableRng};
 
     #[test]
     fn ed25519_private_key() {
-        let mut rng = StdRng::from_seed([13u8; 32]);
-        let value = Ed25519PrivateKey::generate(&mut rng);
+        let value = Ed25519PrivateKey::generate_for_testing();
         let value = Value::Ed25519PrivateKey(value);
         let base64 = value.to_base64().unwrap();
         let out_value = Value::from_base64(&base64).unwrap();

@@ -8,10 +8,10 @@ use crate::{
     keygen::KeyGen,
 };
 use libra_crypto::{
-    ed25519::compat,
+    ed25519::Ed25519PrivateKey,
     hash::CryptoHash,
     multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature},
-    traits::SigningKey,
+    PrivateKey, SigningKey, Uniform,
 };
 use libra_types::{
     account_address::AccountAddress,
@@ -26,7 +26,8 @@ fn rotate_ed25519_key() {
     let mut sender = AccountData::new(1_000_000, 10);
     executor.add_account_data(&sender);
 
-    let (privkey, pubkey) = compat::generate_keypair(None);
+    let privkey = Ed25519PrivateKey::generate_for_testing();
+    let pubkey = privkey.public_key();
     let new_key_hash = AccountAddress::authentication_key(&pubkey).to_vec();
     let txn = rotate_key_txn(sender.account(), new_key_hash.clone(), 10);
 

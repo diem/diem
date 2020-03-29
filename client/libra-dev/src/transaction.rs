@@ -10,7 +10,11 @@ use crate::{
     error::*,
 };
 use lcs::to_bytes;
-use libra_crypto::{ed25519::*, test_utils::KeyPair};
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
+    test_utils::KeyPair,
+    PrivateKey,
+};
 use libra_types::{
     account_address::AccountAddress,
     account_config::lbr_type_tag,
@@ -41,7 +45,7 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
         return LibraStatus::InvalidArgument;
     }
     let private_key_buf: &[u8] =
-        slice::from_raw_parts(sender_private_key_bytes, ED25519_PRIVATE_KEY_LENGTH);
+        slice::from_raw_parts(sender_private_key_bytes, Ed25519PrivateKey::LENGTH);
     let private_key = match Ed25519PrivateKey::try_from(private_key_buf) {
         Ok(result) => result,
         Err(e) => {
@@ -50,7 +54,7 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
         }
     };
 
-    let public_key: Ed25519PublicKey = (&private_key).into();
+    let public_key = private_key.public_key();
     let sender_address = AccountAddress::from_public_key(&public_key);
 
     if receiver.is_null() {
@@ -390,283 +394,274 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
     LibraStatus::Ok
 }
 
-/// Generate a Signed Transaction and deserialize
-#[test]
-fn test_lcs_signed_transaction() {
+#[cfg(test)]
+mod test {
+    use super::*;
     use lcs::from_bytes;
-    use libra_crypto::test_utils::TEST_SEED;
+    use libra_crypto::{hash::CryptoHash, PrivateKey, SigningKey, Uniform};
     use libra_types::transaction::{SignedTransaction, TransactionArgument};
-    use rand::{rngs::StdRng, SeedableRng};
-
-    // generate key pair
-    let mut rng = StdRng::from_seed(TEST_SEED);
-    let key_pair = compat::generate_keypair(&mut rng);
-    let private_key = key_pair.0;
-    let public_key = key_pair.1;
-    let private_key_bytes = private_key.to_bytes();
-
-    // create transfer parameters
-    let sender_address = AccountAddress::from_public_key(&public_key);
-    let receiver_auth_key = AuthenticationKey::random();
-    let sequence = 0;
-    let amount = 100_000_000;
-    let gas_unit_price = 123;
-    let max_gas_amount = 1000;
-    let expiration_time_secs = 0;
-
-    let mut buf: *mut u8 = std::ptr::null_mut();
-    let buf_ptr = &mut buf;
-    let mut len: usize = 0;
-
-    let result = unsafe {
-        libra_SignedTransactionBytes_from(
-            private_key_bytes.as_ptr(),
-            receiver_auth_key.as_ref().as_ptr(),
-            sequence,
-            amount,
-            max_gas_amount,
-            gas_unit_price,
-            expiration_time_secs,
-            buf_ptr,
-            &mut len,
-        )
-    };
-
-    assert_eq!(result, LibraStatus::Ok);
-
-    let signed_txn_bytes_buf: &[u8] = unsafe { slice::from_raw_parts(buf, len) };
-    let deserialized_signed_txn: SignedTransaction =
-        from_bytes(signed_txn_bytes_buf).expect("LCS deserialization failed");
-
-    if let TransactionPayload::Script(program) = deserialized_signed_txn.payload() {
-        if let TransactionArgument::U64(val) = program.args()[1] {
-            assert_eq!(val, amount);
-        }
-    }
-    assert_eq!(deserialized_signed_txn.sender(), sender_address);
-    assert_eq!(deserialized_signed_txn.sequence_number(), 0);
-    assert_eq!(deserialized_signed_txn.gas_unit_price(), gas_unit_price);
-    assert_eq!(
-        deserialized_signed_txn.authenticator().public_key_bytes(),
-        public_key.to_bytes()
-    );
-    assert!(deserialized_signed_txn.check_signature().is_ok());
-
-    // Test signature is stable
-    let mut buf2: *mut u8 = std::ptr::null_mut();
-    let buf_ptr2 = &mut buf2;
-    let mut len2: usize = 0;
-    let result2 = unsafe {
-        libra_SignedTransactionBytes_from(
-            private_key_bytes.as_ptr(),
-            receiver_auth_key.as_ref().as_ptr(),
-            sequence,
-            amount,
-            max_gas_amount,
-            gas_unit_price,
-            expiration_time_secs,
-            buf_ptr2,
-            &mut len2,
-        )
-    };
-
-    assert_eq!(result2, LibraStatus::Ok);
-    assert_ne!(buf, buf2);
-    assert_eq!(len, len2);
-
-    unsafe {
-        let data2 = slice::from_raw_parts(buf2, len2);
-        assert_eq!(signed_txn_bytes_buf, data2);
-    }
-
-    unsafe {
-        libra_free_bytes_buffer(buf);
-        libra_free_bytes_buffer(buf2);
-    };
-}
-
-/// Generate a Raw Transaction, sign it, then deserialize
-#[test]
-fn test_libra_raw_transaction_bytes_from() {
-    use lcs::from_bytes;
-    use libra_crypto::{hash::CryptoHash, test_utils::TEST_SEED, traits::SigningKey};
-    use libra_types::transaction::{SignedTransaction, TransactionArgument};
-    use rand::{rngs::StdRng, SeedableRng};
-
-    // generate key pair
-    let mut rng = StdRng::from_seed(TEST_SEED);
-    let key_pair = compat::generate_keypair(&mut rng);
-    let private_key = key_pair.0;
-    let public_key = key_pair.1;
-
-    // create transfer parameters
-    let sender_address = AccountAddress::from_public_key(&public_key);
-    let receiver_auth_key = AuthenticationKey::random();
-    let sequence = 0;
-    let amount = 100_000_000;
-    let gas_unit_price = 123;
-    let max_gas_amount = 1000;
-    let expiration_time_secs = 0;
-
-    // get raw transaction in bytes
-    let mut buf: u8 = 0;
-    let mut buf_ptr: *mut u8 = &mut buf;
-    let mut len: usize = 0;
-    unsafe {
-        libra_RawTransactionBytes_from(
-            sender_address.as_ref().as_ptr(),
-            receiver_auth_key.as_ref().as_ptr(),
-            sequence,
-            amount,
-            max_gas_amount,
-            gas_unit_price,
-            expiration_time_secs,
-            &mut buf_ptr,
-            &mut len,
-        )
-    };
-
-    // deserialize raw txn and sign
-    let raw_txn_bytes: &[u8] = unsafe { slice::from_raw_parts(buf_ptr, len) };
-    let deserialized_raw_txn: RawTransaction =
-        from_bytes(raw_txn_bytes).expect("LCS deserialization failed for raw transaction");
-    let signature = private_key.sign_message(&deserialized_raw_txn.hash());
-
-    // get signed transaction by signing raw transaction
-    let mut signed_txn_buf: u8 = 0;
-    let mut signed_txn_buf_ptr: *mut u8 = &mut signed_txn_buf;
-    let mut signed_txn_len: usize = 0;
-    unsafe {
-        libra_RawTransaction_sign(
-            raw_txn_bytes.as_ptr(),
-            raw_txn_bytes.len(),
-            public_key.to_bytes().as_ptr(),
-            public_key.to_bytes().len(),
-            signature.to_bytes().as_ptr(),
-            signature.to_bytes().len(),
-            &mut signed_txn_buf_ptr,
-            &mut signed_txn_len,
-        )
-    };
-
-    let signed_txn_bytes: &[u8] =
-        unsafe { slice::from_raw_parts(signed_txn_buf_ptr, signed_txn_len) };
-    let deserialized_signed_txn: SignedTransaction =
-        from_bytes(signed_txn_bytes).expect("LCS deserialization failed for signed transaction");
-
-    // test values equal
-    if let TransactionPayload::Script(program) = deserialized_signed_txn.payload() {
-        if let TransactionArgument::U64(val) = program.args()[1] {
-            assert_eq!(val, amount);
-        }
-    }
-    assert_eq!(deserialized_signed_txn.sender(), sender_address);
-    assert_eq!(deserialized_signed_txn.sequence_number(), 0);
-    assert_eq!(deserialized_signed_txn.gas_unit_price(), gas_unit_price);
-    assert_eq!(
-        deserialized_signed_txn.authenticator().public_key_bytes(),
-        public_key.to_bytes()
-    );
-    assert!(deserialized_signed_txn.check_signature().is_ok());
-
-    // free memory
-    unsafe {
-        libra_free_bytes_buffer(buf_ptr);
-        libra_free_bytes_buffer(signed_txn_buf_ptr);
-    };
-}
-
-/// Generate a Signed Transaction and deserialize
-#[test]
-fn test_libra_signed_transaction_deserialize() {
     use std::ffi::CStr;
 
-    let keypair = compat::generate_keypair(None);
-    let sender = AccountAddress::random();
-    let receiver_auth_key = AuthenticationKey::random();
-    let sequence_number = 1;
-    let amount = 10_000_000;
-    let max_gas_amount = 10;
-    let gas_unit_price = 1;
-    let expiration_time_secs = 5;
-    let public_key = keypair.1;
-    let signature = Ed25519Signature::try_from(&[1u8; ED25519_SIGNATURE_LENGTH][..]).unwrap();
+    /// Generate a Signed Transaction and deserialize
+    #[test]
+    fn test_lcs_signed_transaction() {
+        // generate key pair
+        let private_key = Ed25519PrivateKey::generate_for_testing();
+        let public_key = private_key.public_key();
+        let private_key_bytes = private_key.to_bytes();
 
-    let program = encode_transfer_script(
-        &receiver_auth_key.derived_address(),
-        receiver_auth_key.prefix().to_vec(),
-        amount,
-    );
-    let signed_txn = SignedTransaction::new(
-        RawTransaction::new_script(
-            sender,
-            sequence_number,
-            program,
-            max_gas_amount,
-            gas_unit_price,
-            lbr_type_tag(),
-            Duration::from_secs(expiration_time_secs),
-        ),
-        public_key.clone(),
-        signature.clone(),
-    );
-    let proto_txn: libra_types::proto::types::SignedTransaction = signed_txn.clone().into();
+        // create transfer parameters
+        let sender_address = AccountAddress::from_public_key(&public_key);
+        let receiver_auth_key = AuthenticationKey::random();
+        let sequence = 0;
+        let amount = 100_000_000;
+        let gas_unit_price = 123;
+        let max_gas_amount = 1000;
+        let expiration_time_secs = 0;
 
-    let mut libra_signed_txn = LibraSignedTransaction::default();
-    let result = unsafe {
-        libra_LibraSignedTransaction_from(
-            proto_txn.txn_bytes.as_ptr(),
-            proto_txn.txn_bytes.len() - 1, // pass in wrong length so that SignedTransaction cannot deserialize
-            &mut libra_signed_txn,
-        )
-    };
-    assert_eq!(result, LibraStatus::InvalidArgument);
+        let mut buf: *mut u8 = std::ptr::null_mut();
+        let buf_ptr = &mut buf;
+        let mut len: usize = 0;
 
-    unsafe {
-        let error_msg = libra_strerror();
-        let error_string: &CStr = CStr::from_ptr(error_msg);
-        assert_eq!(error_string.to_str().unwrap(), "Error deserializing signed transaction, invalid signed transaction bytes or length: unexpected end of input");
-    };
+        let result = unsafe {
+            libra_SignedTransactionBytes_from(
+                private_key_bytes.as_ptr(),
+                receiver_auth_key.as_ref().as_ptr(),
+                sequence,
+                amount,
+                max_gas_amount,
+                gas_unit_price,
+                expiration_time_secs,
+                buf_ptr,
+                &mut len,
+            )
+        };
 
-    let result = unsafe {
-        libra_LibraSignedTransaction_from(
-            proto_txn.txn_bytes.as_ptr(),
-            proto_txn.txn_bytes.len(),
-            &mut libra_signed_txn,
-        )
-    };
+        assert_eq!(result, LibraStatus::Ok);
 
-    assert_eq!(result, LibraStatus::Ok);
+        let signed_txn_bytes_buf: &[u8] = unsafe { slice::from_raw_parts(buf, len) };
+        let deserialized_signed_txn: SignedTransaction =
+            from_bytes(signed_txn_bytes_buf).expect("LCS deserialization failed");
 
-    unsafe {
-        let error_msg = libra_strerror();
-        let error_string: &CStr = CStr::from_ptr(error_msg);
-        assert_eq!(error_string.to_str().unwrap(), "");
-    };
-
-    let payload = signed_txn.payload();
-    if let TransactionPayload::Script(_script) = payload {
+        if let TransactionPayload::Script(program) = deserialized_signed_txn.payload() {
+            if let TransactionArgument::U64(val) = program.args()[1] {
+                assert_eq!(val, amount);
+            }
+        }
+        assert_eq!(deserialized_signed_txn.sender(), sender_address);
+        assert_eq!(deserialized_signed_txn.sequence_number(), 0);
+        assert_eq!(deserialized_signed_txn.gas_unit_price(), gas_unit_price);
         assert_eq!(
-            TransactionType::PeerToPeer,
-            libra_signed_txn.raw_txn.payload.txn_type
+            deserialized_signed_txn.authenticator().public_key_bytes(),
+            public_key.to_bytes()
         );
-        assert_eq!(
-            receiver_auth_key.derived_address(),
-            AccountAddress::new(libra_signed_txn.raw_txn.payload.args.address)
-        );
-        assert_eq!(amount, libra_signed_txn.raw_txn.payload.args.value);
+        assert!(deserialized_signed_txn.check_signature().is_ok());
+
+        // Test signature is stable
+        let mut buf2: *mut u8 = std::ptr::null_mut();
+        let buf_ptr2 = &mut buf2;
+        let mut len2: usize = 0;
+        let result2 = unsafe {
+            libra_SignedTransactionBytes_from(
+                private_key_bytes.as_ptr(),
+                receiver_auth_key.as_ref().as_ptr(),
+                sequence,
+                amount,
+                max_gas_amount,
+                gas_unit_price,
+                expiration_time_secs,
+                buf_ptr2,
+                &mut len2,
+            )
+        };
+
+        assert_eq!(result2, LibraStatus::Ok);
+        assert_ne!(buf, buf2);
+        assert_eq!(len, len2);
+
+        unsafe {
+            let data2 = slice::from_raw_parts(buf2, len2);
+            assert_eq!(signed_txn_bytes_buf, data2);
+        }
+
+        unsafe {
+            libra_free_bytes_buffer(buf);
+            libra_free_bytes_buffer(buf2);
+        };
     }
-    assert_eq!(sender, AccountAddress::new(libra_signed_txn.raw_txn.sender));
-    assert_eq!(sequence_number, libra_signed_txn.raw_txn.sequence_number);
-    assert_eq!(max_gas_amount, libra_signed_txn.raw_txn.max_gas_amount);
-    assert_eq!(gas_unit_price, libra_signed_txn.raw_txn.gas_unit_price);
-    assert_eq!(public_key.to_bytes(), libra_signed_txn.public_key);
-    assert_eq!(
-        signature,
-        Ed25519Signature::try_from(libra_signed_txn.signature.as_ref()).unwrap()
-    );
-    assert_eq!(
-        expiration_time_secs,
-        libra_signed_txn.raw_txn.expiration_time_secs
-    );
+
+    /// Generate a Raw Transaction, sign it, then deserialize
+    #[test]
+    fn test_libra_raw_transaction_bytes_from() {
+        let private_key = Ed25519PrivateKey::generate_for_testing();
+        let public_key = private_key.public_key();
+
+        // create transfer parameters
+        let sender_address = AccountAddress::from_public_key(&public_key);
+        let receiver_auth_key = AuthenticationKey::random();
+        let sequence = 0;
+        let amount = 100_000_000;
+        let gas_unit_price = 123;
+        let max_gas_amount = 1000;
+        let expiration_time_secs = 0;
+
+        // get raw transaction in bytes
+        let mut buf: u8 = 0;
+        let mut buf_ptr: *mut u8 = &mut buf;
+        let mut len: usize = 0;
+        unsafe {
+            libra_RawTransactionBytes_from(
+                sender_address.as_ref().as_ptr(),
+                receiver_auth_key.as_ref().as_ptr(),
+                sequence,
+                amount,
+                max_gas_amount,
+                gas_unit_price,
+                expiration_time_secs,
+                &mut buf_ptr,
+                &mut len,
+            )
+        };
+
+        // deserialize raw txn and sign
+        let raw_txn_bytes: &[u8] = unsafe { slice::from_raw_parts(buf_ptr, len) };
+        let deserialized_raw_txn: RawTransaction =
+            from_bytes(raw_txn_bytes).expect("LCS deserialization failed for raw transaction");
+        let signature = private_key.sign_message(&deserialized_raw_txn.hash());
+
+        // get signed transaction by signing raw transaction
+        let mut signed_txn_buf: u8 = 0;
+        let mut signed_txn_buf_ptr: *mut u8 = &mut signed_txn_buf;
+        let mut signed_txn_len: usize = 0;
+        unsafe {
+            libra_RawTransaction_sign(
+                raw_txn_bytes.as_ptr(),
+                raw_txn_bytes.len(),
+                public_key.to_bytes().as_ptr(),
+                public_key.to_bytes().len(),
+                signature.to_bytes().as_ptr(),
+                signature.to_bytes().len(),
+                &mut signed_txn_buf_ptr,
+                &mut signed_txn_len,
+            )
+        };
+
+        let signed_txn_bytes: &[u8] =
+            unsafe { slice::from_raw_parts(signed_txn_buf_ptr, signed_txn_len) };
+        let deserialized_signed_txn: SignedTransaction = from_bytes(signed_txn_bytes)
+            .expect("LCS deserialization failed for signed transaction");
+
+        // test values equal
+        if let TransactionPayload::Script(program) = deserialized_signed_txn.payload() {
+            if let TransactionArgument::U64(val) = program.args()[1] {
+                assert_eq!(val, amount);
+            }
+        }
+        assert_eq!(deserialized_signed_txn.sender(), sender_address);
+        assert_eq!(deserialized_signed_txn.sequence_number(), 0);
+        assert_eq!(deserialized_signed_txn.gas_unit_price(), gas_unit_price);
+        assert_eq!(
+            deserialized_signed_txn.authenticator().public_key_bytes(),
+            public_key.to_bytes()
+        );
+        assert!(deserialized_signed_txn.check_signature().is_ok());
+
+        // free memory
+        unsafe {
+            libra_free_bytes_buffer(buf_ptr);
+            libra_free_bytes_buffer(signed_txn_buf_ptr);
+        };
+    }
+
+    /// Generate a Signed Transaction and deserialize
+    #[test]
+    fn test_libra_signed_transaction_deserialize() {
+        let public_key = Ed25519PrivateKey::generate_for_testing().public_key();
+        let sender = AccountAddress::random();
+        let receiver_auth_key = AuthenticationKey::random();
+        let sequence_number = 1;
+        let amount = 10_000_000;
+        let max_gas_amount = 10;
+        let gas_unit_price = 1;
+        let expiration_time_secs = 5;
+        let signature = Ed25519Signature::try_from(&[1u8; Ed25519Signature::LENGTH][..]).unwrap();
+
+        let program = encode_transfer_script(
+            &receiver_auth_key.derived_address(),
+            receiver_auth_key.prefix().to_vec(),
+            amount,
+        );
+        let signed_txn = SignedTransaction::new(
+            RawTransaction::new_script(
+                sender,
+                sequence_number,
+                program,
+                max_gas_amount,
+                gas_unit_price,
+                lbr_type_tag(),
+                Duration::from_secs(expiration_time_secs),
+            ),
+            public_key.clone(),
+            signature.clone(),
+        );
+        let proto_txn: libra_types::proto::types::SignedTransaction = signed_txn.clone().into();
+
+        let mut libra_signed_txn = LibraSignedTransaction::default();
+        let result = unsafe {
+            libra_LibraSignedTransaction_from(
+                proto_txn.txn_bytes.as_ptr(),
+                proto_txn.txn_bytes.len() - 1, // pass in wrong length so that SignedTransaction cannot deserialize
+                &mut libra_signed_txn,
+            )
+        };
+        assert_eq!(result, LibraStatus::InvalidArgument);
+
+        unsafe {
+            let error_msg = libra_strerror();
+            let error_string: &CStr = CStr::from_ptr(error_msg);
+            assert_eq!(error_string.to_str().unwrap(), "Error deserializing signed transaction, invalid signed transaction bytes or length: unexpected end of input");
+        };
+
+        let result = unsafe {
+            libra_LibraSignedTransaction_from(
+                proto_txn.txn_bytes.as_ptr(),
+                proto_txn.txn_bytes.len(),
+                &mut libra_signed_txn,
+            )
+        };
+
+        assert_eq!(result, LibraStatus::Ok);
+
+        unsafe {
+            let error_msg = libra_strerror();
+            let error_string: &CStr = CStr::from_ptr(error_msg);
+            assert_eq!(error_string.to_str().unwrap(), "");
+        };
+
+        let payload = signed_txn.payload();
+        if let TransactionPayload::Script(_script) = payload {
+            assert_eq!(
+                TransactionType::PeerToPeer,
+                libra_signed_txn.raw_txn.payload.txn_type
+            );
+            assert_eq!(
+                receiver_auth_key.derived_address(),
+                AccountAddress::new(libra_signed_txn.raw_txn.payload.args.address)
+            );
+            assert_eq!(amount, libra_signed_txn.raw_txn.payload.args.value);
+        }
+        assert_eq!(sender, AccountAddress::new(libra_signed_txn.raw_txn.sender));
+        assert_eq!(sequence_number, libra_signed_txn.raw_txn.sequence_number);
+        assert_eq!(max_gas_amount, libra_signed_txn.raw_txn.max_gas_amount);
+        assert_eq!(gas_unit_price, libra_signed_txn.raw_txn.gas_unit_price);
+        assert_eq!(public_key.to_bytes(), libra_signed_txn.public_key);
+        assert_eq!(
+            signature,
+            Ed25519Signature::try_from(libra_signed_txn.signature.as_ref()).unwrap()
+        );
+        assert_eq!(
+            expiration_time_secs,
+            libra_signed_txn.raw_txn.expiration_time_secs
+        );
+    }
 }

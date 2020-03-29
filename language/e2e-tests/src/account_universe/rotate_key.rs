@@ -6,7 +6,10 @@ use crate::{
     common_transactions::rotate_key_txn,
     gas_costs,
 };
-use libra_crypto::ed25519::{compat::keypair_strategy, *};
+use libra_crypto::{
+    ed25519::{self, Ed25519PrivateKey, Ed25519PublicKey},
+    test_utils::KeyPair,
+};
 use libra_proptest_helpers::Index;
 use libra_types::{
     account_address::AccountAddress,
@@ -21,8 +24,8 @@ use proptest_derive::Arbitrary;
 #[proptest(no_params)]
 pub struct RotateKeyGen {
     sender: Index,
-    #[proptest(strategy = "keypair_strategy()")]
-    new_key: (Ed25519PrivateKey, Ed25519PublicKey),
+    #[proptest(strategy = "ed25519::keypair_strategy()")]
+    new_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
 }
 
 impl AUTransactionGen for RotateKeyGen {
@@ -32,8 +35,8 @@ impl AUTransactionGen for RotateKeyGen {
     ) -> (SignedTransaction, (TransactionStatus, u64)) {
         let sender = universe.pick(self.sender).1;
 
-        let new_key_hash = AccountAddress::authentication_key(&self.new_key.1).to_vec();
-        let txn = rotate_key_txn(sender.account(), new_key_hash, sender.sequence_number);
+        let key_hash = AccountAddress::authentication_key(&self.new_keypair.public_key).to_vec();
+        let txn = rotate_key_txn(sender.account(), key_hash, sender.sequence_number);
 
         // This should work all the time except for if the balance is too low for gas.
         let mut gas_cost = 0;
@@ -42,8 +45,10 @@ impl AUTransactionGen for RotateKeyGen {
             sender.sequence_number += 1;
             gas_cost = sender.rotate_key_gas_cost();
             sender.balance -= gas_cost;
-            let (privkey, pubkey) = (self.new_key.0.clone(), self.new_key.1.clone());
-            sender.rotate_key(privkey, pubkey);
+            sender.rotate_key(
+                self.new_keypair.private_key.clone(),
+                self.new_keypair.public_key.clone(),
+            );
 
             TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
         } else {

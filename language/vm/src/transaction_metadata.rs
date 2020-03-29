@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasPrice, GasUnits};
-use libra_crypto::ed25519::compat;
+use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey};
 use libra_types::{
     account_address::AccountAddress,
     transaction::{authenticator::AuthenticationKeyPreimage, SignedTransaction},
 };
-use std::time::Duration;
+use std::{convert::TryFrom, time::Duration};
 
 pub struct TransactionMetadata {
     pub sender: AccountAddress,
@@ -66,7 +66,9 @@ impl TransactionMetadata {
 
 impl Default for TransactionMetadata {
     fn default() -> Self {
-        let (_, public_key) = compat::generate_genesis_keypair();
+        let mut buf = [0u8; Ed25519PrivateKey::LENGTH];
+        buf[Ed25519PrivateKey::LENGTH - 1] = 1;
+        let public_key = Ed25519PrivateKey::try_from(&buf[..]).unwrap().public_key();
         TransactionMetadata {
             sender: AccountAddress::default(),
             authentication_key_preimage: AuthenticationKeyPreimage::ed25519(&public_key).into_vec(),

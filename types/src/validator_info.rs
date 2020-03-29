@@ -4,10 +4,10 @@
 use crate::account_address::AccountAddress;
 use anyhow::{Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
-use libra_crypto::ed25519::compat::generate_keypair as generate_ed25519_keypair;
+use libra_crypto::{
+    ed25519::Ed25519PrivateKey, x25519::X25519StaticPrivateKey, PrivateKey, Uniform,
+};
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519::X25519StaticPublicKey, ValidKey};
-#[cfg(any(test, feature = "fuzzing"))]
-use libra_crypto::{x25519::X25519StaticPrivateKey, PrivateKey, Uniform};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -65,7 +65,7 @@ impl ValidatorInfo {
         consensus_public_key: Ed25519PublicKey,
         consensus_voting_power: u64,
     ) -> Self {
-        let (_, network_signing_public_key) = generate_ed25519_keypair(None);
+        let network_signing_public_key = Ed25519PrivateKey::generate_for_testing().public_key();
         let network_identity_public_key =
             X25519StaticPrivateKey::generate_for_testing().public_key();
         ValidatorInfo {

@@ -1,9 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_crypto::{test_utils::TEST_SEED, PrivateKey, Uniform, ValidKeyStringExt};
+use libra_crypto::{PrivateKey, Uniform, ValidKeyStringExt};
 use mirai_annotations::verify_unreachable;
-use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Debug, PartialEq)]
@@ -81,8 +80,7 @@ where
     T::PublicKeyMaterial: DeserializeOwned + 'static + Serialize + ValidKeyStringExt,
 {
     fn default() -> Self {
-        let mut rng = StdRng::from_seed(TEST_SEED);
-        let private_key = T::generate(&mut rng);
+        let private_key = T::generate_for_testing();
         let public_key = private_key.public_key();
         Self {
             private_key: PrivateKeyContainer::Present(private_key),
