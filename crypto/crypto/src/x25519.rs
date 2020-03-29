@@ -325,61 +325,16 @@ impl std::fmt::Debug for X25519StaticPublicKey {
     }
 }
 
-//////////////////////////
-// Compatibility Traits //
-//////////////////////////
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest::prelude::*;
 
-/// Those transitory traits are meant to help with the progressive
-/// migration of the code base to the crypto module and will
-/// disappear after.
-pub mod compat {
-    use crate::traits::*;
-    #[cfg(any(test, feature = "fuzzing"))]
-    use proptest::strategy::LazyJust;
-    #[cfg(any(test, feature = "fuzzing"))]
-    use proptest::{prelude::*, strategy::Strategy};
+#[cfg(any(test, feature = "fuzzing"))]
+impl proptest::arbitrary::Arbitrary for X25519StaticPublicKey {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
 
-    use crate::x25519::{X25519StaticPrivateKey, X25519StaticPublicKey};
-    use rand::{rngs::StdRng, SeedableRng};
-
-    /// Generate an arbitrary key pair, with possible Rng input
-    ///
-    /// Warning: if you pass in None, this will not return distinct
-    /// results every time! Should you want to write non-deterministic
-    /// tests, look at libra_config::config_builder::util::get_test_config
-    pub fn generate_keypair<'a, T>(opt_rng: T) -> (X25519StaticPrivateKey, X25519StaticPublicKey)
-    where
-        T: Into<Option<&'a mut StdRng>> + Sized,
-    {
-        if let Some(rng_mut_ref) = opt_rng.into() {
-            <(X25519StaticPrivateKey, X25519StaticPublicKey)>::generate(rng_mut_ref)
-        } else {
-            let mut rng = StdRng::from_seed(crate::test_utils::TEST_SEED);
-            <(X25519StaticPrivateKey, X25519StaticPublicKey)>::generate(&mut rng)
-        }
-    }
-
-    /// Used to produce keypairs from a seed for testing purposes
-    #[cfg(any(test, feature = "fuzzing"))]
-    pub fn keypair_strategy(
-    ) -> impl Strategy<Value = (X25519StaticPrivateKey, X25519StaticPublicKey)> {
-        // The no_shrink is because keypairs should be fixed -- shrinking would cause a different
-        // keypair to be generated, which appears to not be very useful.
-        any::<[u8; 32]>()
-            .prop_map(|seed| {
-                let mut rng: StdRng = SeedableRng::from_seed(seed);
-                let (private_key, public_key) = generate_keypair(&mut rng);
-                (private_key, public_key)
-            })
-            .no_shrink()
-    }
-
-    #[cfg(any(test, feature = "fuzzing"))]
-    impl Arbitrary for X25519StaticPublicKey {
-        type Parameters = ();
-        fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-            LazyJust::new(|| generate_keypair(None).1).boxed()
-        }
-        type Strategy = BoxedStrategy<Self>;
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        crate::test_utils::uniform_keypair_strategy::<X25519StaticPrivateKey, X25519StaticPublicKey>()
+            .prop_map(|v| v.public_key).boxed()
     }
 }

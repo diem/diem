@@ -10,11 +10,8 @@ use executor_types::ExecutedTrees;
 use futures::executor::block_on;
 use libra_config::config::RoleType;
 use libra_crypto::{
-    ed25519::*,
-    hash::ACCUMULATOR_PLACEHOLDER_HASH,
-    test_utils::TEST_SEED,
-    x25519,
-    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
+    ed25519::*, hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED,
+    x25519::X25519StaticPrivateKey, PrivateKey, Uniform,
 };
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
@@ -140,9 +137,9 @@ impl SynchronizerEnv {
             .map(|_| compat::generate_keypair(&mut rng))
             .collect::<Vec<(Ed25519PrivateKey, Ed25519PublicKey)>>();
         // Setup identity public keys.
-        let identity_keys = (0..count)
-            .map(|_| x25519::compat::generate_keypair(&mut rng))
-            .collect::<Vec<(X25519StaticPrivateKey, X25519StaticPublicKey)>>();
+        let identity_keys: Vec<_> = (0..count)
+            .map(|_| X25519StaticPrivateKey::generate(&mut rng))
+            .collect();
 
         let mut validators_keys = vec![];
         // The voting power of peer 0 is enough to generate an LI that passes validation.
@@ -153,7 +150,7 @@ impl SynchronizerEnv {
                 signer.public_key(),
                 voting_power,
                 signing_keys[idx].1.clone(),
-                identity_keys[idx].1.clone(),
+                identity_keys[idx].public_key(),
             );
             validators_keys.push(validator_info);
         }
