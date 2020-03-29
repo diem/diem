@@ -58,10 +58,7 @@ async fn submit(mut service: JsonRpcService, params: Vec<Value>) -> Result<()> {
     } else if mempool_status.code == MempoolStatusCode::Accepted {
         Ok(())
     } else {
-        Err(format_err!(
-            "Mempool insertion failed: {:?}",
-            mempool_status
-        ))
+        Err(Error::new(JsonRpcError::mempool_error(mempool_status)?))
     }
 }
 
