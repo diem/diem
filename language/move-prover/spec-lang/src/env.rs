@@ -1310,7 +1310,7 @@ impl<'env> FunctionEnv<'env> {
     pub fn is_mutating(&self) -> bool {
         self.get_parameters()
             .iter()
-            .any(|Parameter(_, ty)| ty.is_mutual_reference())
+            .any(|Parameter(_, ty)| ty.is_mutable_reference())
     }
 
     /// Returns the type parameters associated with this function.

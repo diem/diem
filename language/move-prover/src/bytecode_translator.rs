@@ -58,12 +58,12 @@ struct BytecodeContext<'l> {
     code: &'l StacklessFunction,
     /// The bytecode offsets which require a label because they are branched to.
     branching_targets: BTreeSet<CodeOffset>,
-    /// Set of mutual references, represented by local index. Used for debug tracking. Currently,
+    /// Set of mutable references, represented by local index. Used for debug tracking. Currently,
     /// after each mutation (either by an instruction or by call to a function with mutable
     /// parameters), we dump tracking info for all the variables in this set. This is a vast
     /// over-approximation; however, the execution trace visualizer will remove redundant
     /// entries, so it is more of a performance concern.
-    mutual_refs: BTreeSet<usize>,
+    mutable_refs: BTreeSet<usize>,
     /// A map from local indices  to the before borrow index. Every root which is borrowed in this
     /// function has an entry here. For every BorrowLoc(d) | BorrowGlobal(d), we have an entry
     /// d -> i and construct variables $before_borrow_i to remember the value before borrowing,
@@ -86,7 +86,7 @@ impl<'l> BytecodeContext<'l> {
         Self {
             code,
             branching_targets: BTreeSet::new(),
-            mutual_refs: BTreeSet::new(),
+            mutable_refs: BTreeSet::new(),
             borrowed_to_before_index: BTreeMap::new(),
             inherited_to_before_index: BTreeMap::new(),
             offset_to_dead_refs: BTreeMap::new(),
@@ -511,9 +511,9 @@ impl<'env> ModuleTranslator<'env> {
                 }
                 BorrowLoc(dst, ..) | BorrowGlobal(dst, ..) => {
                     let ty = self.get_local_type(func_env, *dst);
-                    if ty.is_mutual_reference() {
-                        // Track that we create a mutual reference here.
-                        context.mutual_refs.insert(*dst);
+                    if ty.is_mutable_reference() {
+                        // Track that we create a mutable reference here.
+                        context.mutable_refs.insert(*dst);
                         if self.has_after_update_invariant(&ty) {
                             // Create a new borrow index.
                             context
@@ -525,16 +525,16 @@ impl<'env> ModuleTranslator<'env> {
                 }
                 BorrowField(dst, ..) => {
                     let ty = self.get_local_type(func_env, *dst);
-                    if ty.is_mutual_reference() {
-                        // Track that we create a mutual reference here.
-                        context.mutual_refs.insert(*dst);
+                    if ty.is_mutable_reference() {
+                        // Track that we create a mutable reference here.
+                        context.mutable_refs.insert(*dst);
                     }
                 }
                 MoveLoc(dst, src) => {
                     // Propagate information from src to dst.
                     let src = &(*src as usize);
-                    if context.mutual_refs.contains(src) {
-                        context.mutual_refs.insert(*dst);
+                    if context.mutable_refs.contains(src) {
+                        context.mutable_refs.insert(*dst);
                     }
                     if let Some(idx) = context.borrowed_to_before_index.get(src) {
                         // dst becomes an alias for src
@@ -545,8 +545,8 @@ impl<'env> ModuleTranslator<'env> {
                 StLoc(dst, src) => {
                     // Propagate information from src to dst.
                     let dst = &(*dst as usize);
-                    if context.mutual_refs.contains(src) {
-                        context.mutual_refs.insert(*dst);
+                    if context.mutable_refs.contains(src) {
+                        context.mutable_refs.insert(*dst);
                     }
                     if let Some(idx) = context.borrowed_to_before_index.get(src) {
                         // dst becomes an alias for src
@@ -557,10 +557,10 @@ impl<'env> ModuleTranslator<'env> {
                 _ => {}
             }
         }
-        // (c) Walk over parameters and collect mutual references if they have update invariants.
+        // (c) Walk over parameters and collect mutable references if they have update invariants.
         if func_env.is_public() {
             for (i, Parameter(_, ty)) in func_env.get_parameters().iter().enumerate() {
-                if ty.is_mutual_reference() && self.has_after_update_invariant(ty) {
+                if ty.is_mutable_reference() && self.has_after_update_invariant(ty) {
                     context
                         .inherited_to_before_index
                         .insert(i, before_borrow_counter);
@@ -634,7 +634,7 @@ impl<'env> ModuleTranslator<'env> {
         if !context.inherited_to_before_index.is_empty() {
             emitln!(
                 self.writer,
-                "\n// save values and references for mutual ref parameters with invariants"
+                "\n// save values and references for mutable ref parameters with invariants"
             );
             for (param_idx, before_idx) in context.inherited_to_before_index.iter() {
                 self.save_and_enforce_before_update(&func_env, *param_idx, *before_idx);
@@ -719,8 +719,8 @@ impl<'env> ModuleTranslator<'env> {
         };
 
         // Helper function to debug track potential updates of references.
-        let track_mutual_refs = |ctx: &mut BytecodeContext<'_>| {
-            for idx in &ctx.mutual_refs {
+        let track_mutable_refs = |ctx: &mut BytecodeContext<'_>| {
+            for idx in &ctx.mutable_refs {
                 if *idx < func_env.get_local_count() {
                     let s = self.track_local(func_env, loc.clone(), *idx, str_local(&idx).as_str());
                     if !s.is_empty() {
@@ -731,7 +731,7 @@ impl<'env> ModuleTranslator<'env> {
             // Add reference parameter because we also want to debug track them when
             // references are written.
             for (idx, Parameter(_, ty)) in func_env.get_parameters().iter().enumerate() {
-                if ty.is_mutual_reference() {
+                if ty.is_mutable_reference() {
                     let s = self.track_local(func_env, loc.clone(), idx, str_local(&idx).as_str());
                     if !s.is_empty() {
                         emitln!(self.writer, &s);
@@ -884,7 +884,7 @@ impl<'env> ModuleTranslator<'env> {
                     str_local(dest),
                     src,
                 );
-                track_mutual_refs(ctx);
+                track_mutable_refs(ctx);
             }
             FreezeRef(dest, src) => emitln!(
                 self.writer,
@@ -971,7 +971,7 @@ impl<'env> ModuleTranslator<'env> {
                     emitln!(self.writer, s);
                 }
                 if callee_env.is_mutating() {
-                    track_mutual_refs(ctx);
+                    track_mutable_refs(ctx);
                 }
             }
             Pack(dest, struct_def_index, type_actuals, fields) => {
