@@ -173,9 +173,9 @@ pub struct MempoolReconfigSubscription {
 
 impl EventSubscription for MempoolReconfigSubscription {
     fn subscribed_configs(&self) -> HashSet<ConfigID> {
-        let mut subscribed_configs = HashSet::new();
-        subscribed_configs.insert(VMPublishingOption::CONFIG_ID);
-        subscribed_configs
+        vec![VMPublishingOption::CONFIG_ID]
+            .into_iter()
+            .collect::<HashSet<_>>()
     }
 
     fn publish(&mut self, payload: OnChainConfigPayload) {

@@ -26,28 +26,25 @@ impl ConfigID {
     }
 }
 
+/// State sync will panic if the value of any config in this registry is uninitialized
 pub const ON_CHAIN_CONFIG_REGISTRY: &[ConfigID] = &[VMPublishingOption::CONFIG_ID];
 
 #[derive(Clone)]
 pub struct OnChainConfigPayload {
-    configs: Arc<HashMap<ConfigID, Option<Vec<u8>>>>,
+    configs: Arc<HashMap<ConfigID, Vec<u8>>>,
 }
 
 impl OnChainConfigPayload {
-    pub fn new(configs: Arc<HashMap<ConfigID, Option<Vec<u8>>>>) -> Self {
+    pub fn new(configs: Arc<HashMap<ConfigID, Vec<u8>>>) -> Self {
         Self { configs }
     }
 
     pub fn get<T: OnChainConfig>(&self) -> Result<T> {
-        if let Some(bytes) = self
+        let bytes = self
             .configs
             .get(&T::CONFIG_ID)
-            .ok_or_else(|| format_err!("[on-chain-cfg] config not in payload"))?
-        {
-            T::deserialize_into_config(bytes)
-        } else {
-            Err(format_err!("[on-chain-cfg] missing byte array in payload, potentially caused be failed storage read"))
-        }
+            .ok_or_else(|| format_err!("[on-chain cfg] config not in payload"))?;
+        T::deserialize_into_config(bytes)
     }
 }
 
