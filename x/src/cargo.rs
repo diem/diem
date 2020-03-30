@@ -114,8 +114,12 @@ impl Cargo {
             } else {
                 "Failed"
             };
-            let elapsed = now.elapsed().as_millis();
-            info!("{} in {} millis: {:?}", status, elapsed, &self.inner);
+            info!(
+                "{} in {}ms: {:?}",
+                status,
+                now.elapsed().as_millis(),
+                &self.inner
+            );
         }
         if !output.status.success() {
             return Err(anyhow!("failed to run cargo command"));

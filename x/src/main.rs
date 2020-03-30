@@ -3,7 +3,10 @@
 
 #![forbid(unsafe_code)]
 
-use env_logger::Env;
+use chrono::Local;
+use env_logger::{self, fmt::Color};
+use log::{Level, LevelFilter};
+use std::io::Write;
 use structopt::StructOpt;
 
 mod bench;
@@ -47,10 +50,31 @@ enum Command {
 }
 
 fn main() -> Result<()> {
-    let env = Env::default()
-        .filter_or("MY_LOG_LEVEL", "info")
-        .write_style_or("MY_LOG_STYLE", "always");
-    env_logger::init_from_env(env);
+    //let env = Env::default().filter_or("RUST_LOG", "info");
+    //.write_style_or("LOG_STYLE", "always");
+    //env_logger::init_from_env(env);
+
+    env_logger::builder()
+        .format(|buf, record| {
+            let color = match record.level() {
+                Level::Warn => Color::Yellow,
+                Level::Error => Color::Red,
+                _ => Color::Green,
+            };
+
+            let mut level_style = buf.style();
+            level_style.set_color(color).set_bold(true);
+
+            writeln!(
+                buf,
+                "{:>12} [{}] - {}",
+                level_style.value(record.level()),
+                Local::now().format("%T%.3f"),
+                record.args()
+            )
+        })
+        .filter(None, LevelFilter::Info)
+        .init();
 
     let args = Args::from_args();
     let config = config::Config::from_project_root()?;
