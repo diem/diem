@@ -109,14 +109,13 @@ impl Cargo {
         let output = self.inner.output()?;
         // once all the command has been executed we log it's success or failure.
         if log {
-            let status = if output.status.success() {
-                "Completed"
-            } else {
-                "Failed"
-            };
             info!(
                 "{} in {}ms: {:?}",
-                status,
+                if output.status.success() {
+                    "Completed"
+                } else {
+                    "Failed"
+                },
                 now.elapsed().as_millis(),
                 &self.inner
             );
