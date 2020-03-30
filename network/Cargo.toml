@@ -52,7 +52,7 @@ fuzzing = ["proptest", "libra-proptest-helpers", "libra-types/fuzzing"]
 testing = []
 
 [[bench]]
-name = "socket_muxer_bench"
+name = "socket_bench"
 harness = false
 
 [[bench]]

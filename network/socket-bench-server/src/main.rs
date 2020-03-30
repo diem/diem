@@ -3,10 +3,10 @@
 
 #![forbid(unsafe_code)]
 
-//! Standalone server for socket_muxer_bench
+//! Standalone server for socket_bench
 //! ========================================
 //!
-//! You can run `socket_muxer_bench` across a real network by running this bench
+//! You can run `socket_bench` across a real network by running this bench
 //! server remotely. For example,
 //!
 //! `TCP_ADDR=/ip6/::1/tcp/12345 cargo run --release --bin socket-bench-server`
@@ -18,10 +18,7 @@
 
 use libra_logger::info;
 use netcore::transport::tcp::TcpTransport;
-use socket_bench_server::{
-    build_tcp_muxer_transport, build_tcp_noise_muxer_transport, build_tcp_noise_transport,
-    start_muxer_server, start_stream_server, Args,
-};
+use socket_bench_server::{build_tcp_noise_transport, start_stream_server, Args};
 use tokio::runtime::Runtime;
 
 fn main() {
@@ -40,15 +37,5 @@ fn main() {
     if let Some(addr) = args.tcp_noise_addr {
         let addr = start_stream_server(&executor, build_tcp_noise_transport(), addr);
         info!("bench: tcp+noise: listening on: {}", addr);
-    }
-
-    if let Some(addr) = args.tcp_muxer_addr {
-        let addr = start_muxer_server(&executor, build_tcp_muxer_transport(), addr);
-        info!("bench: tcp+muxer: listening on: {}", addr);
-    }
-
-    if let Some(addr) = args.tcp_noise_muxer_addr {
-        let addr = start_muxer_server(&executor, build_tcp_noise_muxer_transport(), addr);
-        info!("bench: tcp+noise+muxer: listening on: {}", addr);
     }
 }
