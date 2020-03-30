@@ -27,7 +27,7 @@ const STORAGE_TESTS: &[fn(&mut dyn Storage)] = &[
     test_get_set_non_existent,
     test_get_uncreated_key_pair,
     test_hash_value,
-    test_timestamp,
+    test_incremental_timestamp,
     test_verify_incorrect_value_types_unwrap,
 ];
 
@@ -381,7 +381,7 @@ fn test_create_sign_rotate_sign(storage: &mut dyn Storage) {
 }
 
 /// This test verifies that timestamps increase with successive writes
-fn test_timestamp(storage: &mut dyn Storage) {
+fn test_incremental_timestamp(storage: &mut dyn Storage) {
     let key = "timestamp_u64";
     let value0 = 442;
     let value1 = 450;
@@ -393,6 +393,6 @@ fn test_timestamp(storage: &mut dyn Storage) {
     storage.set(key, Value::U64(value1)).unwrap();
     let second = storage.get(key).unwrap();
 
-    assert!(first.value != second.value);
-    assert!(first.last_update != second.last_update);
+    assert_ne!(first.value, second.value);
+    assert!(first.last_update < second.last_update);
 }
