@@ -899,7 +899,7 @@ impl ClientProxy {
         space_delim_strings: &[&str],
     ) -> Result<(Vec<EventView>, AccountView)> {
         ensure!(
-            space_delim_strings.len() == 6,
+            space_delim_strings.len() == 5,
             "Invalid number of arguments to get events by access path"
         );
         let (account, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
@@ -920,11 +920,11 @@ impl ClientProxy {
                 error,
             )
         })?;
-        let limit = space_delim_strings[5].parse::<u64>().map_err(|error| {
+        let limit = space_delim_strings[4].parse::<u64>().map_err(|error| {
             format_parse_data_error(
                 "start_seq_number",
                 InputType::UnsignedInt,
-                space_delim_strings[3],
+                space_delim_strings[4],
                 error,
             )
         })?;

@@ -898,7 +898,7 @@ impl LibraDBTrait for LibraDB {
             .ledger_info()
             .version();
         let events = self
-            .get_events_by_event_key(event_key, start, false, limit, version)?
+            .get_events_by_event_key(event_key, start, true, limit, version)?
             .into_iter()
             .map(|e| (e.transaction_version, e.event))
             .collect();
