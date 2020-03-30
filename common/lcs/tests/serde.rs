@@ -4,7 +4,10 @@
 // For some reason deriving `Arbitrary` results in clippy firing a `unit_arg` violation
 #![allow(clippy::unit_arg)]
 
-use libra_canonical_serialization::{from_bytes, to_bytes, Error, MAX_SEQUENCE_LENGTH};
+use libra_canonical_serialization::{
+    backward_compatibility, compressed_signed, compressed_unsigned, from_bytes, to_bytes, Error,
+    MAX_SEQUENCE_LENGTH,
+};
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -581,4 +584,117 @@ fn serde_known_vector() {
     // make sure we can deserialize the test vector into expected struct
     let deserialized_foo: Foo = from_bytes(&test_vector).unwrap();
     assert_eq!(f, deserialized_foo);
+}
+
+#[derive(Serialize, Deserialize, Arbitrary, Debug, PartialEq)]
+struct Unsigned {
+    #[serde(with = "compressed_unsigned")]
+    x: u32,
+}
+
+#[test]
+fn compressed_unsigned() {
+    assert_eq!(from_bytes::<Unsigned>(&[0x80, 0x80, 0x80]), Err(Error::Eof));
+    assert_eq!(
+        from_bytes::<Unsigned>(&[0x80, 0x80, 0x80, 0x0]),
+        Err(Error::NonCanonicalUleb128Encoding)
+    );
+    assert_eq!(
+        from_bytes::<Unsigned>(&[0x80, 0x80, 0x80, 0x80, 0x7f]),
+        Err(Error::Custom(
+            "ULEB128-encoded integer did not fit in the target size".into()
+        )),
+    );
+    assert_eq!(from_bytes::<Unsigned>(&[0x0]), Ok(Unsigned { x: 0 }));
+    assert_eq!(
+        from_bytes::<Unsigned>(&[0x80, 0x1]),
+        Ok(Unsigned { x: 128 })
+    );
+    assert_eq!(
+        from_bytes::<Unsigned>(&[0x81, 0x1]),
+        Ok(Unsigned { x: 129 })
+    );
+    assert_eq!(
+        from_bytes::<Unsigned>(&[0x80, 0x80, 0x80, 0x1]),
+        Ok(Unsigned { x: 1 << 21 })
+    );
+}
+
+proptest! {
+    #[test]
+    fn proptest_compressed_unsigned(v in any::<Unsigned>()) {
+        is_same(v);
+    }
+}
+
+#[derive(Serialize, Deserialize, Arbitrary, Debug, PartialEq)]
+struct Signed {
+    #[serde(with = "compressed_signed")]
+    x: i32,
+}
+
+#[test]
+fn compressed_signed() {
+    assert_eq!(from_bytes::<Signed>(&[0x80, 0x80, 0x80]), Err(Error::Eof));
+    assert_eq!(
+        from_bytes::<Signed>(&[0x80, 0x80, 0x80, 0x0]),
+        Err(Error::NonCanonicalUleb128Encoding)
+    );
+    assert_eq!(
+        from_bytes::<Signed>(&[0x80, 0x80, 0x80, 0x80, 0x7f]),
+        Err(Error::Custom(
+            "ULEB128-encoded integer did not fit in the target size".into()
+        )),
+    );
+    assert_eq!(from_bytes::<Signed>(&[0x0]), Ok(Signed { x: 0 }));
+    assert_eq!(from_bytes::<Signed>(&[0x80, 0x1]), Ok(Signed { x: 64 }));
+    assert_eq!(from_bytes::<Signed>(&[0x81, 0x1]), Ok(Signed { x: -65 }));
+}
+
+proptest! {
+    #[test]
+    fn proptest_compressed_signed(v in any::<Signed>()) {
+        is_same(v);
+    }
+}
+
+#[derive(Serialize, Deserialize, Arbitrary, Debug, PartialEq)]
+struct Extendable {
+    x: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, Arbitrary, Debug, PartialEq, Clone)]
+struct Extended {
+    #[serde(with = "backward_compatibility")]
+    x: (u16, u16),
+}
+
+#[test]
+fn backward_compatibility() {
+    assert_eq!(
+        from_bytes::<Extended>(&[/* length prefix: */ 0x4, 0x1, 0x0, 0x2, 0x0]),
+        Ok(Extended { x: (1, 2) })
+    );
+
+    // The empty vector is a valid default value.
+    let bytes = to_bytes(&Extendable { x: Vec::new() }).unwrap();
+    assert_eq!(from_bytes::<Extended>(&bytes), Ok(Extended { x: (0, 0) }));
+
+    // The empty vector is the only accepted encoding for the default value.
+    assert_eq!(
+        from_bytes::<Extended>(&[0x4, 0x0, 0x0, 0x0, 0x0]),
+        Err(Error::Custom(
+            "Serialization of extension points must use empty vector for the default value".into()
+        ))
+    );
+}
+
+proptest! {
+    #[test]
+    fn proptest_backward_compatibility(v in any::<Extended>()) {
+        is_same(v.clone());
+
+        let old = from_bytes::<Extendable>(&to_bytes(&v).unwrap()).unwrap();
+        is_same(old);
+    }
 }

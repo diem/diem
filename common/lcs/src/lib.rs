@@ -285,3 +285,119 @@ pub const MAX_SEQUENCE_LENGTH: usize = 1 << 31;
 pub use de::{from_bytes, from_bytes_seed};
 pub use error::{Error, Result};
 pub use ser::{is_human_readable, to_bytes};
+
+pub mod compressed_unsigned {
+
+    use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
+
+    pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: Serialize + Clone + Into<u128>,
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            value.serialize(serializer)
+        } else {
+            // TODO: Make it possible for serde-reflection to understand what's happening.
+            serializer.serialize_u128(value.clone().into())
+        }
+    }
+
+    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
+    where
+        T: Deserialize<'de> + std::convert::TryFrom<u128>,
+        D: Deserializer<'de>,
+    {
+        use serde::de::Error;
+        if deserializer.is_human_readable() {
+            T::deserialize(deserializer)
+        } else {
+            let value = <u128>::deserialize(deserializer)?;
+            T::try_from(value).map_err(|_| {
+                D::Error::custom(crate::Error::IntegerOverflowDuringUleb128Decoding.to_string())
+            })
+        }
+    }
+}
+
+pub mod compressed_signed {
+
+    use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
+
+    pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: Serialize + Clone + Into<i128>,
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            value.serialize(serializer)
+        } else {
+            // TODO: Make it possible for serde-reflection to understand what's happening.
+            serializer.serialize_i128(value.clone().into())
+        }
+    }
+
+    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
+    where
+        T: Deserialize<'de> + std::convert::TryFrom<i128>,
+        D: Deserializer<'de>,
+    {
+        use serde::de::Error;
+        if deserializer.is_human_readable() {
+            T::deserialize(deserializer)
+        } else {
+            let value = <i128>::deserialize(deserializer)?;
+            T::try_from(value).map_err(|_| {
+                D::Error::custom(crate::Error::IntegerOverflowDuringUleb128Decoding.to_string())
+            })
+        }
+    }
+}
+
+pub mod backward_compatibility {
+
+    use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
+
+    pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: Serialize + Default + PartialEq,
+        S: Serializer,
+    {
+        use serde::ser::Error;
+        if serializer.is_human_readable() {
+            value.serialize(serializer)
+        } else {
+            // TODO: Make it possible for serde-reflection to understand what's happening.
+            if *value == T::default() {
+                serializer.serialize_bytes(&[])
+            } else {
+                let bytes = crate::to_bytes(&value).map_err(|e| S::Error::custom(e.to_string()))?;
+                serializer.serialize_bytes(&bytes)
+            }
+        }
+    }
+
+    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
+    where
+        T: Deserialize<'de> + Default + PartialEq,
+        D: Deserializer<'de>,
+    {
+        use serde::de::Error;
+        if deserializer.is_human_readable() {
+            T::deserialize(deserializer)
+        } else {
+            let bytes = <&[u8]>::deserialize(deserializer)?;
+            if bytes.is_empty() {
+                Ok(T::default())
+            } else {
+                let value =
+                    crate::from_bytes(bytes).map_err(|e| D::Error::custom(e.to_string()))?;
+                if value == T::default() {
+                    Err(D::Error::custom("Serialization of extension points must use empty vector for the default value".to_string()))
+                } else {
+                    Ok(value)
+                }
+            }
+        }
+    }
+}
