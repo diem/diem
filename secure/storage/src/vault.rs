@@ -31,9 +31,15 @@ impl VaultStorage {
         self.namespace.clone()
     }
 
-    /// Erase all secrets and keys from the vault storage. Use with caution.
+    /// Erase all secrets and keys from the vault storage. If a namespace was specified on vault
+    /// storage creation, only the secrets associated with that namespace are removed. Use with
+    /// caution.
     pub fn reset(&self) -> Result<(), Error> {
-        self.reset_helper("")
+        if let Some(namespace) = &self.namespace {
+            self.reset_helper(&format!("{}/", namespace))
+        } else {
+            self.reset_helper("")
+        }
     }
 
     fn reset_helper(&self, path: &str) -> Result<(), Error> {
