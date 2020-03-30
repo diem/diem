@@ -5,6 +5,7 @@ use crate::SynchronizerState;
 use anyhow::{ensure, format_err, Result};
 use executor::Executor;
 use executor_types::ExecutedTrees;
+use itertools::Itertools;
 use libra_config::config::NodeConfig;
 use libra_types::{
     contract_event::ContractEvent,
@@ -69,7 +70,7 @@ pub(crate) struct ExecutorProxy {
     storage_read_client: Arc<StorageReadServiceClient>,
     executor: Arc<Mutex<Executor<LibraVM>>>,
     reconfig_subscriptions: Vec<Box<dyn EventSubscription>>,
-    on_chain_configs: Arc<HashMap<ConfigID, Option<Vec<u8>>>>,
+    on_chain_configs: Arc<HashMap<ConfigID, Vec<u8>>>,
 }
 
 impl ExecutorProxy {
@@ -80,12 +81,7 @@ impl ExecutorProxy {
     ) -> Self {
         let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
 
-        let on_chain_configs = Arc::new(
-            ON_CHAIN_CONFIG_REGISTRY
-                .iter()
-                .map(|config| (*config, None))
-                .collect(),
-        );
+        let on_chain_configs = Arc::new(HashMap::new());
         Self {
             storage_read_client,
             executor,
@@ -96,7 +92,7 @@ impl ExecutorProxy {
 
     // TODO make this into more general trait method in `on_chain_config.rs`
     // once `StorageRead` trait is replaced with `LibraDBTrait` and `batch_fetch_config` method is no longer async
-    async fn fetch_all_configs(&self) -> HashMap<ConfigID, Option<Vec<u8>>> {
+    async fn fetch_all_configs(&self) -> Result<HashMap<ConfigID, Vec<u8>>> {
         let access_paths = ON_CHAIN_CONFIG_REGISTRY
             .iter()
             .map(|config_id| config_id.access_path())
@@ -104,13 +100,13 @@ impl ExecutorProxy {
         let configs = self
             .storage_read_client
             .batch_fetch_config(access_paths)
-            .await;
+            .await?;
 
-        ON_CHAIN_CONFIG_REGISTRY
+        Ok(ON_CHAIN_CONFIG_REGISTRY
             .iter()
             .cloned()
-            .zip(configs)
-            .collect()
+            .zip_eq(configs)
+            .collect())
     }
 }
 
@@ -195,7 +191,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
     }
 
     async fn load_on_chain_configs(&mut self) -> Result<()> {
-        self.on_chain_configs = Arc::new(self.fetch_all_configs().await);
+        self.on_chain_configs = Arc::new(self.fetch_all_configs().await?);
         Ok(())
     }
 
@@ -205,20 +201,17 @@ impl ExecutorProxyTrait for ExecutorProxy {
         }
 
         // calculate deltas
-        let new_configs = self.fetch_all_configs().await;
-        let changed_configs = ON_CHAIN_CONFIG_REGISTRY
+        let new_configs = self.fetch_all_configs().await?;
+        let changed_configs = new_configs
             .iter()
-            .cloned()
-            .filter(|id| {
-                // the byte array is `None` on storage read failure
-                // We should still publish reconfig notification for failed DB read, to indicate that a
-                // reconfig event did happen, regardless of DB failure
-                // So, we only do not publish a config if its previous and new values are guaranteed
-                // to be the same
-                let new_cfg = new_configs.get(id).cloned().flatten();
-                let cfg = self.on_chain_configs.get(id).cloned().flatten();
-                !(new_cfg == cfg && new_cfg.is_some())
+            .filter(|(id, cfg)| {
+                &self
+                    .on_chain_configs
+                    .get(id)
+                    .expect("missing on-chain config value in local copy")
+                    != cfg
             })
+            .map(|(id, _)| *id)
             .collect::<HashSet<_>>();
 
         // notify subscribers

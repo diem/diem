@@ -147,7 +147,7 @@ impl StorageRead for MockStorageReadClient {
         unimplemented!()
     }
 
-    async fn batch_fetch_config(&self, _access_paths: Vec<AccessPath>) -> Vec<Option<Vec<u8>>> {
+    async fn batch_fetch_config(&self, _access_paths: Vec<AccessPath>) -> Result<Vec<Vec<u8>>> {
         unimplemented!()
     }
 }

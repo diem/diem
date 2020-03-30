@@ -12,7 +12,7 @@
 mod state_view;
 
 pub use crate::state_view::VerifiedStateView;
-use anyhow::{Error, Result};
+use anyhow::{format_err, Error, Result};
 use futures::stream::{BoxStream, StreamExt};
 use libra_crypto::HashValue;
 use libra_types::{
@@ -285,7 +285,7 @@ impl StorageRead for StorageReadServiceClient {
 
     // TODO migrate this to `ConfigStorage` trait as non-async
     // and implement for LibraDBTrait once `StorageRead` is deprecated
-    async fn batch_fetch_config(&self, access_paths: Vec<AccessPath>) -> Vec<Option<Vec<u8>>> {
+    async fn batch_fetch_config(&self, access_paths: Vec<AccessPath>) -> Result<Vec<Vec<u8>>> {
         // some access paths can have the same address, so don't duplicate requests for them
         let addresses: Vec<AccountAddress> = access_paths
             .iter()
@@ -299,28 +299,34 @@ impl StorageRead for StorageReadServiceClient {
             .map(|addr| RequestItem::GetAccountState { address: *addr })
             .collect();
 
-        let responses = match self.update_to_latest_ledger(0, requests).await {
-            Ok(responses) => responses.0,
-            Err(_) => vec![],
-        };
-        // Account address --> AccountState
-        let mut new_account_states = HashMap::new();
+        let responses = self.update_to_latest_ledger(0, requests).await?.0;
 
-        for (addr, resp) in addresses.into_iter().zip(responses) {
-            if let Ok(account_state) = resp.into_get_account_state_response() {
-                if let Some(blob) = account_state.blob {
-                    if let Ok(account_state) = AccountState::try_from(&blob) {
-                        new_account_states.insert(addr, account_state);
-                    }
-                };
-            }
-        }
+        // Account address --> AccountState
+        let account_states = addresses
+            .into_iter()
+            .zip(responses)
+            .map(|(addr, resp)| {
+                let account_state = AccountState::try_from(
+                    &resp
+                        .into_get_account_state_response()?
+                        .blob
+                        .ok_or_else(|| {
+                            format_err!("missing blob in account state/account does not exist")
+                        })?,
+                )?;
+                Ok((addr, account_state))
+            })
+            .collect::<Result<HashMap<_, AccountState>>>()?;
+
         access_paths
             .into_iter()
             .map(|path| {
-                new_account_states
+                Ok(account_states
                     .get(&path.address)
-                    .and_then(|state| state.get(&path.path).cloned())
+                    .ok_or_else(|| format_err!("missing account state for queried access path"))?
+                    .get(&path.path)
+                    .ok_or_else(|| format_err!("no value found in account state"))?
+                    .clone())
             })
             .collect()
     }
@@ -481,7 +487,7 @@ pub trait StorageRead: Send + Sync {
 
     /// Returns a vector of on-chain configs as serialized byte array
     /// Order of on-chain configs returned matches the order of `access_path`
-    async fn batch_fetch_config(&self, access_paths: Vec<AccessPath>) -> Vec<Option<Vec<u8>>>;
+    async fn batch_fetch_config(&self, access_paths: Vec<AccessPath>) -> Result<Vec<Vec<u8>>>;
 }
 
 /// This trait defines interfaces to be implemented by a storage write client.
