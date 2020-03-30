@@ -101,7 +101,7 @@ impl EmitJobRequest {
             },
             None => Self {
                 instances,
-                accounts_per_client: 10,
+                accounts_per_client: 15,
                 workers_per_ac: None,
                 thread_params: EmitThreadParams::default(),
             },
