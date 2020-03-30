@@ -95,7 +95,7 @@ impl Client {
     }
 
     /// Creates a new token or identity for accessing Vault. The token will have access to anything
-    /// under the default policy and any perscribed policies.
+    /// under the default policy and any prescribed policies.
     pub fn create_token(&self, policies: Vec<&str>) -> Result<String, Error> {
         let response = ureq::post(&format!("{}/v1/auth/token/create", self.host))
             .set("X-Vault-Token", &self.token)
