@@ -14,9 +14,7 @@ use crate::{
 use anyhow::anyhow;
 use futures::future::join;
 use libra_types::PeerId;
-use parity_multiaddr::Multiaddr;
 use serial_test::serial;
-use std::str::FromStr;
 use tokio::runtime::{Handle, Runtime};
 
 static RPC_PROTOCOL_A: ProtocolId = ProtocolId::ConsensusRpc;
@@ -42,11 +40,7 @@ fn start_rpc_actor(
     // Reset counters before starting actor.
     reset_counters();
     let rpc = Rpc::new(
-        PeerHandle::new(
-            PeerId::random(),
-            Multiaddr::from_str("/ip4/127.0.0.1/tcp/8081").unwrap(),
-            peer_reqs_tx,
-        ),
+        PeerHandle::new(PeerId::random(), peer_reqs_tx),
         rpc_requests_rx,
         peer_notifs_rx,
         rpc_notifs_tx,

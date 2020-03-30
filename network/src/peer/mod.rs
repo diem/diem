@@ -5,8 +5,8 @@
 //! and opening substreams as well as negotiating particular protocols on those substreams.
 use crate::{
     counters,
-    peer_manager::PeerManagerError,
-    protocols::{identity::Identity, wire::messaging::v1::NetworkMessage},
+    peer_manager::{Connection, ConnectionMetadata, PeerManagerError},
+    protocols::wire::messaging::v1::NetworkMessage,
     transport, ProtocolId,
 };
 use bytes::BytesMut;
@@ -20,8 +20,7 @@ use futures::{
 };
 use libra_logger::prelude::*;
 use libra_types::PeerId;
-use netcore::{compat::IoCompat, transport::ConnectionOrigin};
-use parity_multiaddr::Multiaddr;
+use netcore::compat::IoCompat;
 use std::{fmt::Debug, io};
 use tokio::runtime::Handle;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
@@ -39,7 +38,7 @@ pub enum PeerRequest {
     CloseConnection,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DisconnectReason {
     Requested,
     ConnectionLost,
@@ -48,7 +47,7 @@ pub enum DisconnectReason {
 #[derive(Debug)]
 pub enum PeerNotification {
     NewMessage(NetworkMessage),
-    PeerDisconnected(Identity, Multiaddr, ConnectionOrigin, DisconnectReason),
+    PeerDisconnected(ConnectionMetadata, DisconnectReason),
 }
 
 enum State {
@@ -59,12 +58,8 @@ enum State {
 pub struct Peer<TSocket> {
     /// A handle to a tokio executor.
     executor: Handle,
-    /// Identity of the remote peer
-    identity: Identity,
-    /// Address at which we are connected to the remote peer.
-    address: Multiaddr,
-    /// Origin of the connection.
-    origin: ConnectionOrigin,
+    /// Connection specific information.
+    connection_metadata: ConnectionMetadata,
     /// Underlying connection.
     connection: Option<TSocket>,
     /// Channel to receive requests for opening new outbound substreams.
@@ -85,21 +80,20 @@ where
 {
     pub fn new(
         executor: Handle,
-        identity: Identity,
-        address: Multiaddr,
-        origin: ConnectionOrigin,
-        connection: TSocket,
+        connection: Connection<TSocket>,
         requests_rx: channel::Receiver<PeerRequest>,
         peer_notifs_tx: channel::Sender<PeerNotification>,
         rpc_notifs_tx: channel::Sender<PeerNotification>,
         direct_send_notifs_tx: channel::Sender<PeerNotification>,
     ) -> Self {
+        let Connection {
+            metadata: connection_metadata,
+            socket,
+        } = connection;
         Self {
             executor,
-            identity,
-            address,
-            origin,
-            connection: Some(connection),
+            connection_metadata,
+            connection: Some(socket),
             requests_rx,
             peer_notifs_tx,
             rpc_notifs_tx,
@@ -108,8 +102,12 @@ where
         }
     }
 
+    fn peer_id(&self) -> PeerId {
+        self.connection_metadata.peer_identity().peer_id()
+    }
+
     pub async fn start(mut self) {
-        let self_peer_id = self.identity.peer_id();
+        let self_peer_id = self.peer_id();
         info!(
             "Starting Peer actor for peer: {:?}",
             self_peer_id.short_str()
@@ -175,23 +173,18 @@ where
                     if let Err(e) = self
                         .peer_notifs_tx
                         .send(PeerNotification::PeerDisconnected(
-                            self.identity.clone(),
-                            self.address.clone(),
-                            self.origin,
+                            self.connection_metadata.clone(),
                             reason,
                         ))
                         .await
                     {
                         warn!(
                             "Failed to notify upstream about disconnection of peer: {}; error: {:?}",
-                            self.identity.peer_id().short_str(),
+                            self.peer_id().short_str(),
                             e
                         );
                     }
-                    debug!(
-                        "Peer actor '{}' shutdown",
-                        self.identity.peer_id().short_str()
-                    );
+                    debug!("Peer actor '{}' shutdown", self.peer_id().short_str(),);
                     break;
                 }
             }
@@ -288,10 +281,7 @@ where
             oneshot::Sender<Result<(), PeerManagerError>>,
         )>,
     ) -> Result<(), PeerManagerError> {
-        debug!(
-            "Received message from Peer {}",
-            self.identity.peer_id().short_str()
-        );
+        debug!("Received message from Peer {}", self.peer_id().short_str(),);
         // Read inbound message from stream.
         let message = message.freeze();
         let message: NetworkMessage = lcs::from_bytes(&message)?;
@@ -339,17 +329,16 @@ where
     ) {
         trace!(
             "Peer {} PeerRequest::{:?}",
-            self.identity.peer_id().short_str(),
+            self.peer_id().short_str(),
             request
         );
         match request {
             PeerRequest::SendMessage(message, protocol, channel) => {
-                let identity = self.identity.clone();
                 if let Err(e) = write_reqs_tx.send((message, channel)).await {
                     error!(
                         "Failed to send message for protocol {:?} to peer: {:?}. Error: {:?}",
                         protocol,
-                        identity.peer_id().short_str(),
+                        self.peer_id().short_str(),
                         e
                     );
                 }
@@ -370,7 +359,6 @@ where
 pub struct PeerHandle {
     peer_id: PeerId,
     sender: channel::Sender<PeerRequest>,
-    address: Multiaddr,
 }
 
 impl Clone for PeerHandle {
@@ -378,22 +366,13 @@ impl Clone for PeerHandle {
         Self {
             peer_id: self.peer_id,
             sender: self.sender.clone(),
-            address: self.address.clone(),
         }
     }
 }
 
 impl PeerHandle {
-    pub fn new(peer_id: PeerId, address: Multiaddr, sender: channel::Sender<PeerRequest>) -> Self {
-        Self {
-            peer_id,
-            address,
-            sender,
-        }
-    }
-
-    pub fn address(&self) -> &Multiaddr {
-        &self.address
+    pub fn new(peer_id: PeerId, sender: channel::Sender<PeerRequest>) -> Self {
+        Self { peer_id, sender }
     }
 
     pub fn peer_id(&self) -> PeerId {

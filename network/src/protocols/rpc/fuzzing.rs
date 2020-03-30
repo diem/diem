@@ -16,9 +16,8 @@ use futures::{
 };
 use libra_proptest_helpers::ValueGenerator;
 use libra_types::PeerId;
-use parity_multiaddr::Multiaddr;
 use proptest::{arbitrary::any, collection::vec, prop_oneof, strategy::Strategy};
-use std::{io, iter::FromIterator, str::FromStr};
+use std::{io, iter::FromIterator};
 use tokio::runtime;
 use tokio_util::codec::{Encoder, LengthDelimitedCodec};
 
@@ -78,11 +77,7 @@ pub fn fuzzer(data: &[u8]) {
     let f_handle_inbound = rpc::handle_inbound_request_inner(
         notification_tx,
         inbound_request,
-        PeerHandle::new(
-            MOCK_PEER_ID,
-            Multiaddr::from_str("/ip4/127.0.0.1/tcp/8081").unwrap(),
-            peer_reqs_tx,
-        ),
+        PeerHandle::new(MOCK_PEER_ID, peer_reqs_tx),
     )
     .map(|_| io::Result::Ok(()));
 

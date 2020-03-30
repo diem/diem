@@ -14,10 +14,9 @@
 use crate::{
     counters,
     peer::{Peer, PeerHandle, PeerNotification},
-    peer_manager::ConnectionNotification,
+    peer_manager::{Connection, ConnectionNotification},
     protocols::{
         direct_send::{DirectSend, DirectSendNotification, DirectSendRequest, Message},
-        identity::Identity,
         rpc::{InboundRpcRequest, OutboundRpcRequest, Rpc, RpcNotification},
     },
     validator_network, ProtocolId,
@@ -30,8 +29,6 @@ use futures::{
 };
 use libra_logger::prelude::*;
 use libra_types::PeerId;
-use netcore::transport::ConnectionOrigin;
-use parity_multiaddr::Multiaddr;
 use std::{fmt::Debug, marker::PhantomData, num::NonZeroUsize, time::Duration};
 use tokio::runtime::Handle;
 
@@ -66,10 +63,7 @@ where
 {
     pub fn start(
         executor: Handle,
-        identity: Identity,
-        address: Multiaddr,
-        origin: ConnectionOrigin,
-        connection: TSocket,
+        connection: Connection<TSocket>,
         connection_notifs_tx: channel::Sender<ConnectionNotification<TSocket>>,
         max_concurrent_reqs: usize,
         max_concurrent_notifs: usize,
@@ -78,6 +72,7 @@ where
         libra_channel::Sender<ProtocolId, NetworkRequest>,
         libra_channel::Receiver<ProtocolId, NetworkNotification>,
     ) {
+        let identity = connection.metadata.peer_identity().clone();
         let peer_id = identity.peer_id();
 
         // Setup and start Peer actor.
@@ -107,18 +102,15 @@ where
                 &peer_id.short_str(),
             ),
         );
+        let peer_handle = PeerHandle::new(peer_id, peer_reqs_tx);
         let peer = Peer::new(
             executor.clone(),
-            identity,
-            address.clone(),
-            origin,
             connection,
             peer_reqs_rx,
             peer_notifs_tx,
             peer_rpc_notifs_tx,
             peer_ds_notifs_tx,
         );
-        let peer_handle = PeerHandle::new(peer_id, address, peer_reqs_tx);
         executor.spawn(peer.start());
 
         // Setup and start RPC actor.
@@ -302,13 +294,11 @@ where
         mut connection_notifs_tx: channel::Sender<ConnectionNotification<TSocket>>,
     ) {
         match notif {
-            PeerNotification::PeerDisconnected(identity, addr, origin, reason) => {
+            PeerNotification::PeerDisconnected(conn_info, reason) => {
                 // Send notification to PeerManager. PeerManager is responsible for initiating
                 // cleanup.
                 if let Err(err) = connection_notifs_tx
-                    .send(ConnectionNotification::Disconnected(
-                        identity, addr, origin, reason,
-                    ))
+                    .send(ConnectionNotification::Disconnected(conn_info, reason))
                     .await
                 {
                     warn!("Failed to push Disconnected event to connection event handler. Probably in shutdown mode. Error: {:?}", err);
