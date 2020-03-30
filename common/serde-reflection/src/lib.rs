@@ -175,12 +175,12 @@
 //! occurring in the definition of `T`. At the same time, the algorithm records the
 //! formats of all the visited structs and enum variants.
 //!
-//! For the exploration to be able to terminate, the core algorithm `trace_type_once` explores
-//! possible recursion points only once (see definition below).
-//! In particular, if `T` is an enum, `trace_type_once` discovers only one variant at a time.
+//! For the exploration to be able to terminate, the core algorithm `trace_type_once<T>()` explores
+//! each possible recursion point only once (see paragraph below).
+//! In particular, if `T` is an enum, `trace_type_once<T>()` discovers only one variant at a time.
 //!
 //! For this reason, the high-level API `trace_type<T>()`
-//! will repeat calls to `trace_type_once` until all the variants of `T` are known.
+//! will repeat calls to `trace_type_once<T>()` until all the variants of `T` are known.
 //! Variant cases of `T` are explored in sequential order, starting with index `0`.
 //!
 //! ## Coverage Guarantees
@@ -214,7 +214,7 @@
 //!
 //! In addition to these 3 cases,
 //!
-//! * while visiting a container (one of the 5 types), if the container's name is mapped to a recorded value,
+//! * while visiting a container, if the container's name is mapped to a recorded value,
 //! we MAY decide to use it.
 //!
 //! Currently, we always pick the recorded value for a NewTypeStruct and never do in the other cases.
