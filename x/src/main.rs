@@ -5,7 +5,7 @@
 
 use chrono::Local;
 use env_logger::{self, fmt::Color};
-use log::{Level, LevelFilter};
+use log::Level;
 use std::io::Write;
 use structopt::StructOpt;
 
@@ -50,11 +50,7 @@ enum Command {
 }
 
 fn main() -> Result<()> {
-    //let env = Env::default().filter_or("RUST_LOG", "info");
-    //.write_style_or("LOG_STYLE", "always");
-    //env_logger::init_from_env(env);
-
-    env_logger::builder()
+    env_logger::from_env(env_logger::Env::default().default_filter_or("info"))
         .format(|buf, record| {
             let color = match record.level() {
                 Level::Warn => Color::Yellow,
@@ -73,7 +69,6 @@ fn main() -> Result<()> {
                 record.args()
             )
         })
-        .filter(None, LevelFilter::Info)
         .init();
 
     let args = Args::from_args();
