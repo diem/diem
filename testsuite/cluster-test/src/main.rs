@@ -101,7 +101,7 @@ struct Args {
     changelog: Option<Vec<String>>,
 
     // emit_tx options
-    #[structopt(long, default_value = "10")]
+    #[structopt(long, default_value = "15")]
     accounts_per_client: usize,
     #[structopt(long)]
     workers_per_ac: Option<usize>,
@@ -750,10 +750,12 @@ impl ClusterTestRunner {
 
     pub fn cleanup_and_run(&mut self, experiment: Box<dyn Experiment>) -> Result<()> {
         self.cleanup();
-        self.run_single_experiment(experiment, Some(self.global_emit_job_request.clone()))?;
+        let result =
+            self.run_single_experiment(experiment, Some(self.global_emit_job_request.clone()));
         if let Some(cluster_swarm) = self.cluster_swarm.as_ref() {
             self.runtime.block_on(cluster_swarm.delete_all())?;
         }
+        result?;
         self.print_report();
         Ok(())
     }

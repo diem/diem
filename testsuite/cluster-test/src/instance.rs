@@ -4,8 +4,13 @@
 #![forbid(unsafe_code)]
 
 use anyhow::{ensure, format_err, Result};
+use once_cell::sync::Lazy;
+use regex::Regex;
 use serde_json::Value;
 use std::{collections::HashSet, ffi::OsStr, fmt, process::Stdio};
+
+static VAL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"val-(\d+)").unwrap());
+static FULLNODE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"fn-(\d+)").unwrap());
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum InstanceConfig {
@@ -165,6 +170,23 @@ impl Instance {
 
     pub fn peer_name(&self) -> &String {
         &self.peer_name
+    }
+
+    pub fn validator_index(&self) -> String {
+        if let Some(cap) = VAL_REGEX.captures(&self.peer_name) {
+            if let Some(cap) = cap.get(1) {
+                return cap.as_str().to_string();
+            }
+        }
+        if let Some(cap) = FULLNODE_REGEX.captures(&self.peer_name) {
+            if let Some(cap) = cap.get(1) {
+                return cap.as_str().to_string();
+            }
+        }
+        panic!(
+            "Failed to parse peer name {} into validator_index",
+            self.peer_name
+        )
     }
 
     pub fn ip(&self) -> &String {
