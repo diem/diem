@@ -59,14 +59,16 @@ jobs:
               --report report.json \
               --run bench \
               --k8s-fullnodes-per-validator=0 \
-              --k8s-num-validators=100
+              --k8s-num-validators=100 \
+              --accounts-per-client=10
           else
             JUMPHOST=${{secrets.CLUSTER_TEST_JUMPHOST}} \
               ./scripts/cti \
               --marker land \
               --tag ${TEST_TAG} \
               --report report.json \
-              --run bench
+              --run bench \
+              --accounts-per-client=10
           fi
           echo "report.json start"
           cat report.json
@@ -144,11 +146,11 @@ jobs:
               body += "\nRepro cmd:\n";
               if (${{secrets.ACTIONS_LBT_USE_K8S}}) {
                 body += `
-                  ./scripts/cti --k8s --tag ${env_vars.TEST_TAG} --run bench --k8s-fullnodes-per-validator=0 --k8s-num-validators=100
+                  ./scripts/cti --k8s --tag ${env_vars.TEST_TAG} --run bench --k8s-fullnodes-per-validator=0 --k8s-num-validators=100 --accounts-per-client=10
                 `;
               } else {
                 body += `
-                  ./scripts/cti --tag ${env_vars.TEST_TAG} --run bench
+                  ./scripts/cti --tag ${env_vars.TEST_TAG} --run bench --accounts-per-client=10
                 `;
               }
             } catch (err) {
