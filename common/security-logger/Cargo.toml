@@ -13,6 +13,6 @@ edition = "2018"
 backtrace = { version = "0.3.46", features = ["serialize-serde"] }
 rand = "0.6.5"
 serde = { version = "1.0.105", features = ["derive"] }
-serde_json = "1.0.40"
+serde_json = "1.0.50"
 
 libra-logger = { path = "../logger", version = "0.1.0" }
