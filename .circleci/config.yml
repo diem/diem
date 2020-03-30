@@ -262,13 +262,7 @@ jobs:
       - run:
           name: Run all unit tests
           command: |
-            RUST_BACKTRACE=1 $CI_TIMEOUT cargo test \
-              --all-features \
-              --workspace \
-              --exclude libra-node \
-              --exclude libra-crypto \
-              --exclude testsuite \
-              --exclude consensus
+            RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --unit
   run-crypto-unit-test:
     executor: test-executor
     description: Run crypto unit tests
@@ -296,7 +290,7 @@ jobs:
           name: Run flaky tests
           command: |
             RUST_BACKTRACE=1 $CI_TIMEOUT \
-            ./scripts/run_quarantined.sh -c consensus -r 3 -f
+            ./scripts/run_quarantined.sh -c <your package here> -r 3 -f
   validate-cluster-test-dockerfile:
     description: Validate that committed docker files for cluster test are up to date
     executor: build-executor
@@ -415,9 +409,9 @@ workflows:
       - run-crypto-unit-test:
           requires:
             - prefetch-crates
-      - run-flaky-unit-test:
-          requires:
-            - prefetch-crates
+      #- run-flaky-unit-test:
+      #    requires:
+      #      - prefetch-crates
 
   scheduled-workflow:
     triggers:
