@@ -1079,10 +1079,13 @@ impl<'env> StructEnv<'env> {
 
     /// Get an iterator for the fields.
     pub fn get_fields(&'env self) -> impl Iterator<Item = FieldEnv<'env>> {
-        self.data.field_data.iter().map(move |(_, data)| FieldEnv {
-            struct_env: self.clone(),
-            data,
-        })
+        self.data
+            .field_def_idx_to_id
+            .values()
+            .map(move |field_id| FieldEnv {
+                struct_env: self.clone(),
+                data: &self.data.field_data[field_id],
+            })
     }
 
     /// Gets a field by its id.
