@@ -3,6 +3,7 @@
 
 use crate::{
     peer::{DisconnectReason, Peer, PeerHandle, PeerNotification},
+    peer_manager::{Connection, ConnectionId, ConnectionMetadata},
     protocols::{
         identity::Identity,
         wire::messaging::v1::{DirectSendMsg, NetworkMessage},
@@ -46,19 +47,25 @@ fn build_test_peer(
     let (peer_rpc_notifs_tx, peer_rpc_notifs_rx) = channel::new_test(1);
     let (peer_direct_send_notifs_tx, peer_direct_send_notifs_rx) = channel::new_test(1);
     let (peer_req_tx, peer_req_rx) = channel::new_test(0);
+    let connection = Connection {
+        metadata: ConnectionMetadata::new(
+            identity,
+            ConnectionId::default(),
+            Multiaddr::from_str("/ip4/127.0.0.1/tcp/8081").unwrap(),
+            origin,
+        ),
+        socket: a,
+    };
 
     let peer = Peer::new(
         executor,
-        identity,
-        Multiaddr::from_str("/ip4/127.0.0.1/tcp/8081").unwrap(),
-        origin,
-        a,
+        connection,
         peer_req_rx,
         peer_notifs_tx,
         peer_rpc_notifs_tx,
         peer_direct_send_notifs_tx,
     );
-    let peer_handle = PeerHandle::new(peer_id, Multiaddr::empty(), peer_req_tx);
+    let peer_handle = PeerHandle::new(peer_id, peer_req_tx);
 
     (
         peer,
@@ -139,13 +146,8 @@ async fn assert_peer_disconnected_event(
     peer_notifs_rx: &mut channel::Receiver<PeerNotification>,
 ) {
     match peer_notifs_rx.next().await {
-        Some(PeerNotification::PeerDisconnected(
-            actual_identity,
-            _actual_addr,
-            _actual_origin,
-            actual_reason,
-        )) => {
-            assert_eq!(actual_identity.peer_id(), peer_id);
+        Some(PeerNotification::PeerDisconnected(conn_info, actual_reason)) => {
+            assert_eq!(conn_info.peer_identity().peer_id(), peer_id);
             assert_eq!(actual_reason, reason);
         }
         event => {

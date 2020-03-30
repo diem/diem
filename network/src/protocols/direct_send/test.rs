@@ -15,9 +15,7 @@ use bytes::Bytes;
 use futures::{sink::SinkExt, stream::StreamExt};
 use libra_logger::debug;
 use libra_types::PeerId;
-use parity_multiaddr::Multiaddr;
 use serial_test::serial;
-use std::str::FromStr;
 use tokio::runtime::{Handle, Runtime};
 
 const PROTOCOL_1: ProtocolId = ProtocolId::ConsensusDirectSend;
@@ -48,11 +46,7 @@ fn start_direct_send_actor(
     // Reset counters before starting actor.
     reset_counters();
     let direct_send = DirectSend::new(
-        PeerHandle::new(
-            PeerId::random(),
-            Multiaddr::from_str("/ip4/127.0.0.1/tcp/8081").unwrap(),
-            peer_reqs_tx,
-        ),
+        PeerHandle::new(PeerId::random(), peer_reqs_tx),
         ds_requests_rx,
         ds_notifs_tx,
         peer_notifs_rx,
