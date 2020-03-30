@@ -35,6 +35,9 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+#ignore vs code config files
+.vscode
+
 # Generated VM config in vm-genesis
 language/tools/vm-genesis/genesis/vm_config.toml
 
