@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    account_address::AccountAddress,
     account_config::{
         AccountResource, BalanceResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_RESOURCE_PATH,
         ACCOUNT_SENT_EVENT_PATH, BALANCE_RESOURCE_PATH,
@@ -25,6 +26,12 @@ use std::{collections::btree_map::BTreeMap, convert::TryFrom, fmt};
 pub struct AccountState(BTreeMap<Vec<u8>, Vec<u8>>);
 
 impl AccountState {
+    // By design and do not remove
+    pub fn get_account_address(&self) -> Result<Option<AccountAddress>> {
+        self.get_account_resource()
+            .map(|opt_ar| opt_ar.map(|ar| ar.sent_events().key().get_creator_address()))
+    }
+
     pub fn get_account_resource(&self) -> Result<Option<AccountResource>> {
         self.get_resource(&*ACCOUNT_RESOURCE_PATH)
     }
