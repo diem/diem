@@ -6,6 +6,7 @@ data "template_file" "prometheus_yml" {
     validators            = join(",", formatlist("%s:%s", aws_instance.validator.*.private_ip, range(var.num_validators)))
     fullnodes             = join(",", formatlist("%s:%s", aws_instance.fullnode.*.private_ip, range(var.num_fullnodes)))
     other_nodes           = join(",", ["${aws_instance.monitoring.private_ip}:monitoring", "${aws_instance.faucet.private_ip}:faucet", "${aws_instance.vault.private_ip}:vault"])
+    vault_ip              = aws_instance.vault.private_ip
     monitoring_private_ip = aws_instance.monitoring.private_ip
   }
 }

@@ -291,11 +291,20 @@ resource "aws_security_group_rule" "vault-ssh" {
   ipv6_cidr_blocks  = var.ssh_sources_ipv6
 }
 
-resource "aws_security_group_rule" "vault-mon" {
+resource "aws_security_group_rule" "vault-mon-host" {
   security_group_id        = aws_security_group.vault.id
   type                     = "ingress"
   from_port                = 9100
-  to_port                  = 9101
+  to_port                  = 9100
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.monitoring.id
+}
+
+resource "aws_security_group_rule" "vault-mon-vault" {
+  security_group_id        = aws_security_group.vault.id
+  type                     = "ingress"
+  from_port                = 8200
+  to_port                  = 8200
   protocol                 = "tcp"
   source_security_group_id = aws_security_group.monitoring.id
 }

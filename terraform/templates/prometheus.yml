@@ -116,3 +116,21 @@ scrape_configs:
         regex: '([0-9\.]+):\d+'
         target_label: 'address'
         replacement: '$1'
+
+  - job_name: 'vault'
+    metrics_path: '/v1/sys/metrics'
+    params:
+      format: ['prometheus']
+
+    static_configs:
+      - targets: ['${vault_ip}:8200']
+        labels:
+          role: 'vault'
+          workspace: '${workspace}'
+
+    relabel_configs:
+      - source_labels: ['__address__']
+        # NOTICE: not tested with IPv6
+        regex: '([0-9\.]+):\d+'
+        target_label: 'address'
+        replacement: '$1'

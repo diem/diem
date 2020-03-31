@@ -53,8 +53,10 @@ resource "aws_ecs_task_definition" "vault" {
             tcp = {
               address     = "0.0.0.0:8200",
               tls_disable = "true",
+              telemetry   = { unauthenticated_metrics_access = true },
             },
           },
+          telemetry = { disable_hostname = true },
           seal = {
             awskms = { kms_key_id = aws_kms_key.vault.id }
           },
