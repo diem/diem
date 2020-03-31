@@ -112,6 +112,13 @@ jobs:
                 body += "\n TPS with PR: " + tps + ", this is lower then minimum allowed " + min_tps + " TPS.";
                 should_fail = true;
               }
+              let tps_10down = result.metrics.find(m => m.experiment == "10% down" && m.metric == "avg_tps").value;
+              let min_tps_10down = 850;
+              if (tps_10down < min_tps_10down) {
+                body += "\n :exclamation: Performance regression is detected on this PR";
+                body += "\n TPS with 10% down with PR: " + tps_10down + ", this is lower then minimum allowed " + min_tps_10down + " TPS.";
+                should_fail = true;
+              }
             } catch (err) {
               if (err.code === 'ENOENT') {
                 body = "Cluster Test failed - no test report found.\n";
