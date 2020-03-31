@@ -132,13 +132,13 @@ proptest! {
         let tmp_dir = TempPath::new();
         let db = set_up(&tmp_dir, &ledger_infos_with_sigs);
 
-        let (actual_latest_li, actual_vs_opt) = db.ledger_store.get_startup_info().unwrap().unwrap();
+        let startup_info = db.ledger_store.get_startup_info().unwrap().unwrap();
 
         let expected_latest_li = ledger_infos_with_sigs.last().unwrap();
-        prop_assert_eq!(&actual_latest_li, expected_latest_li);
+        prop_assert_eq!(&startup_info.latest_ledger_info, expected_latest_li);
 
         if expected_latest_li.ledger_info().next_validator_set().is_some() {
-            prop_assert_eq!(actual_vs_opt, None);
+            prop_assert_eq!(startup_info.latest_validator_set, None);
         } else {
             let expected_vs_opt = ledger_infos_with_sigs
                 .iter()
@@ -146,7 +146,7 @@ proptest! {
                 .filter_map(|x| x.ledger_info().next_validator_set().cloned())
                 .next()
                 .unwrap();
-            prop_assert_eq!(actual_vs_opt.unwrap(), expected_vs_opt);
+            prop_assert_eq!(startup_info.latest_validator_set.unwrap(), expected_vs_opt);
         }
     }
 }
