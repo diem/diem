@@ -50,6 +50,9 @@ pub use transaction_argument::{parse_as_transaction_argument, TransactionArgumen
 
 pub type Version = u64; // Height - also used for MVCC in StateDB
 
+// In StateDB, things readable by the genesis transaction are under this version.
+pub const PRE_GENESIS_VERSION: Version = u64::max_value();
+
 pub const MAX_TRANSACTION_SIZE_IN_BYTES: usize = 4096;
 
 /// RawTransaction is the portion of a transaction that a client signs
