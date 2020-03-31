@@ -187,8 +187,9 @@ impl ValidatorConfig {
         let validator_set = ValidatorSet::new(
             validator_swarm
                 .validator_set
-                .clone()
-                .into_iter()
+                .payload()
+                .iter()
+                .cloned()
                 .take(nodes_in_genesis)
                 .collect(),
         );

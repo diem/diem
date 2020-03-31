@@ -88,7 +88,7 @@ impl LedgerRecoveryData {
     }
 
     pub fn validator_keys(&self) -> Vec<ValidatorInfo> {
-        self.validator_keys.clone().to_vec()
+        self.validator_keys.payload().to_vec()
     }
 
     /// Finds the root (last committed block) and returns the root block, the QC to the root block

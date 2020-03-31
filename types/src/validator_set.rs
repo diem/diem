@@ -14,13 +14,7 @@ use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::{
-    convert::{TryFrom, TryInto},
-    fmt,
-    iter::IntoIterator,
-    ops::Deref,
-    vec,
-};
+use std::{convert::TryFrom, fmt, vec};
 
 static LIBRA_SYSTEM_MODULE_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("LibraSystem").unwrap());
@@ -57,7 +51,8 @@ pub static VALIDATOR_SET_CHANGE_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ValidatorSetResource {
-    validator_set: ValidatorSet,
+    scheme: ConsensusScheme,
+    validators: Vec<ValidatorInfo>,
     last_reconfiguration_time: u64,
     change_events: EventHandle,
 }
@@ -71,19 +66,30 @@ impl ValidatorSetResource {
         self.last_reconfiguration_time
     }
 
-    pub fn validator_set(&self) -> &ValidatorSet {
-        &self.validator_set
+    pub fn validator_set(&self) -> ValidatorSet {
+        assert_eq!(self.scheme, ConsensusScheme::Ed25519);
+        ValidatorSet::new(self.validators.clone())
     }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+#[repr(u8)]
+pub enum ConsensusScheme {
+    Ed25519 = 0,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
-pub struct ValidatorSet(Vec<ValidatorInfo>);
+pub struct ValidatorSet {
+    scheme: ConsensusScheme,
+    payload: Vec<ValidatorInfo>,
+}
 
 impl fmt::Display for ValidatorSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[")?;
-        for validator in &self.0 {
+        for validator in self.payload().iter() {
             write!(f, "{} ", validator)?;
         }
         write!(f, "]")
@@ -93,7 +99,18 @@ impl fmt::Display for ValidatorSet {
 impl ValidatorSet {
     /// Constructs a ValidatorSet resource.
     pub fn new(payload: Vec<ValidatorInfo>) -> Self {
-        ValidatorSet(payload)
+        Self {
+            scheme: ConsensusScheme::Ed25519,
+            payload,
+        }
+    }
+
+    pub fn scheme(&self) -> ConsensusScheme {
+        self.scheme
+    }
+
+    pub fn payload(&self) -> &[ValidatorInfo] {
+        &self.payload
     }
 
     pub fn empty() -> Self {
@@ -109,41 +126,18 @@ impl ValidatorSet {
     }
 }
 
-impl Deref for ValidatorSet {
-    type Target = [ValidatorInfo];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl IntoIterator for ValidatorSet {
-    type Item = ValidatorInfo;
-    type IntoIter = vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
 impl TryFrom<crate::proto::types::ValidatorSet> for ValidatorSet {
     type Error = Error;
 
     fn try_from(proto: crate::proto::types::ValidatorSet) -> Result<Self> {
-        Ok(ValidatorSet::new(
-            proto
-                .validator_info
-                .into_iter()
-                .map(TryInto::try_into)
-                .collect::<Result<Vec<_>>>()?,
-        ))
+        Ok(lcs::from_bytes(&proto.bytes)?)
     }
 }
 
 impl From<ValidatorSet> for crate::proto::types::ValidatorSet {
     fn from(set: ValidatorSet) -> Self {
         Self {
-            validator_info: set.0.into_iter().map(Into::into).collect(),
+            bytes: lcs::to_bytes(&set).expect("failed to serialize validator set"),
         }
     }
 }

@@ -243,6 +243,7 @@ impl LibraInterface for TestLibraInterface {
     ) -> Result<ValidatorInfo, Error> {
         self.retrieve_validator_set_resource()?
             .validator_set()
+            .payload()
             .iter()
             .find(|vi| vi.account_address() == &validator_account)
             .cloned()

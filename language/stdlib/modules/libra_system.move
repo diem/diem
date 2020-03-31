@@ -16,10 +16,13 @@ module LibraSystem {
     }
 
     struct ValidatorSetChangeEvent {
+        scheme: u8,
         new_validator_set: vector<ValidatorInfo>,
     }
 
     resource struct ValidatorSet {
+        // The current consensus crypto scheme.
+        scheme: u8,
         // The current validator set. Updated only at epoch boundaries via reconfiguration.
         validators: vector<ValidatorInfo>,
         // Last time when a reconfiguration happened.
@@ -54,6 +57,7 @@ module LibraSystem {
       Transaction::assert(Transaction::sender() == 0x1D8, 1);
 
       move_to_sender<ValidatorSet>(ValidatorSet {
+          scheme: 0,
           validators: Vector::empty(),
           last_reconfiguration_time: 0,
           change_events: LibraAccount::new_event_handle<ValidatorSetChangeEvent>(),
@@ -360,6 +364,7 @@ module LibraSystem {
        LibraAccount::emit_event<ValidatorSetChangeEvent>(
            &mut validator_set_ref.change_events,
            ValidatorSetChangeEvent {
+               scheme: validator_set_ref.scheme,
                new_validator_set: *&validator_set_ref.validators,
            },
        );

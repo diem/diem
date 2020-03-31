@@ -95,7 +95,7 @@ impl FakeExecutor {
         let genesis_change_set = if genesis_modules.is_none() && validator_set.is_none() {
             GENESIS_CHANGE_SET.clone()
         } else {
-            let validator_set_len: usize = validator_set.as_ref().map_or(10, |s| s.len());
+            let validator_set_len: usize = validator_set.as_ref().map_or(10, |s| s.payload().len());
             let swarm = generator::validator_swarm_for_testing(validator_set_len);
             let validator_set = validator_set.unwrap_or(swarm.validator_set);
             let discovery_set = vm_genesis::make_placeholder_discovery_set(&validator_set);
@@ -241,8 +241,10 @@ impl FakeExecutor {
     }
 
     pub fn new_block(&mut self) {
-        let validator_address =
-            *generator::validator_swarm_for_testing(10).validator_set[0].account_address();
+        let validator_address = *generator::validator_swarm_for_testing(10)
+            .validator_set
+            .payload()[0]
+            .account_address();
         self.block_time += 1;
         let new_block = BlockMetadata::new(
             HashValue::zero(),

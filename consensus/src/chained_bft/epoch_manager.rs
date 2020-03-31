@@ -49,6 +49,7 @@ pub enum Processor<T> {
     EventProcessor(EventProcessor<T>),
 }
 
+#[allow(clippy::large_enum_variant)]
 pub enum LivenessStorageData<T> {
     RecoveryData(RecoveryData<T>),
     LedgerRecoveryData(LedgerRecoveryData),
