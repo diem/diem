@@ -12,7 +12,7 @@ use futures::{future::try_join_all, lock::Mutex};
 use k8s_openapi::api::core::v1::{ConfigMap, Node, Pod};
 use kube::{
     api::{Api, PostParams},
-    client::APIClient,
+    client::Client,
     config,
 };
 use libra_logger::*;
@@ -38,7 +38,7 @@ const CFG_FULLNODE_SEED: &str = "26742674267426742674267426742674267426742674267
 const ERROR_NOT_FOUND: u16 = 404;
 
 pub struct ClusterSwarmKube {
-    client: APIClient,
+    client: Client,
     node_map: Arc<Mutex<HashMap<InstanceConfig, Instance>>>,
 }
 
@@ -49,7 +49,7 @@ impl ClusterSwarmKube {
             config = config::incluster_config();
         }
         let config = config.map_err(|e| format_err!("Failed to load config: {:?}", e))?;
-        let client = APIClient::new(config);
+        let client = Client::from(config);
         let node_map = Arc::new(Mutex::new(HashMap::new()));
         Ok(Self { client, node_map })
     }
