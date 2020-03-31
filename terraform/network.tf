@@ -79,6 +79,15 @@ resource "aws_security_group_rule" "monitoring-prometheus" {
   ipv6_cidr_blocks  = var.ssh_sources_ipv6
 }
 
+resource "aws_security_group_rule" "monitoring-pushgateway" {
+  security_group_id        = aws_security_group.monitoring.id
+  type                     = "ingress"
+  from_port                = 9092
+  to_port                  = 9092
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.validator.id
+}
+
 resource "aws_security_group_rule" "monitoring-egress" {
   security_group_id = aws_security_group.monitoring.id
   type              = "egress"
