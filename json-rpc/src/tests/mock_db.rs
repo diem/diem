@@ -164,6 +164,7 @@ impl LibraDBTrait for MockLibraDB {
         &self,
         key: &EventKey,
         start: u64,
+        _ascending: bool,
         limit: u64,
     ) -> Result<Vec<(u64, ContractEvent)>> {
         let events = self
