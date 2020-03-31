@@ -2,8 +2,8 @@
     {
         "name": "prometheus",
         "image": "${prometheus_image}",
-        "cpu": 1280,
-        "memory": 2088,
+        "cpu": 1024,
+        "memory": 2048,
         "essential": true,
         "portMappings": [
             {"containerPort": 9090, "hostPort": 9090}
@@ -21,10 +21,20 @@
         ]
     },
     {
+        "name": "pushgateway",
+        "image": "${pushgateway_image}",
+        "cpu": 256,
+        "memory": 256,
+        "essential": true,
+        "portMappings": [
+            {"containerPort": 9091, "hostPort": 9092}
+        ]
+    },
+    {
         "name": "alertmanager",
         "image": "${alertmanager_image}",
-        "cpu": 384,
-        "memory": 768,
+        "cpu": 256,
+        "memory": 512,
         "essential": true,
         "portMappings": [
             {"containerPort": 9093, "hostPort": 9093}
@@ -41,7 +51,7 @@
     {
         "name": "grafana",
         "image": "${grafana_image}",
-        "cpu": 384,
+        "cpu": 512,
         "memory": 1024,
         "essential": true,
         "portMappings": [

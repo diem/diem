@@ -85,6 +85,7 @@
             {"sourceVolume": "libra-data", "containerPath": "/opt/libra/data"}
         ],
         "environment": [
+            {"name": "PUSH_METRICS_ENDPOINT", "value": "${push_metrics_endpoint}"},
             {"name": "CFG_NODE_INDEX", "value": "${cfg_node_index}"},
             {"name": "CFG_NUM_VALIDATORS", "value": "${cfg_num_validators}"},
             {"name": "CFG_SEED", "value": "${cfg_seed}"},
