@@ -3,7 +3,8 @@
 
 use crate::{utils::project_root, Result};
 use anyhow::anyhow;
-use log::info;
+use log::{info, warn};
+use std::collections::HashMap;
 use std::{
     ffi::{OsStr, OsString},
     path::Path,
@@ -13,7 +14,9 @@ use std::{
 
 pub struct Cargo {
     inner: Command,
+    direct_args: Vec<OsString>,
     pass_through_args: Vec<OsString>,
+    env_additions: HashMap<OsString, OsString>,
 }
 
 impl Cargo {
@@ -22,7 +25,9 @@ impl Cargo {
         inner.arg(command);
         Self {
             inner,
+            direct_args: Vec::new(),
             pass_through_args: Vec::new(),
+            env_additions: HashMap::new(),
         }
     }
 
@@ -75,6 +80,19 @@ impl Cargo {
         self
     }
 
+    /// Not all arguments are shared between commands, and x doesn't care about all argument types.
+    /// Various commands can add extra args to the base cargo command via this function.
+    pub fn direct_arguments<I, S>(&mut self, direct_args: I) -> &mut Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        for direct_arg in direct_args {
+            self.inner.arg(direct_arg);
+        }
+        self
+    }
+
     pub fn pass_through<I, S>(&mut self, args: I) -> &mut Self
     where
         I: IntoIterator<Item = S>,
@@ -82,6 +100,17 @@ impl Cargo {
     {
         for a in args {
             self.pass_through_args.push(a.as_ref().to_owned());
+        }
+        self
+    }
+    pub fn env_additions<I, S>(&mut self, args: I) -> &mut Self
+    where
+        I: IntoIterator<Item = (S, S)>,
+        S: AsRef<OsStr>,
+    {
+        for a in args {
+            self.env_additions
+                .insert(a.0.as_ref().to_owned(), a.1.as_ref().to_owned());
         }
         self
     }
@@ -98,27 +127,43 @@ impl Cargo {
     }
 
     fn do_run(&mut self, log: bool) -> Result<Output> {
+        //these are arguments on the cargo command
+        if !self.direct_args.is_empty() {
+            self.inner.args(&self.direct_args);
+        }
+
+        //this are arguments are passed through cargo to underlaying
+        //executable
         if !self.pass_through_args.is_empty() {
             self.inner.arg("--").args(&self.pass_through_args);
         }
+
         // once all the arguments are added to the command we can log it.
         if log {
+            &self
+                .env_additions
+                .iter()
+                .for_each(|t| info!("Env {:?}: {:?}", t.0, t.1));
             info!("Executing: {:?}", &self.inner);
         }
+        self.inner.envs(&self.env_additions);
         let now = Instant::now();
         let output = self.inner.output()?;
-        // once all the command has been executed we log it's success or failure.
+        // once the command has been executed we log it's success or failure.
         if log {
-            info!(
-                "{} in {}ms: {:?}",
-                if output.status.success() {
-                    "Completed"
-                } else {
-                    "Failed"
-                },
-                now.elapsed().as_millis(),
-                &self.inner
-            );
+            if output.status.success() {
+                info!(
+                    "Completed in {}ms: {:?}",
+                    now.elapsed().as_millis(),
+                    &self.inner
+                );
+            } else {
+                warn!(
+                    "Failed in {}ms: {:?}",
+                    now.elapsed().as_millis(),
+                    &self.inner
+                );
+            }
         }
         if !output.status.success() {
             return Err(anyhow!("failed to run cargo command"));
@@ -137,14 +182,22 @@ pub enum CargoCommand<'a> {
     Bench(&'a [OsString]),
     Check,
     Clippy(&'a [OsString]),
-    Test(&'a [OsString]),
+    Test {
+        direct_args: &'a [OsString],
+        args: &'a [OsString],
+        env: &'a [(&'a str, &'a str)],
+    },
 }
 
 impl<'a> CargoCommand<'a> {
     pub fn run_on_local_package(&self, args: &CargoArgs) -> Result<()> {
         let mut cargo = Cargo::new(self.as_str());
         Self::apply_args(&mut cargo, args);
-        cargo.pass_through(self.pass_through_args()).run()
+        cargo
+            .direct_arguments(self.direct_args())
+            .pass_through(self.pass_through_args())
+            .env_additions(self.get_extra_env().as_ref().to_owned())
+            .run()
     }
 
     pub fn run_on_packages_separate<I, S>(&self, packages: I) -> Result<()>
@@ -156,9 +209,11 @@ impl<'a> CargoCommand<'a> {
             let mut cargo = Cargo::new(self.as_str());
             Self::apply_args(&mut cargo, &args);
             cargo
+                .direct_arguments(self.direct_args())
                 .packages(&[name])
                 .current_dir(project_root())
                 .pass_through(self.pass_through_args())
+                .env_additions(self.get_extra_env().as_ref().to_owned())
                 .run()?;
         }
         Ok(())
@@ -178,8 +233,10 @@ impl<'a> CargoCommand<'a> {
         Self::apply_args(&mut cargo, args);
         cargo
             .current_dir(project_root())
+            .direct_arguments(self.direct_args())
             .packages(packages)
             .pass_through(self.pass_through_args())
+            .env_additions(self.get_extra_env().as_ref().to_owned())
             .run()
     }
 
@@ -193,8 +250,10 @@ impl<'a> CargoCommand<'a> {
         cargo
             .current_dir(project_root())
             .workspace()
+            .direct_arguments(self.direct_args())
             .exclusions(exclusions)
             .pass_through(self.pass_through_args())
+            .env_additions(self.get_extra_env().as_ref().to_owned())
             .run()
     }
 
@@ -203,7 +262,7 @@ impl<'a> CargoCommand<'a> {
             CargoCommand::Bench(_) => "bench",
             CargoCommand::Check => "check",
             CargoCommand::Clippy(_) => "clippy",
-            CargoCommand::Test(_) => "test",
+            CargoCommand::Test { .. } => "test",
         }
     }
 
@@ -212,7 +271,25 @@ impl<'a> CargoCommand<'a> {
             CargoCommand::Bench(args) => args,
             CargoCommand::Check => &[],
             CargoCommand::Clippy(args) => args,
-            CargoCommand::Test(args) => args,
+            CargoCommand::Test { args, .. } => args,
+        }
+    }
+
+    fn direct_args(&self) -> &[OsString] {
+        match self {
+            CargoCommand::Bench(_) => &[],
+            CargoCommand::Check => &[],
+            CargoCommand::Clippy(_) => &[],
+            CargoCommand::Test { direct_args, .. } => direct_args,
+        }
+    }
+
+    pub fn get_extra_env(&self) -> &[(&str, &str)] {
+        match self {
+            CargoCommand::Bench(_) => &[],
+            CargoCommand::Check => &[],
+            CargoCommand::Clippy(_) => &[],
+            CargoCommand::Test { env, .. } => &env,
         }
     }
 

@@ -4,9 +4,13 @@
 use crate::{
     cargo::{CargoArgs, CargoCommand},
     config::Config,
-    utils, Result,
+    utils,
+    utils::project_root,
+    Result,
 };
+use log::info;
 use std::ffi::OsString;
+use std::process::{Command, Stdio};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -17,8 +21,21 @@ pub struct Args {
     #[structopt(long, short)]
     /// Only run unit tests
     unit: bool,
+
+    #[structopt(long)]
+    /// Do not fast fail the run if tests (or test executables) fail.
+    no_fail_fast: bool,
+    #[structopt(long)]
+    /// Do not run tests, only print their names.
+    no_run: bool,
+
+    #[structopt(long, parse(from_os_str))]
+    lcovdir: Option<OsString>,
+    #[structopt(long, parse(from_os_str))]
+    htmlcovdir: Option<OsString>,
     #[structopt(name = "TESTNAME", parse(from_os_str))]
     testname: Option<OsString>,
+
     #[structopt(name = "ARGS", parse(from_os_str), last = true)]
     args: Vec<OsString>,
 }
@@ -26,7 +43,44 @@ pub struct Args {
 pub fn run(mut args: Args, config: Config) -> Result<()> {
     args.args.extend(args.testname.clone());
 
-    let cmd = CargoCommand::Test(&args.args);
+    //if we will be be running coverage, set the environment arguments we'll force
+    let runcov = args.lcovdir.is_some() || args.htmlcovdir.is_some();
+    let coverageflags: &[(&str, &str)] = &[
+        //A way to use -Z (unstable) flags with the stable compiler. See below.
+        ("RUSTC_BOOTSTRAP", "1"),
+        //Recommend setting for grcov, avoids using the cargo cache.
+        ("CARGO_INCREMENTAL", "0"),
+        //recommend flags for use with grcov, with these flags removed: -Copt-level=0, -Clink-dead-code.
+        //for more info see:  https://github.com/mozilla/grcov#example-how-to-generate-gcda-fiels-for-a-rust-project
+        (
+            "RUSTFLAGS",
+            "-Zprofile -Ccodegen-units=1 -Coverflow-checks=off -Zno-landing-pads",
+        ),
+    ];
+
+    let env_vars = if runcov { coverageflags } else { &[] };
+
+    if runcov {
+        let mut clean_cmd = Command::new("cargo");
+        clean_cmd.arg("clean");
+        clean_cmd.output()?;
+        info!("Since we are running coverage, we must run cargo clean first");
+    }
+
+    let mut direct_args = Vec::new();
+    if args.no_run {
+        direct_args.push(OsString::from("--no-run"));
+    };
+    if args.no_fail_fast {
+        direct_args.push(OsString::from("--no-fail-fast"));
+    };
+
+    let cmd = CargoCommand::Test {
+        direct_args: direct_args.as_slice(),
+        args: &args.args,
+        env: &env_vars,
+    };
+
     // When testing, by deafult we want to turn on all features to ensure that the fuzzing features
     // are flipped on
     let base_args = CargoArgs {
@@ -54,7 +108,6 @@ pub fn run(mut args: Args, config: Config) -> Result<()> {
                     )
                 }),
         )?;
-        Ok(())
     } else if !args.package.is_empty() {
         let run_together = args.package.iter().filter(|p| !config.is_exception(p));
         let run_separate = args.package.iter().filter_map(|p| {
@@ -70,7 +123,6 @@ pub fn run(mut args: Args, config: Config) -> Result<()> {
         });
         cmd.run_on_packages_together(run_together, &base_args)?;
         cmd.run_on_packages_separate(run_separate)?;
-        Ok(())
     } else if utils::project_is_root()? {
         // TODO Maybe only run a subest of tests if we're not inside
         // a package but not at the project root (e.g. language)
@@ -87,7 +139,6 @@ pub fn run(mut args: Args, config: Config) -> Result<()> {
                 },
             )
         }))?;
-        Ok(())
     } else {
         let package = utils::get_local_package()?;
         let all_features = config
@@ -100,6 +151,60 @@ pub fn run(mut args: Args, config: Config) -> Result<()> {
             all_features,
             ..base_args
         })?;
-        Ok(())
     }
+
+    let mut debug_dir = project_root();
+    debug_dir.push("target/debug/");
+
+    if args.lcovdir.is_some() {
+        let mut grcov_lcov = Command::new("grcov");
+        grcov_lcov
+            .arg(debug_dir.as_os_str())
+            .arg("-t")
+            .arg("lcov")
+            .arg("--llvm")
+            .arg("--branch")
+            .arg("--ignore")
+            .arg("/*")
+            .arg("--ignore")
+            .arg("x/*")
+            .arg("--ignore")
+            .arg("testsuite/*")
+            .arg("-o")
+            .arg(args.lcovdir.unwrap());
+        info!("{:?}", grcov_lcov);
+        grcov_lcov.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+        let output = grcov_lcov.output()?;
+        output.status.success();
+    };
+
+    if args.htmlcovdir.is_some() {
+        let mut grcov_html = Command::new("grcov");
+        grcov_html
+            //output file from coverage: gcda files
+            .arg(debug_dir.as_os_str())
+            //source code location
+            .arg("-s")
+            .arg(project_root().as_os_str())
+            //html output
+            .arg("-t")
+            .arg("html")
+            .arg("--llvm")
+            .arg("--branch")
+            .arg("--ignore")
+            .arg("/*")
+            .arg("--ignore")
+            .arg("x/*")
+            .arg("--ignore")
+            .arg("testsuite/*")
+            .arg("--ignore-not-existing")
+            .arg("-o")
+            .arg(args.htmlcovdir.unwrap());
+        info!("Build grcov Html Coverage Report");
+        info!("{:?}", grcov_html);
+        grcov_html.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+        grcov_html.output()?;
+    }
+
+    Ok(())
 }
