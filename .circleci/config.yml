@@ -86,21 +86,21 @@ commands:
   save_cargo_package_cache:
     description: Save cargo package cache for subsequent jobs
     steps:
-      - run:
-          name: Save cargo package cache
-          command: |
-            mv /usr/local/cargo/git .
-            mv /usr/local/cargo/registry .
-            mv /usr/local/cargo/.package-cache  .
+      - save_cache:
+          key: cargo-package-cache-{{ checksum "Cargo.lock" }}
+          # paths are relative to /home/circleci/project/
+          paths:
+            - ../../../usr/local/cargo/git
+            - ../../../usr/local/cargo/registry
+            - ../../../usr/local/cargo/.package-cache
   restore_cargo_package_cache:
     description: Restore Cargo package cache from prev job
     steps:
+      - restore_cache:
+          key: cargo-package-cache-{{ checksum "Cargo.lock" }}
       - run:
           name: Check cargo package cache
           command: |
-            mv git /usr/local/cargo/
-            mv registry /usr/local/cargo/
-            mv .package-cache /usr/local/cargo/
             ls -all /usr/local/cargo
             du -ssh /usr/local/cargo
   build_setup:
@@ -125,16 +125,11 @@ jobs:
       - run:
           name: Git Hooks and Checks
           command: ./scripts/git-checks.sh
+      - restore_cargo_package_cache
       - run:
           name: Fetch workspace dependencies over network
           command: cargo fetch
       - save_cargo_package_cache
-      - persist_to_workspace:
-          root: /home/circleci/project
-          paths:
-            - git
-            - registry
-            - .package-cache
   lint:
     executor: test-executor
     description: Run Rust linting tools.
@@ -143,8 +138,6 @@ jobs:
       - run:
           name: Git Hooks and Checks
           command: ./scripts/git-checks.sh
-      - attach_workspace:
-          at: /home/circleci/project
       - restore_cargo_package_cache
       - run:
           name: cargo lint
@@ -168,8 +161,6 @@ jobs:
     description: Development Build
     steps:
       - build_setup
-      - attach_workspace:
-          at: /home/circleci/project
       - restore_cargo_package_cache
       - run:
           command: RUST_BACKTRACE=1 cargo build -j 16
@@ -191,8 +182,6 @@ jobs:
     description: Release Build
     steps:
       - build_setup
-      - attach_workspace:
-          at: /home/circleci/project
       - restore_cargo_package_cache
       - run:
           name: Build release
@@ -224,6 +213,7 @@ jobs:
       test targets.
     steps:
       - build_setup
+      - restore_cargo_package_cache
       - attach_workspace:
           at: /home/circleci/project
       - run:
@@ -256,8 +246,6 @@ jobs:
       explicitly ignored.
     steps:
       - build_setup
-      - attach_workspace:
-          at: /home/circleci/project
       - restore_cargo_package_cache
       - run:
           name: Run all unit tests
@@ -268,8 +256,6 @@ jobs:
     description: Run crypto unit tests
     steps:
       - build_setup
-      - attach_workspace:
-          at: /home/circleci/project
       - restore_cargo_package_cache
       - run:
           name: Run crypto unit tests
@@ -283,8 +269,6 @@ jobs:
     description: Run a list of known flaky tests.
     steps:
       - build_setup
-      - attach_workspace:
-          at: /home/circleci/project
       - restore_cargo_package_cache
       - run:
           name: Run flaky tests
