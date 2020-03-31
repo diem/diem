@@ -4,8 +4,7 @@
 use super::*;
 use libra_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
 use libra_nibble::Nibble;
-use libra_types::proof::SparseMerkleInternalNode;
-use libra_types::transaction::PRE_GENESIS_VERSION;
+use libra_types::{proof::SparseMerkleInternalNode, transaction::PRE_GENESIS_VERSION};
 use mock_tree_store::MockTreeStore;
 use proptest::{
     collection::{btree_map, hash_map, vec},
