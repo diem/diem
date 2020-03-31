@@ -1,6 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#[cfg(any(test, feature = "testing"))]
+pub mod test_helpers;
+
 use executor::Executor;
 use libra_config::config::NodeConfig;
 use libra_vm::LibraVM;

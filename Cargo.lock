@@ -1348,6 +1348,8 @@ version = "0.1.0"
 dependencies = [
  "executor 0.1.0",
  "libra-config 0.1.0",
+ "libra-crypto 0.1.0",
+ "libra-types 0.1.0",
  "libra-vm 0.1.0",
  "storage-client 0.1.0",
  "storage-service 0.1.0",

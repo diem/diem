@@ -2,25 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{ensure, format_err, Result};
-use executor_utils::create_storage_service_and_executor;
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    test_utils::TEST_SEED,
-    HashValue, PrivateKey, Uniform,
+use executor_utils::{
+    create_storage_service_and_executor,
+    test_helpers::{
+        gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
+    },
 };
+use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey, Uniform};
 use libra_types::{
     access_path::AccessPath,
-    account_address::AccountAddress,
     account_config::{association_address, AccountResource},
     account_state::AccountState,
     account_state_blob::AccountStateWithProof,
-    block_info::BlockInfo,
-    block_metadata::BlockMetadata,
     discovery_set::{DISCOVERY_SET_CHANGE_EVENT_PATH, GLOBAL_DISCOVERY_SET_CHANGE_EVENT_PATH},
     get_with_proof::{verify_update_to_latest_ledger_response, RequestItem},
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::VMPublishingOption,
-    test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{
         authenticator::AuthenticationKey, Script, Transaction, TransactionListWithProof,
         TransactionWithProof,
@@ -28,7 +24,7 @@ use libra_types::{
     trusted_state::TrustedState,
 };
 use rand::SeedableRng;
-use std::{collections::BTreeMap, convert::TryFrom, sync::Arc};
+use std::{convert::TryFrom, sync::Arc};
 use stdlib::transaction_scripts::StdlibScript;
 use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::Runtime;
@@ -37,47 +33,47 @@ use transaction_builder::{
     encode_rotate_consensus_pubkey_script, encode_transfer_script,
 };
 
-fn gen_block_id(index: u8) -> HashValue {
-    HashValue::new([index; HashValue::LENGTH])
-}
-
-fn gen_ledger_info_with_sigs(
-    version: u64,
-    root_hash: HashValue,
-    commit_block_id: HashValue,
-) -> LedgerInfoWithSignatures {
-    let ledger_info = LedgerInfo::new(
-        BlockInfo::new(0, 0, commit_block_id, root_hash, version, 0, None),
-        HashValue::zero(),
-    );
-    LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new())
-}
-
-fn gen_block_metadata(index: u8, proposer: AccountAddress) -> BlockMetadata {
-    BlockMetadata::new(
-        gen_block_id(index),
-        index as u64,
-        index as u64,
-        vec![],
-        proposer,
-    )
-}
-
-fn get_test_signed_transaction(
-    sender: AccountAddress,
-    sequence_number: u64,
-    private_key: Ed25519PrivateKey,
-    public_key: Ed25519PublicKey,
-    program: Option<Script>,
-) -> Transaction {
-    Transaction::UserTransaction(get_test_signed_txn(
-        sender,
-        sequence_number,
-        &private_key,
-        public_key,
-        program,
-    ))
-}
+//fn gen_block_id(index: u8) -> HashValue {
+//    HashValue::new([index; HashValue::LENGTH])
+//}
+//
+//fn gen_ledger_info_with_sigs(
+//    version: u64,
+//    root_hash: HashValue,
+//    commit_block_id: HashValue,
+//) -> LedgerInfoWithSignatures {
+//    let ledger_info = LedgerInfo::new(
+//        BlockInfo::new(0, 0, commit_block_id, root_hash, version, 0, None),
+//        HashValue::zero(),
+//    );
+//    LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new())
+//}
+//
+//fn gen_block_metadata(index: u8, proposer: AccountAddress) -> BlockMetadata {
+//    BlockMetadata::new(
+//        gen_block_id(index),
+//        index as u64,
+//        index as u64,
+//        vec![],
+//        proposer,
+//    )
+//}
+//
+//fn get_test_signed_transaction(
+//    sender: AccountAddress,
+//    sequence_number: u64,
+//    private_key: Ed25519PrivateKey,
+//    public_key: Ed25519PublicKey,
+//    program: Option<Script>,
+//) -> Transaction {
+//    Transaction::UserTransaction(get_test_signed_txn(
+//        sender,
+//        sequence_number,
+//        &private_key,
+//        public_key,
+//        program,
+//    ))
+//}
 
 #[test]
 fn test_genesis() {

@@ -49,3 +49,4 @@ vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }
 [features]
 default = []
 fuzzing = ["consensus-types/fuzzing", "libra-config/fuzzing", "libra-crypto/fuzzing", "libra-types/fuzzing"]
+testing = ["executor-utils/testing"]
