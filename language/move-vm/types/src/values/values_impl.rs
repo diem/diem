@@ -2174,6 +2174,23 @@ impl Value {
     pub fn simple_serialize(&self, ty: &Type) -> Option<Vec<u8>> {
         lcs::to_bytes(&AnnotatedValue { ty, val: &self.0 }).ok()
     }
+
+    pub fn trace_serialize(
+        &self,
+        tracer: &mut serde_reflection::Tracer,
+        samples: &mut serde_reflection::Samples,
+        ty: &Type,
+    ) -> Result<(serde_reflection::Format, serde_reflection::Value), serde_reflection::Error> {
+        tracer.trace_value(samples, &AnnotatedValue { ty, val: &self.0 })
+    }
+
+    pub fn trace_deserialize(
+        tracer: &mut serde_reflection::Tracer,
+        samples: &serde_reflection::Samples,
+        ty: &Type,
+    ) -> Result<(serde_reflection::Format, Value), serde_reflection::Error> {
+        tracer.trace_type_once_with_seed(samples, ty)
+    }
 }
 
 impl Struct {
@@ -2184,6 +2201,23 @@ impl Struct {
 
     pub fn simple_serialize(&self, ty: &StructType) -> Option<Vec<u8>> {
         lcs::to_bytes(&AnnotatedValue { ty, val: &self.0 }).ok()
+    }
+
+    pub fn trace_serialize(
+        &self,
+        tracer: &mut serde_reflection::Tracer,
+        samples: &mut serde_reflection::Samples,
+        ty: &StructType,
+    ) -> Result<(serde_reflection::Format, serde_reflection::Value), serde_reflection::Error> {
+        tracer.trace_value(samples, &AnnotatedValue { ty, val: &self.0 })
+    }
+
+    pub fn trace_deserialize(
+        tracer: &mut serde_reflection::Tracer,
+        samples: &serde_reflection::Samples,
+        ty: &StructType,
+    ) -> Result<(serde_reflection::Format, Struct), serde_reflection::Error> {
+        tracer.trace_type_once_with_seed(samples, ty)
     }
 }
 

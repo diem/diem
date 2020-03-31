@@ -22,6 +22,7 @@ vm = { path = "../../vm", version = "0.1.0" }
 lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 move-core-types = { path = "../../move-core/types", version = "0.1.0" }
+serde-reflection = { path = "../../../common/serde-reflection", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = "0.9.6"
