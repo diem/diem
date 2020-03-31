@@ -16,7 +16,7 @@
 //!
 //! KeyManager talks to Libra via the LibraInterface that may either be a direct link into
 //! `LibraDB`/`Executor`, JSON-RPC, or some other concoction.
-//! KeyManager talks to its own storage through the `LibraSecureStorage::Storage1 trait.
+//! KeyManager talks to its own storage through the `LibraSecureStorage::Storage trait.
 #![forbid(unsafe_code)]
 
 use libra_crypto::{
@@ -43,9 +43,9 @@ pub const ACCOUNT_KEY: &str = "account_key";
 pub const CONSENSUS_KEY: &str = "consensus_key";
 const GAS_UNIT_PRICE: u64 = 0;
 const MAX_GAS_AMOUNT: u64 = 400_000;
-const ROTATION_PERIOD: u64 = 604_800; // 1 week
-const TXN_EXPIRATION: u64 = 3600; // 1 hour, we'll try again after that
-const TXN_RETRY: u64 = 3600; // 1 hour retry period
+const ROTATION_PERIOD_SECS: u64 = 604_800; // 1 week
+const TXN_EXPIRATION_SECS: u64 = 3600; // 1 hour, we'll try again after that
+const TXN_RETRY_SECS: u64 = 3600; // 1 hour retry period
 
 /// Defines actions that KeyManager should perform after a check of all associated state.
 #[derive(Debug, PartialEq)]
@@ -54,7 +54,7 @@ pub enum Action {
     NoAction,
     /// The system is in a healthy state but sufficient time has passed for another key rotation
     FullKeyRotation,
-    /// Storage and the BlockChain are inconsistent, submit a new rotation
+    /// Storage and the blockchain are inconsistent, submit a new rotation
     SubmitKeyRotationTransaction,
 }
 
@@ -190,8 +190,9 @@ where
     ) -> Result<Ed25519PublicKey, Error> {
         let account_prikey = self.storage.get_private_key(ACCOUNT_KEY)?;
         let seq_id = self.libra.retrieve_sequence_number(self.account)?;
-        let expiration = Duration::from_secs(self.time_service.now() + TXN_EXPIRATION);
-        let txn = build_transaction(self.account, seq_id, &account_prikey, &new_key, expiration);
+        let expiration = Duration::from_secs(self.time_service.now() + TXN_EXPIRATION_SECS);
+        let txn =
+            build_rotation_transaction(self.account, seq_id, &account_prikey, &new_key, expiration);
         self.libra.submit_transaction(txn)?;
         Ok(new_key)
     }
@@ -208,14 +209,14 @@ where
 
         // If this is inconsistent, then the transaction either failed or was never submitted.
         if let Err(Error::ConfigStorageKeyMismatch(..)) = self.compare_storage_to_config() {
-            if last_rotation + TXN_RETRY <= self.time_service.now() {
-                return Ok(Action::SubmitKeyRotationTransaction);
+            return if last_rotation + TXN_RETRY_SECS <= self.time_service.now() {
+                Ok(Action::SubmitKeyRotationTransaction)
             } else {
-                return Ok(Action::NoAction);
-            }
+                Ok(Action::NoAction)
+            };
         }
 
-        if last_rotation + ROTATION_PERIOD <= self.time_service.now() {
+        if last_rotation + ROTATION_PERIOD_SECS <= self.time_service.now() {
             Ok(Action::FullKeyRotation)
         } else {
             Ok(Action::NoAction)
@@ -231,7 +232,7 @@ where
     }
 }
 
-pub fn build_transaction(
+pub fn build_rotation_transaction(
     sender: AccountAddress,
     seq_id: u64,
     signing_key: &Ed25519PrivateKey,

@@ -189,11 +189,6 @@ impl TestLibraInterface {
 }
 
 impl LibraInterface for TestLibraInterface {
-    fn last_reconfiguration(&self) -> Result<u64, Error> {
-        self.retrieve_validator_set_resource()
-            .map(|v| v.last_reconfiguration_time())
-    }
-
     fn libra_timestamp(&self) -> Result<u64, Error> {
         let account = account_config::association_address();
         let blob = self
@@ -206,6 +201,11 @@ impl LibraInterface for TestLibraInterface {
             .ok_or(Error::DataDoesNotExist("LibraTimestampResource"))?
             .libra_timestamp
             .microseconds)
+    }
+
+    fn last_reconfiguration(&self) -> Result<u64, Error> {
+        self.retrieve_validator_set_resource()
+            .map(|v| v.last_reconfiguration_time())
     }
 
     fn retrieve_sequence_number(&self, account: AccountAddress) -> Result<u64, Error> {
@@ -265,7 +265,9 @@ fn test_ability_to_read_move_data() {
 }
 
 #[test]
-fn test_consensus_rotation() {
+// This tests that a manual consensus key rotation can be performed by generating a new keypair,
+// creating a new rotation transaction, and executing the transaction locally.
+fn test_manual_consensus_rotation() {
     let (config, _genesis_key) = config_builder::test_config();
     let mut node = Node::setup(&config);
 
@@ -287,7 +289,7 @@ fn test_consensus_rotation() {
     let new_prikey = Ed25519PrivateKey::generate(&mut rng);
     let new_pubkey = new_prikey.public_key();
 
-    let txn = crate::build_transaction(
+    let txn = crate::build_rotation_transaction(
         node.account,
         0,
         &account_prikey,
@@ -300,13 +302,13 @@ fn test_consensus_rotation() {
     let new_config = node.libra.retrieve_validator_config(node.account).unwrap();
     let new_info = node.libra.retrieve_validator_info(node.account).unwrap();
 
-    assert!(new_pubkey != genesis_pubkey);
+    assert_ne!(new_pubkey, genesis_pubkey);
     assert_eq!(new_pubkey, new_config.consensus_pubkey);
     assert_eq!(&new_pubkey, new_info.consensus_public_key());
 }
 
 #[test]
-// This verifies the key manager is properly setup and that a
+// This verifies the key manager is properly setup and that a basic rotation can occur
 fn test_key_manager_init_and_basic_rotation() {
     let (config, _genesis_key) = config_builder::test_config();
     let mut node = Node::setup(&config);
@@ -321,16 +323,22 @@ fn test_key_manager_init_and_basic_rotation() {
     let genesis_info = node.libra.retrieve_validator_info(node.account).unwrap();
     let new_key = node.key_manager.rotate_consensus_key().unwrap();
     let pre_exe_rotated_info = node.libra.retrieve_validator_info(node.account).unwrap();
-    assert!(genesis_info.consensus_public_key() == pre_exe_rotated_info.consensus_public_key());
-    assert!(pre_exe_rotated_info.consensus_public_key() != &new_key);
+    assert_eq!(
+        genesis_info.consensus_public_key(),
+        pre_exe_rotated_info.consensus_public_key()
+    );
+    assert_ne!(pre_exe_rotated_info.consensus_public_key(), &new_key);
 
     node.execute_and_commit(node.libra.take_all_transactions());
     let rotated_info = node.libra.retrieve_validator_info(node.account).unwrap();
-    assert!(genesis_info.consensus_public_key() != rotated_info.consensus_public_key());
-    assert!(rotated_info.consensus_public_key() == &new_key);
+    assert_ne!(
+        genesis_info.consensus_public_key(),
+        rotated_info.consensus_public_key()
+    );
+    assert_eq!(rotated_info.consensus_public_key(), &new_key);
 
     // Executions have occurred but nothing after our rotation
-    assert!(0 != node.key_manager.libra_timestamp().unwrap());
+    assert_ne!(0, node.key_manager.libra_timestamp().unwrap());
     assert_eq!(
         node.key_manager.last_reconfiguration(),
         node.key_manager.libra_timestamp()
@@ -338,11 +346,14 @@ fn test_key_manager_init_and_basic_rotation() {
 
     // Executions have occurred after our rotation
     node.execute_and_commit(node.libra.take_all_transactions());
-    assert!(node.key_manager.last_reconfiguration() != node.key_manager.libra_timestamp());
+    assert_ne!(
+        node.key_manager.last_reconfiguration(),
+        node.key_manager.libra_timestamp()
+    );
 }
 
 #[test]
-// This tests the applications main loop to ensure it handles basic operations and reliabilities
+// This tests the application's main loop to ensure it handles basic operations and reliabilities
 fn test_loop() {
     let (config, _genesis_key) = config_builder::test_config();
     let mut node = Node::setup(&config);
@@ -351,7 +362,7 @@ fn test_loop() {
     assert_eq!(action, Action::NoAction);
     node.key_manager.perform_action(action).unwrap();
 
-    node.time.increment_by(crate::ROTATION_PERIOD);
+    node.time.increment_by(crate::ROTATION_PERIOD_SECS);
     action = node.key_manager.evaluate_status().unwrap();
     assert_eq!(action, Action::FullKeyRotation);
     node.key_manager.perform_action(action).unwrap();
@@ -359,7 +370,7 @@ fn test_loop() {
     action = node.key_manager.evaluate_status().unwrap();
     assert_eq!(action, Action::NoAction);
 
-    node.time.increment_by(crate::TXN_RETRY);
+    node.time.increment_by(crate::TXN_RETRY_SECS);
     action = node.key_manager.evaluate_status().unwrap();
     assert_eq!(action, Action::SubmitKeyRotationTransaction);
 
