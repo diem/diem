@@ -43,6 +43,19 @@ fn test_root_node() {
 }
 
 #[test]
+fn test_pre_genesis() {
+    let next_version = 0;
+    let db = MockTreeStore::default();
+    let pre_genesis_root_key = NodeKey::new_empty_path(PRE_GENESIS_VERSION);
+    let (pre_genesis_only_node, _) = random_leaf_with_key(PRE_GENESIS_VERSION);
+    db.put_node(pre_genesis_root_key.clone(), pre_genesis_only_node)
+        .unwrap();
+
+    let cache = TreeCache::new(&db, next_version);
+    assert_eq!(*cache.get_root_node_key(), pre_genesis_root_key);
+}
+
+#[test]
 fn test_freeze_with_delete() {
     let next_version = 0;
     let db = MockTreeStore::default();

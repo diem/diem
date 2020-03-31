@@ -5,6 +5,7 @@ use super::*;
 use libra_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
 use libra_nibble::Nibble;
 use libra_types::proof::SparseMerkleInternalNode;
+use libra_types::transaction::PRE_GENESIS_VERSION;
 use mock_tree_store::MockTreeStore;
 use proptest::{
     collection::{btree_map, hash_map, vec},
@@ -42,6 +43,36 @@ fn test_insert_to_empty_tree() {
     db.write_tree_update_batch(batch).unwrap();
 
     assert_eq!(tree.get(key, 0).unwrap().unwrap(), value);
+}
+
+#[test]
+fn test_insert_to_pre_genesis() {
+    // Set up DB with pre-genesis state (one single leaf node).
+    let db = MockTreeStore::default();
+    let key1 = HashValue::new([0x00u8; HashValue::LENGTH]);
+    let value1 = AccountStateBlob::from(vec![1u8, 2u8]);
+    let pre_genesis_root_key = NodeKey::new_empty_path(PRE_GENESIS_VERSION);
+    db.put_node(pre_genesis_root_key, Node::new_leaf(key1, value1.clone()))
+        .unwrap();
+
+    // Genesis inserts one more leaf.
+    let tree = JellyfishMerkleTree::new(&db);
+    let key2 = update_nibble(&key1, 0, 15);
+    let value2 = AccountStateBlob::from(vec![3u8, 4u8]);
+    let (_root_hash, batch) = tree
+        .put_blob_set(vec![(key2, value2.clone())], 0 /* version */)
+        .unwrap();
+
+    // Check pre-genesis node prunes okay.
+    assert_eq!(batch.stale_node_index_batch.len(), 1);
+    db.write_tree_update_batch(batch).unwrap();
+    assert_eq!(db.num_nodes(), 4);
+    db.purge_stale_nodes(0).unwrap();
+    assert_eq!(db.num_nodes(), 3);
+
+    // Check mixed state reads okay.
+    assert_eq!(tree.get(key1, 0).unwrap().unwrap(), value1);
+    assert_eq!(tree.get(key2, 0).unwrap().unwrap(), value2);
 }
 
 #[test]

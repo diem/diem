@@ -75,7 +75,7 @@ use crate::{
 };
 use anyhow::{bail, Result};
 use libra_crypto::HashValue;
-use libra_types::transaction::Version;
+use libra_types::transaction::{Version, PRE_GENESIS_VERSION};
 use std::{
     collections::{hash_map::Entry, BTreeMap, BTreeSet, HashMap, HashSet},
     convert::Into,
@@ -139,10 +139,26 @@ where
     pub fn new(reader: &'a R, next_version: Version) -> Self {
         let mut node_cache = HashMap::new();
         let root_node_key = if next_version == 0 {
-            // If the first version is 0, it means we need to start from an empty tree so we insert
-            // a null node beforehand deliberately to deal with this corner case.
-            node_cache.insert(NodeKey::new_empty_path(0), Node::new_null());
-            NodeKey::new_empty_path(0)
+            let pre_genesis_root_key = NodeKey::new_empty_path(PRE_GENESIS_VERSION);
+            let pre_genesis_root = reader
+                .get_node_option(&pre_genesis_root_key)
+                .expect("Can't deal with DB read failure on initialization.");
+
+            match pre_genesis_root {
+                Some(_) => {
+                    // This is to support the extreme case where things really went wild,
+                    // and we need to ditch the transaction history and apply a new
+                    // genesis on top of an existing state db.
+                    pre_genesis_root_key
+                }
+                None => {
+                    // Hack: We need to start from an empty tree, so we insert
+                    // a null node beforehand deliberately to deal with this corner case.
+                    let genesis_root_key = NodeKey::new_empty_path(0);
+                    node_cache.insert(genesis_root_key.clone(), Node::new_null());
+                    genesis_root_key
+                }
+            }
         } else {
             NodeKey::new_empty_path(next_version - 1)
         };
