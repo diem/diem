@@ -44,6 +44,7 @@ impl LibraDBBackend {
         let events = self.libra_db.get_events(
             &new_block_event_key(),
             u64::max_value(),
+            false,
             self.window_size as u64 + buffer,
         )?;
         let mut result = vec![];

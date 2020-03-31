@@ -199,7 +199,7 @@ async fn get_events(service: JsonRpcService, params: Vec<Value>) -> Result<Vec<E
     let limit: u64 = serde_json::from_value(params[2].clone())?;
 
     let event_key = EventKey::try_from(&hex::decode(raw_event_key)?[..])?;
-    let events_with_proof = service.db.get_events(&event_key, start, limit)?;
+    let events_with_proof = service.db.get_events(&event_key, start, true, limit)?;
 
     let mut events = vec![];
     for (version, event) in events_with_proof {

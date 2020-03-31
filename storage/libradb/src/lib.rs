@@ -162,6 +162,7 @@ pub trait LibraDBTrait: Send + Sync {
         &self,
         event_key: &EventKey,
         start: u64,
+        ascending: bool,
         limit: u64,
     ) -> Result<Vec<(u64, ContractEvent)>>;
 
@@ -890,6 +891,7 @@ impl LibraDBTrait for LibraDB {
         &self,
         event_key: &EventKey,
         start: u64,
+        ascending: bool,
         limit: u64,
     ) -> Result<Vec<(u64, ContractEvent)>> {
         let version = self
@@ -898,7 +900,7 @@ impl LibraDBTrait for LibraDB {
             .ledger_info()
             .version();
         let events = self
-            .get_events_by_event_key(event_key, start, true, limit, version)?
+            .get_events_by_event_key(event_key, start, ascending, limit, version)?
             .into_iter()
             .map(|e| (e.transaction_version, e.event))
             .collect();
