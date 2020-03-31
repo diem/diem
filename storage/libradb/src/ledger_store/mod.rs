@@ -32,6 +32,7 @@ use libra_types::{
 };
 use schemadb::{ReadOptions, SchemaIterator, DB};
 use std::{ops::Deref, sync::Arc};
+use storage_proto::{StartupInfo, TreeState};
 
 pub(crate) struct LedgerStore {
     db: Arc<DB>,
@@ -148,46 +149,69 @@ impl LedgerStore {
             .store(Arc::new(Some(ledger_info_with_sigs)));
     }
 
-    /// Returns `None` if the DB is empty. Otherwise returns a tuple
-    /// `(LedgerInfoWithSignatures, Option<ValidatorSet>)`: either the first element carries a
-    /// validator set and the second element is `None`, or the second element carries a validator
-    /// set.
-    pub fn get_startup_info(
+    fn get_validator_set(&self, epoch: u64) -> Result<ValidatorSet> {
+        ensure!(epoch > 0, "ValidatorSet only queryable for epoch >= 1.",);
+
+        let ledger_info_with_sigs =
+            self.db
+                .get::<LedgerInfoSchema>(&(epoch - 1))?
+                .ok_or_else(|| {
+                    LibraDbError::NotFound(format!("Last LedgerInfo of epoch {}", epoch - 1))
+                })?;
+        let latest_validator_set = ledger_info_with_sigs
+            .ledger_info()
+            .next_validator_set()
+            .ok_or_else(|| {
+                format_err!("Last LedgerInfo in epoch must carry next_validator_set.")
+            })?;
+
+        Ok(latest_validator_set.clone())
+    }
+
+    fn get_tree_state(
         &self,
-    ) -> Result<Option<(LedgerInfoWithSignatures, Option<ValidatorSet>)>> {
-        let latest_ledger_info_with_sigs = match self.get_latest_ledger_info_option() {
+        version: Version,
+        transaction_info: TransactionInfo,
+    ) -> Result<TreeState> {
+        Ok(TreeState::new(
+            version,
+            Accumulator::get_frozen_subtree_hashes(self, version + 1)?,
+            transaction_info.state_root_hash(),
+        ))
+    }
+
+    pub fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
+        // Get the latest ledger info. Return None if not bootstrapped.
+        let latest_ledger_info = match self.get_latest_ledger_info_option() {
             Some(x) => x,
             None => return Ok(None),
         };
+        let latest_validator_set_if_not_in_li =
+            match latest_ledger_info.ledger_info().next_validator_set() {
+                Some(_) => None,
+                // If the latest LedgerInfo doesn't carry a validator set, we look for the previous
+                // LedgerInfo which should always carry a validator set.
+                None => Some(self.get_validator_set(latest_ledger_info.ledger_info().epoch())?),
+            };
 
-        if latest_ledger_info_with_sigs
-            .ledger_info()
-            .next_validator_set()
-            .is_some()
-        {
-            return Ok(Some((latest_ledger_info_with_sigs, None)));
-        }
+        let li_version = latest_ledger_info.ledger_info().version();
+        let (latest_version, latest_txn_info) = self.get_latest_transaction_info()?;
+        assert!(latest_version >= li_version);
+        let (commited_tree_state, synced_tree_state) = if latest_version == li_version {
+            (self.get_tree_state(latest_version, latest_txn_info)?, None)
+        } else {
+            let commited_txn_info = self.get_transaction_info(li_version)?;
+            (
+                self.get_tree_state(li_version, commited_txn_info)?,
+                Some(self.get_tree_state(latest_version, latest_txn_info)?),
+            )
+        };
 
-        // If the latest LedgerInfo doesn't carry a validator set, we look for the previous
-        // LedgerInfo which should always carry a validator set.
-        let latest_epoch = latest_ledger_info_with_sigs.ledger_info().epoch();
-        ensure!(
-            latest_epoch > 0,
-            "Genesis epoch should always carry a validator set.",
-        );
-
-        let prev_ledger_info_with_sigs = self
-            .db
-            .get::<LedgerInfoSchema>(&(latest_epoch - 1))?
-            .ok_or_else(|| format_err!("At least one epoch change LedgerInfo must exist."))?;
-
-        let latest_validator_set = prev_ledger_info_with_sigs
-            .ledger_info()
-            .next_validator_set()
-            .ok_or_else(|| format_err!("All previous LedgerInfo should have a validator set."))?;
-        Ok(Some((
-            latest_ledger_info_with_sigs,
-            Some(latest_validator_set.clone()),
+        Ok(Some(StartupInfo::new(
+            latest_ledger_info,
+            latest_validator_set_if_not_in_li,
+            commited_tree_state,
+            synced_tree_state,
         )))
     }
 
@@ -325,11 +349,6 @@ impl LedgerStore {
             &ledger_info_with_sigs.ledger_info().epoch(),
             ledger_info_with_sigs,
         )
-    }
-
-    /// From left to right, get frozen subtree root hashes of the transaction accumulator.
-    pub fn get_ledger_frozen_subtree_hashes(&self, version: Version) -> Result<Vec<HashValue>> {
-        Accumulator::get_frozen_subtree_hashes(self, version + 1)
     }
 }
 

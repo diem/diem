@@ -72,7 +72,7 @@ use once_cell::sync::Lazy;
 use prometheus::{IntCounter, IntGauge, IntGaugeVec};
 use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
 use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
-use storage_proto::{StartupInfo, TreeState};
+use storage_proto::StartupInfo;
 
 static OP_COUNTER: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("storage"));
 
@@ -972,57 +972,7 @@ impl LibraDBTrait for LibraDB {
     }
 
     fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
-        // Get the latest ledger info. Return None if not bootstrapped.
-        let (latest_ledger_info, latest_validator_set) =
-            match self.ledger_store.get_startup_info()? {
-                Some(x) => x,
-                None => return Ok(None),
-            };
-
-        let latest_tree_state = {
-            let (latest_version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
-            let account_state_root_hash = txn_info.state_root_hash();
-            let ledger_frozen_subtree_hashes = self
-                .ledger_store
-                .get_ledger_frozen_subtree_hashes(latest_version)?;
-            TreeState::new(
-                latest_version,
-                ledger_frozen_subtree_hashes,
-                account_state_root_hash,
-            )
-        };
-
-        let li_version = latest_ledger_info.ledger_info().version();
-        assert!(latest_tree_state.version >= li_version);
-        let startup_info = if latest_tree_state.version != li_version {
-            // We synced to some version ahead of the version of the latest ledger info. Thus, we are still in sync mode.
-            let committed_version = li_version;
-            let committed_txn_info = self.ledger_store.get_transaction_info(committed_version)?;
-            let committed_account_state_root_hash = committed_txn_info.state_root_hash();
-            let committed_ledger_frozen_subtree_hashes = self
-                .ledger_store
-                .get_ledger_frozen_subtree_hashes(committed_version)?;
-            StartupInfo::new(
-                latest_ledger_info,
-                latest_validator_set,
-                TreeState::new(
-                    committed_version,
-                    committed_ledger_frozen_subtree_hashes,
-                    committed_account_state_root_hash,
-                ),
-                Some(latest_tree_state),
-            )
-        } else {
-            // The version of the latest ledger info matches other data. So the storage is not in sync mode.
-            StartupInfo::new(
-                latest_ledger_info,
-                latest_validator_set,
-                latest_tree_state,
-                None,
-            )
-        };
-
-        Ok(Some(startup_info))
+        self.ledger_store.get_startup_info()
     }
 }
 
