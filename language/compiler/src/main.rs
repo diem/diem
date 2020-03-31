@@ -10,12 +10,7 @@ use bytecode_verifier::{
 };
 use compiler::{util, Compiler};
 use ir_to_bytecode::parser::{parse_module, parse_script};
-use libra_types::{
-    access_path::AccessPath,
-    account_address::AccountAddress,
-    transaction::{Module, Script},
-    vm_error::VMStatus,
-};
+use libra_types::{access_path::AccessPath, account_address::AccountAddress, vm_error::VMStatus};
 use std::{
     convert::TryFrom,
     fs,
@@ -180,9 +175,7 @@ fn main() {
         compiled_script
             .serialize(&mut script)
             .expect("Unable to serialize script");
-        let payload = Script::new(script, vec![]);
-        let payload_bytes = serde_json::to_vec(&payload).expect("Unable to serialize script");
-        write_output(&source_path.with_extension(mv_extension), &payload_bytes);
+        write_output(&source_path.with_extension(mv_extension), &script);
     } else {
         let (compiled_module, source_map) =
             util::do_compile_module(&args.source_path, address, &deps);
@@ -206,8 +199,6 @@ fn main() {
         compiled_module
             .serialize(&mut module)
             .expect("Unable to serialize module");
-        let payload = Module::new(module);
-        let payload_bytes = serde_json::to_vec(&payload).expect("Unable to serialize module");
-        write_output(&source_path.with_extension(mv_extension), &payload_bytes);
+        write_output(&source_path.with_extension(mv_extension), &module);
     }
 }

@@ -29,7 +29,7 @@ use libra_types::{
     transaction::{
         authenticator::AuthenticationKey,
         helpers::{create_unsigned_txn, create_user_txn, TransactionSigner},
-        parse_as_transaction_argument, RawTransaction, Script, SignedTransaction,
+        parse_as_transaction_argument, Module, RawTransaction, Script, SignedTransaction,
         TransactionArgument, TransactionPayload, Version,
     },
     waypoint::Waypoint,
@@ -753,21 +753,23 @@ impl ClientProxy {
 
     /// Publish move module
     pub fn publish_module(&mut self, space_delim_strings: &[&str]) -> Result<()> {
-        let module = serde_json::from_slice(&fs::read(space_delim_strings[2])?)?;
-        self.submit_program(space_delim_strings, TransactionPayload::Module(module))
+        let module_bytes = &fs::read(space_delim_strings[2])?;
+        self.submit_program(
+            space_delim_strings,
+            TransactionPayload::Module(Module::new(module_bytes.clone())),
+        )
     }
 
     /// Execute custom script
     pub fn execute_script(&mut self, space_delim_strings: &[&str]) -> Result<()> {
-        let script: Script = serde_json::from_slice(&fs::read(space_delim_strings[2])?)?;
-        let (script_bytes, _) = script.into_inner();
+        let script_bytes = &fs::read(space_delim_strings[2])?;
         let arguments: Vec<_> = space_delim_strings[3..]
             .iter()
             .filter_map(|arg| parse_as_transaction_argument_for_client(arg).ok())
             .collect();
         self.submit_program(
             space_delim_strings,
-            TransactionPayload::Script(Script::new(script_bytes, arguments)),
+            TransactionPayload::Script(Script::new(script_bytes.clone(), arguments)),
         )
     }
 
