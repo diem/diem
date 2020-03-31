@@ -33,48 +33,6 @@ use transaction_builder::{
     encode_rotate_consensus_pubkey_script, encode_transfer_script,
 };
 
-//fn gen_block_id(index: u8) -> HashValue {
-//    HashValue::new([index; HashValue::LENGTH])
-//}
-//
-//fn gen_ledger_info_with_sigs(
-//    version: u64,
-//    root_hash: HashValue,
-//    commit_block_id: HashValue,
-//) -> LedgerInfoWithSignatures {
-//    let ledger_info = LedgerInfo::new(
-//        BlockInfo::new(0, 0, commit_block_id, root_hash, version, 0, None),
-//        HashValue::zero(),
-//    );
-//    LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new())
-//}
-//
-//fn gen_block_metadata(index: u8, proposer: AccountAddress) -> BlockMetadata {
-//    BlockMetadata::new(
-//        gen_block_id(index),
-//        index as u64,
-//        index as u64,
-//        vec![],
-//        proposer,
-//    )
-//}
-//
-//fn get_test_signed_transaction(
-//    sender: AccountAddress,
-//    sequence_number: u64,
-//    private_key: Ed25519PrivateKey,
-//    public_key: Ed25519PublicKey,
-//    program: Option<Script>,
-//) -> Transaction {
-//    Transaction::UserTransaction(get_test_signed_txn(
-//        sender,
-//        sequence_number,
-//        &private_key,
-//        public_key,
-//        program,
-//    ))
-//}
-
 #[test]
 fn test_genesis() {
     let mut rt = Runtime::new().unwrap();
@@ -326,9 +284,13 @@ fn test_change_publishing_option_to_custom() {
     );
 
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(3, output1.root_hash(), block1_id);
-    executor
+    let (_, reconfig_events) = executor
         .commit_blocks(vec![block1_id], ledger_info_with_sigs)
         .unwrap();
+    assert!(
+        !reconfig_events.is_empty(),
+        "executor commit should return reconfig events for reconfiguration"
+    );
 
     let request_items = vec![
         RequestItem::GetAccountTransactionBySequenceNumber {
@@ -409,9 +371,13 @@ fn test_change_publishing_option_to_custom() {
         .unwrap();
 
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(5, output2.root_hash(), block2_id);
-    executor
+    let (_, reconfig_events) = executor
         .commit_blocks(vec![block2_id], ledger_info_with_sigs)
         .unwrap();
+    assert!(
+        reconfig_events.is_empty(),
+        "expect executor to reutrn no reconfig events"
+    );
 
     let request_items = vec![
         RequestItem::GetAccountTransactionBySequenceNumber {
@@ -565,9 +531,13 @@ fn test_extend_whitelist() {
     );
 
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(3, output1.root_hash(), block1_id);
-    executor
+    let (_, reconfig_events) = executor
         .commit_blocks(vec![block1_id], ledger_info_with_sigs)
         .unwrap();
+    assert!(
+        !reconfig_events.is_empty(),
+        "executor commit should return reconfig events for reconfiguration"
+    );
 
     let request_items = vec![
         RequestItem::GetAccountTransactionBySequenceNumber {
@@ -649,9 +619,13 @@ fn test_extend_whitelist() {
         .unwrap();
 
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(4, output2.root_hash(), block2_id);
-    executor
+    let (_, reconfig_events) = executor
         .commit_blocks(vec![block2_id], ledger_info_with_sigs)
         .unwrap();
+    assert!(
+        reconfig_events.is_empty(),
+        "expect executor to reutrn no reconfig events"
+    );
 
     let request_items = vec![
         RequestItem::GetAccountTransactionBySequenceNumber {
@@ -849,9 +823,13 @@ fn test_execution_with_storage() {
         .execute_block((block1_id, block1.clone()), parent_block_id)
         .unwrap();
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(6, output1.root_hash(), block1_id);
-    executor
+    let (_, reconfig_events) = executor
         .commit_blocks(vec![block1_id], ledger_info_with_sigs)
         .unwrap();
+    assert!(
+        reconfig_events.is_empty(),
+        "expected no reconfiguration event from executor commit"
+    );
 
     let request_items = vec![
         RequestItem::GetAccountTransactionBySequenceNumber {
