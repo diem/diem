@@ -111,6 +111,7 @@ static LIBRA_TIME_MODULE: Lazy<ModuleId> = Lazy::new(|| {
 pub fn make_placeholder_discovery_set(validator_set: &ValidatorSet) -> DiscoverySet {
     let mock_addr = Multiaddr::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
     let discovery_set = validator_set
+        .payload()
         .iter()
         .map(|validator_pubkeys| DiscoveryInfo {
             account_address: *validator_pubkeys.account_address(),
@@ -544,7 +545,8 @@ fn initialize_validators(
     let mut txn_data = TransactionMetadata::default();
     txn_data.sender = account_config::association_address();
 
-    for (validator_keys, discovery_info) in validator_set.iter().zip(discovery_set.iter()) {
+    for (validator_keys, discovery_info) in validator_set.payload().iter().zip(discovery_set.iter())
+    {
         // First, add a ValidatorConfig resource under each account
         let validator_address = *validator_keys.account_address();
         let validator_authentication_key =
