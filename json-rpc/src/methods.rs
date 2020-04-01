@@ -221,11 +221,12 @@ async fn get_account_state_with_proof(
     let address: String = serde_json::from_value(params[0].clone())?;
     let account_address = AccountAddress::from_str(&address)?;
     let version: u64 = serde_json::from_value(params[1].clone())?;
+    let ledger_version: u64 = serde_json::from_value(params[2].clone())?;
 
     let account_state_with_proof =
         service
             .db
-            .get_account_state_with_proof(account_address, version, version)?;
+            .get_account_state_with_proof(account_address, version, ledger_version)?;
     Ok(AccountStateWithProofView::try_from(
         account_state_with_proof,
     )?)
