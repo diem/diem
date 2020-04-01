@@ -14,6 +14,7 @@ use crate::{
     keygen::KeyGen,
 };
 use libra_crypto::{hash::HashValue, traits::SigningKey};
+use libra_types::account_config;
 use transaction_builder::*;
 
 #[test]
@@ -31,20 +32,31 @@ fn register_preburn_burn() {
     };
 
     // Register preburner
-    executor.execute_and_apply(preburner.signed_script_txn(encode_register_preburner_script(), 0));
+    executor.execute_and_apply(preburner.signed_script_txn(
+        encode_register_preburner_script(account_config::lbr_type_tag()),
+        0,
+    ));
     // Send a preburn request
-    executor.execute_and_apply(preburner.signed_script_txn(encode_preburn_script(100), 1));
+    executor.execute_and_apply(preburner.signed_script_txn(
+        encode_preburn_script(account_config::lbr_type_tag(), 100),
+        1,
+    ));
     // Send a second preburn request
-    executor.execute_and_apply(preburner.signed_script_txn(encode_preburn_script(200), 2));
+    executor.execute_and_apply(preburner.signed_script_txn(
+        encode_preburn_script(account_config::lbr_type_tag(), 200),
+        2,
+    ));
 
     // Complete the first request by burning
-    executor.execute_and_apply(
-        association.signed_script_txn(encode_burn_script(*preburner.address()), 1),
-    );
+    executor.execute_and_apply(association.signed_script_txn(
+        encode_burn_script(account_config::lbr_type_tag(), *preburner.address()),
+        1,
+    ));
     // Complete the second request by cancelling
-    executor.execute_and_apply(
-        association.signed_script_txn(encode_cancel_burn_script(*preburner.address()), 2),
-    );
+    executor.execute_and_apply(association.signed_script_txn(
+        encode_cancel_burn_script(account_config::lbr_type_tag(), *preburner.address()),
+        2,
+    ));
 }
 
 #[test]
@@ -78,6 +90,7 @@ fn approved_payment() {
     let signature = private_key.sign_message(&message);
     executor.execute_and_apply(payment_sender.signed_script_txn(
         encode_approved_payment_script(
+            account_config::lbr_type_tag(),
             *payment_receiver.address(),
             100,
             message.to_vec(),

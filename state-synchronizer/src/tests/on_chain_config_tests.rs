@@ -13,7 +13,7 @@ use libra_crypto::{
     HashValue,
 };
 use libra_types::{
-    account_config::association_address,
+    account_config::{association_address, lbr_type_tag},
     event_subscription::EventSubscription,
     on_chain_config::{ConfigID, OnChainConfig, OnChainConfigPayload, VMPublishingOption},
     transaction::authenticator::AuthenticationKey,
@@ -159,6 +159,7 @@ fn test_on_chain_config_pub_sub() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_transfer_script(
+            lbr_type_tag(),
             &validator_account,
             validator_auth_key_prefix,
             1_000_000,

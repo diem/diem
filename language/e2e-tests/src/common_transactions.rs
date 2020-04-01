@@ -70,7 +70,7 @@ pub fn peer_to_peer_txn(
     // get a SignedTransaction
     sender.create_signed_txn_with_args(
         StdlibScript::PeerToPeer.compiled_bytes().into_vec(),
-        vec![],
+        vec![lbr_type_tag()],
         args,
         seq_num,
         gas_costs::TXN_RESERVED, // this is a default for gas

@@ -515,7 +515,12 @@ fn gen_transfer_txn_request(
     num_coins: u64,
 ) -> SignedTransaction {
     gen_submit_transaction_request(
-        transaction_builder::encode_transfer_script(receiver, receiver_auth_key_prefix, num_coins),
+        transaction_builder::encode_transfer_script(
+            lbr_type_tag(),
+            receiver,
+            receiver_auth_key_prefix,
+            num_coins,
+        ),
         sender,
     )
 }

@@ -76,6 +76,7 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
     let expiration_time = Duration::from_secs(expiration_time_secs);
 
     let program = encode_transfer_script(
+        lbr_type_tag(),
         &receiver_address,
         receiver_auth_key.prefix().to_vec(),
         num_coins,
@@ -172,6 +173,7 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
     let expiration_time = Duration::from_secs(expiration_time_secs);
 
     let program = encode_transfer_script(
+        lbr_type_tag(),
         &receiver_address,
         receiver_auth_key.prefix().to_vec(),
         num_coins,
@@ -587,6 +589,7 @@ mod test {
         let signature = Ed25519Signature::try_from(&[1u8; Ed25519Signature::LENGTH][..]).unwrap();
 
         let program = encode_transfer_script(
+            lbr_type_tag(),
             &receiver_auth_key.derived_address(),
             receiver_auth_key.prefix().to_vec(),
             amount,

@@ -11,7 +11,7 @@ use executor_utils::{
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey, Uniform};
 use libra_types::{
     access_path::AccessPath,
-    account_config::{association_address, AccountResource},
+    account_config::{association_address, lbr_type_tag, AccountResource},
     account_state::AccountState,
     account_state_blob::AccountStateWithProof,
     discovery_set::{DISCOVERY_SET_CHANGE_EVENT_PATH, GLOBAL_DISCOVERY_SET_CHANGE_EVENT_PATH},
@@ -139,6 +139,7 @@ fn test_reconfiguration() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_transfer_script(
+            lbr_type_tag(),
             &validator_account,
             validator_auth_key_prefix,
             1_000_000,
@@ -232,6 +233,7 @@ fn test_change_publishing_option_to_custom() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_transfer_script(
+            lbr_type_tag(),
             &validator_account,
             validator_auth_key_prefix,
             1_000_000,
@@ -472,6 +474,7 @@ fn test_extend_whitelist() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_transfer_script(
+            lbr_type_tag(),
             &validator_account,
             validator_auth_key_prefix,
             1_000_000,
@@ -764,6 +767,7 @@ fn test_execution_with_storage() {
         privkey1.clone(),
         pubkey1.clone(),
         Some(encode_transfer_script(
+            lbr_type_tag(),
             &account2,
             account2_auth_key.prefix().to_vec(),
             20_000,
@@ -778,6 +782,7 @@ fn test_execution_with_storage() {
         privkey2,
         pubkey2,
         Some(encode_transfer_script(
+            lbr_type_tag(),
             &account3,
             account3_auth_key.prefix().to_vec(),
             10_000,
@@ -792,6 +797,7 @@ fn test_execution_with_storage() {
         privkey1.clone(),
         pubkey1.clone(),
         Some(encode_transfer_script(
+            lbr_type_tag(),
             &account3,
             account3_auth_key.prefix().to_vec(),
             70_000,
@@ -812,6 +818,7 @@ fn test_execution_with_storage() {
             privkey1.clone(),
             pubkey1.clone(),
             Some(encode_transfer_script(
+                lbr_type_tag(),
                 &account3,
                 account3_auth_key.prefix().to_vec(),
                 10_000,

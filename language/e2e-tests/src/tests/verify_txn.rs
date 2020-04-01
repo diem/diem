@@ -29,7 +29,7 @@ fn verify_signature() {
     executor.add_account_data(&sender);
     // Generate a new key pair to try and sign things with.
     let private_key = Ed25519PrivateKey::generate_for_testing();
-    let program = encode_transfer_script(sender.address(), vec![], 100);
+    let program = encode_transfer_script(lbr_type_tag(), sender.address(), vec![], 100);
     let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
         *sender.address(),
         0,
@@ -52,7 +52,7 @@ fn verify_reserved_sender() {
     executor.add_account_data(&sender);
     // Generate a new key pair to try and sign things with.
     let private_key = Ed25519PrivateKey::generate_for_testing();
-    let program = encode_transfer_script(sender.address(), vec![], 100);
+    let program = encode_transfer_script(lbr_type_tag(), sender.address(), vec![], 100);
     let signed_txn = transaction_test_helpers::get_test_signed_txn(
         CORE_CODE_ADDRESS,
         0,
@@ -110,7 +110,7 @@ fn verify_simple_payment() {
     // Create a new transaction that has the exact right sequence number.
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
-        vec![],
+        vec![lbr_type_tag()],
         args.clone(),
         10, // this should be programmable but for now is 1 more than the setup
         100_000,
@@ -123,7 +123,7 @@ fn verify_simple_payment() {
     let txn = sender.account().create_signed_txn_with_args_and_sender(
         *receiver.address(),
         p2p_script.clone(),
-        vec![],
+        vec![lbr_type_tag()],
         args.clone(),
         10, // this should be programmable but for now is 1 more than the setup
         100_000,
@@ -139,7 +139,7 @@ fn verify_simple_payment() {
     // Create a new transaction that has a old sequence number.
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
-        vec![],
+        vec![lbr_type_tag()],
         args.clone(),
         1,
         100_000,
@@ -155,7 +155,7 @@ fn verify_simple_payment() {
     // Create a new transaction that has a too new sequence number.
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
-        vec![],
+        vec![lbr_type_tag()],
         args.clone(),
         11,
         100_000,
@@ -173,7 +173,7 @@ fn verify_simple_payment() {
     // Create a new transaction that doesn't have enough balance to pay for gas.
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
-        vec![],
+        vec![lbr_type_tag()],
         args.clone(),
         10,
         1_000_000,
@@ -195,7 +195,7 @@ fn verify_simple_payment() {
     let bogus_account = AccountData::new(100_000, 10);
     let txn = bogus_account.account().create_signed_txn_with_args(
         p2p_script.clone(),
-        vec![],
+        vec![lbr_type_tag()],
         args.clone(),
         10,
         10_000,
@@ -219,7 +219,7 @@ fn verify_simple_payment() {
     // that we are doing so in the specified order.
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
-        vec![],
+        vec![lbr_type_tag()],
         args.clone(),
         10,
         1_000_000,
@@ -250,7 +250,7 @@ fn verify_simple_payment() {
 
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
-        vec![],
+        vec![lbr_type_tag()],
         args.clone(),
         10,
         1,
@@ -265,7 +265,7 @@ fn verify_simple_payment() {
 
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
-        vec![],
+        vec![lbr_type_tag()],
         args.clone(),
         10,
         gas_schedule::MIN_TRANSACTION_GAS_UNITS.get() - 1,
@@ -280,7 +280,7 @@ fn verify_simple_payment() {
 
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
-        vec![],
+        vec![lbr_type_tag()],
         args,
         10,
         gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
@@ -295,7 +295,7 @@ fn verify_simple_payment() {
 
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
-        vec![],
+        vec![lbr_type_tag()],
         vec![TransactionArgument::U64(42); MAX_TRANSACTION_SIZE_IN_BYTES],
         10,
         gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
@@ -315,7 +315,7 @@ fn verify_simple_payment() {
 
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script.clone(),
-        vec![],
+        vec![lbr_type_tag()],
         args,
         10,
         100_000,
@@ -333,7 +333,7 @@ fn verify_simple_payment() {
     // Create a new transaction that has no argument.
     let txn = sender.account().create_signed_txn_with_args(
         p2p_script,
-        vec![],
+        vec![lbr_type_tag()],
         vec![],
         10,
         100_000,
