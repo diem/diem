@@ -8,7 +8,7 @@ mod genesis_gas_schedule;
 use crate::genesis_gas_schedule::initial_gas_schedule;
 use anyhow::Result;
 use bytecode_verifier::VerifiedModule;
-use libra_config::config::NodeConfig;
+use libra_config::{config::NodeConfig, generator};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
@@ -145,16 +145,14 @@ pub fn encode_genesis_transaction_with_validator(
     )
 }
 
-pub fn encode_genesis_transaction(
-    private_key: &Ed25519PrivateKey,
-    public_key: Ed25519PublicKey,
+pub fn encode_genesis_change_set(
+    public_key: &Ed25519PublicKey,
     nodes: &[NodeConfig],
     validator_set: ValidatorSet,
     discovery_set: DiscoverySet,
     stdlib_modules: &[VerifiedModule],
     vm_publishing_option: VMPublishingOption,
-) -> SignatureCheckedTransaction {
-    // create a MoveVM
+) -> ChangeSet {
     let move_vm = MoveVM::new();
 
     // create a data view for move_vm
@@ -176,43 +174,61 @@ pub fn encode_genesis_transaction(
     }
 
     // generate the genesis WriteSet
-    let genesis_write_set = {
-        {
-            create_and_initialize_main_accounts(
-                &move_vm,
-                &gas_schedule,
-                &mut interpreter_context,
-                &public_key,
-                initial_gas_schedule(&move_vm, &data_cache),
-            );
-            create_and_initialize_validator_and_discovery_set(
-                &move_vm,
-                &gas_schedule,
-                &mut interpreter_context,
-                &nodes,
-                &validator_set,
-                &discovery_set,
-            );
-            setup_publishing_option(
-                &move_vm,
-                &gas_schedule,
-                &mut interpreter_context,
-                vm_publishing_option,
-            );
-            reconfigure(&move_vm, &gas_schedule, &mut interpreter_context);
-            publish_stdlib(&mut interpreter_context, stdlib_modules);
+    create_and_initialize_main_accounts(
+        &move_vm,
+        &gas_schedule,
+        &mut interpreter_context,
+        &public_key,
+        initial_gas_schedule(&move_vm, &data_cache),
+    );
+    create_and_initialize_validator_and_discovery_set(
+        &move_vm,
+        &gas_schedule,
+        &mut interpreter_context,
+        &nodes,
+        &validator_set,
+        &discovery_set,
+    );
+    setup_publishing_option(
+        &move_vm,
+        &gas_schedule,
+        &mut interpreter_context,
+        vm_publishing_option,
+    );
+    reconfigure(&move_vm, &gas_schedule, &mut interpreter_context);
+    publish_stdlib(&mut interpreter_context, stdlib_modules);
 
-            verify_genesis_write_set(interpreter_context.events(), &validator_set, &discovery_set);
-            ChangeSet::new(
-                interpreter_context
-                    .make_write_set()
-                    .expect("Genesis WriteSet failure"),
-                interpreter_context.events().to_vec(),
-            )
-        }
-    };
-    let transaction =
-        RawTransaction::new_change_set(account_config::association_address(), 0, genesis_write_set);
+    verify_genesis_write_set(interpreter_context.events(), &validator_set, &discovery_set);
+    ChangeSet::new(
+        interpreter_context
+            .make_write_set()
+            .expect("Genesis WriteSet failure"),
+        interpreter_context.events().to_vec(),
+    )
+}
+
+pub fn encode_genesis_transaction(
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
+    nodes: &[NodeConfig],
+    validator_set: ValidatorSet,
+    discovery_set: DiscoverySet,
+    stdlib_modules: &[VerifiedModule],
+    vm_publishing_option: VMPublishingOption,
+) -> SignatureCheckedTransaction {
+    let genesis_change_set = encode_genesis_change_set(
+        &public_key,
+        nodes,
+        validator_set,
+        discovery_set,
+        stdlib_modules,
+        vm_publishing_option,
+    );
+    let transaction = RawTransaction::new_change_set(
+        account_config::association_address(),
+        0,
+        genesis_change_set,
+    );
     transaction.sign(private_key, public_key).unwrap()
 }
 
@@ -748,6 +764,22 @@ fn verify_genesis_write_set(
         discovery_set,
         "Discovery set in emitted event does not match discovery set fed into genesis transaction",
     );
+}
+
+/// Generate an artificial genesis `ChangeSet` for testing
+pub fn generate_genesis_change_set_for_testing() -> ChangeSet {
+    let stdlib_modules = stdlib_modules(StdLibOptions::Staged);
+    let swarm = generator::validator_swarm_for_testing(10);
+    let discovery_set = make_placeholder_discovery_set(&swarm.validator_set);
+
+    encode_genesis_change_set(
+        &GENESIS_KEYPAIR.1,
+        &swarm.nodes,
+        swarm.validator_set,
+        discovery_set,
+        stdlib_modules,
+        VMPublishingOption::Open,
+    )
 }
 
 // `StateView` has no data given we are creating the genesis
