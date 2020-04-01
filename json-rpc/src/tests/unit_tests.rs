@@ -435,7 +435,7 @@ fn test_get_transactions_impl(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoW
                             }
                             _ => panic!("Returned value doesn't match!"),
                         },
-                        Transaction::WriteSet(_) => match view.transaction {
+                        Transaction::WaypointWriteSet(_) => match view.transaction {
                             TransactionDataView::WriteSet { .. } => {}
                             _ => panic!("Returned value doesn't match!"),
                         },

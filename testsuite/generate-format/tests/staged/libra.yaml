@@ -107,7 +107,7 @@ Transaction:
         NEWTYPE:
           TYPENAME: SignedTransaction
     1:
-      WriteSet:
+      WaypointWriteSet:
         NEWTYPE:
           TYPENAME: ChangeSet
     2:
