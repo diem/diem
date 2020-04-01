@@ -80,10 +80,7 @@ message LedgerInfo {
 /// the signatures again when the client performs a query, those are only there
 /// for the client to be able to verify the state
 message LedgerInfoWithSignatures {
-  // Signatures of the root node from each validator
-  repeated ValidatorSignature signatures = 1;
-
-  LedgerInfo ledger_info = 2;
+  bytes bytes = 1;
 }
 
 message ValidatorSignature {
