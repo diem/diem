@@ -13,7 +13,7 @@ use libra_types::{
     account_state_blob::AccountStateBlob,
     event::EventHandle,
     get_with_proof::{RequestItem, ResponseItem},
-    ledger_info::LedgerInfoWithSignatures,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::{AccumulatorConsistencyProof, SparseMerkleProof, SparseMerkleRangeProof},
     proto::types::{
         request_item::RequestedItems, response_item::ResponseItems, AccountStateWithProof,
@@ -31,7 +31,7 @@ use rand::{
     rngs::{OsRng, StdRng},
     Rng, SeedableRng,
 };
-use std::convert::TryFrom;
+use std::{collections::BTreeMap, convert::TryFrom};
 use storage_client::StorageRead;
 use storage_proto::{
     BackupAccountStateResponse, BackupTransactionInfoResponse, BackupTransactionResponse,
@@ -165,8 +165,10 @@ fn get_mock_update_to_latest_ledger(
     ledger_info.consensus_data_hash = HashValue::zero().to_vec();
     ledger_info.consensus_block_id = HashValue::zero().to_vec();
     ledger_info.version = 7;
-    let mut ledger_info_with_sigs = ProtoLedgerInfoWithSignatures::default();
-    ledger_info_with_sigs.ledger_info = Some(ledger_info);
+    let ledger_info_with_sigs = ProtoLedgerInfoWithSignatures::from(LedgerInfoWithSignatures::new(
+        LedgerInfo::try_from(ledger_info).unwrap(),
+        BTreeMap::new(),
+    ));
     resp.ledger_info_with_sigs = Some(ledger_info_with_sigs);
     resp
 }
