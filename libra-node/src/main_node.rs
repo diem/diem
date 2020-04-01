@@ -7,7 +7,7 @@ use debug_interface::{
     node_debug_service::NodeDebugService,
     proto::node_debug_interface_server::NodeDebugInterfaceServer,
 };
-use executor::Executor;
+use executor::{db_bootstrapper::maybe_bootstrap_db, Executor};
 use futures::{channel::mpsc::channel, executor::block_on};
 use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
 use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
@@ -52,11 +52,9 @@ impl Drop for LibraHandle {
 fn setup_executor(config: &NodeConfig) -> Arc<Mutex<Executor<LibraVM>>> {
     let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
     let storage_write_client = Arc::new(StorageWriteServiceClient::new(&config.storage.address));
-
     Arc::new(Mutex::new(Executor::new(
         storage_read_client,
         storage_write_client,
-        config,
     )))
 }
 
@@ -172,6 +170,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let mut instant = Instant::now();
     let libra_db = init_libra_db(&node_config);
     let storage = start_storage_service_with_db(&node_config, Arc::clone(&libra_db));
+    maybe_bootstrap_db::<LibraVM>(node_config).expect("Db-bootstrapper should not fail.");
 
     debug!(
         "Storage service started in {} ms",

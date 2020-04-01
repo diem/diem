@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::vm_validator::{TransactionValidation, VMValidator};
-use executor::Executor;
+use executor::db_bootstrapper::maybe_bootstrap_db;
 use libra_config::config::NodeConfig;
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
@@ -15,7 +15,7 @@ use libra_types::{
 use libra_vm::LibraVM;
 use rand::SeedableRng;
 use std::{sync::Arc, u64};
-use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
+use storage_client::{StorageRead, StorageReadServiceClient};
 use storage_service::start_storage_service;
 use tokio::runtime::Runtime;
 use transaction_builder::encode_transfer_script;
@@ -29,17 +29,7 @@ impl TestValidator {
     fn new(config: &NodeConfig) -> (Self, Runtime) {
         let rt = Runtime::new().unwrap();
         let storage = start_storage_service(&config);
-
-        // setup execution
-        let storage_read_client: Arc<dyn StorageRead> =
-            Arc::new(StorageReadServiceClient::new(&config.storage.address));
-
-        let storage_write_client =
-            Arc::new(StorageWriteServiceClient::new(&config.storage.address));
-
-        // Create executor to initialize genesis state. Otherwise gprc will report error when
-        // fetching data from storage.
-        let _executor = Executor::<LibraVM>::new(storage_read_client, storage_write_client, config);
+        maybe_bootstrap_db::<LibraVM>(config).expect("Db-bootstrapper should not fail.");
 
         // Create another client for the vm_validator since the one used for the executor will be
         // run on another runtime which will be dropped before this function returns.
