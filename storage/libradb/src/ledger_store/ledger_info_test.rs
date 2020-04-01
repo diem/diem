@@ -14,7 +14,7 @@ use std::path::Path;
 fn arb_ledger_infos_with_sigs() -> impl Strategy<Value = Vec<LedgerInfoWithSignatures>> {
     (
         any_with::<AccountInfoUniverse>(3),
-        vec((any::<LedgerInfoWithSignaturesGen>(), 1..10usize), 1..100),
+        vec((any::<LedgerInfoWithSignaturesGen>(), 1..10usize), 1..10),
     )
         .prop_map(|(mut universe, gens)| {
             let ledger_infos_with_sigs: Vec<_> = gens
@@ -128,25 +128,61 @@ proptest! {
     }
 
     #[test]
-    fn test_get_startup_info(ledger_infos_with_sigs in arb_ledger_infos_with_sigs()) {
+    fn test_get_validator_set(ledger_infos_with_sigs in arb_ledger_infos_with_sigs()) {
         let tmp_dir = TempPath::new();
         let db = set_up(&tmp_dir, &ledger_infos_with_sigs);
 
+        assert!(db.ledger_store.get_validator_set(0).is_err());
+
+        for li_with_sigs in ledger_infos_with_sigs {
+            let li = li_with_sigs.ledger_info();
+            if li.next_validator_set().is_some() {
+                assert_eq!(
+                    db.ledger_store.get_validator_set(li.epoch()+1).unwrap(),
+                    *li.next_validator_set().unwrap(),
+                );
+            }
+
+        }
+    }
+
+    #[test]
+    fn test_get_startup_info(
+        (ledger_infos_with_sigs, txn_infos) in arb_ledger_infos_with_sigs()
+            .prop_flat_map(|lis| {
+                let num_committed_txns = get_last_version(&lis) as usize + 1;
+                (
+                    Just(lis),
+                    vec(any::<TransactionInfo>(), num_committed_txns..num_committed_txns + 10),
+                )
+            })
+    ) {
+        let tmp_dir = TempPath::new();
+        let db = set_up(&tmp_dir, &ledger_infos_with_sigs);
+        put_transaction_infos(&db, &txn_infos);
+
         let startup_info = db.ledger_store.get_startup_info().unwrap().unwrap();
-
-        let expected_latest_li = ledger_infos_with_sigs.last().unwrap();
-        prop_assert_eq!(&startup_info.latest_ledger_info, expected_latest_li);
-
-        if expected_latest_li.ledger_info().next_validator_set().is_some() {
-            prop_assert_eq!(startup_info.latest_validator_set, None);
+        let latest_li = ledger_infos_with_sigs.last().unwrap().ledger_info();
+        assert_eq!(startup_info.latest_ledger_info, *ledger_infos_with_sigs.last().unwrap());
+        let expected_validator_set = if latest_li.next_validator_set().is_none() {
+            Some(db.ledger_store.get_validator_set(latest_li.epoch()).unwrap())
         } else {
-            let expected_vs_opt = ledger_infos_with_sigs
-                .iter()
-                .rev()
-                .filter_map(|x| x.ledger_info().next_validator_set().cloned())
-                .next()
-                .unwrap();
-            prop_assert_eq!(startup_info.latest_validator_set.unwrap(), expected_vs_opt);
+            None
+        };
+        assert_eq!(startup_info.latest_validator_set, expected_validator_set);
+        let committed_version = get_last_version(&ledger_infos_with_sigs);
+        assert_eq!(
+            startup_info.committed_tree_state.account_state_root_hash,
+            txn_infos[committed_version as usize].state_root_hash(),
+        );
+        let synced_version = (txn_infos.len() - 1) as u64;
+        if synced_version > committed_version {
+            assert_eq!(
+                startup_info.synced_tree_state.unwrap().account_state_root_hash,
+                txn_infos.last().unwrap().state_root_hash(),
+            );
+        } else {
+            assert!(startup_info.synced_tree_state.is_none());
         }
     }
 }
@@ -166,4 +202,12 @@ fn set_up(path: &impl AsRef<Path>, ledger_infos_with_sigs: &[LedgerInfoWithSigna
     store.set_latest_ledger_info(ledger_infos_with_sigs.last().unwrap().clone());
 
     db
+}
+
+fn put_transaction_infos(db: &LibraDB, txn_infos: &[TransactionInfo]) {
+    let mut cs = ChangeSet::new();
+    db.ledger_store
+        .put_transaction_infos(0, txn_infos, &mut cs)
+        .unwrap();
+    db.db.write_schemas(cs.batch).unwrap()
 }
