@@ -17,7 +17,9 @@ use executor_types::{
 use futures::executor::block_on;
 use libra_config::config::NodeConfig;
 use libra_crypto::{
-    hash::{CryptoHash, EventAccumulatorHasher, PRE_GENESIS_BLOCK_ID},
+    hash::{
+        CryptoHash, EventAccumulatorHasher, TransactionAccumulatorHasher, PRE_GENESIS_BLOCK_ID,
+    },
     HashValue,
 };
 use libra_logger::prelude::*;
@@ -381,6 +383,7 @@ where
         )?;
 
         info!("Skipping the first {} transactions.", num_txns_to_skip);
+        let txn_list_is_empty = txn_list_with_proof.is_empty();
         let transactions: Vec<_> = txn_list_with_proof
             .transactions
             .into_iter()
@@ -388,12 +391,39 @@ where
             .collect();
 
         // If the proof is verified, then the length of txn_infos and txns must be the same.
-        let transaction_infos: Vec<_> = txn_list_with_proof
+        let (skipped_transaction_infos, transaction_infos) = txn_list_with_proof
             .proof
             .transaction_infos()
-            .iter()
-            .skip(num_txns_to_skip as usize)
-            .collect();
+            .split_at(num_txns_to_skip as usize);
+
+        // verify no fork happens.
+        if !txn_list_is_empty {
+            // Left side of the proof happens to be the frozen subtree roots of the accumulator
+            // right before the list of txns are applied.
+            let frozen_subtree_roots_from_proof = txn_list_with_proof
+                .proof
+                .left_siblings()
+                .iter()
+                .rev()
+                .cloned()
+                .collect::<Vec<_>>();
+            let accu_from_proof = InMemoryAccumulator::<TransactionAccumulatorHasher>::new(
+                frozen_subtree_roots_from_proof,
+                first_version - num_txns_to_skip,
+            )?
+            .append(
+                &skipped_transaction_infos
+                    .iter()
+                    .map(CryptoHash::hash)
+                    .collect::<Vec<_>>()[..],
+            );
+
+            // The two accumulator root hashes should be identical.
+            ensure!(
+                self.cache.synced_trees().state_id() == accu_from_proof.root_hash(),
+                "Fork happens because the current synced_trees doesn't match the txn list provided."
+            )
+        }
 
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
@@ -432,7 +462,7 @@ where
         let mut reconfig_events = vec![];
         for ((txn, txn_data), (i, txn_info)) in itertools::zip_eq(
             itertools::zip_eq(transactions, output.transaction_data()),
-            transaction_infos.into_iter().enumerate(),
+            transaction_infos.iter().enumerate(),
         ) {
             let generated_txn_info = &TransactionInfo::new(
                 txn.hash(),

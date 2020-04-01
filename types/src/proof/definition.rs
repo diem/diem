@@ -464,6 +464,11 @@ where
         Self::new(vec![], vec![])
     }
 
+    /// Get all the left siblngs.
+    pub fn left_siblings(&self) -> &Vec<HashValue> {
+        &self.left_siblings
+    }
+
     /// Verifies the proof is correct. The verifier needs to have `expected_root_hash`, the index
     /// of the first leaf and all of the leaves in possession.
     pub fn verify(
@@ -1027,6 +1032,10 @@ impl TransactionListProof {
     /// Returns the list of `TransactionInfo` objects.
     pub fn transaction_infos(&self) -> &[TransactionInfo] {
         &self.transaction_infos
+    }
+
+    pub fn left_siblings(&self) -> &Vec<HashValue> {
+        self.ledger_info_to_transaction_infos_proof.left_siblings()
     }
 
     /// Verifies the list of transactions are correct using the proof. The verifier needs to have
