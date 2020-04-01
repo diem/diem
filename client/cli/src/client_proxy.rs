@@ -753,23 +753,23 @@ impl ClientProxy {
 
     /// Publish move module
     pub fn publish_module(&mut self, space_delim_strings: &[&str]) -> Result<()> {
-        let module_bytes = &fs::read(space_delim_strings[2])?;
+        let module_bytes = fs::read(space_delim_strings[2])?;
         self.submit_program(
             space_delim_strings,
-            TransactionPayload::Module(Module::new(module_bytes.clone())),
+            TransactionPayload::Module(Module::new(module_bytes)),
         )
     }
 
     /// Execute custom script
     pub fn execute_script(&mut self, space_delim_strings: &[&str]) -> Result<()> {
-        let script_bytes = &fs::read(space_delim_strings[2])?;
+        let script_bytes = fs::read(space_delim_strings[2])?;
         let arguments: Vec<_> = space_delim_strings[3..]
             .iter()
             .filter_map(|arg| parse_as_transaction_argument_for_client(arg).ok())
             .collect();
         self.submit_program(
             space_delim_strings,
-            TransactionPayload::Script(Script::new(script_bytes.clone(), arguments)),
+            TransactionPayload::Script(Script::new(script_bytes, arguments)),
         )
     }
 
