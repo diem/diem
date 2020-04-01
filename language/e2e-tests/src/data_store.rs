@@ -9,35 +9,19 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     language_storage::ModuleId,
-    transaction::{Transaction, TransactionPayload},
+    transaction::ChangeSet,
     write_set::{WriteOp, WriteSet},
 };
 use move_vm_state::data_cache::RemoteCache;
 use move_vm_types::values::Struct;
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, fs::File, io::prelude::*, path::PathBuf};
+use std::collections::HashMap;
 use vm::{errors::*, CompiledModule};
+use vm_genesis;
 
-/// The write set encoded in the genesis transaction.
-pub static GENESIS_WRITE_SET: Lazy<WriteSet> = Lazy::new(|| {
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.pop();
-    path.push("tools/vm-genesis/genesis/genesis.blob");
-    load_genesis(path)
-});
-
-fn load_genesis(path: PathBuf) -> WriteSet {
-    let mut f = File::open(&path).unwrap();
-    let mut bytes = vec![];
-    f.read_to_end(&mut bytes).unwrap();
-    let txn = lcs::from_bytes(&bytes).unwrap();
-    if let Transaction::UserTransaction(txn) = txn {
-        if let TransactionPayload::WriteSet(ws) = txn.payload() {
-            return ws.write_set().clone();
-        }
-    }
-    panic!("Expected writeset txn in genesis txn");
-}
+/// Dummy genesis ChangeSet for testing
+pub static GENESIS_CHANGE_SET: Lazy<ChangeSet> =
+    Lazy::new(vm_genesis::generate_genesis_change_set_for_testing);
 
 /// An in-memory implementation of [`StateView`] and [`RemoteCache`] for the VM.
 ///

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    assert_prologue_parity, assert_status_eq, data_store::GENESIS_WRITE_SET,
+    assert_prologue_parity, assert_status_eq, data_store::GENESIS_CHANGE_SET,
     executor::FakeExecutor, transaction_status_eq,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
@@ -41,7 +41,7 @@ fn invalid_genesis_write_set() {
 #[test]
 fn execute_genesis_write_set() {
     let executor = FakeExecutor::no_genesis();
-    let write_set = GENESIS_WRITE_SET.clone();
+    let write_set = GENESIS_CHANGE_SET.clone().write_set().clone();
     let address = account_config::association_address();
 
     let private_key = Ed25519PrivateKey::generate_for_testing();
@@ -54,6 +54,6 @@ fn execute_genesis_write_set() {
     )
     .into_inner();
 
-    // Executing the genesis transaction should success.
+    // Executing the genesis transaction should succeed
     assert!(!executor.execute_transaction(txn).status().is_discarded());
 }

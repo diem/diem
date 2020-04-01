@@ -5,7 +5,7 @@
 
 use crate::{
     account::{Account, AccountData},
-    data_store::{FakeDataStore, GENESIS_WRITE_SET},
+    data_store::{FakeDataStore, GENESIS_CHANGE_SET},
 };
 use bytecode_verifier::VerifiedModule;
 use libra_config::generator;
@@ -18,8 +18,7 @@ use libra_types::{
     language_storage::ModuleId,
     on_chain_config::VMPublishingOption,
     transaction::{
-        SignedTransaction, Transaction, TransactionOutput, TransactionPayload, TransactionStatus,
-        VMValidatorResult,
+        SignedTransaction, Transaction, TransactionOutput, TransactionStatus, VMValidatorResult,
     },
     validator_set::ValidatorSet,
     vm_error::{StatusCode, VMStatus},
@@ -52,7 +51,7 @@ impl FakeExecutor {
 
     /// Creates an executor from the genesis file GENESIS_FILE_LOCATION
     pub fn from_genesis_file() -> Self {
-        Self::from_genesis(&GENESIS_WRITE_SET)
+        Self::from_genesis(GENESIS_CHANGE_SET.clone().write_set())
     }
 
     pub fn whitelist_genesis() -> Self {
@@ -93,8 +92,8 @@ impl FakeExecutor {
         validator_set: Option<ValidatorSet>,
         publishing_options: VMPublishingOption,
     ) -> Self {
-        let genesis_write_set = if genesis_modules.is_none() && validator_set.is_none() {
-            GENESIS_WRITE_SET.clone()
+        let genesis_change_set = if genesis_modules.is_none() && validator_set.is_none() {
+            GENESIS_CHANGE_SET.clone()
         } else {
             let validator_set_len: usize = validator_set.as_ref().map_or(10, |s| s.len());
             let swarm = generator::validator_swarm_for_testing(validator_set_len);
@@ -102,22 +101,16 @@ impl FakeExecutor {
             let discovery_set = vm_genesis::make_placeholder_discovery_set(&validator_set);
             let stdlib_modules =
                 genesis_modules.unwrap_or_else(|| stdlib_modules(StdLibOptions::Staged).to_vec());
-            match vm_genesis::encode_genesis_transaction(
-                &GENESIS_KEYPAIR.0,
-                GENESIS_KEYPAIR.1.clone(),
+            vm_genesis::encode_genesis_change_set(
+                &GENESIS_KEYPAIR.1,
                 &swarm.nodes,
                 validator_set,
                 discovery_set,
                 &stdlib_modules,
                 publishing_options,
             )
-            .payload()
-            {
-                TransactionPayload::WriteSet(ws) => ws.write_set().clone(),
-                _ => panic!("Expected writeset txn in genesis txn"),
-            }
         };
-        Self::from_genesis(&genesis_write_set)
+        Self::from_genesis(genesis_change_set.write_set())
     }
 
     /// Creates a number of [`Account`] instances all with the same balance and sequence number,
