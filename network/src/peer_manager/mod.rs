@@ -529,13 +529,15 @@ where
         let mut send_new_peer_notification = true;
 
         // Check for and handle simultaneous dialing
-        if let Some((curr_connection, peer_handle)) = self.active_peers.remove(&peer_id) {
+        if let Entry::Occupied(active_entry) = self.active_peers.entry(peer_id) {
+            let (curr_conn_metadata, _) = active_entry.get();
             if Self::simultaneous_dial_tie_breaking(
                 self.own_peer_id,
                 peer_id,
-                curr_connection.origin,
+                curr_conn_metadata.origin(),
                 conn_meta.origin,
             ) {
+                let (_, peer_handle) = active_entry.remove();
                 // Drop the existing connection and replace it with the new connection
                 drop(peer_handle);
                 info!(
@@ -565,9 +567,6 @@ where
                     };
                 };
                 self.executor.spawn(drop_fut);
-                // Put the existing connection back
-                self.active_peers
-                    .insert(peer_id, (curr_connection, peer_handle));
                 return;
             }
         }
