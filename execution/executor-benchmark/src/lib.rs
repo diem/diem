@@ -142,6 +142,7 @@ impl TransactionGenerator {
                     &sender.private_key,
                     sender.public_key.clone(),
                     encode_transfer_script(
+                        lbr_type_tag(),
                         &receiver.address,
                         receiver.auth_key_prefix(),
                         1, /* amount */

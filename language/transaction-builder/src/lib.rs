@@ -3,9 +3,12 @@
 
 #![forbid(unsafe_code)]
 
+#[cfg(any(test, feature = "fuzzing"))]
+use libra_types::account_config;
 use libra_types::{
     account_address::AccountAddress,
     block_metadata::BlockMetadata,
+    language_storage::TypeTag,
     on_chain_config::VMPublishingOption,
     transaction::{authenticator::AuthenticationKey, Script, Transaction, TransactionArgument},
 };
@@ -27,8 +30,12 @@ fn validate_auth_key_prefix(auth_key_prefix: &[u8]) {
 /// Encode `stdlib_script` with arguments `args`.
 /// Note: this is not type-safe; the individual type-safe wrappers below should be used when
 /// possible.
-pub fn encode_stdlib_script(stdlib_script: StdlibScript, args: Vec<TransactionArgument>) -> Script {
-    Script::new(stdlib_script.compiled_bytes().into_vec(), vec![], args)
+pub fn encode_stdlib_script(
+    stdlib_script: StdlibScript,
+    type_args: Vec<TypeTag>,
+    args: Vec<TransactionArgument>,
+) -> Script {
+    Script::new(stdlib_script.compiled_bytes().into_vec(), type_args, args)
 }
 
 /// Encode a program adding `new_validator` to the pending validator set. Fails if the
@@ -47,6 +54,7 @@ pub fn encode_add_validator_script(new_validator: &AccountAddress) -> Script {
 /// Aborts if the signature does not match, `payee` does not have an `ApprovedPayment` resource, or
 /// the sender's balance is less than `amount`.
 pub fn encode_approved_payment_script(
+    type_: TypeTag,
     payee: AccountAddress,
     amount: u64,
     metadata: Vec<u8>,
@@ -54,7 +62,7 @@ pub fn encode_approved_payment_script(
 ) -> Script {
     Script::new(
         StdlibScript::ApprovedPayment.compiled_bytes().into_vec(),
-        vec![],
+        vec![type_],
         vec![
             TransactionArgument::Address(payee),
             TransactionArgument::U64(amount),
@@ -67,20 +75,20 @@ pub fn encode_approved_payment_script(
 /// Permanently destroy the coins stored in the oldest burn request under the `Preburn` resource
 /// stored at `preburn_address`. This will only succeed if the sender has a `MintCapability` stored
 /// under their account and `preburn_address` has a pending burn request
-pub fn encode_burn_script(preburn_address: AccountAddress) -> Script {
+pub fn encode_burn_script(type_: TypeTag, preburn_address: AccountAddress) -> Script {
     Script::new(
         StdlibScript::Burn.compiled_bytes().into_vec(),
-        vec![],
+        vec![type_],
         vec![TransactionArgument::Address(preburn_address)],
     )
 }
 
 /// Cancel the oldest burn request from `preburn_address` and return the funds to `preburn_address`.
 /// Fails if the sender does not have a published `MintCapability`.
-pub fn encode_cancel_burn_script(preburn_address: AccountAddress) -> Script {
+pub fn encode_cancel_burn_script(type_: TypeTag, preburn_address: AccountAddress) -> Script {
     Script::new(
         StdlibScript::CancelBurn.compiled_bytes().into_vec(),
-        vec![],
+        vec![type_],
         vec![TransactionArgument::Address(preburn_address)],
     )
 }
@@ -88,6 +96,7 @@ pub fn encode_cancel_burn_script(preburn_address: AccountAddress) -> Script {
 /// Encode a program transferring `amount` coins from `sender` to `recipient`. Fails if there is no
 /// account at the recipient address or if the sender's balance is lower than `amount`.
 pub fn encode_transfer_script(
+    type_: TypeTag,
     recipient: &AccountAddress,
     auth_key_prefix: Vec<u8>,
     amount: u64,
@@ -95,7 +104,7 @@ pub fn encode_transfer_script(
     validate_auth_key_prefix(&auth_key_prefix);
     Script::new(
         StdlibScript::PeerToPeer.compiled_bytes().into_vec(),
-        vec![],
+        vec![type_],
         vec![
             TransactionArgument::Address(*recipient),
             TransactionArgument::U8Vector(auth_key_prefix),
@@ -108,6 +117,7 @@ pub fn encode_transfer_script(
 /// metadata `metadata`. Fails if there is no account at the recipient address or if the sender's
 /// balance is lower than `amount`.
 pub fn encode_transfer_with_metadata_script(
+    type_: TypeTag,
     recipient: &AccountAddress,
     auth_key_prefix: Vec<u8>,
     amount: u64,
@@ -118,7 +128,7 @@ pub fn encode_transfer_with_metadata_script(
         StdlibScript::PeerToPeerWithMetadata
             .compiled_bytes()
             .into_vec(),
-        vec![],
+        vec![type_],
         vec![
             TransactionArgument::Address(*recipient),
             TransactionArgument::U8Vector(auth_key_prefix),
@@ -154,7 +164,7 @@ pub fn encode_transfer_script_with_padding(
 
     Script::new(
         script_bytes,
-        vec![],
+        vec![account_config::lbr_type_tag()],
         vec![
             TransactionArgument::Address(*recipient),
             TransactionArgument::U8Vector(vec![]), // use empty auth key prefix
@@ -165,10 +175,10 @@ pub fn encode_transfer_script_with_padding(
 
 /// Preburn `amount` coins from the sender's account.
 /// This will only succeed if the sender already has a published `Preburn` resource.
-pub fn encode_preburn_script(amount: u64) -> Script {
+pub fn encode_preburn_script(type_: TypeTag, amount: u64) -> Script {
     Script::new(
         StdlibScript::Preburn.compiled_bytes().into_vec(),
-        vec![],
+        vec![type_],
         vec![TransactionArgument::U64(amount)],
     )
 }
@@ -208,10 +218,10 @@ pub fn encode_register_approved_payment_script(public_key: Vec<u8>) -> Script {
 
 /// Publish a newly created `Preburn` resource under the sender's account.
 /// This will fail if the sender already has a published `Preburn` resource.
-pub fn encode_register_preburner_script() -> Script {
+pub fn encode_register_preburner_script(type_: TypeTag) -> Script {
     Script::new(
         StdlibScript::RegisterPreburner.compiled_bytes().into_vec(),
-        vec![],
+        vec![type_],
         vec![],
     )
 }

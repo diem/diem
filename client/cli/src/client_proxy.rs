@@ -510,6 +510,7 @@ impl ClientProxy {
                 format_err!("Unable to find sender account: {}", sender_account_ref_id)
             })?;
             let program = transaction_builder::encode_transfer_script(
+                lbr_type_tag(),
                 &receiver_address,
                 receiver_auth_key_prefix,
                 num_coins,
@@ -553,6 +554,7 @@ impl ClientProxy {
         max_gas_amount: Option<u64>,
     ) -> Result<RawTransaction> {
         let program = transaction_builder::encode_transfer_script(
+            lbr_type_tag(),
             &receiver_address,
             receiver_auth_key_prefix,
             num_coins,
