@@ -24,9 +24,7 @@ use libra_types::{
     discovery_set::DiscoverySet,
     language_storage::ModuleId,
     on_chain_config::VMPublishingOption,
-    transaction::{
-        authenticator::AuthenticationKey, ChangeSet, RawTransaction, SignatureCheckedTransaction,
-    },
+    transaction::{authenticator::AuthenticationKey, ChangeSet, Transaction},
     validator_set::ValidatorSet,
 };
 use libra_vm::system_module_names::*;
@@ -132,7 +130,7 @@ pub fn encode_genesis_transaction_with_validator(
     validator_set: ValidatorSet,
     discovery_set: DiscoverySet,
     vm_publishing_option: Option<VMPublishingOption>,
-) -> SignatureCheckedTransaction {
+) -> Transaction {
     encode_genesis_transaction(
         private_key,
         public_key,
@@ -208,28 +206,22 @@ pub fn encode_genesis_change_set(
 }
 
 pub fn encode_genesis_transaction(
-    private_key: &Ed25519PrivateKey,
+    _private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     nodes: &[NodeConfig],
     validator_set: ValidatorSet,
     discovery_set: DiscoverySet,
     stdlib_modules: &[VerifiedModule],
     vm_publishing_option: VMPublishingOption,
-) -> SignatureCheckedTransaction {
-    let genesis_change_set = encode_genesis_change_set(
+) -> Transaction {
+    Transaction::AuthenticatedWriteSet(encode_genesis_change_set(
         &public_key,
         nodes,
         validator_set,
         discovery_set,
         stdlib_modules,
         vm_publishing_option,
-    );
-    let transaction = RawTransaction::new_change_set(
-        account_config::association_address(),
-        0,
-        genesis_change_set,
-    );
-    transaction.sign(private_key, public_key).unwrap()
+    ))
 }
 
 /// Create an initialize Association, Transaction Fee and Core Code accounts.

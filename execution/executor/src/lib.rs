@@ -728,14 +728,19 @@ where
                 hash_map::Entry::Vacant(entry) => {
                     // Before writing to an account, VM should always read that account. So we
                     // should not reach this code path. The exception is genesis transaction (and
-                    // maybe other FTVM transactions).
-                    match transaction.as_signed_user_txn()?.payload() {
-                        TransactionPayload::Program
-                        | TransactionPayload::Module(_)
-                        | TransactionPayload::Script(_) => {
-                            bail!("Write set should be a subset of read set.")
+                    // maybe other writeset transactions).
+                    match transaction {
+                        Transaction::AuthenticatedWriteSet(_) => (),
+                        Transaction::BlockMetadata(_) =>
+                            bail!("Write set should be a subset of read set."),
+                        Transaction::UserTransaction(txn) => match txn.payload() {
+                            TransactionPayload::Program
+                            | TransactionPayload::Module(_)
+                            | TransactionPayload::Script(_) => {
+                                bail!("Write set should be a subset of read set.")
+                            }
+                            TransactionPayload::WriteSet(_) => (),
                         }
-                        TransactionPayload::WriteSet(_) => (),
                     }
 
                     let mut account_state = Default::default();

@@ -53,7 +53,6 @@ impl ExecutionConfig {
             let mut file = File::open(&path)?;
             let mut buffer = vec![];
             file.read_to_end(&mut buffer)?;
-            // TODO: update to use `Transaction::WriteSet` variant when ready.
             self.genesis = Some(lcs::from_bytes(&buffer)?);
         }
 
@@ -94,7 +93,7 @@ mod test {
 
     #[test]
     fn test_some_and_load_genesis() {
-        let fake_genesis = Transaction::WriteSet(ChangeSet::new(
+        let fake_genesis = Transaction::AuthenticatedWriteSet(ChangeSet::new(
             WriteSetMut::new(vec![]).freeze().unwrap(),
             vec![],
         ));

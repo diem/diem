@@ -101,7 +101,7 @@ Transaction:
         NEWTYPE:
           TYPENAME: SignedTransaction
     1:
-      WriteSet:
+      AuthenticatedWriteSet:
         NEWTYPE:
           TYPENAME: ChangeSet
     2:
