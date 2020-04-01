@@ -79,7 +79,6 @@ impl Node {
         let executor = Executor::new(
             Arc::new(StorageReadServiceClient::new(&config.storage.address)),
             Arc::new(StorageWriteServiceClient::new(&config.storage.address)),
-            config,
         );
         let libra = TestLibraInterface {
             queued_transactions: Arc::new(RefCell::new(Vec::new())),

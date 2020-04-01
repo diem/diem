@@ -3,6 +3,7 @@
 
 use super::*;
 use crate::{
+    db_bootstrapper::maybe_bootstrap_db,
     mock_vm::{
         encode_mint_transaction, encode_reconfiguration_transaction, encode_transfer_transaction,
         MockVM, DISCARD_STATUS, KEEP_STATUS,
@@ -26,9 +27,10 @@ use storage_service::start_storage_service;
 use tokio::runtime::Runtime;
 
 fn create_executor(config: &NodeConfig) -> Executor<MockVM> {
+    maybe_bootstrap_db::<MockVM>(config).expect("Db-bootstrapper should not fail.");
     let read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
     let write_client = Arc::new(StorageWriteServiceClient::new(&config.storage.address));
-    Executor::new(read_client, write_client, config)
+    Executor::new(read_client, write_client)
 }
 
 fn execute_and_commit_block(
@@ -60,6 +62,7 @@ impl TestExecutor {
     fn new() -> TestExecutor {
         let (config, _) = config_builder::test_config();
         let storage_server = start_storage_service(&config);
+        maybe_bootstrap_db::<MockVM>(&config).expect("Db-bootstrapper should not fail.");
         let executor = create_executor(&config);
 
         TestExecutor {

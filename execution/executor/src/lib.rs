@@ -9,17 +9,16 @@ mod executor_test;
 mod mock_vm;
 mod speculation_cache;
 
+pub mod db_bootstrapper;
+
 use anyhow::{bail, ensure, format_err, Result};
 use debug_interface::prelude::*;
 use executor_types::{
     ExecutedTrees, ProcessedVMOutput, ProofReader, StateComputeResult, TransactionData,
 };
 use futures::executor::block_on;
-use libra_config::config::NodeConfig;
 use libra_crypto::{
-    hash::{
-        CryptoHash, EventAccumulatorHasher, TransactionAccumulatorHasher, PRE_GENESIS_BLOCK_ID,
-    },
+    hash::{CryptoHash, EventAccumulatorHasher, TransactionAccumulatorHasher},
     HashValue,
 };
 use libra_logger::prelude::*;
@@ -75,7 +74,6 @@ where
     pub fn new(
         storage_read_client: Arc<dyn StorageRead>,
         storage_write_client: Arc<dyn StorageWrite>,
-        config: &NodeConfig,
     ) -> Self {
         let rt = tokio::runtime::Builder::new()
             .threaded_scheduler()
@@ -83,68 +81,42 @@ where
             .thread_name("tokio-executor")
             .build()
             .unwrap();
-
-        let mut executor = Executor {
-            rt,
-            storage_read_client: storage_read_client.clone(),
-            storage_write_client,
-            phantom: PhantomData,
-            cache: SpeculationCache::new(),
-        };
-
-        let startup_info = block_on(executor.rt.spawn(async move {
-            storage_read_client
+        let read_client_clone = Arc::clone(&storage_read_client);
+        let startup_info = block_on(rt.spawn(async move {
+            read_client_clone
                 .get_startup_info()
                 .await
                 .expect("Shouldn't fail")
         }))
-        .unwrap();
+        .unwrap()
+        .expect("DB not bootstrapped.");
 
-        if let Some(info) = startup_info {
-            executor.cache = SpeculationCache::new_with_startup_info(info);
-        } else {
-            let genesis_txn = config
-                .execution
-                .genesis
-                .as_ref()
-                .expect("failed to load genesis transaction!")
-                .clone();
-            executor.init_genesis(genesis_txn);
+        Self {
+            rt,
+            storage_read_client,
+            storage_write_client,
+            cache: SpeculationCache::new_with_startup_info(startup_info),
+            phantom: PhantomData,
         }
-        executor
     }
 
-    /// This is used when we start for the first time and the DB is completely empty. It will write
-    /// necessary information to DB by committing the genesis transaction.
-    fn init_genesis(&mut self, genesis_txn: Transaction) {
-        let genesis_txns = vec![genesis_txn];
-
-        // Create a block with genesis_txn being the only transaction. Execute it then commit it
-        // immediately.
-        let result = self
-            .execute_block(
-                (
-                    HashValue::zero(), // match with the id in BlockInfo::genesis(...)
-                    genesis_txns,
-                ),
-                *PRE_GENESIS_BLOCK_ID,
-            )
-            .expect("Failed to execute genesis block.");
-
-        let root_hash = result.root_hash();
-        let validator_set = result
-            .validators()
-            .clone()
-            .expect("Genesis transaction must emit a validator set.");
-
-        let ledger_info_with_sigs =
-            LedgerInfoWithSignatures::genesis(root_hash, validator_set.clone());
-        self.commit_blocks(vec![HashValue::zero()], ledger_info_with_sigs)
-            .expect("Failed to commit genesis block.");
-        info!(
-            "GENESIS transaction is committed with state_id {} and ValidatorSet {}.",
-            root_hash, validator_set
-        );
+    fn new_on_unbootstrapped_db(
+        storage_read_client: Arc<dyn StorageRead>,
+        storage_write_client: Arc<dyn StorageWrite>,
+    ) -> Self {
+        let rt = tokio::runtime::Builder::new()
+            .threaded_scheduler()
+            .enable_all()
+            .thread_name("tokio-executor")
+            .build()
+            .unwrap();
+        Self {
+            rt,
+            storage_read_client,
+            storage_write_client,
+            cache: SpeculationCache::new(),
+            phantom: PhantomData,
+        }
     }
 
     /// Executes a block.
