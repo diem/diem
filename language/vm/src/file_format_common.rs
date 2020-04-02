@@ -177,6 +177,7 @@ pub enum Opcodes {
     IMM_BORROW_GLOBAL_GENERIC   = 0x43,
     MOVE_FROM_GENERIC           = 0x44,
     MOVE_TO_GENERIC             = 0x45,
+    NOP                         = 0x46,
 }
 
 /// Upper limit on the binary size

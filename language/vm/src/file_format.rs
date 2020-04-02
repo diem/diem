@@ -1181,6 +1181,10 @@ pub enum Bytecode {
     ///
     /// ```..., u64_value(1), u64_value(2) -> ..., u64_value```
     Shr,
+    /// No operation.
+    ///
+    /// Stack transition: none
+    Nop,
 }
 
 pub const NUMBER_OF_NATIVE_FUNCTIONS: usize = 17;
@@ -1257,6 +1261,7 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::MoveToSenderGeneric(a) => write!(f, "MoveToSenderGeneric({:?})", a),
             Bytecode::GetTxnSequenceNumber => write!(f, "GetTxnSequenceNumber"),
             Bytecode::GetTxnPublicKey => write!(f, "GetTxnPublicKey"),
+            Bytecode::Nop => write!(f, "Nop"),
         }
     }
 }

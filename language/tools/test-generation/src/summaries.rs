@@ -573,6 +573,10 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
             ],
             effects: Effects::NoTyParams(vec![state_stack_pop!()]),
         },
+        Bytecode::Nop => Summary {
+            preconditions: vec![],
+            effects: Effects::NoTyParams(vec![]),
+        },
         // XXX: Deprecated instructions, to remove
         Bytecode::GetTxnGasUnitPrice
         | Bytecode::GetTxnMaxGasUnits

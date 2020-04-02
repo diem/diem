@@ -385,7 +385,7 @@ impl<'a> BoundsChecker<'a> {
                 | CastU128 | LdTrue | LdFalse | ReadRef | WriteRef | Add | Sub | Mul | Mod
                 | Div | BitOr | BitAnd | Xor | Shl | Shr | Or | And | Not | Eq | Neq | Lt | Gt
                 | Le | Ge | Abort | GetTxnGasUnitPrice | GetTxnMaxGasUnits | GetGasRemaining
-                | GetTxnSenderAddress | GetTxnSequenceNumber | GetTxnPublicKey => (),
+                | GetTxnSenderAddress | GetTxnSequenceNumber | GetTxnPublicKey | Nop => (),
             }
         }
     }

@@ -595,7 +595,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 *state = AbstractState::default();
             }
 
-            Bytecode::Branch(_) => (),
+            Bytecode::Branch(_) | Bytecode::Nop => (),
 
             Bytecode::FreezeRef => {
                 let operand = self.stack.pop().unwrap();

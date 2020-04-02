@@ -711,6 +711,7 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
         }
         Bytecode::GetTxnSequenceNumber => binary.push(Opcodes::GET_TXN_SEQUENCE_NUMBER as u8),
         Bytecode::GetTxnPublicKey => binary.push(Opcodes::GET_TXN_PUBLIC_KEY as u8),
+        Bytecode::Nop => binary.push(Opcodes::NOP as u8),
     };
     res?;
     Ok(())

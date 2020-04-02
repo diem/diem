@@ -261,6 +261,7 @@ pub fn instruction_key(instruction: &Bytecode) -> u8 {
         MoveToSenderGeneric(_) => Opcodes::MOVE_TO_GENERIC,
         GetTxnSequenceNumber => Opcodes::GET_TXN_SEQUENCE_NUMBER,
         GetTxnPublicKey => Opcodes::GET_TXN_PUBLIC_KEY,
+        Nop => Opcodes::NOP,
     };
     opcode as u8
 }
@@ -450,6 +451,7 @@ impl CostTable {
                 PackGeneric(StructDefInstantiationIndex::new(0)),
                 GasCost::new(0, 0),
             ),
+            (Nop, GasCost::new(0, 0)),
         ];
         let native_table = (0..NUMBER_OF_NATIVE_FUNCTIONS)
             .map(|_| GasCost::new(0, 0))

@@ -148,8 +148,8 @@ impl<'a> StackUsageVerifier<'a> {
             // WriteRef pops twice but does not push
             Bytecode::WriteRef => (2, 0),
 
-            // Branch neither pops nor pushes
-            Bytecode::Branch(_) => (0, 0),
+            // Branch and Nop neither pops nor pushes
+            Bytecode::Branch(_) | Bytecode::Nop => (0, 0),
 
             // Return performs `return_count` pops
             Bytecode::Ret => {

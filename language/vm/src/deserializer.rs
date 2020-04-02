@@ -1072,6 +1072,7 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
             Opcodes::GET_TXN_SEQUENCE_NUMBER => Bytecode::GetTxnSequenceNumber,
             Opcodes::GET_TXN_PUBLIC_KEY => Bytecode::GetTxnPublicKey,
             Opcodes::FREEZE_REF => Bytecode::FreezeRef,
+            Opcodes::NOP => Bytecode::Nop,
         };
         code.push(bytecode);
     }
@@ -1258,6 +1259,7 @@ impl Opcodes {
             0x43 => Ok(Opcodes::IMM_BORROW_GLOBAL_GENERIC),
             0x44 => Ok(Opcodes::MOVE_FROM_GENERIC),
             0x45 => Ok(Opcodes::MOVE_TO_GENERIC),
+            0x46 => Ok(Opcodes::NOP),
             _ => Err(VMStatus::new(StatusCode::UNKNOWN_OPCODE)),
         }
     }
