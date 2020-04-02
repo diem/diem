@@ -38,6 +38,7 @@ memsocket = { path = "memsocket", version = "0.1.0" }
 netcore = { path = "netcore", version = "0.1.0" }
 noise = { path = "noise", version = "0.1.0" }
 libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0", optional = true }
+stream-ratelimiter = { path = "../common/stream-ratelimiter", version = "0.1.0" }
 proptest = { version = "0.9.4", default-features = true, optional = true }
 
 [dev-dependencies]
