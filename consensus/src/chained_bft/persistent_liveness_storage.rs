@@ -17,7 +17,7 @@ use libra_types::{
     validator_info::ValidatorInfo, validator_set::ValidatorSet,
     validator_verifier::ValidatorVerifier,
 };
-use libradb::LibraDBTrait;
+use libradb::DbReader;
 use std::{cmp::max, collections::HashSet, sync::Arc};
 
 /// PersistentLivenessStorage is essential for maintaining liveness when a node crashes.  Specifically,
@@ -46,7 +46,7 @@ pub trait PersistentLivenessStorage<T>: Send + Sync {
     fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()>;
 
     /// Returns a handle of the libradb.
-    fn libra_db(&self) -> Arc<dyn LibraDBTrait>;
+    fn libra_db(&self) -> Arc<dyn DbReader>;
 }
 
 #[derive(Clone)]
@@ -305,11 +305,11 @@ impl<T: Payload> RecoveryData<T> {
 /// The proxy we use to persist data in libra db storage service via grpc.
 pub struct StorageWriteProxy {
     db: Arc<ConsensusDB>,
-    libra_db: Arc<dyn LibraDBTrait>,
+    libra_db: Arc<dyn DbReader>,
 }
 
 impl StorageWriteProxy {
-    pub fn new(config: &NodeConfig, libra_db: Arc<dyn LibraDBTrait>) -> Self {
+    pub fn new(config: &NodeConfig, libra_db: Arc<dyn DbReader>) -> Self {
         let db = Arc::new(ConsensusDB::new(config.storage.dir()));
         StorageWriteProxy { db, libra_db }
     }
@@ -443,7 +443,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
             .save_highest_timeout_certificate(lcs::to_bytes(&highest_timeout_cert)?)
     }
 
-    fn libra_db(&self) -> Arc<dyn LibraDBTrait> {
+    fn libra_db(&self) -> Arc<dyn DbReader> {
         self.libra_db.clone()
     }
 }

@@ -8,7 +8,7 @@ use consensus_types::{
 };
 use libra_logger::prelude::*;
 use libra_types::block_metadata::{new_block_event_key, NewBlockEvent};
-use libradb::LibraDBTrait;
+use libradb::DbReader;
 use serde::export::PhantomData;
 use std::{
     cmp::Ordering,
@@ -25,12 +25,12 @@ pub trait MetadataBackend: Send + Sync {
 
 pub struct LibraDBBackend {
     window_size: usize,
-    libra_db: Arc<dyn LibraDBTrait>,
+    libra_db: Arc<dyn DbReader>,
     window: Mutex<Vec<(u64, NewBlockEvent)>>,
 }
 
 impl LibraDBBackend {
-    pub fn new(window_size: usize, libra_db: Arc<dyn LibraDBTrait>) -> Self {
+    pub fn new(window_size: usize, libra_db: Arc<dyn DbReader>) -> Self {
         Self {
             window_size,
             libra_db,

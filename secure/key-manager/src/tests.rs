@@ -21,7 +21,7 @@ use libra_types::{
     validator_set::ValidatorSetResource,
 };
 use libra_vm::LibraVM;
-use libradb::{LibraDB, LibraDBTrait};
+use libradb::{DbReader, LibraDB};
 use rand::{rngs::StdRng, SeedableRng};
 use std::{cell::RefCell, collections::BTreeMap, convert::TryFrom, sync::Arc, time::Duration};
 use storage_client::{StorageReadServiceClient, StorageWriteServiceClient};

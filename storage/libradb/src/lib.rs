@@ -121,7 +121,7 @@ fn error_if_too_many_requested(num_requested: u64, max_allowed: u64) -> Result<(
 
 /// Trait that is implemented by a DB that supports certain public (to client) read APIs
 /// expected of a Libra DB
-pub trait LibraDBTrait: Send + Sync {
+pub trait DbReader: Send + Sync {
     /// Given an account address, returns the latest account state. `None` if the account does not
     /// exist.
     fn get_latest_account_state(&self, address: AccountAddress)
@@ -804,7 +804,7 @@ impl LibraDB {
     }
 }
 
-impl LibraDBTrait for LibraDB {
+impl DbReader for LibraDB {
     fn get_latest_account_state(
         &self,
         address: AccountAddress,

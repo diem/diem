@@ -9,7 +9,7 @@ use crate::{
 use futures::future::join_all;
 use libra_config::config::NodeConfig;
 use libra_mempool::MempoolClientSender;
-use libradb::LibraDBTrait;
+use libradb::DbReader;
 use serde_json::{map::Map, Value};
 use std::{net::SocketAddr, sync::Arc};
 use tokio::runtime::{Builder, Runtime};
@@ -19,7 +19,7 @@ use warp::Filter;
 /// Returns handle to corresponding Tokio runtime
 pub fn bootstrap(
     address: SocketAddr,
-    libra_db: Arc<dyn LibraDBTrait>,
+    libra_db: Arc<dyn DbReader>,
     mp_sender: MempoolClientSender,
 ) -> Runtime {
     let runtime = Builder::new()
@@ -56,7 +56,7 @@ pub fn bootstrap(
 /// Creates JSON RPC endpoint by given node config
 pub fn bootstrap_from_config(
     config: &NodeConfig,
-    libra_db: Arc<dyn LibraDBTrait>,
+    libra_db: Arc<dyn DbReader>,
     mp_sender: MempoolClientSender,
 ) -> Runtime {
     bootstrap(config.rpc.address, libra_db, mp_sender)
