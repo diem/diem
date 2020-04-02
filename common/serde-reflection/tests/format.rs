@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_serde_reflection::{ContainerFormat, Error, Format, FormatHolder, Named, VariantFormat};
+use serde_reflection::{ContainerFormat, Error, Format, FormatHolder, Named, VariantFormat};
 
 #[test]
 fn test_format_unification() {
