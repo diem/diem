@@ -17,9 +17,9 @@ use libra_config::config::NodeConfig;
 use libra_mempool::ConsensusRequest;
 use libra_types::transaction::SignedTransaction;
 use libra_vm::LibraVM;
-use libradb::DbReader;
 use state_synchronizer::StateSyncClient;
 use std::sync::{Arc, Mutex};
+use storage_interface::DbReader;
 
 /// Public interface to a consensus protocol.
 pub trait ConsensusProvider {

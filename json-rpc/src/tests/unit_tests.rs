@@ -32,7 +32,7 @@ use libra_types::{
     transaction::{Transaction, TransactionInfo, TransactionPayload, TransactionToCommit},
     vm_error::{StatusCode, VMStatus},
 };
-use libradb::{test_helper::arb_blocks_to_commit, DbReader, LibraDB};
+use libradb::{test_helper::arb_blocks_to_commit, LibraDB};
 use proptest::prelude::*;
 use reqwest;
 use serde_json::{self, Value};
@@ -42,6 +42,7 @@ use std::{
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
+use storage_interface::DbReader;
 use vm_validator::{
     mocks::mock_vm_validator::MockVMValidator, vm_validator::TransactionValidation,
 };

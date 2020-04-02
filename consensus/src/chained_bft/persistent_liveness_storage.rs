@@ -17,8 +17,8 @@ use libra_types::{
     validator_info::ValidatorInfo, validator_set::ValidatorSet,
     validator_verifier::ValidatorVerifier,
 };
-use libradb::DbReader;
 use std::{cmp::max, collections::HashSet, sync::Arc};
+use storage_interface::DbReader;
 
 /// PersistentLivenessStorage is essential for maintaining liveness when a node crashes.  Specifically,
 /// upon a restart, a correct node will recover.  Even if all nodes crash, liveness is

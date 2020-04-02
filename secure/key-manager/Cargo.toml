@@ -31,3 +31,4 @@ libra-config = { path = "../../config", version = "0.1.0", features = ["fuzzing"
 libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
 storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
 storage-service = { path = "../../storage/storage-service", version = "0.1.0" }
+storage-interface= { path = "../../storage/storage-interface", version = "0.1.0" }

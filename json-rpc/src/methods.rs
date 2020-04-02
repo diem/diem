@@ -19,9 +19,9 @@ use libra_types::{
     account_address::AccountAddress, account_state::AccountState, event::EventKey,
     mempool_status::MempoolStatusCode, transaction::SignedTransaction,
 };
-use libradb::DbReader;
 use serde_json::Value;
 use std::{collections::HashMap, convert::TryFrom, pin::Pin, str::FromStr, sync::Arc};
+use storage_interface::DbReader;
 
 #[derive(Clone)]
 pub(crate) struct JsonRpcService {
