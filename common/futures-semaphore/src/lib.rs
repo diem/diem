@@ -68,6 +68,10 @@ impl Semaphore {
         self.available_permits() == 0
     }
 
+    pub fn add_permits(&self, n: usize) {
+        self.inner.semaphore.add_permits(n)
+    }
+
     /// Acquire an available permit from the semaphore.
     ///
     /// If there are no permits currently available, the future will wait until
@@ -88,6 +92,18 @@ impl Semaphore {
         Permit {
             inner: Arc::clone(&self.inner),
         }
+    }
+
+    /// Acquire an available permit from an owned semaphore.
+    ///
+    /// If there are no permits currently available, the future will wait until
+    /// a permit is released back to the semaphore.
+    ///
+    /// This function is complementary to the `acquire` function which takes self by reference.
+    /// This function is useful when we want to poll the future returned by this function in a
+    /// custom `Future`/`Stream` implemenation.
+    pub async fn into_permit(self) -> Permit {
+        self.acquire().await
     }
 
     /// Try to acquire an available permit from the semaphore. If no permits are
