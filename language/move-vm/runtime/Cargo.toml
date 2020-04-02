@@ -38,4 +38,3 @@ move-vm-state = { path = "../state", version = "0.1.0" }
 
 [features]
 default = []
-instruction_synthesis = []

@@ -173,8 +173,6 @@ jobs:
       - run:
           command: RUST_BACKTRACE=1 cargo build -j 16 -p language_benchmarks
       - run:
-          command: RUST_BACKTRACE=1 cargo build -j 16 -p cost-synthesis
-      - run:
           command: RUST_BACKTRACE=1 cargo build -j 16 -p test-generation
       - build_teardown
   build-release:

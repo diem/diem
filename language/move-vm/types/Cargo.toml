@@ -27,5 +27,4 @@ proptest = "0.9"
 
 [features]
 default = []
-instruction_synthesis = []
 fuzzing = ["proptest", "libra-types/fuzzing", "vm/fuzzing"]

@@ -14,14 +14,12 @@ extern crate mirai_annotations;
 #[macro_use]
 extern crate rental;
 
-// TODO: Currently we expose a bunch of extra types for cost synthesis via "pub mod". Figure out a
-// more principled way to do this.
 mod code_cache;
 #[macro_use]
 mod gas_meter;
-pub mod interpreter;
+mod interpreter;
 mod interpreter_context;
-pub mod loaded_data;
+mod loaded_data;
 mod move_vm;
 mod runtime;
 mod special_names;

@@ -51,7 +51,6 @@ members = [
     "language/compiler/ir-to-bytecode",
     "language/compiler/ir-to-bytecode/syntax",
     "language/e2e-tests",
-    "language/tools/cost-synthesis",
     "language/tools/disassembler",
     "language/tools/genesis-viewer",
     "language/tools/utils",

@@ -45,7 +45,6 @@ Libra Core components interact with the language component through the VM. Speci
 ├── stdlib             # Core Move modules and transaction scripts
 ├── test.sh            # Script for running all the language tests
 └── vm
-    ├── cost-synthesis # Cost synthesis for bytecode instructions
     ├── src            # Bytecode language definitions, serializer, and deserializer
     ├── tests          # VM tests
     └── vm-runtime     # The bytecode interpreter
