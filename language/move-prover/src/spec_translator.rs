@@ -3,7 +3,7 @@
 
 //! This module translates specification conditions to Boogie code.
 
-use std::cell::RefCell;
+use std::{cell::RefCell, collections::BTreeMap};
 
 use spec_lang::{
     env::{FieldId, FunctionEnv, Loc, ModuleEnv, ModuleId, NodeId, SpecFunId, StructEnv, StructId},
@@ -20,7 +20,7 @@ use crate::{
 };
 use itertools::Itertools;
 use spec_lang::{
-    ast::{ConditionKind, Exp, Invariant, LocalVarDecl, Operation, Value},
+    ast::{Exp, Invariant, LocalVarDecl, Operation, SpecConditionKind, Value},
     symbol::Symbol,
 };
 use vm::file_format::CodeOffset;
@@ -39,6 +39,8 @@ pub struct SpecTranslator<'env> {
     /// Counter for generating fresh variables.  It's a RefCell so we can increment it without
     /// making a ton of &self arguments mutable.
     fresh_var_count: RefCell<u64>,
+    /// Local variable name to local index in bytecode
+    name_to_idx_map: BTreeMap<Symbol, usize>,
 }
 
 // General
@@ -58,6 +60,26 @@ impl<'env> SpecTranslator<'env> {
             in_old: RefCell::new(false),
             invariant_target: RefCell::new(("".to_string(), "".to_string())),
             fresh_var_count: RefCell::new(0),
+            name_to_idx_map: BTreeMap::new(),
+        }
+    }
+
+    /// Creates a translator for use in translating spec blocks inside function implementation
+    pub fn new_for_spec_in_impl(
+        writer: &'env CodeWriter,
+        func_env: &'env FunctionEnv<'env>,
+        supports_native_old: bool,
+    ) -> SpecTranslator<'env> {
+        SpecTranslator {
+            module_env: &func_env.module_env,
+            writer,
+            supports_native_old,
+            in_old: RefCell::new(false),
+            invariant_target: RefCell::new(("".to_string(), "".to_string())),
+            fresh_var_count: RefCell::new(0),
+            name_to_idx_map: (0..func_env.get_local_count())
+                .map(|idx| (func_env.get_local_name(idx), idx))
+                .collect(),
         }
     }
 
@@ -207,7 +229,7 @@ impl<'env> SpecTranslator<'env> {
                     self.writer.set_location(&cond.loc);
                     emit!(
                         self.writer,
-                        if cond.kind == ConditionKind::Assert {
+                        if cond.kind == SpecConditionKind::Assert {
                             "assert "
                         } else {
                             "assume "
@@ -236,7 +258,7 @@ impl<'env> SpecTranslator<'env> {
         // Generate requires.
         let requires = conds
             .iter()
-            .filter(|c| c.kind == ConditionKind::Requires)
+            .filter(|c| c.kind == SpecConditionKind::Requires)
             .collect_vec();
         if !requires.is_empty() {
             self.translate_seq(requires.iter(), "\n", |cond| {
@@ -253,7 +275,7 @@ impl<'env> SpecTranslator<'env> {
         // multiple abort_if conditions are "or"ed. If no condition holds, function does not abort.
         let aborts_if = conds
             .iter()
-            .filter(|c| c.kind == ConditionKind::AbortsIf)
+            .filter(|c| c.kind == SpecConditionKind::AbortsIf)
             .collect_vec();
         if !aborts_if.is_empty() {
             self.writer.set_location(&aborts_if[0].loc);
@@ -269,7 +291,7 @@ impl<'env> SpecTranslator<'env> {
         // Generate ensures
         let ensures = conds
             .iter()
-            .filter(|c| c.kind == ConditionKind::Ensures)
+            .filter(|c| c.kind == SpecConditionKind::Ensures)
             .collect_vec();
         if !ensures.is_empty() {
             self.translate_seq(ensures.iter(), "\n", |cond| {
@@ -311,7 +333,7 @@ impl<'env> SpecTranslator<'env> {
         let requires = func_env
             .get_specification_on_decl()
             .iter()
-            .filter(|cond| cond.kind == ConditionKind::Requires)
+            .filter(|cond| cond.kind == SpecConditionKind::Requires)
             .collect_vec();
         if !requires.is_empty() {
             self.translate_seq(requires.iter(), "\n", |cond| {
@@ -657,6 +679,13 @@ impl<'env> SpecTranslator<'env> {
             Operation::Tuple => self.error(&loc, "Tuple not yet supported"),
             Operation::Select(module_id, struct_id, field_id) => {
                 self.translate_select(*module_id, *struct_id, *field_id, args)
+            }
+            Operation::Local(sym) => {
+                emit!(
+                    self.writer,
+                    "$GetLocal($m, $frame + {})",
+                    self.name_to_idx_map[sym],
+                );
             }
             Operation::Result(pos) => self.auto_dref(node_id, || {
                 emit!(self.writer, "$ret{}", pos);
