@@ -118,7 +118,7 @@
 pub use log;
 
 pub mod prelude {
-    pub use crate::{crit, debug, error, info, trace, warn};
+    pub use crate::{crit, debug, error, info, send_struct_log, trace, warn};
 }
 
 mod struct_log;
