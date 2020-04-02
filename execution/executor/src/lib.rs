@@ -731,8 +731,9 @@ where
                     // maybe other writeset transactions).
                     match transaction {
                         Transaction::AuthenticatedWriteSet(_) => (),
-                        Transaction::BlockMetadata(_) =>
-                            bail!("Write set should be a subset of read set."),
+                        Transaction::BlockMetadata(_) => {
+                            bail!("Write set should be a subset of read set.")
+                        }
                         Transaction::UserTransaction(txn) => match txn.payload() {
                             TransactionPayload::Program
                             | TransactionPayload::Module(_)
@@ -740,7 +741,7 @@ where
                                 bail!("Write set should be a subset of read set.")
                             }
                             TransactionPayload::WriteSet(_) => (),
-                        }
+                        },
                     }
 
                     let mut account_state = Default::default();
