@@ -82,4 +82,5 @@ module Vector {
         swap(v, i, last_idx);
         pop_back(v)
     }
+
 }
