@@ -1,6 +1,6 @@
-import 0x0.AddressUtil;
 import 0x0.LibraAccount;
 import 0x0.LBR;
+import 0x0.LCS;
 import 0x0.Libra;
 
 main() {
@@ -16,7 +16,7 @@ main() {
     assert(!move(account_exists), 83);
 
     ten_coins = LibraAccount.withdraw_from_sender<LBR.T>(10);
-    LibraAccount.create_account(copy(addr), AddressUtil.address_to_bytes(copy(addr)));
+    LibraAccount.create_account(copy(addr), LCS.to_bytes<address>(&addr));
     LibraAccount.deposit<LBR.T>(copy(addr), move(ten_coins));
 
     account_exists_now = LibraAccount.exists(copy(addr));

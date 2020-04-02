@@ -687,6 +687,8 @@ pub mod sub_status {
 
     // Native Function Error sub-codes
     pub const NFE_VECTOR_ERROR_BASE: u64 = 0;
+    // Failure in LCS deserialization
+    pub const NFE_LCS_SERIALIZATION_FAILURE: u64 = 0x1C5;
 
     pub const GSE_UNABLE_TO_LOAD_MODULE: u64 = 0;
     pub const GSE_UNABLE_TO_LOAD_RESOURCE: u64 = 1;

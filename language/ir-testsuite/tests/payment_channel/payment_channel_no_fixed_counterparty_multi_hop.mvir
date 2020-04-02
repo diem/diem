@@ -1,10 +1,9 @@
 module PaymentChannel {
     import 0x0.Signature;
-import 0x0.LBR;
+    import 0x0.LBR;
+    import 0x0.LCS;
     import 0x0.Libra;
     import 0x0.LibraAccount;
-    import 0x0.AddressUtil;
-    import 0x0.U64Util;
     import 0x0.Hash;
     import 0x0.Vector;
 
@@ -138,9 +137,9 @@ import 0x0.LBR;
             return false;
 	}
 
-        amt_to_transfer_bytes = U64Util.u64_to_bytes(move(amt_to_transfer));
-        new_seq_id_bytes = U64Util.u64_to_bytes(move(new_seq_id));
-        commit_to_bytes = AddressUtil.address_to_bytes(move(commit_address));
+        amt_to_transfer_bytes = LCS.to_bytes<u64>(&amt_to_transfer);
+        new_seq_id_bytes = LCS.to_bytes<u64>(&new_seq_id);
+        commit_to_bytes = LCS.to_bytes<address>(&commit_address);
 
         hash = Hash.sha3_256(move(preimage));
 
