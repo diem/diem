@@ -92,8 +92,7 @@ module LibraAccount {
     public fun deposit<Token>(payee: address, to_deposit: Libra::T<Token>) acquires T, Balance {
         // Since we don't have vector<u8> literals in the source language at
         // the moment.
-        // FIXME: Update this once we have vector<u8> literals
-        deposit_with_metadata(payee, to_deposit, Vector::empty());
+        deposit_with_metadata(payee, to_deposit, x"")
     }
 
     // Deposits the `to_deposit` coin into the sender's account balance
@@ -276,8 +275,7 @@ module LibraAccount {
         auth_key_prefix: vector<u8>,
         amount: u64
     ) acquires T, Balance {
-        // FIXME: Update this once we have vector<u8> literals
-        pay_from_sender_with_metadata<Token>(payee, auth_key_prefix, amount, Vector::empty());
+        pay_from_sender_with_metadata<Token>(payee, auth_key_prefix, amount, x"");
     }
 
     fun rotate_authentication_key_for_account(account: &mut T, new_authentication_key: vector<u8>) {
