@@ -21,4 +21,4 @@ libra-logger = { path = "../logger", version = "0.1.0" }
 libra-metrics = { path = "../metrics", version = "0.1.0" }
 
 [build-dependencies]
-tonic-build = "0.1"
+tonic-build = "0.2"

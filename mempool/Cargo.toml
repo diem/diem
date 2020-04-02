@@ -46,7 +46,7 @@ parity-multiaddr = { version = "0.7.2", default-features = false }
 rand = "0.6.5"
 
 [build-dependencies]
-tonic-build = "0.1"
+tonic-build = "0.2"
 
 [features]
 default = []
