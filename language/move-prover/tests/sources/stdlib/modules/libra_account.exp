@@ -6,19 +6,6 @@ bug:  This assertion might not hold.
  1052 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
       │
-      =     at libra_account.bpl:3720:24: <boogie>: inline$$LibraAccount_deposit$0$Entry
-      =     at libra_account.bpl:3761:6: <boogie>: inline$$LibraAccount_deposit$0$anon11_Else
-      =     at libra_account.bpl:4563:24: <boogie>: inline$$LibraAccount_deposit_with_metadata$0$Entry
-      =     at libra_account.bpl:4638:24: <boogie>: inline$$LibraAccount_deposit_with_sender_and_metadata$0$Entry
-      =     at libra_account.bpl:2890:24: <boogie>: inline$$LibraCoin_value$0$Entry
-      =     at libra_account.bpl:2890:24: <boogie>: inline$$LibraCoin_value$0$Return
-      =     at libra_account.bpl:4712:6: <boogie>: inline$$LibraAccount_deposit_with_sender_and_metadata$0$anon59_Else
-      =     at libra_account.bpl:4728:6: <boogie>: inline$$LibraAccount_deposit_with_sender_and_metadata$0$anon12$1
-      =     at libra_account.bpl:4787:6: <boogie>: inline$$LibraAccount_deposit_with_sender_and_metadata$0$anon64_Else
-      =     at libra_account.bpl:4799:6: <boogie>: inline$$LibraAccount_deposit_with_sender_and_metadata$0$anon22$2
-      =     at libra_account.bpl:5021:24: <boogie>: inline$$LibraAccount_emit_event$0$Entry
-      =     at libra_account.bpl:5080:18: <boogie>: inline$$LibraAccount_emit_event$0$anon15_Then
-      =     at libra_account.bpl:5084:6: <boogie>: inline$$LibraAccount_emit_event$0$anon6$1
 
 bug:  This assertion might not hold.
 
@@ -27,10 +14,6 @@ bug:  This assertion might not hold.
  1014 │     assert false; // $AddressUtil_address_to_bytes not implemented
       │      ^
       │
-      =     at libra_account.bpl:3993:24: <boogie>: inline$$LibraAccount_create_account$0$Entry
-      =     at libra_account.bpl:4063:18: <boogie>: inline$$LibraAccount_create_account$0$anon31_Then
-      =     at libra_account.bpl:4067:6: <boogie>: inline$$LibraAccount_create_account$0$anon6$1
-      =     at libra_account.bpl:4078:6: <boogie>: inline$$LibraAccount_create_account$0$anon8$1
 
 bug:  This assertion might not hold.
 
@@ -39,11 +22,6 @@ bug:  This assertion might not hold.
  1014 │     assert false; // $AddressUtil_address_to_bytes not implemented
       │      ^
       │
-      =     at libra_account.bpl:4287:24: <boogie>: inline$$LibraAccount_create_new_account$0$Entry
-      =     at libra_account.bpl:3993:24: <boogie>: inline$$LibraAccount_create_account$0$Entry
-      =     at libra_account.bpl:4063:18: <boogie>: inline$$LibraAccount_create_account$0$anon31_Then
-      =     at libra_account.bpl:4067:6: <boogie>: inline$$LibraAccount_create_account$0$anon6$1
-      =     at libra_account.bpl:4078:6: <boogie>: inline$$LibraAccount_create_account$0$anon8$1
 
 bug:  This assertion might not hold.
 
@@ -52,17 +30,6 @@ bug:  This assertion might not hold.
  1052 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
       │
-      =     at libra_account.bpl:4563:24: <boogie>: inline$$LibraAccount_deposit_with_metadata$0$Entry
-      =     at libra_account.bpl:4638:24: <boogie>: inline$$LibraAccount_deposit_with_sender_and_metadata$0$Entry
-      =     at libra_account.bpl:2890:24: <boogie>: inline$$LibraCoin_value$0$Entry
-      =     at libra_account.bpl:2890:24: <boogie>: inline$$LibraCoin_value$0$Return
-      =     at libra_account.bpl:4712:6: <boogie>: inline$$LibraAccount_deposit_with_sender_and_metadata$0$anon59_Else
-      =     at libra_account.bpl:4728:6: <boogie>: inline$$LibraAccount_deposit_with_sender_and_metadata$0$anon12$1
-      =     at libra_account.bpl:4787:6: <boogie>: inline$$LibraAccount_deposit_with_sender_and_metadata$0$anon64_Else
-      =     at libra_account.bpl:4799:6: <boogie>: inline$$LibraAccount_deposit_with_sender_and_metadata$0$anon22$2
-      =     at libra_account.bpl:5021:24: <boogie>: inline$$LibraAccount_emit_event$0$Entry
-      =     at libra_account.bpl:5080:18: <boogie>: inline$$LibraAccount_emit_event$0$anon15_Then
-      =     at libra_account.bpl:5084:6: <boogie>: inline$$LibraAccount_emit_event$0$anon6$1
 
 bug:  This assertion might not hold.
 
@@ -71,16 +38,6 @@ bug:  This assertion might not hold.
  1052 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
       │
-      =     at libra_account.bpl:4638:24: <boogie>: inline$$LibraAccount_deposit_with_sender_and_metadata$0$Entry
-      =     at libra_account.bpl:2890:24: <boogie>: inline$$LibraCoin_value$0$Entry
-      =     at libra_account.bpl:2890:24: <boogie>: inline$$LibraCoin_value$0$Return
-      =     at libra_account.bpl:4712:6: <boogie>: inline$$LibraAccount_deposit_with_sender_and_metadata$0$anon59_Else
-      =     at libra_account.bpl:4728:6: <boogie>: inline$$LibraAccount_deposit_with_sender_and_metadata$0$anon12$1
-      =     at libra_account.bpl:4787:6: <boogie>: inline$$LibraAccount_deposit_with_sender_and_metadata$0$anon64_Else
-      =     at libra_account.bpl:4799:6: <boogie>: inline$$LibraAccount_deposit_with_sender_and_metadata$0$anon22$2
-      =     at libra_account.bpl:5021:24: <boogie>: inline$$LibraAccount_emit_event$0$Entry
-      =     at libra_account.bpl:5080:18: <boogie>: inline$$LibraAccount_emit_event$0$anon15_Then
-      =     at libra_account.bpl:5084:6: <boogie>: inline$$LibraAccount_emit_event$0$anon6$1
 
 bug:  This assertion might not hold.
 
@@ -89,9 +46,6 @@ bug:  This assertion might not hold.
  1052 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
       │
-      =     at libra_account.bpl:5021:24: <boogie>: inline$$LibraAccount_emit_event$0$Entry
-      =     at libra_account.bpl:5080:18: <boogie>: inline$$LibraAccount_emit_event$0$anon15_Then
-      =     at libra_account.bpl:5084:6: <boogie>: inline$$LibraAccount_emit_event$0$anon6$1
 
 bug:  This assertion might not hold.
 
@@ -100,7 +54,6 @@ bug:  This assertion might not hold.
  1014 │     assert false; // $AddressUtil_address_to_bytes not implemented
       │      ^
       │
-      =     at libra_account.bpl:5892:24: <boogie>: inline$$LibraAccount_fresh_guid$0$Entry
 
 bug:  This assertion might not hold.
 
@@ -109,13 +62,6 @@ bug:  This assertion might not hold.
  1014 │     assert false; // $AddressUtil_address_to_bytes not implemented
       │      ^
       │
-      =     at libra_account.bpl:6125:24: <boogie>: inline$$LibraAccount_mint_to_address$0$Entry
-      =     at libra_account.bpl:3668:24: <boogie>: inline$$LibraAccount_exists$0$Entry
-      =     at libra_account.bpl:6169:6: <boogie>: inline$$LibraAccount_mint_to_address$0$anon19_Else
-      =     at libra_account.bpl:3993:24: <boogie>: inline$$LibraAccount_create_account$0$Entry
-      =     at libra_account.bpl:4063:18: <boogie>: inline$$LibraAccount_create_account$0$anon31_Then
-      =     at libra_account.bpl:4067:6: <boogie>: inline$$LibraAccount_create_account$0$anon6$1
-      =     at libra_account.bpl:4078:6: <boogie>: inline$$LibraAccount_create_account$0$anon8$1
 
 bug:  This assertion might not hold.
 
@@ -124,11 +70,6 @@ bug:  This assertion might not hold.
  1014 │     assert false; // $AddressUtil_address_to_bytes not implemented
       │      ^
       │
-      =     at libra_account.bpl:6255:24: <boogie>: inline$$LibraAccount_new_event_handle$0$Entry
-      =     at libra_account.bpl:6290:6: <boogie>: inline$$LibraAccount_new_event_handle$0$anon9_Else
-      =     at libra_account.bpl:6302:6: <boogie>: inline$$LibraAccount_new_event_handle$0$anon4$2
-      =     at libra_account.bpl:6345:24: <boogie>: inline$$LibraAccount_new_event_handle_impl$0$Entry
-      =     at libra_account.bpl:5892:24: <boogie>: inline$$LibraAccount_fresh_guid$0$Entry
 
 bug:  This assertion might not hold.
 
@@ -137,8 +78,6 @@ bug:  This assertion might not hold.
  1014 │     assert false; // $AddressUtil_address_to_bytes not implemented
       │      ^
       │
-      =     at libra_account.bpl:6345:24: <boogie>: inline$$LibraAccount_new_event_handle_impl$0$Entry
-      =     at libra_account.bpl:5892:24: <boogie>: inline$$LibraAccount_fresh_guid$0$Entry
 
 bug:  This assertion might not hold.
 
@@ -147,13 +86,6 @@ bug:  This assertion might not hold.
  1014 │     assert false; // $AddressUtil_address_to_bytes not implemented
       │      ^
       │
-      =     at libra_account.bpl:6423:24: <boogie>: inline$$LibraAccount_pay_from_capability$0$Entry
-      =     at libra_account.bpl:3668:24: <boogie>: inline$$LibraAccount_exists$0$Entry
-      =     at libra_account.bpl:6477:6: <boogie>: inline$$LibraAccount_pay_from_capability$0$anon25_Else
-      =     at libra_account.bpl:3993:24: <boogie>: inline$$LibraAccount_create_account$0$Entry
-      =     at libra_account.bpl:4063:18: <boogie>: inline$$LibraAccount_create_account$0$anon31_Then
-      =     at libra_account.bpl:4067:6: <boogie>: inline$$LibraAccount_create_account$0$anon6$1
-      =     at libra_account.bpl:4078:6: <boogie>: inline$$LibraAccount_create_account$0$anon8$1
 
 bug:  This assertion might not hold.
 
@@ -162,15 +94,6 @@ bug:  This assertion might not hold.
  1014 │     assert false; // $AddressUtil_address_to_bytes not implemented
       │      ^
       │
-      =     at libra_account.bpl:6587:24: <boogie>: inline$$LibraAccount_pay_from_sender$0$Entry
-      =     at libra_account.bpl:6637:6: <boogie>: inline$$LibraAccount_pay_from_sender$0$anon14_Else
-      =     at libra_account.bpl:6668:24: <boogie>: inline$$LibraAccount_pay_from_sender_with_metadata$0$Entry
-      =     at libra_account.bpl:3668:24: <boogie>: inline$$LibraAccount_exists$0$Entry
-      =     at libra_account.bpl:6716:6: <boogie>: inline$$LibraAccount_pay_from_sender_with_metadata$0$anon22_Else
-      =     at libra_account.bpl:3993:24: <boogie>: inline$$LibraAccount_create_account$0$Entry
-      =     at libra_account.bpl:4063:18: <boogie>: inline$$LibraAccount_create_account$0$anon31_Then
-      =     at libra_account.bpl:4067:6: <boogie>: inline$$LibraAccount_create_account$0$anon6$1
-      =     at libra_account.bpl:4078:6: <boogie>: inline$$LibraAccount_create_account$0$anon8$1
 
 bug:  This assertion might not hold.
 
@@ -179,13 +102,6 @@ bug:  This assertion might not hold.
  1014 │     assert false; // $AddressUtil_address_to_bytes not implemented
       │      ^
       │
-      =     at libra_account.bpl:6668:24: <boogie>: inline$$LibraAccount_pay_from_sender_with_metadata$0$Entry
-      =     at libra_account.bpl:3668:24: <boogie>: inline$$LibraAccount_exists$0$Entry
-      =     at libra_account.bpl:6716:6: <boogie>: inline$$LibraAccount_pay_from_sender_with_metadata$0$anon22_Else
-      =     at libra_account.bpl:3993:24: <boogie>: inline$$LibraAccount_create_account$0$Entry
-      =     at libra_account.bpl:4063:18: <boogie>: inline$$LibraAccount_create_account$0$anon31_Then
-      =     at libra_account.bpl:4067:6: <boogie>: inline$$LibraAccount_create_account$0$anon6$1
-      =     at libra_account.bpl:4078:6: <boogie>: inline$$LibraAccount_create_account$0$anon8$1
 
 bug:  This assertion might not hold.
 
@@ -194,10 +110,3 @@ bug:  This assertion might not hold.
  1039 │     assert false; // $Hash_sha3_256 not implemented
       │      ^
       │
-      =     at libra_account.bpl:6807:24: <boogie>: inline$$LibraAccount_prologue$0$Entry
-      =     at libra_account.bpl:6912:18: <boogie>: inline$$LibraAccount_prologue$0$anon72_Then
-      =     at libra_account.bpl:6916:6: <boogie>: inline$$LibraAccount_prologue$0$anon12$1
-      =     at libra_account.bpl:3668:24: <boogie>: inline$$LibraAccount_exists$0$Entry
-      =     at libra_account.bpl:6922:6: <boogie>: inline$$LibraAccount_prologue$0$anon73_Else
-      =     at libra_account.bpl:6976:6: <boogie>: inline$$LibraAccount_prologue$0$anon77_Else
-      =     at libra_account.bpl:6988:6: <boogie>: inline$$LibraAccount_prologue$0$anon24$1

@@ -153,7 +153,12 @@ impl<'env> BoogieWrapper<'env> {
         );
 
         // Now add trace diagnostics.
-        if error.kind.is_from_verification() && !error.execution_trace.is_empty() {
+        if error.kind.is_from_verification()
+            && !error.execution_trace.is_empty()
+            // Reporting errors on boogie source seems to have some non-determinism, so skip
+            // this if stable output is required
+            && (on_source || !self.options.stable_test_output)
+        {
             let mut locals_shown = BTreeSet::new();
             let mut aborted = false;
             let cleaned_trace = error

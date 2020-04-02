@@ -24,8 +24,8 @@ use stackless_bytecode_generator::{
 use crate::{
     boogie_helpers::{
         boogie_field_name, boogie_function_name, boogie_local_type, boogie_struct_name,
-        boogie_struct_type_value, boogie_type_check, boogie_type_value, boogie_type_values,
-        boogie_var_before_borrow,
+        boogie_struct_type_value, boogie_type_value, boogie_type_values, boogie_var_before_borrow,
+        boogie_well_formed_check, WellFormedMode,
     },
     cli::Options,
     code_writer::CodeWriter,
@@ -259,10 +259,11 @@ impl<'env> ModuleTranslator<'env> {
         self.writer.indent();
         let mut fields_str = String::from("EmptyValueArray");
         for field_env in struct_env.get_fields() {
-            let type_check = boogie_type_check(
+            let type_check = boogie_well_formed_check(
                 self.module_env.env,
                 &format!("{}", field_env.get_name().display(struct_env.symbol_pool())),
                 &field_env.get_type(),
+                WellFormedMode::Default,
             );
             emit!(self.writer, &type_check);
             fields_str = format!(
@@ -303,10 +304,11 @@ impl<'env> ModuleTranslator<'env> {
                 field_env.get_name().display(struct_env.symbol_pool()),
                 boogie_field_name(&field_env)
             );
-            let type_check = boogie_type_check(
+            let type_check = boogie_well_formed_check(
                 self.module_env.env,
                 &format!("{}", field_env.get_name().display(struct_env.symbol_pool())),
                 &field_env.get_type(),
+                WellFormedMode::Default,
             );
             emit!(self.writer, &type_check);
         }
@@ -610,11 +612,19 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "$frame := $local_counter;");
 
         emitln!(self.writer, "\n// process and type check arguments");
+        let mode = if func_env.is_public() {
+            // For public functions, we always include invariants in type assumptions for parameters,
+            // even for mutable references.
+            WellFormedMode::WithInvariant
+        } else {
+            WellFormedMode::Default
+        };
         for i in 0..num_args {
             let local_name = func_env.get_local_name(i);
             let local_str = format!("{}", local_name.display(func_env.symbol_pool()));
             let local_type = &self.module_env.globalize_signature(&code.local_types[i]);
-            let type_check = boogie_type_check(self.module_env.env, &local_str, local_type);
+            let type_check =
+                boogie_well_formed_check(self.module_env.env, &local_str, local_type, mode);
             emit!(self.writer, &type_check);
             if !local_type.is_reference() {
                 emitln!(
@@ -855,10 +865,12 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emit!(
                     self.writer,
-                    &boogie_type_check(
+                    &boogie_well_formed_check(
                         self.module_env.env,
                         str_local(dest).as_str(),
-                        &self.get_local_type(func_env, *dest)
+                        &self.get_local_type(func_env, *dest),
+                        // At the begining of a borrow, invariant holds.
+                        WellFormedMode::WithInvariant,
                     )
                 );
                 save_borrowed_value(ctx, dest);
@@ -867,10 +879,11 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, "call $tmp := ReadRef({});", str_local(src));
                 emit!(
                     self.writer,
-                    &boogie_type_check(
+                    &boogie_well_formed_check(
                         self.module_env.env,
                         "$tmp",
-                        &self.get_local_type(func_env, *dest)
+                        &self.get_local_type(func_env, *dest),
+                        WellFormedMode::Default
                     )
                 );
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
@@ -963,10 +976,11 @@ impl<'env> ModuleTranslator<'env> {
                         .map(|dest_idx| {
                             let dest = str_local(dest_idx).to_string();
                             let dest_type = &self.get_local_type(func_env, *dest_idx);
-                            dest_type_assumptions.push(boogie_type_check(
+                            dest_type_assumptions.push(boogie_well_formed_check(
                                 self.module_env.env,
                                 &dest,
                                 dest_type,
+                                WellFormedMode::Default,
                             ));
                             if !dest_type.is_reference() {
                                 tmp_assignments.push(update_and_track_local(*dest_idx, &dest));
@@ -1081,10 +1095,11 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emit!(
                     self.writer,
-                    &boogie_type_check(
+                    &boogie_well_formed_check(
                         self.module_env.env,
                         str_local(dest).as_str(),
-                        &self.get_local_type(func_env, *dest)
+                        &self.get_local_type(func_env, *dest),
+                        WellFormedMode::Default
                     )
                 );
             }
@@ -1119,10 +1134,12 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emit!(
                     self.writer,
-                    &boogie_type_check(
+                    &boogie_well_formed_check(
                         self.module_env.env,
                         str_local(dest).as_str(),
-                        &self.get_local_type(func_env, *dest)
+                        &self.get_local_type(func_env, *dest),
+                        // At the beginning of a borrow, invariants always hold
+                        WellFormedMode::WithInvariant,
                     )
                 );
                 emitln!(self.writer, &propagate_abort());
@@ -1159,10 +1176,11 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
                 emit!(
                     self.writer,
-                    &boogie_type_check(
+                    &boogie_well_formed_check(
                         self.module_env.env,
                         str_local(dest).as_str(),
-                        &self.get_local_type(func_env, *dest)
+                        &self.get_local_type(func_env, *dest),
+                        WellFormedMode::Default
                     )
                 );
                 emitln!(self.writer, &propagate_abort());

@@ -13,7 +13,8 @@ use spec_lang::{
 use crate::{
     boogie_helpers::{
         boogie_declare_global, boogie_field_name, boogie_local_type, boogie_spec_fun_name,
-        boogie_spec_var_name, boogie_struct_name, boogie_type_check_expr, boogie_type_value,
+        boogie_spec_var_name, boogie_struct_name, boogie_type_value, boogie_well_formed_expr,
+        WellFormedMode,
     },
     code_writer::CodeWriter,
 };
@@ -357,28 +358,43 @@ impl<'env> SpecTranslator<'env> {
         self.translate_after_update_invariant(struct_env);
     }
 
-    /// Generates a function which assumes the struct to be well-formed. This generates
-    /// both type assumptions for each field and assumptions of the data invariants.
+    /// Generates functions which assumes the struct to be well-formed. The first function
+    /// only checks type assumptions and is called to ensure well-formedness while the struct is
+    /// mutated. The second function checks both types and data invariants and is used while
+    /// the struct is not mutated.
     fn translate_assume_well_formed(&self, struct_env: &StructEnv<'env>) {
+        let emit_field_checks = |mode: WellFormedMode| {
+            emitln!(self.writer, "is#Vector($this)");
+            for field in struct_env.get_fields() {
+                let select = format!("$SelectField($this, {})", boogie_field_name(&field));
+                let type_check = boogie_well_formed_expr(
+                    struct_env.module_env.env,
+                    &select,
+                    &field.get_type(),
+                    mode,
+                );
+                if !type_check.is_empty() {
+                    emitln!(self.writer, "  && {}", type_check);
+                }
+            }
+        };
         emitln!(
             self.writer,
-            "function {{:inline}} ${}_is_well_formed($this: Value): bool {{",
+            "function {{:inline}} {}_is_well_formed_types($this: Value): bool {{",
             boogie_struct_name(struct_env),
         );
         self.writer.indent();
+        emit_field_checks(WellFormedMode::WithoutInvariant);
+        self.writer.unindent();
+        emitln!(self.writer, "}");
 
-        // Emit type assumptions.
-        emitln!(self.writer, "is#Vector($this)");
-        for field in struct_env.get_fields() {
-            let select = format!("$SelectField($this, {})", boogie_field_name(&field));
-            let type_check =
-                boogie_type_check_expr(struct_env.module_env.env, &select, &field.get_type());
-            if !type_check.is_empty() {
-                emitln!(self.writer, "  && {}", type_check);
-            }
-        }
-
-        // Emit invariant assumptions.
+        emitln!(
+            self.writer,
+            "function {{:inline}} {}_is_well_formed($this: Value): bool {{",
+            boogie_struct_name(struct_env),
+        );
+        self.writer.indent();
+        emit_field_checks(WellFormedMode::WithInvariant);
         for inv in struct_env.get_data_invariants() {
             emit!(self.writer, "  && b#Boolean(");
             self.with_invariant_target("$this", "", || self.translate_exp(&inv.exp));

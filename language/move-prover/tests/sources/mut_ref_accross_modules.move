@@ -78,7 +78,6 @@ module TestMutRefs {
     }
 
     // For a private function, the data invariant for a mut ref is not expected to hold.
-    // TODO: this currently does not fail because of #3076
     fun private_data_invariant_invalid(x: &mut T) {
         spec {
             assert x.value > 0;
@@ -88,9 +87,11 @@ module TestMutRefs {
     // The next function should succeed because calling a public function from a private one maintains module
     // invariants.
     fun private_to_public_caller(r: &mut T) acquires TSum {
-        // Before call to public increment, module invariant must hold. Here we specialize it to start with a zero sum.
+        // Before call to public increment, data invariants and module invariant must hold.
+        // Here we assume them, and force spec_sum to start with a zero value.
         spec {
             assume spec_sum == 0;
+            assume r.value > 0;
             assume global<TSum>(0x0).sum == spec_sum;
         };
         increment(r);
