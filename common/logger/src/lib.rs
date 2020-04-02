@@ -305,13 +305,13 @@ macro_rules! format_struct_args {
 #[macro_export]
 macro_rules! format_struct_arg {
     ($entry:ident, $acc:tt, $arg_name:ident=$arg:expr) => {
-        $entry.data(stringify!($arg_name), format!("{:?}", $arg));
+        $entry.data_mutref(stringify!($arg_name), format!("{:?}", $arg));
     };
     ($entry:ident, $acc:tt, $arg:ident) => {
-        $entry.data(stringify!($arg), format!("{:?}", $arg));
+        $entry.data_mutref(stringify!($arg), format!("{:?}", $arg));
     };
     ($entry:ident, $acc:tt, $arg:expr) => {
-        $entry.data($crate::format_index!($acc), format!("{:?}", $arg));
+        $entry.data_mutref($crate::format_index!($acc), format!("{:?}", $arg));
     };
 }
 
