@@ -21,7 +21,7 @@ thiserror = "1.0"
 [dev-dependencies]
 anyhow = "1.0"
 rand = "0.6.5"
-tokio = { version = "0.2.12", features = ["full"] }
+tokio = { version = "0.2.14", features = ["full"] }
 
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 executor = { path = "../../execution/executor", version = "0.1.0" }

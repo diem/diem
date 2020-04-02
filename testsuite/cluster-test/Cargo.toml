@@ -45,7 +45,7 @@ libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] 
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 
 futures = "0.3.0"
-tokio = { version = "0.2.13", features = ["full"] }
+tokio = { version = "0.2.14", features = ["full"] }
 async-trait = "0.1.27"
 
 kube = "0.31.0"
