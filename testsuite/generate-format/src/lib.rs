@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// How to record the format of interesting Libra types.
-/// See API documentation with `cargo doc -p libra-serde-reflection --open`
+/// See API documentation with `cargo doc -p serde-reflection --open`
 use libra_types::{contract_event, transaction};
 use proptest::{
     prelude::*,

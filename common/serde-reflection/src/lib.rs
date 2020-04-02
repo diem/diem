@@ -16,7 +16,7 @@
 //! for `Name` values.
 //!
 //! ```rust
-//! # use libra_serde_reflection::*;
+//! # use serde_reflection::*;
 //! # use serde::{Deserialize, Serialize};
 //! #[derive(Serialize, PartialEq, Eq, Debug, Clone)]
 //! struct Name(String);
@@ -115,7 +115,7 @@
 //! components of `v` in depth and recording Serde formats for all the visited types.
 //!
 //! ```rust
-//! # use libra_serde_reflection::*;
+//! # use serde_reflection::*;
 //! # use serde::Serialize;
 //! #[derive(Serialize)]
 //! struct FullName<'a> {
@@ -145,7 +145,7 @@
 //! formats that are partially unknown.
 //!
 //! ```rust
-//! # use libra_serde_reflection::*;
+//! # use serde_reflection::*;
 //! # use serde::Serialize;
 //! # #[derive(Serialize)]
 //! # struct FullName<'a> {

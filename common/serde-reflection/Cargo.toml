@@ -1,8 +1,8 @@
 [package]
-name = "libra-serde-reflection"
+name = "serde-reflection"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra Serde Reflection"
+description = "Serde Reflection"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"
