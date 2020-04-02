@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-//! # Serde Reflection (experimental)
+//! # Serde Reflection
 //!
 //! This crate provides a way to extract IDL-like format descriptions for Rust containers
 //! that implement the Serialize and/or Deserialize trait(s) of Serde.
@@ -228,6 +228,6 @@ mod trace;
 mod value;
 
 pub use error::{Error, Result};
-pub use format::{ContainerFormat, Format, Named, VariantFormat};
+pub use format::{ContainerFormat, Format, FormatHolder, Named, VariantFormat};
 pub use trace::{Registry, RegistryOwned, Tracer};
 pub use value::Value;
