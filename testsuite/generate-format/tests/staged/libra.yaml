@@ -29,6 +29,12 @@ ChangeSet:
         SEQ:
           TYPENAME: ContractEvent
 ContractEvent:
+  ENUM:
+    0:
+      V0:
+        NEWTYPE:
+          TYPENAME: ContractEventV0
+ContractEventV0:
   STRUCT:
     - key:
         TYPENAME: EventKey
