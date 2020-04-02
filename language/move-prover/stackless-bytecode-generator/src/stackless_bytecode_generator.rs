@@ -883,6 +883,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 "Bytecode {:?} is deprecated and will be removed soon",
                 bytecode
             ),
+            Bytecode::Nop => (), // simply discard
         }
     }
 

@@ -137,6 +137,7 @@ static INITIAL_GAS_SCHEDULE: Lazy<Vec<u8>> = Lazy::new(|| {
             PackGeneric(StructDefInstantiationIndex::new(0)),
             GasCost::new(73, 1),
         ),
+        (Nop, GasCost::new(10, 1)),
     ];
     // TODO Zero for now, this is going to be filled in later
     let native_table = (0..NUMBER_OF_NATIVE_FUNCTIONS)

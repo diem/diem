@@ -1662,10 +1662,10 @@ fn compile_bytecode(
     let ff_instr = match instr_ {
         IRBytecode_::Pop => Bytecode::Pop,
         IRBytecode_::Ret => Bytecode::Ret,
-        IRBytecode_::Nop(None) => return Ok(()),
+        IRBytecode_::Nop(None) => Bytecode::Nop,
         IRBytecode_::Nop(Some(lbl)) => {
             record_nop_label!(lbl);
-            return Ok(());
+            Bytecode::Nop
         }
         IRBytecode_::BrTrue(lbl) => Bytecode::BrTrue(context.label_index(lbl)?),
         IRBytecode_::BrFalse(lbl) => Bytecode::BrFalse(context.label_index(lbl)?),

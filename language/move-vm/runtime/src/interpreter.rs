@@ -692,6 +692,9 @@ impl<'txn> Interpreter<'txn> {
                                 "This opcode is deprecated and will be removed soon".to_string(),
                             ));
                     }
+                    Bytecode::Nop => {
+                        gas!(const_instr: context, self, Opcodes::NOP)?;
+                    }
                 }
             }
             // ok we are out, it's a branch, check the pc for good luck
