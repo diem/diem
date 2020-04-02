@@ -3,9 +3,7 @@ address 0x0:
 module TransactionFee {
     use 0x0::LibraAccount;
     use 0x0::LibraSystem;
-    use 0x0::AddressUtil;
     use 0x0::Transaction;
-    use 0x0::Vector;
 
     ///////////////////////////////////////////////////////////////////////////
     // Transaction Fee Distribution
@@ -80,11 +78,10 @@ module TransactionFee {
 
             LibraAccount::pay_from_capability<Token>(
                 addr,
-                Vector::empty(),
+                x"",
                 &distribution_resource.fee_withdrawal_capability,
                 amount_to_distribute_per_validator,
-                // FIXME: Update this once we have bytearray literals
-                AddressUtil::address_to_bytes(0xFEE),
+                x"",
             );
            }
     }
