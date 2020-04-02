@@ -16,7 +16,7 @@ FROM toolchain AS builder
 
 COPY . /libra
 
-RUN cargo build --release -p libra-node -p cli -p config-builder -p safety-rules && cd target/release && rm -r build deps incremental
+RUN cargo build --release -p libra-node -p cli -p config-builder -p safety-rules -p libra-storage-inspector && cd target/release && rm -r build deps incremental
 RUN strip /libra/target/release/config-builder
 
 ### Production Image ###
@@ -28,6 +28,7 @@ RUN mkdir -p /opt/libra/bin /opt/libra/etc
 COPY docker/install-tools.sh /root
 COPY --from=builder /libra/target/release/libra-node /opt/libra/bin
 COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
+COPY --from=builder /libra/target/release/libra-storage-inspector /opt/libra/bin
 
 # Admission control
 EXPOSE 8000
