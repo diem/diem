@@ -34,7 +34,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::Bool)?;
+        self.format.unify(Format::Bool)?;
         visitor.visit_bool(false)
     }
 
@@ -42,7 +42,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::I8)?;
+        self.format.unify(Format::I8)?;
         visitor.visit_i8(0)
     }
 
@@ -50,7 +50,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::I16)?;
+        self.format.unify(Format::I16)?;
         visitor.visit_i16(0)
     }
 
@@ -58,7 +58,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::I32)?;
+        self.format.unify(Format::I32)?;
         visitor.visit_i32(0)
     }
 
@@ -66,7 +66,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::I64)?;
+        self.format.unify(Format::I64)?;
         visitor.visit_i64(0)
     }
 
@@ -74,7 +74,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::I128)?;
+        self.format.unify(Format::I128)?;
         visitor.visit_i128(0)
     }
 
@@ -82,7 +82,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::U8)?;
+        self.format.unify(Format::U8)?;
         visitor.visit_u8(0)
     }
 
@@ -90,7 +90,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::U16)?;
+        self.format.unify(Format::U16)?;
         visitor.visit_u16(0)
     }
 
@@ -98,7 +98,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::U32)?;
+        self.format.unify(Format::U32)?;
         visitor.visit_u32(0)
     }
 
@@ -106,7 +106,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::U64)?;
+        self.format.unify(Format::U64)?;
         visitor.visit_u64(0)
     }
 
@@ -114,7 +114,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::U128)?;
+        self.format.unify(Format::U128)?;
         visitor.visit_u128(0)
     }
 
@@ -122,7 +122,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::F32)?;
+        self.format.unify(Format::F32)?;
         visitor.visit_f32(0.0)
     }
 
@@ -130,7 +130,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::F64)?;
+        self.format.unify(Format::F64)?;
         visitor.visit_f64(0.0)
     }
 
@@ -138,7 +138,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::Char)?;
+        self.format.unify(Format::Char)?;
         visitor.visit_char('A')
     }
 
@@ -146,7 +146,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::Str)?;
+        self.format.unify(Format::Str)?;
         visitor.visit_borrowed_str("")
     }
 
@@ -154,7 +154,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::Str)?;
+        self.format.unify(Format::Str)?;
         visitor.visit_string("".into())
     }
 
@@ -162,7 +162,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::Bytes)?;
+        self.format.unify(Format::Bytes)?;
         visitor.visit_borrowed_bytes(b"")
     }
 
@@ -178,7 +178,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
         V: Visitor<'de>,
     {
         self.format
-            .merge(Format::Option(Box::new(Format::Unknown)))?;
+            .unify(Format::Option(Box::new(Format::Unknown)))?;
         let format = match &mut self.format {
             Format::Option(x) => x,
             _ => unreachable!(),
@@ -196,7 +196,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::Unit)?;
+        self.format.unify(Format::Unit)?;
         visitor.visit_unit()
     }
 
@@ -204,11 +204,11 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::TypeName(name.into()))?;
+        self.format.unify(Format::TypeName(name.into()))?;
         self.tracer
             .registry
             .entry(name)
-            .merge(ContainerFormat::UnitStruct)?;
+            .unify(ContainerFormat::UnitStruct)?;
         visitor.visit_unit()
     }
 
@@ -216,7 +216,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::TypeName(name.into()))?;
+        self.format.unify(Format::TypeName(name.into()))?;
         // If a newtype struct was visited by the serialization tracer, use the recorded value.
         if let Some(hint) = self.tracer.get_value(name) {
             // Hints are recorded during serialization-tracing therefore the registry is already accurate.
@@ -225,7 +225,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
         self.tracer
             .registry
             .entry(name)
-            .merge(ContainerFormat::NewTypeStruct(Box::new(Format::Unknown)))?;
+            .unify(ContainerFormat::NewTypeStruct(Box::new(Format::Unknown)))?;
 
         let mut format = Format::Unknown;
         let inner = Deserializer::new(self.tracer, &mut format);
@@ -243,7 +243,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::Seq(Box::new(Format::Unknown)))?;
+        self.format.unify(Format::Seq(Box::new(Format::Unknown)))?;
         let format = match &mut self.format {
             Format::Seq(x) => x,
             _ => unreachable!(),
@@ -264,7 +264,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
         V: Visitor<'de>,
     {
         self.format
-            .merge(Format::Tuple(vec![Format::Unknown; len]))?;
+            .unify(Format::Tuple(vec![Format::Unknown; len]))?;
         let formats = match &mut self.format {
             Format::Tuple(x) => x,
             _ => unreachable!(),
@@ -282,13 +282,13 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::TypeName(name.into()))?;
+        self.format.unify(Format::TypeName(name.into()))?;
         let mut formats = vec![Format::Unknown; len];
         // Update the registry with an intermediate result to stop recursion.
         self.tracer
             .registry
             .entry(name)
-            .merge(ContainerFormat::TupleStruct(formats.clone()))?;
+            .unify(ContainerFormat::TupleStruct(formats.clone()))?;
         // Compute the formats.
         let inner = SeqDeserializer::new(self.tracer, formats.iter_mut());
         let value = visitor.visit_seq(inner)?;
@@ -306,7 +306,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::Map {
+        self.format.unify(Format::Map {
             key: Box::new(Format::Unknown),
             value: Box::new(Format::Unknown),
         })?;
@@ -334,7 +334,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     where
         V: Visitor<'de>,
     {
-        self.format.merge(Format::TypeName(name.into()))?;
+        self.format.unify(Format::TypeName(name.into()))?;
         let mut formats: Vec<_> = fields
             .iter()
             .map(|&name| Named {
@@ -346,7 +346,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
         self.tracer
             .registry
             .entry(name)
-            .merge(ContainerFormat::Struct(formats.clone()))?;
+            .unify(ContainerFormat::Struct(formats.clone()))?;
         // Compute the formats.
         let inner = SeqDeserializer::new(
             self.tracer,
@@ -378,12 +378,12 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
             !variants.is_empty(),
             "Enums should have at least one variant."
         );
-        self.format.merge(Format::TypeName(name.into()))?;
+        self.format.unify(Format::TypeName(name.into()))?;
         // Update the registry with an intermediate result to stop recursion.
         self.tracer
             .registry
             .entry(name)
-            .merge(ContainerFormat::Enum(BTreeMap::new()))?;
+            .unify(ContainerFormat::Enum(BTreeMap::new()))?;
         let current_variants = match self.tracer.registry.get(name) {
             Some(ContainerFormat::Enum(x)) => x,
             _ => unreachable!(),
@@ -547,7 +547,7 @@ impl<'de, 'a> de::VariantAccess<'de> for EnumDeserializer<'a> {
     type Error = Error;
 
     fn unit_variant(self) -> Result<()> {
-        self.format.merge(VariantFormat::Unit)
+        self.format.unify(VariantFormat::Unit)
     }
 
     fn newtype_variant_seed<T>(mut self, seed: T) -> Result<T::Value>
@@ -555,7 +555,7 @@ impl<'de, 'a> de::VariantAccess<'de> for EnumDeserializer<'a> {
         T: DeserializeSeed<'de>,
     {
         self.format
-            .merge(VariantFormat::NewType(Box::new(Format::Unknown)))?;
+            .unify(VariantFormat::NewType(Box::new(Format::Unknown)))?;
         let format = match &mut self.format {
             VariantFormat::NewType(x) => x.as_mut(),
             _ => unreachable!(),
@@ -569,7 +569,7 @@ impl<'de, 'a> de::VariantAccess<'de> for EnumDeserializer<'a> {
         V: Visitor<'de>,
     {
         self.format
-            .merge(VariantFormat::Tuple(vec![Format::Unknown; len]))?;
+            .unify(VariantFormat::Tuple(vec![Format::Unknown; len]))?;
         let formats = match &mut self.format {
             VariantFormat::Tuple(x) => x,
             _ => unreachable!(),
@@ -589,7 +589,7 @@ impl<'de, 'a> de::VariantAccess<'de> for EnumDeserializer<'a> {
                 value: Format::Unknown,
             })
             .collect();
-        self.format.merge(VariantFormat::Struct(formats))?;
+        self.format.unify(VariantFormat::Struct(formats))?;
 
         let formats = match &mut self.format {
             VariantFormat::Struct(x) => x,

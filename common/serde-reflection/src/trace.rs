@@ -162,13 +162,13 @@ impl Tracer {
         registry
     }
 
-    pub(crate) fn record(
+    pub(crate) fn record_container(
         &mut self,
         name: &'static str,
         format: ContainerFormat,
         value: Value,
     ) -> Result<(Format, Value)> {
-        self.registry.entry(name).merge(format)?;
+        self.registry.entry(name).unify(format)?;
         self.values.insert(name, value.clone());
         Ok((Format::TypeName(name.into()), value))
     }
@@ -191,7 +191,7 @@ impl Tracer {
         );
         let format = ContainerFormat::Enum(variants);
         let value = Value::Variant(variant_index, Box::new(variant_value));
-        self.record(name, format, value)
+        self.record_container(name, format, value)
     }
 
     pub(crate) fn get_value(&mut self, name: &'static str) -> Option<&Value> {
