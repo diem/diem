@@ -67,10 +67,9 @@ module ApprovalGroup {
 
 //! new-transaction
 module ColdWallet {
-    import 0x0.AddressUtil;
-    import 0x0.U64Util;
     import 0x0.Hash;
     import 0x0.LBR;
+    import 0x0.LCS;
     import 0x0.Libra;
     import 0x0.LibraAccount;
     import 0x0.Vector;
@@ -190,14 +189,14 @@ module ColdWallet {
         // TODO: move doesn't support string now. As a workaround,
         // TODO: the prefix is the hex encoding of "coldwallet.transaction"
         constant = h"636F6C6477616C6C65742E7472616E73616374696F6E";
-        payer_bytes = AddressUtil.address_to_bytes(move(payer));
+        payer_bytes = LCS.to_bytes<address>(&payer);
 
         transaction_bytes = move(payer_bytes);
         Vector.append<u8>(&mut transaction_bytes, move(constant));
 
-        payee_bytes = AddressUtil.address_to_bytes(move(payee));
-        amount_bytes = U64Util.u64_to_bytes(move(amount));
-        seq_bytes = U64Util.u64_to_bytes(*&move(wallet).sequence_num);
+        payee_bytes = LCS.to_bytes<address>(&payee);
+        amount_bytes = LCS.to_bytes<u64>(&amount);
+        seq_bytes = LCS.to_bytes<u64>(&move(wallet).sequence_num);
 
         Vector.append<u8>(&mut transaction_bytes, move(payee_bytes));
         Vector.append<u8>(&mut transaction_bytes, move(amount_bytes));

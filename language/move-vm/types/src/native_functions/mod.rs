@@ -4,5 +4,5 @@
 #[macro_use]
 pub mod dispatch;
 pub mod hash;
-pub mod primitive_helpers;
+pub mod lcs;
 pub mod signature;
