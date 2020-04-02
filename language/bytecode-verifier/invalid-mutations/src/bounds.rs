@@ -12,7 +12,7 @@ use vm::{
     errors::{append_err_info, bounds_error},
     file_format::{
         AddressPoolIndex, CompiledModule, CompiledModuleMut, FunctionHandleIndex, IdentifierIndex,
-        ModuleHandleIndex, SignatureIndex, StructHandleIndex, TableIndex,
+        ModuleHandleIndex, SignatureIndex, StructDefinitionIndex, StructHandleIndex, TableIndex,
     },
     internals::ModuleIndex,
     views::{ModuleView, SignatureTokenView},
@@ -59,7 +59,7 @@ impl PointerKind {
             StructDefinition => &[One(StructHandle), Star(StructHandle)],
             FunctionDefinition => &[One(FunctionHandle), One(Signature)],
             Signature => &[Star(StructHandle)],
-            FieldHandle => &[One(StructHandle)],
+            FieldHandle => &[One(StructDefinition)],
             _ => &[],
         }
     }
@@ -266,7 +266,7 @@ impl ApplyOutOfBoundsContext {
 
         match (src_kind, dst_kind) {
             (ModuleHandle, AddressPool) => {
-                self.module.module_handles[src_idx].address = AddressPoolIndex(new_idx);
+                self.module.module_handles[src_idx].address = AddressPoolIndex(new_idx)
             }
             (ModuleHandle, Identifier) => {
                 self.module.module_handles[src_idx].name = IdentifierIndex(new_idx)
@@ -284,7 +284,7 @@ impl ApplyOutOfBoundsContext {
                 self.module.function_handles[src_idx].name = IdentifierIndex(new_idx)
             }
             (FunctionHandle, Signature) => {
-                self.module.function_handles[src_idx].parameters = SignatureIndex(new_idx);
+                self.module.function_handles[src_idx].parameters = SignatureIndex(new_idx)
             }
             (StructDefinition, StructHandle) => {
                 self.module.struct_defs[src_idx].struct_handle = StructHandleIndex(new_idx)
@@ -300,6 +300,9 @@ impl ApplyOutOfBoundsContext {
                 src_idx = actual_src_idx.into_index();
                 self.module.signatures[src_idx].0[arg_idx]
                     .debug_set_sh_idx(StructHandleIndex(new_idx));
+            }
+            (FieldHandle, StructDefinition) => {
+                self.module.field_handles[src_idx].owner = StructDefinitionIndex(new_idx)
             }
             _ => panic!("Invalid pointer kind: {:?} -> {:?}", src_kind, dst_kind),
         }

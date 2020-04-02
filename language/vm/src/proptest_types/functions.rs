@@ -4,9 +4,9 @@
 use crate::{
     file_format::{
         AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CodeUnit, FieldHandle,
-        FieldHandleIndex, FunctionDefinition, FunctionHandle, FunctionHandleIndex, IdentifierIndex,
-        LocalIndex, ModuleHandleIndex, Signature, SignatureIndex, StructDefinitionIndex,
-        TableIndex,
+        FieldHandleIndex, FieldInstantiation, FunctionDefinition, FunctionHandle,
+        FunctionHandleIndex, FunctionInstantiation, IdentifierIndex, LocalIndex, ModuleHandleIndex,
+        Signature, SignatureIndex, StructDefInstantiation, StructDefinitionIndex, TableIndex,
     },
     proptest_types::{
         signature::{SignatureGen, SignatureTokenGen},
@@ -68,19 +68,19 @@ impl FieldHandleState {
     }
 
     #[allow(unused)]
-    fn add_field_handle(&mut self, fh: FieldHandle) -> Option<FieldHandleIndex> {
+    fn add_field_handle(&mut self, fh: FieldHandle) -> FieldHandleIndex {
         precondition!(self.field_handles.len() < TableSize::max_value() as usize);
         if let Some(idx) = self.field_map.get(&fh) {
-            return Some(*idx);
+            return *idx;
         }
         let idx = FieldHandleIndex(self.field_handles.len() as u16);
         self.field_handles.push(fh.clone());
         self.field_map.insert(fh, idx);
-        Some(idx)
+        idx
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 #[allow(unused)]
 struct InstantiationState<T>
 where
@@ -94,6 +94,13 @@ impl<T> InstantiationState<T>
 where
     T: Eq + Clone + Hash,
 {
+    fn new() -> Self {
+        InstantiationState {
+            instantiations: vec![],
+            instantiation_map: HashMap::new(),
+        }
+    }
+
     #[allow(unused)]
     pub fn instantiations(self) -> Vec<T> {
         self.instantiations
@@ -213,8 +220,12 @@ pub struct FnDefnMaterializeState {
     struct_defs_len: usize,
     signatures: SignatureState,
     function_handles: Vec<FunctionHandle>,
+    struct_def_to_field_count: HashMap<usize, usize>,
     def_function_handles: HashSet<(ModuleHandleIndex, IdentifierIndex)>,
     field_handles: FieldHandleState,
+    type_instantiations: InstantiationState<StructDefInstantiation>,
+    function_instantiations: InstantiationState<FunctionInstantiation>,
+    field_instantiations: InstantiationState<FieldInstantiation>,
 }
 
 impl FnDefnMaterializeState {
@@ -226,6 +237,7 @@ impl FnDefnMaterializeState {
         struct_defs_len: usize,
         signatures: Vec<Signature>,
         function_handles: Vec<FunctionHandle>,
+        struct_def_to_field_count: HashMap<usize, usize>,
     ) -> Self {
         Self {
             address_pool_len,
@@ -235,13 +247,33 @@ impl FnDefnMaterializeState {
             struct_defs_len,
             signatures: SignatureState::new(signatures),
             function_handles,
+            struct_def_to_field_count,
             def_function_handles: HashSet::new(),
             field_handles: FieldHandleState::default(),
+            type_instantiations: InstantiationState::new(),
+            function_instantiations: InstantiationState::new(),
+            field_instantiations: InstantiationState::new(),
         }
     }
 
-    pub fn return_tables(self) -> (Vec<Signature>, Vec<FunctionHandle>) {
-        (self.signatures.signatures(), self.function_handles)
+    pub fn return_tables(
+        self,
+    ) -> (
+        Vec<Signature>,
+        Vec<FunctionHandle>,
+        Vec<FieldHandle>,
+        Vec<StructDefInstantiation>,
+        Vec<FunctionInstantiation>,
+        Vec<FieldInstantiation>,
+    ) {
+        (
+            self.signatures.signatures(),
+            self.function_handles,
+            self.field_handles.field_handles(),
+            self.type_instantiations.instantiations(),
+            self.function_instantiations.instantiations(),
+            self.field_instantiations.instantiations(),
+        )
     }
 
     fn add_signature(&mut self, sig: Signature) -> SignatureIndex {
@@ -393,12 +425,15 @@ enum BytecodeGen {
     // All of these refer to other indexes.
     LdAddr(PropIndex),
     LdByteArray(PropIndex),
-    MutBorrowField(PropIndex),
-    MutBorrowFieldGeneric(PropIndex),
-    ImmBorrowField(PropIndex),
-    ImmBorrowFieldGeneric(PropIndex),
+
+    MutBorrowField((PropIndex, PropIndex)),
+    MutBorrowFieldGeneric((PropIndex, PropIndex)),
+    ImmBorrowField((PropIndex, PropIndex)),
+    ImmBorrowFieldGeneric((PropIndex, PropIndex)),
+
     Call(PropIndex),
     CallGeneric(PropIndex),
+
     Pack(PropIndex),
     PackGeneric(PropIndex),
     Unpack(PropIndex),
@@ -433,10 +468,10 @@ impl BytecodeGen {
             Self::simple_bytecode_strategy().prop_map(Simple),
             any::<PropIndex>().prop_map(LdAddr),
             any::<PropIndex>().prop_map(LdByteArray),
-            any::<PropIndex>().prop_map(ImmBorrowField),
-            any::<PropIndex>().prop_map(ImmBorrowFieldGeneric),
-            any::<PropIndex>().prop_map(MutBorrowField),
-            any::<PropIndex>().prop_map(MutBorrowFieldGeneric),
+            (any::<PropIndex>(), any::<PropIndex>()).prop_map(ImmBorrowField),
+            (any::<PropIndex>(), any::<PropIndex>()).prop_map(ImmBorrowFieldGeneric),
+            (any::<PropIndex>(), any::<PropIndex>()).prop_map(MutBorrowField),
+            (any::<PropIndex>(), any::<PropIndex>()).prop_map(MutBorrowFieldGeneric),
             any::<PropIndex>().prop_map(Call),
             any::<PropIndex>().prop_map(CallGeneric),
             any::<PropIndex>().prop_map(Pack),
@@ -466,7 +501,7 @@ impl BytecodeGen {
 
     fn materialize(
         self,
-        state: &FnDefnMaterializeState,
+        state: &mut FnDefnMaterializeState,
         code_len: usize,
         locals_signature: &Signature,
     ) -> Option<Bytecode> {
@@ -478,16 +513,28 @@ impl BytecodeGen {
             BytecodeGen::LdByteArray(idx) => Bytecode::LdByteArray(ByteArrayPoolIndex(
                 idx.index(state.byte_array_pool_len) as TableIndex,
             )),
-            BytecodeGen::MutBorrowField(_idx) => {
+            BytecodeGen::MutBorrowField((def, field)) => {
+                let def_idx = def.index(state.struct_defs_len);
+                let field_count = state.struct_def_to_field_count.get(&def_idx)?;
+                let fh_idx = state.field_handles.add_field_handle(FieldHandle {
+                    owner: StructDefinitionIndex(def_idx as TableIndex),
+                    field: field.index(*field_count) as TableIndex,
+                });
+                Bytecode::MutBorrowField(fh_idx)
+            }
+            BytecodeGen::MutBorrowFieldGeneric((_handle, _field)) => {
                 return None;
             }
-            BytecodeGen::MutBorrowFieldGeneric(_idx) => {
-                return None;
+            BytecodeGen::ImmBorrowField((def, field)) => {
+                let def_idx = def.index(state.struct_defs_len);
+                let field_count = state.struct_def_to_field_count.get(&def_idx)?;
+                let fh_idx = state.field_handles.add_field_handle(FieldHandle {
+                    owner: StructDefinitionIndex(def_idx as TableIndex),
+                    field: field.index(*field_count) as TableIndex,
+                });
+                Bytecode::ImmBorrowField(fh_idx)
             }
-            BytecodeGen::ImmBorrowField(_idx) => {
-                return None;
-            }
-            BytecodeGen::ImmBorrowFieldGeneric(_idx) => {
+            BytecodeGen::ImmBorrowFieldGeneric((_handle, _field)) => {
                 return None;
             }
             BytecodeGen::Call(idx) => Bytecode::Call(FunctionHandleIndex(
