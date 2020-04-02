@@ -20,8 +20,8 @@ use libra_types::{
     validator_change::ValidatorChangeProof,
     vm_error::StatusCode,
 };
-use libradb::DbReader;
 use std::collections::BTreeMap;
+use storage_interface::DbReader;
 use storage_proto::StartupInfo;
 
 /// Lightweight mock of LibraDB

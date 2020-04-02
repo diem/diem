@@ -8,13 +8,13 @@ use consensus_types::{
 };
 use libra_logger::prelude::*;
 use libra_types::block_metadata::{new_block_event_key, NewBlockEvent};
-use libradb::DbReader;
 use serde::export::PhantomData;
 use std::{
     cmp::Ordering,
     collections::HashSet,
     sync::{Arc, Mutex},
 };
+use storage_interface::DbReader;
 
 /// Interface to query committed BlockMetadata.
 pub trait MetadataBackend: Send + Sync {

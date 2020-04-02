@@ -9,9 +9,9 @@ use crate::{
 use futures::future::join_all;
 use libra_config::config::NodeConfig;
 use libra_mempool::MempoolClientSender;
-use libradb::DbReader;
 use serde_json::{map::Map, Value};
 use std::{net::SocketAddr, sync::Arc};
+use storage_interface::DbReader;
 use tokio::runtime::{Builder, Runtime};
 use warp::Filter;
 

@@ -93,6 +93,7 @@ members = [
     "storage/inspector",
     "storage/schemadb",
     "storage/scratchpad",
+    "storage/storage-interface",
     "storage/storage-client",
     "storage/state-view",
     "storage/storage-proto",

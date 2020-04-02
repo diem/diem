@@ -14,12 +14,12 @@ use consensus_types::{
 };
 use libra_crypto::HashValue;
 use libra_types::{ledger_info::LedgerInfo, validator_set::ValidatorSet};
-use libradb::DbReader;
 use std::{
     collections::HashMap,
     marker::PhantomData,
     sync::{Arc, Mutex},
 };
+use storage_interface::DbReader;
 
 pub struct MockSharedStorage<T> {
     // Safety state

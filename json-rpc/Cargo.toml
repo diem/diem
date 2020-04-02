@@ -31,6 +31,7 @@ libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 libra-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
 libra-types = { path = "../types", version = "0.1.0" }
 libradb = { path = "../storage/libradb", version = "0.1.0" }
+storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
 transaction-builder = { path = "../language/transaction-builder", version = "0.1.0"}
 debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
 libra-temppath = { path = "../common/temppath", version = "0.1.0", optional = true }

@@ -825,6 +825,7 @@ dependencies = [
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.50 (registry+https://github.com/rust-lang/crates.io-index)",
  "state-synchronizer 0.1.0",
+ "storage-interface 0.1.0",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "termion 1.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2343,6 +2344,7 @@ dependencies = [
  "reqwest 0.10.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.50 (registry+https://github.com/rust-lang/crates.io-index)",
+ "storage-interface 0.1.0",
  "storage-proto 0.1.0",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
@@ -2369,6 +2371,7 @@ dependencies = [
  "libradb 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-client 0.1.0",
+ "storage-interface 0.1.0",
  "storage-service 0.1.0",
  "thiserror 1.0.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2563,6 +2566,7 @@ dependencies = [
  "libra-logger 0.1.0",
  "libra-types 0.1.0",
  "libradb 0.1.0",
+ "storage-interface 0.1.0",
  "structopt 0.3.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
@@ -2737,6 +2741,7 @@ dependencies = [
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "schemadb 0.1.0",
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
+ "storage-interface 0.1.0",
  "storage-proto 0.1.0",
  "thiserror 1.0.14 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -4919,6 +4924,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "storage-interface"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.28 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-crypto 0.1.0",
+ "libra-types 0.1.0",
+ "storage-proto 0.1.0",
+]
+
+[[package]]
 name = "storage-proto"
 version = "0.1.0"
 dependencies = [
@@ -4952,6 +4967,7 @@ dependencies = [
  "proptest 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-client 0.1.0",
+ "storage-interface 0.1.0",
  "storage-proto 0.1.0",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "tonic 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",

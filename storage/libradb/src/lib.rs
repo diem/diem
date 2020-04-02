@@ -72,6 +72,7 @@ use once_cell::sync::Lazy;
 use prometheus::{IntCounter, IntGauge, IntGaugeVec};
 use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
 use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
+use storage_interface::DbReader;
 use storage_proto::StartupInfo;
 
 static OP_COUNTER: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("storage"));
@@ -117,78 +118,6 @@ fn error_if_too_many_requested(num_requested: u64, max_allowed: u64) -> Result<(
     } else {
         Ok(())
     }
-}
-
-/// Trait that is implemented by a DB that supports certain public (to client) read APIs
-/// expected of a Libra DB
-pub trait DbReader: Send + Sync {
-    /// Given an account address, returns the latest account state. `None` if the account does not
-    /// exist.
-    fn get_latest_account_state(&self, address: AccountAddress)
-        -> Result<Option<AccountStateBlob>>;
-
-    /// Returns the latest ledger info.
-    fn get_latest_ledger_info(&self) -> Result<LedgerInfoWithSignatures>;
-
-    /// Returns the latest version and committed block timestamp
-    fn get_latest_commit_metadata(&self) -> Result<(Version, u64)> {
-        let ledger_info_with_sig = self.get_latest_ledger_info()?;
-        let ledger_info = ledger_info_with_sig.ledger_info();
-        Ok((ledger_info.version(), ledger_info.timestamp_usecs()))
-    }
-
-    fn get_txn_by_account(
-        &self,
-        address: AccountAddress,
-        seq_num: u64,
-        ledger_version: Version,
-        fetch_events: bool,
-    ) -> Result<Option<TransactionWithProof>>;
-
-    fn get_latest_version(&self) -> Result<Version> {
-        Ok(self.get_latest_ledger_info()?.ledger_info().version())
-    }
-
-    fn get_transactions(
-        &self,
-        start_version: Version,
-        limit: u64,
-        ledger_version: Version,
-        fetch_events: bool,
-    ) -> Result<TransactionListWithProof>;
-
-    /// Returns events by given event key
-    fn get_events(
-        &self,
-        event_key: &EventKey,
-        start: u64,
-        ascending: bool,
-        limit: u64,
-    ) -> Result<Vec<(u64, ContractEvent)>>;
-
-    /// Returns proof of new state relative to version known to client
-    fn get_state_proof(
-        &self,
-        known_version: u64,
-    ) -> Result<(
-        LedgerInfoWithSignatures,
-        ValidatorChangeProof,
-        AccumulatorConsistencyProof,
-    )>;
-
-    /// Returns the account state corresponding to the given version and account address with proof
-    /// based on `ledger_version`
-    fn get_account_state_with_proof(
-        &self,
-        address: AccountAddress,
-        version: Version,
-        ledger_version: Version,
-    ) -> Result<AccountStateWithProof>;
-
-    /// Gets information needed from storage during the main node startup.
-    ///
-    /// This is used by the libra core (executor, state synchronizer) internally.
-    fn get_startup_info(&self) -> Result<Option<StartupInfo>>;
 }
 
 /// This holds a handle to the underlying DB responsible for physical storage and provides APIs for
@@ -779,7 +708,6 @@ impl LibraDB {
 
         Ok(new_root_hash)
     }
-
 
     /// Write the whole schema batch including all data necessary to mutate the ledger
     /// state of some transaction by leveraging rocksdb atomicity support. Also committed are the
