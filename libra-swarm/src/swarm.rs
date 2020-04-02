@@ -55,6 +55,7 @@ impl LibraNode {
         role: RoleType,
         config_path: &Path,
         log_path: PathBuf,
+        struct_log_path: PathBuf,
         disable_logging: bool,
     ) -> Result<Self> {
         let config = NodeConfig::load(&config_path)
@@ -75,6 +76,8 @@ impl LibraNode {
         }
         if disable_logging {
             node_command.arg("-d");
+        } else {
+            node_command.env("STRUCT_LOG_FILE", struct_log_path);
         }
         node_command
             .stdout(log_file.try_clone()?)
@@ -356,6 +359,7 @@ impl LibraSwarm {
                 role,
                 &path,
                 logs_dir_path.join(format!("{}.log", index)),
+                logs_dir_path.join(format!("{}.struct.log", index)),
                 disable_logging,
             )
             .unwrap();
@@ -551,9 +555,21 @@ impl LibraSwarm {
             .get(idx)
             .unwrap_or_else(|| panic!("Node at index {} not found", idx));
         let log_file_path = self.dir.as_ref().join("logs").join(format!("{}.log", idx));
+        let struct_log_file_path = self
+            .dir
+            .as_ref()
+            .join("logs")
+            .join(format!("{}.struct.log", idx));
         let node_id = format!("{}", idx);
-        let mut node =
-            LibraNode::launch(node_id.clone(), role, path, log_file_path, disable_logging).unwrap();
+        let mut node = LibraNode::launch(
+            node_id.clone(),
+            role,
+            path,
+            log_file_path,
+            struct_log_file_path,
+            disable_logging,
+        )
+        .unwrap();
         for _ in 0..60 {
             if let HealthStatus::Healthy = node.health_check() {
                 self.nodes.insert(node_id, node);

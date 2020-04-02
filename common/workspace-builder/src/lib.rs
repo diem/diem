@@ -8,14 +8,15 @@ use std::{env, path::PathBuf, process::Command};
 const WORKSPACE_BUILD_ERROR_MSG: &str = r#"
     Unable to build all workspace binaries. Cannot continue running tests.
 
-    Try running 'cargo build --all --bins' yourself.
+    Try running 'cargo build --all --bins --exclude cluster-test' yourself.
 "#;
 
 // Global flag indicating if all binaries in the workspace have been built.
 static WORKSPACE_BUILT: Lazy<bool> = Lazy::new(|| {
     info!("Building project binaries");
     let args = if cfg!(debug_assertions) {
-        vec!["build", "--all", "--bins"]
+        // special case: excluding cluster-test as it exports no-struct-opt feature that poisons everything
+        vec!["build", "--all", "--bins", "--exclude", "cluster-test"]
     } else {
         vec!["build", "--all", "--bins", "--release"]
     };
