@@ -24,7 +24,7 @@ mod signature;
 use crate::proptest_types::functions::{FnHandleMaterializeState, FunctionHandleGen};
 use functions::{FnDefnMaterializeState, FunctionDefinitionGen};
 use signature::{KindGen, SignatureTokenGen};
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 /// Represents how large [`CompiledModule`] tables can be.
 pub type TableSize = u16;
@@ -234,10 +234,14 @@ impl CompiledModuleStrategyGen {
                     // Struct definitions.
                     // Struct handles for the definitions are generated in this step
                     let mut state = StDefnMaterializeState::new(identifiers_len, struct_handles);
+                    let mut struct_def_to_field_count: HashMap<usize, usize> = HashMap::new();
                     let mut struct_defs: Vec<StructDefinition> = vec![];
                     for struct_def_gen in struct_def_gens {
-                        if let Some(struct_def) = struct_def_gen.materialize(&mut state) {
+                        if let (Some(struct_def), offset) = struct_def_gen.materialize(&mut state) {
                             struct_defs.push(struct_def);
+                            if offset > 0 {
+                                struct_def_to_field_count.insert(struct_defs.len() - 1, offset);
+                            }
                         }
                     }
                     let StDefnMaterializeState { struct_handles, .. } = state;
@@ -274,6 +278,7 @@ impl CompiledModuleStrategyGen {
                         struct_defs.len(),
                         signatures,
                         function_handles,
+                        struct_def_to_field_count,
                     );
                     let mut function_defs: Vec<FunctionDefinition> = vec![];
                     for function_def_gen in function_def_gens {
@@ -281,18 +286,25 @@ impl CompiledModuleStrategyGen {
                             function_defs.push(function_def);
                         }
                     }
-                    let (signatures, function_handles) = state.return_tables();
+                    let (
+                        signatures,
+                        function_handles,
+                        field_handles,
+                        struct_def_instantiations,
+                        function_instantiations,
+                        field_instantiations,
+                    ) = state.return_tables();
 
                     // Build a compiled module
                     CompiledModuleMut {
                         module_handles,
                         struct_handles,
                         function_handles,
-                        field_handles: vec![],
+                        field_handles,
 
-                        struct_def_instantiations: vec![],
-                        function_instantiations: vec![],
-                        field_instantiations: vec![],
+                        struct_def_instantiations,
+                        function_instantiations,
+                        field_instantiations,
 
                         struct_defs,
                         function_defs,
@@ -390,7 +402,7 @@ impl StructDefinitionGen {
             )
     }
 
-    fn materialize(self, state: &mut StDefnMaterializeState) -> Option<StructDefinition> {
+    fn materialize(self, state: &mut StDefnMaterializeState) -> (Option<StructDefinition>, usize) {
         let mut field_names = HashSet::new();
         let mut fields = vec![];
         match self.field_defs {
@@ -424,20 +436,30 @@ impl StructDefinitionGen {
                 .map(|kind| kind.materialize())
                 .collect(),
         };
-        state.add_struct_handle(handle).and_then(|struct_handle| {
-            if fields.is_empty() {
-                Some(StructDefinition {
-                    struct_handle,
-                    field_information: StructFieldInformation::Native,
-                })
-            } else {
-                let field_information = StructFieldInformation::Declared(fields);
-                Some(StructDefinition {
-                    struct_handle,
-                    field_information,
-                })
+        match state.add_struct_handle(handle) {
+            Some(struct_handle) => {
+                if fields.is_empty() {
+                    (
+                        Some(StructDefinition {
+                            struct_handle,
+                            field_information: StructFieldInformation::Native,
+                        }),
+                        0,
+                    )
+                } else {
+                    let field_count = fields.len();
+                    let field_information = StructFieldInformation::Declared(fields);
+                    (
+                        Some(StructDefinition {
+                            struct_handle,
+                            field_information,
+                        }),
+                        field_count,
+                    )
+                }
             }
-        })
+            None => (None, 0),
+        }
     }
 }
 
