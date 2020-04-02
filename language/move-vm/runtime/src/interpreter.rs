@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[cfg(any(test, feature = "instruction_synthesis"))]
-use crate::move_vm::MoveVM;
 use crate::{
     gas,
     interpreter_context::InterpreterContext,
@@ -30,8 +28,6 @@ use move_vm_types::{
     native_functions::dispatch::NativeFunction,
     values::{IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value},
 };
-#[cfg(any(test, feature = "instruction_synthesis"))]
-use std::collections::HashMap;
 use std::{collections::VecDeque, convert::TryFrom, marker::PhantomData};
 use vm::{
     access::ModuleAccess,
@@ -699,10 +695,10 @@ impl<'txn> Interpreter<'txn> {
                 }
             }
             // ok we are out, it's a branch, check the pc for good luck
-            // TODO: re-work the logic here. Cost synthesis and tests should have a more
+            // TODO: re-work the logic here. Tests should have a more
             // natural way to plug in
             if frame.pc as usize >= code.len() {
-                if cfg!(test) || cfg!(feature = "instruction_synthesis") {
+                if cfg!(test) {
                     // In order to test the behavior of an instruction stream, hitting end of the
                     // code should report no error so that we can check the
                     // locals.
@@ -1233,79 +1229,5 @@ where
 
     fn ty_args(&self) -> &[Type] {
         &self.ty_args
-    }
-}
-
-//
-// Below are all the functions needed for gas synthesis and gas cost.
-// The story is going to change given those functions expose internals of the Interpreter that
-// should never leak out.
-// For now they are grouped in a couple of temporary struct and impl that can be used
-// to determine what the needs of gas logic has to be.
-//
-#[cfg(any(test, feature = "instruction_synthesis"))]
-pub struct InterpreterForCostSynthesis<'txn> {
-    interpreter: Interpreter<'txn>,
-}
-
-#[cfg(any(test, feature = "instruction_synthesis"))]
-impl<'txn> InterpreterForCostSynthesis<'txn> {
-    pub fn new(txn_data: &'txn TransactionMetadata, gas_schedule: &'txn CostTable) -> Self {
-        let interpreter = Interpreter::new(txn_data, gas_schedule);
-        InterpreterForCostSynthesis { interpreter }
-    }
-
-    pub fn set_stack(&mut self, stack: Vec<Value>) {
-        self.interpreter.operand_stack.0 = stack;
-    }
-
-    pub fn call_stack_height(&self) -> usize {
-        self.interpreter.call_stack.0.len()
-    }
-
-    pub fn pop_call(&mut self) {
-        self.interpreter
-            .call_stack
-            .pop()
-            .expect("call stack must not be empty");
-    }
-
-    pub fn push_frame(&mut self, func: FunctionRef<'txn>, ty_args: Vec<Type>) {
-        let count = func.local_count();
-        self.interpreter
-            .call_stack
-            .push(Frame::new(func, ty_args, Locals::new(count)))
-            .expect("Call stack limit reached");
-    }
-
-    pub fn load_call(&mut self, args: HashMap<LocalIndex, Value>) {
-        let mut current_frame = self.interpreter.call_stack.pop().expect("frame must exist");
-        for (local_index, local) in args.into_iter() {
-            current_frame
-                .store_loc(local_index, local)
-                .expect("local must exist");
-        }
-        self.interpreter
-            .call_stack
-            .push(current_frame)
-            .expect("Call stack limit reached");
-    }
-
-    pub fn execute_code_snippet(
-        &mut self,
-        move_vm: &MoveVM,
-        context: &mut dyn InterpreterContext,
-        code: &[Bytecode],
-    ) -> VMResult<()> {
-        let mut current_frame = self.interpreter.call_stack.pop().expect("frame must exist");
-        move_vm.with_runtime(|runtime| {
-            self.interpreter
-                .execute_code_unit(runtime, context, &mut current_frame, code)
-        })?;
-        self.interpreter
-            .call_stack
-            .push(current_frame)
-            .expect("Call stack limit reached");
-        Ok(())
     }
 }

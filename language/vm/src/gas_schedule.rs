@@ -333,12 +333,12 @@ impl CostTable {
         }
     }
 
-    // Only used for genesis, cost synthesis (for now) and for tests where we need a cost table and
+    // Only used for genesis and for tests where we need a cost table and
     // don't have a genesis storage state.
     pub fn zero() -> Self {
         use Bytecode::*;
         // The actual costs for the instructions in this table _DO NOT MATTER_. This is only used
-        // for genesis, cost synthesis, and testing, and for these cases we don't need to worry
+        // for genesis and testing, and for these cases we don't need to worry
         // about the actual gas for instructions.  The only thing we care about is having an entry
         // in the gas schedule for each instruction.
         let instrs = vec![
