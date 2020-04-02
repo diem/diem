@@ -20,7 +20,7 @@ libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 
 [build-dependencies]
-tonic-build = "0.1"
+tonic-build = "0.2"
 
 [dev-dependencies]
 libra-prost-ext = { path = "../../common/prost-ext", version = "0.1.0" }
