@@ -107,17 +107,35 @@ function {:inline} $IsValidU8(v: Value): bool {
   is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= MAX_U8
 }
 
+function {:inline} $IsValidU8Vector(vec: Value): bool {
+  $Vector_is_well_formed(vec)
+  && (forall i: int :: 0 <= i && i < $vlen(vec) ==> $IsValidU8($vmap(vec)[i]))
+}
+
 function {:inline} $IsValidU64(v: Value): bool {
   is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= MAX_U64
 }
+
+function {:inline} $IsValidU64Vector(vec: Value): bool {
+  $Vector_is_well_formed(vec)
+  && (forall i: int :: 0 <= i && i < $vlen(vec) ==> $IsValidU64($vmap(vec)[i]))
+}
+
 
 function {:inline} $IsValidU128(v: Value): bool {
   is#Integer(v) && i#Integer(v) >= 0 && i#Integer(v) <= MAX_U128
 }
 
+function {:inline} $IsValidU128Vector(vec: Value): bool {
+  $Vector_is_well_formed(vec)
+  && (forall i: int :: 0 <= i && i < $vlen(vec) ==> $IsValidU128($vmap(vec)[i]))
+}
+
 function {:inline} $IsValidNum(v: Value): bool {
   is#Integer(v) && i#Integer(v) >= 0
 }
+
+
 
 // Value Array
 // -----------
@@ -277,6 +295,18 @@ function {:inline} $vmap(v: Value): [int]Value {
 function {:inline} $vlen(v: Value): int {
     l#ValueArray(v#Vector(v))
 }
+
+// All invalid elements of array are DefaultValue. This is useful in specialized
+// cases
+function {:inline} IsNormalizedMap(va: [int]Value, len: int): bool {
+    (forall i: int :: i < 0 || i >= len ==> va[i] == DefaultValue)
+}
+
+// Check that all invalid elements of vector are DefaultValue
+function {:inline} $is_normalized_vector(v: Value): bool {
+    IsNormalizedMap($vmap(v), $vlen(v))
+}
+
 // Sometimes, we need the length as a Value, not an int.
 function {:inline} $vlen_value(v: Value): Value {
     Integer($vlen(v))
@@ -1024,17 +1054,51 @@ procedure {:inline 1} $U64Util_u64_to_bytes(val: Value) returns (res: Value)  {
 // ==================================================================================
 // Native hash
 
-// TODO: implement the below methods
+// Hash is modeled as an otherwise uninterpreted injection.
+// In truth, it is not an injection since the domain has greater cardinality
+// (arbitrary length vectors) than the co-domain (vectors of length 32).  But it is
+// common to assume in code there are no hash collisions in practice.  Fortunately,
+// Boogie is not smart enough to recognized that there is an inconsistency.
+// FIXME: If we were using a reliable extensional theory of arrays, and if we could use ==
+// instead of IsEqual, we might be able to avoid so many quantified formulas by
+// using a sha2_inverse function in the ensures conditions of Hash_sha2_256 to
+// assert that sha2/3 are injections without using global quantified axioms.
 
-procedure {:inline 1} $Hash_sha2_256(val: Value) returns (res: Value)  {
-    res := DefaultValue;
-    assert false; // $Hash_sha2_256 not implemented
-}
+function $sha2(val: Value) : Value;
 
-procedure {:inline 1} $Hash_sha3_256(val: Value) returns (res: Value)  {
-    res := DefaultValue;
-    assert false; // $Hash_sha3_256 not implemented
-}
+// This says that sha2 respects isEquals (this would be automatic if we had an
+// extensional theory of arrays and used ==, which has the substitution property
+// for functions).
+axiom (forall v1,v2: Value :: $Vector_is_well_formed(v1) && $Vector_is_well_formed(v2)
+       && IsEqual(v1, v2) ==> IsEqual($sha2(v1), $sha2(v2)));
+
+// This says that sha2 is an injection
+axiom (forall v1,v2: Value :: $Vector_is_well_formed(v1) && $Vector_is_well_formed(v2)
+	&& IsEqual($sha2(v1), $sha2(v2)) ==> IsEqual(v1, v2));
+
+// This procedure has no body. We want Boogie to just to use its requires
+// and ensures properties when verifying code that calls it.
+procedure $Hash_sha2_256(val: Value) returns (res: Value);
+// It will still work without this, but this helps verifier find more reasonable counterexamples.
+// requires $IsValidU8Vector(val);  // FIXME: Generated callling code does not ensure validity.
+ensures res == $sha2(val);     // returns sha2 value
+ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
+ensures $vlen(res) == 32;               // result is 32 bytes.
+
+// similarly for sha3
+function $sha3(val: Value) : Value;
+
+axiom (forall v1,v2: Value :: $Vector_is_well_formed(v1) && $Vector_is_well_formed(v2)
+       && IsEqual(v1, v2) ==> IsEqual($sha3(v1), $sha3(v2)));
+
+axiom (forall v1,v2: Value :: $Vector_is_well_formed(v1) && $Vector_is_well_formed(v2)
+	&& IsEqual($sha3(v1), $sha3(v2)) ==> IsEqual(v1, v2));
+
+procedure $Hash_sha3_256(val: Value) returns (res: Value);
+ensures res == $sha3(val);     // returns sha3 value
+ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
+ensures $vlen(res) == 32;               // result is 32 bytes.
+ensures $abort_flag == old($abort_flag);  // Does not abort, but stays aborted.
 
 // ==================================================================================
 // Native libra_account

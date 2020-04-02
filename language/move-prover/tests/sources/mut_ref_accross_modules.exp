@@ -1,6 +1,15 @@
 Move prover returns: exiting with boogie verification errors
 error:  This assertion might not hold.
 
+    ┌── tests/sources/mut_ref_accross_modules.move:76:13 ───
+    │
+ 76 │             assert x.value > 0;
+    │             ^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/mut_ref_accross_modules.move:74:5: data_invariant (entry)
+
+error:  This assertion might not hold.
+
     ┌── tests/sources/mut_ref_accross_modules.move:16:9 ───
     │
  16 │         invariant value > 0;
