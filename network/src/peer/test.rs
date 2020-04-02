@@ -217,22 +217,26 @@ fn peer_recv_message() {
     let recv_msg = send_msg.clone();
 
     let server = async move {
-        // The client should then send the network message.
         let mut connection = Framed::new(IoCompat::new(connection), LengthDelimitedCodec::new());
-        connection
-            .send(lcs::to_bytes(&send_msg).unwrap().into())
-            .await
-            .unwrap();
+        for _ in 0..30 {
+            // The client should then send the network message.
+            connection
+                .send(lcs::to_bytes(&send_msg).unwrap().into())
+                .await
+                .unwrap();
+        }
         // Client then closes connection.
         connection.close().await.unwrap();
     };
 
     let client = async move {
-        // Wait to receive notification of DirectSendMsg from Peer.
-        let received = peer_direct_send_notifs_rx.next().await.unwrap();
-        assert!(
-            matches!(received, PeerNotification::NewMessage(received_msg) if received_msg == recv_msg)
-        );
+        for _ in 0..30 {
+            // Wait to receive notification of DirectSendMsg from Peer.
+            let received = peer_direct_send_notifs_rx.next().await.unwrap();
+            assert!(
+                matches!(received, PeerNotification::NewMessage(received_msg) if received_msg == recv_msg)
+            );
+        }
     };
     rt.spawn(peer.start());
     rt.block_on(join(server, client));

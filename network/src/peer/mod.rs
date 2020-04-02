@@ -21,9 +21,14 @@ use futures::{
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::compat::IoCompat;
-use std::{fmt::Debug, io};
+use std::{fmt::Debug, io, time::Duration};
+use stream_ratelimiter::*;
 use tokio::runtime::Handle;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
+
+// Rate-limit configuration for inbound messages. Allows 100 messages for every 10ms window.
+pub const MESSAGE_RATE_LIMIT_WINDOW: Duration = Duration::from_millis(10);
+pub const MESSAGE_RATE_LIMIT_COUNT: usize = 100;
 
 #[cfg(test)]
 mod test;
@@ -115,7 +120,11 @@ where
         // Split the connection into a ReadHalf and a WriteHalf.
         let (reader, writer) = tokio::io::split(IoCompat::new(self.connection.take().unwrap()));
         // Convert ReadHalf to Stream of length-delimited messages.
-        let mut reader = FramedRead::new(reader, LengthDelimitedCodec::new()).fuse();
+        let reader = FramedRead::new(reader, LengthDelimitedCodec::new()).fuse();
+        // Create a rate-limited stream of inbound messages.
+        let mut reader = reader
+            .ratelimit(MESSAGE_RATE_LIMIT_WINDOW, MESSAGE_RATE_LIMIT_COUNT)
+            .fuse();
         // Convert WriteHalf to Sink of length-delimited messages.
         let writer = FramedWrite::new(writer, LengthDelimitedCodec::new());
         // Start writer "process" as a separate task. We receive two handles to communicate with
