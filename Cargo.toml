@@ -22,6 +22,7 @@ members = [
     "common/prost-ext",
     "common/security-logger",
     "common/serde-reflection",
+    "common/stream-ratelimiter",
     "common/temppath",
     "common/util",
     "common/workspace-builder",

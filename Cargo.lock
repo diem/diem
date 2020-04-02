@@ -3221,6 +3221,7 @@ dependencies = [
  "serde_repr 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serial_test 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "socket-bench-server 0.1.0",
+ "stream-ratelimiter 0.1.0",
  "thiserror 1.0.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-retry 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4969,6 +4970,16 @@ dependencies = [
  "storage-proto 0.1.0",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "tonic 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "stream-ratelimiter"
+version = "0.1.0"
+dependencies = [
+ "futures 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-semaphore 0.1.0",
+ "pin-project 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
