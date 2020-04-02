@@ -17,7 +17,7 @@ use libra_config::config::NodeConfig;
 use libra_mempool::ConsensusRequest;
 use libra_types::transaction::SignedTransaction;
 use libra_vm::LibraVM;
-use libradb::LibraDBTrait;
+use libradb::DbReader;
 use state_synchronizer::StateSyncClient;
 use std::sync::{Arc, Mutex};
 
@@ -42,7 +42,7 @@ pub fn make_consensus_provider(
     executor: Arc<Mutex<Executor<LibraVM>>>,
     state_sync_client: Arc<StateSyncClient>,
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
-    libra_db: Arc<dyn LibraDBTrait>,
+    libra_db: Arc<dyn DbReader>,
 ) -> Box<dyn ConsensusProvider> {
     let storage = Arc::new(StorageWriteProxy::new(node_config, libra_db));
     let txn_manager = Box::new(MempoolProxy::new(consensus_to_mempool_sender));

@@ -91,7 +91,7 @@ impl ExecutorProxy {
     }
 
     // TODO make this into more general trait method in `on_chain_config.rs`
-    // once `StorageRead` trait is replaced with `LibraDBTrait` and `batch_fetch_config` method is no longer async
+    // once `StorageRead` trait is replaced with `DbReader` and `batch_fetch_config` method is no longer async
     async fn fetch_all_configs(&self) -> Result<HashMap<ConfigID, Vec<u8>>> {
         let access_paths = ON_CHAIN_CONFIG_REGISTRY
             .iter()

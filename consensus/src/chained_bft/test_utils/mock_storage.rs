@@ -14,7 +14,7 @@ use consensus_types::{
 };
 use libra_crypto::HashValue;
 use libra_types::{ledger_info::LedgerInfo, validator_set::ValidatorSet};
-use libradb::LibraDBTrait;
+use libradb::DbReader;
 use std::{
     collections::HashMap,
     marker::PhantomData,
@@ -219,7 +219,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for MockStorage<T> {
         Ok(())
     }
 
-    fn libra_db(&self) -> Arc<dyn LibraDBTrait> {
+    fn libra_db(&self) -> Arc<dyn DbReader> {
         unimplemented!()
     }
 }
@@ -283,7 +283,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage<T> {
         Ok(())
     }
 
-    fn libra_db(&self) -> Arc<dyn LibraDBTrait> {
+    fn libra_db(&self) -> Arc<dyn DbReader> {
         unimplemented!()
     }
 }

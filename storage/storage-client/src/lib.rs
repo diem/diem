@@ -284,7 +284,7 @@ impl StorageRead for StorageReadServiceClient {
     }
 
     // TODO migrate this to `ConfigStorage` trait as non-async
-    // and implement for LibraDBTrait once `StorageRead` is deprecated
+    // and implement for DbReader once `StorageRead` is deprecated
     async fn batch_fetch_config(&self, access_paths: Vec<AccessPath>) -> Result<Vec<Vec<u8>>> {
         // some access paths can have the same address, so don't duplicate requests for them
         let addresses: Vec<AccountAddress> = access_paths

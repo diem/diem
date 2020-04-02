@@ -20,7 +20,7 @@ use libra_types::{
     validator_change::ValidatorChangeProof,
     vm_error::StatusCode,
 };
-use libradb::LibraDBTrait;
+use libradb::DbReader;
 use std::collections::BTreeMap;
 use storage_proto::StartupInfo;
 
@@ -35,7 +35,7 @@ pub(crate) struct MockLibraDB {
     pub account_state_with_proof: Vec<AccountStateWithProof>,
 }
 
-impl LibraDBTrait for MockLibraDB {
+impl DbReader for MockLibraDB {
     fn get_latest_account_state(
         &self,
         address: AccountAddress,

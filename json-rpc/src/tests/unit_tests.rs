@@ -32,7 +32,7 @@ use libra_types::{
     transaction::{Transaction, TransactionInfo, TransactionPayload, TransactionToCommit},
     vm_error::{StatusCode, VMStatus},
 };
-use libradb::{test_helper::arb_blocks_to_commit, LibraDB, LibraDBTrait};
+use libradb::{test_helper::arb_blocks_to_commit, DbReader, LibraDB};
 use proptest::prelude::*;
 use reqwest;
 use serde_json::{self, Value};
