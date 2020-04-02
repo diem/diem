@@ -438,7 +438,7 @@ impl<'env> ModuleTranslator<'env> {
     /// Return string for spec inside function implementation.
     fn generate_function_spec_inside_impl(&self, func_env: &FunctionEnv<'_>, offset: CodeOffset) {
         emitln!(self.writer);
-        SpecTranslator::new(self.writer, &func_env.module_env, true)
+        SpecTranslator::new_for_spec_in_impl(self.writer, func_env, true)
             .translate_conditions_inside_impl(func_env, offset);
     }
 
