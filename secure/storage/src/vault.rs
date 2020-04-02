@@ -7,6 +7,8 @@ use crate::{
 use chrono::DateTime;
 use libra_vault_client::{self as vault, Client};
 
+const LIBRA_DEFAULT: &str = "libra_default";
+
 /// VaultStorage utilizes Vault for maintaining encrypted, authenticated data for Libra. This
 /// version currently matches the behavior of OnDiskStorage and InMemoryStorage. In the future,
 /// Vault will be able to create keys, sign messages, and handle permissions across different
@@ -49,7 +51,8 @@ impl VaultStorage {
     }
 
     /// Creates a token but uses the namespace for policies
-    pub fn create_token(&self, policies: Vec<&str>) -> Result<String, Error> {
+    pub fn create_token(&self, mut policies: Vec<&str>) -> Result<String, Error> {
+        policies.push(LIBRA_DEFAULT);
         let result = if let Some(ns) = &self.namespace {
             let policies: Vec<_> = policies.iter().map(|p| format!("{}/{}", ns, p)).collect();
             self.client
@@ -97,11 +100,7 @@ impl VaultStorage {
     ) -> Result<(), Error> {
         let (path, policy_name) = if let Some(namespace) = &self.namespace {
             let path = format!("secret/data/{}/{}", namespace, key);
-            let policy_name = if policy_name == "default" {
-                policy_name.to_string()
-            } else {
-                format!("{}/{}", namespace, policy_name)
-            };
+            let policy_name = format!("{}/{}", namespace, policy_name);
             (path, policy_name)
         } else {
             (format!("secret/data/{}", key), policy_name.to_string())
@@ -144,7 +143,9 @@ impl KVStorage for VaultStorage {
         for permission in &policy.permissions {
             match &permission.id {
                 Identity::User(id) => self.set_policy(id, key, &permission.capabilities)?,
-                Identity::Anyone => self.set_policy("default", key, &permission.capabilities)?,
+                Identity::Anyone => {
+                    self.set_policy(LIBRA_DEFAULT, key, &permission.capabilities)?
+                }
                 Identity::NoOne => (),
             };
         }
