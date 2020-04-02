@@ -280,115 +280,6 @@ impl LibraDB {
     }
 
     // ================================== Public API ==================================
-    /// Returns events specified by `query_path` with sequence number in range designated by
-    /// `start_seq_num`, `ascending` and `limit`. If ascending is true this query will return up to
-    /// `limit` events that were emitted after `start_event_seq_num`. Otherwise, it will return up
-    /// to `limit` events in the reverse order. Both cases are inclusive.
-    fn get_events_by_query_path(
-        &self,
-        query_path: &AccessPath,
-        start_seq_num: u64,
-        ascending: bool,
-        limit: u64,
-        ledger_version: Version,
-    ) -> Result<(Vec<EventWithProof>, AccountStateWithProof)> {
-        let account_state_with_proof =
-            self.get_account_state_with_proof(query_path.address, ledger_version, ledger_version)?;
-
-        let event_key = {
-            let (event_key_opt, _count) =
-                account_state_with_proof.get_event_key_and_count_by_query_path(&query_path.path)?;
-            if let Some(event_key) = event_key_opt {
-                event_key
-            } else {
-                return Ok((Vec::new(), account_state_with_proof));
-            }
-        };
-
-        let events_with_proof = self.get_events_by_event_key(
-            &event_key,
-            start_seq_num,
-            ascending,
-            limit,
-            ledger_version,
-        )?;
-
-        // We always need to return the account blob to prove that this is indeed the event that was
-        // being queried.
-        Ok((events_with_proof, account_state_with_proof))
-    }
-
-    fn get_events_by_event_key(
-        &self,
-        event_key: &EventKey,
-        start_seq_num: u64,
-        ascending: bool,
-        limit: u64,
-        ledger_version: Version,
-    ) -> Result<Vec<EventWithProof>> {
-        error_if_too_many_requested(limit, MAX_LIMIT)?;
-        let get_latest = !ascending && start_seq_num == u64::max_value();
-
-        let cursor = if get_latest {
-            // Caller wants the latest, figure out the latest seq_num.
-            // In the case of no events on that path, use 0 and expect empty result below.
-            self.event_store
-                .get_latest_sequence_number(ledger_version, &event_key)?
-                .unwrap_or(0)
-        } else {
-            start_seq_num
-        };
-
-        // Convert requested range and order to a range in ascending order.
-        let (first_seq, real_limit) = get_first_seq_num_and_limit(ascending, cursor, limit)?;
-
-        // Query the index.
-        let mut event_keys = self.event_store.lookup_events_by_key(
-            &event_key,
-            first_seq,
-            real_limit,
-            ledger_version,
-        )?;
-
-        // When descending, it's possible that user is asking for something beyond the latest
-        // sequence number, in which case we will consider it a bad request and return an empty
-        // list.
-        // For example, if the latest sequence number is 100, and the caller is asking for 110 to
-        // 90, we will get 90 to 100 from the index lookup above. Seeing that the last item
-        // is 100 instead of 110 tells us 110 is out of bound.
-        if !ascending {
-            if let Some((seq_num, _, _)) = event_keys.last() {
-                if *seq_num < cursor {
-                    event_keys = Vec::new();
-                }
-            }
-        }
-
-        let mut events_with_proof = event_keys
-            .into_iter()
-            .map(|(seq, ver, idx)| {
-                let (event, event_proof) = self
-                    .event_store
-                    .get_event_with_proof_by_version_and_index(ver, idx)?;
-                ensure!(
-                    seq == event.sequence_number(),
-                    "Index broken, expected seq:{}, actual:{}",
-                    seq,
-                    event.sequence_number()
-                );
-                let (txn_info, txn_info_proof) = self
-                    .ledger_store
-                    .get_transaction_info_with_proof(ver, ledger_version)?;
-                let proof = EventProof::new(txn_info_proof, txn_info, event_proof);
-                Ok(EventWithProof::new(ver, idx, event, proof))
-            })
-            .collect::<Result<Vec<_>>>()?;
-        if !ascending {
-            events_with_proof.reverse();
-        }
-
-        Ok(events_with_proof)
-    }
 
     /// Returns ledger infos reflecting epoch bumps starting with the given epoch. If there are no
     /// more than `MAX_NUM_EPOCH_CHANGE_LEDGER_INFO` results, this function returns all of them,
@@ -483,58 +374,33 @@ impl LibraDB {
         Ok(())
     }
 
-    fn save_transactions_impl(
+    pub fn get_transaction_with_proof(
         &self,
-        txns_to_commit: &[TransactionToCommit],
-        first_version: u64,
-        mut cs: &mut ChangeSet,
-    ) -> Result<HashValue> {
-        let last_version = first_version + txns_to_commit.len() as u64 - 1;
+        version: Version,
+        ledger_version: Version,
+        fetch_events: bool,
+    ) -> Result<TransactionWithProof> {
+        let proof = {
+            let (txn_info, txn_info_accumulator_proof) = self
+                .ledger_store
+                .get_transaction_info_with_proof(version, ledger_version)?;
+            TransactionProof::new(txn_info_accumulator_proof, txn_info)
+        };
+        let transaction = self.transaction_store.get_transaction(version)?;
 
-        // Account state updates. Gather account state root hashes
-        let account_state_sets = txns_to_commit
-            .iter()
-            .map(|txn_to_commit| txn_to_commit.account_states().clone())
-            .collect::<Vec<_>>();
-        let state_root_hashes =
-            self.state_store
-                .put_account_state_sets(account_state_sets, first_version, &mut cs)?;
+        // If events were requested, also fetch those.
+        let events = if fetch_events {
+            Some(self.event_store.get_events_by_version(version)?)
+        } else {
+            None
+        };
 
-        // Event updates. Gather event accumulator root hashes.
-        let event_root_hashes = zip_eq(first_version..=last_version, txns_to_commit)
-            .map(|(ver, txn_to_commit)| {
-                self.event_store
-                    .put_events(ver, txn_to_commit.events(), &mut cs)
-            })
-            .collect::<Result<Vec<_>>>()?;
-
-        // Transaction updates. Gather transaction hashes.
-        zip_eq(first_version..=last_version, txns_to_commit)
-            .map(|(ver, txn_to_commit)| {
-                self.transaction_store
-                    .put_transaction(ver, txn_to_commit.transaction(), &mut cs)
-            })
-            .collect::<Result<()>>()?;
-
-        // Transaction accumulator updates. Get result root hash.
-        let txn_infos = izip!(txns_to_commit, state_root_hashes, event_root_hashes)
-            .map(|(t, s, e)| {
-                Ok(TransactionInfo::new(
-                    t.transaction().hash(),
-                    s,
-                    e,
-                    t.gas_used(),
-                    t.major_status(),
-                ))
-            })
-            .collect::<Result<Vec<_>>>()?;
-        assert_eq!(txn_infos.len(), txns_to_commit.len());
-
-        let new_root_hash =
-            self.ledger_store
-                .put_transaction_infos(first_version, &txn_infos, &mut cs)?;
-
-        Ok(new_root_hash)
+        Ok(TransactionWithProof {
+            version,
+            transaction,
+            events,
+            proof,
+        })
     }
 
     /// This backs the `UpdateToLatestLedger` public read API which returns the latest
@@ -725,6 +591,116 @@ impl LibraDB {
     }
 
     // ================================== Private APIs ==================================
+    /// Returns events specified by `query_path` with sequence number in range designated by
+    /// `start_seq_num`, `ascending` and `limit`. If ascending is true this query will return up to
+    /// `limit` events that were emitted after `start_event_seq_num`. Otherwise, it will return up
+    /// to `limit` events in the reverse order. Both cases are inclusive.
+    fn get_events_by_query_path(
+        &self,
+        query_path: &AccessPath,
+        start_seq_num: u64,
+        ascending: bool,
+        limit: u64,
+        ledger_version: Version,
+    ) -> Result<(Vec<EventWithProof>, AccountStateWithProof)> {
+        let account_state_with_proof =
+            self.get_account_state_with_proof(query_path.address, ledger_version, ledger_version)?;
+
+        let event_key = {
+            let (event_key_opt, _count) =
+                account_state_with_proof.get_event_key_and_count_by_query_path(&query_path.path)?;
+            if let Some(event_key) = event_key_opt {
+                event_key
+            } else {
+                return Ok((Vec::new(), account_state_with_proof));
+            }
+        };
+
+        let events_with_proof = self.get_events_by_event_key(
+            &event_key,
+            start_seq_num,
+            ascending,
+            limit,
+            ledger_version,
+        )?;
+
+        // We always need to return the account blob to prove that this is indeed the event that was
+        // being queried.
+        Ok((events_with_proof, account_state_with_proof))
+    }
+
+    fn get_events_by_event_key(
+        &self,
+        event_key: &EventKey,
+        start_seq_num: u64,
+        ascending: bool,
+        limit: u64,
+        ledger_version: Version,
+    ) -> Result<Vec<EventWithProof>> {
+        error_if_too_many_requested(limit, MAX_LIMIT)?;
+        let get_latest = !ascending && start_seq_num == u64::max_value();
+
+        let cursor = if get_latest {
+            // Caller wants the latest, figure out the latest seq_num.
+            // In the case of no events on that path, use 0 and expect empty result below.
+            self.event_store
+                .get_latest_sequence_number(ledger_version, &event_key)?
+                .unwrap_or(0)
+        } else {
+            start_seq_num
+        };
+
+        // Convert requested range and order to a range in ascending order.
+        let (first_seq, real_limit) = get_first_seq_num_and_limit(ascending, cursor, limit)?;
+
+        // Query the index.
+        let mut event_keys = self.event_store.lookup_events_by_key(
+            &event_key,
+            first_seq,
+            real_limit,
+            ledger_version,
+        )?;
+
+        // When descending, it's possible that user is asking for something beyond the latest
+        // sequence number, in which case we will consider it a bad request and return an empty
+        // list.
+        // For example, if the latest sequence number is 100, and the caller is asking for 110 to
+        // 90, we will get 90 to 100 from the index lookup above. Seeing that the last item
+        // is 100 instead of 110 tells us 110 is out of bound.
+        if !ascending {
+            if let Some((seq_num, _, _)) = event_keys.last() {
+                if *seq_num < cursor {
+                    event_keys = Vec::new();
+                }
+            }
+        }
+
+        let mut events_with_proof = event_keys
+            .into_iter()
+            .map(|(seq, ver, idx)| {
+                let (event, event_proof) = self
+                    .event_store
+                    .get_event_with_proof_by_version_and_index(ver, idx)?;
+                ensure!(
+                    seq == event.sequence_number(),
+                    "Index broken, expected seq:{}, actual:{}",
+                    seq,
+                    event.sequence_number()
+                );
+                let (txn_info, txn_info_proof) = self
+                    .ledger_store
+                    .get_transaction_info_with_proof(ver, ledger_version)?;
+                let proof = EventProof::new(txn_info_proof, txn_info, event_proof);
+                Ok(EventWithProof::new(ver, idx, event, proof))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        if !ascending {
+            events_with_proof.reverse();
+        }
+
+        Ok(events_with_proof)
+    }
+
     /// Convert a `ChangeSet` to `SealedChangeSet`.
     ///
     /// Specifically, counter increases are added to current counter values and converted to DB
@@ -750,6 +726,61 @@ impl LibraDB {
         Ok((SealedChangeSet { batch: cs.batch }, counters))
     }
 
+    fn save_transactions_impl(
+        &self,
+        txns_to_commit: &[TransactionToCommit],
+        first_version: u64,
+        mut cs: &mut ChangeSet,
+    ) -> Result<HashValue> {
+        let last_version = first_version + txns_to_commit.len() as u64 - 1;
+
+        // Account state updates. Gather account state root hashes
+        let account_state_sets = txns_to_commit
+            .iter()
+            .map(|txn_to_commit| txn_to_commit.account_states().clone())
+            .collect::<Vec<_>>();
+        let state_root_hashes =
+            self.state_store
+                .put_account_state_sets(account_state_sets, first_version, &mut cs)?;
+
+        // Event updates. Gather event accumulator root hashes.
+        let event_root_hashes = zip_eq(first_version..=last_version, txns_to_commit)
+            .map(|(ver, txn_to_commit)| {
+                self.event_store
+                    .put_events(ver, txn_to_commit.events(), &mut cs)
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        // Transaction updates. Gather transaction hashes.
+        zip_eq(first_version..=last_version, txns_to_commit)
+            .map(|(ver, txn_to_commit)| {
+                self.transaction_store
+                    .put_transaction(ver, txn_to_commit.transaction(), &mut cs)
+            })
+            .collect::<Result<()>>()?;
+
+        // Transaction accumulator updates. Get result root hash.
+        let txn_infos = izip!(txns_to_commit, state_root_hashes, event_root_hashes)
+            .map(|(t, s, e)| {
+                Ok(TransactionInfo::new(
+                    t.transaction().hash(),
+                    s,
+                    e,
+                    t.gas_used(),
+                    t.major_status(),
+                ))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        assert_eq!(txn_infos.len(), txns_to_commit.len());
+
+        let new_root_hash =
+            self.ledger_store
+                .put_transaction_infos(first_version, &txn_infos, &mut cs)?;
+
+        Ok(new_root_hash)
+    }
+
+
     /// Write the whole schema batch including all data necessary to mutate the ledger
     /// state of some transaction by leveraging rocksdb atomicity support. Also committed are the
     /// LedgerCounters.
@@ -772,35 +803,6 @@ impl LibraDB {
         }
 
         Ok(())
-    }
-
-    pub fn get_transaction_with_proof(
-        &self,
-        version: Version,
-        ledger_version: Version,
-        fetch_events: bool,
-    ) -> Result<TransactionWithProof> {
-        let proof = {
-            let (txn_info, txn_info_accumulator_proof) = self
-                .ledger_store
-                .get_transaction_info_with_proof(version, ledger_version)?;
-            TransactionProof::new(txn_info_accumulator_proof, txn_info)
-        };
-        let transaction = self.transaction_store.get_transaction(version)?;
-
-        // If events were requested, also fetch those.
-        let events = if fetch_events {
-            Some(self.event_store.get_events_by_version(version)?)
-        } else {
-            None
-        };
-
-        Ok(TransactionWithProof {
-            version,
-            transaction,
-            events,
-            proof,
-        })
     }
 }
 
