@@ -96,7 +96,6 @@ proptest! {
 
     #[test]
     fn proptest_i128(v in any::<i128>()) {
-        assert_eq!(to_bytes(&v)?, v.to_le_bytes());
         is_same(v);
     }
 
@@ -126,7 +125,6 @@ proptest! {
 
     #[test]
     fn proptest_u128(v in any::<u128>()) {
-        assert_eq!(to_bytes(&v)?, v.to_le_bytes());
         is_same(v);
     }
 
@@ -254,7 +252,7 @@ fn invalid_utf8() {
 }
 
 #[test]
-fn uleb_encoding_and_variant() {
+fn uleb_encoding_for_variants() {
     #[derive(Serialize, Deserialize, Debug, PartialEq)]
     enum Test {
         One,
@@ -306,6 +304,25 @@ fn uleb_encoding_and_variant() {
         from_bytes::<Test>(&invalid_uleb),
         Err(Error::NonCanonicalUleb128Encoding)
     );
+}
+
+#[test]
+fn uleb_encoding_for_integers() {
+    assert_eq!(
+        from_bytes::<u128>(&[0x80, 0x80, 0x80, 0x80]),
+        Err(Error::Eof)
+    );
+    assert_eq!(
+        from_bytes::<u128>(&[0x80, 0x80, 0x80, 0x0]),
+        Err(Error::NonCanonicalUleb128Encoding)
+    );
+    assert_eq!(from_bytes::<u128>(&[0x0]), Ok(0));
+    assert_eq!(
+        from_bytes::<u128>(&[0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x1]),
+        Ok(1 << 56)
+    );
+
+    assert_eq!(from_bytes::<i128>(&[0x7f]), Ok(-64));
 }
 
 #[test]

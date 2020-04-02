@@ -127,12 +127,6 @@ impl<'de> Deserializer<'de> {
         Ok(u64::from_le_bytes(le_bytes))
     }
 
-    fn parse_u128(&mut self) -> Result<u128> {
-        let mut le_bytes = [0; 16];
-        self.fill_slice(&mut le_bytes)?;
-        Ok(u128::from_le_bytes(le_bytes))
-    }
-
     fn parse_u32_from_uleb128(&mut self) -> Result<u32> {
         let mut value: u64 = 0;
         for shift in (0..32).step_by(7) {
@@ -149,6 +143,30 @@ impl<'de> Deserializer<'de> {
                 // Decoded integer must not overflow.
                 return u32::try_from(value)
                     .map_err(|_| Error::IntegerOverflowDuringUleb128Decoding);
+            }
+        }
+        // Decoded integer must not overflow.
+        Err(Error::IntegerOverflowDuringUleb128Decoding)
+    }
+
+    fn parse_u128_from_uleb128(&mut self) -> Result<u128> {
+        let mut value: u128 = 0;
+        for shift in (0..128).step_by(7) {
+            let byte = self.next()?;
+            let digit = byte & 0x7f;
+            // Decoded integer must not overflow.
+            if u128::from(digit) != (u128::from(digit) << shift) >> shift {
+                return Err(Error::IntegerOverflowDuringUleb128Decoding);
+            }
+            value |= u128::from(digit) << shift;
+            // If the highest bit of `byte` is 0, return the final value.
+            if digit == byte {
+                if shift > 0 && digit == 0 {
+                    // We only accept canonical ULEB128 encodings, therefore the
+                    // heaviest (and last) base-128 digit must be non-zero.
+                    return Err(Error::NonCanonicalUleb128Encoding);
+                }
+                return Ok(value);
             }
         }
         // Decoded integer must not overflow.
@@ -222,7 +240,15 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_i128(self.parse_u128()? as i128)
+        let zigzag_u128 = self.parse_u128_from_uleb128()?;
+        let value = if zigzag_u128 & 1 > 0 {
+            // negative case
+            (zigzag_u128 >> 1) ^ (-1i128 as u128)
+        } else {
+            // non-negative case
+            zigzag_u128 >> 1
+        };
+        visitor.visit_i128(value as i128)
     }
 
     fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value>
@@ -257,7 +283,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        visitor.visit_u128(self.parse_u128()?)
+        visitor.visit_u128(self.parse_u128_from_uleb128()?)
     }
 
     fn deserialize_f32<V>(self, _visitor: V) -> Result<V::Value>

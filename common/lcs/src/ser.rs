@@ -78,7 +78,13 @@ impl Serializer {
         self.output
     }
 
-    fn serialize_u32_as_uleb128(&mut self, mut value: u32) -> Result<()> {
+    fn serialize_u32_as_uleb128(&mut self, value: u32) -> Result<()> {
+        // TODO: verify that the code gets simplified by the compiler.
+        self.serialize_u128_as_uleb128(value as u128)
+    }
+
+    #[inline]
+    fn serialize_u128_as_uleb128(&mut self, mut value: u128) -> Result<()> {
         use serde::ser::Serializer;
         while value >= 0x80 {
             // Write 7 (lowest) bits of data and set the 8th bit to 1.
@@ -135,7 +141,9 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     }
 
     fn serialize_i128(self, v: i128) -> Result<()> {
-        self.serialize_u128(v as u128)
+        // On signed integers, >> is the arithmetic (aka sticky) right shift.
+        let zigzag_i128 = (v << 1) ^ (v >> 127);
+        self.serialize_u128_as_uleb128(zigzag_i128 as u128)
     }
 
     fn serialize_u8(self, v: u8) -> Result<()> {
@@ -159,8 +167,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     }
 
     fn serialize_u128(self, v: u128) -> Result<()> {
-        self.output.extend_from_slice(&v.to_le_bytes());
-        Ok(())
+        self.serialize_u128_as_uleb128(v)
     }
 
     fn serialize_f32(self, _v: f32) -> Result<()> {
