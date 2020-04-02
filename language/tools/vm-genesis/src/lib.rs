@@ -90,6 +90,13 @@ static ROTATE_AUTHENTICATION_KEY: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("rotate_authentication_key").unwrap());
 static EPILOGUE: Lazy<Identifier> = Lazy::new(|| Identifier::new("epilogue").unwrap());
 
+static ASSOCIATION_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+    ModuleId::new(
+        account_config::CORE_CODE_ADDRESS,
+        Identifier::new("Association").unwrap(),
+    )
+});
+
 static SCRIPT_WHITELIST_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         account_config::CORE_CODE_ADDRESS,
@@ -244,6 +251,18 @@ fn create_and_initialize_main_accounts(
     let association_addr = account_config::association_address();
     let mut txn_data = TransactionMetadata::default();
     txn_data.sender = association_addr;
+
+    move_vm
+        .execute_function(
+            &ASSOCIATION_MODULE,
+            &INITIALIZE,
+            &gas_schedule,
+            interpreter_context,
+            &txn_data,
+            vec![],
+            vec![],
+        )
+        .expect("Failure initializing association module");
 
     // create  the LBR module
     move_vm
