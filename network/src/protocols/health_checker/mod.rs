@@ -318,7 +318,7 @@ where
                         // ConnectivityManager or the remote peer to re-establish the connection.
                         *failures += 1;
                         if *failures > self.ping_failures_tolerated {
-                            info!("Disonnecting from peer: {}", peer_id.short_str());
+                            info!("Disconnecting from peer: {}", peer_id.short_str());
                             if let Err(err) = self.network_tx.disconnect_peer(peer_id).await {
                                 warn!(
                                     "Failed to disconnect from peer: {} with error: {:?}",
