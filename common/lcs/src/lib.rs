@@ -292,7 +292,7 @@ pub mod compressed_unsigned {
 
     pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
     where
-        T: Serialize + Clone + Into<u128>,
+        T: Serialize + Clone + Into<u128> + num::Unsigned,
         S: Serializer,
     {
         if serializer.is_human_readable() {
@@ -305,7 +305,7 @@ pub mod compressed_unsigned {
 
     pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
     where
-        T: Deserialize<'de> + std::convert::TryFrom<u128>,
+        T: Deserialize<'de> + std::convert::TryFrom<u128> + num::Unsigned,
         D: Deserializer<'de>,
     {
         use serde::de::Error;
@@ -326,7 +326,7 @@ pub mod compressed_signed {
 
     pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
     where
-        T: Serialize + Clone + Into<i128>,
+        T: Serialize + Clone + Into<i128> + num::Signed,
         S: Serializer,
     {
         if serializer.is_human_readable() {
@@ -339,7 +339,7 @@ pub mod compressed_signed {
 
     pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
     where
-        T: Deserialize<'de> + std::convert::TryFrom<i128>,
+        T: Deserialize<'de> + std::convert::TryFrom<i128> + num::Signed,
         D: Deserializer<'de>,
     {
         use serde::de::Error;
