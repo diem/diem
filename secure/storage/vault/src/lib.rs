@@ -3,10 +3,11 @@
 
 #![forbid(unsafe_code)]
 
+use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     convert::{TryFrom, TryInto},
 };
 use thiserror::Error;
@@ -23,6 +24,18 @@ pub enum Error {
     NotFound(String, String),
     #[error("Serialization error: {0}")]
     SerializationError(String),
+}
+
+impl From<base64::DecodeError> for Error {
+    fn from(error: base64::DecodeError) -> Self {
+        Self::SerializationError(format!("{}", error))
+    }
+}
+
+impl From<libra_crypto::traits::CryptoMaterialError> for Error {
+    fn from(error: libra_crypto::traits::CryptoMaterialError) -> Self {
+        Self::SerializationError(format!("{}", error))
+    }
 }
 
 impl From<std::io::Error> for Error {
@@ -144,7 +157,7 @@ impl Client {
     }
 
     /// Read a key/value pair from a given secret store.
-    pub fn read_secret(&self, secret: &str, key: &str) -> Result<(String, String), Error> {
+    pub fn read_secret(&self, secret: &str, key: &str) -> Result<ReadResponse<String>, Error> {
         let response = ureq::get(&format!("{}/v1/secret/data/{}", self.host, secret))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
@@ -159,9 +172,170 @@ impl Client {
                     .remove(key)
                     .ok_or_else(|| Error::NotFound(secret.into(), key.into()))?;
                 let created_time = data.metadata.created_time.clone();
-                Ok((value, created_time))
+                let version = data.metadata.version;
+                Ok(ReadResponse::new(created_time, value, version))
             }
             404 => Err(Error::NotFound(secret.into(), key.into())),
+            _ => Err(response.into()),
+        }
+    }
+
+    pub fn create_ed25519_key(&self, name: &str, exportable: bool) -> Result<(), Error> {
+        let response = ureq::post(&format!("{}/v1/transit/keys/{}", self.host, name))
+            .set("X-Vault-Token", &self.token)
+            .timeout_connect(10_000)
+            .send_json(json!({ "type": "ed25519", "exportable": exportable }));
+        match response.status() {
+            200 => Ok(()),
+            204 => Ok(()),
+            404 => Err(Error::NotFound("transit/".into(), name.into())),
+            _ => Err(response.into()),
+        }
+    }
+
+    pub fn delete_key(&self, name: &str) -> Result<(), Error> {
+        let response = ureq::post(&format!("{}/v1/transit/keys/{}/config", self.host, name))
+            .set("X-Vault-Token", &self.token)
+            .timeout_connect(10_000)
+            .send_json(json!({ "deletion_allowed": true }));
+
+        if !response.ok() {
+            return Err(response.into());
+        }
+
+        let response = ureq::delete(&format!("{}/v1/transit/keys/{}", self.host, name))
+            .set("X-Vault-Token", &self.token)
+            .timeout_connect(10_000)
+            .call();
+        if response.ok() {
+            Ok(())
+        } else {
+            Err(response.into())
+        }
+    }
+
+    pub fn export_ed25519_key(
+        &self,
+        name: &str,
+        version: Option<u32>,
+    ) -> Result<Ed25519PrivateKey, Error> {
+        let response = ureq::get(&format!(
+            "{}/v1/transit/export/signing-key/{}",
+            self.host, name
+        ))
+        .set("X-Vault-Token", &self.token)
+        .timeout_connect(10_000)
+        .call();
+        if response.ok() {
+            let export_key: ExportKeyResponse = serde_json::from_str(&response.into_string()?)?;
+            if let Some(version) = version {
+                let key = export_key.data.keys.iter().find(|(k, _v)| **k == version);
+                let (_, key) = key.ok_or_else(|| Error::NotFound("transit".into(), name.into()))?;
+                // Composite key [private|public]
+                Ok(Ed25519PrivateKey::try_from(&base64::decode(key)?[..32])?)
+            } else if let Some(key) = export_key.data.keys.values().last() {
+                // Composite key [private|public]
+                Ok(Ed25519PrivateKey::try_from(&base64::decode(key)?[..32])?)
+            } else {
+                Err(Error::NotFound("transit".into(), name.into()))
+            }
+        } else {
+            Err(response.into())
+        }
+    }
+
+    pub fn list_keys(&self) -> Result<Vec<String>, Error> {
+        let response = ureq::request("LIST", &format!("{}/v1/transit/keys", self.host))
+            .set("X-Vault-Token", &self.token)
+            .timeout_connect(10_000)
+            .call();
+        match response.status() {
+            200 => {
+                let list_keys: ListKeysResponse = serde_json::from_str(&response.into_string()?)?;
+                Ok(list_keys.data.keys)
+            }
+            404 => Err(Error::NotFound("transit/".into(), "keys".into())),
+            _ => Err(response.into()),
+        }
+    }
+
+    pub fn read_ed25519_key(
+        &self,
+        name: &str,
+    ) -> Result<Vec<ReadResponse<Ed25519PublicKey>>, Error> {
+        let response = ureq::get(&format!("{}/v1/transit/keys/{}", self.host, name))
+            .set("X-Vault-Token", &self.token)
+            .timeout_connect(10_000)
+            .call();
+        match response.status() {
+            200 => {
+                let read_key: ReadKeyResponse = serde_json::from_str(&response.into_string()?)?;
+                let mut read_response = Vec::new();
+                for (version, value) in read_key.data.keys {
+                    read_response.push(ReadResponse::new(
+                        value.creation_time,
+                        Ed25519PublicKey::try_from(base64::decode(&value.public_key)?.as_slice())?,
+                        version,
+                    ));
+                }
+                Ok(read_response)
+            }
+            404 => Err(Error::NotFound("transit/".into(), name.into())),
+            _ => Err(response.into()),
+        }
+    }
+
+    pub fn rotate_key(&self, name: &str) -> Result<(), Error> {
+        let response = ureq::post(&format!("{}/v1/transit/keys/{}/rotate", self.host, name))
+            .set("X-Vault-Token", &self.token)
+            .timeout_connect(10_000)
+            .call();
+        if response.ok() {
+            Ok(())
+        } else {
+            Err(response.into())
+        }
+    }
+
+    pub fn sign_ed25519(
+        &self,
+        name: &str,
+        data: &[u8],
+        version: Option<u32>,
+    ) -> Result<Ed25519Signature, Error> {
+        let data = if let Some(version) = version {
+            json!({ "input": base64::encode(&data), "key_version": version })
+        } else {
+            json!({ "input": base64::encode(&data) })
+        };
+
+        let response = ureq::post(&format!("{}/v1/transit/sign/{}", self.host, name))
+            .set("X-Vault-Token", &self.token)
+            .timeout_connect(10_000)
+            .send_json(data);
+        if response.ok() {
+            let signature: SignatureResponse = serde_json::from_str(&response.into_string()?)?;
+            let signature = &signature.data.signature;
+            let signature_pieces: Vec<_> = signature.split(':').collect();
+            let signature = signature_pieces
+                .get(2)
+                .ok_or_else(|| Error::SerializationError(signature.into()))?;
+            Ok(Ed25519Signature::try_from(
+                base64::decode(&signature)?.as_slice(),
+            )?)
+        } else {
+            Err(response.into())
+        }
+    }
+
+    /// Create or update a key/value pair in a given secret store.
+    pub fn write_secret(&self, secret: &str, key: &str, value: &str) -> Result<(), Error> {
+        let response = ureq::put(&format!("{}/v1/secret/data/{}", self.host, secret))
+            .set("X-Vault-Token", &self.token)
+            .timeout_connect(10_000)
+            .send_json(json!({ "data": { key: value } }));
+        match response.status() {
+            200 => Ok(()),
             _ => Err(response.into()),
         }
     }
@@ -181,15 +355,36 @@ impl Client {
         }
     }
 
-    /// Create or update a key/value pair in a given secret store.
-    pub fn write_secret(&self, secret: &str, key: &str, value: &str) -> Result<(), Error> {
-        let response = ureq::put(&format!("{}/v1/secret/data/{}", self.host, secret))
+    /// Returns whether or not transit is enabled at the default location "transit/"
+    pub fn transit_enabled(&self) -> Result<bool, Error> {
+        let response = ureq::get(&format!("{}/v1/sys/mounts", self.host))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
-            .send_json(json!({ "data": { key: value } }));
+            .call();
         match response.status() {
-            200 => Ok(()),
+            200 => {
+                let response: SysMountsResponse = serde_json::from_str(&response.into_string()?)?;
+                Ok(response.transit.is_some())
+            }
             _ => Err(response.into()),
+        }
+    }
+}
+
+/// Provides a simple wrapper for all read APIs.
+#[derive(Debug)]
+pub struct ReadResponse<T> {
+    pub creation_time: String,
+    pub value: T,
+    pub version: u32,
+}
+
+impl<T> ReadResponse<T> {
+    pub fn new(creation_time: String, value: T, version: u32) -> Self {
+        Self {
+            creation_time,
+            value,
+            version,
         }
     }
 }
@@ -231,6 +426,86 @@ struct CreateTokenResponse {
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 struct CreateTokenAuth {
     client_token: String,
+}
+
+/// Below is a sample output of ExportKeyResponse
+/// {
+///   "data": {
+///    "name": "foo",
+///    "keys": {
+///      "1": "eyXYGHbTmugUJn6EtYD/yVEoF6pCxm4R/cMEutUm3MY=",
+///      "2": "Euzymqx6iXjS3/NuGKDCiM2Ev6wdhnU+rBiKnJ7YpHE="
+///    }
+///  }
+///}
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct ExportKeyResponse {
+    data: ExportKey,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct ExportKey {
+    name: String,
+    keys: BTreeMap<u32, String>,
+}
+
+/// Below is a sample output of ListKeysResponse.
+///
+/// {
+///   "data": {
+///     "keys": ["foo", "bar"]
+///   },
+///   "lease_duration": 0,
+///   "lease_id": "",
+///   "renewable": false
+/// }
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct ListKeysResponse {
+    data: ListKeys,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct ListKeys {
+    keys: Vec<String>,
+}
+
+/// Below is a sample output of ReadKeyResponse
+/// {
+///   "data": {
+///     "type": "aes256-gcm96",
+///     "deletion_allowed": false,
+///     "derived": false,
+///     "exportable": false,
+///     "allow_plaintext_backup": false,
+///     "keys": {
+///       "1": 1442851412
+///     },
+///     "min_decryption_version": 1,
+///     "min_encryption_version": 0,
+///     "name": "foo",
+///     "supports_encryption": true,
+///     "supports_decryption": true,
+///     "supports_derivation": true,
+///     "supports_signing": false
+///   }
+/// }
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct ReadKeyResponse {
+    data: ReadKeys,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct ReadKeys {
+    keys: BTreeMap<u32, ReadKey>,
+    name: String,
+    #[serde(rename = "type")]
+    key_type: String,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct ReadKey {
+    creation_time: String,
+    public_key: String,
 }
 
 /// Below is a sample output of ReadSecretListResponse. All fields are decoded and used.
@@ -275,7 +550,7 @@ struct ReadSecretResponse {
 /// See ReadPolicyResponse
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 struct ReadSecretData {
-    data: HashMap<String, String>,
+    data: BTreeMap<String, String>,
     metadata: ReadSecretMetadata,
 }
 
@@ -283,6 +558,7 @@ struct ReadSecretData {
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 struct ReadSecretMetadata {
     created_time: String,
+    version: u32,
 }
 
 /// This data structure is used to represent both policies read from Vault and written to Vault.
@@ -310,7 +586,7 @@ impl Policy {
     pub fn new() -> Self {
         Self {
             internal_rules: PolicyPaths {
-                path: HashMap::new(),
+                path: BTreeMap::new(),
             },
             rules: "".to_string(),
         }
@@ -345,7 +621,7 @@ impl TryFrom<&Policy> for serde_json::Value {
 /// Represents the policy for a given path.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct PolicyPaths {
-    path: HashMap<String, PathPolicy>,
+    path: BTreeMap<String, PathPolicy>,
 }
 
 /// Represents the set of capabilities used within a policy.
@@ -367,6 +643,22 @@ pub enum Capability {
     Update,
 }
 
+/// Below is an example of SignatureResponse.
+/// {
+///   "data": {
+///     "signature": "vault:v1:MEUCIQCyb869d7KWuA0hBM9b5NJrmWzMW3/pT+0XYCM9VmGR+QIgWWF6ufi4OS2xo1eS2V5IeJQfsi59qeMWtgX0LipxEHI="
+///   }
+/// }
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct SignatureResponse {
+    data: Signature,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct Signature {
+    signature: String,
+}
+
 /// Below is an example of SealStatusResponse. Only the fields leveraged by this framework are
 /// decoded.
 /// {
@@ -383,4 +675,37 @@ pub enum Capability {
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 struct SealStatusResponse {
     sealed: bool,
+}
+
+/// Below is an example of SysMountsResponse. Only the fields leveraged by this framework are
+/// decoded.
+/// {
+///   "sys/": {
+///     "type": "system",
+///     "description": "system endpoint",
+///     "config": {
+///       "default_lease_ttl": 0,
+///       "max_lease_ttl": 0,
+///       "force_no_cache": false,
+///       "seal_wrap": false,
+///     }
+///   }
+/// }
+/// Note: there are some other fields that are not in the same format, hence the data structure
+/// below.
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct SysMountsResponse {
+    #[serde(rename = "data/")]
+    data: Option<SysMountInfo>,
+    #[serde(rename = "sys/")]
+    sys: Option<SysMountInfo>,
+    #[serde(rename = "transit/")]
+    transit: Option<SysMountInfo>,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct SysMountInfo {
+    #[serde(rename = "type")]
+    sys_type: String,
+    description: String,
 }

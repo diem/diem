@@ -17,7 +17,6 @@ const STORAGE_TESTS: &[fn(&mut dyn Storage)] = &[
     test_create_and_get_non_existent_version,
     test_create_rotate_and_check_key_pair,
     test_create_key_pair_and_perform_rotations,
-    test_create_key_pair_and_perform_get_set_get,
     test_create_sign_rotate_sign,
     test_create_get_and_test_key_pair,
     test_create_get_set_unwrap,
@@ -32,9 +31,9 @@ const STORAGE_TESTS: &[fn(&mut dyn Storage)] = &[
 ];
 
 /// Storage data constants for testing purposes.
-const CRYPTO_KEY: &str = "Private Key";
-const U64_KEY: &str = "U64 Key";
-const CRYPTO_NAME: &str = "Test Key Name";
+const CRYPTO_KEY: &str = "Private_Key";
+const U64_KEY: &str = "U64_Key";
+const CRYPTO_NAME: &str = "Test_Key_Name";
 
 /// Executes all storage tests on a given storage backend.
 pub fn execute_all_storage_tests(storage: &mut dyn Storage) {
@@ -312,48 +311,6 @@ fn test_create_key_pair_and_perform_rotations(storage: &mut dyn Storage) {
         public_key = new_public_key;
         private_key = new_private_key;
     }
-}
-
-/// This test creates a new key pair and performs: (i) a get operation on the key pair name,
-/// to verify the correct key is returned; (ii) a set operation on the key pair name, to update
-/// the key pair directly; and (iii) a get operation to verify the newly stored value.
-/// This test helps ensure consistency between the K/V api and the cryptographic API.
-fn test_create_key_pair_and_perform_get_set_get(storage: &mut dyn Storage) {
-    let _ = storage
-        .create_key(CRYPTO_NAME, &Policy::public())
-        .expect("Failed to create a test Ed25519 key pair!");
-    let private_key = storage
-        .export_private_key(CRYPTO_NAME)
-        .expect("Failed to get the private key for a key pair that should exist!");
-
-    // Verify we can retrieve and unwrap the private key directly, via the K/V api
-    assert_eq!(
-        storage
-            .get(CRYPTO_NAME)
-            .expect("Failed to get the new private key!")
-            .value
-            .ed25519_private_key()
-            .unwrap(),
-        private_key,
-    );
-
-    // Set a new private key directly, and verify the same key is returned for the following get
-    let new_private_key = Ed25519PrivateKey::generate_for_testing();
-    storage
-        .set(
-            CRYPTO_NAME,
-            Value::Ed25519PrivateKey(new_private_key.clone()),
-        )
-        .expect("Failed to set the private key directly");
-    assert_eq!(
-        storage
-            .get(CRYPTO_NAME)
-            .expect("Failed to get the newly set private key!")
-            .value
-            .ed25519_private_key()
-            .unwrap(),
-        new_private_key,
-    );
 }
 
 /// This test creates a new key pair, signs a message using the key pair, rotates the key pair,

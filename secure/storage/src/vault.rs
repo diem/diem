@@ -2,9 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    Capability, CryptoKVStorage, Error, GetResponse, Identity, KVStorage, Policy, Storage, Value,
+    Capability, CryptoStorage, Error, GetResponse, Identity, KVStorage, Policy, PublicKeyResponse,
+    Storage, Value,
 };
 use chrono::DateTime;
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
+    HashValue,
+};
 use libra_vault_client::{self as vault, Client};
 
 const LIBRA_DEFAULT: &str = "libra_default";
@@ -38,19 +43,36 @@ impl VaultStorage {
     /// caution.
     pub fn reset(&self) -> Result<(), Error> {
         if let Some(namespace) = &self.namespace {
-            self.reset_helper(&format!("{}/", namespace))
+            self.reset_kv(&format!("{}/", namespace))?;
+            self.reset_crypto(&format!("{}__", namespace))
         } else {
-            self.reset_helper("")
+            self.reset_kv("")?;
+            self.reset_crypto("")
         }
     }
 
-    fn reset_helper(&self, path: &str) -> Result<(), Error> {
+    fn reset_kv(&self, path: &str) -> Result<(), Error> {
         let secrets = self.client.list_secrets(path)?;
         for secret in secrets {
             if secret.ends_with('/') {
-                self.reset_helper(&secret)?;
+                self.reset_kv(&secret)?;
             } else {
                 self.client.delete_secret(&format!("{}{}", path, secret))?;
+            }
+        }
+        Ok(())
+    }
+
+    fn reset_crypto(&self, prefix: &str) -> Result<(), Error> {
+        let keys = match self.client.list_keys() {
+            Ok(keys) => keys,
+            // No keys were found, so there's no need to reset.
+            Err(libra_vault_client::Error::NotFound(_, _)) => return Ok(()),
+            Err(e) => return Err(e.into()),
+        };
+        for key in keys {
+            if (!key.contains("__") && prefix.is_empty()) || key.starts_with(prefix) {
+                self.client.delete_key(&key)?;
             }
         }
         Ok(())
@@ -72,24 +94,16 @@ impl VaultStorage {
     /// Retrieves a key from a given secret. Libra Secure Storage inserts each key into its own
     /// distinct secret store and thus the secret and key have the same identifier.
     fn get_secret(&self, key: &str) -> Result<GetResponse, Error> {
-        let secret = if let Some(namespace) = &self.namespace {
-            format!("{}/{}", namespace, key)
-        } else {
-            key.to_string()
-        };
-        let (value, created_time) = self.client.read_secret(&secret, key)?;
-        let last_update = DateTime::parse_from_rfc3339(&created_time)?.timestamp() as u64;
-        let value = Value::from_base64(&value).unwrap();
+        let secret = self.secret_name(key);
+        let resp = self.client.read_secret(&secret, key)?;
+        let last_update = DateTime::parse_from_rfc3339(&resp.creation_time)?.timestamp() as u64;
+        let value = Value::from_base64(&resp.value)?;
         Ok(GetResponse { last_update, value })
     }
 
     /// Inserts a key, value pair into a secret that shares the name of the key.
     fn set_secret(&self, key: &str, value: Value) -> Result<(), Error> {
-        let secret = if let Some(namespace) = &self.namespace {
-            format!("{}/{}", namespace, key)
-        } else {
-            key.to_string()
-        };
+        let secret = self.secret_name(key);
         self.client
             .write_secret(&secret, key, &value.to_base64()?)?;
         Ok(())
@@ -129,11 +143,46 @@ impl VaultStorage {
     pub fn new_storage(host: String, token: String, namespace: Option<String>) -> Box<dyn Storage> {
         Box::new(VaultStorage::new(host, token, namespace))
     }
+
+    fn key_version(&self, name: &str, version: &Ed25519PublicKey) -> Result<u32, Error> {
+        let pubkeys = self.client.read_ed25519_key(name)?;
+        let pubkey = pubkeys.iter().find(|pubkey| version == &pubkey.value);
+        Ok(pubkey
+            .ok_or_else(|| Error::KeyVersionNotFound(name.into()))?
+            .version)
+    }
+
+    fn set_policies(&self, name: &str, policy: &Policy) -> Result<(), Error> {
+        for perm in &policy.permissions {
+            match &perm.id {
+                Identity::User(id) => self.set_policy(id, name, &perm.capabilities)?,
+                Identity::Anyone => self.set_policy(LIBRA_DEFAULT, name, &perm.capabilities)?,
+                Identity::NoOne => (),
+            };
+        }
+        Ok(())
+    }
+
+    fn secret_name(&self, name: &str) -> String {
+        if let Some(namespace) = &self.namespace {
+            format!("{}/{}", namespace, name)
+        } else {
+            name.into()
+        }
+    }
+
+    fn crypto_name(&self, name: &str) -> String {
+        if let Some(namespace) = &self.namespace {
+            format!("{}__{}", namespace, name)
+        } else {
+            name.into()
+        }
+    }
 }
 
 impl KVStorage for VaultStorage {
     fn available(&self) -> bool {
-        self.client.unsealed().unwrap_or(false)
+        self.client.unsealed().unwrap_or(false) && self.client.transit_enabled().unwrap_or(false)
     }
 
     fn create(&mut self, key: &str, value: Value, policy: &Policy) -> Result<(), Error> {
@@ -146,15 +195,7 @@ impl KVStorage for VaultStorage {
         }
 
         self.set_secret(&key, value)?;
-        for permission in &policy.permissions {
-            match &permission.id {
-                Identity::User(id) => self.set_policy(id, key, &permission.capabilities)?,
-                Identity::Anyone => {
-                    self.set_policy(LIBRA_DEFAULT, key, &permission.capabilities)?
-                }
-                Identity::NoOne => (),
-            };
-        }
+        self.set_policies(key, policy)?;
         Ok(())
     }
 
@@ -175,4 +216,74 @@ impl KVStorage for VaultStorage {
     }
 }
 
-impl CryptoKVStorage for VaultStorage {}
+impl CryptoStorage for VaultStorage {
+    fn create_key(&mut self, name: &str, policy: &Policy) -> Result<Ed25519PublicKey, Error> {
+        let ns_name = self.crypto_name(name);
+        match self.get_public_key(name) {
+            Ok(_) => return Err(Error::KeyAlreadyExists(ns_name)),
+            Err(Error::KeyNotSet(_)) => (/* Expected this for new keys! */),
+            Err(e) => return Err(e),
+        }
+
+        self.client.create_ed25519_key(&ns_name, true)?;
+        self.set_policies(&ns_name, policy)?;
+        self.get_public_key(name).map(|v| v.public_key)
+    }
+
+    fn export_private_key(&self, name: &str) -> Result<Ed25519PrivateKey, Error> {
+        let name = self.crypto_name(name);
+        Ok(self.client.export_ed25519_key(&name, None)?)
+    }
+
+    fn export_private_key_for_version(
+        &self,
+        name: &str,
+        version: Ed25519PublicKey,
+    ) -> Result<Ed25519PrivateKey, Error> {
+        let name = self.crypto_name(name);
+        let vers = self.key_version(&name, &version)?;
+        Ok(self.client.export_ed25519_key(&name, Some(vers))?)
+    }
+
+    fn get_public_key(&self, name: &str) -> Result<PublicKeyResponse, Error> {
+        let name = self.crypto_name(name);
+        let resp = self.client.read_ed25519_key(&name)?;
+        let mut last_key = resp.first().ok_or_else(|| Error::KeyNotSet(name))?;
+        for key in &resp {
+            last_key = if last_key.version > key.version {
+                last_key
+            } else {
+                key
+            }
+        }
+
+        Ok(PublicKeyResponse {
+            last_update: DateTime::parse_from_rfc3339(&last_key.creation_time)?.timestamp() as u64,
+            public_key: last_key.value.clone(),
+        })
+    }
+
+    fn rotate_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
+        let ns_name = self.crypto_name(name);
+        self.client.rotate_key(&ns_name)?;
+        self.get_public_key(name).map(|v| v.public_key)
+    }
+
+    fn sign_message(&mut self, name: &str, message: &HashValue) -> Result<Ed25519Signature, Error> {
+        let name = self.crypto_name(name);
+        Ok(self.client.sign_ed25519(&name, message.as_ref(), None)?)
+    }
+
+    fn sign_message_using_version(
+        &mut self,
+        name: &str,
+        version: Ed25519PublicKey,
+        message: &HashValue,
+    ) -> Result<Ed25519Signature, Error> {
+        let name = self.crypto_name(name);
+        let vers = self.key_version(&name, &version)?;
+        Ok(self
+            .client
+            .sign_ed25519(&name, message.as_ref(), Some(vers))?)
+    }
+}
