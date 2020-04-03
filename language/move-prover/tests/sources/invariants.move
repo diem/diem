@@ -77,6 +77,20 @@ module TestInvariants {
         *r = 4;
     }
 
+    fun invalid_R_update_branching(b: bool): R {
+        let t1 = R {x: 5};
+        let t2 = R {x: 3};
+        let r: &mut R;
+        if (b) {
+            // this branch is fine because we can go from x = 5 to x = 4
+            r = &mut t1
+        } else {
+            // this branch leads to update invariant violation as we cannot go from x = 3 to x = 4
+            r = &mut t2
+        };
+        *r = R {x: 4};
+        *r
+    }
 
     // -----------------------
     // Lifetime analysis tests

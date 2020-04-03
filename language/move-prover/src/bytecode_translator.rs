@@ -64,16 +64,20 @@ struct BytecodeContext<'l> {
     /// over-approximation; however, the execution trace visualizer will remove redundant
     /// entries, so it is more of a performance concern.
     mutable_refs: BTreeSet<usize>,
-    /// A map from local indices  to the before borrow index. Every root which is borrowed in this
+    /// A map from local indices  to the before borrow indices. Every root which is borrowed in this
     /// function has an entry here. For every BorrowLoc(d) | BorrowGlobal(d), we have an entry
     /// d -> i and construct variables $before_borrow_i to remember the value before borrowing,
-    /// and $before_borrow_i_ref to remember the reference. We also track aliasing, i.e. if
-    /// we have MoveLoc(d', d) we add d' -> i as well.
-    borrowed_to_before_index: BTreeMap<usize, usize>,
+    /// $before_borrow_i_ref to remember the reference, and $before_borrow_used to remember whether
+    /// this was very used. We also track aliasing, i.e. if we have MoveLoc(d', d) we add d' -> i
+    /// as well. The aliasing can lead to the same reference in the domain of this map pointing to
+    /// multiple before indices. This results from branches (e.g. `if (b) r = ... else r = ...`).
+    /// We use $before_borrow_i_used to track at execution time which branch has been taken.
+    borrowed_to_before_index: BTreeMap<usize, BTreeSet<usize>>,
     /// A map of mut ref parameter indices to their before index. This works similar as
     /// `borrowed_to_before_index` except that those references are passed into a public function
-    /// and not borrowed.
-    inherited_to_before_index: BTreeMap<usize, usize>,
+    /// and not borrowed. They nevertheless behave similar as if they would have been borrowed
+    /// at function entry and released at function exit.
+    inherited_to_before_index: BTreeMap<usize, BTreeSet<usize>>,
     /// As determined by lifetime analysis, the set of references which become dead
     /// at a given bytecode offset.
     offset_to_dead_refs: BTreeMap<CodeOffset, BTreeSet<TempIndex>>,
@@ -539,7 +543,9 @@ impl<'env> ModuleTranslator<'env> {
                             // Create a new borrow index.
                             context
                                 .borrowed_to_before_index
-                                .insert(*dst, before_borrow_counter);
+                                .entry(*dst)
+                                .or_insert_with(BTreeSet::new)
+                                .insert(before_borrow_counter);
                             before_borrow_counter += 1;
                         }
                     }
@@ -551,28 +557,19 @@ impl<'env> ModuleTranslator<'env> {
                         context.mutable_refs.insert(*dst);
                     }
                 }
-                MoveLoc(dst, src) => {
+                MoveLoc(dst, src) | StLoc(dst, src) => {
                     // Propagate information from src to dst.
-                    let src = &(*src as usize);
                     if context.mutable_refs.contains(src) {
                         context.mutable_refs.insert(*dst);
                     }
-                    if let Some(idx) = context.borrowed_to_before_index.get(src) {
+                    if let Some(idx_set) = context.borrowed_to_before_index.get(src) {
                         // dst becomes an alias for src
-                        let idx = *idx;
-                        context.borrowed_to_before_index.insert(*dst, idx);
-                    }
-                }
-                StLoc(dst, src) => {
-                    // Propagate information from src to dst.
-                    let dst = &(*dst as usize);
-                    if context.mutable_refs.contains(src) {
-                        context.mutable_refs.insert(*dst);
-                    }
-                    if let Some(idx) = context.borrowed_to_before_index.get(src) {
-                        // dst becomes an alias for src
-                        let idx = *idx;
-                        context.borrowed_to_before_index.insert(*dst, idx);
+                        let mut idx_set = idx_set.clone();
+                        context
+                            .borrowed_to_before_index
+                            .entry(*dst)
+                            .or_insert_with(BTreeSet::new)
+                            .append(&mut idx_set);
                     }
                 }
                 _ => {}
@@ -584,7 +581,9 @@ impl<'env> ModuleTranslator<'env> {
                 if ty.is_mutable_reference() && self.has_after_update_invariant(ty) {
                     context
                         .inherited_to_before_index
-                        .insert(i, before_borrow_counter);
+                        .entry(i)
+                        .or_insert_with(BTreeSet::new)
+                        .insert(before_borrow_counter);
                     before_borrow_counter += 1;
                 }
             }
@@ -614,17 +613,20 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "var $tmp: Value;");
         emitln!(self.writer, "var $frame: int;");
         emitln!(self.writer, "var $saved_m: Memory;");
-        for idx in context
+        let all_before_borrow_indices = context
             .borrowed_to_before_index
             .values()
             .chain(context.inherited_to_before_index.values())
+            .flatten()
             .unique()
             .sorted()
-        {
+            .collect_vec();
+        for idx in &all_before_borrow_indices {
             // Declare before borrow variables.
-            let name = boogie_var_before_borrow(*idx);
+            let name = boogie_var_before_borrow(**idx);
             emitln!(self.writer, "var {}: Value;", name);
             emitln!(self.writer, "var {}_ref: Reference;", name);
+            emitln!(self.writer, "var {}_used: bool;", name);
         }
 
         emitln!(self.writer, "\n// initialize function execution");
@@ -660,13 +662,19 @@ impl<'env> ModuleTranslator<'env> {
             }
         }
 
+        // Initialize before_borrow_used variables to false.
+        for idx in &all_before_borrow_indices {
+            let name = boogie_var_before_borrow(**idx);
+            emitln!(self.writer, "{}_used := false;", name);
+        }
+
         if !context.inherited_to_before_index.is_empty() {
             emitln!(
                 self.writer,
                 "\n// save values and references for mutable ref parameters with invariants"
             );
-            for (param_idx, before_idx) in context.inherited_to_before_index.iter() {
-                self.save_and_enforce_before_update(&func_env, *param_idx, *before_idx);
+            for (param_idx, before_idx_set) in context.inherited_to_before_index.iter() {
+                self.save_and_enforce_before_update_set(&func_env, *param_idx, before_idx_set);
             }
         }
 
@@ -771,11 +779,11 @@ impl<'env> ModuleTranslator<'env> {
 
         // Helper to save a borrowed value before mutation starts.
         let save_borrowed_value = |ctx: &BytecodeContext<'_>, dest: &usize| {
-            if let Some(idx) = ctx.borrowed_to_before_index.get(dest) {
+            if let Some(idx_set) = ctx.borrowed_to_before_index.get(dest) {
                 // Save the value before mutation happens. We also need to save the reference,
                 // because the bytecode may reuse it for some other purpose, so we can construct
                 // the after-value from it when the update invariant is executed.
-                self.save_and_enforce_before_update(&func_env, *dest, *idx);
+                self.save_and_enforce_before_update_set(&func_env, *dest, idx_set);
             }
         };
 
@@ -937,7 +945,7 @@ impl<'env> ModuleTranslator<'env> {
                     spec_translator.assume_module_invariants(&callee_env);
                 }
                 // If this is a call to a public function within the same module,
-                // and it contains parameters which are mutated currently, we end mutating now,
+                // and it has parameters which are mutated currently, we end mutating now,
                 // enforcing the update invariant. At the end of the call, we restart mutating,
                 // re-initializing the before value. This is reflecting the fact that mutable
                 // reference parameters to public functions are consider frozen when passed
@@ -948,11 +956,12 @@ impl<'env> ModuleTranslator<'env> {
                 {
                     args.iter()
                         .filter_map(|arg| {
-                            if let Some(before_idx) = ctx.borrowed_to_before_index.get(arg) {
-                                Some((*arg, *before_idx))
-                            } else if let Some(before_idx) = ctx.inherited_to_before_index.get(arg)
+                            if let Some(before_idx_set) = ctx.borrowed_to_before_index.get(arg) {
+                                Some((*arg, before_idx_set))
+                            } else if let Some(before_idx_set) =
+                                ctx.inherited_to_before_index.get(arg)
                             {
-                                Some((*arg, *before_idx))
+                                Some((*arg, before_idx_set))
                             } else {
                                 None
                             }
@@ -962,9 +971,9 @@ impl<'env> ModuleTranslator<'env> {
                     BTreeMap::new()
                 };
                 // Now that we have calculated the frozen refs, enforce update invariants.
-                for (idx, before_idx) in &frozen_ref_params {
+                for (idx, before_idx_set) in &frozen_ref_params {
                     let ty = self.get_local_type(func_env, *idx);
-                    self.enforce_after_update_invariant(func_env, &ty, *before_idx);
+                    self.enforce_after_update_invariant_set(func_env, &ty, before_idx_set);
                 }
 
                 let mut dest_str = String::new();
@@ -1039,8 +1048,8 @@ impl<'env> ModuleTranslator<'env> {
                     track_mutable_refs(ctx);
                 }
                 // After the call, save current value as before value and enforce before invariants.
-                for (idx, before_idx) in &frozen_ref_params {
-                    self.save_and_enforce_before_update(func_env, *idx, *before_idx);
+                for (idx, before_idx_set) in &frozen_ref_params {
+                    self.save_and_enforce_before_update_set(func_env, *idx, *before_idx_set);
                 }
             }
             Pack(dest, struct_def_index, type_actuals, fields) => {
@@ -1494,12 +1503,25 @@ impl<'env> ModuleTranslator<'env> {
             ref_name,
         );
         emitln!(self.writer, "{}_ref := {};", before_name, ref_name);
+        emitln!(self.writer, "{}_used := true;", before_name);
         // Enforce the before update invariant (if any).
         self.enforce_before_update_invariant(
             func_env,
             &self.get_local_type(func_env, ref_idx),
             before_idx,
         );
+    }
+
+    /// Call `save_and_enforce_before_update` for a set.
+    fn save_and_enforce_before_update_set(
+        &'env self,
+        func_env: &FunctionEnv,
+        ref_idx: usize,
+        before_idx_set: &BTreeSet<usize>,
+    ) {
+        for before_idx in before_idx_set {
+            self.save_and_enforce_before_update(func_env, ref_idx, *before_idx);
+        }
     }
 
     // Enforce invariants on references going out of scope
@@ -1520,9 +1542,9 @@ impl<'env> ModuleTranslator<'env> {
             }
             for ref_idx in dead_refs {
                 let ref_idx = *ref_idx as usize;
-                if let Some(idx) = context.borrowed_to_before_index.get(&ref_idx) {
+                if let Some(idx_set) = context.borrowed_to_before_index.get(&ref_idx) {
                     let ty = self.get_local_type(func_env, ref_idx);
-                    self.enforce_after_update_invariant(func_env, &ty, *idx);
+                    self.enforce_after_update_invariant_set(func_env, &ty, idx_set);
                 }
             }
         }
@@ -1534,9 +1556,9 @@ impl<'env> ModuleTranslator<'env> {
         func_env: &FunctionEnv,
         context: &BytecodeContext,
     ) {
-        for (ref_idx, before_idx) in &context.inherited_to_before_index {
+        for (ref_idx, before_idx_set) in &context.inherited_to_before_index {
             let ty = self.get_local_type(func_env, *ref_idx);
-            self.enforce_after_update_invariant(func_env, &ty, *before_idx);
+            self.enforce_after_update_invariant_set(func_env, &ty, before_idx_set);
         }
     }
 
@@ -1603,8 +1625,8 @@ impl<'env> ModuleTranslator<'env> {
         None
     }
 
-    // Enforce the invariant of an updated value before mutation starts. Does nothing if there
-    // is no before-update invariant.
+    /// Enforce the invariant of an updated value before mutation starts. Does nothing if there
+    /// is no before-update invariant.
     fn enforce_before_update_invariant(&self, _func_env: &FunctionEnv<'_>, ty: &Type, idx: usize) {
         if let Some(struct_env) = self.get_referred_struct(ty) {
             if SpecTranslator::has_before_update_invariant(&struct_env) {
@@ -1618,20 +1640,37 @@ impl<'env> ModuleTranslator<'env> {
         }
     }
 
-    // Enforce the invariant of an updated value after mutation ended. Does nothing if there is
-    // no after-update invariant.
+    /// Enforce the invariant of an updated value after mutation ended. Does nothing if there is
+    /// no after-update invariant.
     fn enforce_after_update_invariant(&self, _func_env: &FunctionEnv<'_>, ty: &Type, idx: usize) {
         if let Some(struct_env) = self.get_referred_struct(ty) {
             if SpecTranslator::has_after_update_invariant(&struct_env) {
                 let name = &boogie_var_before_borrow(idx);
+                emitln!(self.writer, "if ({}_used) {{", name);
+                self.writer.indent();
                 emitln!(
                     self.writer,
                     "call {}_after_update_inv({}, $Dereference($m, {}_ref));",
                     boogie_struct_name(&struct_env),
                     name,
-                    name
+                    name,
                 );
+                emitln!(self.writer, "{}_used := false;", name);
+                self.writer.unindent();
+                emitln!(self.writer, "}");
             }
+        }
+    }
+
+    /// Calls enforce_after_update_invariant on a set of before-borrow indices.
+    fn enforce_after_update_invariant_set(
+        &self,
+        func_env: &FunctionEnv<'_>,
+        ty: &Type,
+        idx_set: &BTreeSet<usize>,
+    ) {
+        for idx in idx_set {
+            self.enforce_after_update_invariant(func_env, ty, *idx);
         }
     }
 
