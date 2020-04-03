@@ -245,6 +245,7 @@ fn parse_file(
     let no_comments_buffer = match strip_comments_and_verify(fname, &source_buffer) {
         Err(err) => {
             errors.push(err);
+            files.insert(fname, source_buffer);
             return Ok((None, errors));
         }
         Ok(no_comments_buffer) => no_comments_buffer,
@@ -303,8 +304,9 @@ fn verify_string(fname: &'static str, string: &str) -> Result<(), Error> {
             let span = Span::new(ByteIndex(idx as u32), ByteIndex(idx as u32));
             let loc = Loc::new(fname, span);
             let msg = format!(
-                "Parser Error: invalid character {} found when reading file.\
-                 Only ascii printable, tabs (\\t), and \\n line ending characters are permitted.",
+                "Invalid character '{}' found when reading file. \
+                 Only ASCII printable characters, tabs (\\t), and line endings (\\n) \
+                 are permitted.",
                 chr
             );
             Err(vec![(loc, msg)])
