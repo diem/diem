@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 futures = "0.3.0"
 jemallocator = { version = "0.3.2", features = ["profiling", "unprefixed_malloc_on_supported_platforms"] }
-parity-multiaddr = "0.7.2"
+parity-multiaddr = "0.8.0"
 rayon = "1.2.0"
 structopt = "0.3.12"
 tokio = { version = "0.2.13", features = ["full"] }

@@ -39,7 +39,7 @@ bytes = "0.5.4"
 
 config-builder = { path = "../config/config-builder", version = "0.1.0" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
-parity-multiaddr = "0.7.2"
+parity-multiaddr = "0.8.0"
 vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }
 transaction-builder = { path = "../language/transaction-builder", version = "0.1.0" }
 channel = { path = "../common/channel", version = "0.1.0" }
