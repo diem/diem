@@ -314,8 +314,8 @@ module TestVector {
     spec fun test_length3 {
         ensures len(old(v)) == result_1;
         ensures result_1 + 1 == result_2;
-        ensures v == old(v);            // ??
-        ensures len(v) != result_2;     // ??
+        ensures v == old(v);            // TODO: issue of using mutated params in spec
+        ensures len(v) != result_2;     // TODO: issue of using mutated params in spec
     }
 
     fun test_length4(v: &mut vector<u64>) : (u64, u64)
@@ -409,5 +409,42 @@ module TestVector {
     }
     spec fun test_borrow_mut {
         aborts_if len(old(v)) == 0;
+    }
+
+
+    // --------------------------------------------
+    // Custom Option type using vector as container
+    // --------------------------------------------
+
+    struct T<E> {
+        v: vector<E>
+    }
+
+    fun none<E>(): T<E> {
+        T<E> {v: Vector::empty<E>()}
+    }
+
+    fun some<E>(e: E): T<E> {
+        let v = Vector::empty<E>();
+        Vector::push_back(&mut v, e);
+        T<E> {v: v}
+    }
+
+    fun unwrap_or<E: copyable>(x: T<E>, e: E): E {
+        let T<E> {v : v} = x;
+        if (Vector::is_empty<E>(&v))
+            e
+        else
+            Vector::pop_back<E>(&mut v)
+    }
+
+    fun option_type(): (u64, u64) {
+        let n = none<u64>();
+        let s = some<u64>(42);
+        (unwrap_or<u64>(n, 0), unwrap_or<u64>(s, 0))
+    }
+    spec fun option_type {
+        ensures result_1 == 0;
+        ensures result_2 == 42;
     }
 }

@@ -1,6 +1,0 @@
-module BytearrayUtil {
-    // TODO: specify
-    native public bytearray_concat(data1: vector<u8>, data2: vector<u8>): vector<u8>
-        // TODO: what are the really conditions here? For now make this total.
-        succeeds_if true;
-}

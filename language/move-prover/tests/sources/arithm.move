@@ -19,6 +19,15 @@ module TestArithmetic {
 	    ensures result_2 == x + y;
 	}
 
+    fun div(x: u64, y: u64): (u64, u64) {
+        (x / y, x % y)
+    }
+    spec fun div {
+        aborts_if y == 0;
+        ensures result_1 == x / y;
+        ensures result_2 == x % y;
+    }
+
     // succeeds.
 	fun multiple_ops(x: u64, y: u64, z: u64): u64 {
 		x + y * z
@@ -53,6 +62,34 @@ module TestArithmetic {
         ensures result_2 == a;
     }
 
+    fun f(x: u64) : u64 {
+        x+1
+    }
+    spec fun f {
+        aborts_if x+1 > max_u64();
+        ensures result == x+1;
+    }
+
+    fun g(x: u64) : u64 {
+        x+2
+    }
+    spec fun g {
+        aborts_if x+2 > max_u64();
+        ensures result == x+2;
+    }
+
+    fun h(b: bool): u64 {
+        let x: u64 = 3;
+        let y: u64;
+        if (b) y=f(x) else y=g(x);
+        if (b && y != 4) abort 4;
+        if (!b && y != 5) abort 5;
+        y
+    }
+    spec fun h {
+        aborts_if false;
+    }
+
 
     // ---------
     // Underflow
@@ -73,25 +110,25 @@ module TestArithmetic {
     // ----------------
 
     // succeeds.
-    fun div_by_zero_ok(): u64 {
+    fun div_by_zero(): u64 {
         let x = 0;
         1 / x
     }
-	spec fun div_by_zero_ok {
+	spec fun div_by_zero {
 	    aborts_if true;
 	}
 
-    fun div_by_zero_u64_bad(x: u64, y: u64): u64 {
+    fun div_by_zero_u64_incorrect(x: u64, y: u64): u64 {
         x / y
     }
-    spec fun div_by_zero_u64_bad {
+    spec fun div_by_zero_u64_incorrect {
         aborts_if false;
     }
 
-    fun div_by_zero_u64_ok(x: u64, y: u64): u64 {
+    fun div_by_zero_u64(x: u64, y: u64): u64 {
         x / y
     }
-    spec fun div_by_zero_u64_ok {
+    spec fun div_by_zero_u64 {
         aborts_if y == 0;
     }
 
@@ -101,50 +138,50 @@ module TestArithmetic {
     // --------------------
 
     // fails.
-    fun overflow_u8_add_bad(x: u8, y: u8): u8 {
+    fun overflow_u8_add_incorrect(x: u8, y: u8): u8 {
         x + y
     }
-    spec fun overflow_u8_add_bad {
+    spec fun overflow_u8_add_incorrect {
         aborts_if false;
     }
 
     // succeeds.
-    fun overflow_u8_add_ok(x: u8, y: u8): u8 {
+    fun overflow_u8_add(x: u8, y: u8): u8 {
         x + y
     }
-    spec fun overflow_u8_add_ok {
+    spec fun overflow_u8_add {
         aborts_if x + y > max_u8();
     }
 
     // fails.
-    fun overflow_u64_add_bad(x: u64, y: u64): u64 {
+    fun overflow_u64_add_incorrect(x: u64, y: u64): u64 {
         x + y
     }
-    spec fun overflow_u64_add_bad {
+    spec fun overflow_u64_add_incorrect {
         aborts_if false;
     }
 
     // succeeds.
-    fun overflow_u64_add_ok(x: u64, y: u64): u64 {
+    fun overflow_u64_add(x: u64, y: u64): u64 {
         x + y
     }
-    spec fun overflow_u64_add_ok {
+    spec fun overflow_u64_add {
         aborts_if x + y > max_u64();
     }
 
     // fails.
-    fun overflow_u128_add_bad(x: u128, y: u128): u128 {
+    fun overflow_u128_add_incorrect(x: u128, y: u128): u128 {
         x + y
     }
-    spec fun overflow_u128_add_bad {
+    spec fun overflow_u128_add_incorrect {
         aborts_if false;
     }
 
     // succeeds.
-    fun overflow_u128_add_ok(x: u128, y: u128): u128 {
+    fun overflow_u128_add(x: u128, y: u128): u128 {
         x + y
     }
-    spec fun overflow_u128_add_ok {
+    spec fun overflow_u128_add {
         aborts_if x + y > max_u128();
     }
 
@@ -154,50 +191,50 @@ module TestArithmetic {
     // --------------------------
 
     // fails.
-    fun overflow_u8_mul_bad(x: u8, y: u8): u8 {
+    fun overflow_u8_mul_incorrect(x: u8, y: u8): u8 {
         x * y
     }
-    spec fun overflow_u8_mul_bad {
+    spec fun overflow_u8_mul_incorrect {
         aborts_if false;
     }
 
     // succeeds.
-    fun overflow_u8_mul_ok(x: u8, y: u8): u8 {
+    fun overflow_u8_mul(x: u8, y: u8): u8 {
         x * y
     }
-    spec fun overflow_u8_mul_ok {
+    spec fun overflow_u8_mul {
         aborts_if x * y > max_u8();
     }
 
     // fails.
-    fun overflow_u64_mul_bad(x: u64, y: u64): u64 {
+    fun overflow_u64_mul_incorrect(x: u64, y: u64): u64 {
         x * y
     }
-    spec fun overflow_u64_mul_bad {
+    spec fun overflow_u64_mul_incorrect {
         aborts_if false;
     }
 
     // TODO: Should succeed. JP: Prover seems to give a false counterexample.
-    fun overflow_u64_mul_ok(x: u64, y: u64): u64 {
+    fun overflow_u64_mul(x: u64, y: u64): u64 {
         x * y
     }
-    spec fun overflow_u64_mul_ok {
+    spec fun overflow_u64_mul {
         //aborts_if x * y > max_u64();
     }
 
     // fails.
-    fun overflow_u128_mul_bad(x: u128, y: u128): u128 {
+    fun overflow_u128_mul_incorrect(x: u128, y: u128): u128 {
         x * y
     }
-    spec fun overflow_u128_mul_bad {
+    spec fun overflow_u128_mul_incorrect {
         aborts_if false;
     }
 
     // TODO: Should succeed. JP: Prover seems to give a false counterexample.
-    fun overflow_u128_mul_ok(x: u128, y: u128): u128 {
+    fun overflow_u128_mul(x: u128, y: u128): u128 {
         x * y
     }
-    spec fun overflow_u128_mul_ok {
+    spec fun overflow_u128_mul {
         //aborts_if x * y > max_u128(); // U128_MAX
     }
 }

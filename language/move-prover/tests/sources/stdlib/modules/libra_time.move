@@ -1,4 +1,5 @@
 // dep: tests/sources/stdlib/modules/transaction.move
+
 address 0x0:
 
 module LibraTimestamp {
@@ -10,8 +11,7 @@ module LibraTimestamp {
     }
 
     // Initialize the global wall clock time resource.
-    public fun initialize_timer() {
-
+    public fun initialize() {
         // Only callable by the Association address
         Transaction::assert(Transaction::sender() == 0xA550C18, 1);
 
@@ -39,5 +39,10 @@ module LibraTimestamp {
     // Get the timestamp representing `now` in microseconds.
     public fun now_microseconds(): u64 acquires CurrentTimeMicroseconds {
         borrow_global<CurrentTimeMicroseconds>(0xA550C18).microseconds
+    }
+
+    // Helper function to determine if the blockchain is at genesis state.
+    public fun is_genesis(): bool {
+        !::exists<Self::CurrentTimeMicroseconds>(0xA550C18)
     }
 }

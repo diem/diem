@@ -1,7 +1,7 @@
 Move prover returns: exiting with boogie verification errors
 bug:  This assertion might not hold.
 
-      ┌── libra_account.bpl:1116:6 ───
+      ┌── approved_payment.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -9,7 +9,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_account.bpl:1116:6 ───
+      ┌── approved_payment.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -17,7 +17,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_account.bpl:1138:6 ───
+      ┌── approved_payment.bpl:1138:6 ───
       │
  1138 │     assert false; // $LCS_to_bytes not implemented
       │      ^
@@ -25,7 +25,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_account.bpl:1138:6 ───
+      ┌── approved_payment.bpl:1138:6 ───
       │
  1138 │     assert false; // $LCS_to_bytes not implemented
       │      ^
@@ -33,7 +33,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_account.bpl:1116:6 ───
+      ┌── approved_payment.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -41,7 +41,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_account.bpl:1116:6 ───
+      ┌── approved_payment.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -49,7 +49,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_account.bpl:1116:6 ───
+      ┌── approved_payment.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -57,7 +57,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_account.bpl:1116:6 ───
+      ┌── approved_payment.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -65,7 +65,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_account.bpl:1138:6 ───
+      ┌── approved_payment.bpl:1138:6 ───
       │
  1138 │     assert false; // $LCS_to_bytes not implemented
       │      ^
@@ -73,7 +73,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_account.bpl:1116:6 ───
+      ┌── approved_payment.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -81,7 +81,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_account.bpl:1138:6 ───
+      ┌── approved_payment.bpl:1138:6 ───
       │
  1138 │     assert false; // $LCS_to_bytes not implemented
       │      ^
@@ -89,7 +89,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_account.bpl:1138:6 ───
+      ┌── approved_payment.bpl:1138:6 ───
       │
  1138 │     assert false; // $LCS_to_bytes not implemented
       │      ^
@@ -97,7 +97,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_account.bpl:1116:6 ───
+      ┌── approved_payment.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -105,7 +105,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_account.bpl:1116:6 ───
+      ┌── approved_payment.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -113,7 +113,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_account.bpl:1116:6 ───
+      ┌── approved_payment.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -121,8 +121,16 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_account.bpl:1138:6 ───
+      ┌── approved_payment.bpl:1125:6 ───
       │
- 1138 │     assert false; // $LCS_to_bytes not implemented
+ 1125 │     assert false; // $Signature_ed25519_verify not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── approved_payment.bpl:1125:6 ───
+      │
+ 1125 │     assert false; // $Signature_ed25519_verify not implemented
       │      ^
       │

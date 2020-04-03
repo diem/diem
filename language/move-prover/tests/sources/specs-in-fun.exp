@@ -6,8 +6,8 @@ error:  This assertion might not hold.
  40 │             assert x == y;
     │             ^^^^^^^^^^^^^^
     │
-    =     at tests/sources/specs-in-fun.move:37:5: simple1_invalid (entry)
-    =     at tests/sources/specs-in-fun.move:38:9: simple1_invalid
+    =     at tests/sources/specs-in-fun.move:37:5: simple1_incorrect (entry)
+    =     at tests/sources/specs-in-fun.move:38:9: simple1_incorrect
     =         x = <redacted>,
     =         y = <redacted>
 
@@ -18,11 +18,11 @@ error:  This assertion might not hold.
  48 │             assert x == y;
     │             ^^^^^^^^^^^^^^
     │
-    =     at tests/sources/specs-in-fun.move:44:5: simple2_invalid (entry)
-    =     at tests/sources/specs-in-fun.move:46:15: simple2_invalid
+    =     at tests/sources/specs-in-fun.move:44:5: simple2_incorrect (entry)
+    =     at tests/sources/specs-in-fun.move:46:15: simple2_incorrect
     =         x = <redacted>,
     =         y = <redacted>
-    =     at tests/sources/specs-in-fun.move:48:13: simple2_invalid
+    =     at tests/sources/specs-in-fun.move:48:13: simple2_incorrect
 
 error:  This assertion might not hold.
 
@@ -31,7 +31,7 @@ error:  This assertion might not hold.
  55 │             assert x > y;
     │             ^^^^^^^^^^^^^
     │
-    =     at tests/sources/specs-in-fun.move:52:5: simple3_invalid (entry)
+    =     at tests/sources/specs-in-fun.move:52:5: simple3_incorrect (entry)
 
 error:  This assertion might not hold.
 
@@ -40,9 +40,9 @@ error:  This assertion might not hold.
  64 │             assert z > 2*x;
     │             ^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/specs-in-fun.move:59:5: simple4_invalid (entry)
-    =     at tests/sources/specs-in-fun.move:61:15: simple4_invalid
+    =     at tests/sources/specs-in-fun.move:59:5: simple4_incorrect (entry)
+    =     at tests/sources/specs-in-fun.move:61:15: simple4_incorrect
     =         x = <redacted>,
     =         y = <redacted>,
     =         z = <redacted>
-    =     at tests/sources/specs-in-fun.move:63:13: simple4_invalid
+    =     at tests/sources/specs-in-fun.move:63:13: simple4_incorrect

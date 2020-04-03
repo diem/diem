@@ -6,8 +6,8 @@ error:  A postcondition might not hold on this return path.
  31 │         aborts_if x <= y;
     │         ^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/aborts-if.move:28:5: abort2_bad (entry)
-    =     at tests/sources/aborts-if.move:28:5: abort2_bad (exit)
+    =     at tests/sources/aborts-if.move:28:5: abort2_incorrect (entry)
+    =     at tests/sources/aborts-if.move:28:5: abort2_incorrect (exit)
     =         x = <redacted>,
     =         y = <redacted>
 
@@ -18,11 +18,11 @@ error:  A postcondition might not hold on this return path.
  47 │         aborts_if x <= y;
     │         ^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/aborts-if.move:43:5: abort4_bad (entry)
-    =     at tests/sources/aborts-if.move:44:9: abort4_bad
+    =     at tests/sources/aborts-if.move:43:5: abort4_incorrect (entry)
+    =     at tests/sources/aborts-if.move:44:9: abort4_incorrect
     =         x = <redacted>,
     =         y = <redacted>
-    =     at tests/sources/aborts-if.move:43:5: abort4_bad (exit)
+    =     at tests/sources/aborts-if.move:43:5: abort4_incorrect (exit)
 
 error:  A postcondition might not hold on this return path.
 
@@ -31,11 +31,11 @@ error:  A postcondition might not hold on this return path.
  55 │         aborts_if x < y;
     │         ^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/aborts-if.move:51:5: abort5_bad (entry)
-    =     at tests/sources/aborts-if.move:52:9: abort5_bad
+    =     at tests/sources/aborts-if.move:51:5: abort5_incorrect (entry)
+    =     at tests/sources/aborts-if.move:52:9: abort5_incorrect
     =         x = <redacted>,
     =         y = <redacted>
-    =     at tests/sources/aborts-if.move:51:5: abort5_bad (exit)
+    =     at tests/sources/aborts-if.move:51:5: abort5_incorrect (exit)
 
 error:  A postcondition might not hold on this return path.
 
@@ -44,11 +44,11 @@ error:  A postcondition might not hold on this return path.
  63 │         aborts_if x <= y;
     │         ^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/aborts-if.move:59:5: abort6_bad (entry)
-    =     at tests/sources/aborts-if.move:60:9: abort6_bad
+    =     at tests/sources/aborts-if.move:59:5: abort6_incorrect (entry)
+    =     at tests/sources/aborts-if.move:60:9: abort6_incorrect
     =         x = <redacted>,
     =         y = <redacted>
-    =     at tests/sources/aborts-if.move:59:5: abort6_bad (exit)
+    =     at tests/sources/aborts-if.move:59:5: abort6_incorrect (exit)
 
 error:  A postcondition might not hold on this return path.
 
@@ -57,11 +57,11 @@ error:  A postcondition might not hold on this return path.
  85 │         aborts_if x < y;
     │         ^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/aborts-if.move:81:5: multi_abort2_bad (entry)
-    =     at tests/sources/aborts-if.move:82:9: multi_abort2_bad
+    =     at tests/sources/aborts-if.move:81:5: multi_abort2_incorrect (entry)
+    =     at tests/sources/aborts-if.move:82:9: multi_abort2_incorrect
     =         x = <redacted>,
     =         y = <redacted>
-    =     at tests/sources/aborts-if.move:81:5: multi_abort2_bad (exit)
+    =     at tests/sources/aborts-if.move:81:5: multi_abort2_incorrect (exit)
 
 error:  A postcondition might not hold on this return path.
 
@@ -70,8 +70,8 @@ error:  A postcondition might not hold on this return path.
  94 │         aborts_if x < y;
     │         ^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/aborts-if.move:90:5: multi_abort3_bad (entry)
-    =     at tests/sources/aborts-if.move:91:9: multi_abort3_bad
+    =     at tests/sources/aborts-if.move:90:5: multi_abort3_incorrect (entry)
+    =     at tests/sources/aborts-if.move:91:9: multi_abort3_incorrect
     =         x = <redacted>,
     =         y = <redacted>
-    =     at tests/sources/aborts-if.move:90:5: multi_abort3_bad (exit)
+    =     at tests/sources/aborts-if.move:90:5: multi_abort3_incorrect (exit)

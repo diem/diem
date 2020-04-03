@@ -34,14 +34,14 @@ module TestAssertAndAssume {
 
     // Tests that should not verify
 
-    fun simple1_invalid(x: u64, y: u64) {
+    fun simple1_incorrect(x: u64, y: u64) {
         if (!(x > y)) abort 1;
         spec {
             assert x == y;
         }
     }
 
-    fun simple2_invalid(x: u64) {
+    fun simple2_incorrect(x: u64) {
         let y: u64;
         y = x + 1;
         spec {
@@ -49,14 +49,14 @@ module TestAssertAndAssume {
         }
     }
 
-    fun simple3_invalid(x: u64, y: u64) {
+    fun simple3_incorrect(x: u64, y: u64) {
         spec {
             assume x >= y;
             assert x > y;
         }
     }
 
-    fun simple4_invalid(x: u64, y: u64) {
+    fun simple4_incorrect(x: u64, y: u64) {
         let z: u64;
         z = x + y;
         spec {

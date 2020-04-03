@@ -77,6 +77,7 @@ module TestInvariants {
         *r = 4;
     }
 
+
     // -----------------------
     // Lifetime analysis tests
     // -----------------------

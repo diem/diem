@@ -43,7 +43,7 @@ module TestModuleInvariants {
 
     // Function destroying an S instance but not tracking it. The module invariant will catch this when the function
     // exits.
-    public fun delete_S_invalid(x: S) {
+    public fun delete_S_incorrect(x: S) {
         let S{} = x;
     }
 
@@ -52,7 +52,7 @@ module TestModuleInvariants {
 
     // Private function calling a public function and failing because the pre-condition of the public function
     // does not hold.
-    fun private_calls_public_invalid(): S acquires SCounter {
+    fun private_calls_public_incorrect(): S acquires SCounter {
        let x = new_S();
        x
     }
