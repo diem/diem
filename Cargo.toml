@@ -85,6 +85,7 @@ members = [
     "network/noise",
     "network/socket-bench-server",
     "mempool",
+    "secure/json-rpc",
     "secure/key-manager",
     "secure/net",
     "secure/storage",
