@@ -9,6 +9,7 @@ use debug_interface::prelude::*;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
+use libra_types::on_chain_config::VMPublishingOption;
 use libra_types::{
     account_config,
     block_metadata::BlockMetadata,
@@ -66,6 +67,16 @@ impl LibraVM {
 
     pub fn load_configs(&mut self, state: &dyn StateView) {
         self.load_configs_impl(&RemoteStorage::new(state))
+    }
+
+    pub fn update_publishing_option(
+        &mut self,
+        new_publishing_option: VMPublishingOption,
+    ) -> VMResult<()> {
+        self.on_chain_config
+            .as_mut()
+            .map(|config| config.publishing_options = new_publishing_option)
+            .ok_or_else(|| VMStatus::new(StatusCode::VM_STARTUP_FAILURE))
     }
 
     fn on_chain_config(&self) -> VMResult<&OnlineConfig> {
