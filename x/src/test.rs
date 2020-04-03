@@ -30,8 +30,6 @@ pub struct Args {
     no_run: bool,
 
     #[structopt(long, parse(from_os_str))]
-    lcovdir: Option<OsString>,
-    #[structopt(long, parse(from_os_str))]
     htmlcovdir: Option<OsString>,
     #[structopt(name = "TESTNAME", parse(from_os_str))]
     testname: Option<OsString>,
@@ -43,8 +41,6 @@ pub struct Args {
 pub fn run(mut args: Args, config: Config) -> Result<()> {
     args.args.extend(args.testname.clone());
 
-    //if we will be be running coverage, set the environment arguments we'll force
-    let runcov = args.lcovdir.is_some() || args.htmlcovdir.is_some();
     let coverageflags: &[(&str, &str)] = &[
         //A way to use -Z (unstable) flags with the stable compiler. See below.
         ("RUSTC_BOOTSTRAP", "1"),
@@ -58,9 +54,13 @@ pub fn run(mut args: Args, config: Config) -> Result<()> {
         ),
     ];
 
-    let env_vars = if runcov { coverageflags } else { &[] };
+    let env_vars = if args.htmlcovdir.is_some() {
+        coverageflags
+    } else {
+        &[]
+    };
 
-    if runcov {
+    if args.htmlcovdir.is_some() {
         let mut clean_cmd = Command::new("cargo");
         clean_cmd.arg("clean");
         clean_cmd.output()?;
@@ -155,28 +155,6 @@ pub fn run(mut args: Args, config: Config) -> Result<()> {
 
     let mut debug_dir = project_root();
     debug_dir.push("target/debug/");
-
-    if args.lcovdir.is_some() {
-        let mut grcov_lcov = Command::new("grcov");
-        grcov_lcov
-            .arg(debug_dir.as_os_str())
-            .arg("-t")
-            .arg("lcov")
-            .arg("--llvm")
-            .arg("--branch")
-            .arg("--ignore")
-            .arg("/*")
-            .arg("--ignore")
-            .arg("x/*")
-            .arg("--ignore")
-            .arg("testsuite/*")
-            .arg("-o")
-            .arg(args.lcovdir.unwrap());
-        info!("{:?}", grcov_lcov);
-        grcov_lcov.stdout(Stdio::inherit()).stderr(Stdio::inherit());
-        let output = grcov_lcov.output()?;
-        output.status.success();
-    };
 
     if args.htmlcovdir.is_some() {
         let mut grcov_html = Command::new("grcov");
