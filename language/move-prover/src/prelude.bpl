@@ -1105,10 +1105,32 @@ ensures $abort_flag == old($abort_flag);  // Does not abort, but stays aborted.
 
 // TODO: implement the below methods
 
-procedure {:inline 1} $LibraAccount_save_account(balance: Value, account: Value, addr: Value) {
-    assert false; // $LibraAccount_save_account
+procedure {:inline 1} $LibraAccount_save_account(ta: TypeValue, balance: Value, account: Value, addr: Value) {
+    assert false; // $LibraAccount_save_account not implemented
 }
 
 procedure {:inline 1} $LibraAccount_write_to_event_store(ta: TypeValue, guid: Value, count: Value, msg: Value) {
     assert false; // $LibraAccount_write_to_event_store not implemented
+}
+
+// ==================================================================================
+// Native lcs
+
+// TODO: implement the below methods
+
+procedure {:inline 1} $Signature_ed25519_verify(signature: Value, public_key: Value, message: Value) returns (res: Value) {
+    assert false; // $Signature_ed25519_verify not implemented
+}
+
+procedure {:inline 1} Signature_ed25519_threshold_verify(bitmap: Value, signature: Value, public_key: Value, message: Value) returns (res: Value) {
+    assert false; // Signature_ed25519_threshold_verify not implemented
+}
+
+// ==================================================================================
+// Native signature
+
+// TODO: implement the below methods
+
+procedure {:inline 1} $LCS_to_bytes(ta: TypeValue, v: Reference) returns (res: Value) {
+    assert false; // $LCS_to_bytes not implemented
 }

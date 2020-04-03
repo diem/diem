@@ -6,10 +6,10 @@ error:  A postcondition might not hold on this return path.
  44 │         aborts_if false;
     │         ^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/cast.move:40:5: aborting_u64_cast_bad (entry)
-    =     at tests/sources/cast.move:41:9: aborting_u64_cast_bad
+    =     at tests/sources/cast.move:40:5: aborting_u64_cast_incorrect (entry)
+    =     at tests/sources/cast.move:41:9: aborting_u64_cast_incorrect
     =         x = <redacted>
-    =     at tests/sources/cast.move:40:5: aborting_u64_cast_bad (exit)
+    =     at tests/sources/cast.move:40:5: aborting_u64_cast_incorrect (exit)
 
 error:  A postcondition might not hold on this return path.
 
@@ -18,7 +18,7 @@ error:  A postcondition might not hold on this return path.
  30 │         aborts_if false;
     │         ^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/cast.move:26:5: aborting_u8_cast_bad (entry)
-    =     at tests/sources/cast.move:27:9: aborting_u8_cast_bad
+    =     at tests/sources/cast.move:26:5: aborting_u8_cast_incorrect (entry)
+    =     at tests/sources/cast.move:27:9: aborting_u8_cast_incorrect
     =         x = <redacted>
-    =     at tests/sources/cast.move:26:5: aborting_u8_cast_bad (exit)
+    =     at tests/sources/cast.move:26:5: aborting_u8_cast_incorrect (exit)

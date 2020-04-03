@@ -1,7 +1,7 @@
 Move prover returns: exiting with boogie verification errors
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -9,7 +9,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -17,7 +17,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1138:6 ───
+      ┌── libra_configs.bpl:1138:6 ───
       │
  1138 │     assert false; // $LCS_to_bytes not implemented
       │      ^
@@ -25,7 +25,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1138:6 ───
+      ┌── libra_configs.bpl:1138:6 ───
       │
  1138 │     assert false; // $LCS_to_bytes not implemented
       │      ^
@@ -33,7 +33,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -41,7 +41,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -49,7 +49,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -57,7 +57,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -65,7 +65,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1138:6 ───
+      ┌── libra_configs.bpl:1138:6 ───
       │
  1138 │     assert false; // $LCS_to_bytes not implemented
       │      ^
@@ -73,7 +73,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -81,7 +81,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1138:6 ───
+      ┌── libra_configs.bpl:1138:6 ───
       │
  1138 │     assert false; // $LCS_to_bytes not implemented
       │      ^
@@ -89,7 +89,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1138:6 ───
+      ┌── libra_configs.bpl:1138:6 ───
       │
  1138 │     assert false; // $LCS_to_bytes not implemented
       │      ^
@@ -97,7 +97,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -105,7 +105,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -113,7 +113,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -121,7 +121,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -129,7 +129,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -137,7 +137,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -145,7 +145,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -198,7 +198,7 @@ error:  A precondition for this call might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -206,7 +206,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -252,7 +252,7 @@ error:  A precondition for this call might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1138:6 ───
+      ┌── libra_configs.bpl:1138:6 ───
       │
  1138 │     assert false; // $LCS_to_bytes not implemented
       │      ^
@@ -260,7 +260,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1138:6 ───
+      ┌── libra_configs.bpl:1138:6 ───
       │
  1138 │     assert false; // $LCS_to_bytes not implemented
       │      ^
@@ -268,7 +268,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -276,7 +276,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -284,7 +284,7 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
@@ -292,71 +292,16 @@ bug:  This assertion might not hold.
 
 bug:  This assertion might not hold.
 
-      ┌── libra_system.bpl:1116:6 ───
+      ┌── libra_configs.bpl:1116:6 ───
       │
  1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
       │      ^
       │
 
-error:  A precondition for this call might not hold.
+bug:  This assertion might not hold.
 
-     ┌── tests/sources/stdlib/modules/libra_system.move:98:5 ───
-     │
-  98 │ ╭     public fun get_validator_address(v: &ValidatorInfo): &address {
-  99 │ │       &v.addr
- 100 │ │     }
-     │ ╰─────^
-     │
-     =     at tests/sources/stdlib/modules/libra_system.move:263:4: remove_validator (entry)
-     =     at tests/sources/stdlib/modules/libra_system.move:265:8: remove_validator
-     =     at tests/sources/stdlib/modules/libra_system.move:267:32: remove_validator
-     =     at tests/sources/stdlib/modules/libra_system.move:268:64: remove_validator
-     =     at tests/sources/stdlib/modules/libra_system.move:271:26: remove_validator
-     =     at tests/sources/stdlib/modules/libra_system.move:145:4: is_validator_ (entry)
-     =     at tests/sources/stdlib/modules/libra_system.move:146:28: is_validator_
-     =     at tests/sources/stdlib/modules/libra_system.move:147:13: is_validator_
-     =     at tests/sources/stdlib/modules/libra_system.move:151:13: is_validator_
-     =     at tests/sources/stdlib/modules/libra_system.move:153:49: is_validator_
-     =     at tests/sources/stdlib/modules/libra_system.move:155:18: is_validator_
-     =     at tests/sources/stdlib/modules/libra_system.move:271:12: remove_validator
-     =     at tests/sources/stdlib/modules/libra_system.move:270:8: remove_validator
-     =     at tests/sources/stdlib/modules/libra_system.move:195:5: get_validator_index (entry)
-     =     at tests/sources/stdlib/modules/libra_system.move:196:27: get_validator_index
-     =     at tests/sources/stdlib/modules/libra_system.move:197:17: get_validator_index
-     =     at tests/sources/stdlib/modules/libra_system.move:199:54: get_validator_index
-     =     at tests/sources/stdlib/modules/libra_system.move:98:5: get_validator_address (entry)
-
-error:  A precondition for this call might not hold.
-
-     ┌── tests/sources/stdlib/modules/libra_system.move:195:5 ───
-     │
- 195 │ ╭     public fun get_validator_index(validators: &vector<ValidatorInfo>, addr: address): u64 {
- 196 │ │         let len = Vector::length(validators);
- 197 │ │         let i = 0;
- 198 │ │         loop {
- 199 │ │             if (get_validator_address(Vector::borrow(validators, i)) == &addr) {
- 200 │ │                 return i
- 201 │ │             };
- 202 │ │
- 203 │ │             i = i + 1;
- 204 │ │             if (i >= len) { break };
- 205 │ │         };
- 206 │ │
- 207 │ │         abort 99
- 208 │ │     }
-     │ ╰─────^
-     │
-     =     at tests/sources/stdlib/modules/libra_system.move:263:4: remove_validator (entry)
-     =     at tests/sources/stdlib/modules/libra_system.move:265:8: remove_validator
-     =     at tests/sources/stdlib/modules/libra_system.move:267:32: remove_validator
-     =     at tests/sources/stdlib/modules/libra_system.move:268:64: remove_validator
-     =     at tests/sources/stdlib/modules/libra_system.move:271:26: remove_validator
-     =     at tests/sources/stdlib/modules/libra_system.move:145:4: is_validator_ (entry)
-     =     at tests/sources/stdlib/modules/libra_system.move:146:28: is_validator_
-     =     at tests/sources/stdlib/modules/libra_system.move:147:13: is_validator_
-     =     at tests/sources/stdlib/modules/libra_system.move:151:13: is_validator_
-     =     at tests/sources/stdlib/modules/libra_system.move:153:49: is_validator_
-     =     at tests/sources/stdlib/modules/libra_system.move:155:18: is_validator_
-     =     at tests/sources/stdlib/modules/libra_system.move:271:12: remove_validator
-     =     at tests/sources/stdlib/modules/libra_system.move:270:8: remove_validator
-     =     at tests/sources/stdlib/modules/libra_system.move:195:5: get_validator_index (entry)
+      ┌── libra_configs.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
