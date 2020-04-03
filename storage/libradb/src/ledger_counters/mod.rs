@@ -13,7 +13,7 @@ use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use strum::IntoEnumIterator;
-use strum_macros::{AsRefStr, EnumIter};
+use strum_macros::EnumIter;
 
 // register Prometheus counters
 pub static LIBRA_STORAGE_LEDGER: Lazy<IntGaugeVec> = Lazy::new(|| {
@@ -29,9 +29,8 @@ pub static LIBRA_STORAGE_LEDGER: Lazy<IntGaugeVec> = Lazy::new(|| {
 });
 
 /// Types of ledger counters.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, ToPrimitive, EnumIter, AsRefStr)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, ToPrimitive, EnumIter)]
 #[cfg_attr(test, derive(Arbitrary))]
-#[strum(serialize_all = "snake_case")]
 pub(crate) enum LedgerCounter {
     EventsCreated = 101,
 
@@ -40,6 +39,24 @@ pub(crate) enum LedgerCounter {
 
     NewStateNodes = 301,
     StaleStateNodes = 302,
+}
+
+impl LedgerCounter {
+    const STR_EVENTS_CREATED: &'static str = "events_created";
+    const STR_NEW_STATE_LEAVES: &'static str = "new_state_leaves";
+    const STR_STALE_STATE_LEAVES: &'static str = "stale_state_leaves";
+    const STR_NEW_STATE_NODES: &'static str = "new_state_nodes";
+    const STR_STALE_STATE_NODES: &'static str = "stale_state_nodes";
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::EventsCreated=> Self::STR_EVENTS_CREATED,
+            Self::NewStateLeaves => Self::STR_NEW_STATE_LEAVES,
+            Self::StaleStateLeaves => Self::STR_STALE_STATE_LEAVES,
+            Self::NewStateNodes => Self::STR_NEW_STATE_NODES,
+            Self::StaleStateNodes => Self::STR_STALE_STATE_NODES,
+        }
+    }
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
@@ -136,9 +153,9 @@ impl LedgerCounters {
     /// Bump Prometheus counters.
     pub fn bump_op_counters(&self) {
         for counter in LedgerCounter::iter() {
-            OP_COUNTER.set(counter.as_ref(), self.get(counter));
+            OP_COUNTER.set(counter.name(), self.get(counter));
             LIBRA_STORAGE_LEDGER
-                .with_label_values(&[counter.as_ref()])
+                .with_label_values(&[counter.name()])
                 .set(self.get(counter) as i64);
         }
     }
