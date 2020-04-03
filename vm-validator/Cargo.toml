@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0"
 async-trait = "0.1"
 futures = "0.3.0"
-tokio = { version = "0.2.13", features = ["full"] }
+tokio = { version = "0.2.15", features = ["full"] }
 libra-config = { path = "../config", version = "0.1.0" }
 scratchpad = { path = "../storage/scratchpad", version = "0.1.0" }
 libra-state-view = { path = "../storage/state-view", version = "0.1.0" }

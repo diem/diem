@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-tokio = { version = "0.2.12", features = ["full"] }
+tokio = { version = "0.2.15", features = ["full"] }
 
 executor = { path = "../executor", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
