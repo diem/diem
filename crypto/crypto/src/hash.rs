@@ -90,6 +90,7 @@
 
 use anyhow::{ensure, Result};
 use bytes::Bytes;
+use kangarootwelve_xkcp as k12;
 use libra_nibble::Nibble;
 use mirai_annotations::*;
 use once_cell::sync::Lazy;
@@ -98,7 +99,6 @@ use proptest_derive::Arbitrary;
 use rand::{rngs::EntropyRng, Rng};
 use serde::{de, ser};
 use std::{self, convert::AsRef, fmt};
-use tiny_keccak::{Hasher, Sha3};
 
 const LIBRA_HASH_SUFFIX: &[u8] = b"@@$$LIBRA$$@@";
 
@@ -175,9 +175,8 @@ impl HashValue {
     /// Convenience function to compute a sha3-256 HashValue of the buffer. It will handle hasher
     /// creation, data feeding and finalization.
     pub fn from_sha3_256(buffer: &[u8]) -> Self {
-        let mut sha3 = Sha3::v256();
-        sha3.update(buffer);
-        HashValue::from_keccak(sha3)
+        let hash = k12::hash(buffer).into();
+        Self { hash }
     }
 
     #[cfg(test)]
@@ -185,21 +184,12 @@ impl HashValue {
     where
         I: IntoIterator<Item = &'a [u8]>,
     {
-        let mut sha3 = Sha3::v256();
+        let mut k12 = k12::Hasher::new();
         for buffer in buffers {
-            sha3.update(buffer);
+            k12.update(buffer);
         }
-        HashValue::from_keccak(sha3)
-    }
-
-    fn as_ref_mut(&mut self) -> &mut [u8] {
-        &mut self.hash[..]
-    }
-
-    fn from_keccak(state: Sha3) -> Self {
-        let mut hash = Self::zero();
-        state.finalize(hash.as_ref_mut());
-        hash
+        let hash = k12.finalize().into();
+        Self { hash }
     }
 
     /// Returns a `HashValueBitIterator` over all the bits that represent this `HashValue`.
@@ -449,14 +439,18 @@ pub trait CryptoHasher: Default {
 /// * Only used internally within this crate
 #[derive(Clone)]
 pub struct DefaultHasher {
-    state: Sha3,
+    state: k12::Hasher,
+    custom: Option<Vec<u8>>,
 }
 
 impl CryptoHasher for DefaultHasher {
-    fn finish(self) -> HashValue {
-        let mut hasher = HashValue::default();
-        self.state.finalize(hasher.as_ref_mut());
-        hasher
+    fn finish(mut self) -> HashValue {
+        let hash = if let Some(custom) = self.custom {
+            self.state.finalize_custom(&custom).into()
+        } else {
+            self.state.finalize().into()
+        };
+        HashValue { hash }
     }
 
     fn write(&mut self, bytes: &[u8]) -> &mut Self {
@@ -468,7 +462,8 @@ impl CryptoHasher for DefaultHasher {
 impl Default for DefaultHasher {
     fn default() -> Self {
         DefaultHasher {
-            state: Sha3::v256(),
+            state: k12::Hasher::new(),
+            custom: None,
         }
     }
 }
@@ -476,13 +471,15 @@ impl Default for DefaultHasher {
 impl DefaultHasher {
     /// initialize a new hasher with a specific salt
     pub fn new_with_salt(typename: &[u8]) -> Self {
-        let mut state = Sha3::v256();
-        if !typename.is_empty() {
+        let state = k12::Hasher::new();
+        let custom = if typename.is_empty() {
+            None
+        } else {
             let mut salt = typename.to_vec();
             salt.extend_from_slice(LIBRA_HASH_SUFFIX);
-            state.update(HashValue::from_sha3_256(&salt[..]).as_ref());
-        }
-        DefaultHasher { state }
+            Some(salt)
+        };
+        DefaultHasher { state, custom }
     }
 }
 
