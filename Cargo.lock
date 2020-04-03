@@ -2468,6 +2468,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-secure-json-rpc"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.28 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-canonical-serialization 0.1.0",
+ "libra-config 0.1.0",
+ "libra-crypto 0.1.0",
+ "libra-json-rpc 0.1.0",
+ "libra-temppath 0.1.0",
+ "libra-types 0.1.0",
+ "libra-workspace-hack 0.1.0",
+ "libradb 0.1.0",
+ "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.51 (registry+https://github.com/rust-lang/crates.io-index)",
+ "storage-interface 0.1.0",
+ "storage-proto 0.1.0",
+ "thiserror 1.0.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ureq 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vm-validator 0.1.0",
+]
+
+[[package]]
 name = "libra-secure-net"
 version = "0.1.0"
 dependencies = [
