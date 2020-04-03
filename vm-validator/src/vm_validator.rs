@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
+use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
     account_config::AccountResource,
-    transaction::{SignedTransaction, VMValidatorResult},
+    transaction::{SignedTransaction, VMValidatorResult, Version},
 };
 use libra_vm::{LibraVM, VMVerifier};
 use scratchpad::SparseMerkleTree;
@@ -20,8 +21,12 @@ mod vm_validator_test;
 #[async_trait::async_trait]
 pub trait TransactionValidation: Send + Sync + Clone {
     type ValidationInstance: VMVerifier;
+
     /// Validate a txn from client
     async fn validate_transaction(&self, _txn: SignedTransaction) -> Result<VMValidatorResult>;
+
+    /// Restart the transaction validation instance
+    async fn restart(&mut self) -> Result<()>;
 }
 
 #[derive(Clone)]
@@ -72,6 +77,20 @@ impl TransactionValidation for VMValidator {
         .await
         .map_err(Into::into)
     }
+
+    async fn restart(&mut self) -> Result<()> {
+        let db_reader = self.db_reader.clone();
+        let (version, state_root) = self.db_reader.get_latest_state_root()?;
+
+        // We need to run vm.load_configs() in the runtime provided by spawn_blocking to make it
+        // compatible with the runtime blocking logic for the tokio storage read client in the
+        // lower-level implementation of load_configs().
+        // Otherwise, load_configs() will block forever.
+        let new_vm =
+            tokio::task::spawn_blocking(move || new_vm(version, state_root, db_reader)).await?;
+        self.vm = new_vm;
+        Ok(())
+    }
 }
 
 /// returns account's sequence number from storage
@@ -86,4 +105,14 @@ pub async fn get_account_sequence_number(
         Some(blob) => Ok(AccountResource::try_from(&blob)?.sequence_number()),
         None => Ok(0),
     }
+}
+
+pub fn new_vm(version: Version, state_root: HashValue, db_reader: Arc<dyn DbReader>) -> LibraVM {
+    let smt = SparseMerkleTree::new(state_root);
+    let state_view =
+        VerifiedStateView::new(Arc::clone(&db_reader), Some(version), state_root, &smt);
+
+    let mut vm = LibraVM::new();
+    vm.load_configs(&state_view);
+    vm
 }

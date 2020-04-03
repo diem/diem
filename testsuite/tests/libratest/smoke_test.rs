@@ -933,7 +933,7 @@ fn test_e2e_reconfiguration() {
 
 #[test]
 fn test_e2e_modify_publishing_option() {
-    let (mut env, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+    let (_env, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
     client_proxy.create_next_account(false).unwrap();
 
     client_proxy
@@ -965,16 +965,6 @@ fn test_e2e_modify_publishing_option() {
     client_proxy
         .disable_custom_script(&["disallow_custom_script"], true)
         .unwrap();
-
-    // TODO: Currently VMValidator didn't restart after reconfiguration. We will manually restart
-    //       the node so that VMValidator is using the new config.
-    let peer_to_restart = 0;
-    // restart node
-    env.validator_swarm.kill_node(peer_to_restart);
-    assert!(env
-        .validator_swarm
-        .add_node(peer_to_restart, RoleType::Validator, false)
-        .is_ok());
 
     // mint another 10 coins after restart
     client_proxy

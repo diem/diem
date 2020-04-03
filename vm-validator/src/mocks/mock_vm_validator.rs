@@ -75,4 +75,8 @@ impl TransactionValidation for MockVMValidator {
         };
         Ok(VMValidatorResult::new(ret, 0))
     }
+
+    async fn restart(&mut self) -> Result<()> {
+        unimplemented!();
+    }
 }
