@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 hex = "0.4.2"
-parity-multiaddr = { version = "0.7.2", default-features = false }
+parity-multiaddr = { version = "0.8.0", default-features = false }
 rand = "0.6.5"
 structopt = "0.3.12"
 thiserror = "1.0"

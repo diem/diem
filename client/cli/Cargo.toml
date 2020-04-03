@@ -19,7 +19,7 @@ proptest = { version = "0.9.2", optional = true }
 rustyline = "6.0.0"
 rust_decimal = "1.4.0"
 num-traits = "0.2"
-parity-multiaddr = { version = "0.7.2", default-features = false }
+parity-multiaddr = { version = "0.8.0", default-features = false }
 rand = "0.6.5"
 reqwest = { version = "0.10.4", features = ["blocking", "json", "rustls-tls"], default-features = false }
 serde = { version = "1.0.105", features = ["derive"] }
