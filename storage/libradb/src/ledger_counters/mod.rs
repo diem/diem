@@ -12,8 +12,7 @@ use proptest::{collection::hash_map, prelude::*};
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use strum::IntoEnumIterator;
-use strum_macros::EnumIter;
+use num_variants::NumVariants;
 
 // register Prometheus counters
 pub static LIBRA_STORAGE_LEDGER: Lazy<IntGaugeVec> = Lazy::new(|| {
@@ -29,7 +28,7 @@ pub static LIBRA_STORAGE_LEDGER: Lazy<IntGaugeVec> = Lazy::new(|| {
 });
 
 /// Types of ledger counters.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, ToPrimitive, EnumIter)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, ToPrimitive, NumVariants)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub(crate) enum LedgerCounter {
     EventsCreated = 101,
@@ -41,7 +40,16 @@ pub(crate) enum LedgerCounter {
     StaleStateNodes = 302,
 }
 
+
 impl LedgerCounter {
+    const VARIANTS: [LedgerCounter; LedgerCounter::NUM_VARIANTS] = [
+        LedgerCounter::EventsCreated,
+        LedgerCounter::NewStateLeaves,
+        LedgerCounter::StaleStateLeaves,
+        LedgerCounter::NewStateNodes,
+        LedgerCounter::StaleStateNodes,
+    ];
+
     const STR_EVENTS_CREATED: &'static str = "events_created";
     const STR_NEW_STATE_LEAVES: &'static str = "new_state_leaves";
     const STR_STALE_STATE_LEAVES: &'static str = "stale_state_leaves";
@@ -152,11 +160,11 @@ impl LedgerCounters {
 
     /// Bump Prometheus counters.
     pub fn bump_op_counters(&self) {
-        for counter in LedgerCounter::iter() {
-            OP_COUNTER.set(counter.name(), self.get(counter));
+        for counter in &LedgerCounter::VARIANTS {
+            OP_COUNTER.set(counter.name(), self.get(*counter));
             LIBRA_STORAGE_LEDGER
                 .with_label_values(&[counter.name()])
-                .set(self.get(counter) as i64);
+                .set(self.get(*counter) as i64);
         }
     }
 
