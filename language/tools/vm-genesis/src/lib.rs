@@ -214,7 +214,7 @@ pub fn encode_genesis_transaction(
     stdlib_modules: &[VerifiedModule],
     vm_publishing_option: VMPublishingOption,
 ) -> Transaction {
-    Transaction::AuthenticatedWriteSet(encode_genesis_change_set(
+    Transaction::WaypointWriteSet(encode_genesis_change_set(
         &public_key,
         nodes,
         validator_set,

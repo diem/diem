@@ -1127,7 +1127,7 @@ pub enum Transaction {
 
     /// Transaction that applies a WriteSet to the current storage. This should be used for ONLY for
     /// genesis right now.
-    AuthenticatedWriteSet(ChangeSet),
+    WaypointWriteSet(ChangeSet),
 
     /// Transaction to update the block metadata resource at the beginning of a block.
     BlockMetadata(BlockMetadata),
@@ -1147,7 +1147,7 @@ impl Transaction {
                 user_txn.format_for_client(get_transaction_name)
             }
             // TODO: display proper information for client
-            Transaction::AuthenticatedWriteSet(_write_set) => String::from("genesis"),
+            Transaction::WaypointWriteSet(_write_set) => String::from("genesis"),
             // TODO: display proper information for client
             Transaction::BlockMetadata(_block_metadata) => String::from("block_metadata"),
         }

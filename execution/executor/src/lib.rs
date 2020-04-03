@@ -730,7 +730,7 @@ where
                     // should not reach this code path. The exception is genesis transaction (and
                     // maybe other writeset transactions).
                     match transaction {
-                        Transaction::AuthenticatedWriteSet(_) => (),
+                        Transaction::WaypointWriteSet(_) => (),
                         Transaction::BlockMetadata(_) => {
                             bail!("Write set should be a subset of read set.")
                         }

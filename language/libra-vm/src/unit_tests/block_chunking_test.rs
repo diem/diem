@@ -9,7 +9,7 @@ fn reconstruct_transaction_vec(blocks: Vec<TransactionBlock>) -> Vec<Transaction
     let mut txns = vec![];
     for block in blocks {
         match block {
-            TransactionBlock::WriteSet(ws) => txns.push(Transaction::AuthenticatedWriteSet(ws)),
+            TransactionBlock::WriteSet(ws) => txns.push(Transaction::WaypointWriteSet(ws)),
             TransactionBlock::BlockPrologue(ws) => txns.push(Transaction::BlockMetadata(ws)),
             TransactionBlock::UserTransaction(user_txns) => {
                 assert!(!user_txns.is_empty());
@@ -33,7 +33,7 @@ proptest! {
         let check = txns.iter().zip(result.iter()).all(|(l, r)| {
             if let Transaction::UserTransaction(txn) = l {
                 if let TransactionPayload::WriteSet(ws_l) = txn.payload() {
-                    return matches!(r, Transaction::AuthenticatedWriteSet(ws_r) if ws_l == ws_r);
+                    return matches!(r, Transaction::WaypointWriteSet(ws_r) if ws_l == ws_r);
                 }
             }
             l == r

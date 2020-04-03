@@ -93,7 +93,7 @@ mod test {
 
     #[test]
     fn test_some_and_load_genesis() {
-        let fake_genesis = Transaction::AuthenticatedWriteSet(ChangeSet::new(
+        let fake_genesis = Transaction::WaypointWriteSet(ChangeSet::new(
             WriteSetMut::new(vec![]).freeze().unwrap(),
             vec![],
         ));

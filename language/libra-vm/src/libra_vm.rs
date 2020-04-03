@@ -764,7 +764,7 @@ pub fn chunk_block_transactions(txns: Vec<Transaction>) -> Vec<TransactionBlock>
                 }
                 blocks.push(TransactionBlock::BlockPrologue(data));
             }
-            Transaction::AuthenticatedWriteSet(cs) => {
+            Transaction::WaypointWriteSet(cs) => {
                 if !buf.is_empty() {
                     blocks.push(TransactionBlock::UserTransaction(buf));
                     buf = vec![];
