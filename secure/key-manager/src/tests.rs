@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{Action, Error, KeyManager, LibraInterface};
-use executor::Executor;
+use executor::{db_bootstrapper::maybe_bootstrap_db, Executor};
 use libra_config::config::NodeConfig;
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Policy, Value};
@@ -76,6 +76,7 @@ impl Node {
         let storage = storage_service::init_libra_db(config);
         let storage_service =
             storage_service::start_storage_service_with_db(&config, storage.clone());
+        maybe_bootstrap_db::<LibraVM>(config).expect("Db-bootstrapper should not fail.");
         let executor = Executor::new(
             Arc::new(StorageReadServiceClient::new(&config.storage.address)),
             Arc::new(StorageWriteServiceClient::new(&config.storage.address)),
