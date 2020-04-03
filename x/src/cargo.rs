@@ -4,8 +4,8 @@
 use crate::{utils::project_root, Result};
 use anyhow::anyhow;
 use log::{info, warn};
-use std::collections::HashMap;
 use std::{
+    collections::HashMap,
     ffi::{OsStr, OsString},
     path::Path,
     process::{Command, Output, Stdio},

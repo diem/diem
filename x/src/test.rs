@@ -9,8 +9,10 @@ use crate::{
     Result,
 };
 use log::info;
-use std::ffi::OsString;
-use std::process::{Command, Stdio};
+use std::{
+    ffi::OsString,
+    process::{Command, Stdio},
+};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
