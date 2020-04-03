@@ -66,6 +66,11 @@ impl DummyNetworkSender {
         }
     }
 
+    pub async fn dial_peer(&mut self, peer: PeerId, addr: Multiaddr) -> Result<(), NetworkError> {
+        self.inner.dial_peer(peer, addr).await?;
+        Ok(())
+    }
+
     pub fn send_to(&mut self, recipient: PeerId, message: DummyMsg) -> Result<(), NetworkError> {
         let protocol = TEST_DIRECT_SEND_PROTOCOL;
         self.inner.send_to(recipient, protocol, message)
@@ -99,42 +104,9 @@ pub struct DummyNetwork {
 /// The following sets up a 2 peer network and verifies connectivity.
 pub fn setup_network() -> DummyNetwork {
     let any: Multiaddr = "/ip4/127.0.0.1/tcp/0".parse().unwrap();
-    let runtime = Runtime::new().unwrap();
+    let mut runtime = Runtime::new().unwrap();
     let (dialer_peer_id, dialer_addr) = (PeerId::random(), any.clone());
     let (listener_peer_id, listener_addr) = (PeerId::random(), any);
-
-    // Setup keys for dialer.
-    let mut rng = StdRng::from_seed(TEST_SEED);
-    let dialer_signing_private_key = Ed25519PrivateKey::generate(&mut rng);
-    let dialer_signing_public_key = dialer_signing_private_key.public_key();
-    let dialer_identity_private_key = X25519StaticPrivateKey::generate(&mut rng);
-    let dialer_identity_public_key = dialer_identity_private_key.public_key();
-
-    // Setup keys for listener.
-    let listener_signing_private_key = Ed25519PrivateKey::generate(&mut rng);
-    let listener_signing_public_key = listener_signing_private_key.public_key();
-    let listener_identity_private_key = X25519StaticPrivateKey::generate(&mut rng);
-    let listener_identity_public_key = listener_identity_private_key.public_key();
-
-    // Setup trusted peers.
-    let trusted_peers: HashMap<_, _> = vec![
-        (
-            dialer_peer_id,
-            NetworkPublicKeys {
-                signing_public_key: dialer_signing_public_key.clone(),
-                identity_public_key: dialer_identity_public_key.clone(),
-            },
-        ),
-        (
-            listener_peer_id,
-            NetworkPublicKeys {
-                signing_public_key: listener_signing_public_key.clone(),
-                identity_public_key: listener_identity_public_key.clone(),
-            },
-        ),
-    ]
-    .into_iter()
-    .collect();
 
     // Set up the listener network
     let mut network_builder = NetworkBuilder::new(
@@ -143,15 +115,7 @@ pub fn setup_network() -> DummyNetwork {
         listener_addr,
         RoleType::Validator,
     );
-    network_builder
-        .transport(TransportType::TcpNoise(Some((
-            listener_identity_private_key,
-            listener_identity_public_key,
-        ))))
-        .trusted_peers(trusted_peers.clone())
-        .signing_keys((listener_signing_private_key, listener_signing_public_key))
-        .discovery_interval_ms(HOUR_IN_MS)
-        .add_discovery();
+    network_builder.transport(TransportType::Tcp);
     let (listener_sender, mut listener_events) = add_to_network(&mut network_builder);
     let listen_addr = network_builder.build();
 
@@ -162,23 +126,10 @@ pub fn setup_network() -> DummyNetwork {
         dialer_addr,
         RoleType::Validator,
     );
-    network_builder
-        .transport(TransportType::TcpNoise(Some((
-            dialer_identity_private_key,
-            dialer_identity_public_key,
-        ))))
-        .trusted_peers(trusted_peers)
-        .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
-        .seed_peers(
-            [(listener_peer_id, vec![listen_addr])]
-                .iter()
-                .cloned()
-                .collect(),
-        )
-        .discovery_interval_ms(HOUR_IN_MS)
-        .add_discovery();
-    let (dialer_sender, mut dialer_events) = add_to_network(&mut network_builder);
+    network_builder.transport(TransportType::Tcp);
+    let (mut dialer_sender, mut dialer_events) = add_to_network(&mut network_builder);
     let _dialer_addr = network_builder.build();
+    runtime.block_on(dialer_sender.dial_peer(listener_peer_id, listen_addr));
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();
