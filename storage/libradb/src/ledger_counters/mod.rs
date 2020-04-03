@@ -4,6 +4,7 @@
 use crate::OP_COUNTER;
 use num_derive::ToPrimitive;
 use num_traits::ToPrimitive;
+use num_variants::NumVariants;
 use once_cell::sync::Lazy;
 use prometheus::IntGaugeVec;
 #[cfg(test)]
@@ -12,7 +13,6 @@ use proptest::{collection::hash_map, prelude::*};
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use num_variants::NumVariants;
 
 // register Prometheus counters
 pub static LIBRA_STORAGE_LEDGER: Lazy<IntGaugeVec> = Lazy::new(|| {
@@ -40,7 +40,6 @@ pub(crate) enum LedgerCounter {
     StaleStateNodes = 302,
 }
 
-
 impl LedgerCounter {
     const VARIANTS: [LedgerCounter; LedgerCounter::NUM_VARIANTS] = [
         LedgerCounter::EventsCreated,
@@ -56,9 +55,9 @@ impl LedgerCounter {
     const STR_NEW_STATE_NODES: &'static str = "new_state_nodes";
     const STR_STALE_STATE_NODES: &'static str = "stale_state_nodes";
 
-    pub fn name(&self) -> &'static str {
+    pub fn name(self) -> &'static str {
         match self {
-            Self::EventsCreated=> Self::STR_EVENTS_CREATED,
+            Self::EventsCreated => Self::STR_EVENTS_CREATED,
             Self::NewStateLeaves => Self::STR_NEW_STATE_LEAVES,
             Self::StaleStateLeaves => Self::STR_STALE_STATE_LEAVES,
             Self::NewStateNodes => Self::STR_NEW_STATE_NODES,
