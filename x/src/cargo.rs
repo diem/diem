@@ -140,8 +140,7 @@ impl Cargo {
 
         // once all the arguments are added to the command we can log it.
         if log {
-            &self
-                .env_additions
+            self.env_additions
                 .iter()
                 .for_each(|t| info!("Env {:?}: {:?}", t.0, t.1));
             info!("Executing: {:?}", &self.inner);
