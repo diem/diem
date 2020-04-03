@@ -45,6 +45,7 @@ use std::{
 use storage_client::{StorageRead, StorageReadServiceClient, SyncStorageClient};
 use tokio::{
     runtime::{Builder, Handle, Runtime},
+    sync::RwLock,
     time::interval,
 };
 use vm_validator::vm_validator::{get_account_sequence_number, TransactionValidation, VMValidator};
@@ -94,7 +95,7 @@ where
     config: MempoolConfig,
     network_senders: HashMap<PeerId, MempoolNetworkSender>,
     storage_read_client: Arc<dyn StorageRead>,
-    validator: Arc<V>,
+    validator: Arc<RwLock<V>>,
     peer_info: Arc<Mutex<PeerInfo>>,
     subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
 }
@@ -331,11 +332,16 @@ where
             })
             .collect();
 
-    let validation_results = join_all(
-        transactions
-            .iter()
-            .map(|t| smp.validator.validate_transaction(t.0.clone())),
-    )
+    let validation_results = join_all(transactions.iter().map(|t| {
+        let vm_validator = smp.validator.clone();
+        async move {
+            vm_validator
+                .read()
+                .await
+                .validate_transaction(t.0.clone())
+                .await
+        }
+    }))
     .await;
 
     {
@@ -592,12 +598,19 @@ where
     }
 }
 
-fn process_config_update(config_update: OnChainConfigPayload) {
-    // check for VM update
-    if let Ok(_vm_publishing_option) = config_update.get::<VMPublishingOption>() {
-        // TODO restart VM validator
+async fn process_config_update<V>(config_update: OnChainConfigPayload, validator: Arc<RwLock<V>>)
+where
+    V: TransactionValidation,
+{
+    if config_update.get::<VMPublishingOption>().is_ok() {
+        // restart VM validator
+        validator
+            .write()
+            .await
+            .restart()
+            .await
+            .expect("failed to restart VM validator");
     }
-    // potentially check for other configs here
 }
 
 /// This task handles inbound network events.
@@ -649,7 +662,9 @@ async fn inbound_network_task<V>(
                 tokio::spawn(process_state_sync_request(smp.clone(), msg));
             }
             config_update = mempool_reconfig_events.select_next_some() => {
-                process_config_update(config_update);
+                bounded_executor
+                .spawn(process_config_update(config_update, smp.validator.clone()))
+                .await;
             },
             (network_id, event) = events.select_next_some() => {
                 match event {
@@ -757,7 +772,7 @@ pub(crate) fn start_shared_mempool<V>(
     state_sync_requests: mpsc::Receiver<CommitNotification>,
     mempool_reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
     storage_read_client: Arc<dyn StorageRead>,
-    validator: Arc<V>,
+    validator: Arc<RwLock<V>>,
     subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
     timer: Option<IntervalStream>,
 ) where
@@ -830,7 +845,7 @@ pub fn bootstrap(
     let storage_read_client: Arc<dyn StorageRead> =
         Arc::new(StorageReadServiceClient::new(&config.storage.address));
     let db_reader = Arc::new(SyncStorageClient::new(&config.storage.address));
-    let vm_validator = Arc::new(VMValidator::new(db_reader));
+    let vm_validator = Arc::new(RwLock::new(VMValidator::new(db_reader)));
     start_shared_mempool(
         runtime.handle(),
         config,

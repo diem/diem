@@ -22,7 +22,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 use storage_service::mocks::mock_storage_client::MockStorageReadClient;
-use tokio::runtime::{Builder, Runtime};
+use tokio::{
+    runtime::{Builder, Runtime},
+    sync::RwLock,
+};
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
 /// Mock of a running instance of shared mempool
@@ -93,7 +96,7 @@ impl MockSharedMempool {
             state_sync_events,
             reconfig_event_subscriber,
             Arc::new(MockStorageReadClient),
-            Arc::new(MockVMValidator),
+            Arc::new(RwLock::new(MockVMValidator)),
             vec![sender],
             None,
         );
