@@ -17,6 +17,7 @@ pub struct Cargo {
     direct_args: Vec<OsString>,
     pass_through_args: Vec<OsString>,
     env_additions: HashMap<OsString, OsString>,
+    no_fail_fast: bool,
 }
 
 impl Cargo {
@@ -28,6 +29,7 @@ impl Cargo {
             direct_args: Vec::new(),
             pass_through_args: Vec::new(),
             env_additions: HashMap::new(),
+            no_fail_fast: false,
         }
     }
 
@@ -48,6 +50,17 @@ impl Cargo {
 
     pub fn all_targets(&mut self) -> &mut Self {
         self.inner.arg("--all-targets");
+        self
+    }
+
+    ///
+    /// Since multiple x subcommands can fork process that may fail, this
+    /// flag only effects x itself, to get the full output of an x test
+    /// a direct arg of "--no-fail-fast" must be set.   In the case of test
+    /// the presense of that arg will ensure x test sets this flag.
+    ///
+    pub fn no_fail_fast(&mut self, value: bool) -> &mut Self {
+        self.no_fail_fast = value;
         self
     }
 
@@ -115,9 +128,15 @@ impl Cargo {
         self
     }
 
+    /// no fail fast will prevent propigation of errors.
     pub fn run(&mut self) -> Result<()> {
         self.inner.stdout(Stdio::inherit()).stderr(Stdio::inherit());
-        self.do_run(true).map(|_| ())
+        let output = self.do_run(true).map(|_| ());
+        if self.no_fail_fast {
+            Ok(())
+        } else {
+            output
+        }
     }
 
     pub fn run_with_output(&mut self) -> Result<Vec<u8>> {
@@ -196,6 +215,7 @@ impl<'a> CargoCommand<'a> {
             .direct_arguments(self.direct_args())
             .pass_through(self.pass_through_args())
             .env_additions(self.get_extra_env().as_ref().to_owned())
+            .no_fail_fast(self.no_fail_fast())
             .run()
     }
 
@@ -213,6 +233,7 @@ impl<'a> CargoCommand<'a> {
                 .current_dir(project_root())
                 .pass_through(self.pass_through_args())
                 .env_additions(self.get_extra_env().as_ref().to_owned())
+                .no_fail_fast(self.no_fail_fast())
                 .run()?;
         }
         Ok(())
@@ -236,6 +257,7 @@ impl<'a> CargoCommand<'a> {
             .packages(packages)
             .pass_through(self.pass_through_args())
             .env_additions(self.get_extra_env().as_ref().to_owned())
+            .no_fail_fast(self.no_fail_fast())
             .run()
     }
 
@@ -253,6 +275,7 @@ impl<'a> CargoCommand<'a> {
             .exclusions(exclusions)
             .pass_through(self.pass_through_args())
             .env_additions(self.get_extra_env().as_ref().to_owned())
+            .no_fail_fast(self.no_fail_fast())
             .run()
     }
 
@@ -290,6 +313,12 @@ impl<'a> CargoCommand<'a> {
             CargoCommand::Clippy(_) => &[],
             CargoCommand::Test { env, .. } => &env,
         }
+    }
+
+    fn no_fail_fast(&self) -> bool {
+        self.direct_args()
+            .iter()
+            .any(|v| v.as_os_str().to_string_lossy() == "--no-fail-fast")
     }
 
     fn apply_args(cargo: &mut Cargo, args: &CargoArgs) {
