@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/parser/invalid_character_comment.move:3:44 ───
+   │
+ 3 │ // Non-ASCII characters in comments (e.g., ф) are also not allowed.
+   │                                            ^ Invalid character 'ф' found when reading file. Only ASCII printable characters, tabs (\t), and line endings (\n) are permitted.
+   │
+
