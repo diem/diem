@@ -9,11 +9,11 @@ use debug_interface::prelude::*;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
-use libra_types::on_chain_config::VMPublishingOption;
 use libra_types::{
     account_config,
     block_metadata::BlockMetadata,
     language_storage::{ModuleId, TypeTag},
+    on_chain_config::VMPublishingOption,
     transaction::{
         ChangeSet, SignatureCheckedTransaction, SignedTransaction, Transaction,
         TransactionArgument, TransactionOutput, TransactionPayload, TransactionStatus,
