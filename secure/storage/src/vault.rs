@@ -43,11 +43,16 @@ impl VaultStorage {
     /// caution.
     pub fn reset(&self) -> Result<(), Error> {
         if let Some(namespace) = &self.namespace {
-            self.reset_kv(&format!("{}/", namespace))?;
-            self.reset_crypto(&format!("{}__", namespace))
+            let key_path = format!("{}/", namespace);
+            let crypto_path = format!("{}__", namespace);
+            self.reset_kv(&key_path)?;
+            self.reset_crypto(&crypto_path)?;
+            self.reset_policies(&key_path)?;
+            self.reset_policies(&crypto_path)
         } else {
             self.reset_kv("")?;
-            self.reset_crypto("")
+            self.reset_crypto("")?;
+            self.reset_policies("")
         }
     }
 
@@ -73,6 +78,27 @@ impl VaultStorage {
         for key in keys {
             if (!key.contains("__") && prefix.is_empty()) || key.starts_with(prefix) {
                 self.client.delete_key(&key)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn reset_policies(&self, prefix: &str) -> Result<(), Error> {
+        let policies = match self.client.list_policies() {
+            Ok(policies) => policies,
+            Err(libra_vault_client::Error::NotFound(_, _)) => return Ok(()),
+            Err(e) => return Err(e.into()),
+        };
+
+        for policy in policies {
+            // Never touch the default or root policy
+            if policy == "default" || policy == "root" {
+                continue;
+            }
+
+            let ns_policy = policy.contains("__") || policy.contains('/');
+            if (!ns_policy && prefix.is_empty()) || policy.starts_with(prefix) {
+                self.client.delete_policy(&policy)?;
             }
         }
         Ok(())

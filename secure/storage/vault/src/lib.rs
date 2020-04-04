@@ -80,18 +80,31 @@ impl Client {
         Self { host, token }
     }
 
-    /// Create a new policy in Vault, see the explanation for Policy for how the data is
-    /// structured. Vault does not distingush a create and update. An update must first read the
-    /// existing policy, amend the contents,  and then be applied via this API.
-    pub fn set_policy(&self, policy_name: &str, policy: &Policy) -> Result<(), Error> {
-        let resp = ureq::post(&format!("{}/v1/sys/policy/{}", self.host, policy_name))
+    pub fn delete_policy(&self, policy_name: &str) -> Result<(), Error> {
+        let resp = ureq::delete(&format!("{}/v1/sys/policy/{}", self.host, policy_name))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
-            .send_json(policy.try_into()?);
+            .call();
         if resp.ok() {
             Ok(())
         } else {
             Err(resp.into())
+        }
+    }
+
+    pub fn list_policies(&self) -> Result<Vec<String>, Error> {
+        let resp = ureq::get(&format!("{}/v1/sys/policy", self.host))
+            .set("X-Vault-Token", &self.token)
+            .timeout_connect(10_000)
+            .call();
+        match resp.status() {
+            200 => {
+                let policies: ListPoliciesResponse = serde_json::from_str(&resp.into_string()?)?;
+                Ok(policies.policies)
+            }
+            // There are no policies.
+            404 => Ok(vec![]),
+            _ => Err(resp.into()),
         }
     }
 
@@ -104,6 +117,21 @@ impl Client {
         match resp.status() {
             200 => Ok(Policy::try_from(resp.into_json()?)?),
             _ => Err(resp.into()),
+        }
+    }
+
+    /// Create a new policy in Vault, see the explanation for Policy for how the data is
+    /// structured. Vault does not distingush a create and update. An update must first read the
+    /// existing policy, amend the contents,  and then be applied via this API.
+    pub fn set_policy(&self, policy_name: &str, policy: &Policy) -> Result<(), Error> {
+        let resp = ureq::post(&format!("{}/v1/sys/policy/{}", self.host, policy_name))
+            .set("X-Vault-Token", &self.token)
+            .timeout_connect(10_000)
+            .send_json(policy.try_into()?);
+        if resp.ok() {
+            Ok(())
+        } else {
+            Err(resp.into())
         }
     }
 
@@ -445,6 +473,15 @@ struct ExportKeyResponse {
 struct ExportKey {
     name: String,
     keys: BTreeMap<u32, String>,
+}
+
+/// Below is a sample output of ListPoliciesResponse
+/// {
+///   "policies": ["root", "deploy"]
+/// }
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct ListPoliciesResponse {
+    policies: Vec<String>,
 }
 
 /// Below is a sample output of ListKeysResponse.
