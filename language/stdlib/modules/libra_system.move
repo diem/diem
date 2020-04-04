@@ -2,10 +2,11 @@ address 0x0:
 
 module LibraSystem {
     use 0x0::LibraAccount;
+    use 0x0::LibraConfig;
+    use 0x0::LibraSystem2;
+    use 0x0::Transaction;
     use 0x0::ValidatorConfig;
     use 0x0::Vector;
-    use 0x0::Transaction;
-    use 0x0::LibraConfig;
 
     struct ValidatorInfo {
         addr: address,
@@ -51,6 +52,7 @@ module LibraSystem {
             scheme: 0,
             validators: Vector::empty(),
         });
+        LibraSystem2::initialize_validator_set();
     }
 
     // This returns a copy of the current validator set.
