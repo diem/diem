@@ -115,26 +115,38 @@ impl VaultStorage {
     fn set_policy(
         &self,
         policy_name: &str,
+        engine: &VaultEngine,
         key: &str,
         capabilities: &[Capability],
     ) -> Result<(), Error> {
-        let (path, policy_name) = if let Some(namespace) = &self.namespace {
-            let path = format!("secret/data/{}/{}", namespace, key);
-            let policy_name = format!("{}/{}", namespace, policy_name);
-            (path, policy_name)
-        } else {
-            (format!("secret/data/{}", key), policy_name.to_string())
-        };
+        let policy_name = self.name(policy_name, engine);
 
         let mut vault_policy = self.client.read_policy(&policy_name).unwrap_or_default();
-        let vault_capabilities: Vec<vault::Capability> = capabilities
-            .iter()
-            .map(|c| match c {
-                Capability::Write => vault::Capability::Update,
-                Capability::Read => vault::Capability::Read,
-            })
-            .collect();
-        vault_policy.add_policy(&path, vault_capabilities);
+        let mut core_capabilities = Vec::new();
+        for capability in capabilities {
+            match capability {
+                Capability::Export => {
+                    let export_capability = vec![vault::Capability::Read];
+                    let export_policy = format!("transit/export/signing-key/{}", key);
+                    vault_policy.add_policy(&export_policy, export_capability);
+                }
+                Capability::Read => core_capabilities.push(vault::Capability::Read),
+                Capability::Rotate => {
+                    let rotate_capability = vec![vault::Capability::Update];
+                    let rotate_policy = format!("transit/keys/{}/rotate", key);
+                    vault_policy.add_policy(&rotate_policy, rotate_capability);
+                }
+                Capability::Sign => {
+                    let sign_capability = vec![vault::Capability::Update];
+                    let sign_policy = format!("transit/sign/{}", key);
+                    vault_policy.add_policy(&sign_policy, sign_capability);
+                }
+                Capability::Write => core_capabilities.push(vault::Capability::Update),
+            }
+        }
+
+        let path = format!("{}/{}", engine.to_policy_path(), self.name(key, engine));
+        vault_policy.add_policy(&path, core_capabilities);
         self.client.set_policy(&policy_name, &vault_policy)?;
         Ok(())
     }
@@ -152,28 +164,30 @@ impl VaultStorage {
             .version)
     }
 
-    fn set_policies(&self, name: &str, policy: &Policy) -> Result<(), Error> {
+    fn set_policies(&self, name: &str, engine: &VaultEngine, policy: &Policy) -> Result<(), Error> {
         for perm in &policy.permissions {
             match &perm.id {
-                Identity::User(id) => self.set_policy(id, name, &perm.capabilities)?,
-                Identity::Anyone => self.set_policy(LIBRA_DEFAULT, name, &perm.capabilities)?,
+                Identity::User(id) => self.set_policy(id, engine, name, &perm.capabilities)?,
+                Identity::Anyone => {
+                    self.set_policy(LIBRA_DEFAULT, engine, name, &perm.capabilities)?
+                }
                 Identity::NoOne => (),
             };
         }
         Ok(())
     }
 
-    fn secret_name(&self, name: &str) -> String {
-        if let Some(namespace) = &self.namespace {
-            format!("{}/{}", namespace, name)
-        } else {
-            name.into()
-        }
+    fn crypto_name(&self, name: &str) -> String {
+        self.name(name, &VaultEngine::Transit)
     }
 
-    fn crypto_name(&self, name: &str) -> String {
+    fn secret_name(&self, name: &str) -> String {
+        self.name(name, &VaultEngine::KVSecrets)
+    }
+
+    fn name(&self, name: &str, engine: &VaultEngine) -> String {
         if let Some(namespace) = &self.namespace {
-            format!("{}__{}", namespace, name)
+            format!("{}{}{}", namespace, engine.ns_seperator(), name)
         } else {
             name.into()
         }
@@ -195,7 +209,7 @@ impl KVStorage for VaultStorage {
         }
 
         self.set_secret(&key, value)?;
-        self.set_policies(key, policy)?;
+        self.set_policies(key, &VaultEngine::KVSecrets, policy)?;
         Ok(())
     }
 
@@ -226,7 +240,7 @@ impl CryptoStorage for VaultStorage {
         }
 
         self.client.create_ed25519_key(&ns_name, true)?;
-        self.set_policies(&ns_name, policy)?;
+        self.set_policies(&ns_name, &VaultEngine::Transit, policy)?;
         self.get_public_key(name).map(|v| v.public_key)
     }
 
@@ -285,5 +299,26 @@ impl CryptoStorage for VaultStorage {
         Ok(self
             .client
             .sign_ed25519(&name, message.as_ref(), Some(vers))?)
+    }
+}
+
+enum VaultEngine {
+    KVSecrets,
+    Transit,
+}
+
+impl VaultEngine {
+    fn to_policy_path(&self) -> &str {
+        match self {
+            VaultEngine::KVSecrets => "secret/data",
+            VaultEngine::Transit => "transit/keys",
+        }
+    }
+
+    fn ns_seperator(&self) -> &str {
+        match self {
+            VaultEngine::KVSecrets => "/",
+            VaultEngine::Transit => "__",
+        }
     }
 }

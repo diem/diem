@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    tests::suite, vault::VaultStorage, Capability, Error, Identity, KVStorage, Permission, Policy,
-    Value,
+    tests::suite, vault::VaultStorage, Capability, CryptoStorage, Error, Identity, KVStorage,
+    Permission, Policy, Value,
 };
+use libra_crypto::{HashValue, Signature};
 
 /// VaultStorage test constants
 const VAULT_HOST: &str = "http://localhost:8200";
@@ -24,11 +25,12 @@ const U64_VALUE_2: u64 = 304;
 /// storage resets can interfere between tests. To avoid this, we run each test sequentially, and
 /// reset the storage engine only after each test.
 const VAULT_TESTS: &[fn()] = &[
+    test_vault_crypto_policies,
+    test_vault_key_value_policies,
     test_suite_multiple_namespaces,
-    test_suite_no_namespaces,
     test_vault_namespace_reset,
     test_vault_no_namespace_reset,
-    test_vault_tokens_and_basic_ops,
+    test_suite_no_namespaces,
 ];
 
 /// A test for verifying VaultStorage properly implements the LibraSecureStorage API and enforces
@@ -121,7 +123,7 @@ fn create_vault_with_namespace(namespace: Option<String>) -> VaultStorage {
 
 /// Initializes test policies for a VaultStorage instance and checks the instance is
 /// accessible (e.g., by ensuring subsequent read and write operations complete successfully).
-fn test_vault_tokens_and_basic_ops() {
+fn test_vault_key_value_policies() {
     // TODO(davidiw,joshlind): evaluate other systems and determine if create_token can be on the
     // Storage / KV interface. And then refactor this method to make it cleaner and easier to reason
     // about.
@@ -207,4 +209,90 @@ fn test_vault_tokens_and_basic_ops() {
     assert_eq!(storage.get("root").unwrap().value, Value::U64(2));
     assert_eq!(storage.get("partial").unwrap().value, Value::U64(7));
     assert_eq!(storage.get("full").unwrap().value, Value::U64(12));
+}
+
+fn test_vault_crypto_policies() {
+    let mut storage = create_vault_with_namespace(None);
+    let exporter: String = "exporter".into();
+    let noone: String = "noone".into();
+    let reader: String = "reader".into();
+    let rotater: String = "rotater".into();
+    let signer: String = "signer".into();
+
+    let policy = Policy::new(vec![
+        Permission::new(Identity::User(exporter.clone()), vec![Capability::Export]),
+        Permission::new(Identity::User(reader.clone()), vec![Capability::Read]),
+        Permission::new(
+            Identity::User(rotater.clone()),
+            vec![Capability::Read, Capability::Rotate],
+        ),
+        Permission::new(Identity::User(signer.clone()), vec![Capability::Sign]),
+    ]);
+
+    // Initialize data and policies
+    let key_name = "crypto_key";
+    let pubkey = storage.create_key(key_name, &policy).unwrap();
+    assert_eq!(storage.get_public_key(key_name).unwrap().public_key, pubkey);
+
+    // Verify exporter policy
+    let exporter_token = storage.create_token(vec![&exporter]).unwrap();
+    let mut exporter_store =
+        VaultStorage::new(VAULT_HOST.into(), exporter_token, storage.namespace());
+    exporter_store.export_private_key(key_name).unwrap();
+    exporter_store.get_public_key(key_name).unwrap_err();
+    exporter_store.rotate_key(key_name).unwrap_err();
+    exporter_store
+        .sign_message(key_name, &HashValue::zero())
+        .unwrap_err();
+
+    // Verify noone policy
+    let noone_token = storage.create_token(vec![&noone]).unwrap();
+    let mut noone_store = VaultStorage::new(VAULT_HOST.into(), noone_token, storage.namespace());
+    noone_store.export_private_key(key_name).unwrap_err();
+    noone_store.get_public_key(key_name).unwrap_err();
+    noone_store.rotate_key(key_name).unwrap_err();
+    noone_store
+        .sign_message(key_name, &HashValue::zero())
+        .unwrap_err();
+
+    // Verify reader policy
+    let reader_token = storage.create_token(vec![&reader]).unwrap();
+    let mut reader_store = VaultStorage::new(VAULT_HOST.into(), reader_token, storage.namespace());
+    reader_store.export_private_key(key_name).unwrap_err();
+    assert_eq!(
+        reader_store.get_public_key(key_name).unwrap().public_key,
+        pubkey
+    );
+    reader_store.rotate_key(key_name).unwrap_err();
+    reader_store
+        .sign_message(key_name, &HashValue::zero())
+        .unwrap_err();
+
+    // Verify rotater policy
+    let rotater_token = storage.create_token(vec![&rotater]).unwrap();
+    let mut rotater_store =
+        VaultStorage::new(VAULT_HOST.into(), rotater_token, storage.namespace());
+    rotater_store.export_private_key(key_name).unwrap_err();
+    assert_eq!(
+        rotater_store.get_public_key(key_name).unwrap().public_key,
+        pubkey
+    );
+    assert_ne!(rotater_store.rotate_key(key_name).unwrap(), pubkey);
+    rotater_store
+        .sign_message(key_name, &HashValue::zero())
+        .unwrap_err();
+
+    let new_pubkey = storage.get_public_key(key_name).unwrap().public_key;
+
+    // Verify signer policy
+    let signer_token = storage.create_token(vec![&signer]).unwrap();
+    let mut signer_store = VaultStorage::new(VAULT_HOST.into(), signer_token, storage.namespace());
+    signer_store.export_private_key(key_name).unwrap_err();
+    signer_store.get_public_key(key_name).unwrap_err();
+    signer_store.rotate_key(key_name).unwrap_err();
+    let signature = signer_store
+        .sign_message(key_name, &HashValue::zero())
+        .unwrap();
+    signature.verify(&HashValue::zero(), &pubkey).unwrap_err();
+    signature.verify(&HashValue::zero(), &new_pubkey).unwrap();
 }
