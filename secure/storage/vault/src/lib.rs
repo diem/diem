@@ -45,8 +45,8 @@ impl From<std::io::Error> for Error {
 }
 
 impl From<ureq::Response> for Error {
-    fn from(response: ureq::Response) -> Self {
-        Error::HttpError(response.status(), response.status_line().into())
+    fn from(resp: ureq::Response) -> Self {
+        Error::HttpError(resp.status(), resp.status_line().into())
     }
 }
 
@@ -84,89 +84,87 @@ impl Client {
     /// structured. Vault does not distingush a create and update. An update must first read the
     /// existing policy, amend the contents,  and then be applied via this API.
     pub fn set_policy(&self, policy_name: &str, policy: &Policy) -> Result<(), Error> {
-        let response = ureq::post(&format!("{}/v1/sys/policy/{}", self.host, policy_name))
+        let resp = ureq::post(&format!("{}/v1/sys/policy/{}", self.host, policy_name))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
             .send_json(policy.try_into()?);
-        if response.ok() {
+        if resp.ok() {
             Ok(())
         } else {
-            Err(response.into())
+            Err(resp.into())
         }
     }
 
     /// Retrieves the policy at the given policy name.
     pub fn read_policy(&self, policy_name: &str) -> Result<Policy, Error> {
-        let response = ureq::get(&format!("{}/v1/sys/policy/{}", self.host, policy_name))
+        let resp = ureq::get(&format!("{}/v1/sys/policy/{}", self.host, policy_name))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
             .call();
-        match response.status() {
-            200 => Ok(Policy::try_from(response.into_json()?)?),
-            _ => Err(response.into()),
+        match resp.status() {
+            200 => Ok(Policy::try_from(resp.into_json()?)?),
+            _ => Err(resp.into()),
         }
     }
 
     /// Creates a new token or identity for accessing Vault. The token will have access to anything
     /// under the default policy and any prescribed policies.
     pub fn create_token(&self, policies: Vec<&str>) -> Result<String, Error> {
-        let response = ureq::post(&format!("{}/v1/auth/token/create", self.host))
+        let resp = ureq::post(&format!("{}/v1/auth/token/create", self.host))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
             .send_json(json!({ "policies": policies }));
-        if response.ok() {
-            let response: CreateTokenResponse = serde_json::from_str(&response.into_string()?)?;
-            Ok(response.auth.client_token)
+        if resp.ok() {
+            let resp: CreateTokenResponse = serde_json::from_str(&resp.into_string()?)?;
+            Ok(resp.auth.client_token)
         } else {
-            Err(response.into())
+            Err(resp.into())
         }
     }
 
     /// List all stored secrets
     pub fn list_secrets(&self, secret: &str) -> Result<Vec<String>, Error> {
-        let response = ureq::request(
+        let resp = ureq::request(
             "LIST",
             &format!("{}/v1/secret/metadata/{}", self.host, secret),
         )
         .set("X-Vault-Token", &self.token)
         .timeout_connect(10_000)
         .call();
-        match response.status() {
+        match resp.status() {
             200 => {
-                let response: ReadSecretListResponse =
-                    serde_json::from_str(&response.into_string()?)?;
-                Ok(response.data.keys)
+                let resp: ReadSecretListResponse = serde_json::from_str(&resp.into_string()?)?;
+                Ok(resp.data.keys)
             }
             // There are no secrets.
             404 => Ok(vec![]),
-            _ => Err(response.into()),
+            _ => Err(resp.into()),
         }
     }
 
     /// Delete a specific secret store
     pub fn delete_secret(&self, secret: &str) -> Result<(), Error> {
-        let response = ureq::delete(&format!("{}/v1/secret/metadata/{}", self.host, secret))
+        let resp = ureq::delete(&format!("{}/v1/secret/metadata/{}", self.host, secret))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
             .call();
-        if response.ok() {
+        if resp.ok() {
             Ok(())
         } else {
-            Err(response.into())
+            Err(resp.into())
         }
     }
 
     /// Read a key/value pair from a given secret store.
     pub fn read_secret(&self, secret: &str, key: &str) -> Result<ReadResponse<String>, Error> {
-        let response = ureq::get(&format!("{}/v1/secret/data/{}", self.host, secret))
+        let resp = ureq::get(&format!("{}/v1/secret/data/{}", self.host, secret))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
             .call();
-        match response.status() {
+        match resp.status() {
             200 => {
-                let mut response: ReadSecretResponse =
-                    serde_json::from_str(&response.into_string()?)?;
-                let data = &mut response.data;
+                let mut resp: ReadSecretResponse = serde_json::from_str(&resp.into_string()?)?;
+                let data = &mut resp.data;
                 let value = data
                     .data
                     .remove(key)
@@ -176,41 +174,41 @@ impl Client {
                 Ok(ReadResponse::new(created_time, value, version))
             }
             404 => Err(Error::NotFound(secret.into(), key.into())),
-            _ => Err(response.into()),
+            _ => Err(resp.into()),
         }
     }
 
     pub fn create_ed25519_key(&self, name: &str, exportable: bool) -> Result<(), Error> {
-        let response = ureq::post(&format!("{}/v1/transit/keys/{}", self.host, name))
+        let resp = ureq::post(&format!("{}/v1/transit/keys/{}", self.host, name))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
             .send_json(json!({ "type": "ed25519", "exportable": exportable }));
-        match response.status() {
+        match resp.status() {
             200 => Ok(()),
             204 => Ok(()),
             404 => Err(Error::NotFound("transit/".into(), name.into())),
-            _ => Err(response.into()),
+            _ => Err(resp.into()),
         }
     }
 
     pub fn delete_key(&self, name: &str) -> Result<(), Error> {
-        let response = ureq::post(&format!("{}/v1/transit/keys/{}/config", self.host, name))
+        let resp = ureq::post(&format!("{}/v1/transit/keys/{}/config", self.host, name))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
             .send_json(json!({ "deletion_allowed": true }));
 
-        if !response.ok() {
-            return Err(response.into());
+        if !resp.ok() {
+            return Err(resp.into());
         }
 
-        let response = ureq::delete(&format!("{}/v1/transit/keys/{}", self.host, name))
+        let resp = ureq::delete(&format!("{}/v1/transit/keys/{}", self.host, name))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
             .call();
-        if response.ok() {
+        if resp.ok() {
             Ok(())
         } else {
-            Err(response.into())
+            Err(resp.into())
         }
     }
 
@@ -219,15 +217,15 @@ impl Client {
         name: &str,
         version: Option<u32>,
     ) -> Result<Ed25519PrivateKey, Error> {
-        let response = ureq::get(&format!(
+        let resp = ureq::get(&format!(
             "{}/v1/transit/export/signing-key/{}",
             self.host, name
         ))
         .set("X-Vault-Token", &self.token)
         .timeout_connect(10_000)
         .call();
-        if response.ok() {
-            let export_key: ExportKeyResponse = serde_json::from_str(&response.into_string()?)?;
+        if resp.ok() {
+            let export_key: ExportKeyResponse = serde_json::from_str(&resp.into_string()?)?;
             if let Some(version) = version {
                 let key = export_key.data.keys.iter().find(|(k, _v)| **k == version);
                 let (_, key) = key.ok_or_else(|| Error::NotFound("transit".into(), name.into()))?;
@@ -240,22 +238,22 @@ impl Client {
                 Err(Error::NotFound("transit".into(), name.into()))
             }
         } else {
-            Err(response.into())
+            Err(resp.into())
         }
     }
 
     pub fn list_keys(&self) -> Result<Vec<String>, Error> {
-        let response = ureq::request("LIST", &format!("{}/v1/transit/keys", self.host))
+        let resp = ureq::request("LIST", &format!("{}/v1/transit/keys", self.host))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
             .call();
-        match response.status() {
+        match resp.status() {
             200 => {
-                let list_keys: ListKeysResponse = serde_json::from_str(&response.into_string()?)?;
+                let list_keys: ListKeysResponse = serde_json::from_str(&resp.into_string()?)?;
                 Ok(list_keys.data.keys)
             }
             404 => Err(Error::NotFound("transit/".into(), "keys".into())),
-            _ => Err(response.into()),
+            _ => Err(resp.into()),
         }
     }
 
@@ -263,37 +261,37 @@ impl Client {
         &self,
         name: &str,
     ) -> Result<Vec<ReadResponse<Ed25519PublicKey>>, Error> {
-        let response = ureq::get(&format!("{}/v1/transit/keys/{}", self.host, name))
+        let resp = ureq::get(&format!("{}/v1/transit/keys/{}", self.host, name))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
             .call();
-        match response.status() {
+        match resp.status() {
             200 => {
-                let read_key: ReadKeyResponse = serde_json::from_str(&response.into_string()?)?;
-                let mut read_response = Vec::new();
+                let read_key: ReadKeyResponse = serde_json::from_str(&resp.into_string()?)?;
+                let mut read_resp = Vec::new();
                 for (version, value) in read_key.data.keys {
-                    read_response.push(ReadResponse::new(
+                    read_resp.push(ReadResponse::new(
                         value.creation_time,
                         Ed25519PublicKey::try_from(base64::decode(&value.public_key)?.as_slice())?,
                         version,
                     ));
                 }
-                Ok(read_response)
+                Ok(read_resp)
             }
             404 => Err(Error::NotFound("transit/".into(), name.into())),
-            _ => Err(response.into()),
+            _ => Err(resp.into()),
         }
     }
 
     pub fn rotate_key(&self, name: &str) -> Result<(), Error> {
-        let response = ureq::post(&format!("{}/v1/transit/keys/{}/rotate", self.host, name))
+        let resp = ureq::post(&format!("{}/v1/transit/keys/{}/rotate", self.host, name))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
             .call();
-        if response.ok() {
+        if resp.ok() {
             Ok(())
         } else {
-            Err(response.into())
+            Err(resp.into())
         }
     }
 
@@ -309,12 +307,12 @@ impl Client {
             json!({ "input": base64::encode(&data) })
         };
 
-        let response = ureq::post(&format!("{}/v1/transit/sign/{}", self.host, name))
+        let resp = ureq::post(&format!("{}/v1/transit/sign/{}", self.host, name))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
             .send_json(data);
-        if response.ok() {
-            let signature: SignatureResponse = serde_json::from_str(&response.into_string()?)?;
+        if resp.ok() {
+            let signature: SignatureResponse = serde_json::from_str(&resp.into_string()?)?;
             let signature = &signature.data.signature;
             let signature_pieces: Vec<_> = signature.split(':').collect();
             let signature = signature_pieces
@@ -324,49 +322,49 @@ impl Client {
                 base64::decode(&signature)?.as_slice(),
             )?)
         } else {
-            Err(response.into())
+            Err(resp.into())
         }
     }
 
     /// Create or update a key/value pair in a given secret store.
     pub fn write_secret(&self, secret: &str, key: &str, value: &str) -> Result<(), Error> {
-        let response = ureq::put(&format!("{}/v1/secret/data/{}", self.host, secret))
+        let resp = ureq::put(&format!("{}/v1/secret/data/{}", self.host, secret))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
             .send_json(json!({ "data": { key: value } }));
-        match response.status() {
+        match resp.status() {
             200 => Ok(()),
-            _ => Err(response.into()),
+            _ => Err(resp.into()),
         }
     }
 
     /// Returns whether or not the vault is unsealed (can be read from / written to). This can be
     /// queried without authentication.
     pub fn unsealed(&self) -> Result<bool, Error> {
-        let response = ureq::get(&format!("{}/v1/sys/seal-status", self.host))
+        let resp = ureq::get(&format!("{}/v1/sys/seal-status", self.host))
             .timeout_connect(10_000)
             .call();
-        match response.status() {
+        match resp.status() {
             200 => {
-                let response: SealStatusResponse = serde_json::from_str(&response.into_string()?)?;
-                Ok(!response.sealed)
+                let resp: SealStatusResponse = serde_json::from_str(&resp.into_string()?)?;
+                Ok(!resp.sealed)
             }
-            _ => Err(response.into()),
+            _ => Err(resp.into()),
         }
     }
 
     /// Returns whether or not transit is enabled at the default location "transit/"
     pub fn transit_enabled(&self) -> Result<bool, Error> {
-        let response = ureq::get(&format!("{}/v1/sys/mounts", self.host))
+        let resp = ureq::get(&format!("{}/v1/sys/mounts", self.host))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(10_000)
             .call();
-        match response.status() {
+        match resp.status() {
             200 => {
-                let response: SysMountsResponse = serde_json::from_str(&response.into_string()?)?;
-                Ok(response.transit.is_some())
+                let resp: SysMountsResponse = serde_json::from_str(&resp.into_string()?)?;
+                Ok(resp.transit.is_some())
             }
-            _ => Err(response.into()),
+            _ => Err(resp.into()),
         }
     }
 }
