@@ -14,7 +14,7 @@ use rand::{rngs::OsRng, Rng, SeedableRng};
 pub trait CryptoKVStorage: KVStorage {}
 
 impl<T: CryptoKVStorage> CryptoStorage for T {
-    fn generate_new_key(&mut self, name: &str, policy: &Policy) -> Result<Ed25519PublicKey, Error> {
+    fn create_key(&mut self, name: &str, policy: &Policy) -> Result<Ed25519PublicKey, Error> {
         // Generate and store the new named key pair
         let (private_key, public_key) = new_ed25519_key_pair()?;
         self.create(name, Value::Ed25519PrivateKey(private_key), policy)?;
@@ -24,11 +24,36 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
         // now, and not have to do it later on a rotation.
         self.create(
             &get_previous_version_name(name),
-            Value::Ed25519PrivateKey(self.get_private_key(name)?),
+            Value::Ed25519PrivateKey(self.export_private_key(name)?),
             policy,
         )?;
 
         Ok(public_key)
+    }
+
+    fn export_private_key(&self, name: &str) -> Result<Ed25519PrivateKey, Error> {
+        match self.get(name)?.value {
+            Value::Ed25519PrivateKey(private_key) => Ok(private_key),
+            _ => Err(Error::UnexpectedValueType),
+        }
+    }
+
+    fn export_private_key_for_version(
+        &self,
+        name: &str,
+        version: Ed25519PublicKey,
+    ) -> Result<Ed25519PrivateKey, Error> {
+        let current_private_key = self.export_private_key(name)?;
+        if current_private_key.public_key().eq(&version) {
+            return Ok(current_private_key);
+        }
+
+        let previous_private_key = self.export_private_key(&get_previous_version_name(name))?;
+        if previous_private_key.public_key().eq(&version) {
+            return Ok(previous_private_key);
+        }
+
+        Err(Error::KeyVersionNotFound(version.to_string()))
     }
 
     fn get_public_key(&self, name: &str) -> Result<PublicKeyResponse, Error> {
@@ -43,31 +68,6 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
             last_update: response.last_update,
             public_key,
         })
-    }
-
-    fn get_private_key(&self, name: &str) -> Result<Ed25519PrivateKey, Error> {
-        match self.get(name)?.value {
-            Value::Ed25519PrivateKey(private_key) => Ok(private_key),
-            _ => Err(Error::UnexpectedValueType),
-        }
-    }
-
-    fn get_private_key_for_version(
-        &self,
-        name: &str,
-        version: Ed25519PublicKey,
-    ) -> Result<Ed25519PrivateKey, Error> {
-        let current_private_key = self.get_private_key(name)?;
-        if current_private_key.public_key().eq(&version) {
-            return Ok(current_private_key);
-        }
-
-        let previous_private_key = self.get_private_key(&get_previous_version_name(name))?;
-        if previous_private_key.public_key().eq(&version) {
-            return Ok(previous_private_key);
-        }
-
-        Err(Error::KeyVersionNotFound(version.to_string()))
     }
 
     fn rotate_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
@@ -86,7 +86,7 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
     }
 
     fn sign_message(&mut self, name: &str, message: &HashValue) -> Result<Ed25519Signature, Error> {
-        let private_key = self.get_private_key(name)?;
+        let private_key = self.export_private_key(name)?;
         Ok(private_key.sign_message(message))
     }
 
@@ -96,7 +96,7 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
         version: Ed25519PublicKey,
         message: &HashValue,
     ) -> Result<Ed25519Signature, Error> {
-        let private_key = self.get_private_key_for_version(name, version)?;
+        let private_key = self.export_private_key_for_version(name, version)?;
         Ok(private_key.sign_message(message))
     }
 }

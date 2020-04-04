@@ -188,7 +188,7 @@ where
         &self,
         new_key: Ed25519PublicKey,
     ) -> Result<Ed25519PublicKey, Error> {
-        let account_prikey = self.storage.get_private_key(ACCOUNT_KEY)?;
+        let account_prikey = self.storage.export_private_key(ACCOUNT_KEY)?;
         let seq_id = self.libra.retrieve_sequence_number(self.account)?;
         let expiration = Duration::from_secs(self.time_service.now() + TXN_EXPIRATION_SECS);
         let txn =
