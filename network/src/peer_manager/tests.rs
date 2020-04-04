@@ -38,8 +38,8 @@ pub fn build_test_transport(
 ) -> BoxedTransport<(Identity, MemorySocket), impl ::std::error::Error + Sync + Send + 'static> {
     let memory_transport = MemoryTransport::default();
     memory_transport
-        .and_then(move |socket, origin| async move {
-            let (identity, socket) = exchange_identity(&own_identity, socket, origin).await?;
+        .and_then(move |socket, _origin| async move {
+            let (identity, socket) = exchange_identity(&own_identity, socket).await?;
             Ok((identity, socket))
         })
         .boxed()
