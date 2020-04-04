@@ -20,27 +20,27 @@ pub trait CryptoStorage: Send + Sync {
     /// under the given 'policy'. To access or use the key pair (e.g., sign or encrypt data),
     /// subsequent API calls must refer to the key pair by name. As this API call may fail
     /// (e.g., if a key pair with the given name already exists), an error may also be returned.
-    fn generate_new_key(&mut self, name: &str, policy: &Policy) -> Result<Ed25519PublicKey, Error>;
-
-    /// Returns the public key for a given Ed25519 key pair, as identified by the 'name'.
-    /// If the key pair doesn't exist, or the caller doesn't have the
-    /// appropriate permissions to retrieve the public key, this call will fail with an error.
-    fn get_public_key(&self, name: &str) -> Result<PublicKeyResponse, Error>;
+    fn create_key(&mut self, name: &str, policy: &Policy) -> Result<Ed25519PublicKey, Error>;
 
     /// Returns the private key for a given Ed25519 key pair, as identified by the 'name'.
     /// If the key pair doesn't exist, or the caller doesn't have the appropriate permissions to
     /// retrieve the private key, this call will fail with an error.
-    fn get_private_key(&self, name: &str) -> Result<Ed25519PrivateKey, Error>;
+    fn export_private_key(&self, name: &str) -> Result<Ed25519PrivateKey, Error>;
 
     /// Returns the private key for a given Ed25519 key pair version, as identified by the
     /// 'name' and 'version'. If the key pair at the specified version doesn't
     /// exist, or the caller doesn't have the appropriate permissions to retrieve the private key,
     /// this call will fail with an error.
-    fn get_private_key_for_version(
+    fn export_private_key_for_version(
         &self,
         name: &str,
         version: Ed25519PublicKey,
     ) -> Result<Ed25519PrivateKey, Error>;
+
+    /// Returns the public key for a given Ed25519 key pair, as identified by the 'name'.
+    /// If the key pair doesn't exist, or the caller doesn't have the
+    /// appropriate permissions to retrieve the public key, this call will fail with an error.
+    fn get_public_key(&self, name: &str) -> Result<PublicKeyResponse, Error>;
 
     /// Rotates an Ed25519 key pair by generating a new Ed25519 key pair, and updating the
     /// 'name' to reference the freshly generated key. The previous key pair is retained
