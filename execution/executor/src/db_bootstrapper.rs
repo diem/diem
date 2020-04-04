@@ -16,8 +16,6 @@ use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceC
 use storage_proto::StartupInfo;
 
 fn get_startup_info(storage_read_client: Arc<dyn StorageRead>) -> Result<Option<StartupInfo>> {
-    let read_client_clone = Arc::clone(&storage_read_client);
-
     // TODO(aldenhu): remove once we switch to blocking Storage interface.
     let rt = tokio::runtime::Builder::new()
         .threaded_scheduler()
@@ -26,7 +24,7 @@ fn get_startup_info(storage_read_client: Arc<dyn StorageRead>) -> Result<Option<
         .build()
         .unwrap();
     Ok(block_on(rt.spawn(async move {
-        read_client_clone
+        storage_read_client
             .get_startup_info()
             .await
             .expect("Shouldn't fail")
