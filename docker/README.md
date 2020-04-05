@@ -7,9 +7,8 @@ images of the validator node, faucet server and client.
 
 1. [Download](https://docs.docker.com/install/) and install Docker.
 2. Build the docker containers:
-   A. Base validator: From the top level directory, run `docker/validator/build.sh`
-   B. Dynamic validator: From the top level directory, run `docker/validator-dynamic/build.sh`
-   C. Mint (Faucet): From the top level directory, run `docker/mint/build.sh`
+   A. Dynamic validator: From the top level directory, run `docker/validator-dynamic/build.sh`
+   B. Mint (Faucet): From the top level directory, run `docker/mint/build.sh`
 3. To test locally, run the docker containers:
    A. Dynamic validator: run `docker/validator-dynamic/run.sh`
         Note: the Base validator can be run locally but requires substantial maual configuration.
