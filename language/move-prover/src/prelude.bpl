@@ -518,7 +518,7 @@ procedure {:inline 1} BorrowField(src: Reference, f: FieldName) returns (dst: Re
 
     p := p#Reference(src);
     size := size#Path(p);
-	p := Path(p#Path(p)[size := f], size+1);
+    p := Path(p#Path(p)[size := f], size+1);
     dst := Reference(l#Reference(src), p);
 }
 
@@ -759,11 +759,6 @@ function {:constructor} Transaction(
 
 const some_key: ByteArray;
 
-// DD: This doesn't seem to be used.  Commenting it out for now in case I'm wrong.
-// procedure {:inline 1} InitTransaction(sender: Value) {
-//   $txn := Transaction(1, 1000, some_key, sender, 0, 1000);
-// }
-
 procedure {:inline 1} GetGasRemaining() returns (ret_gas_remaining: Value)
 {
   ret_gas_remaining := Integer(gas_remaining#Transaction($txn));
@@ -885,7 +880,7 @@ procedure {:inline 1} $Vector_borrow_mut(ta: TypeValue, src: Reference, index: V
 
     p := p#Reference(src);
     size := size#Path(p);
-	p := Path(p#Path(p)[size := i_ind], size+1);
+        p := Path(p#Path(p)[size := i_ind], size+1);
     dst := Reference(l#Reference(src), p);
 }
 
@@ -994,25 +989,6 @@ procedure {:inline 1} $Vector_contains(ta: TypeValue, vr: Reference, er: Referen
 }
 
 
-// ==================================================================================
-// Native address_util
-
-// TODO: implement the below methods
-
-procedure {:inline 1} $AddressUtil_address_to_bytes(addr: Value) returns (res: Value)  {
-    res := DefaultValue;
-    assert false; // $AddressUtil_address_to_bytes not implemented
-}
-
-// ==================================================================================
-// Native u64_util
-
-// TODO: implement the below methods
-
-procedure {:inline 1} $U64Util_u64_to_bytes(val: Value) returns (res: Value)  {
-    res := DefaultValue;
-    assert false; // $U64Util_u64_to_bytes not implemented
-}
 
 // ==================================================================================
 // Native hash
@@ -1037,7 +1013,7 @@ axiom (forall v1,v2: Value :: $Vector_is_well_formed(v1) && $Vector_is_well_form
 
 // This says that sha2 is an injection
 axiom (forall v1,v2: Value :: $Vector_is_well_formed(v1) && $Vector_is_well_formed(v2)
-	&& IsEqual($sha2(v1), $sha2(v2)) ==> IsEqual(v1, v2));
+        && IsEqual($sha2(v1), $sha2(v2)) ==> IsEqual(v1, v2));
 
 // This procedure has no body. We want Boogie to just to use its requires
 // and ensures properties when verifying code that calls it.
@@ -1055,13 +1031,12 @@ axiom (forall v1,v2: Value :: $Vector_is_well_formed(v1) && $Vector_is_well_form
        && IsEqual(v1, v2) ==> IsEqual($sha3(v1), $sha3(v2)));
 
 axiom (forall v1,v2: Value :: $Vector_is_well_formed(v1) && $Vector_is_well_formed(v2)
-	&& IsEqual($sha3(v1), $sha3(v2)) ==> IsEqual(v1, v2));
+        && IsEqual($sha3(v1), $sha3(v2)) ==> IsEqual(v1, v2));
 
 procedure $Hash_sha3_256(val: Value) returns (res: Value);
 ensures res == $sha3(val);     // returns sha3 value
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
 ensures $vlen(res) == 32;               // result is 32 bytes.
-ensures $abort_flag == old($abort_flag);  // Does not abort, but stays aborted.
 
 // ==================================================================================
 // Native libra_account
@@ -1094,6 +1069,30 @@ procedure {:inline 1} Signature_ed25519_threshold_verify(bitmap: Value, signatur
 
 // TODO: implement the below methods
 
-procedure {:inline 1} $LCS_to_bytes(ta: TypeValue, v: Reference) returns (res: Value) {
-    assert false; // $LCS_to_bytes not implemented
-}
+// ==================================================================================
+// Native LCS::serialize
+
+// native public fun serialize<MoveValue>(v: &MoveValue): vector<u8>;
+
+// Serialize is modeled as an uninterpreted function, with an additional
+// axiom to say it's an injection.
+
+function $serialize(ta: TypeValue, v: Value): Value;
+
+// This says that $serialize respects isEquals (substitution property)
+// Without this, Boogie will get false positives where v1, v2 differ at invalid
+// indices.
+axiom (forall ta: TypeValue ::
+       (forall v1,v2: Value :: IsEqual(v1, v2) ==> IsEqual($serialize(ta, v1), $serialize(ta, v2))));
+
+
+// This says that serialize is an injection
+axiom (forall ta1, ta2: TypeValue ::
+       (forall v1, v2: Value :: IsEqual($serialize(ta1, v1), $serialize(ta2, v2))
+           ==> IsEqual(v1, v2) && (ta1 == ta2)));
+
+
+procedure $LCS_to_bytes(ta: TypeValue, r: Reference) returns (res: Value);
+ensures res == $serialize(ta, $Dereference($m, r));
+ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
+ensures $vlen(res) > 0;
