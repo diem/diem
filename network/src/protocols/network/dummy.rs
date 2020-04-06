@@ -27,8 +27,8 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, time::Duration};
 use tokio::runtime::Runtime;
 
-const TEST_RPC_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
-const TEST_DIRECT_SEND_PROTOCOL: ProtocolId = ProtocolId::ConsensusDirectSend;
+pub const TEST_RPC_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
+pub const TEST_DIRECT_SEND_PROTOCOL: ProtocolId = ProtocolId::ConsensusDirectSend;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct DummyMsg(pub Vec<u8>);
@@ -97,6 +97,7 @@ pub struct DummyNetwork {
     pub dialer_events: DummyNetworkEvents,
     pub dialer_sender: DummyNetworkSender,
     pub listener_peer_id: PeerId,
+    pub listener_addr: Multiaddr,
     pub listener_events: DummyNetworkEvents,
     pub listener_sender: DummyNetworkSender,
 }
@@ -129,7 +130,7 @@ pub fn setup_network() -> DummyNetwork {
     network_builder.transport(TransportType::Tcp);
     let (mut dialer_sender, mut dialer_events) = add_to_network(&mut network_builder);
     let _dialer_addr = network_builder.build();
-    runtime.block_on(dialer_sender.dial_peer(listener_peer_id, listen_addr));
+    runtime.block_on(dialer_sender.dial_peer(listener_peer_id, listen_addr.clone()));
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();
@@ -143,6 +144,7 @@ pub fn setup_network() -> DummyNetwork {
         dialer_events,
         dialer_sender,
         listener_peer_id,
+        listener_addr: listen_addr,
         listener_events,
         listener_sender,
     }

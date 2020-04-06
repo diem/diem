@@ -21,6 +21,7 @@ pub mod peer_manager;
 pub mod protocols;
 pub mod validator_network;
 
+mod client;
 mod counters;
 mod peer;
 mod sink;
