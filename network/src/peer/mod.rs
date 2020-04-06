@@ -11,7 +11,7 @@ use crate::{
     transport::{Connection, ConnectionMetadata},
     ProtocolId,
 };
-use bytes::BytesMut;
+use bytes::Bytes;
 use channel;
 use futures::{
     self,
@@ -152,9 +152,10 @@ where
                         maybe_message = reader.next() => {
                             match maybe_message {
                                 Some(Ok(message)) =>  {
-                                    if let Err(err) = self.handle_inbound_message(message, write_reqs_tx.clone()).await {
-                                        warn!("Error in handling inbound message from peer: {:?}. Error: {:?}",
-                                            self_peer_id.short_str(), err);
+                                    let message = message.freeze();
+                                    if let Err(err) = self.handle_inbound_message(message.clone(), write_reqs_tx.clone()).await {
+                                        warn!("Error in handling inbound message {:?} from peer: {:?}. Error: {:?}",
+                                            self_peer_id.short_str(), message, err);
                                     }
                                 },
                                 Some(Err(err)) => {
@@ -286,7 +287,7 @@ where
 
     async fn handle_inbound_message(
         &mut self,
-        message: BytesMut,
+        message: Bytes,
         mut write_reqs_tx: channel::Sender<(
             NetworkMessage,
             oneshot::Sender<Result<(), PeerManagerError>>,
@@ -294,7 +295,6 @@ where
     ) -> Result<(), PeerManagerError> {
         trace!("Received message from Peer {}", self.peer_id().short_str(),);
         // Read inbound message from stream.
-        let message = message.freeze();
         let message: NetworkMessage = lcs::from_bytes(&message)?;
         match message {
             NetworkMessage::RpcRequest(_) | NetworkMessage::RpcResponse(_) => {
