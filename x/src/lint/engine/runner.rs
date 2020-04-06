@@ -13,7 +13,7 @@ use std::{
 #[derive(Clone, Debug)]
 pub struct LintEngineConfig<'cfg> {
     project_root: &'cfg Path,
-    content_linters: &'cfg [&'cfg (dyn ContentLinter + 'cfg)],
+    content_linters: &'cfg [&'cfg dyn ContentLinter],
     fail_fast: bool,
 }
 
@@ -28,7 +28,7 @@ impl<'cfg> LintEngineConfig<'cfg> {
 
     pub fn with_content_linters(
         &mut self,
-        content_linters: &'cfg [&'cfg (dyn ContentLinter + 'cfg)],
+        content_linters: &'cfg [&'cfg dyn ContentLinter],
     ) -> &mut Self {
         self.content_linters = content_linters;
         self
