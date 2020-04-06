@@ -5,7 +5,6 @@
 //! These should serialize as per [link](TODO: Add ref).
 
 use crate::protocols::wire::handshake::v1::MessagingProtocolVersion;
-use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
@@ -67,7 +66,7 @@ pub struct RpcRequest {
     /// Request priority in the range 0..=255.
     pub priority: Priority,
     /// Request payload. This will be parsed by the application-level handler.
-    pub raw_request: Bytes,
+    pub raw_request: Vec<u8>,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -78,7 +77,7 @@ pub struct RpcResponse {
     /// corresponding request.
     pub priority: Priority,
     /// Response payload.
-    pub raw_response: Bytes,
+    pub raw_response: Vec<u8>,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -88,5 +87,5 @@ pub struct DirectSendMsg {
     /// Message priority in the range 0..=255.
     pub priority: Priority,
     /// Message payload.
-    pub raw_msg: Bytes,
+    pub raw_msg: Vec<u8>,
 }
