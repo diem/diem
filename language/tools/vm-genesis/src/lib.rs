@@ -327,6 +327,18 @@ fn create_and_initialize_main_accounts(
 
     move_vm
         .execute_function(
+            &LIBRA_WRITESET_MANAGER_MODULE,
+            &INITIALIZE,
+            &gas_schedule,
+            interpreter_context,
+            &txn_data,
+            vec![],
+            vec![],
+        )
+        .expect("Failure initializing LibraWriteSetManager");
+
+    move_vm
+        .execute_function(
             &GAS_SCHEDULE_MODULE,
             &INITIALIZE,
             &gas_schedule,
