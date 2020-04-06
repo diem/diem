@@ -11,7 +11,7 @@ use crate::{
     Executor, OP_COUNTERS,
 };
 use libra_config::config::NodeConfig;
-use libra_crypto::HashValue;
+use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue};
 use libra_types::{
     account_address::AccountAddress,
     block_info::BlockInfo,
@@ -25,6 +25,16 @@ use std::collections::BTreeMap;
 use storage_client::{StorageRead, StorageReadServiceClient, SyncStorageClient};
 use storage_service::{init_libra_db, start_storage_service_with_db};
 use tokio::runtime::Runtime;
+
+fn build_test_config() -> (NodeConfig, Ed25519PrivateKey) {
+    let validator_config = config_builder::ValidatorConfig::new();
+    let randomize_service_ports = true;
+    let randomize_libranet_ports = false;
+    let (mut configs, key) = validator_config
+        .build_common(randomize_service_ports, randomize_libranet_ports)
+        .unwrap();
+    (configs.swap_remove(0), key)
+}
 
 fn create_storage(config: &NodeConfig) -> Runtime {
     let (arc_db, db_reader_writer) = init_libra_db(&config);
@@ -64,7 +74,7 @@ struct TestExecutor {
 
 impl TestExecutor {
     fn new() -> TestExecutor {
-        let (config, _) = config_builder::test_config();
+        let (config, _) = build_test_config();
         let storage_server = create_storage(&config);
         let executor = create_executor(&config);
 
@@ -271,7 +281,7 @@ fn create_transaction_chunks(
 
     // To obtain the batches of transactions, we first execute and save all these transactions in a
     // separate DB. Then we call get_transactions to retrieve them.
-    let (config, _) = config_builder::test_config();
+    let (config, _) = build_test_config();
     let storage_server = create_storage(&config);
     let mut executor = create_executor(&config);
 
@@ -331,7 +341,7 @@ fn test_executor_execute_and_commit_chunk() {
     };
 
     // Now we execute these two chunks of transactions.
-    let (config, _) = config_builder::test_config();
+    let (config, _) = build_test_config();
     let storage_server = create_storage(&config);
     let mut executor = create_executor(&config);
     let storage_client = StorageReadServiceClient::new(&config.storage.address);
@@ -407,7 +417,7 @@ fn test_executor_execute_and_commit_chunk_restart() {
         ])
     };
 
-    let (config, _) = config_builder::test_config();
+    let (config, _) = build_test_config();
     let storage_server = create_storage(&config);
 
     // First we simulate syncing the first chunk of transactions.
@@ -456,7 +466,7 @@ fn test_executor_execute_and_commit_chunk_local_result_mismatch() {
         ])
     };
 
-    let (config, _) = config_builder::test_config();
+    let (config, _) = build_test_config();
     let _storage_server = create_storage(&config);
     let mut executor = create_executor(&config);
     // commit 5 txns first.
@@ -610,7 +620,7 @@ proptest! {
         let block_a = TestBlock::new(0..a_size, amount, gen_block_id(1));
         let block_b = TestBlock::new(0..b_size, amount, gen_block_id(2));
 
-        let (config, _) = config_builder::test_config();
+        let (config, _) = build_test_config();
         let storage_server = create_storage(&config);
         let mut parent_block_id;
         let mut root_hash;
@@ -663,7 +673,7 @@ proptest! {
                 overlap_start..overlap_end
             ]);
 
-        let (config, _) = config_builder::test_config();
+        let (config, _) = build_test_config();
         let storage_server = create_storage(&config);
         let mut executor = create_executor(&config);
         let parent_block_id = executor.committed_block_id();
