@@ -53,12 +53,9 @@ jobs:
           export CTI_OUTPUT_LOG=$(mktemp)
           echo "::set-env name=CTI_OUTPUT_LOG::$CTI_OUTPUT_LOG"
           ./scripts/cti \
-            --k8s \
             --tag ${TEST_TAG} \
             --report report.json \
-            --run bench \
-            --k8s-fullnodes-per-validator=1 \
-            --k8s-num-validators=30
+            --run bench
           echo "report.json start"
           cat report.json
           echo "report.json end"
@@ -134,7 +131,7 @@ jobs:
             try {
               body += "\nRepro cmd:\n";
               body += `
-                ./scripts/cti --k8s --tag ${env_vars.TEST_TAG} --run bench --k8s-fullnodes-per-validator=1 --k8s-num-validators=30
+                ./scripts/cti --tag ${env_vars.TEST_TAG} --run bench
               `;
             } catch (err) {
               if (err.code === 'ReferenceError') {
