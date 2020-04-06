@@ -16,7 +16,7 @@ module LibraVersion {
     }
 
     public fun set(major: u64) {
-        let old_config = LibraConfig::read_config<Self::T>();
+        let old_config = LibraConfig::get<Self::T>(Transaction::sender());
 
         Transaction::assert(
             old_config.major < major,

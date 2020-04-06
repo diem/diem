@@ -4,6 +4,7 @@
 use crate::{
     access_path::{AccessPath, Accesses},
     account_config::{association_address, CORE_CODE_ADDRESS},
+    event::EventKey,
     language_storage::{StructTag, TypeTag},
     transaction::SCRIPT_HASH_LENGTH,
 };
@@ -87,6 +88,10 @@ pub trait OnChainConfig: Send + Sync + DeserializeOwned {
             .fetch_config(Self::CONFIG_ID.access_path())
             .and_then(|bytes| Self::deserialize_into_config(&bytes).ok())
     }
+}
+
+pub fn new_epoch_event_key() -> EventKey {
+    EventKey::new_from_address(&association_address(), 3)
 }
 
 pub fn access_path_for_config(config_name: Identifier) -> AccessPath {

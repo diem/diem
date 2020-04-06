@@ -154,7 +154,7 @@ impl VMExecutor for MockVM {
                             ValidatorSet::change_event_key(),
                             0,
                             TypeTag::Bool,
-                            lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap(),
+                            lcs::to_bytes(&0).unwrap(),
                         )],
                         0,
                         KEEP_STATUS.clone(),
