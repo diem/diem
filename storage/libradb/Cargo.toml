@@ -21,7 +21,7 @@ proptest = { version = "0.9.2", optional = true }
 proptest-derive = { version = "0.1.2", optional = true }
 prometheus = { version = "0.8.0", default-features = false }
 rand = "0.6.5"
-serde = "1.0.105"
+serde = "1.0.106"
 thiserror = "1.0"
 
 accumulator = { path = "../accumulator", version = "0.1.0" }
