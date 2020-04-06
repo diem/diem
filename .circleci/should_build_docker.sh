@@ -15,7 +15,7 @@ cd "$PROJECT_DIR"
 COMMITS=$(git rev-list $oldrev..$newrev)
 DOCKER_FILES=$(
   for commit in $COMMITS; do
-    git diff-tree --no-commit-id --name-only -r "$commit" -- "*.Dockerfile";
+    git diff-tree --no-commit-id --name-only -r "$commit" -- "*Dockerfile";
   done
 )
 
