@@ -91,8 +91,8 @@ pub fn build_memory_noise_transport(
                 Err(io::Error::new(io::ErrorKind::Other, "Not a trusted peer"))
             }
         })
-        .and_then(move |(peer_id, socket), _origin| async move {
-            let (identity, socket) = exchange_identity(&own_identity, socket).await?;
+        .and_then(move |(peer_id, mut socket), _origin| async move {
+            let identity = exchange_identity(&own_identity, &mut socket).await?;
             match_peer_id(identity, peer_id).and_then(|identity| Ok((identity, socket)))
         })
         .with_timeout(TRANSPORT_TIMEOUT)
@@ -121,8 +121,8 @@ pub fn build_unauthenticated_memory_noise_transport(
                 Ok((peer_id, socket))
             }
         })
-        .and_then(move |(peer_id, socket), _origin| async move {
-            let (identity, socket) = exchange_identity(&own_identity, socket).await?;
+        .and_then(move |(peer_id, mut socket), _origin| async move {
+            let identity = exchange_identity(&own_identity, &mut socket).await?;
             match_peer_id(identity, peer_id).and_then(|identity| Ok((identity, socket)))
         })
         .with_timeout(TRANSPORT_TIMEOUT)
@@ -134,8 +134,8 @@ pub fn build_memory_transport(
 ) -> boxed::BoxedTransport<(Identity, impl TSocket), impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
     memory_transport
-        .and_then(move |socket, _origin| async move {
-            Ok(exchange_identity(&own_identity, socket).await?)
+        .and_then(move |mut socket, _origin| async move {
+            Ok((exchange_identity(&own_identity, &mut socket).await?, socket))
         })
         .with_timeout(TRANSPORT_TIMEOUT)
         .boxed()
@@ -164,8 +164,8 @@ pub fn build_tcp_noise_transport(
                 Err(io::Error::new(io::ErrorKind::Other, "Not a trusted peer"))
             }
         })
-        .and_then(move |(peer_id, socket), _origin| async move {
-            let (identity, socket) = exchange_identity(&own_identity, socket).await?;
+        .and_then(move |(peer_id, mut socket), _origin| async move {
+            let identity = exchange_identity(&own_identity, &mut socket).await?;
             match_peer_id(identity, peer_id).and_then(|identity| Ok((identity, socket)))
         })
         .with_timeout(TRANSPORT_TIMEOUT)
@@ -195,8 +195,8 @@ pub fn build_unauthenticated_tcp_noise_transport(
                 Ok((peer_id, socket))
             }
         })
-        .and_then(move |(peer_id, socket), _origin| async move {
-            let (identity, socket) = exchange_identity(&own_identity, socket).await?;
+        .and_then(move |(peer_id, mut socket), _origin| async move {
+            let identity = exchange_identity(&own_identity, &mut socket).await?;
             match_peer_id(identity, peer_id).and_then(|identity| Ok((identity, socket)))
         })
         .with_timeout(TRANSPORT_TIMEOUT)
@@ -207,8 +207,8 @@ pub fn build_tcp_transport(
     own_identity: Identity,
 ) -> boxed::BoxedTransport<(Identity, impl TSocket), impl ::std::error::Error> {
     LIBRA_TCP_TRANSPORT
-        .and_then(move |socket, _origin| async move {
-            Ok(exchange_identity(&own_identity, socket).await?)
+        .and_then(move |mut socket, _origin| async move {
+            Ok((exchange_identity(&own_identity, &mut socket).await?, socket))
         })
         .with_timeout(TRANSPORT_TIMEOUT)
         .boxed()
