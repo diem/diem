@@ -33,7 +33,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     ledger_info::LedgerInfoWithSignatures,
-    proof::{SparseMerkleProof, SparseMerkleRangeProof},
+    proof::{definition::LeafCount, SparseMerkleProof, SparseMerkleRangeProof},
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionToCommit, Version,
     },
@@ -493,19 +493,19 @@ impl From<GetTransactionsResponse> for crate::proto::storage::GetTransactionsRes
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct TreeState {
-    pub version: Version,
+    pub num_transactions: LeafCount,
     pub ledger_frozen_subtree_hashes: Vec<HashValue>,
     pub account_state_root_hash: HashValue,
 }
 
 impl TreeState {
     pub fn new(
-        version: Version,
+        num_transactions: LeafCount,
         ledger_frozen_subtree_hashes: Vec<HashValue>,
         account_state_root_hash: HashValue,
     ) -> Self {
         Self {
-            version,
+            num_transactions,
             ledger_frozen_subtree_hashes,
             account_state_root_hash,
         }
@@ -523,10 +523,10 @@ impl TryFrom<crate::proto::storage::TreeState> for TreeState {
             .map(|x| &x[..])
             .map(HashValue::from_slice)
             .collect::<Result<Vec<_>>>()?;
-        let version = proto.version;
+        let num_transactions = proto.num_transactions;
 
         Ok(Self::new(
-            version,
+            num_transactions,
             ledger_frozen_subtree_hashes,
             account_state_root_hash,
         ))
@@ -541,10 +541,10 @@ impl From<TreeState> for crate::proto::storage::TreeState {
             .into_iter()
             .map(|x| x.to_vec())
             .collect();
-        let version = info.version;
+        let num_transactions = info.num_transactions;
 
         Self {
-            version,
+            num_transactions,
             ledger_frozen_subtree_hashes,
             account_state_root_hash,
         }

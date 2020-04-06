@@ -141,8 +141,10 @@ message GetStartupInfoResponse {
 }
 
 message TreeState {
-  // The version of the tree state. All fields below are based on this version.
-  uint64 version = 1;
+  // The number of transactions in the accumulator. "0" means an empty
+  // transaction accumulator, in which case `ledger_frozen_subtree_hashes` must
+  // be empty, but pre-genesis state can exist. All fields below base on this.
+  uint64 num_transactions = 1;
   // From left to right, root hashes of all frozen subtrees.
   repeated bytes ledger_frozen_subtree_hashes = 2;
   // The latest account state root hash.
