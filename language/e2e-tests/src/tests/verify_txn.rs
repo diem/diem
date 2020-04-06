@@ -69,27 +69,6 @@ fn verify_reserved_sender() {
 }
 
 #[test]
-fn verify_rejected_write_set() {
-    let mut executor = FakeExecutor::from_genesis_file();
-    let sender = AccountData::new(900_000, 10);
-    executor.add_account_data(&sender);
-    let signed_txn = transaction_test_helpers::get_write_set_txn(
-        *sender.address(),
-        0,
-        &sender.account().privkey,
-        sender.account().pubkey.clone(),
-        None,
-    )
-    .into_inner();
-
-    assert_prologue_parity!(
-        executor.verify_transaction(signed_txn.clone()).status(),
-        executor.execute_transaction(signed_txn).status(),
-        VMStatus::new(StatusCode::REJECTED_WRITE_SET)
-    );
-}
-
-#[test]
 fn verify_simple_payment() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();

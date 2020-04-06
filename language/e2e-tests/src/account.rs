@@ -15,6 +15,7 @@ use libra_types::{
         authenticator::AuthenticationKey, RawTransaction, Script, SignedTransaction,
         TransactionArgument, TransactionPayload,
     },
+    write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use move_vm_types::{
     identifier::create_access_path,
@@ -571,6 +572,26 @@ impl AccountData {
     /// Use this to retrieve or publish the Account blob.
     pub fn make_balance_access_path(&self) -> AccessPath {
         self.account.make_balance_access_path()
+    }
+
+    pub fn to_writeset(&self) -> WriteSet {
+        let (account_blob, balance_blob) = self.to_account();
+        let account = account_blob
+            .value_as::<Struct>()
+            .unwrap()
+            .simple_serialize(&AccountData::account_type())
+            .unwrap();
+        let balance = balance_blob
+            .value_as::<Struct>()
+            .unwrap()
+            .simple_serialize(&AccountData::balance_type())
+            .unwrap();
+        WriteSetMut::new(vec![
+            (self.make_account_access_path(), WriteOp::Value(account)),
+            (self.make_balance_access_path(), WriteOp::Value(balance)),
+        ])
+        .freeze()
+        .unwrap()
     }
 
     /// Returns the address of the account. This is a hash of the public key the account was created
