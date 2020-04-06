@@ -14,7 +14,7 @@ anyhow = "1.0"
 proptest = { version = "0.9.4", default-features = false, optional = true }
 proptest-derive = { version = "0.1.2", default-features = false, optional = true }
 ref-cast = "1.0"
-serde = { version = "1.0.105", default-features = false }
+serde = { version = "1.0.106", default-features = false }
 
 lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 
