@@ -80,7 +80,7 @@ commands:
           command: |
             echo 'export CHANGED_DOCKER_FILES=$(
               for commit in $(git rev-list origin/master..HEAD) ; do
-                git diff-tree --no-commit-id --name-only -r "$commit" -- "*.Dockerfile";
+                git diff-tree --no-commit-id --name-only -r "$commit" -- "*Dockerfile";
               done
             )' >> $BASH_ENV
   save_cargo_package_cache:
