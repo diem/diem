@@ -167,7 +167,13 @@ impl FullNodeConfig {
             }
         );
 
-        let (validator_configs, faucet_key) = self.validator_config.build_swarm()?;
+        // Don't randomize ports. Until we better separate genesis generation,
+        // we don't want to accidentally randomize initial discovery set addresses.
+        let randomize_service_ports = false;
+        let randomize_libranet_ports = false;
+        let (validator_configs, faucet_key) = self
+            .validator_config
+            .build_common(randomize_service_ports, randomize_libranet_ports)?;
         let validator_config = validator_configs.first().ok_or(Error::NoConfigs)?;
 
         let mut rng = StdRng::from_seed(self.full_node_seed);
