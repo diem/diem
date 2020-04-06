@@ -1370,15 +1370,35 @@ pub mod vector {
         };
     }
 
-    macro_rules! err_vector_elem_ty_mismatch {
-        ($tag: expr, $val: expr) => {{
-            return Err(
-                VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(format!(
-                    "vector elem type mismatch -- expected {:?}, got {:?}",
-                    $tag, $val
-                )),
-            );
-        }};
+    fn check_elem_layout(ty: &Type, v: &Container) -> VMResult<()> {
+        match (ty, v) {
+            (Type::U8, Container::U8(_))
+            | (Type::U64, Container::U64(_))
+            | (Type::U128, Container::U128(_))
+            | (Type::Bool, Container::Bool(_))
+            | (Type::Address, Container::General(_))
+            | (Type::Vector(_), Container::General(_))
+            | (Type::Struct(_), Container::General(_)) => Ok(()),
+
+            (Type::Reference(_), _) | (Type::MutableReference(_), _) | (Type::TyParam(_), _) => {
+                Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(format!("invalid type param for vector: {:?}", ty)))
+            }
+
+            (Type::U8, _)
+            | (Type::U64, _)
+            | (Type::U128, _)
+            | (Type::Bool, _)
+            | (Type::Address, _)
+            | (Type::Vector(_), _)
+            | (Type::Struct(_), _) => Err(VMStatus::new(
+                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+            )
+            .with_message(format!(
+                "vector elem layout mismatch, expected {:?}, got {:?}",
+                ty, v
+            ))),
+        }
     }
 
     pub fn native_empty(
@@ -1396,7 +1416,12 @@ pub mod vector {
             Type::U128 => Container::U128(vec![]),
             Type::Bool => Container::Bool(vec![]),
 
-            _ => Container::General(vec![]),
+            Type::Address | Type::Vector(_) | Type::Struct(_) => Container::General(vec![]),
+
+            Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
+                return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(format!("invalid type param for vector: {:?}", &ty_args[0])))
+            }
         };
 
         Ok(NativeResult::ok(
@@ -1417,17 +1442,14 @@ pub mod vector {
         let r = pop_arg_front!(args, ContainerRef);
         let v = r.borrow();
 
-        let len = match (&ty_args[0], &*v) {
-            (Type::U8, Container::U8(v)) => v.len(),
-            (Type::U64, Container::U64(v)) => v.len(),
-            (Type::U128, Container::U128(v)) => v.len(),
-            (Type::Bool, Container::Bool(v)) => v.len(),
+        check_elem_layout(&ty_args[0], &*v)?;
 
-            (Type::Struct(_), Container::General(v)) | (Type::Address, Container::General(v)) => {
-                v.len()
-            }
-
-            (tag, v) => err_vector_elem_ty_mismatch!(tag, v),
+        let len = match &*v {
+            Container::U8(v) => v.len(),
+            Container::U64(v) => v.len(),
+            Container::U128(v) => v.len(),
+            Container::Bool(v) => v.len(),
+            Container::General(v) => v.len(),
         };
 
         Ok(NativeResult::ok(cost, vec![Value::u64(len as u64)]))
@@ -1450,17 +1472,14 @@ pub mod vector {
             .total()
             .mul(e.size());
 
-        match (&ty_args[0], &mut *v) {
-            (Type::U8, Container::U8(v)) => v.push(e.value_as()?),
-            (Type::U64, Container::U64(v)) => v.push(e.value_as()?),
-            (Type::U128, Container::U128(v)) => v.push(e.value_as()?),
-            (Type::Bool, Container::Bool(v)) => v.push(e.value_as()?),
+        check_elem_layout(&ty_args[0], &*v)?;
 
-            (Type::Struct(_), Container::General(v)) | (Type::Address, Container::General(v)) => {
-                v.push(e.0)
-            }
-
-            (tag, v) => err_vector_elem_ty_mismatch!(tag, v),
+        match &mut *v {
+            Container::U8(v) => v.push(e.value_as()?),
+            Container::U64(v) => v.push(e.value_as()?),
+            Container::U128(v) => v.push(e.value_as()?),
+            Container::Bool(v) => v.push(e.value_as()?),
+            Container::General(v) => v.push(e.0),
         }
 
         Ok(NativeResult::ok(cost, vec![]))
@@ -1479,7 +1498,8 @@ pub mod vector {
         let v = r.borrow();
         let idx = pop_arg_front!(args, u64) as usize;
 
-        // TODO: check if the type tag matches the real type?
+        check_elem_layout(&ty_args[0], &*v)?;
+
         if idx >= v.len() {
             return Ok(NativeResult::err(
                 cost,
@@ -1504,6 +1524,8 @@ pub mod vector {
         let r = pop_arg_front!(args, ContainerRef);
         let mut v = r.borrow_mut();
 
+        check_elem_layout(&ty_args[0], &*v)?;
+
         macro_rules! err_pop_empty_vec {
             () => {
                 return Ok(NativeResult::err(
@@ -1513,32 +1535,28 @@ pub mod vector {
             };
         }
 
-        let res = match (&ty_args[0], &mut *v) {
-            (Type::U8, Container::U8(v)) => match v.pop() {
+        let res = match &mut *v {
+            Container::U8(v) => match v.pop() {
                 Some(x) => Value::u8(x),
                 None => err_pop_empty_vec!(),
             },
-            (Type::U64, Container::U64(v)) => match v.pop() {
+            Container::U64(v) => match v.pop() {
                 Some(x) => Value::u64(x),
                 None => err_pop_empty_vec!(),
             },
-            (Type::U128, Container::U128(v)) => match v.pop() {
+            Container::U128(v) => match v.pop() {
                 Some(x) => Value::u128(x),
                 None => err_pop_empty_vec!(),
             },
-            (Type::Bool, Container::Bool(v)) => match v.pop() {
+            Container::Bool(v) => match v.pop() {
                 Some(x) => Value::bool(x),
                 None => err_pop_empty_vec!(),
             },
 
-            (Type::Struct(_), Container::General(v)) | (Type::Address, Container::General(v)) => {
-                match v.pop() {
-                    Some(x) => Value(x),
-                    None => err_pop_empty_vec!(),
-                }
-            }
-
-            (tag, v) => err_vector_elem_ty_mismatch!(tag, v),
+            Container::General(v) => match v.pop() {
+                Some(x) => Value(x),
+                None => err_pop_empty_vec!(),
+            },
         };
 
         Ok(NativeResult::ok(cost, vec![res]))
@@ -1555,17 +1573,15 @@ pub mod vector {
         let cost = native_gas(cost_table, NativeCostIndex::DESTROY_EMPTY, 1);
         let v = args.pop_front().unwrap().value_as::<Container>()?;
 
-        let is_empty = match (&ty_args[0], &v) {
-            (Type::U8, Container::U8(v)) => v.is_empty(),
-            (Type::U64, Container::U64(v)) => v.is_empty(),
-            (Type::U128, Container::U128(v)) => v.is_empty(),
-            (Type::Bool, Container::Bool(v)) => v.is_empty(),
+        check_elem_layout(&ty_args[0], &v)?;
 
-            (Type::Struct(_), Container::General(v)) | (Type::Address, Container::General(v)) => {
-                v.is_empty()
-            }
+        let is_empty = match &v {
+            Container::U8(v) => v.is_empty(),
+            Container::U64(v) => v.is_empty(),
+            Container::U128(v) => v.is_empty(),
+            Container::Bool(v) => v.is_empty(),
 
-            (tag, v) => err_vector_elem_ty_mismatch!(tag, v),
+            Container::General(v) => v.is_empty(),
         };
 
         if is_empty {
@@ -1593,6 +1609,8 @@ pub mod vector {
         let idx1 = pop_arg_front!(args, u64) as usize;
         let idx2 = pop_arg_front!(args, u64) as usize;
 
+        check_elem_layout(&ty_args[0], &*v)?;
+
         macro_rules! swap {
             ($v: ident) => {{
                 if idx1 >= $v.len() || idx2 >= $v.len() {
@@ -1606,15 +1624,12 @@ pub mod vector {
             }};
         }
 
-        match (&ty_args[0], &mut *v) {
-            (Type::U8, Container::U8(v)) => swap!(v),
-            (Type::U64, Container::U64(v)) => swap!(v),
-            (Type::U128, Container::U128(v)) => swap!(v),
-            (Type::Bool, Container::Bool(v)) => swap!(v),
-            (Type::Struct(_), Container::General(v)) | (Type::Address, Container::General(v)) => {
-                swap!(v)
-            }
-            (tag, v) => err_vector_elem_ty_mismatch!(tag, v),
+        match &mut *v {
+            Container::U8(v) => swap!(v),
+            Container::U64(v) => swap!(v),
+            Container::U128(v) => swap!(v),
+            Container::Bool(v) => swap!(v),
+            Container::General(v) => swap!(v),
         }
 
         Ok(NativeResult::ok(cost, vec![]))
