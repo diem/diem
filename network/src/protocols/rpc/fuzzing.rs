@@ -9,7 +9,6 @@ use crate::{
     },
     ProtocolId,
 };
-use bytes::Bytes;
 use futures::{
     future::{self, FutureExt},
     stream::StreamExt,
@@ -17,7 +16,7 @@ use futures::{
 use libra_proptest_helpers::ValueGenerator;
 use libra_types::PeerId;
 use proptest::{arbitrary::any, collection::vec, prop_oneof, strategy::Strategy};
-use std::{io, iter::FromIterator};
+use std::io;
 use tokio::runtime;
 use tokio_util::codec::{Encoder, LengthDelimitedCodec};
 
@@ -64,8 +63,7 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
 pub fn fuzzer(data: &[u8]) {
     let (notification_tx, mut notification_rx) = channel::new_test(8);
     let (peer_reqs_tx, mut peer_reqs_rx) = channel::new_test(8);
-    let data = Vec::from(data);
-    let raw_request = Bytes::from_iter(data.into_iter());
+    let raw_request = Vec::from(data);
     let inbound_request = RpcRequest {
         protocol_id: TEST_PROTOCOL,
         request_id: 0,

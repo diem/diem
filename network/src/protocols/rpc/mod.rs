@@ -463,7 +463,7 @@ async fn handle_outbound_rpc_inner(
         // TODO: Use default priority for now. To be exposed via network API.
         priority: Priority::default(),
         protocol_id: protocol,
-        raw_request: req_data,
+        raw_request: Vec::from(req_data.as_ref()),
     });
 
     // Start timer to collect RPC latency.
@@ -506,7 +506,7 @@ async fn handle_outbound_rpc_inner(
     counters::LIBRA_NETWORK_RPC_BYTES
         .with_label_values(&["response", "received"])
         .observe(res_data.len() as f64);
-    Ok(res_data)
+    Ok(Bytes::from(res_data))
 }
 
 async fn handle_inbound_request_inner(
@@ -535,7 +535,7 @@ async fn handle_inbound_request_inner(
     let (res_tx, res_rx) = oneshot::channel();
     let notification = RpcNotification::RecvRpc(InboundRpcRequest {
         protocol: request.protocol_id,
-        data: req_data,
+        data: Bytes::from(req_data),
         res_tx,
     });
     notification_tx.send(notification).await?;
@@ -556,7 +556,7 @@ async fn handle_inbound_request_inner(
         peer_id.short_str()
     );
     let response = RpcResponse {
-        raw_response: res_data,
+        raw_response: Vec::from(res_data.as_ref()),
         request_id,
         priority: request.priority,
     };

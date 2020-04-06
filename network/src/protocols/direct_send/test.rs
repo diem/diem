@@ -15,13 +15,14 @@ use bytes::Bytes;
 use futures::{sink::SinkExt, stream::StreamExt};
 use libra_logger::debug;
 use libra_types::PeerId;
+use once_cell::sync::Lazy;
 use serial_test::serial;
 use tokio::runtime::{Handle, Runtime};
 
 const PROTOCOL_1: ProtocolId = ProtocolId::ConsensusDirectSend;
 const PROTOCOL_2: ProtocolId = ProtocolId::MempoolDirectSend;
-static MESSAGE_1: Bytes = Bytes::from_static(b"Direct Send 1");
-static MESSAGE_2: Bytes = Bytes::from_static(b"Direct Send 2");
+static MESSAGE_1: Lazy<Vec<u8>> = Lazy::new(|| Vec::from("Direct Send 1"));
+static MESSAGE_2: Lazy<Vec<u8>> = Lazy::new(|| Vec::from("Direct Send 2"));
 
 // counters are static and therefore shared across tests. This can sometimes lead to
 // surprising counter readings if tests are run in parallel. Since we use counter values in some
@@ -59,7 +60,7 @@ fn start_direct_send_actor(
 async fn expect_network_provider_recv_message(
     ds_notifs_rx: &mut channel::Receiver<DirectSendNotification>,
     expected_protocol: ProtocolId,
-    expected_message: Bytes,
+    expected_message: Vec<u8>,
 ) {
     match ds_notifs_rx.next().await.unwrap() {
         DirectSendNotification::RecvMessage(msg) => {
@@ -144,7 +145,7 @@ fn test_outbound_msg() {
     let f_network_provider = async move {
         let msg_sent = DirectSendRequest::SendMessage(Message {
             protocol: PROTOCOL_1,
-            mdata: MESSAGE_1.clone(),
+            mdata: Bytes::from(MESSAGE_1.clone()),
         });
         debug!("Sending message");
         ds_requests_tx.send(msg_sent).await.unwrap();
@@ -182,7 +183,7 @@ fn test_send_failure() {
         ds_requests_tx
             .send(DirectSendRequest::SendMessage(Message {
                 protocol: PROTOCOL_1,
-                mdata: MESSAGE_1.clone(),
+                mdata: Bytes::from(MESSAGE_1.clone()),
             }))
             .await
             .unwrap();
@@ -190,7 +191,7 @@ fn test_send_failure() {
         ds_requests_tx
             .send(DirectSendRequest::SendMessage(Message {
                 protocol: PROTOCOL_1,
-                mdata: MESSAGE_2.clone(),
+                mdata: Bytes::from(MESSAGE_2.clone()),
             }))
             .await
             .unwrap();

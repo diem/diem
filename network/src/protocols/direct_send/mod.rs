@@ -149,7 +149,7 @@ impl DirectSend {
                         .observe(data.len() as f64);
                     let notif = DirectSendNotification::RecvMessage(Message {
                         protocol,
-                        mdata: data,
+                        mdata: Bytes::from(data),
                     });
                     if let Err(err) = self.ds_notifs_tx.send(notif).await {
                         warn!(
@@ -181,7 +181,7 @@ impl DirectSend {
                             protocol_id,
                             // TODO: Use default priority for now. To be exposed via network API.
                             priority: Priority::default(),
-                            raw_msg: msg.mdata,
+                            raw_msg: Vec::from(msg.mdata.as_ref()),
                         }),
                         protocol_id,
                     )

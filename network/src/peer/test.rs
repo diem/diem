@@ -10,7 +10,6 @@ use crate::{
     },
     ProtocolId,
 };
-use bytes::Bytes;
 use futures::{future::join, io::AsyncWriteExt, stream::StreamExt, SinkExt};
 use libra_types::PeerId;
 use memsocket::MemorySocket;
@@ -175,7 +174,7 @@ fn peer_send_message() {
     let send_msg = NetworkMessage::DirectSendMsg(DirectSendMsg {
         protocol_id: PROTOCOL,
         priority: 0,
-        raw_msg: Bytes::from_static(b"hello world"),
+        raw_msg: Vec::from("hello world"),
     });
     let recv_msg = send_msg.clone();
 
@@ -212,7 +211,7 @@ fn peer_recv_message() {
     let send_msg = NetworkMessage::DirectSendMsg(DirectSendMsg {
         protocol_id: PROTOCOL,
         priority: 0,
-        raw_msg: Bytes::from_static(b"hello world"),
+        raw_msg: Vec::from("hello world"),
     });
     let recv_msg = send_msg.clone();
 
@@ -269,12 +268,12 @@ fn peer_open_substream_simultaneous() {
         let msg_a = NetworkMessage::DirectSendMsg(DirectSendMsg {
             protocol_id: PROTOCOL,
             priority: 0,
-            raw_msg: Bytes::from_static(b"hello world"),
+            raw_msg: Vec::from("hello world"),
         });
         let msg_b = NetworkMessage::DirectSendMsg(DirectSendMsg {
             protocol_id: PROTOCOL,
             priority: 0,
-            raw_msg: Bytes::from_static(b"namaste"),
+            raw_msg: Vec::from("namaste"),
         });
 
         // Send open substream requests to both peer_a and peer_b
