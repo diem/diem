@@ -44,10 +44,7 @@ impl Identity {
 }
 
 /// The Identity exchange protocol
-pub async fn exchange_identity<T>(
-    own_identity: &Identity,
-    mut socket: T,
-) -> io::Result<(Identity, T)>
+pub async fn exchange_identity<T>(own_identity: &Identity, socket: &mut T) -> io::Result<Identity>
 where
     T: AsyncRead + AsyncWrite + Unpin,
 {
@@ -58,19 +55,19 @@ where
             format!("Failed to serialize identity msg: {}", e),
         )
     })?;
-    write_u16frame(&mut socket, &msg).await?;
+    write_u16frame(socket, &msg).await?;
     socket.flush().await?;
 
     // Read an IdentityMsg from the Remote
     let mut response = BytesMut::new();
-    read_u16frame(&mut socket, &mut response).await?;
+    read_u16frame(socket, &mut response).await?;
     let identity = lcs::from_bytes(&response).map_err(|e| {
         io::Error::new(
             io::ErrorKind::InvalidData,
             format!("Failed to parse identity msg: {}", e),
         )
     })?;
-    Ok((identity, socket))
+    Ok(identity)
 }
 
 #[cfg(test)]
@@ -89,7 +86,7 @@ mod tests {
 
     #[test]
     fn simple_identify() {
-        let (outbound, inbound) = build_test_connection();
+        let (mut outbound, mut inbound) = build_test_connection();
         let server_identity = Identity::new(
             PeerId::random(),
             vec![
@@ -105,7 +102,7 @@ mod tests {
         let client_identity_config = client_identity.clone();
 
         let server = async move {
-            let (identity, _connection) = exchange_identity(&server_identity_config, inbound)
+            let identity = exchange_identity(&server_identity_config, &mut inbound)
                 .await
                 .expect("Identity exchange fails");
 
@@ -113,7 +110,7 @@ mod tests {
         };
 
         let client = async move {
-            let (identity, _connection) = exchange_identity(&client_identity_config, outbound)
+            let identity = exchange_identity(&client_identity_config, &mut outbound)
                 .await
                 .expect("Identity exchange fails");
 
