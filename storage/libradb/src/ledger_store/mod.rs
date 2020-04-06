@@ -168,7 +168,7 @@ impl LedgerStore {
         Ok(latest_validator_set.clone())
     }
 
-    fn get_tree_state(
+    pub fn get_tree_state(
         &self,
         num_transactions: LeafCount,
         transaction_info: TransactionInfo,

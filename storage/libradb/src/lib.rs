@@ -47,7 +47,7 @@ use crate::{
 use anyhow::{bail, ensure, format_err, Result};
 use itertools::{izip, zip_eq};
 use jellyfish_merkle::restore::JellyfishMerkleRestore;
-use libra_crypto::hash::{CryptoHash, HashValue};
+use libra_crypto::hash::{CryptoHash, HashValue, SPARSE_MERKLE_PLACEHOLDER_HASH};
 use libra_logger::prelude::*;
 use libra_metrics::OpMetrics;
 use libra_types::{
@@ -64,7 +64,7 @@ use libra_types::{
     },
     transaction::{
         TransactionInfo, TransactionListWithProof, TransactionToCommit, TransactionWithProof,
-        Version,
+        Version, PRE_GENESIS_VERSION,
     },
     validator_change::ValidatorChangeProof,
 };
@@ -73,7 +73,7 @@ use prometheus::{IntCounter, IntGauge, IntGaugeVec};
 use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
 use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_interface::DbReader;
-use storage_proto::StartupInfo;
+use storage_proto::{StartupInfo, TreeState};
 
 static OP_COUNTER: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("storage"));
 
@@ -491,6 +491,23 @@ impl LibraDB {
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
         self.state_store
             .get_account_state_with_proof_by_version(address, version)
+    }
+
+    /// Gets the latest TreeState no matter if db has been bootstrapped.
+    /// Used by the Db-bootstrapper.
+    pub fn get_latest_tree_state(&self) -> Result<TreeState> {
+        let tree_state = match self.ledger_store.get_latest_transaction_info_option()? {
+            Some((version, txn_info)) => self.ledger_store.get_tree_state(version + 1, txn_info)?,
+            None => TreeState::new(
+                0,
+                vec![],
+                self.state_store
+                    .get_root_hash_option(PRE_GENESIS_VERSION)?
+                    .unwrap_or(*SPARSE_MERKLE_PLACEHOLDER_HASH),
+            ),
+        };
+
+        Ok(tree_state)
     }
 
     // ================================== Backup APIs ===================================

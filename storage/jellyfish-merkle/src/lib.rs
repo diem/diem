@@ -599,8 +599,15 @@ where
 
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn get_root_hash(&self, version: Version) -> Result<HashValue> {
+        self.get_root_hash_option(version)?
+            .ok_or_else(|| format_err!("State root hash for version {}", version))
+    }
+
+    pub fn get_root_hash_option(&self, version: Version) -> Result<Option<HashValue>> {
         let root_node_key = NodeKey::new_empty_path(version);
-        let root_node = self.reader.get_node(&root_node_key)?;
-        Ok(root_node.hash())
+        Ok(self
+            .reader
+            .get_node_option(&root_node_key)?
+            .map(|root_node| root_node.hash()))
     }
 }
