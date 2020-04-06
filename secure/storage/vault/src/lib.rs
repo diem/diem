@@ -12,6 +12,9 @@ use std::{
 };
 use thiserror::Error;
 
+/// Request timeout for vault operations
+const TIMEOUT: u64 = 10_000;
+
 #[derive(Debug, Error, PartialEq)]
 pub enum Error {
     #[error("Http error: {1}")]
@@ -83,7 +86,7 @@ impl Client {
     pub fn delete_policy(&self, policy_name: &str) -> Result<(), Error> {
         let resp = ureq::delete(&format!("{}/v1/sys/policy/{}", self.host, policy_name))
             .set("X-Vault-Token", &self.token)
-            .timeout_connect(10_000)
+            .timeout_connect(TIMEOUT)
             .call();
         if resp.ok() {
             Ok(())
@@ -95,7 +98,7 @@ impl Client {
     pub fn list_policies(&self) -> Result<Vec<String>, Error> {
         let resp = ureq::get(&format!("{}/v1/sys/policy", self.host))
             .set("X-Vault-Token", &self.token)
-            .timeout_connect(10_000)
+            .timeout_connect(TIMEOUT)
             .call();
         match resp.status() {
             200 => {
@@ -112,7 +115,7 @@ impl Client {
     pub fn read_policy(&self, policy_name: &str) -> Result<Policy, Error> {
         let resp = ureq::get(&format!("{}/v1/sys/policy/{}", self.host, policy_name))
             .set("X-Vault-Token", &self.token)
-            .timeout_connect(10_000)
+            .timeout_connect(TIMEOUT)
             .call();
         match resp.status() {
             200 => Ok(Policy::try_from(resp.into_json()?)?),
@@ -126,7 +129,7 @@ impl Client {
     pub fn set_policy(&self, policy_name: &str, policy: &Policy) -> Result<(), Error> {
         let resp = ureq::post(&format!("{}/v1/sys/policy/{}", self.host, policy_name))
             .set("X-Vault-Token", &self.token)
-            .timeout_connect(10_000)
+            .timeout_connect(TIMEOUT)
             .send_json(policy.try_into()?);
         if resp.ok() {
             Ok(())
@@ -140,7 +143,7 @@ impl Client {
     pub fn create_token(&self, policies: Vec<&str>) -> Result<String, Error> {
         let resp = ureq::post(&format!("{}/v1/auth/token/create", self.host))
             .set("X-Vault-Token", &self.token)
-            .timeout_connect(10_000)
+            .timeout_connect(TIMEOUT)
             .send_json(json!({ "policies": policies }));
         if resp.ok() {
             let resp: CreateTokenResponse = serde_json::from_str(&resp.into_string()?)?;
@@ -157,7 +160,7 @@ impl Client {
             &format!("{}/v1/secret/metadata/{}", self.host, secret),
         )
         .set("X-Vault-Token", &self.token)
-        .timeout_connect(10_000)
+        .timeout_connect(TIMEOUT)
         .call();
         match resp.status() {
             200 => {
@@ -174,7 +177,7 @@ impl Client {
     pub fn delete_secret(&self, secret: &str) -> Result<(), Error> {
         let resp = ureq::delete(&format!("{}/v1/secret/metadata/{}", self.host, secret))
             .set("X-Vault-Token", &self.token)
-            .timeout_connect(10_000)
+            .timeout_connect(TIMEOUT)
             .call();
         if resp.ok() {
             Ok(())
@@ -187,7 +190,7 @@ impl Client {
     pub fn read_secret(&self, secret: &str, key: &str) -> Result<ReadResponse<String>, Error> {
         let resp = ureq::get(&format!("{}/v1/secret/data/{}", self.host, secret))
             .set("X-Vault-Token", &self.token)
-            .timeout_connect(10_000)
+            .timeout_connect(TIMEOUT)
             .call();
         match resp.status() {
             200 => {
@@ -209,7 +212,7 @@ impl Client {
     pub fn create_ed25519_key(&self, name: &str, exportable: bool) -> Result<(), Error> {
         let resp = ureq::post(&format!("{}/v1/transit/keys/{}", self.host, name))
             .set("X-Vault-Token", &self.token)
-            .timeout_connect(10_000)
+            .timeout_connect(TIMEOUT)
             .send_json(json!({ "type": "ed25519", "exportable": exportable }));
         match resp.status() {
             200 => Ok(()),
@@ -222,7 +225,7 @@ impl Client {
     pub fn delete_key(&self, name: &str) -> Result<(), Error> {
         let resp = ureq::post(&format!("{}/v1/transit/keys/{}/config", self.host, name))
             .set("X-Vault-Token", &self.token)
-            .timeout_connect(10_000)
+            .timeout_connect(TIMEOUT)
             .send_json(json!({ "deletion_allowed": true }));
 
         if !resp.ok() {
@@ -231,7 +234,7 @@ impl Client {
 
         let resp = ureq::delete(&format!("{}/v1/transit/keys/{}", self.host, name))
             .set("X-Vault-Token", &self.token)
-            .timeout_connect(10_000)
+            .timeout_connect(TIMEOUT)
             .call();
         if resp.ok() {
             Ok(())
@@ -250,7 +253,7 @@ impl Client {
             self.host, name
         ))
         .set("X-Vault-Token", &self.token)
-        .timeout_connect(10_000)
+        .timeout_connect(TIMEOUT)
         .call();
         if resp.ok() {
             let export_key: ExportKeyResponse = serde_json::from_str(&resp.into_string()?)?;
@@ -273,7 +276,7 @@ impl Client {
     pub fn list_keys(&self) -> Result<Vec<String>, Error> {
         let resp = ureq::request("LIST", &format!("{}/v1/transit/keys", self.host))
             .set("X-Vault-Token", &self.token)
-            .timeout_connect(10_000)
+            .timeout_connect(TIMEOUT)
             .call();
         match resp.status() {
             200 => {
@@ -291,7 +294,7 @@ impl Client {
     ) -> Result<Vec<ReadResponse<Ed25519PublicKey>>, Error> {
         let resp = ureq::get(&format!("{}/v1/transit/keys/{}", self.host, name))
             .set("X-Vault-Token", &self.token)
-            .timeout_connect(10_000)
+            .timeout_connect(TIMEOUT)
             .call();
         match resp.status() {
             200 => {
@@ -314,7 +317,7 @@ impl Client {
     pub fn rotate_key(&self, name: &str) -> Result<(), Error> {
         let resp = ureq::post(&format!("{}/v1/transit/keys/{}/rotate", self.host, name))
             .set("X-Vault-Token", &self.token)
-            .timeout_connect(10_000)
+            .timeout_connect(TIMEOUT)
             .call();
         if resp.ok() {
             Ok(())
@@ -337,7 +340,7 @@ impl Client {
 
         let resp = ureq::post(&format!("{}/v1/transit/sign/{}", self.host, name))
             .set("X-Vault-Token", &self.token)
-            .timeout_connect(10_000)
+            .timeout_connect(TIMEOUT)
             .send_json(data);
         if resp.ok() {
             let signature: SignatureResponse = serde_json::from_str(&resp.into_string()?)?;
@@ -358,7 +361,7 @@ impl Client {
     pub fn write_secret(&self, secret: &str, key: &str, value: &str) -> Result<(), Error> {
         let resp = ureq::put(&format!("{}/v1/secret/data/{}", self.host, secret))
             .set("X-Vault-Token", &self.token)
-            .timeout_connect(10_000)
+            .timeout_connect(TIMEOUT)
             .send_json(json!({ "data": { key: value } }));
         match resp.status() {
             200 => Ok(()),
@@ -370,7 +373,7 @@ impl Client {
     /// queried without authentication.
     pub fn unsealed(&self) -> Result<bool, Error> {
         let resp = ureq::get(&format!("{}/v1/sys/seal-status", self.host))
-            .timeout_connect(10_000)
+            .timeout_connect(TIMEOUT)
             .call();
         match resp.status() {
             200 => {
@@ -385,7 +388,7 @@ impl Client {
     pub fn transit_enabled(&self) -> Result<bool, Error> {
         let resp = ureq::get(&format!("{}/v1/sys/mounts", self.host))
             .set("X-Vault-Token", &self.token)
-            .timeout_connect(10_000)
+            .timeout_connect(TIMEOUT)
             .call();
         match resp.status() {
             200 => {
