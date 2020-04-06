@@ -9,7 +9,7 @@ use itertools::Itertools;
 use libra_config::config::NodeConfig;
 use libra_types::{
     contract_event::ContractEvent,
-    event_subscription::EventSubscription,
+    event_subscription::ReconfigSubscription,
     ledger_info::LedgerInfoWithSignatures,
     on_chain_config::{ConfigID, OnChainConfigPayload, ON_CHAIN_CONFIG_REGISTRY},
     transaction::TransactionListWithProof,
@@ -69,7 +69,7 @@ pub trait ExecutorProxyTrait: Sync + Send {
 pub(crate) struct ExecutorProxy {
     storage_read_client: Arc<StorageReadServiceClient>,
     executor: Arc<Mutex<Executor<LibraVM>>>,
-    reconfig_subscriptions: Vec<Box<dyn EventSubscription>>,
+    reconfig_subscriptions: Vec<ReconfigSubscription>,
     on_chain_configs: Arc<HashMap<ConfigID, Vec<u8>>>,
 }
 
@@ -77,7 +77,7 @@ impl ExecutorProxy {
     pub(crate) fn new(
         executor: Arc<Mutex<Executor<LibraVM>>>,
         config: &NodeConfig,
-        reconfig_subscriptions: Vec<Box<dyn EventSubscription>>,
+        reconfig_subscriptions: Vec<ReconfigSubscription>,
     ) -> Self {
         let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
 
@@ -220,7 +220,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
         for subscription in self.reconfig_subscriptions.iter_mut() {
             // publish updates if *any* of the subscribed configs changed
             if !changed_configs.is_disjoint(&subscription.subscribed_configs()) {
-                subscription.publish(payload.clone());
+                subscription.publish(payload.clone())?;
             }
         }
 

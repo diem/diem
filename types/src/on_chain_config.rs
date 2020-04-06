@@ -17,7 +17,7 @@ use std::{collections::HashMap, sync::Arc};
 /// 1. Implement the `OnChainConfig` trait for the Rust representation of the config
 /// 2. Add the config's `ConfigID` to `ON_CHAIN_CONFIG_REGISTRY`
 
-#[derive(Copy, Clone, Eq, Hash, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ConfigID(&'static str);
 
 impl ConfigID {
@@ -29,7 +29,7 @@ impl ConfigID {
 /// State sync will panic if the value of any config in this registry is uninitialized
 pub const ON_CHAIN_CONFIG_REGISTRY: &[ConfigID] = &[VMPublishingOption::CONFIG_ID];
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct OnChainConfigPayload {
     configs: Arc<HashMap<ConfigID, Vec<u8>>>,
 }
