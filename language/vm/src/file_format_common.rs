@@ -309,7 +309,7 @@ pub fn read_uleb128_as_u16(cursor: &mut Cursor<&[u8]>) -> Result<u16> {
         let val = byte & 0x7f;
         value |= u32::from(val) << shift;
         if val == byte {
-            if (shift > 0 && val == 0) || value > std::u16::MAX.into() {
+            if (shift > 0 && val == 0) || value > u32::from(std::u16::MAX) {
                 bail!("invalid ULEB128 representation for u16");
             }
             return Ok(value as u16);

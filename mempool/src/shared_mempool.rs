@@ -8,7 +8,7 @@ use crate::{
 };
 use anyhow::{format_err, Result};
 use bounded_executor::BoundedExecutor;
-use channel::{libra_channel, message_queues::QueueStyle};
+use channel::libra_channel;
 use debug_interface::prelude::*;
 use futures::{
     channel::{
@@ -24,7 +24,6 @@ use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{
     account_address::AccountAddress,
-    event_subscription::EventSubscription,
     mempool_status::{MempoolStatus, MempoolStatusCode},
     on_chain_config::{ConfigID, OnChainConfig, OnChainConfigPayload, VMPublishingOption},
     transaction::SignedTransaction,
@@ -38,7 +37,6 @@ use network::protocols::network::Event;
 use std::{
     cmp,
     collections::{HashMap, HashSet},
-    num::NonZeroUsize,
     ops::Deref,
     pin::Pin,
     sync::{Arc, Mutex},
@@ -164,28 +162,6 @@ pub struct TransactionExclusion {
     pub sender: AccountAddress,
     /// sequence number
     pub sequence_number: u64,
-}
-
-/// Mempool's subscription to reconfiguration events
-pub struct MempoolReconfigSubscription {
-    sender: libra_channel::Sender<(), OnChainConfigPayload>,
-}
-
-impl EventSubscription for MempoolReconfigSubscription {
-    fn subscribed_configs(&self) -> HashSet<ConfigID> {
-        vec![VMPublishingOption::CONFIG_ID]
-            .into_iter()
-            .collect::<HashSet<_>>()
-    }
-
-    fn publish(&mut self, payload: OnChainConfigPayload) {
-        if let Err(e) = self.sender.push((), payload) {
-            debug!(
-                "[shared mempool] failed to publish reconfiguration event to mempool: {}",
-                e
-            );
-        }
-    }
 }
 
 fn notify_subscribers(
@@ -875,19 +851,5 @@ pub fn bootstrap(
     runtime
 }
 
-/// Returns a new reconfiguration event subscription for mempool, and the channel receiver to where the subscribed
-/// events will be published
-pub fn generate_reconfig_subscription() -> (
-    Box<dyn EventSubscription>,
-    libra_channel::Receiver<(), OnChainConfigPayload>,
-) {
-    let (reconfig_event_publisher, reconfig_event_subscriber) =
-        libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
-    let reconfig_event_subscription = MempoolReconfigSubscription {
-        sender: reconfig_event_publisher,
-    };
-    (
-        Box::new(reconfig_event_subscription),
-        reconfig_event_subscriber,
-    )
-}
+/// On-chain configs that mempool subscribes to for reconfiguration
+pub const MEMPOOL_SUBSCRIBED_CONFIGS: &[ConfigID] = &[VMPublishingOption::CONFIG_ID];

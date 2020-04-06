@@ -8,58 +8,37 @@ use executor_utils::{
         gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
     },
 };
+use futures::{future::FutureExt, stream::StreamExt};
 use libra_crypto::{
+    ed25519::*,
     traits::{PrivateKey, Uniform},
     HashValue,
 };
 use libra_types::{
     account_config::{association_address, lbr_type_tag},
-    event_subscription::EventSubscription,
-    on_chain_config::{ConfigID, OnChainConfig, OnChainConfigPayload, VMPublishingOption},
+    event_subscription::ReconfigSubscription,
+    on_chain_config::{OnChainConfig, VMPublishingOption},
     transaction::authenticator::AuthenticationKey,
 };
-use std::{
-    collections::HashSet,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 use stdlib::transaction_scripts::StdlibScript;
 use transaction_builder::{
     encode_block_prologue_script, encode_publishing_option_script,
     encode_rotate_consensus_pubkey_script, encode_transfer_script,
 };
 
-use libra_crypto::ed25519::*;
-
-/// Testing non-mocked executor proxy with storage and executor
-struct TestReconfigSubscription {
-    reconfig_sender: futures::channel::mpsc::Sender<OnChainConfigPayload>,
-}
-
-impl EventSubscription for TestReconfigSubscription {
-    fn subscribed_configs(&self) -> HashSet<ConfigID> {
-        vec![VMPublishingOption::CONFIG_ID]
-            .into_iter()
-            .collect::<HashSet<_>>()
-    }
-
-    fn publish(&mut self, payload: OnChainConfigPayload) {
-        let _ = &self.reconfig_sender.try_send(payload);
-    }
-}
-
 // TODO test for subscription with multiple subscribed configs once there are >1 on-chain configs
 #[test]
 fn test_on_chain_config_pub_sub() {
     let mut rt = tokio::runtime::Runtime::new().unwrap();
     // set up reconfig subscription
-    let (reconfig_sender, mut reconfig_receiver) = futures::channel::mpsc::channel(1_024);
-    let subscription = TestReconfigSubscription { reconfig_sender };
-    let boxed: Box<dyn EventSubscription> = Box::new(subscription);
+    let subscribed_configs = &[VMPublishingOption::CONFIG_ID];
+    let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe(subscribed_configs);
 
     let (mut config, genesis_key) = config_builder::test_config();
     let (_storage_server_handle, executor) = create_storage_service_and_executor(&config);
     let executor = Arc::new(Mutex::new(executor));
-    let mut executor_proxy = ExecutorProxy::new(executor.clone(), &config, vec![boxed]);
+    let mut executor_proxy = ExecutorProxy::new(executor.clone(), &config, vec![subscription]);
 
     // start state sync with initial loading of on-chain configs
     rt.block_on(executor_proxy.load_on_chain_configs())
@@ -71,8 +50,9 @@ fn test_on_chain_config_pub_sub() {
     rt.block_on(executor_proxy.publish_on_chain_config_updates(vec![]))
         .expect("failed to publish on-chain configs");
 
-    assert!(
-        reconfig_receiver.try_next().is_err(),
+    assert_eq!(
+        reconfig_receiver.select_next_some().now_or_never(),
+        None,
         "did not expect reconfig update"
     );
 
@@ -143,11 +123,13 @@ fn test_on_chain_config_pub_sub() {
     rt.block_on(executor_proxy.publish_on_chain_config_updates(reconfig_events))
         .expect("failed to publish on-chain configs");
 
-    let payload = reconfig_receiver
-        .try_next()
-        .expect("did not receive expected config update");
-    let received_config = payload.unwrap().get::<VMPublishingOption>().unwrap();
-    assert_eq!(received_config, vm_publishing_option);
+    let receive_reconfig = async {
+        let payload = reconfig_receiver.select_next_some().await;
+        let received_config = payload.get::<VMPublishingOption>().unwrap();
+        assert_eq!(received_config, vm_publishing_option);
+    };
+
+    rt.block_on(receive_reconfig);
 
     //////////////////////////////////////////////////////////////////////////////////////
     // Case 3: don't publish for reconfiguration that doesn't change subscribed configs //
@@ -208,8 +190,9 @@ fn test_on_chain_config_pub_sub() {
     rt.block_on(executor_proxy.publish_on_chain_config_updates(reconfig_events))
         .expect("failed to publish on-chain configs");
 
-    assert!(
-        reconfig_receiver.try_next().is_err(),
+    assert_eq!(
+        reconfig_receiver.select_next_some().now_or_never(),
+        None,
         "did not expect reconfig update"
     );
 }

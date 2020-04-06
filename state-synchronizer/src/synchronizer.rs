@@ -16,7 +16,7 @@ use futures::{
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
 use libra_mempool::{CommitNotification, CommitResponse};
 use libra_types::{
-    contract_event::ContractEvent, event_subscription::EventSubscription,
+    contract_event::ContractEvent, event_subscription::ReconfigSubscription,
     ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
     validator_change::ValidatorChangeProof, waypoint::Waypoint,
 };
@@ -42,7 +42,7 @@ impl StateSynchronizer {
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
         executor: Arc<Mutex<Executor<LibraVM>>>,
         config: &NodeConfig,
-        reconfig_event_subscriptions: Vec<Box<dyn EventSubscription>>,
+        reconfig_event_subscriptions: Vec<ReconfigSubscription>,
     ) -> Self {
         let executor_proxy = ExecutorProxy::new(executor, config, reconfig_event_subscriptions);
         Self::bootstrap_with_executor_proxy(
