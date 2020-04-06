@@ -197,7 +197,7 @@ pub fn encode_genesis_change_set(
     reconfigure(&move_vm, &gas_schedule, &mut interpreter_context);
     publish_stdlib(&mut interpreter_context, stdlib_modules);
 
-    verify_genesis_write_set(interpreter_context.events(), &validator_set, &discovery_set);
+    verify_genesis_write_set(interpreter_context.events(), &discovery_set);
     ChangeSet::new(
         interpreter_context
             .make_write_set()
@@ -696,11 +696,7 @@ fn reconfigure(
 }
 
 /// Verify the consistency of the genesis `WriteSet`
-fn verify_genesis_write_set(
-    events: &[ContractEvent],
-    validator_set: &ValidatorSet,
-    discovery_set: &DiscoverySet,
-) {
+fn verify_genesis_write_set(events: &[ContractEvent], discovery_set: &DiscoverySet) {
     // Sanity checks on emitted events:
     // (1) The genesis tx should emit 4 events: a pair of payment sent/received events for
     // minting to the genesis address, a ValidatorSetChangeEvent, and a
@@ -729,14 +725,8 @@ fn verify_genesis_write_set(
         "Expected sequence number 0 for validator set change event but got {}",
         validator_set_change_event.sequence_number()
     );
-    // (4) It should emit the validator set we fed into the genesis tx
-    assert_eq!(
-        &ValidatorSet::from_bytes(validator_set_change_event.event_data()).unwrap(),
-        validator_set,
-        "Validator set in emitted event does not match validator set fed into genesis transaction"
-    );
 
-    // (5) The fourth event should be the discovery set change event
+    // (4) The fourth event should be the discovery set change event
     let discovery_set_change_event = &events[3];
     assert_eq!(
         *discovery_set_change_event.key(),
@@ -745,14 +735,14 @@ fn verify_genesis_write_set(
         *discovery_set_change_event.key(),
         DiscoverySet::change_event_key()
     );
-    // (6) This should be the first discovery set change event
+    // (5) This should be the first discovery set change event
     assert_eq!(
         discovery_set_change_event.sequence_number(),
         0,
         "Expected sequence number 0 for discovery set change event but got {}",
         discovery_set_change_event.sequence_number()
     );
-    // (7) It should emit the discovery set we fed into the genesis tx
+    // (6) It should emit the discovery set we fed into the genesis tx
     assert_eq!(
         &DiscoverySet::from_bytes(discovery_set_change_event.event_data()).unwrap(),
         discovery_set,

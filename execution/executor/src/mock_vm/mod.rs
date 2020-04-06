@@ -9,6 +9,7 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
+    account_config,
     account_config::lbr_type_tag,
     contract_event::ContractEvent,
     event::EventKey,
@@ -17,7 +18,7 @@ use libra_types::{
         RawTransaction, Script, SignedTransaction, Transaction, TransactionArgument,
         TransactionOutput, TransactionPayload, TransactionStatus,
     },
-    validator_set::ValidatorSet,
+    validator_set::{ValidatorSet, ValidatorSetResource, VALIDATOR_SET_RESOURCE_PATH},
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
@@ -67,7 +68,7 @@ impl VMExecutor for MockVM {
                     ValidatorSet::change_event_key(),
                     0,
                     TypeTag::Bool,
-                    lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap(),
+                    lcs::to_bytes(&0).unwrap(),
                 )],
                 0,
                 KEEP_STATUS.clone(),
@@ -142,7 +143,7 @@ impl VMExecutor for MockVM {
                     ));
                 }
                 MockVMTransaction::Reconfiguration => {
-                    let account = AccountAddress::new([0xff; AccountAddress::LENGTH]);
+                    let account = account_config::validator_set_address();
                     let balance_access_path = balance_ap(account);
                     read_balance_from_storage(state_view, &balance_access_path);
                     outputs.push(TransactionOutput::new(
@@ -220,12 +221,12 @@ fn seqnum_ap(account: AccountAddress) -> AccessPath {
 }
 
 fn gen_genesis_writeset() -> WriteSet {
-    let address = AccountAddress::new([0xff; AccountAddress::LENGTH]);
-    let path = b"hello".to_vec();
     let mut write_set = WriteSetMut::default();
+    let address = account_config::validator_set_address();
+    let path = VALIDATOR_SET_RESOURCE_PATH.clone();
     write_set.push((
-        AccessPath::new(address, path),
-        WriteOp::Value(b"world".to_vec()),
+        AccessPath { address, path },
+        WriteOp::Value(lcs::to_bytes(&ValidatorSetResource::default()).unwrap()),
     ));
     write_set
         .freeze()

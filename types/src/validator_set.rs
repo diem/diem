@@ -57,6 +57,18 @@ pub struct ValidatorSetResource {
     change_events: EventHandle,
 }
 
+#[cfg(any(test, feature = "fuzzing"))]
+impl Default for ValidatorSetResource {
+    fn default() -> Self {
+        ValidatorSetResource {
+            scheme: ConsensusScheme::Ed25519,
+            validators: vec![],
+            last_reconfiguration_time: 0,
+            change_events: EventHandle::new(ValidatorSet::change_event_key(), 0),
+        }
+    }
+}
+
 impl ValidatorSetResource {
     pub fn change_events(&self) -> &EventHandle {
         &self.change_events

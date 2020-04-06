@@ -16,8 +16,7 @@ module LibraSystem {
     }
 
     struct ValidatorSetChangeEvent {
-        scheme: u8,
-        new_validator_set: vector<ValidatorInfo>,
+        last_reconfiguration_time: u64,
     }
 
     resource struct ValidatorSet {
@@ -364,8 +363,7 @@ module LibraSystem {
        LibraAccount::emit_event<ValidatorSetChangeEvent>(
            &mut validator_set_ref.change_events,
            ValidatorSetChangeEvent {
-               scheme: validator_set_ref.scheme,
-               new_validator_set: *&validator_set_ref.validators,
+               last_reconfiguration_time: validator_set_ref.last_reconfiguration_time,
            },
        );
    }

@@ -24,6 +24,7 @@ use libra_crypto::{
 use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
+    account_config,
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
@@ -679,8 +680,18 @@ where
                 .events()
                 .iter()
                 .find(|event| *event.key() == validator_set_change_event_key)
-                .map(|event| ValidatorSet::from_bytes(event.event_data()))
-                .transpose()?
+                .map(|_| {
+                    account_to_state
+                        .get(&account_config::validator_set_address())
+                        .map(|state| {
+                            state
+                                .get_validator_set_resource()?
+                                .ok_or_else(|| format_err!("ValidatorResource does not exist"))
+                                .and_then(|resource| Ok(resource.validator_set()))
+                        })
+                })
+                .flatten()
+                .transpose()?;
         }
 
         let current_transaction_accumulator =
