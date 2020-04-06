@@ -227,7 +227,7 @@ where
         blob_sets: Vec<Vec<(HashValue, AccountStateBlob)>>,
         first_version: Version,
     ) -> Result<(Vec<HashValue>, TreeUpdateBatch)> {
-        let mut tree_cache = TreeCache::new(self.reader, first_version);
+        let mut tree_cache = TreeCache::new(self.reader, first_version)?;
         for (idx, blob_set) in blob_sets.into_iter().enumerate() {
             assert!(
                 !blob_set.is_empty(),
