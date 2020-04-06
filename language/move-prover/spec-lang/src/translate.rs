@@ -13,8 +13,8 @@ use num::{BigUint, FromPrimitive, Num};
 
 use bytecode_source_map::source_map::SourceMap;
 use move_lang::{
-    compiled_unit::SpecInfo,
-    expansion::ast::{self as EA, SpecId},
+    compiled_unit::{FunctionInfo, SpecInfo},
+    expansion::ast::{self as EA},
     hlir::ast::{BaseType, SingleType},
     naming::ast::TParam,
     parser::ast::{self as PA, FunctionName},
@@ -623,10 +623,10 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         module_def: EA::ModuleDefinition,
         compiled_module: CompiledModule,
         source_map: SourceMap<MoveIrLoc>,
-        spec_info: UniqueMap<FunctionName, BTreeMap<SpecId, SpecInfo>>,
+        function_infos: UniqueMap<FunctionName, FunctionInfo>,
     ) {
         self.decl_ana(&module_def);
-        self.def_ana(&module_def, spec_info);
+        self.def_ana(&module_def, function_infos);
         self.populate_env_from_result(loc, compiled_module, source_map);
     }
 }
@@ -859,21 +859,22 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     fn def_ana(
         &mut self,
         module_def: &EA::ModuleDefinition,
-        spec_info: UniqueMap<FunctionName, BTreeMap<SpecId, SpecInfo>>,
+        function_infos: UniqueMap<FunctionName, FunctionInfo>,
     ) {
         for (name, def) in &module_def.structs {
             self.def_ana_struct(&name, def);
         }
         for spec in &module_def.specs {
-            if let Some(context) = self.get_spec_block_context(&spec.value.target) {
-                self.def_ana_spec_block(&context, spec);
-            } else {
-                let loc = self.parent.env.to_loc(&spec.value.target.loc);
-                self.parent.error(&loc, "unresolved spec target");
+            match self.get_spec_block_context(&spec.value.target) {
+                Some(context) => self.def_ana_spec_block(&context, spec),
+                None => {
+                    let loc = self.parent.env.to_loc(&spec.value.target.loc);
+                    self.parent.error(&loc, "unresolved spec target");
+                }
             }
         }
         for (name, fun_def) in &module_def.functions {
-            let fun_spec_info = spec_info.get(&name).unwrap();
+            let fun_spec_info = &function_infos.get(&name).unwrap().spec_info;
             let qsym = self.qualified_by_module(self.symbol_pool().make(&name.0.value));
             for (spec_id, spec_block) in fun_def.specs.iter() {
                 for member in &spec_block.value.members {
@@ -1053,9 +1054,9 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             et.define_type_param(loc, *n, ty.clone());
         }
         et.enter_scope();
-        for (n, ty) in &spec_info.used_locals {
+        for (n, info) in &spec_info.used_locals {
             let sym = et.symbol_pool().make(n.0.value.as_str());
-            let ty = et.translate_hlir_single_type(ty);
+            let ty = et.translate_hlir_single_type(&info.type_);
             if ty == Type::Error {
                 self.parent.error(
                     loc,

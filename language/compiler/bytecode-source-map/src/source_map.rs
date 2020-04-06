@@ -11,7 +11,7 @@ use vm::{
     access::*,
     file_format::{
         AddressPoolIndex, CodeOffset, CompiledModule, CompiledScript, FunctionDefinition,
-        FunctionDefinitionIndex, IdentifierIndex, MemberCount, StructDefinition,
+        FunctionDefinitionIndex, IdentifierIndex, LocalIndex, MemberCount, StructDefinition,
         StructDefinitionIndex, TableIndex,
     },
 };
@@ -216,6 +216,14 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
 
     pub fn get_local_name(&self, local_index: u64) -> Option<SourceName<Location>> {
         self.locals.get(local_index as usize).cloned()
+    }
+
+    pub fn make_local_name_to_index_map(&self) -> BTreeMap<&String, LocalIndex> {
+        self.locals
+            .iter()
+            .enumerate()
+            .map(|(i, (n, _))| (n, i as LocalIndex))
+            .collect()
     }
 
     pub fn dummy_function_map(

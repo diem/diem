@@ -18,10 +18,22 @@ use std::collections::BTreeMap;
 //**************************************************************************************************
 
 #[derive(Debug)]
+pub struct VarInfo {
+    pub type_: H::SingleType,
+    pub index: F::LocalIndex,
+}
+
+#[derive(Debug)]
 pub struct SpecInfo {
     pub offset: F::CodeOffset,
     // Free locals that are used but not declared in the block
-    pub used_locals: BTreeMap<Var, H::SingleType>,
+    pub used_locals: UniqueMap<Var, VarInfo>,
+}
+
+#[derive(Debug)]
+pub struct FunctionInfo {
+    pub spec_info: BTreeMap<SpecId, SpecInfo>,
+    pub parameters: Vec<(Var, VarInfo)>,
 }
 
 #[derive(Debug)]
@@ -30,13 +42,13 @@ pub enum CompiledUnit {
         ident: ModuleIdent,
         module: F::CompiledModule,
         source_map: SourceMap<Loc>,
-        spec_info: UniqueMap<FunctionName, BTreeMap<SpecId, SpecInfo>>,
+        function_infos: UniqueMap<FunctionName, FunctionInfo>,
     },
     Script {
         loc: Loc,
         script: F::CompiledScript,
         source_map: SourceMap<Loc>,
-        spec_info: BTreeMap<SpecId, SpecInfo>,
+        function_info: FunctionInfo,
     },
 }
 
@@ -72,14 +84,14 @@ impl CompiledUnit {
                 ident,
                 module,
                 source_map,
-                spec_info,
+                function_infos,
             } => {
                 let (module, errors) = verify_module(ident.loc(), module);
                 let verified = CompiledUnit::Module {
                     ident,
                     module,
                     source_map,
-                    spec_info,
+                    function_infos,
                 };
                 (verified, errors)
             }
@@ -87,14 +99,14 @@ impl CompiledUnit {
                 loc,
                 script,
                 source_map,
-                spec_info,
+                function_info,
             } => {
                 let (script, errors) = verify_script(loc, script);
                 let verified = CompiledUnit::Script {
                     loc,
                     script,
                     source_map,
-                    spec_info,
+                    function_info,
                 };
                 (verified, errors)
             }
