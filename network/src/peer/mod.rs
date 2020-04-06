@@ -290,7 +290,7 @@ where
             oneshot::Sender<Result<(), PeerManagerError>>,
         )>,
     ) -> Result<(), PeerManagerError> {
-        debug!("Received message from Peer {}", self.peer_id().short_str(),);
+        trace!("Received message from Peer {}", self.peer_id().short_str(),);
         // Read inbound message from stream.
         let message = message.freeze();
         let message: NetworkMessage = lcs::from_bytes(&message)?;
