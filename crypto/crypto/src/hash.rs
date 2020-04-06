@@ -98,9 +98,8 @@ use proptest_derive::Arbitrary;
 use rand::{rngs::EntropyRng, Rng};
 use serde::{de, ser};
 use std::{self, convert::AsRef, fmt};
-use tiny_keccak::{Hasher, Sha3};
 
-const LIBRA_HASH_SUFFIX: &[u8] = b"@@$$LIBRA$$@@";
+const LIBRA_HASH_SUFFIX: &str = "@@$$LIBRA$$@@";
 
 #[cfg(test)]
 #[path = "unit_tests/hash_test.rs"]
@@ -175,9 +174,8 @@ impl HashValue {
     /// Convenience function to compute a sha3-256 HashValue of the buffer. It will handle hasher
     /// creation, data feeding and finalization.
     pub fn from_sha3_256(buffer: &[u8]) -> Self {
-        let mut sha3 = Sha3::v256();
-        sha3.update(buffer);
-        HashValue::from_keccak(sha3)
+        let hash = blake3::hash(buffer);
+        HashValue { hash: hash.into() }
     }
 
     #[cfg(test)]
@@ -185,7 +183,7 @@ impl HashValue {
     where
         I: IntoIterator<Item = &'a [u8]>,
     {
-        let mut sha3 = Sha3::v256();
+        let mut sha3 = blake3::Hasher::new();
         for buffer in buffers {
             sha3.update(buffer);
         }
@@ -196,10 +194,9 @@ impl HashValue {
         &mut self.hash[..]
     }
 
-    fn from_keccak(state: Sha3) -> Self {
-        let mut hash = Self::zero();
-        state.finalize(hash.as_ref_mut());
-        hash
+    fn from_keccak(state: blake3::Hasher) -> Self {
+        let hash = state.finalize();
+        Self { hash: hash.into() }
     }
 
     /// Returns a `HashValueBitIterator` over all the bits that represent this `HashValue`.
@@ -449,14 +446,13 @@ pub trait CryptoHasher: Default {
 /// * Only used internally within this crate
 #[derive(Clone)]
 pub struct DefaultHasher {
-    state: Sha3,
+    state: blake3::Hasher,
 }
 
 impl CryptoHasher for DefaultHasher {
     fn finish(self) -> HashValue {
-        let mut hasher = HashValue::default();
-        self.state.finalize(hasher.as_ref_mut());
-        hasher
+        let hash = self.state.finalize();
+        HashValue { hash: hash.into() }
     }
 
     fn write(&mut self, bytes: &[u8]) -> &mut Self {
@@ -468,20 +464,21 @@ impl CryptoHasher for DefaultHasher {
 impl Default for DefaultHasher {
     fn default() -> Self {
         DefaultHasher {
-            state: Sha3::v256(),
+            state: blake3::Hasher::new(),
         }
     }
 }
 
 impl DefaultHasher {
     /// initialize a new hasher with a specific salt
-    pub fn new_with_salt(typename: &[u8]) -> Self {
-        let mut state = Sha3::v256();
-        if !typename.is_empty() {
-            let mut salt = typename.to_vec();
-            salt.extend_from_slice(LIBRA_HASH_SUFFIX);
-            state.update(HashValue::from_sha3_256(&salt[..]).as_ref());
-        }
+    pub fn new_with_salt(typename: &str) -> Self {
+        let state = if !typename.is_empty() {
+            let mut salt = typename.to_owned();
+            salt.push_str(LIBRA_HASH_SUFFIX);
+            blake3::Hasher::new_derive_key(&salt)
+        } else {
+            blake3::Hasher::new()
+        };
         DefaultHasher { state }
     }
 }
@@ -528,7 +525,7 @@ define_hasher! {
     (
         TransactionAccumulatorHasher,
         TRANSACTION_ACCUMULATOR_HASHER,
-        b"TransactionAccumulator"
+        "TransactionAccumulator"
     )
 }
 
@@ -537,7 +534,7 @@ define_hasher! {
     (
         EventAccumulatorHasher,
         EVENT_ACCUMULATOR_HASHER,
-        b"EventAccumulator"
+        "EventAccumulator"
     )
 }
 
@@ -546,18 +543,18 @@ define_hasher! {
     (
         SparseMerkleInternalHasher,
         SPARSE_MERKLE_INTERNAL_HASHER,
-        b"SparseMerkleInternal"
+        "SparseMerkleInternal"
     )
 }
 
 define_hasher! {
     /// The hasher used only for testing. It doesn't have a salt.
-    (TestOnlyHasher, TEST_ONLY_HASHER, b"")
+    (TestOnlyHasher, TEST_ONLY_HASHER, "")
 }
 
 define_hasher! {
     /// The hasher used to compute the hash of a DiscoveryMsg object.
-    (DiscoveryMsgHasher, DISCOVERY_MSG_HASHER, b"DiscoveryMsg")
+    (DiscoveryMsgHasher, DISCOVERY_MSG_HASHER, "DiscoveryMsg")
 }
 
 fn create_literal_hash(word: &str) -> HashValue {

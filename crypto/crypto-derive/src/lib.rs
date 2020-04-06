@@ -338,7 +338,7 @@ pub fn hasher_dispatch(input: TokenStream) -> TokenStream {
                 let f_name = #fn_name;
 
                 #hasher_name(
-                    libra_crypto::hash::DefaultHasher::new_with_salt(&format!("{}::{}", f_name, mp).as_bytes()))
+                    libra_crypto::hash::DefaultHasher::new_with_salt(&format!("{}::{}", f_name, mp)))
             }
         }
 
