@@ -195,7 +195,7 @@ fn socketaddr_to_multiaddr(socketaddr: SocketAddr) -> Multiaddr {
     ipaddr.with(Protocol::Tcp(socketaddr.port()))
 }
 
-fn multiaddr_to_socketaddr(addr: &Multiaddr) -> ::std::io::Result<SocketAddr> {
+pub fn multiaddr_to_socketaddr(addr: &Multiaddr) -> ::std::io::Result<SocketAddr> {
     let mut iter = addr.iter();
     let proto1 = iter.next().ok_or_else(|| {
         io::Error::new(
