@@ -24,8 +24,8 @@ use libra_crypto::{
 use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
     proof::{
-        position::Position, AccumulatorConsistencyProof, TransactionAccumulatorProof,
-        TransactionAccumulatorRangeProof,
+        definition::LeafCount, position::Position, AccumulatorConsistencyProof,
+        TransactionAccumulatorProof, TransactionAccumulatorRangeProof,
     },
     transaction::{TransactionInfo, Version},
     validator_set::ValidatorSet,
@@ -170,12 +170,12 @@ impl LedgerStore {
 
     fn get_tree_state(
         &self,
-        version: Version,
+        num_transactions: LeafCount,
         transaction_info: TransactionInfo,
     ) -> Result<TreeState> {
         Ok(TreeState::new(
-            version,
-            Accumulator::get_frozen_subtree_hashes(self, version + 1)?,
+            num_transactions,
+            Accumulator::get_frozen_subtree_hashes(self, num_transactions)?,
             transaction_info.state_root_hash(),
         ))
     }
@@ -198,12 +198,15 @@ impl LedgerStore {
         let (latest_version, latest_txn_info) = self.get_latest_transaction_info()?;
         assert!(latest_version >= li_version);
         let (commited_tree_state, synced_tree_state) = if latest_version == li_version {
-            (self.get_tree_state(latest_version, latest_txn_info)?, None)
+            (
+                self.get_tree_state(latest_version + 1, latest_txn_info)?,
+                None,
+            )
         } else {
             let commited_txn_info = self.get_transaction_info(li_version)?;
             (
-                self.get_tree_state(li_version, commited_txn_info)?,
-                Some(self.get_tree_state(latest_version, latest_txn_info)?),
+                self.get_tree_state(li_version + 1, commited_txn_info)?,
+                Some(self.get_tree_state(latest_version + 1, latest_txn_info)?),
             )
         };
 
