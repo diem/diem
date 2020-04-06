@@ -42,6 +42,12 @@ pub static LIBRA_BLOCK_MODULE: Lazy<ModuleId> = Lazy::new(|| {
         Identifier::new("LibraBlock").unwrap(),
     )
 });
+pub static LIBRA_CONFIG_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+    ModuleId::new(
+        account_config::CORE_CODE_ADDRESS,
+        Identifier::new("LibraConfig").unwrap(),
+    )
+});
 /// The ModuleId for the gas schedule module
 pub static GAS_SCHEDULE_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(

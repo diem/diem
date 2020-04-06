@@ -30,7 +30,7 @@ fun main(args: vector<u8>) {
 }
 
 // check: EXECUTED
-// check: ValidatorSetChangeEvent
+// check: NewEpochEvent
 
 //! new-transaction
 module FooConfig2 {

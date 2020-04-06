@@ -23,7 +23,7 @@ use libra_types::{
     discovery_info::DiscoveryInfo,
     discovery_set::DiscoverySet,
     language_storage::ModuleId,
-    on_chain_config::VMPublishingOption,
+    on_chain_config::{new_epoch_event_key, VMPublishingOption},
     transaction::{authenticator::AuthenticationKey, ChangeSet, Transaction},
     validator_set::ValidatorSet,
 };
@@ -72,6 +72,8 @@ static ADD_VALIDATOR: Lazy<Identifier> = Lazy::new(|| Identifier::new("add_valid
 static INITIALIZE: Lazy<Identifier> = Lazy::new(|| Identifier::new("initialize").unwrap());
 static INITIALIZE_BLOCK: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("initialize_block_metadata").unwrap());
+static INITIALIZE_CONFIG: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("initialize_configuration").unwrap());
 static INITIALIZE_TXN_FEES: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("initialize_transaction_fees").unwrap());
 static INITIALIZE_VALIDATOR_SET: Lazy<Identifier> =
@@ -317,6 +319,17 @@ fn create_and_initialize_main_accounts(
         )
         .expect("Failure initializing block metadata");
 
+    move_vm
+        .execute_function(
+            &LIBRA_CONFIG_MODULE,
+            &INITIALIZE_CONFIG,
+            &gas_schedule,
+            interpreter_context,
+            &txn_data,
+            vec![],
+            vec![],
+        )
+        .expect("Failure initializing block metadata");
     move_vm
         .execute_function(
             &GAS_SCHEDULE_MODULE,
@@ -672,7 +685,7 @@ fn reconfigure(
 
     move_vm
         .execute_function(
-            &LIBRA_SYSTEM_MODULE,
+            &LIBRA_CONFIG_MODULE,
             &RECONFIGURE,
             &gas_schedule,
             interpreter_context,
@@ -709,21 +722,21 @@ fn verify_genesis_write_set(events: &[ContractEvent], discovery_set: &DiscoveryS
         events,
     );
 
-    // (2) The third event should be the validator set change event
-    let validator_set_change_event = &events[2];
+    // (2) The third event should be the new epoch event
+    let new_epoch_event = &events[2];
     assert_eq!(
-        *validator_set_change_event.key(),
-        ValidatorSet::change_event_key(),
+        *new_epoch_event.key(),
+        new_epoch_event_key(),
         "Key of emitted event {:?} does not match change event key {:?}",
-        *validator_set_change_event.key(),
-        ValidatorSet::change_event_key()
+        *new_epoch_event.key(),
+        new_epoch_event_key(),
     );
-    // (3) This should be the first validator set change event
+    // (3) This should be the first new_epoch_event
     assert_eq!(
-        validator_set_change_event.sequence_number(),
+        new_epoch_event.sequence_number(),
         0,
         "Expected sequence number 0 for validator set change event but got {}",
-        validator_set_change_event.sequence_number()
+        new_epoch_event.sequence_number()
     );
 
     // (4) The fourth event should be the discovery set change event

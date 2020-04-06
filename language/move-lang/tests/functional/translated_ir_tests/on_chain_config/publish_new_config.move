@@ -28,7 +28,7 @@ fun main() {
     LibraConfig::publish_new_config<FooConfig::T>(move config)
 }
 // Should trigger a reconfiguration
-// check: ValidatorSetChangeEvent
+// check: NewEpochEvent
 // check: EXECUTED
 
 //! new-transaction
@@ -61,5 +61,5 @@ fun main() {
     LibraConfig::set<FooConfig::T>(move config)
 }
 // Should trigger a reconfiguration
-// check: ValidatorSetChangeEvent
+// check: NewEpochEvent
 // check: EXECUTED

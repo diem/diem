@@ -29,6 +29,7 @@ use libra_types::{
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
     ledger_info::LedgerInfoWithSignatures,
+    on_chain_config::new_epoch_event_key,
     proof::{accumulator::InMemoryAccumulator, definition::LeafCount, SparseMerkleProof},
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionOutput,
@@ -601,6 +602,7 @@ where
 
         let proof_reader = ProofReader::new(account_to_proof);
         let validator_set_change_event_key = ValidatorSet::change_event_key();
+        let new_epoch_event_key = new_epoch_event_key();
         for (vm_output, txn) in itertools::zip_eq(vm_outputs.into_iter(), transactions.iter()) {
             if next_validator_set.is_some() {
                 txn_data.push(TransactionData::new(
@@ -679,7 +681,10 @@ where
             next_validator_set = vm_output
                 .events()
                 .iter()
-                .find(|event| *event.key() == validator_set_change_event_key)
+                .find(|event| {
+                    *event.key() == validator_set_change_event_key
+                        || *event.key() == new_epoch_event_key
+                })
                 .map(|_| {
                     account_to_state
                         .get(&account_config::validator_set_address())
@@ -794,9 +799,12 @@ where
 
     fn extract_reconfig_events(events: Vec<ContractEvent>) -> Vec<ContractEvent> {
         let reconfig_event_key = ValidatorSet::change_event_key();
+        let new_epoch_event_key = new_epoch_event_key();
         events
             .into_iter()
-            .filter(|event| *event.key() == reconfig_event_key)
+            .filter(|event| {
+                *event.key() == reconfig_event_key || *event.key() == new_epoch_event_key
+            })
             .collect()
     }
 }
