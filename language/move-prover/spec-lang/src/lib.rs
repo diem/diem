@@ -95,13 +95,13 @@ fn run_spec_checker(
     let modules = units
         .into_iter()
         .filter_map(|unit| {
-            let (module_id, compiled_module, source_map, spec_info) = match unit {
+            let (module_id, compiled_module, source_map, function_infos) = match unit {
                 CompiledUnit::Module {
                     ident,
                     module,
                     source_map,
-                    spec_info,
-                } => (ident, module, source_map, spec_info),
+                    function_infos,
+                } => (ident, module, source_map, function_infos),
                 CompiledUnit::Script { .. } => return None,
             };
             let expanded_module = match eprog.modules.remove(&module_id) {
@@ -119,11 +119,11 @@ fn run_spec_checker(
                 expanded_module,
                 compiled_module,
                 source_map,
-                spec_info,
+                function_infos,
             ))
         })
         .enumerate();
-    for (module_count, (module_id, expanded_module, compiled_module, source_map, spec_info)) in
+    for (module_count, (module_id, expanded_module, compiled_module, source_map, function_infos)) in
         modules
     {
         let loc = translator.to_loc(&expanded_module.loc);
@@ -136,7 +136,13 @@ fn run_spec_checker(
         );
         let module_id = ModuleId::new(module_count);
         let mut module_translator = ModuleTranslator::new(&mut translator, module_id, module_name);
-        module_translator.translate(loc, expanded_module, compiled_module, source_map, spec_info);
+        module_translator.translate(
+            loc,
+            expanded_module,
+            compiled_module,
+            source_map,
+            function_infos,
+        );
     }
     Ok(())
 }
