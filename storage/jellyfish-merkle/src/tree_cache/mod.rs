@@ -136,13 +136,11 @@ where
     R: 'a + TreeReader,
 {
     /// Constructs a new `TreeCache` instance.
-    pub fn new(reader: &'a R, next_version: Version) -> Self {
+    pub fn new(reader: &'a R, next_version: Version) -> Result<Self> {
         let mut node_cache = HashMap::new();
         let root_node_key = if next_version == 0 {
             let pre_genesis_root_key = NodeKey::new_empty_path(PRE_GENESIS_VERSION);
-            let pre_genesis_root = reader
-                .get_node_option(&pre_genesis_root_key)
-                .expect("Can't deal with DB read failure on initialization.");
+            let pre_genesis_root = reader.get_node_option(&pre_genesis_root_key)?;
 
             match pre_genesis_root {
                 Some(_) => {
@@ -162,7 +160,7 @@ where
         } else {
             NodeKey::new_empty_path(next_version - 1)
         };
-        Self {
+        Ok(Self {
             node_cache,
             stale_node_index_cache: HashSet::new(),
             frozen_cache: FrozenTreeCache::default(),
@@ -171,7 +169,7 @@ where
             reader,
             num_stale_leaves: 0,
             num_new_leaves: 0,
-        }
+        })
     }
 
     /// Gets a node with given node key. If it doesn't exist in node cache, read from `reader`.
