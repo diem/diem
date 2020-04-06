@@ -135,7 +135,7 @@ impl DirectSend {
                 let peer_id = self.peer_handle.peer_id();
                 if let NetworkMessage::DirectSendMsg(message) = message {
                     let protocol = message.protocol_id;
-                    debug!(
+                    trace!(
                         "DirectSend: Received inbound message from peer {} for protocol {:?}",
                         peer_id.short_str(),
                         protocol
