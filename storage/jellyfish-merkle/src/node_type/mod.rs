@@ -15,7 +15,6 @@ mod node_type_test;
 
 use crate::nibble_path::NibblePath;
 use anyhow::{ensure, Context, Result};
-use bincode::{deserialize, serialize};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use libra_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
@@ -613,7 +612,7 @@ impl Node {
             }
             Node::Leaf(leaf_node) => {
                 out.push(NodeTag::Leaf as u8);
-                out.extend(serialize(&leaf_node)?);
+                out.extend(lcs::to_bytes(&leaf_node)?);
             }
         }
         Ok(out)
@@ -638,7 +637,7 @@ impl Node {
         match node_tag {
             Some(NodeTag::Null) => Ok(Node::Null),
             Some(NodeTag::Internal) => Ok(Node::Internal(InternalNode::deserialize(&val[1..])?)),
-            Some(NodeTag::Leaf) => Ok(Node::Leaf(deserialize(&val[1..])?)),
+            Some(NodeTag::Leaf) => Ok(Node::Leaf(lcs::from_bytes(&val[1..])?)),
             None => Err(NodeDecodeError::UnknownTag { unknown_tag: tag }.into()),
         }
     }

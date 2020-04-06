@@ -11,7 +11,6 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-bincode = "1.1.1"
 byteorder = "1.3.2"
 mirai-annotations = "1.5.0"
 num-derive = "0.3.0"
@@ -21,6 +20,7 @@ proptest-derive = { version = "0.1.2", optional = true }
 serde = { version = "1.0.106", features = ["derive"] }
 thiserror = "1.0"
 
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
 libra-nibble = { path = "../../common/nibble", version = "0.1.0" }
