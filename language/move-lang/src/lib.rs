@@ -239,7 +239,8 @@ fn parse_file(
     fname: &'static str,
 ) -> io::Result<(Option<parser::ast::FileDefinition>, Errors)> {
     let mut errors: Errors = Vec::new();
-    let mut f = File::open(fname)?;
+    let mut f = File::open(fname)
+        .map_err(|err| std::io::Error::new(err.kind(), format!("{}: {}", err, fname)))?;
     let mut source_buffer = String::new();
     f.read_to_string(&mut source_buffer)?;
     let no_comments_buffer = match strip_comments_and_verify(fname, &source_buffer) {
