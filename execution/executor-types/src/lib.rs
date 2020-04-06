@@ -291,7 +291,7 @@ impl From<TreeState> for ExecutedTrees {
         ExecutedTrees::new(
             tree_state.account_state_root_hash,
             tree_state.ledger_frozen_subtree_hashes,
-            tree_state.version + 1,
+            tree_state.num_transactions,
         )
     }
 }
