@@ -13,27 +13,33 @@ mod state_view;
 
 pub use crate::state_view::VerifiedStateView;
 use anyhow::{format_err, Error, Result};
-use futures::stream::{BoxStream, StreamExt};
+use futures::{
+    executor::block_on,
+    stream::{BoxStream, StreamExt},
+};
 use libra_crypto::HashValue;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_state::AccountState,
-    account_state_blob::AccountStateBlob,
+    account_state_blob::{AccountStateBlob, AccountStateWithProof},
+    contract_event::ContractEvent,
+    event::EventKey,
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
     },
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccumulatorConsistencyProof, SparseMerkleProof, SparseMerkleRangeProof},
-    transaction::{TransactionListWithProof, TransactionToCommit, Version},
+    transaction::{TransactionListWithProof, TransactionToCommit, TransactionWithProof, Version},
     validator_change::ValidatorChangeProof,
 };
 use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom,
     net::SocketAddr,
-    sync::Mutex,
+    sync::{Arc, Mutex},
 };
+use storage_interface::DbReader;
 use storage_proto::{
     proto::storage::{
         storage_client::StorageClient, GetLatestStateRootRequest, GetStartupInfoRequest,
@@ -46,6 +52,7 @@ use storage_proto::{
     GetLatestStateRootResponse, GetStartupInfoResponse, GetTransactionsRequest,
     GetTransactionsResponse, SaveTransactionsRequest, StartupInfo,
 };
+use tokio::runtime::Handle;
 
 /// This provides storage read interfaces backed by real storage service.
 pub struct StorageReadServiceClient {
@@ -506,4 +513,95 @@ pub trait StorageWrite: Send + Sync {
         first_version: Version,
         ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
     ) -> Result<()>;
+}
+
+pub struct StorageReaderWithRuntimeHandle {
+    reader: Arc<dyn StorageRead>,
+    rt_handle: Handle,
+}
+
+impl StorageReaderWithRuntimeHandle {
+    pub fn new(reader: Arc<dyn StorageRead>, rt_handle: Handle) -> Self {
+        Self { reader, rt_handle }
+    }
+}
+
+impl DbReader for StorageReaderWithRuntimeHandle {
+    fn get_transactions(
+        &self,
+        _start_version: u64,
+        _batch_size: u64,
+        _ledger_version: u64,
+        _fetch_events: bool,
+    ) -> Result<TransactionListWithProof> {
+        unimplemented!()
+    }
+
+    fn get_events(
+        &self,
+        _event_key: &EventKey,
+        _start: u64,
+        _ascending: bool,
+        _limit: u64,
+    ) -> Result<Vec<(u64, ContractEvent)>> {
+        unimplemented!()
+    }
+
+    fn get_latest_account_state(
+        &self,
+        _address: AccountAddress,
+    ) -> Result<Option<AccountStateBlob>> {
+        unimplemented!()
+    }
+
+    fn get_latest_ledger_info(&self) -> Result<LedgerInfoWithSignatures> {
+        unimplemented!()
+    }
+
+    fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
+        unimplemented!()
+    }
+
+    fn get_txn_by_account(
+        &self,
+        _address: AccountAddress,
+        _seq_num: u64,
+        _ledger_version: u64,
+        _fetch_events: bool,
+    ) -> Result<Option<TransactionWithProof>> {
+        unimplemented!()
+    }
+
+    fn get_state_proof(
+        &self,
+        _known_version: u64,
+    ) -> Result<(
+        LedgerInfoWithSignatures,
+        ValidatorChangeProof,
+        AccumulatorConsistencyProof,
+    )> {
+        unimplemented!()
+    }
+
+    fn get_account_state_with_proof(
+        &self,
+        _address: AccountAddress,
+        _version: u64,
+        _ledger_version: u64,
+    ) -> Result<AccountStateWithProof> {
+        unimplemented!()
+    }
+
+    fn get_account_state_with_proof_by_version(
+        &self,
+        address: AccountAddress,
+        version: u64,
+    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
+        let reader = Arc::clone(&self.reader);
+        block_on(self.rt_handle.spawn(async move {
+            reader
+                .get_account_state_with_proof_by_version(address, version)
+                .await
+        }))?
+    }
 }

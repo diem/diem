@@ -4919,6 +4919,7 @@ dependencies = [
  "libra-state-view 0.1.0",
  "libra-types 0.1.0",
  "scratchpad 0.1.0",
+ "storage-interface 0.1.0",
  "storage-proto 0.1.0",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "tonic 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",

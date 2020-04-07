@@ -480,19 +480,6 @@ impl LibraDB {
         Ok((version, txn_info.state_root_hash()))
     }
 
-    /// Gets an account state by account address, out of the ledger state indicated by the state
-    /// Merkle tree root hash.
-    ///
-    /// This is used by libra core (executor) internally.
-    pub fn get_account_state_with_proof_by_version(
-        &self,
-        address: AccountAddress,
-        version: Version,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
-        self.state_store
-            .get_account_state_with_proof_by_version(address, version)
-    }
-
     /// Gets the latest TreeState no matter if db has been bootstrapped.
     /// Used by the Db-bootstrapper.
     pub fn get_latest_tree_state(&self) -> Result<TreeState> {
@@ -920,6 +907,15 @@ impl DbReader for LibraDB {
 
     fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
         self.ledger_store.get_startup_info()
+    }
+
+    fn get_account_state_with_proof_by_version(
+        &self,
+        address: AccountAddress,
+        version: Version,
+    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
+        self.state_store
+            .get_account_state_with_proof_by_version(address, version)
     }
 }
 
