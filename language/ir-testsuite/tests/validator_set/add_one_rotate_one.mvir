@@ -24,7 +24,7 @@ main() {
 
     return;
 }
-// check: ValidatorSetChangeEvent
+// check: NewEpochEvent
 // check: EXECUTED
 
 //! block-prologue
@@ -41,7 +41,7 @@ main() {
     return;
 }
 
-// check: ValidatorSetChangeEvent
+// check: NewEpochEvent
 // check: DiscoverySetChangeEvent
 // check: EXECUTED
 

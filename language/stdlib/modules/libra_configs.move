@@ -32,38 +32,39 @@ module LibraConfig {
     }
 
     // We can't return reference here, this returns a copy of the config value.
-    public fun get<Config: copyable>(): Config acquires T {
-        let sender = Transaction::sender();
-
-        Transaction::assert(::exists<T<Config>>(sender), 24);
-        let t_ref = borrow_global<T<Config>>(sender);
-
-        *&t_ref.payload
+    public fun get<Config: copyable>(addr: address): Config acquires T {
+        Transaction::assert(::exists<T<Config>>(addr), 24);
+        *&borrow_global<T<Config>>(addr).payload
     }
 
     // Set a config item to a new value and trigger a reconfiguration.
-    // This can only be invoked by the Association address
-    public fun set<Config: copyable>(payload: Config) acquires T, Configuration {
-        let sender = Transaction::sender();
+    public fun set<Config: copyable>(addr: address, payload: Config) acquires T, Configuration {
+        // TODO: impose proper permission checks
+        // Callable by the any address for now.
 
-        Transaction::assert(::exists<T<Config>>(sender), 24);
-        let config = borrow_global_mut<T<Config>>(sender);
+        Transaction::assert(::exists<T<Config>>(addr), 24);
+        let config = borrow_global_mut<T<Config>>(addr);
         config.payload = payload;
 
-        reconfigure();
+        reconfigure_();
     }
 
     // Publish a new config item to a new value and trigger a reconfiguration.
     public fun publish_new_config<Config: copyable>(payload: Config) acquires Configuration {
+        // TODO: impose proper permission checks
+        // Callable by the any address for now.
+
         move_to_sender(T{ payload });
-        reconfigure();
+        reconfigure_();
     }
 
     public fun reconfigure() acquires Configuration {
-        // TODO: Transform this method to user capability pattern.
-        // Only callable by the Association address for now.
+        // Only callable by association address.
         Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+        reconfigure_();
+    }
 
+    fun reconfigure_() acquires Configuration {
        // Do not do anything if time is not set up yet, this is to avoid genesis emit too many epochs.
        if(LibraTimestamp::is_genesis()) {
            return ()
@@ -81,17 +82,17 @@ module LibraConfig {
        emit_reconfiguration_event();
     }
 
-   // Emit a reconfiguration event. This function will be invoked by the genesis directly to generate the very first
-   // reconfiguration event.
-   fun emit_reconfiguration_event() acquires Configuration {
-       let config_ref = borrow_global_mut<Configuration>(0xA550C18);
-       config_ref.epoch = config_ref.epoch + 1;
+    // Emit a reconfiguration event. This function will be invoked by the genesis directly to generate the very first
+    // reconfiguration event.
+    fun emit_reconfiguration_event() acquires Configuration {
+        let config_ref = borrow_global_mut<Configuration>(0xA550C18);
+        config_ref.epoch = config_ref.epoch + 1;
 
-       LibraAccount::emit_event<NewEpochEvent>(
-           &mut config_ref.events,
-           NewEpochEvent {
-               epoch: config_ref.epoch,
-           },
-       );
-   }
+        LibraAccount::emit_event<NewEpochEvent>(
+            &mut config_ref.events,
+            NewEpochEvent {
+                epoch: config_ref.epoch,
+            },
+        );
+    }
 }

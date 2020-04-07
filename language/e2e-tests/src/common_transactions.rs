@@ -25,7 +25,7 @@ pub fn add_validator_txn(
         vec![],
         args,
         seq_num,
-        gas_costs::TXN_RESERVED,
+        gas_costs::TXN_RESERVED * 2,
         1,
         lbr_type_tag(),
     )

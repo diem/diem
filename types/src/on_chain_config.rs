@@ -3,14 +3,16 @@
 
 use crate::{
     access_path::{AccessPath, Accesses},
+    account_config,
     account_config::{association_address, CORE_CODE_ADDRESS},
-    event::EventKey,
+    event::{EventHandle, EventKey},
     language_storage::{StructTag, TypeTag},
     transaction::SCRIPT_HASH_LENGTH,
 };
 use anyhow::{format_err, Result};
 use libra_crypto::HashValue;
-use move_core_types::identifier::Identifier;
+use move_core_types::identifier::{IdentStr, Identifier};
+use once_cell::sync::Lazy;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
 
@@ -82,7 +84,7 @@ pub trait OnChainConfig: Send + Sync + DeserializeOwned {
 }
 
 pub fn new_epoch_event_key() -> EventKey {
-    EventKey::new_from_address(&association_address(), 3)
+    EventKey::new_from_address(&association_address(), 4)
 }
 
 pub fn access_path_for_config(config_name: Identifier) -> AccessPath {
@@ -103,6 +105,46 @@ pub fn access_path_for_config(config_name: Identifier) -> AccessPath {
             &Accesses::empty(),
         ),
     )
+}
+
+static CONFIGURATION_MODULE_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("LibraConfig").unwrap());
+
+static CONFIGURATION_STRUCT_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("Configuration").unwrap());
+
+pub fn configuration_module_name() -> &'static IdentStr {
+    &*CONFIGURATION_MODULE_NAME
+}
+
+pub fn configuration_struct_name() -> &'static IdentStr {
+    &*CONFIGURATION_STRUCT_NAME
+}
+
+pub fn configuration_tag() -> StructTag {
+    StructTag {
+        address: account_config::CORE_CODE_ADDRESS,
+        name: configuration_struct_name().to_owned(),
+        module: configuration_module_name().to_owned(),
+        type_params: vec![],
+    }
+}
+
+/// Path to the configuration resource.
+pub static CONFIGURATION_RESOURCE_PATH: Lazy<Vec<u8>> =
+    Lazy::new(|| AccessPath::resource_access_vec(&configuration_tag(), &Accesses::empty()));
+
+#[derive(Deserialize, Serialize)]
+pub struct ConfigurationResource {
+    epoch: u64,
+    last_reconfiguration_time: u64,
+    events: EventHandle,
+}
+
+impl ConfigurationResource {
+    pub fn last_reconfiguration_time(&self) -> u64 {
+        self.last_reconfiguration_time
+    }
 }
 
 /// Defines and holds the publishing policies for the VM. There are three possible configurations:

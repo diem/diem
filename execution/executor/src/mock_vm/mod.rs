@@ -10,15 +10,16 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
-    account_config::lbr_type_tag,
+    account_config::{lbr_type_tag, validator_set_address},
     contract_event::ContractEvent,
     event::EventKey,
     language_storage::TypeTag,
+    on_chain_config::{new_epoch_event_key, OnChainConfig},
     transaction::{
         RawTransaction, Script, SignedTransaction, Transaction, TransactionArgument,
         TransactionOutput, TransactionPayload, TransactionStatus,
     },
-    validator_set::{ValidatorSet, ValidatorSetResource, VALIDATOR_SET_RESOURCE_PATH},
+    validator_set::ValidatorSet,
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
@@ -65,7 +66,7 @@ impl VMExecutor for MockVM {
                 gen_genesis_writeset(),
                 // mock the validator set event
                 vec![ContractEvent::new(
-                    ValidatorSet::change_event_key(),
+                    new_epoch_event_key(),
                     0,
                     TypeTag::Bool,
                     lcs::to_bytes(&0).unwrap(),
@@ -151,7 +152,7 @@ impl VMExecutor for MockVM {
                         gen_genesis_writeset(),
                         // mock the validator set event
                         vec![ContractEvent::new(
-                            ValidatorSet::change_event_key(),
+                            new_epoch_event_key(),
                             0,
                             TypeTag::Bool,
                             lcs::to_bytes(&0).unwrap(),
@@ -222,11 +223,13 @@ fn seqnum_ap(account: AccountAddress) -> AccessPath {
 
 fn gen_genesis_writeset() -> WriteSet {
     let mut write_set = WriteSetMut::default();
-    let address = account_config::validator_set_address();
-    let path = VALIDATOR_SET_RESOURCE_PATH.clone();
+    let path = ValidatorSet::CONFIG_ID.access_path();
     write_set.push((
-        AccessPath { address, path },
-        WriteOp::Value(lcs::to_bytes(&ValidatorSetResource::default()).unwrap()),
+        AccessPath {
+            address: validator_set_address(),
+            path: path.path,
+        },
+        WriteOp::Value(lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
     ));
     write_set
         .freeze()

@@ -13,10 +13,9 @@ use crate::{
     },
     event::EventHandle,
     libra_timestamp::{LibraTimestampResource, LIBRA_TIMESTAMP_RESOURCE_PATH},
+    on_chain_config::{ConfigurationResource, OnChainConfig, CONFIGURATION_RESOURCE_PATH},
     validator_config::{ValidatorConfigResource, VALIDATOR_CONFIG_RESOURCE_PATH},
-    validator_set::{
-        ValidatorSetResource, VALIDATOR_SET_CHANGE_EVENT_PATH, VALIDATOR_SET_RESOURCE_PATH,
-    },
+    validator_set::ValidatorSet,
 };
 use anyhow::{bail, Error, Result};
 use serde::{de::DeserializeOwned, export::Formatter, Deserialize, Serialize};
@@ -40,6 +39,10 @@ impl AccountState {
         self.get_resource(&*BALANCE_RESOURCE_PATH)
     }
 
+    pub fn get_configuration_resource(&self) -> Result<Option<ConfigurationResource>> {
+        self.get_resource(&*CONFIGURATION_RESOURCE_PATH)
+    }
+
     pub fn get_discovery_set_resource(&self) -> Result<Option<DiscoverySetResource>> {
         self.get_resource(&*DISCOVERY_SET_RESOURCE_PATH)
     }
@@ -52,8 +55,8 @@ impl AccountState {
         self.get_resource(&*VALIDATOR_CONFIG_RESOURCE_PATH)
     }
 
-    pub fn get_validator_set_resource(&self) -> Result<Option<ValidatorSetResource>> {
-        self.get_resource(&*VALIDATOR_SET_RESOURCE_PATH)
+    pub fn get_validator_set(&self) -> Result<Option<ValidatorSet>> {
+        self.get_resource(&ValidatorSet::CONFIG_ID.access_path().path)
     }
 
     pub fn get_libra_block_resource(&self) -> Result<Option<LibraBlockResource>> {
@@ -70,9 +73,6 @@ impl AccountState {
         } else if *DISCOVERY_SET_CHANGE_EVENT_PATH == query_path {
             self.get_discovery_set_resource()?
                 .map(|discovery_set_resource| discovery_set_resource.change_events().clone())
-        } else if *VALIDATOR_SET_CHANGE_EVENT_PATH == query_path {
-            self.get_validator_set_resource()?
-                .map(|validator_set_resource| validator_set_resource.change_events().clone())
         } else if *NEW_BLOCK_EVENT_PATH == query_path {
             self.get_libra_block_resource()?
                 .map(|libra_block_resource| libra_block_resource.new_block_events().clone())
@@ -132,7 +132,7 @@ impl fmt::Debug for AccountState {
             .unwrap_or_else(|e| format!("parse error: {:#?}", e));
 
         let validator_set_str = self
-            .get_validator_set_resource()
+            .get_validator_set()
             .map(|validator_set_opt| format!("{:#?}", validator_set_opt))
             .unwrap_or_else(|e| format!("parse error: {:#?}", e));
 

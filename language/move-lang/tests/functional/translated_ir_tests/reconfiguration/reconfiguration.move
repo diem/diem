@@ -8,10 +8,10 @@
 
 //! new-transaction
 // Reconfiguration can only be invoked by association.
-use 0x0::LibraSystem;
+use 0x0::LibraConfig;
 
 fun main() {
-    LibraSystem::reconfigure()
+    LibraConfig::reconfigure()
 }
 
 // check: ABORT
@@ -19,22 +19,22 @@ fun main() {
 
 //! new-transaction
 //! sender: association
-use 0x0::LibraSystem;
+use 0x0::LibraConfig;
 
 fun main() {
-    LibraSystem::reconfigure()
+    LibraConfig::reconfigure()
 }
 
-// check: ValidatorSetChangeEvent
+// check: NewEpochEvent
 // check: EXECUTED
 
 //! new-transaction
 //! sender: association
 // Cannot trigger two reconfiguration within the same block.
-use 0x0::LibraSystem;
+use 0x0::LibraConfig;
 
 fun main() {
-    LibraSystem::reconfigure()
+    LibraConfig::reconfigure()
 }
 
 // check: ABORT
@@ -46,11 +46,11 @@ fun main() {
 
 //! new-transaction
 //! sender: association
-use 0x0::LibraSystem;
+use 0x0::LibraConfig;
 
 fun main() {
-    LibraSystem::reconfigure()
+    LibraConfig::reconfigure()
 }
 
-// check: ValidatorSetChangeEvent
+// check: NewEpochEvent
 // check: EXECUTED

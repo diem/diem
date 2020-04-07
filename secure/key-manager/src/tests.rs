@@ -15,10 +15,11 @@ use libra_types::{
     block_metadata::{BlockMetadata, LibraBlockResource},
     discovery_set::DiscoverySet,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    on_chain_config::ConfigurationResource,
     transaction::Transaction,
     validator_config::ValidatorConfig,
     validator_info::ValidatorInfo,
-    validator_set::ValidatorSetResource,
+    validator_set::ValidatorSet,
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
@@ -166,12 +167,12 @@ impl TestLibraInterface {
             .clone())
     }
 
-    fn retrieve_validator_set_resource(&self) -> Result<ValidatorSetResource, Error> {
+    fn retrieve_validator_set_resource(&self) -> Result<ValidatorSet, Error> {
         let account = account_config::validator_set_address();
         let account_state = self.retrieve_account_state(account)?;
         account_state
-            .get_validator_set_resource()?
-            .ok_or(Error::DataDoesNotExist("ValidatorSetResource"))
+            .get_validator_set()?
+            .ok_or(Error::DataDoesNotExist("ValidatorSet"))
     }
 
     fn retrieve_libra_block_resource(&self) -> Result<LibraBlockResource, Error> {
@@ -180,6 +181,14 @@ impl TestLibraInterface {
         account_state
             .get_libra_block_resource()?
             .ok_or(Error::DataDoesNotExist("BlockMetadata"))
+    }
+
+    pub fn retrieve_configuration_resource(&self) -> Result<ConfigurationResource, Error> {
+        let account = account_config::association_address();
+        let account_state = self.retrieve_account_state(account)?;
+        account_state
+            .get_configuration_resource()?
+            .ok_or(Error::DataDoesNotExist("Configuration"))
     }
 
     fn take_all_transactions(&self) -> Vec<Transaction> {
@@ -203,7 +212,7 @@ impl LibraInterface for TestLibraInterface {
     }
 
     fn last_reconfiguration(&self) -> Result<u64, Error> {
-        self.retrieve_validator_set_resource()
+        self.retrieve_configuration_resource()
             .map(|v| v.last_reconfiguration_time())
     }
 
@@ -241,7 +250,6 @@ impl LibraInterface for TestLibraInterface {
         validator_account: AccountAddress,
     ) -> Result<ValidatorInfo, Error> {
         self.retrieve_validator_set_resource()?
-            .validator_set()
             .payload()
             .iter()
             .find(|vi| vi.account_address() == &validator_account)

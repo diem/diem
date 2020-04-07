@@ -2,7 +2,7 @@ module LibraWriteSetManager {
     use 0x0::LibraAccount;
     use 0x0::Hash;
     use 0x0::Transaction;
-    use 0x0::LibraSystem;
+    use 0x0::LibraConfig;
 
     resource struct T {
         sequence_number: u64,
@@ -49,6 +49,6 @@ module LibraWriteSetManager {
             &mut t_ref.upgrade_events,
             UpgradeEvent { writeset_payload },
         );
-        LibraSystem::reconfigure();
+        LibraConfig::reconfigure();
     }
 }

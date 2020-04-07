@@ -5,7 +5,7 @@ module LibraSystem {
     use 0x0::ValidatorConfig;
     use 0x0::Vector;
     use 0x0::Transaction;
-    use 0x0::LibraTimestamp;
+    use 0x0::LibraConfig;
 
     struct ValidatorInfo {
         addr: address,
@@ -15,19 +15,11 @@ module LibraSystem {
         network_identity_pubkey: vector<u8>,
     }
 
-    struct ValidatorSetChangeEvent {
-        last_reconfiguration_time: u64,
-    }
-
-    resource struct ValidatorSet {
+    struct T {
         // The current consensus crypto scheme.
         scheme: u8,
         // The current validator set. Updated only at epoch boundaries via reconfiguration.
         validators: vector<ValidatorInfo>,
-        // Last time when a reconfiguration happened.
-        last_reconfiguration_time: u64,
-        // Handle where validator set change events are emitted
-        change_events: LibraAccount::EventHandle<ValidatorSetChangeEvent>,
     }
 
     struct DiscoveryInfo {
@@ -52,15 +44,18 @@ module LibraSystem {
     // This can only be invoked by the Association address, and only a single time.
     // Currently, it is invoked in the genesis transaction
     public fun initialize_validator_set() {
-      // Only callable by the validator set address
-      Transaction::assert(Transaction::sender() == 0x1D8, 1);
+        // Only callable by the validator set address
+        Transaction::assert(Transaction::sender() == 0x1D8, 1);
 
-      move_to_sender<ValidatorSet>(ValidatorSet {
-          scheme: 0,
-          validators: Vector::empty(),
-          last_reconfiguration_time: 0,
-          change_events: LibraAccount::new_event_handle<ValidatorSetChangeEvent>(),
-      });
+        LibraConfig::publish_new_config<T>(T {
+            scheme: 0,
+            validators: Vector::empty(),
+        });
+    }
+
+    // This returns a copy of the current validator set.
+    public fun get_validator_set(): T {
+        LibraConfig::get<T>(0x1D8)
     }
 
     public fun initialize_discovery_set() {
@@ -71,14 +66,6 @@ module LibraSystem {
             discovery_set: Vector::empty(),
             change_events: LibraAccount::new_event_handle<DiscoverySetChangeEvent>(),
         });
-    }
-
-    public fun reconfigure() acquires ValidatorSet {
-        // TODO: Transform this method to user capability pattern.
-        // Only the Association can emit reconfiguration event for now
-        Transaction::assert(Transaction::sender() == 0xA550C18, 1);
-
-        reconfigure_()
     }
 
     // ValidatorInfo public accessors
@@ -126,8 +113,8 @@ module LibraSystem {
     }
 
     // Return the size of the current validator set
-    public fun validator_set_size(): u64 acquires ValidatorSet {
-        Vector::length(&borrow_global<ValidatorSet>(0x1D8).validators)
+    public fun validator_set_size(): u64 {
+        Vector::length(&get_validator_set().validators)
     }
 
    fun is_validator_(addr: &address, validators_vec_ref: &vector<ValidatorInfo>): bool {
@@ -152,20 +139,20 @@ module LibraSystem {
     }
 
     // Return true if addr is a current validator
-    public fun is_validator(addr: address): bool acquires ValidatorSet {
-        is_validator_(&addr, &borrow_global<ValidatorSet>(0x1D8).validators)
+    public fun is_validator(addr: address): bool {
+        is_validator_(&addr, &get_validator_set().validators)
     }
 
     // Get the ValidatorInfo for the ith validator
-    public fun get_ith_validator_info(i: u64): ValidatorInfo acquires ValidatorSet {
-      let validators_vec_ref = &borrow_global<ValidatorSet>(0x1D8).validators;
+    public fun get_ith_validator_info(i: u64): ValidatorInfo {
+      let validators_vec_ref = &get_validator_set().validators;
       Transaction::assert(i < Vector::length(validators_vec_ref), 3);
       *Vector::borrow(validators_vec_ref, i)
     }
 
     // Get the address of the i'th validator.
-    public fun get_ith_validator_address(i: u64): address acquires ValidatorSet {
-      let validator_set = borrow_global<ValidatorSet>(0x1D8);
+    public fun get_ith_validator_address(i: u64): address {
+      let validator_set = get_validator_set();
       let len = Vector::length(&validator_set.validators);
       Transaction::assert(i < len, 3);
       Vector::borrow(&validator_set.validators, i).addr
@@ -217,57 +204,57 @@ module LibraSystem {
     // Fails if `account_address` is already a validator or has already been added to the addition
     // buffer.
     // Only callable by the Association address
-    public fun add_validator(account_address: address) acquires ValidatorSet, DiscoverySet {
+    public fun add_validator(account_address: address) acquires DiscoverySet {
         add_validator_(account_address);
-        reconfigure_();
         emit_discovery_set_change();
     }
 
-   fun add_validator_(account_address: address) acquires ValidatorSet, DiscoverySet {
+   fun add_validator_(account_address: address) acquires DiscoverySet {
        // Only the Association can add new validators
        Transaction::assert(Transaction::sender() == 0xA550C18, 1);
        // A prospective validator must have a validator config resource
        Transaction::assert(ValidatorConfig::has(account_address), 17);
 
-       let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
+       let validator_set = get_validator_set();
        let discovery_set_ref = borrow_global_mut<DiscoverySet>(0xD15C0);
 
        // Ensure that this address is not already a validator
        Transaction::assert(
-           !is_validator_(&account_address, &validator_set_ref.validators),
+           !is_validator_(&account_address, &validator_set.validators),
            18
        );
 
        Vector::push_back(
-           &mut validator_set_ref.validators,
+           &mut validator_set.validators,
            make_validator_info(account_address)
        );
        Vector::push_back(
            &mut discovery_set_ref.discovery_set,
            make_discovery_info(account_address)
        );
+       set_validator_set(validator_set);
    }
 
-   public fun remove_validator(account_address: address) acquires ValidatorSet, DiscoverySet {
+   public fun remove_validator(account_address: address) acquires DiscoverySet {
        // Only the Association can remove validators
        Transaction::assert(Transaction::sender() == 0xA550C18, 1);
 
-       let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
+       let validator_set = get_validator_set();
        let discovery_set_ref = borrow_global_mut<DiscoverySet>(0xD15C0);
        // Ensure that this address is already a validator
        Transaction::assert(
-           is_validator_(&account_address, &validator_set_ref.validators),
+           is_validator_(&account_address, &validator_set.validators),
            21
        );
 
        let to_remove_index = get_validator_index(
-           &validator_set_ref.validators,
+           &validator_set.validators,
            account_address
        );
 
        // remove corresponding ValidatorInfo from the validator set
        _  = Vector::swap_remove(
-            &mut validator_set_ref.validators,
+            &mut validator_set.validators,
            to_remove_index
        );
        _  = Vector::swap_remove(
@@ -275,29 +262,29 @@ module LibraSystem {
            to_remove_index
        );
 
-       reconfigure_();
+       set_validator_set(validator_set);
        emit_discovery_set_change();
    }
 
-   public fun rotate_consensus_pubkey(consensus_pubkey: vector<u8>) acquires ValidatorSet {
-       let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
+   public fun rotate_consensus_pubkey(consensus_pubkey: vector<u8>) {
+       let validator_set = get_validator_set();
        let account_address = Transaction::sender();
 
        // Ensure that this address is already a validator
        Transaction::assert(
-           is_validator_(&account_address, &validator_set_ref.validators),
+           is_validator_(&account_address, &validator_set.validators),
            21
        );
 
        ValidatorConfig::rotate_consensus_pubkey(consensus_pubkey);
 
        let validator_index = get_validator_index(
-           &validator_set_ref.validators,
+           &validator_set.validators,
            account_address
        );
 
-       if(copy_validator_info(Vector::borrow_mut(&mut validator_set_ref.validators, validator_index))) {
-           reconfigure_();
+       if (copy_validator_info(Vector::borrow_mut(&mut validator_set.validators, validator_index))) {
+           set_validator_set(validator_set);
        }
    }
 
@@ -337,35 +324,8 @@ module LibraSystem {
        }
    }
 
-   fun reconfigure_() acquires ValidatorSet {
-       // Do not do anything if time is not set up yet.
-       if(LibraTimestamp::is_genesis()) {
-           return ()
-       };
-
-       let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
-
-       // Ensure that there is at most one reconfiguration per transaction. This ensures that there is a 1-1
-       // correspondence between system reconfigurations and emitted ReconfigurationEvents.
-
-       let current_block_time = LibraTimestamp::now_microseconds();
-       Transaction::assert(current_block_time > validator_set_ref.last_reconfiguration_time, 23);
-       validator_set_ref.last_reconfiguration_time = current_block_time;
-
-       emit_reconfiguration_event();
-   }
-
-   // Emit a reconfiguration event. This function will be invoked by the genesis to generate the very first
-   // reconfiguration event.
-   fun emit_reconfiguration_event() acquires ValidatorSet {
-       let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
-
-       LibraAccount::emit_event<ValidatorSetChangeEvent>(
-           &mut validator_set_ref.change_events,
-           ValidatorSetChangeEvent {
-               last_reconfiguration_time: validator_set_ref.last_reconfiguration_time,
-           },
-       );
+   fun set_validator_set(value: T) {
+       LibraConfig::set<T>(0x1D8, value)
    }
 
    fun emit_discovery_set_change() acquires DiscoverySet {
