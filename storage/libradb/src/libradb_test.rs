@@ -508,7 +508,7 @@ fn test_get_latest_tree_state() {
     );
 
     // unbootstrapped db with pre-genesis state
-    let address = AccountAddress::new([0; 16]);
+    let address = AccountAddress::default();
     let blob = AccountStateBlob::from(vec![1]);
     db.db
         .put::<JellyfishMerkleNodeSchema>(
@@ -518,7 +518,7 @@ fn test_get_latest_tree_state() {
         .unwrap();
     let hash = SparseMerkleLeafNode::new(address.hash(), blob.hash()).hash();
     let pre_genesis = db.get_latest_tree_state().unwrap();
-    assert_eq!(pre_genesis, TreeState::new(0, vec![], hash,));
+    assert_eq!(pre_genesis, TreeState::new(0, vec![], hash));
 
     // bootstrapped db (any transaction info is in)
     let txn_info = TransactionInfo::new(
