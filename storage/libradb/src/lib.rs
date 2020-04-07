@@ -474,12 +474,6 @@ impl LibraDB {
 
     // =========================== Libra Core Internal APIs ========================================
 
-    /// Gets the latest state root hash together with its version.
-    pub fn get_latest_state_root(&self) -> Result<(Version, HashValue)> {
-        let (version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
-        Ok((version, txn_info.state_root_hash()))
-    }
-
     /// Gets the latest TreeState no matter if db has been bootstrapped.
     /// Used by the Db-bootstrapper.
     pub fn get_latest_tree_state(&self) -> Result<TreeState> {
@@ -916,6 +910,11 @@ impl DbReader for LibraDB {
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
         self.state_store
             .get_account_state_with_proof_by_version(address, version)
+    }
+
+    fn get_latest_state_root(&self) -> Result<(Version, HashValue)> {
+        let (version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
+        Ok((version, txn_info.state_root_hash()))
     }
 }
 

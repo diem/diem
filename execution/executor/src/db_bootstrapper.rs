@@ -11,16 +11,11 @@ use libra_logger::prelude::*;
 use libra_types::ledger_info::LedgerInfoWithSignatures;
 use libra_vm::VMExecutor;
 use std::sync::Arc;
-use storage_client::{StorageReadServiceClient, StorageWriteServiceClient, SyncStorageClient};
+use storage_client::SyncStorageClient;
 use storage_interface::DbReader;
 
 pub fn maybe_bootstrap_db<V: VMExecutor>(config: &NodeConfig) -> Result<()> {
-    let rt = Executor::<V>::create_runtime();
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
-    let db_reader = Arc::new(SyncStorageClient::new(
-        storage_read_client,
-        rt.handle().clone(),
-    ));
+    let db_reader = Arc::new(SyncStorageClient::new(&config.storage.address));
 
     let startup_info_opt = db_reader.get_startup_info()?;
     if startup_info_opt.is_some() {
@@ -33,8 +28,9 @@ pub fn maybe_bootstrap_db<V: VMExecutor>(config: &NodeConfig) -> Result<()> {
         .as_ref()
         .expect("failed to load genesis transaction!")
         .clone();
-    let storage_write_client = Arc::new(StorageWriteServiceClient::new(&config.storage.address));
-    let mut executor = Executor::<V>::new_on_unbootstrapped_db(rt, db_reader, storage_write_client);
+
+    let db_writer = Arc::clone(&db_reader);
+    let mut executor = Executor::<V>::new_on_unbootstrapped_db(db_reader, db_writer);
 
     // Create a block with genesis_txn being the only transaction. Execute it then commit it
     // immediately.

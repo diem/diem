@@ -16,7 +16,6 @@ use debug_interface::prelude::*;
 use executor_types::{
     ExecutedTrees, ProcessedVMOutput, ProofReader, StateComputeResult, TransactionData,
 };
-use futures::executor::block_on;
 use libra_crypto::{
     hash::{CryptoHash, EventAccumulatorHasher, TransactionAccumulatorHasher},
     HashValue,
@@ -47,19 +46,18 @@ use std::{
     marker::PhantomData,
     sync::Arc,
 };
-use storage_client::{StorageWrite, VerifiedStateView};
-use storage_interface::DbReader;
-use tokio::runtime::Runtime;
+use storage_client::VerifiedStateView;
+use storage_interface::{DbReader, DbWriter};
 
 static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
     Lazy::new(|| libra_metrics::OpMetrics::new_and_registered("executor"));
 
 /// `Executor` implements all functionalities the execution module needs to provide.
 pub struct Executor<V> {
-    rt: Runtime,
-    /// Client to storage service.
+    // DbReader and DbWriter have to be held separately because in rust it's impossible to
+    // get a `DbReader` reference out of a `DbReader + DbWriter`
     db_reader: Arc<dyn DbReader>,
-    storage_write_client: Arc<dyn StorageWrite>,
+    db_writer: Arc<dyn DbWriter>,
     cache: SpeculationCache,
     phantom: PhantomData<V>,
 }
@@ -72,44 +70,28 @@ where
         self.cache.committed_block_id()
     }
 
-    pub fn create_runtime() -> Runtime {
-        tokio::runtime::Builder::new()
-            .threaded_scheduler()
-            .enable_all()
-            .thread_name("tokio-executor")
-            .build()
-            .unwrap()
-    }
-
     /// Constructs an `Executor`.
-    pub fn new(
-        rt: Runtime,
-        db_reader: Arc<dyn DbReader>,
-        storage_write_client: Arc<dyn StorageWrite>,
-    ) -> Self {
+    pub fn new(db_reader: Arc<dyn DbReader>, db_writer: Arc<dyn DbWriter>) -> Self {
         let startup_info = db_reader
             .get_startup_info()
             .expect("Shouldn't fail")
             .expect("DB not bootstrapped.");
 
         Self {
-            rt,
             db_reader,
-            storage_write_client,
+            db_writer,
             cache: SpeculationCache::new_with_startup_info(startup_info),
             phantom: PhantomData,
         }
     }
 
     fn new_on_unbootstrapped_db(
-        rt: Runtime,
         db_reader: Arc<dyn DbReader>,
-        storage_write_client: Arc<dyn StorageWrite>,
+        db_writer: Arc<dyn DbWriter>,
     ) -> Self {
         Self {
-            rt,
             db_reader,
-            storage_write_client,
+            db_writer,
             cache: SpeculationCache::new(),
             phantom: PhantomData,
         }
@@ -282,23 +264,15 @@ where
             .unzip();
 
         let num_txns_to_commit = txns_to_commit.len() as u64;
-        let ledger_info_with_sigs_clone = ledger_info_with_sigs.clone();
         {
             let _timer = OP_COUNTERS.timer("storage_save_transactions_time_s");
             OP_COUNTERS.observe("storage_save_transactions.count", num_txns_to_commit as f64);
             assert_eq!(first_version_to_commit, version + 1 - num_txns_to_commit);
-            let write_client = self.storage_write_client.clone();
-            let txns_to_commit_copy = txns_to_commit.clone();
-            block_on(self.rt.spawn(async move {
-                write_client
-                    .save_transactions(
-                        txns_to_commit_copy,
-                        first_version_to_commit,
-                        Some(ledger_info_with_sigs_clone),
-                    )
-                    .await
-            }))
-            .unwrap()?;
+            self.db_writer.save_transactions(
+                &txns_to_commit,
+                first_version_to_commit,
+                Some(&ledger_info_with_sigs),
+            )?;
         }
         // Only bump the counter when the commit succeeds.
         OP_COUNTERS.inc_by("num_accounts", list_num_account_created.into_iter().sum());
@@ -459,14 +433,11 @@ where
         if ledger_info_to_commit.is_none() && txns_to_commit.is_empty() {
             return Ok(reconfig_events);
         }
-        let write_client = self.storage_write_client.clone();
-        let ledger_info = ledger_info_to_commit.clone();
-        block_on(self.rt.spawn(async move {
-            write_client
-                .save_transactions(txns_to_commit, first_version, ledger_info)
-                .await
-        }))
-        .unwrap()?;
+        self.db_writer.save_transactions(
+            &txns_to_commit,
+            first_version,
+            ledger_info_to_commit.as_ref(),
+        )?;
 
         let output_trees = output.executed_trees().clone();
         if let Some(ledger_info_with_sigs) = &ledger_info_to_commit {

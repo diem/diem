@@ -227,4 +227,8 @@ impl DbReader for MockLibraDB {
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
         unimplemented!()
     }
+
+    fn get_latest_state_root(&self) -> Result<(u64, HashValue)> {
+        unimplemented!()
+    }
 }

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
+use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
@@ -9,7 +10,7 @@ use libra_types::{
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccumulatorConsistencyProof, SparseMerkleProof},
-    transaction::{TransactionListWithProof, TransactionWithProof, Version},
+    transaction::{TransactionListWithProof, TransactionToCommit, TransactionWithProof, Version},
     validator_change::ValidatorChangeProof,
 };
 use storage_proto::StartupInfo;
@@ -102,4 +103,23 @@ pub trait DbReader: Send + Sync {
         address: AccountAddress,
         version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)>;
+
+    /// Gets the latest state root hash together with its version.
+    fn get_latest_state_root(&self) -> Result<(Version, HashValue)>;
+}
+
+/// Trait that is implemented by a DB that supports certain public (to client) write APIs
+/// expected of a Libra DB. This adds write APIs to DbReader.
+pub trait DbWriter: Send + Sync {
+    /// Persist transactions. Called by the executor module when either syncing nodes or committing
+    /// blocks during normal operation.
+    /// See [`LibraDB::save_transactions`].
+    ///
+    /// [`LibraDB::save_transactions`]: ../libradb/struct.LibraDB.html#method.save_transactions
+    fn save_transactions(
+        &self,
+        txns_to_commit: &[TransactionToCommit],
+        first_version: Version,
+        ledger_info_with_sigs: Option<&LedgerInfoWithSignatures>,
+    ) -> Result<()>;
 }
