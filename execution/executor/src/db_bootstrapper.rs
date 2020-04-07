@@ -11,15 +11,13 @@ use libra_logger::prelude::*;
 use libra_types::ledger_info::LedgerInfoWithSignatures;
 use libra_vm::VMExecutor;
 use std::sync::Arc;
-use storage_client::{
-    StorageReadServiceClient, StorageReaderWithRuntimeHandle, StorageWriteServiceClient,
-};
+use storage_client::{StorageReadServiceClient, StorageWriteServiceClient, SyncStorageClient};
 use storage_interface::DbReader;
 
 pub fn maybe_bootstrap_db<V: VMExecutor>(config: &NodeConfig) -> Result<()> {
     let rt = Executor::<V>::create_runtime();
     let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
-    let db_reader = Arc::new(StorageReaderWithRuntimeHandle::new(
+    let db_reader = Arc::new(SyncStorageClient::new(
         storage_read_client,
         rt.handle().clone(),
     ));
