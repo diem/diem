@@ -11,8 +11,8 @@ use libra_types::{
     event::EventKey,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::{
-        AccumulatorConsistencyProof, AccumulatorRangeProof, TransactionAccumulatorProof,
-        TransactionListProof, TransactionProof,
+        AccumulatorConsistencyProof, AccumulatorRangeProof, SparseMerkleProof,
+        TransactionAccumulatorProof, TransactionListProof, TransactionProof,
     },
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionWithProof, Version,
@@ -217,6 +217,14 @@ impl DbReader for MockLibraDB {
     }
 
     fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
+        unimplemented!()
+    }
+
+    fn get_account_state_with_proof_by_version(
+        &self,
+        address: AccountAddress,
+        version: u64,
+    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
         unimplemented!()
     }
 }
