@@ -92,14 +92,17 @@ impl<'txn> FunctionReference<'txn> for FunctionRef<'txn> {
     }
 
     fn name(&self) -> &'txn IdentStr {
+        assume!(self.handle.name.into_index() < self.module.identifiers().len()); // invariant
         self.module.identifier_at(self.handle.name)
     }
 
     fn parameters(&self) -> &'txn Signature {
+        assume!(self.handle.parameters.into_index() < self.module.signatures().len()); // invariant
         self.module.signature_at(self.handle.parameters)
     }
 
     fn return_(&self) -> &'txn Signature {
+        assume!(self.handle.return_.into_index() < self.module.signatures().len()); // invariant
         self.module.signature_at(self.handle.return_)
     }
 
@@ -111,7 +114,7 @@ impl<'txn> FunctionReference<'txn> for FunctionRef<'txn> {
 impl<'txn> FunctionRef<'txn> {
     pub fn pretty_string(&self) -> String {
         let parameters = self.parameters();
-        let return_ = self.parameters();
+        let return_ = self.return_();
         format!(
             "{}::{}({:?}){:?}",
             self.module().name(),
@@ -134,6 +137,7 @@ pub struct FunctionDef {
 
 impl FunctionDef {
     pub fn new(module: &VerifiedModule, idx: FunctionDefinitionIndex) -> Self {
+        precondition!(idx.into_index() < module.function_defs().len());
         let definition = module.function_def_at(idx);
         let code = definition.code.code.clone();
         let handle = module.function_handle_at(definition.function);

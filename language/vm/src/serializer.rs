@@ -1074,7 +1074,7 @@ impl ModuleSerializer {
         struct_definitions: &[StructDefinition],
     ) -> Result<()> {
         if !struct_definitions.is_empty() {
-            self.common.table_count += 1;
+            self.common.table_count = self.common.table_count.wrapping_add(1); // the count will bound to a small number
             self.struct_defs.0 = check_index_in_binary(binary.len())?;
             for struct_definition in struct_definitions {
                 serialize_struct_definition(binary, struct_definition)?;
@@ -1091,7 +1091,7 @@ impl ModuleSerializer {
         struct_def_instantiations: &[StructDefInstantiation],
     ) -> Result<()> {
         if !struct_def_instantiations.is_empty() {
-            self.common.table_count += 1;
+            self.common.table_count = self.common.table_count.wrapping_add(1); // the count will bound to a small number
             self.struct_def_instantiations.0 = check_index_in_binary(binary.len())?;
             for struct_instantiation in struct_def_instantiations {
                 serialize_struct_def_instantiation(binary, struct_instantiation)?;
@@ -1142,7 +1142,7 @@ impl ModuleSerializer {
         function_definitions: &[FunctionDefinition],
     ) -> Result<()> {
         if !function_definitions.is_empty() {
-            self.common.table_count += 1;
+            self.common.table_count = self.common.table_count.wrapping_add(1); // the count will bound to a small number
             self.function_defs.0 = check_index_in_binary(binary.len())?;
             for function_definition in function_definitions {
                 serialize_function_definition(binary, function_definition)?;
