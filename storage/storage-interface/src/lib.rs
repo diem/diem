@@ -14,6 +14,7 @@ use libra_types::{
     validator_change::ValidatorChangeProof,
 };
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use storage_proto::StartupInfo;
 
 /// Trait that is implemented by a DB that supports certain public (to client) read APIs
@@ -123,6 +124,30 @@ pub trait DbWriter: Send + Sync {
         first_version: Version,
         ledger_info_with_sigs: Option<&LedgerInfoWithSignatures>,
     ) -> Result<()>;
+}
+
+#[derive(Clone)]
+pub struct DbReaderWriter {
+    pub reader: Arc<dyn DbReader>,
+    pub writer: Arc<dyn DbWriter>,
+}
+
+impl DbReaderWriter {
+    pub fn new<D: 'static + DbReader + DbWriter>(db: D) -> Self {
+        let reader = Arc::new(db);
+        let writer = Arc::clone(&reader);
+
+        Self { reader, writer }
+    }
+}
+
+impl<D> From<D> for DbReaderWriter
+where
+    D: 'static + DbReader + DbWriter,
+{
+    fn from(db: D) -> Self {
+        Self::new(db)
+    }
 }
 
 /// Network types for storage service

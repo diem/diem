@@ -47,17 +47,14 @@ use std::{
     sync::Arc,
 };
 use storage_client::VerifiedStateView;
-use storage_interface::{DbReader, DbWriter};
+use storage_interface::DbReaderWriter;
 
 static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
     Lazy::new(|| libra_metrics::OpMetrics::new_and_registered("executor"));
 
 /// `Executor` implements all functionalities the execution module needs to provide.
 pub struct Executor<V> {
-    // DbReader and DbWriter have to be held separately because in rust it's impossible to
-    // get a `DbReader` reference out of a `DbReader + DbWriter`
-    db_reader: Arc<dyn DbReader>,
-    db_writer: Arc<dyn DbWriter>,
+    db: DbReaderWriter,
     cache: SpeculationCache,
     phantom: PhantomData<V>,
 }
@@ -71,27 +68,23 @@ where
     }
 
     /// Constructs an `Executor`.
-    pub fn new(db_reader: Arc<dyn DbReader>, db_writer: Arc<dyn DbWriter>) -> Self {
-        let startup_info = db_reader
+    pub fn new(db: DbReaderWriter) -> Self {
+        let startup_info = db
+            .reader
             .get_startup_info()
             .expect("Shouldn't fail")
             .expect("DB not bootstrapped.");
 
         Self {
-            db_reader,
-            db_writer,
+            db,
             cache: SpeculationCache::new_with_startup_info(startup_info),
             phantom: PhantomData,
         }
     }
 
-    fn new_on_unbootstrapped_db(
-        db_reader: Arc<dyn DbReader>,
-        db_writer: Arc<dyn DbWriter>,
-    ) -> Self {
+    fn new_on_unbootstrapped_db(db: DbReaderWriter) -> Self {
         Self {
-            db_reader,
-            db_writer,
+            db,
             cache: SpeculationCache::new(),
             phantom: PhantomData,
         }
@@ -119,7 +112,7 @@ where
         let _timer = OP_COUNTERS.timer("block_execute_time_s");
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
-            Arc::clone(&self.db_reader),
+            Arc::clone(&self.db.reader),
             self.cache.committed_trees().version(),
             self.cache.committed_trees().state_root(),
             parent_block_executed_trees.state_tree(),
@@ -268,7 +261,7 @@ where
             let _timer = OP_COUNTERS.timer("storage_save_transactions_time_s");
             OP_COUNTERS.observe("storage_save_transactions.count", num_txns_to_commit as f64);
             assert_eq!(first_version_to_commit, version + 1 - num_txns_to_commit);
-            self.db_writer.save_transactions(
+            self.db.writer.save_transactions(
                 &txns_to_commit,
                 first_version_to_commit,
                 Some(&ledger_info_with_sigs),
@@ -368,7 +361,7 @@ where
 
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
-            Arc::clone(&self.db_reader),
+            Arc::clone(&self.db.reader),
             self.cache.synced_trees().version(),
             self.cache.synced_trees().state_root(),
             self.cache.synced_trees().state_tree(),
@@ -433,7 +426,7 @@ where
         if ledger_info_to_commit.is_none() && txns_to_commit.is_empty() {
             return Ok(reconfig_events);
         }
-        self.db_writer.save_transactions(
+        self.db.writer.save_transactions(
             &txns_to_commit,
             first_version,
             ledger_info_to_commit.as_ref(),

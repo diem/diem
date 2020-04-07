@@ -52,9 +52,9 @@ impl Drop for LibraHandle {
 }
 
 fn setup_executor(config: &NodeConfig) -> Arc<Mutex<Executor<LibraVM>>> {
-    let db_reader = Arc::new(SyncStorageClient::new(&config.storage.address));
-    let db_writer = Arc::clone(&db_reader);
-    Arc::new(Mutex::new(Executor::new(db_reader, db_writer)))
+    Arc::new(Mutex::new(Executor::new(
+        SyncStorageClient::new(&config.storage.address).into(),
+    )))
 }
 
 fn setup_debug_interface(config: &NodeConfig) -> Runtime {

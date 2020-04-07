@@ -78,9 +78,7 @@ impl Node {
         let storage_service =
             storage_service::start_storage_service_with_db(&config, storage.clone());
         maybe_bootstrap_db::<LibraVM>(config).expect("Db-bootstrapper should not fail.");
-        let db_reader = Arc::new(SyncStorageClient::new(&config.storage.address));
-        let db_writer = Arc::clone(&db_reader);
-        let executor = Executor::new(db_reader, db_writer);
+        let executor = Executor::new(SyncStorageClient::new(&config.storage.address).into());
         let libra = TestLibraInterface {
             queued_transactions: Arc::new(RefCell::new(Vec::new())),
             storage,
