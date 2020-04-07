@@ -93,6 +93,7 @@ impl LoadedModule {
 
     /// Return a cached copy of the struct def at this index, if available.
     pub fn cached_struct_def_at(&self, idx: StructDefinitionIndex) -> Option<StructType> {
+        precondition!(idx.into_index() < self.cache.struct_defs.len());
         let cached = self.cache.struct_defs[idx.into_index()]
             .read()
             .expect("lock poisoned");
@@ -101,6 +102,7 @@ impl LoadedModule {
 
     /// Cache this struct def at this location.
     pub fn cache_struct_def(&self, idx: StructDefinitionIndex, ty: StructType) {
+        precondition!(idx.into_index() < self.cache.struct_defs.len());
         let mut cached = self.cache.struct_defs[idx.into_index()]
             .write()
             .expect("lock poisoned");
@@ -110,9 +112,15 @@ impl LoadedModule {
     }
 
     pub fn get_struct_def_index(&self, struct_name: &IdentStr) -> VMResult<&StructDefinitionIndex> {
-        self.struct_defs_table
+        let result = self
+            .struct_defs_table
             .get(struct_name)
-            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))
+            .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR));
+        assumed_postcondition!(match result {
+            Ok(idx) => idx.into_index() < self.cache.struct_defs.len(),
+            Err(..) => true,
+        }); // invariant
+        result
     }
 }
 

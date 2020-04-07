@@ -12,6 +12,7 @@ use libra_types::{
     on_chain_config::{LibraVersion, VMPublishingOption},
     transaction::{authenticator::AuthenticationKey, Script, Transaction, TransactionArgument},
 };
+use mirai_annotations::*;
 use std::convert::TryFrom;
 use stdlib::transaction_scripts::StdlibScript;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -19,7 +20,7 @@ use vm::file_format::{Bytecode, CompiledScript};
 
 fn validate_auth_key_prefix(auth_key_prefix: &[u8]) {
     let auth_key_prefix_length = auth_key_prefix.len();
-    assert!(
+    checked_assume!(
         auth_key_prefix_length == 0
             || auth_key_prefix_length == AuthenticationKey::LENGTH - AccountAddress::LENGTH,
         "Bad auth key prefix length {}",
