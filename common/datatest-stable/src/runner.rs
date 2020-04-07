@@ -32,12 +32,25 @@ struct TestOpts {
     #[structopt(long)]
     /// We already can't capture anything but we don't want arg parsing to fail so this is a noop
     nocapture: bool,
+    #[structopt(long)]
+    /// List all tests
+    list: bool,
 }
 
 pub fn runner(reqs: &[Requirements]) {
     let options = TestOpts::from_args();
 
-    let tests = reqs.iter().flat_map(|req| req.expand()).collect();
+    let tests: Vec<Test> = reqs.iter().flat_map(|req| req.expand()).collect();
+
+    if options.list {
+        for test in &tests {
+            println!("{}: test", test.name);
+        }
+
+        println!();
+        println!("{} tests, 0 benchmarks", tests.len());
+        return;
+    }
 
     match run_tests(options, tests) {
         Ok(true) => {}
