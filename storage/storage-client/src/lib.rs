@@ -515,18 +515,18 @@ pub trait StorageWrite: Send + Sync {
     ) -> Result<()>;
 }
 
-pub struct StorageReaderWithRuntimeHandle {
+pub struct SyncStorageClient {
     reader: Arc<dyn StorageRead>,
     rt_handle: Handle,
 }
 
-impl StorageReaderWithRuntimeHandle {
+impl SyncStorageClient {
     pub fn new(reader: Arc<dyn StorageRead>, rt_handle: Handle) -> Self {
         Self { reader, rt_handle }
     }
 }
 
-impl DbReader for StorageReaderWithRuntimeHandle {
+impl DbReader for SyncStorageClient {
     fn get_transactions(
         &self,
         _start_version: u64,

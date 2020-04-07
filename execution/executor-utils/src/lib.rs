@@ -8,9 +8,7 @@ use executor::{db_bootstrapper::maybe_bootstrap_db, Executor};
 use libra_config::config::NodeConfig;
 use libra_vm::LibraVM;
 use std::sync::Arc;
-use storage_client::{
-    StorageReadServiceClient, StorageReaderWithRuntimeHandle, StorageWriteServiceClient,
-};
+use storage_client::{StorageReadServiceClient, StorageWriteServiceClient, SyncStorageClient};
 use storage_service::start_storage_service;
 use tokio::runtime::Runtime;
 
@@ -20,7 +18,7 @@ pub fn create_storage_service_and_executor(config: &NodeConfig) -> (Runtime, Exe
 
     let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
     let exec_rt = Executor::<LibraVM>::create_runtime();
-    let db_reader = Arc::new(StorageReaderWithRuntimeHandle::new(
+    let db_reader = Arc::new(SyncStorageClient::new(
         storage_read_client,
         exec_rt.handle().clone(),
     ));
