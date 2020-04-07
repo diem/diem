@@ -40,7 +40,7 @@ fun main() {
     let config: FooConfig::T;
 
     config = FooConfig::new(0);
-    LibraConfig::set<FooConfig::T>(move config)
+    LibraConfig::set<FooConfig::T>(0x0::Transaction::sender(), move config)
 }
 // check: ABORTED
 // check: 23
@@ -58,7 +58,7 @@ fun main() {
     let config: FooConfig::T;
 
     config = FooConfig::new(0);
-    LibraConfig::set<FooConfig::T>(move config)
+    LibraConfig::set<FooConfig::T>(0x0::Transaction::sender(), move config)
 }
 // Should trigger a reconfiguration
 // check: NewEpochEvent

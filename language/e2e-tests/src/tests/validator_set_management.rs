@@ -7,8 +7,8 @@ use crate::{
     executor::FakeExecutor,
 };
 use libra_types::{
+    on_chain_config::new_epoch_event_key,
     transaction::TransactionStatus,
-    validator_set::ValidatorSet,
     vm_error::{StatusCode, VMStatus},
 };
 
@@ -43,7 +43,7 @@ fn validator_add() {
     assert!(output
         .events()
         .iter()
-        .any(|e| e.key() == &ValidatorSet::change_event_key()));
+        .any(|e| e.key() == &new_epoch_event_key()));
 }
 
 #[test]
@@ -77,7 +77,7 @@ fn validator_rotate_key() {
     assert!(output
         .events()
         .iter()
-        .any(|e| e.key() == &ValidatorSet::change_event_key()));
+        .any(|e| e.key() == &new_epoch_event_key()));
 
     executor.apply_write_set(output.write_set());
     executor.new_block();
@@ -92,5 +92,5 @@ fn validator_rotate_key() {
     assert!(output
         .events()
         .iter()
-        .any(|e| e.key() == &ValidatorSet::change_event_key()));
+        .any(|e| e.key() == &new_epoch_event_key()));
 }

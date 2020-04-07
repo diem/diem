@@ -2,6 +2,7 @@ address 0x0:
 
 module ScriptWhitelist {
     use 0x0::LibraConfig;
+    use 0x0::Transaction;
 
     struct T { payload: vector<u8> }
 
@@ -10,6 +11,6 @@ module ScriptWhitelist {
     }
 
     public fun set(payload: vector<u8>) {
-        LibraConfig::set<Self::T>(T { payload } )
+        LibraConfig::set<Self::T>(Transaction::sender(), T { payload } )
     }
 }

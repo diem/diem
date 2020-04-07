@@ -28,13 +28,12 @@ use libra_types::{
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
     ledger_info::LedgerInfoWithSignatures,
-    on_chain_config::new_epoch_event_key,
+    on_chain_config,
     proof::{accumulator::InMemoryAccumulator, definition::LeafCount, SparseMerkleProof},
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionOutput,
         TransactionPayload, TransactionStatus, TransactionToCommit, Version,
     },
-    validator_set::ValidatorSet,
     write_set::{WriteOp, WriteSet},
 };
 use libra_vm::VMExecutor;
@@ -558,8 +557,7 @@ where
         let mut next_validator_set = None;
 
         let proof_reader = ProofReader::new(account_to_proof);
-        let validator_set_change_event_key = ValidatorSet::change_event_key();
-        let new_epoch_event_key = new_epoch_event_key();
+        let new_epoch_event_key = on_chain_config::new_epoch_event_key();
         for (vm_output, txn) in itertools::zip_eq(vm_outputs.into_iter(), transactions.iter()) {
             if next_validator_set.is_some() {
                 txn_data.push(TransactionData::new(
@@ -638,18 +636,14 @@ where
             next_validator_set = vm_output
                 .events()
                 .iter()
-                .find(|event| {
-                    *event.key() == validator_set_change_event_key
-                        || *event.key() == new_epoch_event_key
-                })
+                .find(|event| *event.key() == new_epoch_event_key)
                 .map(|_| {
                     account_to_state
                         .get(&account_config::validator_set_address())
                         .map(|state| {
                             state
-                                .get_validator_set_resource()?
-                                .ok_or_else(|| format_err!("ValidatorResource does not exist"))
-                                .and_then(|resource| Ok(resource.validator_set()))
+                                .get_validator_set()?
+                                .ok_or_else(|| format_err!("ValidatorSet does not exist"))
                         })
                 })
                 .flatten()
@@ -755,13 +749,10 @@ where
     }
 
     fn extract_reconfig_events(events: Vec<ContractEvent>) -> Vec<ContractEvent> {
-        let reconfig_event_key = ValidatorSet::change_event_key();
-        let new_epoch_event_key = new_epoch_event_key();
+        let new_epoch_event_key = on_chain_config::new_epoch_event_key();
         events
             .into_iter()
-            .filter(|event| {
-                *event.key() == reconfig_event_key || *event.key() == new_epoch_event_key
-            })
+            .filter(|event| *event.key() == new_epoch_event_key)
             .collect()
     }
 }

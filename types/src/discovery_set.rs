@@ -7,7 +7,6 @@ use crate::{
     discovery_info::DiscoveryInfo,
     event::{EventHandle, EventKey},
     language_storage::StructTag,
-    validator_set::validator_set_module_name,
 };
 use anyhow::Result;
 use move_core_types::identifier::{IdentStr, Identifier};
@@ -17,11 +16,14 @@ use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{iter::IntoIterator, ops::Deref, vec};
 
+static DISCOVERY_SET_MODULE_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("LibraSystem").unwrap());
+
 static DISCOVERY_SET_STRUCT_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("DiscoverySet").unwrap());
 
 pub fn discovery_set_module_name() -> &'static IdentStr {
-    validator_set_module_name()
+    &*DISCOVERY_SET_MODULE_NAME
 }
 
 pub fn discovery_set_struct_name() -> &'static IdentStr {

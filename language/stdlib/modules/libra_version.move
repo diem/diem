@@ -23,6 +23,6 @@ module LibraVersion {
             25
         );
 
-        LibraConfig::set<Self::T>(T { major } )
+        LibraConfig::set<Self::T>(Transaction::sender(), T { major } )
     }
 }

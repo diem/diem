@@ -10,8 +10,8 @@ use libra_types::{
     account_config::{lbr_type_tag, CORE_CODE_ADDRESS},
     contract_event::ContractEvent,
     language_storage::{ResourceKey, StructTag},
+    on_chain_config::new_epoch_event_key,
     transaction::{ChangeSet, TransactionPayload, TransactionStatus},
-    validator_set::ValidatorSet,
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSetMut},
 };
@@ -117,7 +117,7 @@ fn bad_writesets() {
     );
 
     // (2) The WriteSet contains a reconfiguration event, will be dropped.
-    let event = ContractEvent::new(ValidatorSet::change_event_key(), 0, lbr_type_tag(), vec![]);
+    let event = ContractEvent::new(new_epoch_event_key(), 0, lbr_type_tag(), vec![]);
     let writeset_txn = genesis_account.create_signed_txn_impl(
         *genesis_account.address(),
         TransactionPayload::WriteSet(ChangeSet::new(write_set, vec![event])),
