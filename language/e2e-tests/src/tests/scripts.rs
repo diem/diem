@@ -8,8 +8,8 @@ use libra_types::{
 };
 use move_core_types::identifier::Identifier;
 use vm::file_format::{
-    empty_script, AddressPoolIndex, Bytecode, FunctionHandle, FunctionHandleIndex, IdentifierIndex,
-    ModuleHandle, ModuleHandleIndex, SignatureIndex,
+    empty_script, AddressIdentifierIndex, Bytecode, FunctionHandle, FunctionHandleIndex,
+    IdentifierIndex, ModuleHandle, ModuleHandleIndex, SignatureIndex,
 };
 
 #[test]
@@ -67,11 +67,11 @@ fn script_none_existing_module_dep() {
     let mut script = empty_script();
     // make a non existent external module
     script
-        .address_pool
+        .address_identifiers
         .push(AccountAddress::new([1u8; AccountAddress::LENGTH]));
     script.identifiers.push(Identifier::new("module").unwrap());
     let module_handle = ModuleHandle {
-        address: AddressPoolIndex((script.address_pool.len() - 1) as u16),
+        address: AddressIdentifierIndex((script.address_identifiers.len() - 1) as u16),
         name: IdentifierIndex((script.identifiers.len() - 1) as u16),
     };
     script.module_handles.push(module_handle);
@@ -134,11 +134,11 @@ fn script_non_existing_function_dep() {
     let mut script = empty_script();
     // LCS module
     script
-        .address_pool
+        .address_identifiers
         .push(AccountAddress::new([0u8; AccountAddress::LENGTH]));
     script.identifiers.push(Identifier::new("LCS").unwrap());
     let module_handle = ModuleHandle {
-        address: AddressPoolIndex((script.address_pool.len() - 1) as u16),
+        address: AddressIdentifierIndex((script.address_identifiers.len() - 1) as u16),
         name: IdentifierIndex((script.identifiers.len() - 1) as u16),
     };
     script.module_handles.push(module_handle);
@@ -201,11 +201,11 @@ fn script_bad_sig_function_dep() {
     let mut script = empty_script();
     // LCS module
     script
-        .address_pool
+        .address_identifiers
         .push(AccountAddress::new([0u8; AccountAddress::LENGTH]));
     script.identifiers.push(Identifier::new("LCS").unwrap());
     let module_handle = ModuleHandle {
-        address: AddressPoolIndex((script.address_pool.len() - 1) as u16),
+        address: AddressIdentifierIndex((script.address_identifiers.len() - 1) as u16),
         name: IdentifierIndex((script.identifiers.len() - 1) as u16),
     };
     script.module_handles.push(module_handle);

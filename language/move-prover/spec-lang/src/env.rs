@@ -18,13 +18,14 @@ use itertools::Itertools;
 use num::{BigUint, Num};
 
 use bytecode_source_map::source_map::SourceMap;
-use libra_types::language_storage;
+use libra_types::{account_address::AccountAddress, language_storage};
+use move_vm_types::values::Value as VMValue;
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, CodeOffset, FunctionDefinitionIndex,
-        FunctionHandleIndex, Kind, SignatureIndex, SignatureToken, StructDefinitionIndex,
-        StructFieldInformation, StructHandleIndex,
+        AddressIdentifierIndex, CodeOffset, Constant as VMConstant, ConstantPoolIndex,
+        FunctionDefinitionIndex, FunctionHandleIndex, Kind, SignatureIndex, SignatureToken,
+        StructDefinitionIndex, StructFieldInformation, StructHandleIndex,
     },
     views::{
         FunctionDefinitionView, FunctionHandleView, SignatureTokenView, StructDefinitionView,
@@ -924,15 +925,26 @@ impl<'env> ModuleEnv<'env> {
         }
     }
 
-    /// Converts an address pool index for this module into a number representing the address.
-    pub fn get_address(&self, idx: AddressPoolIndex) -> BigUint {
-        let addr = &self.data.module.address_pool()[idx.0 as usize];
-        BigUint::from_str_radix(&addr.to_string(), 16).unwrap()
+    /// Retrieve a constant from the pool
+    pub fn get_constant(&self, idx: ConstantPoolIndex) -> &VMConstant {
+        &self.data.module.constant_pool()[idx.0 as usize]
     }
 
-    /// Gets a byte blob based on a pool index.
-    pub fn get_byte_blob(&self, idx: ByteArrayPoolIndex) -> &[u8] {
-        &self.data.module.byte_array_pool()[idx.0 as usize]
+    /// Converts a constant to the specified type. The type must correspond to the expected
+    /// cannonical representation as defined in `move_vm_types::values`
+    pub fn get_constant_value(&self, constant: &VMConstant) -> VMValue {
+        VMValue::deserialize_constant(constant).unwrap()
+    }
+
+    /// Retrieve an address identifier from the pool
+    pub fn get_address_identifier(&self, idx: AddressIdentifierIndex) -> BigUint {
+        let addr = &self.data.module.address_identifiers()[idx.0 as usize];
+        Self::addr_to_big_uint(addr)
+    }
+
+    /// Converts an address identifier to a number representing the address.
+    pub fn addr_to_big_uint(addr: &AccountAddress) -> BigUint {
+        BigUint::from_str_radix(&addr.to_string(), 16).unwrap()
     }
 
     /// Returns specification variables of this module.

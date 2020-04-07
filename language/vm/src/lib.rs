@@ -43,8 +43,8 @@ pub enum IndexKind {
     FieldDefinition,
     Signature,
     Identifier,
-    ByteArrayPool,
-    AddressPool,
+    AddressIdentifier,
+    ConstantPool,
     LocalPool,
     CodeDefinition,
     TypeParameter,
@@ -57,7 +57,6 @@ impl IndexKind {
 
         // XXX ensure this list stays up to date!
         &[
-            ByteArrayPool,
             ModuleHandle,
             StructHandle,
             FunctionHandle,
@@ -70,7 +69,7 @@ impl IndexKind {
             FieldDefinition,
             Signature,
             Identifier,
-            AddressPool,
+            ConstantPool,
             LocalPool,
             CodeDefinition,
             TypeParameter,
@@ -96,8 +95,8 @@ impl fmt::Display for IndexKind {
             FieldDefinition => "field definition",
             Signature => "signature",
             Identifier => "identifier",
-            ByteArrayPool => "byte_array pool",
-            AddressPool => "address pool",
+            AddressIdentifier => "address identifier",
+            ConstantPool => "constant pool",
             LocalPool => "local pool",
             CodeDefinition => "code definition pool",
             TypeParameter => "type parameter",

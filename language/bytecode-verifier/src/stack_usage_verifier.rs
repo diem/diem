@@ -90,10 +90,9 @@ impl<'a> StackUsageVerifier<'a> {
             Bytecode::LdU8(_)
             | Bytecode::LdU64(_)
             | Bytecode::LdU128(_)
-            | Bytecode::LdAddr(_)
             | Bytecode::LdTrue
             | Bytecode::LdFalse
-            | Bytecode::LdByteArray(_)
+            | Bytecode::LdConst(_)
             | Bytecode::CopyLoc(_)
             | Bytecode::MoveLoc(_)
             | Bytecode::MutBorrowLoc(_)

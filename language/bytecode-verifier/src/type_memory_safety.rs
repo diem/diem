@@ -671,16 +671,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 });
             }
 
-            Bytecode::LdAddr(_) => {
+            Bytecode::LdConst(idx) => {
+                let signature = self.module().constant_at(*idx).type_.clone();
                 self.stack.push(TypedAbstractValue {
-                    signature: SignatureToken::Address,
-                    value: AbstractValue::Value(Kind::Copyable),
-                });
-            }
-
-            Bytecode::LdByteArray(_) => {
-                self.stack.push(TypedAbstractValue {
-                    signature: SignatureToken::Vector(Box::new(SignatureToken::U8)),
+                    signature,
                     value: AbstractValue::Value(Kind::Copyable),
                 });
             }

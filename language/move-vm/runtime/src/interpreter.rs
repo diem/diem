@@ -297,20 +297,23 @@ impl<'txn> Interpreter<'txn> {
                         gas!(const_instr: context, self, Opcodes::LD_U128)?;
                         self.operand_stack.push(Value::u128(*int_const))?;
                     }
-                    Bytecode::LdAddr(idx) => {
-                        gas!(const_instr: context, self, Opcodes::LD_ADDR)?;
-                        self.operand_stack
-                            .push(Value::address(*frame.module().address_at(*idx)))?;
-                    }
-                    Bytecode::LdByteArray(idx) => {
-                        let v = frame.module().byte_array_at(*idx).to_vec();
+                    Bytecode::LdConst(idx) => {
+                        let constant = frame.module().constant_at(*idx);
                         gas!(
                             instr: context,
                             self,
-                            Opcodes::LD_BYTEARRAY,
-                            AbstractMemorySize::new(v.len() as GasCarrier)
+                            Opcodes::LD_CONST,
+                            AbstractMemorySize::new(constant.data.len() as GasCarrier)
                         )?;
-                        self.operand_stack.push(Value::vector_u8(v))?;
+                        self.operand_stack.push(
+                            Value::deserialize_constant(constant).ok_or_else(|| {
+                                VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
+                                    .with_message(
+                                    "Verifier failed to verify the deserialization of constants"
+                                        .to_owned(),
+                                )
+                            })?,
+                        )?
                     }
                     Bytecode::LdTrue => {
                         gas!(const_instr: context, self, Opcodes::LD_TRUE)?;

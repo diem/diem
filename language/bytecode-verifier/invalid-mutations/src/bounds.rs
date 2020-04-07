@@ -11,8 +11,9 @@ use std::collections::BTreeMap;
 use vm::{
     errors::{append_err_info, bounds_error},
     file_format::{
-        AddressPoolIndex, CompiledModule, CompiledModuleMut, FunctionHandleIndex, IdentifierIndex,
-        ModuleHandleIndex, SignatureIndex, StructDefinitionIndex, StructHandleIndex, TableIndex,
+        AddressIdentifierIndex, CompiledModule, CompiledModuleMut, FunctionHandleIndex,
+        IdentifierIndex, ModuleHandleIndex, SignatureIndex, StructDefinitionIndex,
+        StructHandleIndex, TableIndex,
     },
     internals::ModuleIndex,
     views::{ModuleView, SignatureTokenView},
@@ -48,7 +49,7 @@ impl PointerKind {
         use PointerKind::*;
 
         match src_kind {
-            ModuleHandle => &[One(AddressPool), One(Identifier)],
+            ModuleHandle => &[One(AddressIdentifier), One(Identifier)],
             StructHandle => &[One(ModuleHandle), One(Identifier)],
             FunctionHandle => &[
                 One(ModuleHandle),
@@ -265,8 +266,8 @@ impl ApplyOutOfBoundsContext {
         // be listed out.
 
         match (src_kind, dst_kind) {
-            (ModuleHandle, AddressPool) => {
-                self.module.module_handles[src_idx].address = AddressPoolIndex(new_idx)
+            (ModuleHandle, AddressIdentifier) => {
+                self.module.module_handles[src_idx].address = AddressIdentifierIndex(new_idx)
             }
             (ModuleHandle, Identifier) => {
                 self.module.module_handles[src_idx].name = IdentifierIndex(new_idx)

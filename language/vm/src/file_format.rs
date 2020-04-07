@@ -130,14 +130,14 @@ define_index! {
     doc: "Index into the `Identifier` table.",
 }
 define_index! {
-    name: ByteArrayPoolIndex,
-    kind: ByteArrayPool,
-    doc: "Index into the `ByteArrayPool` table.",
+    name: AddressIdentifierIndex,
+    kind: AddressIdentifier,
+    doc: "Index into the `AddressIdentifier` table.",
 }
 define_index! {
-    name: AddressPoolIndex,
-    kind: AddressPool,
-    doc: "Index into the `AddressPool` table.",
+    name: ConstantPoolIndex,
+    kind: ConstantPool,
+    doc: "Index into the `ConstantPool` table.",
 }
 define_index! {
     name: SignatureIndex,
@@ -167,13 +167,11 @@ pub type CodeOffset = u16;
 
 /// The pool of identifiers.
 pub type IdentifierPool = Vec<Identifier>;
-/// The pool of `ByteArray` literals.
-pub type ByteArrayPool = Vec<Vec<u8>>;
-/// The pool of `AccountAddress` literals.
-///
-/// Code references have a literal addresses in `ModuleHandle`s. Literal references to data in
-/// the blockchain are also published here.
-pub type AddressPool = Vec<AccountAddress>;
+/// The pool of address identifiers (addresses used in ModuleHandles/ModuleIds).
+/// Does not include runtime values. Those are placed in the `ConstantPool`
+pub type AddressIdentifierPool = Vec<AccountAddress>;
+/// The pool of `Constant` values
+pub type ConstantPool = Vec<Constant>;
 /// The pool of `TypeSignature` instances. Those are system and user types used and
 /// their composition (e.g. &U64).
 pub type TypeSignaturePool = Vec<TypeSignature>;
@@ -215,8 +213,8 @@ pub const NO_TYPE_ARGUMENTS: SignatureIndex = SignatureIndex(0);
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
 pub struct ModuleHandle {
-    /// Index into the `AddressPool`. Identifies the account that holds the module.
-    pub address: AddressPoolIndex,
+    /// Index into the `AddressIdentifierIndex`. Identifies module-holding account's address.
+    pub address: AddressIdentifierIndex,
     /// The name of the module published in the code section for the account in `address`.
     pub name: IdentifierIndex,
 }
@@ -691,6 +689,14 @@ impl SignatureToken {
     }
 }
 
+/// A `Constant` is a serialized value along with it's type. That type will be deserialized by the
+/// loader/evauluator
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct Constant {
+    pub type_: SignatureToken,
+    pub data: Vec<u8>,
+}
+
 /// A `CodeUnit` is the body of a function. It has the function header and the instruction stream.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
@@ -797,20 +803,13 @@ pub enum Bytecode {
     ///
     /// ```..., integer_value -> ..., u128_value```
     CastU128,
-    /// Push a `ByteArray` literal onto the stack. The `ByteArray` is loaded from the
-    /// `ByteArrayPool` via `ByteArrayPoolIndex`.
+    /// Push a `Constant` onto the stack. The value is loaded and deserialized (according to it's
+    /// type) from the the `ConstantPool` via `ConstantPoolIndex`
     ///
     /// Stack transition:
     ///
-    /// ```... -> ..., bytearray_value```
-    LdByteArray(ByteArrayPoolIndex),
-    /// Push an 'Address' literal onto the stack. The address is loaded from the
-    /// `AddressPool` via `AddressPoolIndex`.
-    ///
-    /// Stack transition:
-    ///
-    /// ```... -> ..., address_value```
-    LdAddr(AddressPoolIndex),
+    /// ```... -> ..., value```
+    LdConst(ConstantPoolIndex),
     /// Push `true` onto the stack.
     ///
     /// Stack transition:
@@ -1186,8 +1185,7 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::CastU8 => write!(f, "CastU8"),
             Bytecode::CastU64 => write!(f, "CastU64"),
             Bytecode::CastU128 => write!(f, "CastU128"),
-            Bytecode::LdByteArray(a) => write!(f, "LdByteArray({})", a),
-            Bytecode::LdAddr(a) => write!(f, "LdAddr({})", a),
+            Bytecode::LdConst(a) => write!(f, "LdAddr({})", a),
             Bytecode::LdTrue => write!(f, "LdTrue"),
             Bytecode::LdFalse => write!(f, "LdFalse"),
             Bytecode::CopyLoc(a) => write!(f, "CopyLoc({})", a),
@@ -1339,11 +1337,10 @@ pub struct CompiledScriptMut {
 
     /// All identifiers used in this transaction.
     pub identifiers: IdentifierPool,
-    /// ByteArray pool. The byte array literals used in the transaction.
-    pub byte_array_pool: ByteArrayPool,
-    /// Address pool. The address literals used in the module. Those include literals for
-    /// code references (`ModuleHandle`).
-    pub address_pool: AddressPool,
+    /// All address identifiers used in this transaction.
+    pub address_identifiers: AddressIdentifierPool,
+    /// Constant pool. The constant values used in the transaction.
+    pub constant_pool: ConstantPool,
 
     /// The main (script) to execute.
     pub main: FunctionDefinition,
@@ -1398,8 +1395,8 @@ impl CompiledScriptMut {
             signatures: self.signatures,
 
             identifiers: self.identifiers,
-            byte_array_pool: self.byte_array_pool,
-            address_pool: self.address_pool,
+            address_identifiers: self.address_identifiers,
+            constant_pool: self.constant_pool,
 
             struct_defs: vec![],
             function_defs: vec![self.main],
@@ -1442,11 +1439,10 @@ pub struct CompiledModuleMut {
 
     /// All identifiers used in this module.
     pub identifiers: IdentifierPool,
-    /// ByteArray pool. The byte array literals used in the module.
-    pub byte_array_pool: ByteArrayPool,
-    /// Address pool. The address literals used in the module. Those include literals for
-    /// code references (`ModuleHandle`).
-    pub address_pool: AddressPool,
+    /// All address identifiers used in this module.
+    pub address_identifiers: AddressIdentifierPool,
+    /// Constant pool. The constant values used in the module.
+    pub constant_pool: ConstantPool,
 
     /// Types defined in this module.
     pub struct_defs: Vec<StructDefinition>,
@@ -1472,7 +1468,6 @@ impl Arbitrary for CompiledScriptMut {
             vec(any_with::<Signature>(size), 0..=size),
             (
                 vec(any::<Identifier>(), 0..=size),
-                vec(vec(any::<u8>(), 0..=size), 0..=size),
                 vec(any::<AccountAddress>(), 0..=size),
             ),
             any_with::<FunctionDefinition>(size),
@@ -1481,9 +1476,10 @@ impl Arbitrary for CompiledScriptMut {
                 |(
                     (module_handles, struct_handles, function_handles),
                     signatures,
-                    (identifiers, byte_array_pool, address_pool),
+                    (identifiers, address_identifiers),
                     main,
                 )| {
+                    // TODO actual constant generation
                     CompiledScriptMut {
                         module_handles,
                         struct_handles,
@@ -1491,8 +1487,8 @@ impl Arbitrary for CompiledScriptMut {
                         function_instantiations: vec![],
                         signatures,
                         identifiers,
-                        byte_array_pool,
-                        address_pool,
+                        address_identifiers,
+                        constant_pool: vec![],
                         main,
                     }
                 },
@@ -1517,7 +1513,6 @@ impl Arbitrary for CompiledModuleMut {
             vec(any_with::<Signature>(size), 0..=size),
             (
                 vec(any::<Identifier>(), 0..=size),
-                vec(vec(any::<u8>(), 0..=size), 0..=size),
                 vec(any::<AccountAddress>(), 0..=size),
             ),
             (
@@ -1529,9 +1524,10 @@ impl Arbitrary for CompiledModuleMut {
                 |(
                     (module_handles, struct_handles, function_handles),
                     signatures,
-                    (identifiers, byte_array_pool, address_pool),
+                    (identifiers, address_identifiers),
                     (struct_defs, function_defs),
                 )| {
+                    // TODO actual constant generation
                     CompiledModuleMut {
                         module_handles,
                         struct_handles,
@@ -1542,8 +1538,8 @@ impl Arbitrary for CompiledModuleMut {
                         field_instantiations: vec![],
                         signatures,
                         identifiers,
-                        byte_array_pool,
-                        address_pool,
+                        address_identifiers,
+                        constant_pool: vec![],
                         struct_defs,
                         function_defs,
                     }
@@ -1568,8 +1564,8 @@ impl CompiledModuleMut {
             IndexKind::FunctionDefinition => self.function_defs.len(),
             IndexKind::Signature => self.signatures.len(),
             IndexKind::Identifier => self.identifiers.len(),
-            IndexKind::ByteArrayPool => self.byte_array_pool.len(),
-            IndexKind::AddressPool => self.address_pool.len(),
+            IndexKind::AddressIdentifier => self.address_identifiers.len(),
+            IndexKind::ConstantPool => self.constant_pool.len(),
             // XXX these two don't seem to belong here
             other @ IndexKind::LocalPool
             | other @ IndexKind::CodeDefinition
@@ -1622,7 +1618,7 @@ impl CompiledModule {
     /// Returns the code key of `module_handle`
     pub fn module_id_for_handle(&self, module_handle: &ModuleHandle) -> ModuleId {
         ModuleId::new(
-            *self.address_at(module_handle.address),
+            *self.address_identifier_at(module_handle.address),
             self.identifier_at(module_handle.name).to_owned(),
         )
     }
@@ -1649,8 +1645,8 @@ impl CompiledModule {
             signatures: inner.signatures,
 
             identifiers: inner.identifiers,
-            byte_array_pool: inner.byte_array_pool,
-            address_pool: inner.address_pool,
+            address_identifiers: inner.address_identifiers,
+            constant_pool: inner.constant_pool,
 
             main,
         })
@@ -1661,11 +1657,12 @@ impl CompiledModule {
 pub fn empty_module() -> CompiledModuleMut {
     CompiledModuleMut {
         module_handles: vec![ModuleHandle {
-            address: AddressPoolIndex(0),
+            address: AddressIdentifierIndex(0),
             name: IdentifierIndex(0),
         }],
-        address_pool: vec![AccountAddress::default()],
         identifiers: vec![self_module_name().to_owned()],
+        address_identifiers: vec![AccountAddress::default()],
+        constant_pool: vec![],
         function_defs: vec![],
         struct_defs: vec![],
         struct_handles: vec![],
@@ -1675,7 +1672,6 @@ pub fn empty_module() -> CompiledModuleMut {
         function_instantiations: vec![],
         field_instantiations: vec![],
         signatures: vec![Signature(vec![])],
-        byte_array_pool: vec![],
     }
 }
 
@@ -1760,7 +1756,7 @@ pub fn empty_script() -> CompiledScriptMut {
     let main_name = Identifier::new("main").unwrap();
     let signatures = vec![Signature(vec![])];
     let self_module_handle = ModuleHandle {
-        address: AddressPoolIndex(0),
+        address: AddressIdentifierIndex(0),
         name: IdentifierIndex(0),
     };
     let main = FunctionHandle {
@@ -1791,8 +1787,8 @@ pub fn empty_script() -> CompiledScriptMut {
         signatures,
 
         identifiers: vec![self_module_name, main_name],
-        byte_array_pool: vec![],
-        address_pool: vec![default_address],
+        address_identifiers: vec![default_address],
+        constant_pool: vec![],
         main: main_def,
     }
 }

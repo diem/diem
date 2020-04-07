@@ -20,7 +20,7 @@ pub trait ModuleAccess: Sync {
         let handle =
             self.module_handle_at(ModuleHandleIndex(CompiledModule::IMPLEMENTED_MODULE_INDEX));
         assumed_postcondition!(
-            handle.address.into_index() < self.as_module().as_inner().address_pool.len()
+            handle.address.into_index() < self.as_module().as_inner().address_identifiers.len()
         ); // invariant
         assumed_postcondition!(
             handle.name.into_index() < self.as_module().as_inner().identifiers.len()
@@ -35,13 +35,13 @@ pub trait ModuleAccess: Sync {
 
     /// Returns the address of the module.
     fn address(&self) -> &AccountAddress {
-        self.address_at(self.self_handle().address)
+        self.address_identifier_at(self.self_handle().address)
     }
 
     fn module_handle_at(&self, idx: ModuleHandleIndex) -> &ModuleHandle {
         let handle = &self.as_module().as_inner().module_handles[idx.into_index()];
         assumed_postcondition!(
-            handle.address.into_index() < self.as_module().as_inner().address_pool.len()
+            handle.address.into_index() < self.as_module().as_inner().address_identifiers.len()
         ); // invariant
         assumed_postcondition!(
             handle.name.into_index() < self.as_module().as_inner().identifiers.len()
@@ -96,12 +96,12 @@ pub trait ModuleAccess: Sync {
         &self.as_module().as_inner().identifiers[idx.into_index()]
     }
 
-    fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> &[u8] {
-        self.as_module().as_inner().byte_array_pool[idx.into_index()].as_slice()
+    fn address_identifier_at(&self, idx: AddressIdentifierIndex) -> &AccountAddress {
+        &self.as_module().as_inner().address_identifiers[idx.into_index()]
     }
 
-    fn address_at(&self, idx: AddressPoolIndex) -> &AccountAddress {
-        &self.as_module().as_inner().address_pool[idx.into_index()]
+    fn constant_at(&self, idx: ConstantPoolIndex) -> &Constant {
+        &self.as_module().as_inner().constant_pool[idx.into_index()]
     }
 
     fn struct_def_at(&self, idx: StructDefinitionIndex) -> &StructDefinition {
@@ -147,16 +147,16 @@ pub trait ModuleAccess: Sync {
         &self.as_module().as_inner().signatures
     }
 
-    fn byte_array_pool(&self) -> &[Vec<u8>] {
-        &self.as_module().as_inner().byte_array_pool
-    }
-
-    fn address_pool(&self) -> &[AccountAddress] {
-        &self.as_module().as_inner().address_pool
+    fn constant_pool(&self) -> &[Constant] {
+        &self.as_module().as_inner().constant_pool
     }
 
     fn identifiers(&self) -> &[Identifier] {
         &self.as_module().as_inner().identifiers
+    }
+
+    fn address_identifiers(&self) -> &[AccountAddress] {
+        &self.as_module().as_inner().address_identifiers
     }
 
     fn struct_defs(&self) -> &[StructDefinition] {
@@ -208,12 +208,12 @@ pub trait ScriptAccess: Sync {
         &self.as_script().as_inner().identifiers[idx.into_index()]
     }
 
-    fn byte_array_at(&self, idx: ByteArrayPoolIndex) -> &[u8] {
-        self.as_script().as_inner().byte_array_pool[idx.into_index()].as_slice()
+    fn address_identifier_at(&self, idx: AddressIdentifierIndex) -> &AccountAddress {
+        &self.as_script().as_inner().address_identifiers[idx.into_index()]
     }
 
-    fn address_at(&self, idx: AddressPoolIndex) -> &AccountAddress {
-        &self.as_script().as_inner().address_pool[idx.into_index()]
+    fn constant_at(&self, idx: ConstantPoolIndex) -> &Constant {
+        &self.as_script().as_inner().constant_pool[idx.into_index()]
     }
 
     fn function_instantiation_at(&self, idx: FunctionInstantiationIndex) -> &FunctionInstantiation {
@@ -240,16 +240,16 @@ pub trait ScriptAccess: Sync {
         &self.as_script().as_inner().signatures
     }
 
-    fn byte_array_pool(&self) -> &[Vec<u8>] {
-        &self.as_script().as_inner().byte_array_pool
-    }
-
-    fn address_pool(&self) -> &[AccountAddress] {
-        &self.as_script().as_inner().address_pool
+    fn constant_pool(&self) -> &[Constant] {
+        &self.as_script().as_inner().constant_pool
     }
 
     fn identifiers(&self) -> &[Identifier] {
         &self.as_script().as_inner().identifiers
+    }
+
+    fn address_identifiers(&self) -> &[AccountAddress] {
+        &self.as_script().as_inner().address_identifiers
     }
 
     fn main(&self) -> &FunctionDefinition {

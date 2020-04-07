@@ -11,6 +11,7 @@ pub mod abstract_state;
 pub mod acquires_list_verifier;
 pub mod check_duplication;
 pub mod code_unit_verifier;
+pub mod constants;
 pub mod control_flow_graph;
 pub mod instantiation_loops;
 pub mod resolver;

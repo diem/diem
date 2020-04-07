@@ -20,7 +20,7 @@ use std::{
 };
 use vm::{
     errors::*,
-    file_format::SignatureToken,
+    file_format::{Constant, SignatureToken},
     gas_schedule::{
         words_in, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, NativeCostIndex,
         CONST_SIZE, REFERENCE_SIZE, STRUCT_SIZE,
@@ -945,6 +945,22 @@ impl VMValueCast<Container> for Value {
             ValueImpl::Container(r) => take_unique_ownership(r),
             v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot cast {:?} to container", v,))),
+        }
+    }
+}
+
+impl VMValueCast<Vec<Value>> for Value {
+    fn cast(self) -> VMResult<Vec<Value>> {
+        match self.0 {
+            ValueImpl::Container(r) => Ok(match take_unique_ownership(r)? {
+                Container::General(vs) => vs.into_iter().map(Value).collect(),
+                Container::U8(vs) => vs.into_iter().map(Value::u8).collect(),
+                Container::U64(vs) => vs.into_iter().map(Value::u64).collect(),
+                Container::U128(vs) => vs.into_iter().map(Value::u128).collect(),
+                Container::Bool(vs) => vs.into_iter().map(Value::bool).collect(),
+            }),
+            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                .with_message(format!("cannot cast {:?} to vector of values", v,))),
         }
     }
 }
@@ -2354,6 +2370,44 @@ impl<'d, 'a> serde::de::Visitor<'d> for StructFieldVisitor<'a> {
             }
         }
         Ok(val)
+    }
+}
+
+/***************************************************************************************
+*
+* Constants
+*
+*   Implementation of deseserialization of constant data into a runtime value
+*
+**************************************************************************************/
+
+impl Value {
+    fn constant_sig_token_to_type(constant_signature: &SignatureToken) -> Option<Type> {
+        use SignatureToken as S;
+        use Type as T;
+        Some(match constant_signature {
+            S::Bool => T::Bool,
+            S::U8 => T::U8,
+            S::U64 => T::U64,
+            S::U128 => T::U128,
+            S::Address => T::Address,
+            S::Vector(inner) => T::Vector(Box::new(Self::constant_sig_token_to_type(inner)?)),
+            // Not yet supported
+            S::Struct(_) | S::StructInstantiation(_, _) => return None,
+            // Not allowed/Not meaningful
+            S::TypeParameter(_) | S::Reference(_) | S::MutableReference(_) => return None,
+        })
+    }
+
+    pub fn deserialize_constant(constant: &Constant) -> Option<Value> {
+        let ty = Self::constant_sig_token_to_type(&constant.type_)?;
+        Value::simple_deserialize(&constant.data, ty).ok()
+    }
+
+    pub fn serialize_constant(type_: SignatureToken, value: Value) -> Option<Constant> {
+        let ty = Self::constant_sig_token_to_type(&type_)?;
+        let data = value.simple_serialize(&ty)?;
+        Some(Constant { data, type_ })
     }
 }
 

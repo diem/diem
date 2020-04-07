@@ -15,11 +15,10 @@ use rand::{rngs::StdRng, Rng};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CompiledModuleMut,
-        FieldHandleIndex, FieldInstantiationIndex, FunctionHandle, FunctionHandleIndex,
-        FunctionInstantiation, FunctionInstantiationIndex, LocalIndex, SignatureToken,
-        StructDefInstantiation, StructDefInstantiationIndex, StructDefinitionIndex,
-        StructFieldInformation, TableIndex,
+        Bytecode, CodeOffset, CompiledModuleMut, ConstantPoolIndex, FieldHandleIndex,
+        FieldInstantiationIndex, FunctionHandle, FunctionHandleIndex, FunctionInstantiation,
+        FunctionInstantiationIndex, LocalIndex, SignatureToken, StructDefInstantiation,
+        StructDefInstantiationIndex, StructDefinitionIndex, StructFieldInformation, TableIndex,
     },
 };
 
@@ -39,10 +38,7 @@ type U64ToBytecode = fn(u64) -> Bytecode;
 type U128ToBytecode = fn(u128) -> Bytecode;
 
 /// This type represents bytecode instructions that take a `AddressPoolIndex`
-type AddressPoolIndexToBytecode = fn(AddressPoolIndex) -> Bytecode;
-
-/// This type represents bytecode instructions that take a `ByteArrayPoolIndex`
-type ByteArrayPoolIndexToBytecode = fn(ByteArrayPoolIndex) -> Bytecode;
+type ConstantPoolIndexToBytecode = fn(ConstantPoolIndex) -> Bytecode;
 
 /// This type represents bytecode instructions that take a `StructDefinitionIndex`
 type StructIndexToBytecode = fn(StructDefinitionIndex) -> Bytecode;
@@ -83,11 +79,8 @@ enum BytecodeType {
     /// Instructions that take a `u128`
     U128(U128ToBytecode),
 
-    /// Instructions that take an `AddressPoolIndex`
-    AddressPoolIndex(AddressPoolIndexToBytecode),
-
-    /// Instructions that take a `ByteArrayPoolIndex`
-    ByteArrayPoolIndex(ByteArrayPoolIndexToBytecode),
+    /// Instructions that take an `ConstantPoolIndex`
+    ConstantPoolIndex(ConstantPoolIndexToBytecode),
 
     /// Instructions that take a `StructDefinitionIndex`
     StructIndex(StructIndexToBytecode),
@@ -178,14 +171,10 @@ impl<'a> BytecodeGenerator<'a> {
             (StackEffect::Nop, BytecodeType::NoArg(Bytecode::CastU128)),
             (
                 StackEffect::Add,
-                BytecodeType::AddressPoolIndex(Bytecode::LdAddr),
+                BytecodeType::ConstantPoolIndex(Bytecode::LdConst),
             ),
             (StackEffect::Add, BytecodeType::NoArg(Bytecode::LdTrue)),
             (StackEffect::Add, BytecodeType::NoArg(Bytecode::LdFalse)),
-            (
-                StackEffect::Add,
-                BytecodeType::ByteArrayPoolIndex(Bytecode::LdByteArray),
-            ),
             (
                 StackEffect::Add,
                 BytecodeType::LocalIndex(Bytecode::CopyLoc),
@@ -415,15 +404,10 @@ impl<'a> BytecodeGenerator<'a> {
                     // Generate a random u128 constant to load
                     Some(instruction(self.rng.gen_range(0, u128::max_value())))
                 }
-                BytecodeType::AddressPoolIndex(instruction) => {
+                BytecodeType::ConstantPoolIndex(instruction) => {
                     // Select a random address from the module's address pool
-                    Self::index_or_none(&module.address_pool, &mut self.rng)
-                        .map(|x| instruction(AddressPoolIndex::new(x)))
-                }
-                BytecodeType::ByteArrayPoolIndex(instruction) => {
-                    // Select a random byte array from the module's byte array pool
-                    Self::index_or_none(&module.byte_array_pool, &mut self.rng)
-                        .map(|x| instruction(ByteArrayPoolIndex::new(x)))
+                    Self::index_or_none(&module.constant_pool, &mut self.rng)
+                        .map(|x| instruction(ConstantPoolIndex::new(x)))
                 }
                 BytecodeType::StructIndex(instruction) => {
                     // Select a random struct definition and local signature
@@ -900,7 +884,7 @@ impl<'a> BytecodeGenerator<'a> {
         token: &SignatureToken,
     ) -> Vec<Bytecode> {
         match token {
-            SignatureToken::Address => vec![Bytecode::LdAddr(AddressPoolIndex(0))],
+            SignatureToken::Address => vec![Bytecode::LdConst(ConstantPoolIndex(0))],
             SignatureToken::U64 => vec![Bytecode::LdU64(0)],
             SignatureToken::U8 => vec![Bytecode::LdU8(0)],
             SignatureToken::U128 => vec![Bytecode::LdU128(0)],

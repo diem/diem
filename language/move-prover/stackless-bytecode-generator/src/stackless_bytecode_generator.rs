@@ -11,8 +11,10 @@ use crate::{
     },
 };
 use itertools::Itertools;
+use libra_types::account_address::AccountAddress;
+use move_vm_types::values::Value as VMValue;
 use spec_lang::{
-    env::{FunctionEnv, Loc, StructId},
+    env::{FunctionEnv, Loc, ModuleEnv, StructId},
     ty::{PrimitiveType, Type},
 };
 use std::{collections::BTreeMap, matches};
@@ -344,34 +346,20 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.temp_count += 1;
             }
 
-            MoveBytecode::LdAddr(address_pool_index) => {
+            MoveBytecode::LdConst(idx) => {
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
-                self.local_types
-                    .push(Type::Primitive(PrimitiveType::Address));
-                self.code.push(Bytecode::Load(
-                    attr_id,
-                    temp_index,
-                    Constant::Address(self.func_env.module_env.get_address(*address_pool_index)),
-                ));
-                self.temp_count += 1;
-            }
-
-            MoveBytecode::LdByteArray(byte_array_pool_index) => {
-                let temp_index = self.temp_count;
-                self.temp_stack.push(temp_index);
-                self.local_types
-                    .push(Type::Vector(Box::new(Type::Primitive(PrimitiveType::U8))));
-                self.code.push(Bytecode::Load(
-                    attr_id,
-                    temp_index,
-                    Constant::ByteArray(
-                        self.func_env
-                            .module_env
-                            .get_byte_blob(*byte_array_pool_index)
-                            .to_vec(),
-                    ),
-                ));
+                let constant = self.func_env.module_env.get_constant(*idx);
+                let ty = self
+                    .func_env
+                    .module_env
+                    .globalize_signature(&constant.type_);
+                let value = Self::translate_value(
+                    &ty,
+                    self.func_env.module_env.get_constant_value(constant),
+                );
+                self.local_types.push(ty);
+                self.code.push(Bytecode::Load(attr_id, temp_index, value));
                 self.temp_count += 1;
             }
 
@@ -1054,6 +1042,35 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 bytecode
             ),
             MoveBytecode::Nop => self.code.push(Bytecode::Nop(attr_id)),
+        }
+    }
+
+    fn translate_value(ty: &Type, value: VMValue) -> Constant {
+        match ty {
+            Type::Vector(inner) => {
+                let vs = value.value_as::<Vec<VMValue>>().unwrap();
+                let b = vs
+                    .into_iter()
+                    .map(|v| match Self::translate_value(inner, v) {
+                        Constant::U8(u) => u,
+                        _ => unimplemented!("Not yet supported constant vector type: {:?}", ty),
+                    })
+                    .collect::<Vec<u8>>();
+                Constant::ByteArray(b)
+            }
+            Type::Primitive(PrimitiveType::Bool) => {
+                Constant::Bool(value.value_as::<bool>().unwrap())
+            }
+            Type::Primitive(PrimitiveType::U8) => Constant::U8(value.value_as::<u8>().unwrap()),
+            Type::Primitive(PrimitiveType::U64) => Constant::U64(value.value_as::<u64>().unwrap()),
+            Type::Primitive(PrimitiveType::U128) => {
+                Constant::U128(value.value_as::<u128>().unwrap())
+            }
+            Type::Primitive(PrimitiveType::Address) => {
+                let a = value.value_as::<AccountAddress>().unwrap();
+                Constant::Address(ModuleEnv::addr_to_big_uint(&a))
+            }
+            _ => panic!("Unexpected (and possibly invalid) constant type: {:?}", ty),
         }
     }
 }

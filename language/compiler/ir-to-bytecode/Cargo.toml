@@ -16,6 +16,7 @@ libra-types = { path = "../../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 move-ir-types = { path = "../../move-ir/types", version = "0.1.0" }
+move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
 bytecode-source-map = { path = "../bytecode-source-map", version = "0.1.0" }
 log = "0.4.7"
