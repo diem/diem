@@ -66,6 +66,7 @@ pub struct RpcRequest {
     /// Request priority in the range 0..=255.
     pub priority: Priority,
     /// Request payload. This will be parsed by the application-level handler.
+    #[serde(with = "serde_bytes")]
     pub raw_request: Vec<u8>,
 }
 
@@ -77,6 +78,7 @@ pub struct RpcResponse {
     /// corresponding request.
     pub priority: Priority,
     /// Response payload.
+    #[serde(with = "serde_bytes")]
     pub raw_response: Vec<u8>,
 }
 
@@ -87,5 +89,6 @@ pub struct DirectSendMsg {
     /// Message priority in the range 0..=255.
     pub priority: Priority,
     /// Message payload.
+    #[serde(with = "serde_bytes")]
     pub raw_msg: Vec<u8>,
 }
