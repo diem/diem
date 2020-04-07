@@ -60,6 +60,15 @@ impl LibraVM {
         }
     }
 
+    pub fn init_with_config(gas_schedule: CostTable, on_chain_config: OnlineConfig) -> Self {
+        let inner = MoveVM::new();
+        Self {
+            move_vm: Arc::new(inner),
+            gas_schedule: Some(gas_schedule),
+            on_chain_config: Some(on_chain_config),
+        }
+    }
+
     /// Provides access to some internal APIs of the Libra VM.
     pub fn internals(&self) -> LibraVMInternals {
         LibraVMInternals(self)
@@ -111,14 +120,14 @@ impl LibraVM {
         Ok(table)
     }
 
-    fn get_gas_schedule(&self) -> VMResult<&CostTable> {
+    pub fn get_gas_schedule(&self) -> VMResult<&CostTable> {
         self.gas_schedule.as_ref().ok_or_else(|| {
             VMStatus::new(StatusCode::VM_STARTUP_FAILURE)
                 .with_sub_status(sub_status::VSF_GAS_SCHEDULE_NOT_FOUND)
         })
     }
 
-    fn get_libra_version(&self) -> VMResult<LibraVersion> {
+    pub fn get_libra_version(&self) -> VMResult<LibraVersion> {
         Ok(self.on_chain_config()?.version.clone())
     }
 
