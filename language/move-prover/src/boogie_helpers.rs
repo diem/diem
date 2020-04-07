@@ -179,10 +179,6 @@ pub fn boogie_well_formed_expr(
                 rtype,
                 mode,
             ));
-            conds.push(format!(
-                "$IsValidReferenceParameter($m, $local_counter, {})",
-                name
-            ));
         }
         // TODO: tuple and functions?
         Type::Fun(_args, _result) => {}

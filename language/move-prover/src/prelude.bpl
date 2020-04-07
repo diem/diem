@@ -132,7 +132,7 @@ function {:inline} $IsValidU128Vector(vec: Value): bool {
 }
 
 function {:inline} $IsValidNum(v: Value): bool {
-  is#Integer(v) && i#Integer(v) >= 0
+  is#Integer(v)
 }
 
 
@@ -367,34 +367,11 @@ function {:inline} $InRange(r: Value, i: int): bool {
 type {:datatype} Location;
 function {:constructor} Global(t: TypeValue, a: int): Location;
 function {:constructor} Local(i: int): Location;
+function {:constructor} Param(i: int): Location;
 
 type {:datatype} Reference;
 function {:constructor} Reference(l: Location, p: Path): Reference;
 const DefaultReference: Reference;
-
-function {:inline} $IsValidReferenceParameter(m: Memory, local_counter: int, r: Reference): bool {
-  // If the reference parameter is for a local, its index must be less than the current
-  // local counter. This prevents any aliasing with locals which we create later.
-  (is#Local(l#Reference(r)) ==> i#Local(l#Reference(r)) < local_counter)
-  &&
-  // The path must be in range of current stratification depth.
-  (size#Path(p#Reference(r)) >= 0 && size#Path(p#Reference(r)) < StratificationDepth)
-  &&
-  // Each internal node in the memory tree must be a vector and each index in the path must be in range.
-  (size#Path(p#Reference(r)) == 0 ||
-   (is#Vector(contents#Memory(m)[l#Reference(r)]) && p#Path(p#Reference(r))[0] >= 0 &&
-     p#Path(p#Reference(r))[0] < $vlen(contents#Memory(m)[l#Reference(r)])))
-  &&
-  (size#Path(p#Reference(r)) <= 1 ||
-    (is#Vector($ReadValue(Path(p#Path(p#Reference(r)), 1), contents#Memory(m)[l#Reference(r)]))
-     && p#Path(p#Reference(r))[1] >= 0 &&
-     p#Path(p#Reference(r))[1] < $vlen($ReadValue(Path(p#Path(p#Reference(r)), 1), contents#Memory(m)[l#Reference(r)]))))
-  &&
-  (size#Path(p#Reference(r)) <= 2 ||
-    (is#Vector($ReadValue(Path(p#Path(p#Reference(r)), 2), contents#Memory(m)[l#Reference(r)]))
-     && p#Path(p#Reference(r))[1] >= 0 &&
-     p#Path(p#Reference(r))[1] < $vlen($ReadValue(Path(p#Path(p#Reference(r)), 2), contents#Memory(m)[l#Reference(r)]))))
-}
 
 type {:datatype} Memory;
 function {:constructor} Memory(domain: [Location]bool, contents: [Location]Value): Memory;
@@ -841,7 +818,6 @@ procedure {:inline 1} $Vector_is_empty(ta: TypeValue, r: Reference) returns (b: 
     var v: Value;
     v := $Dereference($m, r);
     assume is#Vector(v);
-    assume $IsValidReferenceParameter($m, $local_counter, r);
     b := Boolean($vlen(v) == 0);
 }
 
@@ -849,7 +825,6 @@ procedure {:inline 1} $Vector_push_back(ta: TypeValue, r: Reference, val: Value)
     var v: Value;
     v := $Dereference($m, r);
     assume is#Vector(v);
-    assume $IsValidReferenceParameter($m, $local_counter, r);
     call WriteRef(r, $push_back_vector(v, val));
 }
 
@@ -858,7 +833,6 @@ procedure {:inline 1} $Vector_pop_back(ta: TypeValue, r: Reference) returns (e: 
     var len: int;
     v := $Dereference($m, r);
     assume is#Vector(v);
-    assume $IsValidReferenceParameter($m, $local_counter, r);
     len := $vlen(v);
     if (len == 0) {
         $abort_flag := true;
@@ -872,7 +846,6 @@ procedure {:inline 1} $Vector_append(ta: TypeValue, r: Reference, other: Value) 
     var v: Value;
     v := $Dereference($m, r);
     assume is#Vector(v);
-    assume $IsValidReferenceParameter($m, $local_counter, r);
     assume is#Vector(other);
     call WriteRef(r, $append_vector(v, other));
 }
@@ -881,7 +854,6 @@ procedure {:inline 1} $Vector_reverse(ta: TypeValue, r: Reference) {
     var v: Value;
     v := $Dereference($m, r);
     assume is#Vector(v);
-    assume $IsValidReferenceParameter($m, $local_counter, r);
     call WriteRef(r, $reverse_vector(v));
 }
 
@@ -889,7 +861,6 @@ procedure {:inline 1} $Vector_length(ta: TypeValue, r: Reference) returns (l: Va
     var v: Value;
     v := $Dereference($m, r);
     assume is#Vector(v);
-    assume $IsValidReferenceParameter($m, $local_counter, r);
     l := Integer($vlen(v));
 }
 
@@ -907,7 +878,6 @@ procedure {:inline 1} $Vector_borrow_mut(ta: TypeValue, src: Reference, index: V
     i_ind := i#Integer(index);
     v := $Dereference($m, src);
     assume is#Vector(v);
-    assume $IsValidReferenceParameter($m, $local_counter, src);
     if (i_ind < 0 || i_ind >= $vlen(v)) {
         $abort_flag := true;
         return;
@@ -935,7 +905,6 @@ procedure {:inline 1} $Vector_swap(ta: TypeValue, src: Reference, i: Value, j: V
     j_ind := i#Integer(j);
     v := $Dereference($m, src);
     assume is#Vector(v);
-    assume $IsValidReferenceParameter($m, $local_counter, src);
     if (i_ind >= $vlen(v) || j_ind >= $vlen(v) || i_ind < 0 || j_ind < 0) {
         $abort_flag := true;
         return;
@@ -952,7 +921,6 @@ procedure {:inline 1} $Vector_get(ta: TypeValue, src: Reference, i: Value) retur
     i_ind := i#Integer(i);
     v := $Dereference($m, src);
     assume is#Vector(v);
-    assume $IsValidReferenceParameter($m, $local_counter, src);
     if (i_ind < 0 || i_ind >= $vlen(v)) {
         $abort_flag := true;
         return;
@@ -968,7 +936,6 @@ procedure {:inline 1} $Vector_set(ta: TypeValue, src: Reference, i: Value, e: Va
     i_ind := i#Integer(i);
     v := $Dereference($m, src);
     assume is#Vector(v);
-    assume $IsValidReferenceParameter($m, $local_counter, src);
     if (i_ind < 0 || i_ind >= $vlen(v)) {
         $abort_flag := true;
         return;
@@ -987,7 +954,6 @@ procedure {:inline 1} $Vector_remove(ta: TypeValue, r: Reference, i: Value) retu
 
     v := $Dereference($m, r);
     assume is#Vector(v);
-    assume $IsValidReferenceParameter($m, $local_counter, r);
     len := $vlen(v);
     if (i_ind < 0 || i_ind >= len) {
         $abort_flag := true;
@@ -1007,7 +973,6 @@ procedure {:inline 1} $Vector_swap_remove(ta: TypeValue, r: Reference, i: Value)
 
     v := $Dereference($m, r);
     assume is#Vector(v);
-    assume $IsValidReferenceParameter($m, $local_counter, r);
     len := $vlen(v);
     if (i_ind < 0 || i_ind >= len) {
         $abort_flag := true;
@@ -1023,8 +988,6 @@ procedure {:inline 1} $Vector_contains(ta: TypeValue, vr: Reference, er: Referen
 
     v := $Dereference($m, vr);
     e := $Dereference($m, er);
-    assume $IsValidReferenceParameter($m, $local_counter, vr);
-    assume $IsValidReferenceParameter($m, $local_counter, er);
     assume is#Vector(v);
 
     res := Boolean($contains_vector(v, e));

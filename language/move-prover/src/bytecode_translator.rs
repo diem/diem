@@ -450,9 +450,30 @@ impl<'env> ModuleTranslator<'env> {
             .set_location(&self.module_env.env.internal_loc());
         emitln!(self.writer, "{");
         self.writer.indent();
+
+        // Generate assumes for top-level verification entry
+        // (a) init prelude specific stuff.
         emitln!(self.writer, "call $InitVerification();");
+
+        // (b) assume implicit preconditions.
         let spec_translator = SpecTranslator::new(self.writer, &func_env.module_env, false);
         spec_translator.assume_preconditions(func_env);
+
+        // (c) assume reference parameters to be based on the Param(i) Location, ensuring
+        // they are disjoint from all other references. This prevents aliasing and is justified as
+        // follows:
+        // - for mutual references, by their exclusive access in Move.
+        // - for immutable references, by that mutation is not possible, and they are equivalent
+        //   to some given but arbitrary value.
+        for (i, Parameter(name, ty)) in func_env.get_parameters().iter().enumerate() {
+            if ty.is_reference() {
+                let name = func_env.symbol_pool().string(*name);
+                emitln!(self.writer, "assume l#Reference({}) == Param({});", name, i);
+                emitln!(self.writer, "assume size#Path(p#Reference({})) == 0;", name);
+            }
+        }
+
+        // Generate call to inlined function.
         let args = func_env
             .get_type_parameters()
             .iter()
