@@ -78,6 +78,15 @@ pub trait OnChainConfig: Send + Sync + DeserializeOwned {
     fn deserialize_into_config(bytes: &[u8]) -> Result<Self> {
         Self::deserialize_default_impl(bytes)
     }
+
+    fn fetch_config<T>(storage: T) -> Option<Self>
+    where
+        T: ConfigStorage,
+    {
+        storage
+            .fetch_config(Self::CONFIG_ID.access_path())
+            .and_then(|bytes| Self::deserialize_into_config(&bytes).ok())
+    }
 }
 
 pub fn access_path_for_config(config_name: Identifier) -> AccessPath {
