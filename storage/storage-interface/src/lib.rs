@@ -8,7 +8,7 @@ use libra_types::{
     contract_event::ContractEvent,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
-    proof::AccumulatorConsistencyProof,
+    proof::{AccumulatorConsistencyProof, SparseMerkleProof},
     transaction::{TransactionListWithProof, TransactionWithProof, Version},
     validator_change::ValidatorChangeProof,
 };
@@ -92,4 +92,14 @@ pub trait DbReader: Send + Sync {
         version: Version,
         ledger_version: Version,
     ) -> Result<AccountStateWithProof>;
+
+    /// Gets an account state by account address, out of the ledger state indicated by the state
+    /// Merkle tree root hash.
+    ///
+    /// This is used by libra core (executor) internally.
+    fn get_account_state_with_proof_by_version(
+        &self,
+        address: AccountAddress,
+        version: Version,
+    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)>;
 }

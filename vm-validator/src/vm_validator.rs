@@ -11,7 +11,7 @@ use libra_types::{
 use libra_vm::{LibraVM, VMVerifier};
 use scratchpad::SparseMerkleTree;
 use std::{convert::TryFrom, sync::Arc};
-use storage_client::{StorageRead, VerifiedStateView};
+use storage_client::{StorageRead, StorageReaderWithRuntimeHandle, VerifiedStateView};
 use tokio::runtime::Handle;
 
 #[cfg(test)]
@@ -42,8 +42,10 @@ impl VMValidator {
                 .expect("Failed to get the latest state");
         let smt = SparseMerkleTree::new(state_root);
         let state_view = VerifiedStateView::new(
-            storage_read_client.clone(),
-            rt_handle.clone(),
+            Arc::new(StorageReaderWithRuntimeHandle::new(
+                storage_read_client.clone(),
+                rt_handle.clone(),
+            )),
             Some(version),
             state_root,
             &smt,
@@ -81,8 +83,12 @@ impl TransactionValidation for VMValidator {
         // starve other async tasks.
         tokio::task::spawn_blocking(move || {
             let smt = SparseMerkleTree::new(state_root);
-            let state_view =
-                VerifiedStateView::new(client, rt_handle, Some(version), state_root, &smt);
+            let state_view = VerifiedStateView::new(
+                Arc::new(StorageReaderWithRuntimeHandle::new(client, rt_handle)),
+                Some(version),
+                state_root,
+                &smt,
+            );
 
             vm.validate_transaction(txn, &state_view)
         })

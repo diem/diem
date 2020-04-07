@@ -47,7 +47,9 @@ use std::{
     marker::PhantomData,
     sync::Arc,
 };
-use storage_client::{StorageRead, StorageWrite, VerifiedStateView};
+use storage_client::{
+    StorageRead, StorageReaderWithRuntimeHandle, StorageWrite, VerifiedStateView,
+};
 use tokio::runtime::Runtime;
 
 static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
@@ -142,8 +144,10 @@ where
         let _timer = OP_COUNTERS.timer("block_execute_time_s");
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
-            Arc::clone(&self.storage_read_client),
-            self.rt.handle().clone(),
+            Arc::new(StorageReaderWithRuntimeHandle::new(
+                Arc::clone(&self.storage_read_client),
+                self.rt.handle().clone(),
+            )),
             self.cache.committed_trees().version(),
             self.cache.committed_trees().state_root(),
             parent_block_executed_trees.state_tree(),
@@ -400,8 +404,10 @@ where
 
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
-            Arc::clone(&self.storage_read_client),
-            self.rt.handle().clone(),
+            Arc::new(StorageReaderWithRuntimeHandle::new(
+                Arc::clone(&self.storage_read_client),
+                self.rt.handle().clone(),
+            )),
             self.cache.synced_trees().version(),
             self.cache.synced_trees().state_root(),
             self.cache.synced_trees().state_tree(),
