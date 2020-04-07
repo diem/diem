@@ -11,8 +11,7 @@
 //! intersecting messaging protocol version and use that for the remainder of the session.
 
 use serde::{Deserialize, Serialize};
-use serde_repr::{Deserialize_repr, Serialize_repr};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 #[cfg(test)]
 mod test;
@@ -21,14 +20,13 @@ mod test;
 /// bit-vector specifying application-level protocols supported over that version.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct HandshakeMsg {
-    pub supported_protocols: HashMap<MessagingProtocolVersion, bitvec::BitVec>,
+    pub supported_protocols: BTreeMap<MessagingProtocolVersion, bitvec::BitVec>,
 }
 
 /// Enum representing different versions of the Libra network protocol. These should be listed from
 /// old to new, old having the smallest value.
 /// We derive `PartialOrd` since nodes need to find highest intersecting protocol version.
-#[repr(u8)]
-#[derive(Eq, PartialEq, PartialOrd, Clone, Debug, Hash, Deserialize_repr, Serialize_repr)]
+#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Debug, Hash, Deserialize, Serialize)]
 pub enum MessagingProtocolVersion {
     V1 = 0,
 }
