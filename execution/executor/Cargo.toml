@@ -32,6 +32,7 @@ libra-types = { path = "../../types", version = "0.1.0" }
 scratchpad = { path = "../../storage/scratchpad", version = "0.1.0" }
 serde_json = "1.0"
 storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
+storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
 storage-proto = { path = "../../storage/storage-proto", version = "0.1.0" }
 libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
 
