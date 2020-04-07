@@ -602,15 +602,12 @@ async fn process_config_update<V>(config_update: OnChainConfigPayload, validator
 where
     V: TransactionValidation,
 {
-    if config_update.get::<VMPublishingOption>().is_ok() {
-        // restart VM validator
-        validator
-            .write()
-            .await
-            .restart()
-            .await
-            .expect("failed to restart VM validator");
-    }
+    // restart VM validator
+    validator
+        .write()
+        .await
+        .restart(config_update)
+        .expect("failed to restart VM validator");
 }
 
 /// This task handles inbound network events.

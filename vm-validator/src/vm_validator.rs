@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
     account_config::AccountResource,
-    transaction::{SignedTransaction, VMValidatorResult, Version},
+    on_chain_config::{OnChainConfigPayload, VMPublishingOption},
+    transaction::{SignedTransaction, VMValidatorResult},
 };
-use libra_vm::{LibraVM, VMVerifier};
+use libra_vm::{on_chain_configs::VMConfig, LibraVM, VMVerifier};
 use scratchpad::SparseMerkleTree;
 use std::{convert::TryFrom, sync::Arc};
 use storage_client::{StorageRead, VerifiedStateView};
@@ -26,7 +26,7 @@ pub trait TransactionValidation: Send + Sync + Clone {
     async fn validate_transaction(&self, _txn: SignedTransaction) -> Result<VMValidatorResult>;
 
     /// Restart the transaction validation instance
-    async fn restart(&mut self) -> Result<()>;
+    fn restart(&mut self, config: OnChainConfigPayload) -> Result<()>;
 }
 
 #[derive(Clone)]
@@ -78,17 +78,16 @@ impl TransactionValidation for VMValidator {
         .map_err(Into::into)
     }
 
-    async fn restart(&mut self) -> Result<()> {
-        let db_reader = self.db_reader.clone();
-        let (version, state_root) = self.db_reader.get_latest_state_root()?;
+    fn restart(&mut self, config: OnChainConfigPayload) -> Result<()> {
+        let gas_schedule = self.vm.get_gas_schedule()?;
+        let publishing_options = config.get::<VMPublishingOption>()?;
+        let version = self.vm.get_libra_version()?;
+        let vm_config = VMConfig {
+            publishing_options,
+            version,
+        };
 
-        // We need to run vm.load_configs() in the runtime provided by spawn_blocking to make it
-        // compatible with the runtime blocking logic for the tokio storage read client in the
-        // lower-level implementation of load_configs().
-        // Otherwise, load_configs() will block forever.
-        let new_vm =
-            tokio::task::spawn_blocking(move || new_vm(version, state_root, db_reader)).await?;
-        self.vm = new_vm;
+        self.vm = LibraVM::init_with_config(gas_schedule.clone(), vm_config);
         Ok(())
     }
 }
@@ -105,14 +104,4 @@ pub async fn get_account_sequence_number(
         Some(blob) => Ok(AccountResource::try_from(&blob)?.sequence_number()),
         None => Ok(0),
     }
-}
-
-pub fn new_vm(version: Version, state_root: HashValue, db_reader: Arc<dyn DbReader>) -> LibraVM {
-    let smt = SparseMerkleTree::new(state_root);
-    let state_view =
-        VerifiedStateView::new(Arc::clone(&db_reader), Some(version), state_root, &smt);
-
-    let mut vm = LibraVM::new();
-    vm.load_configs(&state_view);
-    vm
 }
