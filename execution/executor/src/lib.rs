@@ -47,9 +47,8 @@ use std::{
     marker::PhantomData,
     sync::Arc,
 };
-use storage_client::{
-    StorageRead, StorageReaderWithRuntimeHandle, StorageWrite, VerifiedStateView,
-};
+use storage_client::{StorageWrite, VerifiedStateView};
+use storage_interface::DbReader;
 use tokio::runtime::Runtime;
 
 static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
@@ -59,7 +58,7 @@ static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
 pub struct Executor<V> {
     rt: Runtime,
     /// Client to storage service.
-    storage_read_client: Arc<dyn StorageRead>,
+    db_reader: Arc<dyn DbReader>,
     storage_write_client: Arc<dyn StorageWrite>,
     cache: SpeculationCache,
     phantom: PhantomData<V>,
@@ -73,30 +72,29 @@ where
         self.cache.committed_block_id()
     }
 
-    /// Constructs an `Executor`.
-    pub fn new(
-        storage_read_client: Arc<dyn StorageRead>,
-        storage_write_client: Arc<dyn StorageWrite>,
-    ) -> Self {
-        let rt = tokio::runtime::Builder::new()
+    pub fn create_runtime() -> Runtime {
+        tokio::runtime::Builder::new()
             .threaded_scheduler()
             .enable_all()
             .thread_name("tokio-executor")
             .build()
-            .unwrap();
-        let read_client_clone = Arc::clone(&storage_read_client);
-        let startup_info = block_on(rt.spawn(async move {
-            read_client_clone
-                .get_startup_info()
-                .await
-                .expect("Shouldn't fail")
-        }))
-        .unwrap()
-        .expect("DB not bootstrapped.");
+            .unwrap()
+    }
+
+    /// Constructs an `Executor`.
+    pub fn new(
+        rt: Runtime,
+        db_reader: Arc<dyn DbReader>,
+        storage_write_client: Arc<dyn StorageWrite>,
+    ) -> Self {
+        let startup_info = db_reader
+            .get_startup_info()
+            .expect("Shouldn't fail")
+            .expect("DB not bootstrapped.");
 
         Self {
             rt,
-            storage_read_client,
+            db_reader,
             storage_write_client,
             cache: SpeculationCache::new_with_startup_info(startup_info),
             phantom: PhantomData,
@@ -104,18 +102,13 @@ where
     }
 
     fn new_on_unbootstrapped_db(
-        storage_read_client: Arc<dyn StorageRead>,
+        rt: Runtime,
+        db_reader: Arc<dyn DbReader>,
         storage_write_client: Arc<dyn StorageWrite>,
     ) -> Self {
-        let rt = tokio::runtime::Builder::new()
-            .threaded_scheduler()
-            .enable_all()
-            .thread_name("tokio-executor")
-            .build()
-            .unwrap();
         Self {
             rt,
-            storage_read_client,
+            db_reader,
             storage_write_client,
             cache: SpeculationCache::new(),
             phantom: PhantomData,
@@ -144,10 +137,7 @@ where
         let _timer = OP_COUNTERS.timer("block_execute_time_s");
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
-            Arc::new(StorageReaderWithRuntimeHandle::new(
-                Arc::clone(&self.storage_read_client),
-                self.rt.handle().clone(),
-            )),
+            Arc::clone(&self.db_reader),
             self.cache.committed_trees().version(),
             self.cache.committed_trees().state_root(),
             parent_block_executed_trees.state_tree(),
@@ -404,10 +394,7 @@ where
 
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
-            Arc::new(StorageReaderWithRuntimeHandle::new(
-                Arc::clone(&self.storage_read_client),
-                self.rt.handle().clone(),
-            )),
+            Arc::clone(&self.db_reader),
             self.cache.synced_trees().version(),
             self.cache.synced_trees().state_root(),
             self.cache.synced_trees().state_tree(),

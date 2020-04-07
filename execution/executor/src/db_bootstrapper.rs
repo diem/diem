@@ -5,36 +5,26 @@
 
 use crate::Executor;
 use anyhow::Result;
-use futures::executor::block_on;
 use libra_config::config::NodeConfig;
 use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
 use libra_logger::prelude::*;
 use libra_types::ledger_info::LedgerInfoWithSignatures;
 use libra_vm::VMExecutor;
 use std::sync::Arc;
-use storage_client::{StorageRead, StorageReadServiceClient, StorageWriteServiceClient};
-use storage_proto::StartupInfo;
-
-fn get_startup_info(storage_read_client: Arc<dyn StorageRead>) -> Result<Option<StartupInfo>> {
-    // TODO(aldenhu): remove once we switch to blocking Storage interface.
-    let rt = tokio::runtime::Builder::new()
-        .threaded_scheduler()
-        .enable_all()
-        .thread_name("tokio-executor")
-        .build()
-        .unwrap();
-    Ok(block_on(rt.spawn(async move {
-        storage_read_client
-            .get_startup_info()
-            .await
-            .expect("Shouldn't fail")
-    }))?)
-}
+use storage_client::{
+    StorageReadServiceClient, StorageReaderWithRuntimeHandle, StorageWriteServiceClient,
+};
+use storage_interface::DbReader;
 
 pub fn maybe_bootstrap_db<V: VMExecutor>(config: &NodeConfig) -> Result<()> {
+    let rt = Executor::<V>::create_runtime();
     let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
+    let db_reader = Arc::new(StorageReaderWithRuntimeHandle::new(
+        storage_read_client,
+        rt.handle().clone(),
+    ));
 
-    let startup_info_opt = get_startup_info(storage_read_client.clone())?;
+    let startup_info_opt = db_reader.get_startup_info()?;
     if startup_info_opt.is_some() {
         return Ok(());
     }
@@ -46,8 +36,7 @@ pub fn maybe_bootstrap_db<V: VMExecutor>(config: &NodeConfig) -> Result<()> {
         .expect("failed to load genesis transaction!")
         .clone();
     let storage_write_client = Arc::new(StorageWriteServiceClient::new(&config.storage.address));
-    let mut executor =
-        Executor::<V>::new_on_unbootstrapped_db(storage_read_client, storage_write_client);
+    let mut executor = Executor::<V>::new_on_unbootstrapped_db(rt, db_reader, storage_write_client);
 
     // Create a block with genesis_txn being the only transaction. Execute it then commit it
     // immediately.

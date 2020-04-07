@@ -559,7 +559,11 @@ impl DbReader for StorageReaderWithRuntimeHandle {
     }
 
     fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
-        unimplemented!()
+        let reader = Arc::clone(&self.reader);
+        block_on(
+            self.rt_handle
+                .spawn(async move { reader.get_startup_info().await }),
+        )?
     }
 
     fn get_txn_by_account(
