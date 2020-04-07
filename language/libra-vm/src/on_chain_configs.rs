@@ -7,7 +7,7 @@ use libra_types::on_chain_config::{
 use move_vm_state::data_cache::RemoteCache;
 
 #[derive(Debug, Clone)]
-pub(crate) struct VMConfig {
+pub struct VMConfig {
     pub publishing_options: VMPublishingOption,
     pub version: LibraVersion,
 }
