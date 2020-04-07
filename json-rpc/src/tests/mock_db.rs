@@ -222,8 +222,8 @@ impl DbReader for MockLibraDB {
 
     fn get_account_state_with_proof_by_version(
         &self,
-        address: AccountAddress,
-        version: u64,
+        _address: AccountAddress,
+        _version: u64,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
         unimplemented!()
     }
