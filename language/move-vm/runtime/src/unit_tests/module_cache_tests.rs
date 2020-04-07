@@ -78,7 +78,7 @@ fn test_module(name: &'static str) -> VerifiedModule {
     let compiled_module = CompiledModuleMut {
         module_handles: vec![ModuleHandle {
             name: IdentifierIndex(0),
-            address: AddressPoolIndex(0),
+            address: AddressIdentifierIndex(0),
         }],
         struct_handles: vec![],
         signatures: vec![Signature(vec![]), Signature(vec![SignatureToken::U64])],
@@ -127,8 +127,8 @@ fn test_module(name: &'static str) -> VerifiedModule {
             },
         ],
         identifiers: idents(vec![name, "func1", "func2"]),
-        byte_array_pool: vec![],
-        address_pool: vec![AccountAddress::default()],
+        address_identifiers: vec![AccountAddress::default()],
+        constant_pool: vec![],
     }
     .freeze()
     .expect("test module should satisfy bounds checker");
@@ -149,11 +149,11 @@ fn test_script() -> VerifiedScript {
         },
         module_handles: vec![
             ModuleHandle {
-                address: AddressPoolIndex(0),
+                address: AddressIdentifierIndex(0),
                 name: IdentifierIndex(0),
             },
             ModuleHandle {
-                address: AddressPoolIndex(0),
+                address: AddressIdentifierIndex(0),
                 name: IdentifierIndex(1),
             },
         ],
@@ -184,8 +184,8 @@ fn test_script() -> VerifiedScript {
         ],
         function_instantiations: vec![],
         identifiers: idents(vec!["hello", "module", "func1", "func2", "main"]),
-        byte_array_pool: vec![],
-        address_pool: vec![AccountAddress::default()],
+        address_identifiers: vec![AccountAddress::default()],
+        constant_pool: vec![],
     }
     .freeze()
     .expect("test script should satisfy bounds checker");
@@ -373,17 +373,17 @@ fn test_multi_level_cache_write_back() {
         module_handles: vec![
             // Self
             ModuleHandle {
-                address: AddressPoolIndex(0),
+                address: AddressIdentifierIndex(0),
                 name: IdentifierIndex(0),
             },
             // To-be-published Module
             ModuleHandle {
-                address: AddressPoolIndex(0),
+                address: AddressIdentifierIndex(0),
                 name: IdentifierIndex(1),
             },
             // Existing module on chain
             ModuleHandle {
-                address: AddressPoolIndex(0),
+                address: AddressIdentifierIndex(0),
                 name: IdentifierIndex(2),
             },
         ],
@@ -424,8 +424,8 @@ fn test_multi_level_cache_write_back() {
             "func2",
             "main",
         ]),
-        byte_array_pool: vec![],
-        address_pool: vec![AccountAddress::default()],
+        address_identifiers: vec![AccountAddress::default()],
+        constant_pool: vec![],
     }
     .freeze()
     .expect("test script should satisfy bounds checker");

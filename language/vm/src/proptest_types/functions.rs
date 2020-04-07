@@ -3,10 +3,10 @@
 
 use crate::{
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CodeUnit, FieldHandle,
-        FieldHandleIndex, FieldInstantiation, FunctionDefinition, FunctionHandle,
-        FunctionHandleIndex, FunctionInstantiation, IdentifierIndex, LocalIndex, ModuleHandleIndex,
-        Signature, SignatureIndex, StructDefInstantiation, StructDefinitionIndex, TableIndex,
+        Bytecode, CodeOffset, CodeUnit, FieldHandle, FieldHandleIndex, FieldInstantiation,
+        FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionInstantiation,
+        IdentifierIndex, LocalIndex, ModuleHandleIndex, Signature, SignatureIndex,
+        StructDefInstantiation, StructDefinitionIndex, TableIndex,
     },
     proptest_types::{
         signature::{SignatureGen, SignatureTokenGen},
@@ -213,9 +213,8 @@ impl FunctionHandleGen {
 /// Represents state required to materialize final data structures for function definitions.
 #[derive(Debug)]
 pub struct FnDefnMaterializeState {
-    address_pool_len: usize,
     identifiers_len: usize,
-    byte_array_pool_len: usize,
+    constant_pool_len: usize,
     struct_handles_len: usize,
     struct_defs_len: usize,
     signatures: SignatureState,
@@ -230,9 +229,8 @@ pub struct FnDefnMaterializeState {
 
 impl FnDefnMaterializeState {
     pub fn new(
-        address_pool_len: usize,
         identifiers_len: usize,
-        byte_array_pool_len: usize,
+        constant_pool_len: usize,
         struct_handles_len: usize,
         struct_defs_len: usize,
         signatures: Vec<Signature>,
@@ -240,9 +238,8 @@ impl FnDefnMaterializeState {
         struct_def_to_field_count: HashMap<usize, usize>,
     ) -> Self {
         Self {
-            address_pool_len,
             identifiers_len,
-            byte_array_pool_len,
+            constant_pool_len,
             struct_handles_len,
             struct_defs_len,
             signatures: SignatureState::new(signatures),
@@ -423,8 +420,7 @@ enum BytecodeGen {
     // "Simple" means this doesn't refer to any other indexes.
     Simple(Bytecode),
     // All of these refer to other indexes.
-    LdAddr(PropIndex),
-    LdByteArray(PropIndex),
+    LdConst(PropIndex),
 
     MutBorrowField((PropIndex, PropIndex)),
     MutBorrowFieldGeneric((PropIndex, PropIndex)),
@@ -466,8 +462,7 @@ impl BytecodeGen {
 
         prop_oneof![
             Self::simple_bytecode_strategy().prop_map(Simple),
-            any::<PropIndex>().prop_map(LdAddr),
-            any::<PropIndex>().prop_map(LdByteArray),
+            any::<PropIndex>().prop_map(LdConst),
             (any::<PropIndex>(), any::<PropIndex>()).prop_map(ImmBorrowField),
             (any::<PropIndex>(), any::<PropIndex>()).prop_map(ImmBorrowFieldGeneric),
             (any::<PropIndex>(), any::<PropIndex>()).prop_map(MutBorrowField),
@@ -507,12 +502,10 @@ impl BytecodeGen {
     ) -> Option<Bytecode> {
         let bytecode = match self {
             BytecodeGen::Simple(bytecode) => bytecode,
-            BytecodeGen::LdAddr(idx) => Bytecode::LdAddr(AddressPoolIndex(
-                idx.index(state.address_pool_len) as TableIndex,
-            )),
-            BytecodeGen::LdByteArray(idx) => Bytecode::LdByteArray(ByteArrayPoolIndex(
-                idx.index(state.byte_array_pool_len) as TableIndex,
-            )),
+            BytecodeGen::LdConst(_idx) => {
+                // TODO constant generation
+                return None;
+            }
             BytecodeGen::MutBorrowField((def, field)) => {
                 let def_idx = def.index(state.struct_defs_len);
                 let field_count = state.struct_def_to_field_count.get(&def_idx)?;

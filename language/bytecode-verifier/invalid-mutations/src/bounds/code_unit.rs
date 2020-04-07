@@ -8,9 +8,9 @@ use std::collections::BTreeMap;
 use vm::{
     errors::{append_err_info, bytecode_offset_err},
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CompiledModuleMut,
-        FieldHandleIndex, FieldInstantiationIndex, FunctionHandleIndex, FunctionInstantiationIndex,
-        LocalIndex, StructDefInstantiationIndex, StructDefinitionIndex, TableIndex,
+        Bytecode, CodeOffset, CompiledModuleMut, ConstantPoolIndex, FieldHandleIndex,
+        FieldInstantiationIndex, FunctionHandleIndex, FunctionInstantiationIndex, LocalIndex,
+        StructDefInstantiationIndex, StructDefinitionIndex, TableIndex,
     },
     internals::ModuleIndex,
     IndexKind,
@@ -166,8 +166,7 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
         let to_mutate = pick_slice_idxs(interesting_offsets.len(), &mutations);
 
         // These have to be computed upfront because self.module is being mutated below.
-        let address_pool_len = self.module.address_pool.len();
-        let byte_array_pool_len = self.module.byte_array_pool.len();
+        let constant_pool_len = self.module.constant_pool.len();
         let function_handles_len = self.module.function_handles.len();
         let field_handle_len = self.module.field_handles.len();
         let struct_defs_len = self.module.struct_defs.len();
@@ -184,19 +183,12 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                 use Bytecode::*;
 
                 let (new_bytecode, err) = match code[bytecode_idx] {
-                    LdAddr(_) => new_bytecode!(
-                        address_pool_len,
+                    LdConst(_) => new_bytecode!(
+                        constant_pool_len,
                         bytecode_idx,
                         offset,
-                        AddressPoolIndex,
-                        LdAddr
-                    ),
-                    LdByteArray(_) => new_bytecode!(
-                        byte_array_pool_len,
-                        bytecode_idx,
-                        offset,
-                        ByteArrayPoolIndex,
-                        LdByteArray
+                        ConstantPoolIndex,
+                        LdConst
                     ),
                     ImmBorrowField(_) => new_bytecode!(
                         field_handle_len,
@@ -375,8 +367,7 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
     use Bytecode::*;
 
     match bytecode {
-        LdAddr(_)
-        | LdByteArray(_)
+        LdConst(_)
         | ImmBorrowField(_)
         | ImmBorrowFieldGeneric(_)
         | MutBorrowField(_)

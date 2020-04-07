@@ -114,7 +114,8 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
                 state_stack_push!(AbstractValue::new_primitive(SignatureToken::U128)),
             ]),
         },
-        Bytecode::LdAddr(_) => Summary {
+        // TODO actual constant generation
+        Bytecode::LdConst(_) => Summary {
             preconditions: vec![],
             effects: Effects::NoTyParams(vec![state_stack_push!(AbstractValue::new_primitive(
                 SignatureToken::Address
@@ -130,12 +131,6 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
             preconditions: vec![],
             effects: Effects::NoTyParams(vec![state_stack_push!(AbstractValue::new_primitive(
                 SignatureToken::Bool
-            ))]),
-        },
-        Bytecode::LdByteArray(_) => Summary {
-            preconditions: vec![],
-            effects: Effects::NoTyParams(vec![state_stack_push!(AbstractValue::new_primitive(
-                SignatureToken::Vector(Box::new(SignatureToken::U8))
             ))]),
         },
         Bytecode::CopyLoc(i) => Summary {

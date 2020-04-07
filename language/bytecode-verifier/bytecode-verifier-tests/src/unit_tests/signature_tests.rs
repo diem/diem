@@ -62,7 +62,7 @@ proptest! {
 fn no_verify_locals_good() {
     let compiled_module_good = CompiledModuleMut {
         module_handles: vec![ModuleHandle {
-            address: AddressPoolIndex(0),
+            address: AddressIdentifierIndex(0),
             name: IdentifierIndex(0),
         }],
         struct_handles: vec![],
@@ -96,8 +96,8 @@ fn no_verify_locals_good() {
             Identifier::new("blah").unwrap(),
             Identifier::new("foo").unwrap(),
         ],
-        byte_array_pool: vec![],
-        address_pool: vec![AccountAddress::new([0; AccountAddress::LENGTH])],
+        address_identifiers: vec![AccountAddress::new([0; AccountAddress::LENGTH])],
+        constant_pool: vec![],
         struct_defs: vec![],
         function_defs: vec![
             FunctionDefinition {
@@ -133,7 +133,7 @@ fn no_verify_locals_bad1() {
     // from the local type at position 0.
     let compiled_module_bad1 = CompiledModuleMut {
         module_handles: vec![ModuleHandle {
-            address: AddressPoolIndex(0),
+            address: AddressIdentifierIndex(0),
             name: IdentifierIndex(0),
         }],
         struct_handles: vec![],
@@ -167,8 +167,8 @@ fn no_verify_locals_bad1() {
             Identifier::new("Bad").unwrap(),
             Identifier::new("blah").unwrap(),
         ],
-        byte_array_pool: vec![],
-        address_pool: vec![AccountAddress::new([0; AccountAddress::LENGTH])],
+        address_identifiers: vec![AccountAddress::new([0; AccountAddress::LENGTH])],
+        constant_pool: vec![],
         struct_defs: vec![],
     };
     assert!(VerifiedModule::new(compiled_module_bad1.freeze().unwrap()).is_err());
@@ -181,7 +181,7 @@ fn no_verify_locals_bad2() {
     // number of arguments is greater than the number of locals.
     let compiled_module_bad2 = CompiledModuleMut {
         module_handles: vec![ModuleHandle {
-            address: AddressPoolIndex(0),
+            address: AddressIdentifierIndex(0),
             name: IdentifierIndex(0),
         }],
         struct_handles: vec![],
@@ -211,8 +211,8 @@ fn no_verify_locals_bad2() {
             Identifier::new("Bad").unwrap(),
             Identifier::new("blah").unwrap(),
         ],
-        byte_array_pool: vec![],
-        address_pool: vec![AccountAddress::new([0; AccountAddress::LENGTH])],
+        address_identifiers: vec![AccountAddress::new([0; AccountAddress::LENGTH])],
+        constant_pool: vec![],
         struct_defs: vec![],
     };
     assert!(VerifiedModule::new(compiled_module_bad2.freeze().unwrap()).is_err());
@@ -226,7 +226,7 @@ fn no_verify_locals_bad3() {
     // from the local type at position 0.
     let compiled_module_bad1 = CompiledModuleMut {
         module_handles: vec![ModuleHandle {
-            address: AddressPoolIndex(0),
+            address: AddressIdentifierIndex(0),
             name: IdentifierIndex(0),
         }],
         struct_handles: vec![],
@@ -250,8 +250,8 @@ fn no_verify_locals_bad3() {
             Identifier::new("Bad").unwrap(),
             Identifier::new("blah").unwrap(),
         ],
-        byte_array_pool: vec![],
-        address_pool: vec![AccountAddress::new([0; AccountAddress::LENGTH])],
+        address_identifiers: vec![AccountAddress::new([0; AccountAddress::LENGTH])],
+        constant_pool: vec![],
         struct_defs: vec![],
         function_defs: vec![FunctionDefinition {
             function: FunctionHandleIndex(0),
@@ -275,7 +275,7 @@ fn no_verify_locals_bad4() {
     // from the local type at position 0.
     let compiled_module_bad1 = CompiledModuleMut {
         module_handles: vec![ModuleHandle {
-            address: AddressPoolIndex(0),
+            address: AddressIdentifierIndex(0),
             name: IdentifierIndex(0),
         }],
         struct_handles: vec![],
@@ -299,8 +299,8 @@ fn no_verify_locals_bad4() {
             Identifier::new("Bad").unwrap(),
             Identifier::new("blah").unwrap(),
         ],
-        byte_array_pool: vec![],
-        address_pool: vec![AccountAddress::new([0; AccountAddress::LENGTH])],
+        constant_pool: vec![],
+        address_identifiers: vec![AccountAddress::new([0; AccountAddress::LENGTH])],
         struct_defs: vec![],
         function_defs: vec![FunctionDefinition {
             function: FunctionHandleIndex(0),

@@ -193,15 +193,13 @@ proptest! {
     #[test]
     fn no_module_handles(
         identifiers in vec(any::<Identifier>(), 0..20),
-        address_pool in vec(any::<AccountAddress>(), 0..20),
-        byte_array_pool in vec(vec(any::<u8>(), 0..10), 0..20),
+        address_identifiers in vec(any::<AccountAddress>(), 0..20),
     ) {
         // If there are no module handles, the only other things that can be stored are intrinsic
         // data.
         let mut module = CompiledModuleMut::default();
         module.identifiers = identifiers;
-        module.address_pool = address_pool;
-        module.byte_array_pool = byte_array_pool;
+        module.address_identifiers = address_identifiers;
 
         let bounds_checker = BoundsChecker::new(&module);
         let actual_violations: Vec<StatusCode> = bounds_checker.verify().into_iter().map(|status| status.major_status).collect();

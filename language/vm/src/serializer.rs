@@ -80,8 +80,8 @@ struct CommonSerializer {
     function_instantiations: (u32, u32),
     signatures: (u32, u32),
     identifiers: (u32, u32),
-    address_pool: (u32, u32),
-    byte_array_pool: (u32, u32),
+    address_identifiers: (u32, u32),
+    constant_pool: (u32, u32),
 }
 
 /// Holds data to compute the header of a module binary.
@@ -164,8 +164,8 @@ trait CommonTables {
     fn get_function_handles(&self) -> &[FunctionHandle];
     fn get_function_instantiations(&self) -> &[FunctionInstantiation];
     fn get_identifiers(&self) -> &[Identifier];
-    fn get_address_pool(&self) -> &[AccountAddress];
-    fn get_byte_array_pool(&self) -> &[Vec<u8>];
+    fn get_address_identifiers(&self) -> &[AccountAddress];
+    fn get_constant_pool(&self) -> &[Constant];
     fn get_signatures(&self) -> &[Signature];
 }
 
@@ -190,12 +190,12 @@ impl CommonTables for CompiledScriptMut {
         &self.identifiers
     }
 
-    fn get_address_pool(&self) -> &[AccountAddress] {
-        &self.address_pool
+    fn get_address_identifiers(&self) -> &[AccountAddress] {
+        &self.address_identifiers
     }
 
-    fn get_byte_array_pool(&self) -> &[Vec<u8>] {
-        &self.byte_array_pool
+    fn get_constant_pool(&self) -> &[Constant] {
+        &self.constant_pool
     }
 
     fn get_signatures(&self) -> &[Signature] {
@@ -224,12 +224,12 @@ impl CommonTables for CompiledModuleMut {
         &self.identifiers
     }
 
-    fn get_address_pool(&self) -> &[AccountAddress] {
-        &self.address_pool
+    fn get_address_identifiers(&self) -> &[AccountAddress] {
+        &self.address_identifiers
     }
 
-    fn get_byte_array_pool(&self) -> &[Vec<u8>] {
-        &self.byte_array_pool
+    fn get_constant_pool(&self) -> &[Constant] {
+        &self.constant_pool
     }
 
     fn get_signatures(&self) -> &[Signature] {
@@ -306,27 +306,6 @@ fn serialize_string(binary: &mut BinaryData, string: &str) -> Result<()> {
     Ok(())
 }
 
-/// Serializes a `ByteArray`.
-///
-/// A `ByteArray` gets serialized as follows:
-/// - `ByteArray` size as a ULEB128
-/// - `ByteArray` bytes in increasing index order
-fn serialize_byte_array(binary: &mut BinaryData, byte_array: &[u8]) -> Result<()> {
-    let len = byte_array.len();
-    if len > u32::max_value() as usize {
-        bail!(
-            "byte arrays size ({}) cannot exceed {}",
-            len,
-            u32::max_value()
-        )
-    }
-    write_u32_as_uleb128(binary, len as u32)?;
-    for byte in byte_array {
-        binary.push(*byte)?;
-    }
-    Ok(())
-}
-
 /// Serializes an `AccountAddress`.
 ///
 /// A `AccountAddress` gets serialized as follows:
@@ -335,6 +314,31 @@ fn serialize_address(binary: &mut BinaryData, address: &AccountAddress) -> Resul
     for byte in address.as_ref() {
         binary.push(*byte)?;
     }
+    Ok(())
+}
+
+/// Serializes a `Constant`.
+///
+/// A `Constant` gets serialized as follows:
+/// - `type_` serialized (see `serialize_signature_token`)
+/// - `data` size as a ULEB128
+/// - `data` bytes in increasing index order
+fn serialize_constant(binary: &mut BinaryData, constant: &Constant) -> Result<()> {
+    serialize_signature_token(binary, &constant.type_)?;
+
+    let len = constant.data.len();
+    if len > u32::max_value() as usize {
+        bail!(
+            "constant's value size ({}) cannot exceed {}",
+            len,
+            u32::max_value()
+        )
+    }
+    write_u32_as_uleb128(binary, len as u32)?;
+    for byte in &constant.data {
+        binary.push(*byte)?;
+    }
+
     Ok(())
 }
 
@@ -573,12 +577,8 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
         Bytecode::CastU8 => binary.push(Opcodes::CAST_U8 as u8),
         Bytecode::CastU64 => binary.push(Opcodes::CAST_U64 as u8),
         Bytecode::CastU128 => binary.push(Opcodes::CAST_U128 as u8),
-        Bytecode::LdAddr(address_idx) => {
-            binary.push(Opcodes::LD_ADDR as u8)?;
-            write_u16_as_uleb128(binary, address_idx.0)
-        }
-        Bytecode::LdByteArray(byte_array_idx) => {
-            binary.push(Opcodes::LD_BYTEARRAY as u8)?;
+        Bytecode::LdConst(byte_array_idx) => {
+            binary.push(Opcodes::LD_CONST as u8)?;
             write_u16_as_uleb128(binary, byte_array_idx.0)
         }
         Bytecode::LdTrue => binary.push(Opcodes::LD_TRUE as u8),
@@ -753,8 +753,8 @@ impl CommonSerializer {
             function_instantiations: (0, 0),
             signatures: (0, 0),
             identifiers: (0, 0),
-            address_pool: (0, 0),
-            byte_array_pool: (0, 0),
+            address_identifiers: (0, 0),
+            constant_pool: (0, 0),
         }
     }
 
@@ -833,17 +833,17 @@ impl CommonSerializer {
         )?;
         checked_serialize_table(
             binary,
-            TableType::ADDRESS_POOL,
-            self.address_pool.0,
+            TableType::ADDRESS_IDENTIFIERS,
+            self.address_identifiers.0,
             start_offset,
-            self.address_pool.1,
+            self.address_identifiers.1,
         )?;
         checked_serialize_table(
             binary,
-            TableType::BYTE_ARRAY_POOL,
-            self.byte_array_pool.0,
+            TableType::CONSTANT_POOL,
+            self.constant_pool.0,
             start_offset,
-            self.byte_array_pool.1,
+            self.constant_pool.1,
         )?;
         Ok(start_offset)
     }
@@ -861,8 +861,8 @@ impl CommonSerializer {
         self.serialize_function_instantiations(binary, tables.get_function_instantiations())?;
         self.serialize_signatures(binary, tables.get_signatures())?;
         self.serialize_identifiers(binary, tables.get_identifiers())?;
-        self.serialize_addresses(binary, tables.get_address_pool())?;
-        self.serialize_byte_arrays(binary, tables.get_byte_array_pool())?;
+        self.serialize_address_identifiers(binary, tables.get_address_identifiers())?;
+        self.serialize_constants(binary, tables.get_constant_pool())?;
         Ok(())
     }
 
@@ -954,36 +954,37 @@ impl CommonSerializer {
         Ok(())
     }
 
-    /// Serializes `ByteArrayPool`.
-    fn serialize_byte_arrays(
-        &mut self,
-        binary: &mut BinaryData,
-        byte_arrays: &[Vec<u8>],
-    ) -> Result<()> {
-        if !byte_arrays.is_empty() {
-            self.table_count += 1;
-            self.byte_array_pool.0 = check_index_in_binary(binary.len())?;
-            for byte_array in byte_arrays {
-                serialize_byte_array(binary, byte_array)?;
-            }
-            self.byte_array_pool.1 = checked_calculate_table_size(binary, self.byte_array_pool.0)?;
-        }
-        Ok(())
-    }
-
-    /// Serializes `AddressPool`.
-    fn serialize_addresses(
+    /// Serializes `AddressIdentifiers`.
+    fn serialize_address_identifiers(
         &mut self,
         binary: &mut BinaryData,
         addresses: &[AccountAddress],
     ) -> Result<()> {
         if !addresses.is_empty() {
             self.table_count += 1;
-            self.address_pool.0 = check_index_in_binary(binary.len())?;
+            self.address_identifiers.0 = check_index_in_binary(binary.len())?;
             for address in addresses {
                 serialize_address(binary, address)?;
             }
-            self.address_pool.1 = checked_calculate_table_size(binary, self.address_pool.0)?;
+            self.address_identifiers.1 =
+                checked_calculate_table_size(binary, self.address_identifiers.0)?;
+        }
+        Ok(())
+    }
+
+    /// Serializes `ConstantPool`.
+    fn serialize_constants(
+        &mut self,
+        binary: &mut BinaryData,
+        constants: &[Constant],
+    ) -> Result<()> {
+        if !constants.is_empty() {
+            self.table_count += 1;
+            self.constant_pool.0 = check_index_in_binary(binary.len())?;
+            for constant in constants {
+                serialize_constant(binary, constant)?;
+            }
+            self.constant_pool.1 = checked_calculate_table_size(binary, self.constant_pool.0)?;
         }
         Ok(())
     }

@@ -3,6 +3,7 @@
 
 pub mod bounds_tests;
 pub mod code_unit_tests;
+pub mod constants_tests;
 pub mod duplication_tests;
 pub mod negative_stack_size_tests;
 pub mod resources_tests;

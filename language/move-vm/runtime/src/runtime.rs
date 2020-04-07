@@ -73,7 +73,7 @@ impl<'alloc> VMRuntime<'alloc> {
         // publish a module under anyone's account.
         if compiled_module.address() != &txn_data.sender {
             return Err(verification_error(
-                IndexKind::AddressPool,
+                IndexKind::AddressIdentifier,
                 CompiledModule::IMPLEMENTED_MODULE_INDEX as usize,
                 StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER,
             ));

@@ -4,7 +4,7 @@
 //! Utilities for property-based testing.
 
 use crate::file_format::{
-    AddressPoolIndex, CompiledModule, CompiledModuleMut, FieldDefinition, FunctionDefinition,
+    AddressIdentifierIndex, CompiledModule, CompiledModuleMut, FieldDefinition, FunctionDefinition,
     FunctionHandle, IdentifierIndex, Kind, ModuleHandle, ModuleHandleIndex, SignatureToken,
     StructDefinition, StructFieldInformation, StructHandle, StructHandleIndex, TableIndex,
     TypeSignature,
@@ -107,7 +107,6 @@ impl CompiledModuleStrategyGen {
         // leaf pool generator
         //
         let address_pool_strat = btree_set(any::<AccountAddress>(), 1..=self.size);
-        let byte_array_pool_strat = btree_set(vec(any::<u8>(), 0..=self.size), 1..=self.size);
         let id_base_range = if self.size < 20 { 10 } else { 1 };
         let identifiers_strat = btree_set(
             any::<Identifier>(),
@@ -162,35 +161,35 @@ impl CompiledModuleStrategyGen {
 
         // Note that prop_test only allows a tuple of length up to 10
         (
-            (address_pool_strat, byte_array_pool_strat, identifiers_strat),
+            (address_pool_strat, identifiers_strat),
             module_handles_strat,
             (struct_handles_strat, struct_defs_strat),
             (function_handles_strat, function_defs_strat),
         )
             .prop_map(
                 |(
-                    (address_pool_gen, byte_array_pool_gen, identifier_gens),
+                    (address_identifier_gens, identifier_gens),
                     module_handles_gen,
                     (struct_handle_gens, struct_def_gens),
                     (function_handle_gens, function_def_gens),
                 )| {
                     //
                     // leaf pools
-                    let address_pool: Vec<_> = address_pool_gen.into_iter().collect();
-                    let address_pool_len = address_pool.len();
+                    // TODO constant generation
+                    let constant_pool = vec![];
+                    let constant_pool_len = constant_pool.len();
+                    let address_identifiers: Vec<_> = address_identifier_gens.into_iter().collect();
+                    let address_identifiers_len = address_identifiers.len();
                     let identifiers: Vec<_> = identifier_gens.into_iter().collect();
                     let identifiers_len = identifiers.len();
-                    let byte_array_pool: Vec<_> = byte_array_pool_gen.into_iter().collect();
-                    let byte_array_pool_len = byte_array_pool.len();
 
                     //
                     // module handles
                     let mut module_handles_set = BTreeSet::new();
                     for (address, name) in module_handles_gen {
-                        module_handles_set.insert(
-                        ModuleHandle {
-                            address: AddressPoolIndex(
-                                address.index(address_pool_len) as TableIndex
+                        module_handles_set.insert(ModuleHandle {
+                            address: AddressIdentifierIndex(
+                                address.index(address_identifiers_len) as TableIndex
                             ),
                             name: IdentifierIndex(name.index(identifiers_len) as TableIndex),
                         });
@@ -271,9 +270,8 @@ impl CompiledModuleStrategyGen {
                     // Here we need pretty much everything if we are going to emit instructions.
                     // signatures and function handles
                     let mut state = FnDefnMaterializeState::new(
-                        address_pool_len,
                         identifiers_len,
-                        byte_array_pool_len,
+                        constant_pool_len,
                         struct_handles.len(),
                         struct_defs.len(),
                         signatures,
@@ -312,8 +310,8 @@ impl CompiledModuleStrategyGen {
                         signatures,
 
                         identifiers,
-                        byte_array_pool,
-                        address_pool,
+                        address_identifiers,
+                        constant_pool,
                     }
                     .freeze()
                     .expect("valid modules should satisfy the bounds checker")
