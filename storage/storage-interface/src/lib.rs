@@ -9,9 +9,10 @@ use libra_types::{
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccumulatorConsistencyProof, SparseMerkleProof},
-    transaction::{TransactionListWithProof, TransactionWithProof, Version},
+    transaction::{TransactionListWithProof, TransactionToCommit, TransactionWithProof, Version},
     validator_change::ValidatorChangeProof,
 };
+use serde::{Deserialize, Serialize};
 use storage_proto::StartupInfo;
 
 /// Trait that is implemented by a DB that supports certain public (to client) read APIs
@@ -102,4 +103,84 @@ pub trait DbReader: Send + Sync {
         address: AccountAddress,
         version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)>;
+}
+
+/// Network types for storage service
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum StorageMsg {
+    /// RPC to get an account state with corresponding sparse merkle proof..
+    GetAccountStateWithProofByVersionRequest(Box<GetAccountStateWithProofByVersionRequest>),
+    GetAccountStateWithProofByVersionResponse(Box<GetAccountStateWithProofByVersionResponse>),
+
+    // RPC to save transactions
+    SaveTransactionsRequest(Box<SaveTransactionsRequest>),
+    SaveTransactionsResponse,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
+pub struct GetAccountStateWithProofByVersionRequest {
+    /// The access path to query with.
+    pub address: AccountAddress,
+
+    /// The version the query is based on.
+    pub version: Version,
+}
+
+impl GetAccountStateWithProofByVersionRequest {
+    /// Constructor.
+    pub fn new(address: AccountAddress, version: Version) -> Self {
+        Self { address, version }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
+pub struct GetAccountStateWithProofByVersionResponse {
+    /// The account state blob requested.
+    pub account_state_blob: Option<AccountStateBlob>,
+
+    /// The state root hash the query is based on.
+    pub sparse_merkle_proof: SparseMerkleProof,
+}
+
+impl GetAccountStateWithProofByVersionResponse {
+    /// Constructor.
+    pub fn new(
+        account_state_blob: Option<AccountStateBlob>,
+        sparse_merkle_proof: SparseMerkleProof,
+    ) -> Self {
+        Self {
+            account_state_blob,
+            sparse_merkle_proof,
+        }
+    }
+}
+
+impl Into<(Option<AccountStateBlob>, SparseMerkleProof)>
+    for GetAccountStateWithProofByVersionResponse
+{
+    fn into(self) -> (Option<AccountStateBlob>, SparseMerkleProof) {
+        (self.account_state_blob, self.sparse_merkle_proof)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct SaveTransactionsRequest {
+    pub txns_to_commit: Vec<TransactionToCommit>,
+    pub first_version: Version,
+    pub ledger_info_with_signatures: Option<LedgerInfoWithSignatures>,
+}
+
+impl SaveTransactionsRequest {
+    /// Constructor.
+    pub fn new(
+        txns_to_commit: Vec<TransactionToCommit>,
+        first_version: Version,
+        ledger_info_with_signatures: Option<LedgerInfoWithSignatures>,
+    ) -> Self {
+        SaveTransactionsRequest {
+            txns_to_commit,
+            first_version,
+            ledger_info_with_signatures,
+        }
+    }
 }
