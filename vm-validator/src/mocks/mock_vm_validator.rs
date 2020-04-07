@@ -6,6 +6,7 @@ use anyhow::Result;
 use libra_state_view::StateView;
 use libra_types::{
     account_address::AccountAddress,
+    on_chain_config::OnChainConfigPayload,
     transaction::{SignedTransaction, VMValidatorResult},
     vm_error::{StatusCode, VMStatus},
 };
@@ -76,7 +77,7 @@ impl TransactionValidation for MockVMValidator {
         Ok(VMValidatorResult::new(ret, 0))
     }
 
-    async fn restart(&mut self) -> Result<()> {
+    fn restart(&mut self, _config: OnChainConfigPayload) -> Result<()> {
         unimplemented!();
     }
 }
