@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+serde = { version = "1.0.106", default-features = false }
 
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 storage-proto = { path = "../storage-proto", version = "0.1.0" }
