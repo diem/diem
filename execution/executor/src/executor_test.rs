@@ -21,16 +21,14 @@ use libra_types::{
 use proptest::prelude::*;
 use rand::Rng;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
-use std::{collections::BTreeMap, sync::Arc};
+use std::collections::BTreeMap;
 use storage_client::{StorageRead, StorageReadServiceClient, SyncStorageClient};
 use storage_service::start_storage_service;
 use tokio::runtime::Runtime;
 
 fn create_executor(config: &NodeConfig) -> Executor<MockVM> {
     maybe_bootstrap_db::<MockVM>(config).expect("Db-bootstrapper should not fail.");
-    let db_reader = Arc::new(SyncStorageClient::new(&config.storage.address));
-    let db_writer = Arc::clone(&db_reader);
-    Executor::new(db_reader, db_writer)
+    Executor::new(SyncStorageClient::new(&config.storage.address).into())
 }
 
 fn execute_and_commit_block(
