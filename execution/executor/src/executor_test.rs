@@ -22,19 +22,15 @@ use proptest::prelude::*;
 use rand::Rng;
 use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::{collections::BTreeMap, sync::Arc};
-use storage_client::{
-    StorageRead, StorageReadServiceClient, StorageWriteServiceClient, SyncStorageClient,
-};
+use storage_client::{StorageRead, StorageReadServiceClient, SyncStorageClient};
 use storage_service::start_storage_service;
 use tokio::runtime::Runtime;
 
 fn create_executor(config: &NodeConfig) -> Executor<MockVM> {
     maybe_bootstrap_db::<MockVM>(config).expect("Db-bootstrapper should not fail.");
-    let rt = Executor::<MockVM>::create_runtime();
-    let read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
-    let db_reader = Arc::new(SyncStorageClient::new(read_client, rt.handle().clone()));
-    let write_client = Arc::new(StorageWriteServiceClient::new(&config.storage.address));
-    Executor::new(rt, db_reader, write_client)
+    let db_reader = Arc::new(SyncStorageClient::new(&config.storage.address));
+    let db_writer = Arc::clone(&db_reader);
+    Executor::new(db_reader, db_writer)
 }
 
 fn execute_and_commit_block(

@@ -42,7 +42,7 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-use storage_client::{StorageRead, StorageReadServiceClient};
+use storage_client::{StorageRead, StorageReadServiceClient, SyncStorageClient};
 use tokio::{
     runtime::{Builder, Handle, Runtime},
     time::interval,
@@ -826,14 +826,11 @@ pub fn bootstrap(
         .enable_all()
         .build()
         .expect("[shared mempool] failed to create runtime");
-    let executor = runtime.handle();
     let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
-    let storage_client: Arc<dyn StorageRead> =
+    let storage_read_client: Arc<dyn StorageRead> =
         Arc::new(StorageReadServiceClient::new(&config.storage.address));
-    let vm_validator = Arc::new(VMValidator::new(
-        Arc::clone(&storage_client),
-        executor.clone(),
-    ));
+    let db_reader = Arc::new(SyncStorageClient::new(&config.storage.address));
+    let vm_validator = Arc::new(VMValidator::new(db_reader));
     start_shared_mempool(
         runtime.handle(),
         config,
@@ -843,7 +840,7 @@ pub fn bootstrap(
         consensus_requests,
         state_sync_requests,
         mempool_reconfig_events,
-        storage_client,
+        storage_read_client,
         vm_validator,
         vec![],
         None,

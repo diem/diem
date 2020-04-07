@@ -24,7 +24,7 @@ use libra_vm::LibraVM;
 use libradb::LibraDB;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{cell::RefCell, collections::BTreeMap, convert::TryFrom, sync::Arc, time::Duration};
-use storage_client::{StorageReadServiceClient, StorageWriteServiceClient, SyncStorageClient};
+use storage_client::SyncStorageClient;
 use storage_interface::DbReader;
 use tokio::runtime::Runtime;
 
@@ -78,16 +78,9 @@ impl Node {
         let storage_service =
             storage_service::start_storage_service_with_db(&config, storage.clone());
         maybe_bootstrap_db::<LibraVM>(config).expect("Db-bootstrapper should not fail.");
-        let rt = Executor::<LibraVM>::create_runtime();
-        let db_reader = Arc::new(SyncStorageClient::new(
-            Arc::new(StorageReadServiceClient::new(&config.storage.address)),
-            rt.handle().clone(),
-        ));
-        let executor = Executor::new(
-            rt,
-            db_reader,
-            Arc::new(StorageWriteServiceClient::new(&config.storage.address)),
-        );
+        let db_reader = Arc::new(SyncStorageClient::new(&config.storage.address));
+        let db_writer = Arc::clone(&db_reader);
+        let executor = Executor::new(db_reader, db_writer);
         let libra = TestLibraInterface {
             queued_transactions: Arc::new(RefCell::new(Vec::new())),
             storage,

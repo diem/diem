@@ -15,7 +15,7 @@ use libra_types::{
 use libra_vm::LibraVM;
 use rand::SeedableRng;
 use std::{sync::Arc, u64};
-use storage_client::{StorageRead, StorageReadServiceClient};
+use storage_client::SyncStorageClient;
 use storage_service::start_storage_service;
 use tokio::runtime::Runtime;
 use transaction_builder::encode_transfer_script;
@@ -33,10 +33,8 @@ impl TestValidator {
 
         // Create another client for the vm_validator since the one used for the executor will be
         // run on another runtime which will be dropped before this function returns.
-        let read_client: Arc<dyn StorageRead> =
-            Arc::new(StorageReadServiceClient::new(&config.storage.address));
-        let vm_validator = VMValidator::new(read_client, rt.handle().clone());
-
+        let db_reader = Arc::new(SyncStorageClient::new(&config.storage.address));
+        let vm_validator = VMValidator::new(db_reader);
         (
             TestValidator {
                 _storage: storage,

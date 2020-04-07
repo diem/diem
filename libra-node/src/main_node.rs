@@ -25,7 +25,7 @@ use std::{
     thread,
     time::Instant,
 };
-use storage_client::{StorageReadServiceClient, StorageWriteServiceClient, SyncStorageClient};
+use storage_client::SyncStorageClient;
 use storage_service::{init_libra_db, start_storage_service_with_db};
 use tokio::runtime::{Builder, Runtime};
 
@@ -52,18 +52,9 @@ impl Drop for LibraHandle {
 }
 
 fn setup_executor(config: &NodeConfig) -> Arc<Mutex<Executor<LibraVM>>> {
-    let rt = Executor::<LibraVM>::create_runtime();
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
-    let db_reader = Arc::new(SyncStorageClient::new(
-        storage_read_client,
-        rt.handle().clone(),
-    ));
-    let storage_write_client = Arc::new(StorageWriteServiceClient::new(&config.storage.address));
-    Arc::new(Mutex::new(Executor::new(
-        rt,
-        db_reader,
-        storage_write_client,
-    )))
+    let db_reader = Arc::new(SyncStorageClient::new(&config.storage.address));
+    let db_writer = Arc::clone(&db_reader);
+    Arc::new(Mutex::new(Executor::new(db_reader, db_writer)))
 }
 
 fn setup_debug_interface(config: &NodeConfig) -> Runtime {
