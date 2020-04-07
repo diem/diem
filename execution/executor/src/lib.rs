@@ -145,7 +145,7 @@ where
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
             Arc::new(StorageReaderWithRuntimeHandle::new(
-                self.storage_read_client.clone(),
+                Arc::clone(&self.storage_read_client),
                 self.rt.handle().clone(),
             )),
             self.cache.committed_trees().version(),
@@ -405,7 +405,7 @@ where
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
             Arc::new(StorageReaderWithRuntimeHandle::new(
-                self.storage_read_client.clone(),
+                Arc::clone(&self.storage_read_client),
                 self.rt.handle().clone(),
             )),
             self.cache.synced_trees().version(),
