@@ -15,7 +15,9 @@ use std::collections::BTreeSet;
 use vm::{
     access::ModuleAccess,
     errors::err_at_offset,
-    file_format::{Bytecode, CompiledModule, FunctionDefinition, StructDefinitionIndex},
+    file_format::{
+        Bytecode, CompiledModule, FunctionDefinition, FunctionHandleIndex, StructDefinitionIndex,
+    },
     views::{FunctionDefinitionView, ModuleView, StructDefinitionView, ViewInternals},
 };
 
@@ -36,6 +38,7 @@ impl<'a> AcquiresVerifier<'a> {
             .iter()
             .cloned()
             .collect();
+
         let mut verifier = Self {
             module_view: ModuleView::new(module),
             annotated_acquires,
@@ -69,34 +72,48 @@ impl<'a> AcquiresVerifier<'a> {
 
     fn verify_instruction(&mut self, instruction: &Bytecode, offset: usize) {
         match instruction {
-            Bytecode::Call(idx, _) => {
-                let function_handle = self.module_view.as_inner().function_handle_at(*idx);
-                let mut function_acquired_resources = self
-                    .module_view
-                    .function_acquired_resources(&function_handle);
-                for acquired_resource in &function_acquired_resources {
-                    if !self.annotated_acquires.contains(acquired_resource) {
-                        self.errors.push(err_at_offset(
-                            StatusCode::MISSING_ACQUIRES_RESOURCE_ANNOTATION_ERROR,
-                            offset,
-                        ))
-                    }
-                }
-                self.actual_acquires
-                    .append(&mut function_acquired_resources)
+            Bytecode::Call(idx) => self.call_acquire(*idx, offset),
+            Bytecode::CallGeneric(idx) => {
+                let fi = self.module_view.as_inner().function_instantiation_at(*idx);
+                self.call_acquire(fi.handle, offset)
             }
-            Bytecode::MoveFrom(idx, _)
-            | Bytecode::MutBorrowGlobal(idx, _)
-            | Bytecode::ImmBorrowGlobal(idx, _) => {
-                if !self.annotated_acquires.contains(idx) {
-                    self.errors.push(err_at_offset(
-                        StatusCode::MISSING_ACQUIRES_RESOURCE_ANNOTATION_ERROR,
-                        offset,
-                    ))
-                }
-                self.actual_acquires.insert(*idx);
+            Bytecode::MoveFrom(idx)
+            | Bytecode::MutBorrowGlobal(idx)
+            | Bytecode::ImmBorrowGlobal(idx) => self.struct_acquire(*idx, offset),
+            Bytecode::MoveFromGeneric(idx)
+            | Bytecode::MutBorrowGlobalGeneric(idx)
+            | Bytecode::ImmBorrowGlobalGeneric(idx) => {
+                let si = self.module_view.as_inner().struct_instantiation_at(*idx);
+                self.struct_acquire(si.def, offset)
             }
             _ => (),
         }
+    }
+
+    fn call_acquire(&mut self, fh_idx: FunctionHandleIndex, offset: usize) {
+        let function_handle = self.module_view.as_inner().function_handle_at(fh_idx);
+        let mut function_acquired_resources = self
+            .module_view
+            .function_acquired_resources(function_handle);
+        for acquired_resource in &function_acquired_resources {
+            if !self.annotated_acquires.contains(acquired_resource) {
+                self.errors.push(err_at_offset(
+                    StatusCode::MISSING_ACQUIRES_RESOURCE_ANNOTATION_ERROR,
+                    offset,
+                ))
+            }
+        }
+        self.actual_acquires
+            .append(&mut function_acquired_resources)
+    }
+
+    fn struct_acquire(&mut self, sd_idx: StructDefinitionIndex, offset: usize) {
+        if !self.annotated_acquires.contains(&sd_idx) {
+            self.errors.push(err_at_offset(
+                StatusCode::MISSING_ACQUIRES_RESOURCE_ANNOTATION_ERROR,
+                offset,
+            ))
+        }
+        self.actual_acquires.insert(sd_idx);
     }
 }

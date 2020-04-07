@@ -6,6 +6,7 @@
 use crate::read_bool_env_var;
 use anyhow::{anyhow, Context, Result};
 use prettydiff::{basic::DiffOp, diff_lines};
+use regex::Regex;
 use std::{
     fs::File,
     io::{Read, Write},
@@ -34,10 +35,16 @@ pub fn verify_or_update_baseline(baseline_file_name: &Path, text: &str) -> Resul
 
 /// Clean a content to be usable as a baseline file. Currently, we ensure there are no
 /// trailing whitespaces and no empty last line, because this is required by git-checks.sh.
+/// We also try to detect and remove unstable file names.
 fn clean_for_baseline(content: &str) -> String {
+    // Regexp for matching unstable filenames in output. This is heuristic and may need refinement
+    // on a case-by-case basis.
+    let rex = Regex::new(r"(/var|/tmp)(/[^/]*)*/(?P<basename>[^.]*\.)").expect("regexp ok");
     let mut res = String::new();
     for line in content.lines() {
-        res.push_str(line.trim_end());
+        let line = line.trim_end();
+        let line = rex.replace_all(line, "$basename");
+        res.push_str(line.to_string().as_str());
         res.push_str("\n");
     }
     res = res.trim_end().to_string(); // removes empty lines at end

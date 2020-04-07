@@ -119,7 +119,7 @@ pub use crate::libra_vm::LibraVM;
 
 use libra_state_view::StateView;
 use libra_types::{
-    transaction::{SignedTransaction, Transaction, TransactionOutput},
+    transaction::{SignedTransaction, Transaction, TransactionOutput, VMValidatorResult},
     vm_error::VMStatus,
 };
 
@@ -132,7 +132,7 @@ pub trait VMVerifier {
         &self,
         transaction: SignedTransaction,
         state_view: &dyn StateView,
-    ) -> Option<VMStatus>;
+    ) -> VMValidatorResult;
 }
 
 /// This trait describes the VM's execution interface.

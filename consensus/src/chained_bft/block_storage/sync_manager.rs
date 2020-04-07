@@ -142,7 +142,7 @@ impl<T: Payload> BlockStore<T> {
         if !self.need_sync_for_quorum_cert(&highest_commit_cert) {
             return Ok(());
         }
-        let (root, root_executed_trees, blocks, quorum_certs) = Self::fast_forward_sync(
+        let (root, root_metadata, blocks, quorum_certs) = Self::fast_forward_sync(
             &highest_commit_cert,
             retriever,
             self.storage.clone(),
@@ -151,7 +151,7 @@ impl<T: Payload> BlockStore<T> {
         .await?
         .take();
         debug!("{}Sync to{} {}", Fg(Blue), Fg(Reset), root.0);
-        self.rebuild(root, root_executed_trees, blocks, quorum_certs)
+        self.rebuild(root, root_metadata, blocks, quorum_certs)
             .await;
 
         if highest_commit_cert.ends_epoch() {
@@ -187,7 +187,15 @@ impl<T: Payload> BlockStore<T> {
         );
         let mut quorum_certs = vec![];
         quorum_certs.push(highest_commit_cert.clone());
-        quorum_certs.extend(blocks.iter().map(|block| block.quorum_cert().clone()));
+        quorum_certs.extend(
+            blocks
+                .iter()
+                .take(2)
+                .map(|block| block.quorum_cert().clone()),
+        );
+        for (i, block) in blocks.iter().enumerate() {
+            assert_eq!(block.id(), quorum_certs[i].certified_block().id());
+        }
 
         // If a node restarts in the middle of state synchronization, it is going to try to catch up
         // to the stored quorum certs as the new root.
@@ -199,7 +207,6 @@ impl<T: Payload> BlockStore<T> {
         counters::STATE_SYNC_DURATION_S.observe_duration(pre_sync_instance.elapsed());
         let recovery_data = storage
             .start()
-            .await
             .expect_recovery_data("Failed to construct recovery data after fast forward sync");
 
         Ok(recovery_data)

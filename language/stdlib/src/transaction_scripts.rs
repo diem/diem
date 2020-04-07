@@ -24,15 +24,23 @@ const STAGED_TXN_SCRIPTS_DIR: Dir = include_dir!("staged/transaction_scripts");
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum StdlibScript {
     AddValidator,
+    ApprovedPayment,
+    Burn,
+    CancelBurn,
     CreateAccount,
     EmptyScript,
     Mint,
+    ModifyPublishingOption,
     PeerToPeer,
     PeerToPeerWithMetadata,
+    Preburn,
+    RegisterApprovedPayment,
+    RegisterPreburner,
     RegisterValidator,
     RemoveValidator,
     RotateAuthenticationKey,
     RotateConsensusPubkey,
+    UpdateLibraVersion,
     // ...add new scripts here
 }
 
@@ -40,17 +48,26 @@ impl StdlibScript {
     /// Return a vector containing all of the standard library scripts (i.e., all inhabitants of the
     /// StdlibScript enum)
     pub fn all() -> Vec<Self> {
+        use StdlibScript::*;
         vec![
-            Self::AddValidator,
-            Self::CreateAccount,
-            Self::EmptyScript,
-            Self::Mint,
-            Self::PeerToPeer,
-            Self::PeerToPeerWithMetadata,
-            Self::RegisterValidator,
-            Self::RemoveValidator,
-            Self::RotateAuthenticationKey,
-            Self::RotateConsensusPubkey,
+            AddValidator,
+            ApprovedPayment,
+            Burn,
+            CancelBurn,
+            CreateAccount,
+            EmptyScript,
+            Mint,
+            ModifyPublishingOption,
+            PeerToPeer,
+            PeerToPeerWithMetadata,
+            Preburn,
+            RegisterApprovedPayment,
+            RegisterPreburner,
+            RegisterValidator,
+            RemoveValidator,
+            RotateAuthenticationKey,
+            RotateConsensusPubkey,
+            UpdateLibraVersion,
             // ...add new scripts here
         ]
     }
@@ -143,20 +160,29 @@ impl TryFrom<&[u8]> for StdlibScript {
 
 impl fmt::Display for StdlibScript {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use StdlibScript::*;
         write!(
             f,
             "{}",
             match self {
-                Self::AddValidator => "add_validator",
-                Self::CreateAccount => "create_account",
-                Self::EmptyScript => "empty_script",
-                Self::Mint => "mint",
-                Self::PeerToPeer => "peer_to_peer",
-                Self::PeerToPeerWithMetadata => "peer_to_peer_with_metadata",
-                Self::RegisterValidator => "register_validator",
-                Self::RemoveValidator => "remove_validator",
-                Self::RotateAuthenticationKey => "rotate_authentication_key",
-                Self::RotateConsensusPubkey => "rotate_consensus_pubkey",
+                AddValidator => "add_validator",
+                ApprovedPayment => "approved_payment",
+                Burn => "burn",
+                CancelBurn => "cancel_burn",
+                CreateAccount => "create_account",
+                EmptyScript => "empty_script",
+                Mint => "mint",
+                ModifyPublishingOption => "modify_publishing_option",
+                PeerToPeer => "peer_to_peer",
+                PeerToPeerWithMetadata => "peer_to_peer_with_metadata",
+                Preburn => "preburn",
+                RegisterApprovedPayment => "register_approved_payment",
+                RegisterPreburner => "register_preburner",
+                RegisterValidator => "register_validator",
+                RemoveValidator => "remove_validator",
+                RotateAuthenticationKey => "rotate_authentication_key",
+                RotateConsensusPubkey => "rotate_consensus_pubkey",
+                UpdateLibraVersion => "update_libra_version",
             }
         )
     }
@@ -175,7 +201,12 @@ mod test {
         assert_eq!(
             files.len(),
             scripts.len(),
-            "Mismatch between stdlib script files and StdlibScript enum"
+            "Mismatch between stdlib script files and StdlibScript enum. {}",
+            if files.len() > scripts.len() {
+                "Did you forget to extend the StdlibScript enum?"
+            } else {
+                "Did you forget to rebuild the standard library?"
+            }
         );
         for file in files {
             assert!(

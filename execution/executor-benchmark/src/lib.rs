@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use executor::Executor;
-use executor_types::ExecutedTrees;
 use executor_utils::create_storage_service_and_executor;
 use libra_crypto::{
-    ed25519::{self, Ed25519PrivateKey, Ed25519PublicKey},
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     hash::{CryptoHash, HashValue},
-    traits::{PrivateKey, SigningKey},
+    PrivateKey, SigningKey, Uniform,
 };
 use libra_logger::prelude::*;
 use libra_types::{
@@ -21,12 +20,7 @@ use libra_types::{
 };
 use libra_vm::LibraVM;
 use rand::{rngs::StdRng, SeedableRng};
-use std::{
-    collections::BTreeMap,
-    convert::TryFrom,
-    path::PathBuf,
-    sync::{mpsc, Arc},
-};
+use std::{collections::BTreeMap, convert::TryFrom, path::PathBuf, sync::mpsc};
 use storage_client::{StorageRead, StorageReadServiceClient};
 use transaction_builder::{encode_create_account_script, encode_transfer_script};
 
@@ -76,7 +70,8 @@ impl TransactionGenerator {
 
         let mut accounts = Vec::with_capacity(num_accounts);
         for _i in 0..num_accounts {
-            let (private_key, public_key) = ed25519::compat::generate_keypair(&mut rng);
+            let private_key = Ed25519PrivateKey::generate(&mut rng);
+            let public_key = private_key.public_key();
             let address = AccountAddress::from_public_key(&public_key);
             let account = AccountData {
                 private_key,
@@ -147,6 +142,7 @@ impl TransactionGenerator {
                     &sender.private_key,
                     sender.public_key.clone(),
                     encode_transfer_script(
+                        lbr_type_tag(),
                         &receiver.address,
                         receiver.auth_key_prefix(),
                         1, /* amount */
@@ -188,19 +184,19 @@ impl TransactionGenerator {
 
 struct TransactionExecutor {
     executor: Executor<LibraVM>,
-    committed_trees: ExecutedTrees,
+    parent_block_id: HashValue,
     block_receiver: mpsc::Receiver<Vec<Transaction>>,
 }
 
 impl TransactionExecutor {
     fn new(
         executor: Executor<LibraVM>,
-        committed_trees: ExecutedTrees,
+        parent_block_id: HashValue,
         block_receiver: mpsc::Receiver<Vec<Transaction>>,
     ) -> Self {
         Self {
             executor,
-            committed_trees,
+            parent_block_id,
             block_receiver,
         }
     }
@@ -214,27 +210,20 @@ impl TransactionExecutor {
 
             let execute_start = std::time::Instant::now();
 
+            let block_id = HashValue::random();
             let output = self
                 .executor
-                .execute_block(
-                    HashValue::zero(),
-                    transactions.clone(),
-                    &self.committed_trees,
-                    &self.committed_trees,
-                )
+                .execute_block((block_id, transactions.clone()), self.parent_block_id)
                 .unwrap();
 
             let execute_time = std::time::Instant::now().duration_since(execute_start);
             let commit_start = std::time::Instant::now();
 
-            let new_committed_trees = output.executed_trees().clone();
-            let block_to_commit = (transactions, Arc::new(output));
-
             let block_info = BlockInfo::new(
-                1,                 /* epoch */
-                0,                 /* round, doesn't matter */
-                HashValue::zero(), /* id, doesn't matter */
-                new_committed_trees.state_id(),
+                1,        /* epoch */
+                0,        /* round, doesn't matter */
+                block_id, /* id, doesn't matter */
+                output.root_hash(),
                 version,
                 0,    /* timestamp_usecs, doesn't matter */
                 None, /* next_validator_set */
@@ -247,14 +236,10 @@ impl TransactionExecutor {
                 LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new() /* signatures */);
 
             self.executor
-                .commit_blocks(
-                    vec![block_to_commit],
-                    ledger_info_with_sigs,
-                    &self.committed_trees,
-                )
+                .commit_blocks(vec![block_id], ledger_info_with_sigs)
                 .unwrap();
 
-            self.committed_trees = new_committed_trees;
+            self.parent_block_id = block_id;
 
             let commit_time = std::time::Instant::now().duration_since(commit_start);
             let total_time = execute_time + commit_time;
@@ -283,8 +268,8 @@ pub fn run_benchmark(
         config.storage.dir = path;
     }
 
-    let (_storage_server_handle, executor, committed_trees) =
-        create_storage_service_and_executor(&config);
+    let (_storage_server_handle, executor) = create_storage_service_and_executor(&config);
+    let parent_block_id = executor.committed_block_id();
     let storage_client = StorageReadServiceClient::new(&config.storage.address);
 
     let (block_sender, block_receiver) = mpsc::sync_channel(50 /* bound */);
@@ -302,7 +287,7 @@ pub fn run_benchmark(
     let exe_thread = std::thread::Builder::new()
         .name("txn_executor".to_string())
         .spawn(move || {
-            let mut exe = TransactionExecutor::new(executor, committed_trees, block_receiver);
+            let mut exe = TransactionExecutor::new(executor, parent_block_id, block_receiver);
             exe.run();
         })
         .expect("Failed to spawn transaction executor thread.");

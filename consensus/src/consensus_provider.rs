@@ -18,8 +18,8 @@ use libra_mempool::ConsensusRequest;
 use libra_types::transaction::SignedTransaction;
 use libra_vm::LibraVM;
 use state_synchronizer::StateSyncClient;
-use std::sync::Arc;
-use storage_client::{StorageRead, StorageReadServiceClient};
+use std::sync::{Arc, Mutex};
+use storage_interface::DbReader;
 
 /// Public interface to a consensus protocol.
 pub trait ConsensusProvider {
@@ -39,11 +39,12 @@ pub fn make_consensus_provider(
     node_config: &mut NodeConfig,
     network_sender: ConsensusNetworkSender<Vec<SignedTransaction>>,
     network_receiver: ConsensusNetworkEvents<Vec<SignedTransaction>>,
-    executor: Arc<Executor<LibraVM>>,
+    executor: Arc<Mutex<Executor<LibraVM>>>,
     state_sync_client: Arc<StateSyncClient>,
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
+    libra_db: Arc<dyn DbReader>,
 ) -> Box<dyn ConsensusProvider> {
-    let storage = Arc::new(StorageWriteProxy::new(node_config));
+    let storage = Arc::new(StorageWriteProxy::new(node_config, libra_db));
     let txn_manager = Box::new(MempoolProxy::new(consensus_to_mempool_sender));
     let state_computer = Arc::new(ExecutionProxy::new(executor, state_sync_client));
 
@@ -55,9 +56,4 @@ pub fn make_consensus_provider(
         storage,
         txn_manager,
     ))
-}
-
-/// Create a storage read client based on the config
-pub fn create_storage_read_client(config: &NodeConfig) -> Arc<dyn StorageRead> {
-    Arc::new(StorageReadServiceClient::new(&config.storage.address))
 }

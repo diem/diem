@@ -14,9 +14,9 @@ anyhow = "1.0"
 get_if_addrs = { version = "0.5.3", default-features = false }
 hex = "0.4.2"
 mirai-annotations = "1.4.0"
-parity-multiaddr = { version = "0.7.2", default-features = false }
+parity-multiaddr = { version = "0.8.0", default-features = false }
 rand = "0.6.5"
-serde = { version = "1.0.105", features = ["rc"], default-features = false }
+serde = { version = "1.0.106", features = ["rc"], default-features = false }
 log = { version = "0.4.8", features = ["serde"] }
 thiserror = "1.0"
 toml = { version = "0.5.3", default-features = false }

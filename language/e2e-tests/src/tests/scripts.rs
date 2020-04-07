@@ -8,8 +8,8 @@ use libra_types::{
 };
 use move_core_types::identifier::Identifier;
 use vm::file_format::{
-    empty_script, AddressPoolIndex, Bytecode, FunctionHandle, FunctionHandleIndex,
-    FunctionSignatureIndex, IdentifierIndex, LocalsSignatureIndex, ModuleHandle, ModuleHandleIndex,
+    empty_script, AddressPoolIndex, Bytecode, FunctionHandle, FunctionHandleIndex, IdentifierIndex,
+    ModuleHandle, ModuleHandleIndex, SignatureIndex,
 };
 
 #[test]
@@ -26,6 +26,7 @@ fn script_code_unverifiable() {
     script.serialize(&mut blob).expect("script must serialize");
     let txn = sender.account().create_signed_txn_with_args(
         blob,
+        vec![],
         vec![],
         10,
         gas_costs::TXN_RESERVED,
@@ -80,21 +81,23 @@ fn script_none_existing_module_dep() {
     let fun_handle = FunctionHandle {
         module: ModuleHandleIndex((script.module_handles.len() - 1) as u16),
         name: IdentifierIndex((script.identifiers.len() - 1) as u16),
-        signature: FunctionSignatureIndex(0),
+        parameters: SignatureIndex(0),
+        return_: SignatureIndex(0),
+        type_parameters: vec![],
     };
     script.function_handles.push(fun_handle);
 
     script.main.code.code = vec![
-        Bytecode::Call(
-            FunctionHandleIndex((script.function_handles.len() - 1) as u16),
-            LocalsSignatureIndex(0),
-        ),
+        Bytecode::Call(FunctionHandleIndex(
+            (script.function_handles.len() - 1) as u16,
+        )),
         Bytecode::Ret,
     ];
     let mut blob = vec![];
     script.serialize(&mut blob).expect("script must serialize");
     let txn = sender.account().create_signed_txn_with_args(
         blob,
+        vec![],
         vec![],
         10,
         gas_costs::TXN_RESERVED,
@@ -131,38 +134,38 @@ fn script_non_existing_function_dep() {
 
     // create a bogus script
     let mut script = empty_script();
-    // AddressUtil module
+    // LCS module
     script
         .address_pool
         .push(AccountAddress::new([0u8; AccountAddress::LENGTH]));
-    script
-        .identifiers
-        .push(Identifier::new("AddressUtil").unwrap());
+    script.identifiers.push(Identifier::new("LCS").unwrap());
     let module_handle = ModuleHandle {
         address: AddressPoolIndex((script.address_pool.len() - 1) as u16),
         name: IdentifierIndex((script.identifiers.len() - 1) as u16),
     };
     script.module_handles.push(module_handle);
-    // make a non existent function on AddressUtil
+    // make a non existent function on LCS
     script.identifiers.push(Identifier::new("foo").unwrap());
     let fun_handle = FunctionHandle {
         module: ModuleHandleIndex((script.module_handles.len() - 1) as u16),
         name: IdentifierIndex((script.identifiers.len() - 1) as u16),
-        signature: FunctionSignatureIndex(0),
+        parameters: SignatureIndex(0),
+        return_: SignatureIndex(0),
+        type_parameters: vec![],
     };
     script.function_handles.push(fun_handle);
 
     script.main.code.code = vec![
-        Bytecode::Call(
-            FunctionHandleIndex((script.function_handles.len() - 1) as u16),
-            LocalsSignatureIndex(0),
-        ),
+        Bytecode::Call(FunctionHandleIndex(
+            (script.function_handles.len() - 1) as u16,
+        )),
         Bytecode::Ret,
     ];
     let mut blob = vec![];
     script.serialize(&mut blob).expect("script must serialize");
     let txn = sender.account().create_signed_txn_with_args(
         blob,
+        vec![],
         vec![],
         10,
         gas_costs::TXN_RESERVED,
@@ -199,40 +202,40 @@ fn script_bad_sig_function_dep() {
 
     // create a bogus script
     let mut script = empty_script();
-    // AddressUtil module
+    // LCS module
     script
         .address_pool
         .push(AccountAddress::new([0u8; AccountAddress::LENGTH]));
-    script
-        .identifiers
-        .push(Identifier::new("AddressUtil").unwrap());
+    script.identifiers.push(Identifier::new("LCS").unwrap());
     let module_handle = ModuleHandle {
         address: AddressPoolIndex((script.address_pool.len() - 1) as u16),
         name: IdentifierIndex((script.identifiers.len() - 1) as u16),
     };
     script.module_handles.push(module_handle);
-    // AddressUtil::address_to_bytes with bad sig
+    // LCS::to_bytes with bad sig
     script
         .identifiers
-        .push(Identifier::new("address_to_bytes").unwrap());
+        .push(Identifier::new("to_bytes").unwrap());
     let fun_handle = FunctionHandle {
         module: ModuleHandleIndex((script.module_handles.len() - 1) as u16),
         name: IdentifierIndex((script.identifiers.len() - 1) as u16),
-        signature: FunctionSignatureIndex(0),
+        parameters: SignatureIndex(0),
+        return_: SignatureIndex(0),
+        type_parameters: vec![],
     };
     script.function_handles.push(fun_handle);
 
     script.main.code.code = vec![
-        Bytecode::Call(
-            FunctionHandleIndex((script.function_handles.len() - 1) as u16),
-            LocalsSignatureIndex(0),
-        ),
+        Bytecode::Call(FunctionHandleIndex(
+            (script.function_handles.len() - 1) as u16,
+        )),
         Bytecode::Ret,
     ];
     let mut blob = vec![];
     script.serialize(&mut blob).expect("script must serialize");
     let txn = sender.account().create_signed_txn_with_args(
         blob,
+        vec![],
         vec![],
         10,
         gas_costs::TXN_RESERVED,

@@ -3,7 +3,7 @@ module M {
 
     struct MyEvent<T1, T2> { b: bool }
 
-    public emit_event<T1: unrestricted, T2: unrestricted>() {
+    public emit_event<T1: copyable, T2: copyable>() {
         let handle: LibraAccount.EventHandle<Self.MyEvent<T2, T1>>;
         handle = LibraAccount.new_event_handle<Self.MyEvent<T2, T1>>();
         LibraAccount.emit_event<Self.MyEvent<T2, T1>>(&mut handle, MyEvent<T2, T1>{ b: true });

@@ -14,7 +14,7 @@ phases:
       - echo Build started on `date`
       - echo Building the Docker image...
       - docker/validator/build.sh
-      - docker/validator-dynamic/build-dynamic.sh
+      - docker/validator-dynamic/build.sh
   post_build:
     commands:
       - echo Build completed on `date`

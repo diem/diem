@@ -9,10 +9,10 @@ use std::path::PathBuf;
 #[serde(default, deny_unknown_fields)]
 pub struct ConsensusConfig {
     pub max_block_size: u64,
-    pub proposer_type: ConsensusProposerType,
     pub contiguous_rounds: u32,
     pub max_pruned_blocks_in_mem: usize,
     pub pacemaker_initial_timeout_ms: u64,
+    pub proposer_type: ConsensusProposerType,
     pub safety_rules: SafetyRulesConfig,
 }
 
@@ -20,7 +20,10 @@ impl Default for ConsensusConfig {
     fn default() -> ConsensusConfig {
         ConsensusConfig {
             max_block_size: 1000,
-            proposer_type: ConsensusProposerType::MultipleOrderedProposers,
+            proposer_type: ConsensusProposerType::LeaderReputation(LeaderReputationConfig {
+                active_weights: 99,
+                inactive_weights: 1,
+            }),
             contiguous_rounds: 2,
             max_pruned_blocks_in_mem: 10000,
             pacemaker_initial_timeout_ms: 1000,
@@ -36,7 +39,7 @@ impl ConsensusConfig {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case", tag = "type")]
 pub enum ConsensusProposerType {
     // Choose the smallest PeerId as the proposer
     FixedProposer,
@@ -44,4 +47,12 @@ pub enum ConsensusProposerType {
     RotatingProposer,
     // Multiple ordered proposers per round (primary, secondary, etc.)
     MultipleOrderedProposers,
+    // Committed history based proposer election
+    LeaderReputation(LeaderReputationConfig),
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct LeaderReputationConfig {
+    pub active_weights: u64,
+    pub inactive_weights: u64,
 }

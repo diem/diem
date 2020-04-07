@@ -2,13 +2,12 @@ address 0x0:
 
 // The module for the account resource that governs every Libra account
 module LibraAccount {
-    use 0x0::AddressUtil;
     use 0x0::Hash;
     use 0x0::LBR;
+    use 0x0::LCS;
     use 0x0::Libra;
     use 0x0::LibraTransactionTimeout;
     use 0x0::Transaction;
-    use 0x0::U64Util;
     use 0x0::Vector;
 
     // Every Libra account has a LibraAccount::T resource
@@ -92,8 +91,7 @@ module LibraAccount {
     public fun deposit<Token>(payee: address, to_deposit: Libra::T<Token>) acquires T, Balance {
         // Since we don't have vector<u8> literals in the source language at
         // the moment.
-        // FIXME: Update this once we have vector<u8> literals
-        deposit_with_metadata(payee, to_deposit, Vector::empty());
+        deposit_with_metadata(payee, to_deposit, x"")
     }
 
     // Deposits the `to_deposit` coin into the sender's account balance
@@ -276,8 +274,7 @@ module LibraAccount {
         auth_key_prefix: vector<u8>,
         amount: u64
     ) acquires T, Balance {
-        // FIXME: Update this once we have vector<u8> literals
-        pay_from_sender_with_metadata<Token>(payee, auth_key_prefix, amount, Vector::empty());
+        pay_from_sender_with_metadata<Token>(payee, auth_key_prefix, amount, x"");
     }
 
     fun rotate_authentication_key_for_account(account: &mut T, new_authentication_key: vector<u8>) {
@@ -338,7 +335,7 @@ module LibraAccount {
     public fun create_account(fresh_address: address, auth_key_prefix: vector<u8>) {
         let generator = EventHandleGenerator {counter: 0};
         let authentication_key = auth_key_prefix;
-        Vector::append(&mut authentication_key, AddressUtil::address_to_bytes(fresh_address));
+        Vector::append(&mut authentication_key, LCS::to_bytes(&fresh_address));
         Transaction::assert(Vector::length(&authentication_key) == 32, 12);
 
         save_account(
@@ -508,9 +505,8 @@ module LibraAccount {
     // such counter is going to give distinct value for each of the new event stream under each sender. And since we
     // hash it with the sender's address, the result is guaranteed to be globally unique.
     fun fresh_guid(counter: &mut EventHandleGenerator, sender: address): vector<u8> {
-        let sender_bytes = AddressUtil::address_to_bytes(sender);
-
-        let count_bytes = U64Util::u64_to_bytes(counter.counter);
+        let sender_bytes = LCS::to_bytes(&sender);
+        let count_bytes = LCS::to_bytes(&counter.counter);
         counter.counter = counter.counter + 1;
 
         // EventHandleGenerator goes first just in case we want to extend address in the future.

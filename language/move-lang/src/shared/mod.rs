@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use move_ir_types::location::*;
+use petgraph::{algo::astar as petgraph_astar, graphmap::DiGraphMap};
 use std::{
     convert::TryFrom,
     fmt,
@@ -143,6 +144,40 @@ impl TName for Name {
     fn add_loc(loc: Loc, key: String) -> Self {
         sp(loc, key)
     }
+}
+
+//**************************************************************************************************
+// Graphs
+//**************************************************************************************************
+
+pub fn shortest_cycle<'a, T: Ord + Hash>(
+    dependency_graph: &DiGraphMap<&'a T, ()>,
+    start: &'a T,
+) -> Vec<&'a T> {
+    let shortest_path = dependency_graph
+        .neighbors(start)
+        .fold(None, |shortest_path, neighbor| {
+            let path_opt = petgraph_astar(
+                dependency_graph,
+                neighbor,
+                |finish| finish == start,
+                |_e| 1,
+                |_| 0,
+            );
+            match (shortest_path, path_opt) {
+                (p, None) | (None, p) => p,
+                (Some((acc_len, acc_path)), Some((cur_len, cur_path))) => {
+                    Some(if cur_len < acc_len {
+                        (cur_len, cur_path)
+                    } else {
+                        (acc_len, acc_path)
+                    })
+                }
+            }
+        });
+    let (_, mut path) = shortest_path.unwrap();
+    path.insert(0, start);
+    path
 }
 
 //**************************************************************************************************

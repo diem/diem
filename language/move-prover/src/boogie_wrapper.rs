@@ -153,7 +153,12 @@ impl<'env> BoogieWrapper<'env> {
         );
 
         // Now add trace diagnostics.
-        if error.kind.is_from_verification() && !error.execution_trace.is_empty() {
+        if error.kind.is_from_verification()
+            && !error.execution_trace.is_empty()
+            // Reporting errors on boogie source seems to have some non-determinism, so skip
+            // this if stable output is required
+            && (on_source || !self.options.stable_test_output)
+        {
             let mut locals_shown = BTreeSet::new();
             let mut aborted = false;
             let cleaned_trace = error
@@ -365,7 +370,7 @@ impl<'env> BoogieWrapper<'env> {
         let verification_diag_start =
             Regex::new(r"(?m)^.*\((?P<line>\d+),(?P<col>\d+)\): Error BP\d+:(?P<msg>.*)$").unwrap();
         let verification_diag_related =
-            Regex::new(r"(?m)^.+\((?P<line>\d+),(?P<col>\d+)\): Related.*$").unwrap();
+            Regex::new(r"^\n.+\((?P<line>\d+),(?P<col>\d+)\): Related.*\n").unwrap();
         let verification_diag_trace = Regex::new(r"(?m)^Execution trace:$").unwrap();
         let verification_diag_trace_entry =
             Regex::new(r"(?m)^    .*\((?P<line>\d+),(?P<col>\d+)\): (?P<msg>.*)$").unwrap();

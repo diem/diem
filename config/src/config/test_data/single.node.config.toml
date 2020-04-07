@@ -51,8 +51,12 @@ seed_peers_file = ""
 max_block_size = 1000
 max_pruned_blocks_in_mem = 10000
 pacemaker_initial_timeout_ms = 1000
-proposer_type = "multiple_ordered_proposers"
 contiguous_rounds = 2
+
+[consensus.proposer_type]
+type = "leader_reputation"
+active_weights = 99
+inactive_weights = 1
 [consensus.safety_rules.backend]
 type = "in_memory_storage"
 

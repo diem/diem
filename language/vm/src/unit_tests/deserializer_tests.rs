@@ -14,7 +14,7 @@ fn malformed_simple() {
     let mut res = CompiledScript::deserialize(&binary);
     assert_eq!(
         res.expect_err("Expected malformed binary").major_status,
-        StatusCode::MALFORMED
+        StatusCode::BAD_MAGIC
     );
 
     // under-sized binary
@@ -22,7 +22,7 @@ fn malformed_simple() {
     res = CompiledScript::deserialize(&binary);
     assert_eq!(
         res.expect_err("Expected malformed binary").major_status,
-        StatusCode::MALFORMED
+        StatusCode::BAD_MAGIC
     );
 
     // bad magic

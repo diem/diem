@@ -15,7 +15,7 @@ use anyhow::format_err;
 use futures::{channel::mpsc::channel, StreamExt};
 use hex;
 use libra_config::utils;
-use libra_crypto::{ed25519::*, HashValue};
+use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use libra_temppath::TempPath;
 use libra_types::{
     account_address::AccountAddress,
@@ -32,7 +32,7 @@ use libra_types::{
     transaction::{Transaction, TransactionInfo, TransactionPayload, TransactionToCommit},
     vm_error::{StatusCode, VMStatus},
 };
-use libradb::{test_helper::arb_blocks_to_commit, LibraDB, LibraDBTrait};
+use libradb::{test_helper::arb_blocks_to_commit, LibraDB};
 use proptest::prelude::*;
 use reqwest;
 use serde_json::{self, Value};
@@ -42,6 +42,7 @@ use std::{
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
+use storage_interface::DbReader;
 use vm_validator::{
     mocks::mock_vm_validator::MockVMValidator, vm_validator::TransactionValidation,
 };
@@ -193,7 +194,7 @@ fn test_transaction_submission() {
     runtime.spawn(async move {
         let validator = MockVMValidator;
         while let Some((txn, cb)) = mp_events.next().await {
-            let vm_status = validator.validate_transaction(txn).await.unwrap();
+            let vm_status = validator.validate_transaction(txn).await.unwrap().status();
             let result = if vm_status.is_some() {
                 (MempoolStatus::new(MempoolStatusCode::VmError), vm_status)
             } else {
@@ -205,8 +206,8 @@ fn test_transaction_submission() {
 
     // closure that checks transaction submission for given account
     let mut txn_submission = move |sender| {
-        let keypair = compat::generate_keypair(None);
-        let txn = get_test_signed_txn(sender, 0, &keypair.0, keypair.1, None);
+        let privkey = Ed25519PrivateKey::generate_for_testing();
+        let txn = get_test_signed_txn(sender, 0, &privkey, privkey.public_key(), None);
         let mut batch = JsonRpcBatch::default();
         batch.add_submit_request(txn).unwrap();
         runtime.block_on(client.execute(batch)).unwrap()
@@ -435,7 +436,7 @@ fn test_get_transactions_impl(blocks: Vec<(Vec<TransactionToCommit>, LedgerInfoW
                             }
                             _ => panic!("Returned value doesn't match!"),
                         },
-                        Transaction::WriteSet(_) => match view.transaction {
+                        Transaction::WaypointWriteSet(_) => match view.transaction {
                             TransactionDataView::WriteSet { .. } => {}
                             _ => panic!("Returned value doesn't match!"),
                         },

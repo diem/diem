@@ -3,9 +3,10 @@
 
 use crate::{counters, state_replication::StateComputer};
 use anyhow::{ensure, Result};
-use consensus_types::{block::Block, executed_block::ExecutedBlock};
+use consensus_types::block::Block;
 use executor::Executor;
-use executor_types::{ExecutedTrees, ProcessedVMOutput};
+use executor_types::StateComputeResult;
+use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
@@ -16,19 +17,22 @@ use libra_vm::LibraVM;
 use state_synchronizer::StateSyncClient;
 use std::{
     convert::TryFrom,
-    sync::Arc,
+    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
 pub struct ExecutionProxy {
-    executor: Arc<Executor<LibraVM>>,
+    executor: Arc<Mutex<Executor<LibraVM>>>,
     synchronizer: Arc<StateSyncClient>,
 }
 
 impl ExecutionProxy {
-    pub fn new(executor: Arc<Executor<LibraVM>>, synchronizer: Arc<StateSyncClient>) -> Self {
+    pub fn new(
+        executor: Arc<Mutex<Executor<LibraVM>>>,
+        synchronizer: Arc<StateSyncClient>,
+    ) -> Self {
         Self {
             executor,
             synchronizer,
@@ -56,11 +60,9 @@ impl StateComputer for ExecutionProxy {
         &self,
         // The block to be executed.
         block: &Block<Self::Payload>,
-        // The executed trees after executing the parent block.
-        parent_executed_trees: &ExecutedTrees,
-        // The last committed trees.
-        committed_trees: &ExecutedTrees,
-    ) -> Result<ProcessedVMOutput> {
+        // The parent block id.
+        parent_block_id: HashValue,
+    ) -> Result<StateComputeResult> {
         let pre_execution_instant = Instant::now();
         debug!(
             "Executing block {:x}. Parent: {:x}.",
@@ -70,15 +72,15 @@ impl StateComputer for ExecutionProxy {
 
         // TODO: figure out error handling for the prologue txn
         self.executor
+            .lock()
+            .unwrap()
             .execute_block(
-                block.id(),
-                Self::transactions_from_block(block),
-                parent_executed_trees,
-                committed_trees,
+                (block.id(), Self::transactions_from_block(block)),
+                parent_block_id,
             )
-            .and_then(|output| {
+            .and_then(|result| {
                 let execution_duration = pre_execution_instant.elapsed();
-                let num_txns = output.transaction_data().len();
+                let num_txns = result.transaction_info_hashes().len();
                 ensure!(num_txns > 0, "metadata txn failed to execute");
                 counters::BLOCK_EXECUTION_DURATION_S.observe_duration(execution_duration);
                 if let Ok(nanos_per_txn) =
@@ -89,35 +91,26 @@ impl StateComputer for ExecutionProxy {
                     counters::TXN_EXECUTION_DURATION_S
                         .observe_duration(Duration::from_nanos(nanos_per_txn));
                 }
-                Ok(output)
+                Ok(result)
             })
     }
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
     async fn commit(
         &self,
-        blocks: Vec<&ExecutedBlock<Self::Payload>>,
+        block_ids: Vec<HashValue>,
         finality_proof: LedgerInfoWithSignatures,
-        committed_trees: &ExecutedTrees,
     ) -> Result<()> {
         let version = finality_proof.ledger_info().version();
         counters::LAST_COMMITTED_VERSION.set(version as i64);
 
         let pre_commit_instant = Instant::now();
 
-        let committable_blocks = blocks
-            .into_iter()
-            .map(|executed_block| {
-                (
-                    Self::transactions_from_block(executed_block.block()),
-                    Arc::clone(executed_block.output()),
-                )
-            })
-            .collect();
-
-        let (committed_txns, reconfig_events) =
-            self.executor
-                .commit_blocks(committable_blocks, finality_proof, committed_trees)?;
+        let (committed_txns, reconfig_events) = self
+            .executor
+            .lock()
+            .unwrap()
+            .commit_blocks(block_ids, finality_proof)?;
         counters::BLOCK_COMMIT_DURATION_S.observe_duration(pre_commit_instant.elapsed());
         if let Err(e) = self
             .synchronizer

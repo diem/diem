@@ -208,7 +208,6 @@ fn arb_update_proof(
                 let signatures = sign_ledger_info(&last_vset[..], &latest_ledger_info);
                 let latest_ledger_info_with_sigs =
                     LedgerInfoWithSignatures::new(latest_ledger_info, signatures);
-
                 (vsets, ledger_infos_with_sigs, latest_ledger_info_with_sigs)
             })
     })
@@ -277,7 +276,7 @@ proptest! {
             1..5, /* validators per epoch */
         )
     ) {
-        let first_epoch_change_li = lis_with_sigs.first().map(LedgerInfoWithSignatures::ledger_info).unwrap();
+        let first_epoch_change_li = lis_with_sigs.first().map(|l| l.ledger_info()).unwrap();
         let waypoint = Waypoint::new(first_epoch_change_li)
             .expect("Generating waypoint failed even though we passed an epoch change ledger info");
         let trusted_state = TrustedState::from_waypoint(waypoint);

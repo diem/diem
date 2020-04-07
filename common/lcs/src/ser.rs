@@ -3,7 +3,6 @@
 
 use crate::error::{Error, Result};
 use serde::{ser, Serialize};
-use std::collections::BTreeMap;
 
 /// Serialize the given data structure as a `Vec<u8>` of LCS.
 ///
@@ -41,9 +40,9 @@ use std::collections::BTreeMap;
 ///
 /// let bytes = to_bytes(&service).unwrap();
 /// let expected = vec![
-///     0xc0, 0xa8, 0x01, 0x01, 0x03, 0x00, 0x00, 0x00,
-///     0x41, 0x1f, 0x42, 0x1f, 0x43, 0x1f, 0x01, 0x88,
-///     0x13, 0x00, 0x00, 0x00,
+///     0xc0, 0xa8, 0x01, 0x01, 0x03, 0x41, 0x1f, 0x42,
+///     0x1f, 0x43, 0x1f, 0x01, 0x88, 0x13, 0x00, 0x00,
+///     0x00,
 /// ];
 /// assert_eq!(bytes, expected);
 /// ```
@@ -79,13 +78,28 @@ impl Serializer {
         self.output
     }
 
+    fn serialize_u32_as_uleb128(&mut self, mut value: u32) -> Result<()> {
+        use serde::ser::Serializer;
+        while value >= 0x80 {
+            // Write 7 (lowest) bits of data and set the 8th bit to 1.
+            let byte = (value & 0x7f) as u8;
+            self.serialize_u8(byte | 0x80)?;
+            value >>= 7;
+        }
+        // Write the remaining bits of data and set the highest bit to 0.
+        self.serialize_u8(value as u8)
+    }
+
+    fn serialize_variant_index(&mut self, v: u32) -> Result<()> {
+        self.serialize_u32_as_uleb128(v)
+    }
+
     /// Serialize a sequence length as a u32.
     fn serialize_seq_len(&mut self, len: usize) -> Result<()> {
-        use serde::ser::Serializer;
         if len > crate::MAX_SEQUENCE_LENGTH {
             return Err(Error::ExceededMaxLen(len));
         }
-        self.serialize_u32(len as u32)
+        self.serialize_u32_as_uleb128(len as u32)
     }
 }
 
@@ -201,7 +215,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         variant_index: u32,
         _variant: &'static str,
     ) -> Result<()> {
-        self.serialize_u32(variant_index)
+        self.serialize_variant_index(variant_index)
     }
 
     fn serialize_newtype_struct<T>(self, _name: &'static str, value: &T) -> Result<()>
@@ -221,7 +235,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     where
         T: ?Sized + Serialize,
     {
-        self.serialize_u32(variant_index)?;
+        self.serialize_variant_index(variant_index)?;
         value.serialize(self)
     }
 
@@ -258,7 +272,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         _variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
-        self.serialize_u32(variant_index)?;
+        self.serialize_variant_index(variant_index)?;
         Ok(self)
     }
 
@@ -277,7 +291,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
         _variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeStructVariant> {
-        self.serialize_u32(variant_index)?;
+        self.serialize_variant_index(variant_index)?;
         Ok(self)
     }
 
@@ -354,7 +368,7 @@ impl<'a> ser::SerializeTupleVariant for &'a mut Serializer {
 #[doc(hidden)]
 struct MapSerializer<'a> {
     ser: &'a mut Serializer,
-    map: BTreeMap<Vec<u8>, Vec<u8>>,
+    entries: Vec<(Vec<u8>, Vec<u8>)>,
     next_key: Option<Vec<u8>>,
 }
 
@@ -362,7 +376,7 @@ impl<'a> MapSerializer<'a> {
     fn new(ser: &'a mut Serializer) -> Self {
         MapSerializer {
             ser,
-            map: BTreeMap::new(),
+            entries: Vec::new(),
             next_key: None,
         }
     }
@@ -394,7 +408,7 @@ impl<'a> ser::SerializeMap for MapSerializer<'a> {
             Some(key) => {
                 let mut s = Serializer::new();
                 value.serialize(&mut s)?;
-                self.map.insert(key, s.output);
+                self.entries.push((key, s.output));
             }
             None => {
                 return Err(Error::ExpectedMapKey);
@@ -404,21 +418,17 @@ impl<'a> ser::SerializeMap for MapSerializer<'a> {
         Ok(())
     }
 
-    fn end(self) -> Result<()> {
-        use serde::ser::Serializer;
-
+    fn end(mut self) -> Result<()> {
         if self.next_key.is_some() {
             return Err(Error::ExpectedMapValue);
         }
+        self.entries.sort_by(|e1, e2| e1.0.cmp(&e2.0));
+        self.entries.dedup_by(|e1, e2| e1.0.eq(&e2.0));
 
-        let len = self.map.len();
-        if len > crate::MAX_SEQUENCE_LENGTH {
-            return Err(Error::ExceededMaxLen(len));
-        }
+        let len = self.entries.len();
+        self.ser.serialize_seq_len(len)?;
 
-        self.ser.serialize_u32(len as u32)?;
-
-        for (key, value) in self.map {
+        for (key, value) in self.entries {
             self.ser.output.extend(key.into_iter());
             self.ser.output.extend(value.into_iter());
         }

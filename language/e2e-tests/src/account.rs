@@ -3,7 +3,7 @@
 
 //! Test infrastructure for modeling Libra accounts.
 
-use crate::keygen::KeyGen;
+use crate::{gas_costs, keygen::KeyGen};
 use libra_crypto::ed25519::*;
 use libra_types::{
     access_path::AccessPath,
@@ -212,6 +212,7 @@ impl Account {
     pub fn create_signed_txn_with_args(
         &self,
         program: Vec<u8>,
+        ty_args: Vec<TypeTag>,
         args: Vec<TransactionArgument>,
         sequence_number: u64,
         max_gas_amount: u64,
@@ -220,7 +221,7 @@ impl Account {
     ) -> SignedTransaction {
         self.create_signed_txn_impl(
             *self.address(),
-            TransactionPayload::Script(Script::new(program, args)),
+            TransactionPayload::Script(Script::new(program, ty_args, args)),
             sequence_number,
             max_gas_amount,
             gas_unit_price,
@@ -231,6 +232,7 @@ impl Account {
     pub fn create_raw_txn_with_args(
         address: AccountAddress,
         program: Vec<u8>,
+        ty_args: Vec<TypeTag>,
         args: Vec<TransactionArgument>,
         sequence_number: u64,
         max_gas_amount: u64,
@@ -239,7 +241,7 @@ impl Account {
     ) -> RawTransaction {
         Self::create_raw_txn_impl(
             address,
-            TransactionPayload::Script(Script::new(program, args)),
+            TransactionPayload::Script(Script::new(program, ty_args, args)),
             sequence_number,
             max_gas_amount,
             gas_unit_price,
@@ -254,6 +256,7 @@ impl Account {
         &self,
         sender: AccountAddress,
         program: Vec<u8>,
+        ty_args: Vec<TypeTag>,
         args: Vec<TransactionArgument>,
         sequence_number: u64,
         max_gas_amount: u64,
@@ -262,7 +265,7 @@ impl Account {
     ) -> SignedTransaction {
         self.create_signed_txn_impl(
             sender,
-            TransactionPayload::Script(Script::new(program, args)),
+            TransactionPayload::Script(Script::new(program, ty_args, args)),
             sequence_number,
             max_gas_amount,
             gas_unit_price,
@@ -273,6 +276,7 @@ impl Account {
     pub fn create_raw_txn_with_args_and_sender(
         sender: AccountAddress,
         program: Vec<u8>,
+        ty_args: Vec<TypeTag>,
         args: Vec<TransactionArgument>,
         sequence_number: u64,
         max_gas_amount: u64,
@@ -281,7 +285,7 @@ impl Account {
     ) -> RawTransaction {
         Self::create_raw_txn_impl(
             sender,
-            TransactionPayload::Script(Script::new(program, args)),
+            TransactionPayload::Script(Script::new(program, ty_args, args)),
             sequence_number,
             max_gas_amount,
             gas_unit_price,
@@ -312,6 +316,19 @@ impl Account {
         .sign(&self.privkey, self.pubkey.clone())
         .unwrap()
         .into_inner()
+    }
+
+    /// Create a transaction containing `script` signed by `sender` with default values for gas
+    /// cost, gas price, expiration time, and currency type.
+    pub fn signed_script_txn(&self, script: Script, sequence_number: u64) -> SignedTransaction {
+        self.create_signed_txn_impl(
+            *self.address(),
+            TransactionPayload::Script(script),
+            sequence_number,
+            gas_costs::TXN_RESERVED,
+            0, // gas price
+            account_config::lbr_type_tag(),
+        )
     }
 
     pub fn create_raw_txn_impl(
@@ -369,6 +386,7 @@ impl Balance {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::account_module_name().to_owned(),
             name: account_config::account_balance_struct_name().to_owned(),
+            is_resource: true,
             ty_args: vec![],
             layout: vec![Type::U64],
         }
@@ -450,6 +468,7 @@ impl AccountData {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::account_module_name().to_owned(),
             name: account_config::sent_event_name().to_owned(),
+            is_resource: false,
             ty_args: vec![],
             layout: vec![Type::U64, Type::Address, Type::Vector(Box::new(Type::U8))],
         }
@@ -460,6 +479,7 @@ impl AccountData {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::account_module_name().to_owned(),
             name: account_config::received_event_name().to_owned(),
+            is_resource: false,
             ty_args: vec![],
             layout: vec![Type::U64, Type::Address, Type::Vector(Box::new(Type::U8))],
         }
@@ -470,6 +490,7 @@ impl AccountData {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::account_module_name().to_owned(),
             name: account_config::account_event_handle_struct_name().to_owned(),
+            is_resource: true,
             ty_args: vec![ty],
             layout: vec![Type::U64, Type::Vector(Box::new(Type::U8))],
         }
@@ -480,6 +501,7 @@ impl AccountData {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::account_module_name().to_owned(),
             name: account_config::account_event_handle_generator_struct_name().to_owned(),
+            is_resource: true,
             ty_args: vec![],
             layout: vec![Type::U64],
         }
@@ -491,6 +513,7 @@ impl AccountData {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::account_module_name().to_owned(),
             name: account_config::account_struct_name().to_owned(),
+            is_resource: true,
             ty_args: vec![],
             layout: vec![
                 Type::Vector(Box::new(Type::U8)),

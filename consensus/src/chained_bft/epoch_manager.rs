@@ -6,6 +6,7 @@ use crate::{
         block_storage::{BlockReader, BlockStore},
         event_processor::{EventProcessor, SyncProcessor, UnverifiedEvent, VerifiedEvent},
         liveness::{
+            leader_reputation::{ActiveInactiveHeuristic, LeaderReputation, LibraDBBackend},
             multi_proposer_election::MultiProposer,
             pacemaker::{ExponentialTimeInterval, Pacemaker},
             proposal_generator::ProposalGenerator,
@@ -48,6 +49,7 @@ pub enum Processor<T> {
     EventProcessor(EventProcessor<T>),
 }
 
+#[allow(clippy::large_enum_variant)]
 pub enum LivenessStorageData<T> {
     RecoveryData(RecoveryData<T>),
     LedgerRecoveryData(LedgerRecoveryData),
@@ -160,6 +162,17 @@ impl<T: Payload> EpochManager<T> {
                     vec![proposer],
                     self.config.contiguous_rounds,
                 ))
+            }
+            ConsensusProposerType::LeaderReputation(heuristic_config) => {
+                let backend = Box::new(LibraDBBackend::new(
+                    proposers.len(),
+                    self.storage.libra_db(),
+                ));
+                let heuristic = Box::new(ActiveInactiveHeuristic::new(
+                    heuristic_config.active_weights,
+                    heuristic_config.inactive_weights,
+                ));
+                Box::new(LeaderReputation::new(proposers, backend, heuristic))
             }
         }
     }
@@ -346,7 +359,7 @@ impl<T: Payload> EpochManager<T> {
     }
 
     pub async fn start_processor(&mut self) {
-        match self.storage.start().await {
+        match self.storage.start() {
             LivenessStorageData::RecoveryData(initial_data) => {
                 self.start_event_processor(initial_data).await
             }

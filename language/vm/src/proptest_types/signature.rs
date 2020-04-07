@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::file_format::{
-    FunctionSignature, Kind, SignatureToken, StructHandleIndex, TableIndex, TypeParameterIndex,
+    Kind, Signature, SignatureToken, StructHandleIndex, TableIndex, TypeParameterIndex,
 };
 use proptest::{
     collection::{vec, SizeRange},
@@ -13,14 +13,14 @@ use proptest::{
 #[derive(Clone, Debug)]
 pub enum KindGen {
     Resource,
-    Unrestricted,
+    Copyable,
 }
 
 impl KindGen {
     pub fn strategy() -> impl Strategy<Value = Self> {
         use KindGen::*;
 
-        static KINDS: &[KindGen] = &[Resource, Unrestricted];
+        static KINDS: &[KindGen] = &[Resource, Copyable];
 
         select(KINDS)
     }
@@ -28,49 +28,23 @@ impl KindGen {
     pub fn materialize(self) -> Kind {
         match self {
             KindGen::Resource => Kind::Resource,
-            KindGen::Unrestricted => Kind::Unrestricted,
+            KindGen::Copyable => Kind::Copyable,
         }
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct FunctionSignatureGen {
-    return_types: Vec<SignatureTokenGen>,
-    arg_types: Vec<SignatureTokenGen>,
-    type_formals: Vec<KindGen>,
+pub struct SignatureGen {
+    signatures: Vec<SignatureTokenGen>,
 }
 
-impl FunctionSignatureGen {
-    pub fn strategy(
-        return_count: impl Into<SizeRange>,
-        arg_count: impl Into<SizeRange>,
-        _kind_count: impl Into<SizeRange>,
-    ) -> impl Strategy<Value = Self> {
-        (
-            vec(SignatureTokenGen::strategy(), return_count),
-            vec(SignatureTokenGen::strategy(), arg_count),
-            // TODO: re-enable type formals once we rework prop tests for generics
-            vec(KindGen::strategy(), 0),
-        )
-            .prop_map(|(return_types, arg_types, type_formals)| Self {
-                return_types,
-                arg_types,
-                type_formals,
-            })
+impl SignatureGen {
+    pub fn strategy(sig_count: impl Into<SizeRange>) -> impl Strategy<Value = Self> {
+        vec(SignatureTokenGen::strategy(), sig_count).prop_map(|signatures| Self { signatures })
     }
 
-    pub fn materialize(self, struct_handles_len: usize) -> FunctionSignature {
-        FunctionSignature {
-            return_types: SignatureTokenGen::map_materialize(self.return_types, struct_handles_len)
-                .collect(),
-            arg_types: SignatureTokenGen::map_materialize(self.arg_types, struct_handles_len)
-                .collect(),
-            type_formals: self
-                .type_formals
-                .into_iter()
-                .map(KindGen::materialize)
-                .collect(),
-        }
+    pub fn materialize(self, struct_handles_len: usize) -> Signature {
+        Signature(SignatureTokenGen::map_materialize(self.signatures, struct_handles_len).collect())
     }
 }
 
@@ -85,7 +59,7 @@ pub enum SignatureTokenGen {
     TypeParameter(PropIndex),
 
     // Composite signature tokens.
-    Struct(PropIndex, Vec<SignatureTokenGen>),
+    Struct(PropIndex),
     Reference(Box<SignatureTokenGen>),
     MutableReference(Box<SignatureTokenGen>),
 }
@@ -132,10 +106,7 @@ impl SignatureTokenGen {
     }
 
     pub fn struct_strategy() -> impl Strategy<Value = Self> {
-        use SignatureTokenGen::*;
-
-        // TODO: generate type actuals
-        any::<PropIndex>().prop_map(|idx| Struct(idx, vec![]))
+        any::<PropIndex>().prop_map(SignatureTokenGen::Struct)
     }
 
     pub fn reference_strategy() -> impl Strategy<Value = Self> {
@@ -150,20 +121,23 @@ impl SignatureTokenGen {
 
     pub fn materialize(self, struct_handles_len: usize) -> SignatureToken {
         use SignatureTokenGen::*;
-
         match self {
             Bool => SignatureToken::Bool,
             U8 => SignatureToken::U8,
             U64 => SignatureToken::U64,
             U128 => SignatureToken::U128,
             Address => SignatureToken::Address,
-            Struct(idx, types) => SignatureToken::Struct(
-                StructHandleIndex::new(idx.index(struct_handles_len) as TableIndex),
-                types
-                    .into_iter()
-                    .map(|t: SignatureTokenGen| t.materialize(struct_handles_len))
-                    .collect(),
-            ),
+            Struct(idx) => {
+                if struct_handles_len == 0 {
+                    // we are asked to create a type of a struct that cannot exist
+                    // so we fake a U64 instead...
+                    SignatureToken::U64
+                } else {
+                    SignatureToken::Struct(StructHandleIndex(
+                        idx.index(struct_handles_len) as TableIndex
+                    ))
+                }
+            }
             Reference(token) => {
                 SignatureToken::Reference(Box::new(token.materialize(struct_handles_len)))
             }

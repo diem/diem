@@ -9,7 +9,7 @@ use crate::{
 };
 
 use consensus_types::common::Round;
-use futures::{executor::block_on, StreamExt};
+use futures::StreamExt;
 use std::{sync::Arc, time::Duration};
 
 #[test]
@@ -25,15 +25,15 @@ fn test_pacemaker_time_interval() {
     assert_eq!(6750, interval.get_round_duration(1000).as_millis());
 }
 
-#[test]
+#[tokio::test]
 /// Verify that Pacemaker properly outputs local timeout events upon timeout
-fn test_basic_timeout() {
+async fn test_basic_timeout() {
     let (mut pm, mut timeout_rx) = make_pacemaker();
 
     // jump start the pacemaker
     pm.process_certificates(Some(0), None, None);
     for _ in 0..2 {
-        let round = block_on(timeout_rx.next()).unwrap();
+        let round = timeout_rx.next().await.unwrap();
         // Here we just test timeout send retry,
         // round for timeout is not changed as no timeout certificate was gathered at this point
         assert_eq!(1, round);

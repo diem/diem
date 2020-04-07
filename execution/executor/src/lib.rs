@@ -2,25 +2,29 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
-#![allow(dead_code)]
 
 #[cfg(test)]
 mod executor_test;
 #[cfg(test)]
 mod mock_vm;
+mod speculation_cache;
+
+pub mod db_bootstrapper;
 
 use anyhow::{bail, ensure, format_err, Result};
 use debug_interface::prelude::*;
-use executor_types::{ExecutedTrees, ProcessedVMOutput, ProofReader, TransactionData};
+use executor_types::{
+    ExecutedTrees, ProcessedVMOutput, ProofReader, StateComputeResult, TransactionData,
+};
 use futures::executor::block_on;
-use libra_config::config::NodeConfig;
 use libra_crypto::{
-    hash::{CryptoHash, EventAccumulatorHasher, GENESIS_BLOCK_ID},
+    hash::{CryptoHash, EventAccumulatorHasher, TransactionAccumulatorHasher},
     HashValue,
 };
 use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
+    account_config,
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
@@ -36,13 +40,15 @@ use libra_types::{
 use libra_vm::VMExecutor;
 use once_cell::sync::Lazy;
 use scratchpad::SparseMerkleTree;
+use speculation_cache::SpeculationCache;
 use std::{
     collections::{hash_map, HashMap, HashSet},
     convert::TryFrom,
     marker::PhantomData,
     sync::Arc,
 };
-use storage_client::{StorageRead, StorageWrite, VerifiedStateView};
+use storage_client::{StorageWrite, VerifiedStateView};
+use storage_interface::DbReader;
 use tokio::runtime::Runtime;
 
 static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
@@ -51,11 +57,10 @@ static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
 /// `Executor` implements all functionalities the execution module needs to provide.
 pub struct Executor<V> {
     rt: Runtime,
-
     /// Client to storage service.
-    storage_read_client: Arc<dyn StorageRead>,
+    db_reader: Arc<dyn DbReader>,
     storage_write_client: Arc<dyn StorageWrite>,
-
+    cache: SpeculationCache,
     phantom: PhantomData<V>,
 }
 
@@ -63,97 +68,79 @@ impl<V> Executor<V>
 where
     V: VMExecutor,
 {
-    /// Constructs an `Executor`.
-    pub fn new(
-        storage_read_client: Arc<dyn StorageRead>,
-        storage_write_client: Arc<dyn StorageWrite>,
-        config: &NodeConfig,
-    ) -> Self {
-        let rt = tokio::runtime::Builder::new()
+    pub fn committed_block_id(&self) -> HashValue {
+        self.cache.committed_block_id()
+    }
+
+    pub fn create_runtime() -> Runtime {
+        tokio::runtime::Builder::new()
             .threaded_scheduler()
             .enable_all()
             .thread_name("tokio-executor")
             .build()
-            .unwrap();
-
-        let mut executor = Executor {
-            rt,
-            storage_read_client: storage_read_client.clone(),
-            storage_write_client,
-            phantom: PhantomData,
-        };
-
-        let startup_info = block_on(executor.rt.spawn(async move {
-            storage_read_client
-                .get_startup_info()
-                .await
-                .expect("Shouldn't fail")
-        }))
-        .unwrap();
-
-        if startup_info.is_none() {
-            let genesis_txn = config
-                .execution
-                .genesis
-                .as_ref()
-                .expect("failed to load genesis transaction!")
-                .clone();
-            executor.init_genesis(genesis_txn);
-        }
-        executor
+            .unwrap()
     }
 
-    /// This is used when we start for the first time and the DB is completely empty. It will write
-    /// necessary information to DB by committing the genesis transaction.
-    fn init_genesis(&mut self, genesis_txn: Transaction) {
-        let genesis_txns = vec![genesis_txn];
+    /// Constructs an `Executor`.
+    pub fn new(
+        rt: Runtime,
+        db_reader: Arc<dyn DbReader>,
+        storage_write_client: Arc<dyn StorageWrite>,
+    ) -> Self {
+        let startup_info = db_reader
+            .get_startup_info()
+            .expect("Shouldn't fail")
+            .expect("DB not bootstrapped.");
 
-        // Create a block with genesis_txn being the only transaction. Execute it then commit it
-        // immediately.
-        // We create `PRE_GENESIS_BLOCK_ID` as the parent of the genesis block.
-        let pre_genesis_trees = ExecutedTrees::new_empty();
-        let output = self
-            .execute_block(
-                *GENESIS_BLOCK_ID,
-                genesis_txns.clone(),
-                &pre_genesis_trees,
-                &pre_genesis_trees,
-            )
-            .expect("Failed to execute genesis block.");
+        Self {
+            rt,
+            db_reader,
+            storage_write_client,
+            cache: SpeculationCache::new_with_startup_info(startup_info),
+            phantom: PhantomData,
+        }
+    }
 
-        let validator_set = output
-            .validators()
-            .clone()
-            .expect("Genesis transaction must emit a validator set.");
-
-        let root_hash = output.accu_root();
-        let ledger_info_with_sigs = LedgerInfoWithSignatures::genesis(root_hash, validator_set);
-
-        self.commit_blocks(
-            vec![(genesis_txns, Arc::new(output))],
-            ledger_info_with_sigs,
-            &pre_genesis_trees,
-        )
-        .expect("Failed to commit genesis block.");
-        info!("GENESIS transaction is committed.")
+    fn new_on_unbootstrapped_db(
+        rt: Runtime,
+        db_reader: Arc<dyn DbReader>,
+        storage_write_client: Arc<dyn StorageWrite>,
+    ) -> Self {
+        Self {
+            rt,
+            db_reader,
+            storage_write_client,
+            cache: SpeculationCache::new(),
+            phantom: PhantomData,
+        }
     }
 
     /// Executes a block.
     pub fn execute_block(
-        &self,
-        block_id: HashValue,
-        transactions: Vec<Transaction>,
-        parent_trees: &ExecutedTrees,
-        committed_trees: &ExecutedTrees,
-    ) -> Result<ProcessedVMOutput> {
+        &mut self,
+        block: (HashValue, Vec<Transaction>),
+        parent_block_id: HashValue,
+    ) -> Result<StateComputeResult> {
+        let (block_id, transactions) = block;
+        let parent_block_executed_trees = if parent_block_id == self.cache.committed_block_id() {
+            self.cache.committed_trees().clone()
+        } else {
+            self.cache
+                .get_block(&parent_block_id)?
+                .lock()
+                .unwrap()
+                .output()
+                .executed_trees()
+                .clone()
+        };
+
         let _timer = OP_COUNTERS.timer("block_execute_time_s");
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
-            Arc::clone(&self.storage_read_client),
-            self.rt.handle().clone(),
-            committed_trees.version(),
-            committed_trees.state_root(),
-            parent_trees.state_tree(),
+            Arc::clone(&self.db_reader),
+            self.cache.committed_trees().version(),
+            self.cache.committed_trees().state_root(),
+            parent_block_executed_trees.state_tree(),
         );
 
         let vm_outputs = {
@@ -178,11 +165,17 @@ where
             account_to_proof,
             &transactions,
             vm_outputs,
-            parent_trees,
+            &parent_block_executed_trees,
         )
         .map_err(|err| format_err!("Failed to execute block: {}", err))?;
 
-        Ok(output)
+        let state_compute_result = output.state_compute_result();
+
+        // Add the output to the speculation_output_tree
+        self.cache
+            .add_block(parent_block_id, (block_id, transactions, output))?;
+
+        Ok(state_compute_result)
     }
 
     /// Saves eligible blocks to persistent storage.
@@ -199,25 +192,30 @@ where
     /// where Vec<Transaction> is a vector of transactions that were kept from the submitted blocks, and
     /// Vec<ContractEvents> is a vector of reconfiguration events in the submitted blocks
     pub fn commit_blocks(
-        &self,
-        blocks: Vec<(Vec<Transaction>, Arc<ProcessedVMOutput>)>,
+        &mut self,
+        block_ids: Vec<HashValue>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
-        synced_trees: &ExecutedTrees,
     ) -> Result<(Vec<Transaction>, Vec<ContractEvent>)> {
-        debug!(
-            "Received request to commit block {:x}.",
-            ledger_info_with_sigs.ledger_info().consensus_block_id()
-        );
-        let num_persistent_txns = synced_trees.txn_accumulator().num_leaves();
+        let block_id_to_commit = ledger_info_with_sigs.ledger_info().consensus_block_id();
+        debug!("Received request to commit block {:x}.", block_id_to_commit);
+
+        let num_persistent_txns = self.cache.synced_trees().txn_accumulator().num_leaves();
 
         // All transactions that need to go to storage. In the above example, this means all the
         // transactions in A, B and C whose status == TransactionStatus::Keep.
         // This must be done before calculate potential skipping of transactions in idempotent commit.
         let mut txns_to_keep = vec![];
-        for (txn, txn_data) in blocks
+        let arc_blocks = block_ids
             .iter()
-            .flat_map(|block| itertools::zip_eq(&block.0, block.1.transaction_data()))
-        {
+            .map(|id| self.cache.get_block(id))
+            .collect::<Result<Vec<_>>>()?;
+        let blocks = arc_blocks
+            .iter()
+            .map(|b| b.lock().unwrap())
+            .collect::<Vec<_>>();
+        for (txn, txn_data) in blocks.iter().flat_map(|block| {
+            itertools::zip_eq(block.transactions(), block.output().transaction_data())
+        }) {
             if let TransactionStatus::Keep(_) = txn_data.status() {
                 txns_to_keep.push((
                     TransactionToCommit::new(
@@ -239,8 +237,11 @@ where
         // Check that the version in ledger info (computed by consensus) matches the version
         // computed by us.
         let version = ledger_info_with_sigs.ledger_info().version();
-        let num_txns_in_speculative_accumulator =
-            last_block.1.executed_trees().txn_accumulator().num_leaves();
+        let num_txns_in_speculative_accumulator = last_block
+            .output()
+            .executed_trees()
+            .txn_accumulator()
+            .num_leaves();
         assert_eq!(
             version + 1,
             num_txns_in_speculative_accumulator as Version,
@@ -281,7 +282,7 @@ where
             .unzip();
 
         let num_txns_to_commit = txns_to_commit.len() as u64;
-
+        let ledger_info_with_sigs_clone = ledger_info_with_sigs.clone();
         {
             let _timer = OP_COUNTERS.timer("storage_save_transactions_time_s");
             OP_COUNTERS.observe("storage_save_transactions.count", num_txns_to_commit as f64);
@@ -293,7 +294,7 @@ where
                     .save_transactions(
                         txns_to_commit_copy,
                         first_version_to_commit,
-                        Some(ledger_info_with_sigs),
+                        Some(ledger_info_with_sigs_clone),
                     )
                     .await
             }))
@@ -301,6 +302,14 @@ where
         }
         // Only bump the counter when the commit succeeds.
         OP_COUNTERS.inc_by("num_accounts", list_num_account_created.into_iter().sum());
+
+        // Prune the tree.
+        for block in blocks {
+            for txn_data in block.output().transaction_data() {
+                txn_data.prune_state_tree();
+            }
+        }
+        self.cache.prune(ledger_info_with_sigs.ledger_info())?;
 
         // Calculate committed transactions and reconfig events now that commit has succeeded
         let mut committed_txns = vec![];
@@ -310,11 +319,6 @@ where
             reconfig_events.append(&mut Self::extract_reconfig_events(txn.events().to_vec()));
         }
 
-        for block in blocks {
-            for txn_data in block.1.transaction_data() {
-                txn_data.prune_state_tree();
-            }
-        }
         // Now that the blocks are persisted successfully, we can reply to consensus
         Ok((committed_txns, reconfig_events))
     }
@@ -323,19 +327,18 @@ where
     /// are valid, executes them and commits immediately if execution results match the proofs.
     /// Returns a vector of reconfiguration events in the chunk
     pub fn execute_and_commit_chunk(
-        &self,
+        &mut self,
         txn_list_with_proof: TransactionListWithProof,
         // Target LI that has been verified independently: the proofs are relative to this version.
         verified_target_li: LedgerInfoWithSignatures,
         // An optional end of epoch LedgerInfo. We do not allow chunks that end epoch without
         // carrying any epoch change LI.
         epoch_change_li: Option<LedgerInfoWithSignatures>,
-        synced_trees: &mut ExecutedTrees,
     ) -> Result<Vec<ContractEvent>> {
         info!(
             "Local synced version: {}. First transaction version in request: {:?}. \
              Number of transactions in request: {}.",
-            synced_trees.txn_accumulator().num_leaves() - 1,
+            self.cache.synced_trees().txn_accumulator().num_leaves() - 1,
             txn_list_with_proof.first_transaction_version,
             txn_list_with_proof.transactions.len(),
         );
@@ -343,23 +346,58 @@ where
         let (num_txns_to_skip, first_version) = Self::verify_chunk(
             &txn_list_with_proof,
             &verified_target_li,
-            synced_trees.txn_accumulator().num_leaves(),
+            self.cache.synced_trees().txn_accumulator().num_leaves(),
         )?;
 
         info!("Skipping the first {} transactions.", num_txns_to_skip);
+        let txn_list_is_empty = txn_list_with_proof.is_empty();
         let transactions: Vec<_> = txn_list_with_proof
             .transactions
             .into_iter()
             .skip(num_txns_to_skip as usize)
             .collect();
 
+        // If the proof is verified, then the length of txn_infos and txns must be the same.
+        let (skipped_transaction_infos, transaction_infos) = txn_list_with_proof
+            .proof
+            .transaction_infos()
+            .split_at(num_txns_to_skip as usize);
+
+        // verify no fork happens.
+        if !txn_list_is_empty {
+            // Left side of the proof happens to be the frozen subtree roots of the accumulator
+            // right before the list of txns are applied.
+            let frozen_subtree_roots_from_proof = txn_list_with_proof
+                .proof
+                .left_siblings()
+                .iter()
+                .rev()
+                .cloned()
+                .collect::<Vec<_>>();
+            let accu_from_proof = InMemoryAccumulator::<TransactionAccumulatorHasher>::new(
+                frozen_subtree_roots_from_proof,
+                first_version - num_txns_to_skip,
+            )?
+            .append(
+                &skipped_transaction_infos
+                    .iter()
+                    .map(CryptoHash::hash)
+                    .collect::<Vec<_>>()[..],
+            );
+
+            // The two accumulator root hashes should be identical.
+            ensure!(
+                self.cache.synced_trees().state_id() == accu_from_proof.root_hash(),
+                "Fork happens because the current synced_trees doesn't match the txn list provided."
+            )
+        }
+
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
-            Arc::clone(&self.storage_read_client),
-            self.rt.handle().clone(),
-            synced_trees.version(),
-            synced_trees.state_root(),
-            synced_trees.state_tree(),
+            Arc::clone(&self.db_reader),
+            self.cache.synced_trees().version(),
+            self.cache.synced_trees().state_root(),
+            self.cache.synced_trees().state_tree(),
         );
         let vm_outputs = {
             let _timer = OP_COUNTERS.timer("vm_execute_chunk_time_s");
@@ -381,14 +419,29 @@ where
             account_to_proof,
             &transactions,
             vm_outputs,
-            synced_trees,
+            self.cache.synced_trees(),
         )?;
 
         // Since we have verified the proofs, we just need to verify that each TransactionInfo
         // object matches what we have computed locally.
         let mut txns_to_commit = vec![];
         let mut reconfig_events = vec![];
-        for (txn, txn_data) in itertools::zip_eq(transactions, output.transaction_data()) {
+        for ((txn, txn_data), (i, txn_info)) in itertools::zip_eq(
+            itertools::zip_eq(transactions, output.transaction_data()),
+            transaction_infos.iter().enumerate(),
+        ) {
+            let generated_txn_info = &TransactionInfo::new(
+                txn.hash(),
+                txn_data.state_root_hash(),
+                txn_data.event_root_hash(),
+                txn_data.gas_used(),
+                txn_data.status().vm_status().major_status,
+            );
+            ensure!(
+                txn_info == generated_txn_info,
+                "txn_info do not match for {}-th transaction in chunk.\nChunk txn_info: {}\nProof txn_info: {}",
+                i, generated_txn_info, txn_info
+            );
             txns_to_commit.push(TransactionToCommit::new(
                 txn,
                 txn_data.account_blobs().clone(),
@@ -415,10 +468,20 @@ where
         }))
         .unwrap()?;
 
-        *synced_trees = output.executed_trees().clone();
+        let output_trees = output.executed_trees().clone();
+        if let Some(ledger_info_with_sigs) = &ledger_info_to_commit {
+            self.cache
+                .update_block_tree_root(output_trees, ledger_info_with_sigs.ledger_info());
+        } else {
+            self.cache.update_synced_trees(output_trees);
+        }
+        self.cache.reset();
         info!(
             "Synced to version {}, the corresponding LedgerInfo is {}.",
-            synced_trees.version().expect("version must exist"),
+            self.cache
+                .synced_trees()
+                .version()
+                .expect("version must exist"),
             if ledger_info_to_commit.is_some() {
                 "committed"
             } else {
@@ -610,8 +673,18 @@ where
                 .events()
                 .iter()
                 .find(|event| *event.key() == validator_set_change_event_key)
-                .map(|event| ValidatorSet::from_bytes(event.event_data()))
-                .transpose()?
+                .map(|_| {
+                    account_to_state
+                        .get(&account_config::validator_set_address())
+                        .map(|state| {
+                            state
+                                .get_validator_set_resource()?
+                                .ok_or_else(|| format_err!("ValidatorResource does not exist"))
+                                .and_then(|resource| Ok(resource.validator_set()))
+                        })
+                })
+                .flatten()
+                .transpose()?;
         }
 
         let current_transaction_accumulator =
@@ -661,14 +734,20 @@ where
                 hash_map::Entry::Vacant(entry) => {
                     // Before writing to an account, VM should always read that account. So we
                     // should not reach this code path. The exception is genesis transaction (and
-                    // maybe other FTVM transactions).
-                    match transaction.as_signed_user_txn()?.payload() {
-                        TransactionPayload::Program
-                        | TransactionPayload::Module(_)
-                        | TransactionPayload::Script(_) => {
+                    // maybe other writeset transactions).
+                    match transaction {
+                        Transaction::WaypointWriteSet(_) => (),
+                        Transaction::BlockMetadata(_) => {
                             bail!("Write set should be a subset of read set.")
                         }
-                        TransactionPayload::WriteSet(_) => (),
+                        Transaction::UserTransaction(txn) => match txn.payload() {
+                            TransactionPayload::Program
+                            | TransactionPayload::Module(_)
+                            | TransactionPayload::Script(_) => {
+                                bail!("Write set should be a subset of read set.")
+                            }
+                            TransactionPayload::WriteSet(_) => (),
+                        },
                     }
 
                     let mut account_state = Default::default();

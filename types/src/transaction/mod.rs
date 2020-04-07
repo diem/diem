@@ -30,6 +30,7 @@ use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
     fmt,
+    fmt::{Display, Formatter},
     time::Duration,
 };
 
@@ -48,6 +49,9 @@ use std::ops::Deref;
 pub use transaction_argument::{parse_as_transaction_argument, TransactionArgument};
 
 pub type Version = u64; // Height - also used for MVCC in StateDB
+
+// In StateDB, things readable by the genesis transaction are under this version.
+pub const PRE_GENESIS_VERSION: Version = u64::max_value();
 
 pub const MAX_TRANSACTION_SIZE_IN_BYTES: usize = 4096;
 
@@ -636,6 +640,27 @@ impl From<VMStatus> for TransactionStatus {
     }
 }
 
+/// The result of running the transaction through the VM validator.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct VMValidatorResult {
+    status: Option<VMStatus>,
+    score: u64,
+}
+
+impl VMValidatorResult {
+    pub fn new(status: Option<VMStatus>, score: u64) -> Self {
+        Self { status, score }
+    }
+
+    pub fn status(&self) -> Option<VMStatus> {
+        self.status.clone()
+    }
+
+    pub fn score(&self) -> u64 {
+        self.score
+    }
+}
+
 /// The output of executing a transaction.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TransactionOutput {
@@ -718,7 +743,7 @@ impl From<TransactionInfo> for crate::proto::types::TransactionInfo {
 
 /// `TransactionInfo` is the object we store in the transaction accumulator. It consists of the
 /// transaction as well as the execution result of this transaction.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
+#[derive(Clone, CryptoHasher, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct TransactionInfo {
     /// The hash of this transaction.
@@ -793,6 +818,16 @@ impl CryptoHash for TransactionInfo {
         let mut state = Self::Hasher::default();
         state.write(&lcs::to_bytes(self).expect("Serialization should work."));
         state.finish()
+    }
+}
+
+impl Display for TransactionInfo {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "TransactionInfo: [txn_hash: {}, state_root_hash: {}, event_root_hash: {}, gas_used: {}, major_status: {:?}]",
+            self.transaction_hash(), self.state_root_hash(), self.event_root_hash(), self.gas_used(), self.major_status(),
+        )
     }
 }
 
@@ -1093,7 +1128,7 @@ pub enum Transaction {
 
     /// Transaction that applies a WriteSet to the current storage. This should be used for ONLY for
     /// genesis right now.
-    WriteSet(ChangeSet),
+    WaypointWriteSet(ChangeSet),
 
     /// Transaction to update the block metadata resource at the beginning of a block.
     BlockMetadata(BlockMetadata),
@@ -1113,7 +1148,7 @@ impl Transaction {
                 user_txn.format_for_client(get_transaction_name)
             }
             // TODO: display proper information for client
-            Transaction::WriteSet(_write_set) => String::from("genesis"),
+            Transaction::WaypointWriteSet(_write_set) => String::from("genesis"),
             // TODO: display proper information for client
             Transaction::BlockMetadata(_block_metadata) => String::from("block_metadata"),
         }

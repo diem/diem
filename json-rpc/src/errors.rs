@@ -1,7 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::vm_error::{StatusType, VMStatus};
+use anyhow::Result;
+use libra_types::{
+    mempool_status::{MempoolStatus, MempoolStatusCode},
+    vm_error::{StatusType, VMStatus},
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -10,14 +14,21 @@ use serde_json::Value;
 pub enum ServerCode {
     DefaultServerError = -32000,
 
-    // expose VM status types as server code
+    // VM errors - see `vm_error.rs` for specs
     VmValidationError = -32001,
     VmVerificationError = -32002,
     VmInvariantViolationError = -32003,
     VmDeserializationError = -32004,
     VmExecutionError = -32005,
     VmUnknownError = -32006,
-    // TODO expose Mempool insertion status as server code
+
+    // Mempool errors - see `MempoolStatusCode` for specs
+    MempoolInvalidSeqNumber = -32007,
+    MempoolIsFull = -32008,
+    MempoolTooManyTransactions = -32009,
+    MempoolInvalidUpdate = -32010,
+    MempoolVmError = -32011,
+    MempoolUnknownError = -32012,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -70,6 +81,31 @@ impl JsonRpcError {
             message: format!("Server error: {}", message),
             data: None,
         }
+    }
+
+    pub(crate) fn mempool_error(error: MempoolStatus) -> Result<Self> {
+        let code = match error.code {
+            MempoolStatusCode::InvalidSeqNumber => ServerCode::MempoolInvalidSeqNumber,
+            MempoolStatusCode::MempoolIsFull => ServerCode::MempoolIsFull,
+            MempoolStatusCode::TooManyTransactions => ServerCode::MempoolTooManyTransactions,
+            MempoolStatusCode::InvalidUpdate => ServerCode::MempoolInvalidUpdate,
+            MempoolStatusCode::VmError => ServerCode::MempoolVmError,
+            MempoolStatusCode::UnknownStatus => ServerCode::MempoolUnknownError,
+            MempoolStatusCode::Accepted => {
+                return Err(anyhow::format_err!(
+                    "[JSON RPC] cannot create mempool error for mempool accepted status"
+                ))
+            }
+        };
+
+        Ok(Self {
+            code: code as i16,
+            message: format!(
+                "Server error: Mempool submission error: {:?}",
+                error.message
+            ),
+            data: None,
+        })
     }
 
     pub(crate) fn vm_error(error: VMStatus) -> Self {

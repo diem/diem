@@ -8,7 +8,7 @@ use crate::{
 };
 use anyhow::{format_err, Result};
 use bounded_executor::BoundedExecutor;
-use channel::{libra_channel, message_queues::QueueStyle};
+use channel::libra_channel;
 use debug_interface::prelude::*;
 use futures::{
     channel::{
@@ -24,9 +24,8 @@ use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{
     account_address::AccountAddress,
-    contract_event::ContractEvent,
-    event_subscription::EventSubscription,
     mempool_status::{MempoolStatus, MempoolStatusCode},
+    on_chain_config::{ConfigID, OnChainConfig, OnChainConfigPayload, VMPublishingOption},
     transaction::SignedTransaction,
     vm_error::{
         StatusCode::{RESOURCE_DOES_NOT_EXIST, SEQUENCE_NUMBER_TOO_OLD},
@@ -38,7 +37,6 @@ use network::protocols::network::Event;
 use std::{
     cmp,
     collections::{HashMap, HashSet},
-    num::NonZeroUsize,
     ops::Deref,
     pin::Pin,
     sync::{Arc, Mutex},
@@ -164,22 +162,6 @@ pub struct TransactionExclusion {
     pub sender: AccountAddress,
     /// sequence number
     pub sequence_number: u64,
-}
-
-/// Mempool's subscription to reconfiguration events
-pub struct MempoolReconfigSubscription {
-    sender: libra_channel::Sender<(), ContractEvent>,
-}
-
-impl EventSubscription for MempoolReconfigSubscription {
-    fn publish(&mut self, payload: ContractEvent) {
-        if let Err(e) = self.sender.push((), payload) {
-            debug!(
-                "[shared mempool] failed to publish reconfiguration event to mempool: {}",
-                e
-            );
-        }
-    }
 }
 
 fn notify_subscribers(
@@ -349,7 +331,7 @@ where
             })
             .collect();
 
-    let validations = join_all(
+    let validation_results = join_all(
         transactions
             .iter()
             .map(|t| smp.validator.validate_transaction(t.0.clone())),
@@ -362,17 +344,27 @@ where
             .lock()
             .expect("[shared mempool] failed to acquire mempool lock");
         for (idx, (transaction, sequence_number)) in transactions.into_iter().enumerate() {
-            if let Ok(None) = validations[idx] {
-                let gas_cost = transaction.max_gas_amount();
-
-                let mempool_status =
-                    mempool.add_txn(transaction, gas_cost, sequence_number, timeline_state);
-                statuses.push((mempool_status, None));
-            } else if let Ok(Some(validation_status)) = &validations[idx] {
-                statuses.push((
-                    MempoolStatus::new(MempoolStatusCode::VmError),
-                    Some(validation_status.clone()),
-                ));
+            if let Ok(validation_result) = &validation_results[idx] {
+                match validation_result.status() {
+                    None => {
+                        let gas_amount = transaction.max_gas_amount();
+                        let rankin_score = validation_result.score();
+                        let mempool_status = mempool.add_txn(
+                            transaction,
+                            gas_amount,
+                            rankin_score,
+                            sequence_number,
+                            timeline_state,
+                        );
+                        statuses.push((mempool_status, None));
+                    }
+                    Some(validation_status) => {
+                        statuses.push((
+                            MempoolStatus::new(MempoolStatusCode::VmError),
+                            Some(validation_status.clone()),
+                        ));
+                    }
+                }
             }
         }
     }
@@ -600,6 +592,14 @@ where
     }
 }
 
+fn process_config_update(config_update: OnChainConfigPayload) {
+    // check for VM update
+    if let Ok(_vm_publishing_option) = config_update.get::<VMPublishingOption>() {
+        // TODO restart VM validator
+    }
+    // potentially check for other configs here
+}
+
 /// This task handles inbound network events.
 async fn inbound_network_task<V>(
     smp: SharedMempool<V>,
@@ -611,7 +611,7 @@ async fn inbound_network_task<V>(
     )>,
     mut consensus_requests: mpsc::Receiver<ConsensusRequest>,
     mut state_sync_requests: mpsc::Receiver<CommitNotification>,
-    mut mempool_reconfig_events: libra_channel::Receiver<(), ContractEvent>,
+    mut mempool_reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
     node_config: NodeConfig,
 ) where
     V: TransactionValidation,
@@ -648,8 +648,8 @@ async fn inbound_network_task<V>(
             msg = state_sync_requests.select_next_some() => {
                 tokio::spawn(process_state_sync_request(smp.clone(), msg));
             }
-            reconfig_event = mempool_reconfig_events.select_next_some() => {
-                // TODO actually process reconfig event
+            config_update = mempool_reconfig_events.select_next_some() => {
+                process_config_update(config_update);
             },
             (network_id, event) = events.select_next_some() => {
                 match event {
@@ -755,7 +755,7 @@ pub(crate) fn start_shared_mempool<V>(
     client_events: mpsc::Receiver<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>,
     consensus_requests: mpsc::Receiver<ConsensusRequest>,
     state_sync_requests: mpsc::Receiver<CommitNotification>,
-    mempool_reconfig_events: libra_channel::Receiver<(), ContractEvent>,
+    mempool_reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
     storage_read_client: Arc<dyn StorageRead>,
     validator: Arc<V>,
     subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
@@ -818,7 +818,7 @@ pub fn bootstrap(
     client_events: Receiver<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>,
     consensus_requests: Receiver<ConsensusRequest>,
     state_sync_requests: Receiver<CommitNotification>,
-    mempool_reconfig_events: libra_channel::Receiver<(), ContractEvent>,
+    mempool_reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
 ) -> Runtime {
     let runtime = Builder::new()
         .thread_name("shared-mem-")
@@ -851,19 +851,5 @@ pub fn bootstrap(
     runtime
 }
 
-/// Returns a new reconfiguration event subscription for mempool, and the channel receiver to where the subscribed
-/// events will be published
-pub fn generate_reconfig_subscription() -> (
-    Box<dyn EventSubscription>,
-    libra_channel::Receiver<(), ContractEvent>,
-) {
-    let (reconfig_event_publisher, reconfig_event_subscriber) =
-        libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
-    let reconfig_event_subscription = MempoolReconfigSubscription {
-        sender: reconfig_event_publisher,
-    };
-    (
-        Box::new(reconfig_event_subscription),
-        reconfig_event_subscriber,
-    )
-}
+/// On-chain configs that mempool subscribes to for reconfiguration
+pub const MEMPOOL_SUBSCRIBED_CONFIGS: &[ConfigID] = &[VMPublishingOption::CONFIG_ID];

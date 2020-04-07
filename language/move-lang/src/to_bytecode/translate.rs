@@ -7,7 +7,10 @@ use crate::{
     compiled_unit::*,
     errors::*,
     expansion::ast::SpecId,
-    hlir::ast::{self as H},
+    hlir::{
+        ast::{self as H},
+        translate::{display_var, DisplayVar},
+    },
     naming::ast::{BuiltinTypeName_, TParam},
     parser::ast::{
         BinOp, BinOp_, Field, FunctionName, FunctionVisibility, Kind, Kind_, ModuleIdent,
@@ -97,13 +100,13 @@ fn module(
         .map(|(s, sdef)| struct_def(&mut context, &ident, s, sdef))
         .collect();
 
-    let mut function_nop_labels = UniqueMap::new();
+    let mut function_infos = UniqueMap::new();
     let functions = mdef
         .functions
         .into_iter()
         .map(|(f, fdef)| {
-            let (res, nop_labels) = function(&mut context, Some(&ident), f.clone(), fdef);
-            function_nop_labels.add(f, nop_labels).unwrap();
+            let (res, specs) = function(&mut context, Some(&ident), f.clone(), fdef);
+            function_infos.add(f, specs).unwrap();
             res
         })
         .collect();
@@ -126,17 +129,12 @@ fn module(
     let deps: Vec<&F::CompiledModule> = vec![];
     let (module, source_map) = ir_to_bytecode::compiler::compile_module(addr, ir_module, deps)
         .map_err(|e| vec![(ident.loc(), format!("IR ERROR: {}", e))])?;
-    let spec_id_offsets =
-        UniqueMap::maybe_from_iter((0..module.as_inner().function_defs.len()).map(|i| {
-            let idx = F::FunctionDefinitionIndex(i as F::TableIndex);
-            function_spec_id_map(&module, &source_map, &function_nop_labels, idx)
-        }))
-        .unwrap();
+    let spec_info = module_spec_info(&module, &source_map, &function_infos);
     Ok(CompiledUnit::Module {
         ident,
         module,
         source_map,
-        spec_id_offsets,
+        spec_info,
     })
 }
 
@@ -154,7 +152,7 @@ fn main(
     let loc = main_name.loc();
     let mut context = Context::new(None);
 
-    let ((_, main), nop_labels) = function(&mut context, None, main_name, fdef);
+    let ((_, main), specs) = function(&mut context, None, main_name, fdef);
 
     let (imports, explicit_dependency_declarations) = context.materialize(
         dependency_orderings,
@@ -170,21 +168,39 @@ fn main(
     let deps: Vec<&F::CompiledModule> = vec![];
     let (script, source_map) = ir_to_bytecode::compiler::compile_script(addr, ir_script, deps)
         .map_err(|e| vec![(loc, format!("IR ERROR: {}", e))])?;
-    let spec_id_offsets = main_spec_id_map(&source_map, nop_labels);
+    let spec_info = main_spec_id_map(&source_map, specs);
     Ok(CompiledUnit::Script {
         loc,
         script,
         source_map,
-        spec_id_offsets,
+        spec_info,
     })
+}
+
+fn module_spec_info(
+    compile_module: &F::CompiledModule,
+    source_map: &SourceMap<Loc>,
+    function_infos: &UniqueMap<
+        FunctionName,
+        BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, H::SingleType>)>,
+    >,
+) -> UniqueMap<FunctionName, BTreeMap<SpecId, SpecInfo>> {
+    UniqueMap::maybe_from_iter((0..compile_module.as_inner().function_defs.len()).map(|i| {
+        let idx = F::FunctionDefinitionIndex(i as F::TableIndex);
+        function_spec_id_map(compile_module, source_map, function_infos, idx)
+    }))
+    .unwrap()
 }
 
 fn function_spec_id_map(
     compile_module: &F::CompiledModule,
     source_map: &SourceMap<Loc>,
-    function_nop_labels: &UniqueMap<FunctionName, BTreeMap<SpecId, IR::NopLabel>>,
+    function_infos: &UniqueMap<
+        FunctionName,
+        BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, H::SingleType>)>,
+    >,
     idx: F::FunctionDefinitionIndex,
-) -> (FunctionName, BTreeMap<SpecId, F::CodeOffset>) {
+) -> (FunctionName, BTreeMap<SpecId, SpecInfo>) {
     let module = compile_module.as_inner();
     let handle_idx = module.function_defs[idx.0 as usize].function;
     let name_idx = module.function_handles[handle_idx.0 as usize].name;
@@ -193,27 +209,41 @@ fn function_spec_id_map(
         .into_string();
 
     let function_source_map = source_map.get_function_source_map(idx).unwrap();
-    let spec_ids = function_nop_labels
+    let spec_ids = function_infos
         .get_(&name)
         .unwrap()
         .iter()
-        .map(|(id, label)| (*id, *function_source_map.nops.get(label).unwrap()))
+        .map(|(id, (label, used_locals))| {
+            let offset = *function_source_map.nops.get(label).unwrap();
+            let info = SpecInfo {
+                offset,
+                used_locals: used_locals.clone(),
+            };
+            (*id, info)
+        })
         .collect();
 
-    let name_loc = *function_nop_labels.get_loc_(&name).unwrap();
+    let name_loc = *function_infos.get_loc_(&name).unwrap();
     let function_name = FunctionName(sp(name_loc, name));
     (function_name, spec_ids)
 }
 
 fn main_spec_id_map(
     source_map: &SourceMap<Loc>,
-    nop_labels: BTreeMap<SpecId, IR::NopLabel>,
-) -> BTreeMap<SpecId, F::CodeOffset> {
+    specs: BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, H::SingleType>)>,
+) -> BTreeMap<SpecId, SpecInfo> {
     let idx = F::FunctionDefinitionIndex(0);
     let function_source_map = source_map.get_function_source_map(idx).unwrap();
-    nop_labels
+    specs
         .into_iter()
-        .map(|(id, label)| (id, *function_source_map.nops.get(&label).unwrap()))
+        .map(|(id, (label, used_locals))| {
+            let offset = *function_source_map.nops.get(&label).unwrap();
+            let info = SpecInfo {
+                offset,
+                used_locals,
+            };
+            (id, info)
+        })
         .collect()
 }
 
@@ -287,7 +317,7 @@ fn function(
     fdef: G::Function,
 ) -> (
     (IR::FunctionName, IR::Function),
-    BTreeMap<SpecId, IR::NopLabel>,
+    BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, H::SingleType>)>,
 ) {
     let G::Function {
         visibility: v,
@@ -339,11 +369,11 @@ fn function_signature(context: &mut Context, sig: H::FunctionSignature) -> IR::F
         .into_iter()
         .map(|(v, st)| (var(v), single_type(context, st)))
         .collect();
-    let type_formals = type_parameters(sig.type_parameters);
+    let type_parameters = type_parameters(sig.type_parameters);
     IR::FunctionSignature {
         return_type,
         formals,
-        type_formals,
+        type_formals: type_parameters,
     }
 }
 
@@ -488,7 +518,7 @@ fn kind(sp!(_, k_): &Kind) -> IR::Kind {
     match k_ {
         GK::Unknown => IRK::All,
         GK::Resource => IRK::Resource,
-        GK::Affine | GK::Unrestricted => IRK::Unrestricted,
+        GK::Affine | GK::Copyable => IRK::Copyable,
     }
 }
 
@@ -656,7 +686,21 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
         E::Unreachable => panic!("ICE should not compile dead code"),
         E::UnresolvedError => panic!("ICE should not have reached compilation if there are errors"),
         E::Unit => (),
-        E::Spec(id) => code.push(sp(loc, B::Nop(Some(context.nop_label(id))))),
+        // remember to switch to orig_name
+        E::Spec(id, raw_used_locals) => {
+            let used_locals = raw_used_locals
+                .into_iter()
+                .map(|(v, st)| {
+                    let sp!(loc, raw_n_) = v.0;
+                    let n_ = match display_var(&raw_n_) {
+                        DisplayVar::Tmp => panic!("ICE spec block captured a tmp"),
+                        DisplayVar::Orig(s) => s,
+                    };
+                    (Var(sp(loc, n_)), st)
+                })
+                .collect();
+            code.push(sp(loc, B::Nop(Some(context.spec(id, used_locals)))))
+        }
         E::Value(v) => {
             code.push(sp(
                 loc,
@@ -747,12 +791,12 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
         }
 
         E::Borrow(mut_, el, f) => {
-            let (n, _) = struct_definition_name(context, el.ty.clone());
+            let (n, tys) = struct_definition_name(context, el.ty.clone());
             exp(context, code, el);
             let instr = if mut_ {
-                B::MutBorrowField(n, field(f))
+                B::MutBorrowField(n, tys, field(f))
             } else {
-                B::ImmBorrowField(n, field(f))
+                B::ImmBorrowField(n, tys, field(f))
             };
             code.push(sp(loc, instr));
         }

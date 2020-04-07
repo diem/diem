@@ -25,10 +25,11 @@ use libra_types::{
     },
     account_state::AccountState,
     ledger_info::LedgerInfoWithSignatures,
+    on_chain_config::VMPublishingOption,
     transaction::{
         authenticator::AuthenticationKey,
         helpers::{create_unsigned_txn, create_user_txn, TransactionSigner},
-        parse_as_transaction_argument, RawTransaction, Script, SignedTransaction,
+        parse_as_transaction_argument, Module, RawTransaction, Script, SignedTransaction,
         TransactionArgument, TransactionPayload, Version,
     },
     waypoint::Waypoint,
@@ -52,6 +53,7 @@ use std::{
     str::{self, FromStr},
     thread, time,
 };
+use stdlib::transaction_scripts::StdlibScript;
 use transaction_builder::encode_register_validator_script;
 
 const CLIENT_WALLET_MNEMONIC_FILE: &str = "client.mnemonic";
@@ -329,6 +331,48 @@ impl ClientProxy {
         }
     }
 
+    /// Allow executing arbitrary script in the network.
+    pub fn enable_custom_script(
+        &mut self,
+        space_delim_strings: &[&str],
+        is_blocking: bool,
+    ) -> Result<()> {
+        ensure!(
+            space_delim_strings.len() == 1,
+            "Invalid number of arguments for setting publishing option"
+        );
+        match self.faucet_account {
+            Some(_) => self.association_transaction_with_local_faucet_account(
+                transaction_builder::encode_publishing_option_script(
+                    VMPublishingOption::CustomScripts,
+                ),
+                is_blocking,
+            ),
+            None => unimplemented!(),
+        }
+    }
+
+    /// Only allow executing predefined script in the move standard library in the network.
+    pub fn disable_custom_script(
+        &mut self,
+        space_delim_strings: &[&str],
+        is_blocking: bool,
+    ) -> Result<()> {
+        ensure!(
+            space_delim_strings.len() == 1,
+            "Invalid number of arguments for setting publishing option"
+        );
+        match self.faucet_account {
+            Some(_) => self.association_transaction_with_local_faucet_account(
+                transaction_builder::encode_publishing_option_script(VMPublishingOption::Locked(
+                    StdlibScript::whitelist(),
+                )),
+                is_blocking,
+            ),
+            None => unimplemented!(),
+        }
+    }
+
     /// Remove a existing validator.
     pub fn remove_validator(
         &mut self,
@@ -466,6 +510,7 @@ impl ClientProxy {
                 format_err!("Unable to find sender account: {}", sender_account_ref_id)
             })?;
             let program = transaction_builder::encode_transfer_script(
+                lbr_type_tag(),
                 &receiver_address,
                 receiver_auth_key_prefix,
                 num_coins,
@@ -509,6 +554,7 @@ impl ClientProxy {
         max_gas_amount: Option<u64>,
     ) -> Result<RawTransaction> {
         let program = transaction_builder::encode_transfer_script(
+            lbr_type_tag(),
             &receiver_address,
             receiver_auth_key_prefix,
             num_coins,
@@ -709,21 +755,24 @@ impl ClientProxy {
 
     /// Publish move module
     pub fn publish_module(&mut self, space_delim_strings: &[&str]) -> Result<()> {
-        let module = serde_json::from_slice(&fs::read(space_delim_strings[2])?)?;
-        self.submit_program(space_delim_strings, TransactionPayload::Module(module))
+        let module_bytes = fs::read(space_delim_strings[2])?;
+        self.submit_program(
+            space_delim_strings,
+            TransactionPayload::Module(Module::new(module_bytes)),
+        )
     }
 
     /// Execute custom script
     pub fn execute_script(&mut self, space_delim_strings: &[&str]) -> Result<()> {
-        let script: Script = serde_json::from_slice(&fs::read(space_delim_strings[2])?)?;
-        let (script_bytes, _) = script.into_inner();
+        let script_bytes = fs::read(space_delim_strings[2])?;
         let arguments: Vec<_> = space_delim_strings[3..]
             .iter()
             .filter_map(|arg| parse_as_transaction_argument_for_client(arg).ok())
             .collect();
+        // TODO: support type arguments in the client.
         self.submit_program(
             space_delim_strings,
-            TransactionPayload::Script(Script::new(script_bytes, arguments)),
+            TransactionPayload::Script(Script::new(script_bytes, vec![], arguments)),
         )
     }
 
@@ -855,7 +904,7 @@ impl ClientProxy {
         space_delim_strings: &[&str],
     ) -> Result<(Vec<EventView>, AccountView)> {
         ensure!(
-            space_delim_strings.len() == 6,
+            space_delim_strings.len() == 5,
             "Invalid number of arguments to get events by access path"
         );
         let (account, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
@@ -876,11 +925,11 @@ impl ClientProxy {
                 error,
             )
         })?;
-        let limit = space_delim_strings[5].parse::<u64>().map_err(|error| {
+        let limit = space_delim_strings[4].parse::<u64>().map_err(|error| {
             format_parse_data_error(
                 "start_seq_number",
                 InputType::UnsignedInt,
-                space_delim_strings[3],
+                space_delim_strings[4],
                 error,
             )
         })?;

@@ -26,8 +26,9 @@ use crate::{
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use libra_crypto::{
-    ed25519::{compat::keypair_strategy, *},
+    ed25519::{self, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     hash::CryptoHash,
+    test_utils::KeyPair,
     traits::*,
     x25519::X25519StaticPublicKey,
     HashValue,
@@ -193,11 +194,14 @@ impl AccountInfoUniverse {
 impl Arbitrary for AccountInfoUniverse {
     type Parameters = usize;
     fn arbitrary_with(num_accounts: Self::Parameters) -> Self::Strategy {
-        vec(keypair_strategy(), num_accounts)
-            .prop_map(|keypairs| {
+        vec(ed25519::keypair_strategy(), num_accounts)
+            .prop_map(|kps| {
+                let kps: Vec<_> = kps
+                    .into_iter()
+                    .map(|k| (k.private_key, k.public_key))
+                    .collect();
                 AccountInfoUniverse::new(
-                    keypairs, /* epoch = */ 0, /* round = */ 0,
-                    /* next_version = */ 0,
+                    kps, /* epoch = */ 0, /* round = */ 0, /* next_version = */ 0,
                 )
             })
             .boxed()
@@ -345,7 +349,7 @@ impl SignatureCheckedTransaction {
     // This isn't an Arbitrary impl because this doesn't generate *any* possible SignedTransaction,
     // just one kind of them.
     pub fn script_strategy(
-        keypair_strategy: impl Strategy<Value = (Ed25519PrivateKey, Ed25519PublicKey)>,
+        keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
         gas_specifier_strategy: impl Strategy<Value = TypeTag>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(
@@ -356,7 +360,7 @@ impl SignatureCheckedTransaction {
     }
 
     pub fn module_strategy(
-        keypair_strategy: impl Strategy<Value = (Ed25519PrivateKey, Ed25519PublicKey)>,
+        keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
         gas_specifier_strategy: impl Strategy<Value = TypeTag>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(
@@ -367,7 +371,7 @@ impl SignatureCheckedTransaction {
     }
 
     pub fn write_set_strategy(
-        keypair_strategy: impl Strategy<Value = (Ed25519PrivateKey, Ed25519PublicKey)>,
+        keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
         gas_specifier_strategy: impl Strategy<Value = TypeTag>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(
@@ -378,7 +382,7 @@ impl SignatureCheckedTransaction {
     }
 
     pub fn genesis_strategy(
-        keypair_strategy: impl Strategy<Value = (Ed25519PrivateKey, Ed25519PublicKey)>,
+        keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
         gas_specifier_strategy: impl Strategy<Value = TypeTag>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(
@@ -389,13 +393,13 @@ impl SignatureCheckedTransaction {
     }
 
     fn strategy_impl(
-        keypair_strategy: impl Strategy<Value = (Ed25519PrivateKey, Ed25519PublicKey)>,
+        keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
         payload_strategy: impl Strategy<Value = TransactionPayload>,
         gas_specifier_strategy: impl Strategy<Value = TypeTag>,
     ) -> impl Strategy<Value = Self> {
         (keypair_strategy, payload_strategy, gas_specifier_strategy)
             .prop_flat_map(|(keypair, payload, gas_specifier)| {
-                let address = AccountAddress::from_public_key(&keypair.1);
+                let address = AccountAddress::from_public_key(&keypair.public_key);
                 (
                     Just(keypair),
                     RawTransaction::strategy_impl(
@@ -405,9 +409,9 @@ impl SignatureCheckedTransaction {
                     ),
                 )
             })
-            .prop_map(|((private_key, public_key), raw_txn)| {
+            .prop_map(|(keypair, raw_txn)| {
                 raw_txn
-                    .sign(&private_key, public_key)
+                    .sign(&keypair.private_key, keypair.public_key)
                     .expect("signing should always work")
             })
     }
@@ -436,7 +440,7 @@ impl Arbitrary for SignatureCheckedTransaction {
     type Parameters = ();
     fn arbitrary_with(_args: ()) -> Self::Strategy {
         Self::strategy_impl(
-            keypair_strategy(),
+            ed25519::keypair_strategy(),
             any::<TransactionPayload>(),
             any::<TypeTag>(),
         )
@@ -549,9 +553,10 @@ impl Arbitrary for Script {
         // The vector sizes are picked out of thin air.
         (
             vec(any::<u8>(), 0..100),
+            vec(any::<TypeTag>(), 0..4),
             vec(any::<TransactionArgument>(), 0..10),
         )
-            .prop_map(|(code, args)| Script::new(code, args))
+            .prop_map(|(code, ty_args, args)| Script::new(code, ty_args, args))
             .boxed()
     }
 }
@@ -585,10 +590,10 @@ impl Arbitrary for TransactionArgument {
 prop_compose! {
     fn arb_validator_signature_for_hash(hash: HashValue)(
         hash in Just(hash),
-        (private_key, public_key) in keypair_strategy(),
+        keypair in ed25519::keypair_strategy(),
     ) -> (AccountAddress, Ed25519Signature) {
-        let signature = private_key.sign_message(&hash);
-        (AccountAddress::from_public_key(&public_key), signature)
+        let signature = keypair.private_key.sign_message(&hash);
+        (AccountAddress::from_public_key(&keypair.public_key), signature)
     }
 }
 

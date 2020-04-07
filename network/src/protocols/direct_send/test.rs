@@ -2,48 +2,51 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    common::NegotiatedSubstream,
+    counters,
     peer::{PeerHandle, PeerNotification, PeerRequest},
     peer_manager::PeerManagerError,
-    protocols::direct_send::{DirectSend, DirectSendNotification, DirectSendRequest, Message},
+    protocols::{
+        direct_send::{DirectSend, DirectSendNotification, DirectSendRequest, Message},
+        wire::messaging::v1::{DirectSendMsg, NetworkMessage, Priority},
+    },
     ProtocolId,
 };
 use bytes::Bytes;
 use futures::{sink::SinkExt, stream::StreamExt};
 use libra_logger::debug;
 use libra_types::PeerId;
-use memsocket::MemorySocket;
-use netcore::compat::IoCompat;
-use parity_multiaddr::Multiaddr;
-use std::str::FromStr;
+use serial_test::serial;
 use tokio::runtime::{Handle, Runtime};
-use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 const PROTOCOL_1: ProtocolId = ProtocolId::ConsensusDirectSend;
 const PROTOCOL_2: ProtocolId = ProtocolId::MempoolDirectSend;
-const MESSAGE_1: &[u8] = b"Direct Send 1";
-const MESSAGE_2: &[u8] = b"Direct Send 2";
-const MESSAGE_3: &[u8] = b"Direct Send 3";
+static MESSAGE_1: Bytes = Bytes::from_static(b"Direct Send 1");
+static MESSAGE_2: Bytes = Bytes::from_static(b"Direct Send 2");
+
+// counters are static and therefore shared across tests. This can sometimes lead to
+// surprising counter readings if tests are run in parallel. Since we use counter values in some
+// test cases, we run tests serially and reset counters in each test.
+fn reset_counters() {
+    counters::LIBRA_NETWORK_DIRECT_SEND_BYTES.reset();
+    counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES.reset();
+}
 
 fn start_direct_send_actor(
     executor: Handle,
 ) -> (
     channel::Sender<DirectSendRequest>,
     channel::Receiver<DirectSendNotification>,
-    channel::Sender<PeerNotification<MemorySocket>>,
-    channel::Receiver<PeerRequest<MemorySocket>>,
+    channel::Sender<PeerNotification>,
+    channel::Receiver<PeerRequest>,
 ) {
     let (ds_requests_tx, ds_requests_rx) = channel::new_test(8);
     let (ds_notifs_tx, ds_notifs_rx) = channel::new_test(8);
     let (peer_notifs_tx, peer_notifs_rx) = channel::new_test(8);
     let (peer_reqs_tx, peer_reqs_rx) = channel::new_test(8);
+    // Reset counters before starting actor.
+    reset_counters();
     let direct_send = DirectSend::new(
-        executor.clone(),
-        PeerHandle::new(
-            PeerId::random(),
-            Multiaddr::from_str("/ip4/127.0.0.1/tcp/8081").unwrap(),
-            peer_reqs_tx,
-        ),
+        PeerHandle::new(PeerId::random(), peer_reqs_tx),
         ds_requests_rx,
         ds_notifs_tx,
         peer_notifs_rx,
@@ -56,77 +59,73 @@ fn start_direct_send_actor(
 async fn expect_network_provider_recv_message(
     ds_notifs_rx: &mut channel::Receiver<DirectSendNotification>,
     expected_protocol: ProtocolId,
-    expected_message: &'static [u8],
+    expected_message: Bytes,
 ) {
     match ds_notifs_rx.next().await.unwrap() {
         DirectSendNotification::RecvMessage(msg) => {
             assert_eq!(msg.protocol, expected_protocol);
-            assert_eq!(msg.mdata, Bytes::from_static(expected_message));
+            assert_eq!(msg.mdata, expected_message);
         }
     }
 }
 
-async fn expect_open_substream_request<TSubstream>(
-    peer_reqs_rx: &mut channel::Receiver<PeerRequest<TSubstream>>,
+async fn expect_send_message_request(
+    peer_reqs_rx: &mut channel::Receiver<PeerRequest>,
     expected_protocol: ProtocolId,
-    response: Result<TSubstream, PeerManagerError>,
-) where
-    TSubstream: std::fmt::Debug,
-{
+    expected_message: DirectSendMsg,
+    expected_result: Result<(), PeerManagerError>,
+) {
     match peer_reqs_rx.next().await.unwrap() {
-        PeerRequest::OpenSubstream(protocol, substream_tx) => {
+        PeerRequest::SendMessage(message, protocol, result_tx) => {
+            assert_eq!(NetworkMessage::DirectSendMsg(expected_message), message);
             assert_eq!(protocol, expected_protocol);
-            substream_tx.send(response).unwrap();
+            result_tx.send(expected_result).unwrap();
         }
         _ => panic!("Unexpected event"),
     }
 }
 
 #[test]
-fn test_inbound_substream() {
+#[serial]
+fn test_inbound_msg() {
     ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
 
     let (_ds_requests_tx, mut ds_notifs_rx, mut peer_notifs_tx, _peer_reqs_rx) =
         start_direct_send_actor(rt.handle().clone());
 
-    let peer_id = PeerId::random();
-    let (dialer_substream, listener_substream) = MemorySocket::new_pair();
-
     // The dialer sends two messages to the listener.
     let f_substream = async move {
-        let mut dialer_substream =
-            Framed::new(IoCompat::new(dialer_substream), LengthDelimitedCodec::new());
         debug!("Sending first message");
-        dialer_substream
-            .send(Bytes::from_static(MESSAGE_1))
+        peer_notifs_tx
+            .send(PeerNotification::NewMessage(NetworkMessage::DirectSendMsg(
+                DirectSendMsg {
+                    protocol_id: PROTOCOL_1,
+                    priority: Priority::default(),
+                    raw_msg: MESSAGE_1.clone(),
+                },
+            )))
             .await
             .unwrap();
         debug!("Sending second message");
-        dialer_substream
-            .send(Bytes::from_static(MESSAGE_2))
+        peer_notifs_tx
+            .send(PeerNotification::NewMessage(NetworkMessage::DirectSendMsg(
+                DirectSendMsg {
+                    protocol_id: PROTOCOL_2,
+                    priority: Priority::default(),
+                    raw_msg: MESSAGE_2.clone(),
+                },
+            )))
             .await
             .unwrap();
-        // dialer_substream is dropped as this future completes.
     };
 
-    // Fake the listener NetworkProvider to notify DirectSend of the inbound substream.
+    // The listener should receive these two messages
     let f_network_provider = async move {
-        debug!("Sending NewSubstream notification");
-        peer_notifs_tx
-            .send(PeerNotification::NewSubstream(
-                peer_id,
-                NegotiatedSubstream {
-                    protocol: PROTOCOL_1,
-                    substream: listener_substream,
-                },
-            ))
-            .await
-            .unwrap();
-
-        // The listener should receive these two messages
-        expect_network_provider_recv_message(&mut ds_notifs_rx, PROTOCOL_1, MESSAGE_1).await;
-        expect_network_provider_recv_message(&mut ds_notifs_rx, PROTOCOL_1, MESSAGE_2).await;
+        expect_network_provider_recv_message(&mut ds_notifs_rx, PROTOCOL_1, MESSAGE_1.clone())
+            .await;
+        expect_network_provider_recv_message(&mut ds_notifs_rx, PROTOCOL_2, MESSAGE_2.clone())
+            .await;
     };
 
     rt.spawn(f_substream);
@@ -134,46 +133,32 @@ fn test_inbound_substream() {
 }
 
 #[test]
-fn test_outbound_single_protocol() {
+#[serial]
+fn test_outbound_msg() {
     let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_notifs_tx, mut peer_reqs_rx) =
         start_direct_send_actor(rt.handle().clone());
 
-    let (dialer_substream, listener_substream) = MemorySocket::new_pair();
-
     // Fake the dialer NetworkProvider
     let f_network_provider = async move {
-        // Send 2 messages with the same protocol
-        ds_requests_tx
-            .send(DirectSendRequest::SendMessage(Message {
-                protocol: PROTOCOL_1,
-                mdata: Bytes::from_static(MESSAGE_1),
-            }))
-            .await
-            .unwrap();
-        ds_requests_tx
-            .send(DirectSendRequest::SendMessage(Message {
-                protocol: PROTOCOL_1,
-                mdata: Bytes::from_static(MESSAGE_2),
-            }))
-            .await
-            .unwrap();
-
-        // DirectSend actor should request to open a substream with the same protocol
-        expect_open_substream_request(&mut peer_reqs_rx, PROTOCOL_1, Ok(dialer_substream)).await;
+        let msg_sent = DirectSendRequest::SendMessage(Message {
+            protocol: PROTOCOL_1,
+            mdata: MESSAGE_1.clone(),
+        });
+        debug!("Sending message");
+        ds_requests_tx.send(msg_sent).await.unwrap();
     };
 
-    // The listener should receive these two messages.
+    // The listener should receive a request to send that message over the wire as a
+    // NetworkMessage::DirectSendMsg, and return success.
     let f_substream = async move {
-        let mut listener_substream = Framed::new(
-            IoCompat::new(listener_substream),
-            LengthDelimitedCodec::new(),
-        );
-        let msg = listener_substream.next().await.unwrap().unwrap();
-        assert_eq!(msg.as_ref(), MESSAGE_1);
-        let msg = listener_substream.next().await.unwrap().unwrap();
-        assert_eq!(msg.as_ref(), MESSAGE_2);
+        let msg_received = DirectSendMsg {
+            protocol_id: PROTOCOL_1,
+            priority: Priority::default(),
+            raw_msg: MESSAGE_1.clone(),
+        };
+        expect_send_message_request(&mut peer_reqs_rx, PROTOCOL_1, msg_received, Ok(())).await;
     };
 
     rt.spawn(f_network_provider);
@@ -181,61 +166,8 @@ fn test_outbound_single_protocol() {
 }
 
 #[test]
-fn test_outbound_multiple_protocols() {
-    ::libra_logger::Logger::new().environment_only(true).init();
-    let mut rt = Runtime::new().unwrap();
-
-    let (mut ds_requests_tx, _ds_notifs_rx, _peer_notifs_tx, mut peer_reqs_rx) =
-        start_direct_send_actor(rt.handle().clone());
-
-    let (dialer_substream_1, listener_substream_1) = MemorySocket::new_pair();
-    let (dialer_substream_2, listener_substream_2) = MemorySocket::new_pair();
-
-    // Fake the dialer NetworkProvider
-    let f_network_provider = async move {
-        // Send 2 messages with different protocols to the same peer
-        ds_requests_tx
-            .send(DirectSendRequest::SendMessage(Message {
-                protocol: PROTOCOL_1,
-                mdata: Bytes::from_static(MESSAGE_1),
-            }))
-            .await
-            .unwrap();
-        // DirectSend actor should request to open a substreams.
-        expect_open_substream_request(&mut peer_reqs_rx, PROTOCOL_1, Ok(dialer_substream_1)).await;
-        ds_requests_tx
-            .send(DirectSendRequest::SendMessage(Message {
-                protocol: PROTOCOL_2,
-                mdata: Bytes::from_static(MESSAGE_2),
-            }))
-            .await
-            .unwrap();
-        // DirectSend actor should request to open a different substreams.
-        expect_open_substream_request(&mut peer_reqs_rx, PROTOCOL_2, Ok(dialer_substream_2)).await;
-    };
-
-    // The listener should receive 1 message on each substream.
-    let f_substream = async move {
-        let mut listener_substream_1 = Framed::new(
-            IoCompat::new(listener_substream_1),
-            LengthDelimitedCodec::new(),
-        );
-        let msg = listener_substream_1.next().await.unwrap().unwrap();
-        assert_eq!(msg.as_ref(), MESSAGE_1);
-        let mut listener_substream_2 = Framed::new(
-            IoCompat::new(listener_substream_2),
-            LengthDelimitedCodec::new(),
-        );
-        let msg = listener_substream_2.next().await.unwrap().unwrap();
-        assert_eq!(msg.as_ref(), MESSAGE_2);
-    };
-
-    rt.spawn(f_network_provider);
-    rt.block_on(f_substream);
-}
-
-#[test]
-fn test_outbound_not_connected() {
+#[serial]
+fn test_send_failure() {
     ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
 
@@ -243,7 +175,6 @@ fn test_outbound_not_connected() {
         start_direct_send_actor(rt.handle().clone());
 
     let peer_id = PeerId::random();
-    let (dialer_substream, listener_substream) = MemorySocket::new_pair();
 
     // Fake the dialer NetworkProvider
     let f_network_provider = async move {
@@ -251,151 +182,58 @@ fn test_outbound_not_connected() {
         ds_requests_tx
             .send(DirectSendRequest::SendMessage(Message {
                 protocol: PROTOCOL_1,
-                mdata: Bytes::from_static(MESSAGE_1),
+                mdata: MESSAGE_1.clone(),
             }))
             .await
             .unwrap();
-
-        // Peer returns the NotConnected error
-        expect_open_substream_request(
-            &mut peer_reqs_rx,
-            PROTOCOL_1,
-            Err(PeerManagerError::NotConnected(peer_id)),
-        )
-        .await;
-
         // Request DirectSend to send the second message
         ds_requests_tx
             .send(DirectSendRequest::SendMessage(Message {
                 protocol: PROTOCOL_1,
-                mdata: Bytes::from_static(MESSAGE_2),
+                mdata: MESSAGE_2.clone(),
             }))
             .await
             .unwrap();
-
-        // Peer returns the substream
-        expect_open_substream_request(&mut peer_reqs_rx, PROTOCOL_1, Ok(dialer_substream)).await;
     };
 
     // The listener should receive the message.
     let f_substream = async move {
-        let mut listener_substream = Framed::new(
-            IoCompat::new(listener_substream),
-            LengthDelimitedCodec::new(),
+        // Peer returns the NotConnected error.
+        expect_send_message_request(
+            &mut peer_reqs_rx,
+            PROTOCOL_1,
+            DirectSendMsg {
+                protocol_id: PROTOCOL_1,
+                priority: Priority::default(),
+                raw_msg: MESSAGE_1.clone(),
+            },
+            Err(PeerManagerError::NotConnected(peer_id)),
+        )
+        .await;
+        // Peer returns Ok(()).
+        expect_send_message_request(
+            &mut peer_reqs_rx,
+            PROTOCOL_1,
+            DirectSendMsg {
+                protocol_id: PROTOCOL_1,
+                priority: Priority::default(),
+                raw_msg: MESSAGE_2.clone(),
+            },
+            Ok(()),
+        )
+        .await;
+        // Ensure failure counter has been incremented to 1.
+        // NB: The fact that we check the counter after receiving the second request is due an
+        // implementation detail, because after receiving the first request, we cannot be immediately
+        // sure that it's result has been processed and the counter updated.
+        assert_eq!(
+            counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
+                .with_label_values(&["failed"])
+                .get() as u64,
+            1
         );
-        let msg = listener_substream.next().await.unwrap().unwrap();
-        // Only the second message should be received, because when the first message is sent,
-        // the peer isn't connected.
-        assert_eq!(msg.as_ref(), MESSAGE_2);
     };
 
     rt.spawn(f_network_provider);
     rt.block_on(f_substream);
-}
-
-#[test]
-fn test_outbound_connection_closed() {
-    ::libra_logger::Logger::new().environment_only(true).init();
-    let mut rt = Runtime::new().unwrap();
-
-    let (mut ds_requests_tx, _ds_notifs_rx, _peer_notifs_tx, mut peer_reqs_rx) =
-        start_direct_send_actor(rt.handle().clone());
-
-    let peer_id = PeerId::random();
-    let (dialer_substream_1, listener_substream_1) = MemorySocket::new_pair();
-    let (dialer_substream_2, listener_substream_2) = MemorySocket::new_pair();
-
-    // Send the first message and open the first substream
-    let f_first_message = async move {
-        // Request DirectSend to send the first message
-        ds_requests_tx
-            .send(DirectSendRequest::SendMessage(Message {
-                protocol: PROTOCOL_1,
-                mdata: Bytes::from_static(MESSAGE_1),
-            }))
-            .await
-            .unwrap();
-
-        // Peer returns the first substream
-        expect_open_substream_request(&mut peer_reqs_rx, PROTOCOL_1, Ok(dialer_substream_1)).await;
-
-        (ds_requests_tx, peer_reqs_rx)
-    };
-    let (mut ds_requests_tx, mut peer_reqs_rx) = rt.block_on(f_first_message);
-
-    // Receive the first message and close the first substream
-    let f_close_first_substream = async move {
-        let mut listener_substream = Framed::new(
-            IoCompat::new(listener_substream_1),
-            LengthDelimitedCodec::new(),
-        );
-        let msg = listener_substream.next().await.unwrap().unwrap();
-        // The listener should receive the first message.
-        assert_eq!(msg.as_ref(), MESSAGE_1);
-        // Close the substream by dropping it on the listener side
-        drop(listener_substream);
-    };
-    rt.block_on(f_close_first_substream);
-
-    // Send the second message while the connection is still lost.
-    let f_second_message = async move {
-        // Request DirectSend to send the second message
-        ds_requests_tx
-            .send(DirectSendRequest::SendMessage(Message {
-                protocol: PROTOCOL_1,
-                mdata: Bytes::from_static(MESSAGE_2),
-            }))
-            .await
-            .unwrap();
-
-        ds_requests_tx
-    };
-    let mut ds_requests_tx = rt.block_on(f_second_message);
-
-    // Keep sending the third message and open the second substream
-    let f_third_message = async move {
-        // Request DirectSend to send the third message
-        loop {
-            ds_requests_tx
-                .send(DirectSendRequest::SendMessage(Message {
-                    protocol: PROTOCOL_1,
-                    mdata: Bytes::from_static(MESSAGE_3),
-                }))
-                .await
-                .unwrap();
-        }
-    };
-    rt.spawn(f_third_message);
-
-    let f_open_second_substream = async move {
-        // Peer returns the second substream
-        expect_open_substream_request(&mut peer_reqs_rx, PROTOCOL_1, Ok(dialer_substream_2)).await;
-
-        peer_reqs_rx
-    };
-    let mut peer_reqs_rx = rt.block_on(f_open_second_substream);
-
-    // Fake peer manager to keep the PeerRequest receiver
-    let f_peer_manager = async move {
-        loop {
-            expect_open_substream_request(
-                &mut peer_reqs_rx,
-                PROTOCOL_1,
-                Err(PeerManagerError::NotConnected(peer_id)),
-            )
-            .await;
-        }
-    };
-    rt.spawn(f_peer_manager);
-
-    // The listener should only receive the third message through the second substream.
-    let f_second_substream = async move {
-        let mut listener_substream = Framed::new(
-            IoCompat::new(listener_substream_2),
-            LengthDelimitedCodec::new(),
-        );
-        let msg = listener_substream.next().await.unwrap().unwrap();
-        assert_eq!(msg.as_ref(), MESSAGE_3);
-    };
-    rt.block_on(f_second_substream);
 }

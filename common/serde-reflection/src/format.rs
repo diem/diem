@@ -9,13 +9,13 @@ use serde::{
 };
 use std::collections::{btree_map::Entry, BTreeMap};
 
-/// Description of a Serde-based serialization format.
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+/// Serde-based serialization format for anonymous "value" types.
+#[derive(Serialize, Deserialize, Debug, Eq, Clone, PartialEq)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum Format {
-    /// Placeholder for an unknown format (e.g. after tracing `None` value)
+    /// Placeholder for an unknown format (e.g. after tracing `None` value).
     Unknown,
-    /// The name of a container
+    /// The name of a container.
     TypeName(String),
 
     // The formats of primitive types
@@ -37,67 +37,83 @@ pub enum Format {
     Str,
     Bytes,
 
-    /// The format of Option<T>
+    /// The format of `Option<T>`.
     Option(Box<Format>),
-    /// E.g. the format of Vec<Foo>
+    /// A sequence, e.g. the format of `Vec<Foo>`.
     Seq(Box<Format>),
-    /// E.g. the format of BTreeMap<K, V>
+    /// A map, e.g. the format of `BTreeMap<K, V>`.
     #[serde(rename_all = "UPPERCASE")]
     Map {
         key: Box<Format>,
         value: Box<Format>,
     },
 
-    /// E.g. the format of (Foo, Bar)
+    /// A tuple, e.g. the format of `(Foo, Bar)`.
     Tuple(Vec<Format>),
-    /// Alias for (Foo, .... Foo)
-    /// E.g. the format of [Foo; N]
+    /// Alias for `(Foo, ... Foo)`.
+    /// E.g. the format of `[Foo; N]`.
     #[serde(rename_all = "UPPERCASE")]
     TupleArray {
         content: Box<Format>,
         size: usize,
     },
-
-    /// The format of an empty struct
-    UnitStruct,
-    /// The format of a struct with a unique unnamed field, e.g. struct A (u16)
-    NewTypeStruct(Box<Format>),
-    /// The format of a struct with several unnamed fields, e.g. struct A (u16, u32)
-    TupleStruct(Vec<Format>),
-    /// The format of a struct with named fields, e.g. struct A { a: Foo }
-    Struct(Vec<Named<Format>>),
-    /// The format of enum containers
-    Variant(BTreeMap<u32, Named<VariantFormat>>),
 }
 
-#[derive(Debug, Default, Eq, PartialEq)]
+/// Serde-based serialization format for named "container" types.
+/// In Rust, those are enums and structs.
+#[derive(Serialize, Deserialize, Debug, Eq, Clone, PartialEq)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum ContainerFormat {
+    /// An empty struct, e.g. `struct A`.
+    UnitStruct,
+    /// A struct with a single unnamed parameter, e.g. `struct A(u16)`
+    NewTypeStruct(Box<Format>),
+    /// A struct with several unnamed parameters, e.g. `struct A(u16, u32)`
+    TupleStruct(Vec<Format>),
+    /// A struct with named parameters, e.g. `struct A { a: Foo }`.
+    Struct(Vec<Named<Format>>),
+    /// An enum, that is, an enumeration of variants.
+    /// Each variant has a unique name and index within the enum.
+    Enum(BTreeMap<u32, Named<VariantFormat>>),
+}
+
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
 /// A named value.
-/// Used for named fields or variant cases.
+/// Used for named parameters or variants.
 pub struct Named<T> {
     pub name: String,
     pub value: T,
 }
 
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, PartialEq)]
 #[serde(rename_all = "UPPERCASE")]
-/// Description of a variant case.
+/// Description of a variant in an enum.
 pub enum VariantFormat {
+    /// A variant whose format is yet unknown.
+    Unknown,
+    /// A variant without parameters, e.g. `A` in `enum X { A }`
     Unit,
+    /// A variant with a single unnamed parameter, e.g. `A` in `enum X { A(u16) }`
     NewType(Box<Format>),
+    /// A struct with several unnamed parameters, e.g. `A` in `enum X { A(u16, u32) }`
     Tuple(Vec<Format>),
+    /// A struct with named parameters, e.g. `A` in `enum X { A { a: Foo } }`
     Struct(Vec<Named<Format>>),
 }
 
-pub(crate) trait FormatHolder {
-    /// Update `self` to replace unknown types or include newly discovered variants.
-    fn merge(&mut self, other: Self) -> Result<()>;
+pub trait FormatHolder {
+    /// Update `self` in order to match `other`. The changes consist in
+    /// replacing `Unknown` formats and adding missing variants wherever necessary.
+    /// This can be seen as form of a
+    /// [first-order term-unification algorithm](https://en.wikipedia.org/wiki/Unification_(computer_science)).
+    fn unify(&mut self, other: Self) -> Result<()>;
 
-    /// Finalize format values by making sure it has no more `Unknown` leaves
-    /// and that all eligible tuples are compressed into a TupleArray.
+    /// Finalize the formats within `self` by making sure they contain no `Unknown` formats
+    /// and that all eligible tuples are compressed into a `TupleArray`.
     fn normalize(&mut self) -> Result<()>;
 }
 
-fn merge_error<T>(v1: T, v2: T) -> Error
+fn unification_error<T>(v1: T, v2: T) -> Error
 where
     T: std::fmt::Debug,
 {
@@ -105,43 +121,48 @@ where
 }
 
 impl FormatHolder for VariantFormat {
-    fn merge(&mut self, mut format: VariantFormat) -> Result<()> {
+    fn unify(&mut self, mut format: VariantFormat) -> Result<()> {
         // Matching `&mut format` instead of `format` because of
         //   "error[E0009]: cannot bind by-move and by-ref in the same pattern"
         // See also https://github.com/rust-lang/rust/issues/68354
         // We make it work using std::mem::take (and the Default trait).
         match (&mut *self, &mut format) {
-            (Self::Unit, Self::Unit) => (),
+            (format1 @ Self::Unknown, format2) => {
+                let format2 = std::mem::take(format2);
+                *format1 = format2;
+            }
+
+            (_, Self::Unknown) | (Self::Unit, Self::Unit) => (),
 
             (Self::NewType(format1), Self::NewType(format2)) => {
                 let format2 = std::mem::take(format2.as_mut());
-                format1.as_mut().merge(format2)?;
+                format1.as_mut().unify(format2)?;
             }
 
             (Self::Tuple(formats1), Self::Tuple(formats2)) => {
                 if formats1.len() != formats2.len() {
-                    return Err(merge_error(formats1, formats2));
+                    return Err(unification_error(formats1, formats2));
                 }
                 let mut formats2 = formats2.iter_mut();
                 for format1 in formats1 {
                     let format2 = std::mem::take(formats2.next().unwrap());
-                    format1.merge(format2)?;
+                    format1.unify(format2)?;
                 }
             }
 
             (Self::Struct(formats1), Self::Struct(formats2)) => {
                 if formats1.len() != formats2.len() {
-                    return Err(merge_error(formats1, formats2));
+                    return Err(unification_error(formats1, formats2));
                 }
                 let mut formats2 = formats2.iter_mut();
                 for format1 in formats1 {
                     let format2 = std::mem::take(formats2.next().unwrap());
-                    format1.merge(format2)?;
+                    format1.unify(format2)?;
                 }
             }
 
             _ => {
-                return Err(merge_error(self, &mut format));
+                return Err(unification_error(self, &mut format));
             }
         }
         Ok(())
@@ -149,6 +170,7 @@ impl FormatHolder for VariantFormat {
 
     fn normalize(&mut self) -> Result<()> {
         match self {
+            Self::Unknown => Err(Error::UnknownFormat),
             Self::Unit => Ok(()),
             Self::NewType(format) => format.normalize(),
             Self::Tuple(formats) => {
@@ -171,11 +193,11 @@ impl<T> FormatHolder for Named<T>
 where
     T: FormatHolder + std::fmt::Debug,
 {
-    fn merge(&mut self, other: Named<T>) -> Result<()> {
+    fn unify(&mut self, other: Named<T>) -> Result<()> {
         if self.name != other.name {
-            return Err(merge_error(&*self, &other));
+            return Err(unification_error(&*self, &other));
         }
-        self.value.merge(other.value)
+        self.value.unify(other.value)
     }
 
     fn normalize(&mut self) -> Result<()> {
@@ -183,10 +205,96 @@ where
     }
 }
 
+impl FormatHolder for ContainerFormat {
+    fn unify(&mut self, mut format: ContainerFormat) -> Result<()> {
+        // Matching `&mut format` instead of `format` because of
+        // "error[E0009]: cannot bind by-move and by-ref in the same pattern"
+        match (&mut *self, &mut format) {
+            (Self::UnitStruct, Self::UnitStruct) => (),
+
+            (Self::NewTypeStruct(format1), Self::NewTypeStruct(format2)) => {
+                let format2 = std::mem::take(format2.as_mut());
+                format1.as_mut().unify(format2)?;
+            }
+
+            (Self::TupleStruct(formats1), Self::TupleStruct(formats2)) => {
+                if formats1.len() != formats2.len() {
+                    return Err(unification_error(self, &mut format));
+                }
+                let mut formats2 = formats2.iter_mut();
+                for format1 in formats1 {
+                    let format2 = std::mem::take(formats2.next().unwrap());
+                    format1.unify(format2)?;
+                }
+            }
+
+            (Self::Struct(named_formats1), Self::Struct(named_formats2)) => {
+                if named_formats1.len() != named_formats2.len() {
+                    return Err(unification_error(self, &mut format));
+                }
+                let mut named_formats2 = named_formats2.iter_mut();
+                for format1 in named_formats1 {
+                    let format2 = std::mem::take(named_formats2.next().unwrap());
+                    format1.unify(format2)?;
+                }
+            }
+
+            (Self::Enum(variants1), Self::Enum(variants2)) => {
+                for (index2, variant2) in variants2.iter_mut() {
+                    let variant2 = std::mem::take(variant2);
+                    match variants1.entry(*index2) {
+                        Entry::Vacant(e) => {
+                            // Note that we do not check for name collisions.
+                            e.insert(variant2);
+                        }
+                        Entry::Occupied(mut e) => {
+                            e.get_mut().unify(variant2)?;
+                        }
+                    }
+                }
+            }
+
+            _ => {
+                return Err(unification_error(self, &mut format));
+            }
+        }
+        Ok(())
+    }
+
+    fn normalize(&mut self) -> Result<()> {
+        match &mut *self {
+            Self::UnitStruct => Ok(()),
+
+            Self::NewTypeStruct(format) => format.normalize(),
+
+            Self::TupleStruct(formats) => {
+                for format in formats {
+                    format.normalize()?;
+                }
+                Ok(())
+            }
+
+            Self::Struct(named_formats) => {
+                for format in named_formats {
+                    format.normalize()?;
+                }
+                Ok(())
+            }
+
+            Self::Enum(variants) => {
+                for variant in variants.values_mut() {
+                    variant.normalize()?;
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
 impl FormatHolder for Format {
-    /// Merge the newly "traced" value `format` into the current format.
+    /// Unify the newly "traced" value `format` into the current format.
     /// Note that there should be no `TupleArray`s at this point.
-    fn merge(&mut self, mut format: Format) -> Result<()> {
+    fn unify(&mut self, mut format: Format) -> Result<()> {
         // Matching `&mut format` instead of `format` because of
         // "error[E0009]: cannot bind by-move and by-ref in the same pattern"
         match (&mut *self, &mut format) {
@@ -202,50 +310,38 @@ impl FormatHolder for Format {
             | (Self::I16, Self::I16)
             | (Self::I32, Self::I32)
             | (Self::I64, Self::I64)
+            | (Self::I128, Self::I128)
             | (Self::U8, Self::U8)
             | (Self::U16, Self::U16)
             | (Self::U32, Self::U32)
             | (Self::U64, Self::U64)
+            | (Self::U128, Self::U128)
             | (Self::F32, Self::F32)
             | (Self::F64, Self::F64)
             | (Self::Char, Self::Char)
             | (Self::Str, Self::Str)
-            | (Self::Bytes, Self::Bytes)
-            | (Self::UnitStruct, Self::UnitStruct) => (),
+            | (Self::Bytes, Self::Bytes) => (),
 
             (Self::TypeName(name1), Self::TypeName(name2)) => {
                 if name1 != name2 {
-                    return Err(merge_error(self, &mut format));
+                    return Err(unification_error(self, &mut format));
                 }
             }
 
             (Self::Option(format1), Self::Option(format2))
-            | (Self::Seq(format1), Self::Seq(format2))
-            | (Self::NewTypeStruct(format1), Self::NewTypeStruct(format2)) => {
+            | (Self::Seq(format1), Self::Seq(format2)) => {
                 let format2 = std::mem::take(format2.as_mut());
-                format1.as_mut().merge(format2)?;
+                format1.as_mut().unify(format2)?;
             }
 
-            (Self::Tuple(formats1), Self::Tuple(formats2))
-            | (Self::TupleStruct(formats1), Self::TupleStruct(formats2)) => {
+            (Self::Tuple(formats1), Self::Tuple(formats2)) => {
                 if formats1.len() != formats2.len() {
-                    return Err(merge_error(self, &mut format));
+                    return Err(unification_error(self, &mut format));
                 }
                 let mut formats2 = formats2.iter_mut();
                 for format1 in formats1 {
                     let format2 = std::mem::take(formats2.next().unwrap());
-                    format1.merge(format2)?;
-                }
-            }
-
-            (Self::Struct(named_formats1), Self::Struct(named_formats2)) => {
-                if named_formats1.len() != named_formats2.len() {
-                    return Err(merge_error(self, &mut format));
-                }
-                let mut named_formats2 = named_formats2.iter_mut();
-                for format1 in named_formats1 {
-                    let format2 = std::mem::take(named_formats2.next().unwrap());
-                    format1.merge(format2)?;
+                    format1.unify(format2)?;
                 }
             }
 
@@ -261,27 +357,12 @@ impl FormatHolder for Format {
             ) => {
                 let key2 = std::mem::take(key2.as_mut());
                 let value2 = std::mem::take(value2.as_mut());
-                key1.as_mut().merge(key2)?;
-                value1.as_mut().merge(value2)?;
-            }
-
-            (Self::Variant(variants1), Self::Variant(variants2)) => {
-                for (index2, variant2) in variants2.iter_mut() {
-                    let variant2 = std::mem::take(variant2);
-                    match variants1.entry(*index2) {
-                        Entry::Vacant(e) => {
-                            // Note that we do not check for name collisions.
-                            e.insert(variant2);
-                        }
-                        Entry::Occupied(mut e) => {
-                            e.get_mut().merge(variant2)?;
-                        }
-                    }
-                }
+                key1.as_mut().unify(key2)?;
+                value1.as_mut().unify(value2)?;
             }
 
             _ => {
-                return Err(merge_error(self, &mut format));
+                return Err(unification_error(self, &mut format));
             }
         }
         Ok(())
@@ -307,8 +388,7 @@ impl FormatHolder for Format {
             | Self::F64
             | Self::Char
             | Self::Str
-            | Self::Bytes
-            | Self::UnitStruct => {
+            | Self::Bytes => {
                 return Ok(());
             }
 
@@ -318,7 +398,6 @@ impl FormatHolder for Format {
 
             Self::Option(format)
             | Self::Seq(format)
-            | Self::NewTypeStruct(format)
             | Self::TupleArray {
                 content: format, ..
             } => {
@@ -328,27 +407,6 @@ impl FormatHolder for Format {
             Self::Map { key, value } => {
                 key.normalize()?;
                 return value.normalize();
-            }
-
-            Self::TupleStruct(formats) => {
-                for format in formats {
-                    format.normalize()?;
-                }
-                return Ok(());
-            }
-
-            Self::Struct(named_formats) => {
-                for format in named_formats {
-                    format.normalize()?;
-                }
-                return Ok(());
-            }
-
-            Self::Variant(variants) => {
-                for variant in variants.values_mut() {
-                    variant.normalize()?;
-                }
-                return Ok(());
             }
 
             // The only case where compression happens.
@@ -378,6 +436,26 @@ impl FormatHolder for Format {
     }
 }
 
+/// Helper trait to update formats in maps.
+pub(crate) trait ContainerFormatEntry {
+    fn unify(self, format: ContainerFormat) -> Result<()>;
+}
+
+impl<'a, K> ContainerFormatEntry for Entry<'a, K, ContainerFormat>
+where
+    K: std::cmp::Ord,
+{
+    fn unify(self, format: ContainerFormat) -> Result<()> {
+        match self {
+            Entry::Vacant(e) => {
+                e.insert(format);
+                Ok(())
+            }
+            Entry::Occupied(e) => e.into_mut().unify(format),
+        }
+    }
+}
+
 impl Default for Format {
     fn default() -> Self {
         Self::Unknown
@@ -386,7 +464,7 @@ impl Default for Format {
 
 impl Default for VariantFormat {
     fn default() -> Self {
-        Self::Unit
+        Self::Unknown
     }
 }
 

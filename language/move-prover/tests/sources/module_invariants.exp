@@ -6,8 +6,8 @@ error:  A postcondition might not hold on this return path.
  24 │         invariant global<SCounter>(0x0).n == spec_count;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/module_invariants.move:42:5: delete_S_invalid (entry)
-    =     at tests/sources/module_invariants.move:42:5: delete_S_invalid (exit)
+    =     at tests/sources/module_invariants.move:46:5: delete_S_incorrect (entry)
+    =     at tests/sources/module_invariants.move:46:5: delete_S_incorrect (exit)
     =         x = <redacted>
 
 error:  A precondition for this call might not hold.
@@ -17,5 +17,5 @@ error:  A precondition for this call might not hold.
  24 │         invariant global<SCounter>(0x0).n == spec_count;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/module_invariants.move:48:5: private_calls_public_invalid (entry)
-    =     at tests/sources/module_invariants.move:28:5: new_S (entry)
+    =     at tests/sources/module_invariants.move:55:5: private_calls_public_incorrect (entry)
+    =     at tests/sources/module_invariants.move:31:5: new_S (entry)

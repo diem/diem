@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/parser/hexstring_bad_value1.move:3:11 ───
+   │
+ 3 │         x"g"
+   │           ^ Invalid hexadecimal character: 'g'
+   │
+

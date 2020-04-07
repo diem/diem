@@ -11,9 +11,9 @@ use move_core_types::identifier::IdentStr;
 use vm::{
     access::ModuleAccess,
     file_format::{
-        Bytecode, FieldDefinitionIndex, FunctionDefinition, FunctionDefinitionIndex,
-        FunctionSignature, Kind, LocalsSignature, LocalsSignatureIndex, SignatureToken,
-        StructDefinition, StructDefinitionIndex, StructFieldInformation, TableIndex, TypeSignature,
+        Bytecode, FieldHandleIndex, FunctionDefinition, FunctionDefinitionIndex, Kind, Signature,
+        SignatureToken, StructDefinition, StructDefinitionIndex, StructFieldInformation,
+        TableIndex, TypeSignature,
     },
 };
 
@@ -93,24 +93,25 @@ impl<Location: Clone + Eq> Disassembler<Location> {
     // Formatting Helpers
     //***************************************************************************
 
-    fn name_for_field(&self, field_idx: FieldDefinitionIndex) -> Result<String> {
-        let field_def = self.source_mapper.bytecode.field_def_at(field_idx);
-        let struct_def_idx = self
+    fn name_for_field(&self, field_idx: FieldHandleIndex) -> Result<String> {
+        let field_handle = self.source_mapper.bytecode.field_handle_at(field_idx);
+        let struct_def = self
             .source_mapper
             .bytecode
-            .struct_defs()
-            .iter()
-            .position(|struct_def| struct_def.struct_handle == field_def.struct_)
-            .ok_or_else(|| format_err!("Unable to find struct definition for struct field"))?;
+            .struct_def_at(field_handle.owner);
+        let field_def = match &struct_def.field_information {
+            StructFieldInformation::Native => {
+                return Err(format_err!("Attempt to access field on a native struct"));
+            }
+            StructFieldInformation::Declared(fields) => fields
+                .get(field_handle.field as usize)
+                .ok_or_else(|| format_err!("Bad field index"))?,
+        };
         let field_name = self
             .source_mapper
             .bytecode
             .identifier_at(field_def.name)
             .to_string();
-        let struct_def = self
-            .source_mapper
-            .bytecode
-            .struct_def_at(StructDefinitionIndex(struct_def_idx as TableIndex));
         let struct_handle = self
             .source_mapper
             .bytecode
@@ -123,42 +124,40 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         Ok(format!("{}.{}", struct_name, field_name))
     }
 
-    fn type_for_field(&self, field_idx: FieldDefinitionIndex) -> Result<String> {
-        let field_def = self.source_mapper.bytecode.field_def_at(field_idx);
-        let struct_def_idx = self
+    fn type_for_field(&self, field_idx: FieldHandleIndex) -> Result<String> {
+        let field_handle = self.source_mapper.bytecode.field_handle_at(field_idx);
+        let struct_def = self
             .source_mapper
             .bytecode
-            .struct_defs()
-            .iter()
-            .position(|struct_def| struct_def.struct_handle == field_def.struct_)
-            .ok_or_else(|| format_err!("Unable to find struct definition for struct field"))?;
+            .struct_def_at(field_handle.owner);
+        let field_def = match &struct_def.field_information {
+            StructFieldInformation::Native => {
+                return Err(format_err!("Attempt to access field on a native struct"));
+            }
+            StructFieldInformation::Declared(fields) => fields
+                .get(field_handle.field as usize)
+                .ok_or_else(|| format_err!("Bad field index"))?,
+        };
         let struct_source_info = self
             .source_mapper
             .source_map
-            .get_struct_source_map(StructDefinitionIndex(struct_def_idx as TableIndex))?;
-        let field_type_sig = self
-            .source_mapper
-            .bytecode
-            .type_signature_at(field_def.signature);
-        let ty = self.disassemble_sig_tok(
-            field_type_sig.0.clone(),
-            &struct_source_info.type_parameters,
-        )?;
+            .get_struct_source_map(field_handle.owner)?;
+        let field_type_sig = field_def.signature.0.clone();
+        let ty = self.disassemble_sig_tok(field_type_sig, &struct_source_info.type_parameters)?;
         Ok(ty)
     }
 
     fn struct_type_info(
         &self,
         struct_idx: StructDefinitionIndex,
-        types_idx: LocalsSignatureIndex,
+        signature: &Signature,
     ) -> Result<(String, String)> {
         let struct_definition = self.get_struct_def(struct_idx)?;
         let struct_source_map = self
             .source_mapper
             .source_map
             .get_struct_source_map(struct_idx)?;
-        let locals_signature = self.source_mapper.bytecode.locals_signature_at(types_idx);
-        let type_arguments = locals_signature
+        let type_arguments = signature
             .0
             .iter()
             .map(|sig_tok| {
@@ -197,7 +196,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
     fn type_for_local(
         &self,
         local_idx: u64,
-        locals_sigs: &LocalsSignature,
+        locals_sigs: &Signature,
         function_source_map: &FunctionSourceMap<Location>,
     ) -> Result<String> {
         let sig_tok = locals_sigs
@@ -254,7 +253,17 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             SignatureToken::U64 => "u64".to_string(),
             SignatureToken::U128 => "u128".to_string(),
             SignatureToken::Address => "address".to_string(),
-            SignatureToken::Struct(struct_handle_idx, instantiation) => {
+            SignatureToken::Struct(struct_handle_idx) => self
+                .source_mapper
+                .bytecode
+                .identifier_at(
+                    self.source_mapper
+                        .bytecode
+                        .struct_handle_at(struct_handle_idx)
+                        .name,
+                )
+                .to_string(),
+            SignatureToken::StructInstantiation(struct_handle_idx, instantiation) => {
                 let instantiation = instantiation
                     .into_iter()
                     .map(|tok| self.disassemble_sig_tok(tok, type_param_context))
@@ -300,7 +309,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
     fn disassemble_instruction(
         &self,
         instruction: &Bytecode,
-        locals_sigs: &LocalsSignature,
+        locals_sigs: &Signature,
         function_source_map: &FunctionSourceMap<Location>,
         default_location: &Location,
     ) -> Result<String> {
@@ -352,63 +361,227 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                 let ty = self.type_for_field(*field_idx)?;
                 Ok(format!("MutBorrowField[{}]({}: {})", field_idx, name, ty))
             }
+            Bytecode::MutBorrowFieldGeneric(field_idx) => {
+                let field_inst = self
+                    .source_mapper
+                    .bytecode
+                    .field_instantiation_at(*field_idx);
+                let name = self.name_for_field(field_inst.handle)?;
+                let ty = self.type_for_field(field_inst.handle)?;
+                Ok(format!(
+                    "MutBorrowFieldGeneric[{}]({}: {})",
+                    field_idx, name, ty
+                ))
+            }
             Bytecode::ImmBorrowField(field_idx) => {
                 let name = self.name_for_field(*field_idx)?;
                 let ty = self.type_for_field(*field_idx)?;
                 Ok(format!("ImmBorrowField[{}]({}: {})", field_idx, name, ty))
             }
-            Bytecode::Pack(struct_idx, types_idx) => {
-                let (name, ty_params) = self.struct_type_info(*struct_idx, *types_idx)?;
+            Bytecode::ImmBorrowFieldGeneric(field_idx) => {
+                let field_inst = self
+                    .source_mapper
+                    .bytecode
+                    .field_instantiation_at(*field_idx);
+                let name = self.name_for_field(field_inst.handle)?;
+                let ty = self.type_for_field(field_inst.handle)?;
+                Ok(format!(
+                    "ImmBorrowFieldGeneric[{}]({}: {})",
+                    field_idx, name, ty
+                ))
+            }
+            Bytecode::Pack(struct_idx) => {
+                let (name, ty_params) = self.struct_type_info(*struct_idx, &Signature(vec![]))?;
                 Ok(format!("Pack[{}]({}{})", struct_idx, name, ty_params))
             }
-            Bytecode::Unpack(struct_idx, types_idx) => {
-                let (name, ty_params) = self.struct_type_info(*struct_idx, *types_idx)?;
+            Bytecode::PackGeneric(struct_idx) => {
+                let struct_inst = self
+                    .source_mapper
+                    .bytecode
+                    .struct_instantiation_at(*struct_idx);
+                let type_params = self
+                    .source_mapper
+                    .bytecode
+                    .signature_at(struct_inst.type_parameters);
+                let (name, ty_params) = self.struct_type_info(struct_inst.def, type_params)?;
+                Ok(format!(
+                    "PackGeneric[{}]({}{})",
+                    struct_idx, name, ty_params
+                ))
+            }
+            Bytecode::Unpack(struct_idx) => {
+                let (name, ty_params) = self.struct_type_info(*struct_idx, &Signature(vec![]))?;
                 Ok(format!("Unpack[{}]({}{})", struct_idx, name, ty_params))
             }
-            Bytecode::Exists(struct_idx, types_idx) => {
-                let (name, ty_params) = self.struct_type_info(*struct_idx, *types_idx)?;
+            Bytecode::UnpackGeneric(struct_idx) => {
+                let struct_inst = self
+                    .source_mapper
+                    .bytecode
+                    .struct_instantiation_at(*struct_idx);
+                let type_params = self
+                    .source_mapper
+                    .bytecode
+                    .signature_at(struct_inst.type_parameters);
+                let (name, ty_params) = self.struct_type_info(struct_inst.def, type_params)?;
+                Ok(format!(
+                    "UnpackGeneric[{}]({}{})",
+                    struct_idx, name, ty_params
+                ))
+            }
+            Bytecode::Exists(struct_idx) => {
+                let (name, ty_params) = self.struct_type_info(*struct_idx, &Signature(vec![]))?;
                 Ok(format!("Exists[{}]({}{})", struct_idx, name, ty_params))
             }
-            Bytecode::MutBorrowGlobal(struct_idx, types_idx) => {
-                let (name, ty_params) = self.struct_type_info(*struct_idx, *types_idx)?;
+            Bytecode::ExistsGeneric(struct_idx) => {
+                let struct_inst = self
+                    .source_mapper
+                    .bytecode
+                    .struct_instantiation_at(*struct_idx);
+                let type_params = self
+                    .source_mapper
+                    .bytecode
+                    .signature_at(struct_inst.type_parameters);
+                let (name, ty_params) = self.struct_type_info(struct_inst.def, type_params)?;
+                Ok(format!(
+                    "ExistsGeneric[{}]({}{})",
+                    struct_idx, name, ty_params
+                ))
+            }
+            Bytecode::MutBorrowGlobal(struct_idx) => {
+                let (name, ty_params) = self.struct_type_info(*struct_idx, &Signature(vec![]))?;
                 Ok(format!(
                     "MutBorrowGlobal[{}]({}{})",
                     struct_idx, name, ty_params
                 ))
             }
-            Bytecode::ImmBorrowGlobal(struct_idx, types_idx) => {
-                let (name, ty_params) = self.struct_type_info(*struct_idx, *types_idx)?;
+            Bytecode::MutBorrowGlobalGeneric(struct_idx) => {
+                let struct_inst = self
+                    .source_mapper
+                    .bytecode
+                    .struct_instantiation_at(*struct_idx);
+                let type_params = self
+                    .source_mapper
+                    .bytecode
+                    .signature_at(struct_inst.type_parameters);
+                let (name, ty_params) = self.struct_type_info(struct_inst.def, type_params)?;
+                Ok(format!(
+                    "MutBorrowGlobalGeneric[{}]({}{})",
+                    struct_idx, name, ty_params
+                ))
+            }
+            Bytecode::ImmBorrowGlobal(struct_idx) => {
+                let (name, ty_params) = self.struct_type_info(*struct_idx, &Signature(vec![]))?;
                 Ok(format!(
                     "ImmBorrowGlobal[{}]({}{})",
                     struct_idx, name, ty_params
                 ))
             }
-            Bytecode::MoveFrom(struct_idx, types_idx) => {
-                let (name, ty_params) = self.struct_type_info(*struct_idx, *types_idx)?;
+            Bytecode::ImmBorrowGlobalGeneric(struct_idx) => {
+                let struct_inst = self
+                    .source_mapper
+                    .bytecode
+                    .struct_instantiation_at(*struct_idx);
+                let type_params = self
+                    .source_mapper
+                    .bytecode
+                    .signature_at(struct_inst.type_parameters);
+                let (name, ty_params) = self.struct_type_info(struct_inst.def, type_params)?;
+                Ok(format!(
+                    "ImmBorrowGlobalGeneric[{}]({}{})",
+                    struct_idx, name, ty_params
+                ))
+            }
+            Bytecode::MoveFrom(struct_idx) => {
+                let (name, ty_params) = self.struct_type_info(*struct_idx, &Signature(vec![]))?;
                 Ok(format!("MoveFrom[{}]({}{})", struct_idx, name, ty_params))
             }
-            Bytecode::MoveToSender(struct_idx, types_idx) => {
-                let (name, ty_params) = self.struct_type_info(*struct_idx, *types_idx)?;
+            Bytecode::MoveFromGeneric(struct_idx) => {
+                let struct_inst = self
+                    .source_mapper
+                    .bytecode
+                    .struct_instantiation_at(*struct_idx);
+                let type_params = self
+                    .source_mapper
+                    .bytecode
+                    .signature_at(struct_inst.type_parameters);
+                let (name, ty_params) = self.struct_type_info(struct_inst.def, type_params)?;
+                Ok(format!(
+                    "MoveFromGeneric[{}]({}{})",
+                    struct_idx, name, ty_params
+                ))
+            }
+            Bytecode::MoveToSender(struct_idx) => {
+                let (name, ty_params) = self.struct_type_info(*struct_idx, &Signature(vec![]))?;
                 Ok(format!(
                     "MoveToSender[{}]({}{})",
                     struct_idx, name, ty_params
                 ))
             }
-            Bytecode::Call(method_idx, locals_sig_index) => {
+            Bytecode::MoveToSenderGeneric(struct_idx) => {
+                let struct_inst = self
+                    .source_mapper
+                    .bytecode
+                    .struct_instantiation_at(*struct_idx);
+                let type_params = self
+                    .source_mapper
+                    .bytecode
+                    .signature_at(struct_inst.type_parameters);
+                let (name, ty_params) = self.struct_type_info(struct_inst.def, type_params)?;
+                Ok(format!(
+                    "MoveToSenderGeneric[{}]({}{})",
+                    struct_idx, name, ty_params
+                ))
+            }
+            Bytecode::Call(method_idx) => {
                 let function_handle = self.source_mapper.bytecode.function_handle_at(*method_idx);
                 let fcall_name = self
                     .source_mapper
                     .bytecode
                     .identifier_at(function_handle.name)
                     .to_string();
-                let function_signature = self
+                let type_arguments = self
                     .source_mapper
                     .bytecode
-                    .function_signature_at(function_handle.signature);
+                    .signature_at(function_handle.parameters)
+                    .0
+                    .iter()
+                    .map(|sig_tok| Ok(self.disassemble_sig_tok(sig_tok.clone(), &[])?))
+                    .collect::<Result<Vec<String>>>()?
+                    .join(", ");
+                let type_rets = self
+                    .source_mapper
+                    .bytecode
+                    .signature_at(function_handle.return_)
+                    .0
+                    .iter()
+                    .map(|sig_tok| Ok(self.disassemble_sig_tok(sig_tok.clone(), &[])?))
+                    .collect::<Result<Vec<String>>>()?;
+                Ok(format!(
+                    "Call[{}]({}({}){})",
+                    method_idx,
+                    fcall_name,
+                    type_arguments,
+                    Self::format_ret_type(&type_rets)
+                ))
+            }
+            Bytecode::CallGeneric(method_idx) => {
+                let func_inst = self
+                    .source_mapper
+                    .bytecode
+                    .function_instantiation_at(*method_idx);
+                let function_handle = self
+                    .source_mapper
+                    .bytecode
+                    .function_handle_at(func_inst.handle);
+                let fcall_name = self
+                    .source_mapper
+                    .bytecode
+                    .identifier_at(function_handle.name)
+                    .to_string();
                 let ty_params = self
                     .source_mapper
                     .bytecode
-                    .locals_signature_at(*locals_sig_index)
+                    .signature_at(func_inst.type_parameters)
                     .0
                     .iter()
                     .map(|sig_tok| {
@@ -421,14 +594,20 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                         ))
                     })
                     .collect::<Result<Vec<_>>>()?;
-                let type_arguments = function_signature
-                    .arg_types
+                let type_arguments = self
+                    .source_mapper
+                    .bytecode
+                    .signature_at(function_handle.parameters)
+                    .0
                     .iter()
                     .map(|sig_tok| Ok(self.disassemble_sig_tok(sig_tok.clone(), &ty_params)?))
                     .collect::<Result<Vec<String>>>()?
                     .join(", ");
-                let type_rets = function_signature
-                    .return_types
+                let type_rets = self
+                    .source_mapper
+                    .bytecode
+                    .signature_at(function_handle.return_)
+                    .0
                     .iter()
                     .map(|sig_tok| Ok(self.disassemble_sig_tok(sig_tok.clone(), &ty_params)?))
                     .collect::<Result<Vec<String>>>()?;
@@ -460,7 +639,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         let locals_sigs = self
             .source_mapper
             .bytecode
-            .locals_signature_at(function_def.code.locals);
+            .signature_at(function_def.code.locals);
         let function_source_map = self
             .source_mapper
             .source_map
@@ -516,23 +695,22 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         &self,
         function_source_map: &FunctionSourceMap<Location>,
         function_definition: &FunctionDefinition,
-        function_signature: &FunctionSignature,
+        parameters: &Signature,
     ) -> Result<(Vec<String>, Vec<String>)> {
-        let locals_signature = self
+        let signature = self
             .source_mapper
             .bytecode
-            .locals_signature_at(function_definition.code.locals);
+            .signature_at(function_definition.code.locals);
         let mut locals_names_tys = function_source_map
             .locals
             .iter()
             .enumerate()
             .map(|(local_idx, (name, _))| {
-                let ty =
-                    self.type_for_local(local_idx as u64, locals_signature, function_source_map)?;
+                let ty = self.type_for_local(local_idx as u64, signature, function_source_map)?;
                 Ok(format!("{}: {}", name.to_string(), ty))
             })
             .collect::<Result<Vec<String>>>()?;
-        let mut locals = locals_names_tys.split_off(function_signature.arg_types.len());
+        let mut locals = locals_names_tys.split_off(parameters.len());
         let args = locals_names_tys;
         if !self.options.print_locals {
             locals = vec![];
@@ -549,10 +727,6 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             .source_mapper
             .bytecode
             .function_handle_at(function_definition.function);
-        let function_signature = self
-            .source_mapper
-            .bytecode
-            .function_signature_at(function_handle.signature);
 
         let function_source_map = self
             .source_mapper
@@ -573,15 +747,19 @@ impl<Location: Clone + Eq> Disassembler<Location> {
 
         let ty_params = Self::disassemble_type_formals(
             &function_source_map.type_parameters,
-            &function_signature.type_formals,
+            &function_handle.type_parameters,
         );
         let name = self
             .source_mapper
             .bytecode
             .identifier_at(function_handle.name)
             .to_string();
-        let ret_type: Vec<String> = function_signature
-            .return_types
+        let return_ = self
+            .source_mapper
+            .bytecode
+            .signature_at(function_handle.return_);
+        let ret_type: Vec<String> = return_
+            .0
             .iter()
             .cloned()
             .map(|sig_token| {
@@ -590,8 +768,12 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                 Ok(sig_tok_str)
             })
             .collect::<Result<Vec<String>>>()?;
+        let parameters = self
+            .source_mapper
+            .bytecode
+            .signature_at(function_handle.parameters);
         let (args, locals) =
-            self.disassemble_locals(function_source_map, function_definition, function_signature)?;
+            self.disassemble_locals(function_source_map, function_definition, parameters)?;
         let bytecode = self.disassemble_bytecode(function_definition_index)?;
         Ok(format!(
             "{visibility_modifier}{name}{ty_params}({args}){ret_type}{body}",
@@ -618,22 +800,13 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             .get_struct_source_map(struct_def_idx)?;
 
         let field_info: Option<Vec<(&IdentStr, &TypeSignature)>> =
-            match struct_definition.field_information {
+            match &struct_definition.field_information {
                 StructFieldInformation::Native => None,
-                StructFieldInformation::Declared {
-                    field_count,
-                    fields,
-                } => Some(
-                    (fields.0..fields.0 + field_count)
-                        .map(|i| {
-                            let field_definition = self
-                                .source_mapper
-                                .bytecode
-                                .field_def_at(FieldDefinitionIndex(i));
-                            let type_sig = self
-                                .source_mapper
-                                .bytecode
-                                .type_signature_at(field_definition.signature);
+                StructFieldInformation::Declared(fields) => Some(
+                    fields
+                        .iter()
+                        .map(|field_definition| {
+                            let type_sig = &field_definition.signature;
                             let field_name = self
                                 .source_mapper
                                 .bytecode
@@ -660,7 +833,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
 
         let ty_params = Self::disassemble_type_formals(
             &struct_source_map.type_parameters,
-            &struct_handle.type_formals,
+            &struct_handle.type_parameters,
         );
         let mut fields = match field_info {
             None => vec![],

@@ -9,7 +9,10 @@ use crate::{
 use channel::{libra_channel, message_queues::QueueStyle};
 use core::str::FromStr;
 use futures::SinkExt;
-use libra_crypto::{ed25519::compat, test_utils::TEST_SEED, x25519};
+use libra_crypto::{
+    ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, x25519::X25519StaticPrivateKey, PrivateKey,
+    Uniform,
+};
 use libra_logger::info;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{io, num::NonZeroUsize};
@@ -37,8 +40,8 @@ fn setup_conn_mgr(
     let eligible_peers = eligible_peers
         .into_iter()
         .map(|peer_id| {
-            let (_, signing_public_key) = compat::generate_keypair(&mut rng);
-            let (_, identity_public_key) = x25519::compat::generate_keypair(&mut rng);
+            let signing_public_key = Ed25519PrivateKey::generate(&mut rng).public_key();
+            let identity_public_key = X25519StaticPrivateKey::generate(&mut rng).public_key();
             let pubkeys = NetworkPublicKeys {
                 identity_public_key,
                 signing_public_key,
@@ -72,8 +75,8 @@ fn setup_conn_mgr(
 fn gen_peer() -> (PeerId, NetworkPublicKeys) {
     let peer_id = PeerId::random();
     let mut rng = StdRng::from_seed(TEST_SEED);
-    let (_, signing_public_key) = compat::generate_keypair(&mut rng);
-    let (_, identity_public_key) = x25519::compat::generate_keypair(&mut rng);
+    let signing_public_key = Ed25519PrivateKey::generate(&mut rng).public_key();
+    let identity_public_key = X25519StaticPrivateKey::generate(&mut rng).public_key();
     (
         peer_id,
         NetworkPublicKeys {

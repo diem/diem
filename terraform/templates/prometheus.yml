@@ -13,23 +13,26 @@ alerting:
 
 # Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
 rule_files:
-  - "rules/blockchain_alerts.yml"
   - "rules/recording_rules.yml"
+  - "rules/blockchain_alerts.yml"
 
 # A scrape configuration containing exactly one endpoint to scrape:
 # Here it's Prometheus itself.
 scrape_configs:
   # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
   - job_name: 'prometheus'
-
-    # metrics_path defaults to '/metrics'
-    # scheme defaults to 'http'.
-
     static_configs:
       - targets: ['localhost:9090']
         labels:
           workspace: '${workspace}'
           role: 'prometheus'
+
+  - job_name: 'pushgateway'
+    honor_labels: true
+    static_configs:
+      - targets: ['${monitoring_private_ip}:9092']
+        labels:
+          workspace: '${workspace}'
 
   - job_name: 'other_nodes'
     static_configs:
@@ -106,6 +109,24 @@ scrape_configs:
           role: 'fullnode'
           workspace: '${workspace}'
       %{ endfor }
+
+    relabel_configs:
+      - source_labels: ['__address__']
+        # NOTICE: not tested with IPv6
+        regex: '([0-9\.]+):\d+'
+        target_label: 'address'
+        replacement: '$1'
+
+  - job_name: 'vault'
+    metrics_path: '/v1/sys/metrics'
+    params:
+      format: ['prometheus']
+
+    static_configs:
+      - targets: ['${vault_ip}:8200']
+        labels:
+          role: 'vault'
+          workspace: '${workspace}'
 
     relabel_configs:
       - source_labels: ['__address__']

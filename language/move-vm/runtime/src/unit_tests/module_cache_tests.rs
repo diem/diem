@@ -77,63 +77,54 @@ impl RemoteCache for FakeDataCache {
 fn test_module(name: &'static str) -> VerifiedModule {
     let compiled_module = CompiledModuleMut {
         module_handles: vec![ModuleHandle {
-            name: IdentifierIndex::new(0),
-            address: AddressPoolIndex::new(0),
+            name: IdentifierIndex(0),
+            address: AddressPoolIndex(0),
         }],
         struct_handles: vec![],
+        signatures: vec![Signature(vec![]), Signature(vec![SignatureToken::U64])],
         function_handles: vec![
             FunctionHandle {
-                module: ModuleHandleIndex::new(0),
-                name: IdentifierIndex::new(1),
-                signature: FunctionSignatureIndex::new(0),
+                module: ModuleHandleIndex(0),
+                name: IdentifierIndex(1),
+                return_: SignatureIndex(0),
+                parameters: SignatureIndex(0),
+                type_parameters: vec![],
             },
             FunctionHandle {
-                module: ModuleHandleIndex::new(0),
-                name: IdentifierIndex::new(2),
-                signature: FunctionSignatureIndex::new(1),
+                module: ModuleHandleIndex(0),
+                name: IdentifierIndex(2),
+                return_: SignatureIndex(0),
+                parameters: SignatureIndex(1),
+                type_parameters: vec![],
             },
         ],
+        field_handles: vec![],
+        struct_def_instantiations: vec![],
+        function_instantiations: vec![],
+        field_instantiations: vec![],
 
         struct_defs: vec![],
-        field_defs: vec![],
         function_defs: vec![
             FunctionDefinition {
-                function: FunctionHandleIndex::new(0),
+                function: FunctionHandleIndex(0),
                 flags: CodeUnit::PUBLIC,
                 acquires_global_resources: vec![],
                 code: CodeUnit {
                     max_stack_size: 10,
-                    locals: LocalsSignatureIndex::new(0),
+                    locals: SignatureIndex(0),
                     code: vec![Bytecode::LdTrue, Bytecode::Pop, Bytecode::Ret],
                 },
             },
             FunctionDefinition {
-                function: FunctionHandleIndex::new(1),
+                function: FunctionHandleIndex(1),
                 flags: CodeUnit::PUBLIC,
                 acquires_global_resources: vec![],
                 code: CodeUnit {
                     max_stack_size: 10,
-                    locals: LocalsSignatureIndex::new(1),
+                    locals: SignatureIndex(1),
                     code: vec![Bytecode::Ret],
                 },
             },
-        ],
-        type_signatures: vec![],
-        function_signatures: vec![
-            FunctionSignature {
-                return_types: vec![],
-                arg_types: vec![],
-                type_formals: vec![],
-            },
-            FunctionSignature {
-                return_types: vec![],
-                arg_types: vec![SignatureToken::U64],
-                type_formals: vec![],
-            },
-        ],
-        locals_signatures: vec![
-            LocalsSignature(vec![]),
-            LocalsSignature(vec![SignatureToken::U64]),
         ],
         identifiers: idents(vec![name, "func1", "func2"]),
         byte_array_pool: vec![],
@@ -147,57 +138,51 @@ fn test_module(name: &'static str) -> VerifiedModule {
 fn test_script() -> VerifiedScript {
     let compiled_script = CompiledScriptMut {
         main: FunctionDefinition {
-            function: FunctionHandleIndex::new(0),
+            function: FunctionHandleIndex(0),
             flags: CodeUnit::PUBLIC,
             acquires_global_resources: vec![],
             code: CodeUnit {
                 max_stack_size: 10,
-                locals: LocalsSignatureIndex(0),
+                locals: SignatureIndex(0),
                 code: vec![Bytecode::Ret],
             },
         },
         module_handles: vec![
             ModuleHandle {
-                address: AddressPoolIndex::new(0),
-                name: IdentifierIndex::new(0),
+                address: AddressPoolIndex(0),
+                name: IdentifierIndex(0),
             },
             ModuleHandle {
-                address: AddressPoolIndex::new(0),
-                name: IdentifierIndex::new(1),
+                address: AddressPoolIndex(0),
+                name: IdentifierIndex(1),
             },
         ],
         struct_handles: vec![],
+        signatures: vec![Signature(vec![]), Signature(vec![SignatureToken::U64])],
         function_handles: vec![
             FunctionHandle {
-                name: IdentifierIndex::new(4),
-                signature: FunctionSignatureIndex::new(0),
-                module: ModuleHandleIndex::new(0),
+                name: IdentifierIndex(4),
+                module: ModuleHandleIndex(0),
+                parameters: SignatureIndex(0),
+                return_: SignatureIndex(0),
+                type_parameters: vec![],
             },
             FunctionHandle {
-                name: IdentifierIndex::new(2),
-                signature: FunctionSignatureIndex::new(0),
-                module: ModuleHandleIndex::new(1),
+                name: IdentifierIndex(2),
+                module: ModuleHandleIndex(1),
+                parameters: SignatureIndex(0),
+                return_: SignatureIndex(0),
+                type_parameters: vec![],
             },
             FunctionHandle {
-                name: IdentifierIndex::new(3),
-                signature: FunctionSignatureIndex::new(1),
-                module: ModuleHandleIndex::new(1),
+                name: IdentifierIndex(3),
+                module: ModuleHandleIndex(1),
+                parameters: SignatureIndex(1),
+                return_: SignatureIndex(0),
+                type_parameters: vec![],
             },
         ],
-        type_signatures: vec![],
-        function_signatures: vec![
-            FunctionSignature {
-                return_types: vec![],
-                arg_types: vec![],
-                type_formals: vec![],
-            },
-            FunctionSignature {
-                return_types: vec![],
-                arg_types: vec![SignatureToken::U64],
-                type_formals: vec![],
-            },
-        ],
-        locals_signatures: vec![LocalsSignature(vec![])],
+        function_instantiations: vec![],
         identifiers: idents(vec!["hello", "module", "func1", "func2", "main"]),
         byte_array_pool: vec![],
         address_pool: vec![AccountAddress::default()],
@@ -225,10 +210,10 @@ fn test_loader_one_module() {
 
     // Get the function reference of the first two function handles.
     let func1_ref = loaded_program
-        .resolve_function_ref(module_ref, FunctionHandleIndex::new(0), &ctx)
+        .resolve_function_ref(module_ref, FunctionHandleIndex(0), &ctx)
         .unwrap();
     let func2_ref = loaded_program
-        .resolve_function_ref(module_ref, FunctionHandleIndex::new(1), &ctx)
+        .resolve_function_ref(module_ref, FunctionHandleIndex(1), &ctx)
         .unwrap();
 
     // The two references should refer to the same module
@@ -266,10 +251,10 @@ fn test_loader_cross_modules() {
     let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
     let entry_module = entry_func.module();
     let func1 = loaded_program
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1), &ctx)
+        .resolve_function_ref(entry_module, FunctionHandleIndex(1), &ctx)
         .unwrap();
     let func2 = loaded_program
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(2), &ctx)
+        .resolve_function_ref(entry_module, FunctionHandleIndex(2), &ctx)
         .unwrap();
 
     assert_eq!(
@@ -297,7 +282,6 @@ fn test_cache_with_storage() {
     let loaded_main = LoadedModule::new(owned_entry_module);
     let entry_func = FunctionRef::new(&loaded_main, CompiledScript::MAIN_INDEX);
     let entry_module = entry_func.module();
-    println!("MODULE: {}", entry_module.as_module());
 
     let vm_cache = VMModuleCache::new(&allocator);
 
@@ -306,7 +290,7 @@ fn test_cache_with_storage() {
 
     // Function is not defined locally.
     assert!(vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1), &ctx)
+        .resolve_function_ref(entry_module, FunctionHandleIndex(1), &ctx)
         .is_err());
 
     let mut data_cache = FakeDataCache::default();
@@ -315,10 +299,10 @@ fn test_cache_with_storage() {
 
     // Make sure the block cache fetches the code from the view.
     let func1 = vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1), &ctx)
+        .resolve_function_ref(entry_module, FunctionHandleIndex(1), &ctx)
         .unwrap();
     let func2 = vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(2), &ctx)
+        .resolve_function_ref(entry_module, FunctionHandleIndex(2), &ctx)
         .unwrap();
 
     assert_eq!(
@@ -342,10 +326,10 @@ fn test_cache_with_storage() {
     let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
 
     let func1 = vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1), &ctx)
+        .resolve_function_ref(entry_module, FunctionHandleIndex(1), &ctx)
         .unwrap();
     let func2 = vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(2), &ctx)
+        .resolve_function_ref(entry_module, FunctionHandleIndex(2), &ctx)
         .unwrap();
 
     assert_eq!(
@@ -377,67 +361,61 @@ fn test_multi_level_cache_write_back() {
     // Create a new script that refers to both published and unpublished modules.
     let script = CompiledScriptMut {
         main: FunctionDefinition {
-            function: FunctionHandleIndex::new(0),
+            function: FunctionHandleIndex(0),
             flags: CodeUnit::PUBLIC,
             acquires_global_resources: vec![],
             code: CodeUnit {
                 max_stack_size: 10,
-                locals: LocalsSignatureIndex(0),
+                locals: SignatureIndex(0),
                 code: vec![Bytecode::Ret],
             },
         },
         module_handles: vec![
             // Self
             ModuleHandle {
-                address: AddressPoolIndex::new(0),
-                name: IdentifierIndex::new(0),
+                address: AddressPoolIndex(0),
+                name: IdentifierIndex(0),
             },
             // To-be-published Module
             ModuleHandle {
-                address: AddressPoolIndex::new(0),
-                name: IdentifierIndex::new(1),
+                address: AddressPoolIndex(0),
+                name: IdentifierIndex(1),
             },
             // Existing module on chain
             ModuleHandle {
-                address: AddressPoolIndex::new(0),
-                name: IdentifierIndex::new(2),
+                address: AddressPoolIndex(0),
+                name: IdentifierIndex(2),
             },
         ],
         struct_handles: vec![],
+        signatures: vec![Signature(vec![]), Signature(vec![SignatureToken::U64])],
         function_handles: vec![
             // main
             FunctionHandle {
-                name: IdentifierIndex::new(5),
-                signature: FunctionSignatureIndex::new(0),
-                module: ModuleHandleIndex::new(0),
+                name: IdentifierIndex(5),
+                module: ModuleHandleIndex(0),
+                parameters: SignatureIndex(0),
+                return_: SignatureIndex(0),
+                type_parameters: vec![],
             },
             // Func2 defined in the new module
             FunctionHandle {
-                name: IdentifierIndex::new(4),
-                signature: FunctionSignatureIndex::new(0),
-                module: ModuleHandleIndex::new(1),
+                name: IdentifierIndex(4),
+                module: ModuleHandleIndex(1),
+                parameters: SignatureIndex(0),
+                return_: SignatureIndex(0),
+                type_parameters: vec![],
             },
             // Func1 defined in the old module
             FunctionHandle {
-                name: IdentifierIndex::new(3),
-                signature: FunctionSignatureIndex::new(1),
-                module: ModuleHandleIndex::new(2),
+                name: IdentifierIndex(3),
+                module: ModuleHandleIndex(2),
+                parameters: SignatureIndex(1),
+                return_: SignatureIndex(0),
+                type_parameters: vec![],
             },
         ],
-        type_signatures: vec![],
-        function_signatures: vec![
-            FunctionSignature {
-                return_types: vec![],
-                arg_types: vec![],
-                type_formals: vec![],
-            },
-            FunctionSignature {
-                return_types: vec![],
-                arg_types: vec![SignatureToken::U64],
-                type_formals: vec![],
-            },
-        ],
-        locals_signatures: vec![LocalsSignature(vec![])],
+        function_instantiations: vec![],
         identifiers: idents(vec![
             "hello",
             "module",
@@ -464,7 +442,7 @@ fn test_multi_level_cache_write_back() {
     let data_cache = FakeDataCache::default();
     let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
     let func2_ref = vm_cache
-        .resolve_function_ref(entry_module, FunctionHandleIndex::new(1), &ctx)
+        .resolve_function_ref(entry_module, FunctionHandleIndex(1), &ctx)
         .unwrap();
     assert_eq!(func2_ref.arg_count(), 1);
     assert_eq!(func2_ref.return_count(), 0);
@@ -518,6 +496,7 @@ fn test_same_module_struct_resolution() {
         address: AccountAddress::from_hex_literal("0x0").unwrap(),
         module: Identifier::new("M1").unwrap(),
         name: Identifier::new("X").unwrap(),
+        is_resource: false,
         ty_args: vec![],
         layout: vec![Type::Bool],
     };
@@ -526,6 +505,7 @@ fn test_same_module_struct_resolution() {
         address: AccountAddress::from_hex_literal("0x0").unwrap(),
         module: Identifier::new("M1").unwrap(),
         name: Identifier::new("T").unwrap(),
+        is_resource: false,
         ty_args: vec![],
         layout: vec![Type::U64, Type::Struct(Box::new(struct_x_expected_ty))],
     };
@@ -580,6 +560,7 @@ fn test_multi_module_struct_resolution() {
         address: AccountAddress::from_hex_literal("0x0").unwrap(),
         module: Identifier::new("M1").unwrap(),
         name: Identifier::new("X").unwrap(),
+        is_resource: false,
         ty_args: vec![],
         layout: vec![Type::Bool],
     };
@@ -587,46 +568,11 @@ fn test_multi_module_struct_resolution() {
         address: AccountAddress::from_hex_literal("0x0").unwrap(),
         module: Identifier::new("M2").unwrap(),
         name: Identifier::new("T").unwrap(),
+        is_resource: false,
         ty_args: vec![],
         layout: vec![Type::U64, Type::Struct(Box::new(struct_x_expected_ty))],
     };
     assert_eq!(struct_t, struct_t_expected_ty,);
-}
-
-#[test]
-fn test_field_offset_resolution() {
-    let allocator = Arena::new();
-    let vm_cache = VMModuleCache::new(&allocator);
-
-    let code = "
-        module M1 {
-            struct X { f: u64, g: bool}
-            struct T { i: u64, x: Self.X, y: u64 }
-        }
-        ";
-
-    let mut data_cache = FakeDataCache::default();
-    let module = parse_and_compile_module(code, vec![]);
-    data_cache.set(module);
-    let ctx = SystemExecutionContext::new(&data_cache, GasUnits::new(0));
-
-    let module_id = ModuleId::new(AccountAddress::default(), ident("M1"));
-    let module_ref = vm_cache.get_loaded_module(&module_id, &ctx).unwrap();
-
-    let f_idx = module_ref.field_defs_table.get(&ident("f")).unwrap();
-    assert_eq!(module_ref.get_field_offset(*f_idx).unwrap(), 0);
-
-    let g_idx = module_ref.field_defs_table.get(&ident("g")).unwrap();
-    assert_eq!(module_ref.get_field_offset(*g_idx).unwrap(), 1);
-
-    let i_idx = module_ref.field_defs_table.get(&ident("i")).unwrap();
-    assert_eq!(module_ref.get_field_offset(*i_idx).unwrap(), 0);
-
-    let x_idx = module_ref.field_defs_table.get(&ident("x")).unwrap();
-    assert_eq!(module_ref.get_field_offset(*x_idx).unwrap(), 1);
-
-    let y_idx = module_ref.field_defs_table.get(&ident("y")).unwrap();
-    assert_eq!(module_ref.get_field_offset(*y_idx).unwrap(), 2);
 }
 
 #[test]

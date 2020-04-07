@@ -29,6 +29,9 @@ fi
 if [ -n "${CFG_SEED_PEER_IP}" ]; then # Seed peer ip for discovery
 	    params+="--bootstrap /ip4/${CFG_SEED_PEER_IP}/tcp/6180 "
 fi
+if [ -n "${CFG_SAFETY_RULES_ADDR}" ]; then
+    params+="--safety-rules-addr ${CFG_SAFETY_RULES_ADDR} "
+fi
 
 /opt/libra/bin/config-builder validator \
     --data-dir /opt/libra/data/common \

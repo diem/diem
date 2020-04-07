@@ -1,11 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use codespan::{ByteIndex, Span};
-use move_ir_types::location::*;
+use crate::{errors::*, parser::syntax::make_loc};
 use std::fmt;
-
-use crate::errors::*;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Tok {
@@ -15,6 +12,7 @@ pub enum Tok {
     U8Value,
     U64Value,
     U128Value,
+    ByteStringValue,
     NameValue,
     Exclaim,
     ExclaimEqual,
@@ -88,6 +86,7 @@ impl fmt::Display for Tok {
             U8Value => "[U8]",
             U64Value => "[U64]",
             U128Value => "[U128]",
+            ByteStringValue => "[ByteString]",
             NameValue => "[Name]",
             Exclaim => "!",
             ExclaimEqual => "!=",
@@ -239,7 +238,7 @@ fn find_token(file: &'static str, text: &str, start_offset: usize) -> Result<(To
     };
     let (tok, len) = match c {
         '0'..='9' => {
-            if (text.starts_with("0x") || text.starts_with("0X")) && text.len() > 2 {
+            if text.starts_with("0x") && text.len() > 2 {
                 let hex_len = get_hex_digits_len(&text[2..]);
                 if hex_len == 0 {
                     // Fall back to treating this as a "0" token.
@@ -252,8 +251,22 @@ fn find_token(file: &'static str, text: &str, start_offset: usize) -> Result<(To
             }
         }
         'A'..='Z' | 'a'..='z' | '_' => {
-            let len = get_name_len(&text);
-            (get_name_token(&text[..len]), len)
+            if text.starts_with("x\"") {
+                // Search the current source line for a closing quote.
+                let line = text.lines().next().unwrap();
+                let len = line[2..].find('"').unwrap_or_else(|| line.len() - 2);
+                if line.len() == 2 || !&text[(2 + len)..].starts_with('"') {
+                    let loc = make_loc(file, start_offset, start_offset + 2 + len);
+                    return Err(vec![(
+                        loc,
+                        "Missing closing quote (\") after byte string".to_string(),
+                    )]);
+                }
+                (Tok::ByteStringValue, 2 + len + 1)
+            } else {
+                let len = get_name_len(&text);
+                (get_name_token(&text[..len]), len)
+            }
         }
         '&' => {
             if text.starts_with("&mut ") {
@@ -334,11 +347,7 @@ fn find_token(file: &'static str, text: &str, start_offset: usize) -> Result<(To
         '{' => (Tok::LBrace, 1),
         '}' => (Tok::RBrace, 1),
         _ => {
-            let span = Span::new(
-                ByteIndex(start_offset as u32),
-                ByteIndex(start_offset as u32),
-            );
-            let loc = Loc::new(file, span);
+            let loc = make_loc(file, start_offset, start_offset);
             return Err(vec![(loc, format!("Invalid character: '{}'", c))]);
         }
     };
@@ -381,12 +390,11 @@ fn get_decimal_number(text: &str) -> (Tok, usize) {
 
 // Return the length of the substring containing characters in [0-9a-fA-F].
 fn get_hex_digits_len(text: &str) -> usize {
-    text.chars()
-        .position(|c| match c {
-            'a'..='f' | 'A'..='F' | '0'..='9' => false,
-            _ => true,
-        })
-        .unwrap_or_else(|| text.len())
+    text.find(|c| match c {
+        'a'..='f' | 'A'..='F' | '0'..='9' => false,
+        _ => true,
+    })
+    .unwrap_or_else(|| text.len())
 }
 
 fn get_name_token(name: &str) -> Tok {

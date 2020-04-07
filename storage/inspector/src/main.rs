@@ -5,8 +5,9 @@
 
 use anyhow::Result;
 use libra_logger::info;
-use libradb::{LibraDB, LibraDBTrait};
+use libradb::LibraDB;
 use std::path::PathBuf;
+use storage_interface::DbReader;
 use transaction_builder::get_transaction_name;
 
 use libra_types::{account_address::AccountAddress, account_config::AccountResource};

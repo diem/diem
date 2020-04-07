@@ -20,11 +20,48 @@ use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::convert::{TryFrom, TryInto};
+use std::{
+    convert::{TryFrom, TryInto},
+    ops::Deref,
+};
+
+/// Support versioning of the data structure.
+#[derive(Hash, Clone, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
+pub enum ContractEvent {
+    V0(ContractEventV0),
+}
+
+impl ContractEvent {
+    pub fn new(
+        key: EventKey,
+        sequence_number: u64,
+        type_tag: TypeTag,
+        event_data: Vec<u8>,
+    ) -> Self {
+        ContractEvent::V0(ContractEventV0::new(
+            key,
+            sequence_number,
+            type_tag,
+            event_data,
+        ))
+    }
+}
+
+// Temporary hack to avoid massive changes, it won't work when new variant comes and needs proper
+// dispatch at that time.
+impl Deref for ContractEvent {
+    type Target = ContractEventV0;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            ContractEvent::V0(event) => event,
+        }
+    }
+}
 
 /// Entry produced via a call to the `emit_event` builtin.
 #[derive(Hash, Clone, Eq, PartialEq, Serialize, Deserialize, CryptoHasher)]
-pub struct ContractEvent {
+pub struct ContractEventV0 {
     /// The unique key that the event was emitted to
     key: EventKey,
     /// The number of messages that have been emitted to the path previously
@@ -35,14 +72,14 @@ pub struct ContractEvent {
     event_data: Vec<u8>,
 }
 
-impl ContractEvent {
+impl ContractEventV0 {
     pub fn new(
         key: EventKey,
         sequence_number: u64,
         type_tag: TypeTag,
         event_data: Vec<u8>,
     ) -> Self {
-        ContractEvent {
+        Self {
             key,
             sequence_number,
             type_tag,
@@ -150,7 +187,7 @@ impl From<ContractEvent> for crate::proto::types::Event {
             key: event.key.to_vec(),
             sequence_number: event.sequence_number,
             type_tag: lcs::to_bytes(&event.type_tag).expect("Failed to serialize."),
-            event_data: event.event_data,
+            event_data: event.event_data.clone(),
         }
     }
 }

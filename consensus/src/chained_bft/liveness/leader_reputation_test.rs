@@ -14,39 +14,32 @@ use consensus_types::{
     block::{block_test_utils::certificate_for_genesis, Block},
     common::{Author, Round},
 };
-use libra_crypto::HashValue;
-use libra_types::{block_metadata::BlockMetadata, validator_signer::ValidatorSigner};
-use std::sync::Arc;
+use libra_types::{block_metadata::NewBlockEvent, validator_signer::ValidatorSigner};
 
 struct MockHistory {
-    data: Vec<BlockMetadata>,
+    window_size: usize,
+    data: Vec<NewBlockEvent>,
 }
 
 impl MockHistory {
-    fn new(data: Vec<BlockMetadata>) -> Self {
-        Self { data }
+    fn new(window_size: usize, data: Vec<NewBlockEvent>) -> Self {
+        Self { window_size, data }
     }
 }
 
 impl MetadataBackend for MockHistory {
-    fn get_block_metadata(&self, window_size: u64, _target_round: Round) -> &[BlockMetadata] {
-        let start = if self.data.len() > window_size as usize {
-            self.data.len() - window_size as usize
+    fn get_block_metadata(&self, _target_round: Round) -> Vec<NewBlockEvent> {
+        let start = if self.data.len() > self.window_size {
+            self.data.len() - self.window_size
         } else {
             0
         };
-        &self.data[start..]
+        self.data[start..].to_vec()
     }
 }
 
-fn create_block(proposer: Author, voters: Vec<&ValidatorSigner>) -> BlockMetadata {
-    BlockMetadata::new(
-        HashValue::zero(),
-        0,
-        0,
-        voters.iter().map(|v| v.author()).collect(),
-        proposer,
-    )
+fn create_block(proposer: Author, voters: Vec<&ValidatorSigner>) -> NewBlockEvent {
+    NewBlockEvent::new(0, proposer, voters.iter().map(|v| v.author()).collect(), 0)
 }
 
 #[test]
@@ -88,7 +81,6 @@ fn test_simple_heuristic() {
 
 #[test]
 fn test_api() {
-    let window_size = 1;
     let active_weight = 9;
     let inactive_weight = 1;
     let mut proposers = vec![];
@@ -104,8 +96,7 @@ fn test_api() {
     ];
     let leader_reputation = LeaderReputation::<TestPayload>::new(
         proposers.clone(),
-        Arc::new(MockHistory::new(history)),
-        window_size,
+        Box::new(MockHistory::new(1, history)),
         Box::new(ActiveInactiveHeuristic::new(active_weight, inactive_weight)),
     );
     let round = 42u64;

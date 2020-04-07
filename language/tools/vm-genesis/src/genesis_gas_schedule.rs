@@ -10,8 +10,9 @@ use move_vm_types::{loaded_data::types::Type, values::Value};
 use once_cell::sync::Lazy;
 use vm::{
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldDefinitionIndex, FunctionHandleIndex,
-        StructDefinitionIndex, NO_TYPE_ACTUALS, NUMBER_OF_NATIVE_FUNCTIONS,
+        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldHandleIndex, FieldInstantiationIndex,
+        FunctionHandleIndex, FunctionInstantiationIndex, StructDefInstantiationIndex,
+        StructDefinitionIndex, NUMBER_OF_NATIVE_FUNCTIONS,
     },
     gas_schedule::{CostTable, GasCost, GAS_SCHEDULE_NAME, MAXIMUM_NUMBER_OF_GAS_UNITS},
 };
@@ -20,12 +21,20 @@ static INITIAL_GAS_SCHEDULE: Lazy<Vec<u8>> = Lazy::new(|| {
     use Bytecode::*;
     let instrs = vec![
         (
-            MoveToSender(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+            MoveToSender(StructDefinitionIndex::new(0)),
+            GasCost::new(774, 1),
+        ),
+        (
+            MoveToSenderGeneric(StructDefInstantiationIndex::new(0)),
             GasCost::new(774, 1),
         ),
         (GetTxnSenderAddress, GasCost::new(30, 1)),
         (
-            MoveFrom(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+            MoveFrom(StructDefinitionIndex::new(0)),
+            GasCost::new(917, 1),
+        ),
+        (
+            MoveFromGeneric(StructDefInstantiationIndex::new(0)),
             GasCost::new(917, 1),
         ),
         (BrTrue(0), GasCost::new(31, 1)),
@@ -39,11 +48,19 @@ static INITIAL_GAS_SCHEDULE: Lazy<Vec<u8>> = Lazy::new(|| {
         (ReadRef, GasCost::new(51, 1)),
         (Sub, GasCost::new(44, 1)),
         (
-            MutBorrowField(FieldDefinitionIndex::new(0)),
+            MutBorrowField(FieldHandleIndex::new(0)),
             GasCost::new(58, 1),
         ),
         (
-            ImmBorrowField(FieldDefinitionIndex::new(0)),
+            MutBorrowFieldGeneric(FieldInstantiationIndex::new(0)),
+            GasCost::new(58, 1),
+        ),
+        (
+            ImmBorrowField(FieldHandleIndex::new(0)),
+            GasCost::new(58, 1),
+        ),
+        (
+            ImmBorrowFieldGeneric(FieldInstantiationIndex::new(0)),
             GasCost::new(58, 1),
         ),
         (Add, GasCost::new(45, 1)),
@@ -67,14 +84,16 @@ static INITIAL_GAS_SCHEDULE: Lazy<Vec<u8>> = Lazy::new(|| {
         (Shr, GasCost::new(46, 1)),
         (Neq, GasCost::new(51, 1)),
         (Not, GasCost::new(35, 1)),
+        (Call(FunctionHandleIndex::new(0)), GasCost::new(197, 1)),
         (
-            Call(FunctionHandleIndex::new(0), NO_TYPE_ACTUALS),
+            CallGeneric(FunctionInstantiationIndex::new(0)),
             GasCost::new(197, 1),
         ),
         (Le, GasCost::new(47, 1)),
         (Branch(0), GasCost::new(10, 1)),
+        (Unpack(StructDefinitionIndex::new(0)), GasCost::new(94, 1)),
         (
-            Unpack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+            UnpackGeneric(StructDefInstantiationIndex::new(0)),
             GasCost::new(94, 1),
         ),
         (Or, GasCost::new(43, 1)),
@@ -83,8 +102,9 @@ static INITIAL_GAS_SCHEDULE: Lazy<Vec<u8>> = Lazy::new(|| {
         (GetTxnGasUnitPrice, GasCost::new(29, 1)),
         (Mod, GasCost::new(42, 1)),
         (BrFalse(0), GasCost::new(29, 1)),
+        (Exists(StructDefinitionIndex::new(0)), GasCost::new(856, 1)),
         (
-            Exists(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+            ExistsGeneric(StructDefInstantiationIndex::new(0)),
             GasCost::new(856, 1),
         ),
         (GetGasRemaining, GasCost::new(32, 1)),
@@ -93,21 +113,31 @@ static INITIAL_GAS_SCHEDULE: Lazy<Vec<u8>> = Lazy::new(|| {
         (GetTxnSequenceNumber, GasCost::new(29, 1)),
         (FreezeRef, GasCost::new(10, 1)),
         (
-            MutBorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+            MutBorrowGlobal(StructDefinitionIndex::new(0)),
             GasCost::new(929, 1),
         ),
         (
-            ImmBorrowGlobal(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+            MutBorrowGlobalGeneric(StructDefInstantiationIndex::new(0)),
+            GasCost::new(929, 1),
+        ),
+        (
+            ImmBorrowGlobal(StructDefinitionIndex::new(0)),
+            GasCost::new(929, 1),
+        ),
+        (
+            ImmBorrowGlobalGeneric(StructDefInstantiationIndex::new(0)),
             GasCost::new(929, 1),
         ),
         (Div, GasCost::new(41, 1)),
         (Eq, GasCost::new(48, 1)),
         (LdByteArray(ByteArrayPoolIndex::new(0)), GasCost::new(56, 1)),
         (Gt, GasCost::new(46, 1)),
+        (Pack(StructDefinitionIndex::new(0)), GasCost::new(73, 1)),
         (
-            Pack(StructDefinitionIndex::new(0), NO_TYPE_ACTUALS),
+            PackGeneric(StructDefInstantiationIndex::new(0)),
             GasCost::new(73, 1),
         ),
+        (Nop, GasCost::new(10, 1)),
     ];
     // TODO Zero for now, this is going to be filled in later
     let native_table = (0..NUMBER_OF_NATIVE_FUNCTIONS)

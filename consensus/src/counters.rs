@@ -401,7 +401,7 @@ pub static VOTE_SUCCESS_WAIT_S: Lazy<DurationHistogram> = Lazy::new(|| {
 
 /// Histogram of time waited for failing to have the ability to vote (both those that waited and didn't wait) while trying to follow timestamp rules
 pub static VOTE_FAILURE_WAIT_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(register_histogram!("libra_consensus_vote_success_wait_s", "Histogram of time waited for failing to have the ability to vote (both those that waited and didn't wait) while trying to follow timestamp rules").unwrap())
+    DurationHistogram::new(register_histogram!("libra_consensus_vote_failure_wait_s", "Histogram of time waited for failing to have the ability to vote (both those that waited and didn't wait) while trying to follow timestamp rules").unwrap())
 });
 
 ///////////////////

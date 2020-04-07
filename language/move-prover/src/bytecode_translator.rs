@@ -24,8 +24,8 @@ use stackless_bytecode_generator::{
 use crate::{
     boogie_helpers::{
         boogie_field_name, boogie_function_name, boogie_local_type, boogie_struct_name,
-        boogie_struct_type_value, boogie_type_check, boogie_type_value, boogie_type_values,
-        boogie_var_before_borrow,
+        boogie_struct_type_value, boogie_type_value, boogie_type_values, boogie_var_before_borrow,
+        boogie_well_formed_check, WellFormedMode,
     },
     cli::Options,
     code_writer::CodeWriter,
@@ -58,22 +58,24 @@ struct BytecodeContext<'l> {
     code: &'l StacklessFunction,
     /// The bytecode offsets which require a label because they are branched to.
     branching_targets: BTreeSet<CodeOffset>,
-    /// Set of mutual references, represented by local index. Used for debug tracking. Currently,
+    /// Set of mutable references, represented by local index. Used for debug tracking. Currently,
     /// after each mutation (either by an instruction or by call to a function with mutable
     /// parameters), we dump tracking info for all the variables in this set. This is a vast
     /// over-approximation; however, the execution trace visualizer will remove redundant
     /// entries, so it is more of a performance concern.
-    mutual_refs: BTreeSet<usize>,
+    mutable_refs: BTreeSet<usize>,
     /// A map from local indices  to the before borrow index. Every root which is borrowed in this
     /// function has an entry here. For every BorrowLoc(d) | BorrowGlobal(d), we have an entry
     /// d -> i and construct variables $before_borrow_i to remember the value before borrowing,
     /// and $before_borrow_i_ref to remember the reference. We also track aliasing, i.e. if
     /// we have MoveLoc(d', d) we add d' -> i as well.
     borrowed_to_before_index: BTreeMap<usize, usize>,
+    /// A map of mut ref parameter indices to their before index. This works similar as
+    /// `borrowed_to_before_index` except that those references are passed into a public function
+    /// and not borrowed.
+    inherited_to_before_index: BTreeMap<usize, usize>,
     /// As determined by lifetime analysis, the set of references which become dead
     /// at a given bytecode offset.
-    /// TODO: the analysis currently represents references via `LocalIndex == u8`, but this might(?)
-    /// overflow because the stackless bytcode can introduce temporaries larger than u8.
     offset_to_dead_refs: BTreeMap<CodeOffset, BTreeSet<TempIndex>>,
 }
 
@@ -82,8 +84,9 @@ impl<'l> BytecodeContext<'l> {
         Self {
             code,
             branching_targets: BTreeSet::new(),
-            mutual_refs: BTreeSet::new(),
+            mutable_refs: BTreeSet::new(),
             borrowed_to_before_index: BTreeMap::new(),
+            inherited_to_before_index: BTreeMap::new(),
             offset_to_dead_refs: BTreeMap::new(),
         }
     }
@@ -256,10 +259,11 @@ impl<'env> ModuleTranslator<'env> {
         self.writer.indent();
         let mut fields_str = String::from("EmptyValueArray");
         for field_env in struct_env.get_fields() {
-            let type_check = boogie_type_check(
+            let type_check = boogie_well_formed_check(
                 self.module_env.env,
                 &format!("{}", field_env.get_name().display(struct_env.symbol_pool())),
                 &field_env.get_type(),
+                WellFormedMode::Default,
             );
             emit!(self.writer, &type_check);
             fields_str = format!(
@@ -300,10 +304,11 @@ impl<'env> ModuleTranslator<'env> {
                 field_env.get_name().display(struct_env.symbol_pool()),
                 boogie_field_name(&field_env)
             );
-            let type_check = boogie_type_check(
+            let type_check = boogie_well_formed_check(
                 self.module_env.env,
                 &format!("{}", field_env.get_name().display(struct_env.symbol_pool())),
                 &field_env.get_type(),
+                WellFormedMode::Default,
             );
             emit!(self.writer, &type_check);
         }
@@ -331,7 +336,7 @@ impl<'env> ModuleTranslator<'env> {
             if !func_env.is_native() {
                 num_fun += 1;
             }
-            if !func_env.get_specification().is_empty() && !func_env.is_native() {
+            if !func_env.get_specification_on_decl().is_empty() && !func_env.is_native() {
                 num_fun_specified += 1;
             }
             self.writer.set_location(&func_env.get_loc());
@@ -430,6 +435,13 @@ impl<'env> ModuleTranslator<'env> {
         SpecTranslator::new(self.writer, &func_env.module_env, true).translate_conditions(func_env);
     }
 
+    /// Return string for spec inside function implementation.
+    fn generate_function_spec_inside_impl(&self, func_env: &FunctionEnv<'_>, offset: CodeOffset) {
+        emitln!(self.writer);
+        SpecTranslator::new_for_spec_in_impl(self.writer, func_env, true)
+            .translate_conditions_inside_impl(func_env, offset);
+    }
+
     /// Return string for body of verify function, which is just a call to the
     /// inline version of the function.
     fn generate_verify_function_body(&self, func_env: &FunctionEnv<'_>) {
@@ -499,9 +511,9 @@ impl<'env> ModuleTranslator<'env> {
                 }
                 BorrowLoc(dst, ..) | BorrowGlobal(dst, ..) => {
                     let ty = self.get_local_type(func_env, *dst);
-                    if ty.is_mutual_reference() {
-                        // Track that we create a mutual reference here.
-                        context.mutual_refs.insert(*dst);
+                    if ty.is_mutable_reference() {
+                        // Track that we create a mutable reference here.
+                        context.mutable_refs.insert(*dst);
                         if self.has_after_update_invariant(&ty) {
                             // Create a new borrow index.
                             context
@@ -513,16 +525,16 @@ impl<'env> ModuleTranslator<'env> {
                 }
                 BorrowField(dst, ..) => {
                     let ty = self.get_local_type(func_env, *dst);
-                    if ty.is_mutual_reference() {
-                        // Track that we create a mutual reference here.
-                        context.mutual_refs.insert(*dst);
+                    if ty.is_mutable_reference() {
+                        // Track that we create a mutable reference here.
+                        context.mutable_refs.insert(*dst);
                     }
                 }
                 MoveLoc(dst, src) => {
                     // Propagate information from src to dst.
                     let src = &(*src as usize);
-                    if context.mutual_refs.contains(src) {
-                        context.mutual_refs.insert(*dst);
+                    if context.mutable_refs.contains(src) {
+                        context.mutable_refs.insert(*dst);
                     }
                     if let Some(idx) = context.borrowed_to_before_index.get(src) {
                         // dst becomes an alias for src
@@ -533,8 +545,8 @@ impl<'env> ModuleTranslator<'env> {
                 StLoc(dst, src) => {
                     // Propagate information from src to dst.
                     let dst = &(*dst as usize);
-                    if context.mutual_refs.contains(src) {
-                        context.mutual_refs.insert(*dst);
+                    if context.mutable_refs.contains(src) {
+                        context.mutable_refs.insert(*dst);
                     }
                     if let Some(idx) = context.borrowed_to_before_index.get(src) {
                         // dst becomes an alias for src
@@ -543,6 +555,17 @@ impl<'env> ModuleTranslator<'env> {
                     }
                 }
                 _ => {}
+            }
+        }
+        // (c) Walk over parameters and collect mutable references if they have update invariants.
+        if func_env.is_public() {
+            for (i, Parameter(_, ty)) in func_env.get_parameters().iter().enumerate() {
+                if ty.is_mutable_reference() && self.has_after_update_invariant(ty) {
+                    context
+                        .inherited_to_before_index
+                        .insert(i, before_borrow_counter);
+                    before_borrow_counter += 1;
+                }
             }
         }
 
@@ -570,7 +593,13 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "var $tmp: Value;");
         emitln!(self.writer, "var $frame: int;");
         emitln!(self.writer, "var $saved_m: Memory;");
-        for idx in context.borrowed_to_before_index.values().unique().sorted() {
+        for idx in context
+            .borrowed_to_before_index
+            .values()
+            .chain(context.inherited_to_before_index.values())
+            .unique()
+            .sorted()
+        {
             // Declare before borrow variables.
             let name = boogie_var_before_borrow(*idx);
             emitln!(self.writer, "var {}: Value;", name);
@@ -583,11 +612,19 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "$frame := $local_counter;");
 
         emitln!(self.writer, "\n// process and type check arguments");
+        let mode = if func_env.is_public() {
+            // For public functions, we always include invariants in type assumptions for parameters,
+            // even for mutable references.
+            WellFormedMode::WithInvariant
+        } else {
+            WellFormedMode::Default
+        };
         for i in 0..num_args {
             let local_name = func_env.get_local_name(i);
             let local_str = format!("{}", local_name.display(func_env.symbol_pool()));
             let local_type = &self.module_env.globalize_signature(&code.local_types[i]);
-            let type_check = boogie_type_check(self.module_env.env, &local_str, local_type);
+            let type_check =
+                boogie_well_formed_check(self.module_env.env, &local_str, local_type, mode);
             emit!(self.writer, &type_check);
             if !local_type.is_reference() {
                 emitln!(
@@ -602,7 +639,17 @@ impl<'env> ModuleTranslator<'env> {
             }
         }
 
-        emitln!(self.writer, "\n// increase the local counter ");
+        if !context.inherited_to_before_index.is_empty() {
+            emitln!(
+                self.writer,
+                "\n// save values and references for mutable ref parameters with invariants"
+            );
+            for (param_idx, before_idx) in context.inherited_to_before_index.iter() {
+                self.save_and_enforce_before_update(&func_env, *param_idx, *before_idx);
+            }
+        }
+
+        emitln!(self.writer, "\n// increase the local counter");
         emitln!(
             self.writer,
             "$local_counter := $local_counter + {};",
@@ -613,7 +660,7 @@ impl<'env> ModuleTranslator<'env> {
 
         // Generate bytecode
         for (offset, bytecode) in code.code.iter().enumerate() {
-            self.translate_bytecode(func_env, &mut context, offset as CodeOffset, bytecode);
+            self.translate_bytecode(func_env, &context, offset as CodeOffset, bytecode);
         }
 
         // Generate abort exit.
@@ -640,7 +687,7 @@ impl<'env> ModuleTranslator<'env> {
     fn translate_bytecode(
         &'env self,
         func_env: &FunctionEnv<'_>,
-        ctx: &mut BytecodeContext<'_>,
+        ctx: &BytecodeContext<'_>,
         offset: u16,
         bytecode: &StacklessBytecode,
     ) {
@@ -680,8 +727,8 @@ impl<'env> ModuleTranslator<'env> {
         };
 
         // Helper function to debug track potential updates of references.
-        let track_mutual_refs = |ctx: &mut BytecodeContext<'_>| {
-            for idx in &ctx.mutual_refs {
+        let track_mutable_refs = |ctx: &BytecodeContext<'_>| {
+            for idx in &ctx.mutable_refs {
                 if *idx < func_env.get_local_count() {
                     let s = self.track_local(func_env, loc.clone(), *idx, str_local(&idx).as_str());
                     if !s.is_empty() {
@@ -692,7 +739,7 @@ impl<'env> ModuleTranslator<'env> {
             // Add reference parameter because we also want to debug track them when
             // references are written.
             for (idx, Parameter(_, ty)) in func_env.get_parameters().iter().enumerate() {
-                if ty.is_mutual_reference() {
+                if ty.is_mutable_reference() {
                     let s = self.track_local(func_env, loc.clone(), idx, str_local(&idx).as_str());
                     if !s.is_empty() {
                         emitln!(self.writer, &s);
@@ -702,25 +749,12 @@ impl<'env> ModuleTranslator<'env> {
         };
 
         // Helper to save a borrowed value before mutation starts.
-        let save_borrowed_value = |ctx: &mut BytecodeContext<'_>, dest: &usize| {
+        let save_borrowed_value = |ctx: &BytecodeContext<'_>, dest: &usize| {
             if let Some(idx) = ctx.borrowed_to_before_index.get(dest) {
                 // Save the value before mutation happens. We also need to save the reference,
                 // because the bytecode may reuse it for some other purpose, so we can construct
                 // the after-value from it when the update invariant is executed.
-                let name = boogie_var_before_borrow(*idx);
-                emitln!(
-                    self.writer,
-                    "{} := $Dereference($m, {});",
-                    name,
-                    str_local(dest)
-                );
-                emitln!(self.writer, "{}_ref := {};", name, str_local(dest));
-                // Enforce the before update invariant (if any).
-                self.enforce_before_update_invariant(
-                    &func_env,
-                    &self.get_local_type(func_env, *dest),
-                    *idx,
-                );
+                self.save_and_enforce_before_update(&func_env, *dest, *idx);
             }
         };
 
@@ -738,6 +772,9 @@ impl<'env> ModuleTranslator<'env> {
             emitln!(self.writer, "Label_{}:", offset);
             self.writer.indent();
         }
+
+        // Insert any specs at this bytecode offset
+        self.generate_function_spec_inside_impl(func_env, offset);
 
         // Translate the bytecode instruction.
         match bytecode {
@@ -828,10 +865,12 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emit!(
                     self.writer,
-                    &boogie_type_check(
+                    &boogie_well_formed_check(
                         self.module_env.env,
                         str_local(dest).as_str(),
-                        &self.get_local_type(func_env, *dest)
+                        &self.get_local_type(func_env, *dest),
+                        // At the begining of a borrow, invariant holds.
+                        WellFormedMode::WithInvariant,
                     )
                 );
                 save_borrowed_value(ctx, dest);
@@ -840,10 +879,11 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, "call $tmp := ReadRef({});", str_local(src));
                 emit!(
                     self.writer,
-                    &boogie_type_check(
+                    &boogie_well_formed_check(
                         self.module_env.env,
                         "$tmp",
-                        &self.get_local_type(func_env, *dest)
+                        &self.get_local_type(func_env, *dest),
+                        WellFormedMode::Default
                     )
                 );
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
@@ -855,7 +895,7 @@ impl<'env> ModuleTranslator<'env> {
                     str_local(dest),
                     src,
                 );
-                track_mutual_refs(ctx);
+                track_mutable_refs(ctx);
             }
             FreezeRef(dest, src) => emitln!(
                 self.writer,
@@ -866,7 +906,8 @@ impl<'env> ModuleTranslator<'env> {
             Call(dests, callee_index, type_actuals, args) => {
                 let callee_env = self.module_env.get_called_function(*callee_index);
                 // If this is a call to a function from another module, assume the module invariants
-                // if any.
+                // if any. This is correct because module invariants are guaranteed to hold whenever
+                // code outside of the module is executed.
                 if callee_env.module_env.get_id() != func_env.module_env.get_id()
                     && !callee_env.module_env.get_module_invariants().is_empty()
                 {
@@ -874,6 +915,37 @@ impl<'env> ModuleTranslator<'env> {
                         SpecTranslator::new(self.writer, &callee_env.module_env, false);
                     spec_translator.assume_module_invariants(&callee_env);
                 }
+                // If this is a call to a public function within the same module,
+                // and it contains parameters which are mutated currently, we end mutating now,
+                // enforcing the update invariant. At the end of the call, we restart mutating,
+                // re-initializing the before value. This is reflecting the fact that mutable
+                // reference parameters to public functions are consider frozen when passed
+                // around outside of the module. So we need to mimic the same behavior for
+                // calls to these function from inside the module.
+                let frozen_ref_params = if callee_env.is_public()
+                    && callee_env.module_env.get_id() == func_env.module_env.get_id()
+                {
+                    args.iter()
+                        .filter_map(|arg| {
+                            if let Some(before_idx) = ctx.borrowed_to_before_index.get(arg) {
+                                Some((*arg, *before_idx))
+                            } else if let Some(before_idx) = ctx.inherited_to_before_index.get(arg)
+                            {
+                                Some((*arg, *before_idx))
+                            } else {
+                                None
+                            }
+                        })
+                        .collect()
+                } else {
+                    BTreeMap::new()
+                };
+                // Now that we have calculated the frozen refs, enforce update invariants.
+                for (idx, before_idx) in &frozen_ref_params {
+                    let ty = self.get_local_type(func_env, *idx);
+                    self.enforce_after_update_invariant(func_env, &ty, *before_idx);
+                }
+
                 let mut dest_str = String::new();
                 let mut args_str = String::new();
                 let mut dest_type_assumptions = vec![];
@@ -904,10 +976,11 @@ impl<'env> ModuleTranslator<'env> {
                         .map(|dest_idx| {
                             let dest = str_local(dest_idx).to_string();
                             let dest_type = &self.get_local_type(func_env, *dest_idx);
-                            dest_type_assumptions.push(boogie_type_check(
+                            dest_type_assumptions.push(boogie_well_formed_check(
                                 self.module_env.env,
                                 &dest,
                                 dest_type,
+                                WellFormedMode::Default,
                             ));
                             if !dest_type.is_reference() {
                                 tmp_assignments.push(update_and_track_local(*dest_idx, &dest));
@@ -942,7 +1015,11 @@ impl<'env> ModuleTranslator<'env> {
                     emitln!(self.writer, s);
                 }
                 if callee_env.is_mutating() {
-                    track_mutual_refs(ctx);
+                    track_mutable_refs(ctx);
+                }
+                // After the call, save current value as before value and enforce before invariants.
+                for (idx, before_idx) in &frozen_ref_params {
+                    self.save_and_enforce_before_update(func_env, *idx, *before_idx);
                 }
             }
             Pack(dest, struct_def_index, type_actuals, fields) => {
@@ -1006,9 +1083,9 @@ impl<'env> ModuleTranslator<'env> {
                     emitln!(self.writer, s);
                 }
             }
-            BorrowField(dest, src, field_def_index) => {
-                let struct_env = self.module_env.get_struct_of_field(field_def_index);
-                let field_env = &struct_env.get_field_by_def_idx(*field_def_index);
+            BorrowField(dest, src, struct_def_index, field_offset) => {
+                let struct_env = self.module_env.get_struct_by_def_idx(*struct_def_index);
+                let field_env = &struct_env.get_field_by_offset(*field_offset);
                 emitln!(
                     self.writer,
                     "call {} := BorrowField({}, {});",
@@ -1018,10 +1095,11 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emit!(
                     self.writer,
-                    &boogie_type_check(
+                    &boogie_well_formed_check(
                         self.module_env.env,
                         str_local(dest).as_str(),
-                        &self.get_local_type(func_env, *dest)
+                        &self.get_local_type(func_env, *dest),
+                        WellFormedMode::Default
                     )
                 );
             }
@@ -1056,10 +1134,12 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emit!(
                     self.writer,
-                    &boogie_type_check(
+                    &boogie_well_formed_check(
                         self.module_env.env,
                         str_local(dest).as_str(),
-                        &self.get_local_type(func_env, *dest)
+                        &self.get_local_type(func_env, *dest),
+                        // At the beginning of a borrow, invariants always hold
+                        WellFormedMode::WithInvariant,
                     )
                 );
                 emitln!(self.writer, &propagate_abort());
@@ -1096,10 +1176,11 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
                 emit!(
                     self.writer,
-                    &boogie_type_check(
+                    &boogie_well_formed_check(
                         self.module_env.env,
                         str_local(dest).as_str(),
-                        &self.get_local_type(func_env, *dest)
+                        &self.get_local_type(func_env, *dest),
+                        WellFormedMode::Default
                     )
                 );
                 emitln!(self.writer, &propagate_abort());
@@ -1108,6 +1189,7 @@ impl<'env> ModuleTranslator<'env> {
                 // In contrast to other instructions, we need to evaluate invariants BEFORE
                 // the return.
                 self.enforce_invariants_for_dead_refs(func_env, ctx, offset);
+                self.enforce_invariants_for_inherited_refs(func_env, ctx);
                 invariants_evaluated = true;
                 for (i, r) in rets.iter().enumerate() {
                     if self.get_local_type(func_env, *r).is_reference() {
@@ -1372,11 +1454,38 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer);
     }
 
+    /// Save content of a ref into its before_borrow variable so we can enforce invariants once
+    /// update finished. Also, if there is a before update invariant, evaluate it.
+    fn save_and_enforce_before_update(
+        &'env self,
+        func_env: &FunctionEnv,
+        ref_idx: usize,
+        before_idx: usize,
+    ) {
+        let ref_name = func_env
+            .symbol_pool()
+            .string(func_env.get_local_name(ref_idx));
+        let before_name = boogie_var_before_borrow(before_idx);
+        emitln!(
+            self.writer,
+            "{} := $Dereference($m, {});",
+            before_name,
+            ref_name,
+        );
+        emitln!(self.writer, "{}_ref := {};", before_name, ref_name);
+        // Enforce the before update invariant (if any).
+        self.enforce_before_update_invariant(
+            func_env,
+            &self.get_local_type(func_env, ref_idx),
+            before_idx,
+        );
+    }
+
     // Enforce invariants on references going out of scope
     fn enforce_invariants_for_dead_refs(
         &self,
         func_env: &FunctionEnv,
-        context: &mut BytecodeContext,
+        context: &BytecodeContext,
         offset: CodeOffset,
     ) {
         if let Some(dead_refs) = context.offset_to_dead_refs.get(&(offset as u16)) {
@@ -1395,6 +1504,18 @@ impl<'env> ModuleTranslator<'env> {
                     self.enforce_after_update_invariant(func_env, &ty, *idx);
                 }
             }
+        }
+    }
+
+    /// Enforce invariants on references inherited as parameters.
+    fn enforce_invariants_for_inherited_refs(
+        &self,
+        func_env: &FunctionEnv,
+        context: &BytecodeContext,
+    ) {
+        for (ref_idx, before_idx) in &context.inherited_to_before_index {
+            let ty = self.get_local_type(func_env, *ref_idx);
+            self.enforce_after_update_invariant(func_env, &ty, *before_idx);
         }
     }
 

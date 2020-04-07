@@ -265,7 +265,7 @@ fn test_insert_vote() {
         let vote = Vote::new(
             VoteData::new(
                 block.block().gen_block_info(
-                    block.compute_result().state_id(),
+                    block.compute_result().root_hash(),
                     block.compute_result().version(),
                     block.compute_result().validators().clone(),
                 ),
@@ -293,7 +293,7 @@ fn test_insert_vote() {
     let vote = Vote::new(
         VoteData::new(
             block.block().gen_block_info(
-                block.compute_result().state_id(),
+                block.compute_result().root_hash(),
                 block.compute_result().version(),
                 block.compute_result().validators().clone(),
             ),

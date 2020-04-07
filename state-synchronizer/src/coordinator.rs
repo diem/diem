@@ -21,7 +21,6 @@ use libra_logger::prelude::*;
 use libra_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
 use libra_types::{
     contract_event::ContractEvent,
-    event_subscription::EventSubscription,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{Transaction, TransactionListWithProof, Version},
     validator_change::{ValidatorChangeProof, VerifierType},
@@ -111,7 +110,6 @@ pub(crate) struct SyncCoordinator<T> {
     // queue of incoming long polling requests
     // peer will be notified about new chunk of transactions if it's available before expiry time
     subscriptions: HashMap<PeerId, PendingRequestInfo>,
-    reconfig_event_subscriptions: Vec<Box<dyn EventSubscription>>,
     executor_proxy: T,
 }
 
@@ -124,7 +122,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         config: StateSyncConfig,
         executor_proxy: T,
         initial_state: SynchronizerState,
-        reconfig_event_subscriptions: Vec<Box<dyn EventSubscription>>,
     ) -> Self {
         let upstream_peers = config.upstream_peers.upstream_peers.clone();
         let retry_timeout_val = match role {
@@ -144,7 +141,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             subscriptions: HashMap::new(),
             sync_request: None,
             initialization_listener: None,
-            reconfig_event_subscriptions,
             executor_proxy,
         }
     }
@@ -175,11 +171,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                             if let Err(e) = self.process_commit(txns, Some(callback)).await {
                                 error!("[state sync] process commit fail: {}", e);
                             }
-                            // TODO add per-subscription filter logic
-                            for event in events {
-                                for subscription in self.reconfig_event_subscriptions.iter_mut() {
-                                    subscription.publish(event.clone());
-                                }
+                            if let Err(e) = self.executor_proxy.publish_on_chain_config_updates(events).await {
+                                error!("[state sync] failed to publish reconfig notification: {}", e);
                             }
                         }
                         CoordinatorMessage::GetState(callback) => {
@@ -770,10 +763,15 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         // successfully.
         let new_version =
             self.local_state.highest_version_in_local_storage() + txn_list_with_proof.len() as u64;
-        let new_epoch = match response_li.ledger_info().next_validator_set() {
-            // This LI carries the validator set for the next epoch.
-            Some(_) => response_li.ledger_info().epoch() + 1,
-            None => response_li.ledger_info().epoch(),
+        let new_epoch = if response_li.ledger_info().version() == new_version
+            && response_li.ledger_info().next_validator_set().is_some()
+        {
+            // This chunk is going to finish the current epoch, optimistically request a chunk
+            // from the next epoch.
+            self.local_state.epoch() + 1
+        } else {
+            // Remain in the current epoch
+            self.local_state.epoch()
         };
         self.send_chunk_request(new_version, new_epoch).await?;
         let verifier = VerifierType::TrustedVerifier(self.local_state.trusted_epoch.clone());
@@ -793,13 +791,20 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             !self.is_initialized(),
             "Response with a waypoint LI but we're already initialized"
         );
-        // Optimistically fetch the next chunk. The next chunk belongs to the next epoch if
-        // end_of_epoch_li is present.
+        // Optimistically fetch the next chunk.
         let new_version =
             self.local_state.highest_version_in_local_storage() + txn_list_with_proof.len() as u64;
+        // The epoch in the optimistic request should be the next epoch if the current chunk
+        // is the last one in its epoch.
         let new_epoch = end_of_epoch_li
             .as_ref()
-            .map_or(self.local_state.epoch(), |li| li.ledger_info().epoch() + 1);
+            .map_or(self.local_state.epoch(), |li| {
+                if li.ledger_info().version() == new_version {
+                    self.local_state.epoch() + 1
+                } else {
+                    self.local_state.epoch()
+                }
+            });
         if new_version < self.waypoint.as_ref().map_or(0, |w| w.version()) {
             self.send_chunk_request(new_version, new_epoch).await?;
         }
@@ -840,7 +845,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 target,
                 intermediate_end_of_epoch_li,
                 &mut self.local_state.synced_trees,
-                &mut self.reconfig_event_subscriptions,
             )
             .await?;
         Ok(())

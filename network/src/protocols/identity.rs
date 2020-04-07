@@ -9,15 +9,9 @@ use crate::ProtocolId;
 use bytes::BytesMut;
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use libra_types::PeerId;
-use netcore::{
-    framing::{read_u16frame, write_u16frame},
-    negotiate::{negotiate_inbound, negotiate_outbound_interactive},
-    transport::ConnectionOrigin,
-};
+use netcore::framing::{read_u16frame, write_u16frame};
 use serde::{Deserialize, Serialize};
 use std::io;
-
-const IDENTITY_PROTOCOL_NAME: &[u8] = b"/identity/0.1.0";
 
 /// The Identity of a node
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -50,24 +44,10 @@ impl Identity {
 }
 
 /// The Identity exchange protocol
-pub async fn exchange_identity<T>(
-    own_identity: &Identity,
-    socket: T,
-    origin: ConnectionOrigin,
-) -> io::Result<(Identity, T)>
+pub async fn exchange_identity<T>(own_identity: &Identity, socket: &mut T) -> io::Result<Identity>
 where
     T: AsyncRead + AsyncWrite + Unpin,
 {
-    // Perform protocol negotiation on the connection.
-    let (mut socket, proto) = match origin {
-        ConnectionOrigin::Inbound => negotiate_inbound(socket, [IDENTITY_PROTOCOL_NAME]).await?,
-        ConnectionOrigin::Outbound => {
-            negotiate_outbound_interactive(socket, [IDENTITY_PROTOCOL_NAME]).await?
-        }
-    };
-
-    assert_eq!(proto, IDENTITY_PROTOCOL_NAME);
-
     // Send serialized message to peer.
     let msg = lcs::to_bytes(own_identity).map_err(|e| {
         io::Error::new(
@@ -75,19 +55,19 @@ where
             format!("Failed to serialize identity msg: {}", e),
         )
     })?;
-    write_u16frame(&mut socket, &msg).await?;
+    write_u16frame(socket, &msg).await?;
     socket.flush().await?;
 
     // Read an IdentityMsg from the Remote
     let mut response = BytesMut::new();
-    read_u16frame(&mut socket, &mut response).await?;
+    read_u16frame(socket, &mut response).await?;
     let identity = lcs::from_bytes(&response).map_err(|e| {
         io::Error::new(
             io::ErrorKind::InvalidData,
             format!("Failed to parse identity msg: {}", e),
         )
     })?;
-    Ok((identity, socket))
+    Ok(identity)
 }
 
 #[cfg(test)]
@@ -99,7 +79,6 @@ mod tests {
     use futures::{executor::block_on, future::join};
     use libra_types::PeerId;
     use memsocket::MemorySocket;
-    use netcore::transport::ConnectionOrigin;
 
     fn build_test_connection() -> (MemorySocket, MemorySocket) {
         MemorySocket::new_pair()
@@ -107,7 +86,7 @@ mod tests {
 
     #[test]
     fn simple_identify() {
-        let (outbound, inbound) = build_test_connection();
+        let (mut outbound, mut inbound) = build_test_connection();
         let server_identity = Identity::new(
             PeerId::random(),
             vec![
@@ -123,22 +102,17 @@ mod tests {
         let client_identity_config = client_identity.clone();
 
         let server = async move {
-            let (identity, _connection) =
-                exchange_identity(&server_identity_config, inbound, ConnectionOrigin::Inbound)
-                    .await
-                    .expect("Identity exchange fails");
+            let identity = exchange_identity(&server_identity_config, &mut inbound)
+                .await
+                .expect("Identity exchange fails");
 
             assert_eq!(identity, client_identity);
         };
 
         let client = async move {
-            let (identity, _connection) = exchange_identity(
-                &client_identity_config,
-                outbound,
-                ConnectionOrigin::Outbound,
-            )
-            .await
-            .expect("Identity exchange fails");
+            let identity = exchange_identity(&client_identity_config, &mut outbound)
+                .await
+                .expect("Identity exchange fails");
 
             assert_eq!(identity, server_identity);
         };

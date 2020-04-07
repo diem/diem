@@ -7,10 +7,10 @@ on:
       - auto
 
 jobs:
-  build-images:
-    name: Build images
+  build-and-run-cluster-test:
+    name: Build images and run cluster test
     runs-on: self-hosted
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v1
       - name: Setup env
@@ -46,47 +46,16 @@ jobs:
           done
           echo "Build failed after retries"
           exit 1
-  build-and-run-cluster-test:
-    name: Build images and run cluster test
-    needs: build-images
-    runs-on: self-hosted
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v1
-      - name: Setup env
-        run: |
-          echo "::set-env name=LIBRA_GIT_REV::$(git rev-parse --short=8 HEAD)"
-          echo "::set-env name=TEST_TAG::land_$(git rev-parse --short=8 HEAD)"
-      - name: Check kill switch
-        id: check_ks
-        run: |
-          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }} || ! .circleci/should_run_lbt.sh ; then
-            echo "::set-output name=should_run::false";
-          else
-            echo "::set-output name=should_run::true";
-          fi;
       - name: Launch cluster test
         if: steps.check_ks.outputs.should_run == 'true'
         # NOTE Remember to update PR comment payload if cti cmd is updated.
         run: |
           export CTI_OUTPUT_LOG=$(mktemp)
           echo "::set-env name=CTI_OUTPUT_LOG::$CTI_OUTPUT_LOG"
-          if [[ ${{ secrets.ACTIONS_LBT_USE_K8S }} == true ]]; then
-            ./scripts/cti \
-              --k8s \
-              --tag ${TEST_TAG} \
-              --report report.json \
-              --run bench \
-              --k8s-fullnodes-per-validator=0 \
-              --k8s-num-validators=100
-          else
-            JUMPHOST=${{secrets.CLUSTER_TEST_JUMPHOST}} \
-              ./scripts/cti \
-              --marker land \
-              --tag ${TEST_TAG} \
-              --report report.json \
-              --run bench
-          fi
+          ./scripts/cti \
+            --tag ${TEST_TAG} \
+            --report report.json \
+            --run bench
           echo "report.json start"
           cat report.json
           echo "report.json end"
@@ -161,15 +130,9 @@ jobs:
             // Add repro cmd to message
             try {
               body += "\nRepro cmd:\n";
-              if (${{secrets.ACTIONS_LBT_USE_K8S}}) {
-                body += `
-                  ./scripts/cti --k8s --tag ${env_vars.TEST_TAG} --run bench --k8s-fullnodes-per-validator=0 --k8s-num-validators=100
-                `;
-              } else {
-                body += `
-                  ./scripts/cti --tag ${env_vars.TEST_TAG} --run bench
-                `;
-              }
+              body += `
+                ./scripts/cti --tag ${env_vars.TEST_TAG} --run bench
+              `;
             } catch (err) {
               if (err.code === 'ReferenceError') {
                 console.error("env var $LIBRA_GIT_REV is not set.");

@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    chained_bft::{consensusdb::ConsensusDB, epoch_manager::LivenessStorageData},
-    consensus_provider::create_storage_read_client,
-};
+use crate::chained_bft::{consensusdb::ConsensusDB, epoch_manager::LivenessStorageData};
 use anyhow::{format_err, Context, Result};
 use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,
@@ -16,19 +13,18 @@ use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
-    block_info::Round, epoch_info::EpochInfo, ledger_info::LedgerInfo,
+    block_info::Round, epoch_info::EpochInfo, ledger_info::LedgerInfo, transaction::Version,
     validator_info::ValidatorInfo, validator_set::ValidatorSet,
     validator_verifier::ValidatorVerifier,
 };
-use std::{collections::HashSet, sync::Arc};
-use storage_client::StorageRead;
+use std::{cmp::max, collections::HashSet, sync::Arc};
+use storage_interface::DbReader;
 
 /// PersistentLivenessStorage is essential for maintaining liveness when a node crashes.  Specifically,
 /// upon a restart, a correct node will recover.  Even if all nodes crash, liveness is
 /// guaranteed.
 /// Blocks persisted are proposed but not yet committed.  The committed state is persisted
 /// via StateComputer.
-#[async_trait::async_trait]
 pub trait PersistentLivenessStorage<T>: Send + Sync {
     /// Persist the blocks and quorum certs into storage atomically.
     fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()>;
@@ -40,14 +36,17 @@ pub trait PersistentLivenessStorage<T>: Send + Sync {
     fn save_state(&self, vote: &Vote) -> Result<()>;
 
     /// Construct data that can be recovered from ledger
-    async fn recover_from_ledger(&self) -> LedgerRecoveryData;
+    fn recover_from_ledger(&self) -> LedgerRecoveryData;
 
     /// Construct necessary data to start consensus.
-    async fn start(&self) -> LivenessStorageData<T>;
+    fn start(&self) -> LivenessStorageData<T>;
 
     /// Persist the highest timeout certificate for improved liveness - proof for other replicas
     /// to jump to this round
     fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()>;
+
+    /// Returns a handle of the libradb.
+    fn libra_db(&self) -> Arc<dyn DbReader>;
 }
 
 #[derive(Clone)]
@@ -89,7 +88,7 @@ impl LedgerRecoveryData {
     }
 
     pub fn validator_keys(&self) -> Vec<ValidatorInfo> {
-        self.validator_keys.clone().to_vec()
+        self.validator_keys.payload().to_vec()
     }
 
     /// Finds the root (last committed block) and returns the root block, the QC to the root block
@@ -147,6 +146,31 @@ impl LedgerRecoveryData {
     }
 }
 
+pub struct RootMetadata {
+    pub accu_hash: HashValue,
+    pub frozen_root_hashes: Vec<HashValue>,
+    pub num_leaves: Version,
+}
+
+impl RootMetadata {
+    pub fn new(num_leaves: u64, accu_hash: HashValue, frozen_root_hashes: Vec<HashValue>) -> Self {
+        Self {
+            num_leaves,
+            accu_hash,
+            frozen_root_hashes,
+        }
+    }
+
+    pub fn version(&self) -> Version {
+        max(self.num_leaves, 1) - 1
+    }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn new_empty() -> Self {
+        Self::new(0, *libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH, vec![])
+    }
+}
+
 /// The recovery data constructed from raw consensusdb data, it'll find the root value and
 /// blocks that need cleanup or return error if the input data is inconsistent.
 pub struct RecoveryData<T> {
@@ -154,7 +178,7 @@ pub struct RecoveryData<T> {
     // The last vote message sent by this validator.
     last_vote: Option<Vote>,
     root: RootInfo<T>,
-    root_executed_trees: ExecutedTrees,
+    root_metadata: RootMetadata,
     // 1. the blocks guarantee the topological ordering - parent <- child.
     // 2. all blocks are children of the root.
     blocks: Vec<Block<T>>,
@@ -170,8 +194,8 @@ impl<T: Payload> RecoveryData<T> {
         last_vote: Option<Vote>,
         ledger_recovery_data: LedgerRecoveryData,
         mut blocks: Vec<Block<T>>,
+        root_metadata: RootMetadata,
         mut quorum_certs: Vec<QuorumCert>,
-        root_executed_trees: ExecutedTrees,
         highest_timeout_certificate: Option<TimeoutCertificate>,
     ) -> Result<Self> {
         let root = ledger_recovery_data
@@ -208,7 +232,7 @@ impl<T: Payload> RecoveryData<T> {
                 _ => None,
             },
             root,
-            root_executed_trees,
+            root_metadata,
             blocks,
             quorum_certs,
             blocks_to_prune,
@@ -231,10 +255,10 @@ impl<T: Payload> RecoveryData<T> {
         self.last_vote.clone()
     }
 
-    pub fn take(self) -> (RootInfo<T>, ExecutedTrees, Vec<Block<T>>, Vec<QuorumCert>) {
+    pub fn take(self) -> (RootInfo<T>, RootMetadata, Vec<Block<T>>, Vec<QuorumCert>) {
         (
             self.root,
-            self.root_executed_trees,
+            self.root_metadata,
             self.blocks,
             self.quorum_certs,
         )
@@ -281,18 +305,16 @@ impl<T: Payload> RecoveryData<T> {
 /// The proxy we use to persist data in libra db storage service via grpc.
 pub struct StorageWriteProxy {
     db: Arc<ConsensusDB>,
-    read_client: Arc<dyn StorageRead>,
+    libra_db: Arc<dyn DbReader>,
 }
 
 impl StorageWriteProxy {
-    pub fn new(config: &NodeConfig) -> Self {
-        let read_client = create_storage_read_client(config);
+    pub fn new(config: &NodeConfig, libra_db: Arc<dyn DbReader>) -> Self {
         let db = Arc::new(ConsensusDB::new(config.storage.dir()));
-        StorageWriteProxy { db, read_client }
+        StorageWriteProxy { db, libra_db }
     }
 }
 
-#[async_trait::async_trait]
 impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
     fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()> {
         let mut trace_batch = vec![];
@@ -316,11 +338,10 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
         self.db.save_state(lcs::to_bytes(vote)?)
     }
 
-    async fn recover_from_ledger(&self) -> LedgerRecoveryData {
+    fn recover_from_ledger(&self) -> LedgerRecoveryData {
         let startup_info = self
-            .read_client
+            .libra_db
             .get_startup_info()
-            .await
             .expect("unable to read ledger info from storage")
             .expect("startup info is None");
 
@@ -330,7 +351,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
         )
     }
 
-    async fn start(&self) -> LivenessStorageData<T> {
+    fn start(&self) -> LivenessStorageData<T> {
         info!("Start consensus recovery.");
         let raw_data = self
             .db
@@ -362,9 +383,8 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
 
         // find the block corresponding to storage latest ledger info
         let startup_info = self
-            .read_client
+            .libra_db
             .get_startup_info()
-            .await
             .expect("unable to read ledger info from storage")
             .expect("startup info is None");
         let validator_set = startup_info.get_validator_set().clone();
@@ -372,13 +392,21 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
             startup_info.latest_ledger_info.ledger_info().clone(),
             validator_set,
         );
+        let frozen_root_hashes = startup_info
+            .committed_tree_state
+            .ledger_frozen_subtree_hashes
+            .clone();
         let root_executed_trees = ExecutedTrees::from(startup_info.committed_tree_state);
         match RecoveryData::new(
             last_vote,
             ledger_recovery_data.clone(),
             blocks,
+            RootMetadata::new(
+                root_executed_trees.txn_accumulator().num_leaves(),
+                root_executed_trees.state_id(),
+                frozen_root_hashes,
+            ),
             quorum_certs,
-            root_executed_trees,
             highest_timeout_certificate,
         ) {
             Ok(mut initial_data) => {
@@ -413,5 +441,9 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
     fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()> {
         self.db
             .save_highest_timeout_certificate(lcs::to_bytes(&highest_timeout_cert)?)
+    }
+
+    fn libra_db(&self) -> Arc<dyn DbReader> {
+        self.libra_db.clone()
     }
 }

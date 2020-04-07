@@ -1,5 +1,6 @@
-// dep: tests/sources/stdlib/modules/transaction.move
 // dep: tests/sources/stdlib/modules/vector.move
+// dep: tests/sources/stdlib/modules/transaction.move
+
 address 0x0:
 
 // The gas schedule keeps two separate schedules for the gas:

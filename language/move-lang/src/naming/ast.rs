@@ -224,7 +224,7 @@ pub enum Exp_ {
     Cast(Box<Exp>, Type),
     Annotate(Box<Exp>, Type),
 
-    Spec(SpecId),
+    Spec(SpecId, BTreeSet<Var>),
 
     UnresolvedError,
 }
@@ -357,7 +357,7 @@ impl Type_ {
         use BuiltinTypeName_::*;
 
         let kind = match b.value {
-            U8 | U64 | U128 | Address | Bool => Some(sp(b.loc, Kind_::Unrestricted)),
+            U8 | U64 | U128 | Address | Bool => Some(sp(b.loc, Kind_::Copyable)),
             Vector => None,
         };
         let n = sp(b.loc, TypeName_::Builtin(b));
@@ -621,7 +621,7 @@ impl AstDebug for TParam {
             Kind_::Unknown => (),
             Kind_::Resource => w.write(": resource"),
             Kind_::Affine => w.write(": copyable"),
-            Kind_::Unrestricted => panic!("ICE 'unrestricted' kind constraint"),
+            Kind_::Copyable => panic!("ICE 'copyable' kind constraint"),
         }
     }
 }
@@ -839,7 +839,14 @@ impl AstDebug for Exp_ {
                 ty.ast_debug(w);
                 w.write(")");
             }
-            E::Spec(u) => w.write(&format!("spec({})", u)),
+            E::Spec(u, used_locals) => {
+                w.write(&format!("spec #{}", u));
+                if !used_locals.is_empty() {
+                    w.write("uses [");
+                    w.comma(used_locals, |w, n| w.write(&format!("{}", n)));
+                    w.write("]");
+                }
+            }
             E::UnresolvedError => w.write("_|_"),
         }
     }

@@ -2,418 +2,414 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! The Peer actor owns the underlying connection and is responsible for listening for
-//!  and opening substreams as well as negotiating particular protocols on those substreams.
+//! and opening substreams as well as negotiating particular protocols on those substreams.
 use crate::{
-    common::NegotiatedSubstream, peer_manager::PeerManagerError, protocols::identity::Identity,
+    counters,
+    peer_manager::{Connection, ConnectionMetadata, PeerManagerError},
+    protocols::wire::messaging::v1::NetworkMessage,
     transport, ProtocolId,
 };
+use bytes::BytesMut;
+use channel;
 use futures::{
+    self,
     channel::oneshot,
-    future::BoxFuture,
-    stream::{FuturesUnordered, StreamExt},
-    FutureExt, SinkExt,
+    io::{AsyncRead, AsyncWrite},
+    stream::StreamExt,
+    FutureExt, SinkExt, TryFutureExt,
 };
 use libra_logger::prelude::*;
 use libra_types::PeerId;
-use netcore::{
-    multiplexing::{Control, StreamMultiplexer},
-    negotiate::{negotiate_inbound, negotiate_outbound_interactive, negotiate_outbound_select},
-    transport::ConnectionOrigin,
-};
-use parity_multiaddr::Multiaddr;
-use std::{collections::HashSet, fmt::Debug, iter::FromIterator};
+use netcore::compat::IoCompat;
+use std::{fmt::Debug, io, time::Duration};
+use stream_ratelimiter::*;
+use tokio::runtime::Handle;
+use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
+
+// Rate-limit configuration for inbound messages. Allows 100 messages for every 10ms window.
+pub const MESSAGE_RATE_LIMIT_WINDOW: Duration = Duration::from_millis(10);
+pub const MESSAGE_RATE_LIMIT_COUNT: usize = 100;
 
 #[cfg(test)]
 mod test;
 
 #[derive(Debug)]
-pub enum PeerRequest<TSubstream> {
-    OpenSubstream(
+pub enum PeerRequest {
+    SendMessage(
+        NetworkMessage,
         ProtocolId,
-        oneshot::Sender<Result<TSubstream, PeerManagerError>>,
+        oneshot::Sender<Result<(), PeerManagerError>>,
     ),
     CloseConnection,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DisconnectReason {
     Requested,
     ConnectionLost,
 }
 
 #[derive(Debug)]
-pub enum PeerNotification<TSubstream> {
-    NewSubstream(PeerId, NegotiatedSubstream<TSubstream>),
-    PeerDisconnected(Identity, Multiaddr, ConnectionOrigin, DisconnectReason),
+pub enum PeerNotification {
+    NewMessage(NetworkMessage),
+    PeerDisconnected(ConnectionMetadata, DisconnectReason),
 }
 
-pub struct Peer<TMuxer>
-where
-    TMuxer: StreamMultiplexer,
-{
-    /// Identity of the remote peer
-    identity: Identity,
-    /// Address at which we are connected to the remote peer.
-    address: Multiaddr,
-    /// Origin of the connection.
-    origin: ConnectionOrigin,
+enum State {
+    Connected,
+    ShuttingDown(DisconnectReason),
+}
+
+pub struct Peer<TSocket> {
+    /// A handle to a tokio executor.
+    executor: Handle,
+    /// Connection specific information.
+    connection_metadata: ConnectionMetadata,
     /// Underlying connection.
-    connection: Option<TMuxer>,
+    connection: Option<TSocket>,
     /// Channel to receive requests for opening new outbound substreams.
-    requests_rx: channel::Receiver<PeerRequest<TMuxer::Substream>>,
+    requests_rx: channel::Receiver<PeerRequest>,
     /// Channel to send peer notifications to PeerManager.
-    peer_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
-    /// RPC protocols supported by self.
-    rpc_protocols: HashSet<ProtocolId>,
+    peer_notifs_tx: channel::Sender<PeerNotification>,
     /// Channel to notify about new inbound RPC substreams.
-    rpc_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
-    /// DirectSend protocols supported by self.
-    direct_send_protocols: HashSet<ProtocolId>,
+    rpc_notifs_tx: channel::Sender<PeerNotification>,
     /// Channel to notify about new inbound DirectSend substreams.
-    direct_send_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
-    /// All supported protocols. This is derived from `rpc_protocols` and `direct_send_protocols`
-    /// at the time this struct is constructed.
-    own_supported_protocols: Vec<ProtocolId>,
+    direct_send_notifs_tx: channel::Sender<PeerNotification>,
     /// Flag to indicate if the actor is being shut down.
-    shutting_down: bool,
+    state: State,
 }
 
-impl<TMuxer> Peer<TMuxer>
+impl<TSocket> Peer<TSocket>
 where
-    TMuxer: StreamMultiplexer + 'static,
-    TMuxer::Substream: 'static,
+    TSocket: AsyncRead + AsyncWrite + Send + 'static,
 {
     pub fn new(
-        identity: Identity,
-        address: Multiaddr,
-        origin: ConnectionOrigin,
-        connection: TMuxer,
-        requests_rx: channel::Receiver<PeerRequest<TMuxer::Substream>>,
-        peer_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
-        rpc_protocols: HashSet<ProtocolId>,
-        rpc_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
-        direct_send_protocols: HashSet<ProtocolId>,
-        direct_send_notifs_tx: channel::Sender<PeerNotification<TMuxer::Substream>>,
+        executor: Handle,
+        connection: Connection<TSocket>,
+        requests_rx: channel::Receiver<PeerRequest>,
+        peer_notifs_tx: channel::Sender<PeerNotification>,
+        rpc_notifs_tx: channel::Sender<PeerNotification>,
+        direct_send_notifs_tx: channel::Sender<PeerNotification>,
     ) -> Self {
-        let own_supported_protocols = Vec::from_iter(
-            rpc_protocols
-                .iter()
-                .chain(direct_send_protocols.iter())
-                .cloned(),
-        );
+        let Connection {
+            metadata: connection_metadata,
+            socket,
+        } = connection;
         Self {
-            identity,
-            address,
-            origin,
-            connection: Some(connection),
+            executor,
+            connection_metadata,
+            connection: Some(socket),
             requests_rx,
             peer_notifs_tx,
-            rpc_protocols,
             rpc_notifs_tx,
-            direct_send_protocols,
             direct_send_notifs_tx,
-            own_supported_protocols,
-            shutting_down: false,
+            state: State::Connected,
         }
+    }
+
+    fn peer_id(&self) -> PeerId {
+        self.connection_metadata.peer_identity().peer_id()
     }
 
     pub async fn start(mut self) {
-        let (substream_rx, control) = self.connection.take().unwrap().start().await;
-        let mut substream_rx = substream_rx.fuse();
-        let mut pending_outbound_substreams = FuturesUnordered::new();
-        let mut pending_inbound_substreams = FuturesUnordered::new();
-        let self_peer_id = self.identity.peer_id();
-        while !self.shutting_down {
-            futures::select! {
-                maybe_req = self.requests_rx.next() => {
-                    if let Some(request) = maybe_req {
-                        self.handle_request(control.clone(), &mut pending_outbound_substreams, request).await;
-                    } else {
-                        // This branch will only be taken if all PeerRequest senders for this Peer
-                        // get dropped.
-                        break;
+        let self_peer_id = self.peer_id();
+        info!(
+            "Starting Peer actor for peer: {:?}",
+            self_peer_id.short_str()
+        );
+        // Split the connection into a ReadHalf and a WriteHalf.
+        let (reader, writer) = tokio::io::split(IoCompat::new(self.connection.take().unwrap()));
+        // Convert ReadHalf to Stream of length-delimited messages.
+        let reader = FramedRead::new(reader, LengthDelimitedCodec::new()).fuse();
+        // Create a rate-limited stream of inbound messages.
+        let mut reader = reader
+            .ratelimit(MESSAGE_RATE_LIMIT_WINDOW, MESSAGE_RATE_LIMIT_COUNT)
+            .fuse();
+        // Convert WriteHalf to Sink of length-delimited messages.
+        let writer = FramedWrite::new(writer, LengthDelimitedCodec::new());
+        // Start writer "process" as a separate task. We receive two handles to communicate with
+        // the task:
+        // `write_reqs_tx`: Instruction to send a NetworkMessage on the wire.
+        // `close_tx`: Instruction to close the underlying connection.
+        let (write_reqs_tx, close_tx) =
+            Self::start_writer_task(&self.executor, self_peer_id, writer);
+        // Start main Peer event loop.
+        loop {
+            match self.state {
+                State::Connected => {
+                    futures::select! {
+                        maybe_req = self.requests_rx.next() => {
+                            if let Some(request) = maybe_req {
+                                self.handle_request(request, write_reqs_tx.clone()).await;
+                            } else {
+                                // This branch will only be taken if all PeerRequest senders for this Peer
+                                // get dropped.
+                                break;
+                            }
+                        },
+                        maybe_message = reader.next() => {
+                            match maybe_message {
+                                Some(Ok(message)) =>  {
+                                    if let Err(err) = self.handle_inbound_message(message, write_reqs_tx.clone()).await {
+                                        warn!("Error in handling inbound message from peer: {:?}. Error: {:?}",
+                                            self_peer_id.short_str(), err);
+                                    }
+                                },
+                                Some(Err(err)) => {
+                                    warn!("Failure in reading messages from socket from peer: {:?}. Error: {:?}",
+                                        self_peer_id.short_str(), err);
+                                    self.close_connection( DisconnectReason::ConnectionLost).await;
+                                }
+                                None => {
+                                    warn!("Received connection closed event for peer: {:?}",
+                                        self_peer_id.short_str());
+                                    self.close_connection(DisconnectReason::ConnectionLost).await;
+                                }
+                            }
+                        },
                     }
-                },
-                maybe_substream = substream_rx.next() => {
-                    match maybe_substream {
-                        Some(Ok(substream)) => {
-                            trace!("New inbound substream from peer: {}", self_peer_id.short_str());
-                            pending_inbound_substreams.push(
-                                Self::negotiate_inbound_substream(
-                                    substream, self.own_supported_protocols.clone()));
-                        }
-                        Some(Err(e)) => {
-                            warn!("Inbound substream error {:?} with peer {}",
-                                e, self_peer_id.short_str());
-                            self.close_connection(control.clone(), DisconnectReason::ConnectionLost).await;
-                        }
-                        None => {
-                            warn!("Inbound substreams exhausted with peer {}",
-                                self_peer_id.short_str());
-                            self.close_connection(control.clone(), DisconnectReason::ConnectionLost).await;
-                        }
+                }
+                State::ShuttingDown(reason) => {
+                    // Send a close instruction to the writer task. On receipt of this instruction, the writer
+                    // task drops all pending outbound messages and closes the connection.
+                    if let Err(e) = close_tx.send(()) {
+                        info!(
+                            "Failed to send close intruction to writer task. It must already be terminating/terminated. Error: {:?}",
+                            e
+                        );
                     }
-                },
-                negotiated_subststream = pending_inbound_substreams.select_next_some() => {
-                    self.handle_negotiated_substream(negotiated_subststream).await;
-                },
-                _ = pending_outbound_substreams.select_next_some() => {
-                    // Do nothing since these futures have an output of "()"
-                },
+                    // Send a PeerDisconnected event to upstream.
+                    if let Err(e) = self
+                        .peer_notifs_tx
+                        .send(PeerNotification::PeerDisconnected(
+                            self.connection_metadata.clone(),
+                            reason,
+                        ))
+                        .await
+                    {
+                        warn!(
+                            "Failed to notify upstream about disconnection of peer: {}; error: {:?}",
+                            self.peer_id().short_str(),
+                            e
+                        );
+                    }
+                    debug!("Peer actor '{}' shutdown", self.peer_id().short_str(),);
+                    break;
+                }
             }
         }
-        debug!(
-            "Peer actor '{}' shutdown",
-            self.identity.peer_id().short_str()
-        );
     }
 
-    async fn handle_negotiated_substream(
-        &mut self,
-        negotiated_subststream: Result<NegotiatedSubstream<TMuxer::Substream>, PeerManagerError>,
+    // Start a new task on the given executor which is responsible for writing outbound messages on
+    // the wire. The function returns two channels which can be used to send intructions to the
+    // task:
+    // 1. The first channel is used to send outbound NetworkMessages to the task
+    // 2. The second channel is used to instruct the task to close the connection and terminate.
+    // If outbound messages are queued when the task receives a close instruction, it discards
+    // them and immediately closes the connection.
+    fn start_writer_task<T: tokio::io::AsyncWrite + Send + Unpin + 'static>(
+        executor: &Handle,
+        self_peer_id: PeerId,
+        mut writer: FramedWrite<T, LengthDelimitedCodec>,
+    ) -> (
+        channel::Sender<(
+            NetworkMessage,
+            oneshot::Sender<Result<(), PeerManagerError>>,
+        )>,
+        oneshot::Sender<()>,
     ) {
-        match negotiated_subststream {
-            Ok(negotiated_substream) => {
-                let protocol = negotiated_substream.protocol;
-                let event =
-                    PeerNotification::NewSubstream(self.identity.peer_id(), negotiated_substream);
-                if self.rpc_protocols.contains(&protocol) {
-                    if let Err(err) = self.rpc_notifs_tx.send(event).await {
-                        warn!("Failed to send notification to RPC actor. Error: {:?}", err);
+        let (write_reqs_tx, mut write_reqs_rx): (
+            channel::Sender<(
+                NetworkMessage,
+                oneshot::Sender<Result<(), PeerManagerError>>,
+            )>,
+            _,
+        ) = channel::new(1024, &counters::PENDING_WIRE_MESSAGES);
+        let (close_tx, close_rx) = oneshot::channel();
+        let writer_task = async move {
+            let mut close_rx = close_rx.into_stream();
+            loop {
+                futures::select! {
+                    (message, ack_ch) = write_reqs_rx.select_next_some() => {
+                        if let Err(e) = writer
+                            .send(
+                                lcs::to_bytes(&message)
+                                    .expect("Outboung message failed to serialize")
+                                    .into(),
+                            )
+                            .map_ok(|_| ack_ch.send(Ok(())))
+                            .await
+                        {
+                            warn!(
+                                "Error in sending message to peer: {:?}. Error: {:?}",
+                                self_peer_id.short_str(),
+                                e
+                            );
+                            break;
+                        }
+                    },
+                    _ = close_rx.select_next_some() => {
+                        break;
                     }
-                } else if self.direct_send_protocols.contains(&protocol) {
-                    if let Err(err) = self.direct_send_notifs_tx.send(event).await {
+                }
+            }
+            info!("Closing connection to peer: {:?}", self_peer_id.short_str());
+            let flush_and_close = async move {
+                writer.flush().await?;
+                writer.close().await?;
+                Ok(()) as io::Result<()>
+            };
+            match tokio::time::timeout(transport::TRANSPORT_TIMEOUT, flush_and_close).await {
+                Err(_) => {
+                    info!(
+                        "Timeout in flush/close of connection to peer: {:?}",
+                        self_peer_id.short_str()
+                    );
+                }
+                Ok(Err(e)) => {
+                    info!(
+                        "Failure in flush/close of connection to peer: {:?}. Error: {:?}",
+                        self_peer_id.short_str(),
+                        e
+                    );
+                }
+                Ok(Ok(())) => {
+                    info!("Closed connection to peer: {:?}", self_peer_id.short_str());
+                }
+            }
+        };
+        executor.spawn(writer_task);
+        (write_reqs_tx, close_tx)
+    }
+
+    async fn handle_inbound_message(
+        &mut self,
+        message: BytesMut,
+        mut write_reqs_tx: channel::Sender<(
+            NetworkMessage,
+            oneshot::Sender<Result<(), PeerManagerError>>,
+        )>,
+    ) -> Result<(), PeerManagerError> {
+        trace!("Received message from Peer {}", self.peer_id().short_str(),);
+        // Read inbound message from stream.
+        let message = message.freeze();
+        let message: NetworkMessage = lcs::from_bytes(&message)?;
+        match message {
+            NetworkMessage::RpcRequest(_) | NetworkMessage::RpcResponse(_) => {
+                let notif = PeerNotification::NewMessage(message);
+                self.rpc_notifs_tx.send(notif).await.map_err(|err| {
+                    warn!("Failed to send notification to RPC actor. Error: {:?}", err);
+                    err
+                })?;
+                Ok(())
+            }
+            NetworkMessage::DirectSendMsg(_) => {
+                let notif = PeerNotification::NewMessage(message);
+                self.direct_send_notifs_tx
+                    .send(notif)
+                    .await
+                    .map_err(|err| {
                         warn!(
                             "Failed to send notification to DirectSend actor. Error: {:?}",
                             err
                         );
-                    }
-                } else {
-                    // We should only be able to negotiate supported protocols, and therefore this
-                    // branch is unreachable.
-                    unreachable!("Negotiated unsupported protocol");
-                }
+                        err
+                    })?;
+                Ok(())
             }
-            Err(e) => {
-                error!(
-                    "Inbound substream negotiation for peer {} failed: {}",
-                    self.identity.peer_id().short_str(),
-                    e
-                );
+            NetworkMessage::Ping(nonce) => {
+                let pong = NetworkMessage::Pong(nonce);
+                let (ack_tx, _) = oneshot::channel();
+                // Resond to a ping right away.
+                write_reqs_tx.send((pong, ack_tx)).await?;
+                Ok(())
             }
+            _ => unreachable!("Unhandled"),
         }
     }
 
     async fn handle_request<'a>(
         &'a mut self,
-        control: TMuxer::Control,
-        pending: &'a mut FuturesUnordered<BoxFuture<'static, ()>>,
-        request: PeerRequest<TMuxer::Substream>,
+        request: PeerRequest,
+        mut write_reqs_tx: channel::Sender<(
+            NetworkMessage,
+            oneshot::Sender<Result<(), PeerManagerError>>,
+        )>,
     ) {
         trace!(
             "Peer {} PeerRequest::{:?}",
-            self.identity.peer_id().short_str(),
+            self.peer_id().short_str(),
             request
         );
         match request {
-            PeerRequest::OpenSubstream(protocol, channel) => {
-                pending
-                    .push(self.handle_open_outbound_substream_request(protocol, control, channel));
-            }
-            PeerRequest::CloseConnection => {
-                self.close_connection(control, DisconnectReason::Requested)
-                    .await;
-            }
-        }
-    }
-
-    fn handle_open_outbound_substream_request(
-        &self,
-        protocol: ProtocolId,
-        control: TMuxer::Control,
-        channel: oneshot::Sender<Result<TMuxer::Substream, PeerManagerError>>,
-    ) -> BoxFuture<'static, ()> {
-        let optimistic_negotiation = self.identity.is_protocol_supported(protocol);
-        Self::negotiate_outbound_substream(
-            self.identity.peer_id(),
-            control,
-            protocol,
-            optimistic_negotiation,
-            channel,
-        )
-        .boxed()
-    }
-
-    async fn negotiate_outbound_substream(
-        peer_id: PeerId,
-        mut control: TMuxer::Control,
-        protocol: ProtocolId,
-        optimistic_negotiation: bool,
-        channel: oneshot::Sender<Result<TMuxer::Substream, PeerManagerError>>,
-    ) {
-        let response = match control.open_stream().await {
-            Ok(substream) => {
-                // TODO(bmwill) Evaluate if we should still try to open and negotiate an outbound
-                // substream even though we know for a fact that the Identity struct of this Peer
-                // doesn't include the protocol we're interested in.
-                if optimistic_negotiation {
-                    negotiate_outbound_select(substream, lcs::to_bytes(&protocol).unwrap()).await
-                } else {
-                    warn!(
-                        "Negotiating outbound substream interactively: Protocol({:?}) PeerId({})",
+            PeerRequest::SendMessage(message, protocol, channel) => {
+                if let Err(e) = write_reqs_tx.send((message, channel)).await {
+                    error!(
+                        "Failed to send message for protocol {:?} to peer: {:?}. Error: {:?}",
                         protocol,
-                        peer_id.short_str()
+                        self.peer_id().short_str(),
+                        e
                     );
-                    negotiate_outbound_interactive(substream, &[lcs::to_bytes(&protocol).unwrap()])
-                        .await
-                        .map(|(substream, _protocol)| substream)
                 }
             }
-            Err(e) => Err(e),
-        }
-        .map_err(Into::into);
-
-        match response {
-            Ok(_) => debug!(
-                "Successfully negotiated outbound substream '{:?}' with Peer {}",
-                protocol,
-                peer_id.short_str()
-            ),
-            Err(ref e) => debug!(
-                "Unable to negotiated outbound substream '{:?}' with Peer {}: {}",
-                protocol,
-                peer_id.short_str(),
-                e
-            ),
-        }
-
-        if channel.send(response).is_err() {
-            warn!(
-                "oneshot channel receiver dropped for new substream with peer {} for protocol {:?}",
-                peer_id.short_str(),
-                protocol
-            );
+            PeerRequest::CloseConnection => {
+                self.close_connection(DisconnectReason::Requested).await;
+            }
         }
     }
 
-    async fn negotiate_inbound_substream(
-        substream: TMuxer::Substream,
-        own_supported_protocols: Vec<ProtocolId>,
-    ) -> Result<NegotiatedSubstream<TMuxer::Substream>, PeerManagerError> {
-        let (substream, protocol) = negotiate_inbound(
-            substream,
-            own_supported_protocols
-                .into_iter()
-                .map(|p| lcs::to_bytes(&p).unwrap())
-                .collect::<Vec<_>>(),
-        )
-        .await?;
-        Ok(NegotiatedSubstream {
-            protocol: lcs::from_bytes(&protocol).unwrap(),
-            substream,
-        })
-    }
-
-    async fn close_connection(&mut self, mut control: TMuxer::Control, reason: DisconnectReason) {
-        match tokio::time::timeout(transport::TRANSPORT_TIMEOUT, control.close()).await {
-            Err(e) => {
-                error!(
-                    "Failed to gracefully close connection with peer: {}; error: {}",
-                    self.identity.peer_id().short_str(),
-                    e
-                );
-            }
-            Ok(_) => {
-                info!(
-                    "Closed connection with peer: {}, reason: {:?}",
-                    self.identity.peer_id().short_str(),
-                    reason
-                );
-            }
-        }
-        // If the graceful shutdown above fails, the connection will be forcefully terminated once
-        // the connection struct is dropped. Setting the `shutdown` flag to true ensures that the
-        // peer actor will terminate and close the connection in the process.
-        self.shutting_down = true;
-        // We send a PeerDisconnected event to NetworkProvider as a result (or in case of a failure
-        // above, in anticipation of) closing the connection.
-        if let Err(e) = self
-            .peer_notifs_tx
-            .send(PeerNotification::PeerDisconnected(
-                self.identity.clone(),
-                self.address.clone(),
-                self.origin,
-                reason,
-            ))
-            .await
-        {
-            warn!(
-                "Failed to notify upstream about disconnection of peer: {}; error: {:?}",
-                self.identity.peer_id().short_str(),
-                e
-            );
-        }
+    async fn close_connection(&mut self, reason: DisconnectReason) {
+        // Set the state of the actor to `State::ShuttingDown` to true ensures that the peer actor
+        // will terminate and close the connection.
+        self.state = State::ShuttingDown(reason);
     }
 }
 
-pub struct PeerHandle<TSubstream> {
+pub struct PeerHandle {
     peer_id: PeerId,
-    sender: channel::Sender<PeerRequest<TSubstream>>,
-    address: Multiaddr,
+    sender: channel::Sender<PeerRequest>,
 }
 
-impl<TSubstream> Clone for PeerHandle<TSubstream> {
+impl Clone for PeerHandle {
     fn clone(&self) -> Self {
         Self {
             peer_id: self.peer_id,
             sender: self.sender.clone(),
-            address: self.address.clone(),
         }
     }
 }
 
-impl<TSubstream> PeerHandle<TSubstream> {
-    pub fn new(
-        peer_id: PeerId,
-        address: Multiaddr,
-        sender: channel::Sender<PeerRequest<TSubstream>>,
-    ) -> Self {
-        Self {
-            peer_id,
-            address,
-            sender,
-        }
-    }
-
-    pub fn address(&self) -> &Multiaddr {
-        &self.address
+impl PeerHandle {
+    pub fn new(peer_id: PeerId, sender: channel::Sender<PeerRequest>) -> Self {
+        Self { peer_id, sender }
     }
 
     pub fn peer_id(&self) -> PeerId {
         self.peer_id
     }
 
-    pub async fn open_substream(
+    pub async fn send_message(
         &mut self,
+        message: NetworkMessage,
         protocol: ProtocolId,
-    ) -> Result<TSubstream, PeerManagerError> {
+    ) -> Result<(), PeerManagerError> {
         // If we fail to send the request to the Peer, then it must have already been shutdown.
         let (oneshot_tx, oneshot_rx) = oneshot::channel();
         if self
             .sender
-            .send(PeerRequest::OpenSubstream(protocol, oneshot_tx))
+            .send(PeerRequest::SendMessage(message, protocol, oneshot_tx))
             .await
             .is_err()
         {
             error!(
-                "Sending OpenSubstream request to Peer {} \
+                "Sending message to Peer {} \
                  failed because it has already been shutdown.",
                 self.peer_id.short_str()
             );
         }
         oneshot_rx
             .await
-            // The open_substream request can get dropped/canceled if the peer
+            // The send_message request can get dropped/canceled if the peer
             // connection is in the process of shutting down.
             .map_err(|_| PeerManagerError::NotConnected(self.peer_id))?
     }

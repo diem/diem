@@ -36,7 +36,7 @@ fn unexpected_token_error<'input>(tokens: &Lexer<'input>, expected: &str) -> Err
 // Miscellaneous Utilities
 //**************************************************************************************************
 
-fn make_loc(file: &'static str, start: usize, end: usize) -> Loc {
+pub fn make_loc(file: &'static str, start: usize, end: usize) -> Loc {
     Loc::new(
         file,
         Span::new(ByteIndex(start as u32), ByteIndex(end as u32)),
@@ -393,14 +393,43 @@ fn parse_lambda_bind_list<'input>(tokens: &mut Lexer<'input>) -> Result<BindList
 // Values
 //**************************************************************************************************
 
+// Parse a byte string:
+//      ByteString = <ByteStringValue>
+fn parse_byte_string<'input>(tokens: &mut Lexer<'input>) -> Result<Vec<u8>, Error> {
+    if tokens.peek() != Tok::ByteStringValue {
+        return Err(unexpected_token_error(tokens, "a byte string value"));
+    }
+    let start_loc = tokens.start_loc();
+    let s = tokens.content();
+    assert!(s.starts_with("x\""));
+    let mut hex_string = String::from(&s[2..s.len() - 1]);
+    if hex_string.len() % 2 != 0 {
+        hex_string.insert(0, '0');
+    }
+    tokens.advance()?;
+    match hex::decode(hex_string.as_str()) {
+        Ok(vec) => Ok(vec),
+        Err(hex::FromHexError::InvalidHexCharacter { c, index }) => {
+            let offset = start_loc + 1 + index;
+            let loc = make_loc(tokens.file_name(), offset, offset);
+            Err(vec![(
+                loc,
+                format!("Invalid hexadecimal character: '{}'", c),
+            )])
+        }
+        Err(_) => unreachable!("unexpected error parsing hex byte string value"),
+    }
+}
+
 // Parse a value:
 //      Value =
 //          <Address>
 //          | "true"
 //          | "false"
-//          | <U8>
-//          | <U64>
-//          | <U128>
+//          | <U8Value>
+//          | <U64Value>
+//          | <U128Value>
+//          | <ByteString>
 fn parse_value<'input>(tokens: &mut Lexer<'input>) -> Result<Value, Error> {
     let start_loc = tokens.start_loc();
     let val = match tokens.peek() {
@@ -442,6 +471,10 @@ fn parse_value<'input>(tokens: &mut Lexer<'input>) -> Result<Value, Error> {
             let i = u128::from_str(s).unwrap();
             tokens.advance()?;
             Value_::U128(i)
+        }
+        Tok::ByteStringValue => {
+            let byte_string = parse_byte_string(tokens)?;
+            Value_::Bytearray(byte_string)
         }
         _ => unreachable!("parse_value called with invalid token"),
     };
@@ -576,9 +609,12 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             }
         }
 
-        Tok::True | Tok::False | Tok::U8Value | Tok::U64Value | Tok::U128Value => {
-            Exp_::Value(parse_value(tokens)?)
-        }
+        Tok::True
+        | Tok::False
+        | Tok::U8Value
+        | Tok::U64Value
+        | Tok::U128Value
+        | Tok::ByteStringValue => Exp_::Value(parse_value(tokens)?),
 
         Tok::NumValue => {
             let i = match u128::from_str(tokens.content()) {

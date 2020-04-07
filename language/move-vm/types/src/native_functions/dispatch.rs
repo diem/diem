@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{hash, primitive_helpers, signature};
+use super::{hash, lcs, signature};
 use crate::{
     loaded_data::types::Type,
     values::{vector, Value},
@@ -19,7 +19,7 @@ use std::collections::VecDeque;
 use vm::{
     access::ModuleAccess,
     errors::VMResult,
-    file_format::{FunctionSignature, Kind, SignatureToken, StructHandleIndex},
+    file_format::{FunctionSignature, Kind, Signature, SignatureToken, StructHandleIndex},
     gas_schedule::{
         AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits, NativeCostIndex,
     },
@@ -92,10 +92,9 @@ macro_rules! decl_native_function_enum {
 decl_native_function_enum! {
     HashSha2_256 = (&CORE_CODE_ADDRESS, "Hash", "sha2_256"),
     HashSha3_256 = (&CORE_CODE_ADDRESS, "Hash", "sha3_256"),
+    LCSToBytes = (&CORE_CODE_ADDRESS, "LCS", "to_bytes"),
     SigED25519Verify = (&CORE_CODE_ADDRESS, "Signature", "ed25519_verify"),
     SigED25519ThresholdVerify = (&CORE_CODE_ADDRESS, "Signature", "ed25519_threshold_verify"),
-    AddrUtilToBytes = (&CORE_CODE_ADDRESS, "AddressUtil", "address_to_bytes"),
-    U64UtilToBytes = (&CORE_CODE_ADDRESS, "U64Util", "u64_to_bytes"),
     VectorLength = (&CORE_CODE_ADDRESS, "Vector", "length"),
     VectorEmpty = (&CORE_CODE_ADDRESS, "Vector", "empty"),
     VectorBorrow = (&CORE_CODE_ADDRESS, "Vector", "borrow"),
@@ -119,12 +118,11 @@ impl NativeFunction {
         match self {
             Self::HashSha2_256 => hash::native_sha2_256(t, v, c),
             Self::HashSha3_256 => hash::native_sha3_256(t, v, c),
+            Self::LCSToBytes => lcs::native_to_bytes(t, v, c),
             Self::SigED25519Verify => signature::native_ed25519_signature_verification(t, v, c),
             Self::SigED25519ThresholdVerify => {
                 signature::native_ed25519_threshold_signature_verification(t, v, c)
             }
-            Self::AddrUtilToBytes => primitive_helpers::native_address_to_bytes(t, v, c),
-            Self::U64UtilToBytes => primitive_helpers::native_u64_to_bytes(t, v, c),
             Self::VectorLength => vector::native_length(t, v, c),
             Self::VectorEmpty => vector::native_empty(t, v, c),
             Self::VectorBorrow => vector::native_borrow(t, v, c),
@@ -147,10 +145,9 @@ impl NativeFunction {
         match self {
             Self::HashSha2_256 => 1,
             Self::HashSha3_256 => 1,
+            Self::LCSToBytes => 1,
             Self::SigED25519Verify => 3,
             Self::SigED25519ThresholdVerify => 4,
-            Self::AddrUtilToBytes => 1,
-            Self::U64UtilToBytes => 1,
             Self::VectorLength => 1,
             Self::VectorEmpty => 0,
             Self::VectorBorrow => 2,
@@ -162,6 +159,27 @@ impl NativeFunction {
             Self::AccountWriteEvent => 3,
             Self::AccountSaveAccount => 3,
         }
+    }
+
+    pub fn parameters<T: ModuleAccess>(
+        self,
+        m: Option<&ModuleView<T>>,
+    ) -> VMResult<Option<Signature>> {
+        Ok(self.signature(m)?.map(|res| Signature(res.parameters)))
+    }
+
+    pub fn return_<T: ModuleAccess>(
+        self,
+        m: Option<&ModuleView<T>>,
+    ) -> VMResult<Option<Signature>> {
+        Ok(self.signature(m)?.map(|res| Signature(res.return_)))
+    }
+
+    pub fn type_parameters<T: ModuleAccess>(
+        self,
+        m: Option<&ModuleView<T>>,
+    ) -> VMResult<Option<Vec<Kind>>> {
+        Ok(self.signature(m)?.map(|res| res.type_parameters))
     }
 
     /// The signature as defined in it's declaring module.
@@ -182,7 +200,7 @@ impl NativeFunction {
             None => return Ok(None),
             Some(res) => res,
         };
-        if self.num_args() == res.arg_types.len() {
+        if self.num_args() == res.parameters.len() {
             Ok(Some(res))
         } else {
             Err(
@@ -203,15 +221,25 @@ impl NativeFunction {
             }};
             ($kinds:expr, $args:expr, $ret:expr) => {{
                 FunctionSignature {
-                    return_types: $ret,
-                    arg_types: $args,
-                    type_formals: $kinds,
+                    return_: $ret,
+                    parameters: $args,
+                    type_parameters: $kinds,
                 }
             }};
         }
         Some(match self {
             Self::HashSha2_256 => simple!(vec![Vector(Box::new(U8))], vec![Vector(Box::new(U8))]),
             Self::HashSha3_256 => simple!(vec![Vector(Box::new(U8))], vec![Vector(Box::new(U8))]),
+            Self::LCSToBytes => {
+                let type_parameters = vec![Kind::All];
+                let parameters = vec![Reference(Box::new(TypeParameter(0)))];
+                let return_ = vec![Vector(Box::new(U8))];
+                FunctionSignature {
+                    type_parameters,
+                    parameters,
+                    return_,
+                }
+            }
             Self::SigED25519Verify => simple!(
                 vec![
                     Vector(Box::new(U8)),
@@ -229,8 +257,6 @@ impl NativeFunction {
                 ],
                 vec![U64]
             ),
-            Self::AddrUtilToBytes => simple!(vec![Address], vec![Vector(Box::new(U8))]),
-            Self::U64UtilToBytes => simple!(vec![U64], vec![Vector(Box::new(U8))]),
             Self::VectorLength => simple!(
                 vec![Kind::All],
                 vec![Reference(Box::new(Vector(Box::new(TypeParameter(0)))))],
@@ -284,12 +310,12 @@ impl NativeFunction {
                 vec![]
             ),
             Self::AccountWriteEvent => simple!(
-                vec![Kind::Unrestricted],
+                vec![Kind::Copyable],
                 vec![Vector(Box::new(U8)), U64, TypeParameter(0)],
                 vec![]
             ),
             Self::AccountSaveAccount => {
-                let type_formals = vec![Kind::All];
+                let type_parameters = vec![Kind::All];
                 let self_t_idx = struct_handle_idx(
                     m?,
                     &CORE_CODE_ADDRESS,
@@ -302,16 +328,16 @@ impl NativeFunction {
                     account_module_name().as_str(),
                     account_balance_struct_name().as_str(),
                 )?;
-                let arg_types = vec![
-                    Struct(balance_t_idx, vec![TypeParameter(0)]),
-                    Struct(self_t_idx, vec![]),
+                let parameters = vec![
+                    StructInstantiation(balance_t_idx, vec![TypeParameter(0)]),
+                    Struct(self_t_idx),
                     Address,
                 ];
-                let return_types = vec![];
+                let return_ = vec![];
                 FunctionSignature {
-                    type_formals,
-                    arg_types,
-                    return_types,
+                    type_parameters,
+                    parameters,
+                    return_,
                 }
             }
         })
@@ -330,7 +356,7 @@ fn struct_handle_idx<T: ModuleAccess>(
             && handle.module_id().name().as_str() == module_name
             && handle.module_id().address() == module_address
         {
-            Some(StructHandleIndex::new(idx as u16))
+            Some(StructHandleIndex(idx as u16))
         } else {
             None
         }

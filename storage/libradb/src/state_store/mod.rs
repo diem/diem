@@ -110,6 +110,10 @@ impl StateStore {
         JellyfishMerkleTree::new(self).get_root_hash(version)
     }
 
+    pub fn get_root_hash_option(&self, version: Version) -> Result<Option<HashValue>> {
+        JellyfishMerkleTree::new(self).get_root_hash_option(version)
+    }
+
     /// Finds the rightmost leaf by scanning the entire DB.
     #[cfg(test)]
     pub fn get_rightmost_leaf_naive(&self) -> Result<Option<(NodeKey, LeafNode)>> {

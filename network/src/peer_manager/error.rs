@@ -3,14 +3,14 @@
 
 //! Errors that originate from the PeerManager module
 
-use futures::channel::oneshot;
+use futures::channel::{mpsc, oneshot};
 use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum PeerManagerError {
-    #[error("Error: {0}")]
+    #[error("Error: {0:?}")]
     Error(#[from] anyhow::Error),
 
     #[error("IO error: {0}")]
@@ -30,6 +30,12 @@ pub enum PeerManagerError {
 
     #[error("Sending end of oneshot dropped")]
     OneshotSenderDropped,
+
+    #[error("Failed to send on mpsc: {0}")]
+    MpscSendError(mpsc::SendError),
+
+    #[error("Serialization error {0}")]
+    LcsError(lcs::Error),
 }
 
 impl PeerManagerError {
@@ -41,5 +47,17 @@ impl PeerManagerError {
 impl From<oneshot::Canceled> for PeerManagerError {
     fn from(_: oneshot::Canceled) -> Self {
         PeerManagerError::OneshotSenderDropped
+    }
+}
+
+impl From<lcs::Error> for PeerManagerError {
+    fn from(e: lcs::Error) -> Self {
+        PeerManagerError::LcsError(e)
+    }
+}
+
+impl From<mpsc::SendError> for PeerManagerError {
+    fn from(e: mpsc::SendError) -> Self {
+        PeerManagerError::MpscSendError(e)
     }
 }

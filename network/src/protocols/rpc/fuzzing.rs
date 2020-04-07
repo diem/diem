@@ -2,21 +2,22 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    common::NegotiatedSubstream,
-    peer::PeerNotification,
-    protocols::rpc::{self, RpcNotification},
+    peer::{PeerHandle, PeerRequest},
+    protocols::{
+        rpc::{self, RpcNotification},
+        wire::messaging::v1::{NetworkMessage, RpcRequest, RpcResponse},
+    },
     ProtocolId,
 };
+use bytes::Bytes;
 use futures::{
     future::{self, FutureExt},
-    io::{AsyncReadExt, AsyncWriteExt},
     stream::StreamExt,
 };
 use libra_proptest_helpers::ValueGenerator;
 use libra_types::PeerId;
-use memsocket::MemorySocket;
 use proptest::{arbitrary::any, collection::vec, prop_oneof, strategy::Strategy};
-use std::{io, time::Duration};
+use std::{io, iter::FromIterator};
 use tokio::runtime;
 use tokio_util::codec::{Encoder, LengthDelimitedCodec};
 
@@ -28,7 +29,6 @@ const MAX_SMALL_MSG_BYTES: usize = 32;
 const MAX_MEDIUM_MSG_BYTES: usize = 280;
 
 const MOCK_PEER_ID: PeerId = PeerId::DEFAULT;
-const INBOUND_RPC_TIMEOUT: Duration = Duration::from_secs(30);
 const TEST_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
 
 #[test]
@@ -63,29 +63,58 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
 // Fuzz the inbound rpc protocol.
 pub fn fuzzer(data: &[u8]) {
     let (notification_tx, mut notification_rx) = channel::new_test(8);
-    let (mut dialer_substream, listener_substream) = MemorySocket::new_pair();
-    let listener_substream = NegotiatedSubstream {
-        protocol: TEST_PROTOCOL,
-        substream: listener_substream,
+    let (peer_reqs_tx, mut peer_reqs_rx) = channel::new_test(8);
+    let data = Vec::from(data);
+    let raw_request = Bytes::from_iter(data.into_iter());
+    let inbound_request = RpcRequest {
+        protocol_id: TEST_PROTOCOL,
+        request_id: 0,
+        priority: 0,
+        // write the fuzzer data into the in-memory substream
+        raw_request: raw_request.clone(),
     };
-    let peer_notif = PeerNotification::NewSubstream(MOCK_PEER_ID, listener_substream);
-
     // run the rpc inbound protocol using the in-memory substream
-    let f_handle_inbound =
-        rpc::handle_inbound_substream(notification_tx, peer_notif, INBOUND_RPC_TIMEOUT)
-            .map(|_| io::Result::Ok(()));
+    let f_handle_inbound = rpc::handle_inbound_request_inner(
+        notification_tx,
+        inbound_request,
+        PeerHandle::new(MOCK_PEER_ID, peer_reqs_tx),
+    )
+    .map(|_| io::Result::Ok(()));
 
     // mock the notification channel to echo the fuzzer data back to the dialer
     // as an rpc response
     let f_respond_inbound = async move {
-        if let Some(notif) = notification_rx.next().await {
-            match notif {
-                RpcNotification::RecvRpc(req) => {
-                    let protocol = req.protocol;
-                    let data = req.data;
-                    let res_tx = req.res_tx;
-                    assert_eq!(protocol, TEST_PROTOCOL);
-                    let _ = res_tx.send(Ok(data));
+        // Wait for notification from RPC actor about inbound RPC.
+        let notif = notification_rx.next().await.unwrap();
+        match notif {
+            RpcNotification::RecvRpc(req) => {
+                let protocol = req.protocol;
+                let data = req.data;
+                let res_tx = req.res_tx;
+                assert_eq!(protocol, TEST_PROTOCOL);
+                let _ = res_tx.send(Ok(data));
+            }
+        }
+
+        // Echo the fuzzer data back in RpcResponse.
+        let outbound_response = NetworkMessage::RpcResponse(RpcResponse {
+            request_id: 0,
+            priority: 0,
+            raw_response: raw_request.clone(),
+        });
+        if let Some(req) = peer_reqs_rx.next().await {
+            match req {
+                PeerRequest::SendMessage(response_message, protocol, res_tx) => {
+                    // when testing, we only run the fuzzer with well-formed inputs, so we
+                    // should successfully reach this point and read the same data back
+                    if cfg!(test) {
+                        assert_eq!(protocol, TEST_PROTOCOL);
+                        assert_eq!(response_message, outbound_response);
+                    }
+                    res_tx.send(Ok(())).unwrap();
+                }
+                _ => {
+                    panic!("unexpected peer request");
                 }
             }
         }
@@ -93,28 +122,7 @@ pub fn fuzzer(data: &[u8]) {
         io::Result::Ok(())
     };
 
-    // send the fuzzer data over the in-memory substream to the listener
-    let f_outbound = async move {
-        // write the fuzzer data into the in-memory substream
-        dialer_substream.write_all(data).await?;
-        dialer_substream.flush().await?;
-        // half-close the write-side
-        dialer_substream.close().await?;
-
-        // drain whatever bytes the listener sends us
-        let mut buf = Vec::new();
-        let _ = dialer_substream.read_to_end(&mut buf).await?;
-
-        // when testing, we only run the fuzzer with well-formed inputs, so we
-        // should successfully reach this point and read the same data back
-        if cfg!(test) {
-            assert_eq!(data, &*buf);
-        }
-
-        io::Result::Ok(())
-    };
-
-    let f = future::try_join3(f_handle_inbound, f_respond_inbound, f_outbound);
+    let f = future::try_join(f_handle_inbound, f_respond_inbound);
     // we need to use tokio runtime since Rpc uses tokio timers
     let res = runtime::Runtime::new().unwrap().block_on(f);
 

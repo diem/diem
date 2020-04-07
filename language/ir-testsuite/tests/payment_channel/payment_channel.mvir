@@ -1,9 +1,9 @@
 module PaymentChannel {
     import 0x0.Signature;
-import 0x0.LBR;
+    import 0x0.LBR;
+    import 0x0.LCS;
     import 0x0.Libra;
     import 0x0.LibraAccount;
-    import 0x0.U64Util;
     import 0x0.Vector;
 
     // This is the PaymentChannel resource
@@ -87,8 +87,8 @@ import 0x0.LBR;
             return false;
 	}
 
-        amt_to_transfer_bytes = U64Util.u64_to_bytes(move(amt_to_transfer));
-        new_seq_id_bytes = U64Util.u64_to_bytes(move(new_seq_id));
+        amt_to_transfer_bytes = LCS.to_bytes<u64>(&amt_to_transfer);
+        new_seq_id_bytes = LCS.to_bytes<u64>(&new_seq_id);
 
         message = move(amt_to_transfer_bytes);
         Vector.append<u8>(&mut message, move(new_seq_id_bytes));

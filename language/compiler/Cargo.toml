@@ -19,7 +19,7 @@ libra-types = { path = "../../types", version = "0.1.0" }
 move-ir-types = { path = "../move-ir/types", version = "0.1.0" }
 vm = { path = "../vm", version = "0.1.0" }
 structopt = "0.3.12"
-serde_json = "1.0.48"
+serde_json = "1.0.51"
 
 [features]
 default = []

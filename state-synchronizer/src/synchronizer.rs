@@ -16,12 +16,15 @@ use futures::{
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
 use libra_mempool::{CommitNotification, CommitResponse};
 use libra_types::{
-    contract_event::ContractEvent, event_subscription::EventSubscription,
+    contract_event::ContractEvent, event_subscription::ReconfigSubscription,
     ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
     validator_change::ValidatorChangeProof, waypoint::Waypoint,
 };
 use libra_vm::LibraVM;
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 use tokio::{
     runtime::{Builder, Runtime},
     time::timeout,
@@ -37,11 +40,11 @@ impl StateSynchronizer {
     pub fn bootstrap(
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
-        executor: Arc<Executor<LibraVM>>,
+        executor: Arc<Mutex<Executor<LibraVM>>>,
         config: &NodeConfig,
-        reconfig_event_subscriptions: Vec<Box<dyn EventSubscription>>,
+        reconfig_event_subscriptions: Vec<ReconfigSubscription>,
     ) -> Self {
-        let executor_proxy = ExecutorProxy::new(executor, config);
+        let executor_proxy = ExecutorProxy::new(executor, config, reconfig_event_subscriptions);
         Self::bootstrap_with_executor_proxy(
             network,
             state_sync_to_mempool_sender,
@@ -49,7 +52,6 @@ impl StateSynchronizer {
             config.base.waypoint,
             &config.state_sync,
             executor_proxy,
-            reconfig_event_subscriptions,
         )
     }
 
@@ -59,8 +61,7 @@ impl StateSynchronizer {
         role: RoleType,
         waypoint: Option<Waypoint>,
         state_sync_config: &StateSyncConfig,
-        executor_proxy: E,
-        reconfig_event_subscriptions: Vec<Box<dyn EventSubscription>>,
+        mut executor_proxy: E,
     ) -> Self {
         let mut runtime = Builder::new()
             .thread_name("state-sync-")
@@ -74,6 +75,12 @@ impl StateSynchronizer {
         let initial_state = runtime
             .block_on(executor_proxy.get_local_storage_state())
             .expect("[state sync] Start failure: cannot sync with storage.");
+
+        // initial read of on-chain configs
+        runtime
+            .block_on(executor_proxy.load_on_chain_configs())
+            .expect("[state sync] Failed initial read of on-chain configs");
+
         let coordinator = SyncCoordinator::new(
             coordinator_receiver,
             state_sync_to_mempool_sender,
@@ -82,7 +89,6 @@ impl StateSynchronizer {
             state_sync_config.clone(),
             executor_proxy,
             initial_state,
-            reconfig_event_subscriptions,
         );
         runtime.spawn(coordinator.start(network));
 

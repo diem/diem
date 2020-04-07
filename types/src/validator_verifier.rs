@@ -279,16 +279,19 @@ impl fmt::Display for ValidatorVerifier {
 
 impl From<&ValidatorSet> for ValidatorVerifier {
     fn from(validator_set: &ValidatorSet) -> Self {
-        ValidatorVerifier::new(validator_set.iter().fold(BTreeMap::new(), |mut map, key| {
-            map.insert(
-                key.account_address().clone(),
-                ValidatorConsensusInfo::new(
-                    key.consensus_public_key().clone(),
-                    key.consensus_voting_power(),
-                ),
-            );
-            map
-        }))
+        ValidatorVerifier::new(validator_set.payload().iter().fold(
+            BTreeMap::new(),
+            |mut map, key| {
+                map.insert(
+                    key.account_address().clone(),
+                    ValidatorConsensusInfo::new(
+                        key.consensus_public_key().clone(),
+                        key.consensus_voting_power(),
+                    ),
+                );
+                map
+            },
+        ))
     }
 }
 

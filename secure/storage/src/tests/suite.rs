@@ -3,7 +3,6 @@
 
 use crate::{Error, Policy, Storage, Value};
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Signature, Uniform};
-use rand::{rngs::StdRng, SeedableRng};
 
 /// This suite contains tests for secure storage backends. We test the correct functionality
 /// of both key/value and cryptographic operations for storage implementations. All storage backend
@@ -18,7 +17,6 @@ const STORAGE_TESTS: &[fn(&mut dyn Storage)] = &[
     test_create_and_get_non_existent_version,
     test_create_rotate_and_check_key_pair,
     test_create_key_pair_and_perform_rotations,
-    test_create_key_pair_and_perform_get_set_get,
     test_create_sign_rotate_sign,
     test_create_get_and_test_key_pair,
     test_create_get_set_unwrap,
@@ -28,14 +26,14 @@ const STORAGE_TESTS: &[fn(&mut dyn Storage)] = &[
     test_get_set_non_existent,
     test_get_uncreated_key_pair,
     test_hash_value,
-    test_timestamp,
+    test_incremental_timestamp,
     test_verify_incorrect_value_types_unwrap,
 ];
 
 /// Storage data constants for testing purposes.
-const CRYPTO_KEY: &str = "Private Key";
-const U64_KEY: &str = "U64 Key";
-const CRYPTO_NAME: &str = "Test Key Name";
+const CRYPTO_KEY: &str = "Private_Key";
+const U64_KEY: &str = "U64_Key";
+const CRYPTO_NAME: &str = "Test_Key_Name";
 
 /// Executes all storage tests on a given storage backend.
 pub fn execute_all_storage_tests(storage: &mut dyn Storage) {
@@ -50,7 +48,7 @@ pub fn execute_all_storage_tests(storage: &mut dyn Storage) {
 /// This test tries to get and set non-existent keys in storage and asserts that the correct
 /// errors are returned on these operations.
 fn test_get_set_non_existent(storage: &mut dyn Storage) {
-    let crypto_value = Value::Ed25519PrivateKey(create_ed25519_key_for_testing());
+    let crypto_value = Value::Ed25519PrivateKey(Ed25519PrivateKey::generate_for_testing());
     let u64_value = Value::U64(10);
 
     assert_eq!(
@@ -74,8 +72,8 @@ fn test_get_set_non_existent(storage: &mut dyn Storage) {
 /// This test stores various key/value pairs in storage, updates them, retrieves the values and
 /// unwraps them to ensure the correct value types are returned.
 fn test_create_get_set_unwrap(storage: &mut dyn Storage) {
-    let crypto_private_1 = create_ed25519_key_for_testing();
-    let crypto_private_2 = create_ed25519_key_for_testing();
+    let crypto_private_1 = Ed25519PrivateKey::generate_for_testing();
+    let crypto_private_2 = Ed25519PrivateKey::generate_for_testing();
     let u64_1 = 10;
     let u64_2 = 647;
     let policy = Policy::public();
@@ -126,7 +124,7 @@ fn test_create_get_set_unwrap(storage: &mut dyn Storage) {
 /// This test stores different types of values into storage, retrieves them, and asserts
 /// that the value unwrap functions return an unexpected type error on an incorrect unwrap.
 fn test_verify_incorrect_value_types_unwrap(storage: &mut dyn Storage) {
-    let crypto_value = Value::Ed25519PrivateKey(create_ed25519_key_for_testing());
+    let crypto_value = Value::Ed25519PrivateKey(Ed25519PrivateKey::generate_for_testing());
     let u64_value = Value::U64(10);
     let policy = Policy::public();
 
@@ -173,7 +171,7 @@ fn test_create_key_value_twice(storage: &mut dyn Storage) {
 /// retrieval call.
 fn test_create_get_and_test_key_pair(storage: &mut dyn Storage) {
     let public_key = storage
-        .generate_new_key(CRYPTO_NAME, &Policy::public())
+        .create_key(CRYPTO_NAME, &Policy::public())
         .expect("Failed to create a test Ed25519 key pair!");
     let retrieved_public_key_response = storage
         .get_public_key(CRYPTO_NAME)
@@ -186,10 +184,10 @@ fn test_create_get_and_test_key_pair(storage: &mut dyn Storage) {
 fn test_create_key_pair_twice(storage: &mut dyn Storage) {
     let policy = Policy::public();
     let _ = storage
-        .generate_new_key(CRYPTO_NAME, &policy)
+        .create_key(CRYPTO_NAME, &policy)
         .expect("Failed to create a test Ed25519 key pair!");
     assert!(
-        storage.generate_new_key(CRYPTO_NAME, &policy).is_err(),
+        storage.create_key(CRYPTO_NAME, &policy).is_err(),
         "The second call to generate_ed25519_key_pair() should have failed!"
     );
 }
@@ -235,13 +233,13 @@ fn test_ensure_storage_is_available(storage: &mut dyn Storage) {
 fn test_create_and_get_non_existent_version(storage: &mut dyn Storage) {
     // Create new named key pair
     let _ = storage
-        .generate_new_key(CRYPTO_NAME, &Policy::public())
+        .create_key(CRYPTO_NAME, &Policy::public())
         .expect("Failed to create a test Ed25519 key pair!");
 
     // Get a non-existent version of the new key pair and verify failure
-    let non_existent_public_key = create_ed25519_key_for_testing().public_key();
+    let non_existent_public_key = Ed25519PrivateKey::generate_for_testing().public_key();
     assert!(
-        storage.get_private_key_for_version(CRYPTO_NAME, non_existent_public_key).is_err(),
+        storage.export_private_key_for_version(CRYPTO_NAME, non_existent_public_key).is_err(),
         "We have tried to retrieve a non-existent private key version -- the call should have failed!",
     );
 }
@@ -251,19 +249,19 @@ fn test_create_and_get_non_existent_version(storage: &mut dyn Storage) {
 fn test_create_rotate_and_check_key_pair(storage: &mut dyn Storage) {
     // Create new key pair, fetch both public and private keys and verify relationship
     let public_key = storage
-        .generate_new_key(CRYPTO_NAME, &Policy::public())
+        .create_key(CRYPTO_NAME, &Policy::public())
         .expect("Failed to create a test Ed25519 key pair!");
     let private_key = storage
-        .get_private_key(CRYPTO_NAME)
+        .export_private_key(CRYPTO_NAME)
         .expect("Failed to get the private key for a key pair that should exist!");
     assert_eq!(private_key.public_key(), public_key);
 
     // Rotate key pair, fetch new public and private keys and verify relationship
     let new_public_key = storage
-        .rotate_key_pair(CRYPTO_NAME)
+        .rotate_key(CRYPTO_NAME)
         .expect("Failed to rotate a valid key pair!");
     let new_private_key = storage
-        .get_private_key(CRYPTO_NAME)
+        .export_private_key(CRYPTO_NAME)
         .expect("Failed to get the private key for the rotated key pair!");
     assert_eq!(new_private_key.public_key(), new_public_key);
 
@@ -277,7 +275,7 @@ fn test_create_rotate_and_check_key_pair(storage: &mut dyn Storage) {
     );
     assert_eq!(
         storage
-            .get_private_key_for_version(CRYPTO_NAME, public_key)
+            .export_private_key_for_version(CRYPTO_NAME, public_key)
             .expect("Failed to get the previous private key!"),
         private_key
     );
@@ -289,23 +287,23 @@ fn test_create_key_pair_and_perform_rotations(storage: &mut dyn Storage) {
     let num_rotations = 10;
 
     let mut public_key = storage
-        .generate_new_key(CRYPTO_NAME, &Policy::public())
+        .create_key(CRYPTO_NAME, &Policy::public())
         .expect("Failed to create a test Ed25519 key pair!");
     let mut private_key = storage
-        .get_private_key(CRYPTO_NAME)
+        .export_private_key(CRYPTO_NAME)
         .expect("Failed to get the private key for a key pair that should exist!");
 
     for _ in 0..num_rotations {
         let new_public_key = storage
-            .rotate_key_pair(CRYPTO_NAME)
+            .rotate_key(CRYPTO_NAME)
             .expect("Failed to rotate a valid key pair!");
         let new_private_key = storage
-            .get_private_key(CRYPTO_NAME)
+            .export_private_key(CRYPTO_NAME)
             .expect("Failed to get the private key for the rotated key pair!");
 
         assert_eq!(
             storage
-                .get_private_key_for_version(CRYPTO_NAME, public_key)
+                .export_private_key_for_version(CRYPTO_NAME, public_key)
                 .expect("Failed to get the previous private key!"),
             private_key
         );
@@ -315,55 +313,13 @@ fn test_create_key_pair_and_perform_rotations(storage: &mut dyn Storage) {
     }
 }
 
-/// This test creates a new key pair and performs: (i) a get operation on the key pair name,
-/// to verify the correct key is returned; (ii) a set operation on the key pair name, to update
-/// the key pair directly; and (iii) a get operation to verify the newly stored value.
-/// This test helps ensure consistency between the K/V api and the cryptographic API.
-fn test_create_key_pair_and_perform_get_set_get(storage: &mut dyn Storage) {
-    let _ = storage
-        .generate_new_key(CRYPTO_NAME, &Policy::public())
-        .expect("Failed to create a test Ed25519 key pair!");
-    let private_key = storage
-        .get_private_key(CRYPTO_NAME)
-        .expect("Failed to get the private key for a key pair that should exist!");
-
-    // Verify we can retrieve and unwrap the private key directly, via the K/V api
-    assert_eq!(
-        storage
-            .get(CRYPTO_NAME)
-            .expect("Failed to get the new private key!")
-            .value
-            .ed25519_private_key()
-            .unwrap(),
-        private_key,
-    );
-
-    // Set a new private key directly, and verify the same key is returned for the following get
-    let new_private_key = create_ed25519_key_for_testing();
-    storage
-        .set(
-            CRYPTO_NAME,
-            Value::Ed25519PrivateKey(new_private_key.clone()),
-        )
-        .expect("Failed to set the private key directly");
-    assert_eq!(
-        storage
-            .get(CRYPTO_NAME)
-            .expect("Failed to get the newly set private key!")
-            .value
-            .ed25519_private_key()
-            .unwrap(),
-        new_private_key,
-    );
-}
-
 /// This test creates a new key pair, signs a message using the key pair, rotates the key pair,
 /// re-signs the message using the previous key pair version, and asserts the same signature is
 /// produced.
 fn test_create_sign_rotate_sign(storage: &mut dyn Storage) {
     // Generate new key pair
     let public_key = storage
-        .generate_new_key(CRYPTO_NAME, &Policy::public())
+        .create_key(CRYPTO_NAME, &Policy::public())
         .expect("Failed to create a test Ed25519 key pair!");
 
     // Create then sign message and verify correct signature
@@ -372,7 +328,7 @@ fn test_create_sign_rotate_sign(storage: &mut dyn Storage) {
     assert!(message_signature.verify(&message, &public_key).is_ok());
 
     // Rotate the key pair and sign the message again using the previous key pair version
-    let _ = storage.rotate_key_pair(CRYPTO_NAME).unwrap();
+    let _ = storage.rotate_key(CRYPTO_NAME).unwrap();
     let message_signature_previous = storage
         .sign_message_using_version(CRYPTO_NAME, public_key, &message)
         .unwrap();
@@ -381,13 +337,8 @@ fn test_create_sign_rotate_sign(storage: &mut dyn Storage) {
     assert_eq!(message_signature, message_signature_previous);
 }
 
-fn create_ed25519_key_for_testing() -> Ed25519PrivateKey {
-    let mut rng = StdRng::from_seed([13u8; 32]);
-    Ed25519PrivateKey::generate_for_testing(&mut rng)
-}
-
 /// This test verifies that timestamps increase with successive writes
-fn test_timestamp(storage: &mut dyn Storage) {
+fn test_incremental_timestamp(storage: &mut dyn Storage) {
     let key = "timestamp_u64";
     let value0 = 442;
     let value1 = 450;
@@ -399,6 +350,6 @@ fn test_timestamp(storage: &mut dyn Storage) {
     storage.set(key, Value::U64(value1)).unwrap();
     let second = storage.get(key).unwrap();
 
-    assert!(first.value != second.value);
-    assert!(first.last_update != second.last_update);
+    assert_ne!(first.value, second.value);
+    assert!(first.last_update < second.last_update);
 }

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Policy, Storage, Value};
+use libra_secure_time::{RealTimeService, TimeService};
 use std::collections::HashMap;
 
 /// InMemoryStorage represents a key value store that is purely in memory and intended for single
@@ -10,25 +11,35 @@ use std::collections::HashMap;
 /// Internally, it retains all data, which means that it must make copies of all key material which
 /// violates the Libra code base. It violates it because the anticipation is that data stores would
 /// securely handle key material. This should not be used in production.
+pub type InMemoryStorage = InMemoryStorageInternal<RealTimeService>;
+
 #[derive(Default)]
-pub struct InMemoryStorage {
+pub struct InMemoryStorageInternal<T> {
     data: HashMap<String, GetResponse>,
+    time_service: T,
 }
 
-impl InMemoryStorage {
+impl InMemoryStorageInternal<RealTimeService> {
     pub fn new() -> Self {
-        Self {
-            data: HashMap::new(),
-        }
+        Self::new_with_time_service(RealTimeService::new())
     }
 
     /// Public convenience function to return a new InMemoryStorage based Storage.
     pub fn new_storage() -> Box<dyn Storage> {
-        Box::new(InMemoryStorage::new())
+        Box::new(Self::new())
     }
 }
 
-impl KVStorage for InMemoryStorage {
+impl<T: TimeService> InMemoryStorageInternal<T> {
+    pub fn new_with_time_service(time_service: T) -> Self {
+        Self {
+            data: HashMap::new(),
+            time_service,
+        }
+    }
+}
+
+impl<T: Send + Sync + TimeService> KVStorage for InMemoryStorageInternal<T> {
     fn available(&self) -> bool {
         true
     }
@@ -37,7 +48,11 @@ impl KVStorage for InMemoryStorage {
         if self.data.contains_key(key) {
             return Err(Error::KeyAlreadyExists(key.to_string()));
         }
-        self.data.insert(key.to_string(), GetResponse::new(value));
+
+        self.data.insert(
+            key.to_string(),
+            GetResponse::new(value, self.time_service.now()),
+        );
         Ok(())
     }
 
@@ -66,7 +81,10 @@ impl KVStorage for InMemoryStorage {
         if !self.data.contains_key(key) {
             return Err(Error::KeyNotSet(key.to_string()));
         }
-        self.data.insert(key.to_string(), GetResponse::new(value));
+        self.data.insert(
+            key.to_string(),
+            GetResponse::new(value, self.time_service.now()),
+        );
         Ok(())
     }
 
@@ -76,4 +94,4 @@ impl KVStorage for InMemoryStorage {
     }
 }
 
-impl CryptoKVStorage for InMemoryStorage {}
+impl<T: TimeService + Send + Sync> CryptoKVStorage for InMemoryStorageInternal<T> {}

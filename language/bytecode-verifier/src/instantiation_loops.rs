@@ -24,7 +24,7 @@ use vm::{
     access::ModuleAccess,
     file_format::{
         Bytecode, CompiledModule, FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex,
-        LocalsSignatureIndex, SignatureToken, TypeParameterIndex,
+        SignatureIndex, SignatureToken, TypeParameterIndex,
     },
 };
 
@@ -98,20 +98,20 @@ impl<'a> InstantiationLoopChecker<'a> {
 
     /// Helper function that extracts type parameters from a given type.
     /// Duplicated entries are removed.
-    fn extract_type_parameters(ty: &SignatureToken) -> HashSet<TypeParameterIndex> {
+    fn extract_type_parameters(&self, ty: &SignatureToken) -> HashSet<TypeParameterIndex> {
         use SignatureToken::*;
 
         let mut type_params = HashSet::new();
 
         fn rec(type_params: &mut HashSet<TypeParameterIndex>, ty: &SignatureToken) {
             match ty {
-                Bool | Address | U8 | U64 | U128 => (),
+                Bool | Address | U8 | U64 | U128 | Struct(_) => (),
                 TypeParameter(idx) => {
                     type_params.insert(*idx);
                 }
                 Vector(ty) => rec(type_params, ty),
                 Reference(ty) | MutableReference(ty) => rec(type_params, ty),
-                Struct(_, tys) => {
+                StructInstantiation(_, tys) => {
                     for ty in tys {
                         rec(type_params, ty);
                     }
@@ -137,9 +137,9 @@ impl<'a> InstantiationLoopChecker<'a> {
         &mut self,
         caller_idx: FunctionDefinitionIndex,
         callee_idx: FunctionDefinitionIndex,
-        type_actuals_idx: LocalsSignatureIndex,
+        type_actuals_idx: SignatureIndex,
     ) {
-        let type_actuals = &self.module.locals_signature_at(type_actuals_idx).0;
+        let type_actuals = &self.module.signature_at(type_actuals_idx).0;
 
         for (formal_idx, ty) in type_actuals.iter().enumerate() {
             let formal_idx = formal_idx as TypeParameterIndex;
@@ -150,7 +150,7 @@ impl<'a> InstantiationLoopChecker<'a> {
                     Edge::Identity,
                 ),
                 _ => {
-                    for type_param in Self::extract_type_parameters(ty) {
+                    for type_param in self.extract_type_parameters(ty) {
                         self.add_edge(
                             Node(caller_idx, type_param),
                             Node(callee_idx, formal_idx),
@@ -170,13 +170,14 @@ impl<'a> InstantiationLoopChecker<'a> {
         caller_def: &FunctionDefinition,
     ) {
         for instr in &caller_def.code.code {
-            if let Bytecode::Call(callee_handle_idx, type_actuals_idx) = instr {
+            if let Bytecode::CallGeneric(callee_inst_idx) = instr {
                 // Get the id of the definition of the function being called.
                 // Skip if the function is not defined in the current module, as we do not
                 // have mutual recursions across module boundaries.
-                if let Some(callee_idx) = self.func_handle_def_map.get(&callee_handle_idx) {
+                let callee_si = self.module.function_instantiation_at(*callee_inst_idx);
+                if let Some(callee_idx) = self.func_handle_def_map.get(&callee_si.handle) {
                     let callee_idx = *callee_idx;
-                    self.build_graph_call(caller_idx, callee_idx, *type_actuals_idx)
+                    self.build_graph_call(caller_idx, callee_idx, callee_si.type_parameters)
                 }
             }
         }

@@ -5,12 +5,11 @@ use crate::{cargo::Cargo, Result};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
-pub fn project_root() -> PathBuf {
+pub fn project_root() -> &'static Path {
     Path::new(&env!("CARGO_MANIFEST_DIR"))
         .ancestors()
         .nth(1)
         .unwrap()
-        .to_path_buf()
 }
 
 pub fn locate_project() -> Result<PathBuf> {

@@ -5,7 +5,8 @@ data "template_file" "prometheus_yml" {
     workspace             = terraform.workspace
     validators            = join(",", formatlist("%s:%s", aws_instance.validator.*.private_ip, range(var.num_validators)))
     fullnodes             = join(",", formatlist("%s:%s", aws_instance.fullnode.*.private_ip, range(var.num_fullnodes)))
-    other_nodes           = join(",", ["${aws_instance.monitoring.private_ip}:monitoring", "${aws_instance.faucet.private_ip}:faucet"])
+    other_nodes           = join(",", ["${aws_instance.monitoring.private_ip}:monitoring", "${aws_instance.faucet.private_ip}:faucet", "${aws_instance.vault.private_ip}:vault"])
+    vault_ip              = aws_instance.vault.private_ip
     monitoring_private_ip = aws_instance.monitoring.private_ip
   }
 }
@@ -186,6 +187,7 @@ data "template_file" "ecs_monitoring_definition" {
 
   vars = {
     prometheus_image   = "prom/prometheus:v2.9.2"
+    pushgateway_image  = "prom/pushgateway:v1.2.0"
     alertmanager_image = "prom/alertmanager:v0.17.0"
     grafana_image      = "grafana/grafana:latest"
   }

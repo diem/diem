@@ -2,21 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{ensure, format_err, Result};
-use executor_utils::create_storage_service_and_executor;
-use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey};
+use executor_utils::{
+    create_storage_service_and_executor,
+    test_helpers::{
+        gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
+    },
+};
+use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey, Uniform};
 use libra_types::{
     access_path::AccessPath,
-    account_address::AccountAddress,
-    account_config::{association_address, AccountResource},
+    account_config::{association_address, lbr_type_tag, AccountResource},
     account_state::AccountState,
     account_state_blob::AccountStateWithProof,
-    block_info::BlockInfo,
-    block_metadata::BlockMetadata,
     discovery_set::{DISCOVERY_SET_CHANGE_EVENT_PATH, GLOBAL_DISCOVERY_SET_CHANGE_EVENT_PATH},
     get_with_proof::{verify_update_to_latest_ledger_response, RequestItem},
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::VMPublishingOption,
-    test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{
         authenticator::AuthenticationKey, Script, Transaction, TransactionListWithProof,
         TransactionWithProof,
@@ -24,62 +24,20 @@ use libra_types::{
     trusted_state::TrustedState,
 };
 use rand::SeedableRng;
-use std::{collections::BTreeMap, convert::TryFrom, sync::Arc};
+use std::{convert::TryFrom, sync::Arc};
+use stdlib::transaction_scripts::StdlibScript;
 use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::Runtime;
 use transaction_builder::{
-    encode_block_prologue_script, encode_create_account_script,
+    encode_block_prologue_script, encode_create_account_script, encode_publishing_option_script,
     encode_rotate_consensus_pubkey_script, encode_transfer_script,
 };
-
-fn gen_block_id(index: u8) -> HashValue {
-    HashValue::new([index; HashValue::LENGTH])
-}
-
-fn gen_ledger_info_with_sigs(
-    version: u64,
-    root_hash: HashValue,
-    commit_block_id: HashValue,
-) -> LedgerInfoWithSignatures {
-    let ledger_info = LedgerInfo::new(
-        BlockInfo::new(0, 0, commit_block_id, root_hash, version, 0, None),
-        HashValue::zero(),
-    );
-    LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new())
-}
-
-fn gen_block_metadata(index: u8, proposer: AccountAddress) -> BlockMetadata {
-    BlockMetadata::new(
-        gen_block_id(index),
-        index as u64,
-        index as u64,
-        vec![],
-        proposer,
-    )
-}
-
-fn get_test_signed_transaction(
-    sender: AccountAddress,
-    sequence_number: u64,
-    private_key: Ed25519PrivateKey,
-    public_key: Ed25519PublicKey,
-    program: Option<Script>,
-) -> Transaction {
-    Transaction::UserTransaction(get_test_signed_txn(
-        sender,
-        sequence_number,
-        &private_key,
-        public_key,
-        program,
-    ))
-}
 
 #[test]
 fn test_genesis() {
     let mut rt = Runtime::new().unwrap();
     let (config, _genesis_key) = config_builder::test_config();
-    let (_storage_server_handle, _executor, mut _committed_trees) =
-        create_storage_service_and_executor(&config);
+    let (_storage_server_handle, _executor) = create_storage_service_and_executor(&config);
 
     let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
 
@@ -152,8 +110,8 @@ fn test_reconfiguration() {
         test_config.publishing_option = Some(VMPublishingOption::CustomScripts);
     }
 
-    let (_storage_server_handle, executor, committed_trees) =
-        create_storage_service_and_executor(&config);
+    let (_storage_server_handle, mut executor) = create_storage_service_and_executor(&config);
+    let parent_block_id = executor.committed_block_id();
 
     let genesis_account = association_address();
     let network_config = config.validator_network.as_ref().unwrap();
@@ -181,6 +139,7 @@ fn test_reconfiguration() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_transfer_script(
+            lbr_type_tag(),
             &validator_account,
             validator_auth_key_prefix,
             1_000_000,
@@ -190,8 +149,7 @@ fn test_reconfiguration() {
     let txn2 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
 
     // rotate the validator's connsensus pubkey to trigger a reconfiguration
-    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
-    let (_, new_pubkey) = compat::generate_keypair(&mut rng);
+    let new_pubkey = Ed25519PrivateKey::generate_for_testing().public_key();
     let txn3 = get_test_signed_transaction(
         validator_account,
         /* sequence_number = */ 0,
@@ -201,19 +159,15 @@ fn test_reconfiguration() {
             new_pubkey.to_bytes().to_vec(),
         )),
     );
+
     let txn_block = vec![txn1, txn2, txn3];
     let vm_output = executor
-        .execute_block(
-            HashValue::zero(),
-            txn_block,
-            &committed_trees,
-            &committed_trees,
-        )
+        .execute_block((HashValue::random(), txn_block), parent_block_id)
         .unwrap();
 
     // Make sure the execution result sees the reconfiguration
     assert!(
-        vm_output.state_compute_result().has_reconfiguration(),
+        vm_output.has_reconfiguration(),
         "StateComputeResult is missing the new validator set"
     );
 
@@ -230,16 +184,11 @@ fn test_reconfiguration() {
     );
     let txn_block = vec![txn4, txn5];
     let output = executor
-        .execute_block(
-            HashValue::zero(),
-            txn_block,
-            &committed_trees,
-            &committed_trees,
-        )
+        .execute_block((HashValue::random(), txn_block), parent_block_id)
         .unwrap();
 
     assert!(
-        !output.state_compute_result().has_reconfiguration(),
+        !output.has_reconfiguration(),
         "StateComputeResult has a new validator set, but should not"
     );
 
@@ -248,11 +197,500 @@ fn test_reconfiguration() {
 }
 
 #[test]
+fn test_change_publishing_option_to_custom() {
+    // Publishing Option is set to locked at genesis.
+    let mut rt = Runtime::new().unwrap();
+    let (mut config, genesis_key) = config_builder::test_config();
+
+    let (_storage_server_handle, mut executor) = create_storage_service_and_executor(&config);
+    let parent_block_id = executor.committed_block_id();
+    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
+
+    let genesis_account = association_address();
+    let network_config = config.validator_network.as_ref().unwrap();
+    let validator_account = network_config.peer_id;
+    let keys = config
+        .test
+        .as_mut()
+        .unwrap()
+        .account_keypair
+        .as_mut()
+        .unwrap();
+
+    let validator_privkey = keys.take_private().unwrap();
+    let validator_pubkey = keys.public().clone();
+    let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
+    let validator_auth_key_prefix = auth_key.prefix().to_vec();
+    assert!(
+        auth_key.derived_address() == validator_account,
+        "Address derived from validator auth key does not match validator account address"
+    );
+
+    // give the validator some money so they can send a tx
+    let txn1 = get_test_signed_transaction(
+        genesis_account,
+        /* sequence_number = */ 1,
+        genesis_key.clone(),
+        genesis_key.public_key(),
+        Some(encode_transfer_script(
+            lbr_type_tag(),
+            &validator_account,
+            validator_auth_key_prefix,
+            1_000_000,
+        )),
+    );
+
+    let script1 = Script::new(vec![], vec![], vec![]);
+    let script2 = Script::new(vec![1], vec![], vec![]);
+
+    // Create a transaction that is not allowed with default publishing option and make sure it is
+    // rejected.
+    let txn2 = get_test_signed_transaction(
+        validator_account,
+        /* sequence_number = */ 0,
+        validator_privkey.clone(),
+        validator_pubkey.clone(),
+        Some(script1.clone()),
+    );
+
+    let txn3 = get_test_signed_transaction(
+        validator_account,
+        /* sequence_number = */ 0,
+        validator_privkey.clone(),
+        validator_pubkey.clone(),
+        Some(script2.clone()),
+    );
+
+    // Create a dummy block prologue transaction that will bump the timer.
+    let txn4 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
+
+    let txn5 = get_test_signed_transaction(
+        genesis_account,
+        /* sequence_number = */ 2,
+        genesis_key.clone(),
+        genesis_key.public_key(),
+        Some(encode_publishing_option_script(
+            VMPublishingOption::CustomScripts,
+        )),
+    );
+
+    let block1_id = gen_block_id(1);
+    let block1 = vec![txn1, txn2, txn3, txn4, txn5];
+    let output1 = executor
+        .execute_block((block1_id, block1.clone()), parent_block_id)
+        .unwrap();
+
+    assert!(
+        output1.has_reconfiguration(),
+        "StateComputeResult has a new validator set"
+    );
+
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(3, output1.root_hash(), block1_id);
+    let (_, reconfig_events) = executor
+        .commit_blocks(vec![block1_id], ledger_info_with_sigs)
+        .unwrap();
+    assert!(
+        !reconfig_events.is_empty(),
+        "executor commit should return reconfig events for reconfiguration"
+    );
+
+    let request_items = vec![
+        RequestItem::GetAccountTransactionBySequenceNumber {
+            account: genesis_account,
+            sequence_number: 1,
+            fetch_events: false,
+        },
+        RequestItem::GetAccountTransactionBySequenceNumber {
+            account: validator_account,
+            sequence_number: 0,
+            fetch_events: false,
+        },
+    ];
+
+    let (
+        mut response_items,
+        ledger_info_with_sigs,
+        validator_change_proof,
+        _ledger_consistency_proof,
+    ) = rt
+        .block_on(
+            storage_read_client.update_to_latest_ledger(
+                /* client_known_version = */ 0,
+                request_items.clone(),
+            ),
+        )
+        .unwrap();
+    let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
+    verify_update_to_latest_ledger_response(
+        &trusted_state,
+        0,
+        &request_items,
+        &response_items,
+        &ledger_info_with_sigs,
+        &validator_change_proof,
+    )
+    .unwrap();
+    response_items.reverse();
+
+    // Transaction 1 is committed as it's in the whitelist
+    let (t1, _) = response_items
+        .pop()
+        .unwrap()
+        .into_get_account_txn_by_seq_num_response()
+        .unwrap();
+    verify_committed_txn_status(t1.as_ref(), &block1[0]).unwrap();
+
+    // Transaction 2, 3 are rejected
+    let (t2, _) = response_items
+        .pop()
+        .unwrap()
+        .into_get_account_txn_by_seq_num_response()
+        .unwrap();
+    assert!(t2.is_none());
+
+    // Now that the PublishingOption is modified to CustomScript, we can resubmit the script again.
+
+    let txn2 = get_test_signed_transaction(
+        validator_account,
+        /* sequence_number = */ 0,
+        validator_privkey.clone(),
+        validator_pubkey.clone(),
+        Some(script1),
+    );
+
+    let txn3 = get_test_signed_transaction(
+        validator_account,
+        /* sequence_number = */ 1,
+        validator_privkey,
+        validator_pubkey,
+        Some(script2),
+    );
+
+    let block2_id = gen_block_id(2);
+    let block2 = vec![txn2, txn3];
+    let output2 = executor
+        .execute_block((block2_id, block2.clone()), block1_id)
+        .unwrap();
+
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(5, output2.root_hash(), block2_id);
+    let (_, reconfig_events) = executor
+        .commit_blocks(vec![block2_id], ledger_info_with_sigs)
+        .unwrap();
+    assert!(
+        reconfig_events.is_empty(),
+        "expect executor to reutrn no reconfig events"
+    );
+
+    let request_items = vec![
+        RequestItem::GetAccountTransactionBySequenceNumber {
+            account: validator_account,
+            sequence_number: 0,
+            fetch_events: false,
+        },
+        RequestItem::GetAccountTransactionBySequenceNumber {
+            account: validator_account,
+            sequence_number: 1,
+            fetch_events: false,
+        },
+    ];
+
+    let (
+        mut response_items,
+        ledger_info_with_sigs,
+        validator_change_proof,
+        _ledger_consistency_proof,
+    ) = rt
+        .block_on(
+            storage_read_client.update_to_latest_ledger(
+                /* client_known_version = */ 0,
+                request_items.clone(),
+            ),
+        )
+        .unwrap();
+    let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
+    verify_update_to_latest_ledger_response(
+        &trusted_state,
+        0,
+        &request_items,
+        &response_items,
+        &ledger_info_with_sigs,
+        &validator_change_proof,
+    )
+    .unwrap();
+    response_items.reverse();
+
+    // Transaction 2 is committed.
+    let (t1, _) = response_items
+        .pop()
+        .unwrap()
+        .into_get_account_txn_by_seq_num_response()
+        .unwrap();
+    verify_committed_txn_status(t1.as_ref(), &block2[0]).unwrap();
+
+    // Transaction 3 is committed.
+    let (t2, _) = response_items
+        .pop()
+        .unwrap()
+        .into_get_account_txn_by_seq_num_response()
+        .unwrap();
+    verify_committed_txn_status(t2.as_ref(), &block2[1]).unwrap();
+}
+
+#[test]
+fn test_extend_whitelist() {
+    // Publishing Option is set to locked at genesis.
+    let mut rt = Runtime::new().unwrap();
+    let (mut config, genesis_key) = config_builder::test_config();
+
+    let (_storage_server_handle, mut executor) = create_storage_service_and_executor(&config);
+    let parent_block_id = executor.committed_block_id();
+
+    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
+
+    let genesis_account = association_address();
+    let network_config = config.validator_network.as_ref().unwrap();
+    let validator_account = network_config.peer_id;
+    let keys = config
+        .test
+        .as_mut()
+        .unwrap()
+        .account_keypair
+        .as_mut()
+        .unwrap();
+
+    let validator_privkey = keys.take_private().unwrap();
+    let validator_pubkey = keys.public().clone();
+    let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
+    let validator_auth_key_prefix = auth_key.prefix().to_vec();
+    assert!(
+        auth_key.derived_address() == validator_account,
+        "Address derived from validator auth key does not match validator account address"
+    );
+
+    // give the validator some money so they can send a tx
+    let txn1 = get_test_signed_transaction(
+        genesis_account,
+        /* sequence_number = */ 1,
+        genesis_key.clone(),
+        genesis_key.public_key(),
+        Some(encode_transfer_script(
+            lbr_type_tag(),
+            &validator_account,
+            validator_auth_key_prefix,
+            1_000_000,
+        )),
+    );
+
+    let script1 = Script::new(vec![], vec![], vec![]);
+    let script2 = Script::new(vec![1], vec![], vec![]);
+
+    // Create a transaction that is not allowed with default publishing option and make sure it is
+    // rejected.
+    let txn2 = get_test_signed_transaction(
+        validator_account,
+        /* sequence_number = */ 0,
+        validator_privkey.clone(),
+        validator_pubkey.clone(),
+        Some(script1.clone()),
+    );
+
+    let txn3 = get_test_signed_transaction(
+        validator_account,
+        /* sequence_number = */ 0,
+        validator_privkey.clone(),
+        validator_pubkey.clone(),
+        Some(script2.clone()),
+    );
+
+    // Create a dummy block prologue transaction that will bump the timer.
+    let txn4 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
+
+    // Add script1 to whitelist.
+    let new_whitelist = {
+        let mut existing_list = StdlibScript::whitelist();
+        existing_list.push(*HashValue::from_sha3_256(&[]).as_ref());
+        existing_list
+    };
+
+    let txn5 = get_test_signed_transaction(
+        genesis_account,
+        /* sequence_number = */ 2,
+        genesis_key.clone(),
+        genesis_key.public_key(),
+        Some(encode_publishing_option_script(VMPublishingOption::Locked(
+            new_whitelist,
+        ))),
+    );
+
+    let block1 = vec![txn1, txn2, txn3, txn4, txn5];
+    let block1_id = gen_block_id(1);
+    let output1 = executor
+        .execute_block((block1_id, block1.clone()), parent_block_id)
+        .unwrap();
+
+    assert!(
+        output1.has_reconfiguration(),
+        "StateComputeResult has a new validator set"
+    );
+
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(3, output1.root_hash(), block1_id);
+    let (_, reconfig_events) = executor
+        .commit_blocks(vec![block1_id], ledger_info_with_sigs)
+        .unwrap();
+    assert!(
+        !reconfig_events.is_empty(),
+        "executor commit should return reconfig events for reconfiguration"
+    );
+
+    let request_items = vec![
+        RequestItem::GetAccountTransactionBySequenceNumber {
+            account: genesis_account,
+            sequence_number: 1,
+            fetch_events: false,
+        },
+        RequestItem::GetAccountTransactionBySequenceNumber {
+            account: validator_account,
+            sequence_number: 0,
+            fetch_events: false,
+        },
+    ];
+
+    let (
+        mut response_items,
+        ledger_info_with_sigs,
+        validator_change_proof,
+        _ledger_consistency_proof,
+    ) = rt
+        .block_on(
+            storage_read_client.update_to_latest_ledger(
+                /* client_known_version = */ 0,
+                request_items.clone(),
+            ),
+        )
+        .unwrap();
+    let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
+    verify_update_to_latest_ledger_response(
+        &trusted_state,
+        0,
+        &request_items,
+        &response_items,
+        &ledger_info_with_sigs,
+        &validator_change_proof,
+    )
+    .unwrap();
+    response_items.reverse();
+
+    // Transaction 1 is committed as it's in the whitelist
+    let (t1, _) = response_items
+        .pop()
+        .unwrap()
+        .into_get_account_txn_by_seq_num_response()
+        .unwrap();
+    verify_committed_txn_status(t1.as_ref(), &block1[0]).unwrap();
+
+    // Transaction 2, 3 are rejected
+    let (t2, _) = response_items
+        .pop()
+        .unwrap()
+        .into_get_account_txn_by_seq_num_response()
+        .unwrap();
+    assert!(t2.is_none());
+
+    // Now that the PublishingOption is modified to whitelist with script1 allowed, we can resubmit
+    // the script again.
+
+    let txn2 = get_test_signed_transaction(
+        validator_account,
+        /* sequence_number = */ 0,
+        validator_privkey.clone(),
+        validator_pubkey.clone(),
+        Some(script1),
+    );
+
+    let txn3 = get_test_signed_transaction(
+        validator_account,
+        /* sequence_number = */ 1,
+        validator_privkey,
+        validator_pubkey,
+        Some(script2),
+    );
+
+    let block2_id = gen_block_id(2);
+    let block2 = vec![txn2, txn3];
+    let output2 = executor
+        .execute_block((block2_id, block2.clone()), block1_id)
+        .unwrap();
+
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(4, output2.root_hash(), block2_id);
+    let (_, reconfig_events) = executor
+        .commit_blocks(vec![block2_id], ledger_info_with_sigs)
+        .unwrap();
+    assert!(
+        reconfig_events.is_empty(),
+        "expect executor to reutrn no reconfig events"
+    );
+
+    let request_items = vec![
+        RequestItem::GetAccountTransactionBySequenceNumber {
+            account: validator_account,
+            sequence_number: 0,
+            fetch_events: false,
+        },
+        RequestItem::GetAccountTransactionBySequenceNumber {
+            account: validator_account,
+            sequence_number: 1,
+            fetch_events: false,
+        },
+    ];
+
+    let (
+        mut response_items,
+        ledger_info_with_sigs,
+        validator_change_proof,
+        _ledger_consistency_proof,
+    ) = rt
+        .block_on(
+            storage_read_client.update_to_latest_ledger(
+                /* client_known_version = */ 0,
+                request_items.clone(),
+            ),
+        )
+        .unwrap();
+    let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
+    verify_update_to_latest_ledger_response(
+        &trusted_state,
+        0,
+        &request_items,
+        &response_items,
+        &ledger_info_with_sigs,
+        &validator_change_proof,
+    )
+    .unwrap();
+    response_items.reverse();
+
+    // Transaction 2 is committed.
+    let (t1, _) = response_items
+        .pop()
+        .unwrap()
+        .into_get_account_txn_by_seq_num_response()
+        .unwrap();
+    verify_committed_txn_status(t1.as_ref(), &block2[0]).unwrap();
+
+    // Transaction 3 is NOT committed.
+    let (t2, _) = response_items
+        .pop()
+        .unwrap()
+        .into_get_account_txn_by_seq_num_response()
+        .unwrap();
+    assert!(t2.is_none());
+}
+
+#[test]
 fn test_execution_with_storage() {
     let mut rt = Runtime::new().unwrap();
     let (config, genesis_key) = config_builder::test_config();
-    let (_storage_server_handle, executor, mut committed_trees) =
-        create_storage_service_and_executor(&config);
+    let (_storage_server_handle, mut executor) = create_storage_service_and_executor(&config);
+    let parent_block_id = executor.committed_block_id();
 
     let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
 
@@ -262,16 +700,22 @@ fn test_execution_with_storage() {
     // account3} already exists in genesis, the code below will fail.
     assert!(seed != TEST_SEED);
     let mut rng = ::rand::rngs::StdRng::from_seed(seed);
-    let (privkey1, pubkey1) = compat::generate_keypair(&mut rng);
+
+    let privkey1 = Ed25519PrivateKey::generate(&mut rng);
+    let pubkey1 = privkey1.public_key();
     let account1_auth_key = AuthenticationKey::ed25519(&pubkey1);
     let account1 = account1_auth_key.derived_address();
-    let (privkey2, pubkey2) = compat::generate_keypair(&mut rng);
+
+    let privkey2 = Ed25519PrivateKey::generate(&mut rng);
+    let pubkey2 = privkey2.public_key();
     let account2_auth_key = AuthenticationKey::ed25519(&pubkey2);
     let account2 = account2_auth_key.derived_address();
-    let (_privkey3, pubkey3) = compat::generate_keypair(&mut rng);
+
+    let pubkey3 = Ed25519PrivateKey::generate(&mut rng).public_key();
     let account3_auth_key = AuthenticationKey::ed25519(&pubkey3);
     let account3 = account3_auth_key.derived_address();
-    let (_privkey4, pubkey4) = compat::generate_keypair(&mut rng);
+
+    let pubkey4 = Ed25519PrivateKey::generate(&mut rng).public_key();
     let account4_auth_key = AuthenticationKey::ed25519(&pubkey4); // non-existent account
     let account4 = account4_auth_key.derived_address();
     let genesis_account = association_address();
@@ -323,6 +767,7 @@ fn test_execution_with_storage() {
         privkey1.clone(),
         pubkey1.clone(),
         Some(encode_transfer_script(
+            lbr_type_tag(),
             &account2,
             account2_auth_key.prefix().to_vec(),
             20_000,
@@ -337,6 +782,7 @@ fn test_execution_with_storage() {
         privkey2,
         pubkey2,
         Some(encode_transfer_script(
+            lbr_type_tag(),
             &account3,
             account3_auth_key.prefix().to_vec(),
             10_000,
@@ -351,6 +797,7 @@ fn test_execution_with_storage() {
         privkey1.clone(),
         pubkey1.clone(),
         Some(encode_transfer_script(
+            lbr_type_tag(),
             &account3,
             account3_auth_key.prefix().to_vec(),
             70_000,
@@ -371,6 +818,7 @@ fn test_execution_with_storage() {
             privkey1.clone(),
             pubkey1.clone(),
             Some(encode_transfer_script(
+                lbr_type_tag(),
                 &account3,
                 account3_auth_key.prefix().to_vec(),
                 10_000,
@@ -379,23 +827,16 @@ fn test_execution_with_storage() {
     }
 
     let output1 = executor
-        .execute_block(
-            HashValue::zero(),
-            block1.clone(),
-            &committed_trees,
-            &committed_trees,
-        )
+        .execute_block((block1_id, block1.clone()), parent_block_id)
         .unwrap();
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(6, output1.accu_root(), block1_id);
-    let committed_trees_copy = committed_trees.clone();
-    committed_trees = output1.executed_trees().clone();
-    executor
-        .commit_blocks(
-            vec![(block1.clone(), Arc::new(output1))],
-            ledger_info_with_sigs,
-            &committed_trees_copy,
-        )
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(6, output1.root_hash(), block1_id);
+    let (_, reconfig_events) = executor
+        .commit_blocks(vec![block1_id], ledger_info_with_sigs)
         .unwrap();
+    assert!(
+        reconfig_events.is_empty(),
+        "expected no reconfiguration event from executor commit"
+    );
 
     let request_items = vec![
         RequestItem::GetAccountTransactionBySequenceNumber {
@@ -665,20 +1106,11 @@ fn test_execution_with_storage() {
 
     // Execution the 2nd block.
     let output2 = executor
-        .execute_block(
-            HashValue::zero(),
-            block2.clone(),
-            &committed_trees,
-            &committed_trees,
-        )
+        .execute_block((block2_id, block2.clone()), block1_id)
         .unwrap();
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(20, output2.accu_root(), block2_id);
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(20, output2.root_hash(), block2_id);
     executor
-        .commit_blocks(
-            vec![(block2.clone(), Arc::new(output2))],
-            ledger_info_with_sigs,
-            &committed_trees,
-        )
+        .commit_blocks(vec![block2_id], ledger_info_with_sigs)
         .unwrap();
 
     let request_items = vec![

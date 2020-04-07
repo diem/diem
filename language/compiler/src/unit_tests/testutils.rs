@@ -137,10 +137,7 @@ pub fn compile_module_string_and_assert_error(
 }
 
 pub fn count_locals(script: &CompiledScript) -> usize {
-    script
-        .locals_signature_at(script.main().code.locals)
-        .0
-        .len()
+    script.signature_at(script.main().code.locals).0.len()
 }
 
 pub fn compile_module_string_with_stdlib(code: &str) -> Result<CompiledModule> {

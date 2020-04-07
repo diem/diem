@@ -6,21 +6,91 @@ use consensus_types::{
     block::Block,
     common::{Author, Round},
 };
-use libra_types::block_metadata::BlockMetadata;
+use libra_logger::prelude::*;
+use libra_types::block_metadata::{new_block_event_key, NewBlockEvent};
 use serde::export::PhantomData;
-use std::{cmp::Ordering, collections::HashSet, sync::Arc};
+use std::{
+    cmp::Ordering,
+    collections::HashSet,
+    sync::{Arc, Mutex},
+};
+use storage_interface::DbReader;
 
 /// Interface to query committed BlockMetadata.
-pub trait MetadataBackend {
-    /// Return a window_size contiguous BlockMetadata window in which last one is at target_round or
+pub trait MetadataBackend: Send + Sync {
+    /// Return a contiguous BlockMetadata window in which last one is at target_round or
     /// latest committed, return all previous one if not enough.
-    fn get_block_metadata(&self, window_size: u64, target_round: Round) -> &[BlockMetadata];
+    fn get_block_metadata(&self, target_round: Round) -> Vec<NewBlockEvent>;
+}
+
+pub struct LibraDBBackend {
+    window_size: usize,
+    libra_db: Arc<dyn DbReader>,
+    window: Mutex<Vec<(u64, NewBlockEvent)>>,
+}
+
+impl LibraDBBackend {
+    pub fn new(window_size: usize, libra_db: Arc<dyn DbReader>) -> Self {
+        Self {
+            window_size,
+            libra_db,
+            window: Mutex::new(vec![]),
+        }
+    }
+
+    fn refresh_window(&self, target_round: Round) -> anyhow::Result<()> {
+        // assumes target round is not too far from latest commit
+        let buffer = 10;
+        let events = self.libra_db.get_events(
+            &new_block_event_key(),
+            u64::max_value(),
+            false,
+            self.window_size as u64 + buffer,
+        )?;
+        let mut result = vec![];
+        for (v, e) in events {
+            let e = lcs::from_bytes::<NewBlockEvent>(e.event_data())?;
+            if e.round() <= target_round && result.len() < self.window_size {
+                result.push((v, e));
+            }
+        }
+        *self.window.lock().unwrap() = result;
+        Ok(())
+    }
+}
+
+impl MetadataBackend for LibraDBBackend {
+    // assume the target_round only increases
+    fn get_block_metadata(&self, target_round: Round) -> Vec<NewBlockEvent> {
+        let (known_version, known_round) = self
+            .window
+            .lock()
+            .unwrap()
+            .first()
+            .map(|(v, e)| (*v, e.round()))
+            .unwrap_or((0, 0));
+        if !(known_round == target_round
+            || known_version == self.libra_db.get_latest_version().unwrap_or(0))
+        {
+            if let Err(e) = self.refresh_window(target_round) {
+                error!("[leader reputation] Fail to refresh window: {:?}", e);
+                return vec![];
+            }
+        }
+        self.window
+            .lock()
+            .unwrap()
+            .clone()
+            .into_iter()
+            .map(|(_, e)| e)
+            .collect()
+    }
 }
 
 /// Interface to calculate weights for proposers based on history.
-pub trait ReputationHeuristic {
+pub trait ReputationHeuristic: Send + Sync {
     /// Return the weights of all candidates based on the history.
-    fn get_weights(&self, candidates: &[Author], history: &[BlockMetadata]) -> Vec<u64>;
+    fn get_weights(&self, candidates: &[Author], history: &[NewBlockEvent]) -> Vec<u64>;
 }
 
 /// If candidate appear in the history, it's assigned active_weight otherwise inactive weight.
@@ -29,7 +99,6 @@ pub struct ActiveInactiveHeuristic {
     inactive_weight: u64,
 }
 
-#[allow(dead_code)]
 impl ActiveInactiveHeuristic {
     pub fn new(active_weight: u64, inactive_weight: u64) -> Self {
         Self {
@@ -40,10 +109,10 @@ impl ActiveInactiveHeuristic {
 }
 
 impl ReputationHeuristic for ActiveInactiveHeuristic {
-    fn get_weights(&self, candidates: &[Author], history: &[BlockMetadata]) -> Vec<u64> {
+    fn get_weights(&self, candidates: &[Author], history: &[NewBlockEvent]) -> Vec<u64> {
         let set = history.iter().fold(HashSet::new(), |mut set, meta| {
             set.insert(meta.proposer());
-            set.extend(meta.voters().into_iter());
+            set.extend(meta.votes().into_iter());
             set
         });
         candidates
@@ -63,24 +132,20 @@ impl ReputationHeuristic for ActiveInactiveHeuristic {
 /// successful leaders to help improve performance.
 pub struct LeaderReputation<T> {
     proposers: Vec<Author>,
-    backend: Arc<dyn MetadataBackend>,
-    window_size: u64,
+    backend: Box<dyn MetadataBackend>,
     heuristic: Box<dyn ReputationHeuristic>,
     phantom: PhantomData<T>,
 }
 
-#[allow(dead_code)]
 impl<T> LeaderReputation<T> {
     pub fn new(
         proposers: Vec<Author>,
-        backend: Arc<dyn MetadataBackend>,
-        window_size: u64,
+        backend: Box<dyn MetadataBackend>,
         heuristic: Box<dyn ReputationHeuristic>,
     ) -> Self {
         Self {
             proposers,
             backend,
-            window_size,
             heuristic,
             phantom: PhantomData,
         }
@@ -98,8 +163,9 @@ impl<T> ProposerElection<T> for LeaderReputation<T> {
 
     fn get_valid_proposers(&self, round: Round) -> Vec<Author> {
         // TODO: configure the round gap
-        let sliding_window = self.backend.get_block_metadata(self.window_size, round - 4);
-        let mut weights = self.heuristic.get_weights(&self.proposers, sliding_window);
+        let target_round = if round >= 4 { round - 4 } else { 0 };
+        let sliding_window = self.backend.get_block_metadata(target_round);
+        let mut weights = self.heuristic.get_weights(&self.proposers, &sliding_window);
         assert_eq!(weights.len(), self.proposers.len());
         let mut total_weight = 0;
         for w in &mut weights {

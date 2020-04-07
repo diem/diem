@@ -17,6 +17,8 @@ use std::{
 };
 use vm::file_format::CodeOffset;
 
+use move_lang::parser::ast::{self as PA};
+
 // =================================================================================================
 /// # Declarations
 
@@ -41,7 +43,7 @@ pub struct SpecFunDecl {
 /// # Conditions
 
 #[derive(Debug, PartialEq)]
-pub enum ConditionKind {
+pub enum SpecConditionKind {
     Assert,
     Assume,
     Decreases,
@@ -50,10 +52,40 @@ pub enum ConditionKind {
     Requires,
 }
 
+impl SpecConditionKind {
+    pub fn new(kind: &PA::SpecConditionKind) -> Self {
+        use SpecConditionKind::*;
+        match kind {
+            PA::SpecConditionKind::Assert => Assert,
+            PA::SpecConditionKind::Assume => Assume,
+            PA::SpecConditionKind::Decreases => Decreases,
+            PA::SpecConditionKind::Ensures => Ensures,
+            PA::SpecConditionKind::Requires => Requires,
+            PA::SpecConditionKind::AbortsIf => AbortsIf,
+        }
+    }
+
+    pub fn on_decl(&self) -> bool {
+        use SpecConditionKind::*;
+        match self {
+            AbortsIf | Ensures | Requires => true,
+            _ => false,
+        }
+    }
+
+    pub fn on_impl(&self) -> bool {
+        use SpecConditionKind::*;
+        match self {
+            Assert | Assume | Decreases => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Condition {
     pub loc: Loc,
-    pub kind: ConditionKind,
+    pub kind: SpecConditionKind,
     pub exp: Exp,
 }
 
@@ -123,6 +155,7 @@ pub enum Operation {
     Pack(ModuleId, StructId),
     Tuple,
     Select(ModuleId, StructId, FieldId),
+    Local(Symbol),
     Result(usize),
     Index,
     Slice,

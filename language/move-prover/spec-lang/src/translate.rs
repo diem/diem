@@ -13,23 +13,24 @@ use num::{BigUint, FromPrimitive, Num};
 
 use bytecode_source_map::source_map::SourceMap;
 use move_lang::{
-    expansion::ast as EA,
-    parser::ast as PA,
+    compiled_unit::SpecInfo,
+    expansion::ast::{self as EA, SpecId},
+    hlir::ast::{BaseType, SingleType},
+    naming::ast::TParam,
+    parser::ast::{self as PA, FunctionName},
     shared::{unique_map::UniqueMap, Name},
 };
 use vm::{
     access::ModuleAccess,
-    file_format::{CodeOffset, FunctionDefinitionIndex, StructDefinitionIndex},
+    file_format::{FunctionDefinitionIndex, StructDefinitionIndex},
     views::{FunctionHandleView, StructHandleView},
     CompiledModule,
 };
-use EA::SpecId;
-use PA::FunctionName;
 
 use crate::{
     ast::{
-        Condition, ConditionKind, Exp, FunSpec, Invariant, InvariantKind, LocalVarDecl, ModuleName,
-        Operation, QualifiedSymbol, SpecFunDecl, SpecVarDecl, Value,
+        Condition, Exp, FunSpec, Invariant, InvariantKind, LocalVarDecl, ModuleName, Operation,
+        QualifiedSymbol, SpecConditionKind, SpecFunDecl, SpecVarDecl, Value,
     },
     env::{
         FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleId, MoveIrLoc, NodeId, SpecFunId,
@@ -37,7 +38,7 @@ use crate::{
     },
     project_1st, project_2nd,
     symbol::{Symbol, SymbolPool},
-    ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, BOOL_TYPE, NUM_TYPE},
+    ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, BOOL_TYPE},
 };
 
 // =================================================================================================
@@ -622,10 +623,10 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         module_def: EA::ModuleDefinition,
         compiled_module: CompiledModule,
         source_map: SourceMap<MoveIrLoc>,
-        spec_id_offsets: UniqueMap<FunctionName, BTreeMap<SpecId, CodeOffset>>,
+        spec_info: UniqueMap<FunctionName, BTreeMap<SpecId, SpecInfo>>,
     ) {
         self.decl_ana(&module_def);
-        self.def_ana(&module_def, spec_id_offsets);
+        self.def_ana(&module_def, spec_info);
         self.populate_env_from_result(loc, compiled_module, source_map);
     }
 }
@@ -639,7 +640,6 @@ enum SpecBlockContext {
     Module,
     Struct(QualifiedSymbol),
     Function(QualifiedSymbol),
-    FunctionImpl(QualifiedSymbol, CodeOffset),
 }
 
 impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
@@ -859,7 +859,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     fn def_ana(
         &mut self,
         module_def: &EA::ModuleDefinition,
-        spec_id_offsets: UniqueMap<FunctionName, BTreeMap<SpecId, CodeOffset>>,
+        spec_info: UniqueMap<FunctionName, BTreeMap<SpecId, SpecInfo>>,
     ) {
         for (name, def) in &module_def.structs {
             self.def_ana_struct(&name, def);
@@ -873,13 +873,26 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             }
         }
         for (name, fun_def) in &module_def.functions {
-            let fun_spec_id_offsets = spec_id_offsets.get(&name).unwrap();
+            let fun_spec_info = spec_info.get(&name).unwrap();
             let qsym = self.qualified_by_module(self.symbol_pool().make(&name.0.value));
             for (spec_id, spec_block) in fun_def.specs.iter() {
-                self.def_ana_spec_block(
-                    &SpecBlockContext::FunctionImpl(qsym.clone(), fun_spec_id_offsets[spec_id]),
-                    spec_block,
-                );
+                for member in &spec_block.value.members {
+                    let loc = &self.parent.env.to_loc(&member.loc);
+                    match &member.value {
+                        EA::SpecBlockMember_::Condition { kind, exp } => {
+                            self.def_ana_condition_on_impl(
+                                &qsym,
+                                &fun_spec_info[spec_id],
+                                loc,
+                                SpecConditionKind::new(kind),
+                                exp,
+                            );
+                        }
+                        _ => {
+                            self.parent.error(&loc, "item not allowed");
+                        }
+                    }
+                }
             }
         }
     }
@@ -923,7 +936,19 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         for member in &block.value.members {
             let loc = &self.parent.env.to_loc(&member.loc);
             match &member.value {
-                Condition { kind, exp } => self.def_ana_condition(context, loc, kind, exp),
+                Condition { kind, exp } => match context {
+                    SpecBlockContext::Function(name) => {
+                        self.def_ana_condition_on_decl(
+                            name,
+                            loc,
+                            SpecConditionKind::new(kind),
+                            exp,
+                        );
+                    }
+                    _ => {
+                        self.parent.error(loc, "item only allowed in function spec");
+                    }
+                },
                 Invariant { kind, exp } => self.def_ana_invariant(context, loc, kind, exp),
                 Function {
                     signature, body, ..
@@ -933,95 +958,127 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         }
     }
 
-    fn def_ana_condition(
+    fn def_ana_condition_on_decl(
         &mut self,
-        context: &SpecBlockContext,
+        name: &QualifiedSymbol,
         loc: &Loc,
-        kind: &PA::SpecConditionKind,
+        kind: SpecConditionKind,
         exp: &EA::Exp,
     ) {
-        let (name, code_offset) = match context {
-            SpecBlockContext::Function(n) => (Some(n), None),
-            SpecBlockContext::FunctionImpl(n, code_offset) => (Some(n), Some(code_offset)),
-            _ => (None, None),
-        };
-        if let Some(name) = name {
-            // We ensured that SpecBlockContext only contains resolvable names.
-            let entry = &self
-                .parent
-                .fun_table
-                .get(name)
-                .expect("invalid spec block context")
-                .clone();
-            let is_precond = kind == &PA::SpecConditionKind::Requires;
-            let mut et = ExpTranslator::new(
-                self,
-                if is_precond {
-                    OldExpStatus::NotSupported
-                } else {
-                    OldExpStatus::OutsideOld
-                },
-            );
-            for (n, ty) in &entry.type_params {
-                et.define_type_param(loc, *n, ty.clone());
-            }
-            et.enter_scope();
-            for (n, ty) in &entry.params {
-                et.define_local(loc, *n, ty.clone(), None);
-            }
-            // Define the placeholders for the result values of a function.
-            if !is_precond {
-                et.enter_scope();
-                if let Type::Tuple(ts) = &entry.result_type {
-                    for (i, ty) in ts.iter().enumerate() {
-                        let name = et.symbol_pool().make(&format!("result_{}", i + 1));
-                        et.define_local(loc, name, ty.clone(), Some(Operation::Result(i)));
-                    }
-                } else {
-                    let name = et.symbol_pool().make("result");
-                    et.define_local(
-                        loc,
-                        name,
-                        entry.result_type.clone(),
-                        Some(Operation::Result(0)),
-                    );
-                }
-            }
-            let expected_type = match kind {
-                PA::SpecConditionKind::Decreases => NUM_TYPE,
-                _ => BOOL_TYPE,
-            };
-            let translated = et.translate_exp(exp, &expected_type);
-            et.finalize_types();
-            let kind = match kind {
-                PA::SpecConditionKind::Assert => ConditionKind::Assert,
-                PA::SpecConditionKind::Assume => ConditionKind::Assume,
-                PA::SpecConditionKind::Decreases => ConditionKind::Decreases,
-                PA::SpecConditionKind::Ensures => ConditionKind::Ensures,
-                PA::SpecConditionKind::Requires => ConditionKind::Requires,
-                PA::SpecConditionKind::AbortsIf => ConditionKind::AbortsIf,
-            };
-            let cond = Condition {
-                loc: loc.clone(),
-                kind,
-                exp: translated,
-            };
-            let fun_spec = self
-                .fun_specs
-                .entry(name.symbol)
-                .or_insert_with(FunSpec::default);
-            if let Some(code_offset) = code_offset {
-                fun_spec
-                    .on_impl
-                    .entry(*code_offset)
-                    .or_insert_with(|| vec![])
-                    .push(cond);
-            } else {
-                fun_spec.on_decl.push(cond);
-            }
-        } else {
-            self.parent.error(loc, "item only allowed in function spec");
+        if kind.on_impl() {
+            self.parent
+                .error(loc, "item only allowed inside function body");
+            return;
         }
+        let entry = &self
+            .parent
+            .fun_table
+            .get(name)
+            .expect("invalid spec block context")
+            .clone();
+        let is_precond = kind == SpecConditionKind::Requires;
+        let mut et = ExpTranslator::new(
+            self,
+            if is_precond {
+                OldExpStatus::NotSupported
+            } else {
+                OldExpStatus::OutsideOld
+            },
+        );
+        for (n, ty) in &entry.type_params {
+            et.define_type_param(loc, *n, ty.clone());
+        }
+        et.enter_scope();
+        for (n, ty) in &entry.params {
+            et.define_local(loc, *n, ty.clone(), None);
+        }
+        // Define the placeholders for the result values of a function.
+        if !is_precond {
+            et.enter_scope();
+            if let Type::Tuple(ts) = &entry.result_type {
+                for (i, ty) in ts.iter().enumerate() {
+                    let name = et.symbol_pool().make(&format!("result_{}", i + 1));
+                    et.define_local(loc, name, ty.clone(), Some(Operation::Result(i)));
+                }
+            } else {
+                let name = et.symbol_pool().make("result");
+                et.define_local(
+                    loc,
+                    name,
+                    entry.result_type.clone(),
+                    Some(Operation::Result(0)),
+                );
+            }
+        }
+        let translated = et.translate_exp(exp, &BOOL_TYPE);
+        et.finalize_types();
+        let cond = Condition {
+            loc: loc.clone(),
+            kind,
+            exp: translated,
+        };
+        self.fun_specs
+            .entry(name.symbol)
+            .or_insert_with(FunSpec::default)
+            .on_decl
+            .push(cond);
+    }
+
+    fn def_ana_condition_on_impl(
+        &mut self,
+        name: &QualifiedSymbol,
+        spec_info: &SpecInfo,
+        loc: &Loc,
+        kind: SpecConditionKind,
+        exp: &EA::Exp,
+    ) {
+        if kind.on_decl() {
+            self.parent
+                .error(loc, "item only allowed on function declaration");
+            return;
+        }
+        if kind == SpecConditionKind::Decreases {
+            self.parent
+                .error(loc, "decreases specification not allowed currently");
+            return;
+        }
+        let entry = &self
+            .parent
+            .fun_table
+            .get(name)
+            .expect("invalid spec block context")
+            .clone();
+        let mut et = ExpTranslator::new(self, OldExpStatus::OutsideOld);
+        for (n, ty) in &entry.type_params {
+            et.define_type_param(loc, *n, ty.clone());
+        }
+        et.enter_scope();
+        for (n, ty) in &spec_info.used_locals {
+            let sym = et.symbol_pool().make(n.0.value.as_str());
+            let ty = et.translate_hlir_single_type(ty);
+            if ty == Type::Error {
+                self.parent.error(
+                    loc,
+                    "internal error in translating hlir type to prover type",
+                );
+                return;
+            }
+            et.define_local(loc, sym, ty, Some(Operation::Local(sym)));
+        }
+        let translated = et.translate_exp(exp, &BOOL_TYPE);
+        et.finalize_types();
+        let cond = Condition {
+            loc: loc.clone(),
+            kind,
+            exp: translated,
+        };
+        self.fun_specs
+            .entry(name.symbol)
+            .or_insert_with(FunSpec::default)
+            .on_impl
+            .entry(spec_info.offset)
+            .or_insert_with(|| vec![])
+            .push(cond);
     }
 
     fn def_ana_invariant(
@@ -1437,7 +1494,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         self.local_table.push_front(BTreeMap::new());
     }
 
-    /// Exists the most inner scope of the locals table.
+    /// Exits the most inner scope of the locals table.
     fn exit_scope(&mut self) {
         self.local_table.pop_front();
     }
@@ -1559,6 +1616,82 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 /// ## Type Translation
 
 impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'module_translator> {
+    /// Translates an hlir type into a target AST type.
+    fn translate_hlir_single_type(&mut self, ty: &SingleType) -> Type {
+        use move_lang::hlir::ast::SingleType_::*;
+        match &ty.value {
+            Ref(is_mut, ty) => {
+                let ty = self.translate_hlir_base_type(&*ty);
+                if ty == Type::Error {
+                    Type::Error
+                } else {
+                    Type::Reference(*is_mut, Box::new(ty))
+                }
+            }
+            Base(ty) => self.translate_hlir_base_type(&*ty),
+        }
+    }
+
+    fn translate_hlir_base_type(&mut self, ty: &BaseType) -> Type {
+        use move_lang::{
+            hlir::ast::{BaseType_::*, TypeName_::*},
+            naming::ast::BuiltinTypeName_::*,
+        };
+        match &ty.value {
+            Param(TParam { debug, .. }) => {
+                let sym = self.symbol_pool().make(debug.value.as_str());
+                self.type_params_table[&sym].clone()
+            }
+            Apply(_, type_name, args) => {
+                let loc = self.to_loc(&type_name.loc);
+                match &type_name.value {
+                    Builtin(builtin_type_name) => match &builtin_type_name.value {
+                        Address => Type::new_prim(PrimitiveType::Address),
+                        U8 => Type::new_prim(PrimitiveType::U8),
+                        U64 => Type::new_prim(PrimitiveType::U64),
+                        U128 => Type::new_prim(PrimitiveType::U128),
+                        Vector => Type::Vector(Box::new(self.translate_hlir_base_type(&args[0]))),
+                        Bool => Type::new_prim(PrimitiveType::Bool),
+                    },
+                    ModuleType(m, n) => {
+                        let module_name = ModuleName::from_str(
+                            &m.0.value.address.to_string(),
+                            self.symbol_pool().make(m.0.value.name.0.value.as_str()),
+                        );
+                        let symbol = self.symbol_pool().make(n.0.value.as_str());
+                        let qsym = QualifiedSymbol {
+                            module_name,
+                            symbol,
+                        };
+                        let rty = self.parent.parent.lookup_type(&loc, &qsym);
+                        if !args.is_empty() {
+                            // Replace type instantiation.
+                            if let Type::Struct(mid, sid, _) = &rty {
+                                let arg_types = self.translate_hlir_base_types(args);
+                                if arg_types.iter().any(|x| *x == Type::Error) {
+                                    Type::Error
+                                } else {
+                                    Type::Struct(*mid, *sid, arg_types)
+                                }
+                            } else {
+                                Type::Error
+                            }
+                        } else {
+                            rty
+                        }
+                    }
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    fn translate_hlir_base_types(&mut self, tys: &[BaseType]) -> Vec<Type> {
+        tys.iter()
+            .map(|t| self.translate_hlir_base_type(t))
+            .collect()
+    }
+
     /// Translates a source AST type into a target AST type.
     fn translate_type(&mut self, ty: &EA::Type) -> Type {
         use EA::Type_::*;

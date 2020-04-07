@@ -15,8 +15,9 @@ use channel::{libra_channel, message_queues::QueueStyle};
 use core::str::FromStr;
 use futures::channel::oneshot;
 use libra_config::config::RoleType;
-use libra_crypto::{test_utils::TEST_SEED, *};
-use rand::{rngs::StdRng, SeedableRng};
+use libra_crypto::{
+    ed25519::Ed25519PrivateKey, x25519::X25519StaticPrivateKey, PrivateKey, Uniform,
+};
 use std::num::NonZeroUsize;
 use tokio::runtime::Runtime;
 
@@ -107,9 +108,8 @@ async fn expect_address_update(
 }
 
 fn generate_network_pub_keys_and_signer() -> (NetworkPublicKeys, Ed25519PrivateKey) {
-    let mut rng = StdRng::from_seed(TEST_SEED);
-    let signing_priv_key = Ed25519PrivateKey::generate_for_testing(&mut rng);
-    let (_, identity_pub_key) = x25519::compat::generate_keypair(&mut rng);
+    let signing_priv_key = Ed25519PrivateKey::generate_for_testing();
+    let identity_pub_key = X25519StaticPrivateKey::generate_for_testing().public_key();
     (
         NetworkPublicKeys {
             signing_public_key: signing_priv_key.public_key(),

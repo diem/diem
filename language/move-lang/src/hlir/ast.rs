@@ -236,7 +236,7 @@ pub enum UnannotatedExp_ {
 
     Unreachable,
 
-    Spec(SpecId),
+    Spec(SpecId, BTreeMap<Var, SingleType>),
 
     UnresolvedError,
 }
@@ -342,7 +342,7 @@ impl BaseType_ {
         use BuiltinTypeName_::*;
 
         let kind = match b_ {
-            U8 | U64 | U128 | Bool | Address => sp(loc, Kind_::Unrestricted),
+            U8 | U64 | U128 | Bool | Address => sp(loc, Kind_::Copyable),
             Vector => {
                 assert!(
                     ty_args.len() == 1,
@@ -398,7 +398,7 @@ impl SingleType_ {
 
     pub fn kind(&self, loc: Loc) -> Kind {
         match self {
-            SingleType_::Ref(_, _) => sp(loc, Kind_::Unrestricted),
+            SingleType_::Ref(_, _) => sp(loc, Kind_::Copyable),
             SingleType_::Base(b) => b.value.kind(),
         }
     }
@@ -880,7 +880,16 @@ impl AstDebug for UnannotatedExp_ {
                 bt.ast_debug(w);
                 w.write(")");
             }
-            E::Spec(u) => w.write(&format!("spec({})", u)),
+            E::Spec(u, used_locals) => {
+                w.write(&format!("spec #{}", u));
+                if !used_locals.is_empty() {
+                    w.write("uses [");
+                    w.comma(used_locals, |w, (n, st)| {
+                        w.annotate(|w| w.write(&format!("{}", n)), st)
+                    });
+                    w.write("]");
+                }
+            }
             E::UnresolvedError => w.write("_|_"),
             E::Unreachable => w.write("unreachable"),
         }

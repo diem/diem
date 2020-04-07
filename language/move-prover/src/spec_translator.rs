@@ -3,7 +3,7 @@
 
 //! This module translates specification conditions to Boogie code.
 
-use std::cell::RefCell;
+use std::{cell::RefCell, collections::BTreeMap};
 
 use spec_lang::{
     env::{FieldId, FunctionEnv, Loc, ModuleEnv, ModuleId, NodeId, SpecFunId, StructEnv, StructId},
@@ -13,15 +13,18 @@ use spec_lang::{
 use crate::{
     boogie_helpers::{
         boogie_declare_global, boogie_field_name, boogie_local_type, boogie_spec_fun_name,
-        boogie_spec_var_name, boogie_struct_name, boogie_type_check_expr, boogie_type_value,
+        boogie_spec_var_name, boogie_struct_name, boogie_type_value, boogie_well_formed_expr,
+        WellFormedMode,
     },
     code_writer::CodeWriter,
 };
 use itertools::Itertools;
 use spec_lang::{
-    ast::{ConditionKind, Exp, Invariant, LocalVarDecl, Operation, Value},
+    ast::{Exp, Invariant, LocalVarDecl, Operation, SpecConditionKind, Value},
+    env::GlobalEnv,
     symbol::Symbol,
 };
+use vm::file_format::CodeOffset;
 
 pub struct SpecTranslator<'env> {
     /// The module in which context translation happens.
@@ -37,6 +40,8 @@ pub struct SpecTranslator<'env> {
     /// Counter for generating fresh variables.  It's a RefCell so we can increment it without
     /// making a ton of &self arguments mutable.
     fresh_var_count: RefCell<u64>,
+    /// Local variable name to local index in bytecode
+    name_to_idx_map: BTreeMap<Symbol, usize>,
 }
 
 // General
@@ -56,6 +61,26 @@ impl<'env> SpecTranslator<'env> {
             in_old: RefCell::new(false),
             invariant_target: RefCell::new(("".to_string(), "".to_string())),
             fresh_var_count: RefCell::new(0),
+            name_to_idx_map: BTreeMap::new(),
+        }
+    }
+
+    /// Creates a translator for use in translating spec blocks inside function implementation
+    pub fn new_for_spec_in_impl(
+        writer: &'env CodeWriter,
+        func_env: &'env FunctionEnv<'env>,
+        supports_native_old: bool,
+    ) -> SpecTranslator<'env> {
+        SpecTranslator {
+            module_env: &func_env.module_env,
+            writer,
+            supports_native_old,
+            in_old: RefCell::new(false),
+            invariant_target: RefCell::new(("".to_string(), "".to_string())),
+            fresh_var_count: RefCell::new(0),
+            name_to_idx_map: (0..func_env.get_local_count())
+                .map(|idx| (func_env.get_local_name(idx), idx))
+                .collect(),
         }
     }
 
@@ -97,7 +122,7 @@ impl<'env> SpecTranslator<'env> {
         name_str
     }
 
-    /// Translates a sequence of items seperated by `sep`.
+    /// Translates a sequence of items separated by `sep`.
     fn translate_seq<T, F>(&self, items: impl Iterator<Item = T>, sep: &str, f: F)
     where
         F: Fn(T),
@@ -192,6 +217,34 @@ impl<'env> SpecTranslator<'env> {
 // ===================
 
 impl<'env> SpecTranslator<'env> {
+    // Generate boogie for asserts/assumes inside function bodies
+    pub fn translate_conditions_inside_impl(
+        &self,
+        func_env: &'env FunctionEnv<'env>,
+        offset: CodeOffset,
+    ) {
+        let conds = func_env.get_specification_on_impl(offset);
+        if let Some(conds) = conds {
+            if !conds.is_empty() {
+                self.translate_seq(conds.iter(), "\n", |cond| {
+                    self.writer.set_location(&cond.loc);
+                    emit!(
+                        self.writer,
+                        if cond.kind == SpecConditionKind::Assert {
+                            "assert "
+                        } else {
+                            "assume "
+                        }
+                    );
+                    emit!(self.writer, "b#Boolean(");
+                    self.translate_exp(&cond.exp);
+                    emit!(self.writer, ");")
+                });
+                emitln!(self.writer);
+            }
+        }
+    }
+
     /// Generates boogie for pre/post conditions.
     pub fn translate_conditions(&self, func_env: &'env FunctionEnv<'env>) {
         // Generate pre-conditions
@@ -200,13 +253,13 @@ impl<'env> SpecTranslator<'env> {
         // the senders account resource (which contains the pubkey)
         // must have existed! So we can assume txn_sender account
         // exists in pre-condition.
-        let conds = func_env.get_specification();
+        let conds = func_env.get_specification_on_decl();
         emitln!(self.writer, "requires $ExistsTxnSenderAccount($m, $txn);");
 
         // Generate requires.
         let requires = conds
             .iter()
-            .filter(|c| c.kind == ConditionKind::Requires)
+            .filter(|c| c.kind == SpecConditionKind::Requires)
             .collect_vec();
         if !requires.is_empty() {
             self.translate_seq(requires.iter(), "\n", |cond| {
@@ -223,7 +276,7 @@ impl<'env> SpecTranslator<'env> {
         // multiple abort_if conditions are "or"ed. If no condition holds, function does not abort.
         let aborts_if = conds
             .iter()
-            .filter(|c| c.kind == ConditionKind::AbortsIf)
+            .filter(|c| c.kind == SpecConditionKind::AbortsIf)
             .collect_vec();
         if !aborts_if.is_empty() {
             self.writer.set_location(&aborts_if[0].loc);
@@ -239,7 +292,7 @@ impl<'env> SpecTranslator<'env> {
         // Generate ensures
         let ensures = conds
             .iter()
-            .filter(|c| c.kind == ConditionKind::Ensures)
+            .filter(|c| c.kind == SpecConditionKind::Ensures)
             .collect_vec();
         if !ensures.is_empty() {
             self.translate_seq(ensures.iter(), "\n", |cond| {
@@ -279,9 +332,9 @@ impl<'env> SpecTranslator<'env> {
 
         // Explicit pre-conditions.
         let requires = func_env
-            .get_specification()
+            .get_specification_on_decl()
             .iter()
-            .filter(|cond| cond.kind == ConditionKind::Requires)
+            .filter(|cond| cond.kind == SpecConditionKind::Requires)
             .collect_vec();
         if !requires.is_empty() {
             self.translate_seq(requires.iter(), "\n", |cond| {
@@ -328,28 +381,43 @@ impl<'env> SpecTranslator<'env> {
         self.translate_after_update_invariant(struct_env);
     }
 
-    /// Generates a function which assumes the struct to be well-formed. This generates
-    /// both type assumptions for each field and assumptions of the data invariants.
+    /// Generates functions which assumes the struct to be well-formed. The first function
+    /// only checks type assumptions and is called to ensure well-formedness while the struct is
+    /// mutated. The second function checks both types and data invariants and is used while
+    /// the struct is not mutated.
     fn translate_assume_well_formed(&self, struct_env: &StructEnv<'env>) {
+        let emit_field_checks = |mode: WellFormedMode| {
+            emitln!(self.writer, "is#Vector($this)");
+            for field in struct_env.get_fields() {
+                let select = format!("$SelectField($this, {})", boogie_field_name(&field));
+                let type_check = boogie_well_formed_expr(
+                    struct_env.module_env.env,
+                    &select,
+                    &field.get_type(),
+                    mode,
+                );
+                if !type_check.is_empty() {
+                    emitln!(self.writer, "  && {}", type_check);
+                }
+            }
+        };
         emitln!(
             self.writer,
-            "function {{:inline}} ${}_is_well_formed($this: Value): bool {{",
+            "function {{:inline}} {}_is_well_formed_types($this: Value): bool {{",
             boogie_struct_name(struct_env),
         );
         self.writer.indent();
+        emit_field_checks(WellFormedMode::WithoutInvariant);
+        self.writer.unindent();
+        emitln!(self.writer, "}");
 
-        // Emit type assumptions.
-        emitln!(self.writer, "is#Vector($this)");
-        for field in struct_env.get_fields() {
-            let select = format!("$SelectField($this, {})", boogie_field_name(&field));
-            let type_check =
-                boogie_type_check_expr(struct_env.module_env.env, &select, &field.get_type());
-            if !type_check.is_empty() {
-                emitln!(self.writer, "  && {}", type_check);
-            }
-        }
-
-        // Emit invariant assumptions.
+        emitln!(
+            self.writer,
+            "function {{:inline}} {}_is_well_formed($this: Value): bool {{",
+            boogie_struct_name(struct_env),
+        );
+        self.writer.indent();
+        emit_field_checks(WellFormedMode::WithInvariant);
         for inv in struct_env.get_data_invariants() {
             emit!(self.writer, "  && b#Boolean(");
             self.with_invariant_target("$this", "", || self.translate_exp(&inv.exp));
@@ -360,18 +428,33 @@ impl<'env> SpecTranslator<'env> {
         emitln!(self.writer);
     }
 
-    /// Determines whether a before-update invariant is generated.
+    /// Determines whether a before-update invariant is generated for this struct.
     ///
     /// We currently support two models for dealing with global spec var updates.
     /// If the specification has explicitly provided update invariants for spec vars, we use those.
     /// If not, we use the unpack invariants before the update, and the pack invariants
     /// after. This function is only true for the later case.
     pub fn has_before_update_invariant(struct_env: &StructEnv<'_>) -> bool {
-        !struct_env
+        let no_explict_update = !struct_env
             .get_update_invariants()
             .iter()
-            .any(Self::is_invariant_spec_var_update)
-            && !struct_env.get_unpack_invariants().is_empty()
+            .any(Self::is_invariant_spec_var_update);
+        let has_pack = !struct_env.get_unpack_invariants().is_empty();
+        no_explict_update && has_pack
+            // If any of the fields has it, it inherits to the struct.
+            || struct_env.get_fields().any(|fe| {
+                Self::has_before_update_invariant_ty(struct_env.module_env.env, &fe.get_type())
+            })
+    }
+
+    /// Determines whether a before-update invariant is generated for this type.
+    pub fn has_before_update_invariant_ty(env: &GlobalEnv, ty: &Type) -> bool {
+        if let Some((struct_env, _)) = ty.get_struct(env) {
+            Self::has_before_update_invariant(&struct_env)
+        } else {
+            // TODO: vectors
+            false
+        }
     }
 
     /// Helper to determine whether an invariant is a spec var update.
@@ -390,17 +473,51 @@ impl<'env> SpecTranslator<'env> {
             boogie_struct_name(struct_env)
         );
         self.writer.indent();
+
+        // Emit call to before update invariant procedure for all fields which have one by their own.
+        for fe in struct_env.get_fields() {
+            if let Some((nested_struct_env, _)) =
+                fe.get_type().get_struct(struct_env.module_env.env)
+            {
+                if Self::has_before_update_invariant(&nested_struct_env) {
+                    let field_name = boogie_field_name(&fe);
+                    emitln!(
+                        self.writer,
+                        "call {}_before_update_inv($SelectField($before, {}));",
+                        boogie_struct_name(&nested_struct_env),
+                        field_name,
+                    );
+                }
+            }
+        }
+
+        // Emit call to spec var updates via unpack invariants.
         self.emit_spec_var_updates("$before", "", struct_env.get_unpack_invariants());
+
         self.writer.unindent();
         emitln!(self.writer, "}");
         emitln!(self.writer);
     }
 
-    /// Determines whether a after-update invariant is generated.
+    /// Determines whether a after-update invariant is generated for this struct.
     pub fn has_after_update_invariant(struct_env: &StructEnv<'_>) -> bool {
         !struct_env.get_update_invariants().is_empty()
             || !struct_env.get_pack_invariants().is_empty()
             || !struct_env.get_data_invariants().is_empty()
+            // If any of the fields has it, it inherits to the struct.
+            || struct_env.get_fields().any(|fe| {
+                Self::has_after_update_invariant_ty(struct_env.module_env.env, &fe.get_type())
+            })
+    }
+
+    /// Determines whether a after-update invariant is generated for this type.
+    pub fn has_after_update_invariant_ty(env: &GlobalEnv, ty: &Type) -> bool {
+        if let Some((struct_env, _)) = ty.get_struct(env) {
+            Self::has_after_update_invariant(&struct_env)
+        } else {
+            // TODO: vectors
+            false
+        }
     }
 
     /// Generates a procedure which asserts the after-update invariants of the struct.
@@ -415,6 +532,32 @@ impl<'env> SpecTranslator<'env> {
         );
         self.writer.indent();
 
+        // Emit call to after update invariant procedure for all fields which have one by their own.
+        for fe in struct_env.get_fields() {
+            if let Some((nested_struct_env, _)) =
+                fe.get_type().get_struct(struct_env.module_env.env)
+            {
+                if Self::has_after_update_invariant(&nested_struct_env) {
+                    let field_name = boogie_field_name(&fe);
+                    emitln!(
+                        self.writer,
+                        "call {}_after_update_inv($SelectField($before, {}), $SelectField($after, {}));",
+                        boogie_struct_name(&nested_struct_env),
+                        field_name, field_name,
+                    );
+                }
+            }
+        }
+
+        // Emit data invariants for this struct.
+        self.emit_invariants_assume_or_assert(
+            "$after",
+            "",
+            false,
+            struct_env.get_data_invariants(),
+        );
+
+        // Emit update invariants for this struct.
         if struct_env
             .get_update_invariants()
             .iter()
@@ -430,12 +573,6 @@ impl<'env> SpecTranslator<'env> {
             "$before",
             false,
             struct_env.get_update_invariants(),
-        );
-        self.emit_invariants_assume_or_assert(
-            "$after",
-            "",
-            false,
-            struct_env.get_data_invariants(),
         );
 
         self.writer.unindent();
@@ -613,6 +750,13 @@ impl<'env> SpecTranslator<'env> {
             Operation::Select(module_id, struct_id, field_id) => {
                 self.translate_select(*module_id, *struct_id, *field_id, args)
             }
+            Operation::Local(sym) => {
+                emit!(
+                    self.writer,
+                    "$GetLocal($m, $frame + {})",
+                    self.name_to_idx_map[sym],
+                );
+            }
             Operation::Result(pos) => self.auto_dref(node_id, || {
                 emit!(self.writer, "$ret{}", pos);
             }),
@@ -638,8 +782,8 @@ impl<'env> SpecTranslator<'env> {
             Operation::Le => self.translate_rel_op("<=", args),
             Operation::Gt => self.translate_rel_op(">", args),
             Operation::Ge => self.translate_rel_op(">=", args),
-            Operation::Eq => self.translate_eq_neq("==", "IsEqual", args),
-            Operation::Neq => self.translate_eq_neq("!=", "!IsEqual", args),
+            Operation::Eq => self.translate_eq_neq("IsEqual", args),
+            Operation::Neq => self.translate_eq_neq("!IsEqual", args),
 
             // Unary operators
             Operation::Not => self.translate_logical_unary_op("!", args),
@@ -651,7 +795,7 @@ impl<'env> SpecTranslator<'env> {
             Operation::Sender => emit!(self.writer, "$TxnSender($txn)"),
             Operation::All => self.translate_all_or_exists(&loc, true, args),
             Operation::Any => self.translate_all_or_exists(&loc, false, args),
-            Operation::Update => self.translate_primitive_call("$update_vector", args),
+            Operation::Update => self.translate_primitive_call("$update_vector_by_value", args),
             Operation::Old => self.translate_old(args),
             Operation::MaxU8 => emit!(self.writer, "Integer(MAX_U8)"),
             Operation::MaxU64 => emit!(self.writer, "Integer(MAX_U64)"),
@@ -731,7 +875,12 @@ impl<'env> SpecTranslator<'env> {
         //      (var $r := v; forall $i: int :: $InVectorRange($v, $i) ==> (var x:=$r[$i]; x > 0))
         // all(r, |x| x > 0) -->
         //      (var $r := r; forall $i: int :: $InRange($r, $i) ==> (var x:=$i; x > 0))
+        // any(v, |x| x > 0) -->
+        //      (var $r := v; exists $i: int :: $InVectorRange($v, $i) && (var x:=$r[$i]; x > 0))
+        // any(r, |x| x > 0) -->
+        //      (var $r := r; exists $i: int :: $InRange($r, $i) && (var x:=$i; x > 0))
         let quant_ty = self.module_env.get_node_type(args[0].node_id());
+        let connective = if is_all { "==>" } else { "&&" };
         if let Exp::Lambda(_, vars, exp) = &args[1] {
             if let Some((var, _)) = self.get_decl_var(loc, vars) {
                 let var_name = self.module_env.symbol_pool().string(var);
@@ -739,6 +888,13 @@ impl<'env> SpecTranslator<'env> {
                 let is_vector = match quant_ty {
                     Type::Vector(..) => true,
                     Type::Primitive(PrimitiveType::Range) => false,
+                    Type::Reference(_, b) => {
+                        if let Type::Vector(..) = *b {
+                            true
+                        } else {
+                            panic!("unexpected type")
+                        }
+                    }
                     _ => panic!("unexpected type"),
                 };
                 let range_tmp = self.fresh_var_name("range");
@@ -752,9 +908,10 @@ impl<'env> SpecTranslator<'env> {
                 if is_vector {
                     emit!(
                         self.writer,
-                        "$InVectorRange({}, {}) ==> (var {} := $select_vector({}, {}); ",
+                        "$InVectorRange({}, {}) {} (var {} := $select_vector({}, {}); ",
                         range_tmp,
                         quant_var,
+                        connective,
                         var_name,
                         range_tmp,
                         quant_var,
@@ -762,9 +919,10 @@ impl<'env> SpecTranslator<'env> {
                 } else {
                     emit!(
                         self.writer,
-                        "$InRange({}, {}) ==> (var {} := Integer({}); ",
+                        "$InRange({}, {}) {} (var {} := Integer({}); ",
                         range_tmp,
                         quant_var,
+                        connective,
                         var_name,
                         quant_var,
                     );
@@ -803,29 +961,13 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
-    fn translate_eq_neq(&self, boogie_ref_op: &str, boogie_val_fun: &str, args: &[Exp]) {
-        let is_ref = self
-            .module_env
-            .get_node_type(args[0].node_id())
-            .is_reference()
-            || self
-                .module_env
-                .get_node_type(args[1].node_id())
-                .is_reference();
+    fn translate_eq_neq(&self, boogie_val_fun: &str, args: &[Exp]) {
         emit!(self.writer, "Boolean(");
-        if is_ref {
-            emit!(self.writer, "(");
-            self.translate_exp(&args[0]);
-            emit!(self.writer, ") {} (", boogie_ref_op);
-            self.translate_exp(&args[1]);
-            emit!(self.writer, ")");
-        } else {
-            emit!(self.writer, "{}(", boogie_val_fun);
-            self.translate_exp(&args[0]);
-            emit!(self.writer, ", ");
-            self.translate_exp(&args[1]);
-            emit!(self.writer, ")");
-        }
+        emit!(self.writer, "{}(", boogie_val_fun);
+        self.translate_exp(&args[0]);
+        emit!(self.writer, ", ");
+        self.translate_exp(&args[1]);
+        emit!(self.writer, ")");
         emit!(self.writer, ")");
     }
 

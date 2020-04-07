@@ -233,11 +233,14 @@ mod test {
 
     #[test]
     fn test_deserialization() {
-        // First 4 bytes represent length.
-        let mut bytes = [0u8; 50];
+        // When the length is smaller than 128, it is encoded in the first byte.
+        // (see comments in LCS crate)
+        let mut bytes = [0u8; 47];
         bytes[0] = 46;
+        assert!(lcs::from_bytes::<Vec<u8>>(&bytes).is_ok());
+        // However, 46 > MAX_BUCKET:
         assert!(lcs::from_bytes::<BitVec>(&bytes).is_err());
-        let mut bytes = [0u8; 36];
+        let mut bytes = [0u8; 33];
         bytes[0] = 32;
         let bv = BitVec {
             inner: Vec::from([0u8; 32].as_ref()),

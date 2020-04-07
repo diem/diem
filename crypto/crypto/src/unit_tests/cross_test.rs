@@ -5,10 +5,10 @@
 // context where the crypto crate is external
 use crate as libra_crypto;
 use crate::{
-    bls12381::{BLS12381PrivateKey, BLS12381PublicKey, BLS12381Signature},
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
+    multi_ed25519::{MultiEd25519PrivateKey, MultiEd25519PublicKey, MultiEd25519Signature},
+    test_utils::uniform_keypair_strategy,
     traits::*,
-    unit_tests::uniform_keypair_strategy,
 };
 
 use crate::hash::HashValue;
@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 // Here we aim to make a point about how we can build an enum generically
 // on top of a few choice signing scheme types. This enum implements the
 // VerifyingKey, SigningKey for precisely the types selected for that enum
-// (here, Ed25519(PublicKey|PrivateKey|Signature) and BLS(...)).
+// (here, Ed25519(PublicKey|PrivateKey|Signature) and MultiEd25519(...)).
 //
 // Note that we do not break type safety (see towards the end), and that
 // this enum can safely be put into the usual collection (Vec, HashMap).
@@ -35,7 +35,7 @@ use serde::{Deserialize, Serialize};
 #[SignatureType = "Sig"]
 enum PublicK {
     Ed(Ed25519PublicKey),
-    BLS(BLS12381PublicKey),
+    MultiEd(MultiEd25519PublicKey),
 }
 
 #[derive(Serialize, Deserialize, SilentDebug, ValidKey, PrivateKey, SigningKey)]
@@ -43,7 +43,7 @@ enum PublicK {
 #[SignatureType = "Sig"]
 enum PrivateK {
     Ed(Ed25519PrivateKey),
-    BLS(BLS12381PrivateKey),
+    MultiEd(MultiEd25519PrivateKey),
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -52,7 +52,7 @@ enum PrivateK {
 #[PrivateKeyType = "PrivateK"]
 enum Sig {
     Ed(Ed25519Signature),
-    BLS(BLS12381Signature),
+    MultiEd(MultiEd25519Signature),
 }
 
 ///////////////////////////////////////////////////////
@@ -66,7 +66,7 @@ proptest! {
         hash in any::<HashValue>(),
         ed_keypair1 in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>(),
         ed_keypair2 in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>(),
-        bls_keypair in uniform_keypair_strategy::<BLS12381PrivateKey, BLS12381PublicKey>()
+        med_keypair in uniform_keypair_strategy::<MultiEd25519PrivateKey, MultiEd25519PublicKey>()
     ) {
         // this is impossible to write statically, due to the trait not being
         // object-safe (voluntarily)
@@ -80,11 +80,11 @@ proptest! {
         prop_assert!(signature.verify(&hash, &ed_keypair1.public_key).is_ok());
 
         // This is impossible to write, and generates:
-        // expected struct `ed25519::Ed25519PublicKey`, found struct `bls12381::BLS12381PublicKey`
-        // prop_assert!(signature.verify(&hash, &bls_keypair.public_key).is_ok());
+        // expected struct `ed25519::Ed25519PublicKey`, found struct `med12381::MultiEd25519PublicKey`
+        // prop_assert!(signature.verify(&hash, &med_keypair.public_key).is_ok());
 
         let mut l2: Vec<PrivateK> = vec![];
-        l2.push(PrivateK::BLS(bls_keypair.private_key));
+        l2.push(PrivateK::MultiEd(med_keypair.private_key));
         l2.push(PrivateK::Ed(ed_keypair2.private_key));
 
         let ed_key = l2.pop().unwrap();
@@ -96,21 +96,21 @@ proptest! {
         prop_assert!(good_sigver.is_ok(), "{:?}", good_sigver);
 
         // but this still fails, as expected
-        let bls_pubkey = PublicK::BLS(bls_keypair.public_key);
-        let bad_sigver = ed_signature.verify(&hash, &bls_pubkey);
+        let med_pubkey = PublicK::MultiEd(med_keypair.public_key);
+        let bad_sigver = ed_signature.verify(&hash, &med_pubkey);
         prop_assert!(bad_sigver.is_err(), "{:?}", bad_sigver);
 
         // And now just in case we're confused again, we pop in the
         // reverse direction
-        let bls_key = l2.pop().unwrap();
-        let bls_signature = bls_key.sign_message(&hash);
+        let med_key = l2.pop().unwrap();
+        let med_signature = med_key.sign_message(&hash);
 
         // This is still business as usual
-        let good_sigver = bls_signature.verify(&hash, &bls_pubkey);
+        let good_sigver = med_signature.verify(&hash, &med_pubkey);
         prop_assert!(good_sigver.is_ok(), "{:?}", good_sigver);
 
         // but this still fails, as expected
-        let bad_sigver = bls_signature.verify(&hash, &ed_pubkey2);
+        let bad_sigver = med_signature.verify(&hash, &ed_pubkey2);
         prop_assert!(bad_sigver.is_err(), "{:?}", bad_sigver);
     }
 }

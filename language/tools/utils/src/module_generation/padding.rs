@@ -5,7 +5,7 @@ use crate::module_generation::{options::ModuleGeneratorOptions, utils::random_st
 use libra_types::account_address::AccountAddress;
 use move_core_types::identifier::Identifier;
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use vm::file_format::{Bytecode, CompiledModuleMut, LocalsSignature};
+use vm::file_format::{Bytecode, CompiledModuleMut, Signature};
 
 ///////////////////////////////////////////////////////////////////////////
 // Padding of tables in compiled modules
@@ -28,7 +28,7 @@ impl Pad {
         slf.pad_address_table(module);
         slf.pad_identifier_table(module);
         slf.pad_byte_array_table(module);
-        slf.pad_locals_signatures(module);
+        slf.pad_signatures(module);
         slf.pad_function_bodies(module);
     }
 
@@ -69,9 +69,9 @@ impl Pad {
     }
 
     // Ensure that locals signatures always contain an empty signature
-    fn pad_locals_signatures(&mut self, module: &mut CompiledModuleMut) {
-        if module.locals_signatures.iter().all(|v| !v.is_empty()) {
-            module.locals_signatures.push(LocalsSignature(Vec::new()));
+    fn pad_signatures(&mut self, module: &mut CompiledModuleMut) {
+        if module.signatures.iter().all(|v| !v.is_empty()) {
+            module.signatures.push(Signature(Vec::new()));
         }
     }
 }

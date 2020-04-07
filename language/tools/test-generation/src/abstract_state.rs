@@ -9,8 +9,10 @@ use std::{
 use vm::{
     access::ModuleAccess,
     file_format::{
-        empty_module, CompiledModule, CompiledModuleMut, FunctionHandleIndex, Kind,
-        LocalsSignature, LocalsSignatureIndex, SignatureToken, StructDefinitionIndex, TableIndex,
+        empty_module, CompiledModule, CompiledModuleMut, FieldInstantiation,
+        FieldInstantiationIndex, FunctionHandleIndex, FunctionInstantiation,
+        FunctionInstantiationIndex, Kind, Signature, SignatureIndex, SignatureToken,
+        StructDefInstantiation, StructDefInstantiationIndex, StructDefinitionIndex, TableIndex,
     },
 };
 
@@ -47,11 +49,12 @@ pub enum Mutability {
 }
 
 impl AbstractValue {
-    /// Create a new primitive `AbstractValue` given its type; the kind will be `Unrestricted`
+    /// Create a new primitive `AbstractValue` given its type; the kind will be `Copyable`
     pub fn new_primitive(token: SignatureToken) -> AbstractValue {
         checked_precondition!(
             match token {
-                SignatureToken::Struct(_, _) => false,
+                SignatureToken::Struct(_) => false,
+                SignatureToken::StructInstantiation(_, _) => false,
                 SignatureToken::Reference(_) => false,
                 SignatureToken::MutableReference(_) => false,
                 _ => true,
@@ -60,7 +63,7 @@ impl AbstractValue {
         );
         AbstractValue {
             token,
-            kind: Kind::Unrestricted,
+            kind: Kind::Copyable,
         }
     }
 
@@ -76,7 +79,7 @@ impl AbstractValue {
     /// Create a new struct `AbstractValue` given its type and kind
     pub fn new_struct(token: SignatureToken, kind: Kind) -> AbstractValue {
         checked_precondition!(
-            matches!(token, SignatureToken::Struct(_, _)),
+            matches!(token, SignatureToken::Struct(_)),
             "AbstractValue::new_struct must be applied with a struct type"
         );
         AbstractValue { token, kind }
@@ -95,7 +98,7 @@ impl AbstractValue {
     fn is_generic_token(token: &SignatureToken) -> bool {
         match token {
             SignatureToken::TypeParameter(_) => true,
-            SignatureToken::Struct(_, tys) => tys.iter().any(Self::is_generic_token),
+            SignatureToken::StructInstantiation(_, _) => true,
             SignatureToken::Reference(tok) | SignatureToken::MutableReference(tok) => {
                 Self::is_generic_token(tok)
             }
@@ -188,12 +191,22 @@ impl CallGraph {
 /// type instantiations, and at the end materialize this updated signature pool into a module. We
 /// also need the ability to quickly determine if an instantiation has already been created, and if
 /// so, at which index. So this also keeps a reverse lookup table of instantiation to
-/// LocalsSignatureIndex.
+/// SignatureIndex.
 #[derive(Debug, Clone)]
 pub struct InstantiableModule {
     // A reverse lookup table for instantiations.
-    instance_for_offset: Vec<Vec<SignatureToken>>,
-    instantiations: HashMap<Vec<SignatureToken>, LocalsSignatureIndex>,
+    sig_instance_for_offset: Vec<Vec<SignatureToken>>,
+    instantiations: HashMap<Vec<SignatureToken>, SignatureIndex>,
+
+    struct_instance_for_offset: Vec<StructDefInstantiation>,
+    struct_instantiations: HashMap<StructDefInstantiation, StructDefInstantiationIndex>,
+
+    func_instance_for_offset: Vec<FunctionInstantiation>,
+    function_instantiations: HashMap<FunctionInstantiation, FunctionInstantiationIndex>,
+
+    field_instance_for_offset: Vec<FieldInstantiation>,
+    field_instantiations: HashMap<FieldInstantiation, FieldInstantiationIndex>,
+
     pub module: CompiledModule,
 }
 
@@ -201,41 +214,168 @@ impl InstantiableModule {
     pub fn new(module: CompiledModule) -> Self {
         Self {
             instantiations: module
-                .locals_signatures()
+                .signatures()
                 .iter()
                 .enumerate()
-                .map(|(index, sig)| (sig.0.clone(), LocalsSignatureIndex(index as TableIndex)))
+                .map(|(index, sig)| (sig.0.clone(), SignatureIndex(index as TableIndex)))
                 .collect::<HashMap<_, _>>(),
-            instance_for_offset: module
-                .locals_signatures()
+            sig_instance_for_offset: module
+                .signatures()
                 .iter()
                 .map(|loc_sig| loc_sig.0.clone())
                 .collect(),
+
+            struct_instantiations: module
+                .struct_instantiations()
+                .iter()
+                .enumerate()
+                .map(|(index, si)| (si.clone(), StructDefInstantiationIndex(index as TableIndex)))
+                .collect::<HashMap<_, _>>(),
+            struct_instance_for_offset: module.struct_instantiations().to_vec(),
+
+            function_instantiations: module
+                .function_instantiations()
+                .iter()
+                .enumerate()
+                .map(|(index, fi)| (fi.clone(), FunctionInstantiationIndex(index as TableIndex)))
+                .collect::<HashMap<_, _>>(),
+            func_instance_for_offset: module.function_instantiations().to_vec(),
+
+            field_instantiations: module
+                .field_instantiations()
+                .iter()
+                .enumerate()
+                .map(|(index, fi)| (fi.clone(), FieldInstantiationIndex(index as TableIndex)))
+                .collect::<HashMap<_, _>>(),
+            field_instance_for_offset: module.field_instantiations().to_vec(),
             module,
         }
     }
 
     /// If the `instantiant` is not in the `instantiations` table, this adds the instantiant to the
     /// `instance_for_offset` for table, and adds the index to the reverse lookup table. Returns
-    /// the LocalsSignatureIndex for the `instantiant`.
-    pub fn add_instantiation(&mut self, instantiant: Vec<SignatureToken>) -> LocalsSignatureIndex {
+    /// the SignatureIndex for the `instantiant`.
+    pub fn add_instantiation(&mut self, instantiant: Vec<SignatureToken>) -> SignatureIndex {
         match self.instantiations.get(&instantiant) {
             Some(index) => *index,
             None => {
                 let current_index =
-                    LocalsSignatureIndex(self.instance_for_offset.len() as TableIndex);
+                    SignatureIndex(self.sig_instance_for_offset.len() as TableIndex);
                 self.instantiations
                     .insert(instantiant.clone(), current_index);
-                self.instance_for_offset.push(instantiant);
+                self.sig_instance_for_offset.push(instantiant);
+                current_index
+            }
+        }
+    }
+
+    /// If the `instantiant` is not in the `struct_instantiations` table, this adds the
+    /// instantiant to the `struct_instance_for_offset` for table, and adds the index to the
+    /// reverse lookup table.
+    /// Returns the SignatureIndex for the `instantiant`.
+    pub fn add_struct_instantiation(
+        &mut self,
+        instantiant: StructDefInstantiation,
+    ) -> StructDefInstantiationIndex {
+        match self.struct_instantiations.get(&instantiant) {
+            Some(index) => *index,
+            None => {
+                let current_index = StructDefInstantiationIndex(
+                    self.struct_instance_for_offset.len() as TableIndex,
+                );
+                self.struct_instantiations
+                    .insert(instantiant.clone(), current_index);
+                self.struct_instance_for_offset.push(instantiant);
+                current_index
+            }
+        }
+    }
+
+    /// If the `instantiant` is not in the `function_instantiations` table, this adds the
+    /// instantiant to the `func_instance_for_offset` for table, and adds the index to the
+    /// reverse lookup table.
+    /// Returns the SignatureIndex for the `instantiant`.
+    pub fn add_function_instantiation(
+        &mut self,
+        instantiant: FunctionInstantiation,
+    ) -> FunctionInstantiationIndex {
+        match self.function_instantiations.get(&instantiant) {
+            Some(index) => *index,
+            None => {
+                let current_index =
+                    FunctionInstantiationIndex(self.func_instance_for_offset.len() as TableIndex);
+                self.function_instantiations
+                    .insert(instantiant.clone(), current_index);
+                self.func_instance_for_offset.push(instantiant);
+                current_index
+            }
+        }
+    }
+
+    /// If the `instantiant` is not in the `field_instantiations` table, this adds the
+    /// instantiant to the `field_instance_for_offset` for table, and adds the index to the
+    /// reverse lookup table.
+    /// Returns the SignatureIndex for the `instantiant`.
+    pub fn add_field_instantiation(
+        &mut self,
+        instantiant: FieldInstantiation,
+    ) -> FieldInstantiationIndex {
+        match self.field_instantiations.get(&instantiant) {
+            Some(index) => *index,
+            None => {
+                let current_index =
+                    FieldInstantiationIndex(self.field_instance_for_offset.len() as TableIndex);
+                self.field_instantiations
+                    .insert(instantiant.clone(), current_index);
+                self.field_instance_for_offset.push(instantiant);
                 current_index
             }
         }
     }
 
     /// Returns the type instantiation at `index`. Errors if the instantiation does not exist.
-    pub fn instantiantiation_at(&self, index: LocalsSignatureIndex) -> &Vec<SignatureToken> {
-        match self.instance_for_offset.get(index.0 as usize) {
+    pub fn instantiantiation_at(&self, index: SignatureIndex) -> &Vec<SignatureToken> {
+        match self.sig_instance_for_offset.get(index.0 as usize) {
             Some(vec) => vec,
+            None => {
+                panic!("Unable to get instantiation at offset: {:#?}", index);
+            }
+        }
+    }
+
+    /// Returns the struct instantiation at `index`. Errors if the instantiation does not exist.
+    pub fn struct_instantiantiation_at(
+        &self,
+        index: StructDefInstantiationIndex,
+    ) -> &StructDefInstantiation {
+        match self.struct_instance_for_offset.get(index.0 as usize) {
+            Some(struct_inst) => struct_inst,
+            None => {
+                panic!("Unable to get instantiation at offset: {:#?}", index);
+            }
+        }
+    }
+
+    /// Returns the struct instantiation at `index`. Errors if the instantiation does not exist.
+    pub fn function_instantiantiation_at(
+        &self,
+        index: FunctionInstantiationIndex,
+    ) -> &FunctionInstantiation {
+        match self.func_instance_for_offset.get(index.0 as usize) {
+            Some(func_inst) => func_inst,
+            None => {
+                panic!("Unable to get instantiation at offset: {:#?}", index);
+            }
+        }
+    }
+
+    /// Returns the struct instantiation at `index`. Errors if the instantiation does not exist.
+    pub fn field_instantiantiation_at(
+        &self,
+        index: FieldInstantiationIndex,
+    ) -> &FieldInstantiation {
+        match self.field_instance_for_offset.get(index.0 as usize) {
+            Some(field_inst) => field_inst,
             None => {
                 panic!("Unable to get instantiation at offset: {:#?}", index);
             }
@@ -246,11 +386,14 @@ impl InstantiableModule {
     /// module, and returns the resultant compiled module.
     pub fn instantiate(self) -> CompiledModuleMut {
         let mut module = self.module.into_inner();
-        module.locals_signatures = self
-            .instance_for_offset
+        module.signatures = self
+            .sig_instance_for_offset
             .into_iter()
-            .map(LocalsSignature)
+            .map(Signature)
             .collect();
+        module.struct_def_instantiations = self.struct_instance_for_offset;
+        module.function_instantiations = self.func_instance_for_offset;
+        module.field_instantiations = self.field_instance_for_offset;
         module
     }
 }

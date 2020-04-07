@@ -85,7 +85,7 @@ pub fn type_(context: &mut Context, ty: &mut Type) {
 fn get_kind(sp!(loc, ty_): &Type) -> Kind {
     use Type_::*;
     match ty_ {
-        Anything | UnresolvedError | Unit | Ref(_, _) => sp(*loc, Kind_::Unrestricted),
+        Anything | UnresolvedError | Unit | Ref(_, _) => sp(*loc, Kind_::Copyable),
         Var(_) => panic!("ICE unexpanded type"),
         Param(TParam { kind, .. }) => kind.clone(),
         Apply(Some(kind), _, _) => kind.clone(),
@@ -153,7 +153,7 @@ fn exp(context: &mut Context, e: &mut T::Exp) {
             let from_user = false;
             let var = v.clone();
             e.exp.value = match get_kind(&e.ty).value {
-                Kind_::Unrestricted => E::Copy { from_user, var },
+                Kind_::Copyable => E::Copy { from_user, var },
                 Kind_::Unknown | Kind_::Affine | Kind_::Resource => E::Move { from_user, var },
             }
         }
@@ -207,6 +207,8 @@ fn exp(context: &mut Context, e: &mut T::Exp) {
             e.exp.value = new_exp;
         }
 
+        E::Spec(_, used_locals) => used_locals.values_mut().for_each(|ty| type_(context, ty)),
+
         E::Unit
         | E::Value(_)
         | E::Move { .. }
@@ -214,7 +216,6 @@ fn exp(context: &mut Context, e: &mut T::Exp) {
         | E::BorrowLocal(_, _)
         | E::Break
         | E::Continue
-        | E::Spec(_)
         | E::UnresolvedError => (),
 
         E::ModuleCall(call) => module_call(context, call),

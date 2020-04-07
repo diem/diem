@@ -4,11 +4,12 @@
 #[cfg(test)]
 mod mock_vm_test;
 
-use libra_crypto::ed25519::compat;
+use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
+    account_config,
     account_config::lbr_type_tag,
     contract_event::ContractEvent,
     event::EventKey,
@@ -17,7 +18,7 @@ use libra_types::{
         RawTransaction, Script, SignedTransaction, Transaction, TransactionArgument,
         TransactionOutput, TransactionPayload, TransactionStatus,
     },
-    validator_set::ValidatorSet,
+    validator_set::{ValidatorSet, ValidatorSetResource, VALIDATOR_SET_RESOURCE_PATH},
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
@@ -67,7 +68,7 @@ impl VMExecutor for MockVM {
                     ValidatorSet::change_event_key(),
                     0,
                     TypeTag::Bool,
-                    lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap(),
+                    lcs::to_bytes(&0).unwrap(),
                 )],
                 0,
                 KEEP_STATUS.clone(),
@@ -142,7 +143,7 @@ impl VMExecutor for MockVM {
                     ));
                 }
                 MockVMTransaction::Reconfiguration => {
-                    let account = AccountAddress::new([0xff; AccountAddress::LENGTH]);
+                    let account = account_config::validator_set_address();
                     let balance_access_path = balance_ap(account);
                     read_balance_from_storage(state_view, &balance_access_path);
                     outputs.push(TransactionOutput::new(
@@ -220,12 +221,12 @@ fn seqnum_ap(account: AccountAddress) -> AccessPath {
 }
 
 fn gen_genesis_writeset() -> WriteSet {
-    let address = AccountAddress::new([0xff; AccountAddress::LENGTH]);
-    let path = b"hello".to_vec();
     let mut write_set = WriteSetMut::default();
+    let address = account_config::validator_set_address();
+    let path = VALIDATOR_SET_RESOURCE_PATH.clone();
     write_set.push((
-        AccessPath::new(address, path),
-        WriteOp::Value(b"world".to_vec()),
+        AccessPath { address, path },
+        WriteOp::Value(lcs::to_bytes(&ValidatorSetResource::default()).unwrap()),
     ));
     write_set
         .freeze()
@@ -281,13 +282,13 @@ fn gen_events(sender: AccountAddress) -> Vec<ContractEvent> {
 
 pub fn encode_mint_program(amount: u64) -> Script {
     let argument = TransactionArgument::U64(amount);
-    Script::new(vec![], vec![argument])
+    Script::new(vec![], vec![], vec![argument])
 }
 
 pub fn encode_transfer_program(recipient: AccountAddress, amount: u64) -> Script {
     let argument1 = TransactionArgument::Address(recipient);
     let argument2 = TransactionArgument::U64(amount);
-    Script::new(vec![], vec![argument1, argument2])
+    Script::new(vec![], vec![], vec![argument1, argument2])
 }
 
 pub fn encode_mint_transaction(sender: AccountAddress, amount: u64) -> Transaction {
@@ -313,10 +314,10 @@ fn encode_transaction(sender: AccountAddress, program: Script) -> Transaction {
         std::time::Duration::from_secs(0),
     );
 
-    let (privkey, pubkey) = compat::generate_keypair(None);
+    let privkey = Ed25519PrivateKey::generate_for_testing();
     Transaction::UserTransaction(
         raw_transaction
-            .sign(&privkey, pubkey)
+            .sign(&privkey, privkey.public_key())
             .expect("Failed to sign raw transaction.")
             .into_inner(),
     )
@@ -325,10 +326,10 @@ fn encode_transaction(sender: AccountAddress, program: Script) -> Transaction {
 pub fn encode_reconfiguration_transaction(sender: AccountAddress) -> Transaction {
     let raw_transaction = RawTransaction::new_write_set(sender, 0, WriteSet::default());
 
-    let (privkey, pubkey) = compat::generate_keypair(None);
+    let privkey = Ed25519PrivateKey::generate_for_testing();
     Transaction::UserTransaction(
         raw_transaction
-            .sign(&privkey, pubkey)
+            .sign(&privkey, privkey.public_key())
             .expect("Failed to sign raw transaction.")
             .into_inner(),
     )

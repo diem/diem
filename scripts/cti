@@ -10,8 +10,8 @@ PR=""
 WORKSPACE=""
 ENV=""
 REPORT=""
-MARKER=$(whoami)
 DEPLOY=yes
+EXIT_CODE=0
 
 K8S=""
 K8S_CONTEXT_PATTERN='arn:aws:eks:us-west-2:853397791086:cluster/CLUSTERNAME-k8s-testnet'
@@ -113,10 +113,6 @@ while (( "$#" )); do
       TAG=master
       shift 1
       ;;
-    --marker)
-      MARKER=$2
-      shift 2
-      ;;
     -T|--tag)
       TAG=$2
       shift 2
@@ -124,10 +120,6 @@ while (( "$#" )); do
     --cluster-test-tag)
       CLUSTER_TEST_TAG=$2
       shift 2
-      ;;
-    -D|--no-deploy)
-      DEPLOY=no
-      shift 1
       ;;
     -W|--workspace)
       WORKSPACE=$2
@@ -160,8 +152,6 @@ then
       echo "-W|--workspace <WORKSPACE>: Use custom workplace <WORKSPACE>"
       echo "-E|--env <ENV>: Set environment variable, ex. -E RUST_LOG=debug. Can be repeated, e.g. -E A=B -E C=D"
       echo "-R|--report file.json: Generate json report into file.json"
-      echo "--marker <MARKER>: Marker to identify purpose of this run. Must be set by automatic invocations like CI"
-      echo "--D|--no-deploy: Do not deploy new version of validator"
       echo
       echo "To see cluster test runner arguments run cti --master"
       echo
@@ -182,71 +172,50 @@ CLUSTER_TEST_TAG=${CLUSTER_TEST_TAG:-${TAG}}
 
 OUTPUT_TEE=${CTI_OUTPUT_LOG:-$(mktemp)}
 
-if [[ -z "${K8S}" ]]; then
-  if [[ -z "${WORKSPACE}" ]]; then
-    WORKSPACE="cluster-test-ci"
-  fi
-  JUMPHOST=${JUMPHOST:-ssh.${WORKSPACE}.aws.hlw3truzy4ls.com}
-
-  ssh $JUMPHOST echo "ssh ok" >/dev/null || (echo "Failed to ssh to jump host $JUMPHOST. Try renew corp canal cert with cc-certs"; exit 1)
-
-  echo "**********"
-  echo "Copy of this output: $OUTPUT_TEE"
-  echo "Dashboard: http://prometheus.${WORKSPACE}.aws.hlw3truzy4ls.com:9091/"
-  echo "Logs:"
-  echo " * ssh ssh.${WORKSPACE}.aws.hlw3truzy4ls.com"
-  echo " * ssh-peer"
-  echo " * tail -f /data/libra/libra.log"
-  echo "**********"
-
-  if [ "$DEPLOY" == "yes" ]
-  then
-      DEPLOY_CMD="--deploy $TAG"
-  else
-      DEPLOY_CMD=""
-  fi
-
-  ssh -t $JUMPHOST ssh -i /libra_rsa ec2-user@ct.priv.${WORKSPACE}.aws.hlw3truzy4ls.com env $ENV CTI_MARKER=$MARKER REMOTE_USER=$MARKER ct -c cluster-test-ci --image "853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:$CLUSTER_TEST_TAG" $DEPLOY_CMD $* 2>&1 | tee $OUTPUT_TEE
-
-else
-  if ! which kubectl &>/dev/null; then
-    echo "kubectl is not installed. Please install kubectl. On mac, you can use : brew install kubectl"
-    exit 1
-  fi
-  echo "Running cluster-test on Kubernetes"
-  kube_init_context
-  pod_name="cluster-test-$(whoami)-$(date +%s)"
-  pod_name=${pod_name/_/-} #underscore not allowed in pod name
-  specfile=$(mktemp)
-  echo "Pod Spec : ${specfile}"
-  join_args $*
-  join_env_vars $ENV
-  DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-  sed -e "s/{pod_name}/${pod_name}/g" \
-      -e "s/{image_tag}/${TAG}/g" \
-      -e "s/{cluster_test_image_tag}/${CLUSTER_TEST_TAG}/g" \
-      -e "s^{env_variables}^${retval_join_env_vars}^g" \
-      -e "s/{extra_args}/${retval_join_args}/g" \
-      ${DIR}/cluster_test_pod_template.yaml > ${specfile}
-  if [[ -z "${WORKSPACE}" ]]; then
-    kube_select_cluster
-    WORKSPACE=${retval_kube_select_cluster}
-  fi
-  echo "Using cluster : ${WORKSPACE}"
-  context=${K8S_CONTEXT_PATTERN/CLUSTERNAME/${WORKSPACE}}
-  kubectl --context=${context} apply -f ${specfile} || (echo "Failed to create cluster-test pod"; exit 1)
-  kube_wait_pod ${pod_name} ${context}
-  echo "**********"
-  echo "${BLUE}Dashboard:${RESTORE} http://grafana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/"
-  echo "${BLUE}'val-0' Logs:${RESTORE} http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))&_a=(columns:!(log,kubernetes.pod_name),filters:!(('\$state':(store:appState),meta:(alias:!n,disabled:!f,key:kubernetes.pod_name,negate:!f,params:(query:val-0),type:phrase),query:(match:(kubernetes.pod_name:(query:val-0,type:phrase))))),interval:auto,query:(language:kuery,query:''),sort:!(!('@timestamp',desc)))"
-  echo
-  echo "${BLUE}'fn-0-0' Logs:${RESTORE} http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))&_a=(columns:!(log,kubernetes.pod_name),filters:!(('\$state':(store:appState),meta:(alias:!n,disabled:!f,key:kubernetes.pod_name,negate:!f,params:(query:fn-0-0),type:phrase),query:(match:(kubernetes.pod_name:(query:fn-0-0,type:phrase))))),interval:auto,query:(language:kuery,query:''),sort:!(!('@timestamp',desc)))"
-  echo
-  echo "${BLUE}Note:${RESTORE} Because of log volume, logs for only some of the validators and fullnodes are streamed to Kibana."
-  echo "**********"
-  kubectl --context=${context} logs -f "${pod_name}" | tee $OUTPUT_TEE
+if ! which kubectl &>/dev/null; then
+  echo "kubectl is not installed. Please install kubectl. On mac, you can use : brew install kubectl"
+  exit 1
+fi
+echo "Running cluster-test on Kubernetes"
+kube_init_context
+pod_name="cluster-test-$(whoami)-$(date +%s)"
+pod_name=${pod_name/_/-} #underscore not allowed in pod name
+specfile=$(mktemp)
+echo "Pod Spec : ${specfile}"
+join_args $*
+join_env_vars $ENV
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+sed -e "s/{pod_name}/${pod_name}/g" \
+    -e "s/{image_tag}/${TAG}/g" \
+    -e "s/{cluster_test_image_tag}/${CLUSTER_TEST_TAG}/g" \
+    -e "s^{env_variables}^${retval_join_env_vars}^g" \
+    -e "s/{extra_args}/${retval_join_args}/g" \
+    ${DIR}/cluster_test_pod_template.yaml > ${specfile}
+if [[ -z "${WORKSPACE}" ]]; then
+  kube_select_cluster
+  WORKSPACE=${retval_kube_select_cluster}
+fi
+echo "Using cluster : ${WORKSPACE}"
+context=${K8S_CONTEXT_PATTERN/CLUSTERNAME/${WORKSPACE}}
+kubectl --context=${context} apply -f ${specfile} || (echo "Failed to create cluster-test pod"; exit 1)
+kube_wait_pod ${pod_name} ${context}
+echo "**********"
+echo "${BLUE}Dashboard:${RESTORE} http://grafana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/"
+echo "${BLUE}'val-0' Logs:${RESTORE} http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))&_a=(columns:!(log,kubernetes.pod_name),filters:!(('\$state':(store:appState),meta:(alias:!n,disabled:!f,key:kubernetes.pod_name,negate:!f,params:(query:val-0),type:phrase),query:(match:(kubernetes.pod_name:(query:val-0,type:phrase))))),interval:auto,query:(language:kuery,query:''),sort:!(!('@timestamp',desc)))"
+echo
+echo "${BLUE}'fn-0-0' Logs:${RESTORE} http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))&_a=(columns:!(log,kubernetes.pod_name),filters:!(('\$state':(store:appState),meta:(alias:!n,disabled:!f,key:kubernetes.pod_name,negate:!f,params:(query:fn-0-0),type:phrase),query:(match:(kubernetes.pod_name:(query:fn-0-0,type:phrase))))),interval:auto,query:(language:kuery,query:''),sort:!(!('@timestamp',desc)))"
+echo
+echo "${BLUE}Note:${RESTORE} Because of log volume, logs for only some of the validators and fullnodes are streamed to Kibana."
+echo "**********"
+kubectl --context=${context} logs -f "${pod_name}" | tee $OUTPUT_TEE
+pod_status=$(kubectl --context=${context} get pods "${pod_name}" -o jsonpath="{.status.phase}")
+if [[ "${pod_status}" != "Succeeded" ]]; then
+  echo "${pod_name} status: ${pod_status}"
+  EXIT_CODE=1
 fi
 
 if [ ! -z "$REPORT" ]; then
     cat $OUTPUT_TEE | awk '/====json-report-begin===/{f=1;next} /====json-report-end===/{f=0} f' > $REPORT
 fi
+
+exit ${EXIT_CODE}

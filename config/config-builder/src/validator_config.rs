@@ -11,7 +11,7 @@ use libra_config::{
     generator,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
-use libra_types::{transaction::Transaction, validator_set::ValidatorSet};
+use libra_types::validator_set::ValidatorSet;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{collections::HashMap, net::SocketAddr};
@@ -187,26 +187,24 @@ impl ValidatorConfig {
         let validator_set = ValidatorSet::new(
             validator_swarm
                 .validator_set
-                .clone()
-                .into_iter()
+                .payload()
+                .iter()
+                .cloned()
                 .take(nodes_in_genesis)
                 .collect(),
         );
         let discovery_set = vm_genesis::make_placeholder_discovery_set(&validator_set);
 
-        let genesis = Some(Transaction::UserTransaction(
-            vm_genesis::encode_genesis_transaction_with_validator(
-                &faucet_key,
-                faucet_key.public_key(),
-                &validator_swarm.nodes,
-                validator_set,
-                discovery_set,
-                self.template
-                    .test
-                    .as_ref()
-                    .and_then(|config| config.publishing_option.clone()),
-            )
-            .into_inner(),
+        let genesis = Some(vm_genesis::encode_genesis_transaction_with_validator(
+            &faucet_key,
+            faucet_key.public_key(),
+            &validator_swarm.nodes,
+            validator_set,
+            discovery_set,
+            self.template
+                .test
+                .as_ref()
+                .and_then(|config| config.publishing_option.clone()),
         ));
 
         for node in &mut validator_swarm.nodes {
@@ -218,7 +216,7 @@ impl ValidatorConfig {
 
     fn build_faucet(&self) -> (Ed25519PrivateKey, [u8; 32]) {
         let mut faucet_rng = StdRng::from_seed(self.seed);
-        let faucet_key = Ed25519PrivateKey::generate_for_testing(&mut faucet_rng);
+        let faucet_key = Ed25519PrivateKey::generate(&mut faucet_rng);
         let config_seed: [u8; 32] = faucet_rng.gen();
         (faucet_key, config_seed)
     }

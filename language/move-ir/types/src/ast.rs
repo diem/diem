@@ -158,8 +158,8 @@ pub enum Kind {
     All,
     /// `Resource` types must follow move semantics and various resource safety rules.
     Resource,
-    /// `Unrestricted` types do not need to follow the `Resource` rules.
-    Unrestricted,
+    /// `Copyable` types do not need to follow the `Resource` rules.
+    Copyable,
 }
 
 //**************************************************************************************************
@@ -634,8 +634,8 @@ pub enum Bytecode_ {
     FreezeRef,
     MutBorrowLoc(Var),
     ImmBorrowLoc(Var),
-    MutBorrowField(StructName, Field),
-    ImmBorrowField(StructName, Field),
+    MutBorrowField(StructName, Vec<Type>, Field),
+    ImmBorrowField(StructName, Vec<Type>, Field),
     MutBorrowGlobal(StructName, Vec<Type>),
     ImmBorrowGlobal(StructName, Vec<Type>),
     Add,
@@ -953,12 +953,12 @@ impl FunctionSignature {
     pub fn new(
         formals: Vec<(Var, Type)>,
         return_type: Vec<Type>,
-        type_formals: Vec<(TypeVar, Kind)>,
+        type_parameters: Vec<(TypeVar, Kind)>,
     ) -> Self {
         FunctionSignature {
             formals,
             return_type,
-            type_formals,
+            type_formals: type_parameters,
         }
     }
 }
@@ -970,12 +970,12 @@ impl Function_ {
         visibility: FunctionVisibility,
         formals: Vec<(Var, Type)>,
         return_type: Vec<Type>,
-        type_formals: Vec<(TypeVar, Kind)>,
+        type_parameters: Vec<(TypeVar, Kind)>,
         acquires: Vec<StructName>,
         specifications: Vec<Condition>,
         body: FunctionBody,
     ) -> Self {
-        let signature = FunctionSignature::new(formals, return_type, type_formals);
+        let signature = FunctionSignature::new(formals, return_type, type_parameters);
         Function_ {
             visibility,
             signature,
@@ -1231,7 +1231,7 @@ impl fmt::Display for Kind {
             match self {
                 Kind::All => "all",
                 Kind::Resource => "resource",
-                Kind::Unrestricted => "unrestricted",
+                Kind::Copyable => "copyable",
             }
         )
     }
@@ -1783,8 +1783,20 @@ impl fmt::Display for Bytecode_ {
             Bytecode_::FreezeRef => write!(f, "FreezeRef"),
             Bytecode_::MutBorrowLoc(v) => write!(f, "MutBorrowLoc {}", v),
             Bytecode_::ImmBorrowLoc(v) => write!(f, "ImmBorrowLoc {}", v),
-            Bytecode_::MutBorrowField(n, field) => write!(f, "MutBorrowField {}.{}", n, field),
-            Bytecode_::ImmBorrowField(n, field) => write!(f, "ImmBorrowField {}.{}", n, field),
+            Bytecode_::MutBorrowField(n, tys, field) => write!(
+                f,
+                "MutBorrowField {}{}.{}",
+                n,
+                format_type_actuals(tys),
+                field
+            ),
+            Bytecode_::ImmBorrowField(n, tys, field) => write!(
+                f,
+                "ImmBorrowField {}{}.{}",
+                n,
+                format_type_actuals(tys),
+                field
+            ),
             Bytecode_::MutBorrowGlobal(n, tys) => {
                 write!(f, "MutBorrowGlobal {}{}", n, format_type_actuals(tys))
             }

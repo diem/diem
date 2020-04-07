@@ -19,8 +19,9 @@ use libra_logger::prelude::*;
 use libra_types::proto::types::{
     UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse, ValidatorChangeProof,
 };
-use libradb::{LibraDB, LibraDBTrait};
+use libradb::LibraDB;
 use std::{convert::TryFrom, path::Path, sync::Arc};
+use storage_interface::DbReader;
 use storage_proto::proto::storage::{
     storage_server::{Storage, StorageServer},
     BackupAccountStateRequest, BackupAccountStateResponse, BackupTransactionInfoRequest,

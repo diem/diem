@@ -9,6 +9,7 @@
 use crate::HashValue;
 use anyhow::Result;
 use core::convert::{From, TryFrom};
+use rand::{rngs::StdRng, CryptoRng, RngCore, SeedableRng};
 use serde::{de::DeserializeOwned, Serialize};
 use std::{fmt::Debug, hash::Hash};
 use thiserror::Error;
@@ -224,10 +225,21 @@ pub trait Signature:
 /// A type family for schemes which know how to generate key material from
 /// a cryptographically-secure [`CryptoRng`][::rand::CryptoRng].
 pub trait Uniform {
-    /// Generate key material from an RNG for testing purposes.
-    fn generate_for_testing<R>(rng: &mut R) -> Self
+    /// Generate key material from an RNG. This should generally not be used for production
+    /// purposes even with a good source of randomness. When possible use hardware crypto to generate and
+    /// store private keys.
+    fn generate<R>(rng: &mut R) -> Self
     where
-        R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng;
+        R: SeedableRng + RngCore + CryptoRng;
+
+    /// Generate a random key using the shared TEST_SEED
+    fn generate_for_testing() -> Self
+    where
+        Self: Sized,
+    {
+        let mut rng: StdRng = SeedableRng::from_seed(crate::test_utils::TEST_SEED);
+        Self::generate(&mut rng)
+    }
 }
 
 /// A type family with a by-convention notion of genesis private key.

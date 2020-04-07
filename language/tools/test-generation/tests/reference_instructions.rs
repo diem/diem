@@ -12,7 +12,7 @@ fn bytecode_readref() {
     let mut state1 = AbstractState::new();
     state1.stack_push(AbstractValue::new_reference(
         SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
-        Kind::Unrestricted,
+        Kind::Copyable,
     ));
     let (state2, _) = common::run_instruction(Bytecode::ReadRef, state1);
     assert_eq!(
@@ -35,7 +35,7 @@ fn bytecode_readref_wrong_dereference() {
     let mut state1 = AbstractState::new();
     state1.stack_push(AbstractValue::new_reference(
         SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
-        Kind::Unrestricted,
+        Kind::Copyable,
     ));
     let (state2, _) = common::run_instruction(Bytecode::ReadRef, state1);
     assert!(
@@ -50,7 +50,7 @@ fn bytecode_writeref() {
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::U64));
     state1.stack_push(AbstractValue::new_reference(
         SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
-        Kind::Unrestricted,
+        Kind::Copyable,
     ));
     let (state2, _) = common::run_instruction(Bytecode::WriteRef, state1);
     assert_eq!(state2.stack_len(), 0, "stack type postcondition not met");
@@ -63,7 +63,7 @@ fn bytecode_writeref_type_mismatch() {
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::Bool));
     state1.stack_push(AbstractValue::new_reference(
         SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
-        Kind::Unrestricted,
+        Kind::Copyable,
     ));
     common::run_instruction(Bytecode::WriteRef, state1);
 }
@@ -75,7 +75,7 @@ fn bytecode_writeref_stack_len_mismatch() {
     state1.stack_push(AbstractValue::new_primitive(SignatureToken::U64));
     state1.stack_push(AbstractValue::new_reference(
         SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
-        Kind::Unrestricted,
+        Kind::Copyable,
     ));
     let (state2, _) = common::run_instruction(Bytecode::WriteRef, state1);
     assert!(state2.stack_len() != 0, "stack type postcondition not met");
@@ -86,7 +86,7 @@ fn bytecode_feezeref() {
     let mut state1 = AbstractState::new();
     state1.stack_push(AbstractValue::new_reference(
         SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
-        Kind::Unrestricted,
+        Kind::Copyable,
     ));
     let (state2, _) = common::run_instruction(Bytecode::FreezeRef, state1);
     assert_eq!(state2.stack_len(), 1, "stack len postcondition not met");
@@ -94,7 +94,7 @@ fn bytecode_feezeref() {
         state2.stack_peek(0),
         Some(AbstractValue::new_reference(
             SignatureToken::Reference(Box::new(SignatureToken::U64)),
-            Kind::Unrestricted
+            Kind::Copyable
         )),
         "stack type postcondition not met"
     );
@@ -113,7 +113,7 @@ fn bytecode_feezeref_already_immutable() {
     let mut state1 = AbstractState::new();
     state1.stack_push(AbstractValue::new_reference(
         SignatureToken::Reference(Box::new(SignatureToken::U64)),
-        Kind::Unrestricted,
+        Kind::Copyable,
     ));
     common::run_instruction(Bytecode::FreezeRef, state1);
 }

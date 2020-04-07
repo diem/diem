@@ -19,18 +19,18 @@ use libra_types::{
     account_address::AccountAddress, account_state::AccountState, event::EventKey,
     mempool_status::MempoolStatusCode, transaction::SignedTransaction,
 };
-use libradb::LibraDBTrait;
 use serde_json::Value;
 use std::{collections::HashMap, convert::TryFrom, pin::Pin, str::FromStr, sync::Arc};
+use storage_interface::DbReader;
 
 #[derive(Clone)]
 pub(crate) struct JsonRpcService {
-    db: Arc<dyn LibraDBTrait>,
+    db: Arc<dyn DbReader>,
     mempool_sender: MempoolClientSender,
 }
 
 impl JsonRpcService {
-    pub fn new(db: Arc<dyn LibraDBTrait>, mempool_sender: MempoolClientSender) -> Self {
+    pub fn new(db: Arc<dyn DbReader>, mempool_sender: MempoolClientSender) -> Self {
         Self { db, mempool_sender }
     }
 }
@@ -58,10 +58,7 @@ async fn submit(mut service: JsonRpcService, params: Vec<Value>) -> Result<()> {
     } else if mempool_status.code == MempoolStatusCode::Accepted {
         Ok(())
     } else {
-        Err(format_err!(
-            "Mempool insertion failed: {:?}",
-            mempool_status
-        ))
+        Err(Error::new(JsonRpcError::mempool_error(mempool_status)?))
     }
 }
 
@@ -202,7 +199,7 @@ async fn get_events(service: JsonRpcService, params: Vec<Value>) -> Result<Vec<E
     let limit: u64 = serde_json::from_value(params[2].clone())?;
 
     let event_key = EventKey::try_from(&hex::decode(raw_event_key)?[..])?;
-    let events_with_proof = service.db.get_events(&event_key, start, limit)?;
+    let events_with_proof = service.db.get_events(&event_key, start, true, limit)?;
 
     let mut events = vec![];
     for (version, event) in events_with_proof {

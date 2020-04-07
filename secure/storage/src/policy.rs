@@ -50,6 +50,9 @@ pub enum Identity {
 /// Represents actions
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Capability {
+    Export,
     Read,
+    Rotate,
+    Sign,
     Write,
 }

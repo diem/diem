@@ -22,6 +22,7 @@ pub fn add_validator_txn(
 
     sender.create_signed_txn_with_args(
         StdlibScript::AddValidator.compiled_bytes().into_vec(),
+        vec![],
         args,
         seq_num,
         gas_costs::TXN_RESERVED,
@@ -44,6 +45,7 @@ pub fn create_account_txn(
 
     sender.create_signed_txn_with_args(
         StdlibScript::CreateAccount.compiled_bytes().into_vec(),
+        vec![],
         args,
         seq_num,
         gas_costs::TXN_RESERVED,
@@ -68,6 +70,7 @@ pub fn peer_to_peer_txn(
     // get a SignedTransaction
     sender.create_signed_txn_with_args(
         StdlibScript::PeerToPeer.compiled_bytes().into_vec(),
+        vec![lbr_type_tag()],
         args,
         seq_num,
         gas_costs::TXN_RESERVED, // this is a default for gas
@@ -97,6 +100,7 @@ pub fn register_validator_txn(
     ];
     sender.create_signed_txn_with_args(
         StdlibScript::RegisterValidator.compiled_bytes().into_vec(),
+        vec![],
         args,
         seq_num,
         gas_costs::TXN_RESERVED,
@@ -112,6 +116,7 @@ pub fn rotate_key_txn(sender: &Account, new_key_hash: Vec<u8>, seq_num: u64) -> 
         StdlibScript::RotateAuthenticationKey
             .compiled_bytes()
             .into_vec(),
+        vec![],
         args,
         seq_num,
         gas_costs::TXN_RESERVED,
@@ -132,6 +137,7 @@ pub fn raw_rotate_key_txn(
         StdlibScript::RotateAuthenticationKey
             .compiled_bytes()
             .into_vec(),
+        vec![],
         args,
         seq_num,
         gas_costs::TXN_RESERVED,
@@ -151,6 +157,7 @@ pub fn rotate_consensus_pubkey_txn(
         StdlibScript::RotateConsensusPubkey
             .compiled_bytes()
             .into_vec(),
+        vec![],
         args,
         seq_num,
         gas_costs::TXN_RESERVED,
@@ -174,6 +181,7 @@ pub fn mint_txn(
     // get a SignedTransaction
     sender.create_signed_txn_with_args(
         StdlibScript::Mint.compiled_bytes().into_vec(),
+        vec![],
         args,
         seq_num,
         gas_costs::TXN_RESERVED, // this is a default for gas

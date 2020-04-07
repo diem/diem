@@ -2,12 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crate::test_helper::{arb_blocks_to_commit, arb_mock_genesis};
+use crate::{
+    schema::jellyfish_merkle_node::JellyfishMerkleNodeSchema,
+    test_helper::{arb_blocks_to_commit, arb_mock_genesis},
+};
+use jellyfish_merkle::node_type::{Node, NodeKey};
 use libra_crypto::hash::CryptoHash;
 use libra_temppath::TempPath;
 use libra_types::{
     account_config::AccountResource, contract_event::ContractEvent,
     discovery_set::DISCOVERY_SET_CHANGE_EVENT_PATH, ledger_info::LedgerInfo,
+    proof::SparseMerkleLeafNode, vm_error::StatusCode,
 };
 use proptest::prelude::*;
 use std::{collections::HashMap, convert::TryFrom};
@@ -488,4 +493,53 @@ proptest! {
         assert!(account_state_with_proof.blob.is_some());
         assert!(events.is_empty());
     }
+}
+
+#[test]
+fn test_get_latest_tree_state() {
+    let tmp_dir = TempPath::new();
+    let db = LibraDB::new(&tmp_dir);
+
+    // entirely emtpy db
+    let empty = db.get_latest_tree_state().unwrap();
+    assert_eq!(
+        empty,
+        TreeState::new(0, vec![], *SPARSE_MERKLE_PLACEHOLDER_HASH,)
+    );
+
+    // unbootstrapped db with pre-genesis state
+    let address = AccountAddress::default();
+    let blob = AccountStateBlob::from(vec![1]);
+    db.db
+        .put::<JellyfishMerkleNodeSchema>(
+            &NodeKey::new_empty_path(PRE_GENESIS_VERSION),
+            &Node::new_leaf(address.hash(), blob.clone()),
+        )
+        .unwrap();
+    let hash = SparseMerkleLeafNode::new(address.hash(), blob.hash()).hash();
+    let pre_genesis = db.get_latest_tree_state().unwrap();
+    assert_eq!(pre_genesis, TreeState::new(0, vec![], hash));
+
+    // bootstrapped db (any transaction info is in)
+    let txn_info = TransactionInfo::new(
+        HashValue::random(),
+        HashValue::random(),
+        HashValue::random(),
+        0,
+        StatusCode::UNKNOWN_STATUS,
+    );
+    put_transaction_info(&db, 0, &txn_info);
+    let bootstrapped = db.get_latest_tree_state().unwrap();
+    assert_eq!(
+        bootstrapped,
+        TreeState::new(1, vec![txn_info.hash()], txn_info.state_root_hash())
+    );
+}
+
+fn put_transaction_info(db: &LibraDB, version: Version, txn_info: &TransactionInfo) {
+    let mut cs = ChangeSet::new();
+    db.ledger_store
+        .put_transaction_infos(version, &[txn_info.clone()], &mut cs)
+        .unwrap();
+    db.db.write_schemas(cs.batch).unwrap();
 }

@@ -1,18 +1,17 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::persistent_liveness_storage::{
-    LedgerRecoveryData, PersistentLivenessStorage, RecoveryData,
+use crate::chained_bft::{
+    epoch_manager::LivenessStorageData,
+    persistent_liveness_storage::{
+        LedgerRecoveryData, PersistentLivenessStorage, RecoveryData, RootMetadata,
+    },
 };
-
-use crate::chained_bft::epoch_manager::LivenessStorageData;
 use anyhow::Result;
 use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
-use executor_types::ExecutedTrees;
-use futures::executor::block_on;
 use libra_crypto::HashValue;
 use libra_types::{ledger_info::LedgerInfo, validator_set::ValidatorSet};
 use std::{
@@ -20,6 +19,7 @@ use std::{
     marker::PhantomData,
     sync::{Arc, Mutex},
 };
+use storage_interface::DbReader;
 
 pub struct MockSharedStorage<T> {
     // Safety state
@@ -113,8 +113,8 @@ impl<T: Payload> MockStorage<T> {
             self.shared_storage.last_vote.lock().unwrap().clone(),
             ledger_recovery_data,
             blocks,
+            RootMetadata::new_empty(),
             quorum_certs,
-            ExecutedTrees::new_empty(),
             self.shared_storage
                 .highest_timeout_certificate
                 .lock()
@@ -138,7 +138,8 @@ impl<T: Payload> MockStorage<T> {
         let storage = Arc::new(MockStorage::new(Arc::clone(&shared_storage)));
 
         (
-            block_on(storage.start())
+            storage
+                .start()
                 .expect_recovery_data("Mock storage should never fail constructing recovery data"),
             storage,
         )
@@ -146,7 +147,6 @@ impl<T: Payload> MockStorage<T> {
 }
 
 // A impl that always start from genesis.
-#[async_trait::async_trait]
 impl<T: Payload> PersistentLivenessStorage<T> for MockStorage<T> {
     fn save_tree(&self, blocks: Vec<Block<T>>, quorum_certs: Vec<QuorumCert>) -> Result<()> {
         // When the shared storage is empty, we are expected to not able to construct an block tree
@@ -196,14 +196,14 @@ impl<T: Payload> PersistentLivenessStorage<T> for MockStorage<T> {
         Ok(())
     }
 
-    async fn recover_from_ledger(&self) -> LedgerRecoveryData {
+    fn recover_from_ledger(&self) -> LedgerRecoveryData {
         self.get_ledger_recovery_data()
     }
 
-    async fn start(&self) -> LivenessStorageData<T> {
+    fn start(&self) -> LivenessStorageData<T> {
         match self.try_start() {
             Ok(recovery_data) => LivenessStorageData::RecoveryData(recovery_data),
-            Err(_) => LivenessStorageData::LedgerRecoveryData(self.recover_from_ledger().await),
+            Err(_) => LivenessStorageData::LedgerRecoveryData(self.recover_from_ledger()),
         }
     }
 
@@ -217,6 +217,10 @@ impl<T: Payload> PersistentLivenessStorage<T> for MockStorage<T> {
             .unwrap()
             .replace(highest_timeout_certificate);
         Ok(())
+    }
+
+    fn libra_db(&self) -> Arc<dyn DbReader> {
+        unimplemented!()
     }
 }
 
@@ -234,13 +238,13 @@ impl<T: Payload> EmptyStorage<T> {
 
     pub fn start_for_testing() -> (RecoveryData<T>, Arc<Self>) {
         let storage = Arc::new(EmptyStorage::new());
-        let recovery_data = block_on(storage.start())
+        let recovery_data = storage
+            .start()
             .expect_recovery_data("Empty storage should never fail constructing recovery data");
         (recovery_data, storage)
     }
 }
 
-#[async_trait::async_trait]
 impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage<T> {
     fn save_tree(&self, _: Vec<Block<T>>, _: Vec<QuorumCert>) -> Result<()> {
         Ok(())
@@ -254,17 +258,17 @@ impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage<T> {
         Ok(())
     }
 
-    async fn recover_from_ledger(&self) -> LedgerRecoveryData {
+    fn recover_from_ledger(&self) -> LedgerRecoveryData {
         LedgerRecoveryData::new(LedgerInfo::mock_genesis(), ValidatorSet::new(vec![]))
     }
 
-    async fn start(&self) -> LivenessStorageData<T> {
+    fn start(&self) -> LivenessStorageData<T> {
         match RecoveryData::new(
             None,
-            self.recover_from_ledger().await,
+            self.recover_from_ledger(),
             vec![],
+            RootMetadata::new_empty(),
             vec![],
-            ExecutedTrees::new_empty(),
             None,
         ) {
             Ok(recovery_data) => LivenessStorageData::RecoveryData(recovery_data),
@@ -274,7 +278,12 @@ impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage<T> {
             }
         }
     }
+
     fn save_highest_timeout_cert(&self, _: TimeoutCertificate) -> Result<()> {
         Ok(())
+    }
+
+    fn libra_db(&self) -> Arc<dyn DbReader> {
+        unimplemented!()
     }
 }

@@ -221,7 +221,7 @@ impl From<Transaction> for TransactionDataView {
                     timestamp_usecs: x.1,
                 })
             }
-            Transaction::WriteSet(_) => Ok(TransactionDataView::WriteSet {}),
+            Transaction::WaypointWriteSet(_) => Ok(TransactionDataView::WriteSet {}),
             Transaction::UserTransaction(t) => {
                 let script_hash = match t.payload() {
                     TransactionPayload::Script(s) => HashValue::from_sha3_256(s.code()),

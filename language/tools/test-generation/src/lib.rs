@@ -25,14 +25,17 @@ use libra_logger::{debug, error, info};
 use libra_state_view::StateView;
 use libra_types::{account_address::AccountAddress, vm_error::StatusCode};
 use libra_vm::LibraVM;
-use move_vm_types::values::Value;
+use move_vm_types::{loaded_data::types::Type, values::Value};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{fs, io::Write, panic, thread};
 use utils::module_generation::generate_module;
 use vm::{
     access::ModuleAccess,
     errors::VMResult,
-    file_format::{CompiledModule, CompiledModuleMut, FunctionDefinitionIndex, SignatureToken},
+    file_format::{
+        CompiledModule, CompiledModuleMut, FunctionDefinitionIndex, Kind, SignatureToken,
+        StructHandleIndex,
+    },
     transaction_metadata::TransactionMetadata,
 };
 
@@ -52,11 +55,11 @@ fn run_vm(module: VerifiedModule) -> VMResult<()> {
     let entry_idx = FunctionDefinitionIndex::new(0);
     let function_signature = {
         let handle = module.function_def_at(entry_idx).function;
-        let sig_idx = module.function_handle_at(handle).signature;
-        module.function_signature_at(sig_idx).clone()
+        let sig_idx = module.function_handle_at(handle).parameters;
+        module.signature_at(sig_idx).clone()
     };
     let main_args: Vec<Value> = function_signature
-        .arg_types
+        .0
         .iter()
         .map(|sig_tok| match sig_tok {
             SignatureToken::Address => Value::address(AccountAddress::DEFAULT),
@@ -70,7 +73,13 @@ fn run_vm(module: VerifiedModule) -> VMResult<()> {
         .collect();
 
     let executor = FakeExecutor::from_genesis_file();
-    execute_function_in_module(executor.get_state_view(), module, entry_idx, main_args)
+    execute_function_in_module(
+        executor.get_state_view(),
+        module,
+        entry_idx,
+        vec![],
+        main_args,
+    )
 }
 
 /// Execute the first function in a module
@@ -78,6 +87,7 @@ fn execute_function_in_module(
     state_view: &dyn StateView,
     module: VerifiedModule,
     idx: FunctionDefinitionIndex,
+    ty_args: Vec<Type>,
     args: Vec<Value>,
 ) -> VMResult<()> {
     let module_id = module.as_inner().self_id();
@@ -103,6 +113,7 @@ fn execute_function_in_module(
                 gas_schedule,
                 &mut txn_context,
                 &txn_data,
+                ty_args,
                 args,
             )
         })
@@ -334,5 +345,101 @@ pub fn run_generation(args: Args) {
 
     for thread in threads {
         thread.join().unwrap();
+    }
+}
+
+pub(crate) fn substitute(token: &SignatureToken, tys: &[SignatureToken]) -> SignatureToken {
+    use SignatureToken::*;
+
+    match token {
+        Bool => Bool,
+        U8 => U8,
+        U64 => U64,
+        U128 => U128,
+        Address => Address,
+        Vector(ty) => Vector(Box::new(substitute(ty, tys))),
+        Struct(idx) => Struct(*idx),
+        StructInstantiation(idx, type_params) => StructInstantiation(
+            *idx,
+            type_params.iter().map(|ty| substitute(ty, tys)).collect(),
+        ),
+        Reference(ty) => Reference(Box::new(substitute(ty, tys))),
+        MutableReference(ty) => MutableReference(Box::new(substitute(ty, tys))),
+        TypeParameter(idx) => {
+            // Assume that the caller has previously parsed and verified the structure of the
+            // file and that this guarantees that type parameter indices are always in bounds.
+            assume!((*idx as usize) < tys.len());
+            tys[*idx as usize].clone()
+        }
+    }
+}
+
+pub fn kind(module: &impl ModuleAccess, ty: &SignatureToken, constraints: &[Kind]) -> Kind {
+    use SignatureToken::*;
+
+    match ty {
+        // The primitive types & references have kind unrestricted.
+        Bool | U8 | U64 | U128 | Address | Reference(_) | MutableReference(_) => Kind::Copyable,
+        TypeParameter(idx) => constraints[*idx as usize],
+        Vector(ty) => kind(module, ty, constraints),
+        Struct(idx) => {
+            let sh = module.struct_handle_at(*idx);
+            if sh.is_nominal_resource {
+                Kind::Resource
+            } else {
+                Kind::Copyable
+            }
+        }
+        StructInstantiation(idx, type_args) => {
+            let sh = module.struct_handle_at(*idx);
+            if sh.is_nominal_resource {
+                return Kind::Resource;
+            }
+            // Gather the kinds of the type actuals.
+            let kinds = type_args
+                .iter()
+                .map(|ty| kind(module, ty, constraints))
+                .collect::<Vec<_>>();
+            // Derive the kind of the struct.
+            //   - If any of the type actuals is `all`, then the struct is `all`.
+            //     - `all` means some part of the type can be either `resource` or
+            //       `unrestricted`.
+            //     - Therefore it is also impossible to determine the kind of the type as a
+            //       whole, and thus `all`.
+            //   - If none of the type actuals is `all`, then the struct is a resource if
+            //     and only if one of the type actuals is `resource`.
+            kinds.iter().cloned().fold(Kind::Copyable, Kind::join)
+        }
+    }
+}
+
+pub(crate) fn get_struct_handle_from_reference(
+    reference_signature: &SignatureToken,
+) -> Option<StructHandleIndex> {
+    match reference_signature {
+        SignatureToken::Reference(signature) => match **signature {
+            SignatureToken::StructInstantiation(idx, _) | SignatureToken::Struct(idx) => Some(idx),
+            _ => None,
+        },
+        SignatureToken::MutableReference(signature) => match **signature {
+            SignatureToken::StructInstantiation(idx, _) | SignatureToken::Struct(idx) => Some(idx),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+pub(crate) fn get_type_actuals_from_reference(
+    token: &SignatureToken,
+) -> Option<Vec<SignatureToken>> {
+    use SignatureToken::*;
+
+    match token {
+        Reference(box_) | MutableReference(box_) => match &**box_ {
+            StructInstantiation(_, tys) => Some(tys.clone()),
+            Struct(_) => Some(vec![]),
+            _ => None,
+        },
+        _ => None,
     }
 }

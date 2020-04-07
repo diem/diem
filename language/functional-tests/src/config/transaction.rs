@@ -1,9 +1,17 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{common::strip, config::global::Config as GlobalConfig, errors::*, evaluator::Stage};
+use crate::{
+    common::strip,
+    config::{global::Config as GlobalConfig, type_tag_parser::parse_type_tags},
+    errors::*,
+    evaluator::Stage,
+};
 use language_e2e_tests::account::Account;
-use libra_types::transaction::{parse_as_transaction_argument, TransactionArgument};
+use libra_types::{
+    language_storage::TypeTag,
+    transaction::{parse_as_transaction_argument, TransactionArgument},
+};
 use std::{collections::BTreeSet, str::FromStr, time::Duration};
 
 /// A partially parsed transaction argument.
@@ -32,6 +40,7 @@ impl FromStr for Argument {
 pub enum Entry {
     DisableStages(Vec<Stage>),
     Sender(String),
+    TypeArguments(Vec<TypeTag>),
     Arguments(Vec<Argument>),
     MaxGas(u64),
     GasPrice(u64),
@@ -53,6 +62,9 @@ impl FromStr for Entry {
                 return Err(ErrorKind::Other("sender cannot be empty".to_string()).into());
             }
             return Ok(Entry::Sender(s.to_ascii_lowercase()));
+        }
+        if let Some(s) = strip(s, "type-args:") {
+            return Ok(Entry::TypeArguments(parse_type_tags(s)?));
         }
         if let Some(s) = strip(s, "args:") {
             let res: Result<Vec<_>> = s
@@ -84,6 +96,7 @@ impl FromStr for Entry {
         if let Some(s) = strip(s, "expiration-time:") {
             return Ok(Entry::ExpirationTime(s.parse::<u64>()?));
         }
+
         Err(ErrorKind::Other(format!(
             "failed to parse '{}' as transaction config entry",
             s
@@ -117,6 +130,7 @@ impl Entry {
 pub struct Config<'a> {
     pub disabled_stages: BTreeSet<Stage>,
     pub sender: &'a Account,
+    pub ty_args: Vec<TypeTag>,
     pub args: Vec<TransactionArgument>,
     pub max_gas: Option<u64>,
     pub gas_price: Option<u64>,
@@ -129,6 +143,7 @@ impl<'a> Config<'a> {
     pub fn build(config: &'a GlobalConfig, entries: &[Entry]) -> Result<Self> {
         let mut disabled_stages = BTreeSet::new();
         let mut sender = None;
+        let mut ty_args = None;
         let mut args = None;
         let mut max_gas = None;
         let mut gas_price = None;
@@ -140,6 +155,12 @@ impl<'a> Config<'a> {
                 Entry::Sender(name) => match sender {
                     None => sender = Some(config.get_account_for_name(name)?),
                     _ => return Err(ErrorKind::Other("sender already set".to_string()).into()),
+                },
+                Entry::TypeArguments(ty_args_) => match ty_args {
+                    None => {
+                        ty_args = Some(ty_args_.clone());
+                    }
+                    _ => bail!("transaction type arguments already set"),
                 },
                 Entry::Arguments(raw_args) => match args {
                     None => {
@@ -209,6 +230,7 @@ impl<'a> Config<'a> {
         Ok(Self {
             disabled_stages,
             sender: sender.unwrap_or_else(|| config.accounts.get("default").unwrap().account()),
+            ty_args: ty_args.unwrap_or_else(|| vec![]),
             args: args.unwrap_or_else(|| vec![]),
             max_gas,
             gas_price,

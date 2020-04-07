@@ -11,7 +11,6 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-byteorder = "1.3.2"
 bytes = "0.5.4"
 curve25519-dalek = { git = "https://github.com/calibra/curve25519-dalek.git", branch = "fiat", default-features = false }
 digest = "0.8.1"
@@ -20,16 +19,14 @@ hex = "0.4.2"
 hmac = "0.7.1"
 once_cell = "1.3.1"
 mirai-annotations = "1.5.0"
-pairing = "0.14"
 proptest = { version = "0.9.1", optional = true }
 proptest-derive = { version = "0.1.0", optional = true }
 rand = "0.6.5"
-serde = { version = "1.0.105", features = ["derive"] }
+serde = { version = "1.0.106", features = ["derive"] }
 sha2 = "0.8.0"
 static_assertions = { version = "1.0.0", optional = true }
 thiserror = "1.0"
-threshold_crypto = "0.3"
-tiny-keccak = { version = "2.0.1", features = ["sha3"]}
+tiny-keccak = { version = "2.0.2", features = ["sha3"]}
 x25519-dalek = { git = "https://github.com/calibra/x25519-dalek.git", branch = "fiat", default-features = false }
 
 libra-crypto-derive = { path = "../crypto-derive", version = "0.1.0" }

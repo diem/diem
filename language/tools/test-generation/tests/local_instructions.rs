@@ -106,7 +106,7 @@ fn bytecode_mutborrowloc() {
         state2.stack_peek(0),
         Some(AbstractValue::new_reference(
             SignatureToken::MutableReference(Box::new(SignatureToken::U64)),
-            Kind::Unrestricted
+            Kind::Copyable
         )),
         "stack type postcondition not met"
     );
@@ -133,7 +133,7 @@ fn bytecode_immborrowloc() {
         state2.stack_peek(0),
         Some(AbstractValue::new_reference(
             SignatureToken::Reference(Box::new(SignatureToken::U64),),
-            Kind::Unrestricted
+            Kind::Copyable
         )),
         "stack type postcondition not met"
     );

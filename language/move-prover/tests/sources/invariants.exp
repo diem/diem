@@ -62,14 +62,14 @@ error:  This assertion might not hold.
  11 │         invariant x > 1;
     │         ^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/invariants.move:84:5: lifetime_invalid_R (entry)
-    =     at tests/sources/invariants.move:85:13: lifetime_invalid_R
-    =     at tests/sources/invariants.move:86:21: lifetime_invalid_R
+    =     at tests/sources/invariants.move:85:5: lifetime_invalid_R (entry)
+    =     at tests/sources/invariants.move:86:13: lifetime_invalid_R
+    =     at tests/sources/invariants.move:87:21: lifetime_invalid_R
     =         r = <redacted>,
     =         r_ref = <redacted>
-    =     at tests/sources/invariants.move:87:26: lifetime_invalid_R
+    =     at tests/sources/invariants.move:88:26: lifetime_invalid_R
     =         x_ref = <redacted>
-    =     at tests/sources/invariants.move:88:18: lifetime_invalid_R
+    =     at tests/sources/invariants.move:89:18: lifetime_invalid_R
     =         r_ref = <redacted>,
     =         x_ref = <redacted>
 
@@ -80,48 +80,48 @@ error:  This assertion might not hold.
  14 │         invariant update x <= old(x);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/invariants.move:97:5: lifetime_invalid_R_2 (entry)
-    =     at tests/sources/invariants.move:98:13: lifetime_invalid_R_2
-    =     at tests/sources/invariants.move:99:21: lifetime_invalid_R_2
+    =     at tests/sources/invariants.move:98:5: lifetime_invalid_R_2 (entry)
+    =     at tests/sources/invariants.move:99:13: lifetime_invalid_R_2
+    =     at tests/sources/invariants.move:100:21: lifetime_invalid_R_2
     =         r = <redacted>,
     =         r_ref = <redacted>
-    =     at tests/sources/invariants.move:100:26: lifetime_invalid_R_2
-    =         x_ref = <redacted>
-    =     at tests/sources/invariants.move:101:18: lifetime_invalid_R_2
-    =         r_ref = <redacted>,
+    =     at tests/sources/invariants.move:101:26: lifetime_invalid_R_2
     =         x_ref = <redacted>
     =     at tests/sources/invariants.move:102:18: lifetime_invalid_R_2
     =         r_ref = <redacted>,
     =         x_ref = <redacted>
-    =     at tests/sources/invariants.move:104:9: lifetime_invalid_R_2
-    =         r_ref = <redacted>
-    =     at tests/sources/invariants.move:105:22: lifetime_invalid_R_2
+    =     at tests/sources/invariants.move:103:18: lifetime_invalid_R_2
+    =         r_ref = <redacted>,
     =         x_ref = <redacted>
-    =     at tests/sources/invariants.move:106:18: lifetime_invalid_R_2
+    =     at tests/sources/invariants.move:105:9: lifetime_invalid_R_2
+    =         r_ref = <redacted>
+    =     at tests/sources/invariants.move:106:22: lifetime_invalid_R_2
+    =         x_ref = <redacted>
+    =     at tests/sources/invariants.move:107:18: lifetime_invalid_R_2
     =         r_ref = <redacted>,
     =         x_ref = <redacted>
 
 error:  This assertion might not hold.
 
-     ┌── tests/sources/invariants.move:122:9 ───
+     ┌── tests/sources/invariants.move:123:9 ───
      │
- 122 │         invariant y > 1;
+ 123 │         invariant y > 1;
      │         ^^^^^^^^^^^^^^^^
      │
-     =     at tests/sources/invariants.move:125:5: lifetime_invalid_S_branching (entry)
-     =     at tests/sources/invariants.move:126:11: lifetime_invalid_S_branching
+     =     at tests/sources/invariants.move:126:5: lifetime_invalid_S_branching (entry)
+     =     at tests/sources/invariants.move:127:11: lifetime_invalid_S_branching
      =         cond = <redacted>
-     =     at tests/sources/invariants.move:127:21: lifetime_invalid_S_branching
+     =     at tests/sources/invariants.move:128:21: lifetime_invalid_S_branching
      =         a = <redacted>,
      =         b = <redacted>
-     =     at tests/sources/invariants.move:128:19: lifetime_invalid_S_branching
-     =         a_ref = <redacted>
      =     at tests/sources/invariants.move:129:19: lifetime_invalid_S_branching
+     =         a_ref = <redacted>
+     =     at tests/sources/invariants.move:130:19: lifetime_invalid_S_branching
      =         b_ref = <redacted>
-     =     at tests/sources/invariants.move:130:23: lifetime_invalid_S_branching
+     =     at tests/sources/invariants.move:131:23: lifetime_invalid_S_branching
      =         x_ref = <redacted>
-     =     at tests/sources/invariants.move:132:11: lifetime_invalid_S_branching
-     =     at tests/sources/invariants.move:135:11: lifetime_invalid_S_branching
+     =     at tests/sources/invariants.move:133:11: lifetime_invalid_S_branching
+     =     at tests/sources/invariants.move:136:11: lifetime_invalid_S_branching
      =         a_ref = <redacted>,
      =         b_ref = <redacted>,
      =         x_ref = <redacted>

@@ -12,10 +12,12 @@ use libra_state_view::StateView;
 use libra_types::{
     account_config,
     block_metadata::BlockMetadata,
+    language_storage::{ModuleId, TypeTag},
+    on_chain_config::LibraVersion,
     transaction::{
         ChangeSet, SignatureCheckedTransaction, SignedTransaction, Transaction,
         TransactionArgument, TransactionOutput, TransactionPayload, TransactionStatus,
-        MAX_TRANSACTION_SIZE_IN_BYTES,
+        VMValidatorResult, MAX_TRANSACTION_SIZE_IN_BYTES,
     },
     vm_error::{sub_status, StatusCode, VMStatus},
     write_set::WriteSet,
@@ -25,7 +27,10 @@ use move_vm_state::{
     data_cache::{BlockDataCache, RemoteCache, RemoteStorage},
     execution_context::{ExecutionContext, SystemExecutionContext, TransactionExecutionContext},
 };
-use move_vm_types::{chain_state::ChainState, identifier::create_access_path, values::Value};
+use move_vm_types::{
+    chain_state::ChainState, identifier::create_access_path, loaded_data::types::Type,
+    values::Value,
+};
 use rayon::prelude::*;
 use std::sync::Arc;
 use vm::{
@@ -111,6 +116,10 @@ impl LibraVM {
             VMStatus::new(StatusCode::VM_STARTUP_FAILURE)
                 .with_sub_status(sub_status::VSF_GAS_SCHEDULE_NOT_FOUND)
         })
+    }
+
+    fn get_libra_version(&self) -> VMResult<LibraVersion> {
+        Ok(self.on_chain_config()?.version.clone())
     }
 
     fn check_payload(
@@ -273,6 +282,35 @@ impl LibraVM {
         Ok(())
     }
 
+    fn resolve_type_argument(
+        &self,
+        ctx: &mut SystemExecutionContext,
+        tag: &TypeTag,
+    ) -> VMResult<Type> {
+        Ok(match tag {
+            TypeTag::U8 => Type::U8,
+            TypeTag::U64 => Type::U64,
+            TypeTag::U128 => Type::U128,
+            TypeTag::Bool => Type::Bool,
+            TypeTag::Address => Type::Address,
+            TypeTag::Vector(tag) => Type::Vector(Box::new(self.resolve_type_argument(ctx, tag)?)),
+            TypeTag::Struct(struct_tag) => {
+                let module_id = ModuleId::new(struct_tag.address, struct_tag.module.clone());
+                let ty_args = struct_tag
+                    .type_params
+                    .iter()
+                    .map(|tag| self.resolve_type_argument(ctx, tag))
+                    .collect::<VMResult<Vec<_>>>()?;
+                Type::Struct(Box::new(self.move_vm.resolve_struct_def_by_name(
+                    &module_id,
+                    &struct_tag.name,
+                    ctx,
+                    &ty_args,
+                )?))
+            }
+        })
+    }
+
     fn verify_transaction_impl(
         &self,
         transaction: &SignatureCheckedTransaction,
@@ -287,9 +325,15 @@ impl LibraVM {
             TransactionPayload::Program => Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT)),
             TransactionPayload::Script(script) => {
                 self.run_prologue(&mut ctx, &txn_data)?;
+                let ty_args = script
+                    .ty_args()
+                    .iter()
+                    .map(|tag| self.resolve_type_argument(&mut ctx, tag))
+                    .collect::<VMResult<Vec<_>>>()?;
                 Ok(VerifiedTranscationPayload::Script(
                     script.code().to_vec(),
-                    script.args().to_vec(),
+                    ty_args,
+                    convert_txn_args(script.args()),
                 ))
             }
             TransactionPayload::Module(module) => {
@@ -313,18 +357,14 @@ impl LibraVM {
             VerifiedTranscationPayload::Module(m) => {
                 self.move_vm.publish_module(m, &mut ctx, txn_data)
             }
-            VerifiedTranscationPayload::Script(s, args) => {
+            VerifiedTranscationPayload::Script(s, ty_args, args) => {
                 let gas_schedule = match self.get_gas_schedule() {
                     Ok(s) => s,
                     Err(e) => return discard_error_output(e),
                 };
-                let ret = self.move_vm.execute_script(
-                    s,
-                    gas_schedule,
-                    &mut ctx,
-                    txn_data,
-                    convert_txn_args(args),
-                );
+                let ret =
+                    self.move_vm
+                        .execute_script(s, gas_schedule, &mut ctx, txn_data, ty_args, args);
                 let gas_usage = txn_data.max_gas_amount().sub(ctx.remaining_gas()).get();
                 record_stats!(observe | TXN_EXECUTION_GAS_USAGE | gas_usage);
                 ret
@@ -448,6 +488,7 @@ impl LibraVM {
                 &gas_schedule,
                 &mut interpreter_context,
                 &txn_data,
+                vec![],
                 args,
             )?
         } else {
@@ -484,6 +525,7 @@ impl LibraVM {
                         self.get_gas_schedule()?,
                         chain_state,
                         &txn_data,
+                        vec![],
                         vec![
                             Value::u64(txn_sequence_number),
                             Value::vector_u8(txn_public_key),
@@ -515,6 +557,7 @@ impl LibraVM {
                     self.get_gas_schedule()?,
                     chain_state,
                     &txn_data,
+                    vec![],
                     vec![
                         Value::u64(txn_sequence_number),
                         Value::u64(txn_gas_price),
@@ -632,12 +675,13 @@ impl VMVerifier for LibraVM {
         &self,
         transaction: SignedTransaction,
         state_view: &dyn StateView,
-    ) -> Option<VMStatus> {
+    ) -> VMValidatorResult {
         let data_cache = BlockDataCache::new(state_view);
+        let gas_price = transaction.gas_unit_price();
         record_stats! {time_hist | TXN_VALIDATION_TIME_TAKEN | {
                 let signature_verified_txn = match transaction.check_signature() {
                     Ok(t) => t,
-                    Err(_) => return Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)),
+                    Err(_) => return VMValidatorResult::new(Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)), gas_price),
                 };
                 let res = match self.verify_transaction_impl(&signature_verified_txn, state_view, &data_cache) {
                     Ok(_) => None,
@@ -650,7 +694,7 @@ impl VMVerifier for LibraVM {
                     }
                 };
                 report_verification_status(&res);
-                res
+                VMValidatorResult::new(res, gas_price)
             }
         }
     }
@@ -685,6 +729,11 @@ impl<'a> LibraVMInternals<'a> {
     /// Returns the internal gas schedule if it has been loaded, or an error if it hasn't.
     pub fn gas_schedule(self) -> VMResult<&'a CostTable> {
         self.0.get_gas_schedule()
+    }
+
+    /// Returns the version of Move Runtime.
+    pub fn libra_version(self) -> VMResult<LibraVersion> {
+        self.0.get_libra_version()
     }
 
     /// Executes the given code within the context of a transaction.
@@ -725,7 +774,7 @@ pub fn chunk_block_transactions(txns: Vec<Transaction>) -> Vec<TransactionBlock>
                 }
                 blocks.push(TransactionBlock::BlockPrologue(data));
             }
-            Transaction::WriteSet(cs) => {
+            Transaction::WaypointWriteSet(cs) => {
                 if !buf.is_empty() {
                     blocks.push(TransactionBlock::UserTransaction(buf));
                     buf = vec![];
@@ -752,18 +801,18 @@ pub fn chunk_block_transactions(txns: Vec<Transaction>) -> Vec<TransactionBlock>
 }
 
 enum VerifiedTranscationPayload {
-    Script(Vec<u8>, Vec<TransactionArgument>),
+    Script(Vec<u8>, Vec<Type>, Vec<Value>),
     Module(Vec<u8>),
 }
 
 /// Convert the transaction arguments into move values.
-fn convert_txn_args(args: Vec<TransactionArgument>) -> Vec<Value> {
-    args.into_iter()
+fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
+    args.iter()
         .map(|arg| match arg {
-            TransactionArgument::U64(i) => Value::u64(i),
-            TransactionArgument::Address(a) => Value::address(a),
-            TransactionArgument::Bool(b) => Value::bool(b),
-            TransactionArgument::U8Vector(v) => Value::vector_u8(v),
+            TransactionArgument::U64(i) => Value::u64(*i),
+            TransactionArgument::Address(a) => Value::address(*a),
+            TransactionArgument::Bool(b) => Value::bool(*b),
+            TransactionArgument::U8Vector(v) => Value::vector_u8(v.clone()),
         })
         .collect()
 }

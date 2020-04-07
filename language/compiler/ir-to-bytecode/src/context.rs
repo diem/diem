@@ -10,15 +10,14 @@ use std::{clone::Clone, collections::HashMap, hash::Hash};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, CodeOffset, FieldDefinitionIndex,
-        FunctionDefinitionIndex, FunctionHandle, FunctionHandleIndex, FunctionSignature,
-        FunctionSignatureIndex, IdentifierIndex, Kind, LocalsSignature, LocalsSignatureIndex,
-        ModuleHandle, ModuleHandleIndex, SignatureToken, StructDefinitionIndex, StructHandle,
-        StructHandleIndex, TableIndex, TypeSignature, TypeSignatureIndex,
+        AddressPoolIndex, ByteArrayPoolIndex, CodeOffset, FieldHandle, FieldHandleIndex,
+        FieldInstantiation, FieldInstantiationIndex, FunctionDefinitionIndex, FunctionHandle,
+        FunctionHandleIndex, FunctionInstantiation, FunctionInstantiationIndex, FunctionSignature,
+        IdentifierIndex, Kind, ModuleHandle, ModuleHandleIndex, Signature, SignatureIndex,
+        SignatureToken, StructDefInstantiation, StructDefInstantiationIndex, StructDefinitionIndex,
+        StructHandle, StructHandleIndex, TableIndex,
     },
 };
-
-type TypeFormalMap = HashMap<TypeVar_, TableIndex>;
 
 macro_rules! get_or_add_item_macro {
     ($m:ident, $k_get:expr, $k_insert:expr) => {{
@@ -37,7 +36,7 @@ macro_rules! get_or_add_item_macro {
     }};
 }
 
-const TABLE_MAX_SIZE: usize = u16::max_value() as usize;
+pub const TABLE_MAX_SIZE: usize = u16::max_value() as usize;
 fn get_or_add_item_ref<K: Clone + Eq + Hash>(
     m: &mut HashMap<K, TableIndex>,
     k: &K,
@@ -59,9 +58,10 @@ struct CompiledDependency<'a> {
 
     module_pool: &'a [ModuleHandle],
     struct_pool: &'a [StructHandle],
-    function_signatuire_pool: &'a [FunctionSignature],
+    function_pool: &'a [FunctionHandle],
     identifiers: &'a [Identifier],
     address_pool: &'a [AccountAddress],
+    signature_pool: &'a [Signature],
 }
 
 impl<'a> CompiledDependency<'a> {
@@ -83,10 +83,11 @@ impl<'a> CompiledDependency<'a> {
         let defined_function_handles = dep
             .function_handles()
             .iter()
-            .filter(|fhandle| fhandle.module.0 == 0);
-        for fhandle in defined_function_handles {
+            .enumerate()
+            .filter(|(_idx, fhandle)| fhandle.module.0 == 0);
+        for (idx, fhandle) in defined_function_handles {
             let fname = dep.identifier_at(fhandle.name);
-            functions.insert(fname, fhandle.signature.0);
+            functions.insert(fname, idx as u16);
         }
 
         Ok(Self {
@@ -94,9 +95,10 @@ impl<'a> CompiledDependency<'a> {
             functions,
             module_pool: dep.module_handles(),
             struct_pool: dep.struct_handles(),
-            function_signatuire_pool: dep.function_signatures(),
+            function_pool: dep.function_handles(),
             identifiers: dep.identifiers(),
             address_pool: dep.address_pool(),
+            signature_pool: dep.signatures(),
         })
     }
 
@@ -130,10 +132,17 @@ impl<'a> CompiledDependency<'a> {
             .and_then(|idx| self.struct_pool.get(*idx as usize))
     }
 
-    fn function_signature(&self, name: &FunctionName) -> Option<&'a FunctionSignature> {
+    fn function_signature(&self, name: &FunctionName) -> Option<FunctionSignature> {
         self.functions
             .get(ident_str(name.as_inner()).ok()?)
-            .and_then(|idx| self.function_signatuire_pool.get(*idx as usize))
+            .and_then(|idx| {
+                let fh = self.function_pool.get(*idx as usize)?;
+                Some(FunctionSignature {
+                    parameters: self.signature_pool[fh.parameters.0 as usize].0.clone(),
+                    return_: self.signature_pool[fh.return_.0 as usize].0.clone(),
+                    type_parameters: fh.type_parameters.clone(),
+                })
+            })
     }
 }
 
@@ -146,12 +155,16 @@ pub struct MaterializedPools {
     pub struct_handles: Vec<StructHandle>,
     /// Function handle pool
     pub function_handles: Vec<FunctionHandle>,
-    /// Type signature pool
-    pub type_signatures: Vec<TypeSignature>,
-    /// Function signature pool
-    pub function_signatures: Vec<FunctionSignature>,
+    /// Field handle pool
+    pub field_handles: Vec<FieldHandle>,
+    /// Struct instantiation pool
+    pub struct_def_instantiations: Vec<StructDefInstantiation>,
+    /// Function instantiation pool
+    pub function_instantiations: Vec<FunctionInstantiation>,
+    /// Field instantiation pool
+    pub field_instantiations: Vec<FieldInstantiation>,
     /// Locals signatures pool
-    pub locals_signatures: Vec<LocalsSignature>,
+    pub signatures: Vec<Signature>,
     /// Identifier pool
     pub identifiers: Vec<Identifier>,
     /// Byte array pool
@@ -175,23 +188,23 @@ pub struct Context<'a> {
     labels: HashMap<BlockLabel, u16>,
 
     // queryable pools
-    fields: HashMap<(StructHandleIndex, Field_), (TableIndex, SignatureToken, usize)>,
+    // TODO: lookup for Fields is not that seemless after binary format changes
+    // We need multiple lookups or a better representation for fields
+    fields: HashMap<(StructHandleIndex, Field_), (StructDefinitionIndex, SignatureToken, usize)>,
     function_handles: HashMap<(ModuleName, FunctionName), (FunctionHandle, FunctionHandleIndex)>,
-    function_signatures:
-        HashMap<(ModuleName, FunctionName), (FunctionSignature, FunctionSignatureIndex)>,
+    function_signatures: HashMap<(ModuleName, FunctionName), FunctionSignature>,
 
     // Simple pools
-    function_signature_pool: HashMap<FunctionSignature, TableIndex>,
     module_handles: HashMap<ModuleHandle, TableIndex>,
     struct_handles: HashMap<StructHandle, TableIndex>,
-    type_signatures: HashMap<TypeSignature, TableIndex>,
-    locals_signatures: HashMap<LocalsSignature, TableIndex>,
+    signatures: HashMap<Signature, TableIndex>,
     identifiers: HashMap<Identifier, TableIndex>,
     byte_array_pool: HashMap<Vec<u8>, TableIndex>,
     address_pool: HashMap<AccountAddress, TableIndex>,
-
-    // Current generic/type formal context
-    type_formals: TypeFormalMap,
+    field_handles: HashMap<FieldHandle, TableIndex>,
+    struct_instantiations: HashMap<StructDefInstantiation, TableIndex>,
+    function_instantiations: HashMap<FunctionInstantiation, TableIndex>,
+    field_instantiations: HashMap<FieldInstantiation, TableIndex>,
 
     // The current function index that we are on
     current_function_index: FunctionDefinitionIndex,
@@ -228,15 +241,16 @@ impl<'a> Context<'a> {
             fields: HashMap::new(),
             function_handles: HashMap::new(),
             function_signatures: HashMap::new(),
-            function_signature_pool: HashMap::new(),
             module_handles: HashMap::new(),
             struct_handles: HashMap::new(),
-            type_signatures: HashMap::new(),
-            locals_signatures: HashMap::new(),
+            field_handles: HashMap::new(),
+            struct_instantiations: HashMap::new(),
+            function_instantiations: HashMap::new(),
+            field_instantiations: HashMap::new(),
+            signatures: HashMap::new(),
             identifiers: HashMap::new(),
             byte_array_pool: HashMap::new(),
             address_pool: HashMap::new(),
-            type_formals: HashMap::new(),
             current_function_index: FunctionDefinitionIndex(0),
             source_map: SourceMap::new(current_module.clone()),
         };
@@ -274,30 +288,18 @@ impl<'a> Context<'a> {
         );
         let materialized_pools = MaterializedPools {
             function_handles,
-            function_signatures: Self::materialize_map(self.function_signature_pool),
             module_handles: Self::materialize_map(self.module_handles),
             struct_handles: Self::materialize_map(self.struct_handles),
-            type_signatures: Self::materialize_map(self.type_signatures),
-            locals_signatures: Self::materialize_map(self.locals_signatures),
+            field_handles: Self::materialize_map(self.field_handles),
+            signatures: Self::materialize_map(self.signatures),
             identifiers: Self::materialize_map(self.identifiers),
             byte_array_pool: Self::materialize_map(self.byte_array_pool),
             address_pool: Self::materialize_map(self.address_pool),
+            function_instantiations: Self::materialize_map(self.function_instantiations),
+            struct_def_instantiations: Self::materialize_map(self.struct_instantiations),
+            field_instantiations: Self::materialize_map(self.field_instantiations),
         };
         (materialized_pools, self.source_map)
-    }
-
-    /// Bind the type formals into a "pool" for the current context.
-    pub fn bind_type_formals(&mut self, m: HashMap<TypeVar_, usize>) -> Result<()> {
-        self.type_formals = m
-            .into_iter()
-            .map(|(k, idx)| {
-                if idx > TABLE_MAX_SIZE {
-                    bail!("Too many type parameters")
-                }
-                Ok((k, idx as TableIndex))
-            })
-            .collect::<Result<_>>()?;
-        Ok(())
     }
 
     pub fn build_index_remapping(
@@ -348,12 +350,65 @@ impl<'a> Context<'a> {
         ))
     }
 
-    /// Get the type formal index, fails if it is not bound.
-    pub fn type_formal_index(&mut self, t: &TypeVar_) -> Result<TableIndex> {
-        match self.type_formals.get(&t) {
-            None => bail!("Unbound type parameter {}", t),
-            Some(idx) => Ok(*idx),
-        }
+    /// Get the field handle index for the alias, adds it if missing.
+    pub fn field_handle_index(
+        &mut self,
+        owner: StructDefinitionIndex,
+        field: u16,
+    ) -> Result<FieldHandleIndex> {
+        let field_handle = FieldHandle { owner, field };
+        Ok(FieldHandleIndex(get_or_add_item(
+            &mut self.field_handles,
+            field_handle,
+        )?))
+    }
+
+    /// Get the struct instantiation index for the alias, adds it if missing.
+    pub fn struct_instantiation_index(
+        &mut self,
+        def: StructDefinitionIndex,
+        type_parameters: SignatureIndex,
+    ) -> Result<StructDefInstantiationIndex> {
+        let struct_inst = StructDefInstantiation {
+            def,
+            type_parameters,
+        };
+        Ok(StructDefInstantiationIndex(get_or_add_item(
+            &mut self.struct_instantiations,
+            struct_inst,
+        )?))
+    }
+
+    /// Get the function instantiation index for the alias, adds it if missing.
+    pub fn function_instantiation_index(
+        &mut self,
+        handle: FunctionHandleIndex,
+        type_parameters: SignatureIndex,
+    ) -> Result<FunctionInstantiationIndex> {
+        let func_inst = FunctionInstantiation {
+            handle,
+            type_parameters,
+        };
+        Ok(FunctionInstantiationIndex(get_or_add_item(
+            &mut self.function_instantiations,
+            func_inst,
+        )?))
+    }
+
+    /// Get the field instantiation index for the alias, adds it if missing.
+    pub fn field_instantiation_index(
+        &mut self,
+        handle: FieldHandleIndex,
+        type_parameters: SignatureIndex,
+    ) -> Result<FieldInstantiationIndex> {
+        let field_inst = FieldInstantiation {
+            handle,
+            type_parameters,
+        };
+        Ok(FieldInstantiationIndex(get_or_add_item(
+            &mut self.field_instantiations,
+            field_inst,
+        )?))
     }
 
     /// Get the fake offset for the label. Labels will be fixed to real offsets after compilation
@@ -391,21 +446,11 @@ impl<'a> Context<'a> {
         &self,
         s: StructHandleIndex,
         f: Field_,
-    ) -> Result<(FieldDefinitionIndex, SignatureToken, usize)> {
+    ) -> Result<(StructDefinitionIndex, SignatureToken, usize)> {
         match self.fields.get(&(s, f.clone())) {
             None => bail!("Unbound field {}", f),
-            Some((idx, token, decl_order)) => {
-                Ok((FieldDefinitionIndex(*idx), token.clone(), *decl_order))
-            }
+            Some((sd_idx, token, decl_order)) => Ok((*sd_idx, token.clone(), *decl_order)),
         }
-    }
-
-    /// Get the type signature index, adds it if it is not bound.
-    pub fn type_signature_index(&mut self, token: SignatureToken) -> Result<TypeSignatureIndex> {
-        Ok(TypeSignatureIndex(get_or_add_item(
-            &mut self.type_signatures,
-            TypeSignature(token),
-        )?))
     }
 
     /// Get the struct definition index, fails if it is not bound.
@@ -416,15 +461,9 @@ impl<'a> Context<'a> {
         }
     }
 
-    /// Get the locals signature pool index, adds it if missing.
-    pub fn locals_signature_index(
-        &mut self,
-        locals: LocalsSignature,
-    ) -> Result<LocalsSignatureIndex> {
-        Ok(LocalsSignatureIndex(get_or_add_item(
-            &mut self.locals_signatures,
-            locals,
-        )?))
+    /// Get the signature pool index, adds it if missing.
+    pub fn signature_index(&mut self, sig: Signature) -> Result<SignatureIndex> {
+        Ok(SignatureIndex(get_or_add_item(&mut self.signatures, sig)?))
     }
 
     pub fn set_function_index(&mut self, index: TableIndex) {
@@ -468,7 +507,7 @@ impl<'a> Context<'a> {
         &mut self,
         sname: QualifiedStructIdent,
         is_nominal_resource: bool,
-        type_formals: Vec<Kind>,
+        type_parameters: Vec<Kind>,
     ) -> Result<StructHandleIndex> {
         let module = self.module_handle_index(&sname.module)?;
         let name = self.identifier_index(sname.name.as_inner())?;
@@ -478,7 +517,7 @@ impl<'a> Context<'a> {
                 module,
                 name,
                 is_nominal_resource,
-                type_formals,
+                type_parameters,
             },
         );
         Ok(StructHandleIndex(get_or_add_item_ref(
@@ -516,15 +555,24 @@ impl<'a> Context<'a> {
         let module = self.module_handle_index(&mname)?;
         let name = self.identifier_index(fname.as_inner())?;
 
-        let sidx = get_or_add_item_ref(&mut self.function_signature_pool, &signature)?;
-        let signature_index = FunctionSignatureIndex(sidx as TableIndex);
         self.function_signatures
-            .insert(m_f.clone(), (signature, signature_index));
+            .insert(m_f.clone(), signature.clone());
+
+        let FunctionSignature {
+            return_,
+            parameters,
+            type_parameters,
+        } = signature;
+
+        let params_idx = get_or_add_item(&mut self.signatures, Signature(parameters))?;
+        let return_idx = get_or_add_item(&mut self.signatures, Signature(return_))?;
 
         let handle = FunctionHandle {
             module,
             name,
-            signature: signature_index,
+            parameters: SignatureIndex(params_idx as TableIndex),
+            return_: SignatureIndex(return_idx as TableIndex),
+            type_parameters,
         };
         // handle duplicate declarations
         // erroring on duplicates needs to be done by the bytecode verifier
@@ -545,21 +593,15 @@ impl<'a> Context<'a> {
     pub fn declare_field(
         &mut self,
         s: StructHandleIndex,
+        sd_idx: StructDefinitionIndex,
         f: Field_,
         token: SignatureToken,
         decl_order: usize,
-    ) -> Result<FieldDefinitionIndex> {
-        let idx = self.fields.len();
-        if idx > TABLE_MAX_SIZE {
-            bail!("too many fields: {}.{}", s, f)
-        }
+    ) {
         // need to handle duplicates
-        Ok(FieldDefinitionIndex(
-            self.fields
-                .entry((s, f))
-                .or_insert((idx as TableIndex, token, decl_order))
-                .0,
-        ))
+        self.fields
+            .entry((s, f))
+            .or_insert((sd_idx, token, decl_order));
     }
 
     //**********************************************************************************************
@@ -580,7 +622,7 @@ impl<'a> Context<'a> {
         let dep = self.dependency(&mident)?;
         match dep.struct_handle(s) {
             None => bail!("Unbound struct {}", s),
-            Some(shandle) => Ok((shandle.is_nominal_resource, shandle.type_formals.clone())),
+            Some(shandle) => Ok((shandle.is_nominal_resource, shandle.type_parameters.clone())),
         }
     }
 
@@ -591,8 +633,8 @@ impl<'a> Context<'a> {
         match self.structs.get(&s) {
             Some(sh) => Ok(StructHandleIndex(*self.struct_handles.get(sh).unwrap())),
             None => {
-                let (is_nominal_resource, type_formals) = self.dep_struct_handle(&s)?;
-                self.declare_struct_handle_index(s, is_nominal_resource, type_formals)
+                let (is_nominal_resource, type_parameters) = self.dep_struct_handle(&s)?;
+                self.declare_struct_handle_index(s, is_nominal_resource, type_parameters)
             }
         }
     }
@@ -621,7 +663,20 @@ impl<'a> Context<'a> {
                 let correct_inner = self.reindex_signature_token(dep, *inner)?;
                 SignatureToken::MutableReference(Box::new(correct_inner))
             }
-            SignatureToken::Struct(orig_sh_idx, inners) => {
+            SignatureToken::Struct(orig_sh_idx) => {
+                let dep_info = self.dependency(&dep)?;
+                let (mident, sname) = dep_info
+                    .source_struct_info(orig_sh_idx)
+                    .ok_or_else(|| format_err!("Malformed dependency"))?;
+                let module_name = self.module_alias(&mident)?.clone();
+                let sident = QualifiedStructIdent {
+                    module: module_name,
+                    name: sname,
+                };
+                let correct_sh_idx = self.struct_handle_index(sident)?;
+                SignatureToken::Struct(correct_sh_idx)
+            }
+            SignatureToken::StructInstantiation(orig_sh_idx, inners) => {
                 let dep_info = self.dependency(&dep)?;
                 let (mident, sname) = dep_info
                     .source_struct_info(orig_sh_idx)
@@ -636,7 +691,7 @@ impl<'a> Context<'a> {
                     .into_iter()
                     .map(|t| self.reindex_signature_token(dep, t))
                     .collect::<Result<_>>()?;
-                SignatureToken::Struct(correct_sh_idx, correct_inners)
+                SignatureToken::StructInstantiation(correct_sh_idx, correct_inners)
             }
         })
     }
@@ -646,21 +701,21 @@ impl<'a> Context<'a> {
         dep: &QualifiedModuleIdent,
         orig: FunctionSignature,
     ) -> Result<FunctionSignature> {
-        let return_types = orig
-            .return_types
+        let return_ = orig
+            .return_
             .into_iter()
             .map(|t| self.reindex_signature_token(dep, t))
             .collect::<Result<_>>()?;
-        let arg_types = orig
-            .arg_types
+        let parameters = orig
+            .parameters
             .into_iter()
             .map(|t| self.reindex_signature_token(dep, t))
             .collect::<Result<_>>()?;
-        let type_formals = orig.type_formals;
+        let type_parameters = orig.type_parameters;
         Ok(vm::file_format::FunctionSignature {
-            return_types,
-            arg_types,
-            type_formals,
+            return_,
+            parameters,
+            type_parameters,
         })
     }
 
@@ -674,7 +729,7 @@ impl<'a> Context<'a> {
         }
         let mident = self.module_ident(m)?.clone();
         let dep = self.dependency(&mident)?;
-        match dep.function_signature(f).cloned() {
+        match dep.function_signature(f) {
             None => bail!("Unbound function {}.{}", m, f),
             Some(sig) => self.reindex_function_signature(&mident, sig),
         }
@@ -712,7 +767,7 @@ impl<'a> Context<'a> {
         &mut self,
         m: ModuleName,
         f: FunctionName,
-    ) -> Result<&(FunctionSignature, FunctionSignatureIndex)> {
+    ) -> Result<&FunctionSignature> {
         self.ensure_function_declared(m.clone(), f.clone())?;
         Ok(self.function_signatures.get(&(m, f)).unwrap())
     }

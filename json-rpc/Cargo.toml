@@ -12,8 +12,8 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 hex = "0.4.2"
-serde_json = "1.0.40"
-serde = { version = "1.0.105", default-features = false }
+serde_json = "1.0.51"
+serde = { version = "1.0.106", default-features = false }
 warp = "0.2.2"
 futures = "0.3.0"
 reqwest = { version = "0.10.4", features = ["blocking", "json"], default_features = false }
@@ -31,9 +31,11 @@ libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 libra-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
 libra-types = { path = "../types", version = "0.1.0" }
 libradb = { path = "../storage/libradb", version = "0.1.0" }
+storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
 transaction-builder = { path = "../language/transaction-builder", version = "0.1.0"}
 debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
 libra-temppath = { path = "../common/temppath", version = "0.1.0", optional = true }
+storage-proto = { path = "../storage/storage-proto", version = "0.1.0" }
 
 [dev-dependencies]
 vm-validator = { path = "../vm-validator", version = "0.1.0" }

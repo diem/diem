@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 futures = { version = "0.3.0"  }
-parity-multiaddr = "0.7.2"
+parity-multiaddr = "0.8.0"
 tokio = { version = "0.2.13", features = ["full"] }
 tokio-util = { version = "0.3", features = ["codec"] }
 

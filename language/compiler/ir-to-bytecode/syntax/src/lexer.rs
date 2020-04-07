@@ -102,7 +102,7 @@ pub enum Tok {
     U64,
     U128,
     Vector,
-    Unrestricted,
+    Copyable,
     While,
     LBrace,
     Pipe,
@@ -252,6 +252,7 @@ impl<'input> Lexer<'input> {
                             "exists" => (Tok::Exists, len + 1),
                             "move_from" => (Tok::MoveFrom, len + 1),
                             "move_to_sender" => (Tok::MoveToSender, len + 1),
+                            "main" => (Tok::Main, len),
                             _ => (Tok::NameBeginTyValue, len + 1),
                         },
                         Some('(') => match name {
@@ -454,7 +455,7 @@ fn get_name_token(name: &str) -> Tok {
         "u8" => Tok::U8,
         "u64" => Tok::U64,
         "u128" => Tok::U128,
-        "unrestricted" => Tok::Unrestricted,
+        "copyable" => Tok::Copyable,
         "while" => Tok::While,
         _ => Tok::NameValue,
     }

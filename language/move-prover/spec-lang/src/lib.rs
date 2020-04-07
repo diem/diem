@@ -95,13 +95,13 @@ fn run_spec_checker(
     let modules = units
         .into_iter()
         .filter_map(|unit| {
-            let (module_id, compiled_module, source_map, spec_id_offsets) = match unit {
+            let (module_id, compiled_module, source_map, spec_info) = match unit {
                 CompiledUnit::Module {
                     ident,
                     module,
                     source_map,
-                    spec_id_offsets,
-                } => (ident, module, source_map, spec_id_offsets),
+                    spec_info,
+                } => (ident, module, source_map, spec_info),
                 CompiledUnit::Script { .. } => return None,
             };
             let expanded_module = match eprog.modules.remove(&module_id) {
@@ -119,14 +119,12 @@ fn run_spec_checker(
                 expanded_module,
                 compiled_module,
                 source_map,
-                spec_id_offsets,
+                spec_info,
             ))
         })
         .enumerate();
-    for (
-        module_count,
-        (module_id, expanded_module, compiled_module, source_map, spec_id_offsets),
-    ) in modules
+    for (module_count, (module_id, expanded_module, compiled_module, source_map, spec_info)) in
+        modules
     {
         let loc = translator.to_loc(&expanded_module.loc);
         let module_name = ModuleName::from_str(
@@ -138,13 +136,7 @@ fn run_spec_checker(
         );
         let module_id = ModuleId::new(module_count);
         let mut module_translator = ModuleTranslator::new(&mut translator, module_id, module_name);
-        module_translator.translate(
-            loc,
-            expanded_module,
-            compiled_module,
-            source_map,
-            spec_id_offsets,
-        );
+        module_translator.translate(loc, expanded_module, compiled_module, source_map, spec_info);
     }
     Ok(())
 }

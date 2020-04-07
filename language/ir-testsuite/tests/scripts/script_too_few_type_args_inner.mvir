@@ -1,0 +1,5 @@
+//! type-args: 0x0::LibraAccount::Balance
+main<T>() {
+    return;
+}
+// check: NUMBER_OF_TYPE_ARGUMENTS_MISMATCH

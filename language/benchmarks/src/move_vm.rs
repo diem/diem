@@ -68,6 +68,7 @@ fn execute(c: &mut Criterion, move_vm: &MoveVM, fun: &str) {
                     &mut interpreter_context,
                     &metadata,
                     vec![],
+                    vec![],
                 )
                 .unwrap_or_else(|_| panic!("Cannot execute function {}", fun))
         })

@@ -4,7 +4,8 @@
 use crate::{
     errors::*,
     expansion::ast::SpecId,
-    parser::ast::{FunctionName, ModuleIdent},
+    hlir::ast as H,
+    parser::ast::{FunctionName, ModuleIdent, Var},
     shared::unique_map::UniqueMap,
 };
 use bytecode_source_map::source_map::SourceMap;
@@ -17,18 +18,25 @@ use std::collections::BTreeMap;
 //**************************************************************************************************
 
 #[derive(Debug)]
+pub struct SpecInfo {
+    pub offset: F::CodeOffset,
+    // Free locals that are used but not declared in the block
+    pub used_locals: BTreeMap<Var, H::SingleType>,
+}
+
+#[derive(Debug)]
 pub enum CompiledUnit {
     Module {
         ident: ModuleIdent,
         module: F::CompiledModule,
         source_map: SourceMap<Loc>,
-        spec_id_offsets: UniqueMap<FunctionName, BTreeMap<SpecId, F::CodeOffset>>,
+        spec_info: UniqueMap<FunctionName, BTreeMap<SpecId, SpecInfo>>,
     },
     Script {
         loc: Loc,
         script: F::CompiledScript,
         source_map: SourceMap<Loc>,
-        spec_id_offsets: BTreeMap<SpecId, F::CodeOffset>,
+        spec_info: BTreeMap<SpecId, SpecInfo>,
     },
 }
 
@@ -52,8 +60,8 @@ impl CompiledUnit {
     #[allow(dead_code)]
     pub fn serialize_debug(self) -> Vec<u8> {
         match self {
-            CompiledUnit::Module { module, .. } => format!("{}", module),
-            CompiledUnit::Script { script, .. } => format!("{}", script),
+            CompiledUnit::Module { module, .. } => format!("{:?}", module),
+            CompiledUnit::Script { script, .. } => format!("{:?}", script),
         }
         .into()
     }
@@ -64,14 +72,14 @@ impl CompiledUnit {
                 ident,
                 module,
                 source_map,
-                spec_id_offsets,
+                spec_info,
             } => {
                 let (module, errors) = verify_module(ident.loc(), module);
                 let verified = CompiledUnit::Module {
                     ident,
                     module,
                     source_map,
-                    spec_id_offsets,
+                    spec_info,
                 };
                 (verified, errors)
             }
@@ -79,14 +87,14 @@ impl CompiledUnit {
                 loc,
                 script,
                 source_map,
-                spec_id_offsets,
+                spec_info,
             } => {
                 let (script, errors) = verify_script(loc, script);
                 let verified = CompiledUnit::Script {
                     loc,
                     script,
                     source_map,
-                    spec_id_offsets,
+                    spec_info,
                 };
                 (verified, errors)
             }

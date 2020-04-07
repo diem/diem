@@ -46,7 +46,7 @@ fn bad_module_address() {
 
     // TODO: This is not verified for now.
     // verify and fail because the addresses don't match
-    // let vm_status = executor.verify_transaction(txn.clone()).unwrap();
+    // let vm_status = executor.verify_transaction(txn.clone()).status().unwrap();
     // assert!(vm_status.is(StatusType::Verification));
     // assert!(vm_status.major_status == StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER);
 
@@ -141,7 +141,7 @@ pub fn test_publishing_no_modules_non_whitelist_script() {
     );
 
     assert_prologue_parity!(
-        executor.verify_transaction(txn.clone()),
+        executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
         VMStatus::new(StatusCode::UNKNOWN_MODULE)
     );
@@ -172,7 +172,7 @@ pub fn test_publishing_allow_modules() {
         1,
         lbr_type_tag(),
     );
-    assert_eq!(executor.verify_transaction(txn.clone()), None);
+    assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
         &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))

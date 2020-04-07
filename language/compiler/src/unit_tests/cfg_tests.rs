@@ -174,7 +174,7 @@ fn cfg_compile_if_else_with_if_return() {
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
     let cfg: VMControlFlowGraph = VMControlFlowGraph::new(&compiled_script.main().code.code);
-    println!("SCRIPT:\n {}", compiled_script);
+    println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
     assert_eq!(cfg.blocks().len(), 3);
     assert_eq!(cfg.num_blocks(), 3);
@@ -200,7 +200,7 @@ fn cfg_compile_if_else_with_two_returns() {
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
     let cfg: VMControlFlowGraph = VMControlFlowGraph::new(&compiled_script.main().code.code);
-    println!("SCRIPT:\n {}", compiled_script);
+    println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
     assert_eq!(cfg.blocks().len(), 4);
     assert_eq!(cfg.num_blocks(), 4);
@@ -254,7 +254,7 @@ fn cfg_compile_if_else_with_if_abort() {
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
     let cfg: VMControlFlowGraph = VMControlFlowGraph::new(&compiled_script.main().code.code);
-    println!("SCRIPT:\n {}", compiled_script);
+    println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
     assert_eq!(cfg.blocks().len(), 3);
     assert_eq!(cfg.num_blocks(), 3);
@@ -280,7 +280,7 @@ fn cfg_compile_if_else_with_two_aborts() {
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
     let cfg: VMControlFlowGraph = VMControlFlowGraph::new(&compiled_script.main().code.code);
-    println!("SCRIPT:\n {}", compiled_script);
+    println!("SCRIPT:\n {:?}", compiled_script);
     cfg.display();
     assert_eq!(cfg.blocks().len(), 4);
     assert_eq!(cfg.num_blocks(), 4);

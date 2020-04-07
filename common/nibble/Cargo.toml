@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 proptest = { version = "0.9.4", optional = true }
-serde = { version = "1.0.105", features = ["derive"] }
+serde = { version = "1.0.106", features = ["derive"] }
 
 [features]
 default = []

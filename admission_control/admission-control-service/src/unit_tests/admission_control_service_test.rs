@@ -10,7 +10,7 @@ use admission_control_proto::{
 };
 use anyhow::Result;
 use futures::executor::block_on;
-use libra_crypto::{ed25519::*, test_utils::TEST_SEED};
+use libra_crypto::{ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, PrivateKey, Uniform};
 use libra_types::{
     account_address::AccountAddress,
     mempool_status::MempoolStatusCode,
@@ -34,16 +34,15 @@ fn submit_transaction(
     ac_service: &MockAdmissionControlService,
     are_keys_valid: bool,
 ) -> SubmitTransactionResponse {
-    let keypair = compat::generate_keypair(None);
+    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
+    let private_key = Ed25519PrivateKey::generate(&mut rng);
     let public_key = if are_keys_valid {
-        keypair.1
+        private_key.public_key()
     } else {
-        let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
-        let test_key = compat::generate_keypair(&mut rng);
-        test_key.1
+        Ed25519PrivateKey::generate(&mut rng).public_key()
     };
     let mut req = SubmitTransactionRequest::default();
-    req.transaction = Some(get_test_signed_txn(sender, 0, &keypair.0, public_key, None).into());
+    req.transaction = Some(get_test_signed_txn(sender, 0, &private_key, public_key, None).into());
     SubmitTransactionResponse::try_from(
         block_on(ac_service.submit_transaction(Request::new(req)))
             .unwrap()
@@ -113,7 +112,8 @@ impl AdmissionControl for MockAdmissionControlService {
 
         let mut resp = ProtoSubmitTransactionResponse::default();
 
-        match self.mock_vm.validate_transaction(transaction).await {
+        let validation_result = self.mock_vm.validate_transaction(transaction).await;
+        match validation_result.as_ref().map(|result| result.status()) {
             Ok(Some(vm_status)) => {
                 resp.status = Some(Status::VmStatus(VmStatusProto::from(vm_status)));
             }

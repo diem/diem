@@ -1,1 +1,362 @@
-Move prover all good, no errors!
+Move prover returns: exiting with boogie verification errors
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1138:6 ───
+      │
+ 1138 │     assert false; // $LCS_to_bytes not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1138:6 ───
+      │
+ 1138 │     assert false; // $LCS_to_bytes not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1138:6 ───
+      │
+ 1138 │     assert false; // $LCS_to_bytes not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1138:6 ───
+      │
+ 1138 │     assert false; // $LCS_to_bytes not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1138:6 ───
+      │
+ 1138 │     assert false; // $LCS_to_bytes not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+error:  A precondition for this call might not hold.
+
+     ┌── tests/sources/stdlib/modules/libra_system.move:424:4 ───
+     │
+ 424 │ ╭    fun make_validator_info(addr: address): ValidatorInfo {
+ 425 │ │        let config = ValidatorConfig::config(addr);
+ 426 │ │
+ 427 │ │       ValidatorInfo {
+ 428 │ │           addr: addr,
+ 429 │ │           consensus_pubkey: ValidatorConfig::consensus_pubkey(&config),
+ 430 │ │           consensus_voting_power: 1,
+ 431 │ │           network_signing_pubkey: ValidatorConfig::validator_network_signing_pubkey(&config),
+ 432 │ │           network_identity_pubkey: ValidatorConfig::validator_network_identity_pubkey(&config),
+ 433 │ │       }
+ 434 │ │    }
+     │ ╰────^
+     │
+     =     at tests/sources/stdlib/modules/libra_system.move:238:4: add_validator_ (entry)
+     =     at tests/sources/stdlib/modules/libra_system.move:240:8: add_validator_
+     =         account_address = <redacted>
+     =     at tests/sources/stdlib/modules/validator_config.move:25:5: has (entry)
+     =     at tests/sources/stdlib/modules/libra_system.move:242:45: add_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:244:32: add_validator_
+     =         validator_set_ref = <redacted>
+     =     at tests/sources/stdlib/modules/libra_system.move:245:64: add_validator_
+     =         discovery_set_ref = <redacted>
+     =     at tests/sources/stdlib/modules/libra_system.move:249:27: add_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:145:4: is_validator_ (entry)
+     =     at tests/sources/stdlib/modules/libra_system.move:146:28: is_validator_
+     =         addr = <redacted>,
+     =         validators_vec_ref = <redacted>,
+     =         size = <redacted>
+     =     at tests/sources/stdlib/modules/libra_system.move:147:13: is_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:151:13: is_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:153:49: is_validator_
+     =         i = <redacted>,
+     =         validator_info_ref = <redacted>
+     =     at tests/sources/stdlib/modules/libra_system.move:155:18: is_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:158:19: is_validator_
+     =         i = <redacted>
+     =     at tests/sources/stdlib/modules/libra_system.move:159:17: is_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:249:13: add_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:248:8: add_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:424:4: make_validator_info (entry)
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+error:  A precondition for this call might not hold.
+
+     ┌── tests/sources/stdlib/modules/libra_system.move:120:5 ───
+     │
+ 120 │ ╭     public fun get_discovery_address(d: &DiscoveryInfo): &address {
+ 121 │ │         &d.addr
+ 122 │ │     }
+     │ ╰─────^
+     │
+     =     at tests/sources/stdlib/modules/libra_system.move:212:5: get_discovery_index (entry)
+     =     at tests/sources/stdlib/modules/libra_system.move:213:27: get_discovery_index
+     =         discovery_set = <redacted>,
+     =         addr = <redacted>,
+     =         len = <redacted>
+     =     at tests/sources/stdlib/modules/libra_system.move:214:17: get_discovery_index
+     =         i = <redacted>
+     =     at tests/sources/stdlib/modules/libra_system.move:216:54: get_discovery_index
+     =     at tests/sources/stdlib/modules/libra_system.move:120:5: get_discovery_address (entry)
+
+error:  A precondition for this call might not hold.
+
+     ┌── tests/sources/stdlib/modules/libra_system.move:98:5 ───
+     │
+  98 │ ╭     public fun get_validator_address(v: &ValidatorInfo): &address {
+  99 │ │       &v.addr
+ 100 │ │     }
+     │ ╰─────^
+     │
+     =     at tests/sources/stdlib/modules/libra_system.move:195:5: get_validator_index (entry)
+     =     at tests/sources/stdlib/modules/libra_system.move:196:27: get_validator_index
+     =         validators = <redacted>,
+     =         addr = <redacted>,
+     =         len = <redacted>
+     =     at tests/sources/stdlib/modules/libra_system.move:197:17: get_validator_index
+     =         i = <redacted>
+     =     at tests/sources/stdlib/modules/libra_system.move:199:54: get_validator_index
+     =     at tests/sources/stdlib/modules/libra_system.move:98:5: get_validator_address (entry)
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1138:6 ───
+      │
+ 1138 │     assert false; // $LCS_to_bytes not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1138:6 ───
+      │
+ 1138 │     assert false; // $LCS_to_bytes not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+bug:  This assertion might not hold.
+
+      ┌── libra_system.bpl:1116:6 ───
+      │
+ 1116 │     assert false; // $LibraAccount_write_to_event_store not implemented
+      │      ^
+      │
+
+error:  A precondition for this call might not hold.
+
+     ┌── tests/sources/stdlib/modules/libra_system.move:98:5 ───
+     │
+  98 │ ╭     public fun get_validator_address(v: &ValidatorInfo): &address {
+  99 │ │       &v.addr
+ 100 │ │     }
+     │ ╰─────^
+     │
+     =     at tests/sources/stdlib/modules/libra_system.move:263:4: remove_validator (entry)
+     =     at tests/sources/stdlib/modules/libra_system.move:265:8: remove_validator
+     =     at tests/sources/stdlib/modules/libra_system.move:267:32: remove_validator
+     =     at tests/sources/stdlib/modules/libra_system.move:268:64: remove_validator
+     =     at tests/sources/stdlib/modules/libra_system.move:271:26: remove_validator
+     =     at tests/sources/stdlib/modules/libra_system.move:145:4: is_validator_ (entry)
+     =     at tests/sources/stdlib/modules/libra_system.move:146:28: is_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:147:13: is_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:151:13: is_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:153:49: is_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:155:18: is_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:271:12: remove_validator
+     =     at tests/sources/stdlib/modules/libra_system.move:270:8: remove_validator
+     =     at tests/sources/stdlib/modules/libra_system.move:195:5: get_validator_index (entry)
+     =     at tests/sources/stdlib/modules/libra_system.move:196:27: get_validator_index
+     =     at tests/sources/stdlib/modules/libra_system.move:197:17: get_validator_index
+     =     at tests/sources/stdlib/modules/libra_system.move:199:54: get_validator_index
+     =     at tests/sources/stdlib/modules/libra_system.move:98:5: get_validator_address (entry)
+
+error:  A precondition for this call might not hold.
+
+     ┌── tests/sources/stdlib/modules/libra_system.move:195:5 ───
+     │
+ 195 │ ╭     public fun get_validator_index(validators: &vector<ValidatorInfo>, addr: address): u64 {
+ 196 │ │         let len = Vector::length(validators);
+ 197 │ │         let i = 0;
+ 198 │ │         loop {
+ 199 │ │             if (get_validator_address(Vector::borrow(validators, i)) == &addr) {
+ 200 │ │                 return i
+ 201 │ │             };
+ 202 │ │
+ 203 │ │             i = i + 1;
+ 204 │ │             if (i >= len) { break };
+ 205 │ │         };
+ 206 │ │
+ 207 │ │         abort 99
+ 208 │ │     }
+     │ ╰─────^
+     │
+     =     at tests/sources/stdlib/modules/libra_system.move:263:4: remove_validator (entry)
+     =     at tests/sources/stdlib/modules/libra_system.move:265:8: remove_validator
+     =     at tests/sources/stdlib/modules/libra_system.move:267:32: remove_validator
+     =     at tests/sources/stdlib/modules/libra_system.move:268:64: remove_validator
+     =     at tests/sources/stdlib/modules/libra_system.move:271:26: remove_validator
+     =     at tests/sources/stdlib/modules/libra_system.move:145:4: is_validator_ (entry)
+     =     at tests/sources/stdlib/modules/libra_system.move:146:28: is_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:147:13: is_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:151:13: is_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:153:49: is_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:155:18: is_validator_
+     =     at tests/sources/stdlib/modules/libra_system.move:271:12: remove_validator
+     =     at tests/sources/stdlib/modules/libra_system.move:270:8: remove_validator
+     =     at tests/sources/stdlib/modules/libra_system.move:195:5: get_validator_index (entry)

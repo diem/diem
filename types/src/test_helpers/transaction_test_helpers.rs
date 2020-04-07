@@ -60,7 +60,7 @@ pub fn get_test_signed_transaction(
     let raw_txn = RawTransaction::new_script(
         sender,
         sequence_number,
-        script.unwrap_or_else(|| Script::new(EMPTY_SCRIPT.to_vec(), Vec::new())),
+        script.unwrap_or_else(|| Script::new(EMPTY_SCRIPT.to_vec(), vec![], Vec::new())),
         max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
         gas_unit_price,
         gas_specifier,
@@ -87,7 +87,7 @@ pub fn get_test_unchecked_transaction(
     let raw_txn = RawTransaction::new_script(
         sender,
         sequence_number,
-        script.unwrap_or_else(|| Script::new(EMPTY_SCRIPT.to_vec(), Vec::new())),
+        script.unwrap_or_else(|| Script::new(EMPTY_SCRIPT.to_vec(), vec![], Vec::new())),
         max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
         gas_unit_price,
         gas_specifier,

@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/parser/invalid_character_non_ascii.move:5:4 ───
+   │
+ 5 │    ф
+   │    ^ Invalid character 'ф' found when reading file. Only ASCII printable characters, tabs (\t), and line endings (\n) are permitted.
+   │
+

@@ -6,8 +6,8 @@ use crate::{
         Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature, ED25519_PRIVATE_KEY_LENGTH,
         ED25519_PUBLIC_KEY_LENGTH, ED25519_SIGNATURE_LENGTH,
     },
+    test_utils::uniform_keypair_strategy,
     traits::*,
-    unit_tests::uniform_keypair_strategy,
 };
 
 use core::{

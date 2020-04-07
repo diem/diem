@@ -36,6 +36,10 @@ const UNINITIALIZED: usize = 0;
 const INITIALIZING: usize = 1;
 const INITIALIZED: usize = 2;
 
+// severity level - lower is worse
+const SEVERITY_CRITICAL: usize = 1;
+const SEVERITY_WARNING: usize = 2;
+
 #[derive(Default, Serialize)]
 pub struct StructuredLogEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -52,6 +56,8 @@ pub struct StructuredLogEntry {
     git_rev: Option<&'static str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     timestamp: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    severity: Option<usize>,
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     data: HashMap<&'static str, Value>,
 }
@@ -71,42 +77,61 @@ impl StructuredLogEntry {
         ret
     }
 
+    pub fn critical(mut self) -> Self {
+        self.severity = Some(SEVERITY_CRITICAL);
+        self
+    }
+
+    pub fn warning(mut self) -> Self {
+        self.severity = Some(SEVERITY_WARNING);
+        self
+    }
+
+    pub fn json_data(mut self, key: &'static str, value: Value) -> Self {
+        self.data.insert(key, value);
+        self
+    }
+
+    pub fn data<D: Serialize>(mut self, key: &'static str, value: D) -> Self {
+        self.data.insert(
+            key,
+            serde_json::to_value(value).expect("Failed to serialize StructuredLogEntry key"),
+        );
+        self
+    }
+
+    #[doc(hidden)] // set from macro
     pub fn log(&mut self, log: String) -> &mut Self {
         self.log = Some(log);
         self
     }
 
+    #[doc(hidden)] // set from macro
     pub fn pattern(&mut self, pattern: &'static str) -> &mut Self {
         self.pattern = Some(pattern);
         self
     }
 
+    #[doc(hidden)] // set from macro
     pub fn module(&mut self, module: &'static str) -> &mut Self {
         self.module = Some(module);
         self
     }
 
+    #[doc(hidden)] // set from macro
     pub fn location(&mut self, location: &'static str) -> &mut Self {
         self.location = Some(location);
         self
     }
 
+    #[doc(hidden)] // set from macro
     pub fn git_rev(&mut self, git_rev: Option<&'static str>) -> &mut Self {
         self.git_rev = git_rev;
         self
     }
 
-    pub fn timestamp(&mut self, timestamp: String) -> &mut Self {
-        self.timestamp = Some(timestamp);
-        self
-    }
-
-    pub fn json_data(&mut self, key: &'static str, value: Value) -> &mut Self {
-        self.data.insert(key, value);
-        self
-    }
-
-    pub fn data<D: Serialize>(&mut self, key: &'static str, value: D) -> &mut Self {
+    #[doc(hidden)] // set from macro
+    pub fn data_mutref<D: Serialize>(&mut self, key: &'static str, value: D) -> &mut Self {
         self.data.insert(
             key,
             serde_json::to_value(value).expect("Failed to serialize StructuredLogEntry key"),

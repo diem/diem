@@ -1,0 +1,34 @@
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/hash_model.move:46:9 ───
+    │
+ 46 │         ensures len(result_1) > 0 ==> result_1[0] < max_u8();
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/hash_model.move:37:5: hash_test1_incorrect (entry)
+    =     at tests/sources/hash_model.move:39:24: hash_test1_incorrect
+    =         v1 = <redacted>,
+    =         v2 = <redacted>,
+    =         h1 = <redacted>
+    =     at tests/sources/hash_model.move:40:33: hash_test1_incorrect
+    =         h2 = <redacted>
+    =     at tests/sources/hash_model.move:41:10: hash_test1_incorrect
+    =     at tests/sources/hash_model.move:37:5: hash_test1_incorrect (exit)
+
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/hash_model.move:89:9 ───
+    │
+ 89 │         ensures len(result_1) > 0 ==> result_1[0] < max_u8();
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/hash_model.move:80:5: hash_test2_incorrect (entry)
+    =     at tests/sources/hash_model.move:82:24: hash_test2_incorrect
+    =         v1 = <redacted>,
+    =         v2 = <redacted>,
+    =         h1 = <redacted>
+    =     at tests/sources/hash_model.move:83:33: hash_test2_incorrect
+    =         h2 = <redacted>
+    =     at tests/sources/hash_model.move:84:10: hash_test2_incorrect
+    =     at tests/sources/hash_model.move:80:5: hash_test2_incorrect (exit)

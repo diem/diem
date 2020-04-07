@@ -11,8 +11,8 @@ use libra_types::{
     event::EventKey,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::{
-        AccumulatorConsistencyProof, AccumulatorRangeProof, TransactionAccumulatorProof,
-        TransactionListProof, TransactionProof,
+        AccumulatorConsistencyProof, AccumulatorRangeProof, SparseMerkleProof,
+        TransactionAccumulatorProof, TransactionListProof, TransactionProof,
     },
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionWithProof, Version,
@@ -20,8 +20,9 @@ use libra_types::{
     validator_change::ValidatorChangeProof,
     vm_error::StatusCode,
 };
-use libradb::LibraDBTrait;
 use std::collections::BTreeMap;
+use storage_interface::DbReader;
+use storage_proto::StartupInfo;
 
 /// Lightweight mock of LibraDB
 #[derive(Clone)]
@@ -34,7 +35,7 @@ pub(crate) struct MockLibraDB {
     pub account_state_with_proof: Vec<AccountStateWithProof>,
 }
 
-impl LibraDBTrait for MockLibraDB {
+impl DbReader for MockLibraDB {
     fn get_latest_account_state(
         &self,
         address: AccountAddress,
@@ -46,8 +47,22 @@ impl LibraDBTrait for MockLibraDB {
         }
     }
 
-    fn get_latest_commit_metadata(&self) -> Result<(Version, u64)> {
-        Ok((self.version, self.timestamp))
+    fn get_latest_ledger_info(&self) -> Result<LedgerInfoWithSignatures> {
+        Ok(LedgerInfoWithSignatures::new(
+            LedgerInfo::new(
+                BlockInfo::new(
+                    0,
+                    0,
+                    HashValue::zero(),
+                    HashValue::zero(),
+                    self.version,
+                    self.timestamp,
+                    None,
+                ),
+                HashValue::zero(),
+            ),
+            BTreeMap::new(),
+        ))
     }
 
     fn get_txn_by_account(
@@ -94,10 +109,6 @@ impl LibraDBTrait for MockLibraDB {
                     ),
                 ),
             }))
-    }
-
-    fn get_latest_version(&self) -> Result<u64, Error> {
-        Ok(self.version)
     }
 
     fn get_transactions(
@@ -153,6 +164,7 @@ impl LibraDBTrait for MockLibraDB {
         &self,
         key: &EventKey,
         start: u64,
+        _ascending: bool,
         limit: u64,
     ) -> Result<Vec<(u64, ContractEvent)>> {
         let events = self
@@ -202,5 +214,17 @@ impl LibraDBTrait for MockLibraDB {
         _ledger_version: Version,
     ) -> Result<AccountStateWithProof> {
         Ok(self.account_state_with_proof[0].clone())
+    }
+
+    fn get_startup_info(&self) -> Result<Option<StartupInfo>> {
+        unimplemented!()
+    }
+
+    fn get_account_state_with_proof_by_version(
+        &self,
+        _address: AccountAddress,
+        _version: u64,
+    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
+        unimplemented!()
     }
 }

@@ -21,7 +21,7 @@ module FooConfig {
 
 //! new-transaction
 //! sender: association
-//! args: b"01000000",
+//! args: b"01",
 // Step 2: Change option to CustomScript
 use 0x0::ScriptWhitelist;
 

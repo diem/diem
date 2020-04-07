@@ -49,7 +49,7 @@ impl PriorityIndex {
 
     fn make_key(&self, txn: &MempoolTransaction) -> OrderedQueueKey {
         OrderedQueueKey {
-            gas_price: txn.get_gas_price(),
+            gas_ranking_score: txn.ranking_score,
             expiration_time: txn.expiration_time,
             address: txn.get_sender(),
             sequence_number: txn.get_sequence_number(),
@@ -68,7 +68,7 @@ impl PriorityIndex {
 
 #[derive(Eq, PartialEq, Clone, Debug, Hash)]
 pub struct OrderedQueueKey {
-    pub gas_price: u64,
+    pub gas_ranking_score: u64,
     pub expiration_time: Duration,
     pub address: AccountAddress,
     pub sequence_number: u64,
@@ -82,7 +82,7 @@ impl PartialOrd for OrderedQueueKey {
 
 impl Ord for OrderedQueueKey {
     fn cmp(&self, other: &OrderedQueueKey) -> Ordering {
-        match self.gas_price.cmp(&other.gas_price) {
+        match self.gas_ranking_score.cmp(&other.gas_ranking_score) {
             Ordering::Equal => {}
             ordering => return ordering,
         }

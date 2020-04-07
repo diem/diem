@@ -10,25 +10,27 @@ use crate::{
     },
 };
 use lcs::test_helpers::assert_canonical_encode_decode;
-use libra_crypto::ed25519::*;
+use libra_crypto::{
+    ed25519::{self, Ed25519PrivateKey, Ed25519Signature},
+    PrivateKey, Uniform,
+};
 use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use proptest::prelude::*;
 use std::convert::TryFrom;
 
 #[test]
 fn test_invalid_signature() {
-    let keypair = compat::generate_keypair(None);
     let proto_txn: crate::proto::types::SignedTransaction = SignedTransaction::new(
         RawTransaction::new_script(
             AccountAddress::random(),
             0,
-            Script::new(vec![], vec![]),
+            Script::new(vec![], vec![], vec![]),
             0,
             0,
             lbr_type_tag(),
             std::time::Duration::new(0, 0),
         ),
-        keypair.1,
+        Ed25519PrivateKey::generate_for_testing().public_key(),
         Ed25519Signature::try_from(&[1u8; 64][..]).unwrap(),
     )
     .into();
@@ -40,8 +42,8 @@ fn test_invalid_signature() {
 
 proptest! {
     #[test]
-    fn test_sign_raw_transaction(raw_txn in any::<RawTransaction>(), (sk1, pk1) in compat::keypair_strategy()) {
-        let txn = raw_txn.sign(&sk1, pk1).unwrap();
+    fn test_sign_raw_transaction(raw_txn in any::<RawTransaction>(), keypair in ed25519::keypair_strategy()) {
+        let txn = raw_txn.sign(&keypair.private_key, keypair.public_key).unwrap();
         let signed_txn = txn.into_inner();
         assert!(signed_txn.check_signature().is_ok());
     }

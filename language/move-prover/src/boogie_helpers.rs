@@ -122,8 +122,25 @@ pub fn boogie_local_type(ty: &Type) -> String {
     }
 }
 
-/// Create boogie type check boolean expression.
-pub fn boogie_type_check_expr(env: &GlobalEnv, name: &str, ty: &Type) -> String {
+/// A value indicating how to perform well-formed checks.
+#[derive(Clone, Copy, PartialEq)]
+pub enum WellFormedMode {
+    /// Assume types and invariants in auto mode. If the type is a mutable reference, invariants
+    /// will not be assumed.
+    Default,
+    /// Assume types and invariants.
+    WithInvariant,
+    /// Assume types only.
+    WithoutInvariant,
+}
+
+/// Create boogie well-formed boolean expression.
+pub fn boogie_well_formed_expr(
+    env: &GlobalEnv,
+    name: &str,
+    ty: &Type,
+    mode: WellFormedMode,
+) -> String {
     let mut conds = vec![];
     match ty {
         Type::Primitive(p) => match p {
@@ -138,17 +155,29 @@ pub fn boogie_type_check_expr(env: &GlobalEnv, name: &str, ty: &Type) -> String 
         Type::Vector(_) => conds.push(format!("$Vector_is_well_formed({})", name)),
         Type::Struct(module_idx, struct_idx, _) => {
             let struct_env = env.get_module(*module_idx).into_struct(*struct_idx);
+            let well_formed_name = if mode == WellFormedMode::WithoutInvariant {
+                "is_well_formed_types"
+            } else {
+                "is_well_formed"
+            };
             conds.push(format!(
-                "${}_is_well_formed({})",
+                "{}_{}({})",
                 boogie_struct_name(&struct_env),
+                well_formed_name,
                 name
             ))
         }
-        Type::Reference(_is_mut, rtype) => {
-            conds.push(boogie_type_check_expr(
+        Type::Reference(is_mut, rtype) => {
+            let mode = if *is_mut && mode == WellFormedMode::Default {
+                WellFormedMode::WithoutInvariant
+            } else {
+                mode
+            };
+            conds.push(boogie_well_formed_expr(
                 env,
                 &format!("$Dereference($m, {})", name),
                 rtype,
+                mode,
             ));
             conds.push(format!(
                 "$IsValidReferenceParameter($m, $local_counter, {})",
@@ -165,10 +194,15 @@ pub fn boogie_type_check_expr(env: &GlobalEnv, name: &str, ty: &Type) -> String 
     conds.iter().filter(|s| !s.is_empty()).join(" && ")
 }
 
-/// Create boogie type check assumption. The result will be either an empty string or a
+/// Create boogie well-formed check. The result will be either an empty string or a
 /// newline-terminated assume statement.
-pub fn boogie_type_check(env: &GlobalEnv, name: &str, ty: &Type) -> String {
-    let expr = boogie_type_check_expr(env, name, ty);
+pub fn boogie_well_formed_check(
+    env: &GlobalEnv,
+    name: &str,
+    ty: &Type,
+    mode: WellFormedMode,
+) -> String {
+    let expr = boogie_well_formed_expr(env, name, ty, mode);
     if !expr.is_empty() {
         format!("assume {};\n", expr)
     } else {
@@ -182,7 +216,7 @@ pub fn boogie_declare_global(env: &GlobalEnv, name: &str, ty: &Type) -> String {
     format!(
         "var {} : Value where {};",
         name,
-        boogie_type_check_expr(env, name, ty)
+        boogie_well_formed_expr(env, name, ty, WellFormedMode::Default)
     )
 }
 

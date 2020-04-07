@@ -4,13 +4,14 @@
 use anyhow::Result;
 use futures::executor::block_on;
 use libra_types::{
-    account_address::AccountAddress, account_config::AccountResource,
-    transaction::SignedTransaction, vm_error::VMStatus,
+    account_address::AccountAddress,
+    account_config::AccountResource,
+    transaction::{SignedTransaction, VMValidatorResult},
 };
 use libra_vm::{LibraVM, VMVerifier};
 use scratchpad::SparseMerkleTree;
 use std::{convert::TryFrom, sync::Arc};
-use storage_client::{StorageRead, VerifiedStateView};
+use storage_client::{StorageRead, StorageReaderWithRuntimeHandle, VerifiedStateView};
 use tokio::runtime::Handle;
 
 #[cfg(test)]
@@ -21,7 +22,7 @@ mod vm_validator_test;
 pub trait TransactionValidation: Send + Sync + Clone {
     type ValidationInstance: VMVerifier;
     /// Validate a txn from client
-    async fn validate_transaction(&self, _txn: SignedTransaction) -> Result<Option<VMStatus>>;
+    async fn validate_transaction(&self, _txn: SignedTransaction) -> Result<VMValidatorResult>;
 }
 
 #[derive(Clone)]
@@ -41,8 +42,10 @@ impl VMValidator {
                 .expect("Failed to get the latest state");
         let smt = SparseMerkleTree::new(state_root);
         let state_view = VerifiedStateView::new(
-            storage_read_client.clone(),
-            rt_handle.clone(),
+            Arc::new(StorageReaderWithRuntimeHandle::new(
+                storage_read_client.clone(),
+                rt_handle.clone(),
+            )),
             Some(version),
             state_root,
             &smt,
@@ -61,7 +64,7 @@ impl VMValidator {
 impl TransactionValidation for VMValidator {
     type ValidationInstance = LibraVM;
 
-    async fn validate_transaction(&self, txn: SignedTransaction) -> Result<Option<VMStatus>> {
+    async fn validate_transaction(&self, txn: SignedTransaction) -> Result<VMValidatorResult> {
         let (version, state_root) = self.storage_read_client.get_latest_state_root().await?;
         let client = self.storage_read_client.clone();
         let rt_handle = self.rt_handle.clone();
@@ -80,8 +83,12 @@ impl TransactionValidation for VMValidator {
         // starve other async tasks.
         tokio::task::spawn_blocking(move || {
             let smt = SparseMerkleTree::new(state_root);
-            let state_view =
-                VerifiedStateView::new(client, rt_handle, Some(version), state_root, &smt);
+            let state_view = VerifiedStateView::new(
+                Arc::new(StorageReaderWithRuntimeHandle::new(client, rt_handle)),
+                Some(version),
+                state_root,
+                &smt,
+            );
 
             vm.validate_transaction(txn, &state_view)
         })

@@ -3,7 +3,8 @@
 
 use crate::{
     expansion::ast::SpecId,
-    parser::ast::{FunctionName, ModuleIdent, ModuleIdent_, ModuleName, StructName},
+    hlir::ast as H,
+    parser::ast::{FunctionName, ModuleIdent, ModuleIdent_, ModuleName, StructName, Var},
 };
 use libra_types::account_address::AccountAddress as LibraAddress;
 use move_ir_types::ast as IR;
@@ -18,7 +19,7 @@ pub struct Context<'a> {
     current_module: Option<&'a ModuleIdent>,
     seen_structs: BTreeSet<(ModuleIdent, StructName)>,
     seen_functions: BTreeSet<(ModuleIdent, FunctionName)>,
-    nop_labels: BTreeMap<SpecId, IR::NopLabel>,
+    spec_info: BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, H::SingleType>)>,
 }
 
 impl<'a> Context<'a> {
@@ -30,7 +31,7 @@ impl<'a> Context<'a> {
             current_module,
             seen_structs: BTreeSet::new(),
             seen_functions: BTreeSet::new(),
-            nop_labels: BTreeMap::new(),
+            spec_info: BTreeMap::new(),
         }
     }
 
@@ -42,8 +43,10 @@ impl<'a> Context<'a> {
         self.current_module.map(|cur| cur == m).unwrap_or(false)
     }
 
-    pub fn finish_function(&mut self) -> BTreeMap<SpecId, IR::NopLabel> {
-        std::mem::replace(&mut self.nop_labels, BTreeMap::new())
+    pub fn finish_function(
+        &mut self,
+    ) -> BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, H::SingleType>)> {
+        std::mem::replace(&mut self.spec_info, BTreeMap::new())
     }
 
     //**********************************************************************************************
@@ -287,9 +290,12 @@ impl<'a> Context<'a> {
     // Nops
     //**********************************************************************************************
 
-    pub fn nop_label(&mut self, id: SpecId) -> IR::NopLabel {
+    pub fn spec(&mut self, id: SpecId, used_locals: BTreeMap<Var, H::SingleType>) -> IR::NopLabel {
         let label = IR::NopLabel(format!("{}", id));
-        assert!(self.nop_labels.insert(id, label.clone()).is_none());
+        assert!(self
+            .spec_info
+            .insert(id, (label.clone(), used_locals))
+            .is_none());
         label
     }
 }

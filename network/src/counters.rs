@@ -141,6 +141,10 @@ pub static PENDING_CONNECTION_HANDLER_NOTIFICATIONS: Lazy<IntGauge> =
 pub static PENDING_PEER_MANAGER_DIAL_REQUESTS: Lazy<IntGauge> =
     Lazy::new(|| OP_COUNTERS.gauge("pending_peer_manager_dial_requests"));
 
+/// Counter of messages pending in queue to be sent out on the wire.
+pub static PENDING_WIRE_MESSAGES: Lazy<IntGauge> =
+    Lazy::new(|| OP_COUNTERS.gauge("pending_wire_messages"));
+
 /// Counter of pending requests in Direct Send
 pub static PENDING_DIRECT_SEND_REQUESTS: &str = "pending_direct_send_requests";
 
@@ -155,9 +159,6 @@ pub static PENDING_RPC_NOTIFICATIONS: &str = "pending_rpc_notifications";
 
 /// Counter of pending requests for each remote peer
 pub static PENDING_PEER_REQUESTS: &str = "pending_peer_requests";
-
-/// Counter of pending outbound messages in Direct Send for each remote peer
-pub static PENDING_DIRECT_SEND_OUTBOUND_MESSAGES: &str = "pending_direct_send_outbound_messages";
 
 /// Counter of pending RPC events from Peer to Rpc actor.
 pub static PENDING_PEER_RPC_NOTIFICATIONS: &str = "pending_peer_rpc_notifications";

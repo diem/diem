@@ -5,6 +5,10 @@ executors:
     docker:
       - image: circleci/rust:buster
     resource_class: 2xlarge
+  test-executor:
+    docker:
+      - image: circleci/rust:buster
+    resource_class: xlarge
   audit-executor:
     docker:
       - image: circleci/rust:buster
@@ -76,9 +80,29 @@ commands:
           command: |
             echo 'export CHANGED_DOCKER_FILES=$(
               for commit in $(git rev-list origin/master..HEAD) ; do
-                git diff-tree --no-commit-id --name-only -r "$commit" -- "*.Dockerfile";
+                git diff-tree --no-commit-id --name-only -r "$commit" -- "*Dockerfile";
               done
             )' >> $BASH_ENV
+  save_cargo_package_cache:
+    description: Save cargo package cache for subsequent jobs
+    steps:
+      - save_cache:
+          key: cargo-package-cache-{{ checksum "Cargo.lock" }}
+          # paths are relative to /home/circleci/project/
+          paths:
+            - ../../../usr/local/cargo/git
+            - ../../../usr/local/cargo/registry
+            - ../../../usr/local/cargo/.package-cache
+  restore_cargo_package_cache:
+    description: Restore Cargo package cache from prev job
+    steps:
+      - restore_cache:
+          key: cargo-package-cache-{{ checksum "Cargo.lock" }}
+      - run:
+          name: Check cargo package cache
+          command: |
+            ls -all /usr/local/cargo
+            du -ssh /usr/local/cargo
   build_setup:
     steps:
       - checkout
@@ -93,53 +117,162 @@ commands:
           command: ./scripts/changed-files.sh
 
 jobs:
-  build:
-    executor: build-executor
-    parallelism: 5
+  prefetch-crates:
+    executor: test-executor
+    description: Prefetch cargo crates for subsequent jobs.
     steps:
       - build_setup
       - run:
           name: Git Hooks and Checks
           command: ./scripts/git-checks.sh
+      - restore_cargo_package_cache
       - run:
-          name: Linting
-          command: |
-            [[ $CIRCLE_NODE_INDEX =~ [1234] ]] || cargo x lint
-            [[ $CIRCLE_NODE_INDEX =~ [1234] ]] || cargo xclippy --workspace --all-targets
-            [[ $CIRCLE_NODE_INDEX =~ [1234] ]] || cargo xfmt --check
-            [[ $CIRCLE_NODE_INDEX =~ [1234] ]] || cargo install cargo-guppy --git http://github.com/calibra/cargo-guppy --rev 8b2bc45c0cd6323a7a2b8170ddad6d2a5b79047b
-            [[ $CIRCLE_NODE_INDEX =~ [1234] ]] || [[ -z $(cargo guppy dups --target x86_64-unknown-linux-gnu --kind directthirdparty) ]]
+          name: Fetch workspace dependencies over network
+          command: cargo fetch
+      - save_cargo_package_cache
+  lint:
+    executor: test-executor
+    description: Run Rust linting tools.
+    steps:
+      - build_setup
       - run:
-          name: Build Release
-          command: |
-            [[ $CIRCLE_NODE_INDEX =~ [0234] ]] || RUST_BACKTRACE=1 cargo build -j 16 --release
+          name: Git Hooks and Checks
+          command: ./scripts/git-checks.sh
+      - restore_cargo_package_cache
       - run:
-          name: Build Dev
-          command: |
-            [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16
-            [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p libra-swarm
-            [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p cluster-test
-            [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p libra-fuzzer
-            [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p language_benchmarks
-            [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p cost-synthesis
-            [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 cargo build -j 16 -p test-generation
+          name: cargo lint
+          command: cargo x lint
       - run:
-          name: Run All Non Flaky Unit Tests
-          command: |
-            [[ $CIRCLE_NODE_INDEX =~ [0134] ]] || RUST_BACKTRACE=1 $CI_TIMEOUT cargo test --all-features --workspace --exclude libra-node --exclude libra-crypto --exclude testsuite --exclude consensus
+          name: cargo clippy
+          command: cargo xclippy --workspace --all-targets
       - run:
-          name: Run Cryptography Unit Tests with the formally verified backend
-          command: |
-            [[ $CIRCLE_NODE_INDEX =~ [0134] ]] || ( RUST_BACKTRACE=1 cd crypto/crypto && $CI_TIMEOUT cargo test --features='std fiat_u64_backend fuzzing' --no-default-features )
+          name: cargo fmt
+          command: cargo xfmt --check
       - run:
-          name: Run All End to End Tests
+          name: cargo guppy
           command: |
-            [[ $CIRCLE_NODE_INDEX =~ [0124] ]] || RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --package testsuite -- --test-threads 1
+            cargo install cargo-guppy \
+              --git http://github.com/calibra/cargo-guppy \
+              --rev 8b2bc45c0cd6323a7a2b8170ddad6d2a5b79047b
+            [[ -z $(cargo guppy dups --target x86_64-unknown-linux-gnu \
+              --kind directthirdparty) ]]
+  build-dev:
+    executor: build-executor
+    description: Development Build
+    steps:
+      - build_setup
+      - restore_cargo_package_cache
       - run:
-          name: Run Quarantined Unit Tests 3 (consensus) times
-          command: |
-            [[ $CIRCLE_NODE_INDEX =~ [0123] ]] || timeout 20m ./scripts/run_quarantined.sh -c consensus -r 3 -f
+          command: RUST_BACKTRACE=1 cargo build -j 16
+      - run:
+          command: RUST_BACKTRACE=1 cargo build -j 16 -p libra-swarm
+      - run:
+          command: RUST_BACKTRACE=1 cargo build -j 16 -p cluster-test
+      - run:
+          command: RUST_BACKTRACE=1 cargo build -j 16 -p libra-fuzzer
+      - run:
+          command: RUST_BACKTRACE=1 cargo build -j 16 -p language_benchmarks
+      - run:
+          command: RUST_BACKTRACE=1 cargo build -j 16 -p test-generation
       - build_teardown
+  build-release:
+    executor: build-executor
+    description: Release Build
+    steps:
+      - build_setup
+      - restore_cargo_package_cache
+      - run:
+          name: Build release
+          command: RUST_BACKTRACE=1 cargo build -j 16 --release
+      - build_teardown
+  build-e2e-test:
+    executor: build-executor
+    description: Generate a list of E2E test targets to be distributed.
+    steps:
+      - build_setup
+      - attach_workspace:
+          at: /home/circleci/project
+      - restore_cargo_package_cache
+      - run:
+          name: Find all e2e tests
+          command: |
+            cargo x test --package testsuite -- --list | grep "::" | \
+              sed 's/: .*$//' > e2e_tests
+            cat e2e_tests
+      - persist_to_workspace:
+          root: /home/circleci/project
+          paths:
+            - e2e_tests
+            - target/debug/deps/libratest*
+  run-e2e-test:
+    executor: build-executor
+    parallelism: 8
+    description: Run E2E tests in parallel. Each container runs a subset of
+      test targets.
+    steps:
+      - build_setup
+      - restore_cargo_package_cache
+      - attach_workspace:
+          at: /home/circleci/project
+      - run:
+          name: Determine test targets for this container.
+          # NOTE Currently the tests are distributed by name order. Once test
+          # metadata is enabled, the tests can be distributed by run time to
+          # speed up this job.
+          command: |
+            ls -all target/debug/*
+            echo -e "Found $(wc -l e2e_tests) tests."
+            cat e2e_tests | circleci tests split > /tmp/tests_to_run
+            echo -e "This runner will run these tests\n$(cat /tmp/tests_to_run)"
+      - run:
+          name: Run E2E tests
+          command: |
+            set -x
+            libratest=$(find target/debug/deps/ -name "libratest*" -executable)
+            for target in $(cat /tmp/tests_to_run) ; do
+              if [ ! -z "$libratest" ]; then
+                RUST_BACKTRACE=1 $CI_TIMEOUT $libratest $target \
+                  --test-threads 1 --exact --nocapture
+              else
+                RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test $target \
+                  --package testsuite -- --test-threads 1 --exact --nocapture
+              fi
+            done
+  run-unit-test:
+    executor: build-executor
+    description: Run all unit tests, excluding E2E and flaky tests that are
+      explicitly ignored.
+    steps:
+      - build_setup
+      - restore_cargo_package_cache
+      - run:
+          name: Run all unit tests
+          command: |
+            RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --unit
+  run-crypto-unit-test:
+    executor: test-executor
+    description: Run crypto unit tests
+    steps:
+      - build_setup
+      - restore_cargo_package_cache
+      - run:
+          name: Run crypto unit tests
+          command: |
+            cd crypto/crypto && \
+            RUST_BACKTRACE=1 cargo test \
+              --features='std fiat_u64_backend fuzzing' \
+              --no-default-features
+  run-flaky-unit-test:
+    executor: test-executor
+    description: Run a list of known flaky tests.
+    steps:
+      - build_setup
+      - restore_cargo_package_cache
+      - run:
+          name: Run flaky tests
+          command: |
+            RUST_BACKTRACE=1 $CI_TIMEOUT \
+            ./scripts/run_quarantined.sh -c <your package here> -r 3 -f
   validate-cluster-test-dockerfile:
     description: Validate that committed docker files for cluster test are up to date
     executor: build-executor
@@ -233,10 +366,34 @@ jobs:
 workflows:
   commit-workflow:
     jobs:
-      - build
       - build-docker
       - validate-cluster-test-dockerfile
       - terraform
+      - prefetch-crates
+      - lint:
+          requires:
+            - prefetch-crates
+      - build-dev:
+          requires:
+            - prefetch-crates
+      - build-release:
+          requires:
+            - prefetch-crates
+      - build-e2e-test:
+          requires:
+            - prefetch-crates
+      - run-e2e-test:
+          requires:
+            - build-e2e-test
+      - run-unit-test:
+          requires:
+            - prefetch-crates
+      - run-crypto-unit-test:
+          requires:
+            - prefetch-crates
+      #- run-flaky-unit-test:
+      #    requires:
+      #      - prefetch-crates
 
   scheduled-workflow:
     triggers:

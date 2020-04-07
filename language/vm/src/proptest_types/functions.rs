@@ -3,13 +3,13 @@
 
 use crate::{
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CodeUnit, FieldDefinitionIndex,
-        FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionSignature,
-        FunctionSignatureIndex, IdentifierIndex, LocalIndex, LocalsSignature, LocalsSignatureIndex,
-        ModuleHandleIndex, StructDefinitionIndex, TableIndex, NO_TYPE_ACTUALS,
+        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, CodeOffset, CodeUnit, FieldHandle,
+        FieldHandleIndex, FieldInstantiation, FunctionDefinition, FunctionHandle,
+        FunctionHandleIndex, FunctionInstantiation, IdentifierIndex, LocalIndex, ModuleHandleIndex,
+        Signature, SignatureIndex, StructDefInstantiation, StructDefinitionIndex, TableIndex,
     },
     proptest_types::{
-        signature::{FunctionSignatureGen, SignatureTokenGen},
+        signature::{SignatureGen, SignatureTokenGen},
         TableSize,
     },
 };
@@ -18,54 +18,280 @@ use proptest::{
     prelude::*,
     sample::{select, Index as PropIndex},
 };
+use std::{
+    collections::{BTreeSet, HashMap, HashSet},
+    hash::Hash,
+};
+
+#[derive(Debug, Default)]
+struct SignatureState {
+    signatures: Vec<Signature>,
+    signature_map: HashMap<Signature, SignatureIndex>,
+}
+
+impl SignatureState {
+    fn new(signatures: Vec<Signature>) -> Self {
+        let mut state = Self::default();
+        for sig in signatures {
+            state.add_signature(sig);
+        }
+        state
+    }
+
+    fn signatures(self) -> Vec<Signature> {
+        self.signatures
+    }
+
+    fn add_signature(&mut self, sig: Signature) -> SignatureIndex {
+        precondition!(self.signatures.len() < TableSize::max_value() as usize);
+        if let Some(idx) = self.signature_map.get(&sig) {
+            return *idx;
+        }
+        let idx = SignatureIndex(self.signatures.len() as u16);
+        self.signatures.push(sig.clone());
+        self.signature_map.insert(sig, idx);
+        idx
+    }
+}
+
+#[derive(Debug, Default)]
+#[allow(unused)]
+struct FieldHandleState {
+    field_handles: Vec<FieldHandle>,
+    field_map: HashMap<FieldHandle, FieldHandleIndex>,
+}
+
+impl FieldHandleState {
+    #[allow(unused)]
+    pub fn field_handles(self) -> Vec<FieldHandle> {
+        self.field_handles
+    }
+
+    #[allow(unused)]
+    fn add_field_handle(&mut self, fh: FieldHandle) -> FieldHandleIndex {
+        precondition!(self.field_handles.len() < TableSize::max_value() as usize);
+        if let Some(idx) = self.field_map.get(&fh) {
+            return *idx;
+        }
+        let idx = FieldHandleIndex(self.field_handles.len() as u16);
+        self.field_handles.push(fh.clone());
+        self.field_map.insert(fh, idx);
+        idx
+    }
+}
+
+#[derive(Debug)]
+#[allow(unused)]
+struct InstantiationState<T>
+where
+    T: Eq + Clone + Hash,
+{
+    instantiations: Vec<T>,
+    instantiation_map: HashMap<T, TableIndex>,
+}
+
+impl<T> InstantiationState<T>
+where
+    T: Eq + Clone + Hash,
+{
+    fn new() -> Self {
+        InstantiationState {
+            instantiations: vec![],
+            instantiation_map: HashMap::new(),
+        }
+    }
+
+    #[allow(unused)]
+    pub fn instantiations(self) -> Vec<T> {
+        self.instantiations
+    }
+
+    #[allow(unused)]
+    fn add_instantiation(&mut self, inst: T) -> TableIndex {
+        precondition!(self.instantiations.len() < TableSize::max_value() as usize);
+        if let Some(idx) = self.instantiation_map.get(&inst) {
+            return *idx;
+        }
+        let idx = self.instantiations.len() as TableIndex;
+        self.instantiations.push(inst.clone());
+        self.instantiation_map.insert(inst, idx);
+        idx
+    }
+}
+
+/// Represents state required to materialize final data structures for function definitions.
+#[derive(Debug)]
+pub struct FnHandleMaterializeState {
+    module_handles_len: usize,
+    identifiers_len: usize,
+    struct_handles_len: usize,
+    signatures: SignatureState,
+    function_handles: HashSet<(ModuleHandleIndex, IdentifierIndex)>,
+}
+
+impl FnHandleMaterializeState {
+    pub fn new(
+        module_handles_len: usize,
+        identifiers_len: usize,
+        struct_handles_len: usize,
+    ) -> Self {
+        Self {
+            module_handles_len,
+            identifiers_len,
+            struct_handles_len,
+            signatures: SignatureState::default(),
+            function_handles: HashSet::new(),
+        }
+    }
+
+    pub fn signatures(self) -> Vec<Signature> {
+        self.signatures.signatures()
+    }
+
+    fn add_signature(&mut self, sig: Signature) -> SignatureIndex {
+        self.signatures.add_signature(sig)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct FunctionHandleGen {
+    module: PropIndex,
+    name: PropIndex,
+    parameters: SignatureGen,
+    return_: SignatureGen,
+}
+
+impl FunctionHandleGen {
+    pub fn strategy(
+        param_count: impl Into<SizeRange>,
+        return_count: impl Into<SizeRange>,
+        _kind_count: impl Into<SizeRange>,
+    ) -> impl Strategy<Value = Self> {
+        let return_count = return_count.into();
+        let param_count = param_count.into();
+        (
+            any::<PropIndex>(),
+            any::<PropIndex>(),
+            SignatureGen::strategy(param_count),
+            SignatureGen::strategy(return_count),
+        )
+            .prop_map(|(module, name, parameters, return_)| Self {
+                module,
+                name,
+                parameters,
+                return_,
+            })
+    }
+
+    pub fn materialize(self, state: &mut FnHandleMaterializeState) -> Option<FunctionHandle> {
+        let mod_ = ModuleHandleIndex(self.module.index(state.module_handles_len) as TableIndex);
+        let mod_idx = if mod_.0 == 0 {
+            ModuleHandleIndex(1)
+        } else {
+            mod_
+        };
+        let iden_idx = IdentifierIndex(self.name.index(state.identifiers_len) as TableIndex);
+        if state.function_handles.contains(&(mod_idx, iden_idx)) {
+            return None;
+        }
+        state.function_handles.insert((mod_idx, iden_idx));
+        let parameters = self.parameters.materialize(state.struct_handles_len);
+        let params_idx = state.add_signature(parameters);
+        let return_ = self.return_.materialize(state.struct_handles_len);
+        let return_idx = state.add_signature(return_);
+        Some(FunctionHandle {
+            module: mod_idx,
+            name: iden_idx,
+            parameters: params_idx,
+            return_: return_idx,
+            // TODO: re-enable type formals gen when we rework prop tests for generics
+            type_parameters: vec![],
+        })
+    }
+}
 
 /// Represents state required to materialize final data structures for function definitions.
 #[derive(Debug)]
 pub struct FnDefnMaterializeState {
-    pub struct_handles_len: usize,
-    pub address_pool_len: usize,
-    pub identifiers_len: usize,
-    pub byte_array_pool_len: usize,
-    pub type_signatures_len: usize,
-    pub field_defs_len: usize,
-    pub struct_defs_len: usize,
-    pub function_defs_len: usize,
-    // This is the final length of function_handles, after all the definitions add their own
-    // handles.
-    pub function_handles_len: usize,
-    // These get mutated by `FunctionDefinitionGen`.
-    pub function_signatures: Vec<FunctionSignature>,
-    pub locals_signatures: Vec<LocalsSignature>,
-    pub function_handles: Vec<FunctionHandle>,
+    address_pool_len: usize,
+    identifiers_len: usize,
+    byte_array_pool_len: usize,
+    struct_handles_len: usize,
+    struct_defs_len: usize,
+    signatures: SignatureState,
+    function_handles: Vec<FunctionHandle>,
+    struct_def_to_field_count: HashMap<usize, usize>,
+    def_function_handles: HashSet<(ModuleHandleIndex, IdentifierIndex)>,
+    field_handles: FieldHandleState,
+    type_instantiations: InstantiationState<StructDefInstantiation>,
+    function_instantiations: InstantiationState<FunctionInstantiation>,
+    field_instantiations: InstantiationState<FieldInstantiation>,
 }
 
 impl FnDefnMaterializeState {
-    #[inline]
-    fn add_function_signature(&mut self, sig: FunctionSignature) -> FunctionSignatureIndex {
-        precondition!(self.function_signatures.len() < TableSize::max_value() as usize);
-        self.function_signatures.push(sig);
-        FunctionSignatureIndex::new((self.function_signatures.len() - 1) as TableIndex)
+    pub fn new(
+        address_pool_len: usize,
+        identifiers_len: usize,
+        byte_array_pool_len: usize,
+        struct_handles_len: usize,
+        struct_defs_len: usize,
+        signatures: Vec<Signature>,
+        function_handles: Vec<FunctionHandle>,
+        struct_def_to_field_count: HashMap<usize, usize>,
+    ) -> Self {
+        Self {
+            address_pool_len,
+            identifiers_len,
+            byte_array_pool_len,
+            struct_handles_len,
+            struct_defs_len,
+            signatures: SignatureState::new(signatures),
+            function_handles,
+            struct_def_to_field_count,
+            def_function_handles: HashSet::new(),
+            field_handles: FieldHandleState::default(),
+            type_instantiations: InstantiationState::new(),
+            function_instantiations: InstantiationState::new(),
+            field_instantiations: InstantiationState::new(),
+        }
     }
 
-    #[inline]
-    fn add_locals_signature(&mut self, sig: LocalsSignature) -> LocalsSignatureIndex {
-        precondition!(self.locals_signatures.len() < TableSize::max_value() as usize);
-        self.locals_signatures.push(sig);
-        LocalsSignatureIndex::new((self.locals_signatures.len() - 1) as TableIndex)
+    pub fn return_tables(
+        self,
+    ) -> (
+        Vec<Signature>,
+        Vec<FunctionHandle>,
+        Vec<FieldHandle>,
+        Vec<StructDefInstantiation>,
+        Vec<FunctionInstantiation>,
+        Vec<FieldInstantiation>,
+    ) {
+        (
+            self.signatures.signatures(),
+            self.function_handles,
+            self.field_handles.field_handles(),
+            self.type_instantiations.instantiations(),
+            self.function_instantiations.instantiations(),
+            self.field_instantiations.instantiations(),
+        )
     }
 
-    #[inline]
+    fn add_signature(&mut self, sig: Signature) -> SignatureIndex {
+        self.signatures.add_signature(sig)
+    }
+
     fn add_function_handle(&mut self, handle: FunctionHandle) -> FunctionHandleIndex {
         precondition!(self.function_handles.len() < TableSize::max_value() as usize);
         self.function_handles.push(handle);
-        FunctionHandleIndex::new((self.function_handles.len() - 1) as TableIndex)
+        FunctionHandleIndex((self.function_handles.len() - 1) as TableIndex)
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct FunctionDefinitionGen {
     name: PropIndex,
-    signature: FunctionSignatureGen,
+    parameters: SignatureGen,
+    return_: SignatureGen,
     is_public: bool,
     acquires: Vec<PropIndex>,
     code: CodeUnitGen,
@@ -75,7 +301,7 @@ impl FunctionDefinitionGen {
     pub fn strategy(
         return_count: impl Into<SizeRange>,
         arg_count: impl Into<SizeRange>,
-        kind_count: impl Into<SizeRange>,
+        _kind_count: impl Into<SizeRange>,
         acquires_count: impl Into<SizeRange>,
         code_len: impl Into<SizeRange>,
     ) -> impl Strategy<Value = Self> {
@@ -83,46 +309,59 @@ impl FunctionDefinitionGen {
         let arg_count = arg_count.into();
         (
             any::<PropIndex>(),
-            FunctionSignatureGen::strategy(return_count, arg_count.clone(), kind_count.into()),
+            SignatureGen::strategy(arg_count.clone()),
+            SignatureGen::strategy(return_count),
             any::<bool>(),
             vec(any::<PropIndex>(), acquires_count.into()),
             CodeUnitGen::strategy(arg_count, code_len),
         )
-            .prop_map(|(name, signature, is_public, acquires, code)| Self {
-                name,
-                signature,
-                is_public,
-                acquires,
-                code,
-            })
+            .prop_map(
+                |(name, parameters, return_, is_public, acquires, code)| Self {
+                    name,
+                    parameters,
+                    return_,
+                    is_public,
+                    acquires,
+                    code,
+                },
+            )
     }
 
-    pub fn materialize(self, state: &mut FnDefnMaterializeState) -> FunctionDefinition {
+    pub fn materialize(self, state: &mut FnDefnMaterializeState) -> Option<FunctionDefinition> {
         // This precondition should never fail because the table size cannot be greater
         // than TableSize::max_value()
-        checked_precondition!(
-            state.function_signatures.len() < TableSize::max_value() as usize
-                && state.locals_signatures.len() < TableSize::max_value() as usize
-                && state.function_handles.len() < TableSize::max_value() as usize
-        );
-        let signature = self.signature.materialize(state.struct_handles_len);
+        let iden_idx = IdentifierIndex(self.name.index(state.identifiers_len) as TableIndex);
+        if state
+            .def_function_handles
+            .contains(&(ModuleHandleIndex(0), iden_idx))
+        {
+            return None;
+        }
+        state
+            .def_function_handles
+            .insert((ModuleHandleIndex(0), iden_idx));
 
+        let parameters = self.parameters.materialize(state.struct_handles_len);
+        let params_idx = state.add_signature(parameters);
+        let return_ = self.return_.materialize(state.struct_handles_len);
+        let return_idx = state.add_signature(return_);
         let handle = FunctionHandle {
-            // 0 represents the current module
-            module: ModuleHandleIndex::new(0),
-            // XXX need to guarantee uniqueness of names?
-            name: IdentifierIndex::new(self.name.index(state.identifiers_len) as TableIndex),
-            signature: state.add_function_signature(signature),
+            module: ModuleHandleIndex(0),
+            name: iden_idx,
+            parameters: params_idx,
+            return_: return_idx,
+            type_parameters: vec![],
         };
         let function_handle = state.add_function_handle(handle);
-        let acquires_global_resources = self
-            .acquires
-            .into_iter()
-            .map(|idx| StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex))
-            .collect();
-        FunctionDefinition {
+        let mut acquires_set = BTreeSet::new();
+        for acquire in self.acquires {
+            acquires_set.insert(StructDefinitionIndex(
+                acquire.index(state.struct_defs_len) as TableIndex
+            ));
+        }
+        let acquires_global_resources = acquires_set.into_iter().collect();
+        Some(FunctionDefinition {
             function: function_handle,
-            // XXX is this even correct?
             flags: if self.is_public {
                 CodeUnit::PUBLIC
             } else {
@@ -131,7 +370,7 @@ impl FunctionDefinitionGen {
             },
             acquires_global_resources,
             code: self.code.materialize(state),
-        }
+        })
     }
 }
 
@@ -157,31 +396,23 @@ impl CodeUnitGen {
     }
 
     fn materialize(self, state: &mut FnDefnMaterializeState) -> CodeUnit {
-        precondition!(state.locals_signatures.len() < TableSize::max_value() as usize);
-        let locals_signature = LocalsSignature(
+        let locals_signature = Signature(
             self.locals_signature
                 .into_iter()
                 .map(|sig| sig.materialize(state.struct_handles_len))
                 .collect(),
         );
 
-        // Not all bytecodes will be successfully materialized -- count how many will.
-        let code_len = self
-            .code
-            .iter()
-            .filter(|code| code.will_materialize(state, &locals_signature))
-            .count();
-
-        let code = self
-            .code
-            .into_iter()
-            .filter_map(|code| code.materialize(state, code_len, &locals_signature))
-            .collect();
+        let mut code = vec![];
+        for bytecode_gen in self.code {
+            if let Some(bytecode) = bytecode_gen.materialize(state, code.len(), &locals_signature) {
+                code.push(bytecode)
+            }
+        }
 
         CodeUnit {
             max_stack_size: 0,
-            locals: state.add_locals_signature(locals_signature),
-            // XXX actually generate code
+            locals: state.add_signature(locals_signature),
             code,
         }
     }
@@ -194,16 +425,29 @@ enum BytecodeGen {
     // All of these refer to other indexes.
     LdAddr(PropIndex),
     LdByteArray(PropIndex),
-    MutBorrowField(PropIndex),
-    ImmBorrowField(PropIndex),
-    Call(PropIndex, PropIndex),
-    Pack(PropIndex, PropIndex),
-    Unpack(PropIndex, PropIndex),
-    Exists(PropIndex, PropIndex),
-    MutBorrowGlobal(PropIndex, PropIndex),
-    ImmBorrowGlobal(PropIndex, PropIndex),
-    MoveFrom(PropIndex, PropIndex),
-    MoveToSender(PropIndex, PropIndex),
+
+    MutBorrowField((PropIndex, PropIndex)),
+    MutBorrowFieldGeneric((PropIndex, PropIndex)),
+    ImmBorrowField((PropIndex, PropIndex)),
+    ImmBorrowFieldGeneric((PropIndex, PropIndex)),
+
+    Call(PropIndex),
+    CallGeneric(PropIndex),
+
+    Pack(PropIndex),
+    PackGeneric(PropIndex),
+    Unpack(PropIndex),
+    UnpackGeneric(PropIndex),
+    Exists(PropIndex),
+    ExistsGeneric(PropIndex),
+    MutBorrowGlobal(PropIndex),
+    MutBorrowGlobalGeneric(PropIndex),
+    ImmBorrowGlobal(PropIndex),
+    ImmBorrowGlobalGeneric(PropIndex),
+    MoveFrom(PropIndex),
+    MoveFromGeneric(PropIndex),
+    MoveToSender(PropIndex),
+    MoveToSenderGeneric(PropIndex),
     BrTrue(PropIndex),
     BrFalse(PropIndex),
     Branch(PropIndex),
@@ -224,19 +468,26 @@ impl BytecodeGen {
             Self::simple_bytecode_strategy().prop_map(Simple),
             any::<PropIndex>().prop_map(LdAddr),
             any::<PropIndex>().prop_map(LdByteArray),
-            any::<PropIndex>().prop_map(ImmBorrowField),
-            any::<PropIndex>().prop_map(MutBorrowField),
-            (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Call(idx, types)),
-            (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Pack(idx, types)),
-            (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Unpack(idx, types)),
-            (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| Exists(idx, types)),
-            (any::<PropIndex>(), any::<PropIndex>(),)
-                .prop_map(|(idx, types)| ImmBorrowGlobal(idx, types)),
-            (any::<PropIndex>(), any::<PropIndex>(),)
-                .prop_map(|(idx, types)| MutBorrowGlobal(idx, types)),
-            (any::<PropIndex>(), any::<PropIndex>(),).prop_map(|(idx, types)| MoveFrom(idx, types)),
-            (any::<PropIndex>(), any::<PropIndex>(),)
-                .prop_map(|(idx, types)| MoveToSender(idx, types)),
+            (any::<PropIndex>(), any::<PropIndex>()).prop_map(ImmBorrowField),
+            (any::<PropIndex>(), any::<PropIndex>()).prop_map(ImmBorrowFieldGeneric),
+            (any::<PropIndex>(), any::<PropIndex>()).prop_map(MutBorrowField),
+            (any::<PropIndex>(), any::<PropIndex>()).prop_map(MutBorrowFieldGeneric),
+            any::<PropIndex>().prop_map(Call),
+            any::<PropIndex>().prop_map(CallGeneric),
+            any::<PropIndex>().prop_map(Pack),
+            any::<PropIndex>().prop_map(PackGeneric),
+            any::<PropIndex>().prop_map(Unpack),
+            any::<PropIndex>().prop_map(UnpackGeneric),
+            any::<PropIndex>().prop_map(Exists),
+            any::<PropIndex>().prop_map(ExistsGeneric),
+            any::<PropIndex>().prop_map(ImmBorrowGlobal),
+            any::<PropIndex>().prop_map(ImmBorrowGlobalGeneric),
+            any::<PropIndex>().prop_map(MutBorrowGlobal),
+            any::<PropIndex>().prop_map(MutBorrowGlobalGeneric),
+            any::<PropIndex>().prop_map(MoveFrom),
+            any::<PropIndex>().prop_map(MoveFromGeneric),
+            any::<PropIndex>().prop_map(MoveToSender),
+            any::<PropIndex>().prop_map(MoveToSenderGeneric),
             any::<PropIndex>().prop_map(BrTrue),
             any::<PropIndex>().prop_map(BrFalse),
             any::<PropIndex>().prop_map(Branch),
@@ -248,107 +499,94 @@ impl BytecodeGen {
         ]
     }
 
-    /// Whether this code will be materialized into a Some(bytecode).
-    fn will_materialize(
-        &self,
-        state: &FnDefnMaterializeState,
-        locals_signature: &LocalsSignature,
-    ) -> bool {
-        // This method should remain in sync with the `None` below.
-        use BytecodeGen::*;
-
-        match self {
-            MutBorrowField(_) | ImmBorrowField(_) => state.field_defs_len != 0,
-            CopyLoc(_) | MoveLoc(_) | StLoc(_) | MutBorrowLoc(_) | ImmBorrowLoc(_) => {
-                !locals_signature.is_empty()
-            }
-            _ => true,
-        }
-    }
-
     fn materialize(
         self,
-        state: &FnDefnMaterializeState,
+        state: &mut FnDefnMaterializeState,
         code_len: usize,
-        locals_signature: &LocalsSignature,
+        locals_signature: &Signature,
     ) -> Option<Bytecode> {
-        // This method returns an Option<Bytecode> because some bytecodes cannot be represented if
-        // some tables are empty.
-        //
-        // Once more sensible function bodies are generated this will probably have to start using
-        // prop_flat_map anyway, so revisit this then.
-
         let bytecode = match self {
             BytecodeGen::Simple(bytecode) => bytecode,
-            BytecodeGen::LdAddr(idx) => Bytecode::LdAddr(AddressPoolIndex::new(
+            BytecodeGen::LdAddr(idx) => Bytecode::LdAddr(AddressPoolIndex(
                 idx.index(state.address_pool_len) as TableIndex,
             )),
-            BytecodeGen::LdByteArray(idx) => Bytecode::LdByteArray(ByteArrayPoolIndex::new(
+            BytecodeGen::LdByteArray(idx) => Bytecode::LdByteArray(ByteArrayPoolIndex(
                 idx.index(state.byte_array_pool_len) as TableIndex,
             )),
-            BytecodeGen::MutBorrowField(idx) => {
-                // Again, once meaningful bytecodes are generated this won't actually be a
-                // possibility since it would be impossible to load a field from a struct that
-                // doesn't have any.
-                if state.field_defs_len == 0 {
+            BytecodeGen::MutBorrowField((def, field)) => {
+                let def_idx = def.index(state.struct_defs_len);
+                let field_count = state.struct_def_to_field_count.get(&def_idx)?;
+                let fh_idx = state.field_handles.add_field_handle(FieldHandle {
+                    owner: StructDefinitionIndex(def_idx as TableIndex),
+                    field: field.index(*field_count) as TableIndex,
+                });
+                Bytecode::MutBorrowField(fh_idx)
+            }
+            BytecodeGen::MutBorrowFieldGeneric((_handle, _field)) => {
+                return None;
+            }
+            BytecodeGen::ImmBorrowField((def, field)) => {
+                let def_idx = def.index(state.struct_defs_len);
+                let field_count = state.struct_def_to_field_count.get(&def_idx)?;
+                let fh_idx = state.field_handles.add_field_handle(FieldHandle {
+                    owner: StructDefinitionIndex(def_idx as TableIndex),
+                    field: field.index(*field_count) as TableIndex,
+                });
+                Bytecode::ImmBorrowField(fh_idx)
+            }
+            BytecodeGen::ImmBorrowFieldGeneric((_handle, _field)) => {
+                return None;
+            }
+            BytecodeGen::Call(idx) => Bytecode::Call(FunctionHandleIndex(
+                idx.index(state.function_handles.len()) as TableIndex,
+            )),
+            BytecodeGen::CallGeneric(_idx) => return None,
+            BytecodeGen::Pack(idx) => Bytecode::Pack(StructDefinitionIndex(
+                idx.index(state.struct_defs_len) as TableIndex,
+            )),
+            BytecodeGen::PackGeneric(_idx) => return None,
+            BytecodeGen::Unpack(idx) => Bytecode::Unpack(StructDefinitionIndex(
+                idx.index(state.struct_defs_len) as TableIndex,
+            )),
+            BytecodeGen::UnpackGeneric(_idx) => return None,
+            BytecodeGen::Exists(idx) => Bytecode::Exists(StructDefinitionIndex(
+                idx.index(state.struct_defs_len) as TableIndex,
+            )),
+            BytecodeGen::ExistsGeneric(_idx) => return None,
+            BytecodeGen::ImmBorrowGlobal(idx) => Bytecode::ImmBorrowGlobal(StructDefinitionIndex(
+                idx.index(state.struct_defs_len) as TableIndex,
+            )),
+            BytecodeGen::ImmBorrowGlobalGeneric(_idx) => return None,
+            BytecodeGen::MutBorrowGlobal(idx) => Bytecode::MutBorrowGlobal(StructDefinitionIndex(
+                idx.index(state.struct_defs_len) as TableIndex,
+            )),
+            BytecodeGen::MutBorrowGlobalGeneric(_idx) => return None,
+            BytecodeGen::MoveFrom(idx) => Bytecode::MoveFrom(StructDefinitionIndex(
+                idx.index(state.struct_defs_len) as TableIndex,
+            )),
+            BytecodeGen::MoveFromGeneric(_idx) => return None,
+            BytecodeGen::MoveToSender(idx) => Bytecode::MoveToSender(StructDefinitionIndex(
+                idx.index(state.struct_defs_len) as TableIndex,
+            )),
+            BytecodeGen::MoveToSenderGeneric(_idx) => return None,
+            BytecodeGen::BrTrue(idx) => {
+                if code_len == 0 {
                     return None;
                 }
-                Bytecode::MutBorrowField(FieldDefinitionIndex::new(
-                    idx.index(state.field_defs_len) as TableIndex
-                ))
+                Bytecode::BrTrue(idx.index(code_len) as CodeOffset)
             }
-            BytecodeGen::ImmBorrowField(idx) => {
-                // Same situation as above
-                if state.field_defs_len == 0 {
+            BytecodeGen::BrFalse(idx) => {
+                if code_len == 0 {
                     return None;
                 }
-                Bytecode::ImmBorrowField(FieldDefinitionIndex::new(
-                    idx.index(state.field_defs_len) as TableIndex
-                ))
+                Bytecode::BrFalse(idx.index(code_len) as CodeOffset)
             }
-            BytecodeGen::Call(idx, _types_idx) => Bytecode::Call(
-                FunctionHandleIndex::new(idx.index(state.function_handles_len) as TableIndex),
-                // TODO: generate random index to type actuals once generics is fully implemented
-                NO_TYPE_ACTUALS,
-            ),
-            BytecodeGen::Pack(idx, _types_idx) => Bytecode::Pack(
-                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
-                // TODO: generate random index to type actuals once generics is fully implemented
-                NO_TYPE_ACTUALS,
-            ),
-            BytecodeGen::Unpack(idx, _types_idx) => Bytecode::Unpack(
-                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
-                // TODO: generate random index to type actuals once generics is fully implemented
-                NO_TYPE_ACTUALS,
-            ),
-            BytecodeGen::Exists(idx, _types_idx) => Bytecode::Exists(
-                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
-                // TODO: generate random index to type actuals once generics is fully implemented
-                NO_TYPE_ACTUALS,
-            ),
-            BytecodeGen::ImmBorrowGlobal(idx, _types_idx) => Bytecode::ImmBorrowGlobal(
-                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
-                // TODO: generate random index to type actuals once generics is fully implemented
-                NO_TYPE_ACTUALS,
-            ),
-            BytecodeGen::MutBorrowGlobal(idx, _types_idx) => Bytecode::MutBorrowGlobal(
-                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
-                // TODO: generate random index to type actuals once generics is fully implemented
-                NO_TYPE_ACTUALS,
-            ),
-            BytecodeGen::MoveFrom(idx, _types_idx) => Bytecode::MoveFrom(
-                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
-                // TODO: generate random index to type actuals once generics is fully implemented
-                NO_TYPE_ACTUALS,
-            ),
-            BytecodeGen::MoveToSender(idx, _types_idx) => Bytecode::MoveToSender(
-                StructDefinitionIndex::new(idx.index(state.struct_defs_len) as TableIndex),
-                // TODO: generate random index to type actuals once generics is fully implemented
-                NO_TYPE_ACTUALS,
-            ),
-            BytecodeGen::BrTrue(idx) => Bytecode::BrTrue(idx.index(code_len) as CodeOffset),
-            BytecodeGen::BrFalse(idx) => Bytecode::BrFalse(idx.index(code_len) as CodeOffset),
-            BytecodeGen::Branch(idx) => Bytecode::Branch(idx.index(code_len) as CodeOffset),
+            BytecodeGen::Branch(idx) => {
+                if code_len == 0 {
+                    return None;
+                }
+                Bytecode::Branch(idx.index(code_len) as CodeOffset)
+            }
             BytecodeGen::CopyLoc(idx) => {
                 if locals_signature.is_empty() {
                     return None;
