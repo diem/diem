@@ -9,7 +9,7 @@ fn reconstruct_transaction_vec(blocks: Vec<TransactionBlock>) -> Vec<Transaction
     let mut txns = vec![];
     for block in blocks {
         match block {
-            TransactionBlock::WriteSet(txn) => txns.push(Transaction::UserTransaction(txn)),
+            TransactionBlock::WriteSet(txn) => txns.push(Transaction::UserTransaction(*txn)),
             TransactionBlock::WaypointWriteSet(ws) => txns.push(Transaction::WaypointWriteSet(ws)),
             TransactionBlock::BlockPrologue(ws) => txns.push(Transaction::BlockMetadata(ws)),
             TransactionBlock::UserTransaction(user_txns) => {

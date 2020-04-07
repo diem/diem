@@ -600,7 +600,7 @@ impl LibraVM {
             epilogue_writeset
                 .iter()
                 .chain(change_set.write_set().iter())
-                .map(|p| p.clone())
+                .cloned()
                 .collect(),
         )
         .freeze()
@@ -609,7 +609,7 @@ impl LibraVM {
             .events()
             .iter()
             .chain(epilogue_events.iter())
-            .map(|e| e.clone())
+            .cloned()
             .collect();
 
         Ok(TransactionOutput::new(
@@ -775,7 +775,7 @@ impl LibraVM {
                         .unwrap_or_else(discard_error_output),
                 ),
                 TransactionBlock::WriteSet(txn) => {
-                    result.push(self.process_writeset_transaction(&mut data_cache, txn)?)
+                    result.push(self.process_writeset_transaction(&mut data_cache, *txn)?)
                 }
             }
         }
@@ -935,7 +935,7 @@ pub enum TransactionBlock {
     UserTransaction(Vec<SignedTransaction>),
     WaypointWriteSet(ChangeSet),
     BlockPrologue(BlockMetadata),
-    WriteSet(SignedTransaction),
+    WriteSet(Box<SignedTransaction>),
 }
 
 pub fn chunk_block_transactions(txns: Vec<Transaction>) -> Vec<TransactionBlock> {
@@ -963,7 +963,7 @@ pub fn chunk_block_transactions(txns: Vec<Transaction>) -> Vec<TransactionBlock>
                         blocks.push(TransactionBlock::UserTransaction(buf));
                         buf = vec![];
                     }
-                    blocks.push(TransactionBlock::WriteSet(txn));
+                    blocks.push(TransactionBlock::WriteSet(Box::new(txn)));
                 } else {
                     buf.push(txn);
                 }

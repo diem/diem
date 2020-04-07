@@ -110,7 +110,7 @@ fn bad_writesets() {
         lbr_type_tag(),
     );
 
-    let output = executor.execute_transaction(writeset_txn.clone());
+    let output = executor.execute_transaction(writeset_txn);
     assert_eq!(
         output.status(),
         &TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_AUTH_KEY))
@@ -120,7 +120,7 @@ fn bad_writesets() {
     let event = ContractEvent::new(ValidatorSet::change_event_key(), 0, lbr_type_tag(), vec![]);
     let writeset_txn = genesis_account.create_signed_txn_impl(
         *genesis_account.address(),
-        TransactionPayload::WriteSet(ChangeSet::new(write_set, vec![event.clone()])),
+        TransactionPayload::WriteSet(ChangeSet::new(write_set, vec![event])),
         0,
         100_000,
         1,
@@ -137,7 +137,7 @@ fn bad_writesets() {
     let key = ResourceKey::new(
         *genesis_account.address(),
         StructTag {
-            address: CORE_CODE_ADDRESS.clone(),
+            address: CORE_CODE_ADDRESS,
             module: Identifier::new("LibraWriteSetManager").unwrap(),
             name: Identifier::new("T").unwrap(),
             type_params: vec![],
