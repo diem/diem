@@ -72,7 +72,7 @@ use once_cell::sync::Lazy;
 use prometheus::{IntCounter, IntGauge, IntGaugeVec};
 use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
 use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
-use storage_interface::DbReader;
+use storage_interface::{DbReader, DbWriter};
 use storage_proto::{StartupInfo, TreeState};
 
 static OP_COUNTER: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("storage"));
@@ -330,69 +330,6 @@ impl LibraDB {
             events,
             proof,
         })
-    }
-
-    /// This backs the `UpdateToLatestLedger` public read API which returns the latest
-    /// [`LedgerInfoWithSignatures`] together with items requested and proofs relative to the same
-    /// ledger info.
-    pub fn update_to_latest_ledger(
-        &self,
-        client_known_version: Version,
-        request_items: Vec<RequestItem>,
-    ) -> Result<(
-        Vec<ResponseItem>,
-        LedgerInfoWithSignatures,
-        ValidatorChangeProof,
-        AccumulatorConsistencyProof,
-    )> {
-        error_if_too_many_requested(request_items.len() as u64, MAX_REQUEST_ITEMS)?;
-
-        // Get the latest ledger info and signatures
-        let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
-        let ledger_info = ledger_info_with_sigs.ledger_info();
-        let ledger_version = ledger_info.version();
-
-        // TODO: cache last epoch change version to avoid a DB access in most cases.
-        let client_epoch = self.ledger_store.get_epoch(client_known_version)?;
-        let validator_change_proof = if client_epoch < ledger_info.epoch() {
-            let (ledger_infos_with_sigs, more) = self.get_epoch_change_ledger_infos(
-                client_epoch,
-                self.ledger_store.get_epoch(ledger_info.version())?,
-            )?;
-            ValidatorChangeProof::new(ledger_infos_with_sigs, more)
-        } else {
-            ValidatorChangeProof::new(vec![], /* more = */ false)
-        };
-
-        let client_new_version = if !validator_change_proof.more {
-            ledger_version
-        } else {
-            validator_change_proof
-                .ledger_info_with_sigs
-                .last()
-                .expect("Must have at least one LedgerInfo.")
-                .ledger_info()
-                .version()
-        };
-        let ledger_consistency_proof = self
-            .ledger_store
-            .get_consistency_proof(client_known_version, client_new_version)?;
-
-        // If the validator change proof in the response is enough for the client to update to
-        // latest LedgerInfo, fulfill all request items. Otherwise the client will not be able to
-        // verify the latest LedgerInfo, so do not send response items back.
-        let response_items = if !validator_change_proof.more {
-            self.get_response_items(request_items, ledger_version)?
-        } else {
-            vec![]
-        };
-
-        Ok((
-            response_items,
-            ledger_info_with_sigs,
-            validator_change_proof,
-            ledger_consistency_proof,
-        ))
     }
 
     fn get_response_items(
@@ -916,6 +853,66 @@ impl DbReader for LibraDB {
         let (version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
         Ok((version, txn_info.state_root_hash()))
     }
+
+    fn update_to_latest_ledger(
+        &self,
+        client_known_version: Version,
+        request_items: Vec<RequestItem>,
+    ) -> Result<(
+        Vec<ResponseItem>,
+        LedgerInfoWithSignatures,
+        ValidatorChangeProof,
+        AccumulatorConsistencyProof,
+    )> {
+        error_if_too_many_requested(request_items.len() as u64, MAX_REQUEST_ITEMS)?;
+
+        // Get the latest ledger info and signatures
+        let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
+        let ledger_info = ledger_info_with_sigs.ledger_info();
+        let ledger_version = ledger_info.version();
+
+        // TODO: cache last epoch change version to avoid a DB access in most cases.
+        let client_epoch = self.ledger_store.get_epoch(client_known_version)?;
+        let validator_change_proof = if client_epoch < ledger_info.epoch() {
+            let (ledger_infos_with_sigs, more) = self.get_epoch_change_ledger_infos(
+                client_epoch,
+                self.ledger_store.get_epoch(ledger_info.version())?,
+            )?;
+            ValidatorChangeProof::new(ledger_infos_with_sigs, more)
+        } else {
+            ValidatorChangeProof::new(vec![], /* more = */ false)
+        };
+
+        let client_new_version = if !validator_change_proof.more {
+            ledger_version
+        } else {
+            validator_change_proof
+                .ledger_info_with_sigs
+                .last()
+                .expect("Must have at least one LedgerInfo.")
+                .ledger_info()
+                .version()
+        };
+        let ledger_consistency_proof = self
+            .ledger_store
+            .get_consistency_proof(client_known_version, client_new_version)?;
+
+        // If the validator change proof in the response is enough for the client to update to
+        // latest LedgerInfo, fulfill all request items. Otherwise the client will not be able to
+        // verify the latest LedgerInfo, so do not send response items back.
+        let response_items = if !validator_change_proof.more {
+            self.get_response_items(request_items, ledger_version)?
+        } else {
+            vec![]
+        };
+
+        Ok((
+            response_items,
+            ledger_info_with_sigs,
+            validator_change_proof,
+            ledger_consistency_proof,
+        ))
+    }
 }
 
 // Convert requested range and order to a range in ascending order.
@@ -929,4 +926,15 @@ fn get_first_seq_num_and_limit(ascending: bool, cursor: u64, limit: u64) -> Resu
     } else {
         (0, cursor + 1)
     })
+}
+
+impl DbWriter for LibraDB {
+    fn save_transactions(
+        &self,
+        txns_to_commit: &[TransactionToCommit],
+        first_version: u64,
+        ledger_info_with_sigs: Option<&LedgerInfoWithSignatures>,
+    ) -> Result<()> {
+        Self::save_transactions(self, txns_to_commit, first_version, ledger_info_with_sigs)
+    }
 }

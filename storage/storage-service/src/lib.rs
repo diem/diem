@@ -35,8 +35,8 @@ use storage_proto::proto::storage::{
 };
 use tokio::runtime::Runtime;
 
-pub fn init_libra_db(config: &NodeConfig) -> Arc<LibraDB> {
-    Arc::new(LibraDB::new(&config.storage.dir()))
+pub fn init_libra_db(config: &NodeConfig) -> LibraDB {
+    LibraDB::new(&config.storage.dir())
 }
 
 /// Starts storage service with a given LibraDB

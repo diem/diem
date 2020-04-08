@@ -26,6 +26,7 @@ use std::{
     time::Instant,
 };
 use storage_client::SyncStorageClient;
+use storage_interface::DbReaderWriter;
 use storage_service::{init_libra_db, start_storage_service_with_db};
 use tokio::runtime::{Builder, Runtime};
 
@@ -167,9 +168,10 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         .expect("Building rayon global thread pool should work.");
 
     let mut instant = Instant::now();
-    let libra_db = init_libra_db(&node_config);
-    let storage = start_storage_service_with_db(&node_config, Arc::clone(&libra_db));
-    maybe_bootstrap_db::<LibraVM>(node_config).expect("Db-bootstrapper should not fail.");
+    let (libra_db, db_reader_writer) = DbReaderWriter::wrap(init_libra_db(&node_config));
+    maybe_bootstrap_db::<LibraVM>(db_reader_writer, &node_config)
+        .expect("Db-bootstrap should not fail.");
+    let storage = start_storage_service_with_db(&node_config, libra_db.clone());
 
     debug!(
         "Storage service started in {} ms",

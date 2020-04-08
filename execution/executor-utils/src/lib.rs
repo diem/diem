@@ -7,15 +7,11 @@ pub mod test_helpers;
 use executor::{db_bootstrapper::maybe_bootstrap_db, Executor};
 use libra_config::config::NodeConfig;
 use libra_vm::LibraVM;
-use storage_client::SyncStorageClient;
-use storage_service::start_storage_service;
-use tokio::runtime::Runtime;
+use libradb::LibraDB;
+use storage_interface::DbReaderWriter;
 
-pub fn create_storage_service_and_executor(config: &NodeConfig) -> (Runtime, Executor<LibraVM>) {
-    let rt = start_storage_service(config);
-    maybe_bootstrap_db::<LibraVM>(config).unwrap();
-
-    let executor = Executor::new(SyncStorageClient::new(&config.storage.address).into());
-
-    (rt, executor)
+pub fn create_db_and_executor(config: &NodeConfig) -> (DbReaderWriter, Executor<LibraVM>) {
+    let db = DbReaderWriter::new(LibraDB::new(&config.storage.dir()));
+    maybe_bootstrap_db::<LibraVM>(db.clone(), config).unwrap();
+    (db.clone(), Executor::new(db))
 }

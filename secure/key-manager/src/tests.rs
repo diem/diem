@@ -21,12 +21,9 @@ use libra_types::{
     validator_set::ValidatorSetResource,
 };
 use libra_vm::LibraVM;
-use libradb::LibraDB;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{cell::RefCell, collections::BTreeMap, convert::TryFrom, sync::Arc, time::Duration};
-use storage_client::SyncStorageClient;
-use storage_interface::DbReader;
-use tokio::runtime::Runtime;
+use storage_interface::DbReaderWriter;
 
 struct Node {
     account: AccountAddress,
@@ -34,7 +31,6 @@ struct Node {
     libra: TestLibraInterface,
     key_manager:
         KeyManager<TestLibraInterface, InMemoryStorageInternal<MockTimeService>, MockTimeService>,
-    _storage_service: Runtime,
     time: MockTimeService,
 }
 
@@ -74,14 +70,13 @@ fn setup_secure_storage(
 
 impl Node {
     fn setup(config: &NodeConfig) -> Self {
-        let storage = storage_service::init_libra_db(config);
-        let storage_service =
-            storage_service::start_storage_service_with_db(&config, storage.clone());
-        maybe_bootstrap_db::<LibraVM>(config).expect("Db-bootstrapper should not fail.");
-        let executor = Executor::new(SyncStorageClient::new(&config.storage.address).into());
+        let db = DbReaderWriter::new(storage_service::init_libra_db(config));
+        maybe_bootstrap_db::<LibraVM>(db.clone(), config)
+            .expect("Db-bootstrapper should not fail.");
+        let executor = Executor::new(db.clone());
         let libra = TestLibraInterface {
             queued_transactions: Arc::new(RefCell::new(Vec::new())),
-            storage,
+            storage: db,
         };
         let time = MockTimeService::new();
         let account = config.validator_network.as_ref().unwrap().peer_id;
@@ -98,7 +93,6 @@ impl Node {
             executor,
             key_manager,
             libra,
-            _storage_service: storage_service,
             time,
         }
     }
@@ -143,13 +137,14 @@ impl Node {
 #[derive(Clone)]
 struct TestLibraInterface {
     queued_transactions: Arc<RefCell<Vec<Transaction>>>,
-    storage: Arc<LibraDB>,
+    storage: DbReaderWriter,
 }
 
 impl TestLibraInterface {
     fn retrieve_account_state(&self, account: AccountAddress) -> Result<AccountState, Error> {
         let blob = self
             .storage
+            .reader
             .get_latest_account_state(account)?
             .ok_or(Error::DataDoesNotExist("AccountState"))?;
         Ok(AccountState::try_from(&blob)?)
@@ -191,6 +186,7 @@ impl LibraInterface for TestLibraInterface {
         let account = account_config::association_address();
         let blob = self
             .storage
+            .reader
             .get_latest_account_state(account)?
             .ok_or(Error::DataDoesNotExist("AccountState"))?;
         let account_state = AccountState::try_from(&blob).unwrap();
@@ -209,6 +205,7 @@ impl LibraInterface for TestLibraInterface {
     fn retrieve_sequence_number(&self, account: AccountAddress) -> Result<u64, Error> {
         let blob = self
             .storage
+            .reader
             .get_latest_account_state(account)?
             .ok_or(Error::DataDoesNotExist("AccountState"))?;
         let account_state = AccountState::try_from(&blob).unwrap();
@@ -226,6 +223,7 @@ impl LibraInterface for TestLibraInterface {
     fn retrieve_validator_config(&self, account: AccountAddress) -> Result<ValidatorConfig, Error> {
         let blob = self
             .storage
+            .reader
             .get_latest_account_state(account)?
             .ok_or(Error::DataDoesNotExist("AccountState"))?;
         let account_state = AccountState::try_from(&blob).unwrap();

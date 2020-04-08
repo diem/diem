@@ -41,6 +41,7 @@ proptest = "0.9.2"
 rusty-fork = "0.2.1"
 
 executor-utils = { path = "../executor-utils", version = "0.1.0" }
+libradb = { path = "../../storage/libradb", version = "0.1.0" }
 storage-service = { path = "../../storage/storage-service", version = "0.1.0" }
 stdlib = { path = "../../language/stdlib", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }

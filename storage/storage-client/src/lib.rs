@@ -627,6 +627,19 @@ impl DbReader for SyncStorageClient {
                 .spawn(async move { reader.get_latest_state_root().await }),
         )?
     }
+
+    fn update_to_latest_ledger(
+        &self,
+        _client_known_version: u64,
+        _request_items: Vec<RequestItem>,
+    ) -> Result<(
+        Vec<ResponseItem>,
+        LedgerInfoWithSignatures,
+        ValidatorChangeProof,
+        AccumulatorConsistencyProof,
+    )> {
+        unimplemented!()
+    }
 }
 
 impl DbWriter for SyncStorageClient {

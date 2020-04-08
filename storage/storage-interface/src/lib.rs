@@ -8,6 +8,7 @@ use libra_types::{
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::ContractEvent,
     event::EventKey,
+    get_with_proof::{RequestItem, ResponseItem},
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccumulatorConsistencyProof, SparseMerkleProof},
     transaction::{TransactionListWithProof, TransactionToCommit, TransactionWithProof, Version},
@@ -108,6 +109,20 @@ pub trait DbReader: Send + Sync {
 
     /// Gets the latest state root hash together with its version.
     fn get_latest_state_root(&self) -> Result<(Version, HashValue)>;
+
+    /// This backs the `UpdateToLatestLedger` public read API which returns the latest
+    /// [`LedgerInfoWithSignatures`] together with items requested and proofs relative to the same
+    /// ledger info.
+    fn update_to_latest_ledger(
+        &self,
+        client_known_version: Version,
+        request_items: Vec<RequestItem>,
+    ) -> Result<(
+        Vec<ResponseItem>,
+        LedgerInfoWithSignatures,
+        ValidatorChangeProof,
+        AccumulatorConsistencyProof,
+    )>;
 }
 
 /// Trait that is implemented by a DB that supports certain public (to client) write APIs
@@ -138,6 +153,14 @@ impl DbReaderWriter {
         let writer = Arc::clone(&reader);
 
         Self { reader, writer }
+    }
+
+    pub fn wrap<D: 'static + DbReader + DbWriter>(db: D) -> (Arc<D>, Self) {
+        let arc_db = Arc::new(db);
+        let reader = Arc::clone(&arc_db);
+        let writer = Arc::clone(&arc_db);
+
+        (arc_db, Self { reader, writer })
     }
 }
 

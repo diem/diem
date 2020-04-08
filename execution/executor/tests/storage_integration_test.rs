@@ -3,7 +3,7 @@
 
 use anyhow::{ensure, format_err, Result};
 use executor_utils::{
-    create_storage_service_and_executor,
+    create_db_and_executor,
     test_helpers::{
         gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
     },
@@ -24,10 +24,8 @@ use libra_types::{
     trusted_state::TrustedState,
 };
 use rand::SeedableRng;
-use std::{convert::TryFrom, sync::Arc};
+use std::convert::TryFrom;
 use stdlib::transaction_scripts::StdlibScript;
-use storage_client::{StorageRead, StorageReadServiceClient};
-use tokio::runtime::Runtime;
 use transaction_builder::{
     encode_block_prologue_script, encode_create_account_script, encode_publishing_option_script,
     encode_rotate_consensus_pubkey_script, encode_transfer_script,
@@ -35,11 +33,8 @@ use transaction_builder::{
 
 #[test]
 fn test_genesis() {
-    let mut rt = Runtime::new().unwrap();
     let (config, _genesis_key) = config_builder::test_config();
-    let (_storage_server_handle, _executor) = create_storage_service_and_executor(&config);
-
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
+    let (db, _executor) = create_db_and_executor(&config);
 
     let request_items = vec![
         RequestItem::GetEventsByEventAccessPath {
@@ -64,13 +59,9 @@ fn test_genesis() {
         ledger_info_with_sigs,
         validator_change_proof,
         _ledger_consistency_proof,
-    ) = rt
-        .block_on(
-            storage_read_client.update_to_latest_ledger(
-                /* client_known_version = */ 0,
-                request_items.clone(),
-            ),
-        )
+    ) = db
+        .reader
+        .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
         .unwrap();
 
     let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
@@ -110,7 +101,7 @@ fn test_reconfiguration() {
         test_config.publishing_option = Some(VMPublishingOption::CustomScripts);
     }
 
-    let (_storage_server_handle, mut executor) = create_storage_service_and_executor(&config);
+    let (_db, mut executor) = create_db_and_executor(&config);
     let parent_block_id = executor.committed_block_id();
 
     let genesis_account = association_address();
@@ -199,12 +190,10 @@ fn test_reconfiguration() {
 #[test]
 fn test_change_publishing_option_to_custom() {
     // Publishing Option is set to locked at genesis.
-    let mut rt = Runtime::new().unwrap();
     let (mut config, genesis_key) = config_builder::test_config();
 
-    let (_storage_server_handle, mut executor) = create_storage_service_and_executor(&config);
+    let (db, mut executor) = create_db_and_executor(&config);
     let parent_block_id = executor.committed_block_id();
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
 
     let genesis_account = association_address();
     let network_config = config.validator_network.as_ref().unwrap();
@@ -312,13 +301,9 @@ fn test_change_publishing_option_to_custom() {
         ledger_info_with_sigs,
         validator_change_proof,
         _ledger_consistency_proof,
-    ) = rt
-        .block_on(
-            storage_read_client.update_to_latest_ledger(
-                /* client_known_version = */ 0,
-                request_items.clone(),
-            ),
-        )
+    ) = db
+        .reader
+        .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
         .unwrap();
     let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
     verify_update_to_latest_ledger_response(
@@ -399,13 +384,9 @@ fn test_change_publishing_option_to_custom() {
         ledger_info_with_sigs,
         validator_change_proof,
         _ledger_consistency_proof,
-    ) = rt
-        .block_on(
-            storage_read_client.update_to_latest_ledger(
-                /* client_known_version = */ 0,
-                request_items.clone(),
-            ),
-        )
+    ) = db
+        .reader
+        .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
         .unwrap();
     let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
     verify_update_to_latest_ledger_response(
@@ -439,13 +420,10 @@ fn test_change_publishing_option_to_custom() {
 #[test]
 fn test_extend_whitelist() {
     // Publishing Option is set to locked at genesis.
-    let mut rt = Runtime::new().unwrap();
     let (mut config, genesis_key) = config_builder::test_config();
 
-    let (_storage_server_handle, mut executor) = create_storage_service_and_executor(&config);
+    let (db, mut executor) = create_db_and_executor(&config);
     let parent_block_id = executor.committed_block_id();
-
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
 
     let genesis_account = association_address();
     let network_config = config.validator_network.as_ref().unwrap();
@@ -560,13 +538,9 @@ fn test_extend_whitelist() {
         ledger_info_with_sigs,
         validator_change_proof,
         _ledger_consistency_proof,
-    ) = rt
-        .block_on(
-            storage_read_client.update_to_latest_ledger(
-                /* client_known_version = */ 0,
-                request_items.clone(),
-            ),
-        )
+    ) = db
+        .reader
+        .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
         .unwrap();
     let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
     verify_update_to_latest_ledger_response(
@@ -648,13 +622,9 @@ fn test_extend_whitelist() {
         ledger_info_with_sigs,
         validator_change_proof,
         _ledger_consistency_proof,
-    ) = rt
-        .block_on(
-            storage_read_client.update_to_latest_ledger(
-                /* client_known_version = */ 0,
-                request_items.clone(),
-            ),
-        )
+    ) = db
+        .reader
+        .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
         .unwrap();
     let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
     verify_update_to_latest_ledger_response(
@@ -687,12 +657,9 @@ fn test_extend_whitelist() {
 
 #[test]
 fn test_execution_with_storage() {
-    let mut rt = Runtime::new().unwrap();
     let (config, genesis_key) = config_builder::test_config();
-    let (_storage_server_handle, mut executor) = create_storage_service_and_executor(&config);
+    let (db, mut executor) = create_db_and_executor(&config);
     let parent_block_id = executor.committed_block_id();
-
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
 
     let seed = [1u8; 32];
     // TEST_SEED is also used to generate a random validator set in get_test_config. Each account
@@ -937,13 +904,9 @@ fn test_execution_with_storage() {
         ledger_info_with_sigs,
         validator_change_proof,
         _ledger_consistency_proof,
-    ) = rt
-        .block_on(
-            storage_read_client.update_to_latest_ledger(
-                /* client_known_version = */ 0,
-                request_items.clone(),
-            ),
-        )
+    ) = db
+        .reader
+        .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
         .unwrap();
     let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
     verify_update_to_latest_ledger_response(
@@ -1161,13 +1124,9 @@ fn test_execution_with_storage() {
         ledger_info_with_sigs,
         validator_change_proof,
         _ledger_consistency_proof,
-    ) = rt
-        .block_on(
-            storage_read_client.update_to_latest_ledger(
-                /* client_known_version = */ 0,
-                request_items.clone(),
-            ),
-        )
+    ) = db
+        .reader
+        .update_to_latest_ledger(/* client_known_version = */ 0, request_items.clone())
         .unwrap();
     let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
     verify_update_to_latest_ledger_response(

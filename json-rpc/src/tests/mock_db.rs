@@ -9,6 +9,7 @@ use libra_types::{
     block_info::BlockInfo,
     contract_event::ContractEvent,
     event::EventKey,
+    get_with_proof::{RequestItem, ResponseItem},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::{
         AccumulatorConsistencyProof, AccumulatorRangeProof, SparseMerkleProof,
@@ -229,6 +230,19 @@ impl DbReader for MockLibraDB {
     }
 
     fn get_latest_state_root(&self) -> Result<(u64, HashValue)> {
+        unimplemented!()
+    }
+
+    fn update_to_latest_ledger(
+        &self,
+        _client_known_version: u64,
+        _request_items: Vec<RequestItem>,
+    ) -> Result<(
+        Vec<ResponseItem>,
+        LedgerInfoWithSignatures,
+        ValidatorChangeProof,
+        AccumulatorConsistencyProof,
+    )> {
         unimplemented!()
     }
 }

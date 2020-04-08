@@ -3,7 +3,7 @@
 
 use crate::executor_proxy::{ExecutorProxy, ExecutorProxyTrait};
 use executor_utils::{
-    create_storage_service_and_executor,
+    create_db_and_executor,
     test_helpers::{
         gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
     },
@@ -36,7 +36,7 @@ fn test_on_chain_config_pub_sub() {
     let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe(subscribed_configs);
 
     let (mut config, genesis_key) = config_builder::test_config();
-    let (_storage_server_handle, executor) = create_storage_service_and_executor(&config);
+    let (_db, executor) = create_db_and_executor(&config);
     let executor = Arc::new(Mutex::new(executor));
     let mut executor_proxy = ExecutorProxy::new(executor.clone(), &config, vec![subscription]);
 

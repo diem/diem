@@ -1,8 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use executor::Executor;
-use executor_utils::create_storage_service_and_executor;
+use executor::{db_bootstrapper::maybe_bootstrap_db, Executor};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     hash::{CryptoHash, HashValue},
@@ -19,9 +18,12 @@ use libra_types::{
     },
 };
 use libra_vm::LibraVM;
+use libradb::LibraDB;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::BTreeMap, convert::TryFrom, path::PathBuf, sync::mpsc};
 use storage_client::{StorageRead, StorageReadServiceClient};
+use storage_interface::DbReaderWriter;
+use storage_service::start_storage_service_with_db;
 use transaction_builder::{encode_create_account_script, encode_transfer_script};
 
 struct AccountData {
@@ -268,7 +270,11 @@ pub fn run_benchmark(
         config.storage.dir = path;
     }
 
-    let (_storage_server_handle, executor) = create_storage_service_and_executor(&config);
+    let (arc_db, db) = DbReaderWriter::wrap(LibraDB::new(config.storage.dir()));
+    maybe_bootstrap_db::<LibraVM>(db.clone(), &config).expect("Db-bootstrapper should not fail.");
+    let executor = Executor::<LibraVM>::new(db);
+    start_storage_service_with_db(&config, arc_db);
+
     let parent_block_id = executor.committed_block_id();
     let storage_client = StorageReadServiceClient::new(&config.storage.address);
 
