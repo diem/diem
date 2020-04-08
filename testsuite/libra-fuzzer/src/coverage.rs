@@ -12,10 +12,6 @@ use std::{env, fs, path::PathBuf};
 // The current tool we use (tarpaulin) only works on test,
 // hence, we need this to be a test.
 //
-// Furthermore, `#[ignore]` for tests seems to be broken,
-// so for now we run this only if some fuzzing corpus has been generated
-// or if a `CORPUS_PATH` env var is set.
-//
 
 #[test]
 #[ignore]

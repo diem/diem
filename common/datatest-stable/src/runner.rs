@@ -30,11 +30,83 @@ struct TestOpts {
     /// Output minimal information
     quiet: bool,
     #[structopt(long)]
-    /// We already can't capture anything but we don't want arg parsing to fail so this is a noop
+    /// NO-OP: don't capture stdout/stderr of each task, allow printing directly
     nocapture: bool,
     #[structopt(long)]
     /// List all tests
     list: bool,
+    #[structopt(long)]
+    /// NO-OP: Run only ignored tests
+    ignored: bool,
+    #[structopt(long)]
+    /// NO-OP: Run ignored and not ignored tests
+    include_ignored: bool,
+    #[structopt(long)]
+    /// NO-OP: Forces tests to run in-process when panic=abort
+    force_run_in_process: bool,
+    #[structopt(long)]
+    /// NO-OP: Excludes tests marked as should_panic
+    exclude_should_panic: bool,
+    #[structopt(long)]
+    /// NO-OP: Run tests and not benchmarks
+    test: bool,
+    #[structopt(long)]
+    /// NO-OP: Run benchmarks instead of tests
+    bench: bool,
+    #[structopt(long)]
+    /// NO-OP: Write logs to the specified file instead of stdout
+    logfile: Option<String>,
+    #[structopt(long, number_of_values = 1)]
+    /// NO-OP: Skip tests whose names contain FILTER (this flag can be used multiple times)
+    skip: Vec<String>,
+    #[structopt(long)]
+    /// NO-OP: Show captured stdo
+    show_output: bool,
+    #[structopt(long)]
+    /// NO-OP: auto|always|never
+    ///         Configure coloring of output:
+    ///         auto = colorize if stdout is a tty and tests are run
+    ///         on serially (default);
+    ///         always = always colorize output;
+    ///         never = never colorize output;
+    color: Option<String>,
+    #[structopt(long)]
+    /// NO-OP: pretty|terse|json
+    ///         Configure formatting of output:
+    ///         pretty = Print verbose output;
+    ///         terse = Display one character per test;
+    ///         json = Output a json document
+    format: Option<String>,
+    #[structopt(long)]
+    /// NO-OP: [plain|colored]
+    ///         Show execution time of each test. Awailable values:
+    ///         plain = do not colorize the execution time (default);
+    ///         colored = colorize output according to the `color`
+    ///         parameter value;
+    ///         Threshold values for colorized output can be
+    ///         configured via
+    ///         `RUST_TEST_TIME_UNIT`, `RUST_TEST_TIME_INTEGRATION`
+    ///         and
+    ///         `RUST_TEST_TIME_DOCTEST` environment variables.
+    ///         Expected format of environment variable is
+    ///         `VARIABLE=WARN_TIME,CRITICAL_TIME`.
+    ///         Durations must be specified in milliseconds, e.g.
+    ///         `500,2000` means that the warn time
+    ///         is 0.5 seconds, and the critical time is 2 seconds.
+    ///         Not available for --format=terse
+    report_time: Option<String>,
+    #[structopt(long)]
+    /// NO-OP: Treat excess of the test execution time limit as
+    ///         error.
+    ///         Threshold values for this option can be configured via
+    ///         `RUST_TEST_TIME_UNIT`, `RUST_TEST_TIME_INTEGRATION`
+    ///         and
+    ///         `RUST_TEST_TIME_DOCTEST` environment variables.
+    ///         Expected format of environment variable is
+    ///         `VARIABLE=WARN_TIME,CRITICAL_TIME`.
+    ///         `CRITICAL_TIME` here means the limit that should not
+    ///         be exceeded by test.
+    ensure_time: bool,
 }
 
 pub fn runner(reqs: &[Requirements]) {
