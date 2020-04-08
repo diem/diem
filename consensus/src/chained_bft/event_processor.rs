@@ -281,7 +281,7 @@ impl<T: Payload> EventProcessor<T> {
         {
             return;
         }
-        let proposal_msg = match self.generate_proposal(new_round_event).await {
+        let proposal_msg = match self.generate_proposal(new_round_event) {
             Ok(x) => x,
             Err(e) => {
                 error!("Error while generating proposal: {:?}", e);
@@ -293,18 +293,15 @@ impl<T: Payload> EventProcessor<T> {
         counters::PROPOSALS_COUNT.inc();
     }
 
-    async fn generate_proposal(
+    fn generate_proposal(
         &mut self,
         new_round_event: NewRoundEvent,
     ) -> anyhow::Result<ProposalMsg<T>> {
         // Proposal generator will ensure that at most one proposal is generated per round
-        let proposal = self
-            .proposal_generator
-            .generate_proposal(
-                new_round_event.round,
-                self.pacemaker.current_round_deadline(),
-            )
-            .await?;
+        let proposal = self.proposal_generator.generate_proposal(
+            new_round_event.round,
+            self.pacemaker.current_round_deadline(),
+        )?;
         let signed_proposal = self.safety_rules.sign_proposal(proposal)?;
         if let Some(ref payload) = signed_proposal.payload() {
             self.txn_manager
@@ -911,7 +908,7 @@ impl<T: Payload> EventProcessor<T> {
         for committed in blocks_to_commit {
             if let Some(payload) = committed.payload() {
                 let compute_result = committed.compute_result();
-                if let Err(e) = self.txn_manager.commit_txns(payload, &compute_result).await {
+                if let Err(e) = self.txn_manager.commit_txns(payload, &compute_result) {
                     error!("Failed to notify mempool of rejected txns: {:?}", e);
                 }
             }

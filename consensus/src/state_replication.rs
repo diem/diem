@@ -8,14 +8,13 @@ use libra_crypto::HashValue;
 use libra_types::{ledger_info::LedgerInfoWithSignatures, validator_change::ValidatorChangeProof};
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
-#[async_trait::async_trait]
 pub trait TxnManager: Send + Sync {
     type Payload;
 
     /// Brings new transactions to be applied.
     /// The `exclude_txns` list includes the transactions that are already pending in the
     /// branch of blocks consensus is trying to extend.
-    async fn pull_txns(
+    fn pull_txns(
         &mut self,
         max_size: u64,
         exclude_txns: Vec<&Self::Payload>,
@@ -23,7 +22,7 @@ pub trait TxnManager: Send + Sync {
 
     /// Notifies TxnManager about the payload of the committed block including the state compute
     /// result, which includes the specifics of what transactions succeeded and failed.
-    async fn commit_txns(
+    fn commit_txns(
         &mut self,
         txns: &Self::Payload,
         compute_result: &StateComputeResult,

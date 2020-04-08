@@ -6,13 +6,12 @@ use anyhow::{format_err, Result};
 use debug_interface::prelude::*;
 use executor_types::StateComputeResult;
 use futures::channel::{mpsc, oneshot};
+use futures::executor::block_on;
 use libra_crypto::HashValue;
 use libra_mempool::{
     CommittedTransaction, ConsensusRequest, ConsensusResponse, TransactionExclusion,
 };
 use libra_types::transaction::{SignedTransaction, TransactionStatus};
-use std::time::Duration;
-use tokio::time::timeout;
 
 /// Proxy interface to mempool
 #[derive(Clone)]
@@ -28,11 +27,10 @@ impl MempoolProxy {
     }
 }
 
-#[async_trait::async_trait]
 impl TxnManager for MempoolProxy {
     type Payload = Vec<SignedTransaction>;
 
-    async fn pull_txns(
+    fn pull_txns(
         &mut self,
         max_size: u64,
         exclude_payloads: Vec<&Self::Payload>,
@@ -50,12 +48,13 @@ impl TxnManager for MempoolProxy {
         let req = ConsensusRequest::GetBlockRequest(max_size, exclude_txns, callback);
         // send to shared mempool
         self.consensus_to_mempool_sender.clone().try_send(req)?;
+        // TODO: add timeout support
         // wait for response
-        match timeout(Duration::from_secs(1), callback_rcv).await {
+        match block_on(callback_rcv) {
             Err(_) => Err(format_err!(
                 "[consensus] did not receive GetBlockResponse on time"
             )),
-            Ok(resp) => match resp?? {
+            Ok(resp) => match resp? {
                 ConsensusResponse::GetBlockResponse(txns) => Ok(txns),
                 _ => Err(format_err!(
                     "[consensus] did not receive expected GetBlockResponse"
@@ -65,7 +64,7 @@ impl TxnManager for MempoolProxy {
     }
 
     // Consensus notifies mempool of committed transactions that were rejected
-    async fn commit_txns(
+    fn commit_txns(
         &mut self,
         txns: &Self::Payload,
         compute_results: &StateComputeResult,
@@ -90,7 +89,8 @@ impl TxnManager for MempoolProxy {
         // send to shared mempool
         self.consensus_to_mempool_sender.clone().try_send(req)?;
 
-        if let Err(e) = timeout(Duration::from_secs(1), callback_rcv).await {
+        // TODO: add timeout support
+        if let Err(e) = block_on(callback_rcv) {
             Err(format_err!("[consensus] txn manager did not receive ACK for commit notification sent to mempool on time: {:?}", e))
         } else {
             Ok(())

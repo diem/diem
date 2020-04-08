@@ -100,7 +100,7 @@ impl<T: Payload> ProposalGenerator<T> {
     /// 2. The round is provided by the caller.
     /// 3. In case a given round is not greater than the calculated parent, return an OldRound
     /// error.
-    pub async fn generate_proposal(
+    pub fn generate_proposal(
         &mut self,
         round: Round,
         round_deadline: Instant,
@@ -204,7 +204,6 @@ impl<T: Payload> ProposalGenerator<T> {
         let txns = self
             .txn_manager
             .pull_txns(self.max_block_size, exclude_payload)
-            .await
             .context("Fail to retrieve txn")?;
 
         Ok(BlockData::new_proposal(

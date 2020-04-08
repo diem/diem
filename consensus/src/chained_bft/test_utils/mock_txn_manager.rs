@@ -52,12 +52,11 @@ fn mock_transaction_status(count: usize) -> Vec<TransactionStatus> {
     statuses
 }
 
-#[async_trait::async_trait]
 impl TxnManager for MockTransactionManager {
     type Payload = Vec<MockTransaction>;
 
     /// The returned future is fulfilled with the vector of SignedTransactions
-    async fn pull_txns(
+    fn pull_txns(
         &mut self,
         max_size: u64,
         _exclude_txns: Vec<&Self::Payload>,
@@ -69,7 +68,7 @@ impl TxnManager for MockTransactionManager {
         Ok(res)
     }
 
-    async fn commit_txns(
+    fn commit_txns(
         &mut self,
         txns: &Self::Payload,
         compute_results: &StateComputeResult,
@@ -88,7 +87,6 @@ impl TxnManager for MockTransactionManager {
                 .as_mut()
                 .unwrap()
                 .commit_txns(&vec![], &mock_compute_result)
-                .await
                 .is_ok());
         }
         Ok(())
