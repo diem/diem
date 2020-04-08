@@ -65,6 +65,7 @@ pub struct ContractEventV0 {
     /// The unique key that the event was emitted to
     key: EventKey,
     /// The number of messages that have been emitted to the path previously
+    #[serde(with = "lcs::fixed_size")]
     sequence_number: u64,
     /// The type of the data
     type_tag: TypeTag,

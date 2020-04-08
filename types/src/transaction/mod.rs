@@ -61,13 +61,16 @@ pub struct RawTransaction {
     /// Sender's address.
     sender: AccountAddress,
     // Sequence number of this transaction corresponding to sender's account.
+    #[serde(with = "lcs::fixed_size")]
     sequence_number: u64,
     // The transaction script to execute.
     payload: TransactionPayload,
 
     // Maximal total gas specified by wallet to spend for this transaction.
+    #[serde(with = "lcs::fixed_size")]
     max_gas_amount: u64,
     // Maximal price can be paid per gas.
+    #[serde(with = "lcs::fixed_size")]
     gas_unit_price: u64,
 
     gas_specifier: TypeTag,
@@ -87,30 +90,16 @@ fn serialize_duration<S>(d: &Duration, serializer: S) -> std::result::Result<S::
 where
     S: ser::Serializer,
 {
-    serializer.serialize_u64(d.as_secs())
+    lcs::fixed_size::serialize::<u64, S>(&d.as_secs(), serializer)
 }
 
 fn deserialize_duration<'de, D>(deserializer: D) -> std::result::Result<Duration, D::Error>
 where
     D: de::Deserializer<'de>,
 {
-    struct DurationVisitor;
-    impl<'de> de::Visitor<'de> for DurationVisitor {
-        type Value = Duration;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("Duration as u64")
-        }
-
-        fn visit_u64<E>(self, v: u64) -> std::result::Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            Ok(Duration::from_secs(v))
-        }
-    }
-
-    deserializer.deserialize_u64(DurationVisitor)
+    Ok(Duration::from_secs(lcs::fixed_size::deserialize::<u64, D>(
+        deserializer,
+    )?))
 }
 
 impl RawTransaction {

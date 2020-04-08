@@ -14,8 +14,14 @@ BlockMetadata:
   STRUCT:
     - id:
         TYPENAME: HashValue
-    - round: U64
-    - timestamp_usecs: U64
+    - round:
+        TUPLEARRAY:
+          CONTENT: U8
+          SIZE: 8
+    - timestamp_usecs:
+        TUPLEARRAY:
+          CONTENT: U8
+          SIZE: 8
     - previous_block_votes:
         SEQ:
           TYPENAME: AccountAddress
@@ -38,7 +44,10 @@ ContractEventV0:
   STRUCT:
     - key:
         TYPENAME: EventKey
-    - sequence_number: U64
+    - sequence_number:
+        TUPLEARRAY:
+          CONTENT: U8
+          SIZE: 8
     - type_tag:
         TYPENAME: TypeTag
     - event_data:
@@ -65,14 +74,26 @@ RawTransaction:
   STRUCT:
     - sender:
         TYPENAME: AccountAddress
-    - sequence_number: U64
+    - sequence_number:
+        TUPLEARRAY:
+          CONTENT: U8
+          SIZE: 8
     - payload:
         TYPENAME: TransactionPayload
-    - max_gas_amount: U64
-    - gas_unit_price: U64
+    - max_gas_amount:
+        TUPLEARRAY:
+          CONTENT: U8
+          SIZE: 8
+    - gas_unit_price:
+        TUPLEARRAY:
+          CONTENT: U8
+          SIZE: 8
     - gas_specifier:
         TYPENAME: TypeTag
-    - expiration_time: U64
+    - expiration_time:
+        TUPLEARRAY:
+          CONTENT: U8
+          SIZE: 8
 Script:
   STRUCT:
     - code:
@@ -118,7 +139,10 @@ TransactionArgument:
   ENUM:
     0:
       U64:
-        NEWTYPE: U64
+        NEWTYPE:
+          TUPLEARRAY:
+            CONTENT: U8
+            SIZE: 8
     1:
       Address:
         NEWTYPE:

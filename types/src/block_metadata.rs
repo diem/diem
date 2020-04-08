@@ -29,7 +29,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BlockMetadata {
     id: HashValue,
+    #[serde(with = "lcs::fixed_size")]
     round: u64,
+    #[serde(with = "lcs::fixed_size")]
     timestamp_usecs: u64,
     // The vector has to be sorted to ensure consistent result among all nodes
     previous_block_votes: Vec<AccountAddress>,
