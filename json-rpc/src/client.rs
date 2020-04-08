@@ -1,16 +1,20 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{errors::JsonRpcError, views::AccountView};
-use anyhow::{ensure, format_err, Error, Result};
-use libra_types::{
-    account_address::AccountAddress, event::EventKey, transaction::SignedTransaction,
+use crate::{
+    errors::JsonRpcError,
+    views::{
+        AccountStateWithProofView, AccountView, BlockMetadata, EventView, StateProofView,
+        TransactionView,
+    },
 };
+use anyhow::{ensure, format_err, Error, Result};
+use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use reqwest::Client;
 use serde_json::{json, Value};
 use std::{collections::HashSet, convert::TryFrom, fmt};
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct JsonRpcBatch {
     pub requests: Vec<(String, Vec<Value>)>,
 }
@@ -81,8 +85,7 @@ impl JsonRpcBatch {
         );
     }
 
-    pub fn add_get_events_request(&mut self, event_key: EventKey, start: u64, limit: u64) {
-        let event_key = hex::encode(event_key.as_bytes());
+    pub fn add_get_events_request(&mut self, event_key: String, start: u64, limit: u64) {
         self.add_request(
             "get_events".to_string(),
             vec![json!(event_key), json!(start), json!(limit)],
@@ -125,7 +128,7 @@ impl JsonRpcAsyncClient {
     pub async fn get_accounts_state(
         &self,
         accounts: &[AccountAddress],
-    ) -> Result<Vec<AccountView>> {
+    ) -> Result<Vec<Option<AccountView>>> {
         let mut batch = JsonRpcBatch::new();
         for account in accounts {
             batch.add_get_account_state_request(*account);
@@ -143,7 +146,12 @@ impl JsonRpcAsyncClient {
                 )
             }
         }
-        assert!(results.len() == accounts.len());
+        ensure!(
+            results.len() == accounts.len(),
+            "Received unexpected number of JSON RPC responses ({}) for {} requests",
+            results.len(),
+            accounts.len()
+        );
         Ok(results)
     }
 
@@ -170,7 +178,7 @@ impl JsonRpcAsyncClient {
         );
 
         let responses: Vec<Value> = resp.json().await?;
-        process_response(batch, responses)
+        process_batch_response(batch, responses)
     }
 }
 
@@ -180,24 +188,76 @@ impl fmt::Debug for JsonRpcAsyncClient {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[allow(clippy::large_enum_variant)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum JsonRpcResponse {
     SubmissionResponse,
-    AccountResponse(AccountView),
-    UnknownResponse,
+    AccountResponse(Option<AccountView>),
+    StateProofResponse(StateProofView),
+    AccountTransactionResponse(Option<TransactionView>),
+    TransactionsResponse(Vec<TransactionView>),
+    EventsResponse(Vec<EventView>),
+    BlockMetadataResponse(BlockMetadata),
+    AccountStateWithProofResponse(AccountStateWithProofView),
+    UnknownResponse(Value),
 }
 
 impl TryFrom<(String, Value)> for JsonRpcResponse {
     type Error = Error;
 
     fn try_from((method, value): (String, Value)) -> Result<JsonRpcResponse> {
-        if method == "submit" {
-            Ok(JsonRpcResponse::SubmissionResponse)
-        } else if method == "get_account_state" {
-            let account: AccountView = serde_json::from_value(value)?;
-            Ok(JsonRpcResponse::AccountResponse(account))
-        } else {
-            Ok(JsonRpcResponse::UnknownResponse)
+        match method.as_str() {
+            "submit" => {
+                ensure!(
+                    value == Value::Null,
+                    "received unexpected payload for submit: {}",
+                    value
+                );
+                Ok(JsonRpcResponse::SubmissionResponse)
+            }
+            "get_account_state" => {
+                let account = match value {
+                    Value::Null => None,
+                    _ => {
+                        let account: AccountView = serde_json::from_value(value)?;
+                        Some(account)
+                    }
+                };
+                Ok(JsonRpcResponse::AccountResponse(account))
+            }
+            "get_events" => {
+                let events: Vec<EventView> = serde_json::from_value(value)?;
+                Ok(JsonRpcResponse::EventsResponse(events))
+            }
+            "get_metadata" => {
+                let metadata: BlockMetadata = serde_json::from_value(value)?;
+                Ok(JsonRpcResponse::BlockMetadataResponse(metadata))
+            }
+            "get_account_state_with_proof" => {
+                let account_with_proof: AccountStateWithProofView = serde_json::from_value(value)?;
+                Ok(JsonRpcResponse::AccountStateWithProofResponse(
+                    account_with_proof,
+                ))
+            }
+            "get_state_proof" => {
+                let state_proof: StateProofView = serde_json::from_value(value)?;
+                Ok(JsonRpcResponse::StateProofResponse(state_proof))
+            }
+            "get_account_transaction" => {
+                let txn = match value {
+                    Value::Null => None,
+                    _ => {
+                        let txn: TransactionView = serde_json::from_value(value)?;
+                        Some(txn)
+                    }
+                };
+                Ok(JsonRpcResponse::AccountTransactionResponse(txn))
+            }
+            "get_transactions" => {
+                let txns: Vec<TransactionView> = serde_json::from_value(value)?;
+                Ok(JsonRpcResponse::TransactionsResponse(txns))
+            }
+            _ => Ok(JsonRpcResponse::UnknownResponse(value)),
         }
     }
 }
@@ -206,7 +266,7 @@ impl TryFrom<(String, Value)> for JsonRpcResponse {
 /// Helper methods for basic payload processing ///
 ///////////////////////////////////////////////////
 
-pub fn process_response(
+pub fn process_batch_response(
     batch: JsonRpcBatch,
     responses: Vec<Value>,
 ) -> Result<Vec<Result<JsonRpcResponse>>> {
@@ -248,6 +308,18 @@ pub fn process_response(
     }
 
     Ok(result)
+}
+
+pub fn get_response_from_batch(
+    index: usize,
+    batch: &[Result<JsonRpcResponse>],
+) -> Result<&Result<JsonRpcResponse>> {
+    batch.get(index).ok_or_else(|| {
+        format_err!(
+            "[JSON RPC client] response missing in batch at index {}",
+            index
+        )
+    })
 }
 
 fn fetch_id(response: &Value) -> Result<usize> {

@@ -1,7 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{format_err, Error};
+use crate::JsonRpcResponse;
+use anyhow::{format_err, Error, Result};
 use hex;
 use libra_crypto::HashValue;
 use libra_types::{
@@ -22,7 +23,27 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use transaction_builder::get_transaction_name;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+/// For JSON RPC views that are returned as part of a `JsonRpcResponse` instance, this trait
+/// can be used to extract the view from a `JsonRpcResponse` instance when applicable
+pub trait ResponseAsView: Sized {
+    fn unexpected_response_error<T>(response: JsonRpcResponse) -> Result<T> {
+        Err(format_err!("did not receive expected view: {:?}", response))
+    }
+
+    fn from_response(_response: JsonRpcResponse) -> Result<Self> {
+        unimplemented!()
+    }
+
+    fn optional_from_response(_response: JsonRpcResponse) -> Result<Option<Self>> {
+        unimplemented!()
+    }
+
+    fn vec_from_response(_response: JsonRpcResponse) -> Result<Vec<Self>> {
+        unimplemented!()
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct AccountView {
     pub balance: u64,
     pub sequence_number: u64,
@@ -47,7 +68,17 @@ impl AccountView {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl ResponseAsView for AccountView {
+    fn optional_from_response(response: JsonRpcResponse) -> Result<Option<Self>> {
+        if let JsonRpcResponse::AccountResponse(view) = response {
+            Ok(view)
+        } else {
+            Self::unexpected_response_error::<Option<Self>>(response)
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct EventView {
     pub key: BytesView,
     pub sequence_number: u64,
@@ -55,7 +86,17 @@ pub struct EventView {
     pub data: EventDataView,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+impl ResponseAsView for EventView {
+    fn vec_from_response(response: JsonRpcResponse) -> Result<Vec<Self>> {
+        if let JsonRpcResponse::EventsResponse(events) = response {
+            Ok(events)
+        } else {
+            Self::unexpected_response_error::<Vec<Self>>(response)
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type")]
 pub enum EventDataView {
     #[serde(rename = "receivedpayment")]
@@ -110,10 +151,20 @@ impl From<(u64, ContractEvent)> for EventView {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct BlockMetadata {
     pub version: u64,
     pub timestamp: u64,
+}
+
+impl ResponseAsView for BlockMetadata {
+    fn from_response(response: JsonRpcResponse) -> Result<Self> {
+        if let JsonRpcResponse::BlockMetadataResponse(metadata) = response {
+            Ok(metadata)
+        } else {
+            Self::unexpected_response_error::<Self>(response)
+        }
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
@@ -137,7 +188,7 @@ impl From<&Vec<u8>> for BytesView {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct TransactionView {
     pub version: u64,
     pub transaction: TransactionDataView,
@@ -147,7 +198,7 @@ pub struct TransactionView {
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(tag = "type")]
 pub enum TransactionDataView {
     #[serde(rename = "blockmetadata")]
@@ -181,7 +232,25 @@ impl TransactionView {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+impl ResponseAsView for TransactionView {
+    fn optional_from_response(response: JsonRpcResponse) -> Result<Option<Self>> {
+        if let JsonRpcResponse::AccountTransactionResponse(view) = response {
+            Ok(view)
+        } else {
+            Self::unexpected_response_error::<Option<Self>>(response)
+        }
+    }
+
+    fn vec_from_response(response: JsonRpcResponse) -> Result<Vec<Self>> {
+        if let JsonRpcResponse::TransactionsResponse(txns) = response {
+            Ok(txns)
+        } else {
+            Self::unexpected_response_error::<Vec<Self>>(response)
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(tag = "type")]
 // TODO cover all script types
 pub enum ScriptView {
@@ -309,7 +378,7 @@ impl From<TransactionPayload> for ScriptView {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct StateProofView {
     pub ledger_info_with_signatures: BytesView,
     pub validator_change_proof: BytesView,
@@ -342,11 +411,31 @@ impl
     }
 }
 
-#[derive(Serialize, Deserialize)]
+impl ResponseAsView for StateProofView {
+    fn from_response(response: JsonRpcResponse) -> Result<Self> {
+        if let JsonRpcResponse::StateProofResponse(view) = response {
+            Ok(view)
+        } else {
+            Self::unexpected_response_error::<Self>(response)
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct AccountStateWithProofView {
     pub version: u64,
     pub blob: Option<BytesView>,
     pub proof: AccountStateProofView,
+}
+
+impl ResponseAsView for AccountStateWithProofView {
+    fn from_response(response: JsonRpcResponse) -> Result<Self> {
+        if let JsonRpcResponse::AccountStateWithProofResponse(resp) = response {
+            Ok(resp)
+        } else {
+            Self::unexpected_response_error::<Self>(response)
+        }
+    }
 }
 
 impl TryFrom<AccountStateWithProof> for AccountStateWithProofView {
@@ -368,7 +457,7 @@ impl TryFrom<AccountStateWithProof> for AccountStateWithProofView {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct AccountStateProofView {
     pub ledger_info_to_transaction_info_proof: BytesView,
     pub transaction_info: BytesView,

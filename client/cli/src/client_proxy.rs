@@ -13,7 +13,7 @@ use libra_crypto::{
     x25519::X25519StaticPublicKey,
     ValidKey, ValidKeyStringExt,
 };
-use libra_json_rpc::views::{AccountView, EventView, TransactionView};
+use libra_json_rpc::views::{AccountView, BlockMetadata, EventView, TransactionView};
 use libra_logger::prelude::*;
 use libra_temppath::TempPath;
 use libra_types::{
@@ -994,8 +994,13 @@ impl ClientProxy {
         }
     }
 
-    /// Test gRPC client connection with validator.
-    pub fn test_validator_connection(&mut self) -> Result<LedgerInfoWithSignatures> {
+    /// Test JSON RPC client connection with validator.
+    pub fn test_validator_connection(&mut self) -> Result<BlockMetadata> {
+        self.client.get_metadata()
+    }
+
+    /// Test client's connection to validator with proof.
+    pub fn test_trusted_connection(&mut self) -> Result<()> {
         self.client.get_state_proof()
     }
 
