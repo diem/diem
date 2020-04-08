@@ -1,14 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use futures::{Future, FutureExt, SinkExt};
+use futures::{executor::block_on, Future, FutureExt, SinkExt};
 use libra_logger::prelude::*;
 use std::{
     pin::Pin,
+    sync::mpsc,
+    thread,
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use thiserror::Error;
-use tokio::{runtime::Handle, time::delay_for};
 
 /// Time service is an abstraction for operations that depend on time
 /// It supports implementations that can simulated time or depend on actual time
@@ -31,7 +32,7 @@ pub trait TimeService: Send + Sync {
     /// time_service::sleep(Y).await;
     /// Z = time_service::get_current_timestamp();
     /// assert(Z >= X + Y)
-    fn sleep(&self, t: Duration) -> Pin<Box<dyn Future<Output = ()> + Send>>;
+    fn sleep(&self, t: Duration);
 }
 
 /// This trait represents abstract task that can be submitted to TimeService::run_after
@@ -81,32 +82,36 @@ where
 
 /// TimeService implementation that uses actual clock to schedule tasks
 pub struct ClockTimeService {
-    executor: Handle,
+    _handle: thread::JoinHandle<()>,
+    tx: mpsc::SyncSender<(Duration, Box<dyn ScheduledTask>)>,
 }
 
 impl ClockTimeService {
-    /// Creates new TimeService that runs tasks based on actual clock
-    /// It needs executor to schedule internal tasks that facilitates it's work
-    pub fn new(executor: Handle) -> ClockTimeService {
-        ClockTimeService { executor }
+    pub fn new() -> Self {
+        let (tx, rx) = mpsc::sync_channel::<(Duration, Box<dyn ScheduledTask>)>(100);
+        let _handle = thread::spawn(move || {
+            while let Ok((timeout, mut task)) = rx.recv() {
+                thread::sleep(timeout);
+                block_on(task.run());
+            }
+        });
+        Self { _handle, tx }
     }
 }
 
 impl TimeService for ClockTimeService {
-    fn run_after(&self, timeout: Duration, mut t: Box<dyn ScheduledTask>) {
-        let task = async move {
-            delay_for(timeout).await;
-            t.run().await;
-        };
-        self.executor.spawn(task);
+    fn run_after(&self, timeout: Duration, t: Box<dyn ScheduledTask>) {
+        self.tx
+            .send((timeout, t))
+            .expect("TimeService thread dropped");
     }
 
     fn get_current_timestamp(&self) -> Duration {
         duration_since_epoch()
     }
 
-    fn sleep(&self, t: Duration) -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        async move { delay_for(t).await }.boxed()
+    fn sleep(&self, t: Duration) {
+        thread::sleep(t);
     }
 }
 
@@ -152,7 +157,7 @@ pub enum WaitingError {
 /// If the waiting time exceeds max_instant then fail immediately.
 /// There are 4 potential outcomes, 2 successful and 2 errors, each represented by
 /// WaitingSuccess and WaitingError.
-pub async fn wait_if_possible(
+pub fn wait_if_possible(
     time_service: &dyn TimeService,
     min_duration_since_epoch: Duration,
     max_instant: Instant,
@@ -177,7 +182,7 @@ pub async fn wait_if_possible(
         // Delay has millisecond granularity, add 1 millisecond to ensure a higher timestamp
         let sleep_duration =
             min_duration_since_epoch - current_duration_since_epoch + Duration::from_millis(1);
-        time_service.sleep(sleep_duration).await;
+        time_service.sleep(sleep_duration);
         let waited_duration_since_epoch = time_service.get_current_timestamp();
         if waited_duration_since_epoch > min_duration_since_epoch {
             Ok(WaitingSuccess::WaitWasRequired {

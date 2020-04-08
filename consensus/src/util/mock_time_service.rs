@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::util::time_service::{ScheduledTask, TimeService};
-use futures::{Future, FutureExt};
 use libra_logger::prelude::*;
 use std::{
-    pin::Pin,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -62,16 +60,13 @@ impl TimeService for SimulatedTimeService {
         self.inner.lock().unwrap().now
     }
 
-    fn sleep(&self, t: Duration) -> Pin<Box<dyn Future<Output = ()> + Send>> {
+    fn sleep(&self, t: Duration) {
         let inner = self.inner.clone();
-        let fut = async move {
-            let mut inner = inner.lock().unwrap();
-            inner.now += t;
-            if inner.now > inner.max {
-                inner.now = inner.max;
-            }
-        };
-        fut.boxed()
+        let mut inner = inner.lock().unwrap();
+        inner.now += t;
+        if inner.now > inner.max {
+            inner.now = inner.max;
+        }
     }
 }
 

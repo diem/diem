@@ -21,7 +21,7 @@ use crate::{
     },
     counters,
     state_replication::{StateComputer, TxnManager},
-    util::time_service::{ClockTimeService, TimeService},
+    util::time_service::TimeService,
 };
 use anyhow::anyhow;
 use consensus_types::{
@@ -69,7 +69,7 @@ impl<T: Payload> LivenessStorageData<T> {
 pub struct EpochManager<T> {
     author: Author,
     config: ConsensusConfig,
-    time_service: Arc<ClockTimeService>,
+    time_service: Arc<dyn TimeService>,
     self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
     network_sender: ConsensusNetworkSender<T>,
     timeout_sender: channel::Sender<Round>,
@@ -84,7 +84,7 @@ impl<T: Payload> EpochManager<T> {
     pub fn new(
         author: Author,
         config: ConsensusConfig,
-        time_service: Arc<ClockTimeService>,
+        time_service: Arc<dyn TimeService>,
         self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
         network_sender: ConsensusNetworkSender<T>,
         timeout_sender: channel::Sender<Round>,

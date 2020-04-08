@@ -132,7 +132,7 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
         let input = self.input.take().expect("already started, input is None");
 
         let executor = runtime.handle().clone();
-        let time_service = Arc::new(ClockTimeService::new(executor.clone()));
+        let time_service = Arc::new(ClockTimeService::new());
 
         let (timeout_sender, timeout_receiver) =
             channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);

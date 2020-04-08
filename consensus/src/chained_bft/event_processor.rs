@@ -650,9 +650,7 @@ impl<T: Payload> EventProcessor<T> {
             self.time_service.as_ref(),
             Duration::from_micros(block_timestamp_us),
             current_round_deadline,
-        )
-        .await
-        {
+        ) {
             Ok(waiting_success) => {
                 debug!("Success with {:?} for being able to vote", waiting_success);
 

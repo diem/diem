@@ -140,9 +140,7 @@ impl<T: Payload> ProposalGenerator<T> {
                 self.time_service.as_ref(),
                 Duration::from_micros(hqc.certified_block().timestamp_usecs()),
                 round_deadline,
-            )
-            .await
-            {
+            ) {
                 Ok(waiting_success) => {
                     debug!(
                         "Success with {:?} for getting a valid timestamp for the next proposal",

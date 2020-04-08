@@ -165,7 +165,7 @@ impl NodeSetup {
             10, // max pruned blocks in mem
         ));
 
-        let time_service = Arc::new(ClockTimeService::new(executor));
+        let time_service = Arc::new(ClockTimeService::new());
 
         let proposal_generator = ProposalGenerator::new(
             author,
