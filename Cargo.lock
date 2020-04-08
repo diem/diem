@@ -2622,6 +2622,7 @@ dependencies = [
  "libra-canonical-serialization 0.1.0",
  "libra-crypto 0.1.0",
  "libra-crypto-derive 0.1.0",
+ "libra-logger 0.1.0",
  "libra-proptest-helpers 0.1.0",
  "libra-prost-ext 0.1.0",
  "mirai-annotations 1.6.1 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -49,7 +49,7 @@ const L: [u8; 32] = [
 ];
 
 /// An Ed25519 private key
-#[derive(DeserializeKey, SilentDisplay, SilentDebug, SerializeKey)]
+#[derive(DeserializeKey, SilentDisplay, Debug, SerializeKey)]
 pub struct Ed25519PrivateKey(ed25519_dalek::SecretKey);
 
 #[cfg(feature = "assert-private-keys-not-cloneable")]

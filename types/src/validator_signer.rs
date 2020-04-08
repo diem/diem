@@ -7,6 +7,7 @@ use libra_crypto::{
     test_utils::TEST_SEED,
     HashValue, PrivateKey, SigningKey, Uniform,
 };
+use libra_logger::prelude::*;
 use rand::{rngs::StdRng, SeedableRng};
 use std::convert::TryFrom;
 
@@ -22,6 +23,10 @@ pub struct ValidatorSigner {
 
 impl ValidatorSigner {
     pub fn new(author: AccountAddress, private_key: Ed25519PrivateKey) -> Self {
+        debug!(
+            "New ValidatorSigner with author {:?} and private key {:?}",
+            author, private_key
+        );
         ValidatorSigner {
             author,
             private_key,
@@ -30,6 +35,10 @@ impl ValidatorSigner {
 
     /// Constructs a signature for `message` using `private_key`.
     pub fn sign_message(&self, message: HashValue) -> Ed25519Signature {
+        debug!(
+            "Signing message {:?} with private_key {:?}",
+            message, self.private_key
+        );
         self.private_key.sign_message(&message)
     }
 

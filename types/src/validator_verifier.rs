@@ -7,6 +7,7 @@ use libra_crypto::{
     ed25519::{Ed25519PublicKey, Ed25519Signature},
     HashValue, VerifyingKey,
 };
+use libra_logger::prelude::*;
 use mirai_annotations::*;
 use std::{collections::BTreeMap, fmt};
 use thiserror::Error;
@@ -140,6 +141,10 @@ impl ValidatorVerifier {
     ) -> std::result::Result<(), VerifyError> {
         match self.get_public_key(&author) {
             Some(public_key) => {
+                debug!(
+                    "Verifying hash {:?} from author {:?} with signature {:?} and pubkey {:?}",
+                    hash, author, signature, public_key
+                );
                 if public_key.verify_signature(&hash, signature).is_err() {
                     Err(VerifyError::InvalidSignature)
                 } else {

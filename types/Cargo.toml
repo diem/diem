@@ -31,6 +31,7 @@ channel = { path = "../common/channel", version = "0.1.0" }
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
+libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0", optional = true }
 move-core-types = { path = "../language/move-core/types", version = "0.1.0" }
 
