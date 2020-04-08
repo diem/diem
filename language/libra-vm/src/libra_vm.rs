@@ -9,7 +9,6 @@ use debug_interface::prelude::*;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
-use libra_types::write_set::WriteSetMut;
 use libra_types::{
     account_config,
     block_metadata::BlockMetadata,
@@ -21,7 +20,7 @@ use libra_types::{
         VMValidatorResult, MAX_TRANSACTION_SIZE_IN_BYTES,
     },
     vm_error::{sub_status, StatusCode, VMStatus},
-    write_set::WriteSet,
+    write_set::{WriteSet, WriteSetMut},
 };
 use move_vm_runtime::MoveVM;
 use move_vm_state::{
