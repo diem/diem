@@ -25,7 +25,9 @@ use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{
     account_address::AccountAddress,
     mempool_status::{MempoolStatus, MempoolStatusCode},
-    on_chain_config::{ConfigID, OnChainConfig, OnChainConfigPayload, VMPublishingOption},
+    on_chain_config::{
+        ConfigID, LibraVersion, OnChainConfig, OnChainConfigPayload, VMPublishingOption,
+    },
     transaction::SignedTransaction,
     vm_error::{
         StatusCode::{RESOURCE_DOES_NOT_EXIST, SEQUENCE_NUMBER_TOO_OLD},
@@ -861,4 +863,5 @@ pub fn bootstrap(
 }
 
 /// On-chain configs that mempool subscribes to for reconfiguration
-pub const MEMPOOL_SUBSCRIBED_CONFIGS: &[ConfigID] = &[VMPublishingOption::CONFIG_ID];
+pub const MEMPOOL_SUBSCRIBED_CONFIGS: &[ConfigID] =
+    &[LibraVersion::CONFIG_ID, VMPublishingOption::CONFIG_ID];
