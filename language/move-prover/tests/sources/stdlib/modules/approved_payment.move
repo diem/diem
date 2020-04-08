@@ -8,6 +8,7 @@
 // dep: tests/sources/stdlib/modules/libra_transaction_timeout.move
 // dep: tests/sources/stdlib/modules/libra_time.move
 // dep: tests/sources/stdlib/modules/hash.move
+// no-verify
 
 // Module that allows a payee to approve payments with a cryptographic signature. The basic flow is:
 // (1) Payer sends `metadata` to the payee

@@ -4,16 +4,18 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use bytecode_verifier::absint::{AbstractDomain, JoinResult};
-use vm::file_format::{CodeOffset, SignatureToken};
+use vm::file_format::CodeOffset;
 
 use crate::{
     dataflow_analysis::{DataflowAnalysis, StateMap, TransferFunctions},
     stackless_bytecode::{
-        StacklessBytecode::{self, *},
+        AssignKind,
+        Bytecode::{self, *},
         TempIndex,
     },
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
+use spec_lang::ty::Type;
 
 /// Represents a node in the borrow graph.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -196,7 +198,7 @@ impl BorrowGraph {
 }
 
 pub struct LifetimeAnalysis<'a> {
-    local_types: &'a [SignatureToken],
+    local_types: &'a [Type],
 }
 
 #[derive(Clone, Debug)]
@@ -244,8 +246,8 @@ impl AbstractDomain for LifetimeState {
 impl<'a> LifetimeAnalysis<'a> {
     pub fn analyze(
         cfg: &StacklessControlFlowGraph,
-        instrs: &[StacklessBytecode],
-        local_types: &'a [SignatureToken],
+        instrs: &[Bytecode],
+        local_types: &'a [Type],
     ) -> BTreeMap<CodeOffset, BTreeSet<TempIndex>> {
         let mut analyzer = Self { local_types };
         let initial_state = LifetimeState {
@@ -269,7 +271,7 @@ impl<'a> LifetimeAnalysis<'a> {
 }
 
 impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
-    type InstrType = StacklessBytecode;
+    type InstrType = Bytecode;
     type State = LifetimeState;
 
     fn execute(
@@ -281,43 +283,43 @@ impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
         let mut after_state = pre.clone();
 
         match instr {
-            MoveLoc(t, l) => {
+            Assign(t, l, k) => {
                 if self.local_types[*t].is_mutable_reference() {
-                    after_state
-                        .borrow_graph
-                        .replace_local(Node::Local(*l), Node::Local(*t));
+                    match k {
+                        AssignKind::Move => {
+                            after_state
+                                .borrow_graph
+                                .replace_local(Node::Local(*l), Node::Local(*t));
+                        }
+                        AssignKind::Copy => {
+                            after_state
+                                .borrow_graph
+                                .copy_local(Node::Local(*l), Node::Local(*t));
+                        }
+                        AssignKind::Store => {
+                            after_state.borrow_graph.move_local(*t);
+                            after_state
+                                .borrow_graph
+                                .replace_local(Node::Local(*l), Node::Local(*t));
+                        }
+                    }
                 }
             }
-            CopyLoc(t, l) => {
-                if self.local_types[*t].is_mutable_reference() {
-                    after_state
-                        .borrow_graph
-                        .copy_local(Node::Local(*l), Node::Local(*t));
-                }
-            }
-            StLoc(l, t) => {
-                if self.local_types[*t].is_mutable_reference() {
-                    after_state.borrow_graph.move_local(*l);
-                    after_state
-                        .borrow_graph
-                        .replace_local(Node::Local(*t), Node::Local(*l));
-                }
-            }
-            BorrowLoc(t, _) => {
-                if self.local_types[*t].is_mutable_reference() {
-                    after_state
-                        .borrow_graph
-                        .add_edge(Node::Root, Node::Local(*t));
-                }
-            }
-            BorrowGlobal(t, _, _, _) => {
+            BorrowLoc(t, ..) => {
                 if self.local_types[*t].is_mutable_reference() {
                     after_state
                         .borrow_graph
                         .add_edge(Node::Root, Node::Local(*t));
                 }
             }
-            BorrowField(dest, src, _, _) => {
+            BorrowGlobal(t, ..) => {
+                if self.local_types[*t].is_mutable_reference() {
+                    after_state
+                        .borrow_graph
+                        .add_edge(Node::Root, Node::Local(*t));
+                }
+            }
+            BorrowField(dest, src, ..) => {
                 if self.local_types[*src].is_mutable_reference() {
                     after_state.borrow_graph.move_local(*src);
                 }
@@ -338,7 +340,7 @@ impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
                     after_state.borrow_graph.move_local(*src);
                 }
             }
-            Call(dest_vec, _, _, src_vec) => {
+            Call(dest_vec, _, _, _, src_vec) => {
                 let mut dest_mut_refs = dest_vec.clone();
                 dest_mut_refs.retain(|d| self.local_types[*d].is_mutable_reference());
                 let mut src_mut_refs = src_vec.clone();
@@ -356,7 +358,7 @@ impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
                     }
                 }
             }
-            Pop(t) => {
+            Destroy(t) => {
                 after_state.borrow_graph.move_local(*t);
             }
             _ => {

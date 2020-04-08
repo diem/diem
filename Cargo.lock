@@ -4836,7 +4836,9 @@ dependencies = [
  "bytecode-verifier 0.1.0",
  "ir-to-bytecode 0.1.0",
  "libra-types 0.1.0",
+ "num 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "spec-lang 0.0.1",
  "stdlib 0.1.0",
  "vm 0.1.0",
 ]

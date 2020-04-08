@@ -717,38 +717,9 @@ procedure {:inline 1} Not(src: Value) returns (dst: Value)
 
 // Pack and Unpack are auto-generated for each type T
 
-procedure {:inline 1} LdConst(val: int) returns (ret: Value)
-{
-    ret := Integer(val);
-}
 
-procedure {:inline 1} LdAddr(val: int) returns (ret: Value)
-{
-    ret := Address(val);
-}
-
-procedure {:inline 1} LdByteArray(val: ByteArray) returns (ret: Value)
-{
-    ret := ByteArray(val);
-}
-
-procedure {:inline 1} LdStr(val: String) returns (ret: Value)
-{
-    ret := Str(val);
-}
-
-procedure {:inline 1} LdTrue() returns (ret: Value)
-{
-    ret := Boolean(true);
-}
-
-procedure {:inline 1} LdFalse() returns (ret: Value)
-{
-    ret := Boolean(false);
-}
-
-// Transaction builtin instructions
-// --------------------------------
+// Transaction
+// -----------
 
 type {:datatype} Transaction;
 var $txn: Transaction;
@@ -759,35 +730,6 @@ function {:constructor} Transaction(
 
 const some_key: ByteArray;
 
-procedure {:inline 1} GetGasRemaining() returns (ret_gas_remaining: Value)
-{
-  ret_gas_remaining := Integer(gas_remaining#Transaction($txn));
-}
-
-procedure {:inline 1} GetTxnSequenceNumber() returns (ret_sequence_number: Value)
-{
-  ret_sequence_number := Integer(sequence_number#Transaction($txn));
-}
-
-procedure {:inline 1} GetTxnPublicKey() returns (ret_public_key: Value)
-{
-  ret_public_key := ByteArray(public_key#Transaction($txn));
-}
-
-procedure {:inline 1} GetTxnSenderAddress() returns (ret_sender: Value)
-{
-  ret_sender := $TxnSender($txn);
-}
-
-procedure {:inline 1} GetTxnMaxGasUnits() returns (ret_max_gas_units: Value)
-{
-  ret_max_gas_units := Integer(max_gas_units#Transaction($txn));
-}
-
-procedure {:inline 1} GetTxnGasUnitPrice() returns (ret_gas_unit_price: Value)
-{
-  ret_gas_unit_price := Integer(gas_unit_price#Transaction($txn));
-}
 
 // ==================================================================================
 // Native Vector Type

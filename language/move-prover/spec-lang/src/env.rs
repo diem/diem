@@ -22,9 +22,9 @@ use libra_types::language_storage;
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressPoolIndex, CodeOffset, FunctionDefinitionIndex, FunctionHandleIndex, Kind,
-        SignatureIndex, SignatureToken, StructDefinitionIndex, StructFieldInformation,
-        StructHandleIndex,
+        AddressPoolIndex, ByteArrayPoolIndex, CodeOffset, FunctionDefinitionIndex,
+        FunctionHandleIndex, Kind, SignatureIndex, SignatureToken, StructDefinitionIndex,
+        StructFieldInformation, StructHandleIndex,
     },
     views::{
         FunctionDefinitionView, FunctionHandleView, SignatureTokenView, StructDefinitionView,
@@ -907,7 +907,7 @@ impl<'env> ModuleEnv<'env> {
     }
 
     /// Globalizes a list of signatures.
-    fn globalize_signatures(&self, sigs: &[SignatureToken]) -> Vec<Type> {
+    pub fn globalize_signatures(&self, sigs: &[SignatureToken]) -> Vec<Type> {
         sigs.iter()
             .map(|s| self.globalize_signature(s))
             .collect_vec()
@@ -928,6 +928,11 @@ impl<'env> ModuleEnv<'env> {
     pub fn get_address(&self, idx: AddressPoolIndex) -> BigUint {
         let addr = &self.data.module.address_pool()[idx.0 as usize];
         BigUint::from_str_radix(&addr.to_string(), 16).unwrap()
+    }
+
+    /// Gets a byte blob based on a pool index.
+    pub fn get_byte_blob(&self, idx: ByteArrayPoolIndex) -> &[u8] {
+        &self.data.module.byte_array_pool()[idx.0 as usize]
     }
 
     /// Returns specification variables of this module.

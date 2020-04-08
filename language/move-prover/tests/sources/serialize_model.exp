@@ -15,16 +15,3 @@ error:  A postcondition might not hold on this return path.
     =         s2 = <redacted>
     =     at tests/sources/serialize_model.move:27:10: lcs_test1_incorrect
     =     at tests/sources/serialize_model.move:23:5: lcs_test1_incorrect (exit)
-
-error:  A postcondition might not hold on this return path.
-
-    ┌── tests/sources/serialize_model.move:34:9 ───
-    │
- 34 │         ensures result_1[0] < max_u8();
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    │
-    =     at tests/sources/serialize_model.move:23:5: lcs_test1_incorrect (entry)
-    =     at tests/sources/serialize_model.move:25:23: lcs_test1_incorrect
-    =     at tests/sources/serialize_model.move:26:32: lcs_test1_incorrect
-    =     at tests/sources/serialize_model.move:27:10: lcs_test1_incorrect
-    =     at tests/sources/serialize_model.move:23:5: lcs_test1_incorrect (exit)

@@ -15,7 +15,7 @@ use spec_lang::{
 };
 use stackless_bytecode_generator::{
     stackless_bytecode::{
-        StacklessBytecode::{self, *},
+        Bytecode::{self, *},
         TempIndex,
     },
     stackless_bytecode_generator::{StacklessFunction, StacklessModuleGenerator},
@@ -23,9 +23,9 @@ use stackless_bytecode_generator::{
 
 use crate::{
     boogie_helpers::{
-        boogie_field_name, boogie_function_name, boogie_local_type, boogie_struct_name,
-        boogie_struct_type_value, boogie_type_value, boogie_type_values, boogie_var_before_borrow,
-        boogie_well_formed_check, WellFormedMode,
+        boogie_byte_blob, boogie_field_name, boogie_function_name, boogie_local_type,
+        boogie_struct_name, boogie_struct_type_value, boogie_type_value, boogie_type_values,
+        boogie_var_before_borrow, boogie_well_formed_check, WellFormedMode,
     },
     cli::Options,
     code_writer::CodeWriter,
@@ -33,7 +33,9 @@ use crate::{
 };
 use num::Zero;
 use stackless_bytecode_generator::{
-    lifetime_analysis::LifetimeAnalysis, stackless_control_flow_graph::StacklessControlFlowGraph,
+    lifetime_analysis::LifetimeAnalysis,
+    stackless_bytecode::{AssignKind, BinaryOp, BranchCond, Constant, UnaryOp},
+    stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use vm::file_format::CodeOffset;
 
@@ -118,7 +120,7 @@ impl<'env> ModuleTranslator<'env> {
     /// result into the translator.
     fn new(parent: &'env BoogieTranslator, module: ModuleEnv<'env>) -> Self {
         let stackless_bytecode =
-            StacklessModuleGenerator::new(module.get_verified_module()).generate_module();
+            StacklessModuleGenerator::new(&module, module.get_verified_module()).generate_module();
         Self {
             writer: parent.writer,
             options: parent.options,
@@ -530,7 +532,7 @@ impl<'env> ModuleTranslator<'env> {
         let mut before_borrow_counter = 0;
         for bytecode in code.code.iter() {
             match bytecode {
-                Branch(target) | BrTrue(target, _) | BrFalse(target, _) => {
+                Branch(target, _) => {
                     // Track that target requires a label.
                     context.branching_targets.insert(*target);
                 }
@@ -557,7 +559,7 @@ impl<'env> ModuleTranslator<'env> {
                         context.mutable_refs.insert(*dst);
                     }
                 }
-                MoveLoc(dst, src) | StLoc(dst, src) => {
+                Assign(dst, src, AssignKind::Move) | Assign(dst, src, AssignKind::Store) => {
                     // Propagate information from src to dst.
                     if context.mutable_refs.contains(src) {
                         context.mutable_refs.insert(*dst);
@@ -601,7 +603,7 @@ impl<'env> ModuleTranslator<'env> {
         let num_args = func_env.get_parameters().len();
         for i in num_args..code.local_types.len() {
             let local_name = func_env.get_local_name(i);
-            let local_type = &self.module_env.globalize_signature(&code.local_types[i]);
+            let local_type = &code.local_types[i];
             emitln!(
                 self.writer,
                 "var {}: {}; // {}",
@@ -645,7 +647,7 @@ impl<'env> ModuleTranslator<'env> {
         for i in 0..num_args {
             let local_name = func_env.get_local_name(i);
             let local_str = format!("{}", local_name.display(func_env.symbol_pool()));
-            let local_type = &self.module_env.globalize_signature(&code.local_types[i]);
+            let local_type = &code.local_types[i];
             let type_check =
                 boogie_well_formed_check(self.module_env.env, &local_str, local_type, mode);
             emit!(self.writer, &type_check);
@@ -718,7 +720,7 @@ impl<'env> ModuleTranslator<'env> {
         func_env: &FunctionEnv<'_>,
         ctx: &BytecodeContext<'_>,
         offset: u16,
-        bytecode: &StacklessBytecode,
+        bytecode: &Bytecode,
     ) {
         // Set location of this code in the CodeWriter.
         let loc = func_env.get_bytecode_loc(offset);
@@ -807,14 +809,14 @@ impl<'env> ModuleTranslator<'env> {
 
         // Translate the bytecode instruction.
         match bytecode {
-            Branch(target) => {
+            Branch(target, BranchCond::Always) => {
                 // In contrast to other instructions, we need to evaluate invariants BEFORE
                 // the branch.
                 self.enforce_invariants_for_dead_refs(func_env, ctx, offset);
                 invariants_evaluated = true;
                 emitln!(self.writer, "goto Label_{};", target)
             }
-            BrTrue(target, idx) => {
+            Branch(target, BranchCond::True(idx)) => {
                 self.enforce_invariants_for_dead_refs(func_env, ctx, offset);
                 invariants_evaluated = true;
                 emitln!(
@@ -823,7 +825,7 @@ impl<'env> ModuleTranslator<'env> {
                     idx,
                     target)
             }
-            BrFalse(target, idx) => {
+            Branch(target, BranchCond::False(idx)) => {
                 self.enforce_invariants_for_dead_refs(func_env, ctx, offset);
                 invariants_evaluated = true;
                 emitln!(
@@ -832,57 +834,25 @@ impl<'env> ModuleTranslator<'env> {
                     idx,
                     target)
             }
-            MoveLoc(dest, src) => {
+            Assign(dest, src, _) => {
                 if self.get_local_type(func_env, *dest).is_reference() {
                     emitln!(
                         self.writer,
                         "call {} := CopyOrMoveRef({});",
                         str_local(dest),
-                        str_local(&(*src as usize))
-                    );
-                } else {
-                    emitln!(
-                        self.writer,
-                        "call $tmp := CopyOrMoveValue($GetLocal($m, $frame + {}));",
-                        src
-                    );
-                    emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
-                }
-            }
-            CopyLoc(dest, src) => {
-                if self.get_local_type(func_env, *dest).is_reference() {
-                    emitln!(
-                        self.writer,
-                        "call {} := CopyOrMoveRef({});",
-                        str_local(dest),
-                        str_local(&(*src as usize))
-                    )
-                } else {
-                    emitln!(
-                        self.writer,
-                        "call $tmp := CopyOrMoveValue($GetLocal($m, $frame + {}));",
-                        src
-                    );
-                    emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
-                }
-            }
-            StLoc(dest, src) => {
-                if self.get_local_type(func_env, *dest as usize).is_reference() {
-                    let dest = *dest as usize;
-                    emitln!(
-                        self.writer,
-                        "call {} := CopyOrMoveRef({});",
-                        str_local(&dest),
                         str_local(src)
                     );
-                    emitln!(self.writer, &track_local(dest, str_local(&dest).as_str()));
+                    let track = track_local(*dest, str_local(dest).as_str());
+                    if !track.is_empty() {
+                        emitln!(self.writer, &track);
+                    }
                 } else {
                     emitln!(
                         self.writer,
                         "call $tmp := CopyOrMoveValue($GetLocal($m, $frame + {}));",
                         src
                     );
-                    emitln!(self.writer, &update_and_track_local(*dest as usize, "$tmp"));
+                    emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
                 }
             }
             BorrowLoc(dest, src) => {
@@ -932,8 +902,8 @@ impl<'env> ModuleTranslator<'env> {
                 str_local(dest),
                 str_local(src),
             ),
-            Call(dests, callee_index, type_actuals, args) => {
-                let callee_env = self.module_env.get_called_function(*callee_index);
+            Call(dests, mid, fid, type_actuals, args) => {
+                let callee_env = self.module_env.env.get_module(*mid).into_function(*fid);
                 // If this is a call to a function from another module, assume the module invariants
                 // if any. This is correct because module invariants are guaranteed to hold whenever
                 // code outside of the module is executed.
@@ -981,10 +951,7 @@ impl<'env> ModuleTranslator<'env> {
                 let mut dest_type_assumptions = vec![];
                 let mut tmp_assignments = vec![];
 
-                args_str.push_str(&boogie_type_values(
-                    func_env.module_env.env,
-                    &func_env.module_env.get_type_actuals(*type_actuals),
-                ));
+                args_str.push_str(&boogie_type_values(func_env.module_env.env, type_actuals));
                 if !args_str.is_empty() && !args.is_empty() {
                     args_str.push_str(", ");
                 }
@@ -1052,8 +1019,8 @@ impl<'env> ModuleTranslator<'env> {
                     self.save_and_enforce_before_update_set(func_env, *idx, *before_idx_set);
                 }
             }
-            Pack(dest, struct_def_index, type_actuals, fields) => {
-                let struct_env = func_env.module_env.get_struct_by_def_idx(*struct_def_index);
+            Pack(dest, mid, sid, type_actuals, fields) => {
+                let struct_env = func_env.module_env.env.get_module(*mid).into_struct(*sid);
                 let effective_dest = self.compute_effective_dest(func_env, ctx.code, offset, *dest);
                 let track_args = if effective_dest < func_env.get_local_count() {
                     format!(
@@ -1065,9 +1032,7 @@ impl<'env> ModuleTranslator<'env> {
                 } else {
                     "0, 0, 0".to_string()
                 };
-                let args_str = func_env
-                    .module_env
-                    .get_type_actuals(*type_actuals)
+                let args_str = type_actuals
                     .iter()
                     .map(|s| boogie_type_value(self.module_env.env, s))
                     .chain(
@@ -1085,8 +1050,8 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            Unpack(dests, struct_def_index, _, src) => {
-                let struct_env = &func_env.module_env.get_struct_by_def_idx(*struct_def_index);
+            Unpack(dests, mid, sid, _, src) => {
+                let struct_env = func_env.module_env.env.get_module(*mid).into_struct(*sid);
                 let mut dests_str = String::new();
                 let mut tmp_assignments = vec![];
                 for dest in dests.iter() {
@@ -1106,15 +1071,15 @@ impl<'env> ModuleTranslator<'env> {
                     self.writer,
                     "call {} := {}_unpack($GetLocal($m, $frame + {}));",
                     dests_str,
-                    boogie_struct_name(struct_env),
+                    boogie_struct_name(&struct_env),
                     src,
                 );
                 for s in &tmp_assignments {
                     emitln!(self.writer, s);
                 }
             }
-            BorrowField(dest, src, struct_def_index, field_offset) => {
-                let struct_env = self.module_env.get_struct_by_def_idx(*struct_def_index);
+            BorrowField(dest, src, mid, sid, field_offset) => {
+                let struct_env = func_env.module_env.env.get_module(*mid).into_struct(*sid);
                 let field_env = &struct_env.get_field_by_offset(*field_offset);
                 emitln!(
                     self.writer,
@@ -1133,13 +1098,9 @@ impl<'env> ModuleTranslator<'env> {
                     )
                 );
             }
-            Exists(dest, addr, struct_def_index, type_actuals) => {
-                let resource_type = boogie_struct_type_value(
-                    self.module_env.env,
-                    self.module_env.get_id(),
-                    self.module_env.get_struct_id(*struct_def_index),
-                    &self.module_env.get_type_actuals(*type_actuals),
-                );
+            Exists(dest, addr, mid, sid, type_actuals) => {
+                let resource_type =
+                    boogie_struct_type_value(self.module_env.env, *mid, *sid, type_actuals);
                 emitln!(
                     self.writer,
                     "call $tmp := Exists($GetLocal($m, $frame + {}), {});",
@@ -1148,13 +1109,9 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            BorrowGlobal(dest, addr, struct_def_index, type_actuals) => {
-                let resource_type = boogie_struct_type_value(
-                    self.module_env.env,
-                    self.module_env.get_id(),
-                    self.module_env.get_struct_id(*struct_def_index),
-                    &self.module_env.get_type_actuals(*type_actuals),
-                );
+            BorrowGlobal(dest, addr, mid, sid, type_actuals) => {
+                let resource_type =
+                    boogie_struct_type_value(self.module_env.env, *mid, *sid, type_actuals);
                 emitln!(
                     self.writer,
                     "call {} := BorrowGlobal($GetLocal($m, $frame + {}), {});",
@@ -1175,13 +1132,9 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, &propagate_abort());
                 save_borrowed_value(ctx, dest);
             }
-            MoveToSender(src, struct_def_index, type_actuals) => {
-                let resource_type = boogie_struct_type_value(
-                    self.module_env.env,
-                    self.module_env.get_id(),
-                    self.module_env.get_struct_id(*struct_def_index),
-                    &self.module_env.get_type_actuals(*type_actuals),
-                );
+            MoveToSender(src, mid, sid, type_actuals) => {
+                let resource_type =
+                    boogie_struct_type_value(self.module_env.env, *mid, *sid, type_actuals);
                 emitln!(
                     self.writer,
                     "call MoveToSender({}, $GetLocal($m, $frame + {}));",
@@ -1190,13 +1143,9 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emitln!(self.writer, &propagate_abort());
             }
-            MoveFrom(dest, src, struct_def_index, type_actuals) => {
-                let resource_type = boogie_struct_type_value(
-                    self.module_env.env,
-                    self.module_env.get_id(),
-                    self.module_env.get_struct_id(*struct_def_index),
-                    &self.module_env.get_type_actuals(*type_actuals),
-                );
+            MoveFrom(dest, src, mid, sid, type_actuals) => {
+                let resource_type =
+                    boogie_struct_type_value(self.module_env.env, *mid, *sid, type_actuals);
                 emitln!(
                     self.writer,
                     "call $tmp := MoveFrom($GetLocal($m, $frame + {}), {});",
@@ -1231,27 +1180,21 @@ impl<'env> ModuleTranslator<'env> {
                 }
                 emitln!(self.writer, "return;");
             }
-            LdTrue(idx) => {
-                emitln!(self.writer, "call $tmp := LdTrue();");
+            Load(idx, c) => {
+                let value = match c {
+                    Constant::Bool(true) => "Boolean(true)".to_string(),
+                    Constant::Bool(false) => "Boolean(false)".to_string(),
+                    Constant::U8(num) => format!("Integer({})", num),
+                    Constant::U64(num) => format!("Integer({})", num),
+                    Constant::U128(num) => format!("Integer({})", num),
+                    Constant::Address(val) => format!("Address({})", val),
+                    Constant::TxnSenderAddress => "$TxnSender($txn)".to_string(),
+                    Constant::ByteArray(val) => boogie_byte_blob(val),
+                };
+                emitln!(self.writer, "$tmp := {};", value);
                 emitln!(self.writer, &update_and_track_local(*idx, "$tmp"));
             }
-            LdFalse(idx) => {
-                emitln!(self.writer, "call $tmp := LdFalse();");
-                emitln!(self.writer, &update_and_track_local(*idx, "$tmp"));
-            }
-            LdU8(idx, num) => {
-                emitln!(self.writer, "call $tmp := LdConst({});", num);
-                emitln!(self.writer, &update_and_track_local(*idx, "$tmp"));
-            }
-            LdU64(idx, num) => {
-                emitln!(self.writer, "call $tmp := LdConst({});", num);
-                emitln!(self.writer, &update_and_track_local(*idx, "$tmp"));
-            }
-            LdU128(idx, num) => {
-                emitln!(self.writer, "call $tmp := LdConst({});", num);
-                emitln!(self.writer, &update_and_track_local(*idx, "$tmp"));
-            }
-            CastU8(dest, src) => {
+            Unary(UnaryOp::CastU8, dest, src) => {
                 emitln!(
                     self.writer,
                     "call $tmp := CastU8($GetLocal($m, $frame + {}));",
@@ -1260,7 +1203,7 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, &propagate_abort());
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            CastU64(dest, src) => {
+            Unary(UnaryOp::CastU64, dest, src) => {
                 emitln!(
                     self.writer,
                     "call $tmp := CastU64($GetLocal($m, $frame + {}));",
@@ -1269,7 +1212,7 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, &propagate_abort());
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            CastU128(dest, src) => {
+            Unary(UnaryOp::CastU128, dest, src) => {
                 emitln!(
                     self.writer,
                     "call $tmp := CastU128($GetLocal($m, $frame + {}));",
@@ -1278,12 +1221,7 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, &propagate_abort());
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            LdAddr(idx, addr_idx) => {
-                let addr_int = self.module_env.get_address(*addr_idx);
-                emitln!(self.writer, "call $tmp := LdAddr({});", addr_int);
-                emitln!(self.writer, &update_and_track_local(*idx, "$tmp"));
-            }
-            Not(dest, operand) => {
+            Unary(UnaryOp::Not, dest, operand) => {
                 emitln!(
                     self.writer,
                     "call $tmp := Not($GetLocal($m, $frame + {}));",
@@ -1291,7 +1229,7 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            Add(dest, op1, op2) => {
+            Binary(BinaryOp::Add, dest, op1, op2) => {
                 let add_type = match self.get_local_type(func_env, *dest) {
                     Type::Primitive(PrimitiveType::U8) => "U8",
                     Type::Primitive(PrimitiveType::U64) => "U64",
@@ -1308,7 +1246,7 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, &propagate_abort());
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            Sub(dest, op1, op2) => {
+            Binary(BinaryOp::Sub, dest, op1, op2) => {
                 emitln!(
                     self.writer,
                     "call $tmp := Sub($GetLocal($m, $frame + {}), $GetLocal($m, $frame + {}));",
@@ -1318,7 +1256,7 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, &propagate_abort());
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            Mul(dest, op1, op2) => {
+            Binary(BinaryOp::Mul, dest, op1, op2) => {
                 let mul_type = match self.get_local_type(func_env, *dest) {
                     Type::Primitive(PrimitiveType::U8) => "U8",
                     Type::Primitive(PrimitiveType::U64) => "U64",
@@ -1335,7 +1273,7 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, &propagate_abort());
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            Div(dest, op1, op2) => {
+            Binary(BinaryOp::Div, dest, op1, op2) => {
                 emitln!(
                     self.writer,
                     "call $tmp := Div($GetLocal($m, $frame + {}), $GetLocal($m, $frame + {}));",
@@ -1345,7 +1283,7 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, &propagate_abort());
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            Mod(dest, op1, op2) => {
+            Binary(BinaryOp::Mod, dest, op1, op2) => {
                 emitln!(
                     self.writer,
                     "call $tmp := Mod($GetLocal($m, $frame + {}), $GetLocal($m, $frame + {}));",
@@ -1355,7 +1293,7 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, &propagate_abort());
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            Lt(dest, op1, op2) => {
+            Binary(BinaryOp::Lt, dest, op1, op2) => {
                 emitln!(
                     self.writer,
                     "call $tmp := Lt($GetLocal($m, $frame + {}), $GetLocal($m, $frame + {}));",
@@ -1364,7 +1302,7 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            Gt(dest, op1, op2) => {
+            Binary(BinaryOp::Gt, dest, op1, op2) => {
                 emitln!(
                     self.writer,
                     "call $tmp := Gt($GetLocal($m, $frame + {}), $GetLocal($m, $frame + {}));",
@@ -1373,7 +1311,7 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            Le(dest, op1, op2) => {
+            Binary(BinaryOp::Le, dest, op1, op2) => {
                 emitln!(
                     self.writer,
                     "call $tmp := Le($GetLocal($m, $frame + {}), $GetLocal($m, $frame + {}));",
@@ -1382,7 +1320,7 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            Ge(dest, op1, op2) => {
+            Binary(BinaryOp::Ge, dest, op1, op2) => {
                 emitln!(
                     self.writer,
                     "call $tmp := Ge($GetLocal($m, $frame + {}), $GetLocal($m, $frame + {}));",
@@ -1391,7 +1329,7 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            Or(dest, op1, op2) => {
+            Binary(BinaryOp::Or, dest, op1, op2) => {
                 emitln!(
                     self.writer,
                     "call $tmp := Or($GetLocal($m, $frame + {}), $GetLocal($m, $frame + {}));",
@@ -1400,7 +1338,7 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            And(dest, op1, op2) => {
+            Binary(BinaryOp::And, dest, op1, op2) => {
                 emitln!(
                     self.writer,
                     "call $tmp := And($GetLocal($m, $frame + {}), $GetLocal($m, $frame + {}));",
@@ -1409,7 +1347,7 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            Eq(dest, op1, op2) => {
+            Binary(BinaryOp::Eq, dest, op1, op2) => {
                 emitln!(
                     self.writer,
                     "$tmp := Boolean(IsEqual($GetLocal($m, $frame + {}), $GetLocal($m, $frame + {})));",
@@ -1418,7 +1356,7 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            Neq(dest, op1, op2) => {
+            Binary(BinaryOp::Neq, dest, op1, op2) => {
                 emitln!(
                     self.writer,
                     "$tmp := Boolean(!IsEqual($GetLocal($m, $frame + {}), $GetLocal($m, $frame + {})));",
@@ -1427,7 +1365,9 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
             }
-            BitOr(_, _, _) | BitAnd(_, _, _) | Xor(_, _, _) => {
+            Binary(BinaryOp::BitOr, ..)
+            | Binary(BinaryOp::BitAnd, ..)
+            | Binary(BinaryOp::Xor, ..) => {
                 emitln!(
                     self.writer,
                     "// bit operation not supported: {:?}",
@@ -1445,31 +1385,7 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emitln!(self.writer, "goto Label_Abort;")
             }
-            GetGasRemaining(idx) => {
-                emitln!(self.writer, "call $tmp := GetGasRemaining();");
-                emitln!(self.writer, &update_and_track_local(*idx, "$tmp"));
-            }
-            GetTxnSequenceNumber(idx) => {
-                emitln!(self.writer, "call $tmp := GetTxnSequenceNumber();");
-                emitln!(self.writer, &update_and_track_local(*idx, "$tmp"));
-            }
-            GetTxnPublicKey(idx) => {
-                emitln!(self.writer, "call $tmp := GetTxnPublicKey();");
-                emitln!(self.writer, &update_and_track_local(*idx, "$tmp"));
-            }
-            GetTxnSenderAddress(idx) => {
-                emitln!(self.writer, "call $tmp := GetTxnSenderAddress();");
-                emitln!(self.writer, &update_and_track_local(*idx, "$tmp"));
-            }
-            GetTxnMaxGasUnits(idx) => {
-                emitln!(self.writer, "call $tmp := GetTxnMaxGasUnits();");
-                emitln!(self.writer, &update_and_track_local(*idx, "$tmp"));
-            }
-            GetTxnGasUnitPrice(idx) => {
-                emitln!(self.writer, "call $tmp := GetTxnGasUnitPrice();");
-                emitln!(self.writer, &update_and_track_local(*idx, "$tmp"));
-            }
-            Pop(..) => {}
+            Destroy(..) => {}
             _ => emitln!(self.writer, "// unimplemented instruction: {:?}", bytecode),
         }
 
@@ -1578,18 +1494,10 @@ impl<'env> ModuleTranslator<'env> {
     ) -> usize {
         if dest >= func_env.get_local_count() && offset as usize + 1 < code.code.len() {
             if let Pack(temp_dest, ..) = &code.code[offset as usize] {
-                match &code.code[offset as usize + 1] {
-                    MoveLoc(effective_dest, src) | CopyLoc(effective_dest, src) => {
-                        if *src as usize == *temp_dest {
-                            return *effective_dest;
-                        }
+                if let Assign(effective_dest, src, _) = &code.code[offset as usize + 1] {
+                    if *src == *temp_dest {
+                        return *effective_dest;
                     }
-                    StLoc(effective_dest, src) => {
-                        if *src == *temp_dest {
-                            return *effective_dest as usize;
-                        }
-                    }
-                    _ => {}
                 }
             }
         }
@@ -1598,9 +1506,7 @@ impl<'env> ModuleTranslator<'env> {
 
     /// Looks up the type of a local in the stackless bytecode representation.
     fn get_local_type(&self, func_env: &FunctionEnv<'_>, local_idx: usize) -> Type {
-        self.module_env.globalize_signature(
-            &self.stackless_bytecode[func_env.get_def_idx().0 as usize].local_types[local_idx],
-        )
+        self.stackless_bytecode[func_env.get_def_idx().0 as usize].local_types[local_idx].clone()
     }
 
     /// Determines whether this type has after-update invariants.
