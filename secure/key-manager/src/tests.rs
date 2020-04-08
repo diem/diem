@@ -74,10 +74,11 @@ fn setup_secure_storage(
 
 impl Node {
     fn setup(config: &NodeConfig) -> Self {
-        let storage = storage_service::init_libra_db(config);
+        let (storage, db_reader_writer) = storage_service::init_libra_db(config);
         let storage_service =
             storage_service::start_storage_service_with_db(&config, storage.clone());
-        maybe_bootstrap_db::<LibraVM>(config).expect("Db-bootstrapper should not fail.");
+        maybe_bootstrap_db::<LibraVM>(db_reader_writer, config)
+            .expect("Db-bootstrapper should not fail.");
         let executor = Executor::new(SyncStorageClient::new(&config.storage.address).into());
         let libra = TestLibraInterface {
             queued_transactions: Arc::new(RefCell::new(Vec::new())),

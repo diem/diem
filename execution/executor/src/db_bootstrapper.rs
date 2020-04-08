@@ -10,13 +10,10 @@ use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
 use libra_logger::prelude::*;
 use libra_types::ledger_info::LedgerInfoWithSignatures;
 use libra_vm::VMExecutor;
-use storage_client::SyncStorageClient;
-use storage_interface::DbReader;
+use storage_interface::DbReaderWriter;
 
-pub fn maybe_bootstrap_db<V: VMExecutor>(config: &NodeConfig) -> Result<()> {
-    let db = SyncStorageClient::new(&config.storage.address);
-
-    let startup_info_opt = db.get_startup_info()?;
+pub fn maybe_bootstrap_db<V: VMExecutor>(db: DbReaderWriter, config: &NodeConfig) -> Result<()> {
+    let startup_info_opt = db.reader.get_startup_info()?;
     if startup_info_opt.is_some() {
         return Ok(());
     }
@@ -28,7 +25,7 @@ pub fn maybe_bootstrap_db<V: VMExecutor>(config: &NodeConfig) -> Result<()> {
         .expect("failed to load genesis transaction!")
         .clone();
 
-    let mut executor = Executor::<V>::new_on_unbootstrapped_db(db.into());
+    let mut executor = Executor::<V>::new_on_unbootstrapped_db(db);
 
     // Create a block with genesis_txn being the only transaction. Execute it then commit it
     // immediately.

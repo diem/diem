@@ -5,6 +5,7 @@ use crate::{test_helper::arb_blocks_to_commit, LibraDB};
 use anyhow::Result;
 use libra_temppath::TempPath;
 use proptest::prelude::*;
+use storage_interface::DbWriter;
 
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]

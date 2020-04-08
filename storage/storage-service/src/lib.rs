@@ -21,7 +21,7 @@ use libra_types::proto::types::{
 };
 use libradb::LibraDB;
 use std::{convert::TryFrom, path::Path, sync::Arc};
-use storage_interface::DbReader;
+use storage_interface::{DbReader, DbReaderWriter, DbWriter};
 use storage_proto::proto::storage::{
     storage_server::{Storage, StorageServer},
     BackupAccountStateRequest, BackupAccountStateResponse, BackupTransactionInfoRequest,
@@ -35,8 +35,8 @@ use storage_proto::proto::storage::{
 };
 use tokio::runtime::Runtime;
 
-pub fn init_libra_db(config: &NodeConfig) -> Arc<LibraDB> {
-    Arc::new(LibraDB::new(&config.storage.dir()))
+pub fn init_libra_db(config: &NodeConfig) -> (Arc<LibraDB>, DbReaderWriter) {
+    DbReaderWriter::wrap(LibraDB::new(&config.storage.dir()))
 }
 
 /// Starts storage service with a given LibraDB

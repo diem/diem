@@ -72,7 +72,7 @@ use once_cell::sync::Lazy;
 use prometheus::{IntCounter, IntGauge, IntGaugeVec};
 use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
 use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
-use storage_interface::DbReader;
+use storage_interface::{DbReader, DbWriter};
 use storage_proto::{StartupInfo, TreeState};
 
 static OP_COUNTER: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("storage"));
@@ -224,83 +224,6 @@ impl LibraDB {
             end_epoch,
             MAX_NUM_EPOCH_CHANGE_LEDGER_INFO,
         )
-    }
-
-    /// Persist transactions. Called by the executor module when either syncing nodes or committing
-    /// blocks during normal operation.
-    ///
-    /// `first_version` is the version of the first transaction in `txns_to_commit`.
-    /// When `ledger_info_with_sigs` is provided, verify that the transaction accumulator root hash
-    /// it carries is generated after the `txns_to_commit` are applied.
-    /// Note that even if `txns_to_commit` is empty, `frist_version` is checked to be
-    /// `ledger_info_with_sigs.ledger_info.version + 1` if `ledger_info_with_sigs` is not `None`.
-    pub fn save_transactions(
-        &self,
-        txns_to_commit: &[TransactionToCommit],
-        first_version: Version,
-        ledger_info_with_sigs: Option<&LedgerInfoWithSignatures>,
-    ) -> Result<()> {
-        let num_txns = txns_to_commit.len() as u64;
-        // ledger_info_with_sigs could be None if we are doing state synchronization. In this case
-        // txns_to_commit should not be empty. Otherwise it is okay to commit empty blocks.
-        ensure!(
-            ledger_info_with_sigs.is_some() || num_txns > 0,
-            "txns_to_commit is empty while ledger_info_with_sigs is None.",
-        );
-
-        if let Some(x) = ledger_info_with_sigs {
-            let claimed_last_version = x.ledger_info().version();
-            ensure!(
-                claimed_last_version + 1 == first_version + num_txns,
-                "Transaction batch not applicable: first_version {}, num_txns {}, last_version {}",
-                first_version,
-                num_txns,
-                claimed_last_version,
-            );
-        }
-
-        // Gather db mutations to `batch`.
-        let mut cs = ChangeSet::new();
-
-        let new_root_hash = self.save_transactions_impl(txns_to_commit, first_version, &mut cs)?;
-
-        // If expected ledger info is provided, verify result root hash and save the ledger info.
-        if let Some(x) = ledger_info_with_sigs {
-            let expected_root_hash = x.ledger_info().transaction_accumulator_hash();
-            ensure!(
-                new_root_hash == expected_root_hash,
-                "Root hash calculated doesn't match expected. {:?} vs {:?}",
-                new_root_hash,
-                expected_root_hash,
-            );
-
-            self.ledger_store.put_ledger_info(x, &mut cs)?;
-        }
-
-        // Persist.
-        let (sealed_cs, counters) = self.seal_change_set(first_version, num_txns, cs)?;
-        self.commit(sealed_cs)?;
-        // Once everything is successfully persisted, update the latest in-memory ledger info.
-        if let Some(x) = ledger_info_with_sigs {
-            self.ledger_store.set_latest_ledger_info(x.clone());
-        }
-
-        // Only increment counter if commit succeeds and there are at least one transaction written
-        // to the storage. That's also when we'd inform the pruner thread to work.
-        if num_txns > 0 {
-            let last_version = first_version + num_txns - 1;
-            OP_COUNTER.inc_by("committed_txns", num_txns as usize);
-            LIBRA_STORAGE_COMMITTED_TXNS.inc_by(num_txns as i64);
-            OP_COUNTER.set("latest_transaction_version", last_version as usize);
-            LIBRA_STORAGE_LATEST_TXN_VERSION.set(last_version as i64);
-            counters
-                .expect("Counters should be bumped with transactions being saved.")
-                .bump_op_counters();
-
-            self.pruner.wake(last_version);
-        }
-
-        Ok(())
     }
 
     pub fn get_transaction_with_proof(
@@ -915,6 +838,82 @@ impl DbReader for LibraDB {
     fn get_latest_state_root(&self) -> Result<(Version, HashValue)> {
         let (version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
         Ok((version, txn_info.state_root_hash()))
+    }
+}
+
+impl DbWriter for LibraDB {
+    /// `first_version` is the version of the first transaction in `txns_to_commit`.
+    /// When `ledger_info_with_sigs` is provided, verify that the transaction accumulator root hash
+    /// it carries is generated after the `txns_to_commit` are applied.
+    /// Note that even if `txns_to_commit` is empty, `frist_version` is checked to be
+    /// `ledger_info_with_sigs.ledger_info.version + 1` if `ledger_info_with_sigs` is not `None`.
+    fn save_transactions(
+        &self,
+        txns_to_commit: &[TransactionToCommit],
+        first_version: Version,
+        ledger_info_with_sigs: Option<&LedgerInfoWithSignatures>,
+    ) -> Result<()> {
+        let num_txns = txns_to_commit.len() as u64;
+        // ledger_info_with_sigs could be None if we are doing state synchronization. In this case
+        // txns_to_commit should not be empty. Otherwise it is okay to commit empty blocks.
+        ensure!(
+            ledger_info_with_sigs.is_some() || num_txns > 0,
+            "txns_to_commit is empty while ledger_info_with_sigs is None.",
+        );
+
+        if let Some(x) = ledger_info_with_sigs {
+            let claimed_last_version = x.ledger_info().version();
+            ensure!(
+                claimed_last_version + 1 == first_version + num_txns,
+                "Transaction batch not applicable: first_version {}, num_txns {}, last_version {}",
+                first_version,
+                num_txns,
+                claimed_last_version,
+            );
+        }
+
+        // Gather db mutations to `batch`.
+        let mut cs = ChangeSet::new();
+
+        let new_root_hash = self.save_transactions_impl(txns_to_commit, first_version, &mut cs)?;
+
+        // If expected ledger info is provided, verify result root hash and save the ledger info.
+        if let Some(x) = ledger_info_with_sigs {
+            let expected_root_hash = x.ledger_info().transaction_accumulator_hash();
+            ensure!(
+                new_root_hash == expected_root_hash,
+                "Root hash calculated doesn't match expected. {:?} vs {:?}",
+                new_root_hash,
+                expected_root_hash,
+            );
+
+            self.ledger_store.put_ledger_info(x, &mut cs)?;
+        }
+
+        // Persist.
+        let (sealed_cs, counters) = self.seal_change_set(first_version, num_txns, cs)?;
+        self.commit(sealed_cs)?;
+        // Once everything is successfully persisted, update the latest in-memory ledger info.
+        if let Some(x) = ledger_info_with_sigs {
+            self.ledger_store.set_latest_ledger_info(x.clone());
+        }
+
+        // Only increment counter if commit succeeds and there are at least one transaction written
+        // to the storage. That's also when we'd inform the pruner thread to work.
+        if num_txns > 0 {
+            let last_version = first_version + num_txns - 1;
+            OP_COUNTER.inc_by("committed_txns", num_txns as usize);
+            LIBRA_STORAGE_COMMITTED_TXNS.inc_by(num_txns as i64);
+            OP_COUNTER.set("latest_transaction_version", last_version as usize);
+            LIBRA_STORAGE_LATEST_TXN_VERSION.set(last_version as i64);
+            counters
+                .expect("Counters should be bumped with transactions being saved.")
+                .bump_op_counters();
+
+            self.pruner.wake(last_version);
+        }
+
+        Ok(())
     }
 }
 

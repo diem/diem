@@ -16,7 +16,7 @@ use libra_vm::LibraVM;
 use rand::SeedableRng;
 use std::{sync::Arc, u64};
 use storage_client::SyncStorageClient;
-use storage_service::start_storage_service;
+use storage_service::{init_libra_db, start_storage_service_with_db};
 use tokio::runtime::Runtime;
 use transaction_builder::encode_transfer_script;
 
@@ -28,8 +28,10 @@ struct TestValidator {
 impl TestValidator {
     fn new(config: &NodeConfig) -> (Self, Runtime) {
         let rt = Runtime::new().unwrap();
-        let storage = start_storage_service(&config);
-        maybe_bootstrap_db::<LibraVM>(config).expect("Db-bootstrapper should not fail.");
+        let (arc_db, db_reader_writer) = init_libra_db(config);
+        maybe_bootstrap_db::<LibraVM>(db_reader_writer, config)
+            .expect("Db-bootstrapper should not fail.");
+        let storage = start_storage_service_with_db(&config, arc_db);
 
         // Create another client for the vm_validator since the one used for the executor will be
         // run on another runtime which will be dropped before this function returns.
