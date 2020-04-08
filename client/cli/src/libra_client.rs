@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::AccountData;
-use anyhow::{bail, ensure, format_err, Error, Result};
+use anyhow::{bail, ensure, format_err, Result};
 use libra_json_rpc::{
     errors::JsonRpcError,
+    get_response_from_batch, process_batch_response,
     views::{
-        AccountStateWithProofView, AccountView, BytesView, EventView, StateProofView,
-        TransactionView,
+        AccountStateWithProofView, AccountView, BlockMetadata, BytesView, EventView,
+        ResponseAsView, StateProofView, TransactionView,
     },
+    JsonRpcBatch, JsonRpcResponse,
 };
 use libra_logger::prelude::*;
 use libra_types::{
@@ -23,7 +25,6 @@ use libra_types::{
     vm_error::StatusCode,
     waypoint::Waypoint,
 };
-use rand::Rng;
 use reqwest::{
     blocking::{Client, ClientBuilder},
     Url,
@@ -70,125 +71,26 @@ impl JsonRpcClient {
         })
     }
 
-    /// Sends JSON request `request`, performs basic checks on the payload, and returns Ok(`result`),
-    /// where `result` is the payload under the key "result" in the JSON RPC response
-    /// If there is an error payload in the JSON RPC response, throw an Err with message describing the error
-    /// payload
-    pub fn send_libra_request(
-        &mut self,
-        method: String,
-        params: Vec<serde_json::Value>,
-    ) -> Result<serde_json::Value> {
-        let id: u64 = rand::thread_rng().gen();
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params,
-            "id": id,
-        });
+    /// Sends a JSON RPC batched request.
+    /// Returns a vector of responses s.t. response order matches the request order
+    pub fn execute(&mut self, batch: JsonRpcBatch) -> Result<Vec<Result<JsonRpcResponse>>> {
+        if batch.requests.is_empty() {
+            return Ok(vec![]);
+        }
+        let request = batch.json_request();
 
+        //retry send
         let response = self
             .send_with_retry(request)?
             .error_for_status()
             .map_err(|e| format_err!("Server returned error: {:?}", e))?;
 
-        // check payload
-        let data: serde_json::Value = response.json()?;
-        let (response_id, result) = Self::process_single_response(data)?;
-
-        // check ID
+        let response = process_batch_response(batch.clone(), response.json()?)?;
         ensure!(
-            response_id == id,
-            "JSON RPC response ID {} does not match request ID {}",
-            response_id,
-            id
+            batch.requests.len() == response.len(),
+            "received unexpected number of responses in batch"
         );
-
-        Ok(result)
-    }
-
-    /// processes a single JSON RPC response
-    fn process_single_response(response: serde_json::Value) -> Result<(u64, serde_json::Value)> {
-        // check JSON RPC protocol
-        let json_rpc_protocol = response.get("jsonrpc");
-        ensure!(
-            json_rpc_protocol == Some(&serde_json::Value::String("2.0".to_string())),
-            "JSON RPC response with incorrect protocol: {:?}",
-            json_rpc_protocol
-        );
-
-        if let Some(error) = response.get("error") {
-            let json_error: JsonRpcError = serde_json::from_value(error.clone())?;
-            return Err(Error::new(json_error));
-        }
-
-        if let Some(result) = response.get("result") {
-            let response_id: u64 = serde_json::from_value(response.get("id").unwrap().clone())?;
-            Ok((response_id, result.clone()))
-        } else {
-            bail!("Received JSON RPC response with no result payload");
-        }
-    }
-
-    /// Sends a batch JSON RPC request.
-    /// Returns a vector of responses s.t. response order matches the request order
-    /// Throws error if any of the responses are not valid JSON RPC responses or any of the valid JSON RPC responses
-    /// contain an `error` payload
-    pub fn send_libra_batch_request(
-        &mut self,
-        batch_requests: Vec<(String, serde_json::Value)>,
-    ) -> Result<Vec<serde_json::Value>> {
-        if batch_requests.is_empty() {
-            return Ok(vec![]);
-        }
-
-        let mut req_id: u64 = 0;
-        // convert requests to JSON
-        let request = batch_requests
-            .into_iter()
-            .map(|(method, params)| {
-                req_id += 1;
-                let request = serde_json::json!({
-                    "jsonrpc": "2.0",
-                    "method": method,
-                    "params": params,
-                    "id": req_id,
-                });
-                request
-            })
-            .collect();
-
-        //retry send
-        let response = self
-            .send_with_retry(serde_json::Value::Array(request))?
-            .error_for_status()
-            .map_err(|e| format_err!("Server returned error: {:?}", e))?;
-
-        // basic process payload
-        let mut processed_responses = vec![];
-        match response.json()? {
-            serde_json::Value::Array(responses) => {
-                for response in responses {
-                    let (id, result) = Self::process_single_response(response)?;
-                    // check ID
-                    ensure!(
-                        0 < id && id <= req_id,
-                        "Unexpected JSON RPC response ID {:?}",
-                        id
-                    );
-
-                    processed_responses.push((id, result));
-                }
-            }
-            _ => bail!("invalid JSON RPC server response format"),
-        }
-
-        // sort response by ID
-        processed_responses.sort_by_key(|(idx, _result)| *idx);
-        Ok(processed_responses
-            .into_iter()
-            .map(|(_idx, result)| result)
-            .collect())
+        Ok(response)
     }
 
     // send with retry
@@ -243,21 +145,21 @@ impl LibraClient {
         transaction: SignedTransaction,
     ) -> Result<()> {
         // form request
-        let payload = hex::encode(lcs::to_bytes(&transaction).unwrap());
-        let params = vec![serde_json::json!(payload)];
+        let mut batch = JsonRpcBatch::new();
+        batch.add_submit_request(transaction)?;
 
-        match self.client.send_libra_request("submit".to_string(), params) {
-            Ok(result) => {
-                ensure!(
-                    result == serde_json::Value::Null,
-                    "Received unexpected result payload from txn submission: {:?}",
-                    result
-                );
-                if let Some(sender_account) = sender_account_opt {
-                    // Bump up sequence_number if transaction is accepted.
-                    sender_account.sequence_number += 1;
+        let responses = self.client.execute(batch)?;
+        match get_response_from_batch(0, &responses)? {
+            Ok(response) => {
+                if response == &JsonRpcResponse::SubmissionResponse {
+                    if let Some(sender_account) = sender_account_opt {
+                        // Bump up sequence_number if transaction is accepted.
+                        sender_account.sequence_number += 1;
+                    }
+                    Ok(())
+                } else {
+                    bail!("Received non-submit response payload: {:?}", response)
                 }
-                Ok(())
             }
             Err(e) => {
                 if let Some(error) = e.downcast_ref::<JsonRpcError>() {
@@ -265,6 +167,7 @@ impl LibraClient {
                     if let Some(vm_error) = error.get_vm_error() {
                         if vm_error.major_status == StatusCode::SEQUENCE_NUMBER_TOO_OLD {
                             if let Some(sender_account) = sender_account_opt {
+                                // update sender's sequence number if too old
                                 sender_account.sequence_number =
                                     self.get_sequence_number(sender_account.address)?;
                             }
@@ -276,32 +179,30 @@ impl LibraClient {
         }
     }
 
-    // Retrieves and
-    // - If `with_state_change`, will also retrieve state proof from node and update trusted_state accordingly
+    /// Retrieves account state
+    /// - If `with_state_proof`, will also retrieve state proof from node and update trusted_state accordingly
     pub fn get_account_state(
         &mut self,
         account: AccountAddress,
         with_state_proof: bool,
     ) -> Result<(Option<AccountView>, Version)> {
-        let method = "get_account_state".to_string();
-        let params = vec![serde_json::json!(account)];
+        let client_version = self.trusted_state.latest_version();
+        let mut batch = JsonRpcBatch::new();
+        batch.add_get_account_state_request(account);
+        if with_state_proof {
+            batch.add_get_state_proof_request(client_version);
+        }
+        let responses = self.client.execute(batch)?;
 
-        let response = if with_state_proof {
-            self.get_with_state_proof(method, serde_json::json!(params))
-        } else {
-            self.client.send_libra_request(method, params)
-        };
+        if with_state_proof {
+            let state_proof = get_response_from_batch(1, &responses)?.as_ref();
+            self.process_state_proof_response(state_proof)?;
+        }
 
-        match response {
+        match get_response_from_batch(0, &responses)? {
             Ok(result) => {
-                let account_view = match result {
-                    serde_json::Value::Null => None,
-                    _ => {
-                        let account_view: AccountView = serde_json::from_value(result)?;
-                        Some(account_view)
-                    }
-                };
-                Ok((account_view, self.trusted_state.latest_version()))
+                let account_view = AccountView::optional_from_response(result.clone())?;
+                Ok((account_view, client_version))
             }
             Err(e) => bail!(
                 "Failed to get account state for account address {} with error: {:?}",
@@ -317,36 +218,46 @@ impl LibraClient {
         start: u64,
         limit: u64,
     ) -> Result<Vec<EventView>> {
-        let params = vec![
-            serde_json::json!(event_key),
-            serde_json::json!(start),
-            serde_json::json!(limit),
-        ];
+        let mut batch = JsonRpcBatch::new();
+        batch.add_get_events_request(event_key, start, limit);
+        let responses = self.client.execute(batch)?;
 
-        match self
-            .client
-            .send_libra_request("get_events".to_string(), params)
-        {
-            Ok(result) => {
-                let events: Vec<EventView> = serde_json::from_value(result)?;
-                Ok(events)
-            }
+        match get_response_from_batch(0, &responses)? {
+            Ok(resp) => Ok(EventView::vec_from_response(resp.clone())?),
             Err(e) => bail!("Failed to get events with error: {:?}", e),
         }
     }
 
-    pub fn get_state_proof(&mut self) -> Result<LedgerInfoWithSignatures> {
-        let client_version = self.trusted_state.latest_version();
-        match self.client.send_libra_request(
-            "get_state_proof".to_string(),
-            vec![serde_json::json!(client_version)],
-        ) {
-            Ok(response) => {
-                let proof: StateProofView = serde_json::from_value(response)?;
-                let li: LedgerInfoWithSignatures =
-                    lcs::from_bytes(&proof.ledger_info_with_signatures.clone().into_bytes()?)?;
-                self.verify_state_proof(proof)?;
-                Ok(li)
+    /// Gets the block metadata
+    pub fn get_metadata(&mut self) -> Result<BlockMetadata> {
+        let mut batch = JsonRpcBatch::new();
+        batch.add_get_metadata_request();
+        let responses = self.client.execute(batch)?;
+
+        match get_response_from_batch(0, &responses)? {
+            Ok(resp) => Ok(BlockMetadata::from_response(resp.clone())?),
+            Err(e) => bail!("Failed to get block metadata with error: {:?}", e),
+        }
+    }
+
+    /// Retrieves and checks the state proof
+    pub fn get_state_proof(&mut self) -> Result<()> {
+        let mut batch = JsonRpcBatch::new();
+        batch.add_get_state_proof_request(self.trusted_state.latest_version());
+        let responses = self.client.execute(batch)?;
+
+        let state_proof = get_response_from_batch(0, &responses)?.as_ref();
+        self.process_state_proof_response(state_proof)
+    }
+
+    fn process_state_proof_response(
+        &mut self,
+        response: Result<&JsonRpcResponse, &anyhow::Error>,
+    ) -> Result<()> {
+        match response {
+            Ok(resp) => {
+                let state_proof = StateProofView::from_response(resp.clone())?;
+                self.verify_state_proof(state_proof)
             }
             Err(e) => bail!("Failed to get state proof with error: {:?}", e),
         }
@@ -394,34 +305,6 @@ impl LibraClient {
         Ok(())
     }
 
-    fn get_with_state_proof(
-        &mut self,
-        method: String,
-        params: serde_json::Value,
-    ) -> Result<serde_json::Value> {
-        let client_version = self.trusted_state.latest_version();
-
-        let batch_requests = vec![
-            (method, params),
-            (
-                "get_state_proof".to_string(),
-                serde_json::json!(vec![client_version]),
-            ),
-        ];
-
-        // batch send
-        match self.client.send_libra_batch_request(batch_requests) {
-            Err(e) => bail!("Failed to get with state proof, error: {:?}", e),
-            Ok(responses) => {
-                // verify and update trusted state
-                let proof: StateProofView = serde_json::from_value(responses[1].clone())?;
-                self.verify_state_proof(proof)?;
-                // verify sub-response - responsibility of each call to subresponse
-                Ok(responses[0].clone())
-            }
-        }
-    }
-
     /// LedgerInfo corresponding to the latest epoch change.
     pub(crate) fn latest_epoch_change_li(&self) -> Option<&LedgerInfoWithSignatures> {
         self.latest_epoch_change_li.as_ref()
@@ -432,16 +315,15 @@ impl LibraClient {
         &mut self,
         address: AccountAddress,
     ) -> Result<Option<AccountStateBlob>> {
-        let version = serde_json::json!(self.trusted_state.latest_version());
-        let params = vec![serde_json::json!(address), version.clone(), version];
+        let version = self.trusted_state.latest_version();
+        let mut batch = JsonRpcBatch::new();
+        batch.add_get_account_state_with_proof_request(address, version, version);
+        let responses = self.client.execute(batch)?;
 
-        match self
-            .client
-            .send_libra_request("get_account_state_with_proof".to_string(), params)
-        {
-            Ok(result) => {
-                let account_state_with_proof: AccountStateWithProofView =
-                    serde_json::from_value(result)?;
+        match get_response_from_batch(0, &responses)? {
+            Ok(resp) => {
+                let account_state_with_proof =
+                    AccountStateWithProofView::from_response(resp.clone())?;
                 let account_blob = if let Some(blob) = account_state_with_proof.blob {
                     let account_blob: AccountStateBlob = lcs::from_bytes(&blob.into_bytes()?)?;
                     Some(account_blob)
@@ -461,24 +343,16 @@ impl LibraClient {
         sequence_number: u64,
         fetch_events: bool,
     ) -> Result<Option<TransactionView>> {
-        let params = vec![
-            serde_json::json!(account),
-            serde_json::json!(sequence_number),
-            serde_json::json!(fetch_events),
-        ];
-        match self.get_with_state_proof(
-            "get_account_transaction".to_string(),
-            serde_json::json!(params),
-        ) {
-            Ok(result) => {
-                let txn = if result == serde_json::Value::Null {
-                    None
-                } else {
-                    let txn_view: TransactionView = serde_json::from_value(result)?;
-                    Some(txn_view)
-                };
-                Ok(txn)
-            }
+        let mut batch = JsonRpcBatch::new();
+        batch.add_get_account_transaction_request(account, sequence_number, fetch_events);
+        batch.add_get_state_proof_request(self.trusted_state.latest_version());
+
+        let responses = self.client.execute(batch)?;
+        let state_proof_view = get_response_from_batch(1, &responses)?.as_ref();
+        self.process_state_proof_response(state_proof_view)?;
+
+        match get_response_from_batch(0, &responses)? {
+            Ok(response) => Ok(TransactionView::optional_from_response(response.clone())?),
             Err(e) => bail!("Failed to get account txn with error: {:?}", e),
         }
     }
@@ -490,17 +364,16 @@ impl LibraClient {
         limit: u64,
         fetch_events: bool,
     ) -> Result<Vec<TransactionView>> {
-        let params = vec![
-            serde_json::json!(start_version),
-            serde_json::json!(limit),
-            serde_json::json!(fetch_events),
-        ];
+        let mut batch = JsonRpcBatch::new();
+        batch.add_get_transactions_request(start_version, limit, fetch_events);
+        batch.add_get_state_proof_request(self.trusted_state.latest_version());
 
-        match self.get_with_state_proof("get_transactions".to_string(), serde_json::json!(params)) {
-            Ok(result) => {
-                let txns: Vec<TransactionView> = serde_json::from_value(result)?;
-                Ok(txns)
-            }
+        let responses = self.client.execute(batch)?;
+        let state_proof = get_response_from_batch(1, &responses)?.as_ref();
+        self.process_state_proof_response(state_proof)?;
+
+        match get_response_from_batch(0, &responses)? {
+            Ok(result) => Ok(TransactionView::vec_from_response(result.clone())?),
             Err(e) => bail!("Failed to get transactions with error: {:?}", e),
         }
     }

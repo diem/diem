@@ -100,7 +100,7 @@ fn main() {
     .expect("Failed to construct client.");
 
     // Test connection to validator
-    let latest_li = client_proxy
+    let block_metadata = client_proxy
         .test_validator_connection()
         .unwrap_or_else(|e| {
             panic!(
@@ -110,10 +110,8 @@ fn main() {
         });
     let ledger_info_str = format!(
         "latest version = {}, timestamp = {}",
-        latest_li.ledger_info().version(),
-        DateTime::<Utc>::from(
-            UNIX_EPOCH + Duration::from_micros(latest_li.ledger_info().timestamp_usecs())
-        )
+        block_metadata.version,
+        DateTime::<Utc>::from(UNIX_EPOCH + Duration::from_micros(block_metadata.timestamp))
     );
     let cli_info = format!(
         "Connected to validator at: {}, {}",

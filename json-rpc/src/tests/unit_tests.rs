@@ -261,6 +261,7 @@ proptest! {
         let result = rt.block_on(client.execute(batch)).unwrap().remove(0).unwrap();
         match result {
             JsonRpcResponse::AccountResponse(account) => {
+                let account = account.expect("account does not exist");
                 assert_eq!(account.balance, expected_resource.get_balance_resource().unwrap().unwrap().coin());
                 assert_eq!(account.sequence_number, expected_resource.get_account_resource().unwrap().unwrap().sequence_number());
             }
@@ -285,6 +286,7 @@ proptest! {
         for (idx, response) in responses.into_iter().enumerate() {
             match response.unwrap() {
                 JsonRpcResponse::AccountResponse(account) => {
+                    let account = account.expect("account does not exist");
                     assert_eq!(account.balance, states[idx].get_balance_resource().unwrap().unwrap().coin());
                     assert_eq!(account.sequence_number, states[idx].get_account_resource().unwrap().unwrap().sequence_number());
                 }

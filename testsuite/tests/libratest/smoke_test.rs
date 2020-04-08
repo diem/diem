@@ -1022,7 +1022,7 @@ fn test_client_waypoints() {
 
     // Start another client with the genesis waypoint and make sure it successfully connects
     let mut client_with_waypoint = env.get_validator_ac_client(0, Some(genesis_waypoint));
-    client_with_waypoint.test_validator_connection().unwrap();
+    client_with_waypoint.test_trusted_connection().unwrap();
     assert_eq!(
         client_with_waypoint.latest_epoch_change_li().unwrap(),
         genesis_li
@@ -1055,7 +1055,7 @@ fn test_client_waypoints() {
 
     // Start a client with the waypoint for end of epoch 1 and make sure it successfully connects
     client_with_waypoint = env.get_validator_ac_client(1, Some(epoch_1_waypoint));
-    client_with_waypoint.test_validator_connection().unwrap();
+    client_with_waypoint.test_trusted_connection().unwrap();
     assert_eq!(
         client_with_waypoint.latest_epoch_change_li().unwrap(),
         epoch_1_li
@@ -1065,9 +1065,7 @@ fn test_client_waypoints() {
     let bad_li = LedgerInfo::mock_genesis();
     let bad_waypoint = Waypoint::new(&bad_li).unwrap();
     let mut client_with_bad_waypoint = env.get_validator_ac_client(1, Some(bad_waypoint));
-    assert!(client_with_bad_waypoint
-        .test_validator_connection()
-        .is_err());
+    assert!(client_with_bad_waypoint.test_trusted_connection().is_err());
 }
 
 #[test]

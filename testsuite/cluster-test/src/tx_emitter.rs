@@ -333,7 +333,10 @@ impl TxEmitter {
             .get_accounts_state(slice::from_ref(address))
             .await
             .map_err(|e| format_err!("[{:?}] get_accounts_state failed: {:?} ", client, e))?;
-        Ok(resp[0].sequence_number)
+        Ok(resp[0]
+            .as_ref()
+            .ok_or_else(|| format_err!("account does not exist"))?
+            .sequence_number)
     }
 }
 
@@ -468,7 +471,10 @@ async fn query_sequence_numbers(
             .map_err(|e| format_err!("[{:?}] get_accounts_state failed: {:?} ", client, e))?;
 
         for item in resp.into_iter() {
-            result.push(item.sequence_number);
+            result.push(
+                item.ok_or_else(|| format_err!("account does not exist"))?
+                    .sequence_number,
+            );
         }
     }
     Ok(result)
