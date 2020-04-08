@@ -354,6 +354,70 @@ pub mod compressed_signed {
     }
 }
 
+pub mod fixed_size {
+
+    use serde::{
+        de::{DeserializeOwned, Deserializer},
+        ser::Serializer,
+        Deserialize, Serialize,
+    };
+
+    pub trait FixedSized {
+        type Array: Serialize + DeserializeOwned;
+        fn to_array(&self) -> Self::Array;
+        fn from_array(value: Self::Array) -> Self;
+    }
+
+    macro_rules! impl_as_array {
+        ($type:ident, $len:expr) => {
+            impl FixedSized for $type {
+                type Array = [u8; $len];
+                fn to_array(&self) -> Self::Array {
+                    self.to_le_bytes()
+                }
+                fn from_array(value: Self::Array) -> Self {
+                    Self::from_le_bytes(value)
+                }
+            }
+        };
+    }
+
+    impl_as_array!(u16, 2);
+    impl_as_array!(u32, 4);
+    impl_as_array!(u64, 8);
+    impl_as_array!(u128, 16);
+    impl_as_array!(i16, 2);
+    impl_as_array!(i32, 4);
+    impl_as_array!(i64, 8);
+    impl_as_array!(i128, 16);
+
+    pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: Serialize + FixedSized,
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            value.serialize(serializer)
+        } else {
+            // TODO: Make it possible for serde-reflection to understand what's happening.
+            value.to_array().serialize(serializer)
+        }
+    }
+
+    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
+    where
+        T: Deserialize<'de> + FixedSized,
+        D: Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            T::deserialize(deserializer)
+        } else {
+            let value = T::Array::deserialize(deserializer)?;
+            Ok(T::from_array(value))
+        }
+    }
+}
+
 pub mod backward_compatibility {
 
     use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};

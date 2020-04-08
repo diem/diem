@@ -5,8 +5,8 @@
 #![allow(clippy::unit_arg)]
 
 use libra_canonical_serialization::{
-    backward_compatibility, compressed_signed, compressed_unsigned, from_bytes, to_bytes, Error,
-    MAX_SEQUENCE_LENGTH,
+    backward_compatibility, compressed_signed, compressed_unsigned, fixed_size, from_bytes,
+    to_bytes, Error, MAX_SEQUENCE_LENGTH,
 };
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;
@@ -654,6 +654,26 @@ fn compressed_signed() {
 proptest! {
     #[test]
     fn proptest_compressed_signed(v in any::<Signed>()) {
+        is_same(v);
+    }
+}
+
+#[derive(Serialize, Deserialize, Arbitrary, Debug, PartialEq)]
+struct Fixed {
+    #[serde(with = "fixed_size")]
+    x: u128,
+}
+
+#[test]
+fn fixed_size() {
+    assert_eq!(from_bytes::<Fixed>(&[0x0]), Err(Error::Eof));
+    assert_eq!(from_bytes::<Fixed>(&vec![0x0; 16]), Ok(Fixed { x: 0 }));
+}
+
+proptest! {
+    #[test]
+    fn proptest_fixed_size(v in any::<Fixed>()) {
+        assert_eq!(to_bytes(&v)?, v.x.to_le_bytes());
         is_same(v);
     }
 }
