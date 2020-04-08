@@ -31,7 +31,8 @@ module TestLCS {
         ensures result_1 == result_2;
         ensures len(result_1) > 0;
         // it knows result is vector<u8>
-        ensures result_1[0] < max_u8();
+        // TODO: the below introduces non-determinism so commented out for now
+        // ensures result_1[0] < max_u8();
     }
 
 }

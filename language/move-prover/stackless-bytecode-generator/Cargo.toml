@@ -10,13 +10,14 @@ publish = false
 edition = "2018"
 
 [dependencies]
+spec-lang = { path = "../spec-lang", version = "0.0.1" }
 vm = { path = "../../vm", version = "0.1.0" }
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 ir-to-bytecode = { path = "../../compiler/ir-to-bytecode", version = "0.1.0" }
 stdlib = { path = "../../stdlib", version = "0.1.0" }
-#
+num = "0.2.0"
+
 [dev-dependencies]
-# invalid-mutations = { path = "invalid-mutations" }
 proptest = "0.9"
 libra-types = { path = "../../../types", version = "0.1.0" }
 

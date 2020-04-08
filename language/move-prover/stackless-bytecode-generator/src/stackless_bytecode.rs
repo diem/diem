@@ -1,126 +1,124 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use vm::file_format::{
-    AddressPoolIndex, ByteArrayPoolIndex, CodeOffset, FunctionHandleIndex, SignatureIndex,
-    StructDefinitionIndex,
+use num::BigUint;
+use spec_lang::{
+    env::{FunId, ModuleId, StructId},
+    ty::Type,
 };
+use vm::file_format::CodeOffset;
 
 pub type TempIndex = usize;
 
+/// The kind of an assignment in the bytecode.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum StacklessBytecode {
-    MoveLoc(TempIndex, TempIndex),   // t = move(l)
-    CopyLoc(TempIndex, TempIndex),   // t = copy(l)
-    StLoc(TempIndex, TempIndex),     // l = t
-    BorrowLoc(TempIndex, TempIndex), // t1 = &t2
-
-    ReadRef(TempIndex, TempIndex),   // t1 = *t2
-    WriteRef(TempIndex, TempIndex),  // *t1 = t2
-    FreezeRef(TempIndex, TempIndex), // t1 = immutable(t2)
-
-    Call(
-        Vec<TempIndex>,
-        FunctionHandleIndex,
-        Option<SignatureIndex>,
-        Vec<TempIndex>,
-    ), /* t1_vec = call(index) with
-        * t2_vec as parameters */
-    Ret(Vec<TempIndex>),
-
-    Pack(
-        TempIndex,
-        StructDefinitionIndex,
-        Option<SignatureIndex>,
-        Vec<TempIndex>,
-    ), /* t1 = struct(index) with t2_vec
-        * as fields */
-    Unpack(
-        Vec<TempIndex>,
-        StructDefinitionIndex,
-        Option<SignatureIndex>,
-        TempIndex,
-    ), // t1_vec = t2's fields
-    BorrowField(TempIndex, TempIndex, StructDefinitionIndex, TempIndex), // t1 = t2.field
-    MoveToSender(TempIndex, StructDefinitionIndex, Option<SignatureIndex>), /* move_to_sender<struct_index>(t) */
-    MoveFrom(
-        TempIndex,
-        TempIndex,
-        StructDefinitionIndex,
-        Option<SignatureIndex>,
-    ), /* t1 = move_from<struct_index>(t2) */
-    BorrowGlobal(
-        TempIndex,
-        TempIndex,
-        StructDefinitionIndex,
-        Option<SignatureIndex>,
-    ), /* t1 = borrow_global<struct_index>(t2) */
-    Exists(
-        TempIndex,
-        TempIndex,
-        StructDefinitionIndex,
-        Option<SignatureIndex>,
-    ), /* t1 = exists<struct_index>(t2) */
-
-    GetGasRemaining(TempIndex),
-    GetTxnSequenceNumber(TempIndex),
-    GetTxnPublicKey(TempIndex),
-    GetTxnSenderAddress(TempIndex),
-    GetTxnMaxGasUnits(TempIndex),
-    GetTxnGasUnitPrice(TempIndex),
-
-    LdTrue(TempIndex),
-    LdFalse(TempIndex),
-    LdU8(TempIndex, u8),
-    LdU64(TempIndex, u64),
-    LdU128(TempIndex, u128),
-    LdAddr(TempIndex, AddressPoolIndex),
-    LdByteArray(TempIndex, ByteArrayPoolIndex),
-
-    CastU8(TempIndex, TempIndex),
-    CastU64(TempIndex, TempIndex),
-    CastU128(TempIndex, TempIndex),
-
-    Not(TempIndex, TempIndex),            // t1 = !t2
-    Add(TempIndex, TempIndex, TempIndex), // t1 = t2 binop t3
-    Sub(TempIndex, TempIndex, TempIndex),
-    Mul(TempIndex, TempIndex, TempIndex),
-    Div(TempIndex, TempIndex, TempIndex),
-    Mod(TempIndex, TempIndex, TempIndex),
-    BitOr(TempIndex, TempIndex, TempIndex),
-    BitAnd(TempIndex, TempIndex, TempIndex),
-    Xor(TempIndex, TempIndex, TempIndex),
-    Shl(TempIndex, TempIndex, TempIndex),
-    Shr(TempIndex, TempIndex, TempIndex),
-    Lt(TempIndex, TempIndex, TempIndex),
-    Gt(TempIndex, TempIndex, TempIndex),
-    Le(TempIndex, TempIndex, TempIndex),
-    Ge(TempIndex, TempIndex, TempIndex),
-    Or(TempIndex, TempIndex, TempIndex),
-    And(TempIndex, TempIndex, TempIndex),
-    Eq(TempIndex, TempIndex, TempIndex),
-    Neq(TempIndex, TempIndex, TempIndex),
-
-    Branch(CodeOffset),
-    BrTrue(CodeOffset, TempIndex),  // if(t) goto code_ooffset
-    BrFalse(CodeOffset, TempIndex), // if(!t) goto code_offset
-
-    Abort(TempIndex), // abort t
-    Pop(TempIndex),
+pub enum AssignKind {
+    /// The assign copies the lhs value.
+    Copy,
+    /// The assign moves the lhs value.
+    Move,
+    /// The assign stores the lhs value.
+    // TODO: figure out why we can't treat this as either copy or move. The lifetime analysis
+    // currently makes a difference of this case. It originates from stack code where Copy
+    // and Move push on the stack and Store pops.
+    Store,
 }
 
-impl StacklessBytecode {
+/// A constant value.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Constant {
+    Bool(bool),
+    U8(u8),
+    U64(u64),
+    U128(u128),
+    Address(BigUint),
+    ByteArray(Vec<u8>),
+    TxnSenderAddress,
+}
+
+/// A unary operation.
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
+pub enum UnaryOp {
+    CastU8,
+    CastU64,
+    CastU128,
+    Not,
+}
+
+/// A binary operation.
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
+pub enum BinaryOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    BitOr,
+    BitAnd,
+    Xor,
+    Shl,
+    Shr,
+    Lt,
+    Gt,
+    Le,
+    Ge,
+    Or,
+    And,
+    Eq,
+    Neq,
+}
+
+/// A branch condition.
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
+pub enum BranchCond {
+    Always,
+    True(TempIndex),
+    False(TempIndex),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Bytecode {
+    Assign(TempIndex, TempIndex, AssignKind),
+
+    ReadRef(TempIndex, TempIndex),
+    WriteRef(TempIndex, TempIndex),
+    FreezeRef(TempIndex, TempIndex),
+
+    Call(Vec<TempIndex>, ModuleId, FunId, Vec<Type>, Vec<TempIndex>),
+    Ret(Vec<TempIndex>),
+
+    Pack(TempIndex, ModuleId, StructId, Vec<Type>, Vec<TempIndex>),
+    Unpack(Vec<TempIndex>, ModuleId, StructId, Vec<Type>, TempIndex),
+
+    BorrowLoc(TempIndex, TempIndex),
+    BorrowField(TempIndex, TempIndex, ModuleId, StructId, usize),
+    BorrowGlobal(TempIndex, TempIndex, ModuleId, StructId, Vec<Type>),
+
+    MoveToSender(TempIndex, ModuleId, StructId, Vec<Type>),
+    MoveFrom(TempIndex, TempIndex, ModuleId, StructId, Vec<Type>),
+    Exists(TempIndex, TempIndex, ModuleId, StructId, Vec<Type>),
+
+    Load(TempIndex, Constant),
+    Unary(UnaryOp, TempIndex, TempIndex),
+    Binary(BinaryOp, TempIndex, TempIndex, TempIndex),
+
+    Branch(CodeOffset, BranchCond),
+    Abort(TempIndex),
+    Destroy(TempIndex),
+}
+
+impl Bytecode {
     pub fn is_unconditional_branch(&self) -> bool {
         matches!(
             self,
-            StacklessBytecode::Ret(_) | StacklessBytecode::Abort(_) | StacklessBytecode::Branch(_)
+            Bytecode::Ret(_) | Bytecode::Abort(_) | Bytecode::Branch(_, BranchCond::Always)
         )
     }
 
     pub fn is_conditional_branch(&self) -> bool {
         matches!(
             self,
-            StacklessBytecode::BrFalse(_, _) | StacklessBytecode::BrTrue(_, _)
+            Bytecode::Branch(_, BranchCond::False(_)) | Bytecode::Branch(_, BranchCond::True(_))
         )
     }
 
@@ -131,15 +129,13 @@ impl StacklessBytecode {
     /// Return the destination of branching if self is a branching instruction
     pub fn branch_dest(&self) -> Option<&CodeOffset> {
         match self {
-            StacklessBytecode::BrFalse(offset, _)
-            | StacklessBytecode::BrTrue(offset, _)
-            | StacklessBytecode::Branch(offset) => Some(offset),
+            Bytecode::Branch(offset, _) => Some(offset),
             _ => None,
         }
     }
 
     /// Return the successor offsets of this instruction
-    pub fn get_successors(pc: CodeOffset, code: &[StacklessBytecode]) -> Vec<CodeOffset> {
+    pub fn get_successors(pc: CodeOffset, code: &[Bytecode]) -> Vec<CodeOffset> {
         let bytecode = &code[pc as usize];
         let mut v = vec![];
 

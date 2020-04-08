@@ -219,3 +219,11 @@ pub fn boogie_declare_global(env: &GlobalEnv, name: &str, ty: &Type) -> String {
 pub fn boogie_var_before_borrow(idx: usize) -> String {
     format!("$before_borrow_{}", idx)
 }
+
+pub fn boogie_byte_blob(val: &[u8]) -> String {
+    let mut res = "$mk_vector()".to_string();
+    for b in val {
+        res = format!("$push_back_vector({}, Integer({}))", res, b);
+    }
+    res
+}

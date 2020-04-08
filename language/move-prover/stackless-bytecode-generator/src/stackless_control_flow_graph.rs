@@ -4,7 +4,7 @@
 //! Adapted from control_flow_graph for Bytecode, this module defines the control-flow graph on
 //! Stackless Bytecode used in analysis as part of Move prover.
 
-use crate::stackless_bytecode::StacklessBytecode;
+use crate::stackless_bytecode::Bytecode;
 use bytecode_verifier::control_flow_graph::{BlockId, ControlFlowGraph};
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
@@ -25,7 +25,7 @@ pub struct StacklessControlFlowGraph {
 const ENTRY_BLOCK_ID: BlockId = 0;
 
 impl StacklessControlFlowGraph {
-    pub fn new(code: &[StacklessBytecode]) -> Self {
+    pub fn new(code: &[Bytecode]) -> Self {
         // First go through and collect block ids, i.e., offsets that begin basic blocks.
         // Need to do this first in order to handle backwards edges.
         let mut block_ids = Set::new();
@@ -42,7 +42,7 @@ impl StacklessControlFlowGraph {
 
             // Create a basic block
             if StacklessControlFlowGraph::is_end_of_block(co_pc, code, &block_ids) {
-                let successors = StacklessBytecode::get_successors(co_pc, code);
+                let successors = Bytecode::get_successors(co_pc, code);
                 let bb = BasicBlock {
                     entry,
                     exit: co_pc,
@@ -57,15 +57,11 @@ impl StacklessControlFlowGraph {
         cfg
     }
 
-    fn is_end_of_block(
-        pc: CodeOffset,
-        code: &[StacklessBytecode],
-        block_ids: &Set<BlockId>,
-    ) -> bool {
+    fn is_end_of_block(pc: CodeOffset, code: &[Bytecode], block_ids: &Set<BlockId>) -> bool {
         pc + 1 == (code.len() as CodeOffset) || block_ids.contains(&(pc + 1))
     }
 
-    fn record_block_ids(pc: CodeOffset, code: &[StacklessBytecode], block_ids: &mut Set<BlockId>) {
+    fn record_block_ids(pc: CodeOffset, code: &[Bytecode], block_ids: &mut Set<BlockId>) {
         let bytecode = &code[pc as usize];
 
         if let Some(offset) = bytecode.branch_dest() {
