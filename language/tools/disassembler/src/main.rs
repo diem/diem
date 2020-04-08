@@ -77,7 +77,7 @@ fn main() {
 
     let mut disassembler_options = DisassemblerOptions::new();
     disassembler_options.print_code = !args.skip_code;
-    disassembler_options.only_public = !args.skip_private;
+    disassembler_options.only_public = args.skip_private;
     disassembler_options.print_basic_blocks = !args.skip_basic_blocks;
     disassembler_options.print_locals = !args.skip_locals;
 
