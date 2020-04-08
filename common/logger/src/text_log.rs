@@ -216,10 +216,8 @@ impl Log for AsyncLogClient {
             return;
         }
 
-        let formatted = match format(record) {
-            Ok(formatted) => formatted,
-            Err(e) => format!("Unable to format log {:?} due to {}", record, e),
-        };
+        let formatted = format(record)
+            .unwrap_or_else(|e| format!("Unable to format log {:?} due to {}", record, e));
         if let Err(e) = self.sender.try_send(LogOp::Log(formatted)) {
             match e {
                 TrySendError::Disconnected(_) => {
