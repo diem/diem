@@ -228,13 +228,13 @@ impl LibraVM {
     }
 
     fn check_change_set(&self, change_set: &ChangeSet, state_view: &dyn StateView) -> VMResult<()> {
-        // TODO: Replace this logic with actual checks.
+        // This function is only invoked by WaypointWriteSet for now. We don't enforce the same
+        // check on TransactionPayload::WriteSet.
         if state_view.is_genesis() {
             for (_access_path, write_op) in change_set.write_set() {
                 // Genesis transactions only add entries, never delete them.
                 if write_op.is_deletion() {
                     error!("[VM] Bad genesis block");
-                    // TODO: return more detailed error somehow?
                     return Err(VMStatus::new(StatusCode::INVALID_WRITE_SET));
                 }
             }
@@ -351,15 +351,16 @@ impl LibraVM {
         transaction: &SignatureCheckedTransaction,
         remote_cache: &dyn RemoteCache,
     ) -> VMResult<()> {
-        self.check_gas(transaction)?;
         let txn_data = TransactionMetadata::new(transaction);
         match transaction.payload() {
             TransactionPayload::Program => Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT)),
             TransactionPayload::Script(script) => {
+                self.check_gas(transaction)?;
                 self.verify_script(remote_cache, script, txn_data)?;
                 Ok(())
             }
             TransactionPayload::Module(module) => {
+                self.check_gas(transaction)?;
                 self.verify_module(remote_cache, module, txn_data)?;
                 Ok(())
             }
@@ -545,7 +546,7 @@ impl LibraVM {
         let change_set = if let TransactionPayload::WriteSet(change_set) = txn.payload() {
             change_set
         } else {
-            // TODO: Should we return errors to the caller?
+            error!("[libra_vm] UNREACHABLE");
             return Ok(discard_error_output(VMStatus::new(StatusCode::UNREACHABLE)));
         };
 

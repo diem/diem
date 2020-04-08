@@ -574,6 +574,8 @@ impl AccountData {
         self.account.make_balance_access_path()
     }
 
+    /// Creates a writeset that contains the account data and can be patched to the storage
+    /// directly.
     pub fn to_writeset(&self) -> WriteSet {
         let (account_blob, balance_blob) = self.to_account();
         let account = account_blob

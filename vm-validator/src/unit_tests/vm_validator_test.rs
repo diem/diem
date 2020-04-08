@@ -411,6 +411,6 @@ fn test_validate_non_genesis_write_set() {
         .unwrap();
     assert_eq!(
         ret.status().unwrap().major_status,
-        StatusCode::REJECTED_WRITE_SET
+        StatusCode::ABORTED
     );
 }

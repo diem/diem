@@ -34,7 +34,6 @@ module LibraWriteSetManager {
         let t_ref = borrow_global<T>(0xA550C18);
         Transaction::assert(writeset_sequence_number >= t_ref.sequence_number, 3);
 
-        // TODO: We don't use SEQUENCE_NUM_TOO_NEW(4) for now as it will be ignored by the VMValidator.
         Transaction::assert(writeset_sequence_number == t_ref.sequence_number, 11);
         Transaction::assert(
             Hash::sha3_256(writeset_public_key) == association_auth_key,
