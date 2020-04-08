@@ -49,7 +49,7 @@ use storage_proto::{
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
     GetEpochChangeLedgerInfosRequest, GetLatestAccountStateRequest, GetLatestAccountStateResponse,
     GetLatestStateRootResponse, GetStartupInfoResponse, GetTransactionsRequest,
-    GetTransactionsResponse, SaveTransactionsRequest, StartupInfo,
+    GetTransactionsResponse, SaveTransactionsRequest, StartupInfo, TreeState,
 };
 use tokio::runtime::Runtime;
 
@@ -687,6 +687,10 @@ impl DbReader for SyncStorageClient {
             self.rt
                 .spawn(async move { reader.get_latest_state_root().await }),
         )?
+    }
+
+    fn get_latest_tree_state(&self) -> Result<TreeState> {
+        unimplemented!()
     }
 }
 

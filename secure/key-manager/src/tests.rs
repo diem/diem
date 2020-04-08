@@ -72,7 +72,7 @@ fn setup_secure_storage(
 impl Node {
     fn setup(config: &NodeConfig) -> Self {
         let (storage, db_rw) = DbReaderWriter::wrap(LibraDB::new(&config.storage.dir()));
-        db_bootstrapper::maybe_bootstrap_db::<LibraVM>(db_rw.clone(), config)
+        db_bootstrapper::bootstrap_db_if_empty::<LibraVM>(&db_rw, config)
             .expect("Failed to execute genesis");
         let executor = Executor::new(db_rw);
         let libra = TestLibraInterface {
