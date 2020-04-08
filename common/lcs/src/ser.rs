@@ -14,14 +14,17 @@ use serde::{ser, Serialize};
 /// # Examples
 ///
 /// ```
-/// use libra_canonical_serialization::to_bytes;
+/// use libra_canonical_serialization::{to_bytes, fixed_size};
 /// use serde::Serialize;
 ///
 /// #[derive(Serialize)]
 /// struct Ip([u8; 4]);
 ///
 /// #[derive(Serialize)]
-/// struct Port(u16);
+/// struct Port(
+///   #[serde(serialize_with = "fixed_size::serialize")]
+///   u16
+/// );
 ///
 /// #[derive(Serialize)]
 /// struct Service {
@@ -41,8 +44,7 @@ use serde::{ser, Serialize};
 /// let bytes = to_bytes(&service).unwrap();
 /// let expected = vec![
 ///     0xc0, 0xa8, 0x01, 0x01, 0x03, 0x41, 0x1f, 0x42,
-///     0x1f, 0x43, 0x1f, 0x01, 0x88, 0x13, 0x00, 0x00,
-///     0x00,
+///     0x1f, 0x43, 0x1f, 0x01, 0x88, 0x27, 0x00,
 /// ];
 /// assert_eq!(bytes, expected);
 /// ```
@@ -78,26 +80,27 @@ impl Serializer {
         self.output
     }
 
-    fn serialize_u32_as_uleb128(&mut self, value: u32) -> Result<()> {
-        // TODO: verify that the code gets simplified by the compiler.
-        self.serialize_u128_as_uleb128(value as u128)
-    }
-
-    #[inline]
-    fn serialize_u128_as_uleb128(&mut self, mut value: u128) -> Result<()> {
+    fn serialize_unsigned_as_uleb128<T>(&mut self, mut value: T) -> Result<()>
+    where
+        T: num::cast::AsPrimitive<u8>
+            + num::Unsigned
+            + From<u8>
+            + std::ops::ShrAssign<usize>
+            + std::cmp::PartialOrd,
+    {
         use serde::ser::Serializer;
-        while value >= 0x80 {
+        while value >= 0x80.into() {
             // Write 7 (lowest) bits of data and set the 8th bit to 1.
-            let byte = (value & 0x7f) as u8;
+            let byte = value.as_() & 0x7f;
             self.serialize_u8(byte | 0x80)?;
             value >>= 7;
         }
         // Write the remaining bits of data and set the highest bit to 0.
-        self.serialize_u8(value as u8)
+        self.serialize_u8(value.as_())
     }
 
     fn serialize_variant_index(&mut self, v: u32) -> Result<()> {
-        self.serialize_u32_as_uleb128(v)
+        self.serialize_unsigned_as_uleb128(v)
     }
 
     /// Serialize a sequence length as a u32.
@@ -105,7 +108,7 @@ impl Serializer {
         if len > crate::MAX_SEQUENCE_LENGTH {
             return Err(Error::ExceededMaxLen(len));
         }
-        self.serialize_u32_as_uleb128(len as u32)
+        self.serialize_unsigned_as_uleb128(len as u32)
     }
 }
 
@@ -129,21 +132,24 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     }
 
     fn serialize_i16(self, v: i16) -> Result<()> {
-        self.serialize_u16(v as u16)
+        // On signed integers, >> is the arithmetic (aka sticky) right shift.
+        let zigzag = (v << 1) ^ (v >> 15);
+        self.serialize_unsigned_as_uleb128(zigzag as u16)
     }
 
     fn serialize_i32(self, v: i32) -> Result<()> {
-        self.serialize_u32(v as u32)
+        let zigzag = (v << 1) ^ (v >> 31);
+        self.serialize_unsigned_as_uleb128(zigzag as u32)
     }
 
     fn serialize_i64(self, v: i64) -> Result<()> {
-        self.serialize_u64(v as u64)
+        let zigzag = (v << 1) ^ (v >> 63);
+        self.serialize_unsigned_as_uleb128(zigzag as u64)
     }
 
     fn serialize_i128(self, v: i128) -> Result<()> {
-        // On signed integers, >> is the arithmetic (aka sticky) right shift.
-        let zigzag_i128 = (v << 1) ^ (v >> 127);
-        self.serialize_u128_as_uleb128(zigzag_i128 as u128)
+        let zigzag = (v << 1) ^ (v >> 127);
+        self.serialize_unsigned_as_uleb128(zigzag as u128)
     }
 
     fn serialize_u8(self, v: u8) -> Result<()> {
@@ -152,22 +158,19 @@ impl<'a> ser::Serializer for &'a mut Serializer {
     }
 
     fn serialize_u16(self, v: u16) -> Result<()> {
-        self.output.extend_from_slice(&v.to_le_bytes());
-        Ok(())
+        self.serialize_unsigned_as_uleb128(v)
     }
 
     fn serialize_u32(self, v: u32) -> Result<()> {
-        self.output.extend_from_slice(&v.to_le_bytes());
-        Ok(())
+        self.serialize_unsigned_as_uleb128(v)
     }
 
     fn serialize_u64(self, v: u64) -> Result<()> {
-        self.output.extend_from_slice(&v.to_le_bytes());
-        Ok(())
+        self.serialize_unsigned_as_uleb128(v)
     }
 
     fn serialize_u128(self, v: u128) -> Result<()> {
-        self.serialize_u128_as_uleb128(v)
+        self.serialize_unsigned_as_uleb128(v)
     }
 
     fn serialize_f32(self, _v: f32) -> Result<()> {

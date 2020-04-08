@@ -120,11 +120,11 @@
 //! ```rust
 //! # use libra_canonical_serialization::{Result, to_bytes};
 //! # fn main() -> Result<()> {
-//! let fixed: [u16; 3] = [1, 2, 3];
-//! assert_eq!(to_bytes(&fixed)?, vec![1, 0, 2, 0, 3, 0]);
+//! let fixed: [u8; 3] = [1, 2, 3];
+//! assert_eq!(to_bytes(&fixed)?, vec![1, 2, 3]);
 //!
 //! let variable: Vec<u16> = vec![1, 2];
-//! assert_eq!(to_bytes(&variable)?, vec![2, 1, 0, 2, 0]);
+//! assert_eq!(to_bytes(&variable)?, vec![2, 1, 2]);
 //!
 //! let large_variable_length: Vec<()> = vec![(); 9_487];
 //! assert_eq!(to_bytes(&large_variable_length)?, vec![0x8f, 0x4a]);
@@ -238,7 +238,7 @@
 //! let v1 = E::Variant1(255);
 //! let v2 = E::Variant2("e".to_owned());
 //!
-//! assert_eq!(to_bytes(&v0)?, vec![0, 0x40, 0x1F]);
+//! assert_eq!(to_bytes(&v0)?, vec![0, 192, 62]);
 //! assert_eq!(to_bytes(&v1)?, vec![1, 0xFF]);
 //! assert_eq!(to_bytes(&v2)?, vec![2, 1, b'e']);
 //! # Ok(())}
@@ -285,74 +285,6 @@ pub const MAX_SEQUENCE_LENGTH: usize = 1 << 31;
 pub use de::{from_bytes, from_bytes_seed};
 pub use error::{Error, Result};
 pub use ser::{is_human_readable, to_bytes};
-
-pub mod compressed_unsigned {
-
-    use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
-
-    pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        T: Serialize + Clone + Into<u128> + num::Unsigned,
-        S: Serializer,
-    {
-        if serializer.is_human_readable() {
-            value.serialize(serializer)
-        } else {
-            // TODO: Make it possible for serde-reflection to understand what's happening.
-            serializer.serialize_u128(value.clone().into())
-        }
-    }
-
-    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
-    where
-        T: Deserialize<'de> + std::convert::TryFrom<u128> + num::Unsigned,
-        D: Deserializer<'de>,
-    {
-        use serde::de::Error;
-        if deserializer.is_human_readable() {
-            T::deserialize(deserializer)
-        } else {
-            let value = <u128>::deserialize(deserializer)?;
-            T::try_from(value).map_err(|_| {
-                D::Error::custom(crate::Error::IntegerOverflowDuringUleb128Decoding.to_string())
-            })
-        }
-    }
-}
-
-pub mod compressed_signed {
-
-    use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
-
-    pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        T: Serialize + Clone + Into<i128> + num::Signed,
-        S: Serializer,
-    {
-        if serializer.is_human_readable() {
-            value.serialize(serializer)
-        } else {
-            // TODO: Make it possible for serde-reflection to understand what's happening.
-            serializer.serialize_i128(value.clone().into())
-        }
-    }
-
-    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
-    where
-        T: Deserialize<'de> + std::convert::TryFrom<i128> + num::Signed,
-        D: Deserializer<'de>,
-    {
-        use serde::de::Error;
-        if deserializer.is_human_readable() {
-            T::deserialize(deserializer)
-        } else {
-            let value = <i128>::deserialize(deserializer)?;
-            T::try_from(value).map_err(|_| {
-                D::Error::custom(crate::Error::IntegerOverflowDuringUleb128Decoding.to_string())
-            })
-        }
-    }
-}
 
 pub mod fixed_size {
 
