@@ -661,23 +661,6 @@ impl SignatureToken {
         }
     }
 
-    /// Checks if the signature token is usable for Eq and Neq.
-    ///
-    /// Currently equality operations are only allowed on:
-    /// - Bool
-    /// - U64
-    /// - ByteArray
-    /// - Address
-    /// - Reference or Mutable reference to these types
-    pub fn allows_equality(&self) -> bool {
-        use SignatureToken::*;
-        match self {
-            Struct(_) | StructInstantiation(_, _) => false,
-            Reference(token) | MutableReference(token) => token.is_primitive(),
-            token => token.is_primitive(),
-        }
-    }
-
     /// Returns true if the `SignatureToken` is any kind of reference (mutable and immutable).
     pub fn is_reference(&self) -> bool {
         use SignatureToken::*;
