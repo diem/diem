@@ -30,82 +30,49 @@ struct TestOpts {
     /// Output minimal information
     quiet: bool,
     #[structopt(long)]
-    /// NO-OP: don't capture stdout/stderr of each task, allow printing directly
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
     nocapture: bool,
     #[structopt(long)]
     /// List all tests
     list: bool,
     #[structopt(long)]
-    /// NO-OP: Run only ignored tests
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
     ignored: bool,
     #[structopt(long)]
-    /// NO-OP: Run ignored and not ignored tests
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
     include_ignored: bool,
     #[structopt(long)]
-    /// NO-OP: Forces tests to run in-process when panic=abort
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
     force_run_in_process: bool,
     #[structopt(long)]
-    /// NO-OP: Excludes tests marked as should_panic
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
     exclude_should_panic: bool,
     #[structopt(long)]
-    /// NO-OP: Run tests and not benchmarks
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
     test: bool,
     #[structopt(long)]
-    /// NO-OP: Run benchmarks instead of tests
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
     bench: bool,
     #[structopt(long)]
-    /// NO-OP: Write logs to the specified file instead of stdout
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
     logfile: Option<String>,
     #[structopt(long, number_of_values = 1)]
-    /// NO-OP: Skip tests whose names contain FILTER (this flag can be used multiple times)
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
     skip: Vec<String>,
     #[structopt(long)]
-    /// NO-OP: Show captured stdo
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
     show_output: bool,
     #[structopt(long)]
-    /// NO-OP: auto|always|never
-    ///         Configure coloring of output:
-    ///         auto = colorize if stdout is a tty and tests are run
-    ///         on serially (default);
-    ///         always = always colorize output;
-    ///         never = never colorize output;
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
     color: Option<String>,
     #[structopt(long)]
-    /// NO-OP: pretty|terse|json
-    ///         Configure formatting of output:
-    ///         pretty = Print verbose output;
-    ///         terse = Display one character per test;
-    ///         json = Output a json document
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
     format: Option<String>,
     #[structopt(long)]
-    /// NO-OP: [plain|colored]
-    ///         Show execution time of each test. Awailable values:
-    ///         plain = do not colorize the execution time (default);
-    ///         colored = colorize output according to the `color`
-    ///         parameter value;
-    ///         Threshold values for colorized output can be
-    ///         configured via
-    ///         `RUST_TEST_TIME_UNIT`, `RUST_TEST_TIME_INTEGRATION`
-    ///         and
-    ///         `RUST_TEST_TIME_DOCTEST` environment variables.
-    ///         Expected format of environment variable is
-    ///         `VARIABLE=WARN_TIME,CRITICAL_TIME`.
-    ///         Durations must be specified in milliseconds, e.g.
-    ///         `500,2000` means that the warn time
-    ///         is 0.5 seconds, and the critical time is 2 seconds.
-    ///         Not available for --format=terse
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
     report_time: Option<String>,
     #[structopt(long)]
-    /// NO-OP: Treat excess of the test execution time limit as
-    ///         error.
-    ///         Threshold values for this option can be configured via
-    ///         `RUST_TEST_TIME_UNIT`, `RUST_TEST_TIME_INTEGRATION`
-    ///         and
-    ///         `RUST_TEST_TIME_DOCTEST` environment variables.
-    ///         Expected format of environment variable is
-    ///         `VARIABLE=WARN_TIME,CRITICAL_TIME`.
-    ///         `CRITICAL_TIME` here means the limit that should not
-    ///         be exceeded by test.
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
     ensure_time: bool,
 }
 
