@@ -370,25 +370,6 @@ impl LibraDB {
             .collect::<Result<Vec<_>>>()
     }
 
-    // =========================== Libra Core Internal APIs ========================================
-
-    /// Gets the latest TreeState no matter if db has been bootstrapped.
-    /// Used by the Db-bootstrapper.
-    pub fn get_latest_tree_state(&self) -> Result<TreeState> {
-        let tree_state = match self.ledger_store.get_latest_transaction_info_option()? {
-            Some((version, txn_info)) => self.ledger_store.get_tree_state(version + 1, txn_info)?,
-            None => TreeState::new(
-                0,
-                vec![],
-                self.state_store
-                    .get_root_hash_option(PRE_GENESIS_VERSION)?
-                    .unwrap_or(*SPARSE_MERKLE_PLACEHOLDER_HASH),
-            ),
-        };
-
-        Ok(tree_state)
-    }
-
     // ================================== Backup APIs ===================================
 
     /// Gets an instance of `BackupHandler` for data backup purpose.
@@ -823,6 +804,21 @@ impl DbReader for LibraDB {
     fn get_latest_state_root(&self) -> Result<(Version, HashValue)> {
         let (version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
         Ok((version, txn_info.state_root_hash()))
+    }
+
+    fn get_latest_tree_state(&self) -> Result<TreeState> {
+        let tree_state = match self.ledger_store.get_latest_transaction_info_option()? {
+            Some((version, txn_info)) => self.ledger_store.get_tree_state(version + 1, txn_info)?,
+            None => TreeState::new(
+                0,
+                vec![],
+                self.state_store
+                    .get_root_hash_option(PRE_GENESIS_VERSION)?
+                    .unwrap_or(*SPARSE_MERKLE_PLACEHOLDER_HASH),
+            ),
+        };
+
+        Ok(tree_state)
     }
 }
 

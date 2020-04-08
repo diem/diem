@@ -47,6 +47,7 @@ use std::{
     sync::Arc,
 };
 use storage_interface::{state_view::VerifiedStateView, DbReaderWriter};
+use storage_proto::TreeState;
 
 static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
     Lazy::new(|| libra_metrics::OpMetrics::new_and_registered("executor"));
@@ -124,10 +125,10 @@ where
         }
     }
 
-    fn new_on_unbootstrapped_db(db: DbReaderWriter) -> Self {
+    fn new_on_unbootstrapped_db(db: DbReaderWriter, tree_state: TreeState) -> Self {
         Self {
             db,
-            cache: SpeculationCache::new(),
+            cache: SpeculationCache::new_with_tree_state(tree_state),
             phantom: PhantomData,
         }
     }

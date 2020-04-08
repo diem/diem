@@ -27,7 +27,7 @@ use std::{
     collections::HashMap,
     sync::{Arc, Mutex, Weak},
 };
-use storage_proto::StartupInfo;
+use storage_proto::{StartupInfo, TreeState};
 
 /// The struct that stores all speculation result of its counterpart in consensus.
 pub(crate) struct SpeculationBlock {
@@ -125,6 +125,16 @@ impl SpeculationCache {
             cache.update_synced_trees(ExecutedTrees::from(synced_tree_state));
         }
         cache
+    }
+
+    pub fn new_with_tree_state(tree_state: TreeState) -> Self {
+        Self {
+            synced_trees: ExecutedTrees::new_empty(),
+            committed_trees: ExecutedTrees::from(tree_state),
+            heads: vec![],
+            block_map: Arc::new(Mutex::new(HashMap::new())),
+            committed_block_id: *PRE_GENESIS_BLOCK_ID,
+        }
     }
 
     pub fn committed_block_id(&self) -> HashValue {
