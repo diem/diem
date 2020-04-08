@@ -139,6 +139,14 @@ impl DbReaderWriter {
 
         Self { reader, writer }
     }
+
+    pub fn wrap<D: 'static + DbReader + DbWriter>(db: D) -> (Arc<D>, Self) {
+        let arc_db = Arc::new(db);
+        let reader = Arc::clone(&arc_db);
+        let writer = Arc::clone(&arc_db);
+
+        (arc_db, Self { reader, writer })
+    }
 }
 
 impl<D> From<D> for DbReaderWriter

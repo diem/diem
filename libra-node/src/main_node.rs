@@ -167,9 +167,10 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         .expect("Building rayon global thread pool should work.");
 
     let mut instant = Instant::now();
-    let libra_db = init_libra_db(&node_config);
+    let (libra_db, db_reader_writer) = init_libra_db(&node_config);
     let storage = start_storage_service_with_db(&node_config, Arc::clone(&libra_db));
-    maybe_bootstrap_db::<LibraVM>(node_config).expect("Db-bootstrapper should not fail.");
+    maybe_bootstrap_db::<LibraVM>(db_reader_writer, node_config)
+        .expect("Db-bootstrapper should not fail.");
 
     debug!(
         "Storage service started in {} ms",
