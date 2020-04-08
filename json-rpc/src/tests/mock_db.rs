@@ -22,7 +22,7 @@ use libra_types::{
 };
 use std::collections::BTreeMap;
 use storage_interface::DbReader;
-use storage_proto::StartupInfo;
+use storage_proto::{StartupInfo, TreeState};
 
 /// Lightweight mock of LibraDB
 #[derive(Clone)]
@@ -233,6 +233,10 @@ impl DbReader for MockLibraDB {
     }
 
     fn get_latest_state_root(&self) -> Result<(u64, HashValue)> {
+        unimplemented!()
+    }
+
+    fn get_latest_tree_state(&self) -> Result<TreeState> {
         unimplemented!()
     }
 }

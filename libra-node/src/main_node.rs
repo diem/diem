@@ -7,7 +7,7 @@ use debug_interface::{
     node_debug_service::NodeDebugService,
     proto::node_debug_interface_server::NodeDebugInterfaceServer,
 };
-use executor::{db_bootstrapper::maybe_bootstrap_db, Executor};
+use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use futures::{channel::mpsc::channel, executor::block_on};
 use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
 use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
@@ -160,9 +160,9 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         .expect("Building rayon global thread pool should work.");
 
     let mut instant = Instant::now();
-    let (libra_db, db_reader_writer) = init_libra_db(&node_config);
+    let (libra_db, db_rw) = init_libra_db(&node_config);
     let storage = start_storage_service_with_db(&node_config, Arc::clone(&libra_db));
-    maybe_bootstrap_db::<LibraVM>(db_reader_writer, node_config)
+    bootstrap_db_if_empty::<LibraVM>(&db_rw, node_config)
         .expect("Db-bootstrapper should not fail.");
 
     debug!(

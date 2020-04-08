@@ -15,7 +15,7 @@ use libra_types::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use storage_proto::StartupInfo;
+use storage_proto::{StartupInfo, TreeState};
 use thiserror::Error;
 
 pub mod state_view;
@@ -150,6 +150,10 @@ pub trait DbReader: Send + Sync {
 
     /// Gets the latest state root hash together with its version.
     fn get_latest_state_root(&self) -> Result<(Version, HashValue)>;
+
+    /// Gets the latest TreeState no matter if db has been bootstrapped.
+    /// Used by the Db-bootstrapper.
+    fn get_latest_tree_state(&self) -> Result<TreeState>;
 }
 
 /// Trait that is implemented by a DB that supports certain public (to client) write APIs

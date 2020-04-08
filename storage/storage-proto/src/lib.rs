@@ -28,7 +28,7 @@
 pub mod proto;
 
 use anyhow::{ensure, format_err, Error, Result};
-use libra_crypto::HashValue;
+use libra_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
@@ -510,6 +510,11 @@ impl TreeState {
             ledger_frozen_subtree_hashes,
             account_state_root_hash,
         }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.num_transactions == 0
+            && self.account_state_root_hash == *SPARSE_MERKLE_PLACEHOLDER_HASH
     }
 }
 

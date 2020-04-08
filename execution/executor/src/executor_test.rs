@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::{
-    db_bootstrapper::maybe_bootstrap_db,
+    db_bootstrapper::bootstrap_db_if_empty,
     mock_vm::{
         encode_mint_transaction, encode_reconfiguration_transaction, encode_transfer_transaction,
         MockVM, DISCARD_STATUS, KEEP_STATUS,
@@ -38,10 +38,9 @@ fn build_test_config() -> (NodeConfig, Ed25519PrivateKey) {
 }
 
 fn create_storage(config: &NodeConfig) -> Runtime {
-    let (arc_db, db_reader_writer) = init_libra_db(&config);
-    maybe_bootstrap_db::<MockVM>(db_reader_writer, &config)
-        .expect("Db-bootstrapper should not fail.");
-    start_storage_service_with_db(&config, arc_db)
+    let (db, db_rw) = init_libra_db(&config);
+    bootstrap_db_if_empty::<MockVM>(&db_rw, &config).expect("Db-bootstrapper should not fail.");
+    start_storage_service_with_db(&config, db)
 }
 
 fn create_executor(config: &NodeConfig) -> Executor<MockVM> {

@@ -296,7 +296,7 @@ mod test {
     use libradb::errors::LibraDbError::NotFound;
     use std::{collections::BTreeMap, convert::TryFrom, sync::Arc};
     use storage_interface::DbReader;
-    use storage_proto::StartupInfo;
+    use storage_proto::{StartupInfo, TreeState};
     use tokio::runtime::Runtime;
     use vm_validator::{
         mocks::mock_vm_validator::MockVMValidator, vm_validator::TransactionValidation,
@@ -599,6 +599,10 @@ mod test {
         }
 
         fn get_latest_state_root(&self) -> Result<(u64, HashValue)> {
+            unimplemented!()
+        }
+
+        fn get_latest_tree_state(&self) -> Result<TreeState> {
             unimplemented!()
         }
     }
