@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0"
 get_if_addrs = { version = "0.5.3", default-features = false }
 hex = "0.4.2"
-mirai-annotations = "1.4.0"
+mirai-annotations = "1.6.1"
 parity-multiaddr = { version = "0.8.0", default-features = false }
 rand = "0.6.5"
 serde = { version = "1.0.106", features = ["rc"], default-features = false }

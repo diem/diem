@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 rand = "0.6.5"
 num_cpus = "1.11.1"
-mirai-annotations = "1.4.0"
+mirai-annotations = "1.6.1"
 structopt = "0.3.12"
 itertools = "0.9.0"
 hex = "0.4.2"

@@ -13,7 +13,7 @@ edition = "2018"
 hex = "0.4.2"
 once_cell = "1.3.1"
 rayon = "1.1"
-mirai-annotations = "1.6.0"
+mirai-annotations = "1.6.1"
 prometheus = { version = "0.8.0", default-features = false }
 
 bytecode-verifier = { path = "../bytecode-verifier", version = "0.1.0" }

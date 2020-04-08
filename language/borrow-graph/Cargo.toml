@@ -6,4 +6,4 @@ publish = false
 edition = "2018"
 
 [dependencies]
-mirai-annotations = "1.4.0"
+mirai-annotations = "1.6.1"

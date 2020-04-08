@@ -14,7 +14,7 @@ anyhow = "1.0"
 byteorder = "1.3.2"
 hex = "0.4.2"
 once_cell = "1.3.1"
-mirai-annotations = "1.6.0"
+mirai-annotations = "1.6.1"
 proptest = { version = "0.9", optional = true }
 proptest-derive = { version = "0.1.1", optional = true }
 ref-cast = "1.0"
