@@ -58,7 +58,7 @@ impl BitVec {
     #[allow(dead_code)]
     /// Sets the bit at position @pos.
     pub fn set(&mut self, pos: u8) {
-        // This is optimised to: let bucket = pos << 3;
+        // This is optimised to: let bucket = pos >> 3;
         let bucket: usize = pos as usize / BUCKET_SIZE;
         if self.inner.len() <= bucket {
             self.inner.resize(bucket + 1, 0);
@@ -72,7 +72,7 @@ impl BitVec {
     #[allow(dead_code)]
     /// Checks if the bit at position @pos is set.
     pub fn is_set(&self, pos: u8) -> bool {
-        // This is optimised to: let bucket = pos << 3;
+        // This is optimised to: let bucket = pos >> 3;
         let bucket: usize = pos as usize / BUCKET_SIZE;
         if self.inner.len() <= bucket {
             return false;
