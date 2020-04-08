@@ -133,6 +133,18 @@ impl<K: Eq + Hash + Clone, M> Receiver<K, M> {
         let mut shared_state = self.shared_state.lock().unwrap();
         shared_state.internal_queue.clear();
     }
+
+    pub fn try_recv(&mut self) -> Option<M> {
+        let mut shared_state = self.shared_state.lock().unwrap();
+        if let Some((val, status_ch)) = shared_state.internal_queue.pop() {
+            if let Some(status_ch) = status_ch {
+                let _err = status_ch.send(ElementStatus::Dequeued);
+            }
+            Some(val)
+        } else {
+            None
+        }
+    }
 }
 
 impl<K: Eq + Hash + Clone, M> Drop for Receiver<K, M> {

@@ -192,7 +192,7 @@ impl<T: Payload> BlockStore<T> {
 
         // If a node restarts in the middle of state synchronization, it is going to try to catch up
         // to the stored quorum certs as the new root.
-        storage.save_tree(blocks.clone(), quorum_certs.clone())?;
+        storage.save_tree(blocks, quorum_certs)?;
         let pre_sync_instance = Instant::now();
         state_computer.sync_to(highest_commit_cert.ledger_info().clone())?;
         counters::STATE_SYNC_DURATION_S.observe_duration(pre_sync_instance.elapsed());

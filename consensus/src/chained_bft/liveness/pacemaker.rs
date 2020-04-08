@@ -9,7 +9,7 @@ use consensus_types::common::Round;
 use libra_logger::prelude::*;
 use std::{
     fmt,
-    sync::Arc,
+    sync::{mpsc, Arc},
     time::{Duration, Instant},
 };
 
@@ -145,7 +145,7 @@ pub struct Pacemaker {
     // Service for timer
     time_service: Arc<dyn TimeService>,
     // To send local timeout events to the subscriber (e.g., SMR)
-    timeout_sender: channel::Sender<Round>,
+    timeout_sender: mpsc::Sender<Round>,
 }
 
 #[allow(dead_code)]
@@ -153,7 +153,7 @@ impl Pacemaker {
     pub fn new(
         time_interval: Box<dyn PacemakerTimeInterval>,
         time_service: Arc<dyn TimeService>,
-        timeout_sender: channel::Sender<Round>,
+        timeout_sender: mpsc::Sender<Round>,
     ) -> Self {
         // Our counters are initialized lazily, so they're not going to appear in
         // Prometheus if some conditions never happen. Invoking get() function enforces creation.

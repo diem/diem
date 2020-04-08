@@ -415,12 +415,3 @@ pub static PENDING_SELF_MESSAGES: Lazy<IntGauge> = Lazy::new(|| {
     )
     .unwrap()
 });
-
-/// Count of the pending outbound pacemaker timeouts
-pub static PENDING_PACEMAKER_TIMEOUTS: Lazy<IntGauge> = Lazy::new(|| {
-    register_int_gauge!(
-        "libra_consensus_pending_pacemaker_timeouts",
-        "Count of the pending outbound pacemaker timeouts"
-    )
-    .unwrap()
-});

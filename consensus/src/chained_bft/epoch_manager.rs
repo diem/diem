@@ -38,7 +38,11 @@ use libra_types::{
 };
 use network::protocols::network::Event;
 use safety_rules::SafetyRulesManager;
-use std::{cmp::Ordering, sync::Arc, time::Duration};
+use std::{
+    cmp::Ordering,
+    sync::{mpsc, Arc},
+    time::Duration,
+};
 
 /// The enum contains two processor
 /// SyncProcessor is used to process events in order to sync up with peer if we can't recover from local consensusdb
@@ -73,7 +77,7 @@ pub struct EpochManager<T> {
     time_service: Arc<dyn TimeService>,
     self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
     network_sender: ConsensusNetworkSender<T>,
-    timeout_sender: channel::Sender<Round>,
+    timeout_sender: mpsc::Sender<Round>,
     txn_manager: Box<dyn TxnManager<Payload = T>>,
     state_computer: Arc<dyn StateComputer<Payload = T>>,
     storage: Arc<dyn PersistentLivenessStorage<T>>,
@@ -88,7 +92,7 @@ impl<T: Payload> EpochManager<T> {
         time_service: Arc<dyn TimeService>,
         self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
         network_sender: ConsensusNetworkSender<T>,
-        timeout_sender: channel::Sender<Round>,
+        timeout_sender: mpsc::Sender<Round>,
         txn_manager: Box<dyn TxnManager<Payload = T>>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         storage: Arc<dyn PersistentLivenessStorage<T>>,
@@ -127,7 +131,7 @@ impl<T: Payload> EpochManager<T> {
     fn create_pacemaker(
         &self,
         time_service: Arc<dyn TimeService>,
-        timeout_sender: channel::Sender<Round>,
+        timeout_sender: mpsc::Sender<Round>,
     ) -> Pacemaker {
         // 1.5^6 ~= 11
         // Timeout goes from initial_timeout to initial_timeout*11 in 6 steps
@@ -262,11 +266,12 @@ impl<T: Payload> EpochManager<T> {
             recovery_data.root_block(),
         );
         info!("Update Network about new validators");
-        block_on(
+        if let Err(e) = block_on(
             self.network_sender
                 .update_eligible_nodes(recovery_data.validator_keys()),
-        )
-        .expect("Unable to update network's eligible peers");
+        ) {
+            error!("Unable to update network's eligible peers: {:?}", e);
+        }
         let last_vote = recovery_data.last_vote();
 
         info!("Create BlockStore");
@@ -332,11 +337,12 @@ impl<T: Payload> EpochManager<T> {
     // care of the sync up here.
     fn start_sync_processor(&mut self, ledger_recovery_data: LedgerRecoveryData) {
         let epoch_info = ledger_recovery_data.epoch_info();
-        block_on(
+        if let Err(e) = block_on(
             self.network_sender
                 .update_eligible_nodes(ledger_recovery_data.validator_keys()),
-        )
-        .expect("Unable to update network's eligible peers");
+        ) {
+            error!("Unable to update network's eligible peers: {:?}", e);
+        }
         let network_sender = NetworkSender::new(
             self.author,
             self.network_sender.clone(),

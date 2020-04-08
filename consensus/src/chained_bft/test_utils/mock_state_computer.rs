@@ -82,13 +82,13 @@ impl StateComputer for MockStateComputer {
                 .ok_or_else(|| format_err!("Cannot find block"))?;
             txns.append(&mut payload);
         }
-        self.state_sync_client
-            .unbounded_send(txns)
-            .expect("Fail to notify state sync about commit");
+        if let Err(e) = self.state_sync_client.unbounded_send(txns) {
+            debug!("Fail to notify state sync about commit: {:?}", e);
+        }
 
-        self.commit_callback
-            .unbounded_send(commit)
-            .expect("Fail to notify about commit.");
+        if let Err(e) = self.commit_callback.unbounded_send(commit) {
+            debug!("Failed to notify about commit: {:?}", e);
+        }
         Ok(())
     }
 
@@ -101,9 +101,9 @@ impl StateComputer for MockStateComputer {
         );
         self.consensus_db
             .commit_to_storage(commit.ledger_info().clone());
-        self.commit_callback
-            .unbounded_send(commit)
-            .expect("Fail to notify about sync");
+        if let Err(e) = self.commit_callback.unbounded_send(commit) {
+            debug!("Failed to notify about commit: {:?}", e);
+        }
         Ok(())
     }
 

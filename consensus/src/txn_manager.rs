@@ -5,8 +5,10 @@ use crate::state_replication::TxnManager;
 use anyhow::{format_err, Result};
 use debug_interface::prelude::*;
 use executor_types::StateComputeResult;
-use futures::channel::{mpsc, oneshot};
-use futures::executor::block_on;
+use futures::{
+    channel::{mpsc, oneshot},
+    executor::block_on,
+};
 use libra_crypto::HashValue;
 use libra_mempool::{
     CommittedTransaction, ConsensusRequest, ConsensusResponse, TransactionExclusion,

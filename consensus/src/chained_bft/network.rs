@@ -17,8 +17,9 @@ use consensus_types::{
     sync_info::SyncInfo,
     vote_msg::VoteMsg,
 };
-use futures::executor::block_on;
-use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryStreamExt};
+use futures::{
+    channel::oneshot, executor::block_on, stream::select, SinkExt, Stream, StreamExt, TryStreamExt,
+};
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{

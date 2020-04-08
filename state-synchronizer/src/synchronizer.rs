@@ -21,14 +21,8 @@ use libra_types::{
     validator_change::ValidatorChangeProof, waypoint::Waypoint,
 };
 use libra_vm::LibraVM;
-use std::{
-    sync::{Arc, Mutex},
-    time::Duration,
-};
-use tokio::{
-    runtime::{Builder, Runtime},
-    time::timeout,
-};
+use std::sync::{Arc, Mutex};
+use tokio::runtime::{Builder, Runtime};
 
 pub struct StateSynchronizer {
     _runtime: Runtime,
@@ -155,12 +149,13 @@ impl StateSyncClient {
                 ))
                 .await?;
 
-            match timeout(Duration::from_secs(1), callback_rcv).await {
+            // TODO: add timeout support
+            match callback_rcv.await {
                 Err(_) => {
                     Err(format_err!("[state sync client] failed to receive commit ACK from state synchronizer on time"))
                 }
                 Ok(resp) => {
-                    let CommitResponse { msg } = resp??;
+                    let CommitResponse { msg } = resp?;
                     if msg != "" {
                         Err(format_err!("[state sync client] commit failed: {:?}", msg))
                     } else {

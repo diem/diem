@@ -16,11 +16,17 @@ use crate::{
 };
 use anyhow::Result;
 use consensus_types::common::{Author, Payload, Round};
-use futures::{select, stream::StreamExt};
 use libra_config::config::{ConsensusConfig, NodeConfig};
 use libra_logger::prelude::*;
 use safety_rules::SafetyRulesManager;
-use std::{sync::Arc, time::Instant};
+use std::{
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc, Arc,
+    },
+    thread,
+    time::Instant,
+};
 use tokio::runtime::{self, Handle, Runtime};
 
 /// All these structures need to be moved into EpochManager. Rather than make each one an option
@@ -40,9 +46,11 @@ pub struct ChainedBftSMRInput<T> {
 pub struct ChainedBftSMR<T> {
     author: Author,
     runtime: Option<Runtime>,
+    handle: Option<thread::JoinHandle<()>>,
     block_store: Option<Arc<BlockStore<T>>>,
     storage: Arc<dyn PersistentLivenessStorage<T>>,
     input: Option<ChainedBftSMRInput<T>>,
+    shutdown: Arc<AtomicBool>,
 }
 
 impl<T: Payload> ChainedBftSMR<T> {
@@ -66,9 +74,11 @@ impl<T: Payload> ChainedBftSMR<T> {
         Self {
             author: node_config.validator_network.as_ref().unwrap().peer_id,
             runtime: None,
+            handle: None,
             block_store: None,
             storage,
             input: Some(input),
+            shutdown: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -85,35 +95,50 @@ impl<T: Payload> ChainedBftSMR<T> {
     fn start_event_processing(
         executor: Handle,
         mut epoch_manager: EpochManager<T>,
-        mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
+        pacemaker_timeout_sender_rx: mpsc::Receiver<Round>,
         network_task: NetworkTask<T>,
         mut network_receivers: NetworkReceivers<T>,
-    ) {
-        let fut = async move {
-            loop {
-                let pre_select_instant = Instant::now();
-                let idle_duration;
-                select! {
-                    msg = network_receivers.consensus_messages.select_next_some() => {
-                        idle_duration = pre_select_instant.elapsed();
-                        epoch_manager.process_message(msg.0, msg.1)
-                    }
-                    block_retrieval = network_receivers.block_retrieval.select_next_some() => {
-                        idle_duration = pre_select_instant.elapsed();
-                        epoch_manager.process_block_retrieval(block_retrieval)
-                    }
-                    round = pacemaker_timeout_sender_rx.select_next_some() => {
-                        idle_duration = pre_select_instant.elapsed();
-                        epoch_manager.process_local_timeout(round)
-                    }
-                }
-                counters::EVENT_PROCESSING_LOOP_BUSY_DURATION_S
-                    .observe_duration(pre_select_instant.elapsed() - idle_duration);
-                counters::EVENT_PROCESSING_LOOP_IDLE_DURATION_S.observe_duration(idle_duration);
-            }
-        };
+        shutdown: Arc<AtomicBool>,
+    ) -> thread::JoinHandle<()> {
         executor.spawn(network_task.start());
-        executor.spawn(fut);
+        thread::spawn(move || loop {
+            let pre_select_instant = Instant::now();
+            let idle_duration;
+            loop {
+                if let Some(msg) = network_receivers.consensus_messages.try_recv() {
+                    idle_duration = pre_select_instant.elapsed();
+                    epoch_manager.process_message(msg.0, msg.1);
+                    break;
+                } else if let Ok(round) = pacemaker_timeout_sender_rx.try_recv() {
+                    idle_duration = pre_select_instant.elapsed();
+                    epoch_manager.process_local_timeout(round);
+                    break;
+                } else if let Some(block_retrieval) = network_receivers.block_retrieval.try_recv() {
+                    idle_duration = pre_select_instant.elapsed();
+                    epoch_manager.process_block_retrieval(block_retrieval);
+                    break;
+                } else if shutdown.load(Ordering::SeqCst) {
+                    return;
+                }
+            }
+            counters::EVENT_PROCESSING_LOOP_BUSY_DURATION_S
+                .observe_duration(pre_select_instant.elapsed() - idle_duration);
+            counters::EVENT_PROCESSING_LOOP_IDLE_DURATION_S.observe_duration(idle_duration);
+        })
+    }
+}
+
+impl<T> ChainedBftSMR<T> {
+    fn _stop(&mut self) {
+        self.runtime.take();
+        if let Some(h) = self.handle.take() {
+            self.shutdown.store(true, Ordering::SeqCst);
+            debug!("[ChainedBftSMR] joining main loop");
+            if let Err(e) = h.join() {
+                error!("[ChainedBftSMR] Error joining main loop: {:?}", e);
+            }
+        }
+        debug!("[ChainedBftSMR] Stopped.")
     }
 }
 
@@ -132,10 +157,9 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
         let input = self.input.take().expect("already started, input is None");
 
         let executor = runtime.handle().clone();
-        let time_service = Arc::new(ClockTimeService::new());
+        let time_service = Arc::new(ClockTimeService::new(self.shutdown.clone()));
 
-        let (timeout_sender, timeout_receiver) =
-            channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
+        let (timeout_sender, timeout_receiver) = mpsc::channel();
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
 
         let mut epoch_mgr = EpochManager::new(
@@ -159,13 +183,14 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
         // TODO: this is for testing, remove
         self.block_store = epoch_mgr.block_store();
 
-        Self::start_event_processing(
+        self.handle = Some(Self::start_event_processing(
             executor,
             epoch_mgr,
             timeout_receiver,
             network_task,
             network_receiver,
-        );
+            self.shutdown.clone(),
+        ));
 
         self.runtime = Some(runtime);
 
@@ -175,8 +200,12 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
 
     /// Stop is synchronous: waits for all the worker threads to terminate.
     fn stop(&mut self) {
-        if let Some(_rt) = self.runtime.take() {
-            debug!("Chained BFT SMR stopped.")
-        }
+        self._stop()
+    }
+}
+
+impl<T> Drop for ChainedBftSMR<T> {
+    fn drop(&mut self) {
+        self._stop()
     }
 }

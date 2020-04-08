@@ -65,7 +65,7 @@ fn build_empty_store(
 fn create_pacemaker() -> Pacemaker {
     let base_timeout = std::time::Duration::new(60, 0);
     let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
-    let (pacemaker_timeout_sender, _) = channel::new_test(1_024);
+    let (pacemaker_timeout_sender, _) = std::sync::mpsc::channel();
     let time_service = Arc::new(SimulatedTimeService::new());
     Pacemaker::new(time_interval, time_service, pacemaker_timeout_sender)
 }

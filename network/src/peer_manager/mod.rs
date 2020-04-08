@@ -170,12 +170,10 @@ impl PeerManagerRequestSender {
             res_tx,
             timeout,
         };
-        self.inner
-            .push(
-                (peer_id, protocol),
-                PeerManagerRequest::SendRpc(peer_id, request),
-            )
-            .unwrap();
+        self.inner.push(
+            (peer_id, protocol),
+            PeerManagerRequest::SendRpc(peer_id, request),
+        )?;
         res_rx.await?
     }
 }

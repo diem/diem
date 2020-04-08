@@ -9,8 +9,10 @@ use crate::{
 };
 
 use consensus_types::common::Round;
-use futures::StreamExt;
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{mpsc, Arc},
+    time::Duration,
+};
 
 #[test]
 fn test_pacemaker_time_interval() {
@@ -25,15 +27,14 @@ fn test_pacemaker_time_interval() {
     assert_eq!(6750, interval.get_round_duration(1000).as_millis());
 }
 
-#[tokio::test]
 /// Verify that Pacemaker properly outputs local timeout events upon timeout
-async fn test_basic_timeout() {
-    let (mut pm, mut timeout_rx) = make_pacemaker();
+fn test_basic_timeout() {
+    let (mut pm, timeout_rx) = make_pacemaker();
 
     // jump start the pacemaker
     pm.process_certificates(Some(0), None, None);
     for _ in 0..2 {
-        let round = timeout_rx.next().await.unwrap();
+        let round = timeout_rx.recv().unwrap();
         // Here we just test timeout send retry,
         // round for timeout is not changed as no timeout certificate was gathered at this point
         assert_eq!(1, round);
@@ -56,10 +57,10 @@ fn test_round_event_generation() {
     expect_qc(5, pm.process_certificates(Some(4), Some(4), None));
 }
 
-fn make_pacemaker() -> (Pacemaker, channel::Receiver<Round>) {
+fn make_pacemaker() -> (Pacemaker, mpsc::Receiver<Round>) {
     let time_interval = Box::new(ExponentialTimeInterval::fixed(Duration::from_millis(2)));
     let simulated_time = SimulatedTimeService::auto_advance_until(Duration::from_millis(4));
-    let (timeout_tx, timeout_rx) = channel::new_test(1_024);
+    let (timeout_tx, timeout_rx) = mpsc::channel();
     (
         Pacemaker::new(time_interval, Arc::new(simulated_time), timeout_tx),
         timeout_rx,

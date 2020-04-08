@@ -51,8 +51,7 @@ impl TimeService for SimulatedTimeService {
             if inner.now > inner.max {
                 inner.now = inner.max;
             }
-            // Perhaps this could be done better, but I think its good enough for tests...
-            futures::executor::block_on(t.run());
+            t.run();
         }
     }
 
@@ -126,7 +125,7 @@ impl SimulatedTimeService {
         }
         for (_, mut t) in drain {
             // probably could be done better then that, but for now I feel its good enough for tests
-            futures::executor::block_on(t.run());
+            t.run();
         }
     }
 }

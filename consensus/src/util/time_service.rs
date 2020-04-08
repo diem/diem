@@ -1,11 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use futures::{executor::block_on, Future, FutureExt, SinkExt};
 use libra_logger::prelude::*;
 use std::{
-    pin::Pin,
-    sync::mpsc,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc, Arc,
+    },
     thread,
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
@@ -39,7 +40,7 @@ pub trait TimeService: Send + Sync {
 pub trait ScheduledTask: Send {
     /// TimeService::run_after will run this method when time expires
     /// It is expected that this function is lightweight and does not take long time to complete
-    fn run(&mut self) -> Pin<Box<dyn Future<Output = ()> + Send>>;
+    fn run(&mut self);
 }
 
 /// This tasks send message to given Sender
@@ -47,7 +48,7 @@ pub struct SendTask<T>
 where
     T: Send + 'static,
 {
-    sender: Option<channel::Sender<T>>,
+    sender: Option<mpsc::Sender<T>>,
     message: Option<T>,
 }
 
@@ -56,7 +57,7 @@ where
     T: Send + 'static,
 {
     /// Makes new SendTask for given sender and message and wraps it to Box
-    pub fn make(sender: channel::Sender<T>, message: T) -> Box<dyn ScheduledTask> {
+    pub fn make(sender: mpsc::Sender<T>, message: T) -> Box<dyn ScheduledTask> {
         Box::new(SendTask {
             sender: Some(sender),
             message: Some(message),
@@ -68,15 +69,12 @@ impl<T> ScheduledTask for SendTask<T>
 where
     T: Send + 'static,
 {
-    fn run(&mut self) -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        let mut sender = self.sender.take().unwrap();
+    fn run(&mut self) {
+        let sender = self.sender.take().unwrap();
         let message = self.message.take().unwrap();
-        let r = async move {
-            if let Err(e) = sender.send(message).await {
-                error!("Error on send: {:?}", e);
-            };
+        if let Err(e) = sender.send(message) {
+            error!("Error on send: {:?}", e);
         };
-        r.boxed()
     }
 }
 
@@ -87,12 +85,15 @@ pub struct ClockTimeService {
 }
 
 impl ClockTimeService {
-    pub fn new() -> Self {
+    pub fn new(shutdown: Arc<AtomicBool>) -> Self {
         let (tx, rx) = mpsc::sync_channel::<(Duration, Box<dyn ScheduledTask>)>(100);
-        let _handle = thread::spawn(move || {
-            while let Ok((timeout, mut task)) = rx.recv() {
+        let _handle = thread::spawn(move || loop {
+            if shutdown.load(Ordering::SeqCst) {
+                break;
+            }
+            if let Ok((timeout, mut task)) = rx.try_recv() {
                 thread::sleep(timeout);
-                block_on(task.run());
+                task.run();
             }
         });
         Self { _handle, tx }
@@ -101,9 +102,9 @@ impl ClockTimeService {
 
 impl TimeService for ClockTimeService {
     fn run_after(&self, timeout: Duration, t: Box<dyn ScheduledTask>) {
-        self.tx
-            .send((timeout, t))
-            .expect("TimeService thread dropped");
+        if let Err(e) = self.tx.send((timeout, t)) {
+            error!("TimeService thread dropped: {:?}", e);
+        }
     }
 
     fn get_current_timestamp(&self) -> Duration {

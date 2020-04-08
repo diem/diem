@@ -52,7 +52,11 @@ use network::peer_manager::{
     conn_status_channel, ConnectionRequestSender, PeerManagerRequestSender,
 };
 use safety_rules::{ConsensusState, PersistentSafetyStorage as SafetyStorage, SafetyRulesManager};
-use std::{num::NonZeroUsize, sync::Arc, time::Duration};
+use std::{
+    num::NonZeroUsize,
+    sync::{atomic::AtomicBool, Arc},
+    time::Duration,
+};
 use tokio::runtime::Handle;
 
 /// Auxiliary struct that is setting up node environment for the test.
@@ -70,7 +74,7 @@ impl NodeSetup {
     fn create_pacemaker(time_service: Arc<dyn TimeService>) -> Pacemaker {
         let base_timeout = Duration::new(60, 0);
         let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
-        let (pacemaker_timeout_sender, _) = channel::new_test(1_024);
+        let (pacemaker_timeout_sender, _) = std::sync::mpsc::channel();
         Pacemaker::new(time_interval, time_service, pacemaker_timeout_sender)
     }
 
@@ -162,7 +166,7 @@ impl NodeSetup {
             10, // max pruned blocks in mem
         ));
 
-        let time_service = Arc::new(ClockTimeService::new());
+        let time_service = Arc::new(ClockTimeService::new(Arc::new(AtomicBool::new(false))));
 
         let proposal_generator = ProposalGenerator::new(
             author,
@@ -450,7 +454,7 @@ fn process_round_mismatch_test() {
 /// Ensure that after the vote messages are broadcasted upon timeout, the receivers
 /// have the highest quorum certificate (carried by the SyncInfo of the vote message)
 fn process_vote_timeout_msg_test() {
-    let mut runtime = consensus_runtime();
+    let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
     let non_proposer = nodes.pop().unwrap();
@@ -607,8 +611,7 @@ fn process_timeout_certificate_test() {
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         );
         assert_eq!(
-            node.event_processor
-                .pre_process_proposal(old_good_proposal.clone()),
+            node.event_processor.pre_process_proposal(old_good_proposal),
             None
         );
     });
@@ -751,7 +754,7 @@ fn process_block_retrieval() {
 #[test]
 /// rebuild a node from previous storage without violating safety guarantees.
 fn basic_restart_test() {
-    let mut runtime = consensus_runtime();
+    let runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut node = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1)
         .pop()
