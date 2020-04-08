@@ -35,7 +35,7 @@ fn test_hkdf_key_pair() {
 
     // HKDF with salt and info.
     let raw_bytes = [2u8; 10];
-    let salt = Some(&raw_bytes[0..4]);
+    let salt = Some(&raw_bytes[..4]);
     let seed = [3u8; 32];
     let info = Some(&raw_bytes[4..10]);
     let (_, public_key1) = X25519StaticPrivateKey::derive_keypair_from_seed(salt, &seed, info);

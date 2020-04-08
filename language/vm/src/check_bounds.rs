@@ -183,14 +183,11 @@ impl<'a> BoundsChecker<'a> {
         );
         // check signature (type) and type parameter for the field type
         if let StructFieldInformation::Declared(fields) = &struct_def.field_information {
-            let type_param_count = match self
+            let type_param_count = self
                 .module
                 .struct_handles
                 .get(struct_def.struct_handle.into_index())
-            {
-                Some(sh) => sh.type_parameters.len(),
-                None => 0,
-            };
+                .map_or(0, |sh| sh.type_parameters.len());
             // field signatures are inlined
             for field in fields {
                 check_bounds_impl(&self.module.identifiers, field.name, errors);

@@ -1058,7 +1058,7 @@ impl<'txn> Interpreter<'txn> {
         let pc = current_frame.pc as usize;
         if pc < code.len() {
             let mut i = 0;
-            for bytecode in &code[0..pc] {
+            for bytecode in &code[..pc] {
                 internal_state.push_str(format!("{}> {:?}\n", i, bytecode).as_str());
                 i += 1;
             }

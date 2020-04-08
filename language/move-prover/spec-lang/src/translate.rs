@@ -1782,7 +1782,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             EA::Exp_::Value(v) => match &v.value {
                 PA::Value_::Address(addr) => {
                     let addr_str = &format!("{}", addr);
-                    if &addr_str[0..2] == "0x" {
+                    if &addr_str[..2] == "0x" {
                         let digits_only = &addr_str[2..];
                         make_value(
                             Value::Address(
