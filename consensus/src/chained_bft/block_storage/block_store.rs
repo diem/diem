@@ -164,7 +164,7 @@ impl<T: Payload> BlockStore<T> {
     }
 
     /// Commit the given block id with the proof, returns the path from current root or error
-    pub async fn commit(
+    pub fn commit(
         &self,
         finality_proof: LedgerInfoWithSignatures,
     ) -> anyhow::Result<Vec<Arc<ExecutedBlock<T>>>> {
@@ -188,7 +188,6 @@ impl<T: Payload> BlockStore<T> {
                 blocks_to_commit.iter().map(|b| b.id()).collect(),
                 finality_proof,
             )
-            .await
             .expect("Failed to persist commit");
         counters::LAST_COMMITTED_ROUND.set(block_to_commit.round() as i64);
         debug!("{}Committed{} {}", Fg(Blue), Fg(Reset), *block_to_commit);
@@ -201,7 +200,7 @@ impl<T: Payload> BlockStore<T> {
         Ok(blocks_to_commit)
     }
 
-    pub async fn rebuild(
+    pub fn rebuild(
         &self,
         root: RootInfo<T>,
         root_metadata: RootMetadata,
@@ -233,7 +232,7 @@ impl<T: Payload> BlockStore<T> {
         // Here we commit up to the highest_commit_cert to maintain highest_commit_cert == state_computer.committed_trees.
         if self.highest_commit_cert().commit_info().round() > self.root().round() {
             let finality_proof = self.highest_commit_cert().ledger_info().clone();
-            if let Err(e) = self.commit(finality_proof).await {
+            if let Err(e) = self.commit(finality_proof) {
                 warn!("{:?}", e);
             }
         }

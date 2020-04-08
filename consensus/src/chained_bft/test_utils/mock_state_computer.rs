@@ -46,7 +46,6 @@ impl MockStateComputer {
     }
 }
 
-#[async_trait::async_trait]
 impl StateComputer for MockStateComputer {
     type Payload = Vec<usize>;
     fn compute(
@@ -68,11 +67,7 @@ impl StateComputer for MockStateComputer {
         ))
     }
 
-    async fn commit(
-        &self,
-        block_ids: Vec<HashValue>,
-        commit: LedgerInfoWithSignatures,
-    ) -> Result<()> {
+    fn commit(&self, block_ids: Vec<HashValue>, commit: LedgerInfoWithSignatures) -> Result<()> {
         self.consensus_db
             .commit_to_storage(commit.ledger_info().clone());
 
@@ -97,7 +92,7 @@ impl StateComputer for MockStateComputer {
         Ok(())
     }
 
-    async fn sync_to(&self, commit: LedgerInfoWithSignatures) -> Result<()> {
+    fn sync_to(&self, commit: LedgerInfoWithSignatures) -> Result<()> {
         debug!(
             "{}Fake sync{} to block id {}",
             Fg(Blue),
@@ -112,11 +107,7 @@ impl StateComputer for MockStateComputer {
         Ok(())
     }
 
-    async fn get_epoch_proof(
-        &self,
-        _start_epoch: u64,
-        _end_epoch: u64,
-    ) -> Result<ValidatorChangeProof> {
+    fn get_epoch_proof(&self, _start_epoch: u64, _end_epoch: u64) -> Result<ValidatorChangeProof> {
         Err(format_err!(
             "epoch proof not supported in mock state computer"
         ))
@@ -125,7 +116,6 @@ impl StateComputer for MockStateComputer {
 
 pub struct EmptyStateComputer;
 
-#[async_trait::async_trait]
 impl StateComputer for EmptyStateComputer {
     type Payload = TestPayload;
     fn compute(
@@ -143,23 +133,15 @@ impl StateComputer for EmptyStateComputer {
         ))
     }
 
-    async fn commit(
-        &self,
-        _block_ids: Vec<HashValue>,
-        _commit: LedgerInfoWithSignatures,
-    ) -> Result<()> {
+    fn commit(&self, _block_ids: Vec<HashValue>, _commit: LedgerInfoWithSignatures) -> Result<()> {
         Ok(())
     }
 
-    async fn sync_to(&self, _commit: LedgerInfoWithSignatures) -> Result<()> {
+    fn sync_to(&self, _commit: LedgerInfoWithSignatures) -> Result<()> {
         Ok(())
     }
 
-    async fn get_epoch_proof(
-        &self,
-        _start_epoch: u64,
-        _end_epoch: u64,
-    ) -> Result<ValidatorChangeProof> {
+    fn get_epoch_proof(&self, _start_epoch: u64, _end_epoch: u64) -> Result<ValidatorChangeProof> {
         Err(format_err!(
             "epoch proof not supported in empty state computer"
         ))

@@ -45,7 +45,6 @@ impl<T> Clone for Box<dyn TxnManager<Payload = T>> {
 /// While Consensus is managing proposed blocks, `StateComputer` is managing the results of the
 /// (speculative) execution of their payload.
 /// StateComputer is using proposed block ids for identifying the transactions.
-#[async_trait::async_trait]
 pub trait StateComputer: Send + Sync {
     type Payload;
 
@@ -61,7 +60,7 @@ pub trait StateComputer: Send + Sync {
     ) -> Result<StateComputeResult>;
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
-    async fn commit(
+    fn commit(
         &self,
         block_ids: Vec<HashValue>,
         finality_proof: LedgerInfoWithSignatures,
@@ -71,12 +70,8 @@ pub trait StateComputer: Send + Sync {
     /// In case of success (`Result::Ok`) the LI of storage is at the given target.
     /// In case of failure (`Result::Error`) the LI of storage remains unchanged, and the validator
     /// can assume there were no modifications to the storage made.
-    async fn sync_to(&self, target: LedgerInfoWithSignatures) -> Result<()>;
+    fn sync_to(&self, target: LedgerInfoWithSignatures) -> Result<()>;
 
     /// Generate the epoch change proof from start_epoch to the latest epoch.
-    async fn get_epoch_proof(
-        &self,
-        start_epoch: u64,
-        end_epoch: u64,
-    ) -> Result<ValidatorChangeProof>;
+    fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<ValidatorChangeProof>;
 }

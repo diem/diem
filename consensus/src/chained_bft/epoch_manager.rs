@@ -177,15 +177,10 @@ impl<T: Payload> EpochManager<T> {
         }
     }
 
-    async fn process_epoch_retrieval(
-        &mut self,
-        request: EpochRetrievalRequest,
-        peer_id: AccountAddress,
-    ) {
+    fn process_epoch_retrieval(&mut self, request: EpochRetrievalRequest, peer_id: AccountAddress) {
         let proof = match self
             .state_computer
             .get_epoch_proof(request.start_epoch, request.end_epoch)
-            .await
         {
             Ok(proof) => proof,
             Err(e) => {
@@ -205,16 +200,13 @@ impl<T: Payload> EpochManager<T> {
     async fn process_different_epoch(&mut self, different_epoch: u64, peer_id: AccountAddress) {
         match different_epoch.cmp(&self.epoch()) {
             // We try to help nodes that have lower epoch than us
-            Ordering::Less => {
-                self.process_epoch_retrieval(
-                    EpochRetrievalRequest {
-                        start_epoch: different_epoch,
-                        end_epoch: self.epoch(),
-                    },
-                    peer_id,
-                )
-                .await
-            }
+            Ordering::Less => self.process_epoch_retrieval(
+                EpochRetrievalRequest {
+                    start_epoch: different_epoch,
+                    end_epoch: self.epoch(),
+                },
+                peer_id,
+            ),
             // We request proof to join higher epoch
             Ordering::Greater => {
                 let request = EpochRetrievalRequest {
@@ -250,7 +242,7 @@ impl<T: Payload> EpochManager<T> {
         );
 
         // make sure storage is on this ledger_info too, it should be no-op if it's already committed
-        if let Err(e) = self.state_computer.sync_to(ledger_info.clone()).await {
+        if let Err(e) = self.state_computer.sync_to(ledger_info.clone()) {
             error!("State sync to new epoch {} failed with {:?}, we'll try to start from current libradb", ledger_info, e);
         }
         self.start_processor().await
@@ -406,7 +398,7 @@ impl<T: Payload> EpochManager<T> {
             }
             ConsensusMsg::EpochRetrievalRequest(request) => {
                 if request.end_epoch <= self.epoch() {
-                    self.process_epoch_retrieval(*request, peer_id).await
+                    self.process_epoch_retrieval(*request, peer_id)
                 } else {
                     warn!("Received EpochRetrievalRequest beyond what we have locally");
                 }

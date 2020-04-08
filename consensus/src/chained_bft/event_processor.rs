@@ -895,7 +895,7 @@ impl<T: Payload> EventProcessor<T> {
 
     /// Upon (potentially) new commit, commit the blocks via block store.
     async fn process_commit(&mut self, finality_proof: LedgerInfoWithSignatures) {
-        let blocks_to_commit = match self.block_store.commit(finality_proof.clone()).await {
+        let blocks_to_commit = match self.block_store.commit(finality_proof.clone()) {
             Ok(blocks) => blocks,
             Err(e) => {
                 error!("{:?}", e);

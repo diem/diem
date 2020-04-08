@@ -151,8 +151,7 @@ impl<T: Payload> BlockStore<T> {
         .await?
         .take();
         debug!("{}Sync to{} {}", Fg(Blue), Fg(Reset), root.0);
-        self.rebuild(root, root_metadata, blocks, quorum_certs)
-            .await;
+        self.rebuild(root, root_metadata, blocks, quorum_certs);
 
         if highest_commit_cert.ends_epoch() {
             retriever
@@ -201,9 +200,7 @@ impl<T: Payload> BlockStore<T> {
         // to the stored quorum certs as the new root.
         storage.save_tree(blocks.clone(), quorum_certs.clone())?;
         let pre_sync_instance = Instant::now();
-        state_computer
-            .sync_to(highest_commit_cert.ledger_info().clone())
-            .await?;
+        state_computer.sync_to(highest_commit_cert.ledger_info().clone())?;
         counters::STATE_SYNC_DURATION_S.observe_duration(pre_sync_instance.elapsed());
         let recovery_data = storage
             .start()

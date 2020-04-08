@@ -6,6 +6,7 @@ use anyhow::{ensure, Result};
 use consensus_types::block::Block;
 use executor::Executor;
 use executor_types::StateComputeResult;
+use futures::executor::block_on;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
@@ -52,7 +53,6 @@ impl ExecutionProxy {
     }
 }
 
-#[async_trait::async_trait]
 impl StateComputer for ExecutionProxy {
     type Payload = Vec<SignedTransaction>;
 
@@ -96,7 +96,7 @@ impl StateComputer for ExecutionProxy {
     }
 
     /// Send a successful commit. A future is fulfilled when the state is finalized.
-    async fn commit(
+    fn commit(
         &self,
         block_ids: Vec<HashValue>,
         finality_proof: LedgerInfoWithSignatures,
@@ -112,29 +112,19 @@ impl StateComputer for ExecutionProxy {
             .unwrap()
             .commit_blocks(block_ids, finality_proof)?;
         counters::BLOCK_COMMIT_DURATION_S.observe_duration(pre_commit_instant.elapsed());
-        if let Err(e) = self
-            .synchronizer
-            .commit(committed_txns, reconfig_events)
-            .await
-        {
+        if let Err(e) = block_on(self.synchronizer.commit(committed_txns, reconfig_events)) {
             error!("failed to notify state synchronizer: {:?}", e);
         }
         Ok(())
     }
 
     /// Synchronize to a commit that not present locally.
-    async fn sync_to(&self, target: LedgerInfoWithSignatures) -> Result<()> {
+    fn sync_to(&self, target: LedgerInfoWithSignatures) -> Result<()> {
         counters::STATE_SYNC_COUNT.inc();
-        self.synchronizer.sync_to(target).await
+        block_on(self.synchronizer.sync_to(target))
     }
 
-    async fn get_epoch_proof(
-        &self,
-        start_epoch: u64,
-        end_epoch: u64,
-    ) -> Result<ValidatorChangeProof> {
-        self.synchronizer
-            .get_epoch_proof(start_epoch, end_epoch)
-            .await
+    fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<ValidatorChangeProof> {
+        block_on(self.synchronizer.get_epoch_proof(start_epoch, end_epoch))
     }
 }
