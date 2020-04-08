@@ -28,6 +28,7 @@ pub struct ValidatorInfo {
     // This key can validate messages sent from this validator
     consensus_public_key: Ed25519PublicKey,
     // Voting power of this validator
+    #[serde(with = "lcs::fixed_size")]
     consensus_voting_power: u64,
     // This key can validate signed messages at the network layer
     network_signing_public_key: Ed25519PublicKey,

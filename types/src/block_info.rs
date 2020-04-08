@@ -27,8 +27,10 @@ pub const GENESIS_TIMESTAMP_USECS: u64 = 0;
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct BlockInfo {
     /// Epoch number corresponds to the set of validators that are active for this block.
+    #[serde(with = "lcs::fixed_size")]
     epoch: u64,
     /// The consensus protocol is executed in rounds, which monotonically increase per epoch.
+    #[serde(with = "lcs::fixed_size")]
     round: Round,
     /// The identifier (hash) of the block.
     id: HashValue,
@@ -37,6 +39,7 @@ pub struct BlockInfo {
     /// The version of the latest transaction after executing this block.
     version: Version,
     /// The timestamp this block was proposed by a proposer.
+    #[serde(with = "lcs::fixed_size")]
     timestamp_usecs: u64,
     /// An optional field containing the set of validators for the start of the next epoch
     next_validator_set: Option<ValidatorSet>,

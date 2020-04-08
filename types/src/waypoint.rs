@@ -21,6 +21,7 @@ const WAYPOINT_DELIMITER: char = ':';
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Waypoint {
     /// The version of the reconfiguration transaction that is being approved by this waypoint.
+    #[serde(with = "lcs::fixed_size")]
     version: Version,
     /// The hash of the chosen fields of LedgerInfo (including the next validator set).
     value: HashValue,
@@ -101,9 +102,12 @@ impl FromStr for Waypoint {
 /// might not be the same for all the participants.
 #[derive(Deserialize, Serialize, CryptoHasher)]
 struct Ledger2WaypointConverter {
+    #[serde(with = "lcs::fixed_size")]
     epoch: u64,
     root_hash: HashValue,
+    #[serde(with = "lcs::fixed_size")]
     version: Version,
+    #[serde(with = "lcs::fixed_size")]
     timestamp_usecs: u64,
     next_validator_set: ValidatorSet,
 }

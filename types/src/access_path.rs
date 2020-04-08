@@ -76,7 +76,7 @@ impl fmt::Display for Field {
 #[derive(Eq, Hash, Serialize, Deserialize, Debug, Clone, PartialEq, Ord, PartialOrd)]
 pub enum Access {
     Field(Field),
-    Index(u64),
+    Index(#[serde(with = "lcs::fixed_size")] u64),
 }
 
 impl Access {

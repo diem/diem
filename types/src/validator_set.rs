@@ -53,6 +53,7 @@ pub static VALIDATOR_SET_CHANGE_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
 pub struct ValidatorSetResource {
     scheme: ConsensusScheme,
     validators: Vec<ValidatorInfo>,
+    #[serde(with = "lcs::fixed_size")]
     last_reconfiguration_time: u64,
     change_events: EventHandle,
 }

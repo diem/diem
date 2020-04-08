@@ -34,6 +34,7 @@ use std::{
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct UpdateToLatestLedgerRequest {
+    #[serde(with = "lcs::fixed_size")]
     pub client_known_version: u64,
     pub requested_items: Vec<RequestItem>,
 }
@@ -434,6 +435,7 @@ fn verify_get_txns_resp(
 pub enum RequestItem {
     GetAccountTransactionBySequenceNumber {
         account: AccountAddress,
+        #[serde(with = "lcs::fixed_size")]
         sequence_number: u64,
         fetch_events: bool,
     },
@@ -443,12 +445,16 @@ pub enum RequestItem {
     },
     GetEventsByEventAccessPath {
         access_path: AccessPath,
+        #[serde(with = "lcs::fixed_size")]
         start_event_seq_num: u64,
         ascending: bool,
+        #[serde(with = "lcs::fixed_size")]
         limit: u64,
     },
     GetTransactions {
+        #[serde(with = "lcs::fixed_size")]
         start_version: Version,
+        #[serde(with = "lcs::fixed_size")]
         limit: u64,
         fetch_events: bool,
     },

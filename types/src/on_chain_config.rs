@@ -153,6 +153,7 @@ impl VMPublishingOption {
 /// Defines the version of Libra Validator software.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct LibraVersion {
+    #[serde(with = "lcs::fixed_size")]
     pub major: u64,
 }
 

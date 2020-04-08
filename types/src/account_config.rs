@@ -172,7 +172,9 @@ pub struct AccountResource {
     delegated_withdrawal_capability: bool,
     received_events: EventHandle,
     sent_events: EventHandle,
+    #[serde(with = "lcs::fixed_size")]
     sequence_number: u64,
+    #[serde(with = "lcs::fixed_size")]
     event_generator: u64,
 }
 
@@ -233,6 +235,7 @@ impl AccountResource {
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct BalanceResource {
+    #[serde(with = "lcs::fixed_size")]
     coin: u64,
 }
 
@@ -275,6 +278,7 @@ pub static ACCOUNT_RECEIVED_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
 /// Struct that represents a SentPaymentEvent.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SentPaymentEvent {
+    #[serde(with = "lcs::fixed_size")]
     amount: u64,
     receiver: AccountAddress,
     metadata: Vec<u8>,
@@ -313,6 +317,7 @@ impl SentPaymentEvent {
 /// Struct that represents a ReceivedPaymentEvent.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReceivedPaymentEvent {
+    #[serde(with = "lcs::fixed_size")]
     amount: u64,
     sender: AccountAddress,
     metadata: Vec<u8>,
