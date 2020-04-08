@@ -409,8 +409,5 @@ fn test_validate_non_genesis_write_set() {
     let ret = rt
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
-    assert_eq!(
-        ret.status().unwrap().major_status,
-        StatusCode::ABORTED
-    );
+    assert_eq!(ret.status().unwrap().major_status, StatusCode::ABORTED);
 }
