@@ -230,3 +230,21 @@ variable "persist_libra_data" {
   default     = true
   description = "Whether to persist libra data on validator and fullnode between restarts"
 }
+
+variable "override_validator_ips" {
+  type        = list(string)
+  default     = []
+  description = "List of private IPs for validators"
+}
+
+variable "override_fullnode_ips" {
+  type        = list(string)
+  default     = []
+  description = "List of private IPs for fullnodes"
+}
+
+variable "override_faucet_ip" {
+  type        = string
+  default     = ""
+  description = "Private IP for faucet"
+}
