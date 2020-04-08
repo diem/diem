@@ -96,15 +96,15 @@ impl<T: Payload> ChainedBftSMR<T> {
                 select! {
                     msg = network_receivers.consensus_messages.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
-                        epoch_manager.process_message(msg.0, msg.1).await
+                        epoch_manager.process_message(msg.0, msg.1)
                     }
                     block_retrieval = network_receivers.block_retrieval.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
-                        epoch_manager.process_block_retrieval(block_retrieval).await
+                        epoch_manager.process_block_retrieval(block_retrieval)
                     }
                     round = pacemaker_timeout_sender_rx.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
-                        epoch_manager.process_local_timeout(round).await
+                        epoch_manager.process_local_timeout(round)
                     }
                 }
                 counters::EVENT_PROCESSING_LOOP_BUSY_DURATION_S
@@ -123,7 +123,7 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
     /// 2. Construct per-epoch component with the fixed Validators provided by EpochManager including
     /// ProposerElection, Pacemaker, SafetyRules, Network(Populate with known validators), EventProcessor
     fn start(&mut self) -> Result<()> {
-        let mut runtime = runtime::Builder::new()
+        let runtime = runtime::Builder::new()
             .thread_name("consensus-")
             .threaded_scheduler()
             .enable_all()
@@ -154,7 +154,7 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
         let (network_task, network_receiver) =
             NetworkTask::new(input.network_events, self_receiver);
 
-        runtime.block_on(epoch_mgr.start_processor());
+        epoch_mgr.start_processor();
 
         // TODO: this is for testing, remove
         self.block_store = epoch_mgr.block_store();

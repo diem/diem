@@ -28,6 +28,7 @@ use consensus_types::{
     common::{Author, Payload, Round},
     epoch_retrieval::EpochRetrievalRequest,
 };
+use futures::executor::block_on;
 use libra_config::config::{ConsensusConfig, ConsensusProposerType};
 use libra_logger::prelude::*;
 use libra_types::{
@@ -197,7 +198,7 @@ impl<T: Payload> EpochManager<T> {
         };
     }
 
-    async fn process_different_epoch(&mut self, different_epoch: u64, peer_id: AccountAddress) {
+    fn process_different_epoch(&mut self, different_epoch: u64, peer_id: AccountAddress) {
         match different_epoch.cmp(&self.epoch()) {
             // We try to help nodes that have lower epoch than us
             Ordering::Less => self.process_epoch_retrieval(
@@ -227,7 +228,7 @@ impl<T: Payload> EpochManager<T> {
         }
     }
 
-    async fn start_new_epoch(&mut self, proof: ValidatorChangeProof) {
+    fn start_new_epoch(&mut self, proof: ValidatorChangeProof) {
         let verifier = VerifierType::TrustedVerifier(self.epoch_info().clone());
         let ledger_info = match proof.verify(&verifier) {
             Ok(ledger_info) => ledger_info,
@@ -245,10 +246,10 @@ impl<T: Payload> EpochManager<T> {
         if let Err(e) = self.state_computer.sync_to(ledger_info.clone()) {
             error!("State sync to new epoch {} failed with {:?}, we'll try to start from current libradb", ledger_info, e);
         }
-        self.start_processor().await
+        self.start_processor()
     }
 
-    async fn start_event_processor(&mut self, recovery_data: RecoveryData<T>) {
+    fn start_event_processor(&mut self, recovery_data: RecoveryData<T>) {
         // Release the previous EventProcessor, especially the SafetyRule client
         self.processor = None;
         let epoch_info = recovery_data.epoch_info();
@@ -261,10 +262,11 @@ impl<T: Payload> EpochManager<T> {
             recovery_data.root_block(),
         );
         info!("Update Network about new validators");
-        self.network_sender
-            .update_eligible_nodes(recovery_data.validator_keys())
-            .await
-            .expect("Unable to update network's eligible peers");
+        block_on(
+            self.network_sender
+                .update_eligible_nodes(recovery_data.validator_keys()),
+        )
+        .expect("Unable to update network's eligible peers");
         let last_vote = recovery_data.last_vote();
 
         info!("Create BlockStore");
@@ -319,7 +321,7 @@ impl<T: Payload> EpochManager<T> {
             self.storage.clone(),
             self.time_service.clone(),
         );
-        processor.start().await;
+        processor.start();
         self.processor = Some(Processor::EventProcessor(processor));
         info!("EventProcessor started");
     }
@@ -328,12 +330,13 @@ impl<T: Payload> EpochManager<T> {
     // event processor at startup. If we need to sync up with peers for blocks to construct
     // a valid block store, which is required to construct an event processor, we will take
     // care of the sync up here.
-    async fn start_sync_processor(&mut self, ledger_recovery_data: LedgerRecoveryData) {
+    fn start_sync_processor(&mut self, ledger_recovery_data: LedgerRecoveryData) {
         let epoch_info = ledger_recovery_data.epoch_info();
-        self.network_sender
-            .update_eligible_nodes(ledger_recovery_data.validator_keys())
-            .await
-            .expect("Unable to update network's eligible peers");
+        block_on(
+            self.network_sender
+                .update_eligible_nodes(ledger_recovery_data.validator_keys()),
+        )
+        .expect("Unable to update network's eligible peers");
         let network_sender = NetworkSender::new(
             self.author,
             self.network_sender.clone(),
@@ -350,31 +353,27 @@ impl<T: Payload> EpochManager<T> {
         info!("SyncProcessor started");
     }
 
-    pub async fn start_processor(&mut self) {
+    pub fn start_processor(&mut self) {
         match self.storage.start() {
             LivenessStorageData::RecoveryData(initial_data) => {
-                self.start_event_processor(initial_data).await
+                self.start_event_processor(initial_data)
             }
             LivenessStorageData::LedgerRecoveryData(ledger_recovery_data) => {
-                self.start_sync_processor(ledger_recovery_data).await
+                self.start_sync_processor(ledger_recovery_data)
             }
         }
     }
 
-    pub async fn process_message(
-        &mut self,
-        peer_id: AccountAddress,
-        consensus_msg: ConsensusMsg<T>,
-    ) {
-        if let Some(event) = self.process_epoch(peer_id, consensus_msg).await {
+    pub fn process_message(&mut self, peer_id: AccountAddress, consensus_msg: ConsensusMsg<T>) {
+        if let Some(event) = self.process_epoch(peer_id, consensus_msg) {
             match event.verify(&self.epoch_info().verifier) {
-                Ok(event) => self.process_event(peer_id, event).await,
+                Ok(event) => self.process_event(peer_id, event),
                 Err(err) => warn!("Message failed verification: {:?}", err),
             }
         }
     }
 
-    async fn process_epoch(
+    fn process_epoch(
         &mut self,
         peer_id: AccountAddress,
         msg: ConsensusMsg<T>,
@@ -385,15 +384,15 @@ impl<T: Payload> EpochManager<T> {
                 if event.epoch() == self.epoch() {
                     return Some(event);
                 } else {
-                    self.process_different_epoch(event.epoch(), peer_id).await;
+                    self.process_different_epoch(event.epoch(), peer_id);
                 }
             }
             ConsensusMsg::ValidatorChangeProof(proof) => {
                 let msg_epoch = proof.epoch().map_err(|e| warn!("{:?}", e)).ok()?;
                 if msg_epoch == self.epoch() {
-                    self.start_new_epoch(*proof).await
+                    self.start_new_epoch(*proof)
                 } else {
-                    self.process_different_epoch(msg_epoch, peer_id).await
+                    self.process_different_epoch(msg_epoch, peer_id)
                 }
             }
             ConsensusMsg::EpochRetrievalRequest(request) => {
@@ -410,28 +409,26 @@ impl<T: Payload> EpochManager<T> {
         None
     }
 
-    async fn process_event(&mut self, peer_id: AccountAddress, event: VerifiedEvent<T>) {
+    fn process_event(&mut self, peer_id: AccountAddress, event: VerifiedEvent<T>) {
         match self.processor_mut() {
             Processor::SyncProcessor(p) => {
                 let result = match event {
-                    VerifiedEvent::ProposalMsg(proposal) => p.process_proposal_msg(*proposal).await,
-                    VerifiedEvent::VoteMsg(vote) => p.process_vote(*vote).await,
+                    VerifiedEvent::ProposalMsg(proposal) => p.process_proposal_msg(*proposal),
+                    VerifiedEvent::VoteMsg(vote) => p.process_vote(*vote),
                     _ => Err(anyhow!("Unexpected VerifiedEvent during startup")),
                 };
                 match result {
                     Ok(data) => {
                         info!("Recovered from SyncProcessor");
-                        self.start_event_processor(data).await
+                        self.start_event_processor(data)
                     }
                     Err(e) => error!("{:?}", e),
                 }
             }
             Processor::EventProcessor(p) => match event {
-                VerifiedEvent::ProposalMsg(proposal) => p.process_proposal_msg(*proposal).await,
-                VerifiedEvent::VoteMsg(vote) => p.process_vote(*vote).await,
-                VerifiedEvent::SyncInfo(sync_info) => {
-                    p.process_sync_info_msg(*sync_info, peer_id).await
-                }
+                VerifiedEvent::ProposalMsg(proposal) => p.process_proposal_msg(*proposal),
+                VerifiedEvent::VoteMsg(vote) => p.process_vote(*vote),
+                VerifiedEvent::SyncInfo(sync_info) => p.process_sync_info_msg(*sync_info, peer_id),
             },
         }
     }
@@ -442,16 +439,16 @@ impl<T: Payload> EpochManager<T> {
             .expect("EpochManager not started yet")
     }
 
-    pub async fn process_block_retrieval(&mut self, request: IncomingBlockRetrievalRequest) {
+    pub fn process_block_retrieval(&mut self, request: IncomingBlockRetrievalRequest) {
         match self.processor_mut() {
-            Processor::EventProcessor(p) => p.process_block_retrieval(request).await,
+            Processor::EventProcessor(p) => p.process_block_retrieval(request),
             _ => warn!("EventProcessor not started yet"),
         }
     }
 
-    pub async fn process_local_timeout(&mut self, round: u64) {
+    pub fn process_local_timeout(&mut self, round: u64) {
         match self.processor_mut() {
-            Processor::EventProcessor(p) => p.process_local_timeout(round).await,
+            Processor::EventProcessor(p) => p.process_local_timeout(round),
             _ => unreachable!("EventProcessor not started yet"),
         }
     }

@@ -17,6 +17,7 @@ use consensus_types::{
     sync_info::SyncInfo,
     vote_msg::VoteMsg,
 };
+use futures::executor::block_on;
 use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryStreamExt};
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
@@ -83,7 +84,7 @@ impl<T: Payload> NetworkSender<T> {
 
     /// Tries to retrieve num of blocks backwards starting from id from the given peer: the function
     /// returns a future that is fulfilled with BlockRetrievalResponse.
-    pub async fn request_block(
+    pub fn request_block(
         &mut self,
         retrieval_request: BlockRetrievalRequest,
         from: Author,
@@ -93,7 +94,7 @@ impl<T: Payload> NetworkSender<T> {
         counters::BLOCK_RETRIEVAL_COUNT.inc_by(retrieval_request.num_blocks() as i64);
         let pre_retrieval_instant = Instant::now();
         let msg = ConsensusMsg::BlockRetrievalRequest::<T>(Box::new(retrieval_request.clone()));
-        let response_msg = self.network_sender.send_rpc(from, msg, timeout).await?;
+        let response_msg = block_on(self.network_sender.send_rpc(from, msg, timeout))?;
         counters::BLOCK_RETRIEVAL_DURATION_S.observe_duration(pre_retrieval_instant.elapsed());
         let response = match response_msg {
             ConsensusMsg::BlockRetrievalResponse(resp) => *resp,
@@ -124,16 +125,16 @@ impl<T: Payload> NetworkSender<T> {
     /// internal(to provide back pressure), it does not indicate the message is delivered or sent
     /// out. It does not give indication about when the message is delivered to the recipients,
     /// as well as there is no indication about the network failures.
-    pub async fn broadcast_proposal(&mut self, proposal: ProposalMsg<T>) {
+    pub fn broadcast_proposal(&mut self, proposal: ProposalMsg<T>) {
         let msg = ConsensusMsg::ProposalMsg(Box::new(proposal));
         // counters::UNWRAPPED_PROPOSAL_SIZE_BYTES.observe(msg.message.len() as f64);
-        self.broadcast(msg).await
+        self.broadcast(msg)
     }
 
-    async fn broadcast(&mut self, msg: ConsensusMsg<T>) {
+    fn broadcast(&mut self, msg: ConsensusMsg<T>) {
         // Directly send the message to ourself without going through network.
         let self_msg = Event::Message((self.author, msg.clone()));
-        if let Err(err) = self.self_sender.send(Ok(self_msg)).await {
+        if let Err(err) = block_on(self.self_sender.send(Ok(self_msg))) {
             error!("Error broadcasting to self: {:?}", err);
         }
 
@@ -159,14 +160,14 @@ impl<T: Payload> NetworkSender<T> {
     /// internal(to provide back pressure), it does not indicate the message is delivered or sent
     /// out. It does not give indication about when the message is delivered to the recipients,
     /// as well as there is no indication about the network failures.
-    pub async fn send_vote(&self, vote_msg: VoteMsg, recipients: Vec<Author>) {
+    pub fn send_vote(&self, vote_msg: VoteMsg, recipients: Vec<Author>) {
         let mut network_sender = self.network_sender.clone();
         let mut self_sender = self.self_sender.clone();
         let msg = ConsensusMsg::VoteMsg::<T>(Box::new(vote_msg));
         for peer in recipients {
             if self.author == peer {
                 let self_msg = Event::Message((self.author, msg.clone()));
-                if let Err(err) = self_sender.send(Ok(self_msg)).await {
+                if let Err(err) = block_on(self_sender.send(Ok(self_msg))) {
                     error!("Error delivering a self vote: {:?}", err);
                 }
                 continue;
@@ -178,9 +179,9 @@ impl<T: Payload> NetworkSender<T> {
     }
 
     /// Broadcasts vote message to all validators
-    pub async fn broadcast_vote(&mut self, vote_msg: VoteMsg) {
+    pub fn broadcast_vote(&mut self, vote_msg: VoteMsg) {
         let msg = ConsensusMsg::VoteMsg::<T>(Box::new(vote_msg));
-        self.broadcast(msg).await
+        self.broadcast(msg)
     }
 
     /// Sends the given sync info to the given author.
@@ -203,15 +204,15 @@ impl<T: Payload> NetworkSender<T> {
 
     /// Broadcast about epoch changes with proof to the current validator set (including self)
     /// when we commit the reconfiguration block
-    pub async fn broadcast_epoch_change(&mut self, proof: ValidatorChangeProof) {
+    pub fn broadcast_epoch_change(&mut self, proof: ValidatorChangeProof) {
         let msg = ConsensusMsg::ValidatorChangeProof::<T>(Box::new(proof));
-        self.broadcast(msg).await
+        self.broadcast(msg)
     }
 
-    pub async fn notify_epoch_change(&mut self, proof: ValidatorChangeProof) {
+    pub fn notify_epoch_change(&mut self, proof: ValidatorChangeProof) {
         let msg = ConsensusMsg::ValidatorChangeProof::<T>(Box::new(proof));
         let self_msg = Event::Message((self.author, msg));
-        if let Err(e) = self.self_sender.send(Ok(self_msg)).await {
+        if let Err(e) = block_on(self.self_sender.send(Ok(self_msg))) {
             warn!("Failed to notify to self an epoch change {:?}", e);
         }
     }

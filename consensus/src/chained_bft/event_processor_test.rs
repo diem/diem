@@ -40,10 +40,7 @@ use consensus_types::{
     vote_data::VoteData,
     vote_msg::VoteMsg,
 };
-use futures::{
-    channel::{mpsc, oneshot},
-    executor::block_on,
-};
+use futures::channel::{mpsc, oneshot};
 use libra_crypto::HashValue;
 use libra_types::{
     block_info::BlockInfo,
@@ -192,7 +189,7 @@ impl NodeSetup {
             storage.clone(),
             time_service,
         );
-        block_on(event_processor.start());
+        event_processor.start();
         Self {
             block_store,
             event_processor,
@@ -233,13 +230,11 @@ fn basic_new_rank_event_test() {
     let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
     timed_block_on(&mut runtime, async {
         let new_round = 1;
-        node.event_processor
-            .process_new_round_event(NewRoundEvent {
-                round: new_round,
-                reason: NewRoundReason::QCReady,
-                timeout: Duration::new(5, 0),
-            })
-            .await;
+        node.event_processor.process_new_round_event(NewRoundEvent {
+            round: new_round,
+            reason: NewRoundReason::QCReady,
+            timeout: Duration::new(5, 0),
+        });
         let pending_messages = playground
             .wait_for_messages(1, NetworkPlayground::proposals_only::<TestPayload>)
             .await;
@@ -291,16 +286,14 @@ fn basic_new_rank_event_test() {
             &node1.signer,
         );
         // Adding votes to form a QC
-        node.event_processor.add_vote(&vote).await.unwrap();
-        node.event_processor.add_vote(&vote1).await.unwrap();
+        node.event_processor.add_vote(&vote).unwrap();
+        node.event_processor.add_vote(&vote1).unwrap();
 
-        node.event_processor
-            .process_new_round_event(NewRoundEvent {
-                round: 2,
-                reason: NewRoundReason::QCReady,
-                timeout: Duration::new(5, 0),
-            })
-            .await;
+        node.event_processor.process_new_round_event(NewRoundEvent {
+            round: 2,
+            reason: NewRoundReason::QCReady,
+            timeout: Duration::new(5, 0),
+        });
         let pending_messages = playground
             .wait_for_messages(1, NetworkPlayground::proposals_only::<TestPayload>)
             .await;
@@ -339,7 +332,7 @@ fn process_successful_proposal_test() {
     timed_block_on(&mut runtime, async {
         let proposal = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
         let proposal_id = proposal.id();
-        node.event_processor.process_proposed_block(proposal).await;
+        node.event_processor.process_proposed_block(proposal);
         let pending_messages = playground
             .wait_for_messages(1, NetworkPlayground::votes_only::<TestPayload>)
             .await;
@@ -388,8 +381,8 @@ fn process_old_proposal_test() {
     let old_block = Block::new_proposal(vec![1], 1, 2, genesis_qc, &node.signer);
     let old_block_id = old_block.id();
     timed_block_on(&mut runtime, async {
-        node.event_processor.process_proposed_block(new_block).await;
-        node.event_processor.process_proposed_block(old_block).await;
+        node.event_processor.process_proposed_block(new_block);
+        node.event_processor.process_proposed_block(old_block);
         let pending_messages = playground
             .wait_for_messages(1, NetworkPlayground::votes_only::<TestPayload>)
             .await;
@@ -438,9 +431,7 @@ fn process_round_mismatch_test() {
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         );
         assert_eq!(
-            node.event_processor
-                .pre_process_proposal(bad_proposal)
-                .await,
+            node.event_processor.pre_process_proposal(bad_proposal),
             None
         );
         let good_proposal = ProposalMsg::<TestPayload>::new(
@@ -449,8 +440,7 @@ fn process_round_mismatch_test() {
         );
         assert_eq!(
             node.event_processor
-                .pre_process_proposal(good_proposal.clone())
-                .await,
+                .pre_process_proposal(good_proposal.clone()),
             Some(good_proposal.take_proposal())
         );
     });
@@ -528,12 +518,9 @@ fn process_vote_timeout_msg_test() {
         vote_on_timeout,
         SyncInfo::new(block_0_quorum_cert, certificate_for_genesis(), None),
     );
-    timed_block_on(
-        &mut runtime,
-        static_proposer
-            .event_processor
-            .process_vote(vote_msg_on_timeout),
-    );
+    static_proposer
+        .event_processor
+        .process_vote(vote_msg_on_timeout);
 
     assert_eq!(
         static_proposer
@@ -570,9 +557,7 @@ fn process_proposer_mismatch_test() {
             SyncInfo::new(genesis_qc.clone(), genesis_qc.clone(), None),
         );
         assert_eq!(
-            node.event_processor
-                .pre_process_proposal(bad_proposal)
-                .await,
+            node.event_processor.pre_process_proposal(bad_proposal),
             None
         );
         let good_proposal = ProposalMsg::<TestPayload>::new(
@@ -582,8 +567,7 @@ fn process_proposer_mismatch_test() {
 
         assert_eq!(
             node.event_processor
-                .pre_process_proposal(good_proposal.clone())
-                .await,
+                .pre_process_proposal(good_proposal.clone()),
             Some(good_proposal.take_proposal())
         );
     });
@@ -615,8 +599,7 @@ fn process_timeout_certificate_test() {
         );
         assert_eq!(
             node.event_processor
-                .pre_process_proposal(skip_round_proposal.clone())
-                .await,
+                .pre_process_proposal(skip_round_proposal.clone()),
             Some(skip_round_proposal.take_proposal())
         );
         let old_good_proposal = ProposalMsg::<TestPayload>::new(
@@ -625,8 +608,7 @@ fn process_timeout_certificate_test() {
         );
         assert_eq!(
             node.event_processor
-                .pre_process_proposal(old_good_proposal.clone())
-                .await,
+                .pre_process_proposal(old_good_proposal.clone()),
             None
         );
     });
@@ -669,7 +651,7 @@ fn process_votes_basic_test() {
     );
 
     timed_block_on(&mut runtime, async {
-        node.event_processor.process_vote(vote_msg).await;
+        node.event_processor.process_vote(vote_msg);
         // The new QC is aggregated
         assert_eq!(
             node.block_store
@@ -696,9 +678,8 @@ fn process_block_retrieval() {
     timed_block_on(&mut runtime, async {
         node.event_processor
             .process_certificates(block.quorum_cert(), None)
-            .await
             .expect("Failed to process certificates");
-        node.event_processor.process_proposed_block(block).await;
+        node.event_processor.process_proposed_block(block);
 
         // first verify that we can retrieve the block if it's in the tree
         let (tx1, rx1) = oneshot::channel();
@@ -707,8 +688,7 @@ fn process_block_retrieval() {
             response_sender: tx1,
         };
         node.event_processor
-            .process_block_retrieval(single_block_request)
-            .await;
+            .process_block_retrieval(single_block_request);
         match rx1.await {
             Ok(Ok(bytes)) => {
                 let response = match lcs::from_bytes(&bytes) {
@@ -729,8 +709,7 @@ fn process_block_retrieval() {
         };
 
         node.event_processor
-            .process_block_retrieval(missing_block_request)
-            .await;
+            .process_block_retrieval(missing_block_request);
         match rx2.await {
             Ok(Ok(bytes)) => {
                 let response = match lcs::from_bytes(&bytes) {
@@ -750,8 +729,7 @@ fn process_block_retrieval() {
             response_sender: tx3,
         };
         node.event_processor
-            .process_block_retrieval(many_block_request)
-            .await;
+            .process_block_retrieval(many_block_request);
         match rx3.await {
             Ok(Ok(bytes)) => {
                 let response = match lcs::from_bytes(&bytes) {
@@ -793,19 +771,13 @@ fn basic_restart_test() {
         proposals.push(proposal);
     }
     for proposal in &proposals {
-        timed_block_on(
-            &mut runtime,
-            node_mut
-                .event_processor
-                .process_certificates(proposal.quorum_cert(), None),
-        )
-        .expect("Failed to process certificates");
-        timed_block_on(
-            &mut runtime,
-            node_mut
-                .event_processor
-                .process_proposed_block(proposal.block().clone()),
-        );
+        node_mut
+            .event_processor
+            .process_certificates(proposal.quorum_cert(), None)
+            .expect("Failed to process certificates");
+        node_mut
+            .event_processor
+            .process_proposed_block(proposal.block().clone());
     }
     // verify after restart we recover the data
     node = node.restart(&mut playground, runtime.handle().clone());
@@ -829,7 +801,7 @@ fn nil_vote_on_timeout() {
     timed_block_on(&mut runtime, async {
         // Process the outgoing vote message and verify that it contains a round signature
         // and that the vote extends genesis.
-        node.event_processor.process_local_timeout(1).await;
+        node.event_processor.process_local_timeout(1);
         let msg = &playground
             .wait_for_messages(1, NetworkPlayground::timeout_votes_only::<TestPayload>)
             .await[0];

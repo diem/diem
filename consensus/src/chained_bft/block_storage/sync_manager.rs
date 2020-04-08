@@ -75,18 +75,16 @@ impl<T: Payload> BlockStore<T> {
     /// Fetches dependencies for given sync_info.quorum_cert
     /// If gap is large, performs state sync using process_highest_commit_cert
     /// Inserts sync_info.quorum_cert into block store as the last step
-    pub async fn sync_to(
+    pub fn sync_to(
         &self,
         sync_info: &SyncInfo,
         mut retriever: BlockRetriever<T>,
     ) -> anyhow::Result<()> {
-        self.process_highest_commit_cert(sync_info.highest_commit_cert().clone(), &mut retriever)
-            .await?;
+        self.process_highest_commit_cert(sync_info.highest_commit_cert().clone(), &mut retriever)?;
 
         match self.need_fetch_for_quorum_cert(sync_info.highest_quorum_cert()) {
             NeedFetchResult::NeedFetch => {
-                self.fetch_quorum_cert(sync_info.highest_quorum_cert().clone(), retriever)
-                    .await?
+                self.fetch_quorum_cert(sync_info.highest_quorum_cert().clone(), retriever)?
             }
             NeedFetchResult::QCBlockExist => {
                 self.insert_single_quorum_cert(sync_info.highest_quorum_cert().clone())?
@@ -100,7 +98,7 @@ impl<T: Payload> BlockStore<T> {
     /// updating the consensus state(with qc) and deciding whether to vote(with block)
     /// The missing ancestors are going to be retrieved from the given peer. If a given peer
     /// fails to provide the missing ancestors, the qc is not going to be added.
-    async fn fetch_quorum_cert(
+    fn fetch_quorum_cert(
         &self,
         qc: QuorumCert,
         mut retriever: BlockRetriever<T>,
@@ -111,7 +109,7 @@ impl<T: Payload> BlockStore<T> {
             if self.block_exists(retrieve_qc.certified_block().id()) {
                 break;
             }
-            let mut blocks = retriever.retrieve_block_for_qc(&retrieve_qc, 1).await?;
+            let mut blocks = retriever.retrieve_block_for_qc(&retrieve_qc, 1)?;
             // retrieve_block_for_qc guarantees that blocks has exactly 1 element
             let block = blocks.remove(0);
             retrieve_qc = block.quorum_cert().clone();
@@ -134,7 +132,7 @@ impl<T: Payload> BlockStore<T> {
     /// 2. We persist the 3-chain to storage before start sync to ensure we could restart if we
     /// crash in the middle of the sync.
     /// 3. We prune the old tree and replace with a new tree built with the 3-chain.
-    async fn process_highest_commit_cert(
+    fn process_highest_commit_cert(
         &self,
         highest_commit_cert: QuorumCert,
         retriever: &mut BlockRetriever<T>,
@@ -147,8 +145,7 @@ impl<T: Payload> BlockStore<T> {
             retriever,
             self.storage.clone(),
             self.state_computer.clone(),
-        )
-        .await?
+        )?
         .take();
         debug!("{}Sync to{} {}", Fg(Blue), Fg(Reset), root.0);
         self.rebuild(root, root_metadata, blocks, quorum_certs);
@@ -159,13 +156,12 @@ impl<T: Payload> BlockStore<T> {
                 .notify_epoch_change(ValidatorChangeProof::new(
                     vec![highest_commit_cert.ledger_info().clone()],
                     /* more = */ false,
-                ))
-                .await;
+                ));
         }
         Ok(())
     }
 
-    pub async fn fast_forward_sync<'a>(
+    pub fn fast_forward_sync<'a>(
         highest_commit_cert: &'a QuorumCert,
         retriever: &'a mut BlockRetriever<T>,
         storage: Arc<dyn PersistentLivenessStorage<T>>,
@@ -177,9 +173,7 @@ impl<T: Payload> BlockStore<T> {
             highest_commit_cert.commit_info(),
         );
 
-        let blocks = retriever
-            .retrieve_block_for_qc(&highest_commit_cert, 3)
-            .await?;
+        let blocks = retriever.retrieve_block_for_qc(&highest_commit_cert, 3)?;
         assert_eq!(
             blocks.last().expect("should have 3-chain").id(),
             highest_commit_cert.commit_info().id(),
@@ -237,7 +231,7 @@ impl<T: Payload> BlockRetriever<T> {
     /// leader to drive quorum certificate creation The other peers from the quorum certificate
     /// will be randomly tried next.  If all members of the quorum certificate are exhausted, an
     /// error is returned
-    async fn retrieve_block_for_qc<'a>(
+    fn retrieve_block_for_qc<'a>(
         &'a mut self,
         qc: &'a QuorumCert,
         num_blocks: u64,
@@ -266,14 +260,11 @@ impl<T: Payload> BlockRetriever<T> {
                 peer.short_str(),
                 attempt
             );
-            let response = self
-                .network
-                .request_block(
-                    BlockRetrievalRequest::new(block_id, num_blocks),
-                    peer,
-                    timeout,
-                )
-                .await;
+            let response = self.network.request_block(
+                BlockRetrievalRequest::new(block_id, num_blocks),
+                peer,
+                timeout,
+            );
             let response = match response {
                 Err(e) => {
                     warn!(

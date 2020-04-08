@@ -19,7 +19,7 @@ use crate::{
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::proposal_msg::ProposalMsg;
-use futures::{channel::mpsc, executor::block_on};
+use futures::channel::mpsc;
 use libra_types::{
     ledger_info::LedgerInfoWithSignatures, validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
@@ -171,11 +171,9 @@ pub fn fuzz_proposal(data: &[u8]) {
         }
     };
 
-    block_on(async move {
-        // TODO: make sure this obtains a vote when testing
-        // TODO: make sure that if this obtains a vote, it's for round 1, etc.
-        event_processor.process_proposal_msg(proposal).await;
-    });
+    // TODO: make sure this obtains a vote when testing
+    // TODO: make sure that if this obtains a vote, it's for round 1, etc.
+    event_processor.process_proposal_msg(proposal);
 }
 
 // This test is here so that the fuzzer can be maintained

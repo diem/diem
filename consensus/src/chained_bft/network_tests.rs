@@ -400,9 +400,7 @@ mod tests {
             SyncInfo::new(previous_qc.clone(), previous_qc, None),
         );
         timed_block_on(&mut runtime, async {
-            nodes[0]
-                .send_vote(vote_msg.clone(), peers[2..5].to_vec())
-                .await;
+            nodes[0].send_vote(vote_msg.clone(), peers[2..5].to_vec());
             playground
                 .wait_for_messages(3, NetworkPlayground::take_all::<TestPayload>)
                 .await;
@@ -413,7 +411,7 @@ mod tests {
                     _ => panic!("unexpected messages"),
                 }
             }
-            nodes[0].broadcast_proposal(proposal.clone()).await;
+            nodes[0].broadcast_proposal(proposal.clone());
             playground
                 .wait_for_messages(4, NetworkPlayground::take_all::<TestPayload>)
                 .await;
@@ -488,8 +486,8 @@ mod tests {
                 // make sure the network task is not blocked during RPC
                 // we limit the network notification queue size to 1 so if it's blocked,
                 // we can not process 2 votes and the test will timeout
-                node0.send_vote(vote_msg.clone(), vec![peer1]).await;
-                node0.send_vote(vote_msg.clone(), vec![peer1]).await;
+                node0.send_vote(vote_msg.clone(), vec![peer1]);
+                node0.send_vote(vote_msg.clone(), vec![peer1]);
                 playground
                     .wait_for_messages(2, NetworkPlayground::votes_only::<TestPayload>)
                     .await;
@@ -511,7 +509,6 @@ mod tests {
                     peer,
                     Duration::from_secs(5),
                 )
-                .await
                 .unwrap();
             assert_eq!(response.status(), BlockRetrievalStatus::IdNotFound);
         });

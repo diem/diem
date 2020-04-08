@@ -140,22 +140,22 @@ impl<T: Payload> SyncProcessor<T> {
         }
     }
 
-    pub async fn process_proposal_msg(
+    pub fn process_proposal_msg(
         &mut self,
         proposal_msg: ProposalMsg<T>,
     ) -> Result<RecoveryData<T>> {
         let author = proposal_msg.proposer();
         let sync_info = proposal_msg.sync_info();
-        self.sync_up(&sync_info, author).await
+        self.sync_up(&sync_info, author)
     }
 
-    pub async fn process_vote(&mut self, vote_msg: VoteMsg) -> Result<RecoveryData<T>> {
+    pub fn process_vote(&mut self, vote_msg: VoteMsg) -> Result<RecoveryData<T>> {
         let author = vote_msg.vote().author();
         let sync_info = vote_msg.sync_info();
-        self.sync_up(&sync_info, author).await
+        self.sync_up(&sync_info, author)
     }
 
-    async fn sync_up(&mut self, sync_info: &SyncInfo, peer: Author) -> Result<RecoveryData<T>> {
+    fn sync_up(&mut self, sync_info: &SyncInfo, peer: Author) -> Result<RecoveryData<T>> {
         sync_info.verify(&self.epoch_info.verifier)?;
         ensure!(
             sync_info.highest_round() > self.ledger_recovery_data.commit_round(),
@@ -176,8 +176,7 @@ impl<T: Payload> SyncProcessor<T> {
             &mut retriever,
             self.storage.clone(),
             self.state_computer.clone(),
-        )
-        .await?;
+        )?;
 
         Ok(recovery_data)
     }
@@ -262,7 +261,7 @@ impl<T: Payload> EventProcessor<T> {
     /// Replica:
     ///
     /// Do nothing
-    async fn process_new_round_event(&mut self, new_round_event: NewRoundEvent) {
+    fn process_new_round_event(&mut self, new_round_event: NewRoundEvent) {
         debug!("Processing {}", new_round_event);
         counters::CURRENT_ROUND.set(new_round_event.round as i64);
         counters::ROUND_TIMEOUT_MS.set(new_round_event.timeout.as_millis() as i64);
@@ -289,7 +288,7 @@ impl<T: Payload> EventProcessor<T> {
             }
         };
         let mut network = self.network.clone();
-        network.broadcast_proposal(proposal_msg).await;
+        network.broadcast_proposal(proposal_msg);
         counters::PROPOSALS_COUNT.inc();
     }
 
@@ -316,9 +315,9 @@ impl<T: Payload> EventProcessor<T> {
 
     /// Process a ProposalMsg, pre_process would bring all the dependencies and filter out invalid
     /// proposal, process_proposed_block would execute and decide whether to vote for it.
-    pub async fn process_proposal_msg(&mut self, proposal_msg: ProposalMsg<T>) {
-        if let Some(block) = self.pre_process_proposal(proposal_msg).await {
-            self.process_proposed_block(block).await
+    pub fn process_proposal_msg(&mut self, proposal_msg: ProposalMsg<T>) {
+        if let Some(block) = self.pre_process_proposal(proposal_msg) {
+            self.process_proposed_block(block)
         }
     }
 
@@ -328,7 +327,7 @@ impl<T: Payload> EventProcessor<T> {
     /// and fetch all the blocks from the committed state to the HQC
     /// 2. forwarding the proposals to the ProposerElection queue,
     /// which is going to eventually trigger one winning proposal per round
-    async fn pre_process_proposal(&mut self, proposal_msg: ProposalMsg<T>) -> Option<Block<T>> {
+    fn pre_process_proposal(&mut self, proposal_msg: ProposalMsg<T>) -> Option<Block<T>> {
         trace_event!("event_processor::pre_process_proposal", {"block", proposal_msg.proposal().id()});
         // Pacemaker is going to be updated with all the proposal certificates later,
         // but it's known that the pacemaker's round is not going to decrease so we can already
@@ -349,10 +348,7 @@ impl<T: Payload> EventProcessor<T> {
             );
             return None;
         }
-        if let Err(e) = self
-            .sync_up(proposal_msg.sync_info(), proposal_msg.proposer(), true)
-            .await
-        {
+        if let Err(e) = self.sync_up(proposal_msg.sync_info(), proposal_msg.proposer(), true) {
             warn!(
                 "Dependencies of proposal {} could not be added to the block store: {}",
                 proposal_msg, e
@@ -402,7 +398,7 @@ impl<T: Payload> EventProcessor<T> {
     /// of the given sync info and update the pacemaker with the certificates if succeed.
     /// Returns Error in case sync mgr failed to bring the missing dependencies.
     /// We'll try to help the remote if the SyncInfo lags behind and the flag is set.
-    async fn sync_up(
+    fn sync_up(
         &mut self,
         sync_info: &SyncInfo,
         author: Author,
@@ -459,7 +455,6 @@ impl<T: Payload> EventProcessor<T> {
         );
         self.block_store
             .sync_to(&sync_info, self.create_block_retriever(deadline, author))
-            .await
             .map_err(|e| {
                 warn!(
                     "Fail to sync up to HQC @ round {}: {}",
@@ -475,15 +470,14 @@ impl<T: Payload> EventProcessor<T> {
             sync_info.highest_quorum_cert(),
             sync_info.highest_timeout_certificate(),
         )
-        .await
     }
 
     /// Process the SyncInfo sent by peers to catch up to latest state.
-    pub async fn process_sync_info_msg(&mut self, sync_info: SyncInfo, peer: Author) {
+    pub fn process_sync_info_msg(&mut self, sync_info: SyncInfo, peer: Author) {
         debug!("Received a sync info msg: {}", sync_info);
         counters::SYNC_INFO_MSGS_RECEIVED_COUNT.inc();
         // To avoid a ping-pong cycle between two peers that move forward together.
-        if let Err(e) = self.sync_up(&sync_info, peer, false).await {
+        if let Err(e) = self.sync_up(&sync_info, peer, false) {
             error!("Fail to process sync info: {}", e);
         }
     }
@@ -495,7 +489,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 2) In case a validator didn't vote yet but has a secondary proposal, it executes this
     /// proposal and votes.
     /// 3) If neither primary nor secondary proposals are available, vote for a NIL block.
-    pub async fn process_local_timeout(&mut self, round: Round) {
+    pub fn process_local_timeout(&mut self, round: Round) {
         if !self.pacemaker.process_local_timeout(round) {
             // The timeout event is late: the node has already moved to another round.
             return;
@@ -518,7 +512,7 @@ impl<T: Payload> EventProcessor<T> {
             Some((vote, vote_round)) if (*vote_round == round) => vote.clone(),
             _ => {
                 // Didn't vote in this round yet, generate a backup vote
-                let backup_vote_res = self.gen_backup_vote(round).await;
+                let backup_vote_res = self.gen_backup_vote(round);
                 match backup_vote_res {
                     Ok(backup_vote) => backup_vote,
                     Err(e) => {
@@ -542,10 +536,10 @@ impl<T: Payload> EventProcessor<T> {
         }
 
         let timeout_vote_msg = VoteMsg::new(timeout_vote, self.gen_sync_info());
-        self.network.broadcast_vote(timeout_vote_msg).await
+        self.network.broadcast_vote(timeout_vote_msg)
     }
 
-    async fn gen_backup_vote(&mut self, round: Round) -> anyhow::Result<Vote> {
+    fn gen_backup_vote(&mut self, round: Round) -> anyhow::Result<Vote> {
         // We generally assume that this function is called only if no votes have been sent in this
         // round, but having a duplicate proposal here would work ok because block store makes
         // sure the calls to `execute_and_insert_block` are idempotent.
@@ -564,11 +558,11 @@ impl<T: Payload> EventProcessor<T> {
                 nil_block
             }
         };
-        self.execute_and_vote(block).await
+        self.execute_and_vote(block)
     }
 
     /// This function is called only after all the dependencies of the given QC have been retrieved.
-    async fn process_certificates(
+    fn process_certificates(
         &mut self,
         qc: &QuorumCert,
         tc: Option<&TimeoutCertificate>,
@@ -585,7 +579,7 @@ impl<T: Payload> EventProcessor<T> {
                     highest_committed_proposal_round = Some(block.round());
                 }
                 let finality_proof = qc.ledger_info().clone();
-                self.process_commit(finality_proof).await;
+                self.process_commit(finality_proof);
             }
         }
         let mut tc_round = None;
@@ -600,7 +594,7 @@ impl<T: Payload> EventProcessor<T> {
             tc_round,
             highest_committed_proposal_round,
         ) {
-            self.process_new_round_event(new_round_event).await;
+            self.process_new_round_event(new_round_event);
         }
         Ok(())
     }
@@ -610,7 +604,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 2. Try to vote for it following the safety rules.
     /// 3. In case a validator chooses to vote, send the vote to the representatives at the next
     /// position.
-    async fn process_proposed_block(&mut self, proposal: Block<T>) {
+    fn process_proposed_block(&mut self, proposal: Block<T>) {
         debug!("EventProcessor: process_proposed_block {}", proposal);
 
         if let Some(time_to_receival) =
@@ -621,7 +615,7 @@ impl<T: Payload> EventProcessor<T> {
 
         let proposal_round = proposal.round();
 
-        let vote = match self.execute_and_vote(proposal).await {
+        let vote = match self.execute_and_vote(proposal) {
             Err(e) => {
                 warn!("{:?}", e);
                 return;
@@ -635,13 +629,10 @@ impl<T: Payload> EventProcessor<T> {
         debug!("{}Voted: {} {}", Fg(Green), Fg(Reset), vote);
 
         let vote_msg = VoteMsg::new(vote, self.gen_sync_info());
-        self.network.send_vote(vote_msg, recipients).await;
+        self.network.send_vote(vote_msg, recipients);
     }
 
-    async fn wait_before_vote_if_needed(
-        &self,
-        block_timestamp_us: u64,
-    ) -> Result<(), WaitingError> {
+    fn wait_before_vote_if_needed(&self, block_timestamp_us: u64) -> Result<(), WaitingError> {
         let current_round_deadline = self.pacemaker.current_round_deadline();
         match wait_if_possible(
             self.time_service.as_ref(),
@@ -722,7 +713,7 @@ impl<T: Payload> EventProcessor<T> {
     /// * return a VoteMsg with the LedgerInfo to be committed in case the vote gathers QC.
     ///
     /// This function assumes that it might be called from different tasks concurrently.
-    async fn execute_and_vote(&mut self, proposed_block: Block<T>) -> anyhow::Result<Vote> {
+    fn execute_and_vote(&mut self, proposed_block: Block<T>) -> anyhow::Result<Vote> {
         trace_code_block!("event_processor::execute_and_vote", {"block", proposed_block.id()});
         let executed_block = self
             .block_store
@@ -745,8 +736,7 @@ impl<T: Payload> EventProcessor<T> {
             .get_block(executed_block.parent_id())
             .ok_or_else(|| format_err!("Parent block not found in block store"))?;
 
-        self.wait_before_vote_if_needed(block.timestamp_usecs())
-            .await?;
+        self.wait_before_vote_if_needed(block.timestamp_usecs())?;
 
         let vote_proposal = VoteProposal::new(
             AccumulatorExtensionProof::<TransactionAccumulatorHasher>::new(
@@ -781,7 +771,7 @@ impl<T: Payload> EventProcessor<T> {
     /// potential attacks).
     /// 2. Add the vote to the store and check whether it finishes a QC.
     /// 3. Once the QC successfully formed, notify the Pacemaker.
-    pub async fn process_vote(&mut self, vote_msg: VoteMsg) {
+    pub fn process_vote(&mut self, vote_msg: VoteMsg) {
         trace_code_block!("event_processor::process_vote", {"block", vote_msg.proposed_block_id()});
         // Check whether this validator is a valid recipient of the vote.
         if !vote_msg.vote().is_timeout() {
@@ -807,14 +797,13 @@ impl<T: Payload> EventProcessor<T> {
             // Sync up for timeout votes only.
             if self
                 .sync_up(vote_msg.sync_info(), vote_msg.vote().author(), true)
-                .await
                 .is_err()
             {
                 warn!("Stop vote processing because of sync up error.");
                 return;
             };
         }
-        if let Err(e) = self.add_vote(vote_msg.vote()).await {
+        if let Err(e) = self.add_vote(vote_msg.vote()) {
             error!("Error adding a new vote: {:?}", e);
         }
     }
@@ -823,7 +812,7 @@ impl<T: Payload> EventProcessor<T> {
     /// If a new QC / TC is formed then
     /// 1) fetch missing dependencies if required, and then
     /// 2) call process_certificates(), which will start a new round in return.
-    async fn add_vote(&mut self, vote: &Vote) -> anyhow::Result<()> {
+    fn add_vote(&mut self, vote: &Vote) -> anyhow::Result<()> {
         debug!("Add vote: {}", vote);
         let block_id = vote.vote_data().proposed().id();
         // Check if the block already had a QC
@@ -849,14 +838,14 @@ impl<T: Payload> EventProcessor<T> {
                     counters::CREATION_TO_QC_S.observe_duration(time_to_qc);
                 }
 
-                self.new_qc_aggregated(qc, vote.author()).await
+                self.new_qc_aggregated(qc, vote.author())
             }
-            VoteReceptionResult::NewTimeoutCertificate(tc) => self.new_tc_aggregated(tc).await,
+            VoteReceptionResult::NewTimeoutCertificate(tc) => self.new_tc_aggregated(tc),
             _ => Ok(()),
         }
     }
 
-    async fn new_qc_aggregated(
+    fn new_qc_aggregated(
         &mut self,
         qc: Arc<QuorumCert>,
         preferred_peer: Author,
@@ -872,12 +861,11 @@ impl<T: Payload> EventProcessor<T> {
                 ),
                 self.create_block_retriever(deadline, preferred_peer),
             )
-            .await
             .context("Failed to process a newly aggregated QC")?;
-        self.process_certificates(qc.as_ref(), None).await
+        self.process_certificates(qc.as_ref(), None)
     }
 
-    async fn new_tc_aggregated(&mut self, tc: Arc<TimeoutCertificate>) -> anyhow::Result<()> {
+    fn new_tc_aggregated(&mut self, tc: Arc<TimeoutCertificate>) -> anyhow::Result<()> {
         self.block_store
             .insert_timeout_certificate(tc.clone())
             .context("Failed to process a newly aggregated TC")?;
@@ -887,11 +875,10 @@ impl<T: Payload> EventProcessor<T> {
             self.block_store.highest_quorum_cert().as_ref(),
             Some(tc.as_ref()),
         )
-        .await
     }
 
     /// Upon (potentially) new commit, commit the blocks via block store.
-    async fn process_commit(&mut self, finality_proof: LedgerInfoWithSignatures) {
+    fn process_commit(&mut self, finality_proof: LedgerInfoWithSignatures) {
         let blocks_to_commit = match self.block_store.commit(finality_proof.clone()) {
             Ok(blocks) => blocks,
             Err(e) => {
@@ -920,7 +907,6 @@ impl<T: Payload> EventProcessor<T> {
                     vec![finality_proof],
                     /* more = */ false,
                 ))
-                .await
         }
     }
 
@@ -960,7 +946,7 @@ impl<T: Payload> EventProcessor<T> {
     ///
     /// The current version of the function is not really async, but keeping it this way for
     /// future possible changes.
-    pub async fn process_block_retrieval(&self, request: IncomingBlockRetrievalRequest) {
+    pub fn process_block_retrieval(&self, request: IncomingBlockRetrievalRequest) {
         let mut blocks = vec![];
         let mut status = BlockRetrievalStatus::Succeeded;
         let mut id = request.req.block_id();
@@ -992,7 +978,7 @@ impl<T: Payload> EventProcessor<T> {
     }
 
     /// To jump start new round with the current certificates we have.
-    pub async fn start(&mut self) {
+    pub fn start(&mut self) {
         let hqc_round = Some(
             self.block_store
                 .highest_quorum_cert()
@@ -1005,7 +991,7 @@ impl<T: Payload> EventProcessor<T> {
             .pacemaker
             .process_certificates(hqc_round, htc_round, last_committed_round)
             .expect("Can not jump start a pacemaker from existing certificates.");
-        self.process_new_round_event(new_round_event).await;
+        self.process_new_round_event(new_round_event);
     }
 
     /// Inspect the current consensus state.
