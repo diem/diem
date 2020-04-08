@@ -156,6 +156,7 @@ resource "aws_instance" "validator" {
   )
   depends_on                  = [aws_main_route_table_association.testnet, aws_iam_role_policy.ecs_extra]
   vpc_security_group_ids      = [aws_security_group.validator.id]
+  private_ip                  = length(var.override_validator_ips) == 0 ? null : var.override_validator_ips[count.index]
   associate_public_ip_address = local.instance_public_ip
   key_name                    = aws_key_pair.libra.key_name
   iam_instance_profile        = aws_iam_instance_profile.ecsInstanceRole.name
