@@ -5,7 +5,7 @@ use anyhow::Result;
 use libra_types::{
     account_address::AccountAddress,
     account_config::AccountResource,
-    on_chain_config::{OnChainConfigPayload, VMPublishingOption},
+    on_chain_config::{LibraVersion, OnChainConfigPayload, VMPublishingOption},
     transaction::{SignedTransaction, VMValidatorResult},
 };
 use libra_vm::{on_chain_configs::VMConfig, LibraVM, VMVerifier};
@@ -81,7 +81,7 @@ impl TransactionValidation for VMValidator {
     fn restart(&mut self, config: OnChainConfigPayload) -> Result<()> {
         let gas_schedule = self.vm.get_gas_schedule()?;
         let publishing_options = config.get::<VMPublishingOption>()?;
-        let version = self.vm.get_libra_version()?;
+        let version = config.get::<LibraVersion>()?;
         let vm_config = VMConfig {
             publishing_options,
             version,
