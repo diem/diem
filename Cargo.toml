@@ -35,6 +35,7 @@ members = [
     "crypto/crypto",
     "crypto/crypto-derive",
     "devtools/x",
+    "devtools/x-lint",
     "execution/executor",
     "execution/executor-benchmark",
     "execution/executor-types",

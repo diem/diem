@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::lint::engine::{LintContext, LintKind};
+use crate::{LintContext, LintKind};
 use std::path::{Path, PathBuf};
 
 /// Overall linter context for a project.

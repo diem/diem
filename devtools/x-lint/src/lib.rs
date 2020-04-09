@@ -22,7 +22,7 @@ pub trait Linter: Send + Sync + fmt::Debug {
 }
 
 /// Represents common functionality among various `Context` instances.
-pub(super) trait LintContext<'l> {
+trait LintContext<'l> {
     /// Returns the kind of this lint context.
     fn kind(&self) -> LintKind<'l>;
 
@@ -124,7 +124,7 @@ pub struct LintSource<'l> {
 }
 
 impl<'l> LintSource<'l> {
-    pub(super) fn new(name: &'static str, kind: LintKind<'l>) -> Self {
+    fn new(name: &'static str, kind: LintKind<'l>) -> Self {
         Self { name, kind }
     }
 

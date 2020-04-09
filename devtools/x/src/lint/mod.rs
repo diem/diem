@@ -1,15 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    config::Config,
-    lint::engine::{prelude::*, LintEngineConfig},
-    utils::project_root,
-};
+use crate::{config::Config, utils::project_root};
 use anyhow::anyhow;
 use structopt::StructOpt;
+use x_lint::{prelude::*, LintEngineConfig};
 
-mod engine;
 mod license;
 mod whitespace;
 

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::lint::engine::{prelude::*, LintContext};
+use crate::{prelude::*, LintContext};
 use once_cell::sync::OnceCell;
 use std::{
     ffi::OsStr,

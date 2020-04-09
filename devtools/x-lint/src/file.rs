@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::lint::engine::{prelude::*, LintContext};
+use crate::{prelude::*, LintContext};
 use std::{ffi::OsStr, fs, path::Path};
 
 /// Contains information for a single file.

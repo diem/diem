@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::lint::engine::prelude::*;
+use x_lint::prelude::*;
 
 static LICENSE_HEADER: &str = "Copyright (c) The Libra Core Contributors\n\
                                SPDX-License-Identifier: Apache-2.0\n\
