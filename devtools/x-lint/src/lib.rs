@@ -199,7 +199,7 @@ pub mod prelude {
     pub use super::{
         content::{ContentContext, ContentLinter},
         file::FileContext,
-        project::ProjectContext,
+        project::{ProjectContext, ProjectLinter},
         LintFormatter, LintKind, LintLevel, LintMessage, LintSource, Linter, Result, RunStatus,
         SkipReason, SystemError,
     };

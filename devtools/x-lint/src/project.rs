@@ -1,8 +1,21 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{LintContext, LintKind};
+use crate::prelude::*;
+use crate::LintContext;
 use std::path::{Path, PathBuf};
+
+/// Represents a linter that checks some property for the overall project.
+///
+/// Linters that implement `ProjectLinter` will run once for the whole project.
+pub trait ProjectLinter: Linter {
+    /// Executes the lint against the given project context.
+    fn run<'l>(
+        &self,
+        ctx: &ProjectContext<'l>,
+        out: &mut LintFormatter<'l, '_>,
+    ) -> Result<RunStatus<'l>>;
+}
 
 /// Overall linter context for a project.
 #[derive(Copy, Clone, Debug)]
