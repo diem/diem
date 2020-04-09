@@ -16,10 +16,11 @@ use crate::{
     peer::DisconnectReason,
     protocols::{
         direct_send::Message,
-        identity::Identity,
         rpc::{error::RpcError, InboundRpcRequest, OutboundRpcRequest},
     },
-    transport, ProtocolId,
+    transport,
+    transport::{Connection, ConnectionId, ConnectionMetadata},
+    ProtocolId,
 };
 use bytes::Bytes;
 use channel::{self, libra_channel};
@@ -260,7 +261,7 @@ where
 
 impl<TTransport, TSocket> PeerManager<TTransport, TSocket>
 where
-    TTransport: Transport<Output = (Identity, TSocket)> + Send + 'static,
+    TTransport: Transport<Output = Connection<TSocket>> + Send + 'static,
     TSocket: transport::TSocket,
 {
     /// Construct a new PeerManager actor
@@ -372,24 +373,20 @@ where
                 counters::LIBRA_NETWORK_PEERS
                     .with_label_values(&[self.role.as_str(), "connected"])
                     .dec();
-                let ConnectionMetadata {
-                    addr,
-                    peer_identity: identity,
-                    connection_id: lost_conn_id,
-                    ..
-                } = lost_conn_metadata;
-
+                let peer_id = lost_conn_metadata.peer_id();
                 // If the active connection with the peer is lost, remove it from `active_peers`.
-                if let Entry::Occupied(entry) = self.active_peers.entry(identity.peer_id()) {
+                if let Entry::Occupied(entry) = self.active_peers.entry(peer_id) {
                     let (conn_metadata, _) = entry.get();
-                    if conn_metadata.connection_id() == lost_conn_id {
+                    if conn_metadata.connection_id() == lost_conn_metadata.connection_id() {
                         // We lost an active connection.
                         entry.remove();
                     }
                 }
 
                 // If the connection was explicitly closed by an upstream client, send an ACK.
-                if let Some(oneshot_tx) = self.outstanding_disconnect_requests.remove(&lost_conn_id)
+                if let Some(oneshot_tx) = self
+                    .outstanding_disconnect_requests
+                    .remove(&lost_conn_metadata.connection_id())
                 {
                     // The client explicitly closed the connection and it should be notified.
                     if let Err(send_err) = oneshot_tx.send(Ok(())) {
@@ -402,8 +399,12 @@ where
 
                 // Notify upstream if there's still no active connection. This might be redundant,
                 // but does not affect correctness.
-                if !self.active_peers.contains_key(&identity.peer_id()) {
-                    self.send_lostpeer_notification(identity, addr, reason);
+                if !self.active_peers.contains_key(&peer_id) {
+                    self.send_lostpeer_notification(
+                        peer_id,
+                        lost_conn_metadata.addr().clone(),
+                        reason,
+                    );
                 }
             }
         }
@@ -415,7 +416,7 @@ where
             ConnectionRequest::DialPeer(requested_peer_id, addr, response_tx) => {
                 // Only dial peers which we aren't already connected with
                 if let Some((curr_connection, _)) = self.active_peers.get(&requested_peer_id) {
-                    let error = PeerManagerError::AlreadyConnected(curr_connection.addr.clone());
+                    let error = PeerManagerError::AlreadyConnected(curr_connection.addr().clone());
                     debug!(
                         "Already connected with Peer {} using connection {:?}. Not dialing address {}",
                         requested_peer_id.short_str(),
@@ -440,7 +441,7 @@ where
                     drop(sender);
                     // Add to outstanding disconnect requests.
                     self.outstanding_disconnect_requests
-                        .insert(conn_metadata.connection_id, resp_tx);
+                        .insert(conn_metadata.connection_id(), resp_tx);
                 } else {
                     info!(
                         "Connection with peer: {} is already closed",
@@ -523,7 +524,7 @@ where
 
     fn add_peer(&mut self, connection: Connection<TSocket>) {
         let conn_meta = connection.metadata.clone();
-        let peer_id = conn_meta.peer_identity.peer_id();
+        let peer_id = conn_meta.peer_id();
         assert_ne!(self.own_peer_id, peer_id);
 
         let mut send_new_peer_notification = true;
@@ -535,7 +536,7 @@ where
                 self.own_peer_id,
                 peer_id,
                 curr_conn_metadata.origin(),
-                conn_meta.origin,
+                conn_meta.origin(),
             ) {
                 let (_, peer_handle) = active_entry.remove();
                 // Drop the existing connection and replace it with the new connection
@@ -592,7 +593,7 @@ where
                 handler
                     .push(
                         peer_id,
-                        ConnectionStatusNotification::NewPeer(peer_id, conn_meta.addr.clone()),
+                        ConnectionStatusNotification::NewPeer(peer_id, conn_meta.addr().clone()),
                     )
                     .unwrap();
             }
@@ -601,11 +602,10 @@ where
 
     fn send_lostpeer_notification(
         &mut self,
-        identity: Identity,
+        peer_id: PeerId,
         addr: Multiaddr,
         reason: DisconnectReason,
     ) {
-        let peer_id = identity.peer_id();
         // Send LostPeer notification to connection event handlers.
         for handler in self.connection_event_handlers.iter_mut() {
             if let Err(e) = handler.push(
@@ -704,84 +704,6 @@ enum ConnectionHandlerRequest {
     ),
 }
 
-/// Unique local identifier for a connection.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
-pub struct ConnectionId(u32);
-
-impl From<u32> for ConnectionId {
-    fn from(i: u32) -> ConnectionId {
-        ConnectionId(i)
-    }
-}
-
-/// Generator of unique ConnectionIds.
-struct ConnectionIdGenerator {
-    next: ConnectionId,
-}
-
-impl ConnectionIdGenerator {
-    fn new() -> ConnectionIdGenerator {
-        Self {
-            next: ConnectionId(0),
-        }
-    }
-
-    fn next(&mut self) -> ConnectionId {
-        let ret = self.next;
-        self.next = ConnectionId(ret.0.wrapping_add(1));
-        ret
-    }
-}
-
-/// Metada associated with an established connection.
-#[derive(Clone, Debug)]
-pub struct ConnectionMetadata {
-    peer_identity: Identity,
-    connection_id: ConnectionId,
-    addr: Multiaddr,
-    origin: ConnectionOrigin,
-}
-
-impl ConnectionMetadata {
-    pub fn new(
-        peer_identity: Identity,
-        connection_id: ConnectionId,
-        addr: Multiaddr,
-        origin: ConnectionOrigin,
-    ) -> ConnectionMetadata {
-        ConnectionMetadata {
-            peer_identity,
-            addr,
-            origin,
-            connection_id,
-        }
-    }
-
-    pub fn peer_identity(&self) -> &Identity {
-        &self.peer_identity
-    }
-
-    pub fn connection_id(&self) -> ConnectionId {
-        self.connection_id
-    }
-
-    pub fn addr(&self) -> &Multiaddr {
-        &self.addr
-    }
-
-    pub fn origin(&self) -> ConnectionOrigin {
-        self.origin
-    }
-}
-
-/// The `Connection` struct consists of connection metadata and the actual socket for
-/// communication.
-#[derive(Debug)]
-pub struct Connection<TSocket> {
-    pub socket: TSocket,
-    pub metadata: ConnectionMetadata,
-}
-
 #[derive(Debug)]
 pub enum ConnectionNotification<TSocket>
 where
@@ -802,12 +724,11 @@ where
     listener: Fuse<TTransport::Listener>,
     dial_request_rx: channel::Receiver<ConnectionHandlerRequest>,
     connection_notifs_tx: channel::Sender<ConnectionNotification<TSocket>>,
-    cid_generator: ConnectionIdGenerator,
 }
 
 impl<TTransport, TSocket> ConnectionHandler<TTransport, TSocket>
 where
-    TTransport: Transport<Output = (Identity, TSocket)>,
+    TTransport: Transport<Output = Connection<TSocket>>,
     TTransport::Listener: 'static,
     TTransport::Inbound: 'static,
     TTransport::Outbound: 'static,
@@ -829,7 +750,6 @@ where
                 listener: listener.fuse(),
                 dial_request_rx,
                 connection_notifs_tx,
-                cid_generator: ConnectionIdGenerator::new(),
             },
             listen_addr,
         )
@@ -879,7 +799,7 @@ where
         BoxFuture<
             'static,
             (
-                Result<(Identity, TSocket), TTransport::Error>,
+                Result<Connection<TSocket>, TTransport::Error>,
                 Multiaddr,
                 PeerId,
                 oneshot::Sender<Result<(), PeerManagerError>>,
@@ -913,36 +833,28 @@ where
 
     async fn handle_completed_outbound_upgrade(
         &mut self,
-        upgrade: Result<(Identity, TSocket), TTransport::Error>,
+        upgrade: Result<Connection<TSocket>, TTransport::Error>,
         addr: Multiaddr,
         peer_id: PeerId,
         response_tx: oneshot::Sender<Result<(), PeerManagerError>>,
     ) {
         match upgrade {
-            Ok((identity, connection)) => {
-                let response = if identity.peer_id() == peer_id {
+            Ok(connection) => {
+                let dialed_peer_id = connection.metadata.peer_id();
+                let response = if dialed_peer_id == peer_id {
                     debug!(
                         "Peer '{}' successfully dialed at '{}'",
                         peer_id.short_str(),
                         addr
                     );
-                    let metadata = ConnectionMetadata {
-                        peer_identity: identity,
-                        connection_id: self.cid_generator.next(),
-                        addr,
-                        origin: ConnectionOrigin::Outbound,
-                    };
-                    let event = ConnectionNotification::NewConnection(Connection {
-                        metadata,
-                        socket: connection,
-                    });
+                    let event = ConnectionNotification::NewConnection(connection);
                     // Send the new connection to PeerManager
                     self.connection_notifs_tx.send(event).await.unwrap();
                     Ok(())
                 } else {
                     let e = ::anyhow::format_err!(
                         "Dialed PeerId ({}) differs from expected PeerId ({})",
-                        identity.peer_id().short_str(),
+                        dialed_peer_id.short_str(),
                         peer_id.short_str()
                     );
 
@@ -976,26 +888,17 @@ where
 
     async fn handle_completed_inbound_upgrade(
         &mut self,
-        upgrade: Result<(Identity, TSocket), TTransport::Error>,
+        upgrade: Result<Connection<TSocket>, TTransport::Error>,
         addr: Multiaddr,
     ) {
         match upgrade {
-            Ok((identity, connection)) => {
+            Ok(connection) => {
                 debug!(
                     "Connection from {} at {} successfully upgraded",
-                    identity.peer_id().short_str(),
+                    connection.metadata.peer_id().short_str(),
                     addr
                 );
-                let metadata = ConnectionMetadata {
-                    peer_identity: identity,
-                    connection_id: self.cid_generator.next(),
-                    addr,
-                    origin: ConnectionOrigin::Inbound,
-                };
-                let event = ConnectionNotification::NewConnection(Connection {
-                    socket: connection,
-                    metadata,
-                });
+                let event = ConnectionNotification::NewConnection(connection);
                 // Send the new connection to PeerManager
                 self.connection_notifs_tx.send(event).await.unwrap();
             }

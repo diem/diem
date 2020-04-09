@@ -20,7 +20,6 @@ use crate::{
     protocols::{
         discovery::{self, Discovery},
         health_checker::{self, HealthChecker},
-        identity::Identity,
     },
     transport,
     transport::*,
@@ -438,33 +437,46 @@ impl NetworkBuilder {
     /// Create the configured transport and start PeerManager.
     /// Return the actual Multiaddr over which this peer is listening.
     pub fn build(mut self) -> Multiaddr {
-        let identity = Identity::new(self.peer_id, self.supported_protocols());
+        let peer_id = self.peer_id;
+        let supported_protocols = self.supported_protocols();
         // Build network based on the transport type
         let trusted_peers = self.trusted_peers.clone();
         match self.transport {
-            TransportType::Memory => self.build_with_transport(build_memory_transport(identity)),
+            TransportType::Memory => {
+                self.build_with_transport(build_memory_transport(peer_id, supported_protocols))
+            }
             TransportType::MemoryNoise(ref mut keys) => {
                 let keys = keys.take().expect("Identity keys not set");
                 self.build_with_transport(build_memory_noise_transport(
-                    identity,
                     keys,
                     trusted_peers,
+                    supported_protocols,
                 ))
             }
             TransportType::PermissionlessMemoryNoise(ref mut keys) => {
                 let keys = keys.take().expect("Identity keys not set");
                 self.build_with_transport(build_unauthenticated_memory_noise_transport(
-                    identity, keys,
+                    keys,
+                    supported_protocols,
                 ))
             }
-            TransportType::Tcp => self.build_with_transport(build_tcp_transport(identity)),
+            TransportType::Tcp => {
+                self.build_with_transport(build_tcp_transport(peer_id, supported_protocols))
+            }
             TransportType::TcpNoise(ref mut keys) => {
                 let keys = keys.take().expect("Identity keys not set");
-                self.build_with_transport(build_tcp_noise_transport(identity, keys, trusted_peers))
+                self.build_with_transport(build_tcp_noise_transport(
+                    keys,
+                    trusted_peers,
+                    supported_protocols,
+                ))
             }
             TransportType::PermissionlessTcpNoise(ref mut keys) => {
                 let keys = keys.take().expect("Identity keys not set");
-                self.build_with_transport(build_unauthenticated_tcp_noise_transport(identity, keys))
+                self.build_with_transport(build_unauthenticated_tcp_noise_transport(
+                    keys,
+                    supported_protocols,
+                ))
             }
         }
     }
@@ -473,7 +485,7 @@ impl NetworkBuilder {
     /// Return the actual Multiaddr over which this peer is listening.
     fn build_with_transport<TTransport, TSocket>(self, transport: TTransport) -> Multiaddr
     where
-        TTransport: Transport<Output = (Identity, TSocket)> + Send + 'static,
+        TTransport: Transport<Output = Connection<TSocket>> + Send + 'static,
         TSocket: transport::TSocket,
     {
         let peer_mgr = PeerManager::new(

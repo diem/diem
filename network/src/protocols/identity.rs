@@ -5,51 +5,20 @@
 //!
 //! Currently, the information shared as part of this protocol includes the peer identity and a
 //! list of protocols supported by the peer.
-use crate::ProtocolId;
+use crate::protocols::wire::handshake::v1::HandshakeMsg;
 use bytes::BytesMut;
 use futures::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use libra_types::PeerId;
 use netcore::framing::{read_u16frame, write_u16frame};
-use serde::{Deserialize, Serialize};
 use std::io;
 
-/// The Identity of a node
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-pub struct Identity {
-    peer_id: PeerId,
-    supported_protocols: Vec<ProtocolId>,
-}
-
-impl Identity {
-    pub fn new(peer_id: PeerId, supported_protocols: Vec<ProtocolId>) -> Self {
-        Self {
-            peer_id,
-            supported_protocols,
-        }
-    }
-
-    pub fn peer_id(&self) -> PeerId {
-        self.peer_id
-    }
-
-    pub fn is_protocol_supported(&self, protocol: ProtocolId) -> bool {
-        self.supported_protocols
-            .iter()
-            .any(|proto| *proto == protocol)
-    }
-
-    pub fn supported_protocols(&self) -> &[ProtocolId] {
-        &self.supported_protocols
-    }
-}
-
-/// The Identity exchange protocol
-pub async fn exchange_identity<T>(own_identity: &Identity, socket: &mut T) -> io::Result<Identity>
+/// The PeerId exchange protocol.
+pub async fn exchange_peerid<T>(own_peer_id: &PeerId, socket: &mut T) -> io::Result<PeerId>
 where
     T: AsyncRead + AsyncWrite + Unpin,
 {
-    // Send serialized message to peer.
-    let msg = lcs::to_bytes(own_identity).map_err(|e| {
+    // Send serialized PeerId to remote peer.
+    let msg = lcs::to_bytes(own_peer_id).map_err(|e| {
         io::Error::new(
             io::ErrorKind::InvalidData,
             format!("Failed to serialize identity msg: {}", e),
@@ -58,7 +27,37 @@ where
     write_u16frame(socket, &msg).await?;
     socket.flush().await?;
 
-    // Read an IdentityMsg from the Remote
+    // Read PeerId from remote peer.
+    let mut response = BytesMut::new();
+    read_u16frame(socket, &mut response).await?;
+    let remote_peer_id = lcs::from_bytes(&response).map_err(|e| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("Failed to parse identity msg: {}", e),
+        )
+    })?;
+    Ok(remote_peer_id)
+}
+
+/// The Handshake exchange protocol.
+pub async fn exchange_handshake<T>(
+    own_handshake: &HandshakeMsg,
+    socket: &mut T,
+) -> io::Result<HandshakeMsg>
+where
+    T: AsyncRead + AsyncWrite + Unpin,
+{
+    // Send serialized handshake message to remote peer.
+    let msg = lcs::to_bytes(own_handshake).map_err(|e| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("Failed to serialize identity msg: {}", e),
+        )
+    })?;
+    write_u16frame(socket, &msg).await?;
+    socket.flush().await?;
+
+    // Read handshake message from the Remote
     let mut response = BytesMut::new();
     read_u16frame(socket, &mut response).await?;
     let identity = lcs::from_bytes(&response).map_err(|e| {
@@ -73,7 +72,10 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        protocols::identity::{exchange_identity, Identity},
+        protocols::{
+            identity::{exchange_handshake, exchange_peerid},
+            wire::handshake::v1::{HandshakeMsg, MessagingProtocolVersion},
+        },
         ProtocolId,
     };
     use futures::{executor::block_on, future::join};
@@ -85,36 +87,74 @@ mod tests {
     }
 
     #[test]
-    fn simple_identify() {
+    fn simple_handshake() {
         let (mut outbound, mut inbound) = build_test_connection();
-        let server_identity = Identity::new(
-            PeerId::random(),
+
+        // Create client and server handshake messages.
+        let mut server_handshake = HandshakeMsg::new();
+        server_handshake.add(
+            MessagingProtocolVersion::V1,
             vec![
                 ProtocolId::ConsensusDirectSend,
                 ProtocolId::MempoolDirectSend,
             ],
         );
-        let client_identity = Identity::new(
-            PeerId::random(),
+        let mut client_handshake = HandshakeMsg::new();
+        client_handshake.add(
+            MessagingProtocolVersion::V1,
             vec![ProtocolId::ConsensusRpc, ProtocolId::ConsensusDirectSend],
         );
-        let server_identity_config = server_identity.clone();
-        let client_identity_config = client_identity.clone();
+
+        let server_handshake_clone = server_handshake.clone();
+        let client_handshake_clone = client_handshake.clone();
 
         let server = async move {
-            let identity = exchange_identity(&server_identity_config, &mut inbound)
+            let handshake = exchange_handshake(&server_handshake, &mut inbound)
                 .await
-                .expect("Identity exchange fails");
+                .expect("Handshake fails");
 
-            assert_eq!(identity, client_identity);
+            assert_eq!(
+                lcs::to_bytes(&handshake).unwrap(),
+                lcs::to_bytes(&client_handshake_clone).unwrap()
+            );
         };
 
         let client = async move {
-            let identity = exchange_identity(&client_identity_config, &mut outbound)
+            let handshake = exchange_handshake(&client_handshake, &mut outbound)
+                .await
+                .expect("Handshake fails");
+
+            assert_eq!(
+                lcs::to_bytes(&handshake).unwrap(),
+                lcs::to_bytes(&server_handshake_clone).unwrap()
+            );
+        };
+
+        block_on(join(server, client));
+    }
+
+    #[test]
+    fn simple_peerid_exchange() {
+        let (mut outbound, mut inbound) = build_test_connection();
+
+        // Create client and server ids.
+        let client_id = PeerId::random();
+        let server_id = PeerId::random();
+
+        let server = async {
+            let id = exchange_peerid(&server_id, &mut inbound)
                 .await
                 .expect("Identity exchange fails");
 
-            assert_eq!(identity, server_identity);
+            assert_eq!(id, client_id);
+        };
+
+        let client = async {
+            let id = exchange_peerid(&client_id, &mut outbound)
+                .await
+                .expect("Identity exchange fails");
+
+            assert_eq!(id, server_id);
         };
 
         block_on(join(server, client));

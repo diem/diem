@@ -74,7 +74,7 @@ impl Args {
 
 /// Build a MemorySocket + Noise transport
 pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseSocket<MemorySocket>> {
-    MemoryTransport::default().and_then(move |socket, origin| async move {
+    MemoryTransport::default().and_then(move |socket, _addr, origin| async move {
         let noise_config = Arc::new(NoiseConfig::new_random());
         let (_remote_static_key, socket) = noise_config.upgrade_connection(socket, origin).await?;
         Ok(socket)
@@ -83,7 +83,7 @@ pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseSocket<
 
 /// Build a Tcp + Noise transport
 pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseSocket<TcpSocket>> {
-    TcpTransport::default().and_then(move |socket, origin| async move {
+    TcpTransport::default().and_then(move |socket, _addr, origin| async move {
         let noise_config = Arc::new(NoiseConfig::new_random());
         let (_remote_static_key, socket) = noise_config.upgrade_connection(socket, origin).await?;
         Ok(socket)

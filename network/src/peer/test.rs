@@ -3,11 +3,11 @@
 
 use crate::{
     peer::{DisconnectReason, Peer, PeerHandle, PeerNotification},
-    peer_manager::{Connection, ConnectionId, ConnectionMetadata},
-    protocols::{
-        identity::Identity,
-        wire::messaging::v1::{DirectSendMsg, NetworkMessage},
+    protocols::wire::{
+        handshake::v1::MessagingProtocolVersion,
+        messaging::v1::{DirectSendMsg, NetworkMessage},
     },
+    transport::{Connection, ConnectionId, ConnectionMetadata},
     ProtocolId,
 };
 use futures::{future::join, io::AsyncWriteExt, stream::StreamExt, SinkExt};
@@ -24,10 +24,6 @@ use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 static PROTOCOL: ProtocolId = ProtocolId::MempoolDirectSend;
 
-fn build_test_identity(peer_id: PeerId) -> Identity {
-    Identity::new(peer_id, Vec::new())
-}
-
 fn build_test_peer(
     executor: Handle,
     origin: ConnectionOrigin,
@@ -40,18 +36,19 @@ fn build_test_peer(
     channel::Receiver<PeerNotification>,
 ) {
     let (a, b) = MemorySocket::new_pair();
-    let identity = build_test_identity(PeerId::random());
-    let peer_id = identity.peer_id();
+    let peer_id = PeerId::random();
     let (peer_notifs_tx, peer_notifs_rx) = channel::new_test(1);
     let (peer_rpc_notifs_tx, peer_rpc_notifs_rx) = channel::new_test(1);
     let (peer_direct_send_notifs_tx, peer_direct_send_notifs_rx) = channel::new_test(1);
     let (peer_req_tx, peer_req_rx) = channel::new_test(0);
     let connection = Connection {
         metadata: ConnectionMetadata::new(
-            identity,
+            peer_id,
             ConnectionId::default(),
             Multiaddr::from_str("/ip4/127.0.0.1/tcp/8081").unwrap(),
             origin,
+            MessagingProtocolVersion::V1,
+            vec![],
         ),
         socket: a,
     };
@@ -146,7 +143,7 @@ async fn assert_peer_disconnected_event(
 ) {
     match peer_notifs_rx.next().await {
         Some(PeerNotification::PeerDisconnected(conn_info, actual_reason)) => {
-            assert_eq!(conn_info.peer_identity().peer_id(), peer_id);
+            assert_eq!(conn_info.peer_id(), peer_id);
             assert_eq!(actual_reason, reason);
         }
         event => {
