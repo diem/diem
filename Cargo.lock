@@ -2452,6 +2452,7 @@ dependencies = [
  "libra-vm 0.1.0",
  "libra-workspace-hack 0.1.0",
  "network 0.1.0",
+ "onchain-discovery 0.1.0",
  "parity-multiaddr 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "state-synchronizer 0.1.0",
