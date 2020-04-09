@@ -748,15 +748,11 @@ impl DbReader for LibraDB {
         Ok(events)
     }
 
-    fn get_state_proof(
+    fn get_state_proof_with_ledger_info(
         &self,
         known_version: u64,
-    ) -> Result<(
-        LedgerInfoWithSignatures,
-        ValidatorChangeProof,
-        AccumulatorConsistencyProof,
-    )> {
-        let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
+        ledger_info_with_sigs: LedgerInfoWithSignatures,
+    ) -> Result<(ValidatorChangeProof, AccumulatorConsistencyProof)> {
         let ledger_info = ledger_info_with_sigs.ledger_info();
         let known_epoch = self.ledger_store.get_epoch(known_version)?;
         let validator_change_proof = if known_epoch < ledger_info.epoch() {
@@ -772,6 +768,20 @@ impl DbReader for LibraDB {
         let ledger_consistency_proof = self
             .ledger_store
             .get_consistency_proof(known_version, ledger_info.version())?;
+        Ok((validator_change_proof, ledger_consistency_proof))
+    }
+
+    fn get_state_proof(
+        &self,
+        known_version: u64,
+    ) -> Result<(
+        LedgerInfoWithSignatures,
+        ValidatorChangeProof,
+        AccumulatorConsistencyProof,
+    )> {
+        let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
+        let (validator_change_proof, ledger_consistency_proof) =
+            self.get_state_proof_with_ledger_info(known_version, ledger_info_with_sigs.clone())?;
         Ok((
             ledger_info_with_sigs,
             validator_change_proof,

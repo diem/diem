@@ -7,9 +7,10 @@ use libra_mempool::mocks::MockSharedMempool;
 use libra_proptest_helpers::ValueGenerator;
 use libra_temppath::TempPath;
 use libra_types::transaction::SignedTransaction;
-use libradb::LibraDB;
+use libradb::{test_helper::arb_mock_genesis, LibraDB};
 use reqwest::blocking::Client;
 use std::sync::Arc;
+use storage_interface::DbWriter;
 
 #[test]
 fn test_json_rpc_service_fuzzer() {
@@ -35,6 +36,12 @@ pub fn fuzzer(data: &[u8]) {
     // set up JSON RPC service
     let tmp_dir = TempPath::new();
     let db = LibraDB::new(&tmp_dir);
+    // initialize DB with baseline ledger info - otherwise server will fail on attempting to retrieve initial ledger info
+    let (genesis_txn_to_commit, ledger_info_with_sigs) =
+        ValueGenerator::new().generate(arb_mock_genesis());
+    db.save_transactions(&[genesis_txn_to_commit], 0, Some(&ledger_info_with_sigs))
+        .unwrap();
+
     let port = utils::get_available_port();
     let address = format!("0.0.0.0:{}", port);
     let _runtime = bootstrap(address.parse().unwrap(), Arc::new(db), smp.ac_client);

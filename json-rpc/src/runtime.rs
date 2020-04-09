@@ -9,11 +9,15 @@ use crate::{
 use futures::future::join_all;
 use libra_config::config::NodeConfig;
 use libra_mempool::MempoolClientSender;
+use libra_types::ledger_info::LedgerInfoWithSignatures;
 use serde_json::{map::Map, Value};
 use std::{net::SocketAddr, sync::Arc};
 use storage_interface::DbReader;
 use tokio::runtime::{Builder, Runtime};
-use warp::Filter;
+use warp::{
+    reject::{self, Reject},
+    Filter,
+};
 
 /// Creates HTTP server (warp-based) that serves JSON RPC requests
 /// Returns handle to corresponding Tokio runtime
@@ -70,16 +74,25 @@ async fn rpc_endpoint(
     service: JsonRpcService,
     registry: Arc<RpcRegistry>,
 ) -> Result<Box<dyn warp::Reply>, warp::Rejection> {
+    // take snapshot of latest version of DB to be used across all requests, especially for batched requests
+    let request_li = service
+        .get_latest_ledger_info()
+        .map_err(|_| reject::custom(DatabaseError))?;
     if let Value::Array(requests) = data {
         // batch API call
-        let futures = requests
-            .into_iter()
-            .map(|req| rpc_request_handler(req, service.clone(), Arc::clone(&registry)));
+        let futures = requests.into_iter().map(|req| {
+            rpc_request_handler(
+                req,
+                service.clone(),
+                Arc::clone(&registry),
+                request_li.clone(),
+            )
+        });
         let responses = join_all(futures).await;
         Ok(Box::new(warp::reply::json(&Value::Array(responses))))
     } else {
         // single API call
-        let resp = rpc_request_handler(data, service, registry).await;
+        let resp = rpc_request_handler(data, service, registry, request_li).await;
         Ok(Box::new(warp::reply::json(&resp)))
     }
 }
@@ -90,6 +103,7 @@ async fn rpc_request_handler(
     req: Value,
     service: JsonRpcService,
     registry: Arc<RpcRegistry>,
+    request_li: LedgerInfoWithSignatures,
 ) -> Value {
     let request: Map<String, Value>;
     let mut response = Map::new();
@@ -158,7 +172,7 @@ async fn rpc_request_handler(
     // get rpc handler
     match request.get("method") {
         Some(Value::String(name)) => match registry.get(name) {
-            Some(handler) => match handler(service, params).await {
+            Some(handler) => match handler(service, params, request_li).await {
                 Ok(result) => {
                     response.insert("result".to_string(), result);
                     counters::REQUESTS
@@ -223,3 +237,9 @@ fn verify_protocol(request: &Map<String, Value>) -> Result<(), JsonRpcError> {
     }
     Err(JsonRpcError::invalid_request())
 }
+
+/// Warp rejection types
+#[derive(Debug)]
+struct DatabaseError;
+
+impl Reject for DatabaseError {}
