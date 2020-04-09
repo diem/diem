@@ -11,10 +11,25 @@
 //! intersecting messaging protocol version and use that for the remainder of the session.
 
 use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::collections::BTreeMap;
 
 #[cfg(test)]
 mod test;
+
+/// Unique identifier associated with each application protocol.
+/// New application protocols can be added without bumping up the MessagingProtocolVersion.
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Deserialize_repr, Serialize_repr)]
+pub enum ProtocolId {
+    ConsensusRpc = 0,
+    ConsensusDirectSend = 1,
+    MempoolDirectSend = 2,
+    StateSynchronizerDirectSend = 3,
+    DiscoveryDirectSend = 4,
+    HealthCheckerRpc = 5,
+    IdentityDirectSend = 6,
+}
 
 /// The HandshakeMsg contains a mapping from MessagingProtocolVersion suppported by the node to a
 /// bit-vector specifying application-level protocols supported over that version.
