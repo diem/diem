@@ -28,6 +28,7 @@ pub enum ProtocolId {
     DiscoveryDirectSend = 4,
     HealthCheckerRpc = 5,
     IdentityDirectSend = 6,
+    OnchainDiscoveryRpc = 7,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
