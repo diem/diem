@@ -587,6 +587,14 @@ impl DbReader for SyncStorageClient {
         unimplemented!()
     }
 
+    fn get_state_proof_with_ledger_info(
+        &self,
+        _known_version: u64,
+        _ledger_info_with_sigs: LedgerInfoWithSignatures,
+    ) -> Result<(ValidatorChangeProof, AccumulatorConsistencyProof)> {
+        unimplemented!()
+    }
+
     fn get_state_proof(
         &self,
         _known_version: u64,

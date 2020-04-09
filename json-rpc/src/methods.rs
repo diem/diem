@@ -17,7 +17,8 @@ use hex;
 use libra_mempool::MempoolClientSender;
 use libra_types::{
     account_address::AccountAddress, account_state::AccountState, event::EventKey,
-    mempool_status::MempoolStatusCode, transaction::SignedTransaction,
+    ledger_info::LedgerInfoWithSignatures, mempool_status::MempoolStatusCode,
+    transaction::SignedTransaction,
 };
 use serde_json::Value;
 use std::{collections::HashMap, convert::TryFrom, pin::Pin, str::FromStr, sync::Arc};
@@ -33,15 +34,28 @@ impl JsonRpcService {
     pub fn new(db: Arc<dyn DbReader>, mempool_sender: MempoolClientSender) -> Self {
         Self { db, mempool_sender }
     }
+
+    pub fn get_latest_ledger_info(&self) -> Result<LedgerInfoWithSignatures> {
+        self.db.get_latest_ledger_info()
+    }
 }
 
-type RpcHandler =
-    Box<fn(JsonRpcService, Vec<Value>) -> Pin<Box<dyn Future<Output = Result<Value>> + Send>>>;
+type RpcHandler = Box<
+    fn(
+        JsonRpcService,
+        Vec<Value>,
+        LedgerInfoWithSignatures,
+    ) -> Pin<Box<dyn Future<Output = Result<Value>> + Send>>,
+>;
 
 pub(crate) type RpcRegistry = HashMap<String, RpcHandler>;
 
 /// Submits transaction to full node
-async fn submit(mut service: JsonRpcService, params: Vec<Value>) -> Result<()> {
+async fn submit(
+    mut service: JsonRpcService,
+    params: Vec<Value>,
+    _request_li: LedgerInfoWithSignatures,
+) -> Result<()> {
     let txn_payload: String = serde_json::from_value(params[0].clone())?;
     let transaction: SignedTransaction = lcs::from_bytes(&hex::decode(txn_payload)?)?;
     trace_code_block!("json-rpc::submit", {"txn", transaction.sender(), transaction.sequence_number()});
@@ -66,10 +80,17 @@ async fn submit(mut service: JsonRpcService, params: Vec<Value>) -> Result<()> {
 async fn get_account_state(
     service: JsonRpcService,
     params: Vec<Value>,
+    request_li: LedgerInfoWithSignatures,
 ) -> Result<Option<AccountView>> {
     let address: String = serde_json::from_value(params[0].clone())?;
     let account_address = AccountAddress::from_str(&address)?;
-    let response = service.db.get_latest_account_state(account_address)?;
+    let response = service
+        .db
+        .get_account_state_with_proof_by_version(
+            account_address,
+            request_li.ledger_info().version(),
+        )?
+        .0;
     if let Some(blob) = response {
         let account_state = AccountState::try_from(&blob)?;
         if let Some(account) = account_state.get_account_resource()? {
@@ -83,15 +104,23 @@ async fn get_account_state(
 
 /// Returns the current blockchain metadata
 /// Can be used to verify that target Full Node is up-to-date
-async fn get_metadata(service: JsonRpcService, _: Vec<Value>) -> Result<BlockMetadata> {
-    let (version, timestamp) = service.db.get_latest_commit_metadata()?;
-    Ok(BlockMetadata { version, timestamp })
+async fn get_metadata(
+    _service: JsonRpcService,
+    _: Vec<Value>,
+    request_li: LedgerInfoWithSignatures,
+) -> Result<BlockMetadata> {
+    let li = request_li.ledger_info();
+    Ok(BlockMetadata {
+        version: li.version(),
+        timestamp: li.timestamp_usecs(),
+    })
 }
 
 /// Returns transactions by range
 async fn get_transactions(
     service: JsonRpcService,
     params: Vec<Value>,
+    request_li: LedgerInfoWithSignatures,
 ) -> Result<Vec<TransactionView>> {
     let start_version: u64 = serde_json::from_value(params[0].clone())?;
     let limit: u64 = serde_json::from_value(params[1].clone())?;
@@ -105,7 +134,7 @@ async fn get_transactions(
     let txs = service.db.get_transactions(
         start_version,
         limit,
-        service.db.get_latest_version()?,
+        request_li.ledger_info().version(),
         include_events,
     )?;
 
@@ -151,6 +180,7 @@ async fn get_transactions(
 async fn get_account_transaction(
     service: JsonRpcService,
     params: Vec<Value>,
+    request_li: LedgerInfoWithSignatures,
 ) -> Result<Option<TransactionView>> {
     let p_account: String = serde_json::from_value(params[0].clone())?;
     let sequence: u64 = serde_json::from_value(params[1].clone())?;
@@ -158,11 +188,12 @@ async fn get_account_transaction(
 
     let account = AccountAddress::try_from(p_account)?;
 
-    let version = service.db.get_latest_version()?;
-
-    let tx = service
-        .db
-        .get_txn_by_account(account, sequence, version, include_events)?;
+    let tx = service.db.get_txn_by_account(
+        account,
+        sequence,
+        request_li.ledger_info().version(),
+        include_events,
+    )?;
 
     if let Some(tx) = tx {
         if include_events {
@@ -193,7 +224,11 @@ async fn get_account_transaction(
 }
 
 /// Returns events by given access path
-async fn get_events(service: JsonRpcService, params: Vec<Value>) -> Result<Vec<EventView>> {
+async fn get_events(
+    service: JsonRpcService,
+    params: Vec<Value>,
+    request_li: LedgerInfoWithSignatures,
+) -> Result<Vec<EventView>> {
     let raw_event_key: String = serde_json::from_value(params[0].clone())?;
     let start: u64 = serde_json::from_value(params[1].clone())?;
     let limit: u64 = serde_json::from_value(params[2].clone())?;
@@ -201,22 +236,32 @@ async fn get_events(service: JsonRpcService, params: Vec<Value>) -> Result<Vec<E
     let event_key = EventKey::try_from(&hex::decode(raw_event_key)?[..])?;
     let events_with_proof = service.db.get_events(&event_key, start, true, limit)?;
 
-    let mut events = vec![];
-    for (version, event) in events_with_proof {
-        events.push((version, event).into());
-    }
+    let req_version = request_li.ledger_info().version();
+    let events = events_with_proof
+        .into_iter()
+        .filter(|(version, _event)| version <= &req_version)
+        .map(|event| event.into())
+        .collect();
     Ok(events)
 }
 
 /// Returns proof of new state relative to version known to client
-async fn get_state_proof(service: JsonRpcService, params: Vec<Value>) -> Result<StateProofView> {
+async fn get_state_proof(
+    service: JsonRpcService,
+    params: Vec<Value>,
+    request_li: LedgerInfoWithSignatures,
+) -> Result<StateProofView> {
     let known_version: u64 = serde_json::from_value(params[0].clone())?;
-    StateProofView::try_from(service.db.get_state_proof(known_version)?)
+    let proofs = service
+        .db
+        .get_state_proof_with_ledger_info(known_version, request_li.clone())?;
+    StateProofView::try_from((request_li, proofs.0, proofs.1))
 }
 
 async fn get_account_state_with_proof(
     service: JsonRpcService,
     params: Vec<Value>,
+    _request_li: LedgerInfoWithSignatures,
 ) -> Result<AccountStateWithProofView> {
     let address: String = serde_json::from_value(params[0].clone())?;
     let account_address = AccountAddress::from_str(&address)?;

@@ -52,7 +52,7 @@ impl DbReader for MockLibraDB {
             LedgerInfo::new(
                 BlockInfo::new(
                     0,
-                    0,
+                    self.version,
                     HashValue::zero(),
                     HashValue::zero(),
                     self.version,
@@ -188,20 +188,21 @@ impl DbReader for MockLibraDB {
         ValidatorChangeProof,
         AccumulatorConsistencyProof,
     )> {
-        let li = LedgerInfo::new(
-            BlockInfo::new(
-                0,
-                known_version,
-                HashValue::zero(),
-                HashValue::zero(),
-                known_version,
-                0,
-                None,
-            ),
-            HashValue::zero(),
-        );
+        let li = self.get_latest_ledger_info()?;
+        let proofs = self.get_state_proof_with_ledger_info(known_version, li.clone())?;
         Ok((
-            LedgerInfoWithSignatures::new(li, BTreeMap::new()),
+            LedgerInfoWithSignatures::new(li.ledger_info().clone(), BTreeMap::new()),
+            proofs.0,
+            proofs.1,
+        ))
+    }
+
+    fn get_state_proof_with_ledger_info(
+        &self,
+        _known_version: u64,
+        _ledger_info: LedgerInfoWithSignatures,
+    ) -> Result<(ValidatorChangeProof, AccumulatorConsistencyProof)> {
+        Ok((
             ValidatorChangeProof::new(vec![], false),
             AccumulatorConsistencyProof::new(vec![]),
         ))
@@ -222,10 +223,13 @@ impl DbReader for MockLibraDB {
 
     fn get_account_state_with_proof_by_version(
         &self,
-        _address: AccountAddress,
+        address: AccountAddress,
         _version: u64,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
-        unimplemented!()
+        Ok((
+            self.get_latest_account_state(address)?,
+            SparseMerkleProof::new(None, vec![]),
+        ))
     }
 
     fn get_latest_state_root(&self) -> Result<(u64, HashValue)> {

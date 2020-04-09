@@ -77,6 +77,14 @@ pub trait DbReader: Send + Sync {
         fetch_events: bool,
     ) -> Result<Option<TransactionWithProof>>;
 
+    /// Returns proof of new state for a given ledger info with signatures relative to version known
+    /// to client
+    fn get_state_proof_with_ledger_info(
+        &self,
+        known_version: u64,
+        ledger_info: LedgerInfoWithSignatures,
+    ) -> Result<(ValidatorChangeProof, AccumulatorConsistencyProof)>;
+
     /// Returns proof of new state relative to version known to client
     fn get_state_proof(
         &self,
