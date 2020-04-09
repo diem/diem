@@ -229,10 +229,10 @@ impl Genesis for MultiEd25519PrivateKey {
 //////////////////////
 
 /// Convenient method to create a MultiEd25519PublicKey from a single Ed25519PublicKey.
-impl From<&Ed25519PublicKey> for MultiEd25519PublicKey {
-    fn from(ed_public_key: &Ed25519PublicKey) -> Self {
+impl From<Ed25519PublicKey> for MultiEd25519PublicKey {
+    fn from(ed_public_key: Ed25519PublicKey) -> Self {
         MultiEd25519PublicKey {
-            public_keys: vec![ed_public_key.clone()],
+            public_keys: vec![ed_public_key],
             threshold: 1u8,
         }
     }
@@ -495,10 +495,10 @@ impl Signature for MultiEd25519Signature {
     }
 }
 
-impl From<&Ed25519Signature> for MultiEd25519Signature {
-    fn from(ed_signature: &Ed25519Signature) -> Self {
+impl From<Ed25519Signature> for MultiEd25519Signature {
+    fn from(ed_signature: Ed25519Signature) -> Self {
         MultiEd25519Signature {
-            signatures: vec![ed_signature.clone()],
+            signatures: vec![ed_signature],
             // "1000_0000 0000_0000 0000_0000 0000_0000"
             bitmap: [0b1000_0000u8, 0u8, 0u8, 0u8],
         }

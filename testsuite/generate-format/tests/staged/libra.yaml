@@ -61,6 +61,12 @@ Module:
   STRUCT:
     - code:
         SEQ: U8
+MultiEd25519PublicKey:
+  NEWTYPESTRUCT:
+    SEQ: U8
+MultiEd25519Signature:
+  NEWTYPESTRUCT:
+    SEQ: U8
 RawTransaction:
   STRUCT:
     - sender:
@@ -138,6 +144,13 @@ TransactionAuthenticator:
               TYPENAME: Ed25519PublicKey
           - signature:
               TYPENAME: Ed25519Signature
+    1:
+      MultiEd25519:
+        STRUCT:
+          - public_key:
+              TYPENAME: MultiEd25519PublicKey
+          - signature:
+              TYPENAME: MultiEd25519Signature
 TransactionPayload:
   ENUM:
     0:

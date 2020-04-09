@@ -143,7 +143,7 @@ fn test_multi_ed25519_public_key_serialization() {
 
     // Check that MultiEd25519PublicKey::from Ed25519PublicKey works as expected.
     let multi_public_key_from_ed25519 = MultiEd25519PublicKey::from(
-        &multi_public_key_7of10_from_multi_private_key.public_keys()[0],
+        multi_public_key_7of10_from_multi_private_key.public_keys()[0].clone(),
     );
     assert_eq!(multi_public_key_from_ed25519.public_keys().len(), 1);
     assert_eq!(
@@ -191,7 +191,7 @@ fn test_multi_ed25519_signature_serialization() {
 
     // Construct from single Ed25519Signature.
     let single_signature = priv_keys_3[0].sign_message(&MESSAGE_HASH);
-    let multi_signature = MultiEd25519Signature::from(&single_signature);
+    let multi_signature = MultiEd25519Signature::from(single_signature.clone());
     assert_eq!(1, multi_signature.signatures().len());
     assert_eq!(multi_signature.signatures()[0], single_signature);
     assert_eq!(multi_signature.bitmap(), &[0b1000_0000u8, 0u8, 0u8, 0u8]);
