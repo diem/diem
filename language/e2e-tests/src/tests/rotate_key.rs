@@ -102,7 +102,7 @@ fn rotate_ed25519_multisig_key() {
 
     // (2) send a tx signed by privkey 1
     let txn1 = raw_rotate_key_txn(*sender_address, new_auth_key.to_vec(), seq_number);
-    let signature1 = MultiEd25519Signature::from(&privkey1.sign_message(&txn1.hash()));
+    let signature1 = MultiEd25519Signature::from(privkey1.sign_message(&txn1.hash()));
     let signed_txn1 =
         SignedTransaction::new_multisig(txn1, multi_ed_public_key.clone(), signature1);
     let output = &executor.execute_transaction(signed_txn1);

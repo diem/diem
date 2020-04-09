@@ -409,10 +409,20 @@ impl SignatureCheckedTransaction {
                     ),
                 )
             })
-            .prop_map(|(keypair, raw_txn)| {
-                raw_txn
-                    .sign(&keypair.private_key, keypair.public_key)
-                    .expect("signing should always work")
+            .prop_flat_map(|(keypair, raw_txn)| {
+                prop_oneof![
+                    Just(
+                        raw_txn
+                            .clone()
+                            .sign(&keypair.private_key, keypair.public_key.clone())
+                            .expect("signing should always work")
+                    ),
+                    Just(
+                        raw_txn
+                            .multi_sign_for_testing(&keypair.private_key, keypair.public_key)
+                            .expect("signing should always work")
+                    ),
+                ]
             })
     }
 }
