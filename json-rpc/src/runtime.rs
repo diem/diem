@@ -4,7 +4,7 @@
 use crate::{
     counters,
     errors::JsonRpcError,
-    methods::{build_registry, JsonRpcService, RpcRegistry},
+    methods::{build_registry, JsonRpcRequest, JsonRpcService, RpcRegistry},
 };
 use futures::future::join_all;
 use libra_config::config::NodeConfig;
@@ -75,7 +75,7 @@ async fn rpc_endpoint(
     registry: Arc<RpcRegistry>,
 ) -> Result<Box<dyn warp::Reply>, warp::Rejection> {
     // take snapshot of latest version of DB to be used across all requests, especially for batched requests
-    let request_li = service
+    let ledger_info = service
         .get_latest_ledger_info()
         .map_err(|_| reject::custom(DatabaseError))?;
     if let Value::Array(requests) = data {
@@ -85,14 +85,14 @@ async fn rpc_endpoint(
                 req,
                 service.clone(),
                 Arc::clone(&registry),
-                request_li.clone(),
+                ledger_info.clone(),
             )
         });
         let responses = join_all(futures).await;
         Ok(Box::new(warp::reply::json(&Value::Array(responses))))
     } else {
         // single API call
-        let resp = rpc_request_handler(data, service, registry, request_li).await;
+        let resp = rpc_request_handler(data, service, registry, ledger_info).await;
         Ok(Box::new(warp::reply::json(&resp)))
     }
 }
@@ -103,7 +103,7 @@ async fn rpc_request_handler(
     req: Value,
     service: JsonRpcService,
     registry: Arc<RpcRegistry>,
-    request_li: LedgerInfoWithSignatures,
+    ledger_info: LedgerInfoWithSignatures,
 ) -> Value {
     let request: Map<String, Value>;
     let mut response = Map::new();
@@ -169,10 +169,14 @@ async fn rpc_request_handler(
         }
     }
 
+    let request_params = JsonRpcRequest {
+        ledger_info,
+        params,
+    };
     // get rpc handler
     match request.get("method") {
         Some(Value::String(name)) => match registry.get(name) {
-            Some(handler) => match handler(service, params, request_li).await {
+            Some(handler) => match handler(service, request_params).await {
                 Ok(result) => {
                     response.insert("result".to_string(), result);
                     counters::REQUESTS
