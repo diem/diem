@@ -10,7 +10,7 @@ use debug_interface::{
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use futures::{channel::mpsc::channel, executor::block_on};
 use libra_config::{
-    config::{NetworkConfig, NodeConfig, RoleType},
+    config::{DiscoveryMethod, NetworkConfig, NodeConfig, RoleType},
     utils::get_genesis_txn,
 };
 use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
@@ -126,7 +126,7 @@ pub fn setup_network(config: &mut NetworkConfig, role: RoleType) -> (Runtime, Ne
             .trusted_peers(trusted_peers)
             .signing_keypair((signing_private, signing_public))
             .discovery_interval_ms(config.discovery_interval_ms)
-            .add_discovery();
+            .add_connectivity_manager();
     } else if config.enable_noise {
         let identity_key = config
             .network_keypairs
@@ -142,6 +142,17 @@ pub fn setup_network(config: &mut NetworkConfig, role: RoleType) -> (Runtime, Ne
     } else {
         network_builder.transport(TransportType::Tcp);
     }
+
+    match config.discovery_method {
+        DiscoveryMethod::Gossip => {
+            network_builder.add_gossip_discovery();
+        }
+        DiscoveryMethod::Onchain => {
+            unimplemented!("onchain discovery not implemented yet");
+        }
+        DiscoveryMethod::None => {}
+    }
+
     (runtime, network_builder)
 }
 

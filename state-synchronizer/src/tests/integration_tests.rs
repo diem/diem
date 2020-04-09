@@ -259,7 +259,8 @@ impl SynchronizerEnv {
             .trusted_peers(trusted_peers)
             .seed_peers(seed_peers)
             .transport(TransportType::Memory)
-            .add_discovery();
+            .add_connectivity_manager()
+            .add_gossip_discovery();
 
         let (sender, events) = crate::network::add_to_network(&mut network_builder);
         let peer_addr = network_builder.build();

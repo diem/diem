@@ -190,7 +190,7 @@ where
 
         trace!("Starting connection manager");
         loop {
-            self.event_id += 1;
+            self.event_id = self.event_id.wrapping_add(1);
             ::futures::select! {
                 _ = self.ticker.select_next_some() => {
                     trace!("Event Id: {}, type: Tick", self.event_id);

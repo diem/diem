@@ -351,15 +351,21 @@ impl NetworkBuilder {
         rx
     }
 
-    pub fn add_discovery(&mut self) -> &mut Self {
-        // We start the connectivity_manager module only if the network is
-        // permissioned.
-        // Initialize and start connectivity manager.
+    /// Add a [`ConnectivityManager`] to the network.
+    ///
+    /// [`ConnectivityManager`] is responsible for ensuring that we are connected
+    /// to a node iff. it is an eligible node and maintaining persistent
+    /// connections with all eligible nodes. A list of eligible nodes is received
+    /// at initialization, and updates are received on changes to system membership.
+    ///
+    /// Note: a connectivity manager should only be added if the network is
+    /// permissioned.
+    pub fn add_connectivity_manager(&mut self) -> &mut Self {
         let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new(
             self.channel_size,
             &counters::PENDING_CONNECTIVITY_MANAGER_REQUESTS,
         );
-        self.conn_mgr_reqs_tx = Some(conn_mgr_reqs_tx.clone());
+        self.conn_mgr_reqs_tx = Some(conn_mgr_reqs_tx);
         let peer_id = self.peer_id;
         let trusted_peers = self.trusted_peers.clone();
         let seed_peers = self.seed_peers.clone();
@@ -380,11 +386,22 @@ impl NetworkBuilder {
             )
         });
         self.executor.spawn(conn_mgr.start());
+        self
+    }
 
-        // We start the discovery module only if the network is permissioned.
-        // Note: We use the `enable_remote_authentication` flag as a proxy for whether we need to run the
-        // discovery module or not. We should make this more explicit eventually.
-        // Initialize and start Discovery actor.
+    /// Add the (gossip) [`Discovery`] protocol to the network.
+    ///
+    /// (gossip) [`Discovery`] discovers other eligible peers' network addresses
+    /// by exchanging the full set of known peer network addresses with connected
+    /// peers as a network protocol.
+    pub fn add_gossip_discovery(&mut self) -> &mut Self {
+        // Note: We use the `enable_remote_authentication` flag as a proxy for
+        // whether we need to run the discovery module or not. We should make this
+        // more explicit eventually.
+        let peer_id = self.peer_id;
+        let conn_mgr_reqs_tx = self
+            .conn_mgr_reqs_tx()
+            .expect("ConnectivityManager not enabled");
         let (signing_private_key, _signing_public_key) =
             self.signing_keypair.take().expect("Signing keys not set");
         // Get handles for network events and sender.
