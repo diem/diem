@@ -196,8 +196,8 @@ jobs:
       - run:
           name: Find all e2e tests
           command: |
-            cargo x test --package testsuite -- --list | grep "::" | \
-              sed 's/: .*$//' > e2e_tests
+            RUST_BACKTRACE=1 cargo x test --package testsuite -- --list | \
+              grep "::" | sed 's/: .*$//' > e2e_tests
             cat e2e_tests
       - persist_to_workspace:
           root: /home/circleci/project
@@ -209,6 +209,8 @@ jobs:
     parallelism: 8
     description: Run E2E tests in parallel. Each container runs a subset of
       test targets.
+    environment:
+      E2E_RETRIES: 3
     steps:
       - build_setup
       - restore_cargo_package_cache
@@ -227,17 +229,28 @@ jobs:
       - run:
           name: Run E2E tests
           command: |
-            set -x
+            set -x +e
             libratest=$(find target/debug/deps/ -name "libratest*" -executable)
+            num_fails=0
             for target in $(cat /tmp/tests_to_run) ; do
-              if [ ! -z "$libratest" ]; then
-                RUST_BACKTRACE=1 $CI_TIMEOUT $libratest $target \
-                  --test-threads 1 --exact --nocapture
-              else
-                RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test $target \
-                  --package testsuite -- --test-threads 1 --exact --nocapture
+              cmd="$libratest $target --test-threads 1 --exact --nocapture"
+              retry=0
+              status=1
+              failed_tests=
+              while [[ $status != 0 && $retry < ${E2E_RETRIES} ]]; do
+                RUST_BACKTRACE=1 timeout --kill-after=370 --preserve-status 360 $cmd
+                status=$?
+                retry=$((retry + 1))
+              done
+              if [[ $status != 0 ]] ; then
+                num_fails=$((num_fails + 1))
+                failed_tests="$target\n$failed_tests"
               fi
             done
+            if [[ $num_fails != 0 ]]; then
+              echo -e "$num_fails test(s) failed:$failed_tests"
+            fi
+            exit $num_fails
   run-unit-test:
     executor: build-executor
     description: Run all unit tests, excluding E2E and flaky tests that are
