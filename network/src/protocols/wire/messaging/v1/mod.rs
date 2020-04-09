@@ -4,9 +4,8 @@
 //! This module defines the structs transported during the network messaging protocol v1.
 //! These should serialize as per [link](TODO: Add ref).
 
-use crate::protocols::wire::handshake::v1::MessagingProtocolVersion;
+use crate::protocols::wire::handshake::v1::{MessagingProtocolVersion, ProtocolId};
 use serde::{Deserialize, Serialize};
-use serde_repr::{Deserialize_repr, Serialize_repr};
 
 #[cfg(test)]
 mod test;
@@ -21,20 +20,6 @@ pub enum NetworkMessage {
     RpcRequest(RpcRequest),
     RpcResponse(RpcResponse),
     DirectSendMsg(DirectSendMsg),
-}
-
-/// Unique identifier associated with each application protocol.
-/// New application protocols can be added without bumping up the MessagingProtocolVersion.
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Deserialize_repr, Serialize_repr)]
-pub enum ProtocolId {
-    ConsensusRpc = 0,
-    ConsensusDirectSend = 1,
-    MempoolDirectSend = 2,
-    StateSynchronizerDirectSend = 3,
-    DiscoveryDirectSend = 4,
-    HealthCheckerRpc = 5,
-    IdentityDirectSend = 6,
 }
 
 /// Enum representing various error codes that can be embedded in NetworkMessage.
