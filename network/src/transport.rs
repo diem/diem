@@ -3,31 +3,40 @@
 
 use crate::{
     common::NetworkPublicKeys,
-    protocols::identity::{exchange_identity, Identity},
+    protocols::{
+        identity::{exchange_handshake, exchange_peerid},
+        wire::handshake::v1::{HandshakeMsg, MessagingProtocolVersion, SupportedProtocols},
+    },
 };
 use futures::io::{AsyncRead, AsyncWrite};
 use libra_crypto::{
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
     ValidKey,
 };
+use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
-use netcore::transport::{boxed, memory, tcp, TransportExt};
+use netcore::transport::{boxed, memory, tcp, ConnectionOrigin, TransportExt};
 use noise::NoiseConfig;
+use once_cell::sync::Lazy;
+use parity_multiaddr::Multiaddr;
 use std::{
     collections::HashMap,
     convert::TryFrom,
     fmt::Debug,
     io,
-    sync::{Arc, RwLock},
+    sync::{Arc, Mutex, RwLock},
     time::Duration,
 };
 
-pub trait TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + 'static {}
-impl<T> TSocket for T where T: AsyncRead + AsyncWrite + Send + Debug + Unpin + 'static {}
-
 /// A timeout for the connection to open and complete all of the upgrade steps.
 pub const TRANSPORT_TIMEOUT: Duration = Duration::from_secs(30);
+/// Currently supported messaging protocol version.
+/// TODO: Add ability to support more than one messaging protocol.
+pub const SUPPORTED_MESSAGING_PROTOCOL: MessagingProtocolVersion = MessagingProtocolVersion::V1;
+/// Global connection-id generator.
+static CONNECTION_ID_GENERATOR: Lazy<Arc<Mutex<ConnectionIdGenerator>>> =
+    Lazy::new(|| Arc::new(Mutex::new(ConnectionIdGenerator::new())));
 
 const LIBRA_TCP_TRANSPORT: tcp::TcpTransport = tcp::TcpTransport {
     // Use default options.
@@ -38,6 +47,93 @@ const LIBRA_TCP_TRANSPORT: tcp::TcpTransport = tcp::TcpTransport {
     // Use TCP_NODELAY for libra tcp connections.
     nodelay: Some(true),
 };
+
+pub trait TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + 'static {}
+impl<T> TSocket for T where T: AsyncRead + AsyncWrite + Send + Debug + Unpin + 'static {}
+
+/// Unique local identifier for a connection.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
+pub struct ConnectionId(u32);
+
+impl From<u32> for ConnectionId {
+    fn from(i: u32) -> ConnectionId {
+        ConnectionId(i)
+    }
+}
+
+/// Generator of unique ConnectionIds.
+struct ConnectionIdGenerator {
+    next: ConnectionId,
+}
+
+impl ConnectionIdGenerator {
+    fn new() -> ConnectionIdGenerator {
+        Self {
+            next: ConnectionId(0),
+        }
+    }
+
+    fn next(&mut self) -> ConnectionId {
+        let ret = self.next;
+        self.next = ConnectionId(ret.0.wrapping_add(1));
+        ret
+    }
+}
+
+/// Metadata associated with an established connection.
+#[derive(Clone, Debug)]
+pub struct ConnectionMetadata {
+    peer_id: PeerId,
+    connection_id: ConnectionId,
+    addr: Multiaddr,
+    origin: ConnectionOrigin,
+    messaging_protocol: MessagingProtocolVersion,
+    application_protocols: SupportedProtocols,
+}
+
+impl ConnectionMetadata {
+    pub fn new(
+        peer_id: PeerId,
+        connection_id: ConnectionId,
+        addr: Multiaddr,
+        origin: ConnectionOrigin,
+        messaging_protocol: MessagingProtocolVersion,
+        application_protocols: SupportedProtocols,
+    ) -> ConnectionMetadata {
+        ConnectionMetadata {
+            peer_id,
+            connection_id,
+            addr,
+            origin,
+            messaging_protocol,
+            application_protocols,
+        }
+    }
+
+    pub fn peer_id(&self) -> PeerId {
+        self.peer_id
+    }
+
+    pub fn connection_id(&self) -> ConnectionId {
+        self.connection_id
+    }
+
+    pub fn addr(&self) -> &Multiaddr {
+        &self.addr
+    }
+
+    pub fn origin(&self) -> ConnectionOrigin {
+        self.origin
+    }
+}
+
+/// The `Connection` struct consists of connection metadata and the actual socket for
+/// communication.
+#[derive(Debug)]
+pub struct Connection<TSocket> {
+    pub socket: TSocket,
+    pub metadata: ConnectionMetadata,
+}
 
 fn identity_key_to_peer_id(
     trusted_peers: &RwLock<HashMap<PeerId, NetworkPublicKeys>>,
@@ -52,37 +148,50 @@ fn identity_key_to_peer_id(
     None
 }
 
-// Ensures that peer id in received identity is same as peer id derived from noise handshake.
-fn match_peer_id(identity: Identity, peer_id: PeerId) -> Result<Identity, io::Error> {
-    if identity.peer_id() != peer_id {
-        security_log(SecurityEvent::InvalidNetworkPeer)
-            .error("InvalidIdentity")
-            .data(&identity)
-            .data(&peer_id)
-            .log();
-        Err(io::Error::new(
+pub async fn perform_handshake<T: TSocket>(
+    peer_id: PeerId,
+    mut socket: T,
+    addr: Multiaddr,
+    origin: ConnectionOrigin,
+    own_handshake: &HandshakeMsg,
+) -> Result<Connection<T>, io::Error> {
+    let handshake_other = exchange_handshake(&own_handshake, &mut socket).await?;
+    let intersecting_protocols = own_handshake.find_common_protocols(&handshake_other);
+    match intersecting_protocols {
+        None => {
+            info!("No matching protocols found for connection with peer: {:?}. Handshake received: {:?}",
+            peer_id.short_str(), handshake_other);
+            Err(io::Error::new(
                 io::ErrorKind::Other,
-                format!(
-                    "PeerId received from Noise Handshake ({}) doesn't match one received from Identity Exchange ({})",
-                    peer_id.short_str(),
-                    identity.peer_id().short_str()
-                )
-        ))
-    } else {
-        Ok(identity)
+                "no matching messaging protocol",
+            ))
+        }
+        Some((messaging_protocol, application_protocols)) => Ok(Connection {
+            socket,
+            metadata: ConnectionMetadata::new(
+                peer_id,
+                CONNECTION_ID_GENERATOR.lock().unwrap().next(),
+                addr,
+                origin,
+                messaging_protocol,
+                application_protocols,
+            ),
+        }),
     }
 }
 
 pub fn build_memory_noise_transport(
-    own_identity: Identity,
     identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
-) -> boxed::BoxedTransport<(Identity, impl TSocket), impl ::std::error::Error> {
+    application_protocols: SupportedProtocols,
+) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
     let noise_config = Arc::new(NoiseConfig::new(identity_keypair));
+    let mut own_handshake = HandshakeMsg::new();
+    own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
     memory_transport
-        .and_then(move |socket, origin| async move {
+        .and_then(move |socket, _addr, origin| async move {
             let (remote_static_key, socket) =
                 noise_config.upgrade_connection(socket, origin).await?;
             if let Some(peer_id) = identity_key_to_peer_id(&trusted_peers, &remote_static_key) {
@@ -91,22 +200,24 @@ pub fn build_memory_noise_transport(
                 Err(io::Error::new(io::ErrorKind::Other, "Not a trusted peer"))
             }
         })
-        .and_then(move |(peer_id, mut socket), _origin| async move {
-            let identity = exchange_identity(&own_identity, &mut socket).await?;
-            match_peer_id(identity, peer_id).and_then(|identity| Ok((identity, socket)))
+        .and_then(move |(peer_id, socket), addr, origin| async move {
+            perform_handshake(peer_id, socket, addr, origin, &own_handshake).await
         })
         .with_timeout(TRANSPORT_TIMEOUT)
         .boxed()
 }
 
 pub fn build_unauthenticated_memory_noise_transport(
-    own_identity: Identity,
     identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
-) -> boxed::BoxedTransport<(Identity, impl TSocket), impl ::std::error::Error> {
+    application_protocols: SupportedProtocols,
+) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
     let noise_config = Arc::new(NoiseConfig::new(identity_keypair));
+    let mut own_handshake = HandshakeMsg::new();
+    own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
+
     memory_transport
-        .and_then(move |socket, origin| {
+        .and_then(move |socket, _addr, origin| {
             async move {
                 let (remote_static_key, socket) =
                     noise_config.upgrade_connection(socket, origin).await?;
@@ -121,21 +232,27 @@ pub fn build_unauthenticated_memory_noise_transport(
                 Ok((peer_id, socket))
             }
         })
-        .and_then(move |(peer_id, mut socket), _origin| async move {
-            let identity = exchange_identity(&own_identity, &mut socket).await?;
-            match_peer_id(identity, peer_id).and_then(|identity| Ok((identity, socket)))
+        .and_then(move |(peer_id, socket), addr, origin| async move {
+            perform_handshake(peer_id, socket, addr, origin, &own_handshake).await
         })
         .with_timeout(TRANSPORT_TIMEOUT)
         .boxed()
 }
 
 pub fn build_memory_transport(
-    own_identity: Identity,
-) -> boxed::BoxedTransport<(Identity, impl TSocket), impl ::std::error::Error> {
+    own_peer_id: PeerId,
+    application_protocols: SupportedProtocols,
+) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
+    let mut own_handshake = HandshakeMsg::new();
+    own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
+
     memory_transport
-        .and_then(move |mut socket, _origin| async move {
-            Ok((exchange_identity(&own_identity, &mut socket).await?, socket))
+        .and_then(move |mut socket, _addr, _origin| async move {
+            Ok((exchange_peerid(&own_peer_id, &mut socket).await?, socket))
+        })
+        .and_then(move |(peer_id, socket), addr, origin| async move {
+            perform_handshake(peer_id, socket, addr, origin, &own_handshake).await
         })
         .with_timeout(TRANSPORT_TIMEOUT)
         .boxed()
@@ -143,14 +260,16 @@ pub fn build_memory_transport(
 
 //TODO(bmwill) Maybe create an Either Transport so we can merge the building of Memory + Tcp
 pub fn build_tcp_noise_transport(
-    own_identity: Identity,
     identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
-) -> boxed::BoxedTransport<(Identity, impl TSocket), impl ::std::error::Error> {
+    application_protocols: SupportedProtocols,
+) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let noise_config = Arc::new(NoiseConfig::new(identity_keypair));
+    let mut own_handshake = HandshakeMsg::new();
+    own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
     LIBRA_TCP_TRANSPORT
-        .and_then(move |socket, origin| async move {
+        .and_then(move |socket, _addr, origin| async move {
             let (remote_static_key, socket) =
                 noise_config.upgrade_connection(socket, origin).await?;
             if let Some(peer_id) = identity_key_to_peer_id(&trusted_peers, &remote_static_key) {
@@ -164,9 +283,8 @@ pub fn build_tcp_noise_transport(
                 Err(io::Error::new(io::ErrorKind::Other, "Not a trusted peer"))
             }
         })
-        .and_then(move |(peer_id, mut socket), _origin| async move {
-            let identity = exchange_identity(&own_identity, &mut socket).await?;
-            match_peer_id(identity, peer_id).and_then(|identity| Ok((identity, socket)))
+        .and_then(move |(peer_id, socket), addr, origin| async move {
+            perform_handshake(peer_id, socket, addr, origin, &own_handshake).await
         })
         .with_timeout(TRANSPORT_TIMEOUT)
         .boxed()
@@ -175,12 +293,15 @@ pub fn build_tcp_noise_transport(
 // Transport based on TCP + Noise, but without remote authentication (i.e., any
 // node is allowed to connect).
 pub fn build_unauthenticated_tcp_noise_transport(
-    own_identity: Identity,
     identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
-) -> boxed::BoxedTransport<(Identity, impl TSocket), impl ::std::error::Error> {
+    application_protocols: SupportedProtocols,
+) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let noise_config = Arc::new(NoiseConfig::new(identity_keypair));
+    let mut own_handshake = HandshakeMsg::new();
+    own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
+
     LIBRA_TCP_TRANSPORT
-        .and_then(move |socket, origin| {
+        .and_then(move |socket, _addr, origin| {
             async move {
                 let (remote_static_key, socket) =
                     noise_config.upgrade_connection(socket, origin).await?;
@@ -195,20 +316,26 @@ pub fn build_unauthenticated_tcp_noise_transport(
                 Ok((peer_id, socket))
             }
         })
-        .and_then(move |(peer_id, mut socket), _origin| async move {
-            let identity = exchange_identity(&own_identity, &mut socket).await?;
-            match_peer_id(identity, peer_id).and_then(|identity| Ok((identity, socket)))
+        .and_then(move |(peer_id, socket), addr, origin| async move {
+            perform_handshake(peer_id, socket, addr, origin, &own_handshake).await
         })
         .with_timeout(TRANSPORT_TIMEOUT)
         .boxed()
 }
 
 pub fn build_tcp_transport(
-    own_identity: Identity,
-) -> boxed::BoxedTransport<(Identity, impl TSocket), impl ::std::error::Error> {
+    own_peer_id: PeerId,
+    application_protocols: SupportedProtocols,
+) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
+    let mut own_handshake = HandshakeMsg::new();
+    own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
+
     LIBRA_TCP_TRANSPORT
-        .and_then(move |mut socket, _origin| async move {
-            Ok((exchange_identity(&own_identity, &mut socket).await?, socket))
+        .and_then(move |mut socket, _addr, _origin| async move {
+            Ok((exchange_peerid(&own_peer_id, &mut socket).await?, socket))
+        })
+        .and_then(move |(peer_id, socket), addr, origin| async move {
+            perform_handshake(peer_id, socket, addr, origin, &own_handshake).await
         })
         .with_timeout(TRANSPORT_TIMEOUT)
         .boxed()

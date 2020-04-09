@@ -82,14 +82,12 @@ impl SupportedProtocols {
 }
 
 impl HandshakeMsg {
-    #[allow(unused)]
     pub fn new() -> Self {
         HandshakeMsg {
             supported_protocols: BTreeMap::default(),
         }
     }
 
-    #[allow(unused)]
     pub fn add(
         &mut self,
         messaging_protocol: MessagingProtocolVersion,
@@ -99,7 +97,6 @@ impl HandshakeMsg {
             .insert(messaging_protocol, application_protocols);
     }
 
-    #[allow(unused)]
     pub fn find_common_protocols(
         &self,
         other: &HandshakeMsg,

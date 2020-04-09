@@ -5,9 +5,11 @@
 //! and opening substreams as well as negotiating particular protocols on those substreams.
 use crate::{
     counters,
-    peer_manager::{Connection, ConnectionMetadata, PeerManagerError},
+    peer_manager::PeerManagerError,
     protocols::wire::messaging::v1::NetworkMessage,
-    transport, ProtocolId,
+    transport,
+    transport::{Connection, ConnectionMetadata},
+    ProtocolId,
 };
 use bytes::BytesMut;
 use channel;
@@ -108,7 +110,7 @@ where
     }
 
     fn peer_id(&self) -> PeerId {
-        self.connection_metadata.peer_identity().peer_id()
+        self.connection_metadata.peer_id()
     }
 
     pub async fn start(mut self) {

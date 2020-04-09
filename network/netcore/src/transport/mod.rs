@@ -121,7 +121,7 @@ pub trait TransportExt: Transport {
     fn and_then<F, Fut, O>(self, f: F) -> and_then::AndThen<Self, F>
     where
         Self: Sized,
-        F: FnOnce(Self::Output, ConnectionOrigin) -> Fut + Clone,
+        F: FnOnce(Self::Output, Multiaddr, ConnectionOrigin) -> Fut + Clone,
         // Pin the error types to be the same for now
         // TODO don't require the error types to be the same
         Fut: Future<Output = Result<O, Self::Error>>,

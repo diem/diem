@@ -272,8 +272,8 @@ mod test {
 
     #[tokio::test]
     async fn simple_listen_and_dial() -> Result<(), ::std::io::Error> {
-        let t = TcpTransport::default().and_then(|mut out, connection| async move {
-            match connection {
+        let t = TcpTransport::default().and_then(|mut out, _addr, origin| async move {
+            match origin {
                 ConnectionOrigin::Inbound => {
                     out.write_all(b"Earth").await?;
                     let mut buf = [0; 3];
