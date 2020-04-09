@@ -34,6 +34,7 @@ members = [
     "consensus/safety-rules",
     "crypto/crypto",
     "crypto/crypto-derive",
+    "devtools/x",
     "execution/executor",
     "execution/executor-benchmark",
     "execution/executor-types",
@@ -105,7 +106,6 @@ members = [
     "testsuite/generate-format",
     "types",
     "vm-validator",
-    "x",
 ]
 
 # NOTE: These members should never include crates that require fuzzing

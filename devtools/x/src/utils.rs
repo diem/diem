@@ -5,10 +5,13 @@ use crate::{cargo::Cargo, Result};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
+/// The number of directories between the project root and the root of this crate.
+pub const X_DEPTH: usize = 2;
+
 pub fn project_root() -> &'static Path {
     Path::new(&env!("CARGO_MANIFEST_DIR"))
         .ancestors()
-        .nth(1)
+        .nth(X_DEPTH)
         .unwrap()
 }
 
