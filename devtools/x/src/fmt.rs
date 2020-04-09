@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{cargo::Cargo, config::Config, Result};
+use crate::{cargo::Cargo, context::XContext, Result};
 use std::ffi::OsString;
 use structopt::StructOpt;
 
@@ -22,7 +22,7 @@ pub struct Args {
     args: Vec<OsString>,
 }
 
-pub fn run(args: Args, _config: Config) -> Result<()> {
+pub fn run(args: Args, _xctx: XContext) -> Result<()> {
     // Hardcode that we want imports merged
     let mut pass_through_args = vec!["--config".into(), "merge_imports=true".into()];
 

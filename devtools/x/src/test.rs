@@ -3,7 +3,7 @@
 
 use crate::{
     cargo::{CargoArgs, CargoCommand},
-    config::Config,
+    context::XContext,
     utils,
     utils::project_root,
     Result,
@@ -38,8 +38,9 @@ pub struct Args {
     args: Vec<OsString>,
 }
 
-pub fn run(mut args: Args, config: Config) -> Result<()> {
+pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
     args.args.extend(args.testname.clone());
+    let config = xctx.config();
 
     let env_vars: &[(&str, &str)] = if args.html_cov_dir.is_some() {
         info!("Running \"cargo clean\" before collecting coverage");

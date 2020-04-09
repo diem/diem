@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{config::Config, utils::project_root};
+use crate::{context::XContext, utils::project_root};
 use anyhow::anyhow;
 use structopt::StructOpt;
 use x_lint::{prelude::*, LintEngineConfig};
@@ -15,7 +15,7 @@ pub struct Args {
     fail_fast: bool,
 }
 
-pub fn run(args: Args, _config: Config) -> crate::Result<()> {
+pub fn run(args: Args, _xctx: XContext) -> crate::Result<()> {
     let content_linters: &[&dyn ContentLinter] = &[
         &license::LicenseHeader,
         &whitespace::EofNewline,

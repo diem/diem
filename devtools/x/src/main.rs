@@ -14,6 +14,7 @@ mod cargo;
 mod check;
 mod clippy;
 mod config;
+mod context;
 mod fmt;
 mod lint;
 mod test;
@@ -72,14 +73,14 @@ fn main() -> Result<()> {
         .init();
 
     let args = Args::from_args();
-    let config = config::Config::from_project_root()?;
+    let xctx = context::XContext::new()?;
 
     match args.cmd {
-        Command::Test(args) => test::run(args, config),
-        Command::Check(args) => check::run(args, config),
-        Command::Clippy(args) => clippy::run(args, config),
-        Command::Fmt(args) => fmt::run(args, config),
-        Command::Bench(args) => bench::run(args, config),
-        Command::Lint(args) => lint::run(args, config),
+        Command::Test(args) => test::run(args, xctx),
+        Command::Check(args) => check::run(args, xctx),
+        Command::Clippy(args) => clippy::run(args, xctx),
+        Command::Fmt(args) => fmt::run(args, xctx),
+        Command::Bench(args) => bench::run(args, xctx),
+        Command::Lint(args) => lint::run(args, xctx),
     }
 }
