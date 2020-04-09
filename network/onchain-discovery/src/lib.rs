@@ -51,6 +51,9 @@ use std::{
 use storage_client::StorageRead;
 use tokio::runtime::Handle;
 
+#[cfg(test)]
+mod test;
+
 pub mod network_interface;
 pub mod types;
 
