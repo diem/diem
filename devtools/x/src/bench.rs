@@ -3,7 +3,7 @@
 
 use crate::{
     cargo::{CargoArgs, CargoCommand},
-    config::Config,
+    context::XContext,
     utils, Result,
 };
 use std::ffi::OsString;
@@ -20,8 +20,9 @@ pub struct Args {
     args: Vec<OsString>,
 }
 
-pub fn run(mut args: Args, config: Config) -> Result<()> {
+pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
     args.args.extend(args.benchname.clone());
+    let config = xctx.config();
 
     let cmd = CargoCommand::Bench(&args.args);
     let base_args = CargoArgs {

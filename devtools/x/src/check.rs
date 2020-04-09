@@ -4,6 +4,7 @@
 use crate::{
     cargo::{CargoArgs, CargoCommand},
     config::Config,
+    context::XContext,
     utils, Result,
 };
 use structopt::StructOpt;
@@ -21,12 +22,12 @@ pub struct Args {
     all_targets: bool,
 }
 
-pub fn run(args: Args, config: Config) -> Result<()> {
+pub fn run(args: Args, xctx: XContext) -> Result<()> {
     let cmd = CargoCommand::Check;
-    run_with(cmd, args, config)
+    run_with(cmd, args, xctx.config())
 }
 
-pub fn run_with(cmd: CargoCommand<'_>, args: Args, config: Config) -> Result<()> {
+pub fn run_with(cmd: CargoCommand<'_>, args: Args, config: &Config) -> Result<()> {
     // If we've been asked to build all targets then we need to enable all_features so that
     // building the testing targets works
     let base_args = CargoArgs {
