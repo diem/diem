@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 tonic = "0.2"
-tokio = { version = "0.2.13", features = ["full"] }
+tokio = { version = "0.2.16", features = ["full"] }
 prost = "0.6"
 
 libra-logger = { path = "../../common/logger", version = "0.1.0" }

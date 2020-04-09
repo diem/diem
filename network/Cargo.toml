@@ -22,7 +22,7 @@ serde = { version = "1.0.106", default-features = false }
 serde_bytes = "0.11.3"
 serde_repr = "0.1"
 thiserror = "1.0"
-tokio = { version = "0.2.13", features = ["full"] }
+tokio = { version = "0.2.16", features = ["full"] }
 tokio-util = { version = "0.3", features = ["codec"] }
 tokio-retry = "0.2.0"
 

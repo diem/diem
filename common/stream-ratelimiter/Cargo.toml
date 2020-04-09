@@ -13,9 +13,9 @@ edition = "2018"
 
 [dependencies]
 futures = "0.3.0"
-tokio = { version = "0.2.13", features = ["time", "stream"] }
+tokio = { version = "0.2.16", features = ["time", "stream"] }
 pin-project = "0.4.2"
 futures-semaphore = { path = "../futures-semaphore" }
 
 [dev-dependencies]
-tokio = { version = "0.2.13", features = ["full"] }
+tokio = { version = "0.2.16", features = ["full"] }
