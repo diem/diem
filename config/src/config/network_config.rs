@@ -38,6 +38,8 @@ pub struct NetworkConfig {
     // Otherwise, any node can connect. If this flag is set to true, `enable_noise` must
     // also be set to true.
     pub enable_remote_authentication: bool,
+    // Enable this network to use either gossip discovery or onchain discovery.
+    pub discovery_method: DiscoveryMethod,
     // network peers are the nodes allowed to connect when the network is started in authenticated
     // mode.
     #[serde(skip)]
@@ -60,6 +62,7 @@ impl Default for NetworkConfig {
             connectivity_check_interval_ms: 5000,
             enable_noise: true,
             enable_remote_authentication: true,
+            discovery_method: DiscoveryMethod::Gossip,
             network_keypairs: None,
             network_peers_file: PathBuf::new(),
             network_peers: NetworkPeersConfig::default(),
@@ -81,6 +84,7 @@ impl NetworkConfig {
             connectivity_check_interval_ms: self.connectivity_check_interval_ms,
             enable_noise: self.enable_noise,
             enable_remote_authentication: self.enable_remote_authentication,
+            discovery_method: self.discovery_method,
             network_keypairs: None,
             network_peers_file: self.network_peers_file.clone(),
             network_peers: self.network_peers.clone(),
@@ -253,6 +257,15 @@ pub struct NetworkPeerInfo {
     pub signing_public_key: Ed25519PublicKey,
     #[serde(rename = "ni")]
     pub identity_public_key: x25519::PublicKey,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DiscoveryMethod {
+    // default until we can deprecate
+    Gossip,
+    Onchain,
+    None,
 }
 
 #[cfg(test)]

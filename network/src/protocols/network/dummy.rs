@@ -147,7 +147,8 @@ pub fn setup_network() -> DummyNetwork {
         .trusted_peers(trusted_peers.clone())
         .signing_keypair((listener_signing_private_key, listener_signing_public_key))
         .discovery_interval_ms(HOUR_IN_MS)
-        .add_discovery();
+        .add_connectivity_manager()
+        .add_gossip_discovery();
     let (listener_sender, mut listener_events) = add_to_network(&mut network_builder);
     let listen_addr = network_builder.build();
 
@@ -169,7 +170,8 @@ pub fn setup_network() -> DummyNetwork {
                 .collect(),
         )
         .discovery_interval_ms(HOUR_IN_MS)
-        .add_discovery();
+        .add_connectivity_manager()
+        .add_gossip_discovery();
     let (dialer_sender, mut dialer_events) = add_to_network(&mut network_builder);
     let _dialer_addr = network_builder.build();
 
