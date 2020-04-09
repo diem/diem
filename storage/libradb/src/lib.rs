@@ -44,7 +44,7 @@ use crate::{
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
-use anyhow::{bail, ensure, format_err, Result};
+use anyhow::{ensure, Result};
 use itertools::{izip, zip_eq};
 use jellyfish_merkle::restore::JellyfishMerkleRestore;
 use libra_crypto::hash::{CryptoHash, HashValue, SPARSE_MERKLE_PLACEHOLDER_HASH};
@@ -136,11 +136,7 @@ impl LibraDB {
     /// Config parameter for the pruner.
     const NUM_HISTORICAL_VERSIONS_TO_KEEP: u64 = 1_000_000;
 
-    pub fn open<P: AsRef<Path> + Clone>(
-        db_root_path: P,
-        readonly: bool,
-        log_dir: Option<P>,
-    ) -> Result<Self> {
+    pub fn open<P: AsRef<Path> + Clone>(db_root_path: P, readonly: bool) -> Result<Self> {
         let cf_opts_map: ColumnFamilyOptionsMap = [
             (
                 /* LedgerInfo CF = */ DEFAULT_CF_NAME,
@@ -175,13 +171,7 @@ impl LibraDB {
         let instant = Instant::now();
 
         let db = Arc::new(if readonly {
-            let db_log_dir = log_dir
-                .ok_or_else(|| format_err!("Must provide log_dir if opening in readonly mode."))?;
-            if !db_log_dir.as_ref().is_dir() {
-                bail!("Invalid log directory: {:?}", db_log_dir.as_ref());
-            }
-            info!("log stored at {:?}", db_log_dir.as_ref());
-            DB::open_readonly(path.clone(), cf_opts_map, db_log_dir.as_ref().to_path_buf())?
+            DB::open_readonly(path.clone(), cf_opts_map)?
         } else {
             DB::open(path.clone(), cf_opts_map)?
         });
@@ -205,7 +195,7 @@ impl LibraDB {
 
     /// This creates an empty LibraDB instance on disk or opens one if it already exists.
     pub fn new<P: AsRef<Path> + Clone>(db_root_path: P) -> Self {
-        Self::open(db_root_path, false, None).expect("Unable to open LibraDB")
+        Self::open(db_root_path, false).expect("Unable to open LibraDB")
     }
 
     // ================================== Public API ==================================

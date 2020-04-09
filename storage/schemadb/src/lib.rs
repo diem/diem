@@ -17,7 +17,7 @@
 pub mod schema;
 
 use crate::schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec};
-use anyhow::{bail, format_err, Result};
+use anyhow::{format_err, Result};
 use libra_metrics::OpMetrics;
 use once_cell::sync::Lazy;
 use rocksdb::{
@@ -228,22 +228,8 @@ impl DB {
     pub fn open_readonly<P: AsRef<Path>>(
         path: P,
         cf_opts_map: ColumnFamilyOptionsMap,
-        db_log_dir: P,
     ) -> Result<Self> {
-        if !db_exists(path.as_ref()) {
-            bail!("DB doesn't exists.");
-        }
-
-        let mut db_opts = DBOptions::new();
-
-        db_opts.create_if_missing(false);
-        db_opts.set_db_log_dir(db_log_dir.as_ref().to_str().ok_or_else(|| {
-            format_err!(
-                "db_log_dir {:?} can not be converted to string.",
-                db_log_dir.as_ref()
-            )
-        })?);
-
+        let db_opts = DBOptions::new();
         DB::open_cf_readonly(db_opts, &path, cf_opts_map.into_iter().collect())
     }
 
