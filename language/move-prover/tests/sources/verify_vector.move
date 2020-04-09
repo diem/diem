@@ -186,6 +186,7 @@ module VerifyVector {
         //ensures len(v) == len(old(v)) - 1; //! A postcondition might not hold on this return path.
         //ensures v[0..i] == old(v[0..i]); //! A postcondition might not hold on this return path.
         //ensures v[i..len(v)] == old(v[i+1..len(v)]); //! A postcondition might not hold on this return path.
+        //ensures old(v[i]) == result;
     }
 
     // Remove the `i`th element E of the vector, shifting all subsequent elements
@@ -198,6 +199,7 @@ module VerifyVector {
         ensures len(v) == len(old(v)) - 1;
         ensures v[0..i] == old(v[0..i]);
         ensures v[i..len(v)] == old(v[i+1..len(v)]);
+        ensures old(v[i]) == result;
     }
 
     // Remove the `i`th element E of the vector by swapping it with the last element,
@@ -212,6 +214,7 @@ module VerifyVector {
         aborts_if i >= len(old(v));
         ensures len(v) == len(old(v)) - 1;
         ensures v == old(update(v,i,v[len(v)-1])[0..len(v)-1]);
+        ensures old(v[i]) == result;
     }
 
     // Remove the `i`th element E of the vector by swapping it with the last element,
@@ -224,5 +227,6 @@ module VerifyVector {
         aborts_if i >= len(old(v));
         ensures len(v) == len(old(v)) - 1;
         ensures v == old(update(v,i,v[len(v)-1])[0..len(v)-1]);
+        ensures old(v[i]) == result;
     }
 }

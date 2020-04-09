@@ -896,7 +896,7 @@ procedure {:inline 1} $Vector_remove(ta: TypeValue, r: Reference, i: Value) retu
         $abort_flag := true;
         return;
     }
-    e := $vmap(v)[len-1];
+    e := $vmap(v)[i_ind];
     call WriteRef(r, $remove_vector(v, i_ind));
 }
 
@@ -915,7 +915,7 @@ procedure {:inline 1} $Vector_swap_remove(ta: TypeValue, r: Reference, i: Value)
         $abort_flag := true;
         return;
     }
-    e := $vmap(v)[len-1];
+    e := $vmap(v)[i_ind];
     call WriteRef(r, $pop_back_vector($swap_vector(v, i_ind, len-1)));
 }
 
