@@ -8,7 +8,7 @@ use debug_interface::{
     proto::node_debug_interface_server::NodeDebugInterfaceServer,
 };
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
-use futures::{channel::mpsc::channel, executor::block_on};
+use futures::{channel::mpsc::channel, executor::block_on, stream::StreamExt};
 use libra_config::{
     config::{DiscoveryMethod, NetworkConfig, NodeConfig, RoleType},
     utils::get_genesis_txn,
@@ -17,22 +17,26 @@ use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
 use libra_mempool::MEMPOOL_SUBSCRIBED_CONFIGS;
 use libra_metrics::metric_server;
-use libra_types::on_chain_config::ON_CHAIN_CONFIG_REGISTRY;
+use libra_types::{on_chain_config::ON_CHAIN_CONFIG_REGISTRY, PeerId};
 use libra_vm::LibraVM;
 use network::validator_network::network_builder::{NetworkBuilder, TransportType};
+use onchain_discovery::OnchainDiscovery;
 use state_synchronizer::StateSynchronizer;
 use std::{
     collections::HashMap,
     net::ToSocketAddrs,
     sync::{Arc, Mutex},
     thread,
-    time::Instant,
+    time::{Duration, Instant},
 };
-use storage_client::SyncStorageClient;
+use storage_client::{StorageReadServiceClient, SyncStorageClient};
 use storage_interface::DbReader;
 use storage_service::{init_libra_db, start_storage_service_with_db};
 use subscription_service::ReconfigSubscription;
-use tokio::runtime::{Builder, Runtime};
+use tokio::{
+    runtime::{Builder, Handle, Runtime},
+    time::interval,
+};
 
 const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
 const INTRA_NODE_CHANNEL_BUFFER_SIZE: usize = 1;
@@ -72,8 +76,47 @@ fn setup_debug_interface(config: &NodeConfig) -> Runtime {
     rt
 }
 
+pub fn setup_onchain_discovery(
+    network: &mut NetworkBuilder,
+    peer_id: PeerId,
+    role: RoleType,
+    storage_read_client: Arc<StorageReadServiceClient>,
+    executor: Handle,
+) {
+    let executor_clone = executor.clone();
+    let waypoint = None;
+    let (network_tx, network_rx) = onchain_discovery::network_interface::add_to_network(network);
+    let outbound_rpc_timeout = Duration::from_secs(30);
+    let max_concurrent_inbound_queries = 8;
+
+    let onchain_discovery = executor.enter(move || {
+        let peer_query_ticker = interval(Duration::from_secs(30)).fuse();
+        let storage_query_ticker = interval(Duration::from_secs(30)).fuse();
+
+        OnchainDiscovery::new(
+            executor_clone,
+            peer_id,
+            role,
+            waypoint,
+            network_tx,
+            network_rx,
+            storage_read_client,
+            peer_query_ticker,
+            storage_query_ticker,
+            outbound_rpc_timeout,
+            max_concurrent_inbound_queries,
+        )
+    });
+
+    executor.spawn(onchain_discovery.start());
+}
+
 // TODO(abhayb): Move to network crate (similar to consensus).
-pub fn setup_network(config: &mut NetworkConfig, role: RoleType) -> (Runtime, NetworkBuilder) {
+pub fn setup_network(
+    config: &mut NetworkConfig,
+    role: RoleType,
+    storage_read: Arc<StorageReadServiceClient>,
+) -> (Runtime, NetworkBuilder) {
     let runtime = Builder::new()
         .thread_name("network-")
         .threaded_scheduler()
@@ -148,7 +191,13 @@ pub fn setup_network(config: &mut NetworkConfig, role: RoleType) -> (Runtime, Ne
             network_builder.add_gossip_discovery();
         }
         DiscoveryMethod::Onchain => {
-            unimplemented!("onchain discovery not implemented yet");
+            setup_onchain_discovery(
+                &mut network_builder,
+                config.peer_id,
+                role,
+                storage_read,
+                runtime.handle().clone(),
+            );
         }
         DiscoveryMethod::None => {}
     }
@@ -194,8 +243,12 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         ReconfigSubscription::subscribe(ON_CHAIN_CONFIG_REGISTRY);
     reconfig_subscriptions.push(consensus_reconfig_subscription);
 
+    let storage_read = Arc::new(StorageReadServiceClient::new(&node_config.storage.address));
+
     if let Some(network) = node_config.validator_network.as_mut() {
-        let (runtime, mut network_builder) = setup_network(network, RoleType::Validator);
+        let (runtime, mut network_builder) =
+            setup_network(network, RoleType::Validator, Arc::clone(&storage_read));
+
         state_sync_network_handles.push(state_synchronizer::network::add_to_network(
             &mut network_builder,
         ));
@@ -207,8 +260,11 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     }
 
     for mut full_node_network in node_config.full_node_networks.iter_mut() {
-        let (runtime, mut network_builder) =
-            setup_network(&mut full_node_network, RoleType::FullNode);
+        let (runtime, mut network_builder) = setup_network(
+            &mut full_node_network,
+            RoleType::FullNode,
+            Arc::clone(&storage_read),
+        );
 
         network_runtimes.push(runtime);
         state_sync_network_handles.push(state_synchronizer::network::add_to_network(
