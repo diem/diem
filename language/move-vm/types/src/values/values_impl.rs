@@ -1946,29 +1946,14 @@ struct AnnotatedValue<'a, 'b, T1, T2> {
     val: &'b T2,
 }
 
+fn invariant_violation<S: serde::Serializer>(message: String) -> S::Error {
+    S::Error::custom(
+        VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(message),
+    )
+}
+
 impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, Type, ValueImpl> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        macro_rules! serialize_vec {
-            ($tc: ident, $ty: expr, $v: expr) => {{
-                match $ty {
-                    Type::$tc => (),
-                    _ => {
-                        return Err(S::Error::custom(
-                            VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                                .with_message(
-                                    "cannot serialize vector -- element type mismatch".to_string(),
-                                ),
-                        ))
-                    }
-                }
-                let mut t = serializer.serialize_seq(Some($v.len()))?;
-                for val in $v {
-                    t.serialize_element(val)?;
-                }
-                t.end()
-            }};
-        }
-
         match (self.ty, self.val) {
             (Type::U8, ValueImpl::U8(x)) => serializer.serialize_u8(*x),
             (Type::U64, ValueImpl::U64(x)) => serializer.serialize_u64(*x),
@@ -1988,9 +1973,12 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, Type, ValueImpl> {
             (Type::Vector(ty), ValueImpl::Container(r)) => {
                 let ty = &**ty;
                 match (ty, &*r.borrow()) {
-                    (Type::Vector(_), Container::General(v))
-                    | (Type::Struct(_), Container::General(v))
-                    | (Type::Address, Container::General(v)) => {
+                    (Type::U8, Container::U8(v)) => v.serialize(serializer),
+                    (Type::U64, Container::U64(v)) => v.serialize(serializer),
+                    (Type::U128, Container::U128(v)) => v.serialize(serializer),
+                    (Type::Bool, Container::Bool(v)) => v.serialize(serializer),
+
+                    (_, Container::General(v)) => {
                         let mut t = serializer.serialize_seq(Some(v.len()))?;
                         for val in v {
                             t.serialize_element(&AnnotatedValue { ty, val })?;
@@ -1998,56 +1986,44 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, Type, ValueImpl> {
                         t.end()
                     }
 
-                    (Type::U8, Container::U8(v)) => serialize_vec!(U8, ty, v),
-                    (Type::U64, Container::U64(v)) => serialize_vec!(U64, ty, v),
-                    (Type::U128, Container::U128(v)) => serialize_vec!(U128, ty, v),
-                    (Type::Bool, Container::Bool(v)) => serialize_vec!(Bool, ty, v),
-
-                    (ty, container) => Err(S::Error::custom(
-                        VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
-                            format!("cannot serialize container {:?} as {:?}", container, ty),
-                        ),
-                    )),
+                    (ty, container) => Err(invariant_violation::<S>(format!(
+                        "cannot serialize container {:?} as {:?}",
+                        container, ty
+                    ))),
                 }
             }
 
-            (ty, val) => Err(S::Error::custom(
-                VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message(format!("cannot serialize value {:?} as {:?}", val, ty)),
-            )),
+            (ty, val) => Err(invariant_violation::<S>(format!(
+                "cannot serialize value {:?} as {:?}",
+                val, ty
+            ))),
         }
     }
 }
 
 impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, StructType, Container> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        match self.val {
-            Container::General(v) => {
-                let fields = &self.ty.layout;
-                if fields.len() != v.len() {
-                    return Err(S::Error::custom(
-                        VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
-                            format!(
-                                "cannot serialize struct value {:?} as {:?} -- number of fields mismatch",
-                                self.val, self.ty
-                            ),
-                        ),
-                    ));
-                }
-                let mut t = serializer.serialize_tuple(v.len())?;
-                for (ty, val) in fields.iter().zip(v.iter()) {
-                    t.serialize_element(&AnnotatedValue { ty, val })?;
-                }
-                t.end()
-            }
-
-            _ => Err(S::Error::custom(
-                VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(format!(
+        let values = match &self.val {
+            Container::General(v) => v,
+            _ => {
+                return Err(invariant_violation::<S>(format!(
                     "cannot serialize container value {:?} as {:?}",
                     self.val, self.ty
-                )),
-            )),
+                )));
+            }
+        };
+        let fields = &self.ty.layout;
+        if fields.len() != values.len() {
+            return Err(invariant_violation::<S>(format!(
+                "cannot serialize struct value {:?} as {:?} -- number of fields mismatch",
+                self.val, self.ty
+            )));
         }
+        let mut t = serializer.serialize_tuple(values.len())?;
+        for (ty, val) in fields.iter().zip(values.iter()) {
+            t.serialize_element(&AnnotatedValue { ty, val })?;
+        }
+        t.end()
     }
 }
 
@@ -2066,113 +2042,80 @@ impl<'d> serde::de::DeserializeSeed<'d> for &Type {
             Type::Address => AccountAddress::deserialize(deserializer).map(Value::address),
 
             Type::Vector(layout) => {
-                struct GeneralVectorVisitor<'a>(&'a Type);
-                impl<'d, 'a> serde::de::Visitor<'d> for GeneralVectorVisitor<'a> {
-                    type Value = Container;
-
-                    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                        formatter.write_str("Vector")
-                    }
-
-                    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-                    where
-                        A: serde::de::SeqAccess<'d>,
-                    {
-                        let mut vals = Vec::new();
-                        while let Some(elem) = seq.next_element_seed(self.0)? {
-                            vals.push(elem.0)
-                        }
-                        Ok(Container::General(vals))
-                    }
-                }
-
-                macro_rules! deserialize_specialized_vec {
-                    ($tc: ident, $tc2: ident, $ty: ident) => {{
-                        struct $tc;
-                        impl<'d> serde::de::Visitor<'d> for $tc {
-                            type Value = Vec<$ty>;
-
-                            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                                formatter.write_str(stringify!($ty))
-                            }
-
-                            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-                            where
-                                A: serde::de::SeqAccess<'d>,
-                            {
-                                let mut vals = Vec::new();
-                                while let Some(elem) = seq.next_element::<$ty>()? {
-                                    vals.push(elem)
-                                }
-                                Ok(vals)
-                            }
-                        }
-                        Ok(Value(ValueImpl::Container(Rc::new(RefCell::new(
-                            Container::$tc2(deserializer.deserialize_seq($tc)?),
-                        )))))
-                    }};
-                }
-
-                match &**layout {
-                    Type::U8 => deserialize_specialized_vec!(U8VectorVisitor, U8, u8),
-                    Type::U64 => deserialize_specialized_vec!(U64VectorVisitor, U64, u64),
-                    Type::U128 => deserialize_specialized_vec!(U128VectorVisitor, U128, u128),
-                    Type::Bool => deserialize_specialized_vec!(BoolVectorVisitor, Bool, bool),
-                    layout => Ok(Value(ValueImpl::Container(Rc::new(RefCell::new(
-                        deserializer.deserialize_seq(GeneralVectorVisitor(layout))?,
-                    ))))),
-                }
+                let container = match &**layout {
+                    Type::U8 => Container::U8(Vec::deserialize(deserializer)?),
+                    Type::U64 => Container::U64(Vec::deserialize(deserializer)?),
+                    Type::U128 => Container::U128(Vec::deserialize(deserializer)?),
+                    Type::Bool => Container::Bool(Vec::deserialize(deserializer)?),
+                    layout => Container::General(
+                        deserializer.deserialize_seq(VectorElementVisitor(layout))?,
+                    ),
+                };
+                Ok(Value(ValueImpl::Container(Rc::new(RefCell::new(
+                    container,
+                )))))
             }
 
-            Type::Struct(layout) => layout.deserialize(deserializer),
+            Type::Struct(ty) => {
+                let layout = &ty.layout;
+                let fields =
+                    deserializer.deserialize_tuple(layout.len(), StructFieldVisitor(layout))?;
+                Ok(Value::struct_(Struct::pack(fields)))
+            }
 
             Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
                 Err(D::Error::custom(
                     VMStatus::new(StatusCode::INVALID_DATA)
-                        .with_message(format!("Value type {:?} not possible", self)),
+                        .with_message(format!("Value type {:?} is not possible", self)),
                 ))
             }
         }
     }
 }
 
-impl<'d> serde::de::DeserializeSeed<'d> for &StructType {
-    type Value = Value;
+struct VectorElementVisitor<'a>(&'a Type);
 
-    fn deserialize<D: serde::de::Deserializer<'d>>(
-        self,
-        deserializer: D,
-    ) -> Result<Self::Value, D::Error> {
-        struct StructVisitor<'a>(&'a [Type]);
-        impl<'d, 'a> serde::de::Visitor<'d> for StructVisitor<'a> {
-            type Value = Struct;
+impl<'d, 'a> serde::de::Visitor<'d> for VectorElementVisitor<'a> {
+    type Value = Vec<ValueImpl>;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("Struct")
-            }
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("Vector")
+    }
 
-            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            where
-                A: serde::de::SeqAccess<'d>,
-            {
-                let mut val = Vec::new();
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: serde::de::SeqAccess<'d>,
+    {
+        let mut vals = Vec::new();
+        while let Some(elem) = seq.next_element_seed(self.0)? {
+            vals.push(elem.0)
+        }
+        Ok(vals)
+    }
+}
 
-                for (i, field_type) in self.0.iter().enumerate() {
-                    if let Some(elem) = seq.next_element_seed(field_type)? {
-                        val.push(elem)
-                    } else {
-                        return Err(A::Error::invalid_length(i, &self));
-                    }
-                }
-                Ok(Struct::pack(val))
+struct StructFieldVisitor<'a>(&'a [Type]);
+
+impl<'d, 'a> serde::de::Visitor<'d> for StructFieldVisitor<'a> {
+    type Value = Vec<Value>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("Struct")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: serde::de::SeqAccess<'d>,
+    {
+        let mut val = Vec::new();
+        for (i, field_type) in self.0.iter().enumerate() {
+            if let Some(elem) = seq.next_element_seed(field_type)? {
+                val.push(elem)
+            } else {
+                return Err(A::Error::invalid_length(i, &self));
             }
         }
-
-        let field_layouts = &self.layout;
-        Ok(Value::struct_(deserializer.deserialize_tuple(
-            field_layouts.len(),
-            StructVisitor(field_layouts),
-        )?))
+        Ok(val)
     }
 }
 
