@@ -22,9 +22,8 @@ use libra_types::{
     contract_event::ContractEvent,
     discovery_set::DiscoverySet,
     language_storage::ModuleId,
-    on_chain_config::{new_epoch_event_key, VMPublishingOption},
+    on_chain_config::{new_epoch_event_key, VMPublishingOption, ValidatorSet},
     transaction::{authenticator::AuthenticationKey, ChangeSet, Transaction},
-    validator_set::ValidatorSet,
 };
 use libra_vm::system_module_names::*;
 use move_core_types::identifier::Identifier;

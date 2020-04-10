@@ -10,7 +10,7 @@ use anyhow::{bail, ensure, format_err};
 use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash, HashValue};
 use libra_types::{
     block_info::BlockInfo, block_metadata::BlockMetadata, ledger_info::LedgerInfo,
-    transaction::Version, validator_set::ValidatorSet, validator_signer::ValidatorSigner,
+    on_chain_config::ValidatorSet, transaction::Version, validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
 };
 use mirai_annotations::debug_checked_verify_eq;

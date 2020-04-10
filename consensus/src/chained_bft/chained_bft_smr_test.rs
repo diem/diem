@@ -28,7 +28,7 @@ use libra_config::{
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
-    ledger_info::LedgerInfoWithSignatures, validator_set::ValidatorSet,
+    ledger_info::LedgerInfoWithSignatures, on_chain_config::ValidatorSet,
     validator_verifier::ValidatorVerifier,
 };
 use network::peer_manager::{

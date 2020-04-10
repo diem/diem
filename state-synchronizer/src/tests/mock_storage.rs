@@ -10,10 +10,10 @@ use libra_types::{
     account_config::lbr_type_tag,
     block_info::BlockInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    on_chain_config::ValidatorSet,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{authenticator::AuthenticationKey, SignedTransaction, Transaction},
     validator_change::ValidatorChangeProof,
-    validator_set::ValidatorSet,
     validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
 };

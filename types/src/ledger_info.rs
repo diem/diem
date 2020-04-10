@@ -4,8 +4,8 @@
 use crate::{
     account_address::AccountAddress,
     block_info::{BlockInfo, Round},
+    on_chain_config::ValidatorSet,
     transaction::Version,
-    validator_set::ValidatorSet,
     validator_verifier::{ValidatorVerifier, VerifyError},
 };
 use anyhow::{Error, Result};

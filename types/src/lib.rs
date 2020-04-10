@@ -33,7 +33,6 @@ pub mod trusted_state;
 pub mod validator_change;
 pub mod validator_config;
 pub mod validator_info;
-pub mod validator_set;
 pub mod validator_signer;
 pub mod validator_verifier;
 pub mod vm_error;

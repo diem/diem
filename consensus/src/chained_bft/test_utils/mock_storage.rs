@@ -13,7 +13,7 @@ use consensus_types::{
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use libra_crypto::HashValue;
-use libra_types::{ledger_info::LedgerInfo, validator_set::ValidatorSet};
+use libra_types::{ledger_info::LedgerInfo, on_chain_config::ValidatorSet};
 use std::{
     collections::HashMap,
     marker::PhantomData,

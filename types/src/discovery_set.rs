@@ -100,7 +100,7 @@ impl IntoIterator for DiscoverySet {
 pub mod mock {
     use super::*;
 
-    use crate::validator_set::ValidatorSet;
+    use crate::on_chain_config::ValidatorSet;
     use libra_crypto::{test_utils::TEST_SEED, x25519};
     use parity_multiaddr::Multiaddr;
     use rand::prelude::*;

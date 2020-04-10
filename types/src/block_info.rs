@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{transaction::Version, validator_set::ValidatorSet};
+use crate::{on_chain_config::ValidatorSet, transaction::Version};
 use libra_crypto::hash::HashValue;
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;

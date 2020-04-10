@@ -33,11 +33,11 @@ use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     ledger_info::LedgerInfoWithSignatures,
+    on_chain_config::ValidatorSet,
     proof::{definition::LeafCount, SparseMerkleProof, SparseMerkleRangeProof},
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionToCommit, Version,
     },
-    validator_set::ValidatorSet,
 };
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;

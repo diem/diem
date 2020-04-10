@@ -11,9 +11,9 @@ use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
+    on_chain_config::ValidatorSet,
     proof::{accumulator::InMemoryAccumulator, SparseMerkleProof},
     transaction::{TransactionStatus, Version},
-    validator_set::ValidatorSet,
 };
 use scratchpad::{ProofRead, SparseMerkleTree};
 use std::{cmp::max, collections::HashMap, sync::Arc};

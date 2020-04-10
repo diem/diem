@@ -17,11 +17,10 @@ use libra_types::{
     block_metadata::{new_block_event_key, BlockMetadata, NewBlockEvent},
     discovery_set::mock::mock_discovery_set,
     language_storage::ModuleId,
-    on_chain_config::VMPublishingOption,
+    on_chain_config::{VMPublishingOption, ValidatorSet},
     transaction::{
         SignedTransaction, Transaction, TransactionOutput, TransactionStatus, VMValidatorResult,
     },
-    validator_set::ValidatorSet,
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };

@@ -14,12 +14,11 @@ use libra_types::{
     contract_event::ContractEvent,
     event::EventKey,
     language_storage::TypeTag,
-    on_chain_config::{new_epoch_event_key, OnChainConfig},
+    on_chain_config::{new_epoch_event_key, OnChainConfig, ValidatorSet},
     transaction::{
         RawTransaction, Script, SignedTransaction, Transaction, TransactionArgument,
         TransactionOutput, TransactionPayload, TransactionStatus,
     },
-    validator_set::ValidatorSet,
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };

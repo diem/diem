@@ -15,11 +15,10 @@ use libra_types::{
     block_metadata::{BlockMetadata, LibraBlockResource},
     discovery_set::DiscoverySet,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    on_chain_config::ConfigurationResource,
+    on_chain_config::{ConfigurationResource, ValidatorSet},
     transaction::Transaction,
     validator_config::ValidatorConfig,
     validator_info::ValidatorInfo,
-    validator_set::ValidatorSet,
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
