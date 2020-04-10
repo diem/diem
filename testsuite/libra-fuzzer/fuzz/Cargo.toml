@@ -1,5 +1,5 @@
 [package]
-name = "libra_fuzzer_fuzz"
+name = "libra-fuzz"
 version = "0.1.0"
 edition = "2018"
 authors = ["Libra Association <opensource@libra.org>"]
