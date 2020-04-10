@@ -7,7 +7,7 @@ use proptest::{collection::vec, prelude::*};
 use schemadb::{
     define_schema,
     schema::{KeyCodec, Schema, ValueCodec},
-    ColumnFamilyOptions, ColumnFamilyOptionsMap, SchemaBatch, DB, DEFAULT_CF_NAME,
+    ColumnFamilyName, SchemaBatch, DB, DEFAULT_CF_NAME,
 };
 
 // Creating two schemas that share exactly the same structure but are stored in different column
@@ -71,29 +71,20 @@ impl ValueCodec<TestSchema2> for TestField {
     }
 }
 
-fn get_cf_opts_map() -> ColumnFamilyOptionsMap {
-    [
-        (DEFAULT_CF_NAME, ColumnFamilyOptions::default()),
-        (
-            TestSchema1::COLUMN_FAMILY_NAME,
-            ColumnFamilyOptions::default(),
-        ),
-        (
-            TestSchema2::COLUMN_FAMILY_NAME,
-            ColumnFamilyOptions::default(),
-        ),
+fn get_column_families() -> Vec<ColumnFamilyName> {
+    vec![
+        DEFAULT_CF_NAME,
+        TestSchema1::COLUMN_FAMILY_NAME,
+        TestSchema2::COLUMN_FAMILY_NAME,
     ]
-    .iter()
-    .cloned()
-    .collect()
 }
 
 fn open_db(dir: &libra_temppath::TempPath) -> DB {
-    DB::open(&dir.path(), get_cf_opts_map()).expect("Failed to open DB.")
+    DB::open(&dir.path(), get_column_families()).expect("Failed to open DB.")
 }
 
 fn open_db_read_only(dir: &libra_temppath::TempPath) -> DB {
-    DB::open_readonly(&dir.path(), get_cf_opts_map()).expect("Failed to open DB.")
+    DB::open_readonly(&dir.path(), get_column_families()).expect("Failed to open DB.")
 }
 
 struct TestDB {
