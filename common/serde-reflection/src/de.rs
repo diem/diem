@@ -218,9 +218,16 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
     {
         self.format.unify(Format::TypeName(name.into()))?;
         // If a newtype struct was visited by the serialization tracer, use the recorded value.
-        if let Some(hint) = self.tracer.get_value(name) {
+        if let Some((format, hint)) = self.tracer.get_recorded_value(name) {
             // Hints are recorded during serialization-tracing therefore the registry is already accurate.
-            return visitor.visit_newtype_struct(hint.clone().into_deserializer());
+            return visitor
+                .visit_newtype_struct(hint.clone().into_deserializer())
+                .map_err(|err| match err {
+                    Error::DeserializationError(msg) => {
+                        Error::UnexpectedDeserializationFormat(name, format.clone(), msg)
+                    }
+                    _ => err,
+                });
         }
         self.tracer
             .registry

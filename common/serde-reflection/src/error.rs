@@ -17,6 +17,8 @@ pub enum Error {
     NotSupported(&'static str),
     #[error("Failed to deserialize {0}")]
     DeserializationError(&'static str),
+    #[error("In container {0}, recorded value for serialization format {1:?} failed to deserialize into {2}")]
+    UnexpectedDeserializationFormat(&'static str, crate::ContainerFormat, &'static str),
     #[error("Incompatible formats detected: {0} {1}")]
     Incompatible(String, String),
     #[error("Incomplete tracing detected")]
