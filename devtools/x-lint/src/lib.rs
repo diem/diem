@@ -8,6 +8,7 @@
 
 pub mod content;
 pub mod file;
+pub mod package;
 pub mod project;
 mod runner;
 
@@ -140,6 +141,10 @@ impl<'l> LintSource<'l> {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum LintKind<'l> {
     Project,
+    Package {
+        name: &'l str,
+        workspace_path: &'l Path,
+    },
     File(&'l Path),
     Content(&'l Path),
 }
@@ -148,6 +153,10 @@ impl<'l> fmt::Display for LintKind<'l> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             LintKind::Project => write!(f, "project"),
+            LintKind::Package {
+                name,
+                workspace_path,
+            } => write!(f, "package '{}' (at {})", name, workspace_path.display()),
             LintKind::File(path) => write!(f, "file {}", path.display()),
             LintKind::Content(path) => write!(f, "content {}", path.display()),
         }
@@ -165,6 +174,7 @@ pub enum SystemError {
         cmd: &'static str,
         status: ExitStatus,
     },
+    Guppy(guppy::Error),
     Io(io::Error),
 }
 
@@ -176,6 +186,7 @@ impl fmt::Display for SystemError {
                 None => write!(f, "'{}' terminated by signal", cmd),
             },
             SystemError::Io(err) => write!(f, "IO error: {}", err),
+            SystemError::Guppy(err) => write!(f, "guppy error: {}", err),
         }
     }
 }
@@ -185,7 +196,14 @@ impl error::Error for SystemError {
         match self {
             SystemError::Exec { .. } => None,
             SystemError::Io(err) => Some(err),
+            SystemError::Guppy(err) => Some(err),
         }
+    }
+}
+
+impl From<guppy::Error> for SystemError {
+    fn from(err: guppy::Error) -> Self {
+        SystemError::Guppy(err)
     }
 }
 
@@ -199,6 +217,7 @@ pub mod prelude {
     pub use super::{
         content::{ContentContext, ContentLinter},
         file::FileContext,
+        package::{PackageContext, PackageLinter},
         project::{ProjectContext, ProjectLinter},
         LintFormatter, LintKind, LintLevel, LintMessage, LintSource, Linter, Result, RunStatus,
         SkipReason, SystemError,

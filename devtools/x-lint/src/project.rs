@@ -1,14 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::prelude::*;
-use crate::LintContext;
+use crate::{prelude::*, LintContext};
+use guppy::graph::PackageGraph;
 use std::path::{Path, PathBuf};
+use x_core::XCoreContext;
 
 /// Represents a linter that checks some property for the overall project.
 ///
 /// Linters that implement `ProjectLinter` will run once for the whole project.
 pub trait ProjectLinter: Linter {
+    // Since ProjectContext is only 1 word long, clippy complains about passing it by reference. Do
+    // it that way for consistency reasons.
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     /// Executes the lint against the given project context.
     fn run<'l>(
         &self,
@@ -20,23 +24,27 @@ pub trait ProjectLinter: Linter {
 /// Overall linter context for a project.
 #[derive(Copy, Clone, Debug)]
 pub struct ProjectContext<'l> {
-    project_root: &'l Path,
+    core: &'l XCoreContext,
 }
 
-#[allow(dead_code)]
 impl<'l> ProjectContext<'l> {
-    pub fn new(project_root: &'l Path) -> Self {
-        Self { project_root }
+    pub fn new(core: &'l XCoreContext) -> Self {
+        Self { core }
     }
 
     /// Returns the project root.
-    pub fn project_root(&self) -> &'l Path {
-        self.project_root
+    pub fn project_root(self) -> &'l Path {
+        self.core.project_root()
+    }
+
+    /// Returns the package graph, computing it for the first time if necessary.
+    pub fn package_graph(self) -> Result<&'l PackageGraph> {
+        Ok(self.core.package_graph()?)
     }
 
     /// Returns the absolute path from the project root.
-    pub fn full_path(&self, path: impl AsRef<Path>) -> PathBuf {
-        self.project_root.join(path.as_ref())
+    pub fn full_path(self, path: impl AsRef<Path>) -> PathBuf {
+        self.core.project_root().join(path.as_ref())
     }
 }
 
