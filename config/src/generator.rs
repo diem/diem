@@ -12,8 +12,8 @@ use crate::{
     utils,
 };
 use libra_types::{
-    discovery_info::DiscoveryInfo, discovery_set::DiscoverySet, validator_info::ValidatorInfo,
-    validator_set::ValidatorSet,
+    discovery_info::DiscoveryInfo, discovery_set::DiscoverySet, on_chain_config::ValidatorSet,
+    validator_info::ValidatorInfo,
 };
 use rand::{rngs::StdRng, SeedableRng};
 

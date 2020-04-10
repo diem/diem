@@ -22,7 +22,7 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::ledger_info::LedgerInfoWithSignatures;
 #[cfg(any(test, feature = "fuzzing"))]
-use libra_types::validator_set::ValidatorSet;
+use libra_types::on_chain_config::ValidatorSet;
 use std::{
     collections::{vec_deque::VecDeque, HashMap},
     sync::{Arc, RwLock},

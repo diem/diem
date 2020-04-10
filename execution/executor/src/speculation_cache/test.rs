@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use libra_types::{block_info::BlockInfo, validator_set::ValidatorSet};
+use libra_types::{block_info::BlockInfo, on_chain_config::ValidatorSet};
 
 fn id(index: u64) -> HashValue {
     let bytes = index.to_be_bytes();

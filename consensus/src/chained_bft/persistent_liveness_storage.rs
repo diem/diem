@@ -13,8 +13,8 @@ use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
-    block_info::Round, epoch_info::EpochInfo, ledger_info::LedgerInfo, transaction::Version,
-    validator_info::ValidatorInfo, validator_set::ValidatorSet,
+    block_info::Round, epoch_info::EpochInfo, ledger_info::LedgerInfo,
+    on_chain_config::ValidatorSet, transaction::Version, validator_info::ValidatorInfo,
     validator_verifier::ValidatorVerifier,
 };
 use std::{cmp::max, collections::HashSet, sync::Arc};

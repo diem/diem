@@ -4,9 +4,9 @@
 use crate::{
     epoch_info::EpochInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    on_chain_config::ValidatorSet,
     transaction::Version,
     validator_change::{ValidatorChangeProof, VerifierType},
-    validator_set::ValidatorSet,
     waypoint::Waypoint,
 };
 use anyhow::{ensure, format_err, Result};

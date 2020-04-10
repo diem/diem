@@ -16,9 +16,9 @@ use libra_crypto::{
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures,
-    proof::TransactionListProof, transaction::TransactionListWithProof,
-    validator_change::ValidatorChangeProof, validator_info::ValidatorInfo,
-    validator_set::ValidatorSet, validator_signer::ValidatorSigner,
+    on_chain_config::ValidatorSet, proof::TransactionListProof,
+    transaction::TransactionListWithProof, validator_change::ValidatorChangeProof,
+    validator_info::ValidatorInfo, validator_signer::ValidatorSigner,
     validator_verifier::random_validator_verifier, waypoint::Waypoint,
 };
 use network::{

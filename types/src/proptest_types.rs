@@ -14,6 +14,7 @@ use crate::{
     get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
     language_storage::{StructTag, TypeTag},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    on_chain_config::ValidatorSet,
     proof::{AccumulatorConsistencyProof, TransactionListProof},
     transaction::{
         ChangeSet, Module, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction,
@@ -21,7 +22,6 @@ use crate::{
         TransactionStatus, TransactionToCommit, Version,
     },
     validator_change::ValidatorChangeProof,
-    validator_set::ValidatorSet,
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };

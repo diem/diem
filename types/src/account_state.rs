@@ -11,9 +11,8 @@ use crate::{
     event::EventHandle,
     libra_timestamp::LibraTimestampResource,
     move_resource::MoveResource,
-    on_chain_config::{ConfigurationResource, OnChainConfig},
+    on_chain_config::{ConfigurationResource, OnChainConfig, ValidatorSet},
     validator_config::ValidatorConfigResource,
-    validator_set::ValidatorSet,
 };
 use anyhow::{bail, Error, Result};
 use serde::{de::DeserializeOwned, export::Formatter, Deserialize, Serialize};

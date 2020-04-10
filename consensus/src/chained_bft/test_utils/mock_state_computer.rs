@@ -12,8 +12,8 @@ use futures::channel::mpsc;
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use libra_logger::prelude::*;
 use libra_types::{
-    ledger_info::LedgerInfoWithSignatures, validator_change::ValidatorChangeProof,
-    validator_set::ValidatorSet,
+    ledger_info::LedgerInfoWithSignatures, on_chain_config::ValidatorSet,
+    validator_change::ValidatorChangeProof,
 };
 use std::{
     collections::HashMap,

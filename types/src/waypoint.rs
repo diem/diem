@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{ledger_info::LedgerInfo, transaction::Version, validator_set::ValidatorSet};
+use crate::{ledger_info::LedgerInfo, on_chain_config::ValidatorSet, transaction::Version};
 use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
 use libra_crypto_derive::CryptoHasher;
