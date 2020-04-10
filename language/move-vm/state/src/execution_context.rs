@@ -9,11 +9,9 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
+use move_core_types::gas_schedule::{GasAlgebra, GasCarrier, GasUnits};
 use move_vm_types::{chain_state::ChainState, loaded_data::types::StructType, values::GlobalValue};
-use vm::{
-    errors::VMResult,
-    gas_schedule::{GasAlgebra, GasCarrier, GasUnits},
-};
+use vm::errors::VMResult;
 
 /// An `ExecutionContext` represents mutable state that is retained in-memory between invocations of
 /// the Move VM.

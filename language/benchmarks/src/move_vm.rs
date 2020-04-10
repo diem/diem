@@ -8,15 +8,15 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath, account_address::AccountAddress, language_storage::ModuleId,
 };
-use move_core_types::identifier::{IdentStr, Identifier};
+use move_core_types::{
+    gas_schedule::{GasAlgebra, GasUnits},
+    identifier::{IdentStr, Identifier},
+};
 use move_lang::{compiled_unit::CompiledUnit, shared::Address};
 use move_vm_runtime::MoveVM;
 use move_vm_state::{data_cache::BlockDataCache, execution_context::TransactionExecutionContext};
 use std::path::PathBuf;
-use vm::{
-    gas_schedule::{CostTable, GasAlgebra, GasUnits},
-    transaction_metadata::TransactionMetadata,
-};
+use vm::{gas_schedule::zero_cost_schedule, transaction_metadata::TransactionMetadata};
 
 /// Entry point for the bench, provide a function name to invoke in Module Bench in bench.move.
 pub fn bench(c: &mut Criterion, fun: &str) {
@@ -47,7 +47,7 @@ fn compile_module() -> VerifiedModule {
 fn execute(c: &mut Criterion, move_vm: &MoveVM, fun: &str) {
     // establish running context
     let state = EmptyStateView;
-    let gas_schedule = CostTable::zero();
+    let gas_schedule = zero_cost_schedule();
     let data_cache = BlockDataCache::new(&state);
     let mut interpreter_context =
         TransactionExecutionContext::new(GasUnits::new(100_000_000), &data_cache);

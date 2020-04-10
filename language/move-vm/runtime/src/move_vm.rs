@@ -7,7 +7,10 @@ use crate::{
 };
 use bytecode_verifier::VerifiedModule;
 use libra_types::language_storage::ModuleId;
-use move_core_types::identifier::{IdentStr, Identifier};
+use move_core_types::{
+    gas_schedule::CostTable,
+    identifier::{IdentStr, Identifier},
+};
 use move_vm_cache::Arena;
 use move_vm_definition::MoveVMImpl;
 use move_vm_types::{
@@ -15,7 +18,7 @@ use move_vm_types::{
     loaded_data::types::{StructType, Type},
     values::Value,
 };
-use vm::{errors::VMResult, gas_schedule::CostTable, transaction_metadata::TransactionMetadata};
+use vm::{errors::VMResult, transaction_metadata::TransactionMetadata};
 
 rental! {
     mod move_vm_definition {

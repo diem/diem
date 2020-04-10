@@ -12,6 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 proptest = { version = "0.9.6", default-features = false, optional = true }
+mirai-annotations = "1.5.0"
 proptest-derive = { version = "0.1.2", default-features = false, optional = true }
 ref-cast = "1.0"
 serde = { version = "1.0.106", default-features = false }

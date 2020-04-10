@@ -19,7 +19,10 @@ use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, StatusType},
 };
-use move_core_types::identifier::Identifier;
+use move_core_types::{
+    gas_schedule::{GasAlgebra, GasUnits},
+    identifier::Identifier,
+};
 use move_vm_cache::Arena;
 use move_vm_state::{
     data_cache::{BlockDataCache, RemoteCache},
@@ -27,12 +30,7 @@ use move_vm_state::{
 };
 use move_vm_types::loaded_data::types::{StructType, Type};
 use std::collections::HashMap;
-use vm::{
-    access::ModuleAccess,
-    errors::VMResult,
-    file_format::*,
-    gas_schedule::{GasAlgebra, GasUnits},
-};
+use vm::{access::ModuleAccess, errors::VMResult, file_format::*};
 
 struct NullStateView;
 

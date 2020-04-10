@@ -25,6 +25,7 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use mirai_annotations::checked_verify;
+use move_core_types::gas_schedule::{GasAlgebra, MAXIMUM_NUMBER_OF_GAS_UNITS};
 use std::{
     fmt::{self, Debug},
     str::FromStr,
@@ -33,7 +34,6 @@ use std::{
 use stdlib::{stdlib_modules, StdLibOptions};
 use vm::{
     file_format::{CompiledModule, CompiledScript},
-    gas_schedule::{GasAlgebra, MAXIMUM_NUMBER_OF_GAS_UNITS},
     views::ModuleView,
 };
 

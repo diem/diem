@@ -3,6 +3,7 @@
 
 //! Core types for Move.
 
+pub mod gas_schedule;
 pub mod identifier;
 #[cfg(test)]
 mod unit_tests;

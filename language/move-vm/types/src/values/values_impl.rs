@@ -9,6 +9,10 @@ use libra_types::{
     account_address::AccountAddress,
     vm_error::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode, VMStatus},
 };
+use move_core_types::gas_schedule::{
+    words_in, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, NativeCostIndex, CONST_SIZE,
+    REFERENCE_SIZE, STRUCT_SIZE,
+};
 use std::{
     cell::{Ref, RefCell, RefMut},
     collections::VecDeque,
@@ -21,10 +25,6 @@ use std::{
 use vm::{
     errors::*,
     file_format::{Constant, SignatureToken},
-    gas_schedule::{
-        words_in, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, NativeCostIndex,
-        CONST_SIZE, REFERENCE_SIZE, STRUCT_SIZE,
-    },
 };
 
 /***************************************************************************************
@@ -1918,8 +1918,8 @@ impl Display for Locals {
 #[allow(dead_code)]
 pub mod debug {
     use super::*;
+    use move_core_types::gas_schedule::ZERO_GAS_UNITS;
     use std::fmt::Write;
-    use vm::gas_schedule::ZERO_GAS_UNITS;
 
     fn print_value_impl<B: Write>(buf: &mut B, ty: &Type, val: &ValueImpl) -> VMResult<()> {
         match (ty, val) {

@@ -8,15 +8,13 @@ use libra_types::{
     language_storage::ModuleId,
     vm_error::{sub_status, StatusCode},
 };
+use move_core_types::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits};
 use move_vm_types::{
     chain_state::ChainState,
     loaded_data::types::StructType,
     values::{GlobalValue, Struct, Value},
 };
-use vm::{
-    errors::*,
-    gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits},
-};
+use vm::errors::*;
 
 /// The `InterpreterContext` context trait specifies the mutations that are allowed to the
 /// `TransactionExecutionContext` within the interpreter.
