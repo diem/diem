@@ -304,7 +304,7 @@ where
     {
         match self.values.next() {
             Some(x) => seed.deserialize(x.into_deserializer()),
-            None => Err(Error::DeserializationError("map (invalid sequence)")),
+            None => Err(Error::DeserializationError("value in map")),
         }
     }
 

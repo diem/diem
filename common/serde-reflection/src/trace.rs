@@ -194,7 +194,19 @@ impl Tracer {
         self.record_container(name, format, value)
     }
 
-    pub(crate) fn get_value(&mut self, name: &'static str) -> Option<&Value> {
-        self.values.get(name)
+    pub(crate) fn get_recorded_value(
+        &mut self,
+        name: &'static str,
+    ) -> Option<(&ContainerFormat, &Value)> {
+        match self.values.get(name) {
+            Some(value) => {
+                let format = self
+                    .registry
+                    .get(name)
+                    .expect("recorded containers should have a format already");
+                Some((format, value))
+            }
+            None => None,
+        }
     }
 }
