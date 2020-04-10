@@ -28,13 +28,24 @@ pub struct Tracer {
     /// serialization and/or deserialization.
     pub(crate) registry: Registry,
 
-    /// Value samples recorded during serialization.
-    /// This will help passing user-defined checks during deserialization.
-    values: BTreeMap<&'static str, Value>,
-
     /// Enums that have detected to be yet incomplete (i.e. missing variants)
     /// while tracing deserialization.
     pub(crate) incomplete_enums: BTreeSet<String>,
+}
+
+/// Value samples recorded during serialization.
+/// This will help passing user-defined checks during deserialization.
+#[derive(Debug, Default)]
+pub struct Records {
+    pub(crate) values: BTreeMap<&'static str, Value>,
+}
+
+impl Records {
+    pub fn new() -> Self {
+        Self {
+            values: BTreeMap::new(),
+        }
+    }
 }
 
 impl Tracer {
@@ -43,7 +54,6 @@ impl Tracer {
         Self {
             is_human_readable,
             registry: BTreeMap::new(),
-            values: BTreeMap::new(),
             incomplete_enums: BTreeSet::new(),
         }
     }
@@ -51,11 +61,11 @@ impl Tracer {
     /// Trace the serialization of a particular value.
     /// Nested containers will be added to the tracing registry, indexed by
     /// their (non-qualified) name.
-    pub fn trace_value<T>(&mut self, value: &T) -> Result<(Format, Value)>
+    pub fn trace_value<T>(&mut self, records: &mut Records, value: &T) -> Result<(Format, Value)>
     where
         T: ?Sized + Serialize,
     {
-        let serializer = Serializer::new(self);
+        let serializer = Serializer::new(self, records);
         value.serialize(serializer)
     }
 
@@ -67,23 +77,27 @@ impl Tracer {
     /// have implemented a custom deserializer that validates data. In this case,
     /// `trace_value` must be called first on the relevant user types to provide valid
     /// examples.
-    pub fn trace_type_once<'de, T>(&mut self) -> Result<(Format, T)>
+    pub fn trace_type_once<'de, T>(&mut self, records: &'de Records) -> Result<(Format, T)>
     where
         T: Deserialize<'de>,
     {
         let mut format = Format::Unknown;
-        let deserializer = Deserializer::new(self, &mut format);
+        let deserializer = Deserializer::new(self, records, &mut format);
         let value = T::deserialize(deserializer)?;
         Ok((format, value))
     }
 
     /// Same as `trace_type_once` for seeded deserialization.
-    pub fn trace_type_once_with_seed<'de, S>(&mut self, seed: S) -> Result<(Format, S::Value)>
+    pub fn trace_type_once_with_seed<'de, S>(
+        &mut self,
+        records: &'de Records,
+        seed: S,
+    ) -> Result<(Format, S::Value)>
     where
         S: DeserializeSeed<'de>,
     {
         let mut format = Format::Unknown;
-        let deserializer = Deserializer::new(self, &mut format);
+        let deserializer = Deserializer::new(self, records, &mut format);
         let value = seed.deserialize(deserializer)?;
         Ok((format, value))
     }
@@ -91,13 +105,13 @@ impl Tracer {
     /// Same as `trace_type_once` but if `T` is an enum, we repeat the process
     /// until all variants of `T` are covered.
     /// We accumulate and return all the sampled values at the end.
-    pub fn trace_type<'de, T>(&mut self) -> Result<(Format, Vec<T>)>
+    pub fn trace_type<'de, T>(&mut self, records: &'de Records) -> Result<(Format, Vec<T>)>
     where
         T: Deserialize<'de>,
     {
         let mut values = Vec::new();
         loop {
-            let (format, value) = self.trace_type_once::<T>()?;
+            let (format, value) = self.trace_type_once::<T>(records)?;
             values.push(value);
             if let Format::TypeName(name) = &format {
                 if self.incomplete_enums.contains(name) {
@@ -111,13 +125,17 @@ impl Tracer {
     }
 
     /// Same as `trace_type` for seeded deserialization.
-    pub fn trace_type_with_seed<'de, S>(&'de mut self, seed: S) -> Result<(Format, Vec<S::Value>)>
+    pub fn trace_type_with_seed<'de, S>(
+        &mut self,
+        records: &'de Records,
+        seed: S,
+    ) -> Result<(Format, Vec<S::Value>)>
     where
         S: DeserializeSeed<'de> + Clone,
     {
         let mut values = Vec::new();
         loop {
-            let (format, value) = self.trace_type_once_with_seed(seed.clone())?;
+            let (format, value) = self.trace_type_once_with_seed(records, seed.clone())?;
             values.push(value);
             if let Format::TypeName(name) = &format {
                 if self.incomplete_enums.contains(name) {
@@ -164,17 +182,19 @@ impl Tracer {
 
     pub(crate) fn record_container(
         &mut self,
+        records: &mut Records,
         name: &'static str,
         format: ContainerFormat,
         value: Value,
     ) -> Result<(Format, Value)> {
         self.registry.entry(name).unify(format)?;
-        self.values.insert(name, value.clone());
+        records.values.insert(name, value.clone());
         Ok((Format::TypeName(name.into()), value))
     }
 
     pub(crate) fn record_variant(
         &mut self,
+        records: &mut Records,
         name: &'static str,
         variant_index: u32,
         variant_name: &'static str,
@@ -191,14 +211,15 @@ impl Tracer {
         );
         let format = ContainerFormat::Enum(variants);
         let value = Value::Variant(variant_index, Box::new(variant_value));
-        self.record_container(name, format, value)
+        self.record_container(records, name, format, value)
     }
 
-    pub(crate) fn get_recorded_value(
-        &mut self,
+    pub(crate) fn get_recorded_value<'de, 'a>(
+        &'a self,
+        records: &'de Records,
         name: &'static str,
-    ) -> Option<(&ContainerFormat, &Value)> {
-        match self.values.get(name) {
+    ) -> Option<(&'a ContainerFormat, &'de Value)> {
+        match records.values.get(name) {
             Some(value) => {
                 let format = self
                     .registry
