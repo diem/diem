@@ -20,6 +20,7 @@ use crate::{
     protocols::{
         discovery::{self, Discovery},
         health_checker::{self, HealthChecker},
+        wire::handshake::v1::SupportedProtocols,
     },
     transport,
     transport::*,
@@ -297,12 +298,11 @@ impl NetworkBuilder {
         self.conn_mgr_reqs_tx.clone()
     }
 
-    fn supported_protocols(&self) -> Vec<ProtocolId> {
+    fn supported_protocols(&self) -> SupportedProtocols {
         self.direct_send_protocols
             .iter()
             .chain(&self.rpc_protocols)
-            .cloned()
-            .collect()
+            .into()
     }
 
     /// Add a handler for given protocols using raw bytes.

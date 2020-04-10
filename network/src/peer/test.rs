@@ -48,7 +48,7 @@ fn build_test_peer(
             Multiaddr::from_str("/ip4/127.0.0.1/tcp/8081").unwrap(),
             origin,
             MessagingProtocolVersion::V1,
-            vec![],
+            [].iter().into(),
         ),
         socket: a,
     };

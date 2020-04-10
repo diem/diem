@@ -48,7 +48,7 @@ pub fn build_test_transport(
                     addr,
                     origin,
                     MessagingProtocolVersion::V1,
-                    vec![TEST_PROTOCOL],
+                    [TEST_PROTOCOL].iter().into(),
                 ),
             })
         })
@@ -219,7 +219,7 @@ fn create_connection<TSocket: transport::TSocket>(
             addr,
             origin,
             MessagingProtocolVersion::V1,
-            vec![TEST_PROTOCOL],
+            [TEST_PROTOCOL].iter().into(),
         ),
     }
 }
@@ -543,7 +543,7 @@ fn peer_manager_simultaneous_dial_disconnect_event() {
                 Multiaddr::empty(),
                 ConnectionOrigin::Inbound,
                 MessagingProtocolVersion::V1,
-                vec![TEST_PROTOCOL],
+                [TEST_PROTOCOL].iter().into(),
             ),
             DisconnectReason::ConnectionLost,
         );
@@ -600,7 +600,7 @@ fn test_dial_disconnect() {
                 Multiaddr::empty(),
                 ConnectionOrigin::Outbound,
                 MessagingProtocolVersion::V1,
-                vec![TEST_PROTOCOL],
+                [TEST_PROTOCOL].iter().into(),
             ),
             DisconnectReason::Requested,
         );

@@ -5,9 +5,8 @@ use crate::{
     common::NetworkPublicKeys,
     protocols::{
         identity::{exchange_handshake, exchange_peerid},
-        wire::handshake::v1::{HandshakeMsg, MessagingProtocolVersion},
+        wire::handshake::v1::{HandshakeMsg, MessagingProtocolVersion, SupportedProtocols},
     },
-    ProtocolId,
 };
 use futures::io::{AsyncRead, AsyncWrite};
 use libra_crypto::{
@@ -89,7 +88,7 @@ pub struct ConnectionMetadata {
     addr: Multiaddr,
     origin: ConnectionOrigin,
     messaging_protocol: MessagingProtocolVersion,
-    application_protocols: Vec<ProtocolId>,
+    application_protocols: SupportedProtocols,
 }
 
 impl ConnectionMetadata {
@@ -99,7 +98,7 @@ impl ConnectionMetadata {
         addr: Multiaddr,
         origin: ConnectionOrigin,
         messaging_protocol: MessagingProtocolVersion,
-        application_protocols: Vec<ProtocolId>,
+        application_protocols: SupportedProtocols,
     ) -> ConnectionMetadata {
         ConnectionMetadata {
             peer_id,
@@ -184,7 +183,7 @@ pub async fn perform_handshake<T: TSocket>(
 pub fn build_memory_noise_transport(
     identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
-    application_protocols: Vec<ProtocolId>,
+    application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
     let noise_config = Arc::new(NoiseConfig::new(identity_keypair));
@@ -210,7 +209,7 @@ pub fn build_memory_noise_transport(
 
 pub fn build_unauthenticated_memory_noise_transport(
     identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
-    application_protocols: Vec<ProtocolId>,
+    application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
     let noise_config = Arc::new(NoiseConfig::new(identity_keypair));
@@ -242,7 +241,7 @@ pub fn build_unauthenticated_memory_noise_transport(
 
 pub fn build_memory_transport(
     own_peer_id: PeerId,
-    application_protocols: Vec<ProtocolId>,
+    application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
     let mut own_handshake = HandshakeMsg::new();
@@ -263,7 +262,7 @@ pub fn build_memory_transport(
 pub fn build_tcp_noise_transport(
     identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
-    application_protocols: Vec<ProtocolId>,
+    application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let noise_config = Arc::new(NoiseConfig::new(identity_keypair));
     let mut own_handshake = HandshakeMsg::new();
@@ -295,7 +294,7 @@ pub fn build_tcp_noise_transport(
 // node is allowed to connect).
 pub fn build_unauthenticated_tcp_noise_transport(
     identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
-    application_protocols: Vec<ProtocolId>,
+    application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let noise_config = Arc::new(NoiseConfig::new(identity_keypair));
     let mut own_handshake = HandshakeMsg::new();
@@ -326,7 +325,7 @@ pub fn build_unauthenticated_tcp_noise_transport(
 
 pub fn build_tcp_transport(
     own_peer_id: PeerId,
-    application_protocols: Vec<ProtocolId>,
+    application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let mut own_handshake = HandshakeMsg::new();
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);

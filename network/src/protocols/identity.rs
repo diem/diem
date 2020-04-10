@@ -94,15 +94,19 @@ mod tests {
         let mut server_handshake = HandshakeMsg::new();
         server_handshake.add(
             MessagingProtocolVersion::V1,
-            vec![
+            [
                 ProtocolId::ConsensusDirectSend,
                 ProtocolId::MempoolDirectSend,
-            ],
+            ]
+            .iter()
+            .into(),
         );
         let mut client_handshake = HandshakeMsg::new();
         client_handshake.add(
             MessagingProtocolVersion::V1,
-            vec![ProtocolId::ConsensusRpc, ProtocolId::ConsensusDirectSend],
+            [ProtocolId::ConsensusRpc, ProtocolId::ConsensusDirectSend]
+                .iter()
+                .into(),
         );
 
         let server_handshake_clone = server_handshake.clone();
