@@ -71,8 +71,8 @@ impl ValueCodec<TestSchema2> for TestField {
     }
 }
 
-fn open_db(dir: &libra_temppath::TempPath) -> DB {
-    let cf_opts_map: ColumnFamilyOptionsMap = [
+fn get_cf_opts_map() -> ColumnFamilyOptionsMap {
+    [
         (DEFAULT_CF_NAME, ColumnFamilyOptions::default()),
         (
             TestSchema1::COLUMN_FAMILY_NAME,
@@ -85,8 +85,15 @@ fn open_db(dir: &libra_temppath::TempPath) -> DB {
     ]
     .iter()
     .cloned()
-    .collect();
-    DB::open(&dir.path(), cf_opts_map).expect("Failed to open DB.")
+    .collect()
+}
+
+fn open_db(dir: &libra_temppath::TempPath) -> DB {
+    DB::open(&dir.path(), get_cf_opts_map()).expect("Failed to open DB.")
+}
+
+fn open_db_read_only(dir: &libra_temppath::TempPath) -> DB {
+    DB::open_readonly(&dir.path(), get_cf_opts_map()).expect("Failed to open DB.")
 }
 
 struct TestDB {
@@ -298,6 +305,23 @@ fn test_reopen() {
             db.get::<TestSchema1>(&TestField(0)).unwrap(),
             Some(TestField(0)),
         );
+    }
+}
+
+#[test]
+fn test_open_read_only() {
+    let tmpdir = libra_temppath::TempPath::new();
+    {
+        let db = open_db(&tmpdir);
+        db.put::<TestSchema1>(&TestField(0), &TestField(0)).unwrap();
+    }
+    {
+        let db = open_db_read_only(&tmpdir);
+        assert_eq!(
+            db.get::<TestSchema1>(&TestField(0)).unwrap(),
+            Some(TestField(0)),
+        );
+        assert!(db.put::<TestSchema1>(&TestField(1), &TestField(1)).is_err());
     }
 }
 
