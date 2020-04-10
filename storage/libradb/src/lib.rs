@@ -70,7 +70,7 @@ use libra_types::{
 };
 use once_cell::sync::Lazy;
 use prometheus::{IntCounter, IntGauge, IntGaugeVec};
-use schemadb::{ColumnFamilyOptions, ColumnFamilyOptionsMap, DB, DEFAULT_CF_NAME};
+use schemadb::{DB, DEFAULT_CF_NAME};
 use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_interface::{DbReader, DbWriter};
 use storage_proto::{StartupInfo, TreeState};
@@ -137,43 +137,28 @@ impl LibraDB {
     const NUM_HISTORICAL_VERSIONS_TO_KEEP: u64 = 1_000_000;
 
     pub fn open<P: AsRef<Path> + Clone>(db_root_path: P, readonly: bool) -> Result<Self> {
-        let cf_opts_map: ColumnFamilyOptionsMap = [
-            (
-                /* LedgerInfo CF = */ DEFAULT_CF_NAME,
-                ColumnFamilyOptions::default(),
-            ),
-            (EPOCH_BY_VERSION_CF_NAME, ColumnFamilyOptions::default()),
-            (EVENT_ACCUMULATOR_CF_NAME, ColumnFamilyOptions::default()),
-            (EVENT_BY_KEY_CF_NAME, ColumnFamilyOptions::default()),
-            (EVENT_CF_NAME, ColumnFamilyOptions::default()),
-            (
-                JELLYFISH_MERKLE_NODE_CF_NAME,
-                ColumnFamilyOptions::default(),
-            ),
-            (LEDGER_COUNTERS_CF_NAME, ColumnFamilyOptions::default()),
-            (STALE_NODE_INDEX_CF_NAME, ColumnFamilyOptions::default()),
-            (TRANSACTION_CF_NAME, ColumnFamilyOptions::default()),
-            (
-                TRANSACTION_ACCUMULATOR_CF_NAME,
-                ColumnFamilyOptions::default(),
-            ),
-            (
-                TRANSACTION_BY_ACCOUNT_CF_NAME,
-                ColumnFamilyOptions::default(),
-            ),
-            (TRANSACTION_INFO_CF_NAME, ColumnFamilyOptions::default()),
-        ]
-        .iter()
-        .cloned()
-        .collect();
+        let column_families = vec![
+            /* LedgerInfo CF = */ DEFAULT_CF_NAME,
+            EPOCH_BY_VERSION_CF_NAME,
+            EVENT_ACCUMULATOR_CF_NAME,
+            EVENT_BY_KEY_CF_NAME,
+            EVENT_CF_NAME,
+            JELLYFISH_MERKLE_NODE_CF_NAME,
+            LEDGER_COUNTERS_CF_NAME,
+            STALE_NODE_INDEX_CF_NAME,
+            TRANSACTION_CF_NAME,
+            TRANSACTION_ACCUMULATOR_CF_NAME,
+            TRANSACTION_BY_ACCOUNT_CF_NAME,
+            TRANSACTION_INFO_CF_NAME,
+        ];
 
         let path = db_root_path.as_ref().join("libradb");
         let instant = Instant::now();
 
         let db = Arc::new(if readonly {
-            DB::open_readonly(path.clone(), cf_opts_map)?
+            DB::open_readonly(path.clone(), column_families)?
         } else {
-            DB::open(path.clone(), cf_opts_map)?
+            DB::open(path.clone(), column_families)?
         });
 
         info!(

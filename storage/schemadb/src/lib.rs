@@ -17,14 +17,14 @@
 pub mod schema;
 
 use crate::schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec};
-use anyhow::{format_err, Result};
+use anyhow::{ensure, format_err, Result};
 use libra_metrics::OpMetrics;
 use once_cell::sync::Lazy;
 use rocksdb::{
     rocksdb_options::ColumnFamilyDescriptor, CFHandle, DBOptions, Writable, WriteOptions,
 };
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet},
     iter::Iterator,
     marker::PhantomData,
     path::Path,
@@ -32,15 +32,11 @@ use std::{
 
 static OP_COUNTER: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("schemadb"));
 
-/// Type alias to `rocksdb::ColumnFamilyOptions`. See [`rocksdb doc`](https://github.com/pingcap/rust-rocksdb/blob/master/src/rocksdb_options.rs)
-pub type ColumnFamilyOptions = rocksdb::ColumnFamilyOptions;
 /// Type alias to `rocksdb::ReadOptions`. See [`rocksdb doc`](https://github.com/pingcap/rust-rocksdb/blob/master/src/rocksdb_options.rs)
 pub type ReadOptions = rocksdb::ReadOptions;
 
 /// Type alias to improve readability.
 pub type ColumnFamilyName = &'static str;
-/// Type alias to improve readability.
-pub type ColumnFamilyOptionsMap = HashMap<ColumnFamilyName, ColumnFamilyOptions>;
 
 /// Name for the `default` column family that's always open by RocksDB. We use it to store
 /// [`LedgerInfo`](../types/ledger_info/struct.LedgerInfo.html).
@@ -195,7 +191,19 @@ pub struct DB {
 impl DB {
     /// Create db with all the column families provided if it doesn't exist at `path`; Otherwise,
     /// try to open it with all the column families.
-    pub fn open<P: AsRef<Path>>(path: P, mut cf_opts_map: ColumnFamilyOptionsMap) -> Result<Self> {
+    pub fn open(path: impl AsRef<Path>, column_families: Vec<ColumnFamilyName>) -> Result<Self> {
+        {
+            let cfs_set: HashSet<_> = column_families.iter().collect();
+            ensure!(
+                cfs_set.contains(&DEFAULT_CF_NAME),
+                "No \"default\" column family name is provided.",
+            );
+            ensure!(
+                cfs_set.len() == column_families.len(),
+                "Duplicate column family name found.",
+            );
+        }
+
         let mut db_opts = DBOptions::new();
 
         // For now we set the max total WAL size to be 1G. This config can be useful when column
@@ -204,33 +212,28 @@ impl DB {
 
         // If db exists, just open it with all cfs.
         if db_exists(path.as_ref()) {
-            return DB::open_cf(db_opts, &path, cf_opts_map.into_iter().collect());
+            return DB::open_cf(db_opts, &path, column_families);
         }
 
         // If db doesn't exist, create a db first with all column families.
         db_opts.create_if_missing(true);
 
-        let mut db = DB::open_cf(
-            db_opts,
-            path,
-            vec![cf_opts_map
-                .remove_entry(&DEFAULT_CF_NAME)
-                .ok_or_else(|| format_err!("No \"default\" column family name found"))?],
-        )?;
-        cf_opts_map
+        let mut db = DB::open_cf(db_opts, path, vec![DEFAULT_CF_NAME])?;
+        column_families
             .into_iter()
-            .map(|(cf_name, cf_opts)| db.create_cf((cf_name, cf_opts)))
+            .filter(|cf_name| *cf_name != DEFAULT_CF_NAME)
+            .map(|cf_name| db.create_cf(cf_name))
             .collect::<Result<Vec<_>>>()?;
         Ok(db)
     }
 
     /// Open db in readonly mode
-    pub fn open_readonly<P: AsRef<Path>>(
-        path: P,
-        cf_opts_map: ColumnFamilyOptionsMap,
+    pub fn open_readonly(
+        path: impl AsRef<Path>,
+        column_families: Vec<ColumnFamilyName>,
     ) -> Result<Self> {
         let db_opts = DBOptions::new();
-        DB::open_cf_readonly(db_opts, &path, cf_opts_map.into_iter().collect())
+        DB::open_cf_readonly(db_opts, &path, column_families)
     }
 
     fn open_cf<'a, P, T>(opts: DBOptions, path: P, cfds: Vec<T>) -> Result<DB>
