@@ -47,7 +47,17 @@ pub struct Options {
     pub out_dir: String,
 }
 
-pub fn main() -> std::io::Result<()> {
+pub fn main() {
+    std::process::exit(match real_main() {
+        Ok(_) => 0,
+        Err(e) => {
+            eprintln!("error: {}", e);
+            1
+        }
+    });
+}
+
+fn real_main() -> std::io::Result<()> {
     let Options {
         source_files,
         dependencies,
