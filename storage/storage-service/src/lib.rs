@@ -21,7 +21,7 @@ use libra_types::proto::types::{
 };
 use libradb::LibraDB;
 use std::{convert::TryFrom, path::Path, sync::Arc};
-use storage_interface::{DbReader, DbReaderWriter, DbWriter};
+use storage_interface::{DbReader, DbReaderWriter, DbWriter, Error};
 use storage_proto::proto::storage::{
     storage_server::{Storage, StorageServer},
     BackupAccountStateRequest, BackupAccountStateResponse, BackupTransactionInfoRequest,
@@ -34,6 +34,95 @@ use storage_proto::proto::storage::{
     SaveTransactionsRequest, SaveTransactionsResponse,
 };
 use tokio::runtime::Runtime;
+
+use libra_secure_net::NetworkServer;
+use libra_types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof};
+use std::thread::{self, JoinHandle};
+use storage_proto::StartupInfo;
+
+/// Starts storage service with a given LibraDB
+pub fn start_simple_storage_service_with_db(
+    config: &NodeConfig,
+    libra_db: Arc<LibraDB>,
+) -> JoinHandle<()> {
+    let storage_service = SimpleStorageService { db: libra_db };
+    storage_service.run(config)
+}
+
+/// Starts storage service according to config.
+pub fn start_simple_storage_service(config: &NodeConfig) -> JoinHandle<()> {
+    let storage_service = SimpleStorageService::new(&config.storage.dir());
+    storage_service.run(config)
+}
+
+#[derive(Clone)]
+pub struct SimpleStorageService {
+    db: Arc<LibraDB>,
+}
+
+impl SimpleStorageService {
+    /// This opens a [`LibraDB`] at `path` and returns a [`StorageService`] instance serving it.
+    pub fn new(path: &impl AsRef<Path>) -> Self {
+        let db = Arc::new(LibraDB::new(path));
+        Self { db }
+    }
+
+    fn handle_message(&self, input_message: Vec<u8>) -> Result<Vec<u8>, Error> {
+        let input = lcs::from_bytes(&input_message)?;
+        let output = match input {
+            storage_interface::StorageRequest::GetAccountStateWithProofByVersionRequest(req) => {
+                lcs::to_bytes(&self.get_account_state_with_proof_by_version(&req))
+            }
+            storage_interface::StorageRequest::GetStartupInfoRequest => {
+                lcs::to_bytes(&self.get_startup_info())
+            }
+            storage_interface::StorageRequest::SaveTransactionsRequest(req) => {
+                lcs::to_bytes(&self.save_transactions(&req))
+            }
+        };
+        Ok(output?)
+    }
+
+    fn get_account_state_with_proof_by_version(
+        &self,
+        req: &storage_interface::GetAccountStateWithProofByVersionRequest,
+    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof), Error> {
+        Ok(self
+            .db
+            .get_account_state_with_proof_by_version(req.address, req.version)?)
+    }
+
+    fn get_startup_info(&self) -> Result<Option<StartupInfo>, Error> {
+        Ok(self.db.get_startup_info()?)
+    }
+
+    fn save_transactions(
+        &self,
+        req: &storage_interface::SaveTransactionsRequest,
+    ) -> Result<(), Error> {
+        Ok(self.db.save_transactions(
+            &req.txns_to_commit,
+            req.first_version,
+            req.ledger_info_with_signatures.as_ref(),
+        )?)
+    }
+
+    fn run(self, config: &NodeConfig) -> JoinHandle<()> {
+        let mut network_server = NetworkServer::new(config.storage.address);
+        thread::spawn(move || loop {
+            if let Err(e) = self.process_one_message(&mut network_server) {
+                warn!("Failed to process message: {}", e);
+            }
+        })
+    }
+
+    fn process_one_message(&self, network_server: &mut NetworkServer) -> Result<(), Error> {
+        let request = network_server.read()?;
+        let response = self.handle_message(request)?;
+        network_server.write(&response)?;
+        Ok(())
+    }
+}
 
 pub fn init_libra_db(config: &NodeConfig) -> (Arc<LibraDB>, DbReaderWriter) {
     DbReaderWriter::wrap(LibraDB::new(&config.storage.dir()))

@@ -16,6 +16,38 @@ use libra_types::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use storage_proto::StartupInfo;
+use thiserror::Error;
+
+#[derive(Debug, Deserialize, Error, PartialEq, Serialize)]
+pub enum Error {
+    #[error("Service error: {:?}", error)]
+    ServiceError { error: String },
+
+    #[error("Serialization error: {0}")]
+    SerializationError(String),
+}
+
+impl From<anyhow::Error> for Error {
+    fn from(error: anyhow::Error) -> Self {
+        Self::ServiceError {
+            error: format!("{}", error),
+        }
+    }
+}
+
+impl From<lcs::Error> for Error {
+    fn from(error: lcs::Error) -> Self {
+        Self::SerializationError(format!("{}", error))
+    }
+}
+
+impl From<libra_secure_net::Error> for Error {
+    fn from(error: libra_secure_net::Error) -> Self {
+        Self::ServiceError {
+            error: format!("{}", error),
+        }
+    }
+}
 
 /// Trait that is implemented by a DB that supports certain public (to client) read APIs
 /// expected of a Libra DB
@@ -168,14 +200,10 @@ where
 
 /// Network types for storage service
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum StorageMsg {
-    /// RPC to get an account state with corresponding sparse merkle proof..
+pub enum StorageRequest {
     GetAccountStateWithProofByVersionRequest(Box<GetAccountStateWithProofByVersionRequest>),
-    GetAccountStateWithProofByVersionResponse(Box<GetAccountStateWithProofByVersionResponse>),
-
-    // RPC to save transactions
+    GetStartupInfoRequest,
     SaveTransactionsRequest(Box<SaveTransactionsRequest>),
-    SaveTransactionsResponse,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
@@ -191,36 +219,6 @@ impl GetAccountStateWithProofByVersionRequest {
     /// Constructor.
     pub fn new(address: AccountAddress, version: Version) -> Self {
         Self { address, version }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
-pub struct GetAccountStateWithProofByVersionResponse {
-    /// The account state blob requested.
-    pub account_state_blob: Option<AccountStateBlob>,
-
-    /// The state root hash the query is based on.
-    pub sparse_merkle_proof: SparseMerkleProof,
-}
-
-impl GetAccountStateWithProofByVersionResponse {
-    /// Constructor.
-    pub fn new(
-        account_state_blob: Option<AccountStateBlob>,
-        sparse_merkle_proof: SparseMerkleProof,
-    ) -> Self {
-        Self {
-            account_state_blob,
-            sparse_merkle_proof,
-        }
-    }
-}
-
-impl Into<(Option<AccountStateBlob>, SparseMerkleProof)>
-    for GetAccountStateWithProofByVersionResponse
-{
-    fn into(self) -> (Option<AccountStateBlob>, SparseMerkleProof) {
-        (self.account_state_blob, self.sparse_merkle_proof)
     }
 }
 
