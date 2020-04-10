@@ -21,7 +21,7 @@ use libra_crypto::{
 use libra_logger::*;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{association_address, lbr_type_tag},
+    account_config::{association_address, lbr_type_tag, LBR_NAME},
     transaction::{
         authenticator::AuthenticationKey, helpers::create_user_txn, Script, TransactionPayload,
     },
@@ -497,7 +497,7 @@ fn gen_submit_transaction_request(
         sender_account.sequence_number,
         MAX_GAS_AMOUNT,
         GAS_UNIT_PRICE,
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
         TXN_EXPIRATION_SECONDS,
     )
     .expect("Failed to create signed transaction");

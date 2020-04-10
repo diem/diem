@@ -3,11 +3,10 @@
 
 use crate::{
     account_address::AccountAddress,
-    account_config::lbr_type_tag,
+    account_config::LBR_NAME,
     account_state_blob::AccountStateBlob,
     block_metadata::BlockMetadata,
     contract_event::ContractEvent,
-    language_storage::TypeTag,
     ledger_info::LedgerInfo,
     proof::{accumulator::InMemoryAccumulator, TransactionListProof, TransactionProof},
     transaction::authenticator::TransactionAuthenticator,
@@ -70,7 +69,7 @@ pub struct RawTransaction {
     // Maximal price can be paid per gas.
     gas_unit_price: u64,
 
-    gas_specifier: TypeTag,
+    gas_specifier: String,
     // Expiration time for this transaction.  If storage is queried and
     // the time returned is greater than or equal to this time and this
     // transaction has not been included, you can be certain that it will
@@ -124,7 +123,7 @@ impl RawTransaction {
         payload: TransactionPayload,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
+        gas_specifier: String,
         expiration_time: Duration,
     ) -> Self {
         RawTransaction {
@@ -147,7 +146,7 @@ impl RawTransaction {
         script: Script,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
+        gas_specifier: String,
         expiration_time: Duration,
     ) -> Self {
         RawTransaction {
@@ -171,7 +170,7 @@ impl RawTransaction {
         module: Module,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
+        gas_specifier: String,
         expiration_time: Duration,
     ) -> Self {
         RawTransaction {
@@ -197,7 +196,7 @@ impl RawTransaction {
             // Since write-set transactions bypass the VM, these fields aren't relevant.
             max_gas_amount: 0,
             gas_unit_price: 0,
-            gas_specifier: lbr_type_tag(),
+            gas_specifier: LBR_NAME.to_string(),
             // Write-set transactions are special and important and shouldn't expire.
             expiration_time: Duration::new(u64::max_value(), 0),
         }
@@ -215,7 +214,7 @@ impl RawTransaction {
             // Since write-set transactions bypass the VM, these fields aren't relevant.
             max_gas_amount: 0,
             gas_unit_price: 0,
-            gas_specifier: lbr_type_tag(),
+            gas_specifier: LBR_NAME.to_string(),
             // Write-set transactions are special and important and shouldn't expire.
             expiration_time: Duration::new(u64::max_value(), 0),
         }

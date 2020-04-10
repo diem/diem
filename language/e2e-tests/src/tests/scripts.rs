@@ -3,8 +3,8 @@
 
 use crate::{account::AccountData, executor::FakeExecutor, gas_costs};
 use libra_types::{
-    account_address::AccountAddress, account_config::lbr_type_tag,
-    on_chain_config::VMPublishingOption, transaction::TransactionStatus, vm_error::StatusCode,
+    account_address::AccountAddress, account_config::LBR_NAME, on_chain_config::VMPublishingOption,
+    transaction::TransactionStatus, vm_error::StatusCode,
 };
 use move_core_types::identifier::Identifier;
 use vm::file_format::{
@@ -31,7 +31,7 @@ fn script_code_unverifiable() {
         10,
         gas_costs::TXN_RESERVED,
         1,
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
     );
 
     // execute transaction
@@ -102,7 +102,7 @@ fn script_none_existing_module_dep() {
         10,
         gas_costs::TXN_RESERVED,
         1,
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
     );
 
     // execute transaction
@@ -170,7 +170,7 @@ fn script_non_existing_function_dep() {
         10,
         gas_costs::TXN_RESERVED,
         1,
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
     );
 
     // execute transaction
@@ -240,7 +240,7 @@ fn script_bad_sig_function_dep() {
         10,
         gas_costs::TXN_RESERVED,
         1,
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
     );
 
     // execute transaction

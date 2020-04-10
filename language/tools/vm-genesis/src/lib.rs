@@ -101,6 +101,13 @@ static LIBRA_VERSION_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     )
 });
 
+static LBR_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+    ModuleId::new(
+        account_config::CORE_CODE_ADDRESS,
+        Identifier::new("LBR").unwrap(),
+    )
+});
+
 static LIBRA_TIME_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         account_config::CORE_CODE_ADDRESS,
@@ -237,7 +244,7 @@ fn create_and_initialize_main_accounts(
     // create  the LBR module
     move_vm
         .execute_function(
-            &account_config::LBR_MODULE,
+            &LBR_MODULE,
             &INITIALIZE,
             &gas_schedule,
             interpreter_context,

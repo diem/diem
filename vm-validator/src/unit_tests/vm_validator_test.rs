@@ -7,7 +7,7 @@ use libra_config::config::NodeConfig;
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     account_address, account_config,
-    account_config::lbr_type_tag,
+    account_config::{lbr_type_tag, LBR_NAME},
     test_helpers::transaction_test_helpers,
     transaction::{Module, Script, TransactionArgument, MAX_TRANSACTION_SIZE_IN_BYTES},
     vm_error::StatusCode,
@@ -139,7 +139,7 @@ fn test_validate_known_script_too_large_args() {
              * max size */
         0,
         0, /* max gas price */
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
         None,
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
@@ -163,7 +163,7 @@ fn test_validate_max_gas_units_above_max() {
         None,
         0,
         0, /* max gas price */
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
         Some(u64::MAX), // Max gas units
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
@@ -187,7 +187,7 @@ fn test_validate_max_gas_units_below_min() {
         None,
         0,
         0, /* max gas price */
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
         Some(1), // Max gas units
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
@@ -211,7 +211,7 @@ fn test_validate_max_gas_price_above_bounds() {
         None,
         0,
         u64::MAX, /* max gas price */
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
         None,
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
@@ -240,7 +240,7 @@ fn test_validate_max_gas_price_below_bounds() {
         // Initial Time was set to 0 with a TTL 86400 secs.
         40000,
         0, /* max gas price */
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
         None,
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
@@ -342,7 +342,7 @@ fn test_validate_account_doesnt_exist() {
         Some(program),
         0,
         1, /* max gas price */
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
         None,
     );
     let ret = rt

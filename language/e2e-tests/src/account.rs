@@ -151,7 +151,7 @@ impl Account {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
+        gas_specifier: String,
     ) -> SignedTransaction {
         Self::create_raw_user_txn(
             *self.address(),
@@ -172,7 +172,7 @@ impl Account {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
+        gas_specifier: String,
     ) -> RawTransaction {
         match payload {
             TransactionPayload::Program => RawTransaction::new(
@@ -218,7 +218,7 @@ impl Account {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
+        gas_specifier: String,
     ) -> SignedTransaction {
         self.create_signed_txn_impl(
             *self.address(),
@@ -238,7 +238,7 @@ impl Account {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
+        gas_specifier: String,
     ) -> RawTransaction {
         Self::create_raw_txn_impl(
             address,
@@ -262,7 +262,7 @@ impl Account {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
+        gas_specifier: String,
     ) -> SignedTransaction {
         self.create_signed_txn_impl(
             sender,
@@ -282,7 +282,7 @@ impl Account {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
+        gas_specifier: String,
     ) -> RawTransaction {
         Self::create_raw_txn_impl(
             sender,
@@ -304,7 +304,7 @@ impl Account {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
+        gas_specifier: String,
     ) -> SignedTransaction {
         Self::create_raw_txn_impl(
             sender,
@@ -328,7 +328,7 @@ impl Account {
             sequence_number,
             gas_costs::TXN_RESERVED,
             0, // gas price
-            account_config::lbr_type_tag(),
+            account_config::LBR_NAME.to_string(),
         )
     }
 
@@ -338,7 +338,7 @@ impl Account {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
+        gas_specifier: String,
     ) -> RawTransaction {
         RawTransaction::new(
             sender,
