@@ -94,10 +94,10 @@ impl<'de> de::Deserialize<'de> for EventKey {
         // See comment in serialize.
         #[derive(::serde::Deserialize)]
         #[serde(rename = "EventKey")]
-        struct Value<'a>(&'a [u8]);
+        struct Value(Vec<u8>);
 
         let value = Value::deserialize(deserializer)?;
-        Self::try_from(value.0).map_err(<D::Error as ::serde::de::Error>::custom)
+        Self::try_from(value.0.as_slice()).map_err(<D::Error as ::serde::de::Error>::custom)
     }
 }
 
