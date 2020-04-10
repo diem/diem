@@ -11,7 +11,6 @@
 //! intersecting messaging protocol version and use that for the remainder of the session.
 
 use serde::{Deserialize, Serialize};
-use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{collections::BTreeMap, convert::TryInto, iter::Iterator};
 
 #[cfg(test)]
@@ -20,7 +19,7 @@ mod test;
 /// Unique identifier associated with each application protocol.
 /// New application protocols can be added without bumping up the MessagingProtocolVersion.
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Deserialize_repr, Serialize_repr)]
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Deserialize, Serialize)]
 pub enum ProtocolId {
     ConsensusRpc = 0,
     ConsensusDirectSend = 1,
