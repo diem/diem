@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{counters::*, system_module_names::*, VMExecutor, VMVerifier};
+use crate::{counters::*, system_module_names::*, VMExecutor, VMValidator};
 use debug_interface::prelude::*;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
@@ -235,7 +235,7 @@ impl LibraVM {
         remote_cache: &dyn RemoteCache,
         script: &Script,
         txn_data: TransactionMetadata,
-    ) -> VMResult<VerifiedTranscationPayload> {
+    ) -> VMResult<VerifiedTransactionPayload> {
         let mut ctx = SystemExecutionContext::new(remote_cache, GasUnits::new(0));
         if !self
             .on_chain_config()?
@@ -251,7 +251,7 @@ impl LibraVM {
             .iter()
             .map(|tag| self.resolve_type_argument(&mut ctx, tag))
             .collect::<VMResult<Vec<_>>>()?;
-        Ok(VerifiedTranscationPayload::Script(
+        Ok(VerifiedTransactionPayload::Script(
             script.code().to_vec(),
             ty_args,
             convert_txn_args(script.args()),
@@ -263,14 +263,14 @@ impl LibraVM {
         remote_cache: &dyn RemoteCache,
         module: &Module,
         txn_data: TransactionMetadata,
-    ) -> VMResult<VerifiedTranscationPayload> {
+    ) -> VMResult<VerifiedTransactionPayload> {
         let mut ctx = SystemExecutionContext::new(remote_cache, GasUnits::new(0));
         if !&self.on_chain_config()?.publishing_option.is_open() {
             warn!("[VM] Custom modules not allowed");
             return Err(VMStatus::new(StatusCode::UNKNOWN_MODULE));
         };
         self.run_prologue(&mut ctx, &txn_data)?;
-        Ok(VerifiedTranscationPayload::Module(module.code().to_vec()))
+        Ok(VerifiedTransactionPayload::Module(module.code().to_vec()))
     }
 
     fn verify_writeset(
@@ -288,7 +288,7 @@ impl LibraVM {
         &self,
         transaction: &SignatureCheckedTransaction,
         remote_cache: &dyn RemoteCache,
-    ) -> VMResult<VerifiedTranscationPayload> {
+    ) -> VMResult<VerifiedTransactionPayload> {
         self.check_gas(transaction)?;
         let txn_data = TransactionMetadata::new(transaction);
         match transaction.payload() {
@@ -329,16 +329,16 @@ impl LibraVM {
         &mut self,
         remote_cache: &mut BlockDataCache<'_>,
         txn_data: &TransactionMetadata,
-        payload: VerifiedTranscationPayload,
+        payload: VerifiedTransactionPayload,
     ) -> TransactionOutput {
         let mut ctx = TransactionExecutionContext::new(txn_data.max_gas_amount(), remote_cache);
         // TODO: The logic for handling falied transaction fee is pretty ugly right now. Fix it later.
         let mut failed_gas_left = GasUnits::new(0);
         match payload {
-            VerifiedTranscationPayload::Module(m) => {
+            VerifiedTransactionPayload::Module(m) => {
                 self.move_vm.publish_module(m, &mut ctx, txn_data)
             }
-            VerifiedTranscationPayload::Script(s, ty_args, args) => {
+            VerifiedTransactionPayload::Script(s, ty_args, args) => {
                 let gas_schedule = match self.get_gas_schedule() {
                     Ok(s) => s,
                     Err(e) => return discard_error_output(e),
@@ -822,8 +822,8 @@ pub(crate) fn discard_error_output(err: VMStatus) -> TransactionOutput {
     )
 }
 
-// Validators external API
-impl VMVerifier for LibraVM {
+// VMValidator external API
+impl VMValidator for LibraVM {
     /// Determine if a transaction is valid. Will return `None` if the transaction is accepted,
     /// `Some(Err)` if the VM rejects it, with `Err` as an error code. Verification performs the
     /// following steps:
@@ -965,7 +965,7 @@ pub fn chunk_block_transactions(txns: Vec<Transaction>) -> Vec<TransactionBlock>
     blocks
 }
 
-enum VerifiedTranscationPayload {
+enum VerifiedTransactionPayload {
     Script(Vec<u8>, Vec<Type>, Vec<Value>),
     Module(Vec<u8>),
 }

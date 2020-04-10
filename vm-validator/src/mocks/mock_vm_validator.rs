@@ -10,13 +10,13 @@ use libra_types::{
     transaction::{SignedTransaction, VMValidatorResult},
     vm_error::{StatusCode, VMStatus},
 };
-use libra_vm::VMVerifier;
+use libra_vm::VMValidator;
 use std::convert::TryFrom;
 
 #[derive(Clone)]
 pub struct MockVMValidator;
 
-impl VMVerifier for MockVMValidator {
+impl VMValidator for MockVMValidator {
     fn validate_transaction(
         &self,
         _transaction: SignedTransaction,

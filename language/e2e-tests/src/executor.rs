@@ -24,7 +24,7 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
-use libra_vm::{LibraVM, VMExecutor, VMVerifier};
+use libra_vm::{LibraVM, VMExecutor, VMValidator};
 use stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use vm::CompiledModule;
 use vm_genesis::GENESIS_KEYPAIR;

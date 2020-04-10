@@ -8,7 +8,7 @@ use libra_types::{
     on_chain_config::{LibraVersion, OnChainConfigPayload, VMConfig},
     transaction::{SignedTransaction, VMValidatorResult},
 };
-use libra_vm::{LibraVM, VMVerifier};
+use libra_vm::LibraVM;
 use scratchpad::SparseMerkleTree;
 use std::{convert::TryFrom, sync::Arc};
 use storage_client::StorageRead;
@@ -20,7 +20,7 @@ mod vm_validator_test;
 
 #[async_trait::async_trait]
 pub trait TransactionValidation: Send + Sync + Clone {
-    type ValidationInstance: VMVerifier;
+    type ValidationInstance: libra_vm::VMValidator;
 
     /// Validate a txn from client
     async fn validate_transaction(&self, _txn: SignedTransaction) -> Result<VMValidatorResult>;
@@ -53,6 +53,8 @@ impl TransactionValidation for VMValidator {
     type ValidationInstance = LibraVM;
 
     async fn validate_transaction(&self, txn: SignedTransaction) -> Result<VMValidatorResult> {
+        use libra_vm::VMValidator;
+
         let (version, state_root) = self.db_reader.get_latest_state_root()?;
         let db_reader = Arc::clone(&self.db_reader);
         let vm = self.vm.clone();
