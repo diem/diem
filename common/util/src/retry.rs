@@ -25,10 +25,10 @@ where
     }
 }
 
-pub async fn retry_async<I, O, T, E>(iterable: I, mut operation: O) -> Result<T, E>
+pub async fn retry_async<'a, I, O, T, E>(iterable: I, mut operation: O) -> Result<T, E>
 where
     I: IntoIterator<Item = Duration>,
-    O: FnMut() -> Pin<Box<dyn Future<Output = Result<T, E>> + Send>>,
+    O: FnMut() -> Pin<Box<dyn Future<Output = Result<T, E>> + Send + 'a>>,
 {
     let mut iterator = iterable.into_iter();
     loop {

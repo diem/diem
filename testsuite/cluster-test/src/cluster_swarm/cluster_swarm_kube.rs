@@ -122,7 +122,7 @@ impl ClusterSwarmKube {
     }
 
     async fn wait_job_completion(&self, job_name: &str, back_off_limit: u32) -> Result<bool> {
-        retry::retry_async(retry::fixed_retry_strategy(5000, 60), || {
+        retry::retry_async(retry::fixed_retry_strategy(5000, 20), || {
             let job_api: Api<Job> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
             let job_name = job_name.to_string();
             Box::pin(async move {
@@ -238,11 +238,8 @@ impl ClusterSwarmKube {
         .await
         .map_err(|e| format_err!("Failed to delete pod {}: {:?}", name, e))
     }
-}
 
-#[async_trait]
-impl ClusterSwarm for ClusterSwarmKube {
-    async fn remove_all_network_effects(&self) -> Result<()> {
+    async fn remove_all_network_effects_helper(&self) -> Result<()> {
         debug!("Trying to remove_all_network_effects");
         let back_off_limit = 2;
 
@@ -284,6 +281,16 @@ impl ClusterSwarm for ClusterSwarmKube {
             })
             .collect::<Result<_, _>>()?;
         self.run_jobs(jobs, back_off_limit).await
+    }
+}
+
+#[async_trait]
+impl ClusterSwarm for ClusterSwarmKube {
+    async fn remove_all_network_effects(&self) -> Result<()> {
+        retry::retry_async(retry::fixed_retry_strategy(5000, 3), || {
+            Box::pin(async move { self.remove_all_network_effects_helper().await })
+        })
+        .await
     }
 
     async fn run(
