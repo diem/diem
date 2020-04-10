@@ -10,8 +10,8 @@ use anyhow::{bail, ensure, format_err, Error, Result};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     test_utils::KeyPair,
-    x25519::X25519StaticPublicKey,
-    ValidKey, ValidKeyStringExt,
+    traits::ValidKey,
+    x25519, ValidKeyStringExt,
 };
 use libra_json_rpc::views::{AccountView, BlockMetadata, EventView, TransactionView};
 use libra_logger::prelude::*;
@@ -426,10 +426,10 @@ impl ClientProxy {
         let consensus_public_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[3])?;
         let network_signing_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[4])?;
         let network_identity_key =
-            X25519StaticPublicKey::from_encoded_string(space_delim_strings[5])?;
+            x25519::PublicKey::from_encoded_string(space_delim_strings[5])?;
         let network_address = Multiaddr::from_str(space_delim_strings[6])?;
         let fullnode_identity_key =
-            X25519StaticPublicKey::from_encoded_string(space_delim_strings[7])?;
+            x25519::PublicKey::from_encoded_string(space_delim_strings[7])?;
         let fullnode_network_address = Multiaddr::from_str(space_delim_strings[8])?;
         let mut sender = Self::get_account_data_from_address(
             &mut self.client,

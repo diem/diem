@@ -270,7 +270,7 @@ mod test {
         let config = FullNodeConfig::new().build().unwrap();
         let network = &config.full_node_networks[0];
         let (seed_peer_id, seed_peer_ips) = network.seed_peers.seed_peers.iter().next().unwrap();
-        assert!(&network.peer_id != seed_peer_id);
+        assert_ne!(&network.peer_id, seed_peer_id);
         // This is true because  we didn't update the DEFAULT_ADVERTISED
         assert_eq!(network.advertised_address, seed_peer_ips[0]);
         assert_eq!(

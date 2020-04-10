@@ -298,11 +298,15 @@ impl From<&ValidatorSet> for ValidatorVerifier {
 #[cfg(any(test, feature = "fuzzing"))]
 impl From<&ValidatorVerifier> for ValidatorSet {
     fn from(verifier: &ValidatorVerifier) -> Self {
+        use libra_crypto::test_utils::TEST_SEED;
+        use rand::prelude::*;
+        let mut rng = StdRng::from_seed(TEST_SEED);
         ValidatorSet::new(
             verifier
                 .get_ordered_account_addresses_iter()
                 .map(|addr| {
                     crate::validator_info::ValidatorInfo::new_with_random_network_keys(
+                        &mut rng,
                         addr,
                         verifier.get_public_key(&addr).unwrap(),
                         verifier.get_voting_power(&addr).unwrap(),
@@ -356,7 +360,8 @@ pub fn random_validator_verifier(
 mod tests {
     use super::*;
     use crate::validator_signer::ValidatorSigner;
-    use libra_crypto::{test_utils::TEST_SEED, HashValue};
+    use libra_crypto::test_utils::TEST_SEED;
+    use libra_crypto::HashValue;
     use std::collections::BTreeMap;
 
     #[test]

@@ -10,8 +10,8 @@ use executor_types::ExecutedTrees;
 use futures::executor::block_on;
 use libra_config::config::RoleType;
 use libra_crypto::{
-    ed25519::Ed25519PrivateKey, hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED,
-    x25519::X25519StaticPrivateKey, PrivateKey, Uniform,
+    ed25519::Ed25519PrivateKey, hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519,
+    PrivateKey, Uniform,
 };
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
@@ -145,7 +145,7 @@ impl SynchronizerEnv {
             .collect();
         // Setup identity public keys.
         let identity_keys: Vec<_> = (0..count)
-            .map(|_| X25519StaticPrivateKey::generate(&mut rng))
+            .map(|_| x25519::PrivateKey::for_test(&mut rng))
             .collect();
 
         let mut validators_keys = vec![];
