@@ -4,10 +4,8 @@
 use crate::account_address::AccountAddress;
 use anyhow::{Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
-use libra_crypto::{
-    ed25519::Ed25519PrivateKey, x25519::X25519StaticPrivateKey, PrivateKey, Uniform,
-};
-use libra_crypto::{ed25519::Ed25519PublicKey, x25519::X25519StaticPublicKey, ValidKey};
+use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use libra_crypto::{ed25519::Ed25519PublicKey, traits::ValidKey, x25519};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -33,7 +31,7 @@ pub struct ValidatorInfo {
     network_signing_public_key: Ed25519PublicKey,
     // This key establishes the corresponding PrivateKey holder's eligibility to join the p2p
     // network
-    network_identity_public_key: X25519StaticPublicKey,
+    network_identity_public_key: x25519::PublicKey,
 }
 
 impl fmt::Display for ValidatorInfo {
@@ -48,7 +46,7 @@ impl ValidatorInfo {
         consensus_public_key: Ed25519PublicKey,
         consensus_voting_power: u64,
         network_signing_public_key: Ed25519PublicKey,
-        network_identity_public_key: X25519StaticPublicKey,
+        network_identity_public_key: x25519::PublicKey,
     ) -> Self {
         ValidatorInfo {
             account_address,
@@ -61,14 +59,16 @@ impl ValidatorInfo {
 
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn new_with_random_network_keys(
+        rng: &mut (impl rand::RngCore + rand::CryptoRng),
         account_address: AccountAddress,
         consensus_public_key: Ed25519PublicKey,
         consensus_voting_power: u64,
     ) -> Self {
         let network_signing_public_key = Ed25519PrivateKey::generate_for_testing().public_key();
-        let network_identity_public_key =
-            X25519StaticPrivateKey::generate_for_testing().public_key();
-        ValidatorInfo {
+        let private_key = x25519::PrivateKey::for_test(rng);
+        let network_identity_public_key: x25519::PublicKey = private_key.public_key();
+
+        Self {
             account_address,
             consensus_public_key,
             consensus_voting_power,
@@ -99,8 +99,8 @@ impl ValidatorInfo {
     }
 
     /// Returns the key that establishes a validator's identity in the p2p network
-    pub fn network_identity_public_key(&self) -> &X25519StaticPublicKey {
-        &self.network_identity_public_key
+    pub fn network_identity_public_key(&self) -> x25519::PublicKey {
+        self.network_identity_public_key
     }
 }
 
@@ -114,7 +114,7 @@ impl TryFrom<crate::proto::types::ValidatorInfo> for ValidatorInfo {
         let network_signing_public_key =
             Ed25519PublicKey::try_from(&proto.network_signing_public_key[..])?;
         let network_identity_public_key =
-            X25519StaticPublicKey::try_from(&proto.network_identity_public_key[..])?;
+            x25519::PublicKey::try_from(&proto.network_identity_public_key[..])?;
         Ok(Self::new(
             account_address,
             consensus_public_key,
@@ -132,7 +132,7 @@ impl From<ValidatorInfo> for crate::proto::types::ValidatorInfo {
             consensus_public_key: keys.consensus_public_key.to_bytes().to_vec(),
             consensus_voting_power: keys.consensus_voting_power,
             network_signing_public_key: keys.network_signing_public_key.to_bytes().to_vec(),
-            network_identity_public_key: keys.network_identity_public_key.to_bytes().to_vec(),
+            network_identity_public_key: keys.network_identity_public_key.to_bytes(),
         }
     }
 }

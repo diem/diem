@@ -11,7 +11,8 @@ use bytecode_verifier::VerifiedModule;
 use libra_config::{config::NodeConfig, generator};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    PrivateKey, Uniform, ValidKey,
+    traits::ValidKey,
+    PrivateKey, Uniform,
 };
 use libra_state_view::StateView;
 use libra_types::{
@@ -34,7 +35,7 @@ use move_vm_state::{
 };
 use move_vm_types::{chain_state::ChainState, values::Value};
 use once_cell::sync::Lazy;
-use rand::{rngs::StdRng, SeedableRng};
+use rand::prelude::*;
 use stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use vm::{
     access::ModuleAccess,

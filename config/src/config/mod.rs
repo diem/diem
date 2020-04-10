@@ -46,8 +46,8 @@ pub use test_config::*;
 /// This is used to set up the nodes and configure various parameters.
 /// The config file is broken up into sections for each module
 /// so that only that module can be passed around
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
-#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
+#[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct NodeConfig {
     #[serde(default)]
@@ -427,7 +427,7 @@ mod test {
     }
 
     fn compare_configs(actual: &NodeConfig, expected: &NodeConfig) {
-        // This is broken down first into smaller evaluations to improve idenitfying what is broken.
+        // This is broken down first into smaller evaluations to improve identifying what is broken.
         // The output for a broken config leveraging assert at the top level config is not readable.
         assert_eq!(actual.admission_control, expected.admission_control);
         assert_eq!(actual.base, expected.base);
