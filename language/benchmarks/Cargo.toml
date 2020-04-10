@@ -1,5 +1,5 @@
 [package]
-name = "language_benchmarks"
+name = "language-benchmarks"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 description = "Libra language benchmarks"
