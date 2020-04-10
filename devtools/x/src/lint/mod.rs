@@ -23,9 +23,10 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
         &workspace_config.banned_direct_deps,
     )];
 
-    let package_linters: &[&dyn PackageLinter] = &[&guppy::EnforcedAttributes::new(
-        &workspace_config.enforced_attributes,
-    )];
+    let package_linters: &[&dyn PackageLinter] = &[
+        &guppy::EnforcedAttributes::new(&workspace_config.enforced_attributes),
+        &guppy::CrateNamesPaths,
+    ];
 
     let content_linters: &[&dyn ContentLinter] = &[
         &license::LicenseHeader,
