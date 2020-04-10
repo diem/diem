@@ -299,6 +299,9 @@ impl LibraClient {
                 self.latest_epoch_change_li = Some(latest_epoch_change_li.clone());
             }
             TrustedStateChange::Version { new_state, .. } => {
+                if self.trusted_state.latest_version() < new_state.latest_version() {
+                    info!("Verified version change to: {}", new_state.latest_version());
+                }
                 self.trusted_state = new_state;
             }
         }

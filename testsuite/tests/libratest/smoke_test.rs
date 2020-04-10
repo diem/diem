@@ -24,7 +24,6 @@ use std::{
     fs::{self, File},
     io::Read,
     str::FromStr,
-    thread, time,
 };
 
 struct TestEnvironment {
@@ -281,17 +280,23 @@ fn smoke_test_single_node() {
     test_smoke_script(client_proxy);
 }
 
+// Test if we commit not only user transactions but also block metadata transactions,
+// assert committed version > # of user transactions
 #[test]
 fn smoke_test_single_node_block_metadata() {
-    let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+    let (swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
     // just need an address to get the latest version
     let address = AccountAddress::from_hex_literal("0xA550C18").unwrap();
-    // sleep 1s to commit some blocks
-    thread::sleep(time::Duration::from_secs(1));
+    // this script does 4 transactions
+    test_smoke_script(swarm.get_validator_ac_client(0, None));
     let (_state, version) = client_proxy
         .get_latest_account_state(&["q", &address.to_string()])
         .unwrap();
-    assert!(version > 0, "BlockMetadata txn not persisted");
+    assert!(
+        version > 4,
+        "BlockMetadata txn not produced, current version: {}",
+        version
+    );
 }
 
 #[test]
