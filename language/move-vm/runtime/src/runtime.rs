@@ -16,7 +16,10 @@ use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
-use move_core_types::identifier::{IdentStr, Identifier};
+use move_core_types::{
+    gas_schedule::CostTable,
+    identifier::{IdentStr, Identifier},
+};
 use move_vm_cache::Arena;
 use move_vm_types::{
     loaded_data::types::{StructType, Type},
@@ -26,7 +29,6 @@ use vm::{
     access::ModuleAccess,
     errors::{verification_error, vm_error, Location, VMResult},
     file_format::{FunctionHandleIndex, Kind, Signature, SignatureToken, StructDefinitionIndex},
-    gas_schedule::CostTable,
     transaction_metadata::TransactionMetadata,
     CompiledModule, IndexKind,
 };

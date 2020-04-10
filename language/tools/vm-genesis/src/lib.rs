@@ -26,6 +26,7 @@ use libra_types::{
     transaction::{authenticator::AuthenticationKey, ChangeSet, Transaction},
 };
 use libra_vm::system_module_names::*;
+use move_core_types::gas_schedule::{CostTable, GasAlgebra, GasUnits};
 use move_core_types::identifier::Identifier;
 use move_vm_runtime::MoveVM;
 use move_vm_state::{
@@ -37,8 +38,7 @@ use once_cell::sync::Lazy;
 use rand::prelude::*;
 use stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use vm::{
-    access::ModuleAccess,
-    gas_schedule::{CostTable, GasAlgebra, GasUnits},
+    access::ModuleAccess, gas_schedule::zero_cost_schedule,
     transaction_metadata::TransactionMetadata,
 };
 
@@ -147,7 +147,7 @@ pub fn encode_genesis_change_set(
 
     // create a data view for move_vm
     let state_view = GenesisStateView;
-    let gas_schedule = CostTable::zero();
+    let gas_schedule = zero_cost_schedule();
     let data_cache = BlockDataCache::new(&state_view);
 
     // create an execution context for the move_vm.

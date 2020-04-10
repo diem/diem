@@ -5,10 +5,8 @@ use crate::{loaded_data::types::StructType, values::GlobalValue};
 use libra_types::{
     access_path::AccessPath, contract_event::ContractEvent, language_storage::ModuleId,
 };
-use vm::{
-    errors::VMResult,
-    gas_schedule::{GasCarrier, GasUnits},
-};
+use move_core_types::gas_schedule::{GasCarrier, GasUnits};
+use vm::errors::VMResult;
 
 /// Trait that describes what Move bytecode runtime expects from the Libra blockchain.
 pub trait ChainState {

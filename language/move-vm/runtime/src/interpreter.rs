@@ -22,7 +22,10 @@ use libra_types::{
     transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
     vm_error::{StatusCode, StatusType, VMStatus},
 };
-use move_core_types::identifier::IdentStr;
+use move_core_types::{
+    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, NativeCostIndex},
+    identifier::IdentStr,
+};
 use move_vm_types::{
     identifier::create_access_path,
     loaded_data::types::{StructType, Type},
@@ -37,10 +40,7 @@ use vm::{
         Bytecode, FunctionHandleIndex, FunctionInstantiationIndex, LocalIndex, Signature,
         StructDefinitionIndex,
     },
-    gas_schedule::{
-        calculate_intrinsic_gas, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier,
-        NativeCostIndex, Opcodes,
-    },
+    gas_schedule::{calculate_intrinsic_gas, Opcodes},
     transaction_metadata::TransactionMetadata,
 };
 

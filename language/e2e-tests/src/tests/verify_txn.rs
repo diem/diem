@@ -18,9 +18,9 @@ use libra_types::{
     },
     vm_error::{StatusCode, StatusType, VMStatus},
 };
+use move_core_types::gas_schedule::{self, GasAlgebra};
 use stdlib::transaction_scripts::StdlibScript;
 use transaction_builder::encode_transfer_with_metadata_script;
-use vm::gas_schedule::{self, GasAlgebra};
 
 #[test]
 fn verify_signature() {

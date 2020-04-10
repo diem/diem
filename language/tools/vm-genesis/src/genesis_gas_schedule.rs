@@ -4,6 +4,7 @@
 //! This file contains the starting gas schedule published at genesis.
 
 use libra_vm::system_module_names::GAS_SCHEDULE_MODULE;
+use move_core_types::gas_schedule::{GasCost, MAXIMUM_NUMBER_OF_GAS_UNITS};
 use move_vm_runtime::MoveVM;
 use move_vm_state::{data_cache::RemoteCache, execution_context::TransactionExecutionContext};
 use move_vm_types::{loaded_data::types::Type, values::Value};
@@ -14,7 +15,7 @@ use vm::{
         FunctionHandleIndex, FunctionInstantiationIndex, StructDefInstantiationIndex,
         StructDefinitionIndex, NUMBER_OF_NATIVE_FUNCTIONS,
     },
-    gas_schedule::{CostTable, GasCost, GAS_SCHEDULE_NAME, MAXIMUM_NUMBER_OF_GAS_UNITS},
+    gas_schedule::{new_from_instructions, GAS_SCHEDULE_NAME},
 };
 
 static INITIAL_GAS_SCHEDULE: Lazy<Vec<u8>> = Lazy::new(|| {
@@ -142,7 +143,7 @@ static INITIAL_GAS_SCHEDULE: Lazy<Vec<u8>> = Lazy::new(|| {
     let native_table = (0..NUMBER_OF_NATIVE_FUNCTIONS)
         .map(|_| GasCost::new(0, 0))
         .collect::<Vec<GasCost>>();
-    let cost_table = CostTable::new(instrs, native_table);
+    let cost_table = new_from_instructions(instrs, native_table);
     lcs::to_bytes(&cost_table).expect("Unable to serialize genesis gas schedule for instructions")
 });
 

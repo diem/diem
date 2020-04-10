@@ -13,15 +13,17 @@ use libra_types::{
     move_resource::MoveResource,
     vm_error::{StatusCode, VMStatus},
 };
-use move_core_types::identifier::IdentStr;
+use move_core_types::{
+    gas_schedule::{
+        AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits, NativeCostIndex,
+    },
+    identifier::IdentStr,
+};
 use std::collections::VecDeque;
 use vm::{
     access::ModuleAccess,
     errors::VMResult,
     file_format::{FunctionSignature, Kind, Signature, SignatureToken, StructHandleIndex},
-    gas_schedule::{
-        AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits, NativeCostIndex,
-    },
     views::ModuleView,
 };
 

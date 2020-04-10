@@ -22,6 +22,9 @@ use libra_types::{
     vm_error::{sub_status, StatusCode, VMStatus},
     write_set::{WriteSet, WriteSetMut},
 };
+use move_core_types::gas_schedule::{
+    self, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits,
+};
 use move_vm_runtime::MoveVM;
 use move_vm_state::{
     data_cache::{BlockDataCache, RemoteCache, RemoteStorage},
@@ -35,9 +38,7 @@ use rayon::prelude::*;
 use std::{collections::HashSet, sync::Arc};
 use vm::{
     errors::{convert_prologue_runtime_error, VMResult},
-    gas_schedule::{
-        self, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits, GAS_SCHEDULE_NAME,
-    },
+    gas_schedule::{calculate_intrinsic_gas, zero_cost_schedule, GAS_SCHEDULE_NAME},
     transaction_metadata::TransactionMetadata,
 };
 
@@ -177,7 +178,7 @@ impl LibraVM {
         // The submitted transactions max gas units needs to be at least enough to cover the
         // intrinsic cost of the transaction as calculated against the size of the
         // underlying `RawTransaction`
-        let min_txn_fee = gas_schedule::calculate_intrinsic_gas(raw_bytes_len);
+        let min_txn_fee = calculate_intrinsic_gas(raw_bytes_len);
         if txn.max_gas_amount() < min_txn_fee.get() {
             let error_str = format!(
                 "min gas required for txn: {}, gas submitted: {}",
@@ -498,7 +499,7 @@ impl LibraVM {
             TransactionExecutionContext::new(txn_data.max_gas_amount(), remote_cache);
         // TODO: We might need a non zero cost table here so that we can at least bound the execution
         //       time by a reasonable amount.
-        let gas_schedule = CostTable::zero();
+        let gas_schedule = zero_cost_schedule();
 
         if let Ok((round, timestamp, previous_vote, proposer)) = block_metadata.into_inner() {
             let args = vec![
@@ -713,7 +714,7 @@ impl LibraVM {
     ) -> VMResult<()> {
         let txn_sequence_number = txn_data.sequence_number();
         let txn_public_key = txn_data.authentication_key_preimage().to_vec();
-        let gas_schedule = CostTable::zero();
+        let gas_schedule = zero_cost_schedule();
         record_stats! {time_hist | TXN_PROLOGUE_TIME_TAKEN | {
                 self.move_vm
                     .execute_function(
@@ -743,7 +744,7 @@ impl LibraVM {
     ) -> VMResult<()> {
         let change_set_bytes =
             lcs::to_bytes(change_set).map_err(|_| VMStatus::new(StatusCode::INVALID_DATA))?;
-        let gas_schedule = CostTable::zero();
+        let gas_schedule = zero_cost_schedule();
 
         record_stats! {time_hist | TXN_EPILOGUE_TIME_TAKEN | {
                 self.move_vm.execute_function(

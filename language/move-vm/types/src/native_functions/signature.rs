@@ -13,11 +13,9 @@ use libra_crypto::{
     HashValue,
 };
 use libra_types::vm_error::{StatusCode, VMStatus};
+use move_core_types::gas_schedule::{CostTable, NativeCostIndex};
 use std::{collections::VecDeque, convert::TryFrom};
-use vm::{
-    errors::VMResult,
-    gas_schedule::{CostTable, NativeCostIndex},
-};
+use vm::errors::VMResult;
 
 const BITMAP_SIZE: usize = 32;
 
