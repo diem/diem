@@ -3,11 +3,17 @@
 
 use crate::DbReader;
 use anyhow::{format_err, Result};
-use libra_crypto::{hash::CryptoHash, HashValue};
+use libra_crypto::{
+    hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
+    HashValue,
+};
 use libra_state_view::StateView;
 use libra_types::{
-    access_path::AccessPath, account_address::AccountAddress, account_state::AccountState,
-    proof::SparseMerkleProof, transaction::Version,
+    access_path::AccessPath,
+    account_address::AccountAddress,
+    account_state::AccountState,
+    proof::SparseMerkleProof,
+    transaction::{Version, PRE_GENESIS_VERSION},
 };
 use scratchpad::{AccountStatus, SparseMerkleTree};
 use std::{
@@ -83,6 +89,15 @@ impl<'a> VerifiedStateView<'a> {
         latest_persistent_state_root: HashValue,
         speculative_state: &'a SparseMerkleTree,
     ) -> Self {
+        // Hack: When there's no transaction in the db but state tree root hash is not the
+        // placeholder hash, it implies that there's pre-genesis state present.
+        let latest_persistent_version = latest_persistent_version.or_else(|| {
+            if latest_persistent_state_root != *SPARSE_MERKLE_PLACEHOLDER_HASH {
+                Some(PRE_GENESIS_VERSION)
+            } else {
+                None
+            }
+        });
         Self {
             reader,
             latest_persistent_version,
