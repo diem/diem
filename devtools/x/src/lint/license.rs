@@ -64,7 +64,7 @@ impl ContentLinter for LicenseHeader {
         };
 
         if missing_header {
-            out.write(LintMessage::new(LintLevel::Error, "missing license header"));
+            out.write(LintLevel::Error, "missing license header");
         }
 
         Ok(RunStatus::Executed)

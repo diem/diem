@@ -27,7 +27,7 @@ impl ContentLinter for EofNewline {
             None => return Ok(RunStatus::Skipped(SkipReason::NonUtf8)),
         };
         if !content.ends_with('\n') {
-            out.write(LintMessage::new(LintLevel::Error, "missing newline at EOF"));
+            out.write(LintLevel::Error, "missing newline at EOF");
         }
         Ok(RunStatus::Executed)
     }
@@ -59,10 +59,10 @@ impl ContentLinter for TrailingWhitespace {
 
         for (ln, line) in content.lines().enumerate().map(|(ln, line)| (ln + 1, line)) {
             if line.trim_end() != line {
-                out.write(LintMessage::new(
+                out.write(
                     LintLevel::Error,
                     format!("trailing whitespace at line {}", ln),
-                ));
+                );
             }
         }
 
@@ -73,10 +73,7 @@ impl ContentLinter for TrailingWhitespace {
             .count()
             > 0
         {
-            out.write(LintMessage::new(
-                LintLevel::Error,
-                "trailing whitespace at EOF",
-            ));
+            out.write(LintLevel::Error, "trailing whitespace at EOF");
         }
 
         Ok(RunStatus::Executed)
