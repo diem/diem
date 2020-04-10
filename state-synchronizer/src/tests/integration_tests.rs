@@ -180,7 +180,7 @@ impl SynchronizerEnv {
                     signers[idx].public_key(),
                     validator_keys.consensus_voting_power(),
                     validator_keys.network_signing_public_key().clone(),
-                    validator_keys.network_identity_public_key().clone(),
+                    validator_keys.network_identity_public_key(),
                 )
             })
             .collect::<Vec<ValidatorInfo>>();
@@ -233,7 +233,7 @@ impl SynchronizerEnv {
                     *public_keys.account_address(),
                     NetworkPublicKeys {
                         signing_public_key: public_keys.network_signing_public_key().clone(),
-                        identity_public_key: public_keys.network_identity_public_key().clone(),
+                        identity_public_key: public_keys.network_identity_public_key(),
                     },
                 )
             })
