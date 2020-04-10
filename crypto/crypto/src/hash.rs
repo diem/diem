@@ -292,10 +292,10 @@ impl<'de> de::Deserialize<'de> for HashValue {
             // See comment in serialize.
             #[derive(::serde::Deserialize)]
             #[serde(rename = "HashValue")]
-            struct Value<'a>(&'a [u8]);
+            struct Value(Vec<u8>);
 
             let value = Value::deserialize(deserializer)?;
-            Self::from_slice(value.0).map_err(<D::Error as ::serde::de::Error>::custom)
+            Self::from_slice(value.0.as_slice()).map_err(<D::Error as ::serde::de::Error>::custom)
         }
     }
 }
