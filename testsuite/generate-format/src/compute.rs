@@ -14,7 +14,7 @@ use structopt::StructOpt;
 )]
 struct Options {
     #[structopt(short, long)]
-    with_deserialize: bool,
+    skip_deserialize: bool,
 
     #[structopt(short, long)]
     record: bool,
@@ -25,7 +25,7 @@ fn main() {
 
     let mut tracer = Tracer::new(lcs::is_human_readable());
     tracer = add_proptest_serialization_tracing(tracer);
-    if options.with_deserialize {
+    if !options.skip_deserialize {
         tracer = add_deserialization_tracing(tracer);
     }
 
