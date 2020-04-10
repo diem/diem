@@ -7,12 +7,11 @@
 //! `Stdlib` script enum will be modified to reflect changes in the on-chain whitelist as time goes
 //! on.
 
-use crate::{compile_script, use_staged, MOVE_EXTENSION, STAGED_EXTENSION, TRANSACTION_SCRIPTS};
 use anyhow::{anyhow, Error, Result};
 use include_dir::{include_dir, Dir};
 use libra_crypto::HashValue;
 use libra_types::transaction::SCRIPT_HASH_LENGTH;
-use std::{convert::TryFrom, env, fmt, path::PathBuf};
+use std::{convert::TryFrom, fmt, path::PathBuf};
 
 // This includes the compiled transaction scripts as binaries. We must use this hack to work around
 // a problem with Docker, which does not copy over the Move source files that would be be used to
@@ -94,26 +93,16 @@ impl StdlibScript {
     /// Return the Move bytecode produced by compiling this script. This will almost always read
     /// from disk rather invoking the compiler; genesis is the only exception.
     pub fn compiled_bytes(self) -> CompiledBytes {
-        if use_staged() {
-            // read from disk
-            let mut path = PathBuf::from(self.name());
-            path.set_extension(STAGED_EXTENSION);
-            CompiledBytes(
-                STAGED_TXN_SCRIPTS_DIR
-                    .get_file(path)
-                    .unwrap()
-                    .contents()
-                    .to_vec(),
-            )
-        } else {
-            // compile from .move source file
-            let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-            path.push(PathBuf::from(TRANSACTION_SCRIPTS));
-            path.push(PathBuf::from(self.name()));
-            path.set_extension(MOVE_EXTENSION);
-            let final_path = path.into_os_string().into_string().unwrap();
-            CompiledBytes(compile_script(final_path))
-        }
+        // read from disk
+        let mut path = PathBuf::from(self.name());
+        path.set_extension("mv");
+        CompiledBytes(
+            STAGED_TXN_SCRIPTS_DIR
+                .get_file(path)
+                .unwrap()
+                .contents()
+                .to_vec(),
+        )
     }
 
     /// Return the sha3-256 hash of the compiled script bytes
