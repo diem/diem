@@ -15,6 +15,7 @@ structopt = "0.3.13"
 difference = "2.0"
 petgraph = "0.5.0"
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
+walkdir = "2.3.1"
 
 move-vm = { path = "../vm", package = "vm" }
 move-bytecode-verifier = { path = "../bytecode-verifier", package = "bytecode-verifier" }
