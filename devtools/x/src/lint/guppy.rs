@@ -108,3 +108,41 @@ impl<'cfg> PackageLinter for EnforcedAttributes<'cfg> {
         Ok(RunStatus::Executed)
     }
 }
+
+/// Check conventions in crate names and paths.
+#[derive(Debug)]
+pub struct CrateNamesPaths;
+
+impl Linter for CrateNamesPaths {
+    fn name(&self) -> &'static str {
+        "crate-names-paths"
+    }
+}
+
+impl PackageLinter for CrateNamesPaths {
+    fn run<'l>(
+        &self,
+        ctx: &PackageContext<'l>,
+        out: &mut LintFormatter<'l, '_>,
+    ) -> Result<RunStatus<'l>> {
+        let name = ctx.metadata().name();
+        if name.contains('_') {
+            out.write(
+                LintLevel::Error,
+                "crate name contains '_' (use '-' instead)",
+            );
+        }
+        let workspace_path = ctx.workspace_path();
+        if let Some(path) = workspace_path.to_str() {
+            if path.contains('_') {
+                out.write(
+                    LintLevel::Error,
+                    "workspace path contains '_' (use '-' instead)",
+                );
+            }
+        } else {
+            // Workspace path is invalid UTF-8. A different lint should catch this.
+        }
+        Ok(RunStatus::Executed)
+    }
+}
