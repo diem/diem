@@ -3,7 +3,7 @@
 
 use super::{hash, lcs, signature};
 use crate::{
-    loaded_data::types::Type,
+    loaded_data::runtime_types::{Type, TypeConverter},
     values::{debug, vector, Value},
 };
 use libra_types::{
@@ -16,11 +16,8 @@ use libra_types::{
     move_resource::MoveResource,
     vm_error::{StatusCode, VMStatus},
 };
-use move_core_types::{
-    gas_schedule::{
-        AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits, NativeCostIndex,
-    },
-    identifier::IdentStr,
+use move_core_types::gas_schedule::{
+    AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits, NativeCostIndex,
 };
 use std::collections::VecDeque;
 use vm::{
@@ -93,14 +90,10 @@ pub enum NativeFunction {
 }
 
 impl NativeFunction {
-    pub fn resolve(module: &ModuleId, function_name: &IdentStr) -> Option<Self> {
+    pub fn resolve(module: &ModuleId, function_name: &str) -> Option<Self> {
         use NativeFunction::*;
 
-        let case = (
-            module.address(),
-            module.name().as_str(),
-            function_name.as_str(),
-        );
+        let case = (module.address(), module.name().as_str(), function_name);
         Some(match case {
             (&CORE_CODE_ADDRESS, "Hash", "sha2_256") => HashSha2_256,
             (&CORE_CODE_ADDRESS, "Hash", "sha3_256") => HashSha3_256,
@@ -133,11 +126,11 @@ impl NativeFunction {
         t: Vec<Type>,
         v: VecDeque<Value>,
         c: &CostTable,
+        type_converter: &dyn TypeConverter,
     ) -> VMResult<NativeResult> {
         match self {
             Self::HashSha2_256 => hash::native_sha2_256(t, v, c),
             Self::HashSha3_256 => hash::native_sha3_256(t, v, c),
-            Self::LCSToBytes => lcs::native_to_bytes(t, v, c),
             Self::SigED25519Verify => signature::native_ed25519_signature_verification(t, v, c),
             Self::SigED25519ThresholdVerify => {
                 signature::native_ed25519_threshold_signature_verification(t, v, c)
@@ -155,7 +148,20 @@ impl NativeFunction {
             )),
             Self::AccountSaveAccount => Err(VMStatus::new(StatusCode::UNREACHABLE)
                 .with_message("save_account does not have a native implementation".to_string())),
-            Self::DebugPrint => debug::native_print(t, v, c),
+            Self::LCSToBytes => {
+                let mut fat_ty_args = vec![];
+                for ty in &t {
+                    fat_ty_args.push(type_converter.type_to_fat_type(ty)?);
+                }
+                lcs::native_to_bytes(fat_ty_args, v, c)
+            }
+            Self::DebugPrint => {
+                let mut fat_ty_args = vec![];
+                for ty in &t {
+                    fat_ty_args.push(type_converter.type_to_fat_type(ty)?);
+                }
+                debug::native_print(fat_ty_args, v, c)
+            }
             Self::DebugPrintStackTrace => Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
                 "print_stack_trace does not have a native implementation".to_string(),
             )),

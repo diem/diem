@@ -22,8 +22,7 @@ use vm::{gas_schedule::zero_cost_schedule, transaction_metadata::TransactionMeta
 pub fn bench(c: &mut Criterion, fun: &str) {
     let module = compile_module();
     let move_vm = MoveVM::new();
-    move_vm.cache_module(module);
-    execute(c, &move_vm, fun);
+    execute(c, &move_vm, module, fun);
 }
 
 // Compile `bench.move`
@@ -44,7 +43,7 @@ fn compile_module() -> VerifiedModule {
 }
 
 // execute a given function in the Bench module
-fn execute(c: &mut Criterion, move_vm: &MoveVM, fun: &str) {
+fn execute(c: &mut Criterion, move_vm: &MoveVM, module: VerifiedModule, fun: &str) {
     // establish running context
     let state = EmptyStateView;
     let gas_schedule = zero_cost_schedule();
@@ -52,6 +51,10 @@ fn execute(c: &mut Criterion, move_vm: &MoveVM, fun: &str) {
     let mut interpreter_context =
         TransactionExecutionContext::new(GasUnits::new(100_000_000), &data_cache);
     let metadata = TransactionMetadata::default();
+
+    move_vm
+        .cache_module(module, &mut interpreter_context)
+        .expect("Module must load");
 
     // module and function to call
     let module_id = ModuleId::new(AccountAddress::default(), Identifier::new("Bench").unwrap());

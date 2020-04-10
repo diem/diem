@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    loaded_data::types::Type,
+    loaded_data::types::FatType,
     native_functions::dispatch::{native_gas, NativeResult},
     values::{values_impl::Reference, Value},
 };
@@ -13,7 +13,7 @@ use vm::errors::VMResult;
 
 /// Rust implementation of Move's `native public fun to_bytes<T>(&T): vector<u8>`
 pub fn native_to_bytes(
-    mut ty_args: Vec<Type>,
+    mut ty_args: Vec<FatType>,
     mut args: VecDeque<Value>,
     cost_table: &CostTable,
 ) -> VMResult<NativeResult> {

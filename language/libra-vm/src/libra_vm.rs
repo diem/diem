@@ -10,7 +10,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_config,
     block_metadata::BlockMetadata,
-    language_storage::{ModuleId, TypeTag},
+    language_storage::TypeTag,
     move_resource::MoveResource,
     on_chain_config::{LibraVersion, OnChainConfig, VMConfig},
     transaction::{
@@ -30,10 +30,7 @@ use move_vm_state::{
     data_cache::{BlockDataCache, RemoteCache, RemoteStorage},
     execution_context::{ExecutionContext, SystemExecutionContext, TransactionExecutionContext},
 };
-use move_vm_types::{
-    chain_state::ChainState, identifier::create_access_path, loaded_data::types::Type,
-    values::Value,
-};
+use move_vm_types::{chain_state::ChainState, identifier::create_access_path, values::Value};
 use rayon::prelude::*;
 use std::{collections::HashSet, sync::Arc};
 use vm::{
@@ -211,31 +208,6 @@ impl LibraVM {
         Ok(())
     }
 
-    fn resolve_type_argument<S: ChainState>(&self, ctx: &mut S, tag: &TypeTag) -> VMResult<Type> {
-        Ok(match tag {
-            TypeTag::U8 => Type::U8,
-            TypeTag::U64 => Type::U64,
-            TypeTag::U128 => Type::U128,
-            TypeTag::Bool => Type::Bool,
-            TypeTag::Address => Type::Address,
-            TypeTag::Vector(tag) => Type::Vector(Box::new(self.resolve_type_argument(ctx, tag)?)),
-            TypeTag::Struct(struct_tag) => {
-                let module_id = ModuleId::new(struct_tag.address, struct_tag.module.clone());
-                let ty_args = struct_tag
-                    .type_params
-                    .iter()
-                    .map(|tag| self.resolve_type_argument(ctx, tag))
-                    .collect::<VMResult<Vec<_>>>()?;
-                Type::Struct(Box::new(self.move_vm.resolve_struct_def_by_name(
-                    &module_id,
-                    &struct_tag.name,
-                    ctx,
-                    &ty_args,
-                )?))
-            }
-        })
-    }
-
     fn verify_script(
         &self,
         remote_cache: &dyn RemoteCache,
@@ -253,14 +225,9 @@ impl LibraVM {
             return Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT));
         };
         self.run_prologue(&mut ctx, &txn_data, account_currency_symbol)?;
-        let ty_args = script
-            .ty_args()
-            .iter()
-            .map(|tag| self.resolve_type_argument(&mut ctx, tag))
-            .collect::<VMResult<Vec<_>>>()?;
         Ok(VerifiedTransactionPayload::Script(
             script.code().to_vec(),
-            ty_args,
+            script.ty_args().to_vec(),
             convert_txn_args(script.args()),
         ))
     }
@@ -621,15 +588,6 @@ impl LibraVM {
         ))
     }
 
-    fn resolve_gas_currency<T: ChainState>(
-        &self,
-        chain_state: &mut T,
-        gas_specifier: &IdentStr,
-    ) -> VMResult<Type> {
-        let gas_currency_tag = account_config::type_tag_for_currency_code(gas_specifier.to_owned());
-        self.resolve_type_argument(chain_state, &gas_currency_tag)
-    }
-
     /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
     fn run_prologue<T: ChainState>(
@@ -638,7 +596,8 @@ impl LibraVM {
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
     ) -> VMResult<()> {
-        let gas_currency_ty = self.resolve_gas_currency(chain_state, account_currency_symbol)?;
+        let gas_currency_ty =
+            account_config::type_tag_for_currency_code(account_currency_symbol.to_owned());
         let txn_sequence_number = txn_data.sequence_number();
         let txn_public_key = txn_data.authentication_key_preimage().to_vec();
         let txn_gas_price = txn_data.gas_unit_price().get();
@@ -674,7 +633,8 @@ impl LibraVM {
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
     ) -> VMResult<()> {
-        let gas_currency_ty = self.resolve_gas_currency(chain_state, account_currency_symbol)?;
+        let gas_currency_ty =
+            account_config::type_tag_for_currency_code(account_currency_symbol.to_owned());
         let txn_sequence_number = txn_data.sequence_number();
         let txn_gas_price = txn_data.gas_unit_price().get();
         let txn_max_gas_units = txn_data.max_gas_amount().get();
@@ -1008,7 +968,8 @@ fn normalize_gas_price(
             .map_err(|_| VMStatus::new(StatusCode::CURRENCY_INFO_DOES_NOT_EXIST))?;
         Ok(x.convert_to_lbr(gas_price))
     } else {
-        Err(VMStatus::new(StatusCode::MISSING_DATA))
+        Err(VMStatus::new(StatusCode::MISSING_DATA)
+            .with_message("Cannot find curency info in gas price normalization".to_string()))
     }
 }
 
@@ -1060,7 +1021,7 @@ pub fn chunk_block_transactions(txns: Vec<Transaction>) -> Vec<TransactionBlock>
 }
 
 enum VerifiedTransactionPayload {
-    Script(Vec<u8>, Vec<Type>, Vec<Value>),
+    Script(Vec<u8>, Vec<TypeTag>, Vec<Value>),
     Module(Vec<u8>),
 }
 

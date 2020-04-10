@@ -10,7 +10,9 @@ use libra_types::{
     write_set::WriteSet,
 };
 use move_core_types::gas_schedule::{GasAlgebra, GasCarrier, GasUnits};
-use move_vm_types::{chain_state::ChainState, loaded_data::types::StructType, values::GlobalValue};
+use move_vm_types::{
+    chain_state::ChainState, loaded_data::types::FatStructType, values::GlobalValue,
+};
 use vm::errors::VMResult;
 
 /// An `ExecutionContext` represents mutable state that is retained in-memory between invocations of
@@ -86,7 +88,7 @@ impl<'txn> ChainState for TransactionExecutionContext<'txn> {
     fn borrow_resource(
         &mut self,
         ap: &AccessPath,
-        ty: StructType,
+        ty: &FatStructType,
     ) -> VMResult<Option<&GlobalValue>> {
         let map_entry = self.data_view.load_data(ap, ty)?;
         Ok(map_entry.as_ref().map(|(_, g)| g))
@@ -95,7 +97,7 @@ impl<'txn> ChainState for TransactionExecutionContext<'txn> {
     fn move_resource_from(
         &mut self,
         ap: &AccessPath,
-        ty: StructType,
+        ty: &FatStructType,
     ) -> VMResult<Option<GlobalValue>> {
         let map_entry = self.data_view.load_data(ap, ty)?;
         // .take() means that the entry is removed from the data map -- this marks the
@@ -111,7 +113,11 @@ impl<'txn> ChainState for TransactionExecutionContext<'txn> {
         self.data_view.publish_module(module_id, module)
     }
 
-    fn publish_resource(&mut self, ap: &AccessPath, g: (StructType, GlobalValue)) -> VMResult<()> {
+    fn publish_resource(
+        &mut self,
+        ap: &AccessPath,
+        g: (FatStructType, GlobalValue),
+    ) -> VMResult<()> {
         self.data_view.publish_resource(ap, g)
     }
 
@@ -151,7 +157,11 @@ impl<'txn> ChainState for SystemExecutionContext<'txn> {
         Ok(())
     }
 
-    fn publish_resource(&mut self, ap: &AccessPath, g: (StructType, GlobalValue)) -> VMResult<()> {
+    fn publish_resource(
+        &mut self,
+        ap: &AccessPath,
+        g: (FatStructType, GlobalValue),
+    ) -> VMResult<()> {
         self.0.publish_resource(ap, g)
     }
 
@@ -162,7 +172,7 @@ impl<'txn> ChainState for SystemExecutionContext<'txn> {
     fn borrow_resource(
         &mut self,
         ap: &AccessPath,
-        ty: StructType,
+        ty: &FatStructType,
     ) -> VMResult<Option<&GlobalValue>> {
         self.0.borrow_resource(ap, ty)
     }
@@ -170,7 +180,7 @@ impl<'txn> ChainState for SystemExecutionContext<'txn> {
     fn move_resource_from(
         &mut self,
         ap: &AccessPath,
-        ty: StructType,
+        ty: &FatStructType,
     ) -> VMResult<Option<GlobalValue>> {
         self.0.move_resource_from(ap, ty)
     }

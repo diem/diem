@@ -11,19 +11,20 @@ use move_core_types::identifier::Identifier;
 use std::fmt::Write;
 use vm::errors::VMResult;
 
+use libra_types::access_path::{AccessPath, Accesses};
 #[cfg(feature = "fuzzing")]
 use serde::{Deserialize, Serialize};
 
 /// VM representation of a struct type in Move.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "fuzzing", derive(Serialize, Deserialize, Eq, PartialEq))]
-pub struct StructType {
+pub struct FatStructType {
     pub address: AccountAddress,
     pub module: Identifier,
     pub name: Identifier,
     pub is_resource: bool,
-    pub ty_args: Vec<Type>,
-    pub layout: Vec<Type>,
+    pub ty_args: Vec<FatType>,
+    pub layout: Vec<FatType>,
 }
 
 /// VM representation of a Move type that gives access to both the fully qualified
@@ -35,49 +36,56 @@ pub struct StructType {
 /// "fuzzing" feature flag. We should look into ways to get rid of this.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "fuzzing", derive(Serialize, Deserialize, Eq, PartialEq))]
-pub enum Type {
+pub enum FatType {
     Bool,
     U8,
     U64,
     U128,
     Address,
-    Vector(Box<Type>),
-    Struct(Box<StructType>),
-    Reference(Box<Type>),
-    MutableReference(Box<Type>),
+    Vector(Box<FatType>),
+    Struct(Box<FatStructType>),
+    Reference(Box<FatType>),
+    MutableReference(Box<FatType>),
     TyParam(usize),
 }
 
-impl StructType {
-    pub fn subst(self, ty_args: &[Type]) -> VMResult<StructType> {
+impl FatStructType {
+    pub fn resource_path(&self) -> VMResult<Vec<u8>> {
+        Ok(AccessPath::resource_access_vec(
+            &self.struct_tag()?,
+            &Accesses::empty(),
+        ))
+    }
+
+    pub fn subst(&self, ty_args: &[FatType]) -> VMResult<FatStructType> {
         Ok(Self {
             address: self.address,
-            module: self.module,
-            name: self.name,
+            module: self.module.clone(),
+            name: self.name.clone(),
             is_resource: self.is_resource,
             ty_args: self
                 .ty_args
-                .into_iter()
+                .iter()
                 .map(|ty| ty.subst(ty_args))
                 .collect::<VMResult<_>>()?,
             layout: self
                 .layout
-                .into_iter()
+                .iter()
                 .map(|ty| ty.subst(ty_args))
                 .collect::<VMResult<_>>()?,
         })
     }
 
-    pub fn into_struct_tag(self) -> VMResult<StructTag> {
+    pub fn struct_tag(&self) -> VMResult<StructTag> {
         let ty_args = self
             .ty_args
-            .into_iter()
-            .map(|ty| ty.into_type_tag())
+            .iter()
+            .map(|ty| ty.type_tag())
             .collect::<VMResult<Vec<_>>>()?;
         Ok(StructTag {
             address: self.address,
-            module: self.module,
-            name: self.name,
+            module: self.module.clone(),
+            name: self.name.clone(),
             type_params: ty_args,
         })
     }
@@ -98,17 +106,17 @@ impl StructType {
     }
 }
 
-impl Type {
-    pub fn subst(self, ty_args: &[Type]) -> VMResult<Type> {
-        use Type::*;
+impl FatType {
+    pub fn subst(&self, ty_args: &[FatType]) -> VMResult<FatType> {
+        use FatType::*;
 
         let res = match self {
-            TyParam(idx) => match ty_args.get(idx) {
+            TyParam(idx) => match ty_args.get(*idx) {
                 Some(ty) => ty.clone(),
                 None => {
                     return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                         .with_message(format!(
-                            "type substitution failed: index out of bounds -- len {} got {}",
+                            "fat type substitution failed: index out of bounds -- len {} got {}",
                             ty_args.len(),
                             idx
                         )));
@@ -130,8 +138,8 @@ impl Type {
         Ok(res)
     }
 
-    pub fn into_type_tag(self) -> VMResult<TypeTag> {
-        use Type::*;
+    pub fn type_tag(&self) -> VMResult<TypeTag> {
+        use FatType::*;
 
         let res = match self {
             Bool => TypeTag::Bool,
@@ -139,8 +147,8 @@ impl Type {
             U64 => TypeTag::U64,
             U128 => TypeTag::U128,
             Address => TypeTag::Address,
-            Vector(ty) => TypeTag::Vector(Box::new(ty.into_type_tag()?)),
-            Struct(struct_ty) => TypeTag::Struct(struct_ty.into_struct_tag()?),
+            Vector(ty) => TypeTag::Vector(Box::new(ty.type_tag()?)),
+            Struct(struct_ty) => TypeTag::Struct(struct_ty.struct_tag()?),
 
             ty @ Reference(_) | ty @ MutableReference(_) | ty @ TyParam(_) => {
                 return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
@@ -152,7 +160,7 @@ impl Type {
     }
 
     pub fn is_resource(&self) -> VMResult<bool> {
-        use Type::*;
+        use FatType::*;
 
         match self {
             Bool | U8 | U64 | U128 | Address | Reference(_) | MutableReference(_) => Ok(false),
@@ -169,7 +177,7 @@ impl Type {
     }
 
     pub fn debug_print<B: Write>(&self, buf: &mut B) -> VMResult<()> {
-        use Type::*;
+        use FatType::*;
 
         match self {
             Bool => debug_write!(buf, "bool"),
@@ -202,10 +210,10 @@ pub mod prop {
     use super::*;
     use proptest::{collection::vec, prelude::*};
 
-    impl Type {
+    impl FatType {
         /// Generate a random primitive Type, no Struct or Vector.
         pub fn single_value_strategy() -> impl Strategy<Value = Self> {
-            use Type::*;
+            use FatType::*;
 
             prop_oneof![Just(Bool), Just(U8), Just(U64), Just(U128), Just(Address),]
         }
@@ -216,14 +224,14 @@ pub mod prop {
             desired_size: u32,
             expected_branch_size: u32,
         ) -> impl Strategy<Value = Self> {
-            use Type::*;
+            use FatType::*;
 
             let leaf = Self::single_value_strategy();
             leaf.prop_recursive(depth, desired_size, expected_branch_size, |inner| {
                 prop_oneof![
                     inner
                         .clone()
-                        .prop_map(|layout| Type::Vector(Box::new(layout))),
+                        .prop_map(|layout| FatType::Vector(Box::new(layout))),
                     (
                         any::<AccountAddress>(),
                         any::<Identifier>(),
@@ -234,7 +242,7 @@ pub mod prop {
                     )
                         .prop_map(
                             |(address, module, name, is_resource, ty_args, layout)| Struct(
-                                Box::new(StructType {
+                                Box::new(FatStructType {
                                     address,
                                     module,
                                     name,
@@ -249,7 +257,7 @@ pub mod prop {
         }
     }
 
-    impl Arbitrary for Type {
+    impl Arbitrary for FatType {
         type Parameters = ();
         fn arbitrary_with(_args: ()) -> Self::Strategy {
             Self::nested_strategy(3, 20, 10).boxed()

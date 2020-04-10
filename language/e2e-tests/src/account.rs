@@ -24,7 +24,7 @@ use libra_types::{
 use move_core_types::identifier::{IdentStr, Identifier};
 use move_vm_types::{
     identifier::create_access_path,
-    loaded_data::types::{StructType, Type},
+    loaded_data::types::{FatStructType, FatType},
     values::{Struct, Value},
 };
 use std::time::Duration;
@@ -136,7 +136,7 @@ impl Account {
 
     // TODO: plug in the account type
     fn make_access_path(&self, tag: StructTag) -> AccessPath {
-        // TODO: we need a way to get the type (StructType) of the Account in place
+        // TODO: we need a way to get the type (FatStructType) of the Account in place
         create_access_path(self.addr, tag)
     }
 
@@ -392,14 +392,14 @@ impl Balance {
     }
 
     /// Returns the value layout for the account balance
-    pub fn type_() -> StructType {
-        StructType {
+    pub fn type_() -> FatStructType {
+        FatStructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: AccountResource::module_identifier(),
             name: BalanceResource::struct_identifier(),
             is_resource: true,
             ty_args: vec![],
-            layout: vec![Type::U64],
+            layout: vec![FatType::U64],
         }
     }
 }
@@ -433,14 +433,14 @@ impl AccountType {
         self.is_empty_account
     }
 
-    fn account_limit_type() -> StructType {
-        StructType {
+    fn account_limit_type() -> FatStructType {
+        FatStructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::account_limits_module_name().to_owned(),
             name: account_config::account_limits_window_struct_name().to_owned(),
             is_resource: false,
             ty_args: vec![],
-            layout: vec![Type::U64, Type::U64, Type::U64, Type::U64],
+            layout: vec![FatType::U64, FatType::U64, FatType::U64, FatType::U64],
         }
     }
 
@@ -463,8 +463,8 @@ impl AccountType {
         ]))
     }
 
-    pub fn type_(is_empty_account: bool) -> StructType {
-        StructType {
+    pub fn type_(is_empty_account: bool) -> FatStructType {
+        FatStructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::account_type_module_name().to_owned(),
             name: account_config::account_type_struct_name().to_owned(),
@@ -474,38 +474,38 @@ impl AccountType {
         }
     }
 
-    fn unhosted_account_type() -> StructType {
-        StructType {
+    fn unhosted_account_type() -> FatStructType {
+        FatStructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::unhosted_type_module_name().to_owned(),
             name: account_config::unhosted_type_struct_name().to_owned(),
             is_resource: false,
             ty_args: vec![],
-            layout: vec![Type::Struct(Box::new(Self::account_limit_type()))],
+            layout: vec![FatType::Struct(Box::new(Self::account_limit_type()))],
         }
     }
 
-    fn empty_account_type() -> StructType {
-        StructType {
+    fn empty_account_type() -> FatStructType {
+        FatStructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::empty_account_type_module_name().to_owned(),
             name: account_config::empty_account_type_struct_name().to_owned(),
             is_resource: false,
             ty_args: vec![],
-            layout: vec![Type::Bool],
+            layout: vec![FatType::Bool],
         }
     }
 
-    fn type_layout(is_empty_account: bool) -> Vec<Type> {
+    fn type_layout(is_empty_account: bool) -> Vec<FatType> {
         let inner_type = if is_empty_account {
             Self::empty_account_type()
         } else {
             Self::unhosted_account_type()
         };
         vec![
-            Type::Bool,
-            Type::Struct(Box::new(inner_type)),
-            Type::Address,
+            FatType::Bool,
+            FatType::Struct(Box::new(inner_type)),
+            FatType::Address,
         ]
     }
 }
@@ -538,14 +538,14 @@ impl EventHandleGenerator {
         ]))
     }
 
-    pub fn type_() -> StructType {
-        StructType {
+    pub fn type_() -> FatStructType {
+        FatStructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::event_module_name().to_owned(),
             name: account_config::event_handle_generator_struct_name().to_owned(),
             is_resource: true,
             ty_args: vec![],
-            layout: vec![Type::U64, Type::Address],
+            layout: vec![FatType::U64, FatType::Address],
         }
     }
 }
@@ -670,36 +670,44 @@ impl AccountData {
         self.account.rotate_key(privkey, pubkey)
     }
 
-    pub fn sent_payment_event_type() -> StructType {
-        StructType {
+    pub fn sent_payment_event_type() -> FatStructType {
+        FatStructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: AccountResource::module_identifier(),
             name: SentPaymentEvent::struct_identifier(),
             is_resource: false,
             ty_args: vec![],
-            layout: vec![Type::U64, Type::Address, Type::Vector(Box::new(Type::U8))],
+            layout: vec![
+                FatType::U64,
+                FatType::Address,
+                FatType::Vector(Box::new(FatType::U8)),
+            ],
         }
     }
 
-    pub fn received_payment_event_type() -> StructType {
-        StructType {
+    pub fn received_payment_event_type() -> FatStructType {
+        FatStructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: AccountResource::module_identifier(),
             name: ReceivedPaymentEvent::struct_identifier(),
             is_resource: false,
             ty_args: vec![],
-            layout: vec![Type::U64, Type::Address, Type::Vector(Box::new(Type::U8))],
+            layout: vec![
+                FatType::U64,
+                FatType::Address,
+                FatType::Vector(Box::new(FatType::U8)),
+            ],
         }
     }
 
-    pub fn event_handle_type(ty: Type) -> StructType {
-        StructType {
+    pub fn event_handle_type(ty: FatType) -> FatStructType {
+        FatStructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::event_module_name().to_owned(),
             name: account_config::event_handle_struct_name().to_owned(),
             is_resource: true,
             ty_args: vec![ty],
-            layout: vec![Type::U64, Type::Vector(Box::new(Type::U8))],
+            layout: vec![FatType::U64, FatType::Vector(Box::new(FatType::U8))],
         }
     }
 
@@ -708,26 +716,26 @@ impl AccountData {
     }
 
     /// Returns the (Move value) layout of the LibraAccount::T struct
-    pub fn type_() -> StructType {
-        StructType {
+    pub fn type_() -> FatStructType {
+        FatStructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: AccountResource::module_identifier(),
             name: AccountResource::struct_identifier(),
             is_resource: true,
             ty_args: vec![],
             layout: vec![
-                Type::Vector(Box::new(Type::U8)),
-                Type::Bool,
-                Type::Bool,
-                Type::Struct(Box::new(Self::event_handle_type(Type::Struct(Box::new(
-                    Self::sent_payment_event_type(),
-                ))))),
-                Type::Struct(Box::new(Self::event_handle_type(Type::Struct(Box::new(
-                    Self::received_payment_event_type(),
-                ))))),
-                Type::U64,
-                Type::Bool,
-                Type::Vector(Box::new(Type::U8)),
+                FatType::Vector(Box::new(FatType::U8)),
+                FatType::Bool,
+                FatType::Bool,
+                FatType::Struct(Box::new(Self::event_handle_type(FatType::Struct(
+                    Box::new(Self::sent_payment_event_type()),
+                )))),
+                FatType::Struct(Box::new(Self::event_handle_type(FatType::Struct(
+                    Box::new(Self::received_payment_event_type()),
+                )))),
+                FatType::U64,
+                FatType::Bool,
+                FatType::Vector(Box::new(FatType::U8)),
             ],
         }
     }
