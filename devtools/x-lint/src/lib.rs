@@ -54,6 +54,19 @@ impl<'l, 'a> LintFormatter<'l, 'a> {
         self.messages
             .push((self.source, LintMessage::new(level, message)));
     }
+
+    /// Writes a new lint message to this formatter with a custom kind.
+    pub fn write_kind(
+        &mut self,
+        kind: LintKind<'l>,
+        level: LintLevel,
+        message: impl Into<Cow<'static, str>>,
+    ) {
+        self.messages.push((
+            LintSource::new(self.source.name(), kind),
+            LintMessage::new(level, message),
+        ));
+    }
 }
 
 /// The run status of a lint.
