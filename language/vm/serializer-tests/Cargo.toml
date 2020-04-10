@@ -1,5 +1,5 @@
 [package]
-name = "serializer_tests"
+name = "serializer-tests"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 description = "Libra serializer tests"

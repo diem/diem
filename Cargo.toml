@@ -75,7 +75,7 @@ members = [
     "language/move-vm/types",
     "language/stdlib",
     "language/vm",
-    "language/vm/serializer_tests",
+    "language/vm/serializer-tests",
     "libra-node",
     "libra-swarm",
     "network",
