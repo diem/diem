@@ -47,7 +47,7 @@ impl<'cfg> ProjectLinter for BannedDirectDeps<'cfg> {
                 .expect("valid package ID");
             for link in dep_links {
                 if let Some(workspace_path) = link.from.workspace_path() {
-                    out.write(LintMessage::new(
+                    out.write(
                         LintLevel::Error,
                         format!(
                             "{} (at {}) has direct dependency '{}': {}",
@@ -56,7 +56,7 @@ impl<'cfg> ProjectLinter for BannedDirectDeps<'cfg> {
                             package.name(),
                             message
                         ),
-                    ));
+                    );
                 }
             }
         }
@@ -92,18 +92,18 @@ impl<'cfg> PackageLinter for EnforcedAttributes<'cfg> {
         let metadata = ctx.metadata();
         if let Some(authors) = &self.config.authors {
             if metadata.authors() != authors.as_slice() {
-                out.write(LintMessage::new(
+                out.write(
                     LintLevel::Error,
                     format!("invalid authors (expected {:?})", authors.join(", "),),
-                ));
+                );
             }
         }
         if let Some(license) = &self.config.license {
             if metadata.license() != Some(license.as_str()) {
-                out.write(LintMessage::new(
+                out.write(
                     LintLevel::Error,
                     format!("invalid license (expected {})", license),
-                ))
+                )
             }
         }
 

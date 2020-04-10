@@ -50,8 +50,9 @@ impl<'l, 'a> LintFormatter<'l, 'a> {
     }
 
     /// Writes a new lint message to this formatter.
-    pub fn write(&mut self, message: LintMessage) {
-        self.messages.push((self.source, message));
+    pub fn write(&mut self, level: LintLevel, message: impl Into<Cow<'static, str>>) {
+        self.messages
+            .push((self.source, LintMessage::new(level, message)));
     }
 }
 
