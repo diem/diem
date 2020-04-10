@@ -23,9 +23,11 @@ use getrandom::getrandom;
 use language_e2e_tests::executor::FakeExecutor;
 use libra_logger::{debug, error, info};
 use libra_state_view::StateView;
-use libra_types::{account_address::AccountAddress, vm_error::StatusCode};
+use libra_types::{
+    account_address::AccountAddress, language_storage::TypeTag, vm_error::StatusCode,
+};
 use libra_vm::LibraVM;
-use move_vm_types::{loaded_data::types::Type, values::Value};
+use move_vm_types::values::Value;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{fs, io::Write, panic, thread};
 use utils::module_generation::generate_module;
@@ -87,7 +89,7 @@ fn execute_function_in_module(
     state_view: &dyn StateView,
     module: VerifiedModule,
     idx: FunctionDefinitionIndex,
-    ty_args: Vec<Type>,
+    ty_args: Vec<TypeTag>,
     args: Vec<Value>,
 ) -> VMResult<()> {
     let module_id = module.as_inner().self_id();
@@ -102,11 +104,11 @@ fn execute_function_in_module(
 
         let internals = libra_vm.internals();
         let move_vm = internals.move_vm();
-        move_vm.cache_module(module.clone());
 
         let gas_schedule = internals.gas_schedule()?;
         let txn_data = TransactionMetadata::default();
         internals.with_txn_context(&txn_data, state_view, |mut txn_context| {
+            move_vm.cache_module(module.clone(), &mut txn_context)?;
             move_vm.execute_function(
                 &module_id,
                 &entry_name,

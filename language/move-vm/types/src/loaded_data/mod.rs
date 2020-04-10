@@ -4,6 +4,7 @@
 //!
 //! This module contains the loaded definition of code data used in runtime.
 
+pub mod runtime_types;
 pub mod types;
 
 #[cfg(all(test, feature = "fuzzing"))]

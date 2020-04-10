@@ -415,6 +415,7 @@ pub enum StatusCode {
     UNREACHABLE = 2011,
     VM_STARTUP_FAILURE = 2012,
     NATIVE_FUNCTION_INTERNAL_INCONSISTENCY = 2013,
+    INVALID_CODE_CACHE = 2014,
 
     // Errors that can arise from binary decoding (deserialization)
     // Deserializtion Errors: 3000-3999

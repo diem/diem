@@ -21,7 +21,7 @@ use libra_types::{
     account_config,
     contract_event::ContractEvent,
     discovery_set::DiscoverySet,
-    language_storage::ModuleId,
+    language_storage::{ModuleId, StructTag, TypeTag},
     on_chain_config::{new_epoch_event_key, VMPublishingOption, ValidatorSet},
     transaction::{authenticator::AuthenticationKey, ChangeSet, Transaction},
 };
@@ -35,9 +35,10 @@ use move_vm_state::{
     data_cache::BlockDataCache,
     execution_context::{ExecutionContext, TransactionExecutionContext},
 };
-use move_vm_types::{chain_state::ChainState, loaded_data::types::Type, values::Value};
+use move_vm_types::{chain_state::ChainState, values::Value};
 use once_cell::sync::Lazy;
 use rand::prelude::*;
+use std::collections::HashMap;
 use stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use vm::{
     access::ModuleAccess, gas_schedule::zero_cost_schedule,
@@ -145,8 +146,12 @@ pub fn encode_genesis_change_set(
     let move_vm = MoveVM::new();
 
     // create a data view for move_vm
-    let state_view = GenesisStateView;
+    let mut state_view = GenesisStateView::new();
     let gas_schedule = zero_cost_schedule();
+    for module in stdlib_modules {
+        let module_id = module.self_id();
+        state_view.add_module(&module_id, &module);
+    }
     let data_cache = BlockDataCache::new(&state_view);
 
     // create an execution context for the move_vm.
@@ -159,19 +164,17 @@ pub fn encode_genesis_change_set(
     // code to create those. However, code lives under an account but we have none.
     // So we are pushing code into the VM blindly in order to create the main accounts.
     for module in stdlib_modules {
-        move_vm.cache_module(module.clone());
+        move_vm
+            .cache_module(module.clone(), &mut interpreter_context)
+            .expect("Failure loading stdlib");
     }
 
-    let lbr_ty = Type::Struct(Box::new(
-        move_vm
-            .resolve_struct_def_by_name(
-                &account_config::LBR_MODULE,
-                &account_config::LBR_STRUCT_NAME,
-                &mut interpreter_context,
-                &[],
-            )
-            .expect("Failure looking up LBR type"),
-    ));
+    let lbr_ty = TypeTag::Struct(StructTag {
+        address: *account_config::LBR_MODULE.address(),
+        module: account_config::LBR_MODULE.name().to_owned(),
+        name: account_config::LBR_STRUCT_NAME.to_owned(),
+        type_params: vec![],
+    });
 
     // generate the genesis WriteSet
     create_and_initialize_main_accounts(
@@ -234,7 +237,7 @@ fn create_and_initialize_main_accounts(
     gas_schedule: &CostTable,
     interpreter_context: &mut TransactionExecutionContext,
     public_key: &Ed25519PublicKey,
-    lbr_ty: &Type,
+    lbr_ty: &TypeTag,
 ) {
     let association_addr = account_config::association_address();
     let mut txn_data = TransactionMetadata::default();
@@ -254,16 +257,12 @@ fn create_and_initialize_main_accounts(
             )
             .expect("Unable to register root association account in genesis");
 
-        let add_currency_priv_ty = Type::Struct(Box::new(
-            move_vm
-                .resolve_struct_def_by_name(
-                    &module("Libra"),
-                    &name("AddCurrency"),
-                    interpreter_context,
-                    &[],
-                )
-                .expect("Failure looking up Libra currency privilege type"),
-        ));
+        let add_currency_priv_ty = TypeTag::Struct(StructTag {
+            address: account_config::CORE_CODE_ADDRESS,
+            module: name("Libra"),
+            name: name("AddCurrency"),
+            type_params: vec![],
+        });
 
         move_vm
             .execute_function(
@@ -323,21 +322,18 @@ fn create_and_initialize_main_accounts(
 
     {
         // Account type initialization
-        let unhosted_type = Type::Struct(Box::new(
-            move_vm
-                .resolve_struct_def_by_name(
-                    &module("Unhosted"),
-                    &name("T"),
-                    interpreter_context,
-                    &[],
-                )
-                .expect("Failure initializing unhosted account type"),
-        ));
-        let empty_type = Type::Struct(Box::new(
-            move_vm
-                .resolve_struct_def_by_name(&module("Empty"), &name("T"), interpreter_context, &[])
-                .expect("Failure initializing empty account type"),
-        ));
+        let unhosted_type = TypeTag::Struct(StructTag {
+            address: account_config::CORE_CODE_ADDRESS,
+            module: name("Unhosted"),
+            name: name("T"),
+            type_params: vec![],
+        });
+        let empty_type = TypeTag::Struct(StructTag {
+            address: account_config::CORE_CODE_ADDRESS,
+            module: name("Empty"),
+            name: name("T"),
+            type_params: vec![],
+        });
 
         let account_types = vec![unhosted_type, empty_type];
         for account_type in account_types.into_iter() {
@@ -530,6 +526,12 @@ fn create_and_initialize_main_accounts(
     // subsequent transaction (e.g., minting) is sent from the Assocation account, a problem
     // arises: both the genesis transaction and the subsequent transaction have sequence
     // number 0
+    let lbr_ty = TypeTag::Struct(StructTag {
+        address: *account_config::LBR_MODULE.address(),
+        module: account_config::LBR_MODULE.name().to_owned(),
+        name: account_config::LBR_STRUCT_NAME.to_owned(),
+        type_params: vec![],
+    });
     move_vm
         .execute_function(
             &account_config::ACCOUNT_MODULE,
@@ -537,7 +539,7 @@ fn create_and_initialize_main_accounts(
             &gas_schedule,
             interpreter_context,
             &txn_data,
-            vec![lbr_ty.clone()],
+            vec![lbr_ty],
             vec![
                 Value::u64(/* txn_sequence_number */ 0),
                 Value::u64(/* txn_gas_price */ 0),
@@ -569,7 +571,7 @@ fn create_and_initialize_validator_and_discovery_set(
     nodes: &[NodeConfig],
     validator_set: &ValidatorSet,
     discovery_set: &DiscoverySet,
-    lbr_ty: &Type,
+    lbr_ty: &TypeTag,
 ) {
     create_and_initialize_validator_set(move_vm, gas_schedule, interpreter_context, lbr_ty);
     create_and_initialize_discovery_set(move_vm, gas_schedule, interpreter_context, lbr_ty);
@@ -589,7 +591,7 @@ fn create_and_initialize_validator_set(
     move_vm: &MoveVM,
     gas_schedule: &CostTable,
     interpreter_context: &mut TransactionExecutionContext,
-    lbr_ty: &Type,
+    lbr_ty: &TypeTag,
 ) {
     let mut txn_data = TransactionMetadata::default();
     let validator_set_address = account_config::validator_set_address();
@@ -633,7 +635,7 @@ fn create_and_initialize_discovery_set(
     move_vm: &MoveVM,
     gas_schedule: &CostTable,
     interpreter_context: &mut TransactionExecutionContext,
-    lbr_ty: &Type,
+    lbr_ty: &TypeTag,
 ) {
     let mut txn_data = TransactionMetadata::default();
     let discovery_set_address = account_config::discovery_set_address();
@@ -705,7 +707,7 @@ fn initialize_validators(
     nodes: &[NodeConfig],
     validator_set: &ValidatorSet,
     discovery_set: &DiscoverySet,
-    lbr_ty: &Type,
+    lbr_ty: &TypeTag,
 ) {
     let mut txn_data = TransactionMetadata::default();
     txn_data.sender = account_config::association_address();
@@ -964,11 +966,30 @@ pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) ->
 }
 
 // `StateView` has no data given we are creating the genesis
-struct GenesisStateView;
+struct GenesisStateView {
+    data: HashMap<AccessPath, Vec<u8>>,
+}
+
+impl GenesisStateView {
+    fn new() -> Self {
+        Self {
+            data: HashMap::new(),
+        }
+    }
+
+    fn add_module(&mut self, module_id: &ModuleId, module: &VerifiedModule) {
+        let access_path = AccessPath::from(module_id);
+        let mut blob = vec![];
+        module
+            .serialize(&mut blob)
+            .expect("serializing stdlib must work");
+        self.data.insert(access_path, blob);
+    }
+}
 
 impl StateView for GenesisStateView {
-    fn get(&self, _access_path: &AccessPath) -> Result<Option<Vec<u8>>> {
-        Ok(None)
+    fn get(&self, access_path: &AccessPath) -> Result<Option<Vec<u8>>> {
+        Ok(self.data.get(access_path).cloned())
     }
 
     fn multi_get(&self, _access_paths: &[AccessPath]) -> Result<Vec<Option<Vec<u8>>>> {

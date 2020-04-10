@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    loaded_data::types::Type,
+    loaded_data::runtime_types::Type,
     native_functions::dispatch::{native_gas, NativeResult},
     values::Value,
 };

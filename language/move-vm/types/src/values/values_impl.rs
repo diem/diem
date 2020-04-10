@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    loaded_data::types::{StructType, Type},
+    loaded_data::types::{FatStructType, FatType},
     native_functions::dispatch::{native_gas, NativeResult},
 };
 use libra_types::{
@@ -1375,6 +1375,7 @@ macro_rules! ensure_len {
 
 pub mod vector {
     use super::*;
+    use crate::loaded_data::runtime_types::Type;
 
     pub const INDEX_OUT_OF_BOUNDS: u64 = NFE_VECTOR_ERROR_BASE + 1;
     pub const POP_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 2;
@@ -1395,6 +1396,7 @@ pub mod vector {
             | (Type::Address, Container::General(_))
             | (Type::Vector(_), Container::General(_))
             | (Type::Struct(_), Container::General(_)) => Ok(()),
+            (Type::StructInstantiation(_, _), Container::General(_)) => Ok(()),
 
             (Type::Reference(_), _) | (Type::MutableReference(_), _) | (Type::TyParam(_), _) => {
                 Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
@@ -1407,7 +1409,8 @@ pub mod vector {
             | (Type::Bool, _)
             | (Type::Address, _)
             | (Type::Vector(_), _)
-            | (Type::Struct(_), _) => Err(VMStatus::new(
+            | (Type::Struct(_), _)
+            | (Type::StructInstantiation(_, _), _) => Err(VMStatus::new(
                 StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
             )
             .with_message(format!(
@@ -1432,7 +1435,9 @@ pub mod vector {
             Type::U128 => Container::U128(vec![]),
             Type::Bool => Container::Bool(vec![]),
 
-            Type::Address | Type::Vector(_) | Type::Struct(_) => Container::General(vec![]),
+            Type::Address | Type::Vector(_) | Type::Struct(_) | Type::StructInstantiation(_, _) => {
+                Container::General(vec![])
+            }
 
             Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
                 return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
@@ -1921,36 +1926,36 @@ pub mod debug {
     use move_core_types::gas_schedule::ZERO_GAS_UNITS;
     use std::fmt::Write;
 
-    fn print_value_impl<B: Write>(buf: &mut B, ty: &Type, val: &ValueImpl) -> VMResult<()> {
+    fn print_value_impl<B: Write>(buf: &mut B, ty: &FatType, val: &ValueImpl) -> VMResult<()> {
         match (ty, val) {
-            (Type::U8, ValueImpl::U8(x)) => debug_write!(buf, "{}u8", x),
-            (Type::U64, ValueImpl::U64(x)) => debug_write!(buf, "{}u64", x),
-            (Type::U128, ValueImpl::U128(x)) => debug_write!(buf, "{}u128", x),
-            (Type::Bool, ValueImpl::Bool(x)) => debug_write!(buf, "{}", x),
-            (Type::Address, ValueImpl::Address(x)) => debug_write!(buf, "{}", x),
+            (FatType::U8, ValueImpl::U8(x)) => debug_write!(buf, "{}u8", x),
+            (FatType::U64, ValueImpl::U64(x)) => debug_write!(buf, "{}u64", x),
+            (FatType::U128, ValueImpl::U128(x)) => debug_write!(buf, "{}u128", x),
+            (FatType::Bool, ValueImpl::Bool(x)) => debug_write!(buf, "{}", x),
+            (FatType::Address, ValueImpl::Address(x)) => debug_write!(buf, "{}", x),
 
-            (Type::Vector(elem_ty), ValueImpl::Container(r)) => {
+            (FatType::Vector(elem_ty), ValueImpl::Container(r)) => {
                 print_vector(buf, elem_ty, &*r.borrow())
             }
 
-            (Type::Struct(struct_ty), ValueImpl::Container(r)) => {
+            (FatType::Struct(struct_ty), ValueImpl::Container(r)) => {
                 print_struct(buf, struct_ty, &*r.borrow())
             }
 
-            (Type::MutableReference(val_ty), ValueImpl::ContainerRef(r)) => {
+            (FatType::MutableReference(val_ty), ValueImpl::ContainerRef(r)) => {
                 debug_write!(buf, "(&mut) ")?;
                 print_container_ref(buf, val_ty, r)
             }
-            (Type::Reference(val_ty), ValueImpl::ContainerRef(r)) => {
+            (FatType::Reference(val_ty), ValueImpl::ContainerRef(r)) => {
                 debug_write!(buf, "(&) ")?;
                 print_container_ref(buf, val_ty, r)
             }
 
-            (Type::MutableReference(val_ty), ValueImpl::IndexedRef(r)) => {
+            (FatType::MutableReference(val_ty), ValueImpl::IndexedRef(r)) => {
                 debug_write!(buf, "(&mut) ")?;
                 print_indexed_ref(buf, val_ty, r)
             }
-            (Type::Reference(val_ty), ValueImpl::IndexedRef(r)) => {
+            (FatType::Reference(val_ty), ValueImpl::IndexedRef(r)) => {
                 debug_write!(buf, "(&) ")?;
                 print_indexed_ref(buf, val_ty, r)
             }
@@ -1962,7 +1967,7 @@ pub mod debug {
         }
     }
 
-    fn print_vector<B: Write>(buf: &mut B, elem_ty: &Type, v: &Container) -> VMResult<()> {
+    fn print_vector<B: Write>(buf: &mut B, elem_ty: &FatType, v: &Container) -> VMResult<()> {
         macro_rules! print_vector {
             ($v: expr, $suffix: expr) => {{
                 let suffix = &$suffix;
@@ -1979,12 +1984,13 @@ pub mod debug {
         }
 
         match (elem_ty, v) {
-            (Type::U8, Container::U8(v)) => print_vector!(v, "u8"),
-            (Type::U64, Container::U64(v)) => print_vector!(v, "u64"),
-            (Type::U128, Container::U128(v)) => print_vector!(v, "u128"),
-            (Type::Bool, Container::Bool(v)) => print_vector!(v, ""),
+            (FatType::U8, Container::U8(v)) => print_vector!(v, "u8"),
+            (FatType::U64, Container::U64(v)) => print_vector!(v, "u64"),
+            (FatType::U128, Container::U128(v)) => print_vector!(v, "u128"),
+            (FatType::Bool, Container::Bool(v)) => print_vector!(v, ""),
 
-            (Type::Address, Container::General(v)) | (Type::Struct(_), Container::General(v)) => {
+            (FatType::Address, Container::General(v))
+            | (FatType::Struct(_), Container::General(v)) => {
                 debug_write!(buf, "[")?;
                 let mut it = v.iter();
                 if let Some(x) = it.next() {
@@ -2006,7 +2012,11 @@ pub mod debug {
         }
     }
 
-    fn print_struct<B: Write>(buf: &mut B, struct_ty: &StructType, s: &Container) -> VMResult<()> {
+    fn print_struct<B: Write>(
+        buf: &mut B,
+        struct_ty: &FatStructType,
+        s: &Container,
+    ) -> VMResult<()> {
         let v = match s {
             Container::General(v) => v,
             _ => {
@@ -2038,10 +2048,14 @@ pub mod debug {
         debug_write!(buf, " }}")
     }
 
-    fn print_container_ref<B: Write>(buf: &mut B, val_ty: &Type, r: &ContainerRef) -> VMResult<()> {
+    fn print_container_ref<B: Write>(
+        buf: &mut B,
+        val_ty: &FatType,
+        r: &ContainerRef,
+    ) -> VMResult<()> {
         match val_ty {
-            Type::Vector(elem_ty) => print_vector(buf, elem_ty, &*r.borrow()),
-            Type::Struct(struct_ty) => print_struct(buf, struct_ty, &*r.borrow()),
+            FatType::Vector(elem_ty) => print_vector(buf, elem_ty, &*r.borrow()),
+            FatType::Struct(struct_ty) => print_struct(buf, struct_ty, &*r.borrow()),
             _ => Err(
                 VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
                     "cannot print container {:?} as type {:?}",
@@ -2052,7 +2066,7 @@ pub mod debug {
         }
     }
 
-    fn print_indexed_ref<B: Write>(buf: &mut B, val_ty: &Type, r: &IndexedRef) -> VMResult<()> {
+    fn print_indexed_ref<B: Write>(buf: &mut B, val_ty: &FatType, r: &IndexedRef) -> VMResult<()> {
         macro_rules! print_vector_elem {
             ($v: expr, $idx: expr, $suffix: expr) => {
                 match $v.get($idx) {
@@ -2065,16 +2079,16 @@ pub mod debug {
 
         let idx = r.idx;
         match (val_ty, &*r.container_ref.borrow()) {
-            (Type::U8, Container::U8(v)) => print_vector_elem!(v, idx, "u8"),
-            (Type::U64, Container::U64(v)) => print_vector_elem!(v, idx, "u64"),
-            (Type::U128, Container::U128(v)) => print_vector_elem!(v, idx, "u128"),
-            (Type::Bool, Container::Bool(v)) => print_vector_elem!(v, idx, ""),
+            (FatType::U8, Container::U8(v)) => print_vector_elem!(v, idx, "u8"),
+            (FatType::U64, Container::U64(v)) => print_vector_elem!(v, idx, "u64"),
+            (FatType::U128, Container::U128(v)) => print_vector_elem!(v, idx, "u128"),
+            (FatType::Bool, Container::Bool(v)) => print_vector_elem!(v, idx, ""),
 
-            (Type::U8, Container::General(v))
-            | (Type::U64, Container::General(v))
-            | (Type::U128, Container::General(v))
-            | (Type::Bool, Container::General(v))
-            | (Type::Address, Container::General(v)) => match v.get(idx) {
+            (FatType::U8, Container::General(v))
+            | (FatType::U64, Container::General(v))
+            | (FatType::U128, Container::General(v))
+            | (FatType::Bool, Container::General(v))
+            | (FatType::Address, Container::General(v)) => match v.get(idx) {
                 Some(val) => print_value_impl(buf, val_ty, val),
                 None => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                     .with_message("ref index out of bounds".to_string())),
@@ -2089,14 +2103,14 @@ pub mod debug {
         }
     }
 
-    fn print_reference<B: Write>(buf: &mut B, val_ty: &Type, r: &Reference) -> VMResult<()> {
+    fn print_reference<B: Write>(buf: &mut B, val_ty: &FatType, r: &Reference) -> VMResult<()> {
         match &r.0 {
             ReferenceImpl::ContainerRef(r) => print_container_ref(buf, val_ty, r),
             ReferenceImpl::IndexedRef(r) => print_indexed_ref(buf, val_ty, r),
         }
     }
 
-    pub fn print_locals<B: Write>(buf: &mut B, tys: &[Type], locals: &Locals) -> VMResult<()> {
+    pub fn print_locals<B: Write>(buf: &mut B, tys: &[FatType], locals: &Locals) -> VMResult<()> {
         match &*locals.0.borrow() {
             Container::General(v) => {
                 // TODO: The number of spaces in the indent is currently hard coded.
@@ -2118,7 +2132,7 @@ pub mod debug {
 
     #[allow(unused_mut)]
     pub fn native_print(
-        mut ty_args: Vec<Type>,
+        mut ty_args: Vec<FatType>,
         mut args: VecDeque<Value>,
         _cost_table: &CostTable,
     ) -> VMResult<NativeResult> {
@@ -2166,23 +2180,23 @@ use serde::{
 };
 
 impl Value {
-    pub fn simple_deserialize(blob: &[u8], ty: Type) -> VMResult<Value> {
-        lcs::from_bytes_seed(&ty, blob)
+    pub fn simple_deserialize(blob: &[u8], ty: &FatType) -> VMResult<Value> {
+        lcs::from_bytes_seed(ty, blob)
             .map_err(|e| VMStatus::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
     }
 
-    pub fn simple_serialize(&self, ty: &Type) -> Option<Vec<u8>> {
+    pub fn simple_serialize(&self, ty: &FatType) -> Option<Vec<u8>> {
         lcs::to_bytes(&AnnotatedValue { ty, val: &self.0 }).ok()
     }
 }
 
 impl Struct {
-    pub fn simple_deserialize(blob: &[u8], ty: StructType) -> VMResult<Struct> {
-        lcs::from_bytes_seed(&ty, blob)
+    pub fn simple_deserialize(blob: &[u8], ty: &FatStructType) -> VMResult<Struct> {
+        lcs::from_bytes_seed(ty, blob)
             .map_err(|e| VMStatus::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
     }
 
-    pub fn simple_serialize(&self, ty: &StructType) -> Option<Vec<u8>> {
+    pub fn simple_serialize(&self, ty: &FatStructType) -> Option<Vec<u8>> {
         lcs::to_bytes(&AnnotatedValue { ty, val: &self.0 }).ok()
     }
 }
@@ -2198,16 +2212,16 @@ fn invariant_violation<S: serde::Serializer>(message: String) -> S::Error {
     )
 }
 
-impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, Type, ValueImpl> {
+impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, FatType, ValueImpl> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match (self.ty, self.val) {
-            (Type::U8, ValueImpl::U8(x)) => serializer.serialize_u8(*x),
-            (Type::U64, ValueImpl::U64(x)) => serializer.serialize_u64(*x),
-            (Type::U128, ValueImpl::U128(x)) => serializer.serialize_u128(*x),
-            (Type::Bool, ValueImpl::Bool(x)) => serializer.serialize_bool(*x),
-            (Type::Address, ValueImpl::Address(x)) => x.serialize(serializer),
+            (FatType::U8, ValueImpl::U8(x)) => serializer.serialize_u8(*x),
+            (FatType::U64, ValueImpl::U64(x)) => serializer.serialize_u64(*x),
+            (FatType::U128, ValueImpl::U128(x)) => serializer.serialize_u128(*x),
+            (FatType::Bool, ValueImpl::Bool(x)) => serializer.serialize_bool(*x),
+            (FatType::Address, ValueImpl::Address(x)) => x.serialize(serializer),
 
-            (Type::Struct(ty), ValueImpl::Container(r)) => {
+            (FatType::Struct(ty), ValueImpl::Container(r)) => {
                 let r = r.borrow();
                 (AnnotatedValue {
                     ty: &**ty,
@@ -2216,13 +2230,13 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, Type, ValueImpl> {
                 .serialize(serializer)
             }
 
-            (Type::Vector(ty), ValueImpl::Container(r)) => {
+            (FatType::Vector(ty), ValueImpl::Container(r)) => {
                 let ty = &**ty;
                 match (ty, &*r.borrow()) {
-                    (Type::U8, Container::U8(v)) => v.serialize(serializer),
-                    (Type::U64, Container::U64(v)) => v.serialize(serializer),
-                    (Type::U128, Container::U128(v)) => v.serialize(serializer),
-                    (Type::Bool, Container::Bool(v)) => v.serialize(serializer),
+                    (FatType::U8, Container::U8(v)) => v.serialize(serializer),
+                    (FatType::U64, Container::U64(v)) => v.serialize(serializer),
+                    (FatType::U128, Container::U128(v)) => v.serialize(serializer),
+                    (FatType::Bool, Container::Bool(v)) => v.serialize(serializer),
 
                     (_, Container::General(v)) => {
                         let mut t = serializer.serialize_seq(Some(v.len()))?;
@@ -2247,7 +2261,7 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, Type, ValueImpl> {
     }
 }
 
-impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, StructType, Container> {
+impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, FatStructType, Container> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let values = match &self.val {
             Container::General(v) => v,
@@ -2273,7 +2287,7 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, StructType, Container> 
     }
 }
 
-impl<'d> serde::de::DeserializeSeed<'d> for &Type {
+impl<'d> serde::de::DeserializeSeed<'d> for &FatType {
     type Value = Value;
 
     fn deserialize<D: serde::de::Deserializer<'d>>(
@@ -2281,20 +2295,20 @@ impl<'d> serde::de::DeserializeSeed<'d> for &Type {
         deserializer: D,
     ) -> Result<Self::Value, D::Error> {
         match self {
-            Type::Bool => bool::deserialize(deserializer).map(Value::bool),
-            Type::U8 => u8::deserialize(deserializer).map(Value::u8),
-            Type::U64 => u64::deserialize(deserializer).map(Value::u64),
-            Type::U128 => u128::deserialize(deserializer).map(Value::u128),
-            Type::Address => AccountAddress::deserialize(deserializer).map(Value::address),
+            FatType::Bool => bool::deserialize(deserializer).map(Value::bool),
+            FatType::U8 => u8::deserialize(deserializer).map(Value::u8),
+            FatType::U64 => u64::deserialize(deserializer).map(Value::u64),
+            FatType::U128 => u128::deserialize(deserializer).map(Value::u128),
+            FatType::Address => AccountAddress::deserialize(deserializer).map(Value::address),
 
-            Type::Struct(ty) => Ok(Value::struct_(ty.deserialize(deserializer)?)),
+            FatType::Struct(ty) => Ok(Value::struct_(ty.deserialize(deserializer)?)),
 
-            Type::Vector(layout) => {
+            FatType::Vector(layout) => {
                 let container = match &**layout {
-                    Type::U8 => Container::U8(Vec::deserialize(deserializer)?),
-                    Type::U64 => Container::U64(Vec::deserialize(deserializer)?),
-                    Type::U128 => Container::U128(Vec::deserialize(deserializer)?),
-                    Type::Bool => Container::Bool(Vec::deserialize(deserializer)?),
+                    FatType::U8 => Container::U8(Vec::deserialize(deserializer)?),
+                    FatType::U64 => Container::U64(Vec::deserialize(deserializer)?),
+                    FatType::U128 => Container::U128(Vec::deserialize(deserializer)?),
+                    FatType::Bool => Container::Bool(Vec::deserialize(deserializer)?),
                     layout => Container::General(
                         deserializer.deserialize_seq(VectorElementVisitor(layout))?,
                     ),
@@ -2304,7 +2318,7 @@ impl<'d> serde::de::DeserializeSeed<'d> for &Type {
                 )))))
             }
 
-            Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
+            FatType::Reference(_) | FatType::MutableReference(_) | FatType::TyParam(_) => {
                 Err(D::Error::custom(
                     VMStatus::new(StatusCode::INVALID_DATA)
                         .with_message(format!("Value type {:?} is not possible", self)),
@@ -2314,7 +2328,7 @@ impl<'d> serde::de::DeserializeSeed<'d> for &Type {
     }
 }
 
-impl<'d> serde::de::DeserializeSeed<'d> for &StructType {
+impl<'d> serde::de::DeserializeSeed<'d> for &FatStructType {
     type Value = Struct;
 
     fn deserialize<D: serde::de::Deserializer<'d>>(
@@ -2327,7 +2341,7 @@ impl<'d> serde::de::DeserializeSeed<'d> for &StructType {
     }
 }
 
-struct VectorElementVisitor<'a>(&'a Type);
+struct VectorElementVisitor<'a>(&'a FatType);
 
 impl<'d, 'a> serde::de::Visitor<'d> for VectorElementVisitor<'a> {
     type Value = Vec<ValueImpl>;
@@ -2348,7 +2362,7 @@ impl<'d, 'a> serde::de::Visitor<'d> for VectorElementVisitor<'a> {
     }
 }
 
-struct StructFieldVisitor<'a>(&'a [Type]);
+struct StructFieldVisitor<'a>(&'a [FatType]);
 
 impl<'d, 'a> serde::de::Visitor<'d> for StructFieldVisitor<'a> {
     type Value = Vec<Value>;
@@ -2382,9 +2396,9 @@ impl<'d, 'a> serde::de::Visitor<'d> for StructFieldVisitor<'a> {
 **************************************************************************************/
 
 impl Value {
-    fn constant_sig_token_to_type(constant_signature: &SignatureToken) -> Option<Type> {
+    fn constant_sig_token_to_type(constant_signature: &SignatureToken) -> Option<FatType> {
+        use FatType as T;
         use SignatureToken as S;
-        use Type as T;
         Some(match constant_signature {
             S::Bool => T::Bool,
             S::U8 => T::U8,
@@ -2401,7 +2415,7 @@ impl Value {
 
     pub fn deserialize_constant(constant: &Constant) -> Option<Value> {
         let ty = Self::constant_sig_token_to_type(&constant.type_)?;
-        Value::simple_deserialize(&constant.data, ty).ok()
+        Value::simple_deserialize(&constant.data, &ty).ok()
     }
 
     pub fn serialize_constant(type_: SignatureToken, value: Value) -> Option<Constant> {
@@ -2423,25 +2437,25 @@ pub mod prop {
     use super::*;
     use proptest::{collection::vec, prelude::*};
 
-    pub fn value_strategy_with_layout(layout: &Type) -> impl Strategy<Value = Value> {
+    pub fn value_strategy_with_layout(layout: &FatType) -> impl Strategy<Value = Value> {
         match layout {
-            Type::U8 => any::<u8>().prop_map(Value::u8).boxed(),
-            Type::U64 => any::<u64>().prop_map(Value::u64).boxed(),
-            Type::U128 => any::<u128>().prop_map(Value::u128).boxed(),
-            Type::Bool => any::<bool>().prop_map(Value::bool).boxed(),
-            Type::Address => any::<AccountAddress>().prop_map(Value::address).boxed(),
+            FatType::U8 => any::<u8>().prop_map(Value::u8).boxed(),
+            FatType::U64 => any::<u64>().prop_map(Value::u64).boxed(),
+            FatType::U128 => any::<u128>().prop_map(Value::u128).boxed(),
+            FatType::Bool => any::<bool>().prop_map(Value::bool).boxed(),
+            FatType::Address => any::<AccountAddress>().prop_map(Value::address).boxed(),
 
-            Type::Vector(layout) => match &**layout {
-                Type::U8 => vec(any::<u8>(), 0..10)
+            FatType::Vector(layout) => match &**layout {
+                FatType::U8 => vec(any::<u8>(), 0..10)
                     .prop_map(|vals| Value(ValueImpl::new_container(Container::U8(vals))))
                     .boxed(),
-                Type::U64 => vec(any::<u64>(), 0..10)
+                FatType::U64 => vec(any::<u64>(), 0..10)
                     .prop_map(|vals| Value(ValueImpl::new_container(Container::U64(vals))))
                     .boxed(),
-                Type::U128 => vec(any::<u128>(), 0..10)
+                FatType::U128 => vec(any::<u128>(), 0..10)
                     .prop_map(|vals| Value(ValueImpl::new_container(Container::U128(vals))))
                     .boxed(),
-                Type::Bool => vec(any::<bool>(), 0..10)
+                FatType::Bool => vec(any::<bool>(), 0..10)
                     .prop_map(|vals| Value(ValueImpl::new_container(Container::Bool(vals))))
                     .boxed(),
                 layout => vec(value_strategy_with_layout(layout), 0..10)
@@ -2453,7 +2467,7 @@ pub mod prop {
                     .boxed(),
             },
 
-            Type::Struct(struct_ty) => struct_ty
+            FatType::Struct(struct_ty) => struct_ty
                 .layout
                 .iter()
                 .map(|layout| value_strategy_with_layout(layout))
@@ -2465,16 +2479,16 @@ pub mod prop {
                 })
                 .boxed(),
 
-            Type::Reference(..) | Type::MutableReference(..) => {
+            FatType::Reference(..) | FatType::MutableReference(..) => {
                 panic!("cannot generate references for prop tests")
             }
 
-            Type::TyParam(..) => panic!("cannot generate type params for prop tests"),
+            FatType::TyParam(..) => panic!("cannot generate type params for prop tests"),
         }
     }
 
-    pub fn layout_and_value_strategy() -> impl Strategy<Value = (Type, Value)> {
-        any::<Type>().no_shrink().prop_flat_map(|layout| {
+    pub fn layout_and_value_strategy() -> impl Strategy<Value = (FatType, Value)> {
+        any::<FatType>().no_shrink().prop_flat_map(|layout| {
             let value_strategy = value_strategy_with_layout(&layout);
             (Just(layout), value_strategy)
         })

@@ -215,6 +215,13 @@ pub fn verify_module_dependencies<'a>(
             dependency_map.insert(dependency_id, dependency);
         }
     }
+    verify_dependencies(module, &dependency_map)
+}
+
+pub fn verify_dependencies(
+    module: &VerifiedModule,
+    dependency_map: &BTreeMap<ModuleId, &VerifiedModule>,
+) -> Vec<VMStatus> {
     let mut errors = vec![];
     let module_view = ModuleView::new(module);
     errors.append(&mut verify_struct_kind(&module_view, &dependency_map));
@@ -244,6 +251,14 @@ pub fn verify_script_dependencies<'a>(
     verify_module_dependencies(&fake_module, dependencies)
 }
 
+pub fn verify_script_dependency_map(
+    script: &VerifiedScript,
+    dependency_map: &BTreeMap<ModuleId, &VerifiedModule>,
+) -> Vec<VMStatus> {
+    let fake_module = script.clone().into_module();
+    verify_dependencies(&fake_module, dependency_map)
+}
+
 fn verify_native_functions(module_view: &ModuleView<VerifiedModule>) -> Vec<VMStatus> {
     let mut errors = vec![];
 
@@ -254,7 +269,7 @@ fn verify_native_functions(module_view: &ModuleView<VerifiedModule>) -> Vec<VMSt
         .filter(|fdv| fdv.1.is_native())
     {
         let function_name = native_function_definition_view.name();
-        match NativeFunction::resolve(&module_id, function_name) {
+        match NativeFunction::resolve(&module_id, function_name.as_str()) {
             None => errors.push(verification_error(
                 IndexKind::FunctionHandle,
                 idx,

@@ -354,7 +354,8 @@ impl StructDefinition {
     pub fn declared_field_count(&self) -> Result<MemberCount, VMStatus> {
         match &self.field_information {
             // TODO we might want a more informative error here
-            StructFieldInformation::Native => Err(VMStatus::new(StatusCode::LINKER_ERROR)),
+            StructFieldInformation::Native => Err(VMStatus::new(StatusCode::LINKER_ERROR)
+                .with_message("Looking for field in native structure".to_string())),
             StructFieldInformation::Declared(fields) => Ok(fields.len() as u16),
         }
     }
