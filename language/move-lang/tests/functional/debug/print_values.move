@@ -1,5 +1,3 @@
-//! debug
-
 module M {
     use 0x0::Debug;
     use 0x0::Vector;

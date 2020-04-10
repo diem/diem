@@ -1905,15 +1905,6 @@ pub mod debug {
     use std::fmt::Write;
     use vm::gas_schedule::ZERO_GAS_UNITS;
 
-    macro_rules! debug_write {
-        ($buf: expr, $($toks: tt)*) => {
-            write!($buf, $($toks)*).map_err(|_|
-                VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message("failed to write to buffer".to_string())
-            )
-        };
-    }
-
     fn print_value_impl<B: Write>(buf: &mut B, ty: &Type, val: &ValueImpl) -> VMResult<()> {
         match (ty, val) {
             (Type::U8, ValueImpl::U8(x)) => debug_write!(buf, "{}u8", x),
@@ -1929,6 +1920,26 @@ pub mod debug {
             (Type::Struct(struct_ty), ValueImpl::Container(r)) => {
                 print_struct(buf, struct_ty, &*r.borrow())
             }
+
+            (Type::MutableReference(val_ty), ValueImpl::ContainerRef(r)) => {
+                debug_write!(buf, "(&mut) ")?;
+                print_container_ref(buf, val_ty, r)
+            }
+            (Type::Reference(val_ty), ValueImpl::ContainerRef(r)) => {
+                debug_write!(buf, "(&) ")?;
+                print_container_ref(buf, val_ty, r)
+            }
+
+            (Type::MutableReference(val_ty), ValueImpl::IndexedRef(r)) => {
+                debug_write!(buf, "(&mut) ")?;
+                print_indexed_ref(buf, val_ty, r)
+            }
+            (Type::Reference(val_ty), ValueImpl::IndexedRef(r)) => {
+                debug_write!(buf, "(&) ")?;
+                print_indexed_ref(buf, val_ty, r)
+            }
+
+            (_, ValueImpl::Invalid) => debug_write!(buf, "(invalid)"),
 
             _ => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot print value {:?} as type {:?}", val, ty))),
@@ -2011,7 +2022,21 @@ pub mod debug {
         debug_write!(buf, " }}")
     }
 
-    fn print_reference<B: Write>(buf: &mut B, val_ty: &Type, r: &Reference) -> VMResult<()> {
+    fn print_container_ref<B: Write>(buf: &mut B, val_ty: &Type, r: &ContainerRef) -> VMResult<()> {
+        match val_ty {
+            Type::Vector(elem_ty) => print_vector(buf, elem_ty, &*r.borrow()),
+            Type::Struct(struct_ty) => print_struct(buf, struct_ty, &*r.borrow()),
+            _ => Err(
+                VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
+                    "cannot print container {:?} as type {:?}",
+                    &*r.borrow(),
+                    val_ty
+                )),
+            ),
+        }
+    }
+
+    fn print_indexed_ref<B: Write>(buf: &mut B, val_ty: &Type, r: &IndexedRef) -> VMResult<()> {
         macro_rules! print_vector_elem {
             ($v: expr, $idx: expr, $suffix: expr) => {
                 match $v.get($idx) {
@@ -2022,43 +2047,56 @@ pub mod debug {
             };
         }
 
-        match &r.0 {
-            ReferenceImpl::ContainerRef(r) => match val_ty {
-                Type::Vector(elem_ty) => print_vector(buf, elem_ty, &*r.borrow()),
-                Type::Struct(struct_ty) => print_struct(buf, struct_ty, &*r.borrow()),
-                _ => Err(
-                    VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
-                        "cannot print container {:?} as type {:?}",
-                        &*r.borrow(),
-                        val_ty
-                    )),
-                ),
+        let idx = r.idx;
+        match (val_ty, &*r.container_ref.borrow()) {
+            (Type::U8, Container::U8(v)) => print_vector_elem!(v, idx, "u8"),
+            (Type::U64, Container::U64(v)) => print_vector_elem!(v, idx, "u64"),
+            (Type::U128, Container::U128(v)) => print_vector_elem!(v, idx, "u128"),
+            (Type::Bool, Container::Bool(v)) => print_vector_elem!(v, idx, ""),
+
+            (Type::U8, Container::General(v))
+            | (Type::U64, Container::General(v))
+            | (Type::U128, Container::General(v))
+            | (Type::Bool, Container::General(v))
+            | (Type::Address, Container::General(v)) => match v.get(idx) {
+                Some(val) => print_value_impl(buf, val_ty, val),
+                None => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("ref index out of bounds".to_string())),
             },
-            ReferenceImpl::IndexedRef(IndexedRef { idx, container_ref }) => {
-                let idx = *idx;
-                match (val_ty, &*container_ref.borrow()) {
-                    (Type::U8, Container::U8(v)) => print_vector_elem!(v, idx, "u8"),
-                    (Type::U64, Container::U64(v)) => print_vector_elem!(v, idx, "u64"),
-                    (Type::U128, Container::U128(v)) => print_vector_elem!(v, idx, "u128"),
-                    (Type::Bool, Container::Bool(v)) => print_vector_elem!(v, idx, ""),
 
-                    (Type::U8, Container::General(v))
-                    | (Type::U64, Container::General(v))
-                    | (Type::U128, Container::General(v))
-                    | (Type::Bool, Container::General(v))
-                    | (Type::Address, Container::General(v)) => match v.get(idx) {
-                        Some(val) => print_value_impl(buf, val_ty, val),
-                        None => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                            .with_message("ref index out of bounds".to_string())),
-                    },
+            (_, container) => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(
+                format!(
+                    "cannot print element {} of container {:?} as {:?}",
+                    idx, container, val_ty
+                ),
+            )),
+        }
+    }
 
-                    (_, container) => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
-                        .with_message(format!(
-                            "cannot print element {} of container {:?} as {:?}",
-                            idx, container, val_ty
-                        ))),
+    fn print_reference<B: Write>(buf: &mut B, val_ty: &Type, r: &Reference) -> VMResult<()> {
+        match &r.0 {
+            ReferenceImpl::ContainerRef(r) => print_container_ref(buf, val_ty, r),
+            ReferenceImpl::IndexedRef(r) => print_indexed_ref(buf, val_ty, r),
+        }
+    }
+
+    pub fn print_locals<B: Write>(buf: &mut B, tys: &[Type], locals: &Locals) -> VMResult<()> {
+        match &*locals.0.borrow() {
+            Container::General(v) => {
+                // TODO: The number of spaces in the indent is currently hard coded.
+                // Plan is to switch to the pretty crate for pretty printing.
+                if tys.is_empty() {
+                    debug_writeln!(buf, "            (none) ")?;
+                } else {
+                    for (idx, (ty, val)) in tys.iter().zip(v.iter()).enumerate() {
+                        debug_write!(buf, "            [{}] ", idx)?;
+                        print_value_impl(buf, ty, val)?;
+                        debug_writeln!(buf)?;
+                    }
                 }
+                Ok(())
             }
+            _ => unreachable!(),
         }
     }
 

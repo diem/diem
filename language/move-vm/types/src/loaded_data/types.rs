@@ -8,6 +8,7 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use move_core_types::identifier::Identifier;
+use std::fmt::Write;
 use vm::errors::VMResult;
 
 #[cfg(feature = "fuzzing")]
@@ -80,6 +81,21 @@ impl StructType {
             type_params: ty_args,
         })
     }
+
+    pub fn debug_print<B: Write>(&self, buf: &mut B) -> VMResult<()> {
+        debug_write!(buf, "{}::{}", self.module, self.name)?;
+        let mut it = self.ty_args.iter();
+        if let Some(ty) = it.next() {
+            debug_write!(buf, "<")?;
+            ty.debug_print(buf)?;
+            for ty in it {
+                debug_write!(buf, ", ")?;
+                ty.debug_print(buf)?;
+            }
+            debug_write!(buf, ">")?;
+        }
+        Ok(())
+    }
 }
 
 impl Type {
@@ -149,6 +165,34 @@ impl Type {
             // case it will always succeed. (Internal invariant violation otherwise.)
             TyParam(_) => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                 .with_message("cannot check if a type parameter is a resource or not".to_string())),
+        }
+    }
+
+    pub fn debug_print<B: Write>(&self, buf: &mut B) -> VMResult<()> {
+        use Type::*;
+
+        match self {
+            Bool => debug_write!(buf, "bool"),
+            U8 => debug_write!(buf, "u8"),
+            U64 => debug_write!(buf, "u64"),
+            U128 => debug_write!(buf, "u128"),
+            Address => debug_write!(buf, "address"),
+            Vector(elem_ty) => {
+                debug_write!(buf, "vector<")?;
+                elem_ty.debug_print(buf)?;
+                debug_write!(buf, ">")
+            }
+            Struct(struct_ty) => struct_ty.debug_print(buf),
+            Reference(ty) => {
+                debug_write!(buf, "&")?;
+                ty.debug_print(buf)
+            }
+            MutableReference(ty) => {
+                debug_write!(buf, "&mut ")?;
+                ty.debug_print(buf)
+            }
+            TyParam(_) => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                .with_message("cannot print out uninstantiated type params".to_string())),
         }
     }
 }
