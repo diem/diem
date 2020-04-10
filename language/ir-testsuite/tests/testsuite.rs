@@ -14,7 +14,7 @@ use ir_to_bytecode::{
 use libra_types::account_address::AccountAddress;
 use move_ir_types::ast;
 use std::path::Path;
-use stdlib::{stdlib_modules, StdLibOptions};
+use stdlib::stdlib_modules;
 
 struct IRCompiler {
     deps: Vec<VerifiedModule>,
@@ -54,10 +54,7 @@ impl Compiler for IRCompiler {
 }
 
 fn run_test(path: &Path) -> datatest_stable::Result<()> {
-    testsuite::functional_tests(
-        IRCompiler::new(stdlib_modules(StdLibOptions::Fresh).to_vec()),
-        path,
-    )
+    testsuite::functional_tests(IRCompiler::new(stdlib_modules().to_vec()), path)
 }
 
 datatest_stable::harness!(run_test, "tests", r".*\.mvir");

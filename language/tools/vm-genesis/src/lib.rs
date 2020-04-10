@@ -35,7 +35,7 @@ use move_vm_state::{
 use move_vm_types::{chain_state::ChainState, values::Value};
 use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, SeedableRng};
-use stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
+use stdlib::{stdlib_modules, transaction_scripts::StdlibScript};
 use vm::{
     access::ModuleAccess,
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
@@ -129,7 +129,7 @@ pub fn encode_genesis_transaction_with_validator(
         nodes,
         validator_set,
         discovery_set,
-        stdlib_modules(StdLibOptions::Staged), // Must use staged stdlib
+        stdlib_modules(),
         vm_publishing_option
             .unwrap_or_else(|| VMPublishingOption::Locked(StdlibScript::whitelist())),
     )
@@ -799,8 +799,8 @@ fn verify_genesis_write_set(events: &[ContractEvent], discovery_set: &DiscoveryS
 }
 
 /// Generate an artificial genesis `ChangeSet` for testing
-pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) -> ChangeSet {
-    let stdlib_modules = stdlib_modules(stdlib_options);
+pub fn generate_genesis_change_set_for_testing() -> ChangeSet {
+    let stdlib_modules = stdlib_modules();
     let swarm = generator::validator_swarm_for_testing(10);
 
     encode_genesis_change_set(

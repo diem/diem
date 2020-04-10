@@ -18,8 +18,6 @@ pub const TODO_EXTENSION: &str = "move_TODO";
 pub const MOVE_EXTENSION: &str = "move";
 pub const IR_EXTENSION: &str = "mvir";
 
-pub const DEBUG_MODULE_FILE_NAME: &str = "debug.move";
-
 pub const COMPLETED_DIRECTORIES: &[&str; 3] =
     &["borrow_tests", "commands", "generics/instantiation_loops"];
 

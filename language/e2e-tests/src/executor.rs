@@ -5,7 +5,7 @@
 
 use crate::{
     account::{Account, AccountData},
-    data_store::{FakeDataStore, GENESIS_CHANGE_SET, GENESIS_CHANGE_SET_FRESH},
+    data_store::{FakeDataStore, GENESIS_CHANGE_SET},
 };
 use bytecode_verifier::VerifiedModule;
 use libra_config::generator;
@@ -26,7 +26,7 @@ use libra_types::{
     write_set::WriteSet,
 };
 use libra_vm::{LibraVM, VMExecutor, VMVerifier};
-use stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
+use stdlib::{stdlib_modules, transaction_scripts::StdlibScript};
 use vm::CompiledModule;
 use vm_genesis::GENESIS_KEYPAIR;
 
@@ -55,14 +55,9 @@ impl FakeExecutor {
         Self::from_genesis(GENESIS_CHANGE_SET.clone().write_set())
     }
 
-    /// Creates an executor using the standard genesis.
-    pub fn from_fresh_genesis() -> Self {
-        Self::from_genesis(GENESIS_CHANGE_SET_FRESH.clone().write_set())
-    }
-
     pub fn whitelist_genesis() -> Self {
         Self::custom_genesis(
-            stdlib_modules(StdLibOptions::Staged).to_vec(),
+            stdlib_modules().to_vec(),
             None,
             VMPublishingOption::Locked(StdlibScript::whitelist()),
         )
@@ -76,11 +71,7 @@ impl FakeExecutor {
             panic!("Whitelisted transactions are not supported as a publishing option")
         }
 
-        Self::custom_genesis(
-            stdlib_modules(StdLibOptions::Staged).to_vec(),
-            None,
-            publishing_options,
-        )
+        Self::custom_genesis(stdlib_modules().to_vec(), None, publishing_options)
     }
 
     /// Creates an executor in which no genesis state has been applied yet.

@@ -18,7 +18,7 @@ use ir_to_bytecode::{
 use libra_types::account_address::AccountAddress;
 use move_ir_types::location::Loc;
 use std::mem;
-use stdlib::{stdlib_modules, StdLibOptions};
+use stdlib::stdlib_modules;
 use vm::file_format::{CompiledModule, CompiledScript};
 
 /// An API for the compiler. Supports setting custom options.
@@ -104,7 +104,7 @@ impl Compiler {
         if self.skip_stdlib_deps {
             extra_deps
         } else {
-            let mut deps = stdlib_modules(StdLibOptions::Staged).to_vec();
+            let mut deps = stdlib_modules().to_vec();
             deps.extend(extra_deps);
             deps
         }
