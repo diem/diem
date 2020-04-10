@@ -1936,6 +1936,11 @@ impl Value {
 }
 
 impl Struct {
+    pub fn simple_deserialize(blob: &[u8], ty: StructType) -> VMResult<Struct> {
+        lcs::from_bytes_seed(&ty, blob)
+            .map_err(|e| VMStatus::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
+    }
+
     pub fn simple_serialize(&self, ty: &StructType) -> Option<Vec<u8>> {
         lcs::to_bytes(&AnnotatedValue { ty, val: &self.0 }).ok()
     }
@@ -2041,6 +2046,8 @@ impl<'d> serde::de::DeserializeSeed<'d> for &Type {
             Type::U128 => u128::deserialize(deserializer).map(Value::u128),
             Type::Address => AccountAddress::deserialize(deserializer).map(Value::address),
 
+            Type::Struct(ty) => Ok(Value::struct_(ty.deserialize(deserializer)?)),
+
             Type::Vector(layout) => {
                 let container = match &**layout {
                     Type::U8 => Container::U8(Vec::deserialize(deserializer)?),
@@ -2056,13 +2063,6 @@ impl<'d> serde::de::DeserializeSeed<'d> for &Type {
                 )))))
             }
 
-            Type::Struct(ty) => {
-                let layout = &ty.layout;
-                let fields =
-                    deserializer.deserialize_tuple(layout.len(), StructFieldVisitor(layout))?;
-                Ok(Value::struct_(Struct::pack(fields)))
-            }
-
             Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
                 Err(D::Error::custom(
                     VMStatus::new(StatusCode::INVALID_DATA)
@@ -2070,6 +2070,19 @@ impl<'d> serde::de::DeserializeSeed<'d> for &Type {
                 ))
             }
         }
+    }
+}
+
+impl<'d> serde::de::DeserializeSeed<'d> for &StructType {
+    type Value = Struct;
+
+    fn deserialize<D: serde::de::Deserializer<'d>>(
+        self,
+        deserializer: D,
+    ) -> Result<Self::Value, D::Error> {
+        let layout = &self.layout;
+        let fields = deserializer.deserialize_tuple(layout.len(), StructFieldVisitor(layout))?;
+        Ok(Struct::pack(fields))
     }
 }
 
