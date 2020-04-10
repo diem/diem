@@ -16,8 +16,7 @@ use futures::{
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
 use libra_mempool::{CommitNotification, CommitResponse};
 use libra_types::{
-    contract_event::ContractEvent, event_subscription::ReconfigSubscription,
-    ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
+    contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
     validator_change::ValidatorChangeProof, waypoint::Waypoint,
 };
 use libra_vm::LibraVM;
@@ -25,6 +24,7 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
+use subscription_service::ReconfigSubscription;
 use tokio::{
     runtime::{Builder, Runtime},
     time::timeout,

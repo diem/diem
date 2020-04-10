@@ -16,12 +16,12 @@ use libra_crypto::{
 };
 use libra_types::{
     account_config::{association_address, lbr_type_tag},
-    event_subscription::ReconfigSubscription,
     on_chain_config::{OnChainConfig, VMPublishingOption},
     transaction::authenticator::AuthenticationKey,
 };
 use std::sync::{Arc, Mutex};
 use stdlib::transaction_scripts::StdlibScript;
+use subscription_service::ReconfigSubscription;
 use transaction_builder::{
     encode_block_prologue_script, encode_publishing_option_script,
     encode_rotate_consensus_pubkey_script, encode_transfer_script,

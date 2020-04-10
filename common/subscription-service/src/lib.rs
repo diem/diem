@@ -1,21 +1,27 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::on_chain_config::{ConfigID, OnChainConfigPayload};
+#![forbid(unsafe_code)]
+
+//! Generic pub/sub service framework
+
 use anyhow::Result;
 use channel::{
     libra_channel::{self, Receiver, Sender},
     message_queues::QueueStyle,
 };
+use libra_types::on_chain_config::{ConfigID, OnChainConfigPayload};
 use std::{collections::HashSet, num::NonZeroUsize};
 
-/// A subscription to on-chain reconfiguration notifications from state sync
-pub struct ReconfigSubscription {
-    sender: Sender<(), OnChainConfigPayload>,
-    subscribed_configs: HashSet<ConfigID>,
+pub struct SubscriptionService<T, U> {
+    subscribed_items: HashSet<T>,
+    sender: Sender<(), U>,
 }
 
-impl ReconfigSubscription {
+/// A subscription service for on-chain reconfiguration notifications from state sync
+/// TODO move this to on-chain config crate when ready
+pub type ReconfigSubscription = SubscriptionService<ConfigID, OnChainConfigPayload>;
+impl SubscriptionService<ConfigID, OnChainConfigPayload> {
     /// Constructs an reconfig subscription object for a set of configs `subscribed_configs`
     /// Returns the subscription object, and the receiving end of a channel that reconfig notifications
     /// will be sent to
@@ -24,22 +30,21 @@ impl ReconfigSubscription {
     ) -> (Self, Receiver<(), OnChainConfigPayload>) {
         let (sender, receiver) =
             libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
-        let subscribed_configs = subscribed_configs.iter().cloned().collect::<HashSet<_>>();
+        let subscribed_items = subscribed_configs.iter().cloned().collect::<HashSet<_>>();
         (
             Self {
                 sender,
-                subscribed_configs,
+                subscribed_items,
             },
             receiver,
         )
     }
 
-    /// Function used by reconfiguration notification publisher to send notification to subscriber
     pub fn publish(&mut self, payload: OnChainConfigPayload) -> Result<()> {
         self.sender.push((), payload)
     }
 
     pub fn subscribed_configs(&self) -> HashSet<ConfigID> {
-        self.subscribed_configs.clone()
+        self.subscribed_items.clone()
     }
 }

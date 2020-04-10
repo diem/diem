@@ -14,7 +14,6 @@ use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
 use libra_mempool::MEMPOOL_SUBSCRIBED_CONFIGS;
 use libra_metrics::metric_server;
-use libra_types::event_subscription::ReconfigSubscription;
 use libra_vm::LibraVM;
 use network::validator_network::network_builder::{NetworkBuilder, TransportType};
 use state_synchronizer::StateSynchronizer;
@@ -27,6 +26,7 @@ use std::{
 };
 use storage_client::SyncStorageClient;
 use storage_service::{init_libra_db, start_storage_service_with_db};
+use subscription_service::ReconfigSubscription;
 use tokio::runtime::{Builder, Runtime};
 
 const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
