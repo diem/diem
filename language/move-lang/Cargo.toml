@@ -1,9 +1,10 @@
 [package]
 name = "move-lang"
 version = "0.0.1"
-authors = ["Libra <oncall+libra@xmail.facebook.com>"]
+authors = ["Libra Association <opensource@libra.org>"]
 publish = false
 edition = "2018"
+license = "Apache-2.0"
 
 [dependencies]
 codespan = "0.8.0"

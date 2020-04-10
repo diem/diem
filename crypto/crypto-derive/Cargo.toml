@@ -1,6 +1,7 @@
 [package]
 name = "libra-crypto-derive"
 version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
 description = "Libra custom derives for `libra-crypto`"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
