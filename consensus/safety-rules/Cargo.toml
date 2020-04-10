@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-lazy_static = "1.4.0"
+once_cell = "1.3.1"
 
 consensus-types = { path = "../consensus-types", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
