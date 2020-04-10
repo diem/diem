@@ -27,7 +27,7 @@ Libra makes use of several cryptographic algorithms:
     ├── lib.rs
     ├── ed25519.rs          # Ed25519 implementation of the signing/verification API in traits.rs
     ├── multi_ed25519.rs    # MultiEd25519 implementation of the signing/verification API in traits.rs
-    ├── x25519.rs           # X25519 keys generation
+    ├── x25519.rs           # X25519 wrapper
     ├── test_utils.rs
     ├── traits.rs           # New API design and the necessary abstractions
     └── unit_tests/         # Tests

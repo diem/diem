@@ -119,10 +119,9 @@ pub mod mock {
             .map(|validator_pubkeys| DiscoveryInfo {
                 account_address: *validator_pubkeys.account_address(),
                 validator_network_identity_pubkey: validator_pubkeys
-                    .network_identity_public_key()
-                    .clone(),
+                    .network_identity_public_key(),
                 validator_network_address: mock_addr.clone(),
-                fullnodes_network_identity_pubkey: mock_pubkey.clone(),
+                fullnodes_network_identity_pubkey: mock_pubkey,
                 fullnodes_network_address: mock_addr.clone(),
             })
             .collect::<Vec<_>>();
