@@ -4,7 +4,7 @@ members = [
     "admission-control/admission-control-service",
     "admission-control/admission-control-proto",
     "client/cli",
-    "client/libra_wallet",
+    "client/libra-wallet",
     "client/libra-dev",
     "common/bitvec",
     "common/bounded-executor",
