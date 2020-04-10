@@ -202,7 +202,7 @@ impl LibraClient {
         match get_response_from_batch(0, &responses)? {
             Ok(result) => {
                 let account_view = AccountView::optional_from_response(result.clone())?;
-                Ok((account_view, client_version))
+                Ok((account_view, self.trusted_state.latest_version()))
             }
             Err(e) => bail!(
                 "Failed to get account state for account address {} with error: {:?}",
@@ -299,6 +299,9 @@ impl LibraClient {
                 self.latest_epoch_change_li = Some(latest_epoch_change_li.clone());
             }
             TrustedStateChange::Version { new_state, .. } => {
+                if self.trusted_state.latest_version() < new_state.latest_version() {
+                    info!("Verified version change to: {}", new_state.latest_version());
+                }
                 self.trusted_state = new_state;
             }
         }
