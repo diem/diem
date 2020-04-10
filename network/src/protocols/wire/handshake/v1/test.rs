@@ -13,10 +13,17 @@ fn net_protocol() -> lcs::Result<()> {
 
 #[test]
 fn protocols_to_from_vec() {
-    let supported_protocols = vec![ProtocolId::ConsensusRpc, ProtocolId::MempoolDirectSend];
+    let supported_protocols: SupportedProtocols =
+        [ProtocolId::ConsensusRpc, ProtocolId::MempoolDirectSend]
+            .iter()
+            .into();
     assert_eq!(
-        SupportedProtocols::from(&supported_protocols).try_into(),
-        Ok(supported_protocols)
+        SupportedProtocols::from(
+            (supported_protocols.clone().try_into() as Result<Vec<ProtocolId>, _>)
+                .unwrap()
+                .iter()
+        ),
+        supported_protocols
     );
 }
 
@@ -24,7 +31,9 @@ fn protocols_to_from_vec() {
 fn common_protocols() {
     let h1: BTreeMap<_, _> = [(
         MessagingProtocolVersion::V1,
-        SupportedProtocols::from([ProtocolId::ConsensusRpc, ProtocolId::DiscoveryDirectSend]),
+        [ProtocolId::ConsensusRpc, ProtocolId::DiscoveryDirectSend]
+            .iter()
+            .into(),
     )]
     .iter()
     .cloned()
@@ -36,7 +45,9 @@ fn common_protocols() {
     // Case 1: One intersecting protocol is found for common messaging protocol version.
     let h2: BTreeMap<_, _> = [(
         MessagingProtocolVersion::V1,
-        SupportedProtocols::from([ProtocolId::ConsensusRpc, ProtocolId::MempoolDirectSend]),
+        [ProtocolId::ConsensusRpc, ProtocolId::MempoolDirectSend]
+            .iter()
+            .into(),
     )]
     .iter()
     .cloned()
@@ -45,7 +56,10 @@ fn common_protocols() {
         supported_protocols: h2,
     };
     assert_eq!(
-        Some((MessagingProtocolVersion::V1, vec![ProtocolId::ConsensusRpc])),
+        Some((
+            MessagingProtocolVersion::V1,
+            [ProtocolId::ConsensusRpc].iter().into()
+        )),
         h1.find_common_protocols(&h2)
     );
 
@@ -64,7 +78,7 @@ fn common_protocols() {
         supported_protocols: h2,
     };
     assert_eq!(
-        Some((MessagingProtocolVersion::V1, vec![])),
+        Some((MessagingProtocolVersion::V1, [].iter().into())),
         h1.find_common_protocols(&h2)
     );
 }

@@ -12,7 +12,7 @@
 
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use std::{collections::BTreeMap, convert::TryInto};
+use std::{collections::BTreeMap, convert::TryInto, iter::Iterator};
 
 #[cfg(test)]
 mod test;
@@ -31,7 +31,7 @@ pub enum ProtocolId {
     IdentityDirectSend = 6,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct SupportedProtocols(bitvec::BitVec);
 
 /// The HandshakeMsg contains a mapping from MessagingProtocolVersion suppported by the node to a
@@ -66,10 +66,10 @@ impl TryInto<Vec<ProtocolId>> for SupportedProtocols {
     }
 }
 
-impl<T: AsRef<[ProtocolId]>> From<T> for SupportedProtocols {
+impl<'a, T: Iterator<Item = &'a ProtocolId>> From<T> for SupportedProtocols {
     fn from(protocols: T) -> Self {
         let mut bv = bitvec::BitVec::default();
-        protocols.as_ref().iter().for_each(|p| bv.set(*p as u8));
+        protocols.for_each(|p| bv.set(*p as u8));
         Self(bv)
     }
 }
@@ -91,7 +91,7 @@ impl HandshakeMsg {
     pub fn add(
         &mut self,
         messaging_protocol: MessagingProtocolVersion,
-        application_protocols: Vec<ProtocolId>,
+        application_protocols: SupportedProtocols,
     ) {
         self.supported_protocols.insert(
             messaging_protocol,
@@ -102,7 +102,7 @@ impl HandshakeMsg {
     pub fn find_common_protocols(
         &self,
         other: &HandshakeMsg,
-    ) -> Option<(MessagingProtocolVersion, Vec<ProtocolId>)> {
+    ) -> Option<(MessagingProtocolVersion, SupportedProtocols)> {
         // First, find the highest MessagingProtocolVersion supported by both nodes.
         let mut inner = other.supported_protocols.iter().rev().peekable();
         // Iterate over all supported protocol versions in decreasing order.
@@ -122,16 +122,9 @@ impl HandshakeMsg {
                     // Both `self` and `other` shold have entry in map for `key`.
                     let protocols_self = self.supported_protocols.get(k_inner).unwrap();
                     let protocols_other = other.supported_protocols.get(k_inner).unwrap();
-                    // Since we are intersecting our `SupportedProtocols` with that of `other`, the
-                    // conversion of intersecting SupportedProtocols to Vec<ProtocolId> is guaranteed to be
-                    // successful.
                     return Some((
                         *k_inner,
-                        protocols_self
-                            .clone()
-                            .intersection(protocols_other.clone())
-                            .try_into()
-                            .unwrap(),
+                        protocols_self.clone().intersection(protocols_other.clone()),
                     ));
                 }
                 _ => {}
