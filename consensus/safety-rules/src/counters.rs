@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use lazy_static::lazy_static;
 use libra_secure_push_metrics::{define_counters, Counter, Gauge};
+use once_cell::sync::Lazy;
 use std::sync::Arc;
 
 // @TODO This is still Work in Progress and not ready for production
@@ -20,6 +20,4 @@ define_counters![
     (some_gauge_counter: Gauge, "example help for a gauge metric"),
 ];
 
-lazy_static! {
-    pub static ref COUNTERS: Arc<Counters> = Arc::new(Counters::new());
-}
+pub static COUNTERS: Lazy<Arc<Counters>> = Lazy::new(|| Arc::new(Counters::new()));
