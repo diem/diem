@@ -27,7 +27,7 @@ serde_json = "1.0"
 serde_yaml = "0.8.11"
 termion = "1.5.3"
 serde = { version = "1.0.106", features = ["derive"] }
-structopt = "0.3.12"
+structopt = "0.3.13"
 chrono = { version = "0.4.11" }
 
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0"}
