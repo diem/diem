@@ -6,7 +6,7 @@ use crate::{
     compile::compile_module_with_address, executor::FakeExecutor, transaction_status_eq,
 };
 use libra_types::{
-    account_config::lbr_type_tag,
+    account_config::LBR_NAME,
     on_chain_config::VMPublishingOption,
     transaction::TransactionStatus,
     vm_error::{StatusCode, StatusType, VMStatus},
@@ -41,7 +41,7 @@ fn bad_module_address() {
         10,
         100_000,
         1,
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
     );
 
     // TODO: This is not verified for now.
@@ -86,7 +86,7 @@ fn duplicate_module() {
         sequence_number,
         100_000,
         1,
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
     );
 
     let txn2 = account.account().create_signed_txn_impl(
@@ -95,7 +95,7 @@ fn duplicate_module() {
         sequence_number + 1,
         100_000,
         1,
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
     );
 
     let output1 = executor.execute_transaction(txn1);
@@ -137,7 +137,7 @@ pub fn test_publishing_no_modules_non_whitelist_script() {
         10,
         100_000,
         1,
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
     );
 
     assert_prologue_parity!(
@@ -170,7 +170,7 @@ pub fn test_publishing_allow_modules() {
         10,
         100_000,
         1,
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
     );
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     assert_eq!(

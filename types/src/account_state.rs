@@ -4,8 +4,8 @@
 use crate::{
     account_address::AccountAddress,
     account_config::{
-        AccountResource, BalanceResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_RESOURCE_PATH,
-        ACCOUNT_SENT_EVENT_PATH, BALANCE_RESOURCE_PATH,
+        balance_resource_path, AccountResource, BalanceResource, ACCOUNT_RECEIVED_EVENT_PATH,
+        ACCOUNT_RESOURCE_PATH, ACCOUNT_SENT_EVENT_PATH,
     },
     block_metadata::{LibraBlockResource, LIBRA_BLOCK_RESOURCE_PATH, NEW_BLOCK_EVENT_PATH},
     discovery_set::{
@@ -36,7 +36,7 @@ impl AccountState {
     }
 
     pub fn get_balance_resource(&self) -> Result<Option<BalanceResource>> {
-        self.get_resource(&*BALANCE_RESOURCE_PATH)
+        self.get_resource(&balance_resource_path())
     }
 
     pub fn get_configuration_resource(&self) -> Result<Option<ConfigurationResource>> {
@@ -165,10 +165,7 @@ impl TryFrom<(&AccountResource, &BalanceResource)> for AccountState {
             ACCOUNT_RESOURCE_PATH.to_vec(),
             lcs::to_bytes(account_resource)?,
         );
-        btree_map.insert(
-            BALANCE_RESOURCE_PATH.to_vec(),
-            lcs::to_bytes(balance_resource)?,
-        );
+        btree_map.insert(balance_resource_path(), lcs::to_bytes(balance_resource)?);
 
         Ok(Self(btree_map))
     }

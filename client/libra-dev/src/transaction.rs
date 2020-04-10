@@ -17,7 +17,7 @@ use libra_crypto::{
 };
 use libra_types::{
     account_address::AccountAddress,
-    account_config::lbr_type_tag,
+    account_config::{lbr_type_tag, LBR_NAME},
     transaction::{
         authenticator::AuthenticationKey, helpers::TransactionSigner, RawTransaction,
         SignedTransaction, TransactionArgument, TransactionPayload,
@@ -88,7 +88,7 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
         payload,
         max_gas_amount,
         gas_unit_price,
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
         expiration_time,
     );
 
@@ -185,7 +185,7 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
         payload,
         max_gas_amount,
         gas_unit_price,
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
         expiration_time,
     );
 
@@ -601,7 +601,7 @@ mod test {
                 program,
                 max_gas_amount,
                 gas_unit_price,
-                lbr_type_tag(),
+                LBR_NAME.to_string(),
                 Duration::from_secs(expiration_time_secs),
             ),
             public_key.clone(),

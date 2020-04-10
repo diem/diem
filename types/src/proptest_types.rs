@@ -219,7 +219,7 @@ pub struct RawTransactionGen {
     payload: TransactionPayload,
     max_gas_amount: u64,
     gas_unit_price: u64,
-    gas_specifier: TypeTag,
+    gas_specifier: String,
     expiration_time_secs: u64,
 }
 
@@ -250,7 +250,7 @@ impl RawTransaction {
     fn strategy_impl(
         address_strategy: impl Strategy<Value = AccountAddress>,
         payload_strategy: impl Strategy<Value = TransactionPayload>,
-        gas_specifier_strategy: impl Strategy<Value = TypeTag>,
+        gas_specifier_strategy: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = Self> {
         // XXX what other constraints do these need to obey?
         (
@@ -292,7 +292,7 @@ fn new_raw_transaction(
     payload: TransactionPayload,
     max_gas_amount: u64,
     gas_unit_price: u64,
-    gas_specifier: TypeTag,
+    gas_specifier: String,
     expiration_time_secs: u64,
 ) -> RawTransaction {
     match payload {
@@ -337,7 +337,7 @@ impl Arbitrary for RawTransaction {
         Self::strategy_impl(
             any::<AccountAddress>(),
             any::<TransactionPayload>(),
-            any::<TypeTag>(),
+            any::<String>(),
         )
         .boxed()
     }
@@ -350,7 +350,7 @@ impl SignatureCheckedTransaction {
     // just one kind of them.
     pub fn script_strategy(
         keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
-        gas_specifier_strategy: impl Strategy<Value = TypeTag>,
+        gas_specifier_strategy: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(
             keypair_strategy,
@@ -361,7 +361,7 @@ impl SignatureCheckedTransaction {
 
     pub fn module_strategy(
         keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
-        gas_specifier_strategy: impl Strategy<Value = TypeTag>,
+        gas_specifier_strategy: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(
             keypair_strategy,
@@ -372,7 +372,7 @@ impl SignatureCheckedTransaction {
 
     pub fn write_set_strategy(
         keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
-        gas_specifier_strategy: impl Strategy<Value = TypeTag>,
+        gas_specifier_strategy: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(
             keypair_strategy,
@@ -383,7 +383,7 @@ impl SignatureCheckedTransaction {
 
     pub fn genesis_strategy(
         keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
-        gas_specifier_strategy: impl Strategy<Value = TypeTag>,
+        gas_specifier_strategy: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(
             keypair_strategy,
@@ -395,7 +395,7 @@ impl SignatureCheckedTransaction {
     fn strategy_impl(
         keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
         payload_strategy: impl Strategy<Value = TransactionPayload>,
-        gas_specifier_strategy: impl Strategy<Value = TypeTag>,
+        gas_specifier_strategy: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = Self> {
         (keypair_strategy, payload_strategy, gas_specifier_strategy)
             .prop_flat_map(|(keypair, payload, gas_specifier)| {
@@ -442,7 +442,7 @@ impl Arbitrary for SignatureCheckedTransaction {
         Self::strategy_impl(
             ed25519::keypair_strategy(),
             any::<TransactionPayload>(),
-            any::<TypeTag>(),
+            any::<String>(),
         )
         .boxed()
     }

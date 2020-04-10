@@ -10,7 +10,7 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
-    account_config::{lbr_type_tag, validator_set_address},
+    account_config::{validator_set_address, LBR_NAME},
     contract_event::ContractEvent,
     event::EventKey,
     language_storage::TypeTag,
@@ -313,7 +313,7 @@ fn encode_transaction(sender: AccountAddress, program: Script) -> Transaction {
         program,
         0,
         0,
-        lbr_type_tag(),
+        LBR_NAME.to_string(),
         std::time::Duration::from_secs(0),
     );
 

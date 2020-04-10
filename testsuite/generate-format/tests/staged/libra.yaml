@@ -70,8 +70,7 @@ RawTransaction:
         TYPENAME: TransactionPayload
     - max_gas_amount: U64
     - gas_unit_price: U64
-    - gas_specifier:
-        TYPENAME: TypeTag
+    - gas_specifier: STR
     - expiration_time: U64
 Script:
   STRUCT:

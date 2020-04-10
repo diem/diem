@@ -14,17 +14,13 @@ use once_cell::sync::Lazy;
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 
+pub const LBR_NAME: &str = "LBR";
+
 // Libra
 static COIN_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("Libra").unwrap());
 static COIN_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
 pub static COIN_MODULE: Lazy<ModuleId> =
     Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, COIN_MODULE_NAME.clone()));
-
-// LBR
-static LBR_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("LBR").unwrap());
-static LBR_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
-pub static LBR_MODULE: Lazy<ModuleId> =
-    Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, LBR_MODULE_NAME.clone()));
 
 // Account
 static ACCOUNT_MODULE_NAME: Lazy<Identifier> =
@@ -65,14 +61,6 @@ pub fn account_struct_name() -> &'static IdentStr {
 
 pub fn account_balance_struct_name() -> &'static IdentStr {
     &*ACCOUNT_BALANCE_STRUCT_NAME
-}
-
-pub fn lbr_module_name() -> &'static IdentStr {
-    &*LBR_MODULE_NAME
-}
-
-pub fn lbr_struct_name() -> &'static IdentStr {
-    &*LBR_STRUCT_NAME
 }
 
 pub fn account_event_handle_struct_name() -> &'static IdentStr {
@@ -122,25 +110,21 @@ pub fn account_struct_tag() -> StructTag {
     }
 }
 
+pub fn lbr_type_tag() -> TypeTag {
+    TypeTag::Struct(StructTag {
+        address: CORE_CODE_ADDRESS,
+        module: from_ticker_string(LBR_NAME).unwrap(),
+        name: coin_struct_name().to_owned(),
+        type_params: vec![],
+    })
+}
+
 pub fn account_balance_struct_tag() -> StructTag {
     StructTag {
         address: CORE_CODE_ADDRESS,
         module: account_module_name().to_owned(),
         name: account_balance_struct_name().to_owned(),
         type_params: vec![lbr_type_tag()],
-    }
-}
-
-pub fn lbr_type_tag() -> TypeTag {
-    TypeTag::Struct(lbr_struct_tag())
-}
-
-pub fn lbr_struct_tag() -> StructTag {
-    StructTag {
-        address: CORE_CODE_ADDRESS,
-        module: lbr_module_name().to_owned(),
-        name: lbr_struct_name().to_owned(),
-        type_params: vec![],
     }
 }
 
@@ -160,6 +144,19 @@ pub fn received_payment_tag() -> StructTag {
         name: received_event_name().to_owned(),
         type_params: vec![],
     }
+}
+
+pub fn type_tag_for_ticker(ticker_symbol: Identifier) -> TypeTag {
+    TypeTag::Struct(StructTag {
+        address: CORE_CODE_ADDRESS,
+        module: ticker_symbol,
+        name: coin_struct_name().to_owned(),
+        type_params: vec![],
+    })
+}
+
+pub fn from_ticker_string(ticker_string: &str) -> Result<Identifier> {
+    Identifier::new(ticker_string)
 }
 
 /// A Rust representation of an Account resource.
@@ -246,15 +243,14 @@ impl BalanceResource {
     }
 }
 
+pub fn balance_resource_path() -> Vec<u8> {
+    AccessPath::resource_access_vec(&account_balance_struct_tag(), &Accesses::empty())
+}
+
 /// Path to the Account resource.
 /// It can be used to create an AccessPath for an Account resource.
 pub static ACCOUNT_RESOURCE_PATH: Lazy<Vec<u8>> =
     Lazy::new(|| AccessPath::resource_access_vec(&account_struct_tag(), &Accesses::empty()));
-
-/// Path to the Balance resource
-pub static BALANCE_RESOURCE_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
-    AccessPath::resource_access_vec(&account_balance_struct_tag(), &Accesses::empty())
-});
 
 /// The path to the sent event counter for an Account resource.
 /// It can be used to query the event DB for the given event.

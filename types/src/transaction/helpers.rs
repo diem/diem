@@ -3,7 +3,6 @@
 
 use crate::{
     account_address::AccountAddress,
-    language_storage::TypeTag,
     proto::types::SignedTransaction as ProtoSignedTransaction,
     transaction::{RawTransaction, SignedTransaction, TransactionPayload},
 };
@@ -35,7 +34,7 @@ pub fn create_unsigned_txn(
     sender_sequence_number: u64,
     max_gas_amount: u64,
     gas_unit_price: u64,
-    gas_specifier: TypeTag,
+    gas_specifier: String,
     txn_expiration: i64, // for compatibility with UTC's timestamp.
 ) -> RawTransaction {
     RawTransaction::new(
@@ -61,7 +60,7 @@ pub fn create_user_txn<T: TransactionSigner + ?Sized>(
     sender_sequence_number: u64,
     max_gas_amount: u64,
     gas_unit_price: u64,
-    gas_specifier: TypeTag,
+    gas_specifier: String,
     txn_expiration: i64, // for compatibility with UTC's timestamp.
 ) -> Result<SignedTransaction> {
     let raw_txn = create_unsigned_txn(

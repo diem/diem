@@ -3,7 +3,7 @@
 
 use crate::{
     account_address::AccountAddress,
-    account_config::lbr_type_tag,
+    account_config::LBR_NAME,
     transaction::{
         RawTransaction, Script, SignedTransaction, Transaction, TransactionInfo,
         TransactionListWithProof, TransactionPayload, TransactionToCommit, TransactionWithProof,
@@ -27,7 +27,7 @@ fn test_invalid_signature() {
             Script::new(vec![], vec![], vec![]),
             0,
             0,
-            lbr_type_tag(),
+            LBR_NAME.to_string(),
             std::time::Duration::new(0, 0),
         ),
         Ed25519PrivateKey::generate_for_testing().public_key(),
