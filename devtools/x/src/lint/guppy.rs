@@ -47,15 +47,13 @@ impl<'cfg> ProjectLinter for BannedDirectDeps<'cfg> {
                 .expect("valid package ID");
             for link in dep_links {
                 if let Some(workspace_path) = link.from.workspace_path() {
-                    out.write(
+                    out.write_kind(
+                        LintKind::Package {
+                            name: link.from.name(),
+                            workspace_path,
+                        },
                         LintLevel::Error,
-                        format!(
-                            "{} (at {}) has direct dependency '{}': {}",
-                            link.from.name(),
-                            workspace_path.display(),
-                            package.name(),
-                            message
-                        ),
+                        format!("banned direct dependency '{}': {}", package.name(), message),
                     );
                 }
             }
