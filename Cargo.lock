@@ -475,7 +475,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bytecode_verifier_tests"
+name = "bytecode-verifier-tests"
 version = "0.1.0"
 dependencies = [
  "bytecode-verifier 0.1.0",
