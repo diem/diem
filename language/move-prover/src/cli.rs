@@ -70,6 +70,8 @@ pub struct Options {
     /// Whether output for e.g. diagnosis shall be stable/redacted so it can be used in test
     /// output.
     pub stable_test_output: bool,
+    /// Whether to only verify functions which have associated specifications
+    pub only_verify_spec: bool,
 }
 
 impl Default for Options {
@@ -91,6 +93,7 @@ impl Default for Options {
             omit_model_debug: false,
             use_array_theory: false,
             stable_test_output: false,
+            only_verify_spec: false,
         }
     }
 }
@@ -142,6 +145,11 @@ impl Options {
                     .short("g")
                     .long("generate-only")
                     .help("only generate boogie file but do not call boogie"),
+            )
+            .arg(
+                Arg::with_name("only-verify-spec")
+                    .long("only-verify-spec")
+                    .help("whether to only verify functions which have associated specifications"),
             )
             .arg(
                 Arg::with_name("native-stubs")
@@ -212,7 +220,7 @@ impl Options {
             .arg(
                 Arg::with_name("sources")
                     .multiple(true)
-                    .value_name("MVIR_FILE")
+                    .value_name("MOVE_FILE")
                     .min_values(1)
                     .help("path to a move file (with embedded spec)"),
             );
@@ -249,6 +257,7 @@ impl Options {
         self.move_sources = get_vec("sources");
         self.use_array_theory = matches.is_present("use-array-theory");
         self.stable_test_output = matches.is_present("stable-test-output");
+        self.only_verify_spec = matches.is_present("only-verify-spec");
     }
 
     /// Sets up logging based on provided options. This should be called as early as possible

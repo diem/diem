@@ -380,6 +380,12 @@ impl<'env> ModuleTranslator<'env> {
         self.generate_inline_function_body(func_env);
         emitln!(self.writer);
 
+        // If the function has no associated spec when the `only-verify-spec` flag is set,
+        // the `_verify` version is not generated to skip verifying the function without spec.
+        if self.options.only_verify_spec && func_env.get_specification_on_decl().is_empty() {
+            return;
+        }
+
         // generate the _verify version of the function which calls inline version for standalone
         // verification.
         self.generate_function_sig(func_env, false); // no inline
