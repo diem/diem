@@ -1,0 +1,15 @@
+[package]
+name = "x-core"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Core data structures used by x"
+edition = "2018"
+publish = false
+license = "Apache-2.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cargo_metadata = "0.9.1"
+guppy = "0.1.8"
+once_cell = "1.3.1"
