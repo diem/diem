@@ -202,7 +202,7 @@ impl LibraClient {
         match get_response_from_batch(0, &responses)? {
             Ok(result) => {
                 let account_view = AccountView::optional_from_response(result.clone())?;
-                Ok((account_view, client_version))
+                Ok((account_view, self.trusted_state.latest_version()))
             }
             Err(e) => bail!(
                 "Failed to get account state for account address {} with error: {:?}",
