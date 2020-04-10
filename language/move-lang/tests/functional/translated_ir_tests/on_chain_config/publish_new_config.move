@@ -27,23 +27,7 @@ fun main() {
     config = FooConfig::new(0);
     LibraConfig::publish_new_config<FooConfig::T>(move config)
 }
-// Should trigger a reconfiguration
-// check: NewEpochEvent
 // check: EXECUTED
-
-//! new-transaction
-//! sender: association
-// Cannot modify the value immediately.
-use 0x0::LibraConfig;
-use {{alice}}::FooConfig;
-fun main() {
-    let config: FooConfig::T;
-
-    config = FooConfig::new(0);
-    LibraConfig::set<FooConfig::T>(0x0::Transaction::sender(), move config)
-}
-// check: ABORTED
-// check: 23
 
 //! block-prologue
 //! proposer: vivian
@@ -51,7 +35,7 @@ fun main() {
 
 //! new-transaction
 //! sender: association
-// Update the value after reconfiguration.
+// Update the value.
 use 0x0::LibraConfig;
 use {{alice}}::FooConfig;
 fun main() {

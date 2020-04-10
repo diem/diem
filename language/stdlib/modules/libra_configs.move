@@ -50,12 +50,14 @@ module LibraConfig {
     }
 
     // Publish a new config item to a new value and trigger a reconfiguration.
-    public fun publish_new_config<Config: copyable>(payload: Config) acquires Configuration {
+    public fun publish_new_config<Config: copyable>(payload: Config) {
         // TODO: impose proper permission checks
         // Callable by the any address for now.
 
         move_to_sender(T{ payload });
-        reconfigure_();
+        // We don't trigger reconfiguration here, instead we'll wait for all validators update the binary
+        // to register this config into ON_CHAIN_CONFIG_REGISTRY then send another transaction to change
+        // the value which triggers the reconfiguration.
     }
 
     public fun reconfigure() acquires Configuration {
