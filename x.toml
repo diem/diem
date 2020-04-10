@@ -10,3 +10,10 @@ allowed = [
     # Known to have false positive at the moment,
     "clippy::mutable_key_type",
 ]
+
+[workspace.enforced-attributes]
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+
+[workspace.banned-direct-deps]
+lazy_static = "use once_cell::sync::Lazy instead"

@@ -1,8 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::utils::project_root;
-use crate::{config::Config, Result};
+use crate::{config::Config, utils::project_root, Result};
 use x_core::XCoreContext;
 
 /// Global context shared across x commands.

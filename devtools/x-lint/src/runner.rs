@@ -8,22 +8,43 @@ use std::{
     path::Path,
     process::{Command, Stdio},
 };
+use x_core::XCoreContext;
 
 /// Configuration for the lint engine.
 #[derive(Clone, Debug)]
 pub struct LintEngineConfig<'cfg> {
-    project_root: &'cfg Path,
+    core: &'cfg XCoreContext,
+    project_linters: &'cfg [&'cfg dyn ProjectLinter],
+    package_linters: &'cfg [&'cfg dyn PackageLinter],
     content_linters: &'cfg [&'cfg dyn ContentLinter],
     fail_fast: bool,
 }
 
 impl<'cfg> LintEngineConfig<'cfg> {
-    pub fn new(project_root: &'cfg Path) -> Self {
+    pub fn new(core: &'cfg XCoreContext) -> Self {
         Self {
-            project_root,
+            core,
+            project_linters: &[],
+            package_linters: &[],
             content_linters: &[],
             fail_fast: false,
         }
+    }
+
+    pub fn with_project_linters(
+        &mut self,
+        project_linters: &'cfg [&'cfg dyn ProjectLinter],
+    ) -> &mut Self {
+        self.project_linters = project_linters;
+        self
+    }
+
+    pub fn with_package_linters(
+        &mut self,
+        package_linters: &'cfg [&'cfg dyn PackageLinter],
+    ) -> &mut Self {
+        self.package_linters = package_linters;
+        self
     }
 
     pub fn with_content_linters(
@@ -65,10 +86,59 @@ impl<'cfg> LintEngine<'cfg> {
         let mut skipped = vec![];
         let mut messages = vec![];
 
-        // TODO: add support for project and file lints.
+        // TODO: add support for file linters.
 
-        let project_ctx = ProjectContext::new(self.config.project_root);
+        let project_ctx = ProjectContext::new(self.config.core);
 
+        // Run project linters.
+        if !self.config.project_linters.is_empty() {
+            for linter in self.config.project_linters {
+                let source = project_ctx.source(linter.name());
+                let mut formatter = LintFormatter::new(source, &mut messages);
+                match linter.run(&project_ctx, &mut formatter)? {
+                    RunStatus::Executed => {
+                        // Lint ran successfully.
+                    }
+                    RunStatus::Skipped(reason) => {
+                        skipped.push((source, reason));
+                    }
+                }
+
+                if self.config.fail_fast && !messages.is_empty() {
+                    // At least one issue was found.
+                    return Ok(LintResults { skipped, messages });
+                }
+            }
+        }
+
+        // Run package linters.
+        if !self.config.package_linters.is_empty() {
+            let package_graph = project_ctx.package_graph()?;
+
+            for (workspace_path, id) in package_graph.workspace().members() {
+                let package_ctx =
+                    PackageContext::new(project_ctx, package_graph, workspace_path, id);
+                for linter in self.config.package_linters {
+                    let source = package_ctx.source(linter.name());
+                    let mut formatter = LintFormatter::new(source, &mut messages);
+                    match linter.run(&package_ctx, &mut formatter)? {
+                        RunStatus::Executed => {
+                            // Lint ran successfully.
+                        }
+                        RunStatus::Skipped(reason) => {
+                            skipped.push((source, reason));
+                        }
+                    }
+
+                    if self.config.fail_fast && !messages.is_empty() {
+                        // At least one issue was found.
+                        return Ok(LintResults { skipped, messages });
+                    }
+                }
+            }
+        }
+
+        // Run content linters.
         if !self.config.content_linters.is_empty() {
             let file_list = self.get_file_list()?;
 
@@ -78,7 +148,7 @@ impl<'cfg> LintEngine<'cfg> {
                 .iter()
                 .map(|path| FileContext::new(project_ctx, path));
 
-            'outer: for file_ctx in file_ctxs {
+            for file_ctx in file_ctxs {
                 let linters_to_run = self
                     .config
                     .content_linters
@@ -118,7 +188,7 @@ impl<'cfg> LintEngine<'cfg> {
 
                     if self.config.fail_fast && !messages.is_empty() {
                         // At least one issue was found.
-                        break 'outer;
+                        return Ok(LintResults { skipped, messages });
                     }
                 }
             }
@@ -171,7 +241,7 @@ impl<'cfg> LintEngine<'cfg> {
             .get_or_try_init(|| {
                 // TODO: abstract out SCM and command-running functionality.
                 let output = Command::new("git")
-                    .current_dir(self.config.project_root)
+                    .current_dir(self.config.core.project_root())
                     // The -z causes files to not be quoted, and to be separated by \0.
                     .args(&["ls-files", "-z"])
                     .stderr(Stdio::inherit())
