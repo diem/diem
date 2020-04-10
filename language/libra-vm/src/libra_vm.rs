@@ -69,6 +69,14 @@ impl LibraVM {
         }
     }
 
+    pub fn clone_with_config(&self, gas_schedule: CostTable, on_chain_config: OnlineConfig) -> Self {
+        Self {
+            move_vm: self.move_vm.clone(),
+            gas_schedule: Some(gas_schedule),
+            on_chain_config: Some(on_chain_config),
+        }
+    }
+
     /// Provides access to some internal APIs of the Libra VM.
     pub fn internals(&self) -> LibraVMInternals {
         LibraVMInternals(self)

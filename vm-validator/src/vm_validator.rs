@@ -87,7 +87,7 @@ impl TransactionValidation for VMValidator {
             version,
         };
 
-        self.vm = LibraVM::init_with_config(gas_schedule.clone(), vm_config);
+        self.vm = self.vm.clone_with_config(gas_schedule.clone(), vm_config);
         Ok(())
     }
 }
