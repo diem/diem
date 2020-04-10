@@ -2,7 +2,7 @@
 name = "libra_fuzzer_fuzz"
 version = "0.1.0"
 edition = "2018"
-authors = ["Automatically generated"]
+authors = ["Libra Association <opensource@libra.org>"]
 description = "Libra fuzzer fuzz"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"

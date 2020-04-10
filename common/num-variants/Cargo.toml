@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
 edition = "2018"
 publish = false
+license = "Apache-2.0"
 
 [lib]
 proc-macro = true
