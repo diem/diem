@@ -14,7 +14,7 @@ anyhow = "1.0"
 hex = "0.4.2"
 parity-multiaddr = { version = "0.8.0", default-features = false }
 rand = "0.6.5"
-structopt = "0.3.12"
+structopt = "0.3.13"
 thiserror = "1.0"
 
 libra-config = { path = "..", version = "0.1.0" }

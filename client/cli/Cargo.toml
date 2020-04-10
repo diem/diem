@@ -24,7 +24,7 @@ rand = "0.6.5"
 reqwest = { version = "0.10.4", features = ["blocking", "json", "rustls-tls"], default-features = false }
 serde = { version = "1.0.106", features = ["derive"] }
 serde_json = "1.0.51"
-structopt = "0.3.12"
+structopt = "0.3.13"
 ureq = { version = "0.12.0"}
 
 admission-control-proto = { path = "../../admission_control/admission-control-proto", version = "0.1.0" }
