@@ -84,6 +84,7 @@ pub enum NativeFunction {
     AccountWriteEvent,
     AccountSaveAccount,
     DebugPrint,
+    DebugPrintStackTrace,
 }
 
 impl NativeFunction {
@@ -114,6 +115,7 @@ impl NativeFunction {
             (&CORE_CODE_ADDRESS, "LibraAccount", "write_to_event_store") => AccountWriteEvent,
             (&CORE_CODE_ADDRESS, "LibraAccount", "save_account") => AccountSaveAccount,
             (&CORE_CODE_ADDRESS, "Debug", "print") => DebugPrint,
+            (&CORE_CODE_ADDRESS, "Debug", "print_stack_trace") => DebugPrintStackTrace,
             _ => return None,
         })
     }
@@ -149,6 +151,9 @@ impl NativeFunction {
             Self::AccountSaveAccount => Err(VMStatus::new(StatusCode::UNREACHABLE)
                 .with_message("save_account does not have a native implementation".to_string())),
             Self::DebugPrint => debug::native_print(t, v, c),
+            Self::DebugPrintStackTrace => Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(
+                "print_stack_trace does not have a native implementation".to_string(),
+            )),
         }
     }
 
@@ -172,6 +177,7 @@ impl NativeFunction {
             Self::AccountWriteEvent => 3,
             Self::AccountSaveAccount => 3,
             Self::DebugPrint => 1,
+            Self::DebugPrintStackTrace => 0,
         }
     }
 
@@ -359,6 +365,7 @@ impl NativeFunction {
                 vec![Reference(Box::new(TypeParameter(0)))],
                 vec![]
             ),
+            Self::DebugPrintStackTrace => simple!(vec![], vec![], vec![]),
         })
     }
 }

@@ -2092,6 +2092,7 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "move-core-types 0.1.0",
  "move-vm-cache 0.1.0",
+ "move-vm-runtime 0.1.0",
  "move-vm-state 0.1.0",
  "move-vm-types 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -7,7 +7,10 @@ use bytecode_verifier::VerifiedModule;
 use move_core_types::identifier::IdentStr;
 use vm::{
     access::ModuleAccess,
-    file_format::{Bytecode, CodeUnit, FunctionDefinitionIndex, FunctionHandle, Kind, Signature},
+    file_format::{
+        Bytecode, CodeUnit, FunctionDefinitionIndex, FunctionHandle, Kind, Signature,
+        SignatureIndex,
+    },
     internals::ModuleIndex,
 };
 
@@ -22,8 +25,16 @@ pub trait FunctionReference<'txn>: Sized + Clone {
     /// Fetch the code of the function definition
     fn code_definition(&self) -> &'txn [Bytecode];
 
+    /// Return the locals for the function
+    fn locals(&self) -> Option<&'txn Signature>;
+
     /// Return the number of locals for the function
-    fn local_count(&self) -> usize;
+    fn local_count(&self) -> usize {
+        match self.locals() {
+            Some(locals) => locals.len(),
+            None => 0,
+        }
+    }
 
     /// Return the number of input parameters for the function
     fn arg_count(&self) -> usize;
@@ -74,11 +85,6 @@ impl<'txn> FunctionReference<'txn> for FunctionRef<'txn> {
     fn code_definition(&self) -> &'txn [Bytecode] {
         &self.def.code
     }
-
-    fn local_count(&self) -> usize {
-        self.def.local_count
-    }
-
     fn arg_count(&self) -> usize {
         self.def.arg_count
     }
@@ -109,6 +115,10 @@ impl<'txn> FunctionReference<'txn> for FunctionRef<'txn> {
     fn type_parameters(&self) -> &'txn [Kind] {
         &self.handle.type_parameters
     }
+
+    fn locals(&self) -> Option<&'txn Signature> {
+        self.def.locals_idx.map(|idx| self.module.signature_at(idx))
+    }
 }
 
 impl<'txn> FunctionRef<'txn> {
@@ -128,7 +138,7 @@ impl<'txn> FunctionRef<'txn> {
 /// Resolved form of a function definition
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FunctionDef {
-    pub local_count: usize,
+    pub locals_idx: Option<SignatureIndex>,
     pub arg_count: usize,
     pub return_count: usize,
     pub code: Vec<Bytecode>,
@@ -144,18 +154,18 @@ impl FunctionDef {
         let parameters = module.signature_at(handle.parameters);
         let return_ = module.signature_at(handle.return_);
         let flags = definition.flags;
+        let locals_idx = if (flags & CodeUnit::NATIVE) == CodeUnit::NATIVE {
+            None
+        } else {
+            Some(definition.code.locals)
+        };
 
         FunctionDef {
             code,
             flags,
             arg_count: parameters.len(),
             return_count: return_.len(),
-            // Local count for native function is omitted
-            local_count: if (flags & CodeUnit::NATIVE) == CodeUnit::NATIVE {
-                0
-            } else {
-                module.signature_at(definition.code.locals).0.len()
-            },
+            locals_idx,
         }
     }
 }

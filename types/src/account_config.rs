@@ -35,6 +35,12 @@ static ACCOUNT_EVENT_HANDLE_GENERATOR_STRUCT_NAME: Lazy<Identifier> =
 pub static ACCOUNT_MODULE: Lazy<ModuleId> =
     Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, ACCOUNT_MODULE_IDENTIFIER.clone()));
 
+// Debug
+pub static DEBUG_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("Debug").unwrap());
+
+pub static DEBUG_MODULE: Lazy<ModuleId> =
+    Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, DEBUG_MODULE_NAME.clone()));
+
 pub fn coin_module_name() -> &'static IdentStr {
     &*COIN_MODULE_NAME
 }
