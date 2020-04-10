@@ -15,7 +15,7 @@ jemallocator = { version = "0.3.2", features = ["profiling", "unprefixed_malloc_
 parity-multiaddr = "0.8.0"
 rayon = "1.2.0"
 structopt = "0.3.13"
-tokio = { version = "0.2.13", features = ["full"] }
+tokio = { version = "0.2.17", features = ["full"] }
 tonic = "0.2"
 
 admission-control-proto = { path = "../admission_control/admission-control-proto", version = "0.1.0" }
