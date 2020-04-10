@@ -2479,6 +2479,7 @@ dependencies = [
  "storage-client 0.1.0",
  "storage-service 0.1.0",
  "structopt 0.3.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "subscription-service 0.1.0",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "tonic 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -2616,7 +2617,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytes 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "channel 0.1.0",
  "chrono 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4883,6 +4883,7 @@ dependencies = [
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
  "storage-client 0.1.0",
+ "subscription-service 0.1.0",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
  "vm-genesis 0.1.0",
@@ -5054,6 +5055,15 @@ dependencies = [
  "proc-macro2 1.0.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "syn 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "subscription-service"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.28 (registry+https://github.com/rust-lang/crates.io-index)",
+ "channel 0.1.0",
+ "libra-types 0.1.0",
 ]
 
 [[package]]

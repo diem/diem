@@ -23,6 +23,7 @@ members = [
     "common/security-logger",
     "common/serde-reflection",
     "common/stream-ratelimiter",
+    "common/subscription-service",
     "common/temppath",
     "common/util",
     "common/workspace-builder",

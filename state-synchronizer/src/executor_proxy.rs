@@ -9,7 +9,6 @@ use itertools::Itertools;
 use libra_config::config::NodeConfig;
 use libra_types::{
     contract_event::ContractEvent,
-    event_subscription::ReconfigSubscription,
     ledger_info::LedgerInfoWithSignatures,
     on_chain_config::{ConfigID, OnChainConfigPayload, ON_CHAIN_CONFIG_REGISTRY},
     transaction::TransactionListWithProof,
@@ -21,6 +20,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use storage_client::{StorageRead, StorageReadServiceClient};
+use subscription_service::ReconfigSubscription;
 
 /// Proxies interactions with execution and storage for state synchronization
 #[async_trait::async_trait]

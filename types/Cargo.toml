@@ -27,7 +27,6 @@ serde = { version = "1.0.106", default-features = false }
 thiserror = "1.0"
 tiny-keccak = { version = "2.0.2", default-features = false, features = ["sha3"] }
 
-channel = { path = "../common/channel", version = "0.1.0" }
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
