@@ -22,6 +22,7 @@ libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libradb = { path = "../libradb", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
+libra-secure-net = { path = "../../secure/net", version = "0.1.0" }
 storage-interface = { path = "../storage-interface", version = "0.1.0" }
 storage-proto = { path = "../storage-proto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }

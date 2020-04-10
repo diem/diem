@@ -43,6 +43,7 @@ use libra_types::{
 use proptest::prelude::*;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
+use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -490,7 +491,7 @@ impl From<GetTransactionsResponse> for crate::proto::storage::GetTransactionsRes
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct TreeState {
     pub num_transactions: LeafCount,
@@ -552,7 +553,7 @@ impl From<TreeState> for crate::proto::storage::TreeState {
 }
 
 /// Helper to construct and parse [`proto::storage::StartupInfo`]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct StartupInfo {
     /// The latest ledger info.
     pub latest_ledger_info: LedgerInfoWithSignatures,
