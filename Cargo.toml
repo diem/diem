@@ -1,8 +1,8 @@
 [workspace]
 
 members = [
-    "admission_control/admission-control-service",
-    "admission_control/admission-control-proto",
+    "admission-control/admission-control-service",
+    "admission-control/admission-control-proto",
     "client/cli",
     "client/libra_wallet",
     "client/libra-dev",
