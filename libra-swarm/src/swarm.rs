@@ -118,7 +118,7 @@ impl LibraNode {
     fn get_metric(&mut self, metric_name: &str) -> Option<i64> {
         match self.debug_client.get_node_metric(metric_name) {
             Err(e) => {
-                debug!(
+                println!(
                     "error getting {} for node: {}; error: {}",
                     metric_name, self.node_id, e
                 );
@@ -126,7 +126,7 @@ impl LibraNode {
             }
             Ok(maybeval) => {
                 if maybeval.is_none() {
-                    debug!("Node: {} did not report {}", self.node_id, metric_name);
+                    println!("Node: {} did not report {}", self.node_id, metric_name);
                 }
                 maybeval
             }
@@ -140,7 +140,7 @@ impl LibraNode {
         );
         if let Some(num_connected_peers) = self.get_metric(&connected_peers) {
             if num_connected_peers < expected_peers {
-                debug!(
+                println!(
                     "Node '{}' Expected peers: {}, found peers: {}",
                     self.node_id, expected_peers, num_connected_peers
                 );
@@ -153,13 +153,13 @@ impl LibraNode {
     }
 
     pub fn health_check(&mut self) -> HealthStatus {
-        debug!("Health check on node '{}'", self.node_id);
+        println!("Health check on node '{}'", self.node_id);
 
         // check if the process has terminated
         match self.node.try_wait() {
             // This would mean the child process has crashed
             Ok(Some(status)) => {
-                debug!("Node '{}' crashed with: {}", self.node_id, status);
+                println!("Node '{}' crashed with: {}", self.node_id, status);
                 return HealthStatus::Crashed(status);
             }
 
@@ -174,11 +174,11 @@ impl LibraNode {
 
         match self.debug_client.get_node_metrics() {
             Ok(_) => {
-                debug!("Node '{}' is healthy", self.node_id);
+                println!("Node '{}' is healthy", self.node_id);
                 HealthStatus::Healthy
             }
             Err(e) => {
-                debug!("Error querying metrics for node '{}'", self.node_id);
+                println!("Error querying metrics for node '{}'", self.node_id);
                 HealthStatus::RpcFailure(e)
             }
         }
@@ -380,7 +380,7 @@ impl LibraSwarm {
         let num_attempts = 60;
 
         for i in 0..num_attempts {
-            debug!("Wait for connectivity attempt: {}", i);
+            println!("Wait for connectivity attempt: {}", i);
 
             let len = self.nodes.len();
             if self
@@ -402,7 +402,7 @@ impl LibraSwarm {
         let num_attempts = 120;
         let mut done = vec![false; self.nodes.len()];
         for i in 0..num_attempts {
-            debug!("Wait for startup attempt: {} of {}", i, num_attempts);
+            println!("Wait for startup attempt: {} of {}", i, num_attempts);
             for (node, done) in self.nodes.values_mut().zip(done.iter_mut()) {
                 if *done {
                     continue;
@@ -444,15 +444,15 @@ impl LibraSwarm {
 
         let mut last_committed_round = 0;
         // First, try to retrieve the max value across all the committed rounds
-        debug!("Calculating max committed round across the validators.");
+        println!("Calculating max committed round across the validators.");
         for node in self.nodes.values_mut() {
             match node.get_metric(last_committed_round_str) {
                 Some(val) => {
-                    debug!("\tNode {} last committed round = {}", node.node_id, val);
+                    println!("\tNode {} last committed round = {}", node.node_id, val);
                     last_committed_round = last_committed_round.max(val);
                 }
                 None => {
-                    debug!(
+                    println!(
                         "\tNode {} last committed round unknown, assuming 0.",
                         node.node_id
                     );
@@ -462,7 +462,7 @@ impl LibraSwarm {
 
         // Now wait for all the nodes to catch up to the max.
         for i in 0..num_attempts {
-            debug!(
+            println!(
                 "Wait for catchup, target_commit_round = {}, attempt: {} of {}",
                 last_committed_round,
                 i + 1,
@@ -476,20 +476,20 @@ impl LibraSwarm {
                 match node.get_metric(last_committed_round_str) {
                     Some(val) => {
                         if val >= last_committed_round {
-                            debug!(
+                            println!(
                                 "\tNode {} is caught up with last committed round {}",
                                 node.node_id, val
                             );
                             *done = true;
                         } else {
-                            debug!(
+                            println!(
                                 "\tNode {} is not caught up yet with last committed round {}",
                                 node.node_id, val
                             );
                         }
                     }
                     None => {
-                        debug!(
+                        println!(
                             "\tNode {} last committed round unknown, assuming 0.",
                             node.node_id
                         );
