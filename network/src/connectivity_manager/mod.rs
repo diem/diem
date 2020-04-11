@@ -39,6 +39,7 @@ use futures::{
 };
 use libra_logger::prelude::*;
 use libra_types::PeerId;
+use num_variants::NumVariants;
 use parity_multiaddr::Multiaddr;
 use std::{
     cmp::min,
@@ -86,15 +87,11 @@ pub struct ConnectivityManager<TTicker, TBackoff> {
 /// Different sources for peer addresses, ordered by priority (Onchain=highest,
 /// Config=lowest).
 #[repr(u8)]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, NumVariants)]
 pub enum DiscoverySource {
-    Onchain = 0,
-    Gossip = 1,
-    Config = 2,
-}
-
-impl DiscoverySource {
-    const NUM_SOURCES: usize = (Self::Config as u8 + 1) as usize;
+    OnChain,
+    Gossip,
+    Config,
 }
 
 /// Requests received by the [`ConnectivityManager`] manager actor from upstream modules.
@@ -110,7 +107,7 @@ pub enum ConnectivityRequest {
 
 /// A set of Multiaddr's for a peer, bucketed by DiscoverySource in priority order.
 #[derive(Clone, Debug, Default)]
-struct Addresses([Vec<Multiaddr>; DiscoverySource::NUM_SOURCES]);
+struct Addresses([Vec<Multiaddr>; DiscoverySource::NUM_VARIANTS]);
 
 #[derive(Debug)]
 enum DialResult {
@@ -488,15 +485,8 @@ impl Addresses {
         self.0[idx] = addrs;
     }
 
-    fn get(&self, mut idx: usize) -> Option<&Multiaddr> {
-        for addrs in &self.0 {
-            if idx >= addrs.len() {
-                idx -= addrs.len();
-            } else {
-                return Some(&addrs[idx]);
-            }
-        }
-        None
+    fn get(&self, idx: usize) -> Option<&Multiaddr> {
+        self.0.iter().flatten().nth(idx)
     }
 }
 
