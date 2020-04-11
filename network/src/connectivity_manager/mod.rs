@@ -1,18 +1,32 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! The ConnectivityManager actor is responsible for ensuring that we are connected to a node
-//! if and only if it is an eligible node.
-//! A list of eligible nodes is received at initialization, and updates are received on changes
-//! to system membership.
+//! The ConnectivityManager actor is responsible for ensuring that we are
+//! connected to a node if and only if it is an eligible node.
 //!
-//! In our current system design, the Consensus actor informs the ConnectivityManager of
-//! eligible nodes, and the Discovery actor infroms it about updates to addresses of eligible
-//! nodes.
+//! A list of eligible nodes is received at initialization, and updates are
+//! received on changes to system membership. In our current system design, the
+//! Consensus actor informs the ConnectivityManager of eligible nodes.
+//!
+//! Different discovery sources notify the ConnectivityManager of updates to
+//! peers' addresses. Currently, there are 3 discovery sources (ordered by
+//! decreasing dial priority, i.e., first is highest priority):
+//!
+//! 1. Onchain discovery protocol
+//! 2. Gossip discovery protocol
+//! 3. Seed peers from config
+//!
+//! In other words, if a we have some addresses discovered via onchain discovery
+//! and some seed addresses from our local config, we will try the onchain
+//! discovery addresses first and the local seed addresses after.
 //!
 //! When dialing a peer with a given list of addresses, we attempt each address
 //! in order with a capped exponential backoff delay until we eventually connect
-//! to the peer.
+//! to the peer. The backoff is capped since, for validators specifically, it is
+//! absolutely important that we maintain connectivity with all peers and heal
+//! any partitions asap, as we aren't currently gossiping consensus messages or
+//! using a relay protocol.
+
 use crate::{
     common::NetworkPublicKeys,
     peer_manager::{self, conn_status_channel, ConnectionRequestSender, PeerManagerError},
@@ -42,16 +56,10 @@ mod test;
 pub struct ConnectivityManager<TTicker, TBackoff> {
     /// Nodes which are eligible to join the network.
     eligible: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
-    /// For some networks, we need an initial set of seed peers to bootstrap from.
-    /// `ConnectivityManager` will attempt to connect to these seed peers on
-    /// startup. Even after receiving fresher information on peer addresses, we
-    /// will still use these configured seed addresses, just as the lowest
-    /// priority backup when attemping to connect.
-    seed_peers: HashMap<PeerId, Vec<Multiaddr>>,
     /// PeerId and address of remote peers to which this peer is connected.
     connected: HashMap<PeerId, Multiaddr>,
-    /// Addresses of peers received from Discovery module.
-    peer_addresses: HashMap<PeerId, Vec<Multiaddr>>,
+    /// Addresses of peers received from discovery sources.
+    peer_addresses: HashMap<PeerId, Addresses>,
     /// Ticker to trigger connectivity checks to provide the guarantees stated above.
     ticker: TTicker,
     /// Channel to send connection requests to PeerManager.
@@ -75,6 +83,20 @@ pub struct ConnectivityManager<TTicker, TBackoff> {
     event_id: u32,
 }
 
+/// Different sources for peer addresses, ordered by priority (Onchain=highest,
+/// Config=lowest).
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub enum DiscoverySource {
+    Onchain = 0,
+    Gossip = 1,
+    Config = 2,
+}
+
+impl DiscoverySource {
+    const NUM_SOURCES: usize = (Self::Config as u8 + 1) as usize;
+}
+
 /// Requests received by the [`ConnectivityManager`] manager actor from upstream modules.
 #[derive(Debug)]
 pub enum ConnectivityRequest {
@@ -85,6 +107,10 @@ pub enum ConnectivityRequest {
     /// Gets current size of dial queue. This is useful in tests.
     GetDialQueueSize(oneshot::Sender<usize>),
 }
+
+/// A set of Multiaddr's for a peer, bucketed by DiscoverySource in priority order.
+#[derive(Clone, Debug, Default)]
+struct Addresses([Vec<Multiaddr>; DiscoverySource::NUM_SOURCES]);
 
 #[derive(Debug)]
 enum DialResult {
@@ -124,14 +150,20 @@ where
         // Ensure seed peers doesn't contain our own address (we want to avoid
         // pointless self-dials).
         let peer_addresses = seed_peers
-            .clone()
             .into_iter()
             .filter(|(peer_id, _)| *peer_id != self_peer_id)
-            .collect::<HashMap<PeerId, _>>();
+            .map(|(peer_id, seed_addrs)| {
+                (
+                    peer_id,
+                    Addresses::from_addrs(DiscoverySource::Config, seed_addrs),
+                )
+            })
+            .collect::<HashMap<PeerId, Addresses>>();
+
+        info!("ConnectivityManager: {} seed peers", peer_addresses.len());
 
         Self {
             eligible,
-            seed_peers,
             connected: HashMap::new(),
             peer_addresses,
             ticker,
@@ -157,7 +189,6 @@ where
         let mut pending_dials = FuturesUnordered::new();
 
         // When we first startup, let's attempt to connect with our seed peers.
-        info!("Connecting to {} seed peers...", self.seed_peers.len());
         self.check_connectivity(&mut pending_dials).await;
 
         trace!("Starting connection manager");
@@ -366,17 +397,14 @@ where
         }
     }
 
-    fn update_peer_addrs(&mut self, peer_id: PeerId, mut addrs: Vec<Multiaddr>) {
-        // Append any seed addresses for this peer as low-priority backups.
-        if let Some(seed_addrs) = self.seed_peers.get(&peer_id) {
-            for seed_addr in seed_addrs {
-                if !addrs.contains(seed_addr) {
-                    addrs.push(seed_addr.clone());
-                }
-            }
-        }
+    fn update_peer_addrs(&mut self, peer_id: PeerId, addrs: Vec<Multiaddr>) {
+        // TODO(philiphayes): use real value here
+        let src = DiscoverySource::Gossip;
 
-        self.peer_addresses.insert(peer_id, addrs);
+        self.peer_addresses
+            .entry(peer_id)
+            .or_default()
+            .update(src, addrs);
     }
 
     fn handle_control_notification(&mut self, notif: peer_manager::ConnectionStatusNotification) {
@@ -438,6 +466,42 @@ fn log_dial_result(peer_id: PeerId, addr: Multiaddr, dial_result: DialResult) {
     }
 }
 
+impl Addresses {
+    fn new() -> Self {
+        Default::default()
+    }
+
+    fn from_addrs(src: DiscoverySource, src_addrs: Vec<Multiaddr>) -> Self {
+        let mut addrs = Self::new();
+        addrs.update(src, src_addrs);
+        addrs
+    }
+
+    fn len(&self) -> usize {
+        self.0.iter().map(Vec::len).sum()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    fn update(&mut self, src: DiscoverySource, addrs: Vec<Multiaddr>) {
+        let idx = src as u8 as usize;
+        self.0[idx] = addrs;
+    }
+
+    fn get(&self, mut idx: usize) -> Option<&Multiaddr> {
+        for addrs in &self.0 {
+            if idx >= addrs.len() {
+                idx -= addrs.len();
+            } else {
+                return Some(&addrs[idx]);
+            }
+        }
+        None
+    }
+}
+
 impl<TBackoff> DialState<TBackoff>
 where
     TBackoff: Iterator<Item = Duration> + Clone,
@@ -453,11 +517,13 @@ where
         self.addr_idx = 0;
     }
 
-    fn next_addr<'a>(&mut self, addrs: &'a [Multiaddr]) -> &'a Multiaddr {
+    fn next_addr<'a>(&mut self, addrs: &'a Addresses) -> &'a Multiaddr {
+        assert_ne!(0, addrs.len());
+
         let addr_idx = self.addr_idx;
         self.addr_idx = self.addr_idx.wrapping_add(1);
 
-        &addrs[addr_idx % addrs.len()]
+        addrs.get(addr_idx % addrs.len()).unwrap()
     }
 
     fn next_backoff_delay(&mut self, max_delay: Duration) -> Duration {
