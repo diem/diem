@@ -37,13 +37,124 @@ type RoundCallback = fn() -> (Box<dyn TSafetyRules<Round>>, ValidatorSigner);
 type ByteArrayCallback = fn() -> (Box<dyn TSafetyRules<Vec<u8>>>, ValidatorSigner);
 
 pub fn run_test_suite(round_func: RoundCallback, byte_func: ByteArrayCallback) {
+    test_bad_execution_output(round_func);
+    test_commit_rule_consecutive_rounds(round_func);
+    test_end_to_end(byte_func);
     test_initial_state(round_func);
     test_preferred_block_rule(round_func);
-    test_voting_potential_commit_id(round_func);
     test_voting(round_func);
-    test_commit_rule_consecutive_rounds(round_func);
-    test_bad_execution_output(round_func);
-    test_end_to_end(byte_func);
+    test_voting_potential_commit_id(round_func);
+}
+
+fn test_bad_execution_output(func: RoundCallback) {
+    // build a tree of the following form:
+    //                 _____
+    //                /     \
+    // genesis---a1--a2--a3  evil_a3
+    //
+    // evil_a3 attempts to append to a1 but fails append only check
+    // a3 works as it properly extends a2
+    let (mut safety_rules, signer) = func();
+
+    let genesis_block = Block::<Round>::make_genesis_block();
+    let genesis_qc = block_test_utils::certificate_for_genesis();
+    let round = genesis_block.round();
+
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
+    let a2 = make_proposal_with_parent(round + 2, &a1, None, &signer);
+    let a3 = make_proposal_with_parent(round + 3, &a2, None, &signer);
+
+    let a1_output = a1
+        .accumulator_extension_proof()
+        .verify(
+            a1.block()
+                .quorum_cert()
+                .certified_block()
+                .executed_state_id(),
+        )
+        .unwrap();
+
+    let evil_proof = Proof::new(
+        a1_output.frozen_subtree_roots().clone(),
+        a1_output.num_leaves(),
+        vec![Timeout::new(0, *a3.block().payload().unwrap()).hash()],
+    );
+
+    let evil_a3 = make_proposal_with_qc_and_proof(
+        round,
+        evil_proof,
+        a3.block().quorum_cert().clone(),
+        &signer,
+    );
+
+    let evil_a3_block = safety_rules.construct_and_sign_vote(&evil_a3);
+    assert!(evil_a3_block.is_err());
+
+    let a3_block = safety_rules.construct_and_sign_vote(&a3);
+    assert!(a3_block.is_ok());
+}
+
+fn test_commit_rule_consecutive_rounds(func: RoundCallback) {
+    // build a tree of the following form:
+    //             ___________
+    //            /           \
+    // genesis---a1  b1---b2   a2---a3---a4
+    //         \_____/
+    //
+    // a1 cannot be committed after a3 gathers QC because a1 and a2 are not consecutive
+    // a2 can be committed after a4 gathers QC
+    let (mut safety_rules, signer) = func();
+
+    let genesis_block = Block::<Round>::make_genesis_block();
+    let genesis_qc = block_test_utils::certificate_for_genesis();
+    let round = genesis_block.round();
+
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &signer);
+    let b1 = test_utils::make_proposal_with_qc(round + 2, genesis_qc, &signer);
+    let b2 = make_proposal_with_parent(round + 3, &b1, None, &signer);
+    let a2 = make_proposal_with_parent(round + 4, &a1, None, &signer);
+    let a3 = make_proposal_with_parent(round + 5, &a2, None, &signer);
+    let a4 = make_proposal_with_parent(round + 6, &a3, Some(&a2), &signer);
+
+    safety_rules.construct_and_sign_vote(&a1).unwrap();
+    safety_rules.construct_and_sign_vote(&b1).unwrap();
+    safety_rules.construct_and_sign_vote(&b2).unwrap();
+    safety_rules.construct_and_sign_vote(&a2).unwrap();
+    safety_rules.construct_and_sign_vote(&a3).unwrap();
+    safety_rules.construct_and_sign_vote(&a4).unwrap();
+}
+
+fn test_end_to_end(func: ByteArrayCallback) {
+    let (mut safety_rules, signer) = func();
+
+    let genesis_block = Block::<Round>::make_genesis_block();
+    let genesis_qc = block_test_utils::certificate_for_genesis();
+    let round = genesis_block.round();
+
+    let mut rng = rand::thread_rng();
+    let data: Vec<u8> = (0..2048).map(|_| rng.gen::<u8>()).collect();
+
+    let p0 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
+    let p1 = test_utils::make_proposal_with_parent(data.clone(), round + 2, &p0, None, &signer);
+    let p2 = test_utils::make_proposal_with_parent(data.clone(), round + 3, &p1, None, &signer);
+    let p3 = test_utils::make_proposal_with_parent(data, round + 4, &p2, Some(&p0), &signer);
+
+    let state = safety_rules.consensus_state().unwrap();
+    assert_eq!(state.last_voted_round(), genesis_block.round());
+    assert_eq!(state.preferred_round(), genesis_block.round());
+
+    safety_rules.update(p0.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&p0).unwrap();
+    safety_rules.update(p1.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&p1).unwrap();
+    safety_rules.update(p2.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&p2).unwrap();
+    safety_rules.update(p3.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&p3).unwrap();
+
+    let state = safety_rules.consensus_state().unwrap();
+    assert_eq!(state.last_voted_round(), round + 4);
+    assert_eq!(state.preferred_round(), round + 2);
 }
 
 fn test_initial_state(func: RoundCallback) {
@@ -119,56 +230,6 @@ fn test_preferred_block_rule(func: RoundCallback) {
     assert_eq!(
         safety_rules.consensus_state().unwrap().preferred_round(),
         a2.block().round()
-    );
-}
-
-fn test_voting_potential_commit_id(func: RoundCallback) {
-    // Test the potential ledger info that we're going to use in case of voting
-    // build a tree of the following form:
-    //            _____
-    //           /     \
-    // genesis--a1  b1  a2--a3--a4--a5
-    //        \_____/
-    //
-    // All the votes before a4 cannot produce any potential commits.
-    // A potential commit for proposal a4 is a2, a potential commit for proposal a5 is a3.
-    let (mut safety_rules, signer) = func();
-
-    let genesis_block = Block::<Round>::make_genesis_block();
-    let genesis_qc = block_test_utils::certificate_for_genesis();
-    let round = genesis_block.round();
-
-    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &signer);
-    let b1 = test_utils::make_proposal_with_qc(round + 2, genesis_qc, &signer);
-    let a2 = make_proposal_with_parent(round + 3, &a1, None, &signer);
-    let a3 = make_proposal_with_parent(round + 4, &a2, None, &signer);
-    let a4 = make_proposal_with_parent(round + 5, &a3, Some(&a2), &signer);
-    let a5 = make_proposal_with_parent(round + 6, &a4, Some(&a3), &signer);
-
-    for b in &[&a1, &b1, &a2, &a3] {
-        safety_rules.update(b.block().quorum_cert()).unwrap();
-        let vote = safety_rules.construct_and_sign_vote(b).unwrap();
-        assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
-    }
-
-    safety_rules.update(a4.block().quorum_cert()).unwrap();
-    assert_eq!(
-        safety_rules
-            .construct_and_sign_vote(&a4)
-            .unwrap()
-            .ledger_info()
-            .consensus_block_id(),
-        a2.block().id(),
-    );
-
-    safety_rules.update(a5.block().quorum_cert()).unwrap();
-    assert_eq!(
-        safety_rules
-            .construct_and_sign_vote(&a5)
-            .unwrap()
-            .ledger_info()
-            .consensus_block_id(),
-        a3.block().id(),
     );
 }
 
@@ -255,15 +316,16 @@ fn test_voting(func: RoundCallback) {
     );
 }
 
-fn test_commit_rule_consecutive_rounds(func: RoundCallback) {
+fn test_voting_potential_commit_id(func: RoundCallback) {
+    // Test the potential ledger info that we're going to use in case of voting
     // build a tree of the following form:
-    //             ___________
-    //            /           \
-    // genesis---a1  b1---b2   a2---a3---a4
-    //         \_____/
+    //            _____
+    //           /     \
+    // genesis--a1  b1  a2--a3--a4--a5
+    //        \_____/
     //
-    // a1 cannot be committed after a3 gathers QC because a1 and a2 are not consecutive
-    // a2 can be committed after a4 gathers QC
+    // All the votes before a4 cannot produce any potential commits.
+    // A potential commit for proposal a4 is a2, a potential commit for proposal a5 is a3.
     let (mut safety_rules, signer) = func();
 
     let genesis_block = Block::<Round>::make_genesis_block();
@@ -272,96 +334,34 @@ fn test_commit_rule_consecutive_rounds(func: RoundCallback) {
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc.clone(), &signer);
     let b1 = test_utils::make_proposal_with_qc(round + 2, genesis_qc, &signer);
-    let b2 = make_proposal_with_parent(round + 3, &b1, None, &signer);
-    let a2 = make_proposal_with_parent(round + 4, &a1, None, &signer);
-    let a3 = make_proposal_with_parent(round + 5, &a2, None, &signer);
-    let a4 = make_proposal_with_parent(round + 6, &a3, Some(&a2), &signer);
+    let a2 = make_proposal_with_parent(round + 3, &a1, None, &signer);
+    let a3 = make_proposal_with_parent(round + 4, &a2, None, &signer);
+    let a4 = make_proposal_with_parent(round + 5, &a3, Some(&a2), &signer);
+    let a5 = make_proposal_with_parent(round + 6, &a4, Some(&a3), &signer);
 
-    safety_rules.construct_and_sign_vote(&a1).unwrap();
-    safety_rules.construct_and_sign_vote(&b1).unwrap();
-    safety_rules.construct_and_sign_vote(&b2).unwrap();
-    safety_rules.construct_and_sign_vote(&a2).unwrap();
-    safety_rules.construct_and_sign_vote(&a3).unwrap();
-    safety_rules.construct_and_sign_vote(&a4).unwrap();
-}
+    for b in &[&a1, &b1, &a2, &a3] {
+        safety_rules.update(b.block().quorum_cert()).unwrap();
+        let vote = safety_rules.construct_and_sign_vote(b).unwrap();
+        assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
+    }
 
-fn test_bad_execution_output(func: RoundCallback) {
-    // build a tree of the following form:
-    //                 _____
-    //                /     \
-    // genesis---a1--a2--a3  evil_a3
-    //
-    // evil_a3 attempts to append to a1 but fails append only check
-    // a3 works as it properly extends a2
-    let (mut safety_rules, signer) = func();
-
-    let genesis_block = Block::<Round>::make_genesis_block();
-    let genesis_qc = block_test_utils::certificate_for_genesis();
-    let round = genesis_block.round();
-
-    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
-    let a2 = make_proposal_with_parent(round + 2, &a1, None, &signer);
-    let a3 = make_proposal_with_parent(round + 3, &a2, None, &signer);
-
-    let a1_output = a1
-        .accumulator_extension_proof()
-        .verify(
-            a1.block()
-                .quorum_cert()
-                .certified_block()
-                .executed_state_id(),
-        )
-        .unwrap();
-
-    let evil_proof = Proof::new(
-        a1_output.frozen_subtree_roots().clone(),
-        a1_output.num_leaves(),
-        vec![Timeout::new(0, *a3.block().payload().unwrap()).hash()],
+    safety_rules.update(a4.block().quorum_cert()).unwrap();
+    assert_eq!(
+        safety_rules
+            .construct_and_sign_vote(&a4)
+            .unwrap()
+            .ledger_info()
+            .consensus_block_id(),
+        a2.block().id(),
     );
 
-    let evil_a3 = make_proposal_with_qc_and_proof(
-        round,
-        evil_proof,
-        a3.block().quorum_cert().clone(),
-        &signer,
+    safety_rules.update(a5.block().quorum_cert()).unwrap();
+    assert_eq!(
+        safety_rules
+            .construct_and_sign_vote(&a5)
+            .unwrap()
+            .ledger_info()
+            .consensus_block_id(),
+        a3.block().id(),
     );
-
-    let evil_a3_block = safety_rules.construct_and_sign_vote(&evil_a3);
-    assert!(evil_a3_block.is_err());
-
-    let a3_block = safety_rules.construct_and_sign_vote(&a3);
-    assert!(a3_block.is_ok());
-}
-
-fn test_end_to_end(func: ByteArrayCallback) {
-    let (mut safety_rules, signer) = func();
-
-    let genesis_block = Block::<Round>::make_genesis_block();
-    let genesis_qc = block_test_utils::certificate_for_genesis();
-    let round = genesis_block.round();
-
-    let mut rng = rand::thread_rng();
-    let data: Vec<u8> = (0..2048).map(|_| rng.gen::<u8>()).collect();
-
-    let p0 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
-    let p1 = test_utils::make_proposal_with_parent(data.clone(), round + 2, &p0, None, &signer);
-    let p2 = test_utils::make_proposal_with_parent(data.clone(), round + 3, &p1, None, &signer);
-    let p3 = test_utils::make_proposal_with_parent(data, round + 4, &p2, Some(&p0), &signer);
-
-    let state = safety_rules.consensus_state().unwrap();
-    assert_eq!(state.last_voted_round(), genesis_block.round());
-    assert_eq!(state.preferred_round(), genesis_block.round());
-
-    safety_rules.update(p0.block().quorum_cert()).unwrap();
-    safety_rules.construct_and_sign_vote(&p0).unwrap();
-    safety_rules.update(p1.block().quorum_cert()).unwrap();
-    safety_rules.construct_and_sign_vote(&p1).unwrap();
-    safety_rules.update(p2.block().quorum_cert()).unwrap();
-    safety_rules.construct_and_sign_vote(&p2).unwrap();
-    safety_rules.update(p3.block().quorum_cert()).unwrap();
-    safety_rules.construct_and_sign_vote(&p3).unwrap();
-
-    let state = safety_rules.consensus_state().unwrap();
-    assert_eq!(state.last_voted_round(), round + 4);
-    assert_eq!(state.preferred_round(), round + 2);
 }
