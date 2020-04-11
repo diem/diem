@@ -10,13 +10,14 @@ use std::sync::Arc;
 define_counters![
     "libra_safety_rules",
     (
+        requested_sign_timeout: Counter,
+        "counts requests to sign_timeouts"
+    ),
+    (
         sign_proposal: Counter,
         "sign_proposal counter counts sign_proposals"
     ),
-    (
-        sign_timeout: Counter,
-        "sign_timeout counter counts sign_timeouts"
-    ),
+    (sign_timeout: Counter, "counts successful sign_timeouts"),
     (some_gauge_counter: Gauge, "example help for a gauge metric"),
 ];
 

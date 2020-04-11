@@ -42,6 +42,7 @@ pub fn run_test_suite(round_func: RoundCallback, byte_func: ByteArrayCallback) {
     test_end_to_end(byte_func);
     test_initial_state(round_func);
     test_preferred_block_rule(round_func);
+    test_sign_timeout(round_func);
     test_voting(round_func);
     test_voting_potential_commit_id(round_func);
 }
@@ -231,6 +232,55 @@ fn test_preferred_block_rule(func: RoundCallback) {
         safety_rules.consensus_state().unwrap().preferred_round(),
         a2.block().round()
     );
+}
+
+/// Verify first that we can successfully sign a timeout on the correct conditions, then ensure
+/// that poorly set last_voted_rounds both historical and in the future fail as well as
+/// synchronization issues on preferred round are correct. Effectivelly ensure that equivocation is
+/// impossible for signing timeouts.
+fn test_sign_timeout(func: RoundCallback) {
+    let (mut safety_rules, signer) = func();
+
+    let genesis_block = Block::<Round>::make_genesis_block();
+    let genesis_qc = block_test_utils::certificate_for_genesis();
+    let round = genesis_block.round();
+
+    let p0 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
+    let p1 = make_proposal_with_parent(round + 2, &p0, None, &signer);
+    let p2 = make_proposal_with_parent(round + 3, &p1, None, &signer);
+    let p3 = make_proposal_with_parent(round + 4, &p2, None, &signer);
+    let p4 = make_proposal_with_parent(round + 5, &p3, None, &signer);
+
+    safety_rules.update(p0.block().quorum_cert()).unwrap();
+
+    // Verify multiple signings are the same
+    let timeout = Timeout::new(genesis_block.epoch(), p0.block().round());
+    let sign1 = safety_rules.sign_timeout(&timeout).unwrap();
+    let sign2 = safety_rules.sign_timeout(&timeout).unwrap();
+    assert_eq!(sign1, sign2);
+
+    // Verify can sign last_voted_round + 1
+    let timeout_plus_1 = Timeout::new(timeout.epoch(), timeout.round() + 1);
+    safety_rules.sign_timeout(&timeout_plus_1).unwrap();
+
+    // Verify cannot sign round older rounds now
+    let actual_err = safety_rules.sign_timeout(&timeout).unwrap_err();
+    let expected_err = Error::BadTimeoutLastVotedRound(timeout.round(), timeout.round() + 1);
+    assert_eq!(actual_err, expected_err);
+
+    // Verify cannot sign last_voted_round < vote < preferred_round
+    safety_rules.update(p4.block().quorum_cert()).unwrap();
+    let preferred_round = p4.block().quorum_cert().parent_block().round();
+    let ptimeout = Timeout::new(timeout.epoch(), preferred_round - 1);
+    let actual_err = safety_rules.sign_timeout(&ptimeout).unwrap_err();
+    let expected_err = Error::BadTimeoutPreferredRound(ptimeout.round(), preferred_round);
+    assert_eq!(actual_err, expected_err);
+
+    // Verify cannot sign for different epoch
+    let etimeout = Timeout::new(timeout.epoch() + 1, round + 1);
+    let actual_err = safety_rules.sign_timeout(&etimeout).unwrap_err();
+    let expected_err = Error::IncorrectEpoch(etimeout.epoch(), timeout.epoch());
+    assert_eq!(actual_err, expected_err);
 }
 
 fn test_voting(func: RoundCallback) {
