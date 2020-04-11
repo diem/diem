@@ -129,6 +129,6 @@ impl HandshakeMsg {
                 _ => {}
             }
         }
-        return None;
+        None
     }
 }
