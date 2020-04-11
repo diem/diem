@@ -99,7 +99,7 @@ module Libra {
         aborts_if !exists<Info<Token>>(0xA550C18);
         aborts_if old(global<Info<Token>>(0xA550C18).total_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
         aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
-        ensures eq_pop_front(global<Preburn<Token>>(preburn_address).requests, old(global<Preburn<Token>>(preburn_address).requests));
+        ensures Vector::eq_pop_front(global<Preburn<Token>>(preburn_address).requests, old(global<Preburn<Token>>(preburn_address).requests));
         ensures global<Info<Token>>(0xA550C18).total_value == old(global<Info<Token>>(0xA550C18).total_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
         ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
     }
@@ -120,7 +120,7 @@ module Libra {
         aborts_if old(len(global<Preburn<Token>>(preburn_address).requests)) == 0;
         aborts_if !exists<Info<Token>>(0xA550C18);
         aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
-        ensures eq_pop_front(global<Preburn<Token>>(preburn_address).requests, old(global<Preburn<Token>>(preburn_address).requests));
+        ensures Vector::eq_pop_front(global<Preburn<Token>>(preburn_address).requests, old(global<Preburn<Token>>(preburn_address).requests));
         ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
         ensures result == old(global<Preburn<Token>>(preburn_address).requests[0]);
     }
@@ -164,21 +164,6 @@ module Libra {
         ensures result.value == value;
     }
 
-    spec module {
-        // Auxiliary function to check if `v1` is equal to the result of adding `e` at the end of `v2`
-        define eq_push_back<Element>(v1: vector<Element>, v2: vector<Element>, e: Element): bool {
-            len(v1) == len(v2) + 1 &&
-            v1[len(v1)-1] == e &&
-            v1[0..len(v1)-1] == v2[0..len(v2)]
-        }
-
-        // Auxiliary function to check if `v1` is equal to the result of removing the first element of `v2`
-        define eq_pop_front<Element>(v1: vector<Element>, v2: vector<Element>): bool {
-            len(v1) + 1 == len(v2) &&
-            v1 == v2[1..len(v2)]
-        }
-    }
-
     // Send coin to the preburn holding area `preburn_ref`, where it will wait to be burned.
     public fun preburn<Token>(
         preburn_ref: &mut Preburn<Token>,
@@ -199,7 +184,7 @@ module Libra {
         aborts_if !exists<Info<Token>>(0xA550C18);
         aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) + coin.value > max_u64();
         ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) + coin.value;
-        ensures eq_push_back(preburn_ref.requests, old(preburn_ref.requests), coin);
+        ensures Vector::eq_push_back(preburn_ref.requests, old(preburn_ref.requests), coin);
     }
 
     // Send coin to the preburn holding area, where it will wait to be burned.
@@ -214,7 +199,7 @@ module Libra {
         aborts_if !exists<Preburn<Token>>(sender());
         aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) + coin.value > max_u64();
         ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) + coin.value;
-        ensures eq_push_back(global<Preburn<Token>>(sender()).requests, old(global<Preburn<Token>>(sender()).requests), coin);
+        ensures Vector::eq_push_back(global<Preburn<Token>>(sender()).requests, old(global<Preburn<Token>>(sender()).requests), coin);
     }
 
     // Permanently remove the coins held in the `Preburn` resource stored at `preburn_address` and
@@ -240,7 +225,7 @@ module Libra {
         aborts_if !exists<Info<Token>>(0xA550C18);
         aborts_if old(global<Info<Token>>(0xA550C18).total_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
         aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
-        ensures eq_pop_front(global<Preburn<Token>>(preburn_address).requests, old(global<Preburn<Token>>(preburn_address).requests));
+        ensures Vector::eq_pop_front(global<Preburn<Token>>(preburn_address).requests, old(global<Preburn<Token>>(preburn_address).requests));
         ensures global<Info<Token>>(0xA550C18).total_value == old(global<Info<Token>>(0xA550C18).total_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
         ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
     }
@@ -268,7 +253,7 @@ module Libra {
         aborts_if old(len(global<Preburn<Token>>(preburn_address).requests)) == 0;
         aborts_if !exists<Info<Token>>(0xA550C18);
         aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
-        ensures eq_pop_front(global<Preburn<Token>>(preburn_address).requests, old(global<Preburn<Token>>(preburn_address).requests));
+        ensures Vector::eq_pop_front(global<Preburn<Token>>(preburn_address).requests, old(global<Preburn<Token>>(preburn_address).requests));
         ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
         ensures result == old(global<Preburn<Token>>(preburn_address).requests[0]);
     }

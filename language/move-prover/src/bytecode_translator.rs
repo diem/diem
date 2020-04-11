@@ -139,9 +139,6 @@ impl<'env> ModuleTranslator<'env> {
 
     /// Translates this module.
     fn translate(&mut self) {
-        if self.is_module_provided_by_prelude() {
-            return;
-        }
         info!(
             "translating module {}",
             self.module_env
@@ -153,6 +150,9 @@ impl<'env> ModuleTranslator<'env> {
         let spec_translator = SpecTranslator::new(self.writer, &self.module_env, false);
         spec_translator.translate_spec_vars();
         spec_translator.translate_spec_funs();
+        if self.is_module_provided_by_prelude() {
+            return;
+        }
         self.translate_structs();
         self.translate_functions();
     }
