@@ -3,6 +3,7 @@
 
 use crate::{
     access_path::{AccessPath, Accesses},
+    account_address::AccountAddress,
     account_config::{association_address, CORE_CODE_ADDRESS},
     event::{EventHandle, EventKey},
     language_storage::{StructTag, TypeTag},
@@ -27,17 +28,23 @@ use crate::move_resource::MoveResource;
 /// 2. Add the config's `ConfigID` to `ON_CHAIN_CONFIG_REGISTRY`
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
-pub struct ConfigID(&'static str);
+pub struct ConfigID(&'static str, &'static str);
 
 impl ConfigID {
     pub fn access_path(self) -> AccessPath {
-        access_path_for_config(Identifier::new(self.0).expect("failed to get Identifier"))
+        access_path_for_config(
+            AccountAddress::from_hex_literal(self.0).expect("failed to get address"),
+            Identifier::new(self.1).expect("failed to get Identifier"),
+        )
     }
 }
 
 /// State sync will panic if the value of any config in this registry is uninitialized
-pub const ON_CHAIN_CONFIG_REGISTRY: &[ConfigID] =
-    &[VMPublishingOption::CONFIG_ID, LibraVersion::CONFIG_ID];
+pub const ON_CHAIN_CONFIG_REGISTRY: &[ConfigID] = &[
+    VMPublishingOption::CONFIG_ID,
+    LibraVersion::CONFIG_ID,
+    ValidatorSet::CONFIG_ID,
+];
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct OnChainConfigPayload {
@@ -66,8 +73,10 @@ pub trait ConfigStorage {
 /// Trait to be implemented by a Rust struct representation of an on-chain config
 /// that is stored in storage as a deserialized byte array
 pub trait OnChainConfig: Send + Sync + DeserializeOwned {
+    // association_address
+    const ADDRESS: &'static str = "0xA550C18";
     const IDENTIFIER: &'static str;
-    const CONFIG_ID: ConfigID = ConfigID(Self::IDENTIFIER);
+    const CONFIG_ID: ConfigID = ConfigID(Self::ADDRESS, Self::IDENTIFIER);
 
     // Single-round LCS deserialization from bytes to `Self`
     // This is the expected deserialization pattern for most Rust representations,
@@ -103,9 +112,9 @@ pub fn new_epoch_event_key() -> EventKey {
     EventKey::new_from_address(&association_address(), 4)
 }
 
-pub fn access_path_for_config(config_name: Identifier) -> AccessPath {
+pub fn access_path_for_config(address: AccountAddress, config_name: Identifier) -> AccessPath {
     AccessPath::new(
-        association_address(),
+        address,
         AccessPath::resource_access_vec(
             &StructTag {
                 address: CORE_CODE_ADDRESS,
