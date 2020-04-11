@@ -477,6 +477,14 @@ impl ClusterSwarm for ClusterSwarmKube {
                         .ok_or_else(|| { format_err!("name not found for service") })?
                 );
             }
+            Err(kube::Error::Api(ae)) => {
+                if ae.code == 409 {
+                    // 409 == service already exists
+                    debug!("Service already exists. Skipping")
+                } else {
+                    bail!("Failed to create service : {}", ae)
+                }
+            }
             Err(e) => bail!("Failed to create service : {}", e),
         }
         if node_name.is_empty() {
@@ -502,7 +510,9 @@ impl ClusterSwarm for ClusterSwarmKube {
                 fullnode_config.validator_index, fullnode_config.fullnode_index
             ),
         };
-        self.delete_pod(&pod_name).await
+        let service_name = pod_name.clone();
+        self.delete_pod(&pod_name).await?;
+        self.delete_service(&service_name).await
     }
 
     async fn delete_all(&self) -> Result<()> {
