@@ -92,10 +92,8 @@ impl HandshakeMsg {
         messaging_protocol: MessagingProtocolVersion,
         application_protocols: SupportedProtocols,
     ) {
-        self.supported_protocols.insert(
-            messaging_protocol,
-            SupportedProtocols::from(application_protocols),
-        );
+        self.supported_protocols
+            .insert(messaging_protocol, application_protocols);
     }
 
     pub fn find_common_protocols(
@@ -108,11 +106,7 @@ impl HandshakeMsg {
         for (k_outer, _) in self.supported_protocols.iter().rev() {
             // Remove all elements from inner iterator that are larger than the current head of the
             // outer iterator.
-            match inner
-                .by_ref()
-                .filter(|(k_inner, _)| *k_inner <= k_outer)
-                .nth(0)
-            {
+            match inner.by_ref().find(|(k_inner, _)| *k_inner <= k_outer) {
                 None => {
                     return None;
                 }
