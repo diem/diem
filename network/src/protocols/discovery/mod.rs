@@ -31,7 +31,7 @@
 //!
 //! [`ConnectivityManager`]: ../../connectivity_manager
 use crate::{
-    connectivity_manager::ConnectivityRequest,
+    connectivity_manager::{ConnectivityRequest, DiscoverySource},
     counters,
     error::{NetworkError, NetworkErrorKind},
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
@@ -376,6 +376,7 @@ where
 
                         self.conn_mgr_reqs_tx
                             .send(ConnectivityRequest::UpdateAddresses(
+                                DiscoverySource::Gossip,
                                 note.as_note().peer_id,
                                 peer_addrs,
                             ))
