@@ -103,6 +103,49 @@ commands:
           command: |
             ls -all /usr/local/cargo
             du -ssh /usr/local/cargo
+  send_message:
+    description: Send message to the specified webhook.
+    parameters:
+      payload_file:
+        description: File containing the message payload
+        type: string
+        default: ""
+      build_url:
+        description: This build's URL in Circle
+        type: string
+        default: "${CIRCLE_BUILD_URL}"
+      webhook:
+        description: Webhook for the message
+        type: string
+        default: ""
+    steps:
+      - run:
+          name: Send job status
+          command: |
+            set -x
+            if [ -e <<parameters.payload_file>> ]; then
+              jq -n \
+                --arg msg "$(cat <<parameters.payload_file>>)" \
+                --arg url "<<parameters.build_url>>" \
+                '{
+                  attachments: [
+                    {
+                      text: $msg,
+                      actions: [
+                        {
+                          "type": "button",
+                          "text": "Visit Job",
+                          "url": $url
+                        }
+                      ],
+                    }
+                  ]
+                }' > /tmp/payload
+              cat /tmp/payload
+              curl -X POST -H 'Content-type: application/json' -d @/tmp/payload \
+                <<parameters.webhook>>
+            fi
+          when: always
   build_setup:
     steps:
       - checkout
@@ -211,6 +254,8 @@ jobs:
       test targets.
     environment:
       E2E_RETRIES: 3
+      FLAKY_TESTS_FILE: "/tmp/flaky_tests"
+      MESSAGE_PAYLOAD_FILE: "/tmp/message_payload"
     steps:
       - build_setup
       - restore_cargo_package_cache
@@ -233,24 +278,35 @@ jobs:
             libratest=$(find target/debug/deps/ -name "libratest*" -executable)
             num_fails=0
             for target in $(cat /tmp/tests_to_run) ; do
-              cmd="$libratest $target --test-threads 1 --exact --nocapture"
               retry=0
               status=1
               failed_tests=
               while [[ $status != 0 && $retry < ${E2E_RETRIES} ]]; do
-                RUST_BACKTRACE=1 timeout --kill-after=370 --preserve-status 360 $cmd
+                RUST_BACKTRACE=1 timeout --kill-after=370 --preserve-status 360 \
+                  $libratest $target --test-threads 1 --exact --nocapture
                 status=$?
                 retry=$((retry + 1))
               done
               if [[ $status != 0 ]] ; then
                 num_fails=$((num_fails + 1))
                 failed_tests="$target\n$failed_tests"
+              elif [[ $retry > 1 ]]; then
+                echo "$target passed after $retry tries" >> ${FLAKY_TESTS_FILE}
               fi
             done
+            if [ -e ${FLAKY_TESTS_FILE} ]; then
+              msg="Found flaky tests\n$(cat ${FLAKY_TESTS_FILE})"
+              echo -e $msg
+              echo -e $msg > ${MESSAGE_PAYLOAD_FILE}
+            fi
             if [[ $num_fails != 0 ]]; then
-              echo -e "$num_fails test(s) failed:$failed_tests"
+              echo -e "$num_fails test(s) failed:\n$failed_tests"
             fi
             exit $num_fails
+      - send_message:
+          payload_file: "${MESSAGE_PAYLOAD_FILE}"
+          build_url: "${CIRCLE_BUILD_URL}#tests/containers/${CIRCLE_NODE_INDEX}"
+          webhook: "${WEBHOOK_FLAKY_TESTS}"
   run-unit-test:
     executor: build-executor
     description: Run all unit tests, excluding E2E and flaky tests that are
