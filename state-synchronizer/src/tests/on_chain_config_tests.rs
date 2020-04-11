@@ -37,7 +37,7 @@ fn test_on_chain_config_pub_sub() {
     let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe(subscribed_configs);
 
     let (mut config, genesis_key) = config_builder::test_config();
-    let (_storage_server_handle, executor) = create_storage_service_and_executor(&config);
+    let (_db, _storage_server_handle, executor) = create_storage_service_and_executor(&config);
     let executor = Arc::new(Mutex::new(executor));
     let mut executor_proxy = rt.block_on(ExecutorProxy::new(
         executor.clone(),

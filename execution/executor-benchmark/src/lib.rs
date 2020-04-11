@@ -269,7 +269,7 @@ pub fn run_benchmark(
         config.storage.dir = path;
     }
 
-    let (_storage_server_handle, executor) = create_storage_service_and_executor(&config);
+    let (_db, _storage_server_handle, executor) = create_storage_service_and_executor(&config);
     let parent_block_id = executor.committed_block_id();
     let storage_client = StorageReadServiceClient::new(&config.storage.address);
 
