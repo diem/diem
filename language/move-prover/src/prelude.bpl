@@ -836,7 +836,7 @@ requires is#Integer(index);
 
     p := p#Reference(src);
     size := size#Path(p);
-        p := Path(p#Path(p)[size := i_ind], size+1);
+    p := Path(p#Path(p)[size := i_ind], size+1);
     dst := Reference(l#Reference(src), p);
 }
 
