@@ -6,6 +6,47 @@
 #![recursion_limit = "1024"]
 // </Black magic>
 
+//! Protocol for discovering validator + validator full node network addresses
+//! and identity keys via a shared on-chain discovery resource.
+//!
+//! ## Protocol
+//!
+//! + Bootstrapping
+//!
+//!     - query own storage for latest known discovery set.
+//!     => peer set = seed peers (from config) and any peers in our storage's
+//!        discovery set (might be very stale).
+//!     - we must assume that we can connect to at least one of these peers from
+//!       the bootstrapping phase, otherwise we will not be able to make progress.
+//!
+//! + Steady state
+//!
+//!     - query own storage for latest known discovery set.
+//!     - query peers for their latest known discovery set and epoch changes
+//!       between our current state and the peer's current state (if any).
+//!     - updates to the discovery set (e.g., a validator is advertising a
+//!       different network address) are sent to the connectivity manager.
+//!
+//! + Serving Queries
+//!
+//!     - all validators and validator full nodes serve queries on their current
+//!       discovery set via LibraNet.
+//!     - note that validators will only allow connections from other validators
+//!       for DDoS mitigation.
+//!     - responses include the most recent discovery set event with state proofs
+//!       (emitted on reconfiguration) and any epoch changes needed to get the
+//!       requestor up to the most recent epoch.
+//!
+//! ## Implementation
+//!
+//! The onchain discovery module is implemented as an actor that:
+//!
+//! 1. queries our own storage for our onchain discovery set
+//! 2. services discovery set queries from our peers
+//! 3. queries our peers for their discovery set
+//! 4. notifies the connectivity_manager with updated network info whenever we
+//!    detect a newer discovery set
+
 use crate::{
     network_interface::{OnchainDiscoveryNetworkEvents, OnchainDiscoveryNetworkSender},
     types::{
