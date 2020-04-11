@@ -89,13 +89,13 @@ module VerifyVector {
         let len = Vector::length(v);
         if (len == 0) return ();
 
-        let front_index = 0;
-        let back_index = len -1;
-        while (front_index < back_index) {
-            Vector::swap(v, front_index, back_index);
-            front_index = front_index + 1;
-            back_index = back_index - 1;
-        }
+//        let front_index = 0;
+//        let back_index = len -1;
+//        while (front_index < back_index) {
+//            Vector::swap(v, front_index, back_index);
+//            front_index = front_index + 1;
+//            back_index = back_index - 1;
+//        }
     }
     spec fun verify_reverse {
         // TODO: may need to extend the spec language to be able to specify this
@@ -148,13 +148,13 @@ module VerifyVector {
     }
 
     // Return true if `e` is in the vector `v`
-    fun verify_contains<Element>(v: &vector<Element>, e: &Element): bool {
-        let i = 0;
-        let len = Vector::length(v);
-        while (i < len) {
-            if (Vector::borrow(v, i) == e) return true;
-            i = i + 1;
-        };
+    fun verify_contains<Element>(_v: &vector<Element>, _e: &Element): bool {
+//        let i = 0;
+//        let len = Vector::length(v);
+//        while (i < len) {
+//            if (Vector::borrow(v, i) == e) return true;
+//            i = i + 1;
+//        };
         false
     }
     spec fun verify_contains { // TODO: cannot verify loop
@@ -177,8 +177,8 @@ module VerifyVector {
         // i out of bounds; abort
         if (i >= len) abort 10;
 
-        len = len - 1;
-        while (i < len) Vector::swap(v, i, { i = i + 1; i });
+//        len = len - 1;
+//        while (i < len) Vector::swap(v, i, { i = i + 1; i });
         Vector::pop_back(v)
     }
     spec fun verify_remove { // TODO: cannot verify loop

@@ -148,9 +148,6 @@ const EmptyValueArray: ValueArray;
 axiom l#ValueArray(EmptyValueArray) == 0;
 axiom v#ValueArray(EmptyValueArray) == MapConstValue(DefaultValue);
 
-function {:inline} AddValueArray(a: ValueArray, v: Value): ValueArray {
-    ValueArray(v#ValueArray(a)[l#ValueArray(a) := v], l#ValueArray(a) + 1)
-}
 function {:inline} RemoveValueArray(a: ValueArray): ValueArray {
     ValueArray(v#ValueArray(a)[l#ValueArray(a) - 1 := DefaultValue], l#ValueArray(a) - 1)
 }
@@ -315,7 +312,7 @@ function {:inline} $mk_vector(): Value {
     Vector(EmptyValueArray)
 }
 function {:inline} $push_back_vector(v: Value, elem: Value): Value {
-    Vector(AddValueArray(v#Vector(v), elem))
+    Vector(ExtendValueArray(v#Vector(v), elem))
 }
 function {:inline} $pop_back_vector(v: Value): Value {
     Vector(RemoveValueArray(v#Vector(v)))
@@ -435,7 +432,7 @@ function {:inline} $Dereference(m: Memory, ref: Reference): Value {
     $ReadValue(p#Reference(ref), contents#Memory(m)[l#Reference(ref)])
 }
 
-// Checker whether sender account exists.
+// Check whether sender account exists.
 function {:inline} $ExistsTxnSenderAccount(m: Memory, txn: Transaction): bool {
    domain#Memory(m)[Global(LibraAccount_T_type_value(), sender#Transaction(txn))]
 }
@@ -458,8 +455,8 @@ function {:inline} TxnSenderAddress(txn: Transaction): int {
 // Instructions
 
 procedure {:inline 1} Exists(address: Value, t: TypeValue) returns (dst: Value)
+requires is#Address(address);
 {
-    assume is#Address(address);
     dst := $ResourceExists($m, t, address);
 }
 
@@ -478,10 +475,10 @@ procedure {:inline 1} MoveToSender(ta: TypeValue, v: Value)
 }
 
 procedure {:inline 1} MoveFrom(address: Value, ta: TypeValue) returns (dst: Value)
+requires is#Address(address);
 {
     var a: int;
     var l: Location;
-    assume is#Address(address);
     a := a#Address(address);
     l := Global(ta, a);
     if (!$ResourceExistsRaw($m, ta, a)) {
@@ -493,10 +490,10 @@ procedure {:inline 1} MoveFrom(address: Value, ta: TypeValue) returns (dst: Valu
 }
 
 procedure {:inline 1} BorrowGlobal(address: Value, ta: TypeValue) returns (dst: Reference)
+requires is#Address(address);
 {
     var a: int;
     var l: Location;
-    assume is#Address(address);
     a := a#Address(address);
     l := Global(ta, a);
     if (!$ResourceExistsRaw($m, ta, a)) {
@@ -554,8 +551,8 @@ procedure {:inline 1} FreezeRef(src: Reference) returns (dst: Reference)
 }
 
 procedure {:inline 1} CastU8(src: Value) returns (dst: Value)
+requires is#Integer(src);
 {
-    assume is#Integer(src);
     if (i#Integer(src) > MAX_U8) {
         $abort_flag := true;
         return;
@@ -564,8 +561,8 @@ procedure {:inline 1} CastU8(src: Value) returns (dst: Value)
 }
 
 procedure {:inline 1} CastU64(src: Value) returns (dst: Value)
+requires is#Integer(src);
 {
-    assume is#Integer(src);
     if (i#Integer(src) > MAX_U64) {
         $abort_flag := true;
         return;
@@ -574,8 +571,8 @@ procedure {:inline 1} CastU64(src: Value) returns (dst: Value)
 }
 
 procedure {:inline 1} CastU128(src: Value) returns (dst: Value)
+requires is#Integer(src);
 {
-    assume is#Integer(src);
     if (i#Integer(src) > MAX_U128) {
         $abort_flag := true;
         return;
@@ -584,8 +581,8 @@ procedure {:inline 1} CastU128(src: Value) returns (dst: Value)
 }
 
 procedure {:inline 1} AddU8(src1: Value, src2: Value) returns (dst: Value)
+requires $IsValidU8(src1) && $IsValidU8(src2);
 {
-    assume $IsValidU8(src1) && $IsValidU8(src2);
     if (i#Integer(src1) + i#Integer(src2) > MAX_U8) {
         $abort_flag := true;
         return;
@@ -594,8 +591,8 @@ procedure {:inline 1} AddU8(src1: Value, src2: Value) returns (dst: Value)
 }
 
 procedure {:inline 1} AddU64(src1: Value, src2: Value) returns (dst: Value)
+requires $IsValidU64(src1) && $IsValidU64(src2);
 {
-    assume $IsValidU64(src1) && $IsValidU64(src2);
     if (i#Integer(src1) + i#Integer(src2) > MAX_U64) {
         $abort_flag := true;
         return;
@@ -604,8 +601,8 @@ procedure {:inline 1} AddU64(src1: Value, src2: Value) returns (dst: Value)
 }
 
 procedure {:inline 1} AddU128(src1: Value, src2: Value) returns (dst: Value)
+requires $IsValidU128(src1) && $IsValidU128(src2);
 {
-    assume $IsValidU128(src1) && $IsValidU128(src2);
     if (i#Integer(src1) + i#Integer(src2) > MAX_U128) {
         $abort_flag := true;
         return;
@@ -614,8 +611,8 @@ procedure {:inline 1} AddU128(src1: Value, src2: Value) returns (dst: Value)
 }
 
 procedure {:inline 1} Sub(src1: Value, src2: Value) returns (dst: Value)
+requires is#Integer(src1) && is#Integer(src2);
 {
-    assume is#Integer(src1) && is#Integer(src2);
     if (i#Integer(src1) < i#Integer(src2)) {
         $abort_flag := true;
         return;
@@ -624,20 +621,22 @@ procedure {:inline 1} Sub(src1: Value, src2: Value) returns (dst: Value)
 }
 
 procedure {:inline 1} Shl(src1: Value, src2: Value) returns (dst: Value)
+requires is#Integer(src1) && is#Integer(src2);
 {
     // TOOD: implement
     assert false;
 }
 
 procedure {:inline 1} Shr(src1: Value, src2: Value) returns (dst: Value)
+requires is#Integer(src1) && is#Integer(src2);
 {
     // TOOD: implement
     assert false;
 }
 
 procedure {:inline 1} MulU8(src1: Value, src2: Value) returns (dst: Value)
+requires $IsValidU8(src1) && $IsValidU8(src2);
 {
-    assume $IsValidU8(src1) && $IsValidU8(src2);
     if (i#Integer(src1) * i#Integer(src2) > MAX_U8) {
         $abort_flag := true;
         return;
@@ -646,8 +645,8 @@ procedure {:inline 1} MulU8(src1: Value, src2: Value) returns (dst: Value)
 }
 
 procedure {:inline 1} MulU64(src1: Value, src2: Value) returns (dst: Value)
+requires $IsValidU64(src1) && $IsValidU64(src2);
 {
-    assume $IsValidU64(src1) && $IsValidU64(src2);
     if (i#Integer(src1) * i#Integer(src2) > MAX_U64) {
         $abort_flag := true;
         return;
@@ -656,8 +655,8 @@ procedure {:inline 1} MulU64(src1: Value, src2: Value) returns (dst: Value)
 }
 
 procedure {:inline 1} MulU128(src1: Value, src2: Value) returns (dst: Value)
+requires $IsValidU128(src1) && $IsValidU128(src2);
 {
-    assume $IsValidU128(src1) && $IsValidU128(src2);
     if (i#Integer(src1) * i#Integer(src2) > MAX_U128) {
         $abort_flag := true;
         return;
@@ -666,8 +665,8 @@ procedure {:inline 1} MulU128(src1: Value, src2: Value) returns (dst: Value)
 }
 
 procedure {:inline 1} Div(src1: Value, src2: Value) returns (dst: Value)
+requires is#Integer(src1) && is#Integer(src2);
 {
-    assume is#Integer(src1) && is#Integer(src2);
     if (i#Integer(src2) == 0) {
         $abort_flag := true;
         return;
@@ -676,8 +675,8 @@ procedure {:inline 1} Div(src1: Value, src2: Value) returns (dst: Value)
 }
 
 procedure {:inline 1} Mod(src1: Value, src2: Value) returns (dst: Value)
+requires is#Integer(src1) && is#Integer(src2);
 {
-    assume is#Integer(src1) && is#Integer(src2);
     if (i#Integer(src2) == 0) {
         $abort_flag := true;
         return;
@@ -685,45 +684,49 @@ procedure {:inline 1} Mod(src1: Value, src2: Value) returns (dst: Value)
     dst := Integer(i#Integer(src1) mod i#Integer(src2));
 }
 
+procedure {:inline 1} ArithBinaryUnimplemented(src1: Value, src2: Value) returns (dst: Value);
+requires is#Integer(src1) && is#Integer(src2);
+ensures is#Integer(dst);
+
 procedure {:inline 1} Lt(src1: Value, src2: Value) returns (dst: Value)
+requires is#Integer(src1) && is#Integer(src2);
 {
-    assume is#Integer(src1) && is#Integer(src2);
     dst := Boolean(i#Integer(src1) < i#Integer(src2));
 }
 
 procedure {:inline 1} Gt(src1: Value, src2: Value) returns (dst: Value)
+requires is#Integer(src1) && is#Integer(src2);
 {
-    assume is#Integer(src1) && is#Integer(src2);
     dst := Boolean(i#Integer(src1) > i#Integer(src2));
 }
 
 procedure {:inline 1} Le(src1: Value, src2: Value) returns (dst: Value)
+requires is#Integer(src1) && is#Integer(src2);
 {
-    assume is#Integer(src1) && is#Integer(src2);
     dst := Boolean(i#Integer(src1) <= i#Integer(src2));
 }
 
 procedure {:inline 1} Ge(src1: Value, src2: Value) returns (dst: Value)
+requires is#Integer(src1) && is#Integer(src2);
 {
-    assume is#Integer(src1) && is#Integer(src2);
     dst := Boolean(i#Integer(src1) >= i#Integer(src2));
 }
 
 procedure {:inline 1} And(src1: Value, src2: Value) returns (dst: Value)
+requires is#Boolean(src1) && is#Boolean(src2);
 {
-    assume is#Boolean(src1) && is#Boolean(src2);
     dst := Boolean(b#Boolean(src1) && b#Boolean(src2));
 }
 
 procedure {:inline 1} Or(src1: Value, src2: Value) returns (dst: Value)
+requires is#Boolean(src1) && is#Boolean(src2);
 {
-    assume is#Boolean(src1) && is#Boolean(src2);
     dst := Boolean(b#Boolean(src1) || b#Boolean(src2));
 }
 
 procedure {:inline 1} Not(src: Value) returns (dst: Value)
+requires is#Boolean(src);
 {
-    assume is#Boolean(src);
     dst := Boolean(!b#Boolean(src));
 }
 
@@ -817,13 +820,14 @@ procedure {:inline 1} $Vector_borrow(ta: TypeValue, src: Reference, index: Value
     call dst := $Vector_borrow_mut(ta, src, index);
 }
 
-procedure {:inline 1} $Vector_borrow_mut(ta: TypeValue, src: Reference, index: Value) returns (dst: Reference) {
+procedure {:inline 1} $Vector_borrow_mut(ta: TypeValue, src: Reference, index: Value) returns (dst: Reference)
+requires is#Integer(index);
+{
     var p: Path;
     var size: int;
     var i_ind: int;
     var v: Value;
 
-    assume is#Integer(index);
     i_ind := i#Integer(index);
     v := $Dereference($m, src);
     assume is#Vector(v);
@@ -834,7 +838,7 @@ procedure {:inline 1} $Vector_borrow_mut(ta: TypeValue, src: Reference, index: V
 
     p := p#Reference(src);
     size := size#Path(p);
-        p := Path(p#Path(p)[size := i_ind], size+1);
+    p := Path(p#Path(p)[size := i_ind], size+1);
     dst := Reference(l#Reference(src), p);
 }
 
@@ -844,12 +848,12 @@ procedure {:inline 1} $Vector_destroy_empty(ta: TypeValue, v: Value) {
     }
 }
 
-procedure {:inline 1} $Vector_swap(ta: TypeValue, src: Reference, i: Value, j: Value) {
+procedure {:inline 1} $Vector_swap(ta: TypeValue, src: Reference, i: Value, j: Value)
+requires is#Integer(i) && is#Integer(j);
+{
     var i_ind: int;
     var j_ind: int;
     var v: Value;
-    assume is#Integer(i);
-    assume is#Integer(j);
     i_ind := i#Integer(i);
     j_ind := i#Integer(j);
     v := $Dereference($m, src);
@@ -862,11 +866,12 @@ procedure {:inline 1} $Vector_swap(ta: TypeValue, src: Reference, i: Value, j: V
     call WriteRef(src, v);
 }
 
-procedure {:inline 1} $Vector_get(ta: TypeValue, src: Reference, i: Value) returns (e: Value) {
+procedure {:inline 1} $Vector_get(ta: TypeValue, src: Reference, i: Value) returns (e: Value)
+requires is#Integer(i);
+{
     var i_ind: int;
     var v: Value;
 
-    assume is#Integer(i);
     i_ind := i#Integer(i);
     v := $Dereference($m, src);
     assume is#Vector(v);
@@ -877,11 +882,12 @@ procedure {:inline 1} $Vector_get(ta: TypeValue, src: Reference, i: Value) retur
     e := $vmap(v)[i_ind];
 }
 
-procedure {:inline 1} $Vector_set(ta: TypeValue, src: Reference, i: Value, e: Value) {
+procedure {:inline 1} $Vector_set(ta: TypeValue, src: Reference, i: Value, e: Value)
+requires is#Integer(i);
+{
     var i_ind: int;
     var v: Value;
 
-    assume is#Integer(i);
     i_ind := i#Integer(i);
     v := $Dereference($m, src);
     assume is#Vector(v);
@@ -893,18 +899,17 @@ procedure {:inline 1} $Vector_set(ta: TypeValue, src: Reference, i: Value, e: Va
     call WriteRef(src, v);
 }
 
-procedure {:inline 1} $Vector_remove(ta: TypeValue, r: Reference, i: Value) returns (e: Value) {
+procedure {:inline 1} $Vector_remove(ta: TypeValue, r: Reference, i: Value) returns (e: Value)
+requires is#Integer(i);
+{
     var i_ind: int;
     var v: Value;
-    var len: int;
 
-    assume is#Integer(i);
     i_ind := i#Integer(i);
 
     v := $Dereference($m, r);
     assume is#Vector(v);
-    len := $vlen(v);
-    if (i_ind < 0 || i_ind >= len) {
+    if (i_ind < 0 || i_ind >= $vlen(v)) {
         $abort_flag := true;
         return;
     }
@@ -912,12 +917,13 @@ procedure {:inline 1} $Vector_remove(ta: TypeValue, r: Reference, i: Value) retu
     call WriteRef(r, $remove_vector(v, i_ind));
 }
 
-procedure {:inline 1} $Vector_swap_remove(ta: TypeValue, r: Reference, i: Value) returns (e: Value) {
+procedure {:inline 1} $Vector_swap_remove(ta: TypeValue, r: Reference, i: Value) returns (e: Value)
+requires is#Integer(i);
+{
     var i_ind: int;
     var v: Value;
     var len: int;
 
-    assume is#Integer(i);
     i_ind := i#Integer(i);
 
     v := $Dereference($m, r);
@@ -969,7 +975,7 @@ axiom (forall v1,v2: Value :: $Vector_is_well_formed(v1) && $Vector_is_well_form
 axiom (forall v1,v2: Value :: $Vector_is_well_formed(v1) && $Vector_is_well_formed(v2)
         && IsEqual($Hash_sha2(v1), $Hash_sha2(v2)) ==> IsEqual(v1, v2));
 
-// This procedure has no body. We want Boogie to just to use its requires
+// This procedure has no body. We want Boogie to just use its requires
 // and ensures properties when verifying code that calls it.
 procedure $Hash_sha2_256(val: Value) returns (res: Value);
 // It will still work without this, but this helps verifier find more reasonable counterexamples.
