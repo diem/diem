@@ -961,7 +961,7 @@ axiom (forall v1,v2: Value :: $Vector_is_well_formed(v1) && $Vector_is_well_form
 // and ensures properties when verifying code that calls it.
 procedure $Hash_sha2_256(val: Value) returns (res: Value);
 // It will still work without this, but this helps verifier find more reasonable counterexamples.
-// requires $IsValidU8Vector(val);  // FIXME: Generated callling code does not ensure validity.
+// requires $IsValidU8Vector(val);  // FIXME: Generated calling code does not ensure validity.
 ensures res == $sha2(val);     // returns sha2 value
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
 ensures $vlen(res) == 32;               // result is 32 bytes.
@@ -990,7 +990,7 @@ procedure {:inline 1} $LibraAccount_save_account(ta: TypeValue, balance: Value, 
 }
 
 procedure {:inline 1} $LibraAccount_write_to_event_store(ta: TypeValue, guid: Value, count: Value, msg: Value) {
-    assert false; // $LibraAccount_write_to_event_store not implemented
+    // This function is modeled as a no-op because the actual side effect of this native function is not observable from the Move side.
 }
 
 // ==================================================================================
@@ -1019,22 +1019,21 @@ procedure {:inline 1} Signature_ed25519_threshold_verify(bitmap: Value, signatur
 // Serialize is modeled as an uninterpreted function, with an additional
 // axiom to say it's an injection.
 
-function $serialize(ta: TypeValue, v: Value): Value;
+function $LCS_serialize(ta: TypeValue, v: Value): Value;
 
 // This says that $serialize respects isEquals (substitution property)
 // Without this, Boogie will get false positives where v1, v2 differ at invalid
 // indices.
 axiom (forall ta: TypeValue ::
-       (forall v1,v2: Value :: IsEqual(v1, v2) ==> IsEqual($serialize(ta, v1), $serialize(ta, v2))));
+       (forall v1,v2: Value :: IsEqual(v1, v2) ==> IsEqual($LCS_serialize(ta, v1), $LCS_serialize(ta, v2))));
 
 
 // This says that serialize is an injection
 axiom (forall ta1, ta2: TypeValue ::
-       (forall v1, v2: Value :: IsEqual($serialize(ta1, v1), $serialize(ta2, v2))
+       (forall v1, v2: Value :: IsEqual($LCS_serialize(ta1, v1), $LCS_serialize(ta2, v2))
            ==> IsEqual(v1, v2) && (ta1 == ta2)));
 
-
 procedure $LCS_to_bytes(ta: TypeValue, r: Reference) returns (res: Value);
-ensures res == $serialize(ta, $Dereference($m, r));
+ensures res == $LCS_serialize(ta, $Dereference($m, r));
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
 ensures $vlen(res) > 0;
