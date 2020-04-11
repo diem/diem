@@ -131,7 +131,7 @@ where
         // accidently trust whatever the peer's genesis is.
         let trusted_state = waypoint
             .map(TrustedState::from_waypoint)
-            .unwrap_or(TrustedState::new_trust_any_genesis_WARNING_UNSAFE());
+            .unwrap_or_else(TrustedState::new_trust_any_genesis_WARNING_UNSAFE);
 
         Self {
             inbound_rpc_executor: BoundedExecutor::new(max_concurrent_inbound_queries, executor),
@@ -308,6 +308,7 @@ where
                     "received query response: peer: {}, their version: {}",
                     peer_id.short_str(),
                     res_msg
+                        .query_res
                         .update_to_latest_ledger_response
                         .ledger_info_with_sigs
                         .ledger_info()
@@ -351,6 +352,7 @@ where
         let latest_version = self.trusted_state.latest_version();
 
         let trusted_state_change = match res_msg
+            .query_res
             .update_to_latest_ledger_response
             .verify(&self.trusted_state, &req_msg.into())
         {
@@ -521,7 +523,7 @@ where
             // The particular index is not important, just the probability of
             // sampling any of the current peers is equal.
             let idx = self.rng.gen_range(0, num_peers);
-            self.connected_peers.iter().skip(idx).next().copied()
+            self.connected_peers.iter().nth(idx).copied()
         } else {
             None
         }
@@ -660,7 +662,7 @@ where
     where
         G: FnOnce() -> Option<F>,
     {
-        if let None = self.inner {
+        if self.inner.is_none() {
             self.inner = fun();
         }
     }
@@ -694,9 +696,6 @@ where
     F: Future + Unpin,
 {
     fn is_terminated(&self) -> bool {
-        match self.inner {
-            Some(_) => false,
-            None => true,
-        }
+        self.inner.is_none()
     }
 }

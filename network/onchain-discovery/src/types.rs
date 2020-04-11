@@ -54,13 +54,13 @@ impl Into<UpdateToLatestLedgerRequest> for QueryDiscoverySetRequest {
 /// event and (if needed) a validator change proof.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct QueryDiscoverySetResponse {
-    pub update_to_latest_ledger_response: UpdateToLatestLedgerResponse,
+    pub update_to_latest_ledger_response: Box<UpdateToLatestLedgerResponse>,
 }
 
 impl From<UpdateToLatestLedgerResponse> for QueryDiscoverySetResponse {
     fn from(res: UpdateToLatestLedgerResponse) -> Self {
         Self {
-            update_to_latest_ledger_response: res,
+            update_to_latest_ledger_response: Box::new(res),
         }
     }
 }
@@ -68,7 +68,7 @@ impl From<UpdateToLatestLedgerResponse> for QueryDiscoverySetResponse {
 impl From<QueryDiscoverySetResponseWithEvent> for QueryDiscoverySetResponse {
     fn from(res: QueryDiscoverySetResponseWithEvent) -> Self {
         Self {
-            update_to_latest_ledger_response: res.update_to_latest_ledger_response,
+            update_to_latest_ledger_response: res.query_res.update_to_latest_ledger_response,
         }
     }
 }
@@ -77,18 +77,17 @@ impl From<QueryDiscoverySetResponseWithEvent> for QueryDiscoverySetResponse {
 /// out to reduce unnecessary double validation.
 #[derive(Clone, Debug)]
 pub struct QueryDiscoverySetResponseWithEvent {
-    pub update_to_latest_ledger_response: UpdateToLatestLedgerResponse,
+    pub query_res: QueryDiscoverySetResponse,
     pub event: Option<DiscoverySetChangeEvent>,
 }
 
 impl TryFrom<QueryDiscoverySetResponse> for QueryDiscoverySetResponseWithEvent {
     type Error = Error;
 
-    fn try_from(res: QueryDiscoverySetResponse) -> Result<Self> {
+    fn try_from(query_res: QueryDiscoverySetResponse) -> Result<Self> {
         // TODO(philiphayes): validate event access path etc
 
-        let res = res.update_to_latest_ledger_response;
-
+        let res = &query_res.update_to_latest_ledger_response;
         let res_len = res.response_items.len();
         ensure!(
             res_len <= 1,
@@ -119,13 +118,10 @@ impl TryFrom<QueryDiscoverySetResponse> for QueryDiscoverySetResponseWithEvent {
             .flatten();
 
         let event = maybe_event
-            .map(|event| DiscoverySetChangeEvent::try_from(event))
+            .map(DiscoverySetChangeEvent::try_from)
             .transpose()?;
 
-        Ok(Self {
-            update_to_latest_ledger_response: res,
-            event,
-        })
+        Ok(Self { query_res, event })
     }
 }
 
