@@ -95,7 +95,7 @@ error:
  38 │         return ()
     │         ^^^^^^^^^ Invalid return
     ·
- 37 │     fun t6<T>(x: T) {
-    │               - The parameter 'x' might still contain a resource value. The resource must be consumed before the function returns
+ 37 │     fun t6<T>(_x: R) {
+    │               -- The parameter '_x' still contains a resource value. The resource must be consumed before the function returns
     │
 

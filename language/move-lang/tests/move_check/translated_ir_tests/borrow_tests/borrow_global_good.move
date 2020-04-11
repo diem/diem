@@ -31,7 +31,7 @@ module A {
         }
     }
 
-    public fun A4(b: bool) acquires T {
+    public fun A4() acquires T {
         let sender = Transaction::sender();
         let x = move_from<T>(sender);
         borrow_global_mut<T>(sender);

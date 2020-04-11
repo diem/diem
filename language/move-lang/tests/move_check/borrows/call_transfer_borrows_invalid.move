@@ -1,9 +1,9 @@
 module M {
-    fun take_imm_mut_give_mut(x: &u64, y: &mut u64): &mut u64 {
+    fun take_imm_mut_give_mut(_x: &u64, y: &mut u64): &mut u64 {
         y
     }
 
-    fun take_imm_mut_give_imm(x: &u64, y: &mut u64): &u64 {
+    fun take_imm_mut_give_imm(_x: &u64, y: &mut u64): &u64 {
         y
     }
 

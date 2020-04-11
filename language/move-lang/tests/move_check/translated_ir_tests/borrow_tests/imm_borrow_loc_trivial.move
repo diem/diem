@@ -1,7 +1,7 @@
 module Tester {
     resource struct X { f: u64 }
 
-    fun bump_and_give(x_ref: &mut X, other: &u64): &u64 {
+    fun bump_and_give(x_ref: &mut X, _other: &u64): &u64 {
         x_ref.f = x_ref.f + 1;
         &x_ref.f
     }

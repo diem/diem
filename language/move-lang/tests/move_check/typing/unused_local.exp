@@ -38,3 +38,43 @@ error:
     │                   ^ Unused local 'g'. Consider removing or prefixing with an underscore: '_g'
     │
 
+error: 
+
+    ┌── tests/move_check/typing/unused_local.move:25:22 ───
+    │
+ 25 │     fun unused_param(x: u64) {
+    │                      ^ Unused parameter 'x'. Consider removing or prefixing with an underscore: '_x'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/unused_local.move:28:20 ───
+    │
+ 28 │     fun two_unused(x: u64, y: bool) {
+    │                    ^ Unused parameter 'x'. Consider removing or prefixing with an underscore: '_x'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/unused_local.move:28:28 ───
+    │
+ 28 │     fun two_unused(x: u64, y: bool) {
+    │                            ^ Unused parameter 'y'. Consider removing or prefixing with an underscore: '_y'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/unused_local.move:31:35 ───
+    │
+ 31 │     fun unused_param1_used_param2(x: u64, y: bool): bool {
+    │                                   ^ Unused parameter 'x'. Consider removing or prefixing with an underscore: '_x'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/unused_local.move:35:43 ───
+    │
+ 35 │     fun unused_param2_used_param1(x: u64, y: bool): u64 {
+    │                                           ^ Unused parameter 'y'. Consider removing or prefixing with an underscore: '_y'
+    │
+

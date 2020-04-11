@@ -3,20 +3,20 @@ module A {
     resource struct T1 {v: u64}
     resource struct T2 {v: u64}
 
-    public fun test1(addr: address) acquires T1, T2 {
+    public fun test1() acquires T1, T2 {
         let x = borrow_global_mut<T1>(Transaction::sender());
         acquires_t2();
         move x;
         acquires_t1();
     }
 
-    public fun test2(addr: address) acquires T1, T2 {
+    public fun test2() acquires T1, T2 {
         borrow_global_mut<T1>(Transaction::sender());
         acquires_t1();
         acquires_t2();
     }
 
-    public fun test3(addr: address) acquires T1, T2 {
+    public fun test3() acquires T1, T2 {
         borrow_global_mut<T1>(Transaction::sender());
         acquires_t2();
         acquires_t1();

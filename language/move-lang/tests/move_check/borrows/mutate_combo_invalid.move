@@ -7,7 +7,7 @@ module M {
         r
     }
 
-    fun t0(cond: bool, other: &mut S) {
+    fun t0(cond: bool, _other: &mut S) {
         let s = &mut S { f: 0, g: 0 };
         let f;
         if (cond) f = &s.f else f = &s.g;
@@ -43,7 +43,7 @@ module M {
         s;
     }
 
-    fun t4(cond: bool, other: &mut S) {
+    fun t4(cond: bool, _other: &mut S) {
         let s = &mut S { f: 0, g: 0 };
         let f = &s.f;
         if (cond) *s = S { f: 0, g: 0 };

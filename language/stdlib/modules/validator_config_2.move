@@ -84,7 +84,11 @@ module ValidatorConfig2 {
 
     // Rotate validator's config.
     // Here validator_account - is the account of the validator whose consensus_pubkey is going to be rotated.
-    public fun rotate_consensus_pubkey(validator_account: address, new_consensus_pubkey: vector<u8>, proof: vector<u8>) acquires T {
+    public fun rotate_consensus_pubkey(
+        validator_account: address,
+        new_consensus_pubkey: vector<u8>,
+        _proof: vector<u8>
+    ) acquires T {
         let addr = get_validator_operator_account(validator_account);
         Transaction::assert(Transaction::sender() == addr, 1);
 

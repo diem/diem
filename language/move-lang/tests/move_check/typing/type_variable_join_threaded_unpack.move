@@ -7,11 +7,11 @@ module Container {
         T {}
     }
 
-    public fun get<V: copyable>(self: &T<V>): V {
+    public fun get<V: copyable>(_self: &T<V>): V {
         abort 0
     }
 
-    public fun put<V>(self: &mut T<V>, item: V) {
+    public fun put<V>(_self: &mut T<V>, _item: V) {
         abort 0
     }
 }

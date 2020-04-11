@@ -28,7 +28,7 @@ module Token {
 
     // control the minting/creation in the defining module of `ATy`
     public fun create<ATy: copyable>(type: ATy, value: u64): Coin<ATy> {
-        Coin { type, value: 0 }
+        Coin { type, value }
     }
 
     public fun value<ATy: copyable>(coin: &Coin<ATy>): u64 {

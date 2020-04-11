@@ -20,7 +20,7 @@ module M {
         while (cond) { r = R{} };
     }
 
-    fun t4(cond: bool) {
+    fun t4() {
         loop { let r = R{}; }
     }
 
@@ -28,7 +28,7 @@ module M {
         let _ = &R{};
     }
 
-    fun t6<T>(x: T) {
+    fun t6<T>(_x: R) {
     }
 
 }

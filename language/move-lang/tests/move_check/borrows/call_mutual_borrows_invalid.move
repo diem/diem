@@ -6,11 +6,11 @@ module M {
     fun id_mut<T>(r: &mut T): &mut T {
         r
     }
-    fun imm_imm<T1, T2>(x: &T1, y: &T2) { }
-    fun mut_imm<T1, T2>(x: &mut T1, y: &T2) { }
-    fun mut_mut<T1, T2>(x: &mut T1, y: &mut T2) { }
+    fun imm_imm<T1, T2>(_x: &T1, _y: &T2) { }
+    fun mut_imm<T1, T2>(_x: &mut T1, _y: &T2) { }
+    fun mut_mut<T1, T2>(_x: &mut T1, _y: &mut T2) { }
 
-    fun t0(s1: &mut S, s2: &mut S) {
+    fun t0(s1: &mut S, _s2: &mut S) {
         let f = freeze(s1);
         mut_imm(s1, f);
         let f = &s1.f;

@@ -2,7 +2,7 @@ module M {
     struct G { v1: u64, v2: u64 }
     struct S { g1: G, g2: G }
 
-    fun t1(root: &mut S, cond: bool) {
+    fun t1(root: &mut S) {
         let v1_mut = &mut root.g1.v1;
         let v2_mut = &mut root.g1.v2;
         let g2_mut = &mut root.g2;
