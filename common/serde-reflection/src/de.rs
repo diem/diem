@@ -173,13 +173,13 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
         self.deserialize_bytes(visitor)
     }
 
-    fn deserialize_option<V>(mut self, visitor: V) -> Result<V::Value>
+    fn deserialize_option<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
         self.format
             .unify(Format::Option(Box::new(Format::Unknown)))?;
-        let format = match &mut self.format {
+        let format = match self.format {
             Format::Option(x) => x,
             _ => unreachable!(),
         };
@@ -246,12 +246,12 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
         Ok(value)
     }
 
-    fn deserialize_seq<V>(mut self, visitor: V) -> Result<V::Value>
+    fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
         self.format.unify(Format::Seq(Box::new(Format::Unknown)))?;
-        let format = match &mut self.format {
+        let format = match self.format {
             Format::Seq(x) => x,
             _ => unreachable!(),
         };
@@ -266,13 +266,13 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
         }
     }
 
-    fn deserialize_tuple<V>(mut self, len: usize, visitor: V) -> Result<V::Value>
+    fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
         self.format
             .unify(Format::Tuple(vec![Format::Unknown; len]))?;
-        let formats = match &mut self.format {
+        let formats = match self.format {
             Format::Tuple(x) => x,
             _ => unreachable!(),
         };
@@ -309,7 +309,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
         Ok(value)
     }
 
-    fn deserialize_map<V>(mut self, visitor: V) -> Result<V::Value>
+    fn deserialize_map<V>(self, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -317,7 +317,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'a> {
             key: Box::new(Format::Unknown),
             value: Box::new(Format::Unknown),
         })?;
-        let formats = match &mut self.format {
+        let formats = match self.format {
             Format::Map { key, value } => vec![key.as_mut(), value.as_mut()],
             _ => unreachable!(),
         };
@@ -557,13 +557,13 @@ impl<'de, 'a> de::VariantAccess<'de> for EnumDeserializer<'a> {
         self.format.unify(VariantFormat::Unit)
     }
 
-    fn newtype_variant_seed<T>(mut self, seed: T) -> Result<T::Value>
+    fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value>
     where
         T: DeserializeSeed<'de>,
     {
         self.format
             .unify(VariantFormat::NewType(Box::new(Format::Unknown)))?;
-        let format = match &mut self.format {
+        let format = match self.format {
             VariantFormat::NewType(x) => x.as_mut(),
             _ => unreachable!(),
         };
@@ -571,13 +571,13 @@ impl<'de, 'a> de::VariantAccess<'de> for EnumDeserializer<'a> {
         seed.deserialize(inner)
     }
 
-    fn tuple_variant<V>(mut self, len: usize, visitor: V) -> Result<V::Value>
+    fn tuple_variant<V>(self, len: usize, visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
         self.format
             .unify(VariantFormat::Tuple(vec![Format::Unknown; len]))?;
-        let formats = match &mut self.format {
+        let formats = match self.format {
             VariantFormat::Tuple(x) => x,
             _ => unreachable!(),
         };
@@ -585,7 +585,7 @@ impl<'de, 'a> de::VariantAccess<'de> for EnumDeserializer<'a> {
         visitor.visit_seq(inner)
     }
 
-    fn struct_variant<V>(mut self, fields: &'static [&'static str], visitor: V) -> Result<V::Value>
+    fn struct_variant<V>(self, fields: &'static [&'static str], visitor: V) -> Result<V::Value>
     where
         V: Visitor<'de>,
     {
@@ -598,7 +598,7 @@ impl<'de, 'a> de::VariantAccess<'de> for EnumDeserializer<'a> {
             .collect();
         self.format.unify(VariantFormat::Struct(formats))?;
 
-        let formats = match &mut self.format {
+        let formats = match self.format {
             VariantFormat::Struct(x) => x,
             _ => unreachable!(),
         };

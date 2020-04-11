@@ -72,7 +72,7 @@ impl Tracer {
         T: Deserialize<'de>,
     {
         let mut format = Format::Unknown;
-        let deserializer = Deserializer::new(&mut *self, &mut format);
+        let deserializer = Deserializer::new(self, &mut format);
         let value = T::deserialize(deserializer)?;
         Ok((format, value))
     }
@@ -83,7 +83,7 @@ impl Tracer {
         S: DeserializeSeed<'de>,
     {
         let mut format = Format::Unknown;
-        let deserializer = Deserializer::new(&mut *self, &mut format);
+        let deserializer = Deserializer::new(self, &mut format);
         let value = seed.deserialize(deserializer)?;
         Ok((format, value))
     }

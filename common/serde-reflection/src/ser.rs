@@ -133,15 +133,11 @@ impl<'a> ser::Serializer for Serializer<'a> {
         )
     }
 
-    fn serialize_newtype_struct<T>(
-        mut self,
-        name: &'static str,
-        value: &T,
-    ) -> Result<(Format, Value)>
+    fn serialize_newtype_struct<T>(self, name: &'static str, value: &T) -> Result<(Format, Value)>
     where
         T: ?Sized + Serialize,
     {
-        let (format, value) = value.serialize(Serializer::new(&mut self.tracer))?;
+        let (format, value) = value.serialize(Serializer::new(self.tracer))?;
         self.tracer.record_container(
             name,
             ContainerFormat::NewTypeStruct(Box::new(format)),
@@ -150,7 +146,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
     }
 
     fn serialize_newtype_variant<T>(
-        mut self,
+        self,
         name: &'static str,
         variant_index: u32,
         variant_name: &'static str,
@@ -159,7 +155,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
     where
         T: ?Sized + Serialize,
     {
-        let (format, value) = value.serialize(Serializer::new(&mut self.tracer))?;
+        let (format, value) = value.serialize(Serializer::new(self.tracer))?;
         self.tracer.record_variant(
             name,
             variant_index,
@@ -171,7 +167,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
 
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq> {
         Ok(SeqSerializer {
-            tracer: &mut *self.tracer,
+            tracer: self.tracer,
             format: Format::Unknown,
             values: Vec::new(),
         })
@@ -179,7 +175,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
 
     fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple> {
         Ok(TupleSerializer {
-            tracer: &mut *self.tracer,
+            tracer: self.tracer,
             formats: Vec::new(),
             values: Vec::new(),
         })
@@ -191,7 +187,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
         _len: usize,
     ) -> Result<Self::SerializeTupleStruct> {
         Ok(TupleStructSerializer {
-            tracer: &mut *self.tracer,
+            tracer: self.tracer,
             name,
             formats: Vec::new(),
             values: Vec::new(),
@@ -206,7 +202,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
         _len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
         Ok(TupleVariantSerializer {
-            tracer: &mut *self.tracer,
+            tracer: self.tracer,
             name,
             variant_index,
             variant_name,
@@ -217,7 +213,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
 
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
         Ok(MapSerializer {
-            tracer: &mut *self.tracer,
+            tracer: self.tracer,
             key_format: Format::Unknown,
             value_format: Format::Unknown,
             values: Vec::new(),
@@ -226,7 +222,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
 
     fn serialize_struct(self, name: &'static str, _len: usize) -> Result<Self::SerializeStruct> {
         Ok(StructSerializer {
-            tracer: &mut *self.tracer,
+            tracer: self.tracer,
             name,
             fields: Vec::new(),
             values: Vec::new(),
@@ -241,7 +237,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
         _len: usize,
     ) -> Result<Self::SerializeStructVariant> {
         Ok(StructVariantSerializer {
-            tracer: &mut *self.tracer,
+            tracer: self.tracer,
             name,
             variant_index,
             variant_name,
@@ -269,7 +265,7 @@ impl<'a> ser::SerializeSeq for SeqSerializer<'a> {
     where
         T: ?Sized + Serialize,
     {
-        let (format, value) = value.serialize(Serializer::new(&mut self.tracer))?;
+        let (format, value) = value.serialize(Serializer::new(self.tracer))?;
         self.format.unify(format)?;
         self.values.push(value);
         Ok(())
@@ -294,7 +290,7 @@ impl<'a> ser::SerializeTuple for TupleSerializer<'a> {
     where
         T: ?Sized + Serialize,
     {
-        let (format, value) = value.serialize(Serializer::new(&mut self.tracer))?;
+        let (format, value) = value.serialize(Serializer::new(self.tracer))?;
         self.formats.push(format);
         self.values.push(value);
         Ok(())
@@ -320,7 +316,7 @@ impl<'a> ser::SerializeTupleStruct for TupleStructSerializer<'a> {
     where
         T: ?Sized + Serialize,
     {
-        let (format, value) = value.serialize(Serializer::new(&mut self.tracer))?;
+        let (format, value) = value.serialize(Serializer::new(self.tracer))?;
         self.formats.push(format);
         self.values.push(value);
         Ok(())
@@ -350,7 +346,7 @@ impl<'a> ser::SerializeTupleVariant for TupleVariantSerializer<'a> {
     where
         T: ?Sized + Serialize,
     {
-        let (format, value) = v.serialize(Serializer::new(&mut self.tracer))?;
+        let (format, value) = v.serialize(Serializer::new(self.tracer))?;
         self.formats.push(format);
         self.values.push(value);
         Ok(())
@@ -384,7 +380,7 @@ impl<'a> ser::SerializeMap for MapSerializer<'a> {
     where
         T: ?Sized + Serialize,
     {
-        let (format, value) = key.serialize(Serializer::new(&mut self.tracer))?;
+        let (format, value) = key.serialize(Serializer::new(self.tracer))?;
         self.key_format.unify(format)?;
         self.values.push(value);
         Ok(())
@@ -394,7 +390,7 @@ impl<'a> ser::SerializeMap for MapSerializer<'a> {
     where
         T: ?Sized + Serialize,
     {
-        let (format, value) = value.serialize(Serializer::new(&mut self.tracer))?;
+        let (format, value) = value.serialize(Serializer::new(self.tracer))?;
         self.value_format.unify(format)?;
         self.values.push(value);
         Ok(())
@@ -425,7 +421,7 @@ impl<'a> ser::SerializeStruct for StructSerializer<'a> {
     where
         T: ?Sized + Serialize,
     {
-        let (format, value) = value.serialize(Serializer::new(&mut self.tracer))?;
+        let (format, value) = value.serialize(Serializer::new(self.tracer))?;
         self.fields.push(Named {
             name: name.into(),
             value: format,
@@ -458,7 +454,7 @@ impl<'a> ser::SerializeStructVariant for StructVariantSerializer<'a> {
     where
         T: ?Sized + Serialize,
     {
-        let (format, value) = value.serialize(Serializer::new(&mut self.tracer))?;
+        let (format, value) = value.serialize(Serializer::new(self.tracer))?;
         self.fields.push(Named {
             name: name.into(),
             value: format,
