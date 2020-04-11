@@ -75,5 +75,7 @@ impl From<ValidatorSet> for crate::proto::types::ValidatorSet {
 }
 
 impl OnChainConfig for ValidatorSet {
+    // validator_set_address
+    const ADDRESS: &'static str = "0x1D8";
     const IDENTIFIER: &'static str = "LibraSystem";
 }
