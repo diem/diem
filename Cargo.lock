@@ -3262,6 +3262,7 @@ dependencies = [
  "memsocket 0.1.0",
  "netcore 0.1.0",
  "noise 0.1.0",
+ "num-variants 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-multiaddr 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pin-project 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
