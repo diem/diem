@@ -98,7 +98,7 @@ pub enum DiscoverySource {
 #[derive(Debug)]
 pub enum ConnectivityRequest {
     /// Request to update known addresses of peer with id `PeerId` to given list.
-    UpdateAddresses(PeerId, Vec<Multiaddr>),
+    UpdateAddresses(DiscoverySource, PeerId, Vec<Multiaddr>),
     /// Update set of nodes eligible to join the network.
     UpdateEligibleNodes(HashMap<PeerId, NetworkPublicKeys>),
     /// Gets current size of dial queue. This is useful in tests.
@@ -373,12 +373,13 @@ where
 
     fn handle_request(&mut self, req: ConnectivityRequest) {
         match req {
-            ConnectivityRequest::UpdateAddresses(peer_id, addrs) => {
+            ConnectivityRequest::UpdateAddresses(src, peer_id, addrs) => {
                 trace!(
-                    "Received updated addresses for peer: {}",
-                    peer_id.short_str()
+                    "Received updated addresses for peer: {} from {:?} discovery source",
+                    peer_id.short_str(),
+                    src,
                 );
-                self.update_peer_addrs(peer_id, addrs);
+                self.update_peer_addrs(src, peer_id, addrs);
                 // Ensure that the next dial attempt starts from the first addr.
                 if let Some(dial_state) = self.dial_states.get_mut(&peer_id) {
                     dial_state.reset_addr();
@@ -394,10 +395,7 @@ where
         }
     }
 
-    fn update_peer_addrs(&mut self, peer_id: PeerId, addrs: Vec<Multiaddr>) {
-        // TODO(philiphayes): use real value here
-        let src = DiscoverySource::Gossip;
-
+    fn update_peer_addrs(&mut self, src: DiscoverySource, peer_id: PeerId, addrs: Vec<Multiaddr>) {
         self.peer_addresses
             .entry(peer_id)
             .or_default()
@@ -508,7 +506,7 @@ where
     }
 
     fn next_addr<'a>(&mut self, addrs: &'a Addresses) -> &'a Multiaddr {
-        assert_ne!(0, addrs.len());
+        assert!(!addrs.is_empty());
 
         let addr_idx = self.addr_idx;
         self.addr_idx = self.addr_idx.wrapping_add(1);

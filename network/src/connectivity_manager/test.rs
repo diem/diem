@@ -216,6 +216,7 @@ fn connect_to_seeds_on_startup() {
         info!("Sending same address of seed peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
+                DiscoverySource::Gossip,
                 seed_peer_id,
                 vec![seed_addr.clone()],
             ))
@@ -231,6 +232,7 @@ fn connect_to_seeds_on_startup() {
         info!("Sending new address of seed peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
+                DiscoverySource::Gossip,
                 seed_peer_id,
                 vec![new_seed_addr.clone()],
             ))
@@ -309,6 +311,7 @@ fn addr_change() {
         info!("Sending address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
+                DiscoverySource::Gossip,
                 other_peer_id,
                 vec![other_address.clone()],
             ))
@@ -338,6 +341,7 @@ fn addr_change() {
         info!("Sending same address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
+                DiscoverySource::Gossip,
                 other_peer_id,
                 vec![other_address.clone()],
             ))
@@ -353,6 +357,7 @@ fn addr_change() {
         info!("Sending new address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
+                DiscoverySource::Gossip,
                 other_peer_id,
                 vec![other_address_new.clone()],
             ))
@@ -414,6 +419,7 @@ fn lost_connection() {
         info!("Sending address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
+                DiscoverySource::Gossip,
                 other_peer_id,
                 vec![other_address.clone()],
             ))
@@ -487,6 +493,7 @@ fn disconnect() {
         info!("Sending address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
+                DiscoverySource::Gossip,
                 other_peer_id,
                 vec![other_address.clone()],
             ))
@@ -553,6 +560,7 @@ fn retry_on_failure() {
         info!("Sending address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
+                DiscoverySource::Gossip,
                 other_peer_id,
                 vec![other_address.clone()],
             ))
@@ -656,6 +664,7 @@ fn no_op_requests() {
         info!("Sending address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
+                DiscoverySource::Gossip,
                 other_peer_id,
                 vec![other_address.clone()],
             ))
@@ -767,6 +776,7 @@ fn backoff_on_failure() {
         info!("Sending address of peer a");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
+                DiscoverySource::Gossip,
                 peer_a,
                 vec![peer_a_address.clone()],
             ))
@@ -776,6 +786,7 @@ fn backoff_on_failure() {
         info!("Sending address of peer b");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
+                DiscoverySource::Gossip,
                 peer_b,
                 vec![peer_b_address.clone()],
             ))
@@ -844,6 +855,7 @@ fn multiple_addrs_basic() {
         info!("Sending address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
+                DiscoverySource::Gossip,
                 other_peer_id,
                 vec![other_addr_1.clone(), other_addr_2.clone()],
             ))
@@ -911,6 +923,7 @@ fn multiple_addrs_wrapping() {
         info!("Sending address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
+                DiscoverySource::Gossip,
                 other_peer_id,
                 vec![other_addr_1.clone(), other_addr_2.clone()],
             ))
@@ -995,6 +1008,7 @@ fn multiple_addrs_shrinking() {
         info!("Sending address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
+                DiscoverySource::Gossip,
                 other_peer_id,
                 vec![
                     other_addr_1.clone(),
@@ -1030,6 +1044,7 @@ fn multiple_addrs_shrinking() {
         info!("Sending address of other peer");
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
+                DiscoverySource::Gossip,
                 other_peer_id,
                 vec![other_addr_4.clone(), other_addr_5.clone()],
             ))

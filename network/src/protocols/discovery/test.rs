@@ -97,7 +97,8 @@ async fn expect_address_update(
     expected_addrs: &[Multiaddr],
 ) {
     match conn_mgr_reqs_rx.next().await.unwrap() {
-        ConnectivityRequest::UpdateAddresses(peer_id, addrs) => {
+        ConnectivityRequest::UpdateAddresses(src, peer_id, addrs) => {
+            assert_eq!(DiscoverySource::Gossip, src);
             assert_eq!(expected_peer_id, peer_id);
             assert_eq!(expected_addrs, &addrs[..]);
         }
