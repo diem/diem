@@ -22,7 +22,7 @@ module M {
         R{} = r;
     }
 
-    fun t4(cond: bool) {
+    fun t4() {
         let r: R;
         loop { r = R{} }
     }

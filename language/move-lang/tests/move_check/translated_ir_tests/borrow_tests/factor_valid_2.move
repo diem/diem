@@ -40,6 +40,6 @@ module M {
         &a.g
     }
 
-    fun baz(a: &u64, b: &u64) {
+    fun baz(_a: &u64, _b: &u64) {
     }
 }

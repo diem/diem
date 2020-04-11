@@ -24,7 +24,7 @@ module M {
         R {} = r;
     }
 
-    fun t4(cond: bool) {
+    fun t4() {
         let r = R{};
         loop { return () }
     }
@@ -34,7 +34,7 @@ module M {
         return ()
     }
 
-    fun t6<T>(x: T) {
+    fun t6<T>(_x: R) {
         return ()
     }
 }

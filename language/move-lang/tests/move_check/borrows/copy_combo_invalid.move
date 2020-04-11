@@ -34,7 +34,7 @@ module M {
         s;
     }
 
-    fun t4(cond: bool, other: &mut S) {
+    fun t4(cond: bool, _other: &mut S) {
         let s = S { f: 0, g: 0 };
         let f = &mut s.f;
         if (cond) { copy s; };

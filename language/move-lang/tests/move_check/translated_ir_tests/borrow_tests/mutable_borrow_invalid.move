@@ -17,9 +17,6 @@ module M {
         foo(x, &mut root.f);
     }
 
-    fun foo(x: &mut u64, y: &mut u64) {
+    fun foo(_x: &mut u64, _y: &mut u64) {
     }
 }
-
-// check: WRITEREF_EXISTS_BORROW_ERROR
-// check: CALL_BORROWED_MUTABLE_REFERENCE_ERROR

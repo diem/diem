@@ -10,7 +10,7 @@ module Tester {
         r2;
     }
 
-    fun foo(r: &u64, r2: &u64): &u64 {
+    fun foo(_r: &u64, r2: &u64): &u64 {
         r2
     }
 }

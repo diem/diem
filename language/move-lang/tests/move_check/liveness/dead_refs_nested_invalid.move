@@ -10,7 +10,7 @@ module M {
         }
     }
 
-    fun t1(cond: bool) {
+    fun t1() {
         let x = 0;
         let x_ref = &mut x;
         loop {

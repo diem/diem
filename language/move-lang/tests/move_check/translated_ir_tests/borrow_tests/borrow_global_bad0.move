@@ -2,7 +2,7 @@ module A {
     use 0x0::Transaction;
     resource struct T {v: u64}
 
-    public fun t0(cond: bool) acquires T {
+    public fun t0() acquires T {
         let sender = Transaction::sender();
         let x = borrow_global_mut<T>(sender);
         copy x;
@@ -10,5 +10,3 @@ module A {
         copy x;
     }
 }
-
-// check: GLOBAL_REFERENCE_ERROR

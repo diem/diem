@@ -3,7 +3,7 @@ module A {
     resource struct T1 {v: u64}
     resource struct T2 {v: u64}
 
-    public fun test1(addr: address) acquires T1, T2 {
+    public fun test1() acquires T1, T2 {
         let x = borrow_global_mut<T1>(Transaction::sender());
         let y = get_v(x);
         acquires_t1();
@@ -11,7 +11,7 @@ module A {
         move y;
     }
 
-    public fun test2(addr: address) acquires T1, T2 {
+    public fun test2() acquires T1, T2 {
         let x = borrow_global_mut<T1>(Transaction::sender());
         let y = get_v(x);
         acquires_t2();
@@ -19,7 +19,7 @@ module A {
         move y;
     }
 
-    public fun test3(addr: address) acquires T1, T2 {
+    public fun test3() acquires T1, T2 {
         let x = borrow_global_mut<T1>(Transaction::sender());
         let y = get_v(x);
         acquires_t1();
@@ -40,7 +40,3 @@ module A {
     }
 
 }
-
-// check: GLOBAL_REFERENCE_ERROR
-// check: GLOBAL_REFERENCE_ERROR
-// check: GLOBAL_REFERENCE_ERROR

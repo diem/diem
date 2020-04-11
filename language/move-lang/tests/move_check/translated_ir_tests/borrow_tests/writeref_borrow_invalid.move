@@ -2,7 +2,7 @@ module M {
     struct G { v: u64 }
     struct S { g: G }
 
-    fun t1(root: &mut S, cond: bool) {
+    fun t1(root: &mut S) {
         let v_mut = &mut root.g.v;
         let g_mut = &mut root.g;
 
@@ -11,5 +11,3 @@ module M {
         v_mut;
     }
 }
-
-// check: WRITEREF_EXISTS_BORROW_ERROR
