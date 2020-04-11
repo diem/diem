@@ -90,8 +90,7 @@ impl MockOnchainDiscoveryNetworkSender {
                 panic!("Unexpected request msg, expected response msg")
             }
         };
-        let res_msg = QueryDiscoverySetResponseWithEvent::try_from(res_msg).unwrap();
-        res_msg
+        QueryDiscoverySetResponseWithEvent::try_from(res_msg).unwrap()
     }
 
     async fn new_peer(&mut self, peer_id: PeerId) {
@@ -123,7 +122,7 @@ impl MockOnchainDiscoveryNetworkSender {
                     ..
                 },
             ) => (
-                protocol.clone(),
+                protocol,
                 PeerManagerNotification::RecvRpc(
                     peer_id,
                     InboundRpcRequest {
@@ -156,7 +155,7 @@ impl MockOnchainDiscoveryNetworkSender {
 fn gen_configs(count: usize) -> (Vec<NodeConfig>, ValidatorSet, DiscoverySet) {
     let config_template = NodeConfig::default();
     let config_seed = [42; 32];
-    let randomize_service_ports = false;
+    let randomize_service_ports = true;
     let randomize_libranet_ports = false;
 
     let ValidatorSwarm {
@@ -299,11 +298,12 @@ fn handles_remote_query() {
 
     let other_peer_id = PeerId::random();
     let query_res =
-        rt.block_on(mock_network_tx.query_discovery_set(other_peer_id, query_req.clone().into()));
+        rt.block_on(mock_network_tx.query_discovery_set(other_peer_id, query_req.clone()));
 
     // verify response and ratchet epoch_info
     let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
     query_res
+        .query_res
         .update_to_latest_ledger_response
         .verify(&trusted_state, &query_req.into())
         .unwrap();
