@@ -35,7 +35,6 @@ error:  This assertion might not hold.
     =         b = <redacted>,
     =         t1 = <redacted>
     =     at tests/sources/invariants.move:82:24: invalid_R_update_branching
-    =         t1 = <redacted>,
     =         t2 = <redacted>
     =     at tests/sources/invariants.move:84:13: invalid_R_update_branching
     =     at tests/sources/invariants.move:89:13: invalid_R_update_branching

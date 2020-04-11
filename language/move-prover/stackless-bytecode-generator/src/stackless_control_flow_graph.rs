@@ -4,7 +4,7 @@
 //! Adapted from control_flow_graph for Bytecode, this module defines the control-flow graph on
 //! Stackless Bytecode used in analysis as part of Move prover.
 
-use crate::stackless_bytecode::Bytecode;
+use crate::stackless_bytecode::{Bytecode, Label};
 use bytecode_verifier::control_flow_graph::{BlockId, ControlFlowGraph};
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
@@ -26,12 +26,18 @@ const ENTRY_BLOCK_ID: BlockId = 0;
 
 impl StacklessControlFlowGraph {
     pub fn new(code: &[Bytecode]) -> Self {
+        let label_offsets = Bytecode::label_offsets(code);
         // First go through and collect block ids, i.e., offsets that begin basic blocks.
         // Need to do this first in order to handle backwards edges.
         let mut block_ids = Set::new();
         block_ids.insert(ENTRY_BLOCK_ID);
         for pc in 0..code.len() {
-            StacklessControlFlowGraph::record_block_ids(pc as CodeOffset, code, &mut block_ids);
+            StacklessControlFlowGraph::record_block_ids(
+                pc as CodeOffset,
+                code,
+                &mut block_ids,
+                &label_offsets,
+            );
         }
 
         // Create basic blocks
@@ -42,7 +48,7 @@ impl StacklessControlFlowGraph {
 
             // Create a basic block
             if StacklessControlFlowGraph::is_end_of_block(co_pc, code, &block_ids) {
-                let successors = Bytecode::get_successors(co_pc, code);
+                let successors = Bytecode::get_successors(co_pc, code, &label_offsets);
                 let bb = BasicBlock {
                     entry,
                     exit: co_pc,
@@ -61,11 +67,16 @@ impl StacklessControlFlowGraph {
         pc + 1 == (code.len() as CodeOffset) || block_ids.contains(&(pc + 1))
     }
 
-    fn record_block_ids(pc: CodeOffset, code: &[Bytecode], block_ids: &mut Set<BlockId>) {
+    fn record_block_ids(
+        pc: CodeOffset,
+        code: &[Bytecode],
+        block_ids: &mut Set<BlockId>,
+        label_offsets: &BTreeMap<Label, CodeOffset>,
+    ) {
         let bytecode = &code[pc as usize];
 
-        if let Some(offset) = bytecode.branch_dest() {
-            block_ids.insert(*offset);
+        if let Some(label) = bytecode.branch_dest() {
+            block_ids.insert(*label_offsets.get(&label).unwrap());
         }
 
         if bytecode.is_branch() && pc + 1 < (code.len() as CodeOffset) {

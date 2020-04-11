@@ -128,7 +128,7 @@ pub struct SpecFunId(RawIndex);
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct SpecVarId(RawIndex);
 
-/// Identifier for a node in the AST, relative to a function. This is used to associate attributes
+/// Identifier for a node in the AST, relative to a module. This is used to associate attributes
 /// with the node, like source location and type.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct NodeId(RawIndex);
@@ -1225,6 +1225,11 @@ impl<'env> FieldEnv<'env> {
             .module_env
             .globalize_signature(&field.signature.0)
     }
+
+    /// Get field offset.
+    pub fn get_offset(&self) -> usize {
+        self.data.offset
+    }
 }
 
 // =================================================================================================
@@ -1346,6 +1351,11 @@ impl<'env> FunctionEnv<'env> {
                 )
             })
             .collect_vec()
+    }
+
+    pub fn get_parameter_count(&self) -> usize {
+        let view = self.definition_view();
+        view.arg_tokens().count()
     }
 
     /// Returns the regular parameters associated with this function.

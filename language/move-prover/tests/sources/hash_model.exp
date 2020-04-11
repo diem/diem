@@ -14,6 +14,8 @@ error:  A postcondition might not hold on this return path.
     =     at tests/sources/hash_model.move:40:33: hash_test1_incorrect
     =         h2 = <redacted>
     =     at tests/sources/hash_model.move:41:10: hash_test1_incorrect
+    =         result_0 = <redacted>,
+    =         result_1 = <redacted>
     =     at tests/sources/hash_model.move:37:5: hash_test1_incorrect (exit)
 
 error:  A postcondition might not hold on this return path.
@@ -31,4 +33,6 @@ error:  A postcondition might not hold on this return path.
     =     at tests/sources/hash_model.move:83:33: hash_test2_incorrect
     =         h2 = <redacted>
     =     at tests/sources/hash_model.move:84:10: hash_test2_incorrect
+    =         result_0 = <redacted>,
+    =         result_1 = <redacted>
     =     at tests/sources/hash_model.move:80:5: hash_test2_incorrect (exit)

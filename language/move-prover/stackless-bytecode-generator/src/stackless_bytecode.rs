@@ -6,9 +6,38 @@ use spec_lang::{
     env::{FunId, ModuleId, StructId},
     ty::Type,
 };
+use std::collections::BTreeMap;
 use vm::file_format::CodeOffset;
 
 pub type TempIndex = usize;
+
+/// A label for a branch destination.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+pub struct Label(u16);
+
+impl Label {
+    pub fn new(idx: usize) -> Self {
+        Self(idx as u16)
+    }
+
+    pub fn as_usize(self) -> usize {
+        self.0 as usize
+    }
+}
+
+/// An id for an attribute attached to an instruction.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+pub struct AttrId(u16);
+
+impl AttrId {
+    pub fn new(idx: usize) -> Self {
+        Self(idx as u16)
+    }
+
+    pub fn as_usize(self) -> usize {
+        self.0 as usize
+    }
+}
 
 /// The kind of an assignment in the bytecode.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -78,47 +107,98 @@ pub enum BranchCond {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Bytecode {
-    Assign(TempIndex, TempIndex, AssignKind),
+    Assign(AttrId, TempIndex, TempIndex, AssignKind),
 
-    ReadRef(TempIndex, TempIndex),
-    WriteRef(TempIndex, TempIndex),
-    FreezeRef(TempIndex, TempIndex),
+    ReadRef(AttrId, TempIndex, TempIndex),
+    WriteRef(AttrId, TempIndex, TempIndex),
+    FreezeRef(AttrId, TempIndex, TempIndex),
 
-    Call(Vec<TempIndex>, ModuleId, FunId, Vec<Type>, Vec<TempIndex>),
-    Ret(Vec<TempIndex>),
+    Call(
+        AttrId,
+        Vec<TempIndex>,
+        ModuleId,
+        FunId,
+        Vec<Type>,
+        Vec<TempIndex>,
+    ),
+    Ret(AttrId, Vec<TempIndex>),
 
-    Pack(TempIndex, ModuleId, StructId, Vec<Type>, Vec<TempIndex>),
-    Unpack(Vec<TempIndex>, ModuleId, StructId, Vec<Type>, TempIndex),
+    Pack(
+        AttrId,
+        TempIndex,
+        ModuleId,
+        StructId,
+        Vec<Type>,
+        Vec<TempIndex>,
+    ),
+    Unpack(
+        AttrId,
+        Vec<TempIndex>,
+        ModuleId,
+        StructId,
+        Vec<Type>,
+        TempIndex,
+    ),
 
-    BorrowLoc(TempIndex, TempIndex),
-    BorrowField(TempIndex, TempIndex, ModuleId, StructId, usize),
-    BorrowGlobal(TempIndex, TempIndex, ModuleId, StructId, Vec<Type>),
+    BorrowLoc(AttrId, TempIndex, TempIndex),
+    BorrowField(AttrId, TempIndex, TempIndex, ModuleId, StructId, usize),
+    BorrowGlobal(AttrId, TempIndex, TempIndex, ModuleId, StructId, Vec<Type>),
 
-    MoveToSender(TempIndex, ModuleId, StructId, Vec<Type>),
-    MoveFrom(TempIndex, TempIndex, ModuleId, StructId, Vec<Type>),
-    Exists(TempIndex, TempIndex, ModuleId, StructId, Vec<Type>),
+    MoveToSender(AttrId, TempIndex, ModuleId, StructId, Vec<Type>),
+    MoveFrom(AttrId, TempIndex, TempIndex, ModuleId, StructId, Vec<Type>),
+    Exists(AttrId, TempIndex, TempIndex, ModuleId, StructId, Vec<Type>),
 
-    Load(TempIndex, Constant),
-    Unary(UnaryOp, TempIndex, TempIndex),
-    Binary(BinaryOp, TempIndex, TempIndex, TempIndex),
+    Load(AttrId, TempIndex, Constant),
+    Unary(AttrId, UnaryOp, TempIndex, TempIndex),
+    Binary(AttrId, BinaryOp, TempIndex, TempIndex, TempIndex),
 
-    Branch(CodeOffset, BranchCond),
-    Abort(TempIndex),
-    Destroy(TempIndex),
+    Branch(AttrId, Label, BranchCond),
+    Labeled(AttrId, Label, Box<Bytecode>),
+    Abort(AttrId, TempIndex),
+    Destroy(AttrId, TempIndex),
+    Nop(AttrId),
 }
 
 impl Bytecode {
+    pub fn get_attr_id(&self) -> AttrId {
+        use Bytecode::*;
+        match self {
+            Assign(id, ..)
+            | ReadRef(id, ..)
+            | WriteRef(id, ..)
+            | FreezeRef(id, ..)
+            | Call(id, ..)
+            | Ret(id, ..)
+            | Pack(id, ..)
+            | Unpack(id, ..)
+            | BorrowLoc(id, ..)
+            | BorrowField(id, ..)
+            | BorrowGlobal(id, ..)
+            | MoveToSender(id, ..)
+            | MoveFrom(id, ..)
+            | Exists(id, ..)
+            | Load(id, ..)
+            | Unary(id, ..)
+            | Binary(id, ..)
+            | Branch(id, ..)
+            | Labeled(id, ..)
+            | Abort(id, ..)
+            | Destroy(id, ..)
+            | Nop(id) => *id,
+        }
+    }
+
     pub fn is_unconditional_branch(&self) -> bool {
         matches!(
             self,
-            Bytecode::Ret(_) | Bytecode::Abort(_) | Bytecode::Branch(_, BranchCond::Always)
+            Bytecode::Ret(..) | Bytecode::Abort(..) | Bytecode::Branch(_, _, BranchCond::Always)
         )
     }
 
     pub fn is_conditional_branch(&self) -> bool {
         matches!(
             self,
-            Bytecode::Branch(_, BranchCond::False(_)) | Bytecode::Branch(_, BranchCond::True(_))
+            Bytecode::Branch(_, _, BranchCond::False(_)) | Bytecode::Branch(_, _, BranchCond::True(_))
         )
     }
 
@@ -126,21 +206,45 @@ impl Bytecode {
         self.is_conditional_branch() || self.is_unconditional_branch()
     }
 
+    pub fn skip_labelled(&self) -> &Bytecode {
+        if let Bytecode::Labeled(_, _, code) = self {
+            code
+        } else {
+            self
+        }
+    }
+
     /// Return the destination of branching if self is a branching instruction
-    pub fn branch_dest(&self) -> Option<&CodeOffset> {
+    pub fn branch_dest(&self) -> Option<Label> {
         match self {
-            Bytecode::Branch(offset, _) => Some(offset),
+            Bytecode::Branch(_, label, _) => Some(*label),
             _ => None,
         }
     }
 
-    /// Return the successor offsets of this instruction
-    pub fn get_successors(pc: CodeOffset, code: &[Bytecode]) -> Vec<CodeOffset> {
+    /// Returns a mapping from labels to code offsets.
+    pub fn label_offsets(code: &[Bytecode]) -> BTreeMap<Label, CodeOffset> {
+        let mut res = BTreeMap::new();
+        for (offs, bc) in code.iter().enumerate() {
+            if let Bytecode::Labeled(_, label, ..) = bc {
+                assert!(res.insert(*label, offs as CodeOffset).is_none());
+            }
+        }
+        res
+    }
+
+    /// Return the successor offsets of this instruction. In addition to the code, a map
+    /// of label to code offset need to be passed in.
+    pub fn get_successors(
+        pc: CodeOffset,
+        code: &[Bytecode],
+        label_offsets: &BTreeMap<Label, CodeOffset>,
+    ) -> Vec<CodeOffset> {
         let bytecode = &code[pc as usize];
         let mut v = vec![];
 
-        if let Some(offset) = bytecode.branch_dest() {
-            v.push(*offset);
+        if let Some(label) = bytecode.branch_dest() {
+            v.push(*label_offsets.get(&label).expect("label defined"));
         }
 
         let next_pc = pc + 1;
