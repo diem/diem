@@ -24,6 +24,8 @@ error:  A postcondition might not hold on this return path.
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/global_vars.move:28:5: pack_incorrect (entry)
+    =     at tests/sources/global_vars.move:29:9: pack_incorrect
+    =         result = <redacted>
     =     at tests/sources/global_vars.move:28:5: pack_incorrect (exit)
 
 error:  A postcondition might not hold on this return path.
@@ -39,6 +41,7 @@ error:  A postcondition might not hold on this return path.
     =     at tests/sources/global_vars.move:52:9: unpack_incorrect
     =         x = <redacted>
     =     at tests/sources/global_vars.move:50:5: unpack_incorrect (exit)
+    =         result = <redacted>
 
 error:  A postcondition might not hold on this return path.
 
@@ -56,6 +59,7 @@ error:  A postcondition might not hold on this return path.
      =         r = <redacted>
      =     at tests/sources/global_vars.move:148:9: update_S_incorrect
      =     at tests/sources/global_vars.move:144:5: update_S_incorrect (exit)
+     =         result = <redacted>
 
 error:  A postcondition might not hold on this return path.
 
@@ -76,3 +80,4 @@ error:  A postcondition might not hold on this return path.
     =     at tests/sources/global_vars.move:84:9: update_incorrect
     =     at tests/sources/global_vars.move:85:9: update_incorrect
     =     at tests/sources/global_vars.move:82:5: update_incorrect (exit)
+    =         result = <redacted>

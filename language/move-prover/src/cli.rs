@@ -6,14 +6,11 @@
 //! Functionality related to the command line interface of the move prover.
 
 use clap::{App, Arg};
-use log::{error, LevelFilter};
+use log::LevelFilter;
 use simplelog::{
     CombinedLogger, Config, ConfigBuilder, LevelPadding, SimpleLogger, TermLogger, TerminalMode,
 };
-use std::{
-    fmt::Display,
-    sync::atomic::{AtomicBool, Ordering},
-};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Represents the virtual path to the boogie prelude which is inlined into the binary.
 pub const INLINE_PRELUDE: &str = "<inline-prelude>";
@@ -313,27 +310,5 @@ impl Options {
     /// Returns name of file where to log boogie output.
     pub fn get_boogie_log_file(&self, boogie_file: &str) -> String {
         format!("{}.log", boogie_file)
-    }
-}
-
-/// If result is not OK, log error and abort program. In difference to result.expect(), this
-/// is dealing with a user input, not a program error, and thus does not print a stacktrace.
-pub fn abort_on_error<T, E: Display>(r: Result<T, E>, msg: &str) -> T {
-    match r {
-        Ok(x) => x,
-        Err(e) => abort_with_error(&format!("{}: {}", msg, e)),
-    }
-}
-
-/// Abort program after printing error message. This is dealing with a user input error,
-/// so panic! with a stack trace is not used.
-pub fn abort_with_error<T>(msg: &str) -> T {
-    error!("{}", msg);
-    if TEST_MODE.load(Ordering::Relaxed) {
-        // We do not want to exit the process during tests, because we do not see buffered terminal
-        // output if so.
-        panic!("test aborted");
-    } else {
-        std::process::exit(1);
     }
 }

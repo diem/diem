@@ -623,6 +623,18 @@ procedure {:inline 1} Sub(src1: Value, src2: Value) returns (dst: Value)
     dst := Integer(i#Integer(src1) - i#Integer(src2));
 }
 
+procedure {:inline 1} Shl(src1: Value, src2: Value) returns (dst: Value)
+{
+    // TOOD: implement
+    assert false;
+}
+
+procedure {:inline 1} Shr(src1: Value, src2: Value) returns (dst: Value)
+{
+    // TOOD: implement
+    assert false;
+}
+
 procedure {:inline 1} MulU8(src1: Value, src2: Value) returns (dst: Value)
 {
     assume $IsValidU8(src1) && $IsValidU8(src2);

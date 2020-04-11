@@ -6,7 +6,7 @@
 use std::{cell::RefCell, collections::BTreeMap};
 
 use spec_lang::{
-    env::{FieldId, FunctionEnv, Loc, ModuleEnv, ModuleId, NodeId, SpecFunId, StructEnv, StructId},
+    env::{FieldId, Loc, ModuleEnv, ModuleId, NodeId, SpecFunId, StructEnv, StructId},
     ty::{PrimitiveType, Type},
 };
 
@@ -24,6 +24,7 @@ use spec_lang::{
     env::GlobalEnv,
     symbol::Symbol,
 };
+use stackless_bytecode_generator::function_target::FunctionTarget;
 use vm::file_format::CodeOffset;
 
 pub struct SpecTranslator<'env> {
@@ -68,18 +69,18 @@ impl<'env> SpecTranslator<'env> {
     /// Creates a translator for use in translating spec blocks inside function implementation
     pub fn new_for_spec_in_impl(
         writer: &'env CodeWriter,
-        func_env: &'env FunctionEnv<'env>,
+        func_target: &'env FunctionTarget<'env>,
         supports_native_old: bool,
     ) -> SpecTranslator<'env> {
         SpecTranslator {
-            module_env: &func_env.module_env,
+            module_env: &func_target.func_env.module_env,
             writer,
             supports_native_old,
             in_old: RefCell::new(false),
             invariant_target: RefCell::new(("".to_string(), "".to_string())),
             fresh_var_count: RefCell::new(0),
-            name_to_idx_map: (0..func_env.get_local_count())
-                .map(|idx| (func_env.get_local_name(idx), idx))
+            name_to_idx_map: (0..func_target.get_local_count())
+                .map(|idx| (func_target.get_local_name(idx), idx))
                 .collect(),
         }
     }
@@ -220,10 +221,10 @@ impl<'env> SpecTranslator<'env> {
     // Generate boogie for asserts/assumes inside function bodies
     pub fn translate_conditions_inside_impl(
         &self,
-        func_env: &'env FunctionEnv<'env>,
+        func_target: &'env FunctionTarget<'env>,
         offset: CodeOffset,
     ) {
-        let conds = func_env.get_specification_on_impl(offset);
+        let conds = func_target.get_specification_on_impl(offset);
         if let Some(conds) = conds {
             if !conds.is_empty() {
                 self.translate_seq(conds.iter(), "\n", |cond| {
@@ -246,14 +247,14 @@ impl<'env> SpecTranslator<'env> {
     }
 
     /// Generates boogie for pre/post conditions.
-    pub fn translate_conditions(&self, func_env: &'env FunctionEnv<'env>) {
+    pub fn translate_conditions(&self, func_target: &'env FunctionTarget<'env>) {
         // Generate pre-conditions
         // For this transaction to be executed, it MUST have had
         // a valid signature for the sender's account. Therefore,
         // the senders account resource (which contains the pubkey)
         // must have existed! So we can assume txn_sender account
         // exists in pre-condition.
-        let conds = func_env.get_specification_on_decl();
+        let conds = func_target.get_specification_on_decl();
         emitln!(self.writer, "requires $ExistsTxnSenderAccount($m, $txn);");
 
         // Generate requires.
@@ -305,8 +306,8 @@ impl<'env> SpecTranslator<'env> {
         }
 
         // Generate implicit requires/ensures from module invariants if this is a public function.
-        if func_env.is_public() {
-            let invariants = func_env.module_env.get_module_invariants();
+        if func_target.is_public() {
+            let invariants = func_target.func_env.module_env.get_module_invariants();
             if !invariants.is_empty() {
                 self.translate_seq(invariants.iter(), "\n", |inv| {
                     self.writer.set_location(&inv.loc);
@@ -327,11 +328,11 @@ impl<'env> SpecTranslator<'env> {
     }
 
     /// Assumes preconditions for function.
-    pub fn assume_preconditions(&self, func_env: &FunctionEnv<'_>) {
+    pub fn assume_preconditions(&self, func_target: &FunctionTarget<'_>) {
         emitln!(self.writer, "assume $ExistsTxnSenderAccount($m, $txn);");
 
         // Explicit pre-conditions.
-        let requires = func_env
+        let requires = func_target
             .get_specification_on_decl()
             .iter()
             .filter(|cond| cond.kind == SpecConditionKind::Requires)
@@ -347,13 +348,13 @@ impl<'env> SpecTranslator<'env> {
         }
 
         // Implict module invariants.
-        self.assume_module_invariants(func_env);
+        self.assume_module_invariants(func_target);
     }
 
     /// Assume module invariants of function.
-    pub fn assume_module_invariants(&self, func_env: &FunctionEnv<'_>) {
-        if func_env.is_public() {
-            let invariants = func_env.module_env.get_module_invariants();
+    pub fn assume_module_invariants(&self, func_target: &FunctionTarget<'_>) {
+        if func_target.is_public() {
+            let invariants = func_target.func_env.module_env.get_module_invariants();
             if !invariants.is_empty() {
                 self.translate_seq(invariants.iter(), "\n", |inv| {
                     self.writer.set_location(&inv.loc);
