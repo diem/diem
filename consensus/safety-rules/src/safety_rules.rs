@@ -189,11 +189,43 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
         ))
     }
 
-    /// @TODO only sign a timeout if it matches last_voted_round or last_voted_round + 1
-    /// @TODO update last_voted_round
+    /// Only sign the timeout if it is greater than or equal to the last_voted_round and ahead of
+    /// the preferred_round. We may end up signing timeouts for rounds without first signing votes
+    /// if we have received QCs but not proposals. Always map the last_voted_round to the last
+    /// signed timeout to prevent equivocation. We can sign the last_voted_round timeout multiple
+    /// times by requiring that the underlying signing scheme provides deterministic signatures.
     fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
+        debug!("Incoming timeout message for round {}", timeout.round());
+        COUNTERS.requested_sign_timeout.inc();
+
+        let expected_epoch = self.persistent_storage.epoch()?;
+        if timeout.epoch() != expected_epoch {
+            return Err(Error::IncorrectEpoch(timeout.epoch(), expected_epoch));
+        }
+
+        let preferred_round = self.persistent_storage.preferred_round()?;
+        if timeout.round() <= preferred_round {
+            return Err(Error::BadTimeoutPreferredRound(
+                timeout.round(),
+                preferred_round,
+            ));
+        }
+
+        let last_voted_round = self.persistent_storage.last_voted_round()?;
+        if timeout.round() < last_voted_round {
+            return Err(Error::BadTimeoutLastVotedRound(
+                timeout.round(),
+                last_voted_round,
+            ));
+        }
+        if timeout.round() > last_voted_round {
+            self.persistent_storage
+                .set_last_voted_round(timeout.round())?;
+        }
+
+        let signature = timeout.sign(&self.validator_signer);
         COUNTERS.sign_timeout.inc();
-        debug!("Incoming timeout message to sign.");
-        Ok(timeout.sign(&self.validator_signer))
+        debug!("Successfully signed timeout message.");
+        Ok(signature)
     }
 }
