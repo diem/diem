@@ -1329,6 +1329,7 @@ dependencies = [
  "libra-vm 0.1.0",
  "libra-workspace-hack 0.1.0",
  "storage-client 0.1.0",
+ "storage-interface 0.1.0",
  "storage-service 0.1.0",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
