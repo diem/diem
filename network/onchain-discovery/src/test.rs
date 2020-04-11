@@ -368,7 +368,7 @@ fn queries_storage_on_tick() {
     let update_reqs = update_reqs
         .into_iter()
         .map(|req| match req {
-            ConnectivityRequest::UpdateAddresses(peer_id, addrs) => (peer_id, addrs),
+            ConnectivityRequest::UpdateAddresses(_src, peer_id, addrs) => (peer_id, addrs),
             _ => panic!(
                 "Unexpected ConnectivityRequest, expected UpdateAddresses: {:?}",
                 req
@@ -466,7 +466,7 @@ fn queries_peers_on_tick() {
     let update_reqs = update_reqs
         .into_iter()
         .map(|req| match req {
-            ConnectivityRequest::UpdateAddresses(peer_id, addrs) => (peer_id, addrs),
+            ConnectivityRequest::UpdateAddresses(_src, peer_id, addrs) => (peer_id, addrs),
             _ => panic!(
                 "Unexpected ConnectivityRequest, expected UpdateAddresses: {:?}",
                 req
