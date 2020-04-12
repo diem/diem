@@ -2417,11 +2417,8 @@ dependencies = [
  "libra-vm 0.1.0",
  "libradb 0.1.0",
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "storage-client 0.1.0",
  "storage-interface 0.1.0",
- "storage-service 0.1.0",
  "thiserror 1.0.15 (registry+https://github.com/rust-lang/crates.io-index)",
- "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

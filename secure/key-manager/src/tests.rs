@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{Action, Error, KeyManager, LibraInterface};
-use executor::{db_bootstrapper::maybe_bootstrap_db, Executor};
+use executor::{db_bootstrapper, Executor};
 use libra_config::config::NodeConfig;
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Policy, Value};
@@ -25,9 +25,7 @@ use libra_vm::LibraVM;
 use libradb::LibraDB;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{cell::RefCell, collections::BTreeMap, convert::TryFrom, sync::Arc, time::Duration};
-use storage_client::SyncStorageClient;
-use storage_interface::DbReader;
-use tokio::runtime::Runtime;
+use storage_interface::{DbReader, DbReaderWriter};
 
 struct Node {
     account: AccountAddress,
@@ -35,7 +33,6 @@ struct Node {
     libra: TestLibraInterface,
     key_manager:
         KeyManager<TestLibraInterface, InMemoryStorageInternal<MockTimeService>, MockTimeService>,
-    _storage_service: Runtime,
     time: MockTimeService,
 }
 
@@ -75,12 +72,10 @@ fn setup_secure_storage(
 
 impl Node {
     fn setup(config: &NodeConfig) -> Self {
-        let (storage, db_reader_writer) = storage_service::init_libra_db(config);
-        let storage_service =
-            storage_service::start_storage_service_with_db(&config, storage.clone());
-        maybe_bootstrap_db::<LibraVM>(db_reader_writer, config)
-            .expect("Db-bootstrapper should not fail.");
-        let executor = Executor::new(SyncStorageClient::new(&config.storage.address).into());
+        let (storage, db_rw) = DbReaderWriter::wrap(LibraDB::new(&config.storage.dir()));
+        db_bootstrapper::maybe_bootstrap_db::<LibraVM>(db_rw.clone(), config)
+            .expect("Failed to execute genesis");
+        let executor = Executor::new(db_rw);
         let libra = TestLibraInterface {
             queued_transactions: Arc::new(RefCell::new(Vec::new())),
             storage,
@@ -100,7 +95,6 @@ impl Node {
             executor,
             key_manager,
             libra,
-            _storage_service: storage_service,
             time,
         }
     }
