@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
     event::EventHandle,
     language_storage::{ModuleId, StructTag, TypeTag},
@@ -198,20 +197,10 @@ impl MoveResource for BalanceResource {
     }
 }
 
-pub fn balance_resource_path() -> Vec<u8> {
-    AccessPath::resource_access_vec(&BalanceResource::struct_tag(), &Accesses::empty())
-}
-
-/// Path to the Account resource.
-/// It can be used to create an AccessPath for an Account resource.
-pub static ACCOUNT_RESOURCE_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
-    AccessPath::resource_access_vec(&AccountResource::struct_tag(), &Accesses::empty())
-});
-
 /// The path to the sent event counter for an Account resource.
 /// It can be used to query the event DB for the given event.
 pub static ACCOUNT_SENT_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
-    let mut path = ACCOUNT_RESOURCE_PATH.to_vec();
+    let mut path = AccountResource::resource_path();
     path.extend_from_slice(b"/sent_events_count/");
     path
 });
@@ -219,7 +208,7 @@ pub static ACCOUNT_SENT_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
 /// Returns the path to the received event counter for an Account resource.
 /// It can be used to query the event DB for the given event.
 pub static ACCOUNT_RECEIVED_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
-    let mut path = ACCOUNT_RESOURCE_PATH.to_vec();
+    let mut path = AccountResource::resource_path();
     path.extend_from_slice(b"/received_events_count/");
     path
 });

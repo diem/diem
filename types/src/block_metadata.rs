@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
     account_config::association_address,
     event::{EventHandle, EventKey},
@@ -77,14 +76,9 @@ pub fn new_block_event_key() -> EventKey {
     EventKey::new_from_address(&association_address(), 2)
 }
 
-/// The access path where the BlockMetadata resource is stored.
-pub static LIBRA_BLOCK_RESOURCE_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
-    AccessPath::resource_access_vec(&LibraBlockResource::struct_tag(), &Accesses::empty())
-});
-
 /// The path to the new block event handle under a LibraBlock::BlockMetadata resource.
 pub static NEW_BLOCK_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
-    let mut path = LIBRA_BLOCK_RESOURCE_PATH.to_vec();
+    let mut path = LibraBlockResource::resource_path();
     // it can be anything as long as it's referenced in AccountState::get_event_handle_by_query_path
     path.extend_from_slice(b"/new_block_event/");
     path

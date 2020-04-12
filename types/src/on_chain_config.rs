@@ -12,7 +12,6 @@ use crate::{
 use anyhow::{format_err, Result};
 use libra_crypto::HashValue;
 use move_core_types::identifier::Identifier;
-use once_cell::sync::Lazy;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
 
@@ -116,11 +115,6 @@ pub fn access_path_for_config(config_name: Identifier) -> AccessPath {
         ),
     )
 }
-
-/// Path to the configuration resource.
-pub static CONFIGURATION_RESOURCE_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
-    AccessPath::resource_access_vec(&ConfigurationResource::struct_tag(), &Accesses::empty())
-});
 
 #[derive(Deserialize, Serialize)]
 pub struct ConfigurationResource {

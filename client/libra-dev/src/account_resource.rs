@@ -72,15 +72,15 @@ pub unsafe extern "C" fn libra_LibraAccountResource_from(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use libra_types::account_config::balance_resource_path;
 
     /// Generate an AccountBlob and verify we can parse it
     #[test]
     fn test_get_accountresource() {
         use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
         use libra_types::{
-            account_config::{AccountResource, BalanceResource, ACCOUNT_RESOURCE_PATH},
+            account_config::{AccountResource, BalanceResource},
             event::{EventHandle, EventKey},
+            move_resource::MoveResource,
             transaction::authenticator::AuthenticationKey,
         };
         use std::collections::BTreeMap;
@@ -104,11 +104,11 @@ mod tests {
 
         // Fill in data
         map.insert(
-            ACCOUNT_RESOURCE_PATH.to_vec(),
+            AccountResource::resource_path(),
             lcs::to_bytes(&ar).expect("Account resource lcs serialization was not successful"),
         );
         map.insert(
-            balance_resource_path(),
+            BalanceResource::resource_path(),
             lcs::to_bytes(&br).expect("Balance resource lcs serialization was not successful"),
         );
 

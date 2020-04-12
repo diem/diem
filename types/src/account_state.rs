@@ -4,17 +4,15 @@
 use crate::{
     account_address::AccountAddress,
     account_config::{
-        balance_resource_path, AccountResource, BalanceResource, ACCOUNT_RECEIVED_EVENT_PATH,
-        ACCOUNT_RESOURCE_PATH, ACCOUNT_SENT_EVENT_PATH,
+        AccountResource, BalanceResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
     },
-    block_metadata::{LibraBlockResource, LIBRA_BLOCK_RESOURCE_PATH, NEW_BLOCK_EVENT_PATH},
-    discovery_set::{
-        DiscoverySetResource, DISCOVERY_SET_CHANGE_EVENT_PATH, DISCOVERY_SET_RESOURCE_PATH,
-    },
+    block_metadata::{LibraBlockResource, NEW_BLOCK_EVENT_PATH},
+    discovery_set::{DiscoverySetResource, DISCOVERY_SET_CHANGE_EVENT_PATH},
     event::EventHandle,
-    libra_timestamp::{LibraTimestampResource, LIBRA_TIMESTAMP_RESOURCE_PATH},
-    on_chain_config::{ConfigurationResource, OnChainConfig, CONFIGURATION_RESOURCE_PATH},
-    validator_config::{ValidatorConfigResource, VALIDATOR_CONFIG_RESOURCE_PATH},
+    libra_timestamp::LibraTimestampResource,
+    move_resource::MoveResource,
+    on_chain_config::{ConfigurationResource, OnChainConfig},
+    validator_config::ValidatorConfigResource,
     validator_set::ValidatorSet,
 };
 use anyhow::{bail, Error, Result};
@@ -32,27 +30,27 @@ impl AccountState {
     }
 
     pub fn get_account_resource(&self) -> Result<Option<AccountResource>> {
-        self.get_resource(&*ACCOUNT_RESOURCE_PATH)
+        self.get_resource(&AccountResource::resource_path())
     }
 
     pub fn get_balance_resource(&self) -> Result<Option<BalanceResource>> {
-        self.get_resource(&balance_resource_path())
+        self.get_resource(&BalanceResource::resource_path())
     }
 
     pub fn get_configuration_resource(&self) -> Result<Option<ConfigurationResource>> {
-        self.get_resource(&*CONFIGURATION_RESOURCE_PATH)
+        self.get_resource(&ConfigurationResource::resource_path())
     }
 
     pub fn get_discovery_set_resource(&self) -> Result<Option<DiscoverySetResource>> {
-        self.get_resource(&*DISCOVERY_SET_RESOURCE_PATH)
+        self.get_resource(&DiscoverySetResource::resource_path())
     }
 
     pub fn get_libra_timestamp_resource(&self) -> Result<Option<LibraTimestampResource>> {
-        self.get_resource(&*LIBRA_TIMESTAMP_RESOURCE_PATH)
+        self.get_resource(&LibraTimestampResource::resource_path())
     }
 
     pub fn get_validator_config_resource(&self) -> Result<Option<ValidatorConfigResource>> {
-        self.get_resource(&*VALIDATOR_CONFIG_RESOURCE_PATH)
+        self.get_resource(&ValidatorConfigResource::resource_path())
     }
 
     pub fn get_validator_set(&self) -> Result<Option<ValidatorSet>> {
@@ -60,7 +58,7 @@ impl AccountState {
     }
 
     pub fn get_libra_block_resource(&self) -> Result<Option<LibraBlockResource>> {
-        self.get_resource(&*LIBRA_BLOCK_RESOURCE_PATH)
+        self.get_resource(&LibraBlockResource::resource_path())
     }
 
     pub fn get_event_handle_by_query_path(&self, query_path: &[u8]) -> Result<Option<EventHandle>> {
@@ -162,10 +160,13 @@ impl TryFrom<(&AccountResource, &BalanceResource)> for AccountState {
     ) -> Result<Self> {
         let mut btree_map: BTreeMap<Vec<u8>, Vec<u8>> = BTreeMap::new();
         btree_map.insert(
-            ACCOUNT_RESOURCE_PATH.to_vec(),
+            AccountResource::resource_path(),
             lcs::to_bytes(account_resource)?,
         );
-        btree_map.insert(balance_resource_path(), lcs::to_bytes(balance_resource)?);
+        btree_map.insert(
+            BalanceResource::resource_path(),
+            lcs::to_bytes(balance_resource)?,
+        );
 
         Ok(Self(btree_map))
     }

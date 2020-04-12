@@ -14,6 +14,7 @@ use libra_types::{
     event::EventHandle,
     get_with_proof::{RequestItem, ResponseItem},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    move_resource::MoveResource,
     proof::{AccumulatorConsistencyProof, SparseMerkleProof, SparseMerkleRangeProof},
     proto::types::{
         request_item::RequestedItems, response_item::ResponseItems, AccountStateWithProof,
@@ -243,7 +244,7 @@ fn get_mock_account_state_blob() -> AccountStateBlob {
 
     let mut account_state = AccountState::default();
     account_state.insert(
-        libra_types::account_config::ACCOUNT_RESOURCE_PATH.to_vec(),
+        libra_types::account_config::AccountResource::resource_path(),
         lcs::to_bytes(&account_resource).unwrap(),
     );
 
