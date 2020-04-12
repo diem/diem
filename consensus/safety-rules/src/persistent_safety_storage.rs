@@ -26,7 +26,8 @@ const WAYPOINT_VERSION: &str = "waypoint_version";
 impl PersistentSafetyStorage {
     pub fn in_memory(private_key: Ed25519PrivateKey) -> Self {
         let storage = InMemoryStorage::new_storage();
-        Self::initialize(storage, private_key)
+        let waypoint = Waypoint::new_from_pieces(0, HashValue::zero());
+        Self::initialize(storage, private_key, waypoint)
     }
 
     /// Use this to instantiate a PersistentStorage for a new data store, one that has no
@@ -34,13 +35,18 @@ impl PersistentSafetyStorage {
     pub fn initialize(
         mut internal_store: Box<dyn Storage>,
         private_key: Ed25519PrivateKey,
+        waypoint: Waypoint,
     ) -> Self {
-        Self::initialize_(internal_store.as_mut(), private_key)
+        Self::initialize_(internal_store.as_mut(), private_key, waypoint)
             .expect("Unable to initialize backend storage");
         Self { internal_store }
     }
 
-    fn initialize_(internal_store: &mut dyn Storage, private_key: Ed25519PrivateKey) -> Result<()> {
+    fn initialize_(
+        internal_store: &mut dyn Storage,
+        private_key: Ed25519PrivateKey,
+        waypoint: Waypoint,
+    ) -> Result<()> {
         let perms = Policy::public();
         internal_store.create_if_not_exists(
             CONSENSUS_KEY,
@@ -50,9 +56,10 @@ impl PersistentSafetyStorage {
         internal_store.create_if_not_exists(EPOCH, Value::U64(1), &perms)?;
         internal_store.create_if_not_exists(LAST_VOTED_ROUND, Value::U64(0), &perms)?;
         internal_store.create_if_not_exists(PREFERRED_ROUND, Value::U64(0), &perms)?;
-        let zero = HashValue::zero();
-        internal_store.create_if_not_exists(WAYPOINT_VALUE, Value::HashValue(zero), &perms)?;
-        internal_store.create_if_not_exists(WAYPOINT_VERSION, Value::U64(0), &perms)?;
+        let value = Value::HashValue(waypoint.value());
+        internal_store.create_if_not_exists(WAYPOINT_VALUE, value, &perms)?;
+        let version = Value::U64(waypoint.version());
+        internal_store.create_if_not_exists(WAYPOINT_VERSION, version, &perms)?;
         Ok(())
     }
 
@@ -139,8 +146,7 @@ mod tests {
     #[test]
     fn test() {
         let private_key = ValidatorSigner::from_int(0).private_key().clone();
-        let internal = InMemoryStorage::new_storage();
-        let mut storage = PersistentSafetyStorage::initialize(internal, private_key);
+        let mut storage = PersistentSafetyStorage::in_memory(private_key);
         assert_eq!(storage.epoch().unwrap(), 1);
         assert_eq!(storage.last_voted_round().unwrap(), 0);
         assert_eq!(storage.preferred_round().unwrap(), 0);
