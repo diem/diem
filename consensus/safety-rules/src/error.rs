@@ -23,6 +23,9 @@ pub enum Error {
     #[error("Unable to verify that the new tree extneds the parent: {:?}", error)]
     InvalidAccumulatorExtension { error: String },
 
+    #[error("No next_validator_set specified in the provided Ledger Info")]
+    InvalidLedgerInfo,
+
     /// This proposal's round is less than round of preferred block.
     /// Returns the id of the preferred block.
     #[error(
@@ -44,6 +47,9 @@ pub enum Error {
 
     #[error("Serialization error: {0}")]
     SerializationError(String),
+
+    #[error("Waypoint mismatch: {0}")]
+    WaypointMismatch(String),
 }
 
 impl From<anyhow::Error> for Error {

@@ -30,7 +30,8 @@ use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
     on_chain_config::{OnChainConfig, OnChainConfigPayload, ValidatorSet},
-    validator_verifier::ValidatorVerifier, waypoint::Waypoint,
+    validator_verifier::ValidatorVerifier,
+    waypoint::Waypoint,
 };
 use network::peer_manager::{
     conn_status_channel, ConnectionRequestSender, PeerManagerRequestSender,
@@ -154,19 +155,20 @@ impl SMRNode {
             a_auth.cmp(&b_auth)
         });
 
-        // TODO(davidiw): Make this derived from a potential first LI
-        let waypoint = Some(Waypoint::new_from_pieces(0, HashValue::zero()));
         let mut smr_nodes = vec![];
         for (smr_id, config) in nodes.iter().enumerate() {
+            let (_, storage) = MockStorage::start_for_testing(validator_set.clone());
+
             let mut node_config = config.clone();
-            node_config.base.waypoint = waypoint;
+            let waypoint = Waypoint::new(&storage.get_ledger_info())
+                .expect("Unable to produce waypoint with the provided LedgerInfo");
+            node_config.base.waypoint = Some(waypoint);
             node_config.consensus.proposer_type = proposer_type;
             // Use in memory storage for testing
             node_config.consensus.safety_rules = SafetyRulesConfig::default();
             // Set higher timeout value in test.
             node_config.consensus.pacemaker_initial_timeout_ms = 5000;
 
-            let (_, storage) = MockStorage::start_for_testing(validator_set.clone());
             smr_nodes.push(Self::start(playground, node_config, smr_id, storage));
         }
         smr_nodes

@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::persistent_safety_storage::PersistentSafetyStorage;
 use consensus_types::{
     accumulator_extension_proof::AccumulatorExtensionProof,
     block::Block,
@@ -11,12 +12,20 @@ use consensus_types::{
     vote_data::VoteData,
     vote_proposal::VoteProposal,
 };
-use libra_crypto::hash::{CryptoHash, TransactionAccumulatorHasher};
+use libra_crypto::{
+    hash::{CryptoHash, TransactionAccumulatorHasher},
+    test_utils::TEST_SEED,
+};
+use libra_secure_storage::InMemoryStorage;
 use libra_types::{
     block_info::BlockInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    on_chain_config::ValidatorSet,
+    validator_info::ValidatorInfo,
     validator_signer::ValidatorSigner,
+    waypoint::Waypoint,
 };
+use rand::prelude::*;
 use std::{
     collections::BTreeMap,
     time::{SystemTime, UNIX_EPOCH},
@@ -131,4 +140,24 @@ pub fn make_proposal_with_parent<P: Payload>(
     let qc = QuorumCert::new(vote_data, ledger_info_with_signatures);
 
     make_proposal_with_qc_and_proof(payload, round, proof, qc, validator_signer)
+}
+
+pub fn validator_signers_to_ledger_info(signers: &[&ValidatorSigner]) -> LedgerInfo {
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    let infos = signers.iter().map(|v| {
+        ValidatorInfo::new_with_test_network_keys(&mut rng, v.author(), v.public_key(), 1)
+    });
+    let validator_set = ValidatorSet::new(infos.collect());
+    LedgerInfo::mock_genesis(Some(validator_set))
+}
+
+pub fn validator_signers_to_waypoints(signers: &[&ValidatorSigner]) -> Waypoint {
+    let li = validator_signers_to_ledger_info(signers);
+    Waypoint::new(&li).unwrap()
+}
+
+pub fn test_storage(signer: &ValidatorSigner) -> PersistentSafetyStorage {
+    let waypoint = validator_signers_to_waypoints(&[signer]);
+    let storage = InMemoryStorage::new_storage();
+    PersistentSafetyStorage::initialize(storage, signer.private_key().clone(), waypoint)
 }
