@@ -4,14 +4,12 @@
 use crate::{
     access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
-    account_config,
     account_config::association_address,
     event::{EventHandle, EventKey},
-    language_storage::StructTag,
+    move_resource::MoveResource,
 };
 use anyhow::Result;
 use libra_crypto::HashValue;
-use move_core_types::identifier::{IdentStr, Identifier};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
@@ -79,31 +77,10 @@ pub fn new_block_event_key() -> EventKey {
     EventKey::new_from_address(&association_address(), 2)
 }
 
-static LIBRA_BLOCK_MODULE_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("LibraBlock").unwrap());
-static BLOCK_STRUCT_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("BlockMetadata").unwrap());
-
-pub fn libra_block_module_name() -> &'static IdentStr {
-    &*LIBRA_BLOCK_MODULE_NAME
-}
-
-pub fn block_struct_name() -> &'static IdentStr {
-    &*BLOCK_STRUCT_NAME
-}
-
-pub fn libra_block_tag() -> StructTag {
-    StructTag {
-        address: account_config::CORE_CODE_ADDRESS,
-        name: block_struct_name().to_owned(),
-        module: libra_block_module_name().to_owned(),
-        type_params: vec![],
-    }
-}
-
 /// The access path where the BlockMetadata resource is stored.
-pub static LIBRA_BLOCK_RESOURCE_PATH: Lazy<Vec<u8>> =
-    Lazy::new(|| AccessPath::resource_access_vec(&libra_block_tag(), &Accesses::empty()));
+pub static LIBRA_BLOCK_RESOURCE_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
+    AccessPath::resource_access_vec(&LibraBlockResource::struct_tag(), &Accesses::empty())
+});
 
 /// The path to the new block event handle under a LibraBlock::BlockMetadata resource.
 pub static NEW_BLOCK_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
@@ -123,6 +100,11 @@ impl LibraBlockResource {
     pub fn new_block_events(&self) -> &EventHandle {
         &self.new_block_events
     }
+}
+
+impl MoveResource for LibraBlockResource {
+    const MODULE_NAME: &'static str = "LibraBlock";
+    const STRUCT_NAME: &'static str = "BlockMetadata";
 }
 
 #[derive(Clone, Deserialize, Serialize)]
