@@ -8,9 +8,12 @@ use libra_crypto::ed25519::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config,
+    account_config::{
+        self, AccountResource, BalanceResource, ReceivedPaymentEvent, SentPaymentEvent,
+    },
     event::EventHandle,
     language_storage::{StructTag, TypeTag},
+    move_resource::MoveResource,
     transaction::{
         authenticator::AuthenticationKey, RawTransaction, Script, SignedTransaction,
         TransactionArgument, TransactionPayload,
@@ -99,14 +102,14 @@ impl Account {
     ///
     /// Use this to retrieve or publish the Account blob.
     pub fn make_account_access_path(&self) -> AccessPath {
-        self.make_access_path(account_config::account_struct_tag())
+        self.make_access_path(AccountResource::struct_tag())
     }
 
     /// Returns the AccessPath that describes the Account balance resource instance.
     ///
     /// Use this to retrieve or publish the Account balance blob.
     pub fn make_balance_access_path(&self) -> AccessPath {
-        self.make_access_path(account_config::account_balance_struct_tag())
+        self.make_access_path(BalanceResource::struct_tag())
     }
 
     // TODO: plug in the account type
@@ -386,7 +389,7 @@ impl Balance {
         StructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::account_module_name().to_owned(),
-            name: account_config::account_balance_struct_name().to_owned(),
+            name: BalanceResource::struct_identifier(),
             is_resource: true,
             ty_args: vec![],
             layout: vec![Type::U64],
@@ -468,7 +471,7 @@ impl AccountData {
         StructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::account_module_name().to_owned(),
-            name: account_config::sent_event_name().to_owned(),
+            name: SentPaymentEvent::struct_identifier(),
             is_resource: false,
             ty_args: vec![],
             layout: vec![Type::U64, Type::Address, Type::Vector(Box::new(Type::U8))],
@@ -479,7 +482,7 @@ impl AccountData {
         StructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::account_module_name().to_owned(),
-            name: account_config::received_event_name().to_owned(),
+            name: ReceivedPaymentEvent::struct_identifier(),
             is_resource: false,
             ty_args: vec![],
             layout: vec![Type::U64, Type::Address, Type::Vector(Box::new(Type::U8))],
@@ -513,7 +516,7 @@ impl AccountData {
         StructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::account_module_name().to_owned(),
-            name: account_config::account_struct_name().to_owned(),
+            name: AccountResource::struct_identifier(),
             is_resource: true,
             ty_args: vec![],
             layout: vec![

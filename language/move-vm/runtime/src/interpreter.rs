@@ -15,9 +15,10 @@ use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config,
+    account_config::{self, AccountResource, BalanceResource},
     contract_event::ContractEvent,
     event::EventKey,
+    move_resource::MoveResource,
     transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
     vm_error::{StatusCode, StatusType, VMStatus},
 };
@@ -842,7 +843,7 @@ impl<'txn> Interpreter<'txn> {
             context,
             &[],
             account_module,
-            account_config::account_struct_name(),
+            &AccountResource::struct_identifier(),
             self.operand_stack.pop_as::<Struct>()?,
             address,
         )?;
@@ -851,7 +852,7 @@ impl<'txn> Interpreter<'txn> {
             context,
             &ty_args,
             account_module,
-            account_config::account_balance_struct_name(),
+            &BalanceResource::struct_identifier(),
             self.operand_stack.pop_as::<Struct>()?,
             address,
         )

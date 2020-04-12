@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account_config::{
-        received_payment_tag, sent_payment_tag, ReceivedPaymentEvent, SentPaymentEvent,
-    },
+    account_config::{ReceivedPaymentEvent, SentPaymentEvent},
     event::EventKey,
     language_storage::TypeTag,
     ledger_info::LedgerInfo,
+    move_resource::MoveResource,
     proof::EventProof,
     transaction::Version,
 };
@@ -108,7 +107,7 @@ impl TryFrom<&ContractEvent> for SentPaymentEvent {
     type Error = Error;
 
     fn try_from(event: &ContractEvent) -> Result<Self> {
-        if event.type_tag != TypeTag::Struct(sent_payment_tag()) {
+        if event.type_tag != TypeTag::Struct(SentPaymentEvent::struct_tag()) {
             anyhow::bail!("Expected Sent Payment")
         }
         Self::try_from_bytes(&event.event_data)
@@ -119,7 +118,7 @@ impl TryFrom<&ContractEvent> for ReceivedPaymentEvent {
     type Error = Error;
 
     fn try_from(event: &ContractEvent) -> Result<Self> {
-        if event.type_tag != TypeTag::Struct(received_payment_tag()) {
+        if event.type_tag != TypeTag::Struct(ReceivedPaymentEvent::struct_tag()) {
             anyhow::bail!("Expected Received Payment")
         }
         Self::try_from_bytes(&event.event_data)

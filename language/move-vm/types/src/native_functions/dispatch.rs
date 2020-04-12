@@ -8,10 +8,9 @@ use crate::{
 };
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{
-        account_balance_struct_name, account_module_name, account_struct_name, CORE_CODE_ADDRESS,
-    },
+    account_config::{account_module_name, AccountResource, BalanceResource, CORE_CODE_ADDRESS},
     language_storage::ModuleId,
+    move_resource::MoveResource,
     vm_error::{StatusCode, VMStatus},
 };
 use move_core_types::identifier::IdentStr;
@@ -335,13 +334,13 @@ impl NativeFunction {
                     m?,
                     &CORE_CODE_ADDRESS,
                     account_module_name().as_str(),
-                    account_struct_name().as_str(),
+                    AccountResource::STRUCT_NAME,
                 )?;
                 let balance_t_idx = struct_handle_idx(
                     m?,
                     &CORE_CODE_ADDRESS,
                     account_module_name().as_str(),
-                    account_balance_struct_name().as_str(),
+                    BalanceResource::STRUCT_NAME,
                 )?;
                 let parameters = vec![
                     StructInstantiation(balance_t_idx, vec![TypeParameter(0)]),
