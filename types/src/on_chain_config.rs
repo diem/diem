@@ -3,15 +3,15 @@
 
 use crate::{
     access_path::{AccessPath, Accesses},
-    account_config,
     account_config::{association_address, CORE_CODE_ADDRESS},
     event::{EventHandle, EventKey},
     language_storage::{StructTag, TypeTag},
+    move_resource::MoveResource,
     transaction::SCRIPT_HASH_LENGTH,
 };
 use anyhow::{format_err, Result};
 use libra_crypto::HashValue;
-use move_core_types::identifier::{IdentStr, Identifier};
+use move_core_types::identifier::Identifier;
 use once_cell::sync::Lazy;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
@@ -117,32 +117,10 @@ pub fn access_path_for_config(config_name: Identifier) -> AccessPath {
     )
 }
 
-static CONFIGURATION_MODULE_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("LibraConfig").unwrap());
-
-static CONFIGURATION_STRUCT_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("Configuration").unwrap());
-
-pub fn configuration_module_name() -> &'static IdentStr {
-    &*CONFIGURATION_MODULE_NAME
-}
-
-pub fn configuration_struct_name() -> &'static IdentStr {
-    &*CONFIGURATION_STRUCT_NAME
-}
-
-pub fn configuration_tag() -> StructTag {
-    StructTag {
-        address: account_config::CORE_CODE_ADDRESS,
-        name: configuration_struct_name().to_owned(),
-        module: configuration_module_name().to_owned(),
-        type_params: vec![],
-    }
-}
-
 /// Path to the configuration resource.
-pub static CONFIGURATION_RESOURCE_PATH: Lazy<Vec<u8>> =
-    Lazy::new(|| AccessPath::resource_access_vec(&configuration_tag(), &Accesses::empty()));
+pub static CONFIGURATION_RESOURCE_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
+    AccessPath::resource_access_vec(&ConfigurationResource::struct_tag(), &Accesses::empty())
+});
 
 #[derive(Deserialize, Serialize)]
 pub struct ConfigurationResource {
@@ -155,6 +133,11 @@ impl ConfigurationResource {
     pub fn last_reconfiguration_time(&self) -> u64 {
         self.last_reconfiguration_time
     }
+}
+
+impl MoveResource for ConfigurationResource {
+    const MODULE_NAME: &'static str = "LibraConfig";
+    const STRUCT_NAME: &'static str = "Configuration";
 }
 
 /// Defines and holds the publishing policies for the VM. There are three possible configurations:
