@@ -6,14 +6,12 @@ use anyhow::{format_err, Error, Result};
 use hex;
 use libra_crypto::HashValue;
 use libra_types::{
-    account_config::{
-        received_payment_tag, sent_payment_tag, AccountResource, BalanceResource,
-        ReceivedPaymentEvent, SentPaymentEvent,
-    },
+    account_config::{AccountResource, BalanceResource, ReceivedPaymentEvent, SentPaymentEvent},
     account_state_blob::AccountStateWithProof,
     contract_event::ContractEvent,
     language_storage::TypeTag,
     ledger_info::LedgerInfoWithSignatures,
+    move_resource::MoveResource,
     proof::{AccountStateProof, AccumulatorConsistencyProof},
     transaction::{Transaction, TransactionArgument, TransactionPayload},
     validator_change::ValidatorChangeProof,
@@ -118,7 +116,8 @@ pub enum EventDataView {
 impl From<(u64, ContractEvent)> for EventView {
     /// Tries to convert the provided byte array into Event Key.
     fn from((txn_version, event): (u64, ContractEvent)) -> EventView {
-        let event_data = if event.type_tag() == &TypeTag::Struct(received_payment_tag()) {
+        let event_data = if event.type_tag() == &TypeTag::Struct(ReceivedPaymentEvent::struct_tag())
+        {
             if let Ok(received_event) = ReceivedPaymentEvent::try_from(&event) {
                 Ok(EventDataView::ReceivedPayment {
                     amount: received_event.amount(),
@@ -128,7 +127,7 @@ impl From<(u64, ContractEvent)> for EventView {
             } else {
                 Err(format_err!("Unable to parse ReceivedPaymentEvent"))
             }
-        } else if event.type_tag() == &TypeTag::Struct(sent_payment_tag()) {
+        } else if event.type_tag() == &TypeTag::Struct(SentPaymentEvent::struct_tag()) {
             if let Ok(sent_event) = SentPaymentEvent::try_from(&event) {
                 Ok(EventDataView::SentPayment {
                     amount: sent_event.amount(),
