@@ -162,10 +162,10 @@ pub fn deserialize_key(source: TokenStream) -> TokenStream {
                     // as the original type.
                     #[derive(::serde::Deserialize)]
                     #[serde(rename = #name_string)]
-                    struct Value(Vec<u8>);
+                    struct Value<'a>(&'a [u8]);
 
                     let value = Value::deserialize(deserializer)?;
-                    #name::try_from(value.0.as_slice()).map_err(|s| {
+                    #name::try_from(value.0).map_err(|s| {
                         <D::Error as ::serde::de::Error>::custom(format!("{} with {}", s, #name_string))
                     })
                 }
@@ -193,7 +193,10 @@ pub fn serialize_key(source: TokenStream) -> TokenStream {
                         .and_then(|str| serializer.serialize_str(&str[..]))
                 } else {
                     // See comment in deserialize_key.
-                    serializer.serialize_newtype_struct(#name_string, &ValidKey::to_bytes(self).as_slice())
+                    serializer.serialize_newtype_struct(
+                        #name_string,
+                        serde_bytes::Bytes::new(&ValidKey::to_bytes(self).as_slice()),
+                    )
                 }
             }
         }
