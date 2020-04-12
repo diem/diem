@@ -17,10 +17,12 @@ rand = "0.6.5"
 structopt = "0.3.13"
 thiserror = "1.0"
 
+executor = { path = "../../execution/executor", version = "0.1.0" }
 libra-config = { path = "..", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
+libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }

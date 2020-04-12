@@ -3,6 +3,7 @@
 
 use crate::{BuildSwarm, Error};
 use anyhow::{ensure, Result};
+use executor::db_bootstrapper;
 use libra_config::{
     config::{
         ConsensusType, NodeConfig, RemoteService, SafetyRulesBackend, SafetyRulesService,
@@ -12,6 +13,7 @@ use libra_config::{
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{discovery_set::DiscoverySet, on_chain_config::ValidatorSet};
+use libra_vm::LibraVM;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{collections::HashMap, net::SocketAddr};
@@ -22,6 +24,7 @@ const DEFAULT_LISTEN: &str = "/ip4/0.0.0.0/tcp/6180";
 
 pub struct ValidatorConfig {
     advertised: Multiaddr,
+    build_waypoint: bool,
     bootstrap: Multiaddr,
     index: usize,
     listen: Multiaddr,
@@ -41,6 +44,7 @@ impl Default for ValidatorConfig {
         Self {
             advertised: DEFAULT_ADVERTISED.parse::<Multiaddr>().unwrap(),
             bootstrap: DEFAULT_ADVERTISED.parse::<Multiaddr>().unwrap(),
+            build_waypoint: true,
             index: 0,
             listen: DEFAULT_LISTEN.parse::<Multiaddr>().unwrap(),
             nodes: 1,
@@ -68,6 +72,11 @@ impl ValidatorConfig {
 
     pub fn bootstrap(&mut self, bootstrap: Multiaddr) -> &mut Self {
         self.bootstrap = bootstrap;
+        self
+    }
+
+    pub fn build_waypoint(&mut self, enabled: bool) -> &mut Self {
+        self.build_waypoint = enabled;
         self
     }
 
@@ -208,7 +217,7 @@ impl ValidatorConfig {
         let discovery_set =
             DiscoverySet::new(discovery_set.into_iter().take(nodes_in_genesis).collect());
 
-        let genesis = Some(vm_genesis::encode_genesis_transaction_with_validator(
+        let genesis = vm_genesis::encode_genesis_transaction_with_validator(
             &faucet_key,
             faucet_key.public_key(),
             &nodes,
@@ -218,9 +227,19 @@ impl ValidatorConfig {
                 .test
                 .as_ref()
                 .and_then(|config| config.publishing_option.clone()),
-        ));
+        );
+
+        let waypoint = if self.build_waypoint {
+            Some(db_bootstrapper::compute_genesis_waypoint::<LibraVM>(
+                genesis.clone(),
+            )?)
+        } else {
+            None
+        };
+        let genesis = Some(genesis);
 
         for node in &mut nodes {
+            node.base.waypoint = waypoint;
             node.execution.genesis = genesis.clone();
         }
 

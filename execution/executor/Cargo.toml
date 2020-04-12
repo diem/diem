@@ -18,7 +18,6 @@ rand = "0.6.5"
 serde = { version = "1.0.106", default-features = false }
 tokio = { version = "0.2.12", features = ["full"] }
 
-config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0"}
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0" }
 executor-types = { path = "../executor-types", version = "0.1.0" }
@@ -28,6 +27,7 @@ libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
 libra-state-view = { path = "../../storage/state-view", version = "0.1.0" }
+libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 scratchpad = { path = "../../storage/scratchpad", version = "0.1.0" }
@@ -35,12 +35,14 @@ serde_json = "1.0"
 storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
 storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
 storage-proto = { path = "../../storage/storage-proto", version = "0.1.0" }
+libradb = { path = "../../storage/libradb", version = "0.1.0" }
 libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = "0.9.6"
 rusty-fork = "0.2.1"
 
+config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 executor-utils = { path = "../executor-utils", version = "0.1.0" }
 storage-service = { path = "../../storage/storage-service", version = "0.1.0" }
 stdlib = { path = "../../language/stdlib", version = "0.1.0" }
