@@ -18,7 +18,11 @@ use consensus_types::{
 use libra_crypto::{ed25519::Ed25519Signature, hash::HashValue};
 use libra_logger::debug;
 use libra_types::{
-    block_info::BlockInfo, ledger_info::LedgerInfo, validator_signer::ValidatorSigner,
+    block_info::BlockInfo,
+    ledger_info::LedgerInfo,
+    validator_change::{ValidatorChangeProof, VerifierType},
+    validator_signer::ValidatorSigner,
+    validator_verifier::ValidatorVerifier,
 };
 use std::marker::PhantomData;
 
@@ -34,6 +38,7 @@ use std::marker::PhantomData;
 pub struct SafetyRules<T> {
     persistent_storage: PersistentSafetyStorage,
     validator_signer: ValidatorSigner,
+    validator_verifier: Option<ValidatorVerifier>,
     marker: PhantomData<T>,
 }
 
@@ -49,6 +54,7 @@ impl<T: Payload> SafetyRules<T> {
         Self {
             persistent_storage,
             validator_signer,
+            validator_verifier: None,
             marker: PhantomData,
         }
     }
@@ -88,6 +94,16 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
             self.persistent_storage.preferred_round()?,
             self.persistent_storage.waypoint()?,
         ))
+    }
+
+    fn initialize(&mut self, proof: &ValidatorChangeProof) -> Result<(), Error> {
+        let waypoint = self.persistent_storage.waypoint()?;
+        let last_li = proof
+            .verify(&VerifierType::Waypoint(waypoint))
+            .map_err(|e| Error::WaypointMismatch(format!("{}", e)))?;
+        let validator_set = last_li.ledger_info().next_validator_set();
+        self.validator_verifier = Some(validator_set.ok_or(Error::InvalidLedgerInfo)?.into());
+        Ok(())
     }
 
     /// @TODO verify signatures of the QC, also the special genesis QC

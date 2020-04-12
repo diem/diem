@@ -293,6 +293,18 @@ impl<T: Payload> EpochManager<T> {
         info!("Update SafetyRules");
 
         let mut safety_rules = self.safety_rules_manager.client();
+        let consensus_state = safety_rules
+            .consensus_state()
+            .expect("Unable to retrieve ConsensusState from SafetyRules");
+        let sr_waypoint = consensus_state.waypoint();
+        let proofs = self
+            .storage
+            .retrieve_validator_change_proof(sr_waypoint.version())
+            .expect("Unable to retrieve Waypoint state from Storage");
+
+        safety_rules
+            .initialize(&proofs)
+            .expect("Unable to initialize SafetyRules");
         safety_rules
             .start_new_epoch(block_store.highest_quorum_cert().as_ref())
             .expect("Unable to transition SafetyRules to the new epoch");

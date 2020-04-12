@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{safety_rules_manager, ConsensusState, Error, SafetyRulesManager, TSafetyRules};
+use crate::{test_utils, ConsensusState, Error, SafetyRulesManager, TSafetyRules};
 use consensus_types::{
     block::Block,
     block_data::BlockData,
@@ -16,7 +16,7 @@ use libra_config::{
     utils,
 };
 use libra_crypto::ed25519::Ed25519Signature;
-use libra_types::validator_signer::ValidatorSigner;
+use libra_types::{validator_change::ValidatorChangeProof, validator_signer::ValidatorSigner};
 use std::{
     any::TypeId,
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -50,22 +50,26 @@ impl<T: Payload> ProcessClientWrapper<T> {
             consensus_type,
         };
         let mut config = NodeConfig::random();
-        config.consensus.safety_rules.backend = backend;
-        config.consensus.safety_rules.service = SafetyRulesService::SpawnedProcess(remote_service);
 
         let mut test_config = config.test.as_ref().unwrap().clone();
-        let safety_rules_manager = SafetyRulesManager::new(&mut config);
-        let safety_rules = safety_rules_manager.client();
-        let (author, _) = safety_rules_manager::extract_service_inputs(&mut config);
+        let author = config.validator_network.as_ref().unwrap().peer_id;
         let private_key = test_config
             .consensus_keypair
             .as_mut()
             .unwrap()
             .take_private()
             .unwrap();
+        let signer = ValidatorSigner::new(author, private_key);
+        config.base.waypoint = Some(test_utils::validator_signers_to_waypoints(&[&signer]));
+
+        config.consensus.safety_rules.backend = backend;
+        config.consensus.safety_rules.service = SafetyRulesService::SpawnedProcess(remote_service);
+
+        let safety_rules_manager = SafetyRulesManager::new(&mut config);
+        let safety_rules = safety_rules_manager.client();
 
         Self {
-            signer: ValidatorSigner::new(author, private_key),
+            signer,
             _safety_rules_manager: safety_rules_manager,
             safety_rules,
         }
@@ -79,6 +83,10 @@ impl<T: Payload> ProcessClientWrapper<T> {
 impl<T: Payload> TSafetyRules<T> for ProcessClientWrapper<T> {
     fn consensus_state(&mut self) -> Result<ConsensusState, Error> {
         self.safety_rules.consensus_state()
+    }
+
+    fn initialize(&mut self, proof: &ValidatorChangeProof) -> Result<(), Error> {
+        self.safety_rules.initialize(proof)
     }
 
     fn update(&mut self, qc: &QuorumCert) -> Result<(), Error> {

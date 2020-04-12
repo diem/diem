@@ -12,7 +12,10 @@ use executor_types::ExecutedTrees;
 use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
-use libra_types::{block_info::Round, ledger_info::LedgerInfo, transaction::Version};
+use libra_types::{
+    block_info::Round, ledger_info::LedgerInfo, transaction::Version,
+    validator_change::ValidatorChangeProof,
+};
 use std::{cmp::max, collections::HashSet, sync::Arc};
 use storage_interface::DbReader;
 
@@ -40,6 +43,10 @@ pub trait PersistentLivenessStorage<T>: Send + Sync {
     /// Persist the highest timeout certificate for improved liveness - proof for other replicas
     /// to jump to this round
     fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()>;
+
+    /// Retrieve a validator change proof for SafetyRules so it can instantiate its
+    /// ValidatorVerifier.
+    fn retrieve_validator_change_proof(&self, version: u64) -> Result<ValidatorChangeProof>;
 
     /// Returns a handle of the libradb.
     fn libra_db(&self) -> Arc<dyn DbReader>;
@@ -397,6 +404,14 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
     fn save_highest_timeout_cert(&self, highest_timeout_cert: TimeoutCertificate) -> Result<()> {
         self.db
             .save_highest_timeout_certificate(lcs::to_bytes(&highest_timeout_cert)?)
+    }
+
+    fn retrieve_validator_change_proof(&self, version: u64) -> Result<ValidatorChangeProof> {
+        let (latest_lis, mut proofs, _) = self.libra_db.get_state_proof(version)?;
+        if latest_lis.ledger_info().version() == version {
+            proofs.ledger_info_with_sigs.push(latest_lis);
+        }
+        Ok(proofs)
     }
 
     fn libra_db(&self) -> Arc<dyn DbReader> {

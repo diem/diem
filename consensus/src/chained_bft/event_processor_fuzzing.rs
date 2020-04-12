@@ -26,7 +26,7 @@ use libra_types::{
 };
 use network::peer_manager::{ConnectionRequestSender, PeerManagerRequestSender};
 use once_cell::sync::Lazy;
-use safety_rules::{PersistentSafetyStorage, SafetyRules};
+use safety_rules::{test_utils, SafetyRules};
 use std::{num::NonZeroUsize, sync::Arc};
 use tokio::runtime::Runtime;
 
@@ -87,10 +87,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     let (initial_data, storage) = MockStorage::<TestPayload>::start_for_testing(validator_set);
 
     // TODO: remove
-    let safety_rules = SafetyRules::new(
-        signer.author(),
-        PersistentSafetyStorage::in_memory(signer.private_key().clone()),
-    );
+    let safety_rules = SafetyRules::new(signer.author(), test_utils::test_storage(&signer));
 
     // TODO: mock channels
     let (network_reqs_tx, _network_reqs_rx) =

@@ -10,8 +10,13 @@ use consensus_types::{
     vote_proposal::VoteProposal,
 };
 use libra_crypto::hash::{CryptoHash, HashValue};
-use libra_types::validator_signer::ValidatorSigner;
+use libra_types::{
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    validator_change::ValidatorChangeProof,
+    validator_signer::ValidatorSigner,
+};
 use rand::Rng;
+use std::collections::BTreeMap;
 
 type Proof = test_utils::Proof;
 
@@ -40,7 +45,7 @@ pub fn run_test_suite(round_func: RoundCallback, byte_func: ByteArrayCallback) {
     test_bad_execution_output(round_func);
     test_commit_rule_consecutive_rounds(round_func);
     test_end_to_end(byte_func);
-    test_initial_state(round_func);
+    test_initialize(round_func);
     test_preferred_block_rule(round_func);
     test_sign_timeout(round_func);
     test_voting(round_func);
@@ -158,13 +163,34 @@ fn test_end_to_end(func: ByteArrayCallback) {
     assert_eq!(state.preferred_round(), round + 2);
 }
 
-fn test_initial_state(func: RoundCallback) {
-    // Start from scratch, verify the state
-    let (mut safety_rules, _) = func();
-    let block = Block::<Round>::make_genesis_block();
+/// Initialize from scratch, ensure that SafetyRules can properly initialize from a Waypoint and
+/// that it rejects invalid LedgerInfos or those that do not match.
+fn test_initialize(func: RoundCallback) {
+    let (mut safety_rules, signer) = func();
+
+    let li: LedgerInfo = test_utils::validator_signers_to_ledger_info(&[&signer]);
+    let genesis_block = Block::<Round>::make_genesis_block_from_ledger_info(&li);
+
     let state = safety_rules.consensus_state().unwrap();
-    assert_eq!(state.last_voted_round(), block.round());
-    assert_eq!(state.preferred_round(), block.round());
+    assert_eq!(state.last_voted_round(), genesis_block.round());
+    assert_eq!(state.preferred_round(), genesis_block.round());
+    assert_eq!(state.epoch(), genesis_block.epoch());
+
+    let lis = LedgerInfoWithSignatures::new(li, BTreeMap::new());
+    let proof = ValidatorChangeProof::new(vec![lis], false);
+
+    safety_rules.initialize(&proof).unwrap();
+
+    let signer1 = ValidatorSigner::from_int(1);
+    let signers = vec![&signer, &signer1];
+    let bad_li: LedgerInfo = test_utils::validator_signers_to_ledger_info(&signers);
+    let bad_lis = LedgerInfoWithSignatures::new(bad_li, BTreeMap::new());
+    let bad_proof = ValidatorChangeProof::new(vec![bad_lis], false);
+
+    match safety_rules.initialize(&bad_proof) {
+        Err(Error::WaypointMismatch(_)) => (),
+        _ => panic!("Unexpected output"),
+    };
 }
 
 fn test_preferred_block_rule(func: RoundCallback) {

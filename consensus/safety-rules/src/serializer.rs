@@ -7,12 +7,14 @@ use consensus_types::{
     timeout::Timeout, vote::Vote, vote_proposal::VoteProposal,
 };
 use libra_crypto::ed25519::Ed25519Signature;
+use libra_types::validator_change::ValidatorChangeProof;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, RwLock};
 
 #[derive(Deserialize, Serialize)]
 pub enum SafetyRulesInput<T> {
     ConsensusState,
+    Initialize(Box<ValidatorChangeProof>),
     Update(Box<QuorumCert>),
     StartNewEpoch(Box<QuorumCert>),
     #[serde(bound = "T: Payload")]
@@ -36,6 +38,7 @@ impl<T: Payload> SerializerService<T> {
 
         let output = match input {
             SafetyRulesInput::ConsensusState => lcs::to_bytes(&self.internal.consensus_state()),
+            SafetyRulesInput::Initialize(li) => lcs::to_bytes(&self.internal.initialize(&li)),
             SafetyRulesInput::Update(qc) => lcs::to_bytes(&self.internal.update(&qc)),
             SafetyRulesInput::StartNewEpoch(qc) => {
                 lcs::to_bytes(&self.internal.start_new_epoch(&qc))
@@ -77,6 +80,11 @@ impl<T: Payload> SerializerClient<T> {
 impl<T: Payload> TSafetyRules<T> for SerializerClient<T> {
     fn consensus_state(&mut self) -> Result<ConsensusState, Error> {
         let response = self.request(SafetyRulesInput::ConsensusState)?;
+        lcs::from_bytes(&response)?
+    }
+
+    fn initialize(&mut self, proof: &ValidatorChangeProof) -> Result<(), Error> {
+        let response = self.request(SafetyRulesInput::Initialize(Box::new(proof.clone())))?;
         lcs::from_bytes(&response)?
     }
 
