@@ -82,7 +82,7 @@ impl ser::Serialize for EventKey {
         // In order to preserve the Serde data model and help analysis tools,
         // make sure to wrap our value in a container with the same name
         // as the original type.
-        serializer.serialize_newtype_struct("EventKey", &self.0[..])
+        serializer.serialize_newtype_struct("EventKey", serde_bytes::Bytes::new(&self.0))
     }
 }
 
@@ -94,10 +94,10 @@ impl<'de> de::Deserialize<'de> for EventKey {
         // See comment in serialize.
         #[derive(::serde::Deserialize)]
         #[serde(rename = "EventKey")]
-        struct Value(Vec<u8>);
+        struct Value<'a>(&'a [u8]);
 
         let value = Value::deserialize(deserializer)?;
-        Self::try_from(value.0.as_slice()).map_err(<D::Error as ::serde::de::Error>::custom)
+        Self::try_from(value.0).map_err(<D::Error as ::serde::de::Error>::custom)
     }
 }
 

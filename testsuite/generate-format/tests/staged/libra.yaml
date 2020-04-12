@@ -44,17 +44,13 @@ ContractEventV0:
     - event_data:
         SEQ: U8
 Ed25519PublicKey:
-  NEWTYPESTRUCT:
-    SEQ: U8
+  NEWTYPESTRUCT: BYTES
 Ed25519Signature:
-  NEWTYPESTRUCT:
-    SEQ: U8
+  NEWTYPESTRUCT: BYTES
 EventKey:
-  NEWTYPESTRUCT:
-    SEQ: U8
+  NEWTYPESTRUCT: BYTES
 HashValue:
-  NEWTYPESTRUCT:
-    SEQ: U8
+  NEWTYPESTRUCT: BYTES
 Identifier:
   NEWTYPESTRUCT: STR
 Module:
@@ -62,11 +58,9 @@ Module:
     - code:
         SEQ: U8
 MultiEd25519PublicKey:
-  NEWTYPESTRUCT:
-    SEQ: U8
+  NEWTYPESTRUCT: BYTES
 MultiEd25519Signature:
-  NEWTYPESTRUCT:
-    SEQ: U8
+  NEWTYPESTRUCT: BYTES
 RawTransaction:
   STRUCT:
     - sender:
