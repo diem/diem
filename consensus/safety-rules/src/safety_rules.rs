@@ -86,6 +86,7 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
             self.persistent_storage.epoch()?,
             self.persistent_storage.last_voted_round()?,
             self.persistent_storage.preferred_round()?,
+            self.persistent_storage.waypoint()?,
         ))
     }
 
