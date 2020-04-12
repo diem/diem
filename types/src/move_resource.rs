@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    access_path::{AccessPath, Accesses},
     account_config,
     language_storage::{StructTag, TypeTag},
 };
@@ -30,5 +31,9 @@ pub trait MoveResource {
                 .to_owned(),
             type_params: Self::type_params(),
         }
+    }
+
+    fn resource_path() -> Vec<u8> {
+        AccessPath::resource_access_vec(&Self::struct_tag(), &Accesses::empty())
     }
 }

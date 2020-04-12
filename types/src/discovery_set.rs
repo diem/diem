@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    access_path::{AccessPath, Accesses},
+    access_path::AccessPath,
     account_config,
     discovery_info::DiscoveryInfo,
     event::{EventHandle, EventKey},
@@ -23,14 +23,9 @@ pub fn discovery_set_module_name() -> &'static IdentStr {
     &*DISCOVERY_SET_MODULE_NAME
 }
 
-/// Path to the DiscoverySet resource.
-pub static DISCOVERY_SET_RESOURCE_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
-    AccessPath::resource_access_vec(&DiscoverySetResource::struct_tag(), &Accesses::empty())
-});
-
 /// The path to the discovery set change event handle under a DiscoverSetResource.
 pub static DISCOVERY_SET_CHANGE_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
-    let mut path = DISCOVERY_SET_RESOURCE_PATH.to_vec();
+    let mut path = DiscoverySetResource::resource_path();
     path.extend_from_slice(b"/change_events_count/");
     path
 });
