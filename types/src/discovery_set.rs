@@ -6,7 +6,7 @@ use crate::{
     account_config,
     discovery_info::DiscoveryInfo,
     event::{EventHandle, EventKey},
-    language_storage::StructTag,
+    move_resource::MoveResource,
 };
 use anyhow::Result;
 use move_core_types::identifier::{IdentStr, Identifier};
@@ -19,29 +19,14 @@ use std::{iter::IntoIterator, ops::Deref, vec};
 static DISCOVERY_SET_MODULE_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("LibraSystem").unwrap());
 
-static DISCOVERY_SET_STRUCT_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("DiscoverySet").unwrap());
-
 pub fn discovery_set_module_name() -> &'static IdentStr {
     &*DISCOVERY_SET_MODULE_NAME
 }
 
-pub fn discovery_set_struct_name() -> &'static IdentStr {
-    &*DISCOVERY_SET_STRUCT_NAME
-}
-
-pub fn discovery_set_tag() -> StructTag {
-    StructTag {
-        address: account_config::CORE_CODE_ADDRESS,
-        name: discovery_set_struct_name().to_owned(),
-        module: discovery_set_module_name().to_owned(),
-        type_params: vec![],
-    }
-}
-
 /// Path to the DiscoverySet resource.
-pub static DISCOVERY_SET_RESOURCE_PATH: Lazy<Vec<u8>> =
-    Lazy::new(|| AccessPath::resource_access_vec(&discovery_set_tag(), &Accesses::empty()));
+pub static DISCOVERY_SET_RESOURCE_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
+    AccessPath::resource_access_vec(&DiscoverySetResource::struct_tag(), &Accesses::empty())
+});
 
 /// The path to the discovery set change event handle under a DiscoverSetResource.
 pub static DISCOVERY_SET_CHANGE_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
@@ -74,6 +59,11 @@ impl DiscoverySetResource {
     pub fn discovery_set(&self) -> &DiscoverySet {
         &self.discovery_set
     }
+}
+
+impl MoveResource for DiscoverySetResource {
+    const MODULE_NAME: &'static str = "LibraSystem";
+    const STRUCT_NAME: &'static str = "DiscoverySet";
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
