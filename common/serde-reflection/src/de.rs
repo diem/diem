@@ -231,7 +231,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'de, 'a> {
         if let Some((format, hint)) = self.tracer.get_recorded_value(self.records, name) {
             // Hints are recorded during serialization-tracing therefore the registry is already accurate.
             return visitor
-                .visit_newtype_struct(hint.clone().into_deserializer())
+                .visit_newtype_struct(hint.into_deserializer())
                 .map_err(|err| match err {
                     Error::DeserializationError(msg) => {
                         Error::UnexpectedDeserializationFormat(name, format.clone(), msg)
