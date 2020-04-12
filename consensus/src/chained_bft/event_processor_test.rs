@@ -51,6 +51,7 @@ use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
     validator_signer::ValidatorSigner,
     validator_verifier::{random_validator_verifier, ValidatorVerifier},
+    waypoint::Waypoint,
 };
 use network::peer_manager::{
     conn_status_channel, ConnectionRequestSender, PeerManagerRequestSender,
@@ -368,9 +369,11 @@ fn process_successful_proposal_test() {
             pending_for_proposer[0].vote().vote_data().proposed().id(),
             proposal_id
         );
+        // TODO(davidiw): Make this derived from a potential first LI
+        let waypoint = Waypoint::new_from_pieces(0, HashValue::zero());
         assert_eq!(
             node.event_processor.safety_rules.consensus_state().unwrap(),
-            ConsensusState::new(1, 1, 0),
+            ConsensusState::new(1, 1, 0, waypoint),
         );
     });
 }
@@ -812,9 +815,11 @@ fn basic_restart_test() {
     }
     // verify after restart we recover the data
     node = node.restart(&mut playground, runtime.handle().clone());
+    // TODO(davidiw): Make this derived from a potential first LI
+    let waypoint = Waypoint::new_from_pieces(0, HashValue::zero());
     assert_eq!(
         node.event_processor.consensus_state(),
-        ConsensusState::new(1, num_proposals, num_proposals - 2),
+        ConsensusState::new(1, num_proposals, num_proposals - 2, waypoint),
     );
     for block in proposals {
         assert_eq!(node.block_store.block_exists(block.id()), true);
