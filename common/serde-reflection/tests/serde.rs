@@ -132,11 +132,11 @@ fn test_tracers() {
     // Tracing deserialization
     let records = Records::new();
     let mut tracer = Tracer::new(/* is_human_readable */ false);
-    let (ident, values) = tracer.trace_type::<E>(&records).unwrap();
+    let (ident, samples) = tracer.trace_type::<E>(&records).unwrap();
     assert_eq!(ident, Format::TypeName("E".into()));
     assert_eq!(tracer.registry().unwrap().get("E").unwrap(), format);
     assert_eq!(
-        values,
+        samples,
         vec![
             E::Unit,
             E::Newtype(0),
@@ -181,7 +181,7 @@ enum Person {
 }
 
 #[test]
-fn test_type_deserialization_with_custom_invariants() {
+fn test_trace_deserialization_with_custom_invariants() {
     let mut records = Records::new();
     let mut tracer = Tracer::new(/* is_human_readable */ false);
     // Type trace alone cannot guess a valid value for `Name`.
@@ -197,10 +197,10 @@ fn test_type_deserialization_with_custom_invariants() {
     assert_eq!(value, Value::Str("Bob".into()));
 
     // Now try again.
-    let (format, values) = tracer.trace_type::<Person>(&records).unwrap();
+    let (format, samples) = tracer.trace_type::<Person>(&records).unwrap();
     assert_eq!(format, Format::TypeName("Person".into()));
     assert_eq!(
-        values,
+        samples,
         vec![
             Person::NickName(bob.clone()),
             Person::FullName {
@@ -265,4 +265,54 @@ fn test_name_clash_not_suported() {
     assert!(tracer.trace_value(&mut records, &foo::A).is_ok());
     // but format have to match.
     assert!(tracer.trace_value(&mut records, &bar::A(0)).is_err());
+}
+
+#[test]
+fn test_borrowed_slice() {
+    #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+    struct Borrowed<'a>(&'a [u8]);
+
+    let bytes = [1u8; 4];
+    let mut records = Records::new();
+    let mut tracer = Tracer::new(/* is_human_readable */ false);
+
+    let (format, value) = tracer.trace_value(&mut records, &Borrowed(&bytes)).unwrap();
+    assert_eq!(format, Format::TypeName("Borrowed".into()));
+    // Slice was traced and serialized as a sequence.
+    assert_eq!(value, Value::Seq(vec![Value::U8(1); 4]));
+
+    // Unfortunately, borrowed slices can only de-serialize as bytes.
+    assert_eq!(
+        tracer.trace_type::<Borrowed>(&records),
+        Err(Error::UnexpectedDeserializationFormat(
+            "Borrowed",
+            ContainerFormat::NewTypeStruct(Box::new(Format::Seq(Box::new(Format::U8)))),
+            "bytes"
+        )),
+    );
+}
+
+#[test]
+fn test_borrowed_bytes() {
+    #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+    struct Borrowed<'a>(#[serde(with = "serde_bytes")] &'a [u8]);
+
+    let bytes = [1u8; 4];
+    let mut records = Records::new();
+    let mut tracer = Tracer::new(/* is_human_readable */ false);
+
+    let (format, value) = tracer.trace_value(&mut records, &Borrowed(&bytes)).unwrap();
+    assert_eq!(format, Format::TypeName("Borrowed".into()));
+    // Value was traced and serialized as a bytes.
+    assert_eq!(value, Value::Bytes(bytes.to_vec()));
+
+    let (format, samples) = tracer.trace_type::<Borrowed>(&records).unwrap();
+    assert_eq!(format, Format::TypeName("Borrowed".into()));
+    assert_eq!(samples, vec![Borrowed(&bytes),]);
+
+    let registry = tracer.registry().unwrap();
+    assert_eq!(
+        registry.get("Borrowed").unwrap(),
+        &ContainerFormat::NewTypeStruct(Box::new(Format::Bytes))
+    );
 }
