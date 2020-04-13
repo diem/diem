@@ -155,7 +155,6 @@ impl NodeSetup {
             state_sync_client,
             commit_cb_sender,
             Arc::clone(&storage),
-            None,
         ));
 
         let block_store = Arc::new(BlockStore::new(
