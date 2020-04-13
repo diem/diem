@@ -21,7 +21,7 @@ const NETWORK_PEERS_DEFAULT: &str = "network_peers.config.toml";
 const SEED_PEERS_DEFAULT: &str = "seed_peers.toml";
 
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct NetworkConfig {
     pub peer_id: PeerId,
@@ -126,8 +126,8 @@ impl NetworkConfig {
 
         // TODO(joshlind): investigate the implications of removing these checks.
         if let Some(network_keypairs) = &self.network_keypairs {
-            let identity_public_key = network_keypairs.identity_public_key.as_slice();
-            let peer_id = AuthenticationKey::try_from(identity_public_key)
+            let identity_public_key = network_keypairs.identity_public_key();
+            let peer_id = AuthenticationKey::try_from(identity_public_key.as_slice())
                 .unwrap()
                 .derived_address();
 
@@ -180,8 +180,8 @@ impl NetworkConfig {
         self.peer_id = if let Some(peer_id) = peer_id {
             peer_id
         } else {
-            let identity_public_key = network_keypairs.identity_public_key.as_slice();
-            AuthenticationKey::try_from(identity_public_key)
+            let identity_public_key = network_keypairs.identity_public_key();
+            AuthenticationKey::try_from(identity_public_key.as_slice())
                 .unwrap()
                 .derived_address()
         };
@@ -198,11 +198,11 @@ pub struct SeedPeersConfig {
 
 // Leveraged to store the network keypairs together on disk separate from this config
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct NetworkKeyPairs {
-    identity_private_key: PrivateKeyContainer<x25519::PrivateKey>,
+    pub identity_private_key: PrivateKeyContainer<x25519::PrivateKey>,
     #[serde(skip)]
-    pub identity_public_key: x25519::PublicKey,
+    identity_public_key: Option<x25519::PublicKey>,
     pub signing_keys: KeyPair<Ed25519PrivateKey>,
 }
 
@@ -220,7 +220,7 @@ impl NetworkKeyPairs {
         identity_private_key: x25519::PrivateKey,
         signing_private_key: Ed25519PrivateKey,
     ) -> Self {
-        let identity_public_key = identity_private_key.public_key();
+        let identity_public_key = Some(identity_private_key.public_key());
         Self {
             identity_private_key: PrivateKeyContainer::Present(identity_private_key),
             identity_public_key,
@@ -230,16 +230,17 @@ impl NetworkKeyPairs {
 
     pub fn as_peer_info(&self) -> NetworkPeerInfo {
         NetworkPeerInfo {
-            identity_public_key: self.identity_public_key,
+            identity_public_key: self.identity_public_key(),
             signing_public_key: self.signing_keys.public().clone(),
         }
     }
 
-    /// retrieving the identity key removes it from NetworkKeyPairs
-    pub fn take_identity_key(&mut self) -> x25519::PrivateKey {
-        self.identity_private_key
-            .take()
-            .expect("identity key should be present")
+    pub fn identity_public_key(&self) -> x25519::PublicKey {
+        self.identity_public_key.unwrap_or_else(|| {
+            self.identity_private_key
+                .public_key()
+                .expect("identity private key should be present")
+        })
     }
 }
 

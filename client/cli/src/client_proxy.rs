@@ -425,11 +425,9 @@ impl ClientProxy {
         let private_key = Ed25519PrivateKey::from_encoded_string(space_delim_strings[2])?;
         let consensus_public_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[3])?;
         let network_signing_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[4])?;
-        let network_identity_key =
-            x25519::PublicKey::from_encoded_string(space_delim_strings[5])?;
+        let network_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[5])?;
         let network_address = Multiaddr::from_str(space_delim_strings[6])?;
-        let fullnode_identity_key =
-            x25519::PublicKey::from_encoded_string(space_delim_strings[7])?;
+        let fullnode_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[7])?;
         let fullnode_network_address = Multiaddr::from_str(space_delim_strings[8])?;
         let mut sender = Self::get_account_data_from_address(
             &mut self.client,

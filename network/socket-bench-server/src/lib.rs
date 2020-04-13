@@ -9,6 +9,7 @@ use futures::{
     sink::SinkExt,
     stream::{Stream, StreamExt},
 };
+use libra_crypto::test_utils::TEST_SEED;
 use memsocket::MemorySocket;
 use netcore::{
     compat::IoCompat,
@@ -20,6 +21,7 @@ use netcore::{
 };
 use noise::{NoiseConfig, NoiseSocket};
 use parity_multiaddr::Multiaddr;
+use rand::prelude::*;
 use std::{convert::TryInto, env, ffi::OsString, sync::Arc};
 use tokio::runtime::Handle;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
@@ -75,7 +77,8 @@ impl Args {
 /// Build a MemorySocket + Noise transport
 pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseSocket<MemorySocket>> {
     MemoryTransport::default().and_then(move |socket, _addr, origin| async move {
-        let noise_config = Arc::new(NoiseConfig::new_random());
+        let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
+        let noise_config = Arc::new(NoiseConfig::new_random(&mut rng));
         let (_remote_static_key, socket) = noise_config.upgrade_connection(socket, origin).await?;
         Ok(socket)
     })
@@ -84,7 +87,8 @@ pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseSocket<
 /// Build a Tcp + Noise transport
 pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseSocket<TcpSocket>> {
     TcpTransport::default().and_then(move |socket, _addr, origin| async move {
-        let noise_config = Arc::new(NoiseConfig::new_random());
+        let mut rng: StdRng = SeedableRng::from_seed(TEST_SEED);
+        let noise_config = Arc::new(NoiseConfig::new_random(&mut rng));
         let (_remote_static_key, socket) = noise_config.upgrade_connection(socket, origin).await?;
         Ok(socket)
     })

@@ -9,10 +9,7 @@ use crate::{
     },
 };
 use futures::io::{AsyncRead, AsyncWrite};
-use libra_crypto::{
-    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
-    ValidKey,
-};
+use libra_crypto::{traits::ValidKey, x25519};
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
@@ -181,12 +178,12 @@ pub async fn perform_handshake<T: TSocket>(
 }
 
 pub fn build_memory_noise_transport(
-    identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
+    identity_key: x25519::PrivateKey,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
-    let noise_config = Arc::new(NoiseConfig::new(identity_keypair));
+    let noise_config = Arc::new(NoiseConfig::new(identity_key));
     let mut own_handshake = HandshakeMsg::new();
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
@@ -208,11 +205,11 @@ pub fn build_memory_noise_transport(
 }
 
 pub fn build_unauthenticated_memory_noise_transport(
-    identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
+    identity_key: x25519::PrivateKey,
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
     let memory_transport = memory::MemoryTransport::default();
-    let noise_config = Arc::new(NoiseConfig::new(identity_keypair));
+    let noise_config = Arc::new(NoiseConfig::new(identity_key));
     let mut own_handshake = HandshakeMsg::new();
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
@@ -221,7 +218,7 @@ pub fn build_unauthenticated_memory_noise_transport(
             async move {
                 let (remote_static_key, socket) =
                     noise_config.upgrade_connection(socket, origin).await?;
-                // Generate PeerId from X25519StaticPublicKey.
+                // Generate PeerId from x25519::PublicKey.
                 // Note: This is inconsistent with current types because AccountAddress is derived
                 // from consensus key which is of type Ed25519PublicKey. Since AccountAddress does
                 // not mean anything in a setting without remote authentication, we use the network
@@ -260,11 +257,11 @@ pub fn build_memory_transport(
 
 //TODO(bmwill) Maybe create an Either Transport so we can merge the building of Memory + Tcp
 pub fn build_tcp_noise_transport(
-    identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
+    identity_key: x25519::PrivateKey,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
-    let noise_config = Arc::new(NoiseConfig::new(identity_keypair));
+    let noise_config = Arc::new(NoiseConfig::new(identity_key));
     let mut own_handshake = HandshakeMsg::new();
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
@@ -293,10 +290,10 @@ pub fn build_tcp_noise_transport(
 // Transport based on TCP + Noise, but without remote authentication (i.e., any
 // node is allowed to connect).
 pub fn build_unauthenticated_tcp_noise_transport(
-    identity_keypair: (X25519StaticPrivateKey, X25519StaticPublicKey),
+    identity_key: x25519::PrivateKey,
     application_protocols: SupportedProtocols,
 ) -> boxed::BoxedTransport<Connection<impl TSocket>, impl ::std::error::Error> {
-    let noise_config = Arc::new(NoiseConfig::new(identity_keypair));
+    let noise_config = Arc::new(NoiseConfig::new(identity_key));
     let mut own_handshake = HandshakeMsg::new();
     own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
@@ -305,7 +302,7 @@ pub fn build_unauthenticated_tcp_noise_transport(
             async move {
                 let (remote_static_key, socket) =
                     noise_config.upgrade_connection(socket, origin).await?;
-                // Generate PeerId from X25519StaticPublicKey.
+                // Generate PeerId from x25519::PublicKey.
                 // Note: This is inconsistent with current types because AccountAddress is derived
                 // from consensus key which is of type Ed25519PublicKey. Since AccountAddress does
                 // not mean anything in a setting without remote authentication, we use the network

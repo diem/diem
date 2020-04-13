@@ -58,7 +58,7 @@ impl ValidatorInfo {
     }
 
     #[cfg(any(test, feature = "fuzzing"))]
-    pub fn new_with_random_network_keys(
+    pub fn new_with_test_network_keys(
         rng: &mut (impl rand::RngCore + rand::CryptoRng),
         account_address: AccountAddress,
         consensus_public_key: Ed25519PublicKey,

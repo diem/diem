@@ -66,7 +66,7 @@ pub struct PrivateKey([u8; PRIVATE_KEY_SIZE]);
 
 /// This type should be used to deserialize a received public key
 #[derive(
-  Default, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, SerializeKey, DeserializeKey,
+    Default, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, SerializeKey, DeserializeKey,
 )]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct PublicKey([u8; PUBLIC_KEY_SIZE]);
@@ -77,24 +77,24 @@ pub struct PublicKey([u8; PUBLIC_KEY_SIZE]);
 //
 
 impl PrivateKey {
-  /// Obtain the public key part of a private key
-  pub fn public_key(&self) -> PublicKey {
-    let private_key: x25519_dalek::StaticSecret = self.0.into();
-    let public_key: x25519_dalek::PublicKey = (&private_key).into();
-    PublicKey(public_key.as_bytes().to_owned())
-  }
+    /// Obtain the public key part of a private key
+    pub fn public_key(&self) -> PublicKey {
+        let private_key: x25519_dalek::StaticSecret = self.0.into();
+        let public_key: x25519_dalek::PublicKey = (&private_key).into();
+        PublicKey(public_key.as_bytes().to_owned())
+    }
 
-  /// Generate a private key for testing
-  pub fn for_test(rng: &mut (impl rand::RngCore + rand::CryptoRng)) -> Self {
-    Self(x25519_dalek::StaticSecret::new(rng).to_bytes())
-  }
+    /// Generate a private key for testing
+    pub fn for_test(rng: &mut (impl rand::RngCore + rand::CryptoRng)) -> Self {
+        Self(x25519_dalek::StaticSecret::new(rng).to_bytes())
+    }
 }
 
 impl PublicKey {
-  /// Obtain a slice reference to the underlying bytearray
-  pub fn as_slice(&self) -> &[u8] {
-    &self.0
-  }
+    /// Obtain a slice reference to the underlying bytearray
+    pub fn as_slice(&self) -> &[u8] {
+        &self.0
+    }
 }
 
 //
@@ -103,49 +103,49 @@ impl PublicKey {
 //
 
 impl From<&PrivateKey> for PublicKey {
-  fn from(private_key: &PrivateKey) -> Self {
-    private_key.public_key()
-  }
+    fn from(private_key: &PrivateKey) -> Self {
+        private_key.public_key()
+    }
 }
 
 impl std::convert::TryFrom<&[u8]> for PrivateKey {
-  type Error = traits::CryptoMaterialError;
+    type Error = traits::CryptoMaterialError;
 
-  fn try_from(private_key_bytes: &[u8]) -> Result<Self, Self::Error> {
-    let private_key_bytes: [u8; PRIVATE_KEY_SIZE] = private_key_bytes
-      .try_into()
-      .map_err(|_| traits::CryptoMaterialError::DeserializationError)?;
-    Ok(Self(private_key_bytes))
-  }
+    fn try_from(private_key_bytes: &[u8]) -> Result<Self, Self::Error> {
+        let private_key_bytes: [u8; PRIVATE_KEY_SIZE] = private_key_bytes
+            .try_into()
+            .map_err(|_| traits::CryptoMaterialError::DeserializationError)?;
+        Ok(Self(private_key_bytes))
+    }
 }
 
 impl std::convert::TryFrom<&[u8]> for PublicKey {
-  type Error = traits::CryptoMaterialError;
+    type Error = traits::CryptoMaterialError;
 
-  fn try_from(public_key_bytes: &[u8]) -> Result<Self, Self::Error> {
-    let public_key_bytes: [u8; PUBLIC_KEY_SIZE] = public_key_bytes
-      .try_into()
-      .map_err(|_| traits::CryptoMaterialError::WrongLengthError)?;
-    Ok(Self(public_key_bytes))
-  }
+    fn try_from(public_key_bytes: &[u8]) -> Result<Self, Self::Error> {
+        let public_key_bytes: [u8; PUBLIC_KEY_SIZE] = public_key_bytes
+            .try_into()
+            .map_err(|_| traits::CryptoMaterialError::WrongLengthError)?;
+        Ok(Self(public_key_bytes))
+    }
 }
 
 impl traits::ValidKey for PrivateKey {
-  fn to_bytes(&self) -> Vec<u8> {
-    self.0.to_vec()
-  }
+    fn to_bytes(&self) -> Vec<u8> {
+        self.0.to_vec()
+    }
 }
 
 impl traits::ValidKey for PublicKey {
-  fn to_bytes(&self) -> Vec<u8> {
-    self.0.to_vec()
-  }
+    fn to_bytes(&self) -> Vec<u8> {
+        self.0.to_vec()
+    }
 }
 
 impl traits::PrivateKey for PrivateKey {
-  type PublicKeyMaterial = PublicKey;
+    type PublicKeyMaterial = PublicKey;
 }
 
 impl traits::PublicKey for PublicKey {
-  type PrivateKeyMaterial = PrivateKey;
+    type PrivateKeyMaterial = PrivateKey;
 }
