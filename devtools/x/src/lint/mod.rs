@@ -26,6 +26,7 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
     let package_linters: &[&dyn PackageLinter] = &[
         &guppy::EnforcedAttributes::new(&workspace_config.enforced_attributes),
         &guppy::CrateNamesPaths,
+        &guppy::WorkspaceHack,
     ];
 
     let content_linters: &[&dyn ContentLinter] = &[
