@@ -48,12 +48,17 @@ pub const ON_CHAIN_CONFIG_REGISTRY: &[ConfigID] = &[
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct OnChainConfigPayload {
+    epoch: u64,
     configs: Arc<HashMap<ConfigID, Vec<u8>>>,
 }
 
 impl OnChainConfigPayload {
-    pub fn new(configs: Arc<HashMap<ConfigID, Vec<u8>>>) -> Self {
-        Self { configs }
+    pub fn new(epoch: u64, configs: Arc<HashMap<ConfigID, Vec<u8>>>) -> Self {
+        Self { epoch, configs }
+    }
+
+    pub fn epoch(&self) -> u64 {
+        self.epoch
     }
 
     pub fn get<T: OnChainConfig>(&self) -> Result<T> {
@@ -62,6 +67,10 @@ impl OnChainConfigPayload {
             .get(&T::CONFIG_ID)
             .ok_or_else(|| format_err!("[on-chain cfg] config not in payload"))?;
         T::deserialize_into_config(bytes)
+    }
+
+    pub fn configs(&self) -> &HashMap<ConfigID, Vec<u8>> {
+        &self.configs
     }
 }
 
@@ -140,6 +149,9 @@ pub struct ConfigurationResource {
 }
 
 impl ConfigurationResource {
+    pub fn epoch(&self) -> u64 {
+        self.epoch
+    }
     pub fn last_reconfiguration_time(&self) -> u64 {
         self.last_reconfiguration_time
     }
