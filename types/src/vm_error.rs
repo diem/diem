@@ -52,6 +52,7 @@ pub struct VMStatus {
 
     /// The optional sub status. Used e.g. for things such as the abort code, or the arithmetic
     /// error type for an ARITHMETIC_ERROR major status.
+    #[serde(with = "lcs::fixed_size_option")]
     pub sub_status: Option<u64>,
 
     /// The optional message. Useful for verification errors, and for returning information in
@@ -473,7 +474,7 @@ impl ser::Serialize for StatusCode {
     where
         S: ser::Serializer,
     {
-        serializer.serialize_u64((*self).into())
+        u64::from(*self).to_le_bytes().serialize(serializer)
     }
 }
 
@@ -498,7 +499,9 @@ impl<'de> de::Deserialize<'de> for StatusCode {
             }
         }
 
-        deserializer.deserialize_u64(StatusCodeVisitor)
+        use de::Visitor;
+
+        StatusCodeVisitor.visit_u64(u64::from_le_bytes(<[u8; 8]>::deserialize(deserializer)?))
     }
 }
 

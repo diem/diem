@@ -196,7 +196,9 @@ impl From<ContractEvent> for crate::proto::types::Event {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct EventWithProof {
+    #[serde(with = "lcs::fixed_size")]
     pub transaction_version: u64, // Should be `Version`
+    #[serde(with = "lcs::fixed_size")]
     pub event_index: u64,
     pub event: ContractEvent,
     pub proof: EventProof,

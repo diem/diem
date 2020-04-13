@@ -121,6 +121,7 @@ impl TryFrom<&[u8]> for EventKey {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EventHandle {
     /// Number of events in the event stream.
+    #[serde(with = "lcs::fixed_size")]
     count: u64,
     /// The associated globally unique key that is used as the key to the EventStore.
     key: EventKey,

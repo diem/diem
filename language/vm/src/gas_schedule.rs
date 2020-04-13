@@ -107,7 +107,7 @@ macro_rules! define_gas_unit {
     } => {
         #[derive(Debug, Hash, Eq, PartialEq, Copy, Clone, Serialize, Deserialize)]
         #[doc=$comment]
-        pub struct $name<GasCarrier>(GasCarrier);
+        pub struct $name<GasCarrier>(#[serde(with = "lcs::fixed_size")] GasCarrier) where GasCarrier: serde::Serialize + serde::de::DeserializeOwned + lcs::fixed_size::FixedSized;
         impl GasAlgebra<$carrier> for $name<$carrier> {
             fn new(c: GasCarrier) -> Self {
                 Self(c)
