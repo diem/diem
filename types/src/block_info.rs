@@ -37,6 +37,7 @@ pub struct BlockInfo {
     /// The accumulator root hash after executing this block.
     executed_state_id: HashValue,
     /// The version of the latest transaction after executing this block.
+    #[serde(with = "lcs::fixed_size")]
     version: Version,
     /// The timestamp this block was proposed by a proposer.
     #[serde(with = "lcs::fixed_size")]

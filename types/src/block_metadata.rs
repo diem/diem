@@ -117,6 +117,7 @@ pub static NEW_BLOCK_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
 
 #[derive(Deserialize, Serialize)]
 pub struct LibraBlockResource {
+    #[serde(with = "lcs::fixed_size")]
     height: u64,
     new_block_events: EventHandle,
 }
@@ -129,9 +130,11 @@ impl LibraBlockResource {
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct NewBlockEvent {
+    #[serde(with = "lcs::fixed_size")]
     round: u64,
     proposer: AccountAddress,
     votes: Vec<AccountAddress>,
+    #[serde(with = "lcs::fixed_size")]
     timestamp: u64,
 }
 
