@@ -4,7 +4,7 @@
 use crate::{
     chained_bft::{
         block_storage::BlockReader,
-        chained_bft_smr::ChainedBftSMR,
+        chained_bft_smr::{ChainedBftSMR, ChainedBftSMRInput},
         network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
         network_tests::NetworkPlayground,
         test_utils::{
@@ -31,6 +31,7 @@ use libra_types::{ledger_info::LedgerInfoWithSignatures, validator_verifier::Val
 use network::peer_manager::{
     conn_status_channel, ConnectionRequestSender, PeerManagerRequestSender,
 };
+use safety_rules::SafetyRulesManager;
 use std::{num::NonZeroUsize, sync::Arc};
 
 /// Auxiliary struct that is preparing SMR for the test
@@ -72,21 +73,29 @@ impl SMRNode {
         let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let shared_mempool = MockSharedMempool::new(None);
         let consensus_to_mempool_sender = shared_mempool.consensus_sender.clone();
+        let state_computer = Arc::new(MockStateComputer::new(
+            state_sync_client,
+            commit_cb_sender,
+            Arc::clone(&storage),
+        ));
+        let txn_manager = Box::new(MockTransactionManager::new(Some(
+            consensus_to_mempool_sender,
+        )));
+        let (_tx, reconfig_events) =
+            libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
 
-        let mut smr = ChainedBftSMR::new(
+        let input = ChainedBftSMRInput {
             network_sender,
             network_events,
-            &mut config.clone(),
-            Arc::new(MockStateComputer::new(
-                state_sync_client,
-                commit_cb_sender,
-                Arc::clone(&storage),
-            )),
-            storage.clone(),
-            Box::new(MockTransactionManager::new(Some(
-                consensus_to_mempool_sender,
-            ))),
-        );
+            safety_rules_manager: SafetyRulesManager::new(&mut config.clone()),
+            state_computer,
+            txn_manager,
+            storage: storage.clone(),
+            config: config.consensus.clone(),
+            reconfig_events,
+        };
+
+        let mut smr = ChainedBftSMR::new(author, input);
 
         smr.start().expect("Failed to start SMR!");
         Self {

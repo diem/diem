@@ -14,6 +14,7 @@ use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
 use libra_mempool::MEMPOOL_SUBSCRIBED_CONFIGS;
 use libra_metrics::metric_server;
+use libra_types::on_chain_config::ON_CHAIN_CONFIG_REGISTRY;
 use libra_vm::LibraVM;
 use network::validator_network::network_builder::{NetworkBuilder, TransportType};
 use state_synchronizer::StateSynchronizer;
@@ -181,6 +182,10 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let (mempool_reconfig_subscription, mempool_reconfig_events) =
         ReconfigSubscription::subscribe(MEMPOOL_SUBSCRIBED_CONFIGS);
     reconfig_subscriptions.push(mempool_reconfig_subscription);
+    // consensus has to subscribe to ALL on-chain configs
+    let (consensus_reconfig_subscription, consensus_reconfig_events) =
+        ReconfigSubscription::subscribe(ON_CHAIN_CONFIG_REGISTRY);
+    reconfig_subscriptions.push(consensus_reconfig_subscription);
 
     if let Some(network) = node_config.validator_network.as_mut() {
         let (runtime, mut network_builder) = setup_network(network, RoleType::Validator);
@@ -276,6 +281,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             state_synchronizer.create_client(),
             consensus_to_mempool_sender,
             libra_db,
+            consensus_reconfig_events,
         );
         consensus_provider
             .start()
