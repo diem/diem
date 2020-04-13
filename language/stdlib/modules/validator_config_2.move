@@ -2,6 +2,7 @@ address 0x0:
 
 module ValidatorConfig2 {
     use 0x0::LibraAccount;
+    use 0x0::Option;
     use 0x0::Transaction;
 
     struct Config {
@@ -16,8 +17,7 @@ module ValidatorConfig2 {
     // The owner can also disable delegation at any time.
     resource struct T {
         config: Config,
-        delegation_enabled: bool,
-        delegated_account: address,
+        delegated_account: Option::T<address>,
     }
 
     // TODO(valerini): add events here
@@ -39,12 +39,7 @@ module ValidatorConfig2 {
 
     // Returns the address of the entity who is now in charge of managing the config.
     public fun get_validator_operator_account(addr: address): address acquires T {
-        let t_ref = borrow_global<T>(addr);
-        if (t_ref.delegation_enabled) {
-            return *&t_ref.delegated_account
-        } else {
-            return addr
-        }
+        Option::get_with_default(&borrow_global<T>(addr).delegated_account, addr)
     }
 
     // Register the transaction sender as a candidate validator by creating a ValidatorConfig
@@ -57,8 +52,7 @@ module ValidatorConfig2 {
                 config: Config {
                     consensus_pubkey: consensus_pubkey,
                 },
-                delegation_enabled: false,
-                delegated_account: 0x0
+                delegated_account: Option::none()
             }
         );
     }
@@ -70,16 +64,14 @@ module ValidatorConfig2 {
         // check delegated address is different from transaction's sender
         Transaction::assert(delegated_account != Transaction::sender(), 6);
         let t_ref = borrow_global_mut<T>(Transaction::sender());
-        *(&mut t_ref.delegation_enabled) = true;
-        *(&mut t_ref.delegated_account) = delegated_account;
+        t_ref.delegated_account = Option::some(delegated_account)
     }
 
     // If the sender of the transaction has a ValidatorConfig::T resource,
     // this function will revoke management capabilities from the delegated_account account.
     public fun remove_delegated_account() acquires T {
         let t_ref = borrow_global_mut<T>(Transaction::sender());
-        *(&mut t_ref.delegation_enabled) = false;
-        *(&mut t_ref.delegated_account) = 0x0;
+        t_ref.delegated_account = Option::none()
     }
 
     // Rotate validator's config.

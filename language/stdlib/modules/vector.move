@@ -25,6 +25,13 @@ module Vector {
     // Swaps the elements at the i'th and j'th indices in the vector.
     native public fun swap<Element>(v: &mut vector<Element>, i: u64, j: u64);
 
+    // Return an vector of size one containing `e`
+    public fun singleton<Element>(e: Element): vector<Element> {
+        let v = empty();
+        push_back(&mut v, e);
+        v
+    }
+
     // Reverses the order of the elements in the vector in place.
     public fun reverse<Element>(v: &mut vector<Element>) {
         let len = length(v);
