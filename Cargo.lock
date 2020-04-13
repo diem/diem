@@ -1678,7 +1678,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "guppy"
-version = "0.1.8"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cargo_metadata 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6601,7 +6601,7 @@ name = "x-core"
 version = "0.1.0"
 dependencies = [
  "cargo_metadata 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "guppy 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "guppy 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-workspace-hack 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -6610,7 +6610,7 @@ dependencies = [
 name = "x-lint"
 version = "0.1.0"
 dependencies = [
- "guppy 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "guppy 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-workspace-hack 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "x-core 0.1.0",
@@ -6814,7 +6814,7 @@ dependencies = [
 "checksum get_if_addrs-sys 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0d04f9fb746cf36b191c00f3ede8bde9c8e64f9f4b05ae2694a9ccf5e3f5ab48"
 "checksum getrandom 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)" = "7abc8dd8451921606d809ba32e95b6111925cd2906060d2dcc29c070220503eb"
 "checksum glob 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
-"checksum guppy 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)" = "df2ea64e2e811725d2b5432be6c86d670de58f2cb6255b5966a13572e6f3c89a"
+"checksum guppy 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ce60fc3a7abb42b1730ec1b7c9cc1b58cd95b83a2b1678940fafe7a1cd145436"
 "checksum h2 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)" = "a5b34c246847f938a410a03c5458c7fee2274436675e76d8b903c08efc29c462"
 "checksum h2 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "9d5c295d1c0c68e4e42003d75f908f5e16a1edd1cbe0b0d02e4dc2006a384f47"
 "checksum headers 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "a72b4bd7cbbf0c22190e82f02517f456a6b9be24c25a6827b5802e478b8c2d70"
