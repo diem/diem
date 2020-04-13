@@ -710,7 +710,7 @@ dependencies = [
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "k8s-openapi 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "kube 0.31.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "kube 0.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-json-rpc 0.1.0",
@@ -2027,7 +2027,7 @@ dependencies = [
 
 [[package]]
 name = "kube"
-version = "0.31.0"
+version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "Inflector 0.11.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2044,7 +2044,6 @@ dependencies = [
  "openssl 0.10.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.10.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.51 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_yaml 0.8.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.15 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6312,7 +6311,7 @@ dependencies = [
 "checksum k8s-openapi 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "96affb18356fc998baa692c2185d198095ffdf6e6fff3bc9efb4927952f86851"
 "checksum keccak 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "67c21572b4949434e4fc1e1978b99c5f77064153c59d998bf13ecd96fb5ecba7"
 "checksum kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
-"checksum kube 0.31.0 (registry+https://github.com/rust-lang/crates.io-index)" = "66be960d78ad587c7f89b24eb5f85a2b83da0e11d0fd7ffb000ce7bc01c52514"
+"checksum kube 0.32.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1283180f679ea37dbd6b0cdf9b915164343b3de91b57bc42afb2471023aa897f"
 "checksum lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 "checksum lazycell 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b294d6fa9ee409a054354afc4352b0b9ef7ca222c69b8812cbea9e7d2bf3783f"
 "checksum libc 0.2.69 (registry+https://github.com/rust-lang/crates.io-index)" = "99e85c08494b21a9054e7fe1374a732aeadaff3980b6990b94bfd3a70f690005"
