@@ -55,7 +55,7 @@ use transaction_builder::encode_register_validator_script;
 
 const CLIENT_WALLET_MNEMONIC_FILE: &str = "client.mnemonic";
 const GAS_UNIT_PRICE: u64 = 0;
-const MAX_GAS_AMOUNT: u64 = 400_000;
+const MAX_GAS_AMOUNT: u64 = 600_000;
 const TX_EXPIRATION: i64 = 100;
 
 /// Enum used for error formatting.

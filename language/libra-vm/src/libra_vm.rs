@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    counters::*, on_chain_configs::VMConfig as OnlineConfig, system_module_names::*, VMExecutor,
-    VMVerifier,
-};
+use crate::{counters::*, system_module_names::*, VMExecutor, VMVerifier};
 use debug_interface::prelude::*;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
@@ -13,7 +10,7 @@ use libra_types::{
     account_config,
     block_metadata::BlockMetadata,
     language_storage::{ModuleId, TypeTag},
-    on_chain_config::LibraVersion,
+    on_chain_config::{LibraVersion, OnChainConfig, VMConfig},
     transaction::{
         ChangeSet, Module, Script, SignatureCheckedTransaction, SignedTransaction, Transaction,
         TransactionArgument, TransactionOutput, TransactionPayload, TransactionStatus,
@@ -30,15 +27,12 @@ use move_vm_state::{
     data_cache::{BlockDataCache, RemoteCache, RemoteStorage},
     execution_context::{ExecutionContext, SystemExecutionContext, TransactionExecutionContext},
 };
-use move_vm_types::{
-    chain_state::ChainState, identifier::create_access_path, loaded_data::types::Type,
-    values::Value,
-};
+use move_vm_types::{chain_state::ChainState, loaded_data::types::Type, values::Value};
 use rayon::prelude::*;
 use std::{collections::HashSet, sync::Arc};
 use vm::{
     errors::{convert_prologue_runtime_error, VMResult},
-    gas_schedule::{calculate_intrinsic_gas, zero_cost_schedule, GAS_SCHEDULE_NAME},
+    gas_schedule::{calculate_intrinsic_gas, zero_cost_schedule},
     transaction_metadata::TransactionMetadata,
 };
 
@@ -46,8 +40,8 @@ use vm::{
 /// A wrapper to make VMRuntime standalone and thread safe.
 pub struct LibraVM {
     move_vm: Arc<MoveVM>,
-    gas_schedule: Option<CostTable>,
-    on_chain_config: Option<OnlineConfig>,
+    on_chain_config: Option<VMConfig>,
+    version: Option<LibraVersion>,
 }
 
 impl LibraVM {
@@ -56,17 +50,17 @@ impl LibraVM {
         let inner = MoveVM::new();
         Self {
             move_vm: Arc::new(inner),
-            gas_schedule: None,
             on_chain_config: None,
+            version: None,
         }
     }
 
-    pub fn init_with_config(gas_schedule: CostTable, on_chain_config: OnlineConfig) -> Self {
+    pub fn init_with_config(version: LibraVersion, on_chain_config: VMConfig) -> Self {
         let inner = MoveVM::new();
         Self {
             move_vm: Arc::new(inner),
-            gas_schedule: Some(gas_schedule),
             on_chain_config: Some(on_chain_config),
+            version: Some(version),
         }
     }
 
@@ -79,57 +73,32 @@ impl LibraVM {
         self.load_configs_impl(&RemoteStorage::new(state))
     }
 
-    fn on_chain_config(&self) -> VMResult<&OnlineConfig> {
+    fn on_chain_config(&self) -> VMResult<&VMConfig> {
         self.on_chain_config
             .as_ref()
             .ok_or_else(|| VMStatus::new(StatusCode::VM_STARTUP_FAILURE))
     }
 
     fn load_configs_impl(&mut self, data_cache: &dyn RemoteCache) {
-        self.gas_schedule = self.fetch_gas_schedule(data_cache).ok();
-        self.on_chain_config = OnlineConfig::load_on_chain_config(data_cache);
-    }
-
-    fn fetch_gas_schedule(&mut self, data_cache: &dyn RemoteCache) -> VMResult<CostTable> {
-        let address = account_config::association_address();
-        let mut ctx = SystemExecutionContext::new(data_cache, GasUnits::new(0));
-        let gas_struct_ty = self
-            .move_vm
-            .resolve_struct_def_by_name(&GAS_SCHEDULE_MODULE, &GAS_SCHEDULE_NAME, &mut ctx, &[])
-            .map_err(|_| {
-                VMStatus::new(StatusCode::GAS_SCHEDULE_ERROR)
-                    .with_sub_status(sub_status::GSE_UNABLE_TO_LOAD_MODULE)
-            })?;
-
-        let access_path = create_access_path(address, gas_struct_ty.into_struct_tag()?);
-
-        let data_blob = data_cache
-            .get(&access_path)
-            .map_err(|_| {
-                VMStatus::new(StatusCode::GAS_SCHEDULE_ERROR)
-                    .with_sub_status(sub_status::GSE_UNABLE_TO_LOAD_RESOURCE)
-            })?
-            .ok_or_else(|| {
-                VMStatus::new(StatusCode::GAS_SCHEDULE_ERROR)
-                    .with_sub_status(sub_status::GSE_UNABLE_TO_LOAD_RESOURCE)
-            })?;
-        let table: CostTable = lcs::from_bytes(&data_blob).map_err(|_| {
-            VMStatus::new(StatusCode::GAS_SCHEDULE_ERROR)
-                .with_sub_status(sub_status::GSE_UNABLE_TO_DESERIALIZE)
-        })?;
-
-        Ok(table)
+        self.on_chain_config = VMConfig::fetch_config(data_cache);
+        self.version = LibraVersion::fetch_config(data_cache);
     }
 
     pub fn get_gas_schedule(&self) -> VMResult<&CostTable> {
-        self.gas_schedule.as_ref().ok_or_else(|| {
-            VMStatus::new(StatusCode::VM_STARTUP_FAILURE)
-                .with_sub_status(sub_status::VSF_GAS_SCHEDULE_NOT_FOUND)
-        })
+        self.on_chain_config
+            .as_ref()
+            .map(|config| &config.gas_schedule)
+            .ok_or_else(|| {
+                VMStatus::new(StatusCode::VM_STARTUP_FAILURE)
+                    .with_sub_status(sub_status::VSF_GAS_SCHEDULE_NOT_FOUND)
+            })
     }
 
     pub fn get_libra_version(&self) -> VMResult<LibraVersion> {
-        Ok(self.on_chain_config()?.version.clone())
+        self.version.clone().ok_or_else(|| {
+            VMStatus::new(StatusCode::VM_STARTUP_FAILURE)
+                .with_sub_status(sub_status::VSF_LIBRA_VERSION_NOT_FOUND)
+        })
     }
 
     fn check_gas(&self, txn: &SignedTransaction) -> VMResult<()> {
@@ -270,7 +239,7 @@ impl LibraVM {
         let mut ctx = SystemExecutionContext::new(remote_cache, GasUnits::new(0));
         if !self
             .on_chain_config()?
-            .publishing_options
+            .publishing_option
             .is_allowed_script(&script.code())
         {
             warn!("[VM] Custom scripts not allowed: {:?}", &script.code());
@@ -296,7 +265,7 @@ impl LibraVM {
         txn_data: TransactionMetadata,
     ) -> VMResult<VerifiedTranscationPayload> {
         let mut ctx = SystemExecutionContext::new(remote_cache, GasUnits::new(0));
-        if !&self.on_chain_config()?.publishing_options.is_open() {
+        if !&self.on_chain_config()?.publishing_option.is_open() {
             warn!("[VM] Custom modules not allowed");
             return Err(VMStatus::new(StatusCode::UNKNOWN_MODULE));
         };

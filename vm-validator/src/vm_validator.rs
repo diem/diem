@@ -5,10 +5,10 @@ use anyhow::Result;
 use libra_types::{
     account_address::AccountAddress,
     account_config::AccountResource,
-    on_chain_config::{LibraVersion, OnChainConfigPayload, VMPublishingOption},
+    on_chain_config::{LibraVersion, OnChainConfigPayload, VMConfig},
     transaction::{SignedTransaction, VMValidatorResult},
 };
-use libra_vm::{on_chain_configs::VMConfig, LibraVM, VMVerifier};
+use libra_vm::{LibraVM, VMVerifier};
 use scratchpad::SparseMerkleTree;
 use std::{convert::TryFrom, sync::Arc};
 use storage_client::StorageRead;
@@ -79,15 +79,10 @@ impl TransactionValidation for VMValidator {
     }
 
     fn restart(&mut self, config: OnChainConfigPayload) -> Result<()> {
-        let gas_schedule = self.vm.get_gas_schedule()?;
-        let publishing_options = config.get::<VMPublishingOption>()?;
+        let vm_config = config.get::<VMConfig>()?;
         let version = config.get::<LibraVersion>()?;
-        let vm_config = VMConfig {
-            publishing_options,
-            version,
-        };
 
-        self.vm = LibraVM::init_with_config(gas_schedule.clone(), vm_config);
+        self.vm = LibraVM::init_with_config(version, vm_config);
         Ok(())
     }
 }

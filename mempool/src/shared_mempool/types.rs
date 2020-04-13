@@ -13,7 +13,7 @@ use libra_config::config::MempoolConfig;
 use libra_types::{
     account_address::AccountAddress,
     mempool_status::MempoolStatus,
-    on_chain_config::{ConfigID, LibraVersion, OnChainConfig, VMPublishingOption},
+    on_chain_config::{ConfigID, LibraVersion, OnChainConfig, VMConfig},
     transaction::SignedTransaction,
     vm_error::VMStatus,
     PeerId,
@@ -151,5 +151,4 @@ pub type MempoolClientSender =
     mpsc::Sender<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>;
 
 /// On-chain configs that mempool subscribes to for reconfiguration
-pub const MEMPOOL_SUBSCRIBED_CONFIGS: &[ConfigID] =
-    &[LibraVersion::CONFIG_ID, VMPublishingOption::CONFIG_ID];
+pub const MEMPOOL_SUBSCRIBED_CONFIGS: &[ConfigID] = &[LibraVersion::CONFIG_ID, VMConfig::CONFIG_ID];

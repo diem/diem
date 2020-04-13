@@ -3,11 +3,7 @@
 
 //! This file contains the starting gas schedule published at genesis.
 
-use libra_vm::system_module_names::GAS_SCHEDULE_MODULE;
-use move_core_types::gas_schedule::{GasCost, MAXIMUM_NUMBER_OF_GAS_UNITS};
-use move_vm_runtime::MoveVM;
-use move_vm_state::{data_cache::RemoteCache, execution_context::TransactionExecutionContext};
-use move_vm_types::{loaded_data::types::Type, values::Value};
+use move_core_types::gas_schedule::GasCost;
 use once_cell::sync::Lazy;
 use vm::{
     file_format::{
@@ -15,12 +11,12 @@ use vm::{
         FunctionHandleIndex, FunctionInstantiationIndex, StructDefInstantiationIndex,
         StructDefinitionIndex, NUMBER_OF_NATIVE_FUNCTIONS,
     },
-    gas_schedule::{new_from_instructions, GAS_SCHEDULE_NAME},
+    gas_schedule::instruction_key,
 };
 
-static INITIAL_GAS_SCHEDULE: Lazy<Vec<u8>> = Lazy::new(|| {
+pub(crate) static INITIAL_GAS_SCHEDULE: Lazy<(Vec<u8>, Vec<u8>)> = Lazy::new(|| {
     use Bytecode::*;
-    let instrs = vec![
+    let mut instrs = vec![
         (
             MoveToSender(StructDefinitionIndex::new(0)),
             GasCost::new(774, 1),
@@ -139,22 +135,17 @@ static INITIAL_GAS_SCHEDULE: Lazy<Vec<u8>> = Lazy::new(|| {
         ),
         (Nop, GasCost::new(10, 1)),
     ];
+    // Note that the LibraVM is expecting the table sorted by instruction order.
+    instrs.sort_by_key(|cost| instruction_key(&cost.0));
+    let raw_instruction_table = instrs.into_iter().map(|(_, cost)| cost).collect::<Vec<_>>();
     // TODO Zero for now, this is going to be filled in later
     let native_table = (0..NUMBER_OF_NATIVE_FUNCTIONS)
         .map(|_| GasCost::new(0, 0))
         .collect::<Vec<GasCost>>();
-    let cost_table = new_from_instructions(instrs, native_table);
-    lcs::to_bytes(&cost_table).expect("Unable to serialize genesis gas schedule for instructions")
+    (
+        lcs::to_bytes(&raw_instruction_table)
+            .expect("Unable to serialize genesis gas schedule for instructions"),
+        lcs::to_bytes(&native_table)
+            .expect("Unable to serialize genesis gas schedule for instructions"),
+    )
 });
-
-pub(crate) fn initial_gas_schedule(move_vm: &MoveVM, data_view: &dyn RemoteCache) -> Value {
-    let struct_ty = move_vm
-        .resolve_struct_def_by_name(
-            &GAS_SCHEDULE_MODULE,
-            &GAS_SCHEDULE_NAME,
-            &mut TransactionExecutionContext::new(MAXIMUM_NUMBER_OF_GAS_UNITS, data_view),
-            &[],
-        )
-        .expect("GasSchedule Module must exist");
-    Value::simple_deserialize(&INITIAL_GAS_SCHEDULE, Type::Struct(Box::new(struct_ty))).unwrap()
-}

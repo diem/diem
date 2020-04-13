@@ -4,6 +4,7 @@
 use crate::{on_chain_config::OnChainConfig, transaction::SCRIPT_HASH_LENGTH};
 use anyhow::{format_err, Result};
 use libra_crypto::HashValue;
+use move_core_types::gas_schedule::CostTable;
 use serde::{Deserialize, Serialize};
 
 /// Defines and holds the publishing policies for the VM. There are three possible configurations:
@@ -22,21 +23,6 @@ pub enum VMPublishingOption {
     Open,
 }
 
-impl OnChainConfig for VMPublishingOption {
-    const IDENTIFIER: &'static str = "ScriptWhitelist";
-
-    fn deserialize_into_config(bytes: &[u8]) -> Result<Self> {
-        lcs::from_bytes::<Vec<u8>>(&bytes)
-            .map_err(|e| {
-                format_err!(
-                    "Failed first round of deserialization for VMPublishingOption: {}",
-                    e
-                )
-            })
-            .and_then(|bytes| Self::deserialize_default_impl(&bytes))
-    }
-}
-
 impl VMPublishingOption {
     pub fn is_open(&self) -> bool {
         match self {
@@ -53,5 +39,54 @@ impl VMPublishingOption {
                 whitelist.contains(hash_value.as_ref())
             }
         }
+    }
+}
+
+/// Defines all the on chain configuration data needed by VM.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct VMConfig {
+    pub publishing_option: VMPublishingOption,
+    pub gas_schedule: CostTable,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+struct CostTableInner {
+    pub instruction_table: Vec<u8>,
+    pub native_table: Vec<u8>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+struct VMConfigInner {
+    pub publishing_option: Vec<u8>,
+    pub gas_schedule: CostTableInner,
+}
+
+impl CostTableInner {
+    pub fn as_cost_table(&self) -> Result<CostTable> {
+        let instruction_table = lcs::from_bytes(&self.instruction_table)?;
+        let native_table = lcs::from_bytes(&self.native_table)?;
+        Ok(CostTable {
+            instruction_table,
+            native_table,
+        })
+    }
+}
+
+impl OnChainConfig for VMConfig {
+    const IDENTIFIER: &'static str = "LibraVMConfig";
+
+    fn deserialize_into_config(bytes: &[u8]) -> Result<Self> {
+        let raw_vm_config = lcs::from_bytes::<VMConfigInner>(&bytes).map_err(|e| {
+            format_err!(
+                "Failed first round of deserialization for VMConfigInner: {}",
+                e
+            )
+        })?;
+        let publishing_option = lcs::from_bytes(&raw_vm_config.publishing_option)?;
+        let gas_schedule = raw_vm_config.gas_schedule.as_cost_table()?;
+        Ok(VMConfig {
+            publishing_option,
+            gas_schedule,
+        })
     }
 }

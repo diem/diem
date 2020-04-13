@@ -1,5 +1,5 @@
-use 0x0::ScriptWhitelist;
+use 0x0::LibraVMConfig;
 
 fun main(args: vector<u8>) {
-    ScriptWhitelist::set(args)
+    LibraVMConfig::set_publishing_option(args)
 }
