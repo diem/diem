@@ -17,8 +17,13 @@ use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::{
     ed25519::*,
     hash::{CryptoHash, CryptoHasher, EventAccumulatorHasher},
+<<<<<<< HEAD
     multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature},
     traits::TSigningKey,
+=======
+    multi_ed25519,
+    traits::SigningKey,
+>>>>>>> 44e773e4a... [crypto] renaming MultiEd25519Keys -> multi_ed25519::keys
     HashValue,
 };
 use libra_crypto_derive::CryptoHasher;
@@ -392,8 +397,8 @@ impl SignedTransaction {
 
     pub fn new_multisig(
         raw_txn: RawTransaction,
-        public_key: MultiEd25519PublicKey,
-        signature: MultiEd25519Signature,
+        public_key: multi_ed25519::VerifyingKeys,
+        signature: multi_ed25519::MultiSignature,
     ) -> SignedTransaction {
         let authenticator = TransactionAuthenticator::multi_ed25519(public_key, signature);
         SignedTransaction {
