@@ -6,7 +6,7 @@
 use crate as libra_crypto;
 use crate::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    multi_ed25519::{MultiEd25519PrivateKey, MultiEd25519PublicKey, MultiEd25519Signature},
+    multi_ed25519,
     test_utils::uniform_keypair_strategy,
     traits::*,
 };
@@ -35,7 +35,7 @@ use serde::{Deserialize, Serialize};
 #[SignatureType = "Sig"]
 enum PublicK {
     Ed(Ed25519PublicKey),
-    MultiEd(MultiEd25519PublicKey),
+    MultiEd(PublicKey),
 }
 
 #[derive(Serialize, Deserialize, SilentDebug, ValidKey, PrivateKeyExt, SigningKey)]
@@ -43,7 +43,7 @@ enum PublicK {
 #[SignatureType = "Sig"]
 enum PrivateK {
     Ed(Ed25519PrivateKey),
-    MultiEd(MultiEd25519PrivateKey),
+    MultiEd(PrivateKey),
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -52,7 +52,7 @@ enum PrivateK {
 #[PrivateKeyType = "PrivateK"]
 enum Sig {
     Ed(Ed25519Signature),
-    MultiEd(MultiEd25519Signature),
+    MultiEd(Signature),
 }
 
 ///////////////////////////////////////////////////////
@@ -66,7 +66,7 @@ proptest! {
         hash in any::<HashValue>(),
         ed_keypair1 in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>(),
         ed_keypair2 in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>(),
-        med_keypair in uniform_keypair_strategy::<MultiEd25519PrivateKey, MultiEd25519PublicKey>()
+        med_keypair in uniform_keypair_strategy::<multi_ed25519::PrivateKey, multi_ed25519::PublicKey>()
     ) {
         // this is impossible to write statically, due to the trait not being
         // object-safe (voluntarily)
@@ -80,7 +80,7 @@ proptest! {
         prop_assert!(signature.verify(&hash, &ed_keypair1.public_key).is_ok());
 
         // This is impossible to write, and generates:
-        // expected struct `ed25519::Ed25519PublicKey`, found struct `med12381::MultiEd25519PublicKey`
+        // expected struct `ed25519::Ed25519PublicKey`, found struct `med12381::multi_ed25519::PublicKey`
         // prop_assert!(signature.verify(&hash, &med_keypair.public_key).is_ok());
 
         let mut l2: Vec<PrivateK> = vec![];

@@ -5,7 +5,7 @@ use crate::account_address::AccountAddress;
 use anyhow::{ensure, Error, Result};
 use libra_crypto::{
     ed25519::{Ed25519PublicKey, Ed25519Signature},
-    multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature},
+    multi_ed25519,
     traits::SignatureExt,
     HashValue,
 };
@@ -56,8 +56,8 @@ pub enum TransactionAuthenticator {
     },
     /// K-of-N multisignature
     MultiEd25519 {
-        public_key: MultiEd25519PublicKey,
-        signature: MultiEd25519Signature,
+        public_key: multi_ed25519::PublicKey,
+        signature: multi_ed25519::Signature,
     },
     // ... add more schemes here
 }
@@ -81,8 +81,8 @@ impl TransactionAuthenticator {
 
     /// Create a multisignature ed25519 authenticator
     pub fn multi_ed25519(
-        public_key: MultiEd25519PublicKey,
-        signature: MultiEd25519Signature,
+        public_key: multi_ed25519::PublicKey,
+        signature: multi_ed25519::Signature,
     ) -> Self {
         Self::MultiEd25519 {
             public_key,
@@ -157,7 +157,7 @@ impl AuthenticationKey {
     }
 
     /// Create an authentication key from a MultiEd25519 public key
-    pub fn multi_ed25519(public_key: &MultiEd25519PublicKey) -> Self {
+    pub fn multi_ed25519(public_key: &multi_ed25519::PublicKey) -> Self {
         Self::from_preimage(&AuthenticationKeyPreimage::multi_ed25519(public_key))
     }
 
@@ -211,7 +211,7 @@ impl AuthenticationKeyPreimage {
     }
 
     /// Construct a preimage from a MultiEd25519 public key
-    pub fn multi_ed25519(public_key: &MultiEd25519PublicKey) -> AuthenticationKeyPreimage {
+    pub fn multi_ed25519(public_key: &multi_ed25519::PublicKey) -> AuthenticationKeyPreimage {
         Self::new(public_key.to_bytes(), Scheme::MultiEd25519)
     }
 
