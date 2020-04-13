@@ -18,7 +18,7 @@ use libra_crypto::{
     ed25519::*,
     hash::{CryptoHash, CryptoHasher, EventAccumulatorHasher},
     multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature},
-    traits::SigningKey,
+    traits::TSigningKey,
     HashValue,
 };
 use libra_crypto_derive::CryptoHasher;

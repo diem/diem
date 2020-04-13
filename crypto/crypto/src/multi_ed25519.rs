@@ -129,11 +129,11 @@ impl From<&Ed25519PrivateKey> for MultiEd25519PrivateKey {
     }
 }
 
-impl PrivateKey for MultiEd25519PrivateKey {
+impl TPrivateKey for MultiEd25519PrivateKey {
     type PublicKeyMaterial = MultiEd25519PublicKey;
 }
 
-impl SigningKey for MultiEd25519PrivateKey {
+impl TSigningKey for MultiEd25519PrivateKey {
     type VerifyingKeyMaterial = MultiEd25519PublicKey;
     type SignatureMaterial = MultiEd25519Signature;
 
@@ -244,7 +244,7 @@ impl From<&MultiEd25519PrivateKey> for MultiEd25519PublicKey {
         let public_keys = private_key
             .private_keys
             .iter()
-            .map(PrivateKey::public_key)
+            .map(TPrivateKey::public_key)
             .collect();
         MultiEd25519PublicKey {
             public_keys,
@@ -254,7 +254,7 @@ impl From<&MultiEd25519PrivateKey> for MultiEd25519PublicKey {
 }
 
 /// We deduce PublicKey from this.
-impl PublicKey for MultiEd25519PublicKey {
+impl TPublicKey for MultiEd25519PublicKey {
     type PrivateKeyMaterial = MultiEd25519PrivateKey;
 }
 
@@ -287,9 +287,9 @@ impl TryFrom<&[u8]> for MultiEd25519PublicKey {
     }
 }
 
-/// We deduce VerifyingKey from pointing to the signature material
+/// We deduce TVerifyingKey from pointing to the signature material
 /// we get the ability to do `pubkey.validate(msg, signature)`
-impl VerifyingKey for MultiEd25519PublicKey {
+impl TVerifyingKey for MultiEd25519PublicKey {
     type SigningKeyMaterial = MultiEd25519PrivateKey;
     type SignatureMaterial = MultiEd25519Signature;
 }
@@ -446,7 +446,7 @@ impl ValidKey for MultiEd25519Signature {
     }
 }
 
-impl Signature for MultiEd25519Signature {
+impl TSignature for MultiEd25519Signature {
     type VerifyingKeyMaterial = MultiEd25519PublicKey;
     type SigningKeyMaterial = MultiEd25519PrivateKey;
 

@@ -4,8 +4,8 @@
 use crate::account_address::AccountAddress;
 use anyhow::{Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
-use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
-use libra_crypto::{ed25519::Ed25519PublicKey, traits::ValidKey, x25519};
+use libra_crypto::{ed25519::Ed25519PrivateKey, TPrivateKey, Uniform};
+use libra_crypto::{ed25519::Ed25519PublicKey, x25519, ValidKey};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};

@@ -5,7 +5,7 @@ use crate::{
     data::{LibraAccountKey, LibraStatus},
     error::*,
 };
-use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey};
+use libra_crypto::{ed25519::Ed25519PrivateKey, TPrivateKey};
 use libra_types::account_address::AccountAddress;
 use std::{convert::TryFrom, slice};
 

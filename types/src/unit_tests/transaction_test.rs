@@ -12,7 +12,7 @@ use crate::{
 use lcs::test_helpers::assert_canonical_encode_decode;
 use libra_crypto::{
     ed25519::{self, Ed25519PrivateKey, Ed25519Signature},
-    PrivateKey, Uniform,
+    TPrivateKey, Uniform,
 };
 use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use proptest::prelude::*;

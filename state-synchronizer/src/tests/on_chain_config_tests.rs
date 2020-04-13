@@ -11,7 +11,7 @@ use executor_utils::{
 use futures::{future::FutureExt, stream::StreamExt};
 use libra_crypto::{
     ed25519::*,
-    traits::{PrivateKey, Uniform},
+    traits::{TPrivateKey, Uniform},
     HashValue,
 };
 use libra_types::{

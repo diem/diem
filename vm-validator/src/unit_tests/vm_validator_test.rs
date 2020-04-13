@@ -4,7 +4,7 @@
 use crate::vm_validator::{TransactionValidation, VMValidator};
 use executor::db_bootstrapper::maybe_bootstrap_db;
 use libra_config::config::NodeConfig;
-use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use libra_crypto::{ed25519::Ed25519PrivateKey, TPrivateKey, Uniform};
 use libra_types::{
     account_address, account_config,
     account_config::{lbr_type_tag, LBR_NAME},

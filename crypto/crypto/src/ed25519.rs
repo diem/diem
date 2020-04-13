@@ -12,7 +12,7 @@
 //! use libra_crypto::hash::{CryptoHasher, TestOnlyHasher};
 //! use libra_crypto::{
 //!     ed25519::*,
-//!     traits::{Signature, SigningKey, Uniform},
+//!     traits::{TSignature, TSigningKey, Uniform},
 //! };
 //! use rand::{rngs::StdRng, SeedableRng};
 //!
@@ -160,11 +160,11 @@ impl Ed25519Signature {
 // PrivateKey Traits //
 ///////////////////////
 
-impl PrivateKey for Ed25519PrivateKey {
+impl TPrivateKey for Ed25519PrivateKey {
     type PublicKeyMaterial = Ed25519PublicKey;
 }
 
-impl SigningKey for Ed25519PrivateKey {
+impl TSigningKey for Ed25519PrivateKey {
     type VerifyingKeyMaterial = Ed25519PublicKey;
     type SignatureMaterial = Ed25519Signature;
 
@@ -245,7 +245,7 @@ impl From<&Ed25519PrivateKey> for Ed25519PublicKey {
 }
 
 // We deduce PublicKey from this
-impl PublicKey for Ed25519PublicKey {
+impl TPublicKey for Ed25519PublicKey {
     type PrivateKeyMaterial = Ed25519PrivateKey;
 }
 
@@ -265,9 +265,9 @@ impl PartialEq for Ed25519PublicKey {
 
 impl Eq for Ed25519PublicKey {}
 
-// We deduce VerifyingKey from pointing to the signature material
+// We deduce TVerifyingKey from pointing to the signature material
 // we get the ability to do `pubkey.validate(msg, signature)`
-impl VerifyingKey for Ed25519PublicKey {
+impl TVerifyingKey for Ed25519PublicKey {
     type SigningKeyMaterial = Ed25519PrivateKey;
     type SignatureMaterial = Ed25519Signature;
 }
@@ -333,7 +333,7 @@ impl ValidKey for Ed25519PublicKey {
 // Signature Traits //
 //////////////////////
 
-impl Signature for Ed25519Signature {
+impl TSignature for Ed25519Signature {
     type VerifyingKeyMaterial = Ed25519PublicKey;
     type SigningKeyMaterial = Ed25519PrivateKey;
 

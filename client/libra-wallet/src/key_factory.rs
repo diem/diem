@@ -23,7 +23,7 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     hash::HashValue,
     hkdf::Hkdf,
-    traits::SigningKey,
+    traits::TSigningKey,
 };
 use libra_types::{account_address::AccountAddress, transaction::authenticator::AuthenticationKey};
 use mirai_annotations::*;

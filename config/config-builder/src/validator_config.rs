@@ -11,7 +11,7 @@ use libra_config::{
     },
     generator::{self, ValidatorSwarm},
 };
-use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use libra_crypto::{ed25519::Ed25519PrivateKey, TPrivateKey, Uniform};
 use libra_types::{discovery_set::DiscoverySet, on_chain_config::ValidatorSet};
 use libra_vm::LibraVM;
 use parity_multiaddr::Multiaddr;

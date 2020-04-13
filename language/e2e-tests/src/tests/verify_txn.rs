@@ -7,7 +7,7 @@ use crate::{
 };
 use bytecode_verifier::VerifiedModule;
 use compiler::Compiler;
-use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use libra_crypto::{ed25519::Ed25519PrivateKey, TPrivateKey, Uniform};
 use libra_types::{
     account_config::{lbr_type_tag, CORE_CODE_ADDRESS, LBR_NAME},
     on_chain_config::VMPublishingOption,

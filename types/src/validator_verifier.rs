@@ -5,7 +5,7 @@ use crate::{account_address::AccountAddress, on_chain_config::ValidatorSet};
 use anyhow::{ensure, Result};
 use libra_crypto::{
     ed25519::{Ed25519PublicKey, Ed25519Signature},
-    HashValue, VerifyingKey,
+    HashValue, TVerifyingKey,
 };
 use mirai_annotations::*;
 use std::{collections::BTreeMap, fmt};

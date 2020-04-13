@@ -8,7 +8,7 @@ use executor_utils::{
         gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
     },
 };
-use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey, Uniform};
+use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, TPrivateKey, Uniform};
 use libra_types::{
     access_path::AccessPath,
     account_config::{association_address, lbr_type_tag, AccountResource},

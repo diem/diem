@@ -4,7 +4,7 @@
 use crate::{CryptoStorage, Error, KVStorage, Policy, PublicKeyResponse, Value};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    HashValue, PrivateKey, SigningKey, Uniform,
+    HashValue, TPrivateKey, TSigningKey, Uniform,
 };
 use rand::{rngs::OsRng, Rng, SeedableRng};
 

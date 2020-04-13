@@ -6,7 +6,7 @@ use anyhow::{ensure, Error, Result};
 use libra_crypto::{
     ed25519::{Ed25519PublicKey, Ed25519Signature},
     multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature},
-    traits::Signature,
+    traits::TSignature,
     HashValue,
 };
 use libra_crypto_derive::CryptoHasher;

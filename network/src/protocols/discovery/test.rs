@@ -16,7 +16,7 @@ use core::str::FromStr;
 use futures::channel::oneshot;
 use libra_config::config::RoleType;
 use libra_crypto::{
-    ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, x25519, PrivateKey, Uniform,
+    ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, x25519, TPrivateKey, Uniform,
 };
 use rand::prelude::*;
 use std::num::NonZeroUsize;

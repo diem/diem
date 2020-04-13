@@ -4,7 +4,7 @@
 use crate::{Action, Error, KeyManager, LibraInterface};
 use executor::{db_bootstrapper, Executor};
 use libra_config::config::NodeConfig;
-use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
+use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, TPrivateKey, Uniform};
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Policy, Value};
 use libra_secure_time::{MockTimeService, TimeService};
 use libra_types::{

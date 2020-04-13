@@ -5,7 +5,7 @@
 
 use anyhow::{Error, Result};
 use futures::stream::BoxStream;
-use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
+use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, TPrivateKey, Uniform};
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,

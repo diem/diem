@@ -6,7 +6,7 @@ use executor_utils::create_storage_service_and_executor;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     hash::{CryptoHash, HashValue},
-    PrivateKey, SigningKey, Uniform,
+    TPrivateKeySigningKey, Uniform,
 };
 use libra_logger::prelude::*;
 use libra_types::{

@@ -12,7 +12,7 @@ use libra_crypto::{
     ed25519::*,
     hash::{CryptoHash, TestOnlyHash},
     test_utils::KeyPair,
-    traits::SigningKey,
+    traits::TSigningKey,
     HashValue,
 };
 

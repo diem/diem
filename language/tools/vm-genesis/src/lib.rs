@@ -11,8 +11,7 @@ use bytecode_verifier::VerifiedModule;
 use libra_config::{config::NodeConfig, generator};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    traits::ValidKey,
-    PrivateKey, Uniform,
+    TPrivateKey, Uniform, ValidKey,
 };
 use libra_state_view::StateView;
 use libra_types::{

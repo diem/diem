@@ -11,7 +11,7 @@ use futures::executor::block_on;
 use libra_config::config::RoleType;
 use libra_crypto::{
     ed25519::Ed25519PrivateKey, hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519,
-    PrivateKey, Uniform,
+    TPrivateKey, Uniform,
 };
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{

@@ -76,7 +76,7 @@ mod tests {
     /// Generate an AccountBlob and verify we can parse it
     #[test]
     fn test_get_accountresource() {
-        use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+        use libra_crypto::{ed25519::Ed25519PrivateKey, TPrivateKey, Uniform};
         use libra_types::{
             account_config::{AccountResource, BalanceResource},
             event::{EventHandle, EventKey},
