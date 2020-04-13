@@ -668,6 +668,10 @@ impl DbReader for SyncStorageClient {
         unimplemented!()
     }
 
+    fn batch_fetch_config(&self, _access_paths: Vec<AccessPath>) -> Result<Vec<Vec<u8>>> {
+        unimplemented!()
+    }
+
     fn get_account_state_with_proof_by_version(
         &self,
         address: AccountAddress,
@@ -690,6 +694,18 @@ impl DbReader for SyncStorageClient {
     }
 
     fn get_latest_tree_state(&self) -> Result<TreeState> {
+        unimplemented!()
+    }
+
+    fn get_epoch_change_ledger_infos(
+        &self,
+        _start_epoch: u64,
+        _end_epoch: u64,
+    ) -> Result<ValidatorChangeProof> {
+        unimplemented!()
+    }
+
+    fn get_ledger_info(&self, _known_version: u64) -> Result<LedgerInfoWithSignatures> {
         unimplemented!()
     }
 }

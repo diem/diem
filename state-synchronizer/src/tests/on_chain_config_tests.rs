@@ -37,13 +37,9 @@ fn test_on_chain_config_pub_sub() {
     let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe(subscribed_configs);
 
     let (mut config, genesis_key) = config_builder::test_config();
-    let (_db, _storage_server_handle, executor) = create_storage_service_and_executor(&config);
+    let (db, _handle, executor) = create_storage_service_and_executor(&config);
     let executor = Arc::new(Mutex::new(executor));
-    let mut executor_proxy = rt.block_on(ExecutorProxy::new(
-        executor.clone(),
-        &config,
-        vec![subscription],
-    ));
+    let mut executor_proxy = ExecutorProxy::new(db, executor.clone(), vec![subscription]);
 
     assert!(
         reconfig_receiver
@@ -54,13 +50,15 @@ fn test_on_chain_config_pub_sub() {
     );
 
     // start state sync with initial loading of on-chain configs
-    rt.block_on(executor_proxy.load_on_chain_configs())
+    executor_proxy
+        .load_on_chain_configs()
         .expect("failed to load on-chain configs");
 
     ////////////////////////////////////////////////////////
     // Case 1: don't publish for no reconfiguration event //
     ////////////////////////////////////////////////////////
-    rt.block_on(executor_proxy.publish_on_chain_config_updates(vec![]))
+    executor_proxy
+        .publish_on_chain_config_updates(vec![])
         .expect("failed to publish on-chain configs");
 
     assert_eq!(
@@ -133,7 +131,8 @@ fn test_on_chain_config_pub_sub() {
         !reconfig_events.is_empty(),
         "expected reconfig events from executor commit"
     );
-    rt.block_on(executor_proxy.publish_on_chain_config_updates(reconfig_events))
+    executor_proxy
+        .publish_on_chain_config_updates(reconfig_events)
         .expect("failed to publish on-chain configs");
 
     let receive_reconfig = async {
@@ -201,7 +200,8 @@ fn test_on_chain_config_pub_sub() {
         "expected reconfig events from executor commit"
     );
 
-    rt.block_on(executor_proxy.publish_on_chain_config_updates(reconfig_events))
+    executor_proxy
+        .publish_on_chain_config_updates(reconfig_events)
         .expect("failed to publish on-chain configs");
 
     assert_eq!(

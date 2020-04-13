@@ -4,6 +4,7 @@
 use anyhow::Result;
 use libra_crypto::HashValue;
 use libra_types::{
+    access_path::AccessPath,
     account_address::AccountAddress,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::ContractEvent,
@@ -54,6 +55,16 @@ impl From<libra_secure_net::Error> for Error {
 /// Trait that is implemented by a DB that supports certain public (to client) read APIs
 /// expected of a Libra DB
 pub trait DbReader: Send + Sync {
+    /// See [`LibraDB::get_epoch_change_ledger_infos`].
+    ///
+    /// [`LibraDB::get_epoch_change_ledger_infos`]:
+    /// ../libradb/struct.LibraDB.html#method.get_epoch_change_ledger_infos
+    fn get_epoch_change_ledger_infos(
+        &self,
+        start_epoch: u64,
+        end_epoch: u64,
+    ) -> Result<ValidatorChangeProof>;
+
     /// See [`LibraDB::get_transactions`].
     ///
     /// [`LibraDB::get_transactions`]: ../libradb/struct.LibraDB.html#method.get_transactions
@@ -103,6 +114,10 @@ pub trait DbReader: Send + Sync {
     /// ../libradb/struct.LibraDB.html#method.get_startup_info
     fn get_startup_info(&self) -> Result<Option<StartupInfo>>;
 
+    /// Returns a vector of on-chain configs as serialized byte array
+    /// Order of on-chain configs returned matches the order of `access_path`
+    fn batch_fetch_config(&self, access_paths: Vec<AccessPath>) -> Result<Vec<Vec<u8>>>;
+
     fn get_txn_by_account(
         &self,
         address: AccountAddress,
@@ -138,22 +153,32 @@ pub trait DbReader: Send + Sync {
         ledger_version: Version,
     ) -> Result<AccountStateWithProof>;
 
-    /// Gets an account state by account address, out of the ledger state indicated by the state
-    /// Merkle tree root hash.
-    ///
-    /// This is used by libra core (executor) internally.
+    // Gets an account state by account address, out of the ledger state indicated by the state
+    // Merkle tree root with a sparse merkle proof proving state tree root.
+    // See [`LibraDB::get_account_state_with_proof_by_version`].
+    //
+    // [`LibraDB::get_account_state_with_proof_by_version`]:
+    // ../libradb/struct.LibraDB.html#method.get_account_state_with_proof_by_version
+    //
+    // This is used by libra core (executor) internally.
     fn get_account_state_with_proof_by_version(
         &self,
         address: AccountAddress,
         version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)>;
 
-    /// Gets the latest state root hash together with its version.
+    /// See [`LibraDB::get_latest_state_root`].
+    ///
+    /// [`LibraDB::get_latest_state_root`]:
+    /// ../libradb/struct.LibraDB.html#method.get_latest_state_root
     fn get_latest_state_root(&self) -> Result<(Version, HashValue)>;
 
     /// Gets the latest TreeState no matter if db has been bootstrapped.
     /// Used by the Db-bootstrapper.
     fn get_latest_tree_state(&self) -> Result<TreeState>;
+
+    /// Get the ledger info of the epoch that `known_version` belongs to.
+    fn get_ledger_info(&self, known_version: u64) -> Result<LedgerInfoWithSignatures>;
 }
 
 /// Trait that is implemented by a DB that supports certain public (to client) write APIs

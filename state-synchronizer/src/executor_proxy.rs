@@ -6,7 +6,6 @@ use anyhow::{ensure, format_err, Result};
 use executor::{ChunkExecutor, Executor};
 use executor_types::ExecutedTrees;
 use itertools::Itertools;
-use libra_config::config::NodeConfig;
 use libra_types::{
     account_config::association_address,
     account_state::AccountState,
@@ -22,17 +21,16 @@ use std::{
     convert::TryFrom,
     sync::{Arc, Mutex},
 };
-use storage_client::{StorageRead, StorageReadServiceClient};
+use storage_interface::DbReader;
 use subscription_service::ReconfigSubscription;
 
 /// Proxies interactions with execution and storage for state synchronization
-#[async_trait::async_trait]
 pub trait ExecutorProxyTrait: Sync + Send {
     /// Sync the local state with the latest in storage.
-    async fn get_local_storage_state(&self) -> Result<SynchronizerState>;
+    fn get_local_storage_state(&self) -> Result<SynchronizerState>;
 
     /// Execute and commit a batch of transactions
-    async fn execute_chunk(
+    fn execute_chunk(
         &mut self,
         txn_list_with_proof: TransactionListWithProof,
         verified_target_li: LedgerInfoWithSignatures,
@@ -41,7 +39,7 @@ pub trait ExecutorProxyTrait: Sync + Send {
     ) -> Result<()>;
 
     /// Gets chunk of transactions given the known version, target version and the max limit.
-    async fn get_chunk(
+    fn get_chunk(
         &self,
         known_version: u64,
         limit: u64,
@@ -49,43 +47,36 @@ pub trait ExecutorProxyTrait: Sync + Send {
     ) -> Result<TransactionListWithProof>;
 
     /// Get the epoch change ledger info for [start_epoch, end_epoch) so that we can move to end_epoch.
-    async fn get_epoch_proof(
-        &self,
-        start_epoch: u64,
-        end_epoch: u64,
-    ) -> Result<ValidatorChangeProof>;
+    fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<ValidatorChangeProof>;
 
     /// Tries to find a LedgerInfo for a given version.
-    async fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures>;
+    fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures>;
 
     /// Load all on-chain configs from storage
     /// Note: this method is being exposed as executor proxy trait temporarily because storage read is currently
     /// using the tonic storage read client, which needs the tokio runtime to block on with no runtime/async issues
     /// Once we make storage reads sync (by replacing the storage read client with direct LibraDB),
     /// we can make this entirely internal to `ExecutorProxy`'s initialization procedure
-    async fn load_on_chain_configs(&mut self) -> Result<()>;
+    fn load_on_chain_configs(&mut self) -> Result<()>;
 
     /// publishes on-chain config updates to subscribed components
-    async fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<()>;
+    fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<()>;
 }
 
 pub(crate) struct ExecutorProxy {
-    storage_read_client: Arc<dyn StorageRead>,
+    storage: Arc<dyn DbReader>,
     executor: Arc<Mutex<Executor<LibraVM>>>,
     reconfig_subscriptions: Vec<ReconfigSubscription>,
     on_chain_configs: OnChainConfigPayload,
 }
 
 impl ExecutorProxy {
-    pub(crate) async fn new(
+    pub(crate) fn new(
+        storage: Arc<dyn DbReader>,
         executor: Arc<Mutex<Executor<LibraVM>>>,
-        config: &NodeConfig,
         mut reconfig_subscriptions: Vec<ReconfigSubscription>,
     ) -> Self {
-        let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
-
-        let on_chain_configs = Self::fetch_all_configs(storage_read_client.clone())
-            .await
+        let on_chain_configs = Self::fetch_all_configs(&*storage)
             .expect("[state sync] Failed initial read of on-chain configs");
         for subscription in reconfig_subscriptions.iter_mut() {
             subscription
@@ -93,7 +84,7 @@ impl ExecutorProxy {
                 .expect("[state sync] Failed to publish initial on-chain config");
         }
         Self {
-            storage_read_client,
+            storage,
             executor,
             reconfig_subscriptions,
             on_chain_configs,
@@ -102,15 +93,14 @@ impl ExecutorProxy {
 
     // TODO make this into more general trait method in `on_chain_config`
     // once `StorageRead` trait is replaced with `DbReader` and `batch_fetch_config` method is no longer async
-    async fn fetch_all_configs(client: Arc<dyn StorageRead>) -> Result<OnChainConfigPayload> {
+    fn fetch_all_configs(storage: &dyn DbReader) -> Result<OnChainConfigPayload> {
         let access_paths = ON_CHAIN_CONFIG_REGISTRY
             .iter()
             .map(|config_id| config_id.access_path())
             .collect();
-        let configs = client.batch_fetch_config(access_paths).await?;
-        let epoch = client
-            .get_latest_account_state(association_address())
-            .await?
+        let configs = storage.batch_fetch_config(access_paths)?;
+        let epoch = storage
+            .get_latest_account_state(association_address())?
             .map(|blob| {
                 AccountState::try_from(&blob).and_then(|state| {
                     Ok(state
@@ -134,13 +124,11 @@ impl ExecutorProxy {
     }
 }
 
-#[async_trait::async_trait]
 impl ExecutorProxyTrait for ExecutorProxy {
-    async fn get_local_storage_state(&self) -> Result<SynchronizerState> {
+    fn get_local_storage_state(&self) -> Result<SynchronizerState> {
         let storage_info = self
-            .storage_read_client
-            .get_startup_info()
-            .await?
+            .storage
+            .get_startup_info()?
             .ok_or_else(|| format_err!("[state sync] Failed to access storage info"))?;
 
         let current_verifier = storage_info.get_validator_set().into();
@@ -158,7 +146,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
         ))
     }
 
-    async fn execute_chunk(
+    fn execute_chunk(
         &mut self,
         txn_list_with_proof: TransactionListWithProof,
         verified_target_li: LedgerInfoWithSignatures,
@@ -170,62 +158,49 @@ impl ExecutorProxyTrait for ExecutorProxy {
             verified_target_li,
             intermediate_end_of_epoch_li,
         )?;
-        self.publish_on_chain_config_updates(reconfig_events).await
+        self.publish_on_chain_config_updates(reconfig_events)
     }
 
-    async fn get_chunk(
+    fn get_chunk(
         &self,
         known_version: u64,
         limit: u64,
         target_version: u64,
     ) -> Result<TransactionListWithProof> {
-        self.storage_read_client
+        self.storage
             .get_transactions(known_version + 1, limit, target_version, false)
-            .await
     }
 
-    async fn get_epoch_proof(
-        &self,
-        start_epoch: u64,
-        end_epoch: u64,
-    ) -> Result<ValidatorChangeProof> {
+    fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<ValidatorChangeProof> {
         let validator_change_proof = self
-            .storage_read_client
-            .get_epoch_change_ledger_infos(start_epoch, end_epoch)
-            .await?;
+            .storage
+            .get_epoch_change_ledger_infos(start_epoch, end_epoch)?;
         Ok(validator_change_proof)
     }
 
-    async fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
-        let (_, _, li_chain, _) = self
-            .storage_read_client
-            .update_to_latest_ledger(version, vec![])
-            .await?;
-        let waypoint_li = li_chain
-            .ledger_info_with_sigs
-            .first()
-            .ok_or_else(|| format_err!("No waypoint found for version {}", version))?;
+    fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
+        let waypoint_li = self.storage.get_ledger_info(version)?;
         ensure!(
             waypoint_li.ledger_info().version() == version,
             "Version of Waypoint LI {} is different from requested waypoint version {}",
             waypoint_li.ledger_info().version(),
             version
         );
-        Ok(waypoint_li.clone())
+        Ok(waypoint_li)
     }
 
-    async fn load_on_chain_configs(&mut self) -> Result<()> {
-        self.on_chain_configs = Self::fetch_all_configs(self.storage_read_client.clone()).await?;
+    fn load_on_chain_configs(&mut self) -> Result<()> {
+        self.on_chain_configs = Self::fetch_all_configs(&*self.storage)?;
         Ok(())
     }
 
-    async fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<()> {
+    fn publish_on_chain_config_updates(&mut self, events: Vec<ContractEvent>) -> Result<()> {
         if events.is_empty() {
             return Ok(());
         }
 
         // calculate deltas
-        let new_configs = Self::fetch_all_configs(self.storage_read_client.clone()).await?;
+        let new_configs = Self::fetch_all_configs(&*self.storage)?;
         let changed_configs = new_configs
             .configs()
             .iter()

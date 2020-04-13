@@ -44,7 +44,7 @@ use crate::{
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
-use anyhow::{ensure, Result};
+use anyhow::{ensure, format_err, Result};
 use itertools::{izip, zip_eq};
 use jellyfish_merkle::restore::JellyfishMerkleRestore;
 use libra_crypto::hash::{CryptoHash, HashValue, SPARSE_MERKLE_PLACEHOLDER_HASH};
@@ -53,6 +53,7 @@ use libra_metrics::OpMetrics;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
+    account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
     event::EventKey,
@@ -71,7 +72,14 @@ use libra_types::{
 use once_cell::sync::Lazy;
 use prometheus::{IntCounter, IntGauge, IntGaugeVec};
 use schemadb::{DB, DEFAULT_CF_NAME};
-use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
+use std::{
+    collections::{HashMap, HashSet},
+    convert::TryFrom,
+    iter::Iterator,
+    path::Path,
+    sync::Arc,
+    time::Instant,
+};
 use storage_interface::{DbReader, DbWriter};
 use storage_proto::{StartupInfo, TreeState};
 
@@ -612,6 +620,16 @@ impl LibraDB {
 }
 
 impl DbReader for LibraDB {
+    fn get_epoch_change_ledger_infos(
+        &self,
+        start_epoch: u64,
+        end_epoch: u64,
+    ) -> Result<ValidatorChangeProof> {
+        let (ledger_info_with_sigs, more) =
+            Self::get_epoch_change_ledger_infos(&self, start_epoch, end_epoch)?;
+        Ok(ValidatorChangeProof::new(ledger_info_with_sigs, more))
+    }
+
     fn get_latest_account_state(
         &self,
         address: AccountAddress,
@@ -712,6 +730,18 @@ impl DbReader for LibraDB {
             .map(|e| (e.transaction_version, e.event))
             .collect();
         Ok(events)
+    }
+
+    fn get_ledger_info(&self, known_version: u64) -> Result<LedgerInfoWithSignatures> {
+        let known_epoch = self.ledger_store.get_epoch(known_version)?;
+        let (mut ledger_infos_with_sigs, _more) =
+            self.get_epoch_change_ledger_infos(known_epoch, known_epoch + 1)?;
+        ledger_infos_with_sigs.pop().ok_or_else(|| {
+            format_err!(
+                "No waypoint ledger info found for version {}",
+                known_version
+            )
+        })
     }
 
     fn get_state_proof_with_ledger_info(
@@ -819,6 +849,53 @@ impl DbReader for LibraDB {
         };
 
         Ok(tree_state)
+    }
+
+    // TODO migrate this to `ConfigStorage` trait as non-async
+    fn batch_fetch_config(&self, access_paths: Vec<AccessPath>) -> Result<Vec<Vec<u8>>> {
+        // some access paths can have the same address, so don't duplicate requests for them
+        let addresses: Vec<AccountAddress> = access_paths
+            .iter()
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .map(|path| path.address)
+            .collect();
+
+        let requests: Vec<RequestItem> = addresses
+            .iter()
+            .map(|addr| RequestItem::GetAccountState { address: *addr })
+            .collect();
+
+        let responses = self.update_to_latest_ledger(0, requests)?.0;
+
+        // Account address --> AccountState
+        let account_states = addresses
+            .into_iter()
+            .zip(responses)
+            .map(|(addr, resp)| {
+                let account_state = AccountState::try_from(
+                    &resp
+                        .into_get_account_state_response()?
+                        .blob
+                        .ok_or_else(|| {
+                            format_err!("missing blob in account state/account does not exist")
+                        })?,
+                )?;
+                Ok((addr, account_state))
+            })
+            .collect::<Result<HashMap<_, AccountState>>>()?;
+
+        access_paths
+            .into_iter()
+            .map(|path| {
+                Ok(account_states
+                    .get(&path.address)
+                    .ok_or_else(|| format_err!("missing account state for queried access path"))?
+                    .get(&path.path)
+                    .ok_or_else(|| format_err!("no value found in account state"))?
+                    .clone())
+            })
+            .collect()
     }
 }
 

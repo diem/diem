@@ -24,6 +24,7 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
+use storage_interface::DbReader;
 use subscription_service::ReconfigSubscription;
 use tokio::{
     runtime::{Builder, Runtime},
@@ -40,22 +41,19 @@ impl StateSynchronizer {
     pub fn bootstrap(
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
+        storage: Arc<dyn DbReader>,
         executor: Arc<Mutex<Executor<LibraVM>>>,
         config: &NodeConfig,
         reconfig_event_subscriptions: Vec<ReconfigSubscription>,
     ) -> Self {
-        let mut runtime = Builder::new()
+        let runtime = Builder::new()
             .thread_name("state-sync-")
             .threaded_scheduler()
             .enable_all()
             .build()
             .expect("[state synchronizer] failed to create runtime");
 
-        let executor_proxy = runtime.block_on(ExecutorProxy::new(
-            executor,
-            config,
-            reconfig_event_subscriptions,
-        ));
+        let executor_proxy = ExecutorProxy::new(storage, executor, reconfig_event_subscriptions);
         Self::bootstrap_with_executor_proxy(
             runtime,
             network,
@@ -68,7 +66,7 @@ impl StateSynchronizer {
     }
 
     pub fn bootstrap_with_executor_proxy<E: ExecutorProxyTrait + 'static>(
-        mut runtime: Runtime,
+        runtime: Runtime,
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
         role: RoleType,
@@ -78,8 +76,8 @@ impl StateSynchronizer {
     ) -> Self {
         let (coordinator_sender, coordinator_receiver) = mpsc::unbounded();
 
-        let initial_state = runtime
-            .block_on(executor_proxy.get_local_storage_state())
+        let initial_state = executor_proxy
+            .get_local_storage_state()
             .expect("[state sync] Start failure: cannot sync with storage.");
 
         let coordinator = SyncCoordinator::new(

@@ -33,6 +33,7 @@ network = { path = "../network", version = "0.1.0" }
 libra-json-rpc = { path = "../json-rpc", version = "0.1.0" }
 state-synchronizer = { path = "../state-synchronizer", version = "0.1.0" }
 storage-client = { path = "../storage/storage-client", version = "0.1.0" }
+storage-interface= { path = "../storage/storage-interface", version = "0.1.0" }
 storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 subscription-service = { path = "../common/subscription-service", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
