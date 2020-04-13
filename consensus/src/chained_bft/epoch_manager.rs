@@ -253,7 +253,7 @@ impl<T: Payload> EpochManager<T> {
         if let Err(e) = self.state_computer.sync_to(ledger_info.clone()).await {
             error!("State sync to new epoch {} failed with {:?}, we'll try to start from current libradb", ledger_info, e);
         }
-        self.start_processor().await
+        // state_computer notifies reconfiguration in another channel
     }
 
     async fn start_event_processor(&mut self, recovery_data: RecoveryData<T>) {
