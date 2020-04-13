@@ -293,6 +293,7 @@ impl SynchronizerEnv {
         )));
         let (mempool_channel, mempool_requests) = futures::channel::mpsc::channel(1_024);
         let synchronizer = StateSynchronizer::bootstrap_with_executor_proxy(
+            Runtime::new().unwrap(),
             vec![(sender, events)],
             mempool_channel,
             role,
