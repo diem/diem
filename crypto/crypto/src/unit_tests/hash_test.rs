@@ -8,7 +8,7 @@ use rand::{rngs::StdRng, SeedableRng};
 use serde::Serialize;
 
 #[derive(Serialize)]
-struct Foo(u32);
+struct Foo(#[serde(with = "lcs::fixed_size")] u32);
 
 #[test]
 fn test_default_hasher() {
@@ -28,19 +28,19 @@ fn test_default_hasher() {
 
 #[test]
 fn test_primitive_type() {
-    let x = 0xf312_u16;
+    let x = 0xf312_u16.to_le_bytes();
     let mut wtr: Vec<u8> = vec![];
-    wtr.extend_from_slice(&x.to_le_bytes());
+    wtr.extend_from_slice(&x);
     assert_eq!(x.test_only_hash(), HashValue::from_sha3_256(&wtr[..]));
 
-    let x = 0x_ff001234_u32;
+    let x = 0x_ff001234_u32.to_le_bytes();
     let mut wtr: Vec<u8> = vec![];
-    wtr.extend_from_slice(&x.to_le_bytes());
+    wtr.extend_from_slice(&x);
     assert_eq!(x.test_only_hash(), HashValue::from_sha3_256(&wtr[..]));
 
-    let x = 0x_89abcdef_01234567_u64;
+    let x = 0x_89abcdef_01234567_u64.to_le_bytes();
     let mut wtr: Vec<u8> = vec![];
-    wtr.extend_from_slice(&x.to_le_bytes());
+    wtr.extend_from_slice(&x);
     assert_eq!(x.test_only_hash(), HashValue::from_sha3_256(&wtr[..]));
 }
 
