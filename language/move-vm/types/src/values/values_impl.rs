@@ -1960,9 +1960,9 @@ fn invariant_violation<S: serde::Serializer>(message: String) -> S::Error {
 impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, Type, ValueImpl> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match (self.ty, self.val) {
-            (Type::U8, ValueImpl::U8(x)) => serializer.serialize_u8(*x),
-            (Type::U64, ValueImpl::U64(x)) => serializer.serialize_u64(*x),
-            (Type::U128, ValueImpl::U128(x)) => serializer.serialize_u128(*x),
+            (Type::U8, ValueImpl::U8(x)) => x.serialize(serializer),
+            (Type::U64, ValueImpl::U64(x)) => x.to_le_bytes().serialize(serializer),
+            (Type::U128, ValueImpl::U128(x)) => x.to_le_bytes().serialize(serializer),
             (Type::Bool, ValueImpl::Bool(x)) => serializer.serialize_bool(*x),
             (Type::Address, ValueImpl::Address(x)) => x.serialize(serializer),
 
@@ -1979,8 +1979,18 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, Type, ValueImpl> {
                 let ty = &**ty;
                 match (ty, &*r.borrow()) {
                     (Type::U8, Container::U8(v)) => v.serialize(serializer),
-                    (Type::U64, Container::U64(v)) => v.serialize(serializer),
-                    (Type::U128, Container::U128(v)) => v.serialize(serializer),
+                    (Type::U64, Container::U64(v)) => v
+                        .iter()
+                        .cloned()
+                        .map(u64::to_le_bytes)
+                        .collect::<Vec<_>>()
+                        .serialize(serializer),
+                    (Type::U128, Container::U128(v)) => v
+                        .iter()
+                        .cloned()
+                        .map(u128::to_le_bytes)
+                        .collect::<Vec<_>>()
+                        .serialize(serializer),
                     (Type::Bool, Container::Bool(v)) => v.serialize(serializer),
 
                     (_, Container::General(v)) => {
@@ -2042,8 +2052,12 @@ impl<'d> serde::de::DeserializeSeed<'d> for &Type {
         match self {
             Type::Bool => bool::deserialize(deserializer).map(Value::bool),
             Type::U8 => u8::deserialize(deserializer).map(Value::u8),
-            Type::U64 => u64::deserialize(deserializer).map(Value::u64),
-            Type::U128 => u128::deserialize(deserializer).map(Value::u128),
+            Type::U64 => {
+                <[u8; 8]>::deserialize(deserializer).map(|x| Value::u64(u64::from_le_bytes(x)))
+            }
+            Type::U128 => {
+                <[u8; 16]>::deserialize(deserializer).map(|x| Value::u128(u128::from_le_bytes(x)))
+            }
             Type::Address => AccountAddress::deserialize(deserializer).map(Value::address),
 
             Type::Struct(ty) => Ok(Value::struct_(ty.deserialize(deserializer)?)),
@@ -2051,8 +2065,18 @@ impl<'d> serde::de::DeserializeSeed<'d> for &Type {
             Type::Vector(layout) => {
                 let container = match &**layout {
                     Type::U8 => Container::U8(Vec::deserialize(deserializer)?),
-                    Type::U64 => Container::U64(Vec::deserialize(deserializer)?),
-                    Type::U128 => Container::U128(Vec::deserialize(deserializer)?),
+                    Type::U64 => Container::U64(
+                        Vec::deserialize(deserializer)?
+                            .into_iter()
+                            .map(u64::from_le_bytes)
+                            .collect(),
+                    ),
+                    Type::U128 => Container::U128(
+                        Vec::deserialize(deserializer)?
+                            .into_iter()
+                            .map(u128::from_le_bytes)
+                            .collect(),
+                    ),
                     Type::Bool => Container::Bool(Vec::deserialize(deserializer)?),
                     layout => Container::General(
                         deserializer.deserialize_seq(VectorElementVisitor(layout))?,
