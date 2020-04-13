@@ -19,7 +19,7 @@ use libra_types::{
     vm_error::{StatusCode, StatusType, VMStatus},
 };
 use stdlib::transaction_scripts::StdlibScript;
-use transaction_builder::encode_transfer_script;
+use transaction_builder::encode_transfer_with_metadata_script;
 use vm::gas_schedule::{self, GasAlgebra};
 
 #[test]
@@ -29,7 +29,8 @@ fn verify_signature() {
     executor.add_account_data(&sender);
     // Generate a new key pair to try and sign things with.
     let private_key = Ed25519PrivateKey::generate_for_testing();
-    let program = encode_transfer_script(lbr_type_tag(), sender.address(), vec![], 100);
+    let program =
+        encode_transfer_with_metadata_script(lbr_type_tag(), sender.address(), vec![], 100, vec![]);
     let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
         *sender.address(),
         0,
@@ -52,7 +53,8 @@ fn verify_reserved_sender() {
     executor.add_account_data(&sender);
     // Generate a new key pair to try and sign things with.
     let private_key = Ed25519PrivateKey::generate_for_testing();
-    let program = encode_transfer_script(lbr_type_tag(), sender.address(), vec![], 100);
+    let program =
+        encode_transfer_with_metadata_script(lbr_type_tag(), sender.address(), vec![], 100, vec![]);
     let signed_txn = transaction_test_helpers::get_test_signed_txn(
         CORE_CODE_ADDRESS,
         0,

@@ -507,11 +507,12 @@ impl ClientProxy {
             let sender = self.accounts.get(sender_account_ref_id).ok_or_else(|| {
                 format_err!("Unable to find sender account: {}", sender_account_ref_id)
             })?;
-            let program = transaction_builder::encode_transfer_script(
+            let program = transaction_builder::encode_transfer_with_metadata_script(
                 lbr_type_tag(),
                 &receiver_address,
                 receiver_auth_key_prefix,
                 num_coins,
+                vec![],
             );
             let txn = self.create_txn_to_submit(
                 TransactionPayload::Script(program),
@@ -551,11 +552,12 @@ impl ClientProxy {
         gas_unit_price: Option<u64>,
         max_gas_amount: Option<u64>,
     ) -> Result<RawTransaction> {
-        let program = transaction_builder::encode_transfer_script(
+        let program = transaction_builder::encode_transfer_with_metadata_script(
             lbr_type_tag(),
             &receiver_address,
             receiver_auth_key_prefix,
             num_coins,
+            vec![],
         );
 
         Ok(create_unsigned_txn(

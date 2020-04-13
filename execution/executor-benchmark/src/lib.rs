@@ -22,7 +22,7 @@ use libra_vm::LibraVM;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::BTreeMap, convert::TryFrom, path::PathBuf, sync::mpsc};
 use storage_client::{StorageRead, StorageReadServiceClient};
-use transaction_builder::{encode_create_account_script, encode_transfer_script};
+use transaction_builder::{encode_create_account_script, encode_transfer_with_metadata_script};
 
 struct AccountData {
     private_key: Ed25519PrivateKey,
@@ -141,11 +141,12 @@ impl TransactionGenerator {
                     sender.sequence_number,
                     &sender.private_key,
                     sender.public_key.clone(),
-                    encode_transfer_script(
+                    encode_transfer_with_metadata_script(
                         lbr_type_tag(),
                         &receiver.address,
                         receiver.auth_key_prefix(),
                         1, /* amount */
+                        vec![],
                     ),
                 );
                 transactions.push(txn);

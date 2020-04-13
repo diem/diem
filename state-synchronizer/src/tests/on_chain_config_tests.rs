@@ -24,7 +24,7 @@ use stdlib::transaction_scripts::StdlibScript;
 use subscription_service::ReconfigSubscription;
 use transaction_builder::{
     encode_block_prologue_script, encode_publishing_option_script,
-    encode_rotate_consensus_pubkey_script, encode_transfer_script,
+    encode_rotate_consensus_pubkey_script, encode_transfer_with_metadata_script,
 };
 
 // TODO test for subscription with multiple subscribed configs once there are >1 on-chain configs
@@ -152,11 +152,12 @@ fn test_on_chain_config_pub_sub() {
         /* sequence_number = */ 2,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_transfer_script(
+        Some(encode_transfer_with_metadata_script(
             lbr_type_tag(),
             &validator_account,
             validator_auth_key_prefix,
             1_000_000,
+            vec![],
         )),
     );
 

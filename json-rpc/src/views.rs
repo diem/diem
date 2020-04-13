@@ -330,20 +330,6 @@ impl From<TransactionPayload> for ScriptView {
         };
 
         let res = match code.as_str() {
-            "peer_to_peer_transaction" => {
-                if let [TransactionArgument::Address(receiver), TransactionArgument::U8Vector(auth_key_prefix), TransactionArgument::U64(amount)] =
-                    &args[..]
-                {
-                    Ok(ScriptView::PeerToPeer {
-                        receiver: receiver.to_string(),
-                        auth_key_prefix: BytesView::from(auth_key_prefix),
-                        amount: *amount,
-                        metadata: BytesView::from(&[0u8; 0][..]),
-                    })
-                } else {
-                    Err(format_err!("Unable to parse PeerToPeer arguments"))
-                }
-            }
             "peer_to_peer_with_metadata_transaction" => {
                 if let [TransactionArgument::Address(receiver), TransactionArgument::U8Vector(auth_key_prefix), TransactionArgument::U64(amount), TransactionArgument::U8Vector(metadata)] =
                     &args[..]
