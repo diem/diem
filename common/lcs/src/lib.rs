@@ -350,6 +350,41 @@ pub mod fixed_size {
     }
 }
 
+pub mod fixed_size_option {
+
+    use crate::fixed_size::FixedSized;
+    use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
+
+    pub fn serialize<T, S>(value: &Option<T>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        T: Serialize + FixedSized,
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            value.serialize(serializer)
+        } else {
+            // TODO: Make it possible for serde-reflection to understand what's happening.
+            value
+                .as_ref()
+                .map(FixedSized::to_array)
+                .serialize(serializer)
+        }
+    }
+
+    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
+    where
+        T: Deserialize<'de> + FixedSized,
+        D: Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            <Option<T>>::deserialize(deserializer)
+        } else {
+            let value = <Option<T::Array>>::deserialize(deserializer)?;
+            Ok(value.map(T::from_array))
+        }
+    }
+}
+
 pub mod backward_compatibility {
 
     use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
