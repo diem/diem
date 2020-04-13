@@ -1,7 +1,0 @@
-import 0x0.GasSchedule;
-
-main() {
-  assert(GasSchedule.instruction_table_size() == 69, GasSchedule.instruction_table_size());
-  assert(GasSchedule.native_table_size() == 17, GasSchedule.instruction_table_size());
-  return;
-}

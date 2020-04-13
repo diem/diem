@@ -9,7 +9,7 @@ use crate::{
 use libra_crypto::{ed25519::*, hash::CryptoHash, traits::*};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-const MAX_GAS_AMOUNT: u64 = 400_000;
+const MAX_GAS_AMOUNT: u64 = 600_000;
 const MAX_GAS_PRICE: u64 = 1;
 
 static EMPTY_SCRIPT: &[u8] =

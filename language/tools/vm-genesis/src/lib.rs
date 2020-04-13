@@ -5,7 +5,7 @@
 
 mod genesis_gas_schedule;
 
-use crate::genesis_gas_schedule::initial_gas_schedule;
+use crate::genesis_gas_schedule::INITIAL_GAS_SCHEDULE;
 use anyhow::Result;
 use bytecode_verifier::VerifiedModule;
 use libra_config::{config::NodeConfig, generator};
@@ -26,8 +26,10 @@ use libra_types::{
     transaction::{authenticator::AuthenticationKey, ChangeSet, Transaction},
 };
 use libra_vm::system_module_names::*;
-use move_core_types::gas_schedule::{CostTable, GasAlgebra, GasUnits};
-use move_core_types::identifier::Identifier;
+use move_core_types::{
+    gas_schedule::{CostTable, GasAlgebra, GasUnits},
+    identifier::Identifier,
+};
 use move_vm_runtime::MoveVM;
 use move_vm_state::{
     data_cache::BlockDataCache,
@@ -87,10 +89,10 @@ static ASSOCIATION_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     )
 });
 
-static SCRIPT_WHITELIST_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+static VM_CONFIG_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         account_config::CORE_CODE_ADDRESS,
-        Identifier::new("ScriptWhitelist").unwrap(),
+        Identifier::new("LibraVMConfig").unwrap(),
     )
 });
 
@@ -169,7 +171,6 @@ pub fn encode_genesis_change_set(
         &gas_schedule,
         &mut interpreter_context,
         &public_key,
-        initial_gas_schedule(&move_vm, &data_cache),
     );
     create_and_initialize_validator_and_discovery_set(
         &move_vm,
@@ -180,7 +181,7 @@ pub fn encode_genesis_change_set(
         &discovery_set,
     );
     setup_libra_version(&move_vm, &gas_schedule, &mut interpreter_context);
-    setup_publishing_option(
+    setup_vm_config(
         &move_vm,
         &gas_schedule,
         &mut interpreter_context,
@@ -223,7 +224,6 @@ fn create_and_initialize_main_accounts(
     gas_schedule: &CostTable,
     interpreter_context: &mut TransactionExecutionContext,
     public_key: &Ed25519PublicKey,
-    initial_gas_schedule: Value,
 ) {
     let association_addr = account_config::association_address();
     let mut txn_data = TransactionMetadata::default();
@@ -344,17 +344,6 @@ fn create_and_initialize_main_accounts(
             vec![],
         )
         .expect("Failure initializing block metadata");
-    move_vm
-        .execute_function(
-            &GAS_SCHEDULE_MODULE,
-            &INITIALIZE,
-            &gas_schedule,
-            interpreter_context,
-            &txn_data,
-            vec![],
-            vec![initial_gas_schedule],
-        )
-        .expect("Failure initializing gas module");
 
     move_vm
         .execute_function(
@@ -651,7 +640,7 @@ fn initialize_validators(
     }
 }
 
-fn setup_publishing_option(
+fn setup_vm_config(
     move_vm: &MoveVM,
     gas_schedule: &CostTable,
     interpreter_context: &mut TransactionExecutionContext,
@@ -664,13 +653,17 @@ fn setup_publishing_option(
         lcs::to_bytes(&publishing_option).expect("Cannot serialize publishing option");
     move_vm
         .execute_function(
-            &SCRIPT_WHITELIST_MODULE,
+            &VM_CONFIG_MODULE,
             &INITIALIZE,
             &gas_schedule,
             interpreter_context,
             &txn_data,
             vec![],
-            vec![Value::vector_u8(option_bytes)],
+            vec![
+                Value::vector_u8(option_bytes),
+                Value::vector_u8(INITIAL_GAS_SCHEDULE.0.clone()),
+                Value::vector_u8(INITIAL_GAS_SCHEDULE.1.clone()),
+            ],
         )
         .expect("Failure setting up publishing option");
 }

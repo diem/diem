@@ -151,5 +151,4 @@ pub type MempoolClientSender =
     mpsc::Sender<(SignedTransaction, oneshot::Sender<Result<SubmissionStatus>>)>;
 
 /// On-chain configs that mempool subscribes to for reconfiguration
-pub const MEMPOOL_SUBSCRIBED_CONFIGS: &[ConfigID] =
-    &[LibraVersion::CONFIG_ID, VMPublishingOption::CONFIG_ID];
+pub const MEMPOOL_SUBSCRIBED_CONFIGS: &[ConfigID] = &[LibraVersion::CONFIG_ID, VMConfig::CONFIG_ID];

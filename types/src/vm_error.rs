@@ -683,6 +683,7 @@ pub mod sub_status {
     pub const AED_DIVISION_BY_ZERO: u64 = 3;
 
     pub const VSF_GAS_SCHEDULE_NOT_FOUND: u64 = 0;
+    pub const VSF_LIBRA_VERSION_NOT_FOUND: u64 = 1;
 
     // Dynamic Reference status sub-codes
     pub const DRE_UNKNOWN_DYNAMIC_REFERENCE_ERROR: u64 = 0;

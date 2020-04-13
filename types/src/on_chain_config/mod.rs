@@ -15,11 +15,12 @@ use std::{collections::HashMap, sync::Arc};
 
 mod libra_version;
 mod validator_set;
-mod vm_publishing_option;
+mod vm_config;
 
 pub use self::{
-    libra_version::LibraVersion, validator_set::ValidatorSet,
-    vm_publishing_option::VMPublishingOption,
+    libra_version::LibraVersion,
+    validator_set::ValidatorSet,
+    vm_config::{VMConfig, VMPublishingOption},
 };
 use crate::move_resource::MoveResource;
 
@@ -41,7 +42,7 @@ impl ConfigID {
 
 /// State sync will panic if the value of any config in this registry is uninitialized
 pub const ON_CHAIN_CONFIG_REGISTRY: &[ConfigID] = &[
-    VMPublishingOption::CONFIG_ID,
+    VMConfig::CONFIG_ID,
     LibraVersion::CONFIG_ID,
     ValidatorSet::CONFIG_ID,
 ];

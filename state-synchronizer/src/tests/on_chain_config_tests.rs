@@ -17,7 +17,7 @@ use libra_crypto::{
 };
 use libra_types::{
     account_config::{association_address, lbr_type_tag},
-    on_chain_config::{OnChainConfig, VMPublishingOption},
+    on_chain_config::{OnChainConfig, VMConfig, VMPublishingOption},
     transaction::authenticator::AuthenticationKey,
 };
 use std::sync::{Arc, Mutex};
@@ -33,7 +33,7 @@ use transaction_builder::{
 fn test_on_chain_config_pub_sub() {
     let mut rt = tokio::runtime::Runtime::new().unwrap();
     // set up reconfig subscription
-    let subscribed_configs = &[VMPublishingOption::CONFIG_ID];
+    let subscribed_configs = &[VMConfig::CONFIG_ID];
     let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe(subscribed_configs);
 
     let (mut config, genesis_key) = config_builder::test_config();
@@ -137,8 +137,8 @@ fn test_on_chain_config_pub_sub() {
 
     let receive_reconfig = async {
         let payload = reconfig_receiver.select_next_some().await;
-        let received_config = payload.get::<VMPublishingOption>().unwrap();
-        assert_eq!(received_config, vm_publishing_option);
+        let received_config = payload.get::<VMConfig>().unwrap();
+        assert_eq!(received_config.publishing_option, vm_publishing_option);
     };
 
     rt.block_on(receive_reconfig);
