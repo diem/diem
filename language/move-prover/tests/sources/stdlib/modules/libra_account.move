@@ -194,6 +194,11 @@ module LibraAccount {
     fun withdraw_from_balance<Token>(balance: &mut Balance<Token>, amount: u64): Libra::T<Token> {
         Libra::withdraw(&mut balance.coin, amount)
     }
+    spec fun withdraw_from_balance {
+        aborts_if old(balance.coin.value) < amount;
+        ensures balance.coin.value == old(balance.coin.value) - amount;
+        ensures result.value == amount;
+    }
 
     // Withdraw `amount` Libra::T<Token> from the transaction sender's account balance
     public fun withdraw_from_sender<Token>(amount: u64): Libra::T<Token> acquires T, Balance {
@@ -428,10 +433,17 @@ module LibraAccount {
     fun balance_for<Token>(balance: &Balance<Token>): u64 {
         Libra::value<Token>(&balance.coin)
     }
+    spec fun balance_for {
+        ensures result == balance.coin.value;
+    }
 
     // Return the current balance of the account at `addr`.
     public fun balance<Token>(addr: address): u64 acquires Balance {
         balance_for(borrow_global<Balance<Token>>(addr))
+    }
+    spec fun balance {
+        aborts_if !exists<Balance<Token>>(addr);
+        ensures result == global<Balance<Token>>(addr).coin.value;
     }
 
     // Helper to return the sequence number field for given `account`
@@ -568,6 +580,59 @@ module LibraAccount {
         // Pay the transaction fee into the transaction fee balance
         let transaction_fee_balance = borrow_global_mut<Balance<LBR::T>>(0xFEE);
         Libra::deposit(&mut transaction_fee_balance.coin, transaction_fee);
+    }
+//    spec fun epilogue { // TODO: Verify this spec. Currently, unable to verify due to the multiplication involved
+//        aborts_if txn_max_gas_units < gas_units_remaining;
+//        aborts_if txn_gas_price * (txn_max_gas_units - gas_units_remaining) > max_u64();
+//        aborts_if !exists<T>(sender());
+//        aborts_if !exists<Balance<LBR::T>>(sender());
+//        aborts_if old(global<Balance<LBR::T>>(sender()).coin.value) < (txn_gas_price * (txn_max_gas_units - gas_units_remaining));
+//        aborts_if txn_sequence_number + 1 > max_u64();
+//        aborts_if !exists<Balance<LBR::T>>(0xFEE);
+//        aborts_if sender() != 0xFEE && old(global<Balance<LBR::T>>(0xFEE).coin.value) + (txn_gas_price * (txn_max_gas_units - gas_units_remaining)) > max_u64();
+//        ensures global<T>(sender()).sequence_number == txn_sequence_number + 1;
+//        ensures sender() != 0xFEE ==> global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value) - (txn_gas_price * (txn_max_gas_units - gas_units_remaining));
+//        ensures sender() != 0xFEE ==> global<Balance<LBR::T>>(0xFEE).coin.value == old(global<Balance<LBR::T>>(0xFEE).coin.value) + (txn_gas_price * (txn_max_gas_units - gas_units_remaining));
+//        ensures sender() == 0xFEE ==> global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value);
+//    }
+
+    // A simplified version of `epilogue` that take `transaction_fee_amount` as an argument instead of calculating internally.
+    // TODO: Remove this function after finishing verifying `epilogue`
+    fun simplified_epilogue(
+        txn_sequence_number: u64,
+        transaction_fee_amount: u64 // Suppose transaction_fee_amount == txn_gas_price * (txn_max_gas_units - gas_units_remaining)
+    ) acquires T, Balance {
+        // Load the transaction sender's account and balance resources
+        let sender_account = borrow_global_mut<T>(Transaction::sender());
+        let sender_balance = borrow_global_mut<Balance<LBR::T>>(Transaction::sender());
+
+        // Charge for gas
+        Transaction::assert(
+            balance_for(sender_balance) >= transaction_fee_amount,
+            6
+        );
+        let transaction_fee = withdraw_from_balance(
+                sender_balance,
+                transaction_fee_amount
+            );
+
+        // Bump the sequence number
+        sender_account.sequence_number = txn_sequence_number + 1;
+        // Pay the transaction fee into the transaction fee balance
+        let transaction_fee_balance = borrow_global_mut<Balance<LBR::T>>(0xFEE);
+        Libra::deposit(&mut transaction_fee_balance.coin, transaction_fee);
+    }
+    spec fun simplified_epilogue {
+        aborts_if !exists<T>(sender());
+        aborts_if !exists<Balance<LBR::T>>(sender());
+        aborts_if old(global<Balance<LBR::T>>(sender()).coin.value) < transaction_fee_amount;
+        aborts_if txn_sequence_number + 1 > max_u64();
+        aborts_if !exists<Balance<LBR::T>>(0xFEE);
+        aborts_if sender() != 0xFEE && old(global<Balance<LBR::T>>(0xFEE).coin.value) + transaction_fee_amount > max_u64();
+        ensures global<T>(sender()).sequence_number == txn_sequence_number + 1;
+        ensures sender() != 0xFEE ==> global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value) - transaction_fee_amount;
+        ensures sender() != 0xFEE ==> global<Balance<LBR::T>>(0xFEE).coin.value == old(global<Balance<LBR::T>>(0xFEE).coin.value) + transaction_fee_amount;
+        ensures sender() == 0xFEE ==> global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value);
     }
 
     /// Events
