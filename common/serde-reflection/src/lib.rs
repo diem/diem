@@ -55,15 +55,16 @@
 //! # fn main() -> Result<(), Error> {
 //! // Start a session to trace formats.
 //! let mut tracer = Tracer::new(/* is_human_readable */ false);
-//! let mut records = Records::new();
+//! let mut records = SerializationRecords::new();
 //!
 //! // For every type (here `Name`), if a user-defined implementation of `Deserialize` exists and
 //! // is known to perform custom validation checks, start by tracing the serialization of
-//! // a valid value of this type.
+//! // a valid value of this type. These sampled values are stored in `records`.
 //! let bob = Name("Bob".into());
 //! tracer.trace_value(&mut records, &bob)?;
 //!
 //! // Now, let's trace deserialization for the top-level type `Person`.
+//! // We pass a reference to `records` so that sampled values can be used.
 //! let (format, values) = tracer.trace_type::<Person>(&records)?;
 //! assert_eq!(format, Format::TypeName("Person".into()));
 //!
@@ -127,7 +128,7 @@
 //!
 //! # fn main() -> Result<(), Error> {
 //! let mut tracer = Tracer::new(/* is_human_readable */ false);
-//! let mut records = Records::new();
+//! let mut records = SerializationRecords::new();
 //! tracer.trace_value(&mut records, &FullName { first: "", middle: Some(""), last: "" })?;
 //! let registry = tracer.registry()?;
 //! match registry.get("FullName").unwrap() {
@@ -157,7 +158,7 @@
 //! # }
 //! # fn main() -> Result<(), Error> {
 //! let mut tracer = Tracer::new(/* is_human_readable */ false);
-//! let mut records = Records::new();
+//! let mut records = SerializationRecords::new();
 //! tracer.trace_value(&mut records, &FullName { first: "", middle: None, last: "" })?;
 //! assert_eq!(tracer.registry().unwrap_err(), Error::UnknownFormatInContainer("FullName"));
 //! # Ok(())
@@ -232,5 +233,5 @@ mod value;
 
 pub use error::{Error, Result};
 pub use format::{ContainerFormat, Format, FormatHolder, Named, VariantFormat};
-pub use trace::{Records, Registry, RegistryOwned, Tracer};
+pub use trace::{Registry, RegistryOwned, SerializationRecords, Tracer};
 pub use value::Value;

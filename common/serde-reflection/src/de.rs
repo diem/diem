@@ -4,21 +4,21 @@
 use crate::{
     error::{Error, Result},
     format::{ContainerFormat, ContainerFormatEntry, Format, FormatHolder, Named, VariantFormat},
-    trace::{Records, Tracer},
+    trace::{SerializationRecords, Tracer},
 };
 use serde::de::{self, DeserializeSeed, IntoDeserializer, Visitor};
 use std::collections::BTreeMap;
 
 pub(crate) struct Deserializer<'de, 'a> {
     tracer: &'a mut Tracer,
-    records: &'de Records,
+    records: &'de SerializationRecords,
     format: &'a mut Format,
 }
 
 impl<'de, 'a> Deserializer<'de, 'a> {
     pub(crate) fn new(
         tracer: &'a mut Tracer,
-        records: &'de Records,
+        records: &'de SerializationRecords,
         format: &'a mut Format,
     ) -> Self {
         Deserializer {
@@ -464,12 +464,12 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'de, 'a> {
 
 struct SeqDeserializer<'de, 'a, I> {
     tracer: &'a mut Tracer,
-    records: &'de Records,
+    records: &'de SerializationRecords,
     formats: I,
 }
 
 impl<'de, 'a, I> SeqDeserializer<'de, 'a, I> {
-    fn new(tracer: &'a mut Tracer, records: &'de Records, formats: I) -> Self {
+    fn new(tracer: &'a mut Tracer, records: &'de SerializationRecords, formats: I) -> Self {
         Self {
             tracer,
             records,
@@ -539,7 +539,7 @@ where
 
 struct EnumDeserializer<'de, 'a> {
     tracer: &'a mut Tracer,
-    records: &'de Records,
+    records: &'de SerializationRecords,
     index: u32,
     format: &'a mut VariantFormat,
 }
@@ -547,7 +547,7 @@ struct EnumDeserializer<'de, 'a> {
 impl<'de, 'a> EnumDeserializer<'de, 'a> {
     fn new(
         tracer: &'a mut Tracer,
-        records: &'de Records,
+        records: &'de SerializationRecords,
         index: u32,
         format: &'a mut VariantFormat,
     ) -> Self {

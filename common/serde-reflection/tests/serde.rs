@@ -5,7 +5,7 @@ use bincode;
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use serde_json;
 use serde_reflection::{
-    ContainerFormat, Error, Format, Named, Records, Tracer, Value, VariantFormat,
+    ContainerFormat, Error, Format, Named, SerializationRecords, Tracer, Value, VariantFormat,
 };
 use serde_yaml;
 use std::collections::BTreeMap;
@@ -20,7 +20,7 @@ enum E {
 }
 
 fn test_variant(tracer: &mut Tracer, expr: E, expected_value: Value) {
-    let mut records = Records::new();
+    let mut records = SerializationRecords::new();
     let (format, value) = tracer.trace_value(&mut records, &expr).unwrap();
     // Check the local result of tracing.
     assert_eq!(format, Format::TypeName("E".into()));
@@ -130,7 +130,7 @@ fn test_tracers() {
     assert_eq!(*format, format4);
 
     // Tracing deserialization
-    let records = Records::new();
+    let records = SerializationRecords::new();
     let mut tracer = Tracer::new(/* is_human_readable */ false);
     let (ident, samples) = tracer.trace_type::<E>(&records).unwrap();
     assert_eq!(ident, Format::TypeName("E".into()));
@@ -182,7 +182,7 @@ enum Person {
 
 #[test]
 fn test_trace_deserialization_with_custom_invariants() {
-    let mut records = Records::new();
+    let mut records = SerializationRecords::new();
     let mut tracer = Tracer::new(/* is_human_readable */ false);
     // Type trace alone cannot guess a valid value for `Name`.
     assert_eq!(
@@ -258,7 +258,7 @@ mod bar {
 
 #[test]
 fn test_name_clash_not_suported() {
-    let mut records = Records::new();
+    let mut records = SerializationRecords::new();
     let mut tracer = Tracer::new(/* is_human_readable */ false);
     tracer.trace_value(&mut records, &foo::A).unwrap();
     // Repeating names is fine.
@@ -273,7 +273,7 @@ fn test_borrowed_slice() {
     struct Borrowed<'a>(&'a [u8]);
 
     let bytes = [1u8; 4];
-    let mut records = Records::new();
+    let mut records = SerializationRecords::new();
     let mut tracer = Tracer::new(/* is_human_readable */ false);
 
     let (format, value) = tracer.trace_value(&mut records, &Borrowed(&bytes)).unwrap();
@@ -298,7 +298,7 @@ fn test_borrowed_bytes() {
     struct Borrowed<'a>(#[serde(with = "serde_bytes")] &'a [u8]);
 
     let bytes = [1u8; 4];
-    let mut records = Records::new();
+    let mut records = SerializationRecords::new();
     let mut tracer = Tracer::new(/* is_human_readable */ false);
 
     let (format, value) = tracer.trace_value(&mut records, &Borrowed(&bytes)).unwrap();

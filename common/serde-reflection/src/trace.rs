@@ -36,11 +36,11 @@ pub struct Tracer {
 /// Value samples recorded during serialization.
 /// This will help passing user-defined checks during deserialization.
 #[derive(Debug, Default)]
-pub struct Records {
+pub struct SerializationRecords {
     pub(crate) values: BTreeMap<&'static str, Value>,
 }
 
-impl Records {
+impl SerializationRecords {
     pub fn new() -> Self {
         Self {
             values: BTreeMap::new(),
@@ -61,7 +61,11 @@ impl Tracer {
     /// Trace the serialization of a particular value.
     /// Nested containers will be added to the tracing registry, indexed by
     /// their (non-qualified) name.
-    pub fn trace_value<T>(&mut self, records: &mut Records, value: &T) -> Result<(Format, Value)>
+    pub fn trace_value<T>(
+        &mut self,
+        records: &mut SerializationRecords,
+        value: &T,
+    ) -> Result<(Format, Value)>
     where
         T: ?Sized + Serialize,
     {
@@ -77,7 +81,10 @@ impl Tracer {
     /// have implemented a custom deserializer that validates data. In this case,
     /// `trace_value` must be called first on the relevant user types to provide valid
     /// examples.
-    pub fn trace_type_once<'de, T>(&mut self, records: &'de Records) -> Result<(Format, T)>
+    pub fn trace_type_once<'de, T>(
+        &mut self,
+        records: &'de SerializationRecords,
+    ) -> Result<(Format, T)>
     where
         T: Deserialize<'de>,
     {
@@ -90,7 +97,7 @@ impl Tracer {
     /// Same as `trace_type_once` for seeded deserialization.
     pub fn trace_type_once_with_seed<'de, S>(
         &mut self,
-        records: &'de Records,
+        records: &'de SerializationRecords,
         seed: S,
     ) -> Result<(Format, S::Value)>
     where
@@ -105,7 +112,10 @@ impl Tracer {
     /// Same as `trace_type_once` but if `T` is an enum, we repeat the process
     /// until all variants of `T` are covered.
     /// We accumulate and return all the sampled values at the end.
-    pub fn trace_type<'de, T>(&mut self, records: &'de Records) -> Result<(Format, Vec<T>)>
+    pub fn trace_type<'de, T>(
+        &mut self,
+        records: &'de SerializationRecords,
+    ) -> Result<(Format, Vec<T>)>
     where
         T: Deserialize<'de>,
     {
@@ -127,7 +137,7 @@ impl Tracer {
     /// Same as `trace_type` for seeded deserialization.
     pub fn trace_type_with_seed<'de, S>(
         &mut self,
-        records: &'de Records,
+        records: &'de SerializationRecords,
         seed: S,
     ) -> Result<(Format, Vec<S::Value>)>
     where
@@ -182,7 +192,7 @@ impl Tracer {
 
     pub(crate) fn record_container(
         &mut self,
-        records: &mut Records,
+        records: &mut SerializationRecords,
         name: &'static str,
         format: ContainerFormat,
         value: Value,
@@ -194,7 +204,7 @@ impl Tracer {
 
     pub(crate) fn record_variant(
         &mut self,
-        records: &mut Records,
+        records: &mut SerializationRecords,
         name: &'static str,
         variant_index: u32,
         variant_name: &'static str,
@@ -216,7 +226,7 @@ impl Tracer {
 
     pub(crate) fn get_recorded_value<'de, 'a>(
         &'a self,
-        records: &'de Records,
+        records: &'de SerializationRecords,
         name: &'static str,
     ) -> Option<(&'a ContainerFormat, &'de Value)> {
         match records.values.get(name) {
