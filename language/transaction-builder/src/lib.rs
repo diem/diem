@@ -94,26 +94,6 @@ pub fn encode_cancel_burn_script(type_: TypeTag, preburn_address: AccountAddress
     )
 }
 
-/// Encode a program transferring `amount` coins from `sender` to `recipient`. Fails if there is no
-/// account at the recipient address or if the sender's balance is lower than `amount`.
-pub fn encode_transfer_script(
-    type_: TypeTag,
-    recipient: &AccountAddress,
-    auth_key_prefix: Vec<u8>,
-    amount: u64,
-) -> Script {
-    validate_auth_key_prefix(&auth_key_prefix);
-    Script::new(
-        StdlibScript::PeerToPeer.compiled_bytes().into_vec(),
-        vec![type_],
-        vec![
-            TransactionArgument::Address(*recipient),
-            TransactionArgument::U8Vector(auth_key_prefix),
-            TransactionArgument::U64(amount),
-        ],
-    )
-}
-
 /// Encode a program transferring `amount` coins from `sender` to `recipient` with associated
 /// metadata `metadata`. Fails if there is no account at the recipient address or if the sender's
 /// balance is lower than `amount`.
