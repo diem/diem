@@ -1,0 +1,323 @@
+============ initial translation from Move ================
+
+fun TestLifetime::lifetime_(cond: bool): (TestLifetime::T, TestLifetime::S) {
+    var a: TestLifetime::T
+    var a_ref: &mut TestLifetime::T
+    var b: TestLifetime::S
+    var b_ref: &mut TestLifetime::S
+    var $t5: &mut u64
+    var x_ref: &mut u64
+    var $t7: u64
+    var $t8: TestLifetime::T
+    var $t9: u64
+    var $t10: TestLifetime::S
+    var $t11: &mut TestLifetime::T
+    var $t12: &mut TestLifetime::S
+    var $t13: bool
+    var $t14: &mut TestLifetime::S
+    var $t15: &mut TestLifetime::T
+    var $t16: &mut u64
+    var $t17: &mut TestLifetime::T
+    var $t18: &mut TestLifetime::S
+    var $t19: &mut u64
+    var $t20: &mut u64
+    var $t21: bool
+    var $t22: u64
+    var $t23: &mut u64
+    var $t24: u64
+    var $t25: &mut u64
+    var $t26: TestLifetime::T
+    var $t27: TestLifetime::S
+    $t7 := 3
+    $t8 := pack TestLifetime::T($t7)
+    a := $t8
+    $t9 := 4
+    $t10 := pack TestLifetime::S($t9)
+    b := $t10
+    $t11 := &mut a
+    a_ref := $t11
+    $t12 := &mut b
+    b_ref := $t12
+    $t13 := copy(cond)
+    if ($t13) goto L0
+    goto L1
+    L0: $t14 := move(b_ref)
+    destroy($t14)
+    $t15 := move(a_ref)
+    $t16 := &mut $t15.x
+    $t5 := $t16
+    goto L2
+    L1: $t17 := move(a_ref)
+    destroy($t17)
+    $t18 := move(b_ref)
+    $t19 := &mut $t18.y
+    $t5 := $t19
+    L2: $t20 := move($t5)
+    x_ref := $t20
+    $t21 := copy(cond)
+    if ($t21) goto L3
+    goto L4
+    L3: $t22 := 2
+    $t23 := move(x_ref)
+    *$t23 := $t22
+    goto L5
+    L4: $t24 := 0
+    $t25 := move(x_ref)
+    *$t25 := $t24
+    L5: $t26 := move(a)
+    $t27 := move(b)
+    return ($t26, $t27)
+}
+
+
+fun TestLifetime::lifetime_R(): TestLifetime::R {
+    var r: TestLifetime::R
+    var r_ref: &mut TestLifetime::R
+    var x_ref: &mut u64
+    var $t3: u64
+    var $t4: TestLifetime::R
+    var $t5: &mut TestLifetime::R
+    var $t6: &mut TestLifetime::R
+    var $t7: &mut u64
+    var $t8: u64
+    var $t9: &mut u64
+    var $t10: &mut TestLifetime::R
+    var $t11: &mut TestLifetime::R
+    var $t12: &mut u64
+    var $t13: u64
+    var $t14: &mut u64
+    var $t15: TestLifetime::R
+    $t3 := 3
+    $t4 := pack TestLifetime::R($t3)
+    r := $t4
+    $t5 := &mut r
+    r_ref := $t5
+    $t6 := move(r_ref)
+    $t7 := &mut $t6.x
+    x_ref := $t7
+    $t8 := 0
+    $t9 := move(x_ref)
+    *$t9 := $t8
+    $t10 := &mut r
+    r_ref := $t10
+    $t11 := move(r_ref)
+    $t12 := &mut $t11.x
+    x_ref := $t12
+    $t13 := 2
+    $t14 := move(x_ref)
+    *$t14 := $t13
+    $t15 := move(r)
+    return $t15
+}
+
+
+fun TestLifetime::lifetime_R_2(): TestLifetime::R {
+    var r: TestLifetime::R
+    var r_ref: &mut TestLifetime::R
+    var x_ref: &mut u64
+    var $t3: u64
+    var $t4: TestLifetime::R
+    var $t5: &mut TestLifetime::R
+    var $t6: &mut TestLifetime::R
+    var $t7: &mut u64
+    var $t8: u64
+    var $t9: &mut u64
+    var $t10: u64
+    var $t11: &mut u64
+    var $t12: &mut TestLifetime::R
+    var $t13: &mut TestLifetime::R
+    var $t14: &mut u64
+    var $t15: u64
+    var $t16: &mut u64
+    var $t17: TestLifetime::R
+    $t3 := 4
+    $t4 := pack TestLifetime::R($t3)
+    r := $t4
+    $t5 := &mut r
+    r_ref := $t5
+    $t6 := move(r_ref)
+    $t7 := &mut $t6.x
+    x_ref := $t7
+    $t8 := 0
+    $t9 := copy(x_ref)
+    *$t9 := $t8
+    $t10 := 2
+    $t11 := move(x_ref)
+    *$t11 := $t10
+    $t12 := &mut r
+    r_ref := $t12
+    $t13 := move(r_ref)
+    $t14 := &mut $t13.x
+    x_ref := $t14
+    $t15 := 3
+    $t16 := move(x_ref)
+    *$t16 := $t15
+    $t17 := move(r)
+    return $t17
+}
+
+============ after pipeline `lifetime` ================
+
+fun TestLifetime::lifetime_(cond: bool): (TestLifetime::T, TestLifetime::S) {
+    var a: TestLifetime::T
+    var a_ref: &mut TestLifetime::T
+    var b: TestLifetime::S
+    var b_ref: &mut TestLifetime::S
+    var $t5: &mut u64
+    var x_ref: &mut u64
+    var $t7: u64
+    var $t8: TestLifetime::T
+    var $t9: u64
+    var $t10: TestLifetime::S
+    var $t11: &mut TestLifetime::T
+    var $t12: &mut TestLifetime::S
+    var $t13: bool
+    var $t14: &mut TestLifetime::S
+    var $t15: &mut TestLifetime::T
+    var $t16: &mut u64
+    var $t17: &mut TestLifetime::T
+    var $t18: &mut TestLifetime::S
+    var $t19: &mut u64
+    var $t20: &mut u64
+    var $t21: bool
+    var $t22: u64
+    var $t23: &mut u64
+    var $t24: u64
+    var $t25: &mut u64
+    var $t26: TestLifetime::T
+    var $t27: TestLifetime::S
+    $t7 := 3
+    $t8 := pack TestLifetime::T($t7)
+    a := $t8
+    $t9 := 4
+    $t10 := pack TestLifetime::S($t9)
+    b := $t10
+    $t11 := &mut a
+    a_ref := $t11
+    $t12 := &mut b
+    b_ref := $t12
+    $t13 := copy(cond)
+    if ($t13) goto L0
+    goto L1
+    L0: $t14 := move(b_ref)
+    // mut ends: $t14
+    destroy($t14)
+    $t15 := move(a_ref)
+    $t16 := &mut $t15.x
+    $t5 := $t16
+    goto L2
+    L1: $t17 := move(a_ref)
+    // mut ends: $t17
+    destroy($t17)
+    $t18 := move(b_ref)
+    $t19 := &mut $t18.y
+    $t5 := $t19
+    L2: $t20 := move($t5)
+    x_ref := $t20
+    $t21 := copy(cond)
+    if ($t21) goto L3
+    goto L4
+    L3: $t22 := 2
+    $t23 := move(x_ref)
+    // mut ends: $t15, $t18, $t23
+    *$t23 := $t22
+    goto L5
+    L4: $t24 := 0
+    $t25 := move(x_ref)
+    // mut ends: $t15, $t18, $t25
+    *$t25 := $t24
+    L5: $t26 := move(a)
+    $t27 := move(b)
+    return ($t26, $t27)
+}
+
+
+fun TestLifetime::lifetime_R(): TestLifetime::R {
+    var r: TestLifetime::R
+    var r_ref: &mut TestLifetime::R
+    var x_ref: &mut u64
+    var $t3: u64
+    var $t4: TestLifetime::R
+    var $t5: &mut TestLifetime::R
+    var $t6: &mut TestLifetime::R
+    var $t7: &mut u64
+    var $t8: u64
+    var $t9: &mut u64
+    var $t10: &mut TestLifetime::R
+    var $t11: &mut TestLifetime::R
+    var $t12: &mut u64
+    var $t13: u64
+    var $t14: &mut u64
+    var $t15: TestLifetime::R
+    $t3 := 3
+    $t4 := pack TestLifetime::R($t3)
+    r := $t4
+    $t5 := &mut r
+    r_ref := $t5
+    $t6 := move(r_ref)
+    $t7 := &mut $t6.x
+    x_ref := $t7
+    $t8 := 0
+    $t9 := move(x_ref)
+    // mut ends: $t6, $t9
+    *$t9 := $t8
+    $t10 := &mut r
+    r_ref := $t10
+    $t11 := move(r_ref)
+    $t12 := &mut $t11.x
+    x_ref := $t12
+    $t13 := 2
+    $t14 := move(x_ref)
+    // mut ends: $t11, $t14
+    *$t14 := $t13
+    $t15 := move(r)
+    return $t15
+}
+
+
+fun TestLifetime::lifetime_R_2(): TestLifetime::R {
+    var r: TestLifetime::R
+    var r_ref: &mut TestLifetime::R
+    var x_ref: &mut u64
+    var $t3: u64
+    var $t4: TestLifetime::R
+    var $t5: &mut TestLifetime::R
+    var $t6: &mut TestLifetime::R
+    var $t7: &mut u64
+    var $t8: u64
+    var $t9: &mut u64
+    var $t10: u64
+    var $t11: &mut u64
+    var $t12: &mut TestLifetime::R
+    var $t13: &mut TestLifetime::R
+    var $t14: &mut u64
+    var $t15: u64
+    var $t16: &mut u64
+    var $t17: TestLifetime::R
+    $t3 := 4
+    $t4 := pack TestLifetime::R($t3)
+    r := $t4
+    $t5 := &mut r
+    r_ref := $t5
+    $t6 := move(r_ref)
+    $t7 := &mut $t6.x
+    x_ref := $t7
+    $t8 := 0
+    $t9 := copy(x_ref)
+    *$t9 := $t8
+    $t10 := 2
+    $t11 := move(x_ref)
+    // mut ends: $t6, $t11
+    *$t11 := $t10
+    $t12 := &mut r
+    r_ref := $t12
+    $t13 := move(r_ref)
+    $t14 := &mut $t13.x
+    x_ref := $t14
+    $t15 := 3
+    $t16 := move(x_ref)
+    // mut ends: $t13, $t16
+    *$t16 := $t15
+    $t17 := move(r)
+    return $t17
+}

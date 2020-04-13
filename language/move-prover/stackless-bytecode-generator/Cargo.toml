@@ -19,9 +19,14 @@ num = "0.2.0"
 itertools = "0.9.0"
 
 [dev-dependencies]
-proptest = "0.9"
 libra-types = { path = "../../../types", version = "0.1.0" }
+datatest-stable = { path = "../../../common/datatest-stable", version = "0.1.0" }
+test-utils = { path = "../test-utils", version = "0.1.0" }
+codespan = "0.8.0"
+codespan-reporting = "0.8.0"
+libra-temppath = { path = "../../../common/temppath", version = "0.1.0" }
+anyhow = "1.0.*"
 
-[features]
-default = []
-fuzzing = ["libra-types/fuzzing"]
+[[test]]
+name = "testsuite"
+harness = false

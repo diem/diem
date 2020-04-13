@@ -4875,14 +4875,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "stackless-bytecode-generator"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytecode-verifier 0.1.0",
+ "codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan-reporting 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "datatest-stable 0.1.0",
  "ir-to-bytecode 0.1.0",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-temppath 0.1.0",
  "libra-types 0.1.0",
  "num 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "proptest 0.9.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "spec-lang 0.0.1",
  "stdlib 0.1.0",
+ "test-utils 0.1.0",
  "vm 0.1.0",
 ]
 

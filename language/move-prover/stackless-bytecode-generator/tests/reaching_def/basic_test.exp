@@ -1,0 +1,88 @@
+============ initial translation from Move ================
+
+fun ReachingDefTest::basic(a: u64, b: u64): u64 {
+    var x: u64
+    var $t3: u64
+    var $t4: u64
+    var $t5: u64
+    var $t6: u64
+    var $t7: u64
+    var $t8: u64
+    var $t9: u64
+    var $t10: u64
+    $t3 := copy(a)
+    $t4 := copy(b)
+    $t5 := $t3 + $t4
+    $t6 := copy(a)
+    $t7 := $t5 / $t6
+    x := $t7
+    $t8 := copy(x)
+    $t9 := 1
+    $t10 := $t8 + $t9
+    return $t10
+}
+
+
+fun ReachingDefTest::create_resource() {
+    var r: ReachingDefTest::R
+    var $t1: u64
+    var $t2: bool
+    var $t3: ReachingDefTest::R
+    $t1 := 1
+    $t2 := false
+    $t3 := pack ReachingDefTest::R($t1, $t2)
+    move_to_sender<ReachingDefTest::R>($t3)
+    return ()
+}
+
+============ after pipeline `reaching_def` ================
+
+fun ReachingDefTest::basic(a: u64, b: u64): u64 {
+    var x: u64
+    var $t3: u64
+    var $t4: u64
+    var $t5: u64
+    var $t6: u64
+    var $t7: u64
+    var $t8: u64
+    var $t9: u64
+    var $t10: u64
+    // reach:
+    $t3 := copy(a)
+    // reach: $t3 -> {a}
+    $t4 := copy(b)
+    // reach: $t3 -> {a}, $t4 -> {b}
+    $t5 := $t3 + $t4
+    // reach: $t3 -> {a}, $t4 -> {b}
+    $t6 := copy(a)
+    // reach: $t3 -> {a}, $t4 -> {b}, $t6 -> {a}
+    $t7 := $t5 / $t6
+    // reach: $t3 -> {a}, $t4 -> {b}, $t6 -> {a}
+    x := $t7
+    // reach: x -> {$t7}, $t3 -> {a}, $t4 -> {b}, $t6 -> {a}
+    $t8 := copy(x)
+    // reach: x -> {$t7}, $t3 -> {a}, $t4 -> {b}, $t6 -> {a}, $t8 -> {x}
+    $t9 := 1
+    // reach: x -> {$t7}, $t3 -> {a}, $t4 -> {b}, $t6 -> {a}, $t8 -> {x}, $t9 -> {1}
+    $t10 := $t8 + $t9
+    // reach: x -> {$t7}, $t3 -> {a}, $t4 -> {b}, $t6 -> {a}, $t8 -> {x}, $t9 -> {1}
+    return $t10
+}
+
+
+fun ReachingDefTest::create_resource() {
+    var r: ReachingDefTest::R
+    var $t1: u64
+    var $t2: bool
+    var $t3: ReachingDefTest::R
+    // reach:
+    $t1 := 1
+    // reach: $t1 -> {1}
+    $t2 := false
+    // reach: $t1 -> {1}, $t2 -> {false}
+    $t3 := pack ReachingDefTest::R($t1, $t2)
+    // reach: $t1 -> {1}, $t2 -> {false}
+    move_to_sender<ReachingDefTest::R>($t3)
+    // reach: $t1 -> {1}, $t2 -> {false}
+    return ()
+}

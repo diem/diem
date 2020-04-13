@@ -1401,9 +1401,10 @@ impl<'env> FunctionEnv<'env> {
         {
             if let Some((ident, _)) = fmap.get_local_name(idx as u64) {
                 // The move compiler produces temporay names of the form `<foo>%#<num>`.
-                // Replace occurences of `%#` so they are accepted by boogie.
-                let ident = ident.replace("%#", "$$");
-                return self.module_env.env.symbol_pool.make(ident.as_str());
+                // Ignore those names and use the idx-based repr instead.
+                if !ident.contains("%#") {
+                    return self.module_env.env.symbol_pool.make(ident.as_str());
+                }
             }
         }
         self.module_env.env.symbol_pool.make(&format!("$t{}", idx))
