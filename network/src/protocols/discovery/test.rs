@@ -16,7 +16,7 @@ use core::str::FromStr;
 use futures::channel::oneshot;
 use libra_config::config::RoleType;
 use libra_crypto::{
-    ed25519::Ed25519PrivateKey, x25519::X25519StaticPrivateKey, PrivateKey, Uniform,
+    ed25519::Ed25519PrivateKey, x25519::X25519StaticPrivateKey, PrivateKeyExt, Uniform,
 };
 use std::num::NonZeroUsize;
 use tokio::runtime::Runtime;

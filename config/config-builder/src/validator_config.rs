@@ -10,7 +10,7 @@ use libra_config::{
     },
     generator::{self, ValidatorSwarm},
 };
-use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKeyExt, Uniform};
 use libra_types::{discovery_set::DiscoverySet, validator_set::ValidatorSet};
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, Rng, SeedableRng};

@@ -12,7 +12,7 @@
 //! use libra_crypto::hash::{CryptoHasher, TestOnlyHasher};
 //! use libra_crypto::{
 //!     ed25519::*,
-//!     traits::{Signature, SigningKey, Uniform},
+//!     traits::{SignatureExt, SigningKey, Uniform},
 //! };
 //! use rand::{rngs::StdRng, SeedableRng};
 //!
@@ -160,7 +160,7 @@ impl Ed25519Signature {
 // PrivateKey Traits //
 ///////////////////////
 
-impl PrivateKey for Ed25519PrivateKey {
+impl PrivateKeyExt for Ed25519PrivateKey {
     type PublicKeyMaterial = Ed25519PublicKey;
 }
 
@@ -245,7 +245,7 @@ impl From<&Ed25519PrivateKey> for Ed25519PublicKey {
 }
 
 // We deduce PublicKey from this
-impl PublicKey for Ed25519PublicKey {
+impl PublicKeyExt for Ed25519PublicKey {
     type PrivateKeyMaterial = Ed25519PrivateKey;
 }
 
@@ -333,7 +333,7 @@ impl ValidKey for Ed25519PublicKey {
 // Signature Traits //
 //////////////////////
 
-impl Signature for Ed25519Signature {
+impl SignatureExt for Ed25519Signature {
     type VerifyingKeyMaterial = Ed25519PublicKey;
     type SigningKeyMaterial = Ed25519PrivateKey;
 

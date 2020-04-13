@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_crypto::{PrivateKey, Uniform, ValidKeyStringExt};
+use libra_crypto::{PrivateKeyExt, Uniform, ValidKeyStringExt};
 use mirai_annotations::verify_unreachable;
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 
@@ -15,7 +15,7 @@ pub enum PrivateKeyContainer<T> {
 
 impl<T> PrivateKeyContainer<T>
 where
-    T: PrivateKey,
+    T: PrivateKeyExt,
 {
     pub fn take(&mut self) -> Option<T> {
         match self {
@@ -67,7 +67,7 @@ where
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct KeyPair<T>
 where
-    T: PrivateKey + Serialize + ValidKeyStringExt,
+    T: PrivateKeyExt + Serialize + ValidKeyStringExt,
 {
     #[serde(bound(deserialize = "PrivateKeyContainer<T>: Deserialize<'de>"))]
     private_key: PrivateKeyContainer<T>,
@@ -76,7 +76,7 @@ where
 
 impl<T> Default for KeyPair<T>
 where
-    T: PrivateKey + Serialize + Uniform + ValidKeyStringExt,
+    T: PrivateKeyExt + Serialize + Uniform + ValidKeyStringExt,
     T::PublicKeyMaterial: DeserializeOwned + 'static + Serialize + ValidKeyStringExt,
 {
     fn default() -> Self {
@@ -91,7 +91,7 @@ where
 
 impl<T> KeyPair<T>
 where
-    T: PrivateKey + Serialize + ValidKeyStringExt,
+    T: PrivateKeyExt + Serialize + ValidKeyStringExt,
     T::PublicKeyMaterial: DeserializeOwned + 'static + Serialize + ValidKeyStringExt,
 {
     pub fn load(private_key: T) -> Self {

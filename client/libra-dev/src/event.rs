@@ -174,7 +174,7 @@ pub unsafe extern "C" fn libra_LibraEvent_free(ptr: *mut LibraEvent) {
 
 #[test]
 fn test_libra_LibraEvent_from() {
-    use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+    use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKeyExt, Uniform};
     use libra_types::{
         account_address::AccountAddress,
         account_config::SentPaymentEvent,

@@ -129,7 +129,7 @@ impl From<&Ed25519PrivateKey> for MultiEd25519PrivateKey {
     }
 }
 
-impl PrivateKey for MultiEd25519PrivateKey {
+impl PrivateKeyExt for MultiEd25519PrivateKey {
     type PublicKeyMaterial = MultiEd25519PublicKey;
 }
 
@@ -244,7 +244,7 @@ impl From<&MultiEd25519PrivateKey> for MultiEd25519PublicKey {
         let public_keys = private_key
             .private_keys
             .iter()
-            .map(PrivateKey::public_key)
+            .map(PrivateKeyExt::public_key)
             .collect();
         MultiEd25519PublicKey {
             public_keys,
@@ -254,7 +254,7 @@ impl From<&MultiEd25519PrivateKey> for MultiEd25519PublicKey {
 }
 
 /// We deduce PublicKey from this.
-impl PublicKey for MultiEd25519PublicKey {
+impl PublicKeyExt for MultiEd25519PublicKey {
     type PrivateKeyMaterial = MultiEd25519PrivateKey;
 }
 
@@ -446,7 +446,7 @@ impl ValidKey for MultiEd25519Signature {
     }
 }
 
-impl Signature for MultiEd25519Signature {
+impl SignatureExt for MultiEd25519Signature {
     type VerifyingKeyMaterial = MultiEd25519PublicKey;
     type SigningKeyMaterial = MultiEd25519PrivateKey;
 

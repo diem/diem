@@ -5,7 +5,7 @@ use crate::account_address::AccountAddress;
 use anyhow::{Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_crypto::{
-    ed25519::Ed25519PrivateKey, x25519::X25519StaticPrivateKey, PrivateKey, Uniform,
+    ed25519::Ed25519PrivateKey, x25519::X25519StaticPrivateKey, PrivateKeyExt, Uniform,
 };
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519::X25519StaticPublicKey, ValidKey};
 #[cfg(any(test, feature = "fuzzing"))]

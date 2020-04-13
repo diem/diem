@@ -108,7 +108,7 @@ impl Uniform for X25519EphemeralPrivateKey {
     }
 }
 
-impl PrivateKey for X25519EphemeralPrivateKey {
+impl PrivateKeyExt for X25519EphemeralPrivateKey {
     type PublicKeyMaterial = X25519PublicKey;
 }
 
@@ -189,7 +189,7 @@ impl Uniform for X25519StaticPrivateKey {
     }
 }
 
-impl PrivateKey for X25519StaticPrivateKey {
+impl PrivateKeyExt for X25519StaticPrivateKey {
     type PublicKeyMaterial = X25519StaticPublicKey;
 }
 
@@ -267,11 +267,11 @@ impl PartialEq for X25519PublicKey {
 
 impl Eq for X25519PublicKey {}
 
-impl PublicKey for X25519PublicKey {
+impl PublicKeyExt for X25519PublicKey {
     type PrivateKeyMaterial = X25519EphemeralPrivateKey;
 }
 
-impl PublicKey for X25519StaticPublicKey {
+impl PublicKeyExt for X25519StaticPublicKey {
     type PrivateKeyMaterial = X25519StaticPrivateKey;
 }
 

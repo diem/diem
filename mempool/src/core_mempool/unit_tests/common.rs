@@ -4,7 +4,7 @@
 use crate::core_mempool::{CoreMempool, TimelineState, TxnPointer};
 use anyhow::{format_err, Result};
 use libra_config::config::NodeConfig;
-use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKeyExt, Uniform};
 use libra_types::{
     account_address::AccountAddress,
     account_config::LBR_NAME,

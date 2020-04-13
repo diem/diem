@@ -8,7 +8,7 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     hash::CryptoHash,
     test_utils::KeyPair,
-    PrivateKey, SigningKey, Uniform,
+    PrivateKeyExt, SigningKey, Uniform,
 };
 use libra_json_rpc::views::{ScriptView, TransactionDataView};
 use libra_logger::prelude::*;

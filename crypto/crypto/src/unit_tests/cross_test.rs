@@ -14,7 +14,7 @@ use crate::{
 use crate::hash::HashValue;
 
 use libra_crypto_derive::{
-    PrivateKey, PublicKey, Signature, SigningKey, SilentDebug, ValidKey, VerifyingKey,
+    PrivateKeyExt, PublicKeyExt, SignatureExt, SigningKey, SilentDebug, ValidKey, VerifyingKey,
 };
 use proptest::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -29,7 +29,7 @@ use serde::{Deserialize, Serialize};
 //
 
 #[derive(
-    Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, ValidKey, PublicKey, VerifyingKey,
+    Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, ValidKey, PublicKeyExt, VerifyingKey,
 )]
 #[PrivateKeyType = "PrivateK"]
 #[SignatureType = "Sig"]
@@ -38,7 +38,7 @@ enum PublicK {
     MultiEd(MultiEd25519PublicKey),
 }
 
-#[derive(Serialize, Deserialize, SilentDebug, ValidKey, PrivateKey, SigningKey)]
+#[derive(Serialize, Deserialize, SilentDebug, ValidKey, PrivateKeyExt, SigningKey)]
 #[PublicKeyType = "PublicK"]
 #[SignatureType = "Sig"]
 enum PrivateK {
@@ -47,7 +47,7 @@ enum PrivateK {
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Signature)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, SignatureExt)]
 #[PublicKeyType = "PublicK"]
 #[PrivateKeyType = "PrivateK"]
 enum Sig {

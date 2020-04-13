@@ -3,7 +3,7 @@
 
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    PrivateKey, Uniform,
+    PrivateKeyExt, Uniform,
 };
 use rand::{
     rngs::{OsRng, StdRng},

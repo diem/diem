@@ -11,7 +11,7 @@ use libra_crypto::{
     ed25519::Ed25519PrivateKey,
     hash::CryptoHash,
     multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature},
-    PrivateKey, SigningKey, Uniform,
+    PrivateKeyExt, SigningKey, Uniform,
 };
 use libra_types::{
     account_address::AccountAddress,

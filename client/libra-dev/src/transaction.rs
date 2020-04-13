@@ -13,7 +13,7 @@ use lcs::to_bytes;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     test_utils::KeyPair,
-    PrivateKey,
+    PrivateKeyExt,
 };
 use libra_types::{
     account_address::AccountAddress,
@@ -400,7 +400,7 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
 mod test {
     use super::*;
     use lcs::from_bytes;
-    use libra_crypto::{hash::CryptoHash, PrivateKey, SigningKey, Uniform};
+    use libra_crypto::{hash::CryptoHash, PrivateKeyExt, SigningKey, Uniform};
     use libra_types::transaction::{SignedTransaction, TransactionArgument};
     use std::ffi::CStr;
 

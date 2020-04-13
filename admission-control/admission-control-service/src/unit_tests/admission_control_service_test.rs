@@ -10,7 +10,7 @@ use admission_control_proto::{
 };
 use anyhow::Result;
 use futures::executor::block_on;
-use libra_crypto::{ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, PrivateKey, Uniform};
+use libra_crypto::{ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, PrivateKeyExt, Uniform};
 use libra_types::{
     account_address::AccountAddress,
     mempool_status::MempoolStatusCode,

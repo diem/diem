@@ -10,7 +10,7 @@ use channel::{libra_channel, message_queues::QueueStyle};
 use core::str::FromStr;
 use futures::SinkExt;
 use libra_crypto::{
-    ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, x25519::X25519StaticPrivateKey, PrivateKey,
+    ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, x25519::X25519StaticPrivateKey, PrivateKeyExt,
     Uniform,
 };
 use libra_logger::info;

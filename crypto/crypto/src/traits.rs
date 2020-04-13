@@ -91,10 +91,10 @@ impl<T: ValidKey> ValidKeyStringExt for T {}
 
 /// A type family for key material that should remain secret and has an
 /// associated type of the [`PublicKey`][PublicKey] family.
-pub trait PrivateKey: Sized {
+pub trait PrivateKeyExt: Sized {
     /// We require public / private types to be coupled, i.e. their
     /// associated type is each other.
-    type PublicKeyMaterial: PublicKey<PrivateKeyMaterial = Self>;
+    type PublicKeyMaterial: PublicKeyExt<PrivateKeyMaterial = Self>;
 
     /// Returns the associated public key
     fn public_key(&self) -> Self::PublicKeyMaterial {
@@ -107,12 +107,12 @@ pub trait PrivateKey: Sized {
 /// A trait for a [`ValidKey`][ValidKey] which knows how to sign a
 /// message, and return an associated `Signature` type.
 pub trait SigningKey:
-    PrivateKey<PublicKeyMaterial = <Self as SigningKey>::VerifyingKeyMaterial> + ValidKey
+    PrivateKeyExt<PublicKeyMaterial = <Self as SigningKey>::VerifyingKeyMaterial> + ValidKey
 {
     /// The associated verifying key type for this signing key.
     type VerifyingKeyMaterial: VerifyingKey<SigningKeyMaterial = Self>;
     /// The associated signature type for this signing key.
-    type SignatureMaterial: Signature<SigningKeyMaterial = Self>;
+    type SignatureMaterial: SignatureExt<SigningKeyMaterial = Self>;
 
     /// Signs an input message.
     fn sign_message(&self, message: &HashValue) -> Self::SignatureMaterial;
@@ -128,7 +128,7 @@ pub trait SigningKey:
 /// reference.
 /// This convertibility requirement ensures the existence of a
 /// deterministic, canonical public key construction from a private key.
-pub trait PublicKey: Sized + Clone + Eq + Hash +
+pub trait PublicKeyExt: Sized + Clone + Eq + Hash +
     // This unsightly turbofish type parameter is the precise constraint
     // needed to require that there exists an
     //
@@ -139,10 +139,10 @@ pub trait PublicKey: Sized + Clone + Eq + Hash +
     // declaration, for any `MyPrivateKeyMaterial`, `MyPublicKeyMaterial`
     // on which we register (respectively) `PublicKey` and `PrivateKey`
     // implementations.
-    for<'a> From<&'a <Self as PublicKey>::PrivateKeyMaterial> {
+    for<'a> From<&'a <Self as PublicKeyExt>::PrivateKeyMaterial> {
     /// We require public / private types to be coupled, i.e. their
     /// associated type is each other.
-    type PrivateKeyMaterial: PrivateKey<PublicKeyMaterial = Self>;
+    type PrivateKeyMaterial: PrivateKeyExt<PublicKeyMaterial = Self>;
 }
 
 /// A type family of public keys that are used for signing.
@@ -150,12 +150,12 @@ pub trait PublicKey: Sized + Clone + Eq + Hash +
 /// It is linked to a type of the Signature family, which carries the
 /// verification implementation.
 pub trait VerifyingKey:
-    PublicKey<PrivateKeyMaterial = <Self as VerifyingKey>::SigningKeyMaterial> + ValidKey
+    PublicKeyExt<PrivateKeyMaterial = <Self as VerifyingKey>::SigningKeyMaterial> + ValidKey
 {
     /// The associated signing key type for this verifying key.
     type SigningKeyMaterial: SigningKey<VerifyingKeyMaterial = Self>;
     /// The associated signature type for this verifying key.
-    type SignatureMaterial: Signature<VerifyingKeyMaterial = Self>;
+    type SignatureMaterial: SignatureExt<VerifyingKeyMaterial = Self>;
 
     /// We provide the logical implementation which dispatches to the signature.
     fn verify_signature(
@@ -187,7 +187,7 @@ pub trait VerifyingKey:
 /// that material de-serializes to a signature of the expected concrete
 /// scheme. This would be done as an extension trait of
 /// [`Signature`][Signature].
-pub trait Signature:
+pub trait SignatureExt:
     for<'a> TryFrom<&'a [u8], Error = CryptoMaterialError> + Sized + Debug + Clone + Eq + Hash
 {
     /// The associated verifying key type for this signature.
@@ -243,17 +243,17 @@ pub trait Uniform {
 }
 
 /// A type family with a by-convention notion of genesis private key.
-pub trait Genesis: PrivateKey {
+pub trait Genesis: PrivateKeyExt {
     /// Produces the genesis private key.
     fn genesis() -> Self;
 }
 
 /// A type family for Diffie-Hellman private key material
 pub trait ExchangeKey:
-    PrivateKey<PublicKeyMaterial = <Self as ExchangeKey>::DHPublicKeyMaterial> + Uniform
+    PrivateKeyExt<PublicKeyMaterial = <Self as ExchangeKey>::DHPublicKeyMaterial> + Uniform
 {
     /// The associated PublicKey type
-    type DHPublicKeyMaterial: PublicKey<PrivateKeyMaterial = Self>;
+    type DHPublicKeyMaterial: PublicKeyExt<PrivateKeyMaterial = Self>;
 
     /// The associated SharedKey type obtained as a result of the DH exchange
     ///

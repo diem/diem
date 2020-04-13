@@ -234,7 +234,7 @@ pub fn derive_enum_validkey(input: TokenStream) -> TokenStream {
     }
 }
 
-#[proc_macro_derive(PublicKey, attributes(PrivateKeyType))]
+#[proc_macro_derive(PublicKeyExt, attributes(PrivateKeyType))]
 pub fn derive_enum_publickey(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
 
@@ -243,12 +243,12 @@ pub fn derive_enum_publickey(input: TokenStream) -> TokenStream {
     match ast.data {
         Data::Enum(ref variants) => impl_enum_publickey(name, private_key_type, variants),
         Data::Struct(_) | Data::Union(_) => {
-            panic!("#[derive(PublicKey)] is only defined for enums")
+            panic!("#[derive(PublicKeyExt)] is only defined for enums")
         }
     }
 }
 
-#[proc_macro_derive(PrivateKey, attributes(PublicKeyType))]
+#[proc_macro_derive(PrivateKeyExt, attributes(PublicKeyType))]
 pub fn derive_enum_privatekey(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
 
@@ -257,7 +257,7 @@ pub fn derive_enum_privatekey(input: TokenStream) -> TokenStream {
     match ast.data {
         Data::Enum(ref variants) => impl_enum_privatekey(name, public_key_type, variants),
         Data::Struct(_) | Data::Union(_) => {
-            panic!("#[derive(PrivateKey)] is only defined for enums")
+            panic!("#[derive(PrivateKeyExt)] is only defined for enums")
         }
     }
 }
@@ -274,7 +274,7 @@ pub fn derive_enum_verifyingkey(input: TokenStream) -> TokenStream {
             impl_enum_verifyingkey(name, private_key_type, signature_type, variants)
         }
         Data::Struct(_) | Data::Union(_) => {
-            panic!("#[derive(PrivateKey)] is only defined for enums")
+            panic!("#[derive(VerifyingKey)] is only defined for enums")
         }
     }
 }
@@ -291,12 +291,12 @@ pub fn derive_enum_signingkey(input: TokenStream) -> TokenStream {
             impl_enum_signingkey(name, public_key_type, signature_type, variants)
         }
         Data::Struct(_) | Data::Union(_) => {
-            panic!("#[derive(PrivateKey)] is only defined for enums")
+            panic!("#[derive(SigningKey)] is only defined for enums")
         }
     }
 }
 
-#[proc_macro_derive(Signature, attributes(PublicKeyType, PrivateKeyType))]
+#[proc_macro_derive(SignatureExt, attributes(PublicKeyType, PrivateKeyType))]
 pub fn derive_enum_signature(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
 
@@ -308,7 +308,7 @@ pub fn derive_enum_signature(input: TokenStream) -> TokenStream {
             impl_enum_signature(name, public_key_type, private_key_type, variants)
         }
         Data::Struct(_) | Data::Union(_) => {
-            panic!("#[derive(PrivateKey)] is only defined for enums")
+            panic!("#[derive(SignatureExt)] is only defined for enums")
         }
     }
 }
