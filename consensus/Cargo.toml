@@ -26,7 +26,7 @@ thiserror = "1.0"
 termion = { version = "1.5.3", default-features = false }
 tokio = { version = "0.2.13", features = ["full"] }
 prometheus = { version = "0.8.0", default-features = false }
-proptest = { version = "0.9.4", optional = true }
+proptest = { version = "0.9.6", optional = true }
 
 channel = { path = "../common/channel", version = "0.1.0" }
 consensus-types = { path = "consensus-types", version = "0.1.0", default-features = false }
@@ -53,7 +53,7 @@ libra-vm = { path = "../language/libra-vm", version = "0.1.0" }
 
 [dev-dependencies]
 cached = "0.12.0"
-proptest = "0.9.4"
+proptest = "0.9.6"
 tempfile = "3.1.0"
 
 vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }

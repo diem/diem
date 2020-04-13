@@ -17,4 +17,4 @@ serde = { version = "1.0.106", features = ["derive"] }
 [dev-dependencies]
 lcs = { path = "../lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-proptest-helpers = { path = "../proptest-helpers", version = "0.1.0"}
-proptest = { version = "0.9.4", default-features = true}
+proptest = { version = "0.9.6", default-features = true}
