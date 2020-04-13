@@ -624,7 +624,7 @@ struct Fixed {
 #[test]
 fn fixed_size() {
     assert_eq!(from_bytes::<Fixed>(&[0x0]), Err(Error::Eof));
-    assert_eq!(from_bytes::<Fixed>(&vec![0x0; 16]), Ok(Fixed { x: 0 }));
+    assert_eq!(from_bytes::<Fixed>(&[0x0; 16]), Ok(Fixed { x: 0 }));
 }
 
 proptest! {
