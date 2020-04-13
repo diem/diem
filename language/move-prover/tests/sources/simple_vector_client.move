@@ -11,18 +11,18 @@ module TestVector {
     // Testing with concrete vectors
     // -----------------------------
 
-    fun test_vector_equal(v: vector<u64>, w: &mut vector<u64>) {
+    fun test_vector_equal(_v: vector<u64>, _w: &mut vector<u64>) {
     }
     spec fun test_vector_equal {
         aborts_if false;
-        ensures v == v;
-        ensures old(v) == old(v);
-        ensures v == v[0..len(v)];
-        ensures old(v) == old(v[0..len(v)]);
-        ensures w == w;
-        ensures old(w) == old(w);
-        ensures w == w[0..len(w)];
-        ensures old(w) == old(w[0..len(w)]);
+        ensures _v == _v;
+        ensures old(_v) == old(_v);
+        ensures _v == _v[0..len(_v)];
+        ensures old(_v) == old(_v[0..len(_v)]);
+        ensures _w == _w;
+        ensures old(_w) == old(_w);
+        ensures _w == _w[0..len(_w)];
+        ensures old(_w) == old(_w[0..len(_w)]);
     }
 
     // succeeds. [] == [].

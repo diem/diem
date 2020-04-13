@@ -139,9 +139,11 @@ error:  This assertion might not hold.
      =     at tests/sources/invariants.move:144:19: lifetime_invalid_S_branching
      =         b_ref = <redacted>
      =     at tests/sources/invariants.move:145:23: lifetime_invalid_S_branching
+     =         $t5 = <redacted>,
      =         x_ref = <redacted>
      =     at tests/sources/invariants.move:147:11: lifetime_invalid_S_branching
      =     at tests/sources/invariants.move:150:11: lifetime_invalid_S_branching
      =         a_ref = <redacted>,
      =         b_ref = <redacted>,
+     =         $t5 = <redacted>,
      =         x_ref = <redacted>

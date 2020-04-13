@@ -3,24 +3,28 @@
 
 use crate::{
     annotations::Annotations,
+    lifetime_analysis, reaching_def_analysis,
     stackless_bytecode::{AttrId, Bytecode},
 };
+use itertools::Itertools;
 use spec_lang::{
     ast::Condition,
-    env::{FunId, FunctionEnv, Loc, TypeParameter},
+    env::{FunId, FunctionEnv, GlobalEnv, Loc, TypeParameter},
     symbol::{Symbol, SymbolPool},
-    ty::Type,
+    ty::{Type, TypeDisplayContext},
 };
-use std::collections::BTreeMap;
+use std::{cell::RefCell, collections::BTreeMap, fmt};
 use vm::file_format::CodeOffset;
 
 /// A FunctionTarget is a drop-in replacement for a FunctionEnv which allows to rewrite
 /// and analyze bytecode and parameter/local types. It encapsulates a FunctionEnv and information
 /// which can be rewritten using the `FunctionTargetsHolder` data structure.
-#[derive(Debug)]
 pub struct FunctionTarget<'env> {
     pub func_env: &'env FunctionEnv<'env>,
     pub data: &'env FunctionTargetData,
+
+    // Used for debugging and testing, containing any attached annotation formatters.
+    annotation_formatters: RefCell<Vec<Box<AnnotationFormatter>>>,
 }
 
 /// Holds the owned data belonging to a FunctionTarget, which can be rewritten using
@@ -35,6 +39,17 @@ pub struct FunctionTargetData {
 }
 
 impl<'env> FunctionTarget<'env> {
+    pub fn new(
+        func_env: &'env FunctionEnv<'env>,
+        data: &'env FunctionTargetData,
+    ) -> FunctionTarget<'env> {
+        FunctionTarget {
+            func_env,
+            data,
+            annotation_formatters: RefCell::new(vec![]),
+        }
+    }
+
     /// Returns the name of this function.
     pub fn get_name(&self) -> Symbol {
         self.func_env.get_name()
@@ -48,6 +63,11 @@ impl<'env> FunctionTarget<'env> {
     /// Shortcut for accessing the symbol pool.
     pub fn symbol_pool(&self) -> &SymbolPool {
         self.func_env.module_env.symbol_pool()
+    }
+
+    /// Shortcut for accessing the global env of this function.
+    pub fn global_env(&self) -> &GlobalEnv {
+        self.func_env.module_env.env
     }
 
     /// Returns the location of this function.
@@ -144,5 +164,112 @@ impl<'env> FunctionTarget<'env> {
     /// Gets annotations.
     pub fn get_annotations(&self) -> &Annotations {
         &self.data.annotations
+    }
+}
+
+// =================================================================================================
+// Formatting
+
+/// A function which is called to display the value of an annotation for a given function target
+/// at the given code offset. The function is passed the function target and the code offset, and
+/// is expected to pick the annotation of its respective type from the function target and for
+/// the given code offset. It should return None if there is no relevant annotation.
+pub type AnnotationFormatter = dyn Fn(&FunctionTarget<'_>, CodeOffset) -> Option<String>;
+
+impl<'env> FunctionTarget<'env> {
+    /// Register a formatter. Each function target processor which introduces new annotations
+    /// should register a formatter in order to get is value printed when a function target
+    /// is displayed for debugging or testing.
+    pub fn register_annotation_formatter(&self, formatter: Box<AnnotationFormatter>) {
+        self.annotation_formatters.borrow_mut().push(formatter);
+    }
+
+    /// Tests use this function to register all relevant annotation formatters. Extend this with
+    /// new formatters relevant for tests.
+    pub fn register_annotation_formatters_for_test(&self) {
+        self.register_annotation_formatter(Box::new(lifetime_analysis::format_lifetime_annotation));
+        self.register_annotation_formatter(Box::new(
+            reaching_def_analysis::format_reaching_def_annotation,
+        ));
+    }
+}
+
+impl<'env> fmt::Display for FunctionTarget<'env> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}fun {}::{}",
+            if self.is_public() { "pub " } else { "" },
+            self.func_env
+                .module_env
+                .get_name()
+                .display(self.symbol_pool()),
+            self.get_name().display(self.symbol_pool())
+        )?;
+        let tparams = &self.get_type_parameters();
+        if !tparams.is_empty() {
+            write!(f, "<")?;
+            for (i, TypeParameter(name, _)) in tparams.iter().enumerate() {
+                if i > 0 {
+                    write!(f, ", ")?;
+                }
+                write!(f, "{}", name.display(self.symbol_pool()))?;
+            }
+            write!(f, ">")?;
+        }
+        let tctx = TypeDisplayContext::WithEnv {
+            env: self.global_env(),
+        };
+        write!(f, "(")?;
+        for i in 0..self.get_parameter_count() {
+            if i > 0 {
+                write!(f, ", ")?;
+            }
+            write!(
+                f,
+                "{}: {}",
+                self.get_local_name(i).display(self.symbol_pool()),
+                self.get_local_type(i).display(&tctx)
+            )?;
+        }
+        write!(f, ")")?;
+        if self.get_return_count() > 0 {
+            write!(f, ": ")?;
+            if self.get_return_count() > 1 {
+                write!(f, "(")?;
+            }
+            for i in 0..self.get_return_count() {
+                if i > 0 {
+                    write!(f, ", ")?;
+                }
+                write!(f, "{}", self.get_return_type(i).display(&tctx))?;
+            }
+            if self.get_return_count() > 1 {
+                write!(f, ")")?;
+            }
+        }
+        writeln!(f, " {{")?;
+        for i in self.get_parameter_count()..self.get_local_count() {
+            writeln!(
+                f,
+                "    var {}: {}",
+                self.get_local_name(i).display(self.symbol_pool()),
+                self.get_local_type(i).display(&tctx)
+            )?;
+        }
+        for (offset, code) in self.get_code().iter().enumerate() {
+            let annotations = self
+                .annotation_formatters
+                .borrow()
+                .iter()
+                .filter_map(|f| f(self, offset as CodeOffset))
+                .join(", ");
+            if !annotations.is_empty() {
+                writeln!(f, "    // {}", annotations)?;
+            }
+            writeln!(f, "    {}", code.display(self))?;
+        }
+        writeln!(f, "}}")?;
+        Ok(())
     }
 }

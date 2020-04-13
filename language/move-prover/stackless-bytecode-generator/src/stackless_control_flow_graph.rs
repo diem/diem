@@ -6,6 +6,7 @@
 
 use crate::stackless_bytecode::{Bytecode, Label};
 use bytecode_verifier::control_flow_graph::{BlockId, ControlFlowGraph};
+use itertools::Itertools;
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 
@@ -16,6 +17,7 @@ struct BasicBlock {
     entry: CodeOffset,
     exit: CodeOffset,
     successors: Vec<BlockId>,
+    predecessors: Vec<BlockId>,
 }
 
 pub struct StacklessControlFlowGraph {
@@ -53,13 +55,25 @@ impl StacklessControlFlowGraph {
                     entry,
                     exit: co_pc,
                     successors,
+                    predecessors: vec![],
                 };
                 cfg.blocks.insert(entry, bb);
                 entry = co_pc + 1;
             }
         }
-
         assert_eq!(entry, code.len() as CodeOffset);
+
+        // Create predecessor edges.
+        for block_id in cfg.blocks.keys().cloned().collect_vec() {
+            let successors = cfg.blocks.get(&block_id).unwrap().successors.clone();
+            for succ in successors {
+                let predecessors = &mut cfg.blocks.get_mut(&succ).unwrap().predecessors;
+                if !predecessors.contains(&block_id) {
+                    predecessors.push(block_id);
+                }
+            }
+        }
+
         cfg
     }
 

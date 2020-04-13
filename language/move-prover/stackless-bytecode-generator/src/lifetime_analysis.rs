@@ -8,7 +8,7 @@ use vm::file_format::CodeOffset;
 
 use crate::{
     dataflow_analysis::{DataflowAnalysis, StateMap, TransferFunctions},
-    function_target::FunctionTargetData,
+    function_target::{FunctionTarget, FunctionTargetData},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{
         AssignKind,
@@ -17,6 +17,7 @@ use crate::{
     },
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
+use itertools::Itertools;
 use spec_lang::{env::FunctionEnv, ty::Type};
 
 /// Function target annotation computed by the lifetime analysis processor.
@@ -321,11 +322,11 @@ impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
 
     fn execute(
         &mut self,
-        pre: &Self::State,
+        pre: Self::State,
         instr: &Self::InstrType,
         idx: CodeOffset,
     ) -> Self::State {
-        let mut after_state = pre.clone();
+        let mut after_state = pre;
 
         match instr.skip_labelled() {
             Assign(_, t, l, k) => {
@@ -420,3 +421,30 @@ impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
 }
 
 impl<'a> DataflowAnalysis for LifetimeAnalysis<'a> {}
+
+// =================================================================================================
+// Formatting
+
+/// Format a lifetime annotation.
+pub fn format_lifetime_annotation(
+    target: &FunctionTarget<'_>,
+    code_offset: CodeOffset,
+) -> Option<String> {
+    if let Some(LifetimeAnnotation(map)) = target.get_annotations().get::<LifetimeAnnotation>() {
+        if let Some(dead_at) = map.get(&code_offset) {
+            if dead_at.is_empty() {
+                return None;
+            }
+            let mut res = dead_at
+                .iter()
+                .map(|idx| {
+                    let name = target.get_local_name(*idx);
+                    format!("{}", name.display(target.symbol_pool()),)
+                })
+                .join(", ");
+            res.insert_str(0, "mut ends: ");
+            return Some(res);
+        }
+    }
+    None
+}

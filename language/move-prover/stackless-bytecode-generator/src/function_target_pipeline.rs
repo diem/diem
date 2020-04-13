@@ -55,7 +55,7 @@ impl FunctionTargetsHolder {
             .targets
             .get(&(func_env.module_env.get_id(), func_env.get_id()))
             .expect("function target exists");
-        FunctionTarget { func_env, data }
+        FunctionTarget::new(func_env, data)
     }
 
     /// Processes the function target data for given function.

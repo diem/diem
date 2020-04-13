@@ -5,7 +5,7 @@ module TestAbortsIf {
     // -------------------------
 
     // succeeds, because the specification claims no 'aborts_if' condition.
-    fun no_aborts_if(x: u64, y: u64) {
+    fun no_aborts_if(_x: u64, _y: u64) {
         abort 1
     }
     spec fun no_aborts_if {
@@ -25,14 +25,14 @@ module TestAbortsIf {
     }
 
     // fails, because it does not abort when x <= y.
-    fun abort2_incorrect(x: u64, y: u64) {
+    fun abort2_incorrect(_x: u64, _y: u64) {
     }
     spec fun abort2_incorrect {
-        aborts_if x <= y;
+        aborts_if _x <= _y;
     }
 
     // succeeds.
-    fun abort3(x: u64, y: u64) {
+    fun abort3(_x: u64, _y: u64) {
         abort 1
     }
     spec fun abort3 {
@@ -87,21 +87,21 @@ module TestAbortsIf {
     }
 
     // fails, because it also abort when x > y which condition has not been specified.
-    fun multi_abort3_incorrect(x: u64, y: u64) {
+    fun multi_abort3_incorrect(_x: u64, _y: u64) {
         abort 1
     }
     spec fun multi_abort3_incorrect {
-        aborts_if x < y;
-        aborts_if x == y;
+        aborts_if _x < _y;
+        aborts_if _x == _y;
     }
 
     // succeeds. Aborts all the time.
-    fun multi_abort4(x: u64, y: u64) {
+    fun multi_abort4(_x: u64, _y: u64) {
         abort 1
     }
     spec fun multi_abort4 {
-        aborts_if x < y;
-        aborts_if x == y;
-        aborts_if x > y;
+        aborts_if _x < _y;
+        aborts_if _x == _y;
+        aborts_if _x > _y;
     }
 }

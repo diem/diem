@@ -3,13 +3,13 @@ error:  A postcondition might not hold on this return path.
 
     ┌── tests/sources/aborts-if.move:31:9 ───
     │
- 31 │         aborts_if x <= y;
-    │         ^^^^^^^^^^^^^^^^^
+ 31 │         aborts_if _x <= _y;
+    │         ^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/aborts-if.move:28:5: abort2_incorrect (entry)
     =     at tests/sources/aborts-if.move:28:5: abort2_incorrect (exit)
-    =         x = <redacted>,
-    =         y = <redacted>
+    =         _x = <redacted>,
+    =         _y = <redacted>
 
 error:  A postcondition might not hold on this return path.
 
@@ -67,11 +67,11 @@ error:  A postcondition might not hold on this return path.
 
     ┌── tests/sources/aborts-if.move:94:9 ───
     │
- 94 │         aborts_if x < y;
-    │         ^^^^^^^^^^^^^^^^
+ 94 │         aborts_if _x < _y;
+    │         ^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/aborts-if.move:90:5: multi_abort3_incorrect (entry)
     =     at tests/sources/aborts-if.move:91:9: multi_abort3_incorrect
-    =         x = <redacted>,
-    =         y = <redacted>
+    =         _x = <redacted>,
+    =         _y = <redacted>
     =     at tests/sources/aborts-if.move:90:5: multi_abort3_incorrect (exit)
