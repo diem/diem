@@ -146,3 +146,59 @@ impl PackageLinter for CrateNamesPaths {
         Ok(RunStatus::Executed)
     }
 }
+
+/// Ensure libra-workspace-hack is a dependency
+#[derive(Debug)]
+pub struct WorkspaceHack;
+
+impl Linter for WorkspaceHack {
+    fn name(&self) -> &'static str {
+        "workspace-hack"
+    }
+}
+
+impl PackageLinter for WorkspaceHack {
+    fn run<'l>(
+        &self,
+        ctx: &PackageContext<'l>,
+        out: &mut LintFormatter<'l, '_>,
+    ) -> Result<RunStatus<'l>> {
+        let package_id = ctx.metadata().id();
+        let pkg_graph = ctx
+            .project_ctx()
+            .package_graph()
+            .expect("can't find package graph");
+        let workspace_hack_id = pkg_graph
+            .workspace()
+            .member_ids()
+            .find_map(|pkg_id| {
+                let metadata = pkg_graph.metadata(pkg_id).unwrap();
+                if metadata.name() == "libra-workspace-hack" {
+                    return Some(pkg_id);
+                }
+                None
+            })
+            .expect("can't find libra-workspace-hack package");
+
+        // libra-workspace-hack does not need to depend on itself
+        if package_id == workspace_hack_id {
+            return Ok(RunStatus::Executed);
+        }
+
+        if let Some(links) = pkg_graph.dep_links(package_id) {
+            let mut has_links = false;
+            let mut has_hack_dep = false;
+            for link in links {
+                has_links = true;
+                if link.to.id() == workspace_hack_id {
+                    has_hack_dep = true;
+                }
+            }
+            if has_links && !has_hack_dep {
+                out.write(LintLevel::Error, "missing libra-workspace-hack depdendency");
+            }
+        }
+
+        Ok(RunStatus::Executed)
+    }
+}
