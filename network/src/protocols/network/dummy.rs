@@ -17,8 +17,7 @@ use channel::message_queues::QueueStyle;
 use futures::{executor::block_on, StreamExt};
 use libra_config::config::RoleType;
 use libra_crypto::{
-    ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, x25519::X25519StaticPrivateKey, PrivateKey,
-    Uniform,
+    ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, x25519, PrivateKey, Uniform,
 };
 use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
@@ -107,13 +106,13 @@ pub fn setup_network() -> DummyNetwork {
     let mut rng = StdRng::from_seed(TEST_SEED);
     let dialer_signing_private_key = Ed25519PrivateKey::generate(&mut rng);
     let dialer_signing_public_key = dialer_signing_private_key.public_key();
-    let dialer_identity_private_key = X25519StaticPrivateKey::generate(&mut rng);
+    let dialer_identity_private_key = x25519::PrivateKey::for_test(&mut rng);
     let dialer_identity_public_key = dialer_identity_private_key.public_key();
 
     // Setup keys for listener.
     let listener_signing_private_key = Ed25519PrivateKey::generate(&mut rng);
     let listener_signing_public_key = listener_signing_private_key.public_key();
-    let listener_identity_private_key = X25519StaticPrivateKey::generate(&mut rng);
+    let listener_identity_private_key = x25519::PrivateKey::for_test(&mut rng);
     let listener_identity_public_key = listener_identity_private_key.public_key();
 
     // Setup trusted peers.
@@ -122,14 +121,14 @@ pub fn setup_network() -> DummyNetwork {
             dialer_peer_id,
             NetworkPublicKeys {
                 signing_public_key: dialer_signing_public_key.clone(),
-                identity_public_key: dialer_identity_public_key.clone(),
+                identity_public_key: dialer_identity_public_key,
             },
         ),
         (
             listener_peer_id,
             NetworkPublicKeys {
                 signing_public_key: listener_signing_public_key.clone(),
-                identity_public_key: listener_identity_public_key.clone(),
+                identity_public_key: listener_identity_public_key,
             },
         ),
     ]
@@ -144,10 +143,7 @@ pub fn setup_network() -> DummyNetwork {
         RoleType::Validator,
     );
     network_builder
-        .transport(TransportType::TcpNoise(Some((
-            listener_identity_private_key,
-            listener_identity_public_key,
-        ))))
+        .transport(TransportType::TcpNoise(Some(listener_identity_private_key)))
         .trusted_peers(trusted_peers.clone())
         .signing_keys((listener_signing_private_key, listener_signing_public_key))
         .discovery_interval_ms(HOUR_IN_MS)
@@ -163,10 +159,7 @@ pub fn setup_network() -> DummyNetwork {
         RoleType::Validator,
     );
     network_builder
-        .transport(TransportType::TcpNoise(Some((
-            dialer_identity_private_key,
-            dialer_identity_public_key,
-        ))))
+        .transport(TransportType::TcpNoise(Some(dialer_identity_private_key)))
         .trusted_peers(trusted_peers)
         .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
         .seed_peers(

@@ -305,7 +305,7 @@ impl From<&ValidatorVerifier> for ValidatorSet {
             verifier
                 .get_ordered_account_addresses_iter()
                 .map(|addr| {
-                    crate::validator_info::ValidatorInfo::new_with_random_network_keys(
+                    crate::validator_info::ValidatorInfo::new_with_test_network_keys(
                         &mut rng,
                         addr,
                         verifier.get_public_key(&addr).unwrap(),
@@ -360,8 +360,7 @@ pub fn random_validator_verifier(
 mod tests {
     use super::*;
     use crate::validator_signer::ValidatorSigner;
-    use libra_crypto::test_utils::TEST_SEED;
-    use libra_crypto::HashValue;
+    use libra_crypto::{test_utils::TEST_SEED, HashValue};
     use std::collections::BTreeMap;
 
     #[test]

@@ -64,7 +64,7 @@ pub fn validator_swarm(
             consensus_pubkey,
             1, // @TODO: Add support for dynamic weights
             network_keypairs.signing_keys.public().clone(),
-            network_keypairs.identity_public_key,
+            network_keypairs.identity_public_key(),
         ));
 
         // TODO(philiphayes): as a temporary hack, we'll just duplicate the
@@ -72,9 +72,9 @@ pub fn validator_swarm(
         // empty fullnode info.
         discovery_infos.push(DiscoveryInfo {
             account_address: network.peer_id,
-            validator_network_identity_pubkey: network_keypairs.identity_public_key,
+            validator_network_identity_pubkey: network_keypairs.identity_public_key(),
             validator_network_address: network.advertised_address.clone(),
-            fullnodes_network_identity_pubkey: network_keypairs.identity_public_key,
+            fullnodes_network_identity_pubkey: network_keypairs.identity_public_key(),
             fullnodes_network_address: network.advertised_address.clone(),
         });
 

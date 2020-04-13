@@ -31,6 +31,13 @@ where
             _ => None,
         }
     }
+
+    pub fn public_key(&self) -> Option<T::PublicKeyMaterial> {
+        match self {
+            PrivateKeyContainer::Present(private_key) => Some(private_key.public_key()),
+            _ => None,
+        }
+    }
 }
 
 impl<T> Serialize for PrivateKeyContainer<T>

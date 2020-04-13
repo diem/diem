@@ -30,8 +30,7 @@ use libra_crypto::{
     hash::CryptoHash,
     test_utils::KeyPair,
     traits::*,
-    x25519::X25519StaticPublicKey,
-    HashValue,
+    x25519, HashValue,
 };
 use libra_proptest_helpers::Index;
 use move_core_types::identifier::Identifier;
@@ -1157,9 +1156,9 @@ impl Arbitrary for DiscoveryInfo {
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         (
             any::<AccountAddress>(),
-            any::<X25519StaticPublicKey>(),
+            any::<x25519::PublicKey>(),
             arb_multiaddr(),
-            any::<X25519StaticPublicKey>(),
+            any::<x25519::PublicKey>(),
             arb_multiaddr(),
         )
             .prop_map(

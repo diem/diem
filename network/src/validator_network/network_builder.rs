@@ -31,7 +31,7 @@ use futures::stream::StreamExt;
 use libra_config::config::RoleType;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
+    x25519,
 };
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
@@ -70,11 +70,11 @@ pub const MAX_CONNECTION_DELAY_MS: u64 = 10 * 60 * 1000 /* 10 minutes */;
 /// with or without Noise encryption
 pub enum TransportType {
     Memory,
-    MemoryNoise(Option<(X25519StaticPrivateKey, X25519StaticPublicKey)>),
-    PermissionlessMemoryNoise(Option<(X25519StaticPrivateKey, X25519StaticPublicKey)>),
+    MemoryNoise(Option<x25519::PrivateKey>),
+    PermissionlessMemoryNoise(Option<x25519::PrivateKey>),
     Tcp,
-    TcpNoise(Option<(X25519StaticPrivateKey, X25519StaticPublicKey)>),
-    PermissionlessTcpNoise(Option<(X25519StaticPrivateKey, X25519StaticPublicKey)>),
+    TcpNoise(Option<x25519::PrivateKey>),
+    PermissionlessTcpNoise(Option<x25519::PrivateKey>),
 }
 
 /// Build Network module with custom configuration values.
