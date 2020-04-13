@@ -8,7 +8,7 @@ use proptest::{
     prelude::*,
     test_runner::{Config, FileFailurePersistence, TestRunner},
 };
-use serde_reflection::{Records, Tracer};
+use serde_reflection::{SerializationRecords, Tracer};
 use std::sync::{Arc, Mutex};
 
 /// Default output file.
@@ -18,7 +18,10 @@ pub static FILE_PATH: &str = "tests/staged/libra.yaml";
 ///
 /// This step is useful to inject well-formed values that must pass
 /// custom-validation checks (e.g. keys).
-pub fn add_proptest_serialization_tracing(tracer: Tracer, records: Records) -> (Tracer, Records) {
+pub fn add_proptest_serialization_tracing(
+    tracer: Tracer,
+    records: SerializationRecords,
+) -> (Tracer, SerializationRecords) {
     let mut runner = TestRunner::new(Config {
         failure_persistence: Some(Box::new(FileFailurePersistence::Off)),
         ..Config::default()
@@ -59,7 +62,7 @@ pub fn add_proptest_serialization_tracing(tracer: Tracer, records: Records) -> (
 ///
 /// This step is useful to guarantee coverage of the analysis but it may
 /// fail if the previous step missed some custom types.
-pub fn add_deserialization_tracing(mut tracer: Tracer, records: &Records) -> Tracer {
+pub fn add_deserialization_tracing(mut tracer: Tracer, records: &SerializationRecords) -> Tracer {
     tracer
         .trace_type::<transaction::Transaction>(&records)
         .unwrap();

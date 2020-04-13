@@ -4,18 +4,18 @@
 use crate::{
     error::{Error, Result},
     format::*,
-    trace::{Records, Tracer},
+    trace::{SerializationRecords, Tracer},
     value::Value,
 };
 use serde::{ser, Serialize};
 
 pub(crate) struct Serializer<'a> {
     tracer: &'a mut Tracer,
-    records: &'a mut Records,
+    records: &'a mut SerializationRecords,
 }
 
 impl<'a> Serializer<'a> {
-    pub(crate) fn new(tracer: &'a mut Tracer, records: &'a mut Records) -> Self {
+    pub(crate) fn new(tracer: &'a mut Tracer, records: &'a mut SerializationRecords) -> Self {
         Self { tracer, records }
     }
 }
@@ -264,7 +264,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
 
 pub struct SeqSerializer<'a> {
     tracer: &'a mut Tracer,
-    records: &'a mut Records,
+    records: &'a mut SerializationRecords,
 
     format: Format,
     values: Vec<Value>,
@@ -291,7 +291,7 @@ impl<'a> ser::SerializeSeq for SeqSerializer<'a> {
 
 pub struct TupleSerializer<'a> {
     tracer: &'a mut Tracer,
-    records: &'a mut Records,
+    records: &'a mut SerializationRecords,
 
     formats: Vec<Format>,
     values: Vec<Value>,
@@ -318,7 +318,7 @@ impl<'a> ser::SerializeTuple for TupleSerializer<'a> {
 
 pub struct TupleStructSerializer<'a> {
     tracer: &'a mut Tracer,
-    records: &'a mut Records,
+    records: &'a mut SerializationRecords,
 
     name: &'static str,
     formats: Vec<Format>,
@@ -349,7 +349,7 @@ impl<'a> ser::SerializeTupleStruct for TupleStructSerializer<'a> {
 
 pub struct TupleVariantSerializer<'a> {
     tracer: &'a mut Tracer,
-    records: &'a mut Records,
+    records: &'a mut SerializationRecords,
 
     name: &'static str,
     variant_index: u32,
@@ -388,7 +388,7 @@ impl<'a> ser::SerializeTupleVariant for TupleVariantSerializer<'a> {
 
 pub struct MapSerializer<'a> {
     tracer: &'a mut Tracer,
-    records: &'a mut Records,
+    records: &'a mut SerializationRecords,
 
     key_format: Format,
     value_format: Format,
@@ -431,7 +431,7 @@ impl<'a> ser::SerializeMap for MapSerializer<'a> {
 
 pub struct StructSerializer<'a> {
     tracer: &'a mut Tracer,
-    records: &'a mut Records,
+    records: &'a mut SerializationRecords,
 
     name: &'static str,
     fields: Vec<Named<Format>>,
@@ -465,7 +465,7 @@ impl<'a> ser::SerializeStruct for StructSerializer<'a> {
 
 pub struct StructVariantSerializer<'a> {
     tracer: &'a mut Tracer,
-    records: &'a mut Records,
+    records: &'a mut SerializationRecords,
     name: &'static str,
     variant_index: u32,
     variant_name: &'static str,

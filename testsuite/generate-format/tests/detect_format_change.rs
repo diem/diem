@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use generate_format::{add_deserialization_tracing, add_proptest_serialization_tracing, FILE_PATH};
-use serde_reflection::{Records, RegistryOwned, Tracer};
+use serde_reflection::{RegistryOwned, SerializationRecords, Tracer};
 use serde_yaml;
 use std::collections::BTreeMap;
 
@@ -12,7 +12,7 @@ Please verify the changes to the recorded file(s) and tag your pull-request as `
 
 #[test]
 fn test_recorded_formats_did_not_change() {
-    let records = Records::new();
+    let records = SerializationRecords::new();
     let tracer = Tracer::new(lcs::is_human_readable());
     let (mut tracer, records) = add_proptest_serialization_tracing(tracer, records);
     tracer = add_deserialization_tracing(tracer, &records);
