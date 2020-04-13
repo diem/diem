@@ -28,12 +28,12 @@ fn rpc_request() -> lcs::Result<()> {
     };
     assert_eq!(
         lcs::to_bytes(&rpc_request)?,
-        // [25, 0, 0, 0] -> request_id
+        // [25] -> request_id
         // [0] -> protocol_idx
         // [0] -> priority
         // [4] -> length of raw_request
         // [0, 1, 2, 3] -> raw_request bytes
-        vec![25, 0, 0, 0, 0, 0, 4, 0, 1, 2, 3]
+        vec![25, 0, 0, 4, 0, 1, 2, 3]
     );
     Ok(())
 }
