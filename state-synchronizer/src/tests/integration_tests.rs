@@ -51,13 +51,12 @@ impl MockExecutorProxy {
     }
 }
 
-#[async_trait::async_trait]
 impl ExecutorProxyTrait for MockExecutorProxy {
-    async fn get_local_storage_state(&self) -> Result<SynchronizerState> {
+    fn get_local_storage_state(&self) -> Result<SynchronizerState> {
         Ok(self.storage.read().unwrap().get_local_storage_state())
     }
 
-    async fn execute_chunk(
+    fn execute_chunk(
         &mut self,
         txn_list_with_proof: TransactionListWithProof,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
@@ -72,7 +71,7 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         Ok(())
     }
 
-    async fn get_chunk(
+    fn get_chunk(
         &self,
         known_version: u64,
         limit: u64,
@@ -93,23 +92,19 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         (self.handler)(txns_with_proof)
     }
 
-    async fn get_epoch_proof(
-        &self,
-        start_epoch: u64,
-        _end_epoch: u64,
-    ) -> Result<ValidatorChangeProof> {
+    fn get_epoch_proof(&self, start_epoch: u64, _end_epoch: u64) -> Result<ValidatorChangeProof> {
         Ok(self.storage.read().unwrap().get_epoch_changes(start_epoch))
     }
 
-    async fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
+    fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
         self.storage.read().unwrap().get_ledger_info(version)
     }
 
-    async fn load_on_chain_configs(&mut self) -> Result<()> {
+    fn load_on_chain_configs(&mut self) -> Result<()> {
         Ok(())
     }
 
-    async fn publish_on_chain_config_updates(&mut self, _events: Vec<ContractEvent>) -> Result<()> {
+    fn publish_on_chain_config_updates(&mut self, _events: Vec<ContractEvent>) -> Result<()> {
         Ok(())
     }
 }

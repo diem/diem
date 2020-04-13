@@ -4,6 +4,7 @@
 use anyhow::{Error, Result};
 use libra_crypto::HashValue;
 use libra_types::{
+    access_path::AccessPath,
     account_address::AccountAddress,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     block_info::BlockInfo,
@@ -237,6 +238,22 @@ impl DbReader for MockLibraDB {
     }
 
     fn get_latest_tree_state(&self) -> Result<TreeState> {
+        unimplemented!()
+    }
+
+    fn get_epoch_change_ledger_infos(
+        &self,
+        _start_epoch: u64,
+        _end_epoch: u64,
+    ) -> Result<ValidatorChangeProof> {
+        unimplemented!()
+    }
+
+    fn batch_fetch_config(&self, _access_paths: Vec<AccessPath>) -> Result<Vec<Vec<u8>>> {
+        unimplemented!()
+    }
+
+    fn get_ledger_info(&self, _: u64) -> Result<LedgerInfoWithSignatures> {
         unimplemented!()
     }
 }

@@ -29,6 +29,7 @@ use std::{
     time::Instant,
 };
 use storage_client::SyncStorageClient;
+use storage_interface::DbReader;
 use storage_service::{init_libra_db, start_storage_service_with_db};
 use subscription_service::ReconfigSubscription;
 use tokio::runtime::{Builder, Runtime};
@@ -217,6 +218,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let state_synchronizer = StateSynchronizer::bootstrap(
         state_sync_network_handles,
         state_sync_to_mempool_sender,
+        Arc::clone(&libra_db) as Arc<dyn DbReader>,
         Arc::clone(&executor),
         &node_config,
         reconfig_subscriptions,
