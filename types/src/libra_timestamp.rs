@@ -43,5 +43,6 @@ pub struct LibraTimestampResource {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct LibraTimestamp {
+    #[serde(with = "lcs::fixed_size")]
     pub microseconds: u64,
 }
