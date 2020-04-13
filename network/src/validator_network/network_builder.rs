@@ -30,7 +30,7 @@ use channel::{self, libra_channel, message_queues::QueueStyle};
 use futures::stream::StreamExt;
 use libra_config::config::RoleType;
 use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    ed25519,
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
 };
 use libra_logger::prelude::*;
@@ -113,7 +113,7 @@ pub struct NetworkBuilder {
     max_concurrent_network_reqs: usize,
     max_concurrent_network_notifs: usize,
     max_connection_delay_ms: u64,
-    signing_keys: Option<(Ed25519PrivateKey, Ed25519PublicKey)>,
+    signing_keys: Option<(ed25519::PrivateKey, ed25519::PublicKey)>,
     enable_remote_authentication: bool,
 }
 
@@ -194,7 +194,7 @@ impl NetworkBuilder {
     }
 
     /// Set signing keys of local node.
-    pub fn signing_keys(&mut self, keys: (Ed25519PrivateKey, Ed25519PublicKey)) -> &mut Self {
+    pub fn signing_keys(&mut self, keys: (ed25519::PrivateKey, ed25519::PublicKey)) -> &mut Self {
         self.signing_keys = Some(keys);
         self
     }

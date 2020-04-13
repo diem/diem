@@ -19,12 +19,7 @@ use crate::mnemonic::Mnemonic;
 use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian};
 use hmac::Hmac;
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    hash::HashValue,
-    hkdf::Hkdf,
-    traits::SigningKey,
-};
+use libra_crypto::{ed25519, hash::HashValue, hkdf::Hkdf, traits::SigningKey};
 use libra_types::{account_address::AccountAddress, transaction::authenticator::AuthenticationKey};
 use mirai_annotations::*;
 use pbkdf2::pbkdf2;
@@ -80,14 +75,14 @@ pub struct ExtendedPrivKey {
     /// Child number of the key used to derive from Parent.
     _child_number: ChildNumber,
     /// Private key.
-    private_key: Ed25519PrivateKey,
+    private_key: ed25519::PrivateKey,
 }
 
 impl ExtendedPrivKey {
     /// Constructor for creating an ExtendedPrivKey from a ed25519 PrivateKey. Note that the
     /// ChildNumber are not used in this iteration of LibraWallet, but in order to
     /// enable more general Hierarchical KeyDerivation schemes, we include it for completeness.
-    pub fn new(_child_number: ChildNumber, private_key: Ed25519PrivateKey) -> Self {
+    pub fn new(_child_number: ChildNumber, private_key: ed25519::PrivateKey) -> Self {
         Self {
             _child_number,
             private_key,
@@ -95,7 +90,7 @@ impl ExtendedPrivKey {
     }
 
     /// Returns the PublicKey associated to a particular ExtendedPrivKey
-    pub fn get_public(&self) -> Ed25519PublicKey {
+    pub fn get_public(&self) -> ed25519::PublicKey {
         (&self.private_key).into()
     }
 
@@ -116,7 +111,7 @@ impl ExtendedPrivKey {
     /// In other words: In Libra, the message used for signature and verification is the sha3 hash
     /// of the transaction. This sha3 hash is then hashed again using SHA512 to arrive at the
     /// deterministic nonce for the EdDSA.
-    pub fn sign(&self, msg: HashValue) -> Ed25519Signature {
+    pub fn sign(&self, msg: HashValue) -> ed25519::Signature {
         self.private_key.sign_message(&msg)
     }
 }
@@ -156,7 +151,7 @@ impl KeyFactory {
         info.extend_from_slice(&le_n);
 
         let hkdf_expand = Hkdf::<Sha3_256>::expand(&self.master(), Some(&info), 32)?;
-        let sk = Ed25519PrivateKey::try_from(hkdf_expand.as_slice())
+        let sk = ed25519::PrivateKey::try_from(hkdf_expand.as_slice())
             .expect("Unable to convert into private key");
 
         Ok(ExtendedPrivKey::new(child, sk))

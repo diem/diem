@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use consensus_types::common::Round;
-use libra_crypto::ed25519::Ed25519PrivateKey;
+use libra_crypto::ed25519;
 use libra_secure_storage::{InMemoryStorage, Policy, Storage, Value};
 
 /// SafetyRules needs an abstract storage interface to act as a common utility for storing
@@ -21,7 +21,7 @@ const LAST_VOTED_ROUND: &str = "last_voted_round";
 const PREFERRED_ROUND: &str = "preferred_round";
 
 impl PersistentSafetyStorage {
-    pub fn in_memory(private_key: Ed25519PrivateKey) -> Self {
+    pub fn in_memory(private_key: ed25519::PrivateKey) -> Self {
         let storage = InMemoryStorage::new_storage();
         Self::initialize(storage, private_key)
     }
@@ -30,7 +30,7 @@ impl PersistentSafetyStorage {
     /// SafetyRules values set.
     pub fn initialize(
         mut internal_store: Box<dyn Storage>,
-        private_key: Ed25519PrivateKey,
+        private_key: ed25519::PrivateKey,
     ) -> Self {
         let perms = Policy::public();
         internal_store
@@ -54,14 +54,14 @@ impl PersistentSafetyStorage {
         Self { internal_store }
     }
 
-    pub fn consensus_key(&self) -> Result<Ed25519PrivateKey> {
+    pub fn consensus_key(&self) -> Result<ed25519::PrivateKey> {
         Ok(self
             .internal_store
             .get(CONSENSUS_KEY)
             .and_then(|r| r.value.ed25519_private_key())?)
     }
 
-    pub fn set_consensus_key(&mut self, consensus_key: Ed25519PrivateKey) -> Result<()> {
+    pub fn set_consensus_key(&mut self, consensus_key: ed25519::PrivateKey) -> Result<()> {
         self.internal_store
             .set(CONSENSUS_KEY, Value::Ed25519PrivateKey(consensus_key))?;
         Ok(())

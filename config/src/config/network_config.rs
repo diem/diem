@@ -8,7 +8,7 @@ use crate::{
 };
 use anyhow::{anyhow, ensure, Result};
 use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    ed25519,
     x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
     Uniform, ValidKey,
 };
@@ -175,7 +175,7 @@ impl NetworkConfig {
     }
 
     pub fn random_with_peer_id(&mut self, rng: &mut StdRng, peer_id: Option<PeerId>) {
-        let signing_key = Ed25519PrivateKey::generate(rng);
+        let signing_key = ed25519::PrivateKey::generate(rng);
         let identity_key = X25519StaticPrivateKey::generate(rng);
         let network_keypairs = NetworkKeyPairs::load(signing_key, identity_key);
         self.peer_id = if let Some(peer_id) = peer_id {
@@ -200,14 +200,14 @@ pub struct SeedPeersConfig {
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 #[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct NetworkKeyPairs {
-    pub signing_keys: KeyPair<Ed25519PrivateKey>,
+    pub signing_keys: KeyPair<ed25519::PrivateKey>,
     pub identity_keys: KeyPair<X25519StaticPrivateKey>,
 }
 
 impl NetworkKeyPairs {
     // used in testing to fill the structure with test keypairs
     pub fn load(
-        signing_private_key: Ed25519PrivateKey,
+        signing_private_key: ed25519::PrivateKey,
         identity_private_key: X25519StaticPrivateKey,
     ) -> Self {
         Self {
@@ -240,7 +240,7 @@ impl std::fmt::Debug for NetworkPeersConfig {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct NetworkPeerInfo {
     #[serde(rename = "ns")]
-    pub signing_public_key: Ed25519PublicKey,
+    pub signing_public_key: ed25519::PublicKey,
     #[serde(rename = "ni")]
     pub identity_public_key: X25519StaticPublicKey,
 }

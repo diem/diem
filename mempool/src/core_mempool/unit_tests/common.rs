@@ -4,7 +4,7 @@
 use crate::core_mempool::{CoreMempool, TimelineState, TxnPointer};
 use anyhow::{format_err, Result};
 use libra_config::config::NodeConfig;
-use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKeyExt, Uniform};
+use libra_crypto::{ed25519, PrivateKeyExt, Uniform};
 use libra_types::{
     account_address::AccountAddress,
     account_config::LBR_NAME,
@@ -79,7 +79,7 @@ impl TestTransaction {
         let mut seed: [u8; 32] = [0u8; 32];
         seed[..4].copy_from_slice(&[1, 2, 3, 4]);
         let mut rng: StdRng = StdRng::from_seed(seed);
-        let privkey = Ed25519PrivateKey::generate(&mut rng);
+        let privkey = ed25519::PrivateKey::generate(&mut rng);
         raw_txn
             .sign(&privkey, privkey.public_key())
             .expect("Failed to sign raw transaction.")

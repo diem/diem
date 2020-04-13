@@ -3,7 +3,7 @@
 
 use crate::{block::Block, common::Round};
 use libra_crypto::{
-    ed25519::Ed25519Signature,
+    ed25519,
     hash::{CryptoHash, CryptoHasher, HashValue},
 };
 use libra_crypto_derive::CryptoHasher;
@@ -41,7 +41,7 @@ impl Timeout {
         self.round
     }
 
-    pub fn sign(&self, signer: &ValidatorSigner) -> Ed25519Signature {
+    pub fn sign(&self, signer: &ValidatorSigner) -> ed25519::Signature {
         signer.sign_message(self.hash())
     }
 }

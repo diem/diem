@@ -4,7 +4,7 @@ use crate::{
     data::{LibraAccountResource, LibraEventHandle, LibraStatus},
     error::*,
 };
-use libra_crypto::ed25519::ED25519_PUBLIC_KEY_LENGTH;
+use libra_crypto::ed25519;
 use libra_types::{account_state::AccountState, account_state_blob::AccountStateBlob};
 use std::{convert::TryFrom, slice};
 
@@ -15,7 +15,7 @@ pub fn libra_LibraAccountResource_from_safe(
     if let Ok(account_state) = AccountState::try_from(&blob) {
         if let Ok(Some(account_resource)) = account_state.get_account_resource() {
             if let Ok(Some(balance_resource)) = account_state.get_balance_resource() {
-                let mut authentication_key = [0u8; ED25519_PUBLIC_KEY_LENGTH];
+                let mut authentication_key = [0u8; ed25519::PUBLIC_KEY_LENGTH];
                 authentication_key.copy_from_slice(account_resource.authentication_key());
 
                 let sent_events = LibraEventHandle {
@@ -76,7 +76,7 @@ mod tests {
     /// Generate an AccountBlob and verify we can parse it
     #[test]
     fn test_get_accountresource() {
-        use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKeyExt, Uniform};
+        use libra_crypto::{ed25519, PrivateKeyExt, Uniform};
         use libra_types::{
             account_config::{AccountResource, BalanceResource},
             event::{EventHandle, EventKey},
@@ -85,7 +85,7 @@ mod tests {
         };
         use std::collections::BTreeMap;
 
-        let pubkey = Ed25519PrivateKey::generate_for_testing().public_key();
+        let pubkey = ed25519::PrivateKey::generate_for_testing().public_key();
 
         // Figure out how to use Libra code to generate AccountStateBlob directly, not involving btreemap directly
         let mut map: BTreeMap<Vec<u8>, Vec<u8>> = BTreeMap::new();

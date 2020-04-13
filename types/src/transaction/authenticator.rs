@@ -3,12 +3,7 @@
 
 use crate::account_address::AccountAddress;
 use anyhow::{ensure, Error, Result};
-use libra_crypto::{
-    ed25519::{Ed25519PublicKey, Ed25519Signature},
-    multi_ed25519,
-    traits::SignatureExt,
-    HashValue,
-};
+use libra_crypto::{ed25519, multi_ed25519, traits::SignatureExt, HashValue};
 use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
@@ -51,8 +46,8 @@ impl fmt::Display for Scheme {
 pub enum TransactionAuthenticator {
     /// Single signature
     Ed25519 {
-        public_key: Ed25519PublicKey,
-        signature: Ed25519Signature,
+        public_key: ed25519::PublicKey,
+        signature: ed25519::Signature,
     },
     /// K-of-N multisignature
     MultiEd25519 {
@@ -72,7 +67,7 @@ impl TransactionAuthenticator {
     }
 
     /// Create a single-signature ed25519 authenticator
-    pub fn ed25519(public_key: Ed25519PublicKey, signature: Ed25519Signature) -> Self {
+    pub fn ed25519(public_key: ed25519::PublicKey, signature: ed25519::Signature) -> Self {
         Self::Ed25519 {
             public_key,
             signature,
@@ -152,7 +147,7 @@ impl AuthenticationKey {
     }
 
     /// Create an authentication key from an Ed25519 public key
-    pub fn ed25519(public_key: &Ed25519PublicKey) -> AuthenticationKey {
+    pub fn ed25519(public_key: &ed25519::PublicKey) -> AuthenticationKey {
         Self::from_preimage(&AuthenticationKeyPreimage::ed25519(public_key))
     }
 
@@ -206,7 +201,7 @@ impl AuthenticationKeyPreimage {
     }
 
     /// Construct a preimage from an Ed25519 public key
-    pub fn ed25519(public_key: &Ed25519PublicKey) -> AuthenticationKeyPreimage {
+    pub fn ed25519(public_key: &ed25519::PublicKey) -> AuthenticationKeyPreimage {
         Self::new(public_key.to_bytes().to_vec(), Scheme::Ed25519)
     }
 

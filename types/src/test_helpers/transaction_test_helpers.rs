@@ -7,7 +7,7 @@ use crate::{
     transaction::{Module, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction},
     write_set::WriteSet,
 };
-use libra_crypto::{ed25519::*, hash::CryptoHash, traits::*};
+use libra_crypto::{ed25519, hash::CryptoHash, traits::*};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const MAX_GAS_AMOUNT: u64 = 400_000;
@@ -20,8 +20,8 @@ static EMPTY_SCRIPT: &[u8] =
 pub fn get_test_signed_module_publishing_transaction(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: &Ed25519PrivateKey,
-    public_key: Ed25519PublicKey,
+    private_key: &ed25519::PrivateKey,
+    public_key: ed25519::PublicKey,
     module: Module,
 ) -> SignedTransaction {
     let expiration_time = SystemTime::now()
@@ -48,8 +48,8 @@ pub fn get_test_signed_module_publishing_transaction(
 pub fn get_test_signed_transaction(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: &Ed25519PrivateKey,
-    public_key: Ed25519PublicKey,
+    private_key: &ed25519::PrivateKey,
+    public_key: ed25519::PublicKey,
     script: Option<Script>,
     expiration_time: u64,
     gas_unit_price: u64,
@@ -75,8 +75,8 @@ pub fn get_test_signed_transaction(
 pub fn get_test_unchecked_transaction(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: &Ed25519PrivateKey,
-    public_key: Ed25519PublicKey,
+    private_key: &ed25519::PrivateKey,
+    public_key: ed25519::PublicKey,
     script: Option<Script>,
     expiration_time: u64,
     gas_unit_price: u64,
@@ -103,8 +103,8 @@ pub fn get_test_unchecked_transaction(
 pub fn get_test_signed_txn(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: &Ed25519PrivateKey,
-    public_key: Ed25519PublicKey,
+    private_key: &ed25519::PrivateKey,
+    public_key: ed25519::PublicKey,
     script: Option<Script>,
 ) -> SignedTransaction {
     let expiration_time = SystemTime::now()
@@ -128,8 +128,8 @@ pub fn get_test_signed_txn(
 pub fn get_test_unchecked_txn(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: &Ed25519PrivateKey,
-    public_key: Ed25519PublicKey,
+    private_key: &ed25519::PrivateKey,
+    public_key: ed25519::PublicKey,
     script: Option<Script>,
 ) -> SignedTransaction {
     let expiration_time = SystemTime::now()
@@ -153,8 +153,8 @@ pub fn get_test_unchecked_txn(
 pub fn get_write_set_txn(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: &Ed25519PrivateKey,
-    public_key: Ed25519PublicKey,
+    private_key: &ed25519::PrivateKey,
+    public_key: ed25519::PublicKey,
     write_set: Option<WriteSet>,
 ) -> SignatureCheckedTransaction {
     let write_set = write_set.unwrap_or_default();

@@ -5,10 +5,7 @@
 
 use config_builder::{FullNodeConfig, ValidatorConfig};
 use libra_config::config::NodeConfig;
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    test_utils::KeyPair,
-};
+use libra_crypto::{ed25519, test_utils::KeyPair};
 use parity_multiaddr::Multiaddr;
 use std::{
     convert::TryInto,
@@ -188,7 +185,7 @@ fn build_faucet(args: FaucetArgs) {
 
     let faucet_key = config_builder.build_faucet_client();
     let key_path = args.output_dir.join("mint.key");
-    let faucet_keypair = KeyPair::<Ed25519PrivateKey, Ed25519PublicKey>::from(faucet_key);
+    let faucet_keypair = KeyPair::<ed25519::PrivateKey, ed25519::PublicKey>::from(faucet_key);
     let serialized_keys = lcs::to_bytes(&faucet_keypair).expect("Unable to serialize keys");
 
     fs::create_dir_all(&args.output_dir).expect("Unable to create output directory");

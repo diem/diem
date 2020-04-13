@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{Error, Policy, Storage, Value};
-use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKeyExt, SignatureExt, Uniform};
+use libra_crypto::{ed25519, HashValue, PrivateKeyExt, SignatureExt, Uniform};
 
 /// This suite contains tests for secure storage backends. We test the correct functionality
 /// of both key/value and cryptographic operations for storage implementations. All storage backend
@@ -48,7 +48,7 @@ pub fn execute_all_storage_tests(storage: &mut dyn Storage) {
 /// This test tries to get and set non-existent keys in storage and asserts that the correct
 /// errors are returned on these operations.
 fn test_get_set_non_existent(storage: &mut dyn Storage) {
-    let crypto_value = Value::Ed25519PrivateKey(Ed25519PrivateKey::generate_for_testing());
+    let crypto_value = Value::Ed25519PrivateKey(ed25519::PrivateKey::generate_for_testing());
     let u64_value = Value::U64(10);
 
     assert_eq!(
@@ -72,8 +72,8 @@ fn test_get_set_non_existent(storage: &mut dyn Storage) {
 /// This test stores various key/value pairs in storage, updates them, retrieves the values and
 /// unwraps them to ensure the correct value types are returned.
 fn test_create_get_set_unwrap(storage: &mut dyn Storage) {
-    let crypto_private_1 = Ed25519PrivateKey::generate_for_testing();
-    let crypto_private_2 = Ed25519PrivateKey::generate_for_testing();
+    let crypto_private_1 = ed25519::PrivateKey::generate_for_testing();
+    let crypto_private_2 = ed25519::PrivateKey::generate_for_testing();
     let u64_1 = 10;
     let u64_2 = 647;
     let policy = Policy::public();
@@ -124,7 +124,7 @@ fn test_create_get_set_unwrap(storage: &mut dyn Storage) {
 /// This test stores different types of values into storage, retrieves them, and asserts
 /// that the value unwrap functions return an unexpected type error on an incorrect unwrap.
 fn test_verify_incorrect_value_types_unwrap(storage: &mut dyn Storage) {
-    let crypto_value = Value::Ed25519PrivateKey(Ed25519PrivateKey::generate_for_testing());
+    let crypto_value = Value::Ed25519PrivateKey(ed25519::PrivateKey::generate_for_testing());
     let u64_value = Value::U64(10);
     let policy = Policy::public();
 
@@ -237,7 +237,7 @@ fn test_create_and_get_non_existent_version(storage: &mut dyn Storage) {
         .expect("Failed to create a test Ed25519 key pair!");
 
     // Get a non-existent version of the new key pair and verify failure
-    let non_existent_public_key = Ed25519PrivateKey::generate_for_testing().public_key();
+    let non_existent_public_key = ed25519::PrivateKey::generate_for_testing().public_key();
     assert!(
         storage.export_private_key_for_version(CRYPTO_NAME, non_existent_public_key).is_err(),
         "We have tried to retrieve a non-existent private key version -- the call should have failed!",

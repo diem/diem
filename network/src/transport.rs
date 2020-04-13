@@ -223,7 +223,7 @@ pub fn build_unauthenticated_memory_noise_transport(
                     noise_config.upgrade_connection(socket, origin).await?;
                 // Generate PeerId from X25519StaticPublicKey.
                 // Note: This is inconsistent with current types because AccountAddress is derived
-                // from consensus key which is of type Ed25519PublicKey. Since AccountAddress does
+                // from consensus key which is of type ed25519::PublicKey. Since AccountAddress does
                 // not mean anything in a setting without remote authentication, we use the network
                 // public key to generate a peer_id for the peer. The only reason this works is
                 // that both are 32 bytes in size. If/when this condition no longer holds, we will
@@ -307,7 +307,7 @@ pub fn build_unauthenticated_tcp_noise_transport(
                     noise_config.upgrade_connection(socket, origin).await?;
                 // Generate PeerId from X25519StaticPublicKey.
                 // Note: This is inconsistent with current types because AccountAddress is derived
-                // from consensus key which is of type Ed25519PublicKey. Since AccountAddress does
+                // from consensus key which is of type ed25519::PublicKey. Since AccountAddress does
                 // not mean anything in a setting without remote authentication, we use the network
                 // public key to generate a peer_id for the peer. The only reason this works is that
                 // both are 32 bytes in size. If/when this condition no longer holds, we will receive

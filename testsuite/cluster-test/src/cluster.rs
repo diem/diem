@@ -8,10 +8,7 @@ use anyhow::{ensure, format_err, Result};
 use config_builder::ValidatorConfig;
 use generate_keypair::load_key_from_file;
 use libra_config::config::DEFAULT_JSON_RPC_PORT;
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    test_utils::KeyPair,
-};
+use libra_crypto::{ed25519, test_utils::KeyPair};
 use libra_logger::*;
 use rand::prelude::*;
 use rusoto_ec2::{DescribeInstancesRequest, Ec2, Filter, Tag};
@@ -23,7 +20,7 @@ pub struct Cluster {
     validator_instances: Vec<Instance>,
     fullnode_instances: Vec<Instance>,
     prometheus_ip: Option<String>,
-    mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
+    mint_key_pair: KeyPair<ed25519::PrivateKey, ed25519::PublicKey>,
 }
 
 impl Cluster {
@@ -38,7 +35,7 @@ impl Cluster {
                 )
             })
             .collect();
-        let mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey> =
+        let mint_key_pair: KeyPair<ed25519::PrivateKey, ed25519::PublicKey> =
             load_key_from_file(mint_file).expect("invalid faucet keypair file");
         Self {
             validator_instances: instances,
@@ -48,7 +45,7 @@ impl Cluster {
         }
     }
 
-    fn get_mint_key_pair() -> KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
+    fn get_mint_key_pair() -> KeyPair<ed25519::PrivateKey, ed25519::PublicKey> {
         let seed = "1337133713371337133713371337133713371337133713371337133713371337";
         let seed = hex::decode(seed).expect("Invalid hex in seed.");
         let seed = seed[..32].try_into().expect("Invalid seed");
@@ -182,7 +179,7 @@ impl Cluster {
         self.prometheus_ip.as_ref()
     }
 
-    pub fn mint_key_pair(&self) -> &KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
+    pub fn mint_key_pair(&self) -> &KeyPair<ed25519::PrivateKey, ed25519::PublicKey> {
         &self.mint_key_pair
     }
 

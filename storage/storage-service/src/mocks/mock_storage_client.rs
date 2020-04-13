@@ -5,7 +5,7 @@
 
 use anyhow::{Error, Result};
 use futures::stream::BoxStream;
-use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKeyExt, Uniform};
+use libra_crypto::{ed25519, HashValue, PrivateKeyExt, Uniform};
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -259,7 +259,7 @@ fn get_mock_txn_data(
     let mut seed_rng = OsRng::new().expect("can't access OsRng");
     let seed_buf: [u8; 32] = seed_rng.gen();
     let mut rng = StdRng::from_seed(seed_buf);
-    let priv_key = Ed25519PrivateKey::generate(&mut rng);
+    let priv_key = ed25519::PrivateKey::generate(&mut rng);
     let mut txns = vec![];
     for i in start_seq..=end_seq {
         let txn = Transaction::UserTransaction(get_test_signed_txn(

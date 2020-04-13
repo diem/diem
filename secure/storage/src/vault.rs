@@ -6,10 +6,7 @@ use crate::{
     Storage, Value,
 };
 use chrono::DateTime;
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    HashValue,
-};
+use libra_crypto::{ed25519, HashValue};
 use libra_vault_client::{self as vault, Client};
 
 const LIBRA_DEFAULT: &str = "libra_default";
@@ -182,7 +179,7 @@ impl VaultStorage {
         Box::new(VaultStorage::new(host, token, namespace))
     }
 
-    fn key_version(&self, name: &str, version: &Ed25519PublicKey) -> Result<u32, Error> {
+    fn key_version(&self, name: &str, version: &ed25519::PublicKey) -> Result<u32, Error> {
         let pubkeys = self.client.read_ed25519_key(name)?;
         let pubkey = pubkeys.iter().find(|pubkey| version == &pubkey.value);
         Ok(pubkey
@@ -257,7 +254,7 @@ impl KVStorage for VaultStorage {
 }
 
 impl CryptoStorage for VaultStorage {
-    fn create_key(&mut self, name: &str, policy: &Policy) -> Result<Ed25519PublicKey, Error> {
+    fn create_key(&mut self, name: &str, policy: &Policy) -> Result<ed25519::PublicKey, Error> {
         let ns_name = self.crypto_name(name);
         match self.get_public_key(name) {
             Ok(_) => return Err(Error::KeyAlreadyExists(ns_name)),
@@ -270,7 +267,7 @@ impl CryptoStorage for VaultStorage {
         self.get_public_key(name).map(|v| v.public_key)
     }
 
-    fn export_private_key(&self, name: &str) -> Result<Ed25519PrivateKey, Error> {
+    fn export_private_key(&self, name: &str) -> Result<ed25519::PrivateKey, Error> {
         let name = self.crypto_name(name);
         Ok(self.client.export_ed25519_key(&name, None)?)
     }
@@ -278,8 +275,8 @@ impl CryptoStorage for VaultStorage {
     fn export_private_key_for_version(
         &self,
         name: &str,
-        version: Ed25519PublicKey,
-    ) -> Result<Ed25519PrivateKey, Error> {
+        version: ed25519::PublicKey,
+    ) -> Result<ed25519::PrivateKey, Error> {
         let name = self.crypto_name(name);
         let vers = self.key_version(&name, &version)?;
         Ok(self.client.export_ed25519_key(&name, Some(vers))?)
@@ -303,13 +300,17 @@ impl CryptoStorage for VaultStorage {
         })
     }
 
-    fn rotate_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
+    fn rotate_key(&mut self, name: &str) -> Result<ed25519::PublicKey, Error> {
         let ns_name = self.crypto_name(name);
         self.client.rotate_key(&ns_name)?;
         self.get_public_key(name).map(|v| v.public_key)
     }
 
-    fn sign_message(&mut self, name: &str, message: &HashValue) -> Result<Ed25519Signature, Error> {
+    fn sign_message(
+        &mut self,
+        name: &str,
+        message: &HashValue,
+    ) -> Result<ed25519::Signature, Error> {
         let name = self.crypto_name(name);
         Ok(self.client.sign_ed25519(&name, message.as_ref(), None)?)
     }
@@ -317,9 +318,9 @@ impl CryptoStorage for VaultStorage {
     fn sign_message_using_version(
         &mut self,
         name: &str,
-        version: Ed25519PublicKey,
+        version: ed25519::PublicKey,
         message: &HashValue,
-    ) -> Result<Ed25519Signature, Error> {
+    ) -> Result<ed25519::Signature, Error> {
         let name = self.crypto_name(name);
         let vers = self.key_version(&name, &version)?;
         Ok(self

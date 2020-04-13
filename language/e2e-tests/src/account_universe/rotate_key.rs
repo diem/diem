@@ -6,10 +6,7 @@ use crate::{
     common_transactions::rotate_key_txn,
     gas_costs,
 };
-use libra_crypto::{
-    ed25519::{self, Ed25519PrivateKey, Ed25519PublicKey},
-    test_utils::KeyPair,
-};
+use libra_crypto::{ed25519, test_utils::KeyPair};
 use libra_proptest_helpers::Index;
 use libra_types::{
     account_address::AccountAddress,
@@ -25,7 +22,7 @@ use proptest_derive::Arbitrary;
 pub struct RotateKeyGen {
     sender: Index,
     #[proptest(strategy = "ed25519::keypair_strategy()")]
-    new_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
+    new_keypair: KeyPair<ed25519::PrivateKey, ed25519::PublicKey>,
 }
 
 impl AUTransactionGen for RotateKeyGen {

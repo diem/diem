@@ -4,7 +4,7 @@
 use executor::Executor;
 use executor_utils::create_storage_service_and_executor;
 use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    ed25519,
     hash::{CryptoHash, HashValue},
     PrivateKeyExt, SigningKey, Uniform,
 };
@@ -25,8 +25,8 @@ use storage_client::{StorageRead, StorageReadServiceClient};
 use transaction_builder::{encode_create_account_script, encode_transfer_script};
 
 struct AccountData {
-    private_key: Ed25519PrivateKey,
-    public_key: Ed25519PublicKey,
+    private_key: ed25519::PrivateKey,
+    public_key: ed25519::PublicKey,
     address: AccountAddress,
     sequence_number: u64,
 }
@@ -45,7 +45,7 @@ struct TransactionGenerator {
     accounts: Vec<AccountData>,
 
     /// Used to mint accounts.
-    genesis_key: Ed25519PrivateKey,
+    genesis_key: ed25519::PrivateKey,
 
     /// For deterministic transaction generation.
     rng: StdRng,
@@ -60,7 +60,7 @@ struct TransactionGenerator {
 
 impl TransactionGenerator {
     fn new(
-        genesis_key: Ed25519PrivateKey,
+        genesis_key: ed25519::PrivateKey,
         num_accounts: usize,
         block_sender: mpsc::SyncSender<Vec<Transaction>>,
         storage_client: StorageReadServiceClient,
@@ -70,7 +70,7 @@ impl TransactionGenerator {
 
         let mut accounts = Vec::with_capacity(num_accounts);
         for _i in 0..num_accounts {
-            let private_key = Ed25519PrivateKey::generate(&mut rng);
+            let private_key = ed25519::PrivateKey::generate(&mut rng);
             let public_key = private_key.public_key();
             let address = AccountAddress::from_public_key(&public_key);
             let account = AccountData {
@@ -306,8 +306,8 @@ pub fn run_benchmark(
 fn create_transaction(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: &Ed25519PrivateKey,
-    public_key: Ed25519PublicKey,
+    private_key: &ed25519::PrivateKey,
+    public_key: ed25519::PublicKey,
     program: Script,
 ) -> Transaction {
     let now = std::time::SystemTime::now()

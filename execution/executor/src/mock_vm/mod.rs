@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod mock_vm_test;
 
-use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKeyExt, Uniform};
+use libra_crypto::{ed25519, PrivateKeyExt, Uniform};
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
@@ -317,7 +317,7 @@ fn encode_transaction(sender: AccountAddress, program: Script) -> Transaction {
         std::time::Duration::from_secs(0),
     );
 
-    let privkey = Ed25519PrivateKey::generate_for_testing();
+    let privkey = ed25519::PrivateKey::generate_for_testing();
     Transaction::UserTransaction(
         raw_transaction
             .sign(&privkey, privkey.public_key())
@@ -329,7 +329,7 @@ fn encode_transaction(sender: AccountAddress, program: Script) -> Transaction {
 pub fn encode_reconfiguration_transaction(sender: AccountAddress) -> Transaction {
     let raw_transaction = RawTransaction::new_write_set(sender, 0, WriteSet::default());
 
-    let privkey = Ed25519PrivateKey::generate_for_testing();
+    let privkey = ed25519::PrivateKey::generate_for_testing();
     Transaction::UserTransaction(
         raw_transaction
             .sign(&privkey, privkey.public_key())

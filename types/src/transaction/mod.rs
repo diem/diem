@@ -15,7 +15,7 @@ use crate::{
 };
 use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::{
-    ed25519::*,
+    ed25519,
     hash::{CryptoHash, CryptoHasher, EventAccumulatorHasher},
     multi_ed25519,
     traits::SigningKey,
@@ -226,8 +226,8 @@ impl RawTransaction {
     /// For a transaction that has just been signed, its signature is expected to be valid.
     pub fn sign(
         self,
-        private_key: &Ed25519PrivateKey,
-        public_key: Ed25519PublicKey,
+        private_key: &ed25519::PrivateKey,
+        public_key: ed25519::PublicKey,
     ) -> Result<SignatureCheckedTransaction> {
         let signature = private_key.sign_message(&self.hash());
         Ok(SignatureCheckedTransaction(SignedTransaction::new(
@@ -238,8 +238,8 @@ impl RawTransaction {
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn multi_sign_for_testing(
         self,
-        private_key: &Ed25519PrivateKey,
-        public_key: Ed25519PublicKey,
+        private_key: &ed25519::PrivateKey,
+        public_key: ed25519::PublicKey,
     ) -> Result<SignatureCheckedTransaction> {
         let signature = private_key.sign_message(&self.hash());
         Ok(SignatureCheckedTransaction(
@@ -380,8 +380,8 @@ impl fmt::Debug for SignedTransaction {
 impl SignedTransaction {
     pub fn new(
         raw_txn: RawTransaction,
-        public_key: Ed25519PublicKey,
-        signature: Ed25519Signature,
+        public_key: ed25519::PublicKey,
+        signature: ed25519::Signature,
     ) -> SignedTransaction {
         let authenticator = TransactionAuthenticator::ed25519(public_key, signature);
         SignedTransaction {

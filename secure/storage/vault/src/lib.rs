@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature};
+use libra_crypto::ed25519;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{
@@ -247,7 +247,7 @@ impl Client {
         &self,
         name: &str,
         version: Option<u32>,
-    ) -> Result<Ed25519PrivateKey, Error> {
+    ) -> Result<ed25519::PrivateKey, Error> {
         let resp = ureq::get(&format!(
             "{}/v1/transit/export/signing-key/{}",
             self.host, name
@@ -261,10 +261,10 @@ impl Client {
                 let key = export_key.data.keys.iter().find(|(k, _v)| **k == version);
                 let (_, key) = key.ok_or_else(|| Error::NotFound("transit".into(), name.into()))?;
                 // Composite key [private|public]
-                Ok(Ed25519PrivateKey::try_from(&base64::decode(key)?[..32])?)
+                Ok(ed25519::PrivateKey::try_from(&base64::decode(key)?[..32])?)
             } else if let Some(key) = export_key.data.keys.values().last() {
                 // Composite key [private|public]
-                Ok(Ed25519PrivateKey::try_from(&base64::decode(key)?[..32])?)
+                Ok(ed25519::PrivateKey::try_from(&base64::decode(key)?[..32])?)
             } else {
                 Err(Error::NotFound("transit".into(), name.into()))
             }
@@ -291,7 +291,7 @@ impl Client {
     pub fn read_ed25519_key(
         &self,
         name: &str,
-    ) -> Result<Vec<ReadResponse<Ed25519PublicKey>>, Error> {
+    ) -> Result<Vec<ReadResponse<ed25519::PublicKey>>, Error> {
         let resp = ureq::get(&format!("{}/v1/transit/keys/{}", self.host, name))
             .set("X-Vault-Token", &self.token)
             .timeout_connect(TIMEOUT)
@@ -303,7 +303,9 @@ impl Client {
                 for (version, value) in read_key.data.keys {
                     read_resp.push(ReadResponse::new(
                         value.creation_time,
-                        Ed25519PublicKey::try_from(base64::decode(&value.public_key)?.as_slice())?,
+                        ed25519::PublicKey::try_from(
+                            base64::decode(&value.public_key)?.as_slice(),
+                        )?,
                         version,
                     ));
                 }
@@ -331,7 +333,7 @@ impl Client {
         name: &str,
         data: &[u8],
         version: Option<u32>,
-    ) -> Result<Ed25519Signature, Error> {
+    ) -> Result<ed25519::Signature, Error> {
         let data = if let Some(version) = version {
             json!({ "input": base64::encode(&data), "key_version": version })
         } else {
@@ -349,7 +351,7 @@ impl Client {
             let signature = signature_pieces
                 .get(2)
                 .ok_or_else(|| Error::SerializationError(signature.into()))?;
-            Ok(Ed25519Signature::try_from(
+            Ok(ed25519::Signature::try_from(
                 base64::decode(&signature)?.as_slice(),
             )?)
         } else {

@@ -15,9 +15,7 @@ use channel::{libra_channel, message_queues::QueueStyle};
 use core::str::FromStr;
 use futures::channel::oneshot;
 use libra_config::config::RoleType;
-use libra_crypto::{
-    ed25519::Ed25519PrivateKey, x25519::X25519StaticPrivateKey, PrivateKeyExt, Uniform,
-};
+use libra_crypto::{ed25519, x25519::X25519StaticPrivateKey, PrivateKeyExt, Uniform};
 use std::num::NonZeroUsize;
 use tokio::runtime::Runtime;
 
@@ -46,7 +44,7 @@ fn setup_discovery(
     rt: &mut Runtime,
     peer_id: PeerId,
     addrs: Vec<Multiaddr>,
-    signer: Ed25519PrivateKey,
+    signer: ed25519::PrivateKey,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
 ) -> (
     libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
@@ -108,8 +106,8 @@ async fn expect_address_update(
     }
 }
 
-fn generate_network_pub_keys_and_signer() -> (NetworkPublicKeys, Ed25519PrivateKey) {
-    let signing_priv_key = Ed25519PrivateKey::generate_for_testing();
+fn generate_network_pub_keys_and_signer() -> (NetworkPublicKeys, ed25519::PrivateKey) {
+    let signing_priv_key = ed25519::PrivateKey::generate_for_testing();
     let identity_pub_key = X25519StaticPrivateKey::generate_for_testing().public_key();
     (
         NetworkPublicKeys {

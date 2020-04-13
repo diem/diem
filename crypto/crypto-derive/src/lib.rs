@@ -55,7 +55,7 @@
 //! use libra_crypto::{
 //!     hash::HashValue,
 //!     bls12381::{BLS12381PrivateKey, BLS12381PublicKey, BLS12381Signature},
-//!     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
+//!     ed25519,
 //! };
 //! use libra_crypto_derive::{
 //!     SilentDebug, PrivateKey, PublicKey, Signature, SigningKey, ValidKey, VerifyingKey,
@@ -69,7 +69,7 @@
 //! #[SignatureType = "GenericSignature"]
 //! pub enum GenericPublicKey {
 //!     /// Ed25519 public key
-//!     Ed(Ed25519PublicKey),
+//!     Ed(ed25519::PublicKey),
 //!     /// BLS12-381 public key
 //!     BLS(BLS12381PublicKey),
 //! }
@@ -79,7 +79,7 @@
 //! #[SignatureType = "GenericSignature"]
 //! pub enum GenericPrivateKey {
 //!     /// Ed25519 private key
-//!     Ed(Ed25519PrivateKey),
+//!     Ed(ed25519::PrivateKey),
 //!     /// BLS12-381 private key
 //!     BLS(BLS12381PrivateKey),
 //! }
@@ -90,7 +90,7 @@
 //! #[PublicKeyType = "GenericPublicKey"]
 //! pub enum GenericSignature {
 //!     /// Ed25519 signature
-//!     Ed(Ed25519Signature),
+//!     Ed(ed25519::Signature),
 //!     /// BLS12-381 signature
 //!     BLS(BLS12381Signature),
 //! }

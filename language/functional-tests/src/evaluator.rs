@@ -10,7 +10,7 @@ use bytecode_verifier::verifier::{
     verify_module_dependencies, verify_script_dependencies, VerifiedModule, VerifiedScript,
 };
 use language_e2e_tests::executor::FakeExecutor;
-use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
+use libra_crypto::ed25519;
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
@@ -260,8 +260,8 @@ pub fn verify_module(
 /// A set of common parameters required to create transactions.
 struct TransactionParameters<'a> {
     pub sender_addr: AccountAddress,
-    pub pubkey: &'a Ed25519PublicKey,
-    pub privkey: &'a Ed25519PrivateKey,
+    pub pubkey: &'a ed25519::PublicKey,
+    pub privkey: &'a ed25519::PrivateKey,
     pub sequence_number: u64,
     pub max_gas_amount: u64,
     pub gas_unit_price: u64,

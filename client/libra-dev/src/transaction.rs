@@ -10,11 +10,7 @@ use crate::{
     error::*,
 };
 use lcs::to_bytes;
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    test_utils::KeyPair,
-    PrivateKeyExt,
-};
+use libra_crypto::{ed25519, test_utils::KeyPair, PrivateKeyExt};
 use libra_types::{
     account_address::AccountAddress,
     account_config::{lbr_type_tag, LBR_NAME},
@@ -45,8 +41,8 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
         return LibraStatus::InvalidArgument;
     }
     let private_key_buf: &[u8] =
-        slice::from_raw_parts(sender_private_key_bytes, Ed25519PrivateKey::LENGTH);
-    let private_key = match Ed25519PrivateKey::try_from(private_key_buf) {
+        slice::from_raw_parts(sender_private_key_bytes, ed25519::PrivateKey::LENGTH);
+    let private_key = match ed25519::PrivateKey::try_from(private_key_buf) {
         Ok(result) => result,
         Err(e) => {
             update_last_error(format!("Invalid private key bytes: {}", e.to_string()));
@@ -242,7 +238,7 @@ pub unsafe extern "C" fn libra_RawTransaction_sign(
         return LibraStatus::InvalidArgument;
     }
     let public_key_bytes: &[u8] = slice::from_raw_parts(buf_public_key, len_public_key);
-    let public_key = match Ed25519PublicKey::try_from(public_key_bytes) {
+    let public_key = match ed25519::PublicKey::try_from(public_key_bytes) {
         Ok(result) => result,
         Err(e) => {
             update_last_error(format!("Invalid public key bytes: {}", e.to_string()));
@@ -255,7 +251,7 @@ pub unsafe extern "C" fn libra_RawTransaction_sign(
         return LibraStatus::InvalidArgument;
     }
     let signature_bytes: &[u8] = slice::from_raw_parts(buf_signature, len_signature);
-    let signature = match Ed25519Signature::try_from(signature_bytes) {
+    let signature = match ed25519::Signature::try_from(signature_bytes) {
         Ok(result) => result,
         Err(e) => {
             update_last_error(format!("Invalid signature bytes: {}", e.to_string()));
@@ -408,7 +404,7 @@ mod test {
     #[test]
     fn test_lcs_signed_transaction() {
         // generate key pair
-        let private_key = Ed25519PrivateKey::generate_for_testing();
+        let private_key = ed25519::PrivateKey::generate_for_testing();
         let public_key = private_key.public_key();
         let private_key_bytes = private_key.to_bytes();
 
@@ -495,7 +491,7 @@ mod test {
     /// Generate a Raw Transaction, sign it, then deserialize
     #[test]
     fn test_libra_raw_transaction_bytes_from() {
-        let private_key = Ed25519PrivateKey::generate_for_testing();
+        let private_key = ed25519::PrivateKey::generate_for_testing();
         let public_key = private_key.public_key();
 
         // create transfer parameters
@@ -578,7 +574,7 @@ mod test {
     /// Generate a Signed Transaction and deserialize
     #[test]
     fn test_libra_signed_transaction_deserialize() {
-        let public_key = Ed25519PrivateKey::generate_for_testing().public_key();
+        let public_key = ed25519::PrivateKey::generate_for_testing().public_key();
         let sender = AccountAddress::random();
         let receiver_auth_key = AuthenticationKey::random();
         let sequence_number = 1;
@@ -586,7 +582,8 @@ mod test {
         let max_gas_amount = 10;
         let gas_unit_price = 1;
         let expiration_time_secs = 5;
-        let signature = Ed25519Signature::try_from(&[1u8; Ed25519Signature::LENGTH][..]).unwrap();
+        let signature =
+            ed25519::Signature::try_from(&[1u8; ed25519::Signature::LENGTH][..]).unwrap();
 
         let program = encode_transfer_script(
             lbr_type_tag(),
@@ -660,7 +657,7 @@ mod test {
         assert_eq!(public_key.to_bytes(), libra_signed_txn.public_key);
         assert_eq!(
             signature,
-            Ed25519Signature::try_from(libra_signed_txn.signature.as_ref()).unwrap()
+            ed25519::Signature::try_from(libra_signed_txn.signature.as_ref()).unwrap()
         );
         assert_eq!(
             expiration_time_secs,

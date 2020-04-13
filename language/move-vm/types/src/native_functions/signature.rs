@@ -7,11 +7,7 @@ use crate::{
     values::Value,
 };
 use bit_vec::BitVec;
-use libra_crypto::{
-    ed25519::{self, Ed25519PublicKey, Ed25519Signature},
-    traits::*,
-    HashValue,
-};
+use libra_crypto::{ed25519, traits::*, HashValue};
 use libra_types::vm_error::{StatusCode, VMStatus};
 use std::{collections::VecDeque, convert::TryFrom};
 use vm::{
@@ -60,7 +56,7 @@ pub fn native_ed25519_signature_verification(
 
     let cost = native_gas(cost_table, NativeCostIndex::ED25519_VERIFY, msg.len());
 
-    let sig = match ed25519::Ed25519Signature::try_from(signature.as_slice()) {
+    let sig = match ed25519::Signature::try_from(signature.as_slice()) {
         Ok(sig) => sig,
         Err(_) => {
             return Ok(NativeResult::err(
@@ -70,7 +66,7 @@ pub fn native_ed25519_signature_verification(
             ));
         }
     };
-    let pk = match ed25519::Ed25519PublicKey::try_from(pubkey.as_slice()) {
+    let pk = match ed25519::PublicKey::try_from(pubkey.as_slice()) {
         Ok(pk) => pk,
         Err(_) => {
             return Ok(NativeResult::err(
@@ -134,14 +130,14 @@ fn ed25519_threshold_signature_verification(
 
     let sig_chunks: ::std::result::Result<Vec<_>, _> = signatures
         .chunks(64)
-        .map(Ed25519Signature::try_from)
+        .map(ed25519::Signature::try_from)
         .collect();
 
     match sig_chunks {
         Ok(signatures) => {
             let key_chunks: ::std::result::Result<Vec<_>, _> = public_keys
                 .chunks(32)
-                .map(Ed25519PublicKey::try_from)
+                .map(ed25519::PublicKey::try_from)
                 .collect();
 
             match key_chunks {
@@ -158,7 +154,7 @@ fn ed25519_threshold_signature_verification(
                         }
                         Ok(hash_value) => hash_value,
                     };
-                    match Ed25519Signature::batch_verify_signatures(
+                    match ed25519::Signature::batch_verify_signatures(
                         &hash_value,
                         keys_and_signatures,
                     ) {
@@ -200,11 +196,11 @@ fn ed25519_threshold_signature_verification(
 fn matching_keys_and_signatures(
     num_of_sigs: u64,
     bitmap: BitVec,
-    signatures: Vec<Ed25519Signature>,
-    public_keys: Vec<Ed25519PublicKey>,
-) -> Vec<(Ed25519PublicKey, Ed25519Signature)> {
+    signatures: Vec<ed25519::Signature>,
+    public_keys: Vec<ed25519::PublicKey>,
+) -> Vec<(ed25519::PublicKey, ed25519::Signature)> {
     let mut sig_index = 0;
-    let mut keys_and_signatures: Vec<(Ed25519PublicKey, Ed25519Signature)> =
+    let mut keys_and_signatures: Vec<(ed25519::PublicKey, ed25519::Signature)> =
         Vec::with_capacity(num_of_sigs as usize);
     for (key_index, bit) in bitmap.iter().enumerate() {
         if bit {

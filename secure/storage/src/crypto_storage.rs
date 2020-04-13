@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{Error, Policy};
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    HashValue,
-};
+use libra_crypto::{ed25519, HashValue};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime};
 
@@ -20,12 +17,12 @@ pub trait CryptoStorage: Send + Sync {
     /// under the given 'policy'. To access or use the key pair (e.g., sign or encrypt data),
     /// subsequent API calls must refer to the key pair by name. As this API call may fail
     /// (e.g., if a key pair with the given name already exists), an error may also be returned.
-    fn create_key(&mut self, name: &str, policy: &Policy) -> Result<Ed25519PublicKey, Error>;
+    fn create_key(&mut self, name: &str, policy: &Policy) -> Result<ed25519::PublicKey, Error>;
 
     /// Returns the private key for a given Ed25519 key pair, as identified by the 'name'.
     /// If the key pair doesn't exist, or the caller doesn't have the appropriate permissions to
     /// retrieve the private key, this call will fail with an error.
-    fn export_private_key(&self, name: &str) -> Result<Ed25519PrivateKey, Error>;
+    fn export_private_key(&self, name: &str) -> Result<ed25519::PrivateKey, Error>;
 
     /// Returns the private key for a given Ed25519 key pair version, as identified by the
     /// 'name' and 'version'. If the key pair at the specified version doesn't
@@ -34,8 +31,8 @@ pub trait CryptoStorage: Send + Sync {
     fn export_private_key_for_version(
         &self,
         name: &str,
-        version: Ed25519PublicKey,
-    ) -> Result<Ed25519PrivateKey, Error>;
+        version: ed25519::PublicKey,
+    ) -> Result<ed25519::PrivateKey, Error>;
 
     /// Returns the public key for a given Ed25519 key pair, as identified by the 'name'.
     /// If the key pair doesn't exist, or the caller doesn't have the
@@ -49,12 +46,16 @@ pub trait CryptoStorage: Send + Sync {
     /// If the key pair doesn't exist, or the caller doesn't have the appropriate permissions to
     /// retrieve the public key, this call will fail with an error. Otherwise, the new public
     /// key for the rotated key pair is returned.
-    fn rotate_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error>;
+    fn rotate_key(&mut self, name: &str) -> Result<ed25519::PublicKey, Error>;
 
     /// Signs the given message using the private key associated with the given 'name'.
     /// If the key pair doesn't exist, or the caller doesn't have the appropriate
     /// permissions to retrieve and use the public key, this call will fail with an error.
-    fn sign_message(&mut self, name: &str, message: &HashValue) -> Result<Ed25519Signature, Error>;
+    fn sign_message(
+        &mut self,
+        name: &str,
+        message: &HashValue,
+    ) -> Result<ed25519::Signature, Error>;
 
     /// Signs the given message using the private key associated with the given 'name'
     /// and 'version'. If the key pair doesn't exist, or the caller doesn't have the
@@ -65,9 +66,9 @@ pub trait CryptoStorage: Send + Sync {
     fn sign_message_using_version(
         &mut self,
         name: &str,
-        version: Ed25519PublicKey,
+        version: ed25519::PublicKey,
         message: &HashValue,
-    ) -> Result<Ed25519Signature, Error>;
+    ) -> Result<ed25519::Signature, Error>;
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
@@ -75,13 +76,13 @@ pub trait CryptoStorage: Send + Sync {
 pub struct PublicKeyResponse {
     /// Time since Unix Epoch in seconds.
     pub last_update: u64,
-    /// Ed25519PublicKey stored at the provided key
-    pub public_key: Ed25519PublicKey,
+    /// ed25519::PublicKey stored at the provided key
+    pub public_key: ed25519::PublicKey,
 }
 
 impl PublicKeyResponse {
     /// Creates a PublicKeyResponse using the current time for the timestamp
-    pub fn new(public_key: Ed25519PublicKey) -> Self {
+    pub fn new(public_key: ed25519::PublicKey) -> Self {
         Self {
             public_key,
             last_update: Self::now().as_secs(),

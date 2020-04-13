@@ -15,7 +15,7 @@ use crate::{
     waypoint::Waypoint,
 };
 use libra_crypto::{
-    ed25519::Ed25519Signature,
+    ed25519,
     hash::{CryptoHash, HashValue},
 };
 use proptest::{
@@ -77,7 +77,7 @@ fn into_validator_set(signers: &[ValidatorSigner]) -> ValidatorSet {
 fn sign_ledger_info(
     signers: &[ValidatorSigner],
     ledger_info: &LedgerInfo,
-) -> BTreeMap<AccountAddress, Ed25519Signature> {
+) -> BTreeMap<AccountAddress, ed25519::Signature> {
     signers
         .iter()
         .map(|s| (s.author(), s.sign_message(ledger_info.hash())))

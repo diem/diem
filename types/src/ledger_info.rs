@@ -10,7 +10,7 @@ use crate::{
 };
 use anyhow::{Error, Result};
 use libra_crypto::{
-    ed25519::Ed25519Signature,
+    ed25519,
     hash::{CryptoHash, CryptoHasher, HashValue},
 };
 use libra_crypto_derive::CryptoHasher;
@@ -200,7 +200,7 @@ impl Display for LedgerInfoWithSignatures {
 impl LedgerInfoWithSignatures {
     pub fn new(
         ledger_info: LedgerInfo,
-        signatures: BTreeMap<AccountAddress, Ed25519Signature>,
+        signatures: BTreeMap<AccountAddress, ed25519::Signature>,
     ) -> Self {
         LedgerInfoWithSignatures::V0(LedgerInfoWithV0::new(ledger_info, signatures))
     }
@@ -243,7 +243,7 @@ pub struct LedgerInfoWithV0 {
     ledger_info: LedgerInfo,
     /// The validator is identified by its account address: in order to verify a signature
     /// one needs to retrieve the public key of the validator for the given epoch.
-    signatures: BTreeMap<AccountAddress, Ed25519Signature>,
+    signatures: BTreeMap<AccountAddress, ed25519::Signature>,
 }
 
 impl Display for LedgerInfoWithV0 {
@@ -255,7 +255,7 @@ impl Display for LedgerInfoWithV0 {
 impl LedgerInfoWithV0 {
     pub fn new(
         ledger_info: LedgerInfo,
-        signatures: BTreeMap<AccountAddress, Ed25519Signature>,
+        signatures: BTreeMap<AccountAddress, ed25519::Signature>,
     ) -> Self {
         LedgerInfoWithV0 {
             ledger_info,
@@ -281,7 +281,7 @@ impl LedgerInfoWithV0 {
         &self.ledger_info
     }
 
-    pub fn add_signature(&mut self, validator: AccountAddress, signature: Ed25519Signature) {
+    pub fn add_signature(&mut self, validator: AccountAddress, signature: ed25519::Signature) {
         self.signatures.entry(validator).or_insert(signature);
     }
 
@@ -289,7 +289,7 @@ impl LedgerInfoWithV0 {
         self.signatures.remove(&validator);
     }
 
-    pub fn signatures(&self) -> &BTreeMap<AccountAddress, Ed25519Signature> {
+    pub fn signatures(&self) -> &BTreeMap<AccountAddress, ed25519::Signature> {
         &self.signatures
     }
 

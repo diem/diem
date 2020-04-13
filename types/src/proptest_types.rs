@@ -26,11 +26,7 @@ use crate::{
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use libra_crypto::{
-    ed25519::{self, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    hash::CryptoHash,
-    test_utils::KeyPair,
-    traits::*,
-    x25519::X25519StaticPublicKey,
+    ed25519, hash::CryptoHash, test_utils::KeyPair, traits::*, x25519::X25519StaticPublicKey,
     HashValue,
 };
 use libra_proptest_helpers::Index;
@@ -112,15 +108,15 @@ impl Arbitrary for ChangeSet {
 #[derive(Debug)]
 struct AccountInfo {
     address: AccountAddress,
-    private_key: Ed25519PrivateKey,
-    public_key: Ed25519PublicKey,
+    private_key: ed25519::PrivateKey,
+    public_key: ed25519::PublicKey,
     sequence_number: u64,
     sent_event_handle: EventHandle,
     received_event_handle: EventHandle,
 }
 
 impl AccountInfo {
-    pub fn new(private_key: Ed25519PrivateKey, public_key: Ed25519PublicKey) -> Self {
+    pub fn new(private_key: ed25519::PrivateKey, public_key: ed25519::PublicKey) -> Self {
         let address = AccountAddress::from_public_key(&public_key);
         Self {
             address,
@@ -143,7 +139,7 @@ pub struct AccountInfoUniverse {
 
 impl AccountInfoUniverse {
     fn new(
-        keypairs: Vec<(Ed25519PrivateKey, Ed25519PublicKey)>,
+        keypairs: Vec<(ed25519::PrivateKey, ed25519::PublicKey)>,
         epoch: u64,
         round: Round,
         next_version: Version,
@@ -349,7 +345,7 @@ impl SignatureCheckedTransaction {
     // This isn't an Arbitrary impl because this doesn't generate *any* possible SignedTransaction,
     // just one kind of them.
     pub fn script_strategy(
-        keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
+        keypair_strategy: impl Strategy<Value = KeyPair<ed25519::PrivateKey, ed25519::PublicKey>>,
         gas_specifier_strategy: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(
@@ -360,7 +356,7 @@ impl SignatureCheckedTransaction {
     }
 
     pub fn module_strategy(
-        keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
+        keypair_strategy: impl Strategy<Value = KeyPair<ed25519::PrivateKey, ed25519::PublicKey>>,
         gas_specifier_strategy: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(
@@ -371,7 +367,7 @@ impl SignatureCheckedTransaction {
     }
 
     pub fn write_set_strategy(
-        keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
+        keypair_strategy: impl Strategy<Value = KeyPair<ed25519::PrivateKey, ed25519::PublicKey>>,
         gas_specifier_strategy: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(
@@ -382,7 +378,7 @@ impl SignatureCheckedTransaction {
     }
 
     pub fn genesis_strategy(
-        keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
+        keypair_strategy: impl Strategy<Value = KeyPair<ed25519::PrivateKey, ed25519::PublicKey>>,
         gas_specifier_strategy: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = Self> {
         Self::strategy_impl(
@@ -393,7 +389,7 @@ impl SignatureCheckedTransaction {
     }
 
     fn strategy_impl(
-        keypair_strategy: impl Strategy<Value = KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
+        keypair_strategy: impl Strategy<Value = KeyPair<ed25519::PrivateKey, ed25519::PublicKey>>,
         payload_strategy: impl Strategy<Value = TransactionPayload>,
         gas_specifier_strategy: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = Self> {
@@ -601,7 +597,7 @@ prop_compose! {
     fn arb_validator_signature_for_hash(hash: HashValue)(
         hash in Just(hash),
         keypair in ed25519::keypair_strategy(),
-    ) -> (AccountAddress, Ed25519Signature) {
+    ) -> (AccountAddress, ed25519::Signature) {
         let signature = keypair.private_key.sign_message(&hash);
         (AccountAddress::from_public_key(&keypair.public_key), signature)
     }

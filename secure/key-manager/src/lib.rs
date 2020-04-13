@@ -19,10 +19,7 @@
 //! KeyManager talks to its own storage through the `LibraSecureStorage::Storage trait.
 #![forbid(unsafe_code)]
 
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    PrivateKeyExt,
-};
+use libra_crypto::{ed25519, PrivateKeyExt};
 use libra_secure_storage::Storage;
 use libra_secure_time::TimeService;
 use libra_transaction_scripts;
@@ -64,9 +61,9 @@ pub enum Error {
     #[error("Unknown error: {0}")]
     UnknownError(String),
     #[error("Key mismatch, config: {0}, info: {0}")]
-    ConfigInfoKeyMismatch(Ed25519PublicKey, Ed25519PublicKey),
+    ConfigInfoKeyMismatch(ed25519::PublicKey, ed25519::PublicKey),
     #[error("Key mismatch, config: {0}, storage: {0}")]
-    ConfigStorageKeyMismatch(Ed25519PublicKey, Ed25519PublicKey),
+    ConfigStorageKeyMismatch(ed25519::PublicKey, ed25519::PublicKey),
     #[error("Data does not exist: {0}")]
     DataDoesNotExist(&'static str),
     #[error("Internal storage error")]
@@ -179,15 +176,15 @@ where
             .map(|_| ())
     }
 
-    pub fn rotate_consensus_key(&mut self) -> Result<Ed25519PublicKey, Error> {
+    pub fn rotate_consensus_key(&mut self) -> Result<ed25519::PublicKey, Error> {
         let new_key = self.storage.rotate_key(CONSENSUS_KEY)?;
         self.submit_key_rotation_transaction(new_key)
     }
 
     pub fn submit_key_rotation_transaction(
         &self,
-        new_key: Ed25519PublicKey,
-    ) -> Result<Ed25519PublicKey, Error> {
+        new_key: ed25519::PublicKey,
+    ) -> Result<ed25519::PublicKey, Error> {
         let account_prikey = self.storage.export_private_key(ACCOUNT_KEY)?;
         let seq_id = self.libra.retrieve_sequence_number(self.account)?;
         let expiration = Duration::from_secs(self.time_service.now() + TXN_EXPIRATION_SECS);
@@ -235,8 +232,8 @@ where
 pub fn build_rotation_transaction(
     sender: AccountAddress,
     seq_id: u64,
-    signing_key: &Ed25519PrivateKey,
-    new_key: &Ed25519PublicKey,
+    signing_key: &ed25519::PrivateKey,
+    new_key: &ed25519::PublicKey,
     expiration: Duration,
 ) -> Transaction {
     let script = Script::new(

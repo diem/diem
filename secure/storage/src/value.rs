@@ -2,19 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::error::Error;
-use libra_crypto::{ed25519::Ed25519PrivateKey, hash::HashValue};
+use libra_crypto::{ed25519, hash::HashValue};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 #[serde(content = "value", rename_all = "snake_case", tag = "type")]
 pub enum Value {
-    Ed25519PrivateKey(Ed25519PrivateKey),
+    Ed25519PrivateKey(ed25519::PrivateKey),
     HashValue(HashValue),
     U64(u64),
 }
 
 impl Value {
-    pub fn ed25519_private_key(self) -> Result<Ed25519PrivateKey, Error> {
+    pub fn ed25519_private_key(self) -> Result<ed25519::PrivateKey, Error> {
         if let Value::Ed25519PrivateKey(value) = self {
             Ok(value)
         } else {
@@ -57,7 +57,7 @@ mod tests {
 
     #[test]
     fn ed25519_private_key() {
-        let value = Ed25519PrivateKey::generate_for_testing();
+        let value = ed25519::PrivateKey::generate_for_testing();
         let value = Value::Ed25519PrivateKey(value);
         let base64 = value.to_base64().unwrap();
         let out_value = Value::from_base64(&base64).unwrap();

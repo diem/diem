@@ -10,7 +10,7 @@ use admission_control_proto::{
 };
 use anyhow::Result;
 use futures::executor::block_on;
-use libra_crypto::{ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, PrivateKeyExt, Uniform};
+use libra_crypto::{ed25519, test_utils::TEST_SEED, PrivateKeyExt, Uniform};
 use libra_types::{
     account_address::AccountAddress,
     mempool_status::MempoolStatusCode,
@@ -35,11 +35,11 @@ fn submit_transaction(
     are_keys_valid: bool,
 ) -> SubmitTransactionResponse {
     let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
-    let private_key = Ed25519PrivateKey::generate(&mut rng);
+    let private_key = ed25519::PrivateKey::generate(&mut rng);
     let public_key = if are_keys_valid {
         private_key.public_key()
     } else {
-        Ed25519PrivateKey::generate(&mut rng).public_key()
+        ed25519::PrivateKey::generate(&mut rng).public_key()
     };
     let mut req = SubmitTransactionRequest::default();
     req.transaction = Some(get_test_signed_txn(sender, 0, &private_key, public_key, None).into());

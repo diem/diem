@@ -6,7 +6,7 @@ use crate::{
     vote_data::VoteData,
 };
 use libra_crypto::{
-    ed25519::Ed25519PrivateKey,
+    ed25519,
     hash::{CryptoHash, HashValue},
 };
 use libra_types::{
@@ -149,7 +149,7 @@ prop_compose! {
 /// vector
 fn block_forest_from_keys(
     depth: u32,
-    keypairs: Vec<Ed25519PrivateKey>,
+    keypairs: Vec<ed25519::PrivateKey>,
 ) -> impl Strategy<Value = LinearizedBlockForest<Vec<usize>>> {
     let leaf = leaf_strategy().prop_map(|block| vec![block]);
     // Note that having `expected_branch_size` of 1 seems to generate significantly larger trees
@@ -164,7 +164,7 @@ fn block_forest_from_keys(
 pub fn block_forest_and_its_keys(
     quorum_size: usize,
     depth: u32,
-) -> impl Strategy<Value = (Vec<Ed25519PrivateKey>, LinearizedBlockForest<Vec<usize>>)> {
+) -> impl Strategy<Value = (Vec<ed25519::PrivateKey>, LinearizedBlockForest<Vec<usize>>)> {
     proptest::collection::vec(proptests::arb_signing_key(), quorum_size).prop_flat_map(
         move |private_key| {
             (

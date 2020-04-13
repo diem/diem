@@ -10,8 +10,7 @@ use channel::{libra_channel, message_queues::QueueStyle};
 use core::str::FromStr;
 use futures::SinkExt;
 use libra_crypto::{
-    ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, x25519::X25519StaticPrivateKey, PrivateKeyExt,
-    Uniform,
+    ed25519, test_utils::TEST_SEED, x25519::X25519StaticPrivateKey, PrivateKeyExt, Uniform,
 };
 use libra_logger::info;
 use rand::{rngs::StdRng, SeedableRng};
@@ -40,7 +39,7 @@ fn setup_conn_mgr(
     let eligible_peers = eligible_peers
         .into_iter()
         .map(|peer_id| {
-            let signing_public_key = Ed25519PrivateKey::generate(&mut rng).public_key();
+            let signing_public_key = ed25519::PrivateKey::generate(&mut rng).public_key();
             let identity_public_key = X25519StaticPrivateKey::generate(&mut rng).public_key();
             let pubkeys = NetworkPublicKeys {
                 identity_public_key,
@@ -75,7 +74,7 @@ fn setup_conn_mgr(
 fn gen_peer() -> (PeerId, NetworkPublicKeys) {
     let peer_id = PeerId::random();
     let mut rng = StdRng::from_seed(TEST_SEED);
-    let signing_public_key = Ed25519PrivateKey::generate(&mut rng).public_key();
+    let signing_public_key = ed25519::PrivateKey::generate(&mut rng).public_key();
     let identity_public_key = X25519StaticPrivateKey::generate(&mut rng).public_key();
     (
         peer_id,
