@@ -7,12 +7,7 @@ use crate::{
     AccountData, AccountStatus,
 };
 use anyhow::{bail, ensure, format_err, Error, Result};
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    test_utils::KeyPair,
-    traits::ValidKey,
-    x25519, ValidKeyStringExt,
-};
+use libra_crypto::{ed25519, test_utils::KeyPair, traits::ValidKey, x25519, ValidKeyStringExt};
 use libra_json_rpc::views::{AccountView, BlockMetadata, EventView, TransactionView};
 use libra_logger::prelude::*;
 use libra_temppath::TempPath;
@@ -135,13 +130,13 @@ impl ClientProxy {
         let faucet_account = if faucet_account_file.is_empty() {
             None
         } else {
-            let faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey> =
+            let faucet_account_keypair: KeyPair<ed25519::SigningKey, ed25519::VerifyingKey> =
                 ClientProxy::load_faucet_account_file(faucet_account_file);
             let faucet_account_data = Self::get_account_data_from_address(
                 &mut client,
                 association_address(),
                 true,
-                Some(KeyPair::<Ed25519PrivateKey, _>::from(
+                Some(KeyPair::<ed25519::SigningKey, _>::from(
                     faucet_account_keypair.private_key,
                 )),
                 None,
@@ -422,9 +417,11 @@ impl ClientProxy {
             "Invalid number of arguments for registering validator"
         );
         let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
-        let private_key = Ed25519PrivateKey::from_encoded_string(space_delim_strings[2])?;
-        let consensus_public_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[3])?;
-        let network_signing_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[4])?;
+        let private_key = ed25519::SigningKey::from_encoded_string(space_delim_strings[2])?;
+        let consensus_public_key =
+            ed25519::VerifyingKey::from_encoded_string(space_delim_strings[3])?;
+        let network_signing_key =
+            ed25519::VerifyingKey::from_encoded_string(space_delim_strings[4])?;
         let network_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[5])?;
         let network_address = Multiaddr::from_str(space_delim_strings[6])?;
         let fullnode_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[7])?;
@@ -718,8 +715,8 @@ impl ClientProxy {
     pub fn submit_signed_transaction(
         &mut self,
         raw_txn: RawTransaction,
-        public_key: Ed25519PublicKey,
-        signature: Ed25519Signature,
+        public_key: ed25519::VerifyingKey,
+        signature: ed25519::Signature,
     ) -> Result<()> {
         let transaction = SignedTransaction::new(raw_txn, public_key, signature);
 
@@ -1042,7 +1039,7 @@ impl ClientProxy {
         client: &mut LibraClient,
         address: AccountAddress,
         sync_with_validator: bool,
-        key_pair: Option<KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
+        key_pair: Option<KeyPair<ed25519::SigningKey, ed25519::VerifyingKey>>,
         authentication_key_opt: Option<Vec<u8>>,
     ) -> Result<AccountData> {
         let (sequence_number, authentication_key, status) = if sync_with_validator {
@@ -1098,7 +1095,7 @@ impl ClientProxy {
 
     fn load_faucet_account_file(
         faucet_account_file: &str,
-    ) -> KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
+    ) -> KeyPair<ed25519::SigningKey, ed25519::VerifyingKey> {
         match fs::read(faucet_account_file) {
             Ok(data) => {
                 lcs::from_bytes(&data[..]).expect("Unable to deserialize faucet account file")

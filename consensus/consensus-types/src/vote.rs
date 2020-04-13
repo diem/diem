@@ -3,7 +3,7 @@
 
 use crate::{common::Author, timeout::Timeout, vote_data::VoteData};
 use anyhow::{ensure, Context};
-use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash};
+use libra_crypto::{ed25519, hash::CryptoHash};
 use libra_types::{
     ledger_info::LedgerInfo, validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
@@ -24,9 +24,9 @@ pub struct Vote {
     /// LedgerInfo of a block that is going to be committed in case this vote gathers QC.
     ledger_info: LedgerInfo,
     /// Signature of the LedgerInfo
-    signature: Ed25519Signature,
+    signature: ed25519::Signature,
     /// The round signatures can be aggregated into a timeout certificate if present.
-    timeout_signature: Option<Ed25519Signature>,
+    timeout_signature: Option<ed25519::Signature>,
 }
 
 impl Display for Vote {
@@ -64,7 +64,7 @@ impl Vote {
 
     /// Generates a round signature, which can then be used for aggregating a timeout certificate.
     /// Typically called for generating vote messages that are sent upon timeouts.
-    pub fn add_timeout_signature(&mut self, signature: Ed25519Signature) {
+    pub fn add_timeout_signature(&mut self, signature: ed25519::Signature) {
         if self.timeout_signature.is_some() {
             return; // round signature is already set
         }
@@ -87,7 +87,7 @@ impl Vote {
     }
 
     /// Return the signature of the vote
-    pub fn signature(&self) -> &Ed25519Signature {
+    pub fn signature(&self) -> &ed25519::Signature {
         &self.signature
     }
 
@@ -106,7 +106,7 @@ impl Vote {
 
     /// Returns the signature for the vote_data().proposed().round() that can be aggregated for
     /// TimeoutCertificate.
-    pub fn timeout_signature(&self) -> Option<&Ed25519Signature> {
+    pub fn timeout_signature(&self) -> Option<&ed25519::Signature> {
         self.timeout_signature.as_ref()
     }
 

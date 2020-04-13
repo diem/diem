@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    TPrivateKeyUniform,
-};
+use libra_crypto::{ed25519, TPrivateKey, Uniform};
 use rand::{
     rngs::{OsRng, StdRng},
     Rng, SeedableRng,
@@ -28,8 +25,8 @@ impl KeyGen {
     }
 
     /// Generate an Ed25519 key pair.
-    pub fn generate_keypair(&mut self) -> (Ed25519PrivateKey, Ed25519PublicKey) {
-        let private_key = Ed25519PrivateKey::generate(&mut self.0);
+    pub fn generate_keypair(&mut self) -> (ed25519::SigningKey, ed25519::VerifyingKey) {
+        let private_key = ed25519::SigningKey::generate(&mut self.0);
         let public_key = private_key.public_key();
         (private_key, public_key)
     }

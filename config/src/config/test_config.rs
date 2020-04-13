@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::keys::KeyPair;
-use libra_crypto::{ed25519::Ed25519PrivateKey, Uniform};
+use libra_crypto::{ed25519, Uniform};
 use libra_temppath::TempPath;
 use libra_types::on_chain_config::VMPublishingOption;
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-type AccountKeyPair = KeyPair<Ed25519PrivateKey>;
-type ConsensusKeyPair = KeyPair<Ed25519PrivateKey>;
+type AccountKeyPair = KeyPair<ed25519::SigningKey>;
+type ConsensusKeyPair = KeyPair<ed25519::SigningKey>;
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct TestConfig {
@@ -65,12 +65,12 @@ impl TestConfig {
     }
 
     pub fn random_account_key(&mut self, rng: &mut StdRng) {
-        let privkey = Ed25519PrivateKey::generate(rng);
+        let privkey = ed25519::SigningKey::generate(rng);
         self.account_keypair = Some(AccountKeyPair::load(privkey));
     }
 
     pub fn random_consensus_key(&mut self, rng: &mut StdRng) {
-        let privkey = Ed25519PrivateKey::generate(rng);
+        let privkey = ed25519::SigningKey::generate(rng);
         self.consensus_keypair = Some(ConsensusKeyPair::load(privkey));
     }
 

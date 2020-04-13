@@ -4,7 +4,7 @@
 use crate::{Action, Error, KeyManager, LibraInterface};
 use executor::{db_bootstrapper, Executor};
 use libra_config::config::NodeConfig;
-use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, TPrivateKey, Uniform};
+use libra_crypto::{ed25519, HashValue, TPrivateKey, Uniform};
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Policy, Value};
 use libra_secure_time::{MockTimeService, TimeService};
 use libra_types::{
@@ -287,7 +287,7 @@ fn test_manual_consensus_rotation() {
     assert_eq!(&node.account, genesis_info.account_address());
 
     let mut rng = StdRng::from_seed([44u8; 32]);
-    let new_prikey = Ed25519PrivateKey::generate(&mut rng);
+    let new_prikey = ed25519::SigningKey::generate(&mut rng);
     let new_pubkey = new_prikey.public_key();
 
     let txn = crate::build_rotation_transaction(

@@ -7,7 +7,7 @@ use crate::{
     quorum_cert::QuorumCert,
 };
 use anyhow::{bail, ensure, format_err};
-use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash, HashValue};
+use libra_crypto::{ed25519, hash::CryptoHash, HashValue};
 use libra_types::{
     block_info::BlockInfo, block_metadata::BlockMetadata, ledger_info::LedgerInfo,
     on_chain_config::ValidatorSet, transaction::Version, validator_signer::ValidatorSigner,
@@ -36,7 +36,7 @@ pub struct Block<T> {
     block_data: BlockData<T>,
     /// Signature that the hash of this block has been authored by the owner of the private key,
     /// this is only set within Proposal blocks
-    signature: Option<Ed25519Signature>,
+    signature: Option<ed25519::Signature>,
 }
 
 impl<T> fmt::Debug for Block<T> {
@@ -95,7 +95,7 @@ impl<T> Block<T> {
         self.block_data.round()
     }
 
-    pub fn signature(&self) -> Option<&Ed25519Signature> {
+    pub fn signature(&self) -> Option<&ed25519::Signature> {
         self.signature.as_ref()
     }
 
@@ -267,7 +267,7 @@ impl<'de, T: DeserializeOwned + Serialize> Deserialize<'de> for Block<T> {
         struct BlockWithoutId<T> {
             #[serde(bound(deserialize = "BlockData<T>: Deserialize<'de>"))]
             block_data: BlockData<T>,
-            signature: Option<Ed25519Signature>,
+            signature: Option<ed25519::Signature>,
         };
 
         let BlockWithoutId {

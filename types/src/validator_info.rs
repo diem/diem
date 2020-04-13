@@ -3,9 +3,9 @@
 
 use crate::account_address::AccountAddress;
 use anyhow::{Error, Result};
+use libra_crypto::{ed25519, x25519, ValidKey};
 #[cfg(any(test, feature = "fuzzing"))]
-use libra_crypto::{ed25519::Ed25519PrivateKey, TPrivateKey, Uniform};
-use libra_crypto::{ed25519::Ed25519PublicKey, x25519, ValidKey};
+use libra_crypto::{TPrivateKey, Uniform};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -24,11 +24,11 @@ pub struct ValidatorInfo {
     // initial property.
     account_address: AccountAddress,
     // This key can validate messages sent from this validator
-    consensus_public_key: Ed25519PublicKey,
+    consensus_public_key: ed25519::VerifyingKey,
     // Voting power of this validator
     consensus_voting_power: u64,
     // This key can validate signed messages at the network layer
-    network_signing_public_key: Ed25519PublicKey,
+    network_signing_public_key: ed25519::VerifyingKey,
     // This key establishes the corresponding PrivateKey holder's eligibility to join the p2p
     // network
     network_identity_public_key: x25519::PublicKey,
@@ -43,9 +43,9 @@ impl fmt::Display for ValidatorInfo {
 impl ValidatorInfo {
     pub fn new(
         account_address: AccountAddress,
-        consensus_public_key: Ed25519PublicKey,
+        consensus_public_key: ed25519::VerifyingKey,
         consensus_voting_power: u64,
-        network_signing_public_key: Ed25519PublicKey,
+        network_signing_public_key: ed25519::VerifyingKey,
         network_identity_public_key: x25519::PublicKey,
     ) -> Self {
         ValidatorInfo {
@@ -61,10 +61,10 @@ impl ValidatorInfo {
     pub fn new_with_test_network_keys(
         rng: &mut (impl rand::RngCore + rand::CryptoRng),
         account_address: AccountAddress,
-        consensus_public_key: Ed25519PublicKey,
+        consensus_public_key: ed25519::VerifyingKey,
         consensus_voting_power: u64,
     ) -> Self {
-        let network_signing_public_key = Ed25519PrivateKey::generate_for_testing().public_key();
+        let network_signing_public_key = ed25519::SigningKey::generate_for_testing().public_key();
         let private_key = x25519::PrivateKey::for_test(rng);
         let network_identity_public_key: x25519::PublicKey = private_key.public_key();
 
@@ -84,7 +84,7 @@ impl ValidatorInfo {
     }
 
     /// Returns the key for validating signed messages from this validator
-    pub fn consensus_public_key(&self) -> &Ed25519PublicKey {
+    pub fn consensus_public_key(&self) -> &ed25519::VerifyingKey {
         &self.consensus_public_key
     }
 
@@ -94,7 +94,7 @@ impl ValidatorInfo {
     }
 
     /// Returns the key for validating signed messages at the network layers
-    pub fn network_signing_public_key(&self) -> &Ed25519PublicKey {
+    pub fn network_signing_public_key(&self) -> &ed25519::VerifyingKey {
         &self.network_signing_public_key
     }
 
@@ -109,10 +109,11 @@ impl TryFrom<crate::proto::types::ValidatorInfo> for ValidatorInfo {
 
     fn try_from(proto: crate::proto::types::ValidatorInfo) -> Result<Self> {
         let account_address = AccountAddress::try_from(proto.account_address)?;
-        let consensus_public_key = Ed25519PublicKey::try_from(&proto.consensus_public_key[..])?;
+        let consensus_public_key =
+            ed25519::VerifyingKey::try_from(&proto.consensus_public_key[..])?;
         let consensus_voting_power = proto.consensus_voting_power;
         let network_signing_public_key =
-            Ed25519PublicKey::try_from(&proto.network_signing_public_key[..])?;
+            ed25519::VerifyingKey::try_from(&proto.network_signing_public_key[..])?;
         let network_identity_public_key =
             x25519::PublicKey::try_from(&proto.network_identity_public_key[..])?;
         Ok(Self::new(

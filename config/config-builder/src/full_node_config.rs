@@ -7,7 +7,7 @@ use libra_config::{
     config::{NetworkPeersConfig, NodeConfig, RoleType, SeedPeersConfig, UpstreamPeersConfig},
     utils,
 };
-use libra_crypto::ed25519::Ed25519PrivateKey;
+use libra_crypto::ed25519;
 use libra_types::transaction::Transaction;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
@@ -157,7 +157,7 @@ impl FullNodeConfig {
     fn build_internal(
         &self,
         randomize_ports: bool,
-    ) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
+    ) -> Result<(Vec<NodeConfig>, ed25519::SigningKey)> {
         ensure!(self.full_nodes > 0, Error::NonZeroNetwork);
         ensure!(
             self.full_node_index < self.full_nodes,
@@ -252,7 +252,7 @@ impl FullNodeConfig {
 }
 
 impl BuildSwarm for FullNodeConfig {
-    fn build_swarm(&self) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
+    fn build_swarm(&self) -> Result<(Vec<NodeConfig>, ed25519::SigningKey)> {
         let (mut configs, faucet_key) = self.build_internal(true)?;
         configs.swap_remove(configs.len() - 1);
         Ok((configs, faucet_key))

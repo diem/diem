@@ -9,11 +9,7 @@
 //! Client (binary) is the CLI tool to interact with Libra validator.
 //! It supposes all public APIs.
 
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    test_utils::KeyPair,
-    traits::ValidKeyStringExt,
-};
+use libra_crypto::{ed25519, test_utils::KeyPair, traits::ValidKeyStringExt};
 use libra_types::account_address::AccountAddress;
 use serde::{Deserialize, Serialize};
 
@@ -38,7 +34,7 @@ pub struct AccountData {
     /// Authentication key of the account.
     pub authentication_key: Option<Vec<u8>>,
     /// (private_key, public_key) pair if the account is not managed by wallet.
-    pub key_pair: Option<KeyPair<Ed25519PrivateKey, Ed25519PublicKey>>,
+    pub key_pair: Option<KeyPair<ed25519::SigningKey, ed25519::VerifyingKey>>,
     /// Latest sequence number maintained by client, it can be different from validator.
     pub sequence_number: u64,
     /// Whether the account is initialized on chain, cached local only, or status unknown.

@@ -9,11 +9,10 @@ use crate::{
 use anyhow::Result;
 use chrono::Utc;
 use libra_crypto::{
-    ed25519::*,
+    ed25519,
     hash::{CryptoHash, TestOnlyHash},
     test_utils::KeyPair,
-    traits::TSigningKey,
-    HashValue,
+    HashValue, TSigningKey,
 };
 
 /// Used to get the digest of a set of signed transactions.  This is used by a validator
@@ -75,7 +74,7 @@ pub fn create_user_txn<T: TransactionSigner + ?Sized>(
     signer.sign_txn(raw_txn)
 }
 
-impl TransactionSigner for KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
+impl TransactionSigner for KeyPair<ed25519::SigningKey, ed25519::VerifyingKey> {
     fn sign_txn(&self, raw_txn: RawTransaction) -> Result<SignedTransaction> {
         let signature = self.private_key.sign_message(&raw_txn.hash());
         Ok(SignedTransaction::new(

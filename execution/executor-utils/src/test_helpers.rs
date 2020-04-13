@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    HashValue,
-};
+use libra_crypto::{ed25519, HashValue};
 use libra_types::{
     account_address::AccountAddress,
     block_info::BlockInfo,
@@ -44,8 +41,8 @@ pub fn gen_block_metadata(index: u8, proposer: AccountAddress) -> BlockMetadata 
 pub fn get_test_signed_transaction(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: Ed25519PrivateKey,
-    public_key: Ed25519PublicKey,
+    private_key: ed25519::SigningKey,
+    public_key: ed25519::VerifyingKey,
     program: Option<Script>,
 ) -> Transaction {
     Transaction::UserTransaction(get_test_signed_txn(

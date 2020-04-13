@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use consensus_types::common::Round;
-use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue};
+use libra_crypto::{ed25519, HashValue};
 use libra_secure_storage::{InMemoryStorage, Policy, Storage, Value};
 use libra_types::waypoint::Waypoint;
 
@@ -24,7 +24,7 @@ const WAYPOINT_VALUE: &str = "waypoint_hash";
 const WAYPOINT_VERSION: &str = "waypoint_version";
 
 impl PersistentSafetyStorage {
-    pub fn in_memory(private_key: Ed25519PrivateKey) -> Self {
+    pub fn in_memory(private_key: ed25519::SigningKey) -> Self {
         let storage = InMemoryStorage::new_storage();
         let waypoint = Waypoint::new_from_pieces(0, HashValue::zero());
         Self::initialize(storage, private_key, waypoint)
@@ -34,7 +34,7 @@ impl PersistentSafetyStorage {
     /// SafetyRules values set.
     pub fn initialize(
         mut internal_store: Box<dyn Storage>,
-        private_key: Ed25519PrivateKey,
+        private_key: ed25519::SigningKey,
         waypoint: Waypoint,
     ) -> Self {
         Self::initialize_(internal_store.as_mut(), private_key, waypoint)
@@ -44,7 +44,7 @@ impl PersistentSafetyStorage {
 
     fn initialize_(
         internal_store: &mut dyn Storage,
-        private_key: Ed25519PrivateKey,
+        private_key: ed25519::SigningKey,
         waypoint: Waypoint,
     ) -> Result<()> {
         let perms = Policy::public();
@@ -69,14 +69,14 @@ impl PersistentSafetyStorage {
         Self { internal_store }
     }
 
-    pub fn consensus_key(&self) -> Result<Ed25519PrivateKey> {
+    pub fn consensus_key(&self) -> Result<ed25519::SigningKey> {
         Ok(self
             .internal_store
             .get(CONSENSUS_KEY)
             .and_then(|r| r.value.ed25519_private_key())?)
     }
 
-    pub fn set_consensus_key(&mut self, consensus_key: Ed25519PrivateKey) -> Result<()> {
+    pub fn set_consensus_key(&mut self, consensus_key: ed25519::SigningKey) -> Result<()> {
         self.internal_store
             .set(CONSENSUS_KEY, Value::Ed25519PrivateKey(consensus_key))?;
         Ok(())

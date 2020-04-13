@@ -64,7 +64,7 @@ impl<T: Send + Sync + TimeService> KVStorage for InMemoryStorageInternal<T> {
 
         let value = match &response.value {
             Value::Ed25519PrivateKey(value) => {
-                // Hack because Ed25519PrivateKey does not support clone / copy
+                // Hack because ed25519::SigningKey does not support clone / copy
                 let bytes = lcs::to_bytes(&value)?;
                 let key = lcs::from_bytes(&bytes)?;
                 Value::Ed25519PrivateKey(key)

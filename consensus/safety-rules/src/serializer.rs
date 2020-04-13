@@ -6,7 +6,7 @@ use consensus_types::{
     block::Block, block_data::BlockData, common::Payload, quorum_cert::QuorumCert,
     timeout::Timeout, vote::Vote, vote_proposal::VoteProposal,
 };
-use libra_crypto::ed25519::Ed25519Signature;
+use libra_crypto::ed25519;
 use libra_types::validator_change::ValidatorChangeProof;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, RwLock};
@@ -110,7 +110,7 @@ impl<T: Payload> TSafetyRules<T> for SerializerClient<T> {
         lcs::from_bytes(&response)?
     }
 
-    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
+    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<ed25519::Signature, Error> {
         let response = self.request(SafetyRulesInput::SignTimeout(Box::new(timeout.clone())))?;
         lcs::from_bytes(&response)?
     }

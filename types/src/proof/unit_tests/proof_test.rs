@@ -17,12 +17,12 @@ use crate::{
     vm_error::StatusCode,
 };
 use libra_crypto::{
-    ed25519::Ed25519PrivateKey,
+    ed25519,
     hash::{
         CryptoHash, TestOnlyHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID,
         SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
-    HashValue, TPrivateKeyUniform,
+    HashValue, TPrivateKey, Uniform,
 };
 
 #[test]
@@ -336,7 +336,7 @@ fn test_verify_account_state_and_event() {
     let txn_info0_hash = b"hellohello".test_only_hash();
     let txn_info1_hash = b"worldworld".test_only_hash();
 
-    let privkey = Ed25519PrivateKey::generate_for_testing();
+    let privkey = ed25519::SigningKey::generate_for_testing();
     let pubkey = privkey.public_key();
     let txn2_hash = Transaction::UserTransaction(
         RawTransaction::new_script(

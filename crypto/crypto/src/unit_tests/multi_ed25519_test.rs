@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, ED25519_PUBLIC_KEY_LENGTH},
+    ed25519,
     hash::HashValue,
     multi_ed25519,
     test_utils::TEST_SEED,
@@ -16,15 +16,18 @@ use rand::{rngs::StdRng, SeedableRng};
 static MESSAGE_HASH: Lazy<HashValue> = Lazy::new(|| HashValue::from_sha3_256(b"Test Message"));
 
 // Helper function to generate N key pairs.
-fn generate_keys(n: usize) -> Vec<Ed25519PrivateKey> {
+fn generate_keys(n: usize) -> Vec<ed25519::SigningKey> {
     let mut rng = StdRng::from_seed(TEST_SEED);
     (0..n)
-        .map(|_| Ed25519PrivateKey::generate(&mut rng))
+        .map(|_| ed25519::SigningKey::generate(&mut rng))
         .collect()
 }
 
 // Reused assertions in our tests.
-fn test_successful_public_key_serialization(original_keys: &[Ed25519PublicKey], threshold: u8) {
+fn test_successful_public_key_serialization(
+    original_keys: &[ed25519::VerifyingKey
+    threshold: u8,
+) {
     let n = original_keys.len();
     let public_key: multi_ed25519::VerifyingKeys =
         multi_ed25519::VerifyingKeys::new(original_keys.to_vec(), threshold).unwrap();
@@ -46,7 +49,7 @@ fn test_failed_public_key_serialization(
     assert_eq!(result.err().unwrap(), expected_error);
 }
 
-fn test_successful_signature_serialization(private_keys: &[Ed25519PrivateKey], threshold: u8) {
+fn test_successful_signature_serialization(private_keys: &[ed25519::SigningKey], threshold: u8) {
     let multi_private_key =
         multi_ed25519::SigningKeys::new(private_keys.to_vec(), threshold).unwrap();
     let multi_public_key = multi_ed25519::VerifyingKeys::from(&multi_private_key);
@@ -141,7 +144,7 @@ fn test_multi_ed25519_public_key_serialization() {
         multi_public_key_7of10
     );
 
-    // Check that MultiEd25519PublicKey::from Ed25519PublicKey works as expected.
+    // Check that multi_ed25519::VerifyingKeys::from Ed25519PublicKey works as expected.
     let multi_public_key_from_ed25519 = multi_ed25519::VerifyingKeys::from(
         multi_public_key_7of10_from_multi_private_key.public_keys()[0].clone(),
     );
@@ -189,7 +192,7 @@ fn test_multi_ed25519_signature_serialization() {
     // Test 32 of 32
     test_successful_signature_serialization(&priv_keys_32, 32);
 
-    // Construct from single Ed25519Signature.
+    // Construct from single ed25519::Signature.
     let single_signature = priv_keys_3[0].sign_message(&MESSAGE_HASH);
     let multi_signature = multi_ed25519::VerifyingKeys::from(single_signature.clone());
     assert_eq!(1, multi_signature.signatures().len());

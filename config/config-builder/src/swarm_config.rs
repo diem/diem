@@ -3,15 +3,12 @@
 
 use anyhow::Result;
 use libra_config::config::NodeConfig;
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    test_utils::KeyPair,
-};
+use libra_crypto::{ed25519, test_utils::KeyPair};
 use std::{fs::File, io::Write, path::PathBuf};
 
 pub trait BuildSwarm {
     /// Generate the configs for a swarm
-    fn build_swarm(&self) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)>;
+    fn build_swarm(&self) -> Result<(Vec<NodeConfig>, ed25519::SigningKey)>;
 }
 
 pub struct SwarmConfig {
@@ -35,7 +32,8 @@ impl SwarmConfig {
         }
 
         let faucet_key_path = output_dir.join("mint.key");
-        let faucet_keypair = KeyPair::<Ed25519PrivateKey, Ed25519PublicKey>::from(faucet_key);
+        let faucet_keypair =
+            KeyPair::<ed25519::SigningKey, ed25519::VerifyingKey>::from(faucet_key);
         let serialized_keys = lcs::to_bytes(&faucet_keypair)?;
         let mut key_file = File::create(&faucet_key_path)?;
         key_file.write_all(&serialized_keys)?;

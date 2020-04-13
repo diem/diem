@@ -16,9 +16,7 @@ use crate::{
 use channel::message_queues::QueueStyle;
 use futures::{executor::block_on, StreamExt};
 use libra_config::config::RoleType;
-use libra_crypto::{
-    ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, x25519, TPrivateKey, Uniform,
-};
+use libra_crypto::{ed25519, test_utils::TEST_SEED, x25519, TPrivateKey, Uniform};
 use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
@@ -104,13 +102,13 @@ pub fn setup_network() -> DummyNetwork {
 
     // Setup keys for dialer.
     let mut rng = StdRng::from_seed(TEST_SEED);
-    let dialer_signing_private_key = Ed25519PrivateKey::generate(&mut rng);
+    let dialer_signing_private_key = ed25519::SigningKey::generate(&mut rng);
     let dialer_signing_public_key = dialer_signing_private_key.public_key();
     let dialer_identity_private_key = x25519::PrivateKey::for_test(&mut rng);
     let dialer_identity_public_key = dialer_identity_private_key.public_key();
 
     // Setup keys for listener.
-    let listener_signing_private_key = Ed25519PrivateKey::generate(&mut rng);
+    let listener_signing_private_key = ed25519::SigningKey::generate(&mut rng);
     let listener_signing_public_key = listener_signing_private_key.public_key();
     let listener_identity_private_key = x25519::PrivateKey::for_test(&mut rng);
     let listener_identity_public_key = listener_identity_private_key.public_key();

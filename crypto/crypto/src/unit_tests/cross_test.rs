@@ -4,12 +4,7 @@
 // This is necessary for the derive macros which rely on being used in a
 // context where the crypto crate is external
 use crate as libra_crypto;
-use crate::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    multi_ed25519,
-    test_utils::uniform_keypair_strategy,
-    traits::*,
-};
+use crate::{ed25519, multi_ed25519, test_utils::uniform_keypair_strategy, traits::*};
 
 use crate::hash::HashValue;
 
@@ -34,15 +29,15 @@ use serde::{Deserialize, Serialize};
 #[PrivateKeyType = "PrivateK"]
 #[SignatureType = "Sig"]
 enum PublicK {
-    Ed(Ed25519PublicKey),
+    Ed(ed25519::VerifyingKey
     MultiEd(PublicKey),
 }
 
-#[derive(Serialize, Deserialize, SilentDebug, ValidKey, TPrivateKeySigningKey)]
+#[derive(Serialize, Deserialize, SilentDebug, ValidKey, TPrivateKey, TSigningKey)]
 #[PublicKeyType = "PublicK"]
 #[SignatureType = "Sig"]
 enum PrivateK {
-    Ed(Ed25519PrivateKey),
+    Ed(ed25519::SigningKey),
     MultiEd(PrivateKey),
 }
 
@@ -51,7 +46,7 @@ enum PrivateK {
 #[PublicKeyType = "PublicK"]
 #[PrivateKeyType = "PrivateK"]
 enum Sig {
-    Ed(Ed25519Signature),
+    Ed(ed25519::Signature),
     MultiEd(Signature),
 }
 
@@ -64,14 +59,14 @@ proptest! {
     #[test]
     fn test_keys_mix(
         hash in any::<HashValue>(),
-        ed_keypair1 in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>(),
-        ed_keypair2 in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>(),
+        ed_keypair1 in uniform_keypair_strategy::<ed25519::SigningKey, ed25519::VerifyingKey,
+        ed_keypair2 in uniform_keypair_strategy::<ed25519::SigningKey, ed25519::VerifyingKey,
         med_keypair in uniform_keypair_strategy::<multi_ed25519::SigningKeys, multi_ed25519::VerifyingKeys>()
     ) {
         // this is impossible to write statically, due to the trait not being
         // object-safe (voluntarily)
         // let mut l: Vec<Box<dyn PrivateKey>> = vec![];
-        let mut l: Vec<Ed25519PrivateKey> = vec![];
+        let mut l: Vec<ed25519::SigningKey> = vec![];
         l.push(ed_keypair1.private_key);
         let ed_key = l.pop().unwrap();
         let signature = ed_key.sign_message(&hash);
@@ -80,7 +75,7 @@ proptest! {
         prop_assert!(signature.verify(&hash, &ed_keypair1.public_key).is_ok());
 
         // This is impossible to write, and generates:
-        // expected struct `ed25519::Ed25519PublicKey`, found struct `med12381::multi_ed25519::VerifyingKeys`
+        // expected struct `ed25519::VerifyingKey` found struct `med12381::multi_ed25519::VerifyingKeys`
         // prop_assert!(signature.verify(&hash, &med_keypair.public_key).is_ok());
 
         let mut l2: Vec<PrivateK> = vec![];

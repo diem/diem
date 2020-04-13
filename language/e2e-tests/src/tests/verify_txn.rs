@@ -7,7 +7,7 @@ use crate::{
 };
 use bytecode_verifier::VerifiedModule;
 use compiler::Compiler;
-use libra_crypto::{ed25519::Ed25519PrivateKey, TPrivateKey, Uniform};
+use libra_crypto::{ed25519, TPrivateKey, Uniform};
 use libra_types::{
     account_config::{lbr_type_tag, CORE_CODE_ADDRESS, LBR_NAME},
     on_chain_config::VMPublishingOption,
@@ -28,7 +28,7 @@ fn verify_signature() {
     let sender = AccountData::new(900_000, 10);
     executor.add_account_data(&sender);
     // Generate a new key pair to try and sign things with.
-    let private_key = Ed25519PrivateKey::generate_for_testing();
+    let private_key = ed25519::SigningKey::generate_for_testing();
     let program =
         encode_transfer_with_metadata_script(lbr_type_tag(), sender.address(), vec![], 100, vec![]);
     let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
@@ -52,7 +52,7 @@ fn verify_reserved_sender() {
     let sender = AccountData::new(900_000, 10);
     executor.add_account_data(&sender);
     // Generate a new key pair to try and sign things with.
-    let private_key = Ed25519PrivateKey::generate_for_testing();
+    let private_key = ed25519::SigningKey::generate_for_testing();
     let program =
         encode_transfer_with_metadata_script(lbr_type_tag(), sender.address(), vec![], 100, vec![]);
     let signed_txn = transaction_test_helpers::get_test_signed_txn(

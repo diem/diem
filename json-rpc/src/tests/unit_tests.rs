@@ -14,7 +14,7 @@ use crate::{
 use futures::{channel::mpsc::channel, StreamExt};
 use hex;
 use libra_config::utils;
-use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, TPrivateKeyUniform};
+use libra_crypto::{ed25519, HashValue, TPrivateKey, Uniform};
 use libra_proptest_helpers::ValueGenerator;
 use libra_types::{
     account_address::AccountAddress,
@@ -201,7 +201,7 @@ fn test_transaction_submission() {
 
     // closure that checks transaction submission for given account
     let mut txn_submission = move |sender| {
-        let privkey = Ed25519PrivateKey::generate_for_testing();
+        let privkey = ed25519::SigningKey::generate_for_testing();
         let txn = get_test_signed_txn(sender, 0, &privkey, privkey.public_key(), None);
         let mut batch = JsonRpcBatch::default();
         batch.add_submit_request(txn).unwrap();
