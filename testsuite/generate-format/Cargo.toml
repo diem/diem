@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-proptest = "0.9.4"
+proptest = "0.9.6"
 serde_yaml = "0.8"
 structopt = "0.3.13"
 

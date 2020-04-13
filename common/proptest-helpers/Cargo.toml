@@ -11,5 +11,5 @@ edition = "2018"
 
 [dependencies]
 crossbeam = "0.7.2"
-proptest = "0.9.4"
+proptest = "0.9.6"
 proptest-derive = "0.1.2"

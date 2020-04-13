@@ -37,7 +37,7 @@ storage-proto = { path = "../../storage/storage-proto", version = "0.1.0" }
 libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
 
 [dev-dependencies]
-proptest = "0.9.2"
+proptest = "0.9.6"
 rusty-fork = "0.2.1"
 
 executor-utils = { path = "../executor-utils", version = "0.1.0" }

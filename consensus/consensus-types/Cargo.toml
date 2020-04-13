@@ -10,7 +10,7 @@ edition = "2018"
 anyhow = "1.0"
 hex = "0.4.2"
 mirai-annotations = { version = "1.5.0", default-features = false }
-proptest = { version = "0.9.4", optional = true }
+proptest = { version = "0.9.6", optional = true }
 serde = { version = "1.0.106", default-features = false }
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
@@ -20,7 +20,7 @@ executor-types = { path = "../../execution/executor-types", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 
 [dev-dependencies]
-proptest = "0.9.4"
+proptest = "0.9.6"
 
 [features]
 default = []
