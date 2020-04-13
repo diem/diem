@@ -39,6 +39,11 @@ impl<'l> PackageContext<'l> {
         }
     }
 
+    /// Returns the project context
+    pub fn project_ctx(&self) -> &ProjectContext<'l> {
+        &self.project_ctx
+    }
+
     /// Returns the relative path for this package in the workspace.
     pub fn workspace_path(&self) -> &'l Path {
         self.workspace_path
