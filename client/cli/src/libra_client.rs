@@ -7,8 +7,8 @@ use libra_json_rpc::{
     errors::JsonRpcError,
     get_response_from_batch, process_batch_response,
     views::{
-        AccountStateWithProofView, AccountView, BlockMetadata, BytesView, EventView,
-        ResponseAsView, StateProofView, TransactionView,
+        AccountView, BlockMetadata, BytesView, EventView, ResponseAsView, StateProofView,
+        TransactionView,
     },
     JsonRpcBatch, JsonRpcResponse,
 };
@@ -17,7 +17,6 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH},
-    account_state_blob::AccountStateBlob,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{SignedTransaction, Version},
     trusted_state::{TrustedState, TrustedStateChange},
@@ -311,32 +310,6 @@ impl LibraClient {
     /// LedgerInfo corresponding to the latest epoch change.
     pub(crate) fn latest_epoch_change_li(&self) -> Option<&LedgerInfoWithSignatures> {
         self.latest_epoch_change_li.as_ref()
-    }
-
-    /// Get the latest account state blob from validator.
-    pub(crate) fn get_account_blob(
-        &mut self,
-        address: AccountAddress,
-    ) -> Result<Option<AccountStateBlob>> {
-        let version = self.trusted_state.latest_version();
-        let mut batch = JsonRpcBatch::new();
-        batch.add_get_account_state_with_proof_request(address, version, version);
-        let responses = self.client.execute(batch)?;
-
-        match get_response_from_batch(0, &responses)? {
-            Ok(resp) => {
-                let account_state_with_proof =
-                    AccountStateWithProofView::from_response(resp.clone())?;
-                let account_blob = if let Some(blob) = account_state_with_proof.blob {
-                    let account_blob: AccountStateBlob = lcs::from_bytes(&blob.into_bytes()?)?;
-                    Some(account_blob)
-                } else {
-                    None
-                };
-                Ok(account_blob)
-            }
-            Err(e) => bail!("Failed to get account state blob with error: {:?}", e),
-        }
     }
 
     /// Get transaction from validator by account and sequence number.

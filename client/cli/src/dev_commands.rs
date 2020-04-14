@@ -41,13 +41,13 @@ impl Command for DevCommandCompile {
         vec!["compile", "c"]
     }
     fn get_params_help(&self) -> &'static str {
-        "<sender_account_address>|<sender_account_ref_id> <file_path> <module|script> [output_file_path (compile into tmp file by default)]"
+        "<sender_account_address>|<sender_account_ref_id> <file_path> <dependency source files...>"
     }
     fn get_description(&self) -> &'static str {
         "Compile Move program"
     }
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
-        if params.len() < 4 || params.len() > 5 {
+        if params.len() < 4 {
             println!("Invalid number of arguments for compilation");
             return;
         }

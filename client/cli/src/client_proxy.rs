@@ -21,9 +21,8 @@ use libra_types::{
     account_address::AccountAddress,
     account_config::{
         association_address, lbr_type_tag, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
-        CORE_CODE_ADDRESS, LBR_NAME,
+        LBR_NAME,
     },
-    account_state::AccountState,
     ledger_info::LedgerInfoWithSignatures,
     on_chain_config::VMPublishingOption,
     transaction::{
@@ -42,14 +41,13 @@ use num_traits::{
 use parity_multiaddr::Multiaddr;
 use reqwest::Url;
 use rust_decimal::Decimal;
-use serde_json;
 use std::{
     collections::HashMap,
     convert::TryFrom,
     fmt, fs,
     io::{stdout, Write},
-    path::{Display, Path, PathBuf},
-    process::{Command, Stdio},
+    path::{Path, PathBuf},
+    process::Command,
     str::{self, FromStr},
     thread, time,
 };
@@ -665,32 +663,22 @@ impl ClientProxy {
         );
         let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let file_path = space_delim_strings[2];
-        let is_module = match space_delim_strings[3] {
-            "module" => true,
-            "script" => false,
-            _ => bail!(
-                "Invalid program type: {}. Available options: module, script",
-                space_delim_strings[3]
-            ),
-        };
-
-        let tmp_source_path = TempPath::new().as_ref().with_extension("mvir");
-        let output_path = &tmp_source_path.with_extension("mv");
-        let mut tmp_source_file = std::fs::File::create(tmp_source_path.clone())?;
-        let mut code = fs::read_to_string(file_path)?;
-        code = code.replace("{{sender}}", &format!("0x{}", address));
-        writeln!(tmp_source_file, "{}", code)?;
-        self.temp_files.push(output_path.to_path_buf());
-        let dependencies_file = self.handle_dependencies(tmp_source_path.display(), is_module)?;
+        let mut tmp_output_dir = TempPath::new();
+        tmp_output_dir.persist();
+        tmp_output_dir
+            .create_as_dir()
+            .expect("error creating temporary output directory");
+        let tmp_output_path = tmp_output_dir.as_ref();
+        self.temp_files.push(tmp_output_path.to_path_buf());
 
         let mut args = format!(
-            "run -p compiler -- {} -a {}{}",
-            tmp_source_path.display(),
+            "run -p move-lang --bin move-build -- -f {} -s {} -o {}",
+            file_path,
             address,
-            if is_module { " -m" } else { "" },
+            tmp_output_path.display(),
         );
-        if let Some(file) = &dependencies_file {
-            args.push_str(&format!(" --deps={}", file.as_ref().display()));
+        for dep in &space_delim_strings[3..] {
+            args.push_str(&format!(" -d {}", dep));
         }
 
         let status = Command::new("cargo")
@@ -700,47 +688,22 @@ impl ClientProxy {
         if !status.success() {
             return Err(format_err!("compilation failed"));
         }
-        Ok(output_path
-            .to_str()
-            .expect(
-                "TempPath::new() should always generate a path that can be converted to a string",
-            )
-            .to_string())
-    }
 
-    fn handle_dependencies(
-        &mut self,
-        source_path: Display,
-        is_module: bool,
-    ) -> Result<Option<TempPath>> {
-        let mut args = format!("run -p compiler -- -l {}", source_path);
-        if is_module {
-            args.push_str(" -m");
-        }
-        let child = Command::new("cargo")
-            .args(args.split(' '))
-            .stdout(Stdio::piped())
-            .spawn()?;
-        let output = child.wait_with_output()?;
-        let paths: Vec<AccessPath> = serde_json::from_str(str::from_utf8(&output.stdout)?)?;
-        let mut dependencies = vec![];
-        for path in paths {
-            if path.address != CORE_CODE_ADDRESS {
-                if let Some(blob) = self.client.get_account_blob(path.address)? {
-                    let account_state = AccountState::try_from(&blob)?;
-                    if let Some(code) = account_state.get(&path.path) {
-                        dependencies.push(code.clone());
-                    }
+        let mut output_files: Vec<_> = fs::read_dir(tmp_output_path)?.collect();
+        match output_files.pop() {
+            None => Err(format_err!("compiler failed to produce an output file")),
+            Some(file) => {
+                if !output_files.is_empty() {
+                    Err(format_err!("compiler output has more than one file"))
+                } else {
+                    Ok(file?
+                        .path()
+                        .to_str()
+                        .expect("compiler output file path cannot be converted to a string")
+                        .to_string())
                 }
             }
         }
-        if dependencies.is_empty() {
-            return Ok(None);
-        }
-        let path = TempPath::new();
-        let mut file = std::fs::File::create(path.as_ref())?;
-        file.write_all(&serde_json::to_vec(&dependencies)?)?;
-        Ok(Some(path))
     }
 
     /// Submit a transaction to the network given the unsigned raw transaction, sender public key
