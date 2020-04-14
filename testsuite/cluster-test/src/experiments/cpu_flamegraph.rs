@@ -16,10 +16,8 @@ use structopt::StructOpt;
 use async_trait::async_trait;
 
 use crate::{
-    aws,
     cluster::Cluster,
     cluster_swarm::ClusterSwarm,
-    effects::{Action, GenerateCpuFlamegraph},
     experiments::{Context, Experiment, ExperimentParam},
     instance,
     instance::Instance,
@@ -76,38 +74,19 @@ impl Experiment for CpuFlamegraph {
                 .take(30)
                 .collect::<String>()
         );
-        if let Some(cluster_swarm) = context.cluster_swarm {
-            let command = generate_perf_flamegraph_command(&filename, self.duration_secs);
-            let flame_graph = cluster_swarm.run(
-                &self.perf_instance,
-                "853397791086.dkr.ecr.us-west-2.amazonaws.com/cluster-test-util:latest",
-                command,
-                "generate-flamegraph",
-            );
-            let flame_graph_future = tokio::time::delay_for(buffer)
-                .then(|_| async move { flame_graph.await })
-                .boxed();
-            let (emit_result, flame_graph_result) = join!(emit_future, flame_graph_future);
-            emit_result.map_err(|e| format_err!("Emiting tx failed: {:?}", e))?;
-            flame_graph_result
-                .map_err(|e| format_err!("Failed to generate flamegraph: {:?}", e))?;
-        } else {
-            let flame_graph =
-                GenerateCpuFlamegraph::new(self.perf_instance.clone(), self.duration_secs);
-            let flame_graph_future = tokio::time::delay_for(buffer)
-                .then(|_| flame_graph.apply())
-                .boxed();
-            let (emit_result, flame_graph_result) = join!(emit_future, flame_graph_future);
-            emit_result.map_err(|e| format_err!("Emiting tx failed: {:?}", e))?;
-            flame_graph_result
-                .map_err(|e| format_err!("Failed to generate flamegraph: {:?}", e))?;
-            aws::upload_to_s3(
-                "perf-kernel.svg",
-                "toro-cluster-test-flamegraphs",
-                filename.as_str(),
-                Some("image/svg+xml".to_string()),
-            )?;
-        }
+        let command = generate_perf_flamegraph_command(&filename, self.duration_secs);
+        let flame_graph = context.cluster_swarm.run(
+            &self.perf_instance,
+            "853397791086.dkr.ecr.us-west-2.amazonaws.com/cluster-test-util:latest",
+            command,
+            "generate-flamegraph",
+        );
+        let flame_graph_future = tokio::time::delay_for(buffer)
+            .then(|_| async move { flame_graph.await })
+            .boxed();
+        let (emit_result, flame_graph_result) = join!(emit_future, flame_graph_future);
+        emit_result.map_err(|e| format_err!("Emiting tx failed: {:?}", e))?;
+        flame_graph_result.map_err(|e| format_err!("Failed to generate flamegraph: {:?}", e))?;
         context.report.report_text(format!(
             "perf flamegraph : https://toro-cluster-test-flamegraphs.s3-us-west-2.amazonaws.com/{}",
             filename
