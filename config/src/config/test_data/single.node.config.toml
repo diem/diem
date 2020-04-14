@@ -30,14 +30,14 @@ address = "127.0.0.1:6184"
 dir = "libradb/db"
 grpc_max_receive_len = 100000000
 [test.account_keypair]
-private_key = "82001573a003fd3b7fd72ffb0eaf63aac62f12deb629dca72785a66268ec758b"
-public_key = "664f6e8f36eacb1770fa879d86c2c1d0fafea145e84fa7d671ab7a011a54d509"
+private_key = "76b8e0ada0f13d90405d6ae55386bd28bdd219b8a08ded1aa836efcc8b770dc7"
+public_key = "20fdbac9b10b7587bba7b5bc163bce69e796d71e4ed44c10fcb4488689f7a144"
 [test.consensus_keypair]
-private_key = "f9e1b4bd35cff88f047043aebedfbd310bb6ca762040ac51c28203fb1873e539"
-public_key = "66535c0f4f9242ea8f9ff7f68b4f50b7c9d8e7961a41cf216124b33a325505ff"
+private_key = "29b721769ce64e43d57133b074d839d531ed1f28510afb45ace10a1f4b794d6f"
+public_key = "beada06126c78d98b4a1a69f6ee6189694f0f4751538da824f1adc8b14a1b562"
 
 [validator_network]
-peer_id = "0468de5bb622c235a681b898929cecf7"
+peer_id = "1a398451c5c11e1e76e64cdc7b588510"
 listen_address = "/ip4/0.0.0.0/tcp/65206"
 advertised_address = "/ip4/0.0.0.0/tcp/65206"
 discovery_interval_ms = 1000
