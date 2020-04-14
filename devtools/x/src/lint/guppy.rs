@@ -170,33 +170,25 @@ impl PackageLinter for WorkspaceHack {
             .expect("can't find package graph");
         let workspace_hack_id = pkg_graph
             .workspace()
-            .member_ids()
-            .find_map(|pkg_id| {
-                let metadata = pkg_graph.metadata(pkg_id).unwrap();
-                if metadata.name() == "libra-workspace-hack" {
-                    return Some(pkg_id);
-                }
-                None
-            })
-            .expect("can't find libra-workspace-hack package");
+            .member_by_name("libra-workspace-hack")
+            .expect("can't find libra-workspace-hack package")
+            .id();
 
         // libra-workspace-hack does not need to depend on itself
         if package_id == workspace_hack_id {
             return Ok(RunStatus::Executed);
         }
 
-        if let Some(links) = pkg_graph.dep_links(package_id) {
-            let mut has_links = false;
-            let mut has_hack_dep = false;
-            for link in links {
-                has_links = true;
-                if link.to.id() == workspace_hack_id {
-                    has_hack_dep = true;
-                }
-            }
-            if has_links && !has_hack_dep {
-                out.write(LintLevel::Error, "missing libra-workspace-hack depdendency");
-            }
+        let has_links = pkg_graph
+            .dep_links(package_id)
+            .expect("valid package ID")
+            .next()
+            .is_some();
+        let has_hack_dep = pkg_graph
+            .directly_depends_on(package_id, workspace_hack_id)
+            .expect("valid package ID");
+        if has_links && !has_hack_dep {
+            out.write(LintLevel::Error, "missing libra-workspace-hack dependency");
         }
 
         Ok(RunStatus::Executed)
