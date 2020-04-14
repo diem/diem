@@ -86,10 +86,7 @@ impl<T: Payload> MockStorage<T> {
     }
 
     pub fn get_ledger_recovery_data(&self) -> LedgerRecoveryData {
-        LedgerRecoveryData::new(
-            self.storage_ledger.lock().unwrap().clone(),
-            self.shared_storage.validator_set.clone(),
-        )
+        LedgerRecoveryData::new(self.storage_ledger.lock().unwrap().clone())
     }
 
     pub fn try_start(&self) -> Result<RecoveryData<T>> {
@@ -263,7 +260,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage<T> {
     }
 
     fn recover_from_ledger(&self) -> LedgerRecoveryData {
-        LedgerRecoveryData::new(LedgerInfo::mock_genesis(), ValidatorSet::new(vec![]))
+        LedgerRecoveryData::new(LedgerInfo::mock_genesis())
     }
 
     fn start(&self) -> LivenessStorageData<T> {
