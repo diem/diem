@@ -295,6 +295,9 @@ pub enum StatusCode {
     // Gas unit price submitted with the transaction is above the maximum
     // gas price set in the VM.
     GAS_UNIT_PRICE_ABOVE_MAX_BOUND = 16,
+    // Gas specifier submitted is either malformed (not a valid identifier),
+    // or does not refer to an accepted gas specifier
+    INVALID_GAS_SPECIFIER = 17,
 
     // When a code module/script is published it is verified. These are the
     // possible errors that can arise from the verification process.

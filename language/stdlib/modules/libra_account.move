@@ -434,7 +434,7 @@ module LibraAccount {
     // - The account's auth key matches the transaction's public key
     // - That the account has enough balance to pay for all of the gas
     // - That the sequence number matches the transaction's sequence key
-    fun prologue(
+    fun prologue<Token>(
         txn_sequence_number: u64,
         txn_public_key: vector<u8>,
         txn_gas_price: u64,
@@ -458,7 +458,7 @@ module LibraAccount {
 
         // Check that the account has enough balance for all of the gas
         let max_transaction_fee = txn_gas_price * txn_max_gas_units;
-        let balance_amount = balance<LBR::T>(transaction_sender);
+        let balance_amount = balance<Token>(transaction_sender);
         Transaction::assert(balance_amount >= max_transaction_fee, 6);
 
         // Check that the transaction sequence number matches the sequence number of the account
@@ -469,7 +469,7 @@ module LibraAccount {
 
     // The epilogue is invoked at the end of transactions.
     // It collects gas and bumps the sequence number
-    fun epilogue(
+    fun epilogue<Token>(
         txn_sequence_number: u64,
         txn_gas_price: u64,
         txn_max_gas_units: u64,
@@ -477,7 +477,7 @@ module LibraAccount {
     ) acquires T, Balance {
         // Load the transaction sender's account and balance resources
         let sender_account = borrow_global_mut<T>(Transaction::sender());
-        let sender_balance = borrow_global_mut<Balance<LBR::T>>(Transaction::sender());
+        let sender_balance = borrow_global_mut<Balance<Token>>(Transaction::sender());
 
         // Charge for gas
         let transaction_fee_amount = txn_gas_price * (txn_max_gas_units - gas_units_remaining);
@@ -493,7 +493,7 @@ module LibraAccount {
         // Bump the sequence number
         sender_account.sequence_number = txn_sequence_number + 1;
         // Pay the transaction fee into the transaction fee balance
-        let transaction_fee_balance = borrow_global_mut<Balance<LBR::T>>(0xFEE);
+        let transaction_fee_balance = borrow_global_mut<Balance<Token>>(0xFEE);
         Libra::deposit(&mut transaction_fee_balance.coin, transaction_fee);
     }
 

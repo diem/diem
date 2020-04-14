@@ -235,11 +235,7 @@ impl LibraVM {
         Ok(())
     }
 
-    fn resolve_type_argument(
-        &self,
-        ctx: &mut SystemExecutionContext,
-        tag: &TypeTag,
-    ) -> VMResult<Type> {
+    fn resolve_type_argument<S: ChainState>(&self, ctx: &mut S, tag: &TypeTag) -> VMResult<Type> {
         Ok(match tag {
             TypeTag::U8 => Type::U8,
             TypeTag::U64 => Type::U64,
@@ -630,6 +626,18 @@ impl LibraVM {
         ))
     }
 
+    fn resolve_gas_currency<T: ChainState>(
+        &self,
+        chain_state: &mut T,
+        gas_specifier: &str,
+    ) -> VMResult<Type> {
+        let gas_currency_tag = account_config::type_tag_for_ticker(
+            account_config::from_ticker_string(gas_specifier)
+                .map_err(|_| VMStatus::new(StatusCode::INVALID_GAS_SPECIFIER))?,
+        );
+        self.resolve_type_argument(chain_state, &gas_currency_tag)
+    }
+
     /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
     fn run_prologue<T: ChainState>(
@@ -637,6 +645,7 @@ impl LibraVM {
         chain_state: &mut T,
         txn_data: &TransactionMetadata,
     ) -> VMResult<()> {
+        let gas_currency_ty = self.resolve_gas_currency(chain_state, account_config::LBR_NAME)?;
         let txn_sequence_number = txn_data.sequence_number();
         let txn_public_key = txn_data.authentication_key_preimage().to_vec();
         let txn_gas_price = txn_data.gas_unit_price().get();
@@ -650,7 +659,7 @@ impl LibraVM {
                         self.get_gas_schedule()?,
                         chain_state,
                         &txn_data,
-                        vec![],
+                        vec![gas_currency_ty],
                         vec![
                             Value::u64(txn_sequence_number),
                             Value::vector_u8(txn_public_key),
@@ -671,6 +680,7 @@ impl LibraVM {
         chain_state: &mut T,
         txn_data: &TransactionMetadata,
     ) -> VMResult<()> {
+        let gas_currency_ty = self.resolve_gas_currency(chain_state, account_config::LBR_NAME)?;
         let txn_sequence_number = txn_data.sequence_number();
         let txn_gas_price = txn_data.gas_unit_price().get();
         let txn_max_gas_units = txn_data.max_gas_amount().get();
@@ -682,7 +692,7 @@ impl LibraVM {
                     self.get_gas_schedule()?,
                     chain_state,
                     &txn_data,
-                    vec![],
+                    vec![gas_currency_ty],
                     vec![
                         Value::u64(txn_sequence_number),
                         Value::u64(txn_gas_price),
