@@ -5,12 +5,14 @@ use serde_reflection::RegistryOwned;
 use std::path::PathBuf;
 use structopt::{clap::arg_enum, StructOpt};
 
+mod cpp;
 mod python3;
 
 arg_enum! {
 #[derive(Debug, StructOpt)]
 enum Language {
     Python3,
+    Cpp,
 }
 }
 
@@ -38,6 +40,20 @@ fn main() {
             println!("{}", python3::output_preambule());
             for (name, format) in &registry {
                 println!("{}", python3::output_container(name, format));
+            }
+        }
+        Language::Cpp => {
+            println!("{}", cpp::output_preambule());
+            for (name, format) in &registry {
+                print!("{}", cpp::output_container_forward_definition(name, format));
+            }
+            println!();
+            for (name, format) in &registry {
+                println!("{}", cpp::output_container(name, format));
+            }
+            println!();
+            for (name, format) in &registry {
+                println!("{}", cpp::output_container_traits(name, format));
             }
         }
     }
