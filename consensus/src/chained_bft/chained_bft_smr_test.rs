@@ -27,12 +27,16 @@ use libra_config::{
 };
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_mempool::mocks::MockSharedMempool;
-use libra_types::{ledger_info::LedgerInfoWithSignatures, validator_verifier::ValidatorVerifier};
+use libra_types::{
+    ledger_info::LedgerInfoWithSignatures,
+    on_chain_config::{OnChainConfig, OnChainConfigPayload, ValidatorSet},
+    validator_verifier::ValidatorVerifier,
+};
 use network::peer_manager::{
     conn_status_channel, ConnectionRequestSender, PeerManagerRequestSender,
 };
 use safety_rules::SafetyRulesManager;
-use std::{num::NonZeroUsize, sync::Arc};
+use std::{collections::HashMap, num::NonZeroUsize, sync::Arc};
 
 /// Auxiliary struct that is preparing SMR for the test
 struct SMRNode {
@@ -81,8 +85,15 @@ impl SMRNode {
         let txn_manager = Box::new(MockTransactionManager::new(Some(
             consensus_to_mempool_sender,
         )));
-        let (_tx, reconfig_events) =
+        let (mut reconfig_sender, reconfig_events) =
             libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
+        let mut configs = HashMap::new();
+        configs.insert(
+            ValidatorSet::CONFIG_ID,
+            lcs::to_bytes(storage.get_validator_set()).unwrap(),
+        );
+        let payload = OnChainConfigPayload::new(1, Arc::new(configs));
+        reconfig_sender.push((), payload).unwrap();
 
         let input = ChainedBftSMRInput {
             network_sender,
@@ -176,15 +187,15 @@ fn basic_start_test() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let nodes = SMRNode::start_num_nodes(2, &mut playground, RotatingProposer);
-    let genesis = nodes[0]
-        .smr
-        .block_store()
-        .expect("No valid block store!")
-        .root();
     timed_block_on(&mut runtime, async {
         let msg = playground
             .wait_for_messages(1, NetworkPlayground::proposals_only::<TestPayload>)
             .await;
+        let genesis = nodes[0]
+            .smr
+            .block_store()
+            .expect("No valid block store!")
+            .root();
         let first_proposal = match &msg[0].1 {
             ConsensusMsg::ProposalMsg(proposal) => proposal,
             _ => panic!("Unexpected message found"),

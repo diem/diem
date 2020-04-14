@@ -20,9 +20,15 @@ use consensus_types::common::{Author, Payload, Round};
 use futures::{select, stream::StreamExt};
 use libra_config::config::ConsensusConfig;
 use libra_logger::prelude::*;
-use libra_types::on_chain_config::OnChainConfigPayload;
+use libra_types::{
+    epoch_info::EpochInfo,
+    on_chain_config::{OnChainConfigPayload, ValidatorSet},
+};
 use safety_rules::SafetyRulesManager;
-use std::{sync::Arc, time::Instant};
+use std::{
+    sync::{Arc, Mutex},
+    time::Instant,
+};
 use tokio::runtime::{self, Handle, Runtime};
 
 /// All these structures need to be moved into EpochManager. Rather than make each one an option
@@ -44,7 +50,7 @@ pub struct ChainedBftSMRInput<T> {
 pub struct ChainedBftSMR<T> {
     author: Author,
     runtime: Option<Runtime>,
-    block_store: Option<Arc<BlockStore<T>>>,
+    block_store: Arc<Mutex<Option<Arc<BlockStore<T>>>>>,
     input: Option<ChainedBftSMRInput<T>>,
 }
 
@@ -53,7 +59,7 @@ impl<T: Payload> ChainedBftSMR<T> {
         Self {
             author,
             runtime: None,
-            block_store: None,
+            block_store: Arc::new(Mutex::new(None)),
             input: Some(input),
         }
     }
@@ -65,7 +71,7 @@ impl<T: Payload> ChainedBftSMR<T> {
 
     #[cfg(test)]
     pub fn block_store(&self) -> Option<Arc<BlockStore<T>>> {
-        self.block_store.clone()
+        self.block_store.lock().unwrap().clone()
     }
 
     fn start_event_processing(
@@ -81,9 +87,15 @@ impl<T: Payload> ChainedBftSMR<T> {
                 let pre_select_instant = Instant::now();
                 let idle_duration;
                 select! {
-                    _ = reconfig_events.select_next_some() => {
+                    payload = reconfig_events.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
-                        epoch_manager.start_processor().await
+                        let epoch_info = EpochInfo {
+                            epoch: payload.epoch(),
+                            verifier: Arc::new((&payload.get::<ValidatorSet>()
+                                .expect("failed to get ValidatorSet from payload"))
+                                .into()),
+                        };
+                        epoch_manager.start_processor(epoch_info).await
                     }
                     msg = network_receivers.consensus_messages.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
@@ -114,7 +126,7 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
     /// 2. Construct per-epoch component with the fixed Validators provided by EpochManager including
     /// ProposerElection, Pacemaker, SafetyRules, Network(Populate with known validators), EventProcessor
     fn start(&mut self) -> Result<()> {
-        let mut runtime = runtime::Builder::new()
+        let runtime = runtime::Builder::new()
             .thread_name("consensus-")
             .threaded_scheduler()
             .enable_all()
@@ -129,7 +141,7 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
             channel::new(1_024, &counters::PENDING_PACEMAKER_TIMEOUTS);
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
 
-        let mut epoch_mgr = EpochManager::new(
+        let epoch_mgr = EpochManager::new(
             self.author,
             input.config,
             time_service,
@@ -145,8 +157,6 @@ impl<T: Payload> ConsensusProvider for ChainedBftSMR<T> {
         let (network_task, network_receiver) =
             NetworkTask::new(input.network_events, self_receiver);
         let reconfig_events = input.reconfig_events;
-
-        runtime.block_on(epoch_mgr.start_processor());
 
         // TODO: this is for testing, remove
         self.block_store = epoch_mgr.block_store();

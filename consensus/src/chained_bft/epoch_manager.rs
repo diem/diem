@@ -37,7 +37,11 @@ use libra_types::{
 };
 use network::protocols::network::Event;
 use safety_rules::SafetyRulesManager;
-use std::{cmp::Ordering, sync::Arc, time::Duration};
+use std::{
+    cmp::Ordering,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 /// The enum contains two processor
 /// SyncProcessor is used to process events in order to sync up with peer if we can't recover from local consensusdb
@@ -78,6 +82,7 @@ pub struct EpochManager<T> {
     storage: Arc<dyn PersistentLivenessStorage<T>>,
     safety_rules_manager: SafetyRulesManager<T>,
     processor: Option<Processor<T>>,
+    block_store: Arc<Mutex<Option<Arc<BlockStore<T>>>>>,
 }
 
 impl<T: Payload> EpochManager<T> {
@@ -105,6 +110,8 @@ impl<T: Payload> EpochManager<T> {
             storage,
             safety_rules_manager,
             processor: None,
+            // TODO: this is for testing, remove
+            block_store: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -256,10 +263,13 @@ impl<T: Payload> EpochManager<T> {
         // state_computer notifies reconfiguration in another channel
     }
 
-    async fn start_event_processor(&mut self, recovery_data: RecoveryData<T>) {
+    async fn start_event_processor(
+        &mut self,
+        recovery_data: RecoveryData<T>,
+        epoch_info: EpochInfo,
+    ) {
         // Release the previous EventProcessor, especially the SafetyRule client
         self.processor = None;
-        let epoch_info = recovery_data.epoch_info();
         counters::EPOCH.set(epoch_info.epoch as i64);
         counters::CURRENT_EPOCH_VALIDATORS.set(epoch_info.verifier.len() as i64);
         counters::CURRENT_EPOCH_QUORUM_SIZE.set(epoch_info.verifier.quorum_voting_power() as i64);
@@ -282,6 +292,7 @@ impl<T: Payload> EpochManager<T> {
             Arc::clone(&self.state_computer),
             self.config.max_pruned_blocks_in_mem,
         ));
+        *self.block_store.lock().unwrap() = Some(block_store.clone());
 
         info!("Update SafetyRules");
 
@@ -336,8 +347,11 @@ impl<T: Payload> EpochManager<T> {
     // event processor at startup. If we need to sync up with peers for blocks to construct
     // a valid block store, which is required to construct an event processor, we will take
     // care of the sync up here.
-    async fn start_sync_processor(&mut self, ledger_recovery_data: LedgerRecoveryData) {
-        let epoch_info = ledger_recovery_data.epoch_info();
+    async fn start_sync_processor(
+        &mut self,
+        ledger_recovery_data: LedgerRecoveryData,
+        epoch_info: EpochInfo,
+    ) {
         self.network_sender
             .update_eligible_nodes(ledger_recovery_data.validator_keys())
             .await
@@ -358,13 +372,14 @@ impl<T: Payload> EpochManager<T> {
         info!("SyncProcessor started");
     }
 
-    pub async fn start_processor(&mut self) {
+    pub async fn start_processor(&mut self, epoch_info: EpochInfo) {
         match self.storage.start() {
             LivenessStorageData::RecoveryData(initial_data) => {
-                self.start_event_processor(initial_data).await
+                self.start_event_processor(initial_data, epoch_info).await
             }
             LivenessStorageData::LedgerRecoveryData(ledger_recovery_data) => {
-                self.start_sync_processor(ledger_recovery_data).await
+                self.start_sync_processor(ledger_recovery_data, epoch_info)
+                    .await
             }
         }
     }
@@ -426,10 +441,11 @@ impl<T: Payload> EpochManager<T> {
                     VerifiedEvent::VoteMsg(vote) => p.process_vote(*vote).await,
                     _ => Err(anyhow!("Unexpected VerifiedEvent during startup")),
                 };
+                let epoch_info = p.epoch_info().clone();
                 match result {
                     Ok(data) => {
                         info!("Recovered from SyncProcessor");
-                        self.start_event_processor(data).await
+                        self.start_event_processor(data, epoch_info).await
                     }
                     Err(e) => error!("{:?}", e),
                 }
@@ -464,10 +480,7 @@ impl<T: Payload> EpochManager<T> {
         }
     }
 
-    pub fn block_store(&self) -> Option<Arc<BlockStore<T>>> {
-        match &self.processor {
-            Some(Processor::EventProcessor(p)) => Some(p.block_store()),
-            _ => None,
-        }
+    pub fn block_store(&self) -> Arc<Mutex<Option<Arc<BlockStore<T>>>>> {
+        self.block_store.clone()
     }
 }

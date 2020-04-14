@@ -80,13 +80,18 @@ impl ExecutorProxy {
     pub(crate) async fn new(
         executor: Arc<Mutex<Executor<LibraVM>>>,
         config: &NodeConfig,
-        reconfig_subscriptions: Vec<ReconfigSubscription>,
+        mut reconfig_subscriptions: Vec<ReconfigSubscription>,
     ) -> Self {
         let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
 
         let on_chain_configs = Self::fetch_all_configs(storage_read_client.clone())
             .await
             .expect("[state sync] Failed initial read of on-chain configs");
+        for subscription in reconfig_subscriptions.iter_mut() {
+            subscription
+                .publish(on_chain_configs.clone())
+                .expect("[state sync] Failed to publish initial on-chain config");
+        }
         Self {
             storage_read_client,
             executor,
