@@ -352,7 +352,7 @@ impl ClientProxy {
         }
     }
 
-    /// Only allow executing predefined script in the move standard library in the network.
+    /// Only allow executing predefined script in the Move standard library in the network.
     pub fn disable_custom_script(
         &mut self,
         space_delim_strings: &[&str],
@@ -629,7 +629,7 @@ impl ClientProxy {
         )
     }
 
-    /// Compile move program
+    /// Compile Move program
     pub fn compile_program(&mut self, space_delim_strings: &[&str]) -> Result<String> {
         let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let file_path = space_delim_strings[2];
@@ -751,7 +751,7 @@ impl ClientProxy {
         Ok(())
     }
 
-    /// Publish move module
+    /// Publish Move module
     pub fn publish_module(&mut self, space_delim_strings: &[&str]) -> Result<()> {
         let module_bytes = fs::read(space_delim_strings[2])?;
         self.submit_program(

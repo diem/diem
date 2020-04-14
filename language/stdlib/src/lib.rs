@@ -35,7 +35,7 @@ static FRESH_MOVELANG_STDLIB: Lazy<Vec<VerifiedModule>> = Lazy::new(build_stdlib
 /// This is why we include it here.
 pub const STAGED_STDLIB_BYTES: &[u8] = std::include_bytes!("../staged/stdlib.mv");
 
-// The staged version of the move standard library.
+// The staged version of the Move standard library.
 // Similarly to genesis, we keep a compiled version of the standard library and scripts around, and
 // only periodically update these. This has the effect of decoupling the current leading edge of
 // compiler development from the current stdlib used in genesis/scripts.  In particular, changes in
