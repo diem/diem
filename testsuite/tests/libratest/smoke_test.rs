@@ -22,7 +22,8 @@ use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::{
     fs::{self, File},
-    io::Read,
+    io::{Read, Result, Write},
+    path::{Path, PathBuf},
     str::FromStr,
 };
 
@@ -181,6 +182,15 @@ impl TestEnvironment {
     }
 }
 
+fn copy_file_with_sender_address(file_path: &Path, sender: AccountAddress) -> Result<PathBuf> {
+    let tmp_source_path = TempPath::new().as_ref().with_extension("move");
+    let mut tmp_source_file = std::fs::File::create(tmp_source_path.clone())?;
+    let mut code = fs::read_to_string(file_path)?;
+    code = code.replace("{{sender}}", &format!("0x{}", sender));
+    writeln!(tmp_source_file, "{}", code)?;
+    Ok(tmp_source_path)
+}
+
 fn setup_swarm_and_client_proxy(
     num_nodes: usize,
     client_port_index: usize,
@@ -238,23 +248,43 @@ fn test_execute_custom_module_and_script() {
     let recipient_address = client_proxy.create_next_account(false).unwrap().address;
     client_proxy.mint_coins(&["mintb", "1", "1"], true).unwrap();
 
-    let module_path = workspace_builder::workspace_root()
-        .join("testsuite/tests/libratest/dev_modules/module.mvir");
-    let unwrapped_module_path = module_path.to_str().unwrap();
-    let module_params = &["compile", "0", unwrapped_module_path, "module"];
-    let module_compiled_path = client_proxy.compile_program(module_params).unwrap();
+    let (sender_account, _) = client_proxy
+        .get_account_address_from_parameter("0")
+        .unwrap();
 
+    // Get the path to the Move stdlib sources
+    let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/modules");
+    let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
+
+    // Make a copy of module.move with "{{sender}}" substituted.
+    let module_path = workspace_builder::workspace_root()
+        .join("testsuite/tests/libratest/dev_modules/module.move");
+    let copied_module_path = copy_file_with_sender_address(&module_path, sender_account).unwrap();
+    let unwrapped_module_path = copied_module_path.to_str().unwrap();
+
+    // Compile and publish that module.
+    let module_params = &["compile", "0", unwrapped_module_path, unwrapped_stdlib_dir];
+    let module_compiled_path = client_proxy.compile_program(module_params).unwrap();
     client_proxy
         .publish_module(&["publish", "0", &module_compiled_path[..]])
         .unwrap();
 
+    // Make a copy of script.move with "{{sender}}" substituted.
     let script_path = workspace_builder::workspace_root()
-        .join("testsuite/tests/libratest/dev_modules/script.mvir");
-    let unwrapped_script_path = script_path.to_str().unwrap();
-    let script_params = &["compile", "0", unwrapped_script_path, "script"];
+        .join("testsuite/tests/libratest/dev_modules/script.move");
+    let copied_script_path = copy_file_with_sender_address(&script_path, sender_account).unwrap();
+    let unwrapped_script_path = copied_script_path.to_str().unwrap();
+
+    // Compile and execute the script.
+    let script_params = &[
+        "compile",
+        "0",
+        unwrapped_script_path,
+        unwrapped_module_path,
+        unwrapped_stdlib_dir,
+    ];
     let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
     let formatted_recipient_address = format!("0x{}", recipient_address);
-
     client_proxy
         .execute_script(&[
             "execute",
@@ -950,9 +980,11 @@ fn test_e2e_modify_publishing_option() {
         Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
     );
     let script_path = workspace_builder::workspace_root()
-        .join("testsuite/tests/libratest/dev_modules/test_script.mvir");
+        .join("testsuite/tests/libratest/dev_modules/test_script.move");
     let unwrapped_script_path = script_path.to_str().unwrap();
-    let script_params = &["compile", "0", unwrapped_script_path, "script"];
+    let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/modules");
+    let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
+    let script_params = &["compile", "0", unwrapped_script_path, unwrapped_stdlib_dir];
     let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
 
     // Initially publishing option was set to CustomScript, this transaction should be executed.
@@ -1073,9 +1105,11 @@ fn test_malformed_script() {
         .unwrap();
 
     let script_path = workspace_builder::workspace_root()
-        .join("testsuite/tests/libratest/dev_modules/test_script.mvir");
+        .join("testsuite/tests/libratest/dev_modules/test_script.move");
     let unwrapped_script_path = script_path.to_str().unwrap();
-    let script_params = &["compile", "0", unwrapped_script_path, "script"];
+    let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/modules");
+    let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
+    let script_params = &["compile", "0", unwrapped_script_path, unwrapped_stdlib_dir];
     let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
 
     // the script expects two arguments. Passing only one in the test, which will cause a failure.
