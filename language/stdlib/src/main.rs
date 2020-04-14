@@ -9,18 +9,28 @@ use std::{
     path::{Path, PathBuf},
 };
 use stdlib::{
-    build_stdlib, compile_script, filter_move_files, STAGED_EXTENSION, STAGED_OUTPUT_PATH,
-    STAGED_STDLIB_NAME, TRANSACTION_SCRIPTS,
+    build_stdlib, compile_script, filter_move_files, stdlib_files, STAGED_EXTENSION,
+    STAGED_OUTPUT_PATH, STAGED_STDLIB_NAME, TRANSACTION_SCRIPTS,
 };
 
-// Generates the staged stdlib and transaction scripts. Until this is run changes to the source
-// modules/scripts, and changes in the Move compiler will not be reflected in the stdlib used for
+// Generates the staged stdlib and transaction scripts. Until this is run, changes to the source
+// modules/scripts and changes in the Move compiler will not be reflected in the stdlib used for
 // genesis, and everywhere else across the code-base unless otherwise specified.
 fn main() {
     let mut scripts_path = PathBuf::from(STAGED_OUTPUT_PATH);
     scripts_path.push(TRANSACTION_SCRIPTS);
 
     std::fs::create_dir_all(&scripts_path).unwrap();
+
+    // Save copies of the module source files
+    let mut source_dir = PathBuf::from(STAGED_OUTPUT_PATH);
+    source_dir.push("src");
+    std::fs::create_dir_all(&source_dir).unwrap();
+    for file in &stdlib_files() {
+        let orig_file = PathBuf::from(file);
+        let copied_file = source_dir.join(orig_file.file_name().unwrap());
+        std::fs::copy(orig_file, copied_file).unwrap();
+    }
 
     // Write the stdlib blob
     let mut module_path = PathBuf::from(STAGED_OUTPUT_PATH);
