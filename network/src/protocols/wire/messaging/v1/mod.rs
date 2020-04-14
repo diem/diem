@@ -30,6 +30,8 @@ pub enum ErrorCode {
     ParsingError(MessagingProtocolVersion, Box<NetworkMessage>),
     /// Ping timed out.
     TimedOut,
+    /// A message was received for a protocol that is not supported over this connection.
+    NotSupported(ProtocolId),
 }
 
 /// Nonces used by Ping and Pong message types.
