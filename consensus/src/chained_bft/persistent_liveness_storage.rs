@@ -12,11 +12,7 @@ use executor_types::ExecutedTrees;
 use libra_config::config::NodeConfig;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
-use libra_types::{
-    block_info::Round, epoch_info::EpochInfo, ledger_info::LedgerInfo,
-    on_chain_config::ValidatorSet, transaction::Version, validator_info::ValidatorInfo,
-    validator_verifier::ValidatorVerifier,
-};
+use libra_types::{block_info::Round, ledger_info::LedgerInfo, transaction::Version};
 use std::{cmp::max, collections::HashSet, sync::Arc};
 use storage_interface::DbReader;
 
@@ -55,40 +51,16 @@ pub struct RootInfo<T>(pub Block<T>, pub QuorumCert, pub QuorumCert);
 /// LedgerRecoveryData is a subset of RecoveryData that we can get solely from ledger info.
 #[derive(Clone)]
 pub struct LedgerRecoveryData {
-    epoch: u64,
-    validators: Arc<ValidatorVerifier>,
-    validator_keys: ValidatorSet,
     storage_ledger: LedgerInfo,
 }
 
 impl LedgerRecoveryData {
-    pub fn new(storage_ledger: LedgerInfo, validator_keys: ValidatorSet) -> Self {
-        let epoch = if storage_ledger.next_validator_set().is_some() {
-            storage_ledger.epoch() + 1
-        } else {
-            storage_ledger.epoch()
-        };
-        LedgerRecoveryData {
-            epoch,
-            validators: Arc::new((&validator_keys).into()),
-            validator_keys,
-            storage_ledger,
-        }
-    }
-
-    pub fn epoch_info(&self) -> EpochInfo {
-        EpochInfo {
-            epoch: self.epoch,
-            verifier: Arc::clone(&self.validators),
-        }
+    pub fn new(storage_ledger: LedgerInfo) -> Self {
+        LedgerRecoveryData { storage_ledger }
     }
 
     pub fn commit_round(&self) -> Round {
         self.storage_ledger.round()
-    }
-
-    pub fn validator_keys(&self) -> Vec<ValidatorInfo> {
-        self.validator_keys.payload().to_vec()
     }
 
     /// Finds the root (last committed block) and returns the root block, the QC to the root block
@@ -174,7 +146,6 @@ impl RootMetadata {
 /// The recovery data constructed from raw consensusdb data, it'll find the root value and
 /// blocks that need cleanup or return error if the input data is inconsistent.
 pub struct RecoveryData<T> {
-    ledger_recovery_data: LedgerRecoveryData,
     // The last vote message sent by this validator.
     last_vote: Option<Vote>,
     root: RootInfo<T>,
@@ -226,7 +197,6 @@ impl<T: Payload> RecoveryData<T> {
         ));
         let epoch = root.0.epoch();
         Ok(RecoveryData {
-            ledger_recovery_data,
             last_vote: match last_vote {
                 Some(v) if v.epoch() == epoch => Some(v),
                 _ => None,
@@ -241,10 +211,6 @@ impl<T: Payload> RecoveryData<T> {
                 _ => None,
             },
         })
-    }
-
-    pub fn epoch_info(&self) -> EpochInfo {
-        self.ledger_recovery_data.epoch_info()
     }
 
     pub fn root_block(&self) -> &Block<T> {
@@ -272,10 +238,6 @@ impl<T: Payload> RecoveryData<T> {
 
     pub fn highest_timeout_certificate(&self) -> Option<TimeoutCertificate> {
         self.highest_timeout_certificate.clone()
-    }
-
-    pub fn validator_keys(&self) -> Vec<ValidatorInfo> {
-        self.ledger_recovery_data.validator_keys()
     }
 
     fn find_blocks_to_prune(
@@ -345,10 +307,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
             .expect("unable to read ledger info from storage")
             .expect("startup info is None");
 
-        LedgerRecoveryData::new(
-            startup_info.latest_ledger_info.ledger_info().clone(),
-            startup_info.get_validator_set().clone(),
-        )
+        LedgerRecoveryData::new(startup_info.latest_ledger_info.ledger_info().clone())
     }
 
     fn start(&self) -> LivenessStorageData<T> {
@@ -387,11 +346,8 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
             .get_startup_info()
             .expect("unable to read ledger info from storage")
             .expect("startup info is None");
-        let validator_set = startup_info.get_validator_set().clone();
-        let ledger_recovery_data = LedgerRecoveryData::new(
-            startup_info.latest_ledger_info.ledger_info().clone(),
-            validator_set,
-        );
+        let ledger_recovery_data =
+            LedgerRecoveryData::new(startup_info.latest_ledger_info.ledger_info().clone());
         let frozen_root_hashes = startup_info
             .committed_tree_state
             .ledger_frozen_subtree_hashes

@@ -21,8 +21,8 @@ use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::proposal_msg::ProposalMsg;
 use futures::{channel::mpsc, executor::block_on};
 use libra_types::{
-    ledger_info::LedgerInfoWithSignatures, validator_signer::ValidatorSigner,
-    validator_verifier::ValidatorVerifier,
+    epoch_info::EpochInfo, ledger_info::LedgerInfoWithSignatures,
+    validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier,
 };
 use network::peer_manager::{ConnectionRequestSender, PeerManagerRequestSender};
 use once_cell::sync::Lazy;
@@ -105,7 +105,10 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
     );
     let (self_sender, _self_receiver) = channel::new_test(8);
 
-    let epoch_info = initial_data.epoch_info();
+    let epoch_info = EpochInfo {
+        epoch: 1,
+        verifier: Arc::new(storage.get_validator_set().into()),
+    };
     let network = NetworkSender::new(
         signer.author(),
         network_sender,

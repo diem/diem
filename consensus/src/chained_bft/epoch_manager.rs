@@ -33,6 +33,7 @@ use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
     epoch_info::EpochInfo,
+    on_chain_config::{OnChainConfigPayload, ValidatorSet},
     validator_change::{ValidatorChangeProof, VerifierType},
 };
 use network::protocols::network::Event;
@@ -278,11 +279,6 @@ impl<T: Payload> EpochManager<T> {
             epoch_info,
             recovery_data.root_block(),
         );
-        info!("Update Network about new validators");
-        self.network_sender
-            .update_eligible_nodes(recovery_data.validator_keys())
-            .await
-            .expect("Unable to update network's eligible peers");
         let last_vote = recovery_data.last_vote();
 
         info!("Create BlockStore");
@@ -352,10 +348,6 @@ impl<T: Payload> EpochManager<T> {
         ledger_recovery_data: LedgerRecoveryData,
         epoch_info: EpochInfo,
     ) {
-        self.network_sender
-            .update_eligible_nodes(ledger_recovery_data.validator_keys())
-            .await
-            .expect("Unable to update network's eligible peers");
         let network_sender = NetworkSender::new(
             self.author,
             self.network_sender.clone(),
@@ -372,7 +364,21 @@ impl<T: Payload> EpochManager<T> {
         info!("SyncProcessor started");
     }
 
-    pub async fn start_processor(&mut self, epoch_info: EpochInfo) {
+    pub async fn start_processor(&mut self, payload: OnChainConfigPayload) {
+        let validator_set: ValidatorSet = payload
+            .get()
+            .expect("failed to get ValidatorSet from payload");
+        let epoch_info = EpochInfo {
+            epoch: payload.epoch(),
+            verifier: Arc::new((&validator_set).into()),
+        };
+        let validator_keys = validator_set.payload().to_vec();
+        info!("Update Network about new validators");
+        self.network_sender
+            .update_eligible_nodes(validator_keys)
+            .await
+            .expect("Unable to update network's eligible peers");
+
         match self.storage.start() {
             LivenessStorageData::RecoveryData(initial_data) => {
                 self.start_event_processor(initial_data, epoch_info).await

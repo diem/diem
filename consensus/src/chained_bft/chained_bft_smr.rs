@@ -20,10 +20,7 @@ use consensus_types::common::{Author, Payload, Round};
 use futures::{select, stream::StreamExt};
 use libra_config::config::ConsensusConfig;
 use libra_logger::prelude::*;
-use libra_types::{
-    epoch_info::EpochInfo,
-    on_chain_config::{OnChainConfigPayload, ValidatorSet},
-};
+use libra_types::on_chain_config::OnChainConfigPayload;
 use safety_rules::SafetyRulesManager;
 use std::{
     sync::{Arc, Mutex},
@@ -89,13 +86,7 @@ impl<T: Payload> ChainedBftSMR<T> {
                 select! {
                     payload = reconfig_events.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();
-                        let epoch_info = EpochInfo {
-                            epoch: payload.epoch(),
-                            verifier: Arc::new((&payload.get::<ValidatorSet>()
-                                .expect("failed to get ValidatorSet from payload"))
-                                .into()),
-                        };
-                        epoch_manager.start_processor(epoch_info).await
+                        epoch_manager.start_processor(payload).await
                     }
                     msg = network_receivers.consensus_messages.select_next_some() => {
                         idle_duration = pre_select_instant.elapsed();

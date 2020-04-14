@@ -47,6 +47,7 @@ use futures::{
 use libra_crypto::HashValue;
 use libra_types::{
     block_info::BlockInfo,
+    epoch_info::EpochInfo,
     ledger_info::LedgerInfoWithSignatures,
     validator_signer::ValidatorSigner,
     validator_verifier::{random_validator_verifier, ValidatorVerifier},
@@ -122,7 +123,10 @@ impl NodeSetup {
         initial_data: RecoveryData<TestPayload>,
         safety_rules_manager: SafetyRulesManager<TestPayload>,
     ) -> Self {
-        let epoch_info = initial_data.epoch_info();
+        let epoch_info = EpochInfo {
+            epoch: 1,
+            verifier: Arc::new(storage.get_validator_set().into()),
+        };
         let validators = epoch_info.verifier.clone();
         let (network_reqs_tx, network_reqs_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
