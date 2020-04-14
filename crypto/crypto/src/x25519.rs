@@ -33,7 +33,7 @@
 
 use std::convert::{TryFrom, TryInto};
 
-use crate::traits::{self, ValidKey, ValidKeyStringExt};
+use crate::traits::*;
 use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
 
 #[cfg(any(test, feature = "fuzzing"))]
@@ -109,43 +109,43 @@ impl From<&PrivateKey> for PublicKey {
 }
 
 impl std::convert::TryFrom<&[u8]> for PrivateKey {
-    type Error = traits::CryptoMaterialError;
+    type Error = CryptoMaterialError;
 
     fn try_from(private_key_bytes: &[u8]) -> Result<Self, Self::Error> {
         let private_key_bytes: [u8; PRIVATE_KEY_SIZE] = private_key_bytes
             .try_into()
-            .map_err(|_| traits::CryptoMaterialError::DeserializationError)?;
+            .map_err(|_| CryptoMaterialError::DeserializationError)?;
         Ok(Self(private_key_bytes))
     }
 }
 
 impl std::convert::TryFrom<&[u8]> for PublicKey {
-    type Error = traits::CryptoMaterialError;
+    type Error = CryptoMaterialError;
 
     fn try_from(public_key_bytes: &[u8]) -> Result<Self, Self::Error> {
         let public_key_bytes: [u8; PUBLIC_KEY_SIZE] = public_key_bytes
             .try_into()
-            .map_err(|_| traits::CryptoMaterialError::WrongLengthError)?;
+            .map_err(|_| CryptoMaterialError::WrongLengthError)?;
         Ok(Self(public_key_bytes))
     }
 }
 
-impl traits::ValidKey for PrivateKey {
+impl ValidKey for PrivateKey {
     fn to_bytes(&self) -> Vec<u8> {
         self.0.to_vec()
     }
 }
 
-impl traits::ValidKey for PublicKey {
+impl ValidKey for PublicKey {
     fn to_bytes(&self) -> Vec<u8> {
         self.0.to_vec()
     }
 }
 
-impl traits::PrivateKey for PrivateKey {
+impl TPrivateKey for PrivateKey {
     type PublicKeyMaterial = PublicKey;
 }
 
-impl traits::PublicKey for PublicKey {
+impl TPublicKey for PublicKey {
     type PrivateKeyMaterial = PrivateKey;
 }
