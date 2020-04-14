@@ -9,7 +9,7 @@ use thiserror::Error;
 
 #[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum TransactionArgument {
-    U64(#[serde(with = "lcs::fixed_size")] u64),
+    U64(u64),
     Address(AccountAddress),
     U8Vector(Vec<u8>),
     Bool(bool),
