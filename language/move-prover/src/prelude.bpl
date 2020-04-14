@@ -1037,21 +1037,25 @@ procedure {:inline 1} Signature_ed25519_threshold_verify(bitmap: Value, signatur
 // Serialize is modeled as an uninterpreted function, with an additional
 // axiom to say it's an injection.
 
-function $LCS_serialize(ta: TypeValue, v: Value): Value;
+function {:inline} $LCS_serialize($m: Memory, ta: TypeValue, v: Value): Value {
+    $LCS_serialize_core(ta, v)
+}
+
+function $LCS_serialize_core(ta: TypeValue, v: Value): Value;
 
 // This says that $serialize respects isEquals (substitution property)
 // Without this, Boogie will get false positives where v1, v2 differ at invalid
 // indices.
 axiom (forall ta: TypeValue ::
-       (forall v1,v2: Value :: IsEqual(v1, v2) ==> IsEqual($LCS_serialize(ta, v1), $LCS_serialize(ta, v2))));
+       (forall v1,v2: Value :: IsEqual(v1, v2) ==> IsEqual($LCS_serialize_core(ta, v1), $LCS_serialize_core(ta, v2))));
 
 
 // This says that serialize is an injection
 axiom (forall ta1, ta2: TypeValue ::
-       (forall v1, v2: Value :: IsEqual($LCS_serialize(ta1, v1), $LCS_serialize(ta2, v2))
+       (forall v1, v2: Value :: IsEqual($LCS_serialize_core(ta1, v1), $LCS_serialize_core(ta2, v2))
            ==> IsEqual(v1, v2) && (ta1 == ta2)));
 
 procedure $LCS_to_bytes(ta: TypeValue, r: Reference) returns (res: Value);
-ensures res == $LCS_serialize(ta, $Dereference($m, r));
+ensures res == $LCS_serialize_core(ta, $Dereference($m, r));
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
 ensures $vlen(res) > 0;

@@ -202,7 +202,11 @@ impl<'env> SpecTranslator<'env> {
                 self.writer,
                 "function {{:inline}} {}({}): {} {{",
                 boogie_spec_fun_name(&self.module_env, *id),
-                type_params.chain(params).join(", "),
+                vec!["$m: Memory".to_string()]
+                    .into_iter()
+                    .chain(type_params)
+                    .chain(params)
+                    .join(", "),
                 result_type
             );
             self.writer.indent();
@@ -814,20 +818,13 @@ impl<'env> SpecTranslator<'env> {
         let module_env = self.module_env.env.get_module(module_id);
         let name = boogie_spec_fun_name(&module_env, fun_id);
         emit!(self.writer, "{}(", name);
-        let mut first = true;
-        let mut maybe_comma = || {
-            if first {
-                first = false;
-            } else {
-                emit!(self.writer, ", ");
-            }
-        };
+        emit!(self.writer, "$m");
         for ty in instantiation.iter() {
-            maybe_comma();
+            emit!(self.writer, ", ");
             emit!(self.writer, &boogie_type_value(self.module_env.env, ty));
         }
         for exp in args {
-            maybe_comma();
+            emit!(self.writer, ", ");
             self.translate_exp(exp);
         }
         emit!(self.writer, ")");
