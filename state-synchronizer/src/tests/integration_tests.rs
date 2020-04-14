@@ -135,11 +135,11 @@ impl SynchronizerEnv {
 
         // Setup signing public keys.
         let mut rng = StdRng::from_seed(TEST_SEED);
-        let signing_keys: Vec<_> = (0..count)
+        let signing_private_keys: Vec<_> = (0..count)
             .map(|_| Ed25519PrivateKey::generate(&mut rng))
             .collect();
         // Setup identity public keys.
-        let identity_keys: Vec<_> = (0..count)
+        let identity_private_keys: Vec<_> = (0..count)
             .map(|_| x25519::PrivateKey::for_test(&mut rng))
             .collect();
 
@@ -151,12 +151,12 @@ impl SynchronizerEnv {
                 signer.author(),
                 signer.public_key(),
                 voting_power,
-                signing_keys[idx].public_key(),
-                identity_keys[idx].public_key(),
+                signing_private_keys[idx].public_key(),
+                identity_private_keys[idx].public_key(),
             );
             validators_keys.push(validator_info);
         }
-        (signers, signing_keys, validators_keys)
+        (signers, signing_private_keys, validators_keys)
     }
 
     // Moves peer 0 to the next epoch. Note that other peers are not going to be able to discover
@@ -250,7 +250,7 @@ impl SynchronizerEnv {
             RoleType::Validator,
         );
         network_builder
-            .signing_keys((
+            .signing_keypair((
                 self.network_signers[new_peer_idx].clone(),
                 self.public_keys[new_peer_idx]
                     .network_signing_public_key()

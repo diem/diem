@@ -281,12 +281,12 @@ impl From<&ValidatorSet> for ValidatorVerifier {
     fn from(validator_set: &ValidatorSet) -> Self {
         ValidatorVerifier::new(validator_set.payload().iter().fold(
             BTreeMap::new(),
-            |mut map, key| {
+            |mut map, validator| {
                 map.insert(
-                    key.account_address().clone(),
+                    validator.account_address().clone(),
                     ValidatorConsensusInfo::new(
-                        key.consensus_public_key().clone(),
-                        key.consensus_voting_power(),
+                        validator.consensus_public_key().clone(),
+                        validator.consensus_voting_power(),
                     ),
                 );
                 map

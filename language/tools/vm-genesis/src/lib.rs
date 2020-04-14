@@ -541,8 +541,8 @@ fn get_validator_authentication_key(
             .account_keypair
             .as_ref()
             .unwrap()
-            .public();
-        let validator_authentication_key = AuthenticationKey::ed25519(public_key);
+            .public_key();
+        let validator_authentication_key = AuthenticationKey::ed25519(&public_key);
         let derived_address = validator_authentication_key.derived_address();
         if derived_address == *address {
             return Some(validator_authentication_key);

@@ -113,7 +113,7 @@ fn test_reconfiguration() {
         .as_mut()
         .unwrap();
     let validator_privkey = keys.take_private().unwrap();
-    let validator_pubkey = keys.public().clone();
+    let validator_pubkey = keys.public_key();
     let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
     let validator_auth_key_prefix = auth_key.prefix().to_vec();
     assert!(
@@ -206,7 +206,7 @@ fn test_change_publishing_option_to_custom() {
         .unwrap();
 
     let validator_privkey = keys.take_private().unwrap();
-    let validator_pubkey = keys.public().clone();
+    let validator_pubkey = keys.public_key();
     let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
     let validator_auth_key_prefix = auth_key.prefix().to_vec();
     assert_eq!(
@@ -378,7 +378,7 @@ fn test_extend_whitelist() {
         .unwrap();
 
     let validator_privkey = keys.take_private().unwrap();
-    let validator_pubkey = keys.public().clone();
+    let validator_pubkey = keys.public_key();
     let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
     let validator_auth_key_prefix = auth_key.prefix().to_vec();
     assert!(
