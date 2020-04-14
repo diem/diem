@@ -199,9 +199,10 @@ variable "safety_rules_image_tag" {
   default     = "latest"
 }
 
-variable "restore_vol_id" {
-  default     = ""
-  description = "volume id to restore validator data from"
+variable "restore_vol_ids" {
+  type        = list(string)
+  default     = []
+  description = "volume ids to restore validator data from"
 }
 
 variable "permissions_boundary_policy" {
