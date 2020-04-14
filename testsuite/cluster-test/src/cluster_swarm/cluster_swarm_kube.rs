@@ -13,7 +13,7 @@ use k8s_openapi::api::core::v1::{ConfigMap, Node, Pod, Service};
 use kube::{
     api::{Api, PostParams},
     client::Client,
-    config,
+    Config,
 };
 use libra_logger::*;
 use util::retry;
@@ -44,12 +44,9 @@ pub struct ClusterSwarmKube {
 
 impl ClusterSwarmKube {
     pub async fn new() -> Result<Self> {
-        let mut config = config::load_kube_config().await;
-        if config.is_err() {
-            config = config::incluster_config();
-        }
-        let config = config.map_err(|e| format_err!("Failed to load config: {:?}", e))?;
-        let client = Client::from(config);
+        let result = Config::infer().await;
+        let config = result.map_err(|e| format_err!("Failed to load config: {:?}", e))?;
+        let client = Client::new(config);
         let node_map = Arc::new(Mutex::new(HashMap::new()));
         Ok(Self { client, node_map })
     }
