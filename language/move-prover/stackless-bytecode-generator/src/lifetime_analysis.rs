@@ -13,7 +13,7 @@ use crate::{
     stackless_bytecode::{
         AssignKind,
         Bytecode::{self, *},
-        TempIndex,
+        Operation, TempIndex,
     },
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
@@ -328,7 +328,7 @@ impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
     ) -> Self::State {
         let mut after_state = pre;
 
-        match instr.skip_labelled() {
+        match instr {
             Assign(_, t, l, k) => {
                 if self.local_types[*t].is_mutable_reference() {
                     match k {
@@ -351,61 +351,77 @@ impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
                     }
                 }
             }
-            BorrowLoc(_, t, ..) => {
-                if self.local_types[*t].is_mutable_reference() {
-                    after_state
-                        .borrow_graph
-                        .add_edge(Node::Root, Node::Local(*t));
-                }
-            }
-            BorrowGlobal(_, t, ..) => {
-                if self.local_types[*t].is_mutable_reference() {
-                    after_state
-                        .borrow_graph
-                        .add_edge(Node::Root, Node::Local(*t));
-                }
-            }
-            BorrowField(_, dest, src, ..) => {
-                if self.local_types[*src].is_mutable_reference() {
-                    after_state.borrow_graph.move_local(*src);
-                }
-                if self.local_types[*dest].is_mutable_reference() {
-                    after_state
-                        .borrow_graph
-                        .add_edge(Node::Local(*src), Node::Local(*dest));
-                }
-            }
-            FreezeRef(_, _, src) => {
-                after_state.borrow_graph.move_local(*src);
-            }
-            WriteRef(_, t, _) => {
-                after_state.borrow_graph.move_local(*t);
-            }
-            ReadRef(_, _, src) => {
-                if self.local_types[*src].is_mutable_reference() {
-                    after_state.borrow_graph.move_local(*src);
-                }
-            }
-            Call(_, dest_vec, _, _, _, src_vec) => {
-                let mut dest_mut_refs = dest_vec.clone();
-                dest_mut_refs.retain(|d| self.local_types[*d].is_mutable_reference());
-                let mut src_mut_refs = src_vec.clone();
-                src_mut_refs.retain(|s| self.local_types[*s].is_mutable_reference());
-                for s in src_mut_refs {
-                    after_state.borrow_graph.move_local(s);
-                    // this is over approximating right now
-                    // we only need to add an edge if it's possible for d to come from s
-                    // for example, if d is an address ref but s is LibraCoin ref then
-                    // there is no way that d is borrowed from s
-                    for d in &dest_mut_refs {
-                        after_state
-                            .borrow_graph
-                            .add_edge(Node::Local(s), Node::Local(*d));
+            Call(_, dsts, oper, srcs) => {
+                use Operation::*;
+                match oper {
+                    BorrowLoc => {
+                        let t = dsts[0];
+                        if self.local_types[t].is_mutable_reference() {
+                            after_state
+                                .borrow_graph
+                                .add_edge(Node::Root, Node::Local(t));
+                        }
+                    }
+                    BorrowGlobal(..) => {
+                        let t = dsts[0];
+                        if self.local_types[t].is_mutable_reference() {
+                            after_state
+                                .borrow_graph
+                                .add_edge(Node::Root, Node::Local(t));
+                        }
+                    }
+                    BorrowField(..) => {
+                        let src = srcs[0];
+                        let dst = dsts[0];
+                        if self.local_types[src].is_mutable_reference() {
+                            after_state.borrow_graph.move_local(src);
+                        }
+                        if self.local_types[dst].is_mutable_reference() {
+                            after_state
+                                .borrow_graph
+                                .add_edge(Node::Local(src), Node::Local(dst));
+                        }
+                    }
+                    FreezeRef => {
+                        let src = srcs[0];
+                        after_state.borrow_graph.move_local(src);
+                    }
+                    WriteRef => {
+                        let dst = dsts[0];
+                        after_state.borrow_graph.move_local(dst);
+                    }
+                    ReadRef => {
+                        let src = srcs[0];
+                        if self.local_types[src].is_mutable_reference() {
+                            after_state.borrow_graph.move_local(src);
+                        }
+                    }
+                    Function(..) => {
+                        let mut dest_mut_refs = dsts.clone();
+                        dest_mut_refs.retain(|d| self.local_types[*d].is_mutable_reference());
+                        let mut src_mut_refs = srcs.clone();
+                        src_mut_refs.retain(|s| self.local_types[*s].is_mutable_reference());
+                        for s in src_mut_refs {
+                            after_state.borrow_graph.move_local(s);
+                            // this is over approximating right now
+                            // we only need to add an edge if it's possible for d to come from s
+                            // for example, if d is an address ref but s is LibraCoin ref then
+                            // there is no way that d is borrowed from s
+                            for d in &dest_mut_refs {
+                                after_state
+                                    .borrow_graph
+                                    .add_edge(Node::Local(s), Node::Local(*d));
+                            }
+                        }
+                    }
+                    Destroy => {
+                        let t = srcs[0];
+                        after_state.borrow_graph.move_local(t);
+                    }
+                    _ => {
+                        // Other operations don't deal with mutable references
                     }
                 }
-            }
-            Destroy(_, t) => {
-                after_state.borrow_graph.move_local(*t);
             }
             _ => {
                 // Other instructions don't deal with mutable references

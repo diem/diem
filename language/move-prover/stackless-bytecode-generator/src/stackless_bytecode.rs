@@ -40,6 +40,21 @@ impl AttrId {
     }
 }
 
+/// An id for a spec block. A spec block can contain assumes and asserts to be enforced at a
+/// program point.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+pub struct SpecBlockId(u16);
+
+impl SpecBlockId {
+    pub fn new(idx: usize) -> Self {
+        Self(idx as u16)
+    }
+
+    pub fn as_usize(self) -> usize {
+        self.0 as usize
+    }
+}
+
 /// The kind of an assignment in the bytecode.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum AssignKind {
@@ -66,18 +81,41 @@ pub enum Constant {
     TxnSenderAddress,
 }
 
-/// A unary operation.
-#[derive(Debug, Clone, PartialEq, Eq, Copy)]
-pub enum UnaryOp {
+/// An operation -- target of a call. This contains user functions, builtin functions, and
+/// operators.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Operation {
+    // User function
+    Function(ModuleId, FunId, Vec<Type>),
+
+    // Pack/Unpack
+    Pack(ModuleId, StructId, Vec<Type>),
+    Unpack(ModuleId, StructId, Vec<Type>),
+
+    // Resources
+    MoveToSender(ModuleId, StructId, Vec<Type>),
+    MoveFrom(ModuleId, StructId, Vec<Type>),
+    Exists(ModuleId, StructId, Vec<Type>),
+
+    // Borrow
+    BorrowLoc,
+    BorrowField(ModuleId, StructId, Vec<Type>, usize),
+    BorrowGlobal(ModuleId, StructId, Vec<Type>),
+
+    // Builtins
+    Abort,
+    Destroy,
+    ReadRef,
+    WriteRef,
+    FreezeRef,
+
+    // Unary
     CastU8,
     CastU64,
     CastU128,
     Not,
-}
 
-/// A binary operation.
-#[derive(Debug, Clone, PartialEq, Eq, Copy)]
-pub enum BinaryOp {
+    // Binary
     Add,
     Sub,
     Mul,
@@ -108,55 +146,16 @@ pub enum BranchCond {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Bytecode {
+    SpecBlock(AttrId, SpecBlockId),
+
     Assign(AttrId, TempIndex, TempIndex, AssignKind),
 
-    ReadRef(AttrId, TempIndex, TempIndex),
-    WriteRef(AttrId, TempIndex, TempIndex),
-    FreezeRef(AttrId, TempIndex, TempIndex),
-
-    Call(
-        AttrId,
-        Vec<TempIndex>,
-        ModuleId,
-        FunId,
-        Vec<Type>,
-        Vec<TempIndex>,
-    ),
+    Call(AttrId, Vec<TempIndex>, Operation, Vec<TempIndex>),
     Ret(AttrId, Vec<TempIndex>),
 
-    Pack(
-        AttrId,
-        TempIndex,
-        ModuleId,
-        StructId,
-        Vec<Type>,
-        Vec<TempIndex>,
-    ),
-    Unpack(
-        AttrId,
-        Vec<TempIndex>,
-        ModuleId,
-        StructId,
-        Vec<Type>,
-        TempIndex,
-    ),
-
-    BorrowLoc(AttrId, TempIndex, TempIndex),
-    BorrowField(AttrId, TempIndex, TempIndex, ModuleId, StructId, usize),
-    BorrowGlobal(AttrId, TempIndex, TempIndex, ModuleId, StructId, Vec<Type>),
-
-    MoveToSender(AttrId, TempIndex, ModuleId, StructId, Vec<Type>),
-    MoveFrom(AttrId, TempIndex, TempIndex, ModuleId, StructId, Vec<Type>),
-    Exists(AttrId, TempIndex, TempIndex, ModuleId, StructId, Vec<Type>),
-
     Load(AttrId, TempIndex, Constant),
-    Unary(AttrId, UnaryOp, TempIndex, TempIndex),
-    Binary(AttrId, BinaryOp, TempIndex, TempIndex, TempIndex),
-
     Branch(AttrId, Label, BranchCond),
-    Labeled(AttrId, Label, Box<Bytecode>),
-    Abort(AttrId, TempIndex),
-    Destroy(AttrId, TempIndex),
+    Label(AttrId, Label),
     Nop(AttrId),
 }
 
@@ -164,27 +163,13 @@ impl Bytecode {
     pub fn get_attr_id(&self) -> AttrId {
         use Bytecode::*;
         match self {
-            Assign(id, ..)
-            | ReadRef(id, ..)
-            | WriteRef(id, ..)
-            | FreezeRef(id, ..)
+            SpecBlock(id, ..)
+            | Assign(id, ..)
             | Call(id, ..)
             | Ret(id, ..)
-            | Pack(id, ..)
-            | Unpack(id, ..)
-            | BorrowLoc(id, ..)
-            | BorrowField(id, ..)
-            | BorrowGlobal(id, ..)
-            | MoveToSender(id, ..)
-            | MoveFrom(id, ..)
-            | Exists(id, ..)
             | Load(id, ..)
-            | Unary(id, ..)
-            | Binary(id, ..)
             | Branch(id, ..)
-            | Labeled(id, ..)
-            | Abort(id, ..)
-            | Destroy(id, ..)
+            | Label(id, ..)
             | Nop(id) => *id,
         }
     }
@@ -192,7 +177,8 @@ impl Bytecode {
     pub fn is_unconditional_branch(&self) -> bool {
         matches!(
             self,
-            Bytecode::Ret(..) | Bytecode::Abort(..) | Bytecode::Branch(_, _, BranchCond::Always)
+            Bytecode::Ret(..) | Bytecode::Branch(_, _, BranchCond::Always)
+            | Bytecode::Call(_, _, Operation::Abort, ..)
         )
     }
 
@@ -207,14 +193,6 @@ impl Bytecode {
         self.is_conditional_branch() || self.is_unconditional_branch()
     }
 
-    pub fn skip_labelled(&self) -> &Bytecode {
-        if let Bytecode::Labeled(_, _, code) = self {
-            code
-        } else {
-            self
-        }
-    }
-
     /// Return the destination of branching if self is a branching instruction
     pub fn branch_dest(&self) -> Option<Label> {
         match self {
@@ -227,7 +205,7 @@ impl Bytecode {
     pub fn label_offsets(code: &[Bytecode]) -> BTreeMap<Label, CodeOffset> {
         let mut res = BTreeMap::new();
         for (offs, bc) in code.iter().enumerate() {
-            if let Bytecode::Labeled(_, label, ..) = bc {
+            if let Bytecode::Label(_, label) = bc {
                 assert!(res.insert(*label, offs as CodeOffset).is_none());
             }
         }
@@ -272,9 +250,12 @@ impl Bytecode {
 
 impl Bytecode {
     /// Creates a format object for a bytecode in context of a function target.
-    pub fn display<'env>(&self, func_target: &'env FunctionTarget<'env>) -> BytecodeDisplay<'env> {
+    pub fn display<'env>(
+        &'env self,
+        func_target: &'env FunctionTarget<'env>,
+    ) -> BytecodeDisplay<'env> {
         BytecodeDisplay {
-            bytecode: self.clone(),
+            bytecode: self,
             func_target,
         }
     }
@@ -282,7 +263,7 @@ impl Bytecode {
 
 /// A display object for a bytecode.
 pub struct BytecodeDisplay<'env> {
-    bytecode: Bytecode,
+    bytecode: &'env Bytecode,
     func_target: &'env FunctionTarget<'env>,
 }
 
@@ -290,6 +271,13 @@ impl<'env> fmt::Display for BytecodeDisplay<'env> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         use Bytecode::*;
         match &self.bytecode {
+            SpecBlock(id, _) => {
+                // For now, use source location to print spec block. We currently do not have a
+                // pretty printer for spec expressions and conditions. We may need to add one as
+                // we start to generate spec blocks during transformations.
+                let loc = self.func_target.get_bytecode_loc(*id);
+                write!(f, "spec at {}..{}", loc.span().start(), loc.span().end())?;
+            }
             Assign(_, dst, src, AssignKind::Copy) => {
                 write!(f, "{} := copy({})", self.lstr(*dst), self.lstr(*src))?
             }
@@ -299,128 +287,20 @@ impl<'env> fmt::Display for BytecodeDisplay<'env> {
             Assign(_, dst, src, AssignKind::Store) => {
                 write!(f, "{} := {}", self.lstr(*dst), self.lstr(*src))?
             }
-            ReadRef(_, dst, src) => write!(f, "{} := *{}", self.lstr(*dst), self.lstr(*src))?,
-            WriteRef(_, dst, src) => write!(f, "*{} := {}", self.lstr(*dst), self.lstr(*src))?,
-            FreezeRef(_, dst, src) => {
-                write!(f, "{} := freeze({})", self.lstr(*dst), self.lstr(*src))?
-            }
-            Call(_, dsts, mid, fid, targs, args) => {
-                let func_env = self
-                    .func_target
-                    .global_env()
-                    .get_module(*mid)
-                    .into_function(*fid);
+            Call(_, dsts, oper, args) => {
                 if !dsts.is_empty() {
                     self.fmt_locals(f, dsts, false)?;
                     write!(f, " := ")?;
                 }
-                write!(
-                    f,
-                    "{}::{}",
-                    func_env
-                        .module_env
-                        .get_name()
-                        .display(func_env.symbol_pool()),
-                    func_env.get_name().display(func_env.symbol_pool())
-                )?;
-                self.fmt_type_args(f, targs)?;
+                write!(f, "{}", oper.display(self.func_target))?;
                 self.fmt_locals(f, args, true)?;
             }
             Ret(_, srcs) => {
                 write!(f, "return ")?;
                 self.fmt_locals(f, srcs, false)?;
             }
-            Pack(_, dst, mid, sid, targs, args) => {
-                write!(
-                    f,
-                    "{} := pack {}",
-                    self.lstr(*dst),
-                    self.struct_str(*mid, *sid, targs)
-                )?;
-                self.fmt_locals(f, args, true)?;
-            }
-            Unpack(_, dsts, mid, sid, targs, src) => {
-                self.fmt_locals(f, dsts, false)?;
-                write!(f, " := unpack {}", self.struct_str(*mid, *sid, targs))?;
-                self.fmt_type_args(f, targs)?;
-                self.fmt_locals(f, &[*src], true)?;
-            }
-            BorrowLoc(_, dst, src) => {
-                write!(
-                    f,
-                    "{} := {}{}",
-                    self.lstr(*dst),
-                    self.borrow_op(dst),
-                    self.lstr(*src)
-                )?;
-            }
-            BorrowField(_, dst, src, mid, sid, offset) => {
-                write!(
-                    f,
-                    "{} := {}{}",
-                    self.lstr(*dst),
-                    self.borrow_op(dst),
-                    self.lstr(*src)
-                )?;
-                let struct_env = self
-                    .func_target
-                    .global_env()
-                    .get_module(*mid)
-                    .into_struct(*sid);
-                let field_env = struct_env.get_field_by_offset(*offset);
-                write!(
-                    f,
-                    ".{}",
-                    field_env.get_name().display(struct_env.symbol_pool())
-                )?;
-            }
-            BorrowGlobal(_, dst, addr, mid, sid, targs) => {
-                write!(
-                    f,
-                    "{} := {}global<{}>",
-                    self.lstr(*dst),
-                    self.borrow_op(dst),
-                    self.struct_str(*mid, *sid, targs)
-                )?;
-                self.fmt_locals(f, &[*addr], true)?;
-            }
-            MoveToSender(_, src, mid, sid, targs) => {
-                write!(f, "move_to_sender<{}>", self.struct_str(*mid, *sid, targs))?;
-                self.fmt_locals(f, &[*src], true)?;
-            }
-            MoveFrom(_, dst, src, mid, sid, targs) => {
-                write!(
-                    f,
-                    "{} := move_from<{}>",
-                    self.lstr(*dst),
-                    self.struct_str(*mid, *sid, targs)
-                )?;
-                self.fmt_locals(f, &[*src], true)?;
-            }
-            Exists(_, dst, src, mid, sid, targs) => {
-                write!(
-                    f,
-                    "{} := exists<{}>",
-                    self.lstr(*dst),
-                    self.struct_str(*mid, *sid, targs)
-                )?;
-                self.fmt_locals(f, &[*src], true)?;
-            }
             Load(_, dst, cons) => {
                 write!(f, "{} := {}", self.lstr(*dst), cons)?;
-            }
-            Unary(_, op, dst, src) => {
-                write!(f, "{} := {} {}", self.lstr(*dst), op, self.lstr(*src))?;
-            }
-            Binary(_, op, dst, src1, src2) => {
-                write!(
-                    f,
-                    "{} := {} {} {}",
-                    self.lstr(*dst),
-                    self.lstr(*src1),
-                    op,
-                    self.lstr(*src2)
-                )?;
             }
             Branch(_, label, cond) => {
                 use BranchCond::*;
@@ -435,19 +315,8 @@ impl<'env> fmt::Display for BytecodeDisplay<'env> {
                 }
                 write!(f, "goto L{}", label.as_usize())?;
             }
-            Labeled(_, label, bytecode) => {
-                write!(
-                    f,
-                    "L{}: {}",
-                    label.as_usize(),
-                    bytecode.display(self.func_target)
-                )?;
-            }
-            Abort(_, src) => {
-                write!(f, "abort({})", self.lstr(*src))?;
-            }
-            Destroy(_, src) => {
-                write!(f, "destroy({})", self.lstr(*src))?;
+            Label(_, label) => {
+                write!(f, "L{}:", label.as_usize(),)?;
             }
             Nop(_) => {
                 write!(f, "nop")?;
@@ -484,45 +353,115 @@ impl<'env> BytecodeDisplay<'env> {
             .symbol_pool()
             .string(self.func_target.get_local_name(idx))
     }
+}
 
-    fn borrow_op(&self, idx: &TempIndex) -> &str {
-        if self.func_target.get_local_type(*idx).is_mutable_reference() {
-            "&mut "
-        } else {
-            "&"
+impl Operation {
+    /// Creates a format object for a bytecode in context of a function target.
+    pub fn display<'env>(
+        &'env self,
+        func_target: &'env FunctionTarget<'env>,
+    ) -> OperationDisplay<'env> {
+        OperationDisplay {
+            oper: self,
+            func_target,
         }
-    }
-
-    fn fmt_type_args(&self, f: &mut Formatter<'_>, targs: &[Type]) -> fmt::Result {
-        if !targs.is_empty() {
-            let tctx = TypeDisplayContext::WithEnv {
-                env: self.func_target.global_env(),
-            };
-            write!(f, "<")?;
-            for (i, ty) in targs.iter().enumerate() {
-                if i > 0 {
-                    write!(f, ", ")?;
-                }
-                write!(f, "{}", ty.display(&tctx))?;
-            }
-            write!(f, ">")?;
-        }
-        Ok(())
-    }
-
-    fn struct_str(&self, mid: ModuleId, sid: StructId, targs: &[Type]) -> String {
-        let ty = Type::Struct(mid, sid, targs.to_vec());
-        let tctx = TypeDisplayContext::WithEnv {
-            env: self.func_target.global_env(),
-        };
-        format!("{}", ty.display(&tctx))
     }
 }
 
-impl fmt::Display for BinaryOp {
+/// A display object for an operation.
+pub struct OperationDisplay<'env> {
+    oper: &'env Operation,
+    func_target: &'env FunctionTarget<'env>,
+}
+
+impl<'env> fmt::Display for OperationDisplay<'env> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        use BinaryOp::*;
-        match self {
+        use Operation::*;
+        match self.oper {
+            // User function
+            Function(mid, fid, targs) => {
+                let func_env = self
+                    .func_target
+                    .global_env()
+                    .get_module(*mid)
+                    .into_function(*fid);
+                write!(
+                    f,
+                    "{}::{}",
+                    func_env
+                        .module_env
+                        .get_name()
+                        .display(func_env.symbol_pool()),
+                    func_env.get_name().display(func_env.symbol_pool())
+                )?;
+                self.fmt_type_args(f, targs)?;
+            }
+
+            // Pack/Unpack
+            Pack(mid, sid, targs) => {
+                write!(f, "pack {}", self.struct_str(*mid, *sid, targs))?;
+            }
+            Unpack(mid, sid, targs) => {
+                write!(f, "unpack {}", self.struct_str(*mid, *sid, targs))?;
+            }
+
+            // Borrow
+            BorrowLoc => {
+                write!(f, "borrow_local")?;
+            }
+            BorrowField(mid, sid, targs, offset) => {
+                write!(f, "borrow_field<{}>", self.struct_str(*mid, *sid, targs))?;
+                let struct_env = self
+                    .func_target
+                    .global_env()
+                    .get_module(*mid)
+                    .into_struct(*sid);
+                let field_env = struct_env.get_field_by_offset(*offset);
+                write!(
+                    f,
+                    ".{}",
+                    field_env.get_name().display(struct_env.symbol_pool())
+                )?;
+            }
+            BorrowGlobal(mid, sid, targs) => {
+                write!(f, "borrow_global<{}>", self.struct_str(*mid, *sid, targs))?;
+            }
+
+            // Resources
+            MoveToSender(mid, sid, targs) => {
+                write!(f, "move_to_sender<{}>", self.struct_str(*mid, *sid, targs))?;
+            }
+            MoveFrom(mid, sid, targs) => {
+                write!(f, "move_from<{}>", self.struct_str(*mid, *sid, targs))?;
+            }
+            Exists(mid, sid, targs) => {
+                write!(f, "exists<{}>", self.struct_str(*mid, *sid, targs))?;
+            }
+
+            // Builtins
+            Abort => {
+                write!(f, "abort")?;
+            }
+            Destroy => {
+                write!(f, "destroy")?;
+            }
+            ReadRef => {
+                write!(f, "read_ref")?;
+            }
+            WriteRef => {
+                write!(f, "write_ref")?;
+            }
+            FreezeRef => {
+                write!(f, "freeze_ref")?;
+            }
+
+            // Unary
+            CastU8 => write!(f, "(u8)")?,
+            CastU64 => write!(f, "(u64)")?,
+            CastU128 => write!(f, "(u128)")?,
+            Not => write!(f, "!")?,
+
+            // Binary
             Add => write!(f, "+")?,
             Sub => write!(f, "-")?,
             Mul => write!(f, "*")?,
@@ -546,16 +485,30 @@ impl fmt::Display for BinaryOp {
     }
 }
 
-impl fmt::Display for UnaryOp {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        use UnaryOp::*;
-        match self {
-            CastU8 => write!(f, "(u8)")?,
-            CastU64 => write!(f, "(u64)")?,
-            CastU128 => write!(f, "(u128)")?,
-            Not => write!(f, "!")?,
+impl<'env> OperationDisplay<'env> {
+    fn fmt_type_args(&self, f: &mut Formatter<'_>, targs: &[Type]) -> fmt::Result {
+        if !targs.is_empty() {
+            let tctx = TypeDisplayContext::WithEnv {
+                env: self.func_target.global_env(),
+            };
+            write!(f, "<")?;
+            for (i, ty) in targs.iter().enumerate() {
+                if i > 0 {
+                    write!(f, ", ")?;
+                }
+                write!(f, "{}", ty.display(&tctx))?;
+            }
+            write!(f, ">")?;
         }
         Ok(())
+    }
+
+    fn struct_str(&self, mid: ModuleId, sid: StructId, targs: &[Type]) -> String {
+        let ty = Type::Struct(mid, sid, targs.to_vec());
+        let tctx = TypeDisplayContext::WithEnv {
+            env: self.func_target.global_env(),
+        };
+        format!("{}", ty.display(&tctx))
     }
 }
 

@@ -24,8 +24,9 @@ use spec_lang::{
     env::GlobalEnv,
     symbol::Symbol,
 };
-use stackless_bytecode_generator::function_target::FunctionTarget;
-use vm::file_format::CodeOffset;
+use stackless_bytecode_generator::{
+    function_target::FunctionTarget, stackless_bytecode::SpecBlockId,
+};
 
 pub struct SpecTranslator<'env> {
     /// The module in which context translation happens.
@@ -222,27 +223,25 @@ impl<'env> SpecTranslator<'env> {
     pub fn translate_conditions_inside_impl(
         &self,
         func_target: &'env FunctionTarget<'env>,
-        offset: CodeOffset,
+        block_id: SpecBlockId,
     ) {
-        let conds = func_target.get_specification_on_impl(offset);
-        if let Some(conds) = conds {
-            if !conds.is_empty() {
-                self.translate_seq(conds.iter(), "\n", |cond| {
-                    self.writer.set_location(&cond.loc);
-                    emit!(
-                        self.writer,
-                        if cond.kind == SpecConditionKind::Assert {
-                            "assert "
-                        } else {
-                            "assume "
-                        }
-                    );
-                    emit!(self.writer, "b#Boolean(");
-                    self.translate_exp(&cond.exp);
-                    emit!(self.writer, ");")
-                });
-                emitln!(self.writer);
-            }
+        let conds = func_target.get_specification_on_impl(block_id);
+        if !conds.is_empty() {
+            self.translate_seq(conds.iter(), "\n", |cond| {
+                self.writer.set_location(&cond.loc);
+                emit!(
+                    self.writer,
+                    if cond.kind == SpecConditionKind::Assert {
+                        "assert "
+                    } else {
+                        "assume "
+                    }
+                );
+                emit!(self.writer, "b#Boolean(");
+                self.translate_exp(&cond.exp);
+                emit!(self.writer, ");")
+            });
+            emitln!(self.writer);
         }
     }
 
