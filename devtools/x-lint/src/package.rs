@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{prelude::*, LintContext};
-use guppy::{
-    graph::{PackageGraph, PackageMetadata},
-    PackageId,
-};
+use guppy::graph::PackageMetadata;
 use std::path::Path;
 
 /// Represents a linter that runs once per package.
@@ -28,14 +25,13 @@ pub struct PackageContext<'l> {
 impl<'l> PackageContext<'l> {
     pub fn new(
         project_ctx: ProjectContext<'l>,
-        package_graph: &'l PackageGraph,
         workspace_path: &'l Path,
-        id: &PackageId,
+        metadata: &'l PackageMetadata,
     ) -> Self {
         Self {
             project_ctx,
             workspace_path,
-            metadata: package_graph.metadata(id).expect("package id is valid"),
+            metadata,
         }
     }
 

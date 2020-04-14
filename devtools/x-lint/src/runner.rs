@@ -115,9 +115,8 @@ impl<'cfg> LintEngine<'cfg> {
         if !self.config.package_linters.is_empty() {
             let package_graph = project_ctx.package_graph()?;
 
-            for (workspace_path, id) in package_graph.workspace().members() {
-                let package_ctx =
-                    PackageContext::new(project_ctx, package_graph, workspace_path, id);
+            for (workspace_path, metadata) in package_graph.workspace().members() {
+                let package_ctx = PackageContext::new(project_ctx, workspace_path, metadata);
                 for linter in self.config.package_linters {
                     let source = package_ctx.source(linter.name());
                     let mut formatter = LintFormatter::new(source, &mut messages);
