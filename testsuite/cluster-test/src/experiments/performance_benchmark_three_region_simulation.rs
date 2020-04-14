@@ -4,7 +4,6 @@
 use crate::{
     cluster::Cluster,
     cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
-    effects::{three_region_simulation_effects, Effect},
     experiments::{Context, Experiment, ExperimentParam},
     instance::Instance,
     stats,
@@ -13,8 +12,7 @@ use crate::{
 };
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::future::{join_all, try_join_all};
-use libra_logger::*;
+use futures::future::try_join_all;
 use std::{
     fmt::{Display, Error, Formatter},
     time::Duration,
@@ -45,7 +43,7 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
         let split_region_num = split_country_num / 2;
         let (us, euro) = self.cluster.split_n_validators_random(split_country_num);
         let (us_west, us_east) = us.split_n_validators_random(split_region_num);
-        let network_effects = three_region_simulation_effects(
+        three_region_simulation_effects_k8s(
             (
                 us_west.validator_instances().to_vec(),
                 us_east.validator_instances().to_vec(),
@@ -56,26 +54,9 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
                 Duration::from_millis(95), // us_west<->eu one way delay
                 Duration::from_millis(40), // us_west<->us_east one way delay
             ),
-        );
-        if let Some(cluster_swarm) = context.cluster_swarm {
-            three_region_simulation_effects_k8s(
-                (
-                    us_west.validator_instances().to_vec(),
-                    us_east.validator_instances().to_vec(),
-                    euro.validator_instances().to_vec(),
-                ),
-                (
-                    Duration::from_millis(60), // us_east<->eu one way delay
-                    Duration::from_millis(95), // us_west<->eu one way delay
-                    Duration::from_millis(40), // us_west<->us_east one way delay
-                ),
-                cluster_swarm,
-            )
-            .await?;
-        } else {
-            info!("cluster_swarm is not set");
-            join_all(network_effects.iter().map(|e| e.activate())).await;
-        }
+            context.cluster_swarm,
+        )
+        .await?;
 
         let window = Duration::from_secs(240);
         let emit_job_request = if context.emit_to_validator {
@@ -97,11 +78,7 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
         let end = unix_timestamp_now() - buffer;
         let start = end - window + 2 * buffer;
         let (avg_tps, avg_latency) = stats::txn_stats(&context.prometheus, start, end)?;
-        if let Some(cluster_swarm) = context.cluster_swarm {
-            cluster_swarm.remove_all_network_effects().await?;
-        } else {
-            join_all(network_effects.iter().map(|e| e.deactivate())).await;
-        }
+        context.cluster_swarm.remove_all_network_effects().await?;
         context.report.report_metric(&self, "avg_tps", avg_tps);
         context
             .report

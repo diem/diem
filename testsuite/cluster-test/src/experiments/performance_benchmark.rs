@@ -4,7 +4,6 @@
 use crate::{
     cluster::Cluster,
     cluster_swarm::ClusterSwarm,
-    effects::{Effect, StopContainer},
     experiments::{Context, Experiment, ExperimentParam},
     instance,
     instance::Instance,
@@ -15,10 +14,7 @@ use crate::{
 use anyhow::Result;
 use async_trait::async_trait;
 use debug_interface::node_debug_service::parse_event;
-use futures::{
-    future::{join_all, try_join_all},
-    join,
-};
+use futures::{future::try_join_all, join};
 use libra_logger::info;
 use serde_json::Value;
 use std::{
@@ -103,23 +99,12 @@ impl Experiment for PerformanceBenchmark {
     }
 
     async fn run(&mut self, context: &mut Context<'_>) -> Result<()> {
-        let stop_effects: Vec<_> = self
-            .down_validators
-            .clone()
+        let instance_configs = instance::instance_configs(&self.down_validators)?;
+        let futures: Vec<_> = instance_configs
             .into_iter()
-            .map(StopContainer::new)
+            .map(|ic| context.cluster_swarm.delete_node(ic.clone()))
             .collect();
-        if let Some(cluster_swarm) = context.cluster_swarm {
-            let instance_configs = instance::instance_configs(&self.down_validators)?;
-            let futures: Vec<_> = instance_configs
-                .into_iter()
-                .map(|ic| cluster_swarm.delete_node(ic.clone()))
-                .collect();
-            try_join_all(futures).await?;
-        } else {
-            let futures = stop_effects.iter().map(|e| e.activate());
-            join_all(futures).await;
-        }
+        try_join_all(futures).await?;
         let buffer = Duration::from_secs(60);
         let window = self.duration + buffer * 2;
         let emit_job_request = if context.emit_to_validator {
@@ -175,17 +160,12 @@ impl Experiment for PerformanceBenchmark {
             "Link to dashboard : {}",
             context.prometheus.link_to_dashboard(start, end)
         );
-        if let Some(cluster_swarm) = context.cluster_swarm {
-            let instance_configs = instance::instance_configs(&self.down_validators)?;
-            let futures: Vec<_> = instance_configs
-                .into_iter()
-                .map(|ic| cluster_swarm.upsert_node(ic.clone(), false))
-                .collect();
-            try_join_all(futures).await?;
-        } else {
-            let futures = stop_effects.iter().map(|e| e.deactivate());
-            join_all(futures).await;
-        }
+        let instance_configs = instance::instance_configs(&self.down_validators)?;
+        let futures: Vec<_> = instance_configs
+            .into_iter()
+            .map(|ic| context.cluster_swarm.upsert_node(ic.clone(), false))
+            .collect();
+        try_join_all(futures).await?;
         let submitted_txn = stats.submitted.load(Ordering::Relaxed);
         let expired_txn = stats.expired.load(Ordering::Relaxed);
         context

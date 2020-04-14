@@ -7,24 +7,18 @@ use std::{
     time::{Duration, Instant},
 };
 
-use chrono::{Datelike, Timelike, Utc};
-use libra_logger::{info, warn};
-use rand::{prelude::ThreadRng, Rng};
+use libra_logger::info;
 use reqwest::Url;
 use structopt::{clap::ArgGroup, StructOpt};
 use termion::{color, style};
 
 use anyhow::{bail, format_err, Result};
 use cluster_test::{
-    aws::Aws,
     cluster::Cluster,
     cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
-    deployment::DeploymentManager,
-    effects::{Action, Effect, Reboot, RemoveNetworkEffects, StopContainer},
     experiments::{get_experiment, Context, Experiment},
     github::GitHub,
     health::{DebugPortLogThread, HealthCheckRunner, LogTail, PrintFailures, TraceTail},
-    instance::Instance,
     prometheus::Prometheus,
     report::SuiteReport,
     slack::SlackClient,
@@ -34,7 +28,7 @@ use cluster_test::{
     util::unix_timestamp_now,
 };
 use futures::{
-    future::{join_all, FutureExt, TryFutureExt},
+    future::{join_all, FutureExt},
     select,
 };
 use itertools::zip;
@@ -60,31 +54,13 @@ struct Args {
     swarm: bool,
 
     #[structopt(long, group = "action")]
-    wipe_all_db: bool,
-    #[structopt(long, group = "action")]
-    discovery: bool,
-    #[structopt(long, group = "action")]
-    pssh: bool,
-    #[structopt(long, group = "action")]
     run: Option<String>,
     #[structopt(long, group = "action")]
-    tail_logs: bool,
-    #[structopt(long, group = "action")]
     health_check: bool,
-    #[structopt(long, group = "action")]
-    reboot: bool,
-    #[structopt(long, group = "action")]
-    restart: bool,
-    #[structopt(long, group = "action")]
-    stop: bool,
-    #[structopt(long, group = "action")]
-    start: bool,
     #[structopt(long, group = "action")]
     emit_tx: bool,
     #[structopt(long, group = "action", requires = "swarm")]
     diag: bool,
-    #[structopt(long, group = "action")]
-    stop_experiment: bool,
     #[structopt(long, group = "action")]
     perf_run: bool,
     #[structopt(long, group = "action")]
@@ -117,10 +93,6 @@ struct Args {
         default_value = "60"
     )]
     duration: u64,
-
-    //stop_experiment options
-    #[structopt(long, default_value = "10")]
-    max_stopped: usize,
 
     #[structopt(
         long,
@@ -174,52 +146,16 @@ pub fn main() {
             ));
             return;
         }
-    } else if args.discovery {
-        let util = ClusterUtil::setup(&args);
-        util.discovery();
-        return;
-    } else if args.pssh {
-        let util = ClusterUtil::setup(&args);
-        util.pssh(args.last);
-        return;
     }
 
     let mut runner = ClusterTestRunner::setup(&args);
 
-    if let Some(ref hash_or_tag) = args.deploy {
-        if runner.cluster_swarm.is_none() {
-            // Deploy deploy_hash before running whatever command
-            let hash = runner
-                .deployment_manager
-                .resolve(hash_or_tag)
-                .expect("Failed to resolve tag");
-            exit_on_error(runner.redeploy(&hash));
-        }
-    }
-
     let mut perf_msg = None;
 
-    if args.tail_logs {
-        runner.tail_logs();
-        return;
-    } else if args.health_check {
+    if args.health_check {
         runner.run_health_check();
-    } else if args.wipe_all_db {
-        runner.stop();
-        runner.wipe_all_db(true);
-        runner.start();
-    } else if args.reboot {
-        runner.reboot();
-    } else if args.restart {
-        runner.restart();
-    } else if args.stop {
-        runner.stop();
-    } else if args.start {
-        runner.start();
     } else if args.perf_run {
         perf_msg = Some(runner.perf_run());
-    } else if args.stop_experiment {
-        runner.stop_experiment(args.max_stopped);
     } else if args.cleanup {
         runner.cleanup();
     } else if args.run_ci_suite {
@@ -283,9 +219,8 @@ struct BasicSwarmUtil {
 
 struct ClusterUtil {
     cluster: Cluster,
-    aws: Aws,
     prometheus: Prometheus,
-    cluster_swarm: Option<ClusterSwarmKube>,
+    cluster_swarm: ClusterSwarmKube,
 }
 
 struct ClusterTestRunner {
@@ -293,7 +228,6 @@ struct ClusterTestRunner {
     trace_tail: TraceTail,
     cluster: Cluster,
     health_check_runner: HealthCheckRunner,
-    deployment_manager: DeploymentManager,
     experiment_interval: Duration,
     runtime: Runtime,
     slack: SlackClient,
@@ -304,7 +238,7 @@ struct ClusterTestRunner {
     report: SuiteReport,
     global_emit_job_request: EmitJobRequest,
     emit_to_validator: bool,
-    cluster_swarm: Option<ClusterSwarmKube>,
+    cluster_swarm: ClusterSwarmKube,
 }
 
 fn parse_host_port(s: &str) -> Result<(String, u32)> {
@@ -436,97 +370,53 @@ impl BasicSwarmUtil {
 impl ClusterUtil {
     pub fn setup(args: &Args) -> Self {
         Runtime::new().unwrap().block_on(async move {
-            let k8s = env::var("KUBERNETES_SERVICE_HOST").is_ok();
-            let aws = Aws::new(k8s);
-            let cluster_swarm = if k8s {
-                Some(
-                    ClusterSwarmKube::new()
-                        .await
-                        .expect("Failed to initialize ClusterSwarmKube"),
+            let cluster_swarm = ClusterSwarmKube::new()
+                .await
+                .expect("Failed to initialize ClusterSwarmKube");
+            cluster_swarm.delete_all().await.expect("delete_all failed");
+            let image_tag = args.deploy.as_deref().unwrap_or("master");
+            info!(
+                "Deploying with {} tag for validators and fullnodes",
+                image_tag
+            );
+            cluster_swarm
+                .create_validator_and_fullnode_set(
+                    args.k8s_num_validators,
+                    args.k8s_fullnodes_per_validator,
+                    &image_tag,
+                    true,
                 )
-            } else {
-                None
-            };
-            let cluster = if let Some(cluster_swarm) = cluster_swarm.as_ref() {
-                cluster_swarm.delete_all().await.expect("delete_all failed");
-                let image_tag = args.deploy.as_deref().unwrap_or("master");
-                info!(
-                    "Deploying with {} tag for validators and fullnodes",
-                    image_tag
-                );
-                cluster_swarm
-                    .create_validator_and_fullnode_set(
-                        args.k8s_num_validators,
-                        args.k8s_fullnodes_per_validator,
-                        &image_tag,
-                        true,
-                    )
-                    .await
-                    .expect("Failed to create_validator_and_fullnode_set");
-                info!("Deployment complete");
-                Cluster::new_k8s(
-                    cluster_swarm.validator_instances().await,
-                    cluster_swarm.fullnode_instances().await,
-                )
-                .unwrap()
-            } else {
-                Cluster::discover(&aws).expect("Failed to discover cluster")
-            };
+                .await
+                .expect("Failed to create_validator_and_fullnode_set");
+            info!("Deployment complete");
+            let cluster = Cluster::new_k8s(
+                cluster_swarm.validator_instances().await,
+                cluster_swarm.fullnode_instances().await,
+            )
+            .unwrap();
+
             let cluster = if args.peers.is_empty() {
                 cluster
             } else {
                 cluster.validator_sub_cluster(args.peers.clone())
             };
-            let prometheus_ip = if cluster_swarm.is_some() {
-                "libra-testnet-prometheus-server.default.svc.cluster.local"
-            } else {
-                cluster
-                    .prometheus_ip()
-                    .expect("Failed to discover prometheus ip in aws")
-            };
-            let grafana_base_url = if let Some(cluster_swarm) = cluster_swarm.as_ref() {
-                cluster_swarm
-                    .get_grafana_baseurl()
-                    .await
-                    .expect("Failed to discover grafana url in k8s")
-            } else {
-                format!(
-                    "http://prometheus.{}.aws.hlw3truzy4ls.com:9091",
-                    aws.workspace()
-                )
-            };
-            let prometheus = Prometheus::new(prometheus_ip, grafana_base_url, k8s);
+            let prometheus_ip = "libra-testnet-prometheus-server.default.svc.cluster.local";
+            let grafana_base_url = cluster_swarm
+                .get_grafana_baseurl()
+                .await
+                .expect("Failed to discover grafana url in k8s");
+            let prometheus = Prometheus::new(prometheus_ip, grafana_base_url);
             info!(
-                "Discovered {} validators and {} fns in {} workspace",
+                "Discovered {} validators and {} fns",
                 cluster.validator_instances().len(),
                 cluster.fullnode_instances().len(),
-                aws.workspace()
             );
             Self {
                 cluster,
-                aws,
                 prometheus,
                 cluster_swarm,
             }
         })
-    }
-
-    pub fn discovery(&self) {
-        for instance in self.cluster.all_instances() {
-            println!("{} {}", instance.peer_name(), instance.ip());
-        }
-    }
-
-    pub fn pssh(&self, cmd: Vec<String>) {
-        let mut runtime = Runtime::new().unwrap();
-        let futures = self.cluster.all_instances().map(|x| {
-            x.run_cmd_tee_err(&cmd).map(move |r| {
-                if let Err(e) = r {
-                    warn!("Failed on {}: {}", x, e)
-                }
-            })
-        });
-        runtime.block_on(join_all(futures));
     }
 
     pub async fn emit_tx(
@@ -574,7 +464,6 @@ impl ClusterTestRunner {
     pub fn setup(args: &Args) -> Self {
         let util = ClusterUtil::setup(args);
         let cluster = util.cluster;
-        let aws = util.aws;
         let cluster_swarm = util.cluster_swarm;
         let log_tail_started = Instant::now();
         let (logs, trace_tail) = DebugPortLogThread::spawn_new(&cluster);
@@ -589,7 +478,6 @@ impl ClusterTestRunner {
             Err(..) => 15,
         };
         let experiment_interval = Duration::from_secs(experiment_interval_sec);
-        let deployment_manager = DeploymentManager::new(aws, cluster.clone());
         let slack = SlackClient::new();
         let slack_changelog_url = env::var("SLACK_CHANGELOG_URL")
             .map(|u| u.parse().expect("Failed to parse SLACK_CHANGELOG_URL"))
@@ -625,7 +513,6 @@ impl ClusterTestRunner {
             trace_tail,
             cluster,
             health_check_runner,
-            deployment_manager,
             experiment_interval,
             slack,
             runtime,
@@ -643,9 +530,7 @@ impl ClusterTestRunner {
     pub fn run_ci_suite(&mut self) -> Result<String> {
         let suite = ExperimentSuite::new_pre_release(&self.cluster);
         let result = self.run_suite(suite);
-        if let Some(cluster_swarm) = self.cluster_swarm.as_ref() {
-            self.runtime.block_on(cluster_swarm.delete_all())?;
-        }
+        self.runtime.block_on(self.cluster_swarm.delete_all())?;
         result?;
         let perf_msg = format!("Performance report:\n```\n{}\n```", self.report);
         Ok(perf_msg)
@@ -693,27 +578,6 @@ impl ClusterTestRunner {
         }
     }
 
-    fn redeploy(&mut self, hash: &str) -> Result<()> {
-        info!("Cleaning up before deploy");
-        self.cleanup();
-        info!("Stopping validators");
-        self.stop();
-        if env::var("WIPE_ON_DEPLOY") != Ok("no".to_string()) {
-            info!("Wiping validators");
-            self.wipe_all_db(false);
-        } else {
-            info!("WIPE_ON_DEPLOY is set to no, keeping database");
-        }
-        self.deployment_manager.redeploy(hash.to_string())?;
-        thread::sleep(Duration::from_secs(60));
-        self.logs.recv_all();
-        self.health_check_runner.clear();
-        self.tx_emitter.clear();
-        self.start();
-        self.wait_until_all_healthy()?;
-        Ok(())
-    }
-
     fn run_suite(&mut self, suite: ExperimentSuite) -> Result<()> {
         info!("Starting suite");
         let suite_started = Instant::now();
@@ -752,9 +616,7 @@ impl ClusterTestRunner {
         self.cleanup();
         let result =
             self.run_single_experiment(experiment, Some(self.global_emit_job_request.clone()));
-        if let Some(cluster_swarm) = self.cluster_swarm.as_ref() {
-            self.runtime.block_on(cluster_swarm.delete_all())?;
-        }
+        self.runtime.block_on(self.cluster_swarm.delete_all())?;
         result?;
         self.print_report();
         Ok(())
@@ -868,62 +730,6 @@ impl ClusterTestRunner {
         Ok(())
     }
 
-    pub fn stop_experiment(&mut self, max_stopped: usize) {
-        let mut instances = self.cluster.validator_instances().to_vec();
-        let mut rng = ThreadRng::default();
-        let mut stop_effects = vec![];
-        let mut stopped_instance_ids = vec![];
-        let mut results = vec![];
-        let window = Duration::from_secs(60);
-        loop {
-            let job = self
-                .runtime
-                .block_on(self.tx_emitter.start_job(EmitJobRequest::for_instances(
-                    instances.clone(),
-                    &Some(self.global_emit_job_request.clone()),
-                )))
-                .expect("Failed to start emit job");
-            thread::sleep(Duration::from_secs(30) + window);
-            let now = unix_timestamp_now();
-            match stats::txn_stats(&self.prometheus, now - window, now) {
-                Ok((avg_tps, avg_latency)) => {
-                    results.push((stop_effects.len(), avg_tps, avg_latency));
-                    info!("Tps: {:.0}, latency: {:.0} ms", avg_tps, avg_latency);
-                }
-                Err(err) => info!("Stat error: {:?}", err),
-            }
-            self.tx_emitter.stop_job(job);
-            if stop_effects.len() > max_stopped {
-                break;
-            }
-            let stop_validator = rng.gen_range(0, instances.len());
-            let stop_validator = instances.remove(stop_validator);
-            stopped_instance_ids.push(stop_validator.peer_name().clone());
-            let stop_effect = StopContainer::new(stop_validator);
-            info!(
-                "Stopped {} validators: {}",
-                stopped_instance_ids.len(),
-                stopped_instance_ids.join(",")
-            );
-            self.runtime
-                .block_on(stop_effect.activate())
-                .expect("Failed to stop container");
-            stop_effects.push(stop_effect);
-            thread::sleep(Duration::from_secs(30));
-        }
-        println!("Results in csv format:");
-        println!("DOWN\tTPS\tLAT");
-        for (stopped, tps, lat) in results {
-            println!("{}\t{:.0}\t{:.0}", stopped, tps, lat * 1000.);
-        }
-        let futures = stop_effects.iter().map(|stop_effect| {
-            stop_effect
-                .deactivate()
-                .map_err(move |e| info!("Failed to deactivate {}: {:?}", stop_effect, e))
-        });
-        self.runtime.block_on(join_all(futures));
-    }
-
     fn run_health_check(&mut self) {
         loop {
             let deadline = Instant::now() + Duration::from_secs(1);
@@ -963,12 +769,6 @@ impl ClusterTestRunner {
         Ok(())
     }
 
-    fn tail_logs(self) {
-        for log in self.logs.event_receiver {
-            info!("{:?}", log);
-        }
-    }
-
     fn slack_changelog_message(&self, msg: String) {
         info!("{}", msg);
         if let Some(ref changelog_url) = self.slack_changelog_url {
@@ -978,105 +778,9 @@ impl ClusterTestRunner {
         }
     }
 
-    fn wipe_all_db(&mut self, safety_wait: bool) {
-        info!("Going to wipe db on all validators in cluster!");
-        if safety_wait {
-            info!("Waiting 10 seconds before proceed");
-            thread::sleep(Duration::from_secs(10));
-            info!("Starting...");
-        }
-        let now = Utc::now();
-        let suffix = format!(
-            ".{:04}{:02}{:02}-{:02}{:02}{:02}.gz",
-            now.year(),
-            now.month(),
-            now.day(),
-            now.hour(),
-            now.minute(),
-            now.second()
-        );
-        let suffix = &suffix;
-        let log_file = "/data/libra/libra.log";
-        info!("Will use suffix {} for log rotation", suffix);
-        let jobs = self
-            .cluster
-            .all_instances()
-            .map(|instance| Self::wipe_instance(log_file, &suffix, instance));
-        self.runtime.block_on(join_all(jobs));
-        info!("Done");
-    }
-
-    async fn wipe_instance(log_file: &str, suffix: &str, instance: &Instance) {
-        instance
-            .run_cmd_tee_err(vec!["sudo", "rm", "-rf", "/data/libra/common"])
-            .await
-            .map_err(|e| info!("Failed to wipe {}: {:?}", instance, e))
-            .ok();
-        instance
-            .run_cmd_tee_err(vec![format!(
-                "! test -f {f} || (sudo timeout 45 gzip -S {s} {f} || (echo gzip failed; sudo rm -f {f}))",
-                f = log_file,
-                s = suffix
-            )]).await
-            .map_err(|e| info!("Failed to gzip log file {}: {:?}", instance, e))
-            .ok();
-    }
-
-    fn reboot(&mut self) {
-        let futures = self.cluster.all_instances().map(|instance| async move {
-            let reboot = Reboot::new(instance.clone());
-            reboot
-                .apply()
-                .await
-                .map_err(|e| info!("Failed to reboot {}: {:?}", instance, e))
-        });
-        self.runtime.block_on(join_all(futures));
-        info!("Completed");
-    }
-
-    fn restart(&mut self) {
-        self.stop();
-        self.start();
-        info!("Completed");
-    }
-
     fn cleanup(&mut self) {
-        if let Some(cluster_swarm) = (&self.cluster_swarm).as_ref() {
-            self.runtime
-                .block_on(cluster_swarm.remove_all_network_effects())
-                .expect("remove_all_network_effects failed on cluster_swarm");
-        } else {
-            let futures = self.cluster.all_instances().map(|instance| async move {
-                RemoveNetworkEffects::new(instance.clone())
-                    .apply()
-                    .await
-                    .map_err(|e| {
-                        info!(
-                            "Failed to remove network effects for {}. Error: {}",
-                            instance, e
-                        );
-                    })
-            });
-            self.runtime.block_on(join_all(futures));
-        }
-    }
-
-    pub fn stop(&mut self) {
-        let effects = self.make_stop_effects();
-        let futures = effects.iter().map(|e| e.activate());
-        self.runtime.block_on(join_all(futures));
-    }
-
-    pub fn start(&mut self) {
-        let effects = self.make_stop_effects();
-        let futures = effects.iter().map(|e| e.deactivate());
-        self.runtime.block_on(join_all(futures));
-    }
-
-    fn make_stop_effects(&self) -> Vec<StopContainer> {
-        self.cluster
-            .all_instances()
-            .map(|x| StopContainer::new(x.clone()))
-            .collect()
+        self.runtime
+            .block_on(self.cluster_swarm.remove_all_network_effects())
+            .expect("remove_all_network_effects failed on cluster_swarm");
     }
 }

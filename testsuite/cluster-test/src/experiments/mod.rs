@@ -4,7 +4,6 @@
 #![forbid(unsafe_code)]
 
 mod cpu_flamegraph;
-mod multi_region_network_simulation;
 mod packet_loss_random_validators;
 mod performance_benchmark;
 mod performance_benchmark_three_region_simulation;
@@ -13,7 +12,6 @@ mod recovery_time;
 
 use std::{collections::HashSet, fmt::Display, time::Duration};
 
-pub use multi_region_network_simulation::{MultiRegionSimulation, MultiRegionSimulationParams};
 pub use packet_loss_random_validators::{
     PacketLossRandomValidators, PacketLossRandomValidatorsParams,
 };
@@ -59,7 +57,7 @@ pub struct Context<'a> {
     pub report: &'a mut SuiteReport,
     pub global_emit_job_request: &'a mut Option<EmitJobRequest>,
     pub emit_to_validator: bool,
-    pub cluster_swarm: &'a Option<ClusterSwarmKube>,
+    pub cluster_swarm: &'a ClusterSwarmKube,
 }
 
 impl<'a> Context<'a> {
@@ -71,7 +69,7 @@ impl<'a> Context<'a> {
         report: &'a mut SuiteReport,
         emit_job_request: &'a mut Option<EmitJobRequest>,
         emit_to_validator: bool,
-        cluster_swarm: &'a Option<ClusterSwarmKube>,
+        cluster_swarm: &'a ClusterSwarmKube,
     ) -> Self {
         Context {
             tx_emitter,
@@ -109,10 +107,6 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
     let mut known_experiments = HashMap::new();
 
     known_experiments.insert("recovery_time", f::<RecoveryTimeParams>());
-    known_experiments.insert(
-        "multi_region_simulation",
-        f::<MultiRegionSimulationParams>(),
-    );
     known_experiments.insert(
         "packet_loss_random_validators",
         f::<PacketLossRandomValidatorsParams>(),
