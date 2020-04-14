@@ -235,23 +235,6 @@ impl LibraVM {
         Ok(())
     }
 
-    fn check_change_set(&self, change_set: &ChangeSet, state_view: &dyn StateView) -> VMResult<()> {
-        // This function is only invoked by WaypointWriteSet for now. We don't enforce the same
-        // check on TransactionPayload::WriteSet.
-        if state_view.is_genesis() {
-            for (_access_path, write_op) in change_set.write_set() {
-                // Genesis transactions only add entries, never delete them.
-                if write_op.is_deletion() {
-                    error!("[VM] Bad genesis block");
-                    return Err(VMStatus::new(StatusCode::INVALID_WRITE_SET));
-                }
-            }
-            Ok(())
-        } else {
-            Err(VMStatus::new(StatusCode::REJECTED_WRITE_SET))
-        }
-    }
-
     fn resolve_type_argument(
         &self,
         ctx: &mut SystemExecutionContext,
@@ -470,20 +453,34 @@ impl LibraVM {
         result
     }
 
+    fn read_writeset(
+        &self,
+        remote_cache: &BlockDataCache<'_>,
+        write_set: &WriteSet,
+    ) -> VMResult<()> {
+        // All Move executions satisfy the read-before-write property. Thus we need to read each
+        // access path that the write set is going to update.
+        for (ap, _) in write_set.iter() {
+            remote_cache.get(ap)?;
+        }
+        Ok(())
+    }
+
     fn process_waypoint_change_set(
         &mut self,
         remote_cache: &mut BlockDataCache<'_>,
         change_set: ChangeSet,
-    ) -> TransactionOutput {
+    ) -> VMResult<TransactionOutput> {
         let (write_set, events) = change_set.into_inner();
+        self.read_writeset(remote_cache, &write_set)?;
         remote_cache.push_write_set(&write_set);
         self.load_configs_impl(remote_cache);
-        TransactionOutput::new(
+        Ok(TransactionOutput::new(
             write_set,
             events,
             0,
             VMStatus::new(StatusCode::EXECUTED).into(),
-        )
+        ))
     }
 
     fn process_block_prologue(
@@ -567,6 +564,10 @@ impl LibraVM {
         let mut interpreter_context = SystemExecutionContext::new(remote_cache, GasUnits::new(0));
 
         self.run_writeset_epilogue(&mut interpreter_context, change_set, &txn_data)?;
+
+        if let Err(e) = self.read_writeset(remote_cache, &change_set.write_set()) {
+            return Ok(discard_error_output(e));
+        };
 
         let epilogue_writeset = interpreter_context.make_write_set()?;
         let epilogue_events = interpreter_context.events().to_vec();
@@ -779,8 +780,7 @@ impl LibraVM {
                     result.push(self.process_block_prologue(&mut data_cache, block_metadata)?)
                 }
                 TransactionBlock::WaypointWriteSet(change_set) => result.push(
-                    self.check_change_set(&change_set, state_view)
-                        .map(|_| self.process_waypoint_change_set(&mut data_cache, change_set))
+                    self.process_waypoint_change_set(&mut data_cache, change_set)
                         .unwrap_or_else(discard_error_output),
                 ),
                 TransactionBlock::WriteSet(txn) => {
