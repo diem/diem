@@ -2,16 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    core_mempool::{
-        unit_tests::common::{batch_add_signed_txn, TestTransaction},
-        CoreMempool, TimelineState,
-    },
+    core_mempool::{CoreMempool, TimelineState},
     mocks::MockSharedMempool,
     network::{MempoolNetworkEvents, MempoolNetworkSender, MempoolSyncMsg},
     shared_mempool::{
         start_shared_mempool,
         types::{SharedMempoolNotification, SyncEvent},
     },
+    tests::common::{batch_add_signed_txn, TestTransaction},
     CommitNotification, CommittedTransaction, ConsensusRequest,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
