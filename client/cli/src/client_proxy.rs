@@ -338,6 +338,11 @@ impl ClientProxy {
         is_blocking: bool,
     ) -> Result<()> {
         ensure!(
+            space_delim_strings[0] == "enable_custom_script",
+            "inconsistent command '{}' for enable_custom_script",
+            space_delim_strings[0]
+        );
+        ensure!(
             space_delim_strings.len() == 1,
             "Invalid number of arguments for setting publishing option"
         );
@@ -358,6 +363,11 @@ impl ClientProxy {
         space_delim_strings: &[&str],
         is_blocking: bool,
     ) -> Result<()> {
+        ensure!(
+            space_delim_strings[0] == "disable_custom_script",
+            "inconsistent command '{}' for disable_custom_script",
+            space_delim_strings[0]
+        );
         ensure!(
             space_delim_strings.len() == 1,
             "Invalid number of arguments for setting publishing option"
@@ -380,6 +390,11 @@ impl ClientProxy {
         is_blocking: bool,
     ) -> Result<()> {
         ensure!(
+            space_delim_strings[0] == "remove_validator",
+            "inconsistent command '{}' for remove_validator",
+            space_delim_strings[0]
+        );
+        ensure!(
             space_delim_strings.len() == 2,
             "Invalid number of arguments for removing validator"
         );
@@ -396,6 +411,11 @@ impl ClientProxy {
 
     /// Add a new validator.
     pub fn add_validator(&mut self, space_delim_strings: &[&str], is_blocking: bool) -> Result<()> {
+        ensure!(
+            space_delim_strings[0] == "add_validator",
+            "inconsistent command '{}' for add_validator",
+            space_delim_strings[0]
+        );
         ensure!(
             space_delim_strings.len() == 2,
             "Invalid number of arguments for adding validator"
@@ -417,6 +437,11 @@ impl ClientProxy {
         space_delim_strings: &[&str],
         is_blocking: bool,
     ) -> Result<()> {
+        ensure!(
+            space_delim_strings[0] == "register_validator",
+            "inconsistent command '{}' for register_validator",
+            space_delim_strings[0]
+        );
         ensure!(
             space_delim_strings.len() == 9,
             "Invalid number of arguments for registering validator"
@@ -631,6 +656,11 @@ impl ClientProxy {
 
     /// Compile move program
     pub fn compile_program(&mut self, space_delim_strings: &[&str]) -> Result<String> {
+        ensure!(
+            space_delim_strings[0] == "compile",
+            "inconsistent command '{}' for compile_program",
+            space_delim_strings[0]
+        );
         let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let file_path = space_delim_strings[2];
         let is_module = match space_delim_strings[3] {
@@ -753,6 +783,11 @@ impl ClientProxy {
 
     /// Publish move module
     pub fn publish_module(&mut self, space_delim_strings: &[&str]) -> Result<()> {
+        ensure!(
+            space_delim_strings[0] == "publish",
+            "inconsistent command '{}' for publish_module",
+            space_delim_strings[0]
+        );
         let module_bytes = fs::read(space_delim_strings[2])?;
         self.submit_program(
             space_delim_strings,
@@ -762,6 +797,11 @@ impl ClientProxy {
 
     /// Execute custom script
     pub fn execute_script(&mut self, space_delim_strings: &[&str]) -> Result<()> {
+        ensure!(
+            space_delim_strings[0] == "execute",
+            "inconsistent command '{}' for execute_script",
+            space_delim_strings[0]
+        );
         let script_bytes = fs::read(space_delim_strings[2])?;
         let arguments: Vec<_> = space_delim_strings[3..]
             .iter()

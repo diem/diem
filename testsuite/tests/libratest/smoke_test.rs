@@ -251,7 +251,7 @@ fn test_execute_custom_module_and_script() {
     let script_path = workspace_builder::workspace_root()
         .join("testsuite/tests/libratest/dev_modules/script.mvir");
     let unwrapped_script_path = script_path.to_str().unwrap();
-    let script_params = &["execute", "0", unwrapped_script_path, "script"];
+    let script_params = &["compile", "0", unwrapped_script_path, "script"];
     let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
     let formatted_recipient_address = format!("0x{}", recipient_address);
 
@@ -952,7 +952,7 @@ fn test_e2e_modify_publishing_option() {
     let script_path = workspace_builder::workspace_root()
         .join("testsuite/tests/libratest/dev_modules/test_script.mvir");
     let unwrapped_script_path = script_path.to_str().unwrap();
-    let script_params = &["execute", "0", unwrapped_script_path, "script"];
+    let script_params = &["compile", "0", unwrapped_script_path, "script"];
     let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
 
     // Initially publishing option was set to CustomScript, this transaction should be executed.
@@ -969,7 +969,7 @@ fn test_e2e_modify_publishing_option() {
     );
 
     client_proxy
-        .disable_custom_script(&["disallow_custom_script"], true)
+        .disable_custom_script(&["disable_custom_script"], true)
         .unwrap();
 
     // mint another 10 coins after restart
@@ -1075,7 +1075,7 @@ fn test_malformed_script() {
     let script_path = workspace_builder::workspace_root()
         .join("testsuite/tests/libratest/dev_modules/test_script.mvir");
     let unwrapped_script_path = script_path.to_str().unwrap();
-    let script_params = &["execute", "0", unwrapped_script_path, "script"];
+    let script_params = &["compile", "0", unwrapped_script_path, "script"];
     let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
 
     // the script expects two arguments. Passing only one in the test, which will cause a failure.
