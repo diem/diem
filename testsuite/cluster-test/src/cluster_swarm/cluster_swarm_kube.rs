@@ -223,60 +223,40 @@ impl ClusterSwarmKube {
         .await
     }
 
-    async fn delete_pod(&self, name: &str) -> Result<()> {
-        debug!("Deleting Pod {}", name);
-        let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
-        pod_api.delete(name, &Default::default()).await?;
+    async fn delete_resource<T>(&self, name: &str) -> Result<()>
+    where
+        T: k8s_openapi::Resource
+            + Clone
+            + serde::de::DeserializeOwned
+            + kube::api::Meta
+            + Send
+            + Sync,
+    {
+        debug!("Deleting {} {}", T::KIND, name);
+        let resource_api: Api<T> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
+        resource_api.delete(name, &Default::default()).await?;
         retry::retry_async(retry::fixed_retry_strategy(5000, 30), || {
-            let pod_api = pod_api.clone();
+            let pod_api = resource_api.clone();
             let name = name.to_string();
             Box::pin(async move {
                 match pod_api.get(&name).await {
                     Ok(_) => {
-                        bail!("Waiting for pod {} to be deleted..", name);
+                        bail!("Waiting for {} {} to be deleted..", T::KIND, name);
                     }
                     Err(kube::Error::Api(ae)) => {
                         if ae.code == ERROR_NOT_FOUND {
-                            debug!("Pod {} deleted successfully", name);
+                            debug!("{} {} deleted successfully", T::KIND, name);
                             Ok(())
                         } else {
-                            bail!("Waiting for pod to be deleted..")
+                            bail!("Waiting for {} to be deleted..", T::KIND)
                         }
                     }
-                    Err(_) => bail!("Waiting for pod {} to be deleted..", name),
+                    Err(_) => bail!("Waiting for {} {} to be deleted..", T::KIND, name),
                 }
             })
         })
         .await
-        .map_err(|e| format_err!("Failed to delete pod {}: {:?}", name, e))
-    }
-
-    async fn delete_service(&self, name: &str) -> Result<()> {
-        debug!("Deleting Service {}", name);
-        let service_api: Api<Service> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
-        service_api.delete(name, &Default::default()).await?;
-        retry::retry_async(retry::fixed_retry_strategy(5000, 30), || {
-            let service_api = service_api.clone();
-            let name = name.to_string();
-            Box::pin(async move {
-                match service_api.get(&name).await {
-                    Ok(_) => {
-                        bail!("Waiting for service {} to be deleted..", name);
-                    }
-                    Err(kube::Error::Api(ae)) => {
-                        if ae.code == ERROR_NOT_FOUND {
-                            debug!("Service {} deleted successfully", name);
-                            Ok(())
-                        } else {
-                            bail!("Waiting for service to be deleted..")
-                        }
-                    }
-                    Err(_) => bail!("Waiting for service {} to be deleted..", name),
-                }
-            })
-        })
-        .await
-        .map_err(|e| format_err!("Failed to delete service {}: {:?}", name, e))
+        .map_err(|e| format_err!("Failed to delete {} {}: {:?}", T::KIND, name, e))
     }
 
     async fn remove_all_network_effects_helper(&self) -> Result<()> {
@@ -408,7 +388,7 @@ impl ClusterSwarm for ClusterSwarmKube {
         };
         let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         if pod_api.get(&pod_name).await.is_ok() {
-            self.delete_pod(&pod_name).await?;
+            self.delete_resource::<Pod>(&pod_name).await?;
         }
         let node_name = if let Some(instance) = self.node_map.lock().await.get(&instance_config) {
             if let Some(k8s_node) = instance.k8s_node() {
@@ -511,8 +491,8 @@ impl ClusterSwarm for ClusterSwarmKube {
             ),
         };
         let service_name = pod_name.clone();
-        self.delete_pod(&pod_name).await?;
-        self.delete_service(&service_name).await
+        self.delete_resource::<Pod>(&pod_name).await?;
+        self.delete_resource::<Service>(&service_name).await
     }
 
     async fn delete_all(&self) -> Result<()> {
@@ -535,7 +515,9 @@ impl ClusterSwarm for ClusterSwarmKube {
                     .clone())
             })
             .collect::<Result<_, _>>()?;
-        let delete_futures = pod_names.iter().map(|pod_name| self.delete_pod(pod_name));
+        let delete_futures = pod_names
+            .iter()
+            .map(|pod_name| self.delete_resource::<Pod>(pod_name));
         try_join_all(delete_futures).await?;
         let service_api: Api<Service> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         let service_names: Vec<String> = service_api
@@ -558,7 +540,30 @@ impl ClusterSwarm for ClusterSwarmKube {
             .collect::<Result<_, _>>()?;
         let delete_futures = service_names
             .iter()
-            .map(|service_name| self.delete_service(service_name));
+            .map(|service_name| self.delete_resource::<Service>(service_name));
+        try_join_all(delete_futures).await?;
+        let job_api: Api<Job> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
+        let job_names: Vec<String> = job_api
+            .list(&ListParams {
+                label_selector: Some("libra-node=true".to_string()),
+                ..Default::default()
+            })
+            .await?
+            .iter()
+            .map(|job| -> Result<String, anyhow::Error> {
+                Ok(job
+                    .metadata
+                    .as_ref()
+                    .ok_or_else(|| format_err!("metadata not found for job"))?
+                    .name
+                    .as_ref()
+                    .ok_or_else(|| format_err!("name not found for job"))?
+                    .clone())
+            })
+            .collect::<Result<_, _>>()?;
+        let delete_futures = job_names
+            .iter()
+            .map(|job_name| self.delete_resource::<Job>(job_name));
         try_join_all(delete_futures).await?;
         Ok(())
     }
