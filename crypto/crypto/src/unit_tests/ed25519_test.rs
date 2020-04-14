@@ -109,17 +109,15 @@ proptest! {
 
         // Check that malleable signatures will pass verification and deserialization in dalek.
         // Construct the corresponding dalek public key.
-        let dalek_public_key = ed25519_dalek::PublicKey::from_bytes(
+        let _dalek_public_key = ed25519_dalek::PublicKey::from_bytes(
             &keypair.public_key.to_bytes()
         ).unwrap();
 
         // Construct the corresponding dalek Signature. This signature is malleable.
         let dalek_sig = ed25519_dalek::Signature::from_bytes(&serialized);
 
-        // ed25519_dalek will deserialize the malleable signature. It does NOT detect it.
-        prop_assert!(dalek_sig.is_ok());
-        // ed25519_dalek will verify malleable signatures as valid.
-        prop_assert!(dalek_public_key.verify(hash.as_ref(), &dalek_sig.unwrap()).is_ok());
+        // ed25519_dalek will (post 2.0) no longer deserialize the malleable signature. It does detect it.
+        prop_assert!(dalek_sig.is_err());
 
         let serialized_malleable: &[u8] = &serialized;
         // try_from will fail on malleable signatures. We detect malleable signatures
@@ -129,14 +127,10 @@ proptest! {
             Err(CryptoMaterialError::CanonicalRepresentationError)
         );
 
-        // We expect from_bytes_unchecked deserialization not to fail, as we don't check
+        // We expect from_bytes_unchecked deserialization to fail, as dalek checks
         // for signature malleability. This method is pub(crate) and only used for test purposes.
-        let sig_unchecked = Ed25519Signature::from_bytes_unchecked(&serialized).unwrap();
-
-        // Malleable signatures will fail to verify in our implementation, even if for some reason
-        // we receive one. Note that this is a second step of validation as we typically check
-        // malleable signatures during deserialization.
-        prop_assert!(keypair.public_key.verify_signature(&hash, &sig_unchecked).is_err());
+        let sig_unchecked = Ed25519Signature::from_bytes_unchecked(&serialized);
+        prop_assert!(sig_unchecked.is_err());
 
         // Update the signature by setting S = L to make it invalid.
         serialized[32..].copy_from_slice(&L.to_bytes());
