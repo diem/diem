@@ -5,6 +5,7 @@ use crate::util::time_service::{ScheduledTask, TimeService};
 use futures::{Future, FutureExt};
 use libra_logger::prelude::*;
 use std::{
+    mem,
     pin::Pin,
     sync::{Arc, Mutex},
     time::Duration,
@@ -65,10 +66,25 @@ impl TimeService for SimulatedTimeService {
     fn sleep(&self, t: Duration) -> Pin<Box<dyn Future<Output = ()> + Send>> {
         let inner = self.inner.clone();
         let fut = async move {
-            let mut inner = inner.lock().unwrap();
-            inner.now += t;
-            if inner.now > inner.max {
-                inner.now = inner.max;
+            let mut run_now = vec![];
+            {
+                let mut inner = inner.lock().unwrap();
+                inner.now += t;
+                if inner.now > inner.max {
+                    inner.now = inner.max;
+                }
+                let mut pending = vec![];
+                mem::swap(&mut inner.pending, &mut pending);
+                for (deadline, task) in pending {
+                    if deadline <= inner.now {
+                        run_now.push(task);
+                    } else {
+                        inner.pending.push((deadline, task));
+                    }
+                }
+            }
+            for mut task in run_now {
+                task.run().await;
             }
         };
         fut.boxed()
@@ -114,24 +130,27 @@ impl SimulatedTimeService {
 
     /// Update time_limit of this SimulatedTimeService instance and run pending tasks that has
     /// deadline lower then new time_limit
-    #[allow(dead_code)]
-    pub fn update_auto_advance_limit(&mut self, time: Duration) {
-        let mut inner = self.inner.lock().unwrap();
-        inner.time_limit += time;
-        let time_limit = inner.time_limit;
-        let mut i = 0;
+    pub async fn update_auto_advance_limit(&self, time: Duration) {
         let mut drain = vec![];
-        while i != inner.pending.len() {
-            let deadline = inner.pending[i].0;
-            if deadline <= time_limit {
-                drain.push(inner.pending.remove(i));
-            } else {
-                i += 1;
+        {
+            let mut inner = self.inner.lock().unwrap();
+            inner.time_limit += time;
+            let time_limit = inner.time_limit;
+            let mut now = inner.now;
+            let mut i = 0;
+            while i != inner.pending.len() {
+                let deadline = inner.pending[i].0;
+                if deadline <= time_limit {
+                    drain.push(inner.pending.remove(i));
+                    now = std::cmp::max(deadline, now);
+                } else {
+                    i += 1;
+                }
             }
+            inner.now = now;
         }
         for (_, mut t) in drain {
-            // probably could be done better then that, but for now I feel its good enough for tests
-            futures::executor::block_on(t.run());
+            t.run().await;
         }
     }
 }

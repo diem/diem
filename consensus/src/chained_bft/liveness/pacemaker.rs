@@ -82,7 +82,6 @@ pub struct ExponentialTimeInterval {
     max_exponent: usize,
 }
 
-#[allow(dead_code)]
 impl ExponentialTimeInterval {
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn fixed(duration: Duration) -> Self {

@@ -17,6 +17,7 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use futures::{channel::mpsc, SinkExt, StreamExt};
+use libra_logger::prelude::*;
 use libra_types::{block_info::BlockInfo, PeerId};
 use network::{
     peer_manager::{
@@ -223,6 +224,12 @@ impl NetworkPlayground {
                 msg_notif
             ),
         };
+        debug!(
+            "[network playground] Deliver {:?} from {} to {}",
+            msg_copy.1,
+            src.short_str(),
+            dst.short_str()
+        );
 
         node_consensus_tx
             .push((src, ProtocolId::ConsensusDirectSend), msg_notif)

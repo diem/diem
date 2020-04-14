@@ -9,6 +9,7 @@ use crate::{
     },
     state_computer::ExecutionProxy,
     txn_manager::MempoolProxy,
+    util::time_service::ClockTimeService,
 };
 use anyhow::Result;
 use channel::libra_channel;
@@ -22,6 +23,7 @@ use safety_rules::SafetyRulesManager;
 use state_synchronizer::StateSyncClient;
 use std::sync::{Arc, Mutex};
 use storage_interface::DbReader;
+use tokio::runtime;
 
 /// Public interface to a consensus protocol.
 pub trait ConsensusProvider {
@@ -47,9 +49,17 @@ pub fn make_consensus_provider(
     libra_db: Arc<dyn DbReader>,
     reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
 ) -> Box<dyn ConsensusProvider> {
+    let runtime = runtime::Builder::new()
+        .thread_name("consensus-")
+        .threaded_scheduler()
+        .enable_all()
+        .build()
+        .expect("Failed to create Tokio runtime!");
+
     let storage = Arc::new(StorageWriteProxy::new(node_config, libra_db));
     let txn_manager = Box::new(MempoolProxy::new(consensus_to_mempool_sender));
     let state_computer = Arc::new(ExecutionProxy::new(executor, state_sync_client));
+    let time_service = Arc::new(ClockTimeService::new(runtime.handle().clone()));
     let input = ChainedBftSMRInput {
         network_sender,
         network_events,
@@ -59,10 +69,12 @@ pub fn make_consensus_provider(
         storage,
         config: node_config.consensus.clone(),
         reconfig_events,
+        time_service,
     };
 
     Box::new(ChainedBftSMR::new(
         node_config.validator_network.as_ref().unwrap().peer_id,
         input,
+        runtime,
     ))
 }

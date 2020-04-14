@@ -26,7 +26,7 @@ pub use mock_state_computer::{EmptyStateComputer, MockStateComputer};
 pub use mock_storage::{EmptyStorage, MockSharedStorage, MockStorage};
 pub use mock_txn_manager::MockTransactionManager;
 
-pub const TEST_TIMEOUT: Duration = Duration::from_secs(60);
+pub const TEST_TIMEOUT: Duration = Duration::from_secs(10);
 
 pub type TestPayload = Vec<usize>;
 

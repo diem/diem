@@ -21,7 +21,7 @@ use crate::{
     },
     counters,
     state_replication::{StateComputer, TxnManager},
-    util::time_service::{ClockTimeService, TimeService},
+    util::time_service::TimeService,
 };
 use anyhow::anyhow;
 use consensus_types::{
@@ -74,7 +74,7 @@ impl<T: Payload> LivenessStorageData<T> {
 pub struct EpochManager<T> {
     author: Author,
     config: ConsensusConfig,
-    time_service: Arc<ClockTimeService>,
+    time_service: Arc<dyn TimeService>,
     self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
     network_sender: ConsensusNetworkSender<T>,
     timeout_sender: channel::Sender<Round>,
@@ -90,7 +90,7 @@ impl<T: Payload> EpochManager<T> {
     pub fn new(
         author: Author,
         config: ConsensusConfig,
-        time_service: Arc<ClockTimeService>,
+        time_service: Arc<dyn TimeService>,
         self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
         network_sender: ConsensusNetworkSender<T>,
         timeout_sender: channel::Sender<Round>,
@@ -395,6 +395,10 @@ impl<T: Payload> EpochManager<T> {
         peer_id: AccountAddress,
         consensus_msg: ConsensusMsg<T>,
     ) {
+        if self.processor.is_none() {
+            warn!("EventProcessor not started yet");
+            return;
+        }
         if let Some(event) = self.process_epoch(peer_id, consensus_msg).await {
             match event.verify(&self.epoch_info().verifier) {
                 Ok(event) => self.process_event(peer_id, event).await,

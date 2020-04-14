@@ -20,13 +20,13 @@ impl Default for ConsensusConfig {
     fn default() -> ConsensusConfig {
         ConsensusConfig {
             max_block_size: 1000,
+            contiguous_rounds: 2,
+            max_pruned_blocks_in_mem: 10000,
+            pacemaker_initial_timeout_ms: 1000,
             proposer_type: ConsensusProposerType::LeaderReputation(LeaderReputationConfig {
                 active_weights: 99,
                 inactive_weights: 1,
             }),
-            contiguous_rounds: 2,
-            max_pruned_blocks_in_mem: 10000,
-            pacemaker_initial_timeout_ms: 1000,
             safety_rules: SafetyRulesConfig::default(),
         }
     }
