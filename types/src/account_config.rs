@@ -15,6 +15,11 @@ use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 
 pub const LBR_NAME: &str = "LBR";
+
+pub static LBR_MODULE: Lazy<ModuleId> =
+    Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, Identifier::new(LBR_NAME).unwrap()));
+pub static LBR_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
+
 const ACCOUNT_MODULE_NAME: &str = "LibraAccount";
 
 // Libra
@@ -92,6 +97,11 @@ pub fn lbr_type_tag() -> TypeTag {
     })
 }
 
+// TODO: This imposes a few implied restrictions:
+//   1) The currency module must be published under the core code address.
+//   2) The module name must be the same as the gas specifier.
+//   3) The struct name must be "T"
+// We need to consider whether we want to switch to a more or fully qualified name.
 pub fn type_tag_for_ticker(ticker_symbol: Identifier) -> TypeTag {
     TypeTag::Struct(StructTag {
         address: CORE_CODE_ADDRESS,

@@ -32,7 +32,7 @@ use move_vm_state::{
     data_cache::BlockDataCache,
     execution_context::{ExecutionContext, TransactionExecutionContext},
 };
-use move_vm_types::{chain_state::ChainState, values::Value};
+use move_vm_types::{chain_state::ChainState, loaded_data::types::Type, values::Value};
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
@@ -389,6 +389,16 @@ fn create_and_initialize_main_accounts(
     // subsequent transaction (e.g., minting) is sent from the Assocation account, a problem
     // arises: both the genesis transaction and the subsequent transaction have sequence
     // number 0
+    let lbr_ty = Type::Struct(Box::new(
+        move_vm
+            .resolve_struct_def_by_name(
+                &account_config::LBR_MODULE,
+                &account_config::LBR_STRUCT_NAME,
+                interpreter_context,
+                &[],
+            )
+            .expect("Failure looking up LBR type"),
+    ));
     move_vm
         .execute_function(
             &account_config::ACCOUNT_MODULE,
@@ -396,7 +406,7 @@ fn create_and_initialize_main_accounts(
             &gas_schedule,
             interpreter_context,
             &txn_data,
-            vec![],
+            vec![lbr_ty],
             vec![
                 Value::u64(/* txn_sequence_number */ 0),
                 Value::u64(/* txn_gas_price */ 0),
