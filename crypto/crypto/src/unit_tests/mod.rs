@@ -3,5 +3,6 @@
 
 mod cross_test;
 mod ed25519_test;
+mod hash_test;
 mod hkdf_test;
 mod multi_ed25519_test;

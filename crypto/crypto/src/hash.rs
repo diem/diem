@@ -101,11 +101,6 @@ use std::{self, convert::AsRef, fmt};
 use tiny_keccak::{Hasher, Sha3};
 
 const LIBRA_HASH_SUFFIX: &[u8] = b"@@$$LIBRA$$@@";
-
-#[cfg(test)]
-#[path = "unit_tests/hash_test.rs"]
-mod hash_test;
-
 const SHORT_STRING_LENGTH: usize = 4;
 
 /// Output value of our hash function. Intentionally opaque for safety and modularity.

@@ -3,6 +3,7 @@
 
 use crate::hash::*;
 use bitvec::prelude::*;
+use libra_nibble::Nibble;
 use proptest::{collection::vec, prelude::*};
 use rand::{rngs::StdRng, SeedableRng};
 use serde::Serialize;
