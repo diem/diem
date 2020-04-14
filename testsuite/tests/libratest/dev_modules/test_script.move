@@ -1,2 +1,2 @@
-fun main(amount: u64, addr: address) {
+fun main(_amount: u64, _addr: address) {
 }

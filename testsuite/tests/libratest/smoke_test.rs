@@ -252,8 +252,8 @@ fn test_execute_custom_module_and_script() {
         .get_account_address_from_parameter("0")
         .unwrap();
 
-    // Get the path to the Move stdlib sources (using the staged version to match genesis).
-    let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/staged/src");
+    // Get the path to the Move stdlib sources
+    let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/modules");
     let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
 
     // Make a copy of module.move with "{{sender}}" substituted.
@@ -982,7 +982,7 @@ fn test_e2e_modify_publishing_option() {
     let script_path = workspace_builder::workspace_root()
         .join("testsuite/tests/libratest/dev_modules/test_script.move");
     let unwrapped_script_path = script_path.to_str().unwrap();
-    let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/staged/src");
+    let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/modules");
     let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
     let script_params = &["compile", "0", unwrapped_script_path, unwrapped_stdlib_dir];
     let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
@@ -1107,7 +1107,7 @@ fn test_malformed_script() {
     let script_path = workspace_builder::workspace_root()
         .join("testsuite/tests/libratest/dev_modules/test_script.move");
     let unwrapped_script_path = script_path.to_str().unwrap();
-    let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/staged/src");
+    let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/modules");
     let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
     let script_params = &["compile", "0", unwrapped_script_path, unwrapped_stdlib_dir];
     let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
