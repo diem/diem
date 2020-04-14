@@ -81,6 +81,10 @@ impl<T: Payload> MockStorage<T> {
         }
     }
 
+    pub fn get_validator_set(&self) -> &ValidatorSet {
+        &self.shared_storage.validator_set
+    }
+
     pub fn get_ledger_recovery_data(&self) -> LedgerRecoveryData {
         LedgerRecoveryData::new(
             self.storage_ledger.lock().unwrap().clone(),

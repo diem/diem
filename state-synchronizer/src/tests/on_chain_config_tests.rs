@@ -44,6 +44,14 @@ fn test_on_chain_config_pub_sub() {
         vec![subscription],
     ));
 
+    assert!(
+        reconfig_receiver
+            .select_next_some()
+            .now_or_never()
+            .is_some(),
+        "expect initial config notification",
+    );
+
     // start state sync with initial loading of on-chain configs
     rt.block_on(executor_proxy.load_on_chain_configs())
         .expect("failed to load on-chain configs");
