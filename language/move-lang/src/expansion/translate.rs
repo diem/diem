@@ -6,7 +6,7 @@ use crate::{
     expansion::ast::{self as E, Fields, SpecId},
     parser::ast::{
         self as P, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, ModuleIdent_,
-        ModuleName, StructName, Var,
+        ModuleName, StructName,
     },
     shared::{remembering_unique_map::RememberingUniqueMap, unique_map::UniqueMap, *},
 };
@@ -94,10 +94,7 @@ impl Context {
         if self.in_spec_context {
             true
         } else {
-            self.error(vec![(
-                loc,
-                &format!("{} only allowed in specifications", item),
-            )]);
+            self.error(vec![(loc, item)]);
             false
         }
     }
@@ -608,9 +605,18 @@ fn spec_member(context: &mut Context, sp!(loc, pm): P::SpecBlockMember) -> E::Sp
                 body,
             }
         }
-        PM::Variable { name, type_: t } => {
+        PM::Variable {
+            name,
+            type_parameters: pty_params,
+            type_: t,
+        } => {
+            let type_parameters = type_parameters(context, pty_params);
             let t = type_(context, t);
-            EM::Variable { name, type_: t }
+            EM::Variable {
+                name,
+                type_parameters,
+                type_: t,
+            }
         }
     };
     sp(loc, em)
@@ -643,7 +649,9 @@ fn type_(context: &mut Context, sp!(loc, pt_): P::Type) -> E::Type {
         }
         PT::Ref(mut_, inner) => ET::Ref(mut_, Box::new(type_(context, *inner))),
         PT::Fun(args, result) => {
-            if context.require_spec_context(loc, "`|_|_` function type") {
+            if context
+                .require_spec_context(loc, "`|_|_` function type only allowed in specifications")
+            {
                 let args = types(context, args);
                 let result = type_(context, *result);
                 ET::Fun(args, Box::new(result))
@@ -774,14 +782,44 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::InferredNum(u) => EE::InferredNum(u),
         PE::Move(v) => EE::Move(v),
         PE::Copy(v) => EE::Copy(v),
-        PE::Name(n) => match context.module_alias_get(&n) {
-            Some(_) => {
-                let msg = format!("Unexpected module alias '{}'. Modules are not values.'", n);
-                context.error(vec![(loc, msg)]);
+        PE::Name(pn, ptys_opt) => {
+            if (matches!(pn.value, P::ModuleAccess_::ModuleAccess(..)) || ptys_opt.is_some())
+                && !context.require_spec_context(
+                    pn.loc,
+                    "Expected either a brace-enclosed list of field expressions or a parenthesized list of arguments for a function call",
+                )
+            {
+                assert!(context.has_errors());
                 EE::UnresolvedError
+            } else {
+                let mk_name = |context: &mut Context, pn| {
+                    let en_opt = module_access(context, pn);
+                    let tys_opt = ptys_opt.map(|pts| types(context, pts));
+                    match en_opt {
+                        Some(en) => EE::Name(en, tys_opt),
+                        None => {
+                            assert!(context.has_errors());
+                            EE::UnresolvedError
+                        }
+                    }
+                };
+                if let sp!(nloc, P::ModuleAccess_::Name(n)) = &pn {
+                    match context.module_alias_get(&n) {
+                        Some(_) => {
+                            let msg = format!(
+                                "Unexpected module alias '{}'. Modules are not values.'",
+                                n
+                            );
+                            context.error(vec![(*nloc, msg)]);
+                            EE::UnresolvedError
+                        }
+                        None => mk_name(context, pn),
+                    }
+                } else {
+                    mk_name(context, pn)
+                }
             }
-            None => EE::Name(n),
-        },
+        }
         PE::GlobalCall(n, ptys_opt, sp!(rloc, prs)) => {
             let tys_opt = ptys_opt.map(|pts| types(context, pts));
             let ers = sp(rloc, exps(context, prs));
@@ -828,7 +866,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::Loop(ploop) => EE::Loop(exp(context, *ploop)),
         PE::Block(seq) => EE::Block(sequence(context, loc, seq)),
         PE::Lambda(pbs, pe) => {
-            if !context.require_spec_context(loc, "`|_| _` lambda expression") {
+            if !context.require_spec_context(loc, "`|_| _` lambda expression only allowed in specifications") {
                 assert!(context.has_errors());
                 EE::UnresolvedError
             } else {
@@ -875,7 +913,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::UnaryExp(op, pe) => EE::UnaryExp(op, exp(context, *pe)),
         PE::BinopExp(pl, op, pr) => {
             if op.value.is_spec_only()
-                && !context.require_spec_context(loc, &format!("`{}` operator", op.value.symbol()))
+                && !context.require_spec_context(loc, &format!("`{}` operator only allowed in specifications", op.value.symbol()))
             {
                 assert!(context.has_errors());
                 EE::UnresolvedError
@@ -893,7 +931,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         },
         PE::Cast(e, ty) => EE::Cast(exp(context, *e), type_(context, ty)),
         PE::Index(e, i) => {
-            if context.require_spec_context(loc, "`_[_]` index operator") {
+            if context.require_spec_context(loc, "`_[_]` index operator only allowed in specifications") {
                 EE::Index(exp(context, *e), exp(context, *i))
             } else {
                 EE::UnresolvedError
@@ -962,7 +1000,7 @@ fn bind(context: &mut Context, sp!(loc, pb_): P::Bind) -> Option<E::LValue> {
     use E::LValue_ as EL;
     use P::Bind_ as PB;
     let b_ = match pb_ {
-        PB::Var(v) => EL::Var(v),
+        PB::Var(v) => EL::Var(sp(loc, E::ModuleAccess_::Name(v.0)), None),
         PB::Unpack(ptn, ptys_opt, pfields) => {
             let tn = module_access(context, ptn)?;
             let tys_opt = ptys_opt.map(|pts| types(context, pts));
@@ -1010,7 +1048,19 @@ fn assign(context: &mut Context, sp!(loc, e_): P::Exp) -> Option<E::LValue> {
     use E::LValue_ as EL;
     use P::Exp_ as PE;
     let a_ = match e_ {
-        PE::Name(n) => EL::Var(Var(n)),
+        PE::Name(pn, ptys_opt) => {
+            let en = module_access(context, pn)?;
+            let tys_opt = ptys_opt.map(|pts| types(context, pts));
+            if (tys_opt.is_some() || matches!(en.value, E::ModuleAccess_::ModuleAccess(..)))
+                && !context.require_spec_context(
+                    loc,
+                    "only simple names allowed in assignment outside of specifications",
+                )
+            {
+                assert!(context.has_errors());
+            }
+            EL::Var(en, tys_opt)
+        }
         PE::Pack(pn, ptys_opt, pfields) => {
             let en = module_access(context, pn)?;
             let tys_opt = ptys_opt.map(|pts| types(context, pts));
@@ -1075,11 +1125,12 @@ fn unbound_names_exp(unbound: &mut BTreeSet<Name>, sp!(_, e_): &E::Exp) {
         | EE::Break
         | EE::Continue
         | EE::UnresolvedError
+        | EE::Name(sp!(_, E::ModuleAccess_::ModuleAccess(..)), _)
         | EE::Unit => (),
         EE::Copy(v) | EE::Move(v) => {
             unbound.insert(v.0.clone());
         }
-        EE::Name(n) => {
+        EE::Name(sp!(_, E::ModuleAccess_::Name(n)), _) => {
             unbound.insert(n.clone());
         }
         EE::GlobalCall(_, _, sp!(_, es_)) | EE::Call(_, _, sp!(_, es_)) => {
@@ -1166,8 +1217,11 @@ fn unbound_names_binds(unbound: &mut BTreeSet<Name>, sp!(_, ls_): &E::LValueList
 fn unbound_names_bind(unbound: &mut BTreeSet<Name>, sp!(_, l_): &E::LValue) {
     use E::LValue_ as EL;
     match l_ {
-        EL::Var(v) => {
-            unbound.remove(&v.0);
+        EL::Var(en, _) => {
+            // Qualified vars are not considered in unbound set.
+            if let E::ModuleAccess_::Name(n) = &en.value {
+                unbound.remove(&n);
+            }
         }
         EL::Unpack(_, _, efields) => efields
             .iter()
@@ -1184,8 +1238,11 @@ fn unbound_names_assigns(unbound: &mut BTreeSet<Name>, sp!(_, ls_): &E::LValueLi
 fn unbound_names_assign(unbound: &mut BTreeSet<Name>, sp!(_, l_): &E::LValue) {
     use E::LValue_ as EL;
     match l_ {
-        EL::Var(v) => {
-            unbound.insert(v.0.clone());
+        EL::Var(en, _) => {
+            // Qualified vars are not considered in unbound set.
+            if let E::ModuleAccess_::Name(n) = &en.value {
+                unbound.insert(n.clone());
+            }
         }
         EL::Unpack(_, _, efields) => efields
             .iter()

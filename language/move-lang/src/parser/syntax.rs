@@ -287,7 +287,10 @@ fn parse_exp_field<'input>(tokens: &mut Lexer<'input>) -> Result<(Field, Exp), E
     let arg = if match_token(tokens, Tok::Colon)? {
         parse_exp(tokens)?
     } else {
-        sp(f.loc(), Exp_::Name(f.0.clone()))
+        sp(
+            f.loc(),
+            Exp_::Name(sp(f.loc(), ModuleAccess_::Name(f.0.clone())), None),
+        )
     };
     Ok((f, arg))
 }
@@ -555,6 +558,7 @@ fn parse_sequence<'input>(tokens: &mut Lexer<'input>) -> Result<Sequence, Error>
 //          "break"
 //          | "continue"
 //          | <Name>
+//          | <ModuleAccess> ("<" Comma<Type> ">")?          (spec only)
 //          | <Value>
 //          | "(" Comma<Exp> ")"
 //          | "(" <Exp> ":" <Type> ")"
@@ -577,33 +581,36 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
         }
 
         Tok::NameValue => {
+            let name_loc = make_loc(tokens.file_name(), start_loc, start_loc);
             // Check if this is a ModuleAccess for a pack or call expression.
             match tokens.lookahead()? {
-                Tok::ColonColon | Tok::LBrace | Tok::LParen => parse_pack_or_call(tokens)?,
+                Tok::ColonColon | Tok::LBrace | Tok::LParen => {
+                    parse_pack_or_call_or_generic_name(tokens)?
+                }
                 Tok::Less => {
                     // There's an ambiguity here. If there is no whitespace after the
                     // name, treat it as the start of a list of type arguments. Otherwise
                     // assume that the "<" is a boolean operator.
                     let next_start = tokens.lookahead_start_loc();
                     if next_start == start_loc + tokens.content().len() {
-                        parse_pack_or_call(tokens).or_else(|mut e| {
-                            let loc = make_loc(tokens.file_name(), next_start, next_start);
+                        let loc = make_loc(tokens.file_name(), next_start, next_start);
+                        parse_pack_or_call_or_generic_name(tokens).or_else(|mut e| {
                             let msg = "Perhaps you need a blank space before this '<' operator?";
                             e.push((loc, msg.to_owned()));
                             Err(e)
                         })?
                     } else {
-                        Exp_::Name(parse_name(tokens)?)
+                        Exp_::Name(sp(name_loc, ModuleAccess_::Name(parse_name(tokens)?)), None)
                     }
                 }
-                _ => Exp_::Name(parse_name(tokens)?),
+                _ => Exp_::Name(sp(name_loc, ModuleAccess_::Name(parse_name(tokens)?)), None),
             }
         }
 
         Tok::AddressValue => {
             // Check if this is a ModuleIdent (in a ModuleAccess).
             if tokens.lookahead()? == Tok::ColonColon {
-                parse_pack_or_call(tokens)?
+                parse_pack_or_call_or_generic_name(tokens)?
             } else {
                 Exp_::Value(parse_value(tokens)?)
             }
@@ -712,11 +719,12 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
     Ok(spanned(tokens.file_name(), start_loc, end_loc, term))
 }
 
-// Parse the subset of expression terms for pack and call operations.
+// Parse the subset of expression terms for pack and call operations, as well as for generic names
+// (in specifications only).
 // This is a helper function for parse_term.
-fn parse_pack_or_call<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
+fn parse_pack_or_call_or_generic_name<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
     let n = parse_module_access(tokens, || {
-        panic!("parse_pack_or_call with something other than a NameValue or AddressValue token")
+        panic!("parse_pack_or_call_or_generic_name with something other than a NameValue or AddressValue token")
     })?;
     let tys = if tokens.peek() == Tok::Less {
         Some(parse_comma_list(
@@ -748,11 +756,8 @@ fn parse_pack_or_call<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error>
             Ok(Exp_::Call(n, tys, rhs))
         }
 
-        _ => {
-            let expected = "either a brace-enclosed list of field expressions or \
-                            a parenthesized list of arguments for a function call";
-            Err(unexpected_token_error(tokens, expected))
-        }
+        // <ModuleAccess> ("<" Comma<Type> ">")?
+        _ => Ok(Exp_::Name(n, tys)),
     }
 }
 
@@ -1644,6 +1649,17 @@ fn parse_spec_variable<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMe
     let start_loc = tokens.start_loc();
     consume_token(tokens, Tok::NameValue)?;
     let name = parse_name(tokens)?;
+    let type_parameters = if tokens.peek() == Tok::Less {
+        parse_comma_list(
+            tokens,
+            Tok::Less,
+            Tok::Greater,
+            parse_type_parameter,
+            "a type parameter",
+        )?
+    } else {
+        vec![]
+    };
     consume_token(tokens, Tok::Colon)?;
     let type_ = parse_type(tokens)?;
     consume_token(tokens, Tok::Semicolon)?;
@@ -1651,7 +1667,11 @@ fn parse_spec_variable<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMe
         tokens.file_name(),
         start_loc,
         tokens.previous_end_loc(),
-        SpecBlockMember_::Variable { name, type_ },
+        SpecBlockMember_::Variable {
+            name,
+            type_parameters,
+            type_,
+        },
     ))
 }
 

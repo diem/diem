@@ -40,6 +40,7 @@ use crate::{
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, BOOL_TYPE},
 };
+use move_ir_types::location::Spanned;
 
 // =================================================================================================
 /// # Translator
@@ -772,7 +773,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 Function {
                     name, signature, ..
                 } => self.decl_ana_spec_fun(&loc, name, signature),
-                Variable { name, type_ } => self.decl_ana_var(&loc, name, type_),
+                Variable { name, type_, .. } => self.decl_ana_var(&loc, name, type_),
                 _ => {}
             }
         }
@@ -1819,7 +1820,13 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 Value::Number(BigUint::from_u128(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U128),
             ),
-            EA::Exp_::Name(n) => self.translate_name(&loc, n, expected_type),
+            EA::Exp_::Name(
+                Spanned {
+                    value: EA::ModuleAccess_::Name(n),
+                    ..
+                },
+                _,
+            ) => self.translate_name(&loc, n, expected_type),
             EA::Exp_::Call(maccess, generics, args) => {
                 // We need the args to be a `&Vec<&Exp>`. This allows us to
                 // construct arg vectors for translate_call on the fly without need to clone
@@ -1972,11 +1979,15 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     }
                     let bind_loc = self.to_loc(&list.value[0].loc);
                     match &list.value[0].value {
-                        EA::LValue_::Var(var) => {
+                        EA::LValue_::Var(maccess, _) => {
+                            let name = match &maccess.value {
+                                EA::ModuleAccess_::Name(n) => n,
+                                EA::ModuleAccess_::ModuleAccess(_, n) => n,
+                            };
                             // Declare the variable in the local environment. Currently we mimic
                             // Rust/ML semantics here, allowing to shadow with each let.
                             self.enter_scope();
-                            let name = self.symbol_pool().make(&var.0.value);
+                            let name = self.symbol_pool().make(&name.value);
                             self.define_local(&bind_loc, name, t.clone(), None);
                             let id = self.new_node_id_with_type_loc(&t, &bind_loc);
                             decls.push(LocalVarDecl {
@@ -2095,8 +2106,15 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             );
             return None;
         }
-        if let EA::LValue_::Var(var) = &list.value[0].value {
-            Some(self.symbol_pool().make(&var.0.value))
+        if let EA::LValue_::Var(
+            Spanned {
+                value: EA::ModuleAccess_::Name(n),
+                ..
+            },
+            _,
+        ) = &list.value[0].value
+        {
+            Some(self.symbol_pool().make(&n.value))
         } else {
             self.error(
                 var_loc,
@@ -2465,8 +2483,14 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         for bind in &bindings.value {
             let loc = self.to_loc(&bind.loc);
             match &bind.value {
-                EA::LValue_::Var(v) => {
-                    let name = self.symbol_pool().make(&v.0.value);
+                EA::LValue_::Var(
+                    Spanned {
+                        value: EA::ModuleAccess_::Name(n),
+                        ..
+                    },
+                    _,
+                ) => {
+                    let name = self.symbol_pool().make(&n.value);
                     let ty = self.fresh_type_var();
                     let id = self.new_node_id_with_type_loc(&ty, &loc);
                     self.define_local(&loc, name, ty.clone(), None);
@@ -2477,7 +2501,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         binding: None,
                     });
                 }
-                EA::LValue_::Unpack(..) => {
+                EA::LValue_::Unpack(..) | EA::LValue_::Var(..) => {
                     self.error(&loc, "[current restriction] tuples not supported in lambda")
                 }
             }
