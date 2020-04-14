@@ -1,0 +1,84 @@
+============ initial translation from Move ================
+
+fun TestSpecBlock::looping(x: u64): u64 {
+    var $t1: u64
+    var $t2: u64
+    var $t3: bool
+    var $t4: u64
+    var $t5: u64
+    var $t6: u64
+    var $t7: u64
+    spec at 592..616
+    L2:
+    $t1 := copy(x)
+    $t2 := 10
+    $t3 := <($t1, $t2)
+    if ($t3) goto L0
+    goto L1
+    L0:
+    spec at 653..676
+    $t4 := copy(x)
+    $t5 := 1
+    $t6 := +($t4, $t5)
+    x := $t6
+    goto L2
+    L1:
+    spec at 718..742
+    $t7 := copy(x)
+    return $t7
+}
+
+
+fun TestSpecBlock::simple1(x: u64, y: u64) {
+    var $t2: u64
+    var $t3: u64
+    var $t4: bool
+    var $t5: bool
+    var $t6: u64
+    $t2 := copy(x)
+    $t3 := copy(y)
+    $t4 := >($t2, $t3)
+    $t5 := !($t4)
+    if ($t5) goto L0
+    goto L1
+    L0:
+    $t6 := 1
+    abort($t6)
+    L1:
+    spec at 97..139
+    return ()
+}
+
+
+fun TestSpecBlock::simple2(x: u64) {
+    var y: u64
+    var $t2: u64
+    var $t3: u64
+    var $t4: u64
+    $t2 := copy(x)
+    $t3 := 1
+    $t4 := +($t2, $t3)
+    y := $t4
+    spec at 220..267
+    return ()
+}
+
+
+fun TestSpecBlock::simple3(x: u64, y: u64) {
+    spec at 317..386
+    return ()
+}
+
+
+fun TestSpecBlock::simple4(x: u64, y: u64) {
+    var z: u64
+    var $t3: u64
+    var $t4: u64
+    var $t5: u64
+    $t3 := copy(x)
+    $t4 := copy(y)
+    $t5 := +($t3, $t4)
+    z := $t5
+    spec at 475..545
+    return ()
+}

@@ -98,25 +98,18 @@ impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
     ) -> Self::State {
         use Bytecode::*;
         let mut post = pre;
-        match instr.skip_labelled() {
+        match instr {
             Assign(_, dst, src, _) => {
                 post.def_alias(*dst, *src);
             }
             Load(_, dst, cons) => {
                 post.def_const(*dst, cons.clone());
             }
-            Call(_, dsts, ..) | Unpack(_, dsts, ..) => {
+            Call(_, dsts, ..) => {
                 for dst in dsts {
                     post.kill(*dst);
                 }
             }
-            BorrowLoc(_, dst, ..)
-            | BorrowField(_, dst, ..)
-            | BorrowGlobal(_, dst, ..)
-            | MoveFrom(_, dst, ..)
-            | Exists(_, dst, ..)
-            | Unary(_, _, dst, ..)
-            | Binary(_, _, dst, ..) => post.kill(*dst),
             _ => {}
         }
         post

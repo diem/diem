@@ -38,7 +38,7 @@ use crate::{
     ty::{PrimitiveType, Type},
 };
 use std::collections::BTreeMap;
-use vm::CompiledModule;
+use vm::{file_format::Bytecode, CompiledModule};
 
 // =================================================================================================
 /// # Locations
@@ -1315,6 +1315,18 @@ impl<'env> FunctionEnv<'env> {
             }
         }
         self.get_loc()
+    }
+
+    /// Returns the bytecode associated with this function.
+    pub fn get_bytecode(&self) -> &[Bytecode] {
+        let function_definition = self
+            .module_env
+            .data
+            .module
+            .function_def_at(self.get_def_idx());
+        let function_definition_view =
+            FunctionDefinitionView::new(&self.module_env.data.module, function_definition);
+        &function_definition_view.code().code
     }
 
     /// Returns true if this function is native.
