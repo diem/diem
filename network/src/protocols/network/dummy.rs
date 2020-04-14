@@ -145,7 +145,7 @@ pub fn setup_network() -> DummyNetwork {
     network_builder
         .transport(TransportType::TcpNoise(Some(listener_identity_private_key)))
         .trusted_peers(trusted_peers.clone())
-        .signing_keys((listener_signing_private_key, listener_signing_public_key))
+        .signing_keypair((listener_signing_private_key, listener_signing_public_key))
         .discovery_interval_ms(HOUR_IN_MS)
         .add_discovery();
     let (listener_sender, mut listener_events) = add_to_network(&mut network_builder);
@@ -161,7 +161,7 @@ pub fn setup_network() -> DummyNetwork {
     network_builder
         .transport(TransportType::TcpNoise(Some(dialer_identity_private_key)))
         .trusted_peers(trusted_peers)
-        .signing_keys((dialer_signing_private_key, dialer_signing_public_key))
+        .signing_keypair((dialer_signing_private_key, dialer_signing_public_key))
         .seed_peers(
             [(listener_peer_id, vec![listen_addr])]
                 .iter()

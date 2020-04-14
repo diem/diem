@@ -53,7 +53,12 @@ pub fn validator_swarm(
         }
 
         let test = node.test.as_ref().unwrap();
-        let consensus_pubkey = test.consensus_keypair.as_ref().unwrap().public().clone();
+        let consensus_pubkey = test
+            .consensus_keypair
+            .as_ref()
+            .unwrap()
+            .public_key()
+            .clone();
         let network_keypairs = network
             .network_keypairs
             .as_ref()
@@ -63,8 +68,8 @@ pub fn validator_swarm(
             network.peer_id,
             consensus_pubkey,
             1, // @TODO: Add support for dynamic weights
-            network_keypairs.signing_keys.public().clone(),
-            network_keypairs.identity_public_key(),
+            network_keypairs.signing_keypair.public_key(),
+            network_keypairs.identity_keypair.public_key(),
         ));
 
         // TODO(philiphayes): as a temporary hack, we'll just duplicate the
@@ -72,9 +77,9 @@ pub fn validator_swarm(
         // empty fullnode info.
         discovery_infos.push(DiscoveryInfo {
             account_address: network.peer_id,
-            validator_network_identity_pubkey: network_keypairs.identity_public_key(),
+            validator_network_identity_pubkey: network_keypairs.identity_keypair.public_key(),
             validator_network_address: network.advertised_address.clone(),
-            fullnodes_network_identity_pubkey: network_keypairs.identity_public_key(),
+            fullnodes_network_identity_pubkey: network_keypairs.identity_keypair.public_key(),
             fullnodes_network_address: network.advertised_address.clone(),
         });
 

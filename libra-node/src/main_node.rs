@@ -102,15 +102,15 @@ pub fn setup_network(config: &mut NetworkConfig, role: RoleType) -> (Runtime, Ne
             .network_keypairs
             .as_mut()
             .expect("Network keypairs are not defined");
-        let signing_keys = &mut network_keypairs.signing_keys;
-        let signing_private = signing_keys
+        let signing_keypair = &mut network_keypairs.signing_keypair;
+        let signing_private = signing_keypair
             .take_private()
             .expect("Failed to take Network signing private key, key absent or already read");
-        let signing_public = signing_keys.public().clone();
+        let signing_public = signing_keypair.public_key();
 
         let identity_key = network_keypairs
-            .identity_private_key
-            .take()
+            .identity_keypair
+            .take_private()
             .expect("identity key should be present");
 
         let trusted_peers = if role == RoleType::Validator {
@@ -124,7 +124,7 @@ pub fn setup_network(config: &mut NetworkConfig, role: RoleType) -> (Runtime, Ne
             .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
             .seed_peers(seed_peers)
             .trusted_peers(trusted_peers)
-            .signing_keys((signing_private, signing_public))
+            .signing_keypair((signing_private, signing_public))
             .discovery_interval_ms(config.discovery_interval_ms)
             .add_discovery();
     } else if config.enable_noise {
@@ -132,8 +132,8 @@ pub fn setup_network(config: &mut NetworkConfig, role: RoleType) -> (Runtime, Ne
             .network_keypairs
             .as_mut()
             .expect("Network keypairs are not defined")
-            .identity_private_key
-            .take()
+            .identity_keypair
+            .take_private()
             .expect("identity key should be present");
         // Even if a network end-point operates without remote authentication, it might want to prove
         // its identity to another peer it connects to. For this, we use TCP + Noise but without

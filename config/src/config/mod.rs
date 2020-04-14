@@ -281,7 +281,8 @@ impl NodeConfig {
 
         if self.base.role == RoleType::Validator {
             test.random_account_key(rng);
-            let peer_id = PeerId::from_public_key(test.account_keypair.as_ref().unwrap().public());
+            let peer_id =
+                PeerId::from_public_key(&test.account_keypair.as_ref().unwrap().public_key());
 
             if self.validator_network.is_none() {
                 self.validator_network = Some(NetworkConfig::default());

@@ -3,7 +3,7 @@
 
 use crate::{
     config::{PersistableConfig, RoleType, RootPath},
-    keys::{KeyPair, PrivateKeyContainer},
+    keys::KeyPair,
     utils,
 };
 use anyhow::{anyhow, ensure, Result};
@@ -126,7 +126,7 @@ impl NetworkConfig {
 
         // TODO(joshlind): investigate the implications of removing these checks.
         if let Some(network_keypairs) = &self.network_keypairs {
-            let identity_public_key = network_keypairs.identity_public_key();
+            let identity_public_key = network_keypairs.identity_keypair.public_key();
             let peer_id = AuthenticationKey::try_from(identity_public_key.as_slice())
                 .unwrap()
                 .derived_address();
@@ -180,7 +180,7 @@ impl NetworkConfig {
         self.peer_id = if let Some(peer_id) = peer_id {
             peer_id
         } else {
-            let identity_public_key = network_keypairs.identity_public_key();
+            let identity_public_key = network_keypairs.identity_keypair.public_key();
             AuthenticationKey::try_from(identity_public_key.as_slice())
                 .unwrap()
                 .derived_address()
@@ -200,17 +200,17 @@ pub struct SeedPeersConfig {
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct NetworkKeyPairs {
-    pub identity_private_key: PrivateKeyContainer<x25519::PrivateKey>,
-    #[serde(skip)]
-    identity_public_key: Option<x25519::PublicKey>,
-    pub signing_keys: KeyPair<Ed25519PrivateKey>,
+    #[serde(rename = "identity_private_key")]
+    pub identity_keypair: KeyPair<x25519::PrivateKey>,
+    #[serde(rename = "signing_private_key")]
+    pub signing_keypair: KeyPair<Ed25519PrivateKey>,
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
 impl PartialEq for NetworkKeyPairs {
     fn eq(&self, other: &Self) -> bool {
-        self.identity_private_key == other.identity_private_key
-            && self.signing_keys == other.signing_keys
+        self.identity_keypair == other.identity_keypair
+            && self.signing_keypair == other.signing_keypair
     }
 }
 
@@ -220,27 +220,17 @@ impl NetworkKeyPairs {
         identity_private_key: x25519::PrivateKey,
         signing_private_key: Ed25519PrivateKey,
     ) -> Self {
-        let identity_public_key = Some(identity_private_key.public_key());
         Self {
-            identity_private_key: PrivateKeyContainer::Present(identity_private_key),
-            identity_public_key,
-            signing_keys: KeyPair::load(signing_private_key),
+            identity_keypair: KeyPair::load(identity_private_key),
+            signing_keypair: KeyPair::load(signing_private_key),
         }
     }
 
     pub fn as_peer_info(&self) -> NetworkPeerInfo {
         NetworkPeerInfo {
-            identity_public_key: self.identity_public_key(),
-            signing_public_key: self.signing_keys.public().clone(),
+            identity_public_key: self.identity_keypair.public_key(),
+            signing_public_key: self.signing_keypair.public_key(),
         }
-    }
-
-    pub fn identity_public_key(&self) -> x25519::PublicKey {
-        self.identity_public_key.unwrap_or_else(|| {
-            self.identity_private_key
-                .public_key()
-                .expect("identity private key should be present")
-        })
     }
 }
 

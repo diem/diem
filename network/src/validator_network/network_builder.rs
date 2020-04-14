@@ -113,7 +113,7 @@ pub struct NetworkBuilder {
     max_concurrent_network_reqs: usize,
     max_concurrent_network_notifs: usize,
     max_connection_delay_ms: u64,
-    signing_keys: Option<(Ed25519PrivateKey, Ed25519PublicKey)>,
+    signing_keypair: Option<(Ed25519PrivateKey, Ed25519PublicKey)>,
     enable_remote_authentication: bool,
 }
 
@@ -167,7 +167,7 @@ impl NetworkBuilder {
             max_concurrent_network_reqs: MAX_CONCURRENT_NETWORK_REQS,
             max_concurrent_network_notifs: MAX_CONCURRENT_NETWORK_NOTIFS,
             max_connection_delay_ms: MAX_CONNECTION_DELAY_MS,
-            signing_keys: None,
+            signing_keypair: None,
             enable_remote_authentication: true,
         }
     }
@@ -194,8 +194,8 @@ impl NetworkBuilder {
     }
 
     /// Set signing keys of local node.
-    pub fn signing_keys(&mut self, keys: (Ed25519PrivateKey, Ed25519PublicKey)) -> &mut Self {
-        self.signing_keys = Some(keys);
+    pub fn signing_keypair(&mut self, keypair: (Ed25519PrivateKey, Ed25519PublicKey)) -> &mut Self {
+        self.signing_keypair = Some(keypair);
         self
     }
 
@@ -386,7 +386,7 @@ impl NetworkBuilder {
         // discovery module or not. We should make this more explicit eventually.
         // Initialize and start Discovery actor.
         let (signing_private_key, _signing_public_key) =
-            self.signing_keys.take().expect("Signing keys not set");
+            self.signing_keypair.take().expect("Signing keys not set");
         // Get handles for network events and sender.
         let (discovery_network_tx, discovery_network_rx) = discovery::add_to_network(self);
         let addrs = vec![self
