@@ -58,11 +58,16 @@ kube_select_cluster () {
   for attempt in {1..360} ; do
     for ((i = 0; i < ${K8S_POOL_SIZE}; i++)); do
       local context=${K8S_CONTEXT_PATTERN/CLUSTERNAME/ct-${i}}
-      local running_pods=$(kubectl --context="${context}" get pods -l app=cluster-test --field-selector=status.phase==Running 2> /dev/null | wc -l)
+      local running_pods=$(kubectl --context="${context}" get pods -l app=cluster-test --field-selector=status.phase==Running 2> /dev/null  | grep -v ^NAME | wc -l)
+      local pending_pods=$(kubectl --context="${context}" get pods -l app=cluster-test --field-selector=status.phase==Pending 2> /dev/null | grep -v ^NAME | wc -l)
       local prometheus_healthy_containers=$(kubectl --context="${context}" get pod/libra-testnet-prometheus-server-0 | grep 'libra-testnet-prometheus-server-0' | awk '{print $2}')
-      if [[ ${prometheus_healthy_containers} != "2/2" ]]; then
-        echo "prometheus is not healthy for ct-${i}"
-      elif [[ $running_pods -eq 0 ]] && [[ ${prometheus_healthy_containers} == "2/2" ]]; then
+      if [[ "${pending_pods}" -gt 0 ]]; then
+        echo "ct-${i} has ${pending_pods} pending pods. Skipping."
+      elif [[ ${prometheus_healthy_containers} != "2/2" ]]; then
+        echo "prometheus is not healthy for ct-${i}. Skipping."
+      elif [[ ${running_pods} -gt 0 ]]; then
+        echo "ct-${i} has ${running_pods} running pods. Skipping."
+      else
         retval_kube_select_cluster="ct-${i}"
         return
       fi
@@ -88,8 +93,15 @@ kube_wait_pod () {
       echo "${pod_name} reached phase : ${phase}"
       return
     fi
+    if kubectl --context="${context}" get pod "${pod_name}" | grep -i -e ImagePullBackOff -e ErrImagePull &>/dev/null; then
+      image_name=$(kubectl --context="${context}" get pod "${pod_name}" -o jsonpath="{.spec.containers[0].image}")
+      echo "${pod_name} name failed to be scheduled because there was an error pulling the image : ${image_name}"
+      # Delete the pod so that it doesn't block other pods from being scheduled on this
+      kubectl  --context="${context}" delete pod "${pod_name}"
+      exit 1
+    fi
     echo "Waiting for ${pod_name} to be scheduled. Current phase : ${phase}"
-    sleep 5
+    sleep 10
   done
   echo "Pod ${pod_name} failed to be scheduled"
   exit 1

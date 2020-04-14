@@ -10,7 +10,7 @@ jobs:
   build-and-run-cluster-test:
     name: Build images and run cluster test
     runs-on: self-hosted
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v1
       - name: Setup env
