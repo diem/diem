@@ -957,38 +957,38 @@ procedure {:inline 1} $Vector_contains(ta: TypeValue, vr: Reference, er: Referen
 // using a sha2_inverse function in the ensures conditions of Hash_sha2_256 to
 // assert that sha2/3 are injections without using global quantified axioms.
 
-function $sha2(val: Value) : Value;
+function $Hash_sha2(val: Value) : Value;
 
-// This says that sha2 respects isEquals (this would be automatic if we had an
+// This says that Hash_sha2 respects isEquals (this would be automatic if we had an
 // extensional theory of arrays and used ==, which has the substitution property
 // for functions).
 axiom (forall v1,v2: Value :: $Vector_is_well_formed(v1) && $Vector_is_well_formed(v2)
-       && IsEqual(v1, v2) ==> IsEqual($sha2(v1), $sha2(v2)));
+       && IsEqual(v1, v2) ==> IsEqual($Hash_sha2(v1), $Hash_sha2(v2)));
 
-// This says that sha2 is an injection
+// This says that Hash_sha2 is an injection
 axiom (forall v1,v2: Value :: $Vector_is_well_formed(v1) && $Vector_is_well_formed(v2)
-        && IsEqual($sha2(v1), $sha2(v2)) ==> IsEqual(v1, v2));
+        && IsEqual($Hash_sha2(v1), $Hash_sha2(v2)) ==> IsEqual(v1, v2));
 
 // This procedure has no body. We want Boogie to just to use its requires
 // and ensures properties when verifying code that calls it.
 procedure $Hash_sha2_256(val: Value) returns (res: Value);
 // It will still work without this, but this helps verifier find more reasonable counterexamples.
 // requires $IsValidU8Vector(val);  // FIXME: Generated calling code does not ensure validity.
-ensures res == $sha2(val);     // returns sha2 value
+ensures res == $Hash_sha2(val);     // returns Hash_sha2 value
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
 ensures $vlen(res) == 32;               // result is 32 bytes.
 
-// similarly for sha3
-function $sha3(val: Value) : Value;
+// similarly for Hash_sha3
+function $Hash_sha3(val: Value) : Value;
 
 axiom (forall v1,v2: Value :: $Vector_is_well_formed(v1) && $Vector_is_well_formed(v2)
-       && IsEqual(v1, v2) ==> IsEqual($sha3(v1), $sha3(v2)));
+       && IsEqual(v1, v2) ==> IsEqual($Hash_sha3(v1), $Hash_sha3(v2)));
 
 axiom (forall v1,v2: Value :: $Vector_is_well_formed(v1) && $Vector_is_well_formed(v2)
-        && IsEqual($sha3(v1), $sha3(v2)) ==> IsEqual(v1, v2));
+        && IsEqual($Hash_sha3(v1), $Hash_sha3(v2)) ==> IsEqual(v1, v2));
 
 procedure $Hash_sha3_256(val: Value) returns (res: Value);
-ensures res == $sha3(val);     // returns sha3 value
+ensures res == $Hash_sha3(val);     // returns Hash_sha3 value
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
 ensures $vlen(res) == 32;               // result is 32 bytes.
 

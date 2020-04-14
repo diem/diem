@@ -209,6 +209,14 @@ module LibraAccount {
         // The sender has retained her withdrawal privileges--proceed.
         withdraw_from_balance<Token>(sender_balance, amount)
     }
+    spec fun withdraw_from_sender {
+        aborts_if !exists<T>(sender());
+        aborts_if !exists<Balance<Token>>(sender());
+        aborts_if global<T>(sender()).delegated_withdrawal_capability;
+        aborts_if old(global<Balance<Token>>(sender()).coin.value) < amount;
+        ensures global<Balance<Token>>(sender()).coin.value == old(global<Balance<Token>>(sender()).coin.value) - amount;
+        ensures result.value == amount;
+    }
 
     // Withdraw `amount` Libra::T<Token> from the account under cap.account_address
     public fun withdraw_with_capability<Token>(
@@ -216,6 +224,12 @@ module LibraAccount {
     ): Libra::T<Token> acquires Balance {
         let balance = borrow_global_mut<Balance<Token>>(cap.account_address);
         withdraw_from_balance<Token>(balance , amount)
+    }
+    spec fun withdraw_with_capability {
+        aborts_if !exists<Balance<Token>>(cap.account_address);
+        aborts_if old(global<Balance<Token>>(cap.account_address).coin.value) < amount;
+        ensures global<Balance<Token>>(cap.account_address).coin.value == old(global<Balance<Token>>(cap.account_address).coin.value) - amount;
+        ensures result.value == amount;
     }
 
     // Return a unique capability granting permission to withdraw from the sender's account balance.
@@ -550,6 +564,68 @@ module LibraAccount {
         Transaction::assert(txn_sequence_number >= sender_account.sequence_number, 3);
         Transaction::assert(txn_sequence_number == sender_account.sequence_number, 4);
         Transaction::assert(LibraTransactionTimeout::is_valid_transaction_timestamp(txn_expiration_time), 7);
+    }
+//    spec fun prologue { // TODO: Verify this spec. Currently, unable to verify due to the multiplication involved
+//        aborts_if !exists<T>(sender());
+//        aborts_if Hash::sha3(txn_public_key) != global<T>(sender()).authentication_key;
+//        aborts_if !exists<Balance<LBR::T>>(sender());
+//        aborts_if global<Balance<LBR::T>>(sender()).coin.value < (txn_gas_price * txn_max_gas_units);
+//        aborts_if txn_sequence_number < global<T>(sender()).sequence_number;
+//        aborts_if txn_sequence_number != global<T>(sender()).sequence_number;
+//        aborts_if txn_expiration_time > 9223372036854;
+//        aborts_if !exists<LibraTransactionTimeout::TTL>(0xA550C18);
+//        aborts_if global<0x0::LibraTimestamp::CurrentTimeMicroseconds>(0xA550C18).microseconds + global<LibraTransactionTimeout::TTL>(0xA550C18).duration_microseconds > max_u64();
+//        aborts_if !exists<0x0::LibraTimestamp::CurrentTimeMicroseconds>(0xA550C18);
+//        aborts_if txn_expiration_time * 1000000 > max_u64();
+//        aborts_if global<0x0::LibraTimestamp::CurrentTimeMicroseconds>(0xA550C18).microseconds >= (txn_expiration_time * 1000000);
+//    }
+
+    // A simplified version of `epilogue` that take `max_transaction_fee` as an argument instead of calculating internally.
+    // TODO: Remove this function after finishing verifying `prologue`
+    fun simplified_prologue(
+        txn_sequence_number: u64,
+        txn_public_key: vector<u8>,
+        max_transaction_fee: u64,
+        txn_expiration_time: u64,
+    ) acquires T, Balance {
+        let transaction_sender = Transaction::sender();
+
+        // FUTURE: Make these error codes sequential
+        // Verify that the transaction sender's account exists
+        Transaction::assert(exists(transaction_sender), 5);
+
+        // Load the transaction sender's account
+        let sender_account = borrow_global_mut<T>(transaction_sender);
+
+        // Check that the hash of the transaction's public key matches the account's auth key
+        Transaction::assert(
+            Hash::sha3_256(txn_public_key) == *&sender_account.authentication_key,
+            2
+        );
+
+        // Check that the account has enough balance for all of the gas
+        //let max_transaction_fee = txn_gas_price * txn_max_gas_units;
+        let balance_amount = balance<LBR::T>(transaction_sender);
+        Transaction::assert(balance_amount >= max_transaction_fee, 6);
+
+        // Check that the transaction sequence number matches the sequence number of the account
+        Transaction::assert(txn_sequence_number >= sender_account.sequence_number, 3);
+        Transaction::assert(txn_sequence_number == sender_account.sequence_number, 4);
+        Transaction::assert(LibraTransactionTimeout::is_valid_transaction_timestamp(txn_expiration_time), 7);
+    }
+    spec fun simplified_prologue {
+        aborts_if !exists<T>(sender());
+        aborts_if Hash::sha3(txn_public_key) != global<T>(sender()).authentication_key;
+        aborts_if !exists<Balance<LBR::T>>(sender());
+        aborts_if global<Balance<LBR::T>>(sender()).coin.value < max_transaction_fee;
+        aborts_if txn_sequence_number < global<T>(sender()).sequence_number;
+        aborts_if txn_sequence_number != global<T>(sender()).sequence_number;
+        aborts_if txn_expiration_time > 9223372036854;
+        aborts_if !exists<LibraTransactionTimeout::TTL>(0xA550C18);
+        aborts_if global<0x0::LibraTimestamp::CurrentTimeMicroseconds>(0xA550C18).microseconds + global<LibraTransactionTimeout::TTL>(0xA550C18).duration_microseconds > max_u64();
+        aborts_if !exists<0x0::LibraTimestamp::CurrentTimeMicroseconds>(0xA550C18);
+        aborts_if txn_expiration_time * 1000000 > max_u64();
+        aborts_if global<0x0::LibraTimestamp::CurrentTimeMicroseconds>(0xA550C18).microseconds >= (txn_expiration_time * 1000000);
     }
 
     // The epilogue is invoked at the end of transactions.
