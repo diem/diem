@@ -1279,7 +1279,6 @@ dependencies = [
  "rand 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusty-fork 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "scratchpad 0.1.0",
- "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.51 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
  "storage-client 0.1.0",
