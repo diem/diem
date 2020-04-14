@@ -1,17 +1,18 @@
 [validator_network]
-peer_id = "afd41847853f81de4b37cd030195b25a"
-seed_peers_file = "afd41847853f81de4b37cd030195b25a.seed_peers.toml"
+peer_id = "31893204fa402143c11b26ce8a89ea1d"
+seed_peers_file = "31893204fa402143c11b26ce8a89ea1d.seed_peers.toml"
 
 [validator_network.network_keypairs]
-identity_private_key = "70389b2e9483015d869e620ec46209f1e84b5f94b2339f6d327e0508cd5e3857"
+identity_private_key = "288b53541ed20ddaa5dea1b78f1fc08446de1f93b0e07080f7f2ee9be681e47f"
+identity_public_key = "2eaab94e262f1f7443c558588157cbb3185a7302263dafc4bfe75a2b01f06776"
 
 [validator_network.network_keypairs.signing_keys]
-private_key = "55f8f8956dde49b412e105460193381bf3fca57565a8a096e60ac7bdd6a0953f"
-public_key = "f5c974b9ead1ca6a6d5d93eb3bd5906e2b7cf5f710c8a7c86c8c6e918f42c4b1"
+private_key = "66dd107034b4582a2ef42c5e1ea475f2fea477a10a9f1d75b3635243b2506b32"
+public_key = "f09263c17aa2e64a311b1ce512608f3e35f8481c736ae1d7db125a0ce58d3782"
 
 [test.account_keypair]
-private_key = "a9ccbb14534fa25b8e2c8062f82592ca4a6ecd228895ef48a21faf480f4fdb9f"
-public_key = "8a09af25da4e547c7192a0f7f05c2b8db94af316a5b599bd2cff8797c28ae68b"
+private_key = "f6b898412f4ab061943167c1e23efaa2ba98e345a093f0b06da13bffdbd4b2c7"
+public_key = "5cea31ed5918cbdac5f5c4e782d295c0b3033ed5d0eac941e8ea8bb0ab4480a3"
 [test.consensus_keypair]
-private_key = "87572b6c1ac0bc9f5245d04f7963c35db0713f0f08685f038d55f8c22a5c45b9"
-public_key = "7fb83ee67e2b16f89510cdd7c061b32a482d68465d24df70acc65b074b3f7862"
+private_key = "f2b916c8b1bf6123854d2fca5384f128199f7a1b2f847316481429b4b35238cc"
+public_key = "ca68c65c24a94c3aca0626e573dbdfe7e799a2565e9051b634fec1a42d3baaf9"
