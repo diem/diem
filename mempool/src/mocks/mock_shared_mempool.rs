@@ -1,10 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
+
 use crate::{
     core_mempool::{CoreMempool, TimelineState},
     network::{MempoolNetworkEvents, MempoolNetworkSender},
-    shared_mempool::{start_shared_mempool, SubmissionStatus},
-    CommitNotification, ConsensusRequest,
+    shared_mempool::start_shared_mempool,
+    CommitNotification, ConsensusRequest, SubmissionStatus,
 };
 use anyhow::{format_err, Result};
 use channel::{self, libra_channel, message_queues::QueueStyle};

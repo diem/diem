@@ -9,9 +9,10 @@ use crate::{
     mocks::MockSharedMempool,
     network::{MempoolNetworkEvents, MempoolNetworkSender, MempoolSyncMsg},
     shared_mempool::{
-        start_shared_mempool, ConsensusRequest, SharedMempoolNotification, SyncEvent,
+        start_shared_mempool,
+        types::{SharedMempoolNotification, SyncEvent},
     },
-    CommitNotification, CommittedTransaction,
+    CommitNotification, CommittedTransaction, ConsensusRequest,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use futures::{
