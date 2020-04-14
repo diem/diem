@@ -13,7 +13,7 @@ use std::{
 };
 
 use codespan::{ByteIndex, ByteOffset, ColumnIndex, FileId, LineIndex, Location, Span};
-use codespan_reporting::diagnostic::{Diagnostic, Label, Severity};
+use codespan_reporting::diagnostic::{Diagnostic, Label};
 use itertools::Itertools;
 use log::{debug, info, warn};
 use num::BigInt;
@@ -138,23 +138,19 @@ impl<'env> BoogieWrapper<'env> {
             }
         });
         let on_source = loc_opt.is_some();
-        let label = if let Some(loc) = &loc_opt {
-            Label::new(loc.file_id(), loc.span(), "")
+        let label: Label<FileId> = if let Some(loc) = &loc_opt {
+            Label::<FileId>::primary(loc.file_id(), loc.span()).with_message("")
         } else {
-            Label::new(self.boogie_file_id, Span::new(index, index), "")
+            Label::<FileId>::primary(self.boogie_file_id, Span::new(index, index)).with_message("")
         };
 
-        // Create the error
-        let mut diag = Diagnostic::new(
-            if on_source {
-                Severity::Error
-            } else {
-                // Consider diags on boogie source as bugs
-                Severity::Bug
-            },
-            &error.message,
-            label,
-        );
+        let mut diag = if on_source {
+            Diagnostic::<FileId>::error()
+        } else {
+            Diagnostic::<FileId>::bug()
+        }
+        .with_message(&error.message)
+        .with_labels([label].to_vec());
 
         // Now add trace diagnostics.
         if error.kind.is_from_verification()

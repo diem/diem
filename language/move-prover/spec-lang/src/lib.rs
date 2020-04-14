@@ -9,6 +9,7 @@ use crate::{
     translate::{ModuleTranslator, Translator},
 };
 use anyhow::anyhow;
+use codespan::FileId;
 use codespan_reporting::diagnostic::{Diagnostic, Label};
 use move_lang::{
     compiled_unit::{self, CompiledUnit},
@@ -72,15 +73,22 @@ pub fn run_spec_lang_compiler(
 }
 
 fn add_move_lang_errors(env: &mut GlobalEnv, errors: Errors) {
-    let mk_label = |env: &mut GlobalEnv, err: (move_ir_types::location::Loc, String)| {
+    let mk_secondary_lbl = |err: (move_ir_types::location::Loc, String)| -> Label<FileId> {
         let loc = env.to_loc(&err.0);
-        Label::new(loc.file_id(), loc.span(), err.1)
+        Label::<FileId>::secondary(loc.file_id(), loc.span()).with_message(err.1)
     };
+    let mk_primary_lbl = |err: (move_ir_types::location::Loc, String)| -> Label<FileId> {
+        let loc = env.to_loc(&err.0);
+        Label::<FileId>::primary(loc.file_id(), loc.span()).with_message(err.1)
+    };
+
     for mut error in errors {
-        let primary = error.remove(0);
-        let diag = Diagnostic::new_error("", mk_label(env, primary))
-            .with_secondary_labels(error.into_iter().map(|e| mk_label(env, e)));
-        env.add_diag(diag);
+        let err = error.remove(0);
+        let mut labels = vec![mk_primary_lbl(err)];
+        labels.extend(error.into_iter().map(mk_secondary_lbl));
+        Diagnostic::<FileId>::error()
+            .with_message("")
+            .with_labels(labels);
     }
 }
 

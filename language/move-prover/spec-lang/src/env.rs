@@ -222,7 +222,7 @@ pub struct GlobalEnv {
     /// In difference to an `unknown_loc`, this is a well-known but undisclosed location.
     internal_loc: Loc,
     /// Accumulated diagnosis. In a RefCell so we can add to it without needing a mutable GlobalEnv.
-    diags: RefCell<Vec<Diagnostic>>,
+    diags: RefCell<Vec<Diagnostic<FileId>>>,
     /// Pool of symbols -- internalized strings.
     symbol_pool: SymbolPool,
     /// List of loaded modules, in order they have been provided using `add`.
@@ -280,14 +280,16 @@ impl GlobalEnv {
     }
 
     /// Adds diagnostic to the environment.
-    pub fn add_diag(&self, diag: Diagnostic) {
+    pub fn add_diag(&self, diag: Diagnostic<FileId>) {
         self.diags.borrow_mut().push(diag);
     }
 
     /// Adds an error to this environment, with notes.
     pub fn error_with_notes(&self, loc: &Loc, msg: &str, notes: Vec<String>) {
-        let diag = Diagnostic::new_error(msg, Label::new(loc.file_id, loc.span, ""));
-        let diag = diag.with_notes(notes);
+        let diag = Diagnostic::<FileId>::error()
+            .with_labels([Label::<FileId>::primary(loc.file_id, loc.span)].to_vec())
+            .with_message(msg)
+            .with_notes(notes);
         self.add_diag(diag);
     }
 

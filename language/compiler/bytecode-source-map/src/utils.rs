@@ -46,8 +46,10 @@ pub fn render_errors(source_mapper: &SourceMapping<Loc>, errors: Errors) -> Resu
     }
 }
 
-pub fn create_diagnostic(id: FileId, (loc, msg): Error) -> Diagnostic {
-    Diagnostic::new_error("", Label::new(id, loc.span(), msg))
+pub fn create_diagnostic(id: FileId, (loc, msg): Error) -> Diagnostic<FileId> {
+    Diagnostic::<FileId>::error()
+        .with_labels([Label::primary(id, loc.span()).with_message(msg)].to_vec())
+        .with_message("")
 }
 
 //***************************************************************************

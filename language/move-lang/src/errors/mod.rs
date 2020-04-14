@@ -104,7 +104,7 @@ fn render_errors<W: WriteColor>(
         }
         seen.insert(hashable_error);
         let err = render_error(files, file_mapping, error);
-        emit(writer, &Config::default(), &files, &err).unwrap()
+        emit(writer, &Config::default(), files, &err).unwrap()
     }
 }
 
@@ -117,14 +117,26 @@ fn convert_loc(files: &Files<String>, file_mapping: &FileMapping, loc: Loc) -> (
     (id, Span::new(begin_index, end_index))
 }
 
-fn render_error(files: &Files<String>, file_mapping: &FileMapping, mut error: Error) -> Diagnostic {
-    let mk_lbl = |err: (Loc, String)| -> Label {
+fn render_error(
+    files: &Files<String>,
+    file_mapping: &FileMapping,
+    mut error: Error,
+) -> Diagnostic<FileId> {
+    let mk_secondary_lbl = |err: (Loc, String)| -> Label<FileId> {
         let (id, span) = convert_loc(files, file_mapping, err.0);
-        Label::new(id, span, err.1)
+        Label::<FileId>::secondary(id, span).with_message(err.1)
     };
+    let mk_primary_lbl = |err: (Loc, String)| -> Label<FileId> {
+        let (id, span) = convert_loc(files, file_mapping, err.0);
+        Label::<FileId>::primary(id, span).with_message(err.1)
+    };
+
     let err = error.remove(0);
+    let mut labels = vec![mk_primary_lbl(err)];
+    labels.extend(error.into_iter().map(mk_secondary_lbl));
+
     // TODO message with each error msg
-    let mut diag = Diagnostic::new_error("", mk_lbl(err));
-    diag = diag.with_secondary_labels(error.into_iter().map(mk_lbl));
-    diag
+    Diagnostic::<FileId>::error()
+        .with_message("")
+        .with_labels(labels)
 }
