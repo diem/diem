@@ -102,4 +102,17 @@ module M {
     fun using_implies(x: u64): u64 {
         x
     }
+
+    spec module {
+        global generic<T>: u64;
+        invariant update generic<u64> = 23;
+        invariant update Self::generic<u64> = 24;
+    }
+
+    fun some_generic<T>() {
+    }
+    spec fun some_generic {
+        ensures generic<T> == 1;
+        ensures Self::generic<T> == 1;
+    }
 }

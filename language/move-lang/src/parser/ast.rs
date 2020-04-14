@@ -203,6 +203,7 @@ pub enum SpecBlockMember_ {
     },
     Variable {
         name: Name,
+        type_parameters: Vec<(Name, Kind)>,
         type_: Type,
     },
 }
@@ -378,8 +379,9 @@ pub enum Exp_ {
     Move(Var),
     // copy(x)
     Copy(Var),
-    // n
-    Name(Name),
+    // [m::]n[<t1, .., tn>]
+    Name(ModuleAccess, Option<Vec<Type>>),
+
     // ::n(e)
     GlobalCall(Name, Option<Vec<Type>>, Spanned<Vec<Exp>>),
 
@@ -834,8 +836,13 @@ impl AstDebug for SpecBlockMember_ {
                     FunctionBody_::Native => w.writeln(";"),
                 }
             }
-            SpecBlockMember_::Variable { name, type_ } => {
+            SpecBlockMember_::Variable {
+                name,
+                type_parameters,
+                type_,
+            } => {
                 w.write(&format!("{}", name));
+                type_parameters.ast_debug(w);
                 w.write(": ");
                 type_.ast_debug(w);
             }
@@ -1032,7 +1039,14 @@ impl AstDebug for Exp_ {
             E::InferredNum(u) => w.write(&format!("{}", u)),
             E::Move(v) => w.write(&format!("move {}", v)),
             E::Copy(v) => w.write(&format!("copy {}", v)),
-            E::Name(n) => w.write(&format!("{}", n)),
+            E::Name(ma, tys_opt) => {
+                ma.ast_debug(w);
+                if let Some(ss) = tys_opt {
+                    w.write("<");
+                    ss.ast_debug(w);
+                    w.write(">");
+                }
+            }
             E::GlobalCall(n, tys_opt, sp!(_, rhs)) => {
                 w.write(&format!("::{}", n));
                 if let Some(ss) = tys_opt {

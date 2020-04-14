@@ -1,14 +1,8 @@
 error: 
 
-   ┌── tests/move_check/expansion/standalone_mname_with_type_args.move:3:27 ───
+   ┌── tests/move_check/expansion/standalone_mname_with_type_args.move:3:21 ───
    │
  3 │         let _ = 0 + M<u64>;
-   │                           ^ Unexpected ';'
-   ·
- 3 │         let _ = 0 + M<u64>;
-   │                           - Expected either a brace-enclosed list of field expressions or a parenthesized list of arguments for a function call
-   ·
- 3 │         let _ = 0 + M<u64>;
-   │                      - Perhaps you need a blank space before this '<' operator?
+   │                     ^ Expected either a brace-enclosed list of field expressions or a parenthesized list of arguments for a function call
    │
 

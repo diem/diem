@@ -706,7 +706,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
         EE::Value(val) => NE::Value(val),
         EE::Move(v) => NE::Move(v),
         EE::Copy(v) => NE::Copy(v),
-        EE::Name(v) => NE::Use(Var(v)),
+        EE::Name(sp!(_, E::ModuleAccess_::Name(v)), None) => NE::Use(Var(v)),
 
         EE::IfElse(eb, et, ef) => {
             NE::IfElse(exp(context, *eb), exp(context, *et), exp(context, *ef))
@@ -845,7 +845,11 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
             assert!(context.has_errors());
             NE::UnresolvedError
         }
-        EE::Index(..) | EE::Lambda(..) => panic!("unexpected specification construct"),
+        EE::Index(..) | EE::Lambda(..) |
+        // matches name variants only allowed in specs (we handle the allowed ones above)
+        EE::Name(..) => {
+            panic!("unexpected specification construct")
+        }
     };
     sp(eloc, ne_)
 }
@@ -876,7 +880,8 @@ fn lvalue(context: &mut Context, case: LValueCase, sp!(loc, l_): E::LValue) -> O
     use E::LValue_ as EL;
     use N::LValue_ as NL;
     let nl_ = match l_ {
-        EL::Var(v) => {
+        EL::Var(sp!(_, E::ModuleAccess_::Name(n)), None) => {
+            let v = Var(n);
             if v.starts_with_underscore() {
                 NL::Ignore
             } else {
@@ -901,6 +906,7 @@ fn lvalue(context: &mut Context, case: LValueCase, sp!(loc, l_): E::LValue) -> O
                 nfields.expect("ICE fields were already unique"),
             )
         }
+        EL::Var(..) => panic!("unexpected specification construct"),
     };
     Some(sp(loc, nl_))
 }
