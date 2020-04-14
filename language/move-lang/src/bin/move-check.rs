@@ -42,7 +42,7 @@ pub struct Options {
 }
 
 pub fn main() {
-    std::process::exit(match real_main() {
+    std::process::exit(match main_impl() {
         Ok(_) => 0,
         Err(e) => {
             eprintln!("error: {}", e);
@@ -51,7 +51,7 @@ pub fn main() {
     });
 }
 
-pub fn real_main() -> std::io::Result<()> {
+pub fn main_impl() -> std::io::Result<()> {
     let Options {
         source_files,
         dependencies,
