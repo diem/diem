@@ -99,8 +99,8 @@ impl JsonRpcBatch {
     pub fn add_get_account_state_with_proof_request(
         &mut self,
         account: AccountAddress,
-        version: u64,
-        ledger_version: u64,
+        version: Option<u64>,
+        ledger_version: Option<u64>,
     ) {
         self.add_request(
             "get_account_state_with_proof".to_string(),
