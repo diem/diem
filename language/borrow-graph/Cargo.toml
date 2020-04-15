@@ -8,4 +8,4 @@ license = "Apache-2.0"
 
 [dependencies]
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-mirai-annotations = "1.4.0"
+mirai-annotations = "1.7.0"

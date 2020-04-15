@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 byteorder = "1.3.2"
-mirai-annotations = "1.5.0"
+mirai-annotations = "1.7.0"
 num-derive = "0.3.0"
 num-traits = "0.2"
 proptest = { version = "0.9.6", optional = true }
