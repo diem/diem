@@ -24,7 +24,6 @@ fn initial_libra_version() {
         1,
         TXN_RESERVED,
         1,
-        account_config::LBR_NAME.to_string(),
     );
     executor.new_block();
     executor.execute_and_apply(txn);

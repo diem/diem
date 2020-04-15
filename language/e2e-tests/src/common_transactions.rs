@@ -6,7 +6,7 @@
 use crate::{account::Account, gas_costs};
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{lbr_type_tag, LBR_NAME},
+    account_config::lbr_type_tag,
     transaction::{RawTransaction, SignedTransaction, TransactionArgument},
 };
 use stdlib::transaction_scripts::StdlibScript;
@@ -27,7 +27,6 @@ pub fn add_validator_txn(
         seq_num,
         gas_costs::TXN_RESERVED * 2,
         1,
-        LBR_NAME.to_string(),
     )
 }
 
@@ -50,7 +49,6 @@ pub fn create_account_txn(
         seq_num,
         gas_costs::TXN_RESERVED,
         1,
-        LBR_NAME.to_string(),
     )
 }
 
@@ -75,7 +73,6 @@ pub fn peer_to_peer_txn(
         seq_num,
         gas_costs::TXN_RESERVED, // this is a default for gas
         1,                       // this is a default for gas
-        LBR_NAME.to_string(),
     )
 }
 
@@ -105,7 +102,6 @@ pub fn register_validator_txn(
         seq_num,
         gas_costs::TXN_RESERVED,
         1,
-        LBR_NAME.to_string(),
     )
 }
 
@@ -121,7 +117,6 @@ pub fn rotate_key_txn(sender: &Account, new_key_hash: Vec<u8>, seq_num: u64) -> 
         seq_num,
         gas_costs::TXN_RESERVED,
         1,
-        LBR_NAME.to_string(),
     )
 }
 
@@ -142,7 +137,6 @@ pub fn raw_rotate_key_txn(
         seq_num,
         gas_costs::TXN_RESERVED,
         1,
-        LBR_NAME.to_string(),
     )
 }
 
@@ -162,7 +156,6 @@ pub fn rotate_consensus_pubkey_txn(
         seq_num,
         gas_costs::TXN_RESERVED,
         1,
-        LBR_NAME.to_string(),
     )
 }
 
@@ -186,6 +179,5 @@ pub fn mint_txn(
         seq_num,
         gas_costs::TXN_RESERVED, // this is a default for gas
         1,                       // this is a default for gas
-        LBR_NAME.to_string(),
     )
 }

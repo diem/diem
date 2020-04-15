@@ -11,7 +11,7 @@ use libra_crypto::{
 use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{association_address, lbr_type_tag, AccountResource, LBR_NAME},
+    account_config::{association_address, lbr_type_tag, AccountResource},
     block_info::BlockInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::{
@@ -322,7 +322,6 @@ fn create_transaction(
         program,
         400_000, /* max_gas_amount */
         1,       /* gas_unit_price */
-        LBR_NAME.to_string(),
         expiration_time,
     );
 

@@ -7,7 +7,7 @@ use crate::{
 };
 use libra_types::{
     access_path::{AccessPath, Accesses},
-    account_config::{lbr_type_tag, CORE_CODE_ADDRESS, LBR_NAME},
+    account_config::{lbr_type_tag, CORE_CODE_ADDRESS},
     contract_event::ContractEvent,
     language_storage::{ResourceKey, StructTag},
     on_chain_config::new_epoch_event_key,
@@ -34,7 +34,6 @@ fn verify_and_execute_writeset() {
         0,
         100_000,
         1,
-        LBR_NAME.to_string(),
     );
 
     let output = executor.execute_transaction(writeset_txn.clone());
@@ -74,7 +73,6 @@ fn verify_and_execute_writeset() {
         10,
         100_000,
         1,
-        LBR_NAME.to_string(),
     );
     let output = executor.execute_transaction(writeset_txn.clone());
     let expected_err = VMStatus::new(StatusCode::ABORTED).with_sub_status(11);
@@ -107,7 +105,6 @@ fn bad_writesets() {
         0,
         100_000,
         1,
-        LBR_NAME.to_string(),
     );
 
     let output = executor.execute_transaction(writeset_txn);
@@ -124,7 +121,6 @@ fn bad_writesets() {
         0,
         100_000,
         1,
-        LBR_NAME.to_string(),
     );
 
     let output = executor.execute_transaction(writeset_txn);
@@ -154,7 +150,6 @@ fn bad_writesets() {
         0,
         100_000,
         0,
-        LBR_NAME.to_string(),
     );
 
     let output = executor.execute_transaction(writeset_txn);
