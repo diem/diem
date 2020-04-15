@@ -9,6 +9,11 @@ use crate::{
 use serde::de::{self, DeserializeSeed, IntoDeserializer, Visitor};
 use std::collections::BTreeMap;
 
+/// Deserialize a single value.
+/// * The lifetime 'a is set by the deserialization call site and the
+/// `&'a mut` references used to return tracing results.
+/// * The lifetime 'de is fixed and the `&'de` reference meant to let us
+/// borrow values from previous serialization runs.
 pub(crate) struct Deserializer<'de, 'a> {
     tracer: &'a mut Tracer,
     records: &'de SerializationRecords,

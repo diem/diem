@@ -195,6 +195,7 @@ fn test_trace_deserialization_with_custom_invariants() {
     let (format, value) = tracer.trace_value(&mut records, &bob).unwrap();
     assert_eq!(format, Format::TypeName("Name".into()));
     assert_eq!(value, Value::Str("Bob".into()));
+    assert_eq!(records.value("Name"), Some(&value));
 
     // Now try again.
     let (format, samples) = tracer.trace_type::<Person>(&records).unwrap();
