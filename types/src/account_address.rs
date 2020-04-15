@@ -5,7 +5,7 @@ use crate::transaction::authenticator::AuthenticationKey;
 use anyhow::{ensure, Error, Result};
 use bytes::Bytes;
 use libra_crypto::{
-    ed25519::Ed25519PublicKey,
+    ed25519,
     hash::{CryptoHash, CryptoHasher},
     HashValue,
 };
@@ -48,11 +48,11 @@ impl AccountAddress {
         self.0.to_vec()
     }
 
-    pub fn authentication_key(public_key: &Ed25519PublicKey) -> AuthenticationKey {
+    pub fn authentication_key(public_key: &ed25519::VerifyingKey) -> AuthenticationKey {
         AuthenticationKey::ed25519(public_key)
     }
 
-    pub fn from_public_key(public_key: &Ed25519PublicKey) -> Self {
+    pub fn from_public_key(public_key: &ed25519::VerifyingKey) -> Self {
         AccountAddress::authentication_key(public_key).derived_address()
     }
 

@@ -11,7 +11,7 @@ use crate::{
     Executor, OP_COUNTERS,
 };
 use libra_config::config::NodeConfig;
-use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue};
+use libra_crypto::{ed25519, HashValue};
 use libra_types::{
     account_address::AccountAddress,
     block_info::BlockInfo,
@@ -26,7 +26,7 @@ use storage_client::{StorageRead, StorageReadServiceClient, SyncStorageClient};
 use storage_service::{init_libra_db, start_storage_service_with_db};
 use tokio::runtime::Runtime;
 
-fn build_test_config() -> (NodeConfig, Ed25519PrivateKey) {
+fn build_test_config() -> (NodeConfig, ed25519::SigningKey) {
     let mut validator_config = config_builder::ValidatorConfig::new();
     let randomize_service_ports = true;
     let randomize_libranet_ports = false;

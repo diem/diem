@@ -16,10 +16,10 @@ pub mod transaction;
 use crate::data::{
     LIBRA_ADDRESS_SIZE, LIBRA_EVENT_KEY_SIZE, LIBRA_PRIVKEY_SIZE, LIBRA_PUBKEY_SIZE,
 };
-use libra_crypto::ed25519::{ED25519_PRIVATE_KEY_LENGTH, ED25519_PUBLIC_KEY_LENGTH};
+use libra_crypto::ed25519;
 use libra_types::{account_address::AccountAddress, event::EventKey};
 
-static_assertions::const_assert_eq!(LIBRA_PUBKEY_SIZE, ED25519_PUBLIC_KEY_LENGTH as u32);
-static_assertions::const_assert_eq!(LIBRA_PRIVKEY_SIZE, ED25519_PRIVATE_KEY_LENGTH as u32);
+static_assertions::const_assert_eq!(LIBRA_PUBKEY_SIZE, ed25519::PUBLIC_KEY_LENGTH as u32);
+static_assertions::const_assert_eq!(LIBRA_PRIVKEY_SIZE, ed25519::PRIVATE_KEY_LENGTH as u32);
 static_assertions::const_assert_eq!(LIBRA_ADDRESS_SIZE, AccountAddress::LENGTH as u32);
 static_assertions::const_assert_eq!(LIBRA_EVENT_KEY_SIZE, EventKey::LENGTH as u32);

@@ -4,11 +4,7 @@
 #![forbid(unsafe_code)]
 
 use anyhow::Result;
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    test_utils::KeyPair,
-    Uniform,
-};
+use libra_crypto::{ed25519, test_utils::KeyPair, Uniform};
 use libra_temppath::TempPath;
 use rand::{rngs::OsRng, Rng, SeedableRng};
 use std::{
@@ -17,7 +13,9 @@ use std::{
     path::Path,
 };
 
-pub fn create_faucet_key_file(output_file: &str) -> KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
+pub fn create_faucet_key_file(
+    output_file: &str,
+) -> KeyPair<ed25519::SigningKey, ed25519::VerifyingKey> {
     let output_file_path = Path::new(&output_file);
 
     if output_file_path.exists() && !output_file_path.is_file() {
@@ -27,7 +25,7 @@ pub fn create_faucet_key_file(output_file: &str) -> KeyPair<Ed25519PrivateKey, E
     let mut seed_rng = OsRng::new().expect("can't access OsRng");
     let mut rng = rand::rngs::StdRng::from_seed(seed_rng.gen());
 
-    let private_key = Ed25519PrivateKey::generate(&mut rng);
+    let private_key = ed25519::SigningKey::generate(&mut rng);
     let keypair = KeyPair::from(private_key);
 
     // Write to disk
@@ -42,7 +40,7 @@ pub fn create_faucet_key_file(output_file: &str) -> KeyPair<Ed25519PrivateKey, E
 /// Tries to load a keypair from the path given as argument
 pub fn load_key_from_file<P: AsRef<Path>>(
     path: P,
-) -> Result<KeyPair<Ed25519PrivateKey, Ed25519PublicKey>> {
+) -> Result<KeyPair<ed25519::SigningKey, ed25519::VerifyingKey>> {
     lcs::from_bytes(&fs::read(path)?[..]).map_err(Into::into)
 }
 
@@ -52,7 +50,7 @@ pub fn load_key_from_file<P: AsRef<Path>>(
 pub fn load_faucet_key_or_create_default(
     file_path: Option<String>,
 ) -> (
-    KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
+    KeyPair<ed25519::SigningKey, ed25519::VerifyingKey>,
     String,
     Option<TempPath>,
 ) {

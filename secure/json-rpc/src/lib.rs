@@ -270,7 +270,7 @@ mod test {
     use anyhow::Result;
     use futures::{channel::mpsc::channel, StreamExt};
     use libra_config::utils;
-    use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
+    use libra_crypto::{ed25519, HashValue, TPrivateKey, Uniform};
     use libra_json_rpc::bootstrap;
     use libra_types::{
         account_address::AccountAddress,
@@ -476,7 +476,7 @@ mod test {
     /// Generates and returns a (randomized) SignedTransaction for testing.
     fn generate_signed_transaction() -> SignedTransaction {
         let sender = AccountAddress::random();
-        let private_key = Ed25519PrivateKey::generate_for_testing();
+        let private_key = ed25519::SigningKey::generate_for_testing();
         get_test_signed_txn(sender, 0, &private_key, private_key.public_key(), None)
     }
 

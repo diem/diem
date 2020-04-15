@@ -6,7 +6,7 @@ use crate::{
     timeout::Timeout,
 };
 use anyhow::Context;
-use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash};
+use libra_crypto::{ed25519, hash::CryptoHash};
 use libra_types::validator_verifier::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt};
@@ -16,7 +16,7 @@ use std::{collections::BTreeMap, fmt};
 /// have voted in round r and we can now move to round r+1.
 pub struct TimeoutCertificate {
     timeout: Timeout,
-    signatures: BTreeMap<Author, Ed25519Signature>,
+    signatures: BTreeMap<Author, ed25519::Signature>,
 }
 
 impl fmt::Display for TimeoutCertificate {
@@ -59,11 +59,11 @@ impl TimeoutCertificate {
     }
 
     /// Returns the signatures certifying the round
-    pub fn signatures(&self) -> &BTreeMap<Author, Ed25519Signature> {
+    pub fn signatures(&self) -> &BTreeMap<Author, ed25519::Signature> {
         &self.signatures
     }
 
-    pub fn add_signature(&mut self, author: Author, signature: Ed25519Signature) {
+    pub fn add_signature(&mut self, author: Author, signature: ed25519::Signature) {
         self.signatures.entry(author).or_insert(signature);
     }
 

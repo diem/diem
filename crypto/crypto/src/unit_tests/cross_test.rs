@@ -4,24 +4,19 @@
 // This is necessary for the derive macros which rely on being used in a
 // context where the crypto crate is external
 use crate as libra_crypto;
-use crate::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    multi_ed25519::{MultiEd25519PrivateKey, MultiEd25519PublicKey, MultiEd25519Signature},
-    test_utils::uniform_keypair_strategy,
-    traits::*,
-};
+use crate::{ed25519, multi_ed25519, test_utils::uniform_keypair_strategy, traits::*};
 
 use crate::hash::HashValue;
 
 use libra_crypto_derive::{
-    PrivateKey, PublicKey, Signature, SigningKey, SilentDebug, ValidKey, VerifyingKey,
+    SilentDebug, TPrivateKey, TPublicKey, TSignature, TSigningKey, TVerifyingKey, ValidKey,
 };
 use proptest::prelude::*;
 use serde::{Deserialize, Serialize};
 
 // Here we aim to make a point about how we can build an enum generically
 // on top of a few choice signing scheme types. This enum implements the
-// VerifyingKey, SigningKey for precisely the types selected for that enum
+// TVerifyingKey, TSigningKey for precisely the types selected for that enum
 // (here, Ed25519(PublicKey|PrivateKey|Signature) and MultiEd25519(...)).
 //
 // Note that we do not break type safety (see towards the end), and that
@@ -29,30 +24,30 @@ use serde::{Deserialize, Serialize};
 //
 
 #[derive(
-    Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, ValidKey, PublicKey, VerifyingKey,
+    Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, ValidKey, TPublicKey, TVerifyingKey,
 )]
 #[PrivateKeyType = "PrivateK"]
 #[SignatureType = "Sig"]
 enum PublicK {
-    Ed(Ed25519PublicKey),
-    MultiEd(MultiEd25519PublicKey),
+    Ed(ed25519::VerifyingKey),
+    MultiEd(multi_ed25519::VerifyingKeys),
 }
 
-#[derive(Serialize, Deserialize, SilentDebug, ValidKey, PrivateKey, SigningKey)]
+#[derive(Serialize, Deserialize, SilentDebug, ValidKey, TPrivateKey, TSigningKey)]
 #[PublicKeyType = "PublicK"]
 #[SignatureType = "Sig"]
 enum PrivateK {
-    Ed(Ed25519PrivateKey),
-    MultiEd(MultiEd25519PrivateKey),
+    Ed(ed25519::SigningKey),
+    MultiEd(multi_ed25519::SigningKeys),
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Signature)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TSignature)]
 #[PublicKeyType = "PublicK"]
 #[PrivateKeyType = "PrivateK"]
 enum Sig {
-    Ed(Ed25519Signature),
-    MultiEd(MultiEd25519Signature),
+    Ed(ed25519::Signature),
+    MultiEd(multi_ed25519::MultiSignature),
 }
 
 ///////////////////////////////////////////////////////
@@ -64,14 +59,14 @@ proptest! {
     #[test]
     fn test_keys_mix(
         hash in any::<HashValue>(),
-        ed_keypair1 in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>(),
-        ed_keypair2 in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>(),
-        med_keypair in uniform_keypair_strategy::<MultiEd25519PrivateKey, MultiEd25519PublicKey>()
+        ed_keypair1 in uniform_keypair_strategy::<ed25519::SigningKey, ed25519::VerifyingKey>(),
+        ed_keypair2 in uniform_keypair_strategy::<ed25519::SigningKey, ed25519::VerifyingKey>(),
+        med_keypair in uniform_keypair_strategy::<multi_ed25519::SigningKeys, multi_ed25519::VerifyingKeys>()
     ) {
         // this is impossible to write statically, due to the trait not being
         // object-safe (voluntarily)
         // let mut l: Vec<Box<dyn PrivateKey>> = vec![];
-        let mut l: Vec<Ed25519PrivateKey> = vec![];
+        let mut l: Vec<ed25519::SigningKey> = vec![];
         l.push(ed_keypair1.private_key);
         let ed_key = l.pop().unwrap();
         let signature = ed_key.sign_message(&hash);
@@ -80,7 +75,7 @@ proptest! {
         prop_assert!(signature.verify(&hash, &ed_keypair1.public_key).is_ok());
 
         // This is impossible to write, and generates:
-        // expected struct `ed25519::Ed25519PublicKey`, found struct `med12381::MultiEd25519PublicKey`
+        // expected struct `ed25519::VerifyingKey` found struct `med12381::multi_ed25519::VerifyingKeys`
         // prop_assert!(signature.verify(&hash, &med_keypair.public_key).is_ok());
 
         let mut l2: Vec<PrivateK> = vec![];

@@ -15,7 +15,7 @@ use consensus_types::{
     vote_data::VoteData,
     vote_proposal::VoteProposal,
 };
-use libra_crypto::{ed25519::Ed25519Signature, hash::HashValue};
+use libra_crypto::{ed25519, hash::HashValue};
 use libra_logger::debug;
 use libra_types::{
     block_info::BlockInfo,
@@ -211,7 +211,7 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
     /// if we have received QCs but not proposals. Always map the last_voted_round to the last
     /// signed timeout to prevent equivocation. We can sign the last_voted_round timeout multiple
     /// times by requiring that the underlying signing scheme provides deterministic signatures.
-    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
+    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<ed25519::Signature, Error> {
         debug!("Incoming timeout message for round {}", timeout.round());
         COUNTERS.requested_sign_timeout.inc();
 

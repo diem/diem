@@ -10,10 +10,7 @@ use crate::{
     },
 };
 use lcs::test_helpers::assert_canonical_encode_decode;
-use libra_crypto::{
-    ed25519::{self, Ed25519PrivateKey, Ed25519Signature},
-    PrivateKey, Uniform,
-};
+use libra_crypto::{ed25519, TPrivateKey, Uniform};
 use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use proptest::prelude::*;
 use std::convert::TryFrom;
@@ -30,8 +27,8 @@ fn test_invalid_signature() {
             LBR_NAME.to_string(),
             std::time::Duration::new(0, 0),
         ),
-        Ed25519PrivateKey::generate_for_testing().public_key(),
-        Ed25519Signature::try_from(&[1u8; 64][..]).unwrap(),
+        ed25519::SigningKey::generate_for_testing().public_key(),
+        ed25519::Signature::try_from(&[1u8; 64][..]).unwrap(),
     )
     .into();
     let txn = SignedTransaction::try_from(proto_txn)

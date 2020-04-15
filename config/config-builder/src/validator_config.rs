@@ -11,7 +11,7 @@ use libra_config::{
     },
     generator::{self, ValidatorSwarm},
 };
-use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use libra_crypto::{ed25519, TPrivateKey, Uniform};
 use libra_types::{discovery_set::DiscoverySet, on_chain_config::ValidatorSet};
 use libra_vm::LibraVM;
 use parity_multiaddr::Multiaddr;
@@ -166,7 +166,7 @@ impl ValidatorConfig {
         Ok(configs)
     }
 
-    pub fn build_faucet_client(&self) -> Ed25519PrivateKey {
+    pub fn build_faucet_client(&self) -> ed25519::SigningKey {
         let (faucet_key, _) = self.build_faucet();
         faucet_key
     }
@@ -175,7 +175,7 @@ impl ValidatorConfig {
         &self,
         randomize_service_ports: bool,
         randomize_libranet_ports: bool,
-    ) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
+    ) -> Result<(Vec<NodeConfig>, ed25519::SigningKey)> {
         ensure!(self.nodes > 0, Error::NonZeroNetwork);
         ensure!(
             self.index < self.nodes,
@@ -246,9 +246,9 @@ impl ValidatorConfig {
         Ok((nodes, faucet_key))
     }
 
-    fn build_faucet(&self) -> (Ed25519PrivateKey, [u8; 32]) {
+    fn build_faucet(&self) -> (ed25519::SigningKey, [u8; 32]) {
         let mut faucet_rng = StdRng::from_seed(self.seed);
-        let faucet_key = Ed25519PrivateKey::generate(&mut faucet_rng);
+        let faucet_key = ed25519::SigningKey::generate(&mut faucet_rng);
         let config_seed: [u8; 32] = faucet_rng.gen();
         (faucet_key, config_seed)
     }
@@ -289,12 +289,12 @@ impl ValidatorConfig {
 }
 
 impl BuildSwarm for ValidatorConfig {
-    fn build_swarm(&self) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
+    fn build_swarm(&self) -> Result<(Vec<NodeConfig>, ed25519::SigningKey)> {
         self.build_common(true, true)
     }
 }
 
-pub fn test_config() -> (NodeConfig, Ed25519PrivateKey) {
+pub fn test_config() -> (NodeConfig, ed25519::SigningKey) {
     let validator_config = ValidatorConfig::new();
     let (mut configs, key) = validator_config.build_swarm().unwrap();
     (configs.swap_remove(0), key)

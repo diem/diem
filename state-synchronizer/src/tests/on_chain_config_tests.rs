@@ -9,11 +9,7 @@ use executor_utils::{
     },
 };
 use futures::{future::FutureExt, stream::StreamExt};
-use libra_crypto::{
-    ed25519::*,
-    traits::{PrivateKey, Uniform},
-    HashValue,
-};
+use libra_crypto::{ed25519, HashValue, TPrivateKey, Uniform};
 use libra_types::{
     account_config::{association_address, lbr_type_tag},
     on_chain_config::{OnChainConfig, VMPublishingOption},
@@ -165,7 +161,7 @@ fn test_on_chain_config_pub_sub() {
     let txn4 = encode_block_prologue_script(gen_block_metadata(2, validator_account));
 
     // rotate the validator's consensus pubkey to trigger a reconfiguration
-    let new_pubkey = Ed25519PrivateKey::generate_for_testing().public_key();
+    let new_pubkey = ed25519::SigningKey::generate_for_testing().public_key();
     let txn5 = get_test_signed_transaction(
         validator_account,
         /* sequence_number = */ 0,

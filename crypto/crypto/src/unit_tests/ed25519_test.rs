@@ -1,14 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    ed25519::{
-        Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature, ED25519_PRIVATE_KEY_LENGTH,
-        ED25519_PUBLIC_KEY_LENGTH, ED25519_SIGNATURE_LENGTH,
-    },
-    test_utils::uniform_keypair_strategy,
-    traits::*,
-};
+use crate::{ed25519, test_utils::uniform_keypair_strategy, traits::*};
 
 use core::{
     convert::TryFrom,
@@ -20,19 +13,19 @@ use proptest::prelude::*;
 
 proptest! {
     #[test]
-    fn test_keys_encode(keypair in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()) {
+    fn test_keys_encode(keypair in uniform_keypair_strategy::<ed25519::SigningKey, ed25519::VerifyingKey>()) {
         {
             let encoded = keypair.private_key.to_encoded_string().unwrap();
              // Hex encoding of a 32-bytes key is 64 (2 x 32) characters.
-            prop_assert_eq!(2 * ED25519_PRIVATE_KEY_LENGTH, encoded.len());
-            let decoded = Ed25519PrivateKey::from_encoded_string(&encoded);
+            prop_assert_eq!(2 * ed25519::PRIVATE_KEY_LENGTH, encoded.len());
+            let decoded = ed25519::SigningKey::from_encoded_string(&encoded);
             prop_assert_eq!(Some(keypair.private_key), decoded.ok());
         }
         {
             let encoded = keypair.public_key.to_encoded_string().unwrap();
             // Hex encoding of a 32-bytes key is 64 (2 x 32) characters.
-            prop_assert_eq!(2 * ED25519_PUBLIC_KEY_LENGTH, encoded.len());
-            let decoded = Ed25519PublicKey::from_encoded_string(&encoded);
+            prop_assert_eq!(2 * ed25519::PUBLIC_KEY_LENGTH, encoded.len());
+            let decoded = ed25519::VerifyingKey::from_encoded_string(&encoded);
             prop_assert_eq!(Some(keypair.public_key), decoded.ok());
         }
     }
@@ -40,33 +33,33 @@ proptest! {
     #[test]
     fn test_batch_verify(
         hash in any::<HashValue>(),
-        keypairs in proptest::array::uniform10(uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>())) {
-        let mut signatures: Vec<(Ed25519PublicKey, Ed25519Signature)> = keypairs.iter().map(|keypair| {
+        keypairs in proptest::array::uniform10(uniform_keypair_strategy::<ed25519::SigningKey, ed25519::VerifyingKey>())) {
+        let mut signatures: Vec<(ed25519::VerifyingKey, ed25519::Signature)> = keypairs.iter().map(|keypair| {
             (keypair.public_key.clone(), keypair.private_key.sign_message(&hash))
         }).collect();
-        prop_assert!(Ed25519Signature::batch_verify_signatures(&hash, signatures.clone()).is_ok());
+        prop_assert!(ed25519::Signature::batch_verify_signatures(&hash, signatures.clone()).is_ok());
         // We swap message and signature for the last element,
         // resulting in an incorrect signature
         let (key, _sig) = signatures.pop().unwrap();
         let other_sig = signatures.last().unwrap().clone().1;
         signatures.push((key, other_sig));
-        prop_assert!(Ed25519Signature::batch_verify_signatures(&hash, signatures).is_err());
+        prop_assert!(ed25519::Signature::batch_verify_signatures(&hash, signatures).is_err());
     }
 
     #[test]
     fn test_keys_custom_serialisation(
-        keypair in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()
+        keypair in uniform_keypair_strategy::<ed25519::SigningKey, ed25519::VerifyingKey>()
     ) {
         {
             let serialized: &[u8] = &(keypair.private_key.to_bytes());
-            prop_assert_eq!(ED25519_PRIVATE_KEY_LENGTH, serialized.len());
-            let deserialized = Ed25519PrivateKey::try_from(serialized);
+            prop_assert_eq!(ed25519::PRIVATE_KEY_LENGTH, serialized.len());
+            let deserialized = ed25519::SigningKey::try_from(serialized);
             prop_assert_eq!(Some(keypair.private_key), deserialized.ok());
         }
         {
             let serialized: &[u8] = &(keypair.public_key.to_bytes());
-            prop_assert_eq!(ED25519_PUBLIC_KEY_LENGTH, serialized.len());
-            let deserialized = Ed25519PublicKey::try_from(serialized);
+            prop_assert_eq!(ed25519::PUBLIC_KEY_LENGTH, serialized.len());
+            let deserialized = ed25519::VerifyingKey::try_from(serialized);
             prop_assert_eq!(Some(keypair.public_key), deserialized.ok());
         }
     }
@@ -74,12 +67,12 @@ proptest! {
     #[test]
     fn test_signature_verification_custom_serialisation(
         hash in any::<HashValue>(),
-        keypair in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()
+        keypair in uniform_keypair_strategy::<ed25519::SigningKey, ed25519::VerifyingKey>()
     ) {
         let signature = keypair.private_key.sign_message(&hash);
         let serialized: &[u8] = &(signature.to_bytes());
-        prop_assert_eq!(ED25519_SIGNATURE_LENGTH, serialized.len());
-        let deserialized = Ed25519Signature::try_from(serialized).unwrap();
+        prop_assert_eq!(ed25519::SIGNATURE_LENGTH, serialized.len());
+        let deserialized = ed25519::Signature::try_from(serialized).unwrap();
         prop_assert!(keypair.public_key.verify_signature(&hash, &deserialized).is_ok());
     }
 
@@ -87,7 +80,7 @@ proptest! {
     #[test]
     fn test_signature_malleability(
         hash in any::<HashValue>(),
-        keypair in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()
+        keypair in uniform_keypair_strategy::<ed25519::SigningKey, ed25519::VerifyingKey>()
     ) {
         let signature = keypair.private_key.sign_message(&hash);
         let mut serialized = signature.to_bytes();
@@ -125,13 +118,13 @@ proptest! {
         // try_from will fail on malleable signatures. We detect malleable signatures
         // during deserialization.
         prop_assert_eq!(
-            Ed25519Signature::try_from(serialized_malleable),
+            ed25519::Signature::try_from(serialized_malleable),
             Err(CryptoMaterialError::CanonicalRepresentationError)
         );
 
         // We expect from_bytes_unchecked deserialization not to fail, as we don't check
         // for signature malleability. This method is pub(crate) and only used for test purposes.
-        let sig_unchecked = Ed25519Signature::from_bytes_unchecked(&serialized).unwrap();
+        let sig_unchecked = ed25519::Signature::from_bytes_unchecked(&serialized).unwrap();
 
         // Malleable signatures will fail to verify in our implementation, even if for some reason
         // we receive one. Note that this is a second step of validation as we typically check
@@ -143,7 +136,7 @@ proptest! {
         let serialized_malleable_l: &[u8] = &serialized;
         // try_from will fail with CanonicalRepresentationError.
         prop_assert_eq!(
-            Ed25519Signature::try_from(serialized_malleable_l),
+            ed25519::Signature::try_from(serialized_malleable_l),
             Err(CryptoMaterialError::CanonicalRepresentationError)
         );
     }
@@ -155,10 +148,10 @@ fn test_publickey_smallorder() {
     for torsion_point in &EIGHT_TORSION {
         let serialized: &[u8] = torsion_point;
         // We expect from_bytes_unchecked to pass, as it does not validate the key.
-        assert!(Ed25519PublicKey::from_bytes_unchecked(serialized).is_ok());
+        assert!(ed25519::VerifyingKey::from_bytes_unchecked(serialized).is_ok());
         // from_bytes will fail on invalid key.
         assert_eq!(
-            Ed25519PublicKey::try_from(serialized),
+            ed25519::VerifyingKey::try_from(serialized),
             Err(CryptoMaterialError::SmallSubgroupError)
         );
     }

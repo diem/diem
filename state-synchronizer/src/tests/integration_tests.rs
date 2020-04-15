@@ -10,8 +10,8 @@ use executor_types::ExecutedTrees;
 use futures::executor::block_on;
 use libra_config::config::RoleType;
 use libra_crypto::{
-    ed25519::Ed25519PrivateKey, hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519,
-    PrivateKey, Uniform,
+    ed25519, hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, TPrivateKey,
+    Uniform,
 };
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
@@ -120,7 +120,7 @@ struct SynchronizerEnv {
     clients: Vec<Arc<StateSyncClient>>,
     storage_proxies: Vec<Arc<RwLock<MockStorage>>>, // to directly modify peers storage
     signers: Vec<ValidatorSigner>,
-    network_signers: Vec<Ed25519PrivateKey>,
+    network_signers: Vec<ed25519::SigningKey>,
     public_keys: Vec<ValidatorInfo>,
     peer_ids: Vec<PeerId>,
     peer_addresses: Vec<Multiaddr>,
@@ -133,7 +133,7 @@ impl SynchronizerEnv {
         count: usize,
     ) -> (
         Vec<ValidatorSigner>,
-        Vec<Ed25519PrivateKey>,
+        Vec<ed25519::SigningKey>,
         Vec<ValidatorInfo>,
     ) {
         let (signers, _verifier) = random_validator_verifier(count, None, true);
@@ -141,7 +141,7 @@ impl SynchronizerEnv {
         // Setup signing public keys.
         let mut rng = StdRng::from_seed(TEST_SEED);
         let signing_keys: Vec<_> = (0..count)
-            .map(|_| Ed25519PrivateKey::generate(&mut rng))
+            .map(|_| ed25519::SigningKey::generate(&mut rng))
             .collect();
         // Setup identity public keys.
         let identity_keys: Vec<_> = (0..count)

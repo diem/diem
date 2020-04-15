@@ -47,9 +47,9 @@ use futures::{
 };
 use libra_config::config::RoleType;
 use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
+    ed25519,
     hash::{CryptoHasher, DiscoveryMsgHasher},
-    HashValue, Signature, SigningKey,
+    HashValue, TSignature, TSigningKey,
 };
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
@@ -139,8 +139,8 @@ pub struct Discovery<TTicker> {
     dns_seed_addr: Bytes,
     /// Validator for verifying signatures on messages.
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
-    /// Ed25519PrivateKey for signing notes.
-    signer: Ed25519PrivateKey,
+    /// ed25519::SigningKey for signing notes.
+    signer: ed25519::SigningKey,
     /// Current state, maintaining the most recent Note for each peer, alongside parsed PeerInfo.
     known_peers: HashMap<PeerId, VerifiedNote>,
     /// Currently connected peers.
@@ -166,7 +166,7 @@ where
         self_peer_id: PeerId,
         role: RoleType,
         self_addrs: Vec<Multiaddr>,
-        signer: Ed25519PrivateKey,
+        signer: ed25519::SigningKey,
         trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
         ticker: TTicker,
         network_reqs_tx: DiscoveryNetworkSender,
@@ -438,7 +438,7 @@ pub struct Note {
 
 impl Note {
     fn new(
-        signer: &Ed25519PrivateKey,
+        signer: &ed25519::SigningKey,
         peer_id: PeerId,
         addrs: Vec<Multiaddr>,
         dns_seed_addr: &[u8],
@@ -462,7 +462,7 @@ impl Note {
 
     /// Verifies validity of notes. Most fields have already been verified during initial
     /// deserialization, so this only verifies that the note contains properly signed infos.
-    fn verify(self, pub_key: &Ed25519PublicKey) -> Result<VerifiedNote, NetworkError> {
+    fn verify(self, pub_key: &ed25519::VerifyingKey) -> Result<VerifiedNote, NetworkError> {
         self.signed_peer_info.verify(&pub_key)?;
         self.signed_full_node_info.verify(&pub_key)?;
         Ok(VerifiedNote(self))
@@ -486,11 +486,11 @@ pub struct SignedPeerInfo {
     peer_info: PeerInfo,
     /// A signature over the above serialzed `PeerInfo`, signed by the validator's
     /// `network_signing_key` referred to by the `peer_id` account address.
-    signature: Ed25519Signature,
+    signature: ed25519::Signature,
 }
 
 impl SignedPeerInfo {
-    fn verify(&self, pub_key: &Ed25519PublicKey) -> Result<(), NetworkError> {
+    fn verify(&self, pub_key: &ed25519::VerifyingKey) -> Result<(), NetworkError> {
         let peer_info_bytes =
             lcs::to_bytes(&self.peer_info).map_err(|_| NetworkErrorKind::ParsingError)?;
         self.signature
@@ -512,7 +512,7 @@ pub struct PeerInfo {
 }
 
 impl PeerInfo {
-    fn sign(self, signer: &Ed25519PrivateKey) -> SignedPeerInfo {
+    fn sign(self, signer: &ed25519::SigningKey) -> SignedPeerInfo {
         let peer_info_bytes = lcs::to_bytes(&self).expect("LCS serialization fails");
         let signature = signer.sign_message(&get_hash(&peer_info_bytes));
         SignedPeerInfo {
@@ -528,11 +528,11 @@ pub struct SignedFullNodeInfo {
     full_node_info: FullNodeInfo,
     /// A signature over the above serialzed `FullNodeInfo`, signed by the validator's
     /// `network_signing_key` referred to by the `peer_id` account address.
-    signature: Ed25519Signature,
+    signature: ed25519::Signature,
 }
 
 impl SignedFullNodeInfo {
-    fn verify(&self, pub_key: &Ed25519PublicKey) -> Result<(), NetworkError> {
+    fn verify(&self, pub_key: &ed25519::VerifyingKey) -> Result<(), NetworkError> {
         let full_node_info_bytes =
             lcs::to_bytes(&self.full_node_info).map_err(|_| NetworkErrorKind::ParsingError)?;
         self.signature
@@ -555,7 +555,7 @@ pub struct FullNodeInfo {
 }
 
 impl FullNodeInfo {
-    fn sign(self, signer: &Ed25519PrivateKey) -> SignedFullNodeInfo {
+    fn sign(self, signer: &ed25519::SigningKey) -> SignedFullNodeInfo {
         let full_node_info_bytes = lcs::to_bytes(&self).expect("LCS serialization failed");
         let signature = signer.sign_message(&get_hash(&full_node_info_bytes));
         SignedFullNodeInfo {

@@ -7,12 +7,7 @@ use crate::{
     executor::FakeExecutor,
     keygen::KeyGen,
 };
-use libra_crypto::{
-    ed25519::Ed25519PrivateKey,
-    hash::CryptoHash,
-    multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature},
-    PrivateKey, SigningKey, Uniform,
-};
+use libra_crypto::{ed25519, hash::CryptoHash, multi_ed25519, TPrivateKey, TSigningKey, Uniform};
 use libra_types::{
     account_address::AccountAddress,
     transaction::{authenticator::AuthenticationKey, SignedTransaction, TransactionStatus},
@@ -26,7 +21,7 @@ fn rotate_ed25519_key() {
     let mut sender = AccountData::new(1_000_000, 10);
     executor.add_account_data(&sender);
 
-    let privkey = Ed25519PrivateKey::generate_for_testing();
+    let privkey = ed25519::SigningKey::generate_for_testing();
     let pubkey = privkey.public_key();
     let new_key_hash = AccountAddress::authentication_key(&pubkey).to_vec();
     let txn = rotate_key_txn(sender.account(), new_key_hash.clone(), 10);
@@ -84,7 +79,7 @@ fn rotate_ed25519_multisig_key() {
     let (privkey2, pubkey2) = keygen.generate_keypair();
     let threshold = 1;
     let multi_ed_public_key =
-        MultiEd25519PublicKey::new(vec![pubkey1, pubkey2], threshold).unwrap();
+        multi_ed25519::VerifyingKeys::new(vec![pubkey1, pubkey2], threshold).unwrap();
     let new_auth_key = AuthenticationKey::multi_ed25519(&multi_ed_public_key);
 
     // (1) rotate key to multisig
@@ -102,7 +97,7 @@ fn rotate_ed25519_multisig_key() {
 
     // (2) send a tx signed by privkey 1
     let txn1 = raw_rotate_key_txn(*sender_address, new_auth_key.to_vec(), seq_number);
-    let signature1 = MultiEd25519Signature::from(privkey1.sign_message(&txn1.hash()));
+    let signature1 = multi_ed25519::MultiSignature::from(privkey1.sign_message(&txn1.hash()));
     let signed_txn1 =
         SignedTransaction::new_multisig(txn1, multi_ed_public_key.clone(), signature1);
     let output = &executor.execute_transaction(signed_txn1);
@@ -116,9 +111,11 @@ fn rotate_ed25519_multisig_key() {
     // (3) send a tx signed by privkey 2
     let txn2 = raw_rotate_key_txn(*sender_address, new_auth_key.to_vec(), seq_number);
     let pubkey_index = 1;
-    let signature2 =
-        MultiEd25519Signature::new(vec![(privkey2.sign_message(&txn2.hash()), pubkey_index)])
-            .unwrap();
+    let signature2 = multi_ed25519::MultiSignature::new(vec![(
+        privkey2.sign_message(&txn2.hash()),
+        pubkey_index,
+    )])
+    .unwrap();
     let signed_txn2 = SignedTransaction::new_multisig(txn2, multi_ed_public_key, signature2);
     signed_txn2.clone().check_signature().unwrap();
     let output = &executor.execute_transaction(signed_txn2);

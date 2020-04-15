@@ -5,7 +5,7 @@ use crate::{
     data::{LibraAccountKey, LibraStatus},
     error::*,
 };
-use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey};
+use libra_crypto::{ed25519, TPrivateKey};
 use libra_types::account_address::AccountAddress;
 use std::{convert::TryFrom, slice};
 
@@ -22,9 +22,9 @@ pub unsafe extern "C" fn libra_LibraAccountKey_from(
     }
 
     let private_key_buf: &[u8] =
-        slice::from_raw_parts(private_key_bytes, Ed25519PrivateKey::LENGTH);
+        slice::from_raw_parts(private_key_bytes, ed25519::SigningKey::LENGTH);
 
-    let private_key = match Ed25519PrivateKey::try_from(private_key_buf) {
+    let private_key = match ed25519::SigningKey::try_from(private_key_buf) {
         Ok(result) => result,
         Err(e) => {
             update_last_error(format!("Invalid private key bytes: {}", e.to_string()));
@@ -48,7 +48,7 @@ pub unsafe extern "C" fn libra_LibraAccountKey_from(
 fn test_libra_account_from() {
     use libra_crypto::Uniform;
 
-    let private_key = Ed25519PrivateKey::generate_for_testing();
+    let private_key = ed25519::SigningKey::generate_for_testing();
     let mut libra_account = LibraAccountKey::default();
     let result =
         unsafe { libra_LibraAccountKey_from(private_key.to_bytes().as_ptr(), &mut libra_account) };

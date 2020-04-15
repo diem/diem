@@ -15,7 +15,7 @@ use libra_config::{
     config::{ConsensusType, NodeConfig, RemoteService, SafetyRulesBackend, SafetyRulesService},
     utils,
 };
-use libra_crypto::ed25519::Ed25519Signature;
+use libra_crypto::ed25519;
 use libra_types::{validator_change::ValidatorChangeProof, validator_signer::ValidatorSigner};
 use std::{
     any::TypeId,
@@ -105,7 +105,7 @@ impl<T: Payload> TSafetyRules<T> for ProcessClientWrapper<T> {
         self.safety_rules.sign_proposal(block_data)
     }
 
-    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
+    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<ed25519::Signature, Error> {
         self.safety_rules.sign_timeout(timeout)
     }
 }

@@ -9,11 +9,7 @@ use crate::genesis_gas_schedule::initial_gas_schedule;
 use anyhow::Result;
 use bytecode_verifier::VerifiedModule;
 use libra_config::{config::NodeConfig, generator};
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    traits::ValidKey,
-    PrivateKey, Uniform,
-};
+use libra_crypto::{ed25519, TPrivateKey, Uniform, ValidKey};
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
@@ -48,9 +44,9 @@ const GENESIS_SEED: [u8; 32] = [42; 32];
 /// The initial balance of the association account.
 pub const ASSOCIATION_INIT_BALANCE: u64 = 1_000_000_000_000_000;
 
-pub static GENESIS_KEYPAIR: Lazy<(Ed25519PrivateKey, Ed25519PublicKey)> = Lazy::new(|| {
+pub static GENESIS_KEYPAIR: Lazy<(ed25519::SigningKey, ed25519::VerifyingKey)> = Lazy::new(|| {
     let mut rng = StdRng::from_seed(GENESIS_SEED);
-    let private_key = Ed25519PrivateKey::generate(&mut rng);
+    let private_key = ed25519::SigningKey::generate(&mut rng);
     let public_key = private_key.public_key();
     (private_key, public_key)
 });
@@ -116,8 +112,8 @@ static LIBRA_TIME_MODULE: Lazy<ModuleId> = Lazy::new(|| {
 });
 
 pub fn encode_genesis_transaction_with_validator(
-    private_key: &Ed25519PrivateKey,
-    public_key: Ed25519PublicKey,
+    private_key: &ed25519::SigningKey,
+    public_key: ed25519::VerifyingKey,
     nodes: &[NodeConfig],
     validator_set: ValidatorSet,
     discovery_set: DiscoverySet,
@@ -136,7 +132,7 @@ pub fn encode_genesis_transaction_with_validator(
 }
 
 pub fn encode_genesis_change_set(
-    public_key: &Ed25519PublicKey,
+    public_key: &ed25519::VerifyingKey,
     nodes: &[NodeConfig],
     validator_set: ValidatorSet,
     discovery_set: DiscoverySet,
@@ -199,8 +195,8 @@ pub fn encode_genesis_change_set(
 }
 
 pub fn encode_genesis_transaction(
-    _private_key: &Ed25519PrivateKey,
-    public_key: Ed25519PublicKey,
+    _private_key: &ed25519::SigningKey,
+    public_key: ed25519::VerifyingKey,
     nodes: &[NodeConfig],
     validator_set: ValidatorSet,
     discovery_set: DiscoverySet,
@@ -222,7 +218,7 @@ fn create_and_initialize_main_accounts(
     move_vm: &MoveVM,
     gas_schedule: &CostTable,
     interpreter_context: &mut TransactionExecutionContext,
-    public_key: &Ed25519PublicKey,
+    public_key: &ed25519::VerifyingKey,
     initial_gas_schedule: Value,
 ) {
     let association_addr = account_config::association_address();

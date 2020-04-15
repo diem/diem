@@ -10,7 +10,7 @@ use language_e2e_tests::{
     keygen::KeyGen,
 };
 use libra_config::generator;
-use libra_crypto::PrivateKey;
+use libra_crypto::TPrivateKey;
 use libra_types::on_chain_config::ValidatorSet;
 use std::{
     collections::{btree_map, BTreeMap},

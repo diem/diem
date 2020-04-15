@@ -5,7 +5,7 @@ use crate::{
     tests::suite, vault::VaultStorage, Capability, CryptoStorage, Error, Identity, KVStorage,
     Permission, Policy, Value,
 };
-use libra_crypto::{HashValue, Signature};
+use libra_crypto::{HashValue, TSignature};
 
 /// VaultStorage test constants
 const VAULT_HOST: &str = "http://localhost:8200";

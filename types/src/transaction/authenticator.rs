@@ -3,12 +3,7 @@
 
 use crate::account_address::AccountAddress;
 use anyhow::{ensure, Error, Result};
-use libra_crypto::{
-    ed25519::{Ed25519PublicKey, Ed25519Signature},
-    multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature},
-    traits::Signature,
-    HashValue,
-};
+use libra_crypto::{ed25519, multi_ed25519, HashValue, TSignature};
 use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
@@ -51,13 +46,13 @@ impl fmt::Display for Scheme {
 pub enum TransactionAuthenticator {
     /// Single signature
     Ed25519 {
-        public_key: Ed25519PublicKey,
-        signature: Ed25519Signature,
+        public_key: ed25519::VerifyingKey,
+        signature: ed25519::Signature,
     },
     /// K-of-N multisignature
     MultiEd25519 {
-        public_key: MultiEd25519PublicKey,
-        signature: MultiEd25519Signature,
+        public_key: multi_ed25519::VerifyingKeys,
+        signature: multi_ed25519::MultiSignature,
     },
     // ... add more schemes here
 }
@@ -72,7 +67,7 @@ impl TransactionAuthenticator {
     }
 
     /// Create a single-signature ed25519 authenticator
-    pub fn ed25519(public_key: Ed25519PublicKey, signature: Ed25519Signature) -> Self {
+    pub fn ed25519(public_key: ed25519::VerifyingKey, signature: ed25519::Signature) -> Self {
         Self::Ed25519 {
             public_key,
             signature,
@@ -81,8 +76,8 @@ impl TransactionAuthenticator {
 
     /// Create a multisignature ed25519 authenticator
     pub fn multi_ed25519(
-        public_key: MultiEd25519PublicKey,
-        signature: MultiEd25519Signature,
+        public_key: multi_ed25519::VerifyingKeys,
+        signature: multi_ed25519::MultiSignature,
     ) -> Self {
         Self::MultiEd25519 {
             public_key,
@@ -152,12 +147,12 @@ impl AuthenticationKey {
     }
 
     /// Create an authentication key from an Ed25519 public key
-    pub fn ed25519(public_key: &Ed25519PublicKey) -> AuthenticationKey {
+    pub fn ed25519(public_key: &ed25519::VerifyingKey) -> AuthenticationKey {
         Self::from_preimage(&AuthenticationKeyPreimage::ed25519(public_key))
     }
 
     /// Create an authentication key from a MultiEd25519 public key
-    pub fn multi_ed25519(public_key: &MultiEd25519PublicKey) -> Self {
+    pub fn multi_ed25519(public_key: &multi_ed25519::VerifyingKeys) -> Self {
         Self::from_preimage(&AuthenticationKeyPreimage::multi_ed25519(public_key))
     }
 
@@ -206,12 +201,12 @@ impl AuthenticationKeyPreimage {
     }
 
     /// Construct a preimage from an Ed25519 public key
-    pub fn ed25519(public_key: &Ed25519PublicKey) -> AuthenticationKeyPreimage {
+    pub fn ed25519(public_key: &ed25519::VerifyingKey) -> AuthenticationKeyPreimage {
         Self::new(public_key.to_bytes().to_vec(), Scheme::Ed25519)
     }
 
     /// Construct a preimage from a MultiEd25519 public key
-    pub fn multi_ed25519(public_key: &MultiEd25519PublicKey) -> AuthenticationKeyPreimage {
+    pub fn multi_ed25519(public_key: &multi_ed25519::VerifyingKeys) -> AuthenticationKeyPreimage {
         Self::new(public_key.to_bytes(), Scheme::MultiEd25519)
     }
 

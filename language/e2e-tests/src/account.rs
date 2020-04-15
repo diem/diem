@@ -4,7 +4,7 @@
 //! Test infrastructure for modeling Libra accounts.
 
 use crate::{gas_costs, keygen::KeyGen};
-use libra_crypto::ed25519::*;
+use libra_crypto::ed25519;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -39,9 +39,9 @@ pub const DEFAULT_EXPIRATION_TIME: u64 = 40_000;
 pub struct Account {
     addr: AccountAddress,
     /// The current private key for this account.
-    pub privkey: Ed25519PrivateKey,
+    pub privkey: ed25519::SigningKey,
     /// The current public key for this account.
-    pub pubkey: Ed25519PublicKey,
+    pub pubkey: ed25519::VerifyingKey,
 }
 
 impl Account {
@@ -61,7 +61,7 @@ impl Account {
     ///
     /// Like with [`Account::new`], the account returned by this constructor is a purely logical
     /// entity.
-    pub fn with_keypair(privkey: Ed25519PrivateKey, pubkey: Ed25519PublicKey) -> Self {
+    pub fn with_keypair(privkey: ed25519::SigningKey, pubkey: ed25519::VerifyingKey) -> Self {
         let addr = AccountAddress::from_public_key(&pubkey);
         Account {
             addr,
@@ -119,7 +119,7 @@ impl Account {
     }
 
     /// Changes the keys for this account to the provided ones.
-    pub fn rotate_key(&mut self, privkey: Ed25519PrivateKey, pubkey: Ed25519PublicKey) {
+    pub fn rotate_key(&mut self, privkey: ed25519::SigningKey, pubkey: ed25519::VerifyingKey) {
         self.privkey = privkey;
         self.pubkey = pubkey;
     }
@@ -431,8 +431,8 @@ impl AccountData {
 
     /// Creates a new `AccountData` with the provided account.
     pub fn with_keypair(
-        privkey: Ed25519PrivateKey,
-        pubkey: Ed25519PublicKey,
+        privkey: ed25519::SigningKey,
+        pubkey: ed25519::VerifyingKey,
         balance: u64,
         sequence_number: u64,
     ) -> Self {
@@ -463,7 +463,7 @@ impl AccountData {
     }
 
     /// Changes the keys for this account to the provided ones.
-    pub fn rotate_key(&mut self, privkey: Ed25519PrivateKey, pubkey: Ed25519PublicKey) {
+    pub fn rotate_key(&mut self, privkey: ed25519::SigningKey, pubkey: ed25519::VerifyingKey) {
         self.account.rotate_key(privkey, pubkey)
     }
 

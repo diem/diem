@@ -13,11 +13,7 @@ use std::{
 
 use anyhow::{format_err, Result};
 use itertools::zip;
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    test_utils::KeyPair,
-    traits::Uniform,
-};
+use libra_crypto::{ed25519, test_utils::KeyPair, traits::Uniform};
 use libra_logger::*;
 use libra_types::{
     account_address::AccountAddress,
@@ -49,7 +45,7 @@ const MAX_TXN_BATCH_SIZE: usize = 100; // Max transactions per account in mempoo
 
 pub struct TxEmitter {
     accounts: Vec<AccountData>,
-    mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
+    mint_key_pair: KeyPair<ed25519::SigningKey, ed25519::VerifyingKey>,
     http_client: Client,
 }
 
@@ -632,7 +628,7 @@ async fn create_new_accounts(
 #[derive(Clone)]
 pub struct AccountData {
     pub address: AccountAddress,
-    pub key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
+    pub key_pair: KeyPair<ed25519::SigningKey, ed25519::VerifyingKey>,
     pub sequence_number: u64,
 }
 

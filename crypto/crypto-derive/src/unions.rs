@@ -153,7 +153,7 @@ pub fn impl_enum_publickey(
         }
     };
     res.extend(quote! {
-        impl libra_crypto::PublicKey for #name {
+        impl libra_crypto::TPublicKey for #name {
             type PrivateKeyMaterial = #pkt;
         }
     });
@@ -167,7 +167,7 @@ pub fn impl_enum_privatekey(
 ) -> TokenStream {
     let pkt: syn::Type = public_key_type.parse().unwrap();
     let res = quote! {
-        impl libra_crypto::PrivateKey for #name {
+        impl libra_crypto::TPrivateKey for #name {
             type PublicKeyMaterial = #pkt;
         }
     };
@@ -183,7 +183,7 @@ pub fn impl_enum_verifyingkey(
     let pkt: syn::Type = private_key_type.parse().unwrap();
     let st: syn::Type = signature_type.parse().unwrap();
     let res = quote! {
-        impl libra_crypto::VerifyingKey for #name {
+        impl libra_crypto::TVerifyingKey for #name {
             type SigningKeyMaterial = #pkt;
             type SignatureMaterial = #st;
         }
@@ -209,7 +209,7 @@ pub fn impl_enum_signingkey(
         });
     }
     let res = quote! {
-        impl libra_crypto::SigningKey for #name {
+        impl libra_crypto::TSigningKey for #name {
             type VerifyingKeyMaterial = #pkt;
             type SignatureMaterial = #st;
 
@@ -247,7 +247,7 @@ pub fn impl_enum_signature(
 
     res.extend(quote! {
 
-        impl libra_crypto::Signature for #name {
+        impl libra_crypto::TSignature for #name {
             type VerifyingKeyMaterial = #pub_kt;
             type SigningKeyMaterial = #priv_kt;
 
