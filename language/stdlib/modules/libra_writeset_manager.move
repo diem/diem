@@ -1,12 +1,15 @@
+address 0x0:
+
 module LibraWriteSetManager {
     use 0x0::LibraAccount;
+    use 0x0::Event;
     use 0x0::Hash;
     use 0x0::Transaction;
     use 0x0::LibraConfig;
 
     resource struct T {
         sequence_number: u64,
-        upgrade_events: LibraAccount::EventHandle<Self::UpgradeEvent>,
+        upgrade_events: Event::EventHandle<Self::UpgradeEvent>,
     }
 
     struct UpgradeEvent {
@@ -18,7 +21,7 @@ module LibraWriteSetManager {
 
         move_to_sender<T>(T {
             sequence_number: 0,
-            upgrade_events: LibraAccount::new_event_handle<Self::UpgradeEvent>(),
+            upgrade_events: Event::new_event_handle<Self::UpgradeEvent>(),
         });
     }
 
@@ -45,7 +48,7 @@ module LibraWriteSetManager {
         let t_ref = borrow_global_mut<T>(0xA550C18);
         t_ref.sequence_number = t_ref.sequence_number + 1;
 
-        LibraAccount::emit_event<Self::UpgradeEvent>(
+        Event::emit_event<Self::UpgradeEvent>(
             &mut t_ref.upgrade_events,
             UpgradeEvent { writeset_payload },
         );

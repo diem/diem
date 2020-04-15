@@ -82,13 +82,6 @@ static ROTATE_AUTHENTICATION_KEY: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("rotate_authentication_key").unwrap());
 static EPILOGUE: Lazy<Identifier> = Lazy::new(|| Identifier::new("epilogue").unwrap());
 
-static ASSOCIATION_MODULE: Lazy<ModuleId> = Lazy::new(|| {
-    ModuleId::new(
-        account_config::CORE_CODE_ADDRESS,
-        Identifier::new("Association").unwrap(),
-    )
-});
-
 static VM_CONFIG_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         account_config::CORE_CODE_ADDRESS,
@@ -103,19 +96,23 @@ static LIBRA_VERSION_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     )
 });
 
-static LBR_MODULE: Lazy<ModuleId> = Lazy::new(|| {
-    ModuleId::new(
-        account_config::CORE_CODE_ADDRESS,
-        Identifier::new("LBR").unwrap(),
-    )
-});
-
 static LIBRA_TIME_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         account_config::CORE_CODE_ADDRESS,
         Identifier::new("LibraTimestamp").unwrap(),
     )
 });
+
+pub fn module(name: &str) -> ModuleId {
+    ModuleId::new(
+        account_config::CORE_CODE_ADDRESS,
+        Identifier::new(name).unwrap(),
+    )
+}
+
+pub fn name(name: &str) -> Identifier {
+    Identifier::new(name).unwrap()
+}
 
 pub fn encode_genesis_transaction_with_validator(
     private_key: &Ed25519PrivateKey,
@@ -165,12 +162,24 @@ pub fn encode_genesis_change_set(
         move_vm.cache_module(module.clone());
     }
 
+    let lbr_ty = Type::Struct(Box::new(
+        move_vm
+            .resolve_struct_def_by_name(
+                &account_config::LBR_MODULE,
+                &account_config::LBR_STRUCT_NAME,
+                &mut interpreter_context,
+                &[],
+            )
+            .expect("Failure looking up LBR type"),
+    ));
+
     // generate the genesis WriteSet
     create_and_initialize_main_accounts(
         &move_vm,
         &gas_schedule,
         &mut interpreter_context,
         &public_key,
+        &lbr_ty,
     );
     create_and_initialize_validator_and_discovery_set(
         &move_vm,
@@ -179,6 +188,7 @@ pub fn encode_genesis_change_set(
         &nodes,
         &validator_set,
         &discovery_set,
+        &lbr_ty,
     );
     setup_libra_version(&move_vm, &gas_schedule, &mut interpreter_context);
     setup_vm_config(
@@ -224,35 +234,178 @@ fn create_and_initialize_main_accounts(
     gas_schedule: &CostTable,
     interpreter_context: &mut TransactionExecutionContext,
     public_key: &Ed25519PublicKey,
+    lbr_ty: &Type,
 ) {
     let association_addr = account_config::association_address();
     let mut txn_data = TransactionMetadata::default();
     txn_data.sender = association_addr;
 
-    move_vm
-        .execute_function(
-            &ASSOCIATION_MODULE,
-            &INITIALIZE,
-            &gas_schedule,
-            interpreter_context,
-            &txn_data,
-            vec![],
-            vec![],
-        )
-        .expect("Failure initializing association module");
+    {
+        // Association module setup
+        move_vm
+            .execute_function(
+                &module("Association"),
+                &name("initialize"),
+                gas_schedule,
+                interpreter_context,
+                &txn_data,
+                vec![],
+                vec![],
+            )
+            .expect("Unable to register root association account in genesis");
 
-    // create  the LBR module
-    move_vm
-        .execute_function(
-            &LBR_MODULE,
-            &INITIALIZE,
-            &gas_schedule,
-            interpreter_context,
-            &txn_data,
-            vec![],
-            vec![],
-        )
-        .expect("Failure initializing LBR");
+        let add_currency_priv_ty = Type::Struct(Box::new(
+            move_vm
+                .resolve_struct_def_by_name(
+                    &module("Libra"),
+                    &name("AddCurrency"),
+                    interpreter_context,
+                    &[],
+                )
+                .expect("Failure looking up Libra currency privilege type"),
+        ));
+
+        move_vm
+            .execute_function(
+                &module("Association"),
+                &name("apply_for_privilege"),
+                gas_schedule,
+                interpreter_context,
+                &txn_data,
+                vec![add_currency_priv_ty.clone()],
+                vec![],
+            )
+            .expect("Unable to apply for currency privilege in genesis");
+
+        move_vm
+            .execute_function(
+                &module("Association"),
+                &name("grant_privilege"),
+                gas_schedule,
+                interpreter_context,
+                &txn_data,
+                vec![add_currency_priv_ty],
+                vec![Value::address(association_addr)],
+            )
+            .expect("Unable to grant currency privilege in genesis");
+    }
+
+    {
+        // Initialize currencies
+        move_vm
+            .execute_function(
+                &module("Libra"),
+                &name("initialize"),
+                &gas_schedule,
+                interpreter_context,
+                &txn_data,
+                vec![],
+                vec![],
+            )
+            .expect("Failure initializing currency module");
+
+        // NB: Order matters
+        let currencies = vec!["Coin1", "Coin2", "LBR"];
+        for currency in currencies.into_iter() {
+            move_vm
+                .execute_function(
+                    &module(currency),
+                    &name("initialize"),
+                    &gas_schedule,
+                    interpreter_context,
+                    &txn_data,
+                    vec![],
+                    vec![],
+                )
+                .unwrap_or_else(|_| panic!("Failure initializing currency {}", currency));
+        }
+    }
+
+    {
+        // Account type initialization
+        let unhosted_type = Type::Struct(Box::new(
+            move_vm
+                .resolve_struct_def_by_name(
+                    &module("Unhosted"),
+                    &name("T"),
+                    interpreter_context,
+                    &[],
+                )
+                .expect("Failure initializing unhosted account type"),
+        ));
+        let empty_type = Type::Struct(Box::new(
+            move_vm
+                .resolve_struct_def_by_name(&module("Empty"), &name("T"), interpreter_context, &[])
+                .expect("Failure initializing empty account type"),
+        ));
+
+        let account_types = vec![unhosted_type, empty_type];
+        for account_type in account_types.into_iter() {
+            move_vm
+                .execute_function(
+                    &module("AccountType"),
+                    &name("register"),
+                    &gas_schedule,
+                    interpreter_context,
+                    &txn_data,
+                    vec![account_type.clone()],
+                    vec![],
+                )
+                .unwrap_or_else(|_| {
+                    panic!("Failure initializing account type {:#?}", account_type)
+                });
+        }
+        move_vm
+            .execute_function(
+                &module("VASP"),
+                &name("initialize"),
+                &gas_schedule,
+                interpreter_context,
+                &txn_data,
+                vec![],
+                vec![],
+            )
+            .expect("Failure initializing currency module");
+    }
+
+    {
+        // Account module setup
+        move_vm
+            .execute_function(
+                &module("AccountTrack"),
+                &name("initialize"),
+                &gas_schedule,
+                interpreter_context,
+                &txn_data,
+                vec![],
+                vec![],
+            )
+            .expect("Failure initializing account tracking module");
+
+        move_vm
+            .execute_function(
+                &module("LibraAccount"),
+                &name("initialize"),
+                &gas_schedule,
+                interpreter_context,
+                &txn_data,
+                vec![],
+                vec![],
+            )
+            .expect("Failure initializing Libra account module");
+
+        move_vm
+            .execute_function(
+                &module("Unhosted"),
+                &name("publish_global_limits_definition"),
+                &gas_schedule,
+                interpreter_context,
+                &txn_data,
+                vec![],
+                vec![],
+            )
+            .expect("Failure publishing limits for unhosted accounts");
+    }
 
     // create the association account
     move_vm
@@ -262,7 +415,7 @@ fn create_and_initialize_main_accounts(
             gas_schedule,
             interpreter_context,
             &txn_data,
-            vec![],
+            vec![lbr_ty.clone()],
             vec![
                 Value::address(association_addr),
                 Value::vector_u8(association_addr.to_vec()),
@@ -284,7 +437,7 @@ fn create_and_initialize_main_accounts(
             gas_schedule,
             interpreter_context,
             &txn_data,
-            vec![],
+            vec![lbr_ty.clone()],
             vec![
                 Value::address(transaction_fee_address),
                 Value::vector_u8(transaction_fee_address.to_vec()),
@@ -352,10 +505,9 @@ fn create_and_initialize_main_accounts(
             &gas_schedule,
             interpreter_context,
             &txn_data,
-            vec![],
+            vec![lbr_ty.clone()],
             vec![
                 Value::address(association_addr),
-                Value::vector_u8(association_addr.to_vec()),
                 Value::u64(ASSOCIATION_INIT_BALANCE),
             ],
         )
@@ -378,16 +530,6 @@ fn create_and_initialize_main_accounts(
     // subsequent transaction (e.g., minting) is sent from the Assocation account, a problem
     // arises: both the genesis transaction and the subsequent transaction have sequence
     // number 0
-    let lbr_ty = Type::Struct(Box::new(
-        move_vm
-            .resolve_struct_def_by_name(
-                &account_config::LBR_MODULE,
-                &account_config::LBR_STRUCT_NAME,
-                interpreter_context,
-                &[],
-            )
-            .expect("Failure looking up LBR type"),
-    ));
     move_vm
         .execute_function(
             &account_config::ACCOUNT_MODULE,
@@ -395,7 +537,7 @@ fn create_and_initialize_main_accounts(
             &gas_schedule,
             interpreter_context,
             &txn_data,
-            vec![lbr_ty],
+            vec![lbr_ty.clone()],
             vec![
                 Value::u64(/* txn_sequence_number */ 0),
                 Value::u64(/* txn_gas_price */ 0),
@@ -427,9 +569,10 @@ fn create_and_initialize_validator_and_discovery_set(
     nodes: &[NodeConfig],
     validator_set: &ValidatorSet,
     discovery_set: &DiscoverySet,
+    lbr_ty: &Type,
 ) {
-    create_and_initialize_validator_set(move_vm, gas_schedule, interpreter_context);
-    create_and_initialize_discovery_set(move_vm, gas_schedule, interpreter_context);
+    create_and_initialize_validator_set(move_vm, gas_schedule, interpreter_context, lbr_ty);
+    create_and_initialize_discovery_set(move_vm, gas_schedule, interpreter_context, lbr_ty);
     initialize_validators(
         move_vm,
         gas_schedule,
@@ -437,6 +580,7 @@ fn create_and_initialize_validator_and_discovery_set(
         nodes,
         validator_set,
         discovery_set,
+        lbr_ty,
     );
 }
 
@@ -445,6 +589,7 @@ fn create_and_initialize_validator_set(
     move_vm: &MoveVM,
     gas_schedule: &CostTable,
     interpreter_context: &mut TransactionExecutionContext,
+    lbr_ty: &Type,
 ) {
     let mut txn_data = TransactionMetadata::default();
     let validator_set_address = account_config::validator_set_address();
@@ -457,7 +602,7 @@ fn create_and_initialize_validator_set(
             gas_schedule,
             interpreter_context,
             &txn_data,
-            vec![],
+            vec![lbr_ty.clone()],
             vec![
                 Value::address(validator_set_address),
                 Value::vector_u8(validator_set_address.to_vec()),
@@ -488,6 +633,7 @@ fn create_and_initialize_discovery_set(
     move_vm: &MoveVM,
     gas_schedule: &CostTable,
     interpreter_context: &mut TransactionExecutionContext,
+    lbr_ty: &Type,
 ) {
     let mut txn_data = TransactionMetadata::default();
     let discovery_set_address = account_config::discovery_set_address();
@@ -500,7 +646,7 @@ fn create_and_initialize_discovery_set(
             gas_schedule,
             interpreter_context,
             &txn_data,
-            vec![],
+            vec![lbr_ty.clone()],
             vec![
                 Value::address(discovery_set_address),
                 Value::vector_u8(discovery_set_address.to_vec()),
@@ -559,6 +705,7 @@ fn initialize_validators(
     nodes: &[NodeConfig],
     validator_set: &ValidatorSet,
     discovery_set: &DiscoverySet,
+    lbr_ty: &Type,
 ) {
     let mut txn_data = TransactionMetadata::default();
     txn_data.sender = account_config::association_address();
@@ -581,7 +728,7 @@ fn initialize_validators(
                 gas_schedule,
                 interpreter_context,
                 &txn_data,
-                vec![],
+                vec![lbr_ty.clone()],
                 vec![
                     Value::address(validator_address),
                     Value::vector_u8(validator_authentication_key.prefix().to_vec()),

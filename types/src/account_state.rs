@@ -4,7 +4,8 @@
 use crate::{
     account_address::AccountAddress,
     account_config::{
-        AccountResource, BalanceResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
+        type_tag_for_currency_code, AccountResource, BalanceResource, CurrencyInfoResource,
+        ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
     },
     block_metadata::{LibraBlockResource, NEW_BLOCK_EVENT_PATH},
     discovery_set::{DiscoverySetResource, DISCOVERY_SET_CHANGE_EVENT_PATH},
@@ -15,6 +16,7 @@ use crate::{
     validator_config::ValidatorConfigResource,
 };
 use anyhow::{bail, Error, Result};
+use move_core_types::identifier::Identifier;
 use serde::{de::DeserializeOwned, export::Formatter, Deserialize, Serialize};
 use std::{collections::btree_map::BTreeMap, convert::TryFrom, fmt};
 
@@ -33,7 +35,15 @@ impl AccountState {
     }
 
     pub fn get_balance_resource(&self) -> Result<Option<BalanceResource>> {
-        self.get_resource(&BalanceResource::resource_path())
+        if let Some(account_resource) = self.get_account_resource()? {
+            let balance_currency_code = account_resource.balance_currency_code();
+            let currency_type_tag = type_tag_for_currency_code(balance_currency_code.to_owned());
+            // TODO: update this to use BalanceResource::resource_path once that takes type
+            // parameters
+            self.get_resource(&BalanceResource::access_path_for(currency_type_tag))
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn get_configuration_resource(&self) -> Result<Option<ConfigurationResource>> {
@@ -50,6 +60,15 @@ impl AccountState {
 
     pub fn get_validator_config_resource(&self) -> Result<Option<ValidatorConfigResource>> {
         self.get_resource(&ValidatorConfigResource::resource_path())
+    }
+
+    pub fn get_currency_info_resource(
+        &self,
+        currency_code: Identifier,
+    ) -> Result<Option<BalanceResource>> {
+        // TODO: update this to use BalanceResource::resource_path once that takes type
+        // parameters
+        self.get_resource(&CurrencyInfoResource::access_path_for(currency_code))
     }
 
     pub fn get_validator_set(&self) -> Result<Option<ValidatorSet>> {

@@ -4,7 +4,7 @@
 use crate::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::{AccountResource, BalanceResource},
+    account_config::{AccountResource, BalanceResource, LBR_NAME},
     account_state_blob::AccountStateBlob,
     block_info::{BlockInfo, Round},
     block_metadata::BlockMetadata,
@@ -116,6 +116,7 @@ struct AccountInfo {
     sequence_number: u64,
     sent_event_handle: EventHandle,
     received_event_handle: EventHandle,
+    balance_currency_code: Identifier,
 }
 
 impl AccountInfo {
@@ -128,6 +129,7 @@ impl AccountInfo {
             sequence_number: 0,
             sent_event_handle: EventHandle::new_from_address(&address, 0),
             received_event_handle: EventHandle::new_from_address(&address, 1),
+            balance_currency_code: Identifier::new(LBR_NAME).unwrap(),
         }
     }
 }
@@ -657,7 +659,8 @@ impl AccountResourceGen {
             self.delegated_withdrawal_capability,
             account_info.sent_event_handle.clone(),
             account_info.received_event_handle.clone(),
-            0,
+            false,
+            account_info.balance_currency_code.clone(),
         )
     }
 }

@@ -12,6 +12,7 @@ use vm::transaction_metadata::TransactionMetadata;
 fn failed_transaction_cleanup_test() {
     let mut fake_executor = FakeExecutor::from_genesis_file();
     let sender = AccountData::new(1_000_000, 10);
+    let gas_currency_code = sender.balance_currency_code();
     fake_executor.add_account_data(&sender);
 
     let mut libra_vm = LibraVM::new();
@@ -31,6 +32,7 @@ fn failed_transaction_cleanup_test() {
         gas_left,
         &txn_data,
         &mut data_cache,
+        gas_currency_code,
     );
     assert!(!out1.write_set().is_empty());
     assert!(out1.gas_used() == 180_000);
@@ -46,6 +48,7 @@ fn failed_transaction_cleanup_test() {
         gas_left,
         &txn_data,
         &mut data_cache,
+        gas_currency_code,
     );
     assert!(out2.write_set().is_empty());
     assert!(out2.gas_used() == 0);

@@ -177,7 +177,7 @@ fn test_libra_LibraEvent_from() {
     use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
     use libra_types::{
         account_address::AccountAddress,
-        account_config::SentPaymentEvent,
+        account_config::{from_currency_code_string, SentPaymentEvent, LBR_NAME},
         contract_event::ContractEvent,
         event::{EventHandle, EventKey},
         language_storage::{StructTag, TypeTag::Struct},
@@ -201,7 +201,12 @@ fn test_libra_LibraEvent_from() {
     });
     let amount = 50_000_000;
     let receiver_address = AccountAddress::random();
-    let event_data = SentPaymentEvent::new(amount, receiver_address, vec![]);
+    let event_data = SentPaymentEvent::new(
+        amount,
+        from_currency_code_string(LBR_NAME).unwrap(),
+        receiver_address,
+        vec![],
+    );
     let event_data_bytes = lcs::to_bytes(&event_data).unwrap();
 
     let event = ContractEvent::new(*event_key, sequence_number, type_tag, event_data_bytes);

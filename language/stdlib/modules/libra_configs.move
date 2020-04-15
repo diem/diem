@@ -1,7 +1,7 @@
 address 0x0:
 module LibraConfig {
     use 0x0::Transaction;
-    use 0x0::LibraAccount;
+    use 0x0::Event;
     use 0x0::LibraTimestamp;
 
     // A generic singleton resource that holds a value of a specific type.
@@ -14,7 +14,7 @@ module LibraConfig {
     resource struct Configuration {
         epoch: u64,
         last_reconfiguration_time: u64,
-        events: LibraAccount::EventHandle<NewEpochEvent>,
+        events: Event::EventHandle<NewEpochEvent>,
     }
 
     // This can only be invoked by the Association address, and only a single time.
@@ -27,7 +27,7 @@ module LibraConfig {
         move_to_sender<Configuration>(Configuration {
             epoch: 0,
             last_reconfiguration_time: 0,
-            events: LibraAccount::new_event_handle<NewEpochEvent>(),
+            events: Event::new_event_handle<NewEpochEvent>(),
         });
     }
 
@@ -90,7 +90,7 @@ module LibraConfig {
         let config_ref = borrow_global_mut<Configuration>(0xA550C18);
         config_ref.epoch = config_ref.epoch + 1;
 
-        LibraAccount::emit_event<NewEpochEvent>(
+        Event::emit_event<NewEpochEvent>(
             &mut config_ref.events,
             NewEpochEvent {
                 epoch: config_ref.epoch,

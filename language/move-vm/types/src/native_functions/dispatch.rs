@@ -8,7 +8,10 @@ use crate::{
 };
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{account_module_name, AccountResource, BalanceResource, CORE_CODE_ADDRESS},
+    account_config::{
+        account_type_module_name, account_type_struct_name, event_handle_generator_struct_name,
+        event_module_name, AccountResource, BalanceResource, CORE_CODE_ADDRESS,
+    },
     language_storage::ModuleId,
     move_resource::MoveResource,
     vm_error::{StatusCode, VMStatus},
@@ -114,7 +117,7 @@ impl NativeFunction {
             (&CORE_CODE_ADDRESS, "Vector", "pop_back") => VectorPopBack,
             (&CORE_CODE_ADDRESS, "Vector", "destroy_empty") => VectorDestroyEmpty,
             (&CORE_CODE_ADDRESS, "Vector", "swap") => VectorSwap,
-            (&CORE_CODE_ADDRESS, "LibraAccount", "write_to_event_store") => AccountWriteEvent,
+            (&CORE_CODE_ADDRESS, "Event", "write_to_event_store") => AccountWriteEvent,
             (&CORE_CODE_ADDRESS, "LibraAccount", "save_account") => AccountSaveAccount,
             (&CORE_CODE_ADDRESS, "Debug", "print") => DebugPrint,
             (&CORE_CODE_ADDRESS, "Debug", "print_stack_trace") => DebugPrintStackTrace,
@@ -177,7 +180,7 @@ impl NativeFunction {
             Self::VectorDestroyEmpty => 1,
             Self::VectorSwap => 3,
             Self::AccountWriteEvent => 3,
-            Self::AccountSaveAccount => 3,
+            Self::AccountSaveAccount => 5,
             Self::DebugPrint => 1,
             Self::DebugPrintStackTrace => 0,
         }
@@ -337,22 +340,36 @@ impl NativeFunction {
                 vec![]
             ),
             Self::AccountSaveAccount => {
-                let type_parameters = vec![Kind::All];
+                let type_parameters = vec![Kind::All, Kind::Copyable];
                 let self_t_idx = struct_handle_idx(
                     m?,
                     &CORE_CODE_ADDRESS,
-                    account_module_name().as_str(),
+                    AccountResource::MODULE_NAME,
                     AccountResource::STRUCT_NAME,
                 )?;
                 let balance_t_idx = struct_handle_idx(
                     m?,
                     &CORE_CODE_ADDRESS,
-                    account_module_name().as_str(),
+                    AccountResource::MODULE_NAME,
                     BalanceResource::STRUCT_NAME,
                 )?;
+                let assoc_cap_t_idx = struct_handle_idx(
+                    m?,
+                    &CORE_CODE_ADDRESS,
+                    account_type_module_name().as_str(),
+                    account_type_struct_name().as_str(),
+                )?;
+                let event_generator_t_idx = struct_handle_idx(
+                    m?,
+                    &CORE_CODE_ADDRESS,
+                    event_module_name().as_str(),
+                    event_handle_generator_struct_name().as_str(),
+                )?;
                 let parameters = vec![
+                    StructInstantiation(assoc_cap_t_idx, vec![TypeParameter(1)]),
                     StructInstantiation(balance_t_idx, vec![TypeParameter(0)]),
                     Struct(self_t_idx),
+                    Struct(event_generator_t_idx),
                     Address,
                 ];
                 let return_ = vec![];

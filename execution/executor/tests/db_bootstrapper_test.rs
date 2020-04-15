@@ -128,6 +128,7 @@ fn get_mint_transaction(
         association_key.clone(),
         association_key.public_key(),
         Some(encode_create_account_script(
+            lbr_type_tag(),
             &account,
             account_auth_key.prefix().to_vec(),
             amount,

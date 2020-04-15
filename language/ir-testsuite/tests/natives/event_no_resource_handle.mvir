@@ -1,10 +1,10 @@
-import 0x0.LibraAccount;
+import 0x0.Event;
 import 0x0.LBR;
 import 0x0.Libra;
 main() {
-    let handle: LibraAccount.EventHandle<Libra.T<LBR.T>>;
-    handle = LibraAccount.new_event_handle<Libra.T<LBR.T>>();
-    LibraAccount.destroy_handle<Libra.T<LBR.T>>(move(handle));
+    let handle: Event.EventHandle<Libra.T<LBR.T>>;
+    handle = Event.new_event_handle<Libra.T<LBR.T>>();
+    Event.destroy_handle<Libra.T<LBR.T>>(move(handle));
     return;
 }
 

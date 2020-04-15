@@ -16,7 +16,7 @@ main() {
     recipient_addr = {{bob}};
     sender_original_balance = LibraAccount.balance<LBR.T>(copy(sender_addr));
     recipient_original_balance = LibraAccount.balance<LBR.T>(copy(recipient_addr));
-    LibraAccount.pay_from_sender<LBR.T>(copy(recipient_addr), Vector.empty<u8>(), 5);
+    LibraAccount.pay_from_sender<LBR.T>(copy(recipient_addr), 5);
 
     sender_new_balance = LibraAccount.balance<LBR.T>(move(sender_addr));
     recipient_new_balance = LibraAccount.balance<LBR.T>(move(recipient_addr));

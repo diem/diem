@@ -1,7 +1,7 @@
 address 0x0:
 
 module LibraSystem {
-    use 0x0::LibraAccount;
+    use 0x0::Event;
     use 0x0::LibraConfig;
     use 0x0::LibraSystem2;
     use 0x0::Transaction;
@@ -39,7 +39,7 @@ module LibraSystem {
         // The current discovery set. Updated only at epoch boundaries via reconfiguration.
         discovery_set: vector<DiscoveryInfo>,
         // Handle where discovery set change events are emitted
-        change_events: LibraAccount::EventHandle<DiscoverySetChangeEvent>,
+        change_events: Event::EventHandle<DiscoverySetChangeEvent>,
     }
 
     // This can only be invoked by the Association address, and only a single time.
@@ -66,7 +66,7 @@ module LibraSystem {
 
         move_to_sender<DiscoverySet>(DiscoverySet {
             discovery_set: Vector::empty(),
-            change_events: LibraAccount::new_event_handle<DiscoverySetChangeEvent>(),
+            change_events: Event::new_event_handle<DiscoverySetChangeEvent>(),
         });
     }
 
@@ -332,7 +332,7 @@ module LibraSystem {
 
    fun emit_discovery_set_change() acquires DiscoverySet {
        let discovery_set_ref = borrow_global_mut<DiscoverySet>(0xD15C0);
-       LibraAccount::emit_event<DiscoverySetChangeEvent>(
+       Event::emit_event<DiscoverySetChangeEvent>(
            &mut discovery_set_ref.change_events,
            DiscoverySetChangeEvent {
                new_discovery_set: *&discovery_set_ref.discovery_set,

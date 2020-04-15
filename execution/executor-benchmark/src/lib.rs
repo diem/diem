@@ -109,6 +109,7 @@ impl TransactionGenerator {
                     &self.genesis_key,
                     self.genesis_key.public_key(),
                     encode_create_account_script(
+                        lbr_type_tag(),
                         &account.address,
                         account.auth_key_prefix(),
                         init_account_balance,
@@ -320,8 +321,8 @@ fn create_transaction(
         sender,
         sequence_number,
         program,
-        400_000, /* max_gas_amount */
-        1,       /* gas_unit_price */
+        1_000_000, /* max_gas_amount */
+        1,         /* gas_unit_price */
         expiration_time,
     );
 
@@ -335,11 +336,11 @@ mod tests {
     #[test]
     fn test_benchmark() {
         super::run_benchmark(
-            25,        /* num_accounts */
-            1_000_000, /* init_account_balance */
-            5,         /* block_size */
-            5,         /* num_transfer_blocks */
-            None,      /* db_dir */
+            25,         /* num_accounts */
+            10_000_000, /* init_account_balance */
+            5,          /* block_size */
+            5,          /* num_transfer_blocks */
+            None,       /* db_dir */
         );
     }
 }

@@ -7,7 +7,7 @@ address 0x0:
 // ValidatorSet and DiscoverySet are stored under different addresses in order to facilitate
 // cheaper reads of these sets from storage.
 module LibraSystem2 {
-    use 0x0::LibraAccount;
+    use 0x0::Event;
     use 0x0::LibraTimestamp;
     use 0x0::Transaction;
     use 0x0::ValidatorConfig2;
@@ -29,7 +29,7 @@ module LibraSystem2 {
     resource struct ValidatorSet {
         validators: vector<ValidatorInfo>,
         last_reconfiguration_time: u64,
-        change_events: LibraAccount::EventHandle<ValidatorSetChangeEvent>,
+        change_events: Event::EventHandle<ValidatorSetChangeEvent>,
     }
 
     // ValidatorInfo public accessors
@@ -61,7 +61,7 @@ module LibraSystem2 {
         move_to_sender<ValidatorSet>(ValidatorSet {
             validators: Vector::empty(),
             last_reconfiguration_time: 0,
-            change_events: LibraAccount::new_event_handle<ValidatorSetChangeEvent>(),
+            change_events: Event::new_event_handle<ValidatorSetChangeEvent>(),
         });
     }
 
@@ -204,7 +204,7 @@ module LibraSystem2 {
         Transaction::assert(current_block_time > validator_set_ref.last_reconfiguration_time, 14);
 
         validator_set_ref.last_reconfiguration_time = current_block_time;
-        LibraAccount::emit_event<ValidatorSetChangeEvent>(
+        Event::emit_event<ValidatorSetChangeEvent>(
             &mut validator_set_ref.change_events,
             ValidatorSetChangeEvent {
                 new_validator_set: *&validator_set_ref.validators,

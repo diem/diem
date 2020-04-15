@@ -781,7 +781,7 @@ impl<'txn> Interpreter<'txn> {
             NativeFunction::resolve(&module_id, function_name)
                 .ok_or_else(|| VMStatus::new(StatusCode::LINKER_ERROR))?
         };
-        if module_id == *account_config::ACCOUNT_MODULE
+        if module_id == *account_config::EVENT_MODULE
             && function_name == EMIT_EVENT_NAME.as_ident_str()
         {
             self.call_emit_event(context, ty_args)
@@ -888,10 +888,22 @@ impl<'txn> Interpreter<'txn> {
                 .total()
         )?;
         let account_module = runtime.get_loaded_module(&account_config::ACCOUNT_MODULE, context)?;
+        let event_module = runtime.get_loaded_module(&account_config::EVENT_MODULE, context)?;
+        let account_type_module =
+            runtime.get_loaded_module(&account_config::ACCOUNT_TYPE_MODULE, context)?;
         let address = self.operand_stack.pop_as::<AccountAddress>()?;
         if address == account_config::CORE_CODE_ADDRESS {
             return Err(VMStatus::new(StatusCode::CREATE_NULL_ACCOUNT));
         }
+        Self::save_under_address(
+            runtime,
+            context,
+            &[],
+            event_module,
+            account_config::event_handle_generator_struct_name(),
+            self.operand_stack.pop_as::<Struct>()?,
+            address,
+        )?;
         Self::save_under_address(
             runtime,
             context,
@@ -904,9 +916,18 @@ impl<'txn> Interpreter<'txn> {
         Self::save_under_address(
             runtime,
             context,
-            &ty_args,
+            &[ty_args[0].clone()],
             account_module,
             &BalanceResource::struct_identifier(),
+            self.operand_stack.pop_as::<Struct>()?,
+            address,
+        )?;
+        Self::save_under_address(
+            runtime,
+            context,
+            &[ty_args[1].clone()],
+            account_type_module,
+            account_config::account_type_struct_name(),
             self.operand_stack.pop_as::<Struct>()?,
             address,
         )

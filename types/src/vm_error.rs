@@ -298,6 +298,12 @@ pub enum StatusCode {
     // Gas specifier submitted is either malformed (not a valid identifier),
     // or does not refer to an accepted gas specifier
     INVALID_GAS_SPECIFIER = 17,
+    // The sending account is frozen
+    SENDING_ACCOUNT_FROZEN = 18,
+    // Unable to deserialize the account blob
+    UNABLE_TO_DESERIALIZE_ACCOUNT = 19,
+    // The currency info was unable to be found
+    CURRENCY_INFO_DOES_NOT_EXIST = 20,
 
     // When a code module/script is published it is verified. These are the
     // possible errors that can arise from the verification process.

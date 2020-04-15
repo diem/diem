@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account::{Account, AccountData},
+    account::{lbr_currency_code, Account, AccountData},
     account_universe::{
         txn_one_account_result, AUTransactionGen, AccountPair, AccountPairGen, AccountUniverse,
     },
@@ -53,7 +53,9 @@ impl AUTransactionGen for CreateAccountGen {
             universe.add_account(AccountData::with_account(
                 self.new_account.clone(),
                 self.amount,
+                lbr_currency_code(),
                 0,
+                false,
             ));
         } else {
             gas_cost = 0;

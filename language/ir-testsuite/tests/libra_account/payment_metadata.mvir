@@ -7,7 +7,7 @@ import 0x0.LBR;
 import 0x0.Vector;
 // send a transaction with metadata and make sure we see it in the PaymentReceivedEvent
 main() {
-    LibraAccount.pay_from_sender_with_metadata<LBR.T>({{bob}}, Vector.empty<u8>(), 1000, h"deadbeef");
+    LibraAccount.pay_from_sender_with_metadata<LBR.T>({{bob}}, 1000, h"deadbeef");
     return;
 }
 

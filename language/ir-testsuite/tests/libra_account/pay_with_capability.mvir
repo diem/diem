@@ -23,7 +23,7 @@ module AlicePays {
     public pay(payee: address, amount: u64) acquires T {
         let cap: &Self.T;
         cap = borrow_global<T>({{alice}});
-        LibraAccount.pay_from_capability<LBR.T>(move(payee), Vector.empty<u8>(), &move(cap).cap, move(amount), h"0A11CE");
+        LibraAccount.pay_from_capability<LBR.T>(move(payee), &move(cap).cap, move(amount), h"0A11CE");
         return;
     }
 }
