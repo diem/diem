@@ -14,6 +14,7 @@ use codespan_reporting::term::termcolor::WriteColor;
 use log::info;
 use spec_lang::{env::GlobalEnv, run_spec_lang_compiler};
 use stackless_bytecode_generator::{
+    eliminate_imm_refs::EliminateImmRefsProcessor,
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
     lifetime_analysis::LifetimeAnalysisProcessor,
 };
@@ -117,6 +118,7 @@ fn create_bytecode_processing_pipeline(_options: &Options) -> FunctionTargetPipe
     let mut res = FunctionTargetPipeline::default();
 
     // Add processors in order they are executed.
+    res.add_processor(EliminateImmRefsProcessor::new());
 
     // Must happen last as it is currently computing information based on raw code offsets.
     res.add_processor(LifetimeAnalysisProcessor::new());

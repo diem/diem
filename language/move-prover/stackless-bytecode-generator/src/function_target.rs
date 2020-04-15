@@ -22,6 +22,7 @@ use vm::file_format::CodeOffset;
 pub struct FunctionTarget<'env> {
     pub func_env: &'env FunctionEnv<'env>,
     pub data: &'env FunctionTargetData,
+    pub name_to_index: BTreeMap<Symbol, usize>,
 
     // Used for debugging and testing, containing any attached annotation formatters.
     annotation_formatters: RefCell<Vec<Box<AnnotationFormatter>>>,
@@ -51,9 +52,13 @@ impl<'env> FunctionTarget<'env> {
         func_env: &'env FunctionEnv<'env>,
         data: &'env FunctionTargetData,
     ) -> FunctionTarget<'env> {
+        let name_to_index = (0..func_env.get_local_count())
+            .map(|idx| (func_env.get_local_name(idx), idx))
+            .collect();
         FunctionTarget {
             func_env,
             data,
+            name_to_index,
             annotation_formatters: RefCell::new(vec![]),
         }
     }
@@ -135,6 +140,11 @@ impl<'env> FunctionTarget<'env> {
     /// otherwise generate a unique name.
     pub fn get_local_name(&self, idx: usize) -> Symbol {
         self.func_env.get_local_name(idx)
+    }
+
+    /// Get the index corresponding to a local name
+    pub fn get_local_index(&self, name: Symbol) -> Option<&usize> {
+        self.name_to_index.get(&name)
     }
 
     /// Gets the number of locals of this function, including parameters.

@@ -447,22 +447,16 @@ function $LibraAccount_T_type_value(): TypeValue;
 
 function $LibraAccount_Balance_type_value(tv: TypeValue): TypeValue;
 
-// Returns sender address.
-function {:inline} TxnSenderAddress(txn: Transaction): int {
-  sender#Transaction(txn)
-}
-
-
 // ============================================================================================
 // Instructions
 
-procedure {:inline 1} Exists(address: Value, t: TypeValue) returns (dst: Value)
+procedure {:inline 1} $Exists(address: Value, t: TypeValue) returns (dst: Value)
 requires is#Address(address);
 {
     dst := $ResourceExists($m, t, address);
 }
 
-procedure {:inline 1} MoveToSender(ta: TypeValue, v: Value)
+procedure {:inline 1} $MoveToSender(ta: TypeValue, v: Value)
 {
     var a: int;
     var l: Location;
@@ -476,7 +470,7 @@ procedure {:inline 1} MoveToSender(ta: TypeValue, v: Value)
     $m := Memory(domain#Memory($m)[l := true], contents#Memory($m)[l := v]);
 }
 
-procedure {:inline 1} MoveFrom(address: Value, ta: TypeValue) returns (dst: Value)
+procedure {:inline 1} $MoveFrom(address: Value, ta: TypeValue) returns (dst: Value)
 requires is#Address(address);
 {
     var a: int;
@@ -491,7 +485,7 @@ requires is#Address(address);
     $m := Memory(domain#Memory($m)[l := false], contents#Memory($m)[l := DefaultValue]);
 }
 
-procedure {:inline 1} BorrowGlobal(address: Value, ta: TypeValue) returns (dst: Reference)
+procedure {:inline 1} $BorrowGlobal(address: Value, ta: TypeValue) returns (dst: Reference)
 requires is#Address(address);
 {
     var a: int;
@@ -505,12 +499,12 @@ requires is#Address(address);
     dst := Reference(l, EmptyPath);
 }
 
-procedure {:inline 1} BorrowLoc(l: int) returns (dst: Reference)
+procedure {:inline 1} $BorrowLoc(l: int) returns (dst: Reference)
 {
     dst := Reference(Local(l), EmptyPath);
 }
 
-procedure {:inline 1} BorrowField(src: Reference, f: FieldName) returns (dst: Reference)
+procedure {:inline 1} $BorrowField(src: Reference, f: FieldName) returns (dst: Reference)
 {
     var p: Path;
     var size: int;
@@ -521,7 +515,28 @@ procedure {:inline 1} BorrowField(src: Reference, f: FieldName) returns (dst: Re
     dst := Reference(l#Reference(src), p);
 }
 
-procedure {:inline 1} WriteRef(to: Reference, new_v: Value)
+procedure {:inline 1} $GetGlobal(address: Value, ta: TypeValue) returns (dst: Value)
+{
+    var r: Reference;
+
+    call r := $BorrowGlobal(address, ta);
+    call dst := $ReadRef(r);
+}
+
+procedure {:inline 1} $GetFieldFromReference(src: Reference, f: FieldName) returns (dst: Value)
+{
+    var r: Reference;
+
+    call r := $BorrowField(src, f);
+    call dst := $ReadRef(r);
+}
+
+procedure {:inline 1} $GetFieldFromValue(src: Value, f: FieldName) returns (dst: Value)
+{
+    dst := $vmap(src)[f];
+}
+
+procedure {:inline 1} $WriteRef(to: Reference, new_v: Value)
 {
     var l: Location;
     var v: Value;
@@ -532,27 +547,27 @@ procedure {:inline 1} WriteRef(to: Reference, new_v: Value)
     $m := Memory(domain#Memory($m), contents#Memory($m)[l := v]);
 }
 
-procedure {:inline 1} ReadRef(from: Reference) returns (v: Value)
+procedure {:inline 1} $ReadRef(from: Reference) returns (v: Value)
 {
     v := $ReadValue(p#Reference(from), contents#Memory($m)[l#Reference(from)]);
 }
 
-procedure {:inline 1} CopyOrMoveRef(local: Reference) returns (dst: Reference)
+procedure {:inline 1} $CopyOrMoveRef(local: Reference) returns (dst: Reference)
 {
     dst := local;
 }
 
-procedure {:inline 1} CopyOrMoveValue(local: Value) returns (dst: Value)
+procedure {:inline 1} $CopyOrMoveValue(local: Value) returns (dst: Value)
 {
     dst := local;
 }
 
-procedure {:inline 1} FreezeRef(src: Reference) returns (dst: Reference)
+procedure {:inline 1} $FreezeRef(src: Reference) returns (dst: Reference)
 {
     dst := src;
 }
 
-procedure {:inline 1} CastU8(src: Value) returns (dst: Value)
+procedure {:inline 1} $CastU8(src: Value) returns (dst: Value)
 requires is#Integer(src);
 {
     if (i#Integer(src) > MAX_U8) {
@@ -562,7 +577,7 @@ requires is#Integer(src);
     dst := src;
 }
 
-procedure {:inline 1} CastU64(src: Value) returns (dst: Value)
+procedure {:inline 1} $CastU64(src: Value) returns (dst: Value)
 requires is#Integer(src);
 {
     if (i#Integer(src) > MAX_U64) {
@@ -572,7 +587,7 @@ requires is#Integer(src);
     dst := src;
 }
 
-procedure {:inline 1} CastU128(src: Value) returns (dst: Value)
+procedure {:inline 1} $CastU128(src: Value) returns (dst: Value)
 requires is#Integer(src);
 {
     if (i#Integer(src) > MAX_U128) {
@@ -582,7 +597,7 @@ requires is#Integer(src);
     dst := src;
 }
 
-procedure {:inline 1} AddU8(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} $AddU8(src1: Value, src2: Value) returns (dst: Value)
 requires $IsValidU8(src1) && $IsValidU8(src2);
 {
     if (i#Integer(src1) + i#Integer(src2) > MAX_U8) {
@@ -592,7 +607,7 @@ requires $IsValidU8(src1) && $IsValidU8(src2);
     dst := Integer(i#Integer(src1) + i#Integer(src2));
 }
 
-procedure {:inline 1} AddU64(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} $AddU64(src1: Value, src2: Value) returns (dst: Value)
 requires $IsValidU64(src1) && $IsValidU64(src2);
 {
     if (i#Integer(src1) + i#Integer(src2) > MAX_U64) {
@@ -602,7 +617,7 @@ requires $IsValidU64(src1) && $IsValidU64(src2);
     dst := Integer(i#Integer(src1) + i#Integer(src2));
 }
 
-procedure {:inline 1} AddU128(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} $AddU128(src1: Value, src2: Value) returns (dst: Value)
 requires $IsValidU128(src1) && $IsValidU128(src2);
 {
     if (i#Integer(src1) + i#Integer(src2) > MAX_U128) {
@@ -612,7 +627,7 @@ requires $IsValidU128(src1) && $IsValidU128(src2);
     dst := Integer(i#Integer(src1) + i#Integer(src2));
 }
 
-procedure {:inline 1} Sub(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} $Sub(src1: Value, src2: Value) returns (dst: Value)
 requires is#Integer(src1) && is#Integer(src2);
 {
     if (i#Integer(src1) < i#Integer(src2)) {
@@ -622,21 +637,21 @@ requires is#Integer(src1) && is#Integer(src2);
     dst := Integer(i#Integer(src1) - i#Integer(src2));
 }
 
-procedure {:inline 1} Shl(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} $Shl(src1: Value, src2: Value) returns (dst: Value)
 requires is#Integer(src1) && is#Integer(src2);
 {
     // TOOD: implement
     assert false;
 }
 
-procedure {:inline 1} Shr(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} $Shr(src1: Value, src2: Value) returns (dst: Value)
 requires is#Integer(src1) && is#Integer(src2);
 {
     // TOOD: implement
     assert false;
 }
 
-procedure {:inline 1} MulU8(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} $MulU8(src1: Value, src2: Value) returns (dst: Value)
 requires $IsValidU8(src1) && $IsValidU8(src2);
 {
     if (i#Integer(src1) * i#Integer(src2) > MAX_U8) {
@@ -646,7 +661,7 @@ requires $IsValidU8(src1) && $IsValidU8(src2);
     dst := Integer(i#Integer(src1) * i#Integer(src2));
 }
 
-procedure {:inline 1} MulU64(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} $MulU64(src1: Value, src2: Value) returns (dst: Value)
 requires $IsValidU64(src1) && $IsValidU64(src2);
 {
     if (i#Integer(src1) * i#Integer(src2) > MAX_U64) {
@@ -656,7 +671,7 @@ requires $IsValidU64(src1) && $IsValidU64(src2);
     dst := Integer(i#Integer(src1) * i#Integer(src2));
 }
 
-procedure {:inline 1} MulU128(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} $MulU128(src1: Value, src2: Value) returns (dst: Value)
 requires $IsValidU128(src1) && $IsValidU128(src2);
 {
     if (i#Integer(src1) * i#Integer(src2) > MAX_U128) {
@@ -666,7 +681,7 @@ requires $IsValidU128(src1) && $IsValidU128(src2);
     dst := Integer(i#Integer(src1) * i#Integer(src2));
 }
 
-procedure {:inline 1} Div(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} $Div(src1: Value, src2: Value) returns (dst: Value)
 requires is#Integer(src1) && is#Integer(src2);
 {
     if (i#Integer(src2) == 0) {
@@ -676,7 +691,7 @@ requires is#Integer(src1) && is#Integer(src2);
     dst := Integer(i#Integer(src1) div i#Integer(src2));
 }
 
-procedure {:inline 1} Mod(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} $Mod(src1: Value, src2: Value) returns (dst: Value)
 requires is#Integer(src1) && is#Integer(src2);
 {
     if (i#Integer(src2) == 0) {
@@ -686,47 +701,47 @@ requires is#Integer(src1) && is#Integer(src2);
     dst := Integer(i#Integer(src1) mod i#Integer(src2));
 }
 
-procedure {:inline 1} ArithBinaryUnimplemented(src1: Value, src2: Value) returns (dst: Value);
+procedure {:inline 1} $ArithBinaryUnimplemented(src1: Value, src2: Value) returns (dst: Value);
 requires is#Integer(src1) && is#Integer(src2);
 ensures is#Integer(dst);
 
-procedure {:inline 1} Lt(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} $Lt(src1: Value, src2: Value) returns (dst: Value)
 requires is#Integer(src1) && is#Integer(src2);
 {
     dst := Boolean(i#Integer(src1) < i#Integer(src2));
 }
 
-procedure {:inline 1} Gt(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} $Gt(src1: Value, src2: Value) returns (dst: Value)
 requires is#Integer(src1) && is#Integer(src2);
 {
     dst := Boolean(i#Integer(src1) > i#Integer(src2));
 }
 
-procedure {:inline 1} Le(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} $Le(src1: Value, src2: Value) returns (dst: Value)
 requires is#Integer(src1) && is#Integer(src2);
 {
     dst := Boolean(i#Integer(src1) <= i#Integer(src2));
 }
 
-procedure {:inline 1} Ge(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} $Ge(src1: Value, src2: Value) returns (dst: Value)
 requires is#Integer(src1) && is#Integer(src2);
 {
     dst := Boolean(i#Integer(src1) >= i#Integer(src2));
 }
 
-procedure {:inline 1} And(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} $And(src1: Value, src2: Value) returns (dst: Value)
 requires is#Boolean(src1) && is#Boolean(src2);
 {
     dst := Boolean(b#Boolean(src1) && b#Boolean(src2));
 }
 
-procedure {:inline 1} Or(src1: Value, src2: Value) returns (dst: Value)
+procedure {:inline 1} $Or(src1: Value, src2: Value) returns (dst: Value)
 requires is#Boolean(src1) && is#Boolean(src2);
 {
     dst := Boolean(b#Boolean(src1) || b#Boolean(src2));
 }
 
-procedure {:inline 1} Not(src: Value) returns (dst: Value)
+procedure {:inline 1} $Not(src: Value) returns (dst: Value)
 requires is#Boolean(src);
 {
     dst := Boolean(!b#Boolean(src));
@@ -768,9 +783,7 @@ procedure {:inline 1} $Vector_empty(ta: TypeValue) returns (v: Value) {
     v := $mk_vector();
 }
 
-procedure {:inline 1} $Vector_is_empty(ta: TypeValue, r: Reference) returns (b: Value) {
-    var v: Value;
-    v := $Dereference($m, r);
+procedure {:inline 1} $Vector_is_empty(ta: TypeValue, v: Value) returns (b: Value) {
     assume is#Vector(v);
     b := Boolean($vlen(v) == 0);
 }
@@ -779,7 +792,7 @@ procedure {:inline 1} $Vector_push_back(ta: TypeValue, r: Reference, val: Value)
     var v: Value;
     v := $Dereference($m, r);
     assume is#Vector(v);
-    call WriteRef(r, $push_back_vector(v, val));
+    call $WriteRef(r, $push_back_vector(v, val));
 }
 
 procedure {:inline 1} $Vector_pop_back(ta: TypeValue, r: Reference) returns (e: Value) {
@@ -793,7 +806,7 @@ procedure {:inline 1} $Vector_pop_back(ta: TypeValue, r: Reference) returns (e: 
         return;
     }
     e := $vmap(v)[len-1];
-    call WriteRef(r, $pop_back_vector(v));
+    call $WriteRef(r, $pop_back_vector(v));
 }
 
 procedure {:inline 1} $Vector_append(ta: TypeValue, r: Reference, other: Value) {
@@ -801,25 +814,32 @@ procedure {:inline 1} $Vector_append(ta: TypeValue, r: Reference, other: Value) 
     v := $Dereference($m, r);
     assume is#Vector(v);
     assume is#Vector(other);
-    call WriteRef(r, $append_vector(v, other));
+    call $WriteRef(r, $append_vector(v, other));
 }
 
 procedure {:inline 1} $Vector_reverse(ta: TypeValue, r: Reference) {
     var v: Value;
     v := $Dereference($m, r);
     assume is#Vector(v);
-    call WriteRef(r, $reverse_vector(v));
+    call $WriteRef(r, $reverse_vector(v));
 }
 
-procedure {:inline 1} $Vector_length(ta: TypeValue, r: Reference) returns (l: Value) {
-    var v: Value;
-    v := $Dereference($m, r);
+procedure {:inline 1} $Vector_length(ta: TypeValue, v: Value) returns (l: Value) {
     assume is#Vector(v);
     l := Integer($vlen(v));
 }
 
-procedure {:inline 1} $Vector_borrow(ta: TypeValue, src: Reference, index: Value) returns (dst: Reference) {
-    call dst := $Vector_borrow_mut(ta, src, index);
+procedure {:inline 1} $Vector_borrow(ta: TypeValue, src: Value, i: Value) returns (dst: Value) {
+    var i_ind: int;
+
+    assume is#Vector(src);
+    assume is#Integer(i);
+    i_ind := i#Integer(i);
+    if (i_ind < 0 || i_ind >= $vlen(src)) {
+        $abort_flag := true;
+        return;
+    }
+    dst := $vmap(src)[i_ind];
 }
 
 procedure {:inline 1} $Vector_borrow_mut(ta: TypeValue, src: Reference, index: Value) returns (dst: Reference)
@@ -865,40 +885,7 @@ requires is#Integer(i) && is#Integer(j);
         return;
     }
     v := $swap_vector(v, i_ind, j_ind);
-    call WriteRef(src, v);
-}
-
-procedure {:inline 1} $Vector_get(ta: TypeValue, src: Reference, i: Value) returns (e: Value)
-requires is#Integer(i);
-{
-    var i_ind: int;
-    var v: Value;
-
-    i_ind := i#Integer(i);
-    v := $Dereference($m, src);
-    assume is#Vector(v);
-    if (i_ind < 0 || i_ind >= $vlen(v)) {
-        $abort_flag := true;
-        return;
-    }
-    e := $vmap(v)[i_ind];
-}
-
-procedure {:inline 1} $Vector_set(ta: TypeValue, src: Reference, i: Value, e: Value)
-requires is#Integer(i);
-{
-    var i_ind: int;
-    var v: Value;
-
-    i_ind := i#Integer(i);
-    v := $Dereference($m, src);
-    assume is#Vector(v);
-    if (i_ind < 0 || i_ind >= $vlen(v)) {
-        $abort_flag := true;
-        return;
-    }
-    v := $update_vector(v, i_ind, e);
-    call WriteRef(src, v);
+    call $WriteRef(src, v);
 }
 
 procedure {:inline 1} $Vector_remove(ta: TypeValue, r: Reference, i: Value) returns (e: Value)
@@ -916,7 +903,7 @@ requires is#Integer(i);
         return;
     }
     e := $vmap(v)[i_ind];
-    call WriteRef(r, $remove_vector(v, i_ind));
+    call $WriteRef(r, $remove_vector(v, i_ind));
 }
 
 procedure {:inline 1} $Vector_swap_remove(ta: TypeValue, r: Reference, i: Value) returns (e: Value)
@@ -936,17 +923,11 @@ requires is#Integer(i);
         return;
     }
     e := $vmap(v)[i_ind];
-    call WriteRef(r, $pop_back_vector($swap_vector(v, i_ind, len-1)));
+    call $WriteRef(r, $pop_back_vector($swap_vector(v, i_ind, len-1)));
 }
 
-procedure {:inline 1} $Vector_contains(ta: TypeValue, vr: Reference, er: Reference) returns (res: Value)  {
-    var v: Value;
-    var e: Value;
-
-    v := $Dereference($m, vr);
-    e := $Dereference($m, er);
+procedure {:inline 1} $Vector_contains(ta: TypeValue, v: Value, e: Value) returns (res: Value)  {
     assume is#Vector(v);
-
     res := Boolean($contains_vector(v, e));
 }
 
@@ -1084,7 +1065,7 @@ axiom (forall ta1, ta2: TypeValue ::
        (forall v1, v2: Value :: IsEqual($LCS_serialize_core(ta1, v1), $LCS_serialize_core(ta2, v2))
            ==> IsEqual(v1, v2) && (ta1 == ta2)));
 
-procedure $LCS_to_bytes(ta: TypeValue, r: Reference) returns (res: Value);
-ensures res == $LCS_serialize_core(ta, $Dereference($m, r));
+procedure $LCS_to_bytes(ta: TypeValue, v: Value) returns (res: Value);
+ensures res == $LCS_serialize_core(ta, v);
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
 ensures $vlen(res) > 0;
