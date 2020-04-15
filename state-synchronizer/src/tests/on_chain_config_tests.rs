@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::executor_proxy::{ExecutorProxy, ExecutorProxyTrait};
+use executor::BlockExecutor;
 use executor_utils::{
     create_storage_service_and_executor,
     test_helpers::{

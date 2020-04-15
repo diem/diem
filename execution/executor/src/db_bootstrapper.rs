@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use crate::Executor;
+use crate::{BlockExecutor, Executor};
 use anyhow::Result;
 use libra_config::config::NodeConfig;
 use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};

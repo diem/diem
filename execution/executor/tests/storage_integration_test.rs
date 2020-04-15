@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{ensure, format_err, Result};
+use executor::BlockExecutor;
 use executor_utils::{
     create_storage_service_and_executor,
     test_helpers::{

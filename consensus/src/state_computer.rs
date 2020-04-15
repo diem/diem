@@ -4,7 +4,7 @@
 use crate::{counters, state_replication::StateComputer};
 use anyhow::{ensure, Result};
 use consensus_types::block::Block;
-use executor::Executor;
+use executor::{BlockExecutor, Executor};
 use executor_types::StateComputeResult;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;

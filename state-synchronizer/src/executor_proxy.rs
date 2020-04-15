@@ -3,7 +3,7 @@
 
 use crate::SynchronizerState;
 use anyhow::{ensure, format_err, Result};
-use executor::Executor;
+use executor::{ChunkExecutor, Executor};
 use executor_types::ExecutedTrees;
 use itertools::Itertools;
 use libra_config::config::NodeConfig;

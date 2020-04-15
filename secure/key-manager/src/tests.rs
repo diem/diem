@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{Action, Error, KeyManager, LibraInterface};
-use executor::{db_bootstrapper, Executor};
+use executor::{db_bootstrapper, BlockExecutor, Executor};
 use libra_config::config::NodeConfig;
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Policy, Value};
