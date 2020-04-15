@@ -88,6 +88,10 @@ impl Compiler for MoveSourceCompiler {
             }
         })
     }
+
+    fn use_staged_genesis(&self) -> bool {
+        false
+    }
 }
 
 fn functional_testsuite(path: &Path) -> datatest_stable::Result<()> {
