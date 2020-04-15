@@ -43,12 +43,6 @@ ContractEventV0:
         TYPENAME: TypeTag
     - event_data:
         SEQ: U8
-Ed25519PublicKey:
-  NEWTYPESTRUCT:
-    SEQ: U8
-Ed25519Signature:
-  NEWTYPESTRUCT:
-    SEQ: U8
 EventKey:
   NEWTYPESTRUCT:
     SEQ: U8
@@ -61,10 +55,7 @@ Module:
   STRUCT:
     - code:
         SEQ: U8
-MultiEd25519PublicKey:
-  NEWTYPESTRUCT:
-    SEQ: U8
-MultiEd25519Signature:
+MultiSignature:
   NEWTYPESTRUCT:
     SEQ: U8
 RawTransaction:
@@ -88,6 +79,9 @@ Script:
     - args:
         SEQ:
           TYPENAME: TransactionArgument
+Signature:
+  NEWTYPESTRUCT:
+    SEQ: U8
 SignedTransaction:
   STRUCT:
     - raw_txn:
@@ -141,16 +135,16 @@ TransactionAuthenticator:
       Ed25519:
         STRUCT:
           - public_key:
-              TYPENAME: Ed25519PublicKey
+              TYPENAME: VerifyingKey
           - signature:
-              TYPENAME: Ed25519Signature
+              TYPENAME: Signature
     1:
       MultiEd25519:
         STRUCT:
           - public_key:
-              TYPENAME: MultiEd25519PublicKey
+              TYPENAME: VerifyingKeys
           - signature:
-              TYPENAME: MultiEd25519Signature
+              TYPENAME: MultiSignature
 TransactionPayload:
   ENUM:
     0:
@@ -187,6 +181,12 @@ TypeTag:
       Struct:
         NEWTYPE:
           TYPENAME: StructTag
+VerifyingKey:
+  NEWTYPESTRUCT:
+    SEQ: U8
+VerifyingKeys:
+  NEWTYPESTRUCT:
+    SEQ: U8
 WriteOp:
   ENUM:
     0:
