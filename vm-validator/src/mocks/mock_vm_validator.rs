@@ -22,7 +22,7 @@ impl VMValidator for MockVMValidator {
         _transaction: SignedTransaction,
         _state_view: &dyn StateView,
     ) -> VMValidatorResult {
-        VMValidatorResult::new(None, 0)
+        VMValidatorResult::new(None, 0, false)
     }
 }
 
@@ -36,6 +36,7 @@ impl TransactionValidation for MockVMValidator {
                 return Ok(VMValidatorResult::new(
                     Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)),
                     0,
+                    false,
                 ))
             }
         };
@@ -74,7 +75,7 @@ impl TransactionValidation for MockVMValidator {
         } else {
             None
         };
-        Ok(VMValidatorResult::new(ret, 0))
+        Ok(VMValidatorResult::new(ret, 0, false))
     }
 
     fn restart(&mut self, _config: OnChainConfigPayload) -> Result<()> {

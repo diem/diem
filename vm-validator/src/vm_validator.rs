@@ -73,7 +73,6 @@ impl TransactionValidation for VMValidator {
         tokio::task::spawn_blocking(move || {
             let smt = SparseMerkleTree::new(state_root);
             let state_view = VerifiedStateView::new(db_reader, Some(version), state_root, &smt);
-
             vm.validate_transaction(txn, &state_view)
         })
         .await

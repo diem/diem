@@ -9,6 +9,7 @@ use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
+    account_config::{from_currency_code_string, AccountResource, LBR_NAME},
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
     event::EventHandle,
@@ -232,19 +233,20 @@ fn get_mock_response_item(request_item: &ProtoRequestItem) -> Result<ProtoRespon
 }
 
 fn get_mock_account_state_blob() -> AccountStateBlob {
-    let account_resource = libra_types::account_config::AccountResource::new(
+    let account_resource = AccountResource::new(
         0,
         vec![],
         false,
         false,
         EventHandle::random_handle(0),
         EventHandle::random_handle(0),
-        0,
+        false,
+        from_currency_code_string(LBR_NAME).unwrap(),
     );
 
     let mut account_state = AccountState::default();
     account_state.insert(
-        libra_types::account_config::AccountResource::resource_path(),
+        AccountResource::resource_path(),
         lcs::to_bytes(&account_resource).unwrap(),
     );
 

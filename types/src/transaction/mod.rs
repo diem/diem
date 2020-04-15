@@ -645,11 +645,16 @@ impl From<VMStatus> for TransactionStatus {
 pub struct VMValidatorResult {
     status: Option<VMStatus>,
     score: u64,
+    is_governance_txn: bool,
 }
 
 impl VMValidatorResult {
-    pub fn new(status: Option<VMStatus>, score: u64) -> Self {
-        Self { status, score }
+    pub fn new(status: Option<VMStatus>, score: u64, is_governance_txn: bool) -> Self {
+        Self {
+            status,
+            score,
+            is_governance_txn,
+        }
     }
 
     pub fn status(&self) -> Option<VMStatus> {
@@ -658,6 +663,10 @@ impl VMValidatorResult {
 
     pub fn score(&self) -> u64 {
         self.score
+    }
+
+    pub fn is_governance_txn(&self) -> bool {
+        self.is_governance_txn
     }
 }
 

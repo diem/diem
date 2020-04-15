@@ -508,7 +508,12 @@ fn gen_mint_request(faucet_account: &mut AccountData, num_coins: u64) -> SignedT
     let receiver = faucet_account.address;
     let auth_key_prefix = faucet_account.auth_key_prefix();
     gen_submit_transaction_request(
-        transaction_builder::encode_mint_script(&receiver, auth_key_prefix, num_coins),
+        transaction_builder::encode_mint_script(
+            lbr_type_tag(),
+            &receiver,
+            auth_key_prefix,
+            num_coins,
+        ),
         faucet_account,
     )
 }

@@ -55,7 +55,7 @@ use transaction_builder::encode_register_validator_script;
 
 const CLIENT_WALLET_MNEMONIC_FILE: &str = "client.mnemonic";
 const GAS_UNIT_PRICE: u64 = 0;
-const MAX_GAS_AMOUNT: u64 = 600_000;
+const MAX_GAS_AMOUNT: u64 = 1_000_000;
 const TX_EXPIRATION: i64 = 100;
 
 /// Enum used for error formatting.
@@ -315,6 +315,7 @@ impl ClientProxy {
         match self.faucet_account {
             Some(_) => self.association_transaction_with_local_faucet_account(
                 transaction_builder::encode_mint_script(
+                    lbr_type_tag(),
                     &receiver,
                     receiver_auth_key.prefix().to_vec(),
                     num_coins,
@@ -396,7 +397,7 @@ impl ClientProxy {
             self.get_account_address_from_parameter(space_delim_strings[1])?;
         match self.faucet_account {
             Some(_) => self.association_transaction_with_local_faucet_account(
-                transaction_builder::encode_remove_validator_script(&account_address),
+                transaction_builder::encode_remove_validator_script(account_address),
                 is_blocking,
             ),
             None => unimplemented!(),
@@ -418,7 +419,7 @@ impl ClientProxy {
             self.get_account_address_from_parameter(space_delim_strings[1])?;
         match self.faucet_account {
             Some(_) => self.association_transaction_with_local_faucet_account(
-                transaction_builder::encode_add_validator_script(&account_address),
+                transaction_builder::encode_add_validator_script(account_address),
                 is_blocking,
             ),
             None => unimplemented!(),

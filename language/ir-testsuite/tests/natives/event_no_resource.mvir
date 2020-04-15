@@ -1,17 +1,17 @@
 module ResourceHandle {
-    import 0x0.LibraAccount;
+    import 0x0.Event;
 import 0x0.LBR;
     import 0x0.Libra;
     resource T {
-        foo: LibraAccount.EventHandle<Libra.T<LBR.T>>
+        foo: Event.EventHandle<Libra.T<LBR.T>>
         // check: INVALID_FIELD_DEF
         // check: CONTRAINT_KIND_MISMATCH
     }
 
     public new(): Self.T {
-        let handle: LibraAccount.EventHandle<Libra.T<LBR.T>>;
+        let handle: Event.EventHandle<Libra.T<LBR.T>>;
         // check: CONTRAINT_KIND_MISMATCH
-        handle = LibraAccount.new_event_handle<Libra.T<LBR.T>>();
+        handle = Event.new_event_handle<Libra.T<LBR.T>>();
         // check: CONTRAINT_KIND_MISMATCH
         return T { foo: move(handle) };
     }

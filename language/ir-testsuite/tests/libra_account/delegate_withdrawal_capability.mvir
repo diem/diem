@@ -115,6 +115,6 @@ import 0x0.Vector;
 
 // check that other users can still pay into Alice's account in the normal way
 main() {
-    LibraAccount.pay_from_sender<LBR.T>({{alice}}, Vector.empty<u8>(), 1000);
+    LibraAccount.pay_from_sender<LBR.T>({{alice}}, 1000);
     return;
 }

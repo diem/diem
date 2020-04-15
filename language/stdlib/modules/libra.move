@@ -1,23 +1,54 @@
 address 0x0:
 
 module Libra {
+    use 0x0::Association;
     use 0x0::Transaction;
     use 0x0::Vector;
+    use 0x0::FixedPoint32;
+    use 0x0::RegisteredCurrencies;
+    use 0x0::LibraConfig;
 
-    // A resource representing a fungible token
-    resource struct T<Token> {
-        // The value of the token. May be zero
-        value: u64,
+    // The currency has a `CoinType` color that tells us what currency the
+    // `value` inside represents.
+    resource struct T<CoinType> { value: u64 }
+
+    // A minting capability allows coins of all types to be minted.
+    resource struct MintCapability<CoinType> { }
+
+    // A operations capability to allow this module to register currencies
+    // with the RegisteredCurrencies on-chain config.
+    resource struct CurrencyRegistrationCapability {
+        cap: RegisteredCurrencies::RegistrationCapability,
     }
 
-    // A singleton resource that grants access to `Libra::mint`. Only the Association has one.
-    resource struct MintCapability<Token> { }
-
-    resource struct Info<Token> {
-        // The sum of the values of all Libra::T resources in the system
+    // The information for every supported currency is stored in a resource
+    // under the `currency_addr()` address. Unless they are specified
+    // otherwise the fields in this resource are immutable.
+    resource struct CurrencyInfo<CoinType> {
+        // The total value for the currency represented by
+        // `CoinType`. Mutable.
         total_value: u128,
         // Value of funds that are in the process of being burned
         preburn_value: u64,
+        // The (rough) exchange rate from `CoinType` to LBR.
+        to_lbr_exchange_rate: FixedPoint32::T,
+        // Holds whether or not this currency is synthetic (contributes to the
+        // off-chain reserve) or not. An example of such a currency would be
+        // the LBR.
+        is_synthetic: bool,
+        // The scaling factor for the coin (i.e. the amount to multiply by
+        // to get to the human-readable reprentation for this currency). e.g. 10^6 for Coin1
+        scaling_factor: u64,
+        // The smallest fractional part (number of decimal places) to be
+        // used in the human-readable representation for the currency (e.g.
+        // 10^2 for Coin1 cents)
+        fractional_part: u64,
+        // The code symbol for this `CoinType`. UTF-8 encoded.
+        // e.g. for "LBR" this is x"4C4252". No character limit.
+        currency_code: vector<u8>,
+        // We may want to disable the ability to mint further coins of a
+        // currency while that currency is still around. Mutable.
+        can_mint: bool,
     }
 
     // A holding area where funds that will subsequently be burned wait while their underyling
@@ -37,20 +68,35 @@ module Libra {
         is_approved: bool,
     }
 
-    public fun register<Token>() {
-        // Only callable by the Association address
-        Transaction::assert(Transaction::sender() == 0xA550C18, 1);
-        move_to_sender(MintCapability<Token>{ });
-        move_to_sender(Info<Token> { total_value: 0u128, preburn_value: 0 });
+    // An association account holding this privileg can add/remove the
+    // currencies from the system.
+    struct AddCurrency { }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Initialization and granting of privileges
+    ///////////////////////////////////////////////////////////////////////////
+
+    // This can only be invoked by the Association address, and only a single time.
+    // Currently, it is invoked in the genesis transaction
+    public fun initialize() {
+        Association::assert_sender_is_association();
+        Transaction::assert(Transaction::sender() == currency_addr(), 0);
+        LibraConfig::publish_new_config(RegisteredCurrencies::empty());
+        move_to_sender(CurrencyRegistrationCapability{
+            cap: RegisteredCurrencies::grant_registration_capability(),
+        })
     }
 
-    fun assert_is_registered<Token>() {
-        Transaction::assert(exists<Info<Token>>(0xA550C18), 12);
+    // Returns a MintCapability for the `CoinType` currency. `CoinType`
+    // must be a registered currency type.
+    public fun grant_minting_capability<CoinType>(): MintCapability<CoinType> {
+        assert_assoc_and_currency<CoinType>();
+        MintCapability<CoinType> { }
     }
 
     // Return `amount` coins.
     // Fails if the sender does not have a published MintCapability.
-    public fun mint<Token>(amount: u64): T<Token> acquires Info, MintCapability {
+    public fun mint<Token>(amount: u64): T<Token> acquires CurrencyInfo, MintCapability {
         mint_with_capability(amount, borrow_global<MintCapability<Token>>(Transaction::sender()))
     }
 
@@ -58,7 +104,7 @@ module Libra {
     // Fails if the sender does not have a published MintCapability.
     public fun burn<Token>(
         preburn_address: address
-    ) acquires Info, MintCapability, Preburn {
+    ) acquires CurrencyInfo, MintCapability, Preburn {
         burn_with_capability(
             preburn_address,
             borrow_global<MintCapability<Token>>(Transaction::sender())
@@ -69,16 +115,15 @@ module Libra {
     // Fails if the sender does not have a published MintCapability.
     public fun cancel_burn<Token>(
         preburn_address: address
-    ): T<Token> acquires Info, MintCapability, Preburn {
+    ): T<Token> acquires CurrencyInfo, MintCapability, Preburn {
         cancel_burn_with_capability(
             preburn_address,
             borrow_global<MintCapability<Token>>(Transaction::sender())
         )
     }
 
-    // Create a new Preburn resource
     public fun new_preburn<Token>(): Preburn<Token> {
-        assert_is_registered<Token>();
+        assert_is_coin<Token>();
         Preburn<Token> { requests: Vector::empty(), is_approved: false, }
     }
 
@@ -88,8 +133,8 @@ module Libra {
     public fun mint_with_capability<Token>(
         value: u64,
         _capability: &MintCapability<Token>
-    ): T<Token> acquires Info {
-        assert_is_registered<Token>();
+    ): T<Token> acquires CurrencyInfo {
+        assert_is_coin<Token>();
         // TODO: temporary measure for testnet only: limit minting to 1B Libra at a time.
         // this is to prevent the market cap's total value from hitting u64_max due to excessive
         // minting. This will not be a problem in the production Libra system because coins will
@@ -97,32 +142,43 @@ module Libra {
         // * 1000000 here because the unit is microlibra
         Transaction::assert(value <= 1000000000 * 1000000, 11);
         // update market cap resource to reflect minting
-        let market_cap = borrow_global_mut<Info<Token>>(0xA550C18);
-        market_cap.total_value = market_cap.total_value + (value as u128);
+        let info = borrow_global_mut<CurrencyInfo<Token>>(0xA550C18);
+        Transaction::assert(info.can_mint, 4);
+        info.total_value = info.total_value + (value as u128);
 
         T<Token> { value }
     }
 
-    // Send coin to the preburn holding area `preburn_ref`, where it will wait to be burned.
-    public fun preburn<Token>(
-        preburn_ref: &mut Preburn<Token>,
-        coin: T<Token>
-    ) acquires Info {
-        // TODO: bring this back once we can automate approvals in testnet
-        // Transaction::assert(preburn_ref.is_approved, 13);
+    // Create a new Preburn resource.
+    // Can only be called by the holder of the MintCapability.
+    public fun new_preburn_with_capability<Token>(
+        _capability: &MintCapability<Token>
+    ): Preburn<Token> {
+        assert_is_coin<Token>();
+        Preburn<Token> { requests: Vector::empty(), is_approved: true }
+    }
+
+    // Send coin to the preburn holding area, where it will wait to be burned.
+    // Fails if the sender does not have a published Preburn resource
+    public fun preburn<Token>(coin: T<Token>) acquires CurrencyInfo, Preburn {
+        preburn_with_resource(coin, borrow_global_mut<Preburn<Token>>(Transaction::sender()))
+    }
+
+    // Send a coin to the preburn holding area `preburn` that is passed in.
+    public fun preburn_with_resource<Token>(coin: T<Token>, preburn: &mut Preburn<Token>) acquires CurrencyInfo {
         let coin_value = value(&coin);
         Vector::push_back(
-            &mut preburn_ref.requests,
+            &mut preburn.requests,
             coin
         );
-        let market_cap = borrow_global_mut<Info<Token>>(0xA550C18);
+        let market_cap = borrow_global_mut<CurrencyInfo<Token>>(0xA550C18);
         market_cap.preburn_value = market_cap.preburn_value + coin_value
     }
 
     // Send coin to the preburn holding area, where it will wait to be burned.
     // Fails if the sender does not have a published Preburn resource
-    public fun preburn_to_sender<Token>(coin: T<Token>) acquires Info, Preburn {
-        preburn(borrow_global_mut<Preburn<Token>>(Transaction::sender()), coin)
+    public fun preburn_to_sender<Token>(coin: T<Token>) acquires CurrencyInfo, Preburn {
+        preburn_with_resource(coin, borrow_global_mut<Preburn<Token>>(Transaction::sender()))
     }
 
     // Permanently remove the coins held in the `Preburn` resource stored at `preburn_address` and
@@ -132,13 +188,25 @@ module Libra {
     // resource under `preburn_address` or has one with no pending burn requests.
     public fun burn_with_capability<Token>(
         preburn_address: address,
-        _capability: &MintCapability<Token>
-    ) acquires Info, Preburn {
+        capability: &MintCapability<Token>
+    ) acquires CurrencyInfo, Preburn {
         // destroy the coin at the head of the preburn queue
-        let preburn = borrow_global_mut<Preburn<Token>>(preburn_address);
+        burn_with_resource_cap(borrow_global_mut<Preburn<Token>>(preburn_address), capability)
+    }
+
+    // Permanently remove the coins held in the passed-in preburn resource
+    // and update the market cap accordingly. If there are multiple preburn
+    // requests in progress, this will remove the oldest one.
+    // Can only be invoked by the holder of the MintCapability. Fails if
+    // the `preburn` resource has no pending burn requests.
+    public fun burn_with_resource_cap<Token>(
+        preburn: &mut Preburn<Token>,
+        _capability: &MintCapability<Token>
+    ) acquires CurrencyInfo {
+        // destroy the coin at the head of the preburn queue
         let T { value } = Vector::remove(&mut preburn.requests, 0);
         // update the market cap
-        let market_cap = borrow_global_mut<Info<Token>>(0xA550C18);
+        let market_cap = borrow_global_mut<CurrencyInfo<Token>>(0xA550C18);
         market_cap.total_value = market_cap.total_value - (value as u128);
         market_cap.preburn_value = market_cap.preburn_value - value
     }
@@ -151,12 +219,12 @@ module Libra {
     public fun cancel_burn_with_capability<Token>(
         preburn_address: address,
         _capability: &MintCapability<Token>
-    ): T<Token> acquires Info, Preburn {
+    ): T<Token> acquires CurrencyInfo, Preburn {
         // destroy the coin at the head of the preburn queue
         let preburn = borrow_global_mut<Preburn<Token>>(preburn_address);
         let coin = Vector::remove(&mut preburn.requests, 0);
         // update the market cap
-        let market_cap = borrow_global_mut<Info<Token>>(0xA550C18);
+        let market_cap = borrow_global_mut<CurrencyInfo<Token>>(0xA550C18);
         market_cap.preburn_value = market_cap.preburn_value - value(&coin);
 
         coin
@@ -165,6 +233,11 @@ module Libra {
     // Publish `preburn` under the sender's account
     public fun publish_preburn<Token>(preburn: Preburn<Token>) {
         move_to_sender(preburn)
+    }
+
+    // Publish `capability` under the sender's account
+    public fun publish_mint_capability<Token>(capability: MintCapability<Token>) {
+        move_to_sender(capability)
     }
 
     // Remove and return the `Preburn` resource under the sender's account
@@ -179,61 +252,50 @@ module Libra {
         Vector::destroy_empty(requests)
     }
 
-    // Publish `capability` under the sender's account
-    public fun publish_mint_capability<Token>(capability: MintCapability<Token>) {
-        move_to_sender(capability)
-    }
-
     // Remove and return the MintCapability from the sender's account. Fails if the sender does
     // not have a published MintCapability
     public fun remove_mint_capability<Token>(): MintCapability<Token> acquires MintCapability {
         move_from<MintCapability<Token>>(Transaction::sender())
     }
 
-    // Return the total value of all Libra in the system
-    public fun market_cap<Token>(): u128 acquires Info {
-        borrow_global<Info<Token>>(0xA550C18).total_value
-    }
-
     // Return the total value of Libra to be burned
-    public fun preburn_value<Token>(): u64 acquires Info {
-        borrow_global<Info<Token>>(0xA550C18).preburn_value
+    public fun preburn_value<Token>(): u64 acquires CurrencyInfo {
+        borrow_global<CurrencyInfo<Token>>(0xA550C18).preburn_value
     }
 
-    // Create a new Libra::T with a value of 0
-    public fun zero<Token>(): T<Token> {
-        // prevent silly coin types (e.g., Libra<bool>) from being created
-        assert_is_registered<Token>();
-        T { value: 0 }
+
+    // Create a new Libra::T<CoinType> with a value of 0
+    public fun zero<CoinType>(): T<CoinType> {
+        assert_is_coin<CoinType>();
+        T<CoinType> { value: 0 }
     }
 
     // Public accessor for the value of a coin
-    public fun value<Token>(coin_ref: &T<Token>): u64 {
-        coin_ref.value
+    public fun value<CoinType>(coin: &T<CoinType>): u64 {
+        coin.value
     }
 
     // Splits the given coin into two and returns them both
-    // It leverages `withdraw` for any verifications of the values
-    public fun split<Token>(coin: T<Token>, amount: u64): (T<Token>, T<Token>) {
+    // It leverages `Self::withdraw` for any verifications of the values
+    public fun split<CoinType>(coin: T<CoinType>, amount: u64): (T<CoinType>, T<CoinType>) {
         let other = withdraw(&mut coin, amount);
         (coin, other)
     }
 
-    // "Divides" the given coin into two, where original coin is modified in place
-    // The original coin will have value = original value - `value`
-    // The new coin will have a value = `value`
-    // Fails if the coins value is less than `value`
-    public fun withdraw<Token>(coin_ref: &mut T<Token>, value: u64): T<Token> {
+    // "Divides" the given coin into two, where the original coin is modified in place
+    // The original coin will have value = original value - `amount`
+    // The new coin will have a value = `amount`
+    // Fails if the coins value is less than `amount`
+    public fun withdraw<CoinType>(coin: &mut T<CoinType>, amount: u64): T<CoinType> {
         // Check that `amount` is less than the coin's value
-        Transaction::assert(coin_ref.value >= value, 10);
-
-        // Split the coin
-        coin_ref.value = coin_ref.value - value;
-        T { value }
+        Transaction::assert(coin.value >= amount, 10);
+        coin.value = coin.value - amount;
+        T { value: amount }
     }
 
-    // Merges two coins and returns a new coin whose value is equal to the sum of the two inputs
-    public fun join<Token>(coin1: T<Token>, coin2: T<Token>): T<Token>  {
+    // Merges two coins of the same currency and returns a new coin whose
+    // value is equal to the sum of the two inputs
+    public fun join<CoinType>(coin1: T<CoinType>, coin2: T<CoinType>): T<CoinType>  {
         deposit(&mut coin1, coin2);
         coin1
     }
@@ -241,17 +303,159 @@ module Libra {
     // "Merges" the two coins
     // The coin passed in by reference will have a value equal to the sum of the two coins
     // The `check` coin is consumed in the process
-    public fun deposit<Token>(coin_ref: &mut T<Token>, check: T<Token>) {
+    public fun deposit<CoinType>(coin: &mut T<CoinType>, check: T<CoinType>) {
         let T { value } = check;
-        coin_ref.value= coin_ref.value + value;
+        coin.value = coin.value + value;
     }
 
     // Destroy a coin
     // Fails if the value is non-zero
-    // The amount of Libra::T in the system is a tightly controlled property,
-    // so you cannot "burn" any non-zero amount of Libra::T
-    public fun destroy_zero<Token>(coin: T<Token>) {
-        let T<Token> { value } = coin;
-        Transaction::assert(value == 0, 11);
+    // The amount of LibraCoin.T in the system is a tightly controlled property,
+    // so you cannot "burn" any non-zero amount of LibraCoin.T
+    public fun destroy_zero<CoinType>(coin: T<CoinType>) {
+        let T { value } = coin;
+        Transaction::assert(value == 0, 5)
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Definition of Currencies
+    ///////////////////////////////////////////////////////////////////////////
+
+    // Register the type `CoinType` as a currency. Without this, a type
+    // cannot be used as a coin/currency unit n Libra.
+    public fun register_currency<CoinType>(
+        to_lbr_exchange_rate: FixedPoint32::T,
+        is_synthetic: bool,
+        scaling_factor: u64,
+        fractional_part: u64,
+        currency_code: vector<u8>,
+    ) acquires CurrencyRegistrationCapability {
+        // And only callable by the designated currency address.
+        assert_is_currency_sender();
+        move_to_sender(MintCapability<CoinType>{});
+        move_to_sender(CurrencyInfo<CoinType> {
+            total_value: 0,
+            preburn_value: 0,
+            to_lbr_exchange_rate,
+            is_synthetic,
+            scaling_factor,
+            fractional_part,
+            currency_code: copy currency_code,
+            can_mint: true,
+        });
+        RegisteredCurrencies::add_currency_code(
+            currency_code,
+            &borrow_global<CurrencyRegistrationCapability>(currency_addr()).cap
+
+        )
+    }
+
+    // Return the total amount of currency minted of type `CoinType`
+    public fun market_cap<CoinType>(): u128
+    acquires CurrencyInfo {
+        borrow_global<CurrencyInfo<CoinType>>(currency_addr()).total_value
+    }
+
+    // Returns the value of the coin in the `FromCoinType` currency in LBR.
+    // This should only be used where a _rough_ approximation of the exchange
+    // rate is needed.
+    public fun approx_lbr_for_value<FromCoinType>(from_value: u64): u64
+    acquires CurrencyInfo {
+        let lbr_exchange_rate = lbr_exchange_rate<FromCoinType>();
+        FixedPoint32::multiply_u64(from_value, lbr_exchange_rate)
+    }
+
+    // Returns the value of the coin in the `FromCoinType` currency in LBR.
+    // This should only be used where a rough approximation of the exchange
+    // rate is needed.
+    public fun approx_lbr_for_coin<FromCoinType>(coin: &T<FromCoinType>): u64
+    acquires CurrencyInfo {
+        let from_value = value(coin);
+        approx_lbr_for_value<FromCoinType>(from_value)
+    }
+
+    // Return true if the type `CoinType` is a registered currency.
+    public fun is_currency<CoinType>(): bool {
+        exists<CurrencyInfo<CoinType>>(currency_addr())
+    }
+
+    // Predicate on whether `CoinType` is a synthetic currency.
+    public fun is_synthetic_currency<CoinType>(): bool
+    acquires CurrencyInfo {
+        let addr = currency_addr();
+        exists<CurrencyInfo<CoinType>>(addr) &&
+            borrow_global<CurrencyInfo<CoinType>>(addr).is_synthetic
+    }
+
+    // Returns the scaling factor for the `CoinType` currency.
+    public fun scaling_factor<CoinType>(): u64
+    acquires CurrencyInfo {
+        borrow_global<CurrencyInfo<CoinType>>(currency_addr()).scaling_factor
+    }
+
+    // Returns the representable fractional part for the `CoinType` currency.
+    public fun fractional_part<CoinType>(): u64
+    acquires CurrencyInfo {
+        borrow_global<CurrencyInfo<CoinType>>(currency_addr()).fractional_part
+    }
+
+    // Return the currency code for the registered currency.
+    public fun currency_code<CoinType>(): vector<u8>
+    acquires CurrencyInfo {
+        *&borrow_global<CurrencyInfo<CoinType>>(currency_addr()).currency_code
+    }
+
+    // Updates the exchange rate for `FromCoinType` to LBR exchange rate held on chain.
+    public fun update_lbr_exchange_rate<FromCoinType>(lbr_exchange_rate: FixedPoint32::T)
+    acquires CurrencyInfo {
+        assert_assoc_and_currency<FromCoinType>();
+        let currency_info = borrow_global_mut<CurrencyInfo<FromCoinType>>(currency_addr());
+        currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
+    }
+
+    // Return the (rough) exchange rate between `CoinType` and LBR
+    public fun lbr_exchange_rate<CoinType>(): FixedPoint32::T
+    acquires CurrencyInfo {
+        *&borrow_global<CurrencyInfo<CoinType>>(currency_addr()).to_lbr_exchange_rate
+    }
+
+    // There may be situations in which we disallow the further minting of
+    // coins in the system without removing the currency. This function
+    // allows the association to control whether or not further coins of
+    // `CoinType` can be minted or not.
+    public fun update_minting_ability<CoinType>(can_mint: bool)
+    acquires CurrencyInfo {
+        assert_assoc_and_currency<CoinType>();
+        let currency_info = borrow_global_mut<CurrencyInfo<CoinType>>(Transaction::sender());
+        currency_info.can_mint = can_mint;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Helper functions
+    ///////////////////////////////////////////////////////////////////////////
+
+    // The (singleton) address under which the currency registration
+    // information is published.
+    fun currency_addr(): address {
+        0xA550C18
+    }
+
+    // Assert that the sending address is the `currency_addr()`
+    fun assert_is_currency_sender() {
+        let sender = Transaction::sender();
+        Transaction::assert(sender == currency_addr(), 7);
+        Transaction::assert(Association::has_privilege<AddCurrency>(sender), 8);
+    }
+
+    // Assert that the sender is an association account, and that
+    // `CoinType` is a regstered currency type.
+    fun assert_assoc_and_currency<CoinType>() {
+        Association::assert_sender_is_association();
+        assert_is_coin<CoinType>();
+    }
+
+    // Assert that `CoinType` is a registered currency
+    fun assert_is_coin<CoinType>() {
+        Transaction::assert(is_currency<CoinType>(), 1);
     }
 }

@@ -7,9 +7,11 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
+    account_address::AccountAddress,
     account_config,
     block_metadata::BlockMetadata,
     language_storage::{ModuleId, TypeTag},
+    move_resource::MoveResource,
     on_chain_config::{LibraVersion, OnChainConfig, VMConfig},
     transaction::{
         ChangeSet, Module, Script, SignatureCheckedTransaction, SignedTransaction, Transaction,
@@ -19,15 +21,19 @@ use libra_types::{
     vm_error::{sub_status, StatusCode, VMStatus},
     write_set::{WriteSet, WriteSetMut},
 };
-use move_core_types::gas_schedule::{
-    self, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits,
+use move_core_types::{
+    gas_schedule::{self, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
+    identifier::{IdentStr, Identifier},
 };
 use move_vm_runtime::MoveVM;
 use move_vm_state::{
     data_cache::{BlockDataCache, RemoteCache, RemoteStorage},
     execution_context::{ExecutionContext, SystemExecutionContext, TransactionExecutionContext},
 };
-use move_vm_types::{chain_state::ChainState, loaded_data::types::Type, values::Value};
+use move_vm_types::{
+    chain_state::ChainState, identifier::create_access_path, loaded_data::types::Type,
+    values::Value,
+};
 use rayon::prelude::*;
 use std::{collections::HashSet, sync::Arc};
 use vm::{
@@ -235,6 +241,7 @@ impl LibraVM {
         remote_cache: &dyn RemoteCache,
         script: &Script,
         txn_data: TransactionMetadata,
+        account_currency_symbol: &IdentStr,
     ) -> VMResult<VerifiedTransactionPayload> {
         let mut ctx = SystemExecutionContext::new(remote_cache, GasUnits::new(0));
         if !self
@@ -245,7 +252,7 @@ impl LibraVM {
             warn!("[VM] Custom scripts not allowed: {:?}", &script.code());
             return Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT));
         };
-        self.run_prologue(&mut ctx, &txn_data)?;
+        self.run_prologue(&mut ctx, &txn_data, account_currency_symbol)?;
         let ty_args = script
             .ty_args()
             .iter()
@@ -263,13 +270,14 @@ impl LibraVM {
         remote_cache: &dyn RemoteCache,
         module: &Module,
         txn_data: TransactionMetadata,
+        account_currency_symbol: &IdentStr,
     ) -> VMResult<VerifiedTransactionPayload> {
         let mut ctx = SystemExecutionContext::new(remote_cache, GasUnits::new(0));
         if !&self.on_chain_config()?.publishing_option.is_open() {
             warn!("[VM] Custom modules not allowed");
             return Err(VMStatus::new(StatusCode::UNKNOWN_MODULE));
         };
-        self.run_prologue(&mut ctx, &txn_data)?;
+        self.run_prologue(&mut ctx, &txn_data, account_currency_symbol)?;
         Ok(VerifiedTransactionPayload::Module(module.code().to_vec()))
     }
 
@@ -288,16 +296,17 @@ impl LibraVM {
         &self,
         transaction: &SignatureCheckedTransaction,
         remote_cache: &dyn RemoteCache,
+        account_currency_symbol: &IdentStr,
     ) -> VMResult<VerifiedTransactionPayload> {
         self.check_gas(transaction)?;
         let txn_data = TransactionMetadata::new(transaction);
         match transaction.payload() {
             TransactionPayload::Program => Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT)),
             TransactionPayload::Script(script) => {
-                self.verify_script(remote_cache, script, txn_data)
+                self.verify_script(remote_cache, script, txn_data, account_currency_symbol)
             }
             TransactionPayload::Module(module) => {
-                self.verify_module(remote_cache, module, txn_data)
+                self.verify_module(remote_cache, module, txn_data, account_currency_symbol)
             }
             TransactionPayload::WriteSet(_) => Err(VMStatus::new(StatusCode::UNREACHABLE)),
         }
@@ -307,18 +316,19 @@ impl LibraVM {
         &self,
         transaction: &SignatureCheckedTransaction,
         remote_cache: &dyn RemoteCache,
+        account_currency_symbol: &IdentStr,
     ) -> VMResult<()> {
         let txn_data = TransactionMetadata::new(transaction);
         match transaction.payload() {
             TransactionPayload::Program => Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT)),
             TransactionPayload::Script(script) => {
                 self.check_gas(transaction)?;
-                self.verify_script(remote_cache, script, txn_data)?;
+                self.verify_script(remote_cache, script, txn_data, account_currency_symbol)?;
                 Ok(())
             }
             TransactionPayload::Module(module) => {
                 self.check_gas(transaction)?;
-                self.verify_module(remote_cache, module, txn_data)?;
+                self.verify_module(remote_cache, module, txn_data, account_currency_symbol)?;
                 Ok(())
             }
             TransactionPayload::WriteSet(cs) => self.verify_writeset(remote_cache, cs, &txn_data),
@@ -330,6 +340,7 @@ impl LibraVM {
         remote_cache: &mut BlockDataCache<'_>,
         txn_data: &TransactionMetadata,
         payload: VerifiedTransactionPayload,
+        account_currency_symbol: &IdentStr,
     ) -> TransactionOutput {
         let mut ctx = TransactionExecutionContext::new(txn_data.max_gas_amount(), remote_cache);
         // TODO: The logic for handling falied transaction fee is pretty ugly right now. Fix it later.
@@ -358,7 +369,7 @@ impl LibraVM {
         .and_then(|_| {
             failed_gas_left = ctx.remaining_gas();
             let mut gas_free_ctx = SystemExecutionContext::from(ctx);
-            self.run_epilogue(&mut gas_free_ctx, txn_data)
+            self.run_epilogue(&mut gas_free_ctx, txn_data, account_currency_symbol)
                 .and_then(|_| {
                     get_transaction_output(
                         &mut gas_free_ctx,
@@ -368,7 +379,13 @@ impl LibraVM {
                 })
         })
         .unwrap_or_else(|err| {
-            self.failed_transaction_cleanup(err, failed_gas_left, txn_data, remote_cache)
+            self.failed_transaction_cleanup(
+                err,
+                failed_gas_left,
+                txn_data,
+                remote_cache,
+                account_currency_symbol,
+            )
         })
     }
 
@@ -380,11 +397,12 @@ impl LibraVM {
         gas_left: GasUnits<GasCarrier>,
         txn_data: &TransactionMetadata,
         remote_cache: &mut BlockDataCache<'_>,
+        account_currency_symbol: &IdentStr,
     ) -> TransactionOutput {
         let mut gas_free_ctx = SystemExecutionContext::new(remote_cache, gas_left);
         match TransactionStatus::from(error_code) {
             TransactionStatus::Keep(status) => self
-                .run_epilogue(&mut gas_free_ctx, txn_data)
+                .run_epilogue(&mut gas_free_ctx, txn_data, account_currency_symbol)
                 .and_then(|_| get_transaction_output(&mut gas_free_ctx, txn_data, status))
                 .unwrap_or_else(discard_error_output),
             TransactionStatus::Discard(status) => discard_error_output(status),
@@ -399,18 +417,25 @@ impl LibraVM {
         txn: &SignatureCheckedTransaction,
     ) -> TransactionOutput {
         let txn_data = TransactionMetadata::new(txn);
+        let account_currency_symbol = account_curreny_currency_code(txn.sender(), remote_cache);
         let verified_payload = record_stats! {time_hist | TXN_VERIFICATION_TIME_TAKEN | {
-            self.verify_user_transaction_impl(txn, remote_cache)
+            account_currency_symbol.clone()
+                .and_then(|currency_code|
+                    self.verify_user_transaction_impl(txn, remote_cache, &currency_code)
+                )
         }};
         let result = verified_payload
             .and_then(|verified_payload| {
-                record_stats! {time_hist | TXN_EXECUTION_TIME_TAKEN | {
-                Ok(self.execute_verified_payload(
-                    remote_cache,
-                    &txn_data,
-                    verified_payload,
-                ))
-                }}
+                account_currency_symbol.and_then(|account_currency_symbol| {
+                    record_stats! {time_hist | TXN_EXECUTION_TIME_TAKEN | {
+                    Ok(self.execute_verified_payload(
+                        remote_cache,
+                        &txn_data,
+                        verified_payload,
+                        &account_currency_symbol,
+                    ))
+                    }}
+                })
             })
             .unwrap_or_else(discard_error_output);
         if let TransactionStatus::Keep(_) = result.status() {
@@ -599,12 +624,9 @@ impl LibraVM {
     fn resolve_gas_currency<T: ChainState>(
         &self,
         chain_state: &mut T,
-        gas_specifier: &str,
+        gas_specifier: &IdentStr,
     ) -> VMResult<Type> {
-        let gas_currency_tag = account_config::type_tag_for_ticker(
-            account_config::from_ticker_string(gas_specifier)
-                .map_err(|_| VMStatus::new(StatusCode::INVALID_GAS_SPECIFIER))?,
-        );
+        let gas_currency_tag = account_config::type_tag_for_currency_code(gas_specifier.to_owned());
         self.resolve_type_argument(chain_state, &gas_currency_tag)
     }
 
@@ -614,8 +636,9 @@ impl LibraVM {
         &self,
         chain_state: &mut T,
         txn_data: &TransactionMetadata,
+        account_currency_symbol: &IdentStr,
     ) -> VMResult<()> {
-        let gas_currency_ty = self.resolve_gas_currency(chain_state, account_config::LBR_NAME)?;
+        let gas_currency_ty = self.resolve_gas_currency(chain_state, account_currency_symbol)?;
         let txn_sequence_number = txn_data.sequence_number();
         let txn_public_key = txn_data.authentication_key_preimage().to_vec();
         let txn_gas_price = txn_data.gas_unit_price().get();
@@ -649,8 +672,9 @@ impl LibraVM {
         &self,
         chain_state: &mut T,
         txn_data: &TransactionMetadata,
+        account_currency_symbol: &IdentStr,
     ) -> VMResult<()> {
-        let gas_currency_ty = self.resolve_gas_currency(chain_state, account_config::LBR_NAME)?;
+        let gas_currency_ty = self.resolve_gas_currency(chain_state, account_currency_symbol)?;
         let txn_sequence_number = txn_data.sequence_number();
         let txn_gas_price = txn_data.gas_unit_price().get();
         let txn_max_gas_units = txn_data.max_gas_amount().get();
@@ -841,24 +865,50 @@ impl VMValidator for LibraVM {
         state_view: &dyn StateView,
     ) -> VMValidatorResult {
         let data_cache = BlockDataCache::new(state_view);
-        let gas_price = transaction.gas_unit_price();
         record_stats! {time_hist | TXN_VALIDATION_TIME_TAKEN | {
-                let signature_verified_txn = match transaction.check_signature() {
-                    Ok(t) => t,
-                    Err(_) => return VMValidatorResult::new(Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)), gas_price),
+                let gas_price = transaction.gas_unit_price();
+                let txn_sender = transaction.sender();
+                let signature_verified_txn = if let Ok(t) = transaction.check_signature() {
+                    t
+                } else {
+                    return VMValidatorResult::new(
+                        Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)),
+                        gas_price,
+                        false,
+                    );
                 };
-                let res = match self.verify_transaction_impl(&signature_verified_txn, &data_cache) {
+
+                let is_governance_txn = is_governance_txn(txn_sender, &data_cache);
+                let currency_code = match account_curreny_currency_code(txn_sender, &data_cache) {
+                    Ok(code) => code,
+                    Err(err) => return VMValidatorResult::new(Some(err), gas_price, false),
+                };
+
+                let normalized_gas_price = match normalize_gas_price(gas_price, &currency_code, &data_cache) {
+                    Ok(price) => price,
+                    Err(err) => return VMValidatorResult::new(Some(err), gas_price, false),
+                };
+
+                let res = match self.verify_transaction_impl(
+                    &signature_verified_txn,
+                    &data_cache,
+                    &currency_code,
+                ) {
                     Ok(_) => None,
                     Err(err) => {
                         if err.major_status == StatusCode::SEQUENCE_NUMBER_TOO_NEW {
                             None
                         } else {
-                            Some(convert_prologue_runtime_error(&err, &signature_verified_txn.sender()))
+                            Some(convert_prologue_runtime_error(
+                                &err,
+                                &signature_verified_txn.sender(),
+                            ))
                         }
                     }
                 };
+
                 report_verification_status(&res);
-                VMValidatorResult::new(res, gas_price)
+                VMValidatorResult::new(res, normalized_gas_price, is_governance_txn)
             }
         }
     }
@@ -915,6 +965,50 @@ impl<'a> LibraVMInternals<'a> {
         let txn_context =
             TransactionExecutionContext::new(txn_data.max_gas_amount(), &remote_storage);
         f(txn_context)
+    }
+}
+
+fn account_curreny_currency_code(
+    sender: AccountAddress,
+    state_view: &dyn RemoteCache,
+) -> VMResult<Identifier> {
+    let account_access_path =
+        create_access_path(sender, account_config::AccountResource::struct_tag());
+    if let Ok(Some(blob)) = state_view.get(&account_access_path) {
+        Ok(lcs::from_bytes::<account_config::AccountResource>(&blob)
+            .map_err(|_| VMStatus::new(StatusCode::UNABLE_TO_DESERIALIZE_ACCOUNT))?
+            .balance_currency_code()
+            .to_owned())
+    } else {
+        Err(VMStatus::new(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST))
+    }
+}
+
+fn is_governance_txn(sender: AccountAddress, remote_cache: &dyn RemoteCache) -> bool {
+    let association_capability_path =
+        create_access_path(sender, association_capability_struct_tag());
+    if let Ok(Some(blob)) = remote_cache.get(&association_capability_path) {
+        return lcs::from_bytes::<account_config::AssociationCapabilityResource>(&blob)
+            .map(|x| x.is_certified())
+            .unwrap_or(false);
+    }
+    false
+}
+
+fn normalize_gas_price(
+    gas_price: u64,
+    account_curreny_currency_code: &IdentStr,
+    remote_cache: &dyn RemoteCache,
+) -> VMResult<u64> {
+    let currency_info_path = account_config::CurrencyInfoResource::resource_path_for(
+        account_curreny_currency_code.to_owned(),
+    );
+    if let Ok(Some(blob)) = remote_cache.get(&currency_info_path) {
+        let x = lcs::from_bytes::<account_config::CurrencyInfoResource>(&blob)
+            .map_err(|_| VMStatus::new(StatusCode::CURRENCY_INFO_DOES_NOT_EXIST))?;
+        Ok(x.convert_to_lbr(gas_price))
+    } else {
+        Err(VMStatus::new(StatusCode::MISSING_DATA))
     }
 }
 

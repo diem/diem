@@ -1,12 +1,13 @@
 import 0x0.LibraAccount;
 import 0x0.LCS;
 import 0x0.Vector;
+import 0x0.LBR;
 
 main() {
   let addr: address;
   addr = 0x0;
   // try to create account on 0x0.
-  LibraAccount.create_account(copy(addr), LCS.to_bytes<address>(&addr));
+  LibraAccount.create_account<LBR.T>(copy(addr), LCS.to_bytes<address>(&addr));
 
   return;
 }

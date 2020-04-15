@@ -11,19 +11,52 @@ use language_e2e_tests::{
 };
 use libra_config::generator;
 use libra_crypto::PrivateKey;
-use libra_types::on_chain_config::ValidatorSet;
+use libra_types::{account_config, on_chain_config::ValidatorSet};
+use move_core_types::identifier::Identifier;
+use once_cell::sync::Lazy;
 use std::{
     collections::{btree_map, BTreeMap},
     str::FromStr,
 };
 
-// unit: microlibra
-const DEFAULT_BALANCE: u64 = 1_000_000;
+static DEFAULT_BALANCE: Lazy<Balance> = Lazy::new(|| Balance {
+    amount: 1_000_000,
+    currency_code: account_config::from_currency_code_string(account_config::LBR_NAME).unwrap(),
+});
 
 #[derive(Debug)]
 pub enum Role {
     /// Means that the account is a current validator; its address is in the on-chain validator set
     Validator,
+}
+
+#[derive(Debug, Clone)]
+pub struct Balance {
+    pub amount: u64,
+    pub currency_code: Identifier,
+}
+
+impl FromStr for Balance {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        // TODO: Try to get this from the on-chain config?
+        let coin_types = vec!["LBR", "Coin1", "Coin2"];
+        let mut coin_type: Vec<&str> = coin_types.into_iter().filter(|x| s.ends_with(x)).collect();
+        let currency_code = coin_type.pop().unwrap_or("LBR");
+        if !coin_type.is_empty() {
+            return Err(ErrorKind::Other(
+                "Multiple coin types supplied for account. Accounts are single currency"
+                    .to_string(),
+            )
+            .into());
+        }
+        let s = s.trim_end_matches(currency_code);
+        Ok(Balance {
+            amount: s.parse::<u64>()?,
+            currency_code: account_config::from_currency_code_string(currency_code)?,
+        })
+    }
 }
 
 /// Struct that specifies the initial setup of an account.
@@ -32,11 +65,13 @@ pub struct AccountDefinition {
     /// Name of the account. The name is case insensitive.
     pub name: String,
     /// The initial balance of the account.
-    pub balance: Option<u64>,
+    pub balance: Option<Balance>,
     /// The initial sequence number of the account.
     pub sequence_number: Option<u64>,
     /// Special role this account has in the system (if any)
     pub role: Option<Role>,
+    /// Specifier on whether this account is an empty account or not
+    pub is_empty_account_type: Option<bool>,
 }
 
 impl FromStr for Role {
@@ -89,14 +124,17 @@ impl FromStr for Entry {
                 )
                 .into());
             }
-            let balance = v.get(1).and_then(|s| s.parse::<u64>().ok());
+            let balance = v.get(1).and_then(|s| s.parse::<Balance>().ok());
             let sequence_number = v.get(2).and_then(|s| s.parse::<u64>().ok());
             let role = v.get(3).and_then(|s| s.parse::<Role>().ok());
+            // These two are mutually exclusive, so we can double-use the third position
+            let is_empty_account_type = v.get(3).and_then(|s| s.parse::<bool>().ok());
             return Ok(Entry::AccountDefinition(AccountDefinition {
                 name: v[0].to_string(),
                 balance,
                 sequence_number,
                 role,
+                is_empty_account_type,
             }));
         }
         Err(ErrorKind::Other(format!("failed to parse '{}' as global config entry", s)).into())
@@ -146,22 +184,27 @@ impl Config {
         for entry in entries {
             match entry {
                 Entry::AccountDefinition(def) => {
+                    let balance = def.balance.as_ref().unwrap_or(&DEFAULT_BALANCE).clone();
                     let account_data = if entry.is_validator() {
                         validator_accounts -= 1;
                         let privkey = validator_keys.iter().nth(validator_accounts).unwrap().1;
                         AccountData::with_keypair(
                             privkey.clone(),
                             privkey.public_key(),
-                            def.balance.unwrap_or(DEFAULT_BALANCE),
+                            balance.amount,
+                            balance.currency_code,
                             def.sequence_number.unwrap_or(0),
+                            def.is_empty_account_type.unwrap_or(false),
                         )
                     } else {
                         let (privkey, pubkey) = keygen.generate_keypair();
                         AccountData::with_keypair(
                             privkey,
                             pubkey,
-                            def.balance.unwrap_or(DEFAULT_BALANCE),
+                            balance.amount,
+                            balance.currency_code,
                             def.sequence_number.unwrap_or(0),
+                            def.is_empty_account_type.unwrap_or(false),
                         )
                     };
                     let name = def.name.to_ascii_lowercase();
@@ -187,8 +230,11 @@ impl Config {
             entry.insert(AccountData::with_keypair(
                 privkey,
                 pubkey,
-                DEFAULT_BALANCE,
-                /* sequence_number */ 0,
+                DEFAULT_BALANCE.amount,
+                DEFAULT_BALANCE.currency_code.clone(),
+                /* sequence_number */
+                0,
+                /* is_empty_account_type */ false,
             ));
         }
         Ok(Config {

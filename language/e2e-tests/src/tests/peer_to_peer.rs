@@ -120,9 +120,9 @@ fn single_peer_to_peer_with_padding() {
 fn few_peer_to_peer_with_event() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
-    // create and publish a sender with 1_000_000 coins and a receiver with 100_000 coins
-    let sender = AccountData::new(1_000_000, 10);
-    let receiver = AccountData::new(100_000, 10);
+    // create and publish a sender with 3_000_000 coins and a receiver with 3_000_000 coins
+    let sender = AccountData::new(3_000_000, 10);
+    let receiver = AccountData::new(3_000_000, 10);
     executor.add_account_data(&sender);
     executor.add_account_data(&receiver);
 
@@ -480,9 +480,9 @@ fn cycle_peer_to_peer_multi_block() {
 fn one_to_many_peer_to_peer() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
-    // create and publish accounts with 4_000_000 coins
+    // create and publish accounts with 100_000_000 coins
     let account_size = 100usize;
-    let initial_balance = 4_000_000u64;
+    let initial_balance = 100_000_000u64;
     let initial_seq_num = 10u64;
     let accounts = executor.create_accounts(account_size, initial_balance, initial_seq_num);
 

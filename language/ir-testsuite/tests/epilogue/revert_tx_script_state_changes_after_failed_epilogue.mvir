@@ -14,7 +14,7 @@ import 0x0.LBR;
 import 0x0.Vector;
 
 main(amount: u64) {
-    LibraAccount.pay_from_sender<LBR.T>({{carol}}, Vector.empty<u8>(), move(amount));
+    LibraAccount.pay_from_sender<LBR.T>({{carol}}, move(amount));
     return;
 }
 
@@ -33,7 +33,7 @@ import 0x0.LBR;
 import 0x0.Vector;
 
 main(amount: u64) {
-    LibraAccount.pay_from_sender<LBR.T>({{carol}}, Vector.empty<u8>(), move(amount));
+    LibraAccount.pay_from_sender<LBR.T>({{carol}}, move(amount));
     return;
 }
 

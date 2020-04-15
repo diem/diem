@@ -27,6 +27,7 @@ pub struct Location {}
 /// Error codes that can be emitted by the prologue. These have special significance to the VM when
 /// they are raised during the prologue. However, they can also be raised by user code during
 /// execution of a transaction script. They have no significance to the VM in that case.
+pub const EACCOUNT_FROZEN: u64 = 0; // sending account is frozen
 pub const EBAD_SIGNATURE: u64 = 1; // signature on transaction is invalid
 pub const EBAD_ACCOUNT_AUTHENTICATION_KEY: u64 = 2; // auth key in transaction is invalid
 pub const ESEQUENCE_NUMBER_TOO_OLD: u64 = 3; // transaction sequence number is too old
@@ -68,6 +69,7 @@ pub fn vm_status_of_result<T>(result: &VMResult<T>) -> VMStatus {
 pub fn convert_prologue_runtime_error(err: &VMStatus, txn_sender: &AccountAddress) -> VMStatus {
     if err.major_status == StatusCode::ABORTED {
         match err.sub_status {
+            Some(EACCOUNT_FROZEN) => VMStatus::new(StatusCode::SENDING_ACCOUNT_FROZEN),
             // Invalid authentication key
             Some(EBAD_ACCOUNT_AUTHENTICATION_KEY) => VMStatus::new(StatusCode::INVALID_AUTH_KEY),
             // Sequence number too old

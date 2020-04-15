@@ -1,10 +1,10 @@
-import 0x0.LibraAccount;
+import 0x0.Event;
 
 main() {
-    let handle: LibraAccount.EventHandle<u64>;
-    handle = LibraAccount.new_event_handle<u64>();
-    LibraAccount.emit_event<u64>(&mut handle, 42);
-    LibraAccount.destroy_handle<u64>(move(handle));
+    let handle: Event.EventHandle<u64>;
+    handle = Event.new_event_handle<u64>();
+    Event.emit_event<u64>(&mut handle, 42);
+    Event.destroy_handle<u64>(move(handle));
     return;
 }
 

@@ -85,4 +85,31 @@ fn build_global_config_4() {
     assert_eq!(config.accounts.len(), 1);
     let default = config.accounts.get("default").unwrap();
     assert_eq!(default.balance(), 50);
+    assert_eq!(default.balance_currency_code().as_str(), "LBR");
+}
+
+#[rustfmt::skip]
+#[test]
+fn build_global_config_5() {
+    let config = parse_and_build_config(r"
+        //! account: default, 50LBR,
+    ").unwrap();
+
+    assert_eq!(config.accounts.len(), 1);
+    let default = config.accounts.get("default").unwrap();
+    assert_eq!(default.balance(), 50);
+    assert_eq!(default.balance_currency_code().as_str(), "LBR");
+}
+
+#[rustfmt::skip]
+#[test]
+fn build_global_config_6() {
+    let config = parse_and_build_config(r"
+        //! account: bob, 51Coin1,
+    ").unwrap();
+
+    assert_eq!(config.accounts.len(), 2);
+    let default = config.accounts.get("bob").unwrap();
+    assert_eq!(default.balance(), 51);
+    assert_eq!(default.balance_currency_code().as_str(), "Coin1");
 }

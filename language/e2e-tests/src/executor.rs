@@ -25,6 +25,7 @@ use libra_types::{
     write_set::WriteSet,
 };
 use libra_vm::{LibraVM, VMExecutor, VMValidator};
+use move_core_types::identifier::Identifier;
 use stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use vm::CompiledModule;
 use vm_genesis::GENESIS_KEYPAIR;
@@ -153,7 +154,17 @@ impl FakeExecutor {
 
     /// Reads the balance resource value for an account from this executor's data store.
     pub fn read_balance_resource(&self, account: &Account) -> Option<BalanceResource> {
-        let ap = account.make_balance_access_path();
+        Some(self.read_account_info(account)?.1)
+    }
+
+    // Reads the balance resource value for an account from this executor's data store with the
+    // given balance currency_code.
+    fn read_balance_resource_from_currency_code(
+        &self,
+        account: &Account,
+        balance_currency_code: Identifier,
+    ) -> Option<BalanceResource> {
+        let ap = account.make_balance_access_path(balance_currency_code);
         let data_blob = StateView::get(&self.data_store, &ap)
             .expect("account must exist in data store")
             .expect("data must exist in data store");
@@ -165,8 +176,13 @@ impl FakeExecutor {
         &self,
         account: &Account,
     ) -> Option<(AccountResource, BalanceResource)> {
-        self.read_account_resource(account)
-            .and_then(|ar| self.read_balance_resource(account).map(|br| (ar, br)))
+        self.read_account_resource(account).and_then(|ar| {
+            self.read_balance_resource_from_currency_code(
+                account,
+                ar.balance_currency_code().to_owned(),
+            )
+            .map(|br| (ar, br))
+        })
     }
 
     /// Executes the given block of transactions.

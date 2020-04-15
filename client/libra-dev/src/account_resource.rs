@@ -72,6 +72,9 @@ pub unsafe extern "C" fn libra_LibraAccountResource_from(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use libra_types::account_config::{
+        from_currency_code_string, type_tag_for_currency_code, LBR_NAME,
+    };
 
     /// Generate an AccountBlob and verify we can parse it
     #[test]
@@ -98,7 +101,8 @@ mod tests {
             false,
             EventHandle::new(EventKey::new_from_address(&addr, 0), 777),
             EventHandle::new(EventKey::new_from_address(&addr, 0), 888),
-            0,
+            false,
+            from_currency_code_string(LBR_NAME).unwrap(),
         );
         let br = BalanceResource::new(100);
 
@@ -108,7 +112,11 @@ mod tests {
             lcs::to_bytes(&ar).expect("Account resource lcs serialization was not successful"),
         );
         map.insert(
-            BalanceResource::resource_path(),
+            // TODO: Need to update this to use BalanceResource::resource_path path once we can
+            // pass type arguments to it.
+            BalanceResource::access_path_for(type_tag_for_currency_code(
+                ar.balance_currency_code().to_owned(),
+            )),
             lcs::to_bytes(&br).expect("Balance resource lcs serialization was not successful"),
         );
 

@@ -14,11 +14,13 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
 
 mod libra_version;
+mod registered_currencies;
 mod validator_set;
 mod vm_config;
 
 pub use self::{
     libra_version::LibraVersion,
+    registered_currencies::RegisteredCurrencies,
     validator_set::ValidatorSet,
     vm_config::{VMConfig, VMPublishingOption},
 };
@@ -45,6 +47,7 @@ pub const ON_CHAIN_CONFIG_REGISTRY: &[ConfigID] = &[
     VMConfig::CONFIG_ID,
     LibraVersion::CONFIG_ID,
     ValidatorSet::CONFIG_ID,
+    RegisteredCurrencies::CONFIG_ID,
 ];
 
 #[derive(Clone, Debug, PartialEq)]
