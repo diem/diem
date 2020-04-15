@@ -13,7 +13,7 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Building the Docker image...
-      - docker/cluster-test/build.sh
+      - bash docker/cluster-test/build.sh
   post_build:
     commands:
       - echo Build completed on `date`
