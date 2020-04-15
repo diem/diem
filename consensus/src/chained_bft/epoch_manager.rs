@@ -13,7 +13,7 @@ use crate::{
             proposer_election::ProposerElection,
             rotating_proposer_election::{choose_leader, RotatingProposer},
         },
-        network::{IncomingBlockRetrievalRequest, NetworkSender},
+        network::{IncomingBlockRetrievalRequest, NetworkReceivers, NetworkSender},
         network_interface::{ConsensusMsg, ConsensusNetworkSender},
         persistent_liveness_storage::{
             LedgerRecoveryData, PersistentLivenessStorage, RecoveryData,
@@ -24,11 +24,13 @@ use crate::{
     util::time_service::{ClockTimeService, TimeService},
 };
 use anyhow::anyhow;
+use channel::libra_channel;
 use consensus_types::{
     common::{Author, Payload, Round},
     epoch_retrieval::EpochRetrievalRequest,
 };
-use libra_config::config::{ConsensusConfig, ConsensusProposerType};
+use futures::{select, StreamExt};
+use libra_config::config::{ConsensusConfig, ConsensusProposerType, NodeConfig};
 use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
@@ -40,8 +42,8 @@ use network::protocols::network::Event;
 use safety_rules::SafetyRulesManager;
 use std::{
     cmp::Ordering,
-    sync::{Arc, Mutex},
-    time::Duration,
+    sync::Arc,
+    time::{Duration, Instant},
 };
 
 /// The enum contains two processor
@@ -83,13 +85,11 @@ pub struct EpochManager<T> {
     storage: Arc<dyn PersistentLivenessStorage<T>>,
     safety_rules_manager: SafetyRulesManager<T>,
     processor: Option<Processor<T>>,
-    block_store: Arc<Mutex<Option<Arc<BlockStore<T>>>>>,
 }
 
 impl<T: Payload> EpochManager<T> {
     pub fn new(
-        author: Author,
-        config: ConsensusConfig,
+        node_config: &mut NodeConfig,
         time_service: Arc<ClockTimeService>,
         self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
         network_sender: ConsensusNetworkSender<T>,
@@ -97,8 +97,10 @@ impl<T: Payload> EpochManager<T> {
         txn_manager: Box<dyn TxnManager<Payload = T>>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         storage: Arc<dyn PersistentLivenessStorage<T>>,
-        safety_rules_manager: SafetyRulesManager<T>,
     ) -> Self {
+        let author = node_config.validator_network.as_ref().unwrap().peer_id;
+        let config = node_config.consensus.clone();
+        let safety_rules_manager = SafetyRulesManager::new(node_config);
         Self {
             author,
             config,
@@ -111,8 +113,6 @@ impl<T: Payload> EpochManager<T> {
             storage,
             safety_rules_manager,
             processor: None,
-            // TODO: this is for testing, remove
-            block_store: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -288,7 +288,6 @@ impl<T: Payload> EpochManager<T> {
             Arc::clone(&self.state_computer),
             self.config.max_pruned_blocks_in_mem,
         ));
-        *self.block_store.lock().unwrap() = Some(block_store.clone());
 
         info!("Update SafetyRules");
 
@@ -498,7 +497,40 @@ impl<T: Payload> EpochManager<T> {
         }
     }
 
-    pub fn block_store(&self) -> Arc<Mutex<Option<Arc<BlockStore<T>>>>> {
-        self.block_store.clone()
+    pub async fn start(
+        mut self,
+        mut pacemaker_timeout_sender_rx: channel::Receiver<Round>,
+        mut network_receivers: NetworkReceivers<T>,
+        mut reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
+    ) {
+        // initial start of the processor
+        if let Some(payload) = reconfig_events.next().await {
+            self.start_processor(payload).await;
+        }
+        loop {
+            let pre_select_instant = Instant::now();
+            let idle_duration;
+            select! {
+                payload = reconfig_events.select_next_some() => {
+                    idle_duration = pre_select_instant.elapsed();
+                    self.start_processor(payload).await
+                }
+                msg = network_receivers.consensus_messages.select_next_some() => {
+                    idle_duration = pre_select_instant.elapsed();
+                    self.process_message(msg.0, msg.1).await
+                }
+                block_retrieval = network_receivers.block_retrieval.select_next_some() => {
+                    idle_duration = pre_select_instant.elapsed();
+                    self.process_block_retrieval(block_retrieval).await
+                }
+                round = pacemaker_timeout_sender_rx.select_next_some() => {
+                    idle_duration = pre_select_instant.elapsed();
+                    self.process_local_timeout(round).await
+                }
+            }
+            counters::EVENT_PROCESSING_LOOP_BUSY_DURATION_S
+                .observe_duration(pre_select_instant.elapsed() - idle_duration);
+            counters::EVENT_PROCESSING_LOOP_IDLE_DURATION_S.observe_duration(idle_duration);
+        }
     }
 }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use admission_control_service::admission_control_service::AdmissionControlService;
-use consensus::consensus_provider::{make_consensus_provider, ConsensusProvider};
+use consensus::consensus_provider::start_consensus;
 use debug_interface::{
     node_debug_service::NodeDebugService,
     proto::node_debug_interface_server::NodeDebugInterfaceServer,
@@ -39,17 +39,9 @@ pub struct LibraHandle {
     _mempool: Runtime,
     _state_synchronizer: StateSynchronizer,
     _network_runtimes: Vec<Runtime>,
-    consensus: Option<Box<dyn ConsensusProvider>>,
+    _consensus_runtime: Option<Runtime>,
     _storage: Runtime,
     _debug: Runtime,
-}
-
-impl Drop for LibraHandle {
-    fn drop(&mut self) {
-        if let Some(consensus) = &mut self.consensus {
-            consensus.stop();
-        }
-    }
 }
 
 fn setup_executor(config: &NodeConfig) -> Arc<Mutex<Executor<LibraVM>>> {
@@ -232,7 +224,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         AdmissionControlService::bootstrap(&node_config, mp_client_sender.clone());
     let rpc_runtime = bootstrap_rpc(&node_config, libra_db.clone(), mp_client_sender);
 
-    let mut consensus = None;
+    let mut consensus_runtime = None;
     let (consensus_to_mempool_sender, consensus_requests) = channel(INTRA_NODE_CHANNEL_BUFFER_SIZE);
 
     instant = Instant::now();
@@ -273,7 +265,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
         // Initialize and start consensus.
         instant = Instant::now();
-        let mut consensus_provider = make_consensus_provider(
+        consensus_runtime = Some(start_consensus(
             node_config,
             consensus_network_sender,
             consensus_network_events,
@@ -282,11 +274,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             consensus_to_mempool_sender,
             libra_db,
             consensus_reconfig_events,
-        );
-        consensus_provider
-            .start()
-            .expect("Failed to start consensus. Can't proceed.");
-        consensus = Some(consensus_provider);
+        ));
         debug!("Consensus started in {} ms", instant.elapsed().as_millis());
     }
 
@@ -307,7 +295,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         _rpc: rpc_runtime,
         _mempool: mempool,
         _state_synchronizer: state_synchronizer,
-        consensus,
+        _consensus_runtime: consensus_runtime,
         _storage: storage,
         _debug: debug_if,
     }
