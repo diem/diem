@@ -273,8 +273,10 @@ jobs:
             echo -e "This runner will run these tests\n$(cat /tmp/tests_to_run)"
       - run:
           name: Run E2E tests
+          # NOTE
+          # +e to disable exit immediately when test timeout in the retry loop
           command: |
-            set -x +e
+            set +e
             libratest=$(find target/debug/deps/ -name "libratest*" -executable)
             num_fails=0
             for target in $(cat /tmp/tests_to_run) ; do
@@ -286,6 +288,7 @@ jobs:
                   $libratest $target --test-threads 1 --exact --nocapture
                 status=$?
                 retry=$((retry + 1))
+                sleep 10
               done
               if [[ $status != 0 ]] ; then
                 num_fails=$((num_fails + 1))
