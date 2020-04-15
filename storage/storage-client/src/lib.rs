@@ -9,9 +9,6 @@
 //! library implementation and protobuf interface, and the interface between the rest of the system
 //! and the client library will remain the same, so we won't need to change other components.
 
-mod state_view;
-
-pub use crate::state_view::VerifiedStateView;
 use anyhow::{format_err, Error, Result};
 use futures::{
     executor::block_on,

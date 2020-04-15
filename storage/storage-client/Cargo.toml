@@ -18,7 +18,6 @@ tonic = "0.2"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-scratchpad = { path = "../scratchpad", version = "0.1.0" }
 libra-secure-net = { path = "../../secure/net", version = "0.1.0" }
 libra-state-view = { path = "../state-view", version = "0.1.0" }
 storage-interface = { path = "../storage-interface", version = "0.1.0" }

@@ -32,7 +32,6 @@ libra-types = { path = "../../types", version = "0.1.0" }
 libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 scratchpad = { path = "../../storage/scratchpad", version = "0.1.0" }
-storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
 storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
 storage-proto = { path = "../../storage/storage-proto", version = "0.1.0" }
 
@@ -44,6 +43,7 @@ rusty-fork = "0.2.1"
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 executor-utils = { path = "../executor-utils", version = "0.1.0" }
 stdlib = { path = "../../language/stdlib", version = "0.1.0" }
+storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
 storage-service = { path = "../../storage/storage-service", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }
