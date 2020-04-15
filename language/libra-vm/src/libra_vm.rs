@@ -235,23 +235,6 @@ impl LibraVM {
         Ok(())
     }
 
-    fn check_change_set(
-        &self,
-        change_set: &ChangeSet,
-        _state_view: &dyn StateView,
-    ) -> VMResult<()> {
-        // This function is only invoked by WaypointWriteSet for now. We don't enforce the same
-        // check on TransactionPayload::WriteSet.
-        for (_access_path, write_op) in change_set.write_set() {
-            // Genesis transactions only add entries, never delete them.
-            if write_op.is_deletion() {
-                error!("[VM] Bad genesis block");
-                return Err(VMStatus::new(StatusCode::INVALID_WRITE_SET));
-            }
-        }
-        Ok(())
-    }
-
     fn resolve_type_argument(
         &self,
         ctx: &mut SystemExecutionContext,
@@ -797,8 +780,7 @@ impl LibraVM {
                     result.push(self.process_block_prologue(&mut data_cache, block_metadata)?)
                 }
                 TransactionBlock::WaypointWriteSet(change_set) => result.push(
-                    self.check_change_set(&change_set, state_view)
-                        .and_then(|_| self.process_waypoint_change_set(&mut data_cache, change_set))
+                    self.process_waypoint_change_set(&mut data_cache, change_set)
                         .unwrap_or_else(discard_error_output),
                 ),
                 TransactionBlock::WriteSet(txn) => {
