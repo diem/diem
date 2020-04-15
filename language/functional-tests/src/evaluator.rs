@@ -15,7 +15,6 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::LBR_NAME,
     block_metadata::BlockMetadata,
     language_storage::ModuleId,
     on_chain_config::VMPublishingOption,
@@ -311,7 +310,6 @@ fn make_script_transaction(
         script,
         params.max_gas_amount,
         params.gas_unit_price,
-        LBR_NAME.to_string(),
         params.expiration_time,
     )
     .sign(params.privkey, params.pubkey.clone())?
@@ -335,7 +333,6 @@ fn make_module_transaction(
         module,
         params.max_gas_amount,
         params.gas_unit_price,
-        LBR_NAME.to_string(),
         params.expiration_time,
     )
     .sign(params.privkey, params.pubkey.clone())?
