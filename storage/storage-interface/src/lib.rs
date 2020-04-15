@@ -18,6 +18,8 @@ use std::sync::Arc;
 use storage_proto::StartupInfo;
 use thiserror::Error;
 
+pub mod state_view;
+
 #[derive(Debug, Deserialize, Error, PartialEq, Serialize)]
 pub enum Error {
     #[error("Service error: {:?}", error)]

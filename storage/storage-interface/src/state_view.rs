@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::DbReader;
 use anyhow::{format_err, Result};
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_state_view::StateView;
@@ -15,7 +16,6 @@ use std::{
     convert::TryInto,
     sync::Arc,
 };
-use storage_interface::DbReader;
 
 /// `VerifiedStateView` is like a snapshot of the global state comprised of state view at two
 /// levels, persistent storage and memory.

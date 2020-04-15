@@ -11,8 +11,8 @@ use libra_types::{
 use libra_vm::{on_chain_configs::VMConfig, LibraVM, VMVerifier};
 use scratchpad::SparseMerkleTree;
 use std::{convert::TryFrom, sync::Arc};
-use storage_client::{StorageRead, VerifiedStateView};
-use storage_interface::DbReader;
+use storage_client::StorageRead;
+use storage_interface::{state_view::VerifiedStateView, DbReader};
 
 #[cfg(test)]
 #[path = "unit_tests/vm_validator_test.rs"]
