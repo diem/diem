@@ -102,6 +102,10 @@ pub enum Operation {
     BorrowField(ModuleId, StructId, Vec<Type>, usize),
     BorrowGlobal(ModuleId, StructId, Vec<Type>),
 
+    // Get
+    GetField(ModuleId, StructId, Vec<Type>, usize),
+    GetGlobal(ModuleId, StructId, Vec<Type>),
+
     // Builtins
     Abort,
     Destroy,
@@ -425,6 +429,23 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             }
             BorrowGlobal(mid, sid, targs) => {
                 write!(f, "borrow_global<{}>", self.struct_str(*mid, *sid, targs))?;
+            }
+            GetField(mid, sid, targs, offset) => {
+                write!(f, "get_field<{}>", self.struct_str(*mid, *sid, targs))?;
+                let struct_env = self
+                    .func_target
+                    .global_env()
+                    .get_module(*mid)
+                    .into_struct(*sid);
+                let field_env = struct_env.get_field_by_offset(*offset);
+                write!(
+                    f,
+                    ".{}",
+                    field_env.get_name().display(struct_env.symbol_pool())
+                )?;
+            }
+            GetGlobal(mid, sid, targs) => {
+                write!(f, "get_global<{}>", self.struct_str(*mid, *sid, targs))?;
             }
 
             // Resources
