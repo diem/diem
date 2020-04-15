@@ -13,7 +13,7 @@ use libra_config::config::MempoolConfig;
 use libra_types::{
     account_address::AccountAddress,
     mempool_status::MempoolStatus,
-    on_chain_config::{ConfigID, LibraVersion, OnChainConfig, VMPublishingOption},
+    on_chain_config::{ConfigID, LibraVersion, OnChainConfig, VMConfig},
     transaction::SignedTransaction,
     vm_error::VMStatus,
     PeerId,
