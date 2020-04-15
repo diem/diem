@@ -1,10 +1,25 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use serde_reflection::{ContainerFormat, Format, Named, VariantFormat};
+use serde_reflection::{ContainerFormat, Format, Named, RegistryOwned, VariantFormat};
 use std::collections::BTreeMap;
 
-pub fn output_preambule() -> String {
+pub fn output(registry: &RegistryOwned) {
+    println!("{}", output_preambule());
+    for (name, format) in registry {
+        print!("{}", output_container_forward_definition(name, format));
+    }
+    println!();
+    for (name, format) in registry {
+        println!("{}", output_container(name, format));
+    }
+    println!();
+    for (name, format) in registry {
+        println!("{}", output_container_traits(name, format));
+    }
+}
+
+fn output_preambule() -> String {
     "#include \"serde.hpp\"\n".into()
 }
 
@@ -133,7 +148,7 @@ fn output_variants_forward_definition(
     result
 }
 
-pub fn output_container_forward_definition(name: &str, format: &ContainerFormat) -> String {
+fn output_container_forward_definition(name: &str, format: &ContainerFormat) -> String {
     use ContainerFormat::*;
     match format {
         UnitStruct | NewTypeStruct(_) | TupleStruct(_) | Struct(_) => format!("struct {};\n", name),
@@ -145,7 +160,7 @@ pub fn output_container_forward_definition(name: &str, format: &ContainerFormat)
     }
 }
 
-pub fn output_container(name: &str, format: &ContainerFormat) -> String {
+fn output_container(name: &str, format: &ContainerFormat) -> String {
     use ContainerFormat::*;
     match format {
         UnitStruct => format!("struct {} {{}};\n", name),
@@ -212,7 +227,7 @@ fn output_struct_traits(name: &str, fields: &[Named<Format>]) -> String {
     )
 }
 
-pub fn output_container_traits(name: &str, format: &ContainerFormat) -> String {
+fn output_container_traits(name: &str, format: &ContainerFormat) -> String {
     use ContainerFormat::*;
     match format {
         UnitStruct => output_struct_traits(name, &[]),

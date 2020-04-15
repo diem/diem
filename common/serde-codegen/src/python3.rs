@@ -1,10 +1,17 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use serde_reflection::{ContainerFormat, Format, Named, VariantFormat};
+use serde_reflection::{ContainerFormat, Format, Named, RegistryOwned, VariantFormat};
 use std::collections::BTreeMap;
 
-pub fn output_preambule() -> String {
+pub fn output(registry: &RegistryOwned) {
+    println!("{}", output_preambule());
+    for (name, format) in registry {
+        println!("{}", output_container(name, format));
+    }
+}
+
+fn output_preambule() -> String {
     r#"
 from dataclasses import dataclass
 import numpy as np
@@ -119,7 +126,7 @@ fn output_variant_aliases(base: &str, variants: &BTreeMap<u32, Named<VariantForm
     result
 }
 
-pub fn output_container(name: &str, format: &ContainerFormat) -> String {
+fn output_container(name: &str, format: &ContainerFormat) -> String {
     use ContainerFormat::*;
     match format {
         UnitStruct => format!("@dataclass\nclass {}:\n    pass\n", name,),

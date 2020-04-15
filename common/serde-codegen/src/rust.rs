@@ -1,10 +1,17 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use serde_reflection::{ContainerFormat, Format, Named, VariantFormat};
+use serde_reflection::{ContainerFormat, Format, Named, RegistryOwned, VariantFormat};
 use std::collections::BTreeMap;
 
-pub fn output_preambule() -> String {
+pub fn output(registry: &RegistryOwned) {
+    println!("{}", output_preambule());
+    for (name, format) in registry {
+        println!("{}", output_container(name, format));
+    }
+}
+
+fn output_preambule() -> String {
     r#"
 #![allow(unused_imports)]
 use serde::{Serialize, Deserialize};

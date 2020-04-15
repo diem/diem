@@ -38,31 +38,8 @@ fn main() {
     let registry = serde_yaml::from_str::<RegistryOwned>(content.as_str()).unwrap();
 
     match options.language {
-        Language::Python3 => {
-            println!("{}", python3::output_preambule());
-            for (name, format) in &registry {
-                println!("{}", python3::output_container(name, format));
-            }
-        }
-        Language::Cpp => {
-            println!("{}", cpp::output_preambule());
-            for (name, format) in &registry {
-                print!("{}", cpp::output_container_forward_definition(name, format));
-            }
-            println!();
-            for (name, format) in &registry {
-                println!("{}", cpp::output_container(name, format));
-            }
-            println!();
-            for (name, format) in &registry {
-                println!("{}", cpp::output_container_traits(name, format));
-            }
-        }
-        Language::Rust => {
-            println!("{}", rust::output_preambule());
-            for (name, format) in &registry {
-                println!("{}", rust::output_container(name, format));
-            }
-        }
+        Language::Python3 => python3::output(&registry),
+        Language::Cpp => cpp::output(&registry),
+        Language::Rust => rust::output(&registry),
     }
 }
