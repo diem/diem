@@ -235,7 +235,11 @@ impl LibraVM {
         Ok(())
     }
 
-    fn check_change_set(&self, change_set: &ChangeSet, state_view: &dyn StateView) -> VMResult<()> {
+    fn check_change_set(
+        &self,
+        change_set: &ChangeSet,
+        _state_view: &dyn StateView,
+    ) -> VMResult<()> {
         // This function is only invoked by WaypointWriteSet for now. We don't enforce the same
         // check on TransactionPayload::WriteSet.
         for (_access_path, write_op) in change_set.write_set() {
@@ -466,14 +470,14 @@ impl LibraVM {
         result
     }
 
-    fn load_writeset(
+    fn read_writeset(
         &self,
         remote_cache: &BlockDataCache<'_>,
         write_set: &WriteSet,
     ) -> VMResult<()> {
-        // Load writeset contents into cache. Executor expects each writeop to be read from
-        // StateView before being able to commit them.
-        for op in write_set.iter() {
+        // All Move executions satisfy the read-before-write property. Thus we need to read each
+        // access path that the write set is going to update.
+        for (ap, _) in write_set.iter() {
             remote_cache.get(ap)?;
         }
         Ok(())
@@ -485,7 +489,7 @@ impl LibraVM {
         change_set: ChangeSet,
     ) -> VMResult<TransactionOutput> {
         let (write_set, events) = change_set.into_inner();
-        self.load_writeset(remote_cache, &write_set)?;
+        self.read_writeset(remote_cache, &write_set)?;
         remote_cache.push_write_set(&write_set);
         self.load_configs_impl(remote_cache);
         Ok(TransactionOutput::new(
@@ -578,7 +582,7 @@ impl LibraVM {
 
         self.run_writeset_epilogue(&mut interpreter_context, change_set, &txn_data)?;
 
-        if let Err(e) = self.load_writeset(remote_cache, &change_set.write_set()) {
+        if let Err(e) = self.read_writeset(remote_cache, &change_set.write_set()) {
             return Ok(discard_error_output(e));
         };
 
