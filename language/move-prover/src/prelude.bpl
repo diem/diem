@@ -621,12 +621,14 @@ requires is#Integer(src1) && is#Integer(src2);
 }
 
 procedure {:inline 1} Shl(src1: Value, src2: Value) returns (dst: Value)
+requires is#Integer(src1) && is#Integer(src2);
 {
     // TOOD: implement
     assert false;
 }
 
 procedure {:inline 1} Shr(src1: Value, src2: Value) returns (dst: Value)
+requires is#Integer(src1) && is#Integer(src2);
 {
     // TOOD: implement
     assert false;

@@ -148,7 +148,7 @@ module VerifyVector {
     }
 
     // Return true if `e` is in the vector `v`
-    fun verify_contains<Element>(v: &vector<Element>, e: &Element): bool {
+    fun verify_contains<Element>(_v: &vector<Element>, _e: &Element): bool {
 //        let i = 0;
 //        let len = Vector::length(v);
 //        while (i < len) {
