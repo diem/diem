@@ -1,8 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::config::NodeConfig;
 use get_if_addrs::get_if_addrs;
-use libra_types::PeerId;
+use libra_types::{transaction::Transaction, PeerId};
 use parity_multiaddr::{Multiaddr, Protocol};
 use serde::{Serialize, Serializer};
 use std::{
@@ -84,4 +85,12 @@ where
 {
     let ordered: BTreeMap<_, _> = value.iter().collect();
     ordered.serialize(serializer)
+}
+
+pub fn get_genesis_txn(config: &NodeConfig) -> anyhow::Result<&Transaction> {
+    config
+        .execution
+        .genesis
+        .as_ref()
+        .ok_or_else(|| anyhow::format_err!("Genesis txn not present."))
 }

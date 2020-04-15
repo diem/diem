@@ -3,7 +3,7 @@
 
 use crate::vm_validator::{TransactionValidation, VMValidator};
 use executor::db_bootstrapper::bootstrap_db_if_empty;
-use libra_config::config::NodeConfig;
+use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     account_address, account_config,
@@ -29,7 +29,8 @@ impl TestValidator {
     fn new(config: &NodeConfig) -> (Self, Runtime) {
         let rt = Runtime::new().unwrap();
         let (db, db_rw) = init_libra_db(config);
-        bootstrap_db_if_empty::<LibraVM>(&db_rw, config).expect("Db-bootstrapper should not fail.");
+        bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(config).unwrap())
+            .expect("Db-bootstrapper should not fail.");
         let storage = start_storage_service_with_db(&config, db);
 
         // Create another client for the vm_validator since the one used for the executor will be

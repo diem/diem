@@ -10,7 +10,7 @@ use crate::{
     },
     BlockExecutor, Executor, OP_COUNTERS,
 };
-use libra_config::config::NodeConfig;
+use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue};
 use libra_types::{
     account_address::AccountAddress,
@@ -37,7 +37,8 @@ fn build_test_config() -> (NodeConfig, Ed25519PrivateKey) {
 
 fn create_storage(config: &NodeConfig) -> DbReaderWriter {
     let db = DbReaderWriter::new(LibraDB::new(config.storage.dir()));
-    bootstrap_db_if_empty::<MockVM>(&db, &config).expect("Db-bootstrapper should not fail.");
+    bootstrap_db_if_empty::<MockVM>(&db, get_genesis_txn(&config).unwrap())
+        .expect("Db-bootstrapper should not fail.");
     db
 }
 

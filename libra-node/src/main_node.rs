@@ -9,7 +9,10 @@ use debug_interface::{
 };
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use futures::{channel::mpsc::channel, executor::block_on};
-use libra_config::config::{NetworkConfig, NodeConfig, RoleType};
+use libra_config::{
+    config::{NetworkConfig, NodeConfig, RoleType},
+    utils::get_genesis_txn,
+};
 use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
 use libra_mempool::MEMPOOL_SUBSCRIBED_CONFIGS;
@@ -154,7 +157,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let mut instant = Instant::now();
     let (libra_db, db_rw) = init_libra_db(&node_config);
     let storage = start_storage_service_with_db(&node_config, Arc::clone(&libra_db));
-    bootstrap_db_if_empty::<LibraVM>(&db_rw, node_config)
+    bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(&node_config).unwrap())
         .expect("Db-bootstrapper should not fail.");
 
     debug!(
