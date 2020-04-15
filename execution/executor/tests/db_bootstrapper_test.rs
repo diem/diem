@@ -10,6 +10,7 @@ use executor::{
     BlockExecutor, Executor,
 };
 use executor_utils::test_helpers::{gen_ledger_info_with_sigs, get_test_signed_transaction};
+use libra_config::utils::get_genesis_txn;
 use libra_crypto::{
     ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, HashValue, PrivateKey, Uniform,
 };
@@ -48,7 +49,8 @@ fn test_empty_db() {
     assert!(db_rw.reader.get_startup_info().unwrap().is_none());
 
     // Bootstrap empty DB.
-    let waypoint = bootstrap_db_if_empty::<LibraVM>(&db_rw, &config)
+    let genesis_txn = get_genesis_txn(&config).unwrap();
+    let waypoint = bootstrap_db_if_empty::<LibraVM>(&db_rw, genesis_txn)
         .expect("Should not fail.")
         .expect("Should not be None.");
     let startup_info = db_rw
@@ -62,7 +64,7 @@ fn test_empty_db() {
     );
 
     // `bootstrap_db_if_empty()` does nothing on non-empty DB.
-    assert!(bootstrap_db_if_empty::<LibraVM>(&db_rw, &config)
+    assert!(bootstrap_db_if_empty::<LibraVM>(&db_rw, genesis_txn)
         .unwrap()
         .is_none())
 }
@@ -186,7 +188,8 @@ fn test_pre_genesis() {
     // Create bootstrapped DB.
     let tmp_dir = TempPath::new();
     let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new(&tmp_dir));
-    bootstrap_db_if_empty::<LibraVM>(&db_rw, &config).unwrap();
+    let genesis_txn = get_genesis_txn(&config).unwrap();
+    bootstrap_db_if_empty::<LibraVM>(&db_rw, genesis_txn).unwrap();
 
     // Mint for 2 demo accounts.
     let (account1, account1_auth_key, account2, account2_auth_key) = get_demo_accounts();
@@ -204,7 +207,7 @@ fn test_pre_genesis() {
     restore_state_to_db(&db, accounts_backup, proof, root_hash, PRE_GENESIS_VERSION);
 
     // DB is not empty, `bootstrap_db_if_empty()` won't apply default genesis txn.
-    assert!(bootstrap_db_if_empty::<LibraVM>(&db_rw, &config)
+    assert!(bootstrap_db_if_empty::<LibraVM>(&db_rw, genesis_txn)
         .unwrap()
         .is_none());
     // Nor is it able to boot Executor.
@@ -234,7 +237,7 @@ fn test_pre_genesis() {
 
     // Bootstrap DB on top of pre-genesis state.
     let tree_state = db_rw.reader.get_latest_tree_state().unwrap();
-    bootstrap_db::<LibraVM>(&db_rw, tree_state, genesis_txn).unwrap();
+    bootstrap_db::<LibraVM>(&db_rw, tree_state, &genesis_txn).unwrap();
 
     // Effect of bootstrapping reflected.
     assert_eq!(get_balance(&account1, &db_rw), 1000);

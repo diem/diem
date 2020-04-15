@@ -6,7 +6,7 @@ use executor::{db_bootstrapper::bootstrap_db_if_empty, BlockExecutor, Executor};
 use executor_utils::test_helpers::{
     gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
 };
-use libra_config::config::NodeConfig;
+use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey, Uniform};
 use libra_types::{
     account_config::{association_address, discovery_set_address, lbr_type_tag},
@@ -34,7 +34,7 @@ use transaction_builder::{
 
 fn create_db_and_executor(config: &NodeConfig) -> (DbReaderWriter, Executor<LibraVM>) {
     let db = DbReaderWriter::new(LibraDB::new(config.storage.dir()));
-    bootstrap_db_if_empty::<LibraVM>(&db, config).unwrap();
+    bootstrap_db_if_empty::<LibraVM>(&db, get_genesis_txn(config).unwrap()).unwrap();
     let executor = Executor::<LibraVM>::new(db.clone());
 
     (db, executor)

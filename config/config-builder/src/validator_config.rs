@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{BuildSwarm, Error};
-use anyhow::{ensure, Result};
+use anyhow::{ensure, format_err, Result};
 use executor::db_bootstrapper;
 use libra_config::{
     config::{
@@ -12,11 +12,14 @@ use libra_config::{
     generator::{self, ValidatorSwarm},
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use libra_temppath::TempPath;
 use libra_types::{discovery_set::DiscoverySet, on_chain_config::ValidatorSet};
 use libra_vm::LibraVM;
+use libradb::LibraDB;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{collections::HashMap, net::SocketAddr};
+use storage_interface::DbReaderWriter;
 
 const DEFAULT_SEED: [u8; 32] = [13u8; 32];
 const DEFAULT_ADVERTISED: &str = "/ip4/127.0.0.1/tcp/6180";
@@ -228,11 +231,13 @@ impl ValidatorConfig {
                 .as_ref()
                 .and_then(|config| config.publishing_option.clone()),
         );
-
         let waypoint = if self.build_waypoint {
-            Some(db_bootstrapper::compute_genesis_waypoint::<LibraVM>(
-                genesis.clone(),
-            )?)
+            let path = TempPath::new();
+            let db_rw = DbReaderWriter::new(LibraDB::new(&path));
+            Some(
+                db_bootstrapper::bootstrap_db_if_empty::<LibraVM>(&db_rw, &genesis)?
+                    .ok_or_else(|| format_err!("Failed to bootstrap empty DB."))?,
+            )
         } else {
             None
         };

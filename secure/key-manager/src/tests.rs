@@ -3,7 +3,7 @@
 
 use crate::{Action, Error, KeyManager, LibraInterface};
 use executor::{db_bootstrapper, BlockExecutor, Executor};
-use libra_config::config::NodeConfig;
+use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Policy, Value};
 use libra_secure_time::{MockTimeService, TimeService};
@@ -72,7 +72,7 @@ fn setup_secure_storage(
 impl Node {
     fn setup(config: &NodeConfig) -> Self {
         let (storage, db_rw) = DbReaderWriter::wrap(LibraDB::new(&config.storage.dir()));
-        db_bootstrapper::bootstrap_db_if_empty::<LibraVM>(&db_rw, config)
+        db_bootstrapper::bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(config).unwrap())
             .expect("Failed to execute genesis");
         let executor = Executor::new(db_rw);
         let libra = TestLibraInterface {
