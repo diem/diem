@@ -14,7 +14,7 @@ error: expected `bool` but found `num`
    │             ^^^^^^^^^^
    │
 
-error: undeclared `result_1`
+error: undeclared `M::result_1`
 
     ┌── tests/sources/conditions_err.move:10:13 ───
     │

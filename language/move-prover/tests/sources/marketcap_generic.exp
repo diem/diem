@@ -1,0 +1,16 @@
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/marketcap_generic.move:64:10 ───
+    │
+ 64 │          ensures sum_of_coins_invariant<X>();
+    │          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/marketcap_generic.move:57:6: deposit_invalid (entry)
+    =     at tests/sources/marketcap_generic.move:58:18: deposit_invalid
+    =         coin_ref = <redacted>,
+    =         check = <redacted>,
+    =         value = <redacted>
+    =     at tests/sources/marketcap_generic.move:59:27: deposit_invalid
+    =         coin_ref = <redacted>
+    =     at tests/sources/marketcap_generic.move:57:6: deposit_invalid (exit)
