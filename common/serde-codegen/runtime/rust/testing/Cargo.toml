@@ -1,0 +1,11 @@
+[package]
+name = "testing"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+edition = "2018"
+
+[dependencies]
+serde = { version = "1.0.106", features = ["derive"] }
+serde_bytes = "0.11.3"
+
+[workspace]

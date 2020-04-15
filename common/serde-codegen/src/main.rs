@@ -7,12 +7,14 @@ use structopt::{clap::arg_enum, StructOpt};
 
 mod cpp;
 mod python3;
+mod rust;
 
 arg_enum! {
 #[derive(Debug, StructOpt)]
 enum Language {
     Python3,
     Cpp,
+    Rust,
 }
 }
 
@@ -54,6 +56,12 @@ fn main() {
             println!();
             for (name, format) in &registry {
                 println!("{}", cpp::output_container_traits(name, format));
+            }
+        }
+        Language::Rust => {
+            println!("{}", rust::output_preambule());
+            for (name, format) in &registry {
+                println!("{}", rust::output_container(name, format));
             }
         }
     }
