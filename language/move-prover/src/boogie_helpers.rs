@@ -207,13 +207,49 @@ pub fn boogie_well_formed_check(
 }
 
 /// Create boogie global variable with type constraint. No references allowed.
-pub fn boogie_declare_global(env: &GlobalEnv, name: &str, ty: &Type) -> String {
+pub fn boogie_declare_global(env: &GlobalEnv, name: &str, param_count: usize, ty: &Type) -> String {
+    let declarator = boogie_global_declarator(env, name, param_count, ty);
     assert!(!ty.is_reference());
-    format!(
-        "var {} : Value where {};",
-        name,
-        boogie_well_formed_expr(env, name, ty, WellFormedMode::Default)
-    )
+    if param_count > 0 {
+        let var_selector = format!(
+            "{}[{}]",
+            name,
+            (0..param_count).map(|i| format!("$tv{}", i)).join(", ")
+        );
+        let type_check = boogie_well_formed_expr(env, &var_selector, ty, WellFormedMode::Default);
+        format!(
+            "var {} where (forall {} :: {});",
+            declarator,
+            (0..param_count)
+                .map(|i| format!("$tv{}: TypeValue", i))
+                .join(", "),
+            type_check
+        )
+    } else {
+        format!(
+            "var {} where {};",
+            declarator,
+            boogie_well_formed_expr(env, name, ty, WellFormedMode::Default)
+        )
+    }
+}
+
+pub fn boogie_global_declarator(
+    _env: &GlobalEnv,
+    name: &str,
+    param_count: usize,
+    ty: &Type,
+) -> String {
+    assert!(!ty.is_reference());
+    if param_count > 0 {
+        format!(
+            "{} : [{}]Value",
+            name,
+            (0..param_count).map(|_| "TypeValue").join(", ")
+        )
+    } else {
+        format!("{} : Value", name)
+    }
 }
 
 pub fn boogie_var_before_borrow(idx: usize) -> String {

@@ -261,7 +261,7 @@ impl<'env> ModuleTranslator<'env> {
             self.writer,
             "procedure {{:inline 1}} {}_pack($file_id: int, $byte_index: int, $var_idx: int, {}) returns ($struct: Value)\n{{",
             boogie_struct_name(struct_env),
-            separate(vec![type_args_str, args_str.clone()], ", ")
+            separate(vec![type_args_str.clone(), args_str.clone()], ", ")
         );
         self.writer.indent();
         let mut fields_str = String::from("EmptyValueArray");
@@ -298,8 +298,9 @@ impl<'env> ModuleTranslator<'env> {
         // Unpack function
         emitln!(
             self.writer,
-            "procedure {{:inline 1}} {}_unpack($struct: Value) returns ({})\n{{",
+            "procedure {{:inline 1}} {}_unpack({}) returns ({})\n{{",
             boogie_struct_name(struct_env),
+            separate(vec![type_args_str, "$struct: Value".to_string()], ", "),
             args_str
         );
         self.writer.indent();
@@ -1148,7 +1149,7 @@ impl<'env> ModuleTranslator<'env> {
                         emitln!(self.writer, &update_and_track_local(dest, "$tmp"));
                     }
 
-                    Unpack(mid, sid, _) => {
+                    Unpack(mid, sid, type_actuals) => {
                         let src = srcs[0];
                         let struct_env = func_target
                             .func_env
@@ -1171,12 +1172,17 @@ impl<'env> ModuleTranslator<'env> {
                                 tmp_assignments.push(track_local(*dest, &dest_str));
                             }
                         }
+                        let args_str = type_actuals
+                            .iter()
+                            .map(|s| boogie_type_value(self.module_env.env, s))
+                            .chain(vec![format!("$GetLocal($m, $frame + {})", src)])
+                            .join(", ");
                         emitln!(
                             self.writer,
-                            "call {} := {}_unpack($GetLocal($m, $frame + {}));",
+                            "call {} := {}_unpack({});",
                             dests_str,
                             boogie_struct_name(&struct_env),
-                            src,
+                            args_str,
                         );
                         for s in &tmp_assignments {
                             emitln!(self.writer, s);
@@ -1732,20 +1738,21 @@ impl<'env> ModuleTranslator<'env> {
     /// Determines whether this type has after-update invariants.
     fn has_after_update_invariant(&'env self, ty: &Type) -> bool {
         self.get_referred_struct(ty)
-            .map(|struct_env| SpecTranslator::has_after_update_invariant(&struct_env))
+            .map(|(struct_env, _)| SpecTranslator::has_after_update_invariant(&struct_env))
             .unwrap_or(false)
     }
 
     /// If ty is a mutable reference to a struct, return its environment.
-    fn get_referred_struct(&self, ty: &Type) -> Option<StructEnv<'_>> {
+    fn get_referred_struct(&self, ty: &Type) -> Option<(StructEnv<'_>, Vec<Type>)> {
         if let Type::Reference(true, bt) = &ty {
-            if let Type::Struct(module_idx, struct_idx, _) = bt.as_ref() {
-                return Some(
+            if let Type::Struct(module_idx, struct_idx, type_args) = bt.as_ref() {
+                return Some((
                     self.module_env
                         .env
                         .get_module(*module_idx)
                         .into_struct(*struct_idx),
-                );
+                    type_args.clone(),
+                ));
             }
         }
         None
@@ -1759,13 +1766,18 @@ impl<'env> ModuleTranslator<'env> {
         ty: &Type,
         idx: usize,
     ) {
-        if let Some(struct_env) = self.get_referred_struct(ty) {
+        if let Some((struct_env, type_args)) = self.get_referred_struct(ty) {
             if SpecTranslator::has_before_update_invariant(&struct_env) {
+                let args_str = type_args
+                    .iter()
+                    .map(|ty| boogie_type_value(self.module_env.env, ty))
+                    .chain(vec![boogie_var_before_borrow(idx)])
+                    .join(", ");
                 emitln!(
                     self.writer,
                     "call {}_before_update_inv({});",
                     boogie_struct_name(&struct_env),
-                    boogie_var_before_borrow(idx)
+                    args_str,
                 );
             }
         }
@@ -1779,17 +1791,24 @@ impl<'env> ModuleTranslator<'env> {
         ty: &Type,
         idx: usize,
     ) {
-        if let Some(struct_env) = self.get_referred_struct(ty) {
+        if let Some((struct_env, type_args)) = self.get_referred_struct(ty) {
             if SpecTranslator::has_after_update_invariant(&struct_env) {
                 let name = &boogie_var_before_borrow(idx);
                 emitln!(self.writer, "if ({}_used) {{", name);
                 self.writer.indent();
+                let args_str = type_args
+                    .iter()
+                    .map(|ty| boogie_type_value(self.module_env.env, ty))
+                    .chain(vec![
+                        name.clone(),
+                        format!("$Dereference($m, {}_ref)", name),
+                    ])
+                    .join(", ");
                 emitln!(
                     self.writer,
-                    "call {}_after_update_inv({}, $Dereference($m, {}_ref));",
+                    "call {}_after_update_inv({});",
                     boogie_struct_name(&struct_env),
-                    name,
-                    name,
+                    args_str,
                 );
                 emitln!(self.writer, "{}_used := false;", name);
                 self.writer.unindent();

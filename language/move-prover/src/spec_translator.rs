@@ -12,9 +12,9 @@ use spec_lang::{
 
 use crate::{
     boogie_helpers::{
-        boogie_declare_global, boogie_field_name, boogie_local_type, boogie_spec_fun_name,
-        boogie_spec_var_name, boogie_struct_name, boogie_type_value, boogie_well_formed_expr,
-        WellFormedMode,
+        boogie_declare_global, boogie_field_name, boogie_global_declarator, boogie_local_type,
+        boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name, boogie_type_value,
+        boogie_well_formed_expr, WellFormedMode,
     },
     code_writer::CodeWriter,
 };
@@ -180,7 +180,12 @@ impl<'env> SpecTranslator<'env> {
             let boogie_name = boogie_spec_var_name(&self.module_env(), var.name);
             emitln!(
                 self.writer,
-                &boogie_declare_global(&self.module_env().env, &boogie_name, &var.type_)
+                &boogie_declare_global(
+                    &self.module_env().env,
+                    &boogie_name,
+                    var.type_params.len(),
+                    &var.type_
+                )
             );
         }
     }
@@ -208,6 +213,17 @@ impl<'env> SpecTranslator<'env> {
                 continue;
             }
             let result_type = boogie_local_type(&fun.result_type);
+            let spec_var_params = fun.used_spec_vars.iter().map(|(mid, vid)| {
+                let declaring_module = self.module_env().env.get_module(*mid);
+                let decl = declaring_module.get_spec_var(*vid);
+                let boogie_name = boogie_spec_var_name(&declaring_module, decl.name);
+                boogie_global_declarator(
+                    declaring_module.env,
+                    &boogie_name,
+                    decl.type_params.len(),
+                    &decl.type_,
+                )
+            });
             let type_params = fun
                 .type_params
                 .iter()
@@ -227,6 +243,7 @@ impl<'env> SpecTranslator<'env> {
                 boogie_spec_fun_name(&self.module_env(), *id),
                 vec!["$m: Memory".to_string()]
                     .into_iter()
+                    .chain(spec_var_params)
                     .chain(type_params)
                     .chain(params)
                     .join(", "),
@@ -488,6 +505,13 @@ impl<'env> SpecTranslator<'env> {
         inv.target.is_some()
     }
 
+    /// Translate type parameters for given struct.
+    pub fn translate_type_parameters(struct_env: &StructEnv<'_>) -> Vec<String> {
+        (0..struct_env.get_type_parameters().len())
+            .map(|i| format!("$tv{}: TypeValue", i))
+            .collect_vec()
+    }
+
     /// Generates a procedure which asserts the before-update invariants of the struct.
     pub fn translate_before_update_invariant(&self, struct_env: &StructEnv<'env>) {
         if !Self::has_before_update_invariant(struct_env) {
@@ -495,8 +519,12 @@ impl<'env> SpecTranslator<'env> {
         }
         emitln!(
             self.writer,
-            "procedure {{:inline 1}} {}_before_update_inv($before: Value) {{",
-            boogie_struct_name(struct_env)
+            "procedure {{:inline 1}} {}_before_update_inv({}) {{",
+            boogie_struct_name(struct_env),
+            Self::translate_type_parameters(struct_env)
+                .into_iter()
+                .chain(vec!["$before: Value".to_string()])
+                .join(", "),
         );
         self.writer.indent();
 
@@ -553,8 +581,12 @@ impl<'env> SpecTranslator<'env> {
         }
         emitln!(
             self.writer,
-            "procedure {{:inline 1}} {}_after_update_inv($before: Value, $after: Value) {{",
-            boogie_struct_name(struct_env)
+            "procedure {{:inline 1}} {}_after_update_inv({}) {{",
+            boogie_struct_name(struct_env),
+            Self::translate_type_parameters(struct_env)
+                .into_iter()
+                .chain(vec!["$before: Value, $after: Value".to_string()])
+                .join(", "),
         );
         self.writer.indent();
 
@@ -641,17 +673,30 @@ impl<'env> SpecTranslator<'env> {
     /// Emits spec var updates for given invariants.
     fn emit_spec_var_updates(&self, target: &str, old_target: &str, invariants: &[Invariant]) {
         for inv in invariants {
-            if let Some((module_id, spec_var_id)) = &inv.target {
+            if let Some((module_id, spec_var_id, tys)) = &inv.target {
                 self.writer.set_location(&inv.loc);
                 let module_env = self.module_env().env.get_module(*module_id);
                 let spec_var = module_env.get_spec_var(*spec_var_id);
-                emit!(
-                    self.writer,
-                    "{} := ",
-                    boogie_spec_var_name(&self.module_env(), spec_var.name),
-                );
+                let var_name = boogie_spec_var_name(&self.module_env(), spec_var.name);
+                if !tys.is_empty() {
+                    emit!(
+                        self.writer,
+                        "{} := {}[{} := ",
+                        var_name,
+                        var_name,
+                        tys.iter()
+                            .map(|ty| boogie_type_value(self.module_env().env, ty))
+                            .join(", ")
+                    );
+                } else {
+                    emit!(self.writer, "{} := ", var_name);
+                }
                 self.with_invariant_target(target, old_target, || self.translate_exp(&inv.exp));
-                emitln!(self.writer, ";")
+                if !tys.is_empty() {
+                    emitln!(self.writer, "];")
+                } else {
+                    emitln!(self.writer, ";")
+                }
             }
         }
     }
@@ -675,10 +720,23 @@ impl<'env> SpecTranslator<'env> {
                 self.set_writer_location(*node_id);
                 let module_env = self.module_env().env.get_module(*module_id);
                 let spec_var = module_env.get_spec_var(*var_id);
+                let instantiation = self.module_env().get_node_instantiation(*node_id);
+                let instantiation_str = if instantiation.is_empty() {
+                    "".to_string()
+                } else {
+                    format!(
+                        "[{}]",
+                        instantiation
+                            .iter()
+                            .map(|ty| boogie_type_value(self.module_env().env, ty))
+                            .join(", ")
+                    )
+                };
                 emit!(
                     self.writer,
-                    "{}",
-                    boogie_spec_var_name(&module_env, spec_var.name)
+                    "{}{}",
+                    boogie_spec_var_name(&module_env, spec_var.name),
+                    instantiation_str
                 );
             }
             Exp::Call(node_id, oper, args) => {
@@ -846,9 +904,19 @@ impl<'env> SpecTranslator<'env> {
     ) {
         let instantiation = self.module_env().get_node_instantiation(node_id);
         let module_env = self.module_env().env.get_module(module_id);
+        let fun_decl = module_env.get_spec_fun(fun_id);
         let name = boogie_spec_fun_name(&module_env, fun_id);
         emit!(self.writer, "{}(", name);
         emit!(self.writer, "$m");
+        for (mid, vid) in &fun_decl.used_spec_vars {
+            emit!(self.writer, ", ");
+            let declaring_module = self.module_env().env.get_module(*mid);
+            let var_decl = declaring_module.get_spec_var(*vid);
+            emit!(
+                self.writer,
+                &boogie_spec_var_name(&declaring_module, var_decl.name)
+            );
+        }
         for ty in instantiation.iter() {
             emit!(self.writer, ", ");
             emit!(self.writer, &boogie_type_value(self.module_env().env, ty));

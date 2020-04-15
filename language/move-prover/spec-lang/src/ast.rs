@@ -18,6 +18,7 @@ use std::{
 use vm::file_format::CodeOffset;
 
 use move_lang::parser::ast::{self as PA};
+use std::collections::BTreeSet;
 
 // =================================================================================================
 /// # Declarations
@@ -26,6 +27,7 @@ use move_lang::parser::ast::{self as PA};
 pub struct SpecVarDecl {
     pub loc: Loc,
     pub name: Symbol,
+    pub type_params: Vec<(Symbol, Type)>,
     pub type_: Type,
 }
 
@@ -36,6 +38,7 @@ pub struct SpecFunDecl {
     pub type_params: Vec<(Symbol, Type)>,
     pub params: Vec<(Symbol, Type)>,
     pub result_type: Type,
+    pub used_spec_vars: BTreeSet<(ModuleId, SpecVarId)>,
     pub body: Option<Exp>,
 }
 
@@ -111,8 +114,8 @@ pub enum InvariantKind {
 pub struct Invariant {
     pub loc: Loc,
     pub kind: InvariantKind,
-    // If this is an assignment to a spec variable, the module and var id.
-    pub target: Option<(ModuleId, SpecVarId)>,
+    // If this is an assignment to a spec variable, the module and var id, and instantiation.
+    pub target: Option<(ModuleId, SpecVarId, Vec<Type>)>,
     pub exp: Exp,
 }
 
@@ -146,6 +149,36 @@ impl Exp {
             | Block(node_id, ..)
             | IfElse(node_id, ..) => *node_id,
         }
+    }
+
+    /// Visits expression, calling visitor on each sub-expression, depth first.
+    pub fn visit<F>(&self, visitor: &mut F)
+    where
+        F: FnMut(&Exp),
+    {
+        use Exp::*;
+        match self {
+            Call(_, _, args) => {
+                for exp in args {
+                    exp.visit(visitor);
+                }
+            }
+            Invoke(_, target, args) => {
+                target.visit(visitor);
+                for exp in args {
+                    exp.visit(visitor);
+                }
+            }
+            Lambda(_, _, body) => body.visit(visitor),
+            Block(_, _, body) => body.visit(visitor),
+            IfElse(_, c, t, e) => {
+                c.visit(visitor);
+                t.visit(visitor);
+                e.visit(visitor);
+            }
+            _ => {}
+        }
+        visitor(self);
     }
 }
 

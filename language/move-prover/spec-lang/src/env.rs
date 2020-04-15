@@ -168,6 +168,10 @@ impl SpecFunId {
     pub fn new(idx: usize) -> Self {
         Self(idx as RawIndex)
     }
+
+    pub fn as_usize(self) -> usize {
+        self.0 as usize
+    }
 }
 
 impl SpecVarId {
