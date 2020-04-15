@@ -9,6 +9,9 @@ use crate::{
 };
 use serde::{ser, Serialize};
 
+/// Serialize a single value.
+/// The lifetime 'a is set by the serialization call site and the `&'a mut`
+/// references used to return tracing results and serialization records.
 pub(crate) struct Serializer<'a> {
     tracer: &'a mut Tracer,
     records: &'a mut SerializationRecords,

@@ -46,6 +46,10 @@ impl SerializationRecords {
             values: BTreeMap::new(),
         }
     }
+
+    pub fn value(&self, name: &'static str) -> Option<&Value> {
+        self.values.get(name)
+    }
 }
 
 impl Tracer {
@@ -59,8 +63,10 @@ impl Tracer {
     }
 
     /// Trace the serialization of a particular value.
-    /// Nested containers will be added to the tracing registry, indexed by
+    /// * Nested containers will be added to the tracing registry, indexed by
     /// their (non-qualified) name.
+    /// * Sampled Rust values will be inserted into `records` to benefit future calls
+    /// to the `trace_type_*` methods.
     pub fn trace_value<T>(
         &mut self,
         records: &mut SerializationRecords,
@@ -78,9 +84,9 @@ impl Tracer {
     /// their (non-qualified) name.
     /// * As a byproduct of deserialization, we also return a value of type `T`.
     /// * Tracing deserialization of a type may fail if this type or some dependencies
-    /// have implemented a custom deserializer that validates data. In this case,
-    /// `trace_value` must be called first on the relevant user types to provide valid
-    /// examples.
+    /// have implemented a custom deserializer that validates data. The solution is
+    /// to make sure that `records` holds enough sampled Rust values to cover all the
+    /// custom types.
     pub fn trace_type_once<'de, T>(
         &mut self,
         records: &'de SerializationRecords,
@@ -229,7 +235,7 @@ impl Tracer {
         records: &'de SerializationRecords,
         name: &'static str,
     ) -> Option<(&'a ContainerFormat, &'de Value)> {
-        match records.values.get(name) {
+        match records.value(name) {
             Some(value) => {
                 let format = self
                     .registry

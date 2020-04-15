@@ -55,16 +55,18 @@
 //! # fn main() -> Result<(), Error> {
 //! // Start a session to trace formats.
 //! let mut tracer = Tracer::new(/* is_human_readable */ false);
+//! // Create a store to hold samples of Rust values.
 //! let mut records = SerializationRecords::new();
 //!
 //! // For every type (here `Name`), if a user-defined implementation of `Deserialize` exists and
-//! // is known to perform custom validation checks, start by tracing the serialization of
-//! // a valid value of this type. These sampled values are stored in `records`.
+//! // is known to perform custom validation checks, use `trace_value` first so that `records`
+//! // contains a valid Rust value of this type.
 //! let bob = Name("Bob".into());
 //! tracer.trace_value(&mut records, &bob)?;
+//! assert!(records.value("Name").is_some());
 //!
 //! // Now, let's trace deserialization for the top-level type `Person`.
-//! // We pass a reference to `records` so that sampled values can be used.
+//! // We pass a reference to `records` so that sampled values are used for custom types.
 //! let (format, values) = tracer.trace_type::<Person>(&records)?;
 //! assert_eq!(format, Format::TypeName("Person".into()));
 //!
