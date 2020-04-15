@@ -3,6 +3,6 @@ error:
    ┌── tests/move_check/expansion/standalone_name_with_type_args.move:3:17 ───
    │
  3 │         let _ = n<u64>;
-   │                 ^ Expected either a brace-enclosed list of field expressions or a parenthesized list of arguments for a function call
+   │                 ^^^^^^ Expected name to be followed by a brace-enclosed list of field expressions or a parenthesized list of arguments for a function call
    │
 

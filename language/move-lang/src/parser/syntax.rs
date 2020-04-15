@@ -581,7 +581,6 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
         }
 
         Tok::NameValue => {
-            let name_loc = make_loc(tokens.file_name(), start_loc, start_loc);
             // Check if this is a ModuleAccess for a pack or call expression.
             match tokens.lookahead()? {
                 Tok::ColonColon | Tok::LBrace | Tok::LParen => {
@@ -600,10 +599,14 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
                             Err(e)
                         })?
                     } else {
-                        Exp_::Name(sp(name_loc, ModuleAccess_::Name(parse_name(tokens)?)), None)
+                        let name = parse_name(tokens)?;
+                        Exp_::Name(sp(name.loc, ModuleAccess_::Name(name)), None)
                     }
                 }
-                _ => Exp_::Name(sp(name_loc, ModuleAccess_::Name(parse_name(tokens)?)), None),
+                _ => {
+                    let name = parse_name(tokens)?;
+                    Exp_::Name(sp(name.loc, ModuleAccess_::Name(name)), None)
+                }
             }
         }
 

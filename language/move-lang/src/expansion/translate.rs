@@ -785,8 +785,8 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::Name(pn, ptys_opt) => {
             if (matches!(pn.value, P::ModuleAccess_::ModuleAccess(..)) || ptys_opt.is_some())
                 && !context.require_spec_context(
-                    pn.loc,
-                    "Expected either a brace-enclosed list of field expressions or a parenthesized list of arguments for a function call",
+                    loc,
+                    "Expected name to be followed by a brace-enclosed list of field expressions or a parenthesized list of arguments for a function call",
                 )
             {
                 assert!(context.has_errors());
