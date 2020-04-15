@@ -13,6 +13,8 @@ pub trait Compiler {
         address: AccountAddress,
         input: &str,
     ) -> Result<ScriptOrModule>;
+
+    fn use_staged_genesis(&self) -> bool;
 }
 
 pub enum ScriptOrModule {
