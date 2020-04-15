@@ -51,6 +51,8 @@ pub(crate) struct JsonRpcRequest {
 }
 
 impl JsonRpcRequest {
+    /// Returns the request parameter at the given index. Note: this method should not panic with
+    /// an out of bounds error, as the number of request parameters has already been checked.
     fn get_param(&self, index: usize) -> Value {
         self.params[index].clone()
     }
@@ -243,14 +245,21 @@ async fn get_state_proof(
     StateProofView::try_from((request.ledger_info, proofs.0, proofs.1))
 }
 
+/// Returns the account state to the client, alongside a proof relative to the version and
+/// ledger_version specified by the client. If version or ledger_version are not specified,
+/// the latest known versions will be used.
 async fn get_account_state_with_proof(
     service: JsonRpcService,
     request: JsonRpcRequest,
 ) -> Result<AccountStateWithProofView> {
     let address: String = serde_json::from_value(request.get_param(0))?;
     let account_address = AccountAddress::from_str(&address)?;
-    let version: u64 = serde_json::from_value(request.get_param(1))?;
-    let ledger_version: u64 = serde_json::from_value(request.get_param(2))?;
+
+    // If versions are specified by the request parameters, use them, otherwise use the defaults
+    let version =
+        serde_json::from_value::<u64>(request.get_param(1)).unwrap_or_else(|_| request.version());
+    let ledger_version =
+        serde_json::from_value::<u64>(request.get_param(2)).unwrap_or_else(|_| request.version());
 
     let account_state_with_proof =
         service
