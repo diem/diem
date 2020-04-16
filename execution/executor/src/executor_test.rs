@@ -39,7 +39,7 @@ fn build_test_config() -> (NodeConfig, Ed25519PrivateKey) {
 
 fn create_storage(config: &NodeConfig) -> Runtime {
     let (db, db_rw) = init_libra_db(&config);
-    bootstrap_db_if_empty::<MockVM>(&db_rw, &config).expect("Db-bootstrapper should not fail.");
+    bootstrap_db_if_empty::<MockVM>(db_rw, &config).expect("Db-bootstrapper should not fail.");
     start_storage_service_with_db(&config, db)
 }
 

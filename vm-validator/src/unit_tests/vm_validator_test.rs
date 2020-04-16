@@ -29,7 +29,7 @@ impl TestValidator {
     fn new(config: &NodeConfig) -> (Self, Runtime) {
         let rt = Runtime::new().unwrap();
         let (db, db_rw) = init_libra_db(config);
-        bootstrap_db_if_empty::<LibraVM>(&db_rw, config).expect("Db-bootstrapper should not fail.");
+        bootstrap_db_if_empty::<LibraVM>(db_rw, config).expect("Db-bootstrapper should not fail.");
         let storage = start_storage_service_with_db(&config, db);
 
         // Create another client for the vm_validator since the one used for the executor will be

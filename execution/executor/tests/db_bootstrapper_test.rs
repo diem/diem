@@ -21,7 +21,7 @@ fn test_empty_db() {
     assert!(db_rw.reader.get_startup_info().unwrap().is_none());
 
     // Bootstrap empty DB.
-    let waypoint = bootstrap_db_if_empty::<LibraVM>(&db_rw, &config)
+    let waypoint = bootstrap_db_if_empty::<LibraVM>(db_rw.clone(), &config)
         .expect("Should not fail.")
         .expect("Should not be None.");
     let startup_info = db_rw
@@ -35,7 +35,7 @@ fn test_empty_db() {
     );
 
     // `bootstrap_db_if_empty()` does nothing on non-empty DB.
-    assert!(bootstrap_db_if_empty::<LibraVM>(&db_rw, &config)
+    assert!(bootstrap_db_if_empty::<LibraVM>(db_rw, &config)
         .unwrap()
         .is_none())
 }

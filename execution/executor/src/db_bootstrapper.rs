@@ -18,7 +18,7 @@ use storage_interface::DbReaderWriter;
 use storage_proto::TreeState;
 
 pub fn bootstrap_db_if_empty<V: VMExecutor>(
-    db: &DbReaderWriter,
+    db: DbReaderWriter,
     config: &NodeConfig,
 ) -> Result<Option<Waypoint>> {
     let genesis = config
@@ -32,7 +32,7 @@ pub fn bootstrap_db_if_empty<V: VMExecutor>(
 }
 
 fn bootstrap_db_if_empty_impl<V: VMExecutor>(
-    db: &DbReaderWriter,
+    db: DbReaderWriter,
     genesis: Transaction,
 ) -> Result<Option<Waypoint>> {
     let tree_state = db.reader.get_latest_tree_state()?;
@@ -44,11 +44,11 @@ fn bootstrap_db_if_empty_impl<V: VMExecutor>(
 }
 
 pub fn bootstrap_db<V: VMExecutor>(
-    db: &DbReaderWriter,
+    db: DbReaderWriter,
     tree_state: TreeState,
     genesis: Transaction,
 ) -> Result<Waypoint> {
-    let mut executor = Executor::<V>::new_on_unbootstrapped_db(db.clone(), tree_state);
+    let mut executor = Executor::<V>::new_on_unbootstrapped_db(db, tree_state);
 
     let block_id = HashValue::zero(); // match with the id in BlockInfo::genesis(...)
                                       // Create a block with genesis being the only txn. Execute it then commit it immediately.
@@ -76,6 +76,6 @@ pub fn bootstrap_db<V: VMExecutor>(
 pub fn compute_genesis_waypoint<V: VMExecutor>(genesis_txn: Transaction) -> Result<Waypoint> {
     let path = TempPath::new();
     let (_, db_rw) = DbReaderWriter::wrap(LibraDB::new(&path.path()));
-    bootstrap_db_if_empty_impl::<V>(&db_rw, genesis_txn)?
+    bootstrap_db_if_empty_impl::<V>(db_rw, genesis_txn)?
         .ok_or_else(|| format_err!("Failed to bootstrap empty DB."))
 }

@@ -162,7 +162,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let mut instant = Instant::now();
     let (libra_db, db_rw) = init_libra_db(&node_config);
     let storage = start_storage_service_with_db(&node_config, Arc::clone(&libra_db));
-    bootstrap_db_if_empty::<LibraVM>(&db_rw, node_config)
+    bootstrap_db_if_empty::<LibraVM>(db_rw, node_config)
         .expect("Db-bootstrapper should not fail.");
 
     debug!(
