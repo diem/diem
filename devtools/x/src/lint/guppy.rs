@@ -4,7 +4,7 @@
 //! Project and package linters that run queries on guppy.
 
 use crate::config::EnforcedAttributesConfig;
-use std::collections::HashMap;
+use std::{collections::HashMap, ffi::OsStr};
 use x_lint::prelude::*;
 
 /// Ban certain crates from being used as direct dependencies.
@@ -132,6 +132,7 @@ impl PackageLinter for CrateNamesPaths {
                 "crate name contains '_' (use '-' instead)",
             );
         }
+
         let workspace_path = ctx.workspace_path();
         if let Some(path) = workspace_path.to_str() {
             if path.contains('_') {
@@ -143,6 +144,24 @@ impl PackageLinter for CrateNamesPaths {
         } else {
             // Workspace path is invalid UTF-8. A different lint should catch this.
         }
+
+        for build_target in ctx.metadata().build_targets() {
+            let target_name = build_target.name();
+            if target_name.contains('_') {
+                // If the path is implicitly specified by the name, don't warn about it.
+                let file_stem = build_target.path().file_stem();
+                if file_stem != Some(OsStr::new(target_name)) {
+                    out.write(
+                        LintLevel::Error,
+                        format!(
+                            "build target '{}' contains '_' (use '-' instead)",
+                            target_name
+                        ),
+                    );
+                }
+            }
+        }
+
         Ok(RunStatus::Executed)
     }
 }
