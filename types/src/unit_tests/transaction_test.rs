@@ -10,7 +10,7 @@ use crate::{
     },
 };
 use lcs::test_helpers::assert_canonical_encode_decode;
-use libra_crypto::{ed25519, TPrivateKey, Uniform};
+use libra_crypto::{ed25519, PrivateKey, Uniform};
 use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
 use proptest::prelude::*;
 use std::convert::TryFrom;

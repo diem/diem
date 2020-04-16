@@ -9,14 +9,14 @@ use crate::{ed25519, multi_ed25519, test_utils::uniform_keypair_strategy, traits
 use crate::hash::HashValue;
 
 use libra_crypto_derive::{
-    SilentDebug, TPrivateKey, TPublicKey, TSignature, TSigningKey, TVerifyingKey, ValidKey,
+    SilentDebug, PrivateKey, PublicKey, Signature, SigningKey, VerifyingKey, ValidKey,
 };
 use proptest::prelude::*;
 use serde::{Deserialize, Serialize};
 
 // Here we aim to make a point about how we can build an enum generically
 // on top of a few choice signing scheme types. This enum implements the
-// TVerifyingKey, TSigningKey for precisely the types selected for that enum
+// VerifyingKey, SigningKey for precisely the types selected for that enum
 // (here, Ed25519(PublicKey|PrivateKey|Signature) and MultiEd25519(...)).
 //
 // Note that we do not break type safety (see towards the end), and that
@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 //
 
 #[derive(
-    Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, ValidKey, TPublicKey, TVerifyingKey,
+    Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, ValidKey, PublicKey, VerifyingKey,
 )]
 #[PrivateKeyType = "PrivateK"]
 #[SignatureType = "Sig"]
@@ -33,7 +33,7 @@ enum PublicK {
     MultiEd(multi_ed25519::VerifyingKeys),
 }
 
-#[derive(Serialize, Deserialize, SilentDebug, ValidKey, TPrivateKey, TSigningKey)]
+#[derive(Serialize, Deserialize, SilentDebug, ValidKey, PrivateKey, SigningKey)]
 #[PublicKeyType = "PublicK"]
 #[SignatureType = "Sig"]
 enum PrivateK {
@@ -42,7 +42,7 @@ enum PrivateK {
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(Clone, Debug, PartialEq, Eq, Hash, TSignature)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Signature)]
 #[PublicKeyType = "PublicK"]
 #[PrivateKeyType = "PrivateK"]
 enum Sig {

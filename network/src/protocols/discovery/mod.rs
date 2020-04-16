@@ -49,7 +49,7 @@ use libra_config::config::RoleType;
 use libra_crypto::{
     ed25519,
     hash::{CryptoHasher, DiscoveryMsgHasher},
-    HashValue, TSignature, TSigningKey,
+    HashValue, Signature, SigningKey,
 };
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};

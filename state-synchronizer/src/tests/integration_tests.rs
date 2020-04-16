@@ -10,7 +10,7 @@ use executor_types::ExecutedTrees;
 use futures::executor::block_on;
 use libra_config::config::RoleType;
 use libra_crypto::{
-    ed25519, hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, TPrivateKey,
+    ed25519, hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, PrivateKey,
     Uniform,
 };
 use libra_mempool::mocks::MockSharedMempool;

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasPrice, GasUnits};
-use libra_crypto::{ed25519, TPrivateKey};
+use libra_crypto::{ed25519, PrivateKey};
 use libra_types::{
     account_address::AccountAddress,
     transaction::{authenticator::AuthenticationKeyPreimage, SignedTransaction},

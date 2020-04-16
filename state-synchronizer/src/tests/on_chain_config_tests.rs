@@ -9,7 +9,7 @@ use executor_utils::{
     },
 };
 use futures::{future::FutureExt, stream::StreamExt};
-use libra_crypto::{ed25519, HashValue, TPrivateKey, Uniform};
+use libra_crypto::{ed25519, HashValue, PrivateKey, Uniform};
 use libra_types::{
     account_config::{association_address, lbr_type_tag},
     on_chain_config::{OnChainConfig, VMPublishingOption},

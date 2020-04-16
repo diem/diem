@@ -3,7 +3,7 @@
 
 use crate::account_address::AccountAddress;
 use anyhow::{ensure, Error, Result};
-use libra_crypto::{ed25519, multi_ed25519, HashValue, TSignature};
+use libra_crypto::{ed25519, multi_ed25519, HashValue, Signature};
 use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;

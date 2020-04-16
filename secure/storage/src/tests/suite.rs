@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{Error, Policy, Storage, Value};
-use libra_crypto::{ed25519, HashValue, TPrivateKey, TSignature, Uniform};
+use libra_crypto::{ed25519, HashValue, PrivateKey, Signature, Uniform};
 
 /// This suite contains tests for secure storage backends. We test the correct functionality
 /// of both key/value and cryptographic operations for storage implementations. All storage backend

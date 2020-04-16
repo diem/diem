@@ -3,7 +3,7 @@
 
 use crate::{account_address::AccountAddress, on_chain_config::ValidatorSet};
 use anyhow::{ensure, Result};
-use libra_crypto::{ed25519, HashValue, TVerifyingKey};
+use libra_crypto::{ed25519, HashValue, VerifyingKey};
 use mirai_annotations::*;
 use std::{collections::BTreeMap, fmt};
 use thiserror::Error;

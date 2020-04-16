@@ -16,7 +16,7 @@ use crate::{
 use channel::message_queues::QueueStyle;
 use futures::{executor::block_on, StreamExt};
 use libra_config::config::RoleType;
-use libra_crypto::{ed25519, test_utils::TEST_SEED, x25519, TPrivateKey, Uniform};
+use libra_crypto::{ed25519, test_utils::TEST_SEED, x25519, PrivateKey, Uniform};
 use libra_types::PeerId;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};

@@ -17,7 +17,7 @@ use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::{
     ed25519,
     hash::{CryptoHash, CryptoHasher, EventAccumulatorHasher},
-    multi_ed25519, HashValue, TSigningKey,
+    multi_ed25519, HashValue, SigningKey,
 };
 use libra_crypto_derive::CryptoHasher;
 #[cfg(any(test, feature = "fuzzing"))]

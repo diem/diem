@@ -14,7 +14,7 @@ use crate::{
 use futures::{channel::mpsc::channel, StreamExt};
 use hex;
 use libra_config::utils;
-use libra_crypto::{ed25519, HashValue, TPrivateKey, Uniform};
+use libra_crypto::{ed25519, HashValue, PrivateKey, Uniform};
 use libra_proptest_helpers::ValueGenerator;
 use libra_types::{
     account_address::AccountAddress,

@@ -5,7 +5,7 @@ use cli::client_proxy::ClientProxy;
 use debug_interface::{libra_trace, node_debug_service::parse_events, NodeDebugClient};
 use libra_config::config::{NodeConfig, RoleType, TestConfig};
 use libra_crypto::{
-    ed25519, hash::CryptoHash, test_utils::KeyPair, TPrivateKey, TSigningKey, Uniform,
+    ed25519, hash::CryptoHash, test_utils::KeyPair, PrivateKey, SigningKey, Uniform,
 };
 use libra_json_rpc::views::{ScriptView, TransactionDataView};
 use libra_logger::prelude::*;

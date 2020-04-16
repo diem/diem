@@ -9,7 +9,7 @@ use crate::genesis_gas_schedule::initial_gas_schedule;
 use anyhow::Result;
 use bytecode_verifier::VerifiedModule;
 use libra_config::{config::NodeConfig, generator};
-use libra_crypto::{ed25519, TPrivateKey, Uniform, ValidKey};
+use libra_crypto::{ed25519, PrivateKey, Uniform, ValidKey};
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,

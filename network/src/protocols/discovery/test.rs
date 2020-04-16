@@ -15,7 +15,7 @@ use channel::{libra_channel, message_queues::QueueStyle};
 use core::str::FromStr;
 use futures::channel::oneshot;
 use libra_config::config::RoleType;
-use libra_crypto::{ed25519, test_utils::TEST_SEED, x25519, TPrivateKey, Uniform};
+use libra_crypto::{ed25519, test_utils::TEST_SEED, x25519, PrivateKey, Uniform};
 use rand::prelude::*;
 use std::num::NonZeroUsize;
 use tokio::runtime::Runtime;

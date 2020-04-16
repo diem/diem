@@ -9,7 +9,7 @@ use crate::{
 use channel::{libra_channel, message_queues::QueueStyle};
 use core::str::FromStr;
 use futures::SinkExt;
-use libra_crypto::{ed25519, test_utils::TEST_SEED, x25519, TPrivateKey, Uniform};
+use libra_crypto::{ed25519, test_utils::TEST_SEED, x25519, PrivateKey, Uniform};
 use libra_logger::info;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{io, num::NonZeroUsize};

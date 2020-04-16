@@ -8,7 +8,7 @@ use crate::{
     common_transactions::{create_account_txn, peer_to_peer_txn, rotate_key_txn},
     executor::FakeExecutor,
 };
-use libra_crypto::{ed25519, TPrivateKey, Uniform};
+use libra_crypto::{ed25519, PrivateKey, Uniform};
 use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use once_cell::sync::Lazy;
 

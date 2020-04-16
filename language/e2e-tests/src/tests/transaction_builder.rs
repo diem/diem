@@ -13,7 +13,7 @@ use crate::{
     executor::FakeExecutor,
     keygen::KeyGen,
 };
-use libra_crypto::{hash::HashValue, traits::TSigningKey};
+use libra_crypto::{hash::HashValue, traits::SigningKey};
 use libra_types::account_config;
 use transaction_builder::*;
 

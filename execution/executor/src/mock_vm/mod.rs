@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod mock_vm_test;
 
-use libra_crypto::{ed25519, TPrivateKey, Uniform};
+use libra_crypto::{ed25519, PrivateKey, Uniform};
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,

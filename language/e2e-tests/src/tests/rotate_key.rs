@@ -7,7 +7,7 @@ use crate::{
     executor::FakeExecutor,
     keygen::KeyGen,
 };
-use libra_crypto::{ed25519, hash::CryptoHash, multi_ed25519, TPrivateKey, TSigningKey, Uniform};
+use libra_crypto::{ed25519, hash::CryptoHash, multi_ed25519, PrivateKey, SigningKey, Uniform};
 use libra_types::{
     account_address::AccountAddress,
     transaction::{authenticator::AuthenticationKey, SignedTransaction, TransactionStatus},
