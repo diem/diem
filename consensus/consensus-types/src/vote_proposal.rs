@@ -3,7 +3,7 @@
 
 use crate::{accumulator_extension_proof::AccumulatorExtensionProof, block::Block};
 use libra_crypto::hash::TransactionAccumulatorHasher;
-use libra_types::validator_set::ValidatorSet;
+use libra_types::on_chain_config::ValidatorSet;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 

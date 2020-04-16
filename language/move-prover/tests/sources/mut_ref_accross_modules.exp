@@ -63,8 +63,9 @@ error:  This assertion might not hold.
     =     at tests/sources/mut_ref_accross_modules.move:31:17: new
     =         r = <redacted>
     =     at tests/sources/mut_ref_accross_modules.move:32:18: new
+    =         result = <redacted>
     =     at tests/sources/mut_ref_accross_modules.move:29:5: new (exit)
-    =     at tests/sources/mut_ref_accross_modules.move:115:22: private_to_public_caller_invalid_data_invariant
+    =     at tests/sources/mut_ref_accross_modules.move:115:18: private_to_public_caller_invalid_data_invariant
     =         x = <redacted>
     =     at tests/sources/mut_ref_accross_modules.move:116:18: private_to_public_caller_invalid_data_invariant
     =         r = <redacted>
@@ -78,7 +79,9 @@ error:  This assertion might not hold.
     =     at tests/sources/mut_ref_accross_modules.move:70:17: private_decrement
     =         x = <redacted>,
     =         r = <redacted>
-    =     at tests/sources/mut_ref_accross_modules.move:119:28: private_to_public_caller_invalid_data_invariant
+    =     at tests/sources/mut_ref_accross_modules.move:119:10: private_to_public_caller_invalid_data_invariant
+    =         r = <redacted>
+    =     at tests/sources/mut_ref_accross_modules.move:121:10: private_to_public_caller_invalid_data_invariant
 
 error:  A precondition for this call might not hold.
 

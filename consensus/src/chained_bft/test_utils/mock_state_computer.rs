@@ -11,10 +11,7 @@ use executor_types::StateComputeResult;
 use futures::channel::mpsc;
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use libra_logger::prelude::*;
-use libra_types::{
-    ledger_info::LedgerInfoWithSignatures, validator_change::ValidatorChangeProof,
-    validator_set::ValidatorSet,
-};
+use libra_types::{ledger_info::LedgerInfoWithSignatures, validator_change::ValidatorChangeProof};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -25,7 +22,6 @@ pub struct MockStateComputer {
     state_sync_client: mpsc::UnboundedSender<Vec<usize>>,
     commit_callback: mpsc::UnboundedSender<LedgerInfoWithSignatures>,
     consensus_db: Arc<MockStorage<TestPayload>>,
-    reconfig: Option<ValidatorSet>,
     block_cache: Mutex<HashMap<HashValue, Vec<usize>>>,
 }
 
@@ -34,13 +30,11 @@ impl MockStateComputer {
         state_sync_client: mpsc::UnboundedSender<Vec<usize>>,
         commit_callback: mpsc::UnboundedSender<LedgerInfoWithSignatures>,
         consensus_db: Arc<MockStorage<TestPayload>>,
-        reconfig: Option<ValidatorSet>,
     ) -> Self {
         MockStateComputer {
             state_sync_client,
             commit_callback,
             consensus_db,
-            reconfig,
             block_cache: Mutex::new(HashMap::new()),
         }
     }
@@ -62,7 +56,7 @@ impl StateComputer for MockStateComputer {
             *ACCUMULATOR_PLACEHOLDER_HASH,
             vec![],
             0,
-            self.reconfig.clone(),
+            None,
             vec![],
             vec![],
         ))

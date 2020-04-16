@@ -1,5 +1,5 @@
 module M {
-    fun tmove1(cond: bool) {
+    fun tmove1() {
         let x = 0;
         loop { _ = move x };
     }
@@ -9,7 +9,7 @@ module M {
         loop { if (cond) break; _ = move x }
     }
 
-    fun tcopy1(cond: bool) {
+    fun tcopy1() {
         let x = 0;
         loop { let y = x; _ = move x; y; }
     }
@@ -19,7 +19,7 @@ module M {
         loop { let y = x; if (cond) continue; _ = move x; y; }
     }
 
-    fun tborrow1(cond: bool) {
+    fun tborrow1() {
         let x = 0;
         loop { let y = &x; _ = move y; _ = move x }
     }

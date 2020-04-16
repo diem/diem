@@ -15,9 +15,7 @@ use consensus_types::{block::Block, common::Payload, quorum_cert::QuorumCert};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use schema::{BLOCK_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME};
-use schemadb::{
-    ColumnFamilyOptions, ColumnFamilyOptionsMap, ReadOptions, SchemaBatch, DB, DEFAULT_CF_NAME,
-};
+use schemadb::{ReadOptions, SchemaBatch, DB, DEFAULT_CF_NAME};
 use std::{collections::HashMap, iter::Iterator, path::Path, time::Instant};
 
 type HighestTimeoutCertificate = Vec<u8>;
@@ -29,22 +27,16 @@ pub struct ConsensusDB {
 
 impl ConsensusDB {
     pub fn new<P: AsRef<Path> + Clone>(db_root_path: P) -> Self {
-        let cf_opts_map: ColumnFamilyOptionsMap = [
-            (
-                /* UNUSED CF = */ DEFAULT_CF_NAME,
-                ColumnFamilyOptions::default(),
-            ),
-            (BLOCK_CF_NAME, ColumnFamilyOptions::default()),
-            (QC_CF_NAME, ColumnFamilyOptions::default()),
-            (SINGLE_ENTRY_CF_NAME, ColumnFamilyOptions::default()),
-        ]
-        .iter()
-        .cloned()
-        .collect();
+        let column_families = vec![
+            /* UNUSED CF = */ DEFAULT_CF_NAME,
+            BLOCK_CF_NAME,
+            QC_CF_NAME,
+            SINGLE_ENTRY_CF_NAME,
+        ];
 
         let path = db_root_path.as_ref().join("consensusdb");
         let instant = Instant::now();
-        let db = DB::open(path.clone(), cf_opts_map)
+        let db = DB::open(path.clone(), column_families)
             .expect("ConsensusDB open failed; unable to continue");
 
         info!(

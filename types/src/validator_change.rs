@@ -340,7 +340,7 @@ mod tests {
 
         // Waypoint after proof range will fail to verify
         let proof_8 =
-            ValidatorChangeProof::new(valid_ledger_info[0..1].to_vec(), /* more */ false);
+            ValidatorChangeProof::new(valid_ledger_info[..1].to_vec(), /* more */ false);
         assert!(proof_8
             .verify(&VerifierType::Waypoint(waypoint_for_3_to_4))
             .is_err());

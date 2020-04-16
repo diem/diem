@@ -97,7 +97,7 @@ fn test_sync_transactions_impl(input: Vec<(Vec<TransactionToCommit>, LedgerInfoW
         let batch1_len = txns_to_commit.len() / 2;
         if batch1_len > 0 {
             db.save_transactions(
-                &txns_to_commit[0..batch1_len],
+                &txns_to_commit[..batch1_len],
                 cur_ver, /* first_version */
                 None,
             )

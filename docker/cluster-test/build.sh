@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright (c) The Libra Core Contributors
 # SPDX-License-Identifier: Apache-2.0
 set -e
@@ -29,9 +29,26 @@ if [ "$1" = "--build-binary" ]; then
   echo "Not building docker container, run without --build-binary to build docker image"
   echo "Built binary is in target/cluster_test_docker_builder/cluster-test"
 else
-  cp target/cluster_test_docker_builder/cluster-test cluster_test_docker_builder_cluster_test
-  docker build -f $DIR/cluster-test.container.Dockerfile $DIR/../.. --tag cluster-test:latest $PROXY
-  rm cluster_test_docker_builder_cluster_test
+  set +e
+  docker_build_retry() {
+    for ((i = 0; i < 30; i++)); do
+      docker build -f $DIR/cluster-test.container.Dockerfile $DIR/../.. --tag cluster-test:latest $PROXY
+      if [[ $? -eq 0 ]]; then
+        echo "docker build succeeded"
+        return 0
+      fi
+      echo "docker build failed. retrying in 10 secs."
+      sleep 10
+    done
+    return 1
+  }
+  cp $DIR/../../target/cluster_test_docker_builder/cluster-test $DIR/../../cluster_test_docker_builder_cluster_test
+  docker_build_retry
+  exit_code=$?
+  rm $DIR/../../cluster_test_docker_builder_cluster_test
+  if [[ $exit_code -gt 0 ]]; then
+    exit 1
+  fi
   echo
   echo
   echo "Built docker container, run with --build-binary to build binary only"

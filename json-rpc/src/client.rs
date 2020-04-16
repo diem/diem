@@ -1,14 +1,20 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{errors::JsonRpcError, views::AccountView};
+use crate::{
+    errors::JsonRpcError,
+    views::{
+        AccountStateWithProofView, AccountView, BlockMetadata, EventView, StateProofView,
+        TransactionView,
+    },
+};
 use anyhow::{ensure, format_err, Error, Result};
 use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use reqwest::Client;
-use serde_json::Value;
-use std::{convert::TryFrom, fmt};
+use serde_json::{json, Value};
+use std::{collections::HashSet, convert::TryFrom, fmt};
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct JsonRpcBatch {
     pub requests: Vec<(String, Vec<Value>)>,
 }
@@ -16,6 +22,18 @@ pub struct JsonRpcBatch {
 impl JsonRpcBatch {
     pub fn new() -> Self {
         Self { requests: vec![] }
+    }
+
+    pub fn json_request(&self) -> Value {
+        let requests = self
+            .requests
+            .iter()
+            .enumerate()
+            .map(|(id, (method, params))| {
+                serde_json::json!({"jsonrpc": "2.0", "method": method, "params": params, "id": id})
+            })
+            .collect();
+        serde_json::Value::Array(requests)
     }
 
     pub fn add_request(&mut self, method_name: String, parameters: Vec<Value>) {
@@ -32,6 +50,65 @@ impl JsonRpcBatch {
         self.add_request(
             "get_account_state".to_string(),
             vec![Value::String(address.to_string())],
+        );
+    }
+
+    pub fn add_get_metadata_request(&mut self) {
+        self.add_request("get_metadata".to_string(), vec![]);
+    }
+
+    pub fn add_get_transactions_request(
+        &mut self,
+        start_version: u64,
+        limit: u64,
+        include_events: bool,
+    ) {
+        self.add_request(
+            "get_transactions".to_string(),
+            vec![json!(start_version), json!(limit), json!(include_events)],
+        );
+    }
+
+    pub fn add_get_account_transaction_request(
+        &mut self,
+        account: AccountAddress,
+        sequence: u64,
+        include_events: bool,
+    ) {
+        self.add_request(
+            "get_account_transaction".to_string(),
+            vec![
+                json!(account.to_string()),
+                json!(sequence),
+                json!(include_events),
+            ],
+        );
+    }
+
+    pub fn add_get_events_request(&mut self, event_key: String, start: u64, limit: u64) {
+        self.add_request(
+            "get_events".to_string(),
+            vec![json!(event_key), json!(start), json!(limit)],
+        );
+    }
+
+    pub fn add_get_state_proof_request(&mut self, known_version: u64) {
+        self.add_request("get_state_proof".to_string(), vec![json!(known_version)]);
+    }
+
+    pub fn add_get_account_state_with_proof_request(
+        &mut self,
+        account: AccountAddress,
+        version: u64,
+        ledger_version: u64,
+    ) {
+        self.add_request(
+            "get_account_state_with_proof".to_string(),
+            vec![
+                json!(account.to_string()),
+                json!(version),
+                json!(ledger_version),
+            ],
         );
     }
 }
@@ -51,7 +128,7 @@ impl JsonRpcAsyncClient {
     pub async fn get_accounts_state(
         &self,
         accounts: &[AccountAddress],
-    ) -> Result<Vec<AccountView>> {
+    ) -> Result<Vec<Option<AccountView>>> {
         let mut batch = JsonRpcBatch::new();
         for account in accounts {
             batch.add_get_account_state_request(*account);
@@ -69,7 +146,12 @@ impl JsonRpcAsyncClient {
                 )
             }
         }
-        assert!(results.len() == accounts.len());
+        ensure!(
+            results.len() == accounts.len(),
+            "Received unexpected number of JSON RPC responses ({}) for {} requests",
+            results.len(),
+            accounts.len()
+        );
         Ok(results)
     }
 
@@ -82,19 +164,11 @@ impl JsonRpcAsyncClient {
     }
 
     pub async fn execute(&self, batch: JsonRpcBatch) -> Result<Vec<Result<JsonRpcResponse>>> {
-        let requests = batch
-            .requests
-            .iter()
-            .enumerate()
-            .map(|(id, (method, params))| {
-                serde_json::json!({"jsonrpc": "2.0", "method": method, "params": params, "id": id})
-            })
-            .collect();
-
+        let requests = batch.json_request();
         let resp = self
             .client
             .post(&self.address)
-            .json(&serde_json::Value::Array(requests))
+            .json(&requests)
             .send()
             .await?;
 
@@ -104,34 +178,7 @@ impl JsonRpcAsyncClient {
         );
 
         let responses: Vec<Value> = resp.json().await?;
-        let mut result = vec![];
-        for _ in batch.requests.iter() {
-            result.push(Err(format_err!("response is missing")));
-        }
-
-        for response in responses {
-            if let Ok(req_id) = self.fetch_id(&response) {
-                if req_id < result.len() {
-                    if let Some(err_data) = response.get("error") {
-                        let err_json: JsonRpcError = serde_json::from_value(err_data.clone())?;
-                        result[req_id] = Err(Error::new(err_json));
-                        continue;
-                    }
-                    if let Some(data) = response.get("result") {
-                        let method = batch.requests[req_id].0.clone();
-                        result[req_id] = Ok(JsonRpcResponse::try_from((method, data.clone()))?);
-                    }
-                }
-            }
-        }
-        Ok(result)
-    }
-
-    fn fetch_id(&self, response: &Value) -> Result<usize> {
-        match response.get("id") {
-            Some(id) => Ok(serde_json::from_value::<usize>(id.clone())?),
-            None => Err(format_err!("request id is missing")),
-        }
+        process_batch_response(batch, responses)
     }
 }
 
@@ -141,24 +188,143 @@ impl fmt::Debug for JsonRpcAsyncClient {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[allow(clippy::large_enum_variant)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum JsonRpcResponse {
     SubmissionResponse,
-    AccountResponse(AccountView),
-    UnknownResponse,
+    AccountResponse(Option<AccountView>),
+    StateProofResponse(StateProofView),
+    AccountTransactionResponse(Option<TransactionView>),
+    TransactionsResponse(Vec<TransactionView>),
+    EventsResponse(Vec<EventView>),
+    BlockMetadataResponse(BlockMetadata),
+    AccountStateWithProofResponse(AccountStateWithProofView),
+    UnknownResponse(Value),
 }
 
 impl TryFrom<(String, Value)> for JsonRpcResponse {
     type Error = Error;
 
     fn try_from((method, value): (String, Value)) -> Result<JsonRpcResponse> {
-        if method == "submit" {
-            Ok(JsonRpcResponse::SubmissionResponse)
-        } else if method == "get_account_state" {
-            let account: AccountView = serde_json::from_value(value)?;
-            Ok(JsonRpcResponse::AccountResponse(account))
-        } else {
-            Ok(JsonRpcResponse::UnknownResponse)
+        match method.as_str() {
+            "submit" => {
+                ensure!(
+                    value == Value::Null,
+                    "received unexpected payload for submit: {}",
+                    value
+                );
+                Ok(JsonRpcResponse::SubmissionResponse)
+            }
+            "get_account_state" => {
+                let account = match value {
+                    Value::Null => None,
+                    _ => {
+                        let account: AccountView = serde_json::from_value(value)?;
+                        Some(account)
+                    }
+                };
+                Ok(JsonRpcResponse::AccountResponse(account))
+            }
+            "get_events" => {
+                let events: Vec<EventView> = serde_json::from_value(value)?;
+                Ok(JsonRpcResponse::EventsResponse(events))
+            }
+            "get_metadata" => {
+                let metadata: BlockMetadata = serde_json::from_value(value)?;
+                Ok(JsonRpcResponse::BlockMetadataResponse(metadata))
+            }
+            "get_account_state_with_proof" => {
+                let account_with_proof: AccountStateWithProofView = serde_json::from_value(value)?;
+                Ok(JsonRpcResponse::AccountStateWithProofResponse(
+                    account_with_proof,
+                ))
+            }
+            "get_state_proof" => {
+                let state_proof: StateProofView = serde_json::from_value(value)?;
+                Ok(JsonRpcResponse::StateProofResponse(state_proof))
+            }
+            "get_account_transaction" => {
+                let txn = match value {
+                    Value::Null => None,
+                    _ => {
+                        let txn: TransactionView = serde_json::from_value(value)?;
+                        Some(txn)
+                    }
+                };
+                Ok(JsonRpcResponse::AccountTransactionResponse(txn))
+            }
+            "get_transactions" => {
+                let txns: Vec<TransactionView> = serde_json::from_value(value)?;
+                Ok(JsonRpcResponse::TransactionsResponse(txns))
+            }
+            _ => Ok(JsonRpcResponse::UnknownResponse(value)),
         }
+    }
+}
+
+////////////////////////////////////////////////////
+/// Helper methods for basic payload processing ///
+///////////////////////////////////////////////////
+
+pub fn process_batch_response(
+    batch: JsonRpcBatch,
+    responses: Vec<Value>,
+) -> Result<Vec<Result<JsonRpcResponse>>> {
+    let mut result = batch
+        .requests
+        .iter()
+        .map(|_| Err(format_err!("response is missing")))
+        .collect::<Vec<_>>();
+
+    let mut seen_ids = HashSet::new();
+    for response in responses {
+        // check JSON RPC protocol
+        let json_rpc_protocol = response.get("jsonrpc");
+        ensure!(
+            json_rpc_protocol == Some(&json!("2.0")),
+            "JSON RPC response with incorrect protocol: {:?}",
+            json_rpc_protocol
+        );
+
+        if let Ok(req_id) = fetch_id(&response) {
+            ensure!(
+                !seen_ids.contains(&req_id),
+                "received JSON RPC response with duplicate response ID"
+            );
+            seen_ids.insert(req_id);
+            if req_id < result.len() {
+                let resp = if let Some(err_data) = response.get("error") {
+                    let err_json: JsonRpcError = serde_json::from_value(err_data.clone())?;
+                    Err(Error::new(err_json))
+                } else if let Some(data) = response.get("result") {
+                    let method = batch.requests[req_id].0.clone();
+                    Ok(JsonRpcResponse::try_from((method, data.clone()))?)
+                } else {
+                    continue;
+                };
+                result[req_id] = resp;
+            }
+        }
+    }
+
+    Ok(result)
+}
+
+pub fn get_response_from_batch(
+    index: usize,
+    batch: &[Result<JsonRpcResponse>],
+) -> Result<&Result<JsonRpcResponse>> {
+    batch.get(index).ok_or_else(|| {
+        format_err!(
+            "[JSON RPC client] response missing in batch at index {}",
+            index
+        )
+    })
+}
+
+fn fetch_id(response: &Value) -> Result<usize> {
+    match response.get("id") {
+        Some(id) => Ok(serde_json::from_value::<usize>(id.clone())?),
+        None => Err(format_err!("request id is missing")),
     }
 }

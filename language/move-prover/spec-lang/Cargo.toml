@@ -1,9 +1,10 @@
 [package]
 name = "spec-lang"
 version = "0.0.1"
-authors = ["Libra <oncall+libra@xmail.facebook.com>"]
+authors = ["Libra Association <opensource@libra.org>"]
 publish = false
 edition = "2018"
+license = "Apache-2.0"
 
 [dependencies]
 # libra dependencies
@@ -11,8 +12,10 @@ move-lang = { path = "../../move-lang", version = "0.0.1" }
 bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }
+libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 bytecode-source-map = { path = "../../compiler/bytecode-source-map", version = "0.1.0" }
 move-ir-types = { path = "../../move-ir/types", version = "0.1.0" }
+move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }
 stdlib = { path = "../../stdlib", version = "0.1.0" }
 
 # external dependencies

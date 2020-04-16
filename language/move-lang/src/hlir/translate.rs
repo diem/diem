@@ -58,7 +58,7 @@ struct Context {
     function_locals: UniqueMap<Var, H::SingleType>,
     local_scope: UniqueMap<Var, Var>,
     used_locals: BTreeSet<Var>,
-    return_type: Option<H::Type>,
+    signature: Option<H::FunctionSignature>,
     has_return_abort: bool,
 }
 
@@ -70,7 +70,7 @@ impl Context {
             function_locals: UniqueMap::new(),
             local_scope: UniqueMap::new(),
             used_locals: BTreeSet::new(),
-            return_type: None,
+            signature: None,
             has_return_abort: false,
         }
     }
@@ -205,7 +205,7 @@ fn function(context: &mut Context, _name: FunctionName, f: T::Function) -> H::Fu
     let visibility = f.visibility;
     let signature = function_signature(context, f.signature);
     let acquires = f.acquires;
-    let body = function_body(context, &signature.return_type, f.body);
+    let body = function_body(context, &signature, f.body);
     H::Function {
         visibility,
         signature,
@@ -221,7 +221,6 @@ fn function_signature(context: &mut Context, sig: N::FunctionSignature) -> H::Fu
         .into_iter()
         .map(|(v, tty)| {
             let ty = single_type(context, tty);
-            context.used_locals.insert(v.clone());
             context.bind_local(v.clone(), ty.clone());
             (v, ty)
         })
@@ -236,7 +235,7 @@ fn function_signature(context: &mut Context, sig: N::FunctionSignature) -> H::Fu
 
 fn function_body(
     context: &mut Context,
-    ret_ty: &H::Type,
+    sig: &H::FunctionSignature,
     sp!(loc, tb_): T::FunctionBody,
 ) -> H::FunctionBody {
     use H::FunctionBody_ as HB;
@@ -248,11 +247,9 @@ fn function_body(
         }
         TB::Defined(seq) => {
             let mut body = VecDeque::new();
-            context.return_type = Some(ret_ty.clone());
+            context.signature = Some(sig.clone());
             assert!(!context.has_return_abort);
-            let final_exp = block(context, &mut body, loc, Some(&ret_ty), seq);
-            context.return_type = None;
-            context.has_return_abort = false;
+            let final_exp = block(context, &mut body, loc, Some(&sig.return_type), seq);
             match &final_exp.exp.value {
                 H::UnannotatedExp_::Unreachable => (),
                 _ => {
@@ -265,6 +262,8 @@ fn function_body(
             let (mut locals, used) = context.extract_function_locals();
             let unused = check_unused_locals(context, &mut locals, used);
             remove_unused_bindings(&unused, &mut body);
+            context.signature = None;
+            context.has_return_abort = false;
             HB::Defined { locals, body }
         }
     };
@@ -742,7 +741,7 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
 
         // Command-like expressions
         TE::Return(te) => {
-            let expected_type = context.return_type.clone();
+            let expected_type = context.signature.as_ref().map(|s| s.return_type.clone());
             let e = exp_(context, result, expected_type.as_ref(), *te);
             context.has_return_abort = true;
             let c = sp(eloc, C::Return(e));
@@ -1378,18 +1377,39 @@ fn check_unused_locals(
     locals: &mut UniqueMap<Var, H::SingleType>,
     used: BTreeSet<Var>,
 ) -> BTreeSet<Var> {
+    let signature = context
+        .signature
+        .as_ref()
+        .expect("ICE Signature should always be defined when checking a function body");
     let mut unused = BTreeSet::new();
-    for (v, _) in locals.iter().filter(|(v, _)| !used.contains(v)) {
+    let mut errors = Vec::new();
+    // report unused locals
+    for (v, _) in locals
+        .iter()
+        .filter(|(v, _)| !used.contains(v) && !v.starts_with_underscore())
+    {
         let vstr = match display_var(v.value()) {
             DisplayVar::Tmp => panic!("ICE unused tmp"),
             DisplayVar::Orig(vstr) => vstr,
         };
-        let msg = format!(
-            "Unused local '{0}'. Consider removing or prefixing with an underscore: '_{0}'",
-            vstr
-        );
-        context.error(vec![(v.loc(), msg)]);
-        unused.insert(v);
+        let loc = v.loc();
+        let msg = if signature.is_parameter(&v) {
+            format!(
+                "Unused parameter '{0}'. Consider removing or prefixing with an underscore: '_{0}'",
+                vstr
+            )
+        } else {
+            // unused local variable; mark for removal
+            unused.insert(v);
+            format!(
+                "Unused local '{0}'. Consider removing or prefixing with an underscore: '_{0}'",
+                vstr
+            )
+        };
+        errors.push((loc, msg));
+    }
+    for error in errors {
+        context.error(vec![error]);
     }
     for v in &unused {
         locals.remove(v);

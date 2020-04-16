@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{transaction::Version, validator_set::ValidatorSet};
+use crate::{on_chain_config::ValidatorSet, transaction::Version};
 use libra_crypto::hash::HashValue;
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
@@ -113,8 +113,9 @@ impl BlockInfo {
     /// Create a mock genesis `BlockInfo` with an empty state tree and empty
     /// validator set.
     #[cfg(any(test, feature = "fuzzing"))]
-    pub fn mock_genesis() -> Self {
-        Self::genesis(*ACCUMULATOR_PLACEHOLDER_HASH, ValidatorSet::empty())
+    pub fn mock_genesis(validator_set: Option<ValidatorSet>) -> Self {
+        let validator_set = validator_set.unwrap_or_else(ValidatorSet::empty);
+        Self::genesis(*ACCUMULATOR_PLACEHOLDER_HASH, validator_set)
     }
 
     pub fn epoch(&self) -> u64 {

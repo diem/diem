@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{Action, Error, KeyManager, LibraInterface};
-use executor::{db_bootstrapper::maybe_bootstrap_db, Executor};
+use executor::{db_bootstrapper, BlockExecutor, Executor};
 use libra_config::config::NodeConfig;
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Policy, Value};
@@ -15,20 +15,16 @@ use libra_types::{
     block_metadata::{BlockMetadata, LibraBlockResource},
     discovery_set::DiscoverySet,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    on_chain_config::{ConfigurationResource, ValidatorSet},
     transaction::Transaction,
     validator_config::ValidatorConfig,
     validator_info::ValidatorInfo,
-    validator_set::ValidatorSetResource,
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{cell::RefCell, collections::BTreeMap, convert::TryFrom, sync::Arc, time::Duration};
-use storage_client::{
-    StorageReadServiceClient, StorageReaderWithRuntimeHandle, StorageWriteServiceClient,
-};
-use storage_interface::DbReader;
-use tokio::runtime::Runtime;
+use storage_interface::{DbReader, DbReaderWriter};
 
 struct Node {
     account: AccountAddress,
@@ -36,7 +32,6 @@ struct Node {
     libra: TestLibraInterface,
     key_manager:
         KeyManager<TestLibraInterface, InMemoryStorageInternal<MockTimeService>, MockTimeService>,
-    _storage_service: Runtime,
     time: MockTimeService,
 }
 
@@ -76,20 +71,10 @@ fn setup_secure_storage(
 
 impl Node {
     fn setup(config: &NodeConfig) -> Self {
-        let storage = storage_service::init_libra_db(config);
-        let storage_service =
-            storage_service::start_storage_service_with_db(&config, storage.clone());
-        maybe_bootstrap_db::<LibraVM>(config).expect("Db-bootstrapper should not fail.");
-        let rt = Executor::<LibraVM>::create_runtime();
-        let db_reader = Arc::new(StorageReaderWithRuntimeHandle::new(
-            Arc::new(StorageReadServiceClient::new(&config.storage.address)),
-            rt.handle().clone(),
-        ));
-        let executor = Executor::new(
-            rt,
-            db_reader,
-            Arc::new(StorageWriteServiceClient::new(&config.storage.address)),
-        );
+        let (storage, db_rw) = DbReaderWriter::wrap(LibraDB::new(&config.storage.dir()));
+        db_bootstrapper::maybe_bootstrap_db::<LibraVM>(db_rw.clone(), config)
+            .expect("Failed to execute genesis");
+        let executor = Executor::new(db_rw);
         let libra = TestLibraInterface {
             queued_transactions: Arc::new(RefCell::new(Vec::new())),
             storage,
@@ -109,7 +94,6 @@ impl Node {
             executor,
             key_manager,
             libra,
-            _storage_service: storage_service,
             time,
         }
     }
@@ -176,12 +160,12 @@ impl TestLibraInterface {
             .clone())
     }
 
-    fn retrieve_validator_set_resource(&self) -> Result<ValidatorSetResource, Error> {
+    fn retrieve_validator_set_resource(&self) -> Result<ValidatorSet, Error> {
         let account = account_config::validator_set_address();
         let account_state = self.retrieve_account_state(account)?;
         account_state
-            .get_validator_set_resource()?
-            .ok_or(Error::DataDoesNotExist("ValidatorSetResource"))
+            .get_validator_set()?
+            .ok_or(Error::DataDoesNotExist("ValidatorSet"))
     }
 
     fn retrieve_libra_block_resource(&self) -> Result<LibraBlockResource, Error> {
@@ -190,6 +174,14 @@ impl TestLibraInterface {
         account_state
             .get_libra_block_resource()?
             .ok_or(Error::DataDoesNotExist("BlockMetadata"))
+    }
+
+    pub fn retrieve_configuration_resource(&self) -> Result<ConfigurationResource, Error> {
+        let account = account_config::association_address();
+        let account_state = self.retrieve_account_state(account)?;
+        account_state
+            .get_configuration_resource()?
+            .ok_or(Error::DataDoesNotExist("Configuration"))
     }
 
     fn take_all_transactions(&self) -> Vec<Transaction> {
@@ -213,7 +205,7 @@ impl LibraInterface for TestLibraInterface {
     }
 
     fn last_reconfiguration(&self) -> Result<u64, Error> {
-        self.retrieve_validator_set_resource()
+        self.retrieve_configuration_resource()
             .map(|v| v.last_reconfiguration_time())
     }
 
@@ -251,7 +243,6 @@ impl LibraInterface for TestLibraInterface {
         validator_account: AccountAddress,
     ) -> Result<ValidatorInfo, Error> {
         self.retrieve_validator_set_resource()?
-            .validator_set()
             .payload()
             .iter()
             .find(|vi| vi.account_address() == &validator_account)

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::AccountAddress;
-use libra_crypto::x25519::X25519StaticPublicKey;
+use libra_crypto::x25519;
 use parity_multiaddr::Multiaddr;
 use serde::{Deserialize, Serialize};
 
@@ -22,12 +22,12 @@ pub struct DiscoveryInfo {
     pub account_address: AccountAddress,
     // This static pubkey is used in the connection handshake to authenticate
     // this particular validator.
-    pub validator_network_identity_pubkey: X25519StaticPublicKey,
+    pub validator_network_identity_pubkey: x25519::PublicKey,
     // Other validators can dial this validator at this multiaddress.
     pub validator_network_address: Multiaddr,
     // This static pubkey is used in the connection handshake to authenticate
     // this validator's full nodes.
-    pub fullnodes_network_identity_pubkey: X25519StaticPublicKey,
+    pub fullnodes_network_identity_pubkey: x25519::PublicKey,
     // Other full nodes and clients can dial this validator's full nodes at this
     // multiaddress.
     pub fullnodes_network_address: Multiaddr,

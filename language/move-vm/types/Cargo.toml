@@ -17,6 +17,7 @@ sha2 = "0.8.0"
 serde = { version = "1.0", features = ["derive", "rc"] }
 
 libra-types = { path = "../../../types", version = "0.1.0" }
+libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
 lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
@@ -28,3 +29,4 @@ proptest = "0.9"
 [features]
 default = []
 fuzzing = ["proptest", "libra-types/fuzzing", "vm/fuzzing"]
+debug_module = []

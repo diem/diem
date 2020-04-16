@@ -9,11 +9,11 @@ use anyhow::{bail, format_err, Result};
 use async_trait::async_trait;
 
 use futures::{future::try_join_all, lock::Mutex};
-use k8s_openapi::api::core::v1::{ConfigMap, Node, Pod};
+use k8s_openapi::api::core::v1::{ConfigMap, Node, Pod, Service};
 use kube::{
     api::{Api, PostParams},
     client::Client,
-    config,
+    Config,
 };
 use libra_logger::*;
 use util::retry;
@@ -44,14 +44,23 @@ pub struct ClusterSwarmKube {
 
 impl ClusterSwarmKube {
     pub async fn new() -> Result<Self> {
-        let mut config = config::load_kube_config().await;
-        if config.is_err() {
-            config = config::incluster_config();
-        }
-        let config = config.map_err(|e| format_err!("Failed to load config: {:?}", e))?;
-        let client = Client::from(config);
+        let result = Config::infer().await;
+        let config = result.map_err(|e| format_err!("Failed to load config: {:?}", e))?;
+        let client = Client::new(config);
         let node_map = Arc::new(Mutex::new(HashMap::new()));
         Ok(Self { client, node_map })
+    }
+
+    fn service_spec(&self, peer_id: String) -> Service {
+        let service_yaml = format!(
+            include_str!("libra_node_service_template.yaml"),
+            peer_id = &peer_id
+        );
+        let service_spec: serde_yaml::Value = serde_yaml::from_str(&service_yaml).unwrap();
+        let service_spec = serde_json::value::to_value(service_spec).unwrap();
+        serde_json::from_value(service_spec)
+            .map_err(|e| format_err!("serde_json::from_value failed: {}", e))
+            .unwrap()
     }
 
     fn validator_spec(
@@ -122,7 +131,7 @@ impl ClusterSwarmKube {
     }
 
     async fn wait_job_completion(&self, job_name: &str, back_off_limit: u32) -> Result<bool> {
-        retry::retry_async(retry::fixed_retry_strategy(5000, 60), || {
+        retry::retry_async(retry::fixed_retry_strategy(5000, 20), || {
             let job_api: Api<Job> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
             let job_name = job_name.to_string();
             Box::pin(async move {
@@ -211,38 +220,43 @@ impl ClusterSwarmKube {
         .await
     }
 
-    async fn delete_pod(&self, name: &str) -> Result<()> {
-        debug!("Deleting Pod {}", name);
-        let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
-        pod_api.delete(name, &Default::default()).await?;
+    async fn delete_resource<T>(&self, name: &str) -> Result<()>
+    where
+        T: k8s_openapi::Resource
+            + Clone
+            + serde::de::DeserializeOwned
+            + kube::api::Meta
+            + Send
+            + Sync,
+    {
+        debug!("Deleting {} {}", T::KIND, name);
+        let resource_api: Api<T> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
+        resource_api.delete(name, &Default::default()).await?;
         retry::retry_async(retry::fixed_retry_strategy(5000, 30), || {
-            let pod_api = pod_api.clone();
+            let pod_api = resource_api.clone();
             let name = name.to_string();
             Box::pin(async move {
                 match pod_api.get(&name).await {
                     Ok(_) => {
-                        bail!("Waiting for pod {} to be deleted..", name);
+                        bail!("Waiting for {} {} to be deleted..", T::KIND, name);
                     }
                     Err(kube::Error::Api(ae)) => {
                         if ae.code == ERROR_NOT_FOUND {
-                            debug!("Pod {} deleted successfully", name);
+                            debug!("{} {} deleted successfully", T::KIND, name);
                             Ok(())
                         } else {
-                            bail!("Waiting for pod to be deleted..")
+                            bail!("Waiting for {} to be deleted..", T::KIND)
                         }
                     }
-                    Err(_) => bail!("Waiting for pod {} to be deleted..", name),
+                    Err(_) => bail!("Waiting for {} {} to be deleted..", T::KIND, name),
                 }
             })
         })
         .await
-        .map_err(|e| format_err!("Failed to delete pod {}: {:?}", name, e))
+        .map_err(|e| format_err!("Failed to delete {} {}: {:?}", T::KIND, name, e))
     }
-}
 
-#[async_trait]
-impl ClusterSwarm for ClusterSwarmKube {
-    async fn remove_all_network_effects(&self) -> Result<()> {
+    async fn remove_all_network_effects_helper(&self) -> Result<()> {
         debug!("Trying to remove_all_network_effects");
         let back_off_limit = 2;
 
@@ -284,6 +298,16 @@ impl ClusterSwarm for ClusterSwarmKube {
             })
             .collect::<Result<_, _>>()?;
         self.run_jobs(jobs, back_off_limit).await
+    }
+}
+
+#[async_trait]
+impl ClusterSwarm for ClusterSwarmKube {
+    async fn remove_all_network_effects(&self) -> Result<()> {
+        retry::retry_async(retry::fixed_retry_strategy(5000, 3), || {
+            Box::pin(async move { self.remove_all_network_effects_helper().await })
+        })
+        .await
     }
 
     async fn run(
@@ -361,7 +385,7 @@ impl ClusterSwarm for ClusterSwarmKube {
         };
         let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         if pod_api.get(&pod_name).await.is_ok() {
-            self.delete_pod(&pod_name).await?;
+            self.delete_resource::<Pod>(&pod_name).await?;
         }
         let node_name = if let Some(instance) = self.node_map.lock().await.get(&instance_config) {
             if let Some(k8s_node) = instance.k8s_node() {
@@ -373,31 +397,40 @@ impl ClusterSwarm for ClusterSwarmKube {
             "".to_string()
         };
         debug!("Creating pod {} on node {:?}", pod_name, node_name);
-        let p: Pod = match &instance_config {
-            Validator(validator_config) => self.validator_spec(
-                validator_config.index,
-                validator_config.num_validators,
-                validator_config.num_fullnodes,
-                &node_name,
-                &validator_config.image_tag,
-                &validator_config.config_overrides.iter().join(","),
-                delete_data,
-            )?,
-            Fullnode(fullnode_config) => self.fullnode_spec(
-                fullnode_config.fullnode_index,
-                fullnode_config.num_fullnodes_per_validator,
-                fullnode_config.validator_index,
-                fullnode_config.num_validators,
-                &node_name,
-                &fullnode_config.image_tag,
-                &fullnode_config.config_overrides.iter().join(","),
-                delete_data,
-            )?,
+        let (p, s): (Pod, Service) = match &instance_config {
+            Validator(validator_config) => (
+                self.validator_spec(
+                    validator_config.index,
+                    validator_config.num_validators,
+                    validator_config.num_fullnodes,
+                    &node_name,
+                    &validator_config.image_tag,
+                    &validator_config.config_overrides.iter().join(","),
+                    delete_data,
+                )?,
+                self.service_spec(format!("val-{}", validator_config.index)),
+            ),
+            Fullnode(fullnode_config) => (
+                self.fullnode_spec(
+                    fullnode_config.fullnode_index,
+                    fullnode_config.num_fullnodes_per_validator,
+                    fullnode_config.validator_index,
+                    fullnode_config.num_validators,
+                    &node_name,
+                    &fullnode_config.image_tag,
+                    &fullnode_config.config_overrides.iter().join(","),
+                    delete_data,
+                )?,
+                self.service_spec(format!(
+                    "fn-{}-{}",
+                    fullnode_config.validator_index, fullnode_config.fullnode_index
+                )),
+            ),
         };
         match pod_api.create(&PostParams::default(), &p).await {
             Ok(o) => {
                 debug!(
-                    "Created {}",
+                    "Created pod {}",
                     o.metadata
                         .as_ref()
                         .ok_or_else(|| { format_err!("metadata not found for pod {}", pod_name) })?
@@ -407,6 +440,29 @@ impl ClusterSwarm for ClusterSwarmKube {
                 );
             }
             Err(e) => bail!("Failed to create pod {} : {}", pod_name, e),
+        }
+        let service_api: Api<Service> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
+        match service_api.create(&PostParams::default(), &s).await {
+            Ok(o) => {
+                debug!(
+                    "Created service {}",
+                    o.metadata
+                        .as_ref()
+                        .ok_or_else(|| { format_err!("metadata not found for service") })?
+                        .name
+                        .as_ref()
+                        .ok_or_else(|| { format_err!("name not found for service") })?
+                );
+            }
+            Err(kube::Error::Api(ae)) => {
+                if ae.code == 409 {
+                    // 409 == service already exists
+                    debug!("Service already exists. Skipping")
+                } else {
+                    bail!("Failed to create service : {}", ae)
+                }
+            }
+            Err(e) => bail!("Failed to create service : {}", e),
         }
         if node_name.is_empty() {
             let (node_name, pod_ip) = self.get_pod_node_and_ip(&pod_name).await?;
@@ -431,7 +487,9 @@ impl ClusterSwarm for ClusterSwarmKube {
                 fullnode_config.validator_index, fullnode_config.fullnode_index
             ),
         };
-        self.delete_pod(&pod_name).await
+        let service_name = pod_name.clone();
+        self.delete_resource::<Pod>(&pod_name).await?;
+        self.delete_resource::<Service>(&service_name).await
     }
 
     async fn delete_all(&self) -> Result<()> {
@@ -454,7 +512,55 @@ impl ClusterSwarm for ClusterSwarmKube {
                     .clone())
             })
             .collect::<Result<_, _>>()?;
-        let delete_futures = pod_names.iter().map(|pod_name| self.delete_pod(pod_name));
+        let delete_futures = pod_names
+            .iter()
+            .map(|pod_name| self.delete_resource::<Pod>(pod_name));
+        try_join_all(delete_futures).await?;
+        let service_api: Api<Service> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
+        let service_names: Vec<String> = service_api
+            .list(&ListParams {
+                label_selector: Some("libra-node=true".to_string()),
+                ..Default::default()
+            })
+            .await?
+            .iter()
+            .map(|service| -> Result<String, anyhow::Error> {
+                Ok(service
+                    .metadata
+                    .as_ref()
+                    .ok_or_else(|| format_err!("metadata not found for service"))?
+                    .name
+                    .as_ref()
+                    .ok_or_else(|| format_err!("name not found for service"))?
+                    .clone())
+            })
+            .collect::<Result<_, _>>()?;
+        let delete_futures = service_names
+            .iter()
+            .map(|service_name| self.delete_resource::<Service>(service_name));
+        try_join_all(delete_futures).await?;
+        let job_api: Api<Job> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
+        let job_names: Vec<String> = job_api
+            .list(&ListParams {
+                label_selector: Some("libra-node=true".to_string()),
+                ..Default::default()
+            })
+            .await?
+            .iter()
+            .map(|job| -> Result<String, anyhow::Error> {
+                Ok(job
+                    .metadata
+                    .as_ref()
+                    .ok_or_else(|| format_err!("metadata not found for job"))?
+                    .name
+                    .as_ref()
+                    .ok_or_else(|| format_err!("name not found for job"))?
+                    .clone())
+            })
+            .collect::<Result<_, _>>()?;
+        let delete_futures = job_names
+            .iter()
+            .map(|job_name| self.delete_resource::<Job>(job_name));
         try_join_all(delete_futures).await?;
         Ok(())
     }

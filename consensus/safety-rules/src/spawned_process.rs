@@ -5,13 +5,7 @@ use crate::remote_service::RemoteService;
 use consensus_types::common::Payload;
 use libra_config::config::{NodeConfig, PersistableConfig, SafetyRulesService};
 use libra_temppath::TempPath;
-use std::{
-    marker::PhantomData,
-    net::SocketAddr,
-    process::{Child, Command, Stdio},
-};
-
-const BINARY: &str = "safety-rules";
+use std::{marker::PhantomData, net::SocketAddr, process::Child};
 
 pub struct SpawnedProcess<T> {
     handle: Child,
@@ -34,16 +28,8 @@ impl<T: Payload> SpawnedProcess<T> {
             panic!("Invalid SafeRulesService, expected SpawnedProcess.");
         };
 
-        let mut command = Command::new(workspace_builder::get_bin(BINARY));
-        command
-            .arg(config_path.path())
-            .stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit());
-        let handle = command.spawn().unwrap();
-
         Self {
-            handle,
+            handle: runner::run(&config_path.path()),
             server_addr,
             _config_path: config_path,
             marker: PhantomData,
@@ -68,5 +54,27 @@ impl<T> Drop for SpawnedProcess<T> {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod runner {
+    const BINARY: &str = "safety-rules";
+
+    pub fn run(path: &std::path::Path) -> std::process::Child {
+        let mut command = std::process::Command::new(workspace_builder::get_bin(BINARY));
+        command
+            .arg(path)
+            .stdin(std::process::Stdio::inherit())
+            .stdout(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::inherit());
+        command.spawn().unwrap()
+    }
+}
+
+#[cfg(not(test))]
+mod runner {
+    pub fn run(_path: &std::path::Path) -> std::process::Child {
+        panic!("Not supported outside of testing");
     }
 }

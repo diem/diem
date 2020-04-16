@@ -3,7 +3,7 @@
 
 use super::{
     core::{self, Context, Subst},
-    expand, globals, recursive_structs,
+    expand, globals, infinite_instantiations, recursive_structs,
 };
 use crate::{
     errors::Errors,
@@ -28,6 +28,7 @@ pub fn program(prog: N::Program, errors: Errors) -> (T::Program, Errors) {
     assert!(context.constraints.is_empty());
     let mut errors = context.get_errors();
     recursive_structs::modules(&mut errors, &modules);
+    infinite_instantiations::modules(&mut errors, &modules);
     (T::Program { modules, main }, errors)
 }
 

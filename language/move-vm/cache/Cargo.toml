@@ -10,9 +10,10 @@ publish = false
 edition = "2018"
 
 [dependencies]
+libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 typed-arena = "2.0.1"
 
 [dev-dependencies]
 crossbeam = "0.7.2"
-proptest = "0.9.4"
+proptest = "0.9.6"
 rand = "0.6.5"

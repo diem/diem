@@ -29,8 +29,11 @@ use shared::Address;
 use std::{
     collections::HashMap,
     fs::File,
-    io::{self, Read, Write},
+    io::{self, ErrorKind, Read, Write},
+    path::Path,
 };
+
+const MOVE_EXTENSION: &str = "move";
 
 //**************************************************************************************************
 // Entry
@@ -83,7 +86,7 @@ pub fn move_compile(
     }
 }
 
-/// Move check but it returns the errors instead of reporting them to stderr
+/// Move compile but it returns the errors instead of reporting them to stderr
 pub fn move_compile_no_report(
     targets: &[String],
     deps: &[String],
@@ -189,14 +192,8 @@ fn parse_program(
     targets: &[String],
     deps: &[String],
 ) -> io::Result<(FilesSourceText, Result<parser::ast::Program, Errors>)> {
-    let targets = targets
-        .iter()
-        .map(|s| leak_str(s))
-        .collect::<Vec<&'static str>>();
-    let deps = deps
-        .iter()
-        .map(|s| leak_str(s))
-        .collect::<Vec<&'static str>>();
+    let targets = find_and_intern_move_filenames(targets)?;
+    let deps = find_and_intern_move_filenames(deps)?;
     let mut files: FilesSourceText = HashMap::new();
     let mut source_definitions = Vec::new();
     let mut lib_definitions = Vec::new();
@@ -227,6 +224,51 @@ fn parse_program(
         Err(errors)
     };
     Ok((files, res))
+}
+
+fn find_and_intern_move_filenames(files: &[String]) -> io::Result<Vec<&'static str>> {
+    let mut result = vec![];
+    for file in files {
+        let path = Path::new(file);
+        if !path.exists() {
+            return Err(std::io::Error::new(
+                ErrorKind::NotFound,
+                format!("No such file or directory '{}'", file),
+            ));
+        }
+        if !path.is_dir() {
+            // If the filename is specified directly, add it to the list, regardless
+            // of whether it has a ".move" extension.
+            result.push(leak_str(file));
+            continue;
+        }
+        for entry in walkdir::WalkDir::new(path)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            let entry_path = entry.path();
+            if !entry.file_type().is_file() || !has_move_extension(&entry_path) {
+                continue;
+            }
+            match entry_path.to_str() {
+                Some(p) => result.push(leak_str(p)),
+                None => {
+                    return Err(std::io::Error::new(
+                        ErrorKind::Other,
+                        "non-Unicode file name",
+                    ))
+                }
+            }
+        }
+    }
+    Ok(result)
+}
+
+fn has_move_extension(path: &Path) -> bool {
+    match path.extension().and_then(|s| s.to_str()) {
+        Some(extension) => extension == MOVE_EXTENSION,
+        None => false,
+    }
 }
 
 // TODO replace with some sort of intern table

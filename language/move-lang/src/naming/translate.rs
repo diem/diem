@@ -560,8 +560,12 @@ fn type_parameters(context: &mut Context, type_parameters: Vec<(Name, Kind)>) ->
         .into_iter()
         .map(|(name, kind)| {
             let id = N::TParamID::next();
-            let debug = name.clone();
-            let tp = N::TParam { id, debug, kind };
+            let user_specified_name = name.clone();
+            let tp = N::TParam {
+                id,
+                user_specified_name,
+                kind,
+            };
             let loc = name.loc;
             context.bind_type(
                 name.value.to_string(),

@@ -43,18 +43,12 @@ pub fn debug_format_cmd(cmd: &str) -> bool {
 
 /// Check whether the input string is a valid libra address.
 pub fn is_address(data: &str) -> bool {
-    match hex::decode(data) {
-        Ok(vec) => vec.len() == AccountAddress::LENGTH,
-        Err(_) => false,
-    }
+    hex::decode(data).map_or(false, |vec| vec.len() == AccountAddress::LENGTH)
 }
 
 /// Check whether the input string is a valid libra authentication key.
 pub fn is_authentication_key(data: &str) -> bool {
-    match hex::decode(data) {
-        Ok(vec) => vec.len() == AuthenticationKey::LENGTH,
-        Err(_) => false,
-    }
+    hex::decode(data).map_or(false, |vec| vec.len() == AuthenticationKey::LENGTH)
 }
 
 /// Returns all the commands available, as well as the reverse index from the aliases to the

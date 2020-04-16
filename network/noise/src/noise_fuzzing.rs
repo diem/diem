@@ -247,7 +247,7 @@ impl<'a> AsyncRead for FakeSocket<'a> {
         }
         // if something left, return what's asked
         let to_read = std::cmp::min(buf.len(), self.content.len());
-        buf[0..to_read].copy_from_slice(&self.content[0..to_read]);
+        buf[..to_read].copy_from_slice(&self.content[..to_read]);
         // update internal state
         self.content = &self.content[to_read..self.content.len()];
         // return length read

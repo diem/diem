@@ -55,15 +55,19 @@
 //! # fn main() -> Result<(), Error> {
 //! // Start a session to trace formats.
 //! let mut tracer = Tracer::new(/* is_human_readable */ false);
+//! // Create a store to hold samples of Rust values.
+//! let mut records = SerializationRecords::new();
 //!
 //! // For every type (here `Name`), if a user-defined implementation of `Deserialize` exists and
-//! // is known to perform custom validation checks, start by tracing the serialization of
-//! // a valid value of this type.
+//! // is known to perform custom validation checks, use `trace_value` first so that `records`
+//! // contains a valid Rust value of this type.
 //! let bob = Name("Bob".into());
-//! tracer.trace_value(&bob)?;
+//! tracer.trace_value(&mut records, &bob)?;
+//! assert!(records.value("Name").is_some());
 //!
 //! // Now, let's trace deserialization for the top-level type `Person`.
-//! let (format, values) = tracer.trace_type::<Person>()?;
+//! // We pass a reference to `records` so that sampled values are used for custom types.
+//! let (format, values) = tracer.trace_type::<Person>(&records)?;
 //! assert_eq!(format, Format::TypeName("Person".into()));
 //!
 //! // As a byproduct, we have also obtained sample values of type `Person`.
@@ -126,7 +130,8 @@
 //!
 //! # fn main() -> Result<(), Error> {
 //! let mut tracer = Tracer::new(/* is_human_readable */ false);
-//! tracer.trace_value(&FullName { first: "", middle: Some(""), last: "" })?;
+//! let mut records = SerializationRecords::new();
+//! tracer.trace_value(&mut records, &FullName { first: "", middle: Some(""), last: "" })?;
 //! let registry = tracer.registry()?;
 //! match registry.get("FullName").unwrap() {
 //!     ContainerFormat::Struct(fields) => assert_eq!(fields.len(), 3),
@@ -155,7 +160,8 @@
 //! # }
 //! # fn main() -> Result<(), Error> {
 //! let mut tracer = Tracer::new(/* is_human_readable */ false);
-//! tracer.trace_value(&FullName { first: "", middle: None, last: "" })?;
+//! let mut records = SerializationRecords::new();
+//! tracer.trace_value(&mut records, &FullName { first: "", middle: None, last: "" })?;
 //! assert_eq!(tracer.registry().unwrap_err(), Error::UnknownFormatInContainer("FullName"));
 //! # Ok(())
 //! # }
@@ -229,5 +235,5 @@ mod value;
 
 pub use error::{Error, Result};
 pub use format::{ContainerFormat, Format, FormatHolder, Named, VariantFormat};
-pub use trace::{Registry, RegistryOwned, Tracer};
+pub use trace::{Registry, RegistryOwned, SerializationRecords, Tracer};
 pub use value::Value;

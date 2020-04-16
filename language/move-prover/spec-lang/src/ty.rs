@@ -99,6 +99,14 @@ impl Type {
         false
     }
 
+    /// If this is a struct type, replace the type instantiation.
+    pub fn replace_struct_instantiation(&self, inst: &[Type]) -> Type {
+        match self {
+            Type::Struct(mid, sid, _) => Type::Struct(*mid, *sid, inst.to_vec()),
+            _ => self.clone(),
+        }
+    }
+
     /// If this is a struct type, return the associated struct env and type parameters.
     pub fn get_struct<'env>(
         &'env self,
@@ -388,9 +396,14 @@ impl Default for Substitution {
 }
 
 /// Data providing context for displaying types.
-pub struct TypeDisplayContext<'a> {
-    pub symbol_pool: &'a SymbolPool,
-    pub reverse_struct_table: &'a BTreeMap<(ModuleId, StructId), QualifiedSymbol>,
+pub enum TypeDisplayContext<'a> {
+    WithoutEnv {
+        symbol_pool: &'a SymbolPool,
+        reverse_struct_table: &'a BTreeMap<(ModuleId, StructId), QualifiedSymbol>,
+    },
+    WithEnv {
+        env: &'a GlobalEnv,
+    },
 }
 
 /// Helper for type displays.
@@ -438,10 +451,26 @@ impl<'a> fmt::Display for TypeDisplay<'a> {
                 write!(f, "{}", t.display(self.context))
             }
             Struct(mid, sid, ts) => {
-                if let Some(sym) = self.context.reverse_struct_table.get(&(*mid, *sid)) {
-                    write!(f, "{}", sym.display(self.context.symbol_pool))?;
-                } else {
-                    f.write_str("??unknown??")?;
+                match self.context {
+                    TypeDisplayContext::WithoutEnv {
+                        symbol_pool,
+                        reverse_struct_table,
+                    } => {
+                        if let Some(sym) = reverse_struct_table.get(&(*mid, *sid)) {
+                            write!(f, "{}", sym.display(symbol_pool))?;
+                        } else {
+                            f.write_str("??unknown??")?;
+                        }
+                    }
+                    TypeDisplayContext::WithEnv { env } => {
+                        let func_env = env.get_module(*mid).into_struct(*sid);
+                        write!(
+                            f,
+                            "{}::{}",
+                            func_env.module_env.get_name().display(env.symbol_pool()),
+                            func_env.get_name().display(env.symbol_pool())
+                        )?;
+                    }
                 }
                 if !ts.is_empty() {
                     f.write_str("<")?;

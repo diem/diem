@@ -2,17 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use futures::executor::block_on;
 use libra_types::{
     account_address::AccountAddress,
     account_config::AccountResource,
+    on_chain_config::{LibraVersion, OnChainConfigPayload, VMPublishingOption},
     transaction::{SignedTransaction, VMValidatorResult},
 };
-use libra_vm::{LibraVM, VMVerifier};
+use libra_vm::{on_chain_configs::VMConfig, LibraVM, VMVerifier};
 use scratchpad::SparseMerkleTree;
 use std::{convert::TryFrom, sync::Arc};
-use storage_client::{StorageRead, StorageReaderWithRuntimeHandle, VerifiedStateView};
-use tokio::runtime::Handle;
+use storage_client::{StorageRead, VerifiedStateView};
+use storage_interface::DbReader;
 
 #[cfg(test)]
 #[path = "unit_tests/vm_validator_test.rs"]
@@ -21,42 +21,30 @@ mod vm_validator_test;
 #[async_trait::async_trait]
 pub trait TransactionValidation: Send + Sync + Clone {
     type ValidationInstance: VMVerifier;
+
     /// Validate a txn from client
     async fn validate_transaction(&self, _txn: SignedTransaction) -> Result<VMValidatorResult>;
+
+    /// Restart the transaction validation instance
+    fn restart(&mut self, config: OnChainConfigPayload) -> Result<()>;
 }
 
 #[derive(Clone)]
 pub struct VMValidator {
-    storage_read_client: Arc<dyn StorageRead>,
-    rt_handle: Handle,
+    db_reader: Arc<dyn DbReader>,
     vm: LibraVM,
 }
 
 impl VMValidator {
-    pub fn new(storage_read_client: Arc<dyn StorageRead>, rt_handle: Handle) -> Self {
+    pub fn new(db_reader: Arc<dyn DbReader>) -> Self {
         let mut vm = LibraVM::new();
-        let client = storage_read_client.clone();
-        let (version, state_root) =
-            block_on(rt_handle.spawn(async move { client.get_latest_state_root().await }))
-                .expect("Block error")
-                .expect("Failed to get the latest state");
+        let (version, state_root) = db_reader.get_latest_state_root().expect("Should not fail.");
         let smt = SparseMerkleTree::new(state_root);
-        let state_view = VerifiedStateView::new(
-            Arc::new(StorageReaderWithRuntimeHandle::new(
-                storage_read_client.clone(),
-                rt_handle.clone(),
-            )),
-            Some(version),
-            state_root,
-            &smt,
-        );
+        let state_view =
+            VerifiedStateView::new(Arc::clone(&db_reader), Some(version), state_root, &smt);
 
         vm.load_configs(&state_view);
-        VMValidator {
-            storage_read_client,
-            rt_handle,
-            vm,
-        }
+        VMValidator { db_reader, vm }
     }
 }
 
@@ -65,9 +53,8 @@ impl TransactionValidation for VMValidator {
     type ValidationInstance = LibraVM;
 
     async fn validate_transaction(&self, txn: SignedTransaction) -> Result<VMValidatorResult> {
-        let (version, state_root) = self.storage_read_client.get_latest_state_root().await?;
-        let client = self.storage_read_client.clone();
-        let rt_handle = self.rt_handle.clone();
+        let (version, state_root) = self.db_reader.get_latest_state_root()?;
+        let db_reader = Arc::clone(&self.db_reader);
         let vm = self.vm.clone();
         // We have to be careful here. The storage read client only exposes async functions but the
         // whole VM is synchronous and async/await isn't currently using in the VM. Due to this
@@ -83,17 +70,25 @@ impl TransactionValidation for VMValidator {
         // starve other async tasks.
         tokio::task::spawn_blocking(move || {
             let smt = SparseMerkleTree::new(state_root);
-            let state_view = VerifiedStateView::new(
-                Arc::new(StorageReaderWithRuntimeHandle::new(client, rt_handle)),
-                Some(version),
-                state_root,
-                &smt,
-            );
+            let state_view = VerifiedStateView::new(db_reader, Some(version), state_root, &smt);
 
             vm.validate_transaction(txn, &state_view)
         })
         .await
         .map_err(Into::into)
+    }
+
+    fn restart(&mut self, config: OnChainConfigPayload) -> Result<()> {
+        let gas_schedule = self.vm.get_gas_schedule()?;
+        let publishing_options = config.get::<VMPublishingOption>()?;
+        let version = config.get::<LibraVersion>()?;
+        let vm_config = VMConfig {
+            publishing_options,
+            version,
+        };
+
+        self.vm = LibraVM::init_with_config(gas_schedule.clone(), vm_config);
+        Ok(())
     }
 }
 

@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0"
 get_if_addrs = { version = "0.5.3", default-features = false }
 hex = "0.4.2"
-mirai-annotations = "1.4.0"
+mirai-annotations = "1.7.0"
 parity-multiaddr = { version = "0.8.0", default-features = false }
 rand = "0.6.5"
 serde = { version = "1.0.106", features = ["rc"], default-features = false }
@@ -25,9 +25,9 @@ lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-se
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
-
 libra-temppath = { path = "../common/temppath", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
+libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 
 [features]
 default = []

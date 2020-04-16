@@ -10,7 +10,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-async-trait = "0.1.29"
+async-trait = "0.1.30"
 byteorder = "1.3.2"
 futures = "0.3.0"
 hex = "0.4.2"
@@ -23,8 +23,9 @@ lcs = { path = "../../common/lcs", package = "libra-canonical-serialization", ve
 libradb = { path = "../libradb", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 storage-client = { path = "../storage-client", version = "0.1.0" }
 
 [dev-dependencies]
-proptest = "0.9.4"
+proptest = "0.9.6"
 tempfile = "3.1.0"

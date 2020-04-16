@@ -75,7 +75,7 @@ fn deserialize(data: &[u8]) -> Result<()> {
     if data.len() < len {
         bail!("too little data");
     }
-    let layout_data = &data[0..len];
+    let layout_data = &data[..len];
     let value_data = &data[len..];
 
     let ty: Type = lcs::from_bytes(layout_data)?;

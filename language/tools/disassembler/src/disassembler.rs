@@ -314,17 +314,12 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         default_location: &Location,
     ) -> Result<String> {
         match instruction {
-            Bytecode::LdAddr(address_idx) => {
-                let address = self
-                    .source_mapper
-                    .bytecode
-                    .address_at(*address_idx)
-                    .short_str();
-                Ok(format!("LdAddr[{}]({})", address_idx, address))
-            }
-            Bytecode::LdByteArray(byte_array_idx) => {
-                let bytearray = self.source_mapper.bytecode.byte_array_at(*byte_array_idx);
-                Ok(format!("LdByteArray[{}]({:?})", byte_array_idx, bytearray))
+            Bytecode::LdConst(idx) => {
+                let constant = self.source_mapper.bytecode.constant_at(*idx);
+                Ok(format!(
+                    "LdAddr[{}]({:?}: {:?})",
+                    idx, &constant.type_, &constant.data
+                ))
             }
             Bytecode::CopyLoc(local_idx) => {
                 let name = self.name_for_local(u64::from(*local_idx), function_source_map)?;

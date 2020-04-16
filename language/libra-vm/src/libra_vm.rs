@@ -15,12 +15,12 @@ use libra_types::{
     language_storage::{ModuleId, TypeTag},
     on_chain_config::LibraVersion,
     transaction::{
-        ChangeSet, SignatureCheckedTransaction, SignedTransaction, Transaction,
+        ChangeSet, Module, Script, SignatureCheckedTransaction, SignedTransaction, Transaction,
         TransactionArgument, TransactionOutput, TransactionPayload, TransactionStatus,
         VMValidatorResult, MAX_TRANSACTION_SIZE_IN_BYTES,
     },
     vm_error::{sub_status, StatusCode, VMStatus},
-    write_set::WriteSet,
+    write_set::{WriteSet, WriteSetMut},
 };
 use move_vm_runtime::MoveVM;
 use move_vm_state::{
@@ -32,7 +32,7 @@ use move_vm_types::{
     values::Value,
 };
 use rayon::prelude::*;
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 use vm::{
     errors::{convert_prologue_runtime_error, VMResult},
     gas_schedule::{
@@ -57,6 +57,15 @@ impl LibraVM {
             move_vm: Arc::new(inner),
             gas_schedule: None,
             on_chain_config: None,
+        }
+    }
+
+    pub fn init_with_config(gas_schedule: CostTable, on_chain_config: OnlineConfig) -> Self {
+        let inner = MoveVM::new();
+        Self {
+            move_vm: Arc::new(inner),
+            gas_schedule: Some(gas_schedule),
+            on_chain_config: Some(on_chain_config),
         }
     }
 
@@ -111,74 +120,18 @@ impl LibraVM {
         Ok(table)
     }
 
-    fn get_gas_schedule(&self) -> VMResult<&CostTable> {
+    pub fn get_gas_schedule(&self) -> VMResult<&CostTable> {
         self.gas_schedule.as_ref().ok_or_else(|| {
             VMStatus::new(StatusCode::VM_STARTUP_FAILURE)
                 .with_sub_status(sub_status::VSF_GAS_SCHEDULE_NOT_FOUND)
         })
     }
 
-    fn get_libra_version(&self) -> VMResult<LibraVersion> {
+    pub fn get_libra_version(&self) -> VMResult<LibraVersion> {
         Ok(self.on_chain_config()?.version.clone())
     }
 
-    fn check_payload(
-        &self,
-        payload: &TransactionPayload,
-        state_view: &dyn StateView,
-    ) -> VMResult<()> {
-        match payload {
-            // TODO: Remove WriteSet from TransactionPayload.
-            TransactionPayload::WriteSet(change_set) => {
-                self.check_change_set(change_set, state_view)
-            }
-            TransactionPayload::Script(script) => {
-                if !self
-                    .on_chain_config()?
-                    .publishing_options
-                    .is_allowed_script(&script.code())
-                {
-                    warn!("[VM] Custom scripts not allowed: {:?}", &script.code());
-                    Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT))
-                } else {
-                    Ok(())
-                }
-            }
-            TransactionPayload::Module(_module) => {
-                if !&self.on_chain_config()?.publishing_options.is_open() {
-                    warn!("[VM] Custom modules not allowed");
-                    Err(VMStatus::new(StatusCode::UNKNOWN_MODULE))
-                } else {
-                    Ok(())
-                }
-            }
-            TransactionPayload::Program => Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT)),
-        }
-    }
-
-    fn check_change_set(&self, change_set: &ChangeSet, state_view: &dyn StateView) -> VMResult<()> {
-        // TODO: Replace this logic with actual checks.
-        if state_view.is_genesis() {
-            for (_access_path, write_op) in change_set.write_set() {
-                // Genesis transactions only add entries, never delete them.
-                if write_op.is_deletion() {
-                    error!("[VM] Bad genesis block");
-                    // TODO: return more detailed error somehow?
-                    return Err(VMStatus::new(StatusCode::INVALID_WRITE_SET));
-                }
-            }
-            Ok(())
-        } else {
-            Err(VMStatus::new(StatusCode::REJECTED_WRITE_SET))
-        }
-    }
-
     fn check_gas(&self, txn: &SignedTransaction) -> VMResult<()> {
-        // Do not check gas limit for writeset transaction.
-        if let TransactionPayload::WriteSet(_) = txn.payload() {
-            return Ok(());
-        }
-
         let raw_bytes_len = AbstractMemorySize::new(txn.raw_txn_bytes_len() as GasCarrier);
         // The transaction is too large.
         if txn.raw_txn_bytes_len() > MAX_TRANSACTION_SIZE_IN_BYTES {
@@ -311,36 +264,98 @@ impl LibraVM {
         })
     }
 
-    fn verify_transaction_impl(
+    fn verify_script(
         &self,
-        transaction: &SignatureCheckedTransaction,
-        state_view: &dyn StateView,
         remote_cache: &dyn RemoteCache,
+        script: &Script,
+        txn_data: TransactionMetadata,
     ) -> VMResult<VerifiedTranscationPayload> {
         let mut ctx = SystemExecutionContext::new(remote_cache, GasUnits::new(0));
+        if !self
+            .on_chain_config()?
+            .publishing_options
+            .is_allowed_script(&script.code())
+        {
+            warn!("[VM] Custom scripts not allowed: {:?}", &script.code());
+            return Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT));
+        };
+        self.run_prologue(&mut ctx, &txn_data)?;
+        let ty_args = script
+            .ty_args()
+            .iter()
+            .map(|tag| self.resolve_type_argument(&mut ctx, tag))
+            .collect::<VMResult<Vec<_>>>()?;
+        Ok(VerifiedTranscationPayload::Script(
+            script.code().to_vec(),
+            ty_args,
+            convert_txn_args(script.args()),
+        ))
+    }
+
+    fn verify_module(
+        &self,
+        remote_cache: &dyn RemoteCache,
+        module: &Module,
+        txn_data: TransactionMetadata,
+    ) -> VMResult<VerifiedTranscationPayload> {
+        let mut ctx = SystemExecutionContext::new(remote_cache, GasUnits::new(0));
+        if !&self.on_chain_config()?.publishing_options.is_open() {
+            warn!("[VM] Custom modules not allowed");
+            return Err(VMStatus::new(StatusCode::UNKNOWN_MODULE));
+        };
+        self.run_prologue(&mut ctx, &txn_data)?;
+        Ok(VerifiedTranscationPayload::Module(module.code().to_vec()))
+    }
+
+    fn verify_writeset(
+        &self,
+        remote_cache: &dyn RemoteCache,
+        _change_set: &ChangeSet,
+        txn_data: &TransactionMetadata,
+    ) -> VMResult<()> {
+        let mut ctx = SystemExecutionContext::new(remote_cache, GasUnits::new(0));
+        self.run_writeset_prologue(&mut ctx, &txn_data)?;
+        Ok(())
+    }
+
+    fn verify_user_transaction_impl(
+        &self,
+        transaction: &SignatureCheckedTransaction,
+        remote_cache: &dyn RemoteCache,
+    ) -> VMResult<VerifiedTranscationPayload> {
         self.check_gas(transaction)?;
-        self.check_payload(transaction.payload(), state_view)?;
         let txn_data = TransactionMetadata::new(transaction);
         match transaction.payload() {
             TransactionPayload::Program => Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT)),
             TransactionPayload::Script(script) => {
-                self.run_prologue(&mut ctx, &txn_data)?;
-                let ty_args = script
-                    .ty_args()
-                    .iter()
-                    .map(|tag| self.resolve_type_argument(&mut ctx, tag))
-                    .collect::<VMResult<Vec<_>>>()?;
-                Ok(VerifiedTranscationPayload::Script(
-                    script.code().to_vec(),
-                    ty_args,
-                    convert_txn_args(script.args()),
-                ))
+                self.verify_script(remote_cache, script, txn_data)
             }
             TransactionPayload::Module(module) => {
-                self.run_prologue(&mut ctx, &txn_data)?;
-                Ok(VerifiedTranscationPayload::Module(module.code().to_vec()))
+                self.verify_module(remote_cache, module, txn_data)
             }
             TransactionPayload::WriteSet(_) => Err(VMStatus::new(StatusCode::UNREACHABLE)),
+        }
+    }
+
+    fn verify_transaction_impl(
+        &self,
+        transaction: &SignatureCheckedTransaction,
+        remote_cache: &dyn RemoteCache,
+    ) -> VMResult<()> {
+        let txn_data = TransactionMetadata::new(transaction);
+        match transaction.payload() {
+            TransactionPayload::Program => Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT)),
+            TransactionPayload::Script(script) => {
+                self.check_gas(transaction)?;
+                self.verify_script(remote_cache, script, txn_data)?;
+                Ok(())
+            }
+            TransactionPayload::Module(module) => {
+                self.check_gas(transaction)?;
+                self.verify_module(remote_cache, module, txn_data)?;
+                Ok(())
+            }
+            TransactionPayload::WriteSet(cs) => self.verify_writeset(remote_cache, cs, &txn_data),
         }
     }
 
@@ -413,13 +428,13 @@ impl LibraVM {
 
     fn execute_user_transaction(
         &mut self,
-        state_view: &dyn StateView,
+        _state_view: &dyn StateView,
         remote_cache: &mut BlockDataCache<'_>,
         txn: &SignatureCheckedTransaction,
     ) -> TransactionOutput {
         let txn_data = TransactionMetadata::new(txn);
         let verified_payload = record_stats! {time_hist | TXN_VERIFICATION_TIME_TAKEN | {
-            self.verify_transaction_impl(txn, state_view, remote_cache)
+            self.verify_user_transaction_impl(txn, remote_cache)
         }};
         let result = verified_payload
             .and_then(|verified_payload| {
@@ -438,20 +453,34 @@ impl LibraVM {
         result
     }
 
-    fn process_change_set(
+    fn read_writeset(
+        &self,
+        remote_cache: &BlockDataCache<'_>,
+        write_set: &WriteSet,
+    ) -> VMResult<()> {
+        // All Move executions satisfy the read-before-write property. Thus we need to read each
+        // access path that the write set is going to update.
+        for (ap, _) in write_set.iter() {
+            remote_cache.get(ap)?;
+        }
+        Ok(())
+    }
+
+    fn process_waypoint_change_set(
         &mut self,
         remote_cache: &mut BlockDataCache<'_>,
         change_set: ChangeSet,
-    ) -> TransactionOutput {
+    ) -> VMResult<TransactionOutput> {
         let (write_set, events) = change_set.into_inner();
+        self.read_writeset(remote_cache, &write_set)?;
         remote_cache.push_write_set(&write_set);
         self.load_configs_impl(remote_cache);
-        TransactionOutput::new(
+        Ok(TransactionOutput::new(
             write_set,
             events,
             0,
             VMStatus::new(StatusCode::EXECUTED).into(),
-        )
+        ))
     }
 
     fn process_block_prologue(
@@ -503,6 +532,102 @@ impl LibraVM {
             remote_cache.push_write_set(output.write_set());
             output
         })
+    }
+
+    fn process_writeset_transaction(
+        &self,
+        remote_cache: &mut BlockDataCache<'_>,
+        txn: SignedTransaction,
+    ) -> VMResult<TransactionOutput> {
+        let txn = match txn.check_signature() {
+            Ok(t) => t,
+            _ => {
+                return Ok(discard_error_output(VMStatus::new(
+                    StatusCode::INVALID_SIGNATURE,
+                )))
+            }
+        };
+
+        let change_set = if let TransactionPayload::WriteSet(change_set) = txn.payload() {
+            change_set
+        } else {
+            error!("[libra_vm] UNREACHABLE");
+            return Ok(discard_error_output(VMStatus::new(StatusCode::UNREACHABLE)));
+        };
+
+        let txn_data = TransactionMetadata::new(&txn);
+
+        if let Err(e) = self.verify_writeset(remote_cache, change_set, &txn_data) {
+            return Ok(discard_error_output(e));
+        };
+
+        let mut interpreter_context = SystemExecutionContext::new(remote_cache, GasUnits::new(0));
+
+        self.run_writeset_epilogue(&mut interpreter_context, change_set, &txn_data)?;
+
+        if let Err(e) = self.read_writeset(remote_cache, &change_set.write_set()) {
+            return Ok(discard_error_output(e));
+        };
+
+        let epilogue_writeset = interpreter_context.make_write_set()?;
+        let epilogue_events = interpreter_context.events().to_vec();
+
+        // Make sure epilogue WriteSet doesn't intersect with the writeset in TransactionPayload.
+        if !epilogue_writeset
+            .iter()
+            .map(|(ap, _)| ap)
+            .collect::<HashSet<_>>()
+            .is_disjoint(
+                &change_set
+                    .write_set()
+                    .iter()
+                    .map(|(ap, _)| ap)
+                    .collect::<HashSet<_>>(),
+            )
+        {
+            return Ok(discard_error_output(VMStatus::new(
+                StatusCode::INVALID_WRITE_SET,
+            )));
+        }
+        if !epilogue_events
+            .iter()
+            .map(|event| event.key())
+            .collect::<HashSet<_>>()
+            .is_disjoint(
+                &change_set
+                    .events()
+                    .iter()
+                    .map(|event| event.key())
+                    .collect::<HashSet<_>>(),
+            )
+        {
+            return Ok(discard_error_output(VMStatus::new(
+                StatusCode::INVALID_WRITE_SET,
+            )));
+        }
+
+        let write_set = WriteSetMut::new(
+            epilogue_writeset
+                .iter()
+                .chain(change_set.write_set().iter())
+                .cloned()
+                .collect(),
+        )
+        .freeze()
+        .map_err(|_| VMStatus::new(StatusCode::INVALID_WRITE_SET))?;
+        let events = change_set
+            .events()
+            .iter()
+            .chain(epilogue_events.iter())
+            .cloned()
+            .collect();
+
+        Ok(TransactionOutput::new(
+            write_set,
+            events,
+            0,
+            TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
+        ))
     }
 
     /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
@@ -569,6 +694,63 @@ impl LibraVM {
         }
     }
 
+    /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
+    /// in the `WRITESET_MODULE` on chain.
+    fn run_writeset_prologue<T: ChainState>(
+        &self,
+        chain_state: &mut T,
+        txn_data: &TransactionMetadata,
+    ) -> VMResult<()> {
+        let txn_sequence_number = txn_data.sequence_number();
+        let txn_public_key = txn_data.authentication_key_preimage().to_vec();
+        let gas_schedule = CostTable::zero();
+        record_stats! {time_hist | TXN_PROLOGUE_TIME_TAKEN | {
+                self.move_vm
+                    .execute_function(
+                        &LIBRA_WRITESET_MANAGER_MODULE,
+                        &PROLOGUE_NAME,
+                        &gas_schedule,
+                        chain_state,
+                        &txn_data,
+                        vec![],
+                        vec![
+                            Value::u64(txn_sequence_number),
+                            Value::vector_u8(txn_public_key),
+                        ],
+                    )
+                    .map_err(|err| convert_prologue_runtime_error(&err, &txn_data.sender))
+                }
+        }
+    }
+
+    /// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored
+    /// in the `WRITESET_MODULE` on chain.
+    fn run_writeset_epilogue<T: ChainState>(
+        &self,
+        chain_state: &mut T,
+        change_set: &ChangeSet,
+        txn_data: &TransactionMetadata,
+    ) -> VMResult<()> {
+        let change_set_bytes =
+            lcs::to_bytes(change_set).map_err(|_| VMStatus::new(StatusCode::INVALID_DATA))?;
+        let gas_schedule = CostTable::zero();
+
+        record_stats! {time_hist | TXN_EPILOGUE_TIME_TAKEN | {
+                self.move_vm.execute_function(
+                    &LIBRA_WRITESET_MANAGER_MODULE,
+                    &EPILOGUE_NAME,
+                    &gas_schedule,
+                    chain_state,
+                    &txn_data,
+                    vec![],
+                    vec![
+                        Value::vector_u8(change_set_bytes),
+                    ],
+                )
+            }
+        }
+    }
+
     fn execute_block_impl(
         &mut self,
         transactions: Vec<Transaction>,
@@ -597,11 +779,13 @@ impl LibraVM {
                     trace_code_block!("libra_vm::execute_block_impl", {"block", current_block_id}, execute_block_trace_guard);
                     result.push(self.process_block_prologue(&mut data_cache, block_metadata)?)
                 }
-                TransactionBlock::WriteSet(change_set) => result.push(
-                    self.check_change_set(&change_set, state_view)
-                        .map(|_| self.process_change_set(&mut data_cache, change_set))
+                TransactionBlock::WaypointWriteSet(change_set) => result.push(
+                    self.process_waypoint_change_set(&mut data_cache, change_set)
                         .unwrap_or_else(discard_error_output),
                 ),
+                TransactionBlock::WriteSet(txn) => {
+                    result.push(self.process_writeset_transaction(&mut data_cache, *txn)?)
+                }
             }
         }
         report_block_count(count);
@@ -683,7 +867,7 @@ impl VMVerifier for LibraVM {
                     Ok(t) => t,
                     Err(_) => return VMValidatorResult::new(Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)), gas_price),
                 };
-                let res = match self.verify_transaction_impl(&signature_verified_txn, state_view, &data_cache) {
+                let res = match self.verify_transaction_impl(&signature_verified_txn, &data_cache) {
                     Ok(_) => None,
                     Err(err) => {
                         if err.major_status == StatusCode::SEQUENCE_NUMBER_TOO_NEW {
@@ -758,8 +942,9 @@ impl<'a> LibraVMInternals<'a> {
 /// Transaction flows are different across different types of transactions.
 pub enum TransactionBlock {
     UserTransaction(Vec<SignedTransaction>),
-    WriteSet(ChangeSet),
+    WaypointWriteSet(ChangeSet),
     BlockPrologue(BlockMetadata),
+    WriteSet(Box<SignedTransaction>),
 }
 
 pub fn chunk_block_transactions(txns: Vec<Transaction>) -> Vec<TransactionBlock> {
@@ -779,15 +964,15 @@ pub fn chunk_block_transactions(txns: Vec<Transaction>) -> Vec<TransactionBlock>
                     blocks.push(TransactionBlock::UserTransaction(buf));
                     buf = vec![];
                 }
-                blocks.push(TransactionBlock::WriteSet(cs));
+                blocks.push(TransactionBlock::WaypointWriteSet(cs));
             }
             Transaction::UserTransaction(txn) => {
-                if let TransactionPayload::WriteSet(cs) = txn.payload() {
+                if let TransactionPayload::WriteSet(_) = txn.payload() {
                     if !buf.is_empty() {
                         blocks.push(TransactionBlock::UserTransaction(buf));
                         buf = vec![];
                     }
-                    blocks.push(TransactionBlock::WriteSet(cs.clone()));
+                    blocks.push(TransactionBlock::WriteSet(Box::new(txn)));
                 } else {
                     buf.push(txn);
                 }

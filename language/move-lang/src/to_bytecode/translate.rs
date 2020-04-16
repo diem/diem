@@ -24,6 +24,12 @@ use move_ir_types::{ast as IR, location::*};
 use move_vm::file_format as F;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
+type CollectedInfos = UniqueMap<FunctionName, CollectedInfo>;
+type CollectedInfo = (
+    Vec<(Var, H::SingleType)>,
+    BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, H::SingleType>)>,
+);
+
 //**************************************************************************************************
 // Entry
 //**************************************************************************************************
@@ -100,13 +106,13 @@ fn module(
         .map(|(s, sdef)| struct_def(&mut context, &ident, s, sdef))
         .collect();
 
-    let mut function_infos = UniqueMap::new();
+    let mut collected_function_infos = UniqueMap::new();
     let functions = mdef
         .functions
         .into_iter()
         .map(|(f, fdef)| {
-            let (res, specs) = function(&mut context, Some(&ident), f.clone(), fdef);
-            function_infos.add(f, specs).unwrap();
+            let (res, info) = function(&mut context, Some(&ident), f.clone(), fdef);
+            collected_function_infos.add(f, info).unwrap();
             res
         })
         .collect();
@@ -129,12 +135,12 @@ fn module(
     let deps: Vec<&F::CompiledModule> = vec![];
     let (module, source_map) = ir_to_bytecode::compiler::compile_module(addr, ir_module, deps)
         .map_err(|e| vec![(ident.loc(), format!("IR ERROR: {}", e))])?;
-    let spec_info = module_spec_info(&module, &source_map, &function_infos);
+    let function_infos = module_function_infos(&module, &source_map, &collected_function_infos);
     Ok(CompiledUnit::Module {
         ident,
         module,
         source_map,
-        spec_info,
+        function_infos,
     })
 }
 
@@ -152,7 +158,7 @@ fn main(
     let loc = main_name.loc();
     let mut context = Context::new(None);
 
-    let ((_, main), specs) = function(&mut context, None, main_name, fdef);
+    let ((_, main), info) = function(&mut context, None, main_name, fdef);
 
     let (imports, explicit_dependency_declarations) = context.materialize(
         dependency_orderings,
@@ -168,39 +174,33 @@ fn main(
     let deps: Vec<&F::CompiledModule> = vec![];
     let (script, source_map) = ir_to_bytecode::compiler::compile_script(addr, ir_script, deps)
         .map_err(|e| vec![(loc, format!("IR ERROR: {}", e))])?;
-    let spec_info = main_spec_id_map(&source_map, specs);
+    let function_info = main_function_info(&source_map, info);
     Ok(CompiledUnit::Script {
         loc,
         script,
         source_map,
-        spec_info,
+        function_info,
     })
 }
 
-fn module_spec_info(
+fn module_function_infos(
     compile_module: &F::CompiledModule,
     source_map: &SourceMap<Loc>,
-    function_infos: &UniqueMap<
-        FunctionName,
-        BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, H::SingleType>)>,
-    >,
-) -> UniqueMap<FunctionName, BTreeMap<SpecId, SpecInfo>> {
+    collected_function_infos: &CollectedInfos,
+) -> UniqueMap<FunctionName, FunctionInfo> {
     UniqueMap::maybe_from_iter((0..compile_module.as_inner().function_defs.len()).map(|i| {
         let idx = F::FunctionDefinitionIndex(i as F::TableIndex);
-        function_spec_id_map(compile_module, source_map, function_infos, idx)
+        function_info_map(compile_module, source_map, collected_function_infos, idx)
     }))
     .unwrap()
 }
 
-fn function_spec_id_map(
+fn function_info_map(
     compile_module: &F::CompiledModule,
     source_map: &SourceMap<Loc>,
-    function_infos: &UniqueMap<
-        FunctionName,
-        BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, H::SingleType>)>,
-    >,
+    collected_function_infos: &CollectedInfos,
     idx: F::FunctionDefinitionIndex,
-) -> (FunctionName, BTreeMap<SpecId, SpecInfo>) {
+) -> (FunctionName, FunctionInfo) {
     let module = compile_module.as_inner();
     let handle_idx = module.function_defs[idx.0 as usize].function;
     let name_idx = module.function_handles[handle_idx.0 as usize].name;
@@ -209,42 +209,83 @@ fn function_spec_id_map(
         .into_string();
 
     let function_source_map = source_map.get_function_source_map(idx).unwrap();
-    let spec_ids = function_infos
-        .get_(&name)
-        .unwrap()
+    let local_map = function_source_map.make_local_name_to_index_map();
+    let (params, specs) = collected_function_infos.get_(&name).unwrap();
+    let parameters = params
         .iter()
-        .map(|(id, (label, used_locals))| {
+        .map(|(v, ty)| var_info(&local_map, v.clone(), ty.clone()))
+        .collect();
+    let spec_info = specs
+        .iter()
+        .map(|(id, (label, used_local_types))| {
             let offset = *function_source_map.nops.get(label).unwrap();
+            let used_locals = used_local_info(&local_map, used_local_types);
             let info = SpecInfo {
                 offset,
-                used_locals: used_locals.clone(),
+                used_locals,
             };
             (*id, info)
         })
         .collect();
+    let function_info = FunctionInfo {
+        parameters,
+        spec_info,
+    };
 
-    let name_loc = *function_infos.get_loc_(&name).unwrap();
+    let name_loc = *collected_function_infos.get_loc_(&name).unwrap();
     let function_name = FunctionName(sp(name_loc, name));
-    (function_name, spec_ids)
+    (function_name, function_info)
 }
 
-fn main_spec_id_map(
-    source_map: &SourceMap<Loc>,
-    specs: BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, H::SingleType>)>,
-) -> BTreeMap<SpecId, SpecInfo> {
+fn main_function_info(source_map: &SourceMap<Loc>, (params, specs): CollectedInfo) -> FunctionInfo {
     let idx = F::FunctionDefinitionIndex(0);
     let function_source_map = source_map.get_function_source_map(idx).unwrap();
-    specs
+    let local_map = function_source_map.make_local_name_to_index_map();
+    let parameters = params
         .into_iter()
-        .map(|(id, (label, used_locals))| {
+        .map(|(v, ty)| var_info(&local_map, v, ty))
+        .collect();
+    let spec_info = specs
+        .into_iter()
+        .map(|(id, (label, used_local_types))| {
             let offset = *function_source_map.nops.get(&label).unwrap();
+            let used_locals = used_local_info(&local_map, &used_local_types);
             let info = SpecInfo {
                 offset,
                 used_locals,
             };
             (id, info)
         })
-        .collect()
+        .collect();
+    FunctionInfo {
+        parameters,
+        spec_info,
+    }
+}
+
+fn used_local_info(
+    local_map: &BTreeMap<&String, F::LocalIndex>,
+    used_local_types: &BTreeMap<Var, H::SingleType>,
+) -> UniqueMap<Var, VarInfo> {
+    UniqueMap::maybe_from_iter(used_local_types.iter().map(|(v, ty)| {
+        let (v, info) = var_info(&local_map, v.clone(), ty.clone());
+        let v_orig_ = match display_var(&v.0.value) {
+            DisplayVar::Tmp => panic!("ICE spec block captured a tmp"),
+            DisplayVar::Orig(s) => s,
+        };
+        let v_orig = Var(sp(v.0.loc, v_orig_));
+        (v_orig, info)
+    }))
+    .unwrap()
+}
+
+fn var_info(
+    local_map: &BTreeMap<&String, F::LocalIndex>,
+    v: Var,
+    type_: H::SingleType,
+) -> (Var, VarInfo) {
+    let index = *local_map.get(&v.0.value).unwrap();
+    (v, VarInfo { type_, index })
 }
 
 //**************************************************************************************************
@@ -315,10 +356,7 @@ fn function(
     m: Option<&ModuleIdent>,
     f: FunctionName,
     fdef: G::Function,
-) -> (
-    (IR::FunctionName, IR::Function),
-    BTreeMap<SpecId, (IR::NopLabel, BTreeMap<Var, H::SingleType>)>,
-) {
+) -> ((IR::FunctionName, IR::Function), CollectedInfo) {
     let G::Function {
         visibility: v,
         signature,
@@ -339,7 +377,7 @@ fn function(
             start,
             blocks,
         } => {
-            let (locals, code) = function_body(context, parameters, locals, start, blocks);
+            let (locals, code) = function_body(context, parameters.clone(), locals, start, blocks);
             IR::FunctionBody::Bytecode { locals, code }
         }
     };
@@ -352,7 +390,10 @@ fn function(
         specifications: vec![],
         body,
     };
-    ((name, sp(loc, ir_function)), context.finish_function())
+    (
+        (name, sp(loc, ir_function)),
+        (parameters, context.finish_function()),
+    )
 }
 
 fn visibility(v: FunctionVisibility) -> IR::FunctionVisibility {
@@ -524,7 +565,7 @@ fn kind(sp!(_, k_): &Kind) -> IR::Kind {
 
 fn type_parameters(tps: Vec<TParam>) -> Vec<(IR::TypeVar, IR::Kind)> {
     tps.into_iter()
-        .map(|tp| (type_var(tp.debug), kind(&tp.kind)))
+        .map(|tp| (type_var(tp.user_specified_name), kind(&tp.kind)))
         .collect()
 }
 
@@ -558,7 +599,10 @@ fn base_type(context: &mut Context, sp!(_, bt_): H::BaseType) -> IR::Type {
             let tys = base_types(context, tys);
             IRT::Struct(n, tys)
         }
-        B::Param(TParam { debug, .. }) => IRT::TypeParameter(type_var(debug).value),
+        B::Param(TParam {
+            user_specified_name,
+            ..
+        }) => IRT::TypeParameter(type_var(user_specified_name).value),
     }
 }
 
@@ -687,20 +731,7 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
         E::UnresolvedError => panic!("ICE should not have reached compilation if there are errors"),
         E::Unit => (),
         // remember to switch to orig_name
-        E::Spec(id, raw_used_locals) => {
-            let used_locals = raw_used_locals
-                .into_iter()
-                .map(|(v, st)| {
-                    let sp!(loc, raw_n_) = v.0;
-                    let n_ = match display_var(&raw_n_) {
-                        DisplayVar::Tmp => panic!("ICE spec block captured a tmp"),
-                        DisplayVar::Orig(s) => s,
-                    };
-                    (Var(sp(loc, n_)), st)
-                })
-                .collect();
-            code.push(sp(loc, B::Nop(Some(context.spec(id, used_locals)))))
-        }
+        E::Spec(id, used_locals) => code.push(sp(loc, B::Nop(Some(context.spec(id, used_locals))))),
         E::Value(v) => {
             code.push(sp(
                 loc,

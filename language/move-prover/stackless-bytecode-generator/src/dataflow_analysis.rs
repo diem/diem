@@ -27,7 +27,7 @@ pub trait TransferFunctions {
     /// Execute instr found at index in the current basic block from pre-state
     fn execute(
         &mut self,
-        pre: &Self::State,
+        pre: Self::State,
         instr: &Self::InstrType,
         idx: CodeOffset,
     ) -> Self::State;
@@ -53,18 +53,14 @@ pub trait DataflowAnalysis: TransferFunctions {
         );
 
         while let Some(block_id) = work_list.pop_front() {
-            let block_res = state_map
-                .get_mut(&block_id)
-                .unwrap_or_else(|| panic!("Missing result for block {}", block_id));
-
-            let pre_state = block_res.pre.clone();
-            let post_state = self.execute_block(block_id, &pre_state, &instrs, cfg);
+            let pre = state_map.remove(&block_id).expect("basic block").pre;
+            let post = self.execute_block(block_id, pre.clone(), &instrs, cfg);
 
             // propagate postcondition of this block to successor blocks
             for next_block_id in cfg.successors(block_id) {
                 match state_map.get_mut(next_block_id) {
                     Some(next_block_res) => {
-                        let join_result = next_block_res.pre.join(&post_state);
+                        let join_result = next_block_res.pre.join(&post);
 
                         match join_result {
                             JoinResult::Unchanged => {
@@ -85,7 +81,7 @@ pub trait DataflowAnalysis: TransferFunctions {
                         state_map.insert(
                             *next_block_id,
                             BlockState {
-                                pre: post_state.clone(),
+                                pre: post.clone(),
                                 post: initial_state.clone(),
                             },
                         );
@@ -93,14 +89,7 @@ pub trait DataflowAnalysis: TransferFunctions {
                     }
                 }
             }
-
-            state_map.insert(
-                block_id,
-                BlockState {
-                    pre: pre_state,
-                    post: post_state,
-                },
-            );
+            state_map.insert(block_id, BlockState { pre, post });
         }
 
         state_map
@@ -109,14 +98,14 @@ pub trait DataflowAnalysis: TransferFunctions {
     fn execute_block(
         &mut self,
         block_id: BlockId,
-        pre_state: &Self::State,
+        pre_state: Self::State,
         instrs: &[Self::InstrType],
         cfg: &dyn ControlFlowGraph,
     ) -> Self::State {
-        let mut state = pre_state.clone();
+        let mut state = pre_state;
         for offset in cfg.instr_indexes(block_id) {
             let instr = &instrs[offset as usize];
-            state = self.execute(&state, instr, offset);
+            state = self.execute(state, instr, offset);
         }
         state
     }

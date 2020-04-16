@@ -35,11 +35,25 @@ pub static LIBRA_SYSTEM_MODULE: Lazy<ModuleId> = Lazy::new(|| {
         Identifier::new("LibraSystem").unwrap(),
     )
 });
+/// The ModuleId for the libra writeset manager module
+pub static LIBRA_WRITESET_MANAGER_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+    ModuleId::new(
+        account_config::CORE_CODE_ADDRESS,
+        Identifier::new("LibraWriteSetManager").unwrap(),
+    )
+});
+
 /// The ModuleId for the libra block module
 pub static LIBRA_BLOCK_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         account_config::CORE_CODE_ADDRESS,
         Identifier::new("LibraBlock").unwrap(),
+    )
+});
+pub static LIBRA_CONFIG_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+    ModuleId::new(
+        account_config::CORE_CODE_ADDRESS,
+        Identifier::new("LibraConfig").unwrap(),
     )
 });
 /// The ModuleId for the gas schedule module

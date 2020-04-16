@@ -169,10 +169,10 @@ pub fn trace_node(entries: &[JsonLogEntry], node_name: &str) {
         }
     }
     let mut start_time = None;
-    for entry in entries {
-        if !entry.name.starts_with("trace_") {
-            continue;
-        }
+    for entry in entries
+        .iter()
+        .filter(|entry| entry.name.starts_with("trace_"))
+    {
         let node = entry
             .json
             .get("node")

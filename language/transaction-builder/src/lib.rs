@@ -12,6 +12,7 @@ use libra_types::{
     on_chain_config::{LibraVersion, VMPublishingOption},
     transaction::{authenticator::AuthenticationKey, Script, Transaction, TransactionArgument},
 };
+use mirai_annotations::*;
 use std::convert::TryFrom;
 use stdlib::transaction_scripts::StdlibScript;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -19,7 +20,7 @@ use vm::file_format::{Bytecode, CompiledScript};
 
 fn validate_auth_key_prefix(auth_key_prefix: &[u8]) {
     let auth_key_prefix_length = auth_key_prefix.len();
-    assert!(
+    checked_assume!(
         auth_key_prefix_length == 0
             || auth_key_prefix_length == AuthenticationKey::LENGTH - AccountAddress::LENGTH,
         "Bad auth key prefix length {}",
@@ -90,26 +91,6 @@ pub fn encode_cancel_burn_script(type_: TypeTag, preburn_address: AccountAddress
         StdlibScript::CancelBurn.compiled_bytes().into_vec(),
         vec![type_],
         vec![TransactionArgument::Address(preburn_address)],
-    )
-}
-
-/// Encode a program transferring `amount` coins from `sender` to `recipient`. Fails if there is no
-/// account at the recipient address or if the sender's balance is lower than `amount`.
-pub fn encode_transfer_script(
-    type_: TypeTag,
-    recipient: &AccountAddress,
-    auth_key_prefix: Vec<u8>,
-    amount: u64,
-) -> Script {
-    validate_auth_key_prefix(&auth_key_prefix);
-    Script::new(
-        StdlibScript::PeerToPeer.compiled_bytes().into_vec(),
-        vec![type_],
-        vec![
-            TransactionArgument::Address(*recipient),
-            TransactionArgument::U8Vector(auth_key_prefix),
-            TransactionArgument::U64(amount),
-        ],
     )
 }
 

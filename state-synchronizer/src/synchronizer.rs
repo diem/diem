@@ -16,8 +16,7 @@ use futures::{
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
 use libra_mempool::{CommitNotification, CommitResponse};
 use libra_types::{
-    contract_event::ContractEvent, event_subscription::ReconfigSubscription,
-    ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
+    contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
     validator_change::ValidatorChangeProof, waypoint::Waypoint,
 };
 use libra_vm::LibraVM;
@@ -25,6 +24,7 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
+use subscription_service::ReconfigSubscription;
 use tokio::{
     runtime::{Builder, Runtime},
     time::timeout,
@@ -44,8 +44,20 @@ impl StateSynchronizer {
         config: &NodeConfig,
         reconfig_event_subscriptions: Vec<ReconfigSubscription>,
     ) -> Self {
-        let executor_proxy = ExecutorProxy::new(executor, config, reconfig_event_subscriptions);
+        let mut runtime = Builder::new()
+            .thread_name("state-sync-")
+            .threaded_scheduler()
+            .enable_all()
+            .build()
+            .expect("[state synchronizer] failed to create runtime");
+
+        let executor_proxy = runtime.block_on(ExecutorProxy::new(
+            executor,
+            config,
+            reconfig_event_subscriptions,
+        ));
         Self::bootstrap_with_executor_proxy(
+            runtime,
             network,
             state_sync_to_mempool_sender,
             config.base.role,
@@ -56,30 +68,19 @@ impl StateSynchronizer {
     }
 
     pub fn bootstrap_with_executor_proxy<E: ExecutorProxyTrait + 'static>(
+        mut runtime: Runtime,
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
         role: RoleType,
         waypoint: Option<Waypoint>,
         state_sync_config: &StateSyncConfig,
-        mut executor_proxy: E,
+        executor_proxy: E,
     ) -> Self {
-        let mut runtime = Builder::new()
-            .thread_name("state-sync-")
-            .threaded_scheduler()
-            .enable_all()
-            .build()
-            .expect("[state synchronizer] failed to create runtime");
-
         let (coordinator_sender, coordinator_receiver) = mpsc::unbounded();
 
         let initial_state = runtime
             .block_on(executor_proxy.get_local_storage_state())
             .expect("[state sync] Start failure: cannot sync with storage.");
-
-        // initial read of on-chain configs
-        runtime
-            .block_on(executor_proxy.load_on_chain_configs())
-            .expect("[state sync] Failed initial read of on-chain configs");
 
         let coordinator = SyncCoordinator::new(
             coordinator_receiver,

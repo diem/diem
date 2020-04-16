@@ -16,8 +16,9 @@ use core::str::FromStr;
 use futures::channel::oneshot;
 use libra_config::config::RoleType;
 use libra_crypto::{
-    ed25519::Ed25519PrivateKey, x25519::X25519StaticPrivateKey, PrivateKey, Uniform,
+    ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, x25519, PrivateKey, Uniform,
 };
+use rand::prelude::*;
 use std::num::NonZeroUsize;
 use tokio::runtime::Runtime;
 
@@ -97,7 +98,8 @@ async fn expect_address_update(
     expected_addrs: &[Multiaddr],
 ) {
     match conn_mgr_reqs_rx.next().await.unwrap() {
-        ConnectivityRequest::UpdateAddresses(peer_id, addrs) => {
+        ConnectivityRequest::UpdateAddresses(src, peer_id, addrs) => {
+            assert_eq!(DiscoverySource::Gossip, src);
             assert_eq!(expected_peer_id, peer_id);
             assert_eq!(expected_addrs, &addrs[..]);
         }
@@ -107,9 +109,11 @@ async fn expect_address_update(
     }
 }
 
-fn generate_network_pub_keys_and_signer() -> (NetworkPublicKeys, Ed25519PrivateKey) {
+fn generate_network_pub_keys_and_signer(
+    rng: &mut (impl rand::RngCore + rand::CryptoRng),
+) -> (NetworkPublicKeys, Ed25519PrivateKey) {
     let signing_priv_key = Ed25519PrivateKey::generate_for_testing();
-    let identity_pub_key = X25519StaticPrivateKey::generate_for_testing().public_key();
+    let identity_pub_key = x25519::PrivateKey::for_test(rng).public_key();
     (
         NetworkPublicKeys {
             signing_public_key: signing_priv_key.public_key(),
@@ -128,12 +132,13 @@ fn inbound() {
     // Setup self.
     let self_peer_id = PeerId::random();
     let self_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
-    let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer();
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer(&mut rng);
 
     // Setup other peer.
     let other_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/8080").unwrap()];
     let other_peer_id = PeerId::random();
-    let (other_pub_keys, other_signer) = generate_network_pub_keys_and_signer();
+    let (other_pub_keys, other_signer) = generate_network_pub_keys_and_signer(&mut rng);
     let trusted_peers = Arc::new(RwLock::new(
         vec![
             (other_peer_id, other_pub_keys),
@@ -146,7 +151,7 @@ fn inbound() {
     // Setup new peer to be added later.
     let new_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/7070").unwrap()];
     let new_peer_id = PeerId::random();
-    let (new_pub_keys, new_signer) = generate_network_pub_keys_and_signer();
+    let (new_pub_keys, new_signer) = generate_network_pub_keys_and_signer(&mut rng);
 
     // Setup discovery.
     let (_, mut conn_mgr_reqs_rx, mut network_notifs_tx, _, _) = setup_discovery(
@@ -240,12 +245,13 @@ fn outbound() {
     // Setup self peer.
     let peer_id = PeerId::random();
     let addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
-    let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer();
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer(&mut rng);
 
     // Setup other peer.
     let other_peer_id = PeerId::random();
     let other_peer_info = gen_peer_info();
-    let (other_pub_keys, _) = generate_network_pub_keys_and_signer();
+    let (other_pub_keys, _) = generate_network_pub_keys_and_signer(&mut rng);
     let trusted_peers = Arc::new(RwLock::new(
         vec![(other_peer_id, other_pub_keys), (peer_id, self_pub_keys)]
             .into_iter()
@@ -308,12 +314,13 @@ fn old_note_higher_epoch() {
     // Setup self peer.
     let peer_id = PeerId::random();
     let addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
-    let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer();
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer(&mut rng);
 
     // Setup other peer.
     let other_peer_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/8080").unwrap()];
     let other_peer_id = PeerId::random();
-    let (other_pub_keys, _) = generate_network_pub_keys_and_signer();
+    let (other_pub_keys, _) = generate_network_pub_keys_and_signer(&mut rng);
     let trusted_peers = Arc::new(RwLock::new(
         vec![(other_peer_id, other_pub_keys), (peer_id, self_pub_keys)]
             .into_iter()
@@ -395,12 +402,13 @@ fn old_note_max_epoch() {
     // Setup self.
     let peer_id = PeerId::random();
     let addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
-    let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer();
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer(&mut rng);
 
     // Setup other.
     let other_peer_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/8080").unwrap()];
     let other_peer_id = PeerId::random();
-    let (other_pub_keys, _) = generate_network_pub_keys_and_signer();
+    let (other_pub_keys, _) = generate_network_pub_keys_and_signer(&mut rng);
     let trusted_peers = Arc::new(RwLock::new(
         vec![(other_peer_id, other_pub_keys), (peer_id, self_pub_keys)]
             .into_iter()

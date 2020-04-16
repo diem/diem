@@ -28,4 +28,4 @@ mod transport;
 
 pub type DisconnectReason = peer::DisconnectReason;
 pub type ConnectivityRequest = connectivity_manager::ConnectivityRequest;
-pub type ProtocolId = protocols::wire::messaging::v1::ProtocolId;
+pub type ProtocolId = protocols::wire::handshake::v1::ProtocolId;

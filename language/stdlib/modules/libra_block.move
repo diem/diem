@@ -48,14 +48,16 @@ module LibraBlock {
         previous_block_votes: vector<address>,
         proposer: address
     ) acquires BlockMetadata {
-      // Can only be invoked by LibraVM privilege.
-      Transaction::assert(Transaction::sender() == 0x0, 33);
+        // Can only be invoked by LibraVM privilege.
+        Transaction::assert(Transaction::sender() == 0x0, 33);
 
-      process_block_prologue(round, timestamp, previous_block_votes, proposer);
+        process_block_prologue(round, timestamp, previous_block_votes, proposer);
 
-      // Currently distribute once per-block.
-      // TODO: Once we have a better on-chain representation of epochs we will make this per-epoch.
-      TransactionFee::distribute_transaction_fees<LBR::T>();
+        // Currently distribute once per-block.
+        // TODO: Once we have a better on-chain representation of epochs we will make this per-epoch.
+        TransactionFee::distribute_transaction_fees<LBR::T>();
+
+        // TODO(valerini): call regular reconfiguration here LibraSystem2::update_all_validator_info()
     }
 
     // Update the BlockMetadata resource with the new blockmetada coming from the consensus.

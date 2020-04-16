@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use bytecode_verifier::VerifiedModule;
 use libra_types::account_address::AccountAddress;
 use vm::file_format::{CompiledModule, CompiledScript};
 
@@ -15,9 +14,7 @@ pub trait Compiler {
         input: &str,
     ) -> Result<ScriptOrModule>;
 
-    /// Return the (ordered) list of modules to be used for genesis. If None is returned the staged
-    /// version of the stdlib is used.
-    fn stdlib() -> Option<Vec<VerifiedModule>>;
+    fn use_staged_genesis(&self) -> bool;
 }
 
 pub enum ScriptOrModule {

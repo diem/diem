@@ -10,7 +10,7 @@ use anyhow::{bail, ensure, format_err};
 use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash, HashValue};
 use libra_types::{
     block_info::BlockInfo, block_metadata::BlockMetadata, ledger_info::LedgerInfo,
-    transaction::Version, validator_set::ValidatorSet, validator_signer::ValidatorSigner,
+    on_chain_config::ValidatorSet, transaction::Version, validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
 };
 use mirai_annotations::debug_checked_verify_eq;
@@ -137,7 +137,7 @@ where
 {
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn make_genesis_block() -> Self {
-        Self::make_genesis_block_from_ledger_info(&LedgerInfo::mock_genesis())
+        Self::make_genesis_block_from_ledger_info(&LedgerInfo::mock_genesis(None))
     }
 
     /// Construct new genesis block for next epoch deterministically from the end-epoch LedgerInfo

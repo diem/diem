@@ -385,6 +385,9 @@ pub enum StatusCode {
     /// Reported when a struct has zero fields
     ZERO_SIZED_STRUCT = 1080,
     LINKER_ERROR = 1081,
+    /// Constant's verification errors
+    INVALID_CONSTANT_TYPE = 1082,
+    MALFORMED_CONSTANT_DATA = 1083,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

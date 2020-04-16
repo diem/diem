@@ -12,14 +12,14 @@ use std::collections::BTreeMap;
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressPoolIndex, IdentifierIndex, ModuleHandle, ModuleHandleIndex, Signature,
+        AddressIdentifierIndex, IdentifierIndex, ModuleHandle, ModuleHandleIndex, Signature,
         SignatureToken, StructHandle, StructHandleIndex,
     },
 };
 
 /// Resolution context for importing types
 pub struct Resolver {
-    address_map: BTreeMap<AccountAddress, AddressPoolIndex>,
+    address_map: BTreeMap<AccountAddress, AddressIdentifierIndex>,
     identifier_map: BTreeMap<Identifier, IdentifierIndex>,
     module_handle_map: BTreeMap<ModuleHandle, ModuleHandleIndex>,
     struct_handle_map: BTreeMap<StructHandle, StructHandleIndex>,
@@ -29,8 +29,8 @@ impl Resolver {
     /// create a new instance of Resolver for module
     pub fn new(module: &impl ModuleAccess) -> Self {
         let mut address_map = BTreeMap::new();
-        for (idx, address) in module.address_pool().iter().enumerate() {
-            address_map.insert(address.clone(), AddressPoolIndex(idx as u16));
+        for (idx, address) in module.address_identifiers().iter().enumerate() {
+            address_map.insert(address.clone(), AddressIdentifierIndex(idx as u16));
         }
         let mut identifier_map = BTreeMap::new();
         for (idx, name) in module.identifiers().iter().enumerate() {
@@ -72,7 +72,8 @@ impl Resolver {
             SignatureToken::Struct(sh_idx) => {
                 let struct_handle = dependency.struct_handle_at(*sh_idx);
                 let defining_module_handle = dependency.module_handle_at(struct_handle.module);
-                let defining_module_address = dependency.address_at(defining_module_handle.address);
+                let defining_module_address =
+                    dependency.address_identifier_at(defining_module_handle.address);
                 let defining_module_name = dependency.identifier_at(defining_module_handle.name);
                 let local_module_handle = ModuleHandle {
                     address: *self
@@ -107,7 +108,8 @@ impl Resolver {
             SignatureToken::StructInstantiation(sh_idx, type_args) => {
                 let struct_handle = dependency.struct_handle_at(*sh_idx);
                 let defining_module_handle = dependency.module_handle_at(struct_handle.module);
-                let defining_module_address = dependency.address_at(defining_module_handle.address);
+                let defining_module_address =
+                    dependency.address_identifier_at(defining_module_handle.address);
                 let defining_module_name = dependency.identifier_at(defining_module_handle.name);
                 let local_module_handle = ModuleHandle {
                     address: *self

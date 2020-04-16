@@ -1019,10 +1019,6 @@ impl<T: Payload> EventProcessor<T> {
         self.safety_rules.consensus_state().unwrap()
     }
 
-    pub fn block_store(&self) -> Arc<BlockStore<T>> {
-        self.block_store.clone()
-    }
-
     pub fn epoch_info(&self) -> &EpochInfo {
         &self.epoch_info
     }

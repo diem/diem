@@ -8,10 +8,10 @@
 
 //! new-transaction
 // Reconfiguration can only be invoked by association.
-import 0x0.LibraSystem;
+import 0x0.LibraConfig;
 
 main() {
-    LibraSystem.reconfigure();
+    LibraConfig.reconfigure();
     return;
 }
 
@@ -20,23 +20,23 @@ main() {
 
 //! new-transaction
 //! sender: association
-import 0x0.LibraSystem;
+import 0x0.LibraConfig;
 
 main() {
-    LibraSystem.reconfigure();
+    LibraConfig.reconfigure();
     return;
 }
 
-// check: ValidatorSetChangeEvent
+// check: NewEpochEvent
 // check: EXECUTED
 
 //! new-transaction
 //! sender: association
 // Cannot trigger two reconfiguration within the same block.
-import 0x0.LibraSystem;
+import 0x0.LibraConfig;
 
 main() {
-    LibraSystem.reconfigure();
+    LibraConfig.reconfigure();
     return;
 }
 
@@ -49,12 +49,12 @@ main() {
 
 //! new-transaction
 //! sender: association
-import 0x0.LibraSystem;
+import 0x0.LibraConfig;
 
 main() {
-    LibraSystem.reconfigure();
+    LibraConfig.reconfigure();
     return;
 }
 
-// check: ValidatorSetChangeEvent
+// check: NewEpochEvent
 // check: EXECUTED

@@ -13,9 +13,13 @@ use consensus_types::{
     timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use libra_crypto::HashValue;
-use libra_types::{ledger_info::LedgerInfo, validator_set::ValidatorSet};
+use libra_types::{
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    on_chain_config::ValidatorSet,
+    validator_change::ValidatorChangeProof,
+};
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     marker::PhantomData,
     sync::{Arc, Mutex},
 };
@@ -25,6 +29,7 @@ pub struct MockSharedStorage<T> {
     // Safety state
     pub block: Mutex<HashMap<HashValue, Block<T>>>,
     pub qc: Mutex<HashMap<HashValue, QuorumCert>>,
+    pub lis: Mutex<HashMap<u64, LedgerInfoWithSignatures>>,
     pub last_vote: Mutex<Option<Vote>>,
 
     // Liveness state
@@ -37,6 +42,7 @@ impl<T: Payload> MockSharedStorage<T> {
         MockSharedStorage {
             block: Mutex::new(HashMap::new()),
             qc: Mutex::new(HashMap::new()),
+            lis: Mutex::new(HashMap::new()),
             last_vote: Mutex::new(None),
             highest_timeout_certificate: Mutex::new(None),
             validator_set,
@@ -53,9 +59,17 @@ pub struct MockStorage<T> {
 
 impl<T: Payload> MockStorage<T> {
     pub fn new(shared_storage: Arc<MockSharedStorage<T>>) -> Self {
+        let validator_set = Some(shared_storage.validator_set.clone());
+        let li = LedgerInfo::mock_genesis(validator_set);
+        let lis = LedgerInfoWithSignatures::new(li.clone(), BTreeMap::new());
+        shared_storage
+            .lis
+            .lock()
+            .unwrap()
+            .insert(lis.ledger_info().version(), lis);
         MockStorage {
             shared_storage,
-            storage_ledger: Mutex::new(LedgerInfo::mock_genesis()),
+            storage_ledger: Mutex::new(li),
         }
     }
 
@@ -63,6 +77,18 @@ impl<T: Payload> MockStorage<T> {
         shared_storage: Arc<MockSharedStorage<T>>,
         ledger_info: LedgerInfo,
     ) -> Self {
+        let li = if ledger_info.next_validator_set().is_some() {
+            ledger_info.clone()
+        } else {
+            let validator_set = Some(shared_storage.validator_set.clone());
+            LedgerInfo::mock_genesis(validator_set)
+        };
+        let lis = LedgerInfoWithSignatures::new(li, BTreeMap::new());
+        shared_storage
+            .lis
+            .lock()
+            .unwrap()
+            .insert(lis.ledger_info().version(), lis);
         MockStorage {
             shared_storage,
             storage_ledger: Mutex::new(ledger_info),
@@ -81,11 +107,12 @@ impl<T: Payload> MockStorage<T> {
         }
     }
 
+    pub fn get_validator_set(&self) -> &ValidatorSet {
+        &self.shared_storage.validator_set
+    }
+
     pub fn get_ledger_recovery_data(&self) -> LedgerRecoveryData {
-        LedgerRecoveryData::new(
-            self.storage_ledger.lock().unwrap().clone(),
-            self.shared_storage.validator_set.clone(),
-        )
+        LedgerRecoveryData::new(self.storage_ledger.lock().unwrap().clone())
     }
 
     pub fn try_start(&self) -> Result<RecoveryData<T>> {
@@ -131,6 +158,7 @@ impl<T: Payload> MockStorage<T> {
         let shared_storage = Arc::new(MockSharedStorage {
             block: Mutex::new(HashMap::new()),
             qc: Mutex::new(HashMap::new()),
+            lis: Mutex::new(HashMap::new()),
             last_vote: Mutex::new(None),
             highest_timeout_certificate: Mutex::new(None),
             validator_set,
@@ -219,6 +247,18 @@ impl<T: Payload> PersistentLivenessStorage<T> for MockStorage<T> {
         Ok(())
     }
 
+    fn retrieve_validator_change_proof(&self, version: u64) -> Result<ValidatorChangeProof> {
+        let lis = self
+            .shared_storage
+            .lis
+            .lock()
+            .unwrap()
+            .get(&version)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("LedgerInfo for version not found"))?;
+        Ok(ValidatorChangeProof::new(vec![lis], false))
+    }
+
     fn libra_db(&self) -> Arc<dyn DbReader> {
         unimplemented!()
     }
@@ -259,7 +299,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage<T> {
     }
 
     fn recover_from_ledger(&self) -> LedgerRecoveryData {
-        LedgerRecoveryData::new(LedgerInfo::mock_genesis(), ValidatorSet::new(vec![]))
+        LedgerRecoveryData::new(LedgerInfo::mock_genesis(None))
     }
 
     fn start(&self) -> LivenessStorageData<T> {
@@ -281,6 +321,10 @@ impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage<T> {
 
     fn save_highest_timeout_cert(&self, _: TimeoutCertificate) -> Result<()> {
         Ok(())
+    }
+
+    fn retrieve_validator_change_proof(&self, _version: u64) -> Result<ValidatorChangeProof> {
+        unimplemented!()
     }
 
     fn libra_db(&self) -> Arc<dyn DbReader> {

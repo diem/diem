@@ -41,7 +41,17 @@ pub struct Options {
     pub sender: Option<Address>,
 }
 
-pub fn main() -> std::io::Result<()> {
+pub fn main() {
+    std::process::exit(match main_impl() {
+        Ok(_) => 0,
+        Err(e) => {
+            eprintln!("error: {}", e);
+            1
+        }
+    });
+}
+
+pub fn main_impl() -> std::io::Result<()> {
     let Options {
         source_files,
         dependencies,

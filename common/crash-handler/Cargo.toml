@@ -14,4 +14,5 @@ backtrace = "0.3.46"
 toml = "0.5.3"
 
 libra-logger = { path = "../logger", version = "0.1.0" }
+libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 serde = { version = "1.0.106", features = ["derive"] }

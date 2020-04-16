@@ -10,9 +10,9 @@ use std::{collections::BTreeMap, ops::Bound};
 use vm::{
     access::*,
     file_format::{
-        AddressPoolIndex, CodeOffset, CompiledModule, CompiledScript, FunctionDefinition,
-        FunctionDefinitionIndex, IdentifierIndex, MemberCount, StructDefinition,
-        StructDefinitionIndex, TableIndex,
+        CodeOffset, CompiledModule, CompiledScript, FunctionDefinition, FunctionDefinitionIndex,
+        LocalIndex, MemberCount, ModuleHandleIndex, StructDefinition, StructDefinitionIndex,
+        TableIndex,
     },
 };
 
@@ -216,6 +216,14 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
 
     pub fn get_local_name(&self, local_index: u64) -> Option<SourceName<Location>> {
         self.locals.get(local_index as usize).cloned()
+    }
+
+    pub fn make_local_name_to_index_map(&self) -> BTreeMap<&String, LocalIndex> {
+        self.locals
+            .iter()
+            .enumerate()
+            .map(|(i, (n, _))| (n, i as LocalIndex))
+            .collect()
     }
 
     pub fn dummy_function_map(
@@ -468,10 +476,10 @@ impl<Location: Clone + Eq> SourceMap<Location> {
     /// Create a 'dummy' source map for a compiled module. This is useful for e.g. disassembling
     /// with generated or real names depending upon if the source map is available or not.
     pub fn dummy_from_module(module: &CompiledModule, default_loc: Location) -> Result<Self> {
-        let module_name =
-            ModuleName::new(module.identifier_at(IdentifierIndex::new(0)).to_string());
-        let module_ident =
-            QualifiedModuleIdent::new(module_name, *module.address_at(AddressPoolIndex::new(0)));
+        let module_handle = module.module_handle_at(ModuleHandleIndex::new(0));
+        let module_name = ModuleName::new(module.identifier_at(module_handle.name).to_string());
+        let address = *module.address_identifier_at(module_handle.address);
+        let module_ident = QualifiedModuleIdent::new(module_name, address);
 
         let mut empty_source_map = Self::new(module_ident);
 

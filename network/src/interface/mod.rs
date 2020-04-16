@@ -14,11 +14,12 @@
 use crate::{
     counters,
     peer::{Peer, PeerHandle, PeerNotification},
-    peer_manager::{Connection, ConnectionNotification},
+    peer_manager::ConnectionNotification,
     protocols::{
         direct_send::{DirectSend, DirectSendNotification, DirectSendRequest, Message},
         rpc::{InboundRpcRequest, OutboundRpcRequest, Rpc, RpcNotification},
     },
+    transport::Connection,
     validator_network, ProtocolId,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
@@ -72,8 +73,7 @@ where
         libra_channel::Sender<ProtocolId, NetworkRequest>,
         libra_channel::Receiver<ProtocolId, NetworkNotification>,
     ) {
-        let identity = connection.metadata.peer_identity().clone();
-        let peer_id = identity.peer_id();
+        let peer_id = connection.metadata.peer_id();
 
         // Setup and start Peer actor.
         let (peer_reqs_tx, peer_reqs_rx) = channel::new(

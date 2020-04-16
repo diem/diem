@@ -7,9 +7,7 @@ module Tester {
         r1;
     }
 
-    fun foo(r: &mut u64, r2: &mut u64): &mut u64 {
+    fun foo(_r: &mut u64, r2: &mut u64): &mut u64 {
         r2
     }
 }
-
-// check: COPYLOC_EXISTS_BORROW_ERROR

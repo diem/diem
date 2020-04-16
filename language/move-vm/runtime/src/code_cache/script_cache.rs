@@ -88,8 +88,9 @@ impl<'alloc> ScriptCache<'alloc> {
                     if module == script_module {
                         continue;
                     }
+                    let address = *script.as_inner().address_identifier_at(module.address);
                     let module_id = ModuleId::new(
-                        *script.as_inner().address_at(module.address),
+                        address,
                         script.as_inner().identifier_at(module.name).to_owned(),
                     );
                     deps.push(load_and_verify_module_id(&module_id, context)?);

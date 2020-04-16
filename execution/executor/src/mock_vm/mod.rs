@@ -10,15 +10,15 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
-    account_config::lbr_type_tag,
+    account_config::validator_set_address,
     contract_event::ContractEvent,
     event::EventKey,
     language_storage::TypeTag,
+    on_chain_config::{new_epoch_event_key, OnChainConfig, ValidatorSet},
     transaction::{
         RawTransaction, Script, SignedTransaction, Transaction, TransactionArgument,
         TransactionOutput, TransactionPayload, TransactionStatus,
     },
-    validator_set::{ValidatorSet, ValidatorSetResource, VALIDATOR_SET_RESOURCE_PATH},
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
@@ -65,7 +65,7 @@ impl VMExecutor for MockVM {
                 gen_genesis_writeset(),
                 // mock the validator set event
                 vec![ContractEvent::new(
-                    ValidatorSet::change_event_key(),
+                    new_epoch_event_key(),
                     0,
                     TypeTag::Bool,
                     lcs::to_bytes(&0).unwrap(),
@@ -151,10 +151,10 @@ impl VMExecutor for MockVM {
                         gen_genesis_writeset(),
                         // mock the validator set event
                         vec![ContractEvent::new(
-                            ValidatorSet::change_event_key(),
+                            new_epoch_event_key(),
                             0,
                             TypeTag::Bool,
-                            lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap(),
+                            lcs::to_bytes(&0).unwrap(),
                         )],
                         0,
                         KEEP_STATUS.clone(),
@@ -222,11 +222,13 @@ fn seqnum_ap(account: AccountAddress) -> AccessPath {
 
 fn gen_genesis_writeset() -> WriteSet {
     let mut write_set = WriteSetMut::default();
-    let address = account_config::validator_set_address();
-    let path = VALIDATOR_SET_RESOURCE_PATH.clone();
+    let path = ValidatorSet::CONFIG_ID.access_path();
     write_set.push((
-        AccessPath { address, path },
-        WriteOp::Value(lcs::to_bytes(&ValidatorSetResource::default()).unwrap()),
+        AccessPath {
+            address: validator_set_address(),
+            path: path.path,
+        },
+        WriteOp::Value(lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
     ));
     write_set
         .freeze()
@@ -304,15 +306,8 @@ pub fn encode_transfer_transaction(
 }
 
 fn encode_transaction(sender: AccountAddress, program: Script) -> Transaction {
-    let raw_transaction = RawTransaction::new_script(
-        sender,
-        0,
-        program,
-        0,
-        0,
-        lbr_type_tag(),
-        std::time::Duration::from_secs(0),
-    );
+    let raw_transaction =
+        RawTransaction::new_script(sender, 0, program, 0, 0, std::time::Duration::from_secs(0));
 
     let privkey = Ed25519PrivateKey::generate_for_testing();
     Transaction::UserTransaction(

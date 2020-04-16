@@ -10,15 +10,15 @@ use executor_types::ExecutedTrees;
 use futures::executor::block_on;
 use libra_config::config::RoleType;
 use libra_crypto::{
-    ed25519::Ed25519PrivateKey, hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED,
-    x25519::X25519StaticPrivateKey, PrivateKey, Uniform,
+    ed25519::Ed25519PrivateKey, hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519,
+    PrivateKey, Uniform,
 };
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures,
-    proof::TransactionListProof, transaction::TransactionListWithProof,
-    validator_change::ValidatorChangeProof, validator_info::ValidatorInfo,
-    validator_set::ValidatorSet, validator_signer::ValidatorSigner,
+    on_chain_config::ValidatorSet, proof::TransactionListProof,
+    transaction::TransactionListWithProof, validator_change::ValidatorChangeProof,
+    validator_info::ValidatorInfo, validator_signer::ValidatorSigner,
     validator_verifier::random_validator_verifier, waypoint::Waypoint,
 };
 use network::{
@@ -145,7 +145,7 @@ impl SynchronizerEnv {
             .collect();
         // Setup identity public keys.
         let identity_keys: Vec<_> = (0..count)
-            .map(|_| X25519StaticPrivateKey::generate(&mut rng))
+            .map(|_| x25519::PrivateKey::for_test(&mut rng))
             .collect();
 
         let mut validators_keys = vec![];
@@ -180,7 +180,7 @@ impl SynchronizerEnv {
                     signers[idx].public_key(),
                     validator_keys.consensus_voting_power(),
                     validator_keys.network_signing_public_key().clone(),
-                    validator_keys.network_identity_public_key().clone(),
+                    validator_keys.network_identity_public_key(),
                 )
             })
             .collect::<Vec<ValidatorInfo>>();
@@ -233,7 +233,7 @@ impl SynchronizerEnv {
                     *public_keys.account_address(),
                     NetworkPublicKeys {
                         signing_public_key: public_keys.network_signing_public_key().clone(),
-                        identity_public_key: public_keys.network_identity_public_key().clone(),
+                        identity_public_key: public_keys.network_identity_public_key(),
                     },
                 )
             })
@@ -293,6 +293,7 @@ impl SynchronizerEnv {
         )));
         let (mempool_channel, mempool_requests) = futures::channel::mpsc::channel(1_024);
         let synchronizer = StateSynchronizer::bootstrap_with_executor_proxy(
+            Runtime::new().unwrap(),
             vec![(sender, events)],
             mempool_channel,
             role,

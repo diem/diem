@@ -1,5 +1,5 @@
 module M {
-    fun foo<T, U>(x: T, y: U) {
+    fun foo<T, U>(_x: T, _y: U) {
     }
 
     fun t1() {

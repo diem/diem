@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use executor::Executor;
+use executor::{BlockExecutor, Executor};
 use executor_utils::create_storage_service_and_executor;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
@@ -22,7 +22,7 @@ use libra_vm::LibraVM;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::BTreeMap, convert::TryFrom, path::PathBuf, sync::mpsc};
 use storage_client::{StorageRead, StorageReadServiceClient};
-use transaction_builder::{encode_create_account_script, encode_transfer_script};
+use transaction_builder::{encode_create_account_script, encode_transfer_with_metadata_script};
 
 struct AccountData {
     private_key: Ed25519PrivateKey,
@@ -141,11 +141,12 @@ impl TransactionGenerator {
                     sender.sequence_number,
                     &sender.private_key,
                     sender.public_key.clone(),
-                    encode_transfer_script(
+                    encode_transfer_with_metadata_script(
                         lbr_type_tag(),
                         &receiver.address,
                         receiver.auth_key_prefix(),
                         1, /* amount */
+                        vec![],
                     ),
                 );
                 transactions.push(txn);
@@ -321,7 +322,6 @@ fn create_transaction(
         program,
         400_000, /* max_gas_amount */
         1,       /* gas_unit_price */
-        lbr_type_tag(),
         expiration_time,
     );
 

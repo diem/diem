@@ -262,7 +262,7 @@ impl FormatHolder for ContainerFormat {
     }
 
     fn normalize(&mut self) -> Result<()> {
-        match &mut *self {
+        match self {
             Self::UnitStruct => Ok(()),
 
             Self::NewTypeStruct(format) => format.normalize(),
@@ -370,7 +370,7 @@ impl FormatHolder for Format {
 
     fn normalize(&mut self) -> Result<()> {
         let normalized_tuple;
-        match &mut *self {
+        match self {
             Self::TypeName(_)
             | Self::Unit
             | Self::Bool
@@ -411,7 +411,7 @@ impl FormatHolder for Format {
 
             // The only case where compression happens.
             Self::Tuple(formats) => {
-                for format in &mut *formats {
+                for format in formats.iter_mut() {
                     format.normalize()?;
                 }
                 let size = formats.len();

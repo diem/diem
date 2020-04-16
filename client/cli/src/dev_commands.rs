@@ -17,7 +17,7 @@ impl Command for DevCommand {
         vec!["dev"]
     }
     fn get_description(&self) -> &'static str {
-        "Local move development"
+        "Local Move development"
     }
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
         let commands: Vec<Box<dyn Command>> = vec![
@@ -33,7 +33,7 @@ impl Command for DevCommand {
     }
 }
 
-/// Sub command to compile move program
+/// Sub command to compile a Move program
 pub struct DevCommandCompile {}
 
 impl Command for DevCommandCompile {
@@ -41,13 +41,13 @@ impl Command for DevCommandCompile {
         vec!["compile", "c"]
     }
     fn get_params_help(&self) -> &'static str {
-        "<sender_account_address>|<sender_account_ref_id> <file_path> <module|script> [output_file_path (compile into tmp file by default)]"
+        "<sender_account_address>|<sender_account_ref_id> <file_path> <dependency source files...>"
     }
     fn get_description(&self) -> &'static str {
-        "Compile move program"
+        "Compile Move program"
     }
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
-        if params.len() < 4 || params.len() > 5 {
+        if params.len() < 4 {
             println!("Invalid number of arguments for compilation");
             return;
         }
@@ -59,7 +59,7 @@ impl Command for DevCommandCompile {
     }
 }
 
-/// Sub command to publish move resource
+/// Sub command to publish a Move resource
 pub struct DevCommandPublish {}
 
 impl Command for DevCommandPublish {
@@ -72,7 +72,7 @@ impl Command for DevCommandPublish {
     }
 
     fn get_description(&self) -> &'static str {
-        "Publish move module on-chain"
+        "Publish Move module on-chain"
     }
 
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
@@ -87,7 +87,7 @@ impl Command for DevCommandPublish {
     }
 }
 
-/// Sub command to execute custom move script
+/// Sub command to execute a custom Move script
 pub struct DevCommandExecute {}
 
 impl Command for DevCommandExecute {
@@ -100,7 +100,7 @@ impl Command for DevCommandExecute {
     }
 
     fn get_description(&self) -> &'static str {
-        "Execute custom move script"
+        "Execute custom Move script"
     }
 
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {

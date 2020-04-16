@@ -19,7 +19,7 @@ module M {
         foo(loop {})
     }
 
-    fun foo(x: u64) {}
+    fun foo(_x: u64) {}
 
     fun t3(): X::R {
         let x: X::R = loop { 0; };

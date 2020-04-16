@@ -7,10 +7,9 @@ use functional_tests::{
     testsuite,
 };
 use libra_types::account_address::AccountAddress as LibraAddress;
-use move_bytecode_verifier::{batch_verify_modules, VerifiedModule};
 use move_lang::{
     compiled_unit::CompiledUnit,
-    move_compile, move_compile_no_report,
+    move_compile_no_report,
     shared::Address,
     test_utils::{read_bool_var, stdlib_files, FUNCTIONAL_TEST_DIR},
 };
@@ -90,24 +89,13 @@ impl Compiler for MoveSourceCompiler {
         })
     }
 
-    fn stdlib() -> Option<Vec<VerifiedModule>> {
-        let (_, compiled_units) =
-            move_compile(&stdlib_files(), &[], Some(Address::LIBRA_CORE)).unwrap();
-        Some(batch_verify_modules(
-            compiled_units
-                .into_iter()
-                .map(|compiled_unit| match compiled_unit {
-                    CompiledUnit::Module { module, .. } => module,
-                    CompiledUnit::Script { .. } => panic!("Unexpected Script in stdlib"),
-                })
-                .collect(),
-        ))
+    fn use_staged_genesis(&self) -> bool {
+        false
     }
 }
 
 fn functional_testsuite(path: &Path) -> datatest_stable::Result<()> {
-    let compiler = MoveSourceCompiler::new(stdlib_files());
-    testsuite::functional_tests(compiler, path)
+    testsuite::functional_tests(MoveSourceCompiler::new(stdlib_files()), path)
 }
 
 datatest_stable::harness!(functional_testsuite, FUNCTIONAL_TEST_DIR, r".*\.move");

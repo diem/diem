@@ -1,5 +1,5 @@
 module M {
-    fun tmove(cond: bool) {
+    fun tmove() {
         let x: u64;
         loop { let y = move x + 1; x = 0; y; }
     }
@@ -9,7 +9,7 @@ module M {
         loop { let y = x + 1; if (cond) { continue }; x = 0; y; }
     }
 
-    fun tborrow1(cond: bool) {
+    fun tborrow1() {
         let x: u64;
         loop { let y = &x; _ = move y; x = 0 }
     }

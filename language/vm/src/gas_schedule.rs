@@ -7,9 +7,9 @@
 //! operations or other native operations; the cost of each native operation will be returned by the
 //! native function itself.
 use crate::file_format::{
-    AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldHandleIndex, FieldInstantiationIndex,
-    FunctionHandleIndex, FunctionInstantiationIndex, StructDefInstantiationIndex,
-    StructDefinitionIndex, NUMBER_OF_NATIVE_FUNCTIONS,
+    Bytecode, ConstantPoolIndex, FieldHandleIndex, FieldInstantiationIndex, FunctionHandleIndex,
+    FunctionInstantiationIndex, StructDefInstantiationIndex, StructDefinitionIndex,
+    NUMBER_OF_NATIVE_FUNCTIONS,
 };
 pub use crate::file_format_common::Opcodes;
 use libra_types::transaction::MAX_TRANSACTION_SIZE_IN_BYTES;
@@ -137,6 +137,9 @@ define_gas_unit! {
     doc: "A newtype wrapper around the gas price for each unit of gas consumed."
 }
 
+/// Zero cost.
+pub const ZERO_GAS_UNITS: GasUnits<GasCarrier> = GasUnits(0);
+
 /// The cost per-byte written to global storage.
 /// TODO: Fill this in with a proper number once it's determined.
 pub const GLOBAL_MEMORY_PER_BYTE_COST: GasUnits<GasCarrier> = GasUnits(8);
@@ -203,8 +206,7 @@ pub fn instruction_key(instruction: &Bytecode) -> u8 {
         CastU8 => Opcodes::CAST_U8,
         CastU64 => Opcodes::CAST_U64,
         CastU128 => Opcodes::CAST_U128,
-        LdByteArray(_) => Opcodes::LD_BYTEARRAY,
-        LdAddr(_) => Opcodes::LD_ADDR,
+        LdConst(_) => Opcodes::LD_CONST,
         LdTrue => Opcodes::LD_TRUE,
         LdFalse => Opcodes::LD_FALSE,
         CopyLoc(_) => Opcodes::COPY_LOC,
@@ -391,7 +393,7 @@ impl CostTable {
             (Abort, GasCost::new(0, 0)),
             (MutBorrowLoc(0), GasCost::new(0, 0)),
             (ImmBorrowLoc(0), GasCost::new(0, 0)),
-            (LdAddr(AddressPoolIndex::new(0)), GasCost::new(0, 0)),
+            (LdConst(ConstantPoolIndex::new(0)), GasCost::new(0, 0)),
             (Ge, GasCost::new(0, 0)),
             (Xor, GasCost::new(0, 0)),
             (Shl, GasCost::new(0, 0)),
@@ -444,7 +446,6 @@ impl CostTable {
             ),
             (Div, GasCost::new(0, 0)),
             (Eq, GasCost::new(0, 0)),
-            (LdByteArray(ByteArrayPoolIndex::new(0)), GasCost::new(0, 0)),
             (Gt, GasCost::new(0, 0)),
             (Pack(StructDefinitionIndex::new(0)), GasCost::new(0, 0)),
             (

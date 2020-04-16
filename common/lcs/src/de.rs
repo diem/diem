@@ -492,7 +492,7 @@ impl<'de, 'a> de::MapAccess<'de> for MapDeserializer<'a, 'de> {
             let previous_input_slice = &self.de.input[..];
             let key_value = seed.deserialize(&mut *self.de)?;
             let key_len = previous_input_slice.len() - self.de.input.len();
-            let key_bytes = &previous_input_slice[0..key_len];
+            let key_bytes = &previous_input_slice[..key_len];
             if let Some(previous_key_bytes) = self.previous_key_bytes {
                 if previous_key_bytes >= key_bytes {
                     return Err(Error::NonCanonicalMap);

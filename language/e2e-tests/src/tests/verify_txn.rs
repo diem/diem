@@ -19,7 +19,7 @@ use libra_types::{
     vm_error::{StatusCode, StatusType, VMStatus},
 };
 use stdlib::transaction_scripts::StdlibScript;
-use transaction_builder::encode_transfer_script;
+use transaction_builder::encode_transfer_with_metadata_script;
 use vm::gas_schedule::{self, GasAlgebra};
 
 #[test]
@@ -29,7 +29,8 @@ fn verify_signature() {
     executor.add_account_data(&sender);
     // Generate a new key pair to try and sign things with.
     let private_key = Ed25519PrivateKey::generate_for_testing();
-    let program = encode_transfer_script(lbr_type_tag(), sender.address(), vec![], 100);
+    let program =
+        encode_transfer_with_metadata_script(lbr_type_tag(), sender.address(), vec![], 100, vec![]);
     let signed_txn = transaction_test_helpers::get_test_unchecked_txn(
         *sender.address(),
         0,
@@ -52,7 +53,8 @@ fn verify_reserved_sender() {
     executor.add_account_data(&sender);
     // Generate a new key pair to try and sign things with.
     let private_key = Ed25519PrivateKey::generate_for_testing();
-    let program = encode_transfer_script(lbr_type_tag(), sender.address(), vec![], 100);
+    let program =
+        encode_transfer_with_metadata_script(lbr_type_tag(), sender.address(), vec![], 100, vec![]);
     let signed_txn = transaction_test_helpers::get_test_signed_txn(
         CORE_CODE_ADDRESS,
         0,
@@ -65,27 +67,6 @@ fn verify_reserved_sender() {
         executor.verify_transaction(signed_txn.clone()).status(),
         executor.execute_transaction(signed_txn).status(),
         VMStatus::new(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST)
-    );
-}
-
-#[test]
-fn verify_rejected_write_set() {
-    let mut executor = FakeExecutor::from_genesis_file();
-    let sender = AccountData::new(900_000, 10);
-    executor.add_account_data(&sender);
-    let signed_txn = transaction_test_helpers::get_write_set_txn(
-        *sender.address(),
-        0,
-        &sender.account().privkey,
-        sender.account().pubkey.clone(),
-        None,
-    )
-    .into_inner();
-
-    assert_prologue_parity!(
-        executor.verify_transaction(signed_txn.clone()).status(),
-        executor.execute_transaction(signed_txn).status(),
-        VMStatus::new(StatusCode::REJECTED_WRITE_SET)
     );
 }
 
@@ -115,7 +96,6 @@ fn verify_simple_payment() {
         10, // this should be programmable but for now is 1 more than the setup
         100_000,
         1,
-        lbr_type_tag(),
     );
     assert_eq!(executor.verify_transaction(txn).status(), None);
 
@@ -128,7 +108,6 @@ fn verify_simple_payment() {
         10, // this should be programmable but for now is 1 more than the setup
         100_000,
         1,
-        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -144,7 +123,6 @@ fn verify_simple_payment() {
         1,
         100_000,
         1,
-        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -160,7 +138,6 @@ fn verify_simple_payment() {
         11,
         100_000,
         1,
-        lbr_type_tag(),
     );
     assert_prologue_disparity!(
         executor.verify_transaction(txn.clone()).status() => None,
@@ -178,7 +155,6 @@ fn verify_simple_payment() {
         10,
         1_000_000,
         1,
-        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -200,7 +176,6 @@ fn verify_simple_payment() {
         10,
         10_000,
         1,
-        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -224,7 +199,6 @@ fn verify_simple_payment() {
         10,
         1_000_000,
         gas_schedule::MAX_PRICE_PER_GAS_UNIT.get() + 1,
-        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -255,7 +229,6 @@ fn verify_simple_payment() {
         10,
         1,
         gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
-        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -270,7 +243,6 @@ fn verify_simple_payment() {
         10,
         gas_schedule::MIN_TRANSACTION_GAS_UNITS.get() - 1,
         gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
-        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -285,7 +257,6 @@ fn verify_simple_payment() {
         10,
         gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
         gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
-        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -300,7 +271,6 @@ fn verify_simple_payment() {
         10,
         gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
         gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
-        lbr_type_tag(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -320,7 +290,6 @@ fn verify_simple_payment() {
         10,
         100_000,
         1,
-        lbr_type_tag(),
     );
     assert_eq!(
         executor.execute_transaction(txn).status(),
@@ -338,7 +307,6 @@ fn verify_simple_payment() {
         10,
         100_000,
         1,
-        lbr_type_tag(),
     );
 
     assert_eq!(
@@ -360,15 +328,10 @@ pub fn test_whitelist() {
 
     // When CustomScripts is off, a garbage script should be rejected with Keep(UnknownScript)
     let random_script = vec![];
-    let txn = sender.account().create_signed_txn_with_args(
-        random_script,
-        vec![],
-        vec![],
-        10,
-        100_000,
-        1,
-        lbr_type_tag(),
-    );
+    let txn =
+        sender
+            .account()
+            .create_signed_txn_with_args(random_script, vec![], vec![], 10, 100_000, 1);
 
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -389,15 +352,10 @@ pub fn test_arbitrary_script_execution() {
     // If CustomScripts is on, result should be Keep(DeserializationError). If it's off, the
     // result should be Keep(UnknownScript)
     let random_script = vec![];
-    let txn = sender.account().create_signed_txn_with_args(
-        random_script,
-        vec![],
-        vec![],
-        10,
-        100_000,
-        1,
-        lbr_type_tag(),
-    );
+    let txn =
+        sender
+            .account()
+            .create_signed_txn_with_args(random_script, vec![], vec![], 10, 100_000, 1);
 
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     let status = executor.execute_transaction(txn).status().clone();
@@ -441,7 +399,7 @@ pub fn test_no_publishing() {
     let random_module = compile_module_with_address(sender.address(), "file_name", &module);
     let txn = sender
         .account()
-        .create_user_txn(random_module, 10, 100_000, 1, lbr_type_tag());
+        .create_user_txn(random_module, 10, 100_000, 1);
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
@@ -484,7 +442,7 @@ pub fn test_open_publishing_invalid_address() {
     let random_module = compile_module_with_address(receiver.address(), "file_name", &module);
     let txn = sender
         .account()
-        .create_user_txn(random_module, 10, 100_000, 1, lbr_type_tag());
+        .create_user_txn(random_module, 10, 100_000, 1);
 
     // TODO: This is not verified for now.
     // verify and fail because the addresses don't match
@@ -535,7 +493,7 @@ pub fn test_open_publishing() {
     let random_module = compile_module_with_address(sender.address(), "file_name", &program);
     let txn = sender
         .account()
-        .create_user_txn(random_module, 10, 100_000, 1, lbr_type_tag());
+        .create_user_txn(random_module, 10, 100_000, 1);
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
@@ -600,7 +558,6 @@ fn test_dependency_fails_verification() {
         10,
         100_000,
         1,
-        lbr_type_tag(),
     );
     // As of now, we don't verify dependencies in verify_transaction.
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);

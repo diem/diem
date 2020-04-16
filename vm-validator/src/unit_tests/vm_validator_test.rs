@@ -15,10 +15,10 @@ use libra_types::{
 use libra_vm::LibraVM;
 use rand::SeedableRng;
 use std::{sync::Arc, u64};
-use storage_client::{StorageRead, StorageReadServiceClient};
-use storage_service::start_storage_service;
+use storage_client::SyncStorageClient;
+use storage_service::{init_libra_db, start_storage_service_with_db};
 use tokio::runtime::Runtime;
-use transaction_builder::encode_transfer_script;
+use transaction_builder::encode_transfer_with_metadata_script;
 
 struct TestValidator {
     _storage: Runtime,
@@ -28,15 +28,15 @@ struct TestValidator {
 impl TestValidator {
     fn new(config: &NodeConfig) -> (Self, Runtime) {
         let rt = Runtime::new().unwrap();
-        let storage = start_storage_service(&config);
-        maybe_bootstrap_db::<LibraVM>(config).expect("Db-bootstrapper should not fail.");
+        let (arc_db, db_reader_writer) = init_libra_db(config);
+        maybe_bootstrap_db::<LibraVM>(db_reader_writer, config)
+            .expect("Db-bootstrapper should not fail.");
+        let storage = start_storage_service_with_db(&config, arc_db);
 
         // Create another client for the vm_validator since the one used for the executor will be
         // run on another runtime which will be dropped before this function returns.
-        let read_client: Arc<dyn StorageRead> =
-            Arc::new(StorageReadServiceClient::new(&config.storage.address));
-        let vm_validator = VMValidator::new(read_client, rt.handle().clone());
-
+        let db_reader = Arc::new(SyncStorageClient::new(&config.storage.address));
+        let vm_validator = VMValidator::new(db_reader);
         (
             TestValidator {
                 _storage: storage,
@@ -77,7 +77,8 @@ fn test_validate_transaction() {
     let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let program = encode_transfer_script(lbr_type_tag(), &address, vec![], 100);
+    let program =
+        encode_transfer_with_metadata_script(lbr_type_tag(), &address, vec![], 100, vec![]);
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
@@ -101,7 +102,8 @@ fn test_validate_invalid_signature() {
     // Submit with an account using an different private/public keypair
 
     let address = account_config::association_address();
-    let program = encode_transfer_script(lbr_type_tag(), &address, vec![], 100);
+    let program =
+        encode_transfer_with_metadata_script(lbr_type_tag(), &address, vec![], 100, vec![]);
     let transaction = transaction_test_helpers::get_test_unchecked_txn(
         address,
         1,
@@ -139,7 +141,6 @@ fn test_validate_known_script_too_large_args() {
              * max size */
         0,
         0, /* max gas price */
-        lbr_type_tag(),
         None,
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
@@ -162,8 +163,7 @@ fn test_validate_max_gas_units_above_max() {
         key.public_key(),
         None,
         0,
-        0, /* max gas price */
-        lbr_type_tag(),
+        0,              /* max gas price */
         Some(u64::MAX), // Max gas units
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
@@ -186,8 +186,7 @@ fn test_validate_max_gas_units_below_min() {
         key.public_key(),
         None,
         0,
-        0, /* max gas price */
-        lbr_type_tag(),
+        0,       /* max gas price */
         Some(1), // Max gas units
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
@@ -211,7 +210,6 @@ fn test_validate_max_gas_price_above_bounds() {
         None,
         0,
         u64::MAX, /* max gas price */
-        lbr_type_tag(),
         None,
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
@@ -230,7 +228,8 @@ fn test_validate_max_gas_price_below_bounds() {
     let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let program = encode_transfer_script(lbr_type_tag(), &address, vec![], 100);
+    let program =
+        encode_transfer_with_metadata_script(lbr_type_tag(), &address, vec![], 100, vec![]);
     let txn = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
@@ -240,7 +239,6 @@ fn test_validate_max_gas_price_below_bounds() {
         // Initial Time was set to 0 with a TTL 86400 secs.
         40000,
         0, /* max gas price */
-        lbr_type_tag(),
         None,
     );
     let ret = rt.block_on(vm_validator.validate_transaction(txn)).unwrap();
@@ -309,7 +307,8 @@ fn test_validate_invalid_auth_key() {
     // Submit with an account using an different private/public keypair
 
     let address = account_config::association_address();
-    let program = encode_transfer_script(lbr_type_tag(), &address, vec![], 100);
+    let program =
+        encode_transfer_with_metadata_script(lbr_type_tag(), &address, vec![], 100, vec![]);
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
@@ -333,7 +332,8 @@ fn test_validate_account_doesnt_exist() {
 
     let address = account_config::association_address();
     let random_account_addr = account_address::AccountAddress::random();
-    let program = encode_transfer_script(lbr_type_tag(), &address, vec![], 100);
+    let program =
+        encode_transfer_with_metadata_script(lbr_type_tag(), &address, vec![], 100, vec![]);
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         random_account_addr,
         1,
@@ -342,7 +342,6 @@ fn test_validate_account_doesnt_exist() {
         Some(program),
         0,
         1, /* max gas price */
-        lbr_type_tag(),
         None,
     );
     let ret = rt
@@ -360,7 +359,8 @@ fn test_validate_sequence_number_too_new() {
     let (vm_validator, mut rt) = TestValidator::new(&config);
 
     let address = account_config::association_address();
-    let program = encode_transfer_script(lbr_type_tag(), &address, vec![], 100);
+    let program =
+        encode_transfer_with_metadata_script(lbr_type_tag(), &address, vec![], 100, vec![]);
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
@@ -381,7 +381,8 @@ fn test_validate_invalid_arguments() {
 
     let address = account_config::association_address();
     let (program_script, _) =
-        encode_transfer_script(lbr_type_tag(), &address, vec![], 100).into_inner();
+        encode_transfer_with_metadata_script(lbr_type_tag(), &address, vec![], 100, vec![])
+            .into_inner();
     let program = Script::new(program_script, vec![], vec![TransactionArgument::U64(42)]);
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
@@ -409,8 +410,5 @@ fn test_validate_non_genesis_write_set() {
     let ret = rt
         .block_on(vm_validator.validate_transaction(transaction))
         .unwrap();
-    assert_eq!(
-        ret.status().unwrap().major_status,
-        StatusCode::REJECTED_WRITE_SET
-    );
+    assert_eq!(ret.status().unwrap().major_status, StatusCode::ABORTED);
 }

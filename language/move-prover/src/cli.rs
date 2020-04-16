@@ -6,14 +6,11 @@
 //! Functionality related to the command line interface of the move prover.
 
 use clap::{App, Arg};
-use log::{error, LevelFilter};
+use log::LevelFilter;
 use simplelog::{
     CombinedLogger, Config, ConfigBuilder, LevelPadding, SimpleLogger, TermLogger, TerminalMode,
 };
-use std::{
-    fmt::Display,
-    sync::atomic::{AtomicBool, Ordering},
-};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Represents the virtual path to the boogie prelude which is inlined into the binary.
 pub const INLINE_PRELUDE: &str = "<inline-prelude>";
@@ -70,6 +67,8 @@ pub struct Options {
     /// Whether output for e.g. diagnosis shall be stable/redacted so it can be used in test
     /// output.
     pub stable_test_output: bool,
+    /// Whether to only verify functions which have associated specifications
+    pub only_verify_spec: bool,
 }
 
 impl Default for Options {
@@ -91,6 +90,7 @@ impl Default for Options {
             omit_model_debug: false,
             use_array_theory: false,
             stable_test_output: false,
+            only_verify_spec: false,
         }
     }
 }
@@ -142,6 +142,11 @@ impl Options {
                     .short("g")
                     .long("generate-only")
                     .help("only generate boogie file but do not call boogie"),
+            )
+            .arg(
+                Arg::with_name("only-verify-spec")
+                    .long("only-verify-spec")
+                    .help("whether to only verify functions which have associated specifications"),
             )
             .arg(
                 Arg::with_name("native-stubs")
@@ -212,7 +217,7 @@ impl Options {
             .arg(
                 Arg::with_name("sources")
                     .multiple(true)
-                    .value_name("MVIR_FILE")
+                    .value_name("MOVE_FILE")
                     .min_values(1)
                     .help("path to a move file (with embedded spec)"),
             );
@@ -249,6 +254,7 @@ impl Options {
         self.move_sources = get_vec("sources");
         self.use_array_theory = matches.is_present("use-array-theory");
         self.stable_test_output = matches.is_present("stable-test-output");
+        self.only_verify_spec = matches.is_present("only-verify-spec");
     }
 
     /// Sets up logging based on provided options. This should be called as early as possible
@@ -304,27 +310,5 @@ impl Options {
     /// Returns name of file where to log boogie output.
     pub fn get_boogie_log_file(&self, boogie_file: &str) -> String {
         format!("{}.log", boogie_file)
-    }
-}
-
-/// If result is not OK, log error and abort program. In difference to result.expect(), this
-/// is dealing with a user input, not a program error, and thus does not print a stacktrace.
-pub fn abort_on_error<T, E: Display>(r: Result<T, E>, msg: &str) -> T {
-    match r {
-        Ok(x) => x,
-        Err(e) => abort_with_error(&format!("{}: {}", msg, e)),
-    }
-}
-
-/// Abort program after printing error message. This is dealing with a user input error,
-/// so panic! with a stack trace is not used.
-pub fn abort_with_error<T>(msg: &str) -> T {
-    error!("{}", msg);
-    if TEST_MODE.load(Ordering::Relaxed) {
-        // We do not want to exit the process during tests, because we do not see buffered terminal
-        // output if so.
-        panic!("test aborted");
-    } else {
-        std::process::exit(1);
     }
 }

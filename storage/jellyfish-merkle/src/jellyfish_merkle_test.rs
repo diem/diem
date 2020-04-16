@@ -839,7 +839,7 @@ fn compute_root_hash_impl(kvs: Vec<(&[bool], HashValue)>) -> HashValue {
         }
         Some(index) => {
             // Both left subtree and right subtree have some keys.
-            left_hash = compute_root_hash_impl(reduce(&kvs[0..index]));
+            left_hash = compute_root_hash_impl(reduce(&kvs[..index]));
             right_hash = compute_root_hash_impl(reduce(&kvs[index..]));
         }
         None => {

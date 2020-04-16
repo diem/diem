@@ -21,11 +21,14 @@ use pretty::RcDoc;
 use regex::Regex;
 
 use spec_lang::{
-    env::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleId, StructId},
+    env::{FunId, GlobalEnv, Loc, ModuleId, StructId},
     ty::{PrimitiveType, Type},
 };
 
 use crate::{cli::Options, code_writer::CodeWriter};
+use stackless_bytecode_generator::{
+    function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder,
+};
 
 /// A type alias for the way how we use crate `pretty`'s document type. `pretty` is a
 /// Wadler-style pretty printer. Our simple usage doesn't require any lifetime management.
@@ -37,6 +40,7 @@ type PrettyDoc = RcDoc<'static, ()>;
 /// Represents the boogie wrapper.
 pub struct BoogieWrapper<'env> {
     pub env: &'env GlobalEnv,
+    pub targets: &'env FunctionTargetsHolder,
     pub writer: &'env CodeWriter,
     pub options: &'env Options,
     pub boogie_file_id: FileId,
@@ -300,7 +304,11 @@ impl<'env> BoogieWrapper<'env> {
             _ => "",
         };
         if let Some(func_env) = self.env.get_enclosing_function(loc.clone()) {
-            let func_name = format!("{}", func_env.get_name().display(func_env.symbol_pool()));
+            let func_target = self.targets.get_target(&func_env);
+            let func_name = format!(
+                "{}",
+                func_target.get_name().display(func_target.symbol_pool())
+            );
             let func_display = format!("{}{}", func_name, kind_tag);
             if is_last {
                 // If this is the last trace entry, set the location to the end of the function.
@@ -309,11 +317,11 @@ impl<'env> BoogieWrapper<'env> {
             }
             let model_info = if let Some(model) = model_opt {
                 let displayed_info = model
-                    .relevant_tracked_locals(&func_env, loc, locals_shown)
+                    .relevant_tracked_locals(&func_target, loc, locals_shown)
                     .iter()
                     .map(|(var, val)| {
-                        let ty = self.get_type_of_local_or_return(&func_env, var.var_idx);
-                        var.pretty(self, &func_env, model, &ty, val)
+                        let ty = self.get_type_of_local_or_return(&func_target, var.var_idx);
+                        var.pretty(self, &func_target, model, &ty, val)
                     })
                     .collect_vec();
                 has_info = !displayed_info.is_empty();
@@ -339,12 +347,16 @@ impl<'env> BoogieWrapper<'env> {
     }
 
     /// Returns the type of either a local or a return parameter.
-    fn get_type_of_local_or_return(&self, func_env: &FunctionEnv<'_>, idx: usize) -> Type {
-        let n = func_env.get_local_count();
+    fn get_type_of_local_or_return(
+        &self,
+        func_target: &'env FunctionTarget<'env>,
+        idx: usize,
+    ) -> &'env Type {
+        let n = func_target.get_local_count();
         if idx < n {
-            func_env.get_local_type(idx)
+            func_target.get_local_type(idx)
         } else {
-            func_env.get_return_types()[idx - n].clone()
+            func_target.get_return_type(idx - n)
         }
     }
 
@@ -379,7 +391,7 @@ impl<'env> BoogieWrapper<'env> {
         loop {
             let model = model_region.captures(&out[at..]).and_then(|cap| {
                 at += cap.get(0).unwrap().end();
-                match Model::parse(self.env, cap.name("mod").unwrap().as_str()) {
+                match Model::parse(self, cap.name("mod").unwrap().as_str()) {
                     Ok(model) => Some(model),
                     Err(parse_error) => {
                         warn!("failed to parse boogie model: {}", parse_error.0);
@@ -497,7 +509,7 @@ pub struct Model {
 
 impl Model {
     /// Parses the given string into a model. The string is expected to end with MODULE_END_MARKER.
-    fn parse(env: &GlobalEnv, input: &str) -> Result<Model, ModelParseError> {
+    fn parse(wrapper: &BoogieWrapper<'_>, input: &str) -> Result<Model, ModelParseError> {
         let mut model_parser = ModelParser { input, at: 0 };
         model_parser
             .parse_map()
@@ -521,7 +533,7 @@ impl Model {
                     if k == &ModelValue::literal("else") {
                         continue;
                     }
-                    let (var, loc, value) = Self::extract_debug_var(env, k)?;
+                    let (var, loc, value) = Self::extract_debug_var(wrapper, k)?;
                     tracked_locals
                         .entry(loc)
                         .or_insert_with(|| vec![])
@@ -538,7 +550,7 @@ impl Model {
                     if k == &ModelValue::literal("else") {
                         continue;
                     }
-                    let (mark, loc) = Self::extract_abort_marker(env, k)?;
+                    let (mark, loc) = Self::extract_abort_marker(wrapper, k)?;
                     tracked_aborts.insert(loc, mark);
                 }
                 // DEBUG
@@ -560,27 +572,29 @@ impl Model {
 
     /// Extract and validate a tracked local from $DebugTrackLocal map.
     fn extract_debug_var(
-        env: &GlobalEnv,
+        wrapper: &BoogieWrapper<'_>,
         map_entry: &ModelValue,
     ) -> Result<(LocalDescriptor, Loc, ModelValue), ModelParseError> {
         if let ModelValue::List(args) = map_entry {
             if args.len() != 4 {
                 return Err(Self::invalid_track_info());
             }
-            let loc = Self::extract_loc(env, args)?;
-            let func_env = env
+            let loc = Self::extract_loc(wrapper, args)?;
+            let func_env = wrapper
+                .env
                 .get_enclosing_function(loc.clone())
                 .ok_or_else(Self::invalid_track_info)?;
+            let func_target = wrapper.targets.get_target(&func_env);
             let var_idx = args[2]
                 .extract_number()
                 .ok_or_else(Self::invalid_track_info)
                 .and_then(Self::index_range_check(
-                    func_env.get_local_count() + func_env.get_return_count(),
+                    func_target.get_local_count() + func_target.get_return_count(),
                 ))?;
             Ok((
                 LocalDescriptor {
-                    module_id: func_env.module_env.get_id(),
-                    func_id: func_env.get_id(),
+                    module_id: func_target.func_env.module_env.get_id(),
+                    func_id: func_target.get_id(),
                     var_idx,
                 },
                 loc,
@@ -593,21 +607,23 @@ impl Model {
 
     /// Extract and validate a tracked abort from $DebugTrackAbort map.
     fn extract_abort_marker(
-        env: &GlobalEnv,
+        wrapper: &BoogieWrapper<'_>,
         map_entry: &ModelValue,
     ) -> Result<(AbortDescriptor, Loc), ModelParseError> {
         if let ModelValue::List(args) = map_entry {
             if args.len() != 2 {
                 return Err(Self::invalid_track_info());
             }
-            let loc = Self::extract_loc(env, args)?;
-            let func_env = env
+            let loc = Self::extract_loc(wrapper, args)?;
+            let func_env = wrapper
+                .env
                 .get_enclosing_function(loc.clone())
                 .ok_or_else(Self::invalid_track_info)?;
+            let func_target = wrapper.targets.get_target(&func_env);
             Ok((
                 AbortDescriptor {
-                    module_id: func_env.module_env.get_id(),
-                    func_id: func_env.get_id(),
+                    module_id: func_target.func_env.module_env.get_id(),
+                    func_id: func_target.get_id(),
                 },
                 loc,
             ))
@@ -617,15 +633,18 @@ impl Model {
     }
 
     // Extract Loc from model values.
-    fn extract_loc(env: &GlobalEnv, args: &[ModelValue]) -> Result<Loc, ModelParseError> {
+    fn extract_loc(
+        wrapper: &BoogieWrapper<'_>,
+        args: &[ModelValue],
+    ) -> Result<Loc, ModelParseError> {
         if args.len() < 2 {
             Err(Self::invalid_track_info())
         } else {
             let file_idx = args[0]
                 .extract_number()
                 .ok_or_else(Self::invalid_track_info)
-                .and_then(Self::index_range_check(env.get_file_count()))?;
-            let file_id = env.file_idx_to_id(file_idx as u16);
+                .and_then(Self::index_range_check(wrapper.env.get_file_count()))?;
+            let file_id = wrapper.env.file_idx_to_id(file_idx as u16);
             let byte_index = ByteIndex(
                 args[1]
                     .extract_number()
@@ -668,18 +687,18 @@ impl Model {
     /// cases seen so far, but may need further refinement.
     fn relevant_tracked_locals(
         &self,
-        func_env: &FunctionEnv<'_>,
+        func_target: &FunctionTarget<'_>,
         loc: Loc,
         locals_shown: &mut BTreeSet<(Loc, LocalDescriptor)>,
     ) -> BTreeSet<(LocalDescriptor, ModelValue)> {
-        let func_loc = func_env.get_loc();
+        let func_loc = func_target.get_loc();
         self.tracked_locals
             .range(func_loc.at_start()..loc.at_end())
             .flat_map(|(loc, vars)| {
                 let mut res = vec![];
                 for (var, val) in vars {
-                    let var_name = func_env.get_local_name(var.var_idx);
-                    if func_env.symbol_pool().string(var_name).contains("$$") {
+                    let var_name = func_target.get_local_name(var.var_idx);
+                    if func_target.symbol_pool().string(var_name).contains("$$") {
                         // Do not show temporaries generated by the move compiler.
                         continue;
                     }
@@ -981,14 +1000,14 @@ impl LocalDescriptor {
     fn pretty(
         &self,
         wrapper: &BoogieWrapper,
-        func_env: &FunctionEnv<'_>,
+        func_target: &FunctionTarget<'_>,
         model: &Model,
         ty: &Type,
         resolved_value: &ModelValue,
     ) -> PrettyDoc {
-        let n = func_env.get_local_count();
+        let n = func_target.get_local_count();
         let var_name = if self.var_idx >= n {
-            if func_env.get_return_count() > 1 {
+            if func_target.get_return_count() > 1 {
                 format!("result_{}", self.var_idx - n)
             } else {
                 "result".to_string()
@@ -996,9 +1015,9 @@ impl LocalDescriptor {
         } else {
             format!(
                 "{}",
-                func_env
+                func_target
                     .get_local_name(self.var_idx)
-                    .display(func_env.symbol_pool())
+                    .display(func_target.symbol_pool())
             )
         };
         PrettyDoc::text(var_name)

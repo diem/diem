@@ -4,20 +4,68 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use bytecode_verifier::absint::{AbstractDomain, JoinResult};
-use vm::file_format::{CodeOffset, SignatureToken};
+use vm::file_format::CodeOffset;
 
 use crate::{
     dataflow_analysis::{DataflowAnalysis, StateMap, TransferFunctions},
+    function_target::{FunctionTarget, FunctionTargetData},
+    function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{
-        StacklessBytecode::{self, *},
-        TempIndex,
+        AssignKind,
+        Bytecode::{self, *},
+        Operation, TempIndex,
     },
     stackless_control_flow_graph::StacklessControlFlowGraph,
 };
+use itertools::Itertools;
+use spec_lang::{env::FunctionEnv, ty::Type};
+
+/// Function target annotation computed by the lifetime analysis processor.
+pub struct LifetimeAnnotation(BTreeMap<CodeOffset, BTreeSet<TempIndex>>);
+
+impl LifetimeAnnotation {
+    pub fn get_dead_refs(&self, code_offset: CodeOffset) -> Option<&BTreeSet<TempIndex>> {
+        self.0.get(&code_offset)
+    }
+}
+
+/// Lifetime analysis processor.
+pub struct LifetimeAnalysisProcessor {}
+
+impl LifetimeAnalysisProcessor {
+    pub fn new() -> Box<Self> {
+        Box::new(LifetimeAnalysisProcessor {})
+    }
+}
+
+impl FunctionTargetProcessor for LifetimeAnalysisProcessor {
+    fn process(
+        &self,
+        _targets: &mut FunctionTargetsHolder,
+        func_env: &FunctionEnv<'_>,
+        mut data: FunctionTargetData,
+    ) -> FunctionTargetData {
+        let offset_to_dead_refs = if func_env.is_native() {
+            // Native functions have no byte code.
+            LifetimeAnnotation(BTreeMap::new())
+        } else {
+            let cfg = StacklessControlFlowGraph::new(&data.code);
+            LifetimeAnnotation(LifetimeAnalysis::analyze(
+                &cfg,
+                &data.code,
+                &data.local_types,
+            ))
+        };
+        // Annotate function target with computed lifetime data.
+        data.annotations
+            .set::<LifetimeAnnotation>(offset_to_dead_refs);
+        data
+    }
+}
 
 /// Represents a node in the borrow graph.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub enum Node {
+enum Node {
     /// Root means global storage or local storage. For example when there's BorrowLoc(dest, _) or
     /// BorrowGlobal(dest,_,_) then an edge will be added between Root -> Local(dest)
     Root,
@@ -28,14 +76,14 @@ pub enum Node {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct BorrowGraph {
+struct BorrowGraph {
     graph: BTreeMap<Node, BTreeSet<Node>>,
     reverse_graph: BTreeMap<Node, BTreeSet<Node>>,
     moved_locals: BTreeSet<TempIndex>,
 }
 
 impl BorrowGraph {
-    pub fn new() -> Self {
+    fn new() -> Self {
         BorrowGraph {
             graph: BTreeMap::new(),
             reverse_graph: BTreeMap::new(),
@@ -44,7 +92,7 @@ impl BorrowGraph {
     }
 
     /// Add an edge in the graph
-    pub fn add_edge(&mut self, from: Node, to: Node) {
+    fn add_edge(&mut self, from: Node, to: Node) {
         // Fancy statement that modifies the value of key from if it exists, and inserts otherwise.
         self.graph
             .entry(from)
@@ -64,7 +112,7 @@ impl BorrowGraph {
 
     /// Mark a local as moved. Notice that moving the local doesn't mean
     /// it's dead and can be removed
-    pub fn move_local(&mut self, local: TempIndex) {
+    fn move_local(&mut self, local: TempIndex) {
         let node = Node::Local(local);
 
         // Only mark local if it actually exists in the graph
@@ -74,7 +122,7 @@ impl BorrowGraph {
     }
 
     /// Replace all appearances of before with after in the graph
-    pub fn replace_local(&mut self, before: Node, after: Node) {
+    fn replace_local(&mut self, before: Node, after: Node) {
         if let Some(to_neighbors) = self.graph.remove(&before) {
             for to in &to_neighbors {
                 self.reverse_graph.entry(*to).and_modify(|e| {
@@ -96,7 +144,7 @@ impl BorrowGraph {
     }
 
     /// Copy all appearances of src to dest in the graph
-    pub fn copy_local(&mut self, dest: Node, src: Node) {
+    fn copy_local(&mut self, dest: Node, src: Node) {
         if self.graph.contains_key(&src) {
             let to_neighbors = self.graph[&src].clone();
             for to in &to_neighbors {
@@ -119,7 +167,7 @@ impl BorrowGraph {
 
     /// Join two borrow graphs, so that self is mutated into a graph consisting of
     /// edges in both graphs
-    pub fn join(&mut self, other: &Self) {
+    fn join(&mut self, other: &Self) {
         for (n, to_neighbors) in &other.graph {
             self.graph
                 .entry(*n)
@@ -142,14 +190,14 @@ impl BorrowGraph {
     }
 
     /// If the BorrowGraph is a subset of other
-    pub fn is_subset(&self, other: &Self) -> bool {
+    fn is_subset(&self, other: &Self) -> bool {
         self.graph
             .keys()
             .all(|k| other.graph.contains_key(k) && self.graph[&k].is_subset(&other.graph[&k]))
     }
 
     /// Remove a node from the graph
-    pub fn remove_node(&mut self, node: Node) {
+    fn remove_node(&mut self, node: Node) {
         if let Node::Local(l) = node {
             self.moved_locals.remove(&l);
         }
@@ -166,7 +214,7 @@ impl BorrowGraph {
     }
 
     /// Find all the moved sink nodes, nodes that don't have any incoming edges
-    pub fn find_sink_nodes(&mut self) -> BTreeSet<Node> {
+    fn find_sink_nodes(&mut self) -> BTreeSet<Node> {
         let mut res = BTreeSet::new();
         for l in &self.moved_locals {
             let n = Node::Local(*l);
@@ -179,7 +227,7 @@ impl BorrowGraph {
 
     /// Trim the borrow graph by iteratively deleting moved sink nodes from the graph
     /// Return the deleted nodes
-    pub fn trim_graph(&mut self) -> BTreeSet<TempIndex> {
+    fn trim_graph(&mut self) -> BTreeSet<TempIndex> {
         let mut sink_nodes = self.find_sink_nodes();
         let mut trimmed_nodes = BTreeSet::new();
         while !sink_nodes.is_empty() {
@@ -195,12 +243,12 @@ impl BorrowGraph {
     }
 }
 
-pub struct LifetimeAnalysis<'a> {
-    local_types: &'a [SignatureToken],
+struct LifetimeAnalysis<'a> {
+    local_types: &'a [Type],
 }
 
 #[derive(Clone, Debug)]
-pub struct LifetimeState {
+struct LifetimeState {
     borrow_graph: BorrowGraph,
 
     /// Mutable references that * just * go out of scope at the end of line CodeOffset
@@ -242,10 +290,10 @@ impl AbstractDomain for LifetimeState {
 }
 
 impl<'a> LifetimeAnalysis<'a> {
-    pub fn analyze(
+    fn analyze(
         cfg: &StacklessControlFlowGraph,
-        instrs: &[StacklessBytecode],
-        local_types: &'a [SignatureToken],
+        instrs: &[Bytecode],
+        local_types: &'a [Type],
     ) -> BTreeMap<CodeOffset, BTreeSet<TempIndex>> {
         let mut analyzer = Self { local_types };
         let initial_state = LifetimeState {
@@ -269,95 +317,111 @@ impl<'a> LifetimeAnalysis<'a> {
 }
 
 impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
-    type InstrType = StacklessBytecode;
+    type InstrType = Bytecode;
     type State = LifetimeState;
 
     fn execute(
         &mut self,
-        pre: &Self::State,
+        pre: Self::State,
         instr: &Self::InstrType,
         idx: CodeOffset,
     ) -> Self::State {
-        let mut after_state = pre.clone();
+        let mut after_state = pre;
 
         match instr {
-            MoveLoc(t, l) => {
+            Assign(_, t, l, k) => {
                 if self.local_types[*t].is_mutable_reference() {
-                    after_state
-                        .borrow_graph
-                        .replace_local(Node::Local(*l), Node::Local(*t));
-                }
-            }
-            CopyLoc(t, l) => {
-                if self.local_types[*t].is_mutable_reference() {
-                    after_state
-                        .borrow_graph
-                        .copy_local(Node::Local(*l), Node::Local(*t));
-                }
-            }
-            StLoc(l, t) => {
-                if self.local_types[*t].is_mutable_reference() {
-                    after_state.borrow_graph.move_local(*l);
-                    after_state
-                        .borrow_graph
-                        .replace_local(Node::Local(*t), Node::Local(*l));
-                }
-            }
-            BorrowLoc(t, _) => {
-                if self.local_types[*t].is_mutable_reference() {
-                    after_state
-                        .borrow_graph
-                        .add_edge(Node::Root, Node::Local(*t));
-                }
-            }
-            BorrowGlobal(t, _, _, _) => {
-                if self.local_types[*t].is_mutable_reference() {
-                    after_state
-                        .borrow_graph
-                        .add_edge(Node::Root, Node::Local(*t));
-                }
-            }
-            BorrowField(dest, src, _, _) => {
-                if self.local_types[*src].is_mutable_reference() {
-                    after_state.borrow_graph.move_local(*src);
-                }
-                if self.local_types[*dest].is_mutable_reference() {
-                    after_state
-                        .borrow_graph
-                        .add_edge(Node::Local(*src), Node::Local(*dest));
-                }
-            }
-            FreezeRef(_, src) => {
-                after_state.borrow_graph.move_local(*src);
-            }
-            WriteRef(t, _) => {
-                after_state.borrow_graph.move_local(*t);
-            }
-            ReadRef(_, src) => {
-                if self.local_types[*src].is_mutable_reference() {
-                    after_state.borrow_graph.move_local(*src);
-                }
-            }
-            Call(dest_vec, _, _, src_vec) => {
-                let mut dest_mut_refs = dest_vec.clone();
-                dest_mut_refs.retain(|d| self.local_types[*d].is_mutable_reference());
-                let mut src_mut_refs = src_vec.clone();
-                src_mut_refs.retain(|s| self.local_types[*s].is_mutable_reference());
-                for s in src_mut_refs {
-                    after_state.borrow_graph.move_local(s);
-                    // this is over approximating right now
-                    // we only need to add an edge if it's possible for d to come from s
-                    // for example, if d is an address ref but s is LibraCoin ref then
-                    // there is no way that d is borrowed from s
-                    for d in &dest_mut_refs {
-                        after_state
-                            .borrow_graph
-                            .add_edge(Node::Local(s), Node::Local(*d));
+                    match k {
+                        AssignKind::Move => {
+                            after_state
+                                .borrow_graph
+                                .replace_local(Node::Local(*l), Node::Local(*t));
+                        }
+                        AssignKind::Copy => {
+                            after_state
+                                .borrow_graph
+                                .copy_local(Node::Local(*l), Node::Local(*t));
+                        }
+                        AssignKind::Store => {
+                            after_state.borrow_graph.move_local(*t);
+                            after_state
+                                .borrow_graph
+                                .replace_local(Node::Local(*l), Node::Local(*t));
+                        }
                     }
                 }
             }
-            Pop(t) => {
-                after_state.borrow_graph.move_local(*t);
+            Call(_, dsts, oper, srcs) => {
+                use Operation::*;
+                match oper {
+                    BorrowLoc => {
+                        let t = dsts[0];
+                        if self.local_types[t].is_mutable_reference() {
+                            after_state
+                                .borrow_graph
+                                .add_edge(Node::Root, Node::Local(t));
+                        }
+                    }
+                    BorrowGlobal(..) => {
+                        let t = dsts[0];
+                        if self.local_types[t].is_mutable_reference() {
+                            after_state
+                                .borrow_graph
+                                .add_edge(Node::Root, Node::Local(t));
+                        }
+                    }
+                    BorrowField(..) => {
+                        let src = srcs[0];
+                        let dst = dsts[0];
+                        if self.local_types[src].is_mutable_reference() {
+                            after_state.borrow_graph.move_local(src);
+                        }
+                        if self.local_types[dst].is_mutable_reference() {
+                            after_state
+                                .borrow_graph
+                                .add_edge(Node::Local(src), Node::Local(dst));
+                        }
+                    }
+                    FreezeRef => {
+                        let src = srcs[0];
+                        after_state.borrow_graph.move_local(src);
+                    }
+                    WriteRef => {
+                        let dst = dsts[0];
+                        after_state.borrow_graph.move_local(dst);
+                    }
+                    ReadRef => {
+                        let src = srcs[0];
+                        if self.local_types[src].is_mutable_reference() {
+                            after_state.borrow_graph.move_local(src);
+                        }
+                    }
+                    Function(..) => {
+                        let mut dest_mut_refs = dsts.clone();
+                        dest_mut_refs.retain(|d| self.local_types[*d].is_mutable_reference());
+                        let mut src_mut_refs = srcs.clone();
+                        src_mut_refs.retain(|s| self.local_types[*s].is_mutable_reference());
+                        for s in src_mut_refs {
+                            after_state.borrow_graph.move_local(s);
+                            // this is over approximating right now
+                            // we only need to add an edge if it's possible for d to come from s
+                            // for example, if d is an address ref but s is LibraCoin ref then
+                            // there is no way that d is borrowed from s
+                            for d in &dest_mut_refs {
+                                after_state
+                                    .borrow_graph
+                                    .add_edge(Node::Local(s), Node::Local(*d));
+                            }
+                        }
+                    }
+                    Destroy => {
+                        let t = srcs[0];
+                        after_state.borrow_graph.move_local(t);
+                    }
+                    _ => {
+                        // Other operations don't deal with mutable references
+                    }
+                }
             }
             _ => {
                 // Other instructions don't deal with mutable references
@@ -373,3 +437,30 @@ impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
 }
 
 impl<'a> DataflowAnalysis for LifetimeAnalysis<'a> {}
+
+// =================================================================================================
+// Formatting
+
+/// Format a lifetime annotation.
+pub fn format_lifetime_annotation(
+    target: &FunctionTarget<'_>,
+    code_offset: CodeOffset,
+) -> Option<String> {
+    if let Some(LifetimeAnnotation(map)) = target.get_annotations().get::<LifetimeAnnotation>() {
+        if let Some(dead_at) = map.get(&code_offset) {
+            if dead_at.is_empty() {
+                return None;
+            }
+            let mut res = dead_at
+                .iter()
+                .map(|idx| {
+                    let name = target.get_local_name(*idx);
+                    format!("{}", name.display(target.symbol_pool()),)
+                })
+                .join(", ");
+            res.insert_str(0, "mut ends: ");
+            return Some(res);
+        }
+    }
+    None
+}

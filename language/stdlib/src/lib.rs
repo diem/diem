@@ -23,6 +23,8 @@ pub const STAGED_OUTPUT_PATH: &str = "staged";
 pub const STAGED_STDLIB_NAME: &str = "stdlib";
 /// The extension for staged files
 pub const STAGED_EXTENSION: &str = "mv";
+/// The file name of the debug module
+pub const DEBUG_MODULE_FILE_NAME: &str = "debug.move";
 
 // The current stdlib that is freshly built. This will never be used in deployment so we don't need
 // to pull the same trick here in order to include this in the Rust binary.
@@ -33,7 +35,7 @@ static FRESH_MOVELANG_STDLIB: Lazy<Vec<VerifiedModule>> = Lazy::new(build_stdlib
 /// This is why we include it here.
 pub const STAGED_STDLIB_BYTES: &[u8] = std::include_bytes!("../staged/stdlib.mv");
 
-// The staged version of the move standard library.
+// The staged version of the Move standard library.
 // Similarly to genesis, we keep a compiled version of the standard library and scripts around, and
 // only periodically update these. This has the effect of decoupling the current leading edge of
 // compiler development from the current stdlib used in genesis/scripts.  In particular, changes in
@@ -91,10 +93,10 @@ pub fn use_staged() -> bool {
     std::env::var(NO_USE_STAGED).is_err()
 }
 
-pub fn filter_move_files(dir_iter: impl Iterator<Item = PathBuf>) -> impl Iterator<Item = String> {
+pub fn filter_move_files(dir_iter: impl Iterator<Item = PathBuf>) -> impl Iterator<Item = PathBuf> {
     dir_iter.flat_map(|path| {
         if path.extension()?.to_str()? == MOVE_EXTENSION {
-            path.into_os_string().into_string().ok()
+            Some(path)
         } else {
             None
         }
@@ -105,7 +107,9 @@ pub fn stdlib_files() -> Vec<String> {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.push(STD_LIB_DIR);
     let dirfiles = datatest_stable::utils::iterate_directory(&path);
-    filter_move_files(dirfiles).collect::<Vec<_>>()
+    filter_move_files(dirfiles)
+        .flat_map(|path| path.into_os_string().into_string())
+        .collect()
 }
 
 pub fn build_stdlib() -> Vec<VerifiedModule> {

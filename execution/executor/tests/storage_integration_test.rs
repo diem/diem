@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{ensure, format_err, Result};
+use executor::BlockExecutor;
 use executor_utils::{
     create_storage_service_and_executor,
     test_helpers::{
@@ -30,7 +31,7 @@ use storage_client::{StorageRead, StorageReadServiceClient};
 use tokio::runtime::Runtime;
 use transaction_builder::{
     encode_block_prologue_script, encode_create_account_script, encode_publishing_option_script,
-    encode_rotate_consensus_pubkey_script, encode_transfer_script,
+    encode_rotate_consensus_pubkey_script, encode_transfer_with_metadata_script,
 };
 
 #[test]
@@ -138,11 +139,12 @@ fn test_reconfiguration() {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_transfer_script(
+        Some(encode_transfer_with_metadata_script(
             lbr_type_tag(),
             &validator_account,
             validator_auth_key_prefix,
             1_000_000,
+            vec![],
         )),
     );
     // Create a dummy block prologue transaction that will bump the timer.
@@ -232,11 +234,12 @@ fn test_change_publishing_option_to_custom() {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_transfer_script(
+        Some(encode_transfer_with_metadata_script(
             lbr_type_tag(),
             &validator_account,
             validator_auth_key_prefix,
             1_000_000,
+            vec![],
         )),
     );
 
@@ -473,11 +476,12 @@ fn test_extend_whitelist() {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_transfer_script(
+        Some(encode_transfer_with_metadata_script(
             lbr_type_tag(),
             &validator_account,
             validator_auth_key_prefix,
             1_000_000,
+            vec![],
         )),
     );
 
@@ -766,11 +770,12 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 0,
         privkey1.clone(),
         pubkey1.clone(),
-        Some(encode_transfer_script(
+        Some(encode_transfer_with_metadata_script(
             lbr_type_tag(),
             &account2,
             account2_auth_key.prefix().to_vec(),
             20_000,
+            vec![],
         )),
     );
 
@@ -781,11 +786,12 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 0,
         privkey2,
         pubkey2,
-        Some(encode_transfer_script(
+        Some(encode_transfer_with_metadata_script(
             lbr_type_tag(),
             &account3,
             account3_auth_key.prefix().to_vec(),
             10_000,
+            vec![],
         )),
     );
 
@@ -796,11 +802,12 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 1,
         privkey1.clone(),
         pubkey1.clone(),
-        Some(encode_transfer_script(
+        Some(encode_transfer_with_metadata_script(
             lbr_type_tag(),
             &account3,
             account3_auth_key.prefix().to_vec(),
             70_000,
+            vec![],
         )),
     );
 
@@ -817,11 +824,12 @@ fn test_execution_with_storage() {
             /* sequence_number = */ i,
             privkey1.clone(),
             pubkey1.clone(),
-            Some(encode_transfer_script(
+            Some(encode_transfer_with_metadata_script(
                 lbr_type_tag(),
                 &account3,
                 account3_auth_key.prefix().to_vec(),
                 10_000,
+                vec![],
             )),
         ));
     }

@@ -37,8 +37,9 @@
 
 use crate::{
     account_address::AccountAddress,
-    account_config::{ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_RESOURCE_PATH, ACCOUNT_SENT_EVENT_PATH},
+    account_config::{AccountResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH},
     language_storage::{ModuleId, ResourceKey, StructTag},
+    move_resource::MoveResource,
 };
 use anyhow::{Error, Result};
 use libra_crypto::hash::{CryptoHash, HashValue};
@@ -208,7 +209,7 @@ impl AccessPath {
 
     /// Given an address, returns the corresponding access path that stores the Account resource.
     pub fn new_for_account(address: AccountAddress) -> Self {
-        Self::new(address, ACCOUNT_RESOURCE_PATH.to_vec())
+        Self::new(address, AccountResource::resource_path())
     }
 
     /// Create an AccessPath to the event for the sender account in a deposit operation.

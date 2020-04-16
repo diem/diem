@@ -133,7 +133,7 @@ fn create_network_request(
         request_id,
         protocol_id,
         priority: Priority::default(),
-        raw_request,
+        raw_request: Vec::from(raw_request.as_ref()),
     })
 }
 
@@ -141,7 +141,7 @@ fn create_network_response(request_id: RequestId, raw_response: Bytes) -> Networ
     NetworkMessage::RpcResponse(RpcResponse {
         request_id,
         priority: Priority::default(),
-        raw_response,
+        raw_response: Vec::from(raw_response.as_ref()),
     })
 }
 
@@ -299,12 +299,11 @@ fn outbound_rpc_timeout() {
 
     let protocol_id = RPC_PROTOCOL_A;
     let req_data = Bytes::from_static(b"hello");
-    let message = NetworkMessage::RpcRequest(RpcRequest {
-        request_id: 0, // This is the first request.
+    let message = create_network_request(
+        0, // This is the first request.
         protocol_id,
-        priority: Priority::default(),
-        raw_request: req_data.clone(),
-    });
+        req_data.clone(),
+    );
 
     let f_mock_peer = expect_successful_send(&mut peer_reqs_rx, protocol_id, message);
 

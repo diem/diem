@@ -5,7 +5,7 @@
 
 use crate::{
     account::{Account, AccountData},
-    data_store::{FakeDataStore, GENESIS_CHANGE_SET},
+    data_store::{FakeDataStore, GENESIS_CHANGE_SET, GENESIS_CHANGE_SET_FRESH},
 };
 use bytecode_verifier::VerifiedModule;
 use libra_config::generator;
@@ -15,12 +15,12 @@ use libra_types::{
     access_path::AccessPath,
     account_config::{AccountResource, BalanceResource},
     block_metadata::{new_block_event_key, BlockMetadata, NewBlockEvent},
+    discovery_set::mock::mock_discovery_set,
     language_storage::ModuleId,
-    on_chain_config::VMPublishingOption,
+    on_chain_config::{VMPublishingOption, ValidatorSet},
     transaction::{
         SignedTransaction, Transaction, TransactionOutput, TransactionStatus, VMValidatorResult,
     },
-    validator_set::ValidatorSet,
     vm_error::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
@@ -54,9 +54,14 @@ impl FakeExecutor {
         Self::from_genesis(GENESIS_CHANGE_SET.clone().write_set())
     }
 
+    /// Creates an executor using the standard genesis.
+    pub fn from_fresh_genesis() -> Self {
+        Self::from_genesis(GENESIS_CHANGE_SET_FRESH.clone().write_set())
+    }
+
     pub fn whitelist_genesis() -> Self {
         Self::custom_genesis(
-            Some(stdlib_modules(StdLibOptions::Staged).to_vec()),
+            stdlib_modules(StdLibOptions::Staged).to_vec(),
             None,
             VMPublishingOption::Locked(StdlibScript::whitelist()),
         )
@@ -71,7 +76,7 @@ impl FakeExecutor {
         }
 
         Self::custom_genesis(
-            Some(stdlib_modules(StdLibOptions::Staged).to_vec()),
+            stdlib_modules(StdLibOptions::Staged).to_vec(),
             None,
             publishing_options,
         )
@@ -85,28 +90,23 @@ impl FakeExecutor {
         }
     }
 
-    /// Creates fresh genesis from the stdlib modules passed in. If none are passed in the staged
-    /// genesis write set is used.
+    /// Creates fresh genesis from the stdlib modules passed in.
     pub fn custom_genesis(
-        genesis_modules: Option<Vec<VerifiedModule>>,
+        genesis_modules: Vec<VerifiedModule>,
         validator_set: Option<ValidatorSet>,
         publishing_options: VMPublishingOption,
     ) -> Self {
-        let genesis_change_set = if genesis_modules.is_none() && validator_set.is_none() {
-            GENESIS_CHANGE_SET.clone()
-        } else {
+        let genesis_change_set = {
             let validator_set_len: usize = validator_set.as_ref().map_or(10, |s| s.payload().len());
             let swarm = generator::validator_swarm_for_testing(validator_set_len);
             let validator_set = validator_set.unwrap_or(swarm.validator_set);
-            let discovery_set = vm_genesis::make_placeholder_discovery_set(&validator_set);
-            let stdlib_modules =
-                genesis_modules.unwrap_or_else(|| stdlib_modules(StdLibOptions::Staged).to_vec());
+            let discovery_set = mock_discovery_set(&validator_set);
             vm_genesis::encode_genesis_change_set(
                 &GENESIS_KEYPAIR.1,
                 &swarm.nodes,
                 validator_set,
                 discovery_set,
-                &stdlib_modules,
+                &genesis_modules,
                 publishing_options,
             )
         };

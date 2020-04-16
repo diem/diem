@@ -179,10 +179,6 @@ pub fn boogie_well_formed_expr(
                 rtype,
                 mode,
             ));
-            conds.push(format!(
-                "$IsValidReferenceParameter($m, $local_counter, {})",
-                name
-            ));
         }
         // TODO: tuple and functions?
         Type::Fun(_args, _result) => {}
@@ -222,4 +218,12 @@ pub fn boogie_declare_global(env: &GlobalEnv, name: &str, ty: &Type) -> String {
 
 pub fn boogie_var_before_borrow(idx: usize) -> String {
     format!("$before_borrow_{}", idx)
+}
+
+pub fn boogie_byte_blob(val: &[u8]) -> String {
+    let mut res = "$mk_vector()".to_string();
+    for b in val {
+        res = format!("$push_back_vector({}, Integer({}))", res, b);
+    }
+    res
 }

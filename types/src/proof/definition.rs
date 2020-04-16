@@ -3,10 +3,6 @@
 
 //! This module has definition of various proofs.
 
-#[cfg(test)]
-#[path = "unit_tests/proof_conversion_test.rs"]
-mod proof_conversion_test;
-
 use super::{
     position::Position, verify_transaction_info, MerkleTreeInternalNode, SparseMerkleInternalNode,
     SparseMerkleLeafNode,

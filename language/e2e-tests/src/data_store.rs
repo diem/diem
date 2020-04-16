@@ -13,15 +13,18 @@ use libra_types::{
     write_set::{WriteOp, WriteSet},
 };
 use move_vm_state::data_cache::RemoteCache;
-use move_vm_types::values::Struct;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
+use stdlib::StdLibOptions;
 use vm::{errors::*, CompiledModule};
-use vm_genesis;
+use vm_genesis::generate_genesis_change_set_for_testing;
 
 /// Dummy genesis ChangeSet for testing
 pub static GENESIS_CHANGE_SET: Lazy<ChangeSet> =
-    Lazy::new(vm_genesis::generate_genesis_change_set_for_testing);
+    Lazy::new(|| generate_genesis_change_set_for_testing(StdLibOptions::Staged));
+
+pub static GENESIS_CHANGE_SET_FRESH: Lazy<ChangeSet> =
+    Lazy::new(|| generate_genesis_change_set_for_testing(StdLibOptions::Fresh));
 
 /// An in-memory implementation of [`StateView`] and [`RemoteCache`] for the VM.
 ///
@@ -68,19 +71,8 @@ impl FakeDataStore {
 
     /// Adds an [`AccountData`] to this data store.
     pub fn add_account_data(&mut self, account_data: &AccountData) {
-        let (account_blob, balance_blob) = account_data.to_account();
-        let account = account_blob
-            .value_as::<Struct>()
-            .unwrap()
-            .simple_serialize(&AccountData::account_type())
-            .unwrap();
-        let balance = balance_blob
-            .value_as::<Struct>()
-            .unwrap()
-            .simple_serialize(&AccountData::balance_type())
-            .unwrap();
-        self.set(account_data.make_account_access_path(), account);
-        self.set(account_data.make_balance_access_path(), balance);
+        let write_set = account_data.to_writeset();
+        self.add_write_set(&write_set)
     }
 
     /// Adds a [`CompiledModule`] to this data store.

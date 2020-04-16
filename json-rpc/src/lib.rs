@@ -27,8 +27,11 @@ mod methods;
 mod runtime;
 pub mod views;
 
-pub use client::{JsonRpcAsyncClient, JsonRpcBatch};
-pub use runtime::bootstrap_from_config;
+pub use client::{
+    get_response_from_batch, process_batch_response, JsonRpcAsyncClient, JsonRpcBatch,
+    JsonRpcResponse,
+};
+pub use runtime::{bootstrap, bootstrap_from_config};
 
 #[cfg(any(feature = "fuzzing", test))]
 /// Fuzzer for JSON RPC service

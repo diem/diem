@@ -13,6 +13,7 @@ error:  A postcondition might not hold on this return path.
      =         s = <redacted>
      =     at tests/sources/global_vars.move:112:15: combi_incorrect
      =         s = <redacted>
+     =     at tests/sources/global_vars.move:109:21: combi_incorrect
      =     at tests/sources/global_vars.move:108:5: combi_incorrect (exit)
 
 error:  A postcondition might not hold on this return path.
@@ -23,6 +24,8 @@ error:  A postcondition might not hold on this return path.
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/global_vars.move:28:5: pack_incorrect (entry)
+    =     at tests/sources/global_vars.move:29:9: pack_incorrect
+    =         result = <redacted>
     =     at tests/sources/global_vars.move:28:5: pack_incorrect (exit)
 
 error:  A postcondition might not hold on this return path.
@@ -38,6 +41,7 @@ error:  A postcondition might not hold on this return path.
     =     at tests/sources/global_vars.move:52:9: unpack_incorrect
     =         x = <redacted>
     =     at tests/sources/global_vars.move:50:5: unpack_incorrect (exit)
+    =         result = <redacted>
 
 error:  A postcondition might not hold on this return path.
 
@@ -53,7 +57,9 @@ error:  A postcondition might not hold on this return path.
      =         s = <redacted>
      =     at tests/sources/global_vars.move:147:15: update_S_incorrect
      =         r = <redacted>
+     =     at tests/sources/global_vars.move:148:9: update_S_incorrect
      =     at tests/sources/global_vars.move:144:5: update_S_incorrect (exit)
+     =         result = <redacted>
 
 error:  A postcondition might not hold on this return path.
 
@@ -72,4 +78,6 @@ error:  A postcondition might not hold on this return path.
     =         t = <redacted>
     =     at tests/sources/global_vars.move:64:5: update_valid_still_mutating (exit)
     =     at tests/sources/global_vars.move:84:9: update_incorrect
+    =     at tests/sources/global_vars.move:85:9: update_incorrect
     =     at tests/sources/global_vars.move:82:5: update_incorrect (exit)
+    =         result = <redacted>

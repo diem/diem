@@ -4,10 +4,8 @@
 //! This module defines the structs transported during the network messaging protocol v1.
 //! These should serialize as per [link](TODO: Add ref).
 
-use crate::protocols::wire::handshake::v1::MessagingProtocolVersion;
-use bytes::Bytes;
+use crate::protocols::wire::handshake::v1::{MessagingProtocolVersion, ProtocolId};
 use serde::{Deserialize, Serialize};
-use serde_repr::{Deserialize_repr, Serialize_repr};
 
 #[cfg(test)]
 mod test;
@@ -24,20 +22,6 @@ pub enum NetworkMessage {
     DirectSendMsg(DirectSendMsg),
 }
 
-/// Unique identifier associated with each application protocol.
-/// New application protocols can be added without bumping up the MessagingProtocolVersion.
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Deserialize_repr, Serialize_repr)]
-pub enum ProtocolId {
-    ConsensusRpc = 0,
-    ConsensusDirectSend = 1,
-    MempoolDirectSend = 2,
-    StateSynchronizerDirectSend = 3,
-    DiscoveryDirectSend = 4,
-    HealthCheckerRpc = 5,
-    IdentityDirectSend = 6,
-}
-
 /// Enum representing various error codes that can be embedded in NetworkMessage.
 /// New variants cannot be added without bumping up the MessagingProtocolVersion.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -46,6 +30,8 @@ pub enum ErrorCode {
     ParsingError(MessagingProtocolVersion, Box<NetworkMessage>),
     /// Ping timed out.
     TimedOut,
+    /// A message was received for a protocol that is not supported over this connection.
+    NotSupported(ProtocolId),
 }
 
 /// Nonces used by Ping and Pong message types.
@@ -67,7 +53,8 @@ pub struct RpcRequest {
     /// Request priority in the range 0..=255.
     pub priority: Priority,
     /// Request payload. This will be parsed by the application-level handler.
-    pub raw_request: Bytes,
+    #[serde(with = "serde_bytes")]
+    pub raw_request: Vec<u8>,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -78,7 +65,8 @@ pub struct RpcResponse {
     /// corresponding request.
     pub priority: Priority,
     /// Response payload.
-    pub raw_response: Bytes,
+    #[serde(with = "serde_bytes")]
+    pub raw_response: Vec<u8>,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -88,5 +76,6 @@ pub struct DirectSendMsg {
     /// Message priority in the range 0..=255.
     pub priority: Priority,
     /// Message payload.
-    pub raw_msg: Bytes,
+    #[serde(with = "serde_bytes")]
+    pub raw_msg: Vec<u8>,
 }

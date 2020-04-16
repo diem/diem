@@ -22,12 +22,9 @@ module M {
         bar(f, f_g);
     }
 
-    fun foo(a: &mut u64, b: &mut Y) {
+    fun foo(_a: &mut u64, _b: &mut Y) {
     }
 
-    fun bar(a: &mut Y, b: &mut u64) {
+    fun bar(_a: &mut Y, _b: &mut u64) {
     }
 }
-
-// check: CALL_BORROWED_MUTABLE_REFERENCE_ERROR
-// check: CALL_BORROWED_MUTABLE_REFERENCE_ERROR

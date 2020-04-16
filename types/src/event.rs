@@ -82,7 +82,7 @@ impl ser::Serialize for EventKey {
         // In order to preserve the Serde data model and help analysis tools,
         // make sure to wrap our value in a container with the same name
         // as the original type.
-        serializer.serialize_newtype_struct("EventKey", &self.0[..])
+        serializer.serialize_newtype_struct("EventKey", serde_bytes::Bytes::new(&self.0))
     }
 }
 

@@ -50,8 +50,9 @@ pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSaf
             .expect("Missing consensus keypair in test config")
             .take_private()
             .expect("Failed to take Consensus private key, key absent or already read");
+        let waypoint = config.base.waypoint.expect("Missing waypoint");
 
-        PersistentSafetyStorage::initialize(internal_storage, private_key)
+        PersistentSafetyStorage::initialize(internal_storage, private_key, waypoint)
     } else {
         PersistentSafetyStorage::new(internal_storage)
     };

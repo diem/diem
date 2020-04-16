@@ -167,7 +167,13 @@ impl FullNodeConfig {
             }
         );
 
-        let (validator_configs, faucet_key) = self.validator_config.build_swarm()?;
+        // Don't randomize ports. Until we better separate genesis generation,
+        // we don't want to accidentally randomize initial discovery set addresses.
+        let randomize_service_ports = false;
+        let randomize_libranet_ports = false;
+        let (validator_configs, faucet_key) = self
+            .validator_config
+            .build_common(randomize_service_ports, randomize_libranet_ports)?;
         let validator_config = validator_configs.first().ok_or(Error::NoConfigs)?;
 
         let mut rng = StdRng::from_seed(self.full_node_seed);
@@ -264,7 +270,7 @@ mod test {
         let config = FullNodeConfig::new().build().unwrap();
         let network = &config.full_node_networks[0];
         let (seed_peer_id, seed_peer_ips) = network.seed_peers.seed_peers.iter().next().unwrap();
-        assert!(&network.peer_id != seed_peer_id);
+        assert_ne!(&network.peer_id, seed_peer_id);
         // This is true because  we didn't update the DEFAULT_ADVERTISED
         assert_eq!(network.advertised_address, seed_peer_ips[0]);
         assert_eq!(

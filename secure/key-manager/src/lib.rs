@@ -28,7 +28,6 @@ use libra_secure_time::TimeService;
 use libra_transaction_scripts;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::lbr_type_tag,
     transaction::{RawTransaction, Script, Transaction, TransactionArgument},
     validator_config::ValidatorConfig,
     validator_info::ValidatorInfo,
@@ -250,7 +249,6 @@ pub fn build_rotation_transaction(
         script,
         MAX_GAS_AMOUNT,
         GAS_UNIT_PRICE,
-        lbr_type_tag(),
         expiration,
     );
     let signed_txn = raw_txn.sign(signing_key, signing_key.public_key()).unwrap();

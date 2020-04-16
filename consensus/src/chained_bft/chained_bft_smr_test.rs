@@ -4,7 +4,7 @@
 use crate::{
     chained_bft::{
         block_storage::BlockReader,
-        chained_bft_smr::ChainedBftSMR,
+        chained_bft_smr::{ChainedBftSMR, ChainedBftSMRInput},
         network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
         network_tests::NetworkPlayground,
         test_utils::{
@@ -28,13 +28,16 @@ use libra_config::{
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
-    ledger_info::LedgerInfoWithSignatures, validator_set::ValidatorSet,
+    ledger_info::LedgerInfoWithSignatures,
+    on_chain_config::{OnChainConfig, OnChainConfigPayload, ValidatorSet},
     validator_verifier::ValidatorVerifier,
+    waypoint::Waypoint,
 };
 use network::peer_manager::{
     conn_status_channel, ConnectionRequestSender, PeerManagerRequestSender,
 };
-use std::{num::NonZeroUsize, sync::Arc};
+use safety_rules::SafetyRulesManager;
+use std::{collections::HashMap, num::NonZeroUsize, sync::Arc};
 
 /// Auxiliary struct that is preparing SMR for the test
 struct SMRNode {
@@ -53,7 +56,6 @@ impl SMRNode {
         config: NodeConfig,
         smr_id: usize,
         storage: Arc<MockStorage<TestPayload>>,
-        executor_with_reconfig: Option<ValidatorSet>,
     ) -> Self {
         let author = config.validator_network.as_ref().unwrap().peer_id;
 
@@ -76,22 +78,36 @@ impl SMRNode {
         let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let shared_mempool = MockSharedMempool::new(None);
         let consensus_to_mempool_sender = shared_mempool.consensus_sender.clone();
+        let state_computer = Arc::new(MockStateComputer::new(
+            state_sync_client,
+            commit_cb_sender,
+            Arc::clone(&storage),
+        ));
+        let txn_manager = Box::new(MockTransactionManager::new(Some(
+            consensus_to_mempool_sender,
+        )));
+        let (mut reconfig_sender, reconfig_events) =
+            libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
+        let mut configs = HashMap::new();
+        configs.insert(
+            ValidatorSet::CONFIG_ID,
+            lcs::to_bytes(storage.get_validator_set()).unwrap(),
+        );
+        let payload = OnChainConfigPayload::new(1, Arc::new(configs));
+        reconfig_sender.push((), payload).unwrap();
 
-        let mut smr = ChainedBftSMR::new(
+        let input = ChainedBftSMRInput {
             network_sender,
             network_events,
-            &mut config.clone(),
-            Arc::new(MockStateComputer::new(
-                state_sync_client,
-                commit_cb_sender,
-                Arc::clone(&storage),
-                executor_with_reconfig,
-            )),
-            storage.clone(),
-            Box::new(MockTransactionManager::new(Some(
-                consensus_to_mempool_sender,
-            ))),
-        );
+            safety_rules_manager: SafetyRulesManager::new(&mut config.clone()),
+            state_computer,
+            txn_manager,
+            storage: storage.clone(),
+            config: config.consensus.clone(),
+            reconfig_events,
+        };
+
+        let mut smr = ChainedBftSMR::new(author, input);
 
         smr.start().expect("Failed to start SMR!");
         Self {
@@ -117,31 +133,19 @@ impl SMRNode {
 
     fn restart(mut self, playground: &mut NetworkPlayground) -> Self {
         self.smr.stop();
-        Self::start(
-            playground,
-            self.config,
-            self.smr_id + 10,
-            self.storage,
-            None,
-        )
+        Self::start(playground, self.config, self.smr_id + 10, self.storage)
     }
 
     fn start_num_nodes(
         num_nodes: usize,
         playground: &mut NetworkPlayground,
         proposer_type: ConsensusProposerType,
-        executor_with_reconfig: bool,
     ) -> Vec<Self> {
         let ValidatorSwarm {
             mut nodes,
             validator_set,
+            ..
         } = generator::validator_swarm_for_testing(num_nodes);
-
-        let executor_validator_set = if executor_with_reconfig {
-            Some(validator_set.clone())
-        } else {
-            None
-        };
 
         // Some tests make assumptions about the ordering of configs in relation
         // to the FixedProposer which should be the first proposer in lexical order.
@@ -153,21 +157,19 @@ impl SMRNode {
 
         let mut smr_nodes = vec![];
         for (smr_id, config) in nodes.iter().enumerate() {
+            let (_, storage) = MockStorage::start_for_testing(validator_set.clone());
+
             let mut node_config = config.clone();
+            let waypoint = Waypoint::new(&storage.get_ledger_info())
+                .expect("Unable to produce waypoint with the provided LedgerInfo");
+            node_config.base.waypoint = Some(waypoint);
             node_config.consensus.proposer_type = proposer_type;
             // Use in memory storage for testing
             node_config.consensus.safety_rules = SafetyRulesConfig::default();
             // Set higher timeout value in test.
             node_config.consensus.pacemaker_initial_timeout_ms = 5000;
 
-            let (_, storage) = MockStorage::start_for_testing(validator_set.clone());
-            smr_nodes.push(Self::start(
-                playground,
-                node_config,
-                smr_id,
-                storage,
-                executor_validator_set.clone(),
-            ));
+            smr_nodes.push(Self::start(playground, node_config, smr_id, storage));
         }
         smr_nodes
     }
@@ -189,16 +191,16 @@ fn verify_finality_proof(node: &SMRNode, ledger_info_with_sig: &LedgerInfoWithSi
 fn basic_start_test() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
-    let nodes = SMRNode::start_num_nodes(2, &mut playground, RotatingProposer, false);
-    let genesis = nodes[0]
-        .smr
-        .block_store()
-        .expect("No valid block store!")
-        .root();
+    let nodes = SMRNode::start_num_nodes(2, &mut playground, RotatingProposer);
     timed_block_on(&mut runtime, async {
         let msg = playground
             .wait_for_messages(1, NetworkPlayground::proposals_only::<TestPayload>)
             .await;
+        let genesis = nodes[0]
+            .smr
+            .block_store()
+            .expect("No valid block store!")
+            .root();
         let first_proposal = match &msg[0].1 {
             ConsensusMsg::ProposalMsg(proposal) => proposal,
             _ => panic!("Unexpected message found"),
@@ -220,7 +222,7 @@ fn basic_start_test() {
 fn start_with_proposal_test() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
-    let nodes = SMRNode::start_num_nodes(2, &mut playground, RotatingProposer, false);
+    let nodes = SMRNode::start_num_nodes(2, &mut playground, RotatingProposer);
 
     timed_block_on(&mut runtime, async {
         let _proposals = playground
@@ -257,7 +259,7 @@ fn start_with_proposal_test() {
 fn basic_full_round(num_nodes: usize, proposer_type: ConsensusProposerType) {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
-    let _nodes = SMRNode::start_num_nodes(num_nodes, &mut playground, proposer_type, false);
+    let _nodes = SMRNode::start_num_nodes(num_nodes, &mut playground, proposer_type);
 
     // In case we're using multi-proposer, every proposal and vote is sent to two participants.
     let num_messages_to_send = if proposer_type == MultipleOrderedProposers {
@@ -370,7 +372,7 @@ async fn basic_commit(
 fn basic_commit_and_restart() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
-    let mut nodes = SMRNode::start_num_nodes(2, &mut playground, RotatingProposer, false);
+    let mut nodes = SMRNode::start_num_nodes(2, &mut playground, RotatingProposer);
     let mut block_ids = vec![];
 
     timed_block_on(
@@ -425,7 +427,7 @@ fn basic_commit_and_restart() {
 fn basic_commit_and_restart_from_clean_storage() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
-    let mut nodes = SMRNode::start_num_nodes(2, &mut playground, RotatingProposer, false);
+    let mut nodes = SMRNode::start_num_nodes(2, &mut playground, RotatingProposer);
     let mut block_ids = vec![];
 
     timed_block_on(
@@ -485,7 +487,7 @@ fn basic_block_retrieval() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // This test depends on the fixed proposer on nodes[0]
-    let mut nodes = SMRNode::start_num_nodes(4, &mut playground, FixedProposer, false);
+    let mut nodes = SMRNode::start_num_nodes(4, &mut playground, FixedProposer);
     timed_block_on(&mut runtime, async {
         let mut first_proposals = vec![];
         // First three proposals are delivered just to nodes[0..2].
@@ -546,7 +548,7 @@ fn basic_block_retrieval() {
 fn block_retrieval_with_timeout() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
-    let nodes = SMRNode::start_num_nodes(4, &mut playground, FixedProposer, false);
+    let nodes = SMRNode::start_num_nodes(4, &mut playground, FixedProposer);
     timed_block_on(&mut runtime, async {
         let mut first_proposals = vec![];
         // First three proposals are delivered just to nodes[0..2].
@@ -593,7 +595,7 @@ fn basic_state_sync() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // This test depends on the fixed proposer on nodes[0]
-    let mut nodes = SMRNode::start_num_nodes(4, &mut playground, FixedProposer, false);
+    let mut nodes = SMRNode::start_num_nodes(4, &mut playground, FixedProposer);
     timed_block_on(&mut runtime, async {
         let mut proposals = vec![];
         // The first ten proposals are delivered just to nodes[0..2], which should commit
@@ -671,7 +673,7 @@ fn state_sync_on_timeout() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // This test depends on the fixed proposer on nodes[0]
-    let mut nodes = SMRNode::start_num_nodes(4, &mut playground, FixedProposer, false);
+    let mut nodes = SMRNode::start_num_nodes(4, &mut playground, FixedProposer);
     timed_block_on(&mut runtime, async {
         // The first ten proposals are delivered just to nodes[0..2], which should commit
         // the first seven blocks.
@@ -720,7 +722,7 @@ fn sync_info_sent_if_remote_stale() {
     // We're going to drop messages from 0 to 2: as a result we expect node 2 to broadcast timeout
     // messages, for which node 1 should respond with sync_info, which should eventually
     // help node 2 to catch up.
-    let mut nodes = SMRNode::start_num_nodes(4, &mut playground, FixedProposer, false);
+    let mut nodes = SMRNode::start_num_nodes(4, &mut playground, FixedProposer);
     timed_block_on(&mut runtime, async {
         playground.drop_message_for(&nodes[0].smr.author(), nodes[2].smr.author());
         // Don't want to receive timeout messages from 2 until 1 has some real stuff to contribute.
@@ -778,7 +780,7 @@ fn aggregate_timeout_votes() {
     // because their messages are dropped.
     // Upon timeout nodes 1 and 2 are sending timeout messages with attached votes for the original
     // proposal: both can then aggregate the QC for the first proposal.
-    let nodes = SMRNode::start_num_nodes(3, &mut playground, FixedProposer, false);
+    let nodes = SMRNode::start_num_nodes(3, &mut playground, FixedProposer);
     timed_block_on(&mut runtime, async {
         // Nodes 1 and 2 cannot send messages to anyone
         playground.drop_message_for(&nodes[1].smr.author(), nodes[0].smr.author());
@@ -862,7 +864,7 @@ fn chain_with_nil_blocks() {
     // communicate with nodes 1, 2, 3. Nodes 1, 2, 3 should be able to commit the 3 proposal
     // via NIL blocks commit chain.
     let num_nodes = 4;
-    let nodes = SMRNode::start_num_nodes(num_nodes, &mut playground, FixedProposer, false);
+    let nodes = SMRNode::start_num_nodes(num_nodes, &mut playground, FixedProposer);
     let num_proposal = 3;
     timed_block_on(&mut runtime, async {
         // Wait for the first 3 proposals (each one sent to two nodes).
@@ -913,8 +915,7 @@ fn secondary_proposers() {
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
 
     let num_nodes = 4;
-    let mut nodes =
-        SMRNode::start_num_nodes(num_nodes, &mut playground, MultipleOrderedProposers, false);
+    let mut nodes = SMRNode::start_num_nodes(num_nodes, &mut playground, MultipleOrderedProposers);
     timed_block_on(&mut runtime, async {
         // Node 0 is disconnected.
         playground.drop_message_for(&nodes[0].smr.author(), nodes[1].smr.author());
@@ -963,31 +964,5 @@ fn secondary_proposers() {
             }
         }
         panic!("Did not commit the secondary proposal");
-    });
-}
-
-#[test]
-/// Test we can do reconfiguration if execution returns new validator set.
-fn reconfiguration_test() {
-    let mut runtime = consensus_runtime();
-    let mut playground = NetworkPlayground::new(runtime.handle().clone());
-
-    // This quorum size needs to be 2f+1 because we derive the ValidatorVerifier from ValidatorSet at network.rs
-    // which doesn't support specializing quorum power
-    let _nodes = SMRNode::start_num_nodes(4, &mut playground, MultipleOrderedProposers, true);
-    let target_epoch = 10;
-    timed_block_on(&mut runtime, async {
-        // Test we can survive a few epochs
-        loop {
-            let mut msg = playground
-                .wait_for_messages(1, NetworkPlayground::take_all)
-                .await;
-            let msg = msg.pop().unwrap().1;
-            if let ConsensusMsg::<TestPayload>::ValidatorChangeProof(proof) = msg {
-                if proof.epoch().unwrap() == target_epoch {
-                    break;
-                }
-            }
-        }
     });
 }

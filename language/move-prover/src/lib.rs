@@ -13,17 +13,20 @@ use anyhow::anyhow;
 use codespan_reporting::term::termcolor::WriteColor;
 use log::info;
 use spec_lang::{env::GlobalEnv, run_spec_lang_compiler};
+use stackless_bytecode_generator::{
+    function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
+    lifetime_analysis::LifetimeAnalysisProcessor,
+};
 use std::fs;
 
-// TODO: remove pub below. Having it for now to supress warnings.
 #[macro_use]
-pub mod code_writer;
+mod code_writer;
 
-pub mod boogie_helpers;
-pub mod boogie_wrapper;
-pub mod bytecode_translator;
+mod boogie_helpers;
+mod boogie_wrapper;
+mod bytecode_translator;
 pub mod cli;
-pub mod spec_translator;
+mod spec_translator;
 
 // =================================================================================================
 // Entry Point
@@ -43,9 +46,14 @@ pub fn run_move_prover<W: WriteColor>(
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with checking errors"));
     }
+    let targets = create_and_process_bytecode(&options, &env);
+    if env.has_errors() {
+        env.report_errors(error_writer);
+        return Err(anyhow!("exiting with transformation errors"));
+    }
     let writer = CodeWriter::new(env.internal_loc());
     add_prelude(&options, &writer)?;
-    let mut translator = BoogieTranslator::new(&env, &options, &writer);
+    let mut translator = BoogieTranslator::new(&env, &options, &targets, &writer);
     translator.translate();
     if env.has_errors() {
         env.report_errors(error_writer);
@@ -58,6 +66,7 @@ pub fn run_move_prover<W: WriteColor>(
             writer.process_result(|result| env.add_source(&options.output_path, result));
         let boogie = BoogieWrapper {
             env: &env,
+            targets: &targets,
             writer: &writer,
             options: &options,
             boogie_file_id,
@@ -83,4 +92,34 @@ fn add_prelude(options: &Options, writer: &CodeWriter) -> anyhow::Result<()> {
         emitln!(writer, &content);
     }
     Ok(())
+}
+
+/// Create bytecode and process it.
+fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTargetsHolder {
+    let mut targets = FunctionTargetsHolder::default();
+
+    // Add function targets for all functions in the environment.
+    for module_env in env.get_modules() {
+        for func_env in module_env.get_functions() {
+            targets.add_target(&func_env)
+        }
+    }
+
+    // Create processing pipeline and run it.
+    let pipeline = create_bytecode_processing_pipeline(options);
+    pipeline.run(env, &mut targets);
+
+    targets
+}
+
+/// Function to create the transformation pipeline.
+fn create_bytecode_processing_pipeline(_options: &Options) -> FunctionTargetPipeline {
+    let mut res = FunctionTargetPipeline::default();
+
+    // Add processors in order they are executed.
+
+    // Must happen last as it is currently computing information based on raw code offsets.
+    res.add_processor(LifetimeAnalysisProcessor::new());
+
+    res
 }

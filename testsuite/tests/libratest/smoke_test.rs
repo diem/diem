@@ -22,9 +22,9 @@ use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::{
     fs::{self, File},
-    io::Read,
+    io::{Read, Result, Write},
+    path::{Path, PathBuf},
     str::FromStr,
-    thread, time,
 };
 
 struct TestEnvironment {
@@ -39,6 +39,7 @@ impl TestEnvironment {
         ::libra_logger::Logger::new().init();
         let mut template = NodeConfig::default();
         template.test = Some(TestConfig::open_module());
+        template.state_sync.chunk_limit = 2;
 
         let validator_swarm = LibraSwarm::configure_swarm(
             num_validators,
@@ -181,6 +182,15 @@ impl TestEnvironment {
     }
 }
 
+fn copy_file_with_sender_address(file_path: &Path, sender: AccountAddress) -> Result<PathBuf> {
+    let tmp_source_path = TempPath::new().as_ref().with_extension("move");
+    let mut tmp_source_file = std::fs::File::create(tmp_source_path.clone())?;
+    let mut code = fs::read_to_string(file_path)?;
+    code = code.replace("{{sender}}", &format!("0x{}", sender));
+    writeln!(tmp_source_file, "{}", code)?;
+    Ok(tmp_source_path)
+}
+
 fn setup_swarm_and_client_proxy(
     num_nodes: usize,
     client_port_index: usize,
@@ -238,23 +248,43 @@ fn test_execute_custom_module_and_script() {
     let recipient_address = client_proxy.create_next_account(false).unwrap().address;
     client_proxy.mint_coins(&["mintb", "1", "1"], true).unwrap();
 
-    let module_path = workspace_builder::workspace_root()
-        .join("testsuite/tests/libratest/dev_modules/module.mvir");
-    let unwrapped_module_path = module_path.to_str().unwrap();
-    let module_params = &["compile", "0", unwrapped_module_path, "module"];
-    let module_compiled_path = client_proxy.compile_program(module_params).unwrap();
+    let (sender_account, _) = client_proxy
+        .get_account_address_from_parameter("0")
+        .unwrap();
 
+    // Get the path to the Move stdlib sources
+    let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/modules");
+    let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
+
+    // Make a copy of module.move with "{{sender}}" substituted.
+    let module_path = workspace_builder::workspace_root()
+        .join("testsuite/tests/libratest/dev_modules/module.move");
+    let copied_module_path = copy_file_with_sender_address(&module_path, sender_account).unwrap();
+    let unwrapped_module_path = copied_module_path.to_str().unwrap();
+
+    // Compile and publish that module.
+    let module_params = &["compile", "0", unwrapped_module_path, unwrapped_stdlib_dir];
+    let module_compiled_path = client_proxy.compile_program(module_params).unwrap();
     client_proxy
         .publish_module(&["publish", "0", &module_compiled_path[..]])
         .unwrap();
 
+    // Make a copy of script.move with "{{sender}}" substituted.
     let script_path = workspace_builder::workspace_root()
-        .join("testsuite/tests/libratest/dev_modules/script.mvir");
-    let unwrapped_script_path = script_path.to_str().unwrap();
-    let script_params = &["execute", "0", unwrapped_script_path, "script"];
+        .join("testsuite/tests/libratest/dev_modules/script.move");
+    let copied_script_path = copy_file_with_sender_address(&script_path, sender_account).unwrap();
+    let unwrapped_script_path = copied_script_path.to_str().unwrap();
+
+    // Compile and execute the script.
+    let script_params = &[
+        "compile",
+        "0",
+        unwrapped_script_path,
+        unwrapped_module_path,
+        unwrapped_stdlib_dir,
+    ];
     let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
     let formatted_recipient_address = format!("0x{}", recipient_address);
-
     client_proxy
         .execute_script(&[
             "execute",
@@ -281,17 +311,23 @@ fn smoke_test_single_node() {
     test_smoke_script(client_proxy);
 }
 
+// Test if we commit not only user transactions but also block metadata transactions,
+// assert committed version > # of user transactions
 #[test]
 fn smoke_test_single_node_block_metadata() {
-    let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+    let (swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
     // just need an address to get the latest version
     let address = AccountAddress::from_hex_literal("0xA550C18").unwrap();
-    // sleep 1s to commit some blocks
-    thread::sleep(time::Duration::from_secs(1));
+    // this script does 4 transactions
+    test_smoke_script(swarm.get_validator_ac_client(0, None));
     let (_state, version) = client_proxy
         .get_latest_account_state(&["q", &address.to_string()])
         .unwrap();
-    assert!(version > 0, "BlockMetadata txn not persisted");
+    assert!(
+        version > 4,
+        "BlockMetadata txn not produced, current version: {}",
+        version
+    );
 }
 
 #[test]
@@ -933,7 +969,7 @@ fn test_e2e_reconfiguration() {
 
 #[test]
 fn test_e2e_modify_publishing_option() {
-    let (mut env, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+    let (_env, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
     client_proxy.create_next_account(false).unwrap();
 
     client_proxy
@@ -944,9 +980,11 @@ fn test_e2e_modify_publishing_option() {
         Decimal::from_str(&client_proxy.get_balance(&["b", "0"]).unwrap()).ok()
     );
     let script_path = workspace_builder::workspace_root()
-        .join("testsuite/tests/libratest/dev_modules/test_script.mvir");
+        .join("testsuite/tests/libratest/dev_modules/test_script.move");
     let unwrapped_script_path = script_path.to_str().unwrap();
-    let script_params = &["execute", "0", unwrapped_script_path, "script"];
+    let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/modules");
+    let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
+    let script_params = &["compile", "0", unwrapped_script_path, unwrapped_stdlib_dir];
     let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
 
     // Initially publishing option was set to CustomScript, this transaction should be executed.
@@ -963,18 +1001,8 @@ fn test_e2e_modify_publishing_option() {
     );
 
     client_proxy
-        .disable_custom_script(&["disallow_custom_script"], true)
+        .disable_custom_script(&["disable_custom_script"], true)
         .unwrap();
-
-    // TODO: Currently VMValidator didn't restart after reconfiguration. We will manually restart
-    //       the node so that VMValidator is using the new config.
-    let peer_to_restart = 0;
-    // restart node
-    env.validator_swarm.kill_node(peer_to_restart);
-    assert!(env
-        .validator_swarm
-        .add_node(peer_to_restart, RoleType::Validator, false)
-        .is_ok());
 
     // mint another 10 coins after restart
     client_proxy
@@ -1022,7 +1050,7 @@ fn test_client_waypoints() {
 
     // Start another client with the genesis waypoint and make sure it successfully connects
     let mut client_with_waypoint = env.get_validator_ac_client(0, Some(genesis_waypoint));
-    client_with_waypoint.test_validator_connection().unwrap();
+    client_with_waypoint.test_trusted_connection().unwrap();
     assert_eq!(
         client_with_waypoint.latest_epoch_change_li().unwrap(),
         genesis_li
@@ -1055,19 +1083,17 @@ fn test_client_waypoints() {
 
     // Start a client with the waypoint for end of epoch 1 and make sure it successfully connects
     client_with_waypoint = env.get_validator_ac_client(1, Some(epoch_1_waypoint));
-    client_with_waypoint.test_validator_connection().unwrap();
+    client_with_waypoint.test_trusted_connection().unwrap();
     assert_eq!(
         client_with_waypoint.latest_epoch_change_li().unwrap(),
         epoch_1_li
     );
 
     // Verify that a client with the wrong waypoint is not going to be able to connect to the chain.
-    let bad_li = LedgerInfo::mock_genesis();
+    let bad_li = LedgerInfo::mock_genesis(None);
     let bad_waypoint = Waypoint::new(&bad_li).unwrap();
     let mut client_with_bad_waypoint = env.get_validator_ac_client(1, Some(bad_waypoint));
-    assert!(client_with_bad_waypoint
-        .test_validator_connection()
-        .is_err());
+    assert!(client_with_bad_waypoint.test_trusted_connection().is_err());
 }
 
 #[test]
@@ -1079,9 +1105,11 @@ fn test_malformed_script() {
         .unwrap();
 
     let script_path = workspace_builder::workspace_root()
-        .join("testsuite/tests/libratest/dev_modules/test_script.mvir");
+        .join("testsuite/tests/libratest/dev_modules/test_script.move");
     let unwrapped_script_path = script_path.to_str().unwrap();
-    let script_params = &["execute", "0", unwrapped_script_path, "script"];
+    let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/modules");
+    let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
+    let script_params = &["compile", "0", unwrapped_script_path, unwrapped_stdlib_dir];
     let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
 
     // the script expects two arguments. Passing only one in the test, which will cause a failure.

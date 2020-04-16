@@ -8,7 +8,7 @@ use crate::{
     gas_costs, transaction_status_eq,
 };
 use libra_types::{
-    account_config::{lbr_type_tag, ReceivedPaymentEvent, SentPaymentEvent},
+    account_config::{ReceivedPaymentEvent, SentPaymentEvent},
     on_chain_config::VMPublishingOption,
     transaction::{SignedTransaction, TransactionOutput, TransactionPayload, TransactionStatus},
     vm_error::{StatusCode, VMStatus},
@@ -89,7 +89,6 @@ fn single_peer_to_peer_with_padding() {
         10,
         gas_costs::TXN_RESERVED, // this is a default for gas
         1,
-        lbr_type_tag(),
     );
     let unpadded_txn = peer_to_peer_txn(sender.account(), receiver.account(), 10, transfer_amount);
     assert!(txn.raw_txn_bytes_len() > unpadded_txn.raw_txn_bytes_len());

@@ -4,7 +4,7 @@
 use crate::{
     errors::{bounds_error, bytecode_offset_err, verification_error},
     file_format::{
-        Bytecode, CompiledModuleMut, FieldHandle, FieldInstantiation, FunctionDefinition,
+        Bytecode, CompiledModuleMut, Constant, FieldHandle, FieldInstantiation, FunctionDefinition,
         FunctionHandle, FunctionInstantiation, ModuleHandle, Signature, SignatureToken,
         StructDefInstantiation, StructDefinition, StructFieldInformation, StructHandle,
     },
@@ -35,6 +35,9 @@ impl<'a> BoundsChecker<'a> {
 
         for signature in &self.module.signatures {
             self.check_signature(signature, &mut errors);
+        }
+        for constant in &self.module.constant_pool {
+            self.check_constant(constant, &mut errors);
         }
         for module_handle in &self.module.module_handles {
             self.check_module_handle(module_handle, &mut errors);
@@ -67,7 +70,11 @@ impl<'a> BoundsChecker<'a> {
     }
 
     fn check_module_handle(&self, module_handle: &ModuleHandle, errors: &mut Vec<VMStatus>) {
-        check_bounds_impl(&self.module.address_pool, module_handle.address, errors);
+        check_bounds_impl(
+            &self.module.address_identifiers,
+            module_handle.address,
+            errors,
+        );
         check_bounds_impl(&self.module.identifiers, module_handle.name, errors);
     }
 
@@ -175,6 +182,10 @@ impl<'a> BoundsChecker<'a> {
         }
     }
 
+    fn check_constant(&self, constant: &Constant, errors: &mut Vec<VMStatus>) {
+        self.check_type(&constant.type_, errors);
+    }
+
     fn check_struct_def(&self, struct_def: &StructDefinition, errors: &mut Vec<VMStatus>) {
         check_bounds_impl(
             &self.module.struct_handles,
@@ -183,14 +194,11 @@ impl<'a> BoundsChecker<'a> {
         );
         // check signature (type) and type parameter for the field type
         if let StructFieldInformation::Declared(fields) = &struct_def.field_information {
-            let type_param_count = match self
+            let type_param_count = self
                 .module
                 .struct_handles
                 .get(struct_def.struct_handle.into_index())
-            {
-                Some(sh) => sh.type_parameters.len(),
-                None => 0,
-            };
+                .map_or(0, |sh| sh.type_parameters.len());
             // field signatures are inlined
             for field in fields {
                 check_bounds_impl(&self.module.identifiers, field.name, errors);
@@ -239,17 +247,9 @@ impl<'a> BoundsChecker<'a> {
             use self::Bytecode::*;
 
             match bytecode {
-                LdAddr(idx) => {
+                LdConst(idx) => {
                     check_code_unit_bounds_impl(
-                        &self.module.address_pool,
-                        bytecode_offset,
-                        *idx,
-                        errors,
-                    );
-                }
-                LdByteArray(idx) => {
-                    check_code_unit_bounds_impl(
-                        &self.module.byte_array_pool,
+                        &self.module.constant_pool,
                         bytecode_offset,
                         *idx,
                         errors,

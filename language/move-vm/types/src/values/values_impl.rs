@@ -20,7 +20,7 @@ use std::{
 };
 use vm::{
     errors::*,
-    file_format::SignatureToken,
+    file_format::{Constant, SignatureToken},
     gas_schedule::{
         words_in, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, NativeCostIndex,
         CONST_SIZE, REFERENCE_SIZE, STRUCT_SIZE,
@@ -949,6 +949,22 @@ impl VMValueCast<Container> for Value {
     }
 }
 
+impl VMValueCast<Vec<Value>> for Value {
+    fn cast(self) -> VMResult<Vec<Value>> {
+        match self.0 {
+            ValueImpl::Container(r) => Ok(match take_unique_ownership(r)? {
+                Container::General(vs) => vs.into_iter().map(Value).collect(),
+                Container::U8(vs) => vs.into_iter().map(Value::u8).collect(),
+                Container::U64(vs) => vs.into_iter().map(Value::u64).collect(),
+                Container::U128(vs) => vs.into_iter().map(Value::u128).collect(),
+                Container::Bool(vs) => vs.into_iter().map(Value::bool).collect(),
+            }),
+            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                .with_message(format!("cannot cast {:?} to vector of values", v,))),
+        }
+    }
+}
+
 impl VMValueCast<Struct> for Value {
     fn cast(self) -> VMResult<Struct> {
         match self.0 {
@@ -1340,29 +1356,29 @@ impl IntegerValue {
 *
 **************************************************************************************/
 
+macro_rules! ensure_len {
+    ($v: expr, $expected_len: expr, $type: expr, $fn: expr) => {{
+        let actual_len = $v.len();
+        let expected_len = $expected_len;
+        if actual_len != expected_len {
+            let msg = format!(
+                "wrong number of {} for {} expected {} found {}",
+                ($type),
+                ($fn),
+                expected_len,
+                actual_len,
+            );
+            return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(msg));
+        }
+    }};
+}
+
 pub mod vector {
     use super::*;
 
     pub const INDEX_OUT_OF_BOUNDS: u64 = NFE_VECTOR_ERROR_BASE + 1;
     pub const POP_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 2;
     pub const DESTROY_NON_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 3;
-
-    macro_rules! ensure_len {
-        ($v: expr, $expected_len: expr, $type: expr, $fn: expr) => {{
-            let actual_len = $v.len();
-            let expected_len = $expected_len;
-            if actual_len != expected_len {
-                let msg = format!(
-                    "wrong number of {} for {} expected {} found {}",
-                    ($type),
-                    ($fn),
-                    expected_len,
-                    actual_len,
-                );
-                return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(msg));
-            }
-        }};
-    }
 
     macro_rules! pop_arg_front {
         ($arguments:ident, $t:ty) => {
@@ -1899,6 +1915,231 @@ impl Display for Locals {
     }
 }
 
+#[allow(dead_code)]
+pub mod debug {
+    use super::*;
+    use std::fmt::Write;
+    use vm::gas_schedule::ZERO_GAS_UNITS;
+
+    fn print_value_impl<B: Write>(buf: &mut B, ty: &Type, val: &ValueImpl) -> VMResult<()> {
+        match (ty, val) {
+            (Type::U8, ValueImpl::U8(x)) => debug_write!(buf, "{}u8", x),
+            (Type::U64, ValueImpl::U64(x)) => debug_write!(buf, "{}u64", x),
+            (Type::U128, ValueImpl::U128(x)) => debug_write!(buf, "{}u128", x),
+            (Type::Bool, ValueImpl::Bool(x)) => debug_write!(buf, "{}", x),
+            (Type::Address, ValueImpl::Address(x)) => debug_write!(buf, "{}", x),
+
+            (Type::Vector(elem_ty), ValueImpl::Container(r)) => {
+                print_vector(buf, elem_ty, &*r.borrow())
+            }
+
+            (Type::Struct(struct_ty), ValueImpl::Container(r)) => {
+                print_struct(buf, struct_ty, &*r.borrow())
+            }
+
+            (Type::MutableReference(val_ty), ValueImpl::ContainerRef(r)) => {
+                debug_write!(buf, "(&mut) ")?;
+                print_container_ref(buf, val_ty, r)
+            }
+            (Type::Reference(val_ty), ValueImpl::ContainerRef(r)) => {
+                debug_write!(buf, "(&) ")?;
+                print_container_ref(buf, val_ty, r)
+            }
+
+            (Type::MutableReference(val_ty), ValueImpl::IndexedRef(r)) => {
+                debug_write!(buf, "(&mut) ")?;
+                print_indexed_ref(buf, val_ty, r)
+            }
+            (Type::Reference(val_ty), ValueImpl::IndexedRef(r)) => {
+                debug_write!(buf, "(&) ")?;
+                print_indexed_ref(buf, val_ty, r)
+            }
+
+            (_, ValueImpl::Invalid) => debug_write!(buf, "(invalid)"),
+
+            _ => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                .with_message(format!("cannot print value {:?} as type {:?}", val, ty))),
+        }
+    }
+
+    fn print_vector<B: Write>(buf: &mut B, elem_ty: &Type, v: &Container) -> VMResult<()> {
+        macro_rules! print_vector {
+            ($v: expr, $suffix: expr) => {{
+                let suffix = &$suffix;
+                debug_write!(buf, "[")?;
+                let mut it = $v.iter();
+                if let Some(x) = it.next() {
+                    debug_write!(buf, "{}{}", x, suffix)?;
+                    for x in it {
+                        debug_write!(buf, ", {}{}", x, suffix)?;
+                    }
+                }
+                debug_write!(buf, "]")
+            }};
+        }
+
+        match (elem_ty, v) {
+            (Type::U8, Container::U8(v)) => print_vector!(v, "u8"),
+            (Type::U64, Container::U64(v)) => print_vector!(v, "u64"),
+            (Type::U128, Container::U128(v)) => print_vector!(v, "u128"),
+            (Type::Bool, Container::Bool(v)) => print_vector!(v, ""),
+
+            (Type::Address, Container::General(v)) | (Type::Struct(_), Container::General(v)) => {
+                debug_write!(buf, "[")?;
+                let mut it = v.iter();
+                if let Some(x) = it.next() {
+                    print_value_impl(buf, elem_ty, x)?;
+                    for x in it {
+                        debug_write!(buf, ", ")?;
+                        print_value_impl(buf, elem_ty, x)?;
+                    }
+                }
+                debug_write!(buf, "]")
+            }
+
+            _ => Err(
+                VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
+                    "cannot print container {:?} as vector with element type {:?}",
+                    v, elem_ty
+                )),
+            ),
+        }
+    }
+
+    fn print_struct<B: Write>(buf: &mut B, struct_ty: &StructType, s: &Container) -> VMResult<()> {
+        let v = match s {
+            Container::General(v) => v,
+            _ => {
+                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                    .with_message(format!("invalid container {:?} as struct", s)))
+            }
+        };
+        let layout = &struct_ty.layout;
+        if layout.len() != v.len() {
+            return Err(
+                VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
+                    "cannot print container {:?} as struct type {:?}, expected {} fields, got {}",
+                    v,
+                    struct_ty,
+                    layout.len(),
+                    v.len()
+                )),
+            );
+        }
+        debug_write!(buf, "{}::{} {{ ", struct_ty.module, struct_ty.name)?;
+        let mut it = layout.iter().zip(v.iter());
+        if let Some((ty, val)) = it.next() {
+            print_value_impl(buf, ty, val)?;
+            for (ty, val) in it {
+                debug_write!(buf, ", ")?;
+                print_value_impl(buf, ty, val)?;
+            }
+        }
+        debug_write!(buf, " }}")
+    }
+
+    fn print_container_ref<B: Write>(buf: &mut B, val_ty: &Type, r: &ContainerRef) -> VMResult<()> {
+        match val_ty {
+            Type::Vector(elem_ty) => print_vector(buf, elem_ty, &*r.borrow()),
+            Type::Struct(struct_ty) => print_struct(buf, struct_ty, &*r.borrow()),
+            _ => Err(
+                VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
+                    "cannot print container {:?} as type {:?}",
+                    &*r.borrow(),
+                    val_ty
+                )),
+            ),
+        }
+    }
+
+    fn print_indexed_ref<B: Write>(buf: &mut B, val_ty: &Type, r: &IndexedRef) -> VMResult<()> {
+        macro_rules! print_vector_elem {
+            ($v: expr, $idx: expr, $suffix: expr) => {
+                match $v.get($idx) {
+                    Some(x) => debug_write!(buf, "{}{}", x, $suffix),
+                    None => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message("ref index out of bounds".to_string())),
+                }
+            };
+        }
+
+        let idx = r.idx;
+        match (val_ty, &*r.container_ref.borrow()) {
+            (Type::U8, Container::U8(v)) => print_vector_elem!(v, idx, "u8"),
+            (Type::U64, Container::U64(v)) => print_vector_elem!(v, idx, "u64"),
+            (Type::U128, Container::U128(v)) => print_vector_elem!(v, idx, "u128"),
+            (Type::Bool, Container::Bool(v)) => print_vector_elem!(v, idx, ""),
+
+            (Type::U8, Container::General(v))
+            | (Type::U64, Container::General(v))
+            | (Type::U128, Container::General(v))
+            | (Type::Bool, Container::General(v))
+            | (Type::Address, Container::General(v)) => match v.get(idx) {
+                Some(val) => print_value_impl(buf, val_ty, val),
+                None => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("ref index out of bounds".to_string())),
+            },
+
+            (_, container) => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(
+                format!(
+                    "cannot print element {} of container {:?} as {:?}",
+                    idx, container, val_ty
+                ),
+            )),
+        }
+    }
+
+    fn print_reference<B: Write>(buf: &mut B, val_ty: &Type, r: &Reference) -> VMResult<()> {
+        match &r.0 {
+            ReferenceImpl::ContainerRef(r) => print_container_ref(buf, val_ty, r),
+            ReferenceImpl::IndexedRef(r) => print_indexed_ref(buf, val_ty, r),
+        }
+    }
+
+    pub fn print_locals<B: Write>(buf: &mut B, tys: &[Type], locals: &Locals) -> VMResult<()> {
+        match &*locals.0.borrow() {
+            Container::General(v) => {
+                // TODO: The number of spaces in the indent is currently hard coded.
+                // Plan is to switch to the pretty crate for pretty printing.
+                if tys.is_empty() {
+                    debug_writeln!(buf, "            (none) ")?;
+                } else {
+                    for (idx, (ty, val)) in tys.iter().zip(v.iter()).enumerate() {
+                        debug_write!(buf, "            [{}] ", idx)?;
+                        print_value_impl(buf, ty, val)?;
+                        debug_writeln!(buf)?;
+                    }
+                }
+                Ok(())
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[allow(unused_mut)]
+    pub fn native_print(
+        mut ty_args: Vec<Type>,
+        mut args: VecDeque<Value>,
+        _cost_table: &CostTable,
+    ) -> VMResult<NativeResult> {
+        ensure_len!(ty_args, 1, "type arguments", "print");
+        ensure_len!(args, 1, "arguments", "print");
+
+        // No-op if the feature flag is not present.
+        #[cfg(feature = "debug_module")]
+        {
+            let ty = ty_args.pop().unwrap();
+            let r: Reference = args.pop_back().unwrap().value_as()?;
+
+            let mut buf = String::new();
+            print_reference(&mut buf, &ty, &r)?;
+            println!("[debug] {}", buf);
+        }
+
+        Ok(NativeResult::ok(ZERO_GAS_UNITS, vec![]))
+    }
+}
+
 /***************************************************************************************
  *
  * Serialization & Deserialization
@@ -1936,6 +2177,11 @@ impl Value {
 }
 
 impl Struct {
+    pub fn simple_deserialize(blob: &[u8], ty: StructType) -> VMResult<Struct> {
+        lcs::from_bytes_seed(&ty, blob)
+            .map_err(|e| VMStatus::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
+    }
+
     pub fn simple_serialize(&self, ty: &StructType) -> Option<Vec<u8>> {
         lcs::to_bytes(&AnnotatedValue { ty, val: &self.0 }).ok()
     }
@@ -1946,29 +2192,14 @@ struct AnnotatedValue<'a, 'b, T1, T2> {
     val: &'b T2,
 }
 
+fn invariant_violation<S: serde::Serializer>(message: String) -> S::Error {
+    S::Error::custom(
+        VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(message),
+    )
+}
+
 impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, Type, ValueImpl> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        macro_rules! serialize_vec {
-            ($tc: ident, $ty: expr, $v: expr) => {{
-                match $ty {
-                    Type::$tc => (),
-                    _ => {
-                        return Err(S::Error::custom(
-                            VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                                .with_message(
-                                    "cannot serialize vector -- element type mismatch".to_string(),
-                                ),
-                        ))
-                    }
-                }
-                let mut t = serializer.serialize_seq(Some($v.len()))?;
-                for val in $v {
-                    t.serialize_element(val)?;
-                }
-                t.end()
-            }};
-        }
-
         match (self.ty, self.val) {
             (Type::U8, ValueImpl::U8(x)) => serializer.serialize_u8(*x),
             (Type::U64, ValueImpl::U64(x)) => serializer.serialize_u64(*x),
@@ -1988,9 +2219,12 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, Type, ValueImpl> {
             (Type::Vector(ty), ValueImpl::Container(r)) => {
                 let ty = &**ty;
                 match (ty, &*r.borrow()) {
-                    (Type::Vector(_), Container::General(v))
-                    | (Type::Struct(_), Container::General(v))
-                    | (Type::Address, Container::General(v)) => {
+                    (Type::U8, Container::U8(v)) => v.serialize(serializer),
+                    (Type::U64, Container::U64(v)) => v.serialize(serializer),
+                    (Type::U128, Container::U128(v)) => v.serialize(serializer),
+                    (Type::Bool, Container::Bool(v)) => v.serialize(serializer),
+
+                    (_, Container::General(v)) => {
                         let mut t = serializer.serialize_seq(Some(v.len()))?;
                         for val in v {
                             t.serialize_element(&AnnotatedValue { ty, val })?;
@@ -1998,56 +2232,44 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, Type, ValueImpl> {
                         t.end()
                     }
 
-                    (Type::U8, Container::U8(v)) => serialize_vec!(U8, ty, v),
-                    (Type::U64, Container::U64(v)) => serialize_vec!(U64, ty, v),
-                    (Type::U128, Container::U128(v)) => serialize_vec!(U128, ty, v),
-                    (Type::Bool, Container::Bool(v)) => serialize_vec!(Bool, ty, v),
-
-                    (ty, container) => Err(S::Error::custom(
-                        VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
-                            format!("cannot serialize container {:?} as {:?}", container, ty),
-                        ),
-                    )),
+                    (ty, container) => Err(invariant_violation::<S>(format!(
+                        "cannot serialize container {:?} as {:?}",
+                        container, ty
+                    ))),
                 }
             }
 
-            (ty, val) => Err(S::Error::custom(
-                VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message(format!("cannot serialize value {:?} as {:?}", val, ty)),
-            )),
+            (ty, val) => Err(invariant_violation::<S>(format!(
+                "cannot serialize value {:?} as {:?}",
+                val, ty
+            ))),
         }
     }
 }
 
 impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, StructType, Container> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        match self.val {
-            Container::General(v) => {
-                let fields = &self.ty.layout;
-                if fields.len() != v.len() {
-                    return Err(S::Error::custom(
-                        VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
-                            format!(
-                                "cannot serialize struct value {:?} as {:?} -- number of fields mismatch",
-                                self.val, self.ty
-                            ),
-                        ),
-                    ));
-                }
-                let mut t = serializer.serialize_tuple(v.len())?;
-                for (ty, val) in fields.iter().zip(v.iter()) {
-                    t.serialize_element(&AnnotatedValue { ty, val })?;
-                }
-                t.end()
-            }
-
-            _ => Err(S::Error::custom(
-                VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(format!(
+        let values = match &self.val {
+            Container::General(v) => v,
+            _ => {
+                return Err(invariant_violation::<S>(format!(
                     "cannot serialize container value {:?} as {:?}",
                     self.val, self.ty
-                )),
-            )),
+                )));
+            }
+        };
+        let fields = &self.ty.layout;
+        if fields.len() != values.len() {
+            return Err(invariant_violation::<S>(format!(
+                "cannot serialize struct value {:?} as {:?} -- number of fields mismatch",
+                self.val, self.ty
+            )));
         }
+        let mut t = serializer.serialize_tuple(values.len())?;
+        for (ty, val) in fields.iter().zip(values.iter()) {
+            t.serialize_element(&AnnotatedValue { ty, val })?;
+        }
+        t.end()
     }
 }
 
@@ -2065,71 +2287,27 @@ impl<'d> serde::de::DeserializeSeed<'d> for &Type {
             Type::U128 => u128::deserialize(deserializer).map(Value::u128),
             Type::Address => AccountAddress::deserialize(deserializer).map(Value::address),
 
+            Type::Struct(ty) => Ok(Value::struct_(ty.deserialize(deserializer)?)),
+
             Type::Vector(layout) => {
-                struct GeneralVectorVisitor<'a>(&'a Type);
-                impl<'d, 'a> serde::de::Visitor<'d> for GeneralVectorVisitor<'a> {
-                    type Value = Container;
-
-                    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                        formatter.write_str("Vector")
-                    }
-
-                    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-                    where
-                        A: serde::de::SeqAccess<'d>,
-                    {
-                        let mut vals = Vec::new();
-                        while let Some(elem) = seq.next_element_seed(self.0)? {
-                            vals.push(elem.0)
-                        }
-                        Ok(Container::General(vals))
-                    }
-                }
-
-                macro_rules! deserialize_specialized_vec {
-                    ($tc: ident, $tc2: ident, $ty: ident) => {{
-                        struct $tc;
-                        impl<'d> serde::de::Visitor<'d> for $tc {
-                            type Value = Vec<$ty>;
-
-                            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                                formatter.write_str(stringify!($ty))
-                            }
-
-                            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-                            where
-                                A: serde::de::SeqAccess<'d>,
-                            {
-                                let mut vals = Vec::new();
-                                while let Some(elem) = seq.next_element::<$ty>()? {
-                                    vals.push(elem)
-                                }
-                                Ok(vals)
-                            }
-                        }
-                        Ok(Value(ValueImpl::Container(Rc::new(RefCell::new(
-                            Container::$tc2(deserializer.deserialize_seq($tc)?),
-                        )))))
-                    }};
-                }
-
-                match &**layout {
-                    Type::U8 => deserialize_specialized_vec!(U8VectorVisitor, U8, u8),
-                    Type::U64 => deserialize_specialized_vec!(U64VectorVisitor, U64, u64),
-                    Type::U128 => deserialize_specialized_vec!(U128VectorVisitor, U128, u128),
-                    Type::Bool => deserialize_specialized_vec!(BoolVectorVisitor, Bool, bool),
-                    layout => Ok(Value(ValueImpl::Container(Rc::new(RefCell::new(
-                        deserializer.deserialize_seq(GeneralVectorVisitor(layout))?,
-                    ))))),
-                }
+                let container = match &**layout {
+                    Type::U8 => Container::U8(Vec::deserialize(deserializer)?),
+                    Type::U64 => Container::U64(Vec::deserialize(deserializer)?),
+                    Type::U128 => Container::U128(Vec::deserialize(deserializer)?),
+                    Type::Bool => Container::Bool(Vec::deserialize(deserializer)?),
+                    layout => Container::General(
+                        deserializer.deserialize_seq(VectorElementVisitor(layout))?,
+                    ),
+                };
+                Ok(Value(ValueImpl::Container(Rc::new(RefCell::new(
+                    container,
+                )))))
             }
-
-            Type::Struct(layout) => layout.deserialize(deserializer),
 
             Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
                 Err(D::Error::custom(
                     VMStatus::new(StatusCode::INVALID_DATA)
-                        .with_message(format!("Value type {:?} not possible", self)),
+                        .with_message(format!("Value type {:?} is not possible", self)),
                 ))
             }
         }
@@ -2137,42 +2315,99 @@ impl<'d> serde::de::DeserializeSeed<'d> for &Type {
 }
 
 impl<'d> serde::de::DeserializeSeed<'d> for &StructType {
-    type Value = Value;
+    type Value = Struct;
 
     fn deserialize<D: serde::de::Deserializer<'d>>(
         self,
         deserializer: D,
     ) -> Result<Self::Value, D::Error> {
-        struct StructVisitor<'a>(&'a [Type]);
-        impl<'d, 'a> serde::de::Visitor<'d> for StructVisitor<'a> {
-            type Value = Struct;
+        let layout = &self.layout;
+        let fields = deserializer.deserialize_tuple(layout.len(), StructFieldVisitor(layout))?;
+        Ok(Struct::pack(fields))
+    }
+}
 
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("Struct")
-            }
+struct VectorElementVisitor<'a>(&'a Type);
 
-            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            where
-                A: serde::de::SeqAccess<'d>,
-            {
-                let mut val = Vec::new();
+impl<'d, 'a> serde::de::Visitor<'d> for VectorElementVisitor<'a> {
+    type Value = Vec<ValueImpl>;
 
-                for (i, field_type) in self.0.iter().enumerate() {
-                    if let Some(elem) = seq.next_element_seed(field_type)? {
-                        val.push(elem)
-                    } else {
-                        return Err(A::Error::invalid_length(i, &self));
-                    }
-                }
-                Ok(Struct::pack(val))
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("Vector")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: serde::de::SeqAccess<'d>,
+    {
+        let mut vals = Vec::new();
+        while let Some(elem) = seq.next_element_seed(self.0)? {
+            vals.push(elem.0)
+        }
+        Ok(vals)
+    }
+}
+
+struct StructFieldVisitor<'a>(&'a [Type]);
+
+impl<'d, 'a> serde::de::Visitor<'d> for StructFieldVisitor<'a> {
+    type Value = Vec<Value>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("Struct")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: serde::de::SeqAccess<'d>,
+    {
+        let mut val = Vec::new();
+        for (i, field_type) in self.0.iter().enumerate() {
+            if let Some(elem) = seq.next_element_seed(field_type)? {
+                val.push(elem)
+            } else {
+                return Err(A::Error::invalid_length(i, &self));
             }
         }
+        Ok(val)
+    }
+}
 
-        let field_layouts = &self.layout;
-        Ok(Value::struct_(deserializer.deserialize_tuple(
-            field_layouts.len(),
-            StructVisitor(field_layouts),
-        )?))
+/***************************************************************************************
+*
+* Constants
+*
+*   Implementation of deseserialization of constant data into a runtime value
+*
+**************************************************************************************/
+
+impl Value {
+    fn constant_sig_token_to_type(constant_signature: &SignatureToken) -> Option<Type> {
+        use SignatureToken as S;
+        use Type as T;
+        Some(match constant_signature {
+            S::Bool => T::Bool,
+            S::U8 => T::U8,
+            S::U64 => T::U64,
+            S::U128 => T::U128,
+            S::Address => T::Address,
+            S::Vector(inner) => T::Vector(Box::new(Self::constant_sig_token_to_type(inner)?)),
+            // Not yet supported
+            S::Struct(_) | S::StructInstantiation(_, _) => return None,
+            // Not allowed/Not meaningful
+            S::TypeParameter(_) | S::Reference(_) | S::MutableReference(_) => return None,
+        })
+    }
+
+    pub fn deserialize_constant(constant: &Constant) -> Option<Value> {
+        let ty = Self::constant_sig_token_to_type(&constant.type_)?;
+        Value::simple_deserialize(&constant.data, ty).ok()
+    }
+
+    pub fn serialize_constant(type_: SignatureToken, value: Value) -> Option<Constant> {
+        let ty = Self::constant_sig_token_to_type(&type_)?;
+        let data = value.simple_serialize(&ty)?;
+        Some(Constant { data, type_ })
     }
 }
 

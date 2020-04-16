@@ -41,6 +41,8 @@ struct LibraP2PTransferTransactionArgument {
     uint64_t value;
     uint8_t address[LIBRA_ADDRESS_SIZE];
     uint8_t auth_key_prefix[LIBRA_PUBKEY_SIZE - LIBRA_ADDRESS_SIZE];
+    const uint8_t* metadata_bytes;
+    size_t metadata_len;
 };
 
 enum TransactionType {
@@ -122,10 +124,12 @@ enum LibraStatus libra_LibraAccountResource_from(const uint8_t *buf, size_t len,
  * @param[in] max_gas_amount is the maximal total gas specified by wallet to spend for this transaction.
  * @param[in] gas_unit_price is the maximal price can be paid per gas.
  * @param[in] expiration_time_secs is the time this TX remain valid, the format is unix timestamp.
+ * @param[in] metadata_bytes is the metadata bytes for given transaction.
+ * @param[in] metadata_len is the length of metadata_bytes array.
  * @param[out] ptr_buf is the pointer that will be filled with the memory address of the transaction allocated in rust. User takes ownership of pointer returned by *buf, which needs to be freed using libra_free_bytes_buffer
  * @param[out] ptr_len is the length of the signed transaction memory buffer.
 */
-enum LibraStatus libra_SignedTransactionBytes_from(const uint8_t sender_private_key[LIBRA_PRIVKEY_SIZE], const uint8_t receiver[LIBRA_PUBKEY_SIZE], uint64_t sequence, uint64_t num_coins, uint64_t max_gas_amount, uint64_t gas_unit_price, uint64_t expiration_time_secs, uint8_t **ptr_buf, size_t *ptr_len);
+enum LibraStatus libra_SignedTransactionBytes_from(const uint8_t sender_private_key[LIBRA_PRIVKEY_SIZE], const uint8_t receiver[LIBRA_PUBKEY_SIZE], uint64_t sequence, uint64_t num_coins, uint64_t max_gas_amount, uint64_t gas_unit_price, uint64_t expiration_time_secs, const uint8_t* metadata_bytes, size_t metadata_len, uint8_t **ptr_buf, size_t *ptr_len);
 
 /*!
  * Function to free the allocation memory in rust for bytes
@@ -156,10 +160,12 @@ enum LibraStatus libra_LibraSignedTransaction_from(const uint8_t *buf, size_t le
  * @param[in] max_gas_amount is the maximal total gas specified by wallet to spend for this transaction.
  * @param[in] gas_unit_price is the maximal price can be paid per gas.
  * @param[in] expiration_time_secs is the time this TX remain valid, the format is unix timestamp.
+ * @param[in] metadata_bytes is the metadata bytes for given transaction.
+ * @param[in] metadata_len is the length of metadata_bytes array.
  * @param[out] buf is the pointer that will be filled with the memory address of the transaction allocated in rust. User takes ownership of pointer returned by *buf, which needs to be freed using libra_free_bytes_buffer
  * @param[out] len is the length of the raw transaction memory buffer.
 */
-enum LibraStatus libra_RawTransactionBytes_from(const uint8_t sender[LIBRA_ADDRESS_SIZE], const uint8_t receiver[LIBRA_PUBKEY_SIZE], uint64_t sequence, uint64_t num_coins, uint64_t max_gas_amount, uint64_t gas_unit_price, uint64_t expiration_time_secs, uint8_t **buf, size_t *len);
+enum LibraStatus libra_RawTransactionBytes_from(const uint8_t sender[LIBRA_ADDRESS_SIZE], const uint8_t receiver[LIBRA_PUBKEY_SIZE], uint64_t sequence, uint64_t num_coins, uint64_t max_gas_amount, uint64_t gas_unit_price, uint64_t expiration_time_secs, const uint8_t* metadata_bytes, size_t metadata_len, uint8_t **buf, size_t *len);
 
 /*!
  * This function takes in a raw transaction, public key and signature in bytes, and return a signed transaction in bytes.

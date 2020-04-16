@@ -10,7 +10,7 @@ use move_vm_types::{loaded_data::types::Type, values::Value};
 use once_cell::sync::Lazy;
 use vm::{
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, Bytecode, FieldHandleIndex, FieldInstantiationIndex,
+        Bytecode, ConstantPoolIndex, FieldHandleIndex, FieldInstantiationIndex,
         FunctionHandleIndex, FunctionInstantiationIndex, StructDefInstantiationIndex,
         StructDefinitionIndex, NUMBER_OF_NATIVE_FUNCTIONS,
     },
@@ -77,7 +77,7 @@ static INITIAL_GAS_SCHEDULE: Lazy<Vec<u8>> = Lazy::new(|| {
         (Abort, GasCost::new(39, 1)),
         (MutBorrowLoc(0), GasCost::new(45, 1)),
         (ImmBorrowLoc(0), GasCost::new(45, 1)),
-        (LdAddr(AddressPoolIndex::new(0)), GasCost::new(36, 1)),
+        (LdConst(ConstantPoolIndex::new(0)), GasCost::new(36, 1)),
         (Ge, GasCost::new(46, 1)),
         (Xor, GasCost::new(46, 1)),
         (Shl, GasCost::new(46, 1)),
@@ -130,7 +130,6 @@ static INITIAL_GAS_SCHEDULE: Lazy<Vec<u8>> = Lazy::new(|| {
         ),
         (Div, GasCost::new(41, 1)),
         (Eq, GasCost::new(48, 1)),
-        (LdByteArray(ByteArrayPoolIndex::new(0)), GasCost::new(56, 1)),
         (Gt, GasCost::new(46, 1)),
         (Pack(StructDefinitionIndex::new(0)), GasCost::new(73, 1)),
         (

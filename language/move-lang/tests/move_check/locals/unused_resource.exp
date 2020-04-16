@@ -117,14 +117,14 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource.move:31:21 ───
+    ┌── tests/move_check/locals/unused_resource.move:31:22 ───
     │
- 31 │       fun t6<T>(x: T) {
-    │ ╭─────────────────────^
+ 31 │       fun t6<T>(_x: R) {
+    │ ╭──────────────────────^
  32 │ │     }
     │ ╰─────^ Invalid return
     ·
- 31 │     fun t6<T>(x: T) {
-    │               - The parameter 'x' might still contain a resource value. The resource must be consumed before the function returns
+ 31 │     fun t6<T>(_x: R) {
+    │               -- The parameter '_x' still contains a resource value. The resource must be consumed before the function returns
     │
 

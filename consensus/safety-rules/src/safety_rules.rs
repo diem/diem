@@ -18,7 +18,11 @@ use consensus_types::{
 use libra_crypto::{ed25519::Ed25519Signature, hash::HashValue};
 use libra_logger::debug;
 use libra_types::{
-    block_info::BlockInfo, ledger_info::LedgerInfo, validator_signer::ValidatorSigner,
+    block_info::BlockInfo,
+    ledger_info::LedgerInfo,
+    validator_change::{ValidatorChangeProof, VerifierType},
+    validator_signer::ValidatorSigner,
+    validator_verifier::ValidatorVerifier,
 };
 use std::marker::PhantomData;
 
@@ -34,6 +38,7 @@ use std::marker::PhantomData;
 pub struct SafetyRules<T> {
     persistent_storage: PersistentSafetyStorage,
     validator_signer: ValidatorSigner,
+    validator_verifier: Option<ValidatorVerifier>,
     marker: PhantomData<T>,
 }
 
@@ -49,6 +54,7 @@ impl<T: Payload> SafetyRules<T> {
         Self {
             persistent_storage,
             validator_signer,
+            validator_verifier: None,
             marker: PhantomData,
         }
     }
@@ -86,7 +92,18 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
             self.persistent_storage.epoch()?,
             self.persistent_storage.last_voted_round()?,
             self.persistent_storage.preferred_round()?,
+            self.persistent_storage.waypoint()?,
         ))
+    }
+
+    fn initialize(&mut self, proof: &ValidatorChangeProof) -> Result<(), Error> {
+        let waypoint = self.persistent_storage.waypoint()?;
+        let last_li = proof
+            .verify(&VerifierType::Waypoint(waypoint))
+            .map_err(|e| Error::WaypointMismatch(format!("{}", e)))?;
+        let validator_set = last_li.ledger_info().next_validator_set();
+        self.validator_verifier = Some(validator_set.ok_or(Error::InvalidLedgerInfo)?.into());
+        Ok(())
     }
 
     /// @TODO verify signatures of the QC, also the special genesis QC
@@ -189,11 +206,43 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
         ))
     }
 
-    /// @TODO only sign a timeout if it matches last_voted_round or last_voted_round + 1
-    /// @TODO update last_voted_round
+    /// Only sign the timeout if it is greater than or equal to the last_voted_round and ahead of
+    /// the preferred_round. We may end up signing timeouts for rounds without first signing votes
+    /// if we have received QCs but not proposals. Always map the last_voted_round to the last
+    /// signed timeout to prevent equivocation. We can sign the last_voted_round timeout multiple
+    /// times by requiring that the underlying signing scheme provides deterministic signatures.
     fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
+        debug!("Incoming timeout message for round {}", timeout.round());
+        COUNTERS.requested_sign_timeout.inc();
+
+        let expected_epoch = self.persistent_storage.epoch()?;
+        if timeout.epoch() != expected_epoch {
+            return Err(Error::IncorrectEpoch(timeout.epoch(), expected_epoch));
+        }
+
+        let preferred_round = self.persistent_storage.preferred_round()?;
+        if timeout.round() <= preferred_round {
+            return Err(Error::BadTimeoutPreferredRound(
+                timeout.round(),
+                preferred_round,
+            ));
+        }
+
+        let last_voted_round = self.persistent_storage.last_voted_round()?;
+        if timeout.round() < last_voted_round {
+            return Err(Error::BadTimeoutLastVotedRound(
+                timeout.round(),
+                last_voted_round,
+            ));
+        }
+        if timeout.round() > last_voted_round {
+            self.persistent_storage
+                .set_last_voted_round(timeout.round())?;
+        }
+
+        let signature = timeout.sign(&self.validator_signer);
         COUNTERS.sign_timeout.inc();
-        debug!("Incoming timeout message to sign.");
-        Ok(timeout.sign(&self.validator_signer))
+        debug!("Successfully signed timeout message.");
+        Ok(signature)
     }
 }

@@ -11,8 +11,8 @@ use bytecode_verifier::VerifiedModule;
 use libra_config::{config::NodeConfig, generator};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    x25519::{X25519StaticPrivateKey, X25519StaticPublicKey},
-    PrivateKey, Uniform, ValidKey,
+    traits::ValidKey,
+    PrivateKey, Uniform,
 };
 use libra_state_view::StateView;
 use libra_types::{
@@ -20,12 +20,10 @@ use libra_types::{
     account_address::AccountAddress,
     account_config,
     contract_event::ContractEvent,
-    discovery_info::DiscoveryInfo,
     discovery_set::DiscoverySet,
     language_storage::ModuleId,
-    on_chain_config::VMPublishingOption,
+    on_chain_config::{new_epoch_event_key, VMPublishingOption, ValidatorSet},
     transaction::{authenticator::AuthenticationKey, ChangeSet, Transaction},
-    validator_set::ValidatorSet,
 };
 use libra_vm::system_module_names::*;
 use move_core_types::identifier::Identifier;
@@ -36,9 +34,7 @@ use move_vm_state::{
 };
 use move_vm_types::{chain_state::ChainState, values::Value};
 use once_cell::sync::Lazy;
-use parity_multiaddr::Multiaddr;
-use rand::{rngs::StdRng, SeedableRng};
-use std::str::FromStr;
+use rand::prelude::*;
 use stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use vm::{
     access::ModuleAccess,
@@ -58,20 +54,14 @@ pub static GENESIS_KEYPAIR: Lazy<(Ed25519PrivateKey, Ed25519PublicKey)> = Lazy::
     let public_key = private_key.public_key();
     (private_key, public_key)
 });
-// TODO(philiphayes): remove this when we add discovery set to genesis config.
-static PLACEHOLDER_PUBKEY: Lazy<X25519StaticPublicKey> = Lazy::new(|| {
-    let salt = None;
-    let seed = [69u8; 32];
-    let app_info = None;
-    let (_, pubkey) = X25519StaticPrivateKey::derive_keypair_from_seed(salt, &seed, app_info);
-    pubkey
-});
 
 // Identifiers for well-known functions.
 static ADD_VALIDATOR: Lazy<Identifier> = Lazy::new(|| Identifier::new("add_validator_").unwrap());
 static INITIALIZE: Lazy<Identifier> = Lazy::new(|| Identifier::new("initialize").unwrap());
 static INITIALIZE_BLOCK: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("initialize_block_metadata").unwrap());
+static INITIALIZE_CONFIG: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("initialize_configuration").unwrap());
 static INITIALIZE_TXN_FEES: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("initialize_transaction_fees").unwrap());
 static INITIALIZE_VALIDATOR_SET: Lazy<Identifier> =
@@ -90,6 +80,13 @@ static ROTATE_AUTHENTICATION_KEY: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("rotate_authentication_key").unwrap());
 static EPILOGUE: Lazy<Identifier> = Lazy::new(|| Identifier::new("epilogue").unwrap());
 
+static ASSOCIATION_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+    ModuleId::new(
+        account_config::CORE_CODE_ADDRESS,
+        Identifier::new("Association").unwrap(),
+    )
+});
+
 static SCRIPT_WHITELIST_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         account_config::CORE_CODE_ADDRESS,
@@ -104,32 +101,19 @@ static LIBRA_VERSION_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     )
 });
 
+static LBR_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+    ModuleId::new(
+        account_config::CORE_CODE_ADDRESS,
+        Identifier::new("LBR").unwrap(),
+    )
+});
+
 static LIBRA_TIME_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
         account_config::CORE_CODE_ADDRESS,
         Identifier::new("LibraTimestamp").unwrap(),
     )
 });
-
-// TODO(philiphayes): remove this after integrating on-chain discovery with config.
-/// Make a placeholder `DiscoverySet` from the `ValidatorSet`.
-pub fn make_placeholder_discovery_set(validator_set: &ValidatorSet) -> DiscoverySet {
-    let mock_addr = Multiaddr::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
-    let discovery_set = validator_set
-        .payload()
-        .iter()
-        .map(|validator_pubkeys| DiscoveryInfo {
-            account_address: *validator_pubkeys.account_address(),
-            validator_network_identity_pubkey: validator_pubkeys
-                .network_identity_public_key()
-                .clone(),
-            validator_network_address: mock_addr.clone(),
-            fullnodes_network_identity_pubkey: PLACEHOLDER_PUBKEY.clone(),
-            fullnodes_network_address: mock_addr.clone(),
-        })
-        .collect::<Vec<_>>();
-    DiscoverySet::new(discovery_set)
-}
 
 pub fn encode_genesis_transaction_with_validator(
     private_key: &Ed25519PrivateKey,
@@ -245,10 +229,22 @@ fn create_and_initialize_main_accounts(
     let mut txn_data = TransactionMetadata::default();
     txn_data.sender = association_addr;
 
+    move_vm
+        .execute_function(
+            &ASSOCIATION_MODULE,
+            &INITIALIZE,
+            &gas_schedule,
+            interpreter_context,
+            &txn_data,
+            vec![],
+            vec![],
+        )
+        .expect("Failure initializing association module");
+
     // create  the LBR module
     move_vm
         .execute_function(
-            &account_config::LBR_MODULE,
+            &LBR_MODULE,
             &INITIALIZE,
             &gas_schedule,
             interpreter_context,
@@ -325,6 +321,29 @@ fn create_and_initialize_main_accounts(
         )
         .expect("Failure initializing block metadata");
 
+    move_vm
+        .execute_function(
+            &LIBRA_WRITESET_MANAGER_MODULE,
+            &INITIALIZE,
+            &gas_schedule,
+            interpreter_context,
+            &txn_data,
+            vec![],
+            vec![],
+        )
+        .expect("Failure initializing LibraWriteSetManager");
+
+    move_vm
+        .execute_function(
+            &LIBRA_CONFIG_MODULE,
+            &INITIALIZE_CONFIG,
+            &gas_schedule,
+            interpreter_context,
+            &txn_data,
+            vec![],
+            vec![],
+        )
+        .expect("Failure initializing block metadata");
     move_vm
         .execute_function(
             &GAS_SCHEDULE_MODULE,
@@ -701,7 +720,7 @@ fn reconfigure(
 
     move_vm
         .execute_function(
-            &LIBRA_SYSTEM_MODULE,
+            &LIBRA_CONFIG_MODULE,
             &RECONFIGURE,
             &gas_schedule,
             interpreter_context,
@@ -738,21 +757,21 @@ fn verify_genesis_write_set(events: &[ContractEvent], discovery_set: &DiscoveryS
         events,
     );
 
-    // (2) The third event should be the validator set change event
-    let validator_set_change_event = &events[2];
+    // (2) The third event should be the new epoch event
+    let new_epoch_event = &events[2];
     assert_eq!(
-        *validator_set_change_event.key(),
-        ValidatorSet::change_event_key(),
+        *new_epoch_event.key(),
+        new_epoch_event_key(),
         "Key of emitted event {:?} does not match change event key {:?}",
-        *validator_set_change_event.key(),
-        ValidatorSet::change_event_key()
+        *new_epoch_event.key(),
+        new_epoch_event_key(),
     );
-    // (3) This should be the first validator set change event
+    // (3) This should be the first new_epoch_event
     assert_eq!(
-        validator_set_change_event.sequence_number(),
+        new_epoch_event.sequence_number(),
         0,
         "Expected sequence number 0 for validator set change event but got {}",
-        validator_set_change_event.sequence_number()
+        new_epoch_event.sequence_number()
     );
 
     // (4) The fourth event should be the discovery set change event
@@ -780,16 +799,15 @@ fn verify_genesis_write_set(events: &[ContractEvent], discovery_set: &DiscoveryS
 }
 
 /// Generate an artificial genesis `ChangeSet` for testing
-pub fn generate_genesis_change_set_for_testing() -> ChangeSet {
-    let stdlib_modules = stdlib_modules(StdLibOptions::Staged);
+pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) -> ChangeSet {
+    let stdlib_modules = stdlib_modules(stdlib_options);
     let swarm = generator::validator_swarm_for_testing(10);
-    let discovery_set = make_placeholder_discovery_set(&swarm.validator_set);
 
     encode_genesis_change_set(
         &GENESIS_KEYPAIR.1,
         &swarm.nodes,
         swarm.validator_set,
-        discovery_set,
+        swarm.discovery_set,
         stdlib_modules,
         VMPublishingOption::Open,
     )

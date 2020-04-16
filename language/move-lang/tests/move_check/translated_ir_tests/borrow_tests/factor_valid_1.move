@@ -13,6 +13,6 @@ module M {
         foo(g, h);
     }
 
-    fun foo(a: &mut u64, b: &mut u64) {
+    fun foo(_a: &mut u64, _b: &mut u64) {
     }
 }

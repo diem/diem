@@ -9,15 +9,16 @@ use crate::{
         loaded_module::LoadedModule,
     },
     runtime::VMRuntime,
-    special_names::{EMIT_EVENT_NAME, SAVE_ACCOUNT_NAME},
+    special_names::{EMIT_EVENT_NAME, PRINT_STACK_TRACE_NAME, SAVE_ACCOUNT_NAME},
 };
 use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config,
+    account_config::{self, AccountResource, BalanceResource},
     contract_event::ContractEvent,
     event::EventKey,
+    move_resource::MoveResource,
     transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
     vm_error::{StatusCode, StatusType, VMStatus},
 };
@@ -26,9 +27,9 @@ use move_vm_types::{
     identifier::create_access_path,
     loaded_data::types::{StructType, Type},
     native_functions::dispatch::NativeFunction,
-    values::{IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value},
+    values::{self, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value},
 };
-use std::{collections::VecDeque, convert::TryFrom, marker::PhantomData};
+use std::{cmp::min, collections::VecDeque, convert::TryFrom, fmt::Write, marker::PhantomData};
 use vm::{
     access::ModuleAccess,
     errors::*,
@@ -42,6 +43,24 @@ use vm::{
     },
     transaction_metadata::TransactionMetadata,
 };
+
+macro_rules! debug_write {
+    ($($toks: tt)*) => {
+        write!($($toks)*).map_err(|_|
+            VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                .with_message("failed to write to buffer".to_string())
+        )
+    };
+}
+
+macro_rules! debug_writeln {
+    ($($toks: tt)*) => {
+        writeln!($($toks)*).map_err(|_|
+            VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                .with_message("failed to write to buffer".to_string())
+        )
+    };
+}
 
 /// `Interpreter` instances can execute Move functions.
 ///
@@ -164,6 +183,8 @@ impl<'txn> Interpreter<'txn> {
                         Opcodes::CALL_GENERIC,
                         AbstractMemorySize::new(1 as GasCarrier)
                     )?;
+                    // TODO: when a native function is executed, the current frame has not yet
+                    // been pushed onto the call stack. Fix it.
                     let opt_frame = self
                         .make_call_frame(runtime, context, current_frame.module(), fh_idx, vec![])
                         .or_else(|err| Err(self.maybe_core_dump(err, &current_frame)))?;
@@ -199,6 +220,8 @@ impl<'txn> Interpreter<'txn> {
                         })
                         .collect::<VMResult<Vec<_>>>()?;
 
+                    // TODO: when a native function is executed, the current frame has not yet
+                    // been pushed onto the call stack. Fix it.
                     let opt_frame = self
                         .make_call_frame(
                             runtime,
@@ -274,20 +297,23 @@ impl<'txn> Interpreter<'txn> {
                         gas!(const_instr: context, self, Opcodes::LD_U128)?;
                         self.operand_stack.push(Value::u128(*int_const))?;
                     }
-                    Bytecode::LdAddr(idx) => {
-                        gas!(const_instr: context, self, Opcodes::LD_ADDR)?;
-                        self.operand_stack
-                            .push(Value::address(*frame.module().address_at(*idx)))?;
-                    }
-                    Bytecode::LdByteArray(idx) => {
-                        let v = frame.module().byte_array_at(*idx).to_vec();
+                    Bytecode::LdConst(idx) => {
+                        let constant = frame.module().constant_at(*idx);
                         gas!(
                             instr: context,
                             self,
-                            Opcodes::LD_BYTEARRAY,
-                            AbstractMemorySize::new(v.len() as GasCarrier)
+                            Opcodes::LD_CONST,
+                            AbstractMemorySize::new(constant.data.len() as GasCarrier)
                         )?;
-                        self.operand_stack.push(Value::vector_u8(v))?;
+                        self.operand_stack.push(
+                            Value::deserialize_constant(constant).ok_or_else(|| {
+                                VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
+                                    .with_message(
+                                    "Verifier failed to verify the deserialization of constants"
+                                        .to_owned(),
+                                )
+                            })?,
+                        )?
                     }
                     Bytecode::LdTrue => {
                         gas!(const_instr: context, self, Opcodes::LD_TRUE)?;
@@ -763,6 +789,10 @@ impl<'txn> Interpreter<'txn> {
             && function_name == SAVE_ACCOUNT_NAME.as_ident_str()
         {
             self.call_save_account(runtime, context, ty_args)
+        } else if module_id == *account_config::DEBUG_MODULE
+            && function_name == PRINT_STACK_TRACE_NAME.as_ident_str()
+        {
+            self.call_print_stack_trace(runtime, context, ty_args)
         } else {
             let mut arguments = VecDeque::new();
             let expected_args = native_function.num_args();
@@ -772,7 +802,6 @@ impl<'txn> Interpreter<'txn> {
                 // assertion is here to make sure
                 // the view the type checker had lines up with the
                 // execution of the native function
-                println!(">>> A");
                 return Err(VMStatus::new(StatusCode::LINKER_ERROR));
             }
             for _ in 0..expected_args {
@@ -787,6 +816,32 @@ impl<'txn> Interpreter<'txn> {
                 Ok(())
             })
         }
+    }
+
+    #[allow(unused_variables)]
+    fn call_print_stack_trace(
+        &mut self,
+        runtime: &'txn VMRuntime<'_>,
+        context: &mut dyn InterpreterContext,
+        ty_args: Vec<Type>,
+    ) -> VMResult<()> {
+        if !ty_args.is_empty() {
+            return Err(
+                VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(format!(
+                    "print_stack_trace expects no type arguments got {}.",
+                    ty_args.len()
+                )),
+            );
+        }
+
+        #[cfg(feature = "debug_module")]
+        {
+            let mut s = String::new();
+            self.debug_print_stack_trace(&mut s, runtime, context)?;
+            println!("{}", s);
+        }
+
+        Ok(())
     }
 
     /// Emit an event if the native function was `write_to_event_store`.
@@ -842,7 +897,7 @@ impl<'txn> Interpreter<'txn> {
             context,
             &[],
             account_module,
-            account_config::account_struct_name(),
+            &AccountResource::struct_identifier(),
             self.operand_stack.pop_as::<Struct>()?,
             address,
         )?;
@@ -851,7 +906,7 @@ impl<'txn> Interpreter<'txn> {
             context,
             &ty_args,
             account_module,
-            account_config::account_balance_struct_name(),
+            &BalanceResource::struct_identifier(),
             self.operand_stack.pop_as::<Struct>()?,
             address,
         )
@@ -1026,6 +1081,100 @@ impl<'txn> Interpreter<'txn> {
         err
     }
 
+    #[allow(dead_code)]
+    fn debug_print_frame<B: Write>(
+        &self,
+        buf: &mut B,
+        runtime: &'txn VMRuntime<'_>,
+        context: &mut dyn InterpreterContext,
+        idx: usize,
+        frame: &Frame<'txn, FunctionRef<'txn>>,
+    ) -> VMResult<()> {
+        // Print out the function name with type arguments.
+        let func = &frame.function;
+
+        debug_write!(
+            buf,
+            "    [{}] {}::{}::{}",
+            idx,
+            func.module().address(),
+            func.module().name(),
+            func.name()
+        )?;
+        let ty_args = frame.ty_args();
+        if !ty_args.is_empty() {
+            debug_write!(buf, "<")?;
+            let mut it = ty_args.iter();
+            if let Some(ty) = it.next() {
+                ty.debug_print(buf)?;
+                for ty in it {
+                    debug_write!(buf, ", ")?;
+                    ty.debug_print(buf)?;
+                }
+            }
+            debug_write!(buf, ">")?;
+        }
+        debug_writeln!(buf)?;
+
+        // Print out the current instruction.
+        debug_writeln!(buf)?;
+        debug_writeln!(buf, "        Code:")?;
+        let pc = frame.pc as usize;
+        let code = frame.code_definition();
+        let before = if pc > 3 { pc - 3 } else { 0 };
+        let after = min(code.len(), pc + 4);
+        for (idx, instr) in code.iter().enumerate().take(pc).skip(before) {
+            debug_writeln!(buf, "            [{}] {:?}", idx, instr)?;
+        }
+        debug_writeln!(buf, "          > [{}] {:?}", pc, &code[pc])?;
+        for (idx, instr) in code.iter().enumerate().take(after).skip(pc + 1) {
+            debug_writeln!(buf, "            [{}] {:?}", idx, instr)?;
+        }
+
+        // Print out the locals.
+        debug_writeln!(buf)?;
+        debug_writeln!(buf, "        Locals:")?;
+        match func.locals() {
+            Some(locals) => {
+                let tys = locals
+                    .0
+                    .iter()
+                    .map(|tok| {
+                        runtime.resolve_signature_token(func.module(), tok, ty_args, context)
+                    })
+                    .collect::<VMResult<Vec<_>>>()?;
+                values::debug::print_locals(buf, &tys, &frame.locals)?;
+                debug_writeln!(buf)?;
+            }
+            None => {
+                debug_writeln!(buf, "            (none)")?;
+            }
+        }
+
+        debug_writeln!(buf)?;
+        Ok(())
+    }
+
+    #[allow(dead_code)]
+    fn debug_print_stack_trace<B: Write>(
+        &self,
+        buf: &mut B,
+        runtime: &'txn VMRuntime<'_>,
+        context: &mut dyn InterpreterContext,
+    ) -> VMResult<()> {
+        debug_writeln!(buf, "Call Stack:")?;
+        for (i, frame) in self.call_stack.0.iter().enumerate() {
+            self.debug_print_frame(buf, runtime, context, i, frame)?;
+        }
+        debug_writeln!(buf, "Operand Stack:")?;
+        for (idx, val) in self.operand_stack.0.iter().enumerate() {
+            // TODO: Currently we do not know the types of the values on the operand stack.
+            // Revisit.
+            debug_writeln!(buf, "    [{}] {}", idx, val)?;
+        }
+        Ok(())
+    }
+
     /// Generate a string which is the status of the interpreter: call stack, current bytecode
     /// stream, locals and operand stack.
     ///
@@ -1058,7 +1207,7 @@ impl<'txn> Interpreter<'txn> {
         let pc = current_frame.pc as usize;
         if pc < code.len() {
             let mut i = 0;
-            for bytecode in &code[0..pc] {
+            for bytecode in &code[..pc] {
                 internal_state.push_str(format!("{}> {:?}\n", i, bytecode).as_str());
                 i += 1;
             }

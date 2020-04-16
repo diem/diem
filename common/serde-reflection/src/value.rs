@@ -36,18 +36,18 @@ pub enum Value {
 }
 
 /// Deserializer meant to reconstruct the Rust value behind a particular Serde value.
-pub struct Deserializer {
-    value: Value,
+pub struct Deserializer<'de> {
+    value: &'de Value,
 }
 
-impl Deserializer {
-    pub fn new(value: Value) -> Self {
+impl<'de> Deserializer<'de> {
+    pub fn new(value: &'de Value) -> Self {
         Self { value }
     }
 }
 
-impl<'de> IntoDeserializer<'de, Error> for Value {
-    type Deserializer = Deserializer;
+impl<'de> IntoDeserializer<'de, Error> for &'de Value {
+    type Deserializer = Deserializer<'de>;
 
     fn into_deserializer(self) -> Self::Deserializer {
         Deserializer::new(self)
@@ -61,6 +61,20 @@ macro_rules! declare_deserialize {
             V: Visitor<'de>,
         {
             match self.value {
+                Value::$token(x) => visitor.$visit(x.clone()),
+                _ => Err(Error::DeserializationError($str)),
+            }
+        }
+    }
+}
+
+macro_rules! declare_deserialize_borrowed {
+    ($method:ident, $token:ident, $visit:ident, $str:expr) => {
+        fn $method<V>(self, visitor: V) -> Result<V::Value>
+        where
+            V: Visitor<'de>,
+        {
+            match self.value {
                 Value::$token(x) => visitor.$visit(x),
                 _ => Err(Error::DeserializationError($str)),
             }
@@ -68,7 +82,7 @@ macro_rules! declare_deserialize {
     }
 }
 
-impl<'de> de::Deserializer<'de> for Deserializer {
+impl<'de> de::Deserializer<'de> for Deserializer<'de> {
     type Error = Error;
 
     fn deserialize_any<V>(self, _visitor: V) -> Result<V::Value>
@@ -97,9 +111,9 @@ impl<'de> de::Deserializer<'de> for Deserializer {
 
     declare_deserialize!(deserialize_char, Char, visit_char, "char");
     declare_deserialize!(deserialize_string, Str, visit_string, "string");
-    declare_deserialize!(deserialize_str, Str, visit_string, "str");
+    declare_deserialize_borrowed!(deserialize_str, Str, visit_borrowed_str, "str");
     declare_deserialize!(deserialize_byte_buf, Bytes, visit_byte_buf, "byte_buf");
-    declare_deserialize!(deserialize_bytes, Bytes, visit_byte_buf, "bytes");
+    declare_deserialize_borrowed!(deserialize_bytes, Bytes, visit_borrowed_bytes, "bytes");
 
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value>
     where
@@ -210,7 +224,7 @@ impl<'de> de::Deserializer<'de> for Deserializer {
     {
         match self.value {
             Value::Variant(index, variant) => {
-                let inner = EnumDeserializer::new(index, *variant);
+                let inner = EnumDeserializer::new(*index, &*variant);
                 visitor.visit_enum(inner)
             }
             _ => Err(Error::DeserializationError("enum")),
@@ -253,17 +267,17 @@ impl<I> SeqDeserializer<I> {
     }
 }
 
-impl IntoSeqDeserializer for Vec<Value> {
-    type SeqDeserializer = SeqDeserializer<std::vec::IntoIter<Value>>;
+impl<'de> IntoSeqDeserializer for &'de Vec<Value> {
+    type SeqDeserializer = SeqDeserializer<std::slice::Iter<'de, Value>>;
 
     fn into_seq_deserializer(self) -> Self::SeqDeserializer {
-        SeqDeserializer::new(self.into_iter())
+        SeqDeserializer::new(self.iter())
     }
 }
 
 impl<'de, I> de::SeqAccess<'de> for SeqDeserializer<I>
 where
-    I: Iterator<Item = Value>,
+    I: Iterator<Item = &'de Value>,
 {
     type Error = Error;
 
@@ -284,7 +298,7 @@ where
 
 impl<'de, I> de::MapAccess<'de> for SeqDeserializer<I>
 where
-    I: Iterator<Item = Value>,
+    I: Iterator<Item = &'de Value>,
 {
     type Error = Error;
 
@@ -304,7 +318,7 @@ where
     {
         match self.values.next() {
             Some(x) => seed.deserialize(x.into_deserializer()),
-            None => Err(Error::DeserializationError("map (invalid sequence)")),
+            None => Err(Error::DeserializationError("value in map")),
         }
     }
 
@@ -313,18 +327,18 @@ where
     }
 }
 
-struct EnumDeserializer {
+struct EnumDeserializer<'de> {
     index: u32,
-    value: Value,
+    value: &'de Value,
 }
 
-impl EnumDeserializer {
-    fn new(index: u32, value: Value) -> Self {
+impl<'de> EnumDeserializer<'de> {
+    fn new(index: u32, value: &'de Value) -> Self {
         Self { index, value }
     }
 }
 
-impl<'de> de::EnumAccess<'de> for EnumDeserializer {
+impl<'de> de::EnumAccess<'de> for EnumDeserializer<'de> {
     type Error = Error;
     type Variant = Self;
 
@@ -337,7 +351,7 @@ impl<'de> de::EnumAccess<'de> for EnumDeserializer {
     }
 }
 
-impl<'de> de::VariantAccess<'de> for EnumDeserializer {
+impl<'de> de::VariantAccess<'de> for EnumDeserializer<'de> {
     type Error = Error;
 
     fn unit_variant(self) -> Result<()> {

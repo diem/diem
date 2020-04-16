@@ -23,12 +23,12 @@ use libra_crypto::{
 };
 use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
+    on_chain_config::ValidatorSet,
     proof::{
         definition::LeafCount, position::Position, AccumulatorConsistencyProof,
         TransactionAccumulatorProof, TransactionAccumulatorRangeProof,
     },
     transaction::{TransactionInfo, Version},
-    validator_set::ValidatorSet,
 };
 use schemadb::{ReadOptions, SchemaIterator, DB};
 use std::{ops::Deref, sync::Arc};

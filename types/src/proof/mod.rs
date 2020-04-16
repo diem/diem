@@ -8,8 +8,7 @@ pub mod position;
 pub mod proptest_proof;
 
 #[cfg(test)]
-#[path = "unit_tests/proof_test.rs"]
-mod proof_test;
+mod unit_tests;
 
 use crate::{
     ledger_info::LedgerInfo,

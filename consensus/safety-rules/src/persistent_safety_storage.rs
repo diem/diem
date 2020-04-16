@@ -3,8 +3,9 @@
 
 use anyhow::Result;
 use consensus_types::common::Round;
-use libra_crypto::ed25519::Ed25519PrivateKey;
+use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue};
 use libra_secure_storage::{InMemoryStorage, Policy, Storage, Value};
+use libra_types::waypoint::Waypoint;
 
 /// SafetyRules needs an abstract storage interface to act as a common utility for storing
 /// persistent data to local disk, cloud, secrets managers, or even memory (for tests)
@@ -19,11 +20,14 @@ const CONSENSUS_KEY: &str = "consensus_key";
 const EPOCH: &str = "epoch";
 const LAST_VOTED_ROUND: &str = "last_voted_round";
 const PREFERRED_ROUND: &str = "preferred_round";
+const WAYPOINT_VALUE: &str = "waypoint_hash";
+const WAYPOINT_VERSION: &str = "waypoint_version";
 
 impl PersistentSafetyStorage {
     pub fn in_memory(private_key: Ed25519PrivateKey) -> Self {
         let storage = InMemoryStorage::new_storage();
-        Self::initialize(storage, private_key)
+        let waypoint = Waypoint::new_from_pieces(0, HashValue::zero());
+        Self::initialize(storage, private_key, waypoint)
     }
 
     /// Use this to instantiate a PersistentStorage for a new data store, one that has no
@@ -31,21 +35,32 @@ impl PersistentSafetyStorage {
     pub fn initialize(
         mut internal_store: Box<dyn Storage>,
         private_key: Ed25519PrivateKey,
+        waypoint: Waypoint,
     ) -> Self {
-        let perms = Policy::public();
-        internal_store
-            .create_if_not_exists(CONSENSUS_KEY, Value::Ed25519PrivateKey(private_key), &perms)
-            .expect("Unable to initialize backend storage");
-        internal_store
-            .create_if_not_exists(EPOCH, Value::U64(1), &perms)
-            .expect("Unable to initialize backend storage");
-        internal_store
-            .create_if_not_exists(LAST_VOTED_ROUND, Value::U64(0), &perms)
-            .expect("Unable to initialize backend storage");
-        internal_store
-            .create_if_not_exists(PREFERRED_ROUND, Value::U64(0), &perms)
+        Self::initialize_(internal_store.as_mut(), private_key, waypoint)
             .expect("Unable to initialize backend storage");
         Self { internal_store }
+    }
+
+    fn initialize_(
+        internal_store: &mut dyn Storage,
+        private_key: Ed25519PrivateKey,
+        waypoint: Waypoint,
+    ) -> Result<()> {
+        let perms = Policy::public();
+        internal_store.create_if_not_exists(
+            CONSENSUS_KEY,
+            Value::Ed25519PrivateKey(private_key),
+            &perms,
+        )?;
+        internal_store.create_if_not_exists(EPOCH, Value::U64(1), &perms)?;
+        internal_store.create_if_not_exists(LAST_VOTED_ROUND, Value::U64(0), &perms)?;
+        internal_store.create_if_not_exists(PREFERRED_ROUND, Value::U64(0), &perms)?;
+        let value = Value::HashValue(waypoint.value());
+        internal_store.create_if_not_exists(WAYPOINT_VALUE, value, &perms)?;
+        let version = Value::U64(waypoint.version());
+        internal_store.create_if_not_exists(WAYPOINT_VERSION, version, &perms)?;
+        Ok(())
     }
 
     /// Use this to instantiate a PersistentStorage with an existing data store. This is intended
@@ -101,6 +116,26 @@ impl PersistentSafetyStorage {
             .set(PREFERRED_ROUND, Value::U64(preferred_round))?;
         Ok(())
     }
+
+    pub fn waypoint(&self) -> Result<Waypoint> {
+        let version = self
+            .internal_store
+            .get(WAYPOINT_VERSION)
+            .and_then(|r| r.value.u64())?;
+        let value = self
+            .internal_store
+            .get(WAYPOINT_VALUE)
+            .and_then(|r| r.value.hash_value())?;
+        Ok(Waypoint::new_from_pieces(version, value))
+    }
+
+    pub fn set_waypoint(&mut self, waypoint: &Waypoint) -> Result<()> {
+        self.internal_store
+            .set(WAYPOINT_VERSION, Value::U64(waypoint.version()))?;
+        self.internal_store
+            .set(WAYPOINT_VALUE, Value::HashValue(waypoint.value()))?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -111,8 +146,7 @@ mod tests {
     #[test]
     fn test() {
         let private_key = ValidatorSigner::from_int(0).private_key().clone();
-        let internal = InMemoryStorage::new_storage();
-        let mut storage = PersistentSafetyStorage::initialize(internal, private_key);
+        let mut storage = PersistentSafetyStorage::in_memory(private_key);
         assert_eq!(storage.epoch().unwrap(), 1);
         assert_eq!(storage.last_voted_round().unwrap(), 0);
         assert_eq!(storage.preferred_round().unwrap(), 0);

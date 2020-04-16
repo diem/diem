@@ -18,13 +18,14 @@ use itertools::Itertools;
 use num::{BigUint, Num};
 
 use bytecode_source_map::source_map::SourceMap;
-use libra_types::language_storage;
+use libra_types::{account_address::AccountAddress, language_storage};
+use move_vm_types::values::Value as VMValue;
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressPoolIndex, CodeOffset, FunctionDefinitionIndex, FunctionHandleIndex, Kind,
-        SignatureIndex, SignatureToken, StructDefinitionIndex, StructFieldInformation,
-        StructHandleIndex,
+        AddressIdentifierIndex, CodeOffset, Constant as VMConstant, ConstantPoolIndex,
+        FunctionDefinitionIndex, FunctionHandleIndex, Kind, SignatureIndex, SignatureToken,
+        StructDefinitionIndex, StructFieldInformation, StructHandleIndex,
     },
     views::{
         FunctionDefinitionView, FunctionHandleView, SignatureTokenView, StructDefinitionView,
@@ -38,7 +39,7 @@ use crate::{
     ty::{PrimitiveType, Type},
 };
 use std::collections::BTreeMap;
-use vm::CompiledModule;
+use vm::{file_format::Bytecode, CompiledModule};
 
 // =================================================================================================
 /// # Locations
@@ -128,7 +129,7 @@ pub struct SpecFunId(RawIndex);
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct SpecVarId(RawIndex);
 
-/// Identifier for a node in the AST, relative to a function. This is used to associate attributes
+/// Identifier for a node in the AST, relative to a module. This is used to associate attributes
 /// with the node, like source location and type.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct NodeId(RawIndex);
@@ -907,7 +908,7 @@ impl<'env> ModuleEnv<'env> {
     }
 
     /// Globalizes a list of signatures.
-    fn globalize_signatures(&self, sigs: &[SignatureToken]) -> Vec<Type> {
+    pub fn globalize_signatures(&self, sigs: &[SignatureToken]) -> Vec<Type> {
         sigs.iter()
             .map(|s| self.globalize_signature(s))
             .collect_vec()
@@ -924,9 +925,25 @@ impl<'env> ModuleEnv<'env> {
         }
     }
 
-    /// Converts an address pool index for this module into a number representing the address.
-    pub fn get_address(&self, idx: AddressPoolIndex) -> BigUint {
-        let addr = &self.data.module.address_pool()[idx.0 as usize];
+    /// Retrieve a constant from the pool
+    pub fn get_constant(&self, idx: ConstantPoolIndex) -> &VMConstant {
+        &self.data.module.constant_pool()[idx.0 as usize]
+    }
+
+    /// Converts a constant to the specified type. The type must correspond to the expected
+    /// cannonical representation as defined in `move_vm_types::values`
+    pub fn get_constant_value(&self, constant: &VMConstant) -> VMValue {
+        VMValue::deserialize_constant(constant).unwrap()
+    }
+
+    /// Retrieve an address identifier from the pool
+    pub fn get_address_identifier(&self, idx: AddressIdentifierIndex) -> BigUint {
+        let addr = &self.data.module.address_identifiers()[idx.0 as usize];
+        Self::addr_to_big_uint(addr)
+    }
+
+    /// Converts an address identifier to a number representing the address.
+    pub fn addr_to_big_uint(addr: &AccountAddress) -> BigUint {
         BigUint::from_str_radix(&addr.to_string(), 16).unwrap()
     }
 
@@ -1220,6 +1237,11 @@ impl<'env> FieldEnv<'env> {
             .module_env
             .globalize_signature(&field.signature.0)
     }
+
+    /// Get field offset.
+    pub fn get_offset(&self) -> usize {
+        self.data.offset
+    }
 }
 
 // =================================================================================================
@@ -1307,6 +1329,18 @@ impl<'env> FunctionEnv<'env> {
         self.get_loc()
     }
 
+    /// Returns the bytecode associated with this function.
+    pub fn get_bytecode(&self) -> &[Bytecode] {
+        let function_definition = self
+            .module_env
+            .data
+            .module
+            .function_def_at(self.get_def_idx());
+        let function_definition_view =
+            FunctionDefinitionView::new(&self.module_env.data.module, function_definition);
+        &function_definition_view.code().code
+    }
+
     /// Returns true if this function is native.
     pub fn is_native(&self) -> bool {
         let view = self.definition_view();
@@ -1341,6 +1375,11 @@ impl<'env> FunctionEnv<'env> {
                 )
             })
             .collect_vec()
+    }
+
+    pub fn get_parameter_count(&self) -> usize {
+        let view = self.definition_view();
+        view.arg_tokens().count()
     }
 
     /// Returns the regular parameters associated with this function.
@@ -1386,9 +1425,10 @@ impl<'env> FunctionEnv<'env> {
         {
             if let Some((ident, _)) = fmap.get_local_name(idx as u64) {
                 // The move compiler produces temporay names of the form `<foo>%#<num>`.
-                // Replace occurences of `%#` so they are accepted by boogie.
-                let ident = ident.replace("%#", "$$");
-                return self.module_env.env.symbol_pool.make(ident.as_str());
+                // Ignore those names and use the idx-based repr instead.
+                if !ident.contains("%#") {
+                    return self.module_env.env.symbol_pool.make(ident.as_str());
+                }
             }
         }
         self.module_env.env.symbol_pool.make(&format!("$t{}", idx))

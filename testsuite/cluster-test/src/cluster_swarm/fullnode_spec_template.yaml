@@ -5,6 +5,7 @@ metadata:
   labels:
     app: libra-fullnode
     libra-node: "true"
+    peer_id: fn-{validator_index}-{fullnode_index}
   annotations:
     prometheus.io/should_be_scraped: "true"
 spec:

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
+use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
@@ -9,10 +10,44 @@ use libra_types::{
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccumulatorConsistencyProof, SparseMerkleProof},
-    transaction::{TransactionListWithProof, TransactionWithProof, Version},
+    transaction::{TransactionListWithProof, TransactionToCommit, TransactionWithProof, Version},
     validator_change::ValidatorChangeProof,
 };
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use storage_proto::StartupInfo;
+use thiserror::Error;
+
+#[derive(Debug, Deserialize, Error, PartialEq, Serialize)]
+pub enum Error {
+    #[error("Service error: {:?}", error)]
+    ServiceError { error: String },
+
+    #[error("Serialization error: {0}")]
+    SerializationError(String),
+}
+
+impl From<anyhow::Error> for Error {
+    fn from(error: anyhow::Error) -> Self {
+        Self::ServiceError {
+            error: format!("{}", error),
+        }
+    }
+}
+
+impl From<lcs::Error> for Error {
+    fn from(error: lcs::Error) -> Self {
+        Self::SerializationError(format!("{}", error))
+    }
+}
+
+impl From<libra_secure_net::Error> for Error {
+    fn from(error: libra_secure_net::Error) -> Self {
+        Self::ServiceError {
+            error: format!("{}", error),
+        }
+    }
+}
 
 /// Trait that is implemented by a DB that supports certain public (to client) read APIs
 /// expected of a Libra DB
@@ -74,6 +109,14 @@ pub trait DbReader: Send + Sync {
         fetch_events: bool,
     ) -> Result<Option<TransactionWithProof>>;
 
+    /// Returns proof of new state for a given ledger info with signatures relative to version known
+    /// to client
+    fn get_state_proof_with_ledger_info(
+        &self,
+        known_version: u64,
+        ledger_info: LedgerInfoWithSignatures,
+    ) -> Result<(ValidatorChangeProof, AccumulatorConsistencyProof)>;
+
     /// Returns proof of new state relative to version known to client
     fn get_state_proof(
         &self,
@@ -102,4 +145,101 @@ pub trait DbReader: Send + Sync {
         address: AccountAddress,
         version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)>;
+
+    /// Gets the latest state root hash together with its version.
+    fn get_latest_state_root(&self) -> Result<(Version, HashValue)>;
+}
+
+/// Trait that is implemented by a DB that supports certain public (to client) write APIs
+/// expected of a Libra DB. This adds write APIs to DbReader.
+pub trait DbWriter: Send + Sync {
+    /// Persist transactions. Called by the executor module when either syncing nodes or committing
+    /// blocks during normal operation.
+    /// See [`LibraDB::save_transactions`].
+    ///
+    /// [`LibraDB::save_transactions`]: ../libradb/struct.LibraDB.html#method.save_transactions
+    fn save_transactions(
+        &self,
+        txns_to_commit: &[TransactionToCommit],
+        first_version: Version,
+        ledger_info_with_sigs: Option<&LedgerInfoWithSignatures>,
+    ) -> Result<()>;
+}
+
+#[derive(Clone)]
+pub struct DbReaderWriter {
+    pub reader: Arc<dyn DbReader>,
+    pub writer: Arc<dyn DbWriter>,
+}
+
+impl DbReaderWriter {
+    pub fn new<D: 'static + DbReader + DbWriter>(db: D) -> Self {
+        let reader = Arc::new(db);
+        let writer = Arc::clone(&reader);
+
+        Self { reader, writer }
+    }
+
+    pub fn wrap<D: 'static + DbReader + DbWriter>(db: D) -> (Arc<D>, Self) {
+        let arc_db = Arc::new(db);
+        let reader = Arc::clone(&arc_db);
+        let writer = Arc::clone(&arc_db);
+
+        (arc_db, Self { reader, writer })
+    }
+}
+
+impl<D> From<D> for DbReaderWriter
+where
+    D: 'static + DbReader + DbWriter,
+{
+    fn from(db: D) -> Self {
+        Self::new(db)
+    }
+}
+
+/// Network types for storage service
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum StorageRequest {
+    GetAccountStateWithProofByVersionRequest(Box<GetAccountStateWithProofByVersionRequest>),
+    GetStartupInfoRequest,
+    SaveTransactionsRequest(Box<SaveTransactionsRequest>),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
+pub struct GetAccountStateWithProofByVersionRequest {
+    /// The access path to query with.
+    pub address: AccountAddress,
+
+    /// The version the query is based on.
+    pub version: Version,
+}
+
+impl GetAccountStateWithProofByVersionRequest {
+    /// Constructor.
+    pub fn new(address: AccountAddress, version: Version) -> Self {
+        Self { address, version }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct SaveTransactionsRequest {
+    pub txns_to_commit: Vec<TransactionToCommit>,
+    pub first_version: Version,
+    pub ledger_info_with_signatures: Option<LedgerInfoWithSignatures>,
+}
+
+impl SaveTransactionsRequest {
+    /// Constructor.
+    pub fn new(
+        txns_to_commit: Vec<TransactionToCommit>,
+        first_version: Version,
+        ledger_info_with_signatures: Option<LedgerInfoWithSignatures>,
+    ) -> Self {
+        SaveTransactionsRequest {
+            txns_to_commit,
+            first_version,
+            ledger_info_with_signatures,
+        }
+    }
 }

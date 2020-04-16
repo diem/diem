@@ -22,17 +22,19 @@ libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libradb = { path = "../libradb", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
+libra-secure-net = { path = "../../secure/net", version = "0.1.0" }
 storage-interface = { path = "../storage-interface", version = "0.1.0" }
 storage-proto = { path = "../storage-proto", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 rand = { version = "0.6.5", optional = true }
-proptest = { version = "0.9.2", optional = true }
+proptest = { version = "0.9.6", optional = true }
 storage-client = { path = "../storage-client", version = "0.1.0", optional = true }
 
 [dev-dependencies]
 itertools = "0.9.0"
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
-proptest = "0.9.2"
+proptest = "0.9.6"
 
 [features]
 default = []

@@ -47,6 +47,7 @@ use futures::{
 use libra_crypto::HashValue;
 use libra_types::{
     block_info::BlockInfo,
+    epoch_info::EpochInfo,
     ledger_info::LedgerInfoWithSignatures,
     validator_signer::ValidatorSigner,
     validator_verifier::{random_validator_verifier, ValidatorVerifier},
@@ -54,7 +55,7 @@ use libra_types::{
 use network::peer_manager::{
     conn_status_channel, ConnectionRequestSender, PeerManagerRequestSender,
 };
-use safety_rules::{ConsensusState, PersistentSafetyStorage as SafetyStorage, SafetyRulesManager};
+use safety_rules::{ConsensusState, SafetyRulesManager};
 use std::{num::NonZeroUsize, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
@@ -97,7 +98,7 @@ impl NodeSetup {
 
             let safety_rules_manager = SafetyRulesManager::new_local(
                 signer.author(),
-                SafetyStorage::in_memory(signer.private_key().clone()),
+                safety_rules::test_utils::test_storage(&signer),
             );
 
             nodes.push(Self::new(
@@ -122,7 +123,10 @@ impl NodeSetup {
         initial_data: RecoveryData<TestPayload>,
         safety_rules_manager: SafetyRulesManager<TestPayload>,
     ) -> Self {
-        let epoch_info = initial_data.epoch_info();
+        let epoch_info = EpochInfo {
+            epoch: 1,
+            verifier: Arc::new(storage.get_validator_set().into()),
+        };
         let validators = epoch_info.verifier.clone();
         let (network_reqs_tx, network_reqs_rx) =
             libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
@@ -155,7 +159,6 @@ impl NodeSetup {
             state_sync_client,
             commit_cb_sender,
             Arc::clone(&storage),
-            None,
         ));
 
         let block_store = Arc::new(BlockStore::new(
@@ -365,10 +368,9 @@ fn process_successful_proposal_test() {
             pending_for_proposer[0].vote().vote_data().proposed().id(),
             proposal_id
         );
-        assert_eq!(
-            node.event_processor.safety_rules.consensus_state().unwrap(),
-            ConsensusState::new(1, 1, 0),
-        );
+        let consensus_state = node.event_processor.consensus_state();
+        let waypoint = consensus_state.waypoint();
+        assert_eq!(consensus_state, ConsensusState::new(1, 1, 0, waypoint));
     });
 }
 
@@ -809,9 +811,11 @@ fn basic_restart_test() {
     }
     // verify after restart we recover the data
     node = node.restart(&mut playground, runtime.handle().clone());
+    let consensus_state = node.event_processor.consensus_state();
+    let waypoint = consensus_state.waypoint();
     assert_eq!(
-        node.event_processor.consensus_state(),
-        ConsensusState::new(1, num_proposals, num_proposals - 2),
+        consensus_state,
+        ConsensusState::new(1, num_proposals, num_proposals - 2, waypoint)
     );
     for block in proposals {
         assert_eq!(node.block_store.block_exists(block.id()), true);

@@ -8,11 +8,12 @@
 /// in the cluster after the given duration
 use crate::{
     cluster::Cluster,
-    effects::{Action, PacketLoss, RemoveNetworkEffects},
     experiments::{Context, Experiment},
     instance::Instance,
 };
 
+use crate::cluster_swarm::ClusterSwarm;
+use anyhow::Result;
 use async_trait::async_trait;
 use std::{fmt, time::Duration};
 use structopt::StructOpt;
@@ -22,7 +23,7 @@ pub struct PacketLossRandomValidators {
     percent: f32,
     duration: Duration,
 }
-use crate::experiments::ExperimentParam;
+use crate::{cluster_swarm::cluster_swarm_kube::ClusterSwarmKube, experiments::ExperimentParam};
 use tokio::time;
 
 #[derive(StructOpt, Debug)]
@@ -66,24 +67,37 @@ impl ExperimentParam for PacketLossRandomValidatorsParams {
 
 #[async_trait]
 impl Experiment for PacketLossRandomValidators {
-    async fn run(&mut self, _context: &mut Context<'_>) -> anyhow::Result<()> {
-        let mut instances = vec![];
+    async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
         for instance in self.instances.iter() {
-            let packet_loss = PacketLoss::new(instance.clone(), self.percent);
-            packet_loss.apply().await?;
-            instances.push(packet_loss)
+            add_packet_delay(instance.clone(), self.percent, &context.cluster_swarm).await?;
         }
         time::delay_for(self.duration).await;
-        for instance in self.instances.iter() {
-            let remove_network_effects = RemoveNetworkEffects::new(instance.clone());
-            remove_network_effects.apply().await?;
-        }
+        context.cluster_swarm.remove_all_network_effects().await?;
         Ok(())
     }
 
     fn deadline(&self) -> Duration {
         Duration::from_secs(20 * 60)
     }
+}
+
+async fn add_packet_delay(
+    instance: Instance,
+    percent: f32,
+    cluster_swarm: &ClusterSwarmKube,
+) -> Result<()> {
+    let command = format!(
+        "tc qdisc delete dev eth0 root; tc qdisc add dev eth0 root netem loss {:.*}%",
+        2, percent
+    );
+    cluster_swarm
+        .run(
+            &instance,
+            "853397791086.dkr.ecr.us-west-2.amazonaws.com/cluster-test-util:latest",
+            command,
+            "add-packet-loss",
+        )
+        .await
 }
 
 impl fmt::Display for PacketLossRandomValidators {

@@ -4,9 +4,9 @@
 use crate::{
     epoch_info::EpochInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    on_chain_config::ValidatorSet,
     transaction::Version,
     validator_change::{ValidatorChangeProof, VerifierType},
-    validator_set::ValidatorSet,
     waypoint::Waypoint,
 };
 use anyhow::{ensure, format_err, Result};
@@ -115,13 +115,6 @@ impl TrustedState {
     /// if the response successfully moves us into a new epoch or a new latest
     /// ledger info within our current epoch.
     ///
-    /// IMPORTANT NOTE: this verification logic is currently only inteded to be
-    /// used by clients and not validators, since their epoch transition logic
-    /// is subtly different. Specifically, a client cannot enter an epoch when
-    /// the latest ledger info is an epoch change but there is no following
-    /// ledger info inside that epoch (i.e., the server is exactly on an epoch
-    /// boundary).
-    ///
     /// + If there was a validation error, e.g., the epoch change proof was
     /// invalid, we return an `Err`.
     ///
@@ -167,7 +160,12 @@ impl TrustedState {
 
             // Verify the latest ledger info inside the latest epoch.
             let new_verifier = VerifierType::TrustedVerifier(new_epoch_info);
-            new_verifier.verify(latest_li)?;
+
+            // If these are the same, then we do not have a LI for the next Epoch and hence there
+            // is nothing to verify.
+            if epoch_change_li != latest_li {
+                new_verifier.verify(latest_li)?;
+            }
 
             let new_state = TrustedState {
                 latest_version: res_version,

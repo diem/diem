@@ -1,0 +1,21 @@
+[package]
+name = "x"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra extended cargo tasks"
+edition = "2018"
+publish = false
+license = "Apache-2.0"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0.51"
+structopt = "0.3.13"
+anyhow = "1.0"
+toml = "0.5.6"
+env_logger = "0.7.1"
+log = "0.4.8"
+chrono = "0.4.11"
+x-core = { version = "0.1.0", path = "../x-core" }
+x-lint = { version = "0.1.0", path = "../x-lint" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

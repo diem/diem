@@ -15,7 +15,6 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::lbr_type_tag,
     block_metadata::BlockMetadata,
     language_storage::ModuleId,
     on_chain_config::VMPublishingOption,
@@ -31,6 +30,7 @@ use std::{
     str::FromStr,
     time::Duration,
 };
+use stdlib::{stdlib_modules, StdLibOptions};
 use vm::{
     file_format::{CompiledModule, CompiledScript},
     gas_schedule::{GasAlgebra, MAXIMUM_NUMBER_OF_GAS_UNITS},
@@ -310,7 +310,6 @@ fn make_script_transaction(
         script,
         params.max_gas_amount,
         params.gas_unit_price,
-        lbr_type_tag(),
         params.expiration_time,
     )
     .sign(params.privkey, params.pubkey.clone())?
@@ -334,7 +333,6 @@ fn make_module_transaction(
         module,
         params.max_gas_amount,
         params.gas_unit_price,
-        lbr_type_tag(),
         params.expiration_time,
     )
     .sign(params.privkey, params.pubkey.clone())?
@@ -557,13 +555,21 @@ pub fn eval<TComp: Compiler>(
 
     // Set up a fake executor with the genesis block and create the accounts.
     let mut exec = if config.validator_set.payload().is_empty() {
-        // use the default validator set. this uses a precomputed validator set and is cheap
-        FakeExecutor::custom_genesis(TComp::stdlib(), None, VMPublishingOption::Open)
+        if compiler.use_staged_genesis() {
+            FakeExecutor::from_genesis_file()
+        } else {
+            FakeExecutor::from_fresh_genesis()
+        }
     } else {
         // use custom validator set. this requires dynamically generating a new genesis tx and
         // is thus more expensive.
         FakeExecutor::custom_genesis(
-            TComp::stdlib(),
+            stdlib_modules(if compiler.use_staged_genesis() {
+                StdLibOptions::Staged
+            } else {
+                StdLibOptions::Fresh
+            })
+            .to_vec(),
             Some(config.validator_set.clone()),
             VMPublishingOption::Open,
         )

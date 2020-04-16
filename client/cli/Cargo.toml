@@ -15,34 +15,35 @@ chrono = "0.4.11"
 tonic = "0.2"
 hex = "0.4.2"
 itertools = "0.9.0"
-proptest = { version = "0.9.2", optional = true }
-rustyline = "6.1.0"
-rust_decimal = "1.4.0"
+proptest = { version = "0.9.6", optional = true }
+rustyline = "6.1.1"
+rust_decimal = "1.4.1"
 num-traits = "0.2"
 parity-multiaddr = { version = "0.8.0", default-features = false }
 rand = "0.6.5"
 reqwest = { version = "0.10.4", features = ["blocking", "json", "rustls-tls"], default-features = false }
 serde = { version = "1.0.106", features = ["derive"] }
 serde_json = "1.0.51"
-structopt = "0.3.12"
-ureq = { version = "0.12.0"}
+structopt = "0.3.13"
+ureq = { version = "0.12.1"}
 
-admission-control-proto = { path = "../../admission_control/admission-control-proto", version = "0.1.0" }
+admission-control-proto = { path = "../../admission-control/admission-control-proto", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
 crash-handler = { path = "../../common/crash-handler", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
-libra-wallet = { path = "../libra_wallet", version = "0.1.0" }
+libra-wallet = { path = "../libra-wallet", version = "0.1.0" }
 libra-json-rpc = { path = "../../json-rpc", version = "0.1.0" }
 libra-logger =  { path = "../../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath/", version = "0.1.0" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 stdlib = { path = "../../language/stdlib", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 
 [dev-dependencies]
-proptest = "0.9.2"
+proptest = "0.9.6"
 
 [features]
 default = []

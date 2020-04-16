@@ -6,7 +6,7 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use schemadb::{
     define_schema,
     schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec},
-    ColumnFamilyOptions, ColumnFamilyOptionsMap, SchemaIterator, DB, DEFAULT_CF_NAME,
+    SchemaIterator, DB, DEFAULT_CF_NAME,
 };
 
 define_schema!(TestSchema, TestKey, TestValue, "TestCF");
@@ -78,17 +78,8 @@ struct TestDB {
 impl TestDB {
     fn new() -> Self {
         let tmpdir = libra_temppath::TempPath::new();
-        let cf_opts_map: ColumnFamilyOptionsMap = [
-            (DEFAULT_CF_NAME, ColumnFamilyOptions::default()),
-            (
-                TestSchema::COLUMN_FAMILY_NAME,
-                ColumnFamilyOptions::default(),
-            ),
-        ]
-        .iter()
-        .cloned()
-        .collect();
-        let db = DB::open(&tmpdir.path(), cf_opts_map).unwrap();
+        let column_families = vec![DEFAULT_CF_NAME, TestSchema::COLUMN_FAMILY_NAME];
+        let db = DB::open(&tmpdir.path(), column_families).unwrap();
 
         db.put::<TestSchema>(&TestKey(1, 0, 0), &TestValue(100))
             .unwrap();

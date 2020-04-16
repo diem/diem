@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::executor_proxy::{ExecutorProxy, ExecutorProxyTrait};
+use executor::BlockExecutor;
 use executor_utils::{
     create_storage_service_and_executor,
     test_helpers::{
@@ -16,15 +17,15 @@ use libra_crypto::{
 };
 use libra_types::{
     account_config::{association_address, lbr_type_tag},
-    event_subscription::ReconfigSubscription,
     on_chain_config::{OnChainConfig, VMPublishingOption},
     transaction::authenticator::AuthenticationKey,
 };
 use std::sync::{Arc, Mutex};
 use stdlib::transaction_scripts::StdlibScript;
+use subscription_service::ReconfigSubscription;
 use transaction_builder::{
     encode_block_prologue_script, encode_publishing_option_script,
-    encode_rotate_consensus_pubkey_script, encode_transfer_script,
+    encode_rotate_consensus_pubkey_script, encode_transfer_with_metadata_script,
 };
 
 // TODO test for subscription with multiple subscribed configs once there are >1 on-chain configs
@@ -38,7 +39,19 @@ fn test_on_chain_config_pub_sub() {
     let (mut config, genesis_key) = config_builder::test_config();
     let (_storage_server_handle, executor) = create_storage_service_and_executor(&config);
     let executor = Arc::new(Mutex::new(executor));
-    let mut executor_proxy = ExecutorProxy::new(executor.clone(), &config, vec![subscription]);
+    let mut executor_proxy = rt.block_on(ExecutorProxy::new(
+        executor.clone(),
+        &config,
+        vec![subscription],
+    ));
+
+    assert!(
+        reconfig_receiver
+            .select_next_some()
+            .now_or_never()
+            .is_some(),
+        "expect initial config notification",
+    );
 
     // start state sync with initial loading of on-chain configs
     rt.block_on(executor_proxy.load_on_chain_configs())
@@ -140,11 +153,12 @@ fn test_on_chain_config_pub_sub() {
         /* sequence_number = */ 2,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_transfer_script(
+        Some(encode_transfer_with_metadata_script(
             lbr_type_tag(),
             &validator_account,
             validator_auth_key_prefix,
             1_000_000,
+            vec![],
         )),
     );
 

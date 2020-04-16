@@ -10,10 +10,10 @@ use anyhow::{bail, ensure, format_err, Error, Result};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     test_utils::KeyPair,
-    x25519::X25519StaticPublicKey,
-    ValidKey, ValidKeyStringExt,
+    traits::ValidKey,
+    x25519, ValidKeyStringExt,
 };
-use libra_json_rpc::views::{AccountView, EventView, TransactionView};
+use libra_json_rpc::views::{AccountView, BlockMetadata, EventView, TransactionView};
 use libra_logger::prelude::*;
 use libra_temppath::TempPath;
 use libra_types::{
@@ -21,9 +21,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_config::{
         association_address, lbr_type_tag, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
-        CORE_CODE_ADDRESS,
     },
-    account_state::AccountState,
     ledger_info::LedgerInfoWithSignatures,
     on_chain_config::VMPublishingOption,
     transaction::{
@@ -42,14 +40,13 @@ use num_traits::{
 use parity_multiaddr::Multiaddr;
 use reqwest::Url;
 use rust_decimal::Decimal;
-use serde_json;
 use std::{
     collections::HashMap,
     convert::TryFrom,
     fmt, fs,
     io::{stdout, Write},
-    path::{Display, Path, PathBuf},
-    process::{Command, Stdio},
+    path::{Path, PathBuf},
+    process::Command,
     str::{self, FromStr},
     thread, time,
 };
@@ -338,6 +335,11 @@ impl ClientProxy {
         is_blocking: bool,
     ) -> Result<()> {
         ensure!(
+            space_delim_strings[0] == "enable_custom_script",
+            "inconsistent command '{}' for enable_custom_script",
+            space_delim_strings[0]
+        );
+        ensure!(
             space_delim_strings.len() == 1,
             "Invalid number of arguments for setting publishing option"
         );
@@ -352,12 +354,17 @@ impl ClientProxy {
         }
     }
 
-    /// Only allow executing predefined script in the move standard library in the network.
+    /// Only allow executing predefined script in the Move standard library in the network.
     pub fn disable_custom_script(
         &mut self,
         space_delim_strings: &[&str],
         is_blocking: bool,
     ) -> Result<()> {
+        ensure!(
+            space_delim_strings[0] == "disable_custom_script",
+            "inconsistent command '{}' for disable_custom_script",
+            space_delim_strings[0]
+        );
         ensure!(
             space_delim_strings.len() == 1,
             "Invalid number of arguments for setting publishing option"
@@ -380,6 +387,11 @@ impl ClientProxy {
         is_blocking: bool,
     ) -> Result<()> {
         ensure!(
+            space_delim_strings[0] == "remove_validator",
+            "inconsistent command '{}' for remove_validator",
+            space_delim_strings[0]
+        );
+        ensure!(
             space_delim_strings.len() == 2,
             "Invalid number of arguments for removing validator"
         );
@@ -396,6 +408,11 @@ impl ClientProxy {
 
     /// Add a new validator.
     pub fn add_validator(&mut self, space_delim_strings: &[&str], is_blocking: bool) -> Result<()> {
+        ensure!(
+            space_delim_strings[0] == "add_validator",
+            "inconsistent command '{}' for add_validator",
+            space_delim_strings[0]
+        );
         ensure!(
             space_delim_strings.len() == 2,
             "Invalid number of arguments for adding validator"
@@ -418,6 +435,11 @@ impl ClientProxy {
         is_blocking: bool,
     ) -> Result<()> {
         ensure!(
+            space_delim_strings[0] == "register_validator",
+            "inconsistent command '{}' for register_validator",
+            space_delim_strings[0]
+        );
+        ensure!(
             space_delim_strings.len() == 9,
             "Invalid number of arguments for registering validator"
         );
@@ -425,11 +447,9 @@ impl ClientProxy {
         let private_key = Ed25519PrivateKey::from_encoded_string(space_delim_strings[2])?;
         let consensus_public_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[3])?;
         let network_signing_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[4])?;
-        let network_identity_key =
-            X25519StaticPublicKey::from_encoded_string(space_delim_strings[5])?;
+        let network_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[5])?;
         let network_address = Multiaddr::from_str(space_delim_strings[6])?;
-        let fullnode_identity_key =
-            X25519StaticPublicKey::from_encoded_string(space_delim_strings[7])?;
+        let fullnode_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[7])?;
         let fullnode_network_address = Multiaddr::from_str(space_delim_strings[8])?;
         let mut sender = Self::get_account_data_from_address(
             &mut self.client,
@@ -509,11 +529,12 @@ impl ClientProxy {
             let sender = self.accounts.get(sender_account_ref_id).ok_or_else(|| {
                 format_err!("Unable to find sender account: {}", sender_account_ref_id)
             })?;
-            let program = transaction_builder::encode_transfer_script(
+            let program = transaction_builder::encode_transfer_with_metadata_script(
                 lbr_type_tag(),
                 &receiver_address,
                 receiver_auth_key_prefix,
                 num_coins,
+                vec![],
             );
             let txn = self.create_txn_to_submit(
                 TransactionPayload::Script(program),
@@ -553,11 +574,12 @@ impl ClientProxy {
         gas_unit_price: Option<u64>,
         max_gas_amount: Option<u64>,
     ) -> Result<RawTransaction> {
-        let program = transaction_builder::encode_transfer_script(
+        let program = transaction_builder::encode_transfer_with_metadata_script(
             lbr_type_tag(),
             &receiver_address,
             receiver_auth_key_prefix,
             num_coins,
+            vec![],
         );
 
         Ok(create_unsigned_txn(
@@ -566,7 +588,6 @@ impl ClientProxy {
             sender_sequence_number,
             max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
             gas_unit_price.unwrap_or(GAS_UNIT_PRICE),
-            lbr_type_tag(),
             TX_EXPIRATION,
         ))
     }
@@ -631,36 +652,31 @@ impl ClientProxy {
         )
     }
 
-    /// Compile move program
+    /// Compile Move program
     pub fn compile_program(&mut self, space_delim_strings: &[&str]) -> Result<String> {
+        ensure!(
+            space_delim_strings[0] == "compile",
+            "inconsistent command '{}' for compile_program",
+            space_delim_strings[0]
+        );
         let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let file_path = space_delim_strings[2];
-        let is_module = match space_delim_strings[3] {
-            "module" => true,
-            "script" => false,
-            _ => bail!(
-                "Invalid program type: {}. Available options: module, script",
-                space_delim_strings[3]
-            ),
-        };
-
-        let tmp_source_path = TempPath::new().as_ref().with_extension("mvir");
-        let output_path = &tmp_source_path.with_extension("mv");
-        let mut tmp_source_file = std::fs::File::create(tmp_source_path.clone())?;
-        let mut code = fs::read_to_string(file_path)?;
-        code = code.replace("{{sender}}", &format!("0x{}", address));
-        writeln!(tmp_source_file, "{}", code)?;
-        self.temp_files.push(output_path.to_path_buf());
-        let dependencies_file = self.handle_dependencies(tmp_source_path.display(), is_module)?;
+        let mut tmp_output_dir = TempPath::new();
+        tmp_output_dir.persist();
+        tmp_output_dir
+            .create_as_dir()
+            .expect("error creating temporary output directory");
+        let tmp_output_path = tmp_output_dir.as_ref();
+        self.temp_files.push(tmp_output_path.to_path_buf());
 
         let mut args = format!(
-            "run -p compiler -- {} -a {}{}",
-            tmp_source_path.display(),
+            "run -p move-lang --bin move-build -- -f {} -s {} -o {}",
+            file_path,
             address,
-            if is_module { " -m" } else { "" },
+            tmp_output_path.display(),
         );
-        if let Some(file) = &dependencies_file {
-            args.push_str(&format!(" --deps={}", file.as_ref().display()));
+        for dep in &space_delim_strings[3..] {
+            args.push_str(&format!(" -d {}", dep));
         }
 
         let status = Command::new("cargo")
@@ -670,47 +686,22 @@ impl ClientProxy {
         if !status.success() {
             return Err(format_err!("compilation failed"));
         }
-        Ok(output_path
-            .to_str()
-            .expect(
-                "TempPath::new() should always generate a path that can be converted to a string",
-            )
-            .to_string())
-    }
 
-    fn handle_dependencies(
-        &mut self,
-        source_path: Display,
-        is_module: bool,
-    ) -> Result<Option<TempPath>> {
-        let mut args = format!("run -p compiler -- -l {}", source_path);
-        if is_module {
-            args.push_str(" -m");
-        }
-        let child = Command::new("cargo")
-            .args(args.split(' '))
-            .stdout(Stdio::piped())
-            .spawn()?;
-        let output = child.wait_with_output()?;
-        let paths: Vec<AccessPath> = serde_json::from_str(str::from_utf8(&output.stdout)?)?;
-        let mut dependencies = vec![];
-        for path in paths {
-            if path.address != CORE_CODE_ADDRESS {
-                if let Some(blob) = self.client.get_account_blob(path.address)? {
-                    let account_state = AccountState::try_from(&blob)?;
-                    if let Some(code) = account_state.get(&path.path) {
-                        dependencies.push(code.clone());
-                    }
+        let mut output_files: Vec<_> = fs::read_dir(tmp_output_path)?.collect();
+        match output_files.pop() {
+            None => Err(format_err!("compiler failed to produce an output file")),
+            Some(file) => {
+                if !output_files.is_empty() {
+                    Err(format_err!("compiler output has more than one file"))
+                } else {
+                    Ok(file?
+                        .path()
+                        .to_str()
+                        .expect("compiler output file path cannot be converted to a string")
+                        .to_string())
                 }
             }
         }
-        if dependencies.is_empty() {
-            return Ok(None);
-        }
-        let path = TempPath::new();
-        let mut file = std::fs::File::create(path.as_ref())?;
-        file.write_all(&serde_json::to_vec(&dependencies)?)?;
-        Ok(Some(path))
     }
 
     /// Submit a transaction to the network given the unsigned raw transaction, sender public key
@@ -753,8 +744,13 @@ impl ClientProxy {
         Ok(())
     }
 
-    /// Publish move module
+    /// Publish Move module
     pub fn publish_module(&mut self, space_delim_strings: &[&str]) -> Result<()> {
+        ensure!(
+            space_delim_strings[0] == "publish",
+            "inconsistent command '{}' for publish_module",
+            space_delim_strings[0]
+        );
         let module_bytes = fs::read(space_delim_strings[2])?;
         self.submit_program(
             space_delim_strings,
@@ -764,6 +760,11 @@ impl ClientProxy {
 
     /// Execute custom script
     pub fn execute_script(&mut self, space_delim_strings: &[&str]) -> Result<()> {
+        ensure!(
+            space_delim_strings[0] == "execute",
+            "inconsistent command '{}' for execute_script",
+            space_delim_strings[0]
+        );
         let script_bytes = fs::read(space_delim_strings[2])?;
         let arguments: Vec<_> = space_delim_strings[3..]
             .iter()
@@ -994,8 +995,13 @@ impl ClientProxy {
         }
     }
 
-    /// Test gRPC client connection with validator.
-    pub fn test_validator_connection(&mut self) -> Result<LedgerInfoWithSignatures> {
+    /// Test JSON RPC client connection with validator.
+    pub fn test_validator_connection(&mut self) -> Result<BlockMetadata> {
+        self.client.get_metadata()
+    }
+
+    /// Test client's connection to validator with proof.
+    pub fn test_trusted_connection(&mut self) -> Result<()> {
         self.client.get_state_proof()
     }
 
@@ -1238,7 +1244,6 @@ impl ClientProxy {
             sender_account.sequence_number,
             max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
             gas_unit_price.unwrap_or(GAS_UNIT_PRICE),
-            lbr_type_tag(),
             TX_EXPIRATION,
         )
     }

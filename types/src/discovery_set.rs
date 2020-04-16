@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    access_path::{AccessPath, Accesses},
+    access_path::AccessPath,
     account_config,
     discovery_info::DiscoveryInfo,
     event::{EventHandle, EventKey},
-    language_storage::StructTag,
-    validator_set::validator_set_module_name,
+    move_resource::MoveResource,
 };
 use anyhow::Result;
 use move_core_types::identifier::{IdentStr, Identifier};
@@ -17,33 +16,16 @@ use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{iter::IntoIterator, ops::Deref, vec};
 
-static DISCOVERY_SET_STRUCT_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("DiscoverySet").unwrap());
+static DISCOVERY_SET_MODULE_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("LibraSystem").unwrap());
 
 pub fn discovery_set_module_name() -> &'static IdentStr {
-    validator_set_module_name()
+    &*DISCOVERY_SET_MODULE_NAME
 }
-
-pub fn discovery_set_struct_name() -> &'static IdentStr {
-    &*DISCOVERY_SET_STRUCT_NAME
-}
-
-pub fn discovery_set_tag() -> StructTag {
-    StructTag {
-        address: account_config::CORE_CODE_ADDRESS,
-        name: discovery_set_struct_name().to_owned(),
-        module: discovery_set_module_name().to_owned(),
-        type_params: vec![],
-    }
-}
-
-/// Path to the DiscoverySet resource.
-pub static DISCOVERY_SET_RESOURCE_PATH: Lazy<Vec<u8>> =
-    Lazy::new(|| AccessPath::resource_access_vec(&discovery_set_tag(), &Accesses::empty()));
 
 /// The path to the discovery set change event handle under a DiscoverSetResource.
 pub static DISCOVERY_SET_CHANGE_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
-    let mut path = DISCOVERY_SET_RESOURCE_PATH.to_vec();
+    let mut path = DiscoverySetResource::resource_path();
     path.extend_from_slice(b"/change_events_count/");
     path
 });
@@ -72,6 +54,11 @@ impl DiscoverySetResource {
     pub fn discovery_set(&self) -> &DiscoverySet {
         &self.discovery_set
     }
+}
+
+impl MoveResource for DiscoverySetResource {
+    const MODULE_NAME: &'static str = "LibraSystem";
+    const STRUCT_NAME: &'static str = "DiscoverySet";
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -106,5 +93,35 @@ impl IntoIterator for DiscoverySet {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+pub mod mock {
+    use super::*;
+
+    use crate::on_chain_config::ValidatorSet;
+    use libra_crypto::{test_utils::TEST_SEED, x25519};
+    use parity_multiaddr::Multiaddr;
+    use rand::prelude::*;
+    use std::str::FromStr;
+
+    pub fn mock_discovery_set(validator_set: &ValidatorSet) -> DiscoverySet {
+        let mut rng = StdRng::from_seed(TEST_SEED);
+        let mock_pubkey = x25519::PrivateKey::for_test(&mut rng).public_key();
+        let mock_addr = Multiaddr::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
+
+        let discovery_set = validator_set
+            .payload()
+            .iter()
+            .map(|validator_pubkeys| DiscoveryInfo {
+                account_address: *validator_pubkeys.account_address(),
+                validator_network_identity_pubkey: validator_pubkeys.network_identity_public_key(),
+                validator_network_address: mock_addr.clone(),
+                fullnodes_network_identity_pubkey: mock_pubkey,
+                fullnodes_network_address: mock_addr.clone(),
+            })
+            .collect::<Vec<_>>();
+        DiscoverySet::new(discovery_set)
     }
 }

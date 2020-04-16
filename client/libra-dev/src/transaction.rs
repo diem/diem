@@ -24,7 +24,7 @@ use libra_types::{
     },
 };
 use std::{convert::TryFrom, slice, time::Duration};
-use transaction_builder::{encode_transfer_script, get_transaction_name};
+use transaction_builder::{encode_transfer_with_metadata_script, get_transaction_name};
 
 #[no_mangle]
 pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
@@ -35,6 +35,8 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
     max_gas_amount: u64,
     gas_unit_price: u64,
     expiration_time_secs: u64,
+    metadata_bytes: *const u8,
+    metadata_len: usize,
     ptr_buf: *mut *mut u8,
     ptr_len: *mut usize,
 ) -> LibraStatus {
@@ -73,13 +75,20 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
         }
     };
     let receiver_address = receiver_auth_key.derived_address();
+
+    let metadata = if metadata_bytes.is_null() {
+        vec![]
+    } else {
+        slice::from_raw_parts(metadata_bytes, metadata_len).to_vec()
+    };
     let expiration_time = Duration::from_secs(expiration_time_secs);
 
-    let program = encode_transfer_script(
+    let program = encode_transfer_with_metadata_script(
         lbr_type_tag(),
         &receiver_address,
         receiver_auth_key.prefix().to_vec(),
         num_coins,
+        metadata,
     );
     let payload = TransactionPayload::Script(program);
     let raw_txn = RawTransaction::new(
@@ -88,7 +97,6 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
         payload,
         max_gas_amount,
         gas_unit_price,
-        lbr_type_tag(),
         expiration_time,
     );
 
@@ -136,6 +144,8 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
     max_gas_amount: u64,
     gas_unit_price: u64,
     expiration_time_secs: u64,
+    metadata_bytes: *const u8,
+    metadata_len: usize,
     buf: *mut *mut u8,
     len: *mut usize,
 ) -> LibraStatus {
@@ -172,11 +182,18 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
     let receiver_address = receiver_auth_key.derived_address();
     let expiration_time = Duration::from_secs(expiration_time_secs);
 
-    let program = encode_transfer_script(
+    let metadata = if metadata_bytes.is_null() {
+        vec![]
+    } else {
+        slice::from_raw_parts(metadata_bytes, metadata_len).to_vec()
+    };
+
+    let program = encode_transfer_with_metadata_script(
         lbr_type_tag(),
         &receiver_address,
         receiver_auth_key.prefix().to_vec(),
         num_coins,
+        metadata,
     );
     let payload = TransactionPayload::Script(program);
     let raw_txn = RawTransaction::new(
@@ -185,7 +202,6 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
         payload,
         max_gas_amount,
         gas_unit_price,
-        lbr_type_tag(),
         expiration_time,
     );
 
@@ -328,7 +344,7 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
 
     if let TransactionPayload::Script(script) = payload {
         match get_transaction_name(script.code()).as_str() {
-            "peer_to_peer_transaction" | "mint_transaction" => {
+            "mint_transaction" => {
                 let args = script.args();
                 if let [TransactionArgument::Address(addr), TransactionArgument::U8Vector(auth_key_prefix), TransactionArgument::U64(amount)] =
                     &args[..]
@@ -343,6 +359,33 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
                             value: *amount,
                             address: addr.into(),
                             auth_key_prefix: auth_key_prefix_buffer,
+                            metadata_bytes: vec![].as_ptr(),
+                            metadata_len: 0,
+                        },
+                    });
+                } else {
+                    update_last_error("Fail to decode transaction payload".to_string());
+                    return LibraStatus::InternalError;
+                }
+            }
+            "peer_to_peer_with_metadata_transaction" => {
+                let args = script.args();
+                if let [TransactionArgument::Address(addr), TransactionArgument::U8Vector(auth_key_prefix), TransactionArgument::U64(amount), TransactionArgument::U8Vector(metadata)] =
+                    &args[..]
+                {
+                    let mut auth_key_prefix_buffer =
+                        [0u8; AuthenticationKey::LENGTH - AccountAddress::LENGTH];
+                    auth_key_prefix_buffer.copy_from_slice(auth_key_prefix.as_slice());
+
+                    txn_payload = Some(LibraTransactionPayload {
+                        txn_type: TransactionType::PeerToPeer,
+                        args: LibraP2PTransferTransactionArgument {
+                            value: *amount,
+                            address: addr.into(),
+                            auth_key_prefix: auth_key_prefix_buffer,
+                            metadata_bytes: (*Box::into_raw(metadata.clone().into_boxed_slice()))
+                                .as_ptr(),
+                            metadata_len: metadata.len(),
                         },
                     });
                 } else {
@@ -420,6 +463,7 @@ mod test {
         let gas_unit_price = 123;
         let max_gas_amount = 1000;
         let expiration_time_secs = 0;
+        let metadata = vec![1, 2, 3];
 
         let mut buf: *mut u8 = std::ptr::null_mut();
         let buf_ptr = &mut buf;
@@ -434,6 +478,8 @@ mod test {
                 max_gas_amount,
                 gas_unit_price,
                 expiration_time_secs,
+                metadata.as_ptr(),
+                metadata.len(),
                 buf_ptr,
                 &mut len,
             )
@@ -446,8 +492,13 @@ mod test {
             from_bytes(signed_txn_bytes_buf).expect("LCS deserialization failed");
 
         if let TransactionPayload::Script(program) = deserialized_signed_txn.payload() {
-            if let TransactionArgument::U64(val) = program.args()[1] {
-                assert_eq!(val, amount);
+            match program.args()[2] {
+                TransactionArgument::U64(val) => assert_eq!(val, amount),
+                _ => unreachable!(),
+            }
+            match &program.args()[3] {
+                TransactionArgument::U8Vector(val) => assert_eq!(val, &metadata),
+                _ => unreachable!(),
             }
         }
         assert_eq!(deserialized_signed_txn.sender(), sender_address);
@@ -472,6 +523,8 @@ mod test {
                 max_gas_amount,
                 gas_unit_price,
                 expiration_time_secs,
+                metadata.as_ptr(),
+                metadata.len(),
                 buf_ptr2,
                 &mut len2,
             )
@@ -520,6 +573,8 @@ mod test {
                 max_gas_amount,
                 gas_unit_price,
                 expiration_time_secs,
+                vec![].as_ptr(),
+                0,
                 &mut buf_ptr,
                 &mut len,
             )
@@ -586,13 +641,15 @@ mod test {
         let max_gas_amount = 10;
         let gas_unit_price = 1;
         let expiration_time_secs = 5;
+        let metadata = vec![1, 2, 3];
         let signature = Ed25519Signature::try_from(&[1u8; Ed25519Signature::LENGTH][..]).unwrap();
 
-        let program = encode_transfer_script(
+        let program = encode_transfer_with_metadata_script(
             lbr_type_tag(),
             &receiver_auth_key.derived_address(),
             receiver_auth_key.prefix().to_vec(),
             amount,
+            metadata.clone(),
         );
         let signed_txn = SignedTransaction::new(
             RawTransaction::new_script(
@@ -601,7 +658,6 @@ mod test {
                 program,
                 max_gas_amount,
                 gas_unit_price,
-                lbr_type_tag(),
                 Duration::from_secs(expiration_time_secs),
             ),
             public_key.clone(),
@@ -652,6 +708,13 @@ mod test {
                 AccountAddress::new(libra_signed_txn.raw_txn.payload.args.address)
             );
             assert_eq!(amount, libra_signed_txn.raw_txn.payload.args.value);
+            let txn_metadata = unsafe {
+                slice::from_raw_parts(
+                    libra_signed_txn.raw_txn.payload.args.metadata_bytes,
+                    libra_signed_txn.raw_txn.payload.args.metadata_len,
+                )
+            };
+            assert_eq!(metadata, txn_metadata);
         }
         assert_eq!(sender, AccountAddress::new(libra_signed_txn.raw_txn.sender));
         assert_eq!(sequence_number, libra_signed_txn.raw_txn.sequence_number);

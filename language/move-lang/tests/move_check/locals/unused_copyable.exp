@@ -1,0 +1,16 @@
+error: 
+
+   ┌── tests/move_check/locals/unused_copyable.move:5:16 ───
+   │
+ 5 │     fun unused(i: u64, s: S) {
+   │                ^ Unused parameter 'i'. Consider removing or prefixing with an underscore: '_i'
+   │
+
+error: 
+
+   ┌── tests/move_check/locals/unused_copyable.move:5:24 ───
+   │
+ 5 │     fun unused(i: u64, s: S) {
+   │                        ^ Unused parameter 's'. Consider removing or prefixing with an underscore: '_s'
+   │
+

@@ -15,7 +15,7 @@ main() {
     return;
 }
 
-// check: ValidatorSetChangeEvent
+// check: NewEpochEvent
 // check: DiscoverySetChangeEvent
 // check: EXECUTED
 
@@ -45,7 +45,7 @@ main() {
     return;
 }
 
-// check: ValidatorSetChangeEvent
+// check: NewEpochEvent
 // check: DiscoverySetChangeEvent
 // check: EXECUTED
 

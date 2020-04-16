@@ -333,7 +333,10 @@ impl TxEmitter {
             .get_accounts_state(slice::from_ref(address))
             .await
             .map_err(|e| format_err!("[{:?}] get_accounts_state failed: {:?} ", client, e))?;
-        Ok(resp[0].sequence_number)
+        Ok(resp[0]
+            .as_ref()
+            .ok_or_else(|| format_err!("account does not exist"))?
+            .sequence_number)
     }
 }
 
@@ -468,7 +471,10 @@ async fn query_sequence_numbers(
             .map_err(|e| format_err!("[{:?}] get_accounts_state failed: {:?} ", client, e))?;
 
         for item in resp.into_iter() {
-            result.push(item.sequence_number);
+            result.push(
+                item.ok_or_else(|| format_err!("account does not exist"))?
+                    .sequence_number,
+            );
         }
     }
     Ok(result)
@@ -491,7 +497,6 @@ fn gen_submit_transaction_request(
         sender_account.sequence_number,
         MAX_GAS_AMOUNT,
         GAS_UNIT_PRICE,
-        lbr_type_tag(),
         TXN_EXPIRATION_SECONDS,
     )
     .expect("Failed to create signed transaction");
@@ -515,11 +520,12 @@ fn gen_transfer_txn_request(
     num_coins: u64,
 ) -> SignedTransaction {
     gen_submit_transaction_request(
-        transaction_builder::encode_transfer_script(
+        transaction_builder::encode_transfer_with_metadata_script(
             lbr_type_tag(),
             receiver,
             receiver_auth_key_prefix,
             num_coins,
+            vec![],
         ),
         sender,
     )

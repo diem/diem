@@ -4,8 +4,8 @@
 use crate::{
     account_address::AccountAddress,
     block_info::{BlockInfo, Round},
+    on_chain_config::ValidatorSet,
     transaction::Version,
-    validator_set::ValidatorSet,
     validator_verifier::{ValidatorVerifier, VerifyError},
 };
 use anyhow::{Error, Result};
@@ -76,8 +76,8 @@ impl LedgerInfo {
     }
 
     #[cfg(any(test, feature = "fuzzing"))]
-    pub fn mock_genesis() -> Self {
-        Self::new(BlockInfo::mock_genesis(), HashValue::zero())
+    pub fn mock_genesis(validator_set: Option<ValidatorSet>) -> Self {
+        Self::new(BlockInfo::mock_genesis(validator_set), HashValue::zero())
     }
 
     /// The `BlockInfo` of a committed block.

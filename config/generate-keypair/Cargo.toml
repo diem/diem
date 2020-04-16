@@ -12,8 +12,9 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 rand = "0.6.5"
-structopt = "0.3.12"
+structopt = "0.3.13"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto/", version = "0.1.0"}
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

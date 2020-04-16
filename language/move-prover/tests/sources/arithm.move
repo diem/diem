@@ -51,7 +51,7 @@ module TestArithmetic {
     }
 
     // succeeds.
-	fun arithmetic_ops(a: u64, b: u64): (u64, u64) {
+	fun arithmetic_ops(a: u64): (u64, u64) {
         let c: u64;
         c = (6 + 4 - 1) * 2 / 3 % 4;
         if (c != 2) abort 42;

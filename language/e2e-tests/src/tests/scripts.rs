@@ -3,13 +3,13 @@
 
 use crate::{account::AccountData, executor::FakeExecutor, gas_costs};
 use libra_types::{
-    account_address::AccountAddress, account_config::lbr_type_tag,
-    on_chain_config::VMPublishingOption, transaction::TransactionStatus, vm_error::StatusCode,
+    account_address::AccountAddress, on_chain_config::VMPublishingOption,
+    transaction::TransactionStatus, vm_error::StatusCode,
 };
 use move_core_types::identifier::Identifier;
 use vm::file_format::{
-    empty_script, AddressPoolIndex, Bytecode, FunctionHandle, FunctionHandleIndex, IdentifierIndex,
-    ModuleHandle, ModuleHandleIndex, SignatureIndex,
+    empty_script, AddressIdentifierIndex, Bytecode, FunctionHandle, FunctionHandleIndex,
+    IdentifierIndex, ModuleHandle, ModuleHandleIndex, SignatureIndex,
 };
 
 #[test]
@@ -31,7 +31,6 @@ fn script_code_unverifiable() {
         10,
         gas_costs::TXN_RESERVED,
         1,
-        lbr_type_tag(),
     );
 
     // execute transaction
@@ -68,11 +67,11 @@ fn script_none_existing_module_dep() {
     let mut script = empty_script();
     // make a non existent external module
     script
-        .address_pool
+        .address_identifiers
         .push(AccountAddress::new([1u8; AccountAddress::LENGTH]));
     script.identifiers.push(Identifier::new("module").unwrap());
     let module_handle = ModuleHandle {
-        address: AddressPoolIndex((script.address_pool.len() - 1) as u16),
+        address: AddressIdentifierIndex((script.address_identifiers.len() - 1) as u16),
         name: IdentifierIndex((script.identifiers.len() - 1) as u16),
     };
     script.module_handles.push(module_handle);
@@ -102,7 +101,6 @@ fn script_none_existing_module_dep() {
         10,
         gas_costs::TXN_RESERVED,
         1,
-        lbr_type_tag(),
     );
 
     // execute transaction
@@ -136,11 +134,11 @@ fn script_non_existing_function_dep() {
     let mut script = empty_script();
     // LCS module
     script
-        .address_pool
+        .address_identifiers
         .push(AccountAddress::new([0u8; AccountAddress::LENGTH]));
     script.identifiers.push(Identifier::new("LCS").unwrap());
     let module_handle = ModuleHandle {
-        address: AddressPoolIndex((script.address_pool.len() - 1) as u16),
+        address: AddressIdentifierIndex((script.address_identifiers.len() - 1) as u16),
         name: IdentifierIndex((script.identifiers.len() - 1) as u16),
     };
     script.module_handles.push(module_handle);
@@ -170,7 +168,6 @@ fn script_non_existing_function_dep() {
         10,
         gas_costs::TXN_RESERVED,
         1,
-        lbr_type_tag(),
     );
 
     // execute transaction
@@ -204,11 +201,11 @@ fn script_bad_sig_function_dep() {
     let mut script = empty_script();
     // LCS module
     script
-        .address_pool
+        .address_identifiers
         .push(AccountAddress::new([0u8; AccountAddress::LENGTH]));
     script.identifiers.push(Identifier::new("LCS").unwrap());
     let module_handle = ModuleHandle {
-        address: AddressPoolIndex((script.address_pool.len() - 1) as u16),
+        address: AddressIdentifierIndex((script.address_identifiers.len() - 1) as u16),
         name: IdentifierIndex((script.identifiers.len() - 1) as u16),
     };
     script.module_handles.push(module_handle);
@@ -240,7 +237,6 @@ fn script_bad_sig_function_dep() {
         10,
         gas_costs::TXN_RESERVED,
         1,
-        lbr_type_tag(),
     );
 
     // execute transaction

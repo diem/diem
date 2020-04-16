@@ -11,3 +11,6 @@ pub(crate) static EMIT_EVENT_NAME: Lazy<Identifier> =
 
 pub(crate) static SAVE_ACCOUNT_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("save_account").unwrap());
+
+pub(crate) static PRINT_STACK_TRACE_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("print_stack_trace").unwrap());

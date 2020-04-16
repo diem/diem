@@ -223,7 +223,7 @@ pub fn placeholder_certificate_for_block(
     certified_parent_block_round: u64,
 ) -> QuorumCert {
     // Assuming executed state to be Genesis state.
-    let genesis_ledger_info = LedgerInfo::mock_genesis();
+    let genesis_ledger_info = LedgerInfo::mock_genesis(None);
     let vote_data = VoteData::new(
         BlockInfo::new(
             genesis_ledger_info.epoch() + 1,
@@ -264,7 +264,7 @@ pub fn placeholder_certificate_for_block(
 }
 
 pub fn certificate_for_genesis() -> QuorumCert {
-    let ledger_info = LedgerInfo::mock_genesis();
+    let ledger_info = LedgerInfo::mock_genesis(None);
     QuorumCert::certificate_for_genesis_from_ledger_info(
         &ledger_info,
         Block::<Vec<usize>>::make_genesis_block_from_ledger_info(&ledger_info).id(),

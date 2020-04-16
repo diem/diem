@@ -30,14 +30,66 @@ struct TestOpts {
     /// Output minimal information
     quiet: bool,
     #[structopt(long)]
-    /// We already can't capture anything but we don't want arg parsing to fail so this is a noop
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
     nocapture: bool,
+    #[structopt(long)]
+    /// List all tests
+    list: bool,
+    #[structopt(long)]
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
+    ignored: bool,
+    #[structopt(long)]
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
+    include_ignored: bool,
+    #[structopt(long)]
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
+    force_run_in_process: bool,
+    #[structopt(long)]
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
+    exclude_should_panic: bool,
+    #[structopt(long)]
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
+    test: bool,
+    #[structopt(long)]
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
+    bench: bool,
+    #[structopt(long)]
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
+    logfile: Option<String>,
+    #[structopt(long, number_of_values = 1)]
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
+    skip: Vec<String>,
+    #[structopt(long)]
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
+    show_output: bool,
+    #[structopt(long)]
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
+    color: Option<String>,
+    #[structopt(long)]
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
+    format: Option<String>,
+    #[structopt(long)]
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
+    report_time: Option<String>,
+    #[structopt(long)]
+    /// NO-OP: unsupported option, exists for compatibility with the default test harness
+    ensure_time: bool,
 }
 
 pub fn runner(reqs: &[Requirements]) {
     let options = TestOpts::from_args();
 
-    let tests = reqs.iter().flat_map(|req| req.expand()).collect();
+    let tests: Vec<Test> = reqs.iter().flat_map(|req| req.expand()).collect();
+
+    if options.list {
+        for test in &tests {
+            println!("{}: test", test.name);
+        }
+
+        println!();
+        println!("{} tests, 0 benchmarks", tests.len());
+        return;
+    }
 
     match run_tests(options, tests) {
         Ok(true) => {}

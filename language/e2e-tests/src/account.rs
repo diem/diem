@@ -8,13 +8,17 @@ use libra_crypto::ed25519::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config,
+    account_config::{
+        self, AccountResource, BalanceResource, ReceivedPaymentEvent, SentPaymentEvent,
+    },
     event::EventHandle,
     language_storage::{StructTag, TypeTag},
+    move_resource::MoveResource,
     transaction::{
         authenticator::AuthenticationKey, RawTransaction, Script, SignedTransaction,
         TransactionArgument, TransactionPayload,
     },
+    write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use move_vm_types::{
     identifier::create_access_path,
@@ -98,14 +102,14 @@ impl Account {
     ///
     /// Use this to retrieve or publish the Account blob.
     pub fn make_account_access_path(&self) -> AccessPath {
-        self.make_access_path(account_config::account_struct_tag())
+        self.make_access_path(AccountResource::struct_tag())
     }
 
     /// Returns the AccessPath that describes the Account balance resource instance.
     ///
     /// Use this to retrieve or publish the Account balance blob.
     pub fn make_balance_access_path(&self) -> AccessPath {
-        self.make_access_path(account_config::account_balance_struct_tag())
+        self.make_access_path(BalanceResource::struct_tag())
     }
 
     // TODO: plug in the account type
@@ -150,7 +154,6 @@ impl Account {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
     ) -> SignedTransaction {
         Self::create_raw_user_txn(
             *self.address(),
@@ -158,7 +161,6 @@ impl Account {
             sequence_number,
             max_gas_amount,
             gas_unit_price,
-            gas_specifier,
         )
         .sign(&self.privkey, self.pubkey.clone())
         .unwrap()
@@ -171,7 +173,6 @@ impl Account {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
     ) -> RawTransaction {
         match payload {
             TransactionPayload::Program => RawTransaction::new(
@@ -180,7 +181,6 @@ impl Account {
                 TransactionPayload::Program,
                 max_gas_amount,
                 gas_unit_price,
-                gas_specifier,
                 Duration::from_secs(DEFAULT_EXPIRATION_TIME),
             ),
             TransactionPayload::WriteSet(writeset) => {
@@ -192,7 +192,6 @@ impl Account {
                 module,
                 max_gas_amount,
                 gas_unit_price,
-                gas_specifier,
                 Duration::from_secs(DEFAULT_EXPIRATION_TIME),
             ),
             TransactionPayload::Script(script) => RawTransaction::new_script(
@@ -201,7 +200,6 @@ impl Account {
                 script,
                 max_gas_amount,
                 gas_unit_price,
-                gas_specifier,
                 Duration::from_secs(DEFAULT_EXPIRATION_TIME),
             ),
         }
@@ -217,7 +215,6 @@ impl Account {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
     ) -> SignedTransaction {
         self.create_signed_txn_impl(
             *self.address(),
@@ -225,7 +222,6 @@ impl Account {
             sequence_number,
             max_gas_amount,
             gas_unit_price,
-            gas_specifier,
         )
     }
 
@@ -237,7 +233,6 @@ impl Account {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
     ) -> RawTransaction {
         Self::create_raw_txn_impl(
             address,
@@ -245,7 +240,6 @@ impl Account {
             sequence_number,
             max_gas_amount,
             gas_unit_price,
-            gas_specifier,
         )
     }
 
@@ -261,7 +255,6 @@ impl Account {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
     ) -> SignedTransaction {
         self.create_signed_txn_impl(
             sender,
@@ -269,7 +262,6 @@ impl Account {
             sequence_number,
             max_gas_amount,
             gas_unit_price,
-            gas_specifier,
         )
     }
 
@@ -281,7 +273,6 @@ impl Account {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
     ) -> RawTransaction {
         Self::create_raw_txn_impl(
             sender,
@@ -289,7 +280,6 @@ impl Account {
             sequence_number,
             max_gas_amount,
             gas_unit_price,
-            gas_specifier,
         )
     }
 
@@ -303,7 +293,6 @@ impl Account {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
     ) -> SignedTransaction {
         Self::create_raw_txn_impl(
             sender,
@@ -311,7 +300,6 @@ impl Account {
             sequence_number,
             max_gas_amount,
             gas_unit_price,
-            gas_specifier,
         )
         .sign(&self.privkey, self.pubkey.clone())
         .unwrap()
@@ -327,7 +315,6 @@ impl Account {
             sequence_number,
             gas_costs::TXN_RESERVED,
             0, // gas price
-            account_config::lbr_type_tag(),
         )
     }
 
@@ -337,7 +324,6 @@ impl Account {
         sequence_number: u64,
         max_gas_amount: u64,
         gas_unit_price: u64,
-        gas_specifier: TypeTag,
     ) -> RawTransaction {
         RawTransaction::new(
             sender,
@@ -345,7 +331,6 @@ impl Account {
             program,
             max_gas_amount,
             gas_unit_price,
-            gas_specifier,
             // TTL is 86400s. Initial time was set to 0.
             Duration::from_secs(DEFAULT_EXPIRATION_TIME),
         )
@@ -385,7 +370,7 @@ impl Balance {
         StructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::account_module_name().to_owned(),
-            name: account_config::account_balance_struct_name().to_owned(),
+            name: BalanceResource::struct_identifier(),
             is_resource: true,
             ty_args: vec![],
             layout: vec![Type::U64],
@@ -467,7 +452,7 @@ impl AccountData {
         StructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::account_module_name().to_owned(),
-            name: account_config::sent_event_name().to_owned(),
+            name: SentPaymentEvent::struct_identifier(),
             is_resource: false,
             ty_args: vec![],
             layout: vec![Type::U64, Type::Address, Type::Vector(Box::new(Type::U8))],
@@ -478,7 +463,7 @@ impl AccountData {
         StructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::account_module_name().to_owned(),
-            name: account_config::received_event_name().to_owned(),
+            name: ReceivedPaymentEvent::struct_identifier(),
             is_resource: false,
             ty_args: vec![],
             layout: vec![Type::U64, Type::Address, Type::Vector(Box::new(Type::U8))],
@@ -512,7 +497,7 @@ impl AccountData {
         StructType {
             address: account_config::CORE_CODE_ADDRESS,
             module: account_config::account_module_name().to_owned(),
-            name: account_config::account_struct_name().to_owned(),
+            name: AccountResource::struct_identifier(),
             is_resource: true,
             ty_args: vec![],
             layout: vec![
@@ -571,6 +556,28 @@ impl AccountData {
     /// Use this to retrieve or publish the Account blob.
     pub fn make_balance_access_path(&self) -> AccessPath {
         self.account.make_balance_access_path()
+    }
+
+    /// Creates a writeset that contains the account data and can be patched to the storage
+    /// directly.
+    pub fn to_writeset(&self) -> WriteSet {
+        let (account_blob, balance_blob) = self.to_account();
+        let account = account_blob
+            .value_as::<Struct>()
+            .unwrap()
+            .simple_serialize(&AccountData::account_type())
+            .unwrap();
+        let balance = balance_blob
+            .value_as::<Struct>()
+            .unwrap()
+            .simple_serialize(&AccountData::balance_type())
+            .unwrap();
+        WriteSetMut::new(vec![
+            (self.make_account_access_path(), WriteOp::Value(account)),
+            (self.make_balance_access_path(), WriteOp::Value(balance)),
+        ])
+        .freeze()
+        .unwrap()
     }
 
     /// Returns the address of the account. This is a hash of the public key the account was created

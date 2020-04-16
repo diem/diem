@@ -5,5 +5,6 @@ pub mod ast;
 pub(crate) mod core;
 mod expand;
 mod globals;
+mod infinite_instantiations;
 mod recursive_structs;
 pub(crate) mod translate;

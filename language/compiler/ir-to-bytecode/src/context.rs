@@ -10,12 +10,12 @@ use std::{clone::Clone, collections::HashMap, hash::Hash};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressPoolIndex, ByteArrayPoolIndex, CodeOffset, FieldHandle, FieldHandleIndex,
-        FieldInstantiation, FieldInstantiationIndex, FunctionDefinitionIndex, FunctionHandle,
-        FunctionHandleIndex, FunctionInstantiation, FunctionInstantiationIndex, FunctionSignature,
-        IdentifierIndex, Kind, ModuleHandle, ModuleHandleIndex, Signature, SignatureIndex,
-        SignatureToken, StructDefInstantiation, StructDefInstantiationIndex, StructDefinitionIndex,
-        StructHandle, StructHandleIndex, TableIndex,
+        AddressIdentifierIndex, CodeOffset, Constant, ConstantPoolIndex, FieldHandle,
+        FieldHandleIndex, FieldInstantiation, FieldInstantiationIndex, FunctionDefinitionIndex,
+        FunctionHandle, FunctionHandleIndex, FunctionInstantiation, FunctionInstantiationIndex,
+        FunctionSignature, IdentifierIndex, Kind, ModuleHandle, ModuleHandleIndex, Signature,
+        SignatureIndex, SignatureToken, StructDefInstantiation, StructDefInstantiationIndex,
+        StructDefinitionIndex, StructHandle, StructHandleIndex, TableIndex,
     },
 };
 
@@ -60,7 +60,7 @@ struct CompiledDependency<'a> {
     struct_pool: &'a [StructHandle],
     function_pool: &'a [FunctionHandle],
     identifiers: &'a [Identifier],
-    address_pool: &'a [AccountAddress],
+    address_identifiers: &'a [AccountAddress],
     signature_pool: &'a [Signature],
 }
 
@@ -97,7 +97,7 @@ impl<'a> CompiledDependency<'a> {
             struct_pool: dep.struct_handles(),
             function_pool: dep.function_handles(),
             identifiers: dep.identifiers(),
-            address_pool: dep.address_pool(),
+            address_identifiers: dep.address_identifiers(),
             signature_pool: dep.signatures(),
         })
     }
@@ -108,7 +108,9 @@ impl<'a> CompiledDependency<'a> {
     ) -> Option<(QualifiedModuleIdent, StructName)> {
         let handle = self.struct_pool.get(idx.0 as usize)?;
         let module_handle = self.module_pool.get(handle.module.0 as usize)?;
-        let address = *self.address_pool.get(module_handle.address.0 as usize)?;
+        let address = *self
+            .address_identifiers
+            .get(module_handle.address.0 as usize)?;
         let module = ModuleName::new(
             self.identifiers
                 .get(module_handle.name.0 as usize)?
@@ -167,10 +169,10 @@ pub struct MaterializedPools {
     pub signatures: Vec<Signature>,
     /// Identifier pool
     pub identifiers: Vec<Identifier>,
-    /// Byte array pool
-    pub byte_array_pool: Vec<Vec<u8>>,
-    /// Address pool
-    pub address_pool: Vec<AccountAddress>,
+    /// Address identifier pool
+    pub address_identifiers: Vec<AccountAddress>,
+    /// Constnat pool
+    pub constant_pool: Vec<Constant>,
 }
 
 /// Compilation context for a single compilation unit (module or script).
@@ -199,8 +201,8 @@ pub struct Context<'a> {
     struct_handles: HashMap<StructHandle, TableIndex>,
     signatures: HashMap<Signature, TableIndex>,
     identifiers: HashMap<Identifier, TableIndex>,
-    byte_array_pool: HashMap<Vec<u8>, TableIndex>,
-    address_pool: HashMap<AccountAddress, TableIndex>,
+    address_identifiers: HashMap<AccountAddress, TableIndex>,
+    constant_pool: HashMap<Constant, TableIndex>,
     field_handles: HashMap<FieldHandle, TableIndex>,
     struct_instantiations: HashMap<StructDefInstantiation, TableIndex>,
     function_instantiations: HashMap<FunctionInstantiation, TableIndex>,
@@ -249,8 +251,8 @@ impl<'a> Context<'a> {
             field_instantiations: HashMap::new(),
             signatures: HashMap::new(),
             identifiers: HashMap::new(),
-            byte_array_pool: HashMap::new(),
-            address_pool: HashMap::new(),
+            address_identifiers: HashMap::new(),
+            constant_pool: HashMap::new(),
             current_function_index: FunctionDefinitionIndex(0),
             source_map: SourceMap::new(current_module.clone()),
         };
@@ -293,8 +295,8 @@ impl<'a> Context<'a> {
             field_handles: Self::materialize_map(self.field_handles),
             signatures: Self::materialize_map(self.signatures),
             identifiers: Self::materialize_map(self.identifiers),
-            byte_array_pool: Self::materialize_map(self.byte_array_pool),
-            address_pool: Self::materialize_map(self.address_pool),
+            address_identifiers: Self::materialize_map(self.address_identifiers),
+            constant_pool: Self::materialize_map(self.constant_pool),
             function_instantiations: Self::materialize_map(self.function_instantiations),
             struct_def_instantiations: Self::materialize_map(self.struct_instantiations),
             field_instantiations: Self::materialize_map(self.field_instantiations),
@@ -416,14 +418,6 @@ impl<'a> Context<'a> {
         Ok(get_or_add_item(&mut self.labels, label)?)
     }
 
-    /// Get the address pool index, adds it if missing.
-    pub fn address_index(&mut self, addr: AccountAddress) -> Result<AddressPoolIndex> {
-        Ok(AddressPoolIndex(get_or_add_item(
-            &mut self.address_pool,
-            addr,
-        )?))
-    }
-
     /// Get the identifier pool index, adds it if missing.
     pub fn identifier_index(&mut self, s: &str) -> Result<IdentifierIndex> {
         let ident = ident_str(s)?;
@@ -432,12 +426,20 @@ impl<'a> Context<'a> {
         Ok(IdentifierIndex(idx?))
     }
 
+    /// Get the address pool index, adds it if missing.
+    pub fn address_index(&mut self, addr: AccountAddress) -> Result<AddressIdentifierIndex> {
+        Ok(AddressIdentifierIndex(get_or_add_item(
+            &mut self.address_identifiers,
+            addr,
+        )?))
+    }
+
     /// Get the byte array pool index, adds it if missing.
     #[allow(clippy::ptr_arg)]
-    pub fn byte_array_index(&mut self, byte_array: &Vec<u8>) -> Result<ByteArrayPoolIndex> {
-        Ok(ByteArrayPoolIndex(get_or_add_item_ref(
-            &mut self.byte_array_pool,
-            byte_array,
+    pub fn constant_index(&mut self, constant: Constant) -> Result<ConstantPoolIndex> {
+        Ok(ConstantPoolIndex(get_or_add_item(
+            &mut self.constant_pool,
+            constant,
         )?))
     }
 

@@ -25,17 +25,16 @@ impl Pad {
             table_size,
             options,
         };
-        slf.pad_address_table(module);
+        slf.pad_cosntant_table(module);
         slf.pad_identifier_table(module);
-        slf.pad_byte_array_table(module);
+        slf.pad_address_identifier_table(module);
         slf.pad_signatures(module);
         slf.pad_function_bodies(module);
     }
 
-    fn pad_address_table(&mut self, module: &mut CompiledModuleMut) {
-        module.address_pool = (0..(self.table_size + module.address_pool.len()))
-            .map(|_| AccountAddress::random())
-            .collect()
+    fn pad_cosntant_table(&mut self, module: &mut CompiledModuleMut) {
+        // TODO actual constant generation
+        module.constant_pool = vec![]
     }
 
     fn pad_identifier_table(&mut self, module: &mut CompiledModuleMut) {
@@ -47,12 +46,9 @@ impl Pad {
             .collect()
     }
 
-    fn pad_byte_array_table(&mut self, module: &mut CompiledModuleMut) {
-        module.byte_array_pool = (0..(self.table_size + module.byte_array_pool.len()))
-            .map(|_| {
-                let len = self.gen.gen_range(10, self.options.byte_array_max_size);
-                (0..len).map(|_| self.gen.gen::<u8>()).collect()
-            })
+    fn pad_address_identifier_table(&mut self, module: &mut CompiledModuleMut) {
+        module.address_identifiers = (0..(self.table_size + module.address_identifiers.len()))
+            .map(|_| AccountAddress::random())
             .collect()
     }
 

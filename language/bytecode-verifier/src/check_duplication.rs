@@ -40,18 +40,10 @@ impl<'a> DuplicationChecker<'a> {
                 StatusCode::DUPLICATE_ELEMENT,
             ))
         }
-        // Bytearrays
-        if let Some(idx) = Self::first_duplicate_element(self.module.byte_array_pool()) {
+        // Constants
+        if let Some(idx) = Self::first_duplicate_element(self.module.constant_pool()) {
             errors.push(verification_error(
-                IndexKind::ByteArrayPool,
-                idx,
-                StatusCode::DUPLICATE_ELEMENT,
-            ))
-        }
-        // Addresses
-        if let Some(idx) = Self::first_duplicate_element(self.module.address_pool()) {
-            errors.push(verification_error(
-                IndexKind::AddressPool,
+                IndexKind::ConstantPool,
                 idx,
                 StatusCode::DUPLICATE_ELEMENT,
             ))
