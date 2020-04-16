@@ -30,7 +30,7 @@ members = [
     "common/workspace-hack",
     "config",
     "config/config-builder",
-    "config/generate-keypair",
+    "config/generate-key",
     "consensus",
     "consensus/consensus-types",
     "consensus/safety-rules",

@@ -3,10 +3,7 @@
 
 use anyhow::Result;
 use libra_config::config::NodeConfig;
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    test_utils::KeyPair,
-};
+use libra_crypto::ed25519::Ed25519PrivateKey;
 use std::{fs::File, io::Write, path::PathBuf};
 
 pub trait BuildSwarm {
@@ -35,8 +32,7 @@ impl SwarmConfig {
         }
 
         let faucet_key_path = output_dir.join("mint.key");
-        let faucet_keypair = KeyPair::<Ed25519PrivateKey, Ed25519PublicKey>::from(faucet_key);
-        let serialized_keys = lcs::to_bytes(&faucet_keypair)?;
+        let serialized_keys = lcs::to_bytes(&faucet_key)?;
         let mut key_file = File::create(&faucet_key_path)?;
         key_file.write_all(&serialized_keys)?;
 

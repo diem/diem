@@ -1,8 +1,8 @@
 [package]
-name = "generate-keypair"
+name = "generate-key"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
-description = "Libra generate keypair"
+description = "Libra generate key"
 repository = "https://github.com/libra/libra"
 homepage = "https://libra.org"
 license = "Apache-2.0"
@@ -10,9 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0"
 rand = "0.7.3"
-structopt = "0.3.13"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto/", version = "0.1.0"}

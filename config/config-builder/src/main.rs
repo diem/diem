@@ -5,18 +5,8 @@
 
 use config_builder::{FullNodeConfig, ValidatorConfig};
 use libra_config::config::NodeConfig;
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    test_utils::KeyPair,
-};
 use parity_multiaddr::Multiaddr;
-use std::{
-    convert::TryInto,
-    fs::{self, File},
-    io::Write,
-    net::SocketAddr,
-    path::PathBuf,
-};
+use std::{convert::TryInto, fs, net::SocketAddr, path::PathBuf};
 use structopt::StructOpt;
 
 const NODE_CONFIG: &str = "node.config.toml";
@@ -188,14 +178,8 @@ fn build_faucet(args: FaucetArgs) {
 
     let faucet_key = config_builder.build_faucet_client();
     let key_path = args.output_dir.join("mint.key");
-    let faucet_keypair = KeyPair::<Ed25519PrivateKey, Ed25519PublicKey>::from(faucet_key);
-    let serialized_keys = lcs::to_bytes(&faucet_keypair).expect("Unable to serialize keys");
-
     fs::create_dir_all(&args.output_dir).expect("Unable to create output directory");
-    let mut key_file = File::create(key_path).expect("Unable to create key file");
-    key_file
-        .write_all(&serialized_keys)
-        .expect("Unable to write to key file");
+    generate_key::save_key(faucet_key, key_path);
 }
 
 fn build_full_node(command: FullNodeCommand) {

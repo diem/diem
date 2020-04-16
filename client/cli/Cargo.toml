@@ -29,6 +29,7 @@ ureq = { version = "0.12.1"}
 
 admission-control-proto = { path = "../../admission-control/admission-control-proto", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
+generate-key = { path = "../../config/generate-key", version = "0.1.0" }
 crash-handler = { path = "../../common/crash-handler", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
