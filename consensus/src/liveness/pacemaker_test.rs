@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::liveness::pacemaker::{
+    liveness::pacemaker::{
         ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker, PacemakerTimeInterval,
     },
     util::mock_time_service::SimulatedTimeService,

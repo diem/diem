@@ -2,24 +2,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::{
-        block_storage::{BlockReader, BlockStore},
-        event_processor::{EventProcessor, SyncProcessor, UnverifiedEvent, VerifiedEvent},
-        liveness::{
-            leader_reputation::{ActiveInactiveHeuristic, LeaderReputation, LibraDBBackend},
-            multi_proposer_election::MultiProposer,
-            pacemaker::{ExponentialTimeInterval, Pacemaker},
-            proposal_generator::ProposalGenerator,
-            proposer_election::ProposerElection,
-            rotating_proposer_election::{choose_leader, RotatingProposer},
-        },
-        network::{IncomingBlockRetrievalRequest, NetworkReceivers, NetworkSender},
-        network_interface::{ConsensusMsg, ConsensusNetworkSender},
-        persistent_liveness_storage::{
-            LedgerRecoveryData, PersistentLivenessStorage, RecoveryData,
-        },
-    },
+    block_storage::{BlockReader, BlockStore},
     counters,
+    event_processor::{EventProcessor, SyncProcessor, UnverifiedEvent, VerifiedEvent},
+    liveness::{
+        leader_reputation::{ActiveInactiveHeuristic, LeaderReputation, LibraDBBackend},
+        multi_proposer_election::MultiProposer,
+        pacemaker::{ExponentialTimeInterval, Pacemaker},
+        proposal_generator::ProposalGenerator,
+        proposer_election::ProposerElection,
+        rotating_proposer_election::{choose_leader, RotatingProposer},
+    },
+    network::{IncomingBlockRetrievalRequest, NetworkReceivers, NetworkSender},
+    network_interface::{ConsensusMsg, ConsensusNetworkSender},
+    persistent_liveness_storage::{LedgerRecoveryData, PersistentLivenessStorage, RecoveryData},
     state_replication::{StateComputer, TxnManager},
     util::time_service::{ClockTimeService, TimeService},
 };

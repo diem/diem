@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::{
-        block_storage::BlockReader,
-        liveness::proposal_generator::ProposalGenerator,
-        test_utils::{build_empty_tree, MockTransactionManager, TreeInserter},
-    },
+    block_storage::BlockReader,
+    liveness::proposal_generator::ProposalGenerator,
+    test_utils::{build_empty_tree, MockTransactionManager, TreeInserter},
     util::mock_time_service::SimulatedTimeService,
 };
 use consensus_types::block::{

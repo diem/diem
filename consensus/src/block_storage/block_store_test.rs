@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
+use crate::{
     block_storage::{
         block_store::sync_manager::NeedFetchResult, BlockReader, PendingVotes, VoteReceptionResult,
     },

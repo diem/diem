@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::test_utils::{mock_storage::MockStorage, TestPayload},
     state_replication::StateComputer,
+    test_utils::{mock_storage::MockStorage, TestPayload},
 };
 use anyhow::{format_err, Result};
 use consensus_types::block::Block;

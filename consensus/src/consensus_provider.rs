@@ -2,13 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::{
-        epoch_manager::EpochManager,
-        network::NetworkTask,
-        network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
-        persistent_liveness_storage::StorageWriteProxy,
-    },
     counters,
+    epoch_manager::EpochManager,
+    network::NetworkTask,
+    network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
+    persistent_liveness_storage::StorageWriteProxy,
     state_computer::ExecutionProxy,
     txn_manager::MempoolProxy,
     util::time_service::ClockTimeService,

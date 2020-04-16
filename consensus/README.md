@@ -53,11 +53,9 @@ All consensus messages are signed by their creators and verified by their receiv
 
     consensus
     ├── src
-    │   └── chained_bft                # Implementation of the LibraBFT protocol
-    │       ├── block_storage          # In-memory storage of blocks and related data structures
-    │       ├── consensus_types        # Consensus data types (i.e. quorum certificates)
-    │       ├── consensusdb            # Database interaction to persist consensus data for safety and liveness
-    │       ├── liveness               # Pacemaker, proposer, and other liveness related code
-    │       ├── safety                 # Safety (voting) rules
-    │       └── test_utils             # Mock implementations that are used for testing only
-    └── state-synchronizer             # Synchronization between validators to catch up on committed state
+    │   ├── block_storage          # In-memory storage of blocks and related data structures
+    │   ├── consensusdb            # Database interaction to persist consensus data for safety and liveness
+    │   ├── liveness               # Pacemaker, proposer, and other liveness related code
+    │   └── test_utils             # Mock implementations that are used for testing only
+    └── consensus-types            # Consensus data types (i.e. quorum certificates)
+    └── safety-rules               # Safety (voting) rules

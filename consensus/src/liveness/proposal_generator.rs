@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::block_storage::BlockReader,
+    block_storage::BlockReader,
     counters,
     state_replication::TxnManager,
     util::time_service::{wait_if_possible, TimeService, WaitingError, WaitingSuccess},

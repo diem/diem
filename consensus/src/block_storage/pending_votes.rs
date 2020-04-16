@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::block_storage::VoteReceptionResult;
+use crate::block_storage::VoteReceptionResult;
 use consensus_types::{
     common::{Author, Round},
     quorum_cert::QuorumCert,
