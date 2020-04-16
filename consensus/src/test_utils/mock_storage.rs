@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
+use crate::{
     epoch_manager::LivenessStorageData,
     persistent_liveness_storage::{
         LedgerRecoveryData, PersistentLivenessStorage, RecoveryData, RootMetadata,

@@ -2,23 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::{
-        block_storage::{BlockReader, BlockStore},
-        event_processor::EventProcessor,
-        liveness::{
-            pacemaker::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
-            proposal_generator::ProposalGenerator,
-            proposer_election::ProposerElection,
-            rotating_proposer_election::RotatingProposer,
-        },
-        network::{IncomingBlockRetrievalRequest, NetworkSender, NetworkTask},
-        network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
-        network_tests::NetworkPlayground,
-        persistent_liveness_storage::RecoveryData,
-        test_utils::{
-            self, consensus_runtime, timed_block_on, MockStateComputer, MockStorage,
-            MockTransactionManager, TestPayload, TreeInserter,
-        },
+    block_storage::{BlockReader, BlockStore},
+    event_processor::EventProcessor,
+    liveness::{
+        pacemaker::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
+        proposal_generator::ProposalGenerator,
+        proposer_election::ProposerElection,
+        rotating_proposer_election::RotatingProposer,
+    },
+    network::{IncomingBlockRetrievalRequest, NetworkSender, NetworkTask},
+    network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
+    network_tests::NetworkPlayground,
+    persistent_liveness_storage::RecoveryData,
+    test_utils::{
+        self, consensus_runtime, timed_block_on, MockStateComputer, MockStorage,
+        MockTransactionManager, TestPayload, TreeInserter,
     },
     util::time_service::{ClockTimeService, TimeService},
 };

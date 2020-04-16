@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::liveness::proposer_election::{next, ProposerElection};
+use crate::liveness::proposer_election::{next, ProposerElection};
 use consensus_types::{
     block::Block,
     common::{Author, Payload, Round},

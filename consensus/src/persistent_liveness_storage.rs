@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{consensusdb::ConsensusDB, epoch_manager::LivenessStorageData};
+use crate::{consensusdb::ConsensusDB, epoch_manager::LivenessStorageData};
 use anyhow::{format_err, Context, Result};
 use consensus_types::{
     block::Block, common::Payload, quorum_cert::QuorumCert,

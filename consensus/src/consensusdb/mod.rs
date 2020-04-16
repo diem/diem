@@ -5,7 +5,7 @@
 mod consensusdb_test;
 mod schema;
 
-use crate::chained_bft::consensusdb::schema::{
+use crate::consensusdb::schema::{
     block::{BlockSchema, SchemaBlock},
     quorum_certificate::QCSchema,
     single_entry::{SingleEntryKey, SingleEntrySchema},

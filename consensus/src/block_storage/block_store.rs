@@ -2,13 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::{
-        block_storage::{block_tree::BlockTree, BlockReader},
-        persistent_liveness_storage::{
-            PersistentLivenessStorage, RecoveryData, RootInfo, RootMetadata,
-        },
-    },
+    block_storage::{block_tree::BlockTree, BlockReader},
     counters,
+    persistent_liveness_storage::{
+        PersistentLivenessStorage, RecoveryData, RootInfo, RootMetadata,
+    },
     state_replication::StateComputer,
 };
 use anyhow::{bail, ensure, format_err, Context};

@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::network_interface::{
-        ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender,
-    },
     counters,
+    network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
 };
 use anyhow::{anyhow, ensure};
 use bytes::Bytes;

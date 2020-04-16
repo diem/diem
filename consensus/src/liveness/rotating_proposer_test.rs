@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::liveness::{
+use crate::liveness::{
     proposer_election::ProposerElection, rotating_proposer_election::RotatingProposer,
 };
 use consensus_types::block::{block_test_utils::certificate_for_genesis, Block};

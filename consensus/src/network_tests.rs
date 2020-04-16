@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::{
+use crate::{
     network::{NetworkReceivers, NetworkSender},
     network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
     test_utils::{self, consensus_runtime, placeholder_ledger_info, timed_block_on},
@@ -343,7 +343,7 @@ impl DropConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chained_bft::{network::NetworkTask, test_utils::TestPayload};
+    use crate::{network::NetworkTask, test_utils::TestPayload};
     use consensus_types::block_retrieval::{
         BlockRetrievalRequest, BlockRetrievalResponse, BlockRetrievalStatus,
     };

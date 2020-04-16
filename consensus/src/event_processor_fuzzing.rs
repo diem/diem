@@ -2,19 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::{
-        block_storage::BlockStore,
-        event_processor::EventProcessor,
-        liveness::{
-            pacemaker::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
-            proposal_generator::ProposalGenerator,
-            rotating_proposer_election::RotatingProposer,
-        },
-        network::NetworkSender,
-        network_interface::ConsensusNetworkSender,
-        persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
-        test_utils::{EmptyStateComputer, MockStorage, MockTransactionManager, TestPayload},
+    block_storage::BlockStore,
+    event_processor::EventProcessor,
+    liveness::{
+        pacemaker::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, Pacemaker},
+        proposal_generator::ProposalGenerator,
+        rotating_proposer_election::RotatingProposer,
     },
+    network::NetworkSender,
+    network_interface::ConsensusNetworkSender,
+    persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
+    test_utils::{EmptyStateComputer, MockStorage, MockTransactionManager, TestPayload},
     util::mock_time_service::SimulatedTimeService,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};

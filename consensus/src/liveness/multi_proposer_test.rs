@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::liveness::{
+use crate::liveness::{
     multi_proposer_election::MultiProposer,
     proposer_election::{next, ProposerElection},
 };

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::chained_bft::block_storage::{pending_votes::PendingVotes, VoteReceptionResult};
+use crate::block_storage::{pending_votes::PendingVotes, VoteReceptionResult};
 use consensus_types::{common::Round, vote::Vote, vote_data::VoteData};
 use libra_crypto::HashValue;
 use libra_types::{

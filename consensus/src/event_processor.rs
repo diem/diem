@@ -2,22 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    chained_bft::{
-        block_storage::{
-            BlockReader, BlockRetriever, BlockStore, PendingVotes, VoteReceptionResult,
-        },
-        liveness::{
-            pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
-            proposal_generator::ProposalGenerator,
-            proposer_election::ProposerElection,
-        },
-        network::{IncomingBlockRetrievalRequest, NetworkSender},
-        network_interface::ConsensusMsg,
-        persistent_liveness_storage::{
-            LedgerRecoveryData, PersistentLivenessStorage, RecoveryData,
-        },
-    },
+    block_storage::{BlockReader, BlockRetriever, BlockStore, PendingVotes, VoteReceptionResult},
     counters,
+    liveness::{
+        pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
+        proposal_generator::ProposalGenerator,
+        proposer_election::ProposerElection,
+    },
+    network::{IncomingBlockRetrievalRequest, NetworkSender},
+    network_interface::ConsensusMsg,
+    persistent_liveness_storage::{LedgerRecoveryData, PersistentLivenessStorage, RecoveryData},
     state_replication::{StateComputer, TxnManager},
     util::time_service::{
         duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
