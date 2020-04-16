@@ -53,7 +53,7 @@ pub struct RawNetworkAddress(#[serde(with = "serde_bytes")] Vec<u8>);
 ///
 /// Most validators will advertise a network address like:
 ///
-/// `/dns/example.com/tcp/6180/noise-ik/<x25519-pubkey>/handshake/1`
+/// `/dns/example.com/tcp/6180/ln-noise-ik/<x25519-pubkey>/ln-handshake/1`
 ///
 /// Unpacking, the above effectively means:
 ///
@@ -213,12 +213,12 @@ impl RawNetworkAddress {
         Self(Vec::new())
     }
 
-    pub fn with_capacity(cap: usize) -> Self {
-        Self(Vec::with_capacity(cap))
-    }
-
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 }
 
@@ -403,7 +403,13 @@ impl fmt::Display for Protocol {
             Dns6(domain) => write!(f, "/dns6/{}", domain),
             Tcp(port) => write!(f, "/tcp/{}", port),
             Memory(port) => write!(f, "/memory/{}", port),
-            NoiseIk(pubkey) => write!(f, "/ln-noise-ik/{}", pubkey),
+            NoiseIk(pubkey) => write!(
+                f,
+                "/ln-noise-ik/{}",
+                pubkey
+                    .to_encoded_string()
+                    .expect("ValidKeyStringExt::to_encoded_string is infallible")
+            ),
             Handshake(version) => write!(f, "/ln-handshake/{}", version),
         }
     }
@@ -528,18 +534,6 @@ mod test {
     use super::*;
     use anyhow::format_err;
     use lcs::test_helpers::assert_canonical_encode_decode;
-
-    #[test]
-    fn test_foo() {
-        use super::Protocol::*;
-        let addr = NetworkAddress::new(vec![Ip4(Ipv4Addr::new(10, 0, 0, 16)), Tcp(80)]);
-        let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
-        let bytes = lcs::to_bytes(&raw_addr).unwrap();
-
-        println!("{}", addr);
-        println!("{:?}", raw_addr.0);
-        println!("{:?}", bytes);
-    }
 
     #[test]
     fn test_network_address_display() {
