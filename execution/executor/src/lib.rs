@@ -46,8 +46,7 @@ use std::{
     marker::PhantomData,
     sync::Arc,
 };
-use storage_interface::{state_view::VerifiedStateView, DbReaderWriter};
-use storage_proto::TreeState;
+use storage_interface::{state_view::VerifiedStateView, DbReaderWriter, TreeState};
 
 static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
     Lazy::new(|| libra_metrics::OpMetrics::new_and_registered("executor"));

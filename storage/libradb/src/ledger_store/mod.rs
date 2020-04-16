@@ -32,7 +32,7 @@ use libra_types::{
 };
 use schemadb::{ReadOptions, SchemaIterator, DB};
 use std::{ops::Deref, sync::Arc};
-use storage_proto::{StartupInfo, TreeState};
+use storage_interface::{StartupInfo, TreeState};
 
 pub(crate) struct LedgerStore {
     db: Arc<DB>,

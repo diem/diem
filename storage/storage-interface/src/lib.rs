@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use libra_crypto::HashValue;
+use libra_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -10,16 +10,79 @@ use libra_types::{
     contract_event::ContractEvent,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
-    proof::{AccumulatorConsistencyProof, SparseMerkleProof},
+    on_chain_config::ValidatorSet,
+    proof::{definition::LeafCount, AccumulatorConsistencyProof, SparseMerkleProof},
     transaction::{TransactionListWithProof, TransactionToCommit, TransactionWithProof, Version},
     validator_change::ValidatorChangeProof,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use storage_proto::{StartupInfo, TreeState};
 use thiserror::Error;
 
 pub mod state_view;
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct StartupInfo {
+    /// The latest ledger info.
+    pub latest_ledger_info: LedgerInfoWithSignatures,
+    /// If the above ledger info doesn't carry a validator set, the latest validator set. Otherwise
+    /// `None`.
+    pub latest_validator_set: Option<ValidatorSet>,
+    pub committed_tree_state: TreeState,
+    pub synced_tree_state: Option<TreeState>,
+}
+
+impl StartupInfo {
+    pub fn new(
+        latest_ledger_info: LedgerInfoWithSignatures,
+        latest_validator_set: Option<ValidatorSet>,
+        committed_tree_state: TreeState,
+        synced_tree_state: Option<TreeState>,
+    ) -> Self {
+        Self {
+            latest_ledger_info,
+            latest_validator_set,
+            committed_tree_state,
+            synced_tree_state,
+        }
+    }
+
+    pub fn get_validator_set(&self) -> &ValidatorSet {
+        match self.latest_ledger_info.ledger_info().next_validator_set() {
+            Some(x) => x,
+            None => self
+                .latest_validator_set
+                .as_ref()
+                .expect("Validator set must exist."),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct TreeState {
+    pub num_transactions: LeafCount,
+    pub ledger_frozen_subtree_hashes: Vec<HashValue>,
+    pub account_state_root_hash: HashValue,
+}
+
+impl TreeState {
+    pub fn new(
+        num_transactions: LeafCount,
+        ledger_frozen_subtree_hashes: Vec<HashValue>,
+        account_state_root_hash: HashValue,
+    ) -> Self {
+        Self {
+            num_transactions,
+            ledger_frozen_subtree_hashes,
+            account_state_root_hash,
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.num_transactions == 0
+            && self.account_state_root_hash == *SPARSE_MERKLE_PLACEHOLDER_HASH
+    }
+}
 
 #[derive(Debug, Deserialize, Error, PartialEq, Serialize)]
 pub enum Error {

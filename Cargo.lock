@@ -1277,7 +1277,6 @@ dependencies = [
  "serde_json 1.0.51 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
  "storage-interface 0.1.0",
- "storage-proto 0.1.0",
  "transaction-builder 0.1.0",
  "vm-genesis 0.1.0",
 ]
@@ -1315,7 +1314,7 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "scratchpad 0.1.0",
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
- "storage-proto 0.1.0",
+ "storage-interface 0.1.0",
 ]
 
 [[package]]
@@ -2309,7 +2308,6 @@ dependencies = [
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.51 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
- "storage-proto 0.1.0",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
  "vm-validator 0.1.0",
@@ -2487,7 +2485,6 @@ dependencies = [
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.51 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
- "storage-proto 0.1.0",
  "thiserror 1.0.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "ureq 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2763,7 +2760,6 @@ dependencies = [
  "schemadb 0.1.0",
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
- "storage-proto 0.1.0",
  "thiserror 1.0.15 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -4852,7 +4848,6 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "scratchpad 0.1.0",
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
- "storage-proto 0.1.0",
  "thiserror 1.0.15 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -4869,6 +4864,7 @@ dependencies = [
  "proptest-derive 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
+ "storage-interface 0.1.0",
  "tonic 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tonic-build 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

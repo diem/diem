@@ -11,8 +11,7 @@ use libra_types::{
     ledger_info::LedgerInfoWithSignatures, transaction::Transaction, waypoint::Waypoint,
 };
 use libra_vm::VMExecutor;
-use storage_interface::DbReaderWriter;
-use storage_proto::TreeState;
+use storage_interface::{DbReaderWriter, TreeState};
 
 pub fn bootstrap_db_if_empty<V: VMExecutor>(
     db: &DbReaderWriter,

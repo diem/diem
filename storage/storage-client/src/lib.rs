@@ -38,7 +38,7 @@ use std::{
     net::SocketAddr,
     sync::{Arc, Mutex},
 };
-use storage_interface::{DbReader, DbWriter};
+use storage_interface::{DbReader, DbWriter, StartupInfo, TreeState};
 use storage_proto::{
     proto::storage::{
         storage_client::StorageClient, GetLatestStateRootRequest, GetStartupInfoRequest,
@@ -49,7 +49,7 @@ use storage_proto::{
     GetAccountStateWithProofByVersionRequest, GetAccountStateWithProofByVersionResponse,
     GetEpochChangeLedgerInfosRequest, GetLatestAccountStateRequest, GetLatestAccountStateResponse,
     GetLatestStateRootResponse, GetStartupInfoResponse, GetTransactionsRequest,
-    GetTransactionsResponse, SaveTransactionsRequest, StartupInfo, TreeState,
+    GetTransactionsResponse, SaveTransactionsRequest,
 };
 use tokio::runtime::Runtime;
 

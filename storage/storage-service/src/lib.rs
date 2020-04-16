@@ -21,7 +21,7 @@ use libra_types::proto::types::{
 };
 use libradb::LibraDB;
 use std::{convert::TryFrom, path::Path, sync::Arc};
-use storage_interface::{DbReader, DbReaderWriter, DbWriter, Error};
+use storage_interface::{DbReader, DbReaderWriter, DbWriter, Error, StartupInfo};
 use storage_proto::proto::storage::{
     storage_server::{Storage, StorageServer},
     BackupAccountStateRequest, BackupAccountStateResponse, BackupTransactionInfoRequest,
@@ -38,7 +38,6 @@ use tokio::runtime::Runtime;
 use libra_secure_net::NetworkServer;
 use libra_types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof};
 use std::thread::{self, JoinHandle};
-use storage_proto::StartupInfo;
 
 /// Starts storage service with a given LibraDB
 pub fn start_simple_storage_service_with_db(

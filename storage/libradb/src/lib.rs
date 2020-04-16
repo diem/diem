@@ -80,8 +80,7 @@ use std::{
     sync::Arc,
     time::Instant,
 };
-use storage_interface::{DbReader, DbWriter};
-use storage_proto::{StartupInfo, TreeState};
+use storage_interface::{DbReader, DbWriter, StartupInfo, TreeState};
 
 static OP_COUNTER: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("storage"));
 
