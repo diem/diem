@@ -295,8 +295,7 @@ mod test {
     };
     use libradb::errors::LibraDbError::NotFound;
     use std::{collections::BTreeMap, convert::TryFrom, sync::Arc};
-    use storage_interface::DbReader;
-    use storage_proto::{StartupInfo, TreeState};
+    use storage_interface::{DbReader, StartupInfo, TreeState};
     use tokio::runtime::Runtime;
     use vm_validator::{
         mocks::mock_vm_validator::MockVMValidator, vm_validator::TransactionValidation,

@@ -3,6 +3,8 @@
 
 use super::*;
 use libra_prost_ext::test_helpers::assert_protobuf_encode_decode;
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest::prelude::*;
 
 macro_rules! test_conversion {
     ($test_name: ident, $rust_type: ident $(,)?) => {
@@ -41,9 +43,6 @@ test_conversion!(
 test_conversion!(test_save_transactions_request, SaveTransactionsRequest);
 test_conversion!(test_get_transactions_request, GetTransactionsRequest);
 test_conversion!(test_get_transactions_response, GetTransactionsResponse);
-test_conversion!(test_tree_state, TreeState);
-test_conversion!(test_startup_info, StartupInfo);
-test_conversion!(test_get_startup_info_response, GetStartupInfoResponse);
 test_conversion!(
     test_get_epoch_change_ledger_infos_request,
     GetEpochChangeLedgerInfosRequest,

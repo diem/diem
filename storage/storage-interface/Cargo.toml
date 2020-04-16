@@ -21,4 +21,3 @@ libra-state-view = { path = "../../storage/state-view", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 scratchpad = { path = "../scratchpad", version = "0.1.0" }
-storage-proto = { path = "../storage-proto", version = "0.1.0" }

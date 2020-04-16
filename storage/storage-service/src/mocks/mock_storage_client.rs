@@ -34,9 +34,9 @@ use rand::{
 };
 use std::{collections::BTreeMap, convert::TryFrom};
 use storage_client::StorageRead;
+use storage_interface::StartupInfo;
 use storage_proto::{
     BackupAccountStateResponse, BackupTransactionInfoResponse, BackupTransactionResponse,
-    StartupInfo,
 };
 
 /// This is a mock of the storage read client used in tests.

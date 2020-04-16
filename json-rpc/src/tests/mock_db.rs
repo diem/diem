@@ -22,8 +22,7 @@ use libra_types::{
     vm_error::StatusCode,
 };
 use std::collections::BTreeMap;
-use storage_interface::DbReader;
-use storage_proto::{StartupInfo, TreeState};
+use storage_interface::{DbReader, StartupInfo, TreeState};
 
 /// Lightweight mock of LibraDB
 #[derive(Clone)]

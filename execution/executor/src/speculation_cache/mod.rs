@@ -27,7 +27,7 @@ use std::{
     collections::HashMap,
     sync::{Arc, Mutex, Weak},
 };
-use storage_proto::{StartupInfo, TreeState};
+use storage_interface::{StartupInfo, TreeState};
 
 /// The struct that stores all speculation result of its counterpart in consensus.
 pub(crate) struct SpeculationBlock {

@@ -36,7 +36,6 @@ storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
 transaction-builder = { path = "../language/transaction-builder", version = "0.1.0"}
 debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
 libra-temppath = { path = "../common/temppath", version = "0.1.0", optional = true }
-storage-proto = { path = "../storage/storage-proto", version = "0.1.0" }
 
 [dev-dependencies]
 vm-validator = { path = "../vm-validator", version = "0.1.0" }
