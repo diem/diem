@@ -1632,7 +1632,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "guppy"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cargo_metadata 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1644,7 +1644,7 @@ dependencies = [
  "semver 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.51 (registry+https://github.com/rust-lang/crates.io-index)",
- "target-spec 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "target-spec 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -5009,7 +5009,7 @@ dependencies = [
 
 [[package]]
 name = "target-spec"
-version = "0.2.1"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cfg-expr 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6116,7 +6116,7 @@ name = "x-core"
 version = "0.1.0"
 dependencies = [
  "cargo_metadata 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "guppy 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "guppy 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-workspace-hack 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -6125,7 +6125,7 @@ dependencies = [
 name = "x-lint"
 version = "0.1.0"
 dependencies = [
- "guppy 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "guppy 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-workspace-hack 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "x-core 0.1.0",
@@ -6319,7 +6319,7 @@ dependencies = [
 "checksum get_if_addrs-sys 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0d04f9fb746cf36b191c00f3ede8bde9c8e64f9f4b05ae2694a9ccf5e3f5ab48"
 "checksum getrandom 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)" = "7abc8dd8451921606d809ba32e95b6111925cd2906060d2dcc29c070220503eb"
 "checksum glob 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9b919933a397b79c37e33b77bb2aa3dc8eb6e165ad809e58ff75bc7db2e34574"
-"checksum guppy 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1934f2169fc7cf100b38f8df941590069d597a204c58cf392388580b028be269"
+"checksum guppy 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "72a17a5699dd0d2720cdb109a801a2f8767772b5d7758a9f0f3a1723f8fb9ca4"
 "checksum h2 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "9d5c295d1c0c68e4e42003d75f908f5e16a1edd1cbe0b0d02e4dc2006a384f47"
 "checksum headers 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "a72b4bd7cbbf0c22190e82f02517f456a6b9be24c25a6827b5802e478b8c2d70"
 "checksum headers-core 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e7f66481bfee273957b1f20485a4ff3362987f85b2c236580d81b4eb7a326429"
@@ -6540,7 +6540,7 @@ dependencies = [
 "checksum syn 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)" = "0df0eb663f387145cab623dea85b09c2c5b4b0aef44e945d928e682fce71bb03"
 "checksum syn-mid 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7be3539f6c128a931cf19dcee741c1af532c7fd387baa739c03dd2e96479338a"
 "checksum synstructure 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)" = "67656ea1dc1b41b1451851562ea232ec2e5a80242139f7e679ceccfb5d61f545"
-"checksum target-spec 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "6c16c80985a37d162b8994f32839b5454973c24a56135d62667bb4df020c9a22"
+"checksum target-spec 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "b241a0ae681e15277f82a5dcf92ec230de0492b825f10f1532322c03fd512449"
 "checksum tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7a6e24d9338a0a5be79593e2fa15a648add6138caa803e2d5bc782c371732ca9"
 "checksum term 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "edd106a334b7657c10b7c540a0106114feadeb4dc314513e97df481d5d966f42"
 "checksum term 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)" = "c0863a3345e70f61d613eab32ee046ccd1bcc5f9105fe402c61fcd0c13eeb8b5"
