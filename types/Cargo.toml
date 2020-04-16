@@ -22,7 +22,7 @@ proptest = { version = "0.9.6", default-features = false, optional = true }
 proptest-derive = { version = "0.1.2", default-features = false, optional = true }
 prost = "0.6"
 radix_trie = { version = "0.1.4", default-features = false }
-rand = "0.6.5"
+rand = "0.7.3"
 serde = { version = "1.0.106", default-features = false }
 serde_bytes = "0.11"
 thiserror = "1.0"
