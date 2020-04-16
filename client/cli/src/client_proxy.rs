@@ -132,15 +132,12 @@ impl ClientProxy {
         let faucet_account = if faucet_account_file.is_empty() {
             None
         } else {
-            let faucet_account_keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey> =
-                ClientProxy::load_faucet_account_file(faucet_account_file);
+            let faucet_account_key = generate_key::load_key(faucet_account_file);
             let faucet_account_data = Self::get_account_data_from_address(
                 &mut client,
                 association_address(),
                 true,
-                Some(KeyPair::<Ed25519PrivateKey, _>::from(
-                    faucet_account_keypair.private_key,
-                )),
+                Some(KeyPair::from(faucet_account_key)),
                 None,
             )?;
             // Load the keypair from file
@@ -1095,22 +1092,6 @@ impl ClientProxy {
     /// Set wallet instance used by this client.
     fn set_wallet(&mut self, wallet: WalletLibrary) {
         self.wallet = wallet;
-    }
-
-    fn load_faucet_account_file(
-        faucet_account_file: &str,
-    ) -> KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
-        match fs::read(faucet_account_file) {
-            Ok(data) => {
-                lcs::from_bytes(&data[..]).expect("Unable to deserialize faucet account file")
-            }
-            Err(e) => {
-                panic!(
-                    "Unable to read faucet account file: {}, {}",
-                    faucet_account_file, e
-                );
-            }
-        }
     }
 
     fn address_from_strings(data: &str) -> Result<AccountAddress> {

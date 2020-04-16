@@ -32,7 +32,7 @@ struct Args {
     /// Path to the generated keypair for the faucet account. The faucet account can be used to
     /// mint coins. If not passed, a new keypair will be generated for
     /// you and placed in a temporary directory.
-    /// To manually generate a keypair, use generate-keypair:
+    /// To manually generate a keypair, use generate-key:
     /// `cargo run -p generate-keypair -- -o <output_file_path>`
     #[structopt(short = "m", long = "faucet-key-file-path")]
     pub faucet_account_file: Option<String>,

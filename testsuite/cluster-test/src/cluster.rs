@@ -6,7 +6,7 @@
 use crate::instance::Instance;
 use anyhow::Result;
 use config_builder::ValidatorConfig;
-use generate_keypair::load_key_from_file;
+use generate_key;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     test_utils::KeyPair,
@@ -35,8 +35,8 @@ impl Cluster {
                 )
             })
             .collect();
-        let mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey> =
-            load_key_from_file(mint_file).expect("invalid faucet keypair file");
+        let mint_key: Ed25519PrivateKey = generate_key::load_key(mint_file);
+        let mint_key_pair = KeyPair::from(mint_key);
         Self {
             validator_instances: instances,
             fullnode_instances: vec![],
