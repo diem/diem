@@ -4,7 +4,7 @@ executors:
   build-executor:
     docker:
       - image: circleci/rust:buster
-    resource_class: 2xlarge
+    resource_class: 2xlarge+
   test-executor:
     docker:
       - image: circleci/rust:buster
