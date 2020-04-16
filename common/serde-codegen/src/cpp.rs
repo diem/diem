@@ -65,7 +65,7 @@ fn output_type(format: &Format, fixed_size: bool) -> String {
             *size
         ),
 
-        _ => panic!("unexpected value"),
+        Unknown => panic!("unexpected value"),
     }
 }
 
@@ -122,7 +122,7 @@ fn output_variant(base: &str, name: &str, index: u32, variant: &VariantFormat) -
             index,
             output_fields(4, fields)
         ),
-        _ => panic!("incorrect value"),
+        Unknown => panic!("incorrect value"),
     }
 }
 

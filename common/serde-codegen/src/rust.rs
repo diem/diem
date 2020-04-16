@@ -61,7 +61,7 @@ fn output_type(format: &Format, fixed_size: bool) -> String {
             format!("[{}; {}]", output_type(content, fixed_size), *size)
         }
 
-        _ => panic!("unexpected value"),
+        Unknown => panic!("unexpected value"),
     }
 }
 
@@ -97,7 +97,7 @@ fn output_variant(name: &str, variant: &VariantFormat) -> String {
         NewType(format) => format!("{}({})", name, output_type(format, true)),
         Tuple(formats) => format!("{}({})", name, output_types(formats, true)),
         Struct(fields) => format!("{} {{\n{}    }}", name, output_fields(8, fields, false)),
-        _ => panic!("incorrect value"),
+        Unknown => panic!("incorrect value"),
     }
 }
 
