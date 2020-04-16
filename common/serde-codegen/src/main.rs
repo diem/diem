@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use structopt::{clap::arg_enum, StructOpt};
 
 mod cpp;
+mod java;
 mod python3;
 mod rust;
 
@@ -15,6 +16,7 @@ enum Language {
     Python3,
     Cpp,
     Rust,
+    Java,
 }
 }
 
@@ -41,5 +43,6 @@ fn main() {
         Language::Python3 => python3::output(&registry),
         Language::Cpp => cpp::output(&registry),
         Language::Rust => rust::output(&registry),
+        Language::Java => java::output(&registry),
     }
 }
