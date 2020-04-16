@@ -32,7 +32,7 @@
 use crate::{traits::*, HashValue};
 use anyhow::{anyhow, Result};
 use core::convert::TryFrom;
-use libra_crypto_derive::{DeserializeKey, SerializeKey};
+use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
 use std::{cmp::Ordering, fmt};
 
 /// The length of the Ed25519PrivateKey
@@ -49,7 +49,7 @@ const L: [u8; 32] = [
 ];
 
 /// An Ed25519 private key
-#[derive(DeserializeKey, SerializeKey)]
+#[derive(DeserializeKey, SerializeKey, SilentDebug, SilentDisplay)]
 pub struct Ed25519PrivateKey(ed25519_dalek::SecretKey);
 
 #[cfg(feature = "assert-private-keys-not-cloneable")]
@@ -278,21 +278,9 @@ impl fmt::Display for Ed25519PublicKey {
     }
 }
 
-impl fmt::Display for Ed25519PrivateKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", hex::encode(&self.0.as_bytes()))
-    }
-}
-
 impl fmt::Debug for Ed25519PublicKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Ed25519PublicKey({})", self)
-    }
-}
-
-impl fmt::Debug for Ed25519PrivateKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Ed25519PrivateKey({})", self)
     }
 }
 
