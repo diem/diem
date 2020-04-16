@@ -27,7 +27,6 @@ fn compile_script_expr_addition() {
     );
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
-    assert_eq!(compiled_script.main().code.max_stack_size, 2);
     assert_eq!(count_locals(&compiled_script), 3);
     assert_eq!(compiled_script.main().code.code.len(), 9);
     assert!(compiled_script.struct_handles().is_empty());
@@ -55,7 +54,6 @@ fn compile_script_expr_combined() {
     );
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
-    assert_eq!(compiled_script.main().code.max_stack_size, 3);
     assert_eq!(count_locals(&compiled_script), 3);
     assert_eq!(compiled_script.main().code.code.len(), 13);
     assert!(compiled_script.struct_handles().is_empty());

@@ -108,7 +108,6 @@ fn test_module(name: &'static str) -> VerifiedModule {
                 flags: CodeUnit::PUBLIC,
                 acquires_global_resources: vec![],
                 code: CodeUnit {
-                    max_stack_size: 10,
                     locals: SignatureIndex(0),
                     code: vec![Bytecode::LdTrue, Bytecode::Pop, Bytecode::Ret],
                 },
@@ -118,7 +117,6 @@ fn test_module(name: &'static str) -> VerifiedModule {
                 flags: CodeUnit::PUBLIC,
                 acquires_global_resources: vec![],
                 code: CodeUnit {
-                    max_stack_size: 10,
                     locals: SignatureIndex(1),
                     code: vec![Bytecode::Ret],
                 },
@@ -140,7 +138,6 @@ fn test_script() -> VerifiedScript {
             flags: CodeUnit::PUBLIC,
             acquires_global_resources: vec![],
             code: CodeUnit {
-                max_stack_size: 10,
                 locals: SignatureIndex(0),
                 code: vec![Bytecode::Ret],
             },
@@ -363,7 +360,6 @@ fn test_multi_level_cache_write_back() {
             flags: CodeUnit::PUBLIC,
             acquires_global_resources: vec![],
             code: CodeUnit {
-                max_stack_size: 10,
                 locals: SignatureIndex(0),
                 code: vec![Bytecode::Ret],
             },

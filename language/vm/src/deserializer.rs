@@ -878,11 +878,9 @@ fn load_struct_definition_indices(
 
 /// Deserializes a `CodeUnit`.
 fn load_code_unit(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<CodeUnit> {
-    let max_stack_size = read_uleb_u16_internal(cursor)?;
     let locals = read_uleb_u16_internal(cursor)?;
 
     let mut code_unit = CodeUnit {
-        max_stack_size,
         locals: SignatureIndex(locals),
         code: vec![],
     };
