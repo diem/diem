@@ -835,16 +835,8 @@ fn compile_function_body(
 
     let mut code = vec![];
     compile_block(context, &mut function_frame, &mut code, block)?;
-    let max_stack_size = if function_frame.max_stack_depth < 0 {
-        0
-    } else if function_frame.max_stack_depth > i64::from(u16::max_value()) {
-        u16::max_value()
-    } else {
-        function_frame.max_stack_depth as u16
-    };
     Ok(CodeUnit {
         locals: sig_idx,
-        max_stack_size,
         code,
     })
 }
@@ -1644,10 +1636,8 @@ fn compile_function_body_bytecode(
     }
     let fake_to_actual = context.build_index_remapping(label_to_index);
     remap_branch_offsets(&mut code, &fake_to_actual);
-    let max_stack_size = u16::max_value();
     Ok(CodeUnit {
         locals: sig_idx,
-        max_stack_size,
         code,
     })
 }

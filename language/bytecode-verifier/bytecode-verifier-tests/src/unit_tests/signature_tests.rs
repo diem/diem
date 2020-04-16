@@ -105,7 +105,6 @@ fn no_verify_locals_good() {
                 flags: 1,
                 acquires_global_resources: vec![],
                 code: CodeUnit {
-                    max_stack_size: 0,
                     locals: SignatureIndex(0),
                     code: vec![Ret],
                 },
@@ -115,7 +114,6 @@ fn no_verify_locals_good() {
                 flags: 0,
                 acquires_global_resources: vec![],
                 code: CodeUnit {
-                    max_stack_size: 0,
                     locals: SignatureIndex(1),
                     code: vec![Ret],
                 },
@@ -154,7 +152,6 @@ fn no_verify_locals_bad1() {
             flags: 1,
             acquires_global_resources: vec![],
             code: CodeUnit {
-                max_stack_size: 0,
                 locals: SignatureIndex(0),
                 code: vec![Ret],
             },
@@ -198,7 +195,6 @@ fn no_verify_locals_bad2() {
             flags: 1,
             acquires_global_resources: vec![],
             code: CodeUnit {
-                max_stack_size: 0,
                 locals: SignatureIndex(0),
                 code: vec![Ret],
             },
@@ -258,7 +254,6 @@ fn no_verify_locals_bad3() {
             flags: 1,
             acquires_global_resources: vec![],
             code: CodeUnit {
-                max_stack_size: 0,
                 locals: SignatureIndex(0),
                 code: vec![Ret],
             },
@@ -307,7 +302,6 @@ fn no_verify_locals_bad4() {
             flags: 1,
             acquires_global_resources: vec![],
             code: CodeUnit {
-                max_stack_size: 0,
                 locals: SignatureIndex(0),
                 code: vec![Ret],
             },

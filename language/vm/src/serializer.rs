@@ -539,7 +539,6 @@ fn serialize_kinds(binary: &mut BinaryData, kinds: &[Kind]) -> Result<()> {
 /// - `CodeUnit.locals` as a ULEB128 (index into the `LocalSignaturePool`)
 /// - `CodeUnit.code` as variable size byte stream for the bytecode
 fn serialize_code_unit(binary: &mut BinaryData, code: &CodeUnit) -> Result<()> {
-    write_u16_as_uleb128(binary, code.max_stack_size)?;
     write_u16_as_uleb128(binary, code.locals.0)?;
     serialize_code(binary, &code.code)
 }

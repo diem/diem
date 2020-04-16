@@ -408,7 +408,6 @@ impl CodeUnitGen {
         }
 
         CodeUnit {
-            max_stack_size: 0,
             locals: state.add_signature(locals_signature),
             code,
         }

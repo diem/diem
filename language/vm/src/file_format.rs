@@ -702,8 +702,6 @@ pub struct Constant {
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(params = "usize"))]
 pub struct CodeUnit {
-    /// Max stack size for the function - currently unused.
-    pub max_stack_size: u16,
     /// List of locals type. All locals are typed.
     pub locals: SignatureIndex,
     /// Code stream, function body.
@@ -1700,7 +1698,6 @@ pub fn basic_test_module() -> CompiledModuleMut {
         flags: 0,
         acquires_global_resources: vec![],
         code: CodeUnit {
-            max_stack_size: 0,
             locals: SignatureIndex(0),
             code: vec![],
         },
@@ -1767,7 +1764,6 @@ pub fn empty_script() -> CompiledScriptMut {
         type_parameters: vec![],
     };
     let code = CodeUnit {
-        max_stack_size: 1,
         locals: SignatureIndex(0),
         code: vec![Bytecode::Ret],
     };
