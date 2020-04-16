@@ -205,13 +205,21 @@ impl<'env> ModuleTranslator<'env> {
             );
         }
         let type_value = format!("StructType({}, {})", struct_name, field_types);
-        if struct_name == "LibraAccount_T" {
+        if struct_name == "$LibraAccount_T" {
             // Special treatment of well-known resource LibraAccount_T. The type_value
-            // function is forward-declared in the prelude, here we only add an axiom for
-            // it.
+            // function is forward-declared in the prelude, here we only add an axiom for it.
             emitln!(
                 self.writer,
                 "axiom {}_type_value() == {};",
+                struct_name,
+                type_value
+            );
+        } else if struct_name == "$LibraAccount_Balance" {
+            // Special treatment of well-known resource LibraAccount_Balance. The type_value
+            // function is forward-declared in the prelude, here we only add an axiom for it.
+            emitln!(
+                self.writer,
+                "axiom (forall $tv0: TypeValue :: {}_type_value($tv0) == {});",
                 struct_name,
                 type_value
             );

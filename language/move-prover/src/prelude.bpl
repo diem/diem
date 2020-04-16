@@ -434,7 +434,7 @@ function {:inline} $Dereference(m: Memory, ref: Reference): Value {
 
 // Check whether sender account exists.
 function {:inline} $ExistsTxnSenderAccount(m: Memory, txn: Transaction): bool {
-   domain#Memory(m)[Global(LibraAccount_T_type_value(), sender#Transaction(txn))]
+   domain#Memory(m)[Global($LibraAccount_T_type_value(), sender#Transaction(txn))]
 }
 
 function {:inline} $TxnSender(txn: Transaction): Value {
@@ -442,8 +442,10 @@ function {:inline} $TxnSender(txn: Transaction): Value {
 }
 
 // Forward declaration of type value of LibraAccount. This is declared so we can define
-// ExistsTxnSenderAccount.
-function LibraAccount_T_type_value(): TypeValue;
+// $ExistsTxnSenderAccount and $LibraAccount_save_account
+function $LibraAccount_T_type_value(): TypeValue;
+
+function $LibraAccount_Balance_type_value(tv: TypeValue): TypeValue;
 
 // Returns sender address.
 function {:inline} TxnSenderAddress(txn: Transaction): int {
@@ -1009,10 +1011,29 @@ ensures $vlen(res) == 32;               // result is 32 bytes.
 // ==================================================================================
 // Native libra_account
 
-// TODO: implement the below methods
-
 procedure {:inline 1} $LibraAccount_save_account(ta: TypeValue, balance: Value, account: Value, addr: Value) {
-    assert false; // $LibraAccount_save_account not implemented
+    var a: int;
+    var t_T: TypeValue;
+    var l_T: Location;
+    var t_Balance: TypeValue;
+    var l_Balance: Location;
+
+    a := a#Address(addr);
+    t_T := $LibraAccount_T_type_value();
+    l_T := Global(t_T, a);
+    if ($ResourceExistsRaw($m, t_T, a)) {
+        $abort_flag := true;
+        return;
+    }
+
+    t_Balance := $LibraAccount_Balance_type_value(ta);
+    l_Balance := Global(t_Balance, a);
+    if ($ResourceExistsRaw($m, t_Balance, a)) {
+        $abort_flag := true;
+        return;
+    }
+
+    $m := Memory(domain#Memory($m)[l_T := true][l_Balance := true], contents#Memory($m)[l_T := account][l_Balance := balance]);
 }
 
 procedure {:inline 1} $LibraAccount_write_to_event_store(ta: TypeValue, guid: Value, count: Value, msg: Value) {
@@ -1020,7 +1041,7 @@ procedure {:inline 1} $LibraAccount_write_to_event_store(ta: TypeValue, guid: Va
 }
 
 // ==================================================================================
-// Native lcs
+// Native signature
 
 // TODO: implement the below methods
 
@@ -1033,7 +1054,7 @@ procedure {:inline 1} Signature_ed25519_threshold_verify(bitmap: Value, signatur
 }
 
 // ==================================================================================
-// Native signature
+// Native lcs
 
 // TODO: implement the below methods
 
