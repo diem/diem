@@ -2,21 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{ensure, format_err, Result};
-use executor::BlockExecutor;
-use executor_utils::{
-    create_storage_service_and_executor,
-    test_helpers::{
-        gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
-    },
+use executor::{db_bootstrapper::bootstrap_db_if_empty, BlockExecutor, Executor};
+use executor_utils::test_helpers::{
+    gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
 };
+use libra_config::config::NodeConfig;
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey, Uniform};
 use libra_types::{
-    access_path::AccessPath,
-    account_config::{association_address, lbr_type_tag, AccountResource},
+    account_config::{association_address, discovery_set_address, lbr_type_tag},
     account_state::AccountState,
     account_state_blob::AccountStateWithProof,
-    discovery_set::{DISCOVERY_SET_CHANGE_EVENT_PATH, GLOBAL_DISCOVERY_SET_CHANGE_EVENT_PATH},
-    get_with_proof::{verify_update_to_latest_ledger_response, RequestItem},
+    discovery_set::DISCOVERY_SET_CHANGE_EVENT_PATH,
+    event::EventKey,
     on_chain_config::VMPublishingOption,
     transaction::{
         authenticator::AuthenticationKey, Script, Transaction, TransactionListWithProof,
@@ -24,81 +21,72 @@ use libra_types::{
     },
     trusted_state::TrustedState,
 };
+use libra_vm::LibraVM;
+use libradb::LibraDB;
 use rand::SeedableRng;
-use std::{convert::TryFrom, sync::Arc};
+use std::convert::TryFrom;
 use stdlib::transaction_scripts::StdlibScript;
-use storage_client::{StorageRead, StorageReadServiceClient};
-use tokio::runtime::Runtime;
+use storage_interface::DbReaderWriter;
 use transaction_builder::{
     encode_block_prologue_script, encode_create_account_script, encode_publishing_option_script,
     encode_rotate_consensus_pubkey_script, encode_transfer_with_metadata_script,
 };
 
+fn create_db_and_executor(config: &NodeConfig) -> (DbReaderWriter, Executor<LibraVM>) {
+    let db = DbReaderWriter::new(LibraDB::new(config.storage.dir()));
+    bootstrap_db_if_empty::<LibraVM>(&db, config).unwrap();
+    let executor = Executor::<LibraVM>::new(db.clone());
+
+    (db, executor)
+}
+
 #[test]
 fn test_genesis() {
-    let mut rt = Runtime::new().unwrap();
     let (config, _genesis_key) = config_builder::test_config();
-    let (_storage_server_handle, _executor) = create_storage_service_and_executor(&config);
+    let (db, _executor) = create_db_and_executor(&config);
 
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
-
-    let request_items = vec![
-        RequestItem::GetEventsByEventAccessPath {
-            access_path: GLOBAL_DISCOVERY_SET_CHANGE_EVENT_PATH.clone(),
-            start_event_seq_num: 0,
-            ascending: true,
-            limit: 100,
-        },
-        RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new(
-                association_address(),
-                DISCOVERY_SET_CHANGE_EVENT_PATH.to_vec(),
-            ),
-            start_event_seq_num: 0,
-            ascending: true,
-            limit: 100,
-        },
-    ];
-
-    let (
-        mut response_items,
-        ledger_info_with_sigs,
-        validator_change_proof,
-        _ledger_consistency_proof,
-    ) = rt
-        .block_on(
-            storage_read_client.update_to_latest_ledger(
-                /* client_known_version = */ 0,
-                request_items.clone(),
-            ),
-        )
-        .unwrap();
+    let (li, validator_change_proof, _accumulator_consistency_proof) =
+        db.reader.get_state_proof(0).unwrap();
 
     let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
-    verify_update_to_latest_ledger_response(
-        &trusted_state,
-        0,
-        &request_items,
-        &response_items,
-        &ledger_info_with_sigs,
-        &validator_change_proof,
-    )
-    .unwrap();
-    response_items.reverse();
-
-    let (discovery_set_change_events, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_events_by_access_path_response()
+    trusted_state
+        .verify_and_ratchet(&li, &validator_change_proof)
         .unwrap();
-    assert_eq!(discovery_set_change_events.len(), 1);
+    let li = li.ledger_info();
+    assert_eq!(li.version(), 0);
 
-    let (non_existent_events, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_events_by_access_path_response()
+    let discovery_set_account = db
+        .reader
+        .get_account_state_with_proof(discovery_set_address(), 0, 0)
         .unwrap();
-    assert!(non_existent_events.is_empty());
+    discovery_set_account
+        .verify(li, 0, discovery_set_address())
+        .unwrap();
+    let (event_key, count) = discovery_set_account
+        .get_event_key_and_count_by_query_path(&DISCOVERY_SET_CHANGE_EVENT_PATH)
+        .unwrap();
+    assert_eq!(count, 1);
+    assert_eq!(
+        db.reader
+            .get_events(&event_key.unwrap(), 0, true, 100)
+            .unwrap()
+            .len(),
+        1
+    );
+
+    let association_account = db
+        .reader
+        .get_account_state_with_proof(association_address(), 0, 0)
+        .unwrap();
+    association_account
+        .verify(li, 0, association_address())
+        .unwrap();
+    assert_eq!(
+        association_account
+            .get_event_key_and_count_by_query_path(&DISCOVERY_SET_CHANGE_EVENT_PATH)
+            .unwrap(),
+        (None, 0),
+    );
 }
 
 #[test]
@@ -111,7 +99,7 @@ fn test_reconfiguration() {
         test_config.publishing_option = Some(VMPublishingOption::CustomScripts);
     }
 
-    let (_storage_server_handle, mut executor) = create_storage_service_and_executor(&config);
+    let (_db, mut executor) = create_db_and_executor(&config);
     let parent_block_id = executor.committed_block_id();
 
     let genesis_account = association_address();
@@ -201,12 +189,10 @@ fn test_reconfiguration() {
 #[test]
 fn test_change_publishing_option_to_custom() {
     // Publishing Option is set to locked at genesis.
-    let mut rt = Runtime::new().unwrap();
     let (mut config, genesis_key) = config_builder::test_config();
 
-    let (_storage_server_handle, mut executor) = create_storage_service_and_executor(&config);
+    let (db, mut executor) = create_db_and_executor(&config);
     let parent_block_id = executor.committed_block_id();
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
 
     let genesis_account = association_address();
     let network_config = config.validator_network.as_ref().unwrap();
@@ -223,8 +209,9 @@ fn test_change_publishing_option_to_custom() {
     let validator_pubkey = keys.public().clone();
     let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
     let validator_auth_key_prefix = auth_key.prefix().to_vec();
-    assert!(
-        auth_key.derived_address() == validator_account,
+    assert_eq!(
+        auth_key.derived_address(),
+        validator_account,
         "Address derived from validator auth key does not match validator account address"
     );
 
@@ -297,62 +284,28 @@ fn test_change_publishing_option_to_custom() {
         "executor commit should return reconfig events for reconfiguration"
     );
 
-    let request_items = vec![
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: genesis_account,
-            sequence_number: 1,
-            fetch_events: false,
-        },
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: validator_account,
-            sequence_number: 0,
-            fetch_events: false,
-        },
-    ];
-
-    let (
-        mut response_items,
-        ledger_info_with_sigs,
-        validator_change_proof,
-        _ledger_consistency_proof,
-    ) = rt
-        .block_on(
-            storage_read_client.update_to_latest_ledger(
-                /* client_known_version = */ 0,
-                request_items.clone(),
-            ),
-        )
-        .unwrap();
+    let (li, validator_change_proof, _accumulator_consistency_proof) =
+        db.reader.get_state_proof(0).unwrap();
     let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
-    verify_update_to_latest_ledger_response(
-        &trusted_state,
-        0,
-        &request_items,
-        &response_items,
-        &ledger_info_with_sigs,
-        &validator_change_proof,
-    )
-    .unwrap();
-    response_items.reverse();
-
+    trusted_state
+        .verify_and_ratchet(&li, &validator_change_proof)
+        .unwrap();
+    let current_version = li.ledger_info().version();
+    assert_eq!(current_version, 3);
     // Transaction 1 is committed as it's in the whitelist
-    let (t1, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_txn_by_seq_num_response()
+    let txn1 = db
+        .reader
+        .get_txn_by_account(genesis_account, 1, current_version, false)
         .unwrap();
-    verify_committed_txn_status(t1.as_ref(), &block1[0]).unwrap();
-
+    verify_committed_txn_status(txn1.as_ref(), &block1[0]).unwrap();
     // Transaction 2, 3 are rejected
-    let (t2, _) = response_items
-        .pop()
+    assert!(db
+        .reader
+        .get_txn_by_account(validator_account, 0, current_version, false)
         .unwrap()
-        .into_get_account_txn_by_seq_num_response()
-        .unwrap();
-    assert!(t2.is_none());
+        .is_none());
 
     // Now that the PublishingOption is modified to CustomScript, we can resubmit the script again.
-
     let txn2 = get_test_signed_transaction(
         validator_account,
         /* sequence_number = */ 0,
@@ -384,71 +337,34 @@ fn test_change_publishing_option_to_custom() {
         "expect executor to reutrn no reconfig events"
     );
 
-    let request_items = vec![
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: validator_account,
-            sequence_number: 0,
-            fetch_events: false,
-        },
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: validator_account,
-            sequence_number: 1,
-            fetch_events: false,
-        },
-    ];
-
-    let (
-        mut response_items,
-        ledger_info_with_sigs,
-        validator_change_proof,
-        _ledger_consistency_proof,
-    ) = rt
-        .block_on(
-            storage_read_client.update_to_latest_ledger(
-                /* client_known_version = */ 0,
-                request_items.clone(),
-            ),
-        )
+    let (li, validator_change_proof, _accumulator_consistency_proof) =
+        db.reader.get_state_proof(current_version).unwrap();
+    trusted_state
+        .verify_and_ratchet(&li, &validator_change_proof)
         .unwrap();
-    let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
-    verify_update_to_latest_ledger_response(
-        &trusted_state,
-        0,
-        &request_items,
-        &response_items,
-        &ledger_info_with_sigs,
-        &validator_change_proof,
-    )
-    .unwrap();
-    response_items.reverse();
-
+    let current_version = li.ledger_info().version();
+    assert_eq!(current_version, 5);
     // Transaction 2 is committed.
-    let (t1, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_txn_by_seq_num_response()
+    let txn2 = db
+        .reader
+        .get_txn_by_account(validator_account, 0, current_version, false)
         .unwrap();
-    verify_committed_txn_status(t1.as_ref(), &block2[0]).unwrap();
-
+    verify_committed_txn_status(txn2.as_ref(), &block2[0]).unwrap();
     // Transaction 3 is committed.
-    let (t2, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_txn_by_seq_num_response()
+    let txn3 = db
+        .reader
+        .get_txn_by_account(validator_account, 1, current_version, false)
         .unwrap();
-    verify_committed_txn_status(t2.as_ref(), &block2[1]).unwrap();
+    verify_committed_txn_status(txn3.as_ref(), &block2[1]).unwrap();
 }
 
 #[test]
 fn test_extend_whitelist() {
     // Publishing Option is set to locked at genesis.
-    let mut rt = Runtime::new().unwrap();
     let (mut config, genesis_key) = config_builder::test_config();
 
-    let (_storage_server_handle, mut executor) = create_storage_service_and_executor(&config);
+    let (db, mut executor) = create_db_and_executor(&config);
     let parent_block_id = executor.committed_block_id();
-
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
 
     let genesis_account = association_address();
     let network_config = config.validator_network.as_ref().unwrap();
@@ -546,57 +462,25 @@ fn test_extend_whitelist() {
         "executor commit should return reconfig events for reconfiguration"
     );
 
-    let request_items = vec![
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: genesis_account,
-            sequence_number: 1,
-            fetch_events: false,
-        },
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: validator_account,
-            sequence_number: 0,
-            fetch_events: false,
-        },
-    ];
-
-    let (
-        mut response_items,
-        ledger_info_with_sigs,
-        validator_change_proof,
-        _ledger_consistency_proof,
-    ) = rt
-        .block_on(
-            storage_read_client.update_to_latest_ledger(
-                /* client_known_version = */ 0,
-                request_items.clone(),
-            ),
-        )
-        .unwrap();
+    let (li, validator_change_proof, _accumulator_consistency_proof) =
+        db.reader.get_state_proof(0).unwrap();
     let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
-    verify_update_to_latest_ledger_response(
-        &trusted_state,
-        0,
-        &request_items,
-        &response_items,
-        &ledger_info_with_sigs,
-        &validator_change_proof,
-    )
-    .unwrap();
-    response_items.reverse();
-
+    trusted_state
+        .verify_and_ratchet(&li, &validator_change_proof)
+        .unwrap();
+    let current_version = li.ledger_info().version();
+    assert_eq!(current_version, 3);
     // Transaction 1 is committed as it's in the whitelist
-    let (t1, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_txn_by_seq_num_response()
+    let t1 = db
+        .reader
+        .get_txn_by_account(genesis_account, 1, current_version, false)
         .unwrap();
     verify_committed_txn_status(t1.as_ref(), &block1[0]).unwrap();
 
     // Transaction 2, 3 are rejected
-    let (t2, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_txn_by_seq_num_response()
+    let t2 = db
+        .reader
+        .get_txn_by_account(validator_account, 0, current_version, false)
         .unwrap();
     assert!(t2.is_none());
 
@@ -634,69 +518,33 @@ fn test_extend_whitelist() {
         "expect executor to reutrn no reconfig events"
     );
 
-    let request_items = vec![
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: validator_account,
-            sequence_number: 0,
-            fetch_events: false,
-        },
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: validator_account,
-            sequence_number: 1,
-            fetch_events: false,
-        },
-    ];
-
-    let (
-        mut response_items,
-        ledger_info_with_sigs,
-        validator_change_proof,
-        _ledger_consistency_proof,
-    ) = rt
-        .block_on(
-            storage_read_client.update_to_latest_ledger(
-                /* client_known_version = */ 0,
-                request_items.clone(),
-            ),
-        )
+    let (li, validator_change_proof, _accumulator_consistency_proof) =
+        db.reader.get_state_proof(current_version).unwrap();
+    trusted_state
+        .verify_and_ratchet(&li, &validator_change_proof)
         .unwrap();
-    let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
-    verify_update_to_latest_ledger_response(
-        &trusted_state,
-        0,
-        &request_items,
-        &response_items,
-        &ledger_info_with_sigs,
-        &validator_change_proof,
-    )
-    .unwrap();
-    response_items.reverse();
-
+    let current_version = li.ledger_info().version();
+    assert_eq!(current_version, 4);
     // Transaction 2 is committed.
-    let (t1, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_txn_by_seq_num_response()
+    let t2 = db
+        .reader
+        .get_txn_by_account(validator_account, 0, current_version, false)
         .unwrap();
-    verify_committed_txn_status(t1.as_ref(), &block2[0]).unwrap();
+    verify_committed_txn_status(t2.as_ref(), &block2[0]).unwrap();
 
     // Transaction 3 is NOT committed.
-    let (t2, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_txn_by_seq_num_response()
+    let t3 = db
+        .reader
+        .get_txn_by_account(validator_account, 1, current_version, false)
         .unwrap();
-    assert!(t2.is_none());
+    assert!(t3.is_none());
 }
 
 #[test]
 fn test_execution_with_storage() {
-    let mut rt = Runtime::new().unwrap();
     let (config, genesis_key) = config_builder::test_config();
-    let (_storage_server_handle, mut executor) = create_storage_service_and_executor(&config);
+    let (db, mut executor) = create_db_and_executor(&config);
     let parent_block_id = executor.committed_block_id();
-
-    let storage_read_client = Arc::new(StorageReadServiceClient::new(&config.storage.address));
 
     let seed = [1u8; 32];
     // TEST_SEED is also used to generate a random validator set in get_test_config. Each account
@@ -846,273 +694,138 @@ fn test_execution_with_storage() {
         "expected no reconfiguration event from executor commit"
     );
 
-    let request_items = vec![
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: genesis_account,
-            sequence_number: 1,
-            fetch_events: false,
-        },
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: genesis_account,
-            sequence_number: 2,
-            fetch_events: false,
-        },
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: genesis_account,
-            sequence_number: 3,
-            fetch_events: false,
-        },
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: genesis_account,
-            sequence_number: 4,
-            fetch_events: false,
-        },
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: account1,
-            sequence_number: 0,
-            fetch_events: true,
-        },
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: account2,
-            sequence_number: 0,
-            fetch_events: false,
-        },
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: account1,
-            sequence_number: 1,
-            fetch_events: false,
-        },
-        RequestItem::GetAccountState { address: account1 },
-        RequestItem::GetAccountState { address: account2 },
-        RequestItem::GetAccountState { address: account3 },
-        RequestItem::GetTransactions {
-            start_version: 3,
-            limit: 10,
-            fetch_events: false,
-        },
-        RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_sent_event(account1),
-            start_event_seq_num: 0,
-            ascending: true,
-            limit: 10,
-        },
-        RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_sent_event(account2),
-            start_event_seq_num: 0,
-            ascending: true,
-            limit: 10,
-        },
-        RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_sent_event(account3),
-            start_event_seq_num: 0,
-            ascending: true,
-            limit: 10,
-        },
-        RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_received_event(account1),
-            start_event_seq_num: u64::max_value(),
-            ascending: false,
-            limit: 10,
-        },
-        RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_received_event(account2),
-            start_event_seq_num: u64::max_value(),
-            ascending: false,
-            limit: 10,
-        },
-        RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_received_event(account3),
-            start_event_seq_num: u64::max_value(),
-            ascending: false,
-            limit: 10,
-        },
-        RequestItem::GetAccountState { address: account4 },
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: account4,
-            sequence_number: 0,
-            fetch_events: true,
-        },
-        RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_sent_event(account4),
-            start_event_seq_num: 0,
-            ascending: true,
-            limit: 100,
-        },
-    ];
-
-    let (
-        mut response_items,
-        ledger_info_with_sigs,
-        validator_change_proof,
-        _ledger_consistency_proof,
-    ) = rt
-        .block_on(
-            storage_read_client.update_to_latest_ledger(
-                /* client_known_version = */ 0,
-                request_items.clone(),
-            ),
-        )
-        .unwrap();
+    let (li, validator_change_proof, _accumulator_consistency_proof) =
+        db.reader.get_state_proof(0).unwrap();
     let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
-    verify_update_to_latest_ledger_response(
-        &trusted_state,
-        0,
-        &request_items,
-        &response_items,
-        &ledger_info_with_sigs,
-        &validator_change_proof,
-    )
-    .unwrap();
-    response_items.reverse();
+    trusted_state
+        .verify_and_ratchet(&li, &validator_change_proof)
+        .unwrap();
+    let current_version = li.ledger_info().version();
+    assert_eq!(current_version, 6);
 
-    let (t1, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_txn_by_seq_num_response()
+    let t1 = db
+        .reader
+        .get_txn_by_account(genesis_account, 1, current_version, false)
         .unwrap();
     verify_committed_txn_status(t1.as_ref(), &block1[0]).unwrap();
 
-    let (t2, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_txn_by_seq_num_response()
+    let t2 = db
+        .reader
+        .get_txn_by_account(genesis_account, 2, current_version, false)
         .unwrap();
     verify_committed_txn_status(t2.as_ref(), &block1[1]).unwrap();
 
-    let (t3, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_txn_by_seq_num_response()
+    let t3 = db
+        .reader
+        .get_txn_by_account(genesis_account, 3, current_version, false)
         .unwrap();
     verify_committed_txn_status(t3.as_ref(), &block1[2]).unwrap();
 
-    let (tn, pn) = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_txn_by_seq_num_response()
+    let tn = db
+        .reader
+        .get_txn_by_account(genesis_account, 4, current_version, false)
         .unwrap();
-    verify_uncommitted_txn_status(
-        tn.as_ref(),
-        pn.as_ref(),
-        /* next_seq_num_of_this_account = */ 4,
-    )
-    .unwrap();
+    assert!(tn.is_none());
 
-    let (t4, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_txn_by_seq_num_response()
+    let t4 = db
+        .reader
+        .get_txn_by_account(account1, 0, current_version, true)
         .unwrap();
     verify_committed_txn_status(t4.as_ref(), &block1[3]).unwrap();
     // We requested the events to come back from this one, so verify that they did
     assert_eq!(t4.unwrap().events.unwrap().len(), 2);
 
-    let (t5, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_txn_by_seq_num_response()
+    let t5 = db
+        .reader
+        .get_txn_by_account(account2, 0, current_version, false)
         .unwrap();
     verify_committed_txn_status(t5.as_ref(), &block1[4]).unwrap();
 
-    let (t6, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_txn_by_seq_num_response()
+    let t6 = db
+        .reader
+        .get_txn_by_account(account1, 1, current_version, true)
         .unwrap();
     verify_committed_txn_status(t6.as_ref(), &block1[5]).unwrap();
 
-    let account1_state_with_proof = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_state_response()
+    let account1_state_with_proof = db
+        .reader
+        .get_account_state_with_proof(account1, current_version, current_version)
         .unwrap();
     verify_account_balance(&account1_state_with_proof, |x| x < 1_910_000).unwrap();
 
-    let account2_state_with_proof = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_state_response()
+    let account2_state_with_proof = db
+        .reader
+        .get_account_state_with_proof(account2, current_version, current_version)
         .unwrap();
     verify_account_balance(&account2_state_with_proof, |x| x < 1_210_000).unwrap();
 
-    let account3_state_with_proof = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_state_response()
+    let account3_state_with_proof = db
+        .reader
+        .get_account_state_with_proof(account3, current_version, current_version)
         .unwrap();
     verify_account_balance(&account3_state_with_proof, |x| x == 1_080_000).unwrap();
 
-    let transaction_list_with_proof = response_items
-        .pop()
-        .unwrap()
-        .into_get_transactions_response()
+    let transaction_list_with_proof = db
+        .reader
+        .get_transactions(3, 10, current_version, false)
         .unwrap();
     verify_transactions(&transaction_list_with_proof, &block1[2..]).unwrap();
 
-    let (account1_sent_events, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_events_by_access_path_response()
+    let account1_sent_events = db
+        .reader
+        .get_events(&EventKey::new_from_address(&account1, 1), 0, true, 10)
         .unwrap();
     assert_eq!(account1_sent_events.len(), 2);
 
-    let (account2_sent_events, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_events_by_access_path_response()
+    let account2_sent_events = db
+        .reader
+        .get_events(&EventKey::new_from_address(&account2, 1), 0, true, 10)
         .unwrap();
     assert_eq!(account2_sent_events.len(), 1);
 
-    let (account3_sent_events, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_events_by_access_path_response()
+    let account3_sent_events = db
+        .reader
+        .get_events(&EventKey::new_from_address(&account3, 1), 0, true, 10)
         .unwrap();
     assert_eq!(account3_sent_events.len(), 0);
 
-    let (account1_received_events, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_events_by_access_path_response()
+    let account1_received_events = db
+        .reader
+        .get_events(&EventKey::new_from_address(&account1, 0), 0, true, 10)
         .unwrap();
     assert_eq!(account1_received_events.len(), 1);
 
-    let (account2_received_events, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_events_by_access_path_response()
+    let account2_received_events = db
+        .reader
+        .get_events(&EventKey::new_from_address(&account2, 0), 0, true, 10)
         .unwrap();
     assert_eq!(account2_received_events.len(), 2);
 
-    let (account3_received_events, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_events_by_access_path_response()
+    let account3_received_events = db
+        .reader
+        .get_events(&EventKey::new_from_address(&account3, 0), 0, true, 10)
         .unwrap();
     assert_eq!(account3_received_events.len(), 3);
 
-    let account4_state = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_state_response()
+    let account4_state = db
+        .reader
+        .get_account_state_with_proof(account4, current_version, current_version)
         .unwrap();
     assert!(account4_state.blob.is_none());
 
-    let (account4_transaction, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_txn_by_seq_num_response()
+    let account4_transaction = db
+        .reader
+        .get_txn_by_account(account4, 0, current_version, true)
         .unwrap();
     assert!(account4_transaction.is_none());
 
-    let (account4_sent_events, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_events_by_access_path_response()
+    let account4_sent_events = db
+        .reader
+        .get_events(&EventKey::new_from_address(&account4, 1), 0, true, 10)
         .unwrap();
     assert!(account4_sent_events.is_empty());
 
-    // Execution the 2nd block.
+    // Execute the 2nd block.
     let output2 = executor
         .execute_block((block2_id, block2.clone()), block1_id)
         .unwrap();
@@ -1121,144 +834,74 @@ fn test_execution_with_storage() {
         .commit_blocks(vec![block2_id], ledger_info_with_sigs)
         .unwrap();
 
-    let request_items = vec![
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: account1,
-            sequence_number: 2,
-            fetch_events: false,
-        },
-        RequestItem::GetAccountTransactionBySequenceNumber {
-            account: account1,
-            sequence_number: 15,
-            fetch_events: false,
-        },
-        RequestItem::GetAccountState { address: account1 },
-        RequestItem::GetAccountState { address: account3 },
-        RequestItem::GetTransactions {
-            start_version: 7,
-            limit: 14,
-            fetch_events: false,
-        },
-        RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_sent_event(account1),
-            start_event_seq_num: 0,
-            ascending: true,
-            limit: 10,
-        },
-        RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_sent_event(account1),
-            start_event_seq_num: 10,
-            ascending: true,
-            limit: 10,
-        },
-        RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_received_event(account3),
-            start_event_seq_num: u64::max_value(),
-            ascending: false,
-            limit: 10,
-        },
-        RequestItem::GetEventsByEventAccessPath {
-            access_path: AccessPath::new_for_received_event(account3),
-            start_event_seq_num: 6,
-            ascending: false,
-            limit: 10,
-        },
-    ];
-    let (
-        mut response_items,
-        ledger_info_with_sigs,
-        validator_change_proof,
-        _ledger_consistency_proof,
-    ) = rt
-        .block_on(
-            storage_read_client.update_to_latest_ledger(
-                /* client_known_version = */ 0,
-                request_items.clone(),
-            ),
-        )
+    let (li, validator_change_proof, _accumulator_consistency_proof) =
+        db.reader.get_state_proof(current_version).unwrap();
+    trusted_state
+        .verify_and_ratchet(&li, &validator_change_proof)
         .unwrap();
-    let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
-    verify_update_to_latest_ledger_response(
-        &trusted_state,
-        0,
-        &request_items,
-        &response_items,
-        &ledger_info_with_sigs,
-        &validator_change_proof,
-    )
-    .unwrap();
-    response_items.reverse();
+    let current_version = li.ledger_info().version();
+    assert_eq!(current_version, 20);
 
-    let (t7, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_txn_by_seq_num_response()
+    let t7 = db
+        .reader
+        .get_txn_by_account(account1, 2, current_version, false)
         .unwrap();
     verify_committed_txn_status(t7.as_ref(), &block2[0]).unwrap();
 
-    let (t20, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_txn_by_seq_num_response()
+    let t20 = db
+        .reader
+        .get_txn_by_account(account1, 15, current_version, false)
         .unwrap();
     verify_committed_txn_status(t20.as_ref(), &block2[13]).unwrap();
 
-    let account1_state_with_proof = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_state_response()
+    let account1_state_with_proof = db
+        .reader
+        .get_account_state_with_proof(account1, current_version, current_version)
         .unwrap();
     verify_account_balance(&account1_state_with_proof, |x| x < 1_770_000).unwrap();
 
-    let account3_state_with_proof = response_items
-        .pop()
-        .unwrap()
-        .into_get_account_state_response()
+    let account3_state_with_proof = db
+        .reader
+        .get_account_state_with_proof(account3, current_version, current_version)
         .unwrap();
     verify_account_balance(&account3_state_with_proof, |x| x == 1_220_000).unwrap();
 
-    let transaction_list_with_proof = response_items
-        .pop()
-        .unwrap()
-        .into_get_transactions_response()
+    let transaction_list_with_proof = db
+        .reader
+        .get_transactions(7, 14, current_version, false)
         .unwrap();
     verify_transactions(&transaction_list_with_proof, &block2[..]).unwrap();
 
-    let (account1_sent_events_batch1, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_events_by_access_path_response()
+    let account1_sent_events_batch1 = db
+        .reader
+        .get_events(&EventKey::new_from_address(&account1, 1), 0, true, 10)
         .unwrap();
     assert_eq!(account1_sent_events_batch1.len(), 10);
 
-    let (account1_sent_events_batch2, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_events_by_access_path_response()
+    let account1_sent_events_batch2 = db
+        .reader
+        .get_events(&EventKey::new_from_address(&account1, 1), 10, true, 10)
         .unwrap();
     assert_eq!(account1_sent_events_batch2.len(), 6);
 
-    let (account3_received_events_batch1, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_events_by_access_path_response()
+    let account3_received_events_batch1 = db
+        .reader
+        .get_events(
+            &EventKey::new_from_address(&account3, 0),
+            u64::max_value(),
+            false,
+            10,
+        )
         .unwrap();
     assert_eq!(account3_received_events_batch1.len(), 10);
-    assert_eq!(
-        account3_received_events_batch1[0].event.sequence_number(),
-        16
-    );
+    assert_eq!(account3_received_events_batch1[0].1.sequence_number(), 16);
 
-    let (account3_received_events_batch2, _) = response_items
-        .pop()
-        .unwrap()
-        .into_get_events_by_access_path_response()
+    let account3_received_events_batch2 = db
+        .reader
+        .get_events(&EventKey::new_from_address(&account3, 0), 6, false, 10)
         .unwrap();
     assert_eq!(account3_received_events_batch2.len(), 7);
-    assert_eq!(
-        account3_received_events_batch2[0].event.sequence_number(),
-        6
-    );
+    assert_eq!(account3_received_events_batch2[0].1.sequence_number(), 6);
 }
 
 fn verify_account_balance<F>(account_state_with_proof: &AccountStateWithProof, f: F) -> Result<()>
@@ -1310,36 +953,5 @@ fn verify_committed_txn_status(
         txn,
     );
 
-    Ok(())
-}
-
-fn verify_uncommitted_txn_status(
-    txn_with_proof: Option<&TransactionWithProof>,
-    proof_of_current_sequence_number: Option<&AccountStateWithProof>,
-    expected_seq_num: u64,
-) -> Result<()> {
-    ensure!(
-        txn_with_proof.is_none(),
-        "Transaction is unexpectedly committed."
-    );
-
-    let proof_of_current_sequence_number = proof_of_current_sequence_number.ok_or_else(|| {
-        format_err!(
-        "proof_of_current_sequence_number should be provided when transaction is not committed."
-    )
-    })?;
-    let seq_num_in_account = if let Some(blob) = &proof_of_current_sequence_number.blob {
-        AccountResource::try_from(blob)?.sequence_number()
-    } else {
-        0
-    };
-
-    ensure!(
-        expected_seq_num == seq_num_in_account,
-        "expected_seq_num {} doesn't match that in account state \
-         in TransactionStatus::Uncommmitted {}",
-        expected_seq_num,
-        seq_num_in_account,
-    );
     Ok(())
 }

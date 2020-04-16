@@ -52,7 +52,8 @@ pub fn bootstrap_db<V: VMExecutor>(
     let mut executor = Executor::<V>::new_on_unbootstrapped_db(db.clone(), tree_state);
 
     let block_id = HashValue::zero(); // match with the id in BlockInfo::genesis(...)
-                                      // Create a block with genesis_txn being the only txn. Execute it then commit it immediately.
+
+    // Create a block with genesis_txn being the only txn. Execute it then commit it immediately.
     let result = executor.execute_block((block_id, vec![genesis_txn]), *PRE_GENESIS_BLOCK_ID)?;
 
     let root_hash = result.root_hash();
