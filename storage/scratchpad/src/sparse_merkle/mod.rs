@@ -211,16 +211,12 @@ impl SparseMerkleTree {
                 // root hash of this subtree in memory). So we need to take into account the leaf
                 // in the proof.
                 let new_subtree = match proof.leaf() {
-                    Some((existing_key, existing_value_hash)) => {
-                        let existing_leaf =
-                            LeafNode::new(existing_key, LeafValue::BlobHash(existing_value_hash));
-                        Self::construct_subtree_with_new_leaf(
-                            key,
-                            new_blob,
-                            &existing_leaf,
-                            proof.siblings().len(),
-                        )
-                    }
+                    Some(existing_leaf) => Self::construct_subtree_with_new_leaf(
+                        key,
+                        new_blob,
+                        &existing_leaf.into(),
+                        proof.siblings().len(),
+                    ),
                     None => Arc::new(SparseMerkleNode::new_leaf(key, LeafValue::Blob(new_blob))),
                 };
 

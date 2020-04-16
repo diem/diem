@@ -541,6 +541,12 @@ impl CryptoHash for LeafNode {
     }
 }
 
+impl From<LeafNode> for SparseMerkleLeafNode {
+    fn from(leaf_node: LeafNode) -> Self {
+        Self::new(leaf_node.account_key, leaf_node.blob_hash)
+    }
+}
+
 #[repr(u8)]
 #[derive(FromPrimitive, ToPrimitive)]
 enum NodeTag {

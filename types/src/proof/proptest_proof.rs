@@ -6,7 +6,7 @@
 
 use crate::proof::{
     definition::MAX_ACCUMULATOR_PROOF_DEPTH, AccumulatorConsistencyProof, AccumulatorProof,
-    AccumulatorRangeProof, SparseMerkleProof, SparseMerkleRangeProof,
+    AccumulatorRangeProof, SparseMerkleLeafNode, SparseMerkleProof, SparseMerkleRangeProof,
 };
 use libra_crypto::{
     hash::{CryptoHasher, ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH},
@@ -75,7 +75,7 @@ impl Arbitrary for SparseMerkleProof {
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
         (
-            any::<Option<(HashValue, HashValue)>>(),
+            any::<Option<SparseMerkleLeafNode>>(),
             (0..=256usize).prop_flat_map(|len| {
                 if len == 0 {
                     Just(vec![]).boxed()
