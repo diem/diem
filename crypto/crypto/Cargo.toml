@@ -29,8 +29,9 @@ sha2 = "0.8.0"
 static_assertions = { version = "1.0.0", optional = true }
 thiserror = "1.0"
 tiny-keccak = { version = "2.0.2", features = ["sha3"]}
+sha3 = "0.8.2"
 x25519-dalek = { git = "https://github.com/calibra/x25519-dalek.git", branch = "fiat2", default-features = false }
-
+aes-gcm = "0.5.0" # used in noise
 libra-crypto-derive = { path = "../crypto-derive", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-nibble = { path = "../../common/nibble", version = "0.1.0" }
@@ -44,6 +45,7 @@ proptest-derive = { version = "0.1.2"}
 ripemd160 = "0.8.0"
 criterion = "0.3"
 sha3 = "0.8.2"
+serde_json = "1.0.51"
 
 [features]
 default = ["std", "batch", "u64_backend"]
@@ -57,4 +59,8 @@ fiat_u64_backend = ["curve25519-dalek/fiat_u64_backend", "ed25519-dalek/fiat_u64
 
 [[bench]]
 name = "hash"
+harness = false
+
+[[bench]]
+name = "noise"
 harness = false
