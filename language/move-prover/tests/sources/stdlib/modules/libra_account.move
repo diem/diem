@@ -418,6 +418,12 @@ module LibraAccount {
             fresh_address,
         );
     }
+//    spec fun create_account { // FIXME: This should pass, but Z3 does not terminate on this.
+//        aborts_if len(LCS::serialize(fresh_address)) + len(auth_key_prefix) != 32;
+//        aborts_if exists<Balance<LBR::T>>(fresh_address);
+//        aborts_if exists<T>(fresh_address);
+//        // TODO: Add ensures
+//    }
 
     // Creates a new account at `fresh_address` with the `initial_balance` deducted from the
     // transaction sender's account
@@ -442,6 +448,28 @@ module LibraAccount {
         account: Self::T,
         addr: address,
     );
+    spec fun save_account { // Prover does not attempt to prove this spec because it's a native function.
+        aborts_if exists<T>(addr);
+        aborts_if exists<Balance<Token>>(addr);
+        ensures exists<T>(addr);
+        ensures exists<Balance<Token>>(addr);
+        ensures global<T>(addr) == account;
+        ensures global<Balance<Token>>(addr) == balance;
+    }
+
+    // This function is created to verify the builtin Boogie model for the native function `save_account`,
+    // and should be removed when it becomes possible for the spec for native function to be verified in place (TODO).
+    fun verify_save_account<Token>(balance: Balance<Token>, account: Self::T, addr: address) {
+        save_account<Token>(balance, account, addr);
+    }
+    spec fun verify_save_account {
+        aborts_if exists<T>(addr);
+        aborts_if exists<Balance<Token>>(addr);
+        ensures exists<T>(addr);
+        ensures exists<Balance<Token>>(addr);
+        ensures global<T>(addr) == account;
+        ensures global<Balance<Token>>(addr) == balance;
+    }
 
     // Helper to return the u64 value of the `balance` for `account`
     fun balance_for<Token>(balance: &Balance<Token>): u64 {
