@@ -223,7 +223,7 @@ impl NodeSetup {
 }
 
 #[test]
-fn basic_new_rank_event_test() {
+fn new_round_on_quorum_cert() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
@@ -328,7 +328,7 @@ fn basic_new_rank_event_test() {
 
 #[test]
 /// If the proposal is valid, a vote should be sent
-fn process_successful_proposal_test() {
+fn vote_on_successful_proposal() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
@@ -375,7 +375,7 @@ fn process_successful_proposal_test() {
 #[test]
 /// If the proposal does not pass voting rules,
 /// No votes are sent, but the block is still added to the block tree.
-fn process_old_proposal_test() {
+fn no_vote_on_old_proposal() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
@@ -421,7 +421,7 @@ fn process_old_proposal_test() {
 /// After that when we then receive proposal for correct round, we vote for it
 /// Basically it checks that adversary can not send proposal and skip rounds violating pacemaker
 /// rules
-fn process_round_mismatch_test() {
+fn no_vote_on_mismatch_round() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
@@ -459,95 +459,93 @@ fn process_round_mismatch_test() {
 #[test]
 /// Ensure that after the vote messages are broadcasted upon timeout, the receivers
 /// have the highest quorum certificate (carried by the SyncInfo of the vote message)
-fn process_vote_timeout_msg_test() {
+fn sync_info_carried_on_timeout_vote() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
-    let non_proposer = nodes.pop().unwrap();
+    let mut non_proposer = nodes.pop().unwrap();
     let mut static_proposer = nodes.pop().unwrap();
 
     let qc = non_proposer.block_store.highest_quorum_cert();
-    let block_0 = Block::new_proposal(vec![1], 1, 1, qc.as_ref().clone(), &non_proposer.signer);
-    non_proposer
-        .block_store
-        .execute_and_insert_block(block_0.clone())
-        .unwrap();
-    static_proposer
-        .block_store
-        .execute_and_insert_block(block_0.clone())
-        .unwrap();
-
-    let parent_block_info = block_0.quorum_cert().certified_block();
-    // Populate block_0 and a quorum certificate for block_0 on non_proposer
-    let block_0_quorum_cert = gen_test_certificate(
-        vec![&static_proposer.signer, &non_proposer.signer],
-        // Follow MockStateComputer implementation
-        block_0.gen_block_info(
-            parent_block_info.executed_state_id(),
-            parent_block_info.version(),
-            parent_block_info.next_validator_set().cloned(),
-        ),
-        parent_block_info.clone(),
-        None,
+    let block_0 = Block::new_proposal(vec![1], 1, 1, qc.as_ref().clone(), &static_proposer.signer);
+    let proposal_msg = ProposalMsg::<TestPayload>::new(
+        block_0.clone(),
+        SyncInfo::new(qc.as_ref().clone(), qc.as_ref().clone(), None),
     );
-    non_proposer
-        .block_store
-        .insert_single_quorum_cert(block_0_quorum_cert.clone())
-        .unwrap();
-    assert_eq!(
+    timed_block_on(&mut runtime, async {
+        non_proposer
+            .event_processor
+            .process_proposal_msg(proposal_msg)
+            .await;
         static_proposer
             .block_store
-            .highest_quorum_cert()
-            .certified_block()
-            .round(),
-        0
-    );
-    assert_eq!(
+            .execute_and_insert_block(block_0.clone())
+            .unwrap();
+
+        let parent_block_info = block_0.quorum_cert().certified_block();
+        // Populate block_0 and a quorum certificate for block_0 on non_proposer
+        let block_0_quorum_cert = gen_test_certificate(
+            vec![&static_proposer.signer, &non_proposer.signer],
+            // Follow MockStateComputer implementation
+            block_0.gen_block_info(
+                parent_block_info.executed_state_id(),
+                parent_block_info.version(),
+                parent_block_info.next_validator_set().cloned(),
+            ),
+            parent_block_info.clone(),
+            None,
+        );
         non_proposer
             .block_store
-            .highest_quorum_cert()
-            .certified_block()
-            .round(),
-        1
-    );
+            .insert_single_quorum_cert(block_0_quorum_cert.clone())
+            .unwrap();
+        assert_eq!(
+            static_proposer
+                .block_store
+                .highest_quorum_cert()
+                .certified_block()
+                .round(),
+            0
+        );
+        assert_eq!(
+            non_proposer
+                .block_store
+                .highest_quorum_cert()
+                .certified_block()
+                .round(),
+            1
+        );
 
-    // As the static proposer processes the the vote message it should learn about the
-    // block_0_quorum_cert at round 1.
-    let dummy_vote_data = VoteData::new(BlockInfo::random(1), BlockInfo::random(0));
+        non_proposer.event_processor.process_local_timeout(1).await;
+        let msg = &playground
+            .wait_for_messages(1, NetworkPlayground::timeout_votes_only::<TestPayload>)
+            .await[0];
+        let vote_msg_on_timeout = match &msg.1 {
+            ConsensusMsg::VoteMsg(vote_msg) => vote_msg.clone(),
+            _ => panic!("Failed to retrieve VoteMsg"),
+        };
 
-    let mut vote_on_timeout = Vote::new(
-        dummy_vote_data,
-        non_proposer.signer.author(),
-        placeholder_ledger_info(),
-        &non_proposer.signer,
-    );
-    let signature = vote_on_timeout.timeout().sign(&non_proposer.signer);
-    vote_on_timeout.add_timeout_signature(signature);
-
-    let vote_msg_on_timeout = VoteMsg::new(
-        vote_on_timeout,
-        SyncInfo::new(block_0_quorum_cert, certificate_for_genesis(), None),
-    );
-    timed_block_on(
-        &mut runtime,
+        // As the static proposer processes the the vote message it should learn about the
+        // block_0_quorum_cert at round 1.
         static_proposer
             .event_processor
-            .process_vote(vote_msg_on_timeout),
-    );
+            .process_vote(*vote_msg_on_timeout)
+            .await;
 
-    assert_eq!(
-        static_proposer
-            .block_store
-            .highest_quorum_cert()
-            .certified_block()
-            .round(),
-        1
-    );
+        assert_eq!(
+            static_proposer
+                .block_store
+                .highest_quorum_cert()
+                .certified_block()
+                .round(),
+            1
+        );
+    });
 }
 
 #[test]
 /// We don't vote for proposals that comes from proposers that are not valid proposers for round
-fn process_proposer_mismatch_test() {
+fn no_vote_on_invalid_proposer() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
@@ -591,7 +589,7 @@ fn process_proposer_mismatch_test() {
 
 #[test]
 /// We allow to 'skip' round if proposal carries timeout certificate for next round
-fn process_timeout_certificate_test() {
+fn new_round_on_timeout_certificate() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     // In order to observe the votes we're going to check proposal processing on the non-proposer
@@ -635,7 +633,7 @@ fn process_timeout_certificate_test() {
 #[test]
 /// Happy path for vote processing:
 /// 1) if a new QC is formed and a block is present send a PM event
-fn process_votes_basic_test() {
+fn quorum_cert_on_vote() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut node = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1)
@@ -682,7 +680,7 @@ fn process_votes_basic_test() {
 }
 
 #[test]
-fn process_block_retrieval() {
+fn response_on_block_retrieval() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut node = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1)
@@ -772,7 +770,7 @@ fn process_block_retrieval() {
 
 #[test]
 /// rebuild a node from previous storage without violating safety guarantees.
-fn basic_restart_test() {
+fn recover_on_restart() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let mut node = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1)
@@ -845,5 +843,106 @@ fn nil_vote_on_timeout() {
         assert!(vote.is_timeout());
         assert_eq!(vote.vote_data().proposed().round(), 1);
         assert_eq!(vote.vote_data().parent().id(), node.block_store.root().id());
+    });
+}
+
+#[test]
+/// If the node votes in a round, upon timeout the same vote is re-sent with a timeout signature.
+fn vote_resent_on_timeout() {
+    let mut runtime = consensus_runtime();
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
+    // It needs 2 nodes to test network message.
+    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
+    let genesis_qc = certificate_for_genesis();
+    let correct_block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &nodes[0].signer);
+    let proposal_msg = ProposalMsg::<TestPayload>::new(
+        correct_block.clone(),
+        SyncInfo::new(genesis_qc.clone(), genesis_qc, None),
+    );
+    let node = &mut nodes[1];
+    timed_block_on(&mut runtime, async {
+        node.event_processor
+            .process_proposal_msg(proposal_msg)
+            .await;
+        let msg = &playground
+            .wait_for_messages(1, NetworkPlayground::votes_only::<TestPayload>)
+            .await[0];
+        let vote = match &msg.1 {
+            ConsensusMsg::VoteMsg(vote_msg) => vote_msg.vote().clone(),
+            _ => panic!("Failed to retrieve VoteMsg"),
+        };
+        assert!(!vote.is_timeout());
+        assert_eq!(vote.vote_data().proposed().id(), correct_block.id());
+        // Process the outgoing vote message and verify that it contains a round signature
+        // and that the vote is the same as above.
+        node.event_processor.process_local_timeout(1).await;
+        let msg = &playground
+            .wait_for_messages(1, NetworkPlayground::timeout_votes_only::<TestPayload>)
+            .await[0];
+        let timeout_vote = match &msg.1 {
+            ConsensusMsg::VoteMsg(vote_msg) => vote_msg.vote().clone(),
+            _ => panic!("Failed to retrieve VoteMsg"),
+        };
+
+        assert!(timeout_vote.is_timeout());
+        assert_eq!(timeout_vote.vote_data(), vote.vote_data());
+    });
+}
+
+#[test]
+fn sync_info_sent_on_stale_sync_info() {
+    let mut runtime = consensus_runtime();
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
+    // It needs 2 nodes to test network message.
+    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 2);
+    let genesis_qc = certificate_for_genesis();
+    let block_0 = Block::new_proposal(vec![1], 1, 1, genesis_qc, &nodes[0].signer);
+    let parent_block_info = block_0.quorum_cert().certified_block();
+    let block_0_quorum_cert = gen_test_certificate(
+        vec![&nodes[0].signer, &nodes[1].signer],
+        // Follow MockStateComputer implementation
+        block_0.gen_block_info(
+            parent_block_info.executed_state_id(),
+            parent_block_info.version(),
+            parent_block_info.next_validator_set().cloned(),
+        ),
+        parent_block_info.clone(),
+        None,
+    );
+    let mut behind_node = nodes.pop().unwrap();
+    let mut ahead_node = nodes.pop().unwrap();
+    ahead_node
+        .block_store
+        .execute_and_insert_block(block_0)
+        .unwrap();
+    ahead_node
+        .block_store
+        .insert_single_quorum_cert(block_0_quorum_cert.clone())
+        .unwrap();
+    timed_block_on(&mut runtime, async {
+        behind_node.event_processor.process_local_timeout(1).await;
+        let msg = &playground
+            .wait_for_messages(1, NetworkPlayground::timeout_votes_only::<TestPayload>)
+            .await[0];
+        let timeout_vote_msg = match &msg.1 {
+            ConsensusMsg::VoteMsg(vote_msg) => vote_msg.clone(),
+            _ => panic!("Failed to retrieve VoteMsg"),
+        };
+
+        assert!(timeout_vote_msg.vote().is_timeout());
+        // process the sync info carried in the vote
+        ahead_node
+            .event_processor
+            .process_vote(*timeout_vote_msg)
+            .await;
+        let msg = &playground
+            .wait_for_messages(1, NetworkPlayground::sync_info_only::<TestPayload>)
+            .await[0];
+        let sync_info = match &msg.1 {
+            ConsensusMsg::SyncInfo(sync_info) => sync_info.clone(),
+            _ => panic!("Failed to retrieve VoteMsg"),
+        };
+
+        assert_eq!(*sync_info.highest_quorum_cert(), block_0_quorum_cert);
     });
 }
