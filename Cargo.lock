@@ -1273,11 +1273,8 @@ dependencies = [
  "scratchpad 0.1.0",
  "serde_json 1.0.51 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
- "storage-client 0.1.0",
  "storage-interface 0.1.0",
  "storage-proto 0.1.0",
- "storage-service 0.1.0",
- "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
  "vm-genesis 0.1.0",
 ]
