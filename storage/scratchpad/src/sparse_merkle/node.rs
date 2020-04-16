@@ -235,6 +235,12 @@ impl LeafNode {
     }
 }
 
+impl From<SparseMerkleLeafNode> for LeafNode {
+    fn from(leaf_node: SparseMerkleLeafNode) -> Self {
+        Self::new(leaf_node.key(), LeafValue::BlobHash(leaf_node.value_hash()))
+    }
+}
+
 /// A subtree node.
 #[derive(Debug)]
 pub struct SubtreeNode {

@@ -150,8 +150,9 @@ fn test_verify_single_element_sparse_merkle() {
     let blob: AccountStateBlob = b"world".to_vec().into();
     let blob_hash = blob.hash();
     let non_existing_blob = b"world?".to_vec().into();
-    let root_hash = SparseMerkleLeafNode::new(key, blob_hash).hash();
-    let proof = SparseMerkleProof::new(Some((key, blob_hash)), vec![]);
+    let root_node = SparseMerkleLeafNode::new(key, blob_hash);
+    let root_hash = root_node.hash();
+    let proof = SparseMerkleProof::new(Some(root_node), vec![]);
 
     // Trying to show this exact key exists with its value.
     assert!(proof.verify(root_hash, key, Some(&blob)).is_ok());
@@ -192,7 +193,8 @@ fn test_verify_three_element_sparse_merkle() {
     let blob2 = AccountStateBlob::from(b"2".to_vec());
     let blob3 = AccountStateBlob::from(b"3".to_vec());
 
-    let leaf1_hash = SparseMerkleLeafNode::new(key1, blob1.hash()).hash();
+    let leaf1 = SparseMerkleLeafNode::new(key1, blob1.hash());
+    let leaf1_hash = leaf1.hash();
     let leaf2_hash = SparseMerkleLeafNode::new(key2, blob2.hash()).hash();
     let leaf3_hash = SparseMerkleLeafNode::new(key3, blob3.hash()).hash();
     let internal_b_hash = SparseMerkleInternalNode::new(leaf2_hash, leaf3_hash).hash();
@@ -208,7 +210,7 @@ fn test_verify_three_element_sparse_merkle() {
     {
         // Construct a proof of key1.
         let proof = SparseMerkleProof::new(
-            Some((key1, blob1.hash())),
+            Some(leaf1),
             vec![internal_b_hash, *SPARSE_MERKLE_PLACEHOLDER_HASH],
         );
 
@@ -325,7 +327,8 @@ fn test_verify_account_state_and_event() {
     let blob3 = AccountStateBlob::from(b"value3".to_vec());
 
     let leaf1_hash = SparseMerkleLeafNode::new(key1, blob1.hash()).hash();
-    let leaf2_hash = SparseMerkleLeafNode::new(key2, blob2.hash()).hash();
+    let leaf2 = SparseMerkleLeafNode::new(key2, blob2.hash());
+    let leaf2_hash = leaf2.hash();
     let leaf3_hash = SparseMerkleLeafNode::new(key3, blob3.hash()).hash();
     let internal_d_hash = SparseMerkleInternalNode::new(leaf2_hash, leaf3_hash).hash();
     let internal_c_hash = SparseMerkleInternalNode::new(leaf1_hash, internal_d_hash).hash();
@@ -383,7 +386,7 @@ fn test_verify_account_state_and_event() {
     let ledger_info_to_transaction_info_proof =
         TransactionAccumulatorProof::new(vec![*ACCUMULATOR_PLACEHOLDER_HASH, internal_a_hash]);
     let transaction_info_to_account_proof = SparseMerkleProof::new(
-        Some((key2, blob2.hash())),
+        Some(leaf2),
         vec![leaf3_hash, leaf1_hash, *SPARSE_MERKLE_PLACEHOLDER_HASH],
     );
     let account_state_proof = AccountStateProof::new(

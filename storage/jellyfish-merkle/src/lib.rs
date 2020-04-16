@@ -541,13 +541,10 @@ where
                         } else {
                             None
                         },
-                        SparseMerkleProof::new(
-                            Some((leaf_node.account_key(), leaf_node.blob_hash())),
-                            {
-                                siblings.reverse();
-                                siblings
-                            },
-                        ),
+                        SparseMerkleProof::new(Some(leaf_node.into()), {
+                            siblings.reverse();
+                            siblings
+                        }),
                     ));
                 }
                 Node::Null => {

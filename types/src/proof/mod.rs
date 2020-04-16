@@ -23,6 +23,9 @@ use libra_crypto::{
     HashValue,
 };
 use libra_crypto_derive::CryptoHasher;
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest_derive::Arbitrary;
+use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
 pub use self::definition::{
@@ -91,7 +94,8 @@ pub type TransactionAccumulatorInternalNode = MerkleTreeInternalNode<Transaction
 pub type EventAccumulatorInternalNode = MerkleTreeInternalNode<EventAccumulatorHasher>;
 pub type TestAccumulatorInternalNode = MerkleTreeInternalNode<TestOnlyHasher>;
 
-#[derive(CryptoHasher)]
+#[derive(Clone, Copy, CryptoHasher, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct SparseMerkleLeafNode {
     key: HashValue,
     value_hash: HashValue,
@@ -100,6 +104,14 @@ pub struct SparseMerkleLeafNode {
 impl SparseMerkleLeafNode {
     pub fn new(key: HashValue, value_hash: HashValue) -> Self {
         SparseMerkleLeafNode { key, value_hash }
+    }
+
+    pub fn key(&self) -> HashValue {
+        self.key
+    }
+
+    pub fn value_hash(&self) -> HashValue {
+        self.value_hash
     }
 }
 

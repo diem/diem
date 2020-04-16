@@ -9,7 +9,10 @@ use libra_crypto::{
     hash::{CryptoHash, TestOnlyHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use libra_types::{account_state_blob::AccountStateBlob, proof::SparseMerkleProof};
+use libra_types::{
+    account_state_blob::AccountStateBlob,
+    proof::{SparseMerkleLeafNode, SparseMerkleProof},
+};
 use std::{collections::HashMap, sync::Arc};
 
 fn hash_internal(left_child: HashValue, right_child: HashValue) -> HashValue {
@@ -17,7 +20,7 @@ fn hash_internal(left_child: HashValue, right_child: HashValue) -> HashValue {
 }
 
 fn hash_leaf(key: HashValue, value_hash: HashValue) -> HashValue {
-    libra_types::proof::SparseMerkleLeafNode::new(key, value_hash).hash()
+    SparseMerkleLeafNode::new(key, value_hash).hash()
 }
 
 #[derive(Default)]
@@ -200,7 +203,7 @@ fn test_construct_subtree_at_bottom_found_leaf_node() {
         iter.next();
         iter
     };
-    let leaf = Some((existing_key, existing_blob_hash));
+    let leaf = Some(SparseMerkleLeafNode::new(existing_key, existing_blob_hash));
     let siblings: Vec<_> = (0..2)
         .map(|x| HashValue::new([x; HashValue::LENGTH]))
         .collect();
@@ -345,7 +348,10 @@ fn test_update_256_siblings_in_proof() {
         .collect();
     siblings.push(leaf2_hash);
     siblings.reverse();
-    let proof_of_key1 = SparseMerkleProof::new(Some((key1, value1_hash)), siblings.clone());
+    let proof_of_key1 = SparseMerkleProof::new(
+        Some(SparseMerkleLeafNode::new(key1, value1_hash)),
+        siblings.clone(),
+    );
 
     let old_root_hash = siblings.iter().fold(leaf1_hash, |previous_hash, hash| {
         hash_internal(previous_hash, *hash)
@@ -418,7 +424,8 @@ fn test_update() {
     let value4 = AccountStateBlob::from(b"value".to_vec());
 
     // Create a proof for this new key.
-    let leaf1_hash = hash_leaf(key1, value1_hash);
+    let leaf1 = SparseMerkleLeafNode::new(key1, value1_hash);
+    let leaf1_hash = leaf1.hash();
     let leaf2_hash = hash_leaf(key2, value2_hash);
     let leaf3_hash = hash_leaf(key3, value3_hash);
     let x_hash = hash_internal(leaf1_hash, leaf2_hash);
@@ -461,7 +468,7 @@ fn test_update() {
 
     // Next, we are going to modify key1. Create a proof for key1.
     let proof = SparseMerkleProof::new(
-        Some((key1, value1_hash)),
+        Some(leaf1),
         vec![leaf2_hash, *SPARSE_MERKLE_PLACEHOLDER_HASH, leaf3_hash],
     );
     assert!(proof.verify(old_root_hash, key1, Some(&value1)).is_ok());

@@ -199,15 +199,15 @@ pub type TestAccumulatorProof = AccumulatorProof<TestOnlyHasher>;
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SparseMerkleProof {
     /// This proof can be used to authenticate whether a given leaf exists in the tree or not.
-    ///     - If this is `Some(HashValue, HashValue)`
-    ///         - If the first `HashValue` equals requested key, this is an inclusion proof and the
-    ///           second `HashValue` equals the hash of the corresponding account blob.
-    ///         - Otherwise this is a non-inclusion proof. The first `HashValue` is the only key
-    ///           that exists in the subtree and the second `HashValue` equals the hash of the
+    ///     - If this is `Some(leaf_node)`
+    ///         - If `leaf_node.key` equals requested key, this is an inclusion proof and
+    ///           `leaf_node.value_hash` equals the hash of the corresponding account blob.
+    ///         - Otherwise this is a non-inclusion proof. `leaf_node.key` is the only key
+    ///           that exists in the subtree and `leaf_node.value_hash` equals the hash of the
     ///           corresponding account blob.
     ///     - If this is `None`, this is also a non-inclusion proof which indicates the subtree is
     ///       empty.
-    leaf: Option<(HashValue, HashValue)>,
+    leaf: Option<SparseMerkleLeafNode>,
 
     /// All siblings in this proof, including the default ones. Siblings are ordered from the bottom
     /// level to the root level.
@@ -216,12 +216,12 @@ pub struct SparseMerkleProof {
 
 impl SparseMerkleProof {
     /// Constructs a new `SparseMerkleProof` using leaf and a list of siblings.
-    pub fn new(leaf: Option<(HashValue, HashValue)>, siblings: Vec<HashValue>) -> Self {
+    pub fn new(leaf: Option<SparseMerkleLeafNode>, siblings: Vec<HashValue>) -> Self {
         SparseMerkleProof { leaf, siblings }
     }
 
     /// Returns the leaf node in this proof.
-    pub fn leaf(&self) -> Option<(HashValue, HashValue)> {
+    pub fn leaf(&self) -> Option<SparseMerkleLeafNode> {
         self.leaf
     }
 
@@ -248,37 +248,37 @@ impl SparseMerkleProof {
         );
 
         match (element_blob, self.leaf) {
-            (Some(blob), Some((proof_key, proof_value_hash))) => {
+            (Some(blob), Some(leaf)) => {
                 // This is an inclusion proof, so the key and value hash provided in the proof
                 // should match element_key and element_value_hash. `siblings` should prove the
                 // route from the leaf node to the root.
                 ensure!(
-                    element_key == proof_key,
+                    element_key == leaf.key,
                     "Keys do not match. Key in proof: {:x}. Expected key: {:x}.",
-                    proof_key,
+                    leaf.key,
                     element_key
                 );
                 let hash = blob.hash();
                 ensure!(
-                    hash == proof_value_hash,
+                    hash == leaf.value_hash,
                     "Value hashes do not match. Value hash in proof: {:x}. \
                      Expected value hash: {:x}",
-                    proof_value_hash,
+                    leaf.value_hash,
                     hash,
                 );
             }
             (Some(_blob), None) => bail!("Expected inclusion proof. Found non-inclusion proof."),
-            (None, Some((proof_key, _))) => {
+            (None, Some(leaf)) => {
                 // This is a non-inclusion proof. The proof intends to show that if a leaf node
                 // representing `element_key` is inserted, it will break a currently existing leaf
                 // node represented by `proof_key` into a branch. `siblings` should prove the
                 // route from that leaf node to the root.
                 ensure!(
-                    element_key != proof_key,
+                    element_key != leaf.key,
                     "Expected non-inclusion proof, but key exists in proof.",
                 );
                 ensure!(
-                    element_key.common_prefix_bits_len(proof_key) >= self.siblings.len(),
+                    element_key.common_prefix_bits_len(leaf.key) >= self.siblings.len(),
                     "Key would not have ended up in the subtree where the provided key in proof \
                      is the only existing key, if it existed. So this is not a valid \
                      non-inclusion proof.",
@@ -293,9 +293,7 @@ impl SparseMerkleProof {
 
         let current_hash = self
             .leaf
-            .map_or(*SPARSE_MERKLE_PLACEHOLDER_HASH, |(key, value_hash)| {
-                SparseMerkleLeafNode::new(key, value_hash).hash()
-            });
+            .map_or(*SPARSE_MERKLE_PLACEHOLDER_HASH, |leaf| leaf.hash());
         let actual_root_hash = self
             .siblings
             .iter()
@@ -333,7 +331,7 @@ impl TryFrom<crate::proto::types::SparseMerkleProof> for SparseMerkleProof {
         } else if proto_leaf.len() == HashValue::LENGTH * 2 {
             let key = HashValue::from_slice(&proto_leaf[0..HashValue::LENGTH])?;
             let value_hash = HashValue::from_slice(&proto_leaf[HashValue::LENGTH..])?;
-            Some((key, value_hash))
+            Some(SparseMerkleLeafNode::new(key, value_hash))
         } else {
             bail!(
                 "Mailformed proof. Leaf has {} bytes. Expect 0 or {} bytes.",
@@ -353,9 +351,9 @@ impl From<SparseMerkleProof> for crate::proto::types::SparseMerkleProof {
         let mut proto_proof = Self::default();
         // If a leaf is present, we write the key and value hash as a single byte array of 64
         // bytes. Otherwise we write an empty byte array.
-        if let Some((key, value_hash)) = proof.leaf {
-            proto_proof.leaf.extend_from_slice(key.as_ref());
-            proto_proof.leaf.extend_from_slice(value_hash.as_ref());
+        if let Some(leaf) = proof.leaf {
+            proto_proof.leaf.extend_from_slice(leaf.key.as_ref());
+            proto_proof.leaf.extend_from_slice(leaf.value_hash.as_ref());
         }
         proto_proof.siblings = into_proto_siblings(proof.siblings, *SPARSE_MERKLE_PLACEHOLDER_HASH);
         proto_proof
