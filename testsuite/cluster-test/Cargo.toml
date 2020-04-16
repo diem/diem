@@ -29,7 +29,7 @@ debug-interface = { path = "../../common/debug-interface", version = "0.1.0"}
 libra-json-rpc = { path = "../../json-rpc", version = "0.1.0"}
 admission-control-proto = { path = "../../admission-control/admission-control-proto", version = "0.1.0" }
 util = { path = "../../common/util", version = "0.1.0", package = "libra-util" }
-num_cpus = "1.11.1"
+num_cpus = "1.13.0"
 
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 generate-keypair = { path = "../../config/generate-keypair", version = "0.1.0" }
