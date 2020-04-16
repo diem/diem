@@ -848,7 +848,7 @@ fn exp_(context: &mut Context, e: E::Exp) -> N::Exp {
         EE::Index(..) | EE::Lambda(..) |
         // matches name variants only allowed in specs (we handle the allowed ones above)
         EE::Name(..) => {
-            panic!("unexpected specification construct")
+            panic!("ICE unexpected specification construct")
         }
     };
     sp(eloc, ne_)
