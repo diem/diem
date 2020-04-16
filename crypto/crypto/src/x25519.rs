@@ -55,9 +55,9 @@ pub use x25519_dalek;
 //
 
 /// Size of a X25519 private key
-const PRIVATE_KEY_SIZE: usize = 32;
+pub const PRIVATE_KEY_SIZE: usize = 32;
 /// Size of a X25519 public key
-const PUBLIC_KEY_SIZE: usize = 32;
+pub const PUBLIC_KEY_SIZE: usize = 32;
 
 /// This type should be used to deserialize a received private key
 #[derive(DeserializeKey, SilentDisplay, SilentDebug, SerializeKey)]
