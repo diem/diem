@@ -642,6 +642,7 @@ fn spec_member(
             name: pn,
             type_arguments: ptys_opt,
             patterns: ppatterns,
+            exclusion_patterns: pe_patterns,
         } => {
             let name = module_access(context, pn)?;
             let type_arguments = optional_types(context, ptys_opt);
@@ -649,10 +650,15 @@ fn spec_member(
                 .into_iter()
                 .map(|p| function_pattern(context, p))
                 .collect();
+            let exclusion_patterns = pe_patterns
+                .into_iter()
+                .map(|p| function_pattern(context, p))
+                .collect();
             EM::Apply {
                 name,
                 type_arguments,
                 patterns,
+                exclusion_patterns,
             }
         }
         PM::Pragma { properties } => EM::Pragma { properties },
@@ -665,6 +671,7 @@ fn function_pattern(
     sp!(
         loc,
         P::FunctionPattern_ {
+            visibility,
             name_pattern,
             type_arguments: pty_args
         }
@@ -674,6 +681,7 @@ fn function_pattern(
     sp(
         loc,
         E::FunctionPattern_ {
+            visibility,
             name_pattern,
             type_arguments,
         },

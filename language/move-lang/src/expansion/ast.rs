@@ -98,6 +98,7 @@ pub struct Function {
 
 #[derive(Debug, PartialEq)]
 pub struct FunctionPattern_ {
+    pub visibility: Option<FunctionVisibility>,
     pub name_pattern: Vec<NamePatternFragment>,
     pub type_arguments: Option<Vec<Type>>,
 }
@@ -141,6 +142,7 @@ pub enum SpecBlockMember_ {
         name: ModuleAccess,
         type_arguments: Option<Vec<Type>>,
         patterns: Vec<FunctionPattern>,
+        exclusion_patterns: Vec<FunctionPattern>,
     },
     Pragma {
         properties: Vec<PragmaProperty>,
@@ -488,6 +490,7 @@ impl AstDebug for SpecBlockMember_ {
                 name,
                 type_arguments,
                 patterns,
+                exclusion_patterns,
             } => {
                 w.write(&format!("apply {}", name));
                 if let Some(ty_args) = type_arguments {
@@ -500,6 +503,13 @@ impl AstDebug for SpecBlockMember_ {
                     p.ast_debug(w);
                     true
                 });
+                if !exclusion_patterns.is_empty() {
+                    w.write(" exclude ");
+                    w.list(exclusion_patterns, ", ", |w, p| {
+                        p.ast_debug(w);
+                        true
+                    });
+                }
             }
             SpecBlockMember_::Pragma { properties } => {
                 w.write("pragma ");
