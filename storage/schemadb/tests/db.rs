@@ -185,7 +185,7 @@ fn collect_values<S: Schema>(db: &TestDB) -> Vec<(S::Key, S::Value)> {
     let mut iter = db
         .iter::<S>(Default::default())
         .expect("Failed to create iterator.");
-    iter.seek_to_first().unwrap();
+    iter.seek_to_first();
     iter.collect::<Result<Vec<_>>>().unwrap()
 }
 
@@ -331,7 +331,7 @@ fn test_report_size() {
         db.write_schemas(db_batch).unwrap();
     }
 
-    db.flush_all(/* sync = */ true).unwrap();
+    db.flush_all().unwrap();
 
     let cf_sizes = db.get_approximate_sizes_cf().unwrap();
     assert!(*cf_sizes.get("TestCF1").unwrap() > 0);

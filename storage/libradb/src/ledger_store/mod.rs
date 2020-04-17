@@ -50,7 +50,7 @@ impl LedgerStore {
             let mut iter = db
                 .iter::<LedgerInfoSchema>(ReadOptions::default())
                 .expect("Constructing iterator should work.");
-            iter.seek_to_last().expect("Unable to seek to last entry!");
+            iter.seek_to_last();
             iter.next()
                 .transpose()
                 .expect("Reading latest ledger info from DB should work.")
@@ -229,7 +229,7 @@ impl LedgerStore {
         let mut iter = self
             .db
             .iter::<TransactionInfoSchema>(ReadOptions::default())?;
-        iter.seek_to_last()?;
+        iter.seek_to_last();
         iter.next().transpose()
     }
 
