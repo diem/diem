@@ -1,42 +1,55 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use generate_format::{add_deserialization_tracing, add_proptest_serialization_tracing, FILE_PATH};
-use serde_reflection::{RegistryOwned, SerializationRecords, Tracer, TracerConfig};
+use generate_format::Corpus;
+use serde_reflection::RegistryOwned;
 use serde_yaml;
-use std::collections::BTreeMap;
-
-static MESSAGE: &str = r#"
-You may run `cargo run -p generate-format -- --record` to refresh the records.
-Please verify the changes to the recorded file(s) and tag your pull-request as `breaking`."#;
 
 #[test]
-fn test_recorded_formats_did_not_change() {
-    let records = SerializationRecords::new();
-    let tracer = Tracer::new(TracerConfig::default().is_human_readable(lcs::is_human_readable()));
-    let (mut tracer, records) = add_proptest_serialization_tracing(tracer, records);
-    tracer = add_deserialization_tracing(tracer, &records);
-    let registry: BTreeMap<_, _> = tracer
-        .registry()
-        .unwrap()
-        .into_iter()
-        .map(|(k, v)| (k.to_string(), v))
-        .collect();
+fn test_that_recorded_formats_did_not_change() {
+    for corpus in Corpus::values() {
+        let registry: RegistryOwned = corpus
+            .get_registry(/* skip_deserialization */ false)
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v))
+            .collect();
 
-    let content = std::fs::read_to_string(FILE_PATH).unwrap();
-    let expected = serde_yaml::from_str::<RegistryOwned>(content.as_str()).unwrap();
+        // Some corpus may not be recorded on disk.
+        if let Some(path) = corpus.output_file() {
+            let content = std::fs::read_to_string(path).unwrap();
+            let expected = serde_yaml::from_str::<RegistryOwned>(content.as_str()).unwrap();
+            assert_registry_has_not_changed(&corpus.to_string(), path, registry, expected);
+        }
+    }
+}
 
+fn message(name: &str) -> String {
+    format!(
+        r#"
+You may run `cargo run -p generate-format -- --corpus {} --record` to refresh the records.
+Please verify the changes to the recorded file(s) and consider tagging your pull-request as `breaking`."#,
+        name
+    )
+}
+
+fn assert_registry_has_not_changed(
+    name: &str,
+    path: &str,
+    registry: RegistryOwned,
+    expected: RegistryOwned,
+) {
     for (key, value) in expected.iter() {
         assert_eq!(
             Some(value),
             registry.get(key),
             r#"
 ----
-The recorded format for type `{}` is missing or does not match the recorded value on disk.{}
+The recorded format for type `{}` was removed or does not match the recorded value in {}.{}
 ----
 "#,
             key,
-            MESSAGE
+            path,
+            message(name),
         );
     }
 
@@ -45,11 +58,12 @@ The recorded format for type `{}` is missing or does not match the recorded valu
             expected.contains_key(key),
             r#"
 ----
-Type `{}` was added and has no recorded format on disk yet.{}
+Type `{}` was added and has no recorded format in {} yet.{}
 ----
 "#,
             key,
-            MESSAGE
+            path,
+            message(name),
         );
     }
 }
