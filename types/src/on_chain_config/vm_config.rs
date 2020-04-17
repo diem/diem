@@ -4,7 +4,7 @@
 use crate::{on_chain_config::OnChainConfig, transaction::SCRIPT_HASH_LENGTH};
 use anyhow::{format_err, Result};
 use libra_crypto::HashValue;
-use move_core_types::gas_schedule::CostTable;
+use move_core_types::gas_schedule::{CostTable, GasConstants};
 use serde::{Deserialize, Serialize};
 
 /// Defines and holds the publishing policies for the VM. There are three possible configurations:
@@ -53,6 +53,7 @@ pub struct VMConfig {
 struct CostTableInner {
     pub instruction_table: Vec<u8>,
     pub native_table: Vec<u8>,
+    pub gas_constants: GasConstants,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -68,6 +69,7 @@ impl CostTableInner {
         Ok(CostTable {
             instruction_table,
             native_table,
+            gas_constants: self.gas_constants.clone(),
         })
     }
 }

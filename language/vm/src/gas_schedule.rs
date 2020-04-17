@@ -15,8 +15,8 @@ pub use crate::file_format_common::Opcodes;
 use libra_types::transaction::MAX_TRANSACTION_SIZE_IN_BYTES;
 use move_core_types::{
     gas_schedule::{
-        words_in, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasCost, GasUnits,
-        INTRINSIC_GAS_PER_BYTE, LARGE_TRANSACTION_CUTOFF, MIN_TRANSACTION_GAS_UNITS,
+        words_in, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasConstants, GasCost,
+        GasUnits,
     },
     identifier::Identifier,
 };
@@ -129,6 +129,7 @@ pub fn new_from_instructions(
     CostTable {
         instruction_table,
         native_table,
+        gas_constants: GasConstants::default(),
     }
 }
 
@@ -276,13 +277,14 @@ pub fn zero_cost_schedule() -> CostTable {
 /// Calculate the intrinsic gas for the transaction based upon its size in bytes/words.
 pub fn calculate_intrinsic_gas(
     transaction_size: AbstractMemorySize<GasCarrier>,
+    gas_constants: &GasConstants,
 ) -> GasUnits<GasCarrier> {
     precondition!(transaction_size.get() <= MAX_TRANSACTION_SIZE_IN_BYTES as GasCarrier);
-    let min_transaction_fee = MIN_TRANSACTION_GAS_UNITS;
+    let min_transaction_fee = gas_constants.min_transaction_gas_units;
 
-    if transaction_size.get() > LARGE_TRANSACTION_CUTOFF.get() {
-        let excess = words_in(transaction_size.sub(LARGE_TRANSACTION_CUTOFF));
-        min_transaction_fee.add(INTRINSIC_GAS_PER_BYTE.mul(excess))
+    if transaction_size.get() > gas_constants.large_transaction_cutoff.get() {
+        let excess = words_in(transaction_size.sub(gas_constants.large_transaction_cutoff));
+        min_transaction_fee.add(gas_constants.instrinsic_gas_per_byte.mul(excess))
     } else {
         min_transaction_fee.unitary_cast()
     }

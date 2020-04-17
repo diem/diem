@@ -25,7 +25,7 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use mirai_annotations::checked_verify;
-use move_core_types::gas_schedule::{GasAlgebra, MAXIMUM_NUMBER_OF_GAS_UNITS};
+use move_core_types::gas_schedule::{GasAlgebra, GasConstants};
 use std::{
     fmt::{self, Debug},
     str::FromStr,
@@ -269,12 +269,13 @@ fn get_transaction_parameters<'a>(
     let account_resource = exec.read_account_resource(config.sender).unwrap();
     let account_balance = exec.read_balance_resource(config.sender).unwrap();
     let gas_unit_price = config.gas_price.unwrap_or(0);
+    let max_number_of_gas_units = GasConstants::default().maximum_number_of_gas_units;
     let max_gas_amount = config.max_gas.unwrap_or_else(|| {
         if gas_unit_price == 0 {
-            MAXIMUM_NUMBER_OF_GAS_UNITS.get()
+            max_number_of_gas_units.get()
         } else {
             std::cmp::min(
-                MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
+                max_number_of_gas_units.get(),
                 account_balance.coin() / gas_unit_price,
             )
         }

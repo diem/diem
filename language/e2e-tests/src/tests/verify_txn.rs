@@ -18,7 +18,7 @@ use libra_types::{
     },
     vm_error::{StatusCode, StatusType, VMStatus},
 };
-use move_core_types::gas_schedule::{self, GasAlgebra};
+use move_core_types::gas_schedule::{GasAlgebra, GasConstants};
 use stdlib::transaction_scripts::StdlibScript;
 use transaction_builder::encode_transfer_with_metadata_script;
 
@@ -198,7 +198,7 @@ fn verify_simple_payment() {
         args.clone(),
         10,
         1_000_000,
-        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get() + 1,
+        GasConstants::default().max_price_per_gas_unit.get() + 1,
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -228,7 +228,7 @@ fn verify_simple_payment() {
         args.clone(),
         10,
         1,
-        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+        GasConstants::default().max_price_per_gas_unit.get(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -241,8 +241,8 @@ fn verify_simple_payment() {
         vec![lbr_type_tag()],
         args.clone(),
         10,
-        gas_schedule::MIN_TRANSACTION_GAS_UNITS.get() - 1,
-        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+        GasConstants::default().min_transaction_gas_units.get() - 1,
+        GasConstants::default().max_price_per_gas_unit.get(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -255,8 +255,8 @@ fn verify_simple_payment() {
         vec![lbr_type_tag()],
         args,
         10,
-        gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
-        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+        GasConstants::default().maximum_number_of_gas_units.get() + 1,
+        GasConstants::default().max_price_per_gas_unit.get(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -269,8 +269,8 @@ fn verify_simple_payment() {
         vec![lbr_type_tag()],
         vec![TransactionArgument::U64(42); MAX_TRANSACTION_SIZE_IN_BYTES],
         10,
-        gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() + 1,
-        gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+        GasConstants::default().maximum_number_of_gas_units.get() + 1,
+        GasConstants::default().max_price_per_gas_unit.get(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
