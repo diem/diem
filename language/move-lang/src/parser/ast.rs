@@ -174,17 +174,42 @@ pub struct SpecBlock_ {
     pub members: Vec<SpecBlockMember>,
 }
 
+pub type SpecBlock = Spanned<SpecBlock_>;
+
 #[derive(Debug, PartialEq)]
 pub enum SpecBlockTarget_ {
     Code,
     Module,
     Function(FunctionName),
     Structure(StructName),
+    Schema(Name, Vec<(Name, Kind)>),
 }
 
 pub type SpecBlockTarget = Spanned<SpecBlockTarget_>;
 
-pub type SpecBlock = Spanned<SpecBlock_>;
+#[derive(Debug, PartialEq)]
+pub struct PragmaProperty_ {
+    pub name: Name,
+    pub value: Option<Value>,
+}
+
+pub type PragmaProperty = Spanned<PragmaProperty_>;
+
+#[derive(Debug, PartialEq)]
+pub struct FunctionPattern_ {
+    pub name_pattern: Vec<NamePatternFragment>,
+    pub type_arguments: Option<Vec<Type>>,
+}
+
+pub type FunctionPattern = Spanned<FunctionPattern_>;
+
+#[derive(Debug, PartialEq)]
+pub enum NamePatternFragment_ {
+    Wildcard,
+    NamePart(Name),
+}
+
+pub type NamePatternFragment = Spanned<NamePatternFragment_>;
 
 #[derive(Debug, PartialEq)]
 pub enum SpecBlockMember_ {
@@ -206,6 +231,18 @@ pub enum SpecBlockMember_ {
         type_parameters: Vec<(Name, Kind)>,
         type_: Type,
     },
+    Include {
+        name: ModuleAccess,
+        type_arguments: Option<Vec<Type>>,
+    },
+    Apply {
+        name: ModuleAccess,
+        type_arguments: Option<Vec<Type>>,
+        patterns: Vec<FunctionPattern>,
+    },
+    Pragma {
+        properties: Vec<PragmaProperty>,
+    },
 }
 
 pub type SpecBlockMember = Spanned<SpecBlockMember_>;
@@ -219,6 +256,7 @@ pub enum SpecConditionKind {
     AbortsIf,
     Ensures,
     Requires,
+    RequiresModule,
 }
 
 // Specification invaiant kind.
@@ -792,6 +830,31 @@ impl AstDebug for SpecBlockTarget_ {
             SpecBlockTarget_::Module => w.write("module "),
             SpecBlockTarget_::Function(n) => w.write(&format!("fun {} ", n.0.value)),
             SpecBlockTarget_::Structure(n) => w.write(&format!("struct {} ", n.0.value)),
+            SpecBlockTarget_::Schema(n, tys) => {
+                w.write(&format!("schema {}", n.value));
+                if !tys.is_empty() {
+                    w.write("<");
+                    w.list(tys, ", ", |w, ty| {
+                        ty.ast_debug(w);
+                        true
+                    });
+                    w.write(">");
+                }
+            }
+        }
+    }
+}
+
+impl AstDebug for SpecConditionKind {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            SpecConditionKind::Assert => w.write("assert "),
+            SpecConditionKind::Assume => w.write("assume "),
+            SpecConditionKind::Decreases => w.write("decreases "),
+            SpecConditionKind::AbortsIf => w.write("aborts_if "),
+            SpecConditionKind::Ensures => w.write("ensures "),
+            SpecConditionKind::Requires => w.write("requires "),
+            SpecConditionKind::RequiresModule => w.write("requires module "),
         }
     }
 }
@@ -800,14 +863,7 @@ impl AstDebug for SpecBlockMember_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
             SpecBlockMember_::Condition { kind, exp } => {
-                match kind {
-                    SpecConditionKind::Assert => w.write("assert "),
-                    SpecConditionKind::Assume => w.write("assume "),
-                    SpecConditionKind::Decreases => w.write("decreases "),
-                    SpecConditionKind::AbortsIf => w.write("aborts_if "),
-                    SpecConditionKind::Ensures => w.write("ensures "),
-                    SpecConditionKind::Requires => w.write("requires "),
-                }
+                kind.ast_debug(w);
                 exp.ast_debug(w);
             }
             SpecBlockMember_::Invariant { kind, exp } => {
@@ -846,6 +902,76 @@ impl AstDebug for SpecBlockMember_ {
                 w.write(": ");
                 type_.ast_debug(w);
             }
+            SpecBlockMember_::Include {
+                name,
+                type_arguments,
+            } => {
+                w.write("include ");
+                name.ast_debug(w);
+                if let Some(ty_args) = type_arguments {
+                    w.write("<");
+                    ty_args.ast_debug(w);
+                    w.write(">");
+                }
+            }
+            SpecBlockMember_::Apply {
+                name,
+                type_arguments,
+                patterns,
+            } => {
+                w.write("apply ");
+                name.ast_debug(w);
+                if let Some(ty_args) = type_arguments {
+                    w.write("<");
+                    ty_args.ast_debug(w);
+                    w.write(">");
+                }
+                w.write(" to ");
+                w.list(patterns, ", ", |w, p| {
+                    p.ast_debug(w);
+                    true
+                });
+            }
+            SpecBlockMember_::Pragma { properties } => {
+                w.write("pragma ");
+                w.list(properties, ", ", |w, p| {
+                    p.ast_debug(w);
+                    true
+                });
+            }
+        }
+    }
+}
+
+impl AstDebug for FunctionPattern_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        w.list(&self.name_pattern, "", |w, f| {
+            f.ast_debug(w);
+            true
+        });
+        if let Some(tys) = &self.type_arguments {
+            w.write("<");
+            tys.ast_debug(w);
+            w.write(">");
+        }
+    }
+}
+
+impl AstDebug for NamePatternFragment_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        match self {
+            NamePatternFragment_::Wildcard => w.write("*"),
+            NamePatternFragment_::NamePart(n) => w.write(&n.value),
+        }
+    }
+}
+
+impl AstDebug for PragmaProperty_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        w.write(&self.name.value);
+        if let Some(value) = &self.value {
+            w.write(" = ");
+            value.ast_debug(w);
         }
     }
 }

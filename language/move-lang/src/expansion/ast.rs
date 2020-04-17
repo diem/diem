@@ -4,8 +4,8 @@
 use crate::{
     parser::ast::{
         BinOp, Field, FunctionName, FunctionVisibility, InvariantKind, Kind, ModuleIdent,
-        ModuleName, ResourceLoc, SpecBlockTarget, SpecConditionKind, StructName, UnaryOp, Value,
-        Var,
+        ModuleName, NamePatternFragment, PragmaProperty, ResourceLoc, SpecBlockTarget,
+        SpecConditionKind, StructName, UnaryOp, Value, Var,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
@@ -96,7 +96,14 @@ pub struct Function {
 // Specification Blocks
 //**************************************************************************************************
 
-// Specification block:
+#[derive(Debug, PartialEq)]
+pub struct FunctionPattern_ {
+    pub name_pattern: Vec<NamePatternFragment>,
+    pub type_arguments: Option<Vec<Type>>,
+}
+
+pub type FunctionPattern = Spanned<FunctionPattern_>;
+
 #[derive(Debug, PartialEq)]
 pub struct SpecBlock_ {
     pub target: SpecBlockTarget,
@@ -125,6 +132,18 @@ pub enum SpecBlockMember_ {
         name: Name,
         type_parameters: Vec<(Name, Kind)>,
         type_: Type,
+    },
+    Include {
+        name: ModuleAccess,
+        type_arguments: Option<Vec<Type>>,
+    },
+    Apply {
+        name: ModuleAccess,
+        type_arguments: Option<Vec<Type>>,
+        patterns: Vec<FunctionPattern>,
+    },
+    Pragma {
+        properties: Vec<PragmaProperty>,
     },
 }
 
@@ -415,14 +434,7 @@ impl AstDebug for SpecBlockMember_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
             SpecBlockMember_::Condition { kind, exp } => {
-                match kind {
-                    SpecConditionKind::Assert => w.write("assert "),
-                    SpecConditionKind::Assume => w.write("assume "),
-                    SpecConditionKind::Decreases => w.write("decreases "),
-                    SpecConditionKind::AbortsIf => w.write("aborts_if "),
-                    SpecConditionKind::Ensures => w.write("ensures "),
-                    SpecConditionKind::Requires => w.write("requires "),
-                }
+                kind.ast_debug(w);
                 exp.ast_debug(w);
             }
             SpecBlockMember_::Invariant { kind, exp } => {
@@ -443,7 +455,7 @@ impl AstDebug for SpecBlockMember_ {
                 if let FunctionBody_::Native = &body.value {
                     w.write("native ");
                 }
-                w.write("fun ");
+                w.write("define ");
                 w.write(&format!("{}", name));
                 signature.ast_debug(w);
                 match &body.value {
@@ -456,11 +468,60 @@ impl AstDebug for SpecBlockMember_ {
                 type_parameters,
                 type_,
             } => {
-                w.write(&format!("{}", name));
+                w.write(&format!("global {}", name));
                 type_parameters.ast_debug(w);
                 w.write(": ");
                 type_.ast_debug(w);
             }
+            SpecBlockMember_::Include {
+                name,
+                type_arguments,
+            } => {
+                w.write(&format!("include {}", name));
+                if let Some(ty_args) = type_arguments {
+                    w.write("<");
+                    ty_args.ast_debug(w);
+                    w.write(">");
+                }
+            }
+            SpecBlockMember_::Apply {
+                name,
+                type_arguments,
+                patterns,
+            } => {
+                w.write(&format!("apply {}", name));
+                if let Some(ty_args) = type_arguments {
+                    w.write("<");
+                    ty_args.ast_debug(w);
+                    w.write(">");
+                }
+                w.write(" to ");
+                w.list(patterns, ", ", |w, p| {
+                    p.ast_debug(w);
+                    true
+                });
+            }
+            SpecBlockMember_::Pragma { properties } => {
+                w.write("pragma ");
+                w.list(properties, ", ", |w, p| {
+                    p.ast_debug(w);
+                    true
+                });
+            }
+        }
+    }
+}
+
+impl AstDebug for FunctionPattern_ {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        w.list(&self.name_pattern, "", |w, f| {
+            f.ast_debug(w);
+            true
+        });
+        if let Some(tys) = &self.type_arguments {
+            w.write("<");
+            tys.ast_debug(w);
+            w.write(">");
         }
     }
 }

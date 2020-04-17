@@ -713,6 +713,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 }
             }
             PA::SpecBlockTarget_::Module => Some(SpecBlockContext::Module),
+            PA::SpecBlockTarget_::Schema(..) => unimplemented!(),
         }
     }
 }
@@ -982,6 +983,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     signature, body, ..
                 } => self.def_ana_spec_fun(signature, body),
                 Variable { .. } => { /* nothing to do right now */ }
+                Include { .. } | Apply { .. } | Pragma { .. } => unimplemented!(),
             }
         }
     }

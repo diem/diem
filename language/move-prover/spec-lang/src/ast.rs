@@ -65,6 +65,7 @@ impl SpecConditionKind {
             PA::SpecConditionKind::Ensures => Ensures,
             PA::SpecConditionKind::Requires => Requires,
             PA::SpecConditionKind::AbortsIf => AbortsIf,
+            PA::SpecConditionKind::RequiresModule => unimplemented!(),
         }
     }
 
