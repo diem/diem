@@ -170,7 +170,7 @@ impl ConsensusDB {
     /// Get all consensus blocks.
     fn get_blocks<T: Payload>(&self) -> Result<HashMap<HashValue, Block<T>>> {
         let mut iter = self.db.iter::<BlockSchema<T>>(ReadOptions::default())?;
-        iter.seek_to_first()?;
+        iter.seek_to_first();
         iter.map(|value| value.and_then(|(k, v)| Ok((k, v.borrow_into_block().clone()))))
             .collect::<Result<HashMap<HashValue, Block<T>>>>()
     }
@@ -178,7 +178,7 @@ impl ConsensusDB {
     /// Get all consensus QCs.
     fn get_quorum_certificates(&self) -> Result<HashMap<HashValue, QuorumCert>> {
         let mut iter = self.db.iter::<QCSchema>(ReadOptions::default())?;
-        iter.seek_to_first()?;
+        iter.seek_to_first();
         iter.collect::<Result<HashMap<HashValue, QuorumCert>>>()
     }
 }

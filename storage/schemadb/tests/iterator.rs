@@ -125,7 +125,7 @@ impl std::ops::Deref for TestDB {
 fn test_seek_to_first() {
     let db = TestDB::new();
     let mut iter = db.iter();
-    iter.seek_to_first().unwrap();
+    iter.seek_to_first();
     assert_eq!(
         collect_values(iter),
         [100, 102, 104, 110, 112, 114, 200, 202]
@@ -136,7 +136,7 @@ fn test_seek_to_first() {
 fn test_seek_to_last() {
     let db = TestDB::new();
     let mut iter = db.iter();
-    iter.seek_to_last().unwrap();
+    iter.seek_to_last();
     assert_eq!(collect_values(iter), [202]);
 }
 
