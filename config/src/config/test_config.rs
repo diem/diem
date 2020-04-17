@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::keys::KeyPair;
-use libra_crypto::{ed25519::Ed25519PrivateKey, Uniform};
+use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_temppath::TempPath;
-use libra_types::on_chain_config::VMPublishingOption;
+use libra_types::{
+    on_chain_config::VMPublishingOption, transaction::authenticator::AuthenticationKey,
+};
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -14,6 +16,7 @@ type ConsensusKeyPair = KeyPair<Ed25519PrivateKey>;
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct TestConfig {
+    pub auth_key: Option<AuthenticationKey>,
     pub account_keypair: Option<AccountKeyPair>,
     pub consensus_keypair: Option<ConsensusKeyPair>,
     // Used only to prevent a potentially temporary data_dir from being deleted. This should
@@ -28,6 +31,7 @@ pub struct TestConfig {
 impl Clone for TestConfig {
     fn clone(&self) -> Self {
         Self {
+            auth_key: self.auth_key,
             account_keypair: self.account_keypair.clone(),
             consensus_keypair: self.consensus_keypair.clone(),
             temp_dir: None,
@@ -40,12 +44,14 @@ impl PartialEq for TestConfig {
     fn eq(&self, other: &Self) -> bool {
         self.account_keypair == other.account_keypair
             && self.consensus_keypair == other.consensus_keypair
+            && self.auth_key == other.auth_key
     }
 }
 
 impl TestConfig {
     pub fn open_module() -> Self {
         Self {
+            auth_key: None,
             account_keypair: None,
             consensus_keypair: None,
             temp_dir: None,
@@ -57,6 +63,7 @@ impl TestConfig {
         let temp_dir = TempPath::new();
         temp_dir.create_as_dir().expect("error creating tempdir");
         Self {
+            auth_key: None,
             account_keypair: None,
             consensus_keypair: None,
             temp_dir: Some(temp_dir),
@@ -66,6 +73,7 @@ impl TestConfig {
 
     pub fn random_account_key(&mut self, rng: &mut StdRng) {
         let privkey = Ed25519PrivateKey::generate(rng);
+        self.auth_key = Some(AuthenticationKey::ed25519(&privkey.public_key()));
         self.account_keypair = Some(AccountKeyPair::load(privkey));
     }
 
@@ -106,6 +114,7 @@ mod test {
         // Copy keys across configs
         clone_test_config.account_keypair = test_config.account_keypair.clone();
         clone_test_config.consensus_keypair = test_config.consensus_keypair.clone();
+        clone_test_config.auth_key = test_config.auth_key;
 
         // Verify both configs are identical
         assert_eq!(clone_test_config, test_config);

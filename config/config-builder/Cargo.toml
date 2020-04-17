@@ -30,3 +30,7 @@ libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0"
 libradb = { path = "../../storage/libradb", version = "0.1.0" }
 storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
 vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }
+
+[features]
+default = []
+fuzzing = ["libra-config/fuzzing"]

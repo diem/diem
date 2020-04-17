@@ -66,6 +66,9 @@ address = "127.0.0.1:6184"
 dir = "libradb/db"
 grpc_max_receive_len = 100000000
 
+[test]
+auth_key = "837e3b2b2b32ee2543c24676ee66326431893204fa402143c11b26ce8a89ea1d"
+
 [test.account_keypair]
 private_key = "f6b898412f4ab061943167c1e23efaa2ba98e345a093f0b06da13bffdbd4b2c7"
 public_key = "5cea31ed5918cbdac5f5c4e782d295c0b3033ed5d0eac941e8ea8bb0ab4480a3"

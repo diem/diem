@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::AccountAddress;
-use anyhow::{ensure, Error, Result};
+use anyhow::{Error, Result};
 use libra_crypto::{
     ed25519::{Ed25519PublicKey, Ed25519Signature},
     multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature},
     traits::Signature,
-    HashValue,
+    CryptoMaterialError, HashValue, ValidKey, ValidKeyStringExt,
 };
-use libra_crypto_derive::CryptoHasher;
+use libra_crypto_derive::{CryptoHasher, DeserializeKey, SerializeKey};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use rand::{rngs::OsRng, Rng};
@@ -133,7 +133,19 @@ impl TransactionAuthenticator {
 
 /// A struct that represents an account authentication key. An account's address is the last 16
 /// bytes of authentication key used to create it
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash, Clone, Copy, CryptoHasher)]
+#[derive(
+    Clone,
+    Copy,
+    CryptoHasher,
+    Debug,
+    DeserializeKey,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    SerializeKey,
+)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AuthenticationKey([u8; AuthenticationKey::LENGTH]);
 
@@ -195,6 +207,12 @@ impl AuthenticationKey {
     }
 }
 
+impl ValidKey for AuthenticationKey {
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_vec()
+    }
+}
+
 /// A value that can be hashed to produce an authentication key
 pub struct AuthenticationKeyPreimage(Vec<u8>);
 
@@ -239,14 +257,12 @@ impl fmt::Display for TransactionAuthenticator {
 }
 
 impl TryFrom<&[u8]> for AuthenticationKey {
-    type Error = Error;
+    type Error = CryptoMaterialError;
 
-    fn try_from(bytes: &[u8]) -> Result<AuthenticationKey> {
-        ensure!(
-            bytes.len() == Self::LENGTH,
-            "The authentication key {:?} is of invalid length",
-            bytes
-        );
+    fn try_from(bytes: &[u8]) -> std::result::Result<AuthenticationKey, CryptoMaterialError> {
+        if bytes.len() != Self::LENGTH {
+            return Err(CryptoMaterialError::WrongLengthError);
+        }
         let mut addr = [0u8; Self::LENGTH];
         addr.copy_from_slice(bytes);
         Ok(AuthenticationKey(addr))
@@ -254,9 +270,9 @@ impl TryFrom<&[u8]> for AuthenticationKey {
 }
 
 impl TryFrom<Vec<u8>> for AuthenticationKey {
-    type Error = Error;
+    type Error = CryptoMaterialError;
 
-    fn try_from(bytes: Vec<u8>) -> Result<AuthenticationKey> {
+    fn try_from(bytes: Vec<u8>) -> std::result::Result<AuthenticationKey, CryptoMaterialError> {
         AuthenticationKey::try_from(&bytes[..])
     }
 }
@@ -267,7 +283,8 @@ impl FromStr for AuthenticationKey {
     fn from_str(s: &str) -> Result<Self> {
         assert!(!s.is_empty());
         let bytes_out = ::hex::decode(s)?;
-        AuthenticationKey::try_from(bytes_out.as_slice())
+        let key = AuthenticationKey::try_from(bytes_out.as_slice())?;
+        Ok(key)
     }
 }
 
