@@ -101,7 +101,7 @@ impl JsonRpcClient {
     pub fn get_account_state(
         &self,
         account: AccountAddress,
-        version: u64,
+        version: Option<u64>,
     ) -> Result<AccountState, Error> {
         let response = self.get_account_state_with_proof(account, version, version)?;
         match response.status() {
@@ -147,7 +147,7 @@ impl JsonRpcClient {
 
     // Sends a submit() request to the JSON RPC server using the given transaction.
     fn submit_transaction(&self, signed_transaction: SignedTransaction) -> Result<Response, Error> {
-        let method = "submit".to_string();
+        let method = "submit".into();
         let params = vec![Value::String(hex::encode(lcs::to_bytes(
             &signed_transaction,
         )?))];
@@ -155,18 +155,18 @@ impl JsonRpcClient {
     }
 
     // Sends a get_account_state_with_proof() request to the JSON RPC server for the specified
-    // account, version height and ledger_version height (for the proof).
+    // account, optional version height and optional ledger_version height (for the proof).
     fn get_account_state_with_proof(
         &self,
         account: AccountAddress,
-        version: u64,
-        ledger_version: u64,
+        version: Option<u64>,
+        ledger_version: Option<u64>,
     ) -> Result<Response, Error> {
-        let method = "get_account_state_with_proof".to_string();
+        let method = "get_account_state_with_proof".into();
         let params = vec![
             Value::String(account.to_string()),
-            Value::Number(version.into()),
-            Value::Number(ledger_version.into()),
+            json!(version),
+            json!(ledger_version),
         ];
         Ok(self.execute_request(method, params))
     }
@@ -344,7 +344,28 @@ mod test {
         let (client, _server) = create_client_and_server(mock_db, true);
 
         // Ensure the client returns the correct AccountState
-        let result = client.get_account_state(account, version_height);
+        let result = client.get_account_state(account, Some(version_height));
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), account_state);
+    }
+
+    #[test]
+    fn test_get_account_state_version_not_specified() {
+        // Create test account state data
+        let account = AccountAddress::random();
+        let account_state = create_test_account_state();
+        let account_state_with_proof = create_test_state_with_proof(&account_state, 0);
+
+        // Create an account to account_state_with_proof mapping
+        let mut map = BTreeMap::new();
+        map.insert(account, account_state_with_proof);
+
+        // Populate the test database with the test data and create the client/server
+        let mock_db = MockLibraDB::new(map);
+        let (client, _server) = create_client_and_server(mock_db, true);
+
+        // Ensure the client returns the latest AccountState (even though no version was specified)
+        let result = client.get_account_state(account, None);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), account_state);
     }
@@ -356,7 +377,7 @@ mod test {
 
         // Ensure the client returns an error for a missing AccountState
         let account = AccountAddress::random();
-        let result = client.get_account_state(account, 0);
+        let result = client.get_account_state(account, Some(0));
         assert!(result.is_err());
     }
 
@@ -378,7 +399,7 @@ mod test {
         let (client, _server) = create_client_and_server(mock_db, true);
 
         // Ensure the client returns an error for the missing AccountState
-        let result = client.get_account_state(account, version_height);
+        let result = client.get_account_state(account, Some(version_height));
         assert!(result.is_err());
     }
 
@@ -586,7 +607,7 @@ mod test {
             if let Some(account_state_proof) = self.account_states_with_proof.get(&address) {
                 Ok(account_state_proof.clone())
             } else {
-                Err(NotFound("AccountStateWithProof".to_string()).into())
+                Err(NotFound("AccountStateWithProof".into()).into())
             }
         }
 
