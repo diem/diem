@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{prelude::*, LintContext};
-use std::{ffi::OsStr, fs, path::Path};
+use std::{ffi::OsStr, fs, io, path::Path};
 
 /// Contains information for a single file.
 #[derive(Clone, Debug)]
@@ -37,17 +37,33 @@ impl<'l> FileContext<'l> {
 
     /// Loads this file and turns it into a `ContentContext`.
     ///
+    /// Returns `None` if the file is missing.
+    ///
     /// `pub(super)` is to dissuade individual linters from loading file contexts.
-    pub(super) fn load(self) -> Result<ContentContext<'l>> {
+    pub(super) fn load(self) -> Result<Option<ContentContext<'l>>> {
         let full_path = self.project_ctx.full_path(self.file_path);
-        let content = fs::read(&full_path)
+        let contents_opt = read_file(&full_path)
             .map_err(|err| SystemError::io(format!("loading {}", full_path.display()), err))?;
-        Ok(ContentContext::new(self, content))
+        Ok(contents_opt.map(|content| ContentContext::new(self, content)))
     }
 }
 
 impl<'l> LintContext<'l> for FileContext<'l> {
     fn kind(&self) -> LintKind<'l> {
         LintKind::File(self.file_path)
+    }
+}
+
+fn read_file(full_path: &Path) -> io::Result<Option<Vec<u8>>> {
+    match fs::read(full_path) {
+        Ok(bytes) => Ok(Some(bytes)),
+        Err(err) => {
+            if err.kind() == io::ErrorKind::NotFound {
+                // Files can be listed by source control but missing -- this is normal.
+                Ok(None)
+            } else {
+                Err(err)
+            }
+        }
     }
 }

@@ -170,7 +170,13 @@ impl<'cfg> LintEngine<'cfg> {
                 }
 
                 // Load up the content for this file.
-                let content_ctx = file_ctx.load()?;
+                let content_ctx = match file_ctx.load()? {
+                    Some(content_ctx) => content_ctx,
+                    None => {
+                        // This file is missing -- can't run content linters on it.
+                        continue;
+                    }
+                };
 
                 for linter in linters_to_run {
                     let source = content_ctx.source(linter.name());
