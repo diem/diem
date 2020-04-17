@@ -1751,6 +1751,7 @@ fn parse_spec_apply<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMembe
     } else {
         vec![]
     };
+    consume_token(tokens, Tok::Semicolon)?;
     Ok(spanned(
         tokens.file_name(),
         start_loc,
@@ -1771,14 +1772,12 @@ fn parse_function_pattern<'input>(tokens: &mut Lexer<'input>) -> Result<Function
     let public_opt = consume_optional_token_with_loc(tokens, Tok::Public)?;
     let visibility = if let Some(loc) = public_opt {
         Some(FunctionVisibility::Public(loc))
+    } else if tokens.peek() == Tok::NameValue && tokens.content() == "internal" {
+        // Its not ideal right now that we do not have a loc here, but acceptable for what
+        // we are doing with this in specs.
+        Some(FunctionVisibility::Internal)
     } else {
-        if tokens.peek() == Tok::NameValue && tokens.content() == "internal" {
-            // Its not ideal right now that we do not have a loc here, but acceptable for what
-            // we are doing with this in specs.
-            Some(FunctionVisibility::Internal)
-        } else {
-            None
-        }
+        None
     };
     let name_pattern = parse_list(
         tokens,
