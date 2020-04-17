@@ -127,6 +127,7 @@ module M {
 
     spec module {
         apply ModuleInvariant<X, Y> to *foo*<Y, X>;
+        apply ModuleInvariant<X, Y> to *foo*<Y, X>, bar except public *, internal baz<X>;
         pragma do_not_verify, timeout = 60;
     }
 }

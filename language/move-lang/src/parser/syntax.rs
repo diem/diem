@@ -189,11 +189,11 @@ where
 // the passed function `parse_list_continue`.
 fn parse_list<'input, C, F, R>(
     tokens: &mut Lexer<'input>,
-    parse_list_continue: C,
+    mut parse_list_continue: C,
     parse_list_item: F,
 ) -> Result<Vec<R>, Error>
 where
-    C: Fn(&mut Lexer<'input>) -> Result<bool, Error>,
+    C: FnMut(&mut Lexer<'input>) -> Result<bool, Error>,
     F: Fn(&mut Lexer<'input>) -> Result<R, Error>,
 {
     let mut v = vec![];
@@ -1722,8 +1722,8 @@ fn parse_spec_include<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMem
 
 // Parse a specification schema apply.
 //    SpecApply = "apply" <ModuleAccess> <OptionalTypeArgs>
-//                 "to" Comma<FunctionPattern>
-//                 ( "except" Comma<FunctionPattern> )? ";"
+//                 "to" Comma<SpecApplyPattern>
+//                 ( "except" Comma<SpecApplyPattern> )? ";"
 fn parse_spec_apply<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
     let start_loc = tokens.start_loc();
     consume_name_value(tokens, "apply")?;
@@ -1741,7 +1741,7 @@ fn parse_spec_apply<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMembe
                     Ok(false)
                 }
             },
-            parse_function_pattern,
+            parse_spec_apply_pattern,
         )
     };
     let patterns = parse_patterns(tokens)?;
@@ -1766,8 +1766,8 @@ fn parse_spec_apply<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMembe
 }
 
 // Parse a function pattern:
-//     FunctionPattern = <NamePatternFragment>+ <OptionalTypeArgs>
-fn parse_function_pattern<'input>(tokens: &mut Lexer<'input>) -> Result<FunctionPattern, Error> {
+//     SpecApplyPattern = <SpecApplyFragment>+ <OptionalTypeArgs>
+fn parse_spec_apply_pattern<'input>(tokens: &mut Lexer<'input>) -> Result<SpecApplyPattern, Error> {
     let start_loc = tokens.start_loc();
     let public_opt = consume_optional_token_with_loc(tokens, Tok::Public)?;
     let visibility = if let Some(loc) = public_opt {
@@ -1775,21 +1775,30 @@ fn parse_function_pattern<'input>(tokens: &mut Lexer<'input>) -> Result<Function
     } else if tokens.peek() == Tok::NameValue && tokens.content() == "internal" {
         // Its not ideal right now that we do not have a loc here, but acceptable for what
         // we are doing with this in specs.
+        tokens.advance()?;
         Some(FunctionVisibility::Internal)
     } else {
         None
     };
+    let mut last_end = tokens.start_loc() + tokens.content().len();
     let name_pattern = parse_list(
         tokens,
-        |tokens| Ok([Tok::NameValue, Tok::Star].contains(&tokens.peek())),
-        parse_name_pattern_fragment,
+        |tokens| {
+            // We need name fragments followed by each other without space. So we do some
+            // magic here similar as with `>>` based on token distance.
+            let start_loc = tokens.start_loc();
+            let adjacent = last_end == start_loc;
+            last_end = start_loc + tokens.content().len();
+            Ok(adjacent && [Tok::NameValue, Tok::Star].contains(&tokens.peek()))
+        },
+        parse_spec_apply_fragment,
     )?;
     let type_arguments = parse_optional_type_args(tokens)?;
     Ok(spanned(
         tokens.file_name(),
         start_loc,
         tokens.previous_end_loc(),
-        FunctionPattern_ {
+        SpecApplyPattern_ {
             visibility,
             name_pattern,
             type_arguments,
@@ -1798,16 +1807,16 @@ fn parse_function_pattern<'input>(tokens: &mut Lexer<'input>) -> Result<Function
 }
 
 // Parse a name pattern fragment:
-//     NamePatternFragment = <Name> | "*"
-fn parse_name_pattern_fragment<'input>(
+//     SpecApplyFragment = <Name> | "*"
+fn parse_spec_apply_fragment<'input>(
     tokens: &mut Lexer<'input>,
-) -> Result<NamePatternFragment, Error> {
+) -> Result<SpecApplyFragment, Error> {
     let start_loc = tokens.start_loc();
     let fragment = match tokens.peek() {
-        Tok::NameValue => NamePatternFragment_::NamePart(parse_name(tokens)?),
+        Tok::NameValue => SpecApplyFragment_::NamePart(parse_name(tokens)?),
         Tok::Star => {
             tokens.advance()?;
-            NamePatternFragment_::Wildcard
+            SpecApplyFragment_::Wildcard
         }
         _ => return Err(unexpected_token_error(tokens, "a name fragment or `*`")),
     };

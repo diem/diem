@@ -196,21 +196,21 @@ pub struct PragmaProperty_ {
 pub type PragmaProperty = Spanned<PragmaProperty_>;
 
 #[derive(Debug, PartialEq)]
-pub struct FunctionPattern_ {
+pub struct SpecApplyPattern_ {
     pub visibility: Option<FunctionVisibility>,
-    pub name_pattern: Vec<NamePatternFragment>,
+    pub name_pattern: Vec<SpecApplyFragment>,
     pub type_arguments: Option<Vec<Type>>,
 }
 
-pub type FunctionPattern = Spanned<FunctionPattern_>;
+pub type SpecApplyPattern = Spanned<SpecApplyPattern_>;
 
 #[derive(Debug, PartialEq)]
-pub enum NamePatternFragment_ {
+pub enum SpecApplyFragment_ {
     Wildcard,
     NamePart(Name),
 }
 
-pub type NamePatternFragment = Spanned<NamePatternFragment_>;
+pub type SpecApplyFragment = Spanned<SpecApplyFragment_>;
 
 #[derive(Debug, PartialEq)]
 pub enum SpecBlockMember_ {
@@ -239,8 +239,8 @@ pub enum SpecBlockMember_ {
     Apply {
         name: ModuleAccess,
         type_arguments: Option<Vec<Type>>,
-        patterns: Vec<FunctionPattern>,
-        exclusion_patterns: Vec<FunctionPattern>,
+        patterns: Vec<SpecApplyPattern>,
+        exclusion_patterns: Vec<SpecApplyPattern>,
     },
     Pragma {
         properties: Vec<PragmaProperty>,
@@ -953,7 +953,7 @@ impl AstDebug for SpecBlockMember_ {
     }
 }
 
-impl AstDebug for FunctionPattern_ {
+impl AstDebug for SpecApplyPattern_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         w.list(&self.name_pattern, "", |w, f| {
             f.ast_debug(w);
@@ -967,11 +967,11 @@ impl AstDebug for FunctionPattern_ {
     }
 }
 
-impl AstDebug for NamePatternFragment_ {
+impl AstDebug for SpecApplyFragment_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
-            NamePatternFragment_::Wildcard => w.write("*"),
-            NamePatternFragment_::NamePart(n) => w.write(&n.value),
+            SpecApplyFragment_::Wildcard => w.write("*"),
+            SpecApplyFragment_::NamePart(n) => w.write(&n.value),
         }
     }
 }
