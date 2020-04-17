@@ -58,12 +58,12 @@ pub fun Vector::contains<$tv0>(v: &vector<#0>, e: &#0): bool {
     var $t15: &vector<#0>
     var $t16: &#0
     var $t17: bool
-    var $t18: &vector<#0>
-    var $t19: &#0
-    var $t20: bool
-    var $t21: u64
-    var $t22: u64
-    var $t23: u64
+    var $t18: u64
+    var $t19: u64
+    var $t20: u64
+    var $t21: &vector<#0>
+    var $t22: &#0
+    var $t23: bool
     $t4 := 0
     i := $t4
     $t5 := copy(v)
@@ -83,26 +83,26 @@ pub fun Vector::contains<$tv0>(v: &vector<#0>, e: &#0): bool {
     $t14 := ==($t12, $t13)
     if ($t14) goto L2
     goto L3
-    L1:
+    L2:
     $t15 := move(v)
     destroy($t15)
     $t16 := move(e)
     destroy($t16)
-    $t17 := false
+    $t17 := true
     return $t17
-    L2:
-    $t18 := move(v)
-    destroy($t18)
-    $t19 := move(e)
-    destroy($t19)
-    $t20 := true
-    return $t20
     L3:
-    $t21 := copy(i)
-    $t22 := 1
-    $t23 := +($t21, $t22)
-    i := $t23
+    $t18 := copy(i)
+    $t19 := 1
+    $t20 := +($t18, $t19)
+    i := $t20
     goto L4
+    L1:
+    $t21 := move(v)
+    destroy($t21)
+    $t22 := move(e)
+    destroy($t22)
+    $t23 := false
+    return $t23
 }
 
 

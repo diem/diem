@@ -470,7 +470,7 @@ fn function_body(
     parameters: Vec<(Var, H::SingleType)>,
     mut locals_map: UniqueMap<Var, H::SingleType>,
     start: H::Label,
-    blocks: H::BasicBlocks,
+    blocks_map: H::BasicBlocks,
 ) -> (Vec<(IR::Var, IR::Type)>, IR::BytecodeBlocks) {
     parameters
         .iter()
@@ -479,6 +479,8 @@ fn function_body(
         .into_iter()
         .map(|(v, ty)| (var(v), single_type(context, ty)))
         .collect();
+    let mut blocks = blocks_map.into_iter().collect::<Vec<_>>();
+    blocks.sort_by_key(|(lbl, _)| *lbl);
 
     let mut bytecode_blocks = Vec::new();
     for (idx, (lbl, basic_block)) in blocks.into_iter().enumerate() {

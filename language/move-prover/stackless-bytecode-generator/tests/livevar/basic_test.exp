@@ -69,11 +69,11 @@ fun TestLiveVars::test3(n: u64, r_ref: &TestLiveVars::R): u64 {
     var $t15: u64
     var $t16: bool
     var $t17: &TestLiveVars::R
-    var $t18: u64
-    var $t19: &TestLiveVars::R
-    var $t20: &TestLiveVars::R
+    var $t18: &TestLiveVars::R
+    var $t19: u64
+    var $t20: u64
     var $t21: u64
-    var $t22: u64
+    var $t22: &TestLiveVars::R
     var $t23: u64
     $t4 := 3
     $t5 := pack TestLiveVars::R($t4)
@@ -97,23 +97,23 @@ fun TestLiveVars::test3(n: u64, r_ref: &TestLiveVars::R): u64 {
     $t16 := ==($t14, $t15)
     if ($t16) goto L2
     goto L3
-    L1:
-    $t17 := move(r_ref)
-    $t18 := TestLiveVars::test1($t17)
-    return $t18
     L2:
-    $t19 := borrow_local(r1)
-    r_ref := $t19
+    $t17 := borrow_local(r1)
+    r_ref := $t17
     goto L4
     L3:
-    $t20 := borrow_local(r2)
-    r_ref := $t20
+    $t18 := borrow_local(r2)
+    r_ref := $t18
     L4:
-    $t21 := copy(n)
-    $t22 := 1
-    $t23 := -($t21, $t22)
-    n := $t23
+    $t19 := copy(n)
+    $t20 := 1
+    $t21 := -($t19, $t20)
+    n := $t21
     goto L5
+    L1:
+    $t22 := move(r_ref)
+    $t23 := TestLiveVars::test1($t22)
+    return $t23
 }
 
 ============ after pipeline `livevar` ================
@@ -213,11 +213,11 @@ fun TestLiveVars::test3(n: u64, r_ref: &TestLiveVars::R): u64 {
     var $t15: u64
     var $t16: bool
     var $t17: &TestLiveVars::R
-    var $t18: u64
-    var $t19: &TestLiveVars::R
-    var $t20: &TestLiveVars::R
+    var $t18: &TestLiveVars::R
+    var $t19: u64
+    var $t20: u64
     var $t21: u64
-    var $t22: u64
+    var $t22: &TestLiveVars::R
     var $t23: u64
     // live vars: n, r_ref
     $t4 := 3
@@ -263,38 +263,38 @@ fun TestLiveVars::test3(n: u64, r_ref: &TestLiveVars::R): u64 {
     if ($t16) goto L2
     // live vars: n, r1, r2
     goto L3
-    // live vars: r_ref
-    L1:
-    // live vars: r_ref
-    $t17 := move(r_ref)
-    // live vars: $t17
-    $t18 := TestLiveVars::test1($t17)
-    // live vars: $t18
-    return $t18
     // live vars: n, r1, r2
     L2:
     // live vars: n, r1, r2
-    $t19 := borrow_local(r1)
-    // live vars: n, r1, r2, $t19
-    r_ref := $t19
+    $t17 := borrow_local(r1)
+    // live vars: n, r1, r2, $t17
+    r_ref := $t17
     // live vars: n, r_ref, r1, r2
     goto L4
     // live vars: n, r1, r2
     L3:
     // live vars: n, r1, r2
-    $t20 := borrow_local(r2)
-    // live vars: n, r1, r2, $t20
-    r_ref := $t20
+    $t18 := borrow_local(r2)
+    // live vars: n, r1, r2, $t18
+    r_ref := $t18
     // live vars: n, r_ref, r1, r2
     L4:
     // live vars: n, r_ref, r1, r2
-    $t21 := copy(n)
+    $t19 := copy(n)
+    // live vars: r_ref, r1, r2, $t19
+    $t20 := 1
+    // live vars: r_ref, r1, r2, $t19, $t20
+    $t21 := -($t19, $t20)
     // live vars: r_ref, r1, r2, $t21
-    $t22 := 1
-    // live vars: r_ref, r1, r2, $t21, $t22
-    $t23 := -($t21, $t22)
-    // live vars: r_ref, r1, r2, $t23
-    n := $t23
+    n := $t21
     // live vars: n, r_ref, r1, r2
     goto L5
+    // live vars: r_ref
+    L1:
+    // live vars: r_ref
+    $t22 := move(r_ref)
+    // live vars: $t22
+    $t23 := TestLiveVars::test1($t22)
+    // live vars: $t23
+    return $t23
 }

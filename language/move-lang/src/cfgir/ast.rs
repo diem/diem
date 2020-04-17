@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    hlir::ast::{Command, FunctionSignature, Label, SingleType, StructDefinition},
+    hlir::ast::{Command, Command_, FunctionSignature, Label, SingleType, StructDefinition},
     parser::ast::{FunctionName, FunctionVisibility, ModuleIdent, StructName, Var},
     shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
@@ -64,6 +64,46 @@ pub struct Function {
 pub type BasicBlocks = BTreeMap<Label, BasicBlock>;
 
 pub type BasicBlock = VecDeque<Command>;
+
+//**************************************************************************************************
+// Label util
+//**************************************************************************************************
+
+pub fn remap_labels(
+    remapping: &BTreeMap<Label, Label>,
+    start: Label,
+    blocks: BasicBlocks,
+) -> (Label, BasicBlocks) {
+    let blocks = blocks
+        .into_iter()
+        .map(|(lbl, mut block)| {
+            remap_labels_block(remapping, &mut block);
+            (remapping[&lbl], block)
+        })
+        .collect();
+    (remapping[&start], blocks)
+}
+
+fn remap_labels_block(remapping: &BTreeMap<Label, Label>, block: &mut BasicBlock) {
+    for cmd in block {
+        remap_labels_cmd(remapping, cmd)
+    }
+}
+
+fn remap_labels_cmd(remapping: &BTreeMap<Label, Label>, sp!(_, cmd_): &mut Command) {
+    use Command_::*;
+    match cmd_ {
+        Break | Continue => panic!("ICE break/continue not translated to jumps"),
+        Mutate(_, _) | Assign(_, _) | IgnoreAndPop { .. } | Abort(_) | Return(_) => (),
+        Jump(lbl) => *lbl = remapping[lbl],
+        JumpIf {
+            if_true, if_false, ..
+        } => {
+            *if_true = remapping[if_true];
+            *if_false = remapping[if_false];
+        }
+    }
+}
 
 //**************************************************************************************************
 // Debug
