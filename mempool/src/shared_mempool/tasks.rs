@@ -252,12 +252,14 @@ where
                     None => {
                         let gas_amount = transaction.max_gas_amount();
                         let rankin_score = validation_result.score();
+                        let is_governance_txn = validation_result.is_governance_txn();
                         let mempool_status = mempool.add_txn(
                             transaction,
                             gas_amount,
                             rankin_score,
                             sequence_number,
                             timeline_state,
+                            is_governance_txn,
                         );
                         statuses.push((mempool_status, None));
                     }

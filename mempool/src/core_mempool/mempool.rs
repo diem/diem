@@ -111,6 +111,7 @@ impl Mempool {
         rankin_score: u64,
         db_sequence_number: u64,
         timeline_state: TimelineState,
+        is_governance_txn: bool,
     ) -> MempoolStatus {
         trace_event!("mempool::add_txn", {"txn", txn.sender(), txn.sequence_number()});
         trace!(
@@ -152,6 +153,7 @@ impl Mempool {
             gas_amount,
             rankin_score,
             timeline_state,
+            is_governance_txn,
         );
 
         let status = self.transactions.insert(txn_info, sequence_number);

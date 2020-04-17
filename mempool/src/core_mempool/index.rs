@@ -53,6 +53,7 @@ impl PriorityIndex {
             expiration_time: txn.expiration_time,
             address: txn.get_sender(),
             sequence_number: txn.get_sequence_number(),
+            is_governance_txn: txn.is_governance_txn,
         }
     }
 
@@ -72,6 +73,7 @@ pub struct OrderedQueueKey {
     pub expiration_time: Duration,
     pub address: AccountAddress,
     pub sequence_number: u64,
+    pub is_governance_txn: bool,
 }
 
 impl PartialOrd for OrderedQueueKey {
@@ -82,6 +84,10 @@ impl PartialOrd for OrderedQueueKey {
 
 impl Ord for OrderedQueueKey {
     fn cmp(&self, other: &OrderedQueueKey) -> Ordering {
+        match self.is_governance_txn.cmp(&other.is_governance_txn) {
+            Ordering::Equal => {}
+            ordering => return ordering,
+        }
         match self.gas_ranking_score.cmp(&other.gas_ranking_score) {
             Ordering::Equal => {}
             ordering => return ordering,

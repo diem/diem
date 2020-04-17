@@ -21,14 +21,21 @@ pub(crate) fn setup_mempool() -> (CoreMempool, ConsensusMock) {
     )
 }
 
-static ACCOUNTS: Lazy<Vec<AccountAddress>> =
-    Lazy::new(|| vec![AccountAddress::random(), AccountAddress::random()]);
+static ACCOUNTS: Lazy<Vec<AccountAddress>> = Lazy::new(|| {
+    vec![
+        AccountAddress::random(),
+        AccountAddress::random(),
+        AccountAddress::random(),
+        AccountAddress::random(),
+    ]
+});
 
 #[derive(Clone)]
 pub struct TestTransaction {
     pub(crate) address: usize,
     pub(crate) sequence_number: u64,
-    gas_price: u64,
+    pub(crate) gas_price: u64,
+    pub(crate) is_governance_txn: bool,
 }
 
 impl TestTransaction {
@@ -37,6 +44,7 @@ impl TestTransaction {
             address,
             sequence_number,
             gas_price,
+            is_governance_txn: false,
         }
     }
 
@@ -103,6 +111,7 @@ pub(crate) fn add_txns_to_mempool(
             txn.gas_unit_price(),
             0,
             TimelineState::NotReady,
+            transaction.is_governance_txn,
         );
         transactions.push(txn);
     }
@@ -121,6 +130,7 @@ pub(crate) fn add_signed_txn(pool: &mut CoreMempool, transaction: SignedTransact
             transaction.gas_unit_price(),
             0,
             TimelineState::NotReady,
+            false,
         )
         .code
     {

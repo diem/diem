@@ -249,7 +249,7 @@ fn test_get_account_state() {
         .unwrap()
         .expect("account does not exist");
     assert_eq!(
-        account.balance,
+        account.balance.amount,
         expected_resource
             .get_balance_resource()
             .unwrap()
@@ -285,7 +285,7 @@ fn test_get_account_state() {
             .unwrap()
             .expect("account does not exist");
         assert_eq!(
-            account.balance,
+            account.balance.amount,
             states[idx].get_balance_resource().unwrap().unwrap().coin()
         );
         assert_eq!(

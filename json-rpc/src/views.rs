@@ -6,7 +6,10 @@ use anyhow::{format_err, Error, Result};
 use hex;
 use libra_crypto::HashValue;
 use libra_types::{
-    account_config::{AccountResource, BalanceResource, ReceivedPaymentEvent, SentPaymentEvent},
+    account_config::{
+        AccountResource, BalanceResource, CurrencyInfoResource, ReceivedPaymentEvent,
+        SentPaymentEvent,
+    },
     account_state_blob::AccountStateWithProof,
     contract_event::ContractEvent,
     language_storage::TypeTag,
@@ -17,6 +20,7 @@ use libra_types::{
     validator_change::ValidatorChangeProof,
     vm_error::StatusCode,
 };
+use move_core_types::identifier::IdentStr;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use transaction_builder::get_transaction_name;
@@ -42,8 +46,23 @@ pub trait ResponseAsView: Sized {
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+pub struct AmountView {
+    pub amount: u64,
+    pub currency: String,
+}
+
+impl AmountView {
+    fn new(amount: u64, currency: &IdentStr) -> Self {
+        Self {
+            amount,
+            currency: currency.to_string(),
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct AccountView {
-    pub balance: u64,
+    pub balance: AmountView,
     pub sequence_number: u64,
     pub authentication_key: BytesView,
     pub sent_events_key: BytesView,
@@ -55,7 +74,7 @@ pub struct AccountView {
 impl AccountView {
     pub fn new(account: &AccountResource, balance: &BalanceResource) -> Self {
         Self {
-            balance: balance.coin(),
+            balance: AmountView::new(balance.coin(), account.balance_currency_code()),
             sequence_number: account.sequence_number(),
             authentication_key: BytesView::from(account.authentication_key()),
             sent_events_key: BytesView::from(account.sent_events().key().as_bytes()),
@@ -99,13 +118,13 @@ impl ResponseAsView for EventView {
 pub enum EventDataView {
     #[serde(rename = "receivedpayment")]
     ReceivedPayment {
-        amount: u64,
+        amount: AmountView,
         sender: BytesView,
         metadata: BytesView,
     },
     #[serde(rename = "sentpayment")]
     SentPayment {
-        amount: u64,
+        amount: AmountView,
         receiver: BytesView,
         metadata: BytesView,
     },
@@ -119,8 +138,10 @@ impl From<(u64, ContractEvent)> for EventView {
         let event_data = if event.type_tag() == &TypeTag::Struct(ReceivedPaymentEvent::struct_tag())
         {
             if let Ok(received_event) = ReceivedPaymentEvent::try_from(&event) {
+                let amount_view =
+                    AmountView::new(received_event.amount(), received_event.currency_code());
                 Ok(EventDataView::ReceivedPayment {
-                    amount: received_event.amount(),
+                    amount: amount_view,
                     sender: BytesView::from(received_event.sender().as_ref()),
                     metadata: BytesView::from(received_event.metadata()),
                 })
@@ -129,8 +150,9 @@ impl From<(u64, ContractEvent)> for EventView {
             }
         } else if event.type_tag() == &TypeTag::Struct(SentPaymentEvent::struct_tag()) {
             if let Ok(sent_event) = SentPaymentEvent::try_from(&event) {
+                let amount_view = AmountView::new(sent_event.amount(), sent_event.currency_code());
                 Ok(EventDataView::SentPayment {
-                    amount: sent_event.amount(),
+                    amount: amount_view,
                     receiver: BytesView::from(sent_event.receiver().as_ref()),
                     metadata: BytesView::from(sent_event.metadata()),
                 })
@@ -360,6 +382,23 @@ impl From<TransactionPayload> for ScriptView {
             _ => Err(format_err!("Unknown scripts")),
         };
         res.unwrap_or(ScriptView::Unknown {})
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct CurrencyInfoView {
+    pub code: String,
+    pub scaling_factor: u64,
+    pub fractional_part: u64,
+}
+
+impl From<CurrencyInfoResource> for CurrencyInfoView {
+    fn from(info: CurrencyInfoResource) -> CurrencyInfoView {
+        CurrencyInfoView {
+            code: info.currency_code().to_string(),
+            scaling_factor: info.scaling_factor(),
+            fractional_part: info.fractional_part(),
+        }
     }
 }
 

@@ -63,6 +63,45 @@ fn test_transaction_ordering() {
 }
 
 #[test]
+fn test_ordering_of_governance_transactions() {
+    let (mut pool, mut consensus) = setup_mempool();
+
+    let txn1 = TestTransaction::new(0, 0, 100);
+    let txn2 = TestTransaction::new(1, 0, 200);
+    let mut gov_txn1 = TestTransaction::new(2, 0, 2);
+    let mut gov_txn2 = TestTransaction::new(3, 0, 1);
+    gov_txn1.is_governance_txn = true;
+    gov_txn2.is_governance_txn = true;
+
+    let _ = add_txns_to_mempool(
+        &mut pool,
+        vec![
+            txn1.clone(),
+            txn2.clone(),
+            gov_txn1.clone(),
+            gov_txn2.clone(),
+        ],
+    );
+
+    assert_eq!(
+        consensus.get_block(&mut pool, 1),
+        vec!(gov_txn1.make_signed_transaction())
+    );
+    assert_eq!(
+        consensus.get_block(&mut pool, 1),
+        vec!(gov_txn2.make_signed_transaction())
+    );
+    assert_eq!(
+        consensus.get_block(&mut pool, 1),
+        vec!(txn2.make_signed_transaction())
+    );
+    assert_eq!(
+        consensus.get_block(&mut pool, 1),
+        vec!(txn1.make_signed_transaction())
+    );
+}
+
+#[test]
 fn test_metric_cache_add_local_txns() {
     let (mut mempool, _) = setup_mempool();
     let txns = add_txns_to_mempool(
@@ -291,7 +330,7 @@ fn test_gc_ready_transaction() {
     // insert in the middle transaction that's going to be expired
     let txn = TestTransaction::new(1, 1, 1)
         .make_signed_transaction_with_expiration_time(Duration::from_secs(0));
-    pool.add_txn(txn, 0, 1, 0, TimelineState::NotReady);
+    pool.add_txn(txn, 0, 1, 0, TimelineState::NotReady, false);
 
     // insert few transactions after it
     // They supposed to be ready because there's sequential path from 0 to them
@@ -323,7 +362,14 @@ fn test_clean_stuck_transactions() {
     }
     let db_sequence_number = 10;
     let txn = TestTransaction::new(0, db_sequence_number, 1).make_signed_transaction();
-    pool.add_txn(txn, 0, 1, db_sequence_number, TimelineState::NotReady);
+    pool.add_txn(
+        txn,
+        0,
+        1,
+        db_sequence_number,
+        TimelineState::NotReady,
+        false,
+    );
     let block = pool.get_block(10, HashSet::new());
     assert_eq!(block.len(), 1);
     assert_eq!(block[0].sequence_number(), 10);

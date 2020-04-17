@@ -254,8 +254,8 @@ impl ClientProxy {
         );
         let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
         self.get_account_resource_and_update(address).map(|res| {
-            let whole_num = res.balance / 1_000_000;
-            let remainder = res.balance % 1_000_000;
+            let whole_num = res.balance.amount / 1_000_000;
+            let remainder = res.balance.amount % 1_000_000;
             format!("{}.{:0>6}", whole_num.to_string(), remainder.to_string())
         })
     }
