@@ -244,7 +244,8 @@ impl<'cfg> LintEngine<'cfg> {
                     // The -z causes files to not be quoted, and to be separated by \0.
                     .args(&["ls-files", "-z"])
                     .stderr(Stdio::inherit())
-                    .output()?;
+                    .output()
+                    .map_err(|err| SystemError::io("running git ls-files", err))?;
                 if !output.status.success() {
                     return Err(SystemError::Exec {
                         cmd: "git ls-files",

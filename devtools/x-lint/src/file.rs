@@ -40,7 +40,8 @@ impl<'l> FileContext<'l> {
     /// `pub(super)` is to dissuade individual linters from loading file contexts.
     pub(super) fn load(self) -> Result<ContentContext<'l>> {
         let full_path = self.project_ctx.full_path(self.file_path);
-        let content = fs::read(&full_path)?;
+        let content = fs::read(&full_path)
+            .map_err(|err| SystemError::io(format!("loading {}", full_path.display()), err))?;
         Ok(ContentContext::new(self, content))
     }
 }
