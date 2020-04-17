@@ -53,7 +53,6 @@ use libra_metrics::OpMetrics;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
     event::EventKey,
@@ -72,14 +71,7 @@ use libra_types::{
 use once_cell::sync::Lazy;
 use prometheus::{IntCounter, IntGauge, IntGaugeVec};
 use schemadb::{DB, DEFAULT_CF_NAME};
-use std::{
-    collections::{HashMap, HashSet},
-    convert::TryFrom,
-    iter::Iterator,
-    path::Path,
-    sync::Arc,
-    time::Instant,
-};
+use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_interface::{DbReader, DbWriter, StartupInfo, TreeState};
 
 static OP_COUNTER: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("storage"));
@@ -848,53 +840,6 @@ impl DbReader for LibraDB {
         };
 
         Ok(tree_state)
-    }
-
-    // TODO migrate this to `ConfigStorage` trait as non-async
-    fn batch_fetch_config(&self, access_paths: Vec<AccessPath>) -> Result<Vec<Vec<u8>>> {
-        // some access paths can have the same address, so don't duplicate requests for them
-        let addresses: Vec<AccountAddress> = access_paths
-            .iter()
-            .collect::<HashSet<_>>()
-            .into_iter()
-            .map(|path| path.address)
-            .collect();
-
-        let requests: Vec<RequestItem> = addresses
-            .iter()
-            .map(|addr| RequestItem::GetAccountState { address: *addr })
-            .collect();
-
-        let responses = self.update_to_latest_ledger(0, requests)?.0;
-
-        // Account address --> AccountState
-        let account_states = addresses
-            .into_iter()
-            .zip(responses)
-            .map(|(addr, resp)| {
-                let account_state = AccountState::try_from(
-                    &resp
-                        .into_get_account_state_response()?
-                        .blob
-                        .ok_or_else(|| {
-                            format_err!("missing blob in account state/account does not exist")
-                        })?,
-                )?;
-                Ok((addr, account_state))
-            })
-            .collect::<Result<HashMap<_, AccountState>>>()?;
-
-        access_paths
-            .into_iter()
-            .map(|path| {
-                Ok(account_states
-                    .get(&path.address)
-                    .ok_or_else(|| format_err!("missing account state for queried access path"))?
-                    .get(&path.path)
-                    .ok_or_else(|| format_err!("no value found in account state"))?
-                    .clone())
-            })
-            .collect()
     }
 }
 

@@ -609,13 +609,6 @@ mod test {
             unimplemented!()
         }
 
-        fn batch_fetch_config(
-            &self,
-            _: std::vec::Vec<libra_types::access_path::AccessPath>,
-        ) -> Result<Vec<Vec<u8>>> {
-            unimplemented!()
-        }
-
         fn get_ledger_info(&self, _: u64) -> Result<LedgerInfoWithSignatures> {
             unimplemented!()
         }

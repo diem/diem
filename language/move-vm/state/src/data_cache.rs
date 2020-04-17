@@ -75,6 +75,7 @@ pub trait RemoteCache {
     fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>>;
 }
 
+// TODO deprecate this in favor of `MoveStorage`
 impl ConfigStorage for &dyn RemoteCache {
     fn fetch_config(&self, access_path: AccessPath) -> Option<Vec<u8>> {
         self.get(&access_path).ok()?

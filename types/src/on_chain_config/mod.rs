@@ -81,7 +81,7 @@ pub trait ConfigStorage {
 }
 
 /// Trait to be implemented by a Rust struct representation of an on-chain config
-/// that is stored in storage as a deserialized byte array
+/// that is stored in storage as a serialized byte array
 pub trait OnChainConfig: Send + Sync + DeserializeOwned {
     // association_address
     const ADDRESS: &'static str = "0xA550C18";
