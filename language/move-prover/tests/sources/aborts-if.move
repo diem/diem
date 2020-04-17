@@ -104,4 +104,14 @@ module TestAbortsIf {
         aborts_if _x == _y;
         aborts_if _x > _y;
     }
+
+    fun multi_abort5_incorrect(x: u64) {
+        if (x == 0) {
+            abort 1
+        };
+    }
+    spec fun multi_abort5_incorrect {
+        aborts_if true;
+        aborts_if x > 0;
+    }
 }

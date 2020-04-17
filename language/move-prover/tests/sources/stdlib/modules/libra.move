@@ -95,10 +95,10 @@ module Libra {
     spec fun burn {
         aborts_if !exists<MintCapability<Token>>(sender());
         aborts_if !exists<Preburn<Token>>(preburn_address);
-        aborts_if old(len(global<Preburn<Token>>(preburn_address).requests)) == 0;
+        aborts_if len(global<Preburn<Token>>(preburn_address).requests) == 0;
         aborts_if !exists<Info<Token>>(0xA550C18);
-        aborts_if old(global<Info<Token>>(0xA550C18).total_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
-        aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
+        aborts_if global<Info<Token>>(0xA550C18).total_value < global<Preburn<Token>>(preburn_address).requests[0].value;
+        aborts_if global<Info<Token>>(0xA550C18).preburn_value < global<Preburn<Token>>(preburn_address).requests[0].value;
         ensures Vector::eq_pop_front(global<Preburn<Token>>(preburn_address).requests, old(global<Preburn<Token>>(preburn_address).requests));
         ensures global<Info<Token>>(0xA550C18).total_value == old(global<Info<Token>>(0xA550C18).total_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
         ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
@@ -117,9 +117,9 @@ module Libra {
     spec fun cancel_burn {
         aborts_if !exists<MintCapability<Token>>(sender());
         aborts_if !exists<Preburn<Token>>(preburn_address);
-        aborts_if old(len(global<Preburn<Token>>(preburn_address).requests)) == 0;
+        aborts_if len(global<Preburn<Token>>(preburn_address).requests) == 0;
         aborts_if !exists<Info<Token>>(0xA550C18);
-        aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
+        aborts_if global<Info<Token>>(0xA550C18).preburn_value < global<Preburn<Token>>(preburn_address).requests[0].value;
         ensures Vector::eq_pop_front(global<Preburn<Token>>(preburn_address).requests, old(global<Preburn<Token>>(preburn_address).requests));
         ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
         ensures result == old(global<Preburn<Token>>(preburn_address).requests[0]);
@@ -182,7 +182,7 @@ module Libra {
     spec fun preburn {
         // aborts_if !preburn_ref.is_approved; // TODO: bring this back once we can automate approvals in testnet
         aborts_if !exists<Info<Token>>(0xA550C18);
-        aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) + coin.value > max_u64();
+        aborts_if global<Info<Token>>(0xA550C18).preburn_value + coin.value > max_u64();
         ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) + coin.value;
         ensures Vector::eq_push_back(preburn_ref.requests, old(preburn_ref.requests), coin);
     }
@@ -197,7 +197,7 @@ module Libra {
         // aborts_if !preburn_ref.is_approved; // TODO: bring this back once we can automate approvals in testnet
         aborts_if !exists<Info<Token>>(0xA550C18);
         aborts_if !exists<Preburn<Token>>(sender());
-        aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) + coin.value > max_u64();
+        aborts_if global<Info<Token>>(0xA550C18).preburn_value + coin.value > max_u64();
         ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) + coin.value;
         ensures Vector::eq_push_back(global<Preburn<Token>>(sender()).requests, old(global<Preburn<Token>>(sender()).requests), coin);
     }
@@ -221,10 +221,10 @@ module Libra {
     }
     spec fun burn_with_capability {
         aborts_if !exists<Preburn<Token>>(preburn_address);
-        aborts_if old(len(global<Preburn<Token>>(preburn_address).requests)) == 0;
+        aborts_if len(global<Preburn<Token>>(preburn_address).requests) == 0;
         aborts_if !exists<Info<Token>>(0xA550C18);
-        aborts_if old(global<Info<Token>>(0xA550C18).total_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
-        aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
+        aborts_if global<Info<Token>>(0xA550C18).total_value < global<Preburn<Token>>(preburn_address).requests[0].value;
+        aborts_if global<Info<Token>>(0xA550C18).preburn_value < global<Preburn<Token>>(preburn_address).requests[0].value;
         ensures Vector::eq_pop_front(global<Preburn<Token>>(preburn_address).requests, old(global<Preburn<Token>>(preburn_address).requests));
         ensures global<Info<Token>>(0xA550C18).total_value == old(global<Info<Token>>(0xA550C18).total_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
         ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
@@ -250,9 +250,9 @@ module Libra {
     }
     spec fun cancel_burn_with_capability {
         aborts_if !exists<Preburn<Token>>(preburn_address);
-        aborts_if old(len(global<Preburn<Token>>(preburn_address).requests)) == 0;
+        aborts_if len(global<Preburn<Token>>(preburn_address).requests) == 0;
         aborts_if !exists<Info<Token>>(0xA550C18);
-        aborts_if old(global<Info<Token>>(0xA550C18).preburn_value) < old(global<Preburn<Token>>(preburn_address).requests[0].value);
+        aborts_if global<Info<Token>>(0xA550C18).preburn_value < global<Preburn<Token>>(preburn_address).requests[0].value;
         ensures Vector::eq_pop_front(global<Preburn<Token>>(preburn_address).requests, old(global<Preburn<Token>>(preburn_address).requests));
         ensures global<Info<Token>>(0xA550C18).preburn_value == old(global<Info<Token>>(0xA550C18).preburn_value) - old(global<Preburn<Token>>(preburn_address).requests[0].value);
         ensures result == old(global<Preburn<Token>>(preburn_address).requests[0]);
@@ -371,7 +371,7 @@ module Libra {
         T { value }
     }
     spec fun withdraw {
-        aborts_if old(coin_ref.value) < value;
+        aborts_if coin_ref.value < value;
         ensures coin_ref.value == old(coin_ref.value) - value;
         ensures result.value == value;
     }
@@ -394,7 +394,7 @@ module Libra {
         coin_ref.value= coin_ref.value + value;
     }
     spec fun deposit {
-        aborts_if old(coin_ref.value) + check.value > max_u64();
+        aborts_if coin_ref.value + check.value > max_u64();
         ensures coin_ref.value == old(coin_ref.value) + check.value;
     }
 

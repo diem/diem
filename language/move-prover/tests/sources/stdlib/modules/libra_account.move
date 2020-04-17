@@ -103,10 +103,33 @@ module LibraAccount {
         // the moment.
         deposit_with_metadata(payee, to_deposit, x"")
     }
+    spec fun deposit {
+        aborts_if to_deposit.value == 0;
+        aborts_if !exists<T>(sender());
+        aborts_if global<T>(sender()).sent_events.counter + 1 > max_u64();
+        aborts_if !exists<T>(payee);
+        aborts_if !exists<Balance<Token>>(payee);
+        aborts_if global<Balance<Token>>(payee).coin.value + to_deposit.value > max_u64();
+        aborts_if global<T>(payee).received_events.counter + 1 > max_u64();
+        ensures global<T>(sender()).sent_events.counter == old(global<T>(sender()).sent_events.counter) + 1;
+        ensures global<T>(payee).received_events.counter == old(global<T>(payee).received_events.counter) + 1;
+        ensures global<Balance<Token>>(payee).coin.value == old(global<Balance<Token>>(payee).coin.value) + to_deposit.value;
+    }
 
     // Deposits the `to_deposit` coin into the sender's account balance
     public fun deposit_to_sender<Token>(to_deposit: Libra::T<Token>) acquires T, Balance {
         deposit(Transaction::sender(), to_deposit)
+    }
+    spec fun deposit_to_sender {
+        aborts_if to_deposit.value == 0;
+        aborts_if !exists<T>(sender());
+        aborts_if global<T>(sender()).sent_events.counter + 1 > max_u64();
+        aborts_if !exists<Balance<Token>>(sender());
+        aborts_if global<Balance<Token>>(sender()).coin.value + to_deposit.value > max_u64();
+        aborts_if global<T>(sender()).received_events.counter + 1 > max_u64();
+        ensures global<T>(sender()).sent_events.counter == old(global<T>(sender()).sent_events.counter) + 1;
+        ensures global<T>(sender()).received_events.counter == old(global<T>(sender()).received_events.counter) + 1;
+        ensures global<Balance<Token>>(sender()).coin.value == old(global<Balance<Token>>(sender()).coin.value) + to_deposit.value;
     }
 
     // Deposits the `to_deposit` coin into the `payee`'s account balance with the attached `metadata`
@@ -121,6 +144,18 @@ module LibraAccount {
             to_deposit,
             metadata
         );
+    }
+    spec fun deposit_with_metadata {
+        aborts_if to_deposit.value == 0;
+        aborts_if !exists<T>(sender());
+        aborts_if global<T>(sender()).sent_events.counter + 1 > max_u64();
+        aborts_if !exists<T>(payee);
+        aborts_if !exists<Balance<Token>>(payee);
+        aborts_if global<Balance<Token>>(payee).coin.value + to_deposit.value > max_u64();
+        aborts_if global<T>(payee).received_events.counter + 1 > max_u64();
+        ensures global<T>(sender()).sent_events.counter == old(global<T>(sender()).sent_events.counter) + 1;
+        ensures global<T>(payee).received_events.counter == old(global<T>(payee).received_events.counter) + 1;
+        ensures global<Balance<Token>>(payee).coin.value == old(global<Balance<Token>>(payee).coin.value) + to_deposit.value;
     }
 
     // Deposits the `to_deposit` coin into the `payee`'s account balance with the attached `metadata` and
@@ -162,6 +197,19 @@ module LibraAccount {
             }
         );
     }
+    spec fun deposit_with_sender_and_metadata {
+        //aborts_if to_deposit.value >= 0; // FIXME: uncommenting this line is verified, but should not be.
+        aborts_if to_deposit.value == 0;
+        aborts_if !exists<T>(sender);
+        aborts_if global<T>(sender).sent_events.counter + 1 > max_u64();
+        aborts_if !exists<T>(payee);
+        aborts_if !exists<Balance<Token>>(payee);
+        aborts_if global<Balance<Token>>(payee).coin.value + to_deposit.value > max_u64();
+        aborts_if global<T>(payee).received_events.counter + 1 > max_u64();
+        ensures global<T>(sender).sent_events.counter == old(global<T>(sender).sent_events.counter) + 1;
+        ensures global<T>(payee).received_events.counter == old(global<T>(payee).received_events.counter) + 1;
+        ensures global<Balance<Token>>(payee).coin.value == old(global<Balance<Token>>(payee).coin.value) + to_deposit.value;
+    }
 
     // mint_to_address can only be called by accounts with MintCapability (see Libra)
     // and those accounts will be charged for gas. If those accounts don't have enough gas to pay
@@ -181,6 +229,12 @@ module LibraAccount {
         deposit(payee, Libra::mint<LBR::T>(amount));
     }
 
+    spec module {
+        define to_return<Token>(preburn_address: address): Libra::T<Token> {
+            global<Libra::Preburn<Token>>(preburn_address).requests[0]
+        }
+    }
+
     // Cancel the oldest burn request from `preburn_address` and return the funds.
     // Fails if the sender does not have a published MintCapability.
     public fun cancel_burn<Token>(
@@ -189,13 +243,39 @@ module LibraAccount {
         let to_return = Libra::cancel_burn<Token>(preburn_address);
         deposit(preburn_address, to_return)
     }
+    spec fun cancel_burn {
+        // derived from Libra::cancel_burn
+        aborts_if !exists<Libra::MintCapability<Token>>(sender());
+        aborts_if !exists<Libra::Preburn<Token>>(preburn_address);
+        aborts_if len(global<Libra::Preburn<Token>>(preburn_address).requests) == 0;
+        aborts_if !exists<Libra::Info<Token>>(0xA550C18);
+        aborts_if global<Libra::Info<Token>>(0xA550C18).preburn_value < global<Libra::Preburn<Token>>(preburn_address).requests[0].value;
+
+        // derived from Self::deposit
+        aborts_if to_return<Token>(preburn_address).value == 0;
+        aborts_if !exists<T>(sender());
+        aborts_if global<T>(sender()).sent_events.counter + 1 > max_u64();
+        aborts_if !exists<T>(preburn_address);
+        aborts_if !exists<Balance<Token>>(preburn_address);
+        aborts_if global<Balance<Token>>(preburn_address).coin.value + to_return<Token>(preburn_address).value > max_u64();
+        aborts_if global<T>(preburn_address).received_events.counter + 1 > max_u64();
+
+        // derived from Self::deposit
+        ensures global<T>(sender()).sent_events.counter == old(global<T>(sender()).sent_events.counter) + 1;
+        ensures global<T>(preburn_address).received_events.counter == old(global<T>(preburn_address).received_events.counter) + 1;
+        ensures global<Balance<Token>>(preburn_address).coin.value == old(global<Balance<Token>>(preburn_address).coin.value) + old(to_return<Token>(preburn_address).value);
+
+        // derived from Libra::CancelBurn
+        ensures Vector::eq_pop_front(global<Libra::Preburn<Token>>(preburn_address).requests, old(global<Libra::Preburn<Token>>(preburn_address).requests));
+        ensures global<Libra::Info<Token>>(0xA550C18).preburn_value == old(global<Libra::Info<Token>>(0xA550C18).preburn_value) - old(global<Libra::Preburn<Token>>(preburn_address).requests[0].value);
+    }
 
     // Helper to withdraw `amount` from the given account balance and return the withdrawn Libra::T<Token>
     fun withdraw_from_balance<Token>(balance: &mut Balance<Token>, amount: u64): Libra::T<Token> {
         Libra::withdraw(&mut balance.coin, amount)
     }
     spec fun withdraw_from_balance {
-        aborts_if old(balance.coin.value) < amount;
+        aborts_if balance.coin.value < amount;
         ensures balance.coin.value == old(balance.coin.value) - amount;
         ensures result.value == amount;
     }
@@ -213,7 +293,7 @@ module LibraAccount {
         aborts_if !exists<T>(sender());
         aborts_if !exists<Balance<Token>>(sender());
         aborts_if global<T>(sender()).delegated_withdrawal_capability;
-        aborts_if old(global<Balance<Token>>(sender()).coin.value) < amount;
+        aborts_if global<Balance<Token>>(sender()).coin.value < amount;
         ensures global<Balance<Token>>(sender()).coin.value == old(global<Balance<Token>>(sender()).coin.value) - amount;
         ensures result.value == amount;
     }
@@ -227,7 +307,7 @@ module LibraAccount {
     }
     spec fun withdraw_with_capability {
         aborts_if !exists<Balance<Token>>(cap.account_address);
-        aborts_if old(global<Balance<Token>>(cap.account_address).coin.value) < amount;
+        aborts_if global<Balance<Token>>(cap.account_address).coin.value < amount;
         ensures global<Balance<Token>>(cap.account_address).coin.value == old(global<Balance<Token>>(cap.account_address).coin.value) - amount;
         ensures result.value == amount;
     }
@@ -246,7 +326,7 @@ module LibraAccount {
     }
     spec fun extract_sender_withdrawal_capability {
         aborts_if !exists<T>(sender());
-        aborts_if old(global<T>(sender()).delegated_withdrawal_capability) == true;
+        aborts_if global<T>(sender()).delegated_withdrawal_capability == true;
         ensures global<T>(sender()).delegated_withdrawal_capability == true;
         ensures result.account_address == sender();
     }
@@ -340,7 +420,7 @@ module LibraAccount {
     }
     spec fun rotate_authentication_key {
         aborts_if !exists<T>(sender());
-        aborts_if old(global<T>(sender()).delegated_key_rotation_capability) == true;
+        aborts_if global<T>(sender()).delegated_key_rotation_capability == true;
         aborts_if len(new_authentication_key) != 32;
         ensures global<T>(sender()).authentication_key == new_authentication_key;
     }
@@ -372,7 +452,7 @@ module LibraAccount {
     }
     spec fun extract_sender_key_rotation_capability {
         aborts_if !exists<T>(sender());
-        aborts_if old(global<T>(sender()).delegated_key_rotation_capability) == true;
+        aborts_if global<T>(sender()).delegated_key_rotation_capability == true;
         ensures global<T>(sender()).delegated_key_rotation_capability == true;
         ensures result.account_address == sender();
     }
@@ -418,12 +498,15 @@ module LibraAccount {
             fresh_address,
         );
     }
-//    spec fun create_account { // FIXME: This should pass, but Z3 does not terminate on this.
+    spec fun create_account { // FIXME: This should pass, but Z3 does not terminate on this.
 //        aborts_if len(LCS::serialize(fresh_address)) + len(auth_key_prefix) != 32;
 //        aborts_if exists<Balance<LBR::T>>(fresh_address);
 //        aborts_if exists<T>(fresh_address);
-//        // TODO: Add ensures
-//    }
+        ensures !(len(LCS::serialize(fresh_address)) + len(auth_key_prefix) != 32); // TODO: Remove this line once the "aborts_if" clauses are verified.
+        ensures !old(exists<Balance<LBR::T>>(fresh_address)); // TODO: Remove this line once the "aborts_if" clauses are verified.
+        ensures !old(exists<T>(fresh_address)); // TODO: Remove this line once the "aborts_if" clauses are verified.
+        // TODO: Add ensures
+    }
 
     // Creates a new account at `fresh_address` with the `initial_balance` deducted from the
     // transaction sender's account
@@ -608,7 +691,7 @@ module LibraAccount {
 //        aborts_if global<0x0::LibraTimestamp::CurrentTimeMicroseconds>(0xA550C18).microseconds >= (txn_expiration_time * 1000000);
 //    }
 
-    // A simplified version of `epilogue` that take `max_transaction_fee` as an argument instead of calculating internally.
+    // A simplified version of `prologue` that take `max_transaction_fee` as an argument instead of calculating internally.
     // TODO: Remove this function after finishing verifying `prologue`
     fun simplified_prologue(
         txn_sequence_number: u64,
@@ -690,10 +773,10 @@ module LibraAccount {
 //        aborts_if txn_gas_price * (txn_max_gas_units - gas_units_remaining) > max_u64();
 //        aborts_if !exists<T>(sender());
 //        aborts_if !exists<Balance<LBR::T>>(sender());
-//        aborts_if old(global<Balance<LBR::T>>(sender()).coin.value) < (txn_gas_price * (txn_max_gas_units - gas_units_remaining));
+//        aborts_if global<Balance<LBR::T>>(sender()).coin.value < (txn_gas_price * (txn_max_gas_units - gas_units_remaining));
 //        aborts_if txn_sequence_number + 1 > max_u64();
 //        aborts_if !exists<Balance<LBR::T>>(0xFEE);
-//        aborts_if sender() != 0xFEE && old(global<Balance<LBR::T>>(0xFEE).coin.value) + (txn_gas_price * (txn_max_gas_units - gas_units_remaining)) > max_u64();
+//        aborts_if sender() != 0xFEE && global<Balance<LBR::T>>(0xFEE).coin.value + (txn_gas_price * (txn_max_gas_units - gas_units_remaining)) > max_u64();
 //        ensures global<T>(sender()).sequence_number == txn_sequence_number + 1;
 //        ensures sender() != 0xFEE ==> global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value) - (txn_gas_price * (txn_max_gas_units - gas_units_remaining));
 //        ensures sender() != 0xFEE ==> global<Balance<LBR::T>>(0xFEE).coin.value == old(global<Balance<LBR::T>>(0xFEE).coin.value) + (txn_gas_price * (txn_max_gas_units - gas_units_remaining));
@@ -729,10 +812,10 @@ module LibraAccount {
     spec fun simplified_epilogue {
         aborts_if !exists<T>(sender());
         aborts_if !exists<Balance<LBR::T>>(sender());
-        aborts_if old(global<Balance<LBR::T>>(sender()).coin.value) < transaction_fee_amount;
+        aborts_if global<Balance<LBR::T>>(sender()).coin.value < transaction_fee_amount;
         aborts_if txn_sequence_number + 1 > max_u64();
         aborts_if !exists<Balance<LBR::T>>(0xFEE);
-        aborts_if sender() != 0xFEE && old(global<Balance<LBR::T>>(0xFEE).coin.value) + transaction_fee_amount > max_u64();
+        aborts_if sender() != 0xFEE && global<Balance<LBR::T>>(0xFEE).coin.value + transaction_fee_amount > max_u64();
         ensures global<T>(sender()).sequence_number == txn_sequence_number + 1;
         ensures sender() != 0xFEE ==> global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value) - transaction_fee_amount;
         ensures sender() != 0xFEE ==> global<Balance<LBR::T>>(0xFEE).coin.value == old(global<Balance<LBR::T>>(0xFEE).coin.value) + transaction_fee_amount;
@@ -757,7 +840,7 @@ module LibraAccount {
         count_bytes
     }
     spec fun fresh_guid {
-        aborts_if old(counter.counter) + 1 > max_u64();
+        aborts_if counter.counter + 1 > max_u64();
         ensures Vector::eq_append(result, LCS::serialize(old(counter.counter)), LCS::serialize(sender));
     }
 
@@ -766,7 +849,7 @@ module LibraAccount {
         EventHandle<T> {counter: 0, guid: fresh_guid(counter, sender)}
     }
     spec fun new_event_handle_impl {
-        aborts_if old(counter.counter) + 1 > max_u64();
+        aborts_if counter.counter + 1 > max_u64();
         ensures Vector::eq_append(result.guid, LCS::serialize(old(counter.counter)), LCS::serialize(sender));
         ensures result.counter == 0;
     }
@@ -778,7 +861,7 @@ module LibraAccount {
     }
     spec fun new_event_handle {
         aborts_if !exists<T>(sender());
-        aborts_if old(global<T>(sender()).event_generator.counter) + 1 > max_u64();
+        aborts_if global<T>(sender()).event_generator.counter + 1 > max_u64();
         ensures Vector::eq_append(result.guid, LCS::serialize(old(global<T>(sender()).event_generator.counter)), LCS::serialize(sender()));
         ensures result.counter == 0;
     }
@@ -792,7 +875,7 @@ module LibraAccount {
         handle_ref.counter = handle_ref.counter + 1;
     }
     spec fun emit_event {
-        aborts_if old(handle_ref.counter) + 1 > max_u64();
+        aborts_if handle_ref.counter + 1 > max_u64();
     }
 
     // Native procedure that writes to the actual event stream in Event store
