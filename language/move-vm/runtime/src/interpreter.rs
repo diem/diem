@@ -107,7 +107,10 @@ impl<'txn> Interpreter<'txn> {
         // We count the intrinsic cost of the transaction here, since that needs to also cover the
         // setup of the function.
         let mut interp = Self::new(txn_data, gas_schedule);
-        gas!(consume: context, calculate_intrinsic_gas(txn_size))?;
+        gas!(
+            consume: context,
+            calculate_intrinsic_gas(txn_size, &gas_schedule.gas_constants)
+        )?;
         interp.execute(loader, context, function, ty_args, args)
     }
 

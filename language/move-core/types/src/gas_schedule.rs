@@ -132,35 +132,9 @@ define_gas_unit! {
 /// Zero cost.
 pub const ZERO_GAS_UNITS: GasUnits<GasCarrier> = GasUnits(0);
 
-/// The cost per-byte written to global storage.
-/// TODO: Fill this in with a proper number once it's determined.
-pub const GLOBAL_MEMORY_PER_BYTE_COST: GasUnits<GasCarrier> = GasUnits(8);
-
-/// The cost per-byte written to storage.
-/// TODO: Fill this in with a proper number once it's determined.
-pub const GLOBAL_MEMORY_PER_BYTE_WRITE_COST: GasUnits<GasCarrier> = GasUnits(8);
-
 /// The maximum size representable by AbstractMemorySize
 pub const MAX_ABSTRACT_MEMORY_SIZE: AbstractMemorySize<GasCarrier> =
     AbstractMemorySize(std::u64::MAX);
-
-/// The units of gas that should be charged per byte for every transaction.
-pub const INTRINSIC_GAS_PER_BYTE: GasUnits<GasCarrier> = GasUnits(8);
-
-/// The minimum gas price that a transaction can be submitted with.
-pub const MIN_PRICE_PER_GAS_UNIT: GasPrice<GasCarrier> = GasPrice(0);
-
-/// The maximum gas unit price that a transaction can be submitted with.
-pub const MAX_PRICE_PER_GAS_UNIT: GasPrice<GasCarrier> = GasPrice(10_000);
-
-/// 1 nanosecond should equal one unit of computational gas. We bound the maximum
-/// computational time of any given transaction at 10 milliseconds. We want this number and
-/// `MAX_PRICE_PER_GAS_UNIT` to always satisfy the inequality that
-///         MAXIMUM_NUMBER_OF_GAS_UNITS * MAX_PRICE_PER_GAS_UNIT < min(u64::MAX, GasUnits<GasCarrier>::MAX)
-pub const MAXIMUM_NUMBER_OF_GAS_UNITS: GasUnits<GasCarrier> = GasUnits(1_000_000);
-
-/// We charge one unit of gas per-byte for the first 600 bytes
-pub const MIN_TRANSACTION_GAS_UNITS: GasUnits<GasCarrier> = GasUnits(600);
 
 /// The word size that we charge by
 pub const WORD_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemorySize(8);
@@ -180,6 +154,55 @@ pub const DEFAULT_ACCOUNT_SIZE: AbstractMemorySize<GasCarrier> = AbstractMemoryS
 /// Any transaction over this size will be charged `INTRINSIC_GAS_PER_BYTE` per byte
 pub const LARGE_TRANSACTION_CUTOFF: AbstractMemorySize<GasCarrier> = AbstractMemorySize(600);
 
+#[derive(Clone, Debug, Serialize, PartialEq, Deserialize)]
+pub struct GasConstants {
+    /// The cost per-byte written to global storage.
+    /// TODO: Fill this in with a proper number once it's determined.
+    pub global_memory_per_byte_cost: GasUnits<GasCarrier>,
+
+    /// The cost per-byte written to storage.
+    /// TODO: Fill this in with a proper number once it's determined.
+    pub global_memory_per_byte_write_cost: GasUnits<GasCarrier>,
+
+    /// We charge one unit of gas per-byte for the first 600 bytes
+    pub min_transaction_gas_units: GasUnits<GasCarrier>,
+
+    /// Any transaction over this size will be charged `INTRINSIC_GAS_PER_BYTE` per byte
+    pub large_transaction_cutoff: AbstractMemorySize<GasCarrier>,
+
+    /// The units of gas that should be charged per byte for every transaction.
+    pub instrinsic_gas_per_byte: GasUnits<GasCarrier>,
+
+    /// 1 nanosecond should equal one unit of computational gas. We bound the maximum
+    /// computational time of any given transaction at 10 milliseconds. We want this number and
+    /// `MAX_PRICE_PER_GAS_UNIT` to always satisfy the inequality that
+    ///         MAXIMUM_NUMBER_OF_GAS_UNITS * MAX_PRICE_PER_GAS_UNIT < min(u64::MAX, GasUnits<GasCarrier>::MAX)
+    pub maximum_number_of_gas_units: GasUnits<GasCarrier>,
+
+    /// The minimum gas price that a transaction can be submitted with.
+    pub min_price_per_gas_units: GasPrice<GasCarrier>,
+
+    /// The maximum gas unit price that a transaction can be submitted with.
+    pub max_price_per_gas_units: GasPrice<GasCarrier>,
+
+    pub max_transaction_size_in_bytes: u64,
+}
+
+impl Default for GasConstants {
+    fn default() -> Self {
+        Self {
+            global_memory_per_byte_cost: GasUnits(8),
+            global_memory_per_byte_write_cost: GasUnits(8),
+            min_transaction_gas_units: GasUnits(600),
+            large_transaction_cutoff: AbstractMemorySize(600),
+            instrinsic_gas_per_byte: GasUnits(8),
+            maximum_number_of_gas_units: GasUnits(1_000_000),
+            min_price_per_gas_units: GasPrice(0),
+            max_price_per_gas_units: GasPrice(10_000),
+            max_transaction_size_in_bytes: 4096,
+        }
+    }
+}
 /// The cost tables, keyed by the serialized form of the bytecode instruction.  We use the
 /// serialized form as opposed to the instruction enum itself as the key since this will be the
 /// on-chain representation of bytecode instructions in the future.
@@ -187,6 +210,7 @@ pub const LARGE_TRANSACTION_CUTOFF: AbstractMemorySize<GasCarrier> = AbstractMem
 pub struct CostTable {
     pub instruction_table: Vec<GasCost>,
     pub native_table: Vec<GasCost>,
+    pub gas_constants: GasConstants,
 }
 
 impl CostTable {

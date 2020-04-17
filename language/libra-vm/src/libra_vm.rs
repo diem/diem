@@ -16,13 +16,13 @@ use libra_types::{
     transaction::{
         ChangeSet, Module, Script, SignatureCheckedTransaction, SignedTransaction, Transaction,
         TransactionArgument, TransactionOutput, TransactionPayload, TransactionStatus,
-        VMValidatorResult, MAX_TRANSACTION_SIZE_IN_BYTES,
+        VMValidatorResult,
     },
     vm_error::{sub_status, StatusCode, VMStatus},
     write_set::{WriteSet, WriteSetMut},
 };
 use move_core_types::{
-    gas_schedule::{self, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
+    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
     identifier::{IdentStr, Identifier},
 };
 use move_vm_runtime::MoveVM;
@@ -105,18 +105,19 @@ impl LibraVM {
     }
 
     fn check_gas(&self, txn: &SignedTransaction) -> VMResult<()> {
+        let gas_constants = &self.get_gas_schedule()?.gas_constants;
         let raw_bytes_len = AbstractMemorySize::new(txn.raw_txn_bytes_len() as GasCarrier);
         // The transaction is too large.
-        if txn.raw_txn_bytes_len() > MAX_TRANSACTION_SIZE_IN_BYTES {
+        if txn.raw_txn_bytes_len() > gas_constants.max_transaction_size_in_bytes as usize {
             let error_str = format!(
                 "max size: {}, txn size: {}",
-                MAX_TRANSACTION_SIZE_IN_BYTES,
+                gas_constants.max_transaction_size_in_bytes,
                 raw_bytes_len.get()
             );
             warn!(
                 "[VM] Transaction size too big {} (max {})",
                 raw_bytes_len.get(),
-                MAX_TRANSACTION_SIZE_IN_BYTES
+                gas_constants.max_transaction_size_in_bytes
             );
             return Err(
                 VMStatus::new(StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE).with_message(error_str)
@@ -125,20 +126,20 @@ impl LibraVM {
 
         // Check is performed on `txn.raw_txn_bytes_len()` which is the same as
         // `raw_bytes_len`
-        assume!(raw_bytes_len.get() <= MAX_TRANSACTION_SIZE_IN_BYTES as u64);
+        assume!(raw_bytes_len.get() <= gas_constants.max_transaction_size_in_bytes);
 
         // The submitted max gas units that the transaction can consume is greater than the
         // maximum number of gas units bound that we have set for any
         // transaction.
-        if txn.max_gas_amount() > gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get() {
+        if txn.max_gas_amount() > gas_constants.maximum_number_of_gas_units.get() {
             let error_str = format!(
                 "max gas units: {}, gas units submitted: {}",
-                gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
+                gas_constants.maximum_number_of_gas_units.get(),
                 txn.max_gas_amount()
             );
             warn!(
                 "[VM] Gas unit error; max {}, submitted {}",
-                gas_schedule::MAXIMUM_NUMBER_OF_GAS_UNITS.get(),
+                gas_constants.maximum_number_of_gas_units.get(),
                 txn.max_gas_amount()
             );
             return Err(
@@ -150,7 +151,7 @@ impl LibraVM {
         // The submitted transactions max gas units needs to be at least enough to cover the
         // intrinsic cost of the transaction as calculated against the size of the
         // underlying `RawTransaction`
-        let min_txn_fee = calculate_intrinsic_gas(raw_bytes_len);
+        let min_txn_fee = calculate_intrinsic_gas(raw_bytes_len, gas_constants);
         if txn.max_gas_amount() < min_txn_fee.get() {
             let error_str = format!(
                 "min gas required for txn: {}, gas submitted: {}",
@@ -172,16 +173,16 @@ impl LibraVM {
         // NB: MIN_PRICE_PER_GAS_UNIT may equal zero, but need not in the future. Hence why
         // we turn off the clippy warning.
         #[allow(clippy::absurd_extreme_comparisons)]
-        let below_min_bound = txn.gas_unit_price() < gas_schedule::MIN_PRICE_PER_GAS_UNIT.get();
+        let below_min_bound = txn.gas_unit_price() < gas_constants.min_price_per_gas_units.get();
         if below_min_bound {
             let error_str = format!(
                 "gas unit min price: {}, submitted price: {}",
-                gas_schedule::MIN_PRICE_PER_GAS_UNIT.get(),
+                gas_constants.min_transaction_gas_units.get(),
                 txn.gas_unit_price()
             );
             warn!(
                 "[VM] Gas unit error; min {}, submitted {}",
-                gas_schedule::MIN_PRICE_PER_GAS_UNIT.get(),
+                gas_constants.min_transaction_gas_units.get(),
                 txn.gas_unit_price()
             );
             return Err(
@@ -190,15 +191,15 @@ impl LibraVM {
         }
 
         // The submitted gas price is greater than the maximum gas unit price set by the VM.
-        if txn.gas_unit_price() > gas_schedule::MAX_PRICE_PER_GAS_UNIT.get() {
+        if txn.gas_unit_price() > gas_constants.max_price_per_gas_units.get() {
             let error_str = format!(
                 "gas unit max price: {}, submitted price: {}",
-                gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+                gas_constants.max_price_per_gas_units.get(),
                 txn.gas_unit_price()
             );
             warn!(
                 "[VM] Gas unit error; min {}, submitted {}",
-                gas_schedule::MAX_PRICE_PER_GAS_UNIT.get(),
+                gas_constants.max_price_per_gas_units.get(),
                 txn.gas_unit_price()
             );
             return Err(
