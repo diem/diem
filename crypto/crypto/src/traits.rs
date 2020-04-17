@@ -104,10 +104,15 @@ pub trait PrivateKey: Sized {
 
 /// A type family of valid keys that know how to sign.
 ///
+/// This trait has a requirement on a `pub(crate)` marker trait meant to
+/// specifically limit its implementations to the present crate.
+///
 /// A trait for a [`ValidKey`][ValidKey] which knows how to sign a
 /// message, and return an associated `Signature` type.
 pub trait SigningKey:
-    PrivateKey<PublicKeyMaterial = <Self as SigningKey>::VerifyingKeyMaterial> + ValidKey
+    PrivateKey<PublicKeyMaterial = <Self as SigningKey>::VerifyingKeyMaterial>
+    + ValidKey
+    + private::Sealed
 {
     /// The associated verifying key type for this signing key.
     type VerifyingKeyMaterial: VerifyingKey<SigningKeyMaterial = Self>;
@@ -147,10 +152,15 @@ pub trait PublicKey: Sized + Clone + Eq + Hash +
 
 /// A type family of public keys that are used for signing.
 ///
+/// This trait has a requirement on a `pub(crate)` marker trait meant to
+/// specifically limit its implementations to the present crate.
+///
 /// It is linked to a type of the Signature family, which carries the
 /// verification implementation.
 pub trait VerifyingKey:
-    PublicKey<PrivateKeyMaterial = <Self as VerifyingKey>::SigningKeyMaterial> + ValidKey
+    PublicKey<PrivateKeyMaterial = <Self as VerifyingKey>::SigningKeyMaterial>
+    + ValidKey
+    + private::Sealed
 {
     /// The associated signing key type for this verifying key.
     type SigningKeyMaterial: SigningKey<VerifyingKeyMaterial = Self>;
@@ -182,13 +192,22 @@ pub trait VerifyingKey:
 /// This trait simply requires an association to some type of the
 /// [`PublicKey`][PublicKey] family of which we are the `SignatureMaterial`.
 ///
+/// This trait has a requirement on a `pub(crate)` marker trait meant to
+/// specifically limit its implementations to the present crate.
+///
 /// It should be possible to write a generic signature function that
 /// checks signature material passed as `&[u8]` and only returns Ok when
 /// that material de-serializes to a signature of the expected concrete
 /// scheme. This would be done as an extension trait of
 /// [`Signature`][Signature].
 pub trait Signature:
-    for<'a> TryFrom<&'a [u8], Error = CryptoMaterialError> + Sized + Debug + Clone + Eq + Hash
+    for<'a> TryFrom<&'a [u8], Error = CryptoMaterialError>
+    + Sized
+    + Debug
+    + Clone
+    + Eq
+    + Hash
+    + private::Sealed
 {
     /// The associated verifying key type for this signature.
     type VerifyingKeyMaterial: VerifyingKey<SignatureMaterial = Self>;
@@ -246,4 +265,20 @@ pub trait Uniform {
 pub trait Genesis: PrivateKey {
     /// Produces the genesis private key.
     fn genesis() -> Self;
+}
+
+/// A pub(crate) mod hiding a Sealed trait and its implementations, allowing
+/// us to make sure implementations are constrained to the crypto crate.
+// See https://rust-lang.github.io/api-guidelines/future-proofing.html#sealed-traits-protect-against-downstream-implementations-c-sealed
+pub(crate) mod private {
+    pub trait Sealed {}
+
+    // Implement for the ed25519, multi-ed25519 signatures
+    impl Sealed for crate::ed25519::Ed25519PrivateKey {}
+    impl Sealed for crate::ed25519::Ed25519PublicKey {}
+    impl Sealed for crate::ed25519::Ed25519Signature {}
+
+    impl Sealed for crate::multi_ed25519::MultiEd25519PrivateKey {}
+    impl Sealed for crate::multi_ed25519::MultiEd25519PublicKey {}
+    impl Sealed for crate::multi_ed25519::MultiEd25519Signature {}
 }
