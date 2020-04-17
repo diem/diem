@@ -1,22 +1,29 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::Result;
+use anyhow::{format_err, Result};
+use itertools::Itertools;
 use libra_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
+    account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::ContractEvent,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
+    move_resource::MoveStorage,
     on_chain_config::ValidatorSet,
     proof::{definition::LeafCount, AccumulatorConsistencyProof, SparseMerkleProof},
     transaction::{TransactionListWithProof, TransactionToCommit, TransactionWithProof, Version},
     validator_change::ValidatorChangeProof,
 };
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::{
+    collections::{HashMap, HashSet},
+    convert::TryFrom,
+    sync::Arc,
+};
 use thiserror::Error;
 
 pub mod state_view;
@@ -177,10 +184,6 @@ pub trait DbReader: Send + Sync {
     /// ../libradb/struct.LibraDB.html#method.get_startup_info
     fn get_startup_info(&self) -> Result<Option<StartupInfo>>;
 
-    /// Returns a vector of on-chain configs as serialized byte array
-    /// Order of on-chain configs returned matches the order of `access_path`
-    fn batch_fetch_config(&self, access_paths: Vec<AccessPath>) -> Result<Vec<Vec<u8>>>;
-
     fn get_txn_by_account(
         &self,
         address: AccountAddress,
@@ -242,6 +245,54 @@ pub trait DbReader: Send + Sync {
 
     /// Get the ledger info of the epoch that `known_version` belongs to.
     fn get_ledger_info(&self, known_version: u64) -> Result<LedgerInfoWithSignatures>;
+}
+
+impl MoveStorage for &dyn DbReader {
+    fn batch_fetch_resources(&self, access_paths: Vec<AccessPath>) -> Result<Vec<Vec<u8>>> {
+        self.batch_fetch_resources_by_version(access_paths, self.get_latest_version()?)
+    }
+
+    fn batch_fetch_resources_by_version(
+        &self,
+        access_paths: Vec<AccessPath>,
+        version: Version,
+    ) -> Result<Vec<Vec<u8>>> {
+        let addresses: Vec<AccountAddress> = access_paths
+            .iter()
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .map(|path| path.address)
+            .collect();
+
+        let results = addresses
+            .iter()
+            .map(|addr| self.get_account_state_with_proof(addr.clone(), version, version))
+            .collect::<Result<Vec<_>>>()?;
+
+        // Account address --> AccountState
+        let account_states = addresses
+            .into_iter()
+            .zip_eq(results)
+            .map(|(addr, result)| {
+                let account_state = AccountState::try_from(&result.blob.ok_or_else(|| {
+                    format_err!("missing blob in account state/account does not exist")
+                })?)?;
+                Ok((addr, account_state))
+            })
+            .collect::<Result<HashMap<_, AccountState>>>()?;
+
+        access_paths
+            .into_iter()
+            .map(|path| {
+                Ok(account_states
+                    .get(&path.address)
+                    .ok_or_else(|| format_err!("missing account state for queried access path"))?
+                    .get(&path.path)
+                    .ok_or_else(|| format_err!("no value found in account state"))?
+                    .clone())
+            })
+            .collect()
+    }
 }
 
 /// Trait that is implemented by a DB that supports certain public (to client) write APIs

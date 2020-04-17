@@ -11,6 +11,7 @@ use libra_types::{
     account_state::AccountState,
     contract_event::ContractEvent,
     ledger_info::LedgerInfoWithSignatures,
+    move_resource::MoveStorage,
     on_chain_config::{OnChainConfigPayload, ON_CHAIN_CONFIG_REGISTRY},
     transaction::TransactionListWithProof,
     validator_change::ValidatorChangeProof,
@@ -98,7 +99,7 @@ impl ExecutorProxy {
             .iter()
             .map(|config_id| config_id.access_path())
             .collect();
-        let configs = storage.batch_fetch_config(access_paths)?;
+        let configs = storage.batch_fetch_resources(access_paths)?;
         let epoch = storage
             .get_latest_account_state(association_address())?
             .map(|blob| {

@@ -668,10 +668,6 @@ impl DbReader for SyncStorageClient {
         unimplemented!()
     }
 
-    fn batch_fetch_config(&self, _access_paths: Vec<AccessPath>) -> Result<Vec<Vec<u8>>> {
-        unimplemented!()
-    }
-
     fn get_account_state_with_proof_by_version(
         &self,
         address: AccountAddress,

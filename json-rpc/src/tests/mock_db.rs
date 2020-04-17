@@ -4,7 +4,6 @@
 use anyhow::{Error, Result};
 use libra_crypto::HashValue;
 use libra_types::{
-    access_path::AccessPath,
     account_address::AccountAddress,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     block_info::BlockInfo,
@@ -245,10 +244,6 @@ impl DbReader for MockLibraDB {
         _start_epoch: u64,
         _end_epoch: u64,
     ) -> Result<ValidatorChangeProof> {
-        unimplemented!()
-    }
-
-    fn batch_fetch_config(&self, _access_paths: Vec<AccessPath>) -> Result<Vec<Vec<u8>>> {
         unimplemented!()
     }
 
