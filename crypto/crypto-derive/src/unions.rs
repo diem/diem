@@ -187,6 +187,7 @@ pub fn impl_enum_verifyingkey(
             type SigningKeyMaterial = #pkt;
             type SignatureMaterial = #st;
         }
+        impl libra_crypto::private::Sealed for #name {}
     };
     res.into()
 }
@@ -219,6 +220,7 @@ pub fn impl_enum_signingkey(
                 }
             }
         }
+        impl libra_crypto::private::Sealed for #name {}
     };
     res.into()
 }
@@ -271,6 +273,8 @@ pub fn impl_enum_signature(
                 }
             }
         }
+
+        impl libra_crypto::private::Sealed for #name {}
     });
     res.into()
 }
