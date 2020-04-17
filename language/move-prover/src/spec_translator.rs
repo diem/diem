@@ -322,13 +322,13 @@ impl<'env> SpecTranslator<'env> {
             .collect_vec();
         if !aborts_if.is_empty() {
             self.writer.set_location(&aborts_if[0].loc);
-            emit!(self.writer, "ensures ");
+            emit!(self.writer, "ensures (");
             self.translate_seq(aborts_if.iter(), " || ", |c| {
                 emit!(self.writer, "b#Boolean(old(");
                 self.translate_exp_parenthesised(&c.exp);
                 emit!(self.writer, "))")
             });
-            emitln!(self.writer, " == $abort_flag;");
+            emitln!(self.writer, ") <==> $abort_flag;");
         }
 
         // Generate ensures

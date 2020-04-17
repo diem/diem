@@ -75,3 +75,15 @@ error:  A postcondition might not hold on this return path.
     =         _x = <redacted>,
     =         _y = <redacted>
     =     at tests/sources/aborts-if.move:90:5: multi_abort3_incorrect (exit)
+
+error:  A postcondition might not hold on this return path.
+
+     ┌── tests/sources/aborts-if.move:114:9 ───
+     │
+ 114 │         aborts_if true;
+     │         ^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/aborts-if.move:108:5: multi_abort5_incorrect (entry)
+     =     at tests/sources/aborts-if.move:109:9: multi_abort5_incorrect
+     =         x = <redacted>
+     =     at tests/sources/aborts-if.move:108:5: multi_abort5_incorrect (exit)
