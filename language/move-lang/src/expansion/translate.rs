@@ -648,11 +648,11 @@ fn spec_member(
             let type_arguments = optional_types(context, ptys_opt);
             let patterns = ppatterns
                 .into_iter()
-                .map(|p| function_pattern(context, p))
+                .map(|p| spec_apply_pattern(context, p))
                 .collect();
             let exclusion_patterns = pe_patterns
                 .into_iter()
-                .map(|p| function_pattern(context, p))
+                .map(|p| spec_apply_pattern(context, p))
                 .collect();
             EM::Apply {
                 name,
@@ -666,21 +666,21 @@ fn spec_member(
     Some(sp(loc, em))
 }
 
-fn function_pattern(
+fn spec_apply_pattern(
     context: &mut Context,
     sp!(
         loc,
-        P::FunctionPattern_ {
+        P::SpecApplyPattern_ {
             visibility,
             name_pattern,
             type_arguments: pty_args
         }
-    ): P::FunctionPattern,
-) -> E::FunctionPattern {
+    ): P::SpecApplyPattern,
+) -> E::SpecApplyPattern {
     let type_arguments = pty_args.map(|tys| types(context, tys));
     sp(
         loc,
-        E::FunctionPattern_ {
+        E::SpecApplyPattern_ {
             visibility,
             name_pattern,
             type_arguments,
