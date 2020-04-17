@@ -567,7 +567,13 @@ fn spec(context: &mut Context, sp!(loc, pspec): P::SpecBlock) -> E::SpecBlock {
     context.in_spec_context = true;
     let members = pmembers
         .into_iter()
-        .map(|m| spec_member(context, m))
+        .filter_map(|m| {
+            let m = spec_member(context, m);
+            if m.is_none() {
+                assert!(context.has_errors())
+            };
+            m
+        })
         .collect();
     context.in_spec_context = false;
     sp(
@@ -580,7 +586,10 @@ fn spec(context: &mut Context, sp!(loc, pspec): P::SpecBlock) -> E::SpecBlock {
     )
 }
 
-fn spec_member(context: &mut Context, sp!(loc, pm): P::SpecBlockMember) -> E::SpecBlockMember {
+fn spec_member(
+    context: &mut Context,
+    sp!(loc, pm): P::SpecBlockMember,
+) -> Option<E::SpecBlockMember> {
     use E::SpecBlockMember_ as EM;
     use P::SpecBlockMember_ as PM;
     let em = match pm {
@@ -618,8 +627,57 @@ fn spec_member(context: &mut Context, sp!(loc, pm): P::SpecBlockMember) -> E::Sp
                 type_: t,
             }
         }
+        PM::Include {
+            name: pn,
+            type_arguments: ptys_opt,
+        } => {
+            let name = module_access(context, pn)?;
+            let type_arguments = optional_types(context, ptys_opt);
+            EM::Include {
+                name,
+                type_arguments,
+            }
+        }
+        PM::Apply {
+            name: pn,
+            type_arguments: ptys_opt,
+            patterns: ppatterns,
+        } => {
+            let name = module_access(context, pn)?;
+            let type_arguments = optional_types(context, ptys_opt);
+            let patterns = ppatterns
+                .into_iter()
+                .map(|p| function_pattern(context, p))
+                .collect();
+            EM::Apply {
+                name,
+                type_arguments,
+                patterns,
+            }
+        }
+        PM::Pragma { properties } => EM::Pragma { properties },
     };
-    sp(loc, em)
+    Some(sp(loc, em))
+}
+
+fn function_pattern(
+    context: &mut Context,
+    sp!(
+        loc,
+        P::FunctionPattern_ {
+            name_pattern,
+            type_arguments: pty_args
+        }
+    ): P::FunctionPattern,
+) -> E::FunctionPattern {
+    let type_arguments = pty_args.map(|tys| types(context, tys));
+    sp(
+        loc,
+        E::FunctionPattern_ {
+            name_pattern,
+            type_arguments,
+        },
+    )
 }
 
 //**************************************************************************************************
@@ -666,6 +724,10 @@ fn type_(context: &mut Context, sp!(loc, pt_): P::Type) -> E::Type {
 
 fn types(context: &mut Context, pts: Vec<P::Type>) -> Vec<E::Type> {
     pts.into_iter().map(|pt| type_(context, pt)).collect()
+}
+
+fn optional_types(context: &mut Context, pts_opt: Option<Vec<P::Type>>) -> Option<Vec<E::Type>> {
+    pts_opt.map(|pts| pts.into_iter().map(|pt| type_(context, pt)).collect())
 }
 
 fn module_access(
@@ -795,7 +857,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         PE::Name(pn, ptys_opt) => {
             let mk_name = |context: &mut Context, pn| {
                 let en_opt = module_access(context, pn);
-                let tys_opt = ptys_opt.map(|pts| types(context, pts));
+                let tys_opt = optional_types(context, ptys_opt);
                 match en_opt {
                     Some(en) => EE::Name(en, tys_opt),
                     None => {
@@ -823,13 +885,13 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
             }
         }
         PE::GlobalCall(n, ptys_opt, sp!(rloc, prs)) => {
-            let tys_opt = ptys_opt.map(|pts| types(context, pts));
+            let tys_opt = optional_types(context, ptys_opt);
             let ers = sp(rloc, exps(context, prs));
             EE::GlobalCall(n, tys_opt, ers)
         }
         PE::Call(pn, ptys_opt, sp!(rloc, prs)) => {
             let en_opt = module_access(context, pn);
-            let tys_opt = ptys_opt.map(|pts| types(context, pts));
+            let tys_opt = optional_types(context, ptys_opt);
             let ers = sp(rloc, exps(context, prs));
             match en_opt {
                 Some(en) => EE::Call(en, tys_opt, ers),
@@ -841,7 +903,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
         }
         PE::Pack(pn, ptys_opt, pfields) => {
             let en_opt = module_access(context, pn);
-            let tys_opt = ptys_opt.map(|pts| types(context, pts));
+            let tys_opt = optional_types(context, ptys_opt);
             let efields_vec = pfields
                 .into_iter()
                 .map(|(f, pe)| (f, exp_(context, pe)))
@@ -1005,7 +1067,7 @@ fn bind(context: &mut Context, sp!(loc, pb_): P::Bind) -> Option<E::LValue> {
         PB::Var(v) => EL::Var(sp(loc, E::ModuleAccess_::Name(v.0)), None),
         PB::Unpack(ptn, ptys_opt, pfields) => {
             let tn = module_access(context, ptn)?;
-            let tys_opt = ptys_opt.map(|pts| types(context, pts));
+            let tys_opt = optional_types(context, ptys_opt);
             let vfields: Option<Vec<(Field, E::LValue)>> = pfields
                 .into_iter()
                 .map(|(f, pb)| Some((f, bind(context, pb)?)))
@@ -1063,12 +1125,12 @@ fn assign(context: &mut Context, sp!(loc, e_): P::Exp) -> Option<E::LValue> {
         }
         PE::Name(pn, ptys_opt) => {
             let en = module_access(context, pn)?;
-            let tys_opt = ptys_opt.map(|pts| types(context, pts));
+            let tys_opt = optional_types(context, ptys_opt);
             EL::Var(en, tys_opt)
         }
         PE::Pack(pn, ptys_opt, pfields) => {
             let en = module_access(context, pn)?;
-            let tys_opt = ptys_opt.map(|pts| types(context, pts));
+            let tys_opt = optional_types(context, ptys_opt);
             let efields = assign_unpack_fields(context, loc, pfields)?;
             EL::Unpack(en, tys_opt, efields)
         }
@@ -1118,7 +1180,11 @@ fn unbound_names_spec_block_member(unbound: &mut BTreeSet<Name>, sp!(_, m_): &E:
         M::Condition { exp, .. } | M::Invariant { exp, .. } => unbound_names_exp(unbound, exp),
         // No unbound names
         // And will error in the move prover
-        M::Function { .. } | M::Variable { .. } => (),
+        M::Function { .. }
+        | M::Variable { .. }
+        | M::Include { .. }
+        | M::Apply { .. }
+        | M::Pragma { .. } => (),
     }
 }
 

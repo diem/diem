@@ -115,4 +115,18 @@ module M {
         ensures generic<T> == 1;
         ensures Self::generic<T> == 1;
     }
+
+    spec schema ModuleInvariant<X, Y> {
+        requires global<X>(0x0).f == global<X>(0x1).f;
+        ensures global<X>(0x0).f == global<X>(0x1).f;
+    }
+
+    spec fun some_generic {
+        include ModuleInvariant<T, T>;
+    }
+
+    spec module {
+        apply ModuleInvariant<X, Y> to *foo*<Y, X>;
+        pragma do_not_verify, timeout = 60;
+    }
 }
