@@ -1,8 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use generate_format::{add_deserialization_tracing, add_proptest_serialization_tracing, FILE_PATH};
-use serde_reflection::{SerializationRecords, Tracer, TracerConfig};
+use generate_format::Corpus;
 use serde_yaml;
 use std::{fs::File, io::Write};
 use structopt::StructOpt;
@@ -13,28 +12,31 @@ use structopt::StructOpt;
     about = "Trace serde (de)serialization to generate format descriptions for Libra types"
 )]
 struct Options {
-    #[structopt(short, long)]
+    #[structopt(long, possible_values = &Corpus::variants(), default_value = "Libra", case_insensitive = true)]
+    corpus: Corpus,
+
+    #[structopt(long)]
     skip_deserialize: bool,
 
-    #[structopt(short, long)]
+    #[structopt(long)]
     record: bool,
 }
 
 fn main() {
     let options = Options::from_args();
 
-    let records = SerializationRecords::new();
-    let tracer = Tracer::new(TracerConfig::default().is_human_readable(lcs::is_human_readable()));
-    let (mut tracer, records) = add_proptest_serialization_tracing(tracer, records);
-    if !options.skip_deserialize {
-        tracer = add_deserialization_tracing(tracer, &records);
-    }
+    let registry = options.corpus.get_registry(options.skip_deserialize);
+    let output_file = options.corpus.output_file();
 
-    let registry = tracer.registry().unwrap();
     let content = serde_yaml::to_string(&registry).unwrap();
     if options.record {
-        let mut f = File::create("testsuite/generate-format/".to_string() + FILE_PATH).unwrap();
-        writeln!(f, "{}", content).unwrap();
+        match output_file {
+            Some(path) => {
+                let mut f = File::create("testsuite/generate-format/".to_string() + path).unwrap();
+                writeln!(f, "{}", content).unwrap();
+            }
+            None => panic!("Corpus {:?} doesn't record formats on disk", options.corpus),
+        }
     } else {
         println!("{}", content);
     }
