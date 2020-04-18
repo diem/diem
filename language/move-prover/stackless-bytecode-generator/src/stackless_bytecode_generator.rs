@@ -22,7 +22,6 @@ use vm::{
     access::ModuleAccess,
     file_format::{
         Bytecode as MoveBytecode, CodeOffset, CompiledModule, FieldHandleIndex, SignatureIndex,
-        SignatureToken,
     },
     views::{FunctionHandleView, ViewInternals},
 };
@@ -879,15 +878,16 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             }
 
             MoveBytecode::MutBorrowGlobal(idx) | MoveBytecode::ImmBorrowGlobal(idx) => {
-                let struct_definition = self.module.struct_def_at(*idx);
+                let struct_env = self.func_env.module_env.get_struct_by_def_idx(*idx);
                 let is_mut = matches!(bytecode, MoveBytecode::MutBorrowGlobal(..));
-
                 let operand_index = self.temp_stack.pop().unwrap();
                 let temp_index = self.temp_count;
                 self.local_types.push(Type::Reference(
                     is_mut,
-                    Box::new(self.func_env.module_env.globalize_signature(
-                        &SignatureToken::Struct(struct_definition.struct_handle),
+                    Box::new(Type::Struct(
+                        struct_env.module_env.get_id(),
+                        struct_env.get_id(),
+                        vec![],
                     )),
                 ));
                 self.temp_stack.push(temp_index);
@@ -906,22 +906,22 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             MoveBytecode::MutBorrowGlobalGeneric(idx)
             | MoveBytecode::ImmBorrowGlobalGeneric(idx) => {
                 let struct_instantiation = self.module.struct_instantiation_at(*idx);
-                let struct_definition = self.module.struct_def_at(struct_instantiation.def);
                 let is_mut = matches!(bytecode, MoveBytecode::MutBorrowGlobalGeneric(..));
+                let struct_env = self
+                    .func_env
+                    .module_env
+                    .get_struct_by_def_idx(struct_instantiation.def);
 
                 let operand_index = self.temp_stack.pop().unwrap();
                 let temp_index = self.temp_count;
                 let actuals = self.get_type_params(struct_instantiation.type_parameters);
                 self.local_types.push(Type::Reference(
                     is_mut,
-                    Box::new(
-                        self.func_env
-                            .module_env
-                            .globalize_signature(&SignatureToken::Struct(
-                                struct_definition.struct_handle,
-                            ))
-                            .instantiate(&actuals),
-                    ),
+                    Box::new(Type::Struct(
+                        struct_env.module_env.get_id(),
+                        struct_env.get_id(),
+                        actuals.clone(),
+                    )),
                 ));
                 self.temp_stack.push(temp_index);
                 self.temp_count += 1;
@@ -939,17 +939,15 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             }
 
             MoveBytecode::MoveFrom(idx) => {
-                let struct_definition = self.module.struct_def_at(*idx);
+                let struct_env = self.func_env.module_env.get_struct_by_def_idx(*idx);
                 let operand_index = self.temp_stack.pop().unwrap();
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
-                self.local_types.push(
-                    self.func_env
-                        .module_env
-                        .globalize_signature(&SignatureToken::Struct(
-                            struct_definition.struct_handle,
-                        )),
-                );
+                self.local_types.push(Type::Struct(
+                    struct_env.module_env.get_id(),
+                    struct_env.get_id(),
+                    vec![],
+                ));
                 self.temp_count += 1;
                 self.code.push(mk_unary(
                     Operation::MoveFrom(
@@ -964,19 +962,19 @@ impl<'a> StacklessBytecodeGenerator<'a> {
 
             MoveBytecode::MoveFromGeneric(idx) => {
                 let struct_instantiation = self.module.struct_instantiation_at(*idx);
-                let struct_definition = self.module.struct_def_at(struct_instantiation.def);
+                let struct_env = self
+                    .func_env
+                    .module_env
+                    .get_struct_by_def_idx(struct_instantiation.def);
                 let operand_index = self.temp_stack.pop().unwrap();
                 let temp_index = self.temp_count;
                 self.temp_stack.push(temp_index);
                 let actuals = self.get_type_params(struct_instantiation.type_parameters);
-                self.local_types.push(
-                    self.func_env
-                        .module_env
-                        .globalize_signature(&SignatureToken::Struct(
-                            struct_definition.struct_handle,
-                        ))
-                        .instantiate(&actuals),
-                );
+                self.local_types.push(Type::Struct(
+                    struct_env.module_env.get_id(),
+                    struct_env.get_id(),
+                    actuals.clone(),
+                ));
                 self.temp_count += 1;
                 self.code.push(mk_unary(
                     Operation::MoveFrom(
