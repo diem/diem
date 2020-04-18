@@ -45,7 +45,7 @@ pub struct SpecFunDecl {
 // =================================================================================================
 /// # Conditions
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum SpecConditionKind {
     Assert,
     Assume,
@@ -53,6 +53,7 @@ pub enum SpecConditionKind {
     AbortsIf,
     Ensures,
     Requires,
+    RequiresModule,
 }
 
 impl SpecConditionKind {
@@ -65,11 +66,18 @@ impl SpecConditionKind {
             PA::SpecConditionKind::Ensures => Ensures,
             PA::SpecConditionKind::Requires => Requires,
             PA::SpecConditionKind::AbortsIf => AbortsIf,
-            PA::SpecConditionKind::RequiresModule => unimplemented!(),
+            PA::SpecConditionKind::RequiresModule => RequiresModule,
         }
     }
 
-    pub fn on_decl(&self) -> bool {
+    pub fn allows_old(self) -> bool {
+        matches!(
+            self,
+            SpecConditionKind::Ensures | SpecConditionKind::AbortsIf
+        )
+    }
+
+    pub fn on_decl(self) -> bool {
         use SpecConditionKind::*;
         match self {
             AbortsIf | Ensures | Requires => true,
@@ -77,7 +85,7 @@ impl SpecConditionKind {
         }
     }
 
-    pub fn on_impl(&self) -> bool {
+    pub fn on_impl(self) -> bool {
         use SpecConditionKind::*;
         match self {
             Assert | Assume | Decreases => true,
@@ -102,13 +110,29 @@ pub struct FunSpec {
 // =================================================================================================
 /// # Invariants
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum InvariantKind {
     Data,
     Update,
     Pack,
     Unpack,
     Module,
+}
+
+impl InvariantKind {
+    pub fn new(kind: &PA::InvariantKind) -> InvariantKind {
+        use InvariantKind::*;
+        match kind {
+            PA::InvariantKind::Data => Data,
+            PA::InvariantKind::Update => Update,
+            PA::InvariantKind::Pack => Pack,
+            PA::InvariantKind::Unpack => Unpack,
+        }
+    }
+
+    pub fn allows_old(self) -> bool {
+        matches!(self, InvariantKind::Update)
+    }
 }
 
 #[derive(Debug)]
@@ -123,7 +147,7 @@ pub struct Invariant {
 // =================================================================================================
 /// # Expressions
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Exp {
     Error(NodeId),
     Value(NodeId, Value),
@@ -233,14 +257,14 @@ pub enum Operation {
     MaxU128,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LocalVarDecl {
     pub id: NodeId,
     pub name: Symbol,
     pub binding: Option<Exp>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     Address(BigUint),
     Number(BigUint),
