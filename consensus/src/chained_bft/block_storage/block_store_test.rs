@@ -19,7 +19,7 @@ use consensus_types::{
     vote::Vote,
     vote_data::VoteData,
 };
-use libra_crypto::{HashValue, TPrivateKey};
+use libra_crypto::{HashValue, PrivateKey};
 use libra_types::{
     account_address::AccountAddress, validator_signer::ValidatorSigner,
     validator_verifier::random_validator_verifier,

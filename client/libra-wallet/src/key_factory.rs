@@ -19,7 +19,7 @@ use crate::mnemonic::Mnemonic;
 use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian};
 use hmac::Hmac;
-use libra_crypto::{ed25519, hash::HashValue, hkdf::Hkdf, TSigningKey};
+use libra_crypto::{ed25519, hash::HashValue, hkdf::Hkdf, SigningKey};
 use libra_types::{account_address::AccountAddress, transaction::authenticator::AuthenticationKey};
 use mirai_annotations::*;
 use pbkdf2::pbkdf2;

@@ -12,7 +12,7 @@
 //! use libra_crypto::hash::{CryptoHasher, TestOnlyHasher};
 //! use libra_crypto::{
 //!     ed25519,
-//!     TSignature, TSigningKey, Uniform,
+//!     TSignature, SigningKey, Uniform,
 //! };
 //! use rand::{rngs::StdRng, SeedableRng};
 //!
@@ -29,7 +29,10 @@
 //! **Note**: The above example generates a private key using a private function intended only for
 //! testing purposes. Production code should find an alternate means for secure key generation.
 
-use crate::{traits::*, HashValue};
+use crate::{
+    traits::{self, CryptoMaterialError, Genesis, Length, Uniform, ValidKey, ValidKeyStringExt},
+    HashValue,
+};
 use anyhow::{anyhow, Result};
 use core::convert::TryFrom;
 use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
@@ -158,11 +161,11 @@ impl Signature {
 // SigningKey Traits //
 ///////////////////////
 
-impl TPrivateKey for SigningKey {
+impl traits::PrivateKey for SigningKey {
     type PublicKeyMaterial = VerifyingKey;
 }
 
-impl TSigningKey for SigningKey {
+impl traits::SigningKey for SigningKey {
     type VerifyingKeyMaterial = VerifyingKey;
     type SignatureMaterial = Signature;
 
@@ -243,7 +246,7 @@ impl From<&SigningKey> for VerifyingKey {
 }
 
 // We deduce VerifyingKey from this
-impl TPublicKey for VerifyingKey {
+impl traits::PublicKey for VerifyingKey {
     type PrivateKeyMaterial = SigningKey;
 }
 
@@ -263,9 +266,9 @@ impl PartialEq for VerifyingKey {
 
 impl Eq for VerifyingKey {}
 
-// We deduce TVerifyingKey from pointing to the signature material
+// We deduce VerifyingKey from pointing to the signature material
 // we get the ability to do `pubkey.validate(msg, signature)`
-impl TVerifyingKey for VerifyingKey {
+impl traits::VerifyingKey for VerifyingKey {
     type SigningKeyMaterial = SigningKey;
     type SignatureMaterial = Signature;
 }
@@ -331,7 +334,7 @@ impl ValidKey for VerifyingKey {
 // Signature Traits //
 //////////////////////
 
-impl TSignature for Signature {
+impl traits::Signature for Signature {
     type VerifyingKeyMaterial = VerifyingKey;
     type SigningKeyMaterial = SigningKey;
 

@@ -19,7 +19,7 @@
 //! KeyManager talks to its own storage through the `LibraSecureStorage::Storage trait.
 #![forbid(unsafe_code)]
 
-use libra_crypto::{ed25519, TPrivateKey};
+use libra_crypto::{ed25519, PrivateKey};
 use libra_secure_storage::Storage;
 use libra_secure_time::TimeService;
 use libra_transaction_scripts;

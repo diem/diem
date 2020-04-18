@@ -6,7 +6,11 @@
 //!
 //! Signature verification also checks and rejects non-canonical signatures.
 
-use crate::{ed25519, traits::*, HashValue};
+use crate::{
+    ed25519,
+    traits::{self, CryptoMaterialError, Genesis, Length, Uniform, ValidKey, ValidKeyStringExt},
+    HashValue,
+};
 use anyhow::{anyhow, Result};
 use core::convert::TryFrom;
 use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
@@ -124,11 +128,11 @@ impl From<&ed25519::SigningKey> for SigningKeys {
     }
 }
 
-impl TPrivateKey for SigningKeys {
+impl traits::PrivateKey for SigningKeys {
     type PublicKeyMaterial = VerifyingKeys;
 }
 
-impl TSigningKey for SigningKeys {
+impl traits::SigningKey for SigningKeys {
     type VerifyingKeyMaterial = VerifyingKeys;
     type SignatureMaterial = MultiSignature;
 
@@ -239,7 +243,7 @@ impl From<&SigningKeys> for VerifyingKeys {
         let public_keys = private_key
             .private_keys
             .iter()
-            .map(TPrivateKey::public_key)
+            .map(traits::PrivateKey::public_key)
             .collect();
         VerifyingKeys {
             public_keys,
@@ -249,7 +253,7 @@ impl From<&SigningKeys> for VerifyingKeys {
 }
 
 /// We deduce VerifyingKeys from this.
-impl TPublicKey for VerifyingKeys {
+impl traits::PublicKey for VerifyingKeys {
     type PrivateKeyMaterial = SigningKeys;
 }
 
@@ -282,9 +286,9 @@ impl TryFrom<&[u8]> for VerifyingKeys {
     }
 }
 
-/// We deduce TVerifyingKey from pointing to the signature material
+/// We deduce VerifyingKey from pointing to the signature material
 /// we get the ability to do `pubkey.validate(msg, signature)`
-impl TVerifyingKey for VerifyingKeys {
+impl traits::VerifyingKey for VerifyingKeys {
     type SigningKeyMaterial = SigningKeys;
     type SignatureMaterial = MultiSignature;
 }
@@ -441,7 +445,7 @@ impl ValidKey for MultiSignature {
     }
 }
 
-impl TSignature for MultiSignature {
+impl traits::Signature for MultiSignature {
     type VerifyingKeyMaterial = VerifyingKeys;
     type SigningKeyMaterial = SigningKeys;
 

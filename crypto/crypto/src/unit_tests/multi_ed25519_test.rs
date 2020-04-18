@@ -194,7 +194,7 @@ fn test_multi_ed25519_signature_serialization() {
 
     // Construct from single ed25519::Signature.
     let single_signature = priv_keys_3[0].sign_message(&MESSAGE_HASH);
-    let multi_signature = multi_ed25519::VerifyingKeys::from(single_signature.clone());
+    let multi_signature = multi_ed25519::MultiSignature::from(single_signature.clone());
     assert_eq!(1, multi_signature.signatures().len());
     assert_eq!(multi_signature.signatures()[0], single_signature);
     assert_eq!(multi_signature.bitmap(), &[0b1000_0000u8, 0u8, 0u8, 0u8]);

@@ -33,7 +33,9 @@
 
 use std::convert::{TryFrom, TryInto};
 
-use crate::traits::*;
+use crate::traits::{
+    self, CryptoMaterialError, Genesis, Length, Uniform, ValidKey, ValidKeyStringExt,
+};
 use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
 
 #[cfg(any(test, feature = "fuzzing"))]
@@ -142,10 +144,10 @@ impl ValidKey for PublicKey {
     }
 }
 
-impl TPrivateKey for PrivateKey {
+impl traits::PrivateKey for PrivateKey {
     type PublicKeyMaterial = PublicKey;
 }
 
-impl TPublicKey for PublicKey {
+impl traits::PublicKey for PublicKey {
     type PrivateKeyMaterial = PrivateKey;
 }

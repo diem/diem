@@ -91,10 +91,10 @@ impl<T: ValidKey> ValidKeyStringExt for T {}
 
 /// A type family for key material that should remain secret and has an
 /// associated type of the [`PublicKey`][PublicKey] family.
-pub trait TPrivateKey: Sized {
+pub trait PrivateKey: Sized {
     /// We require public / private types to be coupled, i.e. their
     /// associated type is each other.
-    type PublicKeyMaterial: TPublicKey<PrivateKeyMaterial = Self>;
+    type PublicKeyMaterial: PublicKey<PrivateKeyMaterial = Self>;
 
     /// Returns the associated public key
     fn public_key(&self) -> Self::PublicKeyMaterial {
@@ -106,13 +106,13 @@ pub trait TPrivateKey: Sized {
 ///
 /// A trait for a [`ValidKey`][ValidKey] which knows how to sign a
 /// message, and return an associated `Signature` type.
-pub trait TSigningKey:
-    TPrivateKey<PublicKeyMaterial = <Self as TSigningKey>::VerifyingKeyMaterial> + ValidKey
+pub trait SigningKey:
+    PrivateKey<PublicKeyMaterial = <Self as SigningKey>::VerifyingKeyMaterial> + ValidKey
 {
     /// The associated verifying key type for this signing key.
-    type VerifyingKeyMaterial: TVerifyingKey<SigningKeyMaterial = Self>;
+    type VerifyingKeyMaterial: VerifyingKey<SigningKeyMaterial = Self>;
     /// The associated signature type for this signing key.
-    type SignatureMaterial: TSignature<SigningKeyMaterial = Self>;
+    type SignatureMaterial: Signature<SigningKeyMaterial = Self>;
 
     /// Signs an input message.
     fn sign_message(&self, message: &HashValue) -> Self::SignatureMaterial;
@@ -128,7 +128,7 @@ pub trait TSigningKey:
 /// reference.
 /// This convertibility requirement ensures the existence of a
 /// deterministic, canonical public key construction from a private key.
-pub trait TPublicKey: Sized + Clone + Eq + Hash +
+pub trait PublicKey: Sized + Clone + Eq + Hash +
     // This unsightly turbofish type parameter is the precise constraint
     // needed to require that there exists an
     //
@@ -139,23 +139,23 @@ pub trait TPublicKey: Sized + Clone + Eq + Hash +
     // declaration, for any `MyPrivateKeyMaterial`, `MyPublicKeyMaterial`
     // on which we register (respectively) `PublicKey` and `PrivateKey`
     // implementations.
-    for<'a> From<&'a <Self as TPublicKey>::PrivateKeyMaterial> {
+    for<'a> From<&'a <Self as PublicKey>::PrivateKeyMaterial> {
     /// We require public / private types to be coupled, i.e. their
     /// associated type is each other.
-    type PrivateKeyMaterial: TPrivateKey<PublicKeyMaterial = Self>;
+    type PrivateKeyMaterial: PrivateKey<PublicKeyMaterial = Self>;
 }
 
 /// A type family of public keys that are used for signing.
 ///
 /// It is linked to a type of the Signature family, which carries the
 /// verification implementation.
-pub trait TVerifyingKey:
-    TPublicKey<PrivateKeyMaterial = <Self as TVerifyingKey>::SigningKeyMaterial> + ValidKey
+pub trait VerifyingKey:
+    PublicKey<PrivateKeyMaterial = <Self as VerifyingKey>::SigningKeyMaterial> + ValidKey
 {
     /// The associated signing key type for this verifying key.
-    type SigningKeyMaterial: TSigningKey<VerifyingKeyMaterial = Self>;
+    type SigningKeyMaterial: SigningKey<VerifyingKeyMaterial = Self>;
     /// The associated signature type for this verifying key.
-    type SignatureMaterial: TSignature<VerifyingKeyMaterial = Self>;
+    type SignatureMaterial: Signature<VerifyingKeyMaterial = Self>;
 
     /// We provide the logical implementation which dispatches to the signature.
     fn verify_signature(
@@ -187,13 +187,13 @@ pub trait TVerifyingKey:
 /// that material de-serializes to a signature of the expected concrete
 /// scheme. This would be done as an extension trait of
 /// [`Signature`][Signature].
-pub trait TSignature:
+pub trait Signature:
     for<'a> TryFrom<&'a [u8], Error = CryptoMaterialError> + Sized + Debug + Clone + Eq + Hash
 {
     /// The associated verifying key type for this signature.
-    type VerifyingKeyMaterial: TVerifyingKey<SignatureMaterial = Self>;
+    type VerifyingKeyMaterial: VerifyingKey<SignatureMaterial = Self>;
     /// The associated signing key type for this signature
-    type SigningKeyMaterial: TSigningKey<SignatureMaterial = Self>;
+    type SigningKeyMaterial: SigningKey<SignatureMaterial = Self>;
 
     /// The verification function.
     fn verify(&self, message: &HashValue, public_key: &Self::VerifyingKeyMaterial) -> Result<()>;
@@ -243,7 +243,7 @@ pub trait Uniform {
 }
 
 /// A type family with a by-convention notion of genesis private key.
-pub trait Genesis: TPrivateKey {
+pub trait Genesis: PrivateKey {
     /// Produces the genesis private key.
     fn genesis() -> Self;
 }

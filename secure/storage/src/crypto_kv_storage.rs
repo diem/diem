@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{CryptoStorage, Error, KVStorage, Policy, PublicKeyResponse, Value};
-use libra_crypto::{ed25519, HashValue, TPrivateKey, TSigningKey, Uniform};
+use libra_crypto::{ed25519, HashValue, PrivateKey, SigningKey, Uniform};
 use rand::{rngs::OsRng, Rng, SeedableRng};
 
 /// CryptoKVStorage offers a CryptoStorage implementation by extending a key value store (KVStorage)

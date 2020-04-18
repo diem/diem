@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::AccountAddress;
-use libra_crypto::{ed25519, test_utils::TEST_SEED, HashValue, TPrivateKey, TSigningKey, Uniform};
+use libra_crypto::{ed25519, test_utils::TEST_SEED, HashValue, PrivateKey, SigningKey, Uniform};
 use rand::{rngs::StdRng, SeedableRng};
 use std::convert::TryFrom;
 

@@ -270,7 +270,7 @@ mod test {
     use anyhow::Result;
     use futures::{channel::mpsc::channel, StreamExt};
     use libra_config::utils;
-    use libra_crypto::{ed25519, HashValue, TPrivateKey, Uniform};
+    use libra_crypto::{ed25519, HashValue, PrivateKey, Uniform};
     use libra_json_rpc::bootstrap;
     use libra_types::{
         account_address::AccountAddress,

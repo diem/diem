@@ -22,7 +22,7 @@ use libra_crypto::{
         CryptoHash, TestOnlyHash, ACCUMULATOR_PLACEHOLDER_HASH, GENESIS_BLOCK_ID,
         SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
-    HashValue, TPrivateKey, Uniform,
+    HashValue, PrivateKey, Uniform,
 };
 
 #[test]

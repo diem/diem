@@ -12,7 +12,7 @@ use libra_crypto::{
     ed25519,
     hash::{CryptoHash, TestOnlyHash},
     test_utils::KeyPair,
-    HashValue, TSigningKey,
+    HashValue, SigningKey,
 };
 
 /// Used to get the digest of a set of signed transactions.  This is used by a validator
