@@ -11,6 +11,7 @@ use stackless_bytecode_generator::{
     eliminate_imm_refs::EliminateImmRefsProcessor,
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
     lifetime_analysis::LifetimeAnalysisProcessor,
+    livevar_analysis::LiveVarAnalysisProcessor,
     reaching_def_analysis::ReachingDefProcessor,
 };
 use test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives};
@@ -20,9 +21,14 @@ fn get_tested_transformation_pipeline(
 ) -> anyhow::Result<Option<FunctionTargetPipeline>> {
     match dir_name {
         "from_move" => Ok(None),
-        "elim_imm_refs" => {
+        "eliminate_imm_refs" => {
             let mut pipeline = FunctionTargetPipeline::default();
             pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
+            Ok(Some(pipeline))
+        }
+        "livevar" => {
+            let mut pipeline = FunctionTargetPipeline::default();
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
             Ok(Some(pipeline))
         }
         "lifetime" => {

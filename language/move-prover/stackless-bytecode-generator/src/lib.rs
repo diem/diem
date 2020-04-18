@@ -9,6 +9,7 @@ pub mod eliminate_imm_refs;
 pub mod function_target;
 pub mod function_target_pipeline;
 pub mod lifetime_analysis;
+pub mod livevar_analysis;
 pub mod reaching_def_analysis;
 pub mod stackless_bytecode;
 pub mod stackless_bytecode_generator;
