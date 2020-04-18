@@ -41,12 +41,14 @@ pub struct SerializationRecords {
 }
 
 impl SerializationRecords {
+    /// Create a new structure to hold value samples.
     pub fn new() -> Self {
         Self {
             values: BTreeMap::new(),
         }
     }
 
+    /// Obtain a (serialized) sample.
     pub fn value(&self, name: &'static str) -> Option<&Value> {
         self.values.get(name)
     }

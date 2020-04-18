@@ -258,7 +258,7 @@ mod bar {
 }
 
 #[test]
-fn test_name_clash_not_suported() {
+fn test_name_clash_not_supported() {
     let mut records = SerializationRecords::new();
     let mut tracer = Tracer::new(/* is_human_readable */ false);
     tracer.trace_value(&mut records, &foo::A).unwrap();
@@ -316,4 +316,28 @@ fn test_borrowed_bytes() {
         registry.get("Borrowed").unwrap(),
         &ContainerFormat::NewTypeStruct(Box::new(Format::Bytes))
     );
+}
+
+#[test]
+fn test_trace_deserialization_with_recursive_types() {
+    #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+    enum List<T> {
+        Empty,
+        Cons { head: T, tail: Box<List<T>> },
+    }
+
+    let records = SerializationRecords::new();
+    let mut tracer = Tracer::new(/* is_human_readable */ false);
+
+    tracer.trace_type::<List<u32>>(&records).unwrap();
+
+    let registry = tracer.registry().unwrap();
+    // Note that we do not use the type parameter in the name.
+    let variants = match registry.get("List").unwrap() {
+        ContainerFormat::Enum(variants) => variants,
+        _ => panic!("should be an enum"),
+    };
+    assert_eq!(variants.len(), 2);
+    assert_eq!(variants.get(&0).unwrap().name, "Empty");
+    assert_eq!(variants.get(&1).unwrap().name, "Cons");
 }

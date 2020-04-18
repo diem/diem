@@ -232,9 +232,14 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'de, 'a> {
         V: Visitor<'de>,
     {
         self.format.unify(Format::TypeName(name.into()))?;
+        // Pre-update the registry.
+        self.tracer
+            .registry
+            .entry(name)
+            .unify(ContainerFormat::NewTypeStruct(Box::new(Format::Unknown)))?;
+
         // If a newtype struct was visited by the serialization tracer, use the recorded value.
         if let Some((format, hint)) = self.tracer.get_recorded_value(self.records, name) {
-            // Hints are recorded during serialization-tracing therefore the registry is already accurate.
             return visitor
                 .visit_newtype_struct(hint.into_deserializer())
                 .map_err(|err| match err {
@@ -244,21 +249,17 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'de, 'a> {
                     _ => err,
                 });
         }
-        self.tracer
-            .registry
-            .entry(name)
-            .unify(ContainerFormat::NewTypeStruct(Box::new(Format::Unknown)))?;
 
         let mut format = Format::Unknown;
         let inner = Deserializer::new(self.tracer, self.records, &mut format);
-        let value = visitor.visit_newtype_struct(inner)?;
+        let result = visitor.visit_newtype_struct(inner);
         match self.tracer.registry.get_mut(name) {
             Some(ContainerFormat::NewTypeStruct(x)) => {
                 *x = Box::new(format);
             }
             _ => unreachable!(),
         };
-        Ok(value)
+        result
     }
 
     fn deserialize_seq<V>(self, visitor: V) -> Result<V::Value>
@@ -307,14 +308,14 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'de, 'a> {
     {
         self.format.unify(Format::TypeName(name.into()))?;
         let mut formats = vec![Format::Unknown; len];
-        // Update the registry with an intermediate result to stop recursion.
+        // Pre-update the registry.
         self.tracer
             .registry
             .entry(name)
             .unify(ContainerFormat::TupleStruct(formats.clone()))?;
         // Compute the formats.
         let inner = SeqDeserializer::new(self.tracer, self.records, formats.iter_mut());
-        let value = visitor.visit_seq(inner)?;
+        let result = visitor.visit_seq(inner);
         // Finally, update the registry.
         match self.tracer.registry.get_mut(name) {
             Some(ContainerFormat::TupleStruct(x)) => {
@@ -322,7 +323,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'de, 'a> {
             }
             _ => unreachable!(),
         };
-        Ok(value)
+        result
     }
 
     fn deserialize_map<V>(self, visitor: V) -> Result<V::Value>
@@ -365,7 +366,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'de, 'a> {
                 value: Format::Unknown,
             })
             .collect();
-        // Update the registry with an intermediate result to stop recursion.
+        // Pre-update the registry.
         self.tracer
             .registry
             .entry(name)
@@ -376,7 +377,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'de, 'a> {
             self.records,
             formats.iter_mut().map(|named| &mut named.value),
         );
-        let value = visitor.visit_seq(inner)?;
+        let result = visitor.visit_seq(inner);
         // Finally, update the registry.
         match self.tracer.registry.get_mut(name) {
             Some(ContainerFormat::Struct(x)) => {
@@ -384,7 +385,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'de, 'a> {
             }
             _ => unreachable!(),
         };
-        Ok(value)
+        result
     }
 
     // Assumption: The first variant(s) should be "base cases", i.e. not cause infinite recursion
@@ -403,7 +404,7 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'de, 'a> {
             "Enums should have at least one variant."
         );
         self.format.unify(Format::TypeName(name.into()))?;
-        // Update the registry with an intermediate result to stop recursion.
+        // Pre-update the registry.
         self.tracer
             .registry
             .entry(name)
@@ -431,20 +432,24 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'de, 'a> {
             };
             (index, variant)
         };
+        // Temporarily mark the entry as "incomplete" to force variant #0 in any
+        // recursive exploration of the same enum.
+        self.tracer.incomplete_enums.insert(name.into());
 
-        // Compute the formats.
+        // Compute the format for this variant.
         let inner = EnumDeserializer::new(self.tracer, self.records, index, &mut variant.value);
-        let value = visitor.visit_enum(inner)?;
+        let result = visitor.visit_enum(inner);
         // Finally, update the registry.
         let current_variants = match self.tracer.registry.get_mut(name) {
             Some(ContainerFormat::Enum(x)) => x,
             _ => unreachable!(),
         };
         current_variants.insert(index, variant);
-        if current_variants.len() != variants.len() {
-            self.tracer.incomplete_enums.insert(name.into());
+        // Clear the flag "incomplete" if we are done exploring variants.
+        if current_variants.len() == variants.len() {
+            self.tracer.incomplete_enums.remove(name);
         }
-        Ok(value)
+        result
     }
 
     // Not needed since we always deserialize structs as sequences.
