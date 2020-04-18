@@ -505,7 +505,8 @@ fn parse_value<'input>(tokens: &mut Lexer<'input>) -> Result<Value, Error> {
     Ok(spanned(tokens.file_name(), start_loc, end_loc, val))
 }
 
-// Parse a num value.
+// Parse a num value:
+//    Num = <NumValue>
 fn parse_num(tokens: &mut Lexer) -> Result<u128, Error> {
     let start_loc = tokens.start_loc();
     assert_eq!(tokens.peek(), Tok::NumValue);
@@ -1490,7 +1491,7 @@ fn parse_spec_block<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlock, Err
         _ => {
             return Err(unexpected_token_error(
                 tokens,
-                "one of `module`, `struct`, `fun`, or `schema`",
+                "one of `module`, `struct`, `fun`, `schema`, or `{`",
             ))
         }
     };
@@ -1537,18 +1538,20 @@ fn parse_spec_block_member<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlo
             "assert" | "assume" | "decreases" | "aborts_if" | "ensures" | "requires" => {
                 parse_condition(tokens)
             }
-            "global" => parse_spec_variable(tokens),
             "include" => parse_spec_include(tokens),
             "apply" => parse_spec_apply(tokens),
             "pragma" => parse_spec_pragma(tokens),
-            _ => Err(unexpected_token_error(
-                tokens,
-                "`assert`, `assume`, `decreases`, `aborts_if`, `ensures`, `requires`, `global`",
-            )),
+            "global" | "local" => parse_spec_variable(tokens),
+            _ => {
+                // local is optional but supported to be able to declare variables which are
+                // named like the weak keywords above
+                parse_spec_variable(tokens)
+            }
         },
         _ => Err(unexpected_token_error(
             tokens,
-            "a specification block member",
+            "one of `assert`, `assume`, `decreases`, `aborts_if`, `ensures`,\
+                 `requires`, `include`, `apply`, `pragma`, `global`, or a name",
         )),
     }
 }
@@ -1680,10 +1683,20 @@ fn parse_spec_function<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMe
 }
 
 // Parse a specification variable.
-//     SpecVariable = "global" <Name> <OptionalTypeParameters> ":" <Type> ";"
+//     SpecVariable = ( "global" | "local" )? <Name> <OptionalTypeParameters> ":" <Type> ";"
 fn parse_spec_variable<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
     let start_loc = tokens.start_loc();
-    consume_name_value(tokens, "global")?;
+    let is_global = match tokens.content() {
+        "global" => {
+            consume_token(tokens, Tok::NameValue)?;
+            true
+        }
+        "local" => {
+            consume_token(tokens, Tok::NameValue)?;
+            false
+        }
+        _ => false,
+    };
     let name = parse_name(tokens)?;
     let type_parameters = parse_optional_type_parameters(tokens)?;
     consume_token(tokens, Tok::Colon)?;
@@ -1694,6 +1707,7 @@ fn parse_spec_variable<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMe
         start_loc,
         tokens.previous_end_loc(),
         SpecBlockMember_::Variable {
+            is_global,
             name,
             type_parameters,
             type_,
@@ -1702,12 +1716,29 @@ fn parse_spec_variable<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMe
 }
 
 // Parse a specification schema include.
-//    SpecInclude = "include" <ModuleAccess> <OptionalTypeArgs> ";"
+//    SpecInclude = "include" <ModuleAccess> <OptionalTypeArgs>
+//                  ( "{" Comma<Name ":" Name> "}" )? ";"
 fn parse_spec_include<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
     let start_loc = tokens.start_loc();
     consume_name_value(tokens, "include")?;
     let name = parse_module_access(tokens, || "a schema name".to_string())?;
     let type_arguments = parse_optional_type_args(tokens)?;
+    let renamings = if tokens.peek() == Tok::LBrace {
+        parse_comma_list(
+            tokens,
+            Tok::LBrace,
+            Tok::RBrace,
+            |tokens| {
+                let left = parse_name(tokens)?;
+                consume_token(tokens, Tok::Colon)?;
+                let right = parse_name(tokens)?;
+                Ok((left, right))
+            },
+            "a renaming pair",
+        )?
+    } else {
+        vec![]
+    };
     consume_token(tokens, Tok::Semicolon)?;
     Ok(spanned(
         tokens.file_name(),
@@ -1716,6 +1747,7 @@ fn parse_spec_include<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMem
         SpecBlockMember_::Include {
             name,
             type_arguments,
+            renamings,
         },
     ))
 }
@@ -1806,7 +1838,7 @@ fn parse_spec_apply_pattern<'input>(tokens: &mut Lexer<'input>) -> Result<SpecAp
     ))
 }
 
-// Parse a name pattern fragment:
+// Parse a name pattern fragment
 //     SpecApplyFragment = <Name> | "*"
 fn parse_spec_apply_fragment<'input>(
     tokens: &mut Lexer<'input>,

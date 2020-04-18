@@ -104,6 +104,9 @@ module M {
     }
 
     spec module {
+        global x: u64;
+        local y: u64;
+        z: u64;
         global generic<T>: u64;
         invariant update generic<u64> = 23;
         invariant update Self::generic<u64> = 24;
@@ -122,7 +125,7 @@ module M {
     }
 
     spec fun some_generic {
-        include ModuleInvariant<T, T>;
+        include ModuleInvariant<T, T>{foo:bar, x:y};
     }
 
     spec module {

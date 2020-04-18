@@ -615,6 +615,7 @@ fn spec_member(
             }
         }
         PM::Variable {
+            is_global,
             name,
             type_parameters: pty_params,
             type_: t,
@@ -622,6 +623,7 @@ fn spec_member(
             let type_parameters = type_parameters(context, pty_params);
             let t = type_(context, t);
             EM::Variable {
+                is_global,
                 name,
                 type_parameters,
                 type_: t,
@@ -630,12 +632,14 @@ fn spec_member(
         PM::Include {
             name: pn,
             type_arguments: ptys_opt,
+            renamings,
         } => {
             let name = module_access(context, pn)?;
             let type_arguments = optional_types(context, ptys_opt);
             EM::Include {
                 name,
                 type_arguments,
+                renamings,
             }
         }
         PM::Apply {

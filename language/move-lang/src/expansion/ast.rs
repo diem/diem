@@ -131,6 +131,7 @@ pub enum SpecBlockMember_ {
         body: FunctionBody,
     },
     Variable {
+        is_global: bool,
         name: Name,
         type_parameters: Vec<(Name, Kind)>,
         type_: Type,
@@ -138,6 +139,7 @@ pub enum SpecBlockMember_ {
     Include {
         name: ModuleAccess,
         type_arguments: Option<Vec<Type>>,
+        renamings: Vec<(Name, Name)>,
     },
     Apply {
         name: ModuleAccess,
@@ -467,11 +469,17 @@ impl AstDebug for SpecBlockMember_ {
                 }
             }
             SpecBlockMember_::Variable {
+                is_global,
                 name,
                 type_parameters,
                 type_,
             } => {
-                w.write(&format!("global {}", name));
+                if *is_global {
+                    w.write("global ");
+                } else {
+                    w.write("local");
+                }
+                w.write(&format!("{}", name));
                 type_parameters.ast_debug(w);
                 w.write(": ");
                 type_.ast_debug(w);
@@ -479,12 +487,23 @@ impl AstDebug for SpecBlockMember_ {
             SpecBlockMember_::Include {
                 name,
                 type_arguments,
+                renamings,
             } => {
                 w.write(&format!("include {}", name));
                 if let Some(ty_args) = type_arguments {
                     w.write("<");
                     ty_args.ast_debug(w);
                     w.write(">");
+                }
+                if !renamings.is_empty() {
+                    w.write("{");
+                    w.list(renamings, ", ", |w, (l, r)| {
+                        w.write(&l.value);
+                        w.write(" : ");
+                        w.write(&r.value);
+                        true
+                    });
+                    w.write("}");
                 }
             }
             SpecBlockMember_::Apply {

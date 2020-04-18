@@ -781,6 +781,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     name,
                     type_,
                     type_parameters,
+                    ..
                 } => self.decl_ana_var(&loc, name, type_parameters, type_),
                 _ => {}
             }
