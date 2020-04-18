@@ -32,8 +32,9 @@ fn proptest_serialization_tracing() -> (Tracer, SerializationRecords) {
         ..Config::default()
     });
 
-    let tracer = Arc::new(Mutex::new(
-        Tracer::new(TracerConfig::default().is_human_readable(lcs::is_human_readable()))));
+    let tracer = Arc::new(Mutex::new(Tracer::new(
+        TracerConfig::default().is_human_readable(lcs::is_human_readable()),
+    )));
     let records = Arc::new(Mutex::new(SerializationRecords::new()));
 
     runner

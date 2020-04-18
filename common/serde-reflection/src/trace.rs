@@ -56,6 +56,9 @@ impl SerializationRecords {
 #[derive(Debug)]
 pub struct TracerConfig {
     pub(crate) is_human_readable: bool,
+    pub(crate) record_samples_for_newtype_structs: bool,
+    pub(crate) record_samples_for_tuple_structs: bool,
+    pub(crate) record_samples_for_structs: bool,
 }
 
 impl Default for TracerConfig {
@@ -63,6 +66,9 @@ impl Default for TracerConfig {
     fn default() -> Self {
         Self {
             is_human_readable: false,
+            record_samples_for_newtype_structs: true,
+            record_samples_for_tuple_structs: false,
+            record_samples_for_structs: false,
         }
     }
 }
@@ -72,6 +78,24 @@ impl TracerConfig {
     #[allow(clippy::wrong_self_convention)]
     pub fn is_human_readable(mut self, value: bool) -> Self {
         self.is_human_readable = value;
+        self
+    }
+
+    /// Record samples of newtype structs during serialization and inject them during deserialization.
+    pub fn record_samples_for_newtype_structs(mut self, value: bool) -> Self {
+        self.record_samples_for_newtype_structs = value;
+        self
+    }
+
+    /// Record samples of tuple structs during serialization and inject them during deserialization.
+    pub fn record_samples_for_tuple_structs(mut self, value: bool) -> Self {
+        self.record_samples_for_tuple_structs = value;
+        self
+    }
+
+    /// Record samples of (regular) structs during serialization and inject them during deserialization.
+    pub fn record_samples_for_structs(mut self, value: bool) -> Self {
+        self.record_samples_for_structs = value;
         self
     }
 }
@@ -226,9 +250,12 @@ impl Tracer {
         name: &'static str,
         format: ContainerFormat,
         value: Value,
+        record_value: bool,
     ) -> Result<(Format, Value)> {
         self.registry.entry(name).unify(format)?;
-        records.values.insert(name, value.clone());
+        if record_value {
+            records.values.insert(name, value.clone());
+        }
         Ok((Format::TypeName(name.into()), value))
     }
 
@@ -251,7 +278,7 @@ impl Tracer {
         );
         let format = ContainerFormat::Enum(variants);
         let value = Value::Variant(variant_index, Box::new(variant_value));
-        self.record_container(records, name, format, value)
+        self.record_container(records, name, format, value, false)
     }
 
     pub(crate) fn get_recorded_value<'de, 'a>(

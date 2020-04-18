@@ -54,6 +54,15 @@ impl<'de> IntoDeserializer<'de, Error> for &'de Value {
     }
 }
 
+impl Value {
+    pub(crate) fn seq_values(&self) -> Result<&Vec<Value>> {
+        match self {
+            Value::Seq(x) => Ok(x),
+            _ => Err(Error::DeserializationError("seq_values")),
+        }
+    }
+}
+
 macro_rules! declare_deserialize {
     ($method:ident, $token:ident, $visit:ident, $str:expr) => {
         fn $method<V>(self, visitor: V) -> Result<V::Value>
@@ -251,11 +260,11 @@ impl<'de> de::Deserializer<'de> for Deserializer<'de> {
     }
 }
 
-struct SeqDeserializer<I> {
+pub(crate) struct SeqDeserializer<I> {
     values: I,
 }
 
-trait IntoSeqDeserializer {
+pub(crate) trait IntoSeqDeserializer {
     type SeqDeserializer;
 
     fn into_seq_deserializer(self) -> Self::SeqDeserializer;

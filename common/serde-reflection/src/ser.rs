@@ -118,8 +118,13 @@ impl<'a> ser::Serializer for Serializer<'a> {
     }
 
     fn serialize_unit_struct(self, name: &'static str) -> Result<(Format, Value)> {
-        self.tracer
-            .record_container(self.records, name, ContainerFormat::UnitStruct, Value::Unit)
+        self.tracer.record_container(
+            self.records,
+            name,
+            ContainerFormat::UnitStruct,
+            Value::Unit,
+            false,
+        )
     }
 
     fn serialize_unit_variant(
@@ -148,6 +153,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
             name,
             ContainerFormat::NewTypeStruct(Box::new(format)),
             value,
+            self.tracer.config.record_samples_for_newtype_structs,
         )
     }
 
@@ -345,8 +351,13 @@ impl<'a> ser::SerializeTupleStruct for TupleStructSerializer<'a> {
     fn end(self) -> Result<(Format, Value)> {
         let format = ContainerFormat::TupleStruct(self.formats);
         let value = Value::Seq(self.values);
-        self.tracer
-            .record_container(self.records, self.name, format, value)
+        self.tracer.record_container(
+            self.records,
+            self.name,
+            format,
+            value,
+            self.tracer.config.record_samples_for_tuple_structs,
+        )
     }
 }
 
@@ -461,8 +472,13 @@ impl<'a> ser::SerializeStruct for StructSerializer<'a> {
     fn end(self) -> Result<(Format, Value)> {
         let format = ContainerFormat::Struct(self.fields);
         let value = Value::Seq(self.values);
-        self.tracer
-            .record_container(self.records, self.name, format, value)
+        self.tracer.record_container(
+            self.records,
+            self.name,
+            format,
+            value,
+            self.tracer.config.record_samples_for_structs,
+        )
     }
 }
 
