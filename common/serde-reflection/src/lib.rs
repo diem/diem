@@ -223,8 +223,8 @@
 //! * while visiting a container, if the container's name is mapped to a recorded value,
 //! we MAY decide to use it.
 //!
-//! Currently, we always pick the recorded value for a NewTypeStruct and never do in the other cases.
-//! (TODO: decide what to do)
+//! The default configuration `TracerConfig:default()` always picks the recorded value for a
+//! `NewTypeStruct` and never does in the other cases.
 
 mod de;
 mod error;

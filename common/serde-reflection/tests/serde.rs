@@ -342,3 +342,35 @@ fn test_trace_deserialization_with_recursive_types() {
     assert_eq!(variants.get(&0).unwrap().name, "Empty");
     assert_eq!(variants.get(&1).unwrap().name, "Cons");
 }
+
+#[test]
+fn test_value_recording_for_structs() {
+    #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+    struct R(u32);
+    #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+    struct S {
+        a: u32,
+    }
+    #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+    struct T(u32, u64);
+
+    let mut records = SerializationRecords::new();
+    let mut tracer = Tracer::new(
+        TracerConfig::default()
+            .record_samples_for_newtype_structs(false) // default is tested above
+            .record_samples_for_tuple_structs(true)
+            .record_samples_for_structs(true),
+    );
+
+    tracer.trace_value(&mut records, &R(1)).unwrap();
+    tracer.trace_value(&mut records, &S { a: 2 }).unwrap();
+    tracer.trace_value(&mut records, &T(3, 4)).unwrap();
+
+    assert!(records.value("R").is_none());
+    assert!(records.value("S").is_some());
+    assert!(records.value("T").is_some());
+
+    assert_eq!(tracer.trace_type_once::<R>(&records).unwrap().1, R(0));
+    assert_eq!(tracer.trace_type_once::<S>(&records).unwrap().1, S { a: 2 });
+    assert_eq!(tracer.trace_type_once::<T>(&records).unwrap().1, T(3, 4));
+}

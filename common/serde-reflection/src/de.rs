@@ -5,6 +5,7 @@ use crate::{
     error::{Error, Result},
     format::{ContainerFormat, ContainerFormatEntry, Format, FormatHolder, Named, VariantFormat},
     trace::{SerializationRecords, Tracer},
+    value::IntoSeqDeserializer,
 };
 use serde::de::{self, DeserializeSeed, IntoDeserializer, Visitor};
 use std::collections::BTreeMap;
@@ -232,27 +233,29 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'de, 'a> {
         V: Visitor<'de>,
     {
         self.format.unify(Format::TypeName(name.into()))?;
+        if self.tracer.config.record_samples_for_newtype_structs {
+            // If a value was recorded during serialization, use it.
+            if let Some((format, hint)) = self.tracer.get_recorded_value(self.records, name) {
+                return visitor
+                    .visit_newtype_struct(hint.into_deserializer())
+                    .map_err(|err| match err {
+                        Error::DeserializationError(msg) => {
+                            Error::UnexpectedDeserializationFormat(name, format.clone(), msg)
+                        }
+                        _ => err,
+                    });
+            }
+        }
         // Pre-update the registry.
         self.tracer
             .registry
             .entry(name)
             .unify(ContainerFormat::NewTypeStruct(Box::new(Format::Unknown)))?;
-
-        // If a newtype struct was visited by the serialization tracer, use the recorded value.
-        if let Some((format, hint)) = self.tracer.get_recorded_value(self.records, name) {
-            return visitor
-                .visit_newtype_struct(hint.into_deserializer())
-                .map_err(|err| match err {
-                    Error::DeserializationError(msg) => {
-                        Error::UnexpectedDeserializationFormat(name, format.clone(), msg)
-                    }
-                    _ => err,
-                });
-        }
-
+        // Compute the format.
         let mut format = Format::Unknown;
         let inner = Deserializer::new(self.tracer, self.records, &mut format);
         let result = visitor.visit_newtype_struct(inner);
+        // Finally, update the registry.
         match self.tracer.registry.get_mut(name) {
             Some(ContainerFormat::NewTypeStruct(x)) => {
                 *x = Box::new(format);
@@ -308,6 +311,18 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'de, 'a> {
     {
         self.format.unify(Format::TypeName(name.into()))?;
         let mut formats = vec![Format::Unknown; len];
+        if self.tracer.config.record_samples_for_tuple_structs {
+            // If a value was recorded during serialization, use it.
+            if let Some((format, hint)) = self.tracer.get_recorded_value(self.records, name) {
+                let result = || visitor.visit_seq(hint.seq_values()?.into_seq_deserializer());
+                return result().map_err(|err| match err {
+                    Error::DeserializationError(msg) => {
+                        Error::UnexpectedDeserializationFormat(name, format.clone(), msg)
+                    }
+                    _ => err,
+                });
+            }
+        }
         // Pre-update the registry.
         self.tracer
             .registry
@@ -359,6 +374,18 @@ impl<'de, 'a> de::Deserializer<'de> for Deserializer<'de, 'a> {
         V: Visitor<'de>,
     {
         self.format.unify(Format::TypeName(name.into()))?;
+        if self.tracer.config.record_samples_for_structs {
+            // If a value was recorded during serialization, use it.
+            if let Some((format, hint)) = self.tracer.get_recorded_value(self.records, name) {
+                let result = || visitor.visit_seq(hint.seq_values()?.into_seq_deserializer());
+                return result().map_err(|err| match err {
+                    Error::DeserializationError(msg) => {
+                        Error::UnexpectedDeserializationFormat(name, format.clone(), msg)
+                    }
+                    _ => err,
+                });
+            }
+        }
         let mut formats: Vec<_> = fields
             .iter()
             .map(|&name| Named {
