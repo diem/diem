@@ -213,6 +213,7 @@ pub enum SpecApplyFragment_ {
 pub type SpecApplyFragment = Spanned<SpecApplyFragment_>;
 
 #[derive(Debug, PartialEq)]
+#[allow(clippy::large_enum_variant)]
 pub enum SpecBlockMember_ {
     Condition {
         kind: SpecConditionKind,

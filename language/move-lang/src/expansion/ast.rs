@@ -115,6 +115,7 @@ pub struct SpecBlock_ {
 pub type SpecBlock = Spanned<SpecBlock_>;
 
 #[derive(Debug, PartialEq)]
+#[allow(clippy::large_enum_variant)]
 pub enum SpecBlockMember_ {
     Condition {
         kind: SpecConditionKind,
