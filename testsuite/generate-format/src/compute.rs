@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use generate_format::{add_deserialization_tracing, add_proptest_serialization_tracing, FILE_PATH};
-use serde_reflection::{SerializationRecords, Tracer};
+use serde_reflection::{SerializationRecords, Tracer, TracerConfig};
 use serde_yaml;
 use std::{fs::File, io::Write};
 use structopt::StructOpt;
@@ -24,7 +24,7 @@ fn main() {
     let options = Options::from_args();
 
     let records = SerializationRecords::new();
-    let tracer = Tracer::new(lcs::is_human_readable());
+    let tracer = Tracer::new(TracerConfig::default().is_human_readable(lcs::is_human_readable()));
     let (mut tracer, records) = add_proptest_serialization_tracing(tracer, records);
     if !options.skip_deserialize {
         tracer = add_deserialization_tracing(tracer, &records);

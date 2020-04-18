@@ -5,7 +5,8 @@ use bincode;
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
 use serde_json;
 use serde_reflection::{
-    ContainerFormat, Error, Format, Named, SerializationRecords, Tracer, Value, VariantFormat,
+    ContainerFormat, Error, Format, Named, SerializationRecords, Tracer, TracerConfig, Value,
+    VariantFormat,
 };
 use serde_yaml;
 use std::collections::BTreeMap;
@@ -31,7 +32,7 @@ fn test_variant(tracer: &mut Tracer, expr: E, expected_value: Value) {
 
 #[test]
 fn test_tracers() {
-    let mut tracer = Tracer::new(/* is_human_readable */ false);
+    let mut tracer = Tracer::new(TracerConfig::default());
 
     test_variant(
         &mut tracer,
@@ -131,7 +132,7 @@ fn test_tracers() {
 
     // Tracing deserialization
     let records = SerializationRecords::new();
-    let mut tracer = Tracer::new(/* is_human_readable */ false);
+    let mut tracer = Tracer::new(TracerConfig::default());
     let (ident, samples) = tracer.trace_type::<E>(&records).unwrap();
     assert_eq!(ident, Format::TypeName("E".into()));
     assert_eq!(tracer.registry().unwrap().get("E").unwrap(), format);
@@ -183,7 +184,7 @@ enum Person {
 #[test]
 fn test_trace_deserialization_with_custom_invariants() {
     let mut records = SerializationRecords::new();
-    let mut tracer = Tracer::new(/* is_human_readable */ false);
+    let mut tracer = Tracer::new(TracerConfig::default());
     // Type trace alone cannot guess a valid value for `Name`.
     assert_eq!(
         tracer.trace_type::<Person>(&records).unwrap_err(),
@@ -260,7 +261,7 @@ mod bar {
 #[test]
 fn test_name_clash_not_supported() {
     let mut records = SerializationRecords::new();
-    let mut tracer = Tracer::new(/* is_human_readable */ false);
+    let mut tracer = Tracer::new(TracerConfig::default());
     tracer.trace_value(&mut records, &foo::A).unwrap();
     // Repeating names is fine.
     assert!(tracer.trace_value(&mut records, &foo::A).is_ok());
@@ -275,7 +276,7 @@ fn test_borrowed_slice() {
 
     let bytes = [1u8; 4];
     let mut records = SerializationRecords::new();
-    let mut tracer = Tracer::new(/* is_human_readable */ false);
+    let mut tracer = Tracer::new(TracerConfig::default());
 
     let (format, value) = tracer.trace_value(&mut records, &Borrowed(&bytes)).unwrap();
     assert_eq!(format, Format::TypeName("Borrowed".into()));
@@ -300,7 +301,7 @@ fn test_borrowed_bytes() {
 
     let bytes = [1u8; 4];
     let mut records = SerializationRecords::new();
-    let mut tracer = Tracer::new(/* is_human_readable */ false);
+    let mut tracer = Tracer::new(TracerConfig::default());
 
     let (format, value) = tracer.trace_value(&mut records, &Borrowed(&bytes)).unwrap();
     assert_eq!(format, Format::TypeName("Borrowed".into()));
@@ -327,7 +328,7 @@ fn test_trace_deserialization_with_recursive_types() {
     }
 
     let records = SerializationRecords::new();
-    let mut tracer = Tracer::new(/* is_human_readable */ false);
+    let mut tracer = Tracer::new(TracerConfig::default());
 
     tracer.trace_type::<List<u32>>(&records).unwrap();
 
