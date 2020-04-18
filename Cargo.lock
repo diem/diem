@@ -1566,6 +1566,7 @@ dependencies = [
  "serde-reflection 0.1.0",
  "serde_yaml 0.8.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vm 0.1.0",
 ]
 
 [[package]]

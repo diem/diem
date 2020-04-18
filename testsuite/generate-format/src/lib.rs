@@ -11,11 +11,15 @@ use structopt::{clap::arg_enum, StructOpt};
 /// Libra transactions.
 mod libra;
 
+/// Move file format.
+mod moveff;
+
 arg_enum! {
 #[derive(Debug, StructOpt, Clone, Copy)]
 /// A corpus of Rust types to trace, and optionally record on disk.
 pub enum Corpus {
     Libra,
+    MoveFileFormat,
 }
 }
 
@@ -32,6 +36,7 @@ impl Corpus {
     pub fn get_registry(self, skip_deserialize: bool) -> Registry {
         match self {
             Corpus::Libra => libra::get_registry(self.to_string(), skip_deserialize),
+            Corpus::MoveFileFormat => moveff::get_registry(self.to_string(), skip_deserialize),
         }
     }
 
@@ -39,6 +44,7 @@ impl Corpus {
     pub fn output_file(self) -> Option<&'static str> {
         match self {
             Corpus::Libra => libra::output_file(),
+            Corpus::MoveFileFormat => moveff::output_file(),
         }
     }
 }
