@@ -21,7 +21,7 @@ fn script_code_unverifiable() {
 
     // create a bogus script
     let mut script = empty_script();
-    script.main.code.code = vec![Bytecode::LdU8(0), Bytecode::Add, Bytecode::Ret];
+    script.code.code = vec![Bytecode::LdU8(0), Bytecode::Add, Bytecode::Ret];
     let mut blob = vec![];
     script.serialize(&mut blob).expect("script must serialize");
     let txn = sender.account().create_signed_txn_with_args(
@@ -65,10 +65,23 @@ fn script_none_existing_module_dep() {
 
     // create a bogus script
     let mut script = empty_script();
-    // make a non existent external module
+
+    // the dummy self module handle
+    // TODO: remove this once we get rid of the script/module conversion.
     script
         .address_identifiers
         .push(AccountAddress::new([1u8; AccountAddress::LENGTH]));
+    script.identifiers.push(Identifier::new("<SELF>").unwrap());
+    let module_handle = ModuleHandle {
+        address: AddressIdentifierIndex((script.address_identifiers.len() - 1) as u16),
+        name: IdentifierIndex((script.identifiers.len() - 1) as u16),
+    };
+    script.module_handles.push(module_handle);
+
+    // make a non existent external module
+    script
+        .address_identifiers
+        .push(AccountAddress::new([2u8; AccountAddress::LENGTH]));
     script.identifiers.push(Identifier::new("module").unwrap());
     let module_handle = ModuleHandle {
         address: AddressIdentifierIndex((script.address_identifiers.len() - 1) as u16),
@@ -86,7 +99,7 @@ fn script_none_existing_module_dep() {
     };
     script.function_handles.push(fun_handle);
 
-    script.main.code.code = vec![
+    script.code.code = vec![
         Bytecode::Call(FunctionHandleIndex(
             (script.function_handles.len() - 1) as u16,
         )),
@@ -132,6 +145,19 @@ fn script_non_existing_function_dep() {
 
     // create a bogus script
     let mut script = empty_script();
+
+    // create the dummy self module handle
+    // TODO: remove this once we get rid of the script/module conversion.
+    script
+        .address_identifiers
+        .push(AccountAddress::new([1u8; AccountAddress::LENGTH]));
+    script.identifiers.push(Identifier::new("<SELF>").unwrap());
+    let module_handle = ModuleHandle {
+        address: AddressIdentifierIndex((script.address_identifiers.len() - 1) as u16),
+        name: IdentifierIndex((script.identifiers.len() - 1) as u16),
+    };
+    script.module_handles.push(module_handle);
+
     // LCS module
     script
         .address_identifiers
@@ -153,7 +179,7 @@ fn script_non_existing_function_dep() {
     };
     script.function_handles.push(fun_handle);
 
-    script.main.code.code = vec![
+    script.code.code = vec![
         Bytecode::Call(FunctionHandleIndex(
             (script.function_handles.len() - 1) as u16,
         )),
@@ -199,6 +225,19 @@ fn script_bad_sig_function_dep() {
 
     // create a bogus script
     let mut script = empty_script();
+
+    // create the dummy self module handle
+    // TODO: remove this once we get rid of the script/module conversion.
+    script
+        .address_identifiers
+        .push(AccountAddress::new([1u8; AccountAddress::LENGTH]));
+    script.identifiers.push(Identifier::new("<SELF>").unwrap());
+    let module_handle = ModuleHandle {
+        address: AddressIdentifierIndex((script.address_identifiers.len() - 1) as u16),
+        name: IdentifierIndex((script.identifiers.len() - 1) as u16),
+    };
+    script.module_handles.push(module_handle);
+
     // LCS module
     script
         .address_identifiers
@@ -222,7 +261,7 @@ fn script_bad_sig_function_dep() {
     };
     script.function_handles.push(fun_handle);
 
-    script.main.code.code = vec![
+    script.code.code = vec![
         Bytecode::Call(FunctionHandleIndex(
             (script.function_handles.len() - 1) as u16,
         )),

@@ -402,19 +402,19 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
         name: ModuleName::new(file_format::self_module_name().to_string()),
     };
     let mut context = Context::new(dependencies, current_module)?;
-    let self_name = ModuleName::new(ModuleName::self_name().into());
 
     compile_imports(&mut context, address, script.imports)?;
     compile_explicit_dependency_declarations(
         &mut context,
         script.explicit_dependency_declarations,
     )?;
-    let main_name = FunctionName::new("main".to_string());
     let function = script.main;
 
     let sig = function_signature(&mut context, &function.value.signature)?;
-    context.declare_function(self_name.clone(), main_name.clone(), sig)?;
-    let main = compile_function(&mut context, &self_name, main_name, function, 0)?;
+    let parameters_sig_idx = context.signature_index(Signature(sig.parameters))?;
+
+    record_src_loc!(function_decl: context, function.loc, 0);
+    let code = compile_function_body_impl(&mut context, function.value)?;
 
     let (
         MaterializedPools {
@@ -439,7 +439,10 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
         identifiers,
         address_identifiers,
         constant_pool,
-        main,
+
+        type_parameters: sig.type_parameters,
+        parameters: parameters_sig_idx,
+        code,
     };
     compiled_script
         .freeze()
@@ -749,6 +752,32 @@ fn compile_functions(
         .collect()
 }
 
+fn compile_function_body_impl(context: &mut Context, ast_function: Function_) -> Result<CodeUnit> {
+    Ok(match ast_function.body {
+        FunctionBody::Move { locals, code } => {
+            let m = type_parameter_indexes(&ast_function.signature.type_formals)?;
+            compile_function_body(context, m, ast_function.signature.formals, locals, code)?
+        }
+        FunctionBody::Bytecode { locals, code } => {
+            let m = type_parameter_indexes(&ast_function.signature.type_formals)?;
+            compile_function_body_bytecode(
+                context,
+                m,
+                ast_function.signature.formals,
+                locals,
+                code,
+            )?
+        }
+
+        FunctionBody::Native => {
+            for (var, _) in ast_function.signature.formals.into_iter() {
+                record_src_loc!(local: context, var)
+            }
+            CodeUnit::default()
+        }
+    })
+}
+
 fn compile_function(
     context: &mut Context,
     self_name: &ModuleName,
@@ -779,29 +808,8 @@ fn compile_function(
         .map(|name| context.struct_definition_index(name))
         .collect::<Result<_>>()?;
 
-    let code = match ast_function.body {
-        FunctionBody::Move { locals, code } => {
-            let m = type_parameter_indexes(&ast_function.signature.type_formals)?;
-            compile_function_body(context, m, ast_function.signature.formals, locals, code)?
-        }
-        FunctionBody::Bytecode { locals, code } => {
-            let m = type_parameter_indexes(&ast_function.signature.type_formals)?;
-            compile_function_body_bytecode(
-                context,
-                m,
-                ast_function.signature.formals,
-                locals,
-                code,
-            )?
-        }
+    let code = compile_function_body_impl(context, ast_function)?;
 
-        FunctionBody::Native => {
-            for (var, _) in ast_function.signature.formals.into_iter() {
-                record_src_loc!(local: context, var)
-            }
-            CodeUnit::default()
-        }
-    };
     Ok(FunctionDefinition {
         function: fh_idx,
         flags,

@@ -87,6 +87,12 @@ impl Identifier {
         is_valid(s.as_ref())
     }
 
+    /// Returns if this identifier is "<SELF>".
+    /// TODO: remove once we fully separate CompiledScript & CompiledModule.
+    pub fn is_self(&self) -> bool {
+        &*self.0 == "<SELF>"
+    }
+
     /// Converts a vector of bytes to an `Identifier`.
     pub fn from_utf8(vec: Vec<u8>) -> Result<Self> {
         let s = String::from_utf8(vec)?;

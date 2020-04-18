@@ -18,7 +18,7 @@ use std::collections::BTreeMap;
 use vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::{append_err_info, verification_error, VMResult},
-    file_format::{CompiledModule, CompiledScript, SignatureToken},
+    file_format::{CompiledModule, CompiledScript, ScriptConversionInfo, SignatureToken},
     views::{ModuleView, ViewInternals},
     IndexKind,
 };
@@ -113,10 +113,12 @@ impl VerifiedScript {
     /// argument. Since the module constructed from a script is guaranteed to have an empty vector
     /// of struct definitions, the bounds checker will catch any occurrences of these illegal
     /// operations.
+    #[allow(deprecated)]
     pub fn new(script: CompiledScript) -> Result<Self, (CompiledScript, VMStatus)> {
-        let script = match VerifiedModule::new(script.into_module()) {
-            Ok(module) => module.into_inner().into_script(),
-            Err((module, errors)) => return Err((module.into_script(), errors)),
+        let (info, fake_module) = script.into_module();
+        let script = match VerifiedModule::new(fake_module) {
+            Ok(module) => module.into_inner().into_script(info),
+            Err((module, errors)) => return Err((module.into_script(info), errors)),
         };
         match verify_main_signature(&script) {
             Ok(()) => Ok(VerifiedScript(script)),
@@ -131,8 +133,9 @@ impl VerifiedScript {
     ///
     /// Every `VerifiedScript` is a `VerifiedModule`, but the inverse is not true, so there's no
     /// corresponding `VerifiedModule::into_script` function.
-    pub fn into_module(self) -> VerifiedModule {
-        VerifiedModule(self.into_inner().into_module())
+    pub fn into_module(self) -> (ScriptConversionInfo, VerifiedModule) {
+        let (info, module) = self.into_inner().into_module();
+        (info, VerifiedModule(module))
     }
 
     /// Serializes this script into the provided buffer.
@@ -165,13 +168,7 @@ impl ScriptAccess for VerifiedScript {
 
 /// This function checks the extra requirements on the signature of the main function of a script.
 pub fn verify_main_signature(script: &CompiledScript) -> VMResult<()> {
-    let function_handle = &script.function_handle_at(script.main().function);
-    let return_ = script.signature_at(function_handle.return_);
-    if !return_.is_empty() {
-        return Err(VMStatus::new(StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE));
-    }
-
-    let arguments = script.signature_at(function_handle.parameters);
+    let arguments = script.signature_at(script.as_inner().parameters);
     for arg_type in &arguments.0 {
         if !(arg_type.is_primitive()
             || *arg_type == SignatureToken::Vector(Box::new(SignatureToken::U8)))
@@ -225,7 +222,7 @@ pub fn verify_script_dependencies<'a>(
     script: &VerifiedScript,
     dependencies: impl IntoIterator<Item = &'a VerifiedModule>,
 ) -> VMResult<()> {
-    let fake_module = script.clone().into_module();
+    let (_, fake_module) = script.clone().into_module();
     verify_module_dependencies(&fake_module, dependencies)
 }
 
@@ -233,7 +230,7 @@ pub fn verify_script_dependency_map(
     script: &VerifiedScript,
     dependency_map: &BTreeMap<ModuleId, &VerifiedModule>,
 ) -> VMResult<()> {
-    let fake_module = script.clone().into_module();
+    let (_, fake_module) = script.clone().into_module();
     verify_dependencies(&fake_module, dependency_map)
 }
 

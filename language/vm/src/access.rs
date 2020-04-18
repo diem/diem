@@ -252,8 +252,8 @@ pub trait ScriptAccess: Sync {
         &self.as_script().as_inner().address_identifiers
     }
 
-    fn main(&self) -> &FunctionDefinition {
-        &self.as_script().as_inner().main
+    fn code(&self) -> &CodeUnit {
+        &self.as_script().as_inner().code
     }
 }
 

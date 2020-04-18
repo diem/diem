@@ -511,7 +511,7 @@ impl<Location: Clone + Eq> SourceMap<Location> {
     }
 
     pub fn dummy_from_script(script: &CompiledScript, default_loc: Location) -> Result<Self> {
-        Self::dummy_from_module(&script.clone().into_module(), default_loc)
+        Self::dummy_from_module(&script.clone().into_module().1, default_loc)
     }
 
     pub fn remap_locations<Other: Clone + Eq>(

@@ -893,8 +893,6 @@ struct Script {
 
 impl Script {
     fn new(script: VerifiedScript, script_hash: &HashValue, cache: &ModuleCache) -> VMResult<Self> {
-        let main_def = script.main();
-
         let mut struct_refs = vec![];
         for struct_handle in script.struct_handles() {
             let struct_name = script.identifier_at(struct_handle.name);
@@ -907,13 +905,7 @@ impl Script {
         }
 
         let mut function_refs = vec![];
-        for (idx, func_handle) in script.function_handles().iter().enumerate() {
-            if idx == main_def.function.0 as usize {
-                // TODO: this is wrong it assumes it's never called for the main which is true
-                // but... it will not be a problem once we split Module and Script
-                function_refs.push(0);
-                continue;
-            }
+        for func_handle in script.function_handles().iter() {
             let func_name = script.identifier_at(func_handle.name);
             let module_handle = script.module_handle_at(func_handle.module);
             let module_id = ModuleId::new(
@@ -925,12 +917,12 @@ impl Script {
         }
 
         let mut function_instantiations = vec![];
-        let module = script.clone().into_module();
+        let (_, module) = script.clone().into_module();
         for func_inst in script.function_instantiations() {
             let handle = function_refs[func_inst.handle.0 as usize];
             let mut instantiation = vec![];
             for ty in &script.signature_at(func_inst.type_parameters).0 {
-                instantiation.push(cache.make_type(module.as_inner(), ty)?);
+                instantiation.push(cache.make_type(&module, ty)?);
             }
             function_instantiations.push(FunctionInstantiation {
                 handle,
@@ -941,13 +933,13 @@ impl Script {
         let scope = Scope::Script(*script_hash);
 
         let compiled_script = script.as_inner().as_inner();
-        let code: Vec<Bytecode> = compiled_script.main.code.code.clone();
-        let main_handle = script.function_handle_at(main_def.function);
-        let parameters = script.signature_at(main_handle.parameters).clone();
-        let return_ = script.signature_at(main_handle.return_).clone();
-        let locals = script.signature_at(main_def.code.locals).clone();
-        let type_parameters = main_handle.type_parameters.clone();
-        let name = script.identifier_at(main_handle.name).to_owned();
+        let code: Vec<Bytecode> = compiled_script.code.code.clone();
+        let parameters = script.signature_at(compiled_script.parameters).clone();
+        let return_ = Signature(vec![]);
+        let locals = script.signature_at(compiled_script.code.locals).clone();
+        let type_parameters = compiled_script.type_parameters.clone();
+        // TODO: main does not have a name. Revisit.
+        let name = Identifier::new("main").unwrap();
         let is_native = false;
         let main: Arc<Function> = Arc::new(Function {
             code,

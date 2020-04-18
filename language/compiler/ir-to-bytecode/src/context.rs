@@ -253,7 +253,7 @@ impl<'a> Context<'a> {
             identifiers: HashMap::new(),
             address_identifiers: HashMap::new(),
             constant_pool: HashMap::new(),
-            current_function_index: FunctionDefinitionIndex(0),
+            current_function_index: FunctionDefinitionIndex::new(0),
             source_map: SourceMap::new(current_module.clone()),
         };
         let self_name = ModuleName::new(ModuleName::self_name().into());

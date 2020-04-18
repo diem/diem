@@ -28,12 +28,12 @@ fn compile_script_expr_addition() {
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
     assert_eq!(count_locals(&compiled_script), 3);
-    assert_eq!(compiled_script.main().code.code.len(), 9);
+    assert_eq!(compiled_script.code().code.len(), 9);
     assert!(compiled_script.struct_handles().is_empty());
-    assert_eq!(compiled_script.function_handles().len(), 1);
+    assert_eq!(compiled_script.function_handles().len(), 0);
     assert_eq!(compiled_script.signatures().len(), 2);
     assert_eq!(compiled_script.module_handles().len(), 1); // the <SELF> module
-    assert_eq!(compiled_script.identifiers().len(), 2); // the name of `main()` + the name of the "<SELF>" module
+    assert_eq!(compiled_script.identifiers().len(), 1); // the name of the "<SELF>" module
     assert_eq!(compiled_script.address_identifiers().len(), 1); // the empty address of <SELF> module
 }
 
@@ -55,12 +55,12 @@ fn compile_script_expr_combined() {
     let compiled_script_res = compile_script_string(&code);
     let compiled_script = compiled_script_res.unwrap();
     assert_eq!(count_locals(&compiled_script), 3);
-    assert_eq!(compiled_script.main().code.code.len(), 13);
+    assert_eq!(compiled_script.code().code.len(), 13);
     assert!(compiled_script.struct_handles().is_empty());
-    assert_eq!(compiled_script.function_handles().len(), 1);
+    assert_eq!(compiled_script.function_handles().len(), 0);
     assert_eq!(compiled_script.signatures().len(), 2);
     assert_eq!(compiled_script.module_handles().len(), 1); // the <SELF> module
-    assert_eq!(compiled_script.identifiers().len(), 2); // the name of `main()` + the name of the "<SELF>" module
+    assert_eq!(compiled_script.identifiers().len(), 1); // the name of the "<SELF>" module
     assert_eq!(compiled_script.address_identifiers().len(), 1); // the empty address of <SELF> module
 }
 
@@ -82,10 +82,10 @@ fn compile_script_borrow_local() {
     let compiled_script = compiled_script_res.unwrap();
     assert_eq!(count_locals(&compiled_script), 2);
     assert!(compiled_script.struct_handles().is_empty());
-    assert_eq!(compiled_script.function_handles().len(), 1);
+    assert_eq!(compiled_script.function_handles().len(), 0);
     assert_eq!(compiled_script.signatures().len(), 2);
     assert_eq!(compiled_script.module_handles().len(), 1); // the <SELF> module
-    assert_eq!(compiled_script.identifiers().len(), 2); // the name of `main()` + the name of the "<SELF>" module
+    assert_eq!(compiled_script.identifiers().len(), 1); // the name of the "<SELF>" module
     assert_eq!(compiled_script.address_identifiers().len(), 1); // the empty address of <SELF> module
 }
 
@@ -107,10 +107,10 @@ fn compile_script_borrow_local_mutable() {
     let compiled_script = compiled_script_res.unwrap();
     assert_eq!(count_locals(&compiled_script), 2);
     assert!(compiled_script.struct_handles().is_empty());
-    assert_eq!(compiled_script.function_handles().len(), 1);
+    assert_eq!(compiled_script.function_handles().len(), 0);
     assert_eq!(compiled_script.signatures().len(), 2);
     assert_eq!(compiled_script.module_handles().len(), 1); // the <SELF> module
-    assert_eq!(compiled_script.identifiers().len(), 2); // the name of `main()` + the name of the "<SELF>" module
+    assert_eq!(compiled_script.identifiers().len(), 1); // the name of the "<SELF>" module
     assert_eq!(compiled_script.address_identifiers().len(), 1); // the empty address of <SELF> module
 }
 
@@ -133,10 +133,10 @@ fn compile_script_borrow_reference() {
     let compiled_script = compiled_script_res.unwrap();
     assert_eq!(count_locals(&compiled_script), 3);
     assert!(compiled_script.struct_handles().is_empty());
-    assert_eq!(compiled_script.function_handles().len(), 1);
+    assert_eq!(compiled_script.function_handles().len(), 0);
     assert_eq!(compiled_script.signatures().len(), 2);
     assert_eq!(compiled_script.module_handles().len(), 1); // the <SELF> module
-    assert_eq!(compiled_script.identifiers().len(), 2); // the name of `main()` + the name of the "<SELF>" module
+    assert_eq!(compiled_script.identifiers().len(), 1); // the name of the "<SELF>" module
     assert_eq!(compiled_script.address_identifiers().len(), 1); // the empty address of <SELF> module
 }
 
