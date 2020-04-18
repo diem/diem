@@ -389,8 +389,9 @@ fn build_script_tables(
                 assume!(start <= usize::max_value() - (table.count as usize));
                 let end: usize = start + table.count as usize;
                 let mut cursor = Cursor::new(&binary[start..end]);
-                let main = load_function_def(&mut cursor)?;
-                script.main = main;
+                script.type_parameters = load_kinds(&mut cursor)?;
+                script.parameters = SignatureIndex::new(read_uleb_u16_internal(&mut cursor)?);
+                script.code = load_code_unit(&mut cursor)?;
             }
             TableType::MODULE_HANDLES
             | TableType::STRUCT_HANDLES
@@ -565,7 +566,6 @@ fn load_identifiers(
             let s = Identifier::from_utf8(buffer).map_err(|_| {
                 VMStatus::new(StatusCode::MALFORMED).with_message("Invalid Identifier".to_string())
             })?;
-
             identifiers.push(s);
         }
     }

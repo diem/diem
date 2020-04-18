@@ -34,7 +34,7 @@ impl<Location: Clone + Eq> SourceMapping<Location> {
     }
 
     pub fn new_from_script(source_map: SourceMap<Location>, bytecode: CompiledScript) -> Self {
-        Self::new(source_map, bytecode.into_module())
+        Self::new(source_map, bytecode.into_module().1)
     }
 
     pub fn with_marks(&mut self, marks: MarkedSourceMapping) {

@@ -196,10 +196,13 @@ fn fetch_script_dependencies(
     exec: &mut FakeExecutor,
     script: &CompiledScript,
 ) -> Vec<VerifiedModule> {
-    let module = script.clone().into_module();
-    let idents = ModuleView::new(&module)
-        .module_handles()
-        .map(|handle_view| handle_view.module_id());
+    let inner = script.as_inner();
+    let idents = inner.module_handles.iter().map(|handle| {
+        ModuleId::new(
+            inner.address_identifiers[handle.address.0 as usize],
+            inner.identifiers[handle.name.0 as usize].clone(),
+        )
+    });
     fetch_dependencies(exec, idents)
 }
 

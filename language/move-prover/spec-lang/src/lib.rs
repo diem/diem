@@ -95,6 +95,7 @@ fn add_move_lang_errors(env: &mut GlobalEnv, errors: Errors) {
     }
 }
 
+#[allow(deprecated)]
 fn run_spec_checker(
     env: &mut GlobalEnv,
     units: Vec<CompiledUnit>,
@@ -142,7 +143,7 @@ fn run_spec_checker(
                             function_info,
                         )
                         .unwrap();
-                    (ident, script.into_module(), source_map, function_infos)
+                    (ident, script.into_module().1, source_map, function_infos)
                 }
             };
             let expanded_module = match eprog.modules.remove(&module_id) {

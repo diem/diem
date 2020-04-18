@@ -174,7 +174,6 @@ pub fn encode_transfer_script_with_padding(
             .unwrap()
             .into_inner();
     script_mut
-        .main
         .code
         .code
         .extend(std::iter::repeat(Bytecode::Ret).take(padding_size as usize));

@@ -1163,7 +1163,7 @@ impl ScriptSerializer {
 
     fn serialize(&mut self, binary: &mut BinaryData, script: &CompiledScriptMut) -> Result<()> {
         self.common.serialize_common(binary, script)?;
-        self.serialize_main(binary, &script.main)
+        self.serialize_main(binary, &script)
     }
 
     fn serialize_header(&mut self, binary: &mut BinaryData) -> Result<()> {
@@ -1179,10 +1179,16 @@ impl ScriptSerializer {
     }
 
     /// Serializes the main function.
-    fn serialize_main(&mut self, binary: &mut BinaryData, main: &FunctionDefinition) -> Result<()> {
+    fn serialize_main(
+        &mut self,
+        binary: &mut BinaryData,
+        script: &CompiledScriptMut,
+    ) -> Result<()> {
         self.common.table_count += 1;
         self.main.0 = check_index_in_binary(binary.len())?;
-        serialize_function_definition(binary, main)?;
+        serialize_kinds(binary, &script.type_parameters)?;
+        write_u16_as_uleb128(binary, script.parameters.0)?;
+        serialize_code_unit(binary, &script.code)?;
         self.main.1 = checked_calculate_table_size(binary, self.main.0)?;
         Ok(())
     }
