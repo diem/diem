@@ -1,0 +1,87 @@
+error: undeclared `M::x`
+
+   ┌── tests/sources/schemas_err.move:4:17 ───
+   │
+ 4 │         ensures x > 0;
+   │                 ^
+   │
+
+error: schema `M::Undeclared` undeclared
+
+   ┌── tests/sources/schemas_err.move:8:9 ───
+   │
+ 8 │         include Undeclared;
+   │         ^^^^^^^^^^^^^^^^^^^
+   │
+
+error: wrong number of type arguments (expected 1, got 2)
+
+    ┌── tests/sources/schemas_err.move:12:9 ───
+    │
+ 12 │         include WrongTypeArgsIncluded<num, num>;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+
+error: `wrong` not declared in schema
+
+    ┌── tests/sources/schemas_err.move:19:44 ───
+    │
+ 19 │         include WrongTypeArgsIncluded<num>{wrong: x};
+    │                                            ^^^^^
+    │
+
+error: incompatible type of included `x` (renamed to `y`); type in schema: `num`, type in inclusion context: `bool`
+
+    ┌── tests/sources/schemas_err.move:24:9 ───
+    │
+ 24 │         include WrongTypeArgsIncluded<num>{x: y};
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+
+error: incompatible type of included `x`; type in schema: `num`, type in inclusion context: `bool`
+
+    ┌── tests/sources/schemas_err.move:29:9 ───
+    │
+ 29 │         include WronglyTypedVarIncluded;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+
+error: incompatible type of included `x`; type in schema: `num`, type in inclusion context: `bool`
+
+    ┌── tests/sources/schemas_err.move:37:9 ───
+    │
+ 37 │         include WronglyTypedInstantiationIncluded<num>;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+
+error: cyclic schema dependency: Cycle1 -> Cycle2 -> Cycle3 -> Cycle1
+
+    ┌── tests/sources/schemas_err.move:76:9 ───
+    │
+ 76 │         include Cycle1;
+    │         ^^^^^^^^^^^^^^^
+    │
+
+error: `y` cannot be matched to an existing name in inclusion context
+
+    ┌── tests/sources/schemas_err.move:48:9 ───
+    │
+ 48 │         include UndeclaredVarInInclude;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+
+error: schema `M::Invariant` includes invariants which are not allowed in this context
+
+    ┌── tests/sources/schemas_err.move:57:9 ───
+    │
+ 57 │         include Invariant;
+    │         ^^^^^^^^^^^^^^^^^^
+    │
+
+error: schema `M::Condition` includes conditions which are not allowed in this context
+
+    ┌── tests/sources/schemas_err.move:66:9 ───
+    │
+ 66 │         include Condition;
+    │         ^^^^^^^^^^^^^^^^^^
+    │
