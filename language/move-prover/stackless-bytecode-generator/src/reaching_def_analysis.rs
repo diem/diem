@@ -2,15 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    dataflow_analysis::{DataflowAnalysis, TransferFunctions},
+    dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
     function_target::{FunctionTarget, FunctionTargetData},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{Bytecode, Constant, TempIndex},
-    stackless_control_flow_graph::StacklessControlFlowGraph,
-};
-use bytecode_verifier::{
-    absint::{AbstractDomain, JoinResult},
-    control_flow_graph::ControlFlowGraph,
+    stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
 };
 use itertools::Itertools;
 use spec_lang::env::FunctionEnv;
@@ -48,7 +44,7 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
         let defs = if func_env.is_native() {
             BTreeMap::new()
         } else {
-            let cfg = StacklessControlFlowGraph::new(&data.code);
+            let cfg = StacklessControlFlowGraph::new_forward(&data.code);
             let mut analyzer = ReachingDefAnalysis {
                 _target: FunctionTarget::new(func_env, &data),
             };
@@ -86,16 +82,13 @@ struct ReachingDefState {
     map: BTreeMap<TempIndex, BTreeSet<Def>>,
 }
 
-impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
-    type State = ReachingDefState;
-    type InstrType = Bytecode;
-
+impl<'a> ReachingDefAnalysis<'a> {
     fn execute(
         &mut self,
-        pre: Self::State,
-        instr: &Self::InstrType,
+        pre: ReachingDefState,
+        instr: &Bytecode,
         _idx: CodeOffset,
-    ) -> Self::State {
+    ) -> ReachingDefState {
         use Bytecode::*;
         let mut post = pre;
         match instr {
@@ -113,6 +106,25 @@ impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
             _ => {}
         }
         post
+    }
+}
+
+impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
+    type State = ReachingDefState;
+
+    fn execute_block(
+        &mut self,
+        block_id: BlockId,
+        pre_state: Self::State,
+        instrs: &[Bytecode],
+        cfg: &StacklessControlFlowGraph,
+    ) -> Self::State {
+        let mut state = pre_state;
+        for offset in cfg.instr_indexes(block_id) {
+            let instr = &instrs[offset as usize];
+            state = self.execute(state, instr, offset);
+        }
+        state
     }
 }
 

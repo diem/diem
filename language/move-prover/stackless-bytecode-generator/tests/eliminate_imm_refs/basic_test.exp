@@ -86,7 +86,7 @@ fun TestEliminateImmRefs::test4(): u64 {
     return $t6
 }
 
-============ after pipeline `elim_imm_refs` ================
+============ after pipeline `eliminate_imm_refs` ================
 
 fun TestEliminateImmRefs::test1(): TestEliminateImmRefs::R {
     var r: TestEliminateImmRefs::R

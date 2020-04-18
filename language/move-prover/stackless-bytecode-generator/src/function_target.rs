@@ -3,7 +3,7 @@
 
 use crate::{
     annotations::Annotations,
-    lifetime_analysis, reaching_def_analysis,
+    lifetime_analysis, livevar_analysis, reaching_def_analysis,
     stackless_bytecode::{AttrId, Bytecode, SpecBlockId},
 };
 use itertools::Itertools;
@@ -214,6 +214,7 @@ impl<'env> FunctionTarget<'env> {
     /// Tests use this function to register all relevant annotation formatters. Extend this with
     /// new formatters relevant for tests.
     pub fn register_annotation_formatters_for_test(&self) {
+        self.register_annotation_formatter(Box::new(livevar_analysis::format_livevar_annotation));
         self.register_annotation_formatter(Box::new(lifetime_analysis::format_lifetime_annotation));
         self.register_annotation_formatter(Box::new(
             reaching_def_analysis::format_reaching_def_annotation,

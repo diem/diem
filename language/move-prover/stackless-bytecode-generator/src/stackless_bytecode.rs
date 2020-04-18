@@ -178,11 +178,14 @@ impl Bytecode {
         }
     }
 
+    pub fn is_return(&self) -> bool {
+        matches!(self, Bytecode::Ret(..))
+    }
+
     pub fn is_unconditional_branch(&self) -> bool {
         matches!(
             self,
             Bytecode::Ret(..) | Bytecode::Branch(_, _, BranchCond::Always)
-            | Bytecode::Call(_, _, Operation::Abort, ..)
         )
     }
 

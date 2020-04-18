@@ -4,12 +4,22 @@
 //! Adapted from AbstractInterpreter for Bytecode, this module defines the data-flow analysis
 //! framework for stackless bytecode.
 
-use bytecode_verifier::{
-    absint::{AbstractDomain, JoinResult},
-    control_flow_graph::{BlockId, ControlFlowGraph},
+use crate::{
+    stackless_bytecode::Bytecode,
+    stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
 };
 use std::collections::{HashMap, VecDeque};
-use vm::file_format::CodeOffset;
+
+#[derive(Debug)]
+pub enum JoinResult {
+    Unchanged,
+    Changed,
+    Error,
+}
+
+pub trait AbstractDomain: Clone + Sized {
+    fn join(&mut self, other: &Self) -> JoinResult;
+}
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct BlockState<State: Clone> {
@@ -22,14 +32,13 @@ pub type StateMap<State> = HashMap<BlockId, BlockState<State>>;
 /// Take a pre-state + instruction and mutate it to produce a post-state。
 pub trait TransferFunctions {
     type State: AbstractDomain + Clone;
-    type InstrType;
 
-    /// Execute instr found at index in the current basic block from pre-state
-    fn execute(
+    fn execute_block(
         &mut self,
-        pre: Self::State,
-        instr: &Self::InstrType,
-        idx: CodeOffset,
+        block_id: BlockId,
+        pre_state: Self::State,
+        instrs: &[Bytecode],
+        cfg: &StacklessControlFlowGraph,
     ) -> Self::State;
 }
 
@@ -37,21 +46,21 @@ pub trait DataflowAnalysis: TransferFunctions {
     fn analyze_function(
         &mut self,
         initial_state: Self::State,
-        instrs: &[Self::InstrType],
-        cfg: &dyn ControlFlowGraph,
+        instrs: &[Bytecode],
+        cfg: &StacklessControlFlowGraph,
     ) -> StateMap<Self::State> {
         let mut state_map: StateMap<Self::State> = StateMap::new();
-        let entry_block_id = cfg.entry_block_id();
         let mut work_list = VecDeque::new();
-        work_list.push_back(entry_block_id);
-        state_map.insert(
-            entry_block_id,
-            BlockState {
-                pre: initial_state.clone(),
-                post: initial_state.clone(),
-            },
-        );
-
+        for entry_block_id in cfg.entry_blocks() {
+            work_list.push_back(entry_block_id);
+            state_map.insert(
+                entry_block_id,
+                BlockState {
+                    pre: initial_state.clone(),
+                    post: initial_state.clone(),
+                },
+            );
+        }
         while let Some(block_id) = work_list.pop_front() {
             let pre = state_map.remove(&block_id).expect("basic block").pre;
             let post = self.execute_block(block_id, pre.clone(), &instrs, cfg);
@@ -93,20 +102,5 @@ pub trait DataflowAnalysis: TransferFunctions {
         }
 
         state_map
-    }
-
-    fn execute_block(
-        &mut self,
-        block_id: BlockId,
-        pre_state: Self::State,
-        instrs: &[Self::InstrType],
-        cfg: &dyn ControlFlowGraph,
-    ) -> Self::State {
-        let mut state = pre_state;
-        for offset in cfg.instr_indexes(block_id) {
-            let instr = &instrs[offset as usize];
-            state = self.execute(state, instr, offset);
-        }
-        state
     }
 }
