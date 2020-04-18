@@ -54,7 +54,7 @@
 //!
 //! # fn main() -> Result<(), Error> {
 //! // Start a session to trace formats.
-//! let mut tracer = Tracer::new(/* is_human_readable */ false);
+//! let mut tracer = Tracer::new(TracerConfig::default());
 //! // Create a store to hold samples of Rust values.
 //! let mut records = SerializationRecords::new();
 //!
@@ -129,7 +129,7 @@
 //! }
 //!
 //! # fn main() -> Result<(), Error> {
-//! let mut tracer = Tracer::new(/* is_human_readable */ false);
+//! let mut tracer = Tracer::new(TracerConfig::default());
 //! let mut records = SerializationRecords::new();
 //! tracer.trace_value(&mut records, &FullName { first: "", middle: Some(""), last: "" })?;
 //! let registry = tracer.registry()?;
@@ -159,7 +159,7 @@
 //! #   last: &'a str,
 //! # }
 //! # fn main() -> Result<(), Error> {
-//! let mut tracer = Tracer::new(/* is_human_readable */ false);
+//! let mut tracer = Tracer::new(TracerConfig::default());
 //! let mut records = SerializationRecords::new();
 //! tracer.trace_value(&mut records, &FullName { first: "", middle: None, last: "" })?;
 //! assert_eq!(tracer.registry().unwrap_err(), Error::UnknownFormatInContainer("FullName"));
@@ -235,5 +235,5 @@ mod value;
 
 pub use error::{Error, Result};
 pub use format::{ContainerFormat, Format, FormatHolder, Named, VariantFormat};
-pub use trace::{Registry, RegistryOwned, SerializationRecords, Tracer};
+pub use trace::{Registry, RegistryOwned, SerializationRecords, Tracer, TracerConfig};
 pub use value::Value;

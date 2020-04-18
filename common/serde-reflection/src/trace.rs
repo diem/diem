@@ -21,8 +21,8 @@ pub type RegistryOwned = BTreeMap<String, ContainerFormat>;
 /// This typically aims at computing a `Registry`.
 #[derive(Debug)]
 pub struct Tracer {
-    /// Whether to trace the human readable variant of the (De)Serialize traits.
-    pub(crate) is_human_readable: bool,
+    /// Hold configuration options.
+    pub(crate) config: TracerConfig,
 
     /// Formats of the named containers discovered so far, while tracing
     /// serialization and/or deserialization.
@@ -43,9 +43,7 @@ pub struct SerializationRecords {
 impl SerializationRecords {
     /// Create a new structure to hold value samples.
     pub fn new() -> Self {
-        Self {
-            values: BTreeMap::new(),
-        }
+        Self::default()
     }
 
     /// Obtain a (serialized) sample.
@@ -54,11 +52,35 @@ impl SerializationRecords {
     }
 }
 
+/// Configuration object to create a tracer.
+#[derive(Debug)]
+pub struct TracerConfig {
+    pub(crate) is_human_readable: bool,
+}
+
+impl Default for TracerConfig {
+    /// Create a new structure to hold value samples.
+    fn default() -> Self {
+        Self {
+            is_human_readable: false,
+        }
+    }
+}
+
+impl TracerConfig {
+    /// Whether to trace the human readable encoding of (de)serialization.
+    #[allow(clippy::wrong_self_convention)]
+    pub fn is_human_readable(mut self, value: bool) -> Self {
+        self.is_human_readable = value;
+        self
+    }
+}
+
 impl Tracer {
     /// Start tracing deserialization.
-    pub fn new(is_human_readable: bool) -> Self {
+    pub fn new(config: TracerConfig) -> Self {
         Self {
-            is_human_readable,
+            config,
             registry: BTreeMap::new(),
             incomplete_enums: BTreeSet::new(),
         }

@@ -261,7 +261,7 @@ impl<'a> ser::Serializer for Serializer<'a> {
     }
 
     fn is_human_readable(&self) -> bool {
-        self.tracer.is_human_readable
+        self.tracer.config.is_human_readable
     }
 }
 
