@@ -70,6 +70,7 @@ impl<T: Send + Sync + TimeService> KVStorage for InMemoryStorageInternal<T> {
                 Value::Ed25519PrivateKey(key)
             }
             Value::HashValue(value) => Value::HashValue(*value),
+            Value::String(value) => Value::String(value.clone()),
             Value::U64(value) => Value::U64(*value),
         };
 

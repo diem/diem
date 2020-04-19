@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 pub enum Value {
     Ed25519PrivateKey(Ed25519PrivateKey),
     HashValue(HashValue),
+    String(String),
     U64(u64),
 }
 
@@ -24,6 +25,14 @@ impl Value {
 
     pub fn hash_value(self) -> Result<HashValue, Error> {
         if let Value::HashValue(value) = self {
+            Ok(value)
+        } else {
+            Err(Error::UnexpectedValueType)
+        }
+    }
+
+    pub fn string(self) -> Result<String, Error> {
+        if let Value::String(value) = self {
             Ok(value)
         } else {
             Err(Error::UnexpectedValueType)

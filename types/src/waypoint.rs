@@ -37,10 +37,6 @@ impl Waypoint {
         })
     }
 
-    pub fn new_from_pieces(version: Version, value: HashValue) -> Self {
-        Self { version, value }
-    }
-
     pub fn version(&self) -> Version {
         self.version
     }
