@@ -36,10 +36,6 @@ impl<T: Payload> TSafetyRules<T> for LocalClient<T> {
         self.internal.write().unwrap().update(qc)
     }
 
-    fn start_new_epoch(&mut self, qc: &QuorumCert) -> Result<(), Error> {
-        self.internal.write().unwrap().start_new_epoch(qc)
-    }
-
     fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal<T>) -> Result<Vote, Error> {
         self.internal
             .write()

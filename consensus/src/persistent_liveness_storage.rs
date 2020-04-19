@@ -408,7 +408,8 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
 
     fn retrieve_validator_change_proof(&self, version: u64) -> Result<ValidatorChangeProof> {
         let (latest_lis, mut proofs, _) = self.libra_db.get_state_proof(version)?;
-        if latest_lis.ledger_info().version() == version {
+        // Include the epoch ending LIs as well.
+        if latest_lis.ledger_info().next_validator_set().is_some() {
             proofs.ledger_info_with_sigs.push(latest_lis);
         }
         Ok(proofs)

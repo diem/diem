@@ -93,10 +93,6 @@ impl<T: Payload> TSafetyRules<T> for ProcessClientWrapper<T> {
         self.safety_rules.update(qc)
     }
 
-    fn start_new_epoch(&mut self, qc: &QuorumCert) -> Result<(), Error> {
-        self.safety_rules.start_new_epoch(qc)
-    }
-
     fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal<T>) -> Result<Vote, Error> {
         self.safety_rules.construct_and_sign_vote(vote_proposal)
     }
