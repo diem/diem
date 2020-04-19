@@ -25,12 +25,6 @@ pub enum Error {
     KeyVersionNotFound(String),
 }
 
-impl From<base64::DecodeError> for Error {
-    fn from(error: base64::DecodeError) -> Self {
-        Self::SerializationError(format!("{}", error))
-    }
-}
-
 impl From<chrono::format::ParseError> for Error {
     fn from(error: chrono::format::ParseError) -> Self {
         Self::SerializationError(format!("{}", error))
@@ -45,6 +39,12 @@ impl From<io::Error> for Error {
 
 impl From<lcs::Error> for Error {
     fn from(error: lcs::Error) -> Self {
+        Self::SerializationError(format!("{}", error))
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(error: serde_json::Error) -> Self {
         Self::SerializationError(format!("{}", error))
     }
 }
