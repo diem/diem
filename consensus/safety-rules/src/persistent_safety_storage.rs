@@ -3,9 +3,10 @@
 
 use anyhow::Result;
 use consensus_types::common::Round;
-use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue};
+use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_secure_storage::{InMemoryStorage, Policy, Storage, Value};
 use libra_types::waypoint::Waypoint;
+use std::str::FromStr;
 
 /// SafetyRules needs an abstract storage interface to act as a common utility for storing
 /// persistent data to local disk, cloud, secrets managers, or even memory (for tests)
@@ -20,14 +21,12 @@ const CONSENSUS_KEY: &str = "consensus_key";
 const EPOCH: &str = "epoch";
 const LAST_VOTED_ROUND: &str = "last_voted_round";
 const PREFERRED_ROUND: &str = "preferred_round";
-const WAYPOINT_VALUE: &str = "waypoint_hash";
-const WAYPOINT_VERSION: &str = "waypoint_version";
+const WAYPOINT: &str = "waypoint";
 
 impl PersistentSafetyStorage {
     pub fn in_memory(private_key: Ed25519PrivateKey) -> Self {
         let storage = InMemoryStorage::new_storage();
-        let waypoint = Waypoint::new_from_pieces(0, HashValue::zero());
-        Self::initialize(storage, private_key, waypoint)
+        Self::initialize(storage, private_key, Waypoint::default())
     }
 
     /// Use this to instantiate a PersistentStorage for a new data store, one that has no
@@ -56,10 +55,11 @@ impl PersistentSafetyStorage {
         internal_store.create_if_not_exists(EPOCH, Value::U64(1), &perms)?;
         internal_store.create_if_not_exists(LAST_VOTED_ROUND, Value::U64(0), &perms)?;
         internal_store.create_if_not_exists(PREFERRED_ROUND, Value::U64(0), &perms)?;
-        let value = Value::HashValue(waypoint.value());
-        internal_store.create_if_not_exists(WAYPOINT_VALUE, value, &perms)?;
-        let version = Value::U64(waypoint.version());
-        internal_store.create_if_not_exists(WAYPOINT_VERSION, version, &perms)?;
+        internal_store.create_if_not_exists(
+            WAYPOINT,
+            Value::String(waypoint.to_string()),
+            &perms,
+        )?;
         Ok(())
     }
 
@@ -118,22 +118,16 @@ impl PersistentSafetyStorage {
     }
 
     pub fn waypoint(&self) -> Result<Waypoint> {
-        let version = self
+        let waypoint = self
             .internal_store
-            .get(WAYPOINT_VERSION)
-            .and_then(|r| r.value.u64())?;
-        let value = self
-            .internal_store
-            .get(WAYPOINT_VALUE)
-            .and_then(|r| r.value.hash_value())?;
-        Ok(Waypoint::new_from_pieces(version, value))
+            .get(WAYPOINT)
+            .and_then(|r| r.value.string())?;
+        Waypoint::from_str(&waypoint)
     }
 
     pub fn set_waypoint(&mut self, waypoint: &Waypoint) -> Result<()> {
         self.internal_store
-            .set(WAYPOINT_VERSION, Value::U64(waypoint.version()))?;
-        self.internal_store
-            .set(WAYPOINT_VALUE, Value::HashValue(waypoint.value()))?;
+            .set(WAYPOINT, Value::String(waypoint.to_string()))?;
         Ok(())
     }
 }

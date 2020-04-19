@@ -3,7 +3,6 @@
 
 use crate::{tests::suite, PersistentSafetyStorage, SafetyRulesManager, TSafetyRules};
 use consensus_types::common::{Payload, Round};
-use libra_crypto::HashValue;
 use libra_secure_storage::VaultStorage;
 use libra_types::{validator_signer::ValidatorSigner, waypoint::Waypoint};
 
@@ -23,7 +22,7 @@ fn safety_rules<T: Payload>() -> (Box<dyn TSafetyRules<T>>, ValidatorSigner) {
     let mut storage = VaultStorage::new_storage(host, token, None);
     storage.reset_and_clear().unwrap();
 
-    let waypoint = Waypoint::new_from_pieces(0, HashValue::zero());
+    let waypoint = Waypoint::default();
     let storage =
         PersistentSafetyStorage::initialize(storage, signer.private_key().clone(), waypoint);
     let safety_rules_manager = SafetyRulesManager::new_local(signer.author(), storage);
