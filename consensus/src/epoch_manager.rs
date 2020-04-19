@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    block_storage::{BlockReader, BlockStore},
+    block_storage::BlockStore,
     counters,
     event_processor::{EventProcessor, SyncProcessor, UnverifiedEvent, VerifiedEvent},
     liveness::{
@@ -300,9 +300,6 @@ impl<T: Payload> EpochManager<T> {
         safety_rules
             .initialize(&proofs)
             .expect("Unable to initialize SafetyRules");
-        safety_rules
-            .start_new_epoch(block_store.highest_quorum_cert().as_ref())
-            .expect("Unable to transition SafetyRules to the new epoch");
 
         info!("Create ProposalGenerator");
         // txn manager is required both by proposal generator (to pull the proposers)

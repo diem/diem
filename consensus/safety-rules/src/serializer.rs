@@ -16,7 +16,6 @@ pub enum SafetyRulesInput<T> {
     ConsensusState,
     Initialize(Box<ValidatorChangeProof>),
     Update(Box<QuorumCert>),
-    StartNewEpoch(Box<QuorumCert>),
     #[serde(bound = "T: Payload")]
     ConstructAndSignVote(Box<VoteProposal<T>>),
     #[serde(bound = "T: Payload")]
@@ -40,9 +39,6 @@ impl<T: Payload> SerializerService<T> {
             SafetyRulesInput::ConsensusState => lcs::to_bytes(&self.internal.consensus_state()),
             SafetyRulesInput::Initialize(li) => lcs::to_bytes(&self.internal.initialize(&li)),
             SafetyRulesInput::Update(qc) => lcs::to_bytes(&self.internal.update(&qc)),
-            SafetyRulesInput::StartNewEpoch(qc) => {
-                lcs::to_bytes(&self.internal.start_new_epoch(&qc))
-            }
             SafetyRulesInput::ConstructAndSignVote(vote_proposal) => {
                 lcs::to_bytes(&self.internal.construct_and_sign_vote(&vote_proposal))
             }
@@ -90,11 +86,6 @@ impl<T: Payload> TSafetyRules<T> for SerializerClient<T> {
 
     fn update(&mut self, qc: &QuorumCert) -> Result<(), Error> {
         let response = self.request(SafetyRulesInput::Update(Box::new(qc.clone())))?;
-        lcs::from_bytes(&response)?
-    }
-
-    fn start_new_epoch(&mut self, qc: &QuorumCert) -> Result<(), Error> {
-        let response = self.request(SafetyRulesInput::StartNewEpoch(Box::new(qc.clone())))?;
         lcs::from_bytes(&response)?
     }
 

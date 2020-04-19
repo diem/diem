@@ -21,12 +21,9 @@ pub trait TSafetyRules<T> {
     /// new epoch but SafetyRules did not.
     fn initialize(&mut self, proof: &ValidatorChangeProof) -> Result<(), Error>;
 
-    /// Learn about a new quorum certificate. In normal state, this updates the preferred round,
-    /// if the parent is greater than our current preferred round.
+    /// Learn about a new quorum certificate. This can lead to updating the preferred round or the
+    /// validator verifier if this ends an epoch and increments the epoch as well.
     fn update(&mut self, qc: &QuorumCert) -> Result<(), Error>;
-
-    /// Notify the safety rules about the new epoch start.
-    fn start_new_epoch(&mut self, qc: &QuorumCert) -> Result<(), Error>;
 
     /// Attempts to vote for a given proposal following the voting rules.
     fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal<T>) -> Result<Vote, Error>;
