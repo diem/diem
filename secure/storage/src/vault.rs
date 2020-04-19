@@ -123,7 +123,7 @@ impl VaultStorage {
         let secret = self.secret_name(key);
         let resp = self.client.read_secret(&secret, key)?;
         let last_update = DateTime::parse_from_rfc3339(&resp.creation_time)?.timestamp() as u64;
-        let value = Value::from_base64(&resp.value)?;
+        let value: Value = serde_json::from_str(&resp.value)?;
         Ok(GetResponse { last_update, value })
     }
 
@@ -131,7 +131,7 @@ impl VaultStorage {
     fn set_secret(&self, key: &str, value: Value) -> Result<(), Error> {
         let secret = self.secret_name(key);
         self.client
-            .write_secret(&secret, key, &value.to_base64()?)?;
+            .write_secret(&secret, key, &serde_json::to_string(&value)?)?;
         Ok(())
     }
 
