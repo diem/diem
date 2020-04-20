@@ -28,7 +28,7 @@ use libra_types::{
     contract_event::ContractEvent,
     move_resource::MoveResource,
     on_chain_config,
-    on_chain_config::{ConfigurationResource, OnChainConfig, ValidatorSet},
+    on_chain_config::{config_address, ConfigurationResource, OnChainConfig, ValidatorSet},
     proof::SparseMerkleRangeProof,
     transaction::{
         authenticator::AuthenticationKey, ChangeSet, Transaction, Version, PRE_GENESIS_VERSION,
@@ -186,16 +186,13 @@ fn get_balance(account: &AccountAddress, db: &DbReaderWriter) -> u64 {
 }
 
 fn get_configuration(db: &DbReaderWriter) -> ConfigurationResource {
-    let association_blob = db
+    let config_blob = db
         .reader
-        .get_latest_account_state(association_address())
+        .get_latest_account_state(config_address())
         .unwrap()
         .unwrap();
-    let association_state = AccountState::try_from(&association_blob).unwrap();
-    association_state
-        .get_configuration_resource()
-        .unwrap()
-        .unwrap()
+    let config_state = AccountState::try_from(&config_blob).unwrap();
+    config_state.get_configuration_resource().unwrap().unwrap()
 }
 
 fn get_state_backup(
@@ -338,10 +335,7 @@ fn test_new_genesis() {
                 WriteOp::Value(lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
             ),
             (
-                AccessPath::new(
-                    association_address(),
-                    ConfigurationResource::resource_path(),
-                ),
+                AccessPath::new(config_address(), ConfigurationResource::resource_path()),
                 WriteOp::Value(lcs::to_bytes(&configuration.bump_epoch_for_test()).unwrap()),
             ),
             (

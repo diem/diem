@@ -9,21 +9,24 @@ module LibraVersion {
     }
 
     public fun initialize() {
+        Transaction::assert(Transaction::sender() == LibraConfig::default_config_address(), 1);
 
-        LibraConfig::publish_new_config<Self::T>(T {
-            major: 1,
-        })
+        LibraConfig::publish_new_config<Self::T>(
+            T { major: 1 },
+        );
     }
 
     public fun set(major: u64) {
-        let old_config = LibraConfig::get<Self::T>(Transaction::sender());
+        let old_config = LibraConfig::get<Self::T>();
 
         Transaction::assert(
             old_config.major < major,
             25
         );
 
-        LibraConfig::set<Self::T>(Transaction::sender(), T { major } )
+        LibraConfig::set<Self::T>(
+            T { major }
+        );
     }
 }
 

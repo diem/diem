@@ -10,7 +10,11 @@ module FooConfig {
     }
 
     public fun new(version: u64) {
-        LibraConfig::publish_new_config<T>(T { version: version });
+        LibraConfig::publish_new_config_with_delegate<T>(T { version: version }, {{alice}});
+    }
+
+    public fun claim() {
+        LibraConfig::claim_delegated_modify_config<T>(LibraConfig::default_config_address());
     }
 
     public fun set(version: u64) {
@@ -40,11 +44,12 @@ fun main() {
 //! block-time: 3
 
 //! new-transaction
-//! sender: config
+//! sender: alice
 // Update the value.
 script {
 use {{alice}}::FooConfig;
 fun main() {
+    FooConfig::claim();
     FooConfig::set(0);
 }
 }
@@ -57,7 +62,7 @@ fun main() {
 //! block-time: 4
 
 //! new-transaction
-//! sender: alice
+//! sender: config
 script {
 use {{alice}}::FooConfig;
 fun main() {

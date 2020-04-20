@@ -4,7 +4,7 @@ import 0x0.LibraSystem;
 
 // check that the genesis validator set has been created and has the expected size
 main() {
-    assert(LibraAccount.exists(0x1D8), 77);
+    assert(LibraAccount.exists(0xD15C0), 77);
     assert(LibraSystem.validator_set_size() == 10, 78);
 
     // check that unexpected addresses aren't validators

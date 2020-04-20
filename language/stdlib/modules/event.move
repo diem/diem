@@ -33,9 +33,9 @@ module Event {
         EventHandleGeneratorCreationCapability{}
     }
 
-    public fun initialize() {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 0);
-        move_to_sender(EventHandleGenerator { counter: 0, addr: 0xA550C18 })
+    public fun grant_event_generator() {
+        Transaction::assert(LibraTimestamp::is_genesis(), 0);
+        move_to_sender(EventHandleGenerator { counter: 0, addr: Transaction::sender() })
     }
 
     public fun new_event_generator(
@@ -47,10 +47,11 @@ module Event {
             // a new one. the reason: it may have already been used to generate event handles and
             // thus may have a nonzero `counter`.
             // this should only happen during genesis bootstrapping, and only for the association
-            // account.
+            // account and the config account.
             // TODO: see if we can eliminate this hack + the initialize() function
-            Transaction::assert(Transaction::sender() == 0xA550C18, 0);
-            Transaction::assert(addr == 0xA550C18, 0);
+            Transaction::assert(Transaction::sender() == 0xA550C18 || Transaction::sender() == 0xF1A95, 0);
+            Transaction::assert(addr == 0xA550C18 || addr == 0xF1A95, 0);
+
             move_from<EventHandleGenerator>(addr)
         } else {
             EventHandleGenerator{ counter: 0, addr }

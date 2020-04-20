@@ -10,7 +10,7 @@ fun main() {
 // check: CANNOT_WRITE_EXISTING_RESOURCE
 
 //! new-transaction
-//! sender: association
+//! sender: config
 script {
 use 0x0::Libra;
 fun main() {
