@@ -38,7 +38,7 @@ use libradb::LibraDB;
 use rand::SeedableRng;
 use std::convert::TryFrom;
 use storage_interface::{DbReader, DbReaderWriter};
-use transaction_builder::encode_create_account_script;
+use transaction_builder::{encode_create_account_script, encode_transfer_with_metadata_script};
 
 #[test]
 fn test_empty_db() {
@@ -88,6 +88,7 @@ fn execute_and_commit(txns: Vec<Transaction>, db: &DbReaderWriter) {
     let output = executor
         .execute_block((block_id, txns), executor.committed_block_id())
         .unwrap();
+    assert_eq!(output.num_leaves(), target_version + 1);
     let ledger_info_with_sigs =
         gen_ledger_info_with_sigs(target_version, output.root_hash(), block_id);
     executor
@@ -97,9 +98,9 @@ fn execute_and_commit(txns: Vec<Transaction>, db: &DbReaderWriter) {
 
 fn get_demo_accounts() -> (
     AccountAddress,
-    AuthenticationKey,
+    Ed25519PrivateKey,
     AccountAddress,
-    AuthenticationKey,
+    Ed25519PrivateKey,
 ) {
     let seed = [1u8; 32];
     // TEST_SEED is also used to generate a random validator set in get_test_config. Each account
@@ -118,16 +119,17 @@ fn get_demo_accounts() -> (
     let account2_auth_key = AuthenticationKey::ed25519(&pubkey2);
     let account2 = account2_auth_key.derived_address();
 
-    (account1, account1_auth_key, account2, account2_auth_key)
+    (account1, privkey1, account2, privkey2)
 }
 
 fn get_mint_transaction(
     association_key: &Ed25519PrivateKey,
     association_seq_num: u64,
     account: &AccountAddress,
-    account_auth_key: &AuthenticationKey,
+    account_key: &Ed25519PrivateKey,
     amount: u64,
 ) -> Transaction {
+    let account_auth_key = AuthenticationKey::ed25519(&account_key.public_key());
     get_test_signed_transaction(
         association_address(),
         /* sequence_number = */ association_seq_num,
@@ -138,6 +140,30 @@ fn get_mint_transaction(
             &account,
             account_auth_key.prefix().to_vec(),
             amount,
+        )),
+    )
+}
+
+fn get_transfer_transaction(
+    sender: AccountAddress,
+    sender_seq_number: u64,
+    sender_key: &Ed25519PrivateKey,
+    recipient: AccountAddress,
+    recipient_key: &Ed25519PrivateKey,
+    amount: u64,
+) -> Transaction {
+    let recipient_auth_key = AuthenticationKey::ed25519(&recipient_key.public_key());
+    get_test_signed_transaction(
+        sender,
+        sender_seq_number,
+        sender_key.clone(),
+        sender_key.public_key(),
+        Some(encode_transfer_with_metadata_script(
+            lbr_type_tag(),
+            &recipient,
+            recipient_auth_key.prefix().to_vec(),
+            amount,
+            vec![],
         )),
     )
 }
@@ -199,9 +225,9 @@ fn test_pre_genesis() {
     bootstrap_db_if_empty::<LibraVM>(&db_rw, genesis_txn).unwrap();
 
     // Mint for 2 demo accounts.
-    let (account1, account1_auth_key, account2, account2_auth_key) = get_demo_accounts();
-    let txn1 = get_mint_transaction(&genesis_key, 1, &account1, &account1_auth_key, 2000);
-    let txn2 = get_mint_transaction(&genesis_key, 2, &account2, &account2_auth_key, 2000);
+    let (account1, account1_key, account2, account2_key) = get_demo_accounts();
+    let txn1 = get_mint_transaction(&genesis_key, 1, &account1, &account1_key, 2000);
+    let txn2 = get_mint_transaction(&genesis_key, 2, &account2, &account2_key, 2000);
     execute_and_commit(vec![txn1, txn2], &db_rw);
     assert_eq!(get_balance(&account1, &db_rw), 2000);
     assert_eq!(get_balance(&account2, &db_rw), 2000);
@@ -255,4 +281,79 @@ fn test_pre_genesis() {
     assert_eq!(get_balance(&account1, &db_rw), 1000);
     // Pre-genesis state accessible.
     assert_eq!(get_balance(&account2, &db_rw), 2000);
+}
+
+#[test]
+fn test_new_genesis() {
+    let (config, genesis_key) = config_builder::test_config();
+
+    // Create bootstrapped DB.
+    let tmp_dir = TempPath::new();
+    let db = DbReaderWriter::new(LibraDB::new(&tmp_dir));
+    let genesis_txn = get_genesis_txn(&config).unwrap();
+    bootstrap_db_if_empty::<LibraVM>(&db, genesis_txn).unwrap();
+
+    // Mint for 2 demo accounts.
+    let (account1, account1_key, account2, account2_key) = get_demo_accounts();
+    let txn1 = get_mint_transaction(&genesis_key, 1, &account1, &account1_key, 2_000_000);
+    let txn2 = get_mint_transaction(&genesis_key, 2, &account2, &account2_key, 2_000_000);
+    execute_and_commit(vec![txn1, txn2], &db);
+    assert_eq!(get_balance(&account1, &db), 2_000_000);
+    assert_eq!(get_balance(&account2, &db), 2_000_000);
+    let (li, validator_change_proof, _) = db.reader.get_state_proof(0).unwrap();
+    let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
+    trusted_state
+        .verify_and_ratchet(&li, &validator_change_proof)
+        .unwrap();
+
+    // New genesis transaction: set validator set and overwrite account1 balance.
+    let genesis_txn = Transaction::WaypointWriteSet(ChangeSet::new(
+        WriteSetMut::new(vec![
+            (
+                ValidatorSet::CONFIG_ID.access_path(),
+                WriteOp::Value(lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
+            ),
+            (
+                AccessPath::new(account1, BalanceResource::resource_path()),
+                WriteOp::Value(lcs::to_bytes(&BalanceResource::new(1_000_000)).unwrap()),
+            ),
+        ])
+        .freeze()
+        .unwrap(),
+        vec![ContractEvent::new(
+            on_chain_config::new_epoch_event_key(),
+            0,
+            lbr_type_tag(),
+            vec![],
+        )],
+    ));
+
+    // Bootstrap DB into new genesis.
+    let tree_state = db.reader.get_latest_tree_state().unwrap();
+    let waypoint = bootstrap_db::<LibraVM>(&db, tree_state, &genesis_txn).unwrap();
+    assert_eq!(waypoint.version(), 3);
+
+    // Client bootable from waypoint.
+    let trusted_state = TrustedState::from_waypoint(waypoint);
+    let (li, validator_change_proof, accumulator_consistency_proof) = db
+        .reader
+        .get_state_proof(trusted_state.latest_version())
+        .unwrap();
+    assert_eq!(li.ledger_info().version(), 3);
+    assert!(validator_change_proof.ledger_info_with_sigs.is_empty());
+    assert!(accumulator_consistency_proof.subtrees().is_empty());
+    trusted_state.verify_and_ratchet(&li, &validator_change_proof).unwrap();
+
+    // Effect of bootstrapping reflected.
+    assert_eq!(get_balance(&account1, &db), 1_000_000);
+    // State before new genesis accessible.
+    assert_eq!(get_balance(&account2, &db), 2_000_000);
+
+    // Transfer some money.
+    let txn =
+        get_transfer_transaction(account1, 0, &account1_key, account2, &account2_key, 500_000);
+    execute_and_commit(vec![txn], &db);
+
+    // And verify.
+    assert_eq!(get_balance(&account2, &db), 2_500_000);
 }
