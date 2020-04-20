@@ -136,7 +136,7 @@ pub(crate) async fn request_coordinator<V>(
                                     .with_label_values(&["message".to_string().deref()])
                                     .inc();
                                 match msg {
-                                    MempoolSyncMsg::BroadcastTransactionsRequest((start_id, end_id), transactions) => {
+                                    MempoolSyncMsg::BroadcastTransactionsRequest{request_id, transactions} => {
                                         counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
                                             .with_label_values(&["received".to_string().deref(), peer_id.to_string().deref()])
                                             .inc_by(transactions.len() as i64);
@@ -149,16 +149,15 @@ pub(crate) async fn request_coordinator<V>(
                                             .spawn(tasks::process_transaction_broadcast(
                                                 smp_clone,
                                                 transactions,
-                                                start_id,
-                                                end_id,
+                                                request_id,
                                                 timeline_state,
                                                 peer_id,
                                                 network_id,
                                             ))
                                             .await;
                                     }
-                                    MempoolSyncMsg::BroadcastTransactionsResponse(start_id, end_id) => {
-                                        tasks::process_broadcast_ack(smp.clone(), start_id, end_id, is_validator);
+                                    MempoolSyncMsg::BroadcastTransactionsResponse{request_id} => {
+                                        tasks::process_broadcast_ack(smp.clone(), request_id, is_validator);
                                         notify_subscribers(SharedMempoolNotification::ACK, &smp.subscribers);
                                     }
                                 };

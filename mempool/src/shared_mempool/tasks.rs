@@ -13,7 +13,7 @@ use crate::{
     CommitNotification, CommitResponse, CommittedTransaction, ConsensusRequest, ConsensusResponse,
     SubmissionStatus,
 };
-use anyhow::{format_err, Result};
+use anyhow::{ensure, format_err, Result};
 use futures::{channel::oneshot, future::join_all};
 use libra_logger::prelude::*;
 use libra_types::{
@@ -72,11 +72,13 @@ pub(crate) async fn sync_with_peers<'a>(
                     .get_mut(&peer_state.network_id)
                     .expect("[shared mempool] missign network sender")
                     .clone();
+
+                let request_id = create_request_id(timeline_id, new_timeline_id);
                 if let Err(e) = send_mempool_sync_msg(
-                    MempoolSyncMsg::BroadcastTransactionsRequest(
-                        (timeline_id, new_timeline_id),
+                    MempoolSyncMsg::BroadcastTransactionsRequest {
+                        request_id,
                         transactions,
-                    ),
+                    },
                     peer_id,
                     network_sender,
                 ) {
@@ -154,8 +156,7 @@ pub(crate) async fn process_client_transaction_submission<V>(
 pub(crate) async fn process_transaction_broadcast<V>(
     mut smp: SharedMempool<V>,
     transactions: Vec<SignedTransaction>,
-    start_id: u64, // ID of first txn in the broadcasted batch of txns
-    end_id: u64,   // ID of second txn in the broadcasted batch of txns
+    request_id: String,
     timeline_state: TimelineState,
     peer_id: PeerId,
     network_id: PeerId,
@@ -171,7 +172,7 @@ pub(crate) async fn process_transaction_broadcast<V>(
     log_txn_process_results(results, Some(peer_id));
     // send back ACK
     if let Err(e) = send_mempool_sync_msg(
-        MempoolSyncMsg::BroadcastTransactionsResponse(start_id, end_id),
+        MempoolSyncMsg::BroadcastTransactionsResponse { request_id },
         peer_id,
         network_sender,
     ) {
@@ -305,8 +306,7 @@ fn log_txn_process_results(results: Vec<SubmissionStatus>, sender: Option<PeerId
 /// processes ACK from peer node regarding txn submission to that node
 pub(crate) fn process_broadcast_ack<V>(
     smp: SharedMempool<V>,
-    start_id: u64,      // ID of first txn in batch of txns being ACK'ed
-    end_id: u64,        // ID of last txn in batch of txns being ACK'ed
+    request_id: String,
     is_validator: bool, // whether this node is a validator or not
 ) where
     V: TransactionValidation,
@@ -314,20 +314,19 @@ pub(crate) fn process_broadcast_ack<V>(
     if is_validator {
         return;
     }
-    if start_id < end_id {
-        let mut mempool = smp
-            .mempool
-            .lock()
-            .expect("[shared mempool] failed to acquire mempool lock");
 
-        for txn in mempool.timeline_range(start_id, end_id).iter() {
-            mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
+    match parse_request_id(request_id) {
+        Ok((start_id, end_id)) => {
+            let mut mempool = smp
+                .mempool
+                .lock()
+                .expect("[shared mempool] failed to acquire mempool lock");
+
+            for txn in mempool.timeline_range(start_id, end_id).iter() {
+                mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
+            }
         }
-    } else {
-        warn!(
-            "[shared mempool] ACK with invalid broadcast range {} to {}",
-            start_id, end_id
-        );
+        Err(err) => warn!("[shared mempool] ACK with invalid request_id: {:?}", err),
     }
 }
 
@@ -466,4 +465,21 @@ pub(crate) async fn process_config_update<V>(
         .await
         .restart(config_update)
         .expect("failed to restart VM validator");
+}
+
+/// creates uniques request id for the batch in the format "{start_id}_{end_id}"
+/// where start is an id in timeline index  that is lower than the first txn in a batch
+/// and end equals to timeline ID of last transaction in a batch
+fn create_request_id(start_timeline_id: u64, end_timeline_id: u64) -> String {
+    format!("{}_{}", start_timeline_id, end_timeline_id)
+}
+
+/// parses request_id according to format "{start_id}_{end_id}"
+fn parse_request_id(request_id: String) -> Result<(u64, u64)> {
+    let timeline_ids: Vec<_> = request_id.split('_').collect();
+    ensure!(timeline_ids.len() == 2, "invalid request_id {}", request_id);
+    let start_id = timeline_ids[0].parse::<u64>()?;
+    let end_id = timeline_ids[1].parse::<u64>()?;
+    ensure!(start_id < end_id, "invalid broadcast range {}", request_id);
+    Ok((start_id, end_id))
 }

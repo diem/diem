@@ -201,9 +201,7 @@ impl SharedMempoolNetwork {
 
         if let PeerManagerRequest::SendMessage(peer_id, msg) = network_req {
             let sync_msg = lcs::from_bytes(&msg.mdata).unwrap();
-            if let MempoolSyncMsg::BroadcastTransactionsRequest((_start, _end), transactions) =
-                sync_msg
-            {
+            if let MempoolSyncMsg::BroadcastTransactionsRequest { transactions, .. } = sync_msg {
                 // send it to peer
                 let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&peer_id).unwrap();
                 receiver_network_notif_tx
@@ -241,7 +239,7 @@ impl SharedMempoolNetwork {
 
         if let PeerManagerRequest::SendMessage(peer_id, msg) = network_req {
             let sync_msg = lcs::from_bytes(&msg.mdata).unwrap();
-            if let MempoolSyncMsg::BroadcastTransactionsResponse(_start, _end) = sync_msg {
+            if let MempoolSyncMsg::BroadcastTransactionsResponse { .. } = sync_msg {
                 // send it to peer
                 let receiver_network_notif_tx = self.network_notifs_txs.get_mut(&peer_id).unwrap();
                 receiver_network_notif_tx
