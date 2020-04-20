@@ -10,14 +10,14 @@ use super::{
     OnchainDiscovery,
 };
 use channel::{libra_channel, message_queues::QueueStyle};
-use executor::{db_bootstrapper::maybe_bootstrap_db, Executor};
+use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use futures::{channel::oneshot, sink::SinkExt, stream::StreamExt};
 use libra_config::{
     config::{NodeConfig, RoleType},
     generator::{self, ValidatorSwarm},
 };
 use libra_types::{
-    discovery_set::DiscoverySet, trusted_state::TrustedState, validator_set::ValidatorSet, PeerId,
+    discovery_set::DiscoverySet, on_chain_config::ValidatorSet, trusted_state::TrustedState, PeerId,
 };
 use libra_vm::LibraVM;
 use network::{
@@ -197,7 +197,8 @@ fn setup_storage_service_and_executor(
     config: &NodeConfig,
 ) -> (Runtime, Arc<dyn StorageRead>, Executor<LibraVM>) {
     let (arc_db, db_reader_writer) = init_libra_db(config);
-    maybe_bootstrap_db::<LibraVM>(db_reader_writer, config)
+    let genesis_tx = config.execution.genesis.as_ref().unwrap();
+    bootstrap_db_if_empty::<LibraVM>(&db_reader_writer, genesis_tx)
         .expect("Db-bootstrapper should not fail.");
     let storage_runtime = start_storage_service_with_db(config, arc_db);
 
