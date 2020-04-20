@@ -140,7 +140,7 @@ impl SynchronizerEnv {
             .collect();
         // Setup identity public keys.
         let identity_private_keys: Vec<_> = (0..count)
-            .map(|_| x25519::PrivateKey::for_test(&mut rng))
+            .map(|_| x25519::PrivateKey::generate(&mut rng))
             .collect();
 
         let mut validators_keys = vec![];

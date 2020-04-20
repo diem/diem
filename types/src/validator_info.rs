@@ -59,14 +59,13 @@ impl ValidatorInfo {
 
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn new_with_test_network_keys(
-        rng: &mut (impl rand::RngCore + rand::CryptoRng),
         account_address: AccountAddress,
         consensus_public_key: Ed25519PublicKey,
         consensus_voting_power: u64,
     ) -> Self {
         let network_signing_public_key = Ed25519PrivateKey::generate_for_testing().public_key();
-        let private_key = x25519::PrivateKey::for_test(rng);
-        let network_identity_public_key: x25519::PublicKey = private_key.public_key();
+        let private_key = x25519::PrivateKey::generate_for_testing();
+        let network_identity_public_key = private_key.public_key();
 
         Self {
             account_address,

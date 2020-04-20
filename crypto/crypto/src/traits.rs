@@ -249,7 +249,7 @@ pub trait Uniform {
     /// store private keys.
     fn generate<R>(rng: &mut R) -> Self
     where
-        R: SeedableRng + RngCore + CryptoRng;
+        R: RngCore + CryptoRng;
 
     /// Generate a random key using the shared TEST_SEED
     fn generate_for_testing() -> Self

@@ -17,14 +17,12 @@ use crate::{
 use libra_crypto::{
     ed25519::Ed25519Signature,
     hash::{CryptoHash, HashValue},
-    test_utils::TEST_SEED,
 };
 use proptest::{
     collection::{size_range, vec, SizeRange},
     prelude::*,
     sample::Index,
 };
-use rand::prelude::*;
 use std::collections::BTreeMap;
 
 // hack strategy to generate a length from `impl Into<SizeRange>`
@@ -60,13 +58,11 @@ fn arb_validator_sets(
 /// Convert a slice of `ValidatorSigner` (includes the private signing key) into
 /// the public-facing `ValidatorSet` type (just the public key).
 fn into_validator_set(signers: &[ValidatorSigner]) -> ValidatorSet {
-    let mut rng = StdRng::from_seed(TEST_SEED);
     ValidatorSet::new(
         signers
             .iter()
             .map(|signer| {
                 ValidatorInfo::new_with_test_network_keys(
-                    &mut rng,
                     signer.author(),
                     signer.public_key(),
                     1, /* voting power */

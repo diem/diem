@@ -10,13 +10,13 @@
 //! # Examples
 //!
 //! ```
-//! use libra_crypto::x25519;
+//! use libra_crypto::{x25519, Uniform};
 //! use rand::{rngs::StdRng, SeedableRng};
 //!
 //! // Derive an X25519 private key for testing.
 //! let seed = [1u8; 32];
 //! let mut rng: StdRng = SeedableRng::from_seed(seed);
-//! let private_key = x25519::PrivateKey::for_test(&mut rng);
+//! let private_key = x25519::PrivateKey::generate(&mut rng);
 //! let public_key = private_key.public_key();
 //!
 //! // Deserialize an hexadecimal private or public key
@@ -31,10 +31,10 @@
 //! ```
 //!
 
-use std::convert::{TryFrom, TryInto};
-
 use crate::traits::{self, ValidKey, ValidKeyStringExt};
 use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
+use rand::{CryptoRng, RngCore};
+use std::convert::{TryFrom, TryInto};
 
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
@@ -83,11 +83,6 @@ impl PrivateKey {
         let public_key: x25519_dalek::PublicKey = (&private_key).into();
         PublicKey(public_key.as_bytes().to_owned())
     }
-
-    /// Generate a private key for testing
-    pub fn for_test(rng: &mut (impl rand_core::RngCore + rand_core::CryptoRng)) -> Self {
-        Self(x25519_dalek::StaticSecret::new(rng).to_bytes())
-    }
 }
 
 impl PublicKey {
@@ -130,6 +125,23 @@ impl std::convert::TryFrom<&[u8]> for PublicKey {
     }
 }
 
+impl traits::PrivateKey for PrivateKey {
+    type PublicKeyMaterial = PublicKey;
+}
+
+impl traits::PublicKey for PublicKey {
+    type PrivateKeyMaterial = PrivateKey;
+}
+
+impl traits::Uniform for PrivateKey {
+    fn generate<R>(rng: &mut R) -> Self
+    where
+        R: RngCore + CryptoRng,
+    {
+        Self(x25519_dalek::StaticSecret::new(rng).to_bytes())
+    }
+}
+
 impl traits::ValidKey for PrivateKey {
     fn to_bytes(&self) -> Vec<u8> {
         self.0.to_vec()
@@ -140,12 +152,4 @@ impl traits::ValidKey for PublicKey {
     fn to_bytes(&self) -> Vec<u8> {
         self.0.to_vec()
     }
-}
-
-impl traits::PrivateKey for PrivateKey {
-    type PublicKeyMaterial = PublicKey;
-}
-
-impl traits::PublicKey for PublicKey {
-    type PrivateKeyMaterial = PrivateKey;
 }

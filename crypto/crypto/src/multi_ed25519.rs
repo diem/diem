@@ -159,7 +159,7 @@ impl SigningKey for MultiEd25519PrivateKey {
 impl Uniform for MultiEd25519PrivateKey {
     fn generate<R>(rng: &mut R) -> Self
     where
-        R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng,
+        R: ::rand::RngCore + ::rand::CryptoRng,
     {
         let num_of_keys = rng.gen_range(1, MAX_NUM_OF_KEYS + 1);
         let mut private_keys: Vec<Ed25519PrivateKey> = Vec::with_capacity(num_of_keys);
