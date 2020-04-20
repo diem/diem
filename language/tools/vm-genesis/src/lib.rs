@@ -21,7 +21,7 @@ use libra_types::{
     account_config,
     contract_event::ContractEvent,
     language_storage::{StructTag, TypeTag},
-    on_chain_config::{new_epoch_event_key, VMPublishingOption},
+    on_chain_config::{config_address, new_epoch_event_key, VMPublishingOption},
     transaction::{authenticator::AuthenticationKey, ChangeSet, Script, Transaction},
 };
 use move_vm_state::{data_cache::BlockDataCache, execution_context::ExecutionContext};
@@ -135,6 +135,27 @@ fn create_and_initialize_main_accounts(
 
     context.exec(
         GENESIS_MODULE_NAME,
+        "initialize_association",
+        vec![],
+        vec![Value::address(root_association_address)],
+    );
+
+    context.set_sender(config_address());
+    context.exec(GENESIS_MODULE_NAME, "initialize_config", vec![], vec![]);
+
+    context.set_sender(root_association_address);
+    context.exec(
+        "LibraConfig",
+        "grant_creator_privilege",
+        vec![],
+        vec![Value::address(config_address())],
+    );
+    context.set_sender(config_address());
+    context.exec("Libra", "initialize", vec![], vec![]);
+
+    context.set_sender(root_association_address);
+    context.exec(
+        GENESIS_MODULE_NAME,
         "initialize_accounts",
         vec![],
         vec![
@@ -174,6 +195,14 @@ fn create_and_initialize_main_accounts(
         GENESIS_MODULE_NAME,
         "initialize_txn_fee_account",
         vec![],
+        vec![Value::vector_u8(genesis_auth_key.clone())],
+    );
+
+    context.set_sender(config_address());
+    context.exec(
+        "LibraAccount",
+        "rotate_authentication_key",
+        vec![],
         vec![Value::vector_u8(genesis_auth_key)],
     );
 
@@ -207,19 +236,8 @@ fn create_and_initialize_validator_and_discovery_set(
 }
 
 /// Create and initialize the validator set.
-fn create_and_initialize_validator_set(context: &mut GenesisContext, lbr_ty: &TypeTag) {
-    let validator_set_address = account_config::validator_set_address();
-    context.set_sender(validator_set_address);
-
-    context.exec(
-        "LibraAccount",
-        "create_unhosted_account",
-        vec![lbr_ty.clone()],
-        vec![
-            Value::address(validator_set_address),
-            Value::vector_u8(validator_set_address.to_vec()),
-        ],
-    );
+fn create_and_initialize_validator_set(context: &mut GenesisContext, _lbr_ty: &TypeTag) {
+    context.set_sender(config_address());
 
     context.exec("LibraSystem", "initialize_validator_set", vec![], vec![]);
 }
@@ -280,7 +298,7 @@ fn initialize_validators(
 }
 
 fn setup_vm_config(context: &mut GenesisContext, publishing_option: VMPublishingOption) {
-    context.set_sender(account_config::association_address());
+    context.set_sender(config_address());
 
     let option_bytes =
         lcs::to_bytes(&publishing_option).expect("Cannot serialize publishing option");
@@ -297,7 +315,7 @@ fn setup_vm_config(context: &mut GenesisContext, publishing_option: VMPublishing
 }
 
 fn setup_libra_version(context: &mut GenesisContext) {
-    context.set_sender(account_config::association_address());
+    context.set_sender(config_address());
     context.exec("LibraVersion", "initialize", vec![], vec![]);
 }
 

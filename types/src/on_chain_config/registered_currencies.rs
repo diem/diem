@@ -42,6 +42,5 @@ impl RegisteredCurrencies {
 
 impl OnChainConfig for RegisteredCurrencies {
     // registered currencies address
-    const ADDRESS: &'static str = "0xA550C18";
     const IDENTIFIER: &'static str = "RegisteredCurrencies";
 }

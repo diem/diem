@@ -14,7 +14,9 @@ use libra_types::{
     event::EventKey,
     language_storage::TypeTag,
     move_resource::MoveResource,
-    on_chain_config::{new_epoch_event_key, ConfigurationResource, OnChainConfig, ValidatorSet},
+    on_chain_config::{
+        config_address, new_epoch_event_key, ConfigurationResource, OnChainConfig, ValidatorSet,
+    },
     transaction::{
         RawTransaction, Script, SignedTransaction, Transaction, TransactionArgument,
         TransactionOutput, TransactionPayload, TransactionStatus,
@@ -227,10 +229,7 @@ fn gen_genesis_writeset() -> WriteSet {
         WriteOp::Value(lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
     ));
     write_set.push((
-        AccessPath::new(
-            association_address(),
-            ConfigurationResource::resource_path(),
-        ),
+        AccessPath::new(config_address(), ConfigurationResource::resource_path()),
         WriteOp::Value(lcs::to_bytes(&ConfigurationResource::default()).unwrap()),
     ));
     write_set

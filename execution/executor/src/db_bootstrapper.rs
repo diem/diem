@@ -15,7 +15,7 @@ use libra_types::{
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     libra_timestamp::LibraTimestampResource,
     move_resource::MoveResource,
-    on_chain_config::ConfigurationResource,
+    on_chain_config::{config_address, ConfigurationResource},
     transaction::Transaction,
     waypoint::Waypoint,
 };
@@ -156,7 +156,7 @@ fn get_state_timestamp(state_view: &VerifiedStateView) -> Result<u64> {
 fn get_state_epoch(state_view: &VerifiedStateView) -> Result<u64> {
     let rsrc_bytes = &state_view
         .get(&AccessPath::new(
-            association_address(),
+            config_address(),
             ConfigurationResource::resource_path(),
         ))?
         .ok_or_else(|| format_err!("ConfigurationResource missing."))?;

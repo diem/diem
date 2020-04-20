@@ -3,12 +3,20 @@
 
 //! sender: alice
 module FooConfig {
+    use 0x0::LibraConfig;
+
     struct T {
         version: u64,
     }
 
-    public fun new(version: u64): T {
-        T { version: version }
+    public fun new(version: u64) {
+        LibraConfig::publish_new_config<T>(T { version: version });
+    }
+
+    public fun set(version: u64) {
+        LibraConfig::set(
+            T { version }
+        )
     }
 }
 
@@ -17,16 +25,12 @@ module FooConfig {
 //! block-time: 2
 
 //! new-transaction
-//! sender: association
+//! sender: config
 // Publish a new config item.
 script {
-use 0x0::LibraConfig;
 use {{alice}}::FooConfig;
 fun main() {
-    let config: FooConfig::T;
-
-    config = FooConfig::new(0);
-    LibraConfig::publish_new_config<FooConfig::T>(move config)
+    FooConfig::new(0);
 }
 }
 // check: EXECUTED
@@ -36,18 +40,28 @@ fun main() {
 //! block-time: 3
 
 //! new-transaction
-//! sender: association
+//! sender: config
 // Update the value.
 script {
-use 0x0::LibraConfig;
 use {{alice}}::FooConfig;
 fun main() {
-    let config: FooConfig::T;
-
-    config = FooConfig::new(0);
-    LibraConfig::set<FooConfig::T>(0x0::Transaction::sender(), move config)
+    FooConfig::set(0);
 }
 }
 // Should trigger a reconfiguration
 // check: NewEpochEvent
 // check: EXECUTED
+
+//! block-prologue
+//! proposer: vivian
+//! block-time: 4
+
+//! new-transaction
+//! sender: alice
+script {
+use {{alice}}::FooConfig;
+fun main() {
+    FooConfig::set(0);
+}
+}
+// check: ABORT

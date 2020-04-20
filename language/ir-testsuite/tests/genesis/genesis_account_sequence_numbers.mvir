@@ -4,8 +4,8 @@ main() {
   // check that the sequence number of the Association account (which sent the genesis txn) has been
   // incremented...
   assert(LibraAccount.sequence_number(0xA550C18) == 1, 66);
-  // ...nor the sequence number of the validator set
-  assert(LibraAccount.sequence_number(0x1D8) == 0, 68);
+  // ...nor the sequence number of the config account
+  assert(LibraAccount.sequence_number(0xF1A95) == 0, 68);
 
   return;
 }

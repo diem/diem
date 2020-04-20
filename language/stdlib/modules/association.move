@@ -38,6 +38,7 @@ module Association {
 
     // Publish a specific privilege under the sending account.
     public fun apply_for_privilege<Privilege>() {
+        if (::exists<PrivilegedCapability<Privilege>>(Transaction::sender())) return;
         move_to_sender(PrivilegedCapability<Privilege>{ is_certified: false });
     }
 

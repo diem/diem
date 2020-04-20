@@ -23,7 +23,6 @@ use libra_crypto::{
 use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
-    account_config,
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
@@ -327,7 +326,7 @@ where
                 .any(|event| *event.key() == new_epoch_event_key)
             {
                 let validator_set = account_to_state
-                    .get(&account_config::validator_set_address())
+                    .get(&on_chain_config::config_address())
                     .map(|state| {
                         state
                             .get_validator_set()?
@@ -335,7 +334,7 @@ where
                     })
                     .ok_or_else(|| format_err!("ValidatorSet account does not exist"))??;
                 let configuration = account_to_state
-                    .get(&account_config::association_address())
+                    .get(&on_chain_config::config_address())
                     .map(|state| {
                         state
                             .get_configuration_resource()?

@@ -2,7 +2,7 @@ address 0x0 {
 
 // These modules only change resources stored under the three addresses:
 // LibraAssociation's account address: 0xA550C18
-// ValidatorSet resource address: 0x1D8
+// ValidatorSet resource address: 0xF1A95
 // DiscoverySet resource address: 0xD15C0
 // ValidatorSet and DiscoverySet are stored under different addresses in order to facilitate
 // cheaper reads of these sets from storage.
@@ -20,6 +20,10 @@ module LibraSystem {
         addr: address,
         consensus_voting_power: u64,
         config: ValidatorConfig::Config,
+    }
+
+    resource struct CapabilityHolder {
+        cap: LibraConfig::ModifyConfigCapability<Self::T>,
     }
 
     struct T {
@@ -71,23 +75,24 @@ module LibraSystem {
     // the resource under that address.
     // It can only be called a single time. Currently, it is invoked in the genesis transaction.
     public fun initialize_validator_set() {
-        Transaction::assert(Transaction::sender() == 0x1D8, 1);
+        Transaction::assert(Transaction::sender() == LibraConfig::default_config_address(), 1);
 
-        LibraConfig::publish_new_config<T>(T {
+        let cap = LibraConfig::publish_new_config_with_capability<T>(T {
             scheme: 0,
             validators: Vector::empty(),
         });
+        move_to_sender(CapabilityHolder { cap })
     }
 
     // This returns a copy of the current validator set.
     public fun get_validator_set(): T {
-        LibraConfig::get<T>(0x1D8)
+        LibraConfig::get<T>()
     }
 
     // This copies the vector of validators into the LibraConfig's resource
     // under ValidatorSet address
-    fun set_validator_set(value: T) {
-        LibraConfig::set<T>(0x1D8, value)
+    fun set_validator_set(value: T) acquires CapabilityHolder {
+        LibraConfig::set_with_capability<T>(&borrow_global<CapabilityHolder>(LibraConfig::default_config_address()).cap, value)
     }
 
     // This can only be invoked by the DiscoverySet address
@@ -103,7 +108,7 @@ module LibraSystem {
         });
     }
 
-    fun add_validator_no_discovery_event(account_address: address) acquires DiscoverySet {
+    fun add_validator_no_discovery_event(account_address: address) acquires DiscoverySet, CapabilityHolder {
         Transaction::assert(Transaction::sender() == 0xA550C18, 1);
         // A prospective validator must have a validator config resource
         Transaction::assert(ValidatorConfig::has(account_address), 17);
@@ -132,13 +137,13 @@ module LibraSystem {
 
     // Adds a new validator, only callable by the LibraAssociation address
     // TODO(valerini): allow the Association to add multiple validators in a single block
-    public fun add_validator(account_address: address) acquires DiscoverySet {
+    public fun add_validator(account_address: address) acquires DiscoverySet, CapabilityHolder {
         add_validator_no_discovery_event(account_address);
         emit_discovery_set_change();
     }
 
     // Removes a validator, only callable by the LibraAssociation address
-    public fun remove_validator(account_address: address) acquires DiscoverySet {
+    public fun remove_validator(account_address: address) acquires DiscoverySet, CapabilityHolder {
         Transaction::assert(Transaction::sender() == 0xA550C18, 1);
         let validator_set = get_validator_set();
 
@@ -164,7 +169,7 @@ module LibraSystem {
     // Here validators' consensus_pubkey, validator's networking information and/or
     // validator's full-node information may change.
     // NewEpochEvent event and/or DiscoverySetChangeEvent will be fired.
-    public fun update_and_reconfigure() acquires DiscoverySet {
+    public fun update_and_reconfigure() acquires DiscoverySet, CapabilityHolder {
         Transaction::assert(is_sender_authorized_(), 22);
 
         let validator_set = get_validator_set();

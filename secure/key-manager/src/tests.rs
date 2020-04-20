@@ -203,7 +203,7 @@ impl MockLibraInterface {
     }
 
     pub fn retrieve_configuration_resource(&self) -> Result<ConfigurationResource, Error> {
-        let account = account_config::association_address();
+        let account = libra_types::on_chain_config::config_address();
         let account_state = self.retrieve_account_state(account)?;
         account_state
             .get_configuration_resource()?

@@ -5,7 +5,8 @@ use crate::Error;
 use libra_secure_json_rpc::JsonRpcClient;
 use libra_types::{
     account_address::AccountAddress, account_config, account_state::AccountState,
-    transaction::Transaction, validator_config::ValidatorConfig, validator_info::ValidatorInfo,
+    on_chain_config::config_address, transaction::Transaction, validator_config::ValidatorConfig,
+    validator_info::ValidatorInfo,
 };
 
 /// This defines a generic trait used to interact with the Libra blockchain. In production, this
@@ -82,7 +83,7 @@ impl LibraInterface for JsonRpcLibraInterface {
     }
 
     fn last_reconfiguration(&self) -> Result<u64, Error> {
-        let account = account_config::association_address();
+        let account = config_address();
         let configuration_resource = self
             .retrieve_account_state(account)?
             .get_configuration_resource();

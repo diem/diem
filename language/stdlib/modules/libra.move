@@ -93,7 +93,7 @@ module Libra {
         burn_events: Event::EventHandle<BurnEvent>,
         // event stream for preburn requests
         preburn_events: Event::EventHandle<PreburnEvent>,
-        // event stream for canceled prebunr requests
+        // event stream for cancelled preburn requests
         cancel_burn_events: Event::EventHandle<CancelBurnEvent>,
     }
 
@@ -126,11 +126,9 @@ module Libra {
     // Currently, it is invoked in the genesis transaction
     public fun initialize() {
         Association::assert_sender_is_association();
-        Transaction::assert(Transaction::sender() == currency_addr(), 0);
-        LibraConfig::publish_new_config(RegisteredCurrencies::empty());
-        move_to_sender(CurrencyRegistrationCapability{
-            cap: RegisteredCurrencies::grant_registration_capability(),
-        })
+        Transaction::assert(Transaction::sender() == LibraConfig::default_config_address(), 0);
+        let cap = RegisteredCurrencies::initialize();
+        move_to_sender(CurrencyRegistrationCapability{ cap })
     }
 
     // Returns a MintCapability for the `CoinType` currency. `CoinType`
@@ -447,7 +445,8 @@ module Libra {
         currency_code: vector<u8>,
     ) acquires CurrencyRegistrationCapability {
         // And only callable by the designated currency address.
-        assert_is_currency_sender();
+        Transaction::assert(Association::has_privilege<AddCurrency>(Transaction::sender()), 8);
+
         move_to_sender(MintCapability<CoinType>{});
         move_to_sender(BurnCapability<CoinType>{});
         move_to_sender(CurrencyInfo<CoinType> {
@@ -466,8 +465,7 @@ module Libra {
         });
         RegisteredCurrencies::add_currency_code(
             currency_code,
-            &borrow_global<CurrencyRegistrationCapability>(currency_addr()).cap
-
+            &borrow_global<CurrencyRegistrationCapability>(LibraConfig::default_config_address()).cap
         )
     }
 
@@ -559,13 +557,6 @@ module Libra {
     // information is published.
     fun currency_addr(): address {
         0xA550C18
-    }
-
-    // Assert that the sending address is the `currency_addr()`
-    fun assert_is_currency_sender() {
-        let sender = Transaction::sender();
-        Transaction::assert(sender == currency_addr(), 7);
-        Transaction::assert(Association::has_privilege<AddCurrency>(sender), 8);
     }
 
     // Assert that the sender is an association account, and that
