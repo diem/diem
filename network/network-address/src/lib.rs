@@ -104,7 +104,7 @@ pub struct RawNetworkAddress(#[serde(with = "serde_bytes")] Vec<u8>);
 /// //     \   '-- serialized NetworkAddress
 /// //      '-- 9 byte uvarint length prefix
 ///
-/// use libra_types::network_address::{NetworkAddress, RawNetworkAddress};
+/// use libra_network_address::{NetworkAddress, RawNetworkAddress};
 /// use lcs;
 /// use std::{str::FromStr, convert::TryFrom};
 ///
