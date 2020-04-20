@@ -264,6 +264,7 @@ impl FromStr for NetworkAddress {
         let mut protocols = Vec::new();
         let mut parts = s.split('/');
 
+        // the first character must be '/'
         if parts.next() != Some("") {
             return Err(ParseError::InvalidProtocolString);
         }
@@ -348,26 +349,13 @@ impl<'de> Deserialize<'de> for NetworkAddress {
     where
         D: Deserializer<'de>,
     {
-        struct StringVisitor;
-
-        impl<'de> de::Visitor<'de> for StringVisitor {
-            type Value = NetworkAddress;
-
-            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(f, "NetworkAddress")
-            }
-
-            fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
-                NetworkAddress::from_str(v).map_err(de::Error::custom)
-            }
-        }
-
         #[derive(Deserialize)]
         #[serde(rename = "NetworkAddress")]
         struct DeserializeWrapper(Vec<Protocol>);
 
         if deserializer.is_human_readable() {
-            deserializer.deserialize_str(StringVisitor)
+            let s = <&str>::deserialize(deserializer)?;
+            NetworkAddress::from_str(s).map_err(de::Error::custom)
         } else {
             let wrapper = DeserializeWrapper::deserialize(deserializer)?;
             let addr = NetworkAddress::try_from(wrapper.0).map_err(de::Error::custom)?;
