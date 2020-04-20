@@ -315,6 +315,16 @@ impl NetworkPlayground {
             .unwrap()
             .stop_drop_message_for(src, dst)
     }
+
+    pub async fn start<T: Payload>(mut self) {
+        // Take the next queued message
+        while let Some((src, net_req)) = self.outbound_msgs_rx.next().await {
+            // Deliver and copy message it if it's not dropped
+            if !self.is_message_dropped(&src, &net_req) {
+                self.deliver_message::<T>(src, net_req).await;
+            }
+        }
+    }
 }
 
 struct DropConfig(HashMap<Author, HashSet<Author>>);

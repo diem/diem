@@ -1,23 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    block_storage::{BlockReader, BlockRetriever, BlockStore, PendingVotes, VoteReceptionResult},
-    counters,
-    liveness::{
-        pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
-        proposal_generator::ProposalGenerator,
-        proposer_election::ProposerElection,
-    },
-    network::{IncomingBlockRetrievalRequest, NetworkSender},
-    network_interface::ConsensusMsg,
-    persistent_liveness_storage::{LedgerRecoveryData, PersistentLivenessStorage, RecoveryData},
-    state_replication::{StateComputer, TxnManager},
-    util::time_service::{
-        duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
-    },
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
 };
+
 use anyhow::{ensure, format_err, Context, Result};
+use termion::color::*;
+
 use consensus_types::{
     accumulator_extension_proof::AccumulatorExtensionProof,
     block::Block,
@@ -43,11 +34,23 @@ use libra_types::{
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
+
+use crate::{
+    block_storage::{BlockReader, BlockRetriever, BlockStore, PendingVotes, VoteReceptionResult},
+    counters,
+    liveness::{
+        pacemaker::{NewRoundEvent, NewRoundReason, Pacemaker},
+        proposal_generator::ProposalGenerator,
+        proposer_election::ProposerElection,
+    },
+    network::{IncomingBlockRetrievalRequest, NetworkSender},
+    network_interface::ConsensusMsg,
+    persistent_liveness_storage::{LedgerRecoveryData, PersistentLivenessStorage, RecoveryData},
+    state_replication::{StateComputer, TxnManager},
+    util::time_service::{
+        duration_since_epoch, wait_if_possible, TimeService, WaitingError, WaitingSuccess,
+    },
 };
-use termion::color::*;
 
 pub enum UnverifiedEvent<T> {
     ProposalMsg(Box<ProposalMsg<T>>),
