@@ -122,13 +122,13 @@ fn render_error(
     file_mapping: &FileMapping,
     mut error: Error,
 ) -> Diagnostic<FileId> {
-    let mk_secondary_lbl = |err: (Loc, String)| -> Label<FileId> {
-        let (id, span) = convert_loc(files, file_mapping, err.0);
-        Label::<FileId>::secondary(id, span).with_message(err.1)
-    };
     let mk_primary_lbl = |err: (Loc, String)| -> Label<FileId> {
         let (id, span) = convert_loc(files, file_mapping, err.0);
-        Label::<FileId>::primary(id, span).with_message(err.1)
+        Label::primary(id, span).with_message(err.1)
+    };
+    let mk_secondary_lbl = |err: (Loc, String)| -> Label<FileId> {
+        let (id, span) = convert_loc(files, file_mapping, err.0);
+        Label::secondary(id, span).with_message(err.1)
     };
 
     let err = error.remove(0);
@@ -136,7 +136,5 @@ fn render_error(
     labels.extend(error.into_iter().map(mk_secondary_lbl));
 
     // TODO message with each error msg
-    Diagnostic::<FileId>::error()
-        .with_message("")
-        .with_labels(labels)
+    Diagnostic::error().with_labels(labels)
 }

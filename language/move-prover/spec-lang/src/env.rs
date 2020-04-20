@@ -286,8 +286,8 @@ impl GlobalEnv {
 
     /// Adds an error to this environment, with notes.
     pub fn error_with_notes(&self, loc: &Loc, msg: &str, notes: Vec<String>) {
-        let diag = Diagnostic::<FileId>::error()
-            .with_labels([Label::<FileId>::primary(loc.file_id, loc.span)].to_vec())
+        let diag = Diagnostic::error()
+            .with_labels(vec![Label::primary(loc.file_id, loc.span)])
             .with_message(msg)
             .with_notes(notes);
         self.add_diag(diag);

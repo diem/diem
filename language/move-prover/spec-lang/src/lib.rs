@@ -73,22 +73,19 @@ pub fn run_spec_lang_compiler(
 }
 
 fn add_move_lang_errors(env: &mut GlobalEnv, errors: Errors) {
-    let mk_secondary_lbl = |err: (move_ir_types::location::Loc, String)| -> Label<FileId> {
-        let loc = env.to_loc(&err.0);
-        Label::<FileId>::secondary(loc.file_id(), loc.span()).with_message(err.1)
-    };
     let mk_primary_lbl = |err: (move_ir_types::location::Loc, String)| -> Label<FileId> {
         let loc = env.to_loc(&err.0);
-        Label::<FileId>::primary(loc.file_id(), loc.span()).with_message(err.1)
+        Label::primary(loc.file_id(), loc.span()).with_message(err.1)
     };
-
+    let mk_secondary_lbl = |err: (move_ir_types::location::Loc, String)| -> Label<FileId> {
+        let loc = env.to_loc(&err.0);
+        Label::secondary(loc.file_id(), loc.span()).with_message(err.1)
+    };
     for mut error in errors {
         let err = error.remove(0);
         let mut labels = vec![mk_primary_lbl(err)];
         labels.extend(error.into_iter().map(mk_secondary_lbl));
-        Diagnostic::<FileId>::error()
-            .with_message("")
-            .with_labels(labels);
+        Diagnostic::error().with_labels(labels);
     }
 }
 

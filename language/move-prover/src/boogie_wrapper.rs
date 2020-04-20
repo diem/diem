@@ -138,19 +138,19 @@ impl<'env> BoogieWrapper<'env> {
             }
         });
         let on_source = loc_opt.is_some();
-        let label: Label<FileId> = if let Some(loc) = &loc_opt {
-            Label::<FileId>::primary(loc.file_id(), loc.span()).with_message("")
+        let label = if let Some(loc) = &loc_opt {
+            Label::primary(loc.file_id(), loc.span()).with_message("")
         } else {
-            Label::<FileId>::primary(self.boogie_file_id, Span::new(index, index)).with_message("")
+            Label::primary(self.boogie_file_id, Span::new(index, index)).with_message("")
         };
 
         let mut diag = if on_source {
-            Diagnostic::<FileId>::error()
+            Diagnostic::error()
         } else {
-            Diagnostic::<FileId>::bug()
+            Diagnostic::bug()
         }
         .with_message(&error.message)
-        .with_labels([label].to_vec());
+        .with_labels(vec![label]);
 
         // Now add trace diagnostics.
         if error.kind.is_from_verification()
