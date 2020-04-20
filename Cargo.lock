@@ -1126,6 +1126,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "db-bootstrapper"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.28 (registry+https://github.com/rust-lang/crates.io-index)",
+ "executor 0.1.0",
+ "libra-canonical-serialization 0.1.0",
+ "libra-crypto 0.1.0",
+ "libra-types 0.1.0",
+ "libra-vm 0.1.0",
+ "libra-workspace-hack 0.1.0",
+ "libradb 0.1.0",
+ "storage-interface 0.1.0",
+ "structopt 0.3.13 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "debug-interface"
 version = "0.1.0"
 dependencies = [
