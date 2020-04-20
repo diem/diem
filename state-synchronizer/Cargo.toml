@@ -45,6 +45,7 @@ transaction-builder = { path = "../language/transaction-builder", version = "0.1
 channel = { path = "../common/channel", version = "0.1.0" }
 executor-utils = { path = "../execution/executor-utils", version = "0.1.0" }
 stdlib = { path = "../language/stdlib", version = "0.1.0" }
+storage-client = { path = "../storage/storage-client", version = "0.1.0" }
 storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 
 [features]

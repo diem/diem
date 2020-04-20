@@ -3,7 +3,7 @@
 
 use crate::SynchronizerState;
 use anyhow::{ensure, format_err, Result};
-use executor::{ChunkExecutor, Executor};
+use executor::ChunkExecutor;
 use executor_types::ExecutedTrees;
 use itertools::Itertools;
 use libra_types::{
@@ -16,12 +16,7 @@ use libra_types::{
     on_chain_config::{OnChainConfigPayload, ON_CHAIN_CONFIG_REGISTRY},
     transaction::TransactionListWithProof,
 };
-use libra_vm::LibraVM;
-use std::{
-    collections::HashSet,
-    convert::TryFrom,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashSet, convert::TryFrom, sync::Arc};
 use storage_interface::DbReader;
 use subscription_service::ReconfigSubscription;
 
@@ -66,7 +61,7 @@ pub trait ExecutorProxyTrait: Send {
 
 pub(crate) struct ExecutorProxy {
     storage: Arc<dyn DbReader>,
-    executor: Arc<Mutex<Executor<LibraVM>>>,
+    executor: Box<dyn ChunkExecutor>,
     reconfig_subscriptions: Vec<ReconfigSubscription>,
     on_chain_configs: OnChainConfigPayload,
 }
@@ -74,7 +69,7 @@ pub(crate) struct ExecutorProxy {
 impl ExecutorProxy {
     pub(crate) fn new(
         storage: Arc<dyn DbReader>,
-        executor: Arc<Mutex<Executor<LibraVM>>>,
+        executor: Box<dyn ChunkExecutor>,
         mut reconfig_subscriptions: Vec<ReconfigSubscription>,
     ) -> Self {
         let on_chain_configs = Self::fetch_all_configs(&*storage)
@@ -154,7 +149,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
         _synced_trees: &mut ExecutedTrees,
     ) -> Result<()> {
-        let reconfig_events = self.executor.lock().unwrap().execute_and_commit_chunk(
+        let reconfig_events = self.executor.execute_and_commit_chunk(
             txn_list_with_proof,
             verified_target_li,
             intermediate_end_of_epoch_li,

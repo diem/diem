@@ -12,15 +12,14 @@ use crate::{
     util::time_service::ClockTimeService,
 };
 use channel::libra_channel;
-use executor::Executor;
+use executor::BlockExecutor;
 use futures::channel::mpsc;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
 use libra_mempool::ConsensusRequest;
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
-use libra_vm::LibraVM;
 use state_synchronizer::StateSyncClient;
-use std::sync::{Arc, Mutex};
+use std::{boxed::Box, sync::Arc};
 use storage_interface::DbReader;
 use tokio::runtime::{self, Runtime};
 
@@ -29,7 +28,7 @@ pub fn start_consensus(
     node_config: &mut NodeConfig,
     network_sender: ConsensusNetworkSender<Vec<SignedTransaction>>,
     network_events: ConsensusNetworkEvents<Vec<SignedTransaction>>,
-    executor: Arc<Mutex<Executor<LibraVM>>>,
+    executor: Box<dyn BlockExecutor>,
     state_sync_client: Arc<StateSyncClient>,
     consensus_to_mempool_sender: mpsc::Sender<ConsensusRequest>,
     libra_db: Arc<dyn DbReader>,

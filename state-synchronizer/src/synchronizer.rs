@@ -7,7 +7,7 @@ use crate::{
     SynchronizerState,
 };
 use anyhow::{format_err, Result};
-use executor::Executor;
+use executor::ChunkExecutor;
 use futures::{
     channel::{mpsc, oneshot},
     future::Future,
@@ -19,11 +19,7 @@ use libra_types::{
     contract_event::ContractEvent, epoch_change::EpochChangeProof,
     ledger_info::LedgerInfoWithSignatures, transaction::Transaction, waypoint::Waypoint,
 };
-use libra_vm::LibraVM;
-use std::{
-    sync::{Arc, Mutex},
-    time::Duration,
-};
+use std::{boxed::Box, sync::Arc, time::Duration};
 use storage_interface::DbReader;
 use subscription_service::ReconfigSubscription;
 use tokio::{
@@ -42,7 +38,7 @@ impl StateSynchronizer {
         network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
         storage: Arc<dyn DbReader>,
-        executor: Arc<Mutex<Executor<LibraVM>>>,
+        executor: Box<dyn ChunkExecutor>,
         config: &NodeConfig,
         reconfig_event_subscriptions: Vec<ReconfigSubscription>,
     ) -> Self {

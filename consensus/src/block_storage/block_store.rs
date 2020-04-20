@@ -137,9 +137,7 @@ impl<T: Payload> BlockStore<T> {
             assert!(!block.is_genesis_block());
             let output = state_computer
                 .compute(&block, block.parent_id())
-                .unwrap_or_else(|_| {
-                    panic!("fail to compute state result for block {}", block.id())
-                });
+                .unwrap_or_else(|e| panic!("Execute block {} emits error: {}", block.id(), e));
             // if this block is certified, ensure we agree with the certified state.
             if let Some(qc) = quorum_certs.get(&block.id()) {
                 assert_eq!(

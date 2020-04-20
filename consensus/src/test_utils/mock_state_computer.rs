@@ -43,6 +43,7 @@ impl MockStateComputer {
 #[async_trait::async_trait]
 impl StateComputer for MockStateComputer {
     type Payload = Vec<usize>;
+
     fn compute(
         &self,
         block: &Block<Self::Payload>,
@@ -122,6 +123,7 @@ pub struct EmptyStateComputer;
 #[async_trait::async_trait]
 impl StateComputer for EmptyStateComputer {
     type Payload = TestPayload;
+
     fn compute(
         &self,
         _block: &Block<Self::Payload>,

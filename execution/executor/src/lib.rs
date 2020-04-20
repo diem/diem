@@ -51,7 +51,7 @@ use storage_interface::{state_view::VerifiedStateView, DbReaderWriter, TreeState
 static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
     Lazy::new(|| libra_metrics::OpMetrics::new_and_registered("executor"));
 
-pub trait ChunkExecutor {
+pub trait ChunkExecutor: Send {
     /// Verifies the transactions based on the provided proofs and ledger info. If the transactions
     /// are valid, executes them and commits immediately if execution results match the proofs.
     /// Returns a vector of reconfiguration events in the chunk
@@ -66,7 +66,10 @@ pub trait ChunkExecutor {
     ) -> Result<Vec<ContractEvent>>;
 }
 
-pub trait BlockExecutor {
+pub trait BlockExecutor: Send {
+    /// Reset the internal state including cache with newly fetched latest committed block from storage.
+    fn reset(&mut self) -> Result<()>;
+
     /// Executes a block.
     fn execute_block(
         &mut self,
@@ -122,6 +125,16 @@ where
             cache: SpeculationCache::new_with_startup_info(startup_info),
             phantom: PhantomData,
         }
+    }
+
+    fn reset_cache(&mut self) -> Result<()> {
+        let startup_info = self
+            .db
+            .reader
+            .get_startup_info()?
+            .ok_or_else(|| format_err!("DB not bootstrapped."))?;
+        self.cache = SpeculationCache::new_with_startup_info(startup_info);
+        Ok(())
     }
 
     fn new_on_unbootstrapped_db(db: DbReaderWriter, tree_state: TreeState) -> Self {
@@ -472,6 +485,9 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
         // carrying any epoch change LI.
         epoch_change_li: Option<LedgerInfoWithSignatures>,
     ) -> Result<Vec<ContractEvent>> {
+        // Update the cache in executor to be consistent with latest synced state.
+        self.reset_cache()?;
+
         info!(
             "Local synced version: {}. First transaction version in request: {:?}. \
              Number of transactions in request: {}.",
@@ -627,6 +643,11 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
 }
 
 impl<V: VMExecutor> BlockExecutor for Executor<V> {
+    // Reset executor state.
+    fn reset(&mut self) -> Result<()> {
+        self.reset_cache()
+    }
+
     /// Executes a block.
     fn execute_block(
         &mut self,
