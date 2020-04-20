@@ -25,7 +25,7 @@ move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }
 datatest-stable = { path = "../../../common/datatest-stable", version = "0.1.0" }
 test-utils = { path = "../test-utils", version = "0.1.0" }
 codespan = "0.8.0"
-codespan-reporting = "0.8.0"
+codespan-reporting = "0.9.2"
 libra-temppath = { path = "../../../common/temppath", version = "0.1.0" }
 anyhow = "1.0.*"
 
