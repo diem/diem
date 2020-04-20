@@ -32,14 +32,55 @@ pub fn bootstrap_db_if_empty<V: VMExecutor>(
         return Ok(None);
     }
 
-    Ok(Some(bootstrap_db::<V>(db, tree_state, genesis_txn)?))
+    let committer = calculate_genesis::<V>(db, tree_state, genesis_txn)?;
+    let waypoint = committer.waypoint;
+    committer.commit()?;
+    Ok(Some(waypoint))
 }
 
-pub fn bootstrap_db<V: VMExecutor>(
+pub struct GenesisCommitter<V: VMExecutor> {
+    executor: Executor<V>,
+    ledger_info_with_sigs: LedgerInfoWithSignatures,
+    waypoint: Waypoint,
+}
+
+impl<V: VMExecutor> GenesisCommitter<V> {
+    pub fn new(
+        executor: Executor<V>,
+        ledger_info_with_sigs: LedgerInfoWithSignatures,
+    ) -> Result<Self> {
+        let waypoint = Waypoint::new(ledger_info_with_sigs.ledger_info())?;
+
+        Ok(Self {
+            executor,
+            ledger_info_with_sigs,
+            waypoint,
+        })
+    }
+
+    pub fn ledger_info_with_sigs(&self) -> &LedgerInfoWithSignatures {
+        &self.ledger_info_with_sigs
+    }
+
+    pub fn waypoint(&self) -> Waypoint {
+        self.waypoint
+    }
+
+    pub fn commit(mut self) -> Result<()> {
+        self.executor
+            .commit_blocks(vec![genesis_block_id()], self.ledger_info_with_sigs)?;
+        info!("Genesis commited.");
+        // DB bootstrapped, avoid anything that could fail after this.
+
+        Ok(())
+    }
+}
+
+pub fn calculate_genesis<V: VMExecutor>(
     db: &DbReaderWriter,
     tree_state: TreeState,
     genesis_txn: &Transaction,
-) -> Result<Waypoint> {
+) -> Result<GenesisCommitter<V>> {
     // DB bootstrapper works on either an empty transaction accumulator or an existing block chain.
     // In the very exetreme and sad situation of losing quorum among validators, we refer to the
     // second use case said above.
@@ -92,16 +133,13 @@ pub fn bootstrap_db<V: VMExecutor>(
         ),
         BTreeMap::default(), /* signatures */
     );
-    let waypoint = Waypoint::new(ledger_info_with_sigs.ledger_info())?;
 
-    executor.commit_blocks(vec![block_id], ledger_info_with_sigs)?;
+    let committer = GenesisCommitter::new(executor, ledger_info_with_sigs)?;
     info!(
-        "GENESIS transaction is committed with state_id {} and ValidatorSet {}.",
-        root_hash, next_validator_set
+        "Genesis calculated: ledger_info_with_sigs {:?}, waypoint {:?}",
+        committer.ledger_info_with_sigs, committer.waypoint,
     );
-    // DB bootstrapped, avoid anything that could fail after this.
-
-    Ok(waypoint)
+    Ok(committer)
 }
 
 fn get_state_timestamp(state_view: &VerifiedStateView) -> Result<u64> {
@@ -124,4 +162,8 @@ fn get_state_epoch(state_view: &VerifiedStateView) -> Result<u64> {
         .ok_or_else(|| format_err!("ConfigurationResource missing."))?;
     let rsrc = lcs::from_bytes::<ConfigurationResource>(&rsrc_bytes)?;
     Ok(rsrc.epoch())
+}
+
+fn genesis_block_id() -> HashValue {
+    HashValue::zero()
 }
