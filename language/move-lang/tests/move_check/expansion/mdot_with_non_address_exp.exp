@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/expansion/mdot_with_non_address_exp.move:9:11 ───
    │
  9 │         01::X::bar()
-   │           ^^ Unexpected '::'
-   ·
- 9 │         01::X::bar()
    │           -- Expected ';'
+   │           ^^ Unexpected '::'
    │
 

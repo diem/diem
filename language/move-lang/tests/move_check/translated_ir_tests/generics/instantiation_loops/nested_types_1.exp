@@ -4,8 +4,6 @@ error:
    │
  5 │         foo<S<S<T>>>()
    │         ^^^^^^^^^^^^^^ Invalid call to '0x8675309::M::foo'
-   ·
- 5 │         foo<S<S<T>>>()
    │             ------- The type parameter 'foo::T' was instantiated with the type '0x8675309::M::S<0x8675309::M::S<T>>', which contains the type parameter 'foo::T'. This recursive call causes the instantiation to recurse infinitely
    │
 

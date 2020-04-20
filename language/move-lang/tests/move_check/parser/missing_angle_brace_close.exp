@@ -1,14 +1,10 @@
 error: 
 
-   ┌── tests/move_check/parser/missing_angle_brace_close.move:3:22 ───
+   ┌── tests/move_check/parser/missing_angle_brace_close.move:3:18 ───
    │
  3 │         let x = t<u64;
-   │                      ^ Expected '>'
-   ·
- 3 │         let x = t<u64;
-   │                  - To match this '<'
-   ·
- 3 │         let x = t<u64;
    │                  - Perhaps you need a blank space before this '<' operator?
+   │                  - To match this '<'
+   │                      ^ Expected '>'
    │
 

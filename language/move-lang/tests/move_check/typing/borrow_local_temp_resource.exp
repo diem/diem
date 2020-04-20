@@ -1,22 +1,19 @@
 error: 
 
-   ┌── tests/move_check/typing/borrow_local_temp_resource.move:7:17 ───
+   ┌── tests/move_check/typing/borrow_local_temp_resource.move:6:10 ───
    │
- 7 │         &mut R{};
-   │                 ^ Invalid return
-   ·
  6 │         &R{};
    │          --- The resource is created but not used. The resource must be consumed before the function returns
+ 7 │         &mut R{};
+   │                 ^ Invalid return
    │
 
 error: 
 
-   ┌── tests/move_check/typing/borrow_local_temp_resource.move:7:17 ───
+   ┌── tests/move_check/typing/borrow_local_temp_resource.move:7:14 ───
    │
  7 │         &mut R{};
-   │                 ^ Invalid return
-   ·
- 7 │         &mut R{};
    │              --- The resource is created but not used. The resource must be consumed before the function returns
+   │                 ^ Invalid return
    │
 

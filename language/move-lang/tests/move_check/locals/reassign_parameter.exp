@@ -1,13 +1,12 @@
 error: 
 
-   ┌── tests/move_check/locals/reassign_parameter.move:7:9 ───
-   │
+   ┌── tests/move_check/locals/reassign_parameter.move:6:9 ───
+   │  
+ 6 │           r = R {};
+   │           - The parameter 'r' might still contain a resource value. The resource must be consumed before the function returns
  7 │ ╭         if  (true) {
  8 │ │             let R { } = r
  9 │ │         }
    │ ╰─────────^ Invalid return
-   ·
- 6 │         r = R {};
-   │         - The parameter 'r' might still contain a resource value. The resource must be consumed before the function returns
-   │
+   │  
 

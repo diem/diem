@@ -1,14 +1,10 @@
 error: 
 
-   ┌── tests/move_check/parser/less_than_space.move:5:16 ───
+   ┌── tests/move_check/parser/less_than_space.move:5:14 ───
    │
  5 │         if (v< 10) return v;
-   │                ^^ Unexpected '10'
-   ·
- 5 │         if (v< 10) return v;
-   │                -- Expected a type name
-   ·
- 5 │         if (v< 10) return v;
    │              - Perhaps you need a blank space before this '<' operator?
+   │                -- Expected a type name
+   │                ^^ Unexpected '10'
    │
 

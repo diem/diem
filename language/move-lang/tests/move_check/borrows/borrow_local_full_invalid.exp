@@ -1,44 +1,42 @@
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_full_invalid.move:14:9 ───
+    ┌── tests/move_check/borrows/borrow_local_full_invalid.move:12:17 ───
     │
- 14 │         *y;
-    │         ^^ Invalid dereference.
-    ·
  12 │         let x = &mut v;
     │                 ------ It is still being mutably borrowed by this reference
+ 13 │         let y = &mut v;
+ 14 │         *y;
+    │         ^^ Invalid dereference.
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_full_invalid.move:18:17 ───
+    ┌── tests/move_check/borrows/borrow_local_full_invalid.move:17:17 ───
     │
- 18 │         let y = id_mut(&mut v);
-    │                 ^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
-    ·
  17 │         let x = &mut v;
     │                 ------ It is still being mutably borrowed by this reference
+ 18 │         let y = id_mut(&mut v);
+    │                 ^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_full_invalid.move:24:9 ───
+    ┌── tests/move_check/borrows/borrow_local_full_invalid.move:22:17 ───
     │
- 24 │         *y = 0;
-    │         ^^^^^^ Invalid mutation of reference.
-    ·
  22 │         let x = &v;
     │                 -- It is still being borrowed by this reference
+ 23 │         let y = &mut v;
+ 24 │         *y = 0;
+    │         ^^^^^^ Invalid mutation of reference.
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_full_invalid.move:33:17 ───
+    ┌── tests/move_check/borrows/borrow_local_full_invalid.move:32:17 ───
     │
- 33 │         let y = &v;
-    │                 ^^ Invalid borrow of local 'v'
-    ·
  32 │         let x = &mut v;
     │                 ------ It is still being mutably borrowed by this reference
+ 33 │         let y = &v;
+    │                 ^^ Invalid borrow of local 'v'
     │
 

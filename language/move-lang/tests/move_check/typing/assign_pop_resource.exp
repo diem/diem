@@ -1,42 +1,36 @@
 error: 
 
-   ┌── tests/move_check/typing/assign_pop_resource.move:5:9 ───
+   ┌── tests/move_check/typing/assign_pop_resource.move:2:5 ───
    │
+ 2 │     resource struct R {}
+   │     -------- Is found to be a non-copyable type here
+   ·
  5 │         _ = R{};
    │         ^ Cannot ignore resource values. The value must be used
-   ·
- 5 │         _ = R{};
    │             --- The type: '0x8675309::M::R'
-   ·
- 2 │     resource struct R {}
-   │     -------- Is found to be a non-copyable type here
    │
 
 error: 
 
-   ┌── tests/move_check/typing/assign_pop_resource.move:6:10 ───
+   ┌── tests/move_check/typing/assign_pop_resource.move:2:5 ───
    │
+ 2 │     resource struct R {}
+   │     -------- Is found to be a non-copyable type here
+   ·
  6 │         (_, _) = (R{}, R{});
    │          ^ Cannot ignore resource values. The value must be used
-   ·
- 6 │         (_, _) = (R{}, R{});
    │                   --- The type: '0x8675309::M::R'
-   ·
- 2 │     resource struct R {}
-   │     -------- Is found to be a non-copyable type here
    │
 
 error: 
 
-   ┌── tests/move_check/typing/assign_pop_resource.move:6:13 ───
+   ┌── tests/move_check/typing/assign_pop_resource.move:2:5 ───
    │
- 6 │         (_, _) = (R{}, R{});
-   │             ^ Cannot ignore resource values. The value must be used
-   ·
- 6 │         (_, _) = (R{}, R{});
-   │                        --- The type: '0x8675309::M::R'
-   ·
  2 │     resource struct R {}
    │     -------- Is found to be a non-copyable type here
+   ·
+ 6 │         (_, _) = (R{}, R{});
+   │             ^ Cannot ignore resource values. The value must be used
+   │                        --- The type: '0x8675309::M::R'
    │
 

@@ -3,12 +3,8 @@ error:
    ┌── tests/move_check/typing/bind_wrong_type.move:6:13 ───
    │
  6 │         let S { g } = R {f :0};
-   │             ^^^^^^^ Invalid deconstruction binding
-   ·
- 6 │         let S { g } = R {f :0};
    │             ------- The type: '0x8675309::M::S'
-   ·
- 6 │         let S { g } = R {f :0};
+   │             ^^^^^^^ Invalid deconstruction binding
    │                       -------- Is not compatible with: '0x8675309::M::R'
    │
 
@@ -17,12 +13,8 @@ error:
    ┌── tests/move_check/typing/bind_wrong_type.move:7:14 ───
    │
  7 │         let (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
-   │              ^^^^^^^ Invalid deconstruction binding
-   ·
- 7 │         let (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
    │              ------- The type: '0x8675309::M::S'
-   ·
- 7 │         let (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
+   │              ^^^^^^^ Invalid deconstruction binding
    │                                   --------- Is not compatible with: '0x8675309::M::R'
    │
 
@@ -32,8 +24,6 @@ error:
     │
  11 │         let x = ();
     │             ^ Invalid type for local
-    ·
- 11 │         let x = ();
     │                 -- Expected a single type, but found expression list type: '()'
     │
 
@@ -42,13 +32,9 @@ error:
     ┌── tests/move_check/typing/bind_wrong_type.move:12:13 ───
     │
  12 │         let () = 0;
-    │             ^^ Invalid value for binding
-    ·
- 12 │         let () = 0;
-    │                  - The type: integer
-    ·
- 12 │         let () = 0;
     │             -- Is not compatible with: '()'
+    │             ^^ Invalid value for binding
+    │                  - The type: integer
     │
 
 error: 
@@ -56,12 +42,8 @@ error:
     ┌── tests/move_check/typing/bind_wrong_type.move:13:13 ───
     │
  13 │         let (x, b, R{f}) = (0, false, R{f: 0}, R{f: 0});
-    │             ^^^^^^^^^^^^ Invalid value for binding
-    ·
- 13 │         let (x, b, R{f}) = (0, false, R{f: 0}, R{f: 0});
     │             ------------ The expression list type of length 3: '(_, _, _)'
-    ·
- 13 │         let (x, b, R{f}) = (0, false, R{f: 0}, R{f: 0});
+    │             ^^^^^^^^^^^^ Invalid value for binding
     │                            ---------------------------- Is not compatible with the expression list type of length 4: '({integer}, bool, 0x8675309::M::R, 0x8675309::M::R)'
     │
 
@@ -70,12 +52,8 @@ error:
     ┌── tests/move_check/typing/bind_wrong_type.move:14:13 ───
     │
  14 │         let (x, b, R{f}) = (0, false);
-    │             ^^^^^^^^^^^^ Invalid value for binding
-    ·
- 14 │         let (x, b, R{f}) = (0, false);
     │             ------------ The expression list type of length 3: '(_, _, _)'
-    ·
- 14 │         let (x, b, R{f}) = (0, false);
+    │             ^^^^^^^^^^^^ Invalid value for binding
     │                            ---------- Is not compatible with the expression list type of length 2: '({integer}, bool)'
     │
 
@@ -85,8 +63,6 @@ error:
     │
  18 │         let x: () = 0;
     │             ^ Invalid type for local
-    ·
- 18 │         let x: () = 0;
     │                -- Expected a single type, but found expression list type: '()'
     │
 
@@ -95,13 +71,9 @@ error:
     ┌── tests/move_check/typing/bind_wrong_type.move:18:16 ───
     │
  18 │         let x: () = 0;
-    │                ^^ Invalid type annotation
-    ·
- 18 │         let x: () = 0;
-    │                     - The type: integer
-    ·
- 18 │         let x: () = 0;
     │                -- Is not compatible with: '()'
+    │                ^^ Invalid type annotation
+    │                     - The type: integer
     │
 
 error: 
@@ -109,12 +81,8 @@ error:
     ┌── tests/move_check/typing/bind_wrong_type.move:19:13 ───
     │
  19 │         let (): u64 = ();
-    │             ^^ Invalid value for binding
-    ·
- 19 │         let (): u64 = ();
     │             -- The type: '()'
-    ·
- 19 │         let (): u64 = ();
+    │             ^^ Invalid value for binding
     │                 --- Is not compatible with: 'u64'
     │
 
@@ -123,13 +91,9 @@ error:
     ┌── tests/move_check/typing/bind_wrong_type.move:19:17 ───
     │
  19 │         let (): u64 = ();
-    │                 ^^^ Invalid type annotation
-    ·
- 19 │         let (): u64 = ();
-    │                       -- The type: '()'
-    ·
- 19 │         let (): u64 = ();
     │                 --- Is not compatible with: 'u64'
+    │                 ^^^ Invalid type annotation
+    │                       -- The type: '()'
     │
 
 error: 
@@ -137,12 +101,8 @@ error:
     ┌── tests/move_check/typing/bind_wrong_type.move:20:13 ───
     │
  20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
-    │             ^^^^^^^^^^^^ Invalid value for binding
-    ·
- 20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
     │             ------------ The expression list type of length 3: '(_, _, _)'
-    ·
- 20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
+    │             ^^^^^^^^^^^^ Invalid value for binding
     │                           ----------------- Is not compatible with the expression list type of length 4: '(u64, bool, 0x8675309::M::R, 0x8675309::M::R)'
     │
 
@@ -151,13 +111,9 @@ error:
     ┌── tests/move_check/typing/bind_wrong_type.move:20:27 ───
     │
  20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
-    │                           ^^^^^^^^^^^^^^^^^ Invalid type annotation
-    ·
- 20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
-    │                                               ------------------- The expression list type of length 3: '({integer}, bool, 0x8675309::M::R)'
-    ·
- 20 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0});
     │                           ----------------- Is not compatible with the expression list type of length 4: '(u64, bool, 0x8675309::M::R, 0x8675309::M::R)'
+    │                           ^^^^^^^^^^^^^^^^^ Invalid type annotation
+    │                                               ------------------- The expression list type of length 3: '({integer}, bool, 0x8675309::M::R)'
     │
 
 error: 
@@ -165,12 +121,8 @@ error:
     ┌── tests/move_check/typing/bind_wrong_type.move:21:13 ───
     │
  21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
-    │             ^^^^^^^^^^^^ Invalid value for binding
-    ·
- 21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
     │             ------------ The expression list type of length 3: '(_, _, _)'
-    ·
- 21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
+    │             ^^^^^^^^^^^^ Invalid value for binding
     │                           ----------- Is not compatible with the expression list type of length 2: '(u64, bool)'
     │
 
@@ -179,12 +131,8 @@ error:
     ┌── tests/move_check/typing/bind_wrong_type.move:21:27 ───
     │
  21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
-    │                           ^^^^^^^^^^^ Invalid type annotation
-    ·
- 21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
-    │                                         ------------------- The expression list type of length 3: '({integer}, bool, 0x8675309::M::R)'
-    ·
- 21 │         let (x, b, R{f}): (u64, bool) = (0, false, R{f: 0});
     │                           ----------- Is not compatible with the expression list type of length 2: '(u64, bool)'
+    │                           ^^^^^^^^^^^ Invalid type annotation
+    │                                         ------------------- The expression list type of length 3: '({integer}, bool, 0x8675309::M::R)'
     │
 

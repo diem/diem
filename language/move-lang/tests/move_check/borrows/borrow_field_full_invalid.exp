@@ -1,44 +1,40 @@
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_full_invalid.move:14:18 ───
+    ┌── tests/move_check/borrows/borrow_field_full_invalid.move:13:17 ───
     │
- 14 │         let f1 = &inner.f1;
-    │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
-    ·
  13 │         let c = copy inner;
     │                 ---------- It is still being mutably borrowed by this reference
+ 14 │         let f1 = &inner.f1;
+    │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_full_invalid.move:23:18 ───
+    ┌── tests/move_check/borrows/borrow_field_full_invalid.move:22:17 ───
     │
- 23 │         let f1 = &inner.f1;
-    │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
-    ·
  22 │         let c = id_mut(copy inner);
     │                 ------------------ It is still being mutably borrowed by this reference
+ 23 │         let f1 = &inner.f1;
+    │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_full_invalid.move:32:18 ───
+    ┌── tests/move_check/borrows/borrow_field_full_invalid.move:31:17 ───
     │
- 32 │         let f1 = &mut inner.f1;
-    │                  ^^^^^^^^^^^^^ Invalid mutable borrow at field 'f1'.
-    ·
  31 │         let c = copy inner;
     │                 ---------- It is still being mutably borrowed by this reference
+ 32 │         let f1 = &mut inner.f1;
+    │                  ^^^^^^^^^^^^^ Invalid mutable borrow at field 'f1'.
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_full_invalid.move:41:18 ───
+    ┌── tests/move_check/borrows/borrow_field_full_invalid.move:40:17 ───
     │
- 41 │         let f1 = &mut inner.f1;
-    │                  ^^^^^^^^^^^^^ Invalid mutable borrow at field 'f1'.
-    ·
  40 │         let c = id_mut(copy inner);
     │                 ------------------ It is still being mutably borrowed by this reference
+ 41 │         let f1 = &mut inner.f1;
+    │                  ^^^^^^^^^^^^^ Invalid mutable borrow at field 'f1'.
     │
 

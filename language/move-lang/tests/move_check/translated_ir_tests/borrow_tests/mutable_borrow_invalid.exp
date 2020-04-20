@@ -1,22 +1,22 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/borrow_tests/mutable_borrow_invalid.move:9:9 ───
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/mutable_borrow_invalid.move:6:27 ───
    │
- 9 │         root.f = 1;
-   │         ^^^^^^^^^^ Invalid mutation of reference.
-   ·
  6 │         let x = if (cond) &mut root.f else &mut root.g;
    │                           ----------- It is still being mutably borrowed by this reference
+   ·
+ 9 │         root.f = 1;
+   │         ^^^^^^^^^^ Invalid mutation of reference.
    │
 
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/borrow_tests/mutable_borrow_invalid.move:17:9 ───
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/mutable_borrow_invalid.move:14:27 ───
     │
- 17 │         foo(x, &mut root.f);
-    │         ^^^^^^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
-    ·
  14 │         let x = if (cond) &mut root.f else &mut root.g;
     │                           ----------- It is still being mutably borrowed by this reference
+    ·
+ 17 │         foo(x, &mut root.f);
+    │         ^^^^^^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
     │
 

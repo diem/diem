@@ -1,56 +1,49 @@
 error: 
 
-   ┌── tests/move_check/typing/seq_cannot_ignore_resource.move:5:9 ───
+   ┌── tests/move_check/typing/seq_cannot_ignore_resource.move:2:5 ───
    │
- 5 │         R{};
-   │         ^^^ Cannot ignore resource values. The value must be used
+ 2 │     resource struct R {}
+   │     -------- Is found to be a non-copyable type here
    ·
  5 │         R{};
    │         --- The type: '0x8675309::M::R'
-   ·
- 2 │     resource struct R {}
-   │     -------- Is found to be a non-copyable type here
+   │         ^^^ Cannot ignore resource values. The value must be used
    │
 
 error: 
 
-    ┌── tests/move_check/typing/seq_cannot_ignore_resource.move:10:9 ───
+    ┌── tests/move_check/typing/seq_cannot_ignore_resource.move:2:5 ───
     │
- 10 │         r;
-    │         ^ Cannot ignore resource values. The value must be used
+  2 │     resource struct R {}
+    │     -------- Is found to be a non-copyable type here
     ·
   9 │         let r = R{};
     │                 --- The type: '0x8675309::M::R'
-    ·
-  2 │     resource struct R {}
-    │     -------- Is found to be a non-copyable type here
+ 10 │         r;
+    │         ^ Cannot ignore resource values. The value must be used
     │
 
 error: 
 
-    ┌── tests/move_check/typing/seq_cannot_ignore_resource.move:14:9 ───
+    ┌── tests/move_check/typing/seq_cannot_ignore_resource.move:2:5 ───
     │
- 14 │         (0, false, R{});
-    │         ^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+  2 │     resource struct R {}
+    │     -------- Is found to be a non-copyable type here
     ·
  14 │         (0, false, R{});
     │         --------------- The type: '(u64, bool, 0x8675309::M::R)'
-    ·
-  2 │     resource struct R {}
-    │     -------- Is found to be a non-copyable type here
+    │         ^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
     │
 
 error: 
 
-    ┌── tests/move_check/typing/seq_cannot_ignore_resource.move:19:9 ───
+    ┌── tests/move_check/typing/seq_cannot_ignore_resource.move:2:5 ───
     │
- 19 │         if (true) (0, false, R{}) else (0, false, r);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
-    ·
- 19 │         if (true) (0, false, R{}) else (0, false, r);
-    │                                        ------------- The type: '(u64, bool, 0x8675309::M::R)'
-    ·
   2 │     resource struct R {}
     │     -------- Is found to be a non-copyable type here
+    ·
+ 19 │         if (true) (0, false, R{}) else (0, false, r);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+    │                                        ------------- The type: '(u64, bool, 0x8675309::M::R)'
     │
 

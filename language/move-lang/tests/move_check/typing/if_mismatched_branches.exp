@@ -4,12 +4,8 @@ error:
    │
  3 │         if (cond) () else 0;
    │         ^^^^^^^^^^^^^^^^^^^ Incompatible branches
-   ·
- 3 │         if (cond) () else 0;
-   │                           - The type: integer
-   ·
- 3 │         if (cond) () else 0;
    │                   -- Is not compatible with: '()'
+   │                           - The type: integer
    │
 
 error: 
@@ -18,11 +14,7 @@ error:
    │
  4 │         if (cond) 0 else ();
    │         ^^^^^^^^^^^^^^^^^^^ Incompatible branches
-   ·
- 4 │         if (cond) 0 else ();
    │                   - The type: integer
-   ·
- 4 │         if (cond) 0 else ();
    │                          -- Is not compatible with: '()'
    │
 
@@ -32,12 +24,8 @@ error:
    │
  8 │         if (cond) 0x0 else 0;
    │         ^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-   ·
- 8 │         if (cond) 0x0 else 0;
-   │                            - The type: integer
-   ·
- 8 │         if (cond) 0x0 else 0;
    │                   --- Is not compatible with: 'address'
+   │                            - The type: integer
    │
 
 error: 
@@ -46,11 +34,7 @@ error:
    │
  9 │         if (cond) 0 else false;
    │         ^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-   ·
- 9 │         if (cond) 0 else false;
    │                   - The type: integer
-   ·
- 9 │         if (cond) 0 else false;
    │                          ----- Is not compatible with: 'bool'
    │
 
@@ -60,12 +44,8 @@ error:
     │
  13 │         if (cond) (0, false) else (1, 1);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-    ·
- 13 │         if (cond) (0, false) else (1, 1);
-    │                                       - The type: integer
-    ·
- 13 │         if (cond) (0, false) else (1, 1);
     │                       ----- Is not compatible with: 'bool'
+    │                                       - The type: integer
     │
 
 error: 
@@ -74,11 +54,7 @@ error:
     │
  14 │         if (cond) (0, false) else (false, false);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-    ·
- 14 │         if (cond) (0, false) else (false, false);
     │                    - The type: integer
-    ·
- 14 │         if (cond) (0, false) else (false, false);
     │                                    ----- Is not compatible with: 'bool'
     │
 
@@ -88,11 +64,7 @@ error:
     │
  15 │         if (cond) (0, false) else (true, 0x0);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-    ·
- 15 │         if (cond) (0, false) else (true, 0x0);
     │                    - The type: integer
-    ·
- 15 │         if (cond) (0, false) else (true, 0x0);
     │                                    ---- Is not compatible with: 'bool'
     │
 
@@ -102,11 +74,7 @@ error:
     │
  19 │         if (cond) (0, false, 0) else (0, false);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-    ·
- 19 │         if (cond) (0, false, 0) else (0, false);
     │                   ------------- The expression list type of length 3: '({integer}, bool, {integer})'
-    ·
- 19 │         if (cond) (0, false, 0) else (0, false);
     │                                      ---------- Is not compatible with the expression list type of length 2: '({integer}, bool)'
     │
 
@@ -116,11 +84,7 @@ error:
     │
  20 │         if (cond) (0, false) else (0, false, 0);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-    ·
- 20 │         if (cond) (0, false) else (0, false, 0);
     │                   ---------- The expression list type of length 2: '({integer}, bool)'
-    ·
- 20 │         if (cond) (0, false) else (0, false, 0);
     │                                   ------------- Is not compatible with the expression list type of length 3: '({integer}, bool, {integer})'
     │
 

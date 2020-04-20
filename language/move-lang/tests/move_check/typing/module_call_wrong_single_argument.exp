@@ -1,98 +1,84 @@
 error: 
 
-    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:24:9 ───
+    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:17:23 ───
     │
- 24 │         foo(0);
-    │         ^^^^^^ Invalid call of '0x1::M::foo'. Invalid argument for parameter 's'
-    ·
- 24 │         foo(0);
-    │             - The type: integer
-    ·
  17 │     public fun foo(s: S) {
     │                       - Is not compatible with: '0x1::M::S'
+    ·
+ 24 │         foo(0);
+    │         ^^^^^^ Invalid call of '0x1::M::foo'. Invalid argument for parameter 's'
+    │             - The type: integer
     │
 
 error: 
 
-    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:25:9 ───
+    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:20:23 ───
     │
- 25 │         bar(S{});
-    │         ^^^^^^^^ Invalid call of '0x1::M::bar'. Invalid argument for parameter 'x'
+ 20 │     public fun bar(x: u64) {
+    │                       --- Is not compatible with: 'u64'
     ·
  25 │         bar(S{});
+    │         ^^^^^^^^ Invalid call of '0x1::M::bar'. Invalid argument for parameter 'x'
     │             --- The type: '0x1::M::S'
-    ·
- 20 │     public fun bar(x: u64) {
-    │                       --- Is not compatible with: 'u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:26:9 ───
+    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:20:23 ───
     │
+ 20 │     public fun bar(x: u64) {
+    │                       --- Is not compatible with: 'u64'
+    ·
  26 │         bar(0x0);
     │         ^^^^^^^^ Invalid call of '0x1::M::bar'. Invalid argument for parameter 'x'
-    ·
- 26 │         bar(0x0);
     │             --- The type: 'address'
-    ·
- 20 │     public fun bar(x: u64) {
-    │                       --- Is not compatible with: 'u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:30:9 ───
+    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:6:23 ───
     │
+  6 │     public fun foo(s: S) {
+    │                       - Is not compatible with: '0x1::X::S'
+    ·
  30 │         X::foo(S{});
     │         ^^^^^^^^^^^ Invalid call of '0x1::X::foo'. Invalid argument for parameter 's'
-    ·
- 30 │         X::foo(S{});
     │                --- The type: '0x1::M::S'
-    ·
-  6 │     public fun foo(s: S) {
-    │                       - Is not compatible with: '0x1::X::S'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:31:9 ───
+    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:6:23 ───
     │
+  6 │     public fun foo(s: S) {
+    │                       - Is not compatible with: '0x1::X::S'
+    ·
  31 │         X::foo(0);
     │         ^^^^^^^^^ Invalid call of '0x1::X::foo'. Invalid argument for parameter 's'
-    ·
- 31 │         X::foo(0);
     │                - The type: integer
-    ·
-  6 │     public fun foo(s: S) {
-    │                       - Is not compatible with: '0x1::X::S'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:32:9 ───
+    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:9:23 ───
     │
+  9 │     public fun bar(x: u64) {
+    │                       --- Is not compatible with: 'u64'
+    ·
  32 │         X::bar(S{});
     │         ^^^^^^^^^^^ Invalid call of '0x1::X::bar'. Invalid argument for parameter 'x'
-    ·
- 32 │         X::bar(S{});
     │                --- The type: '0x1::M::S'
-    ·
-  9 │     public fun bar(x: u64) {
-    │                       --- Is not compatible with: 'u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:33:9 ───
+    ┌── tests/move_check/typing/module_call_wrong_single_argument.move:9:23 ───
     │
- 33 │         X::bar(false);
-    │         ^^^^^^^^^^^^^ Invalid call of '0x1::X::bar'. Invalid argument for parameter 'x'
-    ·
- 33 │         X::bar(false);
-    │                ----- The type: 'bool'
-    ·
   9 │     public fun bar(x: u64) {
     │                       --- Is not compatible with: 'u64'
+    ·
+ 33 │         X::bar(false);
+    │         ^^^^^^^^^^^^^ Invalid call of '0x1::X::bar'. Invalid argument for parameter 'x'
+    │                ----- The type: 'bool'
     │
 

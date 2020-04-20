@@ -3,12 +3,8 @@ error:
    ┌── tests/move_check/typing/assign_wrong_type.move:8:9 ───
    │
  8 │         S { g } = R {f :0};
-   │         ^^^^^^^ Invalid deconstruction assignment
-   ·
- 8 │         S { g } = R {f :0};
    │         ------- The type: '0x8675309::M::S'
-   ·
- 8 │         S { g } = R {f :0};
+   │         ^^^^^^^ Invalid deconstruction assignment
    │                   -------- Is not compatible with: '0x8675309::M::R'
    │
 
@@ -17,12 +13,8 @@ error:
    ┌── tests/move_check/typing/assign_wrong_type.move:9:10 ───
    │
  9 │         (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
-   │          ^^^^^^^ Invalid deconstruction assignment
-   ·
- 9 │         (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
    │          ------- The type: '0x8675309::M::S'
-   ·
- 9 │         (S { g }, R { f }) = (R{ f: 0 }, R{ f: 1 });
+   │          ^^^^^^^ Invalid deconstruction assignment
    │                               --------- Is not compatible with: '0x8675309::M::R'
    │
 
@@ -43,8 +35,6 @@ error:
     │
  16 │         x = ();
     │         ^ Invalid type for local
-    ·
- 16 │         x = ();
     │             -- Expected a single type, but found expression list type: '()'
     │
 
@@ -53,13 +43,9 @@ error:
     ┌── tests/move_check/typing/assign_wrong_type.move:17:9 ───
     │
  17 │         () = 0;
-    │         ^^ Invalid value for assignment
-    ·
- 17 │         () = 0;
-    │              - The type: integer
-    ·
- 17 │         () = 0;
     │         -- Is not compatible with: '()'
+    │         ^^ Invalid value for assignment
+    │              - The type: integer
     │
 
 error: 
@@ -67,12 +53,8 @@ error:
     ┌── tests/move_check/typing/assign_wrong_type.move:18:9 ───
     │
  18 │         (x, b, R{f}) = (0, false, R{f: 0}, R{f: 0});
-    │         ^^^^^^^^^^^^ Invalid value for assignment
-    ·
- 18 │         (x, b, R{f}) = (0, false, R{f: 0}, R{f: 0});
     │         ------------ The expression list type of length 3: '(_, _, _)'
-    ·
- 18 │         (x, b, R{f}) = (0, false, R{f: 0}, R{f: 0});
+    │         ^^^^^^^^^^^^ Invalid value for assignment
     │                        ---------------------------- Is not compatible with the expression list type of length 4: '({integer}, bool, 0x8675309::M::R, 0x8675309::M::R)'
     │
 
@@ -81,68 +63,57 @@ error:
     ┌── tests/move_check/typing/assign_wrong_type.move:19:9 ───
     │
  19 │         (x, b, R{f}) = (0, false);
-    │         ^^^^^^^^^^^^ Invalid value for assignment
-    ·
- 19 │         (x, b, R{f}) = (0, false);
     │         ------------ The expression list type of length 3: '(_, _, _)'
-    ·
- 19 │         (x, b, R{f}) = (0, false);
+    │         ^^^^^^^^^^^^ Invalid value for assignment
     │                        ---------- Is not compatible with the expression list type of length 2: '({integer}, bool)'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/assign_wrong_type.move:27:10 ───
+    ┌── tests/move_check/typing/assign_wrong_type.move:23:17 ───
     │
- 27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
-    │          ^ Invalid assignment to local 'x'
+ 23 │         let x = false;
+    │                 ----- Is not compatible with: 'bool'
     ·
  27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
     │          - The type: integer
-    ·
- 23 │         let x = false;
-    │                 ----- Is not compatible with: 'bool'
+    │          ^ Invalid assignment to local 'x'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/assign_wrong_type.move:27:13 ───
+    ┌── tests/move_check/typing/assign_wrong_type.move:24:13 ───
     │
- 27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
-    │             ^ Invalid assignment to local 'b'
-    ·
  24 │         let b = 0;
     │             - The type: integer
     ·
  27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
+    │             ^ Invalid assignment to local 'b'
     │                               ----- Is not compatible with: 'bool'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/assign_wrong_type.move:27:18 ───
+    ┌── tests/move_check/typing/assign_wrong_type.move:2:27 ───
     │
- 27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
-    │                  ^ Invalid assignment to local 'f'
-    ·
   2 │     resource struct R {f: u64}
     │                           --- The type: 'u64'
     ·
  25 │         let f = 0x0;
     │                 --- Is not compatible with: 'address'
+ 26 │         let r = S{ g: 0 };
+ 27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
+    │                  ^ Invalid assignment to local 'f'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/assign_wrong_type.move:27:22 ───
+    ┌── tests/move_check/typing/assign_wrong_type.move:26:17 ───
     │
- 27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
-    │                      ^ Invalid assignment to local 'r'
-    ·
- 27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
-    │                                               ------- The type: '0x8675309::M::R'
-    ·
  26 │         let r = S{ g: 0 };
     │                 --------- Is not compatible with: '0x8675309::M::S'
+ 27 │         (x, b, R{f}, r) = (0, false, R{f: 0}, R{f: 0});
+    │                      ^ Invalid assignment to local 'r'
+    │                                               ------- The type: '0x8675309::M::R'
     │
 

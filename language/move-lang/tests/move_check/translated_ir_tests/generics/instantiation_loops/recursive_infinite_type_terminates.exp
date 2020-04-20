@@ -4,8 +4,6 @@ error:
     │
  11 │         unbox<T>(f<Box<T>>(n - 1, Box<T> { x }))
     │                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to '0x8675309::M::f'
-    ·
- 11 │         unbox<T>(f<Box<T>>(n - 1, Box<T> { x }))
     │                    ------ The type parameter 'f::T' was instantiated with the type '0x8675309::M::Box<T>', which contains the type parameter 'f::T'. This recursive call causes the instantiation to recurse infinitely
     │
 

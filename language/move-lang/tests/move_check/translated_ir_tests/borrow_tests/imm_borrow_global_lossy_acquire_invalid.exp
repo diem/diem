@@ -1,11 +1,11 @@
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_global_lossy_acquire_invalid.move:32:9 ───
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_global_lossy_acquire_invalid.move:29:18 ───
     │
- 32 │         eq_helper(p1, addr2)
-    │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource 'Pair'
-    ·
  29 │         let p1 = borrow_global<Pair>(addr1);
     │                  -------------------------- It is still being borrowed by this reference
+    ·
+ 32 │         eq_helper(p1, addr2)
+    │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource 'Pair'
     │
 

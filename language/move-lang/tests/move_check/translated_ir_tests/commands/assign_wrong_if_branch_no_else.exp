@@ -1,11 +1,11 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/commands/assign_wrong_if_branch_no_else.move:4:30 ───
+   ┌── tests/move_check/translated_ir_tests/commands/assign_wrong_if_branch_no_else.move:2:9 ───
    │
- 4 │     0x0::Transaction::assert(x == 100, 42);
-   │                              ^ Invalid usage of local 'x'
-   ·
  2 │     let x: u64;
    │         - The local might not have a value due to this position. The local must be assigned a value before being used
+ 3 │     if (false) x = 100;
+ 4 │     0x0::Transaction::assert(x == 100, 42);
+   │                              ^ Invalid usage of local 'x'
    │
 

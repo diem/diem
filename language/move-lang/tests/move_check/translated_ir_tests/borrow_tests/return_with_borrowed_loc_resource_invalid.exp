@@ -1,11 +1,11 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/borrow_tests/return_with_borrowed_loc_resource_invalid.move:7:15 ───
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/return_with_borrowed_loc_resource_invalid.move:5:13 ───
    │
- 7 │         copy u;
-   │               ^ Invalid return
-   ·
  5 │         let s = X { u: 0 };
    │             - The local 's' still contains a resource value due to this assignment. The resource must be consumed before the function returns
+ 6 │         let u = &s.u;
+ 7 │         copy u;
+   │               ^ Invalid return
    │
 

@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/parser/function_acquires_missing_comma.move:5:25 ───
    │
  5 │     fun f() acquires X1 X2 {
-   │                         ^^ Unexpected 'X2'
-   ·
- 5 │     fun f() acquires X1 X2 {
    │                         -- Expected ','
+   │                         ^^ Unexpected 'X2'
    │
 

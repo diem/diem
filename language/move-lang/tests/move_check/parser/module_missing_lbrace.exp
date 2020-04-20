@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/parser/module_missing_lbrace.move:2:5 ───
    │
  2 │     fun f() {}
-   │     ^^^ Unexpected 'fun'
-   ·
- 2 │     fun f() {}
    │     --- Expected '{'
+   │     ^^^ Unexpected 'fun'
    │
 

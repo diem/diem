@@ -1,43 +1,37 @@
 error: 
 
-   ┌── tests/move_check/typing/exp_list_resource_drop.move:7:9 ───
+   ┌── tests/move_check/typing/exp_list_resource_drop.move:2:5 ───
    │
- 7 │         (0, S{}, R<u64> {});
-   │         ^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+ 2 │     resource struct R<T> {}
+   │     -------- Is found to be a non-copyable type here
    ·
  7 │         (0, S{}, R<u64> {});
    │         ------------------- The type: '(u64, 0x8675309::M::S, 0x8675309::M::R<u64>)'
-   ·
- 2 │     resource struct R<T> {}
-   │     -------- Is found to be a non-copyable type here
+   │         ^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
    │
 
 error: 
 
-   ┌── tests/move_check/typing/exp_list_resource_drop.move:8:9 ───
+   ┌── tests/move_check/typing/exp_list_resource_drop.move:2:5 ───
    │
- 8 │         (0, S{}, Box<R<u64>> {});
-   │         ^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+ 2 │     resource struct R<T> {}
+   │     -------- Is found to be a non-copyable type here
    ·
  8 │         (0, S{}, Box<R<u64>> {});
    │         ------------------------ The type: '(u64, 0x8675309::M::S, 0x8675309::M::Box<0x8675309::M::R<u64>>)'
-   ·
- 2 │     resource struct R<T> {}
-   │     -------- Is found to be a non-copyable type here
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
    │
 
 error: 
 
-   ┌── tests/move_check/typing/exp_list_resource_drop.move:9:9 ───
+   ┌── tests/move_check/typing/exp_list_resource_drop.move:4:16 ───
    │
- 9 │         (0, S{}, Box {});
-   │         ^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
+ 4 │     struct Box<T> {}
+   │                - Is found to be a non-copyable type here
    ·
  9 │         (0, S{}, Box {});
    │         ---------------- The type: '(u64, 0x8675309::M::S, 0x8675309::M::Box<_>)'
-   ·
- 4 │     struct Box<T> {}
-   │                - Is found to be a non-copyable type here
+   │         ^^^^^^^^^^^^^^^^ Cannot ignore resource values. The value must be used
    │
 
 error: 

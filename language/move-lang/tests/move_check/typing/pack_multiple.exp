@@ -4,8 +4,6 @@ error:
    │
  5 │         Box { f: (0, 1) };
    │         ^^^^^^^^^^^^^^^^^ Invalid type argument
-   ·
- 5 │         Box { f: (0, 1) };
    │                  ------ Expected a single non-reference type, but found: '(u64, u64)'
    │
 
@@ -15,8 +13,6 @@ error:
    │
  6 │         Box { f: (0, 1, 2) };
    │         ^^^^^^^^^^^^^^^^^^^^ Invalid type argument
-   ·
- 6 │         Box { f: (0, 1, 2) };
    │                  --------- Expected a single non-reference type, but found: '(u64, u64, u64)'
    │
 
@@ -26,8 +22,6 @@ error:
    │
  7 │         Box { f: (true, Box { f: 0 }) };
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
-   ·
- 7 │         Box { f: (true, Box { f: 0 }) };
    │                  -------------------- Expected a single non-reference type, but found: '(bool, 0x8675309::M::Box<u64>)'
    │
 

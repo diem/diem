@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/parser/function_without_body.move:3:13 ───
    │
  3 │     fun fn();
-   │             ^ Unexpected ';'
-   ·
- 3 │     fun fn();
    │             - Expected '{'
+   │             ^ Unexpected ';'
    │
 

@@ -1,99 +1,90 @@
 error: 
 
-    ┌── tests/move_check/borrows/move_from_invalid.move:12:23 ───
+    ┌── tests/move_check/borrows/move_from_invalid.move:11:18 ───
     │
- 12 │         let R { f } = move_from<R>(addr);
-    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
-    ·
  11 │         let r1 = borrow_global_mut<R>(addr);
     │                  -------------------------- It is still being mutably borrowed by this reference
+ 12 │         let R { f } = move_from<R>(addr);
+    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_from_invalid.move:18:23 ───
+    ┌── tests/move_check/borrows/move_from_invalid.move:17:21 ───
     │
- 18 │         let R { f } = move_from<R>(addr);
-    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
-    ·
  17 │         let f_ref = &mut borrow_global_mut<R>(addr).f;
     │                     --------------------------------- It is still being mutably borrowed by this reference
+ 18 │         let R { f } = move_from<R>(addr);
+    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_from_invalid.move:24:23 ───
+    ┌── tests/move_check/borrows/move_from_invalid.move:23:18 ───
     │
- 24 │         let R { f } = move_from<R>(addr);
-    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
-    ·
  23 │         let r1 = id_mut(borrow_global_mut<R>(addr));
     │                  ---------------------------------- It is still being mutably borrowed by this reference
+ 24 │         let R { f } = move_from<R>(addr);
+    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_from_invalid.move:30:23 ───
+    ┌── tests/move_check/borrows/move_from_invalid.move:29:21 ───
     │
- 30 │         let R { f } = move_from<R>(addr);
-    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
-    ·
  29 │         let f_ref = id_mut(&mut borrow_global_mut<R>(addr).f);
     │                     ----------------------------------------- It is still being mutably borrowed by this reference
+ 30 │         let R { f } = move_from<R>(addr);
+    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_from_invalid.move:36:23 ───
+    ┌── tests/move_check/borrows/move_from_invalid.move:35:18 ───
     │
- 36 │         let R { f } = move_from<R>(addr);
-    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
-    ·
  35 │         let r1 = borrow_global<R>(addr);
     │                  ---------------------- It is still being borrowed by this reference
+ 36 │         let R { f } = move_from<R>(addr);
+    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_from_invalid.move:42:23 ───
+    ┌── tests/move_check/borrows/move_from_invalid.move:41:21 ───
     │
- 42 │         let R { f } = move_from<R>(addr);
-    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
-    ·
  41 │         let f_ref = &borrow_global<R>(addr).f;
     │                     ------------------------- It is still being borrowed by this reference
+ 42 │         let R { f } = move_from<R>(addr);
+    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_from_invalid.move:48:23 ───
+    ┌── tests/move_check/borrows/move_from_invalid.move:47:18 ───
     │
- 48 │         let R { f } = move_from<R>(addr);
-    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
-    ·
  47 │         let r1 = id(borrow_global<R>(addr));
     │                  -------------------------- It is still being borrowed by this reference
+ 48 │         let R { f } = move_from<R>(addr);
+    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_from_invalid.move:54:23 ───
+    ┌── tests/move_check/borrows/move_from_invalid.move:53:21 ───
     │
- 54 │         let R { f } = move_from<R>(addr);
-    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
-    ·
  53 │         let f_ref = id(&borrow_global<R>(addr).f);
     │                     ----------------------------- It is still being borrowed by this reference
+ 54 │         let R { f } = move_from<R>(addr);
+    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_from_invalid.move:62:23 ───
+    ┌── tests/move_check/borrows/move_from_invalid.move:61:32 ───
     │
- 62 │         let R { f } = move_from<R>(addr);
-    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
-    ·
  61 │         let r1; if (cond) r1 = borrow_global_mut<R>(addr) else r1 = &mut r;
     │                                -------------------------- It is still being mutably borrowed by this reference
+ 62 │         let R { f } = move_from<R>(addr);
+    │                       ^^^^^^^^^^^^^^^^^^ Invalid extraction of resource 'R'
     │
 

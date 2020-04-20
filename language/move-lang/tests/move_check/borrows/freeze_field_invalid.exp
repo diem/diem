@@ -1,22 +1,20 @@
 error: 
 
-    ┌── tests/move_check/borrows/freeze_field_invalid.move:12:9 ───
+    ┌── tests/move_check/borrows/freeze_field_invalid.move:11:17 ───
     │
- 12 │         freeze(s);
-    │         ^^^^^^^^^ Invalid freeze.
-    ·
  11 │         let f = &mut s.f;
     │                 -------- Field 'f' is still being mutably borrowed by this reference
+ 12 │         freeze(s);
+    │         ^^^^^^^^^ Invalid freeze.
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/freeze_field_invalid.move:19:9 ───
+    ┌── tests/move_check/borrows/freeze_field_invalid.move:18:17 ───
     │
- 19 │         freeze(s);
-    │         ^^^^^^^^^ Invalid freeze.
-    ·
  18 │         let g = &mut s.f;
     │                 -------- Field 'f' is still being mutably borrowed by this reference
+ 19 │         freeze(s);
+    │         ^^^^^^^^^ Invalid freeze.
     │
 

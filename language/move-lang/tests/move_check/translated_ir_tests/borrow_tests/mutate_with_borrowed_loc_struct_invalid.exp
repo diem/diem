@@ -1,33 +1,31 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/borrow_tests/mutate_with_borrowed_loc_struct_invalid.move:7:9 ───
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/mutate_with_borrowed_loc_struct_invalid.move:5:13 ───
    │
- 7 │         x = X { b: true };
-   │         ^ Invalid assignment to local 'x'
-   ·
  5 │         let x = X { b: true };
    │             - The local contains a resource value due to this assignment. The resource must be used before you assign to this local again
+ 6 │         let y = &x;
+ 7 │         x = X { b: true };
+   │         ^ Invalid assignment to local 'x'
    │
 
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/borrow_tests/mutate_with_borrowed_loc_struct_invalid.move:7:9 ───
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/mutate_with_borrowed_loc_struct_invalid.move:6:17 ───
    │
- 7 │         x = X { b: true };
-   │         ^ Invalid assignment of local 'x'
-   ·
  6 │         let y = &x;
    │                 -- It is still being borrowed by this reference
+ 7 │         x = X { b: true };
+   │         ^ Invalid assignment of local 'x'
    │
 
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/borrow_tests/mutate_with_borrowed_loc_struct_invalid.move:16:9 ───
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/mutate_with_borrowed_loc_struct_invalid.move:15:17 ───
     │
- 16 │         s = S { z: 7 };
-    │         ^ Invalid assignment of local 's'
-    ·
  15 │         let z = &y.z;
     │                 ---- It is still being borrowed by this reference
+ 16 │         s = S { z: 7 };
+    │         ^ Invalid assignment of local 's'
     │
 

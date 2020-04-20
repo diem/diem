@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/parser/let_binding_missing_fields.move:6:26 ───
    │
  6 │         let Generic<u64> = g;
-   │                          ^ Unexpected '='
-   ·
- 6 │         let Generic<u64> = g;
    │                          - Expected '{'
+   │                          ^ Unexpected '='
    │
 

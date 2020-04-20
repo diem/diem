@@ -1,15 +1,12 @@
 error: 
 
-   ┌── tests/move_check/typing/exp_list_nested.move:6:9 ───
+   ┌── tests/move_check/typing/exp_list_nested.move:5:15 ───
    │
- 6 │         (0, (S{}, R{}))
-   │         ^^^^^^^^^^^^^^^ Invalid return expression
-   ·
- 6 │         (0, (S{}, R{}))
-   │         --------------- The expression list type of length 2: '({integer}, (0x8675309::M::S, 0x8675309::M::R<_>))'
-   ·
  5 │     fun t0(): (u64, S, R<u64>) {
    │               ---------------- Is not compatible with the expression list type of length 3: '(u64, 0x8675309::M::S, 0x8675309::M::R<u64>)'
+ 6 │         (0, (S{}, R{}))
+   │         --------------- The expression list type of length 2: '({integer}, (0x8675309::M::S, 0x8675309::M::R<_>))'
+   │         ^^^^^^^^^^^^^^^ Invalid return expression
    │
 
 error: 
@@ -18,8 +15,6 @@ error:
    │
  6 │         (0, (S{}, R{}))
    │         ^^^^^^^^^^^^^^^ Invalid expression list type argument
-   ·
- 6 │         (0, (S{}, R{}))
    │             ---------- Expected a single type, but found expression list type: '(0x8675309::M::S, 0x8675309::M::R<_>)'
    │
 

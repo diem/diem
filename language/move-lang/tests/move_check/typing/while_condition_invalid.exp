@@ -3,13 +3,9 @@ error:
    ┌── tests/move_check/typing/while_condition_invalid.move:3:16 ───
    │
  3 │         while (()) ();
-   │                ^^ Invalid while condition
-   ·
- 3 │         while (()) ();
    │                -- The type: '()'
-   ·
- 3 │         while (()) ();
    │                -- Is not compatible with: 'bool'
+   │                ^^ Invalid while condition
    │
 
 error: 
@@ -17,13 +13,9 @@ error:
    ┌── tests/move_check/typing/while_condition_invalid.move:4:16 ───
    │
  4 │         while ((())) ();
-   │                ^^^^ Invalid while condition
-   ·
- 4 │         while ((())) ();
    │                ---- The type: '()'
-   ·
- 4 │         while ((())) ();
    │                ---- Is not compatible with: 'bool'
+   │                ^^^^ Invalid while condition
    │
 
 error: 
@@ -31,27 +23,20 @@ error:
    ┌── tests/move_check/typing/while_condition_invalid.move:5:16 ───
    │
  5 │         while ({}) ()
-   │                ^^ Invalid while condition
-   ·
- 5 │         while ({}) ()
    │                -- The type: '()'
-   ·
- 5 │         while ({}) ()
    │                -- Is not compatible with: 'bool'
+   │                ^^ Invalid while condition
    │
 
 error: 
 
-   ┌── tests/move_check/typing/while_condition_invalid.move:9:16 ───
+   ┌── tests/move_check/typing/while_condition_invalid.move:8:28 ───
    │
- 9 │         while (x) ();
-   │                ^ Invalid while condition
-   ·
  8 │     fun t1<T: copyable>(x: T) {
    │                            - The type: 'T'
-   ·
  9 │         while (x) ();
    │                - Is not compatible with: 'bool'
+   │                ^ Invalid while condition
    │
 
 error: 
@@ -59,13 +44,9 @@ error:
     ┌── tests/move_check/typing/while_condition_invalid.move:10:16 ───
     │
  10 │         while (0) ();
-    │                ^ Invalid while condition
-    ·
- 10 │         while (0) ();
     │                - The type: integer
-    ·
- 10 │         while (0) ();
     │                - Is not compatible with: 'bool'
+    │                ^ Invalid while condition
     │
 
 error: 
@@ -73,13 +54,9 @@ error:
     ┌── tests/move_check/typing/while_condition_invalid.move:11:16 ───
     │
  11 │         while (0x0) ()
-    │                ^^^ Invalid while condition
-    ·
- 11 │         while (0x0) ()
     │                --- The type: 'address'
-    ·
- 11 │         while (0x0) ()
     │                --- Is not compatible with: 'bool'
+    │                ^^^ Invalid while condition
     │
 
 error: 
@@ -87,13 +64,9 @@ error:
     ┌── tests/move_check/typing/while_condition_invalid.move:15:16 ───
     │
  15 │         while ((false, true)) ();
-    │                ^^^^^^^^^^^^^ Invalid while condition
-    ·
- 15 │         while ((false, true)) ();
     │                ------------- The type: '(bool, bool)'
-    ·
- 15 │         while ((false, true)) ();
     │                ------------- Is not compatible with: 'bool'
+    │                ^^^^^^^^^^^^^ Invalid while condition
     │
 
 error: 
@@ -101,12 +74,8 @@ error:
     ┌── tests/move_check/typing/while_condition_invalid.move:16:16 ───
     │
  16 │         while ((0, false)) ()
-    │                ^^^^^^^^^^ Invalid while condition
-    ·
- 16 │         while ((0, false)) ()
     │                ---------- The type: '({integer}, bool)'
-    ·
- 16 │         while ((0, false)) ()
     │                ---------- Is not compatible with: 'bool'
+    │                ^^^^^^^^^^ Invalid while condition
     │
 

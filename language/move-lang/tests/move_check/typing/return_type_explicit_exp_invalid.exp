@@ -1,84 +1,66 @@
 error: 
 
-   ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:5:9 ───
+   ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:4:15 ───
    │
- 5 │         return ()
-   │         ^^^^^^^^^ Invalid return
-   ·
- 5 │         return ()
-   │                -- The type: '()'
-   ·
  4 │     fun t0(): u64 {
    │               --- Is not compatible with: 'u64'
+ 5 │         return ()
+   │         ^^^^^^^^^ Invalid return
+   │                -- The type: '()'
    │
 
 error: 
 
-   ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:9:19 ───
+   ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:8:15 ───
    │
+ 8 │     fun t1(): () {
+   │               -- Is not compatible with: '()'
  9 │         if (true) return 1 else return 0
    │                   ^^^^^^^^ Invalid return
-   ·
- 9 │         if (true) return 1 else return 0
    │                          - The type: integer
-   ·
- 8 │     fun t1(): () {
-   │               -- Is not compatible with: '()'
    │
 
 error: 
 
-   ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:9:33 ───
+   ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:8:15 ───
    │
+ 8 │     fun t1(): () {
+   │               -- Is not compatible with: '()'
  9 │         if (true) return 1 else return 0
    │                                 ^^^^^^^^ Invalid return
-   ·
- 9 │         if (true) return 1 else return 0
    │                                        - The type: integer
-   ·
- 8 │     fun t1(): () {
-   │               -- Is not compatible with: '()'
    │
 
 error: 
 
-    ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:13:14 ───
+    ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:12:15 ───
     │
- 13 │         loop return (0, false, R{});
-    │              ^^^^^^^^^^^^^^^^^^^^^^ Invalid return
-    ·
- 13 │         loop return (0, false, R{});
-    │                     --------------- The expression list type of length 3: '({integer}, bool, 0x8675309::M::R)'
-    ·
  12 │     fun t2(): (u64, bool) {
     │               ----------- Is not compatible with the expression list type of length 2: '(u64, bool)'
+ 13 │         loop return (0, false, R{});
+    │              ^^^^^^^^^^^^^^^^^^^^^^ Invalid return
+    │                     --------------- The expression list type of length 3: '({integer}, bool, 0x8675309::M::R)'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:18:22 ───
+    ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:17:15 ───
     │
- 18 │         while (true) return (0, false, R{});
-    │                      ^^^^^^^^^^^^^^^^^^^^^^ Invalid return
-    ·
- 18 │         while (true) return (0, false, R{});
-    │                             --------------- The expression list type of length 3: '({integer}, bool, 0x8675309::M::R)'
-    ·
  17 │     fun t3(): (u64, bool, R, bool) {
     │               -------------------- Is not compatible with the expression list type of length 4: '(u64, bool, 0x8675309::M::R, bool)'
+ 18 │         while (true) return (0, false, R{});
+    │                      ^^^^^^^^^^^^^^^^^^^^^^ Invalid return
+    │                             --------------- The expression list type of length 3: '({integer}, bool, 0x8675309::M::R)'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:23:23 ───
+    ┌── tests/move_check/typing/return_type_explicit_exp_invalid.move:22:16 ───
     │
- 23 │         while (false) return (0, false, R{});
-    │                       ^^^^^^^^^^^^^^^^^^^^^^ Invalid return
-    ·
- 23 │         while (false) return (0, false, R{});
-    │                               - The type: integer
-    ·
  22 │     fun t4(): (bool, u64, R) {
     │                ---- Is not compatible with: 'bool'
+ 23 │         while (false) return (0, false, R{});
+    │                       ^^^^^^^^^^^^^^^^^^^^^^ Invalid return
+    │                               - The type: integer
     │
 

@@ -1,98 +1,93 @@
 error: 
 
-   ┌── tests/move_check/typing/derefrence_reference.move:6:16 ───
+   ┌── tests/move_check/typing/derefrence_reference.move:2:5 ───
    │
- 6 │         R {} = *r;
-   │                ^^ Invalid dereference. Can only dereference references to copyable types
+ 2 │     resource struct R {}
+   │     -------- Is found to be a non-copyable type here
    ·
  5 │     fun t0(r: &R, b: &B) {
    │                - The type: '0x8675309::M::R'
-   ·
- 2 │     resource struct R {}
-   │     -------- Is found to be a non-copyable type here
+ 6 │         R {} = *r;
+   │                ^^ Invalid dereference. Can only dereference references to copyable types
    │
 
 error: 
 
-   ┌── tests/move_check/typing/derefrence_reference.move:7:24 ───
+   ┌── tests/move_check/typing/derefrence_reference.move:3:5 ───
    │
- 7 │         B { r: R{} } = *b;
-   │                        ^^ Invalid dereference. Can only dereference references to copyable types
-   ·
- 5 │     fun t0(r: &R, b: &B) {
-   │                       - The type: '0x8675309::M::B'
-   ·
  3 │     resource struct B { r: R }
    │     -------- Is found to be a non-copyable type here
+ 4 │ 
+ 5 │     fun t0(r: &R, b: &B) {
+   │                       - The type: '0x8675309::M::B'
+ 6 │         R {} = *r;
+ 7 │         B { r: R{} } = *b;
+   │                        ^^ Invalid dereference. Can only dereference references to copyable types
    │
 
 error: 
 
-   ┌── tests/move_check/typing/derefrence_reference.move:8:15 ───
+   ┌── tests/move_check/typing/derefrence_reference.move:2:5 ───
    │
- 8 │         R{} = *&b.r;
-   │               ^^^^^ Invalid dereference. Can only dereference references to copyable types
-   ·
+ 2 │     resource struct R {}
+   │     -------- Is found to be a non-copyable type here
  3 │     resource struct B { r: R }
    │                            - The type: '0x8675309::M::R'
    ·
- 2 │     resource struct R {}
-   │     -------- Is found to be a non-copyable type here
+ 8 │         R{} = *&b.r;
+   │               ^^^^^ Invalid dereference. Can only dereference references to copyable types
    │
 
 error: 
 
-    ┌── tests/move_check/typing/derefrence_reference.move:12:16 ───
+    ┌── tests/move_check/typing/derefrence_reference.move:2:5 ───
     │
- 12 │         R {} = *r;
-    │                ^^ Invalid dereference. Can only dereference references to copyable types
+  2 │     resource struct R {}
+    │     -------- Is found to be a non-copyable type here
     ·
  11 │     fun t1(r: &mut R, b: &mut B) {
     │                    - The type: '0x8675309::M::R'
-    ·
-  2 │     resource struct R {}
-    │     -------- Is found to be a non-copyable type here
+ 12 │         R {} = *r;
+    │                ^^ Invalid dereference. Can only dereference references to copyable types
     │
 
 error: 
 
-    ┌── tests/move_check/typing/derefrence_reference.move:13:24 ───
+    ┌── tests/move_check/typing/derefrence_reference.move:3:5 ───
     │
- 13 │         B { r: R{} } = *b;
-    │                        ^^ Invalid dereference. Can only dereference references to copyable types
+  3 │     resource struct B { r: R }
+    │     -------- Is found to be a non-copyable type here
     ·
  11 │     fun t1(r: &mut R, b: &mut B) {
     │                               - The type: '0x8675309::M::B'
-    ·
-  3 │     resource struct B { r: R }
-    │     -------- Is found to be a non-copyable type here
+ 12 │         R {} = *r;
+ 13 │         B { r: R{} } = *b;
+    │                        ^^ Invalid dereference. Can only dereference references to copyable types
     │
 
 error: 
 
-    ┌── tests/move_check/typing/derefrence_reference.move:14:15 ───
+    ┌── tests/move_check/typing/derefrence_reference.move:2:5 ───
     │
+  2 │     resource struct R {}
+    │     -------- Is found to be a non-copyable type here
+  3 │     resource struct B { r: R }
+    │                            - The type: '0x8675309::M::R'
+    ·
  14 │         R{} = *&b.r;
     │               ^^^^^ Invalid dereference. Can only dereference references to copyable types
-    ·
-  3 │     resource struct B { r: R }
-    │                            - The type: '0x8675309::M::R'
-    ·
-  2 │     resource struct R {}
-    │     -------- Is found to be a non-copyable type here
     │
 
 error: 
 
-    ┌── tests/move_check/typing/derefrence_reference.move:15:15 ───
+    ┌── tests/move_check/typing/derefrence_reference.move:2:5 ───
     │
- 15 │         R{} = *&mut b.r;
-    │               ^^^^^^^^^ Invalid dereference. Can only dereference references to copyable types
-    ·
+  2 │     resource struct R {}
+    │     -------- Is found to be a non-copyable type here
   3 │     resource struct B { r: R }
     │                            - The type: '0x8675309::M::R'
     ·
-  2 │     resource struct R {}
-    │     -------- Is found to be a non-copyable type here
+ 15 │         R{} = *&mut b.r;
+    │               ^^^^^^^^^ Invalid dereference. Can only dereference references to copyable types
     │
 

@@ -1,196 +1,165 @@
 error: 
 
-   ┌── tests/move_check/typing/if_branches_subtype_invalid.move:3:16 ───
+   ┌── tests/move_check/typing/if_branches_subtype_invalid.move:2:27 ───
    │
- 3 │         let _: &mut u64 = if (cond) u else u_mut;
-   │                ^^^^^^^^ Invalid type annotation
-   ·
  2 │     fun t0(cond: bool, u: &u64, u_mut: &mut u64) {
    │                           ---- The type: '&u64'
-   ·
  3 │         let _: &mut u64 = if (cond) u else u_mut;
    │                -------- Is not a subtype of: '&mut u64'
+   │                ^^^^^^^^ Invalid type annotation
    │
 
 error: 
 
-   ┌── tests/move_check/typing/if_branches_subtype_invalid.move:4:16 ───
+   ┌── tests/move_check/typing/if_branches_subtype_invalid.move:2:27 ───
    │
- 4 │         let _: &mut u64 = if (cond) u_mut else u;
-   │                ^^^^^^^^ Invalid type annotation
-   ·
  2 │     fun t0(cond: bool, u: &u64, u_mut: &mut u64) {
    │                           ---- The type: '&u64'
-   ·
+ 3 │         let _: &mut u64 = if (cond) u else u_mut;
  4 │         let _: &mut u64 = if (cond) u_mut else u;
    │                -------- Is not a subtype of: '&mut u64'
+   │                ^^^^^^^^ Invalid type annotation
    │
 
 error: 
 
-   ┌── tests/move_check/typing/if_branches_subtype_invalid.move:5:16 ───
+   ┌── tests/move_check/typing/if_branches_subtype_invalid.move:2:27 ───
    │
- 5 │         let _: &mut u64 = if (cond) u else u;
-   │                ^^^^^^^^ Invalid type annotation
-   ·
  2 │     fun t0(cond: bool, u: &u64, u_mut: &mut u64) {
    │                           ---- The type: '&u64'
    ·
  5 │         let _: &mut u64 = if (cond) u else u;
    │                -------- Is not a subtype of: '&mut u64'
+   │                ^^^^^^^^ Invalid type annotation
    │
 
 error: 
 
-   ┌── tests/move_check/typing/if_branches_subtype_invalid.move:9:23 ───
+   ┌── tests/move_check/typing/if_branches_subtype_invalid.move:8:28 ───
    │
- 9 │         let _: &u64 = if (cond) u else b;
-   │                       ^^^^^^^^^^^^^^^^^^ Incompatible branches
-   ·
  8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
    │                            --- The type: 'u64'
-   ·
- 8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
    │                                                      ---- Is not compatible with: 'bool'
+ 9 │         let _: &u64 = if (cond) u else b;
+   │                       ^^^^^^^^^^^^^^^^^^ Incompatible branches
    │
 
 error: 
 
-    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:10:23 ───
+    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:8:28 ───
     │
+  8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
+    │                            --- Is not compatible with: 'u64'
+    │                                                      ---- The type: 'bool'
+  9 │         let _: &u64 = if (cond) u else b;
  10 │         let _: &u64 = if (cond) b else u;
     │                       ^^^^^^^^^^^^^^^^^^ Incompatible branches
-    ·
-  8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
-    │                                                      ---- The type: 'bool'
-    ·
-  8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
-    │                            --- Is not compatible with: 'u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:12:23 ───
+    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:8:45 ───
     │
+  8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
+    │                                             --- The type: 'u64'
+    │                                                      ---- Is not compatible with: 'bool'
+    ·
  12 │         let _: &u64 = if (cond) u_mut else b;
     │                       ^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-    ·
-  8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
-    │                                             --- The type: 'u64'
-    ·
-  8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
-    │                                                      ---- Is not compatible with: 'bool'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:13:23 ───
+    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:8:45 ───
     │
- 13 │         let _: &u64 = if (cond) b else u_mut;
-    │                       ^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-    ·
   8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
+    │                                             --- Is not compatible with: 'u64'
     │                                                      ---- The type: 'bool'
     ·
-  8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
-    │                                             --- Is not compatible with: 'u64'
+ 13 │         let _: &u64 = if (cond) b else u_mut;
+    │                       ^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
     │
 
 error: 
 
-    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:15:23 ───
+    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:8:28 ───
     │
- 15 │         let _: &u64 = if (cond) u else b_mut;
-    │                       ^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-    ·
   8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
     │                            --- The type: 'u64'
-    ·
-  8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
     │                                                                        ---- Is not compatible with: 'bool'
+    ·
+ 15 │         let _: &u64 = if (cond) u else b_mut;
+    │                       ^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
     │
 
 error: 
 
-    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:16:23 ───
+    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:8:28 ───
     │
- 16 │         let _: &u64 = if (cond) b_mut else u;
-    │                       ^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-    ·
-  8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
-    │                                                                        ---- The type: 'bool'
-    ·
   8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
     │                            --- Is not compatible with: 'u64'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:19:27 ───
-    │
- 19 │         let _: &mut u64 = if (cond) u_mut else b_mut;
-    │                           ^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-    ·
-  8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
-    │                                             --- The type: 'u64'
-    ·
-  8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
-    │                                                                        ---- Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:20:27 ───
-    │
- 20 │         let _: &mut u64 = if (cond) b_mut else u_mut;
-    │                           ^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
-    ·
-  8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
     │                                                                        ---- The type: 'bool'
     ·
+ 16 │         let _: &u64 = if (cond) b_mut else u;
+    │                       ^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:8:45 ───
+    │
+  8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
+    │                                             --- The type: 'u64'
+    │                                                                        ---- Is not compatible with: 'bool'
+    ·
+ 19 │         let _: &mut u64 = if (cond) u_mut else b_mut;
+    │                           ^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:8:45 ───
+    │
   8 │     fun t1(cond: bool, u: &u64, u_mut: &mut u64, b: &bool, b_mut: &mut bool) {
     │                                             --- Is not compatible with: 'u64'
+    │                                                                        ---- The type: 'bool'
+    ·
+ 20 │         let _: &mut u64 = if (cond) b_mut else u_mut;
+    │                           ^^^^^^^^^^^^^^^^^^^^^^^^^^ Incompatible branches
     │
 
 error: 
 
-    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:25:21 ───
+    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:24:27 ───
     │
- 25 │         let (_, _): (&mut u64, &mut u64) = if (cond) (u, u) else (u_mut, u_mut);
-    │                     ^^^^^^^^^^^^^^^^^^^^ Invalid type annotation
-    ·
  24 │     fun t2(cond: bool, u: &u64, u_mut: &mut u64) {
     │                           ---- The type: '&u64'
-    ·
  25 │         let (_, _): (&mut u64, &mut u64) = if (cond) (u, u) else (u_mut, u_mut);
+    │                     ^^^^^^^^^^^^^^^^^^^^ Invalid type annotation
     │                      -------- Is not a subtype of: '&mut u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:26:21 ───
+    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:24:27 ───
     │
- 26 │         let (_, _): (&mut u64, &mut u64) = if (cond) (u_mut, u) else (u, u_mut);
-    │                     ^^^^^^^^^^^^^^^^^^^^ Invalid type annotation
-    ·
  24 │     fun t2(cond: bool, u: &u64, u_mut: &mut u64) {
     │                           ---- The type: '&u64'
-    ·
+ 25 │         let (_, _): (&mut u64, &mut u64) = if (cond) (u, u) else (u_mut, u_mut);
  26 │         let (_, _): (&mut u64, &mut u64) = if (cond) (u_mut, u) else (u, u_mut);
+    │                     ^^^^^^^^^^^^^^^^^^^^ Invalid type annotation
     │                      -------- Is not a subtype of: '&mut u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:27:21 ───
+    ┌── tests/move_check/typing/if_branches_subtype_invalid.move:24:27 ───
     │
- 27 │         let (_, _): (&mut u64, &mut u64) = if (cond) (u, u_mut) else (u_mut, u);
-    │                     ^^^^^^^^^^^^^^^^^^^^ Invalid type annotation
-    ·
  24 │     fun t2(cond: bool, u: &u64, u_mut: &mut u64) {
     │                           ---- The type: '&u64'
     ·
  27 │         let (_, _): (&mut u64, &mut u64) = if (cond) (u, u_mut) else (u_mut, u);
+    │                     ^^^^^^^^^^^^^^^^^^^^ Invalid type annotation
     │                      -------- Is not a subtype of: '&mut u64'
     │
 

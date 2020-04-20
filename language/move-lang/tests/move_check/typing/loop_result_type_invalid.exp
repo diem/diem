@@ -1,29 +1,23 @@
 error: 
 
-    ┌── tests/move_check/typing/loop_result_type_invalid.move:11:9 ───
+    ┌── tests/move_check/typing/loop_result_type_invalid.move:10:15 ───
     │
- 11 │         loop { if (false) break }
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid return expression
-    ·
- 11 │         loop { if (false) break }
-    │         ------------------------- The type: '()'
-    ·
  10 │     fun t0(): X::R {
     │               ---- Is not compatible with: '0x1::X::R'
+ 11 │         loop { if (false) break }
+    │         ------------------------- The type: '()'
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid return expression
     │
 
 error: 
 
-    ┌── tests/move_check/typing/loop_result_type_invalid.move:15:9 ───
+    ┌── tests/move_check/typing/loop_result_type_invalid.move:14:15 ───
     │
- 15 │         loop { let x = 0; break }
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid return expression
-    ·
- 15 │         loop { let x = 0; break }
-    │         ------------------------- The type: '()'
-    ·
  14 │     fun t1(): u64 {
     │               --- Is not compatible with: 'u64'
+ 15 │         loop { let x = 0; break }
+    │         ------------------------- The type: '()'
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid return expression
     │
 
 error: 
@@ -32,8 +26,6 @@ error:
     │
  19 │         foo(loop { break })
     │         ^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::foo'. Invalid argument for parameter 'x'
-    ·
- 19 │         foo(loop { break })
     │             -------------- The type: '()'
     ·
  22 │     fun foo(x: u64) {}
@@ -46,8 +38,6 @@ error:
     │
  25 │         let x = loop { break };
     │             ^ Invalid type for local
-    ·
- 25 │         let x = loop { break };
     │                 -------------- Expected a single type, but found expression list type: '()'
     │
 
@@ -56,12 +46,8 @@ error:
     ┌── tests/move_check/typing/loop_result_type_invalid.move:26:13 ───
     │
  26 │         let (x, y) = loop { if (false) break };
-    │             ^^^^^^ Invalid value for binding
-    ·
- 26 │         let (x, y) = loop { if (false) break };
     │             ------ The type: '(_, _)'
-    ·
- 26 │         let (x, y) = loop { if (false) break };
+    │             ^^^^^^ Invalid value for binding
     │                      ------------------------- Is not compatible with: '()'
     │
 

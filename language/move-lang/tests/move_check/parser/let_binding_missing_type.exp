@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/parser/let_binding_missing_type.move:3:17 ───
    │
  3 │         let x : = 0;
-   │                 ^ Unexpected '='
-   ·
- 3 │         let x : = 0;
    │                 - Expected a type name
+   │                 ^ Unexpected '='
    │
 

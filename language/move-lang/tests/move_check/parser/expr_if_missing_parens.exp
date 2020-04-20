@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/parser/expr_if_missing_parens.move:4:12 ───
    │
  4 │         if v < 3 ()
-   │            ^ Unexpected 'v'
-   ·
- 4 │         if v < 3 ()
    │            - Expected '('
+   │            ^ Unexpected 'v'
    │
 

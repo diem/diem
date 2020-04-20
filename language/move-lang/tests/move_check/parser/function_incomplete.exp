@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/parser/function_incomplete.move:3:1 ───
    │
  3 │ 
-   │ ^ Unexpected end-of-file
-   ·
- 3 │ 
    │ - Expected an expression term
+   │ ^ Unexpected end-of-file
    │
 

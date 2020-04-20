@@ -1,22 +1,19 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/commands/assign_resource.move:6:9 ───
+   ┌── tests/move_check/translated_ir_tests/commands/assign_resource.move:5:13 ───
    │
- 6 │         t = T {}; &t;
-   │         ^ Invalid assignment to local 't'
-   ·
  5 │         let t = T{}; &t;
    │             - The local contains a resource value due to this assignment. The resource must be used before you assign to this local again
+ 6 │         t = T {}; &t;
+   │         ^ Invalid assignment to local 't'
    │
 
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/commands/assign_resource.move:6:21 ───
+   ┌── tests/move_check/translated_ir_tests/commands/assign_resource.move:6:9 ───
    │
  6 │         t = T {}; &t;
-   │                     ^ Invalid return
-   ·
- 6 │         t = T {}; &t;
    │         - The local 't' still contains a resource value due to this assignment. The resource must be consumed before the function returns
+   │                     ^ Invalid return
    │
 

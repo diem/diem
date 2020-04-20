@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/expansion/module_alias_as_type.move:7:16 ───
    │
  7 │     fun foo(x: X) {}
-   │                ^ Unexpected module alias 'X'
-   ·
- 7 │     fun foo(x: X) {}
    │                - Modules are not types. Try accessing a struct inside the module instead
+   │                ^ Unexpected module alias 'X'
    │
 

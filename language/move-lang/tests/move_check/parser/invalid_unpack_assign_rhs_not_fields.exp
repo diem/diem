@@ -3,9 +3,7 @@ error:
     ┌── tests/move_check/parser/invalid_unpack_assign_rhs_not_fields.move:11:14 ───
     │
  11 │         X::S 0 = 0;
-    │              ^ Unexpected '0'
-    ·
- 11 │         X::S 0 = 0;
     │              - Expected ';'
+    │              ^ Unexpected '0'
     │
 

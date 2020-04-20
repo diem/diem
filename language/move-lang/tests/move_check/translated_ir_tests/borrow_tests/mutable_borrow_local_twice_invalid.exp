@@ -1,11 +1,11 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/borrow_tests/mutable_borrow_local_twice_invalid.move:6:9 ───
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/mutable_borrow_local_twice_invalid.move:4:18 ───
    │
- 6 │         *r2 = 2;
-   │         ^^^^^^^ Invalid mutation of reference.
-   ·
  4 │         let r1 = &mut a;
    │                  ------ It is still being mutably borrowed by this reference
+ 5 │         let r2 = &mut a;
+ 6 │         *r2 = 2;
+   │         ^^^^^^^ Invalid mutation of reference.
    │
 

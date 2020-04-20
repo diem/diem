@@ -1,31 +1,29 @@
 error: 
 
-    ┌── tests/move_check/typing/type_variable_join_threaded_unpack_assign_invalid.move:36:9 ───
+    ┌── tests/move_check/typing/type_variable_join_threaded_unpack_assign_invalid.move:30:15 ───
     │
- 36 │         f1
-    │         ^^ Invalid return expression
+ 30 │     fun t0(): bool {
+    │               ---- Is not compatible with: 'bool'
     ·
  34 │         Box { f1, f2 }  = Container::get(&v);
     │         -------------- The type: integer
-    ·
- 30 │     fun t0(): bool {
-    │               ---- Is not compatible with: 'bool'
+ 35 │         Container::put(&mut v, Box { f1: 0, f2: 0});
+ 36 │         f1
+    │         ^^ Invalid return expression
     │
 
 error: 
 
-    ┌── tests/move_check/typing/type_variable_join_threaded_unpack_assign_invalid.move:43:27 ───
+    ┌── tests/move_check/typing/type_variable_join_threaded_unpack_assign_invalid.move:10:23 ───
     │
- 43 │         Box { f1, f2 }  = Container::get(&v);
-    │                           ^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
-    ·
- 43 │         Box { f1, f2 }  = Container::get(&v);
-    │         -------------- The resource type '0x1::M::Box<0x1::M::R>' does not satisfy the constraint 'copyable'
+ 10 │     public fun get<V: copyable>(self: &T<V>): V {
+    │                       -------- 'copyable' constraint declared here
     ·
  24 │     resource struct R{}
     │     -------- The type's constraint information was determined here
     ·
- 10 │     public fun get<V: copyable>(self: &T<V>): V {
-    │                       -------- 'copyable' constraint declared here
+ 43 │         Box { f1, f2 }  = Container::get(&v);
+    │         -------------- The resource type '0x1::M::Box<0x1::M::R>' does not satisfy the constraint 'copyable'
+    │                           ^^^^^^^^^^^^^^^^^^ Constraint not satisfied.
     │
 

@@ -1,22 +1,20 @@
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_on_mut_invalid.move:22:29 ───
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_on_mut_invalid.move:21:25 ───
     │
- 22 │         let x_val = *freeze(&mut point_ref.x);
-    │                             ^^^^^^^^^^^^^^^^ Invalid mutable borrow at field 'x'.
-    ·
  21 │         let field_ref = set_and_pick(copy point_ref);
     │                         ---------------------------- It is still being mutably borrowed by this reference
+ 22 │         let x_val = *freeze(&mut point_ref.x);
+    │                             ^^^^^^^^^^^^^^^^ Invalid mutable borrow at field 'x'.
     │
 
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_on_mut_invalid.move:36:23 ───
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_on_mut_invalid.move:35:25 ───
     │
- 36 │         let x_val = *&freeze(point_ref).x;
-    │                       ^^^^^^^^^^^^^^^^^ Invalid freeze.
-    ·
  35 │         let field_ref = set_and_pick(copy point_ref);
     │                         ---------------------------- It is still being mutably borrowed by this reference
+ 36 │         let x_val = *&freeze(point_ref).x;
+    │                       ^^^^^^^^^^^^^^^^^ Invalid freeze.
     │
 

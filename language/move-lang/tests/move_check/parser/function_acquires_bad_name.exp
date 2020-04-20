@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/parser/function_acquires_bad_name.move:3:22 ───
    │
  3 │     fun f() acquires {
-   │                      ^ Unexpected '{'
-   ·
- 3 │     fun f() acquires {
    │                      - Expected a resource struct name
+   │                      ^ Unexpected '{'
    │
 

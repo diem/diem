@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/parser/struct_resource.move:3:12 ───
    │
  3 │     struct resource S { }
-   │            ^^^^^^^^ Unexpected 'resource'
-   ·
- 3 │     struct resource S { }
    │            -------- Expected a name value
+   │            ^^^^^^^^ Unexpected 'resource'
    │
 

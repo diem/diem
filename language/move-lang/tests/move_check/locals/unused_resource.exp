@@ -8,13 +8,11 @@ error:
 
 error: 
 
-   ┌── tests/move_check/locals/unused_resource.move:5:20 ───
+   ┌── tests/move_check/locals/unused_resource.move:5:13 ───
    │
  5 │         let r = R{};
-   │                    ^ Invalid return
-   ·
- 5 │         let r = R{};
    │             - The local 'r' still contains a resource value due to this assignment. The resource must be consumed before the function returns
+   │                    ^ Invalid return
    │
 
 error: 
@@ -27,13 +25,11 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource.move:10:31 ───
+    ┌── tests/move_check/locals/unused_resource.move:10:21 ───
     │
  10 │         if (cond) { r = R{}; };
-    │                               ^ Invalid return
-    ·
- 10 │         if (cond) { r = R{}; };
     │                     - The local 'r' might still contain a resource value due to this assignment. The resource must be consumed before the function returns
+    │                               ^ Invalid return
     │
 
 error: 
@@ -46,13 +42,11 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource.move:15:39 ───
+    ┌── tests/move_check/locals/unused_resource.move:15:29 ───
     │
  15 │         if (cond) {} else { r = R{}; };
-    │                                       ^ Invalid return
-    ·
- 15 │         if (cond) {} else { r = R{}; };
     │                             - The local 'r' might still contain a resource value due to this assignment. The resource must be consumed before the function returns
+    │                                       ^ Invalid return
     │
 
 error: 
@@ -68,21 +62,17 @@ error:
     ┌── tests/move_check/locals/unused_resource.move:20:24 ───
     │
  20 │         while (cond) { r = R{} };
-    │                        ^ Invalid assignment to local 'r'
-    ·
- 20 │         while (cond) { r = R{} };
     │                        - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
+    │                        ^ Invalid assignment to local 'r'
     │
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource.move:20:33 ───
+    ┌── tests/move_check/locals/unused_resource.move:20:24 ───
     │
  20 │         while (cond) { r = R{} };
-    │                                 ^ Invalid return
-    ·
- 20 │         while (cond) { r = R{} };
     │                        - The local 'r' might still contain a resource value due to this assignment. The resource must be consumed before the function returns
+    │                                 ^ Invalid return
     │
 
 error: 
@@ -98,33 +88,27 @@ error:
     ┌── tests/move_check/locals/unused_resource.move:24:20 ───
     │
  24 │         loop { let r = R{}; }
-    │                    ^ Invalid assignment to local 'r'
-    ·
- 24 │         loop { let r = R{}; }
     │                    - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
+    │                    ^ Invalid assignment to local 'r'
     │
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource.move:28:21 ───
+    ┌── tests/move_check/locals/unused_resource.move:28:18 ───
     │
- 28 │         let _ = &R{};
-    │                     ^ Invalid return
-    ·
  28 │         let _ = &R{};
     │                  --- The resource is created but not used. The resource must be consumed before the function returns
+    │                     ^ Invalid return
     │
 
 error: 
 
-    ┌── tests/move_check/locals/unused_resource.move:31:22 ───
-    │
+    ┌── tests/move_check/locals/unused_resource.move:31:15 ───
+    │  
  31 │       fun t6<T>(_x: R) {
+    │                 -- The parameter '_x' still contains a resource value. The resource must be consumed before the function returns
     │ ╭──────────────────────^
  32 │ │     }
     │ ╰─────^ Invalid return
-    ·
- 31 │     fun t6<T>(_x: R) {
-    │               -- The parameter '_x' still contains a resource value. The resource must be consumed before the function returns
-    │
+    │  
 

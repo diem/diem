@@ -1,11 +1,9 @@
 error: 
 
-   ┌── tests/move_check/parser/let_binding_missing_paren.move:3:21 ───
+   ┌── tests/move_check/parser/let_binding_missing_paren.move:3:13 ───
    │
  3 │         let (x1, x2 = (1, 2);
-   │                     ^ Expected ')'
-   ·
- 3 │         let (x1, x2 = (1, 2);
    │             - To match this '('
+   │                     ^ Expected ')'
    │
 

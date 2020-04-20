@@ -1,22 +1,20 @@
 error: 
 
-    ┌── tests/move_check/borrows/dereference_full_invalid.move:13:9 ───
+    ┌── tests/move_check/borrows/dereference_full_invalid.move:12:17 ───
     │
- 13 │         *x;
-    │         ^^ Invalid dereference.
-    ·
  12 │         let y = copy x;
     │                 ------ It is still being mutably borrowed by this reference
+ 13 │         *x;
+    │         ^^ Invalid dereference.
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/dereference_full_invalid.move:18:9 ───
+    ┌── tests/move_check/borrows/dereference_full_invalid.move:17:17 ───
     │
- 18 │         *x;
-    │         ^^ Invalid dereference.
-    ·
  17 │         let y = id_mut(x);
     │                 --------- It is still being mutably borrowed by this reference
+ 18 │         *x;
+    │         ^^ Invalid dereference.
     │
 

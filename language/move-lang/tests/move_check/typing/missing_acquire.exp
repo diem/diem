@@ -15,8 +15,6 @@ error:
    │
  9 │         borrow_global<R1>(a);
    │         ^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
-   ·
- 9 │         borrow_global<R1>(a);
    │                       -- The call acquires '0x8675309::M::R1', but the 'acquires' list for the current function does not contain this type. It must be present in the calling context's acquires list
    │
 
@@ -26,8 +24,6 @@ error:
     │
  10 │         borrow_global_mut<R1>(a);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
-    ·
- 10 │         borrow_global_mut<R1>(a);
     │                           -- The call acquires '0x8675309::M::R1', but the 'acquires' list for the current function does not contain this type. It must be present in the calling context's acquires list
     │
 
@@ -37,8 +33,6 @@ error:
     │
  11 │         R1{} = move_from<R1>(a);
     │                ^^^^^^^^^^^^^^^^ Invalid call to move_from.
-    ·
- 11 │         R1{} = move_from<R1>(a);
     │                          -- The call acquires '0x8675309::M::R1', but the 'acquires' list for the current function does not contain this type. It must be present in the calling context's acquires list
     │
 

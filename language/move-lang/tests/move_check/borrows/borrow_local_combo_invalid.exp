@@ -1,55 +1,52 @@
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:13:17 ───
+    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:12:23 ───
     │
- 13 │         let x = &s;
-    │                 ^^ Invalid borrow of local 's'
-    ·
  12 │         if (cond) f = &mut s.f else f = &mut other.f;
     │                       -------- It is still being mutably borrowed by this reference
+ 13 │         let x = &s;
+    │                 ^^ Invalid borrow of local 's'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:23:9 ───
+    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:20:23 ───
     │
- 23 │         *x;
-    │         ^^ Invalid dereference.
-    ·
  20 │         if (cond) f = &mut s.f else f = &mut other.f;
     │                       -------- Field 'f' is still being mutably borrowed by this reference
+    ·
+ 23 │         *x;
+    │         ^^ Invalid dereference.
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:30:17 ───
+    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:29:41 ───
     │
- 30 │         let x = &s;
-    │                 ^^ Invalid borrow of local 's'
-    ·
  29 │         if (cond) f = &mut s.f else f = &mut s.g;
     │                                         -------- It is still being mutably borrowed by this reference
+ 30 │         let x = &s;
+    │                 ^^ Invalid borrow of local 's'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:38:17 ───
+    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:37:23 ───
     │
- 38 │         let y = &s;
-    │                 ^^ Invalid borrow of local 's'
-    ·
  37 │         if (cond) x = &mut s else x = other;
     │                       ------ It is still being mutably borrowed by this reference
+ 38 │         let y = &s;
+    │                 ^^ Invalid borrow of local 's'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:48:9 ───
+    ┌── tests/move_check/borrows/borrow_local_combo_invalid.move:46:23 ───
     │
- 48 │         *y;
-    │         ^^ Invalid dereference.
-    ·
  46 │         if (cond) x = &mut s else x = other;
     │                       ------ It is still being mutably borrowed by this reference
+ 47 │         let y = &mut s;
+ 48 │         *y;
+    │         ^^ Invalid dereference.
     │
 

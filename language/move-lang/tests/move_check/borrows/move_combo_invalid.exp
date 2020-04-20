@@ -1,55 +1,50 @@
 error: 
 
-    ┌── tests/move_check/borrows/move_combo_invalid.move:14:9 ───
+    ┌── tests/move_check/borrows/move_combo_invalid.move:13:37 ───
     │
- 14 │         move s;
-    │         ^^^^^^ Invalid move of local 's'
-    ·
  13 │         if (cond) f = &s.f else f = &s.g;
     │                                     ---- It is still being borrowed by this reference
+ 14 │         move s;
+    │         ^^^^^^ Invalid move of local 's'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_combo_invalid.move:22:9 ───
+    ┌── tests/move_check/borrows/move_combo_invalid.move:21:23 ───
     │
- 22 │         move s;
-    │         ^^^^^^ Invalid move of local 's'
-    ·
  21 │         if (cond) f = &mut s.f else f = &mut other.f;
     │                       -------- It is still being mutably borrowed by this reference
+ 22 │         move s;
+    │         ^^^^^^ Invalid move of local 's'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_combo_invalid.move:30:9 ───
+    ┌── tests/move_check/borrows/move_combo_invalid.move:29:23 ───
     │
- 30 │         move s;
-    │         ^^^^^^ Invalid move of local 's'
-    ·
  29 │         if (cond) f = &mut s else f = other;
     │                       ------ It is still being mutably borrowed by this reference
+ 30 │         move s;
+    │         ^^^^^^ Invalid move of local 's'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_combo_invalid.move:38:9 ───
+    ┌── tests/move_check/borrows/move_combo_invalid.move:37:23 ───
     │
- 38 │         move s;
-    │         ^^^^^^ Invalid move of local 's'
-    ·
  37 │         if (cond) f = id_mut(&mut s) else f = other;
     │                       -------------- It is still being mutably borrowed by this reference
+ 38 │         move s;
+    │         ^^^^^^ Invalid move of local 's'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_combo_invalid.move:45:21 ───
+    ┌── tests/move_check/borrows/move_combo_invalid.move:44:17 ───
     │
- 45 │         if (cond) { move s; };
-    │                     ^^^^^^ Invalid move of local 's'
-    ·
  44 │         let f = &s.f;
     │                 ---- It is still being borrowed by this reference
+ 45 │         if (cond) { move s; };
+    │                     ^^^^^^ Invalid move of local 's'
     │
 

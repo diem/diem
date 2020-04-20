@@ -4,8 +4,6 @@ error:
     │
  27 │         X::foo(1);
     │         ^^^^^^^^^ Invalid call of '0x1::X::foo'. The call expected 0 argument(s) but got 1
-    ·
- 27 │         X::foo(1);
     │               --- Found 1 argument(s) here
     │
 
@@ -15,8 +13,6 @@ error:
     │
  28 │         X::foo(1, 2);
     │         ^^^^^^^^^^^^ Invalid call of '0x1::X::foo'. The call expected 0 argument(s) but got 2
-    ·
- 28 │         X::foo(1, 2);
     │               ------ Found 2 argument(s) here
     │
 
@@ -26,8 +22,6 @@ error:
     │
  29 │         X::bar();
     │         ^^^^^^^^ Invalid call of '0x1::X::bar'. The call expected 1 argument(s) but got 0
-    ·
- 29 │         X::bar();
     │               -- Found 0 argument(s) here
     │
 
@@ -37,8 +31,6 @@ error:
     │
  30 │         X::bar(1, 2);
     │         ^^^^^^^^^^^^ Invalid call of '0x1::X::bar'. The call expected 1 argument(s) but got 2
-    ·
- 30 │         X::bar(1, 2);
     │               ------ Found 2 argument(s) here
     │
 
@@ -48,8 +40,6 @@ error:
     │
  31 │         X::baz<u64, u64>();
     │         ^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::X::baz'. The call expected 2 argument(s) but got 0
-    ·
- 31 │         X::baz<u64, u64>();
     │                         -- Found 0 argument(s) here
     │
 
@@ -59,8 +49,6 @@ error:
     │
  32 │         X::baz<u64, u64>(1);
     │         ^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::X::baz'. The call expected 2 argument(s) but got 1
-    ·
- 32 │         X::baz<u64, u64>(1);
     │                         --- Found 1 argument(s) here
     │
 
@@ -70,8 +58,6 @@ error:
     │
  33 │         X::baz(1, 2, 3);
     │         ^^^^^^^^^^^^^^^ Invalid call of '0x1::X::baz'. The call expected 2 argument(s) but got 3
-    ·
- 33 │         X::baz(1, 2, 3);
     │               --------- Found 3 argument(s) here
     │
 
@@ -81,8 +67,6 @@ error:
     │
  37 │         foo(1);
     │         ^^^^^^ Invalid call of '0x1::M::foo'. The call expected 0 argument(s) but got 1
-    ·
- 37 │         foo(1);
     │            --- Found 1 argument(s) here
     │
 
@@ -92,8 +76,6 @@ error:
     │
  38 │         foo(1, 2);
     │         ^^^^^^^^^ Invalid call of '0x1::M::foo'. The call expected 0 argument(s) but got 2
-    ·
- 38 │         foo(1, 2);
     │            ------ Found 2 argument(s) here
     │
 
@@ -103,8 +85,6 @@ error:
     │
  39 │         bar();
     │         ^^^^^ Invalid call of '0x1::M::bar'. The call expected 1 argument(s) but got 0
-    ·
- 39 │         bar();
     │            -- Found 0 argument(s) here
     │
 
@@ -114,8 +94,6 @@ error:
     │
  40 │         bar(1, 2);
     │         ^^^^^^^^^ Invalid call of '0x1::M::bar'. The call expected 1 argument(s) but got 2
-    ·
- 40 │         bar(1, 2);
     │            ------ Found 2 argument(s) here
     │
 
@@ -125,8 +103,6 @@ error:
     │
  41 │         baz<u64, u64>();
     │         ^^^^^^^^^^^^^^^ Invalid call of '0x1::M::baz'. The call expected 2 argument(s) but got 0
-    ·
- 41 │         baz<u64, u64>();
     │                      -- Found 0 argument(s) here
     │
 
@@ -136,8 +112,6 @@ error:
     │
  42 │         baz<u64, u64>(1);
     │         ^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::baz'. The call expected 2 argument(s) but got 1
-    ·
- 42 │         baz<u64, u64>(1);
     │                      --- Found 1 argument(s) here
     │
 
@@ -147,8 +121,6 @@ error:
     │
  43 │         baz(1, 2, 3);
     │         ^^^^^^^^^^^^ Invalid call of '0x1::M::baz'. The call expected 2 argument(s) but got 3
-    ·
- 43 │         baz(1, 2, 3);
     │            --------- Found 3 argument(s) here
     │
 

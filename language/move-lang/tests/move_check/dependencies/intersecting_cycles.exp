@@ -3,9 +3,7 @@ error:
     ┌── tests/move_check/dependencies/intersecting_cycles.move:10:14 ───
     │
  10 │     fun c(): 0x1::C::S { abort 0 }
-    │              ^^^^^^^^^ Invalid use of module '0x1::C' in module '0x1::B'.
-    ·
- 10 │     fun c(): 0x1::C::S { abort 0 }
     │              --------- Using this module creates a dependency cycle: '0x1::C' uses '0x1::A' uses '0x1::B' uses '0x1::C'
+    │              ^^^^^^^^^ Invalid use of module '0x1::C' in module '0x1::B'.
     │
 

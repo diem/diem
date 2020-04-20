@@ -1,99 +1,78 @@
 error: 
 
-    ┌── tests/move_check/typing/eq_invalid.move:13:20 ───
+    ┌── tests/move_check/typing/eq_invalid.move:13:13 ───
     │
  13 │         (0: u8) == (1: u128);
-    │                    ^^^^^^^^^ Incompatible arguments to '=='
-    ·
- 13 │         (0: u8) == (1: u128);
     │             -- The type: 'u8'
-    ·
- 13 │         (0: u8) == (1: u128);
+    │                    ^^^^^^^^^ Incompatible arguments to '=='
     │                        ---- Is not compatible with: 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/eq_invalid.move:14:14 ───
+    ┌── tests/move_check/typing/eq_invalid.move:14:9 ───
     │
  14 │         0 == false;
-    │              ^^^^^ Incompatible arguments to '=='
-    ·
- 14 │         0 == false;
     │         - The type: integer
-    ·
- 14 │         0 == false;
     │              ----- Is not compatible with: 'bool'
+    │              ^^^^^ Incompatible arguments to '=='
     │
 
 error: 
 
-    ┌── tests/move_check/typing/eq_invalid.move:15:15 ───
+    ┌── tests/move_check/typing/eq_invalid.move:15:9 ───
     │
- 15 │         &0 == 1;
-    │               ^ Incompatible arguments to '=='
-    ·
- 15 │         &0 == 1;
-    │               - The type: integer
-    ·
  15 │         &0 == 1;
     │         -- Is not compatible with: '&{integer}'
+    │               - The type: integer
+    │               ^ Incompatible arguments to '=='
     │
 
 error: 
 
-    ┌── tests/move_check/typing/eq_invalid.move:16:14 ───
+    ┌── tests/move_check/typing/eq_invalid.move:16:9 ───
     │
- 16 │         1 == &0;
-    │              ^^ Incompatible arguments to '=='
-    ·
  16 │         1 == &0;
     │         - The type: integer
-    ·
- 16 │         1 == &0;
     │              -- Is not compatible with: '&{integer}'
+    │              ^^ Incompatible arguments to '=='
     │
 
 error: 
 
-    ┌── tests/move_check/typing/eq_invalid.move:17:14 ───
+    ┌── tests/move_check/typing/eq_invalid.move:12:37 ───
     │
- 17 │         s == s_ref;
-    │              ^^^^^ Incompatible arguments to '=='
-    ·
  12 │     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
     │                                     - The type: '0x8675309::M::S'
-    ·
- 12 │     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
     │                                               -- Is not compatible with: '&0x8675309::M::S'
+    ·
+ 17 │         s == s_ref;
+    │              ^^^^^ Incompatible arguments to '=='
     │
 
 error: 
 
-    ┌── tests/move_check/typing/eq_invalid.move:18:18 ───
+    ┌── tests/move_check/typing/eq_invalid.move:12:37 ───
     │
- 18 │         s_mut == s;
-    │                  ^ Incompatible arguments to '=='
-    ·
- 12 │     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
-    │                                                          ------ The type: '&mut 0x8675309::M::S'
-    ·
  12 │     fun t0(r: &R, r_mut: &mut R, s: S, s_ref: &S, s_mut: &mut S) {
     │                                     - Is not compatible with: '0x8675309::M::S'
+    │                                                          ------ The type: '&mut 0x8675309::M::S'
+    ·
+ 18 │         s_mut == s;
+    │                  ^ Incompatible arguments to '=='
     │
 
 error: 
 
-    ┌── tests/move_check/typing/eq_invalid.move:22:9 ───
+    ┌── tests/move_check/typing/eq_invalid.move:3:5 ───
     │
- 22 │         r == r;
-    │         ^^^^^^ Cannot use '==' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'
+  3 │     resource struct R {
+    │     -------- Is found to be a non-copyable type here
     ·
  21 │     fun t1(r: R) {
     │               - The type: '0x8675309::M::R'
-    ·
-  3 │     resource struct R {
-    │     -------- Is found to be a non-copyable type here
+ 22 │         r == r;
+    │         ^^^^^^ Cannot use '==' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'
     │
 
 error: 
@@ -122,16 +101,14 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/eq_invalid.move:27:9 ───
+    ┌── tests/move_check/typing/eq_invalid.move:7:18 ───
     │
- 27 │         G1{} == G1{};
-    │         ^^^^^^^^^^^^ Cannot use '==' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'
-    ·
- 27 │         G1{} == G1{};
-    │                 ---- The type: '0x8675309::M::G1<_>'
-    ·
   7 │     struct G1<T: resource> {}
     │                  -------- Is found to be a non-copyable type here
+    ·
+ 27 │         G1{} == G1{};
+    │         ^^^^^^^^^^^^ Cannot use '==' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'
+    │                 ---- The type: '0x8675309::M::G1<_>'
     │
 
 error: 
@@ -152,16 +129,14 @@ error:
 
 error: 
 
-    ┌── tests/move_check/typing/eq_invalid.move:28:9 ───
+    ┌── tests/move_check/typing/eq_invalid.move:8:15 ───
     │
- 28 │         G2{} == G2{};
-    │         ^^^^^^^^^^^^ Cannot use '==' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'
-    ·
- 28 │         G2{} == G2{};
-    │                 ---- The type: '0x8675309::M::G2<_>'
-    ·
   8 │     struct G2<T> {}
     │               - Is found to be a non-copyable type here
+    ·
+ 28 │         G2{} == G2{};
+    │         ^^^^^^^^^^^^ Cannot use '==' on resource values. This would destroy the resource. Try borrowing the values with '&' first.'
+    │                 ---- The type: '0x8675309::M::G2<_>'
     │
 
 error: 
@@ -178,8 +153,6 @@ error:
     │
  32 │         () == ();
     │         ^^^^^^^^ Invalid arguments to '=='
-    ·
- 32 │         () == ();
     │               -- Expected a single type, but found expression list type: '()'
     │
 
@@ -189,36 +162,26 @@ error:
     │
  33 │         (0, 1) == (0, 1);
     │         ^^^^^^^^^^^^^^^^ Invalid arguments to '=='
-    ·
- 33 │         (0, 1) == (0, 1);
     │                   ------ Expected a single type, but found expression list type: '(u64, u64)'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/eq_invalid.move:34:22 ───
+    ┌── tests/move_check/typing/eq_invalid.move:34:9 ───
     │
  34 │         (1, 2, 3) == (0, 1);
-    │                      ^^^^^^ Incompatible arguments to '=='
-    ·
- 34 │         (1, 2, 3) == (0, 1);
     │         --------- The expression list type of length 3: '({integer}, {integer}, {integer})'
-    ·
- 34 │         (1, 2, 3) == (0, 1);
     │                      ------ Is not compatible with the expression list type of length 2: '({integer}, {integer})'
+    │                      ^^^^^^ Incompatible arguments to '=='
     │
 
 error: 
 
-    ┌── tests/move_check/typing/eq_invalid.move:35:19 ───
+    ┌── tests/move_check/typing/eq_invalid.move:35:9 ───
     │
  35 │         (0, 1) == (1, 2, 3);
-    │                   ^^^^^^^^^ Incompatible arguments to '=='
-    ·
- 35 │         (0, 1) == (1, 2, 3);
     │         ------ The expression list type of length 2: '({integer}, {integer})'
-    ·
- 35 │         (0, 1) == (1, 2, 3);
     │                   --------- Is not compatible with the expression list type of length 3: '({integer}, {integer}, {integer})'
+    │                   ^^^^^^^^^ Incompatible arguments to '=='
     │
 

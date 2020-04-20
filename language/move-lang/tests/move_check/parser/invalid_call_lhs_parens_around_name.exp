@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/parser/invalid_call_lhs_parens_around_name.move:3:14 ───
    │
  3 │         (foo)()
-   │              ^ Unexpected '('
-   ·
- 3 │         (foo)()
    │              - Expected ';'
+   │              ^ Unexpected '('
    │
 

@@ -1,11 +1,10 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/borrow_tests/copy_loc_borrowed_invalid.move:5:9 ───
+   ┌── tests/move_check/translated_ir_tests/borrow_tests/copy_loc_borrowed_invalid.move:4:18 ───
    │
- 5 │         copy x;
-   │         ^^^^^^ Invalid copy of local 'x'
-   ·
  4 │         let r1 = &mut x;
    │                  ------ It is still being mutably borrowed by this reference
+ 5 │         copy x;
+   │         ^^^^^^ Invalid copy of local 'x'
    │
 

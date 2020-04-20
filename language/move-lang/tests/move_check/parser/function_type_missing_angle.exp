@@ -1,11 +1,9 @@
 error: 
 
-   ┌── tests/move_check/parser/function_type_missing_angle.move:3:19 ───
+   ┌── tests/move_check/parser/function_type_missing_angle.move:3:11 ───
    │
  3 │     fun fn<T1, T2 () { }
-   │                   ^ Expected '>'
-   ·
- 3 │     fun fn<T1, T2 () { }
    │           - To match this '<'
+   │                   ^ Expected '>'
    │
 

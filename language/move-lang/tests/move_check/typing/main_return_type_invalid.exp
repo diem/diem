@@ -3,12 +3,8 @@ error:
    ┌── tests/move_check/typing/main_return_type_invalid.move:1:5 ───
    │
  1 │ fun main(): u64 {
-   │     ^^^^ Invalid main return type
-   ·
- 1 │ fun main(): u64 {
-   │             --- The type: 'u64'
-   ·
- 1 │ fun main(): u64 {
    │     ---- Is not compatible with: '()'
+   │     ^^^^ Invalid main return type
+   │             --- The type: 'u64'
    │
 

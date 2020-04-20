@@ -4,8 +4,6 @@ error:
    │
  1 │ fun main<T: copyable>(x: T, y: vector<T>, z: vector<vector<u8>>, a: vector<vector<T>>) {
    │     ^^^^ Invalid parameter for 'main'
-   ·
- 1 │ fun main<T: copyable>(x: T, y: vector<T>, z: vector<vector<u8>>, a: vector<vector<T>>) {
    │                          - Found: 'T'. But expected: u8, u64, u128, bool, address, vector<u8>
    │
 
@@ -15,8 +13,6 @@ error:
    │
  1 │ fun main<T: copyable>(x: T, y: vector<T>, z: vector<vector<u8>>, a: vector<vector<T>>) {
    │     ^^^^ Invalid parameter for 'main'
-   ·
- 1 │ fun main<T: copyable>(x: T, y: vector<T>, z: vector<vector<u8>>, a: vector<vector<T>>) {
    │                                --------- Found: 'vector<T>'. But expected: u8, u64, u128, bool, address, vector<u8>
    │
 
@@ -26,8 +22,6 @@ error:
    │
  1 │ fun main<T: copyable>(x: T, y: vector<T>, z: vector<vector<u8>>, a: vector<vector<T>>) {
    │     ^^^^ Invalid parameter for 'main'
-   ·
- 1 │ fun main<T: copyable>(x: T, y: vector<T>, z: vector<vector<u8>>, a: vector<vector<T>>) {
    │                                              ------------------ Found: 'vector<vector<u8>>'. But expected: u8, u64, u128, bool, address, vector<u8>
    │
 
@@ -37,8 +31,6 @@ error:
    │
  1 │ fun main<T: copyable>(x: T, y: vector<T>, z: vector<vector<u8>>, a: vector<vector<T>>) {
    │     ^^^^ Invalid parameter for 'main'
-   ·
- 1 │ fun main<T: copyable>(x: T, y: vector<T>, z: vector<vector<u8>>, a: vector<vector<T>>) {
    │                                                                     ----------------- Found: 'vector<vector<T>>'. But expected: u8, u64, u128, bool, address, vector<u8>
    │
 

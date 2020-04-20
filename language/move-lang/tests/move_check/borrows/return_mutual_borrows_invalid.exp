@@ -1,45 +1,41 @@
 error: 
 
-    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:15:9 ───
+    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:14:17 ───
     │
- 15 │         (s1, f)
-    │         ^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
-    ·
  14 │         let f = freeze(s1);
     │                 ---------- It is still being borrowed by this reference
+ 15 │         (s1, f)
+    │         ^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:19:9 ───
+    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:18:17 ───
     │
- 19 │         (s1, f)
-    │         ^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
-    ·
  18 │         let f = &s1.f;
     │                 ----- Field 'f' is still being borrowed by this reference
+ 19 │         (s1, f)
+    │         ^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:23:9 ───
+    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:22:17 ───
     │
- 23 │         (&mut s1.f, f)
-    │         ^^^^^^^^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
-    ·
  22 │         let f = &s1.f;
     │                 ----- It is still being borrowed by this reference
+ 23 │         (&mut s1.f, f)
+    │         ^^^^^^^^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:27:9 ───
+    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:26:17 ───
     │
- 27 │         (&mut s1.f, f)
-    │         ^^^^^^^^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
-    ·
  26 │         let f = id(&s1.f);
     │                 --------- It is still being borrowed by this reference
+ 27 │         (&mut s1.f, f)
+    │         ^^^^^^^^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
     │
 
 error: 
@@ -48,20 +44,17 @@ error:
     │
  31 │         (s1, s1)
     │         ^^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
-    ·
- 31 │         (s1, s1)
     │          -- It is still being mutably borrowed by this reference
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:35:9 ───
+    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:34:18 ───
     │
- 35 │         (s1, f)
-    │         ^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
-    ·
  34 │         let f =  &mut s1.f;
     │                  --------- Field 'f' is still being mutably borrowed by this reference
+ 35 │         (s1, f)
+    │         ^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
     │
 
 error: 
@@ -70,8 +63,6 @@ error:
     │
  38 │         (&mut s1.f, s1)
     │         ^^^^^^^^^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
-    ·
- 38 │         (&mut s1.f, s1)
     │          --------- Field 'f' is still being mutably borrowed by this reference
     │
 
@@ -81,20 +72,17 @@ error:
     │
  41 │         (id_mut(s1), s1)
     │         ^^^^^^^^^^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
-    ·
- 41 │         (id_mut(s1), s1)
     │          ---------- It is still being mutably borrowed by this reference
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:45:9 ───
+    ┌── tests/move_check/borrows/return_mutual_borrows_invalid.move:44:17 ───
     │
- 45 │         (s1, f)
-    │         ^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
-    ·
  44 │         let f = id_mut(&mut s1.f);
     │                 ----------------- Field 'f' is still being mutably borrowed by this reference
+ 45 │         (s1, f)
+    │         ^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
     │
 
 error: 
@@ -103,8 +91,6 @@ error:
     │
  48 │         (id_mut(&mut s1.f), s1)
     │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid return of reference. Cannot transfer a mutable reference that is being borrowed
-    ·
- 48 │         (id_mut(&mut s1.f), s1)
     │          ----------------- Field 'f' is still being mutably borrowed by this reference
     │
 

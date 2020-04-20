@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/parser/expr_abort_missing_value.move:5:5 ───
    │
  5 │     }
-   │     ^ Unexpected '}'
-   ·
- 5 │     }
    │     - Expected an expression term
+   │     ^ Unexpected '}'
    │
 

@@ -1,11 +1,11 @@
 error: 
 
-    ┌── tests/move_check/typing/module_call_internal.move:10:9 ───
+    ┌── tests/move_check/typing/module_call_internal.move:4:9 ───
     │
- 10 │         X::foo()
-    │         ^^^^^^^^ Invalid call to '0x1::X::foo'
-    ·
   4 │     fun foo() {}
     │         --- This function is internal to its module. Only 'public' functions can be called outside of their module
+    ·
+ 10 │         X::foo()
+    │         ^^^^^^^^ Invalid call to '0x1::X::foo'
     │
 

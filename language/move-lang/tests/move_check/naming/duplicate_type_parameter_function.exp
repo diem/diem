@@ -1,12 +1,19 @@
 error: 
 
-   ┌── tests/move_check/naming/duplicate_type_parameter_function.move:2:16 ───
+   ┌── tests/move_check/naming/duplicate_type_parameter_function.move:2:13 ───
    │
  2 │     fun foo<T, T>() {}
-   │                ^ Duplicate type parameter declared with name 'T'
-   ·
- 2 │     fun foo<T, T>() {}
    │             - Previously defined here
+   │                ^ Duplicate type parameter declared with name 'T'
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/duplicate_type_parameter_function.move:3:14 ───
+   │
+ 3 │     fun foo2<T: copyable, T: resource, T>() {}
+   │              - Previously defined here
+   │                           ^ Duplicate type parameter declared with name 'T'
    │
 
 error: 
@@ -14,20 +21,7 @@ error:
    ┌── tests/move_check/naming/duplicate_type_parameter_function.move:3:27 ───
    │
  3 │     fun foo2<T: copyable, T: resource, T>() {}
-   │                           ^ Duplicate type parameter declared with name 'T'
-   ·
- 3 │     fun foo2<T: copyable, T: resource, T>() {}
-   │              - Previously defined here
-   │
-
-error: 
-
-   ┌── tests/move_check/naming/duplicate_type_parameter_function.move:3:40 ───
-   │
- 3 │     fun foo2<T: copyable, T: resource, T>() {}
-   │                                        ^ Duplicate type parameter declared with name 'T'
-   ·
- 3 │     fun foo2<T: copyable, T: resource, T>() {}
    │                           - Previously defined here
+   │                                        ^ Duplicate type parameter declared with name 'T'
    │
 

@@ -1,33 +1,30 @@
 error: 
 
-   ┌── tests/move_check/locals/use_after_move_if.move:5:17 ───
+   ┌── tests/move_check/locals/use_after_move_if.move:4:25 ───
    │
- 5 │         let _ = move x + 1;
-   │                 ^^^^^^ Invalid usage of local 'x'
-   ·
  4 │         if (cond) { _ = move x };
    │                         ------ The local might not have a value due to this position. The local must be assigned a value before being used
+ 5 │         let _ = move x + 1;
+   │                 ^^^^^^ Invalid usage of local 'x'
    │
 
 error: 
 
-    ┌── tests/move_check/locals/use_after_move_if.move:11:17 ───
+    ┌── tests/move_check/locals/use_after_move_if.move:10:25 ───
     │
- 11 │         let _ = x + 1;
-    │                 ^ Invalid usage of local 'x'
-    ·
  10 │         if (cond) { _ = move x };
     │                         ------ The local might not have a value due to this position. The local must be assigned a value before being used
+ 11 │         let _ = x + 1;
+    │                 ^ Invalid usage of local 'x'
     │
 
 error: 
 
-    ┌── tests/move_check/locals/use_after_move_if.move:17:17 ───
+    ┌── tests/move_check/locals/use_after_move_if.move:16:25 ───
     │
- 17 │         let _ = &x;
-    │                 ^^ Invalid usage of local 'x'
-    ·
  16 │         if (cond) { _ = move x };
     │                         ------ The local might not have a value due to this position. The local must be assigned a value before being used
+ 17 │         let _ = &x;
+    │                 ^^ Invalid usage of local 'x'
     │
 

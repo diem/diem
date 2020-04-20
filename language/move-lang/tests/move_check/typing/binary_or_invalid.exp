@@ -3,27 +3,19 @@ error:
    ┌── tests/move_check/typing/binary_or_invalid.move:8:9 ───
    │
  8 │         0 || 1;
-   │         ^ Incompatible arguments to '||'
-   ·
- 8 │         0 || 1;
    │         - The type: integer
-   ·
- 8 │         0 || 1;
    │         - Is not compatible with: 'bool'
+   │         ^ Incompatible arguments to '||'
    │
 
 error: 
 
-   ┌── tests/move_check/typing/binary_or_invalid.move:8:14 ───
+   ┌── tests/move_check/typing/binary_or_invalid.move:8:9 ───
    │
  8 │         0 || 1;
-   │              ^ Incompatible arguments to '||'
-   ·
- 8 │         0 || 1;
-   │              - The type: integer
-   ·
- 8 │         0 || 1;
    │         - Is not compatible with: 'bool'
+   │              - The type: integer
+   │              ^ Incompatible arguments to '||'
    │
 
 error: 
@@ -31,27 +23,19 @@ error:
    ┌── tests/move_check/typing/binary_or_invalid.move:9:9 ───
    │
  9 │         1 || false;
-   │         ^ Incompatible arguments to '||'
-   ·
- 9 │         1 || false;
    │         - The type: integer
-   ·
- 9 │         1 || false;
    │         - Is not compatible with: 'bool'
+   │         ^ Incompatible arguments to '||'
    │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_or_invalid.move:10:18 ───
+    ┌── tests/move_check/typing/binary_or_invalid.move:10:9 ───
     │
  10 │         false || 1;
-    │                  ^ Incompatible arguments to '||'
-    ·
- 10 │         false || 1;
-    │                  - The type: integer
-    ·
- 10 │         false || 1;
     │         ----- Is not compatible with: 'bool'
+    │                  - The type: integer
+    │                  ^ Incompatible arguments to '||'
     │
 
 error: 
@@ -59,27 +43,19 @@ error:
     ┌── tests/move_check/typing/binary_or_invalid.move:11:9 ───
     │
  11 │         0x0 || 0x1;
-    │         ^^^ Incompatible arguments to '||'
-    ·
- 11 │         0x0 || 0x1;
     │         --- The type: 'address'
-    ·
- 11 │         0x0 || 0x1;
     │         --- Is not compatible with: 'bool'
+    │         ^^^ Incompatible arguments to '||'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_or_invalid.move:11:16 ───
+    ┌── tests/move_check/typing/binary_or_invalid.move:11:9 ───
     │
  11 │         0x0 || 0x1;
-    │                ^^^ Incompatible arguments to '||'
-    ·
- 11 │         0x0 || 0x1;
-    │                --- The type: 'address'
-    ·
- 11 │         0x0 || 0x1;
     │         --- Is not compatible with: 'bool'
+    │                --- The type: 'address'
+    │                ^^^ Incompatible arguments to '||'
     │
 
 error: 
@@ -87,83 +63,67 @@ error:
     ┌── tests/move_check/typing/binary_or_invalid.move:12:9 ───
     │
  12 │         (0: u8) || (1: u128);
+    │         ------- Is not compatible with: 'bool'
     │         ^^^^^^^ Incompatible arguments to '||'
-    ·
- 12 │         (0: u8) || (1: u128);
     │             -- The type: 'u8'
-    ·
- 12 │         (0: u8) || (1: u128);
-    │         ------- Is not compatible with: 'bool'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_or_invalid.move:12:20 ───
+    ┌── tests/move_check/typing/binary_or_invalid.move:12:9 ───
     │
  12 │         (0: u8) || (1: u128);
+    │         ------- Is not compatible with: 'bool'
     │                    ^^^^^^^^^ Incompatible arguments to '||'
-    ·
- 12 │         (0: u8) || (1: u128);
     │                        ---- The type: 'u128'
-    ·
- 12 │         (0: u8) || (1: u128);
-    │         ------- Is not compatible with: 'bool'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_or_invalid.move:13:9 ───
+    ┌── tests/move_check/typing/binary_or_invalid.move:7:23 ───
     │
- 13 │         r || r;
-    │         ^ Incompatible arguments to '||'
-    ·
   7 │     fun t0(x: u64, r: R, s: S) {
     │                       - The type: '0x8675309::M::R'
     ·
  13 │         r || r;
     │         - Is not compatible with: 'bool'
+    │         ^ Incompatible arguments to '||'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_or_invalid.move:13:14 ───
+    ┌── tests/move_check/typing/binary_or_invalid.move:7:23 ───
     │
- 13 │         r || r;
-    │              ^ Incompatible arguments to '||'
-    ·
   7 │     fun t0(x: u64, r: R, s: S) {
     │                       - The type: '0x8675309::M::R'
     ·
  13 │         r || r;
     │         - Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_or_invalid.move:14:9 ───
-    │
- 14 │         s || s;
-    │         ^ Incompatible arguments to '||'
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                             - The type: '0x8675309::M::S'
-    ·
- 14 │         s || s;
-    │         - Is not compatible with: 'bool'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_or_invalid.move:14:14 ───
-    │
- 14 │         s || s;
     │              ^ Incompatible arguments to '||'
-    ·
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_or_invalid.move:7:29 ───
+    │
   7 │     fun t0(x: u64, r: R, s: S) {
     │                             - The type: '0x8675309::M::S'
     ·
  14 │         s || s;
     │         - Is not compatible with: 'bool'
+    │         ^ Incompatible arguments to '||'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_or_invalid.move:7:29 ───
+    │
+  7 │     fun t0(x: u64, r: R, s: S) {
+    │                             - The type: '0x8675309::M::S'
+    ·
+ 14 │         s || s;
+    │         - Is not compatible with: 'bool'
+    │              ^ Incompatible arguments to '||'
     │
 
 error: 
@@ -171,41 +131,29 @@ error:
     ┌── tests/move_check/typing/binary_or_invalid.move:15:9 ───
     │
  15 │         () || ();
-    │         ^^ Incompatible arguments to '||'
-    ·
- 15 │         () || ();
     │         -- The type: '()'
-    ·
- 15 │         () || ();
     │         -- Is not compatible with: 'bool'
+    │         ^^ Incompatible arguments to '||'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_or_invalid.move:15:15 ───
+    ┌── tests/move_check/typing/binary_or_invalid.move:15:9 ───
     │
  15 │         () || ();
-    │               ^^ Incompatible arguments to '||'
-    ·
- 15 │         () || ();
+    │         -- Is not compatible with: 'bool'
     │               -- The type: '()'
-    ·
- 15 │         () || ();
-    │         -- Is not compatible with: 'bool'
+    │               ^^ Incompatible arguments to '||'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_or_invalid.move:16:17 ───
+    ┌── tests/move_check/typing/binary_or_invalid.move:16:9 ───
     │
- 16 │         true || ();
-    │                 ^^ Incompatible arguments to '||'
-    ·
- 16 │         true || ();
-    │                 -- The type: '()'
-    ·
  16 │         true || ();
     │         ---- Is not compatible with: 'bool'
+    │                 -- The type: '()'
+    │                 ^^ Incompatible arguments to '||'
     │
 
 error: 
@@ -213,27 +161,19 @@ error:
     ┌── tests/move_check/typing/binary_or_invalid.move:17:9 ───
     │
  17 │         (true, false) || (true, false, true);
-    │         ^^^^^^^^^^^^^ Incompatible arguments to '||'
-    ·
- 17 │         (true, false) || (true, false, true);
     │         ------------- The type: '(bool, bool)'
-    ·
- 17 │         (true, false) || (true, false, true);
     │         ------------- Is not compatible with: 'bool'
+    │         ^^^^^^^^^^^^^ Incompatible arguments to '||'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_or_invalid.move:17:26 ───
+    ┌── tests/move_check/typing/binary_or_invalid.move:17:9 ───
     │
  17 │         (true, false) || (true, false, true);
-    │                          ^^^^^^^^^^^^^^^^^^^ Incompatible arguments to '||'
-    ·
- 17 │         (true, false) || (true, false, true);
-    │                          ------------------- The type: '(bool, bool, bool)'
-    ·
- 17 │         (true, false) || (true, false, true);
     │         ------------- Is not compatible with: 'bool'
+    │                          ------------------- The type: '(bool, bool, bool)'
+    │                          ^^^^^^^^^^^^^^^^^^^ Incompatible arguments to '||'
     │
 
 error: 
@@ -241,26 +181,18 @@ error:
     ┌── tests/move_check/typing/binary_or_invalid.move:18:9 ───
     │
  18 │         (true, true) || (false, false);
-    │         ^^^^^^^^^^^^ Incompatible arguments to '||'
-    ·
- 18 │         (true, true) || (false, false);
     │         ------------ The type: '(bool, bool)'
-    ·
- 18 │         (true, true) || (false, false);
     │         ------------ Is not compatible with: 'bool'
+    │         ^^^^^^^^^^^^ Incompatible arguments to '||'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_or_invalid.move:18:25 ───
+    ┌── tests/move_check/typing/binary_or_invalid.move:18:9 ───
     │
  18 │         (true, true) || (false, false);
-    │                         ^^^^^^^^^^^^^^ Incompatible arguments to '||'
-    ·
- 18 │         (true, true) || (false, false);
-    │                         -------------- The type: '(bool, bool)'
-    ·
- 18 │         (true, true) || (false, false);
     │         ------------ Is not compatible with: 'bool'
+    │                         -------------- The type: '(bool, bool)'
+    │                         ^^^^^^^^^^^^^^ Incompatible arguments to '||'
     │
 

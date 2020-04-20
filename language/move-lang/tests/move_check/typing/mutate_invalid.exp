@@ -3,27 +3,21 @@ error:
    ┌── tests/move_check/typing/mutate_invalid.move:6:10 ───
    │
  6 │         *&mut 0 = false;
-   │          ^^^^^^ Invalid mutation. New value is not valid for the reference
-   ·
- 6 │         *&mut 0 = false;
    │          ------ The type: integer
-   ·
- 6 │         *&mut 0 = false;
+   │          ^^^^^^ Invalid mutation. New value is not valid for the reference
    │                   ----- Is not compatible with: 'bool'
    │
 
 error: 
 
-   ┌── tests/move_check/typing/mutate_invalid.move:7:10 ───
+   ┌── tests/move_check/typing/mutate_invalid.move:2:19 ───
    │
- 7 │         *&mut S{f:0}.f = &1;
-   │          ^^^^^^^^^^^^^ Invalid mutation. New value is not valid for the reference
-   ·
- 7 │         *&mut S{f:0}.f = &1;
-   │                          -- The type: '&{integer}'
-   ·
  2 │     struct S { f: u64 }
    │                   --- Is not compatible with: 'u64'
+   ·
+ 7 │         *&mut S{f:0}.f = &1;
+   │          ^^^^^^^^^^^^^ Invalid mutation. New value is not valid for the reference
+   │                          -- The type: '&{integer}'
    │
 
 error: 
@@ -32,8 +26,6 @@ error:
     │
   8 │         *foo(&mut 0) = (1, 0);
     │          ^^^^^^^^^^^ Invalid mutation. New value is not valid for the reference
-    ·
-  8 │         *foo(&mut 0) = (1, 0);
     │                        ------ The type: '({integer}, {integer})'
     ·
  23 │     fun foo(x: &mut u64): &mut u64 {
@@ -42,99 +34,84 @@ error:
 
 error: 
 
-   ┌── tests/move_check/typing/mutate_invalid.move:9:9 ───
+   ┌── tests/move_check/typing/mutate_invalid.move:2:19 ───
    │
- 9 │         bar(&mut S{f:0}).f = ();
-   │         ^^^^^^^^^^^^^^^^^^ Invalid mutation. New value is not valid for the reference
-   ·
- 9 │         bar(&mut S{f:0}).f = ();
-   │                              -- The type: '()'
-   ·
  2 │     struct S { f: u64 }
    │                   --- Is not compatible with: 'u64'
+   ·
+ 9 │         bar(&mut S{f:0}).f = ();
+   │         ^^^^^^^^^^^^^^^^^^ Invalid mutation. New value is not valid for the reference
+   │                              -- The type: '()'
    │
 
 error: 
 
-    ┌── tests/move_check/typing/mutate_invalid.move:10:10 ───
+    ┌── tests/move_check/typing/mutate_invalid.move:2:19 ───
     │
+  2 │     struct S { f: u64 }
+    │                   --- Is not compatible with: 'u64'
+    ·
  10 │         *&mut bar(&mut S{f:0}).f = &0;
     │          ^^^^^^^^^^^^^^^^^^^^^^^ Invalid mutation. New value is not valid for the reference
-    ·
- 10 │         *&mut bar(&mut S{f:0}).f = &0;
     │                                    -- The type: '&{integer}'
-    ·
-  2 │     struct S { f: u64 }
-    │                   --- Is not compatible with: 'u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/mutate_invalid.move:11:9 ───
+    ┌── tests/move_check/typing/mutate_invalid.move:2:19 ───
     │
+  2 │     struct S { f: u64 }
+    │                   --- Is not compatible with: 'u64'
+    ·
  11 │         baz().f = false;
     │         ^^^^^^^ Invalid mutation. New value is not valid for the reference
-    ·
- 11 │         baz().f = false;
     │                   ----- The type: 'bool'
-    ·
-  2 │     struct S { f: u64 }
-    │                   --- Is not compatible with: 'u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/mutate_invalid.move:12:10 ───
+    ┌── tests/move_check/typing/mutate_invalid.move:2:19 ───
     │
+  2 │     struct S { f: u64 }
+    │                   --- Is not compatible with: 'u64'
+    ·
  12 │         *&mut baz().f = false;
     │          ^^^^^^^^^^^^ Invalid mutation. New value is not valid for the reference
-    ·
- 12 │         *&mut baz().f = false;
     │                         ----- The type: 'bool'
-    ·
-  2 │     struct S { f: u64 }
-    │                   --- Is not compatible with: 'u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/mutate_invalid.move:17:10 ───
+    ┌── tests/move_check/typing/mutate_invalid.move:16:22 ───
     │
- 17 │         *r = X { f: 1 };
-    │          ^ Invalid mutation. New value is not valid for the reference
-    ·
- 17 │         *r = X { f: 1 };
-    │              ---------- The type: '0x8675309::M::X'
-    ·
  16 │         let r = &mut S{ f: 0 };
     │                      --------- Is not compatible with: '0x8675309::M::S'
+ 17 │         *r = X { f: 1 };
+    │          ^ Invalid mutation. New value is not valid for the reference
+    │              ---------- The type: '0x8675309::M::X'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/mutate_invalid.move:19:9 ───
+    ┌── tests/move_check/typing/mutate_invalid.move:2:19 ───
     │
+  2 │     struct S { f: u64 }
+    │                   --- Is not compatible with: 'u64'
+    ·
  19 │         r.f = &0;
     │         ^^^ Invalid mutation. New value is not valid for the reference
-    ·
- 19 │         r.f = &0;
     │               -- The type: '&{integer}'
-    ·
-  2 │     struct S { f: u64 }
-    │                   --- Is not compatible with: 'u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/mutate_invalid.move:20:10 ───
+    ┌── tests/move_check/typing/mutate_invalid.move:2:19 ───
     │
- 20 │         *&mut r.f = ();
-    │          ^^^^^^^^ Invalid mutation. New value is not valid for the reference
-    ·
- 20 │         *&mut r.f = ();
-    │                     -- The type: '()'
-    ·
   2 │     struct S { f: u64 }
     │                   --- Is not compatible with: 'u64'
+    ·
+ 20 │         *&mut r.f = ();
+    │          ^^^^^^^^ Invalid mutation. New value is not valid for the reference
+    │                     -- The type: '()'
     │
 

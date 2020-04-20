@@ -8,46 +8,42 @@ error:
 
 error: 
 
-   ┌── tests/move_check/locals/assign_resource.move:6:9 ───
+   ┌── tests/move_check/locals/assign_resource.move:5:13 ───
    │
- 6 │         r = R{};
-   │         ^ Invalid assignment to local 'r'
-   ·
  5 │         let r = R{};
    │             - The local contains a resource value due to this assignment. The resource must be used before you assign to this local again
+ 6 │         r = R{};
+   │         ^ Invalid assignment to local 'r'
    │
 
 error: 
 
-    ┌── tests/move_check/locals/assign_resource.move:12:21 ───
+    ┌── tests/move_check/locals/assign_resource.move:11:13 ───
     │
- 12 │         if (cond) { r = R{}; };
-    │                     ^ Invalid assignment to local 'r'
-    ·
  11 │         let r = R{};
     │             - The local contains a resource value due to this assignment. The resource must be used before you assign to this local again
+ 12 │         if (cond) { r = R{}; };
+    │                     ^ Invalid assignment to local 'r'
     │
 
 error: 
 
-    ┌── tests/move_check/locals/assign_resource.move:18:29 ───
+    ┌── tests/move_check/locals/assign_resource.move:17:13 ───
     │
- 18 │         if (cond) {} else { r = R{}; };
-    │                             ^ Invalid assignment to local 'r'
-    ·
  17 │         let r = R{};
     │             - The local contains a resource value due to this assignment. The resource must be used before you assign to this local again
+ 18 │         if (cond) {} else { r = R{}; };
+    │                             ^ Invalid assignment to local 'r'
     │
 
 error: 
 
-    ┌── tests/move_check/locals/assign_resource.move:24:24 ───
+    ┌── tests/move_check/locals/assign_resource.move:23:13 ───
     │
- 24 │         while (cond) { r = R{} };
-    │                        ^ Invalid assignment to local 'r'
-    ·
  23 │         let r = R{};
     │             - The local contains a resource value due to this assignment. The resource must be used before you assign to this local again
+ 24 │         while (cond) { r = R{} };
+    │                        ^ Invalid assignment to local 'r'
     │
 
 error: 
@@ -60,23 +56,21 @@ error:
 
 error: 
 
-    ┌── tests/move_check/locals/assign_resource.move:30:16 ───
+    ┌── tests/move_check/locals/assign_resource.move:29:13 ───
     │
- 30 │         loop { r = R{}; R {} = r }
-    │                ^ Invalid assignment to local 'r'
-    ·
  29 │         let r = R{};
     │             - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
+ 30 │         loop { r = R{}; R {} = r }
+    │                ^ Invalid assignment to local 'r'
     │
 
 error: 
 
-    ┌── tests/move_check/locals/assign_resource.move:34:9 ───
+    ┌── tests/move_check/locals/assign_resource.move:33:15 ───
     │
- 34 │         x = y;
-    │         ^ Invalid assignment to local 'x'
-    ·
  33 │     fun t5<T>(x: T, y: T): T {
     │               - The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
+ 34 │         x = y;
+    │         ^ Invalid assignment to local 'x'
     │
 

@@ -3,13 +3,9 @@ error:
    ┌── tests/move_check/typing/while_body_invalid.move:3:22 ───
    │
  3 │         while (cond) 0;
-   │                      ^ Invalid loop body
-   ·
- 3 │         while (cond) 0;
    │                      - The type: integer
-   ·
- 3 │         while (cond) 0;
    │                      - Is not compatible with: '()'
+   │                      ^ Invalid loop body
    │
 
 error: 
@@ -17,13 +13,9 @@ error:
    ┌── tests/move_check/typing/while_body_invalid.move:4:22 ───
    │
  4 │         while (cond) false;
-   │                      ^^^^^ Invalid loop body
-   ·
- 4 │         while (cond) false;
    │                      ----- The type: 'bool'
-   ·
- 4 │         while (cond) false;
    │                      ----- Is not compatible with: '()'
+   │                      ^^^^^ Invalid loop body
    │
 
 error: 
@@ -31,13 +23,9 @@ error:
    ┌── tests/move_check/typing/while_body_invalid.move:5:22 ───
    │
  5 │         while (cond) { 0x0 };
-   │                      ^^^^^^^ Invalid loop body
-   ·
- 5 │         while (cond) { 0x0 };
-   │                        --- The type: 'address'
-   ·
- 5 │         while (cond) { 0x0 };
    │                      ------- Is not compatible with: '()'
+   │                      ^^^^^^^ Invalid loop body
+   │                        --- The type: 'address'
    │
 
 error: 
@@ -45,13 +33,9 @@ error:
    ┌── tests/move_check/typing/while_body_invalid.move:6:22 ───
    │
  6 │         while (cond) { let x = 0; x };
-   │                      ^^^^^^^^^^^^^^^^ Invalid loop body
-   ·
- 6 │         while (cond) { let x = 0; x };
-   │                            - The type: integer
-   ·
- 6 │         while (cond) { let x = 0; x };
    │                      ---------------- Is not compatible with: '()'
+   │                      ^^^^^^^^^^^^^^^^ Invalid loop body
+   │                            - The type: integer
    │
 
 error: 
@@ -59,12 +43,8 @@ error:
    ┌── tests/move_check/typing/while_body_invalid.move:7:22 ───
    │
  7 │         while (cond) { if (cond) 1 else 0 };
-   │                      ^^^^^^^^^^^^^^^^^^^^^^ Invalid loop body
-   ·
- 7 │         while (cond) { if (cond) 1 else 0 };
-   │                                         - The type: integer
-   ·
- 7 │         while (cond) { if (cond) 1 else 0 };
    │                      ---------------------- Is not compatible with: '()'
+   │                      ^^^^^^^^^^^^^^^^^^^^^^ Invalid loop body
+   │                                         - The type: integer
    │
 

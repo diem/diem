@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/parser/let_binding_bad_name.move:4:13 ───
    │
  4 │         let {};
-   │             ^ Unexpected '{'
-   ·
- 4 │         let {};
    │             - Expected a variable or struct name
+   │             ^ Unexpected '{'
    │
 

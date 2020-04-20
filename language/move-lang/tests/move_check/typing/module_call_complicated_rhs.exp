@@ -4,8 +4,6 @@ error:
     │
  11 │         foo (if (cond) () else ());
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. The call expected 0 argument(s) but got 1
-    ·
- 11 │         foo (if (cond) () else ());
     │             ---------------------- Found 1 argument(s) here
     │
 
@@ -15,8 +13,6 @@ error:
     │
  13 │         baz (if (cond) (false, 0x0) else (true, 0x1));
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::baz'. The call expected 2 argument(s) but got 1
-    ·
- 13 │         baz (if (cond) (false, 0x0) else (true, 0x1));
     │             ----------------------------------------- Found 1 argument(s) here
     │
 
@@ -26,8 +22,6 @@ error:
     │
  13 │         baz (if (cond) (false, 0x0) else (true, 0x1));
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
-    ·
- 13 │         baz (if (cond) (false, 0x0) else (true, 0x1));
     │                                          ----------- Expected a single non-reference type, but found: '(bool, address)'
     │
 
@@ -37,8 +31,6 @@ error:
     │
  17 │         foo(if (cond) () else ());
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. The call expected 0 argument(s) but got 1
-    ·
- 17 │         foo(if (cond) () else ());
     │            ---------------------- Found 1 argument(s) here
     │
 
@@ -48,8 +40,6 @@ error:
     │
  19 │         baz(if (cond) (false, 0x0) else (true, 0x1));
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::baz'. The call expected 2 argument(s) but got 1
-    ·
- 19 │         baz(if (cond) (false, 0x0) else (true, 0x1));
     │            ----------------------------------------- Found 1 argument(s) here
     │
 
@@ -59,8 +49,6 @@ error:
     │
  19 │         baz(if (cond) (false, 0x0) else (true, 0x1));
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
-    ·
- 19 │         baz(if (cond) (false, 0x0) else (true, 0x1));
     │                                         ----------- Expected a single non-reference type, but found: '(bool, address)'
     │
 
@@ -70,8 +58,6 @@ error:
     │
  23 │         foo({});
     │         ^^^^^^^ Invalid call of '0x8675309::M::foo'. The call expected 0 argument(s) but got 1
-    ·
- 23 │         foo({});
     │            ---- Found 1 argument(s) here
     │
 
@@ -81,8 +67,6 @@ error:
     │
  24 │         foo({ let _x = 0; });
     │         ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. The call expected 0 argument(s) but got 1
-    ·
- 24 │         foo({ let _x = 0; });
     │            ----------------- Found 1 argument(s) here
     │
 
@@ -92,8 +76,6 @@ error:
     │
  31 │         baz({ (a, x) });
     │         ^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::baz'. The call expected 2 argument(s) but got 1
-    ·
- 31 │         baz({ (a, x) });
     │            ------------ Found 1 argument(s) here
     │
 
@@ -103,8 +85,6 @@ error:
     │
  31 │         baz({ (a, x) });
     │         ^^^^^^^^^^^^^^^ Invalid type argument
-    ·
- 31 │         baz({ (a, x) });
     │               ------ Expected a single non-reference type, but found: '(address, u64)'
     │
 
@@ -114,8 +94,6 @@ error:
     │
  32 │         baz({ let a = false; (a, x) });
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::baz'. The call expected 2 argument(s) but got 1
-    ·
- 32 │         baz({ let a = false; (a, x) });
     │            --------------------------- Found 1 argument(s) here
     │
 
@@ -125,8 +103,6 @@ error:
     │
  32 │         baz({ let a = false; (a, x) });
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
-    ·
- 32 │         baz({ let a = false; (a, x) });
     │                              ------ Expected a single non-reference type, but found: '(bool, u64)'
     │
 
@@ -136,8 +112,6 @@ error:
     │
  36 │         foo({});
     │         ^^^^^^^ Invalid call of '0x8675309::M::foo'. The call expected 0 argument(s) but got 1
-    ·
- 36 │         foo({});
     │            ---- Found 1 argument(s) here
     │
 
@@ -147,8 +121,6 @@ error:
     │
  37 │         foo({ let _x = 0; });
     │         ^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::foo'. The call expected 0 argument(s) but got 1
-    ·
- 37 │         foo({ let _x = 0; });
     │            ----------------- Found 1 argument(s) here
     │
 
@@ -158,8 +130,6 @@ error:
     │
  44 │         baz({ (a, x) });
     │         ^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::baz'. The call expected 2 argument(s) but got 1
-    ·
- 44 │         baz({ (a, x) });
     │            ------------ Found 1 argument(s) here
     │
 
@@ -169,8 +139,6 @@ error:
     │
  44 │         baz({ (a, x) });
     │         ^^^^^^^^^^^^^^^ Invalid type argument
-    ·
- 44 │         baz({ (a, x) });
     │               ------ Expected a single non-reference type, but found: '(address, u64)'
     │
 
@@ -180,8 +148,6 @@ error:
     │
  45 │         baz({ let a = false; (a, x) });
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of '0x8675309::M::baz'. The call expected 2 argument(s) but got 1
-    ·
- 45 │         baz({ let a = false; (a, x) });
     │            --------------------------- Found 1 argument(s) here
     │
 
@@ -191,8 +157,6 @@ error:
     │
  45 │         baz({ let a = false; (a, x) });
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid type argument
-    ·
- 45 │         baz({ let a = false; (a, x) });
     │                              ------ Expected a single non-reference type, but found: '(bool, u64)'
     │
 

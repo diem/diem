@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/expansion/global_access_pack.move:3:13 ───
    │
  3 │         ::S { }
-   │             ^ Unexpected '{'
-   ·
- 3 │         ::S { }
    │             - Expected '('
+   │             ^ Unexpected '{'
    │
 

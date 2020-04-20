@@ -1,33 +1,33 @@
 error: 
 
-   ┌── tests/move_check/locals/use_before_assign_if.move:5:17 ───
+   ┌── tests/move_check/locals/use_before_assign_if.move:3:13 ───
    │
- 5 │         let _ = move x + 1;
-   │                 ^^^^^^ Invalid usage of local 'x'
-   ·
  3 │         let x: u64;
    │             - The local might not have a value due to this position. The local must be assigned a value before being used
+ 4 │         if (cond) { x = 0 };
+ 5 │         let _ = move x + 1;
+   │                 ^^^^^^ Invalid usage of local 'x'
    │
 
 error: 
 
-    ┌── tests/move_check/locals/use_before_assign_if.move:11:17 ───
+    ┌── tests/move_check/locals/use_before_assign_if.move:9:13 ───
     │
- 11 │         let _ = x + 1;
-    │                 ^ Invalid usage of local 'x'
-    ·
   9 │         let x: u64;
     │             - The local might not have a value due to this position. The local must be assigned a value before being used
+ 10 │         if (cond) { x = 0 };
+ 11 │         let _ = x + 1;
+    │                 ^ Invalid usage of local 'x'
     │
 
 error: 
 
-    ┌── tests/move_check/locals/use_before_assign_if.move:17:17 ───
+    ┌── tests/move_check/locals/use_before_assign_if.move:15:13 ───
     │
- 17 │         let _ = &x;
-    │                 ^^ Invalid usage of local 'x'
-    ·
  15 │         let x: u64;
     │             - The local might not have a value due to this position. The local must be assigned a value before being used
+ 16 │         if (cond) { x = 0 };
+ 17 │         let _ = &x;
+    │                 ^^ Invalid usage of local 'x'
     │
 

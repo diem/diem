@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/parser/struct_type_resource.move:3:17 ───
    │
  3 │     struct S<T: res> { }
-   │                 ^^^ Unexpected 'res'
-   ·
- 3 │     struct S<T: res> { }
    │                 --- Expected either 'copyable' or 'resource'
+   │                 ^^^ Unexpected 'res'
    │
 

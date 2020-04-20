@@ -4,8 +4,6 @@ error:
    │
  7 │         f<S<T>>(S<T> { b: true })
    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to '0x8675309::M::f'
-   ·
- 7 │         f<S<T>>(S<T> { b: true })
    │           ---- The type parameter 'f::T' was instantiated with the type '0x8675309::M::S<T>', which contains the type parameter 'f::T'. This recursive call causes the instantiation to recurse infinitely
    │
 

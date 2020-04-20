@@ -1,33 +1,31 @@
 error: 
 
-    ┌── tests/move_check/borrows/call_transfer_borrows_invalid.move:16:9 ───
+    ┌── tests/move_check/borrows/call_transfer_borrows_invalid.move:15:17 ───
     │
- 16 │         move y;
-    │         ^^^^^^ Invalid move of local 'y'
-    ·
  15 │         let r = take_imm_mut_give_mut(move x_ref, move y_ref);
     │                 --------------------------------------------- It is still being mutably borrowed by this reference
+ 16 │         move y;
+    │         ^^^^^^ Invalid move of local 'y'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/call_transfer_borrows_invalid.move:26:9 ───
+    ┌── tests/move_check/borrows/call_transfer_borrows_invalid.move:25:17 ───
     │
+ 25 │         let r = take_imm_mut_give_imm(move x_ref, move y_ref);
+    │                 --------------------------------------------- It is still being borrowed by this reference
  26 │         move x;
     │         ^^^^^^ Invalid move of local 'x'
-    ·
- 25 │         let r = take_imm_mut_give_imm(move x_ref, move y_ref);
-    │                 --------------------------------------------- It is still being borrowed by this reference
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/call_transfer_borrows_invalid.move:27:9 ───
+    ┌── tests/move_check/borrows/call_transfer_borrows_invalid.move:25:17 ───
     │
- 27 │         move y;
-    │         ^^^^^^ Invalid move of local 'y'
-    ·
  25 │         let r = take_imm_mut_give_imm(move x_ref, move y_ref);
     │                 --------------------------------------------- It is still being borrowed by this reference
+ 26 │         move x;
+ 27 │         move y;
+    │         ^^^^^^ Invalid move of local 'y'
     │
 

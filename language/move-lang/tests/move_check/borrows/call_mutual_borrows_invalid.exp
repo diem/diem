@@ -1,45 +1,41 @@
 error: 
 
-    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:15:9 ───
+    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:14:17 ───
     │
- 15 │         mut_imm(s1, f);
-    │         ^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
-    ·
  14 │         let f = freeze(s1);
     │                 ---------- It is still being borrowed by this reference
+ 15 │         mut_imm(s1, f);
+    │         ^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:17:9 ───
+    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:16:17 ───
     │
- 17 │         mut_imm(s1, f);
-    │         ^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
-    ·
  16 │         let f = &s1.f;
     │                 ----- Field 'f' is still being borrowed by this reference
+ 17 │         mut_imm(s1, f);
+    │         ^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:19:9 ───
+    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:18:17 ───
     │
- 19 │         mut_imm(&mut s1.f, f);
-    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
-    ·
  18 │         let f = &s1.f;
     │                 ----- It is still being borrowed by this reference
+ 19 │         mut_imm(&mut s1.f, f);
+    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:21:9 ───
+    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:20:17 ───
     │
- 21 │         id_mut(&mut s1.f); f;
-    │         ^^^^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
-    ·
  20 │         let f = id(&s1.f);
     │                 --------- It is still being borrowed by this reference
+ 21 │         id_mut(&mut s1.f); f;
+    │         ^^^^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
     │
 
 error: 
@@ -48,20 +44,17 @@ error:
     │
  23 │         mut_mut(s1, s1);
     │         ^^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
-    ·
- 23 │         mut_mut(s1, s1);
     │                 -- It is still being mutably borrowed by this reference
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:25:9 ───
+    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:24:17 ───
     │
- 25 │         mut_mut(s1, f);
-    │         ^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
-    ·
  24 │         let f = &mut s1.f;
     │                 --------- Field 'f' is still being mutably borrowed by this reference
+ 25 │         mut_mut(s1, f);
+    │         ^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
     │
 
 error: 
@@ -70,31 +63,27 @@ error:
     │
  26 │         mut_mut(&mut s1.f, s1);
     │         ^^^^^^^^^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
-    ·
- 26 │         mut_mut(&mut s1.f, s1);
     │                 --------- Field 'f' is still being mutably borrowed by this reference
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:28:9 ───
+    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:27:17 ───
     │
- 28 │         id_mut(s1);
-    │         ^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
-    ·
  27 │         let s = id_mut(s1);
     │                 ---------- It is still being mutably borrowed by this reference
+ 28 │         id_mut(s1);
+    │         ^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:31:9 ───
+    ┌── tests/move_check/borrows/call_mutual_borrows_invalid.move:30:17 ───
     │
- 31 │         mut_mut(s1, f);
-    │         ^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
-    ·
  30 │         let f = id_mut(&mut s1.f);
     │                 ----------------- Field 'f' is still being mutably borrowed by this reference
+ 31 │         mut_mut(s1, f);
+    │         ^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
     │
 
 error: 
@@ -103,8 +92,6 @@ error:
     │
  32 │         mut_mut(id_mut(&mut s1.f), s1);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
-    ·
- 32 │         mut_mut(id_mut(&mut s1.f), s1);
     │                 ----------------- Field 'f' is still being mutably borrowed by this reference
     │
 

@@ -1,34 +1,27 @@
 error: 
 
-   ┌── tests/move_check/naming/nominal_resource_field_in_struct_shallow.move:4:9 ───
+   ┌── tests/move_check/naming/nominal_resource_field_in_struct_shallow.move:2:5 ───
    │
- 4 │         f: R
-   │         ^ Invalid resource field 'f' for struct 'S'. Structs cannot contain resource types, except through type parameters
-   ·
- 4 │         f: R
-   │            - Field 'f' is a resource due to the type: '0x8675309::M::R'
-   ·
  2 │     resource struct R {}
    │     -------- Type '0x8675309::M::R' was declared as a resource here
-   ·
  3 │     struct S {
    │            - 'S' declared as a `struct` here
+ 4 │         f: R
+   │         ^ Invalid resource field 'f' for struct 'S'. Structs cannot contain resource types, except through type parameters
+   │            - Field 'f' is a resource due to the type: '0x8675309::M::R'
    │
 
 error: 
 
-   ┌── tests/move_check/naming/nominal_resource_field_in_struct_shallow.move:7:9 ───
+   ┌── tests/move_check/naming/nominal_resource_field_in_struct_shallow.move:2:5 ───
    │
- 7 │         f: R
-   │         ^ Invalid resource field 'f' for struct 'S2'. Structs cannot contain resource types, except through type parameters
-   ·
- 7 │         f: R
-   │            - Field 'f' is a resource due to the type: '0x8675309::M::R'
-   ·
  2 │     resource struct R {}
    │     -------- Type '0x8675309::M::R' was declared as a resource here
    ·
  6 │     struct S2<T: resource> {
    │            -- 'S2' declared as a `struct` here
+ 7 │         f: R
+   │         ^ Invalid resource field 'f' for struct 'S2'. Structs cannot contain resource types, except through type parameters
+   │            - Field 'f' is a resource due to the type: '0x8675309::M::R'
    │
 

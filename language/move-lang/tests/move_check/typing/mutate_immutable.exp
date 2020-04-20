@@ -3,13 +3,9 @@ error:
    ┌── tests/move_check/typing/mutate_immutable.move:5:10 ───
    │
  5 │         *(s: &S) = S { f: 0 };
-   │          ^^^^^^^ Invalid mutation. Expected a mutable reference
-   ·
- 5 │         *(s: &S) = S { f: 0 };
-   │              -- The type: '&0x8675309::M::S'
-   ·
- 5 │         *(s: &S) = S { f: 0 };
    │          ------- Is not a subtype of: '&mut _'
+   │          ^^^^^^^ Invalid mutation. Expected a mutable reference
+   │              -- The type: '&0x8675309::M::S'
    │
 
 error: 
@@ -17,26 +13,19 @@ error:
    ┌── tests/move_check/typing/mutate_immutable.move:6:10 ───
    │
  6 │         *&0 = 1;
-   │          ^^ Invalid mutation. Expected a mutable reference
-   ·
- 6 │         *&0 = 1;
    │          -- The type: '&{integer}'
-   ·
- 6 │         *&0 = 1;
    │          -- Is not a subtype of: '&mut _'
+   │          ^^ Invalid mutation. Expected a mutable reference
    │
 
 error: 
 
-    ┌── tests/move_check/typing/mutate_immutable.move:10:10 ───
+    ┌── tests/move_check/typing/mutate_immutable.move:9:20 ───
     │
- 10 │         *x_ref = 0;
-    │          ^^^^^ Invalid mutation. Expected a mutable reference
-    ·
   9 │         let x_ref: &u64 = x_ref;
     │                    ---- The type: '&u64'
-    ·
  10 │         *x_ref = 0;
     │          ----- Is not a subtype of: '&mut _'
+    │          ^^^^^ Invalid mutation. Expected a mutable reference
     │
 

@@ -4,11 +4,7 @@ error:
    │
  5 │         S { f, f } = S { f: 0 };
    │         ^^^^^^^^^^ Invalid deconstructing assignment
-   ·
- 5 │         S { f, f } = S { f: 0 };
-   │                - Duplicate assignment binding given for field 'f'
-   ·
- 5 │         S { f, f } = S { f: 0 };
    │             - Previously defined here
+   │                - Duplicate assignment binding given for field 'f'
    │
 

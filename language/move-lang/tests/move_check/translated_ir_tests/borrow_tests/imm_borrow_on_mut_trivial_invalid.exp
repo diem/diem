@@ -1,11 +1,11 @@
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_on_mut_trivial_invalid.move:12:59 ───
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/imm_borrow_on_mut_trivial_invalid.move:10:28 ───
     │
- 12 │         0x0::Transaction::assert(*returned_ref == *freeze(&mut x_ref.f) + 1, 42);
-    │                                                           ^^^^^^^^^^^^ Invalid mutable borrow at field 'f'.
-    ·
  10 │         let returned_ref = bump_and_give(x_ref);
     │                            -------------------- It is still being borrowed by this reference
+ 11 │ 
+ 12 │         0x0::Transaction::assert(*returned_ref == *freeze(&mut x_ref.f) + 1, 42);
+    │                                                           ^^^^^^^^^^^^ Invalid mutable borrow at field 'f'.
     │
 

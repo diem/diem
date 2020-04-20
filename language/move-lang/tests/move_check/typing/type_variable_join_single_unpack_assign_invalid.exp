@@ -1,28 +1,22 @@
 error: 
 
-    ┌── tests/move_check/typing/type_variable_join_single_unpack_assign_invalid.move:13:14 ───
+    ┌── tests/move_check/typing/type_variable_join_single_unpack_assign_invalid.move:12:14 ───
     │
- 13 │         (f2: bool);
-    │              ^^^^ Invalid type annotation
-    ·
  12 │         (f1: u64);
     │              --- The type: 'u64'
-    ·
  13 │         (f2: bool);
     │              ---- Is not compatible with: 'bool'
+    │              ^^^^ Invalid type annotation
     │
 
 error: 
 
-    ┌── tests/move_check/typing/type_variable_join_single_unpack_assign_invalid.move:18:14 ───
+    ┌── tests/move_check/typing/type_variable_join_single_unpack_assign_invalid.move:17:18 ───
     │
- 18 │         (f2: Box<bool>);
-    │              ^^^^^^^^^ Invalid type annotation
-    ·
  17 │         (f1: Box<u64>);
     │                  --- The type: 'u64'
-    ·
  18 │         (f2: Box<bool>);
+    │              ^^^^^^^^^ Invalid type annotation
     │                  ---- Is not compatible with: 'bool'
     │
 

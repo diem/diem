@@ -1,14 +1,12 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/commands/pop_positive.move:7:9 ───
+   ┌── tests/move_check/translated_ir_tests/commands/pop_positive.move:2:18 ───
    │
- 7 │         (_, _) = three();
-   │         ^^^^^^ Invalid value for assignment
+ 2 │     fun three(): (u64, u64, u64) {
+   │                  --------------- Is not compatible with the expression list type of length 3: '(u64, u64, u64)'
    ·
  7 │         (_, _) = three();
    │         ------ The expression list type of length 2: '(_, _)'
-   ·
- 2 │     fun three(): (u64, u64, u64) {
-   │                  --------------- Is not compatible with the expression list type of length 3: '(u64, u64, u64)'
+   │         ^^^^^^ Invalid value for assignment
    │
 

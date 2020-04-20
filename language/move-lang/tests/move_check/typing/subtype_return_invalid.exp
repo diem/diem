@@ -1,70 +1,55 @@
 error: 
 
-   ┌── tests/move_check/typing/subtype_return_invalid.move:5:9 ───
+   ┌── tests/move_check/typing/subtype_return_invalid.move:4:15 ───
    │
- 5 │         u
-   │         ^ Invalid return expression
-   ·
  4 │     fun t0(u: &u64): &mut u64 {
    │               ---- The type: '&u64'
-   ·
- 4 │     fun t0(u: &u64): &mut u64 {
    │                      -------- Is not a subtype of: '&mut u64'
+ 5 │         u
+   │         ^ Invalid return expression
    │
 
 error: 
 
-   ┌── tests/move_check/typing/subtype_return_invalid.move:9:9 ───
+   ┌── tests/move_check/typing/subtype_return_invalid.move:8:15 ───
    │
- 9 │         s
-   │         ^ Invalid return expression
-   ·
  8 │     fun t1(s: &S): &mut S {
    │               -- The type: '&0x8675309::M::S'
-   ·
- 8 │     fun t1(s: &S): &mut S {
    │                    ------ Is not a subtype of: '&mut 0x8675309::M::S'
+ 9 │         s
+   │         ^ Invalid return expression
    │
 
 error: 
 
-    ┌── tests/move_check/typing/subtype_return_invalid.move:13:9 ───
+    ┌── tests/move_check/typing/subtype_return_invalid.move:12:26 ───
     │
- 13 │         (u1, u2)
-    │         ^^^^^^^^ Invalid return expression
-    ·
  12 │     fun t2(u1: &u64, u2: &u64): (&u64, &mut u64) {
     │                          ---- The type: '&u64'
-    ·
- 12 │     fun t2(u1: &u64, u2: &u64): (&u64, &mut u64) {
     │                                        -------- Is not a subtype of: '&mut u64'
+ 13 │         (u1, u2)
+    │         ^^^^^^^^ Invalid return expression
     │
 
 error: 
 
-    ┌── tests/move_check/typing/subtype_return_invalid.move:17:9 ───
+    ┌── tests/move_check/typing/subtype_return_invalid.move:16:16 ───
     │
+ 16 │     fun t3(u1: &u64, u2: &u64): (&mut u64, &u64) {
+    │                ---- The type: '&u64'
+    │                                  -------- Is not a subtype of: '&mut u64'
  17 │         (u1, u2)
     │         ^^^^^^^^ Invalid return expression
-    ·
- 16 │     fun t3(u1: &u64, u2: &u64): (&mut u64, &u64) {
-    │                ---- The type: '&u64'
-    ·
- 16 │     fun t3(u1: &u64, u2: &u64): (&mut u64, &u64) {
-    │                                  -------- Is not a subtype of: '&mut u64'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/subtype_return_invalid.move:21:9 ───
+    ┌── tests/move_check/typing/subtype_return_invalid.move:20:16 ───
     │
- 21 │         (u1, u2)
-    │         ^^^^^^^^ Invalid return expression
-    ·
  20 │     fun t4(u1: &u64, u2: &u64): (&mut u64, &mut u64) {
     │                ---- The type: '&u64'
-    ·
- 20 │     fun t4(u1: &u64, u2: &u64): (&mut u64, &mut u64) {
     │                                  -------- Is not a subtype of: '&mut u64'
+ 21 │         (u1, u2)
+    │         ^^^^^^^^ Invalid return expression
     │
 

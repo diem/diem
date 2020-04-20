@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/parser/module_use_after_struct.move:4:5 ───
    │
  4 │     use 0x1::X;
-   │     ^^^ Unexpected 'use'
-   ·
- 4 │     use 0x1::X;
    │     --- Expected 'fun'
+   │     ^^^ Unexpected 'use'
    │
 

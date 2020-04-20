@@ -4,11 +4,7 @@ error:
    │
  4 │         let S { f, f } = S { f: 0 };
    │             ^^^^^^^^^^ Invalid deconstruction binding
-   ·
- 4 │         let S { f, f } = S { f: 0 };
-   │                    - Duplicate binding given for field 'f'
-   ·
- 4 │         let S { f, f } = S { f: 0 };
    │                 - Previously defined here
+   │                    - Duplicate binding given for field 'f'
    │
 

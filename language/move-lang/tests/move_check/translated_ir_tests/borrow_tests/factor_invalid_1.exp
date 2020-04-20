@@ -1,22 +1,22 @@
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/borrow_tests/factor_invalid_1.move:12:9 ───
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/factor_invalid_1.move:9:19 ───
     │
- 12 │         foo(f_g, f);
-    │         ^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
-    ·
   9 │         let f_g = &mut f.g;
     │                   -------- Field 'g' is still being mutably borrowed by this reference
+    ·
+ 12 │         foo(f_g, f);
+    │         ^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
     │
 
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/borrow_tests/factor_invalid_1.move:22:9 ───
+    ┌── tests/move_check/translated_ir_tests/borrow_tests/factor_invalid_1.move:19:19 ───
     │
- 22 │         bar(f, f_g);
-    │         ^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
-    ·
  19 │         let f_g = &mut f.g;
     │                   -------- Field 'g' is still being mutably borrowed by this reference
+    ·
+ 22 │         bar(f, f_g);
+    │         ^^^^^^^^^^^ Invalid usage of reference as function argument. Cannot transfer a mutable reference that is being borrowed
     │
 

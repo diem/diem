@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/parser/function_native_with_body.move:3:21 ───
    │
  3 │     native fun fn() {}
-   │                     ^ Unexpected '{'
-   ·
- 3 │     native fun fn() {}
    │                     - Expected ';'
+   │                     ^ Unexpected '{'
    │
 

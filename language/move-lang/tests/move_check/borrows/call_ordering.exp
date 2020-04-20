@@ -1,22 +1,19 @@
 error: 
 
-   ┌── tests/move_check/borrows/call_ordering.move:7:13 ───
+   ┌── tests/move_check/borrows/call_ordering.move:6:17 ───
    │
- 7 │         foo(freeze(s), { *f = 0; 1 })
-   │             ^^^^^^^^^ Invalid freeze.
-   ·
  6 │         let f = &mut s.f;
    │                 -------- Field 'f' is still being mutably borrowed by this reference
+ 7 │         foo(freeze(s), { *f = 0; 1 })
+   │             ^^^^^^^^^ Invalid freeze.
    │
 
 error: 
 
-    ┌── tests/move_check/borrows/call_ordering.move:12:25 ───
+    ┌── tests/move_check/borrows/call_ordering.move:12:13 ───
     │
  12 │         bar(&mut s.f, { s.f = 0; 1 })
-    │                         ^^^^^^^ Invalid mutation of reference.
-    ·
- 12 │         bar(&mut s.f, { s.f = 0; 1 })
     │             -------- It is still being mutably borrowed by this reference
+    │                         ^^^^^^^ Invalid mutation of reference.
     │
 

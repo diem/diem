@@ -1,44 +1,40 @@
 error: 
 
-    ┌── tests/move_check/borrows/move_field_invalid.move:13:9 ───
+    ┌── tests/move_check/borrows/move_field_invalid.move:12:17 ───
     │
- 13 │         move s;
-    │         ^^^^^^ Invalid move of local 's'
-    ·
  12 │         let f = &s.f;
     │                 ---- It is still being borrowed by this reference
+ 13 │         move s;
+    │         ^^^^^^ Invalid move of local 's'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_field_invalid.move:18:9 ───
+    ┌── tests/move_check/borrows/move_field_invalid.move:17:17 ───
     │
- 18 │         move s;
-    │         ^^^^^^ Invalid move of local 's'
-    ·
  17 │         let f = &mut s.f;
     │                 -------- It is still being mutably borrowed by this reference
+ 18 │         move s;
+    │         ^^^^^^ Invalid move of local 's'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_field_invalid.move:23:9 ───
+    ┌── tests/move_check/borrows/move_field_invalid.move:22:17 ───
     │
- 23 │         move s;
-    │         ^^^^^^ Invalid move of local 's'
-    ·
  22 │         let f = id(&s.f);
     │                 -------- It is still being borrowed by this reference
+ 23 │         move s;
+    │         ^^^^^^ Invalid move of local 's'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_field_invalid.move:28:9 ───
+    ┌── tests/move_check/borrows/move_field_invalid.move:27:17 ───
     │
- 28 │         move s;
-    │         ^^^^^^ Invalid move of local 's'
-    ·
  27 │         let f = id_mut(&mut s.f);
     │                 ---------------- It is still being mutably borrowed by this reference
+ 28 │         move s;
+    │         ^^^^^^ Invalid move of local 's'
     │
 

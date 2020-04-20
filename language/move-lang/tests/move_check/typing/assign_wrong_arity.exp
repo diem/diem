@@ -4,7 +4,6 @@ error:
    │
  5 │         let x;
    │             ^ Invalid type for local
-   ·
  6 │         x = ();
    │             -- Expected a single type, but found expression list type: '()'
    │
@@ -15,23 +14,18 @@ error:
    │
  6 │         x = ();
    │         ^ Invalid type for local
-   ·
- 6 │         x = ();
    │             -- Expected a single type, but found expression list type: '()'
    │
 
 error: 
 
-   ┌── tests/move_check/typing/assign_wrong_arity.move:7:9 ───
+   ┌── tests/move_check/typing/assign_wrong_arity.move:6:13 ───
    │
- 7 │         x = (0, 1, 2);
-   │         ^ Invalid assignment to local 'x'
-   ·
- 7 │         x = (0, 1, 2);
-   │             --------- The type: '({integer}, {integer}, {integer})'
-   ·
  6 │         x = ();
    │             -- Is not compatible with: '()'
+ 7 │         x = (0, 1, 2);
+   │         ^ Invalid assignment to local 'x'
+   │             --------- The type: '({integer}, {integer}, {integer})'
    │
 
 error: 
@@ -40,8 +34,6 @@ error:
    │
  7 │         x = (0, 1, 2);
    │         ^ Invalid type for local
-   ·
- 7 │         x = (0, 1, 2);
    │             --------- Expected a single type, but found expression list type: '(u64, u64, u64)'
    │
 
@@ -50,13 +42,9 @@ error:
    ┌── tests/move_check/typing/assign_wrong_arity.move:8:9 ───
    │
  8 │         () = 0;
-   │         ^^ Invalid value for assignment
-   ·
- 8 │         () = 0;
-   │              - The type: integer
-   ·
- 8 │         () = 0;
    │         -- Is not compatible with: '()'
+   │         ^^ Invalid value for assignment
+   │              - The type: integer
    │
 
 error: 
@@ -64,12 +52,8 @@ error:
     ┌── tests/move_check/typing/assign_wrong_arity.move:11:9 ───
     │
  11 │         (x, b, R{f}) = (0, false, R{f: 0}, R{f: 0});
-    │         ^^^^^^^^^^^^ Invalid value for assignment
-    ·
- 11 │         (x, b, R{f}) = (0, false, R{f: 0}, R{f: 0});
     │         ------------ The expression list type of length 3: '(_, _, _)'
-    ·
- 11 │         (x, b, R{f}) = (0, false, R{f: 0}, R{f: 0});
+    │         ^^^^^^^^^^^^ Invalid value for assignment
     │                        ---------------------------- Is not compatible with the expression list type of length 4: '({integer}, bool, 0x8675309::M::R, 0x8675309::M::R)'
     │
 
@@ -78,12 +62,8 @@ error:
     ┌── tests/move_check/typing/assign_wrong_arity.move:12:9 ───
     │
  12 │         (x, b, R{f}) = (0, false);
-    │         ^^^^^^^^^^^^ Invalid value for assignment
-    ·
- 12 │         (x, b, R{f}) = (0, false);
     │         ------------ The expression list type of length 3: '(_, _, _)'
-    ·
- 12 │         (x, b, R{f}) = (0, false);
+    │         ^^^^^^^^^^^^ Invalid value for assignment
     │                        ---------- Is not compatible with the expression list type of length 2: '({integer}, bool)'
     │
 

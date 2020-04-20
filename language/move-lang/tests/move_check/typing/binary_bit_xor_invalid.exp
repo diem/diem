@@ -3,10 +3,8 @@ error:
    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:8:9 ───
    │
  8 │         false ^ true;
-   │         ^^^^^ Invalid argument to '^'
-   ·
- 8 │         false ^ true;
    │         ----- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+   │         ^^^^^ Invalid argument to '^'
    │
 
 error: 
@@ -15,20 +13,16 @@ error:
    │
  8 │         false ^ true;
    │         ^^^^^^^^^^^^ Invalid argument to '^'
-   ·
- 8 │         false ^ true;
    │                 ---- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
    │
 
 error: 
 
-   ┌── tests/move_check/typing/binary_bit_xor_invalid.move:8:17 ───
+   ┌── tests/move_check/typing/binary_bit_xor_invalid.move:8:9 ───
    │
  8 │         false ^ true;
-   │                 ^^^^ Invalid argument to '^'
-   ·
- 8 │         false ^ true;
    │         ----- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+   │                 ^^^^ Invalid argument to '^'
    │
 
 error: 
@@ -37,23 +31,17 @@ error:
    │
  9 │         1 ^ false;
    │         ^^^^^^^^^ Invalid argument to '^'
-   ·
- 9 │         1 ^ false;
    │             ----- Found: '_'. But expected: 'u8', 'u64', 'u128'
    │
 
 error: 
 
-   ┌── tests/move_check/typing/binary_bit_xor_invalid.move:9:13 ───
+   ┌── tests/move_check/typing/binary_bit_xor_invalid.move:9:9 ───
    │
  9 │         1 ^ false;
-   │             ^^^^^ Incompatible arguments to '^'
-   ·
- 9 │         1 ^ false;
    │         - The type: integer
-   ·
- 9 │         1 ^ false;
    │             ----- Is not compatible with: 'bool'
+   │             ^^^^^ Incompatible arguments to '^'
    │
 
 error: 
@@ -61,10 +49,8 @@ error:
     ┌── tests/move_check/typing/binary_bit_xor_invalid.move:10:9 ───
     │
  10 │         false ^ 1;
-    │         ^^^^^ Invalid argument to '^'
-    ·
- 10 │         false ^ 1;
     │         ----- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+    │         ^^^^^ Invalid argument to '^'
     │
 
 error: 
@@ -73,34 +59,26 @@ error:
     │
  10 │         false ^ 1;
     │         ^^^^^^^^^ Invalid argument to '^'
-    ·
- 10 │         false ^ 1;
     │                 - Found: '_'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:10:17 ───
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:10:9 ───
     │
  10 │         false ^ 1;
-    │                 ^ Incompatible arguments to '^'
-    ·
- 10 │         false ^ 1;
-    │                 - The type: integer
-    ·
- 10 │         false ^ 1;
     │         ----- Is not compatible with: 'bool'
+    │                 - The type: integer
+    │                 ^ Incompatible arguments to '^'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:10:17 ───
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:10:9 ───
     │
  10 │         false ^ 1;
-    │                 ^ Invalid argument to '^'
-    ·
- 10 │         false ^ 1;
     │         ----- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+    │                 ^ Invalid argument to '^'
     │
 
 error: 
@@ -108,10 +86,8 @@ error:
     ┌── tests/move_check/typing/binary_bit_xor_invalid.move:11:9 ───
     │
  11 │         0x0 ^ 0x1;
-    │         ^^^ Invalid argument to '^'
-    ·
- 11 │         0x0 ^ 0x1;
     │         --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+    │         ^^^ Invalid argument to '^'
     │
 
 error: 
@@ -120,20 +96,16 @@ error:
     │
  11 │         0x0 ^ 0x1;
     │         ^^^^^^^^^ Invalid argument to '^'
-    ·
- 11 │         0x0 ^ 0x1;
     │               --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:11:15 ───
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:11:9 ───
     │
  11 │         0x0 ^ 0x1;
-    │               ^^^ Invalid argument to '^'
-    ·
- 11 │         0x0 ^ 0x1;
     │         --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+    │               ^^^ Invalid argument to '^'
     │
 
 error: 
@@ -142,103 +114,97 @@ error:
     │
  12 │         (0: u8) ^ (1: u128);
     │         ^^^^^^^^^^^^^^^^^^^ Invalid argument to '^'
-    ·
- 12 │         (0: u8) ^ (1: u128);
     │                   --------- Found: '_'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:12:19 ───
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:12:13 ───
     │
  12 │         (0: u8) ^ (1: u128);
-    │                   ^^^^^^^^^ Incompatible arguments to '^'
-    ·
- 12 │         (0: u8) ^ (1: u128);
     │             -- The type: 'u8'
-    ·
- 12 │         (0: u8) ^ (1: u128);
+    │                   ^^^^^^^^^ Incompatible arguments to '^'
     │                       ---- Is not compatible with: 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:13:9 ───
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:7:23 ───
     │
+  7 │     fun t0(x: u64, r: R, s: S) {
+    │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
+    ·
  13 │         r ^ r;
     │         ^ Invalid argument to '^'
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:13:9 ───
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:7:23 ───
     │
+  7 │     fun t0(x: u64, r: R, s: S) {
+    │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
+    ·
  13 │         r ^ r;
     │         ^^^^^ Invalid argument to '^'
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:13:9 ───
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:3:5 ───
     │
- 13 │         r ^ r;
-    │         ^^^^^ Cannot ignore resource values. The value must be used
+  3 │     resource struct R {
+    │     -------- Is found to be a non-copyable type here
     ·
   7 │     fun t0(x: u64, r: R, s: S) {
     │                       - The type: '0x8675309::M::R'
     ·
-  3 │     resource struct R {
-    │     -------- Is found to be a non-copyable type here
+ 13 │         r ^ r;
+    │         ^^^^^ Cannot ignore resource values. The value must be used
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:13:13 ───
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:7:23 ───
     │
- 13 │         r ^ r;
-    │             ^ Invalid argument to '^'
-    ·
   7 │     fun t0(x: u64, r: R, s: S) {
     │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
+    ·
+ 13 │         r ^ r;
+    │             ^ Invalid argument to '^'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:14:9 ───
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:7:29 ───
     │
+  7 │     fun t0(x: u64, r: R, s: S) {
+    │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
+    ·
  14 │         s ^ s;
     │         ^ Invalid argument to '^'
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:14:9 ───
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:7:29 ───
     │
+  7 │     fun t0(x: u64, r: R, s: S) {
+    │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
+    ·
  14 │         s ^ s;
     │         ^^^^^ Invalid argument to '^'
-    ·
-  7 │     fun t0(x: u64, r: R, s: S) {
-    │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:14:13 ───
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:7:29 ───
     │
- 14 │         s ^ s;
-    │             ^ Invalid argument to '^'
-    ·
   7 │     fun t0(x: u64, r: R, s: S) {
     │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
+    ·
+ 14 │         s ^ s;
+    │             ^ Invalid argument to '^'
     │
 
 error: 
@@ -247,8 +213,6 @@ error:
     │
  15 │         1 ^ false ^ 0x0 ^ 0;
     │         ^^^^^^^^^ Invalid argument to '^'
-    ·
- 15 │         1 ^ false ^ 0x0 ^ 0;
     │             ----- Found: '_'. But expected: 'u8', 'u64', 'u128'
     │
 
@@ -258,8 +222,6 @@ error:
     │
  15 │         1 ^ false ^ 0x0 ^ 0;
     │         ^^^^^^^^^^^^^^^ Invalid argument to '^'
-    ·
- 15 │         1 ^ false ^ 0x0 ^ 0;
     │                     --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
     │
 
@@ -269,9 +231,17 @@ error:
     │
  15 │         1 ^ false ^ 0x0 ^ 0;
     │         ^^^^^^^^^^^^^^^^^^^ Invalid argument to '^'
-    ·
- 15 │         1 ^ false ^ 0x0 ^ 0;
     │                           - Found: '_'. But expected: 'u8', 'u64', 'u128'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:15:9 ───
+    │
+ 15 │         1 ^ false ^ 0x0 ^ 0;
+    │         - The type: integer
+    │             ----- Is not compatible with: 'bool'
+    │             ^^^^^ Incompatible arguments to '^'
     │
 
 error: 
@@ -279,13 +249,8 @@ error:
     ┌── tests/move_check/typing/binary_bit_xor_invalid.move:15:13 ───
     │
  15 │         1 ^ false ^ 0x0 ^ 0;
-    │             ^^^^^ Incompatible arguments to '^'
-    ·
- 15 │         1 ^ false ^ 0x0 ^ 0;
-    │         - The type: integer
-    ·
- 15 │         1 ^ false ^ 0x0 ^ 0;
-    │             ----- Is not compatible with: 'bool'
+    │             ----- Found: '_'. But expected: 'u8', 'u64', 'u128'
+    │                     ^^^ Invalid argument to '^'
     │
 
 error: 
@@ -293,35 +258,18 @@ error:
     ┌── tests/move_check/typing/binary_bit_xor_invalid.move:15:21 ───
     │
  15 │         1 ^ false ^ 0x0 ^ 0;
-    │                     ^^^ Invalid argument to '^'
-    ·
- 15 │         1 ^ false ^ 0x0 ^ 0;
-    │             ----- Found: '_'. But expected: 'u8', 'u64', 'u128'
-    │
-
-error: 
-
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:15:27 ───
-    │
- 15 │         1 ^ false ^ 0x0 ^ 0;
-    │                           ^ Incompatible arguments to '^'
-    ·
- 15 │         1 ^ false ^ 0x0 ^ 0;
-    │                           - The type: integer
-    ·
- 15 │         1 ^ false ^ 0x0 ^ 0;
     │                     --- Is not compatible with: 'address'
+    │                           - The type: integer
+    │                           ^ Incompatible arguments to '^'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:15:27 ───
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:15:21 ───
     │
- 15 │         1 ^ false ^ 0x0 ^ 0;
-    │                           ^ Invalid argument to '^'
-    ·
  15 │         1 ^ false ^ 0x0 ^ 0;
     │                     --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+    │                           ^ Invalid argument to '^'
     │
 
 error: 
@@ -329,10 +277,8 @@ error:
     ┌── tests/move_check/typing/binary_bit_xor_invalid.move:16:9 ───
     │
  16 │         () ^ ();
-    │         ^^ Invalid argument to '^'
-    ·
- 16 │         () ^ ();
     │         -- Found: '()'. But expected: 'u8', 'u64', 'u128'
+    │         ^^ Invalid argument to '^'
     │
 
 error: 
@@ -341,20 +287,16 @@ error:
     │
  16 │         () ^ ();
     │         ^^^^^^^ Invalid argument to '^'
-    ·
- 16 │         () ^ ();
     │              -- Found: '()'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:16:14 ───
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:16:9 ───
     │
  16 │         () ^ ();
-    │              ^^ Invalid argument to '^'
-    ·
- 16 │         () ^ ();
     │         -- Found: '()'. But expected: 'u8', 'u64', 'u128'
+    │              ^^ Invalid argument to '^'
     │
 
 error: 
@@ -363,23 +305,17 @@ error:
     │
  17 │         1 ^ ();
     │         ^^^^^^ Invalid argument to '^'
-    ·
- 17 │         1 ^ ();
     │             -- Found: '_'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:17:13 ───
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:17:9 ───
     │
  17 │         1 ^ ();
-    │             ^^ Incompatible arguments to '^'
-    ·
- 17 │         1 ^ ();
     │         - The type: integer
-    ·
- 17 │         1 ^ ();
     │             -- Is not compatible with: '()'
+    │             ^^ Incompatible arguments to '^'
     │
 
 error: 
@@ -387,10 +323,8 @@ error:
     ┌── tests/move_check/typing/binary_bit_xor_invalid.move:18:9 ───
     │
  18 │         (0, 1) ^ (0, 1, 2);
-    │         ^^^^^^ Invalid argument to '^'
-    ·
- 18 │         (0, 1) ^ (0, 1, 2);
     │         ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+    │         ^^^^^^ Invalid argument to '^'
     │
 
 error: 
@@ -399,34 +333,26 @@ error:
     │
  18 │         (0, 1) ^ (0, 1, 2);
     │         ^^^^^^^^^^^^^^^^^^ Invalid argument to '^'
-    ·
- 18 │         (0, 1) ^ (0, 1, 2);
     │                  --------- Found: '_'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:18:18 ───
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:18:9 ───
     │
  18 │         (0, 1) ^ (0, 1, 2);
-    │                  ^^^^^^^^^ Incompatible arguments to '^'
-    ·
- 18 │         (0, 1) ^ (0, 1, 2);
     │         ------ The expression list type of length 2: '({integer}, {integer})'
-    ·
- 18 │         (0, 1) ^ (0, 1, 2);
     │                  --------- Is not compatible with the expression list type of length 3: '({integer}, {integer}, {integer})'
+    │                  ^^^^^^^^^ Incompatible arguments to '^'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:18:18 ───
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:18:9 ───
     │
  18 │         (0, 1) ^ (0, 1, 2);
-    │                  ^^^^^^^^^ Invalid argument to '^'
-    ·
- 18 │         (0, 1) ^ (0, 1, 2);
     │         ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+    │                  ^^^^^^^^^ Invalid argument to '^'
     │
 
 error: 
@@ -434,10 +360,8 @@ error:
     ┌── tests/move_check/typing/binary_bit_xor_invalid.move:19:9 ───
     │
  19 │         (1, 2) ^ (0, 1);
-    │         ^^^^^^ Invalid argument to '^'
-    ·
- 19 │         (1, 2) ^ (0, 1);
     │         ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+    │         ^^^^^^ Invalid argument to '^'
     │
 
 error: 
@@ -446,19 +370,15 @@ error:
     │
  19 │         (1, 2) ^ (0, 1);
     │         ^^^^^^^^^^^^^^^ Invalid argument to '^'
-    ·
- 19 │         (1, 2) ^ (0, 1);
     │                  ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:19:18 ───
+    ┌── tests/move_check/typing/binary_bit_xor_invalid.move:19:9 ───
     │
  19 │         (1, 2) ^ (0, 1);
-    │                  ^^^^^^ Invalid argument to '^'
-    ·
- 19 │         (1, 2) ^ (0, 1);
     │         ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+    │                  ^^^^^^ Invalid argument to '^'
     │
 

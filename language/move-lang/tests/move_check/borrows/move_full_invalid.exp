@@ -1,44 +1,40 @@
 error: 
 
-    ┌── tests/move_check/borrows/move_full_invalid.move:13:9 ───
+    ┌── tests/move_check/borrows/move_full_invalid.move:12:17 ───
     │
- 13 │         move x;
-    │         ^^^^^^ Invalid move of local 'x'
-    ·
  12 │         let f = &x;
     │                 -- It is still being borrowed by this reference
+ 13 │         move x;
+    │         ^^^^^^ Invalid move of local 'x'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_full_invalid.move:18:9 ───
+    ┌── tests/move_check/borrows/move_full_invalid.move:17:17 ───
     │
- 18 │         move x;
-    │         ^^^^^^ Invalid move of local 'x'
-    ·
  17 │         let f = &mut x;
     │                 ------ It is still being mutably borrowed by this reference
+ 18 │         move x;
+    │         ^^^^^^ Invalid move of local 'x'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_full_invalid.move:23:9 ───
+    ┌── tests/move_check/borrows/move_full_invalid.move:22:17 ───
     │
- 23 │         move x;
-    │         ^^^^^^ Invalid move of local 'x'
-    ·
  22 │         let f = id(&x);
     │                 ------ It is still being borrowed by this reference
+ 23 │         move x;
+    │         ^^^^^^ Invalid move of local 'x'
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/move_full_invalid.move:28:9 ───
+    ┌── tests/move_check/borrows/move_full_invalid.move:27:17 ───
     │
- 28 │         move x;
-    │         ^^^^^^ Invalid move of local 'x'
-    ·
  27 │         let f = id_mut(&mut x);
     │                 -------------- It is still being mutably borrowed by this reference
+ 28 │         move x;
+    │         ^^^^^^ Invalid move of local 'x'
     │
 

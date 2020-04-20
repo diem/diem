@@ -3,13 +3,9 @@ error:
    ┌── tests/move_check/typing/subtype_bind_invalid.move:5:16 ───
    │
  5 │         let x: &mut u64 = &0;
-   │                ^^^^^^^^ Invalid type annotation
-   ·
- 5 │         let x: &mut u64 = &0;
-   │                           -- The type: '&{integer}'
-   ·
- 5 │         let x: &mut u64 = &0;
    │                -------- Is not a subtype of: '&mut u64'
+   │                ^^^^^^^^ Invalid type annotation
+   │                           -- The type: '&{integer}'
    │
 
 error: 
@@ -18,12 +14,8 @@ error:
    │
  9 │         let (x, y): (&mut u64, &mut u64) = (&0, &0);
    │                     ^^^^^^^^^^^^^^^^^^^^ Invalid type annotation
-   ·
- 9 │         let (x, y): (&mut u64, &mut u64) = (&0, &0);
-   │                                             -- The type: '&{integer}'
-   ·
- 9 │         let (x, y): (&mut u64, &mut u64) = (&0, &0);
    │                      -------- Is not a subtype of: '&mut u64'
+   │                                             -- The type: '&{integer}'
    │
 
 error: 
@@ -32,12 +24,8 @@ error:
     │
  10 │         let (x, y): (&mut u64, &u64) = (&0, &0);
     │                     ^^^^^^^^^^^^^^^^ Invalid type annotation
-    ·
- 10 │         let (x, y): (&mut u64, &u64) = (&0, &0);
-    │                                         -- The type: '&{integer}'
-    ·
- 10 │         let (x, y): (&mut u64, &u64) = (&0, &0);
     │                      -------- Is not a subtype of: '&mut u64'
+    │                                         -- The type: '&{integer}'
     │
 
 error: 
@@ -46,11 +34,7 @@ error:
     │
  11 │         let (x, y): (&u64, &mut u64) = (&0, &0);
     │                     ^^^^^^^^^^^^^^^^ Invalid type annotation
-    ·
- 11 │         let (x, y): (&u64, &mut u64) = (&0, &0);
-    │                                             -- The type: '&{integer}'
-    ·
- 11 │         let (x, y): (&u64, &mut u64) = (&0, &0);
     │                            -------- Is not a subtype of: '&mut u64'
+    │                                             -- The type: '&{integer}'
     │
 

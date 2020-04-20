@@ -4,8 +4,6 @@ error:
    │
  8 │         f<S<T>>()
    │         ^^^^^^^^^ Invalid call to '0x8675309::M::f'
-   ·
- 8 │         f<S<T>>()
    │           ---- The type parameter 'f::T' was instantiated with the type '0x8675309::M::S<T>', which contains the type parameter 'f::T'. This recursive call causes the instantiation to recurse infinitely
    │
 
@@ -15,8 +13,6 @@ error:
     │
  12 │         g<S<T>>()
     │         ^^^^^^^^^ Invalid call to '0x8675309::M::g'
-    ·
- 12 │         g<S<T>>()
     │           ---- The type parameter 'g::T' was instantiated with the type '0x8675309::M::S<T>', which contains the type parameter 'g::T'. This recursive call causes the instantiation to recurse infinitely
     │
 

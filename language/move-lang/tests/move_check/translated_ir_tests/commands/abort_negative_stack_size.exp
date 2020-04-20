@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/translated_ir_tests/commands/abort_negative_stack_size.move:5:1 ───
    │
  5 │ }
-   │ ^ Unexpected '}'
-   ·
- 5 │ }
    │ - Expected an expression term
+   │ ^ Unexpected '}'
    │
 

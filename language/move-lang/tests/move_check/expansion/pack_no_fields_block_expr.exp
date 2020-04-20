@@ -3,9 +3,7 @@ error:
    ┌── tests/move_check/expansion/pack_no_fields_block_expr.move:4:21 ───
    │
  4 │         let s = S { let x = 0; x };
-   │                     ^^^ Unexpected 'let'
-   ·
- 4 │         let s = S { let x = 0; x };
    │                     --- Expected a name value
+   │                     ^^^ Unexpected 'let'
    │
 

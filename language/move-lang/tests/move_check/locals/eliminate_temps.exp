@@ -1,44 +1,36 @@
 error: 
 
-   ┌── tests/move_check/locals/eliminate_temps.move:7:47 ───
+   ┌── tests/move_check/locals/eliminate_temps.move:7:39 ───
    │
- 7 │         let (boom, u): (&u64, u64) = (&mut x, x);
-   │                                               ^ Invalid copy of local 'x'
-   ·
  7 │         let (boom, u): (&u64, u64) = (&mut x, x);
    │                                       ------ It is still being mutably borrowed by this reference
+   │                                               ^ Invalid copy of local 'x'
    │
 
 error: 
 
-    ┌── tests/move_check/locals/eliminate_temps.move:14:39 ───
+    ┌── tests/move_check/locals/eliminate_temps.move:14:36 ───
     │
- 14 │         let (f, u): (&u64, u64) = (r, *r);
-    │                                       ^^ Invalid dereference.
-    ·
  14 │         let (f, u): (&u64, u64) = (r, *r);
     │                                    - It is still being mutably borrowed by this reference
+    │                                       ^^ Invalid dereference.
     │
 
 error: 
 
-    ┌── tests/move_check/locals/eliminate_temps.move:20:46 ───
+    ┌── tests/move_check/locals/eliminate_temps.move:20:36 ───
     │
- 20 │         let (f, u): (&u64, u64) = (&mut s.f, s.f);
-    │                                              ^^^ Invalid immutable borrow at field 'f'.
-    ·
  20 │         let (f, u): (&u64, u64) = (&mut s.f, s.f);
     │                                    -------- Field 'f' is still being mutably borrowed by this reference
+    │                                              ^^^ Invalid immutable borrow at field 'f'.
     │
 
 error: 
 
-    ┌── tests/move_check/locals/eliminate_temps.move:27:58 ───
+    ┌── tests/move_check/locals/eliminate_temps.move:27:33 ───
     │
  27 │         let (f, u): (&R, &R) = (borrow_global_mut<R>(a), borrow_global<R>(a));
-    │                                                          ^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'R'
-    ·
- 27 │         let (f, u): (&R, &R) = (borrow_global_mut<R>(a), borrow_global<R>(a));
     │                                 ----------------------- It is still being mutably borrowed by this reference
+    │                                                          ^^^^^^^^^^^^^^^^^^^ Invalid borrowing of resource 'R'
     │
 

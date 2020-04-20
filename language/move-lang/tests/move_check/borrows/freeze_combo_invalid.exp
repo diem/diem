@@ -1,36 +1,31 @@
 error: 
 
-    ┌── tests/move_check/borrows/freeze_combo_invalid.move:13:9 ───
+    ┌── tests/move_check/borrows/freeze_combo_invalid.move:12:23 ───
     │
- 13 │         freeze(s);
-    │         ^^^^^^^^^ Invalid freeze.
-    ·
  12 │         if (cond) f = &mut s.f else f = &mut other.f;
     │                       -------- Field 'f' is still being mutably borrowed by this reference
+ 13 │         freeze(s);
+    │         ^^^^^^^^^ Invalid freeze.
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/freeze_combo_invalid.move:20:9 ───
+    ┌── tests/move_check/borrows/freeze_combo_invalid.move:19:23 ───
     │
- 20 │         freeze(s);
-    │         ^^^^^^^^^ Invalid freeze.
-    ·
  19 │         if (cond) f = &mut s.f else f = &mut s.g;
     │                       -------- Field 'f' is still being mutably borrowed by this reference
-    ·
- 19 │         if (cond) f = &mut s.f else f = &mut s.g;
     │                                         -------- Field 'g' is still being mutably borrowed by this reference
+ 20 │         freeze(s);
+    │         ^^^^^^^^^ Invalid freeze.
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/freeze_combo_invalid.move:27:9 ───
+    ┌── tests/move_check/borrows/freeze_combo_invalid.move:26:23 ───
     │
- 27 │         freeze(s);
-    │         ^^^^^^^^^ Invalid freeze.
-    ·
  26 │         if (cond) x = s else x = other;
     │                       - It is still being mutably borrowed by this reference
+ 27 │         freeze(s);
+    │         ^^^^^^^^^ Invalid freeze.
     │
 

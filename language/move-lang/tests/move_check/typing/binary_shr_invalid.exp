@@ -3,10 +3,8 @@ error:
    ┌── tests/move_check/typing/binary_shr_invalid.move:8:9 ───
    │
  8 │         false >> true;
-   │         ^^^^^ Invalid argument to '>>'
-   ·
- 8 │         false >> true;
    │         ----- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+   │         ^^^^^ Invalid argument to '>>'
    │
 
 error: 
@@ -14,13 +12,9 @@ error:
    ┌── tests/move_check/typing/binary_shr_invalid.move:8:18 ───
    │
  8 │         false >> true;
-   │                  ^^^^ Invalid argument to '>>'
-   ·
- 8 │         false >> true;
    │                  ---- The type: 'bool'
-   ·
- 8 │         false >> true;
    │                  ---- Is not compatible with: 'u8'
+   │                  ^^^^ Invalid argument to '>>'
    │
 
 error: 
@@ -28,13 +22,9 @@ error:
    ┌── tests/move_check/typing/binary_shr_invalid.move:9:14 ───
    │
  9 │         1 >> false;
-   │              ^^^^^ Invalid argument to '>>'
-   ·
- 9 │         1 >> false;
    │              ----- The type: 'bool'
-   ·
- 9 │         1 >> false;
    │              ----- Is not compatible with: 'u8'
+   │              ^^^^^ Invalid argument to '>>'
    │
 
 error: 
@@ -42,10 +32,8 @@ error:
     ┌── tests/move_check/typing/binary_shr_invalid.move:10:9 ───
     │
  10 │         false >> 1;
-    │         ^^^^^ Invalid argument to '>>'
-    ·
- 10 │         false >> 1;
     │         ----- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+    │         ^^^^^ Invalid argument to '>>'
     │
 
 error: 
@@ -53,10 +41,8 @@ error:
     ┌── tests/move_check/typing/binary_shr_invalid.move:11:9 ───
     │
  11 │         0x0 >> 0x1;
-    │         ^^^ Invalid argument to '>>'
-    ·
- 11 │         0x0 >> 0x1;
     │         --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+    │         ^^^ Invalid argument to '>>'
     │
 
 error: 
@@ -64,13 +50,9 @@ error:
     ┌── tests/move_check/typing/binary_shr_invalid.move:11:16 ───
     │
  11 │         0x0 >> 0x1;
-    │                ^^^ Invalid argument to '>>'
-    ·
- 11 │         0x0 >> 0x1;
     │                --- The type: 'address'
-    ·
- 11 │         0x0 >> 0x1;
     │                --- Is not compatible with: 'u8'
+    │                ^^^ Invalid argument to '>>'
     │
 
 error: 
@@ -78,77 +60,69 @@ error:
     ┌── tests/move_check/typing/binary_shr_invalid.move:12:20 ───
     │
  12 │         (0: u8) >> (1: u128);
-    │                    ^^^^^^^^^ Invalid argument to '>>'
-    ·
- 12 │         (0: u8) >> (1: u128);
-    │                        ---- The type: 'u128'
-    ·
- 12 │         (0: u8) >> (1: u128);
     │                    --------- Is not compatible with: 'u8'
+    │                    ^^^^^^^^^ Invalid argument to '>>'
+    │                        ---- The type: 'u128'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_shr_invalid.move:13:9 ───
+    ┌── tests/move_check/typing/binary_shr_invalid.move:7:23 ───
     │
- 13 │         r >> r;
-    │         ^ Invalid argument to '>>'
-    ·
   7 │     fun t0(x: u64, r: R, s: S) {
     │                       - Found: '0x8675309::M::R'. But expected: 'u8', 'u64', 'u128'
+    ·
+ 13 │         r >> r;
+    │         ^ Invalid argument to '>>'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_shr_invalid.move:13:9 ───
+    ┌── tests/move_check/typing/binary_shr_invalid.move:3:5 ───
     │
- 13 │         r >> r;
-    │         ^^^^^^ Cannot ignore resource values. The value must be used
+  3 │     resource struct R {
+    │     -------- Is found to be a non-copyable type here
     ·
   7 │     fun t0(x: u64, r: R, s: S) {
     │                       - The type: '0x8675309::M::R'
     ·
-  3 │     resource struct R {
-    │     -------- Is found to be a non-copyable type here
+ 13 │         r >> r;
+    │         ^^^^^^ Cannot ignore resource values. The value must be used
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_shr_invalid.move:13:14 ───
+    ┌── tests/move_check/typing/binary_shr_invalid.move:7:23 ───
     │
- 13 │         r >> r;
-    │              ^ Invalid argument to '>>'
-    ·
   7 │     fun t0(x: u64, r: R, s: S) {
     │                       - The type: '0x8675309::M::R'
     ·
  13 │         r >> r;
     │              - Is not compatible with: 'u8'
+    │              ^ Invalid argument to '>>'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_shr_invalid.move:14:9 ───
+    ┌── tests/move_check/typing/binary_shr_invalid.move:7:29 ───
     │
- 14 │         s >> s;
-    │         ^ Invalid argument to '>>'
-    ·
   7 │     fun t0(x: u64, r: R, s: S) {
     │                             - Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
+    ·
+ 14 │         s >> s;
+    │         ^ Invalid argument to '>>'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/binary_shr_invalid.move:14:14 ───
+    ┌── tests/move_check/typing/binary_shr_invalid.move:7:29 ───
     │
- 14 │         s >> s;
-    │              ^ Invalid argument to '>>'
-    ·
   7 │     fun t0(x: u64, r: R, s: S) {
     │                             - The type: '0x8675309::M::S'
     ·
  14 │         s >> s;
     │              - Is not compatible with: 'u8'
+    │              ^ Invalid argument to '>>'
     │
 
 error: 
@@ -156,13 +130,9 @@ error:
     ┌── tests/move_check/typing/binary_shr_invalid.move:15:14 ───
     │
  15 │         1 >> false >> 0x0 >> 0;
-    │              ^^^^^ Invalid argument to '>>'
-    ·
- 15 │         1 >> false >> 0x0 >> 0;
     │              ----- The type: 'bool'
-    ·
- 15 │         1 >> false >> 0x0 >> 0;
     │              ----- Is not compatible with: 'u8'
+    │              ^^^^^ Invalid argument to '>>'
     │
 
 error: 
@@ -170,13 +140,9 @@ error:
     ┌── tests/move_check/typing/binary_shr_invalid.move:15:23 ───
     │
  15 │         1 >> false >> 0x0 >> 0;
-    │                       ^^^ Invalid argument to '>>'
-    ·
- 15 │         1 >> false >> 0x0 >> 0;
     │                       --- The type: 'address'
-    ·
- 15 │         1 >> false >> 0x0 >> 0;
     │                       --- Is not compatible with: 'u8'
+    │                       ^^^ Invalid argument to '>>'
     │
 
 error: 
@@ -184,10 +150,8 @@ error:
     ┌── tests/move_check/typing/binary_shr_invalid.move:16:9 ───
     │
  16 │         () >> ();
-    │         ^^ Invalid argument to '>>'
-    ·
- 16 │         () >> ();
     │         -- Found: '()'. But expected: 'u8', 'u64', 'u128'
+    │         ^^ Invalid argument to '>>'
     │
 
 error: 
@@ -195,13 +159,9 @@ error:
     ┌── tests/move_check/typing/binary_shr_invalid.move:16:15 ───
     │
  16 │         () >> ();
-    │               ^^ Invalid argument to '>>'
-    ·
- 16 │         () >> ();
     │               -- The type: '()'
-    ·
- 16 │         () >> ();
     │               -- Is not compatible with: 'u8'
+    │               ^^ Invalid argument to '>>'
     │
 
 error: 
@@ -209,13 +169,9 @@ error:
     ┌── tests/move_check/typing/binary_shr_invalid.move:17:14 ───
     │
  17 │         1 >> ();
-    │              ^^ Invalid argument to '>>'
-    ·
- 17 │         1 >> ();
     │              -- The type: '()'
-    ·
- 17 │         1 >> ();
     │              -- Is not compatible with: 'u8'
+    │              ^^ Invalid argument to '>>'
     │
 
 error: 
@@ -223,10 +179,8 @@ error:
     ┌── tests/move_check/typing/binary_shr_invalid.move:18:9 ───
     │
  18 │         (0, 1) >> (0, 1, 2);
-    │         ^^^^^^ Invalid argument to '>>'
-    ·
- 18 │         (0, 1) >> (0, 1, 2);
     │         ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+    │         ^^^^^^ Invalid argument to '>>'
     │
 
 error: 
@@ -234,13 +188,9 @@ error:
     ┌── tests/move_check/typing/binary_shr_invalid.move:18:19 ───
     │
  18 │         (0, 1) >> (0, 1, 2);
-    │                   ^^^^^^^^^ Invalid argument to '>>'
-    ·
- 18 │         (0, 1) >> (0, 1, 2);
     │                   --------- The type: '({integer}, {integer}, {integer})'
-    ·
- 18 │         (0, 1) >> (0, 1, 2);
     │                   --------- Is not compatible with: 'u8'
+    │                   ^^^^^^^^^ Invalid argument to '>>'
     │
 
 error: 
@@ -248,10 +198,8 @@ error:
     ┌── tests/move_check/typing/binary_shr_invalid.move:19:9 ───
     │
  19 │         (1, 2) >> (0, 1);
-    │         ^^^^^^ Invalid argument to '>>'
-    ·
- 19 │         (1, 2) >> (0, 1);
     │         ------ Found: '(u64, u64)'. But expected: 'u8', 'u64', 'u128'
+    │         ^^^^^^ Invalid argument to '>>'
     │
 
 error: 
@@ -259,12 +207,8 @@ error:
     ┌── tests/move_check/typing/binary_shr_invalid.move:19:19 ───
     │
  19 │         (1, 2) >> (0, 1);
-    │                   ^^^^^^ Invalid argument to '>>'
-    ·
- 19 │         (1, 2) >> (0, 1);
     │                   ------ The type: '({integer}, {integer})'
-    ·
- 19 │         (1, 2) >> (0, 1);
     │                   ------ Is not compatible with: 'u8'
+    │                   ^^^^^^ Invalid argument to '>>'
     │
 

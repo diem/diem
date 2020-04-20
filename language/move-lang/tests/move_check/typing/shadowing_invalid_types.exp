@@ -1,154 +1,124 @@
 error: 
 
-   ┌── tests/move_check/typing/shadowing_invalid_types.move:8:13 ───
+   ┌── tests/move_check/typing/shadowing_invalid_types.move:5:13 ───
    │
- 8 │         (x: bool);
-   │             ^^^^ Invalid type annotation
-   ·
  5 │         let x = 0;
    │             - The type: integer
    ·
  8 │         (x: bool);
    │             ---- Is not compatible with: 'bool'
+   │             ^^^^ Invalid type annotation
    │
 
 error: 
 
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:10:30 ───
+    ┌── tests/move_check/typing/shadowing_invalid_types.move:10:19 ───
     │
  10 │         { let x = false; (x: u64); };
-    │                              ^^^ Invalid type annotation
-    ·
- 10 │         { let x = false; (x: u64); };
     │                   ----- The type: 'bool'
-    ·
- 10 │         { let x = false; (x: u64); };
     │                              --- Is not compatible with: 'u64'
+    │                              ^^^ Invalid type annotation
     │
 
 error: 
 
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:11:13 ───
+    ┌── tests/move_check/typing/shadowing_invalid_types.move:5:13 ───
     │
- 11 │         (x: bool);
-    │             ^^^^ Invalid type annotation
-    ·
   5 │         let x = 0;
     │             - The type: integer
     ·
  11 │         (x: bool);
     │             ---- Is not compatible with: 'bool'
+    │             ^^^^ Invalid type annotation
     │
 
 error: 
 
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:13:45 ───
+    ┌── tests/move_check/typing/shadowing_invalid_types.move:13:36 ───
     │
- 13 │         { let x = false; { let x = 0x0; (x: u64); }; (x: address); };
-    │                                             ^^^ Invalid type annotation
-    ·
  13 │         { let x = false; { let x = 0x0; (x: u64); }; (x: address); };
     │                                    --- The type: 'address'
-    ·
- 13 │         { let x = false; { let x = 0x0; (x: u64); }; (x: address); };
     │                                             --- Is not compatible with: 'u64'
+    │                                             ^^^ Invalid type annotation
     │
 
 error: 
 
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:13:58 ───
+    ┌── tests/move_check/typing/shadowing_invalid_types.move:13:19 ───
     │
- 13 │         { let x = false; { let x = 0x0; (x: u64); }; (x: address); };
-    │                                                          ^^^^^^^ Invalid type annotation
-    ·
  13 │         { let x = false; { let x = 0x0; (x: u64); }; (x: address); };
     │                   ----- The type: 'bool'
-    ·
- 13 │         { let x = false; { let x = 0x0; (x: u64); }; (x: address); };
     │                                                          ------- Is not compatible with: 'address'
+    │                                                          ^^^^^^^ Invalid type annotation
     │
 
 error: 
 
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:14:13 ───
+    ┌── tests/move_check/typing/shadowing_invalid_types.move:5:13 ───
     │
- 14 │         (x: bool);
-    │             ^^^^ Invalid type annotation
-    ·
   5 │         let x = 0;
     │             - The type: integer
     ·
  14 │         (x: bool);
     │             ---- Is not compatible with: 'bool'
+    │             ^^^^ Invalid type annotation
     │
 
 error: 
 
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:21:17 ───
+    ┌── tests/move_check/typing/shadowing_invalid_types.move:20:34 ───
     │
- 21 │             (x: u64);
-    │                 ^^^ Invalid type annotation
-    ·
  20 │             let (a, x) = (false, false);
     │                                  ----- The type: 'bool'
-    ·
  21 │             (x: u64);
     │                 --- Is not compatible with: 'u64'
+    │                 ^^^ Invalid type annotation
     │
 
 error: 
 
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:25:17 ───
+    ┌── tests/move_check/typing/shadowing_invalid_types.move:24:21 ───
     │
- 25 │             (x: u64);
-    │                 ^^^ Invalid type annotation
-    ·
  24 │             let x = 0x0;
     │                     --- The type: 'address'
-    ·
  25 │             (x: u64);
     │                 --- Is not compatible with: 'u64'
+    │                 ^^^ Invalid type annotation
     │
 
 error: 
 
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:27:13 ───
+    ┌── tests/move_check/typing/shadowing_invalid_types.move:18:13 ───
     │
- 27 │         (x: address);
-    │             ^^^^^^^ Invalid type annotation
-    ·
  18 │         let x = 0;
     │             - The type: integer
     ·
  27 │         (x: address);
     │             ------- Is not compatible with: 'address'
+    │             ^^^^^^^ Invalid type annotation
     │
 
 error: 
 
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:34:17 ───
+    ┌── tests/move_check/typing/shadowing_invalid_types.move:2:26 ───
     │
- 34 │             (x: u64);
-    │                 ^^^ Invalid type annotation
-    ·
   2 │     struct S {f: u64, b: bool}
     │                          ---- The type: 'bool'
     ·
  34 │             (x: u64);
     │                 --- Is not compatible with: 'u64'
+    │                 ^^^ Invalid type annotation
     │
 
 error: 
 
-    ┌── tests/move_check/typing/shadowing_invalid_types.move:37:13 ───
+    ┌── tests/move_check/typing/shadowing_invalid_types.move:31:13 ───
     │
- 37 │         (x: bool);
-    │             ^^^^ Invalid type annotation
-    ·
  31 │         let x = 0;
     │             - The type: integer
     ·
  37 │         (x: bool);
     │             ---- Is not compatible with: 'bool'
+    │             ^^^^ Invalid type annotation
     │
 

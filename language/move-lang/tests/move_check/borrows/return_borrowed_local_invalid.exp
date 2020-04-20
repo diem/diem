@@ -1,43 +1,39 @@
 error: 
 
     ┌── tests/move_check/borrows/return_borrowed_local_invalid.move:19:9 ───
-    │
+    │  
  19 │ ╭         (&mut v1,
  20 │ │         &v2,
  21 │ │         id_mut(&mut v3),
  22 │ │         id(&v4),
  23 │ │         &mut s1.f,
+    │ │         --------- It is still being mutably borrowed by this reference
  24 │ │         &s2.f,
  25 │ │         id_mut(&mut s3.f),
  26 │ │         id(&s4.f))
     │ ╰──────────────────^ Invalid return. Local 's1' is still being borrowed.
-    ·
- 23 │         &mut s1.f,
-    │         --------- It is still being mutably borrowed by this reference
-    │
+    │  
 
 error: 
 
     ┌── tests/move_check/borrows/return_borrowed_local_invalid.move:19:9 ───
-    │
+    │  
  19 │ ╭         (&mut v1,
  20 │ │         &v2,
  21 │ │         id_mut(&mut v3),
  22 │ │         id(&v4),
  23 │ │         &mut s1.f,
  24 │ │         &s2.f,
+    │ │         ----- It is still being borrowed by this reference
  25 │ │         id_mut(&mut s3.f),
  26 │ │         id(&s4.f))
     │ ╰──────────────────^ Invalid return. Local 's2' is still being borrowed.
-    ·
- 24 │         &s2.f,
-    │         ----- It is still being borrowed by this reference
-    │
+    │  
 
 error: 
 
     ┌── tests/move_check/borrows/return_borrowed_local_invalid.move:19:9 ───
-    │
+    │  
  19 │ ╭         (&mut v1,
  20 │ │         &v2,
  21 │ │         id_mut(&mut v3),
@@ -45,17 +41,15 @@ error:
  23 │ │         &mut s1.f,
  24 │ │         &s2.f,
  25 │ │         id_mut(&mut s3.f),
+    │ │         ----------------- It is still being mutably borrowed by this reference
  26 │ │         id(&s4.f))
     │ ╰──────────────────^ Invalid return. Local 's3' is still being borrowed.
-    ·
- 25 │         id_mut(&mut s3.f),
-    │         ----------------- It is still being mutably borrowed by this reference
-    │
+    │  
 
 error: 
 
     ┌── tests/move_check/borrows/return_borrowed_local_invalid.move:19:9 ───
-    │
+    │  
  19 │ ╭         (&mut v1,
  20 │ │         &v2,
  21 │ │         id_mut(&mut v3),
@@ -64,17 +58,16 @@ error:
  24 │ │         &s2.f,
  25 │ │         id_mut(&mut s3.f),
  26 │ │         id(&s4.f))
+    │ │         --------- It is still being borrowed by this reference
     │ ╰──────────────────^ Invalid return. Local 's4' is still being borrowed.
-    ·
- 26 │         id(&s4.f))
-    │         --------- It is still being borrowed by this reference
-    │
+    │  
 
 error: 
 
     ┌── tests/move_check/borrows/return_borrowed_local_invalid.move:19:9 ───
-    │
+    │  
  19 │ ╭         (&mut v1,
+    │ │          ------- It is still being mutably borrowed by this reference
  20 │ │         &v2,
  21 │ │         id_mut(&mut v3),
  22 │ │         id(&v4),
@@ -83,17 +76,15 @@ error:
  25 │ │         id_mut(&mut s3.f),
  26 │ │         id(&s4.f))
     │ ╰──────────────────^ Invalid return. Local 'v1' is still being borrowed.
-    ·
- 19 │         (&mut v1,
-    │          ------- It is still being mutably borrowed by this reference
-    │
+    │  
 
 error: 
 
     ┌── tests/move_check/borrows/return_borrowed_local_invalid.move:19:9 ───
-    │
+    │  
  19 │ ╭         (&mut v1,
  20 │ │         &v2,
+    │ │         --- It is still being borrowed by this reference
  21 │ │         id_mut(&mut v3),
  22 │ │         id(&v4),
  23 │ │         &mut s1.f,
@@ -101,44 +92,37 @@ error:
  25 │ │         id_mut(&mut s3.f),
  26 │ │         id(&s4.f))
     │ ╰──────────────────^ Invalid return. Local 'v2' is still being borrowed.
-    ·
- 20 │         &v2,
-    │         --- It is still being borrowed by this reference
-    │
+    │  
 
 error: 
 
     ┌── tests/move_check/borrows/return_borrowed_local_invalid.move:19:9 ───
-    │
+    │  
  19 │ ╭         (&mut v1,
  20 │ │         &v2,
  21 │ │         id_mut(&mut v3),
+    │ │         --------------- It is still being mutably borrowed by this reference
  22 │ │         id(&v4),
  23 │ │         &mut s1.f,
  24 │ │         &s2.f,
  25 │ │         id_mut(&mut s3.f),
  26 │ │         id(&s4.f))
     │ ╰──────────────────^ Invalid return. Local 'v3' is still being borrowed.
-    ·
- 21 │         id_mut(&mut v3),
-    │         --------------- It is still being mutably borrowed by this reference
-    │
+    │  
 
 error: 
 
     ┌── tests/move_check/borrows/return_borrowed_local_invalid.move:19:9 ───
-    │
+    │  
  19 │ ╭         (&mut v1,
  20 │ │         &v2,
  21 │ │         id_mut(&mut v3),
  22 │ │         id(&v4),
+    │ │         ------- It is still being borrowed by this reference
  23 │ │         &mut s1.f,
  24 │ │         &s2.f,
  25 │ │         id_mut(&mut s3.f),
  26 │ │         id(&s4.f))
     │ ╰──────────────────^ Invalid return. Local 'v4' is still being borrowed.
-    ·
- 22 │         id(&v4),
-    │         ------- It is still being borrowed by this reference
-    │
+    │  
 

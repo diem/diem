@@ -4,8 +4,6 @@ error:
    │
  5 │         let x: () = ();
    │             ^ Invalid type for local
-   ·
- 5 │         let x: () = ();
    │                -- Expected a single type, but found expression list type: '()'
    │
 
@@ -14,12 +12,8 @@ error:
    ┌── tests/move_check/typing/bind_wrong_arity.move:6:13 ───
    │
  6 │         let (): u64 = 0;
-   │             ^^ Invalid value for binding
-   ·
- 6 │         let (): u64 = 0;
    │             -- The type: '()'
-   ·
- 6 │         let (): u64 = 0;
+   │             ^^ Invalid value for binding
    │                 --- Is not compatible with: 'u64'
    │
 
@@ -28,12 +22,8 @@ error:
    ┌── tests/move_check/typing/bind_wrong_arity.move:7:13 ───
    │
  7 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0}, R{f: 0});
-   │             ^^^^^^^^^^^^ Invalid value for binding
-   ·
- 7 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0}, R{f: 0});
    │             ------------ The expression list type of length 3: '(_, _, _)'
-   ·
- 7 │         let (x, b, R{f}): (u64, bool, R, R) = (0, false, R{f: 0}, R{f: 0});
+   │             ^^^^^^^^^^^^ Invalid value for binding
    │                           ----------------- Is not compatible with the expression list type of length 4: '(u64, bool, 0x8675309::M::R, 0x8675309::M::R)'
    │
 
@@ -42,12 +32,8 @@ error:
    ┌── tests/move_check/typing/bind_wrong_arity.move:8:13 ───
    │
  8 │         let (x, b, R{f}): (u64, bool) = (0, false);
-   │             ^^^^^^^^^^^^ Invalid value for binding
-   ·
- 8 │         let (x, b, R{f}): (u64, bool) = (0, false);
    │             ------------ The expression list type of length 3: '(_, _, _)'
-   ·
- 8 │         let (x, b, R{f}): (u64, bool) = (0, false);
+   │             ^^^^^^^^^^^^ Invalid value for binding
    │                           ----------- Is not compatible with the expression list type of length 2: '(u64, bool)'
    │
 

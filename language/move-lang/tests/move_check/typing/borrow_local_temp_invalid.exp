@@ -4,8 +4,6 @@ error:
    │
  3 │         &();
    │         ^^^ Invalid borrow
-   ·
- 3 │         &();
    │          -- Expected a single non-reference type, but found: '()'
    │
 
@@ -15,8 +13,6 @@ error:
    │
  4 │         &(0, 1);
    │         ^^^^^^^ Invalid borrow
-   ·
- 4 │         &(0, 1);
    │          ------ Expected a single non-reference type, but found: '(u64, u64)'
    │
 
@@ -26,8 +22,6 @@ error:
    │
  5 │         &(0, 1, true, 0x0);
    │         ^^^^^^^^^^^^^^^^^^ Invalid borrow
-   ·
- 5 │         &(0, 1, true, 0x0);
    │          ----------------- Expected a single non-reference type, but found: '(u64, u64, bool, address)'
    │
 
@@ -37,8 +31,6 @@ error:
    │
  9 │         &(&0);
    │         ^^^^^ Invalid borrow
-   ·
- 9 │         &(&0);
    │          ---- Expected a single non-reference type, but found: '&u64'
    │
 
@@ -48,8 +40,6 @@ error:
     │
  10 │         &(&mut 1);
     │         ^^^^^^^^^ Invalid borrow
-    ·
- 10 │         &(&mut 1);
     │          -------- Expected a single non-reference type, but found: '&mut u64'
     │
 
@@ -59,8 +49,6 @@ error:
     │
  11 │         &mut &2;
     │         ^^^^^^^ Invalid borrow
-    ·
- 11 │         &mut &2;
     │              -- Expected a single non-reference type, but found: '&u64'
     │
 
@@ -70,8 +58,6 @@ error:
     │
  12 │         &mut &mut 3;
     │         ^^^^^^^^^^^ Invalid borrow
-    ·
- 12 │         &mut &mut 3;
     │              ------ Expected a single non-reference type, but found: '&mut u64'
     │
 

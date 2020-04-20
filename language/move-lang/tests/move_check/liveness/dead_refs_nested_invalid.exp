@@ -1,33 +1,33 @@
 error: 
 
-   ┌── tests/move_check/liveness/dead_refs_nested_invalid.move:9:17 ───
+   ┌── tests/move_check/liveness/dead_refs_nested_invalid.move:4:21 ───
    │
- 9 │             _ = x;
-   │                 ^ Invalid copy of local 'x'
-   ·
  4 │         let x_ref = &mut x;
    │                     ------ It is still being mutably borrowed by this reference
+   ·
+ 9 │             _ = x;
+   │                 ^ Invalid copy of local 'x'
    │
 
 error: 
 
-    ┌── tests/move_check/liveness/dead_refs_nested_invalid.move:19:20 ───
+    ┌── tests/move_check/liveness/dead_refs_nested_invalid.move:15:21 ───
     │
- 19 │                _ = x;
-    │                    ^ Invalid copy of local 'x'
-    ·
  15 │         let x_ref = &mut x;
     │                     ------ It is still being mutably borrowed by this reference
+    ·
+ 19 │                _ = x;
+    │                    ^ Invalid copy of local 'x'
     │
 
 error: 
 
-    ┌── tests/move_check/liveness/dead_refs_nested_invalid.move:29:71 ───
+    ┌── tests/move_check/liveness/dead_refs_nested_invalid.move:27:21 ───
     │
- 29 │             if (cond) { _ = x_ref; break } else { while (!cond) { _ = x } }
-    │                                                                       ^ Invalid copy of local 'x'
-    ·
  27 │         let x_ref = &mut x;
     │                     ------ It is still being mutably borrowed by this reference
+ 28 │         loop {
+ 29 │             if (cond) { _ = x_ref; break } else { while (!cond) { _ = x } }
+    │                                                                       ^ Invalid copy of local 'x'
     │
 

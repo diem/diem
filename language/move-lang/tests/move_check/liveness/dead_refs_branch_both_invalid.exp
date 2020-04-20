@@ -1,44 +1,44 @@
 error: 
 
-    ┌── tests/move_check/liveness/dead_refs_branch_both_invalid.move:10:13 ───
+    ┌── tests/move_check/liveness/dead_refs_branch_both_invalid.move:4:21 ───
     │
+  4 │         let x_ref = &mut x;
+    │                     ------ It is still being mutably borrowed by this reference
+    ·
  10 │         _ = x;
     │             ^ Invalid copy of local 'x'
-    ·
-  4 │         let x_ref = &mut x;
-    │                     ------ It is still being mutably borrowed by this reference
     │
 
 error: 
 
-    ┌── tests/move_check/liveness/dead_refs_branch_both_invalid.move:11:13 ───
+    ┌── tests/move_check/liveness/dead_refs_branch_both_invalid.move:4:21 ───
     │
+  4 │         let x_ref = &mut x;
+    │                     ------ It is still being mutably borrowed by this reference
+    ·
  11 │         _ = move x;
     │             ^^^^^^ Invalid move of local 'x'
-    ·
-  4 │         let x_ref = &mut x;
-    │                     ------ It is still being mutably borrowed by this reference
     │
 
 error: 
 
-    ┌── tests/move_check/liveness/dead_refs_branch_both_invalid.move:23:13 ───
+    ┌── tests/move_check/liveness/dead_refs_branch_both_invalid.move:17:21 ───
     │
+ 17 │         let x_ref = &mut x;
+    │                     ------ It is still being mutably borrowed by this reference
+    ·
  23 │         _ = x;
     │             ^ Invalid copy of local 'x'
-    ·
- 17 │         let x_ref = &mut x;
-    │                     ------ It is still being mutably borrowed by this reference
     │
 
 error: 
 
-    ┌── tests/move_check/liveness/dead_refs_branch_both_invalid.move:24:13 ───
+    ┌── tests/move_check/liveness/dead_refs_branch_both_invalid.move:17:21 ───
     │
- 24 │         _ = move x;
-    │             ^^^^^^ Invalid move of local 'x'
-    ·
  17 │         let x_ref = &mut x;
     │                     ------ It is still being mutably borrowed by this reference
+    ·
+ 24 │         _ = move x;
+    │             ^^^^^^ Invalid move of local 'x'
     │
 

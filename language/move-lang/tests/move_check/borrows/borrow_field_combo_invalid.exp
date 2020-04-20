@@ -1,66 +1,60 @@
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:14:18 ───
+    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:13:30 ───
     │
- 14 │         let f1 = &inner.f1;
-    │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
-    ·
  13 │         let c; if (cond) c = copy inner else c = &mut outer.s1;
     │                              ---------- It is still being mutably borrowed by this reference
+ 14 │         let f1 = &inner.f1;
+    │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:25:18 ───
+    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:24:30 ───
     │
- 25 │         let f1 = &inner.f1;
-    │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
-    ·
  24 │         let c; if (cond) c = id_mut(copy inner) else c = &mut outer.s1;
     │                              ------------------ It is still being mutably borrowed by this reference
+ 25 │         let f1 = &inner.f1;
+    │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:36:18 ───
+    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:35:30 ───
     │
- 36 │         let f1 = &mut inner.f1;
-    │                  ^^^^^^^^^^^^^ Invalid mutable borrow at field 'f1'.
-    ·
  35 │         let c; if (cond) c = copy inner else c = &mut outer.s1;
     │                              ---------- It is still being mutably borrowed by this reference
+ 36 │         let f1 = &mut inner.f1;
+    │                  ^^^^^^^^^^^^^ Invalid mutable borrow at field 'f1'.
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:47:18 ───
+    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:46:30 ───
     │
- 47 │         let f1 = &mut inner.f1;
-    │                  ^^^^^^^^^^^^^ Invalid mutable borrow at field 'f1'.
-    ·
  46 │         let c; if (cond) c = id_mut(copy inner) else c = &mut outer.s1;
     │                              ------------------ It is still being mutably borrowed by this reference
+ 47 │         let f1 = &mut inner.f1;
+    │                  ^^^^^^^^^^^^^ Invalid mutable borrow at field 'f1'.
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:58:18 ───
+    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:57:30 ───
     │
- 58 │         let f1 = &inner.f1;
-    │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
-    ·
  57 │         let c; if (cond) c = &mut inner.f1 else c = &mut inner.f2;
     │                              ------------- Field 'f1' is still being mutably borrowed by this reference
+ 58 │         let f1 = &inner.f1;
+    │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
     │
 
 error: 
 
-    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:67:18 ───
+    ┌── tests/move_check/borrows/borrow_field_combo_invalid.move:66:61 ───
     │
- 67 │         let f1 = &inner.f1;
-    │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
-    ·
  66 │         let c; if (cond) c = id_mut(&mut inner.f1) else c = &mut inner.f1;
     │                                                             ------------- Field 'f1' is still being mutably borrowed by this reference
+ 67 │         let f1 = &inner.f1;
+    │                  ^^^^^^^^^ Invalid immutable borrow at field 'f1'.
     │
 

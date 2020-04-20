@@ -4,8 +4,6 @@ error:
    │
  8 │         borrow_global<R1, R2>(0x1);
    │         ^^^^^^^^^^^^^ Invalid call to builtin function: 'borrow_global'
-   ·
- 8 │         borrow_global<R1, R2>(0x1);
    │         -------------------------- Expected 1 type arguments but got 2
    │
 
@@ -15,8 +13,6 @@ error:
    │
  9 │         exists<R1, R2, R3>(0x1);
    │         ^^^^^^ Invalid call to builtin function: 'exists'
-   ·
- 9 │         exists<R1, R2, R3>(0x1);
    │         ----------------------- Expected 1 type arguments but got 3
    │
 
@@ -26,8 +22,6 @@ error:
     │
  10 │         R1 {} = move_from<R1, R2, R3, R4>(0x1);
     │                 ^^^^^^^^^ Invalid call to builtin function: 'move_from'
-    ·
- 10 │         R1 {} = move_from<R1, R2, R3, R4>(0x1);
     │                 ------------------------------ Expected 1 type arguments but got 4
     │
 
@@ -37,8 +31,6 @@ error:
     │
  11 │         move_to_sender<R1, R2, R3, R4, R5>(R1{});
     │         ^^^^^^^^^^^^^^ Invalid call to builtin function: 'move_to_sender'
-    ·
- 11 │         move_to_sender<R1, R2, R3, R4, R5>(R1{});
     │         ---------------------------------------- Expected 1 type arguments but got 5
     │
 

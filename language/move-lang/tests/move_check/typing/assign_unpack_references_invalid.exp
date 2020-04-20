@@ -1,84 +1,69 @@
 error: 
 
-   ┌── tests/move_check/typing/assign_unpack_references_invalid.move:9:9 ───
+   ┌── tests/move_check/typing/assign_unpack_references_invalid.move:8:21 ───
    │
- 9 │         f = 0;
-   │         ^ Invalid assignment to local 'f'
-   ·
- 9 │         f = 0;
-   │         - The type: integer
-   ·
  8 │         R { s1: S { f }, s2 } = &R { s1: S{f: 0}, s2: S{f: 1} };
    │                     - Is not compatible with: '&u64'
+ 9 │         f = 0;
+   │         - The type: integer
+   │         ^ Invalid assignment to local 'f'
    │
 
 error: 
 
-    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:10:9 ───
+    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:8:26 ───
     │
- 10 │         s2 = S { f: 0 }
-    │         ^^ Invalid assignment to local 's2'
-    ·
- 10 │         s2 = S { f: 0 }
-    │              ---------- The type: '0x8675309::M::S'
-    ·
   8 │         R { s1: S { f }, s2 } = &R { s1: S{f: 0}, s2: S{f: 1} };
     │                          -- Is not compatible with: '&0x8675309::M::S'
+  9 │         f = 0;
+ 10 │         s2 = S { f: 0 }
+    │         ^^ Invalid assignment to local 's2'
+    │              ---------- The type: '0x8675309::M::S'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:17:9 ───
+    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:16:21 ───
     │
- 17 │         f = 0;
-    │         ^ Invalid assignment to local 'f'
-    ·
- 17 │         f = 0;
-    │         - The type: integer
-    ·
  16 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
     │                     - Is not compatible with: '&mut u64'
+ 17 │         f = 0;
+    │         - The type: integer
+    │         ^ Invalid assignment to local 'f'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:18:9 ───
+    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:16:26 ───
     │
- 18 │         s2 = S { f: 0 }
-    │         ^^ Invalid assignment to local 's2'
-    ·
- 18 │         s2 = S { f: 0 }
-    │              ---------- The type: '0x8675309::M::S'
-    ·
  16 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
     │                          -- Is not compatible with: '&mut 0x8675309::M::S'
+ 17 │         f = 0;
+ 18 │         s2 = S { f: 0 }
+    │         ^^ Invalid assignment to local 's2'
+    │              ---------- The type: '0x8675309::M::S'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:26:9 ───
+    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:25:21 ───
     │
- 26 │         f = &0;
-    │         ^ Invalid assignment to local 'f'
-    ·
- 26 │         f = &0;
-    │             -- The type: '&{integer}'
-    ·
  25 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
     │                     - Is not a subtype of: '&mut u64'
+ 26 │         f = &0;
+    │         ^ Invalid assignment to local 'f'
+    │             -- The type: '&{integer}'
     │
 
 error: 
 
-    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:27:9 ───
+    ┌── tests/move_check/typing/assign_unpack_references_invalid.move:25:26 ───
     │
- 27 │         s2 = &S { f: 0 }
-    │         ^^ Invalid assignment to local 's2'
-    ·
- 27 │         s2 = &S { f: 0 }
-    │              ----------- The type: '&0x8675309::M::S'
-    ·
  25 │         R { s1: S { f }, s2 } = &mut R { s1: S{f: 0}, s2: S{f: 1} };
     │                          -- Is not a subtype of: '&mut 0x8675309::M::S'
+ 26 │         f = &0;
+ 27 │         s2 = &S { f: 0 }
+    │         ^^ Invalid assignment to local 's2'
+    │              ----------- The type: '&0x8675309::M::S'
     │
 
