@@ -90,19 +90,19 @@ pub struct RawNetworkAddress(#[serde(with = "serde_bytes")] Vec<u8>);
 /// // serialized NetworkAddress:
 /// //
 /// //      [ 02 00 0a 00 00 10 05 80 00 ]
-/// //       \  \  \           \  \
-/// //        \  \  \           \  '-- u16 tcp port
-/// //         \  \  \           '-- uvarint protocol id for /tcp
-/// //          \  \  '-- u32 ipv4 address
-/// //           \  '-- uvarint protocol id for /ip4
-/// //            '-- uvarint number of protocols
+/// //        \  \  \           \  \
+/// //         \  \  \           \  '-- u16 tcp port
+/// //          \  \  \           '-- uvarint protocol id for /tcp
+/// //           \  \  '-- u32 ipv4 address
+/// //            \  '-- uvarint protocol id for /ip4
+/// //             '-- uvarint number of protocols
 /// //
 /// // serialized RawNetworkAddress:
 /// //
 /// //   [ 09 02 00 0a 00 00 10 05 80 00 ]
-/// //    \   \
-/// //     \   '-- serialized NetworkAddress
-/// //      '-- 9 byte uvarint length prefix
+/// //     \  \
+/// //      \  '-- serialized NetworkAddress
+/// //       '-- uvarint length prefix
 ///
 /// use libra_network_address::{NetworkAddress, RawNetworkAddress};
 /// use lcs;
@@ -114,7 +114,7 @@ pub struct RawNetworkAddress(#[serde(with = "serde_bytes")] Vec<u8>);
 /// let actual_raw_addr: Vec<u8> = raw_addr.into();
 ///
 /// let expected_raw_addr: Vec<u8> = [2, 0, 10, 0, 0, 16, 5, 80, 0].to_vec();
-/// let expected_ser_raw_addr: Vec<u8> = [09, 2, 0, 10, 0, 0, 16, 5, 80, 0].to_vec();
+/// let expected_ser_raw_addr: Vec<u8> = [9, 2, 0, 10, 0, 0, 16, 5, 80, 0].to_vec();
 ///
 /// assert_eq!(expected_raw_addr, actual_raw_addr);
 /// assert_eq!(expected_ser_raw_addr, actual_ser_raw_addr);
@@ -159,7 +159,8 @@ pub enum Protocol {
 /// is a valid unicode string. We do this because '/' characters are already our
 /// protocol delimiter and Rust's [`::std::net::ToSocketAddr`] API requires a
 /// `&str`.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(try_from = "String", into = "String")]
 pub struct DnsName(String);
 
 /// Possible errors when parsing a human-readable [`NetworkAddress`].
@@ -408,7 +409,7 @@ impl fmt::Display for Protocol {
 /////////////
 
 impl DnsName {
-    pub fn is_valid(s: &str) -> Result<(), ParseError> {
+    fn validate(s: &str) -> Result<(), ParseError> {
         if s.is_empty() {
             Err(ParseError::EmptyDnsNameString)
         } else if s.as_bytes().len() > MAX_DNS_NAME_SIZE {
@@ -437,7 +438,7 @@ impl TryFrom<String> for DnsName {
     type Error = ParseError;
 
     fn try_from(s: String) -> Result<Self, Self::Error> {
-        DnsName::is_valid(s.as_str()).map(|_| DnsName(s))
+        DnsName::validate(s.as_str()).map(|_| DnsName(s))
     }
 }
 
@@ -445,47 +446,13 @@ impl FromStr for DnsName {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        DnsName::is_valid(s).map(|_| DnsName(s.to_owned()))
+        DnsName::validate(s).map(|_| DnsName(s.to_owned()))
     }
 }
 
 impl fmt::Display for DnsName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
-    }
-}
-
-impl Serialize for DnsName {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(self.0.as_str())
-    }
-}
-
-impl<'de> Deserialize<'de> for DnsName {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct StringVisitor;
-
-        impl<'de> de::Visitor<'de> for StringVisitor {
-            type Value = DnsName;
-
-            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(f, "DnsName")
-            }
-            fn visit_str<E: de::Error>(self, v: &str) -> Result<Self::Value, E> {
-                DnsName::from_str(v).map_err(de::Error::custom)
-            }
-            fn visit_string<E: de::Error>(self, v: String) -> Result<Self::Value, E> {
-                DnsName::try_from(v).map_err(de::Error::custom)
-            }
-        }
-
-        deserializer.deserialize_string(StringVisitor)
     }
 }
 
@@ -607,12 +574,11 @@ mod test {
         ];
 
         for &addr_str in &test_cases {
-            match NetworkAddress::from_str(addr_str) {
-                Ok(addr) => panic!(
+            if let Ok(addr) = NetworkAddress::from_str(addr_str) {
+                panic!(
                     "parsing should fail: input: '{}', output: '{}'",
                     addr_str, addr
-                ),
-                Err(_) => {}
+                );
             }
         }
     }
