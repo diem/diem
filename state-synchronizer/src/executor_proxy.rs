@@ -26,7 +26,7 @@ use storage_interface::DbReader;
 use subscription_service::ReconfigSubscription;
 
 /// Proxies interactions with execution and storage for state synchronization
-pub trait ExecutorProxyTrait: Sync + Send {
+pub trait ExecutorProxyTrait: Send {
     /// Sync the local state with the latest in storage.
     fn get_local_storage_state(&self) -> Result<SynchronizerState>;
 
