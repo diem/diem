@@ -18,19 +18,18 @@ use serde::{Deserialize, Serialize};
 /// Container for exchanging transactions with other Mempools
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum MempoolSyncMsg {
-    /// Container for sending transactions to peers
-    BroadcastTransactionsRequest(
-        (
-            u64, // timeline ID that is lower than the first txn in this broadcast's transactions
-            u64, // last timeline ID in this broadcast's transactions
-        ),
-        Vec<SignedTransaction>, // transactions
-    ),
-    /// Response for the BroadcastTransactionsRequest confirming receipt
-    BroadcastTransactionsResponse(
-        u64, // first timeline ID of corresponding request for this response
-        u64, // last timeline ID of corresponding request for this response
-    ),
+    /// broadcast request issued by the sender
+    BroadcastTransactionsRequest {
+        /// unique id of sync request. Can be used by sender for rebroadcast analysis
+        request_id: String,
+        /// shared transactions in this batch
+        transactions: Vec<SignedTransaction>,
+    },
+    /// broadcast ack issued by the receiver
+    BroadcastTransactionsResponse {
+        /// unique id of received broadcast request
+        request_id: String,
+    },
 }
 
 /// Protocol id for mempool direct-send calls
