@@ -2,14 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::executor_proxy::{ExecutorProxy, ExecutorProxyTrait};
-use executor::BlockExecutor;
-use executor_utils::{
-    create_storage_service_and_executor,
-    test_helpers::{
-        gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
-    },
+use executor::{db_bootstrapper::bootstrap_db_if_empty, BlockExecutor, Executor};
+use executor_utils::test_helpers::{
+    gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
 };
 use futures::{future::FutureExt, stream::StreamExt};
+use libra_config::utils::get_genesis_txn;
 use libra_crypto::{
     ed25519::*,
     traits::{PrivateKey, Uniform},
@@ -20,8 +18,11 @@ use libra_types::{
     on_chain_config::{OnChainConfig, VMConfig, VMPublishingOption},
     transaction::authenticator::AuthenticationKey,
 };
-use std::sync::{Arc, Mutex};
+use libra_vm::LibraVM;
+use std::sync::Arc;
 use stdlib::transaction_scripts::StdlibScript;
+use storage_client::SyncStorageClient;
+use storage_service::{init_libra_db, start_storage_service_with_db};
 use subscription_service::ReconfigSubscription;
 use transaction_builder::{
     encode_block_prologue_script, encode_publishing_option_script,
@@ -37,9 +38,15 @@ fn test_on_chain_config_pub_sub() {
     let (subscription, mut reconfig_receiver) = ReconfigSubscription::subscribe(subscribed_configs);
 
     let (mut config, genesis_key) = config_builder::test_config();
-    let (db, _handle, executor) = create_storage_service_and_executor(&config);
-    let executor = Arc::new(Mutex::new(executor));
-    let mut executor_proxy = ExecutorProxy::new(db, executor.clone(), vec![subscription]);
+    let (db, db_rw) = init_libra_db(&config);
+    let _storage = start_storage_service_with_db(&config, Arc::clone(&db));
+    bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(&config).unwrap()).unwrap();
+
+    let mut block_executor = Box::new(Executor::<LibraVM>::new(
+        SyncStorageClient::new(&config.storage.address).into(),
+    ));
+    let chunk_executor = Box::new(Executor::<LibraVM>::new(db_rw));
+    let mut executor_proxy = ExecutorProxy::new(db, chunk_executor, vec![subscription]);
 
     assert!(
         reconfig_receiver
@@ -109,11 +116,9 @@ fn test_on_chain_config_pub_sub() {
 
     let block1 = vec![txn1, txn2];
     let block1_id = gen_block_id(1);
-    let parent_block_id = executor.lock().unwrap().committed_block_id();
+    let parent_block_id = block_executor.committed_block_id();
 
-    let output = executor
-        .lock()
-        .unwrap()
+    let output = block_executor
         .execute_block((block1_id, block1), parent_block_id)
         .expect("failed to execute block");
     assert!(
@@ -122,9 +127,7 @@ fn test_on_chain_config_pub_sub() {
     );
 
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(2, output.root_hash(), block1_id);
-    let (_, reconfig_events) = executor
-        .lock()
-        .unwrap()
+    let (_, reconfig_events) = block_executor
         .commit_blocks(vec![block1_id], ledger_info_with_sigs)
         .unwrap();
     assert!(
@@ -179,9 +182,7 @@ fn test_on_chain_config_pub_sub() {
     let block2 = vec![txn3, txn4, txn5];
     let block2_id = gen_block_id(2);
 
-    let output = executor
-        .lock()
-        .unwrap()
+    let output = block_executor
         .execute_block((block2_id, block2), block1_id)
         .expect("failed to execute block");
     assert!(
@@ -190,9 +191,7 @@ fn test_on_chain_config_pub_sub() {
     );
 
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(5, output.root_hash(), block2_id);
-    let (_, reconfig_events) = executor
-        .lock()
-        .unwrap()
+    let (_, reconfig_events) = block_executor
         .commit_blocks(vec![block2_id], ledger_info_with_sigs)
         .unwrap();
     assert!(

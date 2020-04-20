@@ -4792,6 +4792,7 @@ dependencies = [
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "stdlib 0.1.0",
+ "storage-client 0.1.0",
  "storage-interface 0.1.0",
  "storage-service 0.1.0",
  "subscription-service 0.1.0",

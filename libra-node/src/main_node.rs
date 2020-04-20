@@ -7,7 +7,7 @@ use debug_interface::{
     node_debug_service::NodeDebugService,
     proto::node_debug_interface_server::NodeDebugInterfaceServer,
 };
-use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
+use executor::{db_bootstrapper::bootstrap_db_if_empty, BlockExecutor, ChunkExecutor, Executor};
 use futures::{channel::mpsc::channel, executor::block_on, stream::StreamExt};
 use libra_config::{
     config::{DiscoveryMethod, NetworkConfig, NodeConfig, RoleType},
@@ -23,14 +23,15 @@ use network::validator_network::network_builder::{NetworkBuilder, TransportType}
 use onchain_discovery::OnchainDiscovery;
 use state_synchronizer::StateSynchronizer;
 use std::{
+    boxed::Box,
     collections::HashMap,
     net::ToSocketAddrs,
-    sync::{Arc, Mutex},
+    sync::Arc,
     thread,
     time::{Duration, Instant},
 };
 use storage_client::{StorageReadServiceClient, SyncStorageClient};
-use storage_interface::DbReader;
+use storage_interface::{DbReader, DbReaderWriter};
 use storage_service::{init_libra_db, start_storage_service_with_db};
 use subscription_service::ReconfigSubscription;
 use tokio::{
@@ -52,10 +53,14 @@ pub struct LibraHandle {
     _debug: Runtime,
 }
 
-fn setup_executor(config: &NodeConfig) -> Arc<Mutex<Executor<LibraVM>>> {
-    Arc::new(Mutex::new(Executor::new(
+fn setup_chunk_executor(db: DbReaderWriter) -> Box<dyn ChunkExecutor> {
+    Box::new(Executor::<LibraVM>::new(db))
+}
+
+fn setup_block_executor(config: &NodeConfig) -> Box<dyn BlockExecutor> {
+    Box::new(Executor::<LibraVM>::new(
         SyncStorageClient::new(&config.storage.address).into(),
-    )))
+    ))
 }
 
 fn setup_debug_interface(config: &NodeConfig) -> Runtime {
@@ -227,8 +232,11 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     );
 
     instant = Instant::now();
-    let executor = setup_executor(&node_config);
-    debug!("Executor setup in {} ms", instant.elapsed().as_millis());
+    let chunk_executor = setup_chunk_executor(db_rw);
+    debug!(
+        "ChunkExecutor setup in {} ms",
+        instant.elapsed().as_millis()
+    );
     let mut network_runtimes = vec![];
     let mut state_sync_network_handles = vec![];
     let mut mempool_network_handles = vec![];
@@ -286,7 +294,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         state_sync_network_handles,
         state_sync_to_mempool_sender,
         Arc::clone(&libra_db) as Arc<dyn DbReader>,
-        Arc::clone(&executor),
+        chunk_executor,
         &node_config,
         reconfig_subscriptions,
     );
@@ -335,13 +343,20 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             .expect("State synchronizer initialization failure");
         debug!("State synchronizer initialization complete.");
 
+        instant = Instant::now();
+        let block_executor = setup_block_executor(&node_config);
+        debug!(
+            "BlockExecutor setup in {} ms",
+            instant.elapsed().as_millis()
+        );
+
         // Initialize and start consensus.
         instant = Instant::now();
         consensus_runtime = Some(start_consensus(
             node_config,
             consensus_network_sender,
             consensus_network_events,
-            executor,
+            block_executor,
             state_synchronizer.create_client(),
             consensus_to_mempool_sender,
             libra_db,

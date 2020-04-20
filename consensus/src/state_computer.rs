@@ -4,7 +4,7 @@
 use crate::{counters, state_replication::StateComputer};
 use anyhow::{ensure, Result};
 use consensus_types::block::Block;
-use executor::{BlockExecutor, Executor};
+use executor::BlockExecutor;
 use executor_types::StateComputeResult;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
@@ -13,7 +13,6 @@ use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
     transaction::{SignedTransaction, Transaction},
 };
-use libra_vm::LibraVM;
 use state_synchronizer::StateSyncClient;
 use std::{
     convert::TryFrom,
@@ -24,17 +23,14 @@ use std::{
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
 pub struct ExecutionProxy {
-    executor: Arc<Mutex<Executor<LibraVM>>>,
+    executor: Mutex<Box<dyn BlockExecutor>>,
     synchronizer: Arc<StateSyncClient>,
 }
 
 impl ExecutionProxy {
-    pub fn new(
-        executor: Arc<Mutex<Executor<LibraVM>>>,
-        synchronizer: Arc<StateSyncClient>,
-    ) -> Self {
+    pub fn new(executor: Box<dyn BlockExecutor>, synchronizer: Arc<StateSyncClient>) -> Self {
         Self {
-            executor,
+            executor: Mutex::new(executor),
             synchronizer,
         }
     }
@@ -125,7 +121,16 @@ impl StateComputer for ExecutionProxy {
     /// Synchronize to a commit that not present locally.
     async fn sync_to(&self, target: LedgerInfoWithSignatures) -> Result<()> {
         counters::STATE_SYNC_COUNT.inc();
-        self.synchronizer.sync_to(target).await
+        // Here to start to do state synchronization where ChunkExecutor inside will
+        // process chunks and commit to Storage. However, after block execution and
+        // commitments, the the sync state of ChunkExecutor may be not up to date so
+        // it is required to reset the cache of ChunkExecutor in StateSynchronizer
+        // when requested to sync.
+        let res = self.synchronizer.sync_to(target).await;
+        // Similarily, after the state synchronization, we have to reset the cache
+        // of BlockExecutor to guarantee the latest committed state is up to date.
+        self.executor.lock().unwrap().reset()?;
+        res
     }
 
     async fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<EpochChangeProof> {
