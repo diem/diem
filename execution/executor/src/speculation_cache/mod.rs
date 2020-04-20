@@ -128,9 +128,10 @@ impl SpeculationCache {
     }
 
     pub fn new_with_tree_state(tree_state: TreeState) -> Self {
+        let executor_trees = ExecutedTrees::from(tree_state);
         Self {
-            synced_trees: ExecutedTrees::new_empty(),
-            committed_trees: ExecutedTrees::from(tree_state),
+            synced_trees: executor_trees.clone(),
+            committed_trees: executor_trees,
             heads: vec![],
             block_map: Arc::new(Mutex::new(HashMap::new())),
             committed_block_id: *PRE_GENESIS_BLOCK_ID,
