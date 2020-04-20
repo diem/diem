@@ -145,7 +145,7 @@ pub fn access_path_for_config(address: AccountAddress, config_name: Identifier) 
     )
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ConfigurationResource {
     epoch: u64,
     last_reconfiguration_time: u64,

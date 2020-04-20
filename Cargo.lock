@@ -2338,9 +2338,12 @@ dependencies = [
  "config-builder 0.1.0",
  "executor 0.1.0",
  "executor-types 0.1.0",
+ "futures 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
+ "libra-json-rpc 0.1.0",
  "libra-logger 0.1.0",
+ "libra-secure-json-rpc 0.1.0",
  "libra-secure-storage 0.1.0",
  "libra-secure-time 0.1.0",
  "libra-transaction-scripts 0.1.0",
@@ -2351,6 +2354,8 @@ dependencies = [
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
  "thiserror 1.0.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vm-validator 0.1.0",
 ]
 
 [[package]]

@@ -64,6 +64,7 @@ impl From<FromHexError> for Error {
 }
 
 /// Provides a lightweight JsonRpcClient implementation.
+#[derive(Clone)]
 pub struct JsonRpcClient {
     host: String,
 }
