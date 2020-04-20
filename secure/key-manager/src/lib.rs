@@ -19,6 +19,7 @@
 //! KeyManager talks to its own storage through the `LibraSecureStorage::Storage trait.
 #![forbid(unsafe_code)]
 
+use crate::libra_interface::LibraInterface;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey,
@@ -29,12 +30,11 @@ use libra_transaction_scripts;
 use libra_types::{
     account_address::AccountAddress,
     transaction::{RawTransaction, Script, Transaction, TransactionArgument},
-    validator_config::ValidatorConfig,
-    validator_info::ValidatorInfo,
 };
 use std::time::Duration;
 use thiserror::Error;
 
+mod libra_interface;
 #[cfg(test)]
 mod tests;
 
@@ -67,7 +67,7 @@ pub enum Error {
     #[error("Key mismatch, config: {0}, storage: {0}")]
     ConfigStorageKeyMismatch(Ed25519PublicKey, Ed25519PublicKey),
     #[error("Data does not exist: {0}")]
-    DataDoesNotExist(&'static str),
+    DataDoesNotExist(String),
     #[error("Internal storage error")]
     SecureStorageError(#[from] libra_secure_storage::Error),
     #[error("ValidatorInfo not found in ValidatorConfig: {0}")]
@@ -79,30 +79,6 @@ impl From<anyhow::Error> for Error {
     fn from(error: anyhow::Error) -> Self {
         Error::UnknownError(format!("{}", error))
     }
-}
-
-/// This defines a generic trait used to interact with the Libra blockchain. In production, this
-/// will be talking to a JSON-RPC service. For tests, this may be an executor and storage directly.
-pub trait LibraInterface {
-    /// Retrieves the current time from the blockchain, this is returned as microseconds.
-    fn libra_timestamp(&self) -> Result<u64, Error>;
-
-    /// Retrieves the last reconfiguration time from the blockchain, this is returned as
-    /// microseconds.
-    fn last_reconfiguration(&self) -> Result<u64, Error>;
-
-    /// Retrieve current sequence number for the provided account.
-    fn retrieve_sequence_number(&self, account: AccountAddress) -> Result<u64, Error>;
-
-    /// Submits a transaction to the block chain and returns successfully if the transaction was
-    /// successfully submitted. It does not necessarily mean the transaction successfully executed.
-    fn submit_transaction(&self, transaction: Transaction) -> Result<(), Error>;
-
-    /// Retrieves the ValidatorConfig at the specified AccountAddress if one exists.
-    fn retrieve_validator_config(&self, account: AccountAddress) -> Result<ValidatorConfig, Error>;
-
-    /// Retrieves the ValidatorInfo for the specified account from the current ValidatorSet if one exists.
-    fn retrieve_validator_info(&self, account: AccountAddress) -> Result<ValidatorInfo, Error>;
 }
 
 pub struct KeyManager<LI, S, T> {
