@@ -12,10 +12,7 @@ use consensus_types::{
     vote_data::VoteData,
     vote_proposal::VoteProposal,
 };
-use libra_crypto::{
-    hash::{CryptoHash, TransactionAccumulatorHasher},
-    test_utils::TEST_SEED,
-};
+use libra_crypto::hash::{CryptoHash, TransactionAccumulatorHasher};
 use libra_secure_storage::InMemoryStorage;
 use libra_types::{
     block_info::BlockInfo,
@@ -25,7 +22,6 @@ use libra_types::{
     validator_signer::ValidatorSigner,
     waypoint::Waypoint,
 };
-use rand::prelude::*;
 use std::{
     collections::BTreeMap,
     time::{SystemTime, UNIX_EPOCH},
@@ -143,10 +139,9 @@ pub fn make_proposal_with_parent<P: Payload>(
 }
 
 pub fn validator_signers_to_ledger_info(signers: &[&ValidatorSigner]) -> LedgerInfo {
-    let mut rng = StdRng::from_seed(TEST_SEED);
-    let infos = signers.iter().map(|v| {
-        ValidatorInfo::new_with_test_network_keys(&mut rng, v.author(), v.public_key(), 1)
-    });
+    let infos = signers
+        .iter()
+        .map(|v| ValidatorInfo::new_with_test_network_keys(v.author(), v.public_key(), 1));
     let validator_set = ValidatorSet::new(infos.collect());
     LedgerInfo::mock_genesis(Some(validator_set))
 }

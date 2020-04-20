@@ -41,7 +41,7 @@ where
 {
     fn generate<R>(rng: &mut R) -> Self
     where
-        R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng,
+        R: ::rand::RngCore + ::rand::CryptoRng,
     {
         let private_key = S::generate(rng);
         private_key.into()
@@ -56,7 +56,7 @@ where
 {
     fn generate<R>(rng: &mut R) -> Self
     where
-        R: ::rand::SeedableRng + ::rand::RngCore + ::rand::CryptoRng,
+        R: ::rand::RngCore + ::rand::CryptoRng,
     {
         let private_key = S::generate(rng);
         let public_key = (&private_key).into();

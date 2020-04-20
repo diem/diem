@@ -101,14 +101,12 @@ pub mod mock {
     use super::*;
 
     use crate::on_chain_config::ValidatorSet;
-    use libra_crypto::{test_utils::TEST_SEED, x25519};
+    use libra_crypto::{x25519, Uniform};
     use parity_multiaddr::Multiaddr;
-    use rand::prelude::*;
     use std::str::FromStr;
 
     pub fn mock_discovery_set(validator_set: &ValidatorSet) -> DiscoverySet {
-        let mut rng = StdRng::from_seed(TEST_SEED);
-        let mock_pubkey = x25519::PrivateKey::for_test(&mut rng).public_key();
+        let mock_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
         let mock_addr = Multiaddr::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
 
         let discovery_set = validator_set
