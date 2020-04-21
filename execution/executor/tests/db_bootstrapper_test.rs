@@ -29,6 +29,7 @@ use libra_types::{
     transaction::{
         authenticator::AuthenticationKey, ChangeSet, Transaction, Version, PRE_GENESIS_VERSION,
     },
+    trusted_state::TrustedState,
     waypoint::Waypoint,
     write_set::{WriteOp, WriteSetMut},
 };
@@ -62,6 +63,11 @@ fn test_empty_db() {
         Waypoint::new(startup_info.latest_ledger_info.ledger_info()).unwrap(),
         waypoint
     );
+    let (li, validator_change_proof, _) = db_rw.reader.get_state_proof(waypoint.version()).unwrap();
+    let trusted_state = TrustedState::from_waypoint(waypoint);
+    trusted_state
+        .verify_and_ratchet(&li, &validator_change_proof)
+        .unwrap();
 
     // `bootstrap_db_if_empty()` does nothing on non-empty DB.
     assert!(bootstrap_db_if_empty::<LibraVM>(&db_rw, genesis_txn)
@@ -238,7 +244,12 @@ fn test_pre_genesis() {
 
     // Bootstrap DB on top of pre-genesis state.
     let tree_state = db_rw.reader.get_latest_tree_state().unwrap();
-    bootstrap_db::<LibraVM>(&db_rw, tree_state, &genesis_txn).unwrap();
+    let waypoint = bootstrap_db::<LibraVM>(&db_rw, tree_state, &genesis_txn).unwrap();
+    let (li, validator_change_proof, _) = db_rw.reader.get_state_proof(waypoint.version()).unwrap();
+    let trusted_state = TrustedState::from_waypoint(waypoint);
+    trusted_state
+        .verify_and_ratchet(&li, &validator_change_proof)
+        .unwrap();
 
     // Effect of bootstrapping reflected.
     assert_eq!(get_balance(&account1, &db_rw), 1000);

@@ -276,10 +276,11 @@ proptest! {
             1..5, /* validators per epoch */
         )
     ) {
-        let first_epoch_change_li = lis_with_sigs.first().map(|l| l.ledger_info()).unwrap();
-        let waypoint = Waypoint::new(first_epoch_change_li)
+        let first_epoch_change_li = lis_with_sigs.first().unwrap();
+        let waypoint = Waypoint::new(first_epoch_change_li.ledger_info())
             .expect("Generating waypoint failed even though we passed an epoch change ledger info");
         let trusted_state = TrustedState::from_waypoint(waypoint);
+        trusted_state.verify_and_ratchet(first_epoch_change_li, &ValidatorChangeProof::new(vec![], false /* more */)).expect("Should not error when verifying waypoint LedgerInfo itself.");
 
         let expected_latest_version = latest_li.ledger_info().version();
         let expected_latest_li = latest_li.clone();
