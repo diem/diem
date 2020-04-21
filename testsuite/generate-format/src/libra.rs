@@ -6,7 +6,7 @@ use proptest::{
     prelude::*,
     test_runner::{Config, FileFailurePersistence, TestRunner},
 };
-use serde_reflection::{Registry, SerializationRecords, Tracer, TracerConfig};
+use serde_reflection::{Registry, Samples, Tracer, TracerConfig};
 use std::sync::{Arc, Mutex};
 
 /// Default output file.
@@ -15,9 +15,9 @@ pub fn output_file() -> Option<&'static str> {
 }
 
 pub fn get_registry(_name: String, skip_deserialize: bool) -> Registry {
-    let (mut tracer, records) = proptest_serialization_tracing();
+    let (mut tracer, samples) = proptest_serialization_tracing();
     if !skip_deserialize {
-        deserialization_tracing(&mut tracer, &records);
+        deserialization_tracing(&mut tracer, &samples);
     }
     tracer.registry().unwrap()
 }
@@ -26,7 +26,7 @@ pub fn get_registry(_name: String, skip_deserialize: bool) -> Registry {
 ///
 /// This step is useful to inject well-formed values that must pass
 /// custom-validation checks (e.g. keys).
-fn proptest_serialization_tracing() -> (Tracer, SerializationRecords) {
+fn proptest_serialization_tracing() -> (Tracer, Samples) {
     let mut runner = TestRunner::new(Config {
         failure_persistence: Some(Box::new(FileFailurePersistence::Off)),
         ..Config::default()
@@ -35,14 +35,14 @@ fn proptest_serialization_tracing() -> (Tracer, SerializationRecords) {
     let tracer = Arc::new(Mutex::new(Tracer::new(
         TracerConfig::default().is_human_readable(lcs::is_human_readable()),
     )));
-    let records = Arc::new(Mutex::new(SerializationRecords::new()));
+    let samples = Arc::new(Mutex::new(Samples::new()));
 
     runner
         .run(&any::<transaction::Transaction>(), |v| {
             tracer
                 .lock()
                 .unwrap()
-                .trace_value(&mut records.lock().unwrap(), &v)?;
+                .trace_value(&mut samples.lock().unwrap(), &v)?;
             Ok(())
         })
         .unwrap();
@@ -52,7 +52,7 @@ fn proptest_serialization_tracing() -> (Tracer, SerializationRecords) {
             tracer
                 .lock()
                 .unwrap()
-                .trace_value(&mut records.lock().unwrap(), &v)?;
+                .trace_value(&mut samples.lock().unwrap(), &v)?;
             Ok(())
         })
         .unwrap();
@@ -60,7 +60,7 @@ fn proptest_serialization_tracing() -> (Tracer, SerializationRecords) {
     // Recover the Arc-mutex-ed tracer.
     (
         Arc::try_unwrap(tracer).unwrap().into_inner().unwrap(),
-        Arc::try_unwrap(records).unwrap().into_inner().unwrap(),
+        Arc::try_unwrap(samples).unwrap().into_inner().unwrap(),
     )
 }
 
@@ -68,11 +68,11 @@ fn proptest_serialization_tracing() -> (Tracer, SerializationRecords) {
 ///
 /// This step is useful to guarantee coverage of the analysis but it may
 /// fail if the previous step missed some custom types.
-fn deserialization_tracing(tracer: &mut Tracer, records: &SerializationRecords) {
+fn deserialization_tracing(tracer: &mut Tracer, samples: &Samples) {
     tracer
-        .trace_type::<transaction::Transaction>(&records)
+        .trace_type::<transaction::Transaction>(&samples)
         .unwrap();
     tracer
-        .trace_type::<contract_event::ContractEvent>(&records)
+        .trace_type::<contract_event::ContractEvent>(&samples)
         .unwrap();
 }
