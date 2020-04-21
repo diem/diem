@@ -127,7 +127,7 @@ where
     fn new_on_unbootstrapped_db(db: DbReaderWriter, tree_state: TreeState) -> Self {
         Self {
             db,
-            cache: SpeculationCache::new_with_tree_state(tree_state),
+            cache: SpeculationCache::new_for_db_bootstrapping(tree_state),
             phantom: PhantomData,
         }
     }
