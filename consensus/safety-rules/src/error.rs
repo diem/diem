@@ -26,6 +26,12 @@ pub enum Error {
     #[error("No next_validator_set specified in the provided Ledger Info")]
     InvalidLedgerInfo,
 
+    #[error("Invalid QC: {}", {0})]
+    InvalidQuorumCertificate(String),
+
+    #[error("validator_verifier is not set, SafetyRules is not initialized")]
+    NotInitialized,
+
     /// This proposal's round is less than round of preferred block.
     /// Returns the id of the preferred block.
     #[error(

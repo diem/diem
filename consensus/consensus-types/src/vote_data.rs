@@ -43,6 +43,26 @@ impl VoteData {
     pub fn proposed(&self) -> &BlockInfo {
         &self.proposed
     }
+
+    pub fn verify(&self) -> anyhow::Result<()> {
+        anyhow::ensure!(
+            self.parent.epoch() == self.proposed.epoch(),
+            "Parent and proposed epochs do not match",
+        );
+        anyhow::ensure!(
+            self.parent.round() < self.proposed.round(),
+            "Proposed round is less than parent round",
+        );
+        anyhow::ensure!(
+            self.parent.timestamp_usecs() <= self.proposed.timestamp_usecs(),
+            "Proposed happened before parent",
+        );
+        anyhow::ensure!(
+            self.parent.version() <= self.proposed.version(),
+            "Proposed version is less than parent version",
+        );
+        Ok(())
+    }
 }
 
 impl CryptoHash for VoteData {
