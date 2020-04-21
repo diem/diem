@@ -17,7 +17,7 @@
 //! sender: alice
 use 0x0::ValidatorConfig2;
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef");
+    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
 }
 
 // check: EXECUTED
@@ -26,7 +26,7 @@ fun main() {
 //! sender: bob
 use 0x0::ValidatorConfig2;
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef");
+    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
 }
 
 // check: EXECUTED
@@ -35,7 +35,7 @@ fun main() {
 //! sender: carrol
 use 0x0::ValidatorConfig2;
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef");
+    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
 }
 
 // check: EXECUTED
@@ -44,7 +44,7 @@ fun main() {
 //! sender: david
 use 0x0::ValidatorConfig2;
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef");
+    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
 }
 
 // check: EXECUTED
@@ -53,7 +53,7 @@ fun main() {
 //! sender: eve
 use 0x0::ValidatorConfig2;
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef");
+    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
 }
 
 // check: EXECUTED
@@ -62,7 +62,7 @@ fun main() {
 //! sender: fedor
 use 0x0::ValidatorConfig2;
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef");
+    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
 }
 
 // check: EXECUTED

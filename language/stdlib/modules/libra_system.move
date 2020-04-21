@@ -68,6 +68,7 @@ module LibraSystem {
             discovery_set: Vector::empty(),
             change_events: Event::new_event_handle<DiscoverySetChangeEvent>(),
         });
+        LibraSystem2::initialize_discovery_set();
     }
 
     // ValidatorInfo public accessors

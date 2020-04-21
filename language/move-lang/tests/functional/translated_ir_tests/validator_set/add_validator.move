@@ -6,7 +6,7 @@
 //! sender: bob
 use 0x0::ValidatorConfig2;
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef");
+    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
     let config = ValidatorConfig2::get_config({{bob}});
     let consensus_pk = ValidatorConfig2::get_consensus_pubkey(&config);
     let expected_pk = x"beefbeef";
