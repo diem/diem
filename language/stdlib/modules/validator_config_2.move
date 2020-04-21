@@ -7,6 +7,17 @@ module ValidatorConfig2 {
 
     struct Config {
         consensus_pubkey: vector<u8>,
+        // TODO(philiphayes): restructure
+        network_signing_pubkey: vector<u8>,
+        network_identity_pubkey: vector<u8>,
+    }
+
+    struct DiscoveryConfig {
+        // TODO(philiphayes): restructure
+        validator_network_identity_pubkey: vector<u8>,
+        validator_network_address: vector<u8>,
+        fullnodes_network_identity_pubkey: vector<u8>,
+        fullnodes_network_address: vector<u8>,
     }
 
     // A current or prospective validator should publish one of these under their accounts.
@@ -18,6 +29,7 @@ module ValidatorConfig2 {
     resource struct T {
         config: Config,
         delegated_account: Option::T<address>,
+        discovery_config: DiscoveryConfig,
     }
 
     // TODO(valerini): add events here
@@ -30,6 +42,11 @@ module ValidatorConfig2 {
     // Get Config
     public fun get_config(addr: address): Config acquires T {
         *&borrow_global<T>(addr).config
+    }
+
+    // Get DiscoveryConfig
+    public fun get_discovery_config(addr: address): DiscoveryConfig acquires T {
+        *&borrow_global<T>(addr).discovery_config
     }
 
     // Get consensus_pubkey from Config
@@ -46,12 +63,24 @@ module ValidatorConfig2 {
     // resource under their account. Note that only one such resource can be instantiated under an account.
     public fun initialize(
         consensus_pubkey: vector<u8>,
-    ) {
+        validator_network_signing_pubkey: vector<u8>,
+        validator_network_identity_pubkey: vector<u8>,
+        validator_network_address: vector<u8>,
+        fullnodes_network_identity_pubkey: vector<u8>,
+        fullnodes_network_address: vector<u8>) {
 
         move_to_sender<T>(
             T {
                 config: Config {
                     consensus_pubkey: consensus_pubkey,
+                    network_signing_pubkey: *&validator_network_signing_pubkey,
+                    network_identity_pubkey: *&validator_network_identity_pubkey,
+                },
+                discovery_config: DiscoveryConfig {
+                    validator_network_identity_pubkey,
+                    validator_network_address,
+                    fullnodes_network_identity_pubkey,
+                    fullnodes_network_address,
                 },
                 delegated_account: Option::none()
             }
@@ -96,5 +125,53 @@ module ValidatorConfig2 {
     // Simplified arguments when the sender is the validators itself
     public fun rotate_consensus_pubkey_of_sender(new_consensus_pubkey: vector<u8>, proof: vector<u8>) acquires T {
         rotate_consensus_pubkey(Transaction::sender(), new_consensus_pubkey, proof);
+    }
+
+    // TODO(philiphayes): add necessary rotation methods for discovery_config
+
+    // Public accessor for validator's network_identity_pubkey
+    public fun get_validator_network_identity_pubkey(config_ref: &Config): vector<u8> {
+        *&config_ref.network_identity_pubkey
+    }
+
+    // Public accessor for validator's network_identity_pubkey
+    // public fun get_discovery_validator_network_identity_pubkey(config_ref: &DiscoveryConfig): vector<u8> {
+    // *&config_ref.validator_network_identity_pubkey
+    // }
+
+
+    // Public accessor for validator_network_address
+    public fun get_validator_network_address(config_ref: &DiscoveryConfig): vector<u8> {
+        *&config_ref.validator_network_address
+    }
+
+    // Rotate the network public key for validator discovery. This change will be
+    // committed in the next reconfiguration.
+    public fun rotate_validator_network_identity_pubkey(
+        validator_account: address,
+        validator_network_identity_pubkey: vector<u8>
+    ) acquires T {
+        let addr = get_validator_operator_account(validator_account);
+        Transaction::assert(Transaction::sender() == addr, 1);
+
+        let t_ref = borrow_global_mut<T>(validator_account);
+        let key_ref = &mut t_ref.config.network_identity_pubkey;
+        *key_ref = *&validator_network_identity_pubkey;
+        let ikey_ref = &mut t_ref.discovery_config.validator_network_identity_pubkey;
+        *ikey_ref = validator_network_identity_pubkey;
+    }
+
+    // Rotate the network address for validator discovery. This change will be
+    // committed in the next reconfiguration.
+    public fun rotate_validator_network_address(
+        validator_account: address,
+        validator_network_address: vector<u8>
+    ) acquires T {
+        let addr = get_validator_operator_account(validator_account);
+        Transaction::assert(Transaction::sender() == addr, 1);
+
+        let t_ref = borrow_global_mut<T>(validator_account);
+        let key_ref = &mut t_ref.discovery_config.validator_network_address;
+        *key_ref = validator_network_address;
     }
 }

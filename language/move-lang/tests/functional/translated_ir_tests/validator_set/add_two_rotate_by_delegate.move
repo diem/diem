@@ -13,7 +13,7 @@
 use 0x0::ValidatorConfig2;
 // initialize bob as validator
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef");
+    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
     // set alice to change bob's key
     ValidatorConfig2::set_delegated_account({{alice}});
 }
@@ -25,7 +25,7 @@ fun main() {
 use 0x0::ValidatorConfig2;
 // initialize alice as validator
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef");
+    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
 }
 
 // check: EXECUTED

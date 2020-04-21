@@ -9,7 +9,7 @@
 //! sender: bob
 use 0x0::ValidatorConfig2;
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef");
+    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
 }
 
 // check: EXECUTED
