@@ -161,16 +161,15 @@ impl<T: Payload> MockStorage<T> {
             lis: Mutex::new(HashMap::new()),
             last_vote: Mutex::new(None),
             highest_timeout_certificate: Mutex::new(None),
-            validator_set,
+            validator_set: validator_set.clone(),
         });
-        let storage = Arc::new(MockStorage::new(Arc::clone(&shared_storage)));
+        let genesis_li = LedgerInfo::mock_genesis(Some(validator_set));
+        let storage = Self::new_with_ledger_info(shared_storage, genesis_li);
+        let recovery_data = storage
+            .start()
+            .expect_recovery_data("Mock storage should never fail constructing recovery data");
 
-        (
-            storage
-                .start()
-                .expect_recovery_data("Mock storage should never fail constructing recovery data"),
-            storage,
-        )
+        (recovery_data, Arc::new(storage))
     }
 }
 

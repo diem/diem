@@ -123,6 +123,7 @@ impl QuorumCert {
         self.ledger_info()
             .verify_signatures(validator)
             .context("Fail to verify QuorumCert")?;
+        self.vote_data.verify()?;
         Ok(())
     }
 }

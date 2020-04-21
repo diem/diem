@@ -843,6 +843,7 @@ dependencies = [
  "libra-logger 0.1.0",
  "libra-mempool 0.1.0",
  "libra-metrics 0.1.0",
+ "libra-secure-storage 0.1.0",
  "libra-security-logger 0.1.0",
  "libra-temppath 0.1.0",
  "libra-types 0.1.0",

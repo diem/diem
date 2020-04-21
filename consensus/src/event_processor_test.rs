@@ -13,7 +13,7 @@ use crate::{
     network::{IncomingBlockRetrievalRequest, NetworkSender},
     network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
     network_tests::NetworkPlayground,
-    persistent_liveness_storage::RecoveryData,
+    persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
     test_utils::{
         consensus_runtime, timed_block_on, MockStateComputer, MockStorage, MockTransactionManager,
         TestPayload, TreeInserter,
@@ -43,15 +43,16 @@ use futures::{
 use libra_crypto::HashValue;
 use libra_types::{
     epoch_info::EpochInfo,
-    ledger_info::LedgerInfoWithSignatures,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     validator_signer::ValidatorSigner,
     validator_verifier::{random_validator_verifier, ValidatorVerifier},
+    waypoint::Waypoint,
 };
 use network::{
     peer_manager::{conn_status_channel, ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::Event,
 };
-use safety_rules::{ConsensusState, SafetyRulesManager};
+use safety_rules::{ConsensusState, PersistentSafetyStorage, SafetyRulesManager};
 use std::{num::NonZeroUsize, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
@@ -89,15 +90,20 @@ impl NodeSetup {
     ) -> Vec<Self> {
         let (signers, validators) = random_validator_verifier(num_nodes, None, false);
         let proposer_author = signers[0].author();
+        let validator_set = (&validators).into();
+        let waypoint = Waypoint::new(&LedgerInfo::mock_genesis(Some(validator_set))).unwrap();
         let mut nodes = vec![];
         for signer in signers.iter().take(num_nodes) {
             let (initial_data, storage) =
                 MockStorage::<TestPayload>::start_for_testing((&validators).into());
 
-            let safety_rules_manager = SafetyRulesManager::new_local(
-                signer.author(),
-                safety_rules::test_utils::test_storage(&signer),
+            let author = signer.author();
+            let safety_storage = PersistentSafetyStorage::initialize(
+                libra_secure_storage::InMemoryStorage::new_storage(),
+                signer.private_key().clone(),
+                waypoint,
             );
+            let safety_rules_manager = SafetyRulesManager::new_local(author, safety_storage);
 
             nodes.push(Self::new(
                 playground,
@@ -177,8 +183,10 @@ impl NodeSetup {
         );
 
         let pacemaker = Self::create_pacemaker(time_service.clone());
-
         let proposer_election = Self::create_proposer_election(proposer_author);
+        let mut safety_rules = safety_rules_manager.client();
+        let proof = storage.retrieve_validator_change_proof(0).unwrap();
+        safety_rules.initialize(&proof).unwrap();
 
         let mut event_processor = EventProcessor::new(
             epoch_info,
@@ -187,7 +195,7 @@ impl NodeSetup {
             pacemaker,
             proposer_election,
             proposal_generator,
-            safety_rules_manager.client(),
+            safety_rules,
             network,
             Box::new(MockTransactionManager::new(None)),
             storage.clone(),
@@ -608,9 +616,8 @@ fn recover_on_restart() {
         .pop()
         .unwrap();
     let mut inserter = TreeInserter::new_with_store(node.signer.clone(), node.block_store.clone());
-    let node_mut = &mut node;
 
-    let genesis = node_mut.block_store.root();
+    let genesis = node.block_store.root();
     let mut proposals = Vec::new();
     let num_proposals = 100;
     // insert a few successful proposals
@@ -621,19 +628,19 @@ fn recover_on_restart() {
         let proposal = inserter.insert_block(&parent, i, None);
         proposals.push(proposal);
     }
+
     timed_block_on(&mut runtime, async {
         for proposal in &proposals {
-            node_mut
-                .event_processor
+            node.event_processor
                 .process_certificates(proposal.quorum_cert(), None)
                 .await
                 .expect("Failed to process certificates");
-            node_mut
-                .event_processor
+            node.event_processor
                 .process_proposed_block(proposal.block().clone())
                 .await;
         }
     });
+
     // verify after restart we recover the data
     node = node.restart(&mut playground, runtime.handle().clone());
     let consensus_state = node.event_processor.consensus_state();
