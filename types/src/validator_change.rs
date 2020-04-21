@@ -50,10 +50,10 @@ impl VerifierType {
 
     /// Returns true in case the given epoch is larger than the existing verifier can support.
     /// In this case the ValidatorChangeProof should be verified and the verifier updated.
-    pub fn epoch_change_verification_required(&self, epoch: u64) -> bool {
+    pub fn epoch_change_verification_required(&self, latest_li: &LedgerInfo) -> bool {
         match self {
-            VerifierType::Waypoint(_) => true,
-            VerifierType::TrustedVerifier(epoch_info) => epoch_info.epoch < epoch,
+            VerifierType::Waypoint(waypoint) => latest_li.version() != waypoint.version(),
+            VerifierType::TrustedVerifier(epoch_info) => epoch_info.epoch < latest_li.epoch(),
         }
     }
 

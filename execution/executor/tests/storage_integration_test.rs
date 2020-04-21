@@ -48,7 +48,7 @@ fn test_genesis() {
     let (li, validator_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
 
-    let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
+    let trusted_state = TrustedState::from_waypoint(config.base.waypoint.unwrap());
     trusted_state
         .verify_and_ratchet(&li, &validator_change_proof)
         .unwrap();

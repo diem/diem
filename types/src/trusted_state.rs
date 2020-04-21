@@ -142,7 +142,7 @@ impl TrustedState {
 
         if self
             .verifier
-            .epoch_change_verification_required(latest_li.ledger_info().epoch())
+            .epoch_change_verification_required(latest_li.ledger_info())
         {
             // Verify the ValidatorChangeProof to move us into the latest epoch.
             let epoch_change_li = validator_change_proof.verify(&self.verifier)?;
