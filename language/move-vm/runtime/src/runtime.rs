@@ -65,19 +65,7 @@ impl VMRuntime {
             ));
         };
 
-        match VerifiedModule::new(compiled_module) {
-            Ok(ver_module) => ver_module,
-            Err((_, mut errors)) => {
-                let err = if errors.is_empty() {
-                    VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)
-                } else {
-                    errors.remove(0)
-                };
-
-                return Err(err);
-            }
-        };
-
+        VerifiedModule::new(compiled_module).map_err(|(_, e)| e)?;
         context.publish_module(module_id, module)
     }
 

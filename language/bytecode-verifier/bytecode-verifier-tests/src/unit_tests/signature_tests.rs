@@ -15,14 +15,14 @@ fn test_reference_of_reference() {
         SignatureToken::Bool,
     ))))]);
     let errors = SignatureChecker::new(&m.freeze().unwrap()).verify();
-    assert!(!errors.is_empty());
+    assert!(errors.is_err());
 }
 
 proptest! {
     #[test]
     fn valid_signatures(module in CompiledModule::valid_strategy(20)) {
         let signature_checker = SignatureChecker::new(&module);
-        prop_assert_eq!(signature_checker.verify(), vec![]);
+        prop_assert!(signature_checker.verify().is_ok())
     }
 
     #[test]
@@ -36,9 +36,9 @@ proptest! {
         let module = module.freeze().expect("should satisfy bounds checker");
 
         let signature_checker = SignatureChecker::new(&module);
-        let actual_violations = signature_checker.verify();
+        let result = signature_checker.verify();
 
-        prop_assert_eq!(expected_violations, !actual_violations.is_empty());
+        prop_assert_eq!(expected_violations, result.is_err());
     }
 
     #[test]
@@ -52,9 +52,9 @@ proptest! {
         let module = module.freeze().expect("should satisfy bounds checker");
 
         let signature_checker = SignatureChecker::new(&module);
-        let actual_violations = signature_checker.verify();
+        let result = signature_checker.verify();
 
-        prop_assert_eq!(expected_violations, !actual_violations.is_empty());
+        prop_assert_eq!(expected_violations, result.is_err());
     }
 }
 

@@ -45,7 +45,7 @@ use vm::{
 fn run_verifier(module: CompiledModule) -> Result<VerifiedModule, String> {
     let verifier_panic = panic::catch_unwind(|| {
         VerifiedModule::new(module.clone())
-            .map_err(|(_, errs)| format!("Module verification failed: {:#?}", errs))
+            .map_err(|err| format!("Module verification failed: {:#?}", err))
     });
     verifier_panic.unwrap_or_else(|err| Err(format!("Verifier panic: {:#?}", err)))
 }

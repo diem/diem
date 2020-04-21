@@ -12,7 +12,13 @@ module M {
         X { b } = move(x);
         return;
     }
+}
+// check: STLOC_UNSAFE_TO_DESTROY_ERROR
 
+//! new-transaction
+module N {
+    resource X { b: bool }
+    struct S { z: u64 }
     t2() {
         let s: Self.S;
         let y: &Self.S;
@@ -26,5 +32,4 @@ module M {
 
 }
 
-// check: STLOC_UNSAFE_TO_DESTROY_ERROR
 // check: STLOC_UNSAFE_TO_DESTROY_ERROR

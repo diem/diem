@@ -22,6 +22,7 @@ use petgraph::{
 use std::collections::{hash_map, HashMap, HashSet};
 use vm::{
     access::ModuleAccess,
+    errors::VMResult,
     file_format::{
         Bytecode, CompiledModule, FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex,
         SignatureIndex, SignatureToken, TypeParameterIndex,
@@ -253,13 +254,13 @@ impl<'a> InstantiationLoopChecker<'a> {
         }
     }
 
-    pub fn verify(mut self) -> Vec<VMStatus> {
+    pub fn verify(mut self) -> VMResult<()> {
         self.build_graph();
-        let components = self.find_non_trivial_components();
+        let mut components = self.find_non_trivial_components();
 
-        components
-            .into_iter()
-            .map(|(nodes, edges)| {
+        match components.pop() {
+            None => Ok(()),
+            Some((nodes, edges)) => {
                 let msg_edges = edges
                     .into_iter()
                     .filter_map(|edge_idx| match self.graph.edge_weight(edge_idx).unwrap() {
@@ -277,8 +278,8 @@ impl<'a> InstantiationLoopChecker<'a> {
                     "edges with constructors: [{}], nodes: [{}]",
                     msg_edges, msg_nodes
                 );
-                VMStatus::new(StatusCode::LOOP_IN_INSTANTIATION_GRAPH).with_message(msg)
-            })
-            .collect()
+                Err(VMStatus::new(StatusCode::LOOP_IN_INSTANTIATION_GRAPH).with_message(msg))
+            }
+        }
     }
 }

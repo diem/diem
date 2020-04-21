@@ -91,17 +91,25 @@ module M {
         _ = 0 + (R { x: true });
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     g() {
         _ = (R { x: true }) + 0;
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     h() {
         _ = (R { x: true }) + (R { x: true });
         return;
     }
 }
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 
 
@@ -197,17 +205,25 @@ module M {
         _ = 0 - (R { x: true });
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     g() {
         _ = (R { x: true }) - 0;
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     h() {
         _ = (R { x: true }) - (R { x: true });
         return;
     }
 }
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 
 
@@ -303,17 +319,25 @@ module M {
         _ = 0 * (R { x: true });
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     g() {
         _ = (R { x: true }) * 0;
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     h() {
         _ = (R { x: true }) * (R { x: true });
         return;
     }
 }
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 
 
@@ -409,17 +433,25 @@ module M {
         _ = 0 / (R { x: true });
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     g() {
         _ = (R { x: true }) / 0;
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     h() {
         _ = (R { x: true }) / (R { x: true });
         return;
     }
 }
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 
 
@@ -515,17 +547,25 @@ module M {
         _ = 0 & (R { x: true });
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     g() {
         _ = (R { x: true }) & 0;
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     h() {
         _ = (R { x: true }) & (R { x: true });
         return;
     }
 }
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 
 
@@ -621,17 +661,25 @@ module M {
         _ = 0 | (R { x: true });
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     g() {
         _ = (R { x: true }) | 0;
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     h() {
         _ = (R { x: true }) | (R { x: true });
         return;
     }
 }
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 
 
@@ -727,17 +775,25 @@ module M {
         _ = 0 ^ (R { x: true });
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     g() {
         _ = (R { x: true }) ^ 0;
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     h() {
         _ = (R { x: true }) ^ (R { x: true });
         return;
     }
 }
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 
 
@@ -819,12 +875,16 @@ module M {
         _ = 0 == (R { x: true });
         return;
     }
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     g() {
         _ = (R { x: true }) == 0;
         return;
     }
 }
-// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
 // check: EQUALITY_OP_TYPE_MISMATCH_ERROR
 
 
@@ -906,12 +966,16 @@ module M {
         _ = 0 != (R { x: true });
         return;
     }
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     g() {
         _ = (R { x: true }) != 0;
         return;
     }
 }
-// check: EQUALITY_OP_TYPE_MISMATCH_ERROR
 // check: EQUALITY_OP_TYPE_MISMATCH_ERROR
 
 
@@ -1263,17 +1327,25 @@ module M {
         _ = 0 << (R { x: true });
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     g() {
         _ = (R { x: true }) << 0;
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     h() {
         _ = (R { x: true }) << (R { x: true });
         return;
     }
 }
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR
 
 
@@ -1341,15 +1413,23 @@ module M {
         _ = 0 >> (R { x: true });
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     g() {
         _ = (R { x: true }) >> 0;
         return;
     }
+}
+// check: INTEGER_OP_TYPE_MISMATCH_ERROR
+//! new-transaction
+module M {
+    resource R { x: bool }
     h() {
         _ = (R { x: true }) >> (R { x: true });
         return;
     }
 }
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
-// check: INTEGER_OP_TYPE_MISMATCH_ERROR
 // check: INTEGER_OP_TYPE_MISMATCH_ERROR

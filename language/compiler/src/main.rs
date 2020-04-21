@@ -50,20 +50,17 @@ struct Args {
     pub output_source_maps: bool,
 }
 
-fn print_errors_and_exit(verification_errors: &[VMStatus]) -> ! {
-    println!("Verification failed. Errors below:");
-    for e in verification_errors {
-        println!("{:?}", e);
-    }
+fn print_error_and_exit(verification_error: &VMStatus) -> ! {
+    println!("Verification failed:");
+    println!("{:?}", verification_error);
     std::process::exit(1);
 }
 
 fn do_verify_module(module: CompiledModule, dependencies: &[VerifiedModule]) -> VerifiedModule {
     let verified_module =
-        VerifiedModule::new(module).unwrap_or_else(|(_, errors)| print_errors_and_exit(&errors));
-    let errors = verify_module_dependencies(&verified_module, dependencies);
-    if !errors.is_empty() {
-        print_errors_and_exit(&errors);
+        VerifiedModule::new(module).unwrap_or_else(|(_, err)| print_error_and_exit(&err));
+    if let Err(err) = verify_module_dependencies(&verified_module, dependencies) {
+        print_error_and_exit(&err);
     }
     verified_module
 }

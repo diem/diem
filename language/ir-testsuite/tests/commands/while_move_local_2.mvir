@@ -15,6 +15,4 @@ main() {
     return;
 }
 
-// TODO: fix verifier remove identical errors
-// check: MOVELOC_UNAVAILABLE_ERROR
 // check: MOVELOC_UNAVAILABLE_ERROR

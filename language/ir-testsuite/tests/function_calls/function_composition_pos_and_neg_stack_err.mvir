@@ -1,6 +1,3 @@
-// check: POSITIVE_STACK_SIZE_AT_BLOCK_END
-// check: NEGATIVE_STACK_SIZE_WITHIN_BLOCK
-
 module A {
     public parity(u: u64): u64 * bool {
         return copy(u), (move(u) % 2 == 0);
@@ -15,6 +12,7 @@ module A {
         return;
     }
 }
+// check: major_status: EXECUTED
 
 //! new-transaction
 import {{default}}.A;
@@ -29,3 +27,4 @@ main() {
     (A.eat_stack(), A.eat_stack());
     return;
 }
+// check: POSITIVE_STACK_SIZE_AT_BLOCK_END

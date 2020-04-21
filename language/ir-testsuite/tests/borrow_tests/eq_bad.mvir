@@ -8,7 +8,11 @@ module Tester {
         _ = copy(r) == copy(r);
         return;
     }
+}
+// check: READREF_EXISTS_MUTABLE_BORROW_ERROR
 
+//! new-transaction
+module Tester2 {
     eqtest2() {
         let x: u64;
         let r: &mut u64;
@@ -18,7 +22,11 @@ module Tester {
         _ = copy(r) == move(r);
         return;
     }
+}
+// check: READREF_EXISTS_MUTABLE_BORROW_ERROR
 
+//! new-transaction
+module Tester3 {
     neqtest1() {
         let x: u64;
         let r: &mut u64;
@@ -28,7 +36,11 @@ module Tester {
         _ = copy(r) != copy(r);
         return;
     }
+}
+// check: READREF_EXISTS_MUTABLE_BORROW_ERROR
 
+//! new-transaction
+module Tester4 {
     neqtest2() {
         let x: u64;
         let r: &mut u64;
@@ -39,8 +51,4 @@ module Tester {
         return;
     }
 }
-
-// check: READREF_EXISTS_MUTABLE_BORROW_ERROR
-// check: READREF_EXISTS_MUTABLE_BORROW_ERROR
-// check: READREF_EXISTS_MUTABLE_BORROW_ERROR
 // check: READREF_EXISTS_MUTABLE_BORROW_ERROR

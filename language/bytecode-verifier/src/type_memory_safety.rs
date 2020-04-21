@@ -18,7 +18,7 @@ use mirai_annotations::*;
 use std::collections::BTreeSet;
 use vm::{
     access::ModuleAccess,
-    errors::err_at_offset,
+    errors::{err_at_offset, VMResult},
     file_format::{
         Bytecode, CompiledModule, FieldHandleIndex, FunctionDefinition, FunctionHandle, Kind,
         LocalIndex, Signature, SignatureToken, StructDefinition, StructDefinitionIndex,
@@ -42,36 +42,27 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         module: &'a CompiledModule,
         function_definition: &'a FunctionDefinition,
         cfg: &'a VMControlFlowGraph,
-    ) -> Vec<VMStatus> {
+    ) -> VMResult<()> {
         let function_definition_view = FunctionDefinitionView::new(module, function_definition);
         let locals_signature_view = function_definition_view.locals_signature();
         // TODO: this check should probably be elsewhere
         if function_definition_view.arg_count() > locals_signature_view.len() {
-            return vec![VMStatus::new(StatusCode::RANGE_OUT_OF_BOUNDS)
-                .with_message("Fewer locals than parameters".to_string())];
+            return Err(VMStatus::new(StatusCode::RANGE_OUT_OF_BOUNDS)
+                .with_message("Fewer locals than parameters".to_string()));
         }
-        let errors: Vec<VMStatus> = function_definition_view
-            .arg_tokens()
-            .enumerate()
-            .flat_map(|(arg_idx, parameter_view)| {
-                let arg_token = parameter_view.as_inner();
-                let local_token = locals_signature_view
-                    .token_at(arg_idx as LocalIndex)
-                    .as_inner();
-                if arg_token == local_token {
-                    vec![]
-                } else {
-                    vec![
-                        VMStatus::new(StatusCode::TYPE_MISMATCH).with_message(format!(
-                            "Type mismatch at index {} between parameter and local",
-                            arg_idx
-                        )),
-                    ]
-                }
-            })
-            .collect();
-        if !errors.is_empty() {
-            return errors;
+        for (arg_idx, parameter_view) in function_definition_view.arg_tokens().enumerate() {
+            let arg_token = parameter_view.as_inner();
+            let local_token = locals_signature_view
+                .token_at(arg_idx as LocalIndex)
+                .as_inner();
+            if arg_token != local_token {
+                return Err(
+                    VMStatus::new(StatusCode::TYPE_MISMATCH).with_message(format!(
+                        "Type mismatch at index {} between parameter and local",
+                        arg_idx
+                    )),
+                );
+            }
         }
         let initial_state = AbstractState::new(module, function_definition);
         let mut verifier = Self {
@@ -81,25 +72,27 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             stack: vec![],
         };
 
-        let mut errors = vec![];
         let inv_map = verifier.analyze_function(initial_state, &function_definition_view, cfg);
         // Report all the join failures
         for (block_id, BlockInvariant { pre, post }) in inv_map {
             match pre {
                 BlockPrecondition::JoinFailure => {
-                    errors.push(err_at_offset(StatusCode::JOIN_FAILURE, block_id as usize))
+                    return Err(err_at_offset(StatusCode::JOIN_FAILURE, block_id as usize))
                 }
                 BlockPrecondition::State(_) => (),
             }
             match post {
-                BlockPostcondition::Error(mut err) => {
-                    assert!(!err.is_empty());
-                    errors.append(&mut err);
+                BlockPostcondition::Error(err) => return Err(err),
+                BlockPostcondition::Unprocessed => {
+                    return Err(err_at_offset(
+                        StatusCode::VERIFIER_INVARIANT_VIOLATION,
+                        block_id as usize,
+                    ))
                 }
                 BlockPostcondition::Success => (),
             }
         }
-        errors
+        Ok(())
     }
 
     fn module(&self) -> &'a CompiledModule {
@@ -119,21 +112,19 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
     // helper for both `ImmBorrowField` and `MutBorrowField`
     fn borrow_field(
         &mut self,
-        errors: &mut Vec<VMStatus>,
         state: &mut AbstractState,
         offset: usize,
         mut_: bool,
         field_handle_index: FieldHandleIndex,
         type_args: &Signature,
-    ) {
+    ) -> VMResult<()> {
         // load operand and check mutability constraints
         let operand = self.stack.pop().unwrap();
         if mut_ && !operand.signature.is_mutable_reference() {
-            errors.push(err_at_offset(
+            return Err(err_at_offset(
                 StatusCode::BORROWFIELD_TYPE_MISMATCH_ERROR,
                 offset,
             ));
-            return;
         }
 
         // check the reference on the stack is the expected type.
@@ -143,11 +134,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         let struct_def = self.module().struct_def_at(field_handle.owner);
         let expected_type = materialize_type(struct_def.struct_handle, type_args);
         if !operand.reference_to(&expected_type) {
-            errors.push(err_at_offset(
+            return Err(err_at_offset(
                 StatusCode::BORROWFIELD_TYPE_MISMATCH_ERROR,
                 offset,
             ));
-            return;
         }
 
         match state.borrow_field(&operand, mut_, field_handle_index) {
@@ -155,11 +145,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 // load the field type
                 let field_def = match &struct_def.field_information {
                     StructFieldInformation::Native => {
-                        errors.push(err_at_offset(
+                        return Err(err_at_offset(
                             StatusCode::BORROWFIELD_BAD_FIELD_ERROR,
                             offset,
                         ));
-                        return;
                     }
                     StructFieldInformation::Declared(fields) => {
                         // TODO: review the whole error story here, way too much is left to chances...
@@ -180,8 +169,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 });
                 let operand_id = operand.value.extract_id().unwrap();
                 state.release(operand_id);
+                Ok(())
             }
-            None => errors.push(err_at_offset(
+            None => Err(err_at_offset(
                 StatusCode::BORROWFIELD_EXISTS_MUTABLE_BORROW_ERROR,
                 offset,
             )),
@@ -191,24 +181,21 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
     // helper for both `ImmBorrowLoc` and `MutBorrowLoc`
     fn borrow_loc(
         &mut self,
-        errors: &mut Vec<VMStatus>,
         state: &mut AbstractState,
         offset: usize,
         mut_: bool,
         idx: LocalIndex,
-    ) {
+    ) -> VMResult<()> {
         let loc_signature = self.locals_signature_view.token_at(idx).as_inner().clone();
 
         if loc_signature.is_reference() {
-            errors.push(err_at_offset(StatusCode::BORROWLOC_REFERENCE_ERROR, offset));
-            return;
+            return Err(err_at_offset(StatusCode::BORROWLOC_REFERENCE_ERROR, offset));
         }
         if !state.is_available(idx) {
-            errors.push(err_at_offset(
+            return Err(err_at_offset(
                 StatusCode::BORROWLOC_UNAVAILABLE_ERROR,
                 offset,
             ));
-            return;
         }
 
         if let Some(id) = state.borrow_local_value(mut_, idx) {
@@ -221,8 +208,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 signature,
                 value: AbstractValue::Reference(id),
             });
+            Ok(())
         } else {
-            errors.push(err_at_offset(
+            Err(err_at_offset(
                 StatusCode::BORROWLOC_EXISTS_BORROW_ERROR,
                 offset,
             ))
@@ -231,31 +219,28 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
 
     fn borrow_global(
         &mut self,
-        errors: &mut Vec<VMStatus>,
         state: &mut AbstractState,
         offset: usize,
         mut_: bool,
         idx: StructDefinitionIndex,
         type_args: &Signature,
-    ) {
+    ) -> VMResult<()> {
         // check and consume top of stack
         let operand = self.stack.pop().unwrap();
         if operand.signature != SignatureToken::Address {
-            errors.push(err_at_offset(
+            return Err(err_at_offset(
                 StatusCode::BORROWGLOBAL_TYPE_MISMATCH_ERROR,
                 offset,
             ));
-            return;
         }
 
         let struct_def = self.module().struct_def_at(idx);
         let struct_handle = self.module().struct_handle_at(struct_def.struct_handle);
         if !struct_handle.is_nominal_resource {
-            errors.push(err_at_offset(
+            return Err(err_at_offset(
                 StatusCode::BORROWGLOBAL_NO_RESOURCE_ERROR,
                 offset,
             ));
-            return;
         }
 
         if let Some(id) = state.borrow_global_value(mut_, idx) {
@@ -269,26 +254,25 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 signature,
                 value: AbstractValue::Reference(id),
             });
+            Ok(())
         } else {
-            errors.push(err_at_offset(StatusCode::GLOBAL_REFERENCE_ERROR, offset))
+            Err(err_at_offset(StatusCode::GLOBAL_REFERENCE_ERROR, offset))
         }
     }
 
     fn call(
         &mut self,
-        errors: &mut Vec<VMStatus>,
         state: &mut AbstractState,
         offset: usize,
         function_handle: &FunctionHandle,
         type_actuals: &Signature,
-    ) {
+    ) -> VMResult<()> {
         let function_acquired_resources = self
             .module_view
             .function_acquired_resources(&function_handle);
         for acquired_resource in &function_acquired_resources {
             if state.is_global_borrowed(*acquired_resource) {
-                errors.push(err_at_offset(StatusCode::GLOBAL_REFERENCE_ERROR, offset));
-                return;
+                return Err(err_at_offset(StatusCode::GLOBAL_REFERENCE_ERROR, offset));
             }
         }
 
@@ -298,17 +282,15 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         for parameter in parameters.0.iter().rev() {
             let arg = self.stack.pop().unwrap();
             if arg.signature != instantiate(parameter, type_actuals) {
-                errors.push(err_at_offset(StatusCode::CALL_TYPE_MISMATCH_ERROR, offset));
-                return;
+                return Err(err_at_offset(StatusCode::CALL_TYPE_MISMATCH_ERROR, offset));
             }
             if let AbstractValue::Reference(id) = arg.value {
                 if parameter.is_mutable_reference() {
                     if state.is_borrowed(id) {
-                        errors.push(err_at_offset(
+                        return Err(err_at_offset(
                             StatusCode::CALL_BORROWED_MUTABLE_REFERENCE_ERROR,
                             offset,
                         ));
-                        return;
                     }
                     mutable_references_to_borrow_from.insert(id);
                 }
@@ -339,21 +321,20 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
         for id in all_references_to_borrow_from {
             state.release(id);
         }
+        Ok(())
     }
 
     fn type_fields_signature(
         &mut self,
-        errors: &mut Vec<VMStatus>,
         offset: usize,
         struct_def: &StructDefinition,
         type_args: &Signature,
-    ) -> Option<Signature> {
+    ) -> VMResult<Signature> {
         let mut field_sig = vec![];
         match &struct_def.field_information {
             StructFieldInformation::Native => {
                 // TODO: this is more of "unreachable"
-                errors.push(err_at_offset(StatusCode::PACK_TYPE_MISMATCH_ERROR, offset));
-                return None;
+                return Err(err_at_offset(StatusCode::PACK_TYPE_MISMATCH_ERROR, offset));
             }
             StructFieldInformation::Declared(fields) => {
                 for field_def in fields.iter() {
@@ -361,70 +342,67 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 }
             }
         };
-        Some(Signature(field_sig))
+        Ok(Signature(field_sig))
     }
 
     fn pack(
         &mut self,
-        errors: &mut Vec<VMStatus>,
         offset: usize,
         struct_def: &StructDefinition,
         type_args: &Signature,
-    ) {
+    ) -> VMResult<()> {
         let struct_type = materialize_type(struct_def.struct_handle, type_args);
-        if let Some(field_sig) = self.type_fields_signature(errors, offset, struct_def, type_args) {
-            for sig in field_sig.0.iter().rev() {
-                let arg = self.stack.pop().unwrap();
-                if &arg.signature != sig {
-                    errors.push(err_at_offset(StatusCode::PACK_TYPE_MISMATCH_ERROR, offset));
-                }
+        let field_sig = self.type_fields_signature(offset, struct_def, type_args)?;
+        for sig in field_sig.0.iter().rev() {
+            let arg = self.stack.pop().unwrap();
+            if &arg.signature != sig {
+                return Err(err_at_offset(StatusCode::PACK_TYPE_MISMATCH_ERROR, offset));
             }
         }
+
         let kind = kind(self.module(), &struct_type, self.type_parameters());
         self.stack.push(TypedAbstractValue {
             signature: struct_type,
             value: AbstractValue::Value(kind),
-        })
+        });
+        Ok(())
     }
 
     fn unpack(
         &mut self,
-        errors: &mut Vec<VMStatus>,
         offset: usize,
         struct_def: &StructDefinition,
         type_args: &Signature,
-    ) {
+    ) -> VMResult<()> {
         let struct_type = materialize_type(struct_def.struct_handle, type_args);
 
         // Pop an abstract value from the stack and check if its type is equal to the one
         // declared. TODO: is it safe to not call verify the kinds if the types are equal?
         let arg = self.stack.pop().unwrap();
         if arg.signature != struct_type {
-            errors.push(err_at_offset(
+            return Err(err_at_offset(
                 StatusCode::UNPACK_TYPE_MISMATCH_ERROR,
                 offset,
             ));
-            return;
         }
 
-        if let Some(field_sig) = self.type_fields_signature(errors, offset, struct_def, type_args) {
-            for sig in field_sig.0.into_iter() {
-                let kind = kind(self.module(), &sig, self.type_parameters());
-                self.stack.push(TypedAbstractValue {
-                    signature: sig,
-                    value: AbstractValue::Value(kind),
-                })
-            }
+        let field_sig = self.type_fields_signature(offset, struct_def, type_args)?;
+        for sig in field_sig.0.into_iter() {
+            let kind = kind(self.module(), &sig, self.type_parameters());
+            self.stack.push(TypedAbstractValue {
+                signature: sig,
+                value: AbstractValue::Value(kind),
+            })
         }
+        Ok(())
     }
 
-    fn exists(&mut self, errors: &mut Vec<VMStatus>, offset: usize, struct_def: &StructDefinition) {
+    fn exists(&mut self, offset: usize, struct_def: &StructDefinition) -> VMResult<()> {
         if !StructDefinitionView::new(self.module(), struct_def).is_nominal_resource() {
-            errors.push(err_at_offset(
+            return Err(err_at_offset(
                 StatusCode::EXISTS_RESOURCE_TYPE_MISMATCH_ERROR,
                 offset,
             ));
-            return;
         }
 
         let operand = self.stack.pop().unwrap();
@@ -433,8 +411,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 signature: SignatureToken::Bool,
                 value: AbstractValue::Value(Kind::Copyable),
             });
+            Ok(())
         } else {
-            errors.push(err_at_offset(
+            Err(err_at_offset(
                 StatusCode::EXISTS_RESOURCE_TYPE_MISMATCH_ERROR,
                 offset,
             ))
@@ -443,22 +422,19 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
 
     pub fn move_from(
         &mut self,
-        errors: &mut Vec<VMStatus>,
         state: &mut AbstractState,
         offset: usize,
         def_idx: StructDefinitionIndex,
         type_args: &Signature,
-    ) {
+    ) -> VMResult<()> {
         let struct_def = self.module().struct_def_at(def_idx);
         if !StructDefinitionView::new(self.module(), struct_def).is_nominal_resource() {
-            errors.push(err_at_offset(
+            return Err(err_at_offset(
                 StatusCode::MOVEFROM_NO_RESOURCE_ERROR,
                 offset,
             ));
-            return;
         } else if state.is_global_borrowed(def_idx) {
-            errors.push(err_at_offset(StatusCode::GLOBAL_REFERENCE_ERROR, offset));
-            return;
+            return Err(err_at_offset(StatusCode::GLOBAL_REFERENCE_ERROR, offset));
         }
 
         let struct_type = materialize_type(struct_def.struct_handle, type_args);
@@ -468,8 +444,9 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                 signature: struct_type,
                 value: AbstractValue::Value(Kind::Resource),
             });
+            Ok(())
         } else {
-            errors.push(err_at_offset(
+            Err(err_at_offset(
                 StatusCode::MOVEFROM_TYPE_MISMATCH_ERROR,
                 offset,
             ))
@@ -478,43 +455,41 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
 
     pub fn move_to(
         &mut self,
-        errors: &mut Vec<VMStatus>,
         offset: usize,
         struct_def: &StructDefinition,
         type_args: &Signature,
-    ) {
+    ) -> VMResult<()> {
         if !StructDefinitionView::new(self.module(), struct_def).is_nominal_resource() {
-            errors.push(err_at_offset(
+            return Err(err_at_offset(
                 StatusCode::MOVETOSENDER_NO_RESOURCE_ERROR,
                 offset,
             ));
-            return;
         }
 
         let struct_type = materialize_type(struct_def.struct_handle, type_args);
         let value_operand = self.stack.pop().unwrap();
         if value_operand.signature != struct_type {
-            errors.push(err_at_offset(
+            Err(err_at_offset(
                 StatusCode::MOVETOSENDER_TYPE_MISMATCH_ERROR,
                 offset,
             ))
+        } else {
+            Ok(())
         }
     }
 
     fn execute_inner(
         &mut self,
-        errors: &mut Vec<VMStatus>,
         state: &mut AbstractState,
         bytecode: &Bytecode,
         offset: usize,
-    ) {
+    ) -> VMResult<()> {
         match bytecode {
             Bytecode::Pop => {
                 let operand = self.stack.pop().unwrap();
                 let kind = kind(self.module(), &operand.signature, self.type_parameters());
                 if kind != Kind::Copyable {
-                    errors.push(err_at_offset(StatusCode::POP_RESOURCE_ERROR, offset));
-                    return;
+                    return Err(err_at_offset(StatusCode::POP_RESOURCE_ERROR, offset));
                 }
 
                 if let AbstractValue::Reference(id) = operand.value {
@@ -525,25 +500,23 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::BrTrue(_) | Bytecode::BrFalse(_) => {
                 let operand = self.stack.pop().unwrap();
                 if operand.signature != SignatureToken::Bool {
-                    errors.push(err_at_offset(StatusCode::BR_TYPE_MISMATCH_ERROR, offset))
+                    return Err(err_at_offset(StatusCode::BR_TYPE_MISMATCH_ERROR, offset));
                 }
             }
 
             Bytecode::StLoc(idx) => {
                 let operand = self.stack.pop().unwrap();
                 if operand.signature != *self.locals_signature_view.token_at(*idx).as_inner() {
-                    errors.push(err_at_offset(StatusCode::STLOC_TYPE_MISMATCH_ERROR, offset));
-                    return;
+                    return Err(err_at_offset(StatusCode::STLOC_TYPE_MISMATCH_ERROR, offset));
                 }
                 if state.is_available(*idx) {
                     if state.is_local_safe_to_destroy(*idx) {
                         state.destroy_local(*idx);
                     } else {
-                        errors.push(err_at_offset(
+                        return Err(err_at_offset(
                             StatusCode::STLOC_UNSAFE_TO_DESTROY_ERROR,
                             offset,
                         ));
-                        return;
                     }
                 }
                 state.insert_local(*idx, operand);
@@ -552,8 +525,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::Abort => {
                 let error_code = self.stack.pop().unwrap();
                 if error_code.signature != SignatureToken::U64 {
-                    errors.push(err_at_offset(StatusCode::ABORT_TYPE_MISMATCH_ERROR, offset));
-                    return;
+                    return Err(err_at_offset(StatusCode::ABORT_TYPE_MISMATCH_ERROR, offset));
                 }
                 *state = AbstractState::default();
             }
@@ -568,26 +540,23 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     }
                 }
                 if !state.is_frame_safe_to_destroy() {
-                    errors.push(err_at_offset(
+                    return Err(err_at_offset(
                         StatusCode::RET_UNSAFE_TO_DESTROY_ERROR,
                         offset,
                     ));
-                    return;
                 }
                 for return_type_view in self.function_definition_view.return_tokens().rev() {
                     let operand = self.stack.pop().unwrap();
                     if operand.signature != *return_type_view.as_inner() {
-                        errors.push(err_at_offset(StatusCode::RET_TYPE_MISMATCH_ERROR, offset));
-                        return;
+                        return Err(err_at_offset(StatusCode::RET_TYPE_MISMATCH_ERROR, offset));
                     }
                     if return_type_view.is_mutable_reference() {
                         if let AbstractValue::Reference(id) = operand.value {
                             if state.is_borrowed(id) {
-                                errors.push(err_at_offset(
+                                return Err(err_at_offset(
                                     StatusCode::RET_BORROWED_MUTABLE_REFERENCE_ERROR,
                                     offset,
                                 ));
-                                return;
                             }
                         }
                     }
@@ -607,47 +576,41 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                             value: AbstractValue::Reference(frozen_id),
                         });
                     } else {
-                        errors.push(err_at_offset(
+                        return Err(err_at_offset(
                             StatusCode::FREEZEREF_EXISTS_MUTABLE_BORROW_ERROR,
                             offset,
-                        ))
+                        ));
                     }
                 } else {
-                    errors.push(err_at_offset(
+                    return Err(err_at_offset(
                         StatusCode::FREEZEREF_TYPE_MISMATCH_ERROR,
                         offset,
-                    ))
+                    ));
                 }
             }
 
-            Bytecode::MutBorrowField(field_handle_index) => self.borrow_field(
-                errors,
-                state,
-                offset,
-                true,
-                *field_handle_index,
-                &Signature(vec![]),
-            ),
+            Bytecode::MutBorrowField(field_handle_index) => {
+                self.borrow_field(state, offset, true, *field_handle_index, &Signature(vec![]))?
+            }
 
             Bytecode::MutBorrowFieldGeneric(field_inst_index) => {
                 let field_inst = self.module().field_instantiation_at(*field_inst_index);
                 let type_inst = self.module().signature_at(field_inst.type_parameters);
-                self.borrow_field(errors, state, offset, true, field_inst.handle, type_inst)
+                self.borrow_field(state, offset, true, field_inst.handle, type_inst)?
             }
 
             Bytecode::ImmBorrowField(field_handle_index) => self.borrow_field(
-                errors,
                 state,
                 offset,
                 false,
                 *field_handle_index,
                 &Signature(vec![]),
-            ),
+            )?,
 
             Bytecode::ImmBorrowFieldGeneric(field_inst_index) => {
                 let field_inst = self.module().field_instantiation_at(*field_inst_index);
                 let type_inst = self.module().signature_at(field_inst.type_parameters);
-                self.borrow_field(errors, state, offset, false, field_inst.handle, type_inst)
+                self.borrow_field(state, offset, false, field_inst.handle, type_inst)?
             }
 
             Bytecode::LdU8(_) => {
@@ -689,7 +652,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::CopyLoc(idx) => {
                 let signature_view = self.locals_signature_view.token_at(*idx);
                 if !state.is_available(*idx) {
-                    errors.push(err_at_offset(StatusCode::COPYLOC_UNAVAILABLE_ERROR, offset))
+                    return Err(err_at_offset(StatusCode::COPYLOC_UNAVAILABLE_ERROR, offset));
                 } else if signature_view.is_reference() {
                     let id =
                         state.borrow_local_reference(*idx, signature_view.is_mutable_reference());
@@ -704,7 +667,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         self.type_parameters(),
                     ) {
                         Kind::Resource | Kind::All => {
-                            errors.push(err_at_offset(StatusCode::COPYLOC_RESOURCE_ERROR, offset))
+                            return Err(err_at_offset(StatusCode::COPYLOC_RESOURCE_ERROR, offset))
                         }
                         Kind::Copyable => {
                             if !state.is_local_mutably_borrowed(*idx) {
@@ -713,10 +676,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                                     value: AbstractValue::Value(Kind::Copyable),
                                 })
                             } else {
-                                errors.push(err_at_offset(
+                                return Err(err_at_offset(
                                     StatusCode::COPYLOC_EXISTS_BORROW_ERROR,
                                     offset,
-                                ))
+                                ));
                             }
                         }
                     }
@@ -726,56 +689,56 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             Bytecode::MoveLoc(idx) => {
                 let signature = self.locals_signature_view.token_at(*idx).as_inner().clone();
                 if !state.is_available(*idx) {
-                    errors.push(err_at_offset(StatusCode::MOVELOC_UNAVAILABLE_ERROR, offset))
+                    return Err(err_at_offset(StatusCode::MOVELOC_UNAVAILABLE_ERROR, offset));
                 } else if signature.is_reference() || !state.is_local_borrowed(*idx) {
                     let value = state.remove_local(*idx);
                     self.stack.push(value);
                 } else {
-                    errors.push(err_at_offset(
+                    return Err(err_at_offset(
                         StatusCode::MOVELOC_EXISTS_BORROW_ERROR,
                         offset,
-                    ))
+                    ));
                 }
             }
 
-            Bytecode::MutBorrowLoc(idx) => self.borrow_loc(errors, state, offset, true, *idx),
+            Bytecode::MutBorrowLoc(idx) => self.borrow_loc(state, offset, true, *idx)?,
 
-            Bytecode::ImmBorrowLoc(idx) => self.borrow_loc(errors, state, offset, false, *idx),
+            Bytecode::ImmBorrowLoc(idx) => self.borrow_loc(state, offset, false, *idx)?,
 
             Bytecode::Call(idx) => {
                 let function_handle = self.module().function_handle_at(*idx);
-                self.call(errors, state, offset, function_handle, &Signature(vec![]))
+                self.call(state, offset, function_handle, &Signature(vec![]))?
             }
 
             Bytecode::CallGeneric(idx) => {
                 let func_inst = self.module().function_instantiation_at(*idx);
                 let func_handle = self.module().function_handle_at(func_inst.handle);
                 let type_args = &self.module().signature_at(func_inst.type_parameters);
-                self.call(errors, state, offset, func_handle, type_args)
+                self.call(state, offset, func_handle, type_args)?
             }
 
             Bytecode::Pack(idx) => {
                 let struct_definition = self.module().struct_def_at(*idx);
-                self.pack(errors, offset, struct_definition, &Signature(vec![]))
+                self.pack(offset, struct_definition, &Signature(vec![]))?
             }
 
             Bytecode::PackGeneric(idx) => {
                 let struct_inst = self.module().struct_instantiation_at(*idx);
                 let struct_def = self.module().struct_def_at(struct_inst.def);
                 let type_args = &self.module().signature_at(struct_inst.type_parameters);
-                self.pack(errors, offset, struct_def, type_args)
+                self.pack(offset, struct_def, type_args)?
             }
 
             Bytecode::Unpack(idx) => {
                 let struct_definition = self.module().struct_def_at(*idx);
-                self.unpack(errors, offset, struct_definition, &Signature(vec![]))
+                self.unpack(offset, struct_definition, &Signature(vec![]))?
             }
 
             Bytecode::UnpackGeneric(idx) => {
                 let struct_inst = self.module().struct_instantiation_at(*idx);
                 let struct_def = self.module().struct_def_at(struct_inst.def);
                 let type_args = &self.module().signature_at(struct_inst.type_parameters);
-                self.unpack(errors, offset, struct_def, type_args)
+                self.unpack(offset, struct_def, type_args)?
             }
 
             Bytecode::ReadRef => {
@@ -784,18 +747,17 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     value: operand_value,
                 } = self.stack.pop().unwrap();
                 if !operand_signature.is_reference() {
-                    errors.push(err_at_offset(
+                    return Err(err_at_offset(
                         StatusCode::READREF_TYPE_MISMATCH_ERROR,
                         offset,
                     ));
-                    return;
                 }
                 let operand_id = operand_value.extract_id().unwrap();
                 if !Self::is_readable_reference(state, &operand_signature, operand_id) {
-                    errors.push(err_at_offset(
+                    return Err(err_at_offset(
                         StatusCode::READREF_EXISTS_MUTABLE_BORROW_ERROR,
                         offset,
-                    ))
+                    ));
                 } else {
                     let inner_signature = *match operand_signature {
                         SignatureToken::Reference(signature) => signature,
@@ -805,7 +767,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     if kind(self.module(), &inner_signature, self.type_parameters())
                         != Kind::Copyable
                     {
-                        errors.push(err_at_offset(StatusCode::READREF_RESOURCE_ERROR, offset))
+                        return Err(err_at_offset(StatusCode::READREF_RESOURCE_ERROR, offset));
                     } else {
                         self.stack.push(TypedAbstractValue {
                             signature: inner_signature,
@@ -823,32 +785,32 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     let kind = kind(self.module(), &signature, self.type_parameters());
                     match kind {
                         Kind::Resource | Kind::All => {
-                            errors.push(err_at_offset(StatusCode::WRITEREF_RESOURCE_ERROR, offset))
+                            return Err(err_at_offset(StatusCode::WRITEREF_RESOURCE_ERROR, offset))
                         }
                         Kind::Copyable => {
                             if val_operand.signature != *signature {
-                                errors.push(err_at_offset(
+                                return Err(err_at_offset(
                                     StatusCode::WRITEREF_TYPE_MISMATCH_ERROR,
                                     offset,
-                                ))
+                                ));
                             } else {
                                 let ref_operand_id = ref_operand.value.extract_id().unwrap();
                                 if !state.is_borrowed(ref_operand_id) {
                                     state.release(ref_operand_id);
                                 } else {
-                                    errors.push(err_at_offset(
+                                    return Err(err_at_offset(
                                         StatusCode::WRITEREF_EXISTS_BORROW_ERROR,
                                         offset,
-                                    ))
+                                    ));
                                 }
                             }
                         }
                     }
                 } else {
-                    errors.push(err_at_offset(
+                    return Err(err_at_offset(
                         StatusCode::WRITEREF_NO_MUTABLE_REFERENCE_ERROR,
                         offset,
-                    ))
+                    ));
                 }
             }
 
@@ -860,10 +822,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         value: AbstractValue::Value(Kind::Copyable),
                     });
                 } else {
-                    errors.push(err_at_offset(
+                    return Err(err_at_offset(
                         StatusCode::INTEGER_OP_TYPE_MISMATCH_ERROR,
                         offset,
-                    ))
+                    ));
                 }
             }
             Bytecode::CastU64 => {
@@ -874,10 +836,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         value: AbstractValue::Value(Kind::Copyable),
                     });
                 } else {
-                    errors.push(err_at_offset(
+                    return Err(err_at_offset(
                         StatusCode::INTEGER_OP_TYPE_MISMATCH_ERROR,
                         offset,
-                    ))
+                    ));
                 }
             }
             Bytecode::CastU128 => {
@@ -888,10 +850,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         value: AbstractValue::Value(Kind::Copyable),
                     });
                 } else {
-                    errors.push(err_at_offset(
+                    return Err(err_at_offset(
                         StatusCode::INTEGER_OP_TYPE_MISMATCH_ERROR,
                         offset,
-                    ))
+                    ));
                 }
             }
 
@@ -911,10 +873,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         value: AbstractValue::Value(Kind::Copyable),
                     });
                 } else {
-                    errors.push(err_at_offset(
+                    return Err(err_at_offset(
                         StatusCode::INTEGER_OP_TYPE_MISMATCH_ERROR,
                         offset,
-                    ))
+                    ));
                 }
             }
 
@@ -927,10 +889,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         value: AbstractValue::Value(Kind::Copyable),
                     });
                 } else {
-                    errors.push(err_at_offset(
+                    return Err(err_at_offset(
                         StatusCode::INTEGER_OP_TYPE_MISMATCH_ERROR,
                         offset,
-                    ))
+                    ));
                 }
             }
 
@@ -945,10 +907,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         value: AbstractValue::Value(Kind::Copyable),
                     });
                 } else {
-                    errors.push(err_at_offset(
+                    return Err(err_at_offset(
                         StatusCode::BOOLEAN_OP_TYPE_MISMATCH_ERROR,
                         offset,
-                    ))
+                    ));
                 }
             }
 
@@ -960,10 +922,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         value: AbstractValue::Value(Kind::Copyable),
                     });
                 } else {
-                    errors.push(err_at_offset(
+                    return Err(err_at_offset(
                         StatusCode::BOOLEAN_OP_TYPE_MISMATCH_ERROR,
                         offset,
-                    ))
+                    ));
                 }
             }
 
@@ -982,11 +944,10 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                             state.release(id1);
                             state.release(id2);
                         } else {
-                            errors.push(err_at_offset(
+                            return Err(err_at_offset(
                                 StatusCode::READREF_EXISTS_MUTABLE_BORROW_ERROR,
                                 offset,
                             ));
-                            return;
                         }
                     }
                     self.stack.push(TypedAbstractValue {
@@ -994,7 +955,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         value: AbstractValue::Value(Kind::Copyable),
                     });
                 } else {
-                    errors.push(err_at_offset(
+                    return Err(err_at_offset(
                         StatusCode::EQUALITY_OP_TYPE_MISMATCH_ERROR,
                         offset,
                     ));
@@ -1010,7 +971,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                         value: AbstractValue::Value(Kind::Copyable),
                     });
                 } else {
-                    errors.push(err_at_offset(
+                    return Err(err_at_offset(
                         StatusCode::INTEGER_OP_TYPE_MISMATCH_ERROR,
                         offset,
                     ));
@@ -1018,56 +979,54 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             }
 
             Bytecode::MutBorrowGlobal(idx) => {
-                self.borrow_global(errors, state, offset, true, *idx, &Signature(vec![]))
+                self.borrow_global(state, offset, true, *idx, &Signature(vec![]))?
             }
 
             Bytecode::MutBorrowGlobalGeneric(idx) => {
                 let struct_inst = self.module().struct_instantiation_at(*idx);
                 let type_inst = self.module().signature_at(struct_inst.type_parameters);
-                self.borrow_global(errors, state, offset, true, struct_inst.def, type_inst)
+                self.borrow_global(state, offset, true, struct_inst.def, type_inst)?
             }
 
             Bytecode::ImmBorrowGlobal(idx) => {
-                self.borrow_global(errors, state, offset, false, *idx, &Signature(vec![]))
+                self.borrow_global(state, offset, false, *idx, &Signature(vec![]))?
             }
 
             Bytecode::ImmBorrowGlobalGeneric(idx) => {
                 let struct_inst = self.module().struct_instantiation_at(*idx);
                 let type_inst = self.module().signature_at(struct_inst.type_parameters);
-                self.borrow_global(errors, state, offset, false, struct_inst.def, type_inst)
+                self.borrow_global(state, offset, false, struct_inst.def, type_inst)?
             }
 
             Bytecode::Exists(idx) => {
                 let struct_def = self.module().struct_def_at(*idx);
-                self.exists(errors, offset, struct_def)
+                self.exists(offset, struct_def)?
             }
 
             Bytecode::ExistsGeneric(idx) => {
                 let struct_inst = self.module().struct_instantiation_at(*idx);
                 let struct_def = self.module().struct_def_at(struct_inst.def);
-                self.exists(errors, offset, struct_def)
+                self.exists(offset, struct_def)?
             }
 
-            Bytecode::MoveFrom(idx) => {
-                self.move_from(errors, state, offset, *idx, &Signature(vec![]))
-            }
+            Bytecode::MoveFrom(idx) => self.move_from(state, offset, *idx, &Signature(vec![]))?,
 
             Bytecode::MoveFromGeneric(idx) => {
                 let struct_inst = self.module().struct_instantiation_at(*idx);
                 let type_args = &self.module().signature_at(struct_inst.type_parameters);
-                self.move_from(errors, state, offset, struct_inst.def, type_args)
+                self.move_from(state, offset, struct_inst.def, type_args)?
             }
 
             Bytecode::MoveToSender(idx) => {
                 let struct_def = self.module().struct_def_at(*idx);
-                self.move_to(errors, offset, struct_def, &Signature(vec![]))
+                self.move_to(offset, struct_def, &Signature(vec![]))?
             }
 
             Bytecode::MoveToSenderGeneric(idx) => {
                 let struct_inst = self.module().struct_instantiation_at(*idx);
                 let struct_def = self.module().struct_def_at(struct_inst.def);
                 let type_args = &self.module().signature_at(struct_inst.type_parameters);
-                self.move_to(errors, offset, struct_def, type_args)
+                self.move_to(offset, struct_def, type_args)?
             }
 
             Bytecode::GetTxnGasUnitPrice
@@ -1075,7 +1034,7 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
             | Bytecode::GetGasRemaining
             | Bytecode::GetTxnSequenceNumber
             | Bytecode::GetTxnPublicKey => {
-                errors.push(
+                return Err(
                     VMStatus::new(StatusCode::UNKNOWN_VERIFICATION_ERROR).with_message(format!(
                         "Bytecode {:?} is deprecated and will be removed soon",
                         bytecode
@@ -1089,13 +1048,14 @@ impl<'a> TypeAndMemorySafetyAnalysis<'a> {
                     value: AbstractValue::Value(Kind::Copyable),
                 });
             }
-        }
+        };
+        Ok(())
     }
 }
 
 impl<'a> TransferFunctions for TypeAndMemorySafetyAnalysis<'a> {
     type State = AbstractState;
-    type AnalysisError = Vec<VMStatus>;
+    type AnalysisError = VMStatus;
 
     fn execute(
         &mut self,
@@ -1104,16 +1064,11 @@ impl<'a> TransferFunctions for TypeAndMemorySafetyAnalysis<'a> {
         index: usize,
         last_index: usize,
     ) -> Result<(), Self::AnalysisError> {
-        let mut errors = vec![];
-        self.execute_inner(&mut errors, state, bytecode, index);
-        if errors.is_empty() {
-            if index == last_index {
-                *state = state.construct_canonical_state()
-            }
-            Ok(())
-        } else {
-            Err(errors)
+        self.execute_inner(state, bytecode, index)?;
+        if index == last_index {
+            *state = state.construct_canonical_state()
         }
+        Ok(())
     }
 }
 

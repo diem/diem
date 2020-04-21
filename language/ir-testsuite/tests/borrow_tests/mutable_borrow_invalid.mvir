@@ -16,6 +16,13 @@ module M {
 
         return;
     }
+}
+// check: WRITEREF_EXISTS_BORROW_ERROR
+
+//! new-transaction
+module M2 {
+
+    struct S { f: u64, g: u64, h: u64 }
 
     t2(root: &mut Self.S, cond: bool) {
         let x: &mut u64;
@@ -36,6 +43,4 @@ module M {
         return;
     }
 }
-
-// check: WRITEREF_EXISTS_BORROW_ERROR
 // check: CALL_BORROWED_MUTABLE_REFERENCE_ERROR

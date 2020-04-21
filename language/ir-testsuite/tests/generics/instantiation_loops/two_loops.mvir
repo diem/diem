@@ -1,5 +1,5 @@
 // Two loops in the resulting graph.
-// One error for each loop.
+// One error for the loop.
 
 module M {
     struct S<T> { b: bool }
@@ -15,5 +15,4 @@ module M {
     }
 }
 
-// check: LOOP_IN_INSTANTIATION_GRAPH
-// check: LOOP_IN_INSTANTIATION_GRAPH
+// check: Error(VMStatus { major_status: LOOP_IN_INSTANTIATION_GRAPH,

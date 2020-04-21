@@ -10,9 +10,7 @@ import 0x0.LBR;
 
     public new(): Self.T {
         let handle: Event.EventHandle<Libra.T<LBR.T>>;
-        // check: CONTRAINT_KIND_MISMATCH
         handle = Event.new_event_handle<Libra.T<LBR.T>>();
-        // check: CONTRAINT_KIND_MISMATCH
         return T { foo: move(handle) };
     }
 }

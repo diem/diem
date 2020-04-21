@@ -27,8 +27,8 @@
 //! those structs translate to tables and table specifications.
 
 use crate::{
-    access::ModuleAccess, check_bounds::BoundsChecker, internals::ModuleIndex, IndexKind,
-    SignatureTokenKind,
+    access::ModuleAccess, check_bounds::BoundsChecker, errors::VMResult, internals::ModuleIndex,
+    IndexKind, SignatureTokenKind,
 };
 use libra_types::{
     account_address::AccountAddress,
@@ -1373,7 +1373,7 @@ impl CompiledScript {
 impl CompiledScriptMut {
     /// Converts this instance into `CompiledScript` after verifying it for basic internal
     /// consistency. This includes bounds checks but no others.
-    pub fn freeze(self) -> Result<CompiledScript, Vec<VMStatus>> {
+    pub fn freeze(self) -> VMResult<CompiledScript> {
         let fake_module = self.into_module();
         Ok(fake_module.freeze()?.into_script())
     }
@@ -1576,13 +1576,9 @@ impl CompiledModuleMut {
 
     /// Converts this instance into `CompiledModule` after verifying it for basic internal
     /// consistency. This includes bounds checks but no others.
-    pub fn freeze(self) -> Result<CompiledModule, Vec<VMStatus>> {
-        let errors = BoundsChecker::new(&self).verify();
-        if errors.is_empty() {
-            Ok(CompiledModule(self))
-        } else {
-            Err(errors)
-        }
+    pub fn freeze(self) -> VMResult<CompiledModule> {
+        BoundsChecker::new(&self).verify()?;
+        Ok(CompiledModule(self))
     }
 }
 

@@ -7,5 +7,5 @@ use thiserror::Error;
 #[derive(Clone, Debug, Eq, Error, Ord, PartialEq, PartialOrd)]
 pub enum InternalCompilerError {
     #[error("Post-compile bounds check errors: {0:?}")]
-    BoundsCheckErrors(Vec<VMStatus>),
+    BoundsCheckErrors(VMStatus),
 }

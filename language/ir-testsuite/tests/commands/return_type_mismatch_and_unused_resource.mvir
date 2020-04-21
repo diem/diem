@@ -1,16 +1,18 @@
 module M {
-    import 0x0.LBR;
-    import 0x0.Libra;
+    resource R { flag: bool }
 
     // Currently, checking that stack frame can be torn down safely
     // is done before type checking of return values
-
     t1(): bool {
-        let c: Libra.T<LBR.T>;
-        c = Libra.zero<LBR.T>();
+        let c: Self.R;
+        c = R { flag: false };
         return 0;
     }
+}
+// check: RET_UNSAFE_TO_DESTROY_ERROR
 
+//! new-transaction
+module M2 {
     t2(): bool {
         let u: u64;
         let r: &u64;
@@ -19,6 +21,4 @@ module M {
         return move(r);
     }
 }
-
-// check: RET_UNSAFE_TO_DESTROY_ERROR
 // check: RET_UNSAFE_TO_DESTROY_ERROR

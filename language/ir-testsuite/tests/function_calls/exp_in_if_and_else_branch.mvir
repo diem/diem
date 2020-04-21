@@ -5,7 +5,7 @@ main() {
     }
     else {
         (5);
-        // check: POSITIVE_STACK_SIZE_AT_BLOCK_END
+        // POSITIVE_STACK_SIZE_AT_BLOCK_END, but we only check one error
     }
     return;
 }

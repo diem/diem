@@ -20,6 +20,16 @@ module M {
         return;
     }
 
+    foo(a: &mut u64, b: &mut Self.Y) {
+        return;
+    }
+}
+// check: CALL_BORROWED_MUTABLE_REFERENCE_ERROR
+
+//! new-transaction
+module M2 {
+    struct X { f: Self.Y }
+    struct Y { g: u64, h: u64 }
     t2() {
         let x: Self.X;
         let ref_x: &mut Self.X;
@@ -38,14 +48,9 @@ module M {
         return;
     }
 
-    foo(a: &mut u64, b: &mut Self.Y) {
-        return;
-    }
 
     bar(a: &mut Self.Y, b: &mut u64) {
         return;
     }
 }
-
-// check: CALL_BORROWED_MUTABLE_REFERENCE_ERROR
 // check: CALL_BORROWED_MUTABLE_REFERENCE_ERROR

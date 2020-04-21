@@ -8,7 +8,7 @@ use crate::control_flow_graph::VMControlFlowGraph;
 use libra_types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
-    errors::append_err_info,
+    errors::{append_err_info, VMResult},
     file_format::{CompiledModule, FunctionDefinition},
     IndexKind,
 };
@@ -23,25 +23,19 @@ pub struct CodeUnitVerifier<'a> {
 }
 
 impl<'a> CodeUnitVerifier<'a> {
-    pub fn verify(module: &'a CompiledModule) -> Vec<VMStatus> {
+    pub fn verify(module: &'a CompiledModule) -> VMResult<()> {
         let verifier = Self { module };
-        verifier
-            .module
-            .function_defs()
-            .iter()
-            .enumerate()
-            .flat_map(move |(idx, function_definition)| {
-                verifier
-                    .verify_function(function_definition)
-                    .into_iter()
-                    .map(move |err| append_err_info(err, IndexKind::FunctionDefinition, idx))
-            })
-            .collect()
+        for (idx, function_definition) in verifier.module.function_defs().iter().enumerate() {
+            verifier
+                .verify_function(function_definition)
+                .map_err(|err| append_err_info(err, IndexKind::FunctionDefinition, idx))?
+        }
+        Ok(())
     }
 
-    fn verify_function(&self, function_definition: &FunctionDefinition) -> Vec<VMStatus> {
+    fn verify_function(&self, function_definition: &FunctionDefinition) -> VMResult<()> {
         if function_definition.is_native() {
-            return vec![];
+            return Ok(());
         }
 
         let code = &function_definition.code.code;
@@ -49,12 +43,11 @@ impl<'a> CodeUnitVerifier<'a> {
         // Check to make sure that the bytecode vector ends with a branching instruction.
         if let Some(bytecode) = code.last() {
             if !bytecode.is_unconditional_branch() {
-                return vec![VMStatus::new(StatusCode::INVALID_FALL_THROUGH)];
+                return Err(VMStatus::new(StatusCode::INVALID_FALL_THROUGH));
             }
         } else {
-            return vec![VMStatus::new(StatusCode::INVALID_FALL_THROUGH)];
+            return Err(VMStatus::new(StatusCode::INVALID_FALL_THROUGH));
         }
-
         self.verify_function_inner(function_definition, &VMControlFlowGraph::new(code))
     }
 
@@ -62,15 +55,9 @@ impl<'a> CodeUnitVerifier<'a> {
         &self,
         function_definition: &FunctionDefinition,
         cfg: &VMControlFlowGraph,
-    ) -> Vec<VMStatus> {
-        let errors = StackUsageVerifier::verify(self.module, function_definition, cfg);
-        if !errors.is_empty() {
-            return errors;
-        }
-        let errors = AcquiresVerifier::verify(self.module, function_definition);
-        if !errors.is_empty() {
-            return errors;
-        }
+    ) -> VMResult<()> {
+        StackUsageVerifier::verify(self.module, function_definition, cfg)?;
+        AcquiresVerifier::verify(self.module, function_definition)?;
         TypeAndMemorySafetyAnalysis::verify(self.module, function_definition, cfg)
     }
 }

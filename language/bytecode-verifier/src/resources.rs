@@ -3,10 +3,10 @@
 
 //! This module implements a checker for verifying that a non-resource struct does not
 //! have resource fields inside it.
-use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_error::StatusCode;
 use vm::{
     access::ModuleAccess,
-    errors::verification_error,
+    errors::{verification_error, VMResult},
     file_format::{CompiledModule, Kind, SignatureToken, StructFieldInformation},
     IndexKind,
 };
@@ -20,31 +20,27 @@ impl<'a> ResourceTransitiveChecker<'a> {
         Self { module }
     }
 
-    pub fn verify(self) -> Vec<VMStatus> {
-        let mut errors = vec![];
+    pub fn verify(self) -> VMResult<()> {
         for (idx, struct_def) in self.module.struct_defs().iter().enumerate() {
             let sh = self.module.struct_handle_at(struct_def.struct_handle);
-            if !sh.is_nominal_resource {
-                match &struct_def.field_information {
-                    StructFieldInformation::Native => (),
-                    StructFieldInformation::Declared(fields) => {
-                        for field in fields {
-                            if self
-                                .contains_nominal_resource(&field.signature.0, &sh.type_parameters)
-                            {
-                                errors.push(verification_error(
-                                    IndexKind::StructDefinition,
-                                    idx,
-                                    StatusCode::INVALID_RESOURCE_FIELD,
-                                ));
-                                break;
-                            }
-                        }
-                    }
+            if sh.is_nominal_resource {
+                continue;
+            }
+            let fields = match &struct_def.field_information {
+                StructFieldInformation::Native => continue,
+                StructFieldInformation::Declared(fields) => fields,
+            };
+            for field in fields {
+                if self.contains_nominal_resource(&field.signature.0, &sh.type_parameters) {
+                    return Err(verification_error(
+                        IndexKind::StructDefinition,
+                        idx,
+                        StatusCode::INVALID_RESOURCE_FIELD,
+                    ));
                 }
             }
         }
-        errors
+        Ok(())
     }
 
     /// Determines if the given signature token contains a nominal resource.
@@ -53,26 +49,25 @@ impl<'a> ResourceTransitiveChecker<'a> {
     ///   2) it is a struct that
     ///       a) is marked as resource.
     ///       b) has a type actual which is a nominal resource.
-    fn contains_nominal_resource(&self, token: &SignatureToken, type_formals: &[Kind]) -> bool {
+    fn contains_nominal_resource(&self, token: &SignatureToken, type_parameters: &[Kind]) -> bool {
         match token {
             SignatureToken::Struct(sh_idx) => {
                 let sh = self.module.struct_handle_at(*sh_idx);
                 sh.is_nominal_resource
             }
-            SignatureToken::StructInstantiation(sh_idx, type_params) => {
+            SignatureToken::StructInstantiation(sh_idx, type_arguments) => {
                 let sh = self.module.struct_handle_at(*sh_idx);
                 if sh.is_nominal_resource {
                     return true;
                 }
-                // TODO: not sure this is correct and comprehensive, review...
-                for token in type_params {
-                    if self.contains_nominal_resource(token, type_formals) {
+                for token in type_arguments {
+                    if self.contains_nominal_resource(token, type_parameters) {
                         return true;
                     }
                 }
                 false
             }
-            SignatureToken::Vector(ty) => self.contains_nominal_resource(ty, type_formals),
+            SignatureToken::Vector(ty) => self.contains_nominal_resource(ty, type_parameters),
             SignatureToken::Reference(_)
             | SignatureToken::MutableReference(_)
             | SignatureToken::Bool

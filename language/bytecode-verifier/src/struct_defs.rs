@@ -27,24 +27,18 @@ impl<'a> RecursiveStructDefChecker<'a> {
         Self { module }
     }
 
-    pub fn verify(self) -> Vec<VMStatus> {
-        let graph = match StructDefGraphBuilder::new(self.module).build() {
-            Err(status) => return vec![status],
-            Ok(graph) => graph,
-        };
+    pub fn verify(self) -> VMResult<()> {
+        let graph = StructDefGraphBuilder::new(self.module).build()?;
 
         // toposort is iterative while petgraph::algo::is_cyclic_directed is recursive. Prefer
         // the iterative solution here as this code may be dealing with untrusted data.
         match toposort(&graph, None) {
-            Ok(_) => {
-                // Is the result of this useful elsewhere?
-                vec![]
-            }
-            Err(cycle) => vec![verification_error(
+            Ok(_) => Ok(()),
+            Err(cycle) => Err(verification_error(
                 IndexKind::StructDefinition,
                 cycle.node_id().into_index(),
                 StatusCode::RECURSIVE_STRUCT_DEFINITION,
-            )],
+            )),
         }
     }
 }
