@@ -140,7 +140,6 @@ module LibraAccount {
         Transaction::assert(
             AccountTrack::update_deposit_limits<Token>(
                 deposit_value,
-                sender,
                 payee,
                 &borrow_global<AccountOperationsCapability>(0xA550C18).tracking_cap
             ),
@@ -568,7 +567,6 @@ module LibraAccount {
             Transaction::assert(
                 AccountTrack::update_deposit_limits<Token>(
                     transaction_fee_amount,
-                    Transaction::sender(),
                     0xFEE,
                     &borrow_global<AccountOperationsCapability>(0xA550C18).tracking_cap
                 ),
