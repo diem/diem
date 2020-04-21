@@ -20,7 +20,7 @@ use libra_metrics::metric_server;
 use libra_types::{on_chain_config::ON_CHAIN_CONFIG_REGISTRY, waypoint::Waypoint, PeerId};
 use libra_vm::LibraVM;
 use network::validator_network::network_builder::{NetworkBuilder, TransportType};
-use onchain_discovery::OnchainDiscovery;
+use onchain_discovery::{service::OnchainDiscoveryService, OnchainDiscovery};
 use simple_storage_client::SimpleStorageClient;
 use state_synchronizer::StateSynchronizer;
 use std::{
@@ -90,32 +90,37 @@ pub fn setup_onchain_discovery(
     role: RoleType,
     storage_read_client: Arc<StorageReadServiceClient>,
     waypoint: Waypoint,
-    executor: Handle,
+    executor: &Handle,
 ) {
-    let executor_clone = executor.clone();
-    let (network_tx, network_rx) = onchain_discovery::network_interface::add_to_network(network);
+    let (network_tx, peer_mgr_notifs_rx, conn_notifs_rx) =
+        onchain_discovery::network_interface::add_to_network(network);
     let outbound_rpc_timeout = Duration::from_secs(30);
     let max_concurrent_inbound_queries = 8;
+
+    let onchain_discovery_service = OnchainDiscoveryService::new(
+        executor.clone(),
+        peer_mgr_notifs_rx,
+        storage_read_client.clone(),
+        max_concurrent_inbound_queries,
+    );
+    executor.spawn(onchain_discovery_service.start());
 
     let onchain_discovery = executor.enter(move || {
         let peer_query_ticker = interval(Duration::from_secs(30)).fuse();
         let storage_query_ticker = interval(Duration::from_secs(30)).fuse();
 
         OnchainDiscovery::new(
-            executor_clone,
             peer_id,
             role,
             waypoint,
             network_tx,
-            network_rx,
+            conn_notifs_rx,
             storage_read_client,
             peer_query_ticker,
             storage_query_ticker,
             outbound_rpc_timeout,
-            max_concurrent_inbound_queries,
         )
     });
-
     executor.spawn(onchain_discovery.start());
 }
 
@@ -206,7 +211,7 @@ pub fn setup_network(
                 role,
                 storage_read,
                 waypoint,
-                runtime.handle().clone(),
+                runtime.handle(),
             );
         }
         DiscoveryMethod::None => {}
