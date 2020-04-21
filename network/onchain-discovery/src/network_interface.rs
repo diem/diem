@@ -5,39 +5,22 @@
 use crate::types::{
     OnchainDiscoveryMsg, QueryDiscoverySetRequest, QueryDiscoverySetResponseWithEvent,
 };
-use channel::message_queues::QueueStyle;
+use channel::{libra_channel, message_queues::QueueStyle};
 use futures::{channel::mpsc, sink::SinkExt};
 use libra_types::PeerId;
 use network::{
     connectivity_manager::ConnectivityRequest,
-    peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
-    protocols::{
-        network::{NetworkEvents, NetworkSender},
-        rpc::error::RpcError,
+    peer_manager::{
+        conn_status_channel, ConnectionRequestSender, PeerManagerNotification,
+        PeerManagerRequestSender,
     },
+    protocols::{network::NetworkSender, rpc::error::RpcError},
     validator_network::network_builder::NetworkBuilder,
     ProtocolId,
 };
 use std::{convert::TryFrom, time::Duration};
 
-/// The interface from Network to OnchainDiscovery module.
-///
-/// `OnchainDiscoveryNetworkEvents` is a `Stream` of `NetworkNotification` where
-/// the raw `Bytes` rpc messages are deserialized into `OnchainDiscoveryMsg`
-/// types. `OnchainDiscoveryNetworkEvents` is a thin wrapper around a
-/// `channel::Receiver<NetworkNotification>`.
-pub type OnchainDiscoveryNetworkEvents = NetworkEvents<OnchainDiscoveryMsg>;
-
 /// The interface from OnchainDiscovery to Networking layer.
-///
-/// This is a thin wrapper around a `NetworkSender<OnchainDiscoveryMsg>`, which
-/// is in turn a thin wrapper around a `channel::Sender<NetworkRequest>`, so it
-/// is easy to clone and send off to a separate task. For example, the rpc
-/// requests return Futures that encapsulate the whole flow, from sending the
-/// request to remote, to finally receiving the response and deserializing. It
-/// therefore makes the most sense to make the rpc call on a separate async
-/// task, which requires the `OnchainDiscoveryNetworkSender` to be `Clone` and
-/// `Send`.
 #[derive(Clone)]
 pub struct OnchainDiscoveryNetworkSender {
     network_sender: NetworkSender<OnchainDiscoveryMsg>,
@@ -93,7 +76,11 @@ impl OnchainDiscoveryNetworkSender {
 /// given network builder.
 pub fn add_to_network(
     network: &mut NetworkBuilder,
-) -> (OnchainDiscoveryNetworkSender, OnchainDiscoveryNetworkEvents) {
+) -> (
+    OnchainDiscoveryNetworkSender,
+    libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+    conn_status_channel::Receiver,
+) {
     let (network_sender, network_receiver, conn_reqs_tx, conn_notifs_rx) = network
         .add_protocol_handler(
             vec![ProtocolId::OnchainDiscoveryRpc],
@@ -111,6 +98,7 @@ pub fn add_to_network(
                 .conn_mgr_reqs_tx()
                 .expect("ConnecitivtyManager not enabled"),
         ),
-        OnchainDiscoveryNetworkEvents::new(network_receiver, conn_notifs_rx),
+        network_receiver,
+        conn_notifs_rx,
     )
 }

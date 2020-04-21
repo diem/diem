@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
-    network_interface::{OnchainDiscoveryNetworkEvents, OnchainDiscoveryNetworkSender},
+    network_interface::OnchainDiscoveryNetworkSender,
+    service::OnchainDiscoveryService,
     types::{
         DiscoveryInfoInternal, DiscoverySetInternal, OnchainDiscoveryMsg, QueryDiscoverySetRequest,
         QueryDiscoverySetResponseWithEvent,
@@ -181,6 +182,7 @@ fn setup_onchain_discovery(
     waypoint: Waypoint,
 ) -> (
     JoinHandle<()>,
+    JoinHandle<()>,
     MockOnchainDiscoveryNetworkSender,
     channel::Sender<()>,
     channel::Sender<()>,
@@ -200,7 +202,7 @@ fn setup_onchain_discovery(
     let conn_reqs_tx = ConnectionRequestSender::new(conn_reqs_tx);
     let network_reqs_tx =
         OnchainDiscoveryNetworkSender::new(peer_mgr_reqs_tx, conn_reqs_tx, conn_mgr_reqs_tx);
-    let network_notifs_rx = OnchainDiscoveryNetworkEvents::new(peer_mgr_notifs_rx, conn_notifs_rx);
+    // let network_notifs_rx = OnchainDiscoveryNetworkEvents::new(peer_mgr_notifs_rx, conn_notifs_rx);
     let (peer_query_ticker_tx, peer_query_ticker_rx) = channel::new_test::<()>(1);
     let (storage_query_ticker_tx, storage_query_ticker_rx) = channel::new_test::<()>(1);
 
@@ -208,26 +210,32 @@ fn setup_onchain_discovery(
     let max_concurrent_inbound_rpcs = 8;
 
     let onchain_discovery = OnchainDiscovery::new(
-        executor.clone(),
         peer_id,
         role,
         waypoint,
         network_reqs_tx,
-        network_notifs_rx,
-        storage_read_client,
+        conn_notifs_rx,
+        Arc::clone(&storage_read_client),
         peer_query_ticker_rx,
         storage_query_ticker_rx,
         outbound_rpc_timeout,
+    );
+    let f_onchain_discovery = executor.spawn(onchain_discovery.start());
+
+    let service = OnchainDiscoveryService::new(
+        executor.clone(),
+        peer_mgr_notifs_rx,
+        storage_read_client,
         max_concurrent_inbound_rpcs,
     );
-
-    let f_onchain_discovery = executor.spawn(onchain_discovery.start());
+    let f_service = executor.spawn(service.start());
 
     let mock_network_sender =
         MockOnchainDiscoveryNetworkSender::new(peer_mgr_notifs_tx, conn_notifs_tx);
 
     (
         f_onchain_discovery,
+        f_service,
         mock_network_sender,
         peer_query_ticker_tx,
         storage_query_ticker_tx,
@@ -250,6 +258,7 @@ fn handles_remote_query() {
 
     let (
         f_onchain_discovery,
+        f_service,
         mut mock_network_tx,
         peer_query_ticker_tx,
         storage_query_ticker_tx,
@@ -296,6 +305,7 @@ fn handles_remote_query() {
     drop(storage_query_ticker_tx);
 
     rt.block_on(f_onchain_discovery).unwrap();
+    rt.block_on(f_service).unwrap();
 }
 
 #[test]
@@ -312,6 +322,7 @@ fn queries_storage_on_tick() {
 
     let (
         f_onchain_discovery,
+        f_service,
         mock_network_tx,
         peer_query_ticker_tx,
         mut storage_query_ticker_tx,
@@ -360,6 +371,7 @@ fn queries_storage_on_tick() {
 
     // onchain discovery actor should terminate
     rt.block_on(f_onchain_discovery).unwrap();
+    rt.block_on(f_service).unwrap();
 }
 
 #[test]
@@ -379,6 +391,7 @@ fn queries_peers_on_tick() {
 
     let (
         f_server_onchain_discovery,
+        f_server_service,
         mut server_network_tx,
         server_peer_query_ticker_tx,
         server_storage_query_ticker_tx,
@@ -404,6 +417,7 @@ fn queries_peers_on_tick() {
 
     let (
         f_client_onchain_discovery,
+        f_client_service,
         mut client_network_tx,
         mut client_peer_query_ticker_tx,
         client_storage_query_ticker_tx,
@@ -461,6 +475,7 @@ fn queries_peers_on_tick() {
 
     // client should shutdown completely
     rt.block_on(f_client_onchain_discovery).unwrap();
+    rt.block_on(f_client_service).unwrap();
 
     // server shutdown
     drop(server_network_tx);
@@ -468,6 +483,7 @@ fn queries_peers_on_tick() {
     drop(server_storage_query_ticker_tx);
 
     rt.block_on(f_server_onchain_discovery).unwrap();
+    rt.block_on(f_server_service).unwrap();
 }
 
 async fn get_discovery_set(storage: &Arc<dyn StorageRead>) -> DiscoverySet {

@@ -48,18 +48,14 @@
 //!    detect a newer discovery set
 
 use crate::{
-    network_interface::{OnchainDiscoveryNetworkEvents, OnchainDiscoveryNetworkSender},
+    network_interface::OnchainDiscoveryNetworkSender,
     types::{
-        DiscoveryInfoInternal, DiscoverySetInternal, OnchainDiscoveryMsg, QueryDiscoverySetRequest,
+        DiscoveryInfoInternal, DiscoverySetInternal, QueryDiscoverySetRequest,
         QueryDiscoverySetResponse, QueryDiscoverySetResponseWithEvent,
     },
 };
 use anyhow::{Context as AnyhowContext, Result};
-use bounded_executor::BoundedExecutor;
-use bytes::Bytes;
 use futures::{
-    channel::oneshot,
-    future,
     future::{FusedFuture, Future, FutureExt},
     ready,
     stream::{FusedStream, Stream, StreamExt},
@@ -76,31 +72,24 @@ use libra_types::{
 };
 use network::{
     connectivity_manager::{ConnectivityRequest, DiscoverySource},
-    error::NetworkError,
-    protocols::{network::Event, rpc::error::RpcError},
+    peer_manager::{conn_status_channel, ConnectionStatusNotification},
 };
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 use std::{
-    collections::HashSet,
-    convert::{TryFrom, TryInto},
-    mem,
-    pin::Pin,
-    sync::Arc,
-    task::Context,
-    time::Duration,
+    collections::HashSet, convert::TryFrom, mem, pin::Pin, sync::Arc, task::Context, time::Duration,
 };
 use storage_client::StorageRead;
-use tokio::runtime::Handle;
 
 #[cfg(test)]
 mod test;
 
 pub mod network_interface;
+pub mod service;
 pub mod types;
 
+/// Actor for querying various sources (remote peers, local storage) for the
+/// latest discovery set and notifying the `ConnectivityManager` of updates.
 pub struct OnchainDiscovery<TTicker> {
-    /// A bounded executor for handling inbound discovery set queries.
-    inbound_rpc_executor: BoundedExecutor,
     /// Our node's PeerId.
     peer_id: PeerId,
     /// Our node's role (validator || fullnode).
@@ -119,8 +108,8 @@ pub struct OnchainDiscovery<TTicker> {
     connected_peers: HashSet<PeerId>,
     /// A channel to send requests to the network instance.
     network_tx: OnchainDiscoveryNetworkSender,
-    /// A channel to recevie notifications from the network.
-    network_rx: OnchainDiscoveryNetworkEvents,
+    /// A channel to receive connection updates from the network.
+    conn_notifs_rx: conn_status_channel::Receiver,
     /// internal gRPC client to send read requests to Libra Storage.
     // TODO(philiphayes): use the new storage DbReader interface.
     storage_read_client: Arc<dyn StorageRead>,
@@ -147,22 +136,19 @@ where
     TTicker: Stream + FusedStream + Unpin,
 {
     pub fn new(
-        executor: Handle,
         self_peer_id: PeerId,
         role: RoleType,
         waypoint: Waypoint,
         network_tx: OnchainDiscoveryNetworkSender,
-        network_rx: OnchainDiscoveryNetworkEvents,
+        conn_notifs_rx: conn_status_channel::Receiver,
         storage_read_client: Arc<dyn StorageRead>,
         peer_query_ticker: TTicker,
         storage_query_ticker: TTicker,
         outbound_rpc_timeout: Duration,
-        max_concurrent_inbound_queries: usize,
     ) -> Self {
         let trusted_state = waypoint.into();
 
         Self {
-            inbound_rpc_executor: BoundedExecutor::new(max_concurrent_inbound_queries, executor),
             peer_id: self_peer_id,
             role,
             trusted_state,
@@ -170,7 +156,7 @@ where
             latest_discovery_set: DiscoverySetInternal::empty(),
             connected_peers: HashSet::new(),
             network_tx,
-            network_rx,
+            conn_notifs_rx,
             storage_read_client,
             peer_query_ticker,
             storage_query_ticker,
@@ -194,9 +180,9 @@ where
         loop {
             self.event_id = self.event_id.wrapping_add(1);
             futures::select! {
-                event = self.network_rx.select_next_some() => {
-                    trace!("event id: {}, type: NetworkEvent", self.event_id);
-                    self.handle_network_event(event);
+                notif = self.conn_notifs_rx.select_next_some() => {
+                    trace!("event id: {}, type: ConnectionStatusNotification", self.event_id);
+                    self.handle_connection_notif(notif);
                 },
                 _ = self.peer_query_ticker.select_next_some() => {
                     trace!("event id: {}, type: PeerQueryTick", self.event_id);
@@ -227,64 +213,18 @@ where
         }
     }
 
-    fn handle_network_event(&mut self, event: Result<Event<OnchainDiscoveryMsg>, NetworkError>) {
-        match event {
-            Ok(event) => match event {
-                Event::NewPeer(peer_id) => {
-                    trace!("connected to new peer: {}", peer_id.short_str());
-                    // Add peer to connected peer list.
-                    self.connected_peers.insert(peer_id);
-                }
-                Event::LostPeer(peer_id) => {
-                    trace!("disconnected from peer: {}", peer_id.short_str());
-                    // Remove peer from connected peer list.
-                    self.connected_peers.remove(&peer_id);
-                }
-                Event::Message(msg) => {
-                    warn!("unexpected direct-send message from network: {:?}", msg);
-                    debug_assert!(false);
-                }
-                Event::RpcRequest((peer_id, msg, res_tx)) => match msg.try_into() {
-                    Ok(OnchainDiscoveryMsg::QueryDiscoverySetRequest(req_msg)) => {
-                        debug!(
-                            "recevied query discovery set request: peer: {}, \
-                             version: {}, seq_num: {}",
-                            peer_id.short_str(),
-                            req_msg.client_known_version,
-                            req_msg.client_known_seq_num,
-                        );
-
-                        let res = self.inbound_rpc_executor.try_spawn(
-                            handle_query_discovery_set_request(
-                                Arc::clone(&self.storage_read_client),
-                                peer_id,
-                                req_msg,
-                                res_tx,
-                            ),
-                        );
-
-                        if res.is_err() {
-                            warn!(
-                                "discovery set query executor at capacity; dropped \
-                                 rpc request: peer: {}",
-                                peer_id.short_str()
-                            );
-                        }
-                    }
-                    Ok(msg) => {
-                        warn!("unexpected rpc from peer: {}, msg: {:?}", peer_id, msg);
-                        debug_assert!(false);
-                    }
-                    Err(err) => {
-                        warn!(
-                            "failed to deserialize rpc from peer: {}, err: {:?}",
-                            peer_id, err
-                        );
-                        debug_assert!(false);
-                    }
-                },
-            },
-            Err(err) => error!("network event error: {:?}", err),
+    fn handle_connection_notif(&mut self, notif: ConnectionStatusNotification) {
+        match notif {
+            ConnectionStatusNotification::NewPeer(peer_id, _addr) => {
+                trace!("connected to new peer: {}", peer_id.short_str());
+                // Add peer to connected peer list.
+                self.connected_peers.insert(peer_id);
+            }
+            ConnectionStatusNotification::LostPeer(peer_id, _addr, _reason) => {
+                trace!("disconnected from peer: {}", peer_id.short_str());
+                // Remove peer from connected peer list.
+                self.connected_peers.remove(&peer_id);
+            }
         }
     }
 
@@ -553,50 +493,6 @@ where
         } else {
             None
         }
-    }
-}
-
-async fn handle_query_discovery_set_request(
-    storage_read_client: Arc<dyn StorageRead>,
-    peer_id: PeerId,
-    req_msg: QueryDiscoverySetRequest,
-    mut res_tx: oneshot::Sender<Result<Bytes, RpcError>>,
-) {
-    // TODO(philiphayes): verify that there is a timeout here...
-    let mut f_rpc_cancel = future::poll_fn(|cx: &mut Context<'_>| res_tx.poll_canceled(cx)).fuse();
-
-    // TODO(philiphayes): remove?
-    let peer_id_short = peer_id.short_str();
-
-    // cancel the internal storage rpc request early if the external rpc request
-    // is cancelled.
-    futures::select! {
-        res = storage_query_discovery_set(storage_read_client, req_msg).fuse() => {
-            let (_req_msg, res_msg) = match res {
-                Ok(res) => res,
-                Err(err) => {
-                    warn!("error querying storage discovery set: peer: {}, err: {:?}", peer_id_short, err);
-                    return;
-                },
-            };
-
-            let res_msg = QueryDiscoverySetResponse::from(res_msg);
-            let res_msg = OnchainDiscoveryMsg::QueryDiscoverySetResponse(res_msg);
-            let res_bytes = match lcs::to_bytes(&res_msg) {
-                Ok(res_bytes) => res_bytes,
-                Err(err) => {
-                    error!("failed to serialize response message: err: {:?}, res_msg: {:?}", err, res_msg);
-                    return;
-                }
-            };
-
-            if res_tx.send(Ok(res_bytes.into())).is_err() {
-                debug!("remote peer canceled discovery set query: peer: {}", peer_id_short);
-            }
-        },
-        _ = f_rpc_cancel => {
-            debug!("remote peer canceled discovery set query: peer: {}", peer_id_short);
-        },
     }
 }
 
