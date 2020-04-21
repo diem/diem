@@ -16,8 +16,9 @@
 //! for `Name` values.
 //!
 //! ```rust
-//! # use serde_reflection::*;
 //! # use serde::{Deserialize, Serialize};
+//! use serde_reflection::{ContainerFormat, Error, Format, Samples, Tracer, TracerConfig};
+//!
 //! #[derive(Serialize, PartialEq, Eq, Debug, Clone)]
 //! struct Name(String);
 //! // impl<'de> Deserialize<'de> for Name { ... }
@@ -56,18 +57,18 @@
 //! // Start a session to trace formats.
 //! let mut tracer = Tracer::new(TracerConfig::default());
 //! // Create a store to hold samples of Rust values.
-//! let mut records = SerializationRecords::new();
+//! let mut samples = Samples::new();
 //!
 //! // For every type (here `Name`), if a user-defined implementation of `Deserialize` exists and
-//! // is known to perform custom validation checks, use `trace_value` first so that `records`
+//! // is known to perform custom validation checks, use `trace_value` first so that `samples`
 //! // contains a valid Rust value of this type.
 //! let bob = Name("Bob".into());
-//! tracer.trace_value(&mut records, &bob)?;
-//! assert!(records.value("Name").is_some());
+//! tracer.trace_value(&mut samples, &bob)?;
+//! assert!(samples.value("Name").is_some());
 //!
 //! // Now, let's trace deserialization for the top-level type `Person`.
-//! // We pass a reference to `records` so that sampled values are used for custom types.
-//! let (format, values) = tracer.trace_type::<Person>(&records)?;
+//! // We pass a reference to `samples` so that sampled values are used for custom types.
+//! let (format, values) = tracer.trace_type::<Person>(&samples)?;
 //! assert_eq!(format, Format::TypeName("Person".into()));
 //!
 //! // As a byproduct, we have also obtained sample values of type `Person`.
@@ -113,7 +114,7 @@
 //! # }
 //! ```
 //!
-//! # Tracing Serialization with `trace_value(v)`
+//! # Tracing Serialization with `trace_value`
 //!
 //! Tracing the serialization of a Rust value `v` consists of visiting the structural
 //! components of `v` in depth and recording Serde formats for all the visited types.
@@ -130,8 +131,8 @@
 //!
 //! # fn main() -> Result<(), Error> {
 //! let mut tracer = Tracer::new(TracerConfig::default());
-//! let mut records = SerializationRecords::new();
-//! tracer.trace_value(&mut records, &FullName { first: "", middle: Some(""), last: "" })?;
+//! let mut samples = Samples::new();
+//! tracer.trace_value(&mut samples, &FullName { first: "", middle: Some(""), last: "" })?;
 //! let registry = tracer.registry()?;
 //! match registry.get("FullName").unwrap() {
 //!     ContainerFormat::Struct(fields) => assert_eq!(fields.len(), 3),
@@ -160,8 +161,8 @@
 //! # }
 //! # fn main() -> Result<(), Error> {
 //! let mut tracer = Tracer::new(TracerConfig::default());
-//! let mut records = SerializationRecords::new();
-//! tracer.trace_value(&mut records, &FullName { first: "", middle: None, last: "" })?;
+//! let mut samples = Samples::new();
+//! tracer.trace_value(&mut samples, &FullName { first: "", middle: None, last: "" })?;
 //! assert_eq!(tracer.registry().unwrap_err(), Error::UnknownFormatInContainer("FullName"));
 //! # Ok(())
 //! # }
@@ -169,30 +170,31 @@
 //!
 //! For this reason, we introduce a complementary set of APIs to trace deserialization of types.
 //!
-//! # Tracing Deserialization with `trace_type<T>()`
+//! # Tracing Deserialization with `trace_type<T>`
 //!
-//! Deserialization-tracing APIs take the current tracing state `&mut self` and a type `T`
-//! as input.
+//! Deserialization-tracing APIs take a type `T`, the current tracing state, and a
+//! reference to previously recorded samples as input.
 //!
 //! ## Core Algorithm and High-Level API
 //!
-//! The core algorithm `trace_type_once<T>()`
+//! The core algorithm `trace_type_once<T>`
 //! attempts to reconstruct a witness value of type `T` by exploring the graph of all the types
 //! occurring in the definition of `T`. At the same time, the algorithm records the
 //! formats of all the visited structs and enum variants.
 //!
-//! For the exploration to be able to terminate, the core algorithm `trace_type_once<T>()` explores
+//! For the exploration to be able to terminate, the core algorithm `trace_type_once<T>` explores
 //! each possible recursion point only once (see paragraph below).
-//! In particular, if `T` is an enum, `trace_type_once<T>()` discovers only one variant at a time.
+//! In particular, if `T` is an enum, `trace_type_once<T>` discovers only one variant of `T` at a time.
 //!
-//! For this reason, the high-level API `trace_type<T>()`
-//! will repeat calls to `trace_type_once<T>()` until all the variants of `T` are known.
+//! For this reason, the high-level API `trace_type<T>`
+//! will repeat calls to `trace_type_once<T>` until all the variants of `T` are known.
 //! Variant cases of `T` are explored in sequential order, starting with index `0`.
 //!
 //! ## Coverage Guarantees
 //!
-//! Under the assumptions listed below, a single call to `trace_type<T>()` is guaranteed to
-//! record the formats of all the types that `T` depends on.
+//! Under the assumptions listed below, a single call to `trace_type<T>` is guaranteed to
+//! record formats for all the types that `T` depends on. Besides, if `T` is an enum, it
+//! will record all the variants of `T`.
 //!
 //! (0) Container names must not collide. (TODO: handle this using `std::any::type_name`?)
 //!
@@ -225,6 +227,9 @@
 //!
 //! The default configuration `TracerConfig:default()` always picks the recorded value for a
 //! `NewTypeStruct` and never does in the other cases.
+//!
+//! For efficiency reasons, the current algorithm does not attempt to scan the variants of enums
+//! other than the parameter `T` of the main call `trace_type<T>`.
 
 mod de;
 mod error;
@@ -235,5 +240,5 @@ mod value;
 
 pub use error::{Error, Result};
 pub use format::{ContainerFormat, Format, FormatHolder, Named, VariantFormat};
-pub use trace::{Registry, RegistryOwned, SerializationRecords, Tracer, TracerConfig};
+pub use trace::{Registry, RegistryOwned, Samples, Tracer, TracerConfig};
 pub use value::Value;
