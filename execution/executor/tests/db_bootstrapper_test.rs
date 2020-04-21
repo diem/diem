@@ -24,7 +24,7 @@ use libra_types::{
     contract_event::ContractEvent,
     move_resource::MoveResource,
     on_chain_config,
-    on_chain_config::{OnChainConfig, ValidatorSet},
+    on_chain_config::{ConfigurationResource, OnChainConfig, ValidatorSet},
     proof::SparseMerkleRangeProof,
     transaction::{
         authenticator::AuthenticationKey, ChangeSet, Transaction, Version, PRE_GENESIS_VERSION,
@@ -182,6 +182,19 @@ fn get_balance(account: &AccountAddress, db: &DbReaderWriter) -> u64 {
         .coin()
 }
 
+fn get_configuration(db: &DbReaderWriter) -> ConfigurationResource {
+    let association_blob = db
+        .reader
+        .get_latest_account_state(association_address())
+        .unwrap()
+        .unwrap();
+    let association_state = AccountState::try_from(&association_blob).unwrap();
+    association_state
+        .get_configuration_resource()
+        .unwrap()
+        .unwrap()
+}
+
 fn get_state_backup(
     db: &LibraDB,
 ) -> (
@@ -306,12 +319,20 @@ fn test_new_genesis() {
         .verify_and_ratchet(&li, &validator_change_proof)
         .unwrap();
 
-    // New genesis transaction: set validator set and overwrite account1 balance.
+    // New genesis transaction: set validator set, bump epoch and overwrite account1 balance.
+    let configuration = get_configuration(&db);
     let genesis_txn = Transaction::WaypointWriteSet(ChangeSet::new(
         WriteSetMut::new(vec![
             (
                 ValidatorSet::CONFIG_ID.access_path(),
                 WriteOp::Value(lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
+            ),
+            (
+                AccessPath::new(
+                    association_address(),
+                    ConfigurationResource::resource_path(),
+                ),
+                WriteOp::Value(lcs::to_bytes(&configuration.bump_epoch_for_test()).unwrap()),
             ),
             (
                 AccessPath::new(account1, BalanceResource::resource_path()),
@@ -321,7 +342,7 @@ fn test_new_genesis() {
         .freeze()
         .unwrap(),
         vec![ContractEvent::new(
-            on_chain_config::new_epoch_event_key(),
+            *configuration.events().key(),
             0,
             lbr_type_tag(),
             vec![],
