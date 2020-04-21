@@ -97,7 +97,7 @@ use once_cell::sync::Lazy;
 use proptest_derive::Arbitrary;
 use rand::{rngs::OsRng, Rng};
 use serde::{de, ser};
-use std::{self, convert::AsRef, fmt, str::FromStr};
+use std::{self, convert::AsRef, fmt};
 use tiny_keccak::{Hasher, Sha3};
 
 const LIBRA_HASH_SUFFIX: &[u8] = b"@@$$LIBRA$$@@";
@@ -255,14 +255,6 @@ impl HashValue {
     /// Parse a given hex string to a hash value.
     pub fn from_hex(hex_str: &str) -> Result<Self> {
         Self::from_slice(hex::decode(hex_str)?.as_slice())
-    }
-}
-
-impl FromStr for HashValue {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        Self::from_hex(s)
     }
 }
 

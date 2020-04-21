@@ -3,8 +3,7 @@
 
 use anyhow::{ensure, format_err, Context, Result};
 use executor::db_bootstrapper::calculate_genesis;
-use libra_crypto::HashValue;
-use libra_types::transaction::Transaction;
+use libra_types::{transaction::Transaction, waypoint::Waypoint};
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use std::{fs::File, io::Read, path::PathBuf};
@@ -23,13 +22,10 @@ struct Opt {
     #[structopt(short, long, parse(from_os_str))]
     genesis_txn_file: PathBuf,
 
-    #[structopt(short = "v", long, requires("check-waypoint-hash"))]
-    check_waypoint_version: Option<u64>,
+    #[structopt(short, long)]
+    waypoint_to_verify: Option<Waypoint>,
 
-    #[structopt(short = "h", long, requires("check-waypoint-version"))]
-    check_waypoint_hash: Option<HashValue>,
-
-    #[structopt(long, requires_all(&["check-waypoint-version", "check-waypoint-hash"]))]
+    #[structopt(long, requires("waypoint-to-verify"))]
     commit: bool,
 }
 
@@ -52,19 +48,12 @@ fn main() -> Result<()> {
     println!("Successfully calculated genesis.");
     println!("{:?}", committer.waypoint());
 
-    if opt.check_waypoint_version.is_some() {
-        let waypoint = committer.waypoint();
+    if let Some(waypoint) = opt.waypoint_to_verify {
         ensure!(
-            opt.check_waypoint_version.unwrap() == waypoint.version(),
-            "Waypoint version not expected. Expected {:?} got {:?}",
-            opt.check_waypoint_version.unwrap(),
-            waypoint.version(),
-        );
-        ensure!(
-            opt.check_waypoint_hash.unwrap() == waypoint.value(),
-            "Waypoint hash not expected. Expected {:?} got {:?}",
-            opt.check_waypoint_hash.unwrap(),
-            waypoint.value(),
+            waypoint == committer.waypoint(),
+            "Waypoint verification failed. Expected {:?}, got {:?}.",
+            waypoint,
+            committer.waypoint(),
         );
         println!("Waypoint verified.");
 

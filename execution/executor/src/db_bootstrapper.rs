@@ -136,12 +136,8 @@ pub fn calculate_genesis<V: VMExecutor>(
 
     let committer = GenesisCommitter::new(executor, ledger_info_with_sigs)?;
     info!(
-        "Genesis calculated: root_hash {:?}, waypoint {:?}",
-        committer
-            .ledger_info_with_sigs
-            .ledger_info()
-            .transaction_accumulator_hash(),
-        committer.waypoint,
+        "Genesis calculated: ledger_info_with_sigs {:?}, waypoint {:?}",
+        committer.ledger_info_with_sigs, committer.waypoint,
     );
     Ok(committer)
 }
