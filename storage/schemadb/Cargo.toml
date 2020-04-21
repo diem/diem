@@ -14,7 +14,7 @@ anyhow = "1.0"
 once_cell = "1.3.1"
 libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-rocksdb = { git = "https://github.com/wqfish/rust-rocksdb.git", branch = "ro" }
+rocksdb = { git = "https://github.com/rust-rocksdb/rust-rocksdb.git", rev = "4ee65f451be26702df266ee8035240efc50fd902" }
 
 [dev-dependencies]
 byteorder = "1.3.2"
