@@ -374,6 +374,7 @@ module LibraAccount {
             fresh_address,
             &borrow_global<AccountOperationsCapability>(0xA550C18).event_creation_cap
         );
+
         let authentication_key = auth_key_prefix;
         Vector::append(&mut authentication_key, LCS::to_bytes(&fresh_address));
         Transaction::assert(Vector::length(&authentication_key) == 32, 12);

@@ -2,16 +2,34 @@
 // distinct from the burner (the association). Use a third, non-privileged account (carol) to check
 // that only preburners can preburn and only the associaton can burn.
 
-//! account: alice
-//! account: bob
-//! account: carol
+//! account: alice, 0Coin1
+//! account: bob, 0Coin1
+//! account: carol, 0Coin1
+
+// allocate funds to alice, bob and carol
+//! sender: association
+//! max-gas: 1000000
+//! gas-price: 0
+use 0x0::Coin1;
+use 0x0::Libra;
+use 0x0::LibraAccount;
+fun main() {
+    LibraAccount::deposit({{alice}}, Libra::mint<Coin1::T>(200));
+    LibraAccount::deposit({{bob}}, Libra::mint<Coin1::T>(200));
+    LibraAccount::deposit({{carol}}, Libra::mint<Coin1::T>(200));
+}
+
+// check: EXECUTED
 
 // publish preburn resource to alice's account
+//! new-transaction
 //! sender: alice
-use 0x0::LBR;
+//! max-gas: 1000000
+//! gas-price: 0
+use 0x0::Coin1;
 use 0x0::Libra;
 fun main() {
-    Libra::publish_preburn(Libra::new_preburn<LBR::T>())
+    Libra::publish_preburn(Libra::new_preburn<Coin1::T>())
 }
 
 // check: EXECUTED
@@ -19,25 +37,30 @@ fun main() {
 // perform a preburn of 100 from alice's account
 //! new-transaction
 //! sender: alice
+//! max-gas: 1000000
+//! gas-price: 0
 use 0x0::LibraAccount;
-use 0x0::LBR;
+use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main() {
-    let coin = LibraAccount::withdraw_from_sender<LBR::T>(100);
-    Libra::preburn_to_sender<LBR::T>(coin);
-    Transaction::assert(Libra::preburn_value<LBR::T>() == 100, 8001)
+    let coin = LibraAccount::withdraw_from_sender<Coin1::T>(100);
+    Libra::preburn_to_sender<Coin1::T>(coin);
+    Transaction::assert(Libra::preburn_value<Coin1::T>() == 100, 8001)
 }
 
+// check: PreburnEvent
 // check: EXECUTED
 
 // preburn resource to bob's account
 //! new-transaction
 //! sender: bob
-use 0x0::LBR;
+//! max-gas: 1000000
+//! gas-price: 0
+use 0x0::Coin1;
 use 0x0::Libra;
 fun main() {
-    Libra::publish_preburn(Libra::new_preburn<LBR::T>())
+    Libra::publish_preburn(Libra::new_preburn<Coin1::T>())
 }
 
 // check: EXECUTED
@@ -45,28 +68,33 @@ fun main() {
 // perform a preburn of 200 from bob's account
 //! new-transaction
 //! sender: bob
+//! max-gas: 1000000
+//! gas-price: 0
 use 0x0::LibraAccount;
-use 0x0::LBR;
+use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main() {
-    let coin = LibraAccount::withdraw_from_sender<LBR::T>(200);
-    Libra::preburn_to_sender<LBR::T>(coin);
-    Transaction::assert(Libra::preburn_value<LBR::T>() == 300, 8002)
+    let coin = LibraAccount::withdraw_from_sender<Coin1::T>(200);
+    Libra::preburn_to_sender<Coin1::T>(coin);
+    Transaction::assert(Libra::preburn_value<Coin1::T>() == 300, 8002)
 }
 
+// check: PreburnEvent
 // check: EXECUTED
 
 // ensure that the non-privileged user carol cannot preburn.
 // will fail with MISSING_DATA because sender doesn't have a Preburn resource
 //! new-transaction
 //! sender: carol
+//! max-gas: 1000000
+//! gas-price: 0
 use 0x0::LibraAccount;
-use 0x0::LBR;
+use 0x0::Coin1;
 use 0x0::Libra;
 fun main() {
-    let coin = LibraAccount::withdraw_from_sender<LBR::T>(200);
-    Libra::preburn_to_sender<LBR::T>(coin);
+    let coin = LibraAccount::withdraw_from_sender<Coin1::T>(200);
+    Libra::preburn_to_sender<Coin1::T>(coin);
 }
 
 // check: Keep
@@ -76,10 +104,12 @@ fun main() {
 // will fail with MISSING_DATA because sender doesn't have the mint capability
 //! new-transaction
 //! sender: carol
-use 0x0::LBR;
+//! max-gas: 1000000
+//! gas-price: 0
+use 0x0::Coin1;
 use 0x0::Libra;
 fun main() {
-    Libra::burn<LBR::T>({{bob}})
+    Libra::burn<Coin1::T>({{bob}})
 }
 
 // check: Keep
@@ -88,10 +118,12 @@ fun main() {
 // ensure that the preburner bob cannot burn
 //! new-transaction
 //! sender: bob
-use 0x0::LBR;
+//! max-gas: 1000000
+//! gas-price: 0
+use 0x0::Coin1;
 use 0x0::Libra;
 fun main() {
-    Libra::burn<LBR::T>({{bob}})
+    Libra::burn<Coin1::T>({{bob}})
 }
 
 // check: Keep
@@ -100,29 +132,34 @@ fun main() {
 // burn bob's funds, then alice's
 //! new-transaction
 //! sender: association
-use 0x0::LBR;
+//! max-gas: 1000000
+//! gas-price: 0
+use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main() {
-    Libra::burn<LBR::T>({{bob}});
-    Transaction::assert(Libra::preburn_value<LBR::T>() == 100, 8003);
-    Libra::burn<LBR::T>({{alice}});
-    Transaction::assert(Libra::preburn_value<LBR::T>() == 0, 8004)
+    Libra::burn<Coin1::T>({{bob}});
+    Transaction::assert(Libra::preburn_value<Coin1::T>() == 100, 8003);
+    Libra::burn<Coin1::T>({{alice}});
+    Transaction::assert(Libra::preburn_value<Coin1::T>() == 0, 8004)
 }
 
+// check: BurnEvent
 // check: EXECUTED
 
 // now, we will initiate a burn request from alice and have the association cancel/return it.
 //! new-transaction
 //! sender: alice
+//! max-gas: 1000000
+//! gas-price: 0
 use 0x0::LibraAccount;
-use 0x0::LBR;
+use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main() {
-    let coin = LibraAccount::withdraw_from_sender<LBR::T>(100);
-    Libra::preburn_to_sender<LBR::T>(coin);
-    Transaction::assert(Libra::preburn_value<LBR::T>() == 100, 8005)
+    let coin = LibraAccount::withdraw_from_sender<Coin1::T>(100);
+    Libra::preburn_to_sender<Coin1::T>(coin);
+    Transaction::assert(Libra::preburn_value<Coin1::T>() == 100, 8005)
 }
 
 // check: EXECUTED
@@ -130,15 +167,18 @@ fun main() {
 // cancel Alice's request and return her funds
 //! new-transaction
 //! sender: association
+//! max-gas: 1000000
+//! gas-price: 0
 use 0x0::LibraAccount;
-use 0x0::LBR;
+use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main() {
-    let old_balance = LibraAccount::balance<LBR::T>({{alice}});
-    LibraAccount::cancel_burn<LBR::T>({{alice}});
-    Transaction::assert(Libra::preburn_value<LBR::T>() == 0, 8006);
-    Transaction::assert(LibraAccount::balance<LBR::T>({{alice}}) == old_balance + 100, 8007)
+    let old_balance = LibraAccount::balance<Coin1::T>({{alice}});
+    LibraAccount::cancel_burn<Coin1::T>({{alice}});
+    Transaction::assert(Libra::preburn_value<Coin1::T>() == 0, 8006);
+    Transaction::assert(LibraAccount::balance<Coin1::T>({{alice}}) == old_balance + 100, 8007)
 }
 
+// check: CancelBurnEvent
 // check: EXECUTED

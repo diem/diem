@@ -7,8 +7,8 @@ use hex;
 use libra_crypto::HashValue;
 use libra_types::{
     account_config::{
-        AccountResource, BalanceResource, CurrencyInfoResource, ReceivedPaymentEvent,
-        SentPaymentEvent,
+        AccountResource, BalanceResource, BurnEvent, CancelBurnEvent, CurrencyInfoResource,
+        MintEvent, PreburnEvent, ReceivedPaymentEvent, SentPaymentEvent,
     },
     account_state_blob::AccountStateWithProof,
     contract_event::ContractEvent,
@@ -116,6 +116,23 @@ impl ResponseAsView for EventView {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type")]
 pub enum EventDataView {
+    #[serde(rename = "burn")]
+    Burn {
+        amount: AmountView,
+        preburn_address: BytesView,
+    },
+    #[serde(rename = "cancelburn")]
+    CancelBurn {
+        amount: AmountView,
+        preburn_address: BytesView,
+    },
+    #[serde(rename = "mint")]
+    Mint { amount: AmountView },
+    #[serde(rename = "preburn")]
+    Preburn {
+        amount: AmountView,
+        preburn_address: BytesView,
+    },
     #[serde(rename = "receivedpayment")]
     ReceivedPayment {
         amount: AmountView,
@@ -157,7 +174,53 @@ impl From<(u64, ContractEvent)> for EventView {
                     metadata: BytesView::from(sent_event.metadata()),
                 })
             } else {
-                Err(format_err!("Unable to parse ReceivedPaymentEvent"))
+                Err(format_err!("Unable to parse SentPaymentEvent"))
+            }
+        } else if event.type_tag() == &TypeTag::Struct(BurnEvent::struct_tag()) {
+            if let Ok(burn_event) = BurnEvent::try_from(&event) {
+                let amount_view = AmountView::new(burn_event.amount(), burn_event.currency_code());
+                let preburn_address = BytesView::from(burn_event.preburn_address().as_ref());
+                Ok(EventDataView::Burn {
+                    amount: amount_view,
+                    preburn_address,
+                })
+            } else {
+                Err(format_err!("Unable to parse BurnEvent"))
+            }
+        } else if event.type_tag() == &TypeTag::Struct(CancelBurnEvent::struct_tag()) {
+            if let Ok(cancel_burn_event) = CancelBurnEvent::try_from(&event) {
+                let amount_view = AmountView::new(
+                    cancel_burn_event.amount(),
+                    cancel_burn_event.currency_code(),
+                );
+                let preburn_address = BytesView::from(cancel_burn_event.preburn_address().as_ref());
+                Ok(EventDataView::CancelBurn {
+                    amount: amount_view,
+                    preburn_address,
+                })
+            } else {
+                Err(format_err!("Unable to parse BurnEvent"))
+            }
+        } else if event.type_tag() == &TypeTag::Struct(MintEvent::struct_tag()) {
+            if let Ok(mint_event) = MintEvent::try_from(&event) {
+                let amount_view = AmountView::new(mint_event.amount(), mint_event.currency_code());
+                Ok(EventDataView::Mint {
+                    amount: amount_view,
+                })
+            } else {
+                Err(format_err!("Unable to parse MintEvent"))
+            }
+        } else if event.type_tag() == &TypeTag::Struct(PreburnEvent::struct_tag()) {
+            if let Ok(preburn_event) = PreburnEvent::try_from(&event) {
+                let amount_view =
+                    AmountView::new(preburn_event.amount(), preburn_event.currency_code());
+                let preburn_address = BytesView::from(preburn_event.preburn_address().as_ref());
+                Ok(EventDataView::Preburn {
+                    amount: amount_view,
+                    preburn_address,
+                })
+            } else {
+                Err(format_err!("Unable to parse BurnEvent"))
             }
         } else {
             Err(format_err!("Unknown events"))
