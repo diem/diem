@@ -432,6 +432,34 @@ where
             .filter(|event| *event.key() == new_epoch_event_key)
             .collect()
     }
+
+    fn get_executed_trees(&self, block_id: HashValue) -> Result<ExecutedTrees> {
+        let executed_trees = if block_id == self.cache.committed_block_id() {
+            self.cache.committed_trees().clone()
+        } else {
+            self.cache
+                .get_block(&block_id)?
+                .lock()
+                .unwrap()
+                .output()
+                .executed_trees()
+                .clone()
+        };
+
+        Ok(executed_trees)
+    }
+
+    fn get_executed_state_view<'a>(
+        &self,
+        executed_trees: &'a ExecutedTrees,
+    ) -> VerifiedStateView<'a> {
+        VerifiedStateView::new(
+            Arc::clone(&self.db.reader),
+            self.cache.committed_trees().version(),
+            self.cache.committed_trees().state_root(),
+            executed_trees.state_tree(),
+        )
+    }
 }
 
 impl<V: VMExecutor> ChunkExecutor for Executor<V> {
@@ -606,26 +634,9 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         parent_block_id: HashValue,
     ) -> Result<StateComputeResult> {
         let (block_id, transactions) = block;
-        let parent_block_executed_trees = if parent_block_id == self.cache.committed_block_id() {
-            self.cache.committed_trees().clone()
-        } else {
-            self.cache
-                .get_block(&parent_block_id)?
-                .lock()
-                .unwrap()
-                .output()
-                .executed_trees()
-                .clone()
-        };
-
         let _timer = OP_COUNTERS.timer("block_execute_time_s");
-        // Construct a StateView and pass the transactions to VM.
-        let state_view = VerifiedStateView::new(
-            Arc::clone(&self.db.reader),
-            self.cache.committed_trees().version(),
-            self.cache.committed_trees().state_root(),
-            parent_block_executed_trees.state_tree(),
-        );
+        let parent_block_executed_trees = self.get_executed_trees(parent_block_id)?;
+        let state_view = self.get_executed_state_view(&parent_block_executed_trees);
 
         let vm_outputs = {
             trace_code_block!("executor::execute_block", {"block", block_id});
