@@ -4,14 +4,23 @@
 #![forbid(unsafe_code)]
 
 use crate::{BlockExecutor, Executor};
-use anyhow::Result;
+use anyhow::{format_err, Result};
 use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
 use libra_logger::prelude::*;
+use libra_state_view::StateView;
 use libra_types::{
-    ledger_info::LedgerInfoWithSignatures, transaction::Transaction, waypoint::Waypoint,
+    access_path::AccessPath,
+    account_config::association_address,
+    block_info::{BlockInfo, GENESIS_ROUND},
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    libra_timestamp::LibraTimestampResource,
+    move_resource::MoveResource,
+    transaction::Transaction,
+    waypoint::Waypoint,
 };
 use libra_vm::VMExecutor;
-use storage_interface::{DbReaderWriter, TreeState};
+use std::collections::btree_map::BTreeMap;
+use storage_interface::{state_view::VerifiedStateView, DbReaderWriter, TreeState};
 
 pub fn bootstrap_db_if_empty<V: VMExecutor>(
     db: &DbReaderWriter,
@@ -43,8 +52,26 @@ pub fn bootstrap_db<V: VMExecutor>(
         .validators()
         .clone()
         .expect("Genesis transaction must emit a validator set.");
+    let executed_trees = executor.get_executed_trees(block_id)?;
+    let state_view = executor.get_executed_state_view(&executed_trees);
 
-    let ledger_info_with_sigs = LedgerInfoWithSignatures::genesis(root_hash, validator_set.clone());
+    let epoch = 0;
+    let timestamp_usecs = get_libra_timestamp(&state_view)?;
+    let ledger_info_with_sigs = LedgerInfoWithSignatures::new(
+        LedgerInfo::new(
+            BlockInfo::new(
+                epoch,
+                GENESIS_ROUND,
+                block_id,
+                root_hash,
+                0, /* version */
+                timestamp_usecs,
+                Some(validator_set.clone()),
+            ),
+            HashValue::zero(), /* consensus_data_hash */
+        ),
+        BTreeMap::default(), /* signatures */
+    );
     let waypoint = Waypoint::new(ledger_info_with_sigs.ledger_info())?;
 
     executor.commit_blocks(vec![HashValue::zero()], ledger_info_with_sigs)?;
@@ -55,4 +82,15 @@ pub fn bootstrap_db<V: VMExecutor>(
     // DB bootstrapped, avoid anything that could fail after this.
 
     Ok(waypoint)
+}
+
+fn get_libra_timestamp(state_view: &VerifiedStateView) -> Result<u64> {
+    let rsrc_bytes = &state_view
+        .get(&AccessPath::new(
+            association_address(),
+            LibraTimestampResource::resource_path(),
+        ))?
+        .ok_or_else(|| format_err!("LibraTimestamp missing."))?;
+    let rsrc = lcs::from_bytes::<LibraTimestampResource>(&rsrc_bytes)?;
+    Ok(rsrc.libra_timestamp.microseconds)
 }
