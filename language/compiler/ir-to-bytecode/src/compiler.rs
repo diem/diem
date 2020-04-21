@@ -443,7 +443,7 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
     };
     compiled_script
         .freeze()
-        .map_err(|errs| InternalCompilerError::BoundsCheckErrors(errs).into())
+        .map_err(|err| InternalCompilerError::BoundsCheckErrors(err).into())
         .map(|frozen_script| (frozen_script, source_map))
 }
 
@@ -522,7 +522,7 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
     };
     compiled_module
         .freeze()
-        .map_err(|errs| InternalCompilerError::BoundsCheckErrors(errs).into())
+        .map_err(|err| InternalCompilerError::BoundsCheckErrors(err).into())
         .map(|frozen_module| (frozen_module, source_map))
 }
 

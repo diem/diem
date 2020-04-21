@@ -38,11 +38,69 @@ module M {
         return;
     }
 }
-
-// There are two disjoint loops in the resulting graph:
-
-// loop 1: f#T --> g#T --S<T>--> f#T
+// There are two disjoint loops in the resulting graph, but only one error
+// loop: f#T --> g#T --S<T>--> f#T
+// loop: c#T1 --> c#T2 --> d#T --> b#T2 --S<T2>--> c#T1
 // check: LOOP_IN_INSTANTIATION_GRAPH
 
-// loop 2: c#T1 --> c#T2 --> d#T --> b#T2 --S<T2>--> c#T1
+//! new-transaction
+module M2 {
+    struct S<T> { b: bool }
+
+    f<T>() {
+        Self.g<T>();
+        return;
+    }
+
+    g<T>() {
+        Self.f<Self.S<T>>();
+        return;
+    }
+}
+// loop: f#T --> g#T --S<T>--> f#T
+// check: LOOP_IN_INSTANTIATION_GRAPH
+
+//! new-transaction
+module M3 {
+    struct S<T> { b: bool }
+
+    a<T>() {
+        Self.b<Self.S<T>, u64>();
+        return;
+    }
+
+    b<T1, T2>() {
+        Self.f<T1>();
+        Self.c<Self.S<T2>, bool>();
+        return;
+    }
+
+    c<T1, T2>() {
+        Self.c<u64, T1>();
+        Self.d<T2>();
+        Self.e<T2>();
+        return;
+    }
+
+    d<T>() {
+        Self.b<u64, T>();
+        return;
+    }
+
+    e<T>() {
+        return;
+    }
+
+    f<T>() {
+        Self.g<T>();
+        return;
+    }
+
+    g<T>() {
+        // Switched to just <T> to isolate the loop
+        Self.f<T>();
+        return;
+    }
+}
+// loop: c#T1 --> c#T2 --> d#T --> b#T2 --S<T2>--> c#T1
 // check: LOOP_IN_INSTANTIATION_GRAPH

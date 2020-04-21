@@ -1,7 +1,22 @@
+//! account: alice, 90000
+//! account: bob, 90000
+
 module Hash {
     native public sha2_256(data: vector<u8>): vector<u8>;
     native public sha3_256(data: vector<u8>): vector<u8>;
 }
-
 // check: MISSING_DEPENDENCY
+
+//! new-transaction
+//! sender: alice
+module Hash {
+    native public sha2_256(data: vector<u8>): vector<u8>;
+}
+// check: MISSING_DEPENDENCY
+
+//! new-transaction
+//! sender: bob
+module Hash {
+    native public sha3_256(data: vector<u8>): vector<u8>;
+}
 // check: MISSING_DEPENDENCY

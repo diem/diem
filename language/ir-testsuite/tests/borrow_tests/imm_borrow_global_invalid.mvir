@@ -2,8 +2,6 @@
 //! account: bob, 90000
 
 //! sender: alice
-
-
 module A {
     resource Coin { u: u64 }
 
@@ -32,7 +30,6 @@ module A {
 
 //! new-transaction
 //! sender: bob
-
 module Tester {
     import {{alice}}.A;
 
@@ -46,7 +43,15 @@ module Tester {
         p2 = borrow_global_mut<Pair>(move(addr2));
         return move(p1) == move(p2);
     }
+}
+// check: GLOBAL_REFERENCE_ERROR
 
+//! new-transaction
+//! sender: bob
+module Tester {
+    import {{alice}}.A;
+
+    resource Pair { x: A.Coin, y: A.Coin }
     no2(addr1: address, addr2: address): bool acquires Pair {
         let p1: &Self.Pair;
         let p2: &Self.Pair;
@@ -55,7 +60,15 @@ module Tester {
         p2 = freeze(borrow_global_mut<Pair>(move(addr2)));
         return move(p1) == move(p2);
     }
+}
+// check: GLOBAL_REFERENCE_ERROR
 
+//! new-transaction
+//! sender: bob
+module Tester {
+    import {{alice}}.A;
+
+    resource Pair { x: A.Coin, y: A.Coin }
     no3(addr1: address, addr2: address): bool acquires Pair {
         let p1: &mut Self.Pair;
         let p2: &mut Self.Pair;
@@ -68,7 +81,15 @@ module Tester {
         c2 = &move(p1).x;
         return move(c1) == move(c2);
     }
+}
+// check: GLOBAL_REFERENCE_ERROR
 
+//! new-transaction
+//! sender: bob
+module Tester {
+    import {{alice}}.A;
+
+    resource Pair { x: A.Coin, y: A.Coin }
     no4(addr1: address, addr2: address): bool acquires Pair {
         let p1: &mut Self.Pair;
         let p2: &mut Self.Pair;
@@ -81,10 +102,5 @@ module Tester {
         c2 = *&move(p1).x;
         return move(c1) == move(c2);
     }
-
 }
-
-// check: GLOBAL_REFERENCE_ERROR
-// check: GLOBAL_REFERENCE_ERROR
-// check: GLOBAL_REFERENCE_ERROR
 // check: READREF_RESOURCE_ERROR

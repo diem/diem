@@ -1,6 +1,16 @@
 module A {
     resource T1{v: u64}
     resource T2{v: u64}
+    acquires_t1() acquires T1 {
+        let v: u64;
+        T1 { v } = move_from<T1>(get_txn_sender());
+        return;
+    }
+    acquires_t2() acquires T2 {
+        let v: u64;
+        T2 { v } = move_from<T2>(get_txn_sender());
+        return;
+    }
 
     public test1(addr: address) acquires T1, T2 {
         let x: &mut Self.T1;
@@ -9,6 +19,23 @@ module A {
         Self.acquires_t1();
         _ = move(x);
 
+        return;
+    }
+}
+// check: GLOBAL_REFERENCE_ERROR
+
+//! new-transaction
+module A2 {
+    resource T1{v: u64}
+    resource T2{v: u64}
+    acquires_t1() acquires T1 {
+        let v: u64;
+        T1 { v } = move_from<T1>(get_txn_sender());
+        return;
+    }
+    acquires_t2() acquires T2 {
+        let v: u64;
+        T2 { v } = move_from<T2>(get_txn_sender());
         return;
     }
 
@@ -21,6 +48,23 @@ module A {
 
         return;
     }
+}
+// check: GLOBAL_REFERENCE_ERROR
+
+//! new-transaction
+module A2 {
+    resource T1{v: u64}
+    resource T2{v: u64}
+    acquires_t1() acquires T1 {
+        let v: u64;
+        T1 { v } = move_from<T1>(get_txn_sender());
+        return;
+    }
+    acquires_t2() acquires T2 {
+        let v: u64;
+        T2 { v } = move_from<T2>(get_txn_sender());
+        return;
+    }
 
     public test3(addr: address) acquires T1, T2 {
         let x: &mut Self.T1;
@@ -31,21 +75,5 @@ module A {
 
         return;
     }
-
-    acquires_t1() acquires T1 {
-        let v: u64;
-        T1 { v } = move_from<T1>(get_txn_sender());
-        return;
-    }
-
-    acquires_t2() acquires T2 {
-        let v: u64;
-        T2 { v } = move_from<T2>(get_txn_sender());
-        return;
-    }
-
 }
-
-// check: GLOBAL_REFERENCE_ERROR
-// check: GLOBAL_REFERENCE_ERROR
 // check: GLOBAL_REFERENCE_ERROR

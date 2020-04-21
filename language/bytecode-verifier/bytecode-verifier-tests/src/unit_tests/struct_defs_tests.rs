@@ -9,6 +9,6 @@ proptest! {
     #[test]
     fn valid_recursive_struct_defs(module in CompiledModule::valid_strategy(20)) {
         let recursive_checker = RecursiveStructDefChecker::new(&module);
-        prop_assert!(recursive_checker.verify().is_empty());
+        prop_assert!(recursive_checker.verify().is_ok());
     }
 }

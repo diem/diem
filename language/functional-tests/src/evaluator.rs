@@ -234,12 +234,9 @@ fn fetch_dependency(exec: &mut FakeExecutor, ident: ModuleId) -> Option<Verified
 pub fn verify_script(
     script: CompiledScript,
     deps: &[VerifiedModule],
-) -> std::result::Result<VerifiedScript, Vec<VMStatus>> {
-    let verified_script = VerifiedScript::new(script).map_err(|(_, errs)| errs)?;
-    let errs = verify_script_dependencies(&verified_script, deps);
-    if !errs.is_empty() {
-        return Err(errs);
-    }
+) -> std::result::Result<VerifiedScript, VMStatus> {
+    let verified_script = VerifiedScript::new(script).map_err(|(_, e)| e)?;
+    verify_script_dependencies(&verified_script, deps)?;
     Ok(verified_script)
 }
 
@@ -247,12 +244,9 @@ pub fn verify_script(
 pub fn verify_module(
     module: CompiledModule,
     deps: &[VerifiedModule],
-) -> std::result::Result<VerifiedModule, Vec<VMStatus>> {
-    let verified_module = VerifiedModule::new(module).map_err(|(_, errs)| errs)?;
-    let errs = verify_module_dependencies(&verified_module, deps);
-    if !errs.is_empty() {
-        return Err(errs);
-    }
+) -> std::result::Result<VerifiedModule, VMStatus> {
+    let verified_module = VerifiedModule::new(module).map_err(|(_, e)| e)?;
+    verify_module_dependencies(&verified_module, deps)?;
     Ok(verified_module)
 }
 
@@ -456,11 +450,9 @@ fn eval_transaction<TComp: Compiler>(
             let deps = fetch_script_dependencies(exec, &compiled_script);
             let compiled_script = match verify_script(compiled_script, &deps) {
                 Ok(script) => script.into_inner(),
-                Err(errs) => {
-                    for err in errs.into_iter() {
-                        let err: Error = ErrorKind::VerificationError(err).into();
-                        log.append(EvaluationOutput::Error(Box::new(err)));
-                    }
+                Err(err) => {
+                    let err: Error = ErrorKind::VerificationError(err).into();
+                    log.append(EvaluationOutput::Error(Box::new(err)));
                     return Ok(Status::Failure);
                 }
             };
@@ -496,11 +488,9 @@ fn eval_transaction<TComp: Compiler>(
             let deps = fetch_module_dependencies(exec, &compiled_module);
             let compiled_module = match verify_module(compiled_module, &deps) {
                 Ok(module) => module.into_inner(),
-                Err(errs) => {
-                    for err in errs.into_iter() {
-                        let err: Error = ErrorKind::VerificationError(err).into();
-                        log.append(EvaluationOutput::Error(Box::new(err)));
-                    }
+                Err(err) => {
+                    let err: Error = ErrorKind::VerificationError(err).into();
+                    log.append(EvaluationOutput::Error(Box::new(err)));
                     return Ok(Status::Failure);
                 }
             };

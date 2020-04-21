@@ -11,6 +11,5 @@ main() {
     assert(move(y) == 0, 42);
     return;
 }
-// TODO: fix verifier remove identical errors
-// check: MOVELOC_UNAVAILABLE_ERROR
+
 // check: MOVELOC_UNAVAILABLE_ERROR

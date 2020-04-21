@@ -496,7 +496,7 @@ impl Loader {
             }
         };
 
-        let mut errs = match VerifiedScript::new(script) {
+        let err = match VerifiedScript::new(script) {
             Ok(script) => {
                 // verify dependencies
                 let deps = load_script_dependencies(&script);
@@ -508,24 +508,21 @@ impl Loader {
                 for dependency in &dependencies {
                     dependency_map.insert(dependency.module_id().clone(), dependency.module());
                 }
-                let errs = verify_script_dependency_map(&script, &dependency_map);
-                if errs.is_empty() {
-                    return Ok(script);
+                match verify_script_dependency_map(&script, &dependency_map) {
+                    Ok(()) => return Ok(script),
+                    Err(e) => e,
                 }
-                errs
             }
             Err((_, errs)) => errs,
         };
         error!(
             "[VM] bytecode verifier returned errors for script: {:?}",
-            errs
+            err
         );
         // If there are errors there should be at least one otherwise there's an internal
         // error in the verifier. We only give back the first error. If the user wants to
         // debug things, they can do that offline.
-        Err(errs
-            .pop()
-            .unwrap_or_else(|| VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)))
+        Err(err)
     }
 
     fn deserialize_and_verify_module(
@@ -551,9 +548,7 @@ impl Loader {
                 self.check_dependencies(&module, context)?;
                 Ok(module)
             }
-            Err((_, mut errors)) => Err(errors
-                .pop()
-                .unwrap_or_else(|| VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION))),
+            Err((_, err)) => Err(err),
         }
     }
 
@@ -571,13 +566,7 @@ impl Loader {
         for dependency in &dependencies {
             dependency_map.insert(dependency.module_id().clone(), dependency.module());
         }
-        let mut errs = verify_dependencies(module, &dependency_map);
-        if errs.is_empty() {
-            return Ok(());
-        }
-        Err(errs
-            .pop()
-            .unwrap_or_else(|| VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION)))
+        verify_dependencies(module, &dependency_map)
     }
 }
 

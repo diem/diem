@@ -9,10 +9,10 @@
 //! signature. Additionally, the stack height must not dip below that at the beginning of the
 //! block for any basic block.
 use crate::control_flow_graph::{BlockId, ControlFlowGraph, VMControlFlowGraph};
-use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_error::StatusCode;
 use vm::{
     access::ModuleAccess,
-    errors::err_at_offset,
+    errors::{err_at_offset, VMResult},
     file_format::{
         Bytecode, CompiledModule, FunctionDefinition, FunctionHandle, StructFieldInformation,
     },
@@ -29,7 +29,7 @@ impl<'a> StackUsageVerifier<'a> {
         module: &'a CompiledModule,
         function_definition: &'a FunctionDefinition,
         cfg: &'a VMControlFlowGraph,
-    ) -> Vec<VMStatus> {
+    ) -> VMResult<()> {
         let function_handle = module.function_handle_at(function_definition.function);
         let verifier = Self {
             module,
@@ -37,14 +37,13 @@ impl<'a> StackUsageVerifier<'a> {
             function_handle,
         };
 
-        let mut errors = vec![];
         for block_id in cfg.blocks() {
-            errors.append(&mut verifier.verify_block(block_id, cfg));
+            verifier.verify_block(block_id, cfg)?
         }
-        errors
+        Ok(())
     }
 
-    fn verify_block(&self, block_id: BlockId, cfg: &dyn ControlFlowGraph) -> Vec<VMStatus> {
+    fn verify_block(&self, block_id: BlockId, cfg: &dyn ControlFlowGraph) -> VMResult<()> {
         let code = &self.function_definition.code.code;
         let mut stack_size_increment = 0;
         let block_start = cfg.block_start(block_id);
@@ -53,22 +52,22 @@ impl<'a> StackUsageVerifier<'a> {
             // Check that the stack height is sufficient to accomodate the number
             // of pops this instruction does
             if stack_size_increment < num_pops {
-                return vec![err_at_offset(
+                return Err(err_at_offset(
                     StatusCode::NEGATIVE_STACK_SIZE_WITHIN_BLOCK,
                     block_start as usize,
-                )];
+                ));
             }
             stack_size_increment -= num_pops;
             stack_size_increment += num_pushes;
         }
 
         if stack_size_increment == 0 {
-            vec![]
+            Ok(())
         } else {
-            vec![err_at_offset(
+            Err(err_at_offset(
                 StatusCode::POSITIVE_STACK_SIZE_AT_BLOCK_END,
                 block_start as usize,
-            )]
+            ))
         }
     }
 

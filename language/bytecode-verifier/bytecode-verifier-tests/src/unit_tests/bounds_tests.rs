@@ -170,7 +170,7 @@ proptest! {
 
         let bounds_checker = BoundsChecker::new(&module);
         let actual_violations = bounds_checker.verify();
-        prop_assert_eq!(expected_violations.is_empty(), actual_violations.is_empty());
+        prop_assert_eq!(expected_violations.is_empty(), actual_violations.is_ok());
     }
 
     #[test]
@@ -187,7 +187,7 @@ proptest! {
         let bounds_checker = BoundsChecker::new(&module);
         let actual_violations = bounds_checker.verify();
 
-        prop_assert_eq!(expected_violations.is_empty(), actual_violations.is_empty());
+        prop_assert_eq!(expected_violations.is_empty(), actual_violations.is_ok());
     }
 
     #[test]
@@ -202,10 +202,9 @@ proptest! {
         module.address_identifiers = address_identifiers;
 
         let bounds_checker = BoundsChecker::new(&module);
-        let actual_violations: Vec<StatusCode> = bounds_checker.verify().into_iter().map(|status| status.major_status).collect();
         prop_assert_eq!(
-            actual_violations,
-            vec![StatusCode::NO_MODULE_HANDLES]
+            bounds_checker.verify().map_err(|e| e.major_status),
+            Err(StatusCode::NO_MODULE_HANDLES)
         );
     }
 }

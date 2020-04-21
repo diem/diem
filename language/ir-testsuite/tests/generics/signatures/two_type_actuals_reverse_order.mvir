@@ -1,4 +1,15 @@
 module M {
+    struct S<T1: resource, T2: copyable> { b: bool }
+
+    foo() {
+        let x: Self.S<bool, bool>;
+        return;
+    }
+}
+// check: CONTRAINT_KIND_MISMATCH
+
+//! new-transaction
+module M2 {
     resource R { b: bool }
     struct S<T1: resource, T2: copyable> { b: bool }
 
@@ -7,6 +18,4 @@ module M {
         return;
     }
 }
-
-// check: CONTRAINT_KIND_MISMATCH
 // check: CONTRAINT_KIND_MISMATCH

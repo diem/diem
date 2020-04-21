@@ -9,7 +9,13 @@ module M {
         y = &x;
         return move(y);
     }
+}
+// check: RET_UNSAFE_TO_DESTROY_ERROR
 
+//! new-transaction
+module M2 {
+    struct X { y: Self.Y }
+    struct Y { u: u64 }
     t2(): &u64 {
         let x: u64;
         let y: &u64;
@@ -17,7 +23,13 @@ module M {
         y = &x;
         return copy(y);
     }
+}
+// check: RET_UNSAFE_TO_DESTROY_ERROR
 
+//! new-transaction
+module M3 {
+    struct X { y: Self.Y }
+    struct Y { u: u64 }
     t3(): &u64 {
         let s: Self.X;
         let x: &Self.X;
@@ -29,7 +41,13 @@ module M {
         u = &move(y).u;
         return move(u);
     }
+}
+// check: RET_UNSAFE_TO_DESTROY_ERROR
 
+//! new-transaction
+module M4 {
+    struct X { y: Self.Y }
+    struct Y { u: u64 }
     t4(): &u64 {
         let s: Self.X;
         let x: &Self.X;
@@ -42,8 +60,4 @@ module M {
         return copy(u);
     }
 }
-
-// check: RET_UNSAFE_TO_DESTROY_ERROR
-// check: RET_UNSAFE_TO_DESTROY_ERROR
-// check: RET_UNSAFE_TO_DESTROY_ERROR
 // check: RET_UNSAFE_TO_DESTROY_ERROR

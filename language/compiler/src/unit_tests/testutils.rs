@@ -34,7 +34,7 @@ macro_rules! instr_count {
 fn compile_script_string_impl(
     code: &str,
     deps: Vec<CompiledModule>,
-) -> Result<(CompiledScript, Vec<VMStatus>)> {
+) -> Result<(CompiledScript, Option<VMStatus>)> {
     let parsed_script = parse_script("file_name", code).unwrap();
     let compiled_script = compile_script(AccountAddress::default(), parsed_script, &deps)?.0;
 
@@ -45,19 +45,18 @@ fn compile_script_string_impl(
 
     // Always return a CompiledScript because some callers explicitly care about unverified
     // modules.
-    let ret = match VerifiedScript::new(compiled_script) {
-        Ok(script) => (script.into_inner(), vec![]),
-        Err((script, errors)) => (script, errors),
-    };
-    Ok(ret)
+    Ok(match VerifiedScript::new(compiled_script) {
+        Ok(script) => (script.into_inner(), None),
+        Err((script, error)) => (script, Some(error)),
+    })
 }
 
 pub fn compile_script_string_and_assert_no_error(
     code: &str,
     deps: Vec<CompiledModule>,
 ) -> Result<CompiledScript> {
-    let (verified_script, verification_errors) = compile_script_string_impl(code, deps)?;
-    assert!(verification_errors.is_empty());
+    let (verified_script, verification_error) = compile_script_string_impl(code, deps)?;
+    assert!(verification_error.is_none());
     Ok(verified_script)
 }
 
@@ -78,15 +77,15 @@ pub fn compile_script_string_and_assert_error(
     code: &str,
     deps: Vec<CompiledModule>,
 ) -> Result<CompiledScript> {
-    let (verified_script, verification_errors) = compile_script_string_impl(code, deps)?;
-    assert!(!verification_errors.is_empty());
+    let (verified_script, verification_error) = compile_script_string_impl(code, deps)?;
+    assert!(verification_error.is_some());
     Ok(verified_script)
 }
 
 fn compile_module_string_impl(
     code: &str,
     deps: Vec<CompiledModule>,
-) -> Result<(CompiledModule, Vec<VMStatus>)> {
+) -> Result<(CompiledModule, Option<VMStatus>)> {
     let address = AccountAddress::default();
     let module = parse_module("file_name", code).unwrap();
     let compiled_module = compile_module(address, module, &deps)?.0;
@@ -98,19 +97,18 @@ fn compile_module_string_impl(
 
     // Always return a CompiledModule because some callers explicitly care about unverified
     // modules.
-    let ret = match VerifiedModule::new(compiled_module) {
-        Ok(module) => (module.into_inner(), vec![]),
-        Err((module, errors)) => (module, errors),
-    };
-    Ok(ret)
+    Ok(match VerifiedModule::new(compiled_module) {
+        Ok(module) => (module.into_inner(), None),
+        Err((module, error)) => (module, Some(error)),
+    })
 }
 
 pub fn compile_module_string_and_assert_no_error(
     code: &str,
     deps: Vec<CompiledModule>,
 ) -> Result<CompiledModule> {
-    let (verified_module, verification_errors) = compile_module_string_impl(code, deps)?;
-    assert!(verification_errors.is_empty());
+    let (verified_module, verification_error) = compile_module_string_impl(code, deps)?;
+    assert!(verification_error.is_none());
     Ok(verified_module)
 }
 
@@ -131,8 +129,8 @@ pub fn compile_module_string_and_assert_error(
     code: &str,
     deps: Vec<CompiledModule>,
 ) -> Result<CompiledModule> {
-    let (verified_module, verification_errors) = compile_module_string_impl(code, deps)?;
-    assert!(!verification_errors.is_empty());
+    let (verified_module, verification_error) = compile_module_string_impl(code, deps)?;
+    assert!(verification_error.is_some());
     Ok(verified_module)
 }
 
