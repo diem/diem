@@ -45,7 +45,8 @@ module ValidatorConfig2 {
     // Register the transaction sender as a candidate validator by creating a ValidatorConfig
     // resource under their account. Note that only one such resource can be instantiated under an account.
     public fun initialize(
-        consensus_pubkey: vector<u8>,) {
+        consensus_pubkey: vector<u8>,
+    ) {
 
         move_to_sender<T>(
             T {
@@ -87,8 +88,6 @@ module ValidatorConfig2 {
         // TODO(valerini): verify the proof of posession of new_consensus_secretkey
 
         let t_ref = borrow_global_mut<T>(validator_account);
-        // Assert that the new key is different from the old key
-        Transaction::assert(&t_ref.config.consensus_pubkey != &new_consensus_pubkey, 15);
         // Set the new key
         let key_ref = &mut t_ref.config.consensus_pubkey;
         *key_ref = new_consensus_pubkey;

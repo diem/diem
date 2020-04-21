@@ -79,9 +79,9 @@ use 0x0::LibraSystem2;
 // add allice to validator set
 fun main() {
     0x0::Transaction::assert(LibraSystem2::validator_set_size() == 0, 99);
-    LibraSystem2::add_validator(&{{alice}});
-    0x0::Transaction::assert(LibraSystem2::is_validator(&{{alice}}), 100);
-    0x0::Transaction::assert(!LibraSystem2::is_validator(&{{bob}}), 99);
+    LibraSystem2::add_validator({{alice}});
+    0x0::Transaction::assert(LibraSystem2::is_validator({{alice}}), 100);
+    0x0::Transaction::assert(!LibraSystem2::is_validator({{bob}}), 99);
 }
 
 // check: EXECUTED
@@ -97,7 +97,7 @@ fun main() {
 use 0x0::LibraSystem2;
 // add bob to validator set
 fun main() {
-    LibraSystem2::add_validator(&{{bob}});
+    LibraSystem2::add_validator({{bob}});
 }
 
 // check: EXECUTED
@@ -107,7 +107,7 @@ fun main() {
 // adding carrol to the validator set in the same block will fail
 use 0x0::LibraSystem2;
 fun main() {
-    LibraSystem2::add_validator(&{{carrol}});
+    LibraSystem2::add_validator({{carrol}});
 }
 
 // check: ABORTED
@@ -123,8 +123,8 @@ fun main() {
 // test that adding two validators in the same transaction aborts the transaction
 use 0x0::LibraSystem2;
 fun main() {
-    LibraSystem2::add_validator(&{{carrol}});
-    LibraSystem2::add_validator(&{{david}});
+    LibraSystem2::add_validator({{carrol}});
+    LibraSystem2::add_validator({{david}});
 }
 
 // check: ABORTED
@@ -134,7 +134,7 @@ fun main() {
 // add carrol to the validator set
 use 0x0::LibraSystem2;
 fun main() {
-    LibraSystem2::add_validator(&{{carrol}});
+    LibraSystem2::add_validator({{carrol}});
 }
 
 // check: EXECUTED
@@ -150,9 +150,9 @@ fun main() {
 // add david to the validator set
 use 0x0::LibraSystem2;
 fun main() {
-    0x0::Transaction::assert(!LibraSystem2::is_validator(&{{david}}), 99);
-    LibraSystem2::add_validator(&{{david}});
-    0x0::Transaction::assert(LibraSystem2::is_validator(&{{david}}), 99);
+    0x0::Transaction::assert(!LibraSystem2::is_validator({{david}}), 99);
+    LibraSystem2::add_validator({{david}});
+    0x0::Transaction::assert(LibraSystem2::is_validator({{david}}), 99);
 }
 
 // check: EXECUTED
@@ -168,7 +168,7 @@ fun main() {
 // add eve to validator set
 use 0x0::LibraSystem2;
 fun main() {
-    LibraSystem2::add_validator(&{{eve}});
+    LibraSystem2::add_validator({{eve}});
 }
 
 // check: EXECUTED
@@ -183,7 +183,7 @@ fun main() {
 // add fedor to validator set
 use 0x0::LibraSystem2;
 fun main() {
-    LibraSystem2::add_validator(&{{fedor}});
+    LibraSystem2::add_validator({{fedor}});
     0x0::Transaction::assert(LibraSystem2::validator_set_size() == 6, 99);
 }
 
@@ -199,7 +199,7 @@ fun main() {
 // remove alice
 use 0x0::LibraSystem2;
 fun main() {
-    LibraSystem2::remove_validator(&{{alice}});
+    LibraSystem2::remove_validator({{alice}});
     0x0::Transaction::assert(LibraSystem2::validator_set_size() == 5, 99);
 }
 
@@ -216,7 +216,7 @@ fun main() {
 // test deleting a non-existent (or rather already removed) validator aborts
 use 0x0::LibraSystem2;
 fun main() {
-    LibraSystem2::remove_validator(&{{alice}});
+    LibraSystem2::remove_validator({{alice}});
 }
 
 // check: ABORTED
@@ -226,7 +226,7 @@ fun main() {
 // remove fedor
 use 0x0::LibraSystem2;
 fun main() {
-    LibraSystem2::remove_validator(&{{fedor}});
+    LibraSystem2::remove_validator({{fedor}});
     0x0::Transaction::assert(LibraSystem2::validator_set_size() == 4, 99);
 }
 
@@ -245,7 +245,7 @@ fun main() {
 // this test makes sure the number of validators can not go lower
 use 0x0::LibraSystem2;
 fun main() {
-    LibraSystem2::remove_validator(&{{david}});
+    LibraSystem2::remove_validator({{david}});
 }
 
 // check: ABORTED

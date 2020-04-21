@@ -41,10 +41,10 @@ fun main() {
 use 0x0::LibraSystem2;
 fun main() {
     // add validator
-    LibraSystem2::add_validator(&{{bob}});
+    LibraSystem2::add_validator({{bob}});
 }
 
-// check: ValidatorSetChangeEvent
+// check: NewEpochEvent
 // check: EXECUTED
 
 //! block-prologue
@@ -58,10 +58,10 @@ fun main() {
 use 0x0::LibraSystem2;
 fun main() {
     // add validator
-    LibraSystem2::add_validator(&{{alice}});
+    LibraSystem2::add_validator({{alice}});
 }
 
-// check: ValidatorSetChangeEvent
+// check: NewEpochEvent
 // check: EXECUTED
 
 //! block-prologue

@@ -7,12 +7,14 @@ address 0x0:
 // ValidatorSet and DiscoverySet are stored under different addresses in order to facilitate
 // cheaper reads of these sets from storage.
 module LibraSystem2 {
-    use 0x0::Event;
-    use 0x0::LibraTimestamp;
+    use 0x0::LibraConfig;
     use 0x0::Transaction;
     use 0x0::ValidatorConfig2;
     use 0x0::Vector;
 
+    // ValidatorInfo stores consensus config
+    // TODO(valerini): consider writing a map module (address -> ValidatorInfo),
+    //                 currently implemented with Vector
     struct ValidatorInfo {
         addr: address,
         consensus_voting_power: u64,
@@ -22,21 +24,18 @@ module LibraSystem2 {
         last_force_update_time: u64,
     }
 
-    struct ValidatorSetChangeEvent {
-        new_validator_set: vector<ValidatorInfo>,
-    }
-
-    resource struct ValidatorSet {
+    struct T {
+        // The current consensus crypto scheme.
+        scheme: u8,
+        // The current validator set. Updated only at epoch boundaries via reconfiguration.
         validators: vector<ValidatorInfo>,
-        last_reconfiguration_time: u64,
-        change_events: Event::EventHandle<ValidatorSetChangeEvent>,
     }
 
     // ValidatorInfo public accessors
 
     // Get validator's address from ValidatorInfo
-    public fun get_validator_address(v: &ValidatorInfo): &address {
-        &v.addr
+    public fun get_validator_address(v: &ValidatorInfo): address {
+        v.addr
     }
 
     // Get validator's config from ValidatorInfo
@@ -58,100 +57,111 @@ module LibraSystem2 {
     // It can only be called a single time. Currently, it is invoked in the genesis transaction.
     public fun initialize_validator_set() {
         Transaction::assert(Transaction::sender() == 0x1D8, 1);
-        move_to_sender<ValidatorSet>(ValidatorSet {
+
+        LibraConfig::publish_new_config<T>(T {
+            scheme: 0,
             validators: Vector::empty(),
-            last_reconfiguration_time: 0,
-            change_events: Event::new_event_handle<ValidatorSetChangeEvent>(),
         });
+    }
+
+    // This returns a copy of the current validator set.
+    public fun get_validator_set(): T {
+        LibraConfig::get<T>(0x1D8)
+    }
+
+    // This copies the vector of validators into the LibraConfig's resource under ValidatorSet address
+    fun set_validator_set(value: T) {
+        LibraConfig::set<T>(0x1D8, value)
     }
 
     // Adds a new validator, only callable by the LibraAssociation address
     // TODO(valerini): allow the Association to add multiple validators in a single block
-    public fun add_validator(account_address: &address) acquires ValidatorSet {
+    public fun add_validator(account_address: address) {
         Transaction::assert(Transaction::sender() == 0xA550C18, 1);
         // A prospective validator must have a validator config resource
-        Transaction::assert(ValidatorConfig2::has(*account_address), 17);
+        Transaction::assert(ValidatorConfig2::has(account_address), 17);
 
-        let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
+        let validator_set = get_validator_set();
         // Ensure that this address is not already a validator
-        Transaction::assert(!is_validator_(account_address, &validator_set_ref.validators), 18);
+        Transaction::assert(!is_validator_(account_address, &validator_set.validators), 18);
 
-        let config = ValidatorConfig2::get_config(*account_address);
-        let current_block_time = LibraTimestamp::now_microseconds();
-        Vector::push_back(&mut validator_set_ref.validators, ValidatorInfo {
-            addr: *account_address,
+        let config = ValidatorConfig2::get_config(account_address);
+        Vector::push_back(&mut validator_set.validators, ValidatorInfo {
+            addr: account_address,
             config: config, // copy the config over to ValidatorSet
             consensus_voting_power: 1,
-            last_force_update_time: current_block_time,
+            last_force_update_time: 0,
         });
 
-        emit_reconfiguration_event();
+        set_validator_set(validator_set);
     }
 
     // Removes a validator, only callable by the LibraAssociation address
-    public fun remove_validator(account_address: &address) acquires ValidatorSet {
+    public fun remove_validator(account_address: address) {
         Transaction::assert(Transaction::sender() == 0xA550C18, 1);
-        let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
-        let size = Vector::length(&validator_set_ref.validators);
+        let validator_set = get_validator_set();
+        let size = Vector::length(&validator_set.validators);
         // Make sure the size of validator set does not go beyond 4, which is the minimum safe number of validators
         Transaction::assert(size > 4, 22);
 
         // Ensure that this address is an active validator
-        let to_remove_index_vec = get_validator_index_(&validator_set_ref.validators, account_address);
+        let to_remove_index_vec = get_validator_index_(&validator_set.validators, account_address);
         Transaction::assert(!Vector::is_empty(&to_remove_index_vec), 21);
+        let to_remove_index = *Vector::borrow(&to_remove_index_vec, 0);
         // Remove corresponding ValidatorInfo from the validator set
-        _  = Vector::swap_remove(&mut validator_set_ref.validators, *Vector::borrow(&to_remove_index_vec, 0));
+        _  = Vector::swap_remove(&mut validator_set.validators, to_remove_index);
 
-        emit_reconfiguration_event();
+        set_validator_set(validator_set);
     }
 
     // Copies validator's config to ValidatorSet
     // Callable by the LibraAssociation address only.
     // Aborts if there are no changes to the config.
-    public fun update_validator_info(addr: &address) acquires ValidatorSet {
+    public fun update_validator_info(addr: address) {
         Transaction::assert(Transaction::sender() == 0xA550C18, 1);
-        let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
+        let validator_set = get_validator_set();
 
-        let validator_index_vec = get_validator_index_(&validator_set_ref.validators, addr);
+        let validator_index_vec = get_validator_index_(&validator_set.validators, addr);
         Transaction::assert(!Vector::is_empty(&validator_index_vec), 19);
-        Transaction::assert(update_ith_validator_info_(&mut validator_set_ref.validators, *Vector::borrow(&validator_index_vec, 0)), 42);
-        emit_reconfiguration_event();
+
+        let validator_index = *Vector::borrow(&validator_index_vec, 0);
+        if (update_ith_validator_info_(&mut validator_set.validators, validator_index)) {
+            set_validator_set(validator_set);
+        };
+    }
+
+    public fun force_update_validator_info_of_sender() {
+        force_update_validator_info(Transaction::sender());
     }
 
     // This function can be called by the validator's operator,
     // which is either the validator itself or the validator's delegate account.
     // Aborts if there are no changes to the config.
-    public fun force_update_validator_info(validator_address: &address) acquires ValidatorSet {
+    public fun force_update_validator_info(validator_address: address) {
         // Check the sender
-        Transaction::assert(ValidatorConfig2::get_validator_operator_account(*validator_address) == Transaction::sender(), 1);
+        Transaction::assert(ValidatorConfig2::get_validator_operator_account(validator_address) == Transaction::sender(), 1);
 
-        let validator_vec_ref = borrow_global_mut<ValidatorSet>(0x1D8);
-        let validator_index_vec = get_validator_index_(&validator_vec_ref.validators, validator_address);
+        let validator_set = get_validator_set();
+        let validator_index_vec = get_validator_index_(&validator_set.validators, validator_address);
         Transaction::assert(!Vector::is_empty(&validator_index_vec), 19);
         let validator_index = *Vector::borrow(&validator_index_vec, 0);
 
-        // Update force update timer to enforce rate-limits
-        let validator_info_ref = Vector::borrow(&mut validator_vec_ref.validators, validator_index);
-
-        // If less than 24hr has passed since the last forced update, abort.
-        // Note that validators can always ask LibraAssocition offchain to invoke update.
-        let current_block_time = LibraTimestamp::now_microseconds();
-        Transaction::assert(current_block_time - validator_info_ref.last_force_update_time >= 86400000000, 11);
+        // TODO(valerini): add rate-limits for forced key rotations
 
         // Copy validator config from validator's account and assert that there are changes to the config
-        Transaction::assert(update_ith_validator_info_(&mut validator_vec_ref.validators, validator_index), 42);
-        let validator_info = Vector::borrow_mut(&mut validator_vec_ref.validators, validator_index);
-        *&mut validator_info.last_force_update_time = current_block_time;
-        emit_reconfiguration_event();
+        if (update_ith_validator_info_(&mut validator_set.validators, validator_index)) {
+            set_validator_set(validator_set);
+        };
     }
 
     // This function can be invoked by the LibraAssociation or by the 0x0 LibraVM address in
     // block_prologue to facilitate reconfigurations at regular intervals.
-    // Here for all of the validators the information from ValidatorConfig2 will get copied into the ValidatorSet,
+    // Here for all of the validators the information from ValidatorConfig will get copied into the ValidatorSet,
     // if any components of the configs have changed, appropriate events will be fired.
-    public fun update_all_validator_info() acquires ValidatorSet {
+    public fun update_all_validator_info() {
         Transaction::assert(Transaction::sender() == 0xA550C18 || Transaction::sender() == 0x0, 1);
-        let validators = &mut borrow_global_mut<ValidatorSet>(0x1D8).validators;
+        let validator_set = get_validator_set();
+        let validators = &mut validator_set.validators;
 
         let size = Vector::length(validators);
         if (size == 0) {
@@ -166,53 +176,45 @@ module LibraSystem2 {
             if (i >= size) { break };
             configs_changed = configs_changed || update_ith_validator_info_(validators, i);
         };
-        Transaction::assert(configs_changed, 42);
-        emit_reconfiguration_event();
+        if (configs_changed) {
+            set_validator_set(validator_set);
+        };
     }
 
     // Public getters
 
     // Return true if addr is a current validator
-    public fun is_validator(addr: &address): bool acquires ValidatorSet { is_validator_(addr, &borrow_global<ValidatorSet>(0x1D8).validators) }
+    public fun is_validator(addr: address): bool { is_validator_(addr, &get_validator_set().validators) }
 
     // Returns validator info
     // If the address is not a validator, abort
-    public fun get_validator_info(addr: &address): ValidatorInfo acquires ValidatorSet {
-        let validator_set_ref = borrow_global<ValidatorSet>(0x1D8);
-        let validator_index_vec = get_validator_index_(&validator_set_ref.validators, addr);
+    public fun get_validator_info(addr: address): ValidatorInfo {
+        let validator_set = get_validator_set();
+        let validator_index_vec = get_validator_index_(&validator_set.validators, addr);
         Transaction::assert(!Vector::is_empty(&validator_index_vec), 19);
 
-        *Vector::borrow(&validator_set_ref.validators, *Vector::borrow(&validator_index_vec, 0))
+        *Vector::borrow(&validator_set.validators, *Vector::borrow(&validator_index_vec, 0))
     }
 
     // Return the size of the current validator set
-    public fun validator_set_size(): u64 acquires ValidatorSet {
-        Vector::length(&borrow_global<ValidatorSet>(0x1D8).validators)
+    public fun validator_set_size(): u64 {
+        Vector::length(&get_validator_set().validators)
+    }
+
+    // This function is used in transaction_fee.move to distribute transaction fees among validators
+    public fun get_ith_validator_address(i: u64): address {
+        let validator_set = get_validator_set();
+        let len = Vector::length(&validator_set.validators);
+        Transaction::assert(i < len, 3);
+        Vector::borrow(&validator_set.validators, i).addr
     }
 
     // Private helper functions
 
     // Emit a reconfiguration event. This function will be invoked by the genesis to generate the very first
     // reconfiguration event.
-    fun emit_reconfiguration_event() acquires ValidatorSet {
-        let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
-
-        // Ensure only one reconfiguration event is emitted per block
-        let current_block_time = LibraTimestamp::now_microseconds();
-
-        // Abort the transaction if reconfiguration was already called within the same block
-        Transaction::assert(current_block_time > validator_set_ref.last_reconfiguration_time, 14);
-
-        validator_set_ref.last_reconfiguration_time = current_block_time;
-        Event::emit_event<ValidatorSetChangeEvent>(
-            &mut validator_set_ref.change_events,
-            ValidatorSetChangeEvent {
-                new_validator_set: *&validator_set_ref.validators,
-            });
-    }
-
     // Get the index of the validator by address in the `validators` vector
-    fun get_validator_index_(validators: &vector<ValidatorInfo>, addr: &address): vector<u64> {
+    fun get_validator_index_(validators: &vector<ValidatorInfo>, addr: address): vector<u64> {
         let size = Vector::length(validators);
         let result: vector<u64> = Vector::empty();
         if (size == 0) {
@@ -222,7 +224,7 @@ module LibraSystem2 {
         let i = 0;
         let validator_info_ref = Vector::borrow(validators, i);
         loop {
-            if (&validator_info_ref.addr == addr) {
+            if (validator_info_ref.addr == addr) {
                 Vector::push_back(&mut result, i);
                 return result
             };
@@ -240,18 +242,16 @@ module LibraSystem2 {
         if (i >= size) {
             return false
         };
-        let validator_info = Vector::borrow(validators, i);
+        let validator_info = Vector::borrow_mut(validators, i);
         let new_validator_config = ValidatorConfig2::get_config(validator_info.addr);
         // check if information is the same
-        let config_ref = &mut Vector::borrow_mut(validators, i).config;
-        if (config_ref == &new_validator_config) {
-            return false
-        };
+        let config_ref = &mut validator_info.config;
+        let configs_changed = (config_ref != &new_validator_config);
         *config_ref = *&new_validator_config;
-        true
+        configs_changed
     }
 
-    fun is_validator_(addr: &address, validators_vec_ref: &vector<ValidatorInfo>): bool {
+    fun is_validator_(addr: address, validators_vec_ref: &vector<ValidatorInfo>): bool {
         !Vector::is_empty(&get_validator_index_(validators_vec_ref, addr))
     }
 }
