@@ -40,11 +40,14 @@ pub fn bootstrap_db<V: VMExecutor>(
     tree_state: TreeState,
     genesis_txn: &Transaction,
 ) -> Result<Waypoint> {
-    let new_genesis_version = tree_state.num_transactions;
+    // DB bootstrapper works on either an empty transaction accumulator or an existing block chain.
+    // In the very exetreme and sad situation of losing quorum among validators, we refer to the
+    // second use case said above.
+    let genesis_version = tree_state.num_transactions;
     let mut executor = Executor::<V>::new_on_unbootstrapped_db(db.clone(), tree_state);
 
     let block_id = HashValue::zero();
-    let epoch = if new_genesis_version == 0 {
+    let epoch = if genesis_version == 0 {
         GENESIS_EPOCH
     } else {
         let executor_trees = executor.get_executed_trees(*PRE_GENESIS_BLOCK_ID)?;
@@ -63,7 +66,7 @@ pub fn bootstrap_db<V: VMExecutor>(
         .ok_or_else(|| format_err!("Genesis transaction must emit a validator set."))?;
     let executed_trees = executor.get_executed_trees(block_id)?;
     let state_view = executor.get_executed_state_view(&executed_trees);
-    let timestamp_usecs = if new_genesis_version == 0 {
+    let timestamp_usecs = if genesis_version == 0 {
         // TODO(aldenhu): fix existing tests before using real timestamp and check on-chain epoch.
         GENESIS_TIMESTAMP_USECS
     } else {
@@ -81,7 +84,7 @@ pub fn bootstrap_db<V: VMExecutor>(
                 GENESIS_ROUND,
                 block_id,
                 root_hash,
-                new_genesis_version,
+                genesis_version,
                 timestamp_usecs,
                 Some(next_validator_set.clone()),
             ),

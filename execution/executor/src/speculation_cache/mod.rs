@@ -127,7 +127,9 @@ impl SpeculationCache {
         cache
     }
 
-    pub fn new_with_tree_state(tree_state: TreeState) -> Self {
+    pub fn new_for_db_bootstrapping(tree_state: TreeState) -> Self {
+        // The DB-bootstrapper applies genesis txn on a local DB and create a waypoint,
+        // assuming everything is synced and committed.
         let executor_trees = ExecutedTrees::from(tree_state);
         Self {
             synced_trees: executor_trees.clone(),
