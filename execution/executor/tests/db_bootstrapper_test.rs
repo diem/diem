@@ -6,7 +6,7 @@
 use anyhow::Result;
 use config_builder::test_config;
 use executor::{
-    db_bootstrapper::{bootstrap_db, bootstrap_db_if_empty},
+    db_bootstrapper::{bootstrap_db_if_empty, calculate_genesis},
     BlockExecutor, Executor,
 };
 use executor_utils::test_helpers::{gen_ledger_info_with_sigs, get_test_signed_transaction};
@@ -283,7 +283,9 @@ fn test_pre_genesis() {
 
     // Bootstrap DB on top of pre-genesis state.
     let tree_state = db_rw.reader.get_latest_tree_state().unwrap();
-    let waypoint = bootstrap_db::<LibraVM>(&db_rw, tree_state, &genesis_txn).unwrap();
+    let committer = calculate_genesis::<LibraVM>(&db_rw, tree_state, &genesis_txn).unwrap();
+    let waypoint = committer.waypoint();
+    committer.commit().unwrap();
     let (li, validator_change_proof, _) = db_rw.reader.get_state_proof(waypoint.version()).unwrap();
     let trusted_state = TrustedState::from_waypoint(waypoint);
     trusted_state
@@ -351,7 +353,9 @@ fn test_new_genesis() {
 
     // Bootstrap DB into new genesis.
     let tree_state = db.reader.get_latest_tree_state().unwrap();
-    let waypoint = bootstrap_db::<LibraVM>(&db, tree_state, &genesis_txn).unwrap();
+    let committer = calculate_genesis::<LibraVM>(&db, tree_state, &genesis_txn).unwrap();
+    let waypoint = committer.waypoint();
+    committer.commit().unwrap();
     assert_eq!(waypoint.version(), 3);
 
     // Client bootable from waypoint.
