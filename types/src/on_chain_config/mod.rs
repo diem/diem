@@ -156,8 +156,27 @@ impl ConfigurationResource {
     pub fn epoch(&self) -> u64 {
         self.epoch
     }
+
     pub fn last_reconfiguration_time(&self) -> u64 {
         self.last_reconfiguration_time
+    }
+
+    pub fn events(&self) -> &EventHandle {
+        &self.events
+    }
+
+    #[cfg(feature = "fuzzing")]
+    pub fn bump_epoch_for_test(&self) -> Self {
+        let epoch = self.epoch + 1;
+        let last_reconfiguration_time = self.last_reconfiguration_time + 1;
+        let mut events = self.events.clone();
+        *events.count_mut() += 1;
+
+        Self {
+            epoch,
+            last_reconfiguration_time,
+            events,
+        }
     }
 }
 
