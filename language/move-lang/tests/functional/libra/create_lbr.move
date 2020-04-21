@@ -108,6 +108,8 @@ fun main() {
     LibraAccount::deposit({{alice}}, coin1);
     LibraAccount::deposit({{cody}}, coin2);
 }
+// not: PreburnEvent
+// not: BurnEvent
 // check: EXECUTED
 
 // Now mint zero LBR to bob's account
@@ -135,4 +137,5 @@ fun main() {
     LibraAccount::deposit({{alice}}, coin1);
     LibraAccount::deposit({{cody}}, coin2);
 }
+// not: MintEvent
 // check: EXECUTED

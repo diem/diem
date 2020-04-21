@@ -122,7 +122,7 @@ pub trait OnChainConfig: Send + Sync + DeserializeOwned {
 }
 
 pub fn new_epoch_event_key() -> EventKey {
-    EventKey::new_from_address(&association_address(), 4)
+    EventKey::new_from_address(&association_address(), 16)
 }
 
 pub fn access_path_for_config(address: AccountAddress, config_name: Identifier) -> AccessPath {

@@ -31,8 +31,8 @@ fun main() {
     Transaction::assert(Libra::value<Coin1::T>(&coin1) == 10000, 7);
     Transaction::assert(Libra::value<Coin2::T>(&coin2) == 10000, 8);
 
-    Libra::preburn(coin1);
-    Libra::preburn(coin2);
+    Libra::preburn_to_sender(coin1);
+    Libra::preburn_to_sender(coin2);
     Libra::burn<Coin1::T>(Transaction::sender());
     Libra::burn<Coin2::T>(Transaction::sender());
     Libra::destroy_zero(Libra::zero<Coin1::T>());

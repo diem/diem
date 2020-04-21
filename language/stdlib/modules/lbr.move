@@ -1,10 +1,11 @@
 address 0x0:
 
 module LBR {
-    use 0x0::FixedPoint32;
-    use 0x0::Libra;
     use 0x0::Coin1;
     use 0x0::Coin2;
+    use 0x0::FixedPoint32;
+    use 0x0::Libra;
+    use 0x0::Transaction;
 
     // The type tag for this coin type.
     resource struct T { }
@@ -24,6 +25,7 @@ module LBR {
     // on-chain.
     resource struct Reserve {
         mint_cap: Libra::MintCapability<T>,
+        burn_cap: Libra::BurnCapability<T>,
         preburn_cap: Libra::Preburn<T>,
         coin1: ReserveComponent<Coin1::T>,
         coin2: ReserveComponent<Coin2::T>,
@@ -43,8 +45,9 @@ module LBR {
             1000,    // fractional_part = 10^3
             x"4C4252" // UTF8-encoded "LBR" as a hex string
         );
-        let mint_cap = Libra::grant_minting_capability();
-        let preburn_cap = Libra::new_preburn_with_capability(&mint_cap);
+        let mint_cap = Libra::grant_mint_capability();
+        let burn_cap = Libra::grant_burn_capability();
+        let preburn_cap = Libra::new_preburn_with_capability(&burn_cap);
         let coin1 = ReserveComponent<Coin1::T> {
             ratio: FixedPoint32::create_from_rational(1, 2),
             backing: Libra::zero<Coin1::T>(),
@@ -53,7 +56,7 @@ module LBR {
             ratio: FixedPoint32::create_from_rational(1, 2),
             backing: Libra::zero<Coin2::T>(),
         };
-        move_to_sender(Reserve{ mint_cap, preburn_cap, coin1, coin2});
+        move_to_sender(Reserve{ mint_cap, burn_cap, preburn_cap, coin1, coin2});
     }
 
     // Given the constituent coins return as much LBR as possible, with any
@@ -103,8 +106,9 @@ module LBR {
     acquires Reserve {
         let reserve = borrow_global_mut<Reserve>(0xA550C18);
         let ratio_multiplier = Libra::value(&coin);
-        Libra::preburn_with_resource(coin, &mut reserve.preburn_cap);
-        Libra::burn_with_resource_cap(&mut reserve.preburn_cap, &mut reserve.mint_cap);
+        let sender = Transaction::sender();
+        Libra::preburn_with_resource(coin, &mut reserve.preburn_cap, sender);
+        Libra::burn_with_resource_cap(&mut reserve.preburn_cap, sender, &reserve.burn_cap);
         let coin1_amount = FixedPoint32::multiply_u64(ratio_multiplier, *&reserve.coin1.ratio);
         let coin2_amount = FixedPoint32::multiply_u64(ratio_multiplier, *&reserve.coin2.ratio);
         let coin1 = Libra::withdraw(&mut reserve.coin1.backing, coin1_amount);

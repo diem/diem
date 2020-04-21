@@ -2,23 +2,61 @@ address 0x0:
 
 module Libra {
     use 0x0::Association;
+    use 0x0::Event;
+    use 0x0::FixedPoint32;
+    use 0x0::LibraConfig;
+    use 0x0::RegisteredCurrencies;
     use 0x0::Transaction;
     use 0x0::Vector;
-    use 0x0::FixedPoint32;
-    use 0x0::RegisteredCurrencies;
-    use 0x0::LibraConfig;
 
     // The currency has a `CoinType` color that tells us what currency the
     // `value` inside represents.
     resource struct T<CoinType> { value: u64 }
 
-    // A minting capability allows coins of all types to be minted.
+    // A minting capability allows coins of type `CoinType` to be minted
     resource struct MintCapability<CoinType> { }
+
+    // A burn capability allows coins of type `CoinType` to be burned
+    resource struct BurnCapability<CoinType> { }
 
     // A operations capability to allow this module to register currencies
     // with the RegisteredCurrencies on-chain config.
     resource struct CurrencyRegistrationCapability {
         cap: RegisteredCurrencies::RegistrationCapability,
+    }
+
+    struct MintEvent {
+        // funds added to the system
+        amount: u64,
+        // UTF-8 encoded symbol for the coin type (e.g., "LBR")
+        currency_code: vector<u8>,
+    }
+
+    struct BurnEvent {
+        // funds removed from the system
+        amount: u64,
+        // UTF-8 encoded symbol for the coin type (e.g., "LBR")
+        currency_code: vector<u8>,
+        // address with the Preburn resource that stored the now-burned funds
+        preburn_address: address,
+    }
+
+    struct PreburnEvent {
+        // funds waiting to be removed from the system
+        amount: u64,
+        // UTF-8 encoded symbol for the coin type (e.g., "LBR")
+        currency_code: vector<u8>,
+        // address with the Preburn resource that now holds the funds
+        preburn_address: address,
+    }
+
+    struct CancelBurnEvent {
+        // funds returned
+        amount: u64,
+        // UTF-8 encoded symbol for the coin type (e.g., "LBR")
+        currency_code: vector<u8>,
+        // address with the Preburn resource that holds the now-returned funds
+        preburn_address: address,
     }
 
     // The information for every supported currency is stored in a resource
@@ -49,13 +87,21 @@ module Libra {
         // We may want to disable the ability to mint further coins of a
         // currency while that currency is still around. Mutable.
         can_mint: bool,
+        // event stream for minting
+        mint_events: Event::EventHandle<MintEvent>,
+        // event stream for burning
+        burn_events: Event::EventHandle<BurnEvent>,
+        // event stream for preburn requests
+        preburn_events: Event::EventHandle<PreburnEvent>,
+        // event stream for cancelled prebunr requests
+        cancel_burn_events: Event::EventHandle<CancelBurnEvent>,
     }
 
     // A holding area where funds that will subsequently be burned wait while their underyling
     // assets are sold off-chain.
-    // This resource can only be created by the holder of the MintCapability. An account that
+    // This resource can only be created by the holder of the BurnCapability. An account that
     // contains this address has the authority to initiate a burn request. A burn request can be
-    // resolved by the holder of the MintCapability by either (1) burning the funds, or (2)
+    // resolved by the holder of the BurnCapability by either (1) burning the funds, or (2)
     // returning the funds to the account that initiated the burn request.
     // This design supports multiple preburn requests in flight at the same time, including multiple
     // burn requests from the same account. However, burn requests from the same account must be
@@ -63,12 +109,12 @@ module Libra {
     resource struct Preburn<Token> {
         // Queue of pending burn requests
         requests: vector<T<Token>>,
-        // Boolean that is true if the holder of the MintCapability has approved this account as a
+        // Boolean that is true if the holder of the BurnCapability has approved this account as a
         // preburner
         is_approved: bool,
     }
 
-    // An association account holding this privileg can add/remove the
+    // An association account holding this privilege can add/remove the
     // currencies from the system.
     struct AddCurrency { }
 
@@ -89,9 +135,16 @@ module Libra {
 
     // Returns a MintCapability for the `CoinType` currency. `CoinType`
     // must be a registered currency type.
-    public fun grant_minting_capability<CoinType>(): MintCapability<CoinType> {
+    public fun grant_mint_capability<CoinType>(): MintCapability<CoinType> {
         assert_assoc_and_currency<CoinType>();
         MintCapability<CoinType> { }
+    }
+
+    // Returns a `BurnCapability` for the `CoinType` currency. `CoinType`
+    // must be a registered currency type.
+    public fun grant_burn_capability<CoinType>(): BurnCapability<CoinType> {
+        assert_assoc_and_currency<CoinType>();
+        BurnCapability<CoinType> { }
     }
 
     // Return `amount` coins.
@@ -101,24 +154,24 @@ module Libra {
     }
 
     // Burn the coins currently held in the preburn holding area under `preburn_address`.
-    // Fails if the sender does not have a published MintCapability.
+    // Fails if the sender does not have a published `BurnCapability`.
     public fun burn<Token>(
         preburn_address: address
-    ) acquires CurrencyInfo, MintCapability, Preburn {
+    ) acquires BurnCapability, CurrencyInfo, Preburn {
         burn_with_capability(
             preburn_address,
-            borrow_global<MintCapability<Token>>(Transaction::sender())
+            borrow_global<BurnCapability<Token>>(Transaction::sender())
         )
     }
 
     // Cancel the oldest burn request from `preburn_address`
-    // Fails if the sender does not have a published MintCapability.
+    // Fails if the sender does not have a published `BurnCapability`.
     public fun cancel_burn<Token>(
         preburn_address: address
-    ): T<Token> acquires CurrencyInfo, MintCapability, Preburn {
+    ): T<Token> acquires BurnCapability, CurrencyInfo, Preburn {
         cancel_burn_with_capability(
             preburn_address,
-            borrow_global<MintCapability<Token>>(Transaction::sender())
+            borrow_global<BurnCapability<Token>>(Transaction::sender())
         )
     }
 
@@ -141,91 +194,144 @@ module Libra {
         // be backed with real-world assets, and thus minting will be correspondingly rarer.
         // * 1000000 here because the unit is microlibra
         Transaction::assert(value <= 1000000000 * 1000000, 11);
+        let currency_code = currency_code<Token>();
         // update market cap resource to reflect minting
         let info = borrow_global_mut<CurrencyInfo<Token>>(0xA550C18);
         Transaction::assert(info.can_mint, 4);
         info.total_value = info.total_value + (value as u128);
+        // don't emit mint events for synthetic currenices
+        if (!info.is_synthetic) {
+            Event::emit_event(
+                &mut info.mint_events,
+                MintEvent{
+                    amount: value,
+                    currency_code,
+                }
+            );
+        };
 
         T<Token> { value }
     }
 
     // Create a new Preburn resource.
-    // Can only be called by the holder of the MintCapability.
+    // Can only be called by the holder of the BurnCapability.
     public fun new_preburn_with_capability<Token>(
-        _capability: &MintCapability<Token>
+        _capability: &BurnCapability<Token>
     ): Preburn<Token> {
         assert_is_coin<Token>();
         Preburn<Token> { requests: Vector::empty(), is_approved: true }
     }
 
-    // Send coin to the preburn holding area, where it will wait to be burned.
-    // Fails if the sender does not have a published Preburn resource
-    public fun preburn<Token>(coin: T<Token>) acquires CurrencyInfo, Preburn {
-        preburn_with_resource(coin, borrow_global_mut<Preburn<Token>>(Transaction::sender()))
-    }
-
     // Send a coin to the preburn holding area `preburn` that is passed in.
-    public fun preburn_with_resource<Token>(coin: T<Token>, preburn: &mut Preburn<Token>) acquires CurrencyInfo {
+    public fun preburn_with_resource<Token>(
+        coin: T<Token>,
+        preburn: &mut Preburn<Token>,
+        preburn_address: address,
+    ) acquires CurrencyInfo {
         let coin_value = value(&coin);
         Vector::push_back(
             &mut preburn.requests,
             coin
         );
-        let market_cap = borrow_global_mut<CurrencyInfo<Token>>(0xA550C18);
-        market_cap.preburn_value = market_cap.preburn_value + coin_value
+        let currency_code = currency_code<Token>();
+        let info = borrow_global_mut<CurrencyInfo<Token>>(0xA550C18);
+        info.preburn_value = info.preburn_value + coin_value;
+        // don't emit preburn events for synthetic currencies
+        if (!info.is_synthetic) {
+            Event::emit_event(
+                &mut info.preburn_events,
+                PreburnEvent{
+                    amount: coin_value,
+                    currency_code,
+                    preburn_address,
+                }
+            );
+        };
     }
 
     // Send coin to the preburn holding area, where it will wait to be burned.
     // Fails if the sender does not have a published Preburn resource
     public fun preburn_to_sender<Token>(coin: T<Token>) acquires CurrencyInfo, Preburn {
-        preburn_with_resource(coin, borrow_global_mut<Preburn<Token>>(Transaction::sender()))
+        let sender = Transaction::sender();
+        preburn_with_resource(coin, borrow_global_mut<Preburn<Token>>(sender), sender);
     }
 
     // Permanently remove the coins held in the `Preburn` resource stored at `preburn_address` and
     // update the market cap accordingly. If there are multiple preburn requests in progress, this
     // will remove the oldest one.
-    // Can only be invoked by the holder of the MintCapability. Fails if the there is no `Preburn`
+    // Can only be invoked by the holder of the `BurnCapability`. Fails if the there is no `Preburn`
     // resource under `preburn_address` or has one with no pending burn requests.
     public fun burn_with_capability<Token>(
         preburn_address: address,
-        capability: &MintCapability<Token>
+        capability: &BurnCapability<Token>
     ) acquires CurrencyInfo, Preburn {
         // destroy the coin at the head of the preburn queue
-        burn_with_resource_cap(borrow_global_mut<Preburn<Token>>(preburn_address), capability)
+        burn_with_resource_cap(
+            borrow_global_mut<Preburn<Token>>(preburn_address),
+            preburn_address,
+            capability
+        )
     }
 
     // Permanently remove the coins held in the passed-in preburn resource
     // and update the market cap accordingly. If there are multiple preburn
     // requests in progress, this will remove the oldest one.
-    // Can only be invoked by the holder of the MintCapability. Fails if
+    // Can only be invoked by the holder of the `BurnCapability`. Fails if
     // the `preburn` resource has no pending burn requests.
     public fun burn_with_resource_cap<Token>(
         preburn: &mut Preburn<Token>,
-        _capability: &MintCapability<Token>
+        preburn_address: address,
+        _capability: &BurnCapability<Token>
     ) acquires CurrencyInfo {
         // destroy the coin at the head of the preburn queue
         let T { value } = Vector::remove(&mut preburn.requests, 0);
         // update the market cap
-        let market_cap = borrow_global_mut<CurrencyInfo<Token>>(0xA550C18);
-        market_cap.total_value = market_cap.total_value - (value as u128);
-        market_cap.preburn_value = market_cap.preburn_value - value
+        let currency_code = currency_code<Token>();
+        let info = borrow_global_mut<CurrencyInfo<Token>>(0xA550C18);
+        info.total_value = info.total_value - (value as u128);
+        info.preburn_value = info.preburn_value - value;
+        // don't emit burn events for synthetic currencies
+        if (!info.is_synthetic) {
+            Event::emit_event(
+                &mut info.burn_events,
+                BurnEvent {
+                    amount: value,
+                    currency_code,
+                    preburn_address,
+                }
+            );
+        };
     }
 
     // Cancel the burn request in the `Preburn` resource stored at `preburn_address` and
     // return the coins to the caller.
     // If there are multiple preburn requests in progress, this will cancel the oldest one.
-    // Can only be invoked by the holder of the MintCapability. Fails if the transaction sender
+    // Can only be invoked by the holder of the `BurnCapability`. Fails if the transaction sender
     // does not have a published Preburn resource or has one with no pending burn requests.
     public fun cancel_burn_with_capability<Token>(
         preburn_address: address,
-        _capability: &MintCapability<Token>
+        _capability: &BurnCapability<Token>
     ): T<Token> acquires CurrencyInfo, Preburn {
         // destroy the coin at the head of the preburn queue
         let preburn = borrow_global_mut<Preburn<Token>>(preburn_address);
         let coin = Vector::remove(&mut preburn.requests, 0);
         // update the market cap
-        let market_cap = borrow_global_mut<CurrencyInfo<Token>>(0xA550C18);
-        market_cap.preburn_value = market_cap.preburn_value - value(&coin);
+        let currency_code = currency_code<Token>();
+        let info = borrow_global_mut<CurrencyInfo<Token>>(0xA550C18);
+        let amount = value(&coin);
+        info.preburn_value = info.preburn_value - amount;
+        // Don't emit cancel burn events for synthetic currencies. cancel burn shouldn't be be used
+        // for synthetics in the first place
+        if (!info.is_synthetic) {
+            Event::emit_event(
+                &mut info.cancel_burn_events,
+                CancelBurnEvent {
+                    amount,
+                    currency_code,
+                    preburn_address,
+                }
+            );
+        };
 
         coin
     }
@@ -258,11 +364,16 @@ module Libra {
         move_from<MintCapability<Token>>(Transaction::sender())
     }
 
+    // Remove and return the BurnCapability from the sender's account. Fails if the sender does
+    // not have a published BurnCapability
+    public fun remove_burn_capability<Token>(): BurnCapability<Token> acquires BurnCapability {
+        move_from<BurnCapability<Token>>(Transaction::sender())
+    }
+
     // Return the total value of Libra to be burned
     public fun preburn_value<Token>(): u64 acquires CurrencyInfo {
         borrow_global<CurrencyInfo<Token>>(0xA550C18).preburn_value
     }
-
 
     // Create a new Libra::T<CoinType> with a value of 0
     public fun zero<CoinType>(): T<CoinType> {
@@ -333,6 +444,7 @@ module Libra {
         // And only callable by the designated currency address.
         assert_is_currency_sender();
         move_to_sender(MintCapability<CoinType>{});
+        move_to_sender(BurnCapability<CoinType>{});
         move_to_sender(CurrencyInfo<CoinType> {
             total_value: 0,
             preburn_value: 0,
@@ -342,6 +454,10 @@ module Libra {
             fractional_part,
             currency_code: copy currency_code,
             can_mint: true,
+            mint_events: Event::new_event_handle<MintEvent>(),
+            burn_events: Event::new_event_handle<BurnEvent>(),
+            preburn_events: Event::new_event_handle<PreburnEvent>(),
+            cancel_burn_events: Event::new_event_handle<CancelBurnEvent>()
         });
         RegisteredCurrencies::add_currency_code(
             currency_code,

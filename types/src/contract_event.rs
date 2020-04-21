@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account_config::{ReceivedPaymentEvent, SentPaymentEvent},
+    account_config::{
+        BurnEvent, CancelBurnEvent, MintEvent, PreburnEvent, ReceivedPaymentEvent, SentPaymentEvent,
+    },
     event::EventKey,
     language_storage::TypeTag,
     ledger_info::LedgerInfo,
@@ -120,6 +122,50 @@ impl TryFrom<&ContractEvent> for ReceivedPaymentEvent {
     fn try_from(event: &ContractEvent) -> Result<Self> {
         if event.type_tag != TypeTag::Struct(ReceivedPaymentEvent::struct_tag()) {
             anyhow::bail!("Expected Received Payment")
+        }
+        Self::try_from_bytes(&event.event_data)
+    }
+}
+
+impl TryFrom<&ContractEvent> for MintEvent {
+    type Error = Error;
+
+    fn try_from(event: &ContractEvent) -> Result<Self> {
+        if event.type_tag != TypeTag::Struct(MintEvent::struct_tag()) {
+            anyhow::bail!("Expected MintEvent")
+        }
+        Self::try_from_bytes(&event.event_data)
+    }
+}
+
+impl TryFrom<&ContractEvent> for BurnEvent {
+    type Error = Error;
+
+    fn try_from(event: &ContractEvent) -> Result<Self> {
+        if event.type_tag != TypeTag::Struct(BurnEvent::struct_tag()) {
+            anyhow::bail!("Expected BurnEvent")
+        }
+        Self::try_from_bytes(&event.event_data)
+    }
+}
+
+impl TryFrom<&ContractEvent> for PreburnEvent {
+    type Error = Error;
+
+    fn try_from(event: &ContractEvent) -> Result<Self> {
+        if event.type_tag != TypeTag::Struct(PreburnEvent::struct_tag()) {
+            anyhow::bail!("Expected PreburnEvent")
+        }
+        Self::try_from_bytes(&event.event_data)
+    }
+}
+
+impl TryFrom<&ContractEvent> for CancelBurnEvent {
+    type Error = Error;
+
+    fn try_from(event: &ContractEvent) -> Result<Self> {
+        if event.type_tag != TypeTag::Struct(CancelBurnEvent::struct_tag()) {
+            anyhow::bail!("Expected CancelBurnEvent")
         }
         Self::try_from_bytes(&event.event_data)
     }

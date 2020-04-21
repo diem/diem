@@ -293,6 +293,17 @@ fn create_and_initialize_main_accounts(
         // Initialize currencies
         move_vm
             .execute_function(
+                &module("Event"),
+                &name("initialize"),
+                &gas_schedule,
+                interpreter_context,
+                &txn_data,
+                vec![],
+                vec![],
+            )
+            .expect("Failure initializing Event module");
+        move_vm
+            .execute_function(
                 &module("Libra"),
                 &name("initialize"),
                 &gas_schedule,
@@ -301,7 +312,7 @@ fn create_and_initialize_main_accounts(
                 vec![],
                 vec![],
             )
-            .expect("Failure initializing currency module");
+            .expect("Failure initializing Libra module");
 
         // NB: Order matters
         let currencies = vec!["Coin1", "Coin2", "LBR"];
@@ -316,7 +327,7 @@ fn create_and_initialize_main_accounts(
                     vec![],
                     vec![],
                 )
-                .unwrap_or_else(|_| panic!("Failure initializing currency {}", currency));
+                .unwrap_or_else(|e| panic!("Failure initializing currency {}: {}", currency, e));
         }
     }
 
@@ -361,7 +372,7 @@ fn create_and_initialize_main_accounts(
                 vec![],
                 vec![],
             )
-            .expect("Failure initializing currency module");
+            .expect("Failure initializing VASP module");
     }
 
     {

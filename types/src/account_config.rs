@@ -24,7 +24,9 @@ pub static LBR_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T")
 const ACCOUNT_MODULE_NAME: &str = "LibraAccount";
 
 // Libra
-static COIN_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("Libra").unwrap());
+const LIBRA_MODULE_NAME: &str = "Libra";
+static COIN_MODULE_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new(LIBRA_MODULE_NAME).unwrap());
 static COIN_STRUCT_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
 pub static COIN_MODULE: Lazy<ModuleId> =
     Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, COIN_MODULE_NAME.clone()));
@@ -538,7 +540,137 @@ impl MoveResource for ReceivedPaymentEvent {
     const STRUCT_NAME: &'static str = "ReceivedPaymentEvent";
 }
 
-/// Struct that represents a ReceivedPaymentEvent.
+/// Struct that represents a MintEvent.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MintEvent {
+    amount: u64,
+    currency_code: Identifier,
+}
+
+impl MintEvent {
+    /// Get the amount minted
+    pub fn amount(&self) -> u64 {
+        self.amount
+    }
+
+    /// Return the code for the currency that was minted
+    pub fn currency_code(&self) -> &IdentStr {
+        &self.currency_code
+    }
+
+    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
+        lcs::from_bytes(bytes).map_err(Into::into)
+    }
+}
+
+impl MoveResource for MintEvent {
+    const MODULE_NAME: &'static str = LIBRA_MODULE_NAME;
+    const STRUCT_NAME: &'static str = "MintEvent";
+}
+
+/// Struct that represents a BurnEvent.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BurnEvent {
+    amount: u64,
+    currency_code: Identifier,
+    preburn_address: AccountAddress,
+}
+
+impl BurnEvent {
+    /// Get the amount burned
+    pub fn amount(&self) -> u64 {
+        self.amount
+    }
+
+    /// Return the code for the currency that was burned
+    pub fn currency_code(&self) -> &IdentStr {
+        &self.currency_code
+    }
+
+    /// Return the address whose Preburn resource formerly held the burned funds
+    pub fn preburn_address(&self) -> AccountAddress {
+        self.preburn_address
+    }
+
+    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
+        lcs::from_bytes(bytes).map_err(Into::into)
+    }
+}
+
+impl MoveResource for BurnEvent {
+    const MODULE_NAME: &'static str = LIBRA_MODULE_NAME;
+    const STRUCT_NAME: &'static str = "BurnEvent";
+}
+
+/// Struct that represents a PreburnEvent.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PreburnEvent {
+    amount: u64,
+    currency_code: Identifier,
+    preburn_address: AccountAddress,
+}
+
+impl PreburnEvent {
+    /// Get the amount preburned
+    pub fn amount(&self) -> u64 {
+        self.amount
+    }
+
+    /// Return the code for the currency that was preburned
+    pub fn currency_code(&self) -> &IdentStr {
+        &self.currency_code
+    }
+
+    /// Return the address whose Preburn now holds the funds
+    pub fn preburn_address(&self) -> AccountAddress {
+        self.preburn_address
+    }
+
+    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
+        lcs::from_bytes(bytes).map_err(Into::into)
+    }
+}
+
+impl MoveResource for PreburnEvent {
+    const MODULE_NAME: &'static str = LIBRA_MODULE_NAME;
+    const STRUCT_NAME: &'static str = "PreburnEvent";
+}
+
+/// Struct that represents a CancelBurnEvent.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CancelBurnEvent {
+    amount: u64,
+    currency_code: Identifier,
+    preburn_address: AccountAddress,
+}
+
+impl CancelBurnEvent {
+    /// Get the amount cancelled
+    pub fn amount(&self) -> u64 {
+        self.amount
+    }
+
+    /// Return the code for the currency that was returned
+    pub fn currency_code(&self) -> &IdentStr {
+        &self.currency_code
+    }
+
+    /// Return the address whose Preburn resource formerly held the returned funds
+    pub fn preburn_address(&self) -> AccountAddress {
+        self.preburn_address
+    }
+
+    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
+        lcs::from_bytes(bytes).map_err(Into::into)
+    }
+}
+
+impl MoveResource for CancelBurnEvent {
+    const MODULE_NAME: &'static str = LIBRA_MODULE_NAME;
+    const STRUCT_NAME: &'static str = "CancelBurnEvent";
+}
+
+/// Struct that represents a CurrencyInfo resource
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CurrencyInfoResource {
     total_value: u128,
@@ -549,6 +681,10 @@ pub struct CurrencyInfoResource {
     fractional_part: u64,
     currency_code: Identifier,
     can_mint: bool,
+    mint_events: EventHandle,
+    burn_events: EventHandle,
+    preburn_events: EventHandle,
+    cancel_burn_events: EventHandle,
 }
 
 impl MoveResource for CurrencyInfoResource {
