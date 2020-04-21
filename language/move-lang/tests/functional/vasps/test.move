@@ -9,10 +9,8 @@
 //! sender: root
 //! gas-price: 0
 use 0x0::VASP;
-use 0x0::AccountLimits;
 fun main() {
     VASP::apply_for_vasp_root_credential(x"AAA", x"BBB", x"CCC");
-    AccountLimits::publish_unrestricted_limits();
 }
 // check: EXECUTED
 
@@ -65,13 +63,11 @@ fun main() {
 //! new-transaction
 //! sender: association
 use 0x0::VASP;
-use 0x0::AccountLimits;
 use 0x0::Transaction;
 // Once the root vasp is certified it now is considered a root vasp
 // account.
 fun main() {
     VASP::grant_vasp({{root}});
-    AccountLimits::certify_limits_definition({{root}});
     Transaction::assert(VASP::is_root_vasp({{root}}), 1);
 }
 // check: EXECUTED

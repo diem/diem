@@ -462,25 +462,10 @@ encode_txn_script! {
 }
 
 encode_txn_script! {
-    name: encode_apply_for_root_vasp_limited,
-    args: [
-        human_name: Bytes,
-        base_url: Bytes,
-        ca_cert: Bytes,
-        max_outflow: U64,
-        max_inflow: U64,
-        max_holding: U64,
-        time_period: U64
-    ],
-    script: ApplyForRootVaspLimited,
-    doc: "Applies for the sending account to be added as a root VASP account with the specified limits."
-}
-
-encode_txn_script! {
-    name: encode_apply_for_root_vasp_unlimited,
+    name: encode_apply_for_root_vasp,
     args: [human_name: Bytes, base_url: Bytes, ca_cert: Bytes],
-    script: ApplyForRootVaspUnlimited,
-    doc: "Applies for the sending account to be added as a root VASP account with unrestricted account limits."
+    script: ApplyForRootVasp,
+    doc: "Applies for the sending account to be added as a root VASP account."
 }
 
 encode_txn_script! {
