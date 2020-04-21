@@ -79,7 +79,7 @@ use network::{
     error::NetworkError,
     protocols::{network::Event, rpc::error::RpcError},
 };
-use rand::{rngs::SmallRng, FromEntropy, Rng};
+use rand::{rngs::SmallRng, Rng, SeedableRng};
 use std::{
     collections::HashSet,
     convert::{TryFrom, TryInto},
