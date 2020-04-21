@@ -570,7 +570,7 @@ impl CurrencyInfoResource {
     }
 
     pub fn convert_to_lbr(&self, amount: u64) -> u64 {
-        let mut mult = (amount as u128) * (self.scaling_factor as u128);
+        let mut mult = (amount as u128) * (self.to_lbr_exchange_rate as u128);
         mult >>= 32;
         mult as u64
     }
