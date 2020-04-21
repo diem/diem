@@ -58,10 +58,10 @@ fun main() {
 use 0x0::LibraSystem2;
 fun main() {
     // add validator
-    LibraSystem2::add_validator(&{{bob}});
+    LibraSystem2::add_validator({{bob}});
 }
 
-// check: ValidatorSetChangeEvent
+// check: NewEpochEvent
 // check: EXECUTED
 
 //! block-prologue
@@ -83,20 +83,20 @@ use 0x0::LibraSystem2;
 // test alice can invoke reconfiguration upon successful rotation of bob's consensus public key
 fun main() {
     // check initial key was "20"
-    let validator_info = LibraSystem2::get_validator_info(&{{bob}});
+    let validator_info = LibraSystem2::get_validator_info({{bob}});
     let validator_config = LibraSystem2::get_validator_config(&validator_info);
     0x0::Transaction::assert(ValidatorConfig2::get_consensus_pubkey(validator_config) == x"20", 99);
 
     ValidatorConfig2::rotate_consensus_pubkey({{bob}}, x"30", x"10");
 
     // call force_update to reconfigure
-    LibraSystem2::force_update_validator_info(&{{bob}});
+    LibraSystem2::force_update_validator_info({{bob}});
 
     // check bob's public key is updated
-    validator_info = LibraSystem2::get_validator_info(&{{bob}});
+    validator_info = LibraSystem2::get_validator_info({{bob}});
     validator_config = LibraSystem2::get_validator_config(&validator_info);
     0x0::Transaction::assert(ValidatorConfig2::get_consensus_pubkey(validator_config) == x"30", 99);
 }
 
-// check: ValidatorSetChangeEvent
+// check: NewEpochEvent
 // check: EXECUTED

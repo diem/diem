@@ -27,7 +27,7 @@ use 0x0::LibraSystem2;
 fun main() {
     let validator_size = LibraSystem2::validator_set_size();
     0x0::Transaction::assert(validator_size == 0, 99);
-    LibraSystem2::add_validator(&{{bob}});
+    LibraSystem2::add_validator({{bob}});
     validator_size = LibraSystem2::validator_set_size();
     0x0::Transaction::assert(validator_size == 1, 99);
 }
