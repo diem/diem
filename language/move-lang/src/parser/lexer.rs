@@ -203,12 +203,6 @@ impl<'input> Lexer<'input> {
         Ok(tok)
     }
 
-    // Return the starting offset for the next token after the current one.
-    pub fn lookahead_start_loc(&self) -> usize {
-        let text = self.text[self.cur_end..].trim_start();
-        self.text.len() - text.len()
-    }
-
     pub fn advance(&mut self) -> Result<(), Error> {
         self.prev_end = self.cur_end;
         let text = self.text[self.cur_end..].trim_start();

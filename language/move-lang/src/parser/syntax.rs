@@ -269,9 +269,10 @@ fn parse_module_ident<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleIdent,
     )))
 }
 
-// Parse a module access (either a struct or a function):
+// Parse a module access (a variable, struct type, or function):
 //      ModuleAccess =
 //          <Name>
+//          | "::" <Name>
 //          | <ModuleName> "::" <Name>
 //          | <ModuleIdent> "::" <Name>
 fn parse_module_access<'input, F: FnOnce() -> String>(
@@ -289,6 +290,12 @@ fn parse_module_access<'input, F: FnOnce() -> String>(
             } else {
                 ModuleAccess_::Name(m)
             }
+        }
+
+        Tok::ColonColon => {
+            tokens.advance()?;
+            let n = parse_name(tokens)?;
+            ModuleAccess_::Global(n)
         }
 
         Tok::AddressValue => {
@@ -596,17 +603,13 @@ fn parse_sequence<'input>(tokens: &mut Lexer<'input>) -> Result<Sequence, Error>
 //      Term =
 //          "break"
 //          | "continue"
-//          | <Name>
-//          | <ModuleAccess> ("<" Comma<Type> ">")?          (spec only)
+//          | <NameExp>
 //          | <Value>
 //          | <Num>
 //          | "(" Comma<Exp> ")"
 //          | "(" <Exp> ":" <Type> ")"
 //          | "(" <Exp> "as" <Type> ")"
 //          | "{" <Sequence>
-//          | <ModuleAccess> ("<" Comma<Type> ">")? "{" Comma<ExpField> "}"
-//          | <ModuleAccess> ("<" Comma<Type> ">")? "(" Comma<Exp> ")"
-//          | "::" <Name> ("<" Comma<Type> ">")? "(" Comma<Exp> ")"
 fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
     let start_loc = tokens.start_loc();
     let term = match tokens.peek() {
@@ -620,40 +623,12 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             Exp_::Continue
         }
 
-        Tok::NameValue => {
-            // Check if this is a ModuleAccess for a pack or call expression.
-            match tokens.lookahead()? {
-                Tok::ColonColon | Tok::LBrace | Tok::LParen => {
-                    parse_pack_or_call_or_generic_name(tokens)?
-                }
-                Tok::Less => {
-                    // There's an ambiguity here. If there is no whitespace after the
-                    // name, treat it as the start of a list of type arguments. Otherwise
-                    // assume that the "<" is a boolean operator.
-                    let next_start = tokens.lookahead_start_loc();
-                    if next_start == start_loc + tokens.content().len() {
-                        let loc = make_loc(tokens.file_name(), next_start, next_start);
-                        parse_pack_or_call_or_generic_name(tokens).or_else(|mut e| {
-                            let msg = "Perhaps you need a blank space before this '<' operator?";
-                            e.push((loc, msg.to_owned()));
-                            Err(e)
-                        })?
-                    } else {
-                        let name = parse_name(tokens)?;
-                        Exp_::Name(sp(name.loc, ModuleAccess_::Name(name)), None)
-                    }
-                }
-                _ => {
-                    let name = parse_name(tokens)?;
-                    Exp_::Name(sp(name.loc, ModuleAccess_::Name(name)), None)
-                }
-            }
-        }
+        Tok::ColonColon | Tok::NameValue => parse_name_exp(tokens)?,
 
         Tok::AddressValue => {
             // Check if this is a ModuleIdent (in a ModuleAccess).
             if tokens.lookahead()? == Tok::ColonColon {
-                parse_pack_or_call_or_generic_name(tokens)?
+                parse_name_exp(tokens)?
             } else {
                 Exp_::Value(parse_value(tokens)?)
             }
@@ -716,15 +691,6 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
             Exp_::Block(parse_sequence(tokens)?)
         }
 
-        // "::" <Name> <OptionalTypeArgs> "(" Comma<Exp> ")"
-        Tok::ColonColon => {
-            tokens.advance()?; // consume the "::"
-            let n = parse_name(tokens)?;
-            let tys = parse_optional_type_args(tokens)?;
-            let rhs = parse_call_args(tokens)?;
-            Exp_::GlobalCall(n, tys, rhs)
-        }
-
         Tok::Spec => {
             let spec_block = parse_spec_block(tokens)?;
             Exp_::Spec(spec_block)
@@ -738,16 +704,32 @@ fn parse_term<'input>(tokens: &mut Lexer<'input>) -> Result<Exp, Error> {
     Ok(spanned(tokens.file_name(), start_loc, end_loc, term))
 }
 
-// Parse the subset of expression terms for pack and call operations, as well as for generic names
-// (in specifications only).
-// This is a helper function for parse_term.
-fn parse_pack_or_call_or_generic_name<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
+// Parse a pack, call, or other reference to a name:
+//      NameExp =
+//          <ModuleAccess> <OptionalTypeArgs> "{" Comma<ExpField> "}"
+//          | <ModuleAccess> <OptionalTypeArgs> "(" Comma<Exp> ")"
+//          | <ModuleAccess> <OptionalTypeArgs>
+fn parse_name_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
     let n = parse_module_access(tokens, || {
-        panic!("parse_pack_or_call_or_generic_name with something other than a NameValue or AddressValue token")
+        panic!("parse_name_exp with something other than a ModuleAccess")
     })?;
-    let tys = parse_optional_type_args(tokens)?;
+
+    // There's an ambiguity if the name is followed by a "<". If there is no whitespace
+    // after the name, treat it as the start of a list of type arguments. Otherwise
+    // assume that the "<" is a boolean operator.
+    let mut tys = None;
+    let start_loc = tokens.start_loc();
+    if tokens.peek() == Tok::Less && start_loc == n.loc.span().end().to_usize() {
+        let loc = make_loc(tokens.file_name(), start_loc, start_loc);
+        tys = parse_optional_type_args(tokens).or_else(|mut e| {
+            let msg = "Perhaps you need a blank space before this '<' operator?";
+            e.push((loc, msg.to_owned()));
+            Err(e)
+        })?;
+    }
+
     match tokens.peek() {
-        // <ModuleAccess> ("<" Comma<Type> ">")? "{" Comma<ExpField> "}"
+        // Pack: "{" Comma<ExpField> "}"
         Tok::LBrace => {
             let fs = parse_comma_list(
                 tokens,
@@ -759,13 +741,13 @@ fn parse_pack_or_call_or_generic_name<'input>(tokens: &mut Lexer<'input>) -> Res
             Ok(Exp_::Pack(n, tys, fs))
         }
 
-        // <ModuleAccess> ("<" Comma<Type> ">")? "(" Comma<Exp> ")"
+        // Call: "(" Comma<Exp> ")"
         Tok::LParen => {
             let rhs = parse_call_args(tokens)?;
             Ok(Exp_::Call(n, tys, rhs))
         }
 
-        // <ModuleAccess> ("<" Comma<Type> ">")?
+        // Other name reference...
         _ => Ok(Exp_::Name(n, tys)),
     }
 }

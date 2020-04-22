@@ -281,11 +281,14 @@ pub enum InvariantKind {
 // Types
 //**************************************************************************************************
 
-// A ModuleAccess references something from a module, either a struct or a function.
+// A ModuleAccess references a local or global name or something from a module,
+// either a struct type or a function.
 #[derive(Debug, PartialEq)]
 pub enum ModuleAccess_ {
     // N
     Name(Name),
+    // ::N
+    Global(Name),
     // M.S
     ModuleAccess(ModuleName, Name),
     // OxADDR.M.S
@@ -428,9 +431,6 @@ pub enum Exp_ {
     Copy(Var),
     // [m::]n[<t1, .., tn>]
     Name(ModuleAccess, Option<Vec<Type>>),
-
-    // ::n(e)
-    GlobalCall(Name, Option<Vec<Type>>, Spanned<Vec<Exp>>),
 
     // f(earg,*)
     Call(ModuleAccess, Option<Vec<Type>>, Spanned<Vec<Exp>>),
@@ -1161,6 +1161,7 @@ impl AstDebug for ModuleAccess_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         w.write(&match self {
             ModuleAccess_::Name(n) => format!("{}", n),
+            ModuleAccess_::Global(n) => format!("::{}", n),
             ModuleAccess_::ModuleAccess(m, n) => format!("{}::{}", m, n),
             ModuleAccess_::QualifiedModuleAccess(m, n) => format!("{}::{}", m, n),
         })
@@ -1221,17 +1222,6 @@ impl AstDebug for Exp_ {
                     ss.ast_debug(w);
                     w.write(">");
                 }
-            }
-            E::GlobalCall(n, tys_opt, sp!(_, rhs)) => {
-                w.write(&format!("::{}", n));
-                if let Some(ss) = tys_opt {
-                    w.write("<");
-                    ss.ast_debug(w);
-                    w.write(">");
-                }
-                w.write("(");
-                w.comma(rhs, |w, e| e.ast_debug(w));
-                w.write(")");
             }
             E::Call(ma, tys_opt, sp!(_, rhs)) => {
                 ma.ast_debug(w);
