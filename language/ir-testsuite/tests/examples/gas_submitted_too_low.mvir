@@ -3,6 +3,7 @@
 // this sets up Alice's account with very low balance, which is not sufficient to cover the gas cost
 
 //! sender: Alice
+//! max-gas: 10
 main() {
     let x: u64;
     let y: u64;

@@ -1,6 +1,7 @@
 //! account: alice, 90000
 
 //! sender: alice
+//! gas-price: 1
 
 import 0x0.LibraAccount;
 import 0x0.LBR;

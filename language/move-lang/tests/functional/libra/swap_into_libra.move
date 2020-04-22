@@ -44,7 +44,6 @@ fun main() {
 
 //! new-transaction
 //! sender: alice
-//! max-gas: 100000
 //! gas-price: 0
 use {{default}}::MultiCurrencyAccount;
 // Now add coin1 (alice's) account to the multi currency account in bob's
@@ -55,7 +54,6 @@ fun main() {
 
 //! new-transaction
 //! sender: cody
-//! max-gas: 100000
 //! gas-price: 0
 use {{default}}::MultiCurrencyAccount;
 // Now add coin1 (alice's) account to the multi currency account in bob's
@@ -67,7 +65,6 @@ fun main() {
 // Now mint LBR to bob's account
 //! new-transaction
 //! sender: bob
-//! max-gas: 1000000
 //! gas-price: 0
 use 0x0::Coin1;
 use 0x0::Coin2;
@@ -93,7 +90,6 @@ fun main() {
 // Now mint LBR to bob's account
 //! new-transaction
 //! sender: bob
-//! max-gas: 1000000
 //! gas-price: 0
 use 0x0::LBR;
 use 0x0::LibraAccount;

@@ -8,6 +8,7 @@
 // changes and re-execute the epilogue. Alice will still be charged for the gas she used.
 
 //! sender: alice
+//! gas-price: 1
 //! args: 1000000
 import 0x0.LibraAccount;
 import 0x0.LBR;
@@ -27,6 +28,7 @@ main(amount: u64) {
 
 //! new-transaction
 //! sender: bob
+//! gas-price: 1
 //! args: 1000
 import 0x0.LibraAccount;
 import 0x0.LBR;

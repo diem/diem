@@ -582,7 +582,7 @@ fn test_execution_with_storage() {
             lbr_type_tag(),
             &account1,
             account1_auth_key.prefix().to_vec(),
-            20_000_000,
+            2_000_000,
         )),
     );
 
@@ -596,7 +596,7 @@ fn test_execution_with_storage() {
             lbr_type_tag(),
             &account2,
             account2_auth_key.prefix().to_vec(),
-            10_200_000,
+            1_200_000,
         )),
     );
 
@@ -610,7 +610,7 @@ fn test_execution_with_storage() {
             lbr_type_tag(),
             &account3,
             account3_auth_key.prefix().to_vec(),
-            10_000_000,
+            1_000_000,
         )),
     );
 
@@ -754,19 +754,19 @@ fn test_execution_with_storage() {
         .reader
         .get_account_state_with_proof(account1, current_version, current_version)
         .unwrap();
-    verify_account_balance(&account1_state_with_proof, |x| x < 19_910_000).unwrap();
+    verify_account_balance(&account1_state_with_proof, |x| x == 1_910_000).unwrap();
 
     let account2_state_with_proof = db
         .reader
         .get_account_state_with_proof(account2, current_version, current_version)
         .unwrap();
-    verify_account_balance(&account2_state_with_proof, |x| x < 10_060_000).unwrap();
+    verify_account_balance(&account2_state_with_proof, |x| x == 1_210_000).unwrap();
 
     let account3_state_with_proof = db
         .reader
         .get_account_state_with_proof(account3, current_version, current_version)
         .unwrap();
-    verify_account_balance(&account3_state_with_proof, |x| x == 10_080_000).unwrap();
+    verify_account_balance(&account3_state_with_proof, |x| x == 1_080_000).unwrap();
 
     let transaction_list_with_proof = db
         .reader
@@ -861,13 +861,13 @@ fn test_execution_with_storage() {
         .reader
         .get_account_state_with_proof(account1, current_version, current_version)
         .unwrap();
-    verify_account_balance(&account1_state_with_proof, |x| x < 18_000_000).unwrap();
+    verify_account_balance(&account1_state_with_proof, |x| x == 1_770_000).unwrap();
 
     let account3_state_with_proof = db
         .reader
         .get_account_state_with_proof(account3, current_version, current_version)
         .unwrap();
-    verify_account_balance(&account3_state_with_proof, |x| x == 10_220_000).unwrap();
+    verify_account_balance(&account3_state_with_proof, |x| x == 1_220_000).unwrap();
 
     let transaction_list_with_proof = db
         .reader

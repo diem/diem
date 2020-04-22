@@ -2,6 +2,7 @@
 //! account: bob, 10000
 
 //! sender: alice
+//! gas-price: 1
 main() {
     return;
 }
@@ -9,6 +10,7 @@ main() {
 
 //! new-transaction
 //! sender: bob
+//! gas-price: 1
 main() {
     let x: u64;
     x = 1 + 2 + 3;

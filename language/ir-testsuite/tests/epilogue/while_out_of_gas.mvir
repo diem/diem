@@ -1,5 +1,6 @@
 //! account: default, 100000
 
+//! gas-price: 1
 //! max-gas: 10000
 main() {
     while(true) {}
