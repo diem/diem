@@ -5,6 +5,7 @@ use serde_reflection::RegistryOwned;
 use std::path::PathBuf;
 use structopt::{clap::arg_enum, StructOpt};
 
+mod analyzer;
 mod cpp;
 mod java;
 mod python3;
@@ -29,7 +30,7 @@ struct Options {
     #[structopt(parse(from_os_str))]
     input: PathBuf,
 
-    #[structopt(long, possible_values = &Language::variants(), default_value = "Python3")]
+    #[structopt(long, possible_values = &Language::variants(), case_insensitive = true, default_value = "Python3")]
     language: Language,
 }
 
