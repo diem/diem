@@ -97,8 +97,6 @@ pub fn validator_swarm(
         network.seed_peers = seed_peers.clone();
     }
 
-    validator_keys.sort_by(|k1, k2| k1.account_address().cmp(k2.account_address()));
-    discovery_infos.sort_by(|k1, k2| k1.account_address.cmp(&k2.account_address));
     ValidatorSwarm {
         nodes,
         validator_set: ValidatorSet::new(validator_keys),
