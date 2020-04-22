@@ -328,4 +328,17 @@ mod test {
         );
         assert!(config.execution.genesis.is_some());
     }
+
+    #[test]
+    fn verify_same_genesis() {
+        let config1 = ValidatorConfig::new().nodes(10).index(1).build().unwrap();
+        let config2 = ValidatorConfig::new()
+            .nodes(13)
+            .index(12)
+            .nodes_in_genesis(Some(10))
+            .build()
+            .unwrap();
+
+        assert_eq!(config1.execution.genesis, config2.execution.genesis);
+    }
 }

@@ -159,7 +159,7 @@ impl Config {
         // generate a validator set with |validator_accounts| validators
         let (validator_keys, validator_set) = if validator_accounts > 0 {
             let mut swarm = generator::validator_swarm_for_testing(validator_accounts);
-            let validator_keys: BTreeMap<_, _> = swarm
+            let validator_keys: Vec<_> = swarm
                 .nodes
                 .iter_mut()
                 .map(|c| {
@@ -172,7 +172,7 @@ impl Config {
                 .collect();
             (validator_keys, swarm.validator_set)
         } else {
-            (BTreeMap::new(), ValidatorSet::new(vec![]))
+            (vec![], ValidatorSet::new(vec![]))
         };
 
         // key generator with a fixed seed
@@ -187,7 +187,7 @@ impl Config {
                     let balance = def.balance.as_ref().unwrap_or(&DEFAULT_BALANCE).clone();
                     let account_data = if entry.is_validator() {
                         validator_accounts -= 1;
-                        let privkey = validator_keys.iter().nth(validator_accounts).unwrap().1;
+                        let privkey = &validator_keys.get(validator_accounts).unwrap().1;
                         AccountData::with_keypair(
                             privkey.clone(),
                             privkey.public_key(),
