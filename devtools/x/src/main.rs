@@ -50,7 +50,7 @@ enum Command {
     Lint(lint::Args),
 }
 
-fn main() -> Result<()> {
+fn configure_logger() {
     env_logger::from_env(env_logger::Env::default().default_filter_or("info"))
         .format(|buf, record| {
             let color = match record.level() {
@@ -71,7 +71,10 @@ fn main() -> Result<()> {
             )
         })
         .init();
+}
 
+fn main() -> Result<()> {
+    configure_logger();
     let args = Args::from_args();
     let xctx = context::XContext::new()?;
 
