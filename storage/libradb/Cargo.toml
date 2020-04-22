@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-arc-swap = "0.4.5"
+arc-swap = "0.4.6"
 byteorder = "1.3.2"
 itertools = "0.9.0"
 once_cell = "1.3.1"
