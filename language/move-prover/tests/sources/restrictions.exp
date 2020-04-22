@@ -31,14 +31,6 @@ error: [boogie translator] `|x|e` (lambda) currently only supported as argument 
     │                     ^^^^^^^^^
     │
 
-error: [boogie translator] Pack not yet supported
-
-    ┌── tests/sources/restrictions.move:28:13 ───
-    │
- 28 │             S{f: 1}
-    │             ^^^^^^^
-    │
-
 error: [boogie translator] Shl not yet supported
 
     ┌── tests/sources/restrictions.move:33:13 ───

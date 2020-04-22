@@ -436,6 +436,11 @@ impl<'env> SpecTranslator<'env> {
     fn translate_assume_well_formed(&self, struct_env: &StructEnv<'env>) {
         let emit_field_checks = |mode: WellFormedMode| {
             emitln!(self.writer, "is#Vector($this)");
+            emitln!(
+                self.writer,
+                "  && $vlen($this) == {}",
+                struct_env.get_fields().count()
+            );
             for field in struct_env.get_fields() {
                 let select = format!("$SelectField($this, {})", boogie_field_name(&field));
                 let type_check = boogie_well_formed_expr(
@@ -841,7 +846,7 @@ impl<'env> SpecTranslator<'env> {
             Operation::Function(module_id, fun_id) => {
                 self.translate_spec_fun_call(node_id, *module_id, *fun_id, args)
             }
-            Operation::Pack(..) => self.error(&loc, "Pack not yet supported"),
+            Operation::Pack(..) => self.translate_pack(args),
             Operation::Tuple => self.error(&loc, "Tuple not yet supported"),
             Operation::Select(module_id, struct_id, field_id) => {
                 self.translate_select(*module_id, *struct_id, *field_id, args)
@@ -899,6 +904,20 @@ impl<'env> SpecTranslator<'env> {
             Operation::MaxU64 => emit!(self.writer, "Integer(MAX_U64)"),
             Operation::MaxU128 => emit!(self.writer, "Integer(MAX_U128)"),
         }
+    }
+
+    fn translate_pack(&self, args: &[Exp]) {
+        emit!(
+            self.writer,
+            "Vector({}EmptyValueArray",
+            "ExtendValueArray(".repeat(args.len())
+        );
+        for arg in args.iter() {
+            emit!(self.writer, ", ");
+            self.translate_exp(arg);
+            emit!(self.writer, ")");
+        }
+        emit!(self.writer, ")"); // A closing bracket for Vector
     }
 
     fn translate_spec_fun_call(

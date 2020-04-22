@@ -395,8 +395,8 @@ function {:inline} $UpdateLocal(m: Memory, idx: int, v: Value): Memory {
 procedure {:inline 1} $InitVerification() {
   // Set local counter to 0
   $local_counter := 0;
-  // Assume sender account exists.
-  assume $ExistsTxnSenderAccount($m, $txn);
+  // Set abort_flag to false
+  $abort_flag := false;
 }
 
 // ============================================================================================

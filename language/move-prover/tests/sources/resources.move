@@ -25,8 +25,8 @@ module TestResources {
         };
     }
     spec fun create_resource_incorrect {
-        aborts_if exists<R>(sender());
-        ensures exists<R>(sender());
+     aborts_if exists<R>(sender());
+     ensures exists<R>(sender());
     }
 
     fun move_from_addr(a: address) acquires R {
@@ -42,9 +42,48 @@ module TestResources {
         let R{x: x} = r;
         move_to_sender<R>(R{x: x});
     }
-    spec fun move_from_addr_to_sender { // TODO: either a bug or an incomplete spec
-        //aborts_if !exists<R>(a);
-        //aborts_if exists<R>(sender());
+    spec fun move_from_addr_to_sender {
+        aborts_if !exists<R>(a);
+        aborts_if (sender() != a) && exists<R>(sender());
+        ensures exists<R>(sender());
+        ensures (sender() != a) ==> !exists<R>(a);
+        ensures old(global<R>(a).x) == global<R>(sender()).x;
+        //ensures old(global<R>(a)) == global<R>(sender()); // FIXME: this should be verified
+    }
+
+    fun move_from_addr_and_return(a: address): R acquires R {
+        let r = move_from<R>(a);
+        let R{x: x} = r;
+        R{x: x}
+    }
+    spec fun move_from_addr_and_return {
+        aborts_if !exists<R>(a);
+        ensures old(exists<R>(a));
+        ensures result.x == old(global<R>(a).x);
+        //ensures result == old(global<R>(a)); // FIXME: this should be verified
+    }
+
+    fun move_from_sender_and_return(): R acquires R {
+        let r = move_from<R>(Transaction::sender());
+        let R{x: x} = r;
+        R{x: x}
+    }
+    spec fun move_from_sender_and_return {
+        aborts_if !exists<R>(sender());
+        ensures result.x == old(global<R>(sender()).x);
+        //ensures result == old(global<R>(sender())); // FIXME: this should be verified
+    }
+
+    fun move_from_sender_to_sender() acquires R {
+        let r = move_from<R>(Transaction::sender());
+        let R{x: x} = r;
+        move_to_sender<R>(R{x: x});
+    }
+    spec fun move_from_sender_to_sender {
+        aborts_if !exists<R>(sender());
+        ensures exists<R>(sender());
+        ensures old(global<R>(sender()).x) == global<R>(sender()).x;
+        //ensures old(global<R>(sender())) == global<R>(sender()); // FIXME: this should be verified
     }
 
     fun borrow_global_mut_correct(a: address) acquires R {
@@ -173,5 +212,44 @@ module TestResources {
     spec fun ref_A {
         aborts_if b;
         ensures result.addr == a;
+    }
+
+
+    // ---------------
+    // Packs in spec
+    // ---------------
+
+    fun spec_pack_R(): R {
+        R{x: 7}
+    }
+    spec fun spec_pack_R {
+        aborts_if false;
+        ensures result.x == 7;
+        ensures result == R{x: 7};
+    }
+
+    fun spec_pack_A(): A {
+        A{ addr: Transaction::sender(), val: 7 }
+    }
+    spec fun spec_pack_A {
+        aborts_if false;
+        ensures result.addr == sender();
+        ensures result.val == 7;
+        ensures result == A{ addr: sender(), val: 7 };
+        ensures result == A{ val: 7, addr: sender() };
+    }
+
+    fun spec_pack_B(): B {
+        B{ val: 77, a: A{ addr: Transaction::sender(), val: 7 }}
+    }
+    spec fun spec_pack_B {
+        aborts_if false;
+        ensures result.val == 77;
+        ensures result.a.val == 7;
+        ensures result.a.addr == sender();
+        ensures result == B{ val: 77, a: A{ addr: sender(), val: 7 }};
+        ensures result == B{ val: 77, a: A{ val: 7, addr: sender()}};
+        ensures result == B{ a: A{ addr: sender(), val: 7 }, val: 77 };
+        ensures result == B{ a: A{ val: 7, addr: sender()}, val: 77 };
     }
 }
