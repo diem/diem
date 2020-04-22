@@ -241,7 +241,7 @@ impl<'env> SpecTranslator<'env> {
                 self.writer,
                 "function {{:inline}} {}({}): {} {{",
                 boogie_spec_fun_name(&self.module_env(), *id),
-                vec!["$m: Memory".to_string()]
+                vec!["$m: Memory, $txn: Transaction".to_string()]
                     .into_iter()
                     .chain(spec_var_params)
                     .chain(type_params)
@@ -907,7 +907,7 @@ impl<'env> SpecTranslator<'env> {
         let fun_decl = module_env.get_spec_fun(fun_id);
         let name = boogie_spec_fun_name(&module_env, fun_id);
         emit!(self.writer, "{}(", name);
-        emit!(self.writer, "$m");
+        emit!(self.writer, "$m, $txn");
         for (mid, vid) in &fun_decl.used_spec_vars {
             emit!(self.writer, ", ");
             let declaring_module = self.module_env().env.get_module(*mid);
