@@ -236,12 +236,17 @@ impl<'env> SpecTranslator<'env> {
                     boogie_local_type(ty)
                 )
             });
+            let state_params = if fun.is_pure {
+                vec![]
+            } else {
+                vec!["$m: Memory, $txn: Transaction".to_string()]
+            };
             self.writer.set_location(&fun.loc);
             emitln!(
                 self.writer,
                 "function {{:inline}} {}({}): {} {{",
                 boogie_spec_fun_name(&self.module_env(), *id),
-                vec!["$m: Memory, $txn: Transaction".to_string()]
+                state_params
                     .into_iter()
                     .chain(spec_var_params)
                     .chain(type_params)
@@ -757,9 +762,9 @@ impl<'env> SpecTranslator<'env> {
             }
             Exp::IfElse(node_id, cond, on_true, on_false) => {
                 self.set_writer_location(*node_id);
-                emit!(self.writer, "if (");
+                emit!(self.writer, "if (b#Boolean(");
                 self.translate_exp(cond);
-                emit!(self.writer, ") then ");
+                emit!(self.writer, ")) then ");
                 self.translate_exp_parenthesised(on_true);
                 emit!(self.writer, " else ");
                 self.translate_exp_parenthesised(on_false);
@@ -907,9 +912,21 @@ impl<'env> SpecTranslator<'env> {
         let fun_decl = module_env.get_spec_fun(fun_id);
         let name = boogie_spec_fun_name(&module_env, fun_id);
         emit!(self.writer, "{}(", name);
-        emit!(self.writer, "$m, $txn");
+        let mut first = if !fun_decl.is_pure {
+            emit!(self.writer, "$m, $txn");
+            false
+        } else {
+            true
+        };
+        let mut maybe_comma = || {
+            if first {
+                first = false;
+            } else {
+                emit!(self.writer, ", ");
+            }
+        };
         for (mid, vid) in &fun_decl.used_spec_vars {
-            emit!(self.writer, ", ");
+            maybe_comma();
             let declaring_module = self.module_env().env.get_module(*mid);
             let var_decl = declaring_module.get_spec_var(*vid);
             emit!(
@@ -918,11 +935,11 @@ impl<'env> SpecTranslator<'env> {
             );
         }
         for ty in instantiation.iter() {
-            emit!(self.writer, ", ");
+            maybe_comma();
             emit!(self.writer, &boogie_type_value(self.module_env().env, ty));
         }
         for exp in args {
-            emit!(self.writer, ", ");
+            maybe_comma();
             self.translate_exp(exp);
         }
         emit!(self.writer, ")");

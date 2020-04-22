@@ -8,10 +8,18 @@ module TestInvariants {
 
     spec struct R {
         // We must always have a value greater one.
-        invariant x > 1;
+        invariant greater_one(x);
 
         // When we update via a reference, the new value must be smaller or equal the old one.
-        invariant update x <= old(x);
+        invariant update x <= old(x) && tautology();
+    }
+
+    spec module {
+        // Pure function to be used in data invariants.
+        define greater_one(x: num): bool { x > 1 }
+
+        // Impure function to be used in update invariants.
+        define tautology() : bool { sender() == 0x0 || sender() != 0x0 }
     }
 
 
