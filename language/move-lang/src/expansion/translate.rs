@@ -744,6 +744,14 @@ fn module_access(
             }
             None => EN::Name(n),
         },
+        PN::Global(n) => {
+            let msg = "Global names can only be used in function calls";
+            context.error(vec![
+                (loc, format!("Invalid use of global name '::{}'", n)),
+                (loc, msg.into()),
+            ]);
+            return None;
+        }
         PN::ModuleAccess(mname, n) => match context.module_alias_get(&mname.0).cloned() {
             None => {
                 context.error(vec![(
@@ -867,7 +875,7 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
                     match context.module_alias_get(&n) {
                         Some(_) => {
                             let msg = format!(
-                                "Unexpected module alias '{}'. Modules are not values.'",
+                                "Unexpected module alias '{}'. Modules are not values",
                                 n
                             );
                             context.error(vec![(*nloc, msg)]);
@@ -876,24 +884,32 @@ fn exp_(context: &mut Context, sp!(loc, pe_): P::Exp) -> E::Exp {
                         None => mk_name(context, pn),
                     }
                 }
+                sp!(nloc, P::ModuleAccess_::Global(n)) => {
+                    let msg = format!(
+                        "Unexpected global name '::{}'. Global names are not values",
+                        n
+                    );
+                    context.error(vec![(*nloc, msg)]);
+                    EE::UnresolvedError
+                }
                 sp!(_, P::ModuleAccess_::ModuleAccess(_, _))
                 | sp!(_, P::ModuleAccess_::QualifiedModuleAccess(_, _)) => mk_name(context, pn),
             }
         }
-        PE::GlobalCall(n, ptys_opt, sp!(rloc, prs)) => {
-            let tys_opt = optional_types(context, ptys_opt);
-            let ers = sp(rloc, exps(context, prs));
-            EE::GlobalCall(n, tys_opt, ers)
-        }
         PE::Call(pn, ptys_opt, sp!(rloc, prs)) => {
-            let en_opt = module_access(context, pn);
             let tys_opt = optional_types(context, ptys_opt);
             let ers = sp(rloc, exps(context, prs));
-            match en_opt {
-                Some(en) => EE::Call(en, tys_opt, ers),
-                None => {
-                    assert!(context.has_errors());
-                    EE::UnresolvedError
+            match pn {
+                sp!(_, P::ModuleAccess_::Global(n)) => EE::GlobalCall(n, tys_opt, ers),
+                _ => {
+                    let en_opt = module_access(context, pn);
+                    match en_opt {
+                        Some(en) => EE::Call(en, tys_opt, ers),
+                        None => {
+                            assert!(context.has_errors());
+                            EE::UnresolvedError
+                        }
+                    }
                 }
             }
         }

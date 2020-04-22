@@ -1,11 +1,11 @@
 error: 
 
-   ┌── tests/move_check/expansion/global_access_pack.move:3:13 ───
+   ┌── tests/move_check/expansion/global_access_pack.move:3:9 ───
    │
  3 │         ::S { }
-   │             ^ Unexpected '{'
+   │         ^^^ Invalid use of global name '::S'
    ·
  3 │         ::S { }
-   │             - Expected '('
+   │         --- Global names can only be used in function calls
    │
 
