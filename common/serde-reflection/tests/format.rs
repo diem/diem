@@ -21,9 +21,8 @@ fn test_format_visiting() {
     let mut counter: usize = 0;
     format
         .visit(&mut |format| {
-            match format {
-                U8 => counter += 1,
-                _ => (),
+            if let U8 = format {
+                counter += 1;
             }
             Ok(())
         })
