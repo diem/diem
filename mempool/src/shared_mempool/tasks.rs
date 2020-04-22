@@ -15,7 +15,7 @@ use crate::{
     SubmissionStatus,
 };
 use anyhow::{ensure, format_err, Result};
-use futures::{channel::oneshot, future::join_all};
+use futures::channel::oneshot;
 use libra_logger::prelude::*;
 use libra_types::{
     mempool_status::{MempoolStatus, MempoolStatusCode},
@@ -31,10 +31,9 @@ use std::{
     cmp,
     collections::{HashMap, HashSet},
     ops::Deref,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, RwLock},
     time::Duration,
 };
-use tokio::sync::RwLock;
 use vm_validator::vm_validator::{get_account_sequence_number, TransactionValidation};
 
 // ============================== //
@@ -181,12 +180,10 @@ where
 {
     let mut statuses = vec![];
 
-    let seq_numbers = join_all(
-        transactions
-            .iter()
-            .map(|t| get_account_sequence_number(smp.storage_read_client.clone(), t.sender())),
-    )
-    .await;
+    let seq_numbers = transactions
+        .iter()
+        .map(|t| get_account_sequence_number(smp.db.as_ref(), t.sender()))
+        .collect::<Vec<_>>();
 
     let transactions: Vec<_> =
         transactions
@@ -215,17 +212,15 @@ where
             })
             .collect();
 
-    let validation_results = join_all(transactions.iter().map(|t| {
-        let vm_validator = smp.validator.clone();
-        async move {
-            vm_validator
+    let validation_results = transactions
+        .iter()
+        .map(|t| {
+            smp.validator
                 .read()
-                .await
+                .unwrap()
                 .validate_transaction(t.0.clone())
-                .await
-        }
-    }))
-    .await;
+        })
+        .collect::<Vec<_>>();
 
     {
         let mut mempool = smp
@@ -420,7 +415,7 @@ pub(crate) async fn process_config_update<V>(
     // restart VM validator
     validator
         .write()
-        .await
+        .unwrap()
         .restart(config_update)
         .expect("failed to restart VM validator");
 }

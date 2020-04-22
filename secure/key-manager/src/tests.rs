@@ -376,11 +376,7 @@ fn setup_json_client_and_server(db_rw: DbReaderWriter) -> (JsonRpcClient, Runtim
     // Provide a VMValidator to the runtime.
     server.spawn(async move {
         while let Some((txn, cb)) = mp_events.next().await {
-            let vm_status = MockVMValidator
-                .validate_transaction(txn)
-                .await
-                .unwrap()
-                .status();
+            let vm_status = MockVMValidator.validate_transaction(txn).unwrap().status();
             let result = if vm_status.is_some() {
                 (MempoolStatus::new(MempoolStatusCode::VmError), vm_status)
             } else {

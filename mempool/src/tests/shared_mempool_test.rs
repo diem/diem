@@ -36,14 +36,11 @@ use parity_multiaddr::Multiaddr;
 use std::{
     collections::{HashMap, HashSet},
     num::NonZeroUsize,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, RwLock},
     time::Duration,
 };
-use storage_service::mocks::mock_storage_client::MockStorageReadClient;
-use tokio::{
-    runtime::{Builder, Runtime},
-    sync::RwLock,
-};
+use storage_interface::mock::MockDbReader;
+use tokio::runtime::{Builder, Runtime};
 use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 
 #[derive(Default)]
@@ -100,7 +97,7 @@ fn init_single_shared_mempool(smp: &mut SharedMempoolNetwork, peer_id: PeerId, c
         consensus_events,
         state_sync_events,
         reconfig_events_receiver,
-        Arc::new(MockStorageReadClient),
+        Arc::new(MockDbReader),
         Arc::new(RwLock::new(MockVMValidator)),
         vec![sender],
         Some(timer_receiver.map(|_| SyncEvent).boxed()),
@@ -169,7 +166,7 @@ fn init_smp_multiple_networks(
         consensus_events,
         state_sync_events,
         reconfig_events_receiver,
-        Arc::new(MockStorageReadClient),
+        Arc::new(MockDbReader),
         Arc::new(RwLock::new(MockVMValidator)),
         vec![sender],
         Some(timer_receiver.map(|_| SyncEvent).boxed()),

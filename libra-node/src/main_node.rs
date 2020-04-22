@@ -303,8 +303,11 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     );
     let (mp_client_sender, mp_client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
 
-    let admission_control_runtime =
-        AdmissionControlService::bootstrap(&node_config, mp_client_sender.clone());
+    let admission_control_runtime = AdmissionControlService::bootstrap(
+        &node_config,
+        Arc::clone(&libra_db) as Arc<dyn DbReader>,
+        mp_client_sender.clone(),
+    );
     let rpc_runtime = bootstrap_rpc(&node_config, libra_db.clone(), mp_client_sender);
 
     let mut consensus_runtime = None;
@@ -313,6 +316,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     instant = Instant::now();
     let mempool = libra_mempool::bootstrap(
         node_config,
+        Arc::clone(&libra_db) as Arc<dyn DbReader>,
         mempool_network_handles,
         mp_client_events,
         consensus_requests,
