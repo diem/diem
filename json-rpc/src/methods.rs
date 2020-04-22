@@ -242,12 +242,12 @@ async fn get_events(service: JsonRpcService, request: JsonRpcRequest) -> Result<
 /// Returns meta information about supported currencies
 async fn currencies_info(
     service: JsonRpcService,
-    _request: JsonRpcRequest,
+    request: JsonRpcRequest,
 ) -> Result<Vec<CurrencyInfoView>> {
-    let raw_data = service
-        .db
-        .deref()
-        .batch_fetch_resources(vec![RegisteredCurrencies::CONFIG_ID.access_path()])?;
+    let raw_data = service.db.deref().batch_fetch_resources_by_version(
+        vec![RegisteredCurrencies::CONFIG_ID.access_path()],
+        request.version(),
+    )?;
     ensure!(raw_data.len() == 1, "invalid storage result");
     let currencies = RegisteredCurrencies::from_bytes(&raw_data[0])?;
     let access_paths: Vec<_> = currencies
@@ -257,7 +257,11 @@ async fn currencies_info(
         .collect();
 
     let mut currencies = vec![];
-    for raw_data in service.db.deref().batch_fetch_resources(access_paths)? {
+    for raw_data in service
+        .db
+        .deref()
+        .batch_fetch_resources_by_version(access_paths, request.version())?
+    {
         let currency_info = CurrencyInfoResource::try_from_bytes(&raw_data)?;
         currencies.push(CurrencyInfoView::from(currency_info));
     }
