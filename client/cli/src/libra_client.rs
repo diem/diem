@@ -285,24 +285,26 @@ impl LibraClient {
             TrustedStateChange::Epoch {
                 new_state,
                 latest_epoch_change_li,
-                latest_validator_set,
-                ..
             } => {
                 info!(
                     "Verified epoch change to epoch: {}, validator set: [{}]",
                     latest_epoch_change_li.ledger_info().epoch(),
-                    latest_validator_set
+                    latest_epoch_change_li
+                        .ledger_info()
+                        .next_validator_set()
+                        .expect("no validator set in epoch change ledger info"),
                 );
                 // Update client state
                 self.trusted_state = new_state;
                 self.latest_epoch_change_li = Some(latest_epoch_change_li.clone());
             }
-            TrustedStateChange::Version { new_state, .. } => {
+            TrustedStateChange::Version { new_state } => {
                 if self.trusted_state.latest_version() < new_state.latest_version() {
                     info!("Verified version change to: {}", new_state.latest_version());
                 }
                 self.trusted_state = new_state;
             }
+            TrustedStateChange::NoChange => (),
         }
         Ok(())
     }

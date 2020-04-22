@@ -91,6 +91,10 @@ impl LedgerInfo {
         self.commit_info.epoch()
     }
 
+    pub fn next_block_epoch(&self) -> u64 {
+        self.commit_info.next_block_epoch()
+    }
+
     pub fn round(&self) -> Round {
         self.commit_info.round()
     }

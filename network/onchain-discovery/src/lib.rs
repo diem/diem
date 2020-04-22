@@ -409,11 +409,10 @@ where
             }
         };
 
-        let new_state = match trusted_state_change {
+        match trusted_state_change {
             TrustedStateChange::Epoch {
                 new_state,
                 latest_epoch_change_li,
-                ..
             } => {
                 info!(
                     "successfully ratcheted to new epoch: \
@@ -422,21 +421,19 @@ where
                     latest_epoch_change_li.ledger_info().epoch(),
                     new_state.latest_version(),
                 );
-                new_state
+                self.trusted_state = new_state;
             }
-            TrustedStateChange::Version { new_state, .. } => {
+            TrustedStateChange::Version { new_state } => {
                 debug!(
                     "successfully ratcheted to new version: \
                      peer: {}, version: {}",
                     peer_id.short_str(),
                     new_state.latest_version(),
                 );
-                new_state
+                self.trusted_state = new_state;
             }
+            TrustedStateChange::NoChange => (),
         };
-
-        // swap in our newly ratcheted trusted state
-        self.trusted_state = new_state;
 
         if let Some(discovery_set_event) = res_msg.event {
             self.handle_new_discovery_set_event(discovery_set_event)
