@@ -101,6 +101,7 @@ members = [
     "storage/inspector",
     "storage/schemadb",
     "storage/scratchpad",
+    "storage/simple-storage-client",
     "storage/state-view",
     "storage/storage-interface",
     "storage/storage-client",

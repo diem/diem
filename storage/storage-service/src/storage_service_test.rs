@@ -10,13 +10,13 @@ use libra_types::get_with_proof::{RequestItem, ResponseItem};
 #[cfg(test)]
 use libradb::test_helper::arb_blocks_to_commit;
 use proptest::prelude::*;
+use simple_storage_client::SimpleStorageClient;
 use std::{
     collections::{BTreeMap, HashMap},
     net::{IpAddr, Ipv4Addr, SocketAddr},
 };
 use storage_client::{
-    SimpleStorageClient, StorageRead, StorageReadServiceClient, StorageWrite,
-    StorageWriteServiceClient,
+    StorageRead, StorageReadServiceClient, StorageWrite, StorageWriteServiceClient,
 };
 use tokio::runtime::Runtime;
 

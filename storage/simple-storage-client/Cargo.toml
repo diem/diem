@@ -1,0 +1,22 @@
+[package]
+name = "simple-storage-client"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra storage client"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+serde = "1.0"
+tonic = "0.2"
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-secure-net = { path = "../../secure/net", version = "0.1.0" }
+storage-interface = { path = "../storage-interface", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+
+[features]
+default = []
