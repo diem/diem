@@ -4,14 +4,17 @@
 use crate::{BuildSwarm, Error, ValidatorConfig};
 use anyhow::{ensure, Result};
 use libra_config::{
-    config::{NetworkPeersConfig, NodeConfig, RoleType, SeedPeersConfig, UpstreamPeersConfig},
+    config::{
+        NetworkPeersConfig, NodeConfig, PeerNetworkId, RoleType, SeedPeersConfig, UpstreamConfig,
+        UpstreamPeersConfig,
+    },
     utils,
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_types::transaction::Transaction;
 use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct FullNodeConfig {
     advertised: Multiaddr,
@@ -225,8 +228,8 @@ impl FullNodeConfig {
         let upstream_peers = UpstreamPeersConfig {
             upstream_peers: vec![validator_full_node_network.peer_id],
         };
-
         let seed_peers = self.build_seed_peers(&validator_full_node_config)?;
+        let upstream_peer_id = validator_full_node_network.peer_id;
         for config in configs.iter_mut() {
             config.state_sync.upstream_peers = upstream_peers.clone();
             let network = config
@@ -235,6 +238,11 @@ impl FullNodeConfig {
                 .ok_or(Error::MissingFullNodeNetwork)?;
             network.network_peers = network_peers.clone();
             network.seed_peers = seed_peers.clone();
+            let mut upstream = UpstreamConfig::default();
+            upstream.upstream_peers = vec![PeerNetworkId(network.peer_id, upstream_peer_id)]
+                .into_iter()
+                .collect::<HashSet<_>>();
+            config.upstream = upstream.clone();
         }
 
         Ok((configs, faucet_key))

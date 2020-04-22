@@ -38,6 +38,8 @@ mod storage_config;
 pub use storage_config::*;
 mod safety_rules_config;
 pub use safety_rules_config::*;
+mod upstream_config;
+pub use upstream_config::*;
 mod test_config;
 use libra_types::waypoint::Waypoint;
 pub use test_config::*;
@@ -76,6 +78,8 @@ pub struct NodeConfig {
     pub storage: StorageConfig,
     #[serde(default)]
     pub test: Option<TestConfig>,
+    #[serde(default)]
+    pub upstream: UpstreamConfig,
     #[serde(default)]
     pub validator_network: Option<NetworkConfig>,
 }
@@ -173,6 +177,7 @@ impl NodeConfig {
             state_sync: self.state_sync.clone(),
             storage: self.storage.clone(),
             test: None,
+            upstream: self.upstream.clone(),
             validator_network: self
                 .validator_network
                 .as_ref()
@@ -182,9 +187,6 @@ impl NodeConfig {
 
     /// Determines whether a node `peer_id` is an upstream peer of a node with this NodeConfig.
     /// For a validator node, any of its validator peers are considered an upstream peer
-    /// In general, a network ID is a PeerId that this node uses to uniquely identify a network it belongs to.
-    /// This is equivalent to the `peer_id` field in the NetworkConfig of this NodeConfig
-    /// Here, `network_id` is the ID of the network that the peer and this node belong to.
     pub fn is_upstream_peer(&self, peer_id: PeerId, network_id: PeerId) -> bool {
         match self.base.role {
             RoleType::Validator => self
@@ -241,15 +243,6 @@ impl NodeConfig {
         // This must be last as calling save on subconfigs may change their fields
         self.save_config(&output_path)?;
         Ok(())
-    }
-
-    /// Returns true if network_config is for an upstream network
-    pub fn is_upstream_network(&self, network_config: &NetworkConfig) -> bool {
-        self.state_sync
-            .upstream_peers
-            .upstream_peers
-            .iter()
-            .any(|peer_id| network_config.network_peers.peers.contains_key(peer_id))
     }
 
     pub fn randomize_ports(&mut self) {
