@@ -15,7 +15,6 @@ use futures::{
     stream::{BoxStream, StreamExt},
 };
 use libra_crypto::HashValue;
-use libra_secure_net::NetworkClient;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -31,7 +30,6 @@ use libra_types::{
     proof::{AccumulatorConsistencyProof, SparseMerkleProof, SparseMerkleRangeProof},
     transaction::{TransactionListWithProof, TransactionToCommit, TransactionWithProof, Version},
 };
-use serde::de::DeserializeOwned;
 use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom,
@@ -52,60 +50,6 @@ use storage_proto::{
     GetTransactionsResponse, SaveTransactionsRequest,
 };
 use tokio::runtime::Runtime;
-
-pub struct SimpleStorageClient {
-    network_client: Mutex<NetworkClient>,
-}
-
-impl SimpleStorageClient {
-    pub fn new(server_address: &SocketAddr) -> Self {
-        Self {
-            network_client: Mutex::new(NetworkClient::new(*server_address)),
-        }
-    }
-
-    fn request<T: DeserializeOwned>(
-        &self,
-        input: storage_interface::StorageRequest,
-    ) -> Result<T, storage_interface::Error> {
-        let input_message = lcs::to_bytes(&input)?;
-        let mut client = self.network_client.lock().unwrap();
-        client.write(&input_message)?;
-        let result = client.read()?;
-        lcs::from_bytes(&result)?
-    }
-
-    pub fn get_account_state_with_proof_by_version(
-        &self,
-        address: AccountAddress,
-        version: Version,
-    ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof), storage_interface::Error> {
-        self.request(
-            storage_interface::StorageRequest::GetAccountStateWithProofByVersionRequest(Box::new(
-                storage_interface::GetAccountStateWithProofByVersionRequest::new(address, version),
-            )),
-        )
-    }
-
-    pub fn get_startup_info(&self) -> Result<Option<StartupInfo>, storage_interface::Error> {
-        self.request(storage_interface::StorageRequest::GetStartupInfoRequest)
-    }
-
-    pub fn save_transactions(
-        &self,
-        txns_to_commit: Vec<TransactionToCommit>,
-        first_version: Version,
-        ledger_info_with_sigs: Option<LedgerInfoWithSignatures>,
-    ) -> Result<(), storage_interface::Error> {
-        self.request(storage_interface::StorageRequest::SaveTransactionsRequest(
-            Box::new(storage_interface::SaveTransactionsRequest::new(
-                txns_to_commit,
-                first_version,
-                ledger_info_with_sigs,
-            )),
-        ))
-    }
-}
 
 /// This provides storage read interfaces backed by real storage service.
 pub struct StorageReadServiceClient {
