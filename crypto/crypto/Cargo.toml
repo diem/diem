@@ -48,7 +48,7 @@ sha3 = "0.8.2"
 serde_json = "1.0.51"
 
 [features]
-default = ["std", "batch", "u64_backend"]
+default = ["std", "batch", "fiat_u64_backend"]
 assert-private-keys-not-cloneable = ["static_assertions"]
 cloneable-private-keys = []
 fuzzing = ["proptest", "proptest-derive", "cloneable-private-keys"]

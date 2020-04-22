@@ -323,7 +323,7 @@ jobs:
             RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --unit
   run-crypto-unit-test:
     executor: test-executor
-    description: Run crypto unit tests
+    description: Run crypto unit tests without formally verified crypto, to insulate against a curve25519 "default" backend regression
     steps:
       - build_setup
       - restore_cargo_package_cache
@@ -332,7 +332,7 @@ jobs:
           command: |
             cd crypto/crypto && \
             RUST_BACKTRACE=1 cargo test \
-              --features='std fiat_u64_backend batch fuzzing' \
+              --features='std u64_backend batch fuzzing' \
               --no-default-features
   run-flaky-unit-test:
     executor: test-executor
