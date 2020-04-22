@@ -947,7 +947,7 @@ procedure {:inline 1} $Vector_contains(ta: TypeValue, v: Value, e: Value) return
 // assert that sha2/3 are injections without using global quantified axioms.
 
 
-function {:inline} $Hash_sha2($m: Memory, val: Value): Value {
+function {:inline} $Hash_sha2($m: Memory, $txn: Transaction, val: Value): Value {
     $Hash_sha2_core(val)
 }
 
@@ -973,7 +973,7 @@ ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
 ensures $vlen(res) == 32;               // result is 32 bytes.
 
 // similarly for Hash_sha3
-function {:inline} $Hash_sha3($m: Memory, val: Value): Value {
+function {:inline} $Hash_sha3($m: Memory, $txn: Transaction, val: Value): Value {
     $Hash_sha3_core(val)
 }
 function $Hash_sha3_core(val: Value): Value;
@@ -1047,7 +1047,7 @@ procedure {:inline 1} Signature_ed25519_threshold_verify(bitmap: Value, signatur
 // Serialize is modeled as an uninterpreted function, with an additional
 // axiom to say it's an injection.
 
-function {:inline} $LCS_serialize($m: Memory, ta: TypeValue, v: Value): Value {
+function {:inline} $LCS_serialize($m: Memory, $txn: Transaction, ta: TypeValue, v: Value): Value {
     $LCS_serialize_core(ta, v)
 }
 
