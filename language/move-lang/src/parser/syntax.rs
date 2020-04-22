@@ -1723,7 +1723,7 @@ fn parse_spec_include<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMem
     consume_name_value(tokens, "include")?;
     let name = parse_module_access(tokens, || "a schema name".to_string())?;
     let type_arguments = parse_optional_type_args(tokens)?;
-    let renamings = if tokens.peek() == Tok::LBrace {
+    let arguments = if tokens.peek() == Tok::LBrace {
         parse_comma_list(
             tokens,
             Tok::LBrace,
@@ -1731,10 +1731,10 @@ fn parse_spec_include<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMem
             |tokens| {
                 let left = parse_name(tokens)?;
                 consume_token(tokens, Tok::Colon)?;
-                let right = parse_name(tokens)?;
+                let right = parse_exp(tokens)?;
                 Ok((left, right))
             },
-            "a renaming pair",
+            "a schema argument",
         )?
     } else {
         vec![]
@@ -1747,7 +1747,7 @@ fn parse_spec_include<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMem
         SpecBlockMember_::Include {
             name,
             type_arguments,
-            renamings,
+            arguments,
         },
     ))
 }
@@ -1761,6 +1761,22 @@ fn parse_spec_apply<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMembe
     consume_name_value(tokens, "apply")?;
     let name = parse_module_access(tokens, || "a schema name".to_string())?;
     let type_arguments = parse_optional_type_args(tokens)?;
+    let arguments = if tokens.peek() == Tok::LBrace {
+        parse_comma_list(
+            tokens,
+            Tok::LBrace,
+            Tok::RBrace,
+            |tokens| {
+                let left = parse_name(tokens)?;
+                consume_token(tokens, Tok::Colon)?;
+                let right = parse_exp(tokens)?;
+                Ok((left, right))
+            },
+            "a schema argument",
+        )?
+    } else {
+        vec![]
+    };
     consume_name_value(tokens, "to")?;
     let parse_patterns = |tokens: &mut Lexer<'input>| {
         parse_list(
@@ -1791,6 +1807,7 @@ fn parse_spec_apply<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMembe
         SpecBlockMember_::Apply {
             name,
             type_arguments,
+            arguments,
             patterns,
             exclusion_patterns,
         },

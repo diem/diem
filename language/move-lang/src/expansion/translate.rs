@@ -632,24 +632,33 @@ fn spec_member(
         PM::Include {
             name: pn,
             type_arguments: ptys_opt,
-            renamings,
+            arguments: parguments,
         } => {
             let name = module_access(context, pn)?;
             let type_arguments = optional_types(context, ptys_opt);
+            let arguments = parguments
+                .into_iter()
+                .map(|(n, e)| (n, *exp(context, e)))
+                .collect();
             EM::Include {
                 name,
                 type_arguments,
-                renamings,
+                arguments,
             }
         }
         PM::Apply {
             name: pn,
             type_arguments: ptys_opt,
+            arguments: parguments,
             patterns: ppatterns,
             exclusion_patterns: pe_patterns,
         } => {
             let name = module_access(context, pn)?;
             let type_arguments = optional_types(context, ptys_opt);
+            let arguments = parguments
+                .into_iter()
+                .map(|(n, e)| (n, exp_(context, e)))
+                .collect();
             let patterns = ppatterns
                 .into_iter()
                 .map(|p| spec_apply_pattern(context, p))
@@ -661,6 +670,7 @@ fn spec_member(
             EM::Apply {
                 name,
                 type_arguments,
+                arguments,
                 patterns,
                 exclusion_patterns,
             }

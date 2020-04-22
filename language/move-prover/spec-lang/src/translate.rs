@@ -1134,13 +1134,13 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 Include {
                     name,
                     type_arguments,
-                    renamings,
+                    arguments,
                 } => self.def_ana_schema_inclusion_outside_schema(
                     loc,
                     context,
                     name,
                     type_arguments.as_deref(),
-                    renamings,
+                    arguments,
                 ),
                 Variable { .. } => { /* nothing to do right now */ }
                 Apply { .. } | Pragma { .. } => self
@@ -1614,7 +1614,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             .collect();
         let mut included_conditions = vec![];
         let mut included_invariants = vec![];
-        for (include_loc, include_name, type_arguments, renamings) in
+        for (include_loc, include_name, type_arguments, arguments) in
             self.iter_schema_includes(&block.value.members)
         {
             let include_loc = self.parent.env.to_loc(include_loc);
@@ -1628,7 +1628,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 &include_loc,
                 include_name,
                 type_arguments,
-                renamings,
+                arguments,
             );
         }
         // Store the results back to the schema entry.
@@ -1683,21 +1683,21 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             &'a MoveIrLoc,
             &'a EA::ModuleAccess,
             Option<&'a [EA::Type]>,
-            &'a [(Name, Name)],
+            &'a [(Name, EA::Exp)],
         ),
     > {
         members.iter().filter_map(|m| {
             if let EA::SpecBlockMember_::Include {
                 name,
                 type_arguments,
-                renamings,
+                arguments,
             } = &m.value
             {
                 Some((
                     &m.loc,
                     name,
                     type_arguments.as_deref(),
-                    renamings.as_slice(),
+                    arguments.as_slice(),
                 ))
             } else {
                 None
@@ -1718,7 +1718,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         loc: &Loc,
         schema_name: QualifiedSymbol,
         type_arguments: Option<&[EA::Type]>,
-        renamings: &[(Name, Name)],
+        arguments: &[(Name, EA::Exp)],
     ) {
         // We need to temporarily detach the schema entry from the parent table because of
         // borrowing problems, as we need to traverse it while at the same type mutate self.
@@ -1739,7 +1739,6 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             et.define_type_param(loc, *n, ty.clone())
         }
         let type_arguments = &et.translate_types_opt(type_arguments);
-
         if schema_entry.type_params.len() != type_arguments.len() {
             self.parent.error(
                 loc,
@@ -1755,40 +1754,54 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 .insert(schema_name, schema_entry);
             return;
         }
+        // Define locals as we need them for checking schema arguments.
+        et.enter_scope();
+        for (
+            n,
+            LocalVarEntry {
+                loc,
+                type_,
+                operation,
+            },
+        ) in vars.iter()
+        {
+            et.define_local(loc, *n, type_.clone(), operation.clone());
+        }
 
-        let rename_map: BTreeMap<Symbol, Symbol> = renamings
+        let mut argument_map: BTreeMap<Symbol, Exp> = arguments
             .iter()
-            .map(|(in_schema, in_includer)| {
-                let pool = self.symbol_pool();
-                let in_schema_sym = pool.make(&in_schema.value);
-                if !schema_entry.all_vars.contains_key(&in_schema_sym) {
-                    self.parent.error(
-                        &self.parent.env.to_loc(&in_schema.loc),
-                        &format!("`{}` not declared in schema", in_schema_sym.display(pool)),
+            .map(|(schema_var, exp)| {
+                let pool = et.symbol_pool();
+                let schema_sym = pool.make(&schema_var.value);
+                let schema_type = if let Some(LocalVarEntry { type_, .. }) =
+                    schema_entry.all_vars.get(&schema_sym)
+                {
+                    type_.instantiate(type_arguments)
+                } else {
+                    et.error(
+                        &et.to_loc(&schema_var.loc),
+                        &format!("`{}` not declared in schema", schema_sym.display(pool)),
                     );
-                }
-                (in_schema_sym, pool.make(&in_includer.value))
+                    Type::Error
+                };
+                // Check the expression in the argument list.
+                // Note we currently only use the vars defined so far in this context. Variables
+                // which are introduced by schemas after the inclusion of this one are not in scope.
+                let exp = et.translate_exp(exp, &schema_type);
+                et.finalize_types();
+                (schema_sym, exp)
             })
             .collect();
 
-        // Go over all variables in the schema and either match them against existing one
-        // or declare anew.
+        // Go over all variables in the schema which are not in the argument map and either match
+        // them against existing one or declare new, if allowed.
         for (name, LocalVarEntry { type_, .. }) in &schema_entry.all_vars {
-            let new_name = rename_map.get(name).unwrap_or(name);
+            if argument_map.contains_key(name) {
+                continue;
+            }
             let ty = type_.instantiate(type_arguments);
             let pool = self.symbol_pool();
-            let mk_subject = || {
-                if name == new_name {
-                    format!("`{}`", name.display(pool))
-                } else {
-                    format!(
-                        "`{}` (renamed to `{}`)",
-                        name.display(pool),
-                        new_name.display(pool)
-                    )
-                }
-            };
-            if let Some(entry) = vars.get(new_name) {
+            if let Some(entry) = vars.get(name) {
                 // Name already exists in inclusion context, check its type.
                 let mut subs = Substitution::new();
                 let tctx = &TypeDisplayContext::WithEnv {
@@ -1799,17 +1812,27 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     self.parent.error(
                         loc,
                         &format!(
-                            "incompatible type of included {}; type in schema: `{}`, type in inclusion context: `{}`",
-                            mk_subject(),
+                            "incompatible type of included `{}`; type in schema: `{}`, type in inclusion context: `{}`",
+                            name.display(pool),
                             ty.display(tctx),
                             entry.type_.display(tctx),
                         ));
                 }
+                // Put into argument map.
+                let node_id = self.new_node_id();
+                self.type_map.insert(node_id, entry.type_.clone());
+                self.loc_map.insert(node_id, entry.loc.clone());
+                let exp = if let Some(oper) = &entry.operation {
+                    Exp::Call(node_id, oper.clone(), vec![])
+                } else {
+                    Exp::LocalVar(node_id, *name)
+                };
+                argument_map.insert(*name, exp);
             } else if allow_new_vars {
-                // Name does not yet exists in inclusion context, but shall be introduced. This
-                // happens if we include a schema in another schema.
+                // Name does not yet exists in inclusion context, but is allowed to be introduced.
+                // This happens if we include a schema in another schema.
                 vars.insert(
-                    *new_name,
+                    *name,
                     LocalVarEntry {
                         loc: loc.clone(),
                         type_: ty.clone(),
@@ -1820,8 +1843,8 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 self.parent.error(
                     loc,
                     &format!(
-                        "{} cannot be matched to an existing name in inclusion context",
-                        mk_subject()
+                        "`{}` cannot be matched to an existing name in inclusion context",
+                        name.display(pool)
                     ),
                 );
             }
@@ -1833,7 +1856,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             .iter()
             .chain(schema_entry.included_conditions.iter())
         {
-            let mut rewriter = ExprRewriter::new(self, &vars, &rename_map, type_arguments);
+            let mut rewriter = ExprRewriter::new(self, &argument_map, type_arguments);
             conditions.push(Condition {
                 loc: loc.clone(),
                 kind: *kind,
@@ -1852,7 +1875,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             .iter()
             .chain(schema_entry.included_invariants.iter())
         {
-            let mut rewriter = ExprRewriter::new(self, &vars, &rename_map, type_arguments);
+            let mut rewriter = ExprRewriter::new(self, &argument_map, type_arguments);
             invariants.push(Invariant {
                 loc: loc.clone(),
                 kind: *kind,
@@ -1875,7 +1898,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         context: &SpecBlockContext,
         name: &EA::ModuleAccess,
         type_arguments: Option<&[EA::Type]>,
-        renamings: &[(Name, Name)],
+        arguments: &[(Name, EA::Exp)],
     ) {
         let name = self.module_access_to_qualified(name);
 
@@ -1915,7 +1938,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             loc,
             name.clone(),
             type_arguments,
-            renamings,
+            arguments,
         );
 
         // Write the conditions/invariants to the context item.
@@ -3346,16 +3369,15 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
 /// ## Expression Rewriting
 
-/// Rewriter for expressions, allowing to rename and substitute locals, as well as instantiate
-/// types. Used to rewrite conditions and invariants included from schemas.
+/// Rewriter for expressions, allowing to substitute locals by expressions as well as instantiate
+/// types. Currently used to rewrite conditions and invariants included from schemas.
 struct ExprRewriter<'env, 'translator, 'rewriter>
 where
     'env: 'rewriter,
     'translator: 'rewriter,
 {
     parent: &'rewriter mut ModuleTranslator<'env, 'translator>,
-    substitution: &'rewriter BTreeMap<Symbol, LocalVarEntry>,
-    renaming: &'rewriter BTreeMap<Symbol, Symbol>,
+    argument_map: &'rewriter BTreeMap<Symbol, Exp>,
     type_args: &'rewriter [Type],
     shadowed: VecDeque<BTreeSet<Symbol>>,
 }
@@ -3363,41 +3385,28 @@ where
 impl<'env, 'translator, 'rewriter> ExprRewriter<'env, 'translator, 'rewriter> {
     fn new(
         parent: &'rewriter mut ModuleTranslator<'env, 'translator>,
-        substitution: &'rewriter BTreeMap<Symbol, LocalVarEntry>,
-        renaming: &'rewriter BTreeMap<Symbol, Symbol>,
+        argument_map: &'rewriter BTreeMap<Symbol, Exp>,
         type_args: &'rewriter [Type],
     ) -> Self {
         ExprRewriter {
             parent,
-            substitution,
-            renaming,
+            argument_map,
             type_args,
             shadowed: VecDeque::new(),
         }
     }
 
-    fn rename_sym(&self, sym: Symbol) -> Symbol {
-        *self.renaming.get(&sym).unwrap_or(&sym)
-    }
-
     fn replace_local(&mut self, node_id: NodeId, sym: Symbol) -> Exp {
-        let node_id = self.rewrite_attrs(node_id);
         for vars in &self.shadowed {
             if vars.contains(&sym) {
+                let node_id = self.rewrite_attrs(node_id);
                 return Exp::LocalVar(node_id, sym);
             }
         }
-        if let Some(entry) = self.substitution.get(&sym) {
-            // Use the type of the entry in the attribute, not that for the substituted
-            // expression. We might be substituting a &T by a T, because they are type
-            // compatible.
-            self.parent.type_map.insert(node_id, entry.type_.clone());
-            if let Some(oper) = &entry.operation {
-                Exp::Call(node_id, oper.clone(), vec![])
-            } else {
-                Exp::LocalVar(node_id, sym)
-            }
+        if let Some(exp) = self.argument_map.get(&sym) {
+            exp.clone()
         } else {
+            let node_id = self.rewrite_attrs(node_id);
             Exp::LocalVar(node_id, sym)
         }
     }
@@ -3405,7 +3414,7 @@ impl<'env, 'translator, 'rewriter> ExprRewriter<'env, 'translator, 'rewriter> {
     fn rewrite(&mut self, exp: &Exp) -> Exp {
         use Exp::*;
         match exp {
-            LocalVar(id, sym) => self.replace_local(*id, self.rename_sym(*sym)),
+            LocalVar(id, sym) => self.replace_local(*id, *sym),
             Call(id, oper, args) => Call(
                 self.rewrite_attrs(*id),
                 oper.clone(),

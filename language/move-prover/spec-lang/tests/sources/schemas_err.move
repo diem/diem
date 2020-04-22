@@ -16,12 +16,16 @@ module M {
     }
 
     spec schema WrongRenaming {
-        include WrongTypeArgsIncluded<num>{wrong: x};
+        include WrongTypeArgsIncluded<num>{wrong: 1};
     }
 
     spec schema WrongTypeAfterRenaming {
         y: bool;
         include WrongTypeArgsIncluded<num>{x: y};
+    }
+
+    spec schema WrongTypeAfterRenamingExp {
+        include WrongTypeArgsIncluded<bool>{x: 1 + 2};
     }
 
     spec schema WronglyTypedVar {
