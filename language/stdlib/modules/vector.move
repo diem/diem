@@ -62,6 +62,19 @@ module Vector {
         false
     }
 
+    // Return (true, i) if `e` is in the vector `v` at index `i`.
+    // Otherwise returns (false, 0).
+    public fun index_of<Element>(v: &vector<Element>, e: &Element): (bool, u64) {
+        let i = 0;
+        let len = length(v);
+        while (i < len) {
+            if (borrow(v, i) == e) return (true, i);
+            i = i + 1;
+        };
+        (false, 0)
+    }
+
+
     // Remove the `i`th element E of the vector, shifting all subsequent elements
     // It is O(n) and preserves ordering
     public fun remove<Element>(v: &mut vector<Element>, i: u64): Element {
