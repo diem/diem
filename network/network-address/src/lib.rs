@@ -263,28 +263,16 @@ impl FromStr for NetworkAddress {
         }
 
         let mut protocols = Vec::new();
-        let mut parts = s.split('/');
+        let mut parts_iter = s.split('/');
 
         // the first character must be '/'
-        if parts.next() != Some("") {
+        if parts_iter.next() != Some("") {
             return Err(ParseError::InvalidProtocolString);
         }
 
-        while let Some(protocol_type) = parts.next() {
-            let arg = parts.next().ok_or(ParseError::UnexpectedEnd)?;
-            let protocol = match protocol_type {
-                "ip4" => Protocol::Ip4(arg.parse()?),
-                "ip6" => Protocol::Ip6(arg.parse()?),
-                "dns" => Protocol::Dns(arg.parse()?),
-                "dns4" => Protocol::Dns4(arg.parse()?),
-                "dns6" => Protocol::Dns6(arg.parse()?),
-                "tcp" => Protocol::Tcp(arg.parse()?),
-                "memory" => Protocol::Memory(arg.parse()?),
-                "ln-noise-ik" => Protocol::NoiseIk(x25519::PublicKey::from_encoded_string(arg)?),
-                "ln-handshake" => Protocol::Handshake(arg.parse()?),
-                unknown => return Err(ParseError::UnknownProtocolType(unknown.to_string())),
-            };
-            protocols.push(protocol);
+        // parse all `Protocol`s
+        while let Some(protocol_type) = parts_iter.next() {
+            protocols.push(Protocol::parse(protocol_type, &mut parts_iter)?);
         }
 
         Ok(NetworkAddress::new(protocols))
@@ -401,6 +389,38 @@ impl fmt::Display for Protocol {
             ),
             Handshake(version) => write!(f, "/ln-handshake/{}", version),
         }
+    }
+}
+
+fn parse_one<'a, T>(args: &mut impl Iterator<Item = &'a str>) -> Result<T, ParseError>
+where
+    T: FromStr,
+    T::Err: Into<ParseError>,
+{
+    let next_arg = args.next().ok_or(ParseError::UnexpectedEnd)?;
+    next_arg.parse().map_err(Into::into)
+}
+
+impl Protocol {
+    fn parse<'a>(
+        protocol_type: &str,
+        args: &mut impl Iterator<Item = &'a str>,
+    ) -> Result<Protocol, ParseError> {
+        let protocol = match protocol_type {
+            "ip4" => Protocol::Ip4(parse_one(args)?),
+            "ip6" => Protocol::Ip6(parse_one(args)?),
+            "dns" => Protocol::Dns(parse_one(args)?),
+            "dns4" => Protocol::Dns4(parse_one(args)?),
+            "dns6" => Protocol::Dns6(parse_one(args)?),
+            "tcp" => Protocol::Tcp(parse_one(args)?),
+            "memory" => Protocol::Memory(parse_one(args)?),
+            "ln-noise-ik" => Protocol::NoiseIk(x25519::PublicKey::from_encoded_string(
+                args.next().ok_or(ParseError::UnexpectedEnd)?,
+            )?),
+            "ln-handshake" => Protocol::Handshake(parse_one(args)?),
+            unknown => return Err(ParseError::UnknownProtocolType(unknown.to_string())),
+        };
+        Ok(protocol)
     }
 }
 
