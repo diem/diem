@@ -18,14 +18,10 @@ use proptest::prelude::*;
 use std::{collections::HashMap, convert::TryFrom};
 
 fn verify_epochs(db: &LibraDB, ledger_infos_with_sigs: &[LedgerInfoWithSignatures]) {
-    let (_, latest_li, actual_epoch_change_lis, _) =
-        db.update_to_latest_ledger(0, Vec::new()).unwrap();
+    let (_, _, actual_epoch_change_lis, _) = db.update_to_latest_ledger(0, Vec::new()).unwrap();
     let expected_epoch_change_lis: Vec<_> = ledger_infos_with_sigs
         .iter()
-        .filter(|info| {
-            info.ledger_info().next_validator_set().is_some()
-                && info.ledger_info().epoch() < latest_li.ledger_info().epoch()
-        })
+        .filter(|info| info.ledger_info().next_validator_set().is_some())
         .cloned()
         .collect();
     assert_eq!(

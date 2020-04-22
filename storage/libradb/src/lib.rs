@@ -251,11 +251,9 @@ impl LibraDB {
 
         // TODO: cache last epoch change version to avoid a DB access in most cases.
         let client_epoch = self.ledger_store.get_epoch(client_known_version)?;
-        let validator_change_proof = if client_epoch < ledger_info.epoch() {
-            let (ledger_infos_with_sigs, more) = self.get_epoch_change_ledger_infos(
-                client_epoch,
-                self.ledger_store.get_epoch(ledger_info.version())?,
-            )?;
+        let validator_change_proof = if client_epoch < ledger_info.next_block_epoch() {
+            let (ledger_infos_with_sigs, more) =
+                self.get_epoch_change_ledger_infos(client_epoch, ledger_info.next_block_epoch())?;
             ValidatorChangeProof::new(ledger_infos_with_sigs, more)
         } else {
             ValidatorChangeProof::new(vec![], /* more = */ false)
@@ -742,11 +740,9 @@ impl DbReader for LibraDB {
     ) -> Result<(ValidatorChangeProof, AccumulatorConsistencyProof)> {
         let ledger_info = ledger_info_with_sigs.ledger_info();
         let known_epoch = self.ledger_store.get_epoch(known_version)?;
-        let validator_change_proof = if known_epoch < ledger_info.epoch() {
-            let (ledger_infos_with_sigs, more) = self.get_epoch_change_ledger_infos(
-                known_epoch,
-                self.ledger_store.get_epoch(ledger_info.version())?,
-            )?;
+        let validator_change_proof = if known_epoch < ledger_info.next_block_epoch() {
+            let (ledger_infos_with_sigs, more) =
+                self.get_epoch_change_ledger_infos(known_epoch, ledger_info.next_block_epoch())?;
             ValidatorChangeProof::new(ledger_infos_with_sigs, more)
         } else {
             ValidatorChangeProof::new(vec![], /* more = */ false)

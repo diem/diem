@@ -40,7 +40,9 @@ impl VerifierType {
             VerifierType::TrustedVerifier(epoch_info) => {
                 ensure!(
                     epoch_info.epoch == ledger_info.ledger_info().epoch(),
-                    "LedgerInfo has unexpected epoch"
+                    "LedgerInfo has unexpected epoch {}, expected {}",
+                    ledger_info.ledger_info().epoch(),
+                    epoch_info.epoch
                 );
                 ledger_info.verify_signatures(epoch_info.verifier.as_ref())?;
                 Ok(())
@@ -50,10 +52,10 @@ impl VerifierType {
 
     /// Returns true in case the given epoch is larger than the existing verifier can support.
     /// In this case the ValidatorChangeProof should be verified and the verifier updated.
-    pub fn epoch_change_verification_required(&self, latest_li: &LedgerInfo) -> bool {
+    pub fn epoch_change_verification_required(&self, epoch: u64) -> bool {
         match self {
-            VerifierType::Waypoint(waypoint) => latest_li.version() != waypoint.version(),
-            VerifierType::TrustedVerifier(epoch_info) => epoch_info.epoch < latest_li.epoch(),
+            VerifierType::Waypoint(_) => true,
+            VerifierType::TrustedVerifier(epoch_info) => epoch_info.epoch < epoch,
         }
     }
 

@@ -229,7 +229,6 @@ proptest! {
         let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
 
         let expected_latest_version = latest_li.ledger_info().version();
-        let expected_latest_li = latest_li.clone();
         let expected_latest_epoch_change_li = lis_with_sigs.last().cloned();
         let expected_validator_set = expected_latest_epoch_change_li
             .as_ref()
@@ -243,26 +242,13 @@ proptest! {
         match trusted_state_change {
             TrustedStateChange::Epoch {
                 new_state,
-                latest_li,
                 latest_epoch_change_li,
-                latest_validator_set,
             } => {
                 assert_eq!(new_state.latest_version(), expected_latest_version);
-                assert_eq!(latest_li, &expected_latest_li);
                 assert_eq!(Some(latest_epoch_change_li), expected_latest_epoch_change_li.as_ref());
-                assert_eq!(Some(latest_validator_set), expected_validator_set);
-            }
-            TrustedStateChange::Version {
-                new_state,
-                latest_li,
-            } => {
-                panic!(
-                    "Unexpected version-only change, expecting epoch change: \
-                     new_state: {:?}, latest_li: {:?}",
-                    new_state,
-                    latest_li,
-                );
-            }
+                assert_eq!(latest_epoch_change_li.ledger_info().next_validator_set(), expected_validator_set);
+            },
+            _ => panic!("Unexpected  change, expecting epoch change"),
         };
     }
 
@@ -280,10 +266,8 @@ proptest! {
         let waypoint = Waypoint::new(first_epoch_change_li.ledger_info())
             .expect("Generating waypoint failed even though we passed an epoch change ledger info");
         let trusted_state = TrustedState::from_waypoint(waypoint);
-        trusted_state.verify_and_ratchet(first_epoch_change_li, &ValidatorChangeProof::new(vec![], false /* more */)).expect("Should not error when verifying waypoint LedgerInfo itself.");
 
         let expected_latest_version = latest_li.ledger_info().version();
-        let expected_latest_li = latest_li.clone();
         let expected_latest_epoch_change_li = lis_with_sigs.last().cloned();
         let expected_validator_set = expected_latest_epoch_change_li
             .as_ref()
@@ -297,17 +281,13 @@ proptest! {
         match trusted_state_change {
             TrustedStateChange::Epoch {
                 new_state,
-                latest_li,
                 latest_epoch_change_li,
-                latest_validator_set,
             } => {
                 assert_eq!(new_state.latest_version(), expected_latest_version);
-                assert_eq!(latest_li, &expected_latest_li);
                 assert_eq!(Some(latest_epoch_change_li), expected_latest_epoch_change_li.as_ref());
-                assert_eq!(Some(latest_validator_set), expected_validator_set);
+                assert_eq!(latest_epoch_change_li.ledger_info().next_validator_set(), expected_validator_set);
             }
-            TrustedStateChange::Version { .. } =>
-                panic!("Ratcheting from a waypoint should always provide the epoch for that waypoint"),
+            _ => panic!("Ratcheting from a waypoint should always provide the epoch for that waypoint"),
         };
     }
 
@@ -329,7 +309,6 @@ proptest! {
         ).unwrap();
 
         let expected_latest_version = latest_li.ledger_info().version();
-        let expected_latest_li = latest_li.clone();
 
         // Use an empty epoch change proof
         let change_proof = ValidatorChangeProof::new(vec![], false /* more */);
@@ -338,15 +317,13 @@ proptest! {
             .expect("Should never error or be stale when ratcheting from waypoint with valid proofs");
 
         match trusted_state_change {
-            TrustedStateChange::Epoch { ..  } =>
-                panic!("Empty change proof so we should not change epoch"),
+            TrustedStateChange::Epoch{ .. } => panic!("Empty change proof so we should not change epoch"),
             TrustedStateChange::Version {
                 new_state,
-                latest_li,
             } => {
                 assert_eq!(new_state.latest_version(), expected_latest_version);
-                assert_eq!(latest_li, &expected_latest_li);
             }
+            TrustedStateChange::NoChange => assert_eq!(trusted_state.latest_version(), expected_latest_version),
         };
     }
 
@@ -372,7 +349,6 @@ proptest! {
         ).unwrap();
 
         let expected_latest_version = latest_li.ledger_info().version();
-        let expected_latest_li = latest_li.clone();
         let expected_latest_epoch_change_li = lis_with_sigs.last().cloned();
         let expected_validator_set = expected_latest_epoch_change_li
             .as_ref()
@@ -386,22 +362,18 @@ proptest! {
         match trusted_state_change {
             TrustedStateChange::Epoch {
                 new_state,
-                latest_li,
                 latest_epoch_change_li,
-                latest_validator_set,
             } => {
                 assert_eq!(new_state.latest_version(), expected_latest_version);
-                assert_eq!(latest_li, &expected_latest_li);
                 assert_eq!(Some(latest_epoch_change_li), expected_latest_epoch_change_li.as_ref());
-                assert_eq!(Some(latest_validator_set), expected_validator_set);
+                assert_eq!(latest_epoch_change_li.ledger_info().next_validator_set(), expected_validator_set);
             }
             TrustedStateChange::Version {
                 new_state,
-                latest_li,
             } => {
                 assert_eq!(new_state.latest_version(), expected_latest_version);
-                assert_eq!(latest_li, &expected_latest_li);
             }
+            _ => (),
         };
     }
 
@@ -490,9 +462,12 @@ proptest! {
         );
 
         let change_proof = ValidatorChangeProof::new(lis_with_sigs, false /* more */);
-        trusted_state
-            .verify_and_ratchet(&latest_li, &change_proof)
-            .expect_err("Should always return Err with a invalid latest li sigs");
+        // We don't verify ledger info <= known version
+        if latest_li.ledger_info().version() != trusted_state.latest_version() {
+            trusted_state
+                .verify_and_ratchet(&latest_li, &change_proof)
+                .expect_err("Should always return Err with a invalid latest li sigs");
+        }
     }
 }
 

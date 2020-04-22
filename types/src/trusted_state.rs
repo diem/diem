@@ -4,7 +4,6 @@
 use crate::{
     epoch_info::EpochInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
-    on_chain_config::ValidatorSet,
     transaction::Version,
     validator_change::{ValidatorChangeProof, VerifierType},
     waypoint::Waypoint,
@@ -34,18 +33,15 @@ pub struct TrustedState {
 pub enum TrustedStateChange<'a> {
     /// We have a newer `TrustedState` but it's still in the same epoch, so only
     /// the latest trusted version changed.
-    Version {
-        new_state: TrustedState,
-        latest_li: &'a LedgerInfoWithSignatures,
-    },
+    Version { new_state: TrustedState },
     /// We have a newer `TrustedState` and there was at least one epoch change,
     /// so we have a newer trusted version and a newer trusted validator set.
     Epoch {
         new_state: TrustedState,
-        latest_li: &'a LedgerInfoWithSignatures,
         latest_epoch_change_li: &'a LedgerInfoWithSignatures,
-        latest_validator_set: &'a ValidatorSet,
     },
+    /// The latest ledger info is at the same version as the trusted state and matches the hash.
+    NoChange,
 }
 
 impl TrustedState {
@@ -142,7 +138,7 @@ impl TrustedState {
 
         if self
             .verifier
-            .epoch_change_verification_required(latest_li.ledger_info())
+            .epoch_change_verification_required(latest_li.ledger_info().next_block_epoch())
         {
             // Verify the ValidatorChangeProof to move us into the latest epoch.
             let epoch_change_li = validator_change_proof.verify(&self.verifier)?;
@@ -174,25 +170,26 @@ impl TrustedState {
 
             Ok(TrustedStateChange::Epoch {
                 new_state,
-                latest_li,
                 latest_epoch_change_li: epoch_change_li,
-                latest_validator_set: new_validator_set,
             })
         } else {
             // The ValidatorChangeProof is empty, stale, or only gets us into our
             // current epoch. We then try to verify that the latest ledger info
             // is this epoch.
-            self.verifier.verify(latest_li)?;
+            // FIXME: store and verify the root hash if the version equals once new_trust_any_genesis_WARNING_UNSAFE
+            // removed
+            if latest_li.ledger_info().version() == self.latest_version {
+                Ok(TrustedStateChange::NoChange)
+            } else {
+                self.verifier.verify(latest_li)?;
 
-            let new_state = TrustedState {
-                latest_version: res_version,
-                verifier: self.verifier.clone(),
-            };
+                let new_state = TrustedState {
+                    latest_version: res_version,
+                    verifier: self.verifier.clone(),
+                };
 
-            Ok(TrustedStateChange::Version {
-                new_state,
-                latest_li,
-            })
+                Ok(TrustedStateChange::Version { new_state })
+            }
         }
     }
 

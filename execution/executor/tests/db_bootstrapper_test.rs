@@ -365,7 +365,6 @@ fn test_new_genesis() {
         .get_state_proof(trusted_state.latest_version())
         .unwrap();
     assert_eq!(li.ledger_info().version(), 3);
-    assert!(validator_change_proof.ledger_info_with_sigs.is_empty());
     assert!(accumulator_consistency_proof.subtrees().is_empty());
     trusted_state
         .verify_and_ratchet(&li, &validator_change_proof)

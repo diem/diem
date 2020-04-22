@@ -118,6 +118,11 @@ impl BlockInfo {
         Self::genesis(*ACCUMULATOR_PLACEHOLDER_HASH, validator_set)
     }
 
+    /// The epoch after this block committed
+    pub fn next_block_epoch(&self) -> u64 {
+        self.epoch() + self.next_validator_set().map_or(0, |_| 1)
+    }
+
     pub fn epoch(&self) -> u64 {
         self.epoch
     }
