@@ -24,10 +24,9 @@ use libra_types::{
 use std::{
     collections::HashMap,
     pin::Pin,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, RwLock},
 };
-use storage_client::StorageRead;
-use tokio::sync::RwLock;
+use storage_interface::DbReader;
 use vm_validator::vm_validator::TransactionValidation;
 
 pub(crate) const DEFAULT_MIN_BROADCAST_RECIPIENT_COUNT: usize = 0;
@@ -41,7 +40,7 @@ where
     pub mempool: Arc<Mutex<CoreMempool>>,
     pub config: MempoolConfig,
     pub network_senders: HashMap<PeerId, MempoolNetworkSender>,
-    pub storage_read_client: Arc<dyn StorageRead>,
+    pub db: Arc<dyn DbReader>,
     pub validator: Arc<RwLock<V>>,
     pub peer_manager: Arc<PeerManager>,
     pub subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,

@@ -29,29 +29,29 @@ use libra_types::{
     transaction::SignedTransaction,
 };
 use std::{convert::TryFrom, sync::Arc};
-use storage_client::{StorageRead, StorageReadServiceClient};
+use storage_interface::DbReader;
 use tokio::runtime::{Builder, Runtime};
 
 /// Struct implementing trait (service handle) AdmissionControlService.
 #[derive(Clone)]
 pub struct AdmissionControlService {
     ac_sender: MempoolClientSender,
-    /// gRPC client to send read requests to Storage.
-    storage_read_client: Arc<dyn StorageRead>,
+    db: Arc<dyn DbReader>,
 }
 
 impl AdmissionControlService {
     /// Constructs a new AdmissionControlService instance.
-    pub fn new(ac_sender: MempoolClientSender, storage_read_client: Arc<dyn StorageRead>) -> Self {
-        AdmissionControlService {
-            ac_sender,
-            storage_read_client,
-        }
+    pub fn new(ac_sender: MempoolClientSender, db: Arc<dyn DbReader>) -> Self {
+        AdmissionControlService { ac_sender, db }
     }
 
     /// Creates and spins up AdmissionControlService on runtime
     /// Returns the runtime on which Admission Control Service is newly spawned
-    pub fn bootstrap(config: &NodeConfig, ac_sender: MempoolClientSender) -> Runtime {
+    pub fn bootstrap(
+        config: &NodeConfig,
+        db: Arc<dyn DbReader>,
+        ac_sender: MempoolClientSender,
+    ) -> Runtime {
         let runtime = Builder::new()
             .thread_name("ac-service-")
             .threaded_scheduler()
@@ -59,10 +59,7 @@ impl AdmissionControlService {
             .build()
             .expect("[admission control] failed to create runtime");
 
-        // Create storage read client
-        let storage_client: Arc<dyn StorageRead> =
-            Arc::new(StorageReadServiceClient::new(&config.storage.address));
-        let admission_control_service = AdmissionControlService::new(ac_sender, storage_client);
+        let admission_control_service = AdmissionControlService::new(ac_sender, db);
 
         runtime.spawn(
             tonic::transport::Server::builder()
@@ -71,17 +68,15 @@ impl AdmissionControlService {
         );
         runtime
     }
-
     /// Pass the UpdateToLatestLedgerRequest to Storage for read query.
-    async fn update_to_latest_ledger_inner(
+    fn update_to_latest_ledger_inner(
         &self,
         req: UpdateToLatestLedgerRequest,
     ) -> Result<UpdateToLatestLedgerResponse> {
         let rust_req = libra_types::get_with_proof::UpdateToLatestLedgerRequest::try_from(req)?;
         let (response_items, ledger_info_with_sigs, epoch_change_proof, ledger_consistency_proof) =
-            self.storage_read_client
-                .update_to_latest_ledger(rust_req.client_known_version, rust_req.requested_items)
-                .await?;
+            self.db
+                .update_to_latest_ledger(rust_req.client_known_version, rust_req.requested_items)?;
         let rust_resp = libra_types::get_with_proof::UpdateToLatestLedgerResponse::new(
             response_items,
             ledger_info_with_sigs,
@@ -181,7 +176,6 @@ impl AdmissionControl for AdmissionControlService {
         let req = request.into_inner();
         let resp = self
             .update_to_latest_ledger_inner(req)
-            .await
             .map_err(|e| tonic::Status::new(tonic::Code::InvalidArgument, e.to_string()))?;
         Ok(tonic::Response::new(resp))
     }

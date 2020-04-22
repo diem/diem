@@ -112,7 +112,7 @@ impl AdmissionControl for MockAdmissionControlService {
 
         let mut resp = ProtoSubmitTransactionResponse::default();
 
-        let validation_result = self.mock_vm.validate_transaction(transaction).await;
+        let validation_result = self.mock_vm.validate_transaction(transaction);
         match validation_result.as_ref().map(|result| result.status()) {
             Ok(Some(vm_status)) => {
                 resp.status = Some(Status::VmStatus(VmStatusProto::from(vm_status)));

@@ -27,13 +27,12 @@ use libra_config::config::NodeConfig;
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction, PeerId};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, RwLock},
     time::Duration,
 };
-use storage_client::{StorageRead, StorageReadServiceClient, SyncStorageClient};
+use storage_interface::DbReader;
 use tokio::{
     runtime::{Builder, Handle, Runtime},
-    sync::RwLock,
     time::interval,
 };
 use vm_validator::vm_validator::{TransactionValidation, VMValidator};
@@ -54,7 +53,7 @@ pub(crate) fn start_shared_mempool<V>(
     consensus_requests: mpsc::Receiver<ConsensusRequest>,
     state_sync_requests: mpsc::Receiver<CommitNotification>,
     mempool_reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
-    storage_read_client: Arc<dyn StorageRead>,
+    db: Arc<dyn DbReader>,
     validator: Arc<RwLock<V>>,
     subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
     timer: Option<IntervalStream>,
@@ -82,7 +81,7 @@ pub(crate) fn start_shared_mempool<V>(
         mempool: mempool.clone(),
         config: config.mempool.clone(),
         network_senders,
-        storage_read_client,
+        db,
         validator,
         peer_manager,
         subscribers,
@@ -123,6 +122,7 @@ fn default_timer(tick_ms: u64) -> IntervalStream {
 /// method used to bootstrap shared mempool for a node
 pub fn bootstrap(
     config: &NodeConfig,
+    db: Arc<dyn DbReader>,
     // The first element in the tuple is the ID of the network that this network is a handle to
     // See `NodeConfig::is_upstream_peer` for the definition of network ID
     mempool_network_handles: Vec<(PeerId, MempoolNetworkSender, MempoolNetworkEvents)>,
@@ -138,10 +138,7 @@ pub fn bootstrap(
         .build()
         .expect("[shared mempool] failed to create runtime");
     let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
-    let storage_read_client: Arc<dyn StorageRead> =
-        Arc::new(StorageReadServiceClient::new(&config.storage.address));
-    let db_reader = Arc::new(SyncStorageClient::new(&config.storage.address));
-    let vm_validator = Arc::new(RwLock::new(VMValidator::new(db_reader)));
+    let vm_validator = Arc::new(RwLock::new(VMValidator::new(Arc::clone(&db))));
     start_shared_mempool(
         runtime.handle(),
         config,
@@ -151,7 +148,7 @@ pub fn bootstrap(
         consensus_requests,
         state_sync_requests,
         mempool_reconfig_events,
-        storage_read_client,
+        db,
         vm_validator,
         vec![],
         None,

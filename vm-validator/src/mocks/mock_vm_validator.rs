@@ -26,10 +26,9 @@ impl VMValidator for MockVMValidator {
     }
 }
 
-#[async_trait::async_trait]
 impl TransactionValidation for MockVMValidator {
     type ValidationInstance = MockVMValidator;
-    async fn validate_transaction(&self, txn: SignedTransaction) -> Result<VMValidatorResult> {
+    fn validate_transaction(&self, txn: SignedTransaction) -> Result<VMValidatorResult> {
         let txn = match txn.check_signature() {
             Ok(txn) => txn,
             Err(_) => {

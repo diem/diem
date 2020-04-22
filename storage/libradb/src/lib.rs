@@ -609,6 +609,19 @@ impl LibraDB {
 }
 
 impl DbReader for LibraDB {
+    fn update_to_latest_ledger(
+        &self,
+        client_known_version: Version,
+        request_items: Vec<RequestItem>,
+    ) -> Result<(
+        Vec<ResponseItem>,
+        LedgerInfoWithSignatures,
+        EpochChangeProof,
+        AccumulatorConsistencyProof,
+    )> {
+        Self::update_to_latest_ledger(&self, client_known_version, request_items)
+    }
+
     fn get_epoch_change_ledger_infos(
         &self,
         start_epoch: u64,

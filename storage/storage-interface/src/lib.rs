@@ -12,6 +12,7 @@ use libra_types::{
     contract_event::ContractEvent,
     epoch_change::EpochChangeProof,
     event::EventKey,
+    get_with_proof::{RequestItem, ResponseItem},
     ledger_info::LedgerInfoWithSignatures,
     move_resource::MoveStorage,
     on_chain_config::ValidatorSet,
@@ -26,6 +27,8 @@ use std::{
 };
 use thiserror::Error;
 
+#[cfg(any(feature = "testing", feature = "fuzzing"))]
+pub mod mock;
 pub mod state_view;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -125,6 +128,20 @@ impl From<libra_secure_net::Error> for Error {
 /// Trait that is implemented by a DB that supports certain public (to client) read APIs
 /// expected of a Libra DB
 pub trait DbReader: Send + Sync {
+    // TODO: Remove this API after deprecating AC.
+    fn update_to_latest_ledger(
+        &self,
+        _client_known_version: Version,
+        _request_items: Vec<RequestItem>,
+    ) -> Result<(
+        Vec<ResponseItem>,
+        LedgerInfoWithSignatures,
+        EpochChangeProof,
+        AccumulatorConsistencyProof,
+    )> {
+        unimplemented!()
+    }
+
     /// See [`LibraDB::get_epoch_change_ledger_infos`].
     ///
     /// [`LibraDB::get_epoch_change_ledger_infos`]:
