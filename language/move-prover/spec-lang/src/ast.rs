@@ -39,6 +39,7 @@ pub struct SpecFunDecl {
     pub params: Vec<(Symbol, Type)>,
     pub result_type: Type,
     pub used_spec_vars: BTreeSet<(ModuleId, SpecVarId)>,
+    pub is_pure: bool,
     pub body: Option<Exp>,
 }
 
@@ -269,6 +270,43 @@ pub enum Value {
     Address(BigUint),
     Number(BigUint),
     Bool(bool),
+}
+
+// =================================================================================================
+/// # Purity of Expressions
+
+impl Operation {
+    /// Determines whether this operation is pure (does not depend on global state)
+    pub fn is_pure<F>(&self, check_pure: &F) -> bool
+    where
+        F: Fn(ModuleId, SpecFunId) -> bool,
+    {
+        use Operation::*;
+        match self {
+            Sender | Exists | Global => false,
+            Function(mid, fid) => check_pure(*mid, *fid),
+            _ => true,
+        }
+    }
+}
+
+impl Exp {
+    /// Determines whether this expression is pure (does not depend on global state)
+    pub fn is_pure<F>(&self, check_pure: &F) -> bool
+    where
+        F: Fn(ModuleId, SpecFunId) -> bool,
+    {
+        use Exp::*;
+        let mut is_pure = true;
+        self.visit(&mut |exp: &Exp| match exp {
+            Call(_, oper, _) => {
+                is_pure = is_pure && oper.is_pure(check_pure);
+            }
+            SpecVar(..) => is_pure = false,
+            _ => {}
+        });
+        is_pure
+    }
 }
 
 // =================================================================================================

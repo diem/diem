@@ -910,6 +910,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             params,
             result_type,
             used_spec_vars: BTreeSet::new(),
+            is_pure: true,
             body: None,
         };
         self.spec_funs.push(fun_decl);
@@ -1968,6 +1969,32 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         for idx in 0..self.spec_funs.len() {
             self.compute_spec_var_usage_for_fun(&mut visited, idx);
         }
+        // Check for pureness requirements. All data invariants must be pure expressions and
+        // not depend on global state.
+        let check_pure = |mid: ModuleId, fid: SpecFunId| {
+            if mid.to_usize() < self.parent.env.get_module_count() {
+                // This is calling a function from another module we already have
+                // translated.
+                let module_env = self.parent.env.get_module(mid);
+                module_env.get_spec_fun(fid).is_pure
+            } else {
+                // This is calling a function from the module we are currently translating.
+                // Need to recursively ensure we have computed used_spec_vars because of
+                // arbitrary call graphs, including cyclic.
+                self.spec_funs[fid.as_usize()].is_pure
+            }
+        };
+        for struct_invs in self.struct_invariants.values() {
+            for inv in struct_invs {
+                if inv.kind == InvariantKind::Data && !inv.exp.is_pure(&check_pure) {
+                    self.parent.error(
+                        &inv.loc,
+                        "data invariants cannot depend on global state \
+                        (directly or indirectly uses a global spec var or resource storage).",
+                    )
+                }
+            }
+        }
     }
 
     /// Compute spec var usage for a given spec fun, defined via its index into the spec_funs
@@ -1984,14 +2011,18 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         let body = if self.spec_funs[fun_idx].body.is_some() {
             std::mem::replace(&mut self.spec_funs[fun_idx].body, None).unwrap()
         } else {
+            // Native function: assume it is impure. We need a modifier to declare otherwise
+            self.spec_funs[fun_idx].is_pure = false;
             return;
         };
 
         let mut used_spec_vars = BTreeSet::new();
+        let mut is_pure = true;
         body.visit(&mut |e: &Exp| {
             match e {
                 Exp::SpecVar(_, mid, vid) => {
                     used_spec_vars.insert((*mid, *vid));
+                    is_pure = false;
                 }
                 Exp::Call(_, Operation::Function(mid, fid), _) => {
                     if mid.to_usize() < self.parent.env.get_module_count() {
@@ -2000,14 +2031,20 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                         let module_env = self.parent.env.get_module(*mid);
                         let fun_decl = module_env.get_spec_fun(*fid);
                         used_spec_vars.extend(&fun_decl.used_spec_vars);
+                        is_pure = is_pure && fun_decl.is_pure
                     } else {
                         // This is calling a function from the module we are currently translating.
                         // Need to recursively ensure we have computed used_spec_vars because of
                         // arbitrary call graphs, including cyclic.
                         self.compute_spec_var_usage_for_fun(visited, fid.as_usize());
-                        used_spec_vars.extend(&self.spec_funs[fid.as_usize()].used_spec_vars);
+                        let fun_decl = &self.spec_funs[fid.as_usize()];
+                        used_spec_vars.extend(&fun_decl.used_spec_vars);
+                        is_pure = is_pure && fun_decl.is_pure;
                     }
                 }
+                Exp::Call(_, Operation::Sender, _)
+                | Exp::Call(_, Operation::Global, _)
+                | Exp::Call(_, Operation::Exists, _) => is_pure = false,
                 _ => {}
             }
         });
@@ -2016,6 +2053,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         let fun_decl = &mut self.spec_funs[fun_idx];
         fun_decl.body = Some(body);
         fun_decl.used_spec_vars = used_spec_vars;
+        fun_decl.is_pure = is_pure;
     }
 }
 
@@ -3150,6 +3188,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     &cand.result_type.instantiate(&instantiation),
                     expected_type,
                 );
+                // Check pure requirement.
                 // Construct result.
                 let id = self.new_node_id_with_type_loc(&ty, loc);
                 self.set_instantiation(id, instantiation);

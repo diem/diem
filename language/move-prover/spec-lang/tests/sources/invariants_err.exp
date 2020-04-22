@@ -21,3 +21,43 @@ error: `old(..old(..)..)` not allowed
  13 │     invariant update old(old(x)) > 0;
     │                          ^^^^^^
     │
+
+error: data invariants cannot depend on global state (directly or indirectly uses a global spec var or resource storage).
+
+    ┌── tests/sources/invariants_err.move:15:5 ───
+    │
+ 15 │     invariant exists<S>(0x0);
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+
+error: data invariants cannot depend on global state (directly or indirectly uses a global spec var or resource storage).
+
+    ┌── tests/sources/invariants_err.move:16:5 ───
+    │
+ 16 │     invariant global<S>(0x0).x == x;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+
+error: data invariants cannot depend on global state (directly or indirectly uses a global spec var or resource storage).
+
+    ┌── tests/sources/invariants_err.move:17:5 ───
+    │
+ 17 │     invariant sender() == 0x0;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+
+error: data invariants cannot depend on global state (directly or indirectly uses a global spec var or resource storage).
+
+    ┌── tests/sources/invariants_err.move:18:5 ───
+    │
+ 18 │     invariant spec_var > 0;
+    │     ^^^^^^^^^^^^^^^^^^^^^^^
+    │
+
+error: data invariants cannot depend on global state (directly or indirectly uses a global spec var or resource storage).
+
+    ┌── tests/sources/invariants_err.move:20:5 ───
+    │
+ 20 │     invariant rec_fun(true);
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^
+    │
