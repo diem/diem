@@ -26,62 +26,70 @@ error: `wrong` not declared in schema
 
     ┌── tests/sources/schemas_err.move:19:44 ───
     │
- 19 │         include WrongTypeArgsIncluded<num>{wrong: x};
+ 19 │         include WrongTypeArgsIncluded<num>{wrong: 1};
     │                                            ^^^^^
     │
 
-error: incompatible type of included `x` (renamed to `y`); type in schema: `num`, type in inclusion context: `bool`
+error: expected `num` but found `bool`
 
-    ┌── tests/sources/schemas_err.move:24:9 ───
+    ┌── tests/sources/schemas_err.move:24:47 ───
     │
  24 │         include WrongTypeArgsIncluded<num>{x: y};
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │                                               ^
+    │
+
+error: expected `bool` but found `num`
+
+    ┌── tests/sources/schemas_err.move:28:48 ───
+    │
+ 28 │         include WrongTypeArgsIncluded<bool>{x: 1 + 2};
+    │                                                ^^^^^
     │
 
 error: incompatible type of included `x`; type in schema: `num`, type in inclusion context: `bool`
 
-    ┌── tests/sources/schemas_err.move:29:9 ───
+    ┌── tests/sources/schemas_err.move:33:9 ───
     │
- 29 │         include WronglyTypedVarIncluded;
+ 33 │         include WronglyTypedVarIncluded;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
 
 error: incompatible type of included `x`; type in schema: `num`, type in inclusion context: `bool`
 
-    ┌── tests/sources/schemas_err.move:37:9 ───
+    ┌── tests/sources/schemas_err.move:41:9 ───
     │
- 37 │         include WronglyTypedInstantiationIncluded<num>;
+ 41 │         include WronglyTypedInstantiationIncluded<num>;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
 
 error: cyclic schema dependency: Cycle1 -> Cycle2 -> Cycle3 -> Cycle1
 
-    ┌── tests/sources/schemas_err.move:76:9 ───
+    ┌── tests/sources/schemas_err.move:80:9 ───
     │
- 76 │         include Cycle1;
+ 80 │         include Cycle1;
     │         ^^^^^^^^^^^^^^^
     │
 
 error: `y` cannot be matched to an existing name in inclusion context
 
-    ┌── tests/sources/schemas_err.move:48:9 ───
+    ┌── tests/sources/schemas_err.move:52:9 ───
     │
- 48 │         include UndeclaredVarInInclude;
+ 52 │         include UndeclaredVarInInclude;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
 
 error: schema `M::Invariant` includes invariants which are not allowed in this context
 
-    ┌── tests/sources/schemas_err.move:57:9 ───
+    ┌── tests/sources/schemas_err.move:61:9 ───
     │
- 57 │         include Invariant;
+ 61 │         include Invariant;
     │         ^^^^^^^^^^^^^^^^^^
     │
 
 error: schema `M::Condition` includes conditions which are not allowed in this context
 
-    ┌── tests/sources/schemas_err.move:66:9 ───
+    ┌── tests/sources/schemas_err.move:70:9 ───
     │
- 66 │         include Condition;
+ 70 │         include Condition;
     │         ^^^^^^^^^^^^^^^^^^
     │
