@@ -117,7 +117,7 @@ struct StructEntry {
     struct_id: StructId,
     is_resource: bool,
     type_params: Vec<(Symbol, Type)>,
-    fields: Option<BTreeMap<Symbol, Type>>,
+    fields: Option<BTreeMap<Symbol, (usize, Type)>>,
 }
 
 /// A declaration of a function.
@@ -249,7 +249,7 @@ impl<'env> Translator<'env> {
         struct_id: StructId,
         is_resource: bool,
         type_params: Vec<(Symbol, Type)>,
-        fields: Option<BTreeMap<Symbol, Type>>,
+        fields: Option<BTreeMap<Symbol, (usize, Type)>>,
     ) {
         let entry = StructEntry {
             loc,
@@ -1101,10 +1101,10 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         let fields = match &def.fields {
             EA::StructFields::Defined(fields) => {
                 let mut field_map = BTreeMap::new();
-                for (ref field_name, (_, ty)) in fields.iter() {
+                for (ref field_name, (idx, ty)) in fields.iter() {
                     let field_sym = et.symbol_pool().make(&field_name.0.value);
                     let field_ty = et.translate_type(&ty);
-                    field_map.insert(field_sym, field_ty);
+                    field_map.insert(field_sym, (*idx, field_ty));
                 }
                 Some(field_map)
             }
@@ -1452,7 +1452,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                         et.define_type_param(loc, *n, ty.clone());
                     }
                     et.enter_scope();
-                    for (n, ty) in fields {
+                    for (n, (_, ty)) in fields {
                         et.define_local(
                             loc,
                             *n,
@@ -2971,7 +2971,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         .clone();
                     // Lookup the field in the struct.
                     if let Some(fields) = &entry.fields {
-                        if let Some(field_ty) = fields.get(&field_name) {
+                        if let Some((_, field_ty)) = fields.get(&field_name) {
                             // We must instantiate the field type by the provided type args.
                             let field_ty = field_ty.instantiate(targs);
                             self.check_type(&loc, &field_ty, expected_type);
@@ -3219,9 +3219,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 let mut fields_not_convered: BTreeSet<Symbol> = BTreeSet::new();
                 fields_not_convered.extend(field_decls.keys());
                 let mut args = BTreeMap::new();
-                for (ref name, (idx, exp)) in fields.iter() {
+                for (ref name, (_, exp)) in fields.iter() {
                     let field_name = self.symbol_pool().make(&name.0.value);
-                    if let Some(field_ty) = field_decls.get(&field_name) {
+                    if let Some((idx, field_ty)) = field_decls.get(&field_name) {
                         let exp = self.translate_exp(exp, &field_ty.instantiate(&instantiation));
                         fields_not_convered.remove(&field_name);
                         args.insert(idx, exp);

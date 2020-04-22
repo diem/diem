@@ -33,6 +33,10 @@ module M {
       S{x: x, y: y, z: z}
     }
 
+    define struct_pack_other_order(x: u64, y: bool, z: vector<u64>): S {
+      S{z: z, y: y, x: x}
+    }
+
     define generic_struct_pack(x: u64, y: bool): G<u64> {
       G{x: x, y: y}
     }
