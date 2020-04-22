@@ -6,7 +6,7 @@ use std::{collections::BTreeMap, fmt, sync::Arc};
 
 #[derive(Clone, Debug)]
 /// EpochInfo represents a trusted validator set to validate messages from the specific epoch,
-/// it could be updated with ValidatorChangeProof.
+/// it could be updated with EpochChangeProof.
 pub struct EpochInfo {
     pub epoch: u64,
     pub verifier: Arc<ValidatorVerifier>,

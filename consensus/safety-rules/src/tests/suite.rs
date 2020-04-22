@@ -11,9 +11,9 @@ use consensus_types::{
 };
 use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_types::{
+    epoch_change::EpochChangeProof,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::ValidatorSet,
-    validator_change::ValidatorChangeProof,
     validator_info::ValidatorInfo,
     validator_signer::ValidatorSigner,
 };
@@ -22,7 +22,7 @@ use std::collections::BTreeMap;
 
 type Proof = test_utils::Proof;
 
-fn make_genesis<T: Payload>(signer: &ValidatorSigner) -> (ValidatorChangeProof, QuorumCert) {
+fn make_genesis<T: Payload>(signer: &ValidatorSigner) -> (EpochChangeProof, QuorumCert) {
     let validator_info =
         ValidatorInfo::new_with_test_network_keys(signer.author(), signer.public_key(), 1);
     let validator_set = ValidatorSet::new(vec![validator_info]);
@@ -30,7 +30,7 @@ fn make_genesis<T: Payload>(signer: &ValidatorSigner) -> (ValidatorChangeProof, 
     let block = Block::<T>::make_genesis_block_from_ledger_info(&li);
     let qc = QuorumCert::certificate_for_genesis_from_ledger_info(&li, block.id());
     let lis = LedgerInfoWithSignatures::new(li, BTreeMap::new());
-    let proof = ValidatorChangeProof::new(vec![lis], false);
+    let proof = EpochChangeProof::new(vec![lis], false);
     (proof, qc)
 }
 

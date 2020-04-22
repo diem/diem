@@ -12,12 +12,12 @@ use libra_types::{
     },
     account_state_blob::AccountStateWithProof,
     contract_event::ContractEvent,
+    epoch_change::EpochChangeProof,
     language_storage::TypeTag,
     ledger_info::LedgerInfoWithSignatures,
     move_resource::MoveResource,
     proof::{AccountStateProof, AccumulatorConsistencyProof},
     transaction::{Transaction, TransactionArgument, TransactionPayload},
-    validator_change::ValidatorChangeProof,
     vm_error::StatusCode,
 };
 use move_core_types::identifier::IdentStr;
@@ -405,23 +405,23 @@ impl From<CurrencyInfoResource> for CurrencyInfoView {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct StateProofView {
     pub ledger_info_with_signatures: BytesView,
-    pub validator_change_proof: BytesView,
+    pub epoch_change_proof: BytesView,
     pub ledger_consistency_proof: BytesView,
 }
 
 impl
     TryFrom<(
         LedgerInfoWithSignatures,
-        ValidatorChangeProof,
+        EpochChangeProof,
         AccumulatorConsistencyProof,
     )> for StateProofView
 {
     type Error = Error;
 
     fn try_from(
-        (ledger_info_with_signatures, validator_change_proof, ledger_consistency_proof): (
+        (ledger_info_with_signatures, epoch_change_proof, ledger_consistency_proof): (
             LedgerInfoWithSignatures,
-            ValidatorChangeProof,
+            EpochChangeProof,
             AccumulatorConsistencyProof,
         ),
     ) -> Result<StateProofView, Self::Error> {
@@ -429,7 +429,7 @@ impl
             ledger_info_with_signatures: BytesView::from(&lcs::to_bytes(
                 &ledger_info_with_signatures,
             )?),
-            validator_change_proof: BytesView::from(&lcs::to_bytes(&validator_change_proof)?),
+            epoch_change_proof: BytesView::from(&lcs::to_bytes(&epoch_change_proof)?),
             ledger_consistency_proof: BytesView::from(&lcs::to_bytes(&ledger_consistency_proof)?),
         })
     }

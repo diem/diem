@@ -7,8 +7,8 @@ package types;
 
 import "ledger_info.proto";
 
-// This is used to prove validator changes.
-message ValidatorChangeProof {
+// This is used to prove epoch changes.
+message EpochChangeProof {
   // A list of LedgerInfos with contiguous increasing epoch numbers.
   repeated LedgerInfoWithSignatures ledger_info_with_sigs = 1;
 

@@ -19,8 +19,8 @@ use libra_crypto::{ed25519::Ed25519Signature, hash::HashValue};
 use libra_logger::debug;
 use libra_types::{
     block_info::BlockInfo,
+    epoch_change::{EpochChangeProof, VerifierType},
     ledger_info::LedgerInfo,
-    validator_change::{ValidatorChangeProof, VerifierType},
     validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
     waypoint::Waypoint,
@@ -141,7 +141,7 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
         ))
     }
 
-    fn initialize(&mut self, proof: &ValidatorChangeProof) -> Result<(), Error> {
+    fn initialize(&mut self, proof: &EpochChangeProof) -> Result<(), Error> {
         let waypoint = self.persistent_storage.waypoint()?;
         let last_li = proof
             .verify(&VerifierType::Waypoint(waypoint))

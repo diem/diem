@@ -78,19 +78,14 @@ impl AdmissionControlService {
         req: UpdateToLatestLedgerRequest,
     ) -> Result<UpdateToLatestLedgerResponse> {
         let rust_req = libra_types::get_with_proof::UpdateToLatestLedgerRequest::try_from(req)?;
-        let (
-            response_items,
-            ledger_info_with_sigs,
-            validator_change_proof,
-            ledger_consistency_proof,
-        ) = self
-            .storage_read_client
-            .update_to_latest_ledger(rust_req.client_known_version, rust_req.requested_items)
-            .await?;
+        let (response_items, ledger_info_with_sigs, epoch_change_proof, ledger_consistency_proof) =
+            self.storage_read_client
+                .update_to_latest_ledger(rust_req.client_known_version, rust_req.requested_items)
+                .await?;
         let rust_resp = libra_types::get_with_proof::UpdateToLatestLedgerResponse::new(
             response_items,
             ledger_info_with_sigs,
-            validator_change_proof,
+            epoch_change_proof,
             ledger_consistency_proof,
         );
         Ok(rust_resp.into())

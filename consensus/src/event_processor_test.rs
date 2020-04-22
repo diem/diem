@@ -185,7 +185,7 @@ impl NodeSetup {
         let pacemaker = Self::create_pacemaker(time_service.clone());
         let proposer_election = Self::create_proposer_election(proposer_author);
         let mut safety_rules = safety_rules_manager.client();
-        let proof = storage.retrieve_validator_change_proof(0).unwrap();
+        let proof = storage.retrieve_epoch_change_proof(0).unwrap();
         safety_rules.initialize(&proof).unwrap();
 
         let mut event_processor = EventProcessor::new(

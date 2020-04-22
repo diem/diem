@@ -8,6 +8,7 @@ use libra_types::{
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     block_info::BlockInfo,
     contract_event::ContractEvent,
+    epoch_change::EpochChangeProof,
     event::EventKey,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::{
@@ -17,7 +18,6 @@ use libra_types::{
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionWithProof, Version,
     },
-    validator_change::ValidatorChangeProof,
     vm_error::StatusCode,
 };
 use std::collections::BTreeMap;
@@ -184,7 +184,7 @@ impl DbReader for MockLibraDB {
         known_version: u64,
     ) -> Result<(
         LedgerInfoWithSignatures,
-        ValidatorChangeProof,
+        EpochChangeProof,
         AccumulatorConsistencyProof,
     )> {
         let li = self.get_latest_ledger_info()?;
@@ -200,9 +200,9 @@ impl DbReader for MockLibraDB {
         &self,
         _known_version: u64,
         _ledger_info: LedgerInfoWithSignatures,
-    ) -> Result<(ValidatorChangeProof, AccumulatorConsistencyProof)> {
+    ) -> Result<(EpochChangeProof, AccumulatorConsistencyProof)> {
         Ok((
-            ValidatorChangeProof::new(vec![], false),
+            EpochChangeProof::new(vec![], false),
             AccumulatorConsistencyProof::new(vec![]),
         ))
     }
@@ -243,7 +243,7 @@ impl DbReader for MockLibraDB {
         &self,
         _start_epoch: u64,
         _end_epoch: u64,
-    ) -> Result<ValidatorChangeProof> {
+    ) -> Result<EpochChangeProof> {
         unimplemented!()
     }
 

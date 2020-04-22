@@ -16,8 +16,8 @@ use futures::{
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
 use libra_mempool::{CommitNotification, CommitResponse};
 use libra_types::{
-    contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
-    validator_change::ValidatorChangeProof, waypoint::Waypoint,
+    contract_event::ContractEvent, epoch_change::EpochChangeProof,
+    ledger_info::LedgerInfoWithSignatures, transaction::Transaction, waypoint::Waypoint,
 };
 use libra_vm::LibraVM;
 use std::{
@@ -185,7 +185,7 @@ impl StateSyncClient {
         &self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> impl Future<Output = Result<ValidatorChangeProof>> {
+    ) -> impl Future<Output = Result<EpochChangeProof>> {
         let mut sender = self.coordinator_sender.clone();
         let (cb_sender, cb_receiver) = oneshot::channel();
         let request = EpochRetrievalRequest {

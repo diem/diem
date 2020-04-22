@@ -14,9 +14,9 @@ use consensus_types::{
 };
 use libra_crypto::HashValue;
 use libra_types::{
+    epoch_change::EpochChangeProof,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::ValidatorSet,
-    validator_change::ValidatorChangeProof,
 };
 use std::{
     collections::{BTreeMap, HashMap},
@@ -246,7 +246,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for MockStorage<T> {
         Ok(())
     }
 
-    fn retrieve_validator_change_proof(&self, version: u64) -> Result<ValidatorChangeProof> {
+    fn retrieve_epoch_change_proof(&self, version: u64) -> Result<EpochChangeProof> {
         let lis = self
             .shared_storage
             .lis
@@ -255,7 +255,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for MockStorage<T> {
             .get(&version)
             .cloned()
             .ok_or_else(|| anyhow::anyhow!("LedgerInfo for version not found"))?;
-        Ok(ValidatorChangeProof::new(vec![lis], false))
+        Ok(EpochChangeProof::new(vec![lis], false))
     }
 
     fn libra_db(&self) -> Arc<dyn DbReader> {
@@ -322,7 +322,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage<T> {
         Ok(())
     }
 
-    fn retrieve_validator_change_proof(&self, _version: u64) -> Result<ValidatorChangeProof> {
+    fn retrieve_epoch_change_proof(&self, _version: u64) -> Result<EpochChangeProof> {
         unimplemented!()
     }
 

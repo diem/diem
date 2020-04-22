@@ -5,7 +5,7 @@ use anyhow::Result;
 use consensus_types::block::Block;
 use executor_types::StateComputeResult;
 use libra_crypto::HashValue;
-use libra_types::{ledger_info::LedgerInfoWithSignatures, validator_change::ValidatorChangeProof};
+use libra_types::{epoch_change::EpochChangeProof, ledger_info::LedgerInfoWithSignatures};
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
 #[async_trait::async_trait]
@@ -74,9 +74,5 @@ pub trait StateComputer: Send + Sync {
     async fn sync_to(&self, target: LedgerInfoWithSignatures) -> Result<()>;
 
     /// Generate the epoch change proof from start_epoch to the latest epoch.
-    async fn get_epoch_proof(
-        &self,
-        start_epoch: u64,
-        end_epoch: u64,
-    ) -> Result<ValidatorChangeProof>;
+    async fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<EpochChangeProof>;
 }

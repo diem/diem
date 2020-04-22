@@ -16,7 +16,7 @@ use libra_config::{
     utils,
 };
 use libra_crypto::ed25519::Ed25519Signature;
-use libra_types::{validator_change::ValidatorChangeProof, validator_signer::ValidatorSigner};
+use libra_types::{epoch_change::EpochChangeProof, validator_signer::ValidatorSigner};
 use std::{
     any::TypeId,
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -85,7 +85,7 @@ impl<T: Payload> TSafetyRules<T> for ProcessClientWrapper<T> {
         self.safety_rules.consensus_state()
     }
 
-    fn initialize(&mut self, proof: &ValidatorChangeProof) -> Result<(), Error> {
+    fn initialize(&mut self, proof: &EpochChangeProof) -> Result<(), Error> {
         self.safety_rules.initialize(proof)
     }
 

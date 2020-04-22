@@ -4,11 +4,11 @@
 use crate::{
     account_address::AccountAddress,
     block_info::BlockInfo,
+    epoch_change::EpochChangeProof,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::ValidatorSet,
     transaction::Version,
     trusted_state::{TrustedState, TrustedStateChange},
-    validator_change::ValidatorChangeProof,
     validator_info::ValidatorInfo,
     validator_signer::ValidatorSigner,
     validator_verifier::random_validator_verifier,
@@ -104,7 +104,7 @@ fn new_mock_ledger_info(
 }
 
 // A strategy for generating components of an UpdateToLatestLedgerResponse with
-// a correct ValidatorChangeProof.
+// a correct EpochChangeProof.
 fn arb_update_proof(
     // the epoch of the first LedgerInfoWithSignatures
     start_epoch: u64,
@@ -234,7 +234,7 @@ proptest! {
             .as_ref()
             .and_then(|li_with_sigs| li_with_sigs.ledger_info().next_validator_set());
 
-        let change_proof = ValidatorChangeProof::new(lis_with_sigs, false /* more */);
+        let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
         let trusted_state_change = trusted_state
             .verify_and_ratchet(&latest_li, &change_proof)
             .expect("Should never error or be stale when ratcheting from pre-genesis with valid proofs");
@@ -273,7 +273,7 @@ proptest! {
             .as_ref()
             .and_then(|li_with_sigs| li_with_sigs.ledger_info().next_validator_set());
 
-        let change_proof = ValidatorChangeProof::new(lis_with_sigs, false /* more */);
+        let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
         let trusted_state_change = trusted_state
             .verify_and_ratchet(&latest_li, &change_proof)
             .expect("Should never error or be stale when ratcheting from waypoint with valid proofs");
@@ -311,7 +311,7 @@ proptest! {
         let expected_latest_version = latest_li.ledger_info().version();
 
         // Use an empty epoch change proof
-        let change_proof = ValidatorChangeProof::new(vec![], false /* more */);
+        let change_proof = EpochChangeProof::new(vec![], false /* more */);
         let trusted_state_change = trusted_state
             .verify_and_ratchet(&latest_li, &change_proof)
             .expect("Should never error or be stale when ratcheting from waypoint with valid proofs");
@@ -354,7 +354,7 @@ proptest! {
             .as_ref()
             .and_then(|li_with_sigs| li_with_sigs.ledger_info().next_validator_set());
 
-        let change_proof = ValidatorChangeProof::new(lis_with_sigs, false /* more */);
+        let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
         let trusted_state_change = trusted_state
             .verify_and_ratchet(&latest_li, &change_proof)
             .expect("Should never error or be stale when ratcheting from waypoint with valid proofs");
@@ -399,7 +399,7 @@ proptest! {
         let li_gap_idx = li_gap_idx.index(lis_with_sigs.len());
         lis_with_sigs.remove(li_gap_idx);
 
-        let change_proof = ValidatorChangeProof::new(lis_with_sigs, false /* more */);
+        let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
         trusted_state
             .verify_and_ratchet(&latest_li, &change_proof)
             .expect_err("Should always return Err with an invalid change proof");
@@ -431,7 +431,7 @@ proptest! {
         );
         ::std::mem::replace(bad_li_idx.get_mut(&mut lis_with_sigs), bad_li_with_sigs);
 
-        let change_proof = ValidatorChangeProof::new(lis_with_sigs, false /* more */);
+        let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
         trusted_state
             .verify_and_ratchet(&latest_li, &change_proof)
             .expect_err("Should always return Err with an invalid change proof");
@@ -461,7 +461,7 @@ proptest! {
             BTreeMap::new(), /* empty signatures */
         );
 
-        let change_proof = ValidatorChangeProof::new(lis_with_sigs, false /* more */);
+        let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
         // We don't verify ledger info <= known version
         if latest_li.ledger_info().version() != trusted_state.latest_version() {
             trusted_state
@@ -492,7 +492,7 @@ proptest! {
             &epoch_change_li,
         ).unwrap();
 
-        let change_proof = ValidatorChangeProof::new(lis_with_sigs, false /* more */);
+        let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
         trusted_state
             .verify_and_ratchet(&latest_li, &change_proof)
             .expect_err("Expected stale change, got valid change");

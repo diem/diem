@@ -14,7 +14,7 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use futures::sink::SinkExt;
-use libra_types::{validator_change::ValidatorChangeProof, validator_info::ValidatorInfo, PeerId};
+use libra_types::{epoch_change::EpochChangeProof, validator_info::ValidatorInfo, PeerId};
 use network::{
     common::NetworkPublicKeys,
     connectivity_manager::ConnectivityRequest,
@@ -38,7 +38,7 @@ pub enum ConsensusMsg<T> {
     #[serde(bound = "T: Payload")]
     /// Carries the returned blocks and the retrieval status.
     BlockRetrievalResponse(Box<BlockRetrievalResponse<T>>),
-    /// Request to get a ValidatorChangeProof from current_epoch to target_epoch
+    /// Request to get a EpochChangeProof from current_epoch to target_epoch
     EpochRetrievalRequest(Box<EpochRetrievalRequest>),
     #[serde(bound = "T: Payload")]
     /// ProposalMsg contains the required information for the proposer election protocol to make
@@ -47,8 +47,8 @@ pub enum ConsensusMsg<T> {
     /// This struct describes basic synchronization metadata.
     SyncInfo(Box<SyncInfo>),
     /// A vector of LedgerInfo with contiguous increasing epoch numbers to prove a sequence of
-    /// validator changes from the first LedgerInfo's epoch.
-    ValidatorChangeProof(Box<ValidatorChangeProof>),
+    /// epoch changes from the first LedgerInfo's epoch.
+    EpochChangeProof(Box<EpochChangeProof>),
     /// VoteMsg is the struct that is ultimately sent by the voter in response for receiving a
     /// proposal.
     VoteMsg(Box<VoteMsg>),

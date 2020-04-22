@@ -15,9 +15,9 @@ use libra_crypto::{
 };
 use libra_mempool::mocks::MockSharedMempool;
 use libra_types::{
-    contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures,
-    on_chain_config::ValidatorSet, proof::TransactionListProof,
-    transaction::TransactionListWithProof, validator_change::ValidatorChangeProof,
+    contract_event::ContractEvent, epoch_change::EpochChangeProof,
+    ledger_info::LedgerInfoWithSignatures, on_chain_config::ValidatorSet,
+    proof::TransactionListProof, transaction::TransactionListWithProof,
     validator_info::ValidatorInfo, validator_signer::ValidatorSigner,
     validator_verifier::random_validator_verifier, waypoint::Waypoint,
 };
@@ -92,7 +92,7 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         (self.handler)(txns_with_proof)
     }
 
-    fn get_epoch_proof(&self, start_epoch: u64, _end_epoch: u64) -> Result<ValidatorChangeProof> {
+    fn get_epoch_proof(&self, start_epoch: u64, _end_epoch: u64) -> Result<EpochChangeProof> {
         Ok(self.storage.read().unwrap().get_epoch_changes(start_epoch))
     }
 

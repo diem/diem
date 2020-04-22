@@ -17,10 +17,10 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH},
+    epoch_change::EpochChangeProof,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{SignedTransaction, Version},
     trusted_state::{TrustedState, TrustedStateChange},
-    validator_change::ValidatorChangeProof,
     vm_error::StatusCode,
     waypoint::Waypoint,
 };
@@ -266,8 +266,8 @@ impl LibraClient {
         let client_version = self.trusted_state.latest_version();
         let li: LedgerInfoWithSignatures =
             lcs::from_bytes(&state_proof.ledger_info_with_signatures.into_bytes()?)?;
-        let validator_change_proof: ValidatorChangeProof =
-            lcs::from_bytes(&state_proof.validator_change_proof.into_bytes()?)?;
+        let epoch_change_proof: EpochChangeProof =
+            lcs::from_bytes(&state_proof.epoch_change_proof.into_bytes()?)?;
 
         // check ledger info version
         ensure!(
@@ -280,7 +280,7 @@ impl LibraClient {
         // trusted_state_change
         match self
             .trusted_state
-            .verify_and_ratchet(&li, &validator_change_proof)?
+            .verify_and_ratchet(&li, &epoch_change_proof)?
         {
             TrustedStateChange::Epoch {
                 new_state,

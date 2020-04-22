@@ -14,7 +14,7 @@ fn main() {
         "src/proto/get_with_proof.proto",
         "src/proto/ledger_info.proto",
         "src/proto/transaction_info.proto",
-        "src/proto/validator_change.proto",
+        "src/proto/epoch_change.proto",
         "src/proto/validator_set.proto",
         "src/proto/vm_errors.proto",
     ];

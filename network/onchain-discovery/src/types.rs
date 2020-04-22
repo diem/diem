@@ -51,7 +51,7 @@ impl Into<UpdateToLatestLedgerRequest> for QueryDiscoverySetRequest {
 }
 
 /// A response to a QueryDiscoverySetRequest with the latest discovery set change
-/// event and (if needed) a validator change proof.
+/// event and (if needed) a epoch change proof.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct QueryDiscoverySetResponse {
     pub update_to_latest_ledger_response: Box<UpdateToLatestLedgerResponse>,

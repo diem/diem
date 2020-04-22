@@ -7,7 +7,7 @@ use consensus_types::{
     vote_proposal::VoteProposal,
 };
 use libra_crypto::ed25519::Ed25519Signature;
-use libra_types::validator_change::ValidatorChangeProof;
+use libra_types::epoch_change::EpochChangeProof;
 
 /// Interface for SafetyRules
 pub trait TSafetyRules<T> {
@@ -17,9 +17,9 @@ pub trait TSafetyRules<T> {
 
     /// Initialize SafetyRules using an Epoch ending LedgerInfo, this should map to what was
     /// provided in consensus_state. It will be used to initialize the ValidatorSet.
-    /// This uses a ValidatorChangeProof because there's a possibility that consensus migrated to a
+    /// This uses a EpochChangeProof because there's a possibility that consensus migrated to a
     /// new epoch but SafetyRules did not.
-    fn initialize(&mut self, proof: &ValidatorChangeProof) -> Result<(), Error>;
+    fn initialize(&mut self, proof: &EpochChangeProof) -> Result<(), Error>;
 
     /// Learn about a new quorum certificate. This can lead to updating the preferred round or the
     /// validator verifier if this ends an epoch and increments the epoch as well.

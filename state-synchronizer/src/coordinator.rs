@@ -21,9 +21,9 @@ use libra_logger::prelude::*;
 use libra_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
 use libra_types::{
     contract_event::ContractEvent,
+    epoch_change::{EpochChangeProof, VerifierType},
     ledger_info::LedgerInfoWithSignatures,
     transaction::{Transaction, TransactionListWithProof, Version},
-    validator_change::{ValidatorChangeProof, VerifierType},
     waypoint::Waypoint,
 };
 use network::protocols::network::Event;
@@ -43,7 +43,7 @@ pub(crate) struct SyncRequest {
 pub(crate) struct EpochRetrievalRequest {
     pub start_epoch: u64,
     pub end_epoch: u64,
-    pub callback: oneshot::Sender<Result<ValidatorChangeProof>>,
+    pub callback: oneshot::Sender<Result<EpochChangeProof>>,
 }
 
 /// message used by StateSyncClient for communication with Coordinator

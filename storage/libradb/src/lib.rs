@@ -55,6 +55,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
+    epoch_change::EpochChangeProof,
     event::EventKey,
     get_with_proof::{RequestItem, ResponseItem},
     ledger_info::LedgerInfoWithSignatures,
@@ -66,7 +67,6 @@ use libra_types::{
         TransactionInfo, TransactionListWithProof, TransactionToCommit, TransactionWithProof,
         Version, PRE_GENESIS_VERSION,
     },
-    validator_change::ValidatorChangeProof,
 };
 use once_cell::sync::Lazy;
 use prometheus::{IntCounter, IntGauge, IntGaugeVec};
@@ -239,7 +239,7 @@ impl LibraDB {
     ) -> Result<(
         Vec<ResponseItem>,
         LedgerInfoWithSignatures,
-        ValidatorChangeProof,
+        EpochChangeProof,
         AccumulatorConsistencyProof,
     )> {
         error_if_too_many_requested(request_items.len() as u64, MAX_REQUEST_ITEMS)?;
@@ -251,18 +251,18 @@ impl LibraDB {
 
         // TODO: cache last epoch change version to avoid a DB access in most cases.
         let client_epoch = self.ledger_store.get_epoch(client_known_version)?;
-        let validator_change_proof = if client_epoch < ledger_info.next_block_epoch() {
+        let epoch_change_proof = if client_epoch < ledger_info.next_block_epoch() {
             let (ledger_infos_with_sigs, more) =
                 self.get_epoch_change_ledger_infos(client_epoch, ledger_info.next_block_epoch())?;
-            ValidatorChangeProof::new(ledger_infos_with_sigs, more)
+            EpochChangeProof::new(ledger_infos_with_sigs, more)
         } else {
-            ValidatorChangeProof::new(vec![], /* more = */ false)
+            EpochChangeProof::new(vec![], /* more = */ false)
         };
 
-        let client_new_version = if !validator_change_proof.more {
+        let client_new_version = if !epoch_change_proof.more {
             ledger_version
         } else {
-            validator_change_proof
+            epoch_change_proof
                 .ledger_info_with_sigs
                 .last()
                 .expect("Must have at least one LedgerInfo.")
@@ -273,10 +273,10 @@ impl LibraDB {
             .ledger_store
             .get_consistency_proof(client_known_version, client_new_version)?;
 
-        // If the validator change proof in the response is enough for the client to update to
+        // If the epoch change proof in the response is enough for the client to update to
         // latest LedgerInfo, fulfill all request items. Otherwise the client will not be able to
         // verify the latest LedgerInfo, so do not send response items back.
-        let response_items = if !validator_change_proof.more {
+        let response_items = if !epoch_change_proof.more {
             self.get_response_items(request_items, ledger_version)?
         } else {
             vec![]
@@ -285,7 +285,7 @@ impl LibraDB {
         Ok((
             response_items,
             ledger_info_with_sigs,
-            validator_change_proof,
+            epoch_change_proof,
             ledger_consistency_proof,
         ))
     }
@@ -613,10 +613,10 @@ impl DbReader for LibraDB {
         &self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> Result<ValidatorChangeProof> {
+    ) -> Result<EpochChangeProof> {
         let (ledger_info_with_sigs, more) =
             Self::get_epoch_change_ledger_infos(&self, start_epoch, end_epoch)?;
-        Ok(ValidatorChangeProof::new(ledger_info_with_sigs, more))
+        Ok(EpochChangeProof::new(ledger_info_with_sigs, more))
     }
 
     fn get_latest_account_state(
@@ -737,21 +737,21 @@ impl DbReader for LibraDB {
         &self,
         known_version: u64,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
-    ) -> Result<(ValidatorChangeProof, AccumulatorConsistencyProof)> {
+    ) -> Result<(EpochChangeProof, AccumulatorConsistencyProof)> {
         let ledger_info = ledger_info_with_sigs.ledger_info();
         let known_epoch = self.ledger_store.get_epoch(known_version)?;
-        let validator_change_proof = if known_epoch < ledger_info.next_block_epoch() {
+        let epoch_change_proof = if known_epoch < ledger_info.next_block_epoch() {
             let (ledger_infos_with_sigs, more) =
                 self.get_epoch_change_ledger_infos(known_epoch, ledger_info.next_block_epoch())?;
-            ValidatorChangeProof::new(ledger_infos_with_sigs, more)
+            EpochChangeProof::new(ledger_infos_with_sigs, more)
         } else {
-            ValidatorChangeProof::new(vec![], /* more = */ false)
+            EpochChangeProof::new(vec![], /* more = */ false)
         };
 
         let ledger_consistency_proof = self
             .ledger_store
             .get_consistency_proof(known_version, ledger_info.version())?;
-        Ok((validator_change_proof, ledger_consistency_proof))
+        Ok((epoch_change_proof, ledger_consistency_proof))
     }
 
     fn get_state_proof(
@@ -759,15 +759,15 @@ impl DbReader for LibraDB {
         known_version: u64,
     ) -> Result<(
         LedgerInfoWithSignatures,
-        ValidatorChangeProof,
+        EpochChangeProof,
         AccumulatorConsistencyProof,
     )> {
         let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
-        let (validator_change_proof, ledger_consistency_proof) =
+        let (epoch_change_proof, ledger_consistency_proof) =
             self.get_state_proof_with_ledger_info(known_version, ledger_info_with_sigs.clone())?;
         Ok((
             ledger_info_with_sigs,
-            validator_change_proof,
+            epoch_change_proof,
             ledger_consistency_proof,
         ))
     }

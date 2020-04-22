@@ -9,9 +9,9 @@ use executor_types::StateComputeResult;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
+    epoch_change::EpochChangeProof,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{SignedTransaction, Transaction},
-    validator_change::ValidatorChangeProof,
 };
 use libra_vm::LibraVM;
 use state_synchronizer::StateSyncClient;
@@ -128,11 +128,7 @@ impl StateComputer for ExecutionProxy {
         self.synchronizer.sync_to(target).await
     }
 
-    async fn get_epoch_proof(
-        &self,
-        start_epoch: u64,
-        end_epoch: u64,
-    ) -> Result<ValidatorChangeProof> {
+    async fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<EpochChangeProof> {
         self.synchronizer
             .get_epoch_proof(start_epoch, end_epoch)
             .await

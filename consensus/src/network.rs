@@ -19,7 +19,7 @@ use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryS
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{
-    account_address::AccountAddress, validator_change::ValidatorChangeProof,
+    account_address::AccountAddress, epoch_change::EpochChangeProof,
     validator_verifier::ValidatorVerifier,
 };
 use network::protocols::{network::Event, rpc::error::RpcError};
@@ -201,13 +201,13 @@ impl<T: Payload> NetworkSender<T> {
 
     /// Broadcast about epoch changes with proof to the current validator set (including self)
     /// when we commit the reconfiguration block
-    pub async fn broadcast_epoch_change(&mut self, proof: ValidatorChangeProof) {
-        let msg = ConsensusMsg::ValidatorChangeProof::<T>(Box::new(proof));
+    pub async fn broadcast_epoch_change(&mut self, proof: EpochChangeProof) {
+        let msg = ConsensusMsg::EpochChangeProof::<T>(Box::new(proof));
         self.broadcast(msg).await
     }
 
-    pub async fn notify_epoch_change(&mut self, proof: ValidatorChangeProof) {
-        let msg = ConsensusMsg::ValidatorChangeProof::<T>(Box::new(proof));
+    pub async fn notify_epoch_change(&mut self, proof: EpochChangeProof) {
+        let msg = ConsensusMsg::EpochChangeProof::<T>(Box::new(proof));
         let self_msg = Event::Message((self.author, msg));
         if let Err(e) = self.self_sender.send(Ok(self_msg)).await {
             warn!("Failed to notify to self an epoch change {:?}", e);
