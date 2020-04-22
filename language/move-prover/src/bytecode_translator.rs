@@ -679,7 +679,7 @@ impl<'env> ModuleTranslator<'env> {
         }
 
         emitln!(self.writer, "\n// initialize function execution");
-        emitln!(self.writer, "assume !$abort_flag;");
+        emitln!(self.writer, "assert !$abort_flag;");
         emitln!(self.writer, "$saved_m := $m;");
         emitln!(self.writer, "$frame := $local_counter;");
 
