@@ -612,7 +612,7 @@ async fn handle_query_discovery_set_request(
     }
 }
 
-/// Query our own storage for the latest discovery set and validator change proof.
+/// Query our own storage for the latest discovery set and epoch change proof.
 async fn storage_query_discovery_set(
     storage_read_client: Arc<dyn StorageRead>,
     req_msg: QueryDiscoverySetRequest,
@@ -632,13 +632,13 @@ async fn storage_query_discovery_set(
             )
         })?;
 
-    let (response_items, ledger_info_with_sigs, validator_change_proof, ledger_consistency_proof) =
+    let (response_items, ledger_info_with_sigs, epoch_change_proof, ledger_consistency_proof) =
         res_msg;
 
     let res_msg = UpdateToLatestLedgerResponse::new(
         response_items,
         ledger_info_with_sigs,
-        validator_change_proof,
+        epoch_change_proof,
         ledger_consistency_proof,
     );
     let res_msg = QueryDiscoverySetResponse::from(res_msg);
@@ -652,7 +652,7 @@ async fn storage_query_discovery_set(
     Ok((req_msg, res_msg))
 }
 
-/// Query a remote peer for their latest discovery set and a validator change
+/// Query a remote peer for their latest discovery set and a epoch change
 /// proof.
 async fn peer_query_discovery_set(
     peer_id: PeerId,

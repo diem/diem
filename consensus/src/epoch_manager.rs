@@ -30,9 +30,9 @@ use libra_config::config::{ConsensusConfig, ConsensusProposerType, NodeConfig};
 use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
+    epoch_change::{EpochChangeProof, VerifierType},
     epoch_info::EpochInfo,
     on_chain_config::{OnChainConfigPayload, ValidatorSet},
-    validator_change::{ValidatorChangeProof, VerifierType},
 };
 use network::protocols::network::Event;
 use safety_rules::SafetyRulesManager;
@@ -197,7 +197,7 @@ impl<T: Payload> EpochManager<T> {
                 return;
             }
         };
-        let msg = ConsensusMsg::ValidatorChangeProof::<T>(Box::new(proof));
+        let msg = ConsensusMsg::EpochChangeProof::<T>(Box::new(proof));
         if let Err(e) = self.network_sender.send_to(peer_id, msg) {
             warn!(
                 "Failed to send a epoch retrieval to peer {}: {:?}",
@@ -239,12 +239,12 @@ impl<T: Payload> EpochManager<T> {
         }
     }
 
-    async fn start_new_epoch(&mut self, proof: ValidatorChangeProof) {
+    async fn start_new_epoch(&mut self, proof: EpochChangeProof) {
         let verifier = VerifierType::TrustedVerifier(self.epoch_info().clone());
         let ledger_info = match proof.verify(&verifier) {
             Ok(ledger_info) => ledger_info,
             Err(e) => {
-                error!("Invalid ValidatorChangeProof: {:?}", e);
+                error!("Invalid EpochChangeProof: {:?}", e);
                 return;
             }
         };
@@ -294,7 +294,7 @@ impl<T: Payload> EpochManager<T> {
         let sr_waypoint = consensus_state.waypoint();
         let proofs = self
             .storage
-            .retrieve_validator_change_proof(sr_waypoint.version())
+            .retrieve_epoch_change_proof(sr_waypoint.version())
             .expect("Unable to retrieve Waypoint state from Storage");
 
         safety_rules
@@ -421,7 +421,7 @@ impl<T: Payload> EpochManager<T> {
                     self.process_different_epoch(event.epoch(), peer_id).await;
                 }
             }
-            ConsensusMsg::ValidatorChangeProof(proof) => {
+            ConsensusMsg::EpochChangeProof(proof) => {
                 let msg_epoch = proof.epoch().map_err(|e| warn!("{:?}", e)).ok()?;
                 if msg_epoch == self.epoch() {
                     self.start_new_epoch(*proof).await

@@ -280,6 +280,7 @@ mod test {
         account_state_blob::{AccountStateBlob, AccountStateWithProof},
         block_info::BlockInfo,
         contract_event::ContractEvent,
+        epoch_change::EpochChangeProof,
         event::{EventHandle, EventKey},
         ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
         mempool_status::{MempoolStatus, MempoolStatusCode},
@@ -291,7 +292,6 @@ mod test {
             SignedTransaction, TransactionInfo, TransactionListWithProof, TransactionWithProof,
             Version,
         },
-        validator_change::ValidatorChangeProof,
         vm_error::StatusCode,
     };
     use libradb::errors::LibraDbError::NotFound;
@@ -582,7 +582,7 @@ mod test {
             &self,
             _known_version: u64,
             _ledger_info: LedgerInfoWithSignatures,
-        ) -> Result<(ValidatorChangeProof, AccumulatorConsistencyProof)> {
+        ) -> Result<(EpochChangeProof, AccumulatorConsistencyProof)> {
             unimplemented!()
         }
 
@@ -591,7 +591,7 @@ mod test {
             _known_version: u64,
         ) -> Result<(
             LedgerInfoWithSignatures,
-            ValidatorChangeProof,
+            EpochChangeProof,
             AccumulatorConsistencyProof,
         )> {
             unimplemented!()
@@ -628,7 +628,7 @@ mod test {
             unimplemented!()
         }
 
-        fn get_epoch_change_ledger_infos(&self, _: u64, _: u64) -> Result<ValidatorChangeProof> {
+        fn get_epoch_change_ledger_infos(&self, _: u64, _: u64) -> Result<EpochChangeProof> {
             unimplemented!()
         }
 

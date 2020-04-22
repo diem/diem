@@ -11,7 +11,7 @@ import "ledger_info.proto";
 import "proof.proto";
 import "transaction.proto";
 import "transaction_info.proto";
-import "validator_change.proto";
+import "epoch_change.proto";
 import "validator_set.proto";
 
 // -----------------------------------------------------------------------------
@@ -55,7 +55,7 @@ service Storage {
 
   // Returns latest ledger infos per epoch.
   rpc GetEpochChangeLedgerInfos(GetEpochChangeLedgerInfosRequest)
-      returns (types.ValidatorChangeProof);
+      returns (types.EpochChangeProof);
 
   // Returns a stream of account states.
   rpc BackupAccountState(BackupAccountStateRequest)

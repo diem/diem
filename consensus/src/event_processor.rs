@@ -28,8 +28,8 @@ use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{
-    epoch_info::EpochInfo, ledger_info::LedgerInfoWithSignatures, transaction::TransactionStatus,
-    validator_change::ValidatorChangeProof, validator_verifier::ValidatorVerifier,
+    epoch_change::EpochChangeProof, epoch_info::EpochInfo, ledger_info::LedgerInfoWithSignatures,
+    transaction::TransactionStatus, validator_verifier::ValidatorVerifier,
 };
 #[cfg(test)]
 use safety_rules::ConsensusState;
@@ -918,7 +918,7 @@ impl<T: Payload> EventProcessor<T> {
 
         if finality_proof.ledger_info().next_validator_set().is_some() {
             self.network
-                .broadcast_epoch_change(ValidatorChangeProof::new(
+                .broadcast_epoch_change(EpochChangeProof::new(
                     vec![finality_proof],
                     /* more = */ false,
                 ))

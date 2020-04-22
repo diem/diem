@@ -9,11 +9,11 @@ use libra_types::{
     account_address::AccountAddress,
     account_config::lbr_type_tag,
     block_info::BlockInfo,
+    epoch_change::EpochChangeProof,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::ValidatorSet,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{authenticator::AuthenticationKey, SignedTransaction, Transaction},
-    validator_change::ValidatorChangeProof,
     validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
 };
@@ -98,12 +98,12 @@ impl MockStorage {
         )
     }
 
-    pub fn get_epoch_changes(&self, known_epoch: u64) -> ValidatorChangeProof {
+    pub fn get_epoch_changes(&self, known_epoch: u64) -> EpochChangeProof {
         let mut epoch_change_lis = vec![];
         for epoch_num in known_epoch..self.epoch_num() {
             epoch_change_lis.push(self.ledger_infos.get(&epoch_num).unwrap().clone());
         }
-        ValidatorChangeProof::new(epoch_change_lis, /* more = */ false)
+        EpochChangeProof::new(epoch_change_lis, /* more = */ false)
     }
 
     pub fn get_chunk(

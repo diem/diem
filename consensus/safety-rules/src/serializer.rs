@@ -7,14 +7,14 @@ use consensus_types::{
     timeout::Timeout, vote::Vote, vote_proposal::VoteProposal,
 };
 use libra_crypto::ed25519::Ed25519Signature;
-use libra_types::validator_change::ValidatorChangeProof;
+use libra_types::epoch_change::EpochChangeProof;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, RwLock};
 
 #[derive(Deserialize, Serialize)]
 pub enum SafetyRulesInput<T> {
     ConsensusState,
-    Initialize(Box<ValidatorChangeProof>),
+    Initialize(Box<EpochChangeProof>),
     Update(Box<QuorumCert>),
     #[serde(bound = "T: Payload")]
     ConstructAndSignVote(Box<VoteProposal<T>>),
@@ -79,7 +79,7 @@ impl<T: Payload> TSafetyRules<T> for SerializerClient<T> {
         lcs::from_bytes(&response)?
     }
 
-    fn initialize(&mut self, proof: &ValidatorChangeProof) -> Result<(), Error> {
+    fn initialize(&mut self, proof: &EpochChangeProof) -> Result<(), Error> {
         let response = self.request(SafetyRulesInput::Initialize(Box::new(proof.clone())))?;
         lcs::from_bytes(&response)?
     }

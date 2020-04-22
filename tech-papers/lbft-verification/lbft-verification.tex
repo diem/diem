@@ -65,19 +65,19 @@ Below we give a brief overview of the actors and their verification operations t
 \begin{figure}[ht]
 	\centering
 	\includegraphics[width=\textwidth]{figures/ledger-store.pdf}
-	\caption{\footnotesize{Latest \texttt{LedgerInfo} of an epoch keeps a validator set for the next epoch, forming a \texttt{ValidatorChangeProof} chain.}}
+	\caption{\footnotesize{Latest \texttt{LedgerInfo} of an epoch keeps a validator set for the next epoch, forming a \texttt{EpochChangeProof} chain.}}
 	\label{fig:ledger-store}
 \end{figure}
 
-Fundamentally, each change in the validator set is part of the state managed by the ledger. In order to simplify the protocol the new validator set is also included in the last \texttt{LedgerInfo} of each epoch in a special field \texttt{next\_validator\_set}. As shown in Figure~\ref{fig:ledger-store}, storage keeps last \texttt{LedgerInfo} for every epoch, forming a \texttt{ValidatorChangeProof} chain, in which each new validator set is verified using the public keys of the previous validator set.
+Fundamentally, each change in the validator set is part of the state managed by the ledger. In order to simplify the protocol the new validator set is also included in the last \texttt{LedgerInfo} of each epoch in a special field \texttt{next\_validator\_set}. As shown in Figure~\ref{fig:ledger-store}, storage keeps last \texttt{LedgerInfo} for every epoch, forming a \texttt{EpochChangeProof} chain, in which each new validator set is verified using the public keys of the previous validator set.
 
-The \texttt{ValidatorChangeProof} chain is included in the \texttt{UpdateToLatestLedgerResponse}, hence every participant in the system can maintain the uptodate validator set (given a trusted validator set $VS_i$ one can verify a \texttt{LedgerInfo} with a non-empty \texttt{next\_validator\_set} and thus update its trusted validator set to $VS_{i+1}$). Note that this approach assumes \textbf{some initial} trusted validator set, a challenge thoroughly described in Section~\ref{waypoints}.
+The \texttt{EpochChangeProof} chain is included in the \texttt{UpdateToLatestLedgerResponse}, hence every participant in the system can maintain the uptodate validator set (given a trusted validator set $VS_i$ one can verify a \texttt{LedgerInfo} with a non-empty \texttt{next\_validator\_set} and thus update its trusted validator set to $VS_{i+1}$). Note that this approach assumes \textbf{some initial} trusted validator set, a challenge thoroughly described in Section~\ref{waypoints}.
 
 \subsection{State Synchronization through epochs}
 \label{state-sync-epochs}
 \texttt{StateSynchronizer} could verify the latest \texttt{LedgerInfo} similarly to the way it is done by the clients described above. However, this verification might not be enough: in order for a node to be able to serve state-synchronization to its downstream peers it should store all the end-of-epoch \texttt{LedgerInfos} as well.
 
-Thus, the sync up protocol of \texttt{StateSynchronizer} makes sure that both the transactions and the \texttt{ValidatorChangeProof} are properly synchronized. The downstream peer is managing the known epoch and version; the upstream peer makes sure to deliver all the end-of-epoch \texttt{LedgerInfos} (see Figure~\ref{fig:state-sync-epochs}):
+Thus, the sync up protocol of \texttt{StateSynchronizer} makes sure that both the transactions and the \texttt{EpochChangeProof} are properly synchronized. The downstream peer is managing the known epoch and version; the upstream peer makes sure to deliver all the end-of-epoch \texttt{LedgerInfos} (see Figure~\ref{fig:state-sync-epochs}):
 
 \begin{figure*}[ht]
     \centering
@@ -152,18 +152,18 @@ The textual representation of a Waypoint is  "version:hex encoding of the root h
 
 \subsection{Verifying the latest LedgerInfo with waypoints}
 \label{waypoint-li-verification}
-As described in Section~\ref{verification-epochs}, an \texttt{UpdateToLatestLedgerResponse} message carries a data structure for verifying validator changes, \texttt{ValidatorChangeProof}, which contains a list of all the epoch change \texttt{LedgerInfos}. A client verifies this list in an iterative fashion starting with its initial trusted \texttt{ValidatorSet}.
+As described in Section~\ref{verification-epochs}, an \texttt{UpdateToLatestLedgerResponse} message carries a data structure for verifying validator changes, \texttt{EpochChangeProof}, which contains a list of all the epoch change \texttt{LedgerInfos}. A client verifies this list in an iterative fashion starting with its initial trusted \texttt{ValidatorSet}.
 
 \begin{figure}[ht]
 	\centering
 	\includegraphics[width=\textwidth]{figures/waypoint-verification.pdf}
-	\caption{\footnotesize{The first LedgerInfo in the \texttt{ValidatorChangeProof} is verified via a local waypoint.}}
+	\caption{\footnotesize{The first LedgerInfo in the \texttt{EpochChangeProof} is verified via a local waypoint.}}
 	\label{fig:waypoint-verification}
 \end{figure}
 
 Waypoint verification is working slightly differently as shown in Figure~\ref{fig:waypoint-verification}.
 A waypoint version corresponds to the last version of an epoch (version $0$ being somewhat special and corresponding to the last and only version of epoch $0$).
-Hence, the \texttt{ValidatorChangeProof} in the response starts with the end-of-epoch \texttt{LedgerInfo} corresponding to the waypoint: this very first \texttt{LedgerInfo} is verified using the waypoint. The rest of the epoch changes is verified in a regular manner.
+Hence, the \texttt{EpochChangeProof} in the response starts with the end-of-epoch \texttt{LedgerInfo} corresponding to the waypoint: this very first \texttt{LedgerInfo} is verified using the waypoint. The rest of the epoch changes is verified in a regular manner.
 
 \subsection{State synchronization with waypoints}
 \label{waypoint-state-sync}

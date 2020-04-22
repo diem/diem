@@ -10,13 +10,13 @@ use libra_types::{
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::ContractEvent,
+    epoch_change::EpochChangeProof,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     move_resource::MoveStorage,
     on_chain_config::ValidatorSet,
     proof::{definition::LeafCount, AccumulatorConsistencyProof, SparseMerkleProof},
     transaction::{TransactionListWithProof, TransactionToCommit, TransactionWithProof, Version},
-    validator_change::ValidatorChangeProof,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -133,7 +133,7 @@ pub trait DbReader: Send + Sync {
         &self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> Result<ValidatorChangeProof>;
+    ) -> Result<EpochChangeProof>;
 
     /// See [`LibraDB::get_transactions`].
     ///
@@ -198,7 +198,7 @@ pub trait DbReader: Send + Sync {
         &self,
         known_version: u64,
         ledger_info: LedgerInfoWithSignatures,
-    ) -> Result<(ValidatorChangeProof, AccumulatorConsistencyProof)>;
+    ) -> Result<(EpochChangeProof, AccumulatorConsistencyProof)>;
 
     /// Returns proof of new state relative to version known to client
     fn get_state_proof(
@@ -206,7 +206,7 @@ pub trait DbReader: Send + Sync {
         known_version: u64,
     ) -> Result<(
         LedgerInfoWithSignatures,
-        ValidatorChangeProof,
+        EpochChangeProof,
         AccumulatorConsistencyProof,
     )>;
 

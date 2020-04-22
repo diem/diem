@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    epoch_change::{EpochChangeProof, VerifierType},
     epoch_info::EpochInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::Version,
-    validator_change::{ValidatorChangeProof, VerifierType},
     waypoint::Waypoint,
 };
 use anyhow::{ensure, format_err, Result};
@@ -100,12 +100,12 @@ impl TrustedState {
         })
     }
 
-    /// Verify and ratchet forward our trusted state using a `ValidatorChangeProof`
+    /// Verify and ratchet forward our trusted state using a `EpochChangeProof`
     /// (that moves us into the latest epoch) and a `LedgerInfoWithSignatures`
     /// inside that epoch.
     ///
     /// For example, a client sends an `UpdateToLatestLedgerRequest` to a
-    /// FullNode and receives some validator change proof along with a latest
+    /// FullNode and receives some epoch change proof along with a latest
     /// ledger info inside the `UpdateToLatestLedgerResponse`. This function
     /// verifies the change proof and ratchets the trusted state version forward
     /// if the response successfully moves us into a new epoch or a new latest
@@ -128,7 +128,7 @@ impl TrustedState {
     pub fn verify_and_ratchet<'a>(
         &self,
         latest_li: &'a LedgerInfoWithSignatures,
-        validator_change_proof: &'a ValidatorChangeProof,
+        epoch_change_proof: &'a EpochChangeProof,
     ) -> Result<TrustedStateChange<'a>> {
         let res_version = latest_li.ledger_info().version();
         ensure!(
@@ -140,14 +140,16 @@ impl TrustedState {
             .verifier
             .epoch_change_verification_required(latest_li.ledger_info().next_block_epoch())
         {
-            // Verify the ValidatorChangeProof to move us into the latest epoch.
-            let epoch_change_li = validator_change_proof.verify(&self.verifier)?;
+            // Verify the EpochChangeProof to move us into the latest epoch.
+            let epoch_change_li = epoch_change_proof.verify(&self.verifier)?;
             let new_validator_set = epoch_change_li
-                    .ledger_info()
-                    .next_validator_set()
-                    .ok_or_else(|| format_err!(
-                        "A valid ValidatorChangeProof will never return a non-epoch change ledger info"
-                    ))?;
+                .ledger_info()
+                .next_validator_set()
+                .ok_or_else(|| {
+                    format_err!(
+                        "A valid EpochChangeProof will never return a non-epoch change ledger info"
+                    )
+                })?;
             let new_validator_verifier = Arc::new(new_validator_set.into());
             let new_epoch_info = EpochInfo {
                 epoch: epoch_change_li.ledger_info().epoch() + 1,
@@ -173,7 +175,7 @@ impl TrustedState {
                 latest_epoch_change_li: epoch_change_li,
             })
         } else {
-            // The ValidatorChangeProof is empty, stale, or only gets us into our
+            // The EpochChangeProof is empty, stale, or only gets us into our
             // current epoch. We then try to verify that the latest ledger info
             // is this epoch.
             // FIXME: store and verify the root hash if the version equals once new_trust_any_genesis_WARNING_UNSAFE

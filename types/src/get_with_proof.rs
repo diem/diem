@@ -9,6 +9,7 @@ use crate::{
     account_config::AccountResource,
     account_state_blob::AccountStateWithProof,
     contract_event::EventWithProof,
+    epoch_change::EpochChangeProof,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     proof::AccumulatorConsistencyProof,
     proto::types::{
@@ -19,7 +20,6 @@ use crate::{
     },
     transaction::{TransactionListWithProof, TransactionWithProof, Version},
     trusted_state::{TrustedState, TrustedStateChange},
-    validator_change::ValidatorChangeProof,
 };
 use anyhow::{bail, ensure, format_err, Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
@@ -79,7 +79,7 @@ impl From<UpdateToLatestLedgerRequest> for crate::proto::types::UpdateToLatestLe
 pub struct UpdateToLatestLedgerResponse {
     pub response_items: Vec<ResponseItem>,
     pub ledger_info_with_sigs: LedgerInfoWithSignatures,
-    pub validator_change_proof: ValidatorChangeProof,
+    pub epoch_change_proof: EpochChangeProof,
     pub ledger_consistency_proof: AccumulatorConsistencyProof,
 }
 
@@ -96,8 +96,8 @@ impl TryFrom<crate::proto::types::UpdateToLatestLedgerResponse> for UpdateToLate
             .ledger_info_with_sigs
             .unwrap_or_else(Default::default)
             .try_into()?;
-        let validator_change_proof = proto
-            .validator_change_proof
+        let epoch_change_proof = proto
+            .epoch_change_proof
             .unwrap_or_else(Default::default)
             .try_into()?;
         let ledger_consistency_proof = proto
@@ -108,7 +108,7 @@ impl TryFrom<crate::proto::types::UpdateToLatestLedgerResponse> for UpdateToLate
         Ok(Self {
             response_items,
             ledger_info_with_sigs,
-            validator_change_proof,
+            epoch_change_proof,
             ledger_consistency_proof,
         })
     }
@@ -122,13 +122,13 @@ impl From<UpdateToLatestLedgerResponse> for crate::proto::types::UpdateToLatestL
             .map(Into::into)
             .collect();
         let ledger_info_with_sigs = Some(response.ledger_info_with_sigs.into());
-        let validator_change_proof = Some(response.validator_change_proof.into());
+        let epoch_change_proof = Some(response.epoch_change_proof.into());
         let ledger_consistency_proof = Some(response.ledger_consistency_proof.into());
 
         Self {
             response_items,
             ledger_info_with_sigs,
-            validator_change_proof,
+            epoch_change_proof,
             ledger_consistency_proof,
         }
     }
@@ -139,13 +139,13 @@ impl UpdateToLatestLedgerResponse {
     pub fn new(
         response_items: Vec<ResponseItem>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
-        validator_change_proof: ValidatorChangeProof,
+        epoch_change_proof: EpochChangeProof,
         ledger_consistency_proof: AccumulatorConsistencyProof,
     ) -> Self {
         UpdateToLatestLedgerResponse {
             response_items,
             ledger_info_with_sigs,
-            validator_change_proof,
+            epoch_change_proof,
             ledger_consistency_proof,
         }
     }
@@ -166,21 +166,21 @@ impl UpdateToLatestLedgerResponse {
             &request.requested_items,
             &self.response_items,
             &self.ledger_info_with_sigs,
-            &self.validator_change_proof,
+            &self.epoch_change_proof,
         )
     }
 }
 
 /// Verifies content of an [`UpdateToLatestLedgerResponse`] against the proofs it
 /// carries and the content of the corresponding [`UpdateToLatestLedgerRequest`]
-/// Return EpochInfo if there're validator change events.
+/// Return EpochInfo if there're epoch change events.
 pub fn verify_update_to_latest_ledger_response<'a>(
     trusted_state: &TrustedState,
     req_client_known_version: u64,
     req_request_items: &[RequestItem],
     response_items: &[ResponseItem],
     ledger_info_with_sigs: &'a LedgerInfoWithSignatures,
-    validator_change_proof: &'a ValidatorChangeProof,
+    epoch_change_proof: &'a EpochChangeProof,
 ) -> Result<TrustedStateChange<'a>> {
     let ledger_info = ledger_info_with_sigs.ledger_info();
 
@@ -192,10 +192,10 @@ pub fn verify_update_to_latest_ledger_response<'a>(
         req_client_known_version,
     );
 
-    // Verify any validator change proof and latest ledger info. Provide an
+    // Verify any epoch change proof and latest ledger info. Provide an
     // updated trusted state if the proof is correct and not stale.
     let trusted_state_change =
-        trusted_state.verify_and_ratchet(ledger_info_with_sigs, validator_change_proof)?;
+        trusted_state.verify_and_ratchet(ledger_info_with_sigs, epoch_change_proof)?;
 
     // Verify each sub response.
     ensure!(

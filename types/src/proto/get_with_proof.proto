@@ -116,7 +116,7 @@ import "events.proto";
 import "ledger_info.proto";
 import "proof.proto";
 import "transaction.proto";
-import "validator_change.proto";
+import "epoch_change.proto";
 
 // -----------------------------------------------------------------------------
 // ---------------- Update to latest ledger request
@@ -168,10 +168,10 @@ message UpdateToLatestLedgerResponse {
   // extends the old ledger the client had.
   LedgerInfoWithSignatures ledger_info_with_sigs = 2;
 
-  // A proof for Validator changes from what the client last knew. This is
-  // used to inform the client of validator changes from the client's last
+  // A proof for epoch changes from what the client last knew. This is
+  // used to inform the client of epoch changes from the client's last
   // known version until the current version.
-  ValidatorChangeProof validator_change_proof = 3;
+  EpochChangeProof epoch_change_proof = 3;
 
   // A proof that shows the latest ledger accumulator is consistent with the
   // old accumulator at "client_known_version".

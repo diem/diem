@@ -45,12 +45,12 @@ fn test_genesis() {
     let (config, _genesis_key) = config_builder::test_config();
     let (db, _executor) = create_db_and_executor(&config);
 
-    let (li, validator_change_proof, _accumulator_consistency_proof) =
+    let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
 
     let trusted_state = TrustedState::from_waypoint(config.base.waypoint.unwrap());
     trusted_state
-        .verify_and_ratchet(&li, &validator_change_proof)
+        .verify_and_ratchet(&li, &epoch_change_proof)
         .unwrap();
     let li = li.ledger_info();
     assert_eq!(li.version(), 0);
@@ -284,11 +284,11 @@ fn test_change_publishing_option_to_custom() {
         "executor commit should return reconfig events for reconfiguration"
     );
 
-    let (li, validator_change_proof, _accumulator_consistency_proof) =
+    let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
     let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
     trusted_state
-        .verify_and_ratchet(&li, &validator_change_proof)
+        .verify_and_ratchet(&li, &epoch_change_proof)
         .unwrap();
     let current_version = li.ledger_info().version();
     assert_eq!(current_version, 3);
@@ -337,10 +337,10 @@ fn test_change_publishing_option_to_custom() {
         "expect executor to reutrn no reconfig events"
     );
 
-    let (li, validator_change_proof, _accumulator_consistency_proof) =
+    let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(current_version).unwrap();
     trusted_state
-        .verify_and_ratchet(&li, &validator_change_proof)
+        .verify_and_ratchet(&li, &epoch_change_proof)
         .unwrap();
     let current_version = li.ledger_info().version();
     assert_eq!(current_version, 5);
@@ -462,11 +462,11 @@ fn test_extend_whitelist() {
         "executor commit should return reconfig events for reconfiguration"
     );
 
-    let (li, validator_change_proof, _accumulator_consistency_proof) =
+    let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
     let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
     trusted_state
-        .verify_and_ratchet(&li, &validator_change_proof)
+        .verify_and_ratchet(&li, &epoch_change_proof)
         .unwrap();
     let current_version = li.ledger_info().version();
     assert_eq!(current_version, 3);
@@ -518,10 +518,10 @@ fn test_extend_whitelist() {
         "expect executor to reutrn no reconfig events"
     );
 
-    let (li, validator_change_proof, _accumulator_consistency_proof) =
+    let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(current_version).unwrap();
     trusted_state
-        .verify_and_ratchet(&li, &validator_change_proof)
+        .verify_and_ratchet(&li, &epoch_change_proof)
         .unwrap();
     let current_version = li.ledger_info().version();
     assert_eq!(current_version, 4);
@@ -697,11 +697,11 @@ fn test_execution_with_storage() {
         "expected no reconfiguration event from executor commit"
     );
 
-    let (li, validator_change_proof, _accumulator_consistency_proof) =
+    let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
     let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
     trusted_state
-        .verify_and_ratchet(&li, &validator_change_proof)
+        .verify_and_ratchet(&li, &epoch_change_proof)
         .unwrap();
     let current_version = li.ledger_info().version();
     assert_eq!(current_version, 6);
@@ -837,10 +837,10 @@ fn test_execution_with_storage() {
         .commit_blocks(vec![block2_id], ledger_info_with_sigs)
         .unwrap();
 
-    let (li, validator_change_proof, _accumulator_consistency_proof) =
+    let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(current_version).unwrap();
     trusted_state
-        .verify_and_ratchet(&li, &validator_change_proof)
+        .verify_and_ratchet(&li, &epoch_change_proof)
         .unwrap();
     let current_version = li.ledger_info().version();
     assert_eq!(current_version, 20);

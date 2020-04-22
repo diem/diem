@@ -295,7 +295,7 @@ impl NetworkPlayground {
     }
 
     pub fn epoch_change_only<T>(msg: &(Author, ConsensusMsg<T>)) -> bool {
-        matches!(&msg.1, ConsensusMsg::ValidatorChangeProof(_))
+        matches!(&msg.1, ConsensusMsg::EpochChangeProof(_))
     }
 
     fn is_message_dropped(&self, src: &Author, net_req: &PeerManagerRequest) -> bool {

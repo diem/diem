@@ -12,6 +12,7 @@ use libra_types::{
     account_config::{from_currency_code_string, AccountResource, LBR_NAME},
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
+    epoch_change::EpochChangeProof,
     event::EventHandle,
     get_with_proof::{RequestItem, ResponseItem},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -26,7 +27,6 @@ use libra_types::{
     },
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{Transaction, Version},
-    validator_change::ValidatorChangeProof,
     vm_error::StatusCode,
 };
 use rand::{
@@ -56,7 +56,7 @@ impl StorageRead for MockStorageReadClient {
     ) -> Result<(
         Vec<ResponseItem>,
         LedgerInfoWithSignatures,
-        ValidatorChangeProof,
+        EpochChangeProof,
         AccumulatorConsistencyProof,
     )> {
         let request = libra_types::get_with_proof::UpdateToLatestLedgerRequest::new(
@@ -71,7 +71,7 @@ impl StorageRead for MockStorageReadClient {
         let ret = (
             response.response_items,
             response.ledger_info_with_sigs,
-            response.validator_change_proof,
+            response.epoch_change_proof,
             response.ledger_consistency_proof,
         );
         Ok(ret)
@@ -114,7 +114,7 @@ impl StorageRead for MockStorageReadClient {
         &self,
         _start_epoch: u64,
         _end_epoch: u64,
-    ) -> Result<ValidatorChangeProof> {
+    ) -> Result<EpochChangeProof> {
         unimplemented!()
     }
 

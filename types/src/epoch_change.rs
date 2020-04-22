@@ -19,14 +19,14 @@ use std::{
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 /// A vector of LedgerInfo with contiguous increasing epoch numbers to prove a sequence of
-/// validator changes from the first LedgerInfo's epoch.
-pub struct ValidatorChangeProof {
+/// epoch changes from the first LedgerInfo's epoch.
+pub struct EpochChangeProof {
     pub ledger_info_with_sigs: Vec<LedgerInfoWithSignatures>,
     pub more: bool,
 }
 
 #[derive(Clone, Debug)]
-/// The verification of the validator change proof starts with some verifier that is trusted by the
+/// The verification of the epoch change proof starts with some verifier that is trusted by the
 /// client: could be either a waypoint (upon startup) or a known validator verifier.
 pub enum VerifierType {
     Waypoint(Waypoint),
@@ -51,7 +51,7 @@ impl VerifierType {
     }
 
     /// Returns true in case the given epoch is larger than the existing verifier can support.
-    /// In this case the ValidatorChangeProof should be verified and the verifier updated.
+    /// In this case the EpochChangeProof should be verified and the verifier updated.
     pub fn epoch_change_verification_required(&self, epoch: u64) -> bool {
         match self {
             VerifierType::Waypoint(_) => true,
@@ -76,7 +76,7 @@ impl VerifierType {
     }
 }
 
-impl ValidatorChangeProof {
+impl EpochChangeProof {
     pub fn new(ledger_info_with_sigs: Vec<LedgerInfoWithSignatures>, more: bool) -> Self {
         Self {
             ledger_info_with_sigs,
@@ -89,7 +89,7 @@ impl ValidatorChangeProof {
         self.ledger_info_with_sigs
             .first()
             .map(|li| li.ledger_info().epoch())
-            .ok_or_else(|| format_err!("Empty ValidatorChangeProof"))
+            .ok_or_else(|| format_err!("Empty EpochChangeProof"))
     }
 
     /// Verify the proof is correctly chained with known epoch and validator
@@ -99,17 +99,17 @@ impl ValidatorChangeProof {
     /// very first epoch change (it's the responsibility of the caller to not
     /// pass a waypoint in case it's not needed).
     ///
-    /// We will also skip any stale ledger info's in the [`ValidatorChangeProof`].
+    /// We will also skip any stale ledger info's in the [`EpochChangeProof`].
     pub fn verify(&self, verifier: &VerifierType) -> Result<&LedgerInfoWithSignatures> {
         ensure!(
             !self.ledger_info_with_sigs.is_empty(),
-            "The ValidatorChangeProof is empty"
+            "The EpochChangeProof is empty"
         );
         ensure!(
             !verifier
                 .is_ledger_info_stale(self.ledger_info_with_sigs.last().unwrap().ledger_info()),
-            "The ValidatorChangeProof is stale as our verifier is already ahead \
-             of the entire ValidatorChangeProof"
+            "The EpochChangeProof is stale as our verifier is already ahead \
+             of the entire EpochChangeProof"
         );
 
         self.ledger_info_with_sigs
@@ -129,7 +129,7 @@ impl ValidatorChangeProof {
             //
             // If A's response returns first, I will ratchet my trusted state
             // to epoch 9. When B's response returns, I will still be able to
-            // ratchet forward to 11 even though B's ValidatorChangeProof
+            // ratchet forward to 11 even though B's EpochChangeProof
             // includes a bunch of stale ledger infos (for epochs 5, 6, 7, 8).
             //
             // Of course, if B's response returns first, we will reject A's
@@ -137,7 +137,7 @@ impl ValidatorChangeProof {
             .skip_while(|&ledger_info_with_sigs| {
                 verifier.is_ledger_info_stale(ledger_info_with_sigs.ledger_info())
             })
-            // Try to verify each (epoch -> epoch + 1) jump in the ValidatorChangeProof.
+            // Try to verify each (epoch -> epoch + 1) jump in the EpochChangeProof.
             .try_fold(verifier.clone(), |verifier, ledger_info_with_sigs| {
                 verifier.verify(ledger_info_with_sigs)?;
                 // While the original verification could've been via waypoints,
@@ -159,10 +159,10 @@ impl ValidatorChangeProof {
     }
 }
 
-impl TryFrom<crate::proto::types::ValidatorChangeProof> for ValidatorChangeProof {
+impl TryFrom<crate::proto::types::EpochChangeProof> for EpochChangeProof {
     type Error = Error;
 
-    fn try_from(proto: crate::proto::types::ValidatorChangeProof) -> Result<Self> {
+    fn try_from(proto: crate::proto::types::EpochChangeProof) -> Result<Self> {
         let ledger_info_with_sigs = proto
             .ledger_info_with_sigs
             .into_iter()
@@ -170,15 +170,15 @@ impl TryFrom<crate::proto::types::ValidatorChangeProof> for ValidatorChangeProof
             .collect::<Result<Vec<_>>>()?;
         let more = proto.more;
 
-        Ok(ValidatorChangeProof {
+        Ok(EpochChangeProof {
             ledger_info_with_sigs,
             more,
         })
     }
 }
 
-impl From<ValidatorChangeProof> for crate::proto::types::ValidatorChangeProof {
-    fn from(change: ValidatorChangeProof) -> Self {
+impl From<EpochChangeProof> for crate::proto::types::EpochChangeProof {
+    fn from(change: EpochChangeProof) -> Self {
         Self {
             ledger_info_with_sigs: change
                 .ledger_info_with_sigs
@@ -191,7 +191,7 @@ impl From<ValidatorChangeProof> for crate::proto::types::ValidatorChangeProof {
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
-impl Arbitrary for ValidatorChangeProof {
+impl Arbitrary for EpochChangeProof {
     type Parameters = ();
     type Strategy = BoxedStrategy<Self>;
 
@@ -208,7 +208,7 @@ mod tests {
     use crate::block_info::BlockInfo;
 
     #[test]
-    fn verify_validator_set_change_proof() {
+    fn verify_epoch_change_proof() {
         use crate::{ledger_info::LedgerInfo, validator_verifier::random_validator_verifier};
         use libra_crypto::hash::{CryptoHash, HashValue};
         use std::collections::BTreeMap;
@@ -249,7 +249,7 @@ mod tests {
         }
 
         // Test well-formed proof will succeed
-        let proof_1 = ValidatorChangeProof::new(valid_ledger_info.clone(), /* more = */ false);
+        let proof_1 = EpochChangeProof::new(valid_ledger_info.clone(), /* more = */ false);
         assert!(proof_1
             .verify(&VerifierType::TrustedVerifier(EpochInfo {
                 epoch: all_epoch[0],
@@ -258,7 +258,7 @@ mod tests {
             .is_ok());
 
         let proof_2 =
-            ValidatorChangeProof::new(valid_ledger_info[2..5].to_vec(), /* more = */ false);
+            EpochChangeProof::new(valid_ledger_info[2..5].to_vec(), /* more = */ false);
         assert!(proof_2
             .verify(&VerifierType::TrustedVerifier(EpochInfo {
                 epoch: all_epoch[2],
@@ -275,7 +275,7 @@ mod tests {
             .is_ok());
 
         // Test empty proof will fail verification
-        let proof_3 = ValidatorChangeProof::new(vec![], /* more = */ false);
+        let proof_3 = EpochChangeProof::new(vec![], /* more = */ false);
         assert!(proof_3
             .verify(&VerifierType::TrustedVerifier(EpochInfo {
                 epoch: all_epoch[0],
@@ -286,7 +286,7 @@ mod tests {
         // Test non contiguous proof will fail
         let mut list = valid_ledger_info[3..5].to_vec();
         list.extend_from_slice(&valid_ledger_info[8..9]);
-        let proof_4 = ValidatorChangeProof::new(list, /* more = */ false);
+        let proof_4 = EpochChangeProof::new(list, /* more = */ false);
         assert!(proof_4
             .verify(&VerifierType::TrustedVerifier(EpochInfo {
                 epoch: all_epoch[3],
@@ -297,7 +297,7 @@ mod tests {
         // Test non increasing proof will fail
         let mut list = valid_ledger_info.clone();
         list.reverse();
-        let proof_5 = ValidatorChangeProof::new(list, /* more = */ false);
+        let proof_5 = EpochChangeProof::new(list, /* more = */ false);
         assert!(proof_5
             .verify(&VerifierType::TrustedVerifier(EpochInfo {
                 epoch: all_epoch[9],
@@ -306,7 +306,7 @@ mod tests {
             .is_err());
 
         // Test proof with invalid signatures will fail
-        let proof_6 = ValidatorChangeProof::new(
+        let proof_6 = EpochChangeProof::new(
             vec![LedgerInfoWithSignatures::new(
                 valid_ledger_info[0].ledger_info().clone(),
                 BTreeMap::new(),
@@ -335,14 +335,13 @@ mod tests {
         // Waypoint before proof range will fail to verify
         let waypoint_for_3_to_4 = Waypoint::new(valid_ledger_info[2].ledger_info()).unwrap();
         let proof_7 =
-            ValidatorChangeProof::new(valid_ledger_info[4..8].to_vec(), /* more */ false);
+            EpochChangeProof::new(valid_ledger_info[4..8].to_vec(), /* more */ false);
         assert!(proof_7
             .verify(&VerifierType::Waypoint(waypoint_for_3_to_4))
             .is_err());
 
         // Waypoint after proof range will fail to verify
-        let proof_8 =
-            ValidatorChangeProof::new(valid_ledger_info[..1].to_vec(), /* more */ false);
+        let proof_8 = EpochChangeProof::new(valid_ledger_info[..1].to_vec(), /* more */ false);
         assert!(proof_8
             .verify(&VerifierType::Waypoint(waypoint_for_3_to_4))
             .is_err());

@@ -11,7 +11,7 @@ use executor_types::StateComputeResult;
 use futures::channel::mpsc;
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use libra_logger::prelude::*;
-use libra_types::{ledger_info::LedgerInfoWithSignatures, validator_change::ValidatorChangeProof};
+use libra_types::{epoch_change::EpochChangeProof, ledger_info::LedgerInfoWithSignatures};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -110,7 +110,7 @@ impl StateComputer for MockStateComputer {
         &self,
         _start_epoch: u64,
         _end_epoch: u64,
-    ) -> Result<ValidatorChangeProof> {
+    ) -> Result<EpochChangeProof> {
         Err(format_err!(
             "epoch proof not supported in mock state computer"
         ))
@@ -153,7 +153,7 @@ impl StateComputer for EmptyStateComputer {
         &self,
         _start_epoch: u64,
         _end_epoch: u64,
-    ) -> Result<ValidatorChangeProof> {
+    ) -> Result<EpochChangeProof> {
         Err(format_err!(
             "epoch proof not supported in empty state computer"
         ))

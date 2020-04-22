@@ -10,6 +10,7 @@ use crate::{
     block_metadata::BlockMetadata,
     contract_event::ContractEvent,
     discovery_info::DiscoveryInfo,
+    epoch_change::EpochChangeProof,
     event::{EventHandle, EventKey},
     get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
     language_storage::{StructTag, TypeTag},
@@ -21,7 +22,6 @@ use crate::{
         Transaction, TransactionArgument, TransactionListWithProof, TransactionPayload,
         TransactionStatus, TransactionToCommit, Version,
     },
-    validator_change::ValidatorChangeProof,
     vm_error::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
@@ -590,13 +590,13 @@ prop_compose! {
     fn arb_update_to_latest_ledger_response()(
         response_items in vec(any::<ResponseItem>(), 0..10),
         ledger_info_with_sigs in any::<LedgerInfoWithSignatures>(),
-        validator_change_proof in any::<ValidatorChangeProof>(),
+        epoch_change_proof in any::<EpochChangeProof>(),
         ledger_consistency_proof in any::<AccumulatorConsistencyProof>(),
     ) -> UpdateToLatestLedgerResponse {
         UpdateToLatestLedgerResponse::new(
             response_items,
             ledger_info_with_sigs,
-            validator_change_proof,
+            epoch_change_proof,
             ledger_consistency_proof,
         )
     }
