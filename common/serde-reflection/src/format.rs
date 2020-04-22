@@ -102,6 +102,12 @@ pub enum VariantFormat {
 }
 
 pub trait FormatHolder {
+    /// Visit all the formats in `self` in a depth-first way.
+    fn visit(&self, f: &mut dyn FnMut(&Format) -> Result<()>) -> Result<()>;
+
+    /// Mutably visit all the formats in `self` in a depth-first way.
+    fn visit_mut(&mut self, f: &mut dyn FnMut(&mut Format) -> Result<()>) -> Result<()>;
+
     /// Update `self` in order to match `other`. The changes consist in
     /// replacing `Unknown` formats and adding missing variants wherever necessary.
     /// This can be seen as form of a
@@ -110,7 +116,33 @@ pub trait FormatHolder {
 
     /// Finalize the formats within `self` by making sure they contain no `Unknown` formats
     /// and that all eligible tuples are compressed into a `TupleArray`.
-    fn normalize(&mut self) -> Result<()>;
+    fn normalize(&mut self) -> Result<()> {
+        self.visit_mut(&mut |format: &mut Format| {
+            let normalized = match format {
+                Format::Tuple(formats) => {
+                    let size = formats.len();
+                    if size <= 1 {
+                        return Ok(());
+                    }
+                    let format0 = &formats[0];
+                    for format in formats.iter().skip(1) {
+                        if format != format0 {
+                            return Ok(());
+                        }
+                    }
+                    Format::TupleArray {
+                        content: Box::new(std::mem::take(&mut formats[0])),
+                        size,
+                    }
+                }
+                _ => {
+                    return Ok(());
+                }
+            };
+            *format = normalized;
+            Ok(())
+        })
+    }
 }
 
 fn unification_error<T>(v1: T, v2: T) -> Error
@@ -121,6 +153,48 @@ where
 }
 
 impl FormatHolder for VariantFormat {
+    fn visit(&self, f: &mut dyn FnMut(&Format) -> Result<()>) -> Result<()> {
+        match self {
+            Self::Unknown => {
+                return Err(Error::UnknownFormat);
+            }
+            Self::Unit => (),
+            Self::NewType(format) => format.visit(f)?,
+            Self::Tuple(formats) => {
+                for format in formats {
+                    format.visit(f)?;
+                }
+            }
+            Self::Struct(named_formats) => {
+                for format in named_formats {
+                    format.visit(f)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn visit_mut(&mut self, f: &mut dyn FnMut(&mut Format) -> Result<()>) -> Result<()> {
+        match self {
+            Self::Unknown => {
+                return Err(Error::UnknownFormat);
+            }
+            Self::Unit => (),
+            Self::NewType(format) => format.visit_mut(f)?,
+            Self::Tuple(formats) => {
+                for format in formats {
+                    format.visit_mut(f)?;
+                }
+            }
+            Self::Struct(named_formats) => {
+                for format in named_formats {
+                    format.visit_mut(f)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     fn unify(&mut self, mut format: VariantFormat) -> Result<()> {
         // Matching `&mut format` instead of `format` because of
         //   "error[E0009]: cannot bind by-move and by-ref in the same pattern"
@@ -167,45 +241,75 @@ impl FormatHolder for VariantFormat {
         }
         Ok(())
     }
-
-    fn normalize(&mut self) -> Result<()> {
-        match self {
-            Self::Unknown => Err(Error::UnknownFormat),
-            Self::Unit => Ok(()),
-            Self::NewType(format) => format.normalize(),
-            Self::Tuple(formats) => {
-                for format in formats {
-                    format.normalize()?;
-                }
-                Ok(())
-            }
-            Self::Struct(named_formats) => {
-                for format in named_formats {
-                    format.normalize()?;
-                }
-                Ok(())
-            }
-        }
-    }
 }
 
 impl<T> FormatHolder for Named<T>
 where
     T: FormatHolder + std::fmt::Debug,
 {
+    fn visit(&self, f: &mut dyn FnMut(&Format) -> Result<()>) -> Result<()> {
+        self.value.visit(f)
+    }
+
+    fn visit_mut(&mut self, f: &mut dyn FnMut(&mut Format) -> Result<()>) -> Result<()> {
+        self.value.visit_mut(f)
+    }
+
     fn unify(&mut self, other: Named<T>) -> Result<()> {
         if self.name != other.name {
             return Err(unification_error(&*self, &other));
         }
         self.value.unify(other.value)
     }
-
-    fn normalize(&mut self) -> Result<()> {
-        self.value.normalize()
-    }
 }
 
 impl FormatHolder for ContainerFormat {
+    fn visit(&self, f: &mut dyn FnMut(&Format) -> Result<()>) -> Result<()> {
+        match self {
+            Self::UnitStruct => (),
+            Self::NewTypeStruct(format) => format.visit(f)?,
+            Self::TupleStruct(formats) => {
+                for format in formats {
+                    format.visit(f)?;
+                }
+            }
+            Self::Struct(named_formats) => {
+                for format in named_formats {
+                    format.visit(f)?;
+                }
+            }
+            Self::Enum(variants) => {
+                for variant in variants {
+                    variant.1.visit(f)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn visit_mut(&mut self, f: &mut dyn FnMut(&mut Format) -> Result<()>) -> Result<()> {
+        match self {
+            Self::UnitStruct => (),
+            Self::NewTypeStruct(format) => format.visit_mut(f)?,
+            Self::TupleStruct(formats) => {
+                for format in formats {
+                    format.visit_mut(f)?;
+                }
+            }
+            Self::Struct(named_formats) => {
+                for format in named_formats {
+                    format.visit_mut(f)?;
+                }
+            }
+            Self::Enum(variants) => {
+                for variant in variants {
+                    variant.1.visit_mut(f)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     fn unify(&mut self, mut format: ContainerFormat) -> Result<()> {
         // Matching `&mut format` instead of `format` because of
         // "error[E0009]: cannot bind by-move and by-ref in the same pattern"
@@ -260,38 +364,101 @@ impl FormatHolder for ContainerFormat {
         }
         Ok(())
     }
-
-    fn normalize(&mut self) -> Result<()> {
-        match self {
-            Self::UnitStruct => Ok(()),
-
-            Self::NewTypeStruct(format) => format.normalize(),
-
-            Self::TupleStruct(formats) => {
-                for format in formats {
-                    format.normalize()?;
-                }
-                Ok(())
-            }
-
-            Self::Struct(named_formats) => {
-                for format in named_formats {
-                    format.normalize()?;
-                }
-                Ok(())
-            }
-
-            Self::Enum(variants) => {
-                for variant in variants.values_mut() {
-                    variant.normalize()?;
-                }
-                Ok(())
-            }
-        }
-    }
 }
 
 impl FormatHolder for Format {
+    fn visit(&self, f: &mut dyn FnMut(&Format) -> Result<()>) -> Result<()> {
+        match self {
+            Self::Unknown => {
+                return Err(Error::UnknownFormat);
+            }
+            Self::TypeName(_)
+            | Self::Unit
+            | Self::Bool
+            | Self::I8
+            | Self::I16
+            | Self::I32
+            | Self::I64
+            | Self::I128
+            | Self::U8
+            | Self::U16
+            | Self::U32
+            | Self::U64
+            | Self::U128
+            | Self::F32
+            | Self::F64
+            | Self::Char
+            | Self::Str
+            | Self::Bytes => (),
+
+            Self::Option(format)
+            | Self::Seq(format)
+            | Self::TupleArray {
+                content: format, ..
+            } => {
+                format.visit(f)?;
+            }
+
+            Self::Map { key, value } => {
+                key.visit(f)?;
+                value.visit(f)?;
+            }
+
+            Self::Tuple(formats) => {
+                for format in formats {
+                    format.visit(f)?;
+                }
+            }
+        }
+        f(self)
+    }
+
+    fn visit_mut(&mut self, f: &mut dyn FnMut(&mut Format) -> Result<()>) -> Result<()> {
+        match self {
+            Self::Unknown => {
+                return Err(Error::UnknownFormat);
+            }
+            Self::TypeName(_)
+            | Self::Unit
+            | Self::Bool
+            | Self::I8
+            | Self::I16
+            | Self::I32
+            | Self::I64
+            | Self::I128
+            | Self::U8
+            | Self::U16
+            | Self::U32
+            | Self::U64
+            | Self::U128
+            | Self::F32
+            | Self::F64
+            | Self::Char
+            | Self::Str
+            | Self::Bytes => {}
+
+            Self::Option(format)
+            | Self::Seq(format)
+            | Self::TupleArray {
+                content: format, ..
+            } => {
+                format.visit_mut(f)?;
+            }
+
+            Self::Map { key, value } => {
+                key.visit_mut(f)?;
+                value.visit_mut(f)?;
+            }
+
+            Self::Tuple(formats) => {
+                for format in formats {
+                    format.visit_mut(f)?;
+                }
+            }
+        }
+        f(self)
+    }
+
     /// Unify the newly "traced" value `format` into the current format.
     /// Note that there should be no `TupleArray`s at this point.
     fn unify(&mut self, mut format: Format) -> Result<()> {
@@ -365,73 +532,6 @@ impl FormatHolder for Format {
                 return Err(unification_error(self, &mut format));
             }
         }
-        Ok(())
-    }
-
-    fn normalize(&mut self) -> Result<()> {
-        let normalized_tuple;
-        match self {
-            Self::TypeName(_)
-            | Self::Unit
-            | Self::Bool
-            | Self::I8
-            | Self::I16
-            | Self::I32
-            | Self::I64
-            | Self::I128
-            | Self::U8
-            | Self::U16
-            | Self::U32
-            | Self::U64
-            | Self::U128
-            | Self::F32
-            | Self::F64
-            | Self::Char
-            | Self::Str
-            | Self::Bytes => {
-                return Ok(());
-            }
-
-            Self::Unknown => {
-                return Err(Error::UnknownFormat);
-            }
-
-            Self::Option(format)
-            | Self::Seq(format)
-            | Self::TupleArray {
-                content: format, ..
-            } => {
-                return format.normalize();
-            }
-
-            Self::Map { key, value } => {
-                key.normalize()?;
-                return value.normalize();
-            }
-
-            // The only case where compression happens.
-            Self::Tuple(formats) => {
-                for format in formats.iter_mut() {
-                    format.normalize()?;
-                }
-                let size = formats.len();
-                if size <= 1 {
-                    return Ok(());
-                }
-                let format0 = &formats[0];
-                for format in formats.iter().skip(1) {
-                    if format != format0 {
-                        return Ok(());
-                    }
-                }
-                normalized_tuple = Self::TupleArray {
-                    content: Box::new(std::mem::take(&mut formats[0])),
-                    size,
-                };
-                // fall to final statement to mutate self
-            }
-        }
-        *self = normalized_tuple;
         Ok(())
     }
 }
