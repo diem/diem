@@ -5,8 +5,7 @@
 use crate::types::{
     OnchainDiscoveryMsg, QueryDiscoverySetRequest, QueryDiscoverySetResponseWithEvent,
 };
-use channel::libra_channel;
-use channel::message_queues::QueueStyle;
+use channel::{libra_channel, message_queues::QueueStyle};
 use futures::{channel::mpsc, sink::SinkExt};
 use libra_types::PeerId;
 use network::{
