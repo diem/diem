@@ -2,6 +2,7 @@
 //! account: bob, 10000
 
 //! sender: alice
+//! gas-price: 1
 //! args: 0
 main(abrt: u64) {
     assert(move(abrt) == 0, 77);
@@ -13,6 +14,7 @@ main(abrt: u64) {
 
 //! new-transaction
 //! sender: bob
+//! gas-price: 1
 //! args: 1
 main(abrt: u64) {
     assert(move(abrt) == 0, 78);

@@ -1,5 +1,6 @@
 //! account: default, 10000, 0
 
+//! gas-price: 1
 //! max-gas: 5000
 main() {
     return;

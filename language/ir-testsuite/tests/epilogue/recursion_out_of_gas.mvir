@@ -9,6 +9,7 @@ module M {
 
 
 //! new-transaction
+//! gas-price: 1
 //! max-gas: 5000
 import {{default}}.M;
 

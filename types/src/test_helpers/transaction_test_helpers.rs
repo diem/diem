@@ -10,7 +10,7 @@ use libra_crypto::{ed25519::*, hash::CryptoHash, traits::*};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const MAX_GAS_AMOUNT: u64 = 1_000_000;
-const MAX_GAS_PRICE: u64 = 1;
+const TEST_GAS_PRICE: u64 = 0;
 
 static EMPTY_SCRIPT: &[u8] =
     include_bytes!("../../../language/stdlib/staged/transaction_scripts/empty_script.mv");
@@ -33,7 +33,7 @@ pub fn get_test_signed_module_publishing_transaction(
         sequence_number,
         module,
         MAX_GAS_AMOUNT,
-        MAX_GAS_PRICE,
+        TEST_GAS_PRICE,
         Duration::from_secs(expiration_time),
     );
 
@@ -113,7 +113,7 @@ pub fn get_test_signed_txn(
         public_key,
         script,
         expiration_time,
-        MAX_GAS_PRICE,
+        TEST_GAS_PRICE,
         None,
     )
 }
@@ -137,7 +137,7 @@ pub fn get_test_unchecked_txn(
         public_key,
         script,
         expiration_time,
-        MAX_GAS_PRICE,
+        TEST_GAS_PRICE,
         None,
     )
 }

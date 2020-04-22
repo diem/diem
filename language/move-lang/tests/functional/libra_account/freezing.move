@@ -68,7 +68,6 @@ fun main() {
 //! new-transaction
 //! sender: vasp
 //! gas-price: 0
-//! max-gas: 1000000
 use 0x0::VASP;
 use 0x0::LCS;
 fun main() {
@@ -94,7 +93,6 @@ fun main() {
 //! new-transaction
 //! sender: vasp
 //! gas-price: 0
-//! max-gas: 1000000
 fun main() {
     0x0::VASP::allow_child_accounts();
 }
@@ -103,7 +101,6 @@ fun main() {
 //! new-transaction
 //! sender: childvasp
 //! gas-price: 0
-//! max-gas: 1000000
 fun main() {
     0x0::VASP::apply_for_child_vasp_credential({{vasp}});
 }
@@ -112,7 +109,6 @@ fun main() {
 //! new-transaction
 //! sender: vasp
 //! gas-price: 0
-//! max-gas: 1000000
 fun main() {
     0x0::VASP::grant_child_account({{childvasp}});
 }
