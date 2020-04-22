@@ -52,6 +52,7 @@ This script will download and install the necessary dependencies needed to
 build Libra Core. This includes:
 	* Rust (and the necessary components, e.g. rust-fmt, clippy)
 	* CMake
+      * Clang
 
 If you'd prefer to install these dependencies yourself, please exit this script
 now with Ctrl-C.
@@ -102,6 +103,20 @@ else
 	fi
 fi
 
+echo "Installing Clang......"
+if which clang &>/dev/null; then
+        echo "Clang is already installed"
+else
+        if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
+                sudo yum install clang -y
+        elif [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
+                sudo apt-get install clang -y
+        elif [[ "$PACKAGE_MANAGER" == "pacman" ]]; then
+                sudo pacman -Syu clang --noconfirm
+        elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
+                brew install llvm
+        fi
+fi
 cat <<EOF
 
 Finished installing all dependencies.
