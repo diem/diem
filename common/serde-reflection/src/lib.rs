@@ -196,7 +196,8 @@
 //! record formats for all the types that `T` depends on. Besides, if `T` is an enum, it
 //! will record all the variants of `T`.
 //!
-//! (0) Container names must not collide. (TODO: handle this using `std::any::type_name`?)
+//! (0) Container names must not collide. If this happens, consider using `#[serde(rename = "name")]`,
+//! or implementing serde traits manually.
 //!
 //! (1) The first variants of mutually recursive enums must be a "base case". That is,
 //! defaulting to the first variant for every enum type (along with `None` for option values
