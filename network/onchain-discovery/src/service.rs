@@ -1,3 +1,6 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{
     storage_query_discovery_set,
     types::{OnchainDiscoveryMsg, QueryDiscoverySetRequest, QueryDiscoverySetResponse},
