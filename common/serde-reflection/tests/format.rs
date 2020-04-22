@@ -4,6 +4,37 @@
 use serde_reflection::{ContainerFormat, Error, Format, FormatHolder, Named, VariantFormat};
 
 #[test]
+fn test_format_visiting() {
+    use Format::*;
+
+    let format = ContainerFormat::Enum(
+        vec![(
+            0,
+            Named {
+                name: "foo".into(),
+                value: VariantFormat::Tuple(vec![U8, U8, Seq(Box::new(U8))]),
+            },
+        )]
+        .into_iter()
+        .collect(),
+    );
+    let mut counter: usize = 0;
+    format
+        .visit(&mut |format| {
+            match format {
+                U8 => counter += 1,
+                _ => (),
+            }
+            Ok(())
+        })
+        .unwrap();
+    assert_eq!(counter, 3);
+
+    assert!(VariantFormat::Unknown.visit(&mut |_| Ok(())).is_err());
+    assert!(Format::Unknown.visit(&mut |_| Ok(())).is_err());
+}
+
+#[test]
 fn test_format_unification() {
     use Format::*;
 
