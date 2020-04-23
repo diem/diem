@@ -45,14 +45,13 @@ proptest = { version = "0.9.6", default-features = true, optional = true }
 
 [dev-dependencies]
 criterion = "=0.3.1"
-noise = { path = "noise", version = "0.1.0", features = ["testing"] }
 serial_test = "0.4.0"
 socket-bench-server = { path = "socket-bench-server", version = "0.1.0" }
 
 [features]
 default = []
 fuzzing = ["proptest", "libra-proptest-helpers", "libra-types/fuzzing"]
-testing = []
+testing = ["noise/testing"]
 
 [[bench]]
 name = "socket_bench"
