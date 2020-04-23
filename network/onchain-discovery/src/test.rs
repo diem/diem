@@ -29,11 +29,7 @@ use network::{
     ProtocolId,
 };
 use std::{
-    collections::HashMap,
-    convert::{TryFrom, TryInto},
-    num::NonZeroUsize,
-    str::FromStr,
-    sync::Arc,
+    collections::HashMap, convert::TryFrom, num::NonZeroUsize, str::FromStr, sync::Arc,
     time::Duration,
 };
 use storage_client::{StorageRead, StorageReadServiceClient, SyncStorageClient};
@@ -352,15 +348,7 @@ fn queries_storage_on_tick() {
     let update_reqs = update_reqs
         .into_iter()
         .map(|req| match req {
-            ConnectivityRequest::UpdateAddresses(_src, peer_id, addrs) => {
-                // TODO(philiphayes): remove
-                let addrs = addrs
-                    .into_iter()
-                    .map(TryInto::try_into)
-                    .collect::<Result<Vec<_>, _>>()
-                    .unwrap();
-                (peer_id, addrs)
-            }
+            ConnectivityRequest::UpdateAddresses(_src, peer_id, addrs) => (peer_id, addrs),
             _ => panic!(
                 "Unexpected ConnectivityRequest, expected UpdateAddresses: {:?}",
                 req
@@ -461,15 +449,7 @@ fn queries_peers_on_tick() {
     let update_reqs = update_reqs
         .into_iter()
         .map(|req| match req {
-            ConnectivityRequest::UpdateAddresses(_src, peer_id, addrs) => {
-                // TODO(philiphayes): remove
-                let addrs = addrs
-                    .into_iter()
-                    .map(TryInto::try_into)
-                    .collect::<Result<Vec<_>, _>>()
-                    .unwrap();
-                (peer_id, addrs)
-            }
+            ConnectivityRequest::UpdateAddresses(_src, peer_id, addrs) => (peer_id, addrs),
             _ => panic!(
                 "Unexpected ConnectivityRequest, expected UpdateAddresses: {:?}",
                 req

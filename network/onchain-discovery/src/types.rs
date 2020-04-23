@@ -4,6 +4,8 @@
 use anyhow::{bail, ensure, Error, Result};
 use libra_config::config::RoleType;
 use libra_crypto::x25519;
+use libra_logger::prelude::*;
+use libra_network_address::NetworkAddress;
 use libra_types::{
     discovery_info::DiscoveryInfo,
     discovery_set::{
@@ -14,7 +16,6 @@ use libra_types::{
     },
     PeerId,
 };
-use parity_multiaddr::Multiaddr;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, convert::TryFrom};
 
@@ -134,11 +135,22 @@ impl DiscoverySetInternal {
         Self(
             discovery_set
                 .into_iter()
-                .map(|discovery_info| {
-                    (
-                        discovery_info.account_address,
-                        DiscoveryInfoInternal::from_discovery_info(role_filter, discovery_info),
-                    )
+                .filter_map(|discovery_info| {
+                    let peer_id = discovery_info.account_address;
+                    let res_info =
+                        DiscoveryInfoInternal::try_from_discovery_info(role_filter, discovery_info);
+
+                    // ignore network addresses that fail to deserialize
+                    res_info
+                        .map_err(|err| {
+                            debug!(
+                                "failed to deserialize addresses from validator: {}, err: {}",
+                                peer_id.short_str(),
+                                err
+                            )
+                        })
+                        .map(|info| (peer_id, info))
+                        .ok()
                 })
                 .collect::<HashMap<_, _>>(),
         )
@@ -158,19 +170,27 @@ impl DiscoverySetInternal {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct DiscoveryInfoInternal(pub x25519::PublicKey, pub Vec<Multiaddr>);
+pub struct DiscoveryInfoInternal(pub x25519::PublicKey, pub Vec<NetworkAddress>);
 
 impl DiscoveryInfoInternal {
-    pub fn from_discovery_info(role_filter: RoleType, discovery_info: DiscoveryInfo) -> Self {
-        match role_filter {
+    pub fn try_from_discovery_info(
+        role_filter: RoleType,
+        discovery_info: DiscoveryInfo,
+    ) -> Result<Self> {
+        let info = match role_filter {
             RoleType::Validator => Self(
                 discovery_info.validator_network_identity_pubkey,
-                vec![discovery_info.validator_network_address],
+                vec![NetworkAddress::try_from(
+                    &discovery_info.validator_network_address,
+                )?],
             ),
             RoleType::FullNode => Self(
                 discovery_info.fullnodes_network_identity_pubkey,
-                vec![discovery_info.fullnodes_network_address],
+                vec![NetworkAddress::try_from(
+                    &discovery_info.fullnodes_network_address,
+                )?],
             ),
-        }
+        };
+        Ok(info)
     }
 }

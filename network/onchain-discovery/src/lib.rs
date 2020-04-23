@@ -67,7 +67,6 @@ use futures::{
 };
 use libra_config::config::RoleType;
 use libra_logger::prelude::*;
-use libra_network_address::NetworkAddress;
 use libra_types::{
     discovery_set::DiscoverySetChangeEvent,
     get_with_proof::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse},
@@ -515,13 +514,6 @@ where
                             }
                         }
 
-                        // TODO(philiphayes): remove
-                        let addrs = addrs
-                            .into_iter()
-                            .map(NetworkAddress::try_from)
-                            .collect::<Result<Vec<_>, _>>()
-                            .unwrap();
-
                         Some(ConnectivityRequest::UpdateAddresses(
                             DiscoverySource::OnChain,
                             peer_id,
@@ -532,20 +524,11 @@ where
                     Some(_) => None,
                     // a validator has been added or we're starting up; always
                     // send an update request.
-                    None => {
-                        // TODO(philiphayes): remove
-                        let addrs = addrs
-                            .into_iter()
-                            .map(NetworkAddress::try_from)
-                            .collect::<Result<Vec<_>, _>>()
-                            .unwrap();
-
-                        Some(ConnectivityRequest::UpdateAddresses(
-                            DiscoverySource::OnChain,
-                            peer_id,
-                            addrs,
-                        ))
-                    }
+                    None => Some(ConnectivityRequest::UpdateAddresses(
+                        DiscoverySource::OnChain,
+                        peer_id,
+                        addrs,
+                    )),
                 }
             });
 

@@ -243,6 +243,18 @@ impl TryFrom<&NetworkAddress> for RawNetworkAddress {
     }
 }
 
+#[cfg(any(test, feature = "fuzzing"))]
+impl Arbitrary for RawNetworkAddress {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        any::<NetworkAddress>()
+            .prop_map(|addr| RawNetworkAddress::try_from(&addr).unwrap())
+            .boxed()
+    }
+}
+
 ////////////////////
 // NetworkAddress //
 ////////////////////
