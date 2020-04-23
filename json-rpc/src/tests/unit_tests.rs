@@ -12,7 +12,6 @@ use crate::{
     JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse,
 };
 use futures::{channel::mpsc::channel, StreamExt};
-use hex;
 use libra_config::utils;
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use libra_proptest_helpers::ValueGenerator;
@@ -33,8 +32,6 @@ use libra_types::{
 };
 use libradb::test_helper::arb_blocks_to_commit;
 use proptest::prelude::*;
-use reqwest;
-use serde_json;
 use std::{
     collections::{BTreeMap, HashMap},
     convert::TryFrom,

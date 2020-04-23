@@ -31,7 +31,6 @@ use crate::{
     common::NetworkPublicKeys,
     peer_manager::{self, conn_status_channel, ConnectionRequestSender, PeerManagerError},
 };
-use channel;
 use futures::{
     channel::oneshot,
     future::{BoxFuture, FutureExt},

@@ -3,7 +3,6 @@
 
 use crate::*;
 use language_common::{error_codes::*, tooling::fake_executor::Account};
-use libra_crypto;
 use libra_types::account_address::AccountAddress;
 use move_ir::{assert_error_type, assert_no_error};
 

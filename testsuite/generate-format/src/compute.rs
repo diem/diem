@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use generate_format::Corpus;
-use serde_yaml;
 use std::{fs::File, io::Write};
 use structopt::StructOpt;
 

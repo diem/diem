@@ -13,7 +13,6 @@ use anyhow::{ensure, format_err, Error, Result};
 use core::future::Future;
 use debug_interface::prelude::*;
 use futures::{channel::oneshot, SinkExt};
-use hex;
 use libra_mempool::MempoolClientSender;
 use libra_types::{
     account_address::AccountAddress,

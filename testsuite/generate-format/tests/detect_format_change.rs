@@ -3,7 +3,6 @@
 
 use generate_format::Corpus;
 use serde_reflection::RegistryOwned;
-use serde_yaml;
 
 #[test]
 fn test_that_recorded_formats_did_not_change() {

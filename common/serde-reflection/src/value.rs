@@ -74,7 +74,7 @@ macro_rules! declare_deserialize {
                 _ => Err(Error::DeserializationError($str)),
             }
         }
-    }
+    };
 }
 
 macro_rules! declare_deserialize_borrowed {
@@ -88,7 +88,7 @@ macro_rules! declare_deserialize_borrowed {
                 _ => Err(Error::DeserializationError($str)),
             }
         }
-    }
+    };
 }
 
 impl<'de> de::Deserializer<'de> for Deserializer<'de> {
