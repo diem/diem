@@ -1139,7 +1139,13 @@ impl Frame {
                     Bytecode::Abort => {
                         gas!(const_instr: context, interpreter, Opcodes::ABORT)?;
                         let error_code = interpreter.operand_stack.pop_as::<u64>()?;
-                        return Err(VMStatus::new(StatusCode::ABORTED).with_sub_status(error_code));
+                        return Err(VMStatus::new(StatusCode::ABORTED)
+                            .with_sub_status(error_code)
+                            .with_message(format!(
+                                "{} at offset {}",
+                                self.function.pretty_string(),
+                                self.pc,
+                            )));
                     }
                     Bytecode::Eq => {
                         let lhs = interpreter.operand_stack.pop()?;

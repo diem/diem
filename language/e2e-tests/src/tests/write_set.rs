@@ -75,15 +75,13 @@ fn verify_and_execute_writeset() {
         1,
     );
     let output = executor.execute_transaction(writeset_txn.clone());
-    let expected_err = VMStatus::new(StatusCode::ABORTED).with_sub_status(11);
-    assert_eq!(
-        output.status(),
-        &TransactionStatus::Discard(expected_err.clone())
-    );
-    assert_eq!(
-        executor.verify_transaction(writeset_txn).status().unwrap(),
-        expected_err
-    );
+    let status = output.status();
+    assert!(status.is_discarded());
+    assert_eq!(status.vm_status().major_status, StatusCode::ABORTED);
+    assert_eq!(status.vm_status().sub_status, Some(11));
+    let err = executor.verify_transaction(writeset_txn).status().unwrap();
+    assert_eq!(err.major_status, StatusCode::ABORTED);
+    assert_eq!(err.sub_status, Some(11));
 }
 
 #[test]

@@ -1,0 +1,19 @@
+module M {
+    public foo() {
+        abort 22;
+    }
+
+}
+
+//! new-transaction
+
+import {{default}}.M;
+
+main() {
+    M.foo();
+    return;
+}
+
+// check: ABORTED
+// check: 22
+// check: "::M::foo at offset 2"
