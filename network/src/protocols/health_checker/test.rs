@@ -11,7 +11,7 @@ use crate::{
 };
 use channel::{libra_channel, message_queues::QueueStyle};
 use futures::sink::SinkExt;
-use parity_multiaddr::Multiaddr;
+use libra_network_address::NetworkAddress;
 use std::{num::NonZeroUsize, str::FromStr};
 use tokio::runtime::Runtime;
 
@@ -176,7 +176,7 @@ async fn send_new_peer_notification(
             peer_id,
             peer_manager::ConnectionStatusNotification::NewPeer(
                 peer_id,
-                Multiaddr::from_str("/ip6/::1/tcp/8081").unwrap(),
+                NetworkAddress::from_str("/ip6/::1/tcp/8081").unwrap(),
             ),
             Some(delivered_tx),
         )

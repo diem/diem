@@ -36,7 +36,6 @@ use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use netcore::transport::{ConnectionOrigin, Transport};
-use parity_multiaddr::Multiaddr;
 use std::{
     collections::{hash_map::Entry, HashMap},
     convert::{TryFrom, TryInto},
@@ -75,7 +74,7 @@ pub enum PeerManagerNotification {
 pub enum ConnectionRequest {
     DialPeer(
         PeerId,
-        Multiaddr,
+        NetworkAddress,
         oneshot::Sender<Result<(), PeerManagerError>>,
     ),
     DisconnectPeer(PeerId, oneshot::Sender<Result<(), PeerManagerError>>),
@@ -84,9 +83,9 @@ pub enum ConnectionRequest {
 #[derive(Debug, PartialEq, Eq)]
 pub enum ConnectionStatusNotification {
     /// Connection with a new peer has been established.
-    NewPeer(PeerId, Multiaddr),
+    NewPeer(PeerId, NetworkAddress),
     /// Connection to a peer has been terminated. This could have been triggered from either end.
-    LostPeer(PeerId, Multiaddr, DisconnectReason),
+    LostPeer(PeerId, NetworkAddress, DisconnectReason),
 }
 
 /// Convenience wrapper which makes it easy to issue communication requests and await the responses
@@ -192,7 +191,7 @@ impl ConnectionRequestSender {
     pub async fn dial_peer(
         &mut self,
         peer: PeerId,
-        addr: Multiaddr,
+        addr: NetworkAddress,
     ) -> Result<(), PeerManagerError> {
         let (oneshot_tx, oneshot_rx) = oneshot::channel();
         self.inner
@@ -221,7 +220,7 @@ where
     /// Our node type.
     role: RoleType,
     /// Address to listen on for incoming connections.
-    listen_addr: Multiaddr,
+    listen_addr: NetworkAddress,
     /// Connection Listener, listening on `listen_addr`
     connection_handler: Option<ConnectionHandler<TTransport, TSocket>>,
     /// Map from PeerId to corresponding Peer object.
@@ -273,7 +272,7 @@ where
         transport: TTransport,
         own_peer_id: PeerId,
         role: RoleType,
-        listen_addr: Multiaddr,
+        listen_addr: NetworkAddress,
         requests_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
         connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
         upstream_handlers: HashMap<
@@ -324,8 +323,8 @@ where
         }
     }
 
-    /// Get the [`Multiaddr`] we're listening for incoming connections on
-    pub fn listen_addr(&self) -> &Multiaddr {
+    /// Get the [`NetworkAddress`] we're listening for incoming connections on
+    pub fn listen_addr(&self) -> &NetworkAddress {
         &self.listen_addr
     }
 
@@ -605,7 +604,7 @@ where
     fn send_lostpeer_notification(
         &mut self,
         peer_id: PeerId,
-        addr: Multiaddr,
+        addr: NetworkAddress,
         reason: DisconnectReason,
     ) {
         // Send LostPeer notification to connection event handlers.
@@ -626,7 +625,7 @@ where
     async fn dial_peer(
         &mut self,
         peer_id: PeerId,
-        address: Multiaddr,
+        address: NetworkAddress,
         response_tx: oneshot::Sender<Result<(), PeerManagerError>>,
     ) {
         let request = ConnectionHandlerRequest::DialPeer(peer_id, address, response_tx);
@@ -701,7 +700,7 @@ where
 enum ConnectionHandlerRequest {
     DialPeer(
         PeerId,
-        Multiaddr,
+        NetworkAddress,
         oneshot::Sender<Result<(), PeerManagerError>>,
     ),
 }
@@ -738,10 +737,10 @@ where
 {
     fn new(
         transport: TTransport,
-        listen_addr: Multiaddr,
+        listen_addr: NetworkAddress,
         dial_request_rx: channel::Receiver<ConnectionHandlerRequest>,
         connection_notifs_tx: channel::Sender<ConnectionNotification<TSocket>>,
-    ) -> (Self, Multiaddr) {
+    ) -> (Self, NetworkAddress) {
         let (listener, listen_addr) = transport
             .listen_on(NetworkAddress::try_from(listen_addr).unwrap())
             .expect("Transport listen on fails");
@@ -802,7 +801,7 @@ where
             'static,
             (
                 Result<Connection<TSocket>, TTransport::Error>,
-                Multiaddr,
+                NetworkAddress,
                 PeerId,
                 oneshot::Sender<Result<(), PeerManagerError>>,
             ),
@@ -837,7 +836,7 @@ where
     async fn handle_completed_outbound_upgrade(
         &mut self,
         upgrade: Result<Connection<TSocket>, TTransport::Error>,
-        addr: Multiaddr,
+        addr: NetworkAddress,
         peer_id: PeerId,
         response_tx: oneshot::Sender<Result<(), PeerManagerError>>,
     ) {
@@ -892,7 +891,7 @@ where
     async fn handle_completed_inbound_upgrade(
         &mut self,
         upgrade: Result<Connection<TSocket>, TTransport::Error>,
-        addr: Multiaddr,
+        addr: NetworkAddress,
     ) {
         match upgrade {
             Ok(connection) => {

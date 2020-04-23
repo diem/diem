@@ -25,7 +25,7 @@ mod test {
     use super::*;
     use crate::peer::DisconnectReason;
     use futures::{executor::block_on, future::FutureExt, stream::StreamExt};
-    use parity_multiaddr::Multiaddr;
+    use libra_network_address::NetworkAddress;
 
     #[test]
     fn send_n_get_1() {
@@ -36,7 +36,7 @@ mod test {
             sender
                 .push(
                     peer_id_a,
-                    ConnectionStatusNotification::NewPeer(peer_id_a, Multiaddr::empty()),
+                    ConnectionStatusNotification::NewPeer(peer_id_a, NetworkAddress::mock()),
                 )
                 .unwrap();
             sender
@@ -44,7 +44,7 @@ mod test {
                     peer_id_a,
                     ConnectionStatusNotification::LostPeer(
                         peer_id_a,
-                        Multiaddr::empty(),
+                        NetworkAddress::mock(),
                         DisconnectReason::ConnectionLost,
                     ),
                 )
@@ -52,7 +52,7 @@ mod test {
             sender
                 .push(
                     peer_id_a,
-                    ConnectionStatusNotification::NewPeer(peer_id_a, Multiaddr::empty()),
+                    ConnectionStatusNotification::NewPeer(peer_id_a, NetworkAddress::mock()),
                 )
                 .unwrap();
             sender
@@ -60,7 +60,7 @@ mod test {
                     peer_id_a,
                     ConnectionStatusNotification::LostPeer(
                         peer_id_a,
-                        Multiaddr::empty(),
+                        NetworkAddress::mock(),
                         DisconnectReason::Requested,
                     ),
                 )
@@ -70,7 +70,7 @@ mod test {
                 receiver.select_next_some().await,
                 ConnectionStatusNotification::LostPeer(
                     peer_id_a,
-                    Multiaddr::empty(),
+                    NetworkAddress::mock(),
                     DisconnectReason::Requested
                 )
             );
@@ -80,13 +80,13 @@ mod test {
             sender
                 .push(
                     peer_id_a,
-                    ConnectionStatusNotification::NewPeer(peer_id_a, Multiaddr::empty()),
+                    ConnectionStatusNotification::NewPeer(peer_id_a, NetworkAddress::mock()),
                 )
                 .unwrap();
             sender
                 .push(
                     peer_id_b,
-                    ConnectionStatusNotification::NewPeer(peer_id_b, Multiaddr::empty()),
+                    ConnectionStatusNotification::NewPeer(peer_id_b, NetworkAddress::mock()),
                 )
                 .unwrap();
             // Assert that we receive 2 updates, since they are sent for different peers.

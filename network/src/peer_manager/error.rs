@@ -4,8 +4,8 @@
 //! Errors that originate from the PeerManager module
 
 use futures::channel::{mpsc, oneshot};
+use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
-use parity_multiaddr::Multiaddr;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -26,7 +26,7 @@ pub enum PeerManagerError {
     NotConnected(PeerId),
 
     #[error("Already connected at {0}")]
-    AlreadyConnected(Multiaddr),
+    AlreadyConnected(NetworkAddress),
 
     #[error("Sending end of oneshot dropped")]
     OneshotSenderDropped,

@@ -28,9 +28,6 @@ pub enum NetworkErrorKind {
     #[error("Invalid signature error")]
     SignatureError,
 
-    #[error("Failed to parse multiaddrs")]
-    MultiaddrError,
-
     #[error("Error sending on mpsc channel")]
     MpscSendError,
 
@@ -90,14 +87,6 @@ impl From<VerifyError> for NetworkError {
     fn from(err: VerifyError) -> NetworkError {
         anyhow::Error::new(err)
             .context(NetworkErrorKind::SignatureError)
-            .into()
-    }
-}
-
-impl From<parity_multiaddr::Error> for NetworkError {
-    fn from(err: parity_multiaddr::Error) -> NetworkError {
-        anyhow::Error::new(err)
-            .context(NetworkErrorKind::MultiaddrError)
             .into()
     }
 }

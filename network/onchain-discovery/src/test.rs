@@ -13,6 +13,7 @@ use channel::{libra_channel, message_queues::QueueStyle};
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use futures::{channel::oneshot, sink::SinkExt, stream::StreamExt};
 use libra_config::config::{NodeConfig, RoleType};
+use libra_network_address::NetworkAddress;
 use libra_types::{
     account_config, account_state::AccountState, discovery_set::DiscoverySet, waypoint::Waypoint,
     PeerId,
@@ -27,9 +28,12 @@ use network::{
     protocols::rpc::{InboundRpcRequest, OutboundRpcRequest},
     ProtocolId,
 };
-use parity_multiaddr::Multiaddr;
 use std::{
-    collections::HashMap, convert::TryFrom, num::NonZeroUsize, str::FromStr, sync::Arc,
+    collections::HashMap,
+    convert::{TryFrom, TryInto},
+    num::NonZeroUsize,
+    str::FromStr,
+    sync::Arc,
     time::Duration,
 };
 use storage_client::{StorageRead, StorageReadServiceClient, SyncStorageClient};
@@ -91,7 +95,7 @@ impl MockOnchainDiscoveryNetworkSender {
     }
 
     async fn new_peer(&mut self, peer_id: PeerId) {
-        let addr = Multiaddr::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
+        let addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
         let notif = ConnectionStatusNotification::NewPeer(peer_id, addr);
         self.send_connection_notif(peer_id, notif).await;
     }
@@ -348,7 +352,15 @@ fn queries_storage_on_tick() {
     let update_reqs = update_reqs
         .into_iter()
         .map(|req| match req {
-            ConnectivityRequest::UpdateAddresses(_src, peer_id, addrs) => (peer_id, addrs),
+            ConnectivityRequest::UpdateAddresses(_src, peer_id, addrs) => {
+                // TODO(philiphayes): remove
+                let addrs = addrs
+                    .into_iter()
+                    .map(TryInto::try_into)
+                    .collect::<Result<Vec<_>, _>>()
+                    .unwrap();
+                (peer_id, addrs)
+            }
             _ => panic!(
                 "Unexpected ConnectivityRequest, expected UpdateAddresses: {:?}",
                 req
@@ -449,7 +461,15 @@ fn queries_peers_on_tick() {
     let update_reqs = update_reqs
         .into_iter()
         .map(|req| match req {
-            ConnectivityRequest::UpdateAddresses(_src, peer_id, addrs) => (peer_id, addrs),
+            ConnectivityRequest::UpdateAddresses(_src, peer_id, addrs) => {
+                // TODO(philiphayes): remove
+                let addrs = addrs
+                    .into_iter()
+                    .map(TryInto::try_into)
+                    .collect::<Result<Vec<_>, _>>()
+                    .unwrap();
+                (peer_id, addrs)
+            }
             _ => panic!(
                 "Unexpected ConnectivityRequest, expected UpdateAddresses: {:?}",
                 req

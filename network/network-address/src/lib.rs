@@ -255,6 +255,11 @@ impl NetworkAddress {
     pub fn as_slice(&self) -> &[Protocol] {
         self.0.as_slice()
     }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn mock() -> Self {
+        NetworkAddress::new(vec![Protocol::Memory(1234)])
+    }
 }
 
 impl FromStr for NetworkAddress {

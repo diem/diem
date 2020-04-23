@@ -24,6 +24,7 @@ use futures::{
     StreamExt,
 };
 use libra_config::config::{NetworkConfig, NodeConfig, PeerNetworkId, RoleType, UpstreamConfig};
+use libra_network_address::NetworkAddress;
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     peer_manager::{
@@ -32,7 +33,6 @@ use network::{
     },
     DisconnectReason, ProtocolId,
 };
-use parity_multiaddr::Multiaddr;
 use std::{
     collections::{HashMap, HashSet},
     num::NonZeroUsize,
@@ -449,7 +449,7 @@ fn test_basic_flow() {
     // A discovers new peer B
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_b, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_b, NetworkAddress::mock()),
     );
 
     for seq in 0..3 {
@@ -481,7 +481,7 @@ fn test_metric_cache_ignore_shared_txns() {
     // Let peer_a discover new peer_b.
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_b, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_b, NetworkAddress::mock()),
     );
     for txn in txns.iter().take(3) {
         // Let peer_a share txns with peer_b
@@ -504,11 +504,11 @@ fn test_interruption_in_sync() {
     // A discovers 2 peers
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_b, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_b, NetworkAddress::mock()),
     );
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_c, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_c, NetworkAddress::mock()),
     );
 
     // make sure it delivered first transaction to both nodes
@@ -526,7 +526,7 @@ fn test_interruption_in_sync() {
         &peer_a,
         ConnectionStatusNotification::LostPeer(
             *peer_b,
-            Multiaddr::empty(),
+            NetworkAddress::mock(),
             DisconnectReason::ConnectionLost,
         ),
     );
@@ -545,7 +545,7 @@ fn test_interruption_in_sync() {
     // A reconnects to B
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_b, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_b, NetworkAddress::mock()),
     );
 
     // B should receive transaction 2
@@ -565,7 +565,7 @@ fn test_ready_transactions() {
     // first message delivery
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_b, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_b, NetworkAddress::mock()),
     );
     smp.deliver_message(&peer_a);
 
@@ -587,11 +587,11 @@ fn test_broadcast_self_transactions() {
     // A and B discover each other
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_b, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_b, NetworkAddress::mock()),
     );
     smp.send_connection_event(
         &peer_b,
-        ConnectionStatusNotification::NewPeer(*peer_a, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_a, NetworkAddress::mock()),
     );
 
     // A sends txn to B
@@ -623,11 +623,11 @@ fn test_broadcast_dependencies() {
     // A and B discover each other
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_b, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_b, NetworkAddress::mock()),
     );
     smp.send_connection_event(
         &peer_b,
-        ConnectionStatusNotification::NewPeer(*peer_a, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_a, NetworkAddress::mock()),
     );
 
     // B receives 0
@@ -651,11 +651,11 @@ fn test_broadcast_updated_transaction() {
     // A and B discover each other
     smp.send_connection_event(
         &peer_a,
-        ConnectionStatusNotification::NewPeer(*peer_b, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_b, NetworkAddress::mock()),
     );
     smp.send_connection_event(
         &peer_b,
-        ConnectionStatusNotification::NewPeer(*peer_a, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(*peer_a, NetworkAddress::mock()),
     );
 
     // B receives 0
@@ -791,7 +791,7 @@ fn test_broadcast_ack_single_account_single_peer() {
     // FN discovers new peer V
     smp.send_connection_event(
         &full_node,
-        ConnectionStatusNotification::NewPeer(validator, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(validator, NetworkAddress::mock()),
     );
 
     // deliver messages until FN mempool is empty
@@ -835,7 +835,7 @@ fn test_broadcast_ack_multiple_accounts_single_peer() {
     // full node discovers new validator peer
     smp.send_connection_event(
         &full_node,
-        ConnectionStatusNotification::NewPeer(validator, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(validator, NetworkAddress::mock()),
     );
 
     // deliver message
@@ -897,11 +897,11 @@ fn test_k_policy_broadcast_no_fallback() {
     // fn_0 discovers primary and fallback upstream peers
     smp.send_connection_event(
         &fn_0,
-        ConnectionStatusNotification::NewPeer(v_0, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(v_0, NetworkAddress::mock()),
     );
     smp.send_connection_event(
         &fn_0_fallback_network_id,
-        ConnectionStatusNotification::NewPeer(fn_1, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(fn_1, NetworkAddress::mock()),
     );
 
     // add txn to fn_0
@@ -959,11 +959,11 @@ fn test_k_policy_broadcast_to_fallback() {
     // fn_0 discovers primary and fallback upstream peers
     smp.send_connection_event(
         &fn_0,
-        ConnectionStatusNotification::NewPeer(v_0, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(v_0, NetworkAddress::mock()),
     );
     smp.send_connection_event(
         &fn_0_fallback_network_id,
-        ConnectionStatusNotification::NewPeer(fn_1, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(fn_1, NetworkAddress::mock()),
     );
 
     // add txn to fn_0
@@ -1010,7 +1010,7 @@ fn test_k_policy_broadcast_not_enough_fallbacks() {
     // fn_0 discovers primary peer but no fallback peers available
     smp.send_connection_event(
         &fn_0,
-        ConnectionStatusNotification::NewPeer(v_0, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(v_0, NetworkAddress::mock()),
     );
 
     // add txn to fn_0
@@ -1063,15 +1063,15 @@ fn test_k_policy_broadcast_excess_fallbacks() {
     // fn_0 discovers primary and fallback upstream peers
     smp.send_connection_event(
         &fn_0,
-        ConnectionStatusNotification::NewPeer(v_0, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(v_0, NetworkAddress::mock()),
     );
     smp.send_connection_event(
         &fn_0_fallback_network_id,
-        ConnectionStatusNotification::NewPeer(fn_1, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(fn_1, NetworkAddress::mock()),
     );
     smp.send_connection_event(
         &fn_0_fallback_network_id,
-        ConnectionStatusNotification::NewPeer(fn_2, Multiaddr::empty()),
+        ConnectionStatusNotification::NewPeer(fn_2, NetworkAddress::mock()),
     );
 
     // add txn to fn_0
