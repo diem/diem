@@ -36,5 +36,5 @@ rand_core = "0.5.1"
 
 [features]
 default = []
-testing = ["rand"]
+testing = ["rand", "rand_core"]
 fuzzing = ["libra-proptest-helpers", "once_cell", "proptest", "memsocket", "rand_core"]
