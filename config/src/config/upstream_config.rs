@@ -37,7 +37,7 @@ impl UpstreamConfig {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Copy, Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 /// Identifier of a node, represented as (network_id, peer_id)
 pub struct PeerNetworkId(pub NetworkId, pub PeerId);
 
@@ -48,5 +48,9 @@ impl PeerNetworkId {
 
     pub fn peer_id(&self) -> PeerId {
         self.1
+    }
+
+    pub fn random() -> Self {
+        Self(NetworkId::random(), PeerId::random())
     }
 }

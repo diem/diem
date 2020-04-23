@@ -8,7 +8,7 @@ use crate::{
 use anyhow::{bail, Result};
 use executor_types::ExecutedTrees;
 use futures::executor::block_on;
-use libra_config::config::RoleType;
+use libra_config::config::{PeerNetworkId, RoleType};
 use libra_crypto::{
     ed25519::Ed25519PrivateKey, hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519,
     PrivateKey, Uniform,
@@ -266,20 +266,19 @@ impl SynchronizerEnv {
         let peer_addr = network_builder.build();
 
         let mut config = config_builder::test_config().0;
+        let mut network = config.validator_network.clone().unwrap();
+        let mut network_id = network.peer_id;
         if !role.is_validator() {
-            let mut network = config.validator_network.unwrap();
             network.peer_id = PeerId::default();
+            network_id = network.peer_id;
             config.full_node_networks = vec![network];
             config.validator_network = None;
         }
         config.base.role = role;
         if new_peer_idx > 0 {
             // set the upstream peer in the config
-            config
-                .state_sync
-                .upstream_peers
-                .upstream_peers
-                .push(self.peer_ids[new_peer_idx - 1]);
+            let upstream_peer = PeerNetworkId(network_id, self.peer_ids[new_peer_idx - 1]);
+            config.upstream.upstream_peers.insert(upstream_peer);
         }
 
         let genesis_li = Self::genesis_li(&self.public_keys);
@@ -290,11 +289,12 @@ impl SynchronizerEnv {
         let (mempool_channel, mempool_requests) = futures::channel::mpsc::channel(1_024);
         let synchronizer = StateSynchronizer::bootstrap_with_executor_proxy(
             Runtime::new().unwrap(),
-            vec![(sender, events)],
+            vec![(network_id, sender, events)],
             mempool_channel,
             role,
             waypoint,
             &config.state_sync,
+            config.upstream,
             MockExecutorProxy::new(handler, storage_proxy.clone()),
         );
         self.mempools
