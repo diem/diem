@@ -46,7 +46,7 @@ pub struct SpecFunDecl {
 // =================================================================================================
 /// # Conditions
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub enum SpecConditionKind {
     Assert,
     Assume,
@@ -102,16 +102,29 @@ pub struct Condition {
     pub exp: Exp,
 }
 
+/// Specification and properties associated with a function.
 #[derive(Debug, Default)]
 pub struct FunSpec {
     pub on_decl: Vec<Condition>,
     pub on_impl: BTreeMap<CodeOffset, Vec<Condition>>,
+    pub properties_on_decl: PropertyBag,
+    pub properties_on_impl: BTreeMap<CodeOffset, PropertyBag>,
 }
+
+/// Specification and properties associated with a struct.
+#[derive(Debug, Default)]
+pub struct StructSpec {
+    pub invariants: BTreeMap<InvariantKind, Vec<Invariant>>,
+    pub properties: PropertyBag,
+}
+
+/// A set of properties stemming from pragmas.
+pub type PropertyBag = BTreeMap<Symbol, Value>;
 
 // =================================================================================================
 /// # Invariants
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub enum InvariantKind {
     Data,
     Update,
@@ -270,6 +283,7 @@ pub enum Value {
     Address(BigUint),
     Number(BigUint),
     Bool(bool),
+    ByteArray(Vec<u8>),
 }
 
 // =================================================================================================

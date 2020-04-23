@@ -12,9 +12,9 @@ use spec_lang::{
 
 use crate::{
     boogie_helpers::{
-        boogie_declare_global, boogie_field_name, boogie_global_declarator, boogie_local_type,
-        boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name, boogie_type_value,
-        boogie_well_formed_expr, WellFormedMode,
+        boogie_byte_blob, boogie_declare_global, boogie_field_name, boogie_global_declarator,
+        boogie_local_type, boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name,
+        boogie_type_value, boogie_well_formed_expr, WellFormedMode,
     },
     code_writer::CodeWriter,
 };
@@ -784,6 +784,7 @@ impl<'env> SpecTranslator<'env> {
             Value::Address(addr) => emit!(self.writer, "Address({})", addr),
             Value::Number(val) => emit!(self.writer, "Integer({})", val),
             Value::Bool(val) => emit!(self.writer, "Boolean({})", val),
+            Value::ByteArray(val) => emit!(self.writer, &boogie_byte_blob(val)),
         }
     }
 

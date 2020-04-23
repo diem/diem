@@ -10,7 +10,7 @@
 // dep: tests/sources/stdlib/modules/hash.move
 // dep: tests/sources/stdlib/modules/lcs.move
 // dep: tests/sources/stdlib/modules/libra_transaction_timeout.move
-// no-verify
+// flag: --verify=none
 
 address 0x0:
 

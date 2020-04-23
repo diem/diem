@@ -32,10 +32,11 @@ use crate::{
         boogie_struct_name, boogie_struct_type_value, boogie_type_value, boogie_type_values,
         boogie_var_before_borrow, boogie_well_formed_check, WellFormedMode,
     },
-    cli::Options,
+    cli::{Options, VerificationScope},
     code_writer::CodeWriter,
     spec_translator::SpecTranslator,
 };
+use spec_lang::ast::Value;
 
 pub struct BoogieTranslator<'env> {
     env: &'env GlobalEnv,
@@ -382,9 +383,8 @@ impl<'env> ModuleTranslator<'env> {
         self.generate_inline_function_body(func_target);
         emitln!(self.writer);
 
-        // If the function has no associated spec when the `only-verify-spec` flag is set,
-        // the `_verify` version is not generated to skip verifying the function without spec.
-        if self.options.only_verify_spec && func_target.get_specification_on_decl().is_empty() {
+        // If the function should not have a `_verify` entry point, stop here.
+        if !self.should_generate_verify(func_target) {
             return;
         }
 
@@ -392,6 +392,30 @@ impl<'env> ModuleTranslator<'env> {
         // verification.
         self.generate_function_sig(func_target, false); // no inline
         self.generate_verify_function_body(func_target); // function body just calls inlined version
+    }
+
+    /// Determines whether we should generate the `_verify` entry point for a function, which
+    /// triggers its standalone verification.
+    fn should_generate_verify(&self, func_target: &FunctionTarget<'_>) -> bool {
+        // We look up the `verify` pragma property first in this function, then in
+        // the module, and finally fall back to the value of option `--verify`.
+        let prop_name = &func_target.symbol_pool().make("verify");
+        if let Some(Value::Bool(b)) = func_target.func_env.get_properties_on_decl().get(prop_name) {
+            return *b;
+        }
+        if let Some(Value::Bool(b)) = func_target
+            .func_env
+            .module_env
+            .get_properties()
+            .get(prop_name)
+        {
+            return *b;
+        }
+        match self.options.verify_scope {
+            VerificationScope::Public => func_target.func_env.is_public(),
+            VerificationScope::All => true,
+            VerificationScope::None => false,
+        }
     }
 
     /// Return a string for a boogie procedure header.
