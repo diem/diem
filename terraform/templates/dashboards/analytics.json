@@ -291,7 +291,7 @@
       "pluginVersion": "6.2.2",
       "targets": [
         {
-          "expr": "max(rate(executor{op='num_accounts'}[5m]))",
+          "expr": "max(rate((storage_gauge{op=\"new_state_leaves\",role=\"validator\"} - ignoring (op) storage_gauge{op=\"stale_state_leaves\",role=\"validator\"})[5m:]))",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -433,7 +433,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(rate(executor{op='num_accounts'}[5m]))",
+          "expr": "max(rate((storage_gauge{op=\"new_state_leaves\",role=\"validator\"} - ignoring (op) storage_gauge{op=\"stale_state_leaves\",role=\"validator\"})[5m:]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Num Accounts Created / second",
@@ -609,7 +609,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "executor{op='num_accounts'}",
+          "expr": "storage_gauge{op=\"new_state_leaves\",role=\"validator\"} - ignoring (op) storage_gauge{op=\"stale_state_leaves\",role=\"validator\"}",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -622,7 +622,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Transaction count by node",
+      "title": "Account count by node",
       "tooltip": {
         "shared": true,
         "sort": 0,
