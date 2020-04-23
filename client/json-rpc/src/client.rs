@@ -10,7 +10,7 @@ use crate::{
 };
 use anyhow::{ensure, format_err, Error, Result};
 use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
-use reqwest::Client;
+use reqwest::{Client, Url};
 use serde_json::{json, Value};
 use std::{collections::HashSet, convert::TryFrom, fmt};
 
@@ -120,9 +120,19 @@ pub struct JsonRpcAsyncClient {
 }
 
 impl JsonRpcAsyncClient {
-    pub fn new(client: Client, host: &str, port: u16) -> Self {
-        let address = format!("http://{}:{}", host, port);
-        Self { address, client }
+    /// Pass in full url for endpoint, supports HTTPS
+    pub fn new(url: Url) -> Self {
+        Self {
+            address: url.to_string(),
+            client: Client::new(),
+        }
+    }
+
+    pub fn new_with_client(client: Client, url: Url) -> Self {
+        Self {
+            address: url.to_string(),
+            client,
+        }
     }
 
     pub async fn get_accounts_state(

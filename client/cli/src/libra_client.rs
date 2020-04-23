@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::AccountData;
-use anyhow::{bail, ensure, format_err, Result};
-use libra_json_rpc::{
+use anyhow::{bail, ensure, Result};
+use libra_json_rpc_client::{
     errors::JsonRpcError,
-    get_response_from_batch, process_batch_response,
+    get_response_from_batch,
     views::{
         AccountView, BlockMetadata, BytesView, EventView, ResponseAsView, StateProofView,
         TransactionView,
     },
-    JsonRpcBatch, JsonRpcResponse,
+    JsonRpcBatch, JsonRpcClient, JsonRpcResponse,
 };
 use libra_logger::prelude::*;
 use libra_types::{
@@ -24,14 +24,7 @@ use libra_types::{
     vm_error::StatusCode,
     waypoint::Waypoint,
 };
-use reqwest::{
-    blocking::{Client, ClientBuilder},
-    Url,
-};
-use std::time::Duration;
-
-const JSON_RPC_TIMEOUT_MS: u64 = 5_000;
-const MAX_JSON_RPC_RETRY_COUNT: u64 = 2;
+use reqwest::Url;
 
 /// A client connection to an AdmissionControl (AC) service. `LibraClient` also
 /// handles verifying the server's responses, retrying on non-fatal failures, and
@@ -55,67 +48,6 @@ pub struct LibraClient {
     /// about our local [`Waypoint`] and have not yet ratcheted to the remote's
     /// latest state.
     latest_epoch_change_li: Option<LedgerInfoWithSignatures>,
-}
-
-pub struct JsonRpcClient {
-    url: Url,
-    client: Client,
-}
-
-impl JsonRpcClient {
-    pub fn new(url: Url) -> Result<Self> {
-        Ok(Self {
-            client: ClientBuilder::new().use_rustls_tls().build()?,
-            url,
-        })
-    }
-
-    /// Sends a JSON RPC batched request.
-    /// Returns a vector of responses s.t. response order matches the request order
-    pub fn execute(&mut self, batch: JsonRpcBatch) -> Result<Vec<Result<JsonRpcResponse>>> {
-        if batch.requests.is_empty() {
-            return Ok(vec![]);
-        }
-        let request = batch.json_request();
-
-        //retry send
-        let response = self
-            .send_with_retry(request)?
-            .error_for_status()
-            .map_err(|e| format_err!("Server returned error: {:?}", e))?;
-
-        let response = process_batch_response(batch.clone(), response.json()?)?;
-        ensure!(
-            batch.requests.len() == response.len(),
-            "received unexpected number of responses in batch"
-        );
-        Ok(response)
-    }
-
-    // send with retry
-    pub fn send_with_retry(
-        &mut self,
-        request: serde_json::Value,
-    ) -> Result<reqwest::blocking::Response> {
-        let mut response = self.send(&request);
-        let mut try_cnt = 0;
-
-        // retry if send fails
-        while try_cnt < MAX_JSON_RPC_RETRY_COUNT && response.is_err() {
-            response = self.send(&request);
-            try_cnt += 1;
-        }
-        response
-    }
-
-    fn send(&mut self, request: &serde_json::Value) -> Result<reqwest::blocking::Response> {
-        self.client
-            .post(self.url.clone())
-            .json(request)
-            .timeout(Duration::from_millis(JSON_RPC_TIMEOUT_MS))
-            .send()
-            .map_err(Into::into)
-    }
 }
 
 impl LibraClient {

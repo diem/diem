@@ -13,7 +13,7 @@ use libra_crypto::{
     traits::ValidKey,
     x25519, ValidKeyStringExt,
 };
-use libra_json_rpc::views::{AccountView, BlockMetadata, EventView, TransactionView};
+use libra_json_rpc_client::views::{AccountView, BlockMetadata, EventView, TransactionView};
 use libra_logger::prelude::*;
 use libra_temppath::TempPath;
 use libra_types::{

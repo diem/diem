@@ -47,11 +47,11 @@ impl std::fmt::Display for JsonRpcError {
 }
 
 impl JsonRpcError {
-    pub(crate) fn serialize(self) -> Value {
+    pub fn serialize(self) -> Value {
         serde_json::to_value(self).unwrap_or(Value::Null)
     }
 
-    pub(crate) fn invalid_request() -> Self {
+    pub fn invalid_request() -> Self {
         Self {
             code: -32600,
             message: "Invalid Request".to_string(),
@@ -59,7 +59,7 @@ impl JsonRpcError {
         }
     }
 
-    pub(crate) fn invalid_params() -> Self {
+    pub fn invalid_params() -> Self {
         Self {
             code: -32602,
             message: "Invalid params".to_string(),
@@ -67,7 +67,7 @@ impl JsonRpcError {
         }
     }
 
-    pub(crate) fn method_not_found() -> Self {
+    pub fn method_not_found() -> Self {
         Self {
             code: -32601,
             message: "Method not found".to_string(),
@@ -75,7 +75,7 @@ impl JsonRpcError {
         }
     }
 
-    pub(crate) fn internal_error(message: String) -> Self {
+    pub fn internal_error(message: String) -> Self {
         Self {
             code: ServerCode::DefaultServerError as i16,
             message: format!("Server error: {}", message),
@@ -83,7 +83,7 @@ impl JsonRpcError {
         }
     }
 
-    pub(crate) fn mempool_error(error: MempoolStatus) -> Result<Self> {
+    pub fn mempool_error(error: MempoolStatus) -> Result<Self> {
         let code = match error.code {
             MempoolStatusCode::InvalidSeqNumber => ServerCode::MempoolInvalidSeqNumber,
             MempoolStatusCode::MempoolIsFull => ServerCode::MempoolIsFull,
@@ -108,7 +108,7 @@ impl JsonRpcError {
         })
     }
 
-    pub(crate) fn vm_error(error: VMStatus) -> Self {
+    pub fn vm_error(error: VMStatus) -> Self {
         // map VM status to custom server code
         let vm_status_type = error.status_type();
         let code = match vm_status_type {
