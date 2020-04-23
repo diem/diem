@@ -9,7 +9,9 @@ use executor::{
     db_bootstrapper::{bootstrap_db_if_empty, calculate_genesis},
     BlockExecutor, Executor,
 };
-use executor_utils::test_helpers::{gen_ledger_info_with_sigs, get_test_signed_transaction};
+use executor_utils::test_helpers::{
+    extract_signer, gen_ledger_info_with_sigs, get_test_signed_transaction,
+};
 use libra_config::utils::get_genesis_txn;
 use libra_crypto::{
     ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, HashValue, PrivateKey, Uniform,
@@ -30,6 +32,7 @@ use libra_types::{
         authenticator::AuthenticationKey, ChangeSet, Transaction, Version, PRE_GENESIS_VERSION,
     },
     trusted_state::TrustedState,
+    validator_signer::ValidatorSigner,
     waypoint::Waypoint,
     write_set::{WriteOp, WriteSetMut},
 };
@@ -64,7 +67,7 @@ fn test_empty_db() {
         waypoint
     );
     let (li, epoch_change_proof, _) = db_rw.reader.get_state_proof(waypoint.version()).unwrap();
-    let trusted_state = TrustedState::from_waypoint(waypoint);
+    let trusted_state = TrustedState::from(waypoint);
     trusted_state
         .verify_and_ratchet(&li, &epoch_change_proof)
         .unwrap();
@@ -75,22 +78,18 @@ fn test_empty_db() {
         .is_none())
 }
 
-fn execute_and_commit(txns: Vec<Transaction>, db: &DbReaderWriter) {
+fn execute_and_commit(txns: Vec<Transaction>, db: &DbReaderWriter, signer: &ValidatorSigner) {
     let block_id = HashValue::random();
-    let version = db
-        .reader
-        .get_latest_ledger_info()
-        .unwrap()
-        .ledger_info()
-        .version();
+    let li = db.reader.get_latest_ledger_info().unwrap();
+    let version = li.ledger_info().version();
+    let epoch = li.ledger_info().next_block_epoch();
     let target_version = version + txns.len() as u64;
     let mut executor = Executor::<LibraVM>::new(db.clone());
     let output = executor
         .execute_block((block_id, txns), executor.committed_block_id())
         .unwrap();
     assert_eq!(output.num_leaves(), target_version + 1);
-    let ledger_info_with_sigs =
-        gen_ledger_info_with_sigs(target_version, output.root_hash(), block_id);
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(epoch, output, block_id, vec![&signer]);
     executor
         .commit_blocks(vec![block_id], ledger_info_with_sigs)
         .unwrap();
@@ -229,19 +228,20 @@ fn restore_state_to_db(
 
 #[test]
 fn test_pre_genesis() {
-    let (config, genesis_key) = config_builder::test_config();
+    let (mut config, genesis_key) = config_builder::test_config();
 
     // Create bootstrapped DB.
     let tmp_dir = TempPath::new();
     let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new(&tmp_dir));
-    let genesis_txn = get_genesis_txn(&config).unwrap();
-    bootstrap_db_if_empty::<LibraVM>(&db_rw, genesis_txn).unwrap();
+    let signer = extract_signer(&mut config);
+    let genesis_txn = get_genesis_txn(&config).unwrap().clone();
+    bootstrap_db_if_empty::<LibraVM>(&db_rw, &genesis_txn).unwrap();
 
     // Mint for 2 demo accounts.
     let (account1, account1_key, account2, account2_key) = get_demo_accounts();
     let txn1 = get_mint_transaction(&genesis_key, 1, &account1, &account1_key, 2000);
     let txn2 = get_mint_transaction(&genesis_key, 2, &account2, &account2_key, 2000);
-    execute_and_commit(vec![txn1, txn2], &db_rw);
+    execute_and_commit(vec![txn1, txn2], &db_rw, &signer);
     assert_eq!(get_balance(&account1, &db_rw), 2000);
     assert_eq!(get_balance(&account2, &db_rw), 2000);
 
@@ -253,7 +253,7 @@ fn test_pre_genesis() {
     restore_state_to_db(&db, accounts_backup, proof, root_hash, PRE_GENESIS_VERSION);
 
     // DB is not empty, `bootstrap_db_if_empty()` won't apply default genesis txn.
-    assert!(bootstrap_db_if_empty::<LibraVM>(&db_rw, genesis_txn)
+    assert!(bootstrap_db_if_empty::<LibraVM>(&db_rw, &genesis_txn)
         .unwrap()
         .is_none());
     // Nor is it able to boot Executor.
@@ -287,7 +287,7 @@ fn test_pre_genesis() {
     let waypoint = committer.waypoint();
     committer.commit().unwrap();
     let (li, epoch_change_proof, _) = db_rw.reader.get_state_proof(waypoint.version()).unwrap();
-    let trusted_state = TrustedState::from_waypoint(waypoint);
+    let trusted_state = TrustedState::from(waypoint);
     trusted_state
         .verify_and_ratchet(&li, &epoch_change_proof)
         .unwrap();
@@ -300,23 +300,27 @@ fn test_pre_genesis() {
 
 #[test]
 fn test_new_genesis() {
-    let (config, genesis_key) = config_builder::test_config();
-
+    let (mut config, genesis_key) = config_builder::test_config();
     // Create bootstrapped DB.
     let tmp_dir = TempPath::new();
     let db = DbReaderWriter::new(LibraDB::new(&tmp_dir));
-    let genesis_txn = get_genesis_txn(&config).unwrap();
-    bootstrap_db_if_empty::<LibraVM>(&db, genesis_txn).unwrap();
+    let waypoint = {
+        let genesis_txn = get_genesis_txn(&config).unwrap();
+        bootstrap_db_if_empty::<LibraVM>(&db, genesis_txn)
+            .unwrap()
+            .unwrap()
+    };
+    let signer = extract_signer(&mut config);
 
     // Mint for 2 demo accounts.
     let (account1, account1_key, account2, account2_key) = get_demo_accounts();
     let txn1 = get_mint_transaction(&genesis_key, 1, &account1, &account1_key, 2_000_000);
     let txn2 = get_mint_transaction(&genesis_key, 2, &account2, &account2_key, 2_000_000);
-    execute_and_commit(vec![txn1, txn2], &db);
+    execute_and_commit(vec![txn1, txn2], &db, &signer);
     assert_eq!(get_balance(&account1, &db), 2_000_000);
     assert_eq!(get_balance(&account2, &db), 2_000_000);
-    let (li, epoch_change_proof, _) = db.reader.get_state_proof(0).unwrap();
-    let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
+    let (li, epoch_change_proof, _) = db.reader.get_state_proof(waypoint.version()).unwrap();
+    let trusted_state = TrustedState::from(waypoint);
     trusted_state
         .verify_and_ratchet(&li, &epoch_change_proof)
         .unwrap();
@@ -359,7 +363,7 @@ fn test_new_genesis() {
     assert_eq!(waypoint.version(), 3);
 
     // Client bootable from waypoint.
-    let trusted_state = TrustedState::from_waypoint(waypoint);
+    let trusted_state = TrustedState::from(waypoint);
     let (li, epoch_change_proof, accumulator_consistency_proof) = db
         .reader
         .get_state_proof(trusted_state.latest_version())
@@ -378,7 +382,7 @@ fn test_new_genesis() {
     // Transfer some money.
     let txn =
         get_transfer_transaction(account1, 0, &account1_key, account2, &account2_key, 500_000);
-    execute_and_commit(vec![txn], &db);
+    execute_and_commit(vec![txn], &db, &signer);
 
     // And verify.
     assert_eq!(get_balance(&account2, &db), 2_500_000);

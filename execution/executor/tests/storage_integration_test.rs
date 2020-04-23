@@ -4,7 +4,8 @@
 use anyhow::{ensure, format_err, Result};
 use executor::{db_bootstrapper::bootstrap_db_if_empty, BlockExecutor, Executor};
 use executor_utils::test_helpers::{
-    gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
+    extract_signer, gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs,
+    get_test_signed_transaction,
 };
 use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey, Uniform};
@@ -19,7 +20,7 @@ use libra_types::{
         authenticator::AuthenticationKey, Script, Transaction, TransactionListWithProof,
         TransactionWithProof,
     },
-    trusted_state::TrustedState,
+    trusted_state::{TrustedState, TrustedStateChange},
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
@@ -48,7 +49,7 @@ fn test_genesis() {
     let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
 
-    let trusted_state = TrustedState::from_waypoint(config.base.waypoint.unwrap());
+    let trusted_state = TrustedState::from(config.base.waypoint.unwrap());
     trusted_state
         .verify_and_ratchet(&li, &epoch_change_proof)
         .unwrap();
@@ -204,9 +205,11 @@ fn test_change_publishing_option_to_custom() {
         .account_keypair
         .as_mut()
         .unwrap();
-
     let validator_privkey = keys.take_private().unwrap();
     let validator_pubkey = keys.public_key();
+
+    let signer = extract_signer(&mut config);
+
     let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
     let validator_auth_key_prefix = auth_key.prefix().to_vec();
     assert_eq!(
@@ -275,7 +278,7 @@ fn test_change_publishing_option_to_custom() {
         "StateComputeResult has a new validator set"
     );
 
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(3, output1.root_hash(), block1_id);
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, output1, block1_id, vec![&signer]);
     let (_, reconfig_events) = executor
         .commit_blocks(vec![block1_id], ledger_info_with_sigs)
         .unwrap();
@@ -286,10 +289,11 @@ fn test_change_publishing_option_to_custom() {
 
     let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
-    let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
-    trusted_state
-        .verify_and_ratchet(&li, &epoch_change_proof)
-        .unwrap();
+    let mut trusted_state = TrustedState::from(config.base.waypoint.unwrap());
+    match trusted_state.verify_and_ratchet(&li, &epoch_change_proof) {
+        Ok(TrustedStateChange::Epoch { new_state, .. }) => trusted_state = new_state,
+        _ => panic!("unexpected state change"),
+    }
     let current_version = li.ledger_info().version();
     assert_eq!(current_version, 3);
     // Transaction 1 is committed as it's in the whitelist
@@ -325,10 +329,10 @@ fn test_change_publishing_option_to_custom() {
     let block2_id = gen_block_id(2);
     let block2 = vec![txn2, txn3];
     let output2 = executor
-        .execute_block((block2_id, block2.clone()), block1_id)
+        .execute_block((block2_id, block2.clone()), executor.committed_block_id())
         .unwrap();
 
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(5, output2.root_hash(), block2_id);
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(2, output2, block2_id, vec![&signer]);
     let (_, reconfig_events) = executor
         .commit_blocks(vec![block2_id], ledger_info_with_sigs)
         .unwrap();
@@ -376,9 +380,9 @@ fn test_extend_whitelist() {
         .account_keypair
         .as_mut()
         .unwrap();
-
     let validator_privkey = keys.take_private().unwrap();
     let validator_pubkey = keys.public_key();
+    let signer = extract_signer(&mut config);
     let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
     let validator_auth_key_prefix = auth_key.prefix().to_vec();
     assert!(
@@ -453,7 +457,7 @@ fn test_extend_whitelist() {
         "StateComputeResult has a new validator set"
     );
 
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(3, output1.root_hash(), block1_id);
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, output1, block1_id, vec![&signer]);
     let (_, reconfig_events) = executor
         .commit_blocks(vec![block1_id], ledger_info_with_sigs)
         .unwrap();
@@ -464,10 +468,11 @@ fn test_extend_whitelist() {
 
     let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
-    let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
-    trusted_state
-        .verify_and_ratchet(&li, &epoch_change_proof)
-        .unwrap();
+    let mut trusted_state = TrustedState::from(config.base.waypoint.unwrap());
+    match trusted_state.verify_and_ratchet(&li, &epoch_change_proof) {
+        Ok(TrustedStateChange::Epoch { new_state, .. }) => trusted_state = new_state,
+        _ => panic!("unexpected state change"),
+    }
     let current_version = li.ledger_info().version();
     assert_eq!(current_version, 3);
     // Transaction 1 is committed as it's in the whitelist
@@ -506,10 +511,10 @@ fn test_extend_whitelist() {
     let block2_id = gen_block_id(2);
     let block2 = vec![txn2, txn3];
     let output2 = executor
-        .execute_block((block2_id, block2.clone()), block1_id)
+        .execute_block((block2_id, block2.clone()), executor.committed_block_id())
         .unwrap();
 
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(4, output2.root_hash(), block2_id);
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(2, output2, block2_id, vec![&signer]);
     let (_, reconfig_events) = executor
         .commit_blocks(vec![block2_id], ledger_info_with_sigs)
         .unwrap();
@@ -542,9 +547,10 @@ fn test_extend_whitelist() {
 
 #[test]
 fn test_execution_with_storage() {
-    let (config, genesis_key) = config_builder::test_config();
+    let (mut config, genesis_key) = config_builder::test_config();
     let (db, mut executor) = create_db_and_executor(&config);
     let parent_block_id = executor.committed_block_id();
+    let signer = extract_signer(&mut config);
 
     let seed = [1u8; 32];
     // TEST_SEED is also used to generate a random validator set in get_test_config. Each account
@@ -688,7 +694,7 @@ fn test_execution_with_storage() {
     let output1 = executor
         .execute_block((block1_id, block1.clone()), parent_block_id)
         .unwrap();
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(6, output1.root_hash(), block1_id);
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, output1, block1_id, vec![&signer]);
     let (_, reconfig_events) = executor
         .commit_blocks(vec![block1_id], ledger_info_with_sigs)
         .unwrap();
@@ -699,12 +705,13 @@ fn test_execution_with_storage() {
 
     let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
-    let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
-    trusted_state
-        .verify_and_ratchet(&li, &epoch_change_proof)
-        .unwrap();
+    let mut trusted_state = TrustedState::from(config.base.waypoint.unwrap());
+    match trusted_state.verify_and_ratchet(&li, &epoch_change_proof) {
+        Ok(TrustedStateChange::Epoch { new_state, .. }) => trusted_state = new_state,
+        _ => panic!("unexpected state change"),
+    }
     let current_version = li.ledger_info().version();
-    assert_eq!(current_version, 6);
+    assert_eq!(trusted_state.latest_version(), 6);
 
     let t1 = db
         .reader
@@ -832,13 +839,15 @@ fn test_execution_with_storage() {
     let output2 = executor
         .execute_block((block2_id, block2.clone()), block1_id)
         .unwrap();
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(20, output2.root_hash(), block2_id);
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, output2, block2_id, vec![&signer]);
     executor
         .commit_blocks(vec![block2_id], ledger_info_with_sigs)
         .unwrap();
 
-    let (li, epoch_change_proof, _accumulator_consistency_proof) =
-        db.reader.get_state_proof(current_version).unwrap();
+    let (li, epoch_change_proof, _accumulator_consistency_proof) = db
+        .reader
+        .get_state_proof(trusted_state.latest_version())
+        .unwrap();
     trusted_state
         .verify_and_ratchet(&li, &epoch_change_proof)
         .unwrap();

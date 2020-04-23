@@ -52,14 +52,8 @@ pub struct LibraClient {
 
 impl LibraClient {
     /// Construct a new Client instance.
-    // TODO(philiphayes/dmitrip): Waypoint should not be optional
-    pub fn new(url: Url, waypoint: Option<Waypoint>) -> Result<Self> {
-        // If waypoint is present, use it for initial verification, otherwise the initial
-        // verification is essentially empty.
-        let initial_trusted_state = match waypoint {
-            Some(waypoint) => TrustedState::from_waypoint(waypoint),
-            None => TrustedState::new_trust_any_genesis_WARNING_UNSAFE(),
-        };
+    pub fn new(url: Url, waypoint: Waypoint) -> Result<Self> {
+        let initial_trusted_state = TrustedState::from(waypoint);
         let client = JsonRpcClient::new(url)?;
         Ok(LibraClient {
             client,

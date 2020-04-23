@@ -1,13 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use cli::{client_proxy::ClientProxy, commands};
 use std::{
-    collections::HashMap,
     io::{self, Write},
     path::Path,
     process::{Child, Command, Output, Stdio},
-    sync::Arc,
 };
 
 pub struct InteractiveClient {
@@ -128,49 +125,5 @@ impl InteractiveClient {
             input.flush()?;
         }
         Ok(())
-    }
-}
-
-pub struct InProcessTestClient {
-    client: ClientProxy,
-    alias_to_cmd: HashMap<&'static str, Arc<dyn commands::Command>>,
-}
-
-impl InProcessTestClient {
-    pub fn new(port: u16, faucet_key_file_path: &Path, mnemonic_file_path: &str) -> Self {
-        let (_, alias_to_cmd) = commands::get_commands(true);
-        Self {
-            client: ClientProxy::new(
-                &format!("http://localhost:{}", port),
-                faucet_key_file_path
-                    .canonicalize()
-                    .expect("Unable to get canonical path of faucet key file")
-                    .to_str()
-                    .unwrap(),
-                false,
-                /* faucet server */ None,
-                Some(mnemonic_file_path.to_string()),
-                None,
-            )
-            .unwrap(),
-            alias_to_cmd,
-        }
-    }
-
-    pub fn execute_instructions(&mut self, instructions: &[&str]) {
-        for instr in instructions {
-            let to_parse = (*instr).to_string();
-            let params = commands::parse_cmd(&to_parse);
-            // filter out empty lines
-            if params.is_empty() || params[0].is_empty() {
-                continue;
-            }
-            let cmd = self.alias_to_cmd.get(params[0]).expect("Cmd not found");
-            cmd.execute(&mut self.client, &params);
-        }
-    }
-
-    pub fn client(&mut self) -> &mut ClientProxy {
-        &mut self.client
     }
 }

@@ -13,7 +13,7 @@ source "$HOME/.cargo/env"
 
 SCRIPT_PATH="$(dirname $0)"
 
-RUN_PARAMS="--url https://client.testnet.libra.org "
+RUN_PARAMS="--url https://client.testnet.libra.org --waypoint_url https://developers.libra.org/testnet_waypoint.txt"
 RELEASE=""
 
 while [[ ! -z "$1" ]]; do
