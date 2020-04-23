@@ -13,13 +13,13 @@ use futures::{
     future::Future,
     SinkExt,
 };
-use libra_config::config::{NodeConfig, RoleType, StateSyncConfig};
+use libra_config::config::{NodeConfig, RoleType, StateSyncConfig, UpstreamConfig};
 use libra_mempool::{CommitNotification, CommitResponse};
 use libra_types::{
     contract_event::ContractEvent, epoch_change::EpochChangeProof,
-    ledger_info::LedgerInfoWithSignatures, transaction::Transaction, waypoint::Waypoint,
+    ledger_info::LedgerInfoWithSignatures, transaction::Transaction, waypoint::Waypoint, PeerId,
 };
-use std::{boxed::Box, sync::Arc, time::Duration};
+use std::{boxed::Box, collections::HashMap, sync::Arc, time::Duration};
 use storage_interface::DbReader;
 use subscription_service::ReconfigSubscription;
 use tokio::{
@@ -35,7 +35,7 @@ pub struct StateSynchronizer {
 impl StateSynchronizer {
     /// Setup state synchronizer. spawns coordinator and downloader routines on executor
     pub fn bootstrap(
-        network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
+        network: Vec<(PeerId, StateSynchronizerSender, StateSynchronizerEvents)>,
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
         storage: Arc<dyn DbReader>,
         executor: Box<dyn ChunkExecutor>,
@@ -57,17 +57,19 @@ impl StateSynchronizer {
             config.base.role,
             config.base.waypoint,
             &config.state_sync,
+            config.upstream.clone(),
             executor_proxy,
         )
     }
 
     pub fn bootstrap_with_executor_proxy<E: ExecutorProxyTrait + 'static>(
         runtime: Runtime,
-        network: Vec<(StateSynchronizerSender, StateSynchronizerEvents)>,
+        network: Vec<(PeerId, StateSynchronizerSender, StateSynchronizerEvents)>,
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
         role: RoleType,
         waypoint: Option<Waypoint>,
         state_sync_config: &StateSyncConfig,
+        upstream_config: UpstreamConfig,
         executor_proxy: E,
     ) -> Self {
         let (coordinator_sender, coordinator_receiver) = mpsc::unbounded();
@@ -76,12 +78,19 @@ impl StateSynchronizer {
             .get_local_storage_state()
             .expect("[state sync] Start failure: cannot sync with storage.");
 
+        let network_senders: HashMap<_, _> = network
+            .iter()
+            .map(|(network_id, sender, _events)| (*network_id, sender.clone()))
+            .collect();
+
         let coordinator = SyncCoordinator::new(
             coordinator_receiver,
             state_sync_to_mempool_sender,
+            network_senders,
             role,
             waypoint,
             state_sync_config.clone(),
+            upstream_config,
             executor_proxy,
             initial_state,
         );

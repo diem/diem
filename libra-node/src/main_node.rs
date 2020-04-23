@@ -257,9 +257,9 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         let (runtime, mut network_builder) =
             setup_network(network, RoleType::Validator, Arc::clone(&storage_read));
 
-        state_sync_network_handles.push(state_synchronizer::network::add_to_network(
-            &mut network_builder,
-        ));
+        let (state_sync_sender, state_sync_events) =
+            state_synchronizer::network::add_to_network(&mut network_builder);
+        state_sync_network_handles.push((network.peer_id, state_sync_sender, state_sync_events));
 
         let (mempool_sender, mempool_events) =
             libra_mempool::network::add_to_network(&mut network_builder);
@@ -275,8 +275,12 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         );
 
         network_runtimes.push(runtime);
-        state_sync_network_handles.push(state_synchronizer::network::add_to_network(
-            &mut network_builder,
+        let (state_sync_sender, state_sync_events) =
+            state_synchronizer::network::add_to_network(&mut network_builder);
+        state_sync_network_handles.push((
+            full_node_network.peer_id,
+            state_sync_sender,
+            state_sync_events,
         ));
         let (mempool_sender, mempool_events) =
             libra_mempool::network::add_to_network(&mut network_builder);
