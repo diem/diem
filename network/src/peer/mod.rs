@@ -12,7 +12,6 @@ use crate::{
     ProtocolId,
 };
 use bytes::BytesMut;
-use channel;
 use futures::{
     self,
     channel::oneshot,

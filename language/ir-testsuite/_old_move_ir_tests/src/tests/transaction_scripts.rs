@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::*;
-use hex;
 use move_ir::assert_no_error;
 use std::borrow::Borrow;
 

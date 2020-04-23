@@ -2,10 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use chrono::Utc;
-use log;
-use serde_json;
-use std::io::Write as IoWrite;
-
 use once_cell::sync::Lazy;
 use serde::Serialize;
 use serde_json::Value;
@@ -14,6 +10,7 @@ use std::{
     env,
     fs::{File, OpenOptions},
     io,
+    io::Write as IoWrite,
     str::FromStr,
     sync::{
         atomic::{AtomicUsize, Ordering},

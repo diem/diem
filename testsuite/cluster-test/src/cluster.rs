@@ -6,7 +6,6 @@
 use crate::instance::Instance;
 use anyhow::Result;
 use config_builder::ValidatorConfig;
-use generate_key;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     test_utils::KeyPair,

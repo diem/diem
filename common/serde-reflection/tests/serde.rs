@@ -1,13 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use bincode;
 use serde::{de::IntoDeserializer, Deserialize, Serialize};
-use serde_json;
 use serde_reflection::{
     ContainerFormat, Error, Format, Named, Samples, Tracer, TracerConfig, Value, VariantFormat,
 };
-use serde_yaml;
 use std::collections::BTreeMap;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]

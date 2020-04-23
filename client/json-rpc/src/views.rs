@@ -3,7 +3,6 @@
 
 use crate::client::JsonRpcResponse;
 use anyhow::{format_err, Error, Result};
-use hex;
 use libra_crypto::HashValue;
 use libra_types::{
     account_config::{

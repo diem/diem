@@ -26,7 +26,6 @@ use libra_crypto::{
 };
 use libra_secure_storage::Storage;
 use libra_secure_time::TimeService;
-use libra_transaction_scripts;
 use libra_types::{
     account_address::AccountAddress,
     transaction::{RawTransaction, Script, Transaction, TransactionArgument},

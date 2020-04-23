@@ -7,8 +7,6 @@ use crate::{noise::NoiseConfig, test_utils::TEST_SEED, x25519};
 
 use rand::SeedableRng;
 use serde::*;
-use serde_json;
-use x25519_dalek;
 
 fn vec_to_private_key(bytes: &[u8]) -> x25519_dalek::StaticSecret {
     if bytes.len() != x25519::PRIVATE_KEY_SIZE {
