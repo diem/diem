@@ -8,13 +8,19 @@ use std::{
         atomic::{AtomicU64, Ordering},
         Arc,
     },
-    time::SystemTime,
+    thread::sleep,
+    time::{Duration, SystemTime},
 };
 
-/// A generic service for providing the current time
+/// A generic service for providing time related operations (e.g., returning the current time and
+/// sleeping).
 pub trait TimeService {
-    /// Returns the current time since the UNIX_EPOCH in seconds as a u64
+    /// Returns the current time since the UNIX_EPOCH in seconds as a u64.
     fn now(&self) -> u64;
+
+    /// Sleeps the calling thread for (at least) the specified number of seconds. This call may
+    /// sleep longer than specified, never less.
+    fn sleep(&self, seconds: u64);
 }
 
 /// A real-time TimeService
@@ -33,6 +39,10 @@ impl TimeService for RealTimeService {
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
             .as_secs()
+    }
+
+    fn sleep(&self, seconds: u64) {
+        sleep(Duration::new(seconds, 0));
     }
 }
 
@@ -62,6 +72,10 @@ impl TimeService for MockTimeService {
     fn now(&self) -> u64 {
         self.now.load(Ordering::Relaxed)
     }
+
+    fn sleep(&self, seconds: u64) {
+        self.increment_by(seconds);
+    }
 }
 
 #[cfg(test)]
@@ -81,6 +95,28 @@ mod tests {
         assert_eq!(service.now(), 0);
         service.increment();
         assert_eq!(service.now(), 1);
+    }
+
+    #[test]
+    fn test_sleep() {
+        // This time shouldn't be too large because it actually sleeps the testing thread when
+        // using the RealTimeService!
+        let sleep_time = 1;
+
+        // Test real service
+        let service = RealTimeService::new();
+        verify_sleep(&service, sleep_time);
+
+        // Test mock service
+        let service = MockTimeService::new();
+        verify_sleep(&service, sleep_time);
+    }
+
+    fn verify_sleep<T: TimeService>(service: &T, sleep_time: u64) {
+        let current_time = service.now();
+        service.sleep(sleep_time);
+
+        assert!(service.now() >= current_time + sleep_time);
     }
 
     fn test_time_service<T: TimeService>(service: &T) {
