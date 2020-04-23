@@ -468,38 +468,54 @@ fn serialize_signature_tokens(binary: &mut BinaryData, tokens: &[SignatureToken]
 /// A `SignatureToken` gets serialized as a variable size blob depending on composition.
 /// Values for types are defined in `SerializedType`.
 fn serialize_signature_token(binary: &mut BinaryData, token: &SignatureToken) -> Result<()> {
-    match token {
-        SignatureToken::Bool => binary.push(SerializedType::BOOL as u8),
-        SignatureToken::U8 => binary.push(SerializedType::U8 as u8),
-        SignatureToken::U64 => binary.push(SerializedType::U64 as u8),
-        SignatureToken::U128 => binary.push(SerializedType::U128 as u8),
-        SignatureToken::Address => binary.push(SerializedType::ADDRESS as u8),
-        SignatureToken::Vector(boxed_token) => {
-            binary.push(SerializedType::VECTOR as u8)?;
-            serialize_signature_token(binary, boxed_token)
-        }
-        SignatureToken::Struct(idx) => {
-            binary.push(SerializedType::STRUCT as u8)?;
-            write_u16_as_uleb128(binary, idx.0)
-        }
-        SignatureToken::StructInstantiation(idx, type_params) => {
-            binary.push(SerializedType::STRUCT_INST as u8)?;
-            write_u16_as_uleb128(binary, idx.0)?;
-            serialize_signature_tokens(binary, &type_params)
-        }
-        SignatureToken::Reference(boxed_token) => {
-            binary.push(SerializedType::REFERENCE as u8)?;
-            serialize_signature_token(binary, boxed_token)
-        }
-        SignatureToken::MutableReference(boxed_token) => {
-            binary.push(SerializedType::MUTABLE_REFERENCE as u8)?;
-            serialize_signature_token(binary, boxed_token)
-        }
-        SignatureToken::TypeParameter(idx) => {
-            binary.push(SerializedType::TYPE_PARAMETER as u8)?;
-            write_u16_as_uleb128(binary, *idx)
+    // Non-recursive implementation to avoid overflowing the stack.
+    let mut stack = vec![token];
+
+    while let Some(token) = stack.pop() {
+        match token {
+            SignatureToken::Bool => binary.push(SerializedType::BOOL as u8)?,
+            SignatureToken::U8 => binary.push(SerializedType::U8 as u8)?,
+            SignatureToken::U64 => binary.push(SerializedType::U64 as u8)?,
+            SignatureToken::U128 => binary.push(SerializedType::U128 as u8)?,
+            SignatureToken::Address => binary.push(SerializedType::ADDRESS as u8)?,
+            SignatureToken::Vector(boxed_token) => {
+                binary.push(SerializedType::VECTOR as u8)?;
+                stack.push(boxed_token);
+            }
+            SignatureToken::Struct(idx) => {
+                binary.push(SerializedType::STRUCT as u8)?;
+                write_u16_as_uleb128(binary, idx.0)?;
+            }
+            SignatureToken::StructInstantiation(idx, type_params) => {
+                binary.push(SerializedType::STRUCT_INST as u8)?;
+                write_u16_as_uleb128(binary, idx.0)?;
+                let len = type_params.len();
+                if len > u8::max_value() as usize {
+                    bail!(
+                        "arguments/locals size ({}) cannot exceed {}",
+                        len,
+                        u8::max_value(),
+                    )
+                }
+                binary.push(len as u8)?;
+                stack.extend(type_params.iter().rev());
+            }
+            SignatureToken::Reference(boxed_token) => {
+                binary.push(SerializedType::REFERENCE as u8)?;
+                stack.push(boxed_token);
+            }
+            SignatureToken::MutableReference(boxed_token) => {
+                binary.push(SerializedType::MUTABLE_REFERENCE as u8)?;
+                stack.push(boxed_token);
+            }
+            SignatureToken::TypeParameter(idx) => {
+                binary.push(SerializedType::TYPE_PARAMETER as u8)?;
+                write_u16_as_uleb128(binary, *idx)?;
+            }
         }
     }
+
+    Ok(())
 }
 
 fn serialize_nominal_resource_flag(

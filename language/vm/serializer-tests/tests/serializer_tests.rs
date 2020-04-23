@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use proptest::prelude::*;
-use vm::file_format::{CompiledModule, CompiledModuleMut};
+use vm::file_format::{empty_module, CompiledModule, CompiledModuleMut, Signature, SignatureToken};
 
 proptest! {
     #[test]
@@ -31,4 +31,25 @@ proptest! {
             .expect("deserialization should work");
         prop_assert_eq!(module, deserialized_module);
     }
+}
+
+#[test]
+fn serialize_and_deserialize_deeply_nested_types() {
+    const RECURSION_DEPTH: usize = 10000;
+
+    let mut m = empty_module();
+    let mut ty = SignatureToken::U8;
+    // TODO: turn the number of iterations up once we fix Drop for SignatureToken.
+    for _ in 0..RECURSION_DEPTH {
+        ty = SignatureToken::Vector(Box::new(ty));
+    }
+    m.signatures.push(Signature(vec![ty]));
+
+    // TODO: Run bounds checker here once we get that fixed .
+    let mut serialized = Vec::with_capacity(2048);
+    m.serialize(&mut serialized)
+        .expect("serialization should work");
+
+    CompiledModuleMut::deserialize_no_check_bounds(&serialized)
+        .expect("deserialization should work");
 }
