@@ -1,9 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_metrics::DurationHistogram;
+use libra_metrics::{
+    register_histogram, register_int_counter, register_int_counter_vec, register_int_gauge,
+    DurationHistogram, IntCounter, IntCounterVec, IntGauge,
+};
 use once_cell::sync::Lazy;
-use prometheus::{IntCounter, IntCounterVec, IntGauge};
 
 /// Counter of pending network events to State Synchronizer
 pub static PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| {

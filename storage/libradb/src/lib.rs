@@ -9,8 +9,6 @@
 //! It relays read/write operations on the physical storage via [`schemadb`] to the underlying
 //! Key-Value storage system, and implements libra data structures on top of it.
 
-#[macro_use]
-extern crate prometheus;
 // Used in this and other crates for testing.
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod test_helper;
@@ -49,7 +47,10 @@ use itertools::{izip, zip_eq};
 use jellyfish_merkle::restore::JellyfishMerkleRestore;
 use libra_crypto::hash::{CryptoHash, HashValue, SPARSE_MERKLE_PLACEHOLDER_HASH};
 use libra_logger::prelude::*;
-use libra_metrics::OpMetrics;
+use libra_metrics::{
+    register_int_counter, register_int_gauge, register_int_gauge_vec, IntCounter, IntGauge,
+    IntGaugeVec, OpMetrics,
+};
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -69,7 +70,6 @@ use libra_types::{
     validator_change::ValidatorChangeProof,
 };
 use once_cell::sync::Lazy;
-use prometheus::{IntCounter, IntGauge, IntGaugeVec};
 use schemadb::{DB, DEFAULT_CF_NAME};
 use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_interface::{DbReader, DbWriter, StartupInfo, TreeState};

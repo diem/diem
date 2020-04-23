@@ -1,9 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_metrics::{Histogram, IntGauge, OpMetrics};
+use libra_metrics::{
+    register_histogram, register_histogram_vec, register_int_counter_vec, register_int_gauge_vec,
+    Histogram, HistogramVec, IntCounterVec, IntGauge, IntGaugeVec, OpMetrics,
+};
 use once_cell::sync::Lazy;
-use prometheus::{HistogramVec, IntCounterVec, IntGaugeVec};
 
 pub static LIBRA_NETWORK_PEERS: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(

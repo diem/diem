@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::OP_COUNTER;
+use libra_metrics::{register_int_gauge_vec, IntGaugeVec};
 use num_derive::ToPrimitive;
 use num_traits::ToPrimitive;
 use num_variants::NumVariants;
 use once_cell::sync::Lazy;
-use prometheus::IntGaugeVec;
 #[cfg(test)]
 use proptest::{collection::hash_map, prelude::*};
 #[cfg(test)]
