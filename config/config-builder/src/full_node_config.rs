@@ -198,6 +198,7 @@ impl FullNodeConfig {
             } else {
                 validator_config.execution.genesis.clone()
             };
+            config.base.waypoint = validator_config.base.waypoint;
 
             let network = config
                 .full_node_networks

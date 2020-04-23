@@ -120,7 +120,7 @@ impl ClientProxy {
         sync_on_wallet_recovery: bool,
         faucet_server: Option<String>,
         mnemonic_file: Option<String>,
-        waypoint: Option<Waypoint>,
+        waypoint: Waypoint,
     ) -> Result<Self> {
         // fail fast if url is not valid
         let url = Url::parse(url)?;
@@ -1294,6 +1294,7 @@ impl fmt::Display for AccountEntry {
 mod tests {
     use crate::client_proxy::{parse_bool, AddressAndIndex, ClientProxy};
     use libra_temppath::TempPath;
+    use libra_types::{ledger_info::LedgerInfo, on_chain_config::ValidatorSet, waypoint::Waypoint};
     use libra_wallet::io_utils;
     use proptest::prelude::*;
 
@@ -1302,6 +1303,8 @@ mod tests {
         accounts.reserve(count);
         let file = TempPath::new();
         let mnemonic_path = file.path().to_str().unwrap().to_string();
+        let waypoint =
+            Waypoint::new(&LedgerInfo::mock_genesis(Some(ValidatorSet::empty()))).unwrap();
 
         // Note: `client_proxy` won't actually connect to URL - it will be used only to
         // generate random accounts
@@ -1311,7 +1314,7 @@ mod tests {
             false,
             None,
             Some(mnemonic_path),
-            None,
+            waypoint,
         )
         .unwrap();
         for _ in 0..count {

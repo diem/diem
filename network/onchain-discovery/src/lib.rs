@@ -150,8 +150,7 @@ where
         executor: Handle,
         self_peer_id: PeerId,
         role: RoleType,
-        // TODO(philiphayes): make Waypoint non-optional
-        waypoint: Option<Waypoint>,
+        waypoint: Waypoint,
         network_tx: OnchainDiscoveryNetworkSender,
         network_rx: OnchainDiscoveryNetworkEvents,
         storage_read_client: Arc<dyn StorageRead>,
@@ -160,19 +159,7 @@ where
         outbound_rpc_timeout: Duration,
         max_concurrent_inbound_queries: usize,
     ) -> Self {
-        // This initial trusted state will trust any genesis presented to us.
-        // Since we are querying from our own storage, this will just get us
-        // up-to-speed on our last known ledger state from storage, ratcheting
-        // our trusted state in the process.
-        // TODO(philiphayes): always start from at least genesis _waypoint_.
-        // TODO(philiphayes): we could also start from storage.get_startup_info's
-        // latest ledger info?
-        // TODO(philiphayes): this is probably unsafe currently, since the
-        // storage query could race with the peer query below and we might
-        // accidently trust whatever the peer's genesis is.
-        let trusted_state = waypoint
-            .map(TrustedState::from_waypoint)
-            .unwrap_or_else(TrustedState::new_trust_any_genesis_WARNING_UNSAFE);
+        let trusted_state = waypoint.into();
 
         Self {
             inbound_rpc_executor: BoundedExecutor::new(max_concurrent_inbound_queries, executor),

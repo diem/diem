@@ -9,7 +9,7 @@ use crate::{
     waypoint::Waypoint,
 };
 use anyhow::{ensure, format_err, Result};
-use std::sync::Arc;
+use std::{convert::TryFrom, sync::Arc};
 
 /// `TrustedState` keeps track of our latest trusted state, including the latest
 /// verified version and the latest verified validator set.
@@ -45,61 +45,6 @@ pub enum TrustedStateChange<'a> {
 }
 
 impl TrustedState {
-    /// Create an initial trusted state from a waypoint.
-    pub fn from_waypoint(waypoint: Waypoint) -> Self {
-        Self {
-            latest_version: waypoint.version(),
-            verifier: VerifierType::Waypoint(waypoint),
-        }
-    }
-
-    /// Create an initial trusted state that will trust the first genesis
-    /// presented to it.
-    ///
-    /// WARNING: this is obviously unsafe, as a malicious peer could present any
-    /// arbitrary genesis and this TrustedState would gladly accept it.
-    // TODO(philiphayes/dmitrip): remove this when waypoints are completely
-    // integrated with client code.
-    #[allow(non_snake_case)]
-    pub fn new_trust_any_genesis_WARNING_UNSAFE() -> Self {
-        Self {
-            latest_version: 0,
-            verifier: VerifierType::TrustedVerifier(EpochInfo::empty()),
-        }
-    }
-
-    /// Create an initial trusted state from an epoch change ledger info and
-    /// a version inside that epoch.
-    pub fn from_epoch_change_ledger_info(
-        latest_version: Version,
-        epoch_change_li: &LedgerInfo,
-    ) -> Result<Self> {
-        ensure!(
-            latest_version != epoch_change_li.version(),
-            "A client can only enter an epoch on the boundary; only with a version inside that epoch",
-        );
-        ensure!(
-            latest_version > epoch_change_li.version(),
-            "The given version must be inside the epoch",
-        );
-
-        let validator_set = epoch_change_li.next_validator_set().ok_or_else(|| {
-            format_err!("No ValidatorSet in LedgerInfo; it must not be on an epoch boundary")
-        })?;
-
-        // Generate the EpochInfo from the new validator set.
-        let epoch_info = EpochInfo {
-            epoch: epoch_change_li.epoch() + 1,
-            verifier: Arc::new(validator_set.into()),
-        };
-        let verifier = VerifierType::TrustedVerifier(epoch_info);
-
-        Ok(Self {
-            latest_version,
-            verifier,
-        })
-    }
-
     /// Verify and ratchet forward our trusted state using a `EpochChangeProof`
     /// (that moves us into the latest epoch) and a `LedgerInfoWithSignatures`
     /// inside that epoch.
@@ -201,5 +146,36 @@ impl TrustedState {
 
     pub fn verifier(&self) -> &VerifierType {
         &self.verifier
+    }
+}
+
+impl From<Waypoint> for TrustedState {
+    fn from(waypoint: Waypoint) -> Self {
+        Self {
+            latest_version: waypoint.version(),
+            verifier: VerifierType::Waypoint(waypoint),
+        }
+    }
+}
+
+impl TryFrom<&LedgerInfo> for TrustedState {
+    type Error = anyhow::Error;
+
+    fn try_from(ledger_info: &LedgerInfo) -> Result<Self> {
+        let validator_set = ledger_info.next_validator_set().ok_or_else(|| {
+            format_err!("No ValidatorSet in LedgerInfo; it must not be on an epoch boundary")
+        })?;
+
+        // Generate the EpochInfo from the new validator set.
+        let epoch_info = EpochInfo {
+            epoch: ledger_info.next_block_epoch(),
+            verifier: Arc::new(validator_set.into()),
+        };
+        let verifier = VerifierType::TrustedVerifier(epoch_info);
+
+        Ok(Self {
+            latest_version: ledger_info.version(),
+            verifier,
+        })
     }
 }
