@@ -7,7 +7,6 @@
 
 // Bounds checks are implemented in the `vm` crate.
 pub mod absint;
-pub mod abstract_state;
 pub mod acquires_list_verifier;
 pub mod check_duplication;
 pub mod code_unit_verifier;
@@ -15,12 +14,14 @@ pub mod constants;
 pub mod control_flow;
 pub mod control_flow_graph;
 pub mod instantiation_loops;
+pub mod locals_safety;
+pub mod reference_safety;
 pub mod resolver;
 pub mod resources;
 pub mod signature;
 pub mod stack_usage_verifier;
 pub mod struct_defs;
-pub mod type_memory_safety;
+pub mod type_safety;
 pub mod unused_entries;
 
 pub mod verifier;
