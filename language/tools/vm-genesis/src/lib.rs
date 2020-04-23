@@ -65,8 +65,6 @@ static INITIALIZE_BLOCK: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("initialize_block_metadata").unwrap());
 static INITIALIZE_CONFIG: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("initialize_configuration").unwrap());
-static INITIALIZE_TXN_FEES: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("initialize_transaction_fees").unwrap());
 static INITIALIZE_VALIDATOR_SET: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("initialize_validator_set").unwrap());
 static INITIALIZE_DISCOVERY_SET: Lazy<Identifier> =
@@ -435,27 +433,97 @@ fn create_and_initialize_main_accounts(
             )
         });
 
-    // create the transaction fee account
-    let transaction_fee_address = account_config::transaction_fee_address();
-    move_vm
-        .execute_function(
-            &account_config::ACCOUNT_MODULE,
-            &CREATE_ACCOUNT_NAME,
-            gas_schedule,
-            interpreter_context,
-            &txn_data,
-            vec![lbr_ty.clone()],
-            vec![
-                Value::address(transaction_fee_address),
-                Value::vector_u8(transaction_fee_address.to_vec()),
-            ],
-        )
-        .unwrap_or_else(|e| {
-            panic!(
-                "Failure creating transaction fee account {:?}: {}",
-                transaction_fee_address, e
+    {
+        // transaction fee addresses setup
+        move_vm
+            .execute_function(
+                &module("TransactionFeeAccounts"),
+                &name("initialize"),
+                gas_schedule,
+                interpreter_context,
+                &txn_data,
+                vec![],
+                vec![],
             )
-        });
+            .unwrap();
+
+        move_vm
+            .execute_function(
+                &module("Association"),
+                &name("grant_privilege"),
+                gas_schedule,
+                interpreter_context,
+                &txn_data,
+                vec![TypeTag::Struct(StructTag {
+                    address: account_config::CORE_CODE_ADDRESS,
+                    module: name("TransactionFeeAccounts"),
+                    name: name("TransactionFeeAccountRegistration"),
+                    type_params: vec![],
+                })],
+                vec![Value::address(association_addr)],
+            )
+            .expect("Unable to grant transaction fee account registration privilege");
+    }
+
+    {
+        // Transaction fee setup
+        let prev_sender = txn_data.sender;
+        // create the transaction fee accounts and addresses
+        let accounts = vec![("Coin1", "0xFEE0"), ("Coin2", "0xFEE1"), ("LBR", "0xFEE2")]
+            .into_iter()
+            .map(|(code, addr)| {
+                (
+                    account_config::type_tag_for_currency_code(
+                        account_config::from_currency_code_string(code).unwrap(),
+                    ),
+                    AccountAddress::from_hex_literal(addr).unwrap(),
+                )
+            });
+        for (type_tag, addr) in accounts {
+            // create the account
+            move_vm
+                .execute_function(
+                    &account_config::ACCOUNT_MODULE,
+                    &CREATE_ACCOUNT_NAME,
+                    gas_schedule,
+                    interpreter_context,
+                    &txn_data,
+                    vec![type_tag.clone()],
+                    vec![Value::address(addr), Value::vector_u8(addr.to_vec())],
+                )
+                .unwrap_or_else(|e| {
+                    panic!("Failure creating transaction fee account {:?}: {}", addr, e)
+                });
+
+            // Now register that address as a transaction fee address
+            move_vm
+                .execute_function(
+                    &module("TransactionFeeAccounts"),
+                    &name("add_transaction_fee_account"),
+                    &gas_schedule,
+                    interpreter_context,
+                    &txn_data,
+                    vec![type_tag],
+                    vec![Value::address(addr)],
+                )
+                .expect("Failure initializing transaction fee");
+
+            txn_data.sender = addr;
+            // Initialize the account as a transaction fee account
+            move_vm
+                .execute_function(
+                    &TRANSACTION_FEE_MODULE,
+                    &name("initialize_transaction_fees"),
+                    &gas_schedule,
+                    interpreter_context,
+                    &txn_data,
+                    vec![],
+                    vec![],
+                )
+                .expect("Failure initializing transaction fee");
+            txn_data.sender = prev_sender;
+        }
+    }
 
     move_vm
         .execute_function(
@@ -559,19 +627,6 @@ fn create_and_initialize_main_accounts(
             ],
         )
         .expect("Failure running epilogue for association account");
-
-    txn_data.sender = account_config::transaction_fee_address();
-    move_vm
-        .execute_function(
-            &TRANSACTION_FEE_MODULE,
-            &INITIALIZE_TXN_FEES,
-            &gas_schedule,
-            interpreter_context,
-            &txn_data,
-            vec![],
-            vec![],
-        )
-        .expect("Failure initializing transaction fee");
 }
 
 /// Create and initialize validator and discovery set.

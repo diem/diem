@@ -14,6 +14,7 @@ module LibraAccount {
     use 0x0::Empty;
     use 0x0::AccountTrack;
     use 0x0::Association;
+    use 0x0::TransactionFeeAccounts;
 
     // Every Libra account has a LibraAccount::T resource
     resource struct T {
@@ -562,12 +563,13 @@ module LibraAccount {
             // Pay the transaction fee into the transaction fee balance.
             // Don't use the account deposit in order to not emit a
             // sent/received payment event.
-            let transaction_fee_balance = borrow_global_mut<Balance<Token>>(0xFEE);
+            let fee_addr = TransactionFeeAccounts::transaction_fee_address<Token>();
+            let transaction_fee_balance = borrow_global_mut<Balance<Token>>(fee_addr);
             Libra::deposit(&mut transaction_fee_balance.coin, transaction_fee);
             Transaction::assert(
                 AccountTrack::update_deposit_limits<Token>(
                     transaction_fee_amount,
-                    0xFEE,
+                    fee_addr,
                     &borrow_global<AccountOperationsCapability>(0xA550C18).tracking_cap
                 ),
                 9

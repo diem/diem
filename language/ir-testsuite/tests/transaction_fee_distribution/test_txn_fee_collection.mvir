@@ -5,13 +5,17 @@
 
 import 0x0.LibraAccount;
 import 0x0.LBR;
+import 0x0.TransactionFeeAccounts;
 
 main() {
     let x: u64;
     let transaction_fee_pot_amount: u64;
+    let fee_addr: address;
     x = 10;
     // Make sure that the pot is empty to start with
-    transaction_fee_pot_amount = LibraAccount.balance<LBR.T>(0xFEE);
+    fee_addr = TransactionFeeAccounts.transaction_fee_address<LBR.T>();
+    transaction_fee_pot_amount =
+    LibraAccount.balance<LBR.T>(move(fee_addr));
     assert(move(transaction_fee_pot_amount) == 0, 0);
     // Do some work
     while (copy(x) > 0) {
@@ -24,18 +28,21 @@ main() {
 //! sender: alice
 import 0x0.LibraAccount;
 import 0x0.LBR;
+import 0x0.TransactionFeeAccounts;
 
 main() {
     let current_balance: u64;
     let previous_balance: u64;
     let transaction_fee_paid: u64;
     let transaction_fee_pot_amount: u64;
+    let fee_addr: address;
     previous_balance = 90000;
     current_balance = LibraAccount.balance<LBR.T>({{alice}});
     assert(copy(previous_balance) > copy(current_balance), 1);
     // Calculate the transaction fee paid
     transaction_fee_paid = move(previous_balance) - move(current_balance);
-    transaction_fee_pot_amount = LibraAccount.balance<LBR.T>(0xFEE);
+    fee_addr = TransactionFeeAccounts.transaction_fee_address<LBR.T>();
+    transaction_fee_pot_amount = LibraAccount.balance<LBR.T>(move(fee_addr));
     // Assert that the transaction fees collected are equal to the transaction fees paid
     assert(move(transaction_fee_paid) == move(transaction_fee_pot_amount), 2);
 

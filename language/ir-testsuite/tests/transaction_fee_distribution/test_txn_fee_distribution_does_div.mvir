@@ -31,6 +31,7 @@ import 0x0.LibraAccount;
 import 0x0.LBR;
 import 0x0.Libra;
 import 0x0.Vector;
+import 0x0.TransactionFeeAccounts;
 import {{vivian}}.BalanceHolder;
 
 main() {
@@ -38,6 +39,7 @@ main() {
   let number_of_validators: u64;
   let index: u64;
   let addr: address;
+  let fee_addr: address;
   let balances: vector<u64>;
   let old_balance: u64;
   let new_balance: u64;
@@ -61,7 +63,8 @@ main() {
   }
 
   BalanceHolder.publish(move(balances));
-  LibraAccount.deposit<LBR.T>({{fees}}, move(lib_coin));
+  fee_addr = TransactionFeeAccounts.transaction_fee_address<LBR.T>();
+  LibraAccount.deposit<LBR.T>(move(fee_addr), move(lib_coin));
   return;
 }
 //! check: EXECUTED
@@ -75,12 +78,14 @@ main() {
 import 0x0.LibraSystem;
 import 0x0.LibraAccount;
 import 0x0.LBR;
+import 0x0.TransactionFeeAccounts;
 import {{vivian}}.BalanceHolder;
 
 main() {
   let number_of_validators: u64;
   let index: u64;
   let addr: address;
+  let fee_addr: address;
   let old_balance: u64;
   let new_balance: u64;
 
@@ -95,7 +100,8 @@ main() {
      assert(copy(new_balance) == (copy(old_balance) + 10), 77);
   }
 
-  assert(LibraAccount.balance<LBR.T>({{fees}}) == 0, 10000);
+  fee_addr = TransactionFeeAccounts.transaction_fee_address<LBR.T>();
+  assert(LibraAccount.balance<LBR.T>(move(fee_addr)) == 0, 10000);
 
   return;
 }

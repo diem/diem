@@ -31,6 +31,7 @@ import 0x0.LibraAccount;
 import 0x0.LBR;
 import 0x0.Libra;
 import 0x0.Vector;
+import 0x0.TransactionFeeAccounts;
 import {{vivian}}.BalanceHolder;
 
 main() {
@@ -38,6 +39,7 @@ main() {
   let number_of_validators: u64;
   let index: u64;
   let addr: address;
+  let fee_addr: address;
   let balances: vector<u64>;
 
   index = 0;
@@ -62,7 +64,8 @@ main() {
 
   index = 0;
 
-  LibraAccount.deposit<LBR.T>({{fees}} , move(lib_coin));
+  fee_addr = TransactionFeeAccounts.transaction_fee_address<LBR.T>();
+  LibraAccount.deposit<LBR.T>(move(fee_addr), move(lib_coin));
   BalanceHolder.publish(move(balances));
   return;
 }
@@ -79,10 +82,12 @@ import 0x0.LibraAccount;
 import 0x0.LBR;
 import 0x0.Libra;
 import 0x0.Vector;
+import 0x0.TransactionFeeAccounts;
 import {{vivian}}.BalanceHolder;
 
 main() {
   let addr: address;
+  let fee_addr: address;
   let index: u64;
   let number_of_validators: u64;
   let old_balance: u64;
@@ -99,10 +104,11 @@ main() {
      assert(move(new_balance) == (move(old_balance) + 10), 77);
   }
 
-  // The remainder in 0xFEE's balance must be less than the number of validators.
-  assert(LibraAccount.balance<LBR.T>({{fees}}) < move(number_of_validators), 2);
+  // The remainder in the transaction fee balance must be less than the number of validators.
+  fee_addr = TransactionFeeAccounts.transaction_fee_address<LBR.T>();
+  assert(LibraAccount.balance<LBR.T>(copy(fee_addr)) < move(number_of_validators), 2);
   // And in this particular case, must be exactly equal to 1.
-  assert(LibraAccount.balance<LBR.T>({{fees}}) == 1, 3);
+  assert(LibraAccount.balance<LBR.T>(move(fee_addr)) == 1, 3);
 
   return;
 }
