@@ -266,7 +266,7 @@ impl SynchronizerEnv {
         let peer_addr = network_builder.build();
 
         let mut config = config_builder::test_config().0;
-        let mut network = config.validator_network.clone().unwrap();
+        let mut network = config.validator_network.unwrap();
         let mut network_id = network.peer_id;
         if !role.is_validator() {
             network.peer_id = PeerId::default();

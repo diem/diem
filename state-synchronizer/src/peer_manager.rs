@@ -9,7 +9,7 @@ use rand::{
     thread_rng,
 };
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, HashMap},
     time::SystemTime,
 };
 
@@ -19,17 +19,12 @@ const MIN_SCORE: f64 = 1.0;
 #[derive(Default, Debug, Clone)]
 pub struct PeerInfo {
     is_alive: bool,
-    is_upstream: bool,
     score: f64,
 }
 
 impl PeerInfo {
-    pub fn new(is_alive: bool, is_upstream: bool, score: f64) -> Self {
-        Self {
-            is_alive,
-            is_upstream,
-            score,
-        }
+    pub fn new(is_alive: bool, score: f64) -> Self {
+        Self { is_alive, score }
     }
 }
 
@@ -43,13 +38,13 @@ pub struct ChunkRequestInfo {
 }
 
 impl ChunkRequestInfo {
-    pub fn new(version: u64, peer_id: PeerNetworkId) -> Self {
+    pub fn new(version: u64, peer: PeerNetworkId) -> Self {
         let now = SystemTime::now();
         Self {
             version,
             first_request_time: now,
             last_request_time: now,
-            last_request_peer: peer_id,
+            last_request_peer: peer,
         }
     }
 }
@@ -69,51 +64,36 @@ pub struct PeerManager {
     peers: HashMap<PeerNetworkId, PeerInfo>,
     requests: BTreeMap<u64, ChunkRequestInfo>,
     weighted_index: Option<WeightedIndex<f64>>,
+    upstream_config: UpstreamConfig,
 }
 
 impl PeerManager {
     pub fn new(upstream_config: UpstreamConfig) -> Self {
-        let peers = upstream_config
-            .upstream_peers
-            .iter()
-            .map(|peer| (*peer, PeerInfo::new(false, true, MAX_SCORE)))
-            .collect();
         Self {
-            peers,
+            peers: HashMap::new(),
             requests: BTreeMap::new(),
             weighted_index: None,
+            upstream_config,
         }
     }
 
-    pub fn set_peers(&mut self, peer_ids: Vec<PeerNetworkId>) {
-        let new_peer_ids: HashSet<_> = peer_ids.iter().collect();
-        for (peer_id, info) in self.peers.iter_mut() {
-            info.is_upstream = new_peer_ids.contains(peer_id);
+    pub fn enable_peer(&mut self, peer: PeerNetworkId) {
+        if !self.is_upstream_peer(peer) {
+            return;
         }
-        for peer_id in new_peer_ids {
-            if !self.peers.contains_key(peer_id) {
-                self.peers
-                    .insert(*peer_id, PeerInfo::new(false, true, MAX_SCORE));
-            }
-        }
-        self.compute_weighted_index();
-        debug!("[state sync] (set_peers) state: {:?}", self.peers);
-    }
 
-    pub fn enable_peer(&mut self, peer_id: PeerNetworkId) {
         debug!("[state sync] state before: {:?}", self.peers);
-        if let Some(peer_info) = self.peers.get_mut(&peer_id) {
+        if let Some(peer_info) = self.peers.get_mut(&peer) {
             peer_info.is_alive = true;
         } else {
-            self.peers
-                .insert(peer_id, PeerInfo::new(true, false, MAX_SCORE));
+            self.peers.insert(peer, PeerInfo::new(true, MAX_SCORE));
         }
         self.compute_weighted_index();
         debug!("[state sync] state after: {:?}", self.peers);
     }
 
-    pub fn disable_peer(&mut self, peer_id: &PeerNetworkId) {
-        if let Some(peer_info) = self.peers.get_mut(peer_id) {
+    pub fn disable_peer(&mut self, peer: &PeerNetworkId) {
+        if let Some(peer_info) = self.peers.get_mut(peer) {
             peer_info.is_alive = false;
         };
         self.compute_weighted_index();
@@ -123,8 +103,8 @@ impl PeerManager {
         self.get_active_upstream_peers().is_empty()
     }
 
-    pub fn update_score(&mut self, peer_id: &PeerNetworkId, update_type: PeerScoreUpdateType) {
-        if let Some(peer_info) = self.peers.get_mut(peer_id) {
+    pub fn update_score(&mut self, peer: &PeerNetworkId, update_type: PeerScoreUpdateType) {
+        if let Some(peer_info) = self.peers.get_mut(peer) {
             let old_score = peer_info.score;
             match update_type {
                 PeerScoreUpdateType::Success => {
@@ -186,17 +166,17 @@ impl PeerManager {
     fn get_active_upstream_peers(&self) -> Vec<(&PeerNetworkId, &PeerInfo)> {
         self.peers
             .iter()
-            .filter(|&(_, peer_info)| peer_info.is_alive && peer_info.is_upstream)
+            .filter(|&(peer, peer_info)| peer_info.is_alive && self.is_upstream_peer(*peer))
             .collect()
     }
 
-    pub fn process_request(&mut self, version: u64, peer_id: PeerNetworkId) {
+    pub fn process_request(&mut self, version: u64, peer: PeerNetworkId) {
         if let Some(prev_request) = self.requests.get_mut(&version) {
-            prev_request.last_request_peer = peer_id;
+            prev_request.last_request_peer = peer;
             prev_request.last_request_time = SystemTime::now();
         } else {
             self.requests
-                .insert(version, ChunkRequestInfo::new(version, peer_id));
+                .insert(version, ChunkRequestInfo::new(version, peer));
         }
     }
 
@@ -230,8 +210,13 @@ impl PeerManager {
         self.update_score(&peer_to_penalize, PeerScoreUpdateType::TimeOut);
     }
 
+    fn is_upstream_peer(&self, peer: PeerNetworkId) -> bool {
+        self.upstream_config
+            .is_upstream_peer(peer.network_id(), peer.peer_id())
+    }
+
     #[cfg(test)]
-    pub fn peer_score(&self, peer_id: &PeerNetworkId) -> Option<f64> {
-        self.peers.get(peer_id).map(|p| p.score)
+    pub fn peer_score(&self, peer: &PeerNetworkId) -> Option<f64> {
+        self.peers.get(peer).map(|p| p.score)
     }
 }

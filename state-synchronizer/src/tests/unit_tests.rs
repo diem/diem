@@ -44,6 +44,9 @@ fn test_remove_requests() {
     let mut upstream_config = UpstreamConfig::default();
     upstream_config.upstream_peers = peers.iter().cloned().collect();
     let mut peer_manager = PeerManager::new(upstream_config);
+    for peer in peers.iter() {
+        peer_manager.enable_peer(*peer);
+    }
 
     peer_manager.process_request(1, peers[0]);
     peer_manager.process_request(3, peers[1]);
@@ -66,6 +69,9 @@ fn test_peer_manager_request_metadata() {
     let mut upstream_config = UpstreamConfig::default();
     upstream_config.upstream_peers = peers.iter().cloned().collect();
     let mut peer_manager = PeerManager::new(upstream_config);
+    for peer in peers.iter() {
+        peer_manager.enable_peer(*peer);
+    }
     assert!(peer_manager.get_first_request_time(1).is_none());
     peer_manager.process_request(1, peers[0]);
     peer_manager.process_timeout(1, true);
