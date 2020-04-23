@@ -9,7 +9,7 @@ use futures::{
     ready,
     stream::Stream,
 };
-use parity_multiaddr::{Multiaddr, Protocol};
+use libra_network_address::{NetworkAddress, Protocol};
 use std::{
     convert::TryFrom,
     fmt::Debug,
@@ -70,11 +70,14 @@ impl Transport for TcpTransport {
     type Inbound = future::Ready<io::Result<TcpSocket>>;
     type Outbound = TcpOutbound;
 
-    fn listen_on(&self, addr: Multiaddr) -> Result<(Self::Listener, Multiaddr), Self::Error> {
+    fn listen_on(
+        &self,
+        addr: NetworkAddress,
+    ) -> Result<(Self::Listener, NetworkAddress), Self::Error> {
         let socket_addr = multiaddr_to_socketaddr(&addr)?;
         let config = self.clone();
         let listener = ::std::net::TcpListener::bind(&socket_addr)?;
-        let local_addr = socketaddr_to_multiaddr(listener.local_addr()?);
+        let local_addr = NetworkAddress::from(listener.local_addr()?);
         let listener = TcpListener::try_from(listener)?;
 
         Ok((
@@ -86,7 +89,7 @@ impl Transport for TcpTransport {
         ))
     }
 
-    fn dial(&self, addr: Multiaddr) -> Result<Self::Outbound, Self::Error> {
+    fn dial(&self, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
         let socket_addr = multiaddr_to_string(&addr)?;
         let config = self.clone();
         let f: Pin<Box<dyn Future<Output = io::Result<TcpStream>> + Send + 'static>> =
@@ -102,7 +105,7 @@ pub struct TcpListenerStream {
 }
 
 impl Stream for TcpListenerStream {
-    type Item = io::Result<(future::Ready<io::Result<TcpSocket>>, Multiaddr)>;
+    type Item = io::Result<(future::Ready<io::Result<TcpSocket>>, NetworkAddress)>;
 
     fn poll_next(mut self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
         match Pin::new(&mut self.inner.incoming()).poll_next(context) {
@@ -111,7 +114,7 @@ impl Stream for TcpListenerStream {
                     return Poll::Ready(Some(Err(e)));
                 }
                 let dialer_addr = match socket.peer_addr() {
-                    Ok(addr) => socketaddr_to_multiaddr(addr),
+                    Ok(addr) => NetworkAddress::from(addr),
                     Err(e) => return Poll::Ready(Some(Err(e))),
                 };
                 Poll::Ready(Some(Ok((
@@ -190,62 +193,57 @@ impl AsyncWrite for TcpSocket {
     }
 }
 
-fn socketaddr_to_multiaddr(socketaddr: SocketAddr) -> Multiaddr {
-    let ipaddr: Multiaddr = socketaddr.ip().into();
-    ipaddr.with(Protocol::Tcp(socketaddr.port()))
-}
-
-fn multiaddr_to_socketaddr(addr: &Multiaddr) -> ::std::io::Result<SocketAddr> {
-    let mut iter = addr.iter();
+fn multiaddr_to_socketaddr(addr: &NetworkAddress) -> ::std::io::Result<SocketAddr> {
+    let mut iter = addr.as_slice().iter();
     let proto1 = iter.next().ok_or_else(|| {
         io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("Invalid Multiaddr '{:?}'", addr),
+            format!("Invalid NetworkAddress '{:?}'", addr),
         )
     })?;
     let proto2 = iter.next().ok_or_else(|| {
         io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("Invalid Multiaddr '{:?}'", addr),
+            format!("Invalid NetworkAddress '{:?}'", addr),
         )
     })?;
 
     if iter.next().is_some() {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("Invalid Multiaddr '{:?}'", addr),
+            format!("Invalid NetworkAddress '{:?}'", addr),
         ));
     }
 
     match (proto1, proto2) {
-        (Protocol::Ip4(ip), Protocol::Tcp(port)) => Ok(SocketAddr::new(ip.into(), port)),
-        (Protocol::Ip6(ip), Protocol::Tcp(port)) => Ok(SocketAddr::new(ip.into(), port)),
+        (Protocol::Ip4(ip), Protocol::Tcp(port)) => Ok(SocketAddr::new((*ip).into(), *port)),
+        (Protocol::Ip6(ip), Protocol::Tcp(port)) => Ok(SocketAddr::new((*ip).into(), *port)),
         _ => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("Invalid Multiaddr '{:?}'", addr),
+            format!("Invalid NetworkAddress '{:?}'", addr),
         )),
     }
 }
 
-fn multiaddr_to_string(addr: &Multiaddr) -> ::std::io::Result<String> {
-    let mut iter = addr.iter();
+fn multiaddr_to_string(addr: &NetworkAddress) -> ::std::io::Result<String> {
+    let mut iter = addr.as_slice().iter();
     let proto1 = iter.next().ok_or_else(|| {
         io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("Invalid Multiaddr '{:?}'", addr),
+            format!("Invalid NetworkAddress '{:?}'", addr),
         )
     })?;
     let proto2 = iter.next().ok_or_else(|| {
         io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("Invalid Multiaddr '{:?}'", addr),
+            format!("Invalid NetworkAddress '{:?}'", addr),
         )
     })?;
 
     if iter.next().is_some() {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("Invalid Multiaddr '{:?}'", addr),
+            format!("Invalid NetworkAddress '{:?}'", addr),
         ));
     }
 
@@ -256,7 +254,7 @@ fn multiaddr_to_string(addr: &Multiaddr) -> ::std::io::Result<String> {
         | (Protocol::Dns6(host), Protocol::Tcp(port)) => Ok(format!("{}:{}", host, port)),
         _ => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("Invalid Multiaddr '{:?}'", addr),
+            format!("Invalid NetworkAddress '{:?}'", addr),
         )),
     }
 }

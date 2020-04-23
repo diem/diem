@@ -13,7 +13,7 @@ use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
     convert::{Into, TryFrom},
     fmt,
-    net::{self, Ipv4Addr, Ipv6Addr},
+    net::{self, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     num,
     str::FromStr,
     string::ToString,
@@ -251,6 +251,10 @@ impl NetworkAddress {
     fn new(protocols: Vec<Protocol>) -> Self {
         Self(protocols)
     }
+
+    pub fn as_slice(&self) -> &[Protocol] {
+        self.0.as_slice()
+    }
 }
 
 impl FromStr for NetworkAddress {
@@ -290,12 +294,26 @@ impl TryFrom<Vec<Protocol>> for NetworkAddress {
     }
 }
 
+impl From<Protocol> for NetworkAddress {
+    fn from(proto: Protocol) -> NetworkAddress {
+        NetworkAddress::new(vec![proto])
+    }
+}
+
 impl TryFrom<&RawNetworkAddress> for NetworkAddress {
     type Error = lcs::Error;
 
     fn try_from(value: &RawNetworkAddress) -> Result<Self, lcs::Error> {
         let addr: NetworkAddress = lcs::from_bytes(value.as_ref())?;
         Ok(addr)
+    }
+}
+
+impl From<SocketAddr> for NetworkAddress {
+    fn from(sockaddr: SocketAddr) -> NetworkAddress {
+        let ip_proto = Protocol::from(sockaddr.ip());
+        let tcp_proto = Protocol::Tcp(sockaddr.port());
+        NetworkAddress::new(vec![ip_proto, tcp_proto])
     }
 }
 
@@ -420,6 +438,15 @@ impl Protocol {
             unknown => return Err(ParseError::UnknownProtocolType(unknown.to_string())),
         };
         Ok(protocol)
+    }
+}
+
+impl From<IpAddr> for Protocol {
+    fn from(addr: IpAddr) -> Protocol {
+        match addr {
+            IpAddr::V4(addr) => Protocol::Ip4(addr),
+            IpAddr::V6(addr) => Protocol::Ip6(addr),
+        }
     }
 }
 

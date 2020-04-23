@@ -48,11 +48,11 @@ use futures::{
     sink::{Sink, SinkExt},
     stream::{self, Stream, StreamExt},
 };
+use libra_network_address::NetworkAddress;
 use netcore::{
     compat::IoCompat,
     transport::{memory::MemoryTransport, tcp::TcpTransport, Transport},
 };
-use parity_multiaddr::Multiaddr;
 use socket_bench_server::{
     build_memsocket_noise_transport, build_tcp_noise_transport, start_stream_server, Args,
 };
@@ -99,7 +99,7 @@ fn bench_client_stream_send<T, S>(
     b: &mut Bencher,
     msg_len: usize,
     runtime: &mut Runtime,
-    server_addr: Multiaddr,
+    server_addr: NetworkAddress,
     client_transport: T,
 ) -> impl Stream
 where
@@ -122,7 +122,7 @@ where
 
 /// Benchmark the throughput of sending messages of size `msg_len` over an
 /// in-memory socket.
-fn bench_memsocket_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
+fn bench_memsocket_send(b: &mut Bencher, msg_len: &usize, server_addr: NetworkAddress) {
     let mut runtime = Runtime::new().unwrap();
 
     let client_transport = MemoryTransport::default();
@@ -134,7 +134,7 @@ fn bench_memsocket_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr
 
 /// Benchmark the throughput of sending messages of size `msg_len` over an
 /// in-memory socket with Noise encryption.
-fn bench_memsocket_noise_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
+fn bench_memsocket_noise_send(b: &mut Bencher, msg_len: &usize, server_addr: NetworkAddress) {
     let mut runtime = Runtime::new().unwrap();
 
     let client_transport = build_memsocket_noise_transport();
@@ -146,7 +146,7 @@ fn bench_memsocket_noise_send(b: &mut Bencher, msg_len: &usize, server_addr: Mul
 
 /// Benchmark the throughput of sending messages of size `msg_len` over tcp to
 /// server at multiaddr `server_addr`.
-fn bench_tcp_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
+fn bench_tcp_send(b: &mut Bencher, msg_len: &usize, server_addr: NetworkAddress) {
     let mut runtime = Runtime::new().unwrap();
 
     let client_transport = TcpTransport::default();
@@ -158,7 +158,7 @@ fn bench_tcp_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
 
 /// Benchmark the throughput of sending messages of size `msg_len` over tcp to
 /// server at multiaddr `server_addr` with TCP_NODELAY set.
-fn bench_tcp_send_with_nodelay(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
+fn bench_tcp_send_with_nodelay(b: &mut Bencher, msg_len: &usize, server_addr: NetworkAddress) {
     let mut runtime = Runtime::new().unwrap();
 
     let client_transport = TcpTransport {
@@ -173,7 +173,7 @@ fn bench_tcp_send_with_nodelay(b: &mut Bencher, msg_len: &usize, server_addr: Mu
 
 /// Benchmark the throughput of sending messages of size `msg_len` over tcp with
 /// Noise encryption to server at multiaddr `server_addr`.
-fn bench_tcp_noise_send(b: &mut Bencher, msg_len: &usize, server_addr: Multiaddr) {
+fn bench_tcp_noise_send(b: &mut Bencher, msg_len: &usize, server_addr: NetworkAddress) {
     let mut runtime = Runtime::new().unwrap();
 
     let client_transport = build_tcp_noise_transport();

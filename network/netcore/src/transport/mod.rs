@@ -12,7 +12,7 @@
 //! [`TransportExt`]: crate::transport::TransportExt
 
 use futures::{future::Future, stream::Stream};
-use parity_multiaddr::Multiaddr;
+use libra_network_address::NetworkAddress;
 use std::time::Duration;
 
 pub mod and_then;
@@ -55,7 +55,9 @@ pub trait Transport {
     /// transport stack. Each item is an [`Inbound`](Transport::Inbound) future
     /// that resolves to an [`Output`](Transport::Output) value once all protocol upgrades
     /// have been applied.
-    type Listener: Stream<Item = Result<(Self::Inbound, Multiaddr), Self::Error>> + Send + Unpin;
+    type Listener: Stream<Item = Result<(Self::Inbound, NetworkAddress), Self::Error>>
+        + Send
+        + Unpin;
 
     /// A pending [`Output`](Transport::Output) for an inbound connection,
     /// obtained from the [`Listener`](Transport::Listener) stream.
@@ -72,16 +74,19 @@ pub trait Transport {
     /// obtained from [dialing](Transport::dial) stream.
     type Outbound: Future<Output = Result<Self::Output, Self::Error>> + Send;
 
-    /// Listens on the given [`Multiaddr`], returning a stream of incoming connections.
+    /// Listens on the given [`NetworkAddress`], returning a stream of incoming connections.
     ///
-    /// The returned [`Multiaddr`] is the actual listening address, this is done to take into
+    /// The returned [`NetworkAddress`] is the actual listening address, this is done to take into
     /// account OS-assigned port numbers (e.g. listening on port 0).
-    fn listen_on(&self, addr: Multiaddr) -> Result<(Self::Listener, Multiaddr), Self::Error>
+    fn listen_on(
+        &self,
+        addr: NetworkAddress,
+    ) -> Result<(Self::Listener, NetworkAddress), Self::Error>
     where
         Self: Sized;
 
-    /// Dials the given [`Multiaddr`], returning a future for a pending outbound connection.
-    fn dial(&self, addr: Multiaddr) -> Result<Self::Outbound, Self::Error>
+    /// Dials the given [`NetworkAddress`], returning a future for a pending outbound connection.
+    fn dial(&self, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error>
     where
         Self: Sized;
 }
@@ -93,8 +98,8 @@ impl<T: ?Sized> TransportExt for T where T: Transport {}
 ///
 /// Additional protocols or functionality can be layered on top of an existing
 /// [`Transport`] by using this extension trait. For example, one might want to
-/// take a raw connection and upgrade it to a secure transport followed by a
-/// stream multiplexer by chaining calls to [`and_then`](TransportExt::and_then).
+/// take a raw connection and upgrade it to a secure transport followed by
+/// version handshake by chaining calls to [`and_then`](TransportExt::and_then).
 /// Each method yields a new [`Transport`] whose connection setup incorporates
 /// all earlier upgrades followed by the new upgrade, i.e. the order of the
 /// upgrades is significant.
@@ -121,7 +126,7 @@ pub trait TransportExt: Transport {
     fn and_then<F, Fut, O>(self, f: F) -> and_then::AndThen<Self, F>
     where
         Self: Sized,
-        F: FnOnce(Self::Output, Multiaddr, ConnectionOrigin) -> Fut + Clone,
+        F: FnOnce(Self::Output, NetworkAddress, ConnectionOrigin) -> Fut + Clone,
         // Pin the error types to be the same for now
         // TODO don't require the error types to be the same
         Fut: Future<Output = Result<O, Self::Error>>,
