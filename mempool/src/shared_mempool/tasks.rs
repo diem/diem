@@ -7,8 +7,9 @@ use crate::{
     core_mempool::{CoreMempool, TimelineState, TxnPointer},
     counters,
     network::{MempoolNetworkSender, MempoolSyncMsg},
-    shared_mempool::types::{
-        notify_subscribers, PeerInfo, PeerSyncState, SharedMempool, SharedMempoolNotification,
+    shared_mempool::{
+        peer_manager::PeerManager,
+        types::{notify_subscribers, SharedMempool, SharedMempoolNotification},
     },
     CommitNotification, CommitResponse, CommittedTransaction, ConsensusRequest, ConsensusResponse,
     SubmissionStatus,
@@ -42,22 +43,15 @@ use vm_validator::vm_validator::{get_account_sequence_number, TransactionValidat
 /// sync routine
 /// used to periodically broadcast ready to go transactions to peers
 pub(crate) async fn sync_with_peers<'a>(
-    peer_info: &'a Mutex<PeerInfo>,
+    peer_manager: Arc<PeerManager>,
     mempool: &'a Mutex<CoreMempool>,
     mut network_senders: HashMap<PeerId, MempoolNetworkSender>,
     batch_size: usize,
 ) {
-    // Clone the underlying peer_info map and use this to sync and collect
-    // state updates. We do this instead of holding the lock for the whole
-    // function since that would hold the lock across await points which is bad.
-    let peer_info_copy = peer_info
-        .lock()
-        .expect("[shared mempool] failed to acquire peer_info lock")
-        .deref()
-        .clone();
+    let peers = peer_manager.pick_peers();
     let mut state_updates = vec![];
 
-    for (peer_id, peer_state) in peer_info_copy.into_iter() {
+    for (peer_id, peer_state) in peers.into_iter() {
         if peer_state.is_alive {
             let timeline_id = peer_state.timeline_id;
             let (transactions, new_timeline_id) = mempool
@@ -94,15 +88,7 @@ pub(crate) async fn sync_with_peers<'a>(
         }
     }
 
-    // Lock the shared peer_info and apply state updates.
-    let mut peer_info = peer_info
-        .lock()
-        .expect("[shared mempool] failed to acquire peer_info lock");
-    for (peer_id, new_timeline_id) in state_updates {
-        peer_info.entry(peer_id).and_modify(|t| {
-            t.timeline_id = new_timeline_id;
-        });
-    }
+    peer_manager.update_peer_broadcast(state_updates);
 }
 
 fn send_mempool_sync_msg(
@@ -329,36 +315,6 @@ pub(crate) fn process_broadcast_ack<V>(
             }
         }
         Err(err) => warn!("[shared mempool] ACK with invalid request_id: {:?}", err),
-    }
-}
-
-// ===================== //
-// peer management tasks //
-// ===================== //
-/// new peer discovery handler
-/// adds new entry to `peer_info`
-/// `network_id` is the ID of the mempool network the peer belongs to
-pub(crate) fn new_peer(peer_info: &Mutex<PeerInfo>, peer_id: PeerId, network_id: PeerId) {
-    peer_info
-        .lock()
-        .expect("[shared mempool] failed to acquire peer_info lock")
-        .entry(peer_id)
-        .or_insert(PeerSyncState {
-            timeline_id: 0,
-            is_alive: true,
-            network_id,
-        })
-        .is_alive = true;
-}
-
-/// lost peer handler. Marks connection as dead
-pub(crate) fn lost_peer(peer_info: &Mutex<PeerInfo>, peer_id: PeerId) {
-    if let Some(state) = peer_info
-        .lock()
-        .expect("[shared mempool] failed to acquire peer_info lock")
-        .get_mut(&peer_id)
-    {
-        state.is_alive = false;
     }
 }
 

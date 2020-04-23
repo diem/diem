@@ -242,7 +242,7 @@ impl FullNodeConfig {
             upstream.upstream_peers = vec![PeerNetworkId(network.peer_id, upstream_peer_id)]
                 .into_iter()
                 .collect::<HashSet<_>>();
-            config.upstream = upstream.clone();
+            config.upstream = upstream;
         }
 
         Ok((configs, faucet_key))

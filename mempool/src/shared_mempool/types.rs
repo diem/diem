@@ -3,7 +3,10 @@
 
 //! Objects used by/related to shared mempool
 
-use crate::{core_mempool::CoreMempool, shared_mempool::network::MempoolNetworkSender};
+use crate::{
+    core_mempool::CoreMempool,
+    shared_mempool::{network::MempoolNetworkSender, peer_manager::PeerManager},
+};
 use anyhow::Result;
 use futures::{
     channel::{mpsc, mpsc::UnboundedSender, oneshot},
@@ -27,6 +30,8 @@ use storage_client::StorageRead;
 use tokio::sync::RwLock;
 use vm_validator::vm_validator::TransactionValidation;
 
+pub(crate) const DEFAULT_MIN_BROADCAST_RECIPIENT_COUNT: usize = 0;
+
 /// Struct that owns all dependencies required by shared mempool routines
 #[derive(Clone)]
 pub(crate) struct SharedMempool<V>
@@ -38,7 +43,7 @@ where
     pub network_senders: HashMap<PeerId, MempoolNetworkSender>,
     pub storage_read_client: Arc<dyn StorageRead>,
     pub validator: Arc<RwLock<V>>,
-    pub peer_info: Arc<Mutex<PeerInfo>>,
+    pub peer_manager: Arc<PeerManager>,
     pub subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
 }
 
@@ -48,20 +53,6 @@ pub enum SharedMempoolNotification {
     PeerStateChange,
     NewTransactions,
     ACK,
-}
-
-/// stores only peers that receive txns from this node
-pub(crate) type PeerInfo = HashMap<PeerId, PeerSyncState>;
-
-/// state of last sync with peer
-/// `timeline_id` is position in log of ready transactions
-/// `is_alive` - is connection healthy
-/// `network_id` - ID of the mempool network that this peer belongs to
-#[derive(Clone)]
-pub(crate) struct PeerSyncState {
-    pub timeline_id: u64,
-    pub is_alive: bool,
-    pub network_id: PeerId,
 }
 
 #[derive(Debug)]

@@ -6,7 +6,11 @@ use crate::{
     network::{MempoolNetworkEvents, MempoolNetworkSender},
     shared_mempool::{
         coordinator::{broadcast_coordinator, gc_coordinator, request_coordinator},
-        types::{IntervalStream, PeerInfo, SharedMempool, SharedMempoolNotification, SyncEvent},
+        peer_manager::PeerManager,
+        types::{
+            IntervalStream, SharedMempool, SharedMempoolNotification, SyncEvent,
+            DEFAULT_MIN_BROADCAST_RECIPIENT_COUNT,
+        },
     },
     CommitNotification, ConsensusRequest, SubmissionStatus,
 };
@@ -57,7 +61,14 @@ pub(crate) fn start_shared_mempool<V>(
 ) where
     V: TransactionValidation + 'static,
 {
-    let peer_info = Arc::new(Mutex::new(PeerInfo::new()));
+    let upstream_config = config.upstream.clone();
+    let peer_manager = Arc::new(PeerManager::new(
+        upstream_config,
+        config
+            .mempool
+            .shared_mempool_min_broadcast_recipient_count
+            .unwrap_or(DEFAULT_MIN_BROADCAST_RECIPIENT_COUNT),
+    ));
     let config_clone = config.clone_for_template();
 
     let mut all_network_events = vec![];
@@ -73,7 +84,7 @@ pub(crate) fn start_shared_mempool<V>(
         network_senders,
         storage_read_client,
         validator,
-        peer_info,
+        peer_manager,
         subscribers,
     };
 

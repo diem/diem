@@ -185,23 +185,6 @@ impl NodeConfig {
         }
     }
 
-    /// Determines whether a node `peer_id` is an upstream peer of a node with this NodeConfig.
-    /// For a validator node, any of its validator peers are considered an upstream peer
-    pub fn is_upstream_peer(&self, peer_id: PeerId, network_id: PeerId) -> bool {
-        match self.base.role {
-            RoleType::Validator => self
-                .validator_network
-                .as_ref()
-                .map(|cfg| cfg.peer_id == network_id)
-                .unwrap_or_default(),
-            RoleType::FullNode => self
-                .state_sync
-                .upstream_peers
-                .upstream_peers
-                .contains(&peer_id),
-        }
-    }
-
     /// Reads the config file and returns the configuration object in addition to doing some
     /// post-processing of the config
     /// Paths used in the config are either absolute or relative to the config location
