@@ -103,7 +103,7 @@ pub enum VariantFormat {
 
 pub trait FormatHolder {
     /// Visit all the formats in `self` in a depth-first way.
-    fn visit(&self, f: &mut dyn FnMut(&Format) -> Result<()>) -> Result<()>;
+    fn visit<'a>(&'a self, f: &mut dyn FnMut(&'a Format) -> Result<()>) -> Result<()>;
 
     /// Mutably visit all the formats in `self` in a depth-first way.
     fn visit_mut(&mut self, f: &mut dyn FnMut(&mut Format) -> Result<()>) -> Result<()>;
@@ -153,7 +153,7 @@ where
 }
 
 impl FormatHolder for VariantFormat {
-    fn visit(&self, f: &mut dyn FnMut(&Format) -> Result<()>) -> Result<()> {
+    fn visit<'a>(&'a self, f: &mut dyn FnMut(&'a Format) -> Result<()>) -> Result<()> {
         match self {
             Self::Unknown => {
                 return Err(Error::UnknownFormat);
@@ -247,7 +247,7 @@ impl<T> FormatHolder for Named<T>
 where
     T: FormatHolder + std::fmt::Debug,
 {
-    fn visit(&self, f: &mut dyn FnMut(&Format) -> Result<()>) -> Result<()> {
+    fn visit<'a>(&'a self, f: &mut dyn FnMut(&'a Format) -> Result<()>) -> Result<()> {
         self.value.visit(f)
     }
 
@@ -264,7 +264,7 @@ where
 }
 
 impl FormatHolder for ContainerFormat {
-    fn visit(&self, f: &mut dyn FnMut(&Format) -> Result<()>) -> Result<()> {
+    fn visit<'a>(&'a self, f: &mut dyn FnMut(&'a Format) -> Result<()>) -> Result<()> {
         match self {
             Self::UnitStruct => (),
             Self::NewTypeStruct(format) => format.visit(f)?,
@@ -367,7 +367,7 @@ impl FormatHolder for ContainerFormat {
 }
 
 impl FormatHolder for Format {
-    fn visit(&self, f: &mut dyn FnMut(&Format) -> Result<()>) -> Result<()> {
+    fn visit<'a>(&'a self, f: &mut dyn FnMut(&'a Format) -> Result<()>) -> Result<()> {
         match self {
             Self::Unknown => {
                 return Err(Error::UnknownFormat);
