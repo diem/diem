@@ -661,44 +661,137 @@ fn load_signature_tokens(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<Vec<S
 
 /// Deserializes a `SignatureToken`.
 fn load_signature_token(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<SignatureToken> {
-    if let Ok(byte) = cursor.read_u8() {
-        match SerializedType::from_u8(byte)? {
-            SerializedType::BOOL => Ok(SignatureToken::Bool),
-            SerializedType::U8 => Ok(SignatureToken::U8),
-            SerializedType::U64 => Ok(SignatureToken::U64),
-            SerializedType::U128 => Ok(SignatureToken::U128),
-            SerializedType::ADDRESS => Ok(SignatureToken::Address),
-            SerializedType::VECTOR => {
-                let ty = load_signature_token(cursor)?;
-                Ok(SignatureToken::Vector(Box::new(ty)))
-            }
-            SerializedType::REFERENCE => {
-                let ref_token = load_signature_token(cursor)?;
-                Ok(SignatureToken::Reference(Box::new(ref_token)))
-            }
-            SerializedType::MUTABLE_REFERENCE => {
-                let ref_token = load_signature_token(cursor)?;
-                Ok(SignatureToken::MutableReference(Box::new(ref_token)))
-            }
-            SerializedType::STRUCT => {
-                let sh_idx = read_uleb_u16_internal(cursor)?;
-                Ok(SignatureToken::Struct(StructHandleIndex(sh_idx)))
-            }
-            SerializedType::STRUCT_INST => {
-                let sh_idx = read_uleb_u16_internal(cursor)?;
-                let type_params = load_signature_tokens(cursor)?;
-                Ok(SignatureToken::StructInstantiation(
-                    StructHandleIndex(sh_idx),
-                    type_params,
-                ))
-            }
-            SerializedType::TYPE_PARAMETER => {
-                let idx = read_uleb_u16_internal(cursor)?;
-                Ok(SignatureToken::TypeParameter(idx))
+    // The following algorithm works by storing partially constructed types on a stack.
+    //
+    // Example:
+    //
+    //     SignatureToken: `Foo<u8, Foo<u64, bool, Bar>, address>`
+    //     Byte Stream:    Foo u8 Foo u64 bool Bar address
+    //
+    // Stack Transitions:
+    //     []
+    //     [Foo<?, ?, ?>]
+    //     [Foo<?, ?, ?>, u8]
+    //     [Foo<u8, ?, ?>]
+    //     [Foo<u8, ?, ?>, Foo<?, ?, ?>]
+    //     [Foo<u8, ?, ?>, Foo<?, ?, ?>, u64]
+    //     [Foo<u8, ?, ?>, Foo<u64, ?, ?>]
+    //     [Foo<u8, ?, ?>, Foo<u64, ?, ?>, bool]
+    //     [Foo<u8, ?, ?>, Foo<u64, bool, ?>]
+    //     [Foo<u8, ?, ?>, Foo<u64, bool, ?>, Bar]
+    //     [Foo<u8, ?, ?>, Foo<u64, bool, Bar>]
+    //     [Foo<u8, Foo<u64, bool, Bar>, ?>]
+    //     [Foo<u8, Foo<u64, bool, Bar>, ?>, address]
+    //     [Foo<u8, Foo<u64, bool, Bar>, address>]        (done)
+
+    use SerializedType as S;
+
+    enum TypeBuilder {
+        Saturated(SignatureToken),
+        Vector,
+        Reference,
+        MutableReference,
+        StructInst {
+            sh_idx: StructHandleIndex,
+            arity: usize,
+            ty_args: Vec<SignatureToken>,
+        },
+    }
+
+    impl TypeBuilder {
+        fn apply(self, tok: SignatureToken) -> Self {
+            match self {
+                T::Vector => T::Saturated(SignatureToken::Vector(Box::new(tok))),
+                T::Reference => T::Saturated(SignatureToken::Reference(Box::new(tok))),
+                T::MutableReference => {
+                    T::Saturated(SignatureToken::MutableReference(Box::new(tok)))
+                }
+                T::StructInst {
+                    sh_idx,
+                    arity,
+                    mut ty_args,
+                } => {
+                    ty_args.push(tok);
+                    if ty_args.len() >= arity {
+                        T::Saturated(SignatureToken::StructInstantiation(sh_idx, ty_args))
+                    } else {
+                        T::StructInst {
+                            sh_idx,
+                            arity,
+                            ty_args,
+                        }
+                    }
+                }
+                _ => unreachable!("invalid type constructor application"),
             }
         }
-    } else {
-        Err(VMStatus::new(StatusCode::MALFORMED).with_message("Unexpected EOF".to_string()))
+
+        fn is_saturated(&self) -> bool {
+            matches!(self, T::Saturated(_))
+        }
+
+        fn unwrap_saturated(self) -> SignatureToken {
+            match self {
+                T::Saturated(tok) => tok,
+                _ => unreachable!("cannot unwrap unsaturated type constructor"),
+            }
+        }
+    }
+
+    use TypeBuilder as T;
+
+    let mut read_next = || {
+        if let Ok(byte) = cursor.read_u8() {
+            Ok(match S::from_u8(byte)? {
+                S::BOOL => T::Saturated(SignatureToken::Bool),
+                S::U8 => T::Saturated(SignatureToken::U8),
+                S::U64 => T::Saturated(SignatureToken::U64),
+                S::U128 => T::Saturated(SignatureToken::U128),
+                S::ADDRESS => T::Saturated(SignatureToken::Address),
+                S::VECTOR => T::Vector,
+                S::REFERENCE => T::Reference,
+                S::MUTABLE_REFERENCE => T::MutableReference,
+                S::STRUCT => {
+                    let sh_idx = read_uleb_u16_internal(cursor)?;
+                    T::Saturated(SignatureToken::Struct(StructHandleIndex(sh_idx)))
+                }
+                S::STRUCT_INST => {
+                    let sh_idx = StructHandleIndex(read_uleb_u16_internal(cursor)?);
+                    let arity = cursor.read_u8().map_err(|_| {
+                        VMStatus::new(StatusCode::MALFORMED)
+                            .with_message("Unexpected EOF".to_string())
+                    })?;
+                    T::StructInst {
+                        sh_idx,
+                        arity: arity as usize,
+                        ty_args: vec![],
+                    }
+                }
+                S::TYPE_PARAMETER => {
+                    let idx = read_uleb_u16_internal(cursor)?;
+                    T::Saturated(SignatureToken::TypeParameter(idx))
+                }
+            })
+        } else {
+            Err(VMStatus::new(StatusCode::MALFORMED).with_message("Unexpected EOF".to_string()))
+        }
+    };
+
+    let mut stack = match read_next()? {
+        T::Saturated(tok) => return Ok(tok),
+        t => vec![t],
+    };
+
+    loop {
+        if stack.last().unwrap().is_saturated() {
+            let tok = stack.pop().unwrap().unwrap_saturated();
+            match stack.pop() {
+                Some(t) => stack.push(t.apply(tok)),
+                None => return Ok(tok),
+            }
+        } else {
+            stack.push(read_next()?)
+        }
     }
 }
 
