@@ -83,6 +83,10 @@ pub fn validator_swarm(
             fullnodes_network_address: network.advertised_address.clone(),
         });
 
+        // set UpstreamConfig
+        // For a validator node, any of its validator peers are considered an upstream peer
+        node.upstream.primary_networks.push(network.peer_id);
+
         nodes.push(node);
     }
 

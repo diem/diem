@@ -41,7 +41,7 @@ pub(crate) async fn broadcast_coordinator<V>(smp: SharedMempool<V>, mut interval
 where
     V: TransactionValidation,
 {
-    let peer_info = smp.peer_info;
+    let peer_manager = smp.peer_manager;
     let mempool = smp.mempool;
     let network_senders = smp.network_senders;
     let batch_size = smp.config.shared_mempool_batch_size;
@@ -49,7 +49,13 @@ where
 
     while let Some(sync_event) = interval.next().await {
         trace!("SyncEvent: {:?}", sync_event);
-        tasks::sync_with_peers(&peer_info, &mempool, network_senders.clone(), batch_size).await;
+        tasks::sync_with_peers(
+            peer_manager.clone(),
+            &mempool,
+            network_senders.clone(),
+            batch_size,
+        )
+        .await;
         notify_subscribers(SharedMempoolNotification::Sync, &subscribers);
     }
 
@@ -72,7 +78,7 @@ pub(crate) async fn request_coordinator<V>(
 ) where
     V: TransactionValidation,
 {
-    let peer_info = smp.peer_info.clone();
+    let peer_manager = smp.peer_manager.clone();
     let subscribers = smp.subscribers.clone();
     let smp_events: Vec<_> = network_events
         .into_iter()
@@ -117,18 +123,14 @@ pub(crate) async fn request_coordinator<V>(
                                 counters::SHARED_MEMPOOL_EVENTS
                                     .with_label_values(&["new_peer".to_string().deref()])
                                     .inc();
-                                if node_config.is_upstream_peer(peer_id, network_id) {
-                                    tasks::new_peer(&peer_info, peer_id, network_id);
-                                }
+                                peer_manager.add_peer(network_id, peer_id);
                                 notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                             }
                             Event::LostPeer(peer_id) => {
                                 counters::SHARED_MEMPOOL_EVENTS
                                     .with_label_values(&["lost_peer".to_string().deref()])
                                     .inc();
-                                if node_config.is_upstream_peer(peer_id, network_id) {
-                                    tasks::lost_peer(&peer_info, peer_id);
-                                }
+                                peer_manager.disable_peer(peer_id);
                                 notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                             }
                             Event::Message((peer_id, msg)) => {
@@ -141,7 +143,7 @@ pub(crate) async fn request_coordinator<V>(
                                             .with_label_values(&["received".to_string().deref(), peer_id.to_string().deref()])
                                             .inc_by(transactions.len() as i64);
                                         let smp_clone = smp.clone();
-                                        let timeline_state = match node_config.is_upstream_peer(peer_id, network_id) {
+                                        let timeline_state = match peer_manager.is_upstream_peer(network_id, peer_id) {
                                             true => TimelineState::NonQualified,
                                             false => TimelineState::NotReady,
                                         };
