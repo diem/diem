@@ -2388,6 +2388,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-management"
+version = "0.1.0"
+dependencies = [
+ "libra-crypto 0.1.0",
+ "libra-secure-storage 0.1.0",
+ "libra-types 0.1.0",
+ "libra-workspace-hack 0.1.0",
+ "structopt 0.3.13 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "libra-mempool"
 version = "0.1.0"
 dependencies = [
