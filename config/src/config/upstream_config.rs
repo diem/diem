@@ -7,7 +7,7 @@ use std::collections::HashSet;
 
 /// In general, a network ID is a PeerId that this node uses to uniquely identify a network it belongs to.
 /// This is equivalent to the `peer_id` field in the NetworkConfig of this NodeConfig
-type NetworkId = PeerId;
+pub type NetworkId = PeerId;
 
 #[derive(Clone, Default, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]

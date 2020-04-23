@@ -16,7 +16,7 @@ use futures::{
     stream::select_all,
     StreamExt,
 };
-use libra_config::config::{PeerNetworkId, RoleType, StateSyncConfig, UpstreamConfig};
+use libra_config::config::{NetworkId, PeerNetworkId, RoleType, StateSyncConfig, UpstreamConfig};
 use libra_logger::prelude::*;
 use libra_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
 use libra_types::{
@@ -85,9 +85,6 @@ struct PendingRequestInfo {
 pub(crate) struct SyncCoordinator<T> {
     // used to process client requests
     client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
-    // client network ID
-    // `None` on nodes that do not expect client requests
-    client_network_id: Option<PeerId>,
     // used to send messages (e.g. notifications about newly committed txns) to mempool
     state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
     // Current state of the storage, which includes both the latest committed transaction and the
@@ -104,7 +101,7 @@ pub(crate) struct SyncCoordinator<T> {
     // waypoint a node is not going to be abl
     waypoint: Option<Waypoint>,
     // network senders - (k, v) = (network ID, network sender)
-    network_senders: HashMap<PeerId, StateSynchronizerSender>,
+    network_senders: HashMap<NetworkId, StateSynchronizerSender>,
     // peers used for synchronization
     peer_manager: PeerManager,
     // Optional sync request to be called when the target sync is reached
@@ -122,7 +119,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     pub fn new(
         client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
-        network_senders: HashMap<PeerId, StateSynchronizerSender>,
+        network_senders: HashMap<NetworkId, StateSynchronizerSender>,
         role: RoleType,
         waypoint: Option<Waypoint>,
         config: StateSyncConfig,
@@ -130,17 +127,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         executor_proxy: T,
         initial_state: SynchronizerState,
     ) -> Self {
-        let (retry_timeout_val, client_network_id) = match role {
-            RoleType::FullNode => (config.tick_interval_ms + config.long_poll_timeout_ms, None),
-            RoleType::Validator => (
-                2 * config.tick_interval_ms,
-                upstream_config.primary_networks.get(0).cloned(),
-            ),
+        let retry_timeout_val = match role {
+            RoleType::FullNode => config.tick_interval_ms + config.long_poll_timeout_ms,
+            RoleType::Validator => 2 * config.tick_interval_ms,
         };
 
         Self {
             client_events,
-            client_network_id,
             state_sync_to_mempool_sender,
             local_state: initial_state,
             retry_timeout: Duration::from_millis(retry_timeout_val),
@@ -202,15 +195,15 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                         Ok(event) => {
                             match event {
                                 Event::NewPeer(peer_id) => {
-                                    let peer_id = PeerNetworkId(network_id, peer_id);
-                                    debug!("[state sync] new peer {:?}", peer_id);
-                                    self.peer_manager.enable_peer(peer_id);
+                                    let peer = PeerNetworkId(network_id, peer_id);
+                                    debug!("[state sync] new peer {:?}", peer);
+                                    self.peer_manager.enable_peer(peer);
                                     self.check_progress();
                                 }
                                 Event::LostPeer(peer_id) => {
-                                    let peer_id = PeerNetworkId(network_id, peer_id);
-                                    debug!("[state sync] lost peer {:?}", peer_id);
-                                    self.peer_manager.disable_peer(&peer_id);
+                                    let peer = PeerNetworkId(network_id, peer_id);
+                                    debug!("[state sync] lost peer {:?}", peer);
+                                    self.peer_manager.disable_peer(&peer);
                                 }
                                 Event::Message((peer_id, mut message)) => self.process_one_message(PeerNetworkId(network_id, peer_id), message).await,
                                 _ => warn!("[state sync] unexpected event: {:?}", event),
@@ -324,16 +317,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             highest_local_li, target_version
         );
 
-        let network_id = self
-            .client_network_id
-            .expect("missing client network ID / not expecting client requests");
-        let peers = request
-            .target
-            .signatures()
-            .keys()
-            .map(|peer_id| PeerNetworkId(network_id, *peer_id))
-            .collect();
-        self.peer_manager.set_peers(peers);
         self.sync_request = Some(request);
         self.send_chunk_request(
             self.local_state.highest_version_in_local_storage(),
@@ -485,7 +468,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// Assumes that the local state is uptodate with storage.
     fn process_request_target_li(
         &mut self,
-        peer_id: PeerNetworkId,
+        peer: PeerNetworkId,
         request: GetChunkRequest,
         target_li: LedgerInfoWithSignatures,
     ) -> Result<()> {
@@ -498,7 +481,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         // In case known_version is lower than the requested ledger info an empty response might be
         // sent.
         self.deliver_chunk(
-            peer_id,
+            peer,
             request.known_version,
             ResponseLedgerInfo::VerifiableLedgerInfo(response_li),
             limit,
@@ -510,7 +493,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// Assumes that the local state is uptodate with storage.
     fn process_request_highest_available(
         &mut self,
-        peer_id: PeerNetworkId,
+        peer: PeerNetworkId,
         request: GetChunkRequest,
         timeout_ms: u64,
     ) -> Result<()> {
@@ -532,13 +515,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     request_epoch: request.current_epoch,
                     limit,
                 };
-                self.subscriptions.insert(peer_id, request_info);
+                self.subscriptions.insert(peer, request_info);
             }
             return Ok(());
         }
 
         self.deliver_chunk(
-            peer_id,
+            peer,
             request.known_version,
             ResponseLedgerInfo::VerifiableLedgerInfo(response_li),
             limit,
@@ -547,7 +530,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
     fn process_request_waypoint(
         &mut self,
-        peer_id: PeerNetworkId,
+        peer: PeerNetworkId,
         request: GetChunkRequest,
         waypoint_version: Version,
     ) -> Result<()> {
@@ -591,7 +574,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             limit = std::cmp::min(limit, num_txns_until_end_of_epoch);
         }
         self.deliver_chunk(
-            peer_id,
+            peer,
             request.known_version,
             ResponseLedgerInfo::LedgerInfoForWaypoint {
                 waypoint_li,
@@ -949,7 +932,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let highest_li_version = self.local_state.highest_local_li.ledger_info().version();
 
         let mut ready = vec![];
-        self.subscriptions.retain(|peer_id, request_info| {
+        self.subscriptions.retain(|peer, request_info| {
             // filter out expired peer requests
             if SystemTime::now()
                 .duration_since(request_info.expiration_time.clone())
@@ -958,7 +941,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 return false;
             }
             if request_info.known_version < highest_li_version {
-                ready.push((*peer_id, request_info.clone()));
+                ready.push((*peer, request_info.clone()));
                 false
             } else {
                 true
