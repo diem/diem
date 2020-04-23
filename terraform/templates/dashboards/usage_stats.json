@@ -308,7 +308,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(executor{op=\"num_accounts\"}[2m])",
+          "expr": "irate((storage_gauge{op=\"new_state_leaves\",role=\"validator\"} - ignoring (op) storage_gauge{op=\"stale_state_leaves\",role=\"validator\"})[2m:])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
