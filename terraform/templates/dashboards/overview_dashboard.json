@@ -205,7 +205,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "max(storage_gauge{op=\"new_state_leaves\"}) - max(storage_gauge{op=\"stale_state_leaves\"})",
+          "expr": "max(storage_gauge{op=\"new_state_leaves\"} - ignoring (op) storage_gauge{op=\"stale_state_leaves\"})",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 1,
