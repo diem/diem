@@ -1,5 +1,5 @@
 // Make sure that the `SentPaymentEvent` for transaction fee distribution
-// shows 0xFEE as the sender.
+// shows 0xFEE__ as the sender.
 
 //! account: vivian, 1000000, 0, validator
 //! account: valentina, 1000000, 0, validator
@@ -10,16 +10,19 @@ import 0x0.LibraAccount;
 import 0x0.LBR;
 import 0x0.Libra;
 import 0x0.Vector;
+import 0x0.TransactionFeeAccounts;
 
 main() {
   let lib_coin: Libra.T<LBR.T>;
   let number_of_validators: u64;
+  let fee_addr: address;
 
   number_of_validators = LibraSystem.validator_set_size();
   assert(copy(number_of_validators) > 1, 0);
   lib_coin = LibraAccount.withdraw_from_sender<LBR.T>(copy(number_of_validators));
 
-  LibraAccount.deposit<LBR.T>({{fees}} , move(lib_coin));
+  fee_addr = TransactionFeeAccounts.transaction_fee_address<LBR.T>();
+  LibraAccount.deposit<LBR.T>(move(fee_addr) , move(lib_coin));
 
   return;
 }
