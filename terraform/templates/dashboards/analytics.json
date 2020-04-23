@@ -165,7 +165,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "max(storage_gauge{op='state_blobs_created'}) - max(storage_gauge{op='state_blobs_retired'})",
+          "expr": "max(storage_gauge{op=\"new_state_leaves\"} - ignoring (op) storage_gauge{op=\"stale_state_leaves\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Num Accounts Created",
