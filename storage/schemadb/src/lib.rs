@@ -211,7 +211,15 @@ impl DB {
         path: impl AsRef<Path>,
         column_families: Vec<ColumnFamilyName>,
     ) -> Result<DB> {
-        let inner = rocksdb::DB::open_cf(opts, path, &column_families)?;
+        let inner = rocksdb::DB::open_cf_descriptors(
+            opts,
+            path,
+            column_families.iter().map(|cf_name| {
+                let mut cf_opts = rocksdb::Options::default();
+                cf_opts.set_compression_type(rocksdb::DBCompressionType::Lz4);
+                rocksdb::ColumnFamilyDescriptor::new((*cf_name).to_string(), cf_opts)
+            }),
+        )?;
         Ok(DB {
             inner,
             column_families,
