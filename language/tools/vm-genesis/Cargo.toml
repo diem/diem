@@ -25,7 +25,6 @@ move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 move-vm-runtime = { path = "../../move-vm/runtime", version = "0.1.0"}
 move-vm-state = { path = "../../move-vm/state", version = "0.1.0"}
 move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }
-parity-multiaddr = { version = "0.8.0", default-features = false }
 stdlib = { path = "../../stdlib", version = "0.1.0" }
 transaction-builder = { path = "../../transaction-builder", version = "0.1.0"}
 vm = { path = "../../vm", version = "0.1.0" }

@@ -158,12 +158,13 @@ pub mod mock {
 
     use crate::on_chain_config::ValidatorSet;
     use libra_crypto::{x25519, Uniform};
-    use parity_multiaddr::Multiaddr;
+    use libra_network_address::{NetworkAddress, RawNetworkAddress};
     use std::str::FromStr;
 
     pub fn mock_discovery_set(validator_set: &ValidatorSet) -> DiscoverySet {
         let mock_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
-        let mock_addr = Multiaddr::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
+        let mock_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
+        let mock_addr = RawNetworkAddress::try_from(&mock_addr).unwrap();
 
         let discovery_set = validator_set
             .payload()
