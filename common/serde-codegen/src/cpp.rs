@@ -7,13 +7,13 @@ use std::collections::{BTreeMap, HashSet};
 
 // TODO:
 // * optional namespace
-// * optional `using` for newtype/tuple structs and variants ?
+// * optionally use `using` for newtype/tuple structs and variants, as well as enums
 
 pub fn output(registry: &RegistryOwned) {
+    output_preambule();
+
     let dependencies = analyzer::get_dependency_map(registry).unwrap();
     let entries = analyzer::best_effort_topological_sort(&dependencies).unwrap();
-
-    output_preambule();
     let mut known_names = HashSet::new();
     let mut known_sizes = HashSet::new();
     for name in entries {
@@ -23,12 +23,12 @@ pub fn output(registry: &RegistryOwned) {
                 known_names.insert(*dependency);
             }
         }
-
         let format = &registry[name];
         output_container(name, format, &known_sizes);
         known_sizes.insert(name);
         known_names.insert(name);
     }
+
     println!();
     for (name, format) in registry {
         output_container_traits(name, format);
@@ -39,8 +39,8 @@ fn output_preambule() {
     println!("#include \"serde.hpp\"\n");
 }
 
-/// If known_size is present, we must try to return a type with a known size as well.
-fn output_type(format: &Format, known_sizes: Option<&HashSet<&str>>, namespace: &str) -> String {
+/// If known_sizes is present, we must try to return a type with a known size as well.
+fn quote_type(format: &Format, known_sizes: Option<&HashSet<&str>>, namespace: &str) -> String {
     use Format::*;
     match format {
         TypeName(x) => {
@@ -71,21 +71,21 @@ fn output_type(format: &Format, known_sizes: Option<&HashSet<&str>>, namespace: 
 
         Option(format) => format!(
             "std:optional<{}>",
-            output_type(format, known_sizes, namespace)
+            quote_type(format, known_sizes, namespace)
         ),
-        Seq(format) => format!("std::vector<{}>", output_type(format, None, namespace)),
+        Seq(format) => format!("std::vector<{}>", quote_type(format, None, namespace)),
         Map { key, value } => format!(
             "std::map<{}, {}>",
-            output_type(key, None, namespace),
-            output_type(value, None, namespace)
+            quote_type(key, None, namespace),
+            quote_type(value, None, namespace)
         ),
         Tuple(formats) => format!(
             "std::tuple<{}>",
-            output_types(formats, known_sizes, namespace)
+            quote_types(formats, known_sizes, namespace)
         ),
         TupleArray { content, size } => format!(
             "std::array<{}, {}>",
-            output_type(content, known_sizes, namespace),
+            quote_type(content, known_sizes, namespace),
             *size
         ),
 
@@ -93,14 +93,10 @@ fn output_type(format: &Format, known_sizes: Option<&HashSet<&str>>, namespace: 
     }
 }
 
-fn output_types(
-    formats: &[Format],
-    known_sizes: Option<&HashSet<&str>>,
-    namespace: &str,
-) -> String {
+fn quote_types(formats: &[Format], known_sizes: Option<&HashSet<&str>>, namespace: &str) -> String {
     formats
         .iter()
-        .map(|x| output_type(x, known_sizes, namespace))
+        .map(|x| quote_type(x, known_sizes, namespace))
         .collect::<Vec<_>>()
         .join(", ")
 }
@@ -110,60 +106,50 @@ fn output_fields(
     fields: &[Named<Format>],
     known_sizes: &HashSet<&str>,
     namespace: &str,
-) -> String {
-    let mut result = String::new();
+) {
     let tab = " ".repeat(indentation);
     for field in fields {
-        result += &format!(
-            "{}{} {};\n",
+        println!(
+            "{}{} {};",
             tab,
-            output_type(&field.value, Some(known_sizes), namespace),
+            quote_type(&field.value, Some(known_sizes), namespace),
             field.name
         );
     }
-    result
 }
 
-fn output_variant(name: &str, variant: &VariantFormat, known_sizes: &HashSet<&str>) -> String {
+fn output_variant(name: &str, variant: &VariantFormat, known_sizes: &HashSet<&str>) {
     use VariantFormat::*;
     match variant {
-        Unit => format!("struct {} {{}};", name,),
-        NewType(format) => format!(
-            "struct {} {{\n        {} value;\n    }};",
+        Unit => println!("    struct {} {{}};", name),
+        NewType(format) => println!(
+            "    struct {} {{\n        {} value;\n    }};",
             name,
-            output_type(format, Some(known_sizes), "::")
+            quote_type(format, Some(known_sizes), "::")
         ),
-        Tuple(formats) => format!(
-            "struct {} {{\n        std::tuple<{}> value;\n    }};",
+        Tuple(formats) => println!(
+            "    struct {} {{\n        std::tuple<{}> value;\n    }};",
             name,
-            output_types(formats, Some(known_sizes), "::")
+            quote_types(formats, Some(known_sizes), "::")
         ),
-        Struct(fields) => format!(
-            "struct {} {{\n{}    }};",
-            name,
-            output_fields(8, fields, known_sizes, "::")
-        ),
+        Struct(fields) => {
+            println!("    struct {} {{", name);
+            output_fields(8, fields, known_sizes, "::");
+            println!("    }};");
+        }
         Unknown => panic!("incorrect value"),
     }
 }
 
-fn output_variants(
-    variants: &BTreeMap<u32, Named<VariantFormat>>,
-    known_sizes: &HashSet<&str>,
-) -> String {
-    let mut result = String::new();
+fn output_variants(variants: &BTreeMap<u32, Named<VariantFormat>>, known_sizes: &HashSet<&str>) {
     for (expected_index, (index, variant)) in variants.iter().enumerate() {
         assert_eq!(*index, expected_index as u32);
-        result += &format!(
-            "    {}\n",
-            output_variant(&variant.name, &variant.value, known_sizes)
-        );
+        output_variant(&variant.name, &variant.value, known_sizes);
     }
-    result
 }
 
 fn output_container_forward_definition(name: &str) {
-    println!("struct {};", name)
+    println!("struct {};\n", name)
 }
 
 fn output_container(name: &str, format: &ContainerFormat, known_sizes: &HashSet<&str>) {
@@ -173,28 +159,30 @@ fn output_container(name: &str, format: &ContainerFormat, known_sizes: &HashSet<
         NewTypeStruct(format) => println!(
             "struct {} {{\n    {} value;\n}};\n",
             name,
-            output_type(format, Some(known_sizes), ""),
+            quote_type(format, Some(known_sizes), ""),
         ),
         TupleStruct(formats) => println!(
             "struct {} {{\n    std::tuple<{}> value;\n}};\n",
             name,
-            output_types(formats, Some(known_sizes), ""),
+            quote_types(formats, Some(known_sizes), ""),
         ),
-        Struct(fields) => println!(
-            "struct {} {{\n{}}};\n",
-            name,
-            output_fields(4, fields, known_sizes, ""),
-        ),
-        Enum(variants) => println!(
-            "struct {} {{\n{}\n    std::variant<{}> value;\n}};\n",
-            name,
-            output_variants(variants, known_sizes),
-            variants
-                .iter()
-                .map(|(_, v)| v.name.clone())
-                .collect::<Vec<_>>()
-                .join(", "),
-        ),
+        Struct(fields) => {
+            println!("struct {} {{", name);
+            output_fields(4, fields, known_sizes, "");
+            println!("}};\n");
+        }
+        Enum(variants) => {
+            println!("struct {} {{", name);
+            output_variants(variants, known_sizes);
+            println!(
+                "    std::variant<{}> value;\n}};\n",
+                variants
+                    .iter()
+                    .map(|(_, v)| v.name.clone())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+            );
+        }
     }
 }
 
@@ -203,8 +191,7 @@ fn output_struct_serializable(name: &str, fields: &[&str]) {
         r#"
 template <>
 template <typename Serializer>
-void Serializable<{}>::serialize(const {} &obj, Serializer &serializer) {{
-"#,
+void Serializable<{}>::serialize(const {} &obj, Serializer &serializer) {{"#,
         name, name,
     );
     for field in fields {
@@ -222,8 +209,7 @@ fn output_struct_deserializable(name: &str, fields: &[&str]) {
 template <>
 template <typename Deserializer>
 {} Deserializable<{}>::deserialize(Deserializer &deserializer) {{
-    {} obj;
-"#,
+    {} obj;"#,
         name, name, name,
     );
     for field in fields {

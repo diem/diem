@@ -5,7 +5,7 @@ use serde_reflection::{ContainerFormat, Format, Named, RegistryOwned, VariantFor
 use std::collections::BTreeMap;
 
 pub fn output(registry: &RegistryOwned) {
-    println!("{}", output_preambule());
+    output_preambule();
 
     println!("public class Test {{");
     println!(
@@ -19,13 +19,14 @@ public static class Int128 {{ public Long high; public Long low; }};
 "#
     );
     for (name, format) in registry {
-        println!("{}", output_container(name, format));
+        output_container(name, format);
     }
     println!("}}");
 }
 
-fn output_preambule() -> String {
-    r#"
+fn output_preambule() {
+    println!(
+        r#"
 import java.nio.ByteBuffer;
 import java.util.Optional;
 import java.util.Vector;
@@ -34,28 +35,28 @@ import java.lang.Class;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
 
-@Target({ElementType.TYPE_USE})
-@interface Unsigned {}
+@Target({{ElementType.TYPE_USE}})
+@interface Unsigned {{}}
 
-@Target({ElementType.TYPE_USE})
-@interface FixedLength {
+@Target({{ElementType.TYPE_USE}})
+@interface FixedLength {{
     int length();
-}
+}}
 
-@Target({ElementType.TYPE_USE})
-@interface Enum {
+@Target({{ElementType.TYPE_USE}})
+@interface Enum {{
     Class<?>[] variants();
-}
+}}
 
-@Target({ElementType.TYPE_USE})
-@interface Variant {
+@Target({{ElementType.TYPE_USE}})
+@interface Variant {{
     long index();
-}
+}}
 "#
-    .into()
+    );
 }
 
-fn output_type(format: &Format) -> String {
+fn quote_type(format: &Format) -> String {
     use Format::*;
     match format {
         TypeName(x) => x.to_string(),
@@ -77,112 +78,106 @@ fn output_type(format: &Format) -> String {
         Str => "String".into(),
         Bytes => "ByteBuffer".into(),
 
-        Option(format) => format!("Optional<{}>", output_type(format)),
-        Seq(format) => format!("Vector<{}>", output_type(format)),
-        Map { key, value } => format!("SortedMap<{}, {}>", output_type(key), output_type(value)),
-        Tuple(formats) => format!("Tuple{}<{}>", formats.len(), output_types(formats)),
+        Option(format) => format!("Optional<{}>", quote_type(format)),
+        Seq(format) => format!("Vector<{}>", quote_type(format)),
+        Map { key, value } => format!("SortedMap<{}, {}>", quote_type(key), quote_type(value)),
+        Tuple(formats) => format!("Tuple{}<{}>", formats.len(), quote_types(formats)),
         TupleArray { content, size } => format!(
             "@FixedLength(length={}) Vector<{}>",
             size,
-            output_type(content)
+            quote_type(content)
         ),
         Unknown => panic!("unexpected value"),
     }
 }
 
-fn output_types(formats: &[Format]) -> String {
+fn quote_types(formats: &[Format]) -> String {
     formats
         .iter()
-        .map(output_type)
+        .map(quote_type)
         .collect::<Vec<_>>()
         .join(", ")
 }
 
-fn output_fields(indentation: usize, fields: &[Named<Format>]) -> String {
-    let mut result = String::new();
+fn output_fields(indentation: usize, fields: &[Named<Format>]) {
     let tab = " ".repeat(indentation);
     for field in fields {
-        result += &format!(
-            "{} public {} {};\n",
+        println!(
+            "{} public {} {};",
             tab,
-            output_type(&field.value),
+            quote_type(&field.value),
             field.name
         );
     }
-    result
 }
 
-fn output_variant(base: &str, name: &str, index: u32, variant: &VariantFormat) -> String {
+fn output_variant(base: &str, name: &str, index: u32, variant: &VariantFormat) {
     use VariantFormat::*;
     let annotation = format!("@Variant(index = {})\n", index);
     let class = format!("public static class {}_{} extends {}", base, name, base);
     match variant {
-        Unit => format!("{}{} {{}};", annotation, class),
-        NewType(format) => format!(
-            "{}{} {{\n    {} value;\n}};",
+        Unit => println!("\n{}{} {{}};", annotation, class),
+        NewType(format) => println!(
+            "\n{}{} {{\n    {} value;\n}};",
             annotation,
             class,
-            output_type(format),
+            quote_type(format),
         ),
-        Tuple(formats) => format!(
-            "{}{} {{\n    {} value;\n}};",
+        Tuple(formats) => println!(
+            "\n{}{} {{\n    {} value;\n}};",
             annotation,
             class,
-            output_type(&Format::Tuple(formats.clone())),
+            quote_type(&Format::Tuple(formats.clone())),
         ),
-        Struct(fields) => format!(
-            "{}{} {{\n{}}};",
-            annotation,
-            class,
-            output_fields(4, fields)
-        ),
+        Struct(fields) => {
+            println!("\n{}{} {{", annotation, class);
+            output_fields(4, fields);
+            println!("}};");
+        }
         Unknown => panic!("incorrect value"),
     }
 }
 
-fn output_variants(base: &str, variants: &BTreeMap<u32, Named<VariantFormat>>) -> String {
-    let mut result = String::new();
+fn output_variants(base: &str, variants: &BTreeMap<u32, Named<VariantFormat>>) {
     for (index, variant) in variants {
-        result += &format!(
-            "\n{}\n",
-            output_variant(base, &variant.name, *index, &variant.value)
-        );
+        output_variant(base, &variant.name, *index, &variant.value);
     }
-    result
 }
 
-fn output_container(name: &str, format: &ContainerFormat) -> String {
+fn output_container(name: &str, format: &ContainerFormat) {
     use ContainerFormat::*;
     match format {
-        UnitStruct => format!("public static class {} {{}};\n", name),
-        NewTypeStruct(format) => format!(
+        UnitStruct => println!("public static class {} {{}};\n", name),
+        NewTypeStruct(format) => println!(
             "public static class {} {{\n    {} value;\n}};\n",
             name,
-            output_type(format)
+            quote_type(format)
         ),
-        TupleStruct(formats) => format!(
+        TupleStruct(formats) => println!(
             "public static class {} {{\n    {} value;\n}};\n",
             name,
-            output_type(&Format::Tuple(formats.clone()))
+            quote_type(&Format::Tuple(formats.clone()))
         ),
-        Struct(fields) => format!(
-            "public static class {} {{\n{}}};\n",
-            name,
-            output_fields(4, fields)
-        ),
-        Enum(variants) => format!(
-            r#"@Enum(variants={{
+        Struct(fields) => {
+            println!("public static class {} {{", name);
+            output_fields(4, fields);
+            println!("}};\n");
+        }
+        Enum(variants) => {
+            println!(
+                r#"@Enum(variants={{
     {}
 }})
 public abstract static class {} {{}};
-{}"#,
-            variants
-                .iter()
-                .map(|(_, v)| format!("{}_{}.class", name, v.name))
-                .collect::<Vec<_>>()
-                .join(",\n    "),
-            name,
-            output_variants(name, variants),
-        ),
+"#,
+                variants
+                    .iter()
+                    .map(|(_, v)| format!("{}_{}.class", name, v.name))
+                    .collect::<Vec<_>>()
+                    .join(",\n    "),
+                name
+            );
+            output_variants(name, variants);
+        }
     }
 }
