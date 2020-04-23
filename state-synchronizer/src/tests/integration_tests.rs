@@ -14,6 +14,7 @@ use libra_crypto::{
     PrivateKey, Uniform,
 };
 use libra_mempool::mocks::MockSharedMempool;
+use libra_network_address::NetworkAddress;
 use libra_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures,
     on_chain_config::ValidatorSet, proof::TransactionListProof,
@@ -25,7 +26,6 @@ use network::{
     validator_network::network_builder::{NetworkBuilder, TransportType},
     NetworkPublicKeys,
 };
-use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::HashMap,
@@ -118,7 +118,7 @@ struct SynchronizerEnv {
     network_signers: Vec<Ed25519PrivateKey>,
     public_keys: Vec<ValidatorInfo>,
     peer_ids: Vec<PeerId>,
-    peer_addresses: Vec<Multiaddr>,
+    peer_addresses: Vec<NetworkAddress>,
     mempools: Vec<MockSharedMempool>,
 }
 
@@ -235,7 +235,7 @@ impl SynchronizerEnv {
             .collect();
 
         // setup network
-        let addr: Multiaddr = "/memory/0".parse().unwrap();
+        let addr: NetworkAddress = "/memory/0".parse().unwrap();
         let mut seed_peers = HashMap::new();
         if new_peer_idx > 0 {
             seed_peers.insert(

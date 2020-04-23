@@ -14,7 +14,6 @@ anyhow = "1.0"
 bytes = { version = "0.5.4", features = ["serde"] }
 futures = "0.3.0"
 once_cell = "1.3.1"
-parity-multiaddr = { version = "0.8.0", default-features = false }
 pin-project = "0.4.9"
 rand = "0.7.3"
 serde = { version = "1.0.106", default-features = false }
@@ -50,7 +49,7 @@ socket-bench-server = { path = "socket-bench-server", version = "0.1.0" }
 
 [features]
 default = []
-fuzzing = ["proptest", "libra-proptest-helpers", "libra-types/fuzzing"]
+fuzzing = ["proptest", "libra-proptest-helpers", "libra-types/fuzzing", "libra-network-address/fuzzing"]
 testing = ["noise/testing"]
 
 [[bench]]

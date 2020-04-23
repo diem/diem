@@ -19,8 +19,8 @@ use futures::{
     stream::{FusedStream, Map, Select, Stream, StreamExt},
     task::{Context, Poll},
 };
+use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
-use parity_multiaddr::Multiaddr;
 use pin_project::pin_project;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{marker::PhantomData, pin::Pin, time::Duration};
@@ -194,9 +194,13 @@ impl<TMessage> NetworkSender<TMessage> {
         }
     }
 
-    /// Request that a given Peer be dialed at the provided `Multiaddr` and synchronously wait for
-    /// the request to be performed.
-    pub async fn dial_peer(&mut self, peer: PeerId, addr: Multiaddr) -> Result<(), NetworkError> {
+    /// Request that a given Peer be dialed at the provided `NetworkAddress` and
+    /// synchronously wait for the request to be performed.
+    pub async fn dial_peer(
+        &mut self,
+        peer: PeerId,
+        addr: NetworkAddress,
+    ) -> Result<(), NetworkError> {
         self.connection_reqs_tx.dial_peer(peer, addr).await?;
         Ok(())
     }

@@ -11,10 +11,10 @@ use crate::{
     ProtocolId,
 };
 use futures::{future::join, io::AsyncWriteExt, stream::StreamExt, SinkExt};
+use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use memsocket::MemorySocket;
 use netcore::{compat::IoCompat, transport::ConnectionOrigin};
-use parity_multiaddr::Multiaddr;
 use std::{mem::ManuallyDrop, str::FromStr, time::Duration};
 use tokio::{
     runtime::{Handle, Runtime},
@@ -45,7 +45,7 @@ fn build_test_peer(
         metadata: ConnectionMetadata::new(
             peer_id,
             ConnectionId::default(),
-            Multiaddr::from_str("/ip4/127.0.0.1/tcp/8081").unwrap(),
+            NetworkAddress::from_str("/ip4/127.0.0.1/tcp/8081").unwrap(),
             origin,
             MessagingProtocolVersion::V1,
             [].iter().into(),

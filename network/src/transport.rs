@@ -17,10 +17,9 @@ use libra_types::PeerId;
 use netcore::transport::{boxed, memory, tcp, ConnectionOrigin, TransportExt};
 use noise::NoiseConfig;
 use once_cell::sync::Lazy;
-use parity_multiaddr::Multiaddr;
 use std::{
     collections::HashMap,
-    convert::{TryFrom, TryInto},
+    convert::TryFrom,
     fmt::Debug,
     io,
     sync::{Arc, Mutex, RwLock},
@@ -83,7 +82,7 @@ impl ConnectionIdGenerator {
 pub struct ConnectionMetadata {
     peer_id: PeerId,
     connection_id: ConnectionId,
-    addr: Multiaddr,
+    addr: NetworkAddress,
     origin: ConnectionOrigin,
     messaging_protocol: MessagingProtocolVersion,
     application_protocols: SupportedProtocols,
@@ -93,7 +92,7 @@ impl ConnectionMetadata {
     pub fn new(
         peer_id: PeerId,
         connection_id: ConnectionId,
-        addr: Multiaddr,
+        addr: NetworkAddress,
         origin: ConnectionOrigin,
         messaging_protocol: MessagingProtocolVersion,
         application_protocols: SupportedProtocols,
@@ -116,7 +115,7 @@ impl ConnectionMetadata {
         self.connection_id
     }
 
-    pub fn addr(&self) -> &Multiaddr {
+    pub fn addr(&self) -> &NetworkAddress {
         &self.addr
     }
 
@@ -153,10 +152,6 @@ pub async fn perform_handshake<T: TSocket>(
     origin: ConnectionOrigin,
     own_handshake: &HandshakeMsg,
 ) -> Result<Connection<T>, io::Error> {
-    let addr: Multiaddr = addr
-        .try_into()
-        .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
-
     let handshake_other = exchange_handshake(&own_handshake, &mut socket).await?;
     let intersecting_protocols = own_handshake.find_common_protocols(&handshake_other);
     match intersecting_protocols {

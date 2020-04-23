@@ -37,9 +37,9 @@ use futures::{
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
 use libra_logger::prelude::*;
+use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use num_variants::NumVariants;
-use parity_multiaddr::Multiaddr;
 use std::{
     cmp::min,
     collections::HashMap,
@@ -57,7 +57,7 @@ pub struct ConnectivityManager<TTicker, TBackoff> {
     /// Nodes which are eligible to join the network.
     eligible: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     /// PeerId and address of remote peers to which this peer is connected.
-    connected: HashMap<PeerId, Multiaddr>,
+    connected: HashMap<PeerId, NetworkAddress>,
     /// Addresses of peers received from discovery sources.
     peer_addresses: HashMap<PeerId, Addresses>,
     /// Ticker to trigger connectivity checks to provide the guarantees stated above.
@@ -97,16 +97,16 @@ pub enum DiscoverySource {
 #[derive(Debug)]
 pub enum ConnectivityRequest {
     /// Request to update known addresses of peer with id `PeerId` to given list.
-    UpdateAddresses(DiscoverySource, PeerId, Vec<Multiaddr>),
+    UpdateAddresses(DiscoverySource, PeerId, Vec<NetworkAddress>),
     /// Update set of nodes eligible to join the network.
     UpdateEligibleNodes(HashMap<PeerId, NetworkPublicKeys>),
     /// Gets current size of dial queue. This is useful in tests.
     GetDialQueueSize(oneshot::Sender<usize>),
 }
 
-/// A set of Multiaddr's for a peer, bucketed by DiscoverySource in priority order.
+/// A set of NetworkAddress's for a peer, bucketed by DiscoverySource in priority order.
 #[derive(Clone, Debug, Default)]
-struct Addresses([Vec<Multiaddr>; DiscoverySource::NUM_VARIANTS]);
+struct Addresses([Vec<NetworkAddress>; DiscoverySource::NUM_VARIANTS]);
 
 #[derive(Debug)]
 enum DialResult {
@@ -135,7 +135,7 @@ where
     pub fn new(
         self_peer_id: PeerId,
         eligible: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
-        seed_peers: HashMap<PeerId, Vec<Multiaddr>>,
+        seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
         ticker: TTicker,
         connection_reqs_tx: ConnectionRequestSender,
         connection_notifs_rx: conn_status_channel::Receiver,
@@ -394,7 +394,12 @@ where
         }
     }
 
-    fn update_peer_addrs(&mut self, src: DiscoverySource, peer_id: PeerId, addrs: Vec<Multiaddr>) {
+    fn update_peer_addrs(
+        &mut self,
+        src: DiscoverySource,
+        peer_id: PeerId,
+        addrs: Vec<NetworkAddress>,
+    ) {
         self.peer_addresses
             .entry(peer_id)
             .or_default()
@@ -428,7 +433,7 @@ where
     }
 }
 
-fn log_dial_result(peer_id: PeerId, addr: Multiaddr, dial_result: DialResult) {
+fn log_dial_result(peer_id: PeerId, addr: NetworkAddress, dial_result: DialResult) {
     match dial_result {
         DialResult::Success => {
             info!(
@@ -465,7 +470,7 @@ impl Addresses {
         Default::default()
     }
 
-    fn from_addrs(src: DiscoverySource, src_addrs: Vec<Multiaddr>) -> Self {
+    fn from_addrs(src: DiscoverySource, src_addrs: Vec<NetworkAddress>) -> Self {
         let mut addrs = Self::new();
         addrs.update(src, src_addrs);
         addrs
@@ -479,12 +484,12 @@ impl Addresses {
         self.len() == 0
     }
 
-    fn update(&mut self, src: DiscoverySource, addrs: Vec<Multiaddr>) {
+    fn update(&mut self, src: DiscoverySource, addrs: Vec<NetworkAddress>) {
         let idx = src as u8 as usize;
         self.0[idx] = addrs;
     }
 
-    fn get(&self, idx: usize) -> Option<&Multiaddr> {
+    fn get(&self, idx: usize) -> Option<&NetworkAddress> {
         self.0.iter().flatten().nth(idx)
     }
 }
@@ -504,7 +509,7 @@ where
         self.addr_idx = 0;
     }
 
-    fn next_addr<'a>(&mut self, addrs: &'a Addresses) -> &'a Multiaddr {
+    fn next_addr<'a>(&mut self, addrs: &'a Addresses) -> &'a NetworkAddress {
         assert!(!addrs.is_empty());
 
         let addr_idx = self.addr_idx;

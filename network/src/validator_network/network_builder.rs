@@ -35,9 +35,9 @@ use libra_crypto::{
 };
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
+use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use netcore::transport::Transport;
-use parity_multiaddr::Multiaddr;
 use std::{
     clone::Clone,
     collections::HashMap,
@@ -85,10 +85,10 @@ pub enum TransportType {
 pub struct NetworkBuilder {
     executor: Handle,
     peer_id: PeerId,
-    addr: Multiaddr,
+    addr: NetworkAddress,
     role: RoleType,
-    advertised_address: Option<Multiaddr>,
-    seed_peers: HashMap<PeerId, Vec<Multiaddr>>,
+    advertised_address: Option<NetworkAddress>,
+    seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     transport: TransportType,
     channel_size: usize,
@@ -122,7 +122,7 @@ impl NetworkBuilder {
     pub fn new(
         executor: Handle,
         peer_id: PeerId,
-        addr: Multiaddr,
+        addr: NetworkAddress,
         role: RoleType,
     ) -> NetworkBuilder {
         // Setup channel to send requests to peer manager.
@@ -179,7 +179,7 @@ impl NetworkBuilder {
     }
 
     /// Set and address to advertise, if different from the listen address
-    pub fn advertised_address(&mut self, advertised_address: Multiaddr) -> &mut Self {
+    pub fn advertised_address(&mut self, advertised_address: NetworkAddress) -> &mut Self {
         self.advertised_address = Some(advertised_address);
         self
     }
@@ -200,7 +200,7 @@ impl NetworkBuilder {
     }
 
     /// Set seed peers to bootstrap discovery
-    pub fn seed_peers(&mut self, seed_peers: HashMap<PeerId, Vec<Multiaddr>>) -> &mut Self {
+    pub fn seed_peers(&mut self, seed_peers: HashMap<PeerId, Vec<NetworkAddress>>) -> &mut Self {
         self.seed_peers = seed_peers;
         self
     }
@@ -452,8 +452,8 @@ impl NetworkBuilder {
     }
 
     /// Create the configured transport and start PeerManager.
-    /// Return the actual Multiaddr over which this peer is listening.
-    pub fn build(mut self) -> Multiaddr {
+    /// Return the actual NetworkAddress over which this peer is listening.
+    pub fn build(mut self) -> NetworkAddress {
         let peer_id = self.peer_id;
         let supported_protocols = self.supported_protocols();
         // Build network based on the transport type
@@ -499,8 +499,8 @@ impl NetworkBuilder {
     }
 
     /// Given a transport build and launch PeerManager.
-    /// Return the actual Multiaddr over which this peer is listening.
-    fn build_with_transport<TTransport, TSocket>(self, transport: TTransport) -> Multiaddr
+    /// Return the actual NetworkAddress over which this peer is listening.
+    fn build_with_transport<TTransport, TSocket>(self, transport: TTransport) -> NetworkAddress
     where
         TTransport: Transport<Output = Connection<TSocket>> + Send + 'static,
         TSocket: transport::TSocket,

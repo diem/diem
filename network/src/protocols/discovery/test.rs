@@ -12,19 +12,19 @@ use crate::{
 };
 use anyhow::anyhow;
 use channel::{libra_channel, message_queues::QueueStyle};
-use core::str::FromStr;
 use futures::channel::oneshot;
 use libra_config::config::RoleType;
 use libra_crypto::{
     ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, x25519, PrivateKey, Uniform,
 };
+use libra_network_address::NetworkAddress;
 use rand::prelude::*;
-use std::num::NonZeroUsize;
+use std::{num::NonZeroUsize, str::FromStr};
 use tokio::runtime::Runtime;
 
 fn gen_peer_info() -> PeerInfo {
     PeerInfo {
-        addrs: vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()],
+        addrs: vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()],
         epoch: 1,
     }
 }
@@ -46,7 +46,7 @@ fn parse_raw_message(msg: Message) -> Result<DiscoveryMsg, NetworkError> {
 fn setup_discovery(
     rt: &mut Runtime,
     peer_id: PeerId,
-    addrs: Vec<Multiaddr>,
+    addrs: Vec<NetworkAddress>,
     signer: Ed25519PrivateKey,
     trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
 ) -> (
@@ -95,7 +95,7 @@ fn setup_discovery(
 async fn expect_address_update(
     conn_mgr_reqs_rx: &mut channel::Receiver<ConnectivityRequest>,
     expected_peer_id: PeerId,
-    expected_addrs: &[Multiaddr],
+    expected_addrs: &[NetworkAddress],
 ) {
     match conn_mgr_reqs_rx.next().await.unwrap() {
         ConnectivityRequest::UpdateAddresses(src, peer_id, addrs) => {
@@ -131,12 +131,12 @@ fn inbound() {
 
     // Setup self.
     let self_peer_id = PeerId::random();
-    let self_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
+    let self_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
     let mut rng = StdRng::from_seed(TEST_SEED);
     let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer(&mut rng);
 
     // Setup other peer.
-    let other_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/8080").unwrap()];
+    let other_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/8080").unwrap()];
     let other_peer_id = PeerId::random();
     let (other_pub_keys, other_signer) = generate_network_pub_keys_and_signer(&mut rng);
     let trusted_peers = Arc::new(RwLock::new(
@@ -149,7 +149,7 @@ fn inbound() {
     ));
 
     // Setup new peer to be added later.
-    let new_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/7070").unwrap()];
+    let new_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/7070").unwrap()];
     let new_peer_id = PeerId::random();
     let (new_pub_keys, new_signer) = generate_network_pub_keys_and_signer(&mut rng);
 
@@ -207,7 +207,7 @@ fn inbound() {
         );
 
         // Update other peer's note.
-        let other_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/1234").unwrap()];
+        let other_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/1234").unwrap()];
         let other_note = Note::new(
             &other_signer,
             other_peer_id,
@@ -244,7 +244,7 @@ fn outbound() {
 
     // Setup self peer.
     let peer_id = PeerId::random();
-    let addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
+    let addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
     let mut rng = StdRng::from_seed(TEST_SEED);
     let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer(&mut rng);
 
@@ -313,12 +313,12 @@ fn old_note_higher_epoch() {
 
     // Setup self peer.
     let peer_id = PeerId::random();
-    let addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
+    let addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
     let mut rng = StdRng::from_seed(TEST_SEED);
     let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer(&mut rng);
 
     // Setup other peer.
-    let other_peer_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/8080").unwrap()];
+    let other_peer_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/8080").unwrap()];
     let other_peer_id = PeerId::random();
     let (other_pub_keys, _) = generate_network_pub_keys_and_signer(&mut rng);
     let trusted_peers = Arc::new(RwLock::new(
@@ -349,7 +349,7 @@ fn old_note_higher_epoch() {
 
         // Send DiscoveryMsg consisting of the this node's older note which has higher epoch than
         // current note.
-        let old_self_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9091").unwrap()];
+        let old_self_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9091").unwrap()];
         let old_epoch = get_unix_epoch() + 100;
         let old_note = Note::new(
             &self_signer,
@@ -401,12 +401,12 @@ fn old_note_max_epoch() {
 
     // Setup self.
     let peer_id = PeerId::random();
-    let addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
+    let addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap()];
     let mut rng = StdRng::from_seed(TEST_SEED);
     let (self_pub_keys, self_signer) = generate_network_pub_keys_and_signer(&mut rng);
 
     // Setup other.
-    let other_peer_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/8080").unwrap()];
+    let other_peer_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/8080").unwrap()];
     let other_peer_id = PeerId::random();
     let (other_pub_keys, _) = generate_network_pub_keys_and_signer(&mut rng);
     let trusted_peers = Arc::new(RwLock::new(
@@ -436,7 +436,7 @@ fn old_note_max_epoch() {
         delivered_rx.await.unwrap();
 
         // Send DiscoveryMsg consisting of the this node's older note which has u64::MAX epoch.
-        let old_self_addrs = vec![Multiaddr::from_str("/ip4/127.0.0.1/tcp/9091").unwrap()];
+        let old_self_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9091").unwrap()];
         let old_epoch = std::u64::MAX;
         let old_note = Note::new(
             &self_signer,
