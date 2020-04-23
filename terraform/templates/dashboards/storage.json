@@ -149,12 +149,12 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(storage_gauge{op=\"new_state_nodes\"}) - max(storage_gauge{op=\"stale_state_nodes\"})",
+          "expr": "max(storage_gauge{op=\"new_state_nodes\"} - ignoring(op) storage_gauge{op=\"stale_state_nodes\"})",
           "legendFormat": "accounts",
           "refId": "A"
         },
         {
-          "expr": "max(storage_gauge{op=\"new_state_nodes\"}) - max(storage_gauge{op=\"stale_state_nodes\"}) - max(storage_gauge{op=\"new_state_leaves\"}) + max(storage_gauge{op=\"stale_state_leaves\"})",
+          "expr": "max(storage_gauge{op=\"new_state_nodes\"} - ignoring(op) storage_gauge{op=\"stale_state_nodes\"} - ignoring(op) storage_gauge{op=\"new_state_leaves\"} + ignoring(op) storage_gauge{op=\"stale_state_leaves\"})",
           "legendFormat": "internal_nodes",
           "refId": "B"
         }
@@ -1671,7 +1671,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(rate(storage_gauge{op=\"new_state_leaves\"}[10m])) / max(rate(storage_gauge{op=\"latest_transaction_version\"}[10m]))",
+          "expr": "max(irate(storage_gauge{op=\"new_state_leaves\"}[10m]) / ignoring(op) irate(storage_gauge{op=\"latest_transaction_version\"}[10m]))",
           "legendFormat": "accounts/txn",
           "refId": "A"
         }
@@ -1757,7 +1757,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(rate(storage_gauge{op=\"events_created\"}[10m])) / max(rate(storage_gauge{op=\"latest_transaction_version\"}[10m]))",
+          "expr": "max(irate(storage_gauge{op=\"events_created\"}[10m]) / ignoring(op) irate(storage_gauge{op=\"latest_transaction_version\"}[10m]))",
           "legendFormat": "events/txn",
           "refId": "A"
         }
@@ -1843,7 +1843,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(rate(storage_gauge{op=\"new_state_nodes\"}[10m])) / max(rate(storage_gauge{op=\"new_state_leaves\"}[10m])) - 1",
+          "expr": "max(irate(storage_gauge{op=\"new_state_nodes\"}[10m]) / ignoring(op) irate(storage_gauge{op=\"new_state_leaves\"}[10m])) - 1",
           "legendFormat": "internal nodes/accounts",
           "refId": "A"
         }
