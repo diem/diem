@@ -9,22 +9,25 @@
 
 struct AccountAddress {
     std::array<uint8_t, 16> value;
+    std::tuple<uint8_t, uint8_t> other;
 };
 
 template <>
 template <typename Serializer>
-void Serializable<AccountAddress>::serialize(const AccountAddress &obj, Serializer &serializer) {
+void Serializable<AccountAddress>::serialize(const AccountAddress &obj,
+                                             Serializer &serializer) {
     Serializable<decltype(obj.value)>::serialize(obj.value, serializer);
 }
 
 struct AccessPath {
-    std::unique_ptr<AccountAddress> address;
+    std::unique_ptr<std::variant<AccountAddress, uint8_t>> address;
     std::vector<uint8_t> path;
 };
 
 template <>
 template <typename Serializer>
-void Serializable<AccessPath>::serialize(const AccessPath &obj, Serializer &serializer) {
+void Serializable<AccessPath>::serialize(const AccessPath &obj,
+                                         Serializer &serializer) {
     Serializable<decltype(obj.address)>::serialize(obj.address, serializer);
     Serializable<decltype(obj.path)>::serialize(obj.path, serializer);
 }
@@ -32,23 +35,21 @@ void Serializable<AccessPath>::serialize(const AccessPath &obj, Serializer &seri
 /* ---------- */
 
 struct MySerializer {
-    void serialize_len(uint32_t len) {
-        std::cout << len << "\n";
-    }
+    void serialize_len(uint32_t len) { std::cout << len << "\n"; }
 
-    void serialize_u32(uint32_t value) {
-        std::cout << value << "\n";
-    }
+    void serialize_variant_index(uint32_t index) { std::cout << index << "\n"; }
 
-    void serialize_u8(uint8_t value) {
-        std::cout << (int32_t)value << "\n";
-    }
+    void serialize_u32(uint32_t value) { std::cout << value << "\n"; }
+
+    void serialize_u8(uint8_t value) { std::cout << (int32_t)value << "\n"; }
 };
 
 int main() {
-    AccountAddress address = {{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}};
-    std::vector<uint8_t> path = {1,2,3,4};
-    AccessPath value = { std::make_unique<AccountAddress>(address), path };
+    AccountAddress address = {
+        {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, {16, 17}};
+    std::vector<uint8_t> path = {1, 2, 3, 4};
+    AccessPath value = {
+        std::make_unique<std::variant<AccountAddress, uint8_t>>(address), path};
 
     MySerializer serializer{};
     Serializable<decltype(value)>::serialize(value, serializer);

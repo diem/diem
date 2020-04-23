@@ -4,12 +4,14 @@
 #pragma once
 
 #include <array>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
 #include <stdint.h>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
@@ -35,7 +37,8 @@ struct Deserializable {
 template <typename T, typename Deleter>
 struct Serializable<std::unique_ptr<T, Deleter>> {
     template <typename Serializer>
-    static void serialize(const std::unique_ptr<T, Deleter> &value, Serializer &serializer) {
+    static void serialize(const std::unique_ptr<T, Deleter> &value,
+                          Serializer &serializer) {
         Serializable<T>::serialize(*value, serializer);
     }
 };
@@ -43,9 +46,10 @@ struct Serializable<std::unique_ptr<T, Deleter>> {
 template <typename T, typename Allocator>
 struct Serializable<std::vector<T, Allocator>> {
     template <typename Serializer>
-    static void serialize(const std::vector<T, Allocator> &value, Serializer &serializer) {
+    static void serialize(const std::vector<T, Allocator> &value,
+                          Serializer &serializer) {
         serializer.serialize_len(value.size());
-        for (const T& item : value) {
+        for (const T &item : value) {
             Serializable<T>::serialize(item, serializer);
         }
     }
@@ -54,8 +58,9 @@ struct Serializable<std::vector<T, Allocator>> {
 template <typename T, std::size_t N>
 struct Serializable<std::array<T, N>> {
     template <typename Serializer>
-    static void serialize(const std::array<T, N> &value, Serializer &serializer) {
-        for (const T& item : value) {
+    static void serialize(const std::array<T, N> &value,
+                          Serializer &serializer) {
+        for (const T &item : value) {
             Serializable<T>::serialize(item, serializer);
         }
     }
@@ -149,13 +154,43 @@ struct Serializable<int128_t> {
     }
 };
 
+// Must be defined after (u)int128_t.
+template <class... Types>
+struct Serializable<std::tuple<Types...>> {
+    template <typename Serializer>
+    static void serialize(const std::tuple<Types...> &value,
+                          Serializer &serializer) {
+        std::apply(
+            [&serializer](Types const &... args) {
+                (Serializable<Types>::serialize(args, serializer), ...);
+            },
+            value);
+    }
+};
+
+template <class... Types>
+struct Serializable<std::variant<Types...>> {
+    template <typename Serializer>
+    static void serialize(const std::variant<Types...> &value,
+                          Serializer &serializer) {
+        serializer.serialize_variant_index(value.index());
+        std::visit(
+            [&serializer](const auto &arg) {
+                using T = typename std::decay<decltype(arg)>::type;
+                Serializable<T>::serialize(arg, serializer);
+            },
+            value);
+    }
+};
+
 /* ---------- */
 
 template <typename T>
 struct Deserializable<std::unique_ptr<T>> {
     template <typename Deserializer>
     static std::unique_ptr<T> deserialize(Deserializer &deserializer) {
-        return std::make_unique<T>(Deserializable<T>::deserialize(deserializer));
+        return std::make_unique<T>(
+            Deserializable<T>::deserialize(deserializer));
     }
 };
 
@@ -177,7 +212,7 @@ struct Deserializable<std::array<T, N>> {
     template <typename Deserializer>
     static std::array<T, N> deserialize(Deserializer &deserializer) {
         std::array<T, N> result;
-        for (T& item : result) {
+        for (T &item : result) {
             item = Deserializable<T>::deserialize(deserializer);
         }
         return result;
@@ -269,5 +304,38 @@ struct Deserializable<int128_t> {
     template <typename Deserializer>
     static int128_t deserialize(Deserializer &deserializer) {
         return deserializer.deserialize_i128();
+    }
+};
+
+// Must be defined after (u)int128_t.
+template <class... Types>
+struct Deserializable<std::tuple<Types...>> {
+    template <typename Deserializer>
+    static std::tuple<Types...> deserialize(Deserializer &deserializer) {
+        return std::make_tuple(
+            Deserializable<Types>::deserialize(deserializer)...);
+    }
+};
+
+template <class... Types>
+struct Deserializable<std::variant<Types...>> {
+    template <typename Deserializer>
+    static std::variant<Types...> deserialize(Deserializer &deserializer) {
+        auto index = deserializer.deserialize_variant_index();
+
+        using Case = std::function<std::variant<Types...>()>;
+
+        auto make_case = [&deserializer](auto tag) -> Case {
+            using T = typename decltype(tag)::type;
+            auto f = [&deserializer]() {
+                return std::variant<Types...>(
+                    Deserializable<T>::deserialize(deserializer));
+            };
+            return f;
+        };
+
+        std::array<Case, sizeof...(Types)> cases = {
+            make_case(std::common_type<Types>{})...};
+        return cases.at(index)();
     }
 };
