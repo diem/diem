@@ -4,8 +4,7 @@
 use crate::{
     cargo::{CargoArgs, CargoCommand},
     context::XContext,
-    utils,
-    utils::project_root,
+    xcontext::execution_location,
     Result,
 };
 use log::info;
@@ -125,7 +124,7 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
         });
         cmd.run_on_packages_together(run_together, &base_args)?;
         cmd.run_on_packages_separate(run_separate)?;
-    } else if utils::project_is_root()? {
+    } else if execution_location::project_is_root()? {
         // TODO Maybe only run a subest of tests if we're not inside
         // a package but not at the project root (e.g. language)
         cmd.run_with_exclusions(
@@ -142,7 +141,7 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
             )
         }))?;
     } else {
-        let package = utils::get_local_package()?;
+        let package = execution_location::get_local_package()?;
         let all_features = config
             .package_exceptions()
             .get(&package)
@@ -156,14 +155,14 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
     }
 
     if args.html_cov_dir.is_some() {
-        let debug_dir = project_root().join("target/debug/");
+        let debug_dir = execution_location::project_root().join("target/debug/");
         let mut grcov_html = Command::new("grcov");
         grcov_html
             //output file from coverage: gcda files
             .arg(debug_dir.as_os_str())
             //source code location
             .arg("-s")
-            .arg(project_root().as_os_str())
+            .arg(execution_location::project_root().as_os_str())
             //html output
             .arg("-t")
             .arg("html")

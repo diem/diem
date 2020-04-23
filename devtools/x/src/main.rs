@@ -13,12 +13,11 @@ mod bench;
 mod cargo;
 mod check;
 mod clippy;
-mod config;
 mod context;
 mod fmt;
 mod lint;
 mod test;
-mod utils;
+mod xcontext;
 
 type Result<T> = anyhow::Result<T>;
 

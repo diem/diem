@@ -3,9 +3,10 @@
 
 use crate::{
     cargo::{CargoArgs, CargoCommand},
-    config::Config,
     context::XContext,
-    utils, Result,
+    xcontext::execution_location,
+    xcontext::project_metadata::Config,
+    Result,
 };
 use structopt::StructOpt;
 
@@ -54,7 +55,7 @@ pub fn run_with(cmd: CargoCommand<'_>, args: Args, config: &Config) -> Result<()
         });
         cmd.run_on_packages_together(run_together, &base_args)?;
         cmd.run_on_packages_separate(run_separate)?;
-    } else if utils::project_is_root()? || args.workspace {
+    } else if execution_location::project_is_root()? || args.workspace {
         cmd.run_with_exclusions(
             config.package_exceptions().iter().map(|(p, _)| p),
             &base_args,
@@ -73,7 +74,7 @@ pub fn run_with(cmd: CargoCommand<'_>, args: Args, config: &Config) -> Result<()
             )
         }))?;
     } else {
-        let package = utils::get_local_package()?;
+        let package = execution_location::get_local_package()?;
         let cargo_args = if args.all_targets {
             let all_features = config
                 .package_exceptions()

@@ -4,7 +4,8 @@
 use crate::{
     cargo::{CargoArgs, CargoCommand},
     context::XContext,
-    utils, Result,
+    xcontext::execution_location,
+    Result,
 };
 use std::ffi::OsString;
 use structopt::StructOpt;
@@ -45,7 +46,7 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
         });
         cmd.run_on_packages_together(run_together, &base_args)?;
         cmd.run_on_packages_separate(run_separate)?;
-    } else if utils::project_is_root()? {
+    } else if execution_location::project_is_root()? {
         cmd.run_with_exclusions(
             config.package_exceptions().iter().map(|(p, _)| p),
             &base_args,
@@ -60,7 +61,7 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
             )
         }))?;
     } else {
-        let package = utils::get_local_package()?;
+        let package = execution_location::get_local_package()?;
         let all_features = config
             .package_exceptions()
             .get(&package)

@@ -3,7 +3,7 @@
 
 //! Project and package linters that run queries on guppy.
 
-use crate::config::EnforcedAttributesConfig;
+use crate::xcontext::project_metadata::EnforcedAttributesConfig;
 use guppy::graph::BuildTargetId;
 use std::{collections::HashMap, ffi::OsStr};
 use x_lint::prelude::*;
