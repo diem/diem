@@ -5,9 +5,10 @@ module A {
         let sender: address;
         let t: Self.T;
         let t_ref: &mut Self.T;
+        let v: u64;
         sender = get_txn_sender();
         t_ref = borrow_global_mut<T>(copy(sender));
-        t = move_from<T>(move(sender));
+        T { v: v } = move_from<T>(move(sender));
         _ = move(t_ref);
         return;
     }

@@ -9,10 +9,10 @@ module Token {
         return;
     }
 
-    public bump_value(this: &Self.T) {
-        let val: &u64;
+    public bump_value(this: &mut Self.T) {
+        let val: &mut u64;
         let x: u64;
-        val = &move(this).value;
+        val = &mut move(this).value;
         x = *move(val) + 1;
         *move(val) = copy(x);
         return;

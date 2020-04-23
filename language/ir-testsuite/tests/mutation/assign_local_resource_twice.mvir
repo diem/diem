@@ -1,5 +1,3 @@
-// check: MOVELOC_EXISTS_BORROW_ERROR
-
 import 0x0.LBR;
 import 0x0.Libra;
 main() {
@@ -10,3 +8,5 @@ main() {
     *move(resource_ref) = move(resource1);
     return;
 }
+
+// check: WRITEREF_RESOURCE_ERROR

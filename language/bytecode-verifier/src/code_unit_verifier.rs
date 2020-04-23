@@ -6,7 +6,7 @@
 //! abstract_interpreter.rs. CodeUnitVerifier simply orchestrates calls into these two files.
 use crate::{
     acquires_list_verifier::AcquiresVerifier, control_flow_graph::VMControlFlowGraph,
-    stack_usage_verifier::StackUsageVerifier, type_memory_safety::TypeAndMemorySafetyAnalysis,
+    locals_safety, reference_safety, stack_usage_verifier::StackUsageVerifier, type_safety,
 };
 use libra_types::vm_error::{StatusCode, VMStatus};
 use vm::{
@@ -59,6 +59,8 @@ impl<'a> CodeUnitVerifier<'a> {
     ) -> VMResult<()> {
         StackUsageVerifier::verify(self.module, function_definition, cfg)?;
         AcquiresVerifier::verify(self.module, function_definition)?;
-        TypeAndMemorySafetyAnalysis::verify(self.module, function_definition, cfg)
+        type_safety::verify(self.module, function_definition, cfg)?;
+        locals_safety::verify(self.module, function_definition, cfg)?;
+        reference_safety::verify(self.module, function_definition, cfg)
     }
 }

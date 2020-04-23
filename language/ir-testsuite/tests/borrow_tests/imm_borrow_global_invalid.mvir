@@ -78,7 +78,7 @@ module Tester {
         p1 = borrow_global_mut<Pair>(move(addr1));
         c1 = &move(p1).x;
         p2 = borrow_global_mut<Pair>(move(addr2));
-        c2 = &move(p1).x;
+        c2 = &move(p2).x;
         return move(c1) == move(c2);
     }
 }
@@ -99,7 +99,7 @@ module Tester {
         p1 = borrow_global_mut<Pair>(move(addr1));
         c1 = *&move(p1).x;
         p2 = borrow_global_mut<Pair>(move(addr2));
-        c2 = *&move(p1).x;
+        c2 = *&move(p2).x;
         return move(c1) == move(c2);
     }
 }
