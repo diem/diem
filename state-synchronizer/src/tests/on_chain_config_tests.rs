@@ -126,7 +126,7 @@ fn test_on_chain_config_pub_sub() {
         "execution missing reconfiguration"
     );
 
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(2, output.root_hash(), block1_id);
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, output, block1_id, vec![]);
     let (_, reconfig_events) = block_executor
         .commit_blocks(vec![block1_id], ledger_info_with_sigs)
         .unwrap();
@@ -183,14 +183,14 @@ fn test_on_chain_config_pub_sub() {
     let block2_id = gen_block_id(2);
 
     let output = block_executor
-        .execute_block((block2_id, block2), block1_id)
+        .execute_block((block2_id, block2), block_executor.committed_block_id())
         .expect("failed to execute block");
     assert!(
         output.has_reconfiguration(),
         "execution missing reconfiguration"
     );
 
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(5, output.root_hash(), block2_id);
+    let ledger_info_with_sigs = gen_ledger_info_with_sigs(2, output, block2_id, vec![]);
     let (_, reconfig_events) = block_executor
         .commit_blocks(vec![block2_id], ledger_info_with_sigs)
         .unwrap();

@@ -4,6 +4,7 @@
 use anyhow::Result;
 use libra_config::config::NodeConfig;
 use libra_crypto::ed25519::Ed25519PrivateKey;
+use libra_types::waypoint::Waypoint;
 use std::{fs::File, io::Write, path::PathBuf};
 
 pub trait BuildSwarm {
@@ -14,6 +15,7 @@ pub trait BuildSwarm {
 pub struct SwarmConfig {
     pub config_files: Vec<PathBuf>,
     pub faucet_key_path: PathBuf,
+    pub waypoint: Waypoint,
 }
 
 impl SwarmConfig {
@@ -39,6 +41,7 @@ impl SwarmConfig {
         Ok(SwarmConfig {
             config_files,
             faucet_key_path,
+            waypoint: configs[0].base.waypoint.unwrap(),
         })
     }
 }

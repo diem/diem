@@ -80,14 +80,16 @@ fn main() {
     let mnemonic_file = args.mnemonic_file.clone();
 
     // If waypoint is given explicitly, use its value,
-    // otherwise if waypoint_url is given, try to retrieve the waypoint from the URL,
-    // otherwise waypoint is None.
-    let waypoint = args.waypoint.or_else(|| {
-        args.waypoint_url.as_ref().map(|url_str| {
-            retrieve_waypoint(url_str.as_str()).unwrap_or_else(|e| {
-                panic!("Failure to retrieve a waypoint from {}: {}", url_str, e)
+    // otherwise waypoint_url is required, try to retrieve the waypoint from the URL.
+    let waypoint = args.waypoint.unwrap_or_else(|| {
+        args.waypoint_url
+            .as_ref()
+            .map(|url_str| {
+                retrieve_waypoint(url_str.as_str()).unwrap_or_else(|e| {
+                    panic!("Failure to retrieve a waypoint from {}: {}", url_str, e)
+                })
             })
-        })
+            .unwrap()
     });
     let mut client_proxy = ClientProxy::new(
         &args.url,

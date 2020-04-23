@@ -122,7 +122,7 @@ impl TestEnvironment {
             false,
             /* faucet server */ None,
             Some(mnemonic_file_path),
-            waypoint,
+            waypoint.unwrap_or_else(|| self.validator_swarm.config.waypoint),
         )
         .unwrap()
     }

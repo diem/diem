@@ -23,7 +23,7 @@ use proptest::{
     prelude::*,
     sample::Index,
 };
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, convert::TryFrom};
 
 // hack strategy to generate a length from `impl Into<SizeRange>`
 fn arb_length(size_range: impl Into<SizeRange>) -> impl Strategy<Value = usize> {
@@ -217,43 +217,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(100))]
 
     #[test]
-    fn test_pre_genesis_trusted_state_always_ratchets_from_any_genesis(
-        (_vsets, lis_with_sigs, latest_li) in arb_update_proof(
-            0    /* start epoch */,
-            0    /* start version */,
-            1..3 /* version delta */,
-            1..3 /* epoch changes */,
-            1..5 /* validators per epoch */,
-        )
-    ) {
-        let trusted_state = TrustedState::new_trust_any_genesis_WARNING_UNSAFE();
-
-        let expected_latest_version = latest_li.ledger_info().version();
-        let expected_latest_epoch_change_li = lis_with_sigs.last().cloned();
-        let expected_validator_set = expected_latest_epoch_change_li
-            .as_ref()
-            .and_then(|li_with_sigs| li_with_sigs.ledger_info().next_validator_set());
-
-        let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
-        let trusted_state_change = trusted_state
-            .verify_and_ratchet(&latest_li, &change_proof)
-            .expect("Should never error or be stale when ratcheting from pre-genesis with valid proofs");
-
-        match trusted_state_change {
-            TrustedStateChange::Epoch {
-                new_state,
-                latest_epoch_change_li,
-            } => {
-                assert_eq!(new_state.latest_version(), expected_latest_version);
-                assert_eq!(Some(latest_epoch_change_li), expected_latest_epoch_change_li.as_ref());
-                assert_eq!(latest_epoch_change_li.ledger_info().next_validator_set(), expected_validator_set);
-            },
-            _ => panic!("Unexpected  change, expecting epoch change"),
-        };
-    }
-
-    #[test]
-    fn test_ratchet_from_waypoint(
+    fn test_ratchet_from(
         (_vsets, lis_with_sigs, latest_li) in arb_update_proof(
             10,   /* start epoch */
             123,  /* start version */
@@ -265,7 +229,7 @@ proptest! {
         let first_epoch_change_li = lis_with_sigs.first().unwrap();
         let waypoint = Waypoint::new(first_epoch_change_li.ledger_info())
             .expect("Generating waypoint failed even though we passed an epoch change ledger info");
-        let trusted_state = TrustedState::from_waypoint(waypoint);
+        let trusted_state = TrustedState::from(waypoint);
 
         let expected_latest_version = latest_li.ledger_info().version();
         let expected_latest_epoch_change_li = lis_with_sigs.last().cloned();
@@ -303,10 +267,7 @@ proptest! {
     ) {
         // Assume we have already ratcheted into this epoch
         let epoch_change_li = lis_with_sigs.remove(0);
-        let trusted_state = TrustedState::from_epoch_change_ledger_info(
-            epoch_change_li.ledger_info().version() + 1,
-            epoch_change_li.ledger_info()
-        ).unwrap();
+        let trusted_state = TrustedState::try_from(epoch_change_li.ledger_info()).unwrap();
 
         let expected_latest_version = latest_li.ledger_info().version();
 
@@ -343,10 +304,7 @@ proptest! {
         // we should be able to use that and just skip the already trusted prefix.
         let idx = trusted_prefix_end_idx.index(lis_with_sigs.len());
         let intermediate_ledger_info = lis_with_sigs[idx].ledger_info();
-        let trusted_state = TrustedState::from_epoch_change_ledger_info(
-            intermediate_ledger_info.version() + 1,
-            intermediate_ledger_info,
-        ).unwrap();
+        let trusted_state = TrustedState::try_from(intermediate_ledger_info).unwrap();
 
         let expected_latest_version = latest_li.ledger_info().version();
         let expected_latest_epoch_change_li = lis_with_sigs.last().cloned();
@@ -390,10 +348,7 @@ proptest! {
     ) {
         let initial_li_with_sigs = lis_with_sigs.remove(0);
         let initial_li = initial_li_with_sigs.ledger_info();
-        let trusted_state = TrustedState::from_epoch_change_ledger_info(
-            initial_li.version() + 1,
-            initial_li,
-        ).unwrap();
+        let trusted_state = TrustedState::try_from(initial_li).unwrap();
 
         // materialize index and remove an epoch change in the proof to add a gap
         let li_gap_idx = li_gap_idx.index(lis_with_sigs.len());
@@ -418,10 +373,7 @@ proptest! {
     ) {
         let initial_li_with_sigs = lis_with_sigs.remove(0);
         let initial_li = initial_li_with_sigs.ledger_info();
-        let trusted_state = TrustedState::from_epoch_change_ledger_info(
-            initial_li.version() + 1,
-            initial_li,
-        ).unwrap();
+        let trusted_state = TrustedState::try_from(initial_li).unwrap();
 
         // Swap in a bad ledger info without signatures
         let li_with_sigs = bad_li_idx.get(&lis_with_sigs);
@@ -449,10 +401,7 @@ proptest! {
     ) {
         let initial_li_with_sigs = lis_with_sigs.remove(0);
         let initial_li = initial_li_with_sigs.ledger_info();
-        let trusted_state = TrustedState::from_epoch_change_ledger_info(
-            initial_li.version() + 1,
-            initial_li,
-        ).unwrap();
+        let trusted_state = TrustedState::try_from(initial_li).unwrap();
 
         // Verifying a latest ledger info (inside the last epoch) with invalid
         // signatures should fail.
@@ -487,10 +436,7 @@ proptest! {
         // We've ratched beyond the response change proof, so attempting to ratchet
         // that change proof should just return `TrustedStateChange::Stale`.
         let epoch_change_li = new_mock_ledger_info(123 /* epoch */, 456 /* version */, Some(ValidatorSet::empty()));
-        let trusted_state = TrustedState::from_epoch_change_ledger_info(
-            epoch_change_li.version() + 1,
-            &epoch_change_li,
-        ).unwrap();
+        let trusted_state = TrustedState::try_from(&epoch_change_li).unwrap();
 
         let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
         trusted_state

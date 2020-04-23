@@ -17,7 +17,7 @@ use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
 use libra_mempool::MEMPOOL_SUBSCRIBED_CONFIGS;
 use libra_metrics::metric_server;
-use libra_types::{on_chain_config::ON_CHAIN_CONFIG_REGISTRY, PeerId};
+use libra_types::{on_chain_config::ON_CHAIN_CONFIG_REGISTRY, waypoint::Waypoint, PeerId};
 use libra_vm::LibraVM;
 use network::validator_network::network_builder::{NetworkBuilder, TransportType};
 use onchain_discovery::OnchainDiscovery;
@@ -89,10 +89,10 @@ pub fn setup_onchain_discovery(
     peer_id: PeerId,
     role: RoleType,
     storage_read_client: Arc<StorageReadServiceClient>,
+    waypoint: Waypoint,
     executor: Handle,
 ) {
     let executor_clone = executor.clone();
-    let waypoint = None;
     let (network_tx, network_rx) = onchain_discovery::network_interface::add_to_network(network);
     let outbound_rpc_timeout = Duration::from_secs(30);
     let max_concurrent_inbound_queries = 8;
@@ -124,6 +124,7 @@ pub fn setup_network(
     config: &mut NetworkConfig,
     role: RoleType,
     storage_read: Arc<StorageReadServiceClient>,
+    waypoint: Waypoint,
 ) -> (Runtime, NetworkBuilder) {
     let runtime = Builder::new()
         .thread_name("network-")
@@ -204,6 +205,7 @@ pub fn setup_network(
                 config.peer_id,
                 role,
                 storage_read,
+                waypoint,
                 runtime.handle().clone(),
             );
         }
@@ -261,8 +263,12 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let storage_read = Arc::new(StorageReadServiceClient::new(&node_config.storage.address));
 
     if let Some(network) = node_config.validator_network.as_mut() {
-        let (runtime, mut network_builder) =
-            setup_network(network, RoleType::Validator, Arc::clone(&storage_read));
+        let (runtime, mut network_builder) = setup_network(
+            network,
+            RoleType::Validator,
+            Arc::clone(&storage_read),
+            node_config.base.waypoint.expect("No waypoint in config"),
+        );
 
         let (state_sync_sender, state_sync_events) =
             state_synchronizer::network::add_to_network(&mut network_builder);
@@ -279,6 +285,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             &mut full_node_network,
             RoleType::FullNode,
             Arc::clone(&storage_read),
+            node_config.base.waypoint.expect("No waypoint in config"),
         );
 
         network_runtimes.push(runtime);
