@@ -29,7 +29,7 @@ impl<T, F> AndThen<T, F> {
 impl<T, F, Fut, O> Transport for AndThen<T, F>
 where
     T: Transport,
-    F: FnOnce(T::Output, Multiaddr, ConnectionOrigin) -> Fut + Send + Unpin + Clone,
+    F: (FnOnce(T::Output, Multiaddr, ConnectionOrigin) -> Fut) + Send + Unpin + Clone,
     // Pin the error types to be the same for now
     // TODO don't require the error types to be the same
     Fut: Future<Output = Result<O, T::Error>> + Send,
