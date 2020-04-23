@@ -6,6 +6,7 @@ members = [
     "client/cli",
     "client/libra-wallet",
     "client/libra-dev",
+    "client/json-rpc",
     "common/bitvec",
     "common/bounded-executor",
     "common/channel",

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::JsonRpcResponse;
+use crate::client::JsonRpcResponse;
 use anyhow::{format_err, Error, Result};
 use hex;
 use libra_crypto::HashValue;

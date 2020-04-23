@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    client::{JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse},
     errors::{JsonRpcError, ServerCode},
     runtime::bootstrap,
     tests::mock_db::MockLibraDB,
@@ -10,6 +9,7 @@ use crate::{
         AccountStateWithProofView, AccountView, BlockMetadata, BytesView, EventView,
         ResponseAsView, StateProofView, TransactionDataView, TransactionView,
     },
+    JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse,
 };
 use futures::{channel::mpsc::channel, StreamExt};
 use hex;
@@ -38,6 +38,7 @@ use serde_json;
 use std::{
     collections::{BTreeMap, HashMap},
     convert::TryFrom,
+    str::FromStr,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -46,7 +47,6 @@ use tokio::runtime::Runtime;
 use vm_validator::{
     mocks::mock_vm_validator::MockVMValidator, vm_validator::TransactionValidation,
 };
-
 type JsonMap = HashMap<String, serde_json::Value>;
 
 // returns MockLibraDB for unit-testing
@@ -184,7 +184,10 @@ fn test_transaction_submission() {
     let port = utils::get_available_port();
     let address = format!("0.0.0.0:{}", port);
     let mut runtime = bootstrap(address.parse().unwrap(), Arc::new(mock_db), mp_sender);
-    let client = JsonRpcAsyncClient::new(reqwest::Client::new(), "0.0.0.0", port);
+    let client = JsonRpcAsyncClient::new(
+        reqwest::Url::from_str(format!("http://{}:{}", "127.0.0.1", port).as_str())
+            .expect("invalid url"),
+    );
 
     // future that mocks shared mempool execution
     runtime.spawn(async move {
@@ -593,7 +596,9 @@ fn create_database_client_and_runtime(
         Arc::new(mock_db.clone()),
         mp_sender,
     );
-    let client = JsonRpcAsyncClient::new(reqwest::Client::new(), host, port);
+    let client = JsonRpcAsyncClient::new(
+        reqwest::Url::from_str(format!("http://127.0.0.1:{}", port).as_str()).expect("invalid url"),
+    );
 
     (mock_db, client, runtime)
 }

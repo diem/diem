@@ -10,19 +10,19 @@
 //!
 //! Module organization:
 //! ├── methods.rs        # contains all available JSON RPC method handlers
-//! ├── views.rs          # custom JSON serializers for Libra data types
 //! ├── runtime.rs        # implementation of JSON RPC protocol over HTTP
 //! ├── tests.rs          # tests
 
 #[macro_use]
 mod util;
 
-mod client;
+extern crate prometheus;
+
 mod counters;
-pub mod errors;
 mod methods;
 mod runtime;
-pub mod views;
+
+pub use client::{errors, views};
 
 pub use client::{
     get_response_from_batch, process_batch_response, JsonRpcAsyncClient, JsonRpcBatch,

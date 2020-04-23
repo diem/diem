@@ -1,0 +1,28 @@
+[package]
+name = "libra-json-rpc-client"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra JSONRPC client"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+hex = "0.4.2"
+reqwest = { version = "0.10.4", features = ["blocking", "json"], default_features = false }
+serde = { version = "1.0.106", default-features = false }
+serde_json = "1.0.51"
+
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-types = { path = "../../types", version = "0.1.0" }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
+transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0"}
+
+[features]
+default = ["tls"]
+tls = ["reqwest/rustls-tls"]
