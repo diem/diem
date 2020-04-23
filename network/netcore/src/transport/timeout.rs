@@ -132,19 +132,17 @@ where
     type Output = Result<O, TimeoutTransportError<E>>;
 
     fn poll(mut self: Pin<&mut Self>, mut context: &mut Context) -> Poll<Self::Output> {
-        // Try polling the inner future first
-        match self.as_mut().project().future.poll(&mut context) {
-            Poll::Pending => {}
-            Poll::Ready(Err(e)) => {
-                return Poll::Ready(Err(TimeoutTransportError::TransportError(e)))
-            }
-            Poll::Ready(Ok(output)) => return Poll::Ready(Ok(output)),
-        }
-
-        // Now check to see if we've overshot the timeout
+        // check to see if we've overshot the timeout first
         match Pin::new(self.as_mut().project().timeout).poll(&mut context) {
+            Poll::Pending => {}
+            Poll::Ready(()) => return Poll::Ready(Err(TimeoutTransportError::Timeout)),
+        };
+
+        // All good, try polling the inner future now
+        match self.as_mut().project().future.poll(&mut context) {
             Poll::Pending => Poll::Pending,
-            Poll::Ready(()) => Poll::Ready(Err(TimeoutTransportError::Timeout)),
+            Poll::Ready(Err(e)) => Poll::Ready(Err(TimeoutTransportError::TransportError(e))),
+            Poll::Ready(Ok(output)) => Poll::Ready(Ok(output)),
         }
     }
 }
