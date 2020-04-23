@@ -7,9 +7,6 @@
 //! Used for node restarts, network partitions, full node syncs
 #![recursion_limit = "1024"]
 
-#[macro_use]
-extern crate prometheus;
-
 use executor_types::ExecutedTrees;
 use libra_types::{
     account_address::AccountAddress, epoch_info::EpochInfo, ledger_info::LedgerInfoWithSignatures,

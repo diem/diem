@@ -12,9 +12,6 @@
 #![cfg_attr(feature = "fuzzing", allow(dead_code))]
 #![recursion_limit = "512"]
 
-#[macro_use]
-extern crate prometheus;
-
 mod block_storage;
 mod consensusdb;
 mod counters;

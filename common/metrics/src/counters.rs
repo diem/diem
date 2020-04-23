@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use once_cell::sync::Lazy;
-use prometheus::IntCounter;
+use prometheus::{register_int_counter, IntCounter};
 
 // Admission Control counters
 pub static COUNTER_ADMISSION_CONTROL_CANNOT_SEND_REPLY: Lazy<IntCounter> = Lazy::new(|| {

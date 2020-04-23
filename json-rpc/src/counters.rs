@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use libra_metrics::{register_int_gauge_vec, IntGaugeVec};
 use once_cell::sync::Lazy;
-use prometheus::IntGaugeVec;
 
 /// Cumulative number of valid requests that the JSON RPC client service receives
 pub static REQUESTS: Lazy<IntGaugeVec> = Lazy::new(|| {

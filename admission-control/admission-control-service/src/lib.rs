@@ -12,9 +12,6 @@
 //! 1. SubmitTransaction, to submit transaction to associated validator.
 //! 2. UpdateToLatestLedger, to query storage, e.g. account state, transaction log, and proofs.
 
-#[macro_use]
-extern crate prometheus;
-
 #[cfg(test)]
 #[path = "unit_tests/admission_control_service_test.rs"]
 mod admission_control_service_test;

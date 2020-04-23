@@ -4,9 +4,6 @@
 #![forbid(unsafe_code)]
 #![recursion_limit = "128"]
 
-#[macro_use]
-extern crate prometheus;
-
 pub mod counters;
 mod json_encoder;
 mod json_metrics;
@@ -20,7 +17,11 @@ pub use op_counters::{DurationHistogram, OpMetrics};
 mod unit_tests;
 
 // Re-export counter types from prometheus crate
-pub use prometheus::{Histogram, IntCounter, IntCounterVec, IntGauge, IntGaugeVec};
+pub use prometheus::{
+    register_histogram, register_histogram_vec, register_int_counter, register_int_counter_vec,
+    register_int_gauge, register_int_gauge_vec, Histogram, HistogramVec, IntCounter, IntCounterVec,
+    IntGauge, IntGaugeVec,
+};
 
 use anyhow::Result;
 use libra_logger::prelude::*;

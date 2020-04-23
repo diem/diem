@@ -1,13 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_metrics::OpMetrics;
+use libra_metrics::{IntCounter, IntGauge, OpMetrics};
 use libra_types::{
     transaction::TransactionStatus,
     vm_error::{StatusCode, StatusType, VMStatus},
 };
 use once_cell::sync::Lazy;
-use prometheus::{IntCounter, IntGauge};
 use std::{convert::TryFrom, time::Instant};
 
 // constants used to create counters
