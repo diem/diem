@@ -3,7 +3,7 @@
 
 use crate::transport::{ConnectionOrigin, Transport};
 use futures::{future::Future, stream::Stream};
-use parity_multiaddr::Multiaddr;
+use libra_network_address::NetworkAddress;
 use pin_project::{pin_project, project};
 use std::{
     pin::Pin,
@@ -29,7 +29,7 @@ impl<T, F> AndThen<T, F> {
 impl<T, F, Fut, O> Transport for AndThen<T, F>
 where
     T: Transport,
-    F: (FnOnce(T::Output, Multiaddr, ConnectionOrigin) -> Fut) + Send + Unpin + Clone,
+    F: (FnOnce(T::Output, NetworkAddress, ConnectionOrigin) -> Fut) + Send + Unpin + Clone,
     // Pin the error types to be the same for now
     // TODO don't require the error types to be the same
     Fut: Future<Output = Result<O, T::Error>> + Send,
@@ -40,14 +40,17 @@ where
     type Inbound = AndThenFuture<T::Inbound, Fut, F>;
     type Outbound = AndThenFuture<T::Outbound, Fut, F>;
 
-    fn listen_on(&self, addr: Multiaddr) -> Result<(Self::Listener, Multiaddr), Self::Error> {
+    fn listen_on(
+        &self,
+        addr: NetworkAddress,
+    ) -> Result<(Self::Listener, NetworkAddress), Self::Error> {
         let (listener, addr) = self.transport.listen_on(addr)?;
         let listener = AndThenStream::new(listener, self.function.clone());
 
         Ok((listener, addr))
     }
 
-    fn dial(&self, addr: Multiaddr) -> Result<Self::Outbound, Self::Error> {
+    fn dial(&self, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
         let fut = self.transport.dial(addr.clone())?;
         let origin = ConnectionOrigin::Outbound;
         let f = self.function.clone();
@@ -68,10 +71,10 @@ pub struct AndThenStream<St, F> {
 
 impl<St, Fut1, O1, Fut2, O2, E, F> AndThenStream<St, F>
 where
-    St: Stream<Item = Result<(Fut1, Multiaddr), E>>,
+    St: Stream<Item = Result<(Fut1, NetworkAddress), E>>,
     Fut1: Future<Output = Result<O1, E>>,
     Fut2: Future<Output = Result<O2, E>>,
-    F: FnOnce(O1, Multiaddr, ConnectionOrigin) -> Fut2 + Clone,
+    F: FnOnce(O1, NetworkAddress, ConnectionOrigin) -> Fut2 + Clone,
     E: ::std::error::Error,
 {
     fn new(stream: St, f: F) -> Self {
@@ -81,13 +84,13 @@ where
 
 impl<St, Fut1, O1, Fut2, O2, E, F> Stream for AndThenStream<St, F>
 where
-    St: Stream<Item = Result<(Fut1, Multiaddr), E>>,
+    St: Stream<Item = Result<(Fut1, NetworkAddress), E>>,
     Fut1: Future<Output = Result<O1, E>>,
     Fut2: Future<Output = Result<O2, E>>,
-    F: FnOnce(O1, Multiaddr, ConnectionOrigin) -> Fut2 + Clone,
+    F: FnOnce(O1, NetworkAddress, ConnectionOrigin) -> Fut2 + Clone,
     E: ::std::error::Error,
 {
-    type Item = Result<(AndThenFuture<Fut1, Fut2, F>, Multiaddr), E>;
+    type Item = Result<(AndThenFuture<Fut1, Fut2, F>, NetworkAddress), E>;
 
     fn poll_next(mut self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
         match self.as_mut().project().stream.poll_next(context) {
@@ -110,7 +113,7 @@ where
 #[pin_project]
 #[derive(Debug)]
 enum AndThenChain<Fut1, Fut2, F> {
-    First(#[pin] Fut1, Option<(F, Multiaddr, ConnectionOrigin)>),
+    First(#[pin] Fut1, Option<(F, NetworkAddress, ConnectionOrigin)>),
     Second(#[pin] Fut2),
     Empty,
 }
@@ -131,10 +134,10 @@ impl<Fut1, O1, Fut2, O2, E, F> AndThenFuture<Fut1, Fut2, F>
 where
     Fut1: Future<Output = Result<O1, E>>,
     Fut2: Future<Output = Result<O2, E>>,
-    F: FnOnce(O1, Multiaddr, ConnectionOrigin) -> Fut2,
+    F: FnOnce(O1, NetworkAddress, ConnectionOrigin) -> Fut2,
     E: ::std::error::Error,
 {
-    fn new(fut1: Fut1, f: F, addr: Multiaddr, origin: ConnectionOrigin) -> Self {
+    fn new(fut1: Fut1, f: F, addr: NetworkAddress, origin: ConnectionOrigin) -> Self {
         Self {
             chain: AndThenChain::First(fut1, Some((f, addr, origin))),
         }
@@ -146,7 +149,7 @@ impl<Fut1, O1, Fut2, O2, E, F> Future for AndThenFuture<Fut1, Fut2, F>
 where
     Fut1: Future<Output = Result<O1, E>>,
     Fut2: Future<Output = Result<O2, E>>,
-    F: FnOnce(O1, Multiaddr, ConnectionOrigin) -> Fut2,
+    F: FnOnce(O1, NetworkAddress, ConnectionOrigin) -> Fut2,
     E: ::std::error::Error,
 {
     type Output = Result<O2, E>;

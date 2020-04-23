@@ -10,6 +10,7 @@ use futures::{
     stream::{Stream, StreamExt},
 };
 use libra_crypto::test_utils::TEST_SEED;
+use libra_network_address::NetworkAddress;
 use memsocket::MemorySocket;
 use netcore::{
     compat::IoCompat,
@@ -20,23 +21,22 @@ use netcore::{
     },
 };
 use noise::{NoiseConfig, NoiseSocket};
-use parity_multiaddr::Multiaddr;
 use rand::prelude::*;
-use std::{convert::TryInto, env, ffi::OsString, sync::Arc};
+use std::{env, ffi::OsString, sync::Arc};
 use tokio::runtime::Handle;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
 #[derive(Debug)]
 pub struct Args {
-    pub tcp_addr: Option<Multiaddr>,
-    pub tcp_noise_addr: Option<Multiaddr>,
+    pub tcp_addr: Option<NetworkAddress>,
+    pub tcp_noise_addr: Option<NetworkAddress>,
     pub msg_lens: Option<Vec<usize>>,
 }
 
-fn parse_addr(s: OsString) -> Multiaddr {
-    s.into_string()
+fn parse_addr(s: OsString) -> NetworkAddress {
+    s.to_str()
         .expect("Error: Address should be valid Unicode")
-        .try_into()
+        .parse()
         .expect("Error: Address should be a multiaddr")
 }
 
@@ -98,7 +98,7 @@ pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseSocket<TcpSoc
 /// over a simple stream (tcp or in-memory).
 pub async fn server_stream_handler<L, I, S, E>(mut server_listener: L)
 where
-    L: Stream<Item = Result<(I, Multiaddr), E>> + Unpin,
+    L: Stream<Item = Result<(I, NetworkAddress), E>> + Unpin,
     I: Future<Output = Result<S, E>>,
     S: AsyncRead + AsyncWrite + Unpin,
     E: ::std::error::Error,
@@ -117,11 +117,11 @@ where
 pub fn start_stream_server<T, L, I, S, E>(
     executor: &Handle,
     transport: T,
-    listen_addr: Multiaddr,
-) -> Multiaddr
+    listen_addr: NetworkAddress,
+) -> NetworkAddress
 where
     T: Transport<Output = S, Error = E, Listener = L, Inbound = I>,
-    L: Stream<Item = Result<(I, Multiaddr), E>> + Unpin + Send + 'static,
+    L: Stream<Item = Result<(I, NetworkAddress), E>> + Unpin + Send + 'static,
     I: Future<Output = Result<S, E>> + Send + 'static,
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
     E: ::std::error::Error + Send + Sync + 'static,

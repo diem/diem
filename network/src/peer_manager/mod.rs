@@ -33,11 +33,13 @@ use futures::{
 };
 use libra_config::config::RoleType;
 use libra_logger::prelude::*;
+use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use netcore::transport::{ConnectionOrigin, Transport};
 use parity_multiaddr::Multiaddr;
 use std::{
     collections::{hash_map::Entry, HashMap},
+    convert::{TryFrom, TryInto},
     fmt::Debug,
     marker::PhantomData,
     time::Duration,
@@ -741,7 +743,7 @@ where
         connection_notifs_tx: channel::Sender<ConnectionNotification<TSocket>>,
     ) -> (Self, Multiaddr) {
         let (listener, listen_addr) = transport
-            .listen_on(listen_addr)
+            .listen_on(NetworkAddress::try_from(listen_addr).unwrap())
             .expect("Transport listen on fails");
         debug!("listening on {:?}", listen_addr);
         (
@@ -751,7 +753,7 @@ where
                 dial_request_rx,
                 connection_notifs_tx,
             },
-            listen_addr,
+            listen_addr.try_into().unwrap(),
         )
     }
 
@@ -783,7 +785,7 @@ where
                     self.handle_completed_outbound_upgrade(upgrade, addr, peer_id, response_tx).await;
                 },
                 (upgrade, addr) = pending_inbound_connections.select_next_some() => {
-                    self.handle_completed_inbound_upgrade(upgrade, addr).await;
+                    self.handle_completed_inbound_upgrade(upgrade, addr.try_into().unwrap()).await;
                 },
                 complete => break,
             }
@@ -807,11 +809,12 @@ where
         >,
     > {
         match dial_peer_request {
-            ConnectionHandlerRequest::DialPeer(peer_id, address, response_tx) => {
-                match self.transport.dial(address.clone()) {
+            ConnectionHandlerRequest::DialPeer(peer_id, addr, response_tx) => {
+                let addr = NetworkAddress::try_from(addr).unwrap();
+                match self.transport.dial(addr.clone()) {
                     Ok(upgrade) => Some(
                         upgrade
-                            .map(move |out| (out, address, peer_id, response_tx))
+                            .map(move |out| (out, addr.try_into().unwrap(), peer_id, response_tx))
                             .boxed(),
                     ),
                     Err(error) => {

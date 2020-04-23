@@ -25,7 +25,9 @@ use netcore::{
     transport::{boxed::BoxedTransport, memory::MemoryTransport, ConnectionOrigin, TransportExt},
 };
 use parity_multiaddr::Multiaddr;
-use std::{collections::HashMap, iter::FromIterator, num::NonZeroUsize, str::FromStr};
+use std::{
+    collections::HashMap, convert::TryInto, iter::FromIterator, num::NonZeroUsize, str::FromStr,
+};
 use tokio::runtime::Handle;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
@@ -45,7 +47,7 @@ pub fn build_test_transport(
                 metadata: ConnectionMetadata::new(
                     PeerId::random(),
                     ConnectionId::default(),
-                    addr,
+                    addr.try_into().unwrap(),
                     origin,
                     MessagingProtocolVersion::V1,
                     [TEST_PROTOCOL].iter().into(),

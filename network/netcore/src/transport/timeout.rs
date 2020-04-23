@@ -5,7 +5,7 @@
 
 use crate::transport::Transport;
 use futures::{future::Future, stream::Stream};
-use parity_multiaddr::Multiaddr;
+use libra_network_address::NetworkAddress;
 use pin_project::pin_project;
 use std::{
     pin::Pin,
@@ -43,14 +43,17 @@ where
     type Inbound = TimeoutFuture<T::Inbound>;
     type Outbound = TimeoutFuture<T::Outbound>;
 
-    fn listen_on(&self, addr: Multiaddr) -> Result<(Self::Listener, Multiaddr), Self::Error> {
+    fn listen_on(
+        &self,
+        addr: NetworkAddress,
+    ) -> Result<(Self::Listener, NetworkAddress), Self::Error> {
         let (listener, addr) = self.transport.listen_on(addr)?;
         let listener = TimeoutStream::new(listener, self.timeout);
 
         Ok((listener, addr))
     }
 
-    fn dial(&self, addr: Multiaddr) -> Result<Self::Outbound, Self::Error> {
+    fn dial(&self, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
         let fut = self.transport.dial(addr)?;
 
         Ok(TimeoutFuture::new(fut, self.timeout))
@@ -81,11 +84,11 @@ where
 
 impl<St, Fut, O, E> Stream for TimeoutStream<St>
 where
-    St: Stream<Item = Result<(Fut, Multiaddr), E>>,
+    St: Stream<Item = Result<(Fut, NetworkAddress), E>>,
     Fut: Future<Output = Result<O, E>>,
     E: ::std::error::Error,
 {
-    type Item = Result<(TimeoutFuture<Fut>, Multiaddr), TimeoutTransportError<E>>;
+    type Item = Result<(TimeoutFuture<Fut>, NetworkAddress), TimeoutTransportError<E>>;
 
     fn poll_next(mut self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
         match self.as_mut().project().inner.poll_next(context) {

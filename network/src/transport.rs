@@ -11,6 +11,7 @@ use crate::{
 use futures::io::{AsyncRead, AsyncWrite};
 use libra_crypto::{traits::ValidCryptoMaterial, x25519};
 use libra_logger::prelude::*;
+use libra_network_address::NetworkAddress;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
 use netcore::transport::{boxed, memory, tcp, ConnectionOrigin, TransportExt};
@@ -19,7 +20,7 @@ use once_cell::sync::Lazy;
 use parity_multiaddr::Multiaddr;
 use std::{
     collections::HashMap,
-    convert::TryFrom,
+    convert::{TryFrom, TryInto},
     fmt::Debug,
     io,
     sync::{Arc, Mutex, RwLock},
@@ -148,10 +149,14 @@ fn identity_key_to_peer_id(
 pub async fn perform_handshake<T: TSocket>(
     peer_id: PeerId,
     mut socket: T,
-    addr: Multiaddr,
+    addr: NetworkAddress,
     origin: ConnectionOrigin,
     own_handshake: &HandshakeMsg,
 ) -> Result<Connection<T>, io::Error> {
+    let addr: Multiaddr = addr
+        .try_into()
+        .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
+
     let handshake_other = exchange_handshake(&own_handshake, &mut socket).await?;
     let intersecting_protocols = own_handshake.find_common_protocols(&handshake_other);
     match intersecting_protocols {
