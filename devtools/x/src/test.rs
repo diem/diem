@@ -21,8 +21,11 @@ pub struct Args {
     /// Run test on the provided packages
     package: Vec<String>,
     #[structopt(long, short)]
-    /// Only run unit tests
+    /// Skip running expensive libra testsuite integration tests
     unit: bool,
+    #[structopt(long)]
+    /// Test only this package's library unit tests, skipping doctests
+    lib: bool,
     #[structopt(long)]
     /// Do not fast fail the run if tests (or test executables) fail
     no_fail_fast: bool,
@@ -70,6 +73,9 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
     if args.no_fail_fast {
         direct_args.push(OsString::from("--no-fail-fast"));
     };
+    if args.lib {
+        direct_args.push(OsString::from("--lib"));
+    }
 
     let cmd = CargoCommand::Test {
         direct_args: direct_args.as_slice(),
