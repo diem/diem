@@ -30,7 +30,8 @@ use vm::{
 use crate::{
     ast::{
         Condition, Exp, FunSpec, Invariant, InvariantKind, LocalVarDecl, ModuleName, Operation,
-        QualifiedSymbol, SpecConditionKind, SpecFunDecl, SpecVarDecl, Value,
+        PropertyBag, QualifiedSymbol, SpecConditionKind, SpecFunDecl, SpecVarDecl, StructSpec,
+        Value,
     },
     env::{
         FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleId, MoveIrLoc, NodeId, SpecFunId,
@@ -101,6 +102,8 @@ struct SpecSchemaEntry {
     conditions: Vec<Condition>,
     // The invariants provided in this schema.
     invariants: Vec<Invariant>,
+    // Properties from pragmas
+    properties: PropertyBag,
     // All variables in scope of this schema, including those introduced by included schemas.
     all_vars: BTreeMap<Symbol, LocalVarEntry>,
     // The conditions included from other schemas, after renaming and type instantiation.
@@ -223,6 +226,7 @@ impl<'env> Translator<'env> {
             vars,
             conditions: vec![],
             invariants: vec![],
+            properties: PropertyBag::new(),
             all_vars: BTreeMap::new(),
             included_conditions: vec![],
             included_invariants: vec![],
@@ -633,9 +637,11 @@ pub struct ModuleTranslator<'env, 'translator> {
     /// Translated function specifications.
     fun_specs: BTreeMap<Symbol, FunSpec>,
     /// Translated struct invariants.
-    struct_invariants: BTreeMap<Symbol, Vec<Invariant>>,
+    struct_specs: BTreeMap<Symbol, StructSpec>,
     /// Translated module invariants
     module_invariants: Vec<Invariant>,
+    /// Module properties
+    module_properties: PropertyBag,
 }
 
 /// # Entry Points
@@ -658,7 +664,8 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             spec_fun_index: 0,
             spec_vars: vec![],
             fun_specs: BTreeMap::new(),
-            struct_invariants: BTreeMap::new(),
+            struct_specs: BTreeMap::new(),
+            module_properties: PropertyBag::new(),
             module_invariants: vec![],
         }
     }
@@ -1143,10 +1150,72 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     type_arguments.as_deref(),
                     arguments,
                 ),
+                Pragma { properties } => self.def_ana_pragma(loc, context, properties),
                 Variable { .. } => { /* nothing to do right now */ }
-                Apply { .. } | Pragma { .. } => self
+                Apply { .. } => self
                     .parent
-                    .error(loc, "spec block member not yet implemented"),
+                    .error(loc, "spec block member `apply` not yet implemented"),
+            }
+        }
+    }
+
+    /// Definition analysis for a pragma.
+    fn def_ana_pragma(
+        &mut self,
+        _loc: &Loc,
+        context: &SpecBlockContext,
+        properties: &[PA::PragmaProperty],
+    ) {
+        // For now we pass properties just on. We may want to check against a set of known
+        // property names and types.
+        for prop in properties {
+            let prop_name = self.symbol_pool().make(&prop.value.name.value);
+            let value = if let Some(pv) = &prop.value.value {
+                let mut et = ExpTranslator::new(self);
+                if let Some((v, _)) = et.translate_value(pv) {
+                    v
+                } else {
+                    // Error reported
+                    continue;
+                }
+            } else {
+                Value::Bool(true)
+            };
+            match context {
+                SpecBlockContext::Function(name) => {
+                    self.fun_specs
+                        .entry(name.symbol)
+                        .or_insert_with(FunSpec::default)
+                        .properties_on_decl
+                        .insert(prop_name, value);
+                }
+                SpecBlockContext::FunctionCode(name, spec_info) => {
+                    self.fun_specs
+                        .entry(name.symbol)
+                        .or_insert_with(FunSpec::default)
+                        .properties_on_impl
+                        .entry(spec_info.offset)
+                        .or_insert_with(PropertyBag::default)
+                        .insert(prop_name, value);
+                }
+                SpecBlockContext::Schema(name) => {
+                    self.parent
+                        .spec_schema_table
+                        .get_mut(name)
+                        .expect("schema defined")
+                        .properties
+                        .insert(prop_name, value);
+                }
+                SpecBlockContext::Struct(name) => {
+                    self.struct_specs
+                        .entry(name.symbol)
+                        .or_insert_with(StructSpec::default)
+                        .properties
+                        .insert(prop_name, value);
+                }
+                SpecBlockContext::Module => {
+                    self.module_properties.insert(prop_name, value);
+                }
             }
         }
     }
@@ -1406,10 +1475,15 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     ) -> bool {
         match context {
             SpecBlockContext::Struct(name) => {
-                self.struct_invariants
-                    .entry(name.symbol)
-                    .or_insert_with(|| vec![])
-                    .extend(invariants);
+                for invariant in invariants {
+                    self.struct_specs
+                        .entry(name.symbol)
+                        .or_insert_with(StructSpec::default)
+                        .invariants
+                        .entry(invariant.kind)
+                        .or_insert_with(Vec::new)
+                        .push(invariant);
+                }
                 true
             }
             SpecBlockContext::Module => {
@@ -1857,7 +1931,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             .iter()
             .chain(schema_entry.included_conditions.iter())
         {
-            let mut rewriter = ExprRewriter::new(self, &argument_map, type_arguments);
+            let mut rewriter = ExpRewriter::new(self, &argument_map, type_arguments);
             conditions.push(Condition {
                 loc: loc.clone(),
                 kind: *kind,
@@ -1876,7 +1950,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             .iter()
             .chain(schema_entry.included_invariants.iter())
         {
-            let mut rewriter = ExprRewriter::new(self, &argument_map, type_arguments);
+            let mut rewriter = ExpRewriter::new(self, &argument_map, type_arguments);
             invariants.push(Invariant {
                 loc: loc.clone(),
                 kind: *kind,
@@ -1969,7 +2043,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         for idx in 0..self.spec_funs.len() {
             self.compute_spec_var_usage_for_fun(&mut visited, idx);
         }
-        // Check for pureness requirements. All data invariants must be pure expressions and
+        // Check for purity requirements. All data invariants must be pure expressions and
         // not depend on global state.
         let check_pure = |mid: ModuleId, fid: SpecFunId| {
             if mid.to_usize() < self.parent.env.get_module_count() {
@@ -1979,14 +2053,17 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 module_env.get_spec_fun(fid).is_pure
             } else {
                 // This is calling a function from the module we are currently translating.
-                // Need to recursively ensure we have computed used_spec_vars because of
-                // arbitrary call graphs, including cyclic.
                 self.spec_funs[fid.as_usize()].is_pure
             }
         };
-        for struct_invs in self.struct_invariants.values() {
-            for inv in struct_invs {
-                if inv.kind == InvariantKind::Data && !inv.exp.is_pure(&check_pure) {
+        for struct_spec in self.struct_specs.values() {
+            for inv in struct_spec
+                .invariants
+                .get(&InvariantKind::Data)
+                .unwrap_or(&vec![])
+                .iter()
+            {
+                if !inv.exp.is_pure(&check_pure) {
                     self.parent.error(
                         &inv.loc,
                         "data invariants cannot depend on global state \
@@ -2078,10 +2155,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     .struct_table
                     .get(&self.qualified_by_module(name))
                 {
-                    let invariants = self
-                        .struct_invariants
+                    let struct_spec = self
+                        .struct_specs
                         .remove(&name)
-                        .unwrap_or_else(|| vec![]);
+                        .unwrap_or_else(StructSpec::default);
+                    // Ensure that all invariant kinds
                     Some((
                         StructId::new(name),
                         self.parent.env.create_struct_data(
@@ -2089,7 +2167,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                             def_idx,
                             name,
                             entry.loc.clone(),
-                            invariants,
+                            struct_spec,
                         ),
                     ))
                 } else {
@@ -2128,23 +2206,19 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 }
             })
             .collect();
-        let spec_vars = std::mem::replace(&mut self.spec_vars, vec![]);
-        let spec_funs = std::mem::replace(&mut self.spec_funs, vec![]);
-        let loc_map = std::mem::replace(&mut self.loc_map, BTreeMap::new());
-        let type_map = std::mem::replace(&mut self.type_map, BTreeMap::new());
-        let instantiation_map = std::mem::replace(&mut self.instantiation_map, BTreeMap::new());
         self.parent.env.add(
             loc,
             module,
             source_map,
+            std::mem::take(&mut self.module_properties),
             struct_data,
             function_data,
-            spec_vars,
-            spec_funs,
-            std::mem::replace(&mut self.module_invariants, vec![]),
-            loc_map,
-            type_map,
-            instantiation_map,
+            std::mem::take(&mut self.spec_vars),
+            std::mem::take(&mut self.spec_funs),
+            std::mem::take(&mut self.module_invariants),
+            std::mem::take(&mut self.loc_map),
+            std::mem::take(&mut self.type_map),
+            std::mem::take(&mut self.instantiation_map),
         );
     }
 }
@@ -2625,52 +2699,27 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     /// Translates an expression, with given expected type, which might be a type variable.
     fn translate_exp(&mut self, exp: &EA::Exp, expected_type: &Type) -> Exp {
         let loc = self.to_loc(&exp.loc);
-        let mut make_value = |val: Value, ty: Type| {
-            let rty = self.check_type(&loc, &ty, expected_type);
-            let id = self.new_node_id_with_type_loc(&rty, &loc);
+        let make_value = |et: &mut ExpTranslator, val: Value, ty: Type| {
+            let rty = et.check_type(&loc, &ty, expected_type);
+            let id = et.new_node_id_with_type_loc(&rty, &loc);
             Exp::Value(id, val)
         };
         match &exp.value {
-            EA::Exp_::Value(v) => match &v.value {
-                PA::Value_::Address(addr) => {
-                    let addr_str = &format!("{}", addr);
-                    if &addr_str[..2] == "0x" {
-                        let digits_only = &addr_str[2..];
-                        make_value(
-                            Value::Address(
-                                BigUint::from_str_radix(digits_only, 16).expect("valid address"),
-                            ),
-                            Type::new_prim(PrimitiveType::Address),
-                        )
-                    } else {
-                        self.error(&loc, "address string does not begin with '0x'");
-                        self.new_error_exp()
-                    }
-                }
-                PA::Value_::U8(x) => make_value(
-                    Value::Number(BigUint::from_u8(*x).unwrap()),
-                    Type::new_prim(PrimitiveType::U8),
-                ),
-                PA::Value_::U64(x) => make_value(
-                    Value::Number(BigUint::from_u64(*x).unwrap()),
-                    Type::new_prim(PrimitiveType::U64),
-                ),
-                PA::Value_::U128(x) => make_value(
-                    Value::Number(BigUint::from_u128(*x).unwrap()),
-                    Type::new_prim(PrimitiveType::U128),
-                ),
-                PA::Value_::Bool(x) => {
-                    make_value(Value::Bool(*x), Type::new_prim(PrimitiveType::Bool))
-                }
-                PA::Value_::Bytearray(_) => {
-                    self.error(&loc, "byte array construct not supported in specifications");
+            EA::Exp_::Value(v) => {
+                if let Some((v, ty)) = self.translate_value(v) {
+                    make_value(self, v, ty)
+                } else {
                     self.new_error_exp()
                 }
-            },
-            EA::Exp_::InferredNum(x) => make_value(
-                Value::Number(BigUint::from_u128(*x).unwrap()),
-                Type::new_prim(PrimitiveType::U128),
-            ),
+            }
+            EA::Exp_::InferredNum(x) => {
+                // We don't really need to infer type, because all ints are exchangeable.
+                make_value(
+                    self,
+                    Value::Number(BigUint::from_u128(*x).unwrap()),
+                    Type::new_prim(PrimitiveType::U128),
+                )
+            }
             EA::Exp_::Name(maccess, type_params) => {
                 self.translate_name(&loc, maccess, type_params.as_deref(), expected_type)
             }
@@ -2741,6 +2790,44 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             _ => {
                 self.error(&loc, "expression construct not supported in specifications");
                 self.new_error_exp()
+            }
+        }
+    }
+
+    fn translate_value(&mut self, v: &PA::Value) -> Option<(Value, Type)> {
+        let loc = self.to_loc(&v.loc);
+        match &v.value {
+            PA::Value_::Address(addr) => {
+                let addr_str = &format!("{}", addr);
+                if &addr_str[..2] == "0x" {
+                    let digits_only = &addr_str[2..];
+                    Some((
+                        Value::Address(
+                            BigUint::from_str_radix(digits_only, 16).expect("valid address"),
+                        ),
+                        Type::new_prim(PrimitiveType::Address),
+                    ))
+                } else {
+                    self.error(&loc, "address string does not begin with '0x'");
+                    None
+                }
+            }
+            PA::Value_::U8(x) => Some((
+                Value::Number(BigUint::from_u8(*x).unwrap()),
+                Type::new_prim(PrimitiveType::U8),
+            )),
+            PA::Value_::U64(x) => Some((
+                Value::Number(BigUint::from_u64(*x).unwrap()),
+                Type::new_prim(PrimitiveType::U64),
+            )),
+            PA::Value_::U128(x) => Some((
+                Value::Number(BigUint::from_u128(*x).unwrap()),
+                Type::new_prim(PrimitiveType::U128),
+            )),
+            PA::Value_::Bool(x) => Some((Value::Bool(*x), Type::new_prim(PrimitiveType::Bool))),
+            PA::Value_::Bytearray(x) => {
+                let ty = Type::Vector(Box::new(Type::new_prim(PrimitiveType::U8)));
+                Some((Value::ByteArray(x.clone()), ty))
             }
         }
     }
@@ -3410,7 +3497,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
 /// Rewriter for expressions, allowing to substitute locals by expressions as well as instantiate
 /// types. Currently used to rewrite conditions and invariants included from schemas.
-struct ExprRewriter<'env, 'translator, 'rewriter>
+struct ExpRewriter<'env, 'translator, 'rewriter>
 where
     'env: 'rewriter,
     'translator: 'rewriter,
@@ -3421,13 +3508,13 @@ where
     shadowed: VecDeque<BTreeSet<Symbol>>,
 }
 
-impl<'env, 'translator, 'rewriter> ExprRewriter<'env, 'translator, 'rewriter> {
+impl<'env, 'translator, 'rewriter> ExpRewriter<'env, 'translator, 'rewriter> {
     fn new(
         parent: &'rewriter mut ModuleTranslator<'env, 'translator>,
         argument_map: &'rewriter BTreeMap<Symbol, Exp>,
         type_args: &'rewriter [Type],
     ) -> Self {
-        ExprRewriter {
+        ExpRewriter {
             parent,
             argument_map,
             type_args,

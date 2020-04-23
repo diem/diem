@@ -30,6 +30,17 @@ static LOGGER_CONFIGURED: AtomicBool = AtomicBool::new(false);
 /// Atomic used to detect whether we are running in test mode.
 static TEST_MODE: AtomicBool = AtomicBool::new(false);
 
+/// Default for what functions to verify.
+#[derive(Debug, PartialEq)]
+pub enum VerificationScope {
+    /// Verify only public functions.
+    Public,
+    /// Verify all functions.
+    All,
+    /// Verify no functions
+    None,
+}
+
 /// Represents options provided to the tool.
 #[derive(Debug)]
 pub struct Options {
@@ -67,8 +78,8 @@ pub struct Options {
     /// Whether output for e.g. diagnosis shall be stable/redacted so it can be used in test
     /// output.
     pub stable_test_output: bool,
-    /// Whether to only verify functions which have associated specifications
-    pub only_verify_spec: bool,
+    /// Scope of what functions to verify
+    pub verify_scope: VerificationScope,
 }
 
 impl Default for Options {
@@ -90,7 +101,7 @@ impl Default for Options {
             omit_model_debug: false,
             use_array_theory: false,
             stable_test_output: false,
-            only_verify_spec: false,
+            verify_scope: VerificationScope::Public,
         }
     }
 }
@@ -144,9 +155,13 @@ impl Options {
                     .help("only generate boogie file but do not call boogie"),
             )
             .arg(
-                Arg::with_name("only-verify-spec")
-                    .long("only-verify-spec")
-                    .help("whether to only verify functions which have associated specifications"),
+                Arg::with_name("verify")
+                    .long("verify")
+                    .possible_values(&["public", "all", "none"])
+                    .default_value("public")
+                    .value_name("SCOPE")
+                    .help("default scope of verification \
+                    (can be overridden by `pragma verify=true|false`)"),
             )
             .arg(
                 Arg::with_name("native-stubs")
@@ -254,7 +269,12 @@ impl Options {
         self.move_sources = get_vec("sources");
         self.use_array_theory = matches.is_present("use-array-theory");
         self.stable_test_output = matches.is_present("stable-test-output");
-        self.only_verify_spec = matches.is_present("only-verify-spec");
+        self.verify_scope = match get_with_default("verify").as_str() {
+            "public" => VerificationScope::Public,
+            "all" => VerificationScope::All,
+            "none" => VerificationScope::None,
+            _ => unreachable!("should not happen"),
+        };
     }
 
     /// Sets up logging based on provided options. This should be called as early as possible

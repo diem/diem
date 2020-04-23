@@ -34,7 +34,10 @@ use vm::{
 };
 
 use crate::{
-    ast::{Condition, FunSpec, Invariant, InvariantKind, ModuleName, SpecFunDecl, SpecVarDecl},
+    ast::{
+        Condition, FunSpec, Invariant, InvariantKind, ModuleName, PropertyBag, SpecFunDecl,
+        SpecVarDecl, StructSpec,
+    },
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type},
 };
@@ -386,6 +389,7 @@ impl GlobalEnv {
         loc: Loc,
         module: CompiledModule,
         source_map: SourceMap<MoveIrLoc>,
+        properties: PropertyBag,
         struct_data: BTreeMap<StructId, StructData>,
         function_data: BTreeMap<FunId, FunctionData>,
         spec_vars: Vec<SpecVarDecl>,
@@ -431,6 +435,7 @@ impl GlobalEnv {
             spec_funs,
             module_invariants,
             source_map,
+            properties,
             loc,
             loc_map,
             type_map,
@@ -470,7 +475,7 @@ impl GlobalEnv {
         def_idx: StructDefinitionIndex,
         name: Symbol,
         loc: Loc,
-        invariants: Vec<Invariant>,
+        mut spec: StructSpec,
     ) -> StructData {
         let handle_idx = module.struct_def_at(def_idx).struct_handle;
         let field_data = if let StructFieldInformation::Declared(fields) =
@@ -494,19 +499,14 @@ impl GlobalEnv {
         } else {
             BTreeMap::new()
         };
-        let mut data_invariants = vec![];
-        let mut update_invariants = vec![];
-        let mut pack_invariants = vec![];
-        let mut unpack_invariants = vec![];
-
-        for inv in invariants {
-            match inv.kind {
-                InvariantKind::Data => data_invariants.push(inv),
-                InvariantKind::Update => update_invariants.push(inv),
-                InvariantKind::Pack => pack_invariants.push(inv),
-                InvariantKind::Unpack => unpack_invariants.push(inv),
-                _ => panic!("unexpected invariant kind"),
-            }
+        // Ensure that all invariant kinds in spec have an entry.
+        for kind in &[
+            InvariantKind::Data,
+            InvariantKind::Update,
+            InvariantKind::Pack,
+            InvariantKind::Unpack,
+        ] {
+            spec.invariants.entry(*kind).or_insert_with(|| vec![]);
         }
         StructData {
             name,
@@ -514,10 +514,7 @@ impl GlobalEnv {
             def_idx,
             handle_idx,
             field_data,
-            data_invariants,
-            update_invariants,
-            pack_invariants,
-            unpack_invariants,
+            spec,
         }
     }
 
@@ -686,6 +683,9 @@ pub struct ModuleData {
     /// Module level invariants.
     pub module_invariants: Vec<Invariant>,
 
+    /// Properties (from pragmas) associated with this module.
+    pub properties: PropertyBag,
+
     /// Module source location information.
     pub source_map: SourceMap<MoveIrLoc>,
 
@@ -721,6 +721,11 @@ impl<'env> ModuleEnv<'env> {
     /// Returns the name of this module.
     pub fn get_name(&'env self) -> &'env ModuleName {
         &self.data.name
+    }
+
+    /// Returns properties from pragmas.
+    pub fn get_properties(&self) -> &PropertyBag {
+        &self.data.properties
     }
 
     /// Shortcut for accessing the symbol pool.
@@ -1035,11 +1040,8 @@ pub struct StructData {
     /// Field definitions.
     field_data: BTreeMap<FieldId, FieldData>,
 
-    // Invariants
-    data_invariants: Vec<Invariant>,
-    update_invariants: Vec<Invariant>,
-    pack_invariants: Vec<Invariant>,
-    unpack_invariants: Vec<Invariant>,
+    // Associated specification.
+    spec: StructSpec,
 }
 
 #[derive(Debug, Clone)]
@@ -1065,6 +1067,11 @@ impl<'env> StructEnv<'env> {
     /// Returns the location of this struct.
     pub fn get_loc(&self) -> Loc {
         self.data.loc.clone()
+    }
+
+    /// Returns properties from pragmas.
+    pub fn get_properties(&self) -> &PropertyBag {
+        &self.data.spec.properties
     }
 
     /// Gets the definition index associated with this struct.
@@ -1164,30 +1171,37 @@ impl<'env> StructEnv<'env> {
 
     /// Returns true if this struct has invariants.
     pub fn has_invariants(&self) -> bool {
-        !self.data.data_invariants.is_empty()
-            || !self.data.update_invariants.is_empty()
-            || !self.data.pack_invariants.is_empty()
-            || !self.data.unpack_invariants.is_empty()
+        !self.data.spec.invariants.is_empty()
     }
 
     /// Returns the data invariants associated with this struct.
     pub fn get_data_invariants(&'env self) -> &'env [Invariant] {
-        &self.data.data_invariants
+        self.data.spec.invariants.get(&InvariantKind::Data).unwrap()
     }
 
     /// Returns the update invariants associated with this struct.
     pub fn get_update_invariants(&'env self) -> &'env [Invariant] {
-        &self.data.update_invariants
+        &self
+            .data
+            .spec
+            .invariants
+            .get(&InvariantKind::Update)
+            .unwrap()
     }
 
     /// Returns the pack invariants associated with this struct.
     pub fn get_pack_invariants(&'env self) -> &'env [Invariant] {
-        &self.data.pack_invariants
+        &self.data.spec.invariants.get(&InvariantKind::Pack).unwrap()
     }
 
     /// Returns the unpack invariants associated with this struct.
     pub fn get_unpack_invariants(&'env self) -> &'env [Invariant] {
-        &self.data.unpack_invariants
+        &self
+            .data
+            .spec
+            .invariants
+            .get(&InvariantKind::Unpack)
+            .unwrap()
     }
 }
 
@@ -1316,6 +1330,16 @@ impl<'env> FunctionEnv<'env> {
     /// Returns the location of this function.
     pub fn get_loc(&self) -> Loc {
         self.data.loc.clone()
+    }
+
+    /// Returns properties from pragmas on decl.
+    pub fn get_properties_on_decl(&self) -> &PropertyBag {
+        &self.data.spec.properties_on_decl
+    }
+
+    /// Returns properties from pragmas on impl.
+    pub fn get_properties_on_impl(&self, offset: CodeOffset) -> Option<&PropertyBag> {
+        self.data.spec.properties_on_impl.get(&offset)
     }
 
     /// Returns the location of the bytecode at the given offset.

@@ -6,7 +6,7 @@
 // dep: tests/sources/stdlib/modules/transaction.move
 // dep: tests/sources/stdlib/modules/vector.move
 // dep: tests/sources/stdlib/modules/libra_time.move
-// no-verify
+// flag: --verify=none
 
 address 0x0:
 

@@ -1,0 +1,12 @@
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/pragma.move:15:9 ───
+    │
+ 15 │         aborts_if _c;
+    │         ^^^^^^^^^^^^^
+    │
+    =     at tests/sources/pragma.move:10:5: always_aborts_with_verify_incorrect (entry)
+    =     at tests/sources/pragma.move:11:9: always_aborts_with_verify_incorrect
+    =         _c = <redacted>
+    =     at tests/sources/pragma.move:10:5: always_aborts_with_verify_incorrect (exit)

@@ -9,7 +9,7 @@
 // dep: tests/sources/stdlib/modules/libra_time.move
 // dep: tests/sources/stdlib/modules/libra_system.move
 // dep: tests/sources/stdlib/modules/validator_config.move
-// no-verify
+// flag: --verify=none
 
 address 0x0:
 
