@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <string>
 #include <tuple>
+#include <variant>
 #include <vector>
 
 using uint128_t = std::tuple<uint64_t, uint64_t>;

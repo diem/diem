@@ -5,47 +5,51 @@ use crate::analyzer;
 use serde_reflection::{ContainerFormat, Format, Named, RegistryOwned, VariantFormat};
 use std::collections::{BTreeMap, HashSet};
 
+// TODO:
+// * optional namespace
+// * optional `using` for newtype/tuple structs and variants ?
+
 pub fn output(registry: &RegistryOwned) {
     let dependencies = analyzer::get_dependency_map(registry).unwrap();
     let entries = analyzer::best_effort_topological_sort(&dependencies).unwrap();
 
-    println!("{}", output_preambule());
+    output_preambule();
     let mut known_names = HashSet::new();
     let mut known_sizes = HashSet::new();
     for name in entries {
         for dependency in &dependencies[name] {
             if !known_names.contains(dependency) {
-                println!("{}", output_container_forward_definition(*dependency));
+                output_container_forward_definition(*dependency);
                 known_names.insert(*dependency);
             }
         }
 
         let format = &registry[name];
-        println!("{}", output_container(name, format, &known_sizes));
+        output_container(name, format, &known_sizes);
         known_sizes.insert(name);
         known_names.insert(name);
     }
     println!();
     for (name, format) in registry {
-        println!("{}", output_container_traits(name, format));
+        output_container_traits(name, format);
     }
 }
 
-fn output_preambule() -> String {
-    "#include \"serde.hpp\"\n".into()
+fn output_preambule() {
+    println!("#include \"serde.hpp\"\n");
 }
 
 /// If known_size is present, we must try to return a type with a known size as well.
-fn output_type(format: &Format, known_sizes: Option<&HashSet<&str>>) -> String {
+fn output_type(format: &Format, known_sizes: Option<&HashSet<&str>>, namespace: &str) -> String {
     use Format::*;
     match format {
         TypeName(x) => {
             if let Some(set) = known_sizes {
                 if !set.contains(x.as_str()) {
-                    return format!("std::unique_ptr<{}>", x);
+                    return format!("std::unique_ptr<{}{}>", namespace, x);
                 }
             }
-            x.to_string()
+            format!("{}{}", namespace, x)
         }
         Unit => "void".into(),
         Bool => "bool".into(),
@@ -65,17 +69,23 @@ fn output_type(format: &Format, known_sizes: Option<&HashSet<&str>>) -> String {
         Str => "std::string".into(),
         Bytes => "std::vector<uint8_t>".into(),
 
-        Option(format) => format!("std:optional<{}>", output_type(format, known_sizes)),
-        Seq(format) => format!("std::vector<{}>", output_type(format, None)),
+        Option(format) => format!(
+            "std:optional<{}>",
+            output_type(format, known_sizes, namespace)
+        ),
+        Seq(format) => format!("std::vector<{}>", output_type(format, None, namespace)),
         Map { key, value } => format!(
             "std::map<{}, {}>",
-            output_type(key, None),
-            output_type(value, None)
+            output_type(key, None, namespace),
+            output_type(value, None, namespace)
         ),
-        Tuple(formats) => format!("std::tuple<{}>", output_types(formats, known_sizes)),
+        Tuple(formats) => format!(
+            "std::tuple<{}>",
+            output_types(formats, known_sizes, namespace)
+        ),
         TupleArray { content, size } => format!(
             "std::array<{}, {}>",
-            output_type(content, known_sizes),
+            output_type(content, known_sizes, namespace),
             *size
         ),
 
@@ -83,10 +93,14 @@ fn output_type(format: &Format, known_sizes: Option<&HashSet<&str>>) -> String {
     }
 }
 
-fn output_types(formats: &[Format], known_sizes: Option<&HashSet<&str>>) -> String {
+fn output_types(
+    formats: &[Format],
+    known_sizes: Option<&HashSet<&str>>,
+    namespace: &str,
+) -> String {
     formats
         .iter()
-        .map(|x| output_type(x, known_sizes))
+        .map(|x| output_type(x, known_sizes, namespace))
         .collect::<Vec<_>>()
         .join(", ")
 }
@@ -95,6 +109,7 @@ fn output_fields(
     indentation: usize,
     fields: &[Named<Format>],
     known_sizes: &HashSet<&str>,
+    namespace: &str,
 ) -> String {
     let mut result = String::new();
     let tab = " ".repeat(indentation);
@@ -102,167 +117,164 @@ fn output_fields(
         result += &format!(
             "{}{} {};\n",
             tab,
-            output_type(&field.value, Some(known_sizes)),
+            output_type(&field.value, Some(known_sizes), namespace),
             field.name
         );
     }
     result
 }
 
-fn output_variant(
-    base: &str,
-    name: &str,
-    index: u32,
-    variant: &VariantFormat,
-    known_sizes: &HashSet<&str>,
-) -> String {
+fn output_variant(name: &str, variant: &VariantFormat, known_sizes: &HashSet<&str>) -> String {
     use VariantFormat::*;
     match variant {
-        Unit => format!(
-            "struct {}_{}: {} {{\n    const uint32_t index = {};\n}};",
-            base, name, base, index,
-        ),
+        Unit => format!("struct {} {{}};", name,),
         NewType(format) => format!(
-            "struct {}_{}: {} {{\n    const uint32_t index = {};\n\n    {} value;\n}};",
-            base,
+            "struct {} {{\n        {} value;\n    }};",
             name,
-            base,
-            index,
-            output_type(format, Some(known_sizes))
+            output_type(format, Some(known_sizes), "::")
         ),
         Tuple(formats) => format!(
-            "struct {}_{}: {} {{\n    const uint32_t index = {};\n\n    std::tuple<{}> value;\n}};",
-            base,
+            "struct {} {{\n        std::tuple<{}> value;\n    }};",
             name,
-            base,
-            index,
-            output_types(formats, Some(known_sizes))
+            output_types(formats, Some(known_sizes), "::")
         ),
         Struct(fields) => format!(
-            "struct {}_{}: {} {{\n    const uint32_t index = {};\n\n{}}};",
-            base,
+            "struct {} {{\n{}    }};",
             name,
-            base,
-            index,
-            output_fields(4, fields, known_sizes)
+            output_fields(8, fields, known_sizes, "::")
         ),
         Unknown => panic!("incorrect value"),
     }
 }
 
 fn output_variants(
-    base: &str,
     variants: &BTreeMap<u32, Named<VariantFormat>>,
     known_sizes: &HashSet<&str>,
 ) -> String {
     let mut result = String::new();
-    for (index, variant) in variants {
+    for (expected_index, (index, variant)) in variants.iter().enumerate() {
+        assert_eq!(*index, expected_index as u32);
         result += &format!(
-            "{}\n",
-            output_variant(base, &variant.name, *index, &variant.value, known_sizes)
+            "    {}\n",
+            output_variant(&variant.name, &variant.value, known_sizes)
         );
     }
     result
 }
 
-fn output_container_forward_definition(name: &str) -> String {
-    format!("struct {};\n", name)
+fn output_container_forward_definition(name: &str) {
+    println!("struct {};", name)
 }
 
-fn output_container(name: &str, format: &ContainerFormat, known_sizes: &HashSet<&str>) -> String {
+fn output_container(name: &str, format: &ContainerFormat, known_sizes: &HashSet<&str>) {
     use ContainerFormat::*;
     match format {
-        UnitStruct => format!("struct {} {{}};\n", name),
-        NewTypeStruct(format) => format!(
+        UnitStruct => println!("struct {} {{}};\n", name),
+        NewTypeStruct(format) => println!(
             "struct {} {{\n    {} value;\n}};\n",
             name,
-            output_type(format, Some(known_sizes))
+            output_type(format, Some(known_sizes), ""),
         ),
-        TupleStruct(formats) => format!(
+        TupleStruct(formats) => println!(
             "struct {} {{\n    std::tuple<{}> value;\n}};\n",
             name,
-            output_types(formats, Some(known_sizes))
+            output_types(formats, Some(known_sizes), ""),
         ),
-        Struct(fields) => format!(
+        Struct(fields) => println!(
             "struct {} {{\n{}}};\n",
             name,
-            output_fields(4, fields, known_sizes)
+            output_fields(4, fields, known_sizes, ""),
         ),
-        Enum(variants) => format!(
-            "struct {} {{}};\n{}",
+        Enum(variants) => println!(
+            "struct {} {{\n{}\n    std::variant<{}> value;\n}};\n",
             name,
-            output_variants(name, variants, known_sizes),
+            output_variants(variants, known_sizes),
+            variants
+                .iter()
+                .map(|(_, v)| v.name.clone())
+                .collect::<Vec<_>>()
+                .join(", "),
         ),
     }
 }
 
-fn output_struct_serializable(name: &str, fields: &[Named<Format>]) -> String {
-    let mut fields_serializable = String::new();
-    for field in fields {
-        fields_serializable += &format!(
-            "    Serializable<decltype(obj.{})>::serialize(obj.{}, serializer);\n",
-            field.name, field.name,
-        );
-    }
-
-    format!(
+fn output_struct_serializable(name: &str, fields: &[&str]) {
+    println!(
         r#"
 template <>
 template <typename Serializer>
 void Serializable<{}>::serialize(const {} &obj, Serializer &serializer) {{
-{}}}"#,
-        name, name, fields_serializable,
-    )
-}
-
-fn output_struct_deserializable(name: &str, fields: &[Named<Format>]) -> String {
-    let mut fields_deserializable = String::new();
+"#,
+        name, name,
+    );
     for field in fields {
-        fields_deserializable += &format!(
-            "    obj.{} = Deserializable<decltype(obj.{})>::deserialize(deserializer);\n",
-            field.name, field.name,
+        println!(
+            "    Serializable<decltype(obj.{})>::serialize(obj.{}, serializer);",
+            field, field,
         );
     }
+    println!("}}");
+}
 
-    format!(
+fn output_struct_deserializable(name: &str, fields: &[&str]) {
+    println!(
         r#"
 template <>
 template <typename Deserializer>
 {} Deserializable<{}>::deserialize(Deserializer &deserializer) {{
     {} obj;
-{}    return obj;
-}}"#,
-        name, name, name, fields_deserializable,
-    )
+"#,
+        name, name, name,
+    );
+    for field in fields {
+        println!(
+            "    obj.{} = Deserializable<decltype(obj.{})>::deserialize(deserializer);",
+            field, field,
+        );
+    }
+    println!("    return obj;\n}}");
 }
 
-fn output_struct_traits(name: &str, fields: &[Named<Format>]) -> String {
-    format!(
-        "{}\n{}\n",
-        output_struct_serializable(name, fields),
-        output_struct_deserializable(name, fields)
-    )
+fn output_struct_traits(name: &str, fields: &[&str]) {
+    output_struct_serializable(name, fields);
+    output_struct_deserializable(name, fields);
 }
 
-fn output_container_traits(name: &str, format: &ContainerFormat) -> String {
+fn get_variant_fields(format: &VariantFormat) -> Vec<&str> {
+    use VariantFormat::*;
+    match format {
+        Unit => Vec::new(),
+        NewType(_format) => vec!["value"],
+        Tuple(_formats) => vec!["value"],
+        Struct(fields) => fields
+            .iter()
+            .map(|field| field.name.as_str())
+            .collect::<Vec<_>>(),
+        Unknown => panic!("incorrect value"),
+    }
+}
+
+fn output_container_traits(name: &str, format: &ContainerFormat) {
     use ContainerFormat::*;
     match format {
         UnitStruct => output_struct_traits(name, &[]),
-        NewTypeStruct(format) => output_struct_traits(
+        NewTypeStruct(_format) => output_struct_traits(name, &["value"]),
+        TupleStruct(_formats) => output_struct_traits(name, &["value"]),
+        Struct(fields) => output_struct_traits(
             name,
-            &[Named {
-                name: "value".into(),
-                value: format.as_ref().clone(),
-            }],
+            &fields
+                .iter()
+                .map(|field| field.name.as_str())
+                .collect::<Vec<_>>(),
         ),
-        TupleStruct(formats) => output_struct_traits(
-            name,
-            &[Named {
-                name: "value".into(),
-                value: Format::Tuple(formats.clone()),
-            }],
-        ),
-        Struct(fields) => output_struct_traits(name, fields),
-        Enum(_variants) => String::new(), // TODO
+        Enum(variants) => {
+            output_struct_traits(name, &["value"]);
+            for variant in variants.values() {
+                output_struct_traits(
+                    &format!("{}::{}", name, variant.name),
+                    &get_variant_fields(&variant.value),
+                );
+            }
+        }
     }
 }
