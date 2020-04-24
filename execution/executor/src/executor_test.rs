@@ -8,7 +8,7 @@ use crate::{
         encode_mint_transaction, encode_reconfiguration_transaction, encode_transfer_transaction,
         MockVM, DISCARD_STATUS, KEEP_STATUS,
     },
-    BlockExecutor, Executor, OP_COUNTERS,
+    BlockExecutor, Executor,
 };
 use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue};
@@ -21,7 +21,6 @@ use libra_types::{
 use libradb::LibraDB;
 use proptest::prelude::*;
 use rand::Rng;
-use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::collections::BTreeMap;
 
 fn build_test_config() -> (NodeConfig, Ed25519PrivateKey) {
@@ -235,18 +234,6 @@ fn test_executor_execute_same_block_multiple_times() {
     }
     responses.dedup();
     assert_eq!(responses.len(), 1);
-}
-
-rusty_fork_test! {
-    #[test]
-    fn test_num_accounts_created_counter() {
-        let mut executor = TestExecutor::new();
-        let mut parent_block_id = executor.committed_block_id();
-        for i in 0..20 {
-            parent_block_id = execute_and_commit_block(&mut executor, parent_block_id, i);
-            assert_eq!(OP_COUNTERS.counter("num_accounts").get() as u64, i + 1);
-        }
-    }
 }
 
 /// Generates a list of `TransactionListWithProof`s according to the given ranges.
