@@ -10,19 +10,22 @@ use libra_config::{
     utils,
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
+use libra_network_address::NetworkAddress;
 use libra_types::transaction::Transaction;
-use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, SeedableRng};
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+};
 
 pub struct FullNodeConfig {
-    advertised: Multiaddr,
-    bootstrap: Multiaddr,
+    advertised: NetworkAddress,
+    bootstrap: NetworkAddress,
     full_node_index: usize,
     full_node_seed: [u8; 32],
     full_nodes: usize,
     genesis: Option<Transaction>,
-    listen: Multiaddr,
+    listen: NetworkAddress,
     enable_remote_authentication: bool,
     template: NodeConfig,
     validator_config: ValidatorConfig,
@@ -38,13 +41,13 @@ impl Default for FullNodeConfig {
         template.base.role = RoleType::FullNode;
 
         Self {
-            advertised: DEFAULT_ADVERTISED.parse::<Multiaddr>().unwrap(),
-            bootstrap: DEFAULT_ADVERTISED.parse::<Multiaddr>().unwrap(),
+            advertised: NetworkAddress::from_str(DEFAULT_ADVERTISED).unwrap(),
+            bootstrap: NetworkAddress::from_str(DEFAULT_ADVERTISED).unwrap(),
             full_node_index: 0,
             full_node_seed: DEFAULT_SEED,
             full_nodes: 1,
             genesis: None,
-            listen: DEFAULT_LISTEN.parse::<Multiaddr>().unwrap(),
+            listen: NetworkAddress::from_str(DEFAULT_LISTEN).unwrap(),
             enable_remote_authentication: true,
             template,
             validator_config: ValidatorConfig::new(),
@@ -57,12 +60,12 @@ impl FullNodeConfig {
         Self::default()
     }
 
-    pub fn advertised(&mut self, advertised: Multiaddr) -> &mut Self {
+    pub fn advertised(&mut self, advertised: NetworkAddress) -> &mut Self {
         self.advertised = advertised;
         self
     }
 
-    pub fn bootstrap(&mut self, bootstrap: Multiaddr) -> &mut Self {
+    pub fn bootstrap(&mut self, bootstrap: NetworkAddress) -> &mut Self {
         self.bootstrap = bootstrap;
         self
     }
@@ -87,7 +90,7 @@ impl FullNodeConfig {
         self
     }
 
-    pub fn listen(&mut self, listen: Multiaddr) -> &mut Self {
+    pub fn listen(&mut self, listen: NetworkAddress) -> &mut Self {
         self.listen = listen;
         self
     }
@@ -279,11 +282,11 @@ mod test {
         assert_eq!(network.advertised_address, seed_peer_ips[0]);
         assert_eq!(
             network.advertised_address,
-            DEFAULT_ADVERTISED.parse::<Multiaddr>().unwrap()
+            NetworkAddress::from_str(DEFAULT_ADVERTISED).unwrap()
         );
         assert_eq!(
             network.listen_address,
-            DEFAULT_LISTEN.parse::<Multiaddr>().unwrap()
+            NetworkAddress::from_str(DEFAULT_LISTEN).unwrap()
         );
         assert!(config.execution.genesis.is_some());
     }

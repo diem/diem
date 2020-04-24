@@ -12,12 +12,12 @@ use libra_config::{
     generator,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+use libra_network_address::NetworkAddress;
 use libra_temppath::TempPath;
 use libra_vm::LibraVM;
 use libradb::LibraDB;
-use parity_multiaddr::Multiaddr;
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use std::{collections::HashMap, net::SocketAddr};
+use std::{collections::HashMap, net::SocketAddr, str::FromStr};
 use storage_interface::DbReaderWriter;
 
 const DEFAULT_SEED: [u8; 32] = [13u8; 32];
@@ -25,11 +25,11 @@ const DEFAULT_ADVERTISED: &str = "/ip4/127.0.0.1/tcp/6180";
 const DEFAULT_LISTEN: &str = "/ip4/0.0.0.0/tcp/6180";
 
 pub struct ValidatorConfig {
-    advertised: Multiaddr,
+    advertised: NetworkAddress,
     build_waypoint: bool,
-    bootstrap: Multiaddr,
+    bootstrap: NetworkAddress,
     index: usize,
-    listen: Multiaddr,
+    listen: NetworkAddress,
     nodes: usize,
     nodes_in_genesis: Option<usize>,
     safety_rules_addr: Option<SocketAddr>,
@@ -44,11 +44,11 @@ pub struct ValidatorConfig {
 impl Default for ValidatorConfig {
     fn default() -> Self {
         Self {
-            advertised: DEFAULT_ADVERTISED.parse::<Multiaddr>().unwrap(),
-            bootstrap: DEFAULT_ADVERTISED.parse::<Multiaddr>().unwrap(),
+            advertised: NetworkAddress::from_str(DEFAULT_ADVERTISED).unwrap(),
+            bootstrap: NetworkAddress::from_str(DEFAULT_ADVERTISED).unwrap(),
             build_waypoint: true,
             index: 0,
-            listen: DEFAULT_LISTEN.parse::<Multiaddr>().unwrap(),
+            listen: NetworkAddress::from_str(DEFAULT_LISTEN).unwrap(),
             nodes: 1,
             nodes_in_genesis: None,
             safety_rules_addr: None,
@@ -67,12 +67,12 @@ impl ValidatorConfig {
         Self::default()
     }
 
-    pub fn advertised(&mut self, advertised: Multiaddr) -> &mut Self {
+    pub fn advertised(&mut self, advertised: NetworkAddress) -> &mut Self {
         self.advertised = advertised;
         self
     }
 
-    pub fn bootstrap(&mut self, bootstrap: Multiaddr) -> &mut Self {
+    pub fn bootstrap(&mut self, bootstrap: NetworkAddress) -> &mut Self {
         self.bootstrap = bootstrap;
         self
     }
@@ -87,7 +87,7 @@ impl ValidatorConfig {
         self
     }
 
-    pub fn listen(&mut self, listen: Multiaddr) -> &mut Self {
+    pub fn listen(&mut self, listen: NetworkAddress) -> &mut Self {
         self.listen = listen;
         self
     }
@@ -306,11 +306,11 @@ mod test {
         assert_eq!(network.advertised_address, seed_peer_ips[0]);
         assert_eq!(
             network.advertised_address,
-            DEFAULT_ADVERTISED.parse::<Multiaddr>().unwrap()
+            NetworkAddress::from_str(DEFAULT_ADVERTISED).unwrap()
         );
         assert_eq!(
             network.listen_address,
-            DEFAULT_LISTEN.parse::<Multiaddr>().unwrap()
+            NetworkAddress::from_str(DEFAULT_LISTEN).unwrap()
         );
         assert!(config.execution.genesis.is_some());
     }

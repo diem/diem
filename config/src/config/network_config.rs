@@ -11,8 +11,8 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     x25519, Uniform,
 };
+use libra_network_address::NetworkAddress;
 use libra_types::{transaction::authenticator::AuthenticationKey, PeerId};
-use parity_multiaddr::Multiaddr;
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, convert::TryFrom, path::PathBuf, string::ToString};
@@ -27,9 +27,9 @@ pub struct NetworkConfig {
     pub peer_id: PeerId,
     // TODO: Add support for multiple listen/advertised addresses in config.
     // The address that this node is listening on for new connections.
-    pub listen_address: Multiaddr,
+    pub listen_address: NetworkAddress,
     // The address that this node advertises to other nodes for the discovery protocol.
-    pub advertised_address: Multiaddr,
+    pub advertised_address: NetworkAddress,
     pub discovery_interval_ms: u64,
     pub connectivity_check_interval_ms: u64,
     // Flag to toggle if Noise is used for encryption and authentication.
@@ -56,8 +56,8 @@ impl Default for NetworkConfig {
     fn default() -> Self {
         Self {
             peer_id: PeerId::default(),
-            listen_address: "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
-            advertised_address: "/ip4/127.0.0.1/tcp/6180".parse::<Multiaddr>().unwrap(),
+            listen_address: "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
+            advertised_address: "/ip4/127.0.0.1/tcp/6180".parse().unwrap(),
             discovery_interval_ms: 1000,
             connectivity_check_interval_ms: 5000,
             enable_noise: true,
@@ -197,7 +197,7 @@ impl NetworkConfig {
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct SeedPeersConfig {
     // All peers config. Key:a unique peer id, will be PK in future, Value: peer discovery info
-    pub seed_peers: HashMap<PeerId, Vec<Multiaddr>>,
+    pub seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
 }
 
 // Leveraged to store the network keypairs together on disk separate from this config
@@ -389,8 +389,8 @@ mod test {
         let root_dir = RootPath::new_path(path.path());
 
         // Now reset IP addresses and save
-        config.listen_address = Multiaddr::empty();
-        config.advertised_address = Multiaddr::empty();
+        config.listen_address = NetworkAddress::mock();
+        config.advertised_address = NetworkAddress::mock();
         config.save(&root_dir).unwrap();
 
         // Now load and verify default IP addresses are generated

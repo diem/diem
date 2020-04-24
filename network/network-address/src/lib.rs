@@ -268,6 +268,10 @@ impl NetworkAddress {
         self.0.as_slice()
     }
 
+    pub fn push(&mut self, proto: Protocol) {
+        self.0.push(proto)
+    }
+
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn mock() -> Self {
         NetworkAddress::new(vec![Protocol::Memory(1234)])

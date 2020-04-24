@@ -5,7 +5,7 @@
 
 use config_builder::{FullNodeConfig, ValidatorConfig};
 use libra_config::config::NodeConfig;
-use parity_multiaddr::Multiaddr;
+use libra_network_address::NetworkAddress;
 use std::{convert::TryInto, fs, net::SocketAddr, path::PathBuf};
 use structopt::StructOpt;
 
@@ -56,10 +56,10 @@ struct FullNodeArgs {
     // Parameters for this full node config
     #[structopt(short = "a", long, parse(from_str = parse_addr))]
     /// Advertised address for this node, if this is null, listen is reused
-    advertised: Multiaddr,
+    advertised: NetworkAddress,
     #[structopt(short = "b", long, parse(from_str = parse_addr))]
     /// Advertised address for the first node in this test net
-    bootstrap: Multiaddr,
+    bootstrap: NetworkAddress,
     #[structopt(short = "d", long, parse(from_os_str))]
     /// The data directory for the configs (e.g. /opt/libra/data)
     data_dir: PathBuf,
@@ -74,7 +74,7 @@ struct FullNodeArgs {
     index: usize,
     #[structopt(short = "l", long, parse(from_str = parse_addr))]
     /// Listening address for this node
-    listen: Multiaddr,
+    listen: NetworkAddress,
     #[structopt(short = "o", long, parse(from_os_str))]
     /// The output directory, note if a config exists already here, it will be updated to include
     /// this full node network
@@ -97,13 +97,13 @@ struct SafetyRulesArgs {
 struct ValidatorArgs {
     #[structopt(short = "a", long, parse(from_str = parse_addr))]
     /// Advertised address for this node, if this is null, listen is reused
-    advertised: Multiaddr,
+    advertised: NetworkAddress,
     #[structopt(short = "b", long, parse(from_str = parse_addr))]
     /// Advertised address for the first node in this test net
-    bootstrap: Multiaddr,
+    bootstrap: NetworkAddress,
     #[structopt(short = "l", long, parse(from_str = parse_addr))]
     /// Listening address for this node
-    listen: Multiaddr,
+    listen: NetworkAddress,
     #[structopt(flatten)]
     validator_common: ValidatorCommonArgs,
 }
@@ -149,8 +149,8 @@ struct ValidatorCommonArgs {
     template: Option<PathBuf>,
 }
 
-fn parse_addr(src: &str) -> Multiaddr {
-    src.parse::<Multiaddr>().unwrap()
+fn parse_addr(src: &str) -> NetworkAddress {
+    src.parse::<NetworkAddress>().unwrap()
 }
 
 fn parse_socket_addr(src: &str) -> SocketAddr {
