@@ -7,7 +7,7 @@ use libra_crypto::{
     ed25519::{Ed25519PublicKey, Ed25519Signature},
     multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature},
     traits::Signature,
-    CryptoMaterialError, HashValue, ValidKey, ValidKeyStringExt,
+    CryptoMaterialError, HashValue, ValidCryptoMaterial, ValidCryptoMaterialStringExt,
 };
 use libra_crypto_derive::{CryptoHasher, DeserializeKey, SerializeKey};
 #[cfg(any(test, feature = "fuzzing"))]
@@ -207,7 +207,7 @@ impl AuthenticationKey {
     }
 }
 
-impl ValidKey for AuthenticationKey {
+impl ValidCryptoMaterial for AuthenticationKey {
     fn to_bytes(&self) -> Vec<u8> {
         self.to_vec()
     }

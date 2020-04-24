@@ -14,7 +14,7 @@ use crate::{
 use crate::hash::HashValue;
 
 use libra_crypto_derive::{
-    PrivateKey, PublicKey, Signature, SigningKey, SilentDebug, ValidKey, VerifyingKey,
+    PrivateKey, PublicKey, Signature, SigningKey, SilentDebug, ValidCryptoMaterial, VerifyingKey,
 };
 use proptest::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -29,7 +29,16 @@ use serde::{Deserialize, Serialize};
 //
 
 #[derive(
-    Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, ValidKey, PublicKey, VerifyingKey,
+    Serialize,
+    Deserialize,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Hash,
+    ValidCryptoMaterial,
+    PublicKey,
+    VerifyingKey,
 )]
 #[PrivateKeyType = "PrivateK"]
 #[SignatureType = "Sig"]
@@ -38,7 +47,7 @@ enum PublicK {
     MultiEd(MultiEd25519PublicKey),
 }
 
-#[derive(Serialize, Deserialize, SilentDebug, ValidKey, PrivateKey, SigningKey)]
+#[derive(Serialize, Deserialize, SilentDebug, ValidCryptoMaterial, PrivateKey, SigningKey)]
 #[PublicKeyType = "PublicK"]
 #[SignatureType = "Sig"]
 enum PrivateK {

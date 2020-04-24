@@ -21,7 +21,7 @@ mod socket;
 pub use self::socket::noise_fuzzing;
 
 pub use self::socket::NoiseSocket;
-use libra_crypto::{x25519, ValidKey};
+use libra_crypto::{x25519, ValidCryptoMaterial};
 
 const NOISE_IX_25519_AESGCM_SHA256_PROTOCOL_NAME: &[u8] = b"/noise_ix_25519_aesgcm_sha256/1.0.0";
 const NOISE_PARAMETER: &str = "Noise_IX_25519_AESGCM_SHA256";

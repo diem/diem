@@ -12,7 +12,7 @@
 //! while ignored during serialization.
 //!
 
-use libra_crypto::{PrivateKey, ValidKeyStringExt};
+use libra_crypto::{PrivateKey, ValidCryptoMaterialStringExt};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[cfg(test)]
@@ -24,7 +24,7 @@ use libra_crypto::Uniform;
 #[derive(Debug, PartialEq)]
 pub struct KeyPair<T>
 where
-    T: PrivateKey + Serialize + ValidKeyStringExt,
+    T: PrivateKey + Serialize + ValidCryptoMaterialStringExt,
 {
     private_key: Option<T>,
     public_key: T::PublicKeyMaterial,
@@ -33,7 +33,7 @@ where
 #[cfg(test)]
 impl<T> Default for KeyPair<T>
 where
-    T: PrivateKey + Serialize + Uniform + ValidKeyStringExt,
+    T: PrivateKey + Serialize + Uniform + ValidCryptoMaterialStringExt,
 {
     fn default() -> Self {
         let private_key = T::generate_for_testing();
@@ -47,7 +47,7 @@ where
 
 impl<T> KeyPair<T>
 where
-    T: PrivateKey + Serialize + ValidKeyStringExt,
+    T: PrivateKey + Serialize + ValidCryptoMaterialStringExt,
 {
     /// This transforms a private key into a keypair data structure.
     pub fn load(private_key: T) -> Self {
@@ -76,12 +76,12 @@ where
 /// Serialization for a KeyPair only serializes the private key part (if present).
 impl<T> Serialize for KeyPair<T>
 where
-    T: PrivateKey + Serialize + ValidKeyStringExt,
+    T: PrivateKey + Serialize + ValidCryptoMaterialStringExt,
 {
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: Serializer,
-        T: Serialize + ValidKeyStringExt,
+        T: Serialize + ValidCryptoMaterialStringExt,
     {
         match &self.private_key {
             Some(key) => key.serialize(serializer),
@@ -93,7 +93,7 @@ where
 /// Deserializing a keypair only deserializes the private key, and dynamically derives the public key.
 impl<'de, T> Deserialize<'de> for KeyPair<T>
 where
-    T: PrivateKey + ValidKeyStringExt,
+    T: PrivateKey + ValidCryptoMaterialStringExt,
 {
     fn deserialize<D>(deserializer: D) -> std::result::Result<KeyPair<T>, D::Error>
     where

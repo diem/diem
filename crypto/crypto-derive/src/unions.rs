@@ -33,7 +33,7 @@ pub fn impl_enum_tryfrom(name: &Ident, variants: &DataEnum) -> proc_macro2::Toke
     let mut try_iter = variants.variants.iter();
     let first_variant = try_iter
         .next()
-        .expect("#[derive(ValidKey] requires a non-empty enum.");
+        .expect("#[derive(ValidCryptoMaterial] requires a non-empty enum.");
     let first_variant_ident = &first_variant.ident;
     let first_variant_arg = &first_variant
         .fields
@@ -69,7 +69,7 @@ pub fn impl_enum_tryfrom(name: &Ident, variants: &DataEnum) -> proc_macro2::Toke
 }
 
 fn match_enum_to_bytes(name: &Ident, variants: &DataEnum) -> proc_macro2::TokenStream {
-    // the ValidKey dispatch proper
+    // the ValidCryptoMaterial dispatch proper
     let mut match_arms = quote! {};
     for variant in variants.variants.iter() {
         let variant_ident = &variant.ident;
@@ -81,14 +81,14 @@ fn match_enum_to_bytes(name: &Ident, variants: &DataEnum) -> proc_macro2::TokenS
     match_arms
 }
 
-pub fn impl_enum_validkey(name: &Ident, variants: &DataEnum) -> TokenStream {
+pub fn impl_enum_valid_crypto_material(name: &Ident, variants: &DataEnum) -> TokenStream {
     let mut try_from = impl_enum_tryfrom(name, variants);
 
     let to_bytes_arms = match_enum_to_bytes(name, variants);
 
     try_from.extend(quote! {
 
-        impl libra_crypto::ValidKey for #name {
+        impl libra_crypto::ValidCryptoMaterial for #name {
             fn to_bytes(&self) -> Vec<u8> {
                 match self {
                     #to_bytes_arms

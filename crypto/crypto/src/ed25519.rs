@@ -217,7 +217,7 @@ impl Length for Ed25519PrivateKey {
     }
 }
 
-impl ValidKey for Ed25519PrivateKey {
+impl ValidCryptoMaterial for Ed25519PrivateKey {
     fn to_bytes(&self) -> Vec<u8> {
         self.to_bytes().to_vec()
     }
@@ -323,7 +323,7 @@ impl Length for Ed25519PublicKey {
     }
 }
 
-impl ValidKey for Ed25519PublicKey {
+impl ValidCryptoMaterial for Ed25519PublicKey {
     fn to_bytes(&self) -> Vec<u8> {
         self.0.to_bytes().to_vec()
     }
@@ -390,7 +390,7 @@ impl Length for Ed25519Signature {
     }
 }
 
-impl ValidKey for Ed25519Signature {
+impl ValidCryptoMaterial for Ed25519Signature {
     fn to_bytes(&self) -> Vec<u8> {
         self.to_bytes().to_vec()
     }

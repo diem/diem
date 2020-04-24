@@ -9,7 +9,7 @@
 //! - the `SilentDebug` and SilentDisplay macros are meant to be used on private key types, and
 //!   elide their input for confidentiality.
 //! - the `Deref` macro helps derive the canonical instances on new types.
-//! - the derive macros for `libra_crypto::traits`, namely `ValidKey`, `PublicKey`, `PrivateKey`,
+//! - the derive macros for `libra_crypto::traits`, namely `ValidCryptoMaterial`, `PublicKey`, `PrivateKey`,
 //!   `VerifyingKey`, `SigningKey` and `Signature` are meant to be derived on simple unions of types
 //!   implementing these traits.
 //! - the derive macro for `libra_crypto::hash::CryptoHasher`, which defines
@@ -58,12 +58,12 @@
 //!     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
 //! };
 //! use libra_crypto_derive::{
-//!     SilentDebug, PrivateKey, PublicKey, Signature, SigningKey, ValidKey, VerifyingKey,
+//!     SilentDebug, PrivateKey, PublicKey, Signature, SigningKey, ValidCryptoMaterial, VerifyingKey,
 //! };
 //!
 //! /// Generic public key enum
 //! #[derive(
-//!     Debug, Clone, PartialEq, Eq, Hash, ValidKey, PublicKey, VerifyingKey,
+//!     Debug, Clone, PartialEq, Eq, Hash, ValidCryptoMaterial, PublicKey, VerifyingKey,
 //! )]
 //! #[PrivateKeyType = "GenericPrivateKey"]
 //! #[SignatureType = "GenericSignature"]
@@ -74,7 +74,7 @@
 //!     BLS(BLS12381PublicKey),
 //! }
 //! /// Generic private key enum
-//! #[derive(SilentDebug, ValidKey, PrivateKey, SigningKey)]
+//! #[derive(SilentDebug, ValidCryptoMaterial, PrivateKey, SigningKey)]
 //! #[PublicKeyType = "GenericPublicKey"]
 //! #[SignatureType = "GenericSignature"]
 //! pub enum GenericPrivateKey {
@@ -154,7 +154,7 @@ pub fn deserialize_key(source: TokenStream) -> TokenStream {
             {
                 if deserializer.is_human_readable() {
                     let encoded_key = <&str>::deserialize(deserializer)?;
-                    ValidKeyStringExt::from_encoded_string(encoded_key)
+                    ValidCryptoMaterialStringExt::from_encoded_string(encoded_key)
                         .map_err(<D::Error as ::serde::de::Error>::custom)
                 } else {
                     // In order to preserve the Serde data model and help analysis tools,
@@ -195,7 +195,7 @@ pub fn serialize_key(source: TokenStream) -> TokenStream {
                     // See comment in deserialize_key.
                     serializer.serialize_newtype_struct(
                         #name_string,
-                        serde_bytes::Bytes::new(&ValidKey::to_bytes(self).as_slice()),
+                        serde_bytes::Bytes::new(&ValidCryptoMaterial::to_bytes(self).as_slice()),
                     )
                 }
             }
@@ -226,14 +226,16 @@ pub fn derive_deref(input: TokenStream) -> TokenStream {
     .into()
 }
 
-#[proc_macro_derive(ValidKey)]
-pub fn derive_enum_validkey(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(ValidCryptoMaterial)]
+pub fn derive_enum_valid_crypto_material(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
 
     let name = &ast.ident;
     match ast.data {
-        Data::Enum(ref variants) => impl_enum_validkey(name, variants),
-        Data::Struct(_) | Data::Union(_) => panic!("#[derive(ValidKey)] is only defined for enums"),
+        Data::Enum(ref variants) => impl_enum_valid_crypto_material(name, variants),
+        Data::Struct(_) | Data::Union(_) => {
+            panic!("#[derive(ValidCryptoMaterial)] is only defined for enums")
+        }
     }
 }
 

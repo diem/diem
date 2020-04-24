@@ -207,7 +207,7 @@ impl Length for MultiEd25519PrivateKey {
     }
 }
 
-impl ValidKey for MultiEd25519PrivateKey {
+impl ValidCryptoMaterial for MultiEd25519PrivateKey {
     fn to_bytes(&self) -> Vec<u8> {
         self.to_bytes()
     }
@@ -312,7 +312,7 @@ impl Length for MultiEd25519PublicKey {
     }
 }
 
-impl ValidKey for MultiEd25519PublicKey {
+impl ValidCryptoMaterial for MultiEd25519PublicKey {
     fn to_bytes(&self) -> Vec<u8> {
         self.to_bytes()
     }
@@ -440,7 +440,7 @@ impl fmt::Debug for MultiEd25519Signature {
     }
 }
 
-impl ValidKey for MultiEd25519Signature {
+impl ValidCryptoMaterial for MultiEd25519Signature {
     fn to_bytes(&self) -> Vec<u8> {
         self.to_bytes()
     }
@@ -510,8 +510,11 @@ impl From<Ed25519Signature> for MultiEd25519Signature {
 //////////////////////
 
 // Helper function required to MultiEd25519 keys to_bytes to add the threshold.
-fn to_bytes<T: ValidKey>(keys: &[T], threshold: u8) -> Vec<u8> {
-    let mut bytes: Vec<u8> = keys.iter().flat_map(ValidKey::to_bytes).collect();
+fn to_bytes<T: ValidCryptoMaterial>(keys: &[T], threshold: u8) -> Vec<u8> {
+    let mut bytes: Vec<u8> = keys
+        .iter()
+        .flat_map(ValidCryptoMaterial::to_bytes)
+        .collect();
     bytes.push(threshold);
     bytes
 }
