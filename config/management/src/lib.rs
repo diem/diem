@@ -113,7 +113,7 @@ impl Command {
         let value = storage
             .get_public_key(key)
             .map(|c| c.public_key.to_string())
-            .unwrap_or_else(|_| "None".into());
+            .unwrap_or_else(|e| format!("{:?}", e));
         writeln!(buffer, "{} - {}", key, value).unwrap();
     }
 
@@ -122,22 +122,24 @@ impl Command {
             .get(key)
             .and_then(|c| c.value.u64())
             .map(|c| c.to_string())
-            .unwrap_or_else(|e| "None".into());
+            .unwrap_or_else(|e| format!("{:?}", e));
         writeln!(buffer, "{} - {}", key, value).unwrap();
     }
 
     fn write_waypoint(storage: &dyn Storage, buffer: &mut String, key: &str) {
-        let value = if let Ok(value) = storage.get(key).and_then(|c| c.value.string()) {
-            if value.is_empty() {
-                "empty".into()
-            } else {
-                Waypoint::from_str(&value)
-                    .map(|c| c.to_string())
-                    .unwrap_or_else(|_| "Invalid waypoint".into())
-            }
-        } else {
-            "None".into()
-        };
+        let value = storage
+            .get(key)
+            .and_then(|c| c.value.string())
+            .map(|value| {
+                if value.is_empty() {
+                    "empty".into()
+                } else {
+                    Waypoint::from_str(&value)
+                        .map(|c| c.to_string())
+                        .unwrap_or_else(|_| "Invalid waypoint".into())
+                }
+            })
+            .unwrap_or_else(|e| format!("{:?}", e));
 
         writeln!(buffer, "{} - {}", key, value).unwrap();
     }
@@ -182,13 +184,13 @@ pub mod tests {
         let mut storage = secure_storage(default_secure_backend(namespace.into()));
         storage.reset_and_clear().unwrap();
 
-        let output = verify(namespace).split("None").count();
-        assert_eq!(output, 10); // 9 None results in 9 splits
+        let output = verify(namespace).split("KeyNotSet").count();
+        assert_eq!(output, 10); // 9 KeyNotSet results in 9 splits
 
         initialize_storage(default_secure_backend(namespace.into()));
 
-        let output = verify(namespace).split("None").count();
-        assert_eq!(output, 1); // 0 None results in 1 split
+        let output = verify(namespace).split("KeyNotSet").count();
+        assert_eq!(output, 1); // 0 KeyNotSet results in 1 split
     }
 
     #[test]
@@ -205,8 +207,13 @@ pub mod tests {
     #[ignore]
     fn test_owner_key_valid() {
         let namespace = "owner_key";
-        initialize_storage(default_secure_backend(namespace.into()));
-        owner_key(namespace);
+        let storage = initialize_storage(default_secure_backend(namespace.into()));
+        let key = storage
+            .get_public_key(constants::OWNER_KEY)
+            .unwrap()
+            .public_key;
+        let okey = owner_key(namespace);
+        assert_eq!(key, okey);
     }
 
     #[test]
@@ -223,8 +230,13 @@ pub mod tests {
     #[ignore]
     fn test_operator_key_valid() {
         let namespace = "operator_key";
-        initialize_storage(default_secure_backend(namespace.into()));
-        operator_key(namespace);
+        let storage = initialize_storage(default_secure_backend(namespace.into()));
+        let key = storage
+            .get_public_key(constants::OPERATOR_KEY)
+            .unwrap()
+            .public_key;
+        let okey = operator_key(namespace);
+        assert_eq!(key, okey);
     }
 
     fn default_secure_backend(namespace: String) -> SecureBackend {
@@ -235,7 +247,7 @@ pub mod tests {
         }
     }
 
-    fn initialize_storage(config: SecureBackend) {
+    fn initialize_storage(config: SecureBackend) -> Box<dyn Storage> {
         let mut storage = secure_storage(config);
         let policy = Policy::public();
         storage.reset_and_clear().unwrap();
@@ -266,6 +278,8 @@ pub mod tests {
         storage
             .create(constants::WAYPOINT, Value::String("".into()), &policy)
             .unwrap();
+
+        storage
     }
 
     fn operator_key(namespace: &str) -> Ed25519PublicKey {
