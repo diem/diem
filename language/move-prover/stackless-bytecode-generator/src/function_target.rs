@@ -3,13 +3,14 @@
 
 use crate::{
     annotations::Annotations,
-    lifetime_analysis, livevar_analysis, reaching_def_analysis,
+    borrow_analysis, lifetime_analysis, livevar_analysis, packref_analysis, reaching_def_analysis,
     stackless_bytecode::{AttrId, Bytecode, SpecBlockId},
+    writeback_analysis,
 };
 use itertools::Itertools;
 use spec_lang::{
     ast::Spec,
-    env::{FunId, FunctionEnv, GlobalEnv, Loc, TypeParameter},
+    env::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, StructId, TypeParameter},
     symbol::{Symbol, SymbolPool},
     ty::{Type, TypeDisplayContext},
 };
@@ -35,6 +36,7 @@ pub struct FunctionTargetData {
     pub code: Vec<Bytecode>,
     pub local_types: Vec<Type>,
     pub return_types: Vec<Type>,
+    pub acquires_global_resources: Vec<StructId>,
     pub locations: BTreeMap<AttrId, Loc>,
     pub annotations: Annotations,
 
@@ -76,6 +78,11 @@ impl<'env> FunctionTarget<'env> {
     /// Shortcut for accessing the symbol pool.
     pub fn symbol_pool(&self) -> &SymbolPool {
         self.func_env.module_env.symbol_pool()
+    }
+
+    /// Shortcut for accessing the module env of this function.
+    pub fn module_env(&self) -> &ModuleEnv {
+        &self.func_env.module_env
     }
 
     /// Shortcut for accessing the global env of this function.
@@ -201,6 +208,11 @@ impl<'env> FunctionTarget<'env> {
     pub fn get_annotations(&self) -> &Annotations {
         &self.data.annotations
     }
+
+    /// Gets acquired resources
+    pub fn get_acquires_global_resources(&self) -> &[StructId] {
+        &self.data.acquires_global_resources
+    }
 }
 
 // =================================================================================================
@@ -224,6 +236,11 @@ impl<'env> FunctionTarget<'env> {
     /// new formatters relevant for tests.
     pub fn register_annotation_formatters_for_test(&self) {
         self.register_annotation_formatter(Box::new(livevar_analysis::format_livevar_annotation));
+        self.register_annotation_formatter(Box::new(borrow_analysis::format_borrow_annotation));
+        self.register_annotation_formatter(Box::new(
+            writeback_analysis::format_writeback_annotation,
+        ));
+        self.register_annotation_formatter(Box::new(packref_analysis::format_packref_annotation));
         self.register_annotation_formatter(Box::new(lifetime_analysis::format_lifetime_annotation));
         self.register_annotation_formatter(Box::new(
             reaching_def_analysis::format_reaching_def_annotation,
@@ -300,9 +317,10 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
                 .borrow()
                 .iter()
                 .filter_map(|f| f(self, offset as CodeOffset))
-                .join(", ");
+                .map(|s| format!("    // {}", s))
+                .join("\n");
             if !annotations.is_empty() {
-                writeln!(f, "    // {}", annotations)?;
+                writeln!(f, "{}", annotations)?;
             }
             writeln!(f, "    {}", code.display(self))?;
         }

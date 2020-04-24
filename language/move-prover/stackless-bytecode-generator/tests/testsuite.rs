@@ -8,11 +8,15 @@ use codespan_reporting::term::termcolor::Buffer;
 
 use spec_lang::{env::GlobalEnv, run_spec_lang_compiler};
 use stackless_bytecode_generator::{
+    borrow_analysis::BorrowAnalysisProcessor,
     eliminate_imm_refs::EliminateImmRefsProcessor,
+    eliminate_mut_refs::EliminateMutRefsProcessor,
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
     lifetime_analysis::LifetimeAnalysisProcessor,
     livevar_analysis::LiveVarAnalysisProcessor,
+    packref_analysis::PackrefAnalysisProcessor,
     reaching_def_analysis::ReachingDefProcessor,
+    writeback_analysis::WritebackAnalysisProcessor,
 };
 use test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives};
 
@@ -29,6 +33,39 @@ fn get_tested_transformation_pipeline(
         "livevar" => {
             let mut pipeline = FunctionTargetPipeline::default();
             pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            Ok(Some(pipeline))
+        }
+        "borrow" => {
+            let mut pipeline = FunctionTargetPipeline::default();
+            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
+            Ok(Some(pipeline))
+        }
+        "writeback" => {
+            let mut pipeline = FunctionTargetPipeline::default();
+            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(WritebackAnalysisProcessor {}));
+            Ok(Some(pipeline))
+        }
+        "packref" => {
+            let mut pipeline = FunctionTargetPipeline::default();
+            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(PackrefAnalysisProcessor {}));
+            Ok(Some(pipeline))
+        }
+        "eliminate_mut_refs" => {
+            let mut pipeline = FunctionTargetPipeline::default();
+            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(WritebackAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(PackrefAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(EliminateMutRefsProcessor {}));
             Ok(Some(pipeline))
         }
         "lifetime" => {

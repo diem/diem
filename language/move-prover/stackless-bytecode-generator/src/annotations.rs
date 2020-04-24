@@ -30,4 +30,10 @@ impl Annotations {
         let id = TypeId::of::<T>();
         self.map.insert(id, Box::new(x));
     }
+
+    /// Removes annotation of type T.
+    pub fn remove<T: Any>(&mut self) -> Option<Box<T>> {
+        let id = TypeId::of::<T>();
+        self.map.remove(&id).and_then(|d| d.downcast::<T>().ok())
+    }
 }

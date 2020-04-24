@@ -1,0 +1,543 @@
+============ initial translation from Move ================
+
+fun TestPackref::test1(): TestPackref::R {
+    var r: TestPackref::R
+    var r_ref: &mut TestPackref::R
+    var x_ref: &mut u64
+    var $t3: u64
+    var $t4: TestPackref::R
+    var $t5: &mut TestPackref::R
+    var $t6: &mut TestPackref::R
+    var $t7: &mut u64
+    var $t8: u64
+    var $t9: &mut u64
+    var $t10: TestPackref::R
+    $t3 := 3
+    $t4 := pack TestPackref::R($t3)
+    r := $t4
+    $t5 := borrow_local(r)
+    r_ref := $t5
+    $t6 := move(r_ref)
+    $t7 := borrow_field<TestPackref::R>.x($t6)
+    x_ref := $t7
+    $t8 := 0
+    $t9 := move(x_ref)
+    write_ref($t9, $t8)
+    $t10 := move(r)
+    return $t10
+}
+
+
+fun TestPackref::test2(x_ref: &mut u64, v: u64) {
+    var $t2: u64
+    var $t3: &mut u64
+    $t2 := copy(v)
+    $t3 := move(x_ref)
+    write_ref($t3, $t2)
+    return ()
+}
+
+
+pub fun TestPackref::test3(r_ref: &mut TestPackref::R, v: u64) {
+    var x_ref: &mut u64
+    var $t3: &mut TestPackref::R
+    var $t4: &mut u64
+    var $t5: &mut u64
+    var $t6: u64
+    $t3 := move(r_ref)
+    $t4 := borrow_field<TestPackref::R>.x($t3)
+    x_ref := $t4
+    $t5 := move(x_ref)
+    $t6 := copy(v)
+    TestPackref::test2($t5, $t6)
+    return ()
+}
+
+
+fun TestPackref::test4(): TestPackref::R {
+    var r: TestPackref::R
+    var r_ref: &mut TestPackref::R
+    var $t2: u64
+    var $t3: TestPackref::R
+    var $t4: &mut TestPackref::R
+    var $t5: &mut TestPackref::R
+    var $t6: u64
+    var $t7: TestPackref::R
+    $t2 := 3
+    $t3 := pack TestPackref::R($t2)
+    r := $t3
+    $t4 := borrow_local(r)
+    r_ref := $t4
+    $t5 := move(r_ref)
+    $t6 := 0
+    TestPackref::test3($t5, $t6)
+    $t7 := move(r)
+    return $t7
+}
+
+
+pub fun TestPackref::test5(r_ref: &mut TestPackref::R): &mut u64 {
+    var $t1: &mut TestPackref::R
+    var $t2: &mut u64
+    $t1 := move(r_ref)
+    $t2 := borrow_field<TestPackref::R>.x($t1)
+    return $t2
+}
+
+
+fun TestPackref::test6(): TestPackref::R {
+    var r: TestPackref::R
+    var r_ref: &mut TestPackref::R
+    var x_ref: &mut u64
+    var $t3: u64
+    var $t4: TestPackref::R
+    var $t5: &mut TestPackref::R
+    var $t6: &mut TestPackref::R
+    var $t7: &mut u64
+    var $t8: &mut u64
+    var $t9: u64
+    var $t10: TestPackref::R
+    $t3 := 3
+    $t4 := pack TestPackref::R($t3)
+    r := $t4
+    $t5 := borrow_local(r)
+    r_ref := $t5
+    $t6 := move(r_ref)
+    $t7 := TestPackref::test5($t6)
+    x_ref := $t7
+    $t8 := move(x_ref)
+    $t9 := 0
+    TestPackref::test2($t8, $t9)
+    $t10 := move(r)
+    return $t10
+}
+
+
+fun TestPackref::test7(b: bool) {
+    var r1: TestPackref::R
+    var r2: TestPackref::R
+    var r_ref: &mut TestPackref::R
+    var $t4: u64
+    var $t5: TestPackref::R
+    var $t6: u64
+    var $t7: TestPackref::R
+    var $t8: &mut TestPackref::R
+    var $t9: bool
+    var $t10: &mut TestPackref::R
+    var $t11: &mut TestPackref::R
+    var $t12: &mut TestPackref::R
+    var $t13: u64
+    $t4 := 3
+    $t5 := pack TestPackref::R($t4)
+    r1 := $t5
+    $t6 := 4
+    $t7 := pack TestPackref::R($t6)
+    r2 := $t7
+    $t8 := borrow_local(r1)
+    r_ref := $t8
+    $t9 := copy(b)
+    if ($t9) goto L0 else goto L1
+    L1:
+    goto L2
+    L0:
+    $t10 := move(r_ref)
+    destroy($t10)
+    $t11 := borrow_local(r2)
+    r_ref := $t11
+    goto L2
+    L2:
+    $t12 := move(r_ref)
+    $t13 := 0
+    TestPackref::test3($t12, $t13)
+    return ()
+}
+
+
+fun TestPackref::test8(n: u64, r_ref: &mut TestPackref::R) {
+    var r1: TestPackref::R
+    var r2: TestPackref::R
+    var $t4: u64
+    var $t5: TestPackref::R
+    var $t6: u64
+    var $t7: TestPackref::R
+    var $t8: u64
+    var $t9: u64
+    var $t10: bool
+    var $t11: &mut TestPackref::R
+    var $t12: u64
+    var $t13: u64
+    var $t14: u64
+    var $t15: u64
+    var $t16: bool
+    var $t17: &mut TestPackref::R
+    var $t18: &mut TestPackref::R
+    var $t19: u64
+    var $t20: u64
+    var $t21: u64
+    var $t22: &mut TestPackref::R
+    var $t23: u64
+    $t4 := 3
+    $t5 := pack TestPackref::R($t4)
+    r1 := $t5
+    $t6 := 4
+    $t7 := pack TestPackref::R($t6)
+    r2 := $t7
+    goto L7
+    L7:
+    $t8 := 0
+    $t9 := copy(n)
+    $t10 := <($t8, $t9)
+    if ($t10) goto L0 else goto L1
+    L1:
+    goto L2
+    L0:
+    $t11 := move(r_ref)
+    destroy($t11)
+    $t12 := copy(n)
+    $t13 := 2
+    $t14 := /($t12, $t13)
+    $t15 := 0
+    $t16 := ==($t14, $t15)
+    if ($t16) goto L3 else goto L4
+    L4:
+    goto L5
+    L3:
+    $t17 := borrow_local(r1)
+    r_ref := $t17
+    goto L6
+    L5:
+    $t18 := borrow_local(r2)
+    r_ref := $t18
+    goto L6
+    L6:
+    $t19 := copy(n)
+    $t20 := 1
+    $t21 := -($t19, $t20)
+    n := $t21
+    goto L7
+    L2:
+    $t22 := move(r_ref)
+    $t23 := 0
+    TestPackref::test3($t22, $t23)
+    return ()
+}
+
+============ after pipeline `packref` ================
+
+fun TestPackref::test1(): TestPackref::R {
+    var r: TestPackref::R
+    var r_ref: &mut TestPackref::R
+    var x_ref: &mut u64
+    var $t3: u64
+    var $t4: TestPackref::R
+    var $t5: &mut TestPackref::R
+    var $t6: &mut TestPackref::R
+    var $t7: &mut u64
+    var $t8: u64
+    var $t9: &mut u64
+    var $t10: TestPackref::R
+    $t3 := 3
+    $t4 := pack TestPackref::R($t3)
+    r := $t4
+    // before:  after: UnpackRef($t5)
+    $t5 := borrow_local(r)
+    // live_refs: $t5 borrowed_by: LocalRoot(r) -> {Reference($t5)} borrows_from: Reference($t5) -> {LocalRoot(r)}
+    r_ref := $t5
+    // live_refs: r_ref borrowed_by: LocalRoot(r) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r)}
+    $t6 := move(r_ref)
+    // live_refs: $t6 borrowed_by: LocalRoot(r) -> {Reference($t6)} borrows_from: Reference($t6) -> {LocalRoot(r)}
+    // before:  after: UnpackRef($t7)
+    $t7 := borrow_field<TestPackref::R>.x($t6)
+    // live_refs: $t7 borrowed_by: LocalRoot(r) -> {Reference($t7)}, Reference($t6) -> {Reference($t7)} borrows_from: Reference($t7) -> {LocalRoot(r), Reference($t6)}
+    x_ref := $t7
+    // live_refs: x_ref borrowed_by: LocalRoot(r) -> {Reference(x_ref)}, Reference($t6) -> {Reference(x_ref)} borrows_from: Reference(x_ref) -> {LocalRoot(r), Reference($t6)}
+    $t8 := 0
+    // live_refs: x_ref borrowed_by: LocalRoot(r) -> {Reference(x_ref)}, Reference($t6) -> {Reference(x_ref)} borrows_from: Reference(x_ref) -> {LocalRoot(r), Reference($t6)}
+    $t9 := move(x_ref)
+    // live_refs: $t9 borrowed_by: LocalRoot(r) -> {Reference($t9)}, Reference($t6) -> {Reference($t9)} borrows_from: Reference($t9) -> {LocalRoot(r), Reference($t6)}
+    // before:  after: PackRef($t6), PackRef($t9)
+    write_ref($t9, $t8)
+    $t10 := move(r)
+    return $t10
+}
+
+
+fun TestPackref::test2(x_ref: &mut u64, v: u64) {
+    var $t2: u64
+    var $t3: &mut u64
+    // live_refs: x_ref borrowed_by: LocalRoot(x_ref) -> {Reference(x_ref)} borrows_from: Reference(x_ref) -> {LocalRoot(x_ref)}
+    $t2 := copy(v)
+    // live_refs: x_ref borrowed_by: LocalRoot(x_ref) -> {Reference(x_ref)} borrows_from: Reference(x_ref) -> {LocalRoot(x_ref)}
+    $t3 := move(x_ref)
+    // live_refs: $t3 borrowed_by: LocalRoot(x_ref) -> {Reference($t3)} borrows_from: Reference($t3) -> {LocalRoot(x_ref)}
+    // before:  after: PackRef($t3)
+    write_ref($t3, $t2)
+    return ()
+}
+
+
+pub fun TestPackref::test3(r_ref: &mut TestPackref::R, v: u64) {
+    var x_ref: &mut u64
+    var $t3: &mut TestPackref::R
+    var $t4: &mut u64
+    var $t5: &mut u64
+    var $t6: u64
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+    // before: UnpackRef(r_ref) after:
+    $t3 := move(r_ref)
+    // live_refs: $t3 borrowed_by: LocalRoot(r_ref) -> {Reference($t3)} borrows_from: Reference($t3) -> {LocalRoot(r_ref)}
+    // before:  after: UnpackRef($t4)
+    $t4 := borrow_field<TestPackref::R>.x($t3)
+    // live_refs: $t4 borrowed_by: LocalRoot(r_ref) -> {Reference($t4)}, Reference($t3) -> {Reference($t4)} borrows_from: Reference($t4) -> {LocalRoot(r_ref), Reference($t3)}
+    x_ref := $t4
+    // live_refs: x_ref borrowed_by: LocalRoot(r_ref) -> {Reference(x_ref)}, Reference($t3) -> {Reference(x_ref)} borrows_from: Reference(x_ref) -> {LocalRoot(r_ref), Reference($t3)}
+    $t5 := move(x_ref)
+    // live_refs: $t5 borrowed_by: LocalRoot(r_ref) -> {Reference($t5)}, Reference($t3) -> {Reference($t5)} borrows_from: Reference($t5) -> {LocalRoot(r_ref), Reference($t3)}
+    $t6 := copy(v)
+    // live_refs: $t5 borrowed_by: LocalRoot(r_ref) -> {Reference($t5)}, Reference($t3) -> {Reference($t5)} borrows_from: Reference($t5) -> {LocalRoot(r_ref), Reference($t3)}
+    // before:  after: PackRef($t3), PackRef($t5)
+    TestPackref::test2($t5, $t6)
+    // before: PackRef(r_ref) after:
+    return ()
+}
+
+
+fun TestPackref::test4(): TestPackref::R {
+    var r: TestPackref::R
+    var r_ref: &mut TestPackref::R
+    var $t2: u64
+    var $t3: TestPackref::R
+    var $t4: &mut TestPackref::R
+    var $t5: &mut TestPackref::R
+    var $t6: u64
+    var $t7: TestPackref::R
+    $t2 := 3
+    $t3 := pack TestPackref::R($t2)
+    r := $t3
+    // before:  after: UnpackRef($t4)
+    $t4 := borrow_local(r)
+    // live_refs: $t4 borrowed_by: LocalRoot(r) -> {Reference($t4)} borrows_from: Reference($t4) -> {LocalRoot(r)}
+    r_ref := $t4
+    // live_refs: r_ref borrowed_by: LocalRoot(r) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r)}
+    $t5 := move(r_ref)
+    // live_refs: $t5 borrowed_by: LocalRoot(r) -> {Reference($t5)} borrows_from: Reference($t5) -> {LocalRoot(r)}
+    $t6 := 0
+    // live_refs: $t5 borrowed_by: LocalRoot(r) -> {Reference($t5)} borrows_from: Reference($t5) -> {LocalRoot(r)}
+    // before: PackRef($t5) after: UnpackRef($t5), PackRef($t5)
+    TestPackref::test3($t5, $t6)
+    $t7 := move(r)
+    return $t7
+}
+
+
+pub fun TestPackref::test5(r_ref: &mut TestPackref::R): &mut u64 {
+    var $t1: &mut TestPackref::R
+    var $t2: &mut u64
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+    $t1 := move(r_ref)
+    // live_refs: $t1 borrowed_by: LocalRoot(r_ref) -> {Reference($t1)} borrows_from: Reference($t1) -> {LocalRoot(r_ref)}
+    // before:  after: UnpackRef($t2)
+    $t2 := borrow_field<TestPackref::R>.x($t1)
+    // live_refs: $t2 borrowed_by: LocalRoot(r_ref) -> {Reference($t2)}, Reference($t1) -> {Reference($t2)} borrows_from: Reference($t2) -> {LocalRoot(r_ref), Reference($t1)}
+    return $t2
+}
+
+
+fun TestPackref::test6(): TestPackref::R {
+    var r: TestPackref::R
+    var r_ref: &mut TestPackref::R
+    var x_ref: &mut u64
+    var $t3: u64
+    var $t4: TestPackref::R
+    var $t5: &mut TestPackref::R
+    var $t6: &mut TestPackref::R
+    var $t7: &mut u64
+    var $t8: &mut u64
+    var $t9: u64
+    var $t10: TestPackref::R
+    $t3 := 3
+    $t4 := pack TestPackref::R($t3)
+    r := $t4
+    // before:  after: UnpackRef($t5)
+    $t5 := borrow_local(r)
+    // live_refs: $t5 borrowed_by: LocalRoot(r) -> {Reference($t5)} borrows_from: Reference($t5) -> {LocalRoot(r)}
+    r_ref := $t5
+    // live_refs: r_ref borrowed_by: LocalRoot(r) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r)}
+    $t6 := move(r_ref)
+    // live_refs: $t6 borrowed_by: LocalRoot(r) -> {Reference($t6)} borrows_from: Reference($t6) -> {LocalRoot(r)}
+    $t7 := TestPackref::test5($t6)
+    // live_refs: $t7 borrowed_by: LocalRoot(r) -> {Reference($t7)}, Reference($t6) -> {Reference($t7)} borrows_from: Reference($t7) -> {LocalRoot(r), Reference($t6)}
+    x_ref := $t7
+    // live_refs: x_ref borrowed_by: LocalRoot(r) -> {Reference(x_ref)}, Reference($t6) -> {Reference(x_ref)} borrows_from: Reference(x_ref) -> {LocalRoot(r), Reference($t6)}
+    $t8 := move(x_ref)
+    // live_refs: $t8 borrowed_by: LocalRoot(r) -> {Reference($t8)}, Reference($t6) -> {Reference($t8)} borrows_from: Reference($t8) -> {LocalRoot(r), Reference($t6)}
+    $t9 := 0
+    // live_refs: $t8 borrowed_by: LocalRoot(r) -> {Reference($t8)}, Reference($t6) -> {Reference($t8)} borrows_from: Reference($t8) -> {LocalRoot(r), Reference($t6)}
+    // before:  after: PackRef($t6), PackRef($t8)
+    TestPackref::test2($t8, $t9)
+    $t10 := move(r)
+    return $t10
+}
+
+
+fun TestPackref::test7(b: bool) {
+    var r1: TestPackref::R
+    var r2: TestPackref::R
+    var r_ref: &mut TestPackref::R
+    var $t4: u64
+    var $t5: TestPackref::R
+    var $t6: u64
+    var $t7: TestPackref::R
+    var $t8: &mut TestPackref::R
+    var $t9: bool
+    var $t10: &mut TestPackref::R
+    var $t11: &mut TestPackref::R
+    var $t12: &mut TestPackref::R
+    var $t13: u64
+    $t4 := 3
+    $t5 := pack TestPackref::R($t4)
+    r1 := $t5
+    $t6 := 4
+    $t7 := pack TestPackref::R($t6)
+    r2 := $t7
+    // before:  after: UnpackRef($t8)
+    $t8 := borrow_local(r1)
+    // live_refs: $t8 borrowed_by: LocalRoot(r1) -> {Reference($t8)} borrows_from: Reference($t8) -> {LocalRoot(r1)}
+    r_ref := $t8
+    // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1)}
+    $t9 := copy(b)
+    // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1)}
+    if ($t9) goto L0 else goto L1
+    // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1)}
+    L1:
+    // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1)}
+    goto L2
+    // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1)}
+    L0:
+    // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1)}
+    $t10 := move(r_ref)
+    // live_refs: $t10 borrowed_by: LocalRoot(r1) -> {Reference($t10)} borrows_from: Reference($t10) -> {LocalRoot(r1)}
+    // before:  after: PackRef($t10)
+    destroy($t10)
+    // before:  after: UnpackRef($t11)
+    $t11 := borrow_local(r2)
+    // live_refs: $t11 borrowed_by: LocalRoot(r2) -> {Reference($t11)} borrows_from: Reference($t11) -> {LocalRoot(r2)}
+    r_ref := $t11
+    // live_refs: r_ref borrowed_by: LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r2)}
+    goto L2
+    // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+    L2:
+    // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+    $t12 := move(r_ref)
+    // live_refs: $t12 borrowed_by: LocalRoot(r1) -> {Reference($t12)}, LocalRoot(r2) -> {Reference($t12)} borrows_from: Reference($t12) -> {LocalRoot(r1), LocalRoot(r2)}
+    $t13 := 0
+    // live_refs: $t12 borrowed_by: LocalRoot(r1) -> {Reference($t12)}, LocalRoot(r2) -> {Reference($t12)} borrows_from: Reference($t12) -> {LocalRoot(r1), LocalRoot(r2)}
+    // before: PackRef($t12) after: UnpackRef($t12), PackRef($t12)
+    TestPackref::test3($t12, $t13)
+    return ()
+}
+
+
+fun TestPackref::test8(n: u64, r_ref: &mut TestPackref::R) {
+    var r1: TestPackref::R
+    var r2: TestPackref::R
+    var $t4: u64
+    var $t5: TestPackref::R
+    var $t6: u64
+    var $t7: TestPackref::R
+    var $t8: u64
+    var $t9: u64
+    var $t10: bool
+    var $t11: &mut TestPackref::R
+    var $t12: u64
+    var $t13: u64
+    var $t14: u64
+    var $t15: u64
+    var $t16: bool
+    var $t17: &mut TestPackref::R
+    var $t18: &mut TestPackref::R
+    var $t19: u64
+    var $t20: u64
+    var $t21: u64
+    var $t22: &mut TestPackref::R
+    var $t23: u64
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+    $t4 := 3
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+    $t5 := pack TestPackref::R($t4)
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+    r1 := $t5
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+    $t6 := 4
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+    $t7 := pack TestPackref::R($t6)
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+    r2 := $t7
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+    goto L7
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref), LocalRoot(r1), LocalRoot(r2)}
+    L7:
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref), LocalRoot(r1), LocalRoot(r2)}
+    $t8 := 0
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref), LocalRoot(r1), LocalRoot(r2)}
+    $t9 := copy(n)
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref), LocalRoot(r1), LocalRoot(r2)}
+    $t10 := <($t8, $t9)
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref), LocalRoot(r1), LocalRoot(r2)}
+    if ($t10) goto L0 else goto L1
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref), LocalRoot(r1), LocalRoot(r2)}
+    L1:
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref), LocalRoot(r1), LocalRoot(r2)}
+    goto L2
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref), LocalRoot(r1), LocalRoot(r2)}
+    L0:
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref), LocalRoot(r1), LocalRoot(r2)}
+    $t11 := move(r_ref)
+    // live_refs: $t11 borrowed_by: LocalRoot(r_ref) -> {Reference($t11)}, LocalRoot(r1) -> {Reference($t11)}, LocalRoot(r2) -> {Reference($t11)} borrows_from: Reference($t11) -> {LocalRoot(r_ref), LocalRoot(r1), LocalRoot(r2)}
+    // before:  after: PackRef($t11)
+    destroy($t11)
+    $t12 := copy(n)
+    $t13 := 2
+    $t14 := /($t12, $t13)
+    $t15 := 0
+    $t16 := ==($t14, $t15)
+    if ($t16) goto L3 else goto L4
+    L4:
+    goto L5
+    L3:
+    // before:  after: UnpackRef($t17)
+    $t17 := borrow_local(r1)
+    // live_refs: $t17 borrowed_by: LocalRoot(r1) -> {Reference($t17)} borrows_from: Reference($t17) -> {LocalRoot(r1)}
+    r_ref := $t17
+    // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1)}
+    goto L6
+    L5:
+    // before:  after: UnpackRef($t18)
+    $t18 := borrow_local(r2)
+    // live_refs: $t18 borrowed_by: LocalRoot(r2) -> {Reference($t18)} borrows_from: Reference($t18) -> {LocalRoot(r2)}
+    r_ref := $t18
+    // live_refs: r_ref borrowed_by: LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r2)}
+    goto L6
+    // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+    L6:
+    // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+    $t19 := copy(n)
+    // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+    $t20 := 1
+    // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+    $t21 := -($t19, $t20)
+    // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+    n := $t21
+    // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+    goto L7
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref), LocalRoot(r1), LocalRoot(r2)}
+    L2:
+    // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref), LocalRoot(r1), LocalRoot(r2)}
+    $t22 := move(r_ref)
+    // live_refs: $t22 borrowed_by: LocalRoot(r_ref) -> {Reference($t22)}, LocalRoot(r1) -> {Reference($t22)}, LocalRoot(r2) -> {Reference($t22)} borrows_from: Reference($t22) -> {LocalRoot(r_ref), LocalRoot(r1), LocalRoot(r2)}
+    $t23 := 0
+    // live_refs: $t22 borrowed_by: LocalRoot(r_ref) -> {Reference($t22)}, LocalRoot(r1) -> {Reference($t22)}, LocalRoot(r2) -> {Reference($t22)} borrows_from: Reference($t22) -> {LocalRoot(r_ref), LocalRoot(r1), LocalRoot(r2)}
+    // before: PackRef($t22) after: UnpackRef($t22), PackRef($t22)
+    TestPackref::test3($t22, $t23)
+    return ()
+}
