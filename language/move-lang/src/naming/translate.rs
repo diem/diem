@@ -347,11 +347,17 @@ fn check_unused_aliases(context: &mut Context, unused_aliases: Vec<ModuleIdent>)
 
 fn main_function(
     context: &mut Context,
-    main: Option<(Vec<ModuleIdent>, Address, FunctionName, E::Function)>,
+    main: Option<(
+        Vec<ModuleIdent>,
+        Address,
+        FunctionName,
+        E::Function,
+        Vec<E::SpecBlock>,
+    )>,
 ) -> Option<(Address, FunctionName, N::Function)> {
     match main {
         None => None,
-        Some((unused_aliases, addr, name, f)) => {
+        Some((unused_aliases, addr, name, f, _)) => {
             check_unused_aliases(context, unused_aliases);
             Some((addr, name.clone(), function(context, name, f)))
         }

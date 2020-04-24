@@ -26,6 +26,8 @@ use spec_lang::{
 };
 
 use crate::{cli::Options, code_writer::CodeWriter};
+// DENUG
+// use backtrace::Backtrace;
 use stackless_bytecode_generator::{
     function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder,
 };
@@ -394,7 +396,14 @@ impl<'env> BoogieWrapper<'env> {
                 match Model::parse(self, cap.name("mod").unwrap().as_str()) {
                     Ok(model) => Some(model),
                     Err(parse_error) => {
-                        warn!("failed to parse boogie model: {}", parse_error.0);
+                        let context_module = self
+                            .env
+                            .symbol_pool()
+                            .string(self.env.get_modules().last().unwrap().get_name().name());
+                        warn!(
+                            "failed to parse boogie model (module context `{}`): {}",
+                            context_module, parse_error.0
+                        );
                         None
                     }
                 }
@@ -660,6 +669,9 @@ impl Model {
     }
 
     fn invalid_track_info() -> ModelParseError {
+        // DEBUG
+        // let bt = Backtrace::new();
+        // ModelParseError::new(&format!("invalid debug track info. Stack trace:\n{:?}", bt))
         ModelParseError::new("invalid debug track info")
     }
 

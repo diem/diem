@@ -5,16 +5,30 @@
 
 use itertools::Itertools;
 use spec_lang::{
-    env::{FieldEnv, FunctionEnv, GlobalEnv, ModuleEnv, ModuleId, SpecFunId, StructEnv, StructId},
+    env::{
+        FieldEnv, FunctionEnv, GlobalEnv, ModuleEnv, ModuleId, SpecFunId, StructEnv, StructId,
+        SCRIPT_MODULE_NAME,
+    },
     symbol::Symbol,
     ty::{PrimitiveType, Type},
 };
+
+/// Return boogie name of given module.
+pub fn boogie_module_name(env: &ModuleEnv<'_>) -> String {
+    let name = env.symbol_pool().string(env.get_name().name());
+    if name.as_str() == SCRIPT_MODULE_NAME {
+        // <SELF> is not accepted by boogie as a symbol
+        "#SELF#".to_string()
+    } else {
+        name.to_string()
+    }
+}
 
 /// Return boogie name of given structure.
 pub fn boogie_struct_name(env: &StructEnv<'_>) -> String {
     format!(
         "${}_{}",
-        env.module_env.get_name().name().display(env.symbol_pool()),
+        boogie_module_name(&env.module_env),
         env.get_name().display(env.symbol_pool())
     )
 }
@@ -32,7 +46,7 @@ pub fn boogie_field_name(env: &FieldEnv<'_>) -> String {
 pub fn boogie_function_name(env: &FunctionEnv<'_>) -> String {
     let name = format!(
         "${}_{}",
-        env.module_env.get_name().name().display(env.symbol_pool()),
+        boogie_module_name(&env.module_env),
         env.get_name().display(env.symbol_pool())
     );
     // TODO: hack to deal with similar native functions in old/new library. We identify
@@ -49,7 +63,7 @@ pub fn boogie_function_name(env: &FunctionEnv<'_>) -> String {
 pub fn boogie_spec_var_name(env: &ModuleEnv<'_>, name: Symbol) -> String {
     format!(
         "${}_{}",
-        env.get_name().name().display(env.symbol_pool()),
+        boogie_module_name(env),
         name.display(env.symbol_pool())
     )
 }
@@ -68,7 +82,7 @@ pub fn boogie_spec_fun_name(env: &ModuleEnv<'_>, id: SpecFunId) -> String {
     };
     format!(
         "${}_{}{}",
-        env.get_name().name().display(env.symbol_pool()),
+        boogie_module_name(env),
         decl.name.display(env.symbol_pool()),
         overload_qualifier
     )
@@ -105,8 +119,7 @@ pub fn boogie_struct_type_value(
     struct_id: StructId,
     args: &[Type],
 ) -> String {
-    let module_env = env.get_module(module_id);
-    let struct_env = module_env.get_struct(struct_id);
+    let struct_env = env.get_module(module_id).into_struct(struct_id);
     format!(
         "{}_type_value({})",
         boogie_struct_name(&struct_env),

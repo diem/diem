@@ -71,6 +71,7 @@ pub enum ModuleOrAddress {
 pub struct Main {
     pub uses: Vec<(ModuleIdent, Option<ModuleName>)>,
     pub function: Function,
+    pub specs: Vec<SpecBlock>,
 }
 
 //**************************************************************************************************
@@ -727,9 +728,17 @@ impl AstDebug for FileDefinition {
 
 impl AstDebug for Main {
     fn ast_debug(&self, w: &mut AstWriter) {
-        let Main { uses, function } = self;
+        let Main {
+            uses,
+            function,
+            specs,
+        } = self;
         uses.ast_debug(w);
         function.ast_debug(w);
+        for spec in specs {
+            spec.ast_debug(w);
+            w.new_line();
+        }
     }
 }
 

@@ -22,7 +22,13 @@ use std::{
 #[derive(Debug)]
 pub struct Program {
     pub modules: UniqueMap<ModuleIdent, ModuleDefinition>,
-    pub main: Option<(Vec<ModuleIdent>, Address, FunctionName, Function)>,
+    pub main: Option<(
+        Vec<ModuleIdent>,
+        Address,
+        FunctionName,
+        Function,
+        Vec<SpecBlock>,
+    )>,
 }
 
 //**************************************************************************************************
@@ -320,7 +326,7 @@ impl AstDebug for Program {
             w.new_line();
         }
 
-        if let Some((unused_aliases, addr, n, fdef)) = main {
+        if let Some((unused_aliases, addr, n, fdef, specs)) = main {
             w.writeln(&format!("address {}:", addr));
             if !unused_aliases.is_empty() {
                 w.writeln("unused_aliases: ");
@@ -332,6 +338,10 @@ impl AstDebug for Program {
                 });
             }
             (n.clone(), fdef).ast_debug(w);
+            for spec in specs {
+                spec.ast_debug(w);
+                w.new_line();
+            }
         }
     }
 }

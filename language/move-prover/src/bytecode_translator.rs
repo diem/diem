@@ -776,7 +776,7 @@ impl<'env> ModuleTranslator<'env> {
         // Set location of this code in the CodeWriter.
         let loc = func_target.get_bytecode_loc(bytecode.get_attr_id());
         self.writer.set_location(&loc);
-        emitln!(self.writer, "// {:?}", bytecode); // DEBUG
+        emitln!(self.writer, "// {}", bytecode.display(func_target));
 
         // A boolean indicating whether we have evaluated invariants for refs going out of scope.
         let mut invariants_evaluated = false;
