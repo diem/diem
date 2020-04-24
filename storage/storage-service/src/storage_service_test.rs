@@ -30,11 +30,11 @@ fn start_test_storage_with_client() -> (
     config.storage.dir = tmp_dir.path().to_path_buf();
 
     let server_port = utils::get_available_port();
-    config.storage.address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
+    config.storage.simple_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
 
     let storage_server_handle = start_simple_storage_service(&config);
 
-    let client = SimpleStorageClient::new(&config.storage.address);
+    let client = SimpleStorageClient::new(&config.storage.simple_address);
     (storage_server_handle, tmp_dir, client)
 }
 

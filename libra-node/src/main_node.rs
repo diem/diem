@@ -21,6 +21,7 @@ use libra_types::{on_chain_config::ON_CHAIN_CONFIG_REGISTRY, PeerId};
 use libra_vm::LibraVM;
 use network::validator_network::network_builder::{NetworkBuilder, TransportType};
 use onchain_discovery::OnchainDiscovery;
+use simple_storage_client::SimpleStorageClient;
 use state_synchronizer::StateSynchronizer;
 use std::{
     boxed::Box,
@@ -30,9 +31,11 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
-use storage_client::{StorageReadServiceClient, SyncStorageClient};
+use storage_client::StorageReadServiceClient;
 use storage_interface::{DbReader, DbReaderWriter};
-use storage_service::{init_libra_db, start_storage_service_with_db};
+use storage_service::{
+    init_libra_db, start_simple_storage_service_with_db, start_storage_service_with_db,
+};
 use subscription_service::ReconfigSubscription;
 use tokio::{
     runtime::{Builder, Handle, Runtime},
@@ -59,7 +62,7 @@ fn setup_chunk_executor(db: DbReaderWriter) -> Box<dyn ChunkExecutor> {
 
 fn setup_block_executor(config: &NodeConfig) -> Box<dyn BlockExecutor> {
     Box::new(Executor::<LibraVM>::new(
-        SyncStorageClient::new(&config.storage.address).into(),
+        SimpleStorageClient::new(&config.storage.simple_address).into(),
     ))
 }
 
@@ -222,6 +225,10 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
     let mut instant = Instant::now();
     let (libra_db, db_rw) = init_libra_db(&node_config);
+    let _simple_storage_service =
+        start_simple_storage_service_with_db(&node_config, Arc::clone(&libra_db));
+
+    // Will be deprecated. Do not reference it anymore.
     let storage = start_storage_service_with_db(&node_config, Arc::clone(&libra_db));
     bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(&node_config).unwrap())
         .expect("Db-bootstrapper should not fail.");
