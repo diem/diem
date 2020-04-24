@@ -199,7 +199,7 @@ pub type PragmaProperty = Spanned<PragmaProperty_>;
 pub struct SpecApplyPattern_ {
     pub visibility: Option<FunctionVisibility>,
     pub name_pattern: Vec<SpecApplyFragment>,
-    pub type_arguments: Option<Vec<Type>>,
+    pub type_parameters: Vec<(Name, Kind)>,
 }
 
 pub type SpecApplyPattern = Spanned<SpecApplyPattern_>;
@@ -991,9 +991,9 @@ impl AstDebug for SpecApplyPattern_ {
             f.ast_debug(w);
             true
         });
-        if let Some(tys) = &self.type_arguments {
+        if !self.type_parameters.is_empty() {
             w.write("<");
-            tys.ast_debug(w);
+            self.type_parameters.ast_debug(w);
             w.write(">");
         }
     }

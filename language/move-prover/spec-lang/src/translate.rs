@@ -42,6 +42,7 @@ use crate::{
     ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, BOOL_TYPE},
 };
 use move_ir_types::location::Spanned;
+use regex::Regex;
 
 // =================================================================================================
 /// # Translator
@@ -129,6 +130,7 @@ struct FunEntry {
     loc: Loc,
     module_id: ModuleId,
     fun_id: FunId,
+    is_public: bool,
     type_params: Vec<(Symbol, Type)>,
     params: Vec<(Symbol, Type)>,
     result_type: Type,
@@ -276,6 +278,7 @@ impl<'env> Translator<'env> {
         name: QualifiedSymbol,
         module_id: ModuleId,
         fun_id: FunId,
+        is_public: bool,
         type_params: Vec<(Symbol, Type)>,
         params: Vec<(Symbol, Type)>,
         result_type: Type,
@@ -284,6 +287,7 @@ impl<'env> Translator<'env> {
             loc,
             module_id,
             fun_id,
+            is_public,
             type_params,
             params,
             result_type,
@@ -845,11 +849,13 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         et.enter_scope();
         let params = et.analyze_and_add_params(&def.signature.parameters);
         let result_type = et.translate_type(&def.signature.return_type);
+        let is_public = matches!(def.visibility, PA::FunctionVisibility::Public(..));
         et.parent.parent.define_fun(
             et.to_loc(&def.loc),
             qsym,
             et.parent.module_id,
             fun_id,
+            is_public,
             type_params,
             params,
             result_type,
@@ -1146,15 +1152,28 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 } => self.def_ana_schema_inclusion_outside_schema(
                     loc,
                     context,
+                    None,
                     name,
                     type_arguments.as_deref(),
                     arguments,
                 ),
+                Apply {
+                    name,
+                    type_arguments,
+                    arguments,
+                    patterns,
+                    exclusion_patterns,
+                } => self.def_ana_schema_apply(
+                    loc,
+                    context,
+                    name,
+                    type_arguments.as_deref(),
+                    arguments,
+                    patterns,
+                    exclusion_patterns,
+                ),
                 Pragma { properties } => self.def_ana_pragma(loc, context, properties),
                 Variable { .. } => { /* nothing to do right now */ }
-                Apply { .. } => self
-                    .parent
-                    .error(loc, "spec block member `apply` not yet implemented"),
             }
         }
     }
@@ -1967,10 +1986,16 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 
     /// Analyze schema inclusion in the spec block for a function, struct or module. This
     /// instantiates the schema and adds all conditions and invariants it contains to the context.
+    ///
+    /// The `alt_context_type_params` allows to use different type parameter names as would
+    /// otherwise be inferred from the SchemaBlockContext. This is used for the apply weaving
+    /// operator which allows to use different type parameter names than the function declarations
+    /// to which it is applied to.
     fn def_ana_schema_inclusion_outside_schema(
         &mut self,
         loc: &Loc,
         context: &SpecBlockContext,
+        alt_context_type_params: Option<&[(Symbol, Type)]>,
         name: &EA::ModuleAccess,
         type_arguments: Option<&[EA::Type]>,
         arguments: &[(Name, EA::Exp)],
@@ -2005,7 +2030,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         // Analyze the schema inclusion. This will instantiate conditions and invariants for
         // this block.
         self.def_ana_schema_inclusion(
-            &context_type_params,
+            if let Some(type_params) = alt_context_type_params {
+                type_params
+            } else {
+                &context_type_params
+            },
             &mut vars,
             &mut conditions,
             &mut invariants,
@@ -2035,6 +2064,110 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 ),
             );
         }
+    }
+
+    fn def_ana_schema_apply(
+        &mut self,
+        loc: &Loc,
+        context: &SpecBlockContext,
+        name: &EA::ModuleAccess,
+        type_arguments: Option<&[EA::Type]>,
+        arguments: &[(Name, EA::Exp)],
+        patterns: &[PA::SpecApplyPattern],
+        exclusion_patterns: &[PA::SpecApplyPattern],
+    ) {
+        if !matches!(context, SpecBlockContext::Module) {
+            self.parent.error(
+                loc,
+                "the `apply` schema weaving operator can only be used inside a `spec module` block",
+            );
+            return;
+        }
+        for fun_name in self.parent.fun_table.keys().cloned().collect_vec() {
+            // Note we need the vector clone above to avoid borrowing self for the
+            // whole loop.
+            let entry = self.parent.fun_table.get(&fun_name).unwrap();
+            if entry.module_id != self.module_id {
+                // Not a function from this module
+                continue;
+            }
+            let is_public = entry.is_public;
+            let type_arg_count = entry.type_params.len();
+            let is_excluded = exclusion_patterns.iter().any(|p| {
+                self.apply_pattern_matches(fun_name.symbol, is_public, type_arg_count, true, p)
+            });
+            if is_excluded {
+                // Explicitly excluded from matching.
+                continue;
+            }
+            if let Some(matched) = patterns.iter().find(|p| {
+                self.apply_pattern_matches(fun_name.symbol, is_public, type_arg_count, false, p)
+            }) {
+                // This is a match, so apply this schema to this function.
+                let type_params = {
+                    let mut et = ExpTranslator::new(self);
+                    et.analyze_and_add_type_params(&matched.value.type_parameters);
+                    et.extract_type_params()
+                };
+                self.def_ana_schema_inclusion_outside_schema(
+                    loc,
+                    &SpecBlockContext::Function(fun_name),
+                    Some(&type_params),
+                    name,
+                    type_arguments,
+                    arguments,
+                );
+            }
+        }
+    }
+
+    /// Returns true if the pattern matches the function of name, type arity, and
+    /// visibility.
+    ///
+    /// The `ignore_type_args` parameter is used for exclusion matches. In exclusion matches we
+    /// do not want to include type args because its to easy for a user to get this wrong, so
+    /// we match based only on visibility and name pattern. On the other hand, we want a user
+    /// in inclusion matches to use a pattern like `*<X>` to match any generic function with
+    /// one type argument.
+    fn apply_pattern_matches(
+        &self,
+        name: Symbol,
+        is_public: bool,
+        type_arg_count: usize,
+        ignore_type_args: bool,
+        pattern: &PA::SpecApplyPattern,
+    ) -> bool {
+        if !ignore_type_args && pattern.value.type_parameters.len() != type_arg_count {
+            return false;
+        }
+        if let Some(v) = &pattern.value.visibility {
+            match v {
+                PA::FunctionVisibility::Public(..) => {
+                    if !is_public {
+                        return false;
+                    }
+                }
+                PA::FunctionVisibility::Internal => {
+                    if is_public {
+                        return false;
+                    }
+                }
+            }
+        }
+        let rex = Regex::new(&format!(
+            "^{}$",
+            pattern
+                .value
+                .name_pattern
+                .iter()
+                .map(|p| match &p.value {
+                    PA::SpecApplyFragment_::Wildcard => ".*".to_string(),
+                    PA::SpecApplyFragment_::NamePart(n) => n.value.clone(),
+                })
+                .join("")
+        ))
+        .expect("regex valid");
+        rex.is_match(self.symbol_pool().string(name).as_str())
     }
 
     /// Compute spec var usage of spec funs.

@@ -1842,7 +1842,7 @@ fn parse_spec_apply_pattern<'input>(tokens: &mut Lexer<'input>) -> Result<SpecAp
         },
         parse_spec_apply_fragment,
     )?;
-    let type_arguments = parse_optional_type_args(tokens)?;
+    let type_parameters = parse_optional_type_parameters(tokens)?;
     Ok(spanned(
         tokens.file_name(),
         start_loc,
@@ -1850,7 +1850,7 @@ fn parse_spec_apply_pattern<'input>(tokens: &mut Lexer<'input>) -> Result<SpecAp
         SpecApplyPattern_ {
             visibility,
             name_pattern,
-            type_arguments,
+            type_parameters,
         },
     ))
 }

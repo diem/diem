@@ -650,22 +650,14 @@ fn spec_member(
             name: pn,
             type_arguments: ptys_opt,
             arguments: parguments,
-            patterns: ppatterns,
-            exclusion_patterns: pe_patterns,
+            patterns,
+            exclusion_patterns,
         } => {
             let name = module_access(context, pn)?;
             let type_arguments = optional_types(context, ptys_opt);
             let arguments = parguments
                 .into_iter()
                 .map(|(n, e)| (n, exp_(context, e)))
-                .collect();
-            let patterns = ppatterns
-                .into_iter()
-                .map(|p| spec_apply_pattern(context, p))
-                .collect();
-            let exclusion_patterns = pe_patterns
-                .into_iter()
-                .map(|p| spec_apply_pattern(context, p))
                 .collect();
             EM::Apply {
                 name,
@@ -678,28 +670,6 @@ fn spec_member(
         PM::Pragma { properties } => EM::Pragma { properties },
     };
     Some(sp(loc, em))
-}
-
-fn spec_apply_pattern(
-    context: &mut Context,
-    sp!(
-        loc,
-        P::SpecApplyPattern_ {
-            visibility,
-            name_pattern,
-            type_arguments: pty_args
-        }
-    ): P::SpecApplyPattern,
-) -> E::SpecApplyPattern {
-    let type_arguments = pty_args.map(|tys| types(context, tys));
-    sp(
-        loc,
-        E::SpecApplyPattern_ {
-            visibility,
-            name_pattern,
-            type_arguments,
-        },
-    )
 }
 
 //**************************************************************************************************
