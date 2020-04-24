@@ -282,7 +282,13 @@ fn module(
 
 fn main(
     context: &mut Context,
-    main_opt: &mut Option<(Vec<ModuleIdent>, Address, FunctionName, E::Function)>,
+    main_opt: &mut Option<(
+        Vec<ModuleIdent>,
+        Address,
+        FunctionName,
+        E::Function,
+        Vec<E::SpecBlock>,
+    )>,
     addr: Address,
     main_def: P::Main,
 ) {
@@ -290,6 +296,7 @@ fn main(
     let P::Main {
         uses,
         function: pfunction,
+        specs: pspecs,
     } = main_def;
     let alias_map = aliases(context, uses);
     context.set_and_shadow_aliases(alias_map.clone());
@@ -317,11 +324,12 @@ fn main(
             "Invalid 'native' function. This top-level function must have a defined body",
         )]),
     }
+    let especs = specs(context, pspecs);
     let used_aliases = context.clear_aliases();
     let (_uses, unused_aliases) = check_aliases(context, used_aliases, alias_map);
     match main_opt {
-        None => *main_opt = Some((unused_aliases, addr, fname, function)),
-        Some((_, _, old_name, _)) => context.error(vec![
+        None => *main_opt = Some((unused_aliases, addr, fname, function, especs)),
+        Some((_, _, old_name, _, _)) => context.error(vec![
             (
                 fname.loc(),
                 format!("Duplicate definition of '{}'", FunctionName::MAIN_NAME),

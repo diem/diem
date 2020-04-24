@@ -15,6 +15,7 @@ use move_lang::{
     errors::Errors,
     expansion::ast::Program,
     move_compile_no_report, move_compile_to_expansion_no_report,
+    parser::ast::FunctionName,
     shared::Address,
 };
 
@@ -24,8 +25,15 @@ pub mod symbol;
 mod translate;
 pub mod ty;
 
+use crate::env::SCRIPT_MODULE_NAME;
 #[allow(unused_imports)]
 use log::{info, warn};
+use move_ir_types::location::Spanned;
+use move_lang::{
+    expansion::ast::ModuleDefinition,
+    parser::ast::{ModuleIdent, ModuleIdent_},
+    shared::{unique_map::UniqueMap, Name},
+};
 
 // =================================================================================================
 // Entry Point
@@ -98,23 +106,86 @@ fn run_spec_checker(
     let modules = units
         .into_iter()
         .filter_map(|unit| {
-            let (module_id, compiled_module, source_map, function_infos) = match unit {
+            let (mut module_id, compiled_module, source_map, mut function_infos) = match unit {
                 CompiledUnit::Module {
                     ident,
                     module,
                     source_map,
                     function_infos,
                 } => (ident, module, source_map, function_infos),
-                CompiledUnit::Script { .. } => return None,
+                CompiledUnit::Script {
+                    loc,
+                    script,
+                    source_map,
+                    function_info,
+                } => {
+                    // Convert the script into a module.
+                    let ident = ModuleIdent(Spanned {
+                        loc,
+                        value: ModuleIdent_ {
+                            name: move_lang::parser::ast::ModuleName(Name {
+                                loc,
+                                value: SCRIPT_MODULE_NAME.to_string(),
+                            }),
+                            address: Default::default(),
+                        },
+                    });
+                    let mut function_infos = UniqueMap::new();
+                    function_infos
+                        .add(
+                            FunctionName(Name {
+                                loc,
+                                // Use an empty name for now, we will later replace it with the
+                                // one we got from expansion AST.
+                                value: "".to_string(),
+                            }),
+                            function_info,
+                        )
+                        .unwrap();
+                    (ident, script.into_module(), source_map, function_infos)
+                }
             };
             let expanded_module = match eprog.modules.remove(&module_id) {
                 Some(m) => m,
                 None => {
-                    warn!(
-                        "[internal] cannot associate bytecode module `{}` with AST",
-                        module_id
-                    );
-                    return None;
+                    if module_id.0.value.name.0.value == SCRIPT_MODULE_NAME {
+                        if let Some((uses, addr, function_name, function, specs)) =
+                            std::mem::take(&mut eprog.main)
+                        {
+                            // Construct a pseudo module definition.
+                            let loc = function_name.0.loc;
+                            let uses = uses
+                                .iter()
+                                .map(|module_id| (module_id.clone(), loc))
+                                .collect();
+                            let mut functions = UniqueMap::new();
+                            functions.add(function_name.clone(), function).unwrap();
+                            // As we now know the real function name and address, replace it in the
+                            // data we got from bytecode.
+                            let function_info = function_infos.into_iter().next().unwrap().1;
+                            module_id.0.value.address = addr;
+                            function_infos = UniqueMap::new();
+                            function_infos.add(function_name, function_info).unwrap();
+                            ModuleDefinition {
+                                loc,
+                                uses,
+                                unused_aliases: vec![],
+                                is_source_module: true,
+                                structs: UniqueMap::new(),
+                                functions,
+                                specs,
+                            }
+                        } else {
+                            warn!("[internal] bytecode represents a script but AST does not");
+                            return None;
+                        }
+                    } else {
+                        warn!(
+                            "[internal] cannot associate bytecode module `{}` with AST",
+                            module_id
+                        );
+                        return None;
+                    }
                 }
             };
             Some((

@@ -1,0 +1,12 @@
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/functional/script_incorrect.move:10:5 ───
+    │
+ 10 │     aborts_if false;
+    │     ^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/script_provider.move:9:5: register (entry)
+    =     at tests/sources/functional/script_provider.move:10:9: register
+    =     at tests/sources/functional/script_provider.move:12:5: register
+    =     at tests/sources/functional/script_provider.move:9:5: register (exit)

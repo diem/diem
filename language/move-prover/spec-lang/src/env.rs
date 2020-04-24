@@ -45,6 +45,12 @@ use std::collections::{BTreeMap, BTreeSet};
 use vm::{file_format::Bytecode, views::SignatureView, CompiledModule};
 
 // =================================================================================================
+/// # Constants
+
+/// A name we use to represent a script as a module.
+pub const SCRIPT_MODULE_NAME: &str = "<SELF>";
+
+// =================================================================================================
 /// # Locations
 
 /// A location, consisting of a FileId and a span in this file.
@@ -729,6 +735,11 @@ impl<'env> ModuleEnv<'env> {
         &self.data.name
     }
 
+    /// Returns true if this is a module representing a script.
+    pub fn is_script_module(&self) -> bool {
+        self.symbol_pool().string(self.data.name.name()).as_str() == SCRIPT_MODULE_NAME
+    }
+
     /// Returns properties from pragmas.
     pub fn get_properties(&self) -> &PropertyBag {
         &self.data.properties
@@ -1391,6 +1402,8 @@ impl<'env> FunctionEnv<'env> {
     pub fn is_public(&self) -> bool {
         let view = self.definition_view();
         view.is_public()
+            // The main function of a script is implicitly public
+            || self.module_env.is_script_module()
     }
 
     /// Returns true if this function mutates any references (i.e. has &mut parameters).

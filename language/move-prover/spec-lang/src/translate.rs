@@ -96,6 +96,7 @@ struct SpecVarEntry {
 struct SpecSchemaEntry {
     loc: Loc,
     name: QualifiedSymbol,
+    module_id: ModuleId,
     type_params: Vec<(Symbol, Type)>,
     // The local variables declared in the schema.
     vars: Vec<(Symbol, Type)>,
@@ -218,12 +219,14 @@ impl<'env> Translator<'env> {
         &mut self,
         loc: &Loc,
         name: QualifiedSymbol,
+        module_id: ModuleId,
         type_params: Vec<(Symbol, Type)>,
         vars: Vec<(Symbol, Type)>,
     ) {
         let entry = SpecSchemaEntry {
             loc: loc.clone(),
             name: name.clone(),
+            module_id,
             type_params,
             vars,
             conditions: vec![],
@@ -1006,7 +1009,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         // Add schema declaration prototype to the symbol table.
         let loc = et.to_loc(&block.loc);
         self.parent
-            .define_spec_schema(&loc, qsym, type_params, vars);
+            .define_spec_schema(&loc, qsym, self.module_id, type_params, vars);
     }
 }
 
@@ -1317,8 +1320,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         match context {
             SpecBlockContext::Function(name) => {
                 if kind.on_impl() {
-                    self.parent
-                        .error(loc, "item only allowed on function declaration");
+                    self.parent.error(loc, "item only allowed in function body");
                     return None;
                 }
                 let entry = &self
@@ -1358,7 +1360,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             SpecBlockContext::FunctionCode(name, spec_info) => {
                 if kind.on_decl() {
                     self.parent
-                        .error(loc, "item only allowed inside function body");
+                        .error(loc, "item only allowed in function declaration");
                     return None;
                 }
                 let entry = &self
@@ -1950,7 +1952,8 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             .iter()
             .chain(schema_entry.included_conditions.iter())
         {
-            let mut rewriter = ExpRewriter::new(self, &argument_map, type_arguments);
+            let mut rewriter =
+                ExpRewriter::new(self, schema_entry.module_id, &argument_map, type_arguments);
             conditions.push(Condition {
                 loc: loc.clone(),
                 kind: *kind,
@@ -1969,7 +1972,8 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             .iter()
             .chain(schema_entry.included_invariants.iter())
         {
-            let mut rewriter = ExpRewriter::new(self, &argument_map, type_arguments);
+            let mut rewriter =
+                ExpRewriter::new(self, schema_entry.module_id, &argument_map, type_arguments);
             invariants.push(Invariant {
                 loc: loc.clone(),
                 kind: *kind,
@@ -3639,11 +3643,13 @@ where
     argument_map: &'rewriter BTreeMap<Symbol, Exp>,
     type_args: &'rewriter [Type],
     shadowed: VecDeque<BTreeSet<Symbol>>,
+    originating_module: ModuleId,
 }
 
 impl<'env, 'translator, 'rewriter> ExpRewriter<'env, 'translator, 'rewriter> {
     fn new(
         parent: &'rewriter mut ModuleTranslator<'env, 'translator>,
+        originating_module: ModuleId,
         argument_map: &'rewriter BTreeMap<Symbol, Exp>,
         type_args: &'rewriter [Type],
     ) -> Self {
@@ -3652,6 +3658,7 @@ impl<'env, 'translator, 'rewriter> ExpRewriter<'env, 'translator, 'rewriter> {
             argument_map,
             type_args,
             shadowed: VecDeque::new(),
+            originating_module,
         }
     }
 
@@ -3728,23 +3735,40 @@ impl<'env, 'translator, 'rewriter> ExpRewriter<'env, 'translator, 'rewriter> {
 
     fn rewrite_attrs(&mut self, node_id: NodeId) -> NodeId {
         // Create a new node id and copy attributes over, after instantiation with type args.
-        let loc = self
-            .parent
-            .loc_map
-            .get(&node_id)
-            .expect("loc defined")
-            .clone();
-        let ty = self
-            .parent
-            .type_map
-            .get(&node_id)
-            .expect("type defined")
-            .instantiate(self.type_args);
-        let instantiation_opt = self.parent.instantiation_map.get(&node_id).map(|tys| {
-            tys.iter()
-                .map(|ty| ty.instantiate(self.type_args))
-                .collect_vec()
-        });
+        let (loc, ty, instantiation_opt) = if self.parent.module_id == self.originating_module {
+            let loc = self
+                .parent
+                .loc_map
+                .get(&node_id)
+                .expect("loc defined")
+                .clone();
+            let ty = self
+                .parent
+                .type_map
+                .get(&node_id)
+                .expect("type defined")
+                .instantiate(self.type_args);
+            let instantiation_opt = self.parent.instantiation_map.get(&node_id).map(|tys| {
+                tys.iter()
+                    .map(|ty| ty.instantiate(self.type_args))
+                    .collect_vec()
+            });
+            (loc, ty, instantiation_opt)
+        } else {
+            let module_env = self.parent.parent.env.get_module(self.originating_module);
+            let loc = module_env.get_node_loc(node_id);
+            let ty = module_env.get_node_type(node_id);
+            let instantiation = module_env.get_node_instantiation(node_id);
+            (
+                loc,
+                ty,
+                if instantiation.is_empty() {
+                    None
+                } else {
+                    Some(instantiation)
+                },
+            )
+        };
         let new_node_id = self.parent.new_node_id();
         self.parent.loc_map.insert(new_node_id, loc);
         self.parent.type_map.insert(new_node_id, ty);

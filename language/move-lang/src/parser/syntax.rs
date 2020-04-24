@@ -1981,6 +1981,10 @@ fn parse_file<'input>(tokens: &mut Lexer<'input>) -> Result<FileDefinition, Erro
             uses.push(parse_use_decl(tokens)?);
         }
         let function = parse_function_decl(tokens, /* allow_native */ false)?;
+        let mut specs = vec![];
+        while tokens.peek() == Tok::Spec {
+            specs.push(parse_spec_block(tokens)?)
+        }
         if tokens.peek() != Tok::EOF {
             let loc = current_token_loc(tokens);
             return Err(vec![(
@@ -1988,7 +1992,11 @@ fn parse_file<'input>(tokens: &mut Lexer<'input>) -> Result<FileDefinition, Erro
                 "Unexpected characters after end of main function".to_string(),
             )]);
         }
-        FileDefinition::Main(Main { uses, function })
+        FileDefinition::Main(Main {
+            uses,
+            function,
+            specs,
+        })
     };
     Ok(f)
 }
