@@ -14,7 +14,7 @@ futures = "0.3.0"
 jemallocator = { version = "0.3.2", features = ["profiling", "unprefixed_malloc_on_supported_platforms"] }
 parity-multiaddr = { version = "0.8.0", default-features = false }
 rayon = "1.2.0"
-structopt = "0.3.13"
+structopt = "0.3.14"
 tokio = { version = "0.2.13", features = ["full"] }
 tonic = "0.2"
 

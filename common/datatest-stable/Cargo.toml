@@ -14,7 +14,7 @@ edition = "2018"
 [dependencies]
 regex = "1.3.7"
 walkdir = "2.2.9"
-structopt = "0.3.13"
+structopt = "0.3.14"
 termcolor = "1.0.5"
 libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 
