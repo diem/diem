@@ -16,7 +16,7 @@ tonic = "0.2"
 hex = "0.4.2"
 itertools = "0.9.0"
 proptest = { version = "0.9.6", optional = true }
-rustyline = "6.1.1"
+rustyline = "6.1.2"
 rust_decimal = "1.4.1"
 num-traits = "0.2"
 parity-multiaddr = { version = "0.8.0", default-features = false }
