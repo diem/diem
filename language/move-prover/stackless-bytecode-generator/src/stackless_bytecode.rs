@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::function_target::FunctionTarget;
+use itertools::Itertools;
 use num::BigUint;
 use spec_lang::{
     env::{FunId, ModuleId, StructId},
@@ -139,6 +140,72 @@ pub enum Operation {
     Neq,
 }
 
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub struct StructDecl {
+    pub module_id: ModuleId,
+    pub struct_id: StructId,
+}
+
+#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub enum BorrowNode {
+    GlobalRoot(StructDecl),
+    LocalRoot(TempIndex),
+    Reference(TempIndex),
+}
+
+/// A display object for a borrow node.
+pub struct BorrowNodeDisplay<'env> {
+    node: &'env BorrowNode,
+    func_target: &'env FunctionTarget<'env>,
+}
+
+impl BorrowNode {
+    /// Creates a format object for a borrow node in context of a function target.
+    pub fn display<'env>(
+        &'env self,
+        func_target: &'env FunctionTarget<'env>,
+    ) -> BorrowNodeDisplay<'env> {
+        BorrowNodeDisplay {
+            node: self,
+            func_target,
+        }
+    }
+}
+
+impl<'env> fmt::Display for BorrowNodeDisplay<'env> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        use BorrowNode::*;
+        match self.node {
+            GlobalRoot(s) => {
+                let ty = Type::Struct(s.module_id, s.struct_id, vec![]);
+                let tctx = TypeDisplayContext::WithEnv {
+                    env: self.func_target.global_env(),
+                };
+                write!(f, "{}", ty.display(&tctx))?;
+            }
+            LocalRoot(idx) => {
+                write!(
+                    f,
+                    "LocalRoot({})",
+                    self.func_target
+                        .get_local_name(*idx)
+                        .display(self.func_target.symbol_pool())
+                )?;
+            }
+            Reference(idx) => {
+                write!(
+                    f,
+                    "Reference({})",
+                    self.func_target
+                        .get_local_name(*idx)
+                        .display(self.func_target.symbol_pool())
+                )?;
+            }
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Bytecode {
     SpecBlock(AttrId, SpecBlockId),
@@ -154,6 +221,13 @@ pub enum Bytecode {
     Label(AttrId, Label),
     Abort(AttrId, TempIndex),
     Nop(AttrId),
+
+    WriteBack(AttrId, BorrowNode, TempIndex),
+
+    UnpackRef(AttrId, TempIndex),
+    PackRef(AttrId, TempIndex),
+
+    Splice(AttrId, TempIndex, BTreeMap<usize, TempIndex>),
 }
 
 impl Bytecode {
@@ -169,7 +243,11 @@ impl Bytecode {
             | Jump(id, ..)
             | Label(id, ..)
             | Abort(id, ..)
-            | Nop(id) => *id,
+            | Nop(id)
+            | WriteBack(id, ..)
+            | UnpackRef(id, ..)
+            | PackRef(id, ..)
+            | Splice(id, ..) => *id,
         }
     }
 
@@ -311,6 +389,22 @@ impl<'env> fmt::Display for BytecodeDisplay<'env> {
             Nop(_) => {
                 write!(f, "nop")?;
             }
+            WriteBack(_, dst, src) => write!(
+                f,
+                "{} <- {}",
+                dst.display(self.func_target),
+                self.lstr(*src)
+            )?,
+            UnpackRef(_, src) => write!(f, "UnpackRef({})", self.lstr(*src))?,
+            PackRef(_, src) => write!(f, "PackRef({})", self.lstr(*src))?,
+            Splice(_, dst, srcs) => write!(
+                f,
+                "{} ~- [{}]",
+                self.lstr(*dst),
+                srcs.iter()
+                    .map(|(idx, local)| format!("{} -> {}", idx, self.lstr(*local)))
+                    .join(", ")
+            )?,
         }
         Ok(())
     }

@@ -840,6 +840,7 @@ impl<'env> ModuleTranslator<'env> {
 
         // Translate the bytecode instruction.
         match bytecode {
+            WriteBack(..) | UnpackRef(..) | PackRef(..) | Splice(..) => unimplemented!(),
             SpecBlock(_, block_id) => {
                 self.generate_function_spec_inside_impl(func_target, *block_id);
             }

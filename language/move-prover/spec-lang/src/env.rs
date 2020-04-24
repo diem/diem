@@ -1492,6 +1492,20 @@ impl<'env> FunctionEnv<'env> {
         &self.data.spec
     }
 
+    /// Returns the acquired global resource types.
+    pub fn get_acquires_global_resources(&'env self) -> Vec<StructId> {
+        let function_definition = self
+            .module_env
+            .data
+            .module
+            .function_def_at(self.get_def_idx());
+        function_definition
+            .acquires_global_resources
+            .iter()
+            .map(|x| self.module_env.get_struct_id(*x))
+            .collect()
+    }
+
     fn definition_view(&'env self) -> FunctionDefinitionView<'env, CompiledModule> {
         FunctionDefinitionView::new(
             &self.module_env.data.module,

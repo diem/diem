@@ -27,7 +27,7 @@ impl FunctionTargetProcessor for EliminateImmRefsProcessor {
         func_env: &FunctionEnv<'_>,
         mut data: FunctionTargetData,
     ) -> FunctionTargetData {
-        let code = std::mem::replace(&mut data.code, vec![]);
+        let code = std::mem::take(&mut data.code);
         data.code = code
             .into_iter()
             .map(|bytecode| {
@@ -35,14 +35,14 @@ impl FunctionTargetProcessor for EliminateImmRefsProcessor {
                     .transform_bytecode(bytecode)
             })
             .collect();
-        let local_types = std::mem::replace(&mut data.local_types, vec![]);
+        let local_types = std::mem::take(&mut data.local_types);
         data.local_types = local_types
             .into_iter()
             .map(|ty| {
                 EliminateImmRefs::new(&FunctionTarget::new(func_env, &data)).transform_type(ty)
             })
             .collect();
-        let return_types = std::mem::replace(&mut data.return_types, vec![]);
+        let return_types = std::mem::take(&mut data.return_types);
         data.return_types = return_types
             .into_iter()
             .map(|ty| {

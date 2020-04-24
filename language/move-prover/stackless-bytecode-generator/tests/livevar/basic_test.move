@@ -1,5 +1,4 @@
 module TestLiveVars {
-
     struct R {
         x: u64
     }
