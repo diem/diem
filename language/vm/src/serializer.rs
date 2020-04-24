@@ -469,18 +469,16 @@ fn serialize_signature_tokens(binary: &mut BinaryData, tokens: &[SignatureToken]
 /// Values for types are defined in `SerializedType`.
 fn serialize_signature_token(binary: &mut BinaryData, token: &SignatureToken) -> Result<()> {
     // Non-recursive implementation to avoid overflowing the stack.
-    let mut stack = vec![token];
 
-    while let Some(token) = stack.pop() {
+    for token in token.preorder_traversal() {
         match token {
             SignatureToken::Bool => binary.push(SerializedType::BOOL as u8)?,
             SignatureToken::U8 => binary.push(SerializedType::U8 as u8)?,
             SignatureToken::U64 => binary.push(SerializedType::U64 as u8)?,
             SignatureToken::U128 => binary.push(SerializedType::U128 as u8)?,
             SignatureToken::Address => binary.push(SerializedType::ADDRESS as u8)?,
-            SignatureToken::Vector(boxed_token) => {
+            SignatureToken::Vector(_) => {
                 binary.push(SerializedType::VECTOR as u8)?;
-                stack.push(boxed_token);
             }
             SignatureToken::Struct(idx) => {
                 binary.push(SerializedType::STRUCT as u8)?;
@@ -498,15 +496,12 @@ fn serialize_signature_token(binary: &mut BinaryData, token: &SignatureToken) ->
                     )
                 }
                 binary.push(len as u8)?;
-                stack.extend(type_params.iter().rev());
             }
-            SignatureToken::Reference(boxed_token) => {
+            SignatureToken::Reference(_) => {
                 binary.push(SerializedType::REFERENCE as u8)?;
-                stack.push(boxed_token);
             }
-            SignatureToken::MutableReference(boxed_token) => {
+            SignatureToken::MutableReference(_) => {
                 binary.push(SerializedType::MUTABLE_REFERENCE as u8)?;
-                stack.push(boxed_token);
             }
             SignatureToken::TypeParameter(idx) => {
                 binary.push(SerializedType::TYPE_PARAMETER as u8)?;

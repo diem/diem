@@ -347,73 +347,75 @@ impl<'a> BoundsChecker<'a> {
         Ok(())
     }
 
-    fn check_type(&self, type_: &SignatureToken) -> VMResult<()> {
+    fn check_type(&self, ty: &SignatureToken) -> VMResult<()> {
         use self::SignatureToken::*;
 
-        match type_ {
-            Bool | U8 | U64 | U128 | Address | TypeParameter(_) => (),
-            Reference(ty) | MutableReference(ty) | Vector(ty) => self.check_type(ty)?,
-            Struct(idx) => {
-                check_bounds_impl(&self.module.struct_handles, *idx)?;
-                if let Some(sh) = self.module.struct_handles.get(idx.into_index()) {
-                    if !sh.type_parameters.is_empty() {
-                        return Err(VMStatus::new(StatusCode::NUMBER_OF_TYPE_ARGUMENTS_MISMATCH)
+        for ty in ty.preorder_traversal() {
+            match ty {
+                Bool | U8 | U64 | U128 | Address | TypeParameter(_) | Reference(_)
+                | MutableReference(_) | Vector(_) => (),
+                Struct(idx) => {
+                    check_bounds_impl(&self.module.struct_handles, *idx)?;
+                    if let Some(sh) = self.module.struct_handles.get(idx.into_index()) {
+                        if !sh.type_parameters.is_empty() {
+                            return Err(VMStatus::new(
+                                StatusCode::NUMBER_OF_TYPE_ARGUMENTS_MISMATCH,
+                            )
                             .with_message(format!(
                                 "expected {} type parameters got 0 (Struct)",
                                 sh.type_parameters.len(),
                             )));
+                        }
                     }
                 }
-            }
-            StructInstantiation(idx, type_arguments) => {
-                check_bounds_impl(&self.module.struct_handles, *idx)?;
-                if let Some(sh) = self.module.struct_handles.get(idx.into_index()) {
-                    if sh.type_parameters.len() != type_arguments.len() {
-                        return Err(VMStatus::new(StatusCode::NUMBER_OF_TYPE_ARGUMENTS_MISMATCH)
+                StructInstantiation(idx, type_params) => {
+                    check_bounds_impl(&self.module.struct_handles, *idx)?;
+                    if let Some(sh) = self.module.struct_handles.get(idx.into_index()) {
+                        if sh.type_parameters.len() != type_params.len() {
+                            return Err(VMStatus::new(
+                                StatusCode::NUMBER_OF_TYPE_ARGUMENTS_MISMATCH,
+                            )
                             .with_message(format!(
                                 "expected {} type parameters got {}",
                                 sh.type_parameters.len(),
-                                type_arguments.len(),
+                                type_params.len(),
                             )));
+                        }
                     }
                 }
-                for ty in type_arguments {
-                    self.check_type(ty)?
-                }
             }
-        };
+        }
         Ok(())
     }
 
-    fn check_type_parameter(
-        &self,
-        type_: &SignatureToken,
-        type_param_count: usize,
-    ) -> VMResult<()> {
+    fn check_type_parameter(&self, ty: &SignatureToken, type_param_count: usize) -> VMResult<()> {
         use self::SignatureToken::*;
 
-        match type_ {
-            Bool | U8 | U64 | U128 | Address | Struct(_) => (),
-            Reference(ty) | MutableReference(ty) | Vector(ty) => {
-                self.check_type_parameter(ty, type_param_count)?
-            }
-            // TODO: is this correct?
-            SignatureToken::StructInstantiation(_, type_params) => {
-                for type_param in type_params {
-                    self.check_type_parameter(type_param, type_param_count)?
+        for ty in ty.preorder_traversal() {
+            match ty {
+                SignatureToken::TypeParameter(idx) => {
+                    if *idx as usize >= type_param_count {
+                        return Err(bounds_error(
+                            IndexKind::TypeParameter,
+                            *idx as usize,
+                            type_param_count,
+                            StatusCode::INDEX_OUT_OF_BOUNDS,
+                        ));
+                    }
                 }
+
+                Bool
+                | U8
+                | U64
+                | U128
+                | Address
+                | Struct(_)
+                | Reference(_)
+                | MutableReference(_)
+                | Vector(_)
+                | StructInstantiation(_, _) => (),
             }
-            SignatureToken::TypeParameter(idx) => {
-                if *idx as usize >= type_param_count {
-                    return Err(bounds_error(
-                        IndexKind::TypeParameter,
-                        *idx as usize,
-                        type_param_count,
-                        StatusCode::INDEX_OUT_OF_BOUNDS,
-                    ));
-                }
-            }
-        };
+        }
         Ok(())
     }
 }

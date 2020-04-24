@@ -551,6 +551,40 @@ pub enum SignatureToken {
     TypeParameter(TypeParameterIndex),
 }
 
+/// An iterator to help traverse the `SignatureToken` in a non-recursive fashion to avoid
+/// overflowing the stack.
+///
+/// Traversal order: root -> left -> right
+pub struct SignatureTokenPreorderTraversalIter<'a> {
+    stack: Vec<&'a SignatureToken>,
+}
+
+impl<'a> Iterator for SignatureTokenPreorderTraversalIter<'a> {
+    type Item = &'a SignatureToken;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        use SignatureToken::*;
+
+        match self.stack.pop() {
+            Some(tok) => {
+                match tok {
+                    Reference(inner_tok) | MutableReference(inner_tok) | Vector(inner_tok) => {
+                        self.stack.push(inner_tok)
+                    }
+
+                    StructInstantiation(_, inner_toks) => {
+                        self.stack.extend(inner_toks.iter().rev())
+                    }
+
+                    Bool | Address | U8 | U64 | U128 | Struct(_) | TypeParameter(_) => (),
+                }
+                Some(tok)
+            }
+            None => None,
+        }
+    }
+}
+
 /// `Arbitrary` for `SignatureToken` cannot be derived automatically as it's a recursive type.
 #[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for SignatureToken {
@@ -687,6 +721,10 @@ impl SignatureToken {
                 sh_idx, other
             ),
         }
+    }
+
+    pub fn preorder_traversal(&self) -> SignatureTokenPreorderTraversalIter<'_> {
+        SignatureTokenPreorderTraversalIter { stack: vec![self] }
     }
 }
 

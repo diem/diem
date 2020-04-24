@@ -47,6 +47,7 @@ fn serialize_and_deserialize_deeply_nested_types() {
 
     // TODO: Run bounds checker here once we get that fixed .
     let mut serialized = Vec::with_capacity(2048);
+    let m = m.freeze().expect("module should bounds check");
     m.serialize(&mut serialized)
         .expect("serialization should work");
 
