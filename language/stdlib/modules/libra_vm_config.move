@@ -52,10 +52,10 @@ module LibraVMConfig {
         maximum_number_of_gas_units: u64,
 
         /// The minimum gas price that a transaction can be submitted with.
-        min_price_per_gas_units: u64,
+        min_price_per_gas_unit: u64,
 
         /// The maximum gas unit price that a transaction can be submitted with.
-        max_price_per_gas_units: u64,
+        max_price_per_gas_unit: u64,
 
         max_transaction_size_in_bytes: u64,
     }
@@ -73,8 +73,8 @@ module LibraVMConfig {
             large_transaction_cutoff: 600,
             instrinsic_gas_per_byte: 8,
             maximum_number_of_gas_units: 1000000,
-            min_price_per_gas_units: 0,
-            max_price_per_gas_units: 10000,
+            min_price_per_gas_unit: 0,
+            max_price_per_gas_unit: 10000,
             max_transaction_size_in_bytes: 4096,
         };
 

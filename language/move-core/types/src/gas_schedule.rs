@@ -180,10 +180,10 @@ pub struct GasConstants {
     pub maximum_number_of_gas_units: GasUnits<GasCarrier>,
 
     /// The minimum gas price that a transaction can be submitted with.
-    pub min_price_per_gas_units: GasPrice<GasCarrier>,
+    pub min_price_per_gas_unit: GasPrice<GasCarrier>,
 
     /// The maximum gas unit price that a transaction can be submitted with.
-    pub max_price_per_gas_units: GasPrice<GasCarrier>,
+    pub max_price_per_gas_unit: GasPrice<GasCarrier>,
 
     pub max_transaction_size_in_bytes: u64,
 }
@@ -197,8 +197,8 @@ impl Default for GasConstants {
             large_transaction_cutoff: AbstractMemorySize(600),
             instrinsic_gas_per_byte: GasUnits(8),
             maximum_number_of_gas_units: GasUnits(1_000_000),
-            min_price_per_gas_units: GasPrice(0),
-            max_price_per_gas_units: GasPrice(10_000),
+            min_price_per_gas_unit: GasPrice(0),
+            max_price_per_gas_unit: GasPrice(10_000),
             max_transaction_size_in_bytes: 4096,
         }
     }

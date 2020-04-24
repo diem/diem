@@ -198,7 +198,7 @@ fn verify_simple_payment() {
         args.clone(),
         10,
         1_000_000,
-        GasConstants::default().max_price_per_gas_units.get() + 1,
+        GasConstants::default().max_price_per_gas_unit.get() + 1,
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -228,7 +228,7 @@ fn verify_simple_payment() {
         args.clone(),
         10,
         1,
-        GasConstants::default().max_price_per_gas_units.get(),
+        GasConstants::default().max_price_per_gas_unit.get(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -242,7 +242,7 @@ fn verify_simple_payment() {
         args.clone(),
         10,
         GasConstants::default().min_transaction_gas_units.get() - 1,
-        GasConstants::default().max_price_per_gas_units.get(),
+        GasConstants::default().max_price_per_gas_unit.get(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -256,7 +256,7 @@ fn verify_simple_payment() {
         args,
         10,
         GasConstants::default().maximum_number_of_gas_units.get() + 1,
-        GasConstants::default().max_price_per_gas_units.get(),
+        GasConstants::default().max_price_per_gas_unit.get(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -270,7 +270,7 @@ fn verify_simple_payment() {
         vec![TransactionArgument::U64(42); MAX_TRANSACTION_SIZE_IN_BYTES],
         10,
         GasConstants::default().maximum_number_of_gas_units.get() + 1,
-        GasConstants::default().max_price_per_gas_units.get(),
+        GasConstants::default().max_price_per_gas_unit.get(),
     );
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),

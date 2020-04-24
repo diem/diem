@@ -173,7 +173,7 @@ impl LibraVM {
         // NB: MIN_PRICE_PER_GAS_UNIT may equal zero, but need not in the future. Hence why
         // we turn off the clippy warning.
         #[allow(clippy::absurd_extreme_comparisons)]
-        let below_min_bound = txn.gas_unit_price() < gas_constants.min_price_per_gas_units.get();
+        let below_min_bound = txn.gas_unit_price() < gas_constants.min_price_per_gas_unit.get();
         if below_min_bound {
             let error_str = format!(
                 "gas unit min price: {}, submitted price: {}",
@@ -191,15 +191,15 @@ impl LibraVM {
         }
 
         // The submitted gas price is greater than the maximum gas unit price set by the VM.
-        if txn.gas_unit_price() > gas_constants.max_price_per_gas_units.get() {
+        if txn.gas_unit_price() > gas_constants.max_price_per_gas_unit.get() {
             let error_str = format!(
                 "gas unit max price: {}, submitted price: {}",
-                gas_constants.max_price_per_gas_units.get(),
+                gas_constants.max_price_per_gas_unit.get(),
                 txn.gas_unit_price()
             );
             warn!(
                 "[VM] Gas unit error; min {}, submitted {}",
-                gas_constants.max_price_per_gas_units.get(),
+                gas_constants.max_price_per_gas_unit.get(),
                 txn.gas_unit_price()
             );
             return Err(
