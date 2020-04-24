@@ -107,7 +107,7 @@ impl SimpleStorageService {
     }
 
     fn run(self, config: &NodeConfig) -> JoinHandle<()> {
-        let mut network_server = NetworkServer::new(config.storage.address);
+        let mut network_server = NetworkServer::new(config.storage.simple_address);
         thread::spawn(move || loop {
             if let Err(e) = self.process_one_message(&mut network_server) {
                 warn!("Failed to process message: {}", e);

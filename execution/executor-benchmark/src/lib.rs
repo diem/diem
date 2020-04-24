@@ -21,7 +21,7 @@ use libra_types::{
 use libra_vm::LibraVM;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::BTreeMap, convert::TryFrom, path::PathBuf, sync::mpsc};
-use storage_client::{StorageRead, StorageReadServiceClient};
+use storage_interface::DbReader;
 use transaction_builder::{encode_create_account_script, encode_transfer_with_metadata_script};
 
 struct AccountData {
@@ -53,9 +53,6 @@ struct TransactionGenerator {
     /// Each generated block of transactions are sent to this channel. Using `SyncSender` to make
     /// sure if execution is slow to consume the transactions, we do not run out of memory.
     block_sender: Option<mpsc::SyncSender<Vec<Transaction>>>,
-
-    /// Used to verify account sequence numbers after all transactions are committed.
-    storage_client: StorageReadServiceClient,
 }
 
 impl TransactionGenerator {
@@ -63,7 +60,6 @@ impl TransactionGenerator {
         genesis_key: Ed25519PrivateKey,
         num_accounts: usize,
         block_sender: mpsc::SyncSender<Vec<Transaction>>,
-        storage_client: StorageReadServiceClient,
     ) -> Self {
         let seed = [1u8; 32];
         let mut rng = StdRng::from_seed(seed);
@@ -87,7 +83,6 @@ impl TransactionGenerator {
             genesis_key,
             rng,
             block_sender: Some(block_sender),
-            storage_client,
         }
     }
 
@@ -164,13 +159,11 @@ impl TransactionGenerator {
     }
 
     /// Verifies the sequence numbers in storage match what we have locally.
-    fn verify_sequence_number(&self) {
-        let mut rt = tokio::runtime::Runtime::new().unwrap();
-
+    fn verify_sequence_number(&self, db: &dyn DbReader) {
         for account in &self.accounts {
             let address = account.address;
-            let blob = rt
-                .block_on(self.storage_client.get_latest_account_state(address))
+            let blob = db
+                .get_latest_account_state(address)
                 .expect("Failed to query storage.")
                 .expect("Account must exist.");
             let account_resource = AccountResource::try_from(&blob).unwrap();
@@ -270,9 +263,8 @@ pub fn run_benchmark(
         config.storage.dir = path;
     }
 
-    let (_db, _storage_server_handle, executor) = create_storage_service_and_executor(&config);
+    let (db, executor) = create_storage_service_and_executor(&config);
     let parent_block_id = executor.committed_block_id();
-    let storage_client = StorageReadServiceClient::new(&config.storage.address);
 
     let (block_sender, block_receiver) = mpsc::sync_channel(50 /* bound */);
 
@@ -280,8 +272,7 @@ pub fn run_benchmark(
     let gen_thread = std::thread::Builder::new()
         .name("txn_generator".to_string())
         .spawn(move || {
-            let mut generator =
-                TransactionGenerator::new(genesis_key, num_accounts, block_sender, storage_client);
+            let mut generator = TransactionGenerator::new(genesis_key, num_accounts, block_sender);
             generator.run(init_account_balance, block_size, num_transfer_blocks);
             generator
         })
@@ -302,7 +293,7 @@ pub fn run_benchmark(
     exe_thread.join().unwrap();
 
     // Do a sanity check on the sequence number to make sure all transactions are committed.
-    generator.verify_sequence_number();
+    generator.verify_sequence_number(db.as_ref());
 }
 
 fn create_transaction(
