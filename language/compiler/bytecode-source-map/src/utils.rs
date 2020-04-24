@@ -14,7 +14,7 @@ use codespan_reporting::{
 };
 use move_ir_types::location::Loc;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::{collections::HashMap, fs::File, path::Path};
+use std::{collections::HashMap, fs::File, io::Read, path::Path};
 
 pub type Error = (Loc, String);
 pub type Errors = Vec<Error>;
@@ -23,10 +23,13 @@ pub fn source_map_from_file<Location>(file_path: &Path) -> Result<SourceMap<Loca
 where
     Location: Clone + Eq + Default + DeserializeOwned,
 {
+    let mut bytes = Vec::new();
     File::open(file_path)
         .ok()
-        .and_then(|file| serde_json::from_reader(file).ok())
-        .ok_or_else(|| format_err!("Error while reading in source map information"))
+        .and_then(|mut file| file.read_to_end(&mut bytes).ok())
+        .ok_or_else(|| format_err!("Error while reading in source map information"))?;
+    lcs::from_bytes::<SourceMap<Location>>(&bytes)
+        .map_err(|_| format_err!("Error deserializing into source map"))
 }
 
 pub fn render_errors(source_mapper: &SourceMapping<Loc>, errors: Errors) -> Result<()> {

@@ -16,6 +16,9 @@ pub const OUT_DIR: &str = "out-dir";
 pub const OUT_DIR_SHORT: &str = "o";
 pub const DEFAULT_OUTPUT_DIR: &str = "output";
 
+pub const SOURCE_MAP: &str = "source-map";
+pub const SOURCE_MAP_SHORT: &str = "m";
+
 pub fn parse_address(s: &str) -> Result<Address, String> {
     Address::parse_str(s).map_err(|msg| format!("Invalid argument to '{}': {}", SENDER, msg))
 }
