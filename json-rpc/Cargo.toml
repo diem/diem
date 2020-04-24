@@ -14,8 +14,6 @@ anyhow = "1.0"
 futures = "0.3.0"
 hex = "0.4.2"
 once_cell = "1.3.1"
-prometheus = { version = "0.8.0", default-features = false }
-reqwest = { version = "0.10.4", features = ["blocking", "json"], default_features = false }
 serde_json = "1.0.51"
 serde = { version = "1.0.106", default-features = false }
 tokio = { version = "0.2.13", features = ["full"] }
@@ -32,13 +30,16 @@ libra-mempool = { path = "../mempool", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 libra-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
 libra-types = { path = "../types", version = "0.1.0" }
-libra-temppath = { path = "../common/temppath", version = "0.1.0", optional = true }
 libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 proptest = { version = "0.9.6", optional = true }
 storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
+
+
+libra-temppath = { path = "../common/temppath", version = "0.1.0", optional = true }
+reqwest = { version = "0.10.4", features = ["blocking", "json"], default_features = false, optional = true }
 
 [dev-dependencies]
 vm-validator = { path = "../vm-validator", version = "0.1.0" }
 
 [features]
-fuzzing = ["proptest", "libra-mempool/fuzzing", "libra-proptest-helpers", "libra-temppath", "libradb/fuzzing"]
+fuzzing = ["proptest", "libra-mempool/fuzzing", "libra-proptest-helpers", "libra-temppath", "libradb/fuzzing", "reqwest"]

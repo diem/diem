@@ -3,8 +3,6 @@
 
 //! mempool is used to track transactions which have been submitted but not yet
 //! agreed upon.
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
 use crate::{
     core_mempool::{
         index::TxnPointer,
@@ -13,7 +11,6 @@ use crate::{
     },
     OP_COUNTERS,
 };
-use chrono::Utc;
 use debug_interface::prelude::*;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
@@ -23,7 +20,11 @@ use libra_types::{
     transaction::SignedTransaction,
 };
 use lru_cache::LruCache;
-use std::{cmp::max, collections::HashSet, convert::TryFrom};
+use std::{
+    cmp::max,
+    collections::HashSet,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 use ttl_cache::TtlCache;
 
 pub struct Mempool {
@@ -35,7 +36,7 @@ pub struct Mempool {
     // for each transaction, entry with timestamp is added when transaction enters mempool
     // used to measure e2e latency of transaction in system, as well as time it takes to pick it up
     // by consensus
-    pub(crate) metrics_cache: TtlCache<(AccountAddress, u64), i64>,
+    pub(crate) metrics_cache: TtlCache<(AccountAddress, u64), SystemTime>,
     pub system_transaction_timeout: Duration,
 }
 
@@ -95,9 +96,8 @@ impl Mempool {
 
     fn log_latency(&mut self, account: AccountAddress, sequence_number: u64, metric: &str) {
         if let Some(&creation_time) = self.metrics_cache.get(&(account, sequence_number)) {
-            if let Ok(time_delta_ms) = u64::try_from(Utc::now().timestamp_millis() - creation_time)
-            {
-                OP_COUNTERS.observe_duration(metric, Duration::from_millis(time_delta_ms));
+            if let Ok(time_delta) = SystemTime::now().duration_since(creation_time) {
+                OP_COUNTERS.observe_duration(metric, time_delta);
             }
         }
     }
@@ -142,7 +142,7 @@ impl Mempool {
         if timeline_state != TimelineState::NonQualified {
             self.metrics_cache.insert(
                 (txn.sender(), txn.sequence_number()),
-                Utc::now().timestamp_millis(),
+                SystemTime::now(),
                 Duration::from_secs(100),
             );
         }
