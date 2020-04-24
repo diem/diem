@@ -19,7 +19,7 @@ pub mod unique_map;
 // Address
 //**************************************************************************************************
 
-pub const ADDRESS_LENGTH: usize = 16;
+pub const ADDRESS_LENGTH: usize = 24;
 
 #[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Default, Clone, Copy)]
 pub struct Address([u8; ADDRESS_LENGTH]);
