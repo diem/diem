@@ -322,7 +322,6 @@ fn setup_node<T: LibraInterface + Clone>(
     let libra_test_harness = LibraInterfaceTestHarness::new(libra);
     let key_manager = KeyManager::new(
         account,
-        crate::CONSENSUS_KEY.into(),
         libra_test_harness.clone(),
         setup_secure_storage(&config, time.clone()),
         time.clone(),
@@ -344,7 +343,7 @@ fn setup_secure_storage(
     let a_prikey = Value::Ed25519PrivateKey(a_keypair.take_private().unwrap());
 
     sec_storage
-        .create(crate::ACCOUNT_KEY, a_prikey, &Policy::public())
+        .create(crate::VALIDATOR_KEY, a_prikey, &Policy::public())
         .unwrap();
 
     let mut c_keypair = test_config.consensus_keypair.unwrap();
