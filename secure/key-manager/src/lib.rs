@@ -42,6 +42,7 @@ pub const CONSENSUS_KEY: &str = "consensus_key";
 const GAS_UNIT_PRICE: u64 = 0;
 const MAX_GAS_AMOUNT: u64 = 400_000;
 const ROTATION_PERIOD_SECS: u64 = 604_800; // 1 week
+const SLEEP_PERIOD_SECS: u64 = 600; // 10 minutes, after which the key manager will awaken again
 const TXN_EXPIRATION_SECS: u64 = 3600; // 1 hour, we'll try again after that
 const TXN_RETRY_SECS: u64 = 3600; // 1 hour retry period
 
@@ -67,6 +68,10 @@ pub enum Error {
     ConfigStorageKeyMismatch(Ed25519PublicKey, Ed25519PublicKey),
     #[error("Data does not exist: {0}")]
     DataDoesNotExist(String),
+    #[error(
+        "The libra_timestamp value on-chain isn't increasing. Last value: {0}, Current value: {0}:"
+    )]
+    LivenessError(u64, u64),
     #[error("Internal storage error")]
     SecureStorageError(#[from] libra_secure_storage::Error),
     #[error("ValidatorInfo not found in ValidatorConfig: {0}")]
@@ -86,6 +91,7 @@ pub struct KeyManager<LI, S, T> {
     libra: LI,
     storage: S,
     time_service: T,
+    last_checked_libra_timestamp: u64,
 }
 
 impl<LI, S, T> KeyManager<LI, S, T>
@@ -107,7 +113,29 @@ where
             libra,
             storage,
             time_service,
+            last_checked_libra_timestamp: 0,
         }
+    }
+
+    /// Begins execution of the key manager by running an infinite loop where the key manager will
+    /// periodically wake up, verify the state of the validator keys (e.g., the consensus key), and
+    /// initiate a key rotation when required. If something goes wrong, an error will be returned
+    /// by this method, upon which the key manager will flag the error and stop execution.
+    pub fn execute(&mut self) -> Result<(), Error> {
+        loop {
+            self.execute_once()?;
+            self.time_service.sleep(SLEEP_PERIOD_SECS);
+        }
+    }
+
+    /// Checks the current state of the validator keys and performs any actions that might be
+    /// required (e.g., performing a key rotation).
+    pub fn execute_once(&mut self) -> Result<(), Error> {
+        let status = self.evaluate_status()?;
+        if status != Action::NoAction {
+            self.perform_action(status)?;
+        }
+        Ok(())
     }
 
     pub fn compare_storage_to_config(&self) -> Result<(), Error> {
@@ -171,11 +199,33 @@ where
         Ok(new_key)
     }
 
-    pub fn evaluate_status(&self) -> Result<Action, Error> {
-        // If this is inconsistent, then we are likely waiting on a reconfiguration.
+    /// Ensures that the libra_timestamp() value registered on-chain is strictly monotonically
+    /// increasing.
+    fn ensure_timestamp_progress(&mut self) -> Result<(), Error> {
+        let current_libra_timestamp = self.libra.libra_timestamp()?;
+        if current_libra_timestamp <= self.last_checked_libra_timestamp {
+            return Err(Error::LivenessError(
+                self.last_checked_libra_timestamp,
+                current_libra_timestamp,
+            ));
+        }
+
+        self.last_checked_libra_timestamp = current_libra_timestamp;
+        Ok(())
+    }
+
+    /// Evaluates the current status of the key manager by performing various state checks between
+    /// secure storage and the blockchain.
+    ///
+    /// Note: every time this function is called, the libra_timestamp registered on-chain must be
+    /// strictly monotonically increasing. This helps to ensure that the blockchain is making
+    /// progress. Otherwise, if no progress is being made on-chain, a reconfiguration event is
+    /// unlikely, and the key manager will be unable to rotate keys.
+    pub fn evaluate_status(&mut self) -> Result<Action, Error> {
+        self.ensure_timestamp_progress()?;
+
+        // If this is inconsistent, then we are waiting on a reconfiguration...
         if let Err(Error::ConfigInfoKeyMismatch(..)) = self.compare_info_to_config() {
-            // For now, just assume this is correct, but this needs to compare libra_timestamp with
-            // the current time to ensure that progress is being made. And if not flag an error.
             return Ok(Action::NoAction);
         }
 
