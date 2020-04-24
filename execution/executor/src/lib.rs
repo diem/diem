@@ -257,12 +257,11 @@ where
                     Arc::clone(&current_state_tree),
                     Arc::new(InMemoryAccumulator::<EventAccumulatorHasher>::default()),
                     0,
-                    0,
                     None,
                 ));
                 continue;
             }
-            let (blobs, state_tree, num_accounts_created) = Self::process_write_set(
+            let (blobs, state_tree) = Self::process_write_set(
                 txn,
                 &mut account_to_state,
                 &proof_reader,
@@ -317,7 +316,6 @@ where
                 Arc::clone(&state_tree),
                 Arc::new(event_tree),
                 vm_output.gas_used(),
-                num_accounts_created,
                 txn_info_hash,
             ));
             current_state_tree = state_tree;
@@ -364,10 +362,8 @@ where
     ) -> Result<(
         HashMap<AccountAddress, AccountStateBlob>,
         Arc<SparseMerkleTree>,
-        usize, /* num_account_created */
     )> {
         let mut updated_blobs = HashMap::new();
-        let mut num_accounts_created = 0;
 
         // Find all addresses this transaction touches while processing each write op.
         let mut addrs = HashSet::new();
@@ -376,13 +372,7 @@ where
             let path = access_path.path;
             match account_to_state.entry(address) {
                 hash_map::Entry::Occupied(mut entry) => {
-                    let account_state = entry.get_mut();
-                    // TODO(gzh): we check account creation here for now. Will remove it once we
-                    // have a better way.
-                    if account_state.is_empty() {
-                        num_accounts_created += 1;
-                    }
-                    Self::update_account_state(account_state, path, write_op);
+                    Self::update_account_state(entry.get_mut(), path, write_op);
                 }
                 hash_map::Entry::Vacant(entry) => {
                     // Before writing to an account, VM should always read that account. So we
@@ -428,7 +418,7 @@ where
                 .expect("Failed to update state tree."),
         );
 
-        Ok((updated_blobs, state_tree, num_accounts_created))
+        Ok((updated_blobs, state_tree))
     }
 
     fn update_account_state(account_state: &mut AccountState, path: Vec<u8>, write_op: WriteOp) {
@@ -720,15 +710,12 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
             itertools::zip_eq(block.transactions(), block.output().transaction_data())
         }) {
             if let TransactionStatus::Keep(_) = txn_data.status() {
-                txns_to_keep.push((
-                    TransactionToCommit::new(
-                        txn.clone(),
-                        txn_data.account_blobs().clone(),
-                        txn_data.events().to_vec(),
-                        txn_data.gas_used(),
-                        txn_data.status().vm_status().major_status,
-                    ),
-                    txn_data.num_account_created(),
+                txns_to_keep.push(TransactionToCommit::new(
+                    txn.clone(),
+                    txn_data.account_blobs().clone(),
+                    txn_data.events().to_vec(),
+                    txn_data.gas_used(),
+                    txn_data.status().vm_status().major_status,
                 ));
             }
         }
@@ -779,10 +766,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         }
 
         // Skip duplicate txns that are already persistent.
-        let (txns_to_commit, list_num_account_created): (Vec<_>, Vec<_>) = txns_to_keep
-            .into_iter()
-            .skip(num_txns_to_skip as usize)
-            .unzip();
+        let txns_to_commit = &txns_to_keep[num_txns_to_skip as usize..];
 
         let num_txns_to_commit = txns_to_commit.len() as u64;
         {
@@ -790,13 +774,11 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
             OP_COUNTERS.observe("storage_save_transactions.count", num_txns_to_commit as f64);
             assert_eq!(first_version_to_commit, version + 1 - num_txns_to_commit);
             self.db.writer.save_transactions(
-                &txns_to_commit,
+                txns_to_commit,
                 first_version_to_commit,
                 Some(&ledger_info_with_sigs),
             )?;
         }
-        // Only bump the counter when the commit succeeds.
-        OP_COUNTERS.inc_by("num_accounts", list_num_account_created.into_iter().sum());
 
         // Prune the tree.
         for block in blocks {

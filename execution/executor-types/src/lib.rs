@@ -129,9 +129,6 @@ pub struct TransactionData {
     /// The amount of gas used.
     gas_used: u64,
 
-    /// The number of newly created accounts.
-    num_account_created: usize,
-
     /// The transaction info hash if the VM status output was keep, None otherwise
     txn_info_hash: Option<HashValue>,
 }
@@ -144,7 +141,6 @@ impl TransactionData {
         state_tree: Arc<SparseMerkleTree>,
         event_tree: Arc<InMemoryAccumulator<EventAccumulatorHasher>>,
         gas_used: u64,
-        num_account_created: usize,
         txn_info_hash: Option<HashValue>,
     ) -> Self {
         TransactionData {
@@ -154,7 +150,6 @@ impl TransactionData {
             state_tree,
             event_tree,
             gas_used,
-            num_account_created,
             txn_info_hash,
         }
     }
@@ -181,10 +176,6 @@ impl TransactionData {
 
     pub fn gas_used(&self) -> u64 {
         self.gas_used
-    }
-
-    pub fn num_account_created(&self) -> usize {
-        self.num_account_created
     }
 
     pub fn prune_state_tree(&self) {
