@@ -24,7 +24,7 @@ thiserror = "1.0"
 anyhow = "1.0"
 futures = "0.3.0"
 rand = "0.7.3"
-tokio = { version = "0.2.13", features = ["full"] }
+tokio = { version = "0.2.18", features = ["full"] }
 
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 executor = { path = "../../execution/executor", version = "0.1.0" }
