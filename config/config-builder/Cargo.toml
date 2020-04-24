@@ -14,7 +14,7 @@ anyhow = "1.0"
 hex = "0.4.2"
 parity-multiaddr = { version = "0.8.0", default-features = false }
 rand = "0.7.3"
-structopt = "0.3.13"
+structopt = "0.3.14"
 thiserror = "1.0"
 
 executor = { path = "../../execution/executor", version = "0.1.0" }

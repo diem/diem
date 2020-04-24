@@ -10,7 +10,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-structopt = "0.3.13"
+structopt = "0.3.14"
 tempfile = "3.1.0"
 
 libradb = { path = "../libradb", version = "0.1.0" }
