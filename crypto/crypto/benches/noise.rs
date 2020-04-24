@@ -9,46 +9,61 @@
 #[macro_use]
 extern crate criterion;
 
-use libra_crypto::{noise::NoiseConfig, test_utils::TEST_SEED};
-
 use criterion::{Benchmark, Criterion, Throughput};
 use rand::SeedableRng;
-use x25519_dalek as x25519;
+use std::convert::TryFrom as _;
+
+use libra_crypto::{
+    noise::{handshake_init_msg_len, handshake_resp_msg_len, NoiseConfig, AES_GCM_TAGLEN},
+    test_utils::TEST_SEED,
+    x25519, Uniform as _, ValidCryptoMaterial as _,
+};
 
 const MSG_SIZE: usize = 4096;
 
 fn benchmarks(c: &mut Criterion) {
-    // bench the builder
-    c.bench(
-        "builder",
-        Benchmark::new("skeleton", |b| {
-            // setup keys first
-            let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
-            let initiator_static = x25519::StaticSecret::new(&mut rng);
-            b.iter(|| NoiseConfig::new(initiator_static.clone()))
-        })
-        .throughput(Throughput::Elements(1)),
-    );
-
     // bench the handshake
     c.bench(
         "handshake",
         Benchmark::new("xx", |b| {
             // setup keys first
             let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
-            let initiator_static = x25519::StaticSecret::new(&mut rng);
-            let responder_static = x25519_dalek::StaticSecret::new(&mut rng);
-            let responder_public = x25519_dalek::PublicKey::from(&responder_static);
+            let initiator_static = x25519::PrivateKey::generate(&mut rng);
+            let initiator_static = initiator_static.to_bytes();
+            let responder_static = x25519::PrivateKey::generate(&mut rng);
+            let responder_public = responder_static.public_key();
+            let responder_static = responder_static.to_bytes();
+
+            let mut first_message = [0u8; handshake_init_msg_len(0)];
+            let mut second_message = [0u8; handshake_init_msg_len(0)];
 
             b.iter(|| {
-                let initiator = NoiseConfig::new(initiator_static.clone());
-                let responder = NoiseConfig::new(responder_static.clone());
+                let initiator_static =
+                    x25519::PrivateKey::try_from(initiator_static.clone().as_slice()).unwrap();
+                let responder_static =
+                    x25519::PrivateKey::try_from(responder_static.clone().as_slice()).unwrap();
 
-                let (initiator_state, first_message) = initiator
-                    .initiate_connection(&mut rng, b"prologue", &responder_public, None)
+                let initiator = NoiseConfig::new(initiator_static);
+                let responder = NoiseConfig::new(responder_static);
+
+                let initiator_state = initiator
+                    .initiate_connection(
+                        &mut rng,
+                        b"prologue",
+                        responder_public,
+                        None,
+                        &mut first_message,
+                    )
                     .unwrap();
-                let (second_message, _, _, _) = responder
-                    .respond_to_client_and_finalize(&mut rng, b"prologue", &first_message, None)
+
+                let _ = responder
+                    .respond_to_client_and_finalize(
+                        &mut rng,
+                        b"prologue",
+                        &first_message,
+                        None,
+                        &mut second_message,
+                    )
                     .unwrap();
                 let _ = initiator
                     .finalize_connection(initiator_state, &second_message)
@@ -61,22 +76,38 @@ fn benchmarks(c: &mut Criterion) {
     c.bench(
         "transport",
         Benchmark::new("AES-GCM throughput", |b| {
-            let buffer_msg = [0u8; MSG_SIZE * 2];
+            let mut buffer_msg = [0u8; MSG_SIZE * 2];
 
             // setup keys first
             let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
-            let initiator_static = x25519::StaticSecret::new(&mut rng);
-            let responder_static = x25519_dalek::StaticSecret::new(&mut rng);
-            let responder_public = x25519_dalek::PublicKey::from(&responder_static);
+            let initiator_static = x25519::PrivateKey::generate(&mut rng);
+            let responder_static = x25519::PrivateKey::generate(&mut rng);
+            let responder_public = responder_static.public_key();
 
             // handshake first
             let initiator = NoiseConfig::new(initiator_static);
             let responder = NoiseConfig::new(responder_static);
-            let (initiator_state, first_message) = initiator
-                .initiate_connection(&mut rng, b"prologue", &responder_public, None)
+
+            let mut first_message = [0u8; handshake_init_msg_len(0)];
+            let mut second_message = [0u8; handshake_resp_msg_len(0)];
+
+            let initiator_state = initiator
+                .initiate_connection(
+                    &mut rng,
+                    b"prologue",
+                    responder_public,
+                    None,
+                    &mut first_message,
+                )
                 .unwrap();
-            let (second_message, _, _, mut responder_session) = responder
-                .respond_to_client_and_finalize(&mut rng, b"prologue", &first_message, None)
+            let (_, mut responder_session) = responder
+                .respond_to_client_and_finalize(
+                    &mut rng,
+                    b"prologue",
+                    &first_message,
+                    None,
+                    &mut second_message,
+                )
                 .unwrap();
             let (_, mut initiator_session) = initiator
                 .finalize_connection(initiator_state, &second_message)
@@ -84,12 +115,14 @@ fn benchmarks(c: &mut Criterion) {
 
             // bench throughput post-handshake
             b.iter(move || {
-                let ciphertext = initiator_session
-                    .write_message(&buffer_msg[..MSG_SIZE])
+                let auth_tag = initiator_session
+                    .write_message_in_place(&mut buffer_msg[..MSG_SIZE])
                     .expect("session should not be closed");
 
+                buffer_msg[MSG_SIZE..MSG_SIZE + AES_GCM_TAGLEN].copy_from_slice(&auth_tag);
+
                 let _plaintext = responder_session
-                    .read_message(&ciphertext)
+                    .read_message_in_place(&mut buffer_msg[..MSG_SIZE + AES_GCM_TAGLEN])
                     .expect("session should not be closed");
             })
         })
