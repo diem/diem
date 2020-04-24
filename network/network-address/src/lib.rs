@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_crypto::{
-    traits::{CryptoMaterialError, ValidKeyStringExt},
+    traits::{CryptoMaterialError, ValidCryptoMaterialStringExt},
     x25519,
 };
 #[cfg(any(test, feature = "fuzzing"))]
@@ -384,7 +384,7 @@ impl fmt::Display for Protocol {
                 "/ln-noise-ik/{}",
                 pubkey
                     .to_encoded_string()
-                    .expect("ValidKeyStringExt::to_encoded_string is infallible")
+                    .expect("ValidCryptoMaterialStringExt::to_encoded_string is infallible")
             ),
             Handshake(version) => write!(f, "/ln-handshake/{}", version),
         }

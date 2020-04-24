@@ -10,8 +10,8 @@ use anyhow::{bail, ensure, format_err, Error, Result};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     test_utils::KeyPair,
-    traits::ValidKey,
-    x25519, ValidKeyStringExt,
+    traits::ValidCryptoMaterial,
+    x25519, ValidCryptoMaterialStringExt,
 };
 use libra_json_rpc_client::views::{AccountView, BlockMetadata, EventView, TransactionView};
 use libra_logger::prelude::*;

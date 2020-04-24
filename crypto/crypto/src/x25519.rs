@@ -20,7 +20,7 @@
 //! let public_key = private_key.public_key();
 //!
 //! // Deserialize an hexadecimal private or public key
-//! use libra_crypto::traits::ValidKeyStringExt;
+//! use libra_crypto::traits::ValidCryptoMaterialStringExt;
 //! # fn main() -> Result<(), libra_crypto::traits::CryptoMaterialError> {
 //! let private_key = "404acc8ec6a0f18df7359a6ee7823f19dd95616b10fed8bdb0de030e891b945a";
 //! let private_key = x25519::PrivateKey::from_encoded_string(&private_key)?;
@@ -31,7 +31,7 @@
 //! ```
 //!
 
-use crate::traits::{self, ValidKey, ValidKeyStringExt};
+use crate::traits::{self, ValidCryptoMaterial, ValidCryptoMaterialStringExt};
 use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
 use rand::{CryptoRng, RngCore};
 use std::convert::{TryFrom, TryInto};
@@ -140,7 +140,7 @@ impl traits::Uniform for PrivateKey {
 }
 
 // TODO: should this be gated under test flag? (mimoo)
-impl traits::ValidKey for PrivateKey {
+impl traits::ValidCryptoMaterial for PrivateKey {
     fn to_bytes(&self) -> Vec<u8> {
         self.0.to_bytes().to_vec()
     }
@@ -195,7 +195,7 @@ impl traits::PublicKey for PublicKey {
     type PrivateKeyMaterial = PrivateKey;
 }
 
-impl traits::ValidKey for PublicKey {
+impl traits::ValidCryptoMaterial for PublicKey {
     fn to_bytes(&self) -> Vec<u8> {
         self.0.to_vec()
     }

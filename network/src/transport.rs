@@ -9,7 +9,7 @@ use crate::{
     },
 };
 use futures::io::{AsyncRead, AsyncWrite};
-use libra_crypto::{traits::ValidKey, x25519};
+use libra_crypto::{traits::ValidCryptoMaterial, x25519};
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;

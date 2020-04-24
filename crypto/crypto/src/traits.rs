@@ -14,7 +14,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use std::{fmt::Debug, hash::Hash};
 use thiserror::Error;
 
-/// An error type for key and signature validation issues, see [`ValidKey`][ValidKey].
+/// An error type for key and signature validation issues, see [`ValidCryptoMaterial`][ValidCryptoMaterial].
 ///
 /// This enum reflects there are two interesting causes of validation
 /// failure for the ingestion of key or signature material: deserialization errors
@@ -56,24 +56,24 @@ pub trait Length {
 ///
 /// This provides an implementation for a validation that relies on a
 /// round-trip to bytes and corresponding [`TryFrom`][TryFrom].
-pub trait ValidKey:
+pub trait ValidCryptoMaterial:
     // The for<'a> exactly matches the assumption "deserializable from any lifetime".
     for<'a> TryFrom<&'a [u8], Error = CryptoMaterialError> + Serialize + DeserializeOwned
 {
-    /// Convert the valid key to bytes.
+    /// Convert the valid crypto material to bytes.
     fn to_bytes(&self) -> Vec<u8>;
 }
 
-/// An extension to to/from Strings for [`ValidKey`][ValidKey].
+/// An extension to to/from Strings for [`ValidCryptoMaterial`][ValidCryptoMaterial].
 ///
 /// Relies on [`hex`][::hex] for string encoding / decoding.
 /// No required fields, provides a default implementation.
-pub trait ValidKeyStringExt: ValidKey {
+pub trait ValidCryptoMaterialStringExt: ValidCryptoMaterial {
     /// When trying to convert from bytes, we simply decode the string into
     /// bytes before checking if we can convert.
     fn from_encoded_string(encoded_str: &str) -> std::result::Result<Self, CryptoMaterialError> {
         let bytes_out = ::hex::decode(encoded_str);
-        // We defer to `try_from` to make sure we only produce valid keys.
+        // We defer to `try_from` to make sure we only produce valid crypto materials.
         bytes_out
             // We reinterpret a failure to serialize: key is mangled someway.
             .or(Err(CryptoMaterialError::DeserializationError))
@@ -86,8 +86,8 @@ pub trait ValidKeyStringExt: ValidKey {
 }
 
 // There's nothing required in this extension, so let's just derive it
-// for anybody that has a ValidKey.
-impl<T: ValidKey> ValidKeyStringExt for T {}
+// for anybody that has a ValidCryptoMaterial.
+impl<T: ValidCryptoMaterial> ValidCryptoMaterialStringExt for T {}
 
 /// A type family for key material that should remain secret and has an
 /// associated type of the [`PublicKey`][PublicKey] family.
@@ -107,11 +107,11 @@ pub trait PrivateKey: Sized {
 /// This trait has a requirement on a `pub(crate)` marker trait meant to
 /// specifically limit its implementations to the present crate.
 ///
-/// A trait for a [`ValidKey`][ValidKey] which knows how to sign a
+/// A trait for a [`ValidCryptoMaterial`][ValidCryptoMaterial] which knows how to sign a
 /// message, and return an associated `Signature` type.
 pub trait SigningKey:
     PrivateKey<PublicKeyMaterial = <Self as SigningKey>::VerifyingKeyMaterial>
-    + ValidKey
+    + ValidCryptoMaterial
     + private::Sealed
 {
     /// The associated verifying key type for this signing key.
@@ -159,7 +159,7 @@ pub trait PublicKey: Sized + Clone + Eq + Hash +
 /// verification implementation.
 pub trait VerifyingKey:
     PublicKey<PrivateKeyMaterial = <Self as VerifyingKey>::SigningKeyMaterial>
-    + ValidKey
+    + ValidCryptoMaterial
     + private::Sealed
 {
     /// The associated signing key type for this verifying key.
