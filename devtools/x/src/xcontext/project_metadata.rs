@@ -69,6 +69,7 @@ impl Config {
         toml::from_slice(bytes).map_err(Into::into)
     }
 
+    // TODO delete
     pub fn from_project_root() -> Result<Self> {
         Self::from_file(project_root().join("x.toml"))
     }

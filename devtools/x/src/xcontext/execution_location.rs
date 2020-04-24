@@ -26,6 +26,7 @@ pub fn locate_project() -> Result<PathBuf> {
     Ok(serde_json::from_slice::<LocateProject>(&output)?.root)
 }
 
+// TODO: delete
 pub fn project_is_root() -> Result<bool> {
     let mut project = locate_project()?;
     project.pop();

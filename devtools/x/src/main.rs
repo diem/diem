@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use chrono::Local;
+use coi::ContainerBuilder;
 use env_logger::{self, fmt::Color};
 use log::Level;
 use std::io::Write;
@@ -75,6 +76,20 @@ fn configure_logger() {
 fn main() -> Result<()> {
     configure_logger();
     let args = Args::from_args();
+
+    #[allow(unused_variables)]
+    let context = xcontext::register_default_components(ContainerBuilder::new()).build();
+
+    // the plan is to move the command builders in to the coi context, and simply extract the
+    // the one command we need from coi to execute with the args.  like so:
+
+    // let command = container
+    //    .resolve::<dyn CargoCommand>("Clippy")
+    //    .expect("project_root should exist");
+    // command.run(args);  //notice the context is already wired in....
+
+    // based on some args will switch between internal managed instances (log commands or run? or both?)
+
     let xctx = context::XContext::new()?;
 
     match args.cmd {

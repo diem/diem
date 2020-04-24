@@ -4,8 +4,7 @@
 use crate::{
     cargo::{CargoArgs, CargoCommand},
     context::XContext,
-    xcontext::execution_location,
-    xcontext::project_metadata::Config,
+    xcontext::{execution_location, project_metadata::Config},
     Result,
 };
 use structopt::StructOpt;

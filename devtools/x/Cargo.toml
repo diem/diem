@@ -17,6 +17,7 @@ toml = "0.5.6"
 env_logger = "0.7.1"
 log = "0.4.8"
 chrono = "0.4.11"
+coi = "0.9.2"
 x-core = { version = "0.1.0", path = "../x-core" }
 x-lint = { version = "0.1.0", path = "../x-lint" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

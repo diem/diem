@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    xcontext::execution_location::project_root, xcontext::project_metadata::Config, Result,
+    xcontext::{execution_location::project_root, project_metadata::Config},
+    Result,
 };
 use x_core::XCoreContext;
 
