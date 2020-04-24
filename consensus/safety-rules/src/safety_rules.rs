@@ -121,7 +121,7 @@ impl<T: Payload> SafetyRules<T> {
             // * finally, set the epoch information because once the epoch is set, this `if`
             // statement cannot be re-entered.
             self.persistent_storage
-                .set_waypoint(&Waypoint::new(ledger_info)?)?;
+                .set_waypoint(&Waypoint::new_epoch_boundary(ledger_info)?)?;
             self.persistent_storage.set_last_voted_round(0)?;
             self.persistent_storage.set_preferred_round(0)?;
             self.persistent_storage.set_epoch(ledger_info.epoch() + 1)?;

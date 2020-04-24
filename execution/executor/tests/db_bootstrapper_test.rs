@@ -63,7 +63,7 @@ fn test_empty_db() {
         .expect("Should not fail.")
         .expect("Should not be None.");
     assert_eq!(
-        Waypoint::new(startup_info.latest_ledger_info.ledger_info()).unwrap(),
+        Waypoint::new_epoch_boundary(startup_info.latest_ledger_info.ledger_info()).unwrap(),
         waypoint
     );
     let (li, epoch_change_proof, _) = db_rw.reader.get_state_proof(waypoint.version()).unwrap();

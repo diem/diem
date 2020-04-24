@@ -15,11 +15,9 @@ use std::{convert::TryFrom, sync::Arc};
 /// verified version and the latest verified validator set.
 #[derive(Clone, Debug)]
 pub struct TrustedState {
-    /// The latest verified version of either a waypoint or a ledger info, either
-    /// inside an epoch or the epoch change ledger info. If the TrustedState is
-    /// generated from an initial waypoint, the latest_version is coincidentally
-    /// the same as the waypoint version.
-    latest_version: Version,
+    /// The latest verified state is from either a waypoint or a ledger info, either
+    /// inside an epoch or the epoch change ledger info.
+    verified_state: Waypoint,
     /// The current verifier. If we're starting up fresh, this is probably a
     /// waypoint from our config. Otherwise, this is generated from the validator
     /// set in the last known epoch change ledger info.
@@ -77,7 +75,7 @@ impl TrustedState {
     ) -> Result<TrustedStateChange<'a>> {
         let res_version = latest_li.ledger_info().version();
         ensure!(
-            res_version >= self.latest_version,
+            res_version >= self.latest_version(),
             "The target latest ledger info is stale and behind our current trusted version",
         );
 
@@ -111,7 +109,7 @@ impl TrustedState {
             }
 
             let new_state = TrustedState {
-                latest_version: res_version,
+                verified_state: Waypoint::new_any(latest_li.ledger_info()),
                 verifier: new_verifier,
             };
 
@@ -123,15 +121,18 @@ impl TrustedState {
             // The EpochChangeProof is empty, stale, or only gets us into our
             // current epoch. We then try to verify that the latest ledger info
             // is this epoch.
-            // FIXME: store and verify the root hash if the version equals once new_trust_any_genesis_WARNING_UNSAFE
-            // removed
-            if latest_li.ledger_info().version() == self.latest_version {
+            let new_waypoint = Waypoint::new_any(latest_li.ledger_info());
+            if new_waypoint.version() == self.verified_state.version() {
+                ensure!(
+                    new_waypoint == self.verified_state,
+                    "LedgerInfo doesn't match verified state"
+                );
                 Ok(TrustedStateChange::NoChange)
             } else {
                 self.verifier.verify(latest_li)?;
 
                 let new_state = TrustedState {
-                    latest_version: res_version,
+                    verified_state: new_waypoint,
                     verifier: self.verifier.clone(),
                 };
 
@@ -141,7 +142,7 @@ impl TrustedState {
     }
 
     pub fn latest_version(&self) -> Version {
-        self.latest_version
+        self.verified_state.version()
     }
 
     pub fn verifier(&self) -> &VerifierType {
@@ -152,7 +153,7 @@ impl TrustedState {
 impl From<Waypoint> for TrustedState {
     fn from(waypoint: Waypoint) -> Self {
         Self {
-            latest_version: waypoint.version(),
+            verified_state: waypoint,
             verifier: VerifierType::Waypoint(waypoint),
         }
     }
@@ -174,7 +175,7 @@ impl TryFrom<&LedgerInfo> for TrustedState {
         let verifier = VerifierType::TrustedVerifier(epoch_info);
 
         Ok(Self {
-            latest_version: ledger_info.version(),
+            verified_state: Waypoint::new_epoch_boundary(ledger_info)?,
             verifier,
         })
     }

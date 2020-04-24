@@ -1034,7 +1034,7 @@ fn test_client_waypoints() {
         .latest_epoch_change_li()
         .expect("Failed to retrieve genesis LedgerInfo");
     assert_eq!(genesis_li.ledger_info().epoch(), 0);
-    let genesis_waypoint = Waypoint::new(genesis_li.ledger_info())
+    let genesis_waypoint = Waypoint::new_epoch_boundary(genesis_li.ledger_info())
         .expect("Failed to generate waypoint from genesis LI");
 
     // Start another client with the genesis waypoint and make sure it successfully connects
@@ -1067,7 +1067,7 @@ fn test_client_waypoints() {
         .expect("Failed to retrieve end of epoch 1 LedgerInfo");
 
     assert_eq!(epoch_1_li.ledger_info().epoch(), 1);
-    let epoch_1_waypoint = Waypoint::new(epoch_1_li.ledger_info())
+    let epoch_1_waypoint = Waypoint::new_epoch_boundary(epoch_1_li.ledger_info())
         .expect("Failed to generate waypoint from end of epoch 1");
 
     // Start a client with the waypoint for end of epoch 1 and make sure it successfully connects
@@ -1080,7 +1080,7 @@ fn test_client_waypoints() {
 
     // Verify that a client with the wrong waypoint is not going to be able to connect to the chain.
     let bad_li = LedgerInfo::mock_genesis(None);
-    let bad_waypoint = Waypoint::new(&bad_li).unwrap();
+    let bad_waypoint = Waypoint::new_epoch_boundary(&bad_li).unwrap();
     let mut client_with_bad_waypoint = env.get_validator_ac_client(1, Some(bad_waypoint));
     assert!(client_with_bad_waypoint.test_trusted_connection().is_err());
 }

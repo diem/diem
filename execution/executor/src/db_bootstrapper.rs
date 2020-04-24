@@ -49,7 +49,7 @@ impl<V: VMExecutor> GenesisCommitter<V> {
         executor: Executor<V>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> Result<Self> {
-        let waypoint = Waypoint::new(ledger_info_with_sigs.ledger_info())?;
+        let waypoint = Waypoint::new_epoch_boundary(ledger_info_with_sigs.ledger_info())?;
 
         Ok(Self {
             executor,

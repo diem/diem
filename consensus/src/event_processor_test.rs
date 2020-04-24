@@ -91,7 +91,8 @@ impl NodeSetup {
         let (signers, validators) = random_validator_verifier(num_nodes, None, false);
         let proposer_author = signers[0].author();
         let validator_set = (&validators).into();
-        let waypoint = Waypoint::new(&LedgerInfo::mock_genesis(Some(validator_set))).unwrap();
+        let waypoint =
+            Waypoint::new_epoch_boundary(&LedgerInfo::mock_genesis(Some(validator_set))).unwrap();
         let mut nodes = vec![];
         for signer in signers.iter().take(num_nodes) {
             let (initial_data, storage) =

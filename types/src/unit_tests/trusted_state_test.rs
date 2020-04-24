@@ -227,7 +227,7 @@ proptest! {
         )
     ) {
         let first_epoch_change_li = lis_with_sigs.first().unwrap();
-        let waypoint = Waypoint::new(first_epoch_change_li.ledger_info())
+        let waypoint = Waypoint::new_epoch_boundary(first_epoch_change_li.ledger_info())
             .expect("Generating waypoint failed even though we passed an epoch change ledger info");
         let trusted_state = TrustedState::from(waypoint);
 
@@ -402,20 +402,38 @@ proptest! {
         let initial_li_with_sigs = lis_with_sigs.remove(0);
         let initial_li = initial_li_with_sigs.ledger_info();
         let trusted_state = TrustedState::try_from(initial_li).unwrap();
-
-        // Verifying a latest ledger info (inside the last epoch) with invalid
-        // signatures should fail.
-        let latest_li = LedgerInfoWithSignatures::new(
-            latest_li.ledger_info().clone(),
-            BTreeMap::new(), /* empty signatures */
-        );
-
+        let good_li = latest_li.ledger_info();
         let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
-        // We don't verify ledger info <= known version
-        if latest_li.ledger_info().version() != trusted_state.latest_version() {
-            trusted_state
-                .verify_and_ratchet(&latest_li, &change_proof)
-                .expect_err("Should always return Err with a invalid latest li sigs");
+
+        if good_li.version() == trusted_state.latest_version() {
+            // Verifying a latest ledger info (inside the last epoch) with
+            // invalid data should fail.
+            let bad_li = LedgerInfoWithSignatures::new(
+                LedgerInfo::new(
+                    BlockInfo::new(
+                        good_li.epoch(),
+                        0,                 /* round */
+                        HashValue::zero(), /* id */
+                        HashValue::zero(), /* executed_state_id */
+                        good_li.version(),
+                        42, /* bad timestamp_usecs */
+                        None,
+                    ),
+                    HashValue::zero(),
+                ),
+                BTreeMap::new(),
+            );
+
+            trusted_state.verify_and_ratchet(&bad_li, &change_proof)
+                .expect_err("Should always return Err with a invalid latest li");
+
+            // Verifying a latest ledger info with the same data should be a NoChange.
+            let no_sig = LedgerInfoWithSignatures::new(good_li.clone(), BTreeMap::new());
+            assert!(matches!(trusted_state.verify_and_ratchet(&no_sig, &change_proof), Ok(TrustedStateChange::NoChange)));
+        } else {
+            let no_sig = LedgerInfoWithSignatures::new(good_li.clone(), BTreeMap::new());
+            trusted_state.verify_and_ratchet(&no_sig, &change_proof)
+                .expect_err("Should always return Err with a invalid latest li");
         }
     }
 }
