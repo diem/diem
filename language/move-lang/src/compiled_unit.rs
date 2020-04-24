@@ -78,6 +78,13 @@ impl CompiledUnit {
         .into()
     }
 
+    pub fn serialize_source_map(&self) -> Vec<u8> {
+        match self {
+            CompiledUnit::Module { source_map, .. } => lcs::to_bytes(source_map).unwrap(),
+            CompiledUnit::Script { source_map, .. } => lcs::to_bytes(source_map).unwrap(),
+        }
+    }
+
     pub fn verify(self) -> (Self, Errors) {
         match self {
             CompiledUnit::Module {

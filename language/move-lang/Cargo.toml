@@ -25,6 +25,7 @@ move-ir-types = {path = "../move-ir/types" }
 ir-to-bytecode = {path = "../compiler/ir-to-bytecode" }
 borrow-graph = { path = "../borrow-graph" }
 bytecode-source-map = { path = "../compiler/bytecode-source-map" }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 
 
 [dev-dependencies]

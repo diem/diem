@@ -45,6 +45,14 @@ pub struct Options {
         default_value = cli::DEFAULT_OUTPUT_DIR,
     )]
     pub out_dir: String,
+
+    /// Save bytecode source map to disk
+    #[structopt(
+        name = "",
+        short = cli::SOURCE_MAP_SHORT,
+        long = cli::SOURCE_MAP,
+    )]
+    pub emit_source_map: bool,
 }
 
 pub fn main() {
@@ -63,7 +71,8 @@ fn main_impl() -> std::io::Result<()> {
         dependencies,
         sender,
         out_dir,
+        emit_source_map,
     } = Options::from_args();
     let (files, compiled_units) = move_lang::move_compile(&source_files, &dependencies, sender)?;
-    move_lang::output_compiled_units(files, compiled_units, &out_dir)
+    move_lang::output_compiled_units(emit_source_map, files, compiled_units, &out_dir)
 }
