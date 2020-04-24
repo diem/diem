@@ -1,4 +1,5 @@
-// Copyright (c) The Libra Core Contributors // SPDX-License-Identifier: Apache-2.0
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
 
 use super::{
     network_interface::{OnchainDiscoveryNetworkEvents, OnchainDiscoveryNetworkSender},
@@ -13,8 +14,8 @@ use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use futures::{channel::oneshot, sink::SinkExt, stream::StreamExt};
 use libra_config::config::{NodeConfig, RoleType};
 use libra_types::{
-    account_config, account_state::AccountState, discovery_set::DiscoverySet,
-    trusted_state::TrustedState, waypoint::Waypoint, PeerId,
+    account_config, account_state::AccountState, discovery_set::DiscoverySet, waypoint::Waypoint,
+    PeerId,
 };
 use libra_vm::LibraVM;
 use network::{

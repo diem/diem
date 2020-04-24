@@ -260,7 +260,7 @@ impl Command for DevCommandGenWaypoint {
             UNIX_EPOCH
                 + Duration::from_micros(latest_epoch_change_li.ledger_info().timestamp_usecs()),
         );
-        match Waypoint::new(latest_epoch_change_li.ledger_info()) {
+        match Waypoint::new_epoch_boundary(latest_epoch_change_li.ledger_info()) {
             Err(e) => println!("Failed to generate a waypoint: {}", e),
             Ok(waypoint) => println!(
                 "Waypoint (end of epoch {}, time {}): {}",

@@ -148,7 +148,7 @@ pub fn validator_signers_to_ledger_info(signers: &[&ValidatorSigner]) -> LedgerI
 
 pub fn validator_signers_to_waypoints(signers: &[&ValidatorSigner]) -> Waypoint {
     let li = validator_signers_to_ledger_info(signers);
-    Waypoint::new(&li).unwrap()
+    Waypoint::new_epoch_boundary(&li).unwrap()
 }
 
 pub fn test_storage(signer: &ValidatorSigner) -> PersistentSafetyStorage {

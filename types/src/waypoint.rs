@@ -14,7 +14,7 @@ use std::{
 // The delimiter between the version and the hash.
 const WAYPOINT_DELIMITER: char = ':';
 
-/// Waypoint keeps information about the LedgerInfo on a given reconfiguration, which provides an
+/// Waypoint keeps information about the LedgerInfo on a given version, which provides an
 /// off-chain mechanism to verify the sync process right after the restart.
 /// At high level, a trusted waypoint verifies the LedgerInfo for a certain epoch change.
 /// For more information, please refer to the Waypoints documentation.
@@ -22,19 +22,27 @@ const WAYPOINT_DELIMITER: char = ':';
 pub struct Waypoint {
     /// The version of the reconfiguration transaction that is being approved by this waypoint.
     version: Version,
-    /// The hash of the chosen fields of LedgerInfo (including the next validator set).
+    /// The hash of the chosen fields of LedgerInfo.
     value: HashValue,
 }
 
 impl Waypoint {
-    /// Generates a new waypoint given the LedgerInfo.
-    /// Errors in case the given LedgerInfo does not include the validator set.
-    pub fn new(ledger_info: &LedgerInfo) -> Result<Self> {
-        let converter = Ledger2WaypointConverter::new(ledger_info)?;
-        Ok(Self {
+    /// Generate a new waypoint given any LedgerInfo.
+    pub fn new_any(ledger_info: &LedgerInfo) -> Self {
+        let converter = Ledger2WaypointConverter::new(ledger_info);
+        Self {
             version: ledger_info.version(),
             value: converter.hash(),
-        })
+        }
+    }
+
+    /// Generates a new waypoint given the epoch change LedgerInfo.
+    pub fn new_epoch_boundary(ledger_info: &LedgerInfo) -> Result<Self> {
+        ensure!(
+            ledger_info.next_validator_set().is_some(),
+            "No validator set"
+        );
+        Ok(Self::new_any(ledger_info))
     }
 
     pub fn version(&self) -> Version {
@@ -53,7 +61,7 @@ impl Waypoint {
             self.version(),
             ledger_info.version()
         );
-        let converter = Ledger2WaypointConverter::new(ledger_info)?;
+        let converter = Ledger2WaypointConverter::new(ledger_info);
         ensure!(
             converter.hash() == self.value(),
             format!(
@@ -105,21 +113,18 @@ struct Ledger2WaypointConverter {
     root_hash: HashValue,
     version: Version,
     timestamp_usecs: u64,
-    next_validator_set: ValidatorSet,
+    next_validator_set: Option<ValidatorSet>,
 }
 
 impl Ledger2WaypointConverter {
-    pub fn new(ledger_info: &LedgerInfo) -> Result<Self> {
-        Ok(Self {
+    pub fn new(ledger_info: &LedgerInfo) -> Self {
+        Self {
             epoch: ledger_info.epoch(),
             root_hash: ledger_info.transaction_accumulator_hash(),
             version: ledger_info.version(),
             timestamp_usecs: ledger_info.timestamp_usecs(),
-            next_validator_set: ledger_info
-                .next_validator_set()
-                .ok_or_else(|| format_err!("Cannot create a waypoint without validator set"))?
-                .clone(),
-        })
+            next_validator_set: ledger_info.next_validator_set().cloned(),
+        }
     }
 }
 
@@ -154,7 +159,7 @@ mod test {
     #[test]
     fn test_waypoint_li_verification() {
         let empty_li = LedgerInfo::new(BlockInfo::empty(), HashValue::zero());
-        assert!(Waypoint::new(&empty_li).is_err()); // no validator set in empty LI
+        assert!(Waypoint::new_epoch_boundary(&empty_li).is_err()); // no validator set in empty LI
         let li = LedgerInfo::new(
             BlockInfo::new(
                 1,
@@ -167,7 +172,7 @@ mod test {
             ),
             HashValue::zero(),
         );
-        let waypoint = Waypoint::new(&li).unwrap();
+        let waypoint = Waypoint::new_epoch_boundary(&li).unwrap();
         assert!(waypoint.verify(&li).is_ok());
     }
 }

@@ -321,19 +321,22 @@ mod tests {
             .is_err());
 
         // Test proof with waypoint corresponding to the first epoch change succeeds.
-        let waypoint_for_1_to_2 = Waypoint::new(valid_ledger_info[0].ledger_info()).unwrap();
+        let waypoint_for_1_to_2 =
+            Waypoint::new_epoch_boundary(valid_ledger_info[0].ledger_info()).unwrap();
         assert!(proof_1
             .verify(&VerifierType::Waypoint(waypoint_for_1_to_2))
             .is_ok());
 
         // Test proof with stale prefix will verify with a Waypoint
-        let waypoint_for_5_to_6 = Waypoint::new(valid_ledger_info[4].ledger_info()).unwrap();
+        let waypoint_for_5_to_6 =
+            Waypoint::new_epoch_boundary(valid_ledger_info[4].ledger_info()).unwrap();
         assert!(proof_1
             .verify(&VerifierType::Waypoint(waypoint_for_5_to_6))
             .is_ok());
 
         // Waypoint before proof range will fail to verify
-        let waypoint_for_3_to_4 = Waypoint::new(valid_ledger_info[2].ledger_info()).unwrap();
+        let waypoint_for_3_to_4 =
+            Waypoint::new_epoch_boundary(valid_ledger_info[2].ledger_info()).unwrap();
         let proof_7 =
             EpochChangeProof::new(valid_ledger_info[4..8].to_vec(), /* more */ false);
         assert!(proof_7

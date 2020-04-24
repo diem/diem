@@ -519,7 +519,7 @@ fn catch_up_with_waypoints() {
 
     // Create a waypoint based on LedgerInfo of peer 0 at version 700 (epoch 7)
     let waypoint_li = env.get_ledger_info(0, 700).unwrap();
-    let waypoint = Waypoint::new(waypoint_li.ledger_info()).unwrap();
+    let waypoint = Waypoint::new_epoch_boundary(waypoint_li.ledger_info()).unwrap();
 
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),

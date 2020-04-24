@@ -1304,7 +1304,8 @@ mod tests {
         let file = TempPath::new();
         let mnemonic_path = file.path().to_str().unwrap().to_string();
         let waypoint =
-            Waypoint::new(&LedgerInfo::mock_genesis(Some(ValidatorSet::empty()))).unwrap();
+            Waypoint::new_epoch_boundary(&LedgerInfo::mock_genesis(Some(ValidatorSet::empty())))
+                .unwrap();
 
         // Note: `client_proxy` won't actually connect to URL - it will be used only to
         // generate random accounts
