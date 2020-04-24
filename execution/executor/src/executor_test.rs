@@ -8,7 +8,7 @@ use crate::{
         encode_mint_transaction, encode_reconfiguration_transaction, encode_transfer_transaction,
         MockVM, DISCARD_STATUS, KEEP_STATUS,
     },
-    BlockExecutor, Executor, OP_COUNTERS,
+    BlockExecutor, Executor,
 };
 use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue};
@@ -21,7 +21,6 @@ use libra_types::{
 use libradb::LibraDB;
 use proptest::prelude::*;
 use rand::Rng;
-use rusty_fork::{rusty_fork_id, rusty_fork_test, rusty_fork_test_name};
 use std::collections::BTreeMap;
 
 fn build_test_config() -> (NodeConfig, Ed25519PrivateKey) {
