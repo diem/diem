@@ -7,6 +7,5 @@ use libra_management::Command;
 use structopt::StructOpt;
 
 fn main() {
-    let args = Command::from_args();
-    println!("{}", args.verify());
+    println!("{}", Command::from_args().execute());
 }

@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_secure_storage::{Storage, VaultStorage};
 use libra_types::waypoint::Waypoint;
 use std::{fmt::Write, str::FromStr};
@@ -23,13 +24,47 @@ pub mod constants {
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Tool used to manage Libra Validators")]
 pub enum Command {
-    #[structopt(about = "Dummy command until more implementation exists")]
-    NotImplemented,
+    #[structopt(about = "Produces an LCS Ed25519PublicKey for the operator")]
+    OperatorKey(SecureBackend),
+    #[structopt(about = "Produces an LCS Ed25519PublicKey for the owner")]
+    OwnerKey(SecureBackend),
     #[structopt(about = "Verifies and prints the current configuration state")]
     Verify(SecureBackend),
 }
 
 impl Command {
+    pub fn execute(self) -> String {
+        match &self {
+            Command::OperatorKey(_) => self.operator_key().to_string(),
+            Command::OwnerKey(_) => self.owner_key().to_string(),
+            Command::Verify(_) => self.verify(),
+        }
+    }
+
+    pub fn operator_key(self) -> Ed25519PublicKey {
+        if let Command::OperatorKey(secure_backend) = self {
+            let storage = secure_storage(secure_backend);
+            storage
+                .get_public_key(constants::OPERATOR_KEY)
+                .unwrap()
+                .public_key
+        } else {
+            panic!("Expected Command::OperatorKey");
+        }
+    }
+
+    pub fn owner_key(self) -> Ed25519PublicKey {
+        if let Command::OwnerKey(secure_backend) = self {
+            let storage = secure_storage(secure_backend);
+            storage
+                .get_public_key(constants::OWNER_KEY)
+                .unwrap()
+                .public_key
+        } else {
+            panic!("Expected Command::OwnerKey");
+        }
+    }
+
     pub fn verify(self) -> String {
         if let Command::Verify(secure_backend) = self {
             let storage = secure_storage(secure_backend);
@@ -87,7 +122,7 @@ impl Command {
             .get(key)
             .and_then(|c| c.value.u64())
             .map(|c| c.to_string())
-            .unwrap_or_else(|_| "None".into());
+            .unwrap_or_else(|e| "None".into());
         writeln!(buffer, "{} - {}", key, value).unwrap();
     }
 
@@ -126,6 +161,11 @@ fn secure_storage(config: SecureBackend) -> Box<dyn Storage> {
     ))
 }
 
+/// These tests depends on running Vault, which can be done by using the provided docker run script
+/// in `docker/vault/run.sh`.
+/// Note: Some of these tests may fail if you run them too quickly one after another due to data
+/// sychronization issues within Vault. It would seem the only way to fix it would be to restart
+/// the Vault service between runs.
 #[cfg(test)]
 pub mod tests {
     use super::*;
@@ -149,6 +189,42 @@ pub mod tests {
 
         let output = verify(namespace).split("None").count();
         assert_eq!(output, 1); // 0 None results in 1 split
+    }
+
+    #[test]
+    #[should_panic]
+    #[ignore]
+    fn test_owner_key_invalid() {
+        let namespace = "owner_key";
+        let mut storage = secure_storage(default_secure_backend(namespace.into()));
+        storage.reset_and_clear().unwrap();
+        owner_key(namespace);
+    }
+
+    #[test]
+    #[ignore]
+    fn test_owner_key_valid() {
+        let namespace = "owner_key";
+        initialize_storage(default_secure_backend(namespace.into()));
+        owner_key(namespace);
+    }
+
+    #[test]
+    #[should_panic]
+    #[ignore]
+    fn test_operator_key_invalid() {
+        let namespace = "operator_key";
+        let mut storage = secure_storage(default_secure_backend(namespace.into()));
+        storage.reset_and_clear().unwrap();
+        operator_key(namespace);
+    }
+
+    #[test]
+    #[ignore]
+    fn test_operator_key_valid() {
+        let namespace = "operator_key";
+        initialize_storage(default_secure_backend(namespace.into()));
+        operator_key(namespace);
     }
 
     fn default_secure_backend(namespace: String) -> SecureBackend {
@@ -190,6 +266,42 @@ pub mod tests {
         storage
             .create(constants::WAYPOINT, Value::String("".into()), &policy)
             .unwrap();
+    }
+
+    fn operator_key(namespace: &str) -> Ed25519PublicKey {
+        let args = format!(
+            "
+                validator_config
+                operator-key
+                --host {secure_host}
+                --token {secure_token}
+                --namespace {secure_namespace}
+            ",
+            secure_host = VAULT_HOST,
+            secure_token = VAULT_ROOT_TOKEN,
+            secure_namespace = namespace,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.operator_key()
+    }
+
+    fn owner_key(namespace: &str) -> Ed25519PublicKey {
+        let args = format!(
+            "
+                validator_config
+                owner-key
+                --host {secure_host}
+                --token {secure_token}
+                --namespace {secure_namespace}
+            ",
+            secure_host = VAULT_HOST,
+            secure_token = VAULT_ROOT_TOKEN,
+            secure_namespace = namespace,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.owner_key()
     }
 
     fn verify(namespace: &str) -> String {
