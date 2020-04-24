@@ -189,8 +189,23 @@ pub fn build_memory_noise_transport(
 
     memory_transport
         .and_then(move |socket, _addr, origin| async move {
-            let (remote_static_key, socket) =
-                noise_config.upgrade_connection(socket, origin).await?;
+            // dummy public key
+            // TODO: OF COURSE REMOVE THIS
+            let remote_public_key = x25519::PublicKey::from([0u8; 32]);
+            let (remote_static_key, socket) = noise_config
+                .upgrade_connection(socket, origin, remote_public_key, Some(&trusted_peers))
+                .await?;
+
+            if remote_static_key != remote_public_key {
+                if cfg!(test) {
+                    unreachable!();
+                }
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    "SHOULD NOT HAPPEN: wrong public key received",
+                ));
+            }
+
             if let Some(peer_id) = identity_key_to_peer_id(&trusted_peers, &remote_static_key) {
                 Ok((peer_id, socket))
             } else {
@@ -216,8 +231,11 @@ pub fn build_unauthenticated_memory_noise_transport(
     memory_transport
         .and_then(move |socket, _addr, origin| {
             async move {
-                let (remote_static_key, socket) =
-                    noise_config.upgrade_connection(socket, origin).await?;
+                // TODO: DONT DO THIS
+                let remote_public_key = x25519::PublicKey::from([0u8; 32]);
+                let (remote_static_key, socket) = noise_config
+                    .upgrade_connection(socket, origin, remote_public_key, None)
+                    .await?;
                 // Generate PeerId from x25519::PublicKey.
                 // Note: This is inconsistent with current types because AccountAddress is derived
                 // from consensus key which is of type Ed25519PublicKey. Since AccountAddress does
@@ -267,8 +285,12 @@ pub fn build_tcp_noise_transport(
 
     LIBRA_TCP_TRANSPORT
         .and_then(move |socket, _addr, origin| async move {
-            let (remote_static_key, socket) =
-                noise_config.upgrade_connection(socket, origin).await?;
+            // TODO: DONT DO THIS
+            let remote_public_key = x25519::PublicKey::from([0u8; 32]);
+            let (remote_static_key, socket) = noise_config
+                .upgrade_connection(socket, origin, remote_public_key, Some(&trusted_peers))
+                .await?;
+
             if let Some(peer_id) = identity_key_to_peer_id(&trusted_peers, &remote_static_key) {
                 Ok((peer_id, socket))
             } else {
@@ -300,8 +322,12 @@ pub fn build_unauthenticated_tcp_noise_transport(
     LIBRA_TCP_TRANSPORT
         .and_then(move |socket, _addr, origin| {
             async move {
-                let (remote_static_key, socket) =
-                    noise_config.upgrade_connection(socket, origin).await?;
+                // TODO: DONT DO THIS
+                let remote_public_key = x25519::PublicKey::from([0u8; 32]);
+                let (remote_static_key, socket) = noise_config
+                    .upgrade_connection(socket, origin, remote_public_key, None)
+                    .await?;
+
                 // Generate PeerId from x25519::PublicKey.
                 // Note: This is inconsistent with current types because AccountAddress is derived
                 // from consensus key which is of type Ed25519PublicKey. Since AccountAddress does
