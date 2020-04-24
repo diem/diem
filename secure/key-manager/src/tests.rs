@@ -67,6 +67,11 @@ impl<T: LibraInterface> Node<T> {
         }
     }
 
+    // Increments the libra_timestamp on the blockchain by executing an empty block.
+    fn update_libra_timestamp(&mut self) {
+        self.execute_and_commit(vec![]);
+    }
+
     fn execute_and_commit(&mut self, mut block: Vec<Transaction>) {
         // 1) Update the clock for potential reconfigurations
         self.time.increment();
@@ -397,7 +402,7 @@ fn setup_json_client_and_server(db_rw: DbReaderWriter) -> (JsonRpcClient, Runtim
 }
 
 #[test]
-// This simple test just proves that genesis took effect and the values are in storage
+// This simple test just proves that genesis took effect and the values are on-chain (in storage).
 fn test_ability_to_read_move_data() {
     // Test the mock libra interface implementation
     let (config, _genesis_key) = config_builder::test_config();
@@ -420,21 +425,22 @@ fn verify_ability_to_read_move_data<T: LibraInterface>(node: Node<T>) {
 }
 
 #[test]
-// This tests that a manual consensus key rotation can be performed by generating a new keypair,
-// creating a new rotation transaction, and executing the transaction locally.
-fn test_manual_consensus_rotation() {
+// This tests that a manual on-chain consensus key rotation can be performed (in the event of an
+// unexpected failure). To do this, the test generates a new keypair locally, creates a new rotation
+// transaction manually and executes the transaction on-chain.
+fn test_manual_rotation_on_chain() {
     // Test the mock libra interface implementation
     let (config, _genesis_key) = config_builder::test_config();
     let node = setup_node_using_test_mocks(&config);
-    verify_manual_consensus_rotation(config, node);
+    verify_manual_rotation_on_chain(config, node);
 
     // Test the json libra interface implementation
     let (config, _genesis_key) = config_builder::test_config();
     let (node, _runtime) = setup_node_using_json_rpc(&config);
-    verify_manual_consensus_rotation(config, node);
+    verify_manual_rotation_on_chain(config, node);
 }
 
-fn verify_manual_consensus_rotation<T: LibraInterface>(config: NodeConfig, mut node: Node<T>) {
+fn verify_manual_rotation_on_chain<T: LibraInterface>(config: NodeConfig, mut node: Node<T>) {
     let test_config = config.test.unwrap();
     let account_prikey = test_config.account_keypair.unwrap().take_private().unwrap();
     let genesis_pubkey = test_config
@@ -452,9 +458,10 @@ fn verify_manual_consensus_rotation<T: LibraInterface>(config: NodeConfig, mut n
     assert_eq!(&genesis_pubkey, genesis_info.consensus_public_key());
     assert_eq!(&node.account, genesis_info.account_address());
 
-    // Perform rotation
+    // Perform on-chain rotation
     let mut rng = StdRng::from_seed([44u8; 32]);
-    let new_pubkey = Ed25519PrivateKey::generate(&mut rng).public_key();
+    let new_privkey = Ed25519PrivateKey::generate(&mut rng);
+    let new_pubkey = new_privkey.public_key();
     let txn = crate::build_rotation_transaction(
         node.account,
         0,
@@ -474,7 +481,7 @@ fn verify_manual_consensus_rotation<T: LibraInterface>(config: NodeConfig, mut n
 }
 
 #[test]
-// This verifies the key manager is properly setup and that a basic rotation can occur
+// This verifies that the key manager is properly setup and that a basic rotation can be performed.
 fn test_key_manager_init_and_basic_rotation() {
     // Test the mock libra interface implementation
     let (config, _genesis_key) = config_builder::test_config();
@@ -531,47 +538,110 @@ fn verify_init_and_basic_rotation<T: LibraInterface>(mut node: Node<T>) {
 }
 
 #[test]
-// This tests the application's main loop to ensure it handles basic operations and reliabilities
-fn test_main_loop() {
+// This tests the application's main loop to ensure it handles basic operations and reliabilities.
+// To do this, the test repeatedly calls "execute_once_and_sleep" -- identical to the main "execute"
+// loop.
+fn test_execute() {
     // Test the mock libra interface implementation
     let (config, _genesis_key) = config_builder::test_config();
     let node = setup_node_using_test_mocks(&config);
-    verify_main_loop(node);
+    verify_execute(node);
 
     // Test the json libra interface implementation
     let (config, _genesis_key) = config_builder::test_config();
     let (node, _runtime) = setup_node_using_json_rpc(&config);
-    verify_main_loop(node);
+    verify_execute(node);
 }
 
-fn verify_main_loop<T: LibraInterface>(mut node: Node<T>) {
-    // Verify nothing to be done initially
-    let mut action = node.key_manager.evaluate_status().unwrap();
-    assert_eq!(action, Action::NoAction);
-    node.key_manager.perform_action(action).unwrap();
+fn verify_execute<T: LibraInterface>(mut node: Node<T>) {
+    // Verify correct initial state (i.e., nothing to be done by key manager)
+    assert_eq!(0, node.time.now());
+    assert_eq!(0, node.libra.last_reconfiguration().unwrap());
 
-    // Verify rotation required after enough time elapsed
+    // Verify rotation required after enough time
     node.time.increment_by(crate::ROTATION_PERIOD_SECS);
-    action = node.key_manager.evaluate_status().unwrap();
-    assert_eq!(action, Action::FullKeyRotation);
-    node.key_manager.perform_action(action).unwrap();
+    node.update_libra_timestamp();
+    assert_eq!(
+        Action::FullKeyRotation,
+        node.key_manager.evaluate_status().unwrap()
+    );
 
-    // Verify rotation was performed, nothing to be done
-    action = node.key_manager.evaluate_status().unwrap();
-    assert_eq!(action, Action::NoAction);
+    // Verify a single execution iteration will perform the rotation and re-sync everything
+    node.update_libra_timestamp();
+    assert!(node.key_manager.execute_once().is_ok());
 
-    // Verify transaction not executed, now expired
+    // Verify nothing to be done after rotation
+    node.update_libra_timestamp();
+    assert_eq!(
+        Action::NoAction,
+        node.key_manager.evaluate_status().unwrap()
+    );
+
+    // Verify rotation transaction not executed, now expired
     node.time.increment_by(crate::TXN_RETRY_SECS);
-    action = node.key_manager.evaluate_status().unwrap();
-    assert_eq!(action, Action::SubmitKeyRotationTransaction);
+    node.update_libra_timestamp();
+    assert_eq!(
+        Action::SubmitKeyRotationTransaction,
+        node.key_manager.evaluate_status().unwrap()
+    );
 
-    // Let's execute the expired transaction! And then a good transaction!
+    // Let's execute the expired transaction and see that a resubmission is still required
     node.execute_and_commit(node.libra.take_all_transactions());
-    action = node.key_manager.evaluate_status().unwrap();
-    assert_eq!(action, Action::SubmitKeyRotationTransaction);
-    node.key_manager.perform_action(action).unwrap();
-    node.execute_and_commit(node.libra.take_all_transactions());
+    assert_eq!(
+        Action::SubmitKeyRotationTransaction,
+        node.key_manager.evaluate_status().unwrap()
+    );
 
-    action = node.key_manager.evaluate_status().unwrap();
-    assert_eq!(action, Action::NoAction);
+    // Verify that a single execution iteration will resubmit the transaction, which can then be
+    // executed to re-sync everything up (on-chain).
+    node.update_libra_timestamp();
+    assert!(node.key_manager.execute_once().is_ok());
+    node.execute_and_commit(node.libra.take_all_transactions());
+    assert_eq!(
+        Action::NoAction,
+        node.key_manager.evaluate_status().unwrap()
+    );
+    assert_ne!(0, node.libra.last_reconfiguration().unwrap());
+}
+
+#[test]
+// This test ensures that execute() will return an error and halt the key manager if something goes
+// wrong.
+fn test_execute_error() {
+    // Test the mock libra interface implementation
+    let (config, _genesis_key) = config_builder::test_config();
+    let node = setup_node_using_test_mocks(&config);
+    verify_execute_error(node);
+
+    // Test the json libra interface implementation
+    let (config, _genesis_key) = config_builder::test_config();
+    let (node, _runtime) = setup_node_using_json_rpc(&config);
+    verify_execute_error(node);
+}
+
+fn verify_execute_error<T: LibraInterface>(mut node: Node<T>) {
+    // Verify some correct initial state
+    assert_eq!(0, node.time.now());
+    assert_eq!(0, node.libra.last_reconfiguration().unwrap());
+
+    // Verify nothing to be done by key manager
+    node.update_libra_timestamp();
+    assert_eq!(
+        Action::NoAction,
+        node.key_manager.evaluate_status().unwrap()
+    );
+
+    // Perform each execution iteration a few times to see that everything is working
+    for _ in 0..5 {
+        node.update_libra_timestamp();
+        assert!(node.key_manager.execute_once().is_ok());
+    }
+
+    // Delete all keys in secure storage to emulate a failure (e.g., so that the key manager should
+    // fail when trying to access something in secure storage on the next execution iteration.)
+    node.key_manager.storage.reset_and_clear().unwrap();
+
+    // Check that execute() now returns an error and doesn't spin forever.
+    node.update_libra_timestamp();
+    assert!(node.key_manager.execute().is_err());
 }
