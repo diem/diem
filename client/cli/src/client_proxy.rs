@@ -15,6 +15,7 @@ use libra_crypto::{
 };
 use libra_json_rpc_client::views::{AccountView, BlockMetadata, EventView, TransactionView};
 use libra_logger::prelude::*;
+use libra_network_address::{NetworkAddress, RawNetworkAddress};
 use libra_temppath::TempPath;
 use libra_types::{
     access_path::AccessPath,
@@ -37,7 +38,6 @@ use num_traits::{
     cast::{FromPrimitive, ToPrimitive},
     identities::Zero,
 };
-use parity_multiaddr::Multiaddr;
 use reqwest::Url;
 use rust_decimal::Decimal;
 use std::{
@@ -446,9 +446,11 @@ impl ClientProxy {
         let consensus_public_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[3])?;
         let network_signing_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[4])?;
         let network_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[5])?;
-        let network_address = Multiaddr::from_str(space_delim_strings[6])?;
+        let network_address = NetworkAddress::from_str(space_delim_strings[6])?;
+        let network_address = RawNetworkAddress::try_from(&network_address)?;
         let fullnode_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[7])?;
-        let fullnode_network_address = Multiaddr::from_str(space_delim_strings[8])?;
+        let fullnode_network_address = NetworkAddress::from_str(space_delim_strings[8])?;
+        let fullnode_network_address = RawNetworkAddress::try_from(&fullnode_network_address)?;
         let mut sender = Self::get_account_data_from_address(
             &mut self.client,
             address,
@@ -460,9 +462,9 @@ impl ClientProxy {
             consensus_public_key.to_bytes().to_vec(),
             network_signing_key.to_bytes().to_vec(),
             network_identity_key.to_bytes(),
-            network_address.to_vec(),
+            network_address.into(),
             fullnode_identity_key.to_bytes(),
-            fullnode_network_address.to_vec(),
+            fullnode_network_address.into(),
         );
         let txn =
             self.create_txn_to_submit(TransactionPayload::Script(program), &sender, None, None)?;

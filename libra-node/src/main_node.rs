@@ -27,7 +27,6 @@ use state_synchronizer::StateSynchronizer;
 use std::{
     boxed::Box,
     collections::HashMap,
-    convert::{TryFrom, TryInto},
     net::ToSocketAddrs,
     sync::Arc,
     thread,
@@ -137,14 +136,12 @@ pub fn setup_network(
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
         config.peer_id,
-        // TODO(philiphayes): remove try_into
-        config.listen_address.clone().try_into().unwrap(),
+        config.listen_address.clone(),
         role,
     );
     network_builder
         .enable_remote_authentication(config.enable_remote_authentication)
-        // TODO(philiphayes): remove try_into
-        .advertised_address(config.advertised_address.clone().try_into().unwrap())
+        .advertised_address(config.advertised_address.clone())
         .add_connection_monitoring();
     if config.enable_remote_authentication {
         // If the node wants to run in permissioned mode, it should also have authentication and
@@ -154,20 +151,6 @@ pub fn setup_network(
             "Permissioned network end-points should use authentication"
         );
         let seed_peers = config.seed_peers.seed_peers.clone();
-
-        // TODO(philiphayes): remove
-        let seed_peers = seed_peers
-            .into_iter()
-            .map(|(peer_id, multiaddrs)| {
-                let addrs = multiaddrs
-                    .into_iter()
-                    .map(NetworkAddress::try_from)
-                    .collect::<Result<Vec<_>, _>>()
-                    .unwrap();
-                (peer_id, addrs)
-            })
-            .collect::<HashMap<_, _>>();
-
         let network_keypairs = config
             .network_keypairs
             .as_mut()

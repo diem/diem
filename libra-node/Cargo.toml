@@ -12,7 +12,6 @@ edition = "2018"
 [dependencies]
 futures = "0.3.0"
 jemallocator = { version = "0.3.2", features = ["profiling", "unprefixed_malloc_on_supported_platforms"] }
-parity-multiaddr = { version = "0.8.0", default-features = false }
 rayon = "1.2.0"
 structopt = "0.3.14"
 tokio = { version = "0.2.13", features = ["full"] }
@@ -29,7 +28,6 @@ libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-mempool = { path = "../mempool", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
-libra-network-address = { path = "../network/network-address", version = "0.1.0" }
 network = { path = "../network", version = "0.1.0" }
 onchain-discovery = { path = "../network/onchain-discovery", version = "0.1.0" }
 libra-json-rpc = { path = "../json-rpc", version = "0.1.0" }
