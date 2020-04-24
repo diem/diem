@@ -6,7 +6,6 @@ use anyhow::{ensure, Result};
 use libra_config::{
     config::{
         NetworkPeersConfig, NodeConfig, PeerNetworkId, RoleType, SeedPeersConfig, UpstreamConfig,
-        UpstreamPeersConfig,
     },
     utils,
 };
@@ -225,13 +224,9 @@ impl FullNodeConfig {
             .full_node_networks
             .last()
             .ok_or(Error::MissingFullNodeNetwork)?;
-        let upstream_peers = UpstreamPeersConfig {
-            upstream_peers: vec![validator_full_node_network.peer_id],
-        };
         let seed_peers = self.build_seed_peers(&validator_full_node_config)?;
         let upstream_peer_id = validator_full_node_network.peer_id;
         for config in configs.iter_mut() {
-            config.state_sync.upstream_peers = upstream_peers.clone();
             let network = config
                 .full_node_networks
                 .last_mut()
@@ -293,7 +288,7 @@ mod test {
     }
 
     #[test]
-    fn verify_state_sync() {
+    fn verify_upstream_config() {
         let mut validator_config = ValidatorConfig::new().build().unwrap();
         FullNodeConfig::new()
             .extend_validator(&mut validator_config)
@@ -301,10 +296,11 @@ mod test {
         let val_fn = &validator_config.full_node_networks[0];
 
         let fnc = FullNodeConfig::new().build().unwrap();
-        assert_eq!(
-            val_fn.peer_id,
-            fnc.state_sync.upstream_peers.upstream_peers[0]
-        );
+        let fn_network_id = fnc.full_node_networks[0].peer_id;
+        assert!(fnc
+            .upstream
+            .upstream_peers
+            .contains(&PeerNetworkId(fn_network_id, val_fn.peer_id)));
     }
 
     #[test]
