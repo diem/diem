@@ -15,7 +15,7 @@ use std::time::Duration;
 
 /// A small wrapper around Histogram to handle the special case
 /// of duration buckets.
-/// This Histogram will handle the correct granularty for logging
+/// This Histogram will handle the correct granularity for logging
 /// time duration in a way that fits the used buckets.
 pub struct DurationHistogram {
     histogram: Histogram,
@@ -27,7 +27,7 @@ impl DurationHistogram {
     }
 
     pub fn observe_duration(&self, d: Duration) {
-        // Duration is full seconds + nanos elapsed from the presious full second
+        // Duration is full seconds + nanos elapsed from the previous full second
         let v = d.as_secs() as f64 + f64::from(d.subsec_nanos()) / 1e9;
         self.histogram.observe(v);
     }
@@ -145,7 +145,7 @@ impl OpMetrics {
     }
 
     pub fn observe_duration(&self, op: &str, d: Duration) {
-        // Duration is full seconds + nanos elapsed from the presious full second
+        // Duration is full seconds + nanos elapsed from the previous full second
         let v = d.as_secs() as f64 + f64::from(d.subsec_nanos()) / 1e9;
         self.duration_histograms.with_label_values(&[op]).observe(v);
     }
