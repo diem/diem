@@ -4,6 +4,7 @@
 //! Project and package linters that run queries on guppy.
 
 use crate::config::EnforcedAttributesConfig;
+use guppy::graph::BuildTargetId;
 use std::{collections::HashMap, ffi::OsStr};
 use x_lint::prelude::*;
 
@@ -208,6 +209,43 @@ impl PackageLinter for WorkspaceHack {
             .expect("valid package ID");
         if has_links && !has_hack_dep {
             out.write(LintLevel::Error, "missing libra-workspace-hack dependency");
+        }
+
+        Ok(RunStatus::Executed)
+    }
+}
+
+/// Ensure that any workspace packages with build dependencies also have a build script.
+#[derive(Debug)]
+pub struct IrrelevantBuildDeps;
+
+impl Linter for IrrelevantBuildDeps {
+    fn name(&self) -> &'static str {
+        "irrelevant-build-deps"
+    }
+}
+
+impl PackageLinter for IrrelevantBuildDeps {
+    fn run<'l>(
+        &self,
+        ctx: &PackageContext<'l>,
+        out: &mut LintFormatter<'l, '_>,
+    ) -> Result<RunStatus<'l>> {
+        let metadata = ctx.metadata();
+
+        // TODO: clean up with guppy 0.4.
+        let has_build_script = metadata.build_target(&BuildTargetId::BuildScript).is_some();
+
+        let has_build_dep = ctx
+            .project_ctx()
+            .package_graph()
+            .unwrap()
+            .dep_links(metadata.id())
+            .unwrap()
+            .any(|link| link.edge.build().is_some());
+
+        if !has_build_script && has_build_dep {
+            out.write(LintLevel::Error, "build dependencies but no build script");
         }
 
         Ok(RunStatus::Executed)
