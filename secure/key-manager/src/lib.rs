@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! The purpose of KeyManager is to rotate consensus key and eventually the network key. It is not
+//! The purpose of KeyManager is to rotate consensus key (and eventually the network key). It is not
 //! responsible for generating the first key and fails if the stores have not been properly setup.
 //! During rotation, it first updates the local store, then submits a transaction to rotate to the
 //! new key. After some period of time and upon restarts of the process, it will evaluate the
@@ -37,8 +37,8 @@ mod libra_interface;
 #[cfg(test)]
 mod tests;
 
-pub const ACCOUNT_KEY: &str = "account_key";
-pub const CONSENSUS_KEY: &str = "consensus_key";
+pub const VALIDATOR_KEY: &str = "validator";
+pub const CONSENSUS_KEY: &str = "consensus";
 const GAS_UNIT_PRICE: u64 = 0;
 const MAX_GAS_AMOUNT: u64 = 400_000;
 const ROTATION_PERIOD_SECS: u64 = 604_800; // 1 week
@@ -87,7 +87,6 @@ impl From<anyhow::Error> for Error {
 
 pub struct KeyManager<LI, S, T> {
     account: AccountAddress,
-    key_name: String,
     libra: LI,
     storage: S,
     time_service: T,
@@ -100,16 +99,9 @@ where
     S: Storage,
     T: TimeService,
 {
-    pub fn new(
-        account: AccountAddress,
-        key_name: String,
-        libra: LI,
-        storage: S,
-        time_service: T,
-    ) -> Self {
+    pub fn new(account: AccountAddress, libra: LI, storage: S, time_service: T) -> Self {
         Self {
             account,
-            key_name,
             libra,
             storage,
             time_service,
@@ -139,7 +131,7 @@ where
     }
 
     pub fn compare_storage_to_config(&self) -> Result<(), Error> {
-        let storage_key = self.storage.get_public_key(&self.key_name)?.public_key;
+        let storage_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
         let validator_config = self.libra.retrieve_validator_config(self.account)?;
         let config_key = validator_config.consensus_pubkey;
 
@@ -167,7 +159,7 @@ where
     }
 
     pub fn last_rotation(&self) -> Result<u64, Error> {
-        Ok(self.storage.get_public_key(&self.key_name)?.last_update)
+        Ok(self.storage.get_public_key(CONSENSUS_KEY)?.last_update)
     }
 
     pub fn libra_timestamp(&self) -> Result<u64, Error> {
@@ -176,7 +168,7 @@ where
     }
 
     pub fn resubmit_consensus_key_transaction(&self) -> Result<(), Error> {
-        let storage_key = self.storage.get_public_key(&self.key_name)?.public_key;
+        let storage_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
         self.submit_key_rotation_transaction(storage_key)
             .map(|_| ())
     }
@@ -190,7 +182,7 @@ where
         &self,
         new_key: Ed25519PublicKey,
     ) -> Result<Ed25519PublicKey, Error> {
-        let account_prikey = self.storage.export_private_key(ACCOUNT_KEY)?;
+        let account_prikey = self.storage.export_private_key(VALIDATOR_KEY)?;
         let seq_id = self.libra.retrieve_sequence_number(self.account)?;
         let expiration = Duration::from_secs(self.time_service.now() + TXN_EXPIRATION_SECS);
         let txn =
