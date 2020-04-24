@@ -137,9 +137,9 @@ impl ClusterSwarmKube {
             Box::pin(async move {
                 match job_api.get(&job_name).await {
                     Ok(job) => {
-                        let job_status = job
-                            .status
-                            .ok_or_else(|| format_err!("status not found for job {}", job_name))?;
+                        let job_status = job.status.as_ref().ok_or_else(|| {
+                            format_err!("status not found for job {}: {:?}", job_name, &job)
+                        })?;
                         if let Some(succeeded) = job_status.succeeded {
                             if succeeded == 1 {
                                 return Ok(true);
@@ -170,9 +170,12 @@ impl ClusterSwarmKube {
             .map(|job| -> Result<String, anyhow::Error> {
                 Ok(job
                     .metadata
-                    .ok_or_else(|| format_err!("metadata not found for job"))?
+                    .as_ref()
+                    .ok_or_else(|| format_err!("metadata not found for job {:?}", &job))?
                     .name
-                    .ok_or_else(|| format_err!("name not found for job"))?)
+                    .as_ref()
+                    .ok_or_else(|| format_err!("name not found for job {:?}", &job))?
+                    .clone())
             })
             .collect::<Result<_, _>>()?;
         let wait_jobs_futures = job_names
@@ -194,23 +197,27 @@ impl ClusterSwarmKube {
                     Ok(o) => {
                         let node_name = o
                             .spec
-                            .ok_or_else(|| format_err!("spec not found for pod {}", pod_name))?
+                            .as_ref()
+                            .ok_or_else(|| format_err!("spec not found for pod {}, spec: {:?}", pod_name, o))?
                             .node_name
+                            .as_ref()
                             .ok_or_else(|| {
-                                format_err!("node_name not found for pod {}", pod_name)
+                                format_err!("node_name not found for pod {}, spec: {:?}", pod_name, o)
                             })?;
                         let pod_ip = o
                             .status
-                            .ok_or_else(|| format_err!("status not found for pod {}", pod_name))?
+                            .as_ref()
+                            .ok_or_else(|| format_err!("status not found for pod {}, spec: {:?}", pod_name, o))?
                             .pod_ip
-                            .ok_or_else(|| format_err!("pod_ip not found for pod {}", pod_name))?;
+                            .as_ref()
+                            .ok_or_else(|| format_err!("pod_ip not found for pod {}, spec: {:?}", pod_name, o))?;
                         if node_name.is_empty() || pod_ip.is_empty() {
                             bail!(
-                                "Either node_name or pod_ip was empty string for pod {}",
-                                pod_name
+                                "Either node_name or pod_ip was empty string for pod {}, spec: {:?}",
+                                pod_name, o
                             )
                         } else {
-                            Ok((node_name, pod_ip))
+                            Ok((node_name.clone(), pod_ip.clone()))
                         }
                     }
                     Err(e) => bail!("pod_api.get failed for pod {} : {:?}", pod_name, e),
