@@ -16,8 +16,6 @@
 #[macro_use]
 mod util;
 
-extern crate prometheus;
-
 mod counters;
 mod methods;
 mod runtime;
