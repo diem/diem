@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use serde::{Deserialize, Serialize};
+use std::num::NonZeroUsize;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
@@ -10,7 +11,7 @@ pub struct MempoolConfig {
     pub shared_mempool_tick_interval_ms: u64,
     pub shared_mempool_batch_size: usize,
     pub shared_mempool_max_concurrent_inbound_syncs: usize,
-    pub shared_mempool_min_broadcast_recipient_count: Option<usize>,
+    pub shared_mempool_min_broadcast_recipient_count: Option<NonZeroUsize>,
     pub capacity: usize,
     // max number of transactions per user in Mempool
     pub capacity_per_user: usize,

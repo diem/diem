@@ -305,16 +305,27 @@ pub(crate) fn process_broadcast_ack<V>(
 
     match parse_request_id(request_id) {
         Ok((start_id, end_id)) => {
-            let mut mempool = smp
-                .mempool
-                .lock()
-                .expect("[shared mempool] failed to acquire mempool lock");
+            enforce_ack_policy(start_id, end_id, smp);
+        }
+        Err(err) => warn!("[shared mempool] ACK with invalid request_id: {:?}", err),
+    }
+}
 
-            for txn in mempool.timeline_range(start_id, end_id).iter() {
+fn enforce_ack_policy<V>(start_id: u64, end_id: u64, smp: SharedMempool<V>)
+where
+    V: TransactionValidation,
+{
+    if let Some(policy) = smp.ack_policy.as_ref() {
+        let mut policy = policy.lock().expect("failed to acquire k-policy lock");
+        let mut mempool = smp
+            .mempool
+            .lock()
+            .expect("[shared mempool] failed to acquire mempool lock");
+        for (timeline_id, txn) in mempool.timeline_range(start_id, end_id) {
+            if policy.is_ack_enough(timeline_id) {
                 mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
             }
         }
-        Err(err) => warn!("[shared mempool] ACK with invalid request_id: {:?}", err),
     }
 }
 

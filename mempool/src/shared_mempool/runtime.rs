@@ -8,7 +8,7 @@ use crate::{
         coordinator::{broadcast_coordinator, gc_coordinator, request_coordinator},
         peer_manager::PeerManager,
         types::{
-            IntervalStream, SharedMempool, SharedMempoolNotification, SyncEvent,
+            AckPolicy, IntervalStream, SharedMempool, SharedMempoolNotification, SyncEvent,
             DEFAULT_MIN_BROADCAST_RECIPIENT_COUNT,
         },
     },
@@ -67,8 +67,16 @@ pub(crate) fn start_shared_mempool<V>(
         config
             .mempool
             .shared_mempool_min_broadcast_recipient_count
-            .unwrap_or(DEFAULT_MIN_BROADCAST_RECIPIENT_COUNT),
+            .map(|ct| ct.get())
+            .unwrap_or_else(|| DEFAULT_MIN_BROADCAST_RECIPIENT_COUNT),
     ));
+    let ack_policy = Arc::new(
+        match config.mempool.shared_mempool_min_broadcast_recipient_count {
+            Some(min_acks) => Some(Mutex::new(AckPolicy::new(min_acks))),
+            None => None,
+        },
+    );
+
     let config_clone = config.clone_for_template();
 
     let mut all_network_events = vec![];
@@ -85,6 +93,7 @@ pub(crate) fn start_shared_mempool<V>(
         storage_read_client,
         validator,
         peer_manager,
+        ack_policy,
         subscribers,
     };
 

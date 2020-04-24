@@ -23,6 +23,7 @@ use libra_types::{
 };
 use std::{
     collections::HashMap,
+    num::NonZeroUsize,
     pin::Pin,
     sync::{Arc, Mutex},
 };
@@ -44,6 +45,9 @@ where
     pub storage_read_client: Arc<dyn StorageRead>,
     pub validator: Arc<RwLock<V>>,
     pub peer_manager: Arc<PeerManager>,
+    /// optional `k-policy` enforcer
+    /// if None, we rely only on TTL to remove transactions from mempool
+    pub ack_policy: Arc<Option<Mutex<AckPolicy>>>,
     pub subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
 }
 
@@ -66,6 +70,42 @@ pub(crate) fn notify_subscribers(
 ) {
     for subscriber in subscribers {
         let _ = subscriber.unbounded_send(event);
+    }
+}
+
+/// represents `k-policy` to ensure reliable txn delivery:
+/// - removes txn from mempool if at least `k` peers have successfully ACK'ed for it
+#[derive(Clone)]
+pub(crate) struct AckPolicy {
+    // tracks how many ACKs have been received for a pending broadcasted txn
+    // (k, v) = (txn timeline_id, # ACKs received)
+    pub ack_counts: HashMap<u64, usize>,
+    pub min_acks: NonZeroUsize,
+}
+
+impl AckPolicy {
+    pub fn new(min_acks: NonZeroUsize) -> Self {
+        Self {
+            ack_counts: HashMap::new(),
+            min_acks,
+        }
+    }
+
+    // updates ACK count for txn with `timeline_id`
+    // returns whether txn has enough ACKs after this update
+    pub fn is_ack_enough(&mut self, timeline_id: u64) -> bool {
+        let acks = self
+            .ack_counts
+            .entry(timeline_id)
+            .and_modify(|acks| *acks += 1)
+            .or_insert(1);
+        if acks >= &mut self.min_acks.get() {
+            // remove
+            self.ack_counts.remove(&timeline_id);
+            true
+        } else {
+            false
+        }
     }
 }
 

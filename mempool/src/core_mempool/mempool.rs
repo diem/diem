@@ -260,7 +260,7 @@ impl Mempool {
         &mut self,
         start_timeline_id: u64,
         end_timeline_id: u64,
-    ) -> Vec<SignedTransaction> {
+    ) -> Vec<(u64, SignedTransaction)> {
         self.transactions
             .timeline_range(start_timeline_id, end_timeline_id)
     }

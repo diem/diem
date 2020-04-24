@@ -298,9 +298,9 @@ impl TransactionStore {
         &mut self,
         start_timeline_id: u64,
         end_timeline_id: u64,
-    ) -> Vec<SignedTransaction> {
+    ) -> Vec<(u64, SignedTransaction)> {
         let mut batch = vec![];
-        for (address, sequence_number) in self
+        for (timeline_id, address, sequence_number) in self
             .timeline_index
             .range(start_timeline_id, end_timeline_id)
         {
@@ -309,7 +309,7 @@ impl TransactionStore {
                 .get_mut(&address)
                 .and_then(|txns| txns.get(&sequence_number))
             {
-                batch.push(txn.txn.clone());
+                batch.push((timeline_id, txn.txn.clone()));
             }
         }
         batch

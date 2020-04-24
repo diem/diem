@@ -212,7 +212,10 @@ impl SharedMempoolNetwork {
 
     /// creates a shared mempool network of one full node and one validator
     /// returns the newly created SharedMempoolNetwork, and the ID of validator and full node, in that order
-    fn bootstrap_vfn_network(broadcast_batch_size: usize) -> (Self, PeerId, PeerId) {
+    fn bootstrap_vfn_network(
+        broadcast_batch_size: usize,
+        k_policy: Option<NonZeroUsize>,
+    ) -> (Self, PeerId, PeerId) {
         let mut smp = Self::default();
 
         // declare peers in network
@@ -232,6 +235,9 @@ impl SharedMempoolNetwork {
         let mut fn_config = NodeConfig::random();
         fn_config.base.role = RoleType::FullNode;
         fn_config.mempool.shared_mempool_batch_size = broadcast_batch_size;
+        fn_config
+            .mempool
+            .shared_mempool_min_broadcast_recipient_count = k_policy;
 
         let mut upstream_config = UpstreamConfig::default();
         upstream_config
@@ -343,15 +349,12 @@ impl SharedMempoolNetwork {
                     panic!("peer {:?} didn't broadcast transaction", peer)
                 }
             }
-            let network_reqs_rx = self.network_reqs_rxs.get_mut(&peer).unwrap();
-            assert!(network_reqs_rx.select_next_some().now_or_never().is_none());
         }
         broadcasts
     }
 
     /// delivers next broadcast message from `peer`
     fn deliver_message(&mut self, peer: &PeerId) -> (Vec<SignedTransaction>, PeerId) {
-        println!("delivering");
         let main_peer_id = self.peer_ids.get(peer).unwrap_or(peer);
         // emulate timer tick
         self.timers
@@ -781,7 +784,8 @@ fn test_state_sync_events_committed_txns() {
 #[test]
 fn test_broadcast_ack_single_account_single_peer() {
     let batch_size = 3;
-    let (mut smp, validator, full_node) = SharedMempoolNetwork::bootstrap_vfn_network(3);
+    let (mut smp, validator, full_node) =
+        SharedMempoolNetwork::bootstrap_vfn_network(3, NonZeroUsize::new(1));
 
     // add txns to FN
     // txns from single account
@@ -824,7 +828,8 @@ fn test_broadcast_ack_single_account_single_peer() {
 
 #[test]
 fn test_broadcast_ack_multiple_accounts_single_peer() {
-    let (mut smp, validator, full_node) = SharedMempoolNetwork::bootstrap_vfn_network(3);
+    let (mut smp, validator, full_node) =
+        SharedMempoolNetwork::bootstrap_vfn_network(3, NonZeroUsize::new(1));
 
     let all_txns = vec![
         TestTransaction::new(0, 0, 1),
@@ -874,7 +879,7 @@ fn test_k_policy_broadcast_no_fallback() {
     fn_0_config.mempool.shared_mempool_batch_size = 1;
     fn_0_config
         .mempool
-        .shared_mempool_min_broadcast_recipient_count = Some(1);
+        .shared_mempool_min_broadcast_recipient_count = NonZeroUsize::new(1);
     fn_0_config
         .upstream
         .upstream_peers
@@ -936,7 +941,7 @@ fn test_k_policy_broadcast_to_fallback() {
     fn_0_config.mempool.shared_mempool_batch_size = 1;
     fn_0_config
         .mempool
-        .shared_mempool_min_broadcast_recipient_count = Some(2);
+        .shared_mempool_min_broadcast_recipient_count = NonZeroUsize::new(2);
     fn_0_config
         .upstream
         .upstream_peers
@@ -996,7 +1001,7 @@ fn test_k_policy_broadcast_not_enough_fallbacks() {
     fn_0_config.mempool.shared_mempool_batch_size = 1;
     fn_0_config
         .mempool
-        .shared_mempool_min_broadcast_recipient_count = Some(2);
+        .shared_mempool_min_broadcast_recipient_count = NonZeroUsize::new(2);
     fn_0_config
         .upstream
         .upstream_peers
@@ -1042,10 +1047,11 @@ fn test_k_policy_broadcast_excess_fallbacks() {
 
     // fn_0 has v0 as primary upstream peer and v1 as fallback upstream peer
     let mut fn_0_config = NodeConfig::default();
+    fn_0_config.base.role = RoleType::FullNode;
     fn_0_config.mempool.shared_mempool_batch_size = 1;
     fn_0_config
         .mempool
-        .shared_mempool_min_broadcast_recipient_count = Some(2);
+        .shared_mempool_min_broadcast_recipient_count = NonZeroUsize::new(2);
     fn_0_config
         .upstream
         .upstream_peers
@@ -1078,14 +1084,26 @@ fn test_k_policy_broadcast_excess_fallbacks() {
     );
 
     // add txn to fn_0
-    smp.add_txns(&fn_0, vec![TestTransaction::new(1, 0, 1)]);
+    let txn = vec![TestTransaction::new(1, 0, 1)];
+    smp.add_txns(&fn_0, txn.clone());
 
-    // make sure it delivers txn to both nodes
-    let peers: Vec<PeerId> = smp
-        .deliver_multi_network_message(vec![(fn_0, 1), (fn_0_fallback_network_id, 1)])
-        .iter()
-        .map(|(_txns, peer)| *peer)
-        .collect();
-    assert!(peers.contains(&v_0));
-    assert!(peers.contains(&fn_1) || peers.contains(&fn_2));
+    let first_broadcast = smp.deliver_multi_network_message(vec![(fn_0, 1)]);
+    assert_eq!(first_broadcast[0].1, v_0);
+    {
+        let mempool = smp.mempools.get(&fn_0).unwrap();
+        let block = mempool.lock().unwrap().get_block(100, HashSet::new());
+        // txn should still be in mempool because only one peer ACK'ed so far
+        assert!(block.contains(&txn[0].make_signed_transaction_with_max_gas_amount(5)));
+    }
+
+    let second_broadcast = smp.deliver_multi_network_message(vec![(fn_0_fallback_network_id, 1)]);
+    let recipient = second_broadcast[0].1;
+    let expected_recipients = vec![fn_1, fn_2];
+    assert!(expected_recipients.contains(&recipient));
+    {
+        let mempool = smp.mempools.get(&fn_0).unwrap();
+        let block = mempool.lock().unwrap().get_block(100, HashSet::new());
+        // txn should be removed after receiving 2(=k) ACKs
+        assert!(!block.contains(&txn[0].make_signed_transaction_with_max_gas_amount(5)));
+    }
 }

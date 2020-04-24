@@ -225,13 +225,13 @@ impl TimelineIndex {
         &mut self,
         start_timeline_id: u64,
         end_timeline_id: u64,
-    ) -> Vec<(AccountAddress, u64)> {
+    ) -> Vec<(u64, AccountAddress, u64)> {
         let mut batch = vec![];
-        for (_, &(address, sequence_number)) in self.timeline.range((
+        for (timeline_id, &(address, sequence_number)) in self.timeline.range((
             Bound::Excluded(start_timeline_id),
             Bound::Included(end_timeline_id),
         )) {
-            batch.push((address, sequence_number));
+            batch.push((*timeline_id, address, sequence_number));
         }
         batch
     }
