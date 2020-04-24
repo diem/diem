@@ -19,7 +19,6 @@ proptest = { version = "0.9.6", optional = true }
 rustyline = "6.1.2"
 rust_decimal = "1.4.1"
 num-traits = "0.2"
-parity-multiaddr = { version = "0.8.0", default-features = false }
 rand = "0.7.3"
 reqwest = { version = "0.10.4", features = ["blocking", "json", "rustls-tls"], default-features = false }
 serde = { version = "1.0.106", features = ["derive"] }
@@ -37,6 +36,7 @@ libra-wallet = { path = "../libra-wallet", version = "0.1.0" }
 libra-json-rpc-client = { path = "../json-rpc", version = "0.1.0" }
 libra-logger =  { path = "../../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
+libra-network-address = { path = "../../network/network-address", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath/", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
