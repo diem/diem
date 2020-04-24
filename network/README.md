@@ -18,7 +18,6 @@ primary interfaces:
 * DirectSend, for fire-and-forget style message delivery to a single receiver.
 
 The network component uses:
-* [Multiaddr](https://multiformats.io/multiaddr/) scheme for peer addressing.
 * TCP for reliable transport.
 * [Noise](https://noiseprotocol.org/noise.html) for authentication and full
  end-to-end encryption.

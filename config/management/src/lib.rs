@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use libra_crypto::{ed25519::Ed25519PublicKey, hash::CryptoHash, x25519, ValidCryptoMaterial};
+use libra_network_address::{NetworkAddress, RawNetworkAddress};
 use libra_secure_storage::{Storage, VaultStorage};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_types::{
@@ -11,8 +12,12 @@ use libra_types::{
     transaction::{RawTransaction, SignedTransaction, Transaction},
     waypoint::Waypoint,
 };
-use parity_multiaddr::Multiaddr;
-use std::{convert::TryInto, fmt::Write, str::FromStr, time::Duration};
+use std::{
+    convert::{TryFrom, TryInto},
+    fmt::Write,
+    str::FromStr,
+    time::Duration,
+};
 use structopt::StructOpt;
 
 pub mod constants {
@@ -95,6 +100,11 @@ impl Command {
                 .expect("Unable to retrieve validator network key from storage")
                 .public_key;
 
+            let fullnode_address = RawNetworkAddress::try_from(&config.fullnode_address)
+                .expect("Unable to serialize fullnode network address from config");
+            let validator_address = RawNetworkAddress::try_from(&config.validator_address)
+                .expect("Unable to serialize validator network address from config");
+
             let fullnode_network_key = fullnode_network_key.to_bytes();
             let fullnode_network_key: x25519::PublicKey = fullnode_network_key
                 .as_ref()
@@ -118,9 +128,9 @@ impl Command {
                 consensus_key.to_bytes().to_vec(),
                 owner_key.to_bytes().to_vec(),
                 validator_network_key.to_bytes(),
-                config.validator_address.to_vec(),
+                validator_address.into(),
                 fullnode_network_key.to_bytes(),
-                config.fullnode_address.to_vec(),
+                fullnode_address.into(),
             );
 
             let sender = config.owner_address;
@@ -242,9 +252,9 @@ pub struct ValidatorConfig {
     #[structopt(long)]
     owner_address: AccountAddress,
     #[structopt(long)]
-    validator_address: Multiaddr,
+    validator_address: NetworkAddress,
     #[structopt(long)]
-    fullnode_address: Multiaddr,
+    fullnode_address: NetworkAddress,
     #[structopt(flatten)]
     secure_backend: SecureBackend,
 }
@@ -288,8 +298,8 @@ pub mod tests {
 
         let validator_txn = validator_config(
             AccountAddress::random(),
-            "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
-            "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
+            "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
+            "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
             namespace,
         );
 
@@ -315,8 +325,8 @@ pub mod tests {
 
         validator_config(
             AccountAddress::random(),
-            "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
-            "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
+            "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
+            "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
             namespace,
         );
     }
@@ -468,8 +478,8 @@ pub mod tests {
 
     fn validator_config(
         owner_address: AccountAddress,
-        validator_address: Multiaddr,
-        fullnode_address: Multiaddr,
+        validator_address: NetworkAddress,
+        fullnode_address: NetworkAddress,
         namespace: &str,
     ) -> Transaction {
         let args = format!(

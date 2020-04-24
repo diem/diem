@@ -13,6 +13,7 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey, Uniform, ValidCryptoMaterial,
 };
+use libra_network_address::RawNetworkAddress;
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
@@ -38,7 +39,7 @@ use move_vm_state::{
 use move_vm_types::{chain_state::ChainState, values::Value};
 use once_cell::sync::Lazy;
 use rand::prelude::*;
-use std::collections::HashMap;
+use std::{collections::HashMap, convert::TryFrom};
 use stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use vm::{
     access::ModuleAccess, gas_schedule::zero_cost_schedule,
@@ -1066,14 +1067,16 @@ pub fn validator_registrations(node_configs: &[NodeConfig]) -> Vec<ValidatorRegi
             let network = n.validator_network.as_ref().unwrap();
             let network_keypairs = network.network_keypairs.as_ref().unwrap();
             let signing_key = network_keypairs.signing_keypair.public_key();
+            let raw_advertised_address =
+                RawNetworkAddress::try_from(&network.advertised_address).unwrap();
 
             let script = transaction_builder::encode_register_validator_script(
                 consensus_key.to_bytes().to_vec(),
                 signing_key.to_bytes().to_vec(),
                 network_keypairs.identity_keypair.public_key().to_bytes(),
-                network.advertised_address.to_vec(),
+                raw_advertised_address.clone().into(),
                 network_keypairs.identity_keypair.public_key().to_bytes(),
-                network.advertised_address.to_vec(),
+                raw_advertised_address.into(),
             );
             (account_key, script)
         })
