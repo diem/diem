@@ -158,22 +158,24 @@ fn gen_configs(count: usize) -> (Vec<NodeConfig>, ValidatorSet, DiscoverySet) {
     let randomize_service_ports = true;
     let randomize_libranet_ports = false;
 
-    let ValidatorSwarm {
-        mut nodes,
-        validator_set,
-        discovery_set,
-    } = generator::validator_swarm(
+    let swarm = generator::validator_swarm(
         &config_template,
         count,
         config_seed,
         randomize_service_ports,
         randomize_libranet_ports,
     );
+    let auth_keys = swarm.auth_keys();
+    let ValidatorSwarm {
+        mut nodes,
+        validator_set,
+        discovery_set,
+    } = swarm;
 
     let vm_publishing_option = None;
     let genesis = encode_genesis_transaction_with_validator(
         GENESIS_KEYPAIR.1.clone(),
-        &nodes[..],
+        &auth_keys,
         validator_set.clone(),
         discovery_set.clone(),
         vm_publishing_option,

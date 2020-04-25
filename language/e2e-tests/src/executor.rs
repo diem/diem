@@ -100,11 +100,13 @@ impl FakeExecutor {
         let genesis_change_set = {
             let validator_set_len: usize = validator_set.as_ref().map_or(10, |s| s.payload().len());
             let swarm = generator::validator_swarm_for_testing(validator_set_len);
+            let mut auth_keys = swarm.auth_keys();
+            auth_keys.truncate(validator_set_len);
             let validator_set = validator_set.unwrap_or(swarm.validator_set);
             let discovery_set = mock_discovery_set(&validator_set);
             vm_genesis::encode_genesis_change_set(
                 &GENESIS_KEYPAIR.1,
-                &swarm.nodes,
+                &auth_keys,
                 validator_set,
                 discovery_set,
                 &genesis_modules,

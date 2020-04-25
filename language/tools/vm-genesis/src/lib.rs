@@ -8,11 +8,9 @@ mod genesis_gas_schedule;
 use crate::genesis_gas_schedule::INITIAL_GAS_SCHEDULE;
 use anyhow::Result;
 use bytecode_verifier::VerifiedModule;
-use libra_config::{config::NodeConfig, generator};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    traits::ValidCryptoMaterial,
-    PrivateKey, Uniform,
+    PrivateKey, Uniform, ValidCryptoMaterial,
 };
 use libra_state_view::StateView;
 use libra_types::{
@@ -115,14 +113,14 @@ pub fn name(name: &str) -> Identifier {
 
 pub fn encode_genesis_transaction_with_validator(
     public_key: Ed25519PublicKey,
-    nodes: &[NodeConfig],
+    authentication_keys: &[AuthenticationKey],
     validator_set: ValidatorSet,
     discovery_set: DiscoverySet,
     vm_publishing_option: Option<VMPublishingOption>,
 ) -> Transaction {
     encode_genesis_transaction(
         public_key,
-        nodes,
+        authentication_keys,
         validator_set,
         discovery_set,
         stdlib_modules(StdLibOptions::Staged), // Must use staged stdlib
@@ -133,7 +131,7 @@ pub fn encode_genesis_transaction_with_validator(
 
 pub fn encode_genesis_change_set(
     public_key: &Ed25519PublicKey,
-    nodes: &[NodeConfig],
+    authentication_keys: &[AuthenticationKey],
     validator_set: ValidatorSet,
     discovery_set: DiscoverySet,
     stdlib_modules: &[VerifiedModule],
@@ -184,7 +182,7 @@ pub fn encode_genesis_change_set(
         &move_vm,
         &gas_schedule,
         &mut interpreter_context,
-        &nodes,
+        &authentication_keys,
         &validator_set,
         &discovery_set,
         &lbr_ty,
@@ -210,7 +208,7 @@ pub fn encode_genesis_change_set(
 
 pub fn encode_genesis_transaction(
     public_key: Ed25519PublicKey,
-    nodes: &[NodeConfig],
+    authentication_keys: &[AuthenticationKey],
     validator_set: ValidatorSet,
     discovery_set: DiscoverySet,
     stdlib_modules: &[VerifiedModule],
@@ -218,7 +216,7 @@ pub fn encode_genesis_transaction(
 ) -> Transaction {
     Transaction::WaypointWriteSet(encode_genesis_change_set(
         &public_key,
-        nodes,
+        authentication_keys,
         validator_set,
         discovery_set,
         stdlib_modules,
@@ -631,7 +629,7 @@ fn create_and_initialize_validator_and_discovery_set(
     move_vm: &MoveVM,
     gas_schedule: &CostTable,
     interpreter_context: &mut TransactionExecutionContext,
-    nodes: &[NodeConfig],
+    authentication_keys: &[AuthenticationKey],
     validator_set: &ValidatorSet,
     discovery_set: &DiscoverySet,
     lbr_ty: &TypeTag,
@@ -642,7 +640,7 @@ fn create_and_initialize_validator_and_discovery_set(
         move_vm,
         gas_schedule,
         interpreter_context,
-        nodes,
+        authentication_keys,
         validator_set,
         discovery_set,
         lbr_ty,
@@ -737,37 +735,12 @@ fn create_and_initialize_discovery_set(
         .expect("Failure initializing discovery set");
 }
 
-// TODO: refactor ValidatorSet / NodeConfig to make it possible to  do this resolution without a
-// linear search through nodes
-/// Return an authentication key in `nodes` whose derived address is equal to `address`
-fn get_validator_authentication_key(
-    nodes: &[NodeConfig],
-    address: &AccountAddress,
-) -> Option<AuthenticationKey> {
-    for node in nodes {
-        let public_key = node
-            .test
-            .as_ref()
-            .unwrap()
-            .account_keypair
-            .as_ref()
-            .unwrap()
-            .public_key();
-        let validator_authentication_key = AuthenticationKey::ed25519(&public_key);
-        let derived_address = validator_authentication_key.derived_address();
-        if derived_address == *address {
-            return Some(validator_authentication_key);
-        }
-    }
-    None
-}
-
 /// Initialize each validator.
 fn initialize_validators(
     move_vm: &MoveVM,
     gas_schedule: &CostTable,
     interpreter_context: &mut TransactionExecutionContext,
-    nodes: &[NodeConfig],
+    authentication_keys: &[AuthenticationKey],
     validator_set: &ValidatorSet,
     discovery_set: &DiscoverySet,
     lbr_ty: &TypeTag,
@@ -775,17 +748,11 @@ fn initialize_validators(
     let mut txn_data = TransactionMetadata::default();
     txn_data.sender = account_config::association_address();
 
-    for (validator_keys, discovery_info) in validator_set.payload().iter().zip(discovery_set.iter())
-    {
+    let discovery_and_keys = discovery_set.iter().zip(authentication_keys.iter());
+    let nodes = validator_set.payload().iter().zip(discovery_and_keys);
+    for (validator_info, (discovery_info, auth_key)) in nodes {
         // First, add a ValidatorConfig resource under each account
-        let validator_address = *validator_keys.account_address();
-        let validator_authentication_key =
-            get_validator_authentication_key(nodes, &validator_address).unwrap_or_else(|| {
-                panic!(
-                    "Couldn't find authentication key for validator address {}",
-                    validator_address
-                )
-            });
+        let validator_address = *validator_info.account_address();
         move_vm
             .execute_function(
                 &account_config::ACCOUNT_MODULE,
@@ -796,7 +763,7 @@ fn initialize_validators(
                 vec![lbr_ty.clone()],
                 vec![
                     Value::address(validator_address),
-                    Value::vector_u8(validator_authentication_key.prefix().to_vec()),
+                    Value::vector_u8(auth_key.prefix().to_vec()),
                 ],
             )
             .unwrap_or_else(|e| {
@@ -818,10 +785,10 @@ fn initialize_validators(
                 vec![],
                 vec![
                     // consensus_pubkey
-                    Value::vector_u8(validator_keys.consensus_public_key().to_bytes().to_vec()),
+                    Value::vector_u8(validator_info.consensus_public_key().to_bytes().to_vec()),
                     // network_signing_pubkey
                     Value::vector_u8(
-                        validator_keys
+                        validator_info
                             .network_signing_public_key()
                             .to_bytes()
                             .to_vec(),
@@ -1016,11 +983,11 @@ fn verify_genesis_write_set(events: &[ContractEvent], discovery_set: &DiscoveryS
 /// Generate an artificial genesis `ChangeSet` for testing
 pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) -> ChangeSet {
     let stdlib_modules = stdlib_modules(stdlib_options);
-    let swarm = generator::validator_swarm_for_testing(10);
+    let swarm = libra_config::generator::validator_swarm_for_testing(10);
 
     encode_genesis_change_set(
         &GENESIS_KEYPAIR.1,
-        &swarm.nodes,
+        &swarm.auth_keys(),
         swarm.validator_set,
         swarm.discovery_set,
         stdlib_modules,
