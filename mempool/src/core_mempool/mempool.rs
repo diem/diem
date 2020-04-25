@@ -8,6 +8,7 @@ use crate::{
         index::TxnPointer,
         transaction::{MempoolTransaction, TimelineState},
         transaction_store::TransactionStore,
+        ttl_cache::TtlCache,
     },
     OP_COUNTERS,
 };
@@ -19,19 +20,17 @@ use libra_types::{
     mempool_status::{MempoolStatus, MempoolStatusCode},
     transaction::SignedTransaction,
 };
-use lru_cache::LruCache;
 use std::{
     cmp::max,
     collections::HashSet,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use ttl_cache::TtlCache;
 
 pub struct Mempool {
     // stores metadata of all transactions in mempool (of all states)
     transactions: TransactionStore,
 
-    sequence_number_cache: LruCache<AccountAddress, u64>,
+    sequence_number_cache: TtlCache<AccountAddress, u64>,
     // temporary DS. TODO: eventually retire it
     // for each transaction, entry with timestamp is added when transaction enters mempool
     // used to measure e2e latency of transaction in system, as well as time it takes to pick it up
@@ -44,8 +43,8 @@ impl Mempool {
     pub fn new(config: &NodeConfig) -> Self {
         Mempool {
             transactions: TransactionStore::new(&config.mempool),
-            sequence_number_cache: LruCache::new(config.mempool.capacity),
-            metrics_cache: TtlCache::new(config.mempool.capacity),
+            sequence_number_cache: TtlCache::new(config.mempool.capacity, Duration::from_secs(100)),
+            metrics_cache: TtlCache::new(config.mempool.capacity, Duration::from_secs(100)),
             system_transaction_timeout: Duration::from_secs(
                 config.mempool.system_transaction_timeout_secs,
             ),
@@ -120,7 +119,7 @@ impl Mempool {
             txn.sequence_number(),
             db_sequence_number,
         );
-        let cached_value = self.sequence_number_cache.get_mut(&txn.sender());
+        let cached_value = self.sequence_number_cache.get(&txn.sender());
         let sequence_number =
             cached_value.map_or(db_sequence_number, |value| max(*value, db_sequence_number));
         self.sequence_number_cache
@@ -140,11 +139,8 @@ impl Mempool {
             .expect("init timestamp failure")
             + self.system_transaction_timeout;
         if timeline_state != TimelineState::NonQualified {
-            self.metrics_cache.insert(
-                (txn.sender(), txn.sequence_number()),
-                SystemTime::now(),
-                Duration::from_secs(100),
-            );
+            self.metrics_cache
+                .insert((txn.sender(), txn.sequence_number()), SystemTime::now());
         }
 
         let txn_info = MempoolTransaction::new(
@@ -187,12 +183,12 @@ impl Mempool {
             if seen.contains(&TxnPointer::from(txn)) {
                 continue;
             }
-            let mut seq = txn.sequence_number;
-            let account_sequence_number = self.sequence_number_cache.get_mut(&txn.address);
+            let seq = txn.sequence_number;
+            let account_sequence_number = self.sequence_number_cache.get(&txn.address);
             let seen_previous = seq > 0 && seen.contains(&(txn.address, seq - 1));
             // include transaction if it's "next" for given account or
             // we've already sent its ancestor to Consensus
-            if seen_previous || account_sequence_number == Some(&mut seq) {
+            if seen_previous || account_sequence_number == Some(&seq) {
                 let ptr = TxnPointer::from(txn);
                 seen.insert(ptr);
                 trace_event!("mempool::get_block", {"txn", txn.address, txn.sequence_number});
@@ -234,9 +230,14 @@ impl Mempool {
         block
     }
 
-    /// TTL based garbage collection. Remove all transactions that got expired
-    pub(crate) fn gc_by_system_ttl(&mut self) {
+    /// periodic core mempool garbage collection
+    /// removes all expired transactions
+    /// clears expired entries in metrics cache and sequence number cache
+    pub(crate) fn gc(&mut self) {
+        let now = SystemTime::now();
         self.transactions.gc_by_system_ttl();
+        self.metrics_cache.gc(now);
+        self.sequence_number_cache.gc(now);
     }
 
     /// Garbage collection based on client-specified expiration time

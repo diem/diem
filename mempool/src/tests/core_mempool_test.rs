@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    core_mempool::{CoreMempool, TimelineState},
+    core_mempool::{CoreMempool, TimelineState, TtlCache},
     tests::common::{
         add_signed_txn, add_txn, add_txns_to_mempool, exist_in_metrics_cache, setup_mempool,
         TestTransaction,
@@ -10,7 +10,10 @@ use crate::{
 };
 use libra_config::config::NodeConfig;
 use libra_types::transaction::SignedTransaction;
-use std::{collections::HashSet, time::Duration};
+use std::{
+    collections::HashSet,
+    time::{Duration, SystemTime},
+};
 
 #[test]
 fn test_transaction_ordering() {
@@ -189,7 +192,7 @@ fn test_system_ttl() {
     add_txn(&mut mempool, transaction.clone()).unwrap();
 
     // gc routine should clear transaction from first insert but keep last one
-    mempool.gc_by_system_ttl();
+    mempool.gc();
     let batch = mempool.get_block(1, HashSet::new());
     assert_eq!(vec![transaction.make_signed_transaction()], batch);
 }
@@ -292,7 +295,7 @@ fn test_capacity() {
 
     // fill it up and check that GC routine will clear space
     assert!(add_txn(&mut pool, TestTransaction::new(1, 2, 1)).is_err());
-    pool.gc_by_system_ttl();
+    pool.gc();
     assert!(add_txn(&mut pool, TestTransaction::new(1, 2, 1)).is_ok());
 }
 
@@ -373,4 +376,28 @@ fn test_clean_stuck_transactions() {
     let block = pool.get_block(10, HashSet::new());
     assert_eq!(block.len(), 1);
     assert_eq!(block[0].sequence_number(), 10);
+}
+
+#[test]
+fn test_ttl_cache() {
+    let mut cache = TtlCache::new(2, Duration::from_secs(1));
+    // test basic insertion
+    cache.insert(1, 1);
+    cache.insert(1, 2);
+    cache.insert(2, 2);
+    cache.insert(1, 3);
+    assert_eq!(cache.get(&1), Some(&3));
+    assert_eq!(cache.get(&2), Some(&2));
+    assert_eq!(cache.size(), 2);
+    // test reaching max capacity
+    cache.insert(3, 3);
+    assert_eq!(cache.size(), 2);
+    assert_eq!(cache.get(&1), Some(&3));
+    assert_eq!(cache.get(&3), Some(&3));
+    assert_eq!(cache.get(&2), None);
+    // test ttl functionality
+    cache.gc(SystemTime::now()
+        .checked_add(Duration::from_secs(10))
+        .unwrap());
+    assert_eq!(cache.size(), 0);
 }
