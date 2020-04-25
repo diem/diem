@@ -13,7 +13,7 @@ use crate::{
 };
 use libra_types::{
     discovery_info::DiscoveryInfo, discovery_set::DiscoverySet, on_chain_config::ValidatorSet,
-    validator_info::ValidatorInfo,
+    transaction::authenticator::AuthenticationKey, validator_info::ValidatorInfo,
 };
 use rand::{rngs::StdRng, SeedableRng};
 
@@ -21,6 +21,19 @@ pub struct ValidatorSwarm {
     pub nodes: Vec<NodeConfig>,
     pub validator_set: ValidatorSet,
     pub discovery_set: DiscoverySet,
+}
+
+impl ValidatorSwarm {
+    pub fn auth_keys(&self) -> Vec<AuthenticationKey> {
+        self.nodes
+            .iter()
+            .map(|n| {
+                let test_config = n.test.as_ref().unwrap();
+                let key = test_config.account_keypair.as_ref().unwrap().public_key();
+                AuthenticationKey::ed25519(&key)
+            })
+            .collect::<Vec<_>>()
+    }
 }
 
 pub fn validator_swarm(

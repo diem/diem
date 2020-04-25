@@ -189,17 +189,19 @@ impl ValidatorConfig {
         );
 
         let (faucet_key, config_seed) = self.build_faucet();
-        let ValidatorSwarm {
-            mut nodes,
-            validator_set,
-            discovery_set,
-        } = generator::validator_swarm(
+        let swarm = generator::validator_swarm(
             &self.template,
             self.nodes,
             config_seed,
             randomize_service_ports,
             randomize_libranet_ports,
         );
+        let auth_keys = swarm.auth_keys();
+        let ValidatorSwarm {
+            mut nodes,
+            validator_set,
+            discovery_set,
+        } = swarm;
 
         ensure!(
             nodes.len() == self.nodes,
@@ -222,7 +224,7 @@ impl ValidatorConfig {
 
         let genesis = vm_genesis::encode_genesis_transaction_with_validator(
             faucet_key.public_key(),
-            &nodes,
+            &auth_keys,
             validator_set,
             discovery_set,
             self.template
