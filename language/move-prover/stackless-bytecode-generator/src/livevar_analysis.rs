@@ -96,7 +96,7 @@ impl LiveVarAnalysis {
         &mut self,
         cfg: &StacklessControlFlowGraph,
         instrs: &[Bytecode],
-        state_map: StateMap<LiveVarState>,
+        state_map: StateMap<LiveVarState, ()>,
     ) -> BTreeMap<CodeOffset, BTreeSet<TempIndex>> {
         let mut result = BTreeMap::new();
         for (block_id, block_state) in state_map {
@@ -153,6 +153,7 @@ impl LiveVarAnalysis {
 
 impl TransferFunctions for LiveVarAnalysis {
     type State = LiveVarState;
+    type AnalysisError = ();
 
     fn execute_block(
         &mut self,
@@ -160,13 +161,13 @@ impl TransferFunctions for LiveVarAnalysis {
         pre_state: Self::State,
         instrs: &[Bytecode],
         cfg: &StacklessControlFlowGraph,
-    ) -> Self::State {
+    ) -> Result<Self::State, Self::AnalysisError> {
         let mut state = pre_state;
         for offset in cfg.instr_indexes(block_id).rev() {
             let instr = &instrs[offset as usize];
             state = self.execute(state, instr, offset);
         }
-        state
+        Ok(state)
     }
 }
 

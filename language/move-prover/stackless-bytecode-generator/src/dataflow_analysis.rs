@@ -22,16 +22,17 @@ pub trait AbstractDomain: Clone + Sized {
 }
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct BlockState<State: Clone> {
+pub struct BlockState<State: Clone, AnalysisError: Clone> {
     pub pre: State,
-    pub post: State,
+    pub post: Result<State, AnalysisError>,
 }
 
-pub type StateMap<State> = HashMap<BlockId, BlockState<State>>;
+pub type StateMap<State, AnalysisError> = HashMap<BlockId, BlockState<State, AnalysisError>>;
 
 /// Take a pre-state + instruction and mutate it to produce a post-state。
 pub trait TransferFunctions {
     type State: AbstractDomain + Clone;
+    type AnalysisError: Clone;
 
     fn execute_block(
         &mut self,
@@ -39,7 +40,7 @@ pub trait TransferFunctions {
         pre_state: Self::State,
         instrs: &[Bytecode],
         cfg: &StacklessControlFlowGraph,
-    ) -> Self::State;
+    ) -> Result<Self::State, Self::AnalysisError>;
 }
 
 pub trait DataflowAnalysis: TransferFunctions {
@@ -48,8 +49,8 @@ pub trait DataflowAnalysis: TransferFunctions {
         initial_state: Self::State,
         instrs: &[Bytecode],
         cfg: &StacklessControlFlowGraph,
-    ) -> StateMap<Self::State> {
-        let mut state_map: StateMap<Self::State> = StateMap::new();
+    ) -> StateMap<Self::State, Self::AnalysisError> {
+        let mut state_map: StateMap<Self::State, Self::AnalysisError> = StateMap::new();
         let mut work_list = VecDeque::new();
         for entry_block_id in cfg.entry_blocks() {
             work_list.push_back(entry_block_id);
@@ -57,7 +58,7 @@ pub trait DataflowAnalysis: TransferFunctions {
                 entry_block_id,
                 BlockState {
                     pre: initial_state.clone(),
-                    post: initial_state.clone(),
+                    post: Ok(initial_state.clone()),
                 },
             );
         }
@@ -66,35 +67,37 @@ pub trait DataflowAnalysis: TransferFunctions {
             let post = self.execute_block(block_id, pre.clone(), &instrs, cfg);
 
             // propagate postcondition of this block to successor blocks
-            for next_block_id in cfg.successors(block_id) {
-                match state_map.get_mut(next_block_id) {
-                    Some(next_block_res) => {
-                        let join_result = next_block_res.pre.join(&post);
+            if let Ok(state) = &post {
+                for next_block_id in cfg.successors(block_id) {
+                    match state_map.get_mut(next_block_id) {
+                        Some(next_block_res) => {
+                            let join_result = next_block_res.pre.join(state);
 
-                        match join_result {
-                            JoinResult::Unchanged => {
-                                // Pre is the same after join. Reanalyzing this block would produce
-                                // the same post. Don't schedule it.
-                                continue;
+                            match join_result {
+                                JoinResult::Unchanged => {
+                                    // Pre is the same after join. Reanalyzing this block would produce
+                                    // the same post. Don't schedule it.
+                                    continue;
+                                }
+                                JoinResult::Changed => {
+                                    // The pre changed. Schedule the next block.
+                                    work_list.push_back(*next_block_id);
+                                }
+                                _ => unreachable!(), // There shouldn't be any error at this point
                             }
-                            JoinResult::Changed => {
-                                // The pre changed. Schedule the next block.
-                                work_list.push_back(*next_block_id);
-                            }
-                            _ => unreachable!(), // There shouldn't be any error at this point
                         }
-                    }
-                    None => {
-                        // Haven't visited the next block yet. Use the post of the current block as
-                        // its pre and schedule it.
-                        state_map.insert(
-                            *next_block_id,
-                            BlockState {
-                                pre: post.clone(),
-                                post: initial_state.clone(),
-                            },
-                        );
-                        work_list.push_back(*next_block_id);
+                        None => {
+                            // Haven't visited the next block yet. Use the post of the current block as
+                            // its pre and schedule it.
+                            state_map.insert(
+                                *next_block_id,
+                                BlockState {
+                                    pre: state.clone(),
+                                    post: Ok(initial_state.clone()),
+                                },
+                            );
+                            work_list.push_back(*next_block_id);
+                        }
                     }
                 }
             }
