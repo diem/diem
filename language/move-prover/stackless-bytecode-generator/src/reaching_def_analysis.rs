@@ -111,6 +111,7 @@ impl<'a> ReachingDefAnalysis<'a> {
 
 impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
     type State = ReachingDefState;
+    type AnalysisError = ();
 
     fn execute_block(
         &mut self,
@@ -118,13 +119,13 @@ impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
         pre_state: Self::State,
         instrs: &[Bytecode],
         cfg: &StacklessControlFlowGraph,
-    ) -> Self::State {
+    ) -> Result<Self::State, Self::AnalysisError> {
         let mut state = pre_state;
         for offset in cfg.instr_indexes(block_id) {
             let instr = &instrs[offset as usize];
             state = self.execute(state, instr, offset);
         }
-        state
+        Ok(state)
     }
 }
 

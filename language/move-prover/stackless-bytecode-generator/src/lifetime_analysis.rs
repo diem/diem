@@ -307,11 +307,11 @@ impl<'a> LifetimeAnalysis<'a> {
 
     /// Union the set of dead references at each CodeOffset
     fn post_process(
-        state_map: StateMap<LifetimeState>,
+        state_map: StateMap<LifetimeState, ()>,
     ) -> BTreeMap<CodeOffset, BTreeSet<TempIndex>> {
         let mut res = BTreeMap::new();
         for (_, v) in state_map {
-            LifetimeState::dead_ref_join(&mut res, &v.post.dead_refs);
+            LifetimeState::dead_ref_join(&mut res, &v.post.unwrap().dead_refs);
         }
         res
     }
@@ -429,6 +429,7 @@ impl<'a> LifetimeAnalysis<'a> {
 
 impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
     type State = LifetimeState;
+    type AnalysisError = ();
 
     fn execute_block(
         &mut self,
@@ -436,13 +437,13 @@ impl<'a> TransferFunctions for LifetimeAnalysis<'a> {
         pre_state: Self::State,
         instrs: &[Bytecode],
         cfg: &StacklessControlFlowGraph,
-    ) -> Self::State {
+    ) -> Result<Self::State, Self::AnalysisError> {
         let mut state = pre_state;
         for offset in cfg.instr_indexes(block_id) {
             let instr = &instrs[offset as usize];
             state = self.execute(state, instr, offset);
         }
-        state
+        Ok(state)
     }
 }
 
