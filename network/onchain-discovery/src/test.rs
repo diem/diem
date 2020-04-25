@@ -172,7 +172,6 @@ fn gen_configs(count: usize) -> (Vec<NodeConfig>, ValidatorSet, DiscoverySet) {
 
     let vm_publishing_option = None;
     let genesis = encode_genesis_transaction_with_validator(
-        &GENESIS_KEYPAIR.0,
         GENESIS_KEYPAIR.1.clone(),
         &nodes[..],
         validator_set.clone(),

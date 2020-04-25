@@ -221,7 +221,6 @@ impl ValidatorConfig {
             DiscoverySet::new(discovery_set.into_iter().take(nodes_in_genesis).collect());
 
         let genesis = vm_genesis::encode_genesis_transaction_with_validator(
-            &faucet_key,
             faucet_key.public_key(),
             &nodes,
             validator_set,
