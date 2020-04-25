@@ -2410,9 +2410,12 @@ version = "0.1.0"
 dependencies = [
  "libra-crypto 0.1.0",
  "libra-secure-storage 0.1.0",
+ "libra-secure-time 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
+ "parity-multiaddr 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "transaction-builder 0.1.0",
 ]
 
 [[package]]
