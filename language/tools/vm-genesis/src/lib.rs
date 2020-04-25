@@ -114,7 +114,6 @@ pub fn name(name: &str) -> Identifier {
 }
 
 pub fn encode_genesis_transaction_with_validator(
-    private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     nodes: &[NodeConfig],
     validator_set: ValidatorSet,
@@ -122,7 +121,6 @@ pub fn encode_genesis_transaction_with_validator(
     vm_publishing_option: Option<VMPublishingOption>,
 ) -> Transaction {
     encode_genesis_transaction(
-        private_key,
         public_key,
         nodes,
         validator_set,
@@ -211,7 +209,6 @@ pub fn encode_genesis_change_set(
 }
 
 pub fn encode_genesis_transaction(
-    _private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     nodes: &[NodeConfig],
     validator_set: ValidatorSet,
