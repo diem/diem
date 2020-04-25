@@ -196,21 +196,22 @@ axiom StratificationDepth == 4;
 function {:inline} IsEqual4(v1: Value, v2: Value): bool {
     v1 == v2
 }
-function {:inline} IsEqual3(v1: Value, v2: Value): bool {
+// Do not inline the next three functions: it complicates things for the SMT solver and we have termination issues.
+function IsEqual3(v1: Value, v2: Value): bool {
     (v1 == v2) ||
     (is#Vector(v1) &&
      is#Vector(v2) &&
      $vlen(v1) == $vlen(v2) &&
      (forall i: int :: 0 <= i && i < $vlen(v1) ==> IsEqual4($vmap(v1)[i], $vmap(v2)[i])))
 }
-function {:inline} IsEqual2(v1: Value, v2: Value): bool {
+function IsEqual2(v1: Value, v2: Value): bool {
     (v1 == v2) ||
     (is#Vector(v1) &&
      is#Vector(v2) &&
      $vlen(v1) == $vlen(v2) &&
      (forall i: int :: 0 <= i && i < $vlen(v1) ==> IsEqual3($vmap(v1)[i], $vmap(v2)[i])))
 }
-function {:inline} IsEqual1(v1: Value, v2: Value): bool {
+function IsEqual1(v1: Value, v2: Value): bool {
     (v1 == v2) ||
     (is#Vector(v1) &&
      is#Vector(v2) &&
