@@ -48,7 +48,7 @@ module TestResources {
         ensures exists<R>(sender());
         ensures (sender() != a) ==> !exists<R>(a);
         ensures old(global<R>(a).x) == global<R>(sender()).x;
-        //ensures old(global<R>(a)) == global<R>(sender()); // FIXME: this should be verified
+        ensures old(global<R>(a)) == global<R>(sender());
     }
 
     fun move_from_addr_and_return(a: address): R acquires R {
@@ -60,7 +60,7 @@ module TestResources {
         aborts_if !exists<R>(a);
         ensures old(exists<R>(a));
         ensures result.x == old(global<R>(a).x);
-        //ensures result == old(global<R>(a)); // FIXME: this should be verified
+        ensures result == old(global<R>(a));
     }
 
     fun move_from_sender_and_return(): R acquires R {
@@ -71,7 +71,7 @@ module TestResources {
     spec fun move_from_sender_and_return {
         aborts_if !exists<R>(sender());
         ensures result.x == old(global<R>(sender()).x);
-        //ensures result == old(global<R>(sender())); // FIXME: this should be verified
+        ensures result == old(global<R>(sender()));
     }
 
     fun move_from_sender_to_sender() acquires R {
@@ -83,7 +83,7 @@ module TestResources {
         aborts_if !exists<R>(sender());
         ensures exists<R>(sender());
         ensures old(global<R>(sender()).x) == global<R>(sender()).x;
-        //ensures old(global<R>(sender())) == global<R>(sender()); // FIXME: this should be verified
+        ensures old(global<R>(sender())) == global<R>(sender());
     }
 
     fun borrow_global_mut_correct(a: address) acquires R {

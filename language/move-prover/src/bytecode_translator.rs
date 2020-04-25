@@ -1300,6 +1300,7 @@ impl<'env> ModuleTranslator<'env> {
                             addr,
                             resource_type,
                         );
+                        emitln!(self.writer, &propagate_abort());
                         emit!(
                             self.writer,
                             &boogie_well_formed_check(
@@ -1310,7 +1311,6 @@ impl<'env> ModuleTranslator<'env> {
                                 WellFormedMode::WithInvariant,
                             )
                         );
-                        emitln!(self.writer, &propagate_abort());
                         save_borrowed_value(ctx, dest);
                     }
                     GetGlobal(mid, sid, type_actuals) => {
@@ -1324,6 +1324,7 @@ impl<'env> ModuleTranslator<'env> {
                             addr,
                             resource_type,
                         );
+                        emitln!(self.writer, &propagate_abort());
                         emit!(
                             self.writer,
                             &boogie_well_formed_check(
@@ -1335,7 +1336,6 @@ impl<'env> ModuleTranslator<'env> {
                             )
                         );
                         emitln!(self.writer, &update_and_track_local(dest, "$tmp"));
-                        emitln!(self.writer, &propagate_abort());
                     }
                     MoveToSender(mid, sid, type_actuals) => {
                         let src = srcs[0];
@@ -1360,17 +1360,17 @@ impl<'env> ModuleTranslator<'env> {
                             src,
                             resource_type,
                         );
-                        emitln!(self.writer, &update_and_track_local(dest, "$tmp"));
+                        emitln!(self.writer, &propagate_abort());
                         emit!(
                             self.writer,
                             &boogie_well_formed_check(
                                 self.module_env.env,
-                                str_local(dest).as_str(),
+                                "$tmp",
                                 &func_target.get_local_type(dest),
                                 WellFormedMode::Default
                             )
                         );
-                        emitln!(self.writer, &propagate_abort());
+                        emitln!(self.writer, &update_and_track_local(dest, "$tmp"));
                     }
                     CastU8 => {
                         let src = srcs[0];
