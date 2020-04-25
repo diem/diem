@@ -3,10 +3,16 @@
 
 #![forbid(unsafe_code)]
 
-use libra_crypto::ed25519::Ed25519PublicKey;
+use libra_crypto::{ed25519::Ed25519PublicKey, hash::CryptoHash, x25519, ValidCryptoMaterial};
 use libra_secure_storage::{Storage, VaultStorage};
-use libra_types::waypoint::Waypoint;
-use std::{fmt::Write, str::FromStr};
+use libra_secure_time::{RealTimeService, TimeService};
+use libra_types::{
+    account_address::AccountAddress,
+    transaction::{RawTransaction, SignedTransaction, Transaction},
+    waypoint::Waypoint,
+};
+use parity_multiaddr::Multiaddr;
+use std::{convert::TryInto, fmt::Write, str::FromStr, time::Duration};
 use structopt::StructOpt;
 
 pub mod constants {
@@ -19,6 +25,10 @@ pub mod constants {
     pub const PREFERRED_ROUND: &str = "preferred_round";
     pub const VALIDATOR_NETWORK_KEY: &str = "validator_network";
     pub const WAYPOINT: &str = "waypoint";
+
+    pub const GAS_UNIT_PRICE: u64 = 0;
+    pub const MAX_GAS_AMOUNT: u64 = 1_000_000;
+    pub const TXN_EXPIRATION_SECS: u64 = 3600;
 }
 
 #[derive(Debug, StructOpt)]
@@ -28,6 +38,8 @@ pub enum Command {
     OperatorKey(SecureBackend),
     #[structopt(about = "Produces an LCS Ed25519PublicKey for the owner")]
     OwnerKey(SecureBackend),
+    #[structopt(about = "Constructs and signs a ValidatorConfig")]
+    ValidatorConfig(ValidatorConfig),
     #[structopt(about = "Verifies and prints the current configuration state")]
     Verify(SecureBackend),
 }
@@ -37,6 +49,7 @@ impl Command {
         match &self {
             Command::OperatorKey(_) => self.operator_key().to_string(),
             Command::OwnerKey(_) => self.owner_key().to_string(),
+            Command::ValidatorConfig(_) => format!("{:?}", self.validator_config()),
             Command::Verify(_) => self.verify(),
         }
     }
@@ -62,6 +75,73 @@ impl Command {
                 .public_key
         } else {
             panic!("Expected Command::OwnerKey");
+        }
+    }
+
+    pub fn validator_config(self) -> Transaction {
+        if let Command::ValidatorConfig(config) = self {
+            let mut storage = secure_storage(config.secure_backend);
+            let consensus_key = storage
+                .get_public_key(constants::CONSENSUS_KEY)
+                .expect("Unable to retrieve consensus key from storage")
+                .public_key;
+            let fullnode_network_key = storage
+                .get_public_key(constants::FULLNODE_NETWORK_KEY)
+                .expect("Unable to retrieve fullnode network key from storage")
+                .public_key;
+            let validator_network_key = storage
+                .get_public_key(constants::VALIDATOR_NETWORK_KEY)
+                .expect("Unable to retrieve validator network key from storage")
+                .public_key;
+
+            let fullnode_network_key = fullnode_network_key.to_bytes();
+            let fullnode_network_key: x25519::PublicKey = fullnode_network_key
+                .as_ref()
+                .try_into()
+                .expect("Unable to decode x25519 from fullnode_network_key");
+
+            let validator_network_key = validator_network_key.to_bytes();
+            let validator_network_key: x25519::PublicKey = validator_network_key
+                .as_ref()
+                .try_into()
+                .expect("Unable to decode x25519 from validator_network_key");
+
+            let owner_key = storage
+                .get_public_key(constants::OWNER_KEY)
+                .expect("Unable to retrieve owner key from storage")
+                .public_key;
+
+            // TODO(davidiw): The signing key, parameter 2, will be deleted soon, so this is a
+            // temporary hack to reduce over-engineering.
+            let script = transaction_builder::encode_register_validator_script(
+                consensus_key.to_bytes().to_vec(),
+                owner_key.to_bytes().to_vec(),
+                validator_network_key.to_bytes(),
+                config.validator_address.to_vec(),
+                fullnode_network_key.to_bytes(),
+                config.fullnode_address.to_vec(),
+            );
+
+            let sender = config.owner_address;
+            // TODO(davidiw): In genesis this is irrelevant -- afterward we need to obtain the
+            // current sequence number by querying the blockchain.
+            let sequence_number = 0;
+            let expiration_time = RealTimeService::new().now() + constants::TXN_EXPIRATION_SECS;
+            let raw_transaction = RawTransaction::new_script(
+                sender,
+                sequence_number,
+                script,
+                constants::MAX_GAS_AMOUNT,
+                constants::GAS_UNIT_PRICE,
+                Duration::from_secs(expiration_time),
+            );
+            let signature = storage
+                .sign_message(constants::OWNER_KEY, &raw_transaction.hash())
+                .expect("Unable to sign transaction hash");
+            let signed_txn = SignedTransaction::new(raw_transaction, owner_key, signature);
+            Transaction::UserTransaction(signed_txn)
+        } else {
+            panic!("Expected Command::SignValidatorConfig");
         }
     }
 
@@ -155,6 +235,19 @@ pub struct SecureBackend {
     namespace: Option<String>,
 }
 
+// TODO(davidiw) add operator_address, since that will eventually be the identity producing this.
+#[derive(Debug, StructOpt)]
+pub struct ValidatorConfig {
+    #[structopt(long)]
+    owner_address: AccountAddress,
+    #[structopt(long)]
+    validator_address: Multiaddr,
+    #[structopt(long)]
+    fullnode_address: Multiaddr,
+    #[structopt(flatten)]
+    secure_backend: SecureBackend,
+}
+
 fn secure_storage(config: SecureBackend) -> Box<dyn Storage> {
     Box::new(VaultStorage::new(
         config.host,
@@ -175,6 +268,20 @@ pub mod tests {
 
     const VAULT_HOST: &str = "http://localhost:8200";
     const VAULT_ROOT_TOKEN: &str = "root_token";
+
+    #[test]
+    #[ignore]
+    fn test_validator_config() {
+        let namespace = "validator_config";
+        initialize_storage(default_secure_backend(namespace.into()));
+
+        validator_config(
+            AccountAddress::random(),
+            "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
+            "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
+            namespace,
+        );
+    }
 
     #[test]
     #[ignore]
@@ -285,7 +392,7 @@ pub mod tests {
     fn operator_key(namespace: &str) -> Ed25519PublicKey {
         let args = format!(
             "
-                validator_config
+                management
                 operator-key
                 --host {secure_host}
                 --token {secure_token}
@@ -303,7 +410,7 @@ pub mod tests {
     fn owner_key(namespace: &str) -> Ed25519PublicKey {
         let args = format!(
             "
-                validator_config
+                management
                 owner-key
                 --host {secure_host}
                 --token {secure_token}
@@ -316,6 +423,35 @@ pub mod tests {
 
         let command = Command::from_iter(args.split_whitespace());
         command.owner_key()
+    }
+
+    fn validator_config(
+        owner_address: AccountAddress,
+        validator_address: Multiaddr,
+        fullnode_address: Multiaddr,
+        namespace: &str,
+    ) -> Transaction {
+        let args = format!(
+            "
+                management
+                validator-config
+                --owner-address {owner_address}
+                --validator-address {validator_address}
+                --fullnode-address {fullnode_address}
+                --host {secure_host}
+                --token {secure_token}
+                --namespace {secure_namespace}
+            ",
+            owner_address = owner_address,
+            validator_address = validator_address,
+            fullnode_address = fullnode_address,
+            secure_host = VAULT_HOST,
+            secure_token = VAULT_ROOT_TOKEN,
+            secure_namespace = namespace,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.validator_config()
     }
 
     fn verify(namespace: &str) -> String {
