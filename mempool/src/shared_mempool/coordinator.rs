@@ -193,7 +193,7 @@ pub(crate) async fn gc_coordinator(mempool: Arc<Mutex<CoreMempool>>, gc_interval
         mempool
             .lock()
             .expect("[shared mempool] failed to acquire mempool lock")
-            .gc_by_system_ttl();
+            .gc();
     }
 
     crit!("SharedMempool gc_task terminated");
