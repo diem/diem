@@ -220,10 +220,6 @@ pub enum SpecBlockMember_ {
         kind: SpecConditionKind,
         exp: Exp,
     },
-    Invariant {
-        kind: InvariantKind,
-        exp: Exp,
-    },
     Function {
         name: FunctionName,
         signature: FunctionSignature,
@@ -264,6 +260,11 @@ pub enum SpecConditionKind {
     Ensures,
     Requires,
     RequiresModule,
+    Invariant,
+    InvariantUpdate,
+    InvariantPack,
+    InvariantUnpack,
+    InvariantModule,
 }
 
 // Specification invaiant kind.
@@ -273,6 +274,7 @@ pub enum InvariantKind {
     Update,
     Pack,
     Unpack,
+    Module,
 }
 
 //**************************************************************************************************
@@ -862,14 +864,20 @@ impl AstDebug for SpecBlockTarget_ {
 
 impl AstDebug for SpecConditionKind {
     fn ast_debug(&self, w: &mut AstWriter) {
+        use SpecConditionKind::*;
         match self {
-            SpecConditionKind::Assert => w.write("assert "),
-            SpecConditionKind::Assume => w.write("assume "),
-            SpecConditionKind::Decreases => w.write("decreases "),
-            SpecConditionKind::AbortsIf => w.write("aborts_if "),
-            SpecConditionKind::Ensures => w.write("ensures "),
-            SpecConditionKind::Requires => w.write("requires "),
-            SpecConditionKind::RequiresModule => w.write("requires module "),
+            Assert => w.write("assert "),
+            Assume => w.write("assume "),
+            Decreases => w.write("decreases "),
+            AbortsIf => w.write("aborts_if "),
+            Ensures => w.write("ensures "),
+            Requires => w.write("requires "),
+            RequiresModule => w.write("requires module "),
+            Invariant => w.write("invariant "),
+            InvariantUpdate => w.write("invariant update "),
+            InvariantPack => w.write("invariant pack "),
+            InvariantUnpack => w.write("invariant unpack "),
+            InvariantModule => w.write("invariant module "),
         }
     }
 }
@@ -879,16 +887,6 @@ impl AstDebug for SpecBlockMember_ {
         match self {
             SpecBlockMember_::Condition { kind, exp } => {
                 kind.ast_debug(w);
-                exp.ast_debug(w);
-            }
-            SpecBlockMember_::Invariant { kind, exp } => {
-                w.write("invariant ");
-                match kind {
-                    InvariantKind::Data => {}
-                    InvariantKind::Update => w.write("update "),
-                    InvariantKind::Pack => w.write("pack "),
-                    InvariantKind::Unpack => w.write("unpack "),
-                }
                 exp.ast_debug(w);
             }
             SpecBlockMember_::Function {

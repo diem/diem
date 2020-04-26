@@ -345,7 +345,7 @@ impl<'env> ModuleTranslator<'env> {
             if !func_env.is_native() {
                 num_fun += 1;
             }
-            if !func_env.get_specification_on_decl().is_empty() && !func_env.is_native() {
+            if !func_env.get_spec().has_conditions() && !func_env.is_native() {
                 num_fun_specified += 1;
             }
             self.writer.set_location(&func_env.get_loc());
@@ -404,13 +404,14 @@ impl<'env> ModuleTranslator<'env> {
         // We look up the `verify` pragma property first in this function, then in
         // the module, and finally fall back to the value of option `--verify`.
         let prop_name = &func_target.symbol_pool().make("verify");
-        if let Some(Value::Bool(b)) = func_target.func_env.get_properties_on_decl().get(prop_name) {
+        if let Some(Value::Bool(b)) = func_target.func_env.get_spec().properties.get(prop_name) {
             return *b;
         }
         if let Some(Value::Bool(b)) = func_target
             .func_env
             .module_env
-            .get_properties()
+            .get_spec()
+            .properties
             .get(prop_name)
         {
             return *b;
@@ -1009,7 +1010,7 @@ impl<'env> ModuleTranslator<'env> {
                         // code outside of the module is executed.
                         if callee_env.module_env.get_id()
                             != func_target.func_env.module_env.get_id()
-                            && !callee_env.module_env.get_module_invariants().is_empty()
+                            && callee_env.module_env.get_spec().has_conditions()
                         {
                             let spec_translator =
                                 SpecTranslator::new(self.writer, &callee_env.module_env, false);

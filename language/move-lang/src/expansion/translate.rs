@@ -605,10 +605,6 @@ fn spec_member(
             let exp = exp_(context, exp);
             EM::Condition { kind, exp }
         }
-        PM::Invariant { kind, exp } => {
-            let exp = exp_(context, exp);
-            EM::Invariant { kind, exp }
-        }
         PM::Function {
             name,
             signature,
@@ -1177,7 +1173,7 @@ fn unbound_names_spec_block(unbound: &mut BTreeSet<Name>, sp!(_, sb_): &E::SpecB
 fn unbound_names_spec_block_member(unbound: &mut BTreeSet<Name>, sp!(_, m_): &E::SpecBlockMember) {
     use E::SpecBlockMember_ as M;
     match m_ {
-        M::Condition { exp, .. } | M::Invariant { exp, .. } => unbound_names_exp(unbound, exp),
+        M::Condition { exp, .. } => unbound_names_exp(unbound, exp),
         // No unbound names
         // And will error in the move prover
         M::Function { .. }

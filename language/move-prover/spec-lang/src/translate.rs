@@ -29,9 +29,8 @@ use vm::{
 
 use crate::{
     ast::{
-        Condition, Exp, FunSpec, Invariant, InvariantKind, LocalVarDecl, ModuleName, Operation,
-        PropertyBag, QualifiedSymbol, SpecConditionKind, SpecFunDecl, SpecVarDecl, StructSpec,
-        Value,
+        Condition, ConditionKind, Exp, LocalVarDecl, ModuleName, Operation, QualifiedSymbol, Spec,
+        SpecFunDecl, SpecVarDecl, Value,
     },
     env::{
         FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleId, MoveIrLoc, NodeId, SpecFunId,
@@ -100,18 +99,12 @@ struct SpecSchemaEntry {
     type_params: Vec<(Symbol, Type)>,
     // The local variables declared in the schema.
     vars: Vec<(Symbol, Type)>,
-    // The conditions provided in this schema.
-    conditions: Vec<Condition>,
-    // The invariants provided in this schema.
-    invariants: Vec<Invariant>,
-    // Properties from pragmas
-    properties: PropertyBag,
+    // The specifications in in this schema.
+    spec: Spec,
     // All variables in scope of this schema, including those introduced by included schemas.
     all_vars: BTreeMap<Symbol, LocalVarEntry>,
-    // The conditions included from other schemas, after renaming and type instantiation.
-    included_conditions: Vec<Condition>,
-    // The invariants included from other schemas, after renaming and type instantiation.
-    included_invariants: Vec<Invariant>,
+    // The specification included from other schemas, after renaming and type instantiation.
+    included_spec: Spec,
 }
 
 /// A declaration of a struct.
@@ -229,12 +222,9 @@ impl<'env> Translator<'env> {
             module_id,
             type_params,
             vars,
-            conditions: vec![],
-            invariants: vec![],
-            properties: PropertyBag::new(),
+            spec: Spec::default(),
             all_vars: BTreeMap::new(),
-            included_conditions: vec![],
-            included_invariants: vec![],
+            included_spec: Spec::default(),
         };
         if let Some(old) = self.spec_schema_table.insert(name.clone(), entry) {
             let schema_display = name.display(self.env.symbol_pool());
@@ -642,13 +632,11 @@ pub struct ModuleTranslator<'env, 'translator> {
     /// Translated specification variables.
     spec_vars: Vec<SpecVarDecl>,
     /// Translated function specifications.
-    fun_specs: BTreeMap<Symbol, FunSpec>,
-    /// Translated struct invariants.
-    struct_specs: BTreeMap<Symbol, StructSpec>,
-    /// Translated module invariants
-    module_invariants: Vec<Invariant>,
-    /// Module properties
-    module_properties: PropertyBag,
+    fun_specs: BTreeMap<Symbol, Spec>,
+    /// Translated struct specifications.
+    struct_specs: BTreeMap<Symbol, Spec>,
+    /// Translated module spec
+    module_spec: Spec,
 }
 
 /// # Entry Points
@@ -672,8 +660,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             spec_vars: vec![],
             fun_specs: BTreeMap::new(),
             struct_specs: BTreeMap::new(),
-            module_properties: PropertyBag::new(),
-            module_invariants: vec![],
+            module_spec: Spec::default(),
         }
     }
 
@@ -1082,12 +1069,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                                 qsym.clone(),
                                 &fun_spec_info[spec_id],
                             );
-                            self.def_ana_condition(
-                                loc,
-                                &context,
-                                SpecConditionKind::new(kind),
-                                exp,
-                            );
+                            if let Some((kind, exp)) =
+                                self.extract_condition_kind(&context, kind, exp)
+                            {
+                                self.def_ana_condition(loc, &context, kind, exp);
+                            }
                         }
                         _ => {
                             self.parent.error(&loc, "item not allowed");
@@ -1140,10 +1126,9 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             let loc = &self.parent.env.to_loc(&member.loc);
             match &member.value {
                 Condition { kind, exp } => {
-                    self.def_ana_condition(loc, context, SpecConditionKind::new(kind), exp)
-                }
-                Invariant { kind, exp } => {
-                    self.def_ana_invariant(loc, context, InvariantKind::new(kind), exp)
+                    if let Some((kind, exp)) = self.extract_condition_kind(context, kind, exp) {
+                        self.def_ana_condition(loc, context, kind, exp)
+                    }
                 }
                 Function {
                     signature, body, ..
@@ -1203,41 +1188,87 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             } else {
                 Value::Bool(true)
             };
-            match context {
-                SpecBlockContext::Function(name) => {
-                    self.fun_specs
-                        .entry(name.symbol)
-                        .or_insert_with(FunSpec::default)
-                        .properties_on_decl
-                        .insert(prop_name, value);
-                }
-                SpecBlockContext::FunctionCode(name, spec_info) => {
-                    self.fun_specs
-                        .entry(name.symbol)
-                        .or_insert_with(FunSpec::default)
-                        .properties_on_impl
-                        .entry(spec_info.offset)
-                        .or_insert_with(PropertyBag::default)
-                        .insert(prop_name, value);
-                }
-                SpecBlockContext::Schema(name) => {
-                    self.parent
-                        .spec_schema_table
-                        .get_mut(name)
-                        .expect("schema defined")
-                        .properties
-                        .insert(prop_name, value);
-                }
-                SpecBlockContext::Struct(name) => {
-                    self.struct_specs
-                        .entry(name.symbol)
-                        .or_insert_with(StructSpec::default)
-                        .properties
-                        .insert(prop_name, value);
-                }
-                SpecBlockContext::Module => {
-                    self.module_properties.insert(prop_name, value);
-                }
+            self.update_spec(context, move |spec| {
+                spec.properties.insert(prop_name, value);
+            });
+        }
+    }
+
+    /// Returns a mutable reference to the spec of the given spec block context.
+    fn update_spec<F>(&mut self, context: &SpecBlockContext, update: F)
+    where
+        F: FnOnce(&mut Spec),
+    {
+        use SpecBlockContext::*;
+        match context {
+            Function(name) => update(
+                &mut self
+                    .fun_specs
+                    .entry(name.symbol)
+                    .or_insert_with(Spec::default),
+            ),
+            FunctionCode(name, spec_info) => update(
+                &mut self
+                    .fun_specs
+                    .entry(name.symbol)
+                    .or_insert_with(Spec::default)
+                    .on_impl
+                    .entry(spec_info.offset)
+                    .or_insert_with(Spec::default),
+            ),
+            Schema(name) => update(
+                &mut self
+                    .parent
+                    .spec_schema_table
+                    .get_mut(name)
+                    .expect("schema defined")
+                    .spec,
+            ),
+            Struct(name) => update(
+                &mut self
+                    .struct_specs
+                    .entry(name.symbol)
+                    .or_insert_with(Spec::default),
+            ),
+            Module => update(&mut self.module_spec),
+        }
+    }
+
+    /// Check whether the condition is allowed in the given context. Return true if so, otherwise
+    /// report an error and return false.
+    fn check_condition_is_valid(
+        &mut self,
+        context: &SpecBlockContext,
+        loc: &Loc,
+        kind: &ConditionKind,
+        error_msg: &str,
+    ) -> bool {
+        use SpecBlockContext::*;
+        let ok = match context {
+            Module => kind.allowed_on_module(),
+            Struct(_) => kind.allowed_on_struct(),
+            Function(_) => kind.allowed_on_fun_decl(),
+            FunctionCode(_, _) => kind.allowed_on_fun_impl(),
+            Schema(_) => true,
+        };
+        if !ok {
+            self.parent.error(loc, error_msg);
+        }
+        ok
+    }
+
+    /// Add the given conditions to the context, after checking whether they are valid in the
+    /// context. Reports errors for invalid conditions.
+    fn add_conditions_to_context(
+        &mut self,
+        context: &SpecBlockContext,
+        loc: &Loc,
+        conditions: Vec<Condition>,
+        error_msg: &str,
+    ) {
+        for cond in conditions {
+            if self.check_condition_is_valid(context, loc, &cond.kind, error_msg) {
+                self.update_spec(context, |spec| spec.conditions.push(cond));
             }
         }
     }
@@ -1247,148 +1278,165 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         &mut self,
         loc: &Loc,
         context: &SpecBlockContext,
-        kind: SpecConditionKind,
+        kind: ConditionKind,
         exp: &EA::Exp,
     ) {
-        if kind == SpecConditionKind::Decreases {
+        if kind == ConditionKind::Decreases {
             self.parent
                 .error(loc, "decreases specification not supported currently");
             return;
         }
-        let mut et = if let Some(et) = self.exp_translator_for_condition(loc, context, kind) {
-            et
-        } else {
-            return;
-        };
-        let translated = et.translate_exp(exp, &BOOL_TYPE);
+        let expected_type = self.expected_type_for_condition(&kind);
+        let mut et = self.exp_translator_for_context(loc, context, Some(&kind));
+        let translated = et.translate_exp(exp, &expected_type);
         et.finalize_types();
-        let cond = Condition {
-            loc: loc.clone(),
-            kind,
-            exp: translated,
-        };
-        self.add_conditions_to_context(context, vec![cond]);
+        self.add_conditions_to_context(
+            context,
+            loc,
+            vec![Condition {
+                loc: loc.clone(),
+                kind,
+                exp: translated,
+            }],
+            "condition not allowed in this context",
+        );
     }
 
-    /// Adds a list of conditions to the item defined by the spec block context. Returns true
-    /// if the item can accept conditions, false otherwise.
-    fn add_conditions_to_context(
-        &mut self,
-        context: &SpecBlockContext,
-        conds: Vec<Condition>,
-    ) -> bool {
-        match context {
-            SpecBlockContext::Function(name) => {
-                self.fun_specs
-                    .entry(name.symbol)
-                    .or_insert_with(FunSpec::default)
-                    .on_decl
-                    .extend(conds);
-                true
+    /// Compute the expected type for the expression in a condition.
+    fn expected_type_for_condition(&mut self, kind: &ConditionKind) -> Type {
+        if let Some((mid, vid, ty_args)) = kind.get_spec_var_target() {
+            if mid == self.module_id {
+                self.spec_vars[vid.as_usize()]
+                    .type_
+                    .clone()
+                    .instantiate(&ty_args)
+            } else {
+                let module_env = self.parent.env.get_module(mid);
+                module_env
+                    .get_spec_var(vid)
+                    .type_
+                    .clone()
+                    .instantiate(&ty_args)
             }
-            SpecBlockContext::FunctionCode(name, spec_info) => {
-                self.fun_specs
-                    .entry(name.symbol)
-                    .or_insert_with(FunSpec::default)
-                    .on_impl
-                    .entry(spec_info.offset)
-                    .or_insert_with(|| vec![])
-                    .extend(conds);
-                true
-            }
-            SpecBlockContext::Schema(name) => {
-                self.parent
-                    .spec_schema_table
-                    .get_mut(name)
-                    .expect("schema defined")
-                    .conditions
-                    .extend(conds);
-                true
-            }
-            _ => conds.is_empty(),
+        } else {
+            BOOL_TYPE.clone()
         }
     }
 
-    /// Sets up an expression translator for a condition, depending on spec block context and
-    /// condition kind. Defines all the symbols which can be consumed by the condition.
-    fn exp_translator_for_condition<'module_translator>(
+    /// Sets up an expression translator for the given spec block context. If kind
+    /// is given, includes all the symbols which can be consumed by the condition,
+    /// otherwise only defines type parameters.
+    fn exp_translator_for_context<'module_translator>(
         &'module_translator mut self,
         loc: &Loc,
         context: &SpecBlockContext,
-        kind: SpecConditionKind,
-    ) -> Option<ExpTranslator<'env, 'translator, 'module_translator>> {
+        kind_opt: Option<&ConditionKind>,
+    ) -> ExpTranslator<'env, 'translator, 'module_translator> {
+        use SpecBlockContext::*;
+        let allow_old = if let Some(kind) = kind_opt {
+            kind.allows_old()
+        } else {
+            false
+        };
         match context {
-            SpecBlockContext::Function(name) => {
-                if kind.on_impl() {
-                    self.parent.error(loc, "item only allowed in function body");
-                    return None;
-                }
+            Function(name) => {
                 let entry = &self
                     .parent
                     .fun_table
                     .get(name)
                     .expect("invalid spec block context")
                     .clone();
-                let mut et = ExpTranslator::new_with_old(self, kind.allows_old());
+                let mut et = ExpTranslator::new_with_old(self, allow_old);
                 for (n, ty) in &entry.type_params {
                     et.define_type_param(loc, *n, ty.clone());
                 }
-                et.enter_scope();
-                for (n, ty) in &entry.params {
-                    et.define_local(loc, *n, ty.clone(), None);
-                }
-                // Define the placeholders for the result values of a function.
-                if kind.allows_old() {
+                if let Some(kind) = kind_opt {
                     et.enter_scope();
-                    if let Type::Tuple(ts) = &entry.result_type {
-                        for (i, ty) in ts.iter().enumerate() {
-                            let name = et.symbol_pool().make(&format!("result_{}", i + 1));
-                            et.define_local(loc, name, ty.clone(), Some(Operation::Result(i)));
+                    for (n, ty) in &entry.params {
+                        et.define_local(loc, *n, ty.clone(), None);
+                    }
+                    // Define the placeholders for the result values of a function if this is an
+                    // Ensures condition.
+                    if matches!(kind, ConditionKind::Ensures) {
+                        et.enter_scope();
+                        if let Type::Tuple(ts) = &entry.result_type {
+                            for (i, ty) in ts.iter().enumerate() {
+                                let name = et.symbol_pool().make(&format!("result_{}", i + 1));
+                                et.define_local(loc, name, ty.clone(), Some(Operation::Result(i)));
+                            }
+                        } else {
+                            let name = et.symbol_pool().make("result");
+                            et.define_local(
+                                loc,
+                                name,
+                                entry.result_type.clone(),
+                                Some(Operation::Result(0)),
+                            );
                         }
-                    } else {
-                        let name = et.symbol_pool().make("result");
-                        et.define_local(
-                            loc,
-                            name,
-                            entry.result_type.clone(),
-                            Some(Operation::Result(0)),
-                        );
                     }
                 }
-                Some(et)
+                et
             }
-            SpecBlockContext::FunctionCode(name, spec_info) => {
-                if kind.on_decl() {
-                    self.parent
-                        .error(loc, "item only allowed in function declaration");
-                    return None;
-                }
+            FunctionCode(name, spec_info) => {
                 let entry = &self
                     .parent
                     .fun_table
                     .get(name)
                     .expect("invalid spec block context")
                     .clone();
-                let mut et = ExpTranslator::new_with_old(self, kind.allows_old());
+                let mut et = ExpTranslator::new_with_old(self, allow_old);
                 for (n, ty) in &entry.type_params {
                     et.define_type_param(loc, *n, ty.clone());
                 }
-                et.enter_scope();
-                for (n, info) in &spec_info.used_locals {
-                    let sym = et.symbol_pool().make(n.0.value.as_str());
-                    let ty = et.translate_hlir_single_type(&info.type_);
-                    if ty == Type::Error {
-                        et.error(
-                            loc,
-                            "[internal] error in translating hlir type to prover type",
-                        );
-                        return None;
+                if kind_opt.is_some() {
+                    et.enter_scope();
+                    for (n, info) in &spec_info.used_locals {
+                        let sym = et.symbol_pool().make(n.0.value.as_str());
+                        let ty = et.translate_hlir_single_type(&info.type_);
+                        if ty == Type::Error {
+                            et.error(
+                                loc,
+                                "[internal] error in translating hlir type to prover type",
+                            );
+                        }
+                        et.define_local(loc, sym, ty, Some(Operation::Local(sym)));
                     }
-                    et.define_local(loc, sym, ty, Some(Operation::Local(sym)));
                 }
-                Some(et)
+                et
             }
-            SpecBlockContext::Schema(name) => {
+            Struct(name) => {
+                let entry = &self
+                    .parent
+                    .struct_table
+                    .get(name)
+                    .expect("invalid spec block context")
+                    .clone();
+
+                let mut et = ExpTranslator::new_with_old(self, allow_old);
+                for (n, ty) in &entry.type_params {
+                    et.define_type_param(loc, *n, ty.clone());
+                }
+                if kind_opt.is_some() {
+                    if let Some(fields) = &entry.fields {
+                        et.enter_scope();
+                        for (n, (_, ty)) in fields {
+                            et.define_local(
+                                loc,
+                                *n,
+                                ty.clone(),
+                                Some(Operation::Select(
+                                    entry.module_id,
+                                    entry.struct_id,
+                                    FieldId::new(*n),
+                                )),
+                            );
+                        }
+                    }
+                }
+                et
+            }
+            Module => ExpTranslator::new(self),
+            Schema(name) => {
                 let entry = self
                     .parent
                     .spec_schema_table
@@ -1398,55 +1446,97 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 // of self for expression translator.
                 let type_params = entry.type_params.clone();
                 let all_vars = entry.all_vars.clone();
-                let mut et = ExpTranslator::new_with_old(self, kind.allows_old());
+                let mut et = ExpTranslator::new_with_old(self, allow_old);
                 for (n, ty) in type_params {
                     et.define_type_param(loc, n, ty);
                 }
-                et.enter_scope();
-                for (n, entry) in all_vars {
-                    et.define_local(loc, n, entry.type_, None);
+                if kind_opt.is_some() {
+                    et.enter_scope();
+                    for (n, entry) in all_vars {
+                        et.define_local(loc, n, entry.type_, None);
+                    }
                 }
-                Some(et)
-            }
-            _ => {
-                self.parent.error(loc, "item not allowed in this context");
-                None
+                et
             }
         }
     }
 
-    /// Definition analysis for an invariant.
-    fn def_ana_invariant(
+    /// Extracts a condition kind based on the parsed kind and the associated expression. This
+    /// identifies a spec var assignment expression and moves the var to the SpecConditionKind enum
+    /// we use in our AST, returning the rhs expression of the assignment; otherwise it returns
+    /// the passed expression.
+    fn extract_condition_kind<'a>(
         &mut self,
-        loc: &Loc,
         context: &SpecBlockContext,
-        kind: InvariantKind,
-        exp: &EA::Exp,
-    ) {
-        // Construct expression translator defining locals, depending on context.
-        let mut et = if let Some(et) = self.exp_translator_for_invariant(loc, context, kind) {
-            et
-        } else {
-            return;
-        };
-
-        // Process assignment for a spec var.
-        let (exp, expected_type, target) = if let EA::Exp_::Assign(list, exp) = &exp.value {
-            if kind == InvariantKind::Data {
-                et.error(
-                    loc,
-                    "assignment to spec globals not allowed for data invariants",
-                );
-                return;
+        kind: &PA::SpecConditionKind,
+        exp: &'a EA::Exp,
+    ) -> Option<(ConditionKind, &'a EA::Exp)> {
+        use ConditionKind::*;
+        use PA::SpecConditionKind as PK;
+        let loc = self.parent.env.to_loc(&exp.loc);
+        match kind {
+            PK::Assert => Some((Assert, exp)),
+            PK::Assume => Some((Assume, exp)),
+            PK::Decreases => Some((Decreases, exp)),
+            PK::Ensures => Some((Ensures, exp)),
+            PK::Requires => Some((Requires, exp)),
+            PK::AbortsIf => Some((AbortsIf, exp)),
+            PK::RequiresModule => Some((RequiresModule, exp)),
+            PK::Invariant => Some((Invariant, exp)),
+            PK::InvariantModule => Some((InvariantModule, exp)),
+            PK::InvariantUpdate => {
+                if let Some((mid, vid, tys, exp1)) = self.extract_assignment(context, exp) {
+                    Some((VarUpdate(mid, vid, tys), exp1))
+                } else {
+                    Some((InvariantUpdate, exp))
+                }
             }
-            if let Some((var_name, tys)) = et.extract_assign_target(list) {
-                let var_loc = et.to_loc(&list.loc);
+            PK::InvariantPack => {
+                if let Some((mid, vid, tys, exp1)) = self.extract_assignment(context, exp) {
+                    Some((VarPack(mid, vid, tys), exp1))
+                } else {
+                    self.parent
+                        .error(&loc, "expected assignment to spec variable");
+                    None
+                }
+            }
+            PK::InvariantUnpack => {
+                if let Some((mid, vid, tys, exp1)) = self.extract_assignment(context, exp) {
+                    Some((VarUnpack(mid, vid, tys), exp1))
+                } else {
+                    self.parent
+                        .error(&loc, "expected assignment to spec variable");
+                    None
+                }
+            }
+        }
+    }
+
+    /// Extracts an assignment from an expression, returning the assigned spec var and
+    /// rhs expression.
+    fn extract_assignment<'a>(
+        &mut self,
+        context: &SpecBlockContext,
+        exp: &'a EA::Exp,
+    ) -> Option<(ModuleId, SpecVarId, Vec<Type>, &'a EA::Exp)> {
+        if let EA::Exp_::Assign(list, rhs) = &exp.value {
+            let var_loc = self.parent.to_loc(&list.loc);
+            if list.value.len() != 1 {
+                self.parent.error(
+                    &var_loc,
+                    "[current restriction] tuples not supported in assignment",
+                );
+                return None;
+            }
+            if let EA::LValue_::Var(maccess, tys_opt) = &list.value[0].value {
+                let var_name = self.module_access_to_qualified(maccess);
+                let mut et = self.exp_translator_for_context(&var_loc, context, None);
+                let tys = tys_opt
+                    .as_ref()
+                    .map(|tys| et.translate_types(tys))
+                    .unwrap_or_else(|| vec![]);
                 if let Some(spec_var) = et.parent.parent.spec_var_table.get(&var_name) {
-                    (
-                        exp.as_ref(),
-                        spec_var.type_.clone(),
-                        Some((spec_var.module_id, spec_var.var_id, tys)),
-                    )
+                    Some((spec_var.module_id, spec_var.var_id, tys, rhs.as_ref()))
                 } else {
                     et.error(
                         &var_loc,
@@ -1455,150 +1545,17 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                             var_name.display(et.symbol_pool())
                         ),
                     );
-                    return;
+                    None
                 }
             } else {
-                // Error has been reported.
-                return;
-            }
-        } else {
-            // There is no assignment, but Pack and Unpack need one.
-            if let InvariantKind::Pack | InvariantKind::Unpack = &kind {
-                et.error(
-                    loc,
-                    "pack/unpack invariants must be assignments to spec globals",
+                self.parent.error(
+                    &var_loc,
+                    "[current restriction] unpack not supported in assignment",
                 );
-                return;
-            }
-            (exp, BOOL_TYPE.clone(), None)
-        };
-
-        // Translate invariant expression.
-        let translated = et.translate_exp(exp, &expected_type);
-        et.finalize_types();
-        let invariant = Invariant {
-            loc: loc.clone(),
-            kind,
-            target,
-            exp: translated,
-        };
-
-        // Store result.
-        self.add_invariants_to_context(context, vec![invariant]);
-    }
-
-    /// Adds a list of invariants to the item defined by the spec block context. Returns true
-    /// if the item can accept conditions, false otherwise.
-    fn add_invariants_to_context(
-        &mut self,
-        context: &SpecBlockContext,
-        invariants: Vec<Invariant>,
-    ) -> bool {
-        match context {
-            SpecBlockContext::Struct(name) => {
-                for invariant in invariants {
-                    self.struct_specs
-                        .entry(name.symbol)
-                        .or_insert_with(StructSpec::default)
-                        .invariants
-                        .entry(invariant.kind)
-                        .or_insert_with(Vec::new)
-                        .push(invariant);
-                }
-                true
-            }
-            SpecBlockContext::Module => {
-                self.module_invariants.extend(invariants);
-                true
-            }
-            SpecBlockContext::Schema(name) => {
-                self.parent
-                    .spec_schema_table
-                    .get_mut(name)
-                    .expect("schema defined")
-                    .invariants
-                    .extend(invariants);
-                true
-            }
-            _ => invariants.is_empty(),
-        }
-    }
-
-    /// Sets up an expression translator for an invariant, depending on spec block context and
-    /// invariant kind. Defines all the symbols which can be consumed by the invariant.
-    fn exp_translator_for_invariant<'module_translator>(
-        &'module_translator mut self,
-        loc: &Loc,
-        context: &SpecBlockContext,
-        kind: InvariantKind,
-    ) -> Option<ExpTranslator<'env, 'translator, 'module_translator>> {
-        match context {
-            SpecBlockContext::Struct(name) => {
-                // We ensured that SpecBlockContext only contains resolvable names.
-                let entry = &self
-                    .parent
-                    .struct_table
-                    .get(name)
-                    .expect("invalid spec block context")
-                    .clone();
-
-                if let Some(fields) = &entry.fields {
-                    let mut et = ExpTranslator::new_with_old(self, kind.allows_old());
-                    for (n, ty) in &entry.type_params {
-                        et.define_type_param(loc, *n, ty.clone());
-                    }
-                    et.enter_scope();
-                    for (n, (_, ty)) in fields {
-                        et.define_local(
-                            loc,
-                            *n,
-                            ty.clone(),
-                            Some(Operation::Select(
-                                entry.module_id,
-                                entry.struct_id,
-                                FieldId::new(*n),
-                            )),
-                        );
-                    }
-                    Some(et)
-                } else {
-                    self.parent
-                        .error(loc, "native structs cannot have invariants");
-                    None
-                }
-            }
-            SpecBlockContext::Module => {
-                let et = ExpTranslator::new(self);
-                if kind != InvariantKind::Data {
-                    et.error(loc, "module invariant cannot be pack/unpack/update");
-                    None
-                } else {
-                    Some(et)
-                }
-            }
-            SpecBlockContext::Schema(name) => {
-                let entry = self
-                    .parent
-                    .spec_schema_table
-                    .get(name)
-                    .expect("schema defined");
-                let type_params = entry.type_params.clone();
-                let all_vars = entry.all_vars.clone();
-                let mut et = ExpTranslator::new_with_old(self, kind.allows_old());
-                for (n, ty) in type_params {
-                    et.define_type_param(loc, n, ty);
-                }
-                et.enter_scope();
-                for (n, entry) in all_vars {
-                    et.define_local(loc, n, entry.type_, None);
-                }
-                Some(et)
-            }
-            _ => {
-                self.parent
-                    .error(loc, "item only allowed in struct or module spec");
                 None
             }
+        } else {
+            None
         }
     }
 
@@ -1708,8 +1665,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 )
             })
             .collect();
-        let mut included_conditions = vec![];
-        let mut included_invariants = vec![];
+        let mut included_spec = Spec::default();
         for (include_loc, include_name, type_arguments, arguments) in
             self.iter_schema_includes(&block.value.members)
         {
@@ -1718,8 +1674,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             self.def_ana_schema_inclusion(
                 &type_params,
                 &mut all_vars,
-                &mut included_conditions,
-                &mut included_invariants,
+                &mut included_spec,
                 true,
                 &include_loc,
                 include_name,
@@ -1735,8 +1690,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 .get_mut(&name)
                 .expect("schema defined");
             entry.all_vars = all_vars;
-            entry.included_conditions = included_conditions;
-            entry.included_invariants = included_invariants;
+            entry.included_spec = included_spec;
         }
 
         // Now process all conditions and invariants.
@@ -1748,20 +1702,12 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 } => { /* handled during decl analysis */ }
                 EA::SpecBlockMember_::Include { .. } => { /* handled above */ }
                 EA::SpecBlockMember_::Condition { kind, exp } => {
-                    self.def_ana_condition(
-                        &member_loc,
-                        &SpecBlockContext::Schema(name.clone()),
-                        SpecConditionKind::new(kind),
-                        exp,
-                    );
-                }
-                EA::SpecBlockMember_::Invariant { kind, exp } => {
-                    self.def_ana_invariant(
-                        &member_loc,
-                        &SpecBlockContext::Schema(name.clone()),
-                        InvariantKind::new(kind),
-                        exp,
-                    );
+                    let context = SpecBlockContext::Schema(name.clone());
+                    if let Some((kind, exp)) = self.extract_condition_kind(&context, kind, exp) {
+                        self.def_ana_condition(&member_loc, &context, kind, exp);
+                    } else {
+                        // Error reported.
+                    }
                 }
                 _ => {
                     self.parent.error(&member_loc, "item not allowed in schema");
@@ -1808,8 +1754,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         &mut self,
         context_type_params: &[(Symbol, Type)],
         vars: &mut BTreeMap<Symbol, LocalVarEntry>,
-        conditions: &mut Vec<Condition>,
-        invariants: &mut Vec<Invariant>,
+        spec: &mut Spec,
         allow_new_vars: bool,
         loc: &Loc,
         schema_name: QualifiedSymbol,
@@ -1948,36 +1893,16 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 
         // Go over all conditions in the schema, rewrite them, and add to the inclusion conditions.
         for Condition { loc, kind, exp } in schema_entry
+            .spec
             .conditions
             .iter()
-            .chain(schema_entry.included_conditions.iter())
+            .chain(schema_entry.included_spec.conditions.iter())
         {
             let mut rewriter =
                 ExpRewriter::new(self, schema_entry.module_id, &argument_map, type_arguments);
-            conditions.push(Condition {
+            spec.conditions.push(Condition {
                 loc: loc.clone(),
-                kind: *kind,
-                exp: rewriter.rewrite(exp),
-            });
-        }
-
-        // Go over all invariants in the schema, rewrite them, and add to the inclusion invariants.
-        for Invariant {
-            loc,
-            kind,
-            target,
-            exp,
-        } in schema_entry
-            .invariants
-            .iter()
-            .chain(schema_entry.included_invariants.iter())
-        {
-            let mut rewriter =
-                ExpRewriter::new(self, schema_entry.module_id, &argument_map, type_arguments);
-            invariants.push(Invariant {
-                loc: loc.clone(),
-                kind: *kind,
-                target: target.clone(),
+                kind: kind.clone(),
                 exp: rewriter.rewrite(exp),
             });
         }
@@ -2014,24 +1939,24 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         // the block.
         let (mut vars, context_type_params) = match context {
             SpecBlockContext::Function(..) | SpecBlockContext::FunctionCode(..) => {
-                let et = self
-                    .exp_translator_for_condition(loc, context, SpecConditionKind::Ensures)
-                    .unwrap();
+                let et =
+                    self.exp_translator_for_context(loc, context, Some(&ConditionKind::Ensures));
                 (et.extract_var_map(), et.extract_type_params())
             }
             SpecBlockContext::Struct(..) => {
-                let et = self
-                    .exp_translator_for_invariant(loc, context, InvariantKind::Update)
-                    .unwrap();
+                let et = self.exp_translator_for_context(
+                    loc,
+                    context,
+                    Some(&ConditionKind::InvariantUpdate),
+                );
                 (et.extract_var_map(), et.extract_type_params())
             }
             SpecBlockContext::Module => (BTreeMap::new(), vec![]),
             SpecBlockContext::Schema { .. } => panic!("unexpected schema context"),
         };
-        let mut conditions = vec![];
-        let mut invariants = vec![];
+        let mut spec = Spec::default();
 
-        // Analyze the schema inclusion. This will instantiate conditions and invariants for
+        // Analyze the schema inclusion. This will instantiate conditions for
         // this block.
         self.def_ana_schema_inclusion(
             if let Some(type_params) = alt_context_type_params {
@@ -2040,34 +1965,22 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 &context_type_params
             },
             &mut vars,
-            &mut conditions,
-            &mut invariants,
+            &mut spec,
             false,
             loc,
-            name.clone(),
+            name,
             type_arguments,
             arguments,
         );
 
-        // Write the conditions/invariants to the context item.
-        if !self.add_conditions_to_context(context, conditions) {
-            self.parent.error(
-                loc,
-                &format!(
-                    "schema `{}` includes conditions which are not allowed in this context",
-                    name.display(self.symbol_pool())
-                ),
-            );
-        }
-        if !self.add_invariants_to_context(context, invariants) {
-            self.parent.error(
-                loc,
-                &format!(
-                    "schema `{}` includes invariants which are not allowed in this context",
-                    name.display(self.symbol_pool())
-                ),
-            );
-        }
+        // Write the conditions to the context item.
+        // TODO: merge pragma properties as well?
+        self.add_conditions_to_context(
+            context,
+            loc,
+            spec.conditions,
+            "schema includes condition which is not allowed in this context",
+        );
     }
 
     fn def_ana_schema_apply(
@@ -2194,18 +2107,13 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             }
         };
         for struct_spec in self.struct_specs.values() {
-            for inv in struct_spec
-                .invariants
-                .get(&InvariantKind::Data)
-                .unwrap_or(&vec![])
-                .iter()
-            {
-                if !inv.exp.is_pure(&check_pure) {
+            for cond in &struct_spec.conditions {
+                if cond.kind == ConditionKind::Invariant && !cond.exp.is_pure(&check_pure) {
                     self.parent.error(
-                        &inv.loc,
+                        &cond.loc,
                         "data invariants cannot depend on global state \
                         (directly or indirectly uses a global spec var or resource storage).",
-                    )
+                    );
                 }
             }
         }
@@ -2295,7 +2203,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     let struct_spec = self
                         .struct_specs
                         .remove(&name)
-                        .unwrap_or_else(StructSpec::default);
+                        .unwrap_or_else(Spec::default);
                     // Ensure that all invariant kinds
                     Some((
                         StructId::new(name),
@@ -2327,7 +2235,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     name_str = SCRIPT_AST_FUN_NAME;
                 }
                 let name = self.symbol_pool().make(name_str);
-                let fun_spec = self.fun_specs.remove(&name).unwrap_or_else(FunSpec::default);
+                let fun_spec = self.fun_specs.remove(&name).unwrap_or_else(Spec::default);
                 if let Some(entry) = self.parent.fun_table.get(&self.qualified_by_module(name)) {
                     let arg_names = project_1st(&entry.params);
                     let type_arg_names = project_1st(&entry.type_params);
@@ -2355,12 +2263,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             loc,
             module,
             source_map,
-            std::mem::take(&mut self.module_properties),
             struct_data,
             function_data,
             std::mem::take(&mut self.spec_vars),
             std::mem::take(&mut self.spec_funs),
-            std::mem::take(&mut self.module_invariants),
+            std::mem::take(&mut self.module_spec),
             std::mem::take(&mut self.loc_map),
             std::mem::take(&mut self.type_map),
             std::mem::take(&mut self.instantiation_map),
@@ -2932,6 +2839,10 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 let id = self.new_node_id_with_type_loc(&ty, &loc);
                 Exp::Call(id, Operation::Tuple, vec![])
             }
+            EA::Exp_::Assign(..) => {
+                self.error(&loc, "assignment only allowed in spec var updates");
+                self.new_error_exp()
+            }
             _ => {
                 self.error(&loc, "expression construct not supported in specifications");
                 self.new_error_exp()
@@ -3198,35 +3109,6 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         let result_t = self.check_type(loc, &result_t, expected_type);
         let id = self.new_node_id_with_type_loc(&result_t, &loc);
         Exp::Call(id, oper, vec![vector_exp, ie])
-    }
-
-    /// Extract assign target from assignment list.
-    fn extract_assign_target(
-        &mut self,
-        list: &EA::LValueList,
-    ) -> Option<(QualifiedSymbol, Vec<Type>)> {
-        let var_loc = self.to_loc(&list.loc);
-        if list.value.len() != 1 {
-            self.error(
-                &var_loc,
-                "[current restriction] tuples not supported in assignment",
-            );
-            return None;
-        }
-        if let EA::LValue_::Var(maccess, tys_opt) = &list.value[0].value {
-            let qsym = self.parent.module_access_to_qualified(maccess);
-            let tys = tys_opt
-                .as_ref()
-                .map(|tys| self.translate_types(tys))
-                .unwrap_or_else(|| vec![]);
-            Some((qsym, tys))
-        } else {
-            self.error(
-                &var_loc,
-                "[current restriction] unpack not supported in assignment",
-            );
-            None
-        }
     }
 
     /// Translate a Dotted expression.

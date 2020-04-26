@@ -20,7 +20,7 @@ use crate::{
 };
 use itertools::Itertools;
 use spec_lang::{
-    ast::{Exp, Invariant, LocalVarDecl, Operation, SpecConditionKind, Value},
+    ast::{Condition, ConditionKind, Exp, LocalVarDecl, Operation, Value},
     env::GlobalEnv,
     symbol::Symbol,
 };
@@ -271,13 +271,13 @@ impl<'env> SpecTranslator<'env> {
     // Generate boogie for asserts/assumes inside function bodies
     pub fn translate_conditions_inside_impl(&self, block_id: SpecBlockId) {
         let func_target = self.function_target();
-        let conds = func_target.get_specification_on_impl(block_id);
-        if !conds.is_empty() {
-            self.translate_seq(conds.iter(), "\n", |cond| {
+        let spec = func_target.get_spec_on_impl(block_id);
+        if !spec.conditions.is_empty() {
+            self.translate_seq(spec.conditions.iter(), "\n", |cond| {
                 self.writer.set_location(&cond.loc);
                 emit!(
                     self.writer,
-                    if cond.kind == SpecConditionKind::Assert {
+                    if cond.kind == ConditionKind::Assert {
                         "assert "
                     } else {
                         "assume "
@@ -300,14 +300,11 @@ impl<'env> SpecTranslator<'env> {
         // must have existed! So we can assume txn_sender account
         // exists in pre-condition.
         let func_target = self.function_target();
-        let conds = func_target.get_specification_on_decl();
+        let spec = func_target.get_spec();
         emitln!(self.writer, "requires $ExistsTxnSenderAccount($m, $txn);");
 
         // Generate requires.
-        let requires = conds
-            .iter()
-            .filter(|c| c.kind == SpecConditionKind::Requires)
-            .collect_vec();
+        let requires = spec.filter_kind(ConditionKind::Requires).collect_vec();
         if !requires.is_empty() {
             self.translate_seq(requires.iter(), "\n", |cond| {
                 self.writer.set_location(&cond.loc);
@@ -321,10 +318,7 @@ impl<'env> SpecTranslator<'env> {
         // Generate aborts_if
         // abort_if P means function abort if P holds.
         // multiple abort_if conditions are "or"ed. If no condition holds, function does not abort.
-        let aborts_if = conds
-            .iter()
-            .filter(|c| c.kind == SpecConditionKind::AbortsIf)
-            .collect_vec();
+        let aborts_if = spec.filter_kind(ConditionKind::AbortsIf).collect_vec();
         if !aborts_if.is_empty() {
             self.writer.set_location(&aborts_if[0].loc);
             emit!(self.writer, "ensures (");
@@ -337,10 +331,7 @@ impl<'env> SpecTranslator<'env> {
         }
 
         // Generate ensures
-        let ensures = conds
-            .iter()
-            .filter(|c| c.kind == SpecConditionKind::Ensures)
-            .collect_vec();
+        let ensures = spec.filter_kind(ConditionKind::Ensures).collect_vec();
         if !ensures.is_empty() {
             self.translate_seq(ensures.iter(), "\n", |cond| {
                 self.writer.set_location(&cond.loc);
@@ -353,7 +344,7 @@ impl<'env> SpecTranslator<'env> {
 
         // Generate implicit requires/ensures from module invariants if this is a public function.
         if func_target.is_public() {
-            let invariants = func_target.func_env.module_env.get_module_invariants();
+            let invariants = &func_target.func_env.module_env.get_spec().conditions;
             if !invariants.is_empty() {
                 self.translate_seq(invariants.iter(), "\n", |inv| {
                     self.writer.set_location(&inv.loc);
@@ -380,9 +371,8 @@ impl<'env> SpecTranslator<'env> {
         // Explicit pre-conditions.
         let func_target = self.function_target();
         let requires = func_target
-            .get_specification_on_decl()
-            .iter()
-            .filter(|cond| cond.kind == SpecConditionKind::Requires)
+            .get_spec()
+            .filter_kind(ConditionKind::Requires)
             .collect_vec();
         if !requires.is_empty() {
             self.translate_seq(requires.iter(), "\n", |cond| {
@@ -401,7 +391,7 @@ impl<'env> SpecTranslator<'env> {
     /// Assume module invariants of function.
     pub fn assume_module_invariants(&self, func_target: &FunctionTarget<'_>) {
         if func_target.is_public() {
-            let invariants = func_target.func_env.module_env.get_module_invariants();
+            let invariants = &func_target.func_env.module_env.get_spec().conditions;
             if !invariants.is_empty() {
                 self.translate_seq(invariants.iter(), "\n", |inv| {
                     self.writer.set_location(&inv.loc);
@@ -471,7 +461,7 @@ impl<'env> SpecTranslator<'env> {
         );
         self.writer.indent();
         emit_field_checks(WellFormedMode::WithInvariant);
-        for inv in struct_env.get_data_invariants() {
+        for inv in struct_env.get_spec().filter_kind(ConditionKind::Invariant) {
             emit!(self.writer, "  && b#Boolean(");
             self.with_invariant_target("$this", "", || self.translate_exp(&inv.exp));
             emitln!(self.writer, ")");
@@ -488,11 +478,9 @@ impl<'env> SpecTranslator<'env> {
     /// If not, we use the unpack invariants before the update, and the pack invariants
     /// after. This function is only true for the later case.
     pub fn has_before_update_invariant(struct_env: &StructEnv<'_>) -> bool {
-        let no_explict_update = !struct_env
-            .get_update_invariants()
-            .iter()
-            .any(Self::is_invariant_spec_var_update);
-        let has_pack = !struct_env.get_unpack_invariants().is_empty();
+        let spec = struct_env.get_spec();
+        let no_explict_update = !spec.any(|c| matches!(c.kind, ConditionKind::VarUpdate(..)));
+        let has_pack = spec.any(|c| matches!(c.kind, ConditionKind::VarPack(..)));
         no_explict_update && has_pack
             // If any of the fields has it, it inherits to the struct.
             || struct_env.get_fields().any(|fe| {
@@ -508,11 +496,6 @@ impl<'env> SpecTranslator<'env> {
             // TODO: vectors
             false
         }
-    }
-
-    /// Helper to determine whether an invariant is a spec var update.
-    fn is_invariant_spec_var_update(inv: &Invariant) -> bool {
-        inv.target.is_some()
     }
 
     /// Translate type parameters for given struct.
@@ -561,7 +544,13 @@ impl<'env> SpecTranslator<'env> {
         }
 
         // Emit call to spec var updates via unpack invariants.
-        self.emit_spec_var_updates("$before", "", struct_env.get_unpack_invariants());
+        self.emit_spec_var_updates(
+            "$before",
+            "",
+            struct_env
+                .get_spec()
+                .filter(|c| matches!(c.kind, ConditionKind::VarUnpack(..))),
+        );
 
         self.writer.unindent();
         emitln!(self.writer, "}");
@@ -570,9 +559,8 @@ impl<'env> SpecTranslator<'env> {
 
     /// Determines whether a after-update invariant is generated for this struct.
     pub fn has_after_update_invariant(struct_env: &StructEnv<'_>) -> bool {
-        !struct_env.get_update_invariants().is_empty()
-            || !struct_env.get_pack_invariants().is_empty()
-            || !struct_env.get_data_invariants().is_empty()
+        use ConditionKind::*;
+        struct_env.get_spec().any(|c| matches!(c.kind, VarUpdate(..)|VarPack(..)|Invariant))
             // If any of the fields has it, it inherits to the struct.
             || struct_env.get_fields().any(|fe| {
                 Self::has_after_update_invariant_ty(struct_env.module_env.env, &fe.get_type())
@@ -634,29 +622,33 @@ impl<'env> SpecTranslator<'env> {
         }
 
         // Emit data invariants for this struct.
+        let spec = struct_env.get_spec();
         self.emit_invariants_assume_or_assert(
             "$after",
             "",
             false,
-            struct_env.get_data_invariants(),
+            spec.filter_kind(ConditionKind::Invariant),
         );
 
         // Emit update invariants for this struct.
-        if struct_env
-            .get_update_invariants()
-            .iter()
-            .any(Self::is_invariant_spec_var_update)
-        {
-            self.emit_spec_var_updates("$after", "$before", struct_env.get_update_invariants());
+        let var_updates = spec
+            .filter(|c| matches!(c.kind, ConditionKind::VarUpdate(..)))
+            .collect_vec();
+        if !var_updates.is_empty() {
+            self.emit_spec_var_updates("$after", "$before", var_updates.into_iter());
         } else {
             // Use the pack invariants to update spec vars.
-            self.emit_spec_var_updates("$after", "", struct_env.get_pack_invariants());
+            self.emit_spec_var_updates(
+                "$after",
+                "",
+                spec.filter(|c| matches!(c.kind, ConditionKind::VarPack(..))),
+            );
         }
         self.emit_invariants_assume_or_assert(
             "$after",
             "$before",
             false,
-            struct_env.get_update_invariants(),
+            spec.filter_kind(ConditionKind::InvariantUpdate),
         );
 
         self.writer.unindent();
@@ -665,25 +657,41 @@ impl<'env> SpecTranslator<'env> {
     }
 
     pub fn emit_pack_invariants(&self, struct_env: &StructEnv<'env>, target: &str) {
-        self.emit_invariants_assume_or_assert(target, "", false, struct_env.get_data_invariants());
-        self.emit_spec_var_updates(target, "", struct_env.get_pack_invariants());
+        let spec = struct_env.get_spec();
+        self.emit_invariants_assume_or_assert(
+            target,
+            "",
+            false,
+            spec.filter_kind(ConditionKind::Invariant),
+        );
+        self.emit_spec_var_updates(
+            target,
+            "",
+            spec.filter(|c| matches!(c.kind, ConditionKind::VarPack(..))),
+        );
     }
 
     /// Emits a sequence of statements which assert the unpack invariants.
     pub fn emit_unpack_invariants(&self, struct_env: &StructEnv<'env>, target: &str) {
-        self.emit_spec_var_updates(target, "", struct_env.get_unpack_invariants());
+        self.emit_spec_var_updates(
+            target,
+            "",
+            struct_env
+                .get_spec()
+                .filter(|c| matches!(c.kind, ConditionKind::VarUnpack(..))),
+        );
     }
 
     /// Emits assume or assert for invariants.
-    fn emit_invariants_assume_or_assert(
+    fn emit_invariants_assume_or_assert<'a>(
         &self,
         target: &str,
         old_target: &str,
         assume: bool,
-        invariants: &[Invariant],
+        invariants: impl Iterator<Item = &'a Condition>,
     ) {
         for inv in invariants {
-            if inv.target.is_none() {
+            if inv.kind.get_spec_var_target().is_none() {
                 self.writer.set_location(&inv.loc);
                 if assume {
                     emit!(self.writer, "assume b#Boolean(");
@@ -697,9 +705,14 @@ impl<'env> SpecTranslator<'env> {
     }
 
     /// Emits spec var updates for given invariants.
-    fn emit_spec_var_updates(&self, target: &str, old_target: &str, invariants: &[Invariant]) {
+    fn emit_spec_var_updates<'a>(
+        &self,
+        target: &str,
+        old_target: &str,
+        invariants: impl Iterator<Item = &'a Condition>,
+    ) {
         for inv in invariants {
-            if let Some((module_id, spec_var_id, tys)) = &inv.target {
+            if let Some((module_id, spec_var_id, tys)) = &inv.kind.get_spec_var_target() {
                 self.writer.set_location(&inv.loc);
                 let module_env = self.module_env().env.get_module(*module_id);
                 let spec_var = module_env.get_spec_var(*spec_var_id);
