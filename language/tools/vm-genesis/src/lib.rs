@@ -8,6 +8,7 @@ mod genesis_gas_schedule;
 use crate::genesis_gas_schedule::INITIAL_GAS_SCHEDULE;
 use anyhow::Result;
 use bytecode_verifier::VerifiedModule;
+use libra_config::config::NodeConfig;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey, Uniform, ValidCryptoMaterial,
@@ -18,12 +19,13 @@ use libra_types::{
     account_address::AccountAddress,
     account_config,
     contract_event::ContractEvent,
-    discovery_set::DiscoverySet,
     language_storage::{ModuleId, StructTag, TypeTag},
-    on_chain_config::{new_epoch_event_key, VMPublishingOption, ValidatorSet},
-    transaction::{authenticator::AuthenticationKey, ChangeSet, Transaction},
+    on_chain_config::{new_epoch_event_key, VMPublishingOption},
+    transaction::{
+        authenticator::AuthenticationKey, ChangeSet, Script, Transaction, TransactionArgument,
+    },
 };
-use libra_vm::system_module_names::*;
+use libra_vm::{self, system_module_names::*};
 use move_core_types::{
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
     identifier::Identifier,
@@ -56,6 +58,8 @@ pub static GENESIS_KEYPAIR: Lazy<(Ed25519PrivateKey, Ed25519PublicKey)> = Lazy::
     (private_key, public_key)
 });
 
+pub type ValidatorRegistration = (Ed25519PublicKey, Script);
+
 // Identifiers for well-known functions.
 static ADD_VALIDATOR: Lazy<Identifier> = Lazy::new(|| Identifier::new("add_validator_").unwrap());
 static INITIALIZE: Lazy<Identifier> = Lazy::new(|| Identifier::new("initialize").unwrap());
@@ -73,8 +77,6 @@ static RECONFIGURE: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("emit_reconfiguration_event").unwrap());
 static EMIT_DISCOVERY_SET: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("emit_discovery_set_change").unwrap());
-static REGISTER_CANDIDATE_VALIDATOR: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("register_candidate_validator").unwrap());
 static ROTATE_AUTHENTICATION_KEY: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("rotate_authentication_key").unwrap());
 static EPILOGUE: Lazy<Identifier> = Lazy::new(|| Identifier::new("epilogue").unwrap());
@@ -113,16 +115,12 @@ pub fn name(name: &str) -> Identifier {
 
 pub fn encode_genesis_transaction_with_validator(
     public_key: Ed25519PublicKey,
-    authentication_keys: &[AuthenticationKey],
-    validator_set: ValidatorSet,
-    discovery_set: DiscoverySet,
+    validators: &[ValidatorRegistration],
     vm_publishing_option: Option<VMPublishingOption>,
 ) -> Transaction {
     encode_genesis_transaction(
         public_key,
-        authentication_keys,
-        validator_set,
-        discovery_set,
+        validators,
         stdlib_modules(StdLibOptions::Staged), // Must use staged stdlib
         vm_publishing_option
             .unwrap_or_else(|| VMPublishingOption::Locked(StdlibScript::whitelist())),
@@ -131,9 +129,7 @@ pub fn encode_genesis_transaction_with_validator(
 
 pub fn encode_genesis_change_set(
     public_key: &Ed25519PublicKey,
-    authentication_keys: &[AuthenticationKey],
-    validator_set: ValidatorSet,
-    discovery_set: DiscoverySet,
+    validators: &[ValidatorRegistration],
     stdlib_modules: &[VerifiedModule],
     vm_publishing_option: VMPublishingOption,
 ) -> ChangeSet {
@@ -182,9 +178,7 @@ pub fn encode_genesis_change_set(
         &move_vm,
         &gas_schedule,
         &mut interpreter_context,
-        &authentication_keys,
-        &validator_set,
-        &discovery_set,
+        &validators,
         &lbr_ty,
     );
     setup_libra_version(&move_vm, &gas_schedule, &mut interpreter_context);
@@ -197,7 +191,7 @@ pub fn encode_genesis_change_set(
     reconfigure(&move_vm, &gas_schedule, &mut interpreter_context);
     publish_stdlib(&mut interpreter_context, stdlib_modules);
 
-    verify_genesis_write_set(interpreter_context.events(), &discovery_set);
+    verify_genesis_write_set(interpreter_context.events());
     ChangeSet::new(
         interpreter_context
             .make_write_set()
@@ -208,17 +202,13 @@ pub fn encode_genesis_change_set(
 
 pub fn encode_genesis_transaction(
     public_key: Ed25519PublicKey,
-    authentication_keys: &[AuthenticationKey],
-    validator_set: ValidatorSet,
-    discovery_set: DiscoverySet,
+    validators: &[ValidatorRegistration],
     stdlib_modules: &[VerifiedModule],
     vm_publishing_option: VMPublishingOption,
 ) -> Transaction {
     Transaction::WaypointWriteSet(encode_genesis_change_set(
         &public_key,
-        authentication_keys,
-        validator_set,
-        discovery_set,
+        validators,
         stdlib_modules,
         vm_publishing_option,
     ))
@@ -629,9 +619,7 @@ fn create_and_initialize_validator_and_discovery_set(
     move_vm: &MoveVM,
     gas_schedule: &CostTable,
     interpreter_context: &mut TransactionExecutionContext,
-    authentication_keys: &[AuthenticationKey],
-    validator_set: &ValidatorSet,
-    discovery_set: &DiscoverySet,
+    validators: &[ValidatorRegistration],
     lbr_ty: &TypeTag,
 ) {
     create_and_initialize_validator_set(move_vm, gas_schedule, interpreter_context, lbr_ty);
@@ -640,9 +628,7 @@ fn create_and_initialize_validator_and_discovery_set(
         move_vm,
         gas_schedule,
         interpreter_context,
-        authentication_keys,
-        validator_set,
-        discovery_set,
+        &validators,
         lbr_ty,
     );
 }
@@ -740,19 +726,17 @@ fn initialize_validators(
     move_vm: &MoveVM,
     gas_schedule: &CostTable,
     interpreter_context: &mut TransactionExecutionContext,
-    authentication_keys: &[AuthenticationKey],
-    validator_set: &ValidatorSet,
-    discovery_set: &DiscoverySet,
+    validators: &[ValidatorRegistration],
     lbr_ty: &TypeTag,
 ) {
     let mut txn_data = TransactionMetadata::default();
     txn_data.sender = account_config::association_address();
 
-    let discovery_and_keys = discovery_set.iter().zip(authentication_keys.iter());
-    let nodes = validator_set.payload().iter().zip(discovery_and_keys);
-    for (validator_info, (discovery_info, auth_key)) in nodes {
-        // First, add a ValidatorConfig resource under each account
-        let validator_address = *validator_info.account_address();
+    for (account_key, registration) in validators {
+        let auth_key = AuthenticationKey::ed25519(&account_key);
+        let account = auth_key.derived_address();
+
+        // Create an account
         move_vm
             .execute_function(
                 &account_config::ACCOUNT_MODULE,
@@ -762,49 +746,27 @@ fn initialize_validators(
                 &txn_data,
                 vec![lbr_ty.clone()],
                 vec![
-                    Value::address(validator_address),
+                    Value::address(account),
                     Value::vector_u8(auth_key.prefix().to_vec()),
                 ],
             )
-            .unwrap_or_else(|e| {
-                panic!(
-                    "Failure creating validator account {:?}: {}",
-                    validator_address, e
-                )
-            });
+            .unwrap_or_else(|e| panic!("Failure creating validator account {:?}: {}", account, e));
 
+        // Add the validator information
         let mut validator_txn_data = TransactionMetadata::default();
-        validator_txn_data.sender = validator_address;
+        validator_txn_data.sender = account;
         move_vm
-            .execute_function(
-                &VALIDATOR_CONFIG_MODULE,
-                &REGISTER_CANDIDATE_VALIDATOR,
+            .execute_script(
+                registration.code().to_vec(),
                 &gas_schedule,
                 interpreter_context,
                 &validator_txn_data,
-                vec![],
-                vec![
-                    // consensus_pubkey
-                    Value::vector_u8(validator_info.consensus_public_key().to_bytes().to_vec()),
-                    // network_signing_pubkey
-                    Value::vector_u8(
-                        validator_info
-                            .network_signing_public_key()
-                            .to_bytes()
-                            .to_vec(),
-                    ),
-                    // validator_network_identity_pubkey
-                    Value::vector_u8(discovery_info.validator_network_identity_pubkey.to_bytes()),
-                    // validator_network_address
-                    Value::vector_u8(discovery_info.validator_network_address.to_vec()),
-                    // fullnodes_network_identity_pubkey
-                    Value::vector_u8(discovery_info.fullnodes_network_identity_pubkey.to_bytes()),
-                    // fullnodes_network_address
-                    Value::vector_u8(discovery_info.fullnodes_network_address.to_vec()),
-                ],
+                registration.ty_args().to_vec(),
+                convert_txn_args(registration.args()),
             )
-            .unwrap_or_else(|_| panic!("Failure initializing validator {:?}", validator_address));
-        // Then, add the account to the validator set
+            .unwrap_or_else(|_| panic!("Failure initializing validator {:?}", account));
+
+        // Finally, add the account to the validator set
         move_vm
             .execute_function(
                 &LIBRA_SYSTEM_MODULE,
@@ -813,9 +775,9 @@ fn initialize_validators(
                 interpreter_context,
                 &txn_data,
                 vec![],
-                vec![Value::address(validator_address)],
+                vec![Value::address(account)],
             )
-            .unwrap_or_else(|_| panic!("Failure adding validator {:?}", validator_address));
+            .unwrap_or_else(|_| panic!("Failure adding validator {:?}", account));
     }
 }
 
@@ -926,7 +888,7 @@ fn reconfigure(
 }
 
 /// Verify the consistency of the genesis `WriteSet`
-fn verify_genesis_write_set(events: &[ContractEvent], discovery_set: &DiscoverySet) {
+fn verify_genesis_write_set(events: &[ContractEvent]) {
     // Sanity checks on emitted events:
     // (1) The genesis tx should emit 4 events: a pair of payment sent/received events for
     // minting to the genesis address, a ValidatorSetChangeEvent, and a
@@ -955,29 +917,6 @@ fn verify_genesis_write_set(events: &[ContractEvent], discovery_set: &DiscoveryS
         "Expected sequence number 0 for validator set change event but got {}",
         new_epoch_event.sequence_number()
     );
-
-    // (4) The fourth event should be the discovery set change event
-    let discovery_set_change_event = &events[3];
-    assert_eq!(
-        *discovery_set_change_event.key(),
-        DiscoverySet::change_event_key(),
-        "Key of emitted event {:?} does not match change event key {:?}",
-        *discovery_set_change_event.key(),
-        DiscoverySet::change_event_key()
-    );
-    // (5) This should be the first discovery set change event
-    assert_eq!(
-        discovery_set_change_event.sequence_number(),
-        0,
-        "Expected sequence number 0 for discovery set change event but got {}",
-        discovery_set_change_event.sequence_number()
-    );
-    // (6) It should emit the discovery set we fed into the genesis tx
-    assert_eq!(
-        &DiscoverySet::from_bytes(discovery_set_change_event.event_data()).unwrap(),
-        discovery_set,
-        "Discovery set in emitted event does not match discovery set fed into genesis transaction",
-    );
 }
 
 /// Generate an artificial genesis `ChangeSet` for testing
@@ -987,9 +926,7 @@ pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) ->
 
     encode_genesis_change_set(
         &GENESIS_KEYPAIR.1,
-        &swarm.auth_keys(),
-        swarm.validator_set,
-        swarm.discovery_set,
+        &validator_registrations(&swarm.nodes),
         stdlib_modules,
         VMPublishingOption::Open,
     )
@@ -1029,4 +966,40 @@ impl StateView for GenesisStateView {
     fn is_genesis(&self) -> bool {
         true
     }
+}
+
+pub fn validator_registrations(node_configs: &[NodeConfig]) -> Vec<ValidatorRegistration> {
+    node_configs
+        .iter()
+        .map(|n| {
+            let test = n.test.as_ref().unwrap();
+            let account_key = test.account_keypair.as_ref().unwrap().public_key();
+            let consensus_key = test.consensus_keypair.as_ref().unwrap().public_key();
+            let network = n.validator_network.as_ref().unwrap();
+            let network_keypairs = network.network_keypairs.as_ref().unwrap();
+            let signing_key = network_keypairs.signing_keypair.public_key();
+
+            let script = transaction_builder::encode_register_validator_script(
+                consensus_key.to_bytes().to_vec(),
+                signing_key.to_bytes().to_vec(),
+                network_keypairs.identity_keypair.public_key().to_bytes(),
+                network.advertised_address.to_vec(),
+                network_keypairs.identity_keypair.public_key().to_bytes(),
+                network.advertised_address.to_vec(),
+            );
+            (account_key, script)
+        })
+        .collect::<Vec<_>>()
+}
+
+/// Convert the transaction arguments into move values.
+fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
+    args.iter()
+        .map(|arg| match arg {
+            TransactionArgument::U64(i) => Value::u64(*i),
+            TransactionArgument::Address(a) => Value::address(*a),
+            TransactionArgument::Bool(b) => Value::bool(*b),
+            TransactionArgument::U8Vector(v) => Value::vector_u8(v.clone()),
+        })
+        .collect()
 }

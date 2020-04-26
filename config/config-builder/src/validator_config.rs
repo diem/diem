@@ -9,11 +9,10 @@ use libra_config::{
         ConsensusType, NodeConfig, RemoteService, SafetyRulesBackend, SafetyRulesService,
         SeedPeersConfig, VaultConfig,
     },
-    generator::{self, ValidatorSwarm},
+    generator,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_temppath::TempPath;
-use libra_types::{discovery_set::DiscoverySet, on_chain_config::ValidatorSet};
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use parity_multiaddr::Multiaddr;
@@ -189,19 +188,13 @@ impl ValidatorConfig {
         );
 
         let (faucet_key, config_seed) = self.build_faucet();
-        let swarm = generator::validator_swarm(
+        let generator::ValidatorSwarm { mut nodes, .. } = generator::validator_swarm(
             &self.template,
             self.nodes,
             config_seed,
             randomize_service_ports,
             randomize_libranet_ports,
         );
-        let auth_keys = swarm.auth_keys();
-        let ValidatorSwarm {
-            mut nodes,
-            validator_set,
-            discovery_set,
-        } = swarm;
 
         ensure!(
             nodes.len() == self.nodes,
@@ -211,27 +204,18 @@ impl ValidatorConfig {
         // Optionally choose a limited subset of generated validators to be
         // present at genesis time.
         let nodes_in_genesis = self.nodes_in_genesis.unwrap_or(self.nodes);
-        let validator_set = ValidatorSet::new(
-            validator_set
-                .payload()
-                .iter()
-                .take(nodes_in_genesis)
-                .cloned()
-                .collect(),
-        );
-        let discovery_set =
-            DiscoverySet::new(discovery_set.into_iter().take(nodes_in_genesis).collect());
+
+        let validators = vm_genesis::validator_registrations(&nodes[..nodes_in_genesis]);
 
         let genesis = vm_genesis::encode_genesis_transaction_with_validator(
             faucet_key.public_key(),
-            &auth_keys,
-            validator_set,
-            discovery_set,
+            &validators,
             self.template
                 .test
                 .as_ref()
                 .and_then(|config| config.publishing_option.clone()),
         );
+
         let waypoint = if self.build_waypoint {
             let path = TempPath::new();
             let db_rw = DbReaderWriter::new(LibraDB::new(&path));
@@ -242,6 +226,7 @@ impl ValidatorConfig {
         } else {
             None
         };
+
         let genesis = Some(genesis);
 
         for node in &mut nodes {

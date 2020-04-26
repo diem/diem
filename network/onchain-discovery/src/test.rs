@@ -14,7 +14,7 @@ use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use futures::{channel::oneshot, sink::SinkExt, stream::StreamExt};
 use libra_config::{
     config::{NodeConfig, RoleType},
-    generator::{self, ValidatorSwarm},
+    generator,
 };
 use libra_types::{
     discovery_set::DiscoverySet, on_chain_config::ValidatorSet, trusted_state::TrustedState, PeerId,
@@ -40,7 +40,6 @@ use tokio::{
     runtime::{Handle, Runtime},
     task::JoinHandle,
 };
-use vm_genesis::{encode_genesis_transaction_with_validator, GENESIS_KEYPAIR};
 
 struct MockOnchainDiscoveryNetworkSender {
     peer_mgr_notifs_tx: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
@@ -158,34 +157,26 @@ fn gen_configs(count: usize) -> (Vec<NodeConfig>, ValidatorSet, DiscoverySet) {
     let randomize_service_ports = true;
     let randomize_libranet_ports = false;
 
-    let swarm = generator::validator_swarm(
+    let mut swarm = generator::validator_swarm(
         &config_template,
         count,
         config_seed,
         randomize_service_ports,
         randomize_libranet_ports,
     );
-    let auth_keys = swarm.auth_keys();
-    let ValidatorSwarm {
-        mut nodes,
-        validator_set,
-        discovery_set,
-    } = swarm;
 
     let vm_publishing_option = None;
-    let genesis = encode_genesis_transaction_with_validator(
-        GENESIS_KEYPAIR.1.clone(),
-        &auth_keys,
-        validator_set.clone(),
-        discovery_set.clone(),
+    let genesis = vm_genesis::encode_genesis_transaction_with_validator(
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
+        &vm_genesis::validator_registrations(&swarm.nodes),
         vm_publishing_option,
     );
 
-    for node in &mut nodes {
+    for node in &mut swarm.nodes {
         node.execution.genesis = Some(genesis.clone());
     }
 
-    (nodes, validator_set, discovery_set)
+    (swarm.nodes, swarm.validator_set, swarm.discovery_set)
 }
 
 fn gen_single_config(count: usize) -> (NodeConfig, ValidatorSet, DiscoverySet) {
