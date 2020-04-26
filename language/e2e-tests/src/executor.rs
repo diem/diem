@@ -15,7 +15,6 @@ use libra_types::{
     access_path::AccessPath,
     account_config::{AccountResource, BalanceResource},
     block_metadata::{new_block_event_key, BlockMetadata, NewBlockEvent},
-    discovery_set::mock::mock_discovery_set,
     language_storage::ModuleId,
     on_chain_config::{VMPublishingOption, ValidatorSet},
     transaction::{
@@ -98,17 +97,12 @@ impl FakeExecutor {
         publishing_options: VMPublishingOption,
     ) -> Self {
         let genesis_change_set = {
-            let validator_set_len: usize = validator_set.as_ref().map_or(10, |s| s.payload().len());
-            let swarm = generator::validator_swarm_for_testing(validator_set_len);
-            let mut auth_keys = swarm.auth_keys();
-            auth_keys.truncate(validator_set_len);
-            let validator_set = validator_set.unwrap_or(swarm.validator_set);
-            let discovery_set = mock_discovery_set(&validator_set);
+            let validator_count: usize = validator_set.as_ref().map_or(10, |s| s.payload().len());
+            let swarm = generator::validator_swarm_for_testing(validator_count);
+
             vm_genesis::encode_genesis_change_set(
                 &GENESIS_KEYPAIR.1,
-                &auth_keys,
-                validator_set,
-                discovery_set,
+                &vm_genesis::validator_registrations(&swarm.nodes),
                 &genesis_modules,
                 publishing_options,
             )
