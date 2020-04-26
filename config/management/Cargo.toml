@@ -19,3 +19,4 @@ libra-secure-time = { path = "../../secure/time", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
+vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }
