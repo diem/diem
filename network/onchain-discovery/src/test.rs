@@ -12,12 +12,10 @@ use super::{
 use channel::{libra_channel, message_queues::QueueStyle};
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use futures::{channel::oneshot, sink::SinkExt, stream::StreamExt};
-use libra_config::{
-    config::{NodeConfig, RoleType},
-    generator,
-};
+use libra_config::config::{NodeConfig, RoleType};
 use libra_types::{
-    discovery_set::DiscoverySet, on_chain_config::ValidatorSet, trusted_state::TrustedState, PeerId,
+    account_config, account_state::AccountState, discovery_set::DiscoverySet,
+    trusted_state::TrustedState, PeerId,
 };
 use libra_vm::LibraVM;
 use network::{
@@ -151,38 +149,12 @@ impl MockOnchainDiscoveryNetworkSender {
     }
 }
 
-fn gen_configs(count: usize) -> (Vec<NodeConfig>, ValidatorSet, DiscoverySet) {
-    let config_template = NodeConfig::default();
-    let config_seed = [42; 32];
-    let randomize_service_ports = true;
-    let randomize_libranet_ports = false;
-
-    let mut swarm = generator::validator_swarm(
-        &config_template,
-        count,
-        config_seed,
-        randomize_service_ports,
-        randomize_libranet_ports,
-    );
-
-    let vm_publishing_option = None;
-    let genesis = vm_genesis::encode_genesis_transaction_with_validator(
-        vm_genesis::GENESIS_KEYPAIR.1.clone(),
-        &vm_genesis::validator_registrations(&swarm.nodes),
-        vm_publishing_option,
-    );
-
-    for node in &mut swarm.nodes {
-        node.execution.genesis = Some(genesis.clone());
-    }
-
-    (swarm.nodes, swarm.validator_set, swarm.discovery_set)
-}
-
-fn gen_single_config(count: usize) -> (NodeConfig, ValidatorSet, DiscoverySet) {
-    let (mut nodes, validator_set, discovery_set) = gen_configs(count);
-    let node = nodes.swap_remove(0);
-    (node, validator_set, discovery_set)
+fn gen_configs(count: usize) -> Vec<NodeConfig> {
+    config_builder::ValidatorConfig::new()
+        .nodes(count)
+        .build_common(true, false)
+        .unwrap()
+        .0
 }
 
 fn setup_storage_service_and_executor(
@@ -267,12 +239,13 @@ fn setup_onchain_discovery(
 fn handles_remote_query() {
     ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
-    let (config, _, discovery_set) = gen_single_config(5);
+    let config = gen_configs(1).swap_remove(0);
     let self_peer_id = config.validator_network.as_ref().unwrap().peer_id;
     let role = config.base.role;
 
     let (_storage_runtime, storage_read_client, _executor) =
         setup_storage_service_and_executor(&config);
+    let discovery_set = rt.block_on(get_discovery_set(&storage_read_client));
 
     let (
         f_onchain_discovery,
@@ -322,12 +295,13 @@ fn handles_remote_query() {
 fn queries_storage_on_tick() {
     ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
-    let (config, _, discovery_set) = gen_single_config(5);
+    let config = gen_configs(1).swap_remove(0);
     let self_peer_id = config.validator_network.as_ref().unwrap().peer_id;
     let role = config.base.role;
 
     let (_storage_runtime, storage_read_client, _executor) =
         setup_storage_service_and_executor(&config);
+    let discovery_set = rt.block_on(get_discovery_set(&storage_read_client));
 
     let (
         f_onchain_discovery,
@@ -379,7 +353,7 @@ fn queries_storage_on_tick() {
 fn queries_peers_on_tick() {
     ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
-    let (mut configs, _, discovery_set) = gen_configs(5);
+    let mut configs = gen_configs(5);
 
     // server setup
 
@@ -412,6 +386,7 @@ fn queries_peers_on_tick() {
 
     let (_storage_runtime, storage_read_client, _executor) =
         setup_storage_service_and_executor(&client_config);
+    let discovery_set = rt.block_on(get_discovery_set(&storage_read_client));
 
     let (
         f_client_onchain_discovery,
@@ -478,4 +453,17 @@ fn queries_peers_on_tick() {
     drop(server_storage_query_ticker_tx);
 
     rt.block_on(f_server_onchain_discovery).unwrap();
+}
+
+async fn get_discovery_set(storage: &Arc<dyn StorageRead>) -> DiscoverySet {
+    let account_state = storage
+        .get_latest_account_state(account_config::discovery_set_address())
+        .await;
+    let account_state = AccountState::try_from(&account_state.unwrap().unwrap()).unwrap();
+    account_state
+        .get_discovery_set_resource()
+        .unwrap()
+        .unwrap()
+        .discovery_set()
+        .clone()
 }
