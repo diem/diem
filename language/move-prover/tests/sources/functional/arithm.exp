@@ -1,0 +1,84 @@
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+     ┌── tests/sources/functional/arithm.move:125:9 ───
+     │
+ 125 │         aborts_if false;
+     │         ^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/arithm.move:121:5: div_by_zero_u64_incorrect (entry)
+     =     at tests/sources/functional/arithm.move:122:11: div_by_zero_u64_incorrect (ABORTED)
+     =         x = <redacted>,
+     =         y = <redacted>
+
+error:  A postcondition might not hold on this return path.
+
+     ┌── tests/sources/functional/arithm.move:177:9 ───
+     │
+ 177 │         aborts_if false;
+     │         ^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/arithm.move:173:5: overflow_u128_add_incorrect (entry)
+     =     at tests/sources/functional/arithm.move:174:11: overflow_u128_add_incorrect (ABORTED)
+     =         x = <redacted>,
+     =         y = <redacted>
+
+error:  A postcondition might not hold on this return path.
+
+     ┌── tests/sources/functional/arithm.move:230:9 ───
+     │
+ 230 │         aborts_if false;
+     │         ^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/arithm.move:226:5: overflow_u128_mul_incorrect (entry)
+     =     at tests/sources/functional/arithm.move:227:11: overflow_u128_mul_incorrect (ABORTED)
+     =         x = <redacted>,
+     =         y = <redacted>
+
+error:  A postcondition might not hold on this return path.
+
+     ┌── tests/sources/functional/arithm.move:161:9 ───
+     │
+ 161 │         aborts_if false;
+     │         ^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/arithm.move:157:5: overflow_u64_add_incorrect (entry)
+     =     at tests/sources/functional/arithm.move:158:11: overflow_u64_add_incorrect (ABORTED)
+     =         x = <redacted>,
+     =         y = <redacted>
+
+error:  A postcondition might not hold on this return path.
+
+     ┌── tests/sources/functional/arithm.move:214:9 ───
+     │
+ 214 │         aborts_if false;
+     │         ^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/arithm.move:210:5: overflow_u64_mul_incorrect (entry)
+     =     at tests/sources/functional/arithm.move:211:11: overflow_u64_mul_incorrect (ABORTED)
+     =         x = <redacted>,
+     =         y = <redacted>
+
+error:  A postcondition might not hold on this return path.
+
+     ┌── tests/sources/functional/arithm.move:145:9 ───
+     │
+ 145 │         aborts_if false;
+     │         ^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/arithm.move:141:5: overflow_u8_add_incorrect (entry)
+     =     at tests/sources/functional/arithm.move:142:11: overflow_u8_add_incorrect (ABORTED)
+     =         x = <redacted>,
+     =         y = <redacted>
+
+error:  A postcondition might not hold on this return path.
+
+     ┌── tests/sources/functional/arithm.move:198:9 ───
+     │
+ 198 │         aborts_if false;
+     │         ^^^^^^^^^^^^^^^^
+     │
+     =     at tests/sources/functional/arithm.move:194:5: overflow_u8_mul_incorrect (entry)
+     =     at tests/sources/functional/arithm.move:195:11: overflow_u8_mul_incorrect (ABORTED)
+     =         x = <redacted>,
+     =         y = <redacted>

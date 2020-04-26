@@ -40,11 +40,14 @@ pub fn run_spec_lang_compiler(
         .transpose()
         .map_err(|s| anyhow!(s))?;
 
+    // Construct all sources from targets and deps, as we need bytecode for all of them.
+    let mut all_sources = targets;
+    all_sources.extend(deps.clone());
     let mut env = GlobalEnv::new();
     // First pass: compile move code.
-    let (files, units_or_errors) = move_compile_no_report(&targets, &deps, address_opt)?;
+    let (files, units_or_errors) = move_compile_no_report(&all_sources, &[], address_opt)?;
     for (fname, fsrc) in files {
-        env.add_source(fname, &fsrc);
+        env.add_source(fname, &fsrc, deps.contains(&fname.to_string()));
     }
     match units_or_errors {
         Err(errors) => {
@@ -60,7 +63,7 @@ pub fn run_spec_lang_compiler(
                 // The alternative to do a second parse and expansion pass is to make the expansion
                 // AST clonable and tee it somehow out of the regular compile chain.
                 let (_, eprog_or_errors) =
-                    move_compile_to_expansion_no_report(&targets, &deps, address_opt)?;
+                    move_compile_to_expansion_no_report(&all_sources, &[], address_opt)?;
                 let eprog = eprog_or_errors.expect("no compilation errors");
                 // Run the spec checker on verified units plus expanded AST. This will
                 // populate the environment including any errors.

@@ -1,0 +1,48 @@
+Move prover returns: exiting with boogie verification errors
+error:  This assertion might not hold.
+
+    ┌── tests/sources/functional/nested_invariants.move:11:9 ───
+    │
+ 11 │         invariant x > 0;
+    │         ^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/nested_invariants.move:58:5: mutate_inner_data_invariant_invalid (entry)
+    =     at tests/sources/functional/nested_invariants.move:59:13: mutate_inner_data_invariant_invalid
+    =     at tests/sources/functional/nested_invariants.move:60:17: mutate_inner_data_invariant_invalid
+    =         o = <redacted>,
+    =         r = <redacted>
+    =     at tests/sources/functional/nested_invariants.move:61:17: mutate_inner_data_invariant_invalid
+    =         r = <redacted>
+
+error:  This assertion might not hold.
+
+    ┌── tests/sources/functional/nested_invariants.move:27:9 ───
+    │
+ 27 │         invariant n.x < y;
+    │         ^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/nested_invariants.move:52:5: mutate_outer_data_invariant_invalid (entry)
+    =     at tests/sources/functional/nested_invariants.move:53:13: mutate_outer_data_invariant_invalid
+    =     at tests/sources/functional/nested_invariants.move:54:17: mutate_outer_data_invariant_invalid
+    =         o = <redacted>,
+    =         r = <redacted>
+    =     at tests/sources/functional/nested_invariants.move:55:15: mutate_outer_data_invariant_invalid
+    =         r = <redacted>
+
+error:  This assertion might not hold.
+
+    ┌── tests/sources/functional/nested_invariants.move:11:9 ───
+    │
+ 11 │         invariant x > 0;
+    │         ^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/nested_invariants.move:41:5: new_inner_data_invariant_invalid (entry)
+
+error:  This assertion might not hold.
+
+    ┌── tests/sources/functional/nested_invariants.move:27:9 ───
+    │
+ 27 │         invariant n.x < y;
+    │         ^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/nested_invariants.move:37:5: new_outer_data_invariant_invalid (entry)

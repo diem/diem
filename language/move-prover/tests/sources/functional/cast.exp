@@ -1,0 +1,24 @@
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/functional/cast.move:44:9 ───
+    │
+ 44 │         aborts_if false;
+    │         ^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/cast.move:40:5: aborting_u64_cast_incorrect (entry)
+    =     at tests/sources/functional/cast.move:41:9: aborting_u64_cast_incorrect
+    =         x = <redacted>
+    =     at tests/sources/functional/cast.move:40:5: aborting_u64_cast_incorrect (exit)
+
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/functional/cast.move:30:9 ───
+    │
+ 30 │         aborts_if false;
+    │         ^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/cast.move:26:5: aborting_u8_cast_incorrect (entry)
+    =     at tests/sources/functional/cast.move:27:9: aborting_u8_cast_incorrect
+    =         x = <redacted>
+    =     at tests/sources/functional/cast.move:26:5: aborting_u8_cast_incorrect (exit)

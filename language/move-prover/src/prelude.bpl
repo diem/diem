@@ -932,6 +932,10 @@ procedure {:inline 1} $Vector_contains(ta: TypeValue, v: Value, e: Value) return
     res := Boolean($contains_vector(v, e));
 }
 
+procedure {:inline 1} $Vector_index_of(ta: TypeValue, v: Value, e: Value) returns (res1: Value, res2: Value)  {
+    // TODO: implement me
+    assert false;
+}
 
 
 // ==================================================================================
@@ -993,7 +997,10 @@ ensures $vlen(res) == 32;               // result is 32 bytes.
 // ==================================================================================
 // Native libra_account
 
-procedure {:inline 1} $LibraAccount_save_account(ta: TypeValue, balance: Value, account: Value, addr: Value) {
+// TODO: this function clashes with a similar version in older libraries. This is solved by a hack where the
+// translator appends _OLD to the name when encountering this. The hack shall be removed once old library
+// sources are not longer used.
+procedure {:inline 1} $LibraAccount_save_account_OLD(ta: TypeValue, balance: Value, account: Value, addr: Value) {
     var a: int;
     var t_T: TypeValue;
     var l_T: Location;
@@ -1018,7 +1025,19 @@ procedure {:inline 1} $LibraAccount_save_account(ta: TypeValue, balance: Value, 
     $m := Memory(domain#Memory($m)[l_T := true][l_Balance := true], contents#Memory($m)[l_T := account][l_Balance := balance]);
 }
 
+procedure {:inline 1} $LibraAccount_save_account(
+       t_Token: TypeValue, t_AT: TypeValue, account_type: Value, balance: Value,
+       account: Value, event_generator: Value, addr: Value) {
+    // TODO: implement this
+    assert false;
+}
+
 procedure {:inline 1} $LibraAccount_write_to_event_store(ta: TypeValue, guid: Value, count: Value, msg: Value) {
+    // TODO: this is used in old library sources, remove it once those sources are not longer used in tests.
+    // This function is modeled as a no-op because the actual side effect of this native function is not observable from the Move side.
+}
+
+procedure {:inline 1} $Event_write_to_event_store(ta: TypeValue, guid: Value, count: Value, msg: Value) {
     // This function is modeled as a no-op because the actual side effect of this native function is not observable from the Move side.
 }
 

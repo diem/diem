@@ -1,0 +1,21 @@
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/functional/module_invariants.move:24:9 ───
+    │
+ 24 │         invariant global<SCounter>(0x0).n == spec_count;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/module_invariants.move:46:5: delete_S_incorrect (entry)
+    =     at tests/sources/functional/module_invariants.move:46:5: delete_S_incorrect (exit)
+    =         x = <redacted>
+
+error:  A precondition for this call might not hold.
+
+    ┌── tests/sources/functional/module_invariants.move:24:9 ───
+    │
+ 24 │         invariant global<SCounter>(0x0).n == spec_count;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/module_invariants.move:55:5: private_calls_public_incorrect (entry)
+    =     at tests/sources/functional/module_invariants.move:31:5: new_S (entry)
