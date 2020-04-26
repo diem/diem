@@ -41,7 +41,7 @@ use crate::{
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type},
 };
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use vm::{file_format::Bytecode, views::SignatureView, CompiledModule};
 
 // =================================================================================================
@@ -215,6 +215,8 @@ pub struct GlobalEnv {
     /// can emit FileId's to generated code and read them back.
     file_id_to_idx: BTreeMap<FileId, u16>,
     file_idx_to_id: BTreeMap<u16, FileId>,
+    /// A set indicating whether a file id is a target or a dependency.
+    file_id_is_dep: BTreeSet<FileId>,
     /// A special constant location representing an unknown location.
     /// This uses a pseudo entry in `source_files` to be safely represented.
     unknown_loc: Loc,
@@ -261,6 +263,7 @@ impl GlobalEnv {
             file_name_map,
             file_id_to_idx,
             file_idx_to_id,
+            file_id_is_dep: BTreeSet::new(),
             diags: RefCell::new(vec![]),
             symbol_pool: SymbolPool::new(),
             module_data: vec![],
@@ -273,12 +276,15 @@ impl GlobalEnv {
     }
 
     /// Adds a source to this environment, returning a FileId for it.
-    pub fn add_source(&mut self, file_name: &str, source: &str) -> FileId {
+    pub fn add_source(&mut self, file_name: &str, source: &str, is_dep: bool) -> FileId {
         let file_id = self.source_files.add(file_name, source.to_string());
         self.file_name_map.insert(file_name.to_string(), file_id);
         let file_idx = self.file_id_to_idx.len() as u16;
         self.file_id_to_idx.insert(file_id, file_idx);
         self.file_idx_to_id.insert(file_idx, file_id);
+        if is_dep {
+            self.file_id_is_dep.insert(file_id);
+        }
         file_id
     }
 
@@ -726,6 +732,12 @@ impl<'env> ModuleEnv<'env> {
     /// Returns properties from pragmas.
     pub fn get_properties(&self) -> &PropertyBag {
         &self.data.properties
+    }
+
+    /// Returns true of this module is from a dependency, i.e. not the target of verification.
+    pub fn is_in_dependency(&self) -> bool {
+        let file_id = self.data.loc.file_id;
+        self.env.file_id_is_dep.contains(&file_id)
     }
 
     /// Shortcut for accessing the symbol pool.

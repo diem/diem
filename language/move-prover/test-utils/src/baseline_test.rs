@@ -4,31 +4,36 @@
 //! A module supporting baseline (golden) tests.
 
 use crate::read_bool_env_var;
-use anyhow::{anyhow, Context, Result};
+use anyhow::anyhow;
 use prettydiff::{basic::DiffOp, diff_lines};
 use regex::Regex;
 use std::{
-    fs::File,
+    fs::{remove_file, File},
     io::{Read, Write},
     path::Path,
 };
 
 /// Verifies or updates baseline file for the given generated text.
-pub fn verify_or_update_baseline(baseline_file_name: &Path, text: &str) -> Result<()> {
+pub fn verify_or_update_baseline(baseline_file_name: &Path, text: &str) -> anyhow::Result<()> {
     let update_baseline = read_bool_env_var("UPBL");
 
     if update_baseline {
-        // Just update the baseline file.
-        let mut file = File::create(baseline_file_name)?;
-        write!(file, "{}", clean_for_baseline(text))?;
+        if !text.is_empty() {
+            // Update the baseline file.
+            let mut file = File::create(baseline_file_name)?;
+            write!(file, "{}", clean_for_baseline(text))?;
+        } else {
+            // Remove the baseline file.
+            let _ = remove_file(baseline_file_name);
+        }
         Ok(())
     } else {
         // Read the baseline and diff it.
         let mut contents = String::new();
-        let mut file = File::open(baseline_file_name)
-            .with_context(||
-                format!("Cannot read baseline file at `{}`. To create a new baseline, call this test with env var UPBL=1.", baseline_file_name.to_string_lossy()))?;
-        file.read_to_string(&mut contents)?;
+        if baseline_file_name.exists() {
+            let mut file = File::open(baseline_file_name)?;
+            file.read_to_string(&mut contents)?;
+        }
         diff(clean_for_baseline(text).as_ref(), &contents)
     }
 }
@@ -53,7 +58,7 @@ fn clean_for_baseline(content: &str) -> String {
 }
 
 /// Diffs old and new content.
-fn diff(old_content: &str, new_content: &str) -> Result<()> {
+fn diff(old_content: &str, new_content: &str) -> anyhow::Result<()> {
     if old_content.trim() == new_content.trim() {
         return Ok(());
     }
@@ -79,7 +84,7 @@ fn diff(old_content: &str, new_content: &str) -> Result<()> {
     result.push(
         "
 New output differs from baseline!
-Call this test with env variable UPBL=1 to regenerate baseline files.
+Call this test with env variable UPBL=1 to regenerate or remove old baseline files.
 Then use your favorite changelist diff tool to verify you are good with the changes.
 
 Or check the rudimentary diff below:

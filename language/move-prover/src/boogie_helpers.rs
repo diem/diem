@@ -30,11 +30,19 @@ pub fn boogie_field_name(env: &FieldEnv<'_>) -> String {
 
 /// Return boogie name of given function.
 pub fn boogie_function_name(env: &FunctionEnv<'_>) -> String {
-    format!(
+    let name = format!(
         "${}_{}",
         env.module_env.get_name().name().display(env.symbol_pool()),
         env.get_name().display(env.symbol_pool())
-    )
+    );
+    // TODO: hack to deal with similar native functions in old/new library. We identify
+    // whether the old or new version of the function is referenced by the number of type
+    // parameters.
+    if name == "$LibraAccount_save_account" && env.get_type_parameters().len() == 1 {
+        name + "_OLD"
+    } else {
+        name
+    }
 }
 
 /// Return boogie name of given spec var.

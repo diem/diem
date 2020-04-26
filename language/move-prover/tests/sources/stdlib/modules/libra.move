@@ -1,6 +1,3 @@
-// dep: tests/sources/stdlib/modules/transaction.move
-// dep: tests/sources/stdlib/modules/vector.move
-
 address 0x0:
 
 // global spec ideas

@@ -1,0 +1,19 @@
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/functional/serialize_model.move:29:9 ───
+    │
+ 29 │         ensures result_1 == result_2;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/serialize_model.move:21:5: lcs_test1_incorrect (entry)
+    =     at tests/sources/functional/serialize_model.move:23:23: lcs_test1_incorrect
+    =         v1 = <redacted>,
+    =         v2 = <redacted>,
+    =         s1 = <redacted>
+    =     at tests/sources/functional/serialize_model.move:24:32: lcs_test1_incorrect
+    =         s2 = <redacted>
+    =     at tests/sources/functional/serialize_model.move:25:10: lcs_test1_incorrect
+    =         result_0 = <redacted>,
+    =         result_1 = <redacted>
+    =     at tests/sources/functional/serialize_model.move:21:5: lcs_test1_incorrect (exit)

@@ -40,9 +40,10 @@ pub fn run_move_prover<W: WriteColor>(
     options: Options,
 ) -> anyhow::Result<()> {
     let sources = options.move_sources.clone();
+    let deps = options.move_deps.clone();
     let address = Some(options.account_address.as_ref());
     info!("parsing and checking sources");
-    let mut env: GlobalEnv = run_spec_lang_compiler(sources, vec![], address)?;
+    let mut env: GlobalEnv = run_spec_lang_compiler(sources, deps, address)?;
     if env.has_errors() {
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with checking errors"));
@@ -64,7 +65,7 @@ pub fn run_move_prover<W: WriteColor>(
     writer.process_result(|result| fs::write(&options.output_path, result))?;
     if !options.generate_only {
         let boogie_file_id =
-            writer.process_result(|result| env.add_source(&options.output_path, result));
+            writer.process_result(|result| env.add_source(&options.output_path, result, false));
         let boogie = BoogieWrapper {
             env: &env,
             targets: &targets,

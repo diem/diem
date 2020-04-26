@@ -55,6 +55,9 @@ pub struct Options {
     pub verbosity_level: LevelFilter,
     /// The paths to the move sources.
     pub move_sources: Vec<String>,
+    /// The paths to any dependencies for the move sources. Those will not be verified but
+    /// can be used by `move_sources`.
+    pub move_deps: Vec<String>,
     /// Path to the boogie executable.
     pub boogie_exe: String,
     /// Path to the z3 executable.
@@ -90,6 +93,7 @@ impl Default for Options {
             account_address: "0x234567".to_string(),
             verbosity_level: LevelFilter::Warn,
             move_sources: vec![],
+            move_deps: vec![],
             boogie_exe: "".to_string(),
             z3_exe: "".to_string(),
             use_cvc4: false,
@@ -230,6 +234,16 @@ impl Options {
                     ),
             )
             .arg(
+                Arg::with_name("dependencies")
+                    .long("dep")
+                    .short("d")
+                    .multiple(true)
+                    .number_of_values(1)
+                    .takes_value(true)
+                    .value_name("MOVE_FILE")
+                    .help("path to a move file dependency, which will not be verified")
+            )
+            .arg(
                 Arg::with_name("sources")
                     .multiple(true)
                     .value_name("MOVE_FILE")
@@ -267,6 +281,7 @@ impl Options {
         self.cvc4_exe = get_with_default("cvc4-exe");
         self.boogie_flags = get_vec("boogie-flags");
         self.move_sources = get_vec("sources");
+        self.move_deps = get_vec("dependencies");
         self.use_array_theory = matches.is_present("use-array-theory");
         self.stable_test_output = matches.is_present("stable-test-output");
         self.verify_scope = match get_with_default("verify").as_str() {

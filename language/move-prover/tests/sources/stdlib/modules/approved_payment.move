@@ -1,15 +1,3 @@
-// dep: tests/sources/stdlib/modules/libra.move
-// dep: tests/sources/stdlib/modules/libra_account.move
-// dep: tests/sources/stdlib/modules/signature.move
-// dep: tests/sources/stdlib/modules/transaction.move
-// dep: tests/sources/stdlib/modules/vector.move
-// dep: tests/sources/stdlib/modules/lcs.move
-// dep: tests/sources/stdlib/modules/lbr.move
-// dep: tests/sources/stdlib/modules/libra_transaction_timeout.move
-// dep: tests/sources/stdlib/modules/libra_time.move
-// dep: tests/sources/stdlib/modules/hash.move
-// flag: --verify=none
-
 // Module that allows a payee to approve payments with a cryptographic signature. The basic flow is:
 // (1) Payer sends `metadata` to the payee
 // (2) Payee signs `metadata` and sends 64 byte signature back to the payer
@@ -25,6 +13,10 @@ module ApprovedPayment {
     use 0x0::Signature;
     use 0x0::Transaction;
     use 0x0::Vector;
+
+    spec module {
+        pragma verify = false;
+    }
 
     // A resource to be published under the payee's account
     resource struct T {

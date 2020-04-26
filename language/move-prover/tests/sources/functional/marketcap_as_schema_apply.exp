@@ -1,0 +1,16 @@
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/functional/marketcap_as_schema_apply.move:12:9 ───
+    │
+ 12 │         ensures global<MarketCap>(0xA550C18).total_value == sum_of_coins<X>;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/marketcap_as_schema_apply.move:63:5: deposit_incorrect (entry)
+    =     at tests/sources/functional/marketcap_as_schema_apply.move:64:17: deposit_incorrect
+    =         coin_ref = <redacted>,
+    =         check = <redacted>,
+    =         value = <redacted>
+    =     at tests/sources/functional/marketcap_as_schema_apply.move:65:26: deposit_incorrect
+    =         coin_ref = <redacted>
+    =     at tests/sources/functional/marketcap_as_schema_apply.move:63:5: deposit_incorrect (exit)

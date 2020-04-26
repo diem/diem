@@ -397,6 +397,10 @@ impl<'env> ModuleTranslator<'env> {
     /// Determines whether we should generate the `_verify` entry point for a function, which
     /// triggers its standalone verification.
     fn should_generate_verify(&self, func_target: &FunctionTarget<'_>) -> bool {
+        if func_target.func_env.module_env.is_in_dependency() {
+            // Never generate verify method for functions from dependencies.
+            return false;
+        }
         // We look up the `verify` pragma property first in this function, then in
         // the module, and finally fall back to the value of option `--verify`.
         let prop_name = &func_target.symbol_pool().make("verify");

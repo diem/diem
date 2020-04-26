@@ -1,13 +1,3 @@
-// dep: tests/sources/stdlib/modules/hash.move
-// dep: tests/sources/stdlib/modules/lbr.move
-// dep: tests/sources/stdlib/modules/lcs.move
-// dep: tests/sources/stdlib/modules/libra.move
-// dep: tests/sources/stdlib/modules/libra_transaction_timeout.move
-// dep: tests/sources/stdlib/modules/transaction.move
-// dep: tests/sources/stdlib/modules/vector.move
-// dep: tests/sources/stdlib/modules/libra_time.move
-// flag: --verify=none
-
 address 0x0:
 
 // The module for the account resource that governs every Libra account
@@ -19,6 +9,10 @@ module LibraAccount {
     use 0x0::LibraTransactionTimeout;
     use 0x0::Transaction;
     use 0x0::Vector;
+
+    spec module {
+        pragma verify = false;
+    }
 
     // Every Libra account has a LibraAccount::T resource
     resource struct T {
