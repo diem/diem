@@ -9,6 +9,7 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     language_storage::ModuleId,
+    on_chain_config::ConfigStorage,
     transaction::ChangeSet,
     write_set::{WriteOp, WriteSet},
 };
@@ -85,6 +86,12 @@ impl FakeDataStore {
             .serialize(&mut blob)
             .expect("serializing this module should work");
         self.set(access_path, blob);
+    }
+}
+
+impl ConfigStorage for &FakeDataStore {
+    fn fetch_config(&self, access_path: AccessPath) -> Option<Vec<u8>> {
+        StateView::get(*self, &access_path).unwrap_or_default()
     }
 }
 

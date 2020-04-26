@@ -16,7 +16,7 @@ use libra_types::{
     account_config::{AccountResource, BalanceResource},
     block_metadata::{new_block_event_key, BlockMetadata, NewBlockEvent},
     language_storage::ModuleId,
-    on_chain_config::{VMPublishingOption, ValidatorSet},
+    on_chain_config::{OnChainConfig, VMPublishingOption, ValidatorSet},
     transaction::{
         SignedTransaction, Transaction, TransactionOutput, TransactionStatus, VMValidatorResult,
     },
@@ -253,17 +253,15 @@ impl FakeExecutor {
     }
 
     pub fn new_block(&mut self) {
-        let validator_address = *generator::validator_swarm_for_testing(10)
-            .validator_set
-            .payload()[0]
-            .account_address();
+        let validator_set = ValidatorSet::fetch_config(&self.data_store)
+            .expect("Unable to retrieve the validator set from storage");
         self.block_time += 1;
         let new_block = BlockMetadata::new(
             HashValue::zero(),
             0,
             self.block_time,
             vec![],
-            validator_address,
+            *validator_set.payload()[0].account_address(),
         );
         let output = self
             .execute_transaction_block(vec![Transaction::BlockMetadata(new_block)])
