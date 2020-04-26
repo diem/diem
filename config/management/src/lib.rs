@@ -16,6 +16,7 @@ use std::{convert::TryInto, fmt::Write, str::FromStr, time::Duration};
 use structopt::StructOpt;
 
 pub mod constants {
+    pub const ASSOCIATION_KEY: &str = "association";
     pub const CONSENSUS_KEY: &str = "consensus";
     pub const EPOCH: &str = "epoch";
     pub const FULLNODE_NETWORK_KEY: &str = "fullnode_network";
@@ -265,9 +266,46 @@ fn secure_storage(config: SecureBackend) -> Box<dyn Storage> {
 pub mod tests {
     use super::*;
     use libra_secure_storage::{Policy, Value};
+    use libra_types::transaction::TransactionPayload;
 
     const VAULT_HOST: &str = "http://localhost:8200";
     const VAULT_ROOT_TOKEN: &str = "root_token";
+
+    #[test]
+    #[ignore]
+    fn test_end_to_end() {
+        let namespace = "end_to_end";
+        let storage = initialize_storage(default_secure_backend(namespace.into()));
+        let association_key = storage
+            .get_public_key(constants::ASSOCIATION_KEY)
+            .unwrap()
+            .public_key;
+
+        let validator_key = storage
+            .get_public_key(constants::OWNER_KEY)
+            .unwrap()
+            .public_key;
+
+        let validator_txn = validator_config(
+            AccountAddress::random(),
+            "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
+            "/ip4/0.0.0.0/tcp/6180".parse::<Multiaddr>().unwrap(),
+            namespace,
+        );
+
+        let validator_txn = validator_txn.as_signed_user_txn().unwrap().payload();
+        let validator_txn = if let TransactionPayload::Script(script) = validator_txn {
+            script.clone()
+        } else {
+            panic!("Expected TransactionPayload::Script(_)");
+        };
+
+        vm_genesis::encode_genesis_transaction_with_validator(
+            association_key,
+            &[(validator_key, validator_txn)],
+            None,
+        );
+    }
 
     #[test]
     #[ignore]
@@ -359,6 +397,9 @@ pub mod tests {
         let policy = Policy::public();
         storage.reset_and_clear().unwrap();
 
+        storage
+            .create_key(constants::ASSOCIATION_KEY, &policy)
+            .unwrap();
         storage
             .create_key(constants::CONSENSUS_KEY, &policy)
             .unwrap();
