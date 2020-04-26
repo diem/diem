@@ -11,7 +11,7 @@ use language_e2e_tests::{
 };
 use libra_config::generator;
 use libra_crypto::PrivateKey;
-use libra_types::{account_config, on_chain_config::ValidatorSet};
+use libra_types::account_config;
 use move_core_types::identifier::Identifier;
 use once_cell::sync::Lazy;
 use std::{
@@ -148,18 +148,19 @@ pub struct Config {
     pub accounts: BTreeMap<String, AccountData>,
     pub genesis_accounts: BTreeMap<String, Account>,
     /// The validator set after genesis
-    pub validator_set: ValidatorSet,
+    pub validator_accounts: usize,
 }
 
 impl Config {
     pub fn build(entries: &[Entry]) -> Result<Self> {
         let mut accounts = BTreeMap::new();
         let mut validator_accounts = entries.iter().filter(|entry| entry.is_validator()).count();
+        let total_validator_accounts = validator_accounts;
 
         // generate a validator set with |validator_accounts| validators
-        let (validator_keys, validator_set) = if validator_accounts > 0 {
+        let validator_keys = if validator_accounts > 0 {
             let mut swarm = generator::validator_swarm_for_testing(validator_accounts);
-            let validator_keys: Vec<_> = swarm
+            swarm
                 .nodes
                 .iter_mut()
                 .map(|c| {
@@ -169,10 +170,9 @@ impl Config {
                     let privkey = account_keypair.take_private().unwrap();
                     (peer_id, privkey)
                 })
-                .collect();
-            (validator_keys, swarm.validator_set)
+                .collect::<Vec<_>>()
         } else {
-            (vec![], ValidatorSet::new(vec![]))
+            vec![]
         };
 
         // key generator with a fixed seed
@@ -240,7 +240,7 @@ impl Config {
         Ok(Config {
             accounts,
             genesis_accounts: make_genesis_accounts(),
-            validator_set,
+            validator_accounts: total_validator_accounts,
         })
     }
 

@@ -93,11 +93,11 @@ impl FakeExecutor {
     /// Creates fresh genesis from the stdlib modules passed in.
     pub fn custom_genesis(
         genesis_modules: Vec<VerifiedModule>,
-        validator_set: Option<ValidatorSet>,
+        validator_accounts: Option<usize>,
         publishing_options: VMPublishingOption,
     ) -> Self {
         let genesis_change_set = {
-            let validator_count: usize = validator_set.as_ref().map_or(10, |s| s.payload().len());
+            let validator_count = validator_accounts.map_or(10, |s| s);
             let swarm = generator::validator_swarm_for_testing(validator_count);
 
             vm_genesis::encode_genesis_change_set(

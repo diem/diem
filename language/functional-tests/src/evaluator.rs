@@ -557,7 +557,7 @@ pub fn eval<TComp: Compiler>(
     let mut log = EvaluationLog { outputs: vec![] };
 
     // Set up a fake executor with the genesis block and create the accounts.
-    let mut exec = if config.validator_set.payload().is_empty() {
+    let mut exec = if config.validator_accounts == 0 {
         if compiler.use_staged_genesis() {
             FakeExecutor::from_genesis_file()
         } else {
@@ -573,7 +573,7 @@ pub fn eval<TComp: Compiler>(
                 StdLibOptions::Fresh
             })
             .to_vec(),
-            Some(config.validator_set.clone()),
+            Some(config.validator_accounts),
             VMPublishingOption::Open,
         )
     };
