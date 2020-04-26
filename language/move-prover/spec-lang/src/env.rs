@@ -23,9 +23,9 @@ use move_vm_types::values::Value as VMValue;
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressIdentifierIndex, CodeOffset, Constant as VMConstant, ConstantPoolIndex,
-        FunctionDefinitionIndex, FunctionHandleIndex, Kind, SignatureIndex, SignatureToken,
-        StructDefinitionIndex, StructFieldInformation, StructHandleIndex,
+        AddressIdentifierIndex, Constant as VMConstant, ConstantPoolIndex, FunctionDefinitionIndex,
+        FunctionHandleIndex, Kind, SignatureIndex, SignatureToken, StructDefinitionIndex,
+        StructFieldInformation, StructHandleIndex,
     },
     views::{
         FunctionDefinitionView, FunctionHandleView, SignatureTokenView, StructDefinitionView,
@@ -34,10 +34,7 @@ use vm::{
 };
 
 use crate::{
-    ast::{
-        Condition, FunSpec, Invariant, InvariantKind, ModuleName, PropertyBag, SpecFunDecl,
-        SpecVarDecl, StructSpec,
-    },
+    ast::{ModuleName, PropertyBag, Spec, SpecFunDecl, SpecVarDecl},
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type},
 };
@@ -190,6 +187,10 @@ impl SpecFunId {
 impl SpecVarId {
     pub fn new(idx: usize) -> Self {
         Self(idx as RawIndex)
+    }
+
+    pub fn as_usize(self) -> usize {
+        self.0 as usize
     }
 }
 
@@ -405,12 +406,11 @@ impl GlobalEnv {
         loc: Loc,
         module: CompiledModule,
         source_map: SourceMap<MoveIrLoc>,
-        properties: PropertyBag,
         struct_data: BTreeMap<StructId, StructData>,
         function_data: BTreeMap<FunId, FunctionData>,
         spec_vars: Vec<SpecVarDecl>,
         spec_funs: Vec<SpecFunDecl>,
-        module_invariants: Vec<Invariant>,
+        module_spec: Spec,
         loc_map: BTreeMap<NodeId, Loc>,
         type_map: BTreeMap<NodeId, Type>,
         instantiation_map: BTreeMap<NodeId, Vec<Type>>,
@@ -449,9 +449,8 @@ impl GlobalEnv {
             function_idx_to_id,
             spec_vars,
             spec_funs,
-            module_invariants,
+            module_spec,
             source_map,
-            properties,
             loc,
             loc_map,
             type_map,
@@ -469,7 +468,7 @@ impl GlobalEnv {
         loc: Loc,
         arg_names: Vec<Symbol>,
         type_arg_names: Vec<Symbol>,
-        spec: FunSpec,
+        spec: Spec,
     ) -> FunctionData {
         let handle_idx = module.function_def_at(def_idx).function;
         FunctionData {
@@ -491,7 +490,7 @@ impl GlobalEnv {
         def_idx: StructDefinitionIndex,
         name: Symbol,
         loc: Loc,
-        mut spec: StructSpec,
+        spec: Spec,
     ) -> StructData {
         let handle_idx = module.struct_def_at(def_idx).struct_handle;
         let field_data = if let StructFieldInformation::Declared(fields) =
@@ -515,15 +514,6 @@ impl GlobalEnv {
         } else {
             BTreeMap::new()
         };
-        // Ensure that all invariant kinds in spec have an entry.
-        for kind in &[
-            InvariantKind::Data,
-            InvariantKind::Update,
-            InvariantKind::Pack,
-            InvariantKind::Unpack,
-        ] {
-            spec.invariants.entry(*kind).or_insert_with(|| vec![]);
-        }
         StructData {
             name,
             loc,
@@ -626,11 +616,11 @@ impl GlobalEnv {
     }
 
     /// Returns all structs in all modules which carry invariants.
-    pub fn get_all_structs_with_invariants(&self) -> Vec<Type> {
+    pub fn get_all_structs_with_conditions(&self) -> Vec<Type> {
         let mut res = vec![];
         for module_env in self.get_modules() {
             for struct_env in module_env.get_structs() {
-                if struct_env.has_invariants() {
+                if struct_env.has_conditions() {
                     let formals = struct_env
                         .get_type_parameters()
                         .iter()
@@ -696,11 +686,8 @@ pub struct ModuleData {
     /// Specification functions, in SpecFunId order.
     pub spec_funs: BTreeMap<SpecFunId, SpecFunDecl>,
 
-    /// Module level invariants.
-    pub module_invariants: Vec<Invariant>,
-
-    /// Properties (from pragmas) associated with this module.
-    pub properties: PropertyBag,
+    /// Module level specification.
+    pub module_spec: Spec,
 
     /// Module source location information.
     pub source_map: SourceMap<MoveIrLoc>,
@@ -742,11 +729,6 @@ impl<'env> ModuleEnv<'env> {
     /// Returns true if this is a module representing a script.
     pub fn is_script_module(&self) -> bool {
         self.symbol_pool().string(self.data.name.name()).as_str() == SCRIPT_MODULE_NAME
-    }
-
-    /// Returns properties from pragmas.
-    pub fn get_properties(&self) -> &PropertyBag {
-        &self.data.properties
     }
 
     /// Returns true of this module is from a dependency, i.e. not the target of verification.
@@ -1003,9 +985,9 @@ impl<'env> ModuleEnv<'env> {
         self.data.spec_funs.get(&id).expect("spec fun id defined")
     }
 
-    /// Gets module invariants.
-    pub fn get_module_invariants(&self) -> &[Invariant] {
-        &self.data.module_invariants
+    /// Gets module specification.
+    pub fn get_spec(&self) -> &Spec {
+        &self.data.module_spec
     }
 
     /// Get all spec fun overloads with the given name.
@@ -1068,7 +1050,7 @@ pub struct StructData {
     field_data: BTreeMap<FieldId, FieldData>,
 
     // Associated specification.
-    spec: StructSpec,
+    spec: Spec,
 }
 
 #[derive(Debug, Clone)]
@@ -1196,44 +1178,20 @@ impl<'env> StructEnv<'env> {
             .collect_vec()
     }
 
-    /// Returns true if this struct has invariants.
-    pub fn has_invariants(&self) -> bool {
-        !self.data.spec.invariants.is_empty()
+    /// Returns true if this struct has specifcation conditions.
+    pub fn has_conditions(&self) -> bool {
+        !self.data.spec.conditions.is_empty()
     }
 
     /// Returns the data invariants associated with this struct.
-    pub fn get_data_invariants(&'env self) -> &'env [Invariant] {
-        self.data.spec.invariants.get(&InvariantKind::Data).unwrap()
-    }
-
-    /// Returns the update invariants associated with this struct.
-    pub fn get_update_invariants(&'env self) -> &'env [Invariant] {
-        &self
-            .data
-            .spec
-            .invariants
-            .get(&InvariantKind::Update)
-            .unwrap()
-    }
-
-    /// Returns the pack invariants associated with this struct.
-    pub fn get_pack_invariants(&'env self) -> &'env [Invariant] {
-        &self.data.spec.invariants.get(&InvariantKind::Pack).unwrap()
-    }
-
-    /// Returns the unpack invariants associated with this struct.
-    pub fn get_unpack_invariants(&'env self) -> &'env [Invariant] {
-        &self
-            .data
-            .spec
-            .invariants
-            .get(&InvariantKind::Unpack)
-            .unwrap()
+    pub fn get_spec(&'env self) -> &'env Spec {
+        &self.data.spec
     }
 }
 
 // =================================================================================================
 /// # Field Environment
+
 #[derive(Debug)]
 pub struct FieldData {
     /// The name of this field.
@@ -1320,8 +1278,8 @@ pub struct FunctionData {
     /// List of type argument names. Not in bytecode but obtained from AST.
     type_arg_names: Vec<Symbol>,
 
-    /// List of specification conditions. Not in bytecode but obtained from AST.
-    spec: FunSpec,
+    /// Specification associated with this function.
+    spec: Spec,
 }
 
 #[derive(Debug, Clone)]
@@ -1357,16 +1315,6 @@ impl<'env> FunctionEnv<'env> {
     /// Returns the location of this function.
     pub fn get_loc(&self) -> Loc {
         self.data.loc.clone()
-    }
-
-    /// Returns properties from pragmas on decl.
-    pub fn get_properties_on_decl(&self) -> &PropertyBag {
-        &self.data.spec.properties_on_decl
-    }
-
-    /// Returns properties from pragmas on impl.
-    pub fn get_properties_on_impl(&self, offset: CodeOffset) -> Option<&PropertyBag> {
-        self.data.spec.properties_on_impl.get(&offset)
     }
 
     /// Returns the location of the bytecode at the given offset.
@@ -1517,14 +1465,9 @@ impl<'env> FunctionEnv<'env> {
             .globalize_signature(signature.token_at(idx as u8).signature_token())
     }
 
-    /// Returns specification conditions associated with this function.
-    pub fn get_specification_on_decl(&'env self) -> &'env [Condition] {
-        &self.data.spec.on_decl
-    }
-
-    /// Returns specification conditions associated with this function at bytecode offset.
-    pub fn get_specification_on_impl(&'env self, offset: CodeOffset) -> Option<&'env [Condition]> {
-        self.data.spec.on_impl.get(&offset).map(|x| x.as_slice())
+    /// Returns associated specification.
+    pub fn get_spec(&'env self) -> &'env Spec {
+        &self.data.spec
     }
 
     fn definition_view(&'env self) -> FunctionDefinitionView<'env, CompiledModule> {

@@ -1600,20 +1600,24 @@ fn parse_invariant<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember
         match tokens.content() {
             "update" => {
                 tokens.advance()?;
-                InvariantKind::Update
+                SpecConditionKind::InvariantUpdate
             }
             "pack" => {
                 tokens.advance()?;
-                InvariantKind::Pack
+                SpecConditionKind::InvariantPack
             }
             "unpack" => {
                 tokens.advance()?;
-                InvariantKind::Unpack
+                SpecConditionKind::InvariantUnpack
             }
-            _ => InvariantKind::Data,
+            "module" => {
+                tokens.advance()?;
+                SpecConditionKind::InvariantModule
+            }
+            _ => SpecConditionKind::Invariant,
         }
     } else {
-        InvariantKind::Data
+        SpecConditionKind::Invariant
     };
     let exp = parse_exp(tokens)?;
     consume_token(tokens, Tok::Semicolon)?;
@@ -1621,7 +1625,7 @@ fn parse_invariant<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember
         tokens.file_name(),
         start_loc,
         tokens.previous_end_loc(),
-        SpecBlockMember_::Invariant { kind, exp },
+        SpecBlockMember_::Condition { kind, exp },
     ))
 }
 

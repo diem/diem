@@ -78,15 +78,7 @@ error: `y` cannot be matched to an existing name in inclusion context
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
 
-error: schema `M::Invariant` includes invariants which are not allowed in this context
-
-    ┌── tests/sources/schemas_err.move:61:9 ───
-    │
- 61 │         include Invariant;
-    │         ^^^^^^^^^^^^^^^^^^
-    │
-
-error: schema `M::Condition` includes conditions which are not allowed in this context
+error: schema includes condition which is not allowed in this context
 
     ┌── tests/sources/schemas_err.move:70:9 ───
     │

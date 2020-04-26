@@ -125,18 +125,14 @@ impl<'a> StacklessBytecodeGenerator<'a> {
         }
 
         // Add spec block if defined at this code offset.
-        if self
-            .func_env
-            .get_specification_on_impl(code_offset)
-            .is_some()
-        {
+        if self.func_env.get_spec().on_impl.get(&code_offset).is_some() {
             let block_id = SpecBlockId::new(spec_blocks.len());
             spec_blocks.insert(block_id, code_offset);
             let spec_block_attr_id = self.new_loc_attr(code_offset);
             self.code
                 .push(Bytecode::SpecBlock(spec_block_attr_id, block_id));
 
-            // If the current instruction is just a Nop, skip it. It has been generated tp support
+            // If the current instruction is just a Nop, skip it. It has been generated to support
             // spec blocks.
             if matches!(bytecode, MoveBytecode::Nop) {
                 return;

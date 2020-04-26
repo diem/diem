@@ -17,7 +17,6 @@ use std::{
 };
 use vm::file_format::CodeOffset;
 
-use move_lang::parser::ast::{self as PA};
 use std::collections::BTreeSet;
 
 // =================================================================================================
@@ -46,8 +45,8 @@ pub struct SpecFunDecl {
 // =================================================================================================
 /// # Conditions
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
-pub enum SpecConditionKind {
+#[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
+pub enum ConditionKind {
     Assert,
     Assume,
     Decreases,
@@ -55,107 +54,118 @@ pub enum SpecConditionKind {
     Ensures,
     Requires,
     RequiresModule,
+    Invariant,
+    InvariantModule,
+    InvariantUpdate,
+    VarUpdate(ModuleId, SpecVarId, Vec<Type>),
+    VarPack(ModuleId, SpecVarId, Vec<Type>),
+    VarUnpack(ModuleId, SpecVarId, Vec<Type>),
 }
 
-impl SpecConditionKind {
-    pub fn new(kind: &PA::SpecConditionKind) -> Self {
-        use SpecConditionKind::*;
-        match kind {
-            PA::SpecConditionKind::Assert => Assert,
-            PA::SpecConditionKind::Assume => Assume,
-            PA::SpecConditionKind::Decreases => Decreases,
-            PA::SpecConditionKind::Ensures => Ensures,
-            PA::SpecConditionKind::Requires => Requires,
-            PA::SpecConditionKind::AbortsIf => AbortsIf,
-            PA::SpecConditionKind::RequiresModule => RequiresModule,
+impl ConditionKind {
+    /// If this is an assignment to a spec var, return it.
+    pub fn get_spec_var_target(&self) -> Option<(ModuleId, SpecVarId, Vec<Type>)> {
+        use ConditionKind::*;
+        if let VarUpdate(mid, vid, tys) | VarPack(mid, vid, tys) | VarUnpack(mid, vid, tys) = self {
+            Some((*mid, *vid, tys.clone()))
+        } else {
+            None
         }
     }
 
-    pub fn allows_old(self) -> bool {
+    /// Returns true of this condition allows the `old(..)` expression.
+    pub fn allows_old(&self) -> bool {
+        use ConditionKind::*;
+        matches!(self, Ensures | AbortsIf | InvariantUpdate | VarUpdate(..))
+    }
+
+    /// Returns true if this condition is allowed on a function declaration.
+    pub fn allowed_on_fun_decl(&self) -> bool {
+        use ConditionKind::*;
         matches!(
             self,
-            SpecConditionKind::Ensures | SpecConditionKind::AbortsIf
+            Requires
+                | RequiresModule
+                | Invariant
+                | InvariantModule
+                | AbortsIf
+                | Ensures
+                | VarUpdate(..)
         )
     }
 
-    pub fn on_decl(self) -> bool {
-        use SpecConditionKind::*;
-        match self {
-            AbortsIf | Ensures | Requires => true,
-            _ => false,
-        }
+    /// Returns true if this condition is allowed in a function body.
+    pub fn allowed_on_fun_impl(&self) -> bool {
+        use ConditionKind::*;
+        matches!(self, Assert | Assume | Decreases)
     }
 
-    pub fn on_impl(self) -> bool {
-        use SpecConditionKind::*;
-        match self {
-            Assert | Assume | Decreases => true,
-            _ => false,
-        }
+    /// Returns true if this condition is allowed on a struct.
+    pub fn allowed_on_struct(&self) -> bool {
+        use ConditionKind::*;
+        matches!(
+            self,
+            Invariant | InvariantUpdate | VarUpdate(..) | VarPack(..) | VarUnpack(..)
+        )
+    }
+
+    /// Returns true if this condition is allowed on a module.
+    pub fn allowed_on_module(&self) -> bool {
+        use ConditionKind::*;
+        matches!(self, Invariant | InvariantModule)
     }
 }
 
 #[derive(Debug)]
 pub struct Condition {
     pub loc: Loc,
-    pub kind: SpecConditionKind,
+    pub kind: ConditionKind,
     pub exp: Exp,
 }
 
-/// Specification and properties associated with a function.
-#[derive(Debug, Default)]
-pub struct FunSpec {
-    pub on_decl: Vec<Condition>,
-    pub on_impl: BTreeMap<CodeOffset, Vec<Condition>>,
-    pub properties_on_decl: PropertyBag,
-    pub properties_on_impl: BTreeMap<CodeOffset, PropertyBag>,
-}
-
-/// Specification and properties associated with a struct.
-#[derive(Debug, Default)]
-pub struct StructSpec {
-    pub invariants: BTreeMap<InvariantKind, Vec<Invariant>>,
-    pub properties: PropertyBag,
-}
+// =================================================================================================
+/// # Specifications
 
 /// A set of properties stemming from pragmas.
 pub type PropertyBag = BTreeMap<Symbol, Value>;
 
-// =================================================================================================
-/// # Invariants
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
-pub enum InvariantKind {
-    Data,
-    Update,
-    Pack,
-    Unpack,
-    Module,
+/// Specification and properties associated with a language item.
+#[derive(Debug, Default)]
+pub struct Spec {
+    // The set of conditions associated with this item.
+    pub conditions: Vec<Condition>,
+    // Any pragma properties associated with this item.
+    pub properties: PropertyBag,
+    // If this is a function, specs associated with individual code points.
+    pub on_impl: BTreeMap<CodeOffset, Spec>,
 }
 
-impl InvariantKind {
-    pub fn new(kind: &PA::InvariantKind) -> InvariantKind {
-        use InvariantKind::*;
-        match kind {
-            PA::InvariantKind::Data => Data,
-            PA::InvariantKind::Update => Update,
-            PA::InvariantKind::Pack => Pack,
-            PA::InvariantKind::Unpack => Unpack,
-        }
+impl Spec {
+    pub fn has_conditions(&self) -> bool {
+        !self.conditions.is_empty()
     }
 
-    pub fn allows_old(self) -> bool {
-        matches!(self, InvariantKind::Update)
+    pub fn filter<P>(&self, pred: P) -> impl Iterator<Item = &Condition>
+    where
+        P: FnMut(&&Condition) -> bool,
+    {
+        self.conditions.iter().filter(pred)
     }
-}
 
-#[derive(Debug)]
-pub struct Invariant {
-    pub loc: Loc,
-    pub kind: InvariantKind,
-    // If this is an assignment to a spec variable, the module and var id, and instantiation.
-    pub target: Option<(ModuleId, SpecVarId, Vec<Type>)>,
-    pub exp: Exp,
+    pub fn filter_kind(&self, kind: ConditionKind) -> impl Iterator<Item = &Condition> {
+        self.filter(move |c| c.kind == kind)
+    }
+
+    pub fn any<P>(&self, pred: P) -> bool
+    where
+        P: FnMut(&Condition) -> bool,
+    {
+        self.conditions.iter().any(pred)
+    }
+
+    pub fn any_kind(&self, kind: ConditionKind) -> bool {
+        self.any(move |c| c.kind == kind)
+    }
 }
 
 // =================================================================================================

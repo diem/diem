@@ -6,6 +6,14 @@ error: spec global `M::ticks` undeclared
     │                      ^^^^^
     │
 
+error: assignment only allowed in spec var updates
+
+    ┌── tests/sources/variables_err.move:11:22 ───
+    │
+ 11 │     invariant update ticks = tick + 1;
+    │                      ^^^^^^^^^^^^^^^^
+    │
+
 error: expected `num` but found `bool`
 
     ┌── tests/sources/variables_err.move:14:29 ───
@@ -14,26 +22,26 @@ error: expected `num` but found `bool`
     │                             ^^^^^
     │
 
-error: assignment to spec globals not allowed for data invariants
+error: assignment only allowed in spec var updates
 
-    ┌── tests/sources/variables_err.move:17:5 ───
+    ┌── tests/sources/variables_err.move:17:15 ───
     │
  17 │     invariant tick = x;
-    │     ^^^^^^^^^^^^^^^^^^^
+    │               ^^^^^^^^
     │
 
-error: pack/unpack invariants must be assignments to spec globals
+error: expected assignment to spec variable
 
-    ┌── tests/sources/variables_err.move:20:5 ───
+    ┌── tests/sources/variables_err.move:20:20 ───
     │
  20 │     invariant pack x == 0;
-    │     ^^^^^^^^^^^^^^^^^^^^^^
+    │                    ^^^^^^
     │
 
-error: pack/unpack invariants must be assignments to spec globals
+error: expected assignment to spec variable
 
-    ┌── tests/sources/variables_err.move:21:5 ───
+    ┌── tests/sources/variables_err.move:21:22 ───
     │
  21 │     invariant unpack x == 0;
-    │     ^^^^^^^^^^^^^^^^^^^^^^^^
+    │                      ^^^^^^
     │

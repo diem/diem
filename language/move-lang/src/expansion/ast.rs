@@ -3,9 +3,9 @@
 
 use crate::{
     parser::ast::{
-        BinOp, Field, FunctionName, FunctionVisibility, InvariantKind, Kind, ModuleIdent,
-        ModuleName, PragmaProperty, ResourceLoc, SpecApplyPattern, SpecBlockTarget,
-        SpecConditionKind, StructName, UnaryOp, Value, Var,
+        BinOp, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, ModuleName,
+        PragmaProperty, ResourceLoc, SpecApplyPattern, SpecBlockTarget, SpecConditionKind,
+        StructName, UnaryOp, Value, Var,
     },
     shared::{ast_debug::*, unique_map::UniqueMap, *},
 };
@@ -116,10 +116,6 @@ pub type SpecBlock = Spanned<SpecBlock_>;
 pub enum SpecBlockMember_ {
     Condition {
         kind: SpecConditionKind,
-        exp: Exp,
-    },
-    Invariant {
-        kind: InvariantKind,
         exp: Exp,
     },
     Function {
@@ -442,16 +438,6 @@ impl AstDebug for SpecBlockMember_ {
         match self {
             SpecBlockMember_::Condition { kind, exp } => {
                 kind.ast_debug(w);
-                exp.ast_debug(w);
-            }
-            SpecBlockMember_::Invariant { kind, exp } => {
-                w.write("invariant ");
-                match kind {
-                    InvariantKind::Data => {}
-                    InvariantKind::Update => w.write("update "),
-                    InvariantKind::Pack => w.write("pack "),
-                    InvariantKind::Unpack => w.write("unpack "),
-                }
                 exp.ast_debug(w);
             }
             SpecBlockMember_::Function {
