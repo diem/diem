@@ -11,29 +11,10 @@ use crate::{
     },
     utils,
 };
-use libra_types::{
-    discovery_info::DiscoveryInfo, discovery_set::DiscoverySet, on_chain_config::ValidatorSet,
-    transaction::authenticator::AuthenticationKey, validator_info::ValidatorInfo,
-};
 use rand::{rngs::StdRng, SeedableRng};
 
 pub struct ValidatorSwarm {
     pub nodes: Vec<NodeConfig>,
-    pub validator_set: ValidatorSet,
-    pub discovery_set: DiscoverySet,
-}
-
-impl ValidatorSwarm {
-    pub fn auth_keys(&self) -> Vec<AuthenticationKey> {
-        self.nodes
-            .iter()
-            .map(|n| {
-                let test_config = n.test.as_ref().unwrap();
-                let key = test_config.account_keypair.as_ref().unwrap().public_key();
-                AuthenticationKey::ed25519(&key)
-            })
-            .collect::<Vec<_>>()
-    }
 }
 
 pub fn validator_swarm(
@@ -44,8 +25,6 @@ pub fn validator_swarm(
     randomize_libranet_ports: bool,
 ) -> ValidatorSwarm {
     let mut rng = StdRng::from_seed(seed);
-    let mut validator_keys = Vec::new();
-    let mut discovery_infos = Vec::new();
     let mut nodes = Vec::new();
 
     for _index in 0..count {
@@ -65,38 +44,6 @@ pub fn validator_swarm(
             network.advertised_address = network.listen_address.clone();
         }
 
-        let test = node.test.as_ref().unwrap();
-        let consensus_pubkey = test
-            .consensus_keypair
-            .as_ref()
-            .unwrap()
-            .public_key()
-            .clone();
-        let network_keypairs = network
-            .network_keypairs
-            .as_ref()
-            .expect("Network keypairs are not defined");
-
-        validator_keys.push(ValidatorInfo::new(
-            network.peer_id,
-            consensus_pubkey,
-            1, // @TODO: Add support for dynamic weights
-            network_keypairs.signing_keypair.public_key(),
-            network_keypairs.identity_keypair.public_key(),
-        ));
-
-        // TODO(philiphayes): as a temporary hack, we'll just duplicate the
-        // validator info into the fullnode info until we can handle deserializing
-        // empty fullnode info.
-        discovery_infos.push(DiscoveryInfo {
-            account_address: network.peer_id,
-            validator_network_identity_pubkey: network_keypairs.identity_keypair.public_key(),
-            validator_network_address: network.advertised_address.clone(),
-            fullnodes_network_identity_pubkey: network_keypairs.identity_keypair.public_key(),
-            fullnodes_network_address: network.advertised_address.clone(),
-        });
-
-        // set UpstreamConfig
         // For a validator node, any of its validator peers are considered an upstream peer
         node.upstream.primary_networks.push(network.peer_id);
 
@@ -114,11 +61,7 @@ pub fn validator_swarm(
         network.seed_peers = seed_peers.clone();
     }
 
-    ValidatorSwarm {
-        nodes,
-        validator_set: ValidatorSet::new(validator_keys),
-        discovery_set: DiscoverySet::new(discovery_infos),
-    }
+    ValidatorSwarm { nodes }
 }
 
 pub fn validator_swarm_for_testing(nodes: usize) -> ValidatorSwarm {
