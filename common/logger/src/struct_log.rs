@@ -179,32 +179,32 @@ pub fn struct_logger_set() -> bool {
 
 /// Initializes struct logger from STRUCT_LOG_FILE env var
 /// Can only be called once
-pub fn init_struct_log_from_env() -> Result<(), InitFileLoggerError> {
+pub fn init_struct_log_from_env() -> Result<(), InitLoggerError> {
     if let Ok(file) = env::var("STRUCT_LOG_FILE") {
         init_file_struct_log(file)
     } else {
-        Ok(())
+        init_println_struct_log()
     }
 }
 
 /// Initializes struct logger sink that writes to specified file
 /// Can only be called once
-pub fn init_file_struct_log(file_path: String) -> Result<(), InitFileLoggerError> {
-    let logger = FileStructLog::start_new(file_path).map_err(InitFileLoggerError::IoError)?;
+pub fn init_file_struct_log(file_path: String) -> Result<(), InitLoggerError> {
+    let logger = FileStructLog::start_new(file_path).map_err(InitLoggerError::IoError)?;
     let logger = Box::leak(Box::new(logger));
-    set_struct_logger(logger).map_err(|_| InitFileLoggerError::StructLoggerAlreadySet)
+    set_struct_logger(logger).map_err(|_| InitLoggerError::StructLoggerAlreadySet)
 }
 
 /// Initialize struct logger sink that prints all structured logs to stdout
 /// Can only be called once
-pub fn init_println_struct_log() -> Result<(), ()> {
+pub fn init_println_struct_log() -> Result<(), InitLoggerError> {
     let logger = PrintStructLog {};
     let logger = Box::leak(Box::new(logger));
-    set_struct_logger(logger)
+    set_struct_logger(logger).map_err(|_| InitLoggerError::StructLoggerAlreadySet)
 }
 
 #[derive(Debug)]
-pub enum InitFileLoggerError {
+pub enum InitLoggerError {
     IoError(io::Error),
     StructLoggerAlreadySet,
 }
