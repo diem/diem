@@ -164,6 +164,7 @@ impl MockStorage {
             receiver.prefix().to_vec(),
             1,
             vec![],
+            vec![],
         );
         Transaction::UserTransaction(get_test_signed_txn(
             sender,

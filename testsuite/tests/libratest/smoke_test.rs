@@ -753,6 +753,7 @@ fn test_external_transaction_signer() {
                     amount: p_amount,
                     auth_key_prefix,
                     metadata,
+                    metadata_signature,
                 } => {
                     assert_eq!(p_receiver, receiver_address.to_string());
                     assert_eq!(p_amount, amount);
@@ -766,6 +767,12 @@ fn test_external_transaction_signer() {
                         metadata
                             .into_bytes()
                             .expect("failed to turn metadata to bytes"),
+                        Vec::<u8>::new()
+                    );
+                    assert_eq!(
+                        metadata_signature
+                            .into_bytes()
+                            .expect("failed to turn metadata_signature to bytes"),
                         Vec::<u8>::new()
                     );
                 }

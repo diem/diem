@@ -10,7 +10,8 @@
 //! gas-price: 0
 use 0x0::VASP;
 fun main() {
-    VASP::apply_for_vasp_root_credential(x"AAA", x"BBB", x"CCC");
+    let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
+    VASP::apply_for_vasp_root_credential(x"AAA", x"BBB", x"CCC", pubkey);
 }
 // check: EXECUTED
 

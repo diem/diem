@@ -535,6 +535,7 @@ impl ClientProxy {
                 receiver_auth_key_prefix,
                 num_coins,
                 vec![],
+                vec![],
             );
             let txn = self.create_txn_to_submit(
                 TransactionPayload::Script(program),
@@ -579,6 +580,7 @@ impl ClientProxy {
             &receiver_address,
             receiver_auth_key_prefix,
             num_coins,
+            vec![],
             vec![],
         );
 

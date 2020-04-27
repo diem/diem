@@ -161,6 +161,7 @@ fn test_on_chain_config_pub_sub() {
             validator_auth_key_prefix,
             1_000_000,
             vec![],
+            vec![],
         )),
     );
 

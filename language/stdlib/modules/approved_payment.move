@@ -43,7 +43,7 @@ module ApprovedPayment {
             ),
             9002, // TODO: proper error code
         );
-        LibraAccount::deposit_with_metadata<Token>(payee, coin, metadata)
+        LibraAccount::deposit_with_metadata<Token>(payee, coin, metadata, x"")
     }
 
     // Wrapper of `deposit` that withdraw's from the sender's balance and uses the top-level
