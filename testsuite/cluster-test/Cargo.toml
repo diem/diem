@@ -44,5 +44,5 @@ futures = "0.3.0"
 tokio = { version = "0.2.13", features = ["full"] }
 async-trait = "0.1.30"
 
-kube = "0.32.0"
+kube = "0.32.1"
 k8s-openapi = { version = "0.7.1", default-features = false, features = ["v1_15"] }
