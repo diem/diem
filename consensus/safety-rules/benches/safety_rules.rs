@@ -3,7 +3,7 @@
 
 use consensus_types::block::{block_test_utils, Block};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use libra_config::config::{OnDiskStorageConfig, SafetyRulesBackend};
+use libra_config::config::{OnDiskStorageConfig, SecureBackend};
 use libra_secure_storage::{InMemoryStorage, OnDiskStorage};
 use libra_types::validator_signer::ValidatorSigner;
 use rand::Rng;
@@ -108,7 +108,7 @@ fn process(n: u64) {
     let mut config = OnDiskStorageConfig::default();
     config.default = true;
     config.path = file_path;
-    let backend = SafetyRulesBackend::OnDiskStorage(config);
+    let backend = SecureBackend::OnDiskStorage(config);
     let client_wrapper = ProcessClientWrapper::new(backend);
     let signer = client_wrapper.signer();
 

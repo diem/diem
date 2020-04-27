@@ -12,7 +12,7 @@ use crate::{
     SafetyRules, TSafetyRules,
 };
 use consensus_types::common::{Author, Payload};
-use libra_config::config::{NodeConfig, SafetyRulesBackend, SafetyRulesService};
+use libra_config::config::{NodeConfig, SafetyRulesService, SecureBackend};
 use libra_secure_storage::{InMemoryStorage, OnDiskStorage, Storage, VaultStorage};
 use std::{
     net::SocketAddr,
@@ -28,11 +28,11 @@ pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSaf
 
     let backend = &config.consensus.safety_rules.backend;
     let (initialize, internal_storage): (bool, Box<dyn Storage>) = match backend {
-        SafetyRulesBackend::InMemoryStorage => (true, InMemoryStorage::new_storage()),
-        SafetyRulesBackend::OnDiskStorage(config) => {
+        SecureBackend::InMemoryStorage => (true, InMemoryStorage::new_storage()),
+        SecureBackend::OnDiskStorage(config) => {
             (config.default, OnDiskStorage::new_storage(config.path()))
         }
-        SafetyRulesBackend::Vault(config) => (
+        SecureBackend::Vault(config) => (
             config.default,
             VaultStorage::new_storage(
                 config.server.clone(),
