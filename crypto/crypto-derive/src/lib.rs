@@ -153,8 +153,8 @@ pub fn deserialize_key(source: TokenStream) -> TokenStream {
                 D: ::serde::Deserializer<'de>,
             {
                 if deserializer.is_human_readable() {
-                    let encoded_key = <&str>::deserialize(deserializer)?;
-                    ValidCryptoMaterialStringExt::from_encoded_string(encoded_key)
+                    let encoded_key = <String>::deserialize(deserializer)?;
+                    ValidCryptoMaterialStringExt::from_encoded_string(encoded_key.as_str())
                         .map_err(<D::Error as ::serde::de::Error>::custom)
                 } else {
                     // In order to preserve the Serde data model and help analysis tools,

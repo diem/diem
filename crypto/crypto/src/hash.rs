@@ -282,8 +282,9 @@ impl<'de> de::Deserialize<'de> for HashValue {
         D: de::Deserializer<'de>,
     {
         if deserializer.is_human_readable() {
-            let encoded_hash = <&str>::deserialize(deserializer)?;
-            HashValue::from_hex(encoded_hash).map_err(<D::Error as ::serde::de::Error>::custom)
+            let encoded_hash = <String>::deserialize(deserializer)?;
+            HashValue::from_hex(encoded_hash.as_str())
+                .map_err(<D::Error as ::serde::de::Error>::custom)
         } else {
             // See comment in serialize.
             #[derive(::serde::Deserialize)]
