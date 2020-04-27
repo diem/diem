@@ -195,6 +195,7 @@ pod_name=${pod_name/_/-} #underscore not allowed in pod name
 specfile=$(mktemp)
 echo "Pod Spec : ${specfile}"
 join_args $*
+ENV="$ENV AWS_ROLE_SESSION_NAME=AWS_ROLE_SESSION_NAME"
 join_env_vars $ENV
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 sed -e "s/{pod_name}/${pod_name}/g" \

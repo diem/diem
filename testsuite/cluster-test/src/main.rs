@@ -14,6 +14,7 @@ use termion::{color, style};
 
 use anyhow::{bail, format_err, Result};
 use cluster_test::{
+    aws,
     cluster::Cluster,
     cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
     experiments::{get_experiment, Context, Experiment},
@@ -38,7 +39,6 @@ use tokio::{
     runtime::{Builder, Runtime},
     time::{delay_for, delay_until, Instant as TokioInstant},
 };
-
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 
 #[derive(StructOpt, Debug)]
@@ -379,6 +379,22 @@ impl ClusterUtil {
                 "Deploying with {} tag for validators and fullnodes",
                 image_tag
             );
+            let asg_name = format!(
+                "{}-k8s-testnet-validators",
+                cluster_swarm
+                    .get_workspace()
+                    .await
+                    .expect("Failed to get workspace")
+            );
+            aws::set_asg_size(
+                (args.k8s_num_validators
+                    + (args.k8s_fullnodes_per_validator * args.k8s_num_validators))
+                    as i64,
+                5.0,
+                &asg_name,
+            )
+            .await
+            .expect("kush-k8s-testnet-validators scaling failed");
             cluster_swarm
                 .create_validator_and_fullnode_set(
                     args.k8s_num_validators,

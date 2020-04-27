@@ -306,6 +306,19 @@ impl ClusterSwarmKube {
             .collect::<Result<_, _>>()?;
         self.run_jobs(jobs, back_off_limit).await
     }
+
+    pub async fn get_workspace(&self) -> Result<String> {
+        let cm_api: Api<ConfigMap> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
+        let data = cm_api
+            .get("workspace")
+            .await?
+            .data
+            .ok_or_else(|| format_err!("data not found for ConfigMap"))?;
+        let workspace = data
+            .get("workspace")
+            .ok_or_else(|| format_err!("Failed to find workspace"))?;
+        Ok(workspace.clone())
+    }
 }
 
 #[async_trait]
@@ -573,15 +586,7 @@ impl ClusterSwarm for ClusterSwarmKube {
     }
 
     async fn get_grafana_baseurl(&self) -> Result<String> {
-        let cm_api: Api<ConfigMap> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
-        let data = cm_api
-            .get("workspace")
-            .await?
-            .data
-            .ok_or_else(|| format_err!("data not found for ConfigMap"))?;
-        let workspace = data
-            .get("workspace")
-            .ok_or_else(|| format_err!("Failed to find workspace"))?;
+        let workspace = self.get_workspace().await?;
         Ok(format!(
             "http://grafana.{}-k8s-testnet.aws.hlw3truzy4ls.com",
             workspace
