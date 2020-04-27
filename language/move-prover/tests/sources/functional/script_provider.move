@@ -9,7 +9,8 @@ module ScriptProvider {
     public fun register<T>() {
         Transaction::assert(Transaction::sender() == 0x1, 1);
         move_to_sender(Info<T>{})
-    nfddenvnfiguetvlferbfjiii
+    }
+    spec schema RegisterConditions<T> {
         aborts_if sender() != 0x1;
         aborts_if exists<Info<T>>(0x1);
         ensures exists<Info<T>>(0x1);
