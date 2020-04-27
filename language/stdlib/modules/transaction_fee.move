@@ -28,7 +28,8 @@ module TransactionFee {
     // height in order to ensure that we don't try to pay more than once per-block. We also
     // encapsulate the withdrawal capability to the transaction fee account so that we can withdraw
     // the fees from this account from block metadata transactions.
-    fun initialize_transaction_fees() {
+    public fun initialize_transaction_fees() {
+        Transaction::assert(Transaction::sender() == 0xFEE, 0);
         move_to_sender<TransactionFees>(TransactionFees {
             fee_withdrawal_capability: LibraAccount::extract_sender_withdrawal_capability(),
         });
