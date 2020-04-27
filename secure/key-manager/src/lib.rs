@@ -33,7 +33,8 @@ use libra_types::{
 use std::time::Duration;
 use thiserror::Error;
 
-mod libra_interface;
+pub mod libra_interface;
+
 #[cfg(test)]
 mod tests;
 
