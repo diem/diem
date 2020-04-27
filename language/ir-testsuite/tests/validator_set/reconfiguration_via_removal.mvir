@@ -1,6 +1,9 @@
 //! account: alice
 //! account: vivian, 1000000, 0, validator
 //! account: viola, 1000000, 0, validator
+//! account: v1, 1000000, 0, validator
+//! account: v2, 1000000, 0, validator
+//! account: v3, 1000000, 0, validator
 
 //! block-prologue
 //! proposer: viola

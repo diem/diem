@@ -19,8 +19,10 @@ main() {
 //! sender: vivian
 // rotate Vivian's key
 import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
 main() {
-    LibraSystem.rotate_consensus_pubkey(h"beefbeef");
+    ValidatorConfig.rotate_consensus_pubkey_of_sender(h"beefbeef");
+    LibraSystem.update_and_reconfigure();
 
     return;
 }
@@ -48,14 +50,14 @@ main() {
 //! new-transaction
 // check that Alice is a validator and Vivian's key has been rotated
 import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
 main() {
     let info: LibraSystem.ValidatorInfo;
 
     assert(LibraSystem.is_validator({{alice}}), 70);
 
-    info = LibraSystem.get_ith_validator_info(0);
-    assert(*LibraSystem.get_validator_address(&info) == {{vivian}}, 71);
-    assert(*LibraSystem.get_consensus_pubkey(&info) == h"beefbeef", 72);
+    info = LibraSystem.get_validator_info({{vivian}});
+    assert(ValidatorConfig.get_consensus_pubkey(LibraSystem.get_validator_config(&info)) == h"beefbeef", 72);
 
     return;
 }

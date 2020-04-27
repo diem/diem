@@ -21,7 +21,7 @@ import 0x0.LibraSystem;
 import 0x0.ValidatorConfig;
 // rotate alice's network address
 main() {
-    ValidatorConfig.rotate_validator_network_address(h"40");
+    ValidatorConfig.rotate_validator_network_address({{alice}}, h"40");
     return;
 }
 // check: events: []
@@ -39,13 +39,15 @@ main() {
 //! new-transaction
 //! sender: vivian
 import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
 // rotate vivian's network address
 main() {
     let info: LibraSystem.DiscoveryInfo;
-    LibraSystem.rotate_validator_network_address(h"40");
+    ValidatorConfig.rotate_validator_network_address({{vivian}}, h"40");
+    LibraSystem.update_and_reconfigure();
     // check that the discovery set contains Vivian new address with reconfiguration
     info = LibraSystem.get_ith_discovery_info(1);
-    assert(*LibraSystem.get_validator_network_address(&info) == h"40", 98);
+    assert(ValidatorConfig.get_validator_network_address(LibraSystem.get_discovery_config(&info)) == h"40", 98);
     return;
 }
 // not: ValidatorSetChangeEvent
@@ -64,7 +66,7 @@ main() {
     let info: LibraSystem.DiscoveryInfo;
     // check that the discovery set contains Vivian's new address after reconfiguration
     info = LibraSystem.get_ith_discovery_info(1);
-    assert(*LibraSystem.get_validator_network_address(&info) == h"40", 99);
+    assert(ValidatorConfig.get_validator_network_address(LibraSystem.get_discovery_config(&info)) == h"40", 99);
     return;
 }
 // check: events: []
@@ -73,9 +75,11 @@ main() {
 //! new-transaction
 //! sender: vivian
 import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
 // rotate vivian's network address to the same value
 main() {
-    LibraSystem.rotate_validator_network_address(h"40");
+    ValidatorConfig.rotate_validator_network_address({{vivian}}, h"40");
+    LibraSystem.update_and_reconfigure();
     return;
 }
 // check: events: []
@@ -90,9 +94,11 @@ main() {
 //! new-transaction
 //! sender: viola
 import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
 // rotate viola's network address to a new value
 main() {
-    LibraSystem.rotate_validator_network_address(h"80");
+    ValidatorConfig.rotate_validator_network_address({{viola}}, h"80");
+    LibraSystem.update_and_reconfigure();
     return;
 }
 // not: ValidatorSetChangeEvent
@@ -102,9 +108,11 @@ main() {
 //! new-transaction
 //! sender: vivian
 import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
 // rotate vivian's network address to a new value
 main() {
-    LibraSystem.rotate_validator_network_address(h"90");
+    ValidatorConfig.rotate_validator_network_address({{vivian}}, h"90");
+    LibraSystem.update_and_reconfigure();
     return;
 }
 // not: ValidatorSetChangeEvent
@@ -126,13 +134,13 @@ main() {
 
     // check that the discovery set contains Viola's new address
     info = LibraSystem.get_ith_discovery_info(0);
-    assert(*LibraSystem.get_discovery_address(&info) == {{viola}}, 14);
-    assert(*LibraSystem.get_validator_network_address(&info) == h"80", 15);
+    assert(LibraSystem.get_discovery_address(&info) == {{viola}}, 14);
+    assert(ValidatorConfig.get_validator_network_address(LibraSystem.get_discovery_config(&info)) == h"80", 15);
 
     // check that the discovery set contains Vivian's new address
     info = LibraSystem.get_ith_discovery_info(1);
-    assert(*LibraSystem.get_discovery_address(&info) == {{vivian}}, 16);
-    assert(*LibraSystem.get_validator_network_address(&info) == h"90", 17);
+    assert(LibraSystem.get_discovery_address(&info) == {{vivian}}, 16);
+    assert(ValidatorConfig.get_validator_network_address(LibraSystem.get_discovery_config(&info)) == h"90", 17);
 
     return;
 }

@@ -15,54 +15,61 @@
 //! account: fedor
 
 //! sender: alice
-use 0x0::ValidatorConfig2;
+use 0x0::ValidatorConfig;
+// validators: bob
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
+    ValidatorConfig::register_candidate_validator(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
 }
 
 // check: EXECUTED
 
 //! new-transaction
 //! sender: bob
-use 0x0::ValidatorConfig2;
+use 0x0::ValidatorConfig;
+// try to double-initialize a validator config should fail
+// validators: bob
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
+    ValidatorConfig::register_candidate_validator(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
 }
 
-// check: EXECUTED
+// check: CANNOT_WRITE_EXISTING_RESOURCE
 
 //! new-transaction
 //! sender: carrol
-use 0x0::ValidatorConfig2;
+use 0x0::ValidatorConfig;
+// validators: bob
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
+    ValidatorConfig::register_candidate_validator(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
 }
 
 // check: EXECUTED
 
 //! new-transaction
 //! sender: david
-use 0x0::ValidatorConfig2;
+use 0x0::ValidatorConfig;
+// validators: bob
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
+    ValidatorConfig::register_candidate_validator(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
 }
 
 // check: EXECUTED
 
 //! new-transaction
 //! sender: eve
-use 0x0::ValidatorConfig2;
+use 0x0::ValidatorConfig;
+// validators: bob
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
+    ValidatorConfig::register_candidate_validator(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
 }
 
 // check: EXECUTED
 
 //! new-transaction
 //! sender: fedor
-use 0x0::ValidatorConfig2;
+use 0x0::ValidatorConfig;
+// validators: bob
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
+    ValidatorConfig::register_candidate_validator(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
 }
 
 // check: EXECUTED
@@ -75,13 +82,15 @@ fun main() {
 
 //! new-transaction
 //! sender: association
-use 0x0::LibraSystem2;
+use 0x0::LibraSystem;
 // add allice to validator set
+// validators: bob
 fun main() {
-    0x0::Transaction::assert(LibraSystem2::validator_set_size() == 0, 99);
-    LibraSystem2::add_validator({{alice}});
-    0x0::Transaction::assert(LibraSystem2::is_validator({{alice}}), 100);
-    0x0::Transaction::assert(!LibraSystem2::is_validator({{bob}}), 99);
+    0x0::Transaction::assert(LibraSystem::validator_set_size() == 1, 99);
+    LibraSystem::add_validator({{alice}});
+    0x0::Transaction::assert(LibraSystem::is_validator({{alice}}), 100);
+    0x0::Transaction::assert(LibraSystem::is_validator({{bob}}), 101);
+    0x0::Transaction::assert(!LibraSystem::is_validator({{eve}}), 99);
 }
 
 // check: EXECUTED
@@ -94,20 +103,23 @@ fun main() {
 
 //! new-transaction
 //! sender: association
-use 0x0::LibraSystem2;
-// add bob to validator set
+use 0x0::LibraSystem;
+// add bob to validator set fails as it already exists
+// validators: alice, bob
 fun main() {
-    LibraSystem2::add_validator({{bob}});
+    LibraSystem::add_validator({{bob}});
 }
 
-// check: EXECUTED
+// check: ABORTED
 
 //! new-transaction
 //! sender: association
-// adding carrol to the validator set in the same block will fail
-use 0x0::LibraSystem2;
+// adding two validators in the same block fails for now
+use 0x0::LibraSystem;
+// validators: alice, bob
 fun main() {
-    LibraSystem2::add_validator({{carrol}});
+    LibraSystem::add_validator({{carrol}});
+    LibraSystem::add_validator({{david}});
 }
 
 // check: ABORTED
@@ -121,20 +133,10 @@ fun main() {
 //! new-transaction
 //! sender: association
 // test that adding two validators in the same transaction aborts the transaction
-use 0x0::LibraSystem2;
+use 0x0::LibraSystem;
+// validators: alice, bob
 fun main() {
-    LibraSystem2::add_validator({{carrol}});
-    LibraSystem2::add_validator({{david}});
-}
-
-// check: ABORTED
-
-//! new-transaction
-//! sender: association
-// add carrol to the validator set
-use 0x0::LibraSystem2;
-fun main() {
-    LibraSystem2::add_validator({{carrol}});
+    LibraSystem::add_validator({{carrol}});
 }
 
 // check: EXECUTED
@@ -148,11 +150,12 @@ fun main() {
 //! new-transaction
 //! sender: association
 // add david to the validator set
-use 0x0::LibraSystem2;
+use 0x0::LibraSystem;
+// validators: alice, bob, carrol
 fun main() {
-    0x0::Transaction::assert(!LibraSystem2::is_validator({{david}}), 99);
-    LibraSystem2::add_validator({{david}});
-    0x0::Transaction::assert(LibraSystem2::is_validator({{david}}), 99);
+    0x0::Transaction::assert(!LibraSystem::is_validator({{david}}), 99);
+    LibraSystem::add_validator({{david}});
+    0x0::Transaction::assert(LibraSystem::is_validator({{david}}), 99);
 }
 
 // check: EXECUTED
@@ -166,12 +169,14 @@ fun main() {
 //! new-transaction
 //! sender: association
 // add eve to validator set
-use 0x0::LibraSystem2;
+use 0x0::LibraSystem;
+// validators: alice, bob, carrol, david
 fun main() {
-    LibraSystem2::add_validator({{eve}});
+    LibraSystem::add_validator({{eve}});
 }
 
 // check: EXECUTED
+
 //! block-prologue
 //! proposer: bob
 //! block-time: 7
@@ -181,13 +186,15 @@ fun main() {
 //! new-transaction
 //! sender: association
 // add fedor to validator set
-use 0x0::LibraSystem2;
+use 0x0::LibraSystem;
+// validators: alice, bob, carrol, david, eve
 fun main() {
-    LibraSystem2::add_validator({{fedor}});
-    0x0::Transaction::assert(LibraSystem2::validator_set_size() == 6, 99);
+    LibraSystem::add_validator({{fedor}});
+    0x0::Transaction::assert(LibraSystem::validator_set_size() == 6, 99);
 }
 
 // check: EXECUTED
+
 //! block-prologue
 //! proposer: bob
 //! block-time: 8
@@ -197,10 +204,11 @@ fun main() {
 //! new-transaction
 //! sender: association
 // remove alice
-use 0x0::LibraSystem2;
+use 0x0::LibraSystem;
+// validators: alice, bob, carrol, david, eve, fedor
 fun main() {
-    LibraSystem2::remove_validator({{alice}});
-    0x0::Transaction::assert(LibraSystem2::validator_set_size() == 5, 99);
+    LibraSystem::remove_validator({{alice}});
+    0x0::Transaction::assert(LibraSystem::validator_set_size() == 5, 99);
 }
 
 // check: EXECUTED
@@ -214,9 +222,10 @@ fun main() {
 //! new-transaction
 //! sender: association
 // test deleting a non-existent (or rather already removed) validator aborts
-use 0x0::LibraSystem2;
+use 0x0::LibraSystem;
+// validators: bob, carrol, david, eve, fedor
 fun main() {
-    LibraSystem2::remove_validator({{alice}});
+    LibraSystem::remove_validator({{alice}});
 }
 
 // check: ABORTED
@@ -224,10 +233,11 @@ fun main() {
 //! new-transaction
 //! sender: association
 // remove fedor
-use 0x0::LibraSystem2;
+use 0x0::LibraSystem;
+// validators: bob, carrol, david, eve, fedor
 fun main() {
-    LibraSystem2::remove_validator({{fedor}});
-    0x0::Transaction::assert(LibraSystem2::validator_set_size() == 4, 99);
+    LibraSystem::remove_validator({{fedor}});
+    0x0::Transaction::assert(LibraSystem::validator_set_size() == 4, 99);
 }
 
 // check: EXECUTED
@@ -237,15 +247,3 @@ fun main() {
 //! block-time: 10
 
 // check: EXECUTED
-
-//! new-transaction
-//! sender: association
-// make sure nobody else can be deleted
-// the safe number of validators is 4
-// this test makes sure the number of validators can not go lower
-use 0x0::LibraSystem2;
-fun main() {
-    LibraSystem2::remove_validator({{david}});
-}
-
-// check: ABORTED
