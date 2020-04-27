@@ -27,6 +27,7 @@ use vm::{
     file_format::{FunctionSignature, Kind, Signature, SignatureToken, StructHandleIndex},
     views::ModuleView,
 };
+use crate::native_functions::oracle;
 
 /// Result of a native function execution that requires charges for execution cost.
 ///
@@ -88,6 +89,7 @@ pub enum NativeFunction {
     AccountSaveAccount,
     DebugPrint,
     DebugPrintStackTrace,
+    OraclePrice,
 }
 
 /// Function.
@@ -156,6 +158,7 @@ impl FunctionResolver {
             (&CORE_CODE_ADDRESS, "LibraAccount", "save_account") => AccountSaveAccount,
             (&CORE_CODE_ADDRESS, "Debug", "print") => DebugPrint,
             (&CORE_CODE_ADDRESS, "Debug", "print_stack_trace") => DebugPrintStackTrace,
+            (&AccountAddress::DEFAULT, "Oracle", "get_price") => OraclePrice,
             _ => return None,
         })
     }
@@ -189,6 +192,7 @@ impl Function for NativeFunction {
             Self::LCSToBytes => lcs::native_to_bytes(ctx, t, v),
             Self::DebugPrint => debug::native_print(ctx, t, v),
             Self::DebugPrintStackTrace => debug::native_print_stack_trace(ctx, t, v),
+            Self::OraclePrice => oracle::native_oracle_get_price(ctx, t, v),
         }
     }
 
@@ -213,6 +217,7 @@ impl Function for NativeFunction {
             Self::AccountSaveAccount => 5,
             Self::DebugPrint => 1,
             Self::DebugPrintStackTrace => 0,
+            Self::OraclePrice => 1,
         }
     }
 
@@ -281,6 +286,7 @@ impl NativeFunction {
         Some(match self {
             Self::HashSha2_256 => simple!(vec![Vector(Box::new(U8))], vec![Vector(Box::new(U8))]),
             Self::HashSha3_256 => simple!(vec![Vector(Box::new(U8))], vec![Vector(Box::new(U8))]),
+            Self::OraclePrice => simple!(vec![U64], vec![U64]),
             Self::LCSToBytes => {
                 let type_parameters = vec![Kind::All];
                 let parameters = vec![Reference(Box::new(TypeParameter(0)))];

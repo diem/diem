@@ -287,4 +287,5 @@ pub enum NativeCostIndex {
     DESTROY_EMPTY = 11,
     SWAP = 12,
     SAVE_ACCOUNT = 13,
+    ORACLE_PRICE = 14,
 }

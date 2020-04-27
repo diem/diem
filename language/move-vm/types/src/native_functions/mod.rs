@@ -9,3 +9,4 @@ pub mod event;
 pub mod hash;
 pub mod lcs;
 pub mod signature;
+pub mod oracle;
