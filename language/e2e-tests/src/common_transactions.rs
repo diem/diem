@@ -154,7 +154,7 @@ pub fn rotate_consensus_pubkey_txn(
         vec![],
         args,
         seq_num,
-        gas_costs::TXN_RESERVED,
+        gas_costs::TXN_RESERVED * 3,
         1,
     )
 }

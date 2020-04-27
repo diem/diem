@@ -72,7 +72,7 @@ module LibraVMConfig {
             min_transaction_gas_units: 600,
             large_transaction_cutoff: 600,
             instrinsic_gas_per_byte: 8,
-            maximum_number_of_gas_units: 1000000,
+            maximum_number_of_gas_units: 2000000,
             min_price_per_gas_unit: 0,
             max_price_per_gas_unit: 10000,
             max_transaction_size_in_bytes: 4096,

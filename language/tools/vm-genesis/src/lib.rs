@@ -61,7 +61,8 @@ pub static GENESIS_KEYPAIR: Lazy<(Ed25519PrivateKey, Ed25519PublicKey)> = Lazy::
 pub type ValidatorRegistration = (Ed25519PublicKey, Script);
 
 // Identifiers for well-known functions.
-static ADD_VALIDATOR: Lazy<Identifier> = Lazy::new(|| Identifier::new("add_validator_").unwrap());
+static ADD_VALIDATOR: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("add_validator_no_discovery_event").unwrap());
 static INITIALIZE: Lazy<Identifier> = Lazy::new(|| Identifier::new("initialize").unwrap());
 static INITIALIZE_BLOCK: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("initialize_block_metadata").unwrap());

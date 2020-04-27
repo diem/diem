@@ -196,7 +196,7 @@ impl Default for GasConstants {
             min_transaction_gas_units: GasUnits(600),
             large_transaction_cutoff: AbstractMemorySize(600),
             instrinsic_gas_per_byte: GasUnits(8),
-            maximum_number_of_gas_units: GasUnits(1_000_000),
+            maximum_number_of_gas_units: GasUnits(2_000_000),
             min_price_per_gas_unit: GasPrice(0),
             max_price_per_gas_unit: GasPrice(10_000),
             max_transaction_size_in_bytes: 4096,

@@ -18,12 +18,10 @@ main() {
 
 //! new-transaction
 //! sender: alice
-import 0x0.LibraSystem;
 import 0x0.ValidatorConfig;
-
 // rotate alice's pubkey
 main() {
-    ValidatorConfig.rotate_consensus_pubkey(h"40");
+    ValidatorConfig.rotate_consensus_pubkey_of_sender(h"40");
     return;
 }
 
@@ -49,10 +47,11 @@ import 0x0.ValidatorConfig;
 main() {
     let info: LibraSystem.ValidatorInfo;
 
-    LibraSystem.rotate_consensus_pubkey(h"40");
+    ValidatorConfig.rotate_consensus_pubkey_of_sender(h"40");
+    LibraSystem.update_and_reconfigure();
     // check that the validator set contains Vivian's new key after reconfiguration
-    info = LibraSystem.get_ith_validator_info(1);
-    assert(*LibraSystem.get_consensus_pubkey(&info) == h"40", 98);
+    info = LibraSystem.get_validator_info({{vivian}});
+    assert(ValidatorConfig.get_consensus_pubkey(LibraSystem.get_validator_config(&info)) == h"40", 98);
     return;
 }
 
@@ -63,11 +62,13 @@ main() {
 //! new-transaction
 //! sender: vivian
 import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
 // rotate vivian's pubkey to the same value and run the block prologue. No reconfiguration should be
 // triggered. the not "NewEpochEvent" check part tests this because reconfiguration always emits a
 // NewEpoch event.
 main() {
-    LibraSystem.rotate_consensus_pubkey(h"40");
+    ValidatorConfig.rotate_consensus_pubkey_of_sender(h"40");
+    LibraSystem.update_and_reconfigure();
 
     return;
 }
@@ -83,9 +84,11 @@ main() {
 //! new-transaction
 //! sender: viola
 import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
 // rotate viola's consensus pubkey to a new value
 main() {
-    LibraSystem.rotate_consensus_pubkey(h"80");
+    ValidatorConfig.rotate_consensus_pubkey_of_sender(h"80");
+    LibraSystem.update_and_reconfigure();
 
     return;
 }
@@ -101,9 +104,11 @@ main() {
 //! new-transaction
 //! sender: vivian
 import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
 // rotate vivian's consensus pubkey to a new value
 main() {
-    LibraSystem.rotate_consensus_pubkey(h"90");
+    ValidatorConfig.rotate_consensus_pubkey_of_sender(h"90");
+    LibraSystem.update_and_reconfigure();
 
     return;
 }
@@ -122,13 +127,11 @@ main() {
     let info: LibraSystem.ValidatorInfo;
 
     // check that the validator set contains Viola's new key
-    info = LibraSystem.get_ith_validator_info(0);
-    assert(*LibraSystem.get_validator_address(&info) == {{viola}}, 14);
-    assert(*LibraSystem.get_consensus_pubkey(&info) == h"80", 15);
+    info = LibraSystem.get_validator_info({{viola}});
+    assert(ValidatorConfig.get_consensus_pubkey(LibraSystem.get_validator_config(&info)) == h"80", 15);
     // check that the validator set contains Vivian's new key
-    info = LibraSystem.get_ith_validator_info(1);
-    assert(*LibraSystem.get_validator_address(&info) == {{vivian}}, 16);
-    assert(*LibraSystem.get_consensus_pubkey(&info) == h"90", 17);
+    info = LibraSystem.get_validator_info({{vivian}});
+    assert(ValidatorConfig.get_consensus_pubkey(LibraSystem.get_validator_config(&info)) == h"90", 17);
     return;
 }
 // check: EXECUTED

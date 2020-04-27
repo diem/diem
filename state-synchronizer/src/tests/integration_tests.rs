@@ -149,8 +149,8 @@ impl SynchronizerEnv {
             let voting_power = if idx == 0 { 1000 } else { 1 };
             let validator_info = ValidatorInfo::new(
                 signer.author(),
-                signer.public_key(),
                 voting_power,
+                signer.public_key(),
                 signing_private_keys[idx].public_key(),
                 identity_private_keys[idx].public_key(),
             );
@@ -172,8 +172,8 @@ impl SynchronizerEnv {
             .map(|(idx, validator_keys)| {
                 ValidatorInfo::new(
                     signers[idx].author(),
-                    signers[idx].public_key(),
                     validator_keys.consensus_voting_power(),
+                    signers[idx].public_key(),
                     validator_keys.network_signing_public_key().clone(),
                     validator_keys.network_identity_public_key(),
                 )

@@ -50,7 +50,7 @@ fn validator_add() {
 fn validator_rotate_key() {
     let mut executor = FakeExecutor::from_genesis_file();
     let genesis_account = Account::new_association();
-    let new_validator = AccountData::new(1_000_000, 0);
+    let new_validator = AccountData::new(2_000_000, 0);
 
     // create a FakeExecutor with a genesis from file
     executor.add_account_data(&new_validator);

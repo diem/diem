@@ -7,65 +7,66 @@
 // alice's key by alice - executes
 
 //! account: alice
-//! account: bob, 1000000, 0, validator
+//! account: bob
+//! account: carrol, 1000000, 0, validator
 
 //! sender: bob
-use 0x0::ValidatorConfig2;
+use 0x0::ValidatorConfig;
 // initialize bob as validator
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
+    ValidatorConfig::register_candidate_validator(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
     // set alice to change bob's key
-    ValidatorConfig2::set_delegated_account({{alice}});
+    ValidatorConfig::set_delegated_account({{alice}});
 }
 
 // check: EXECUTED
 
 //! new-transaction
 //! sender: alice
-use 0x0::ValidatorConfig2;
+use 0x0::ValidatorConfig;
 // initialize alice as validator
 fun main() {
-    ValidatorConfig2::initialize(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
+    ValidatorConfig::register_candidate_validator(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
 }
 
 // check: EXECUTED
 
 //! block-prologue
-//! proposer: bob
+//! proposer: carrol
 //! block-time: 2
 
 // check: EXECUTED
 
 //! new-transaction
 //! sender: association
-use 0x0::LibraSystem2;
+use 0x0::LibraSystem;
 fun main() {
     // add validator
-    LibraSystem2::add_validator({{bob}});
+    LibraSystem::add_validator({{bob}});
 }
 
 // check: NewEpochEvent
 // check: EXECUTED
 
 //! block-prologue
-//! proposer: bob
+//! proposer: carrol
 //! block-time: 3
 
 // check: EXECUTED
 
 //! new-transaction
 //! sender: association
-use 0x0::LibraSystem2;
+use 0x0::LibraSystem;
 fun main() {
     // add validator
-    LibraSystem2::add_validator({{alice}});
+    LibraSystem::add_validator({{alice}});
 }
 
 // check: NewEpochEvent
 // check: EXECUTED
 
 //! block-prologue
-//! proposer: bob
+//! proposer: carrol
 //! block-time: 4
 
 // check: EXECUTED
@@ -73,9 +74,9 @@ fun main() {
 //! new-transaction
 //! sender: bob
 // check bob can not rotate his consensus key
-use 0x0::ValidatorConfig2;
+use 0x0::ValidatorConfig;
 fun main() {
-    ValidatorConfig2::rotate_consensus_pubkey_of_sender(x"30", x"10");
+    ValidatorConfig::rotate_consensus_pubkey_of_sender(x"30");
 }
 
 // check: ABORTED
@@ -83,9 +84,9 @@ fun main() {
 //! new-transaction
 //! sender: bob
 // check bob can not rotate his consensus key
-use 0x0::ValidatorConfig2;
+use 0x0::ValidatorConfig;
 fun main() {
-    ValidatorConfig2::rotate_consensus_pubkey({{bob}}, x"30", x"10");
+    ValidatorConfig::rotate_consensus_pubkey({{bob}}, x"30");
 }
 
 // check: ABORTED
@@ -93,9 +94,9 @@ fun main() {
 //! new-transaction
 //! sender: bob
 // check bob can not rotate alice's consensus key
-use 0x0::ValidatorConfig2;
+use 0x0::ValidatorConfig;
 fun main() {
-    ValidatorConfig2::rotate_consensus_pubkey({{alice}}, x"30", x"10");
+    ValidatorConfig::rotate_consensus_pubkey({{alice}}, x"30");
 }
 
 // check: ABORTED
@@ -103,11 +104,11 @@ fun main() {
 //! new-transaction
 //! sender: alice
 // check alice can rotate bob's consensus key
-use 0x0::ValidatorConfig2;
+use 0x0::ValidatorConfig;
 fun main() {
-    0x0::Transaction::assert(ValidatorConfig2::get_consensus_pubkey(&ValidatorConfig2::get_config({{bob}})) == x"beefbeef", 99);
-    ValidatorConfig2::rotate_consensus_pubkey({{bob}}, x"30", x"10");
-    0x0::Transaction::assert(ValidatorConfig2::get_consensus_pubkey(&ValidatorConfig2::get_config({{bob}})) == x"30", 99);
+    0x0::Transaction::assert(ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{bob}})) == x"beefbeef", 99);
+    ValidatorConfig::rotate_consensus_pubkey({{bob}}, x"30");
+    0x0::Transaction::assert(ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{bob}})) == x"30", 99);
 }
 
 // check: EXECUTED
@@ -115,11 +116,11 @@ fun main() {
 //! new-transaction
 //! sender: alice
 // check alice can rotate her consensus key
-use 0x0::ValidatorConfig2;
+use 0x0::ValidatorConfig;
 fun main() {
-    0x0::Transaction::assert(ValidatorConfig2::get_consensus_pubkey(&ValidatorConfig2::get_config({{alice}})) == x"beefbeef", 99);
-    ValidatorConfig2::rotate_consensus_pubkey({{alice}}, x"20", x"10");
-    0x0::Transaction::assert(ValidatorConfig2::get_consensus_pubkey(&ValidatorConfig2::get_config({{alice}})) == x"20", 99);
+    0x0::Transaction::assert(ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{alice}})) == x"beefbeef", 99);
+    ValidatorConfig::rotate_consensus_pubkey({{alice}}, x"20");
+    0x0::Transaction::assert(ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{alice}})) == x"20", 99);
 }
 
 // check: EXECUTED
@@ -127,10 +128,10 @@ fun main() {
 //! new-transaction
 //! sender: alice
 // check alice can rotate her consensus key
-use 0x0::ValidatorConfig2;
+use 0x0::ValidatorConfig;
 fun main() {
-    ValidatorConfig2::rotate_consensus_pubkey_of_sender(x"30", x"10");
-    0x0::Transaction::assert(ValidatorConfig2::get_consensus_pubkey(&ValidatorConfig2::get_config({{alice}})) == x"30", 99);
+    ValidatorConfig::rotate_consensus_pubkey_of_sender(x"30");
+    0x0::Transaction::assert(ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{alice}})) == x"30", 99);
 }
 
 // check: EXECUTED

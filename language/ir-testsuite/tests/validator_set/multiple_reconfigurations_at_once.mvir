@@ -38,11 +38,15 @@ main() {
 
 //! new-transaction
 //! sender: vivian
-
+// validators: vivian, viola
 import 0x0.LibraSystem;
+import 0x0.ValidatorConfig;
 main() {
-    LibraSystem.rotate_consensus_pubkey(h"40");
-    LibraSystem.rotate_consensus_pubkey(h"50");
+    ValidatorConfig.rotate_consensus_pubkey_of_sender(h"40");
+    LibraSystem.update_and_reconfigure();
+
+    ValidatorConfig.rotate_consensus_pubkey_of_sender(h"50");
+    LibraSystem.update_and_reconfigure();
 
     return;
 }
