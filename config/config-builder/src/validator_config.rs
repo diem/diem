@@ -6,7 +6,7 @@ use anyhow::{ensure, format_err, Result};
 use executor::db_bootstrapper;
 use libra_config::{
     config::{
-        ConsensusType, NodeConfig, RemoteService, SafetyRulesBackend, SafetyRulesService,
+        ConsensusType, NodeConfig, RemoteService, SafetyRulesService, SecureBackend,
         SeedPeersConfig, VaultConfig,
     },
     generator,
@@ -255,9 +255,9 @@ impl ValidatorConfig {
 
         if let Some(backend) = &self.safety_rules_backend {
             safety_rules_config.backend = match backend.as_str() {
-                "in-memory" => SafetyRulesBackend::InMemoryStorage,
+                "in-memory" => SecureBackend::InMemoryStorage,
                 "on-disk" => safety_rules_config.backend.clone(),
-                "vault" => SafetyRulesBackend::Vault(VaultConfig {
+                "vault" => SecureBackend::Vault(VaultConfig {
                     default: true,
                     namespace: self.safety_rules_namespace.clone(),
                     server: self

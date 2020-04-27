@@ -3,7 +3,7 @@
 
 use crate::{process_client_wrapper::ProcessClientWrapper, tests::suite, TSafetyRules};
 use consensus_types::common::{Payload, Round};
-use libra_config::config::SafetyRulesBackend;
+use libra_config::config::SecureBackend;
 use libra_types::validator_signer::ValidatorSigner;
 
 #[test]
@@ -12,7 +12,7 @@ fn test() {
 }
 
 fn safety_rules<T: Payload>() -> (Box<dyn TSafetyRules<T>>, ValidatorSigner) {
-    let client_wrapper = ProcessClientWrapper::new(SafetyRulesBackend::InMemoryStorage);
+    let client_wrapper = ProcessClientWrapper::new(SecureBackend::InMemoryStorage);
     let signer = client_wrapper.signer();
     (Box::new(client_wrapper), signer)
 }

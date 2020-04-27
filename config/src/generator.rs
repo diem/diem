@@ -6,7 +6,7 @@
 
 use crate::{
     config::{
-        NodeConfig, OnDiskStorageConfig, SafetyRulesBackend, SafetyRulesService, SeedPeersConfig,
+        NodeConfig, OnDiskStorageConfig, SafetyRulesService, SecureBackend, SeedPeersConfig,
         TestConfig,
     },
     utils,
@@ -36,7 +36,7 @@ pub fn validator_swarm(
         let mut storage_config = OnDiskStorageConfig::default();
         storage_config.default = true;
         node.consensus.safety_rules.service = SafetyRulesService::Thread;
-        node.consensus.safety_rules.backend = SafetyRulesBackend::OnDiskStorage(storage_config);
+        node.consensus.safety_rules.backend = SecureBackend::OnDiskStorage(storage_config);
 
         let network = node.validator_network.as_mut().unwrap();
         if randomize_libranet_ports {
