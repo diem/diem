@@ -55,7 +55,6 @@ pub struct JsonRpcLibraInterface {
     client: JsonRpcClient,
 }
 
-#[allow(dead_code)]
 impl JsonRpcLibraInterface {
     pub fn new(client: JsonRpcClient) -> Self {
         Self { client }

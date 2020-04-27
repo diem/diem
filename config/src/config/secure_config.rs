@@ -3,14 +3,40 @@
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::net::SocketAddr;
+
+const DEFAULT_JSON_RPC_ADDR :&str = "127.0.0.1";
+const DEFAULT_JSON_RPC_PORT: u16 = 8080;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
-pub struct SecureConfig {}
+pub struct SecureConfig {
+    pub key_manager: KeyManagerConfig,
+}
 
 impl Default for SecureConfig {
     fn default() -> Self {
-        Self {}
+        Self {
+            key_manager : KeyManagerConfig::default(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct KeyManagerConfig {
+    pub json_rpc_address: SocketAddr,
+    pub secure_backend: SecureBackend,
+}
+
+impl Default for KeyManagerConfig {
+    fn default() -> KeyManagerConfig {
+        KeyManagerConfig {
+            json_rpc_address: format!("{}:{}", DEFAULT_JSON_RPC_ADDR, DEFAULT_JSON_RPC_PORT)
+                .parse()
+                .unwrap(),
+            secure_backend : SecureBackend::InMemoryStorage,
+        }
     }
 }
 
