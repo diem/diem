@@ -32,7 +32,6 @@ libra-types = { path = "../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 mirai-annotations = "1.7.0"
 network = { path = "../network", version = "0.1.0" }
-prometheus = { version = "0.8.0", default-features = false }
 serde_json = "1.0"
 storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
 vm-validator = { path = "../vm-validator", version = "0.1.0" }
