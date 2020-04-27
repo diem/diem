@@ -211,8 +211,7 @@ impl PeerManager {
     }
 
     fn is_upstream_peer(&self, peer: PeerNetworkId) -> bool {
-        self.upstream_config
-            .is_upstream_peer(peer.network_id(), peer.peer_id())
+        self.upstream_config.is_upstream_peer(peer)
     }
 
     #[cfg(test)]

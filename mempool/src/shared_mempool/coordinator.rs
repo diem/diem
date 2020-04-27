@@ -23,7 +23,7 @@ use futures::{
     stream::select_all,
     StreamExt,
 };
-use libra_config::config::NodeConfig;
+use libra_config::config::{NodeConfig, PeerNetworkId};
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction, PeerId};
@@ -123,14 +123,14 @@ pub(crate) async fn request_coordinator<V>(
                                 counters::SHARED_MEMPOOL_EVENTS
                                     .with_label_values(&["new_peer".to_string().deref()])
                                     .inc();
-                                peer_manager.add_peer(network_id, peer_id);
+                                peer_manager.add_peer(PeerNetworkId(network_id, peer_id));
                                 notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                             }
                             Event::LostPeer(peer_id) => {
                                 counters::SHARED_MEMPOOL_EVENTS
                                     .with_label_values(&["lost_peer".to_string().deref()])
                                     .inc();
-                                peer_manager.disable_peer(peer_id);
+                                peer_manager.disable_peer(PeerNetworkId(network_id, peer_id));
                                 notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                             }
                             Event::Message((peer_id, msg)) => {
@@ -143,7 +143,8 @@ pub(crate) async fn request_coordinator<V>(
                                             .with_label_values(&["received".to_string().deref(), peer_id.to_string().deref()])
                                             .inc_by(transactions.len() as i64);
                                         let smp_clone = smp.clone();
-                                        let timeline_state = match peer_manager.is_upstream_peer(network_id, peer_id) {
+                                        let peer = PeerNetworkId(network_id, peer_id);
+                                        let timeline_state = match peer_manager.is_upstream_peer(peer) {
                                             true => TimelineState::NonQualified,
                                             false => TimelineState::NotReady,
                                         };
@@ -153,8 +154,7 @@ pub(crate) async fn request_coordinator<V>(
                                                 transactions,
                                                 request_id,
                                                 timeline_state,
-                                                peer_id,
-                                                network_id,
+                                                peer
                                             ))
                                             .await;
                                     }

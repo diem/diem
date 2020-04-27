@@ -1,13 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_config::config::UpstreamConfig;
-use libra_types::PeerId;
+use libra_config::config::{PeerNetworkId, UpstreamConfig};
 use rand::seq::IteratorRandom;
 use std::{collections::HashMap, sync::Mutex};
 
 /// stores only peers that receive txns from this node
-pub(crate) type PeerInfo = HashMap<PeerId, PeerSyncState>;
+pub(crate) type PeerInfo = HashMap<PeerNetworkId, PeerSyncState>;
 
 /// state of last sync with peer
 /// `timeline_id` is position in log of ready transactions
@@ -17,7 +16,6 @@ pub(crate) type PeerInfo = HashMap<PeerId, PeerSyncState>;
 pub(crate) struct PeerSyncState {
     pub timeline_id: u64,
     pub is_alive: bool,
-    pub network_id: PeerId,
 }
 
 pub(crate) struct PeerManager {
@@ -36,27 +34,26 @@ impl PeerManager {
         }
     }
 
-    pub fn add_peer(&self, network_id: PeerId, peer_id: PeerId) {
-        if self.is_upstream_peer(network_id, peer_id) {
+    pub fn add_peer(&self, peer: PeerNetworkId) {
+        if self.is_upstream_peer(peer) {
             self.peer_info
                 .lock()
                 .expect("failed to acquire peer info lock")
-                .entry(peer_id)
+                .entry(peer)
                 .or_insert(PeerSyncState {
                     timeline_id: 0,
                     is_alive: true,
-                    network_id,
                 })
                 .is_alive = true;
         }
     }
 
-    pub fn disable_peer(&self, peer_id: PeerId) {
+    pub fn disable_peer(&self, peer: PeerNetworkId) {
         if let Some(state) = self
             .peer_info
             .lock()
             .expect("failed to acquire peer info lock")
-            .get_mut(&peer_id)
+            .get_mut(&peer)
         {
             state.is_alive = false;
         }
@@ -74,10 +71,7 @@ impl PeerManager {
         let mut picked_peers: PeerInfo = peer_info
             .iter()
             .filter(|(peer, state)| {
-                state.is_alive
-                    && self
-                        .upstream_config
-                        .is_primary_upstream_peer(state.network_id, **peer)
+                state.is_alive && self.upstream_config.is_primary_upstream_peer(**peer)
             })
             .map(|(peer, state)| (*peer, state.clone()))
             .collect();
@@ -102,20 +96,20 @@ impl PeerManager {
         picked_peers
     }
 
-    pub fn update_peer_broadcast(&self, peer_broadcasts: Vec<(PeerId, u64)>) {
+    pub fn update_peer_broadcast(&self, peer_broadcasts: Vec<(PeerNetworkId, u64)>) {
         let mut peer_info = self
             .peer_info
             .lock()
             .expect("failed to acquire peer_info lock");
 
-        for (peer_id, new_timeline_id) in peer_broadcasts {
-            peer_info.entry(peer_id).and_modify(|t| {
+        for (peer, new_timeline_id) in peer_broadcasts {
+            peer_info.entry(peer).and_modify(|t| {
                 t.timeline_id = new_timeline_id;
             });
         }
     }
 
-    pub fn is_upstream_peer(&self, network_id: PeerId, peer_id: PeerId) -> bool {
-        self.upstream_config.is_upstream_peer(network_id, peer_id)
+    pub fn is_upstream_peer(&self, peer: PeerNetworkId) -> bool {
+        self.upstream_config.is_upstream_peer(peer)
     }
 }
