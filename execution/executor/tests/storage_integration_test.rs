@@ -134,6 +134,7 @@ fn test_reconfiguration() {
             validator_auth_key_prefix,
             1_000_000,
             vec![],
+            vec![],
         )),
     );
     // Create a dummy block prologue transaction that will bump the timer.
@@ -229,6 +230,7 @@ fn test_change_publishing_option_to_custom() {
             &validator_account,
             validator_auth_key_prefix,
             1_000_000,
+            vec![],
             vec![],
         )),
     );
@@ -401,6 +403,7 @@ fn test_extend_whitelist() {
             &validator_account,
             validator_auth_key_prefix,
             1_000_000,
+            vec![],
             vec![],
         )),
     );
@@ -633,6 +636,7 @@ fn test_execution_with_storage() {
             account2_auth_key.prefix().to_vec(),
             20_000,
             vec![],
+            vec![],
         )),
     );
 
@@ -649,6 +653,7 @@ fn test_execution_with_storage() {
             account3_auth_key.prefix().to_vec(),
             10_000,
             vec![],
+            vec![],
         )),
     );
 
@@ -664,6 +669,7 @@ fn test_execution_with_storage() {
             &account3,
             account3_auth_key.prefix().to_vec(),
             70_000,
+            vec![],
             vec![],
         )),
     );
@@ -686,6 +692,7 @@ fn test_execution_with_storage() {
                 &account3,
                 account3_auth_key.prefix().to_vec(),
                 10_000,
+                vec![],
                 vec![],
             )),
         ));

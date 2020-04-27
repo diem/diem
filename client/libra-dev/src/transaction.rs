@@ -37,6 +37,8 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
     expiration_time_secs: u64,
     metadata_bytes: *const u8,
     metadata_len: usize,
+    metadata_signature_bytes: *const u8,
+    metadata_signature_len: usize,
     ptr_buf: *mut *mut u8,
     ptr_len: *mut usize,
 ) -> LibraStatus {
@@ -81,6 +83,11 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
     } else {
         slice::from_raw_parts(metadata_bytes, metadata_len).to_vec()
     };
+    let metadata_signature = if metadata_signature_bytes.is_null() {
+        vec![]
+    } else {
+        slice::from_raw_parts(metadata_signature_bytes, metadata_signature_len).to_vec()
+    };
     let expiration_time = Duration::from_secs(expiration_time_secs);
 
     let program = encode_transfer_with_metadata_script(
@@ -89,6 +96,7 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
         receiver_auth_key.prefix().to_vec(),
         num_coins,
         metadata,
+        metadata_signature,
     );
     let payload = TransactionPayload::Script(program);
     let raw_txn = RawTransaction::new(
@@ -146,6 +154,8 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
     expiration_time_secs: u64,
     metadata_bytes: *const u8,
     metadata_len: usize,
+    metadata_signature_bytes: *const u8,
+    metadata_signature_len: usize,
     buf: *mut *mut u8,
     len: *mut usize,
 ) -> LibraStatus {
@@ -187,6 +197,11 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
     } else {
         slice::from_raw_parts(metadata_bytes, metadata_len).to_vec()
     };
+    let metadata_signature = if metadata_signature_bytes.is_null() {
+        vec![]
+    } else {
+        slice::from_raw_parts(metadata_signature_bytes, metadata_signature_len).to_vec()
+    };
 
     let program = encode_transfer_with_metadata_script(
         lbr_type_tag(),
@@ -194,6 +209,7 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
         receiver_auth_key.prefix().to_vec(),
         num_coins,
         metadata,
+        metadata_signature,
     );
     let payload = TransactionPayload::Script(program);
     let raw_txn = RawTransaction::new(
@@ -361,6 +377,8 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
                             auth_key_prefix: auth_key_prefix_buffer,
                             metadata_bytes: vec![].as_ptr(),
                             metadata_len: 0,
+                            metadata_signature_bytes: vec![].as_ptr(),
+                            metadata_signature_len: 0,
                         },
                     });
                 } else {
@@ -370,7 +388,7 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
             }
             "peer_to_peer_with_metadata_transaction" => {
                 let args = script.args();
-                if let [TransactionArgument::Address(addr), TransactionArgument::U8Vector(auth_key_prefix), TransactionArgument::U64(amount), TransactionArgument::U8Vector(metadata)] =
+                if let [TransactionArgument::Address(addr), TransactionArgument::U8Vector(auth_key_prefix), TransactionArgument::U64(amount), TransactionArgument::U8Vector(metadata), TransactionArgument::U8Vector(metadata_signature)] =
                     &args[..]
                 {
                     let mut auth_key_prefix_buffer =
@@ -386,6 +404,11 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
                             metadata_bytes: (*Box::into_raw(metadata.clone().into_boxed_slice()))
                                 .as_ptr(),
                             metadata_len: metadata.len(),
+                            metadata_signature_bytes: (*Box::into_raw(
+                                metadata_signature.clone().into_boxed_slice(),
+                            ))
+                            .as_ptr(),
+                            metadata_signature_len: metadata_signature.len(),
                         },
                     });
                 } else {
@@ -464,6 +487,7 @@ mod test {
         let max_gas_amount = 1000;
         let expiration_time_secs = 0;
         let metadata = vec![1, 2, 3];
+        let metadata_signature = [0x1; 64].to_vec();
 
         let mut buf: *mut u8 = std::ptr::null_mut();
         let buf_ptr = &mut buf;
@@ -480,6 +504,8 @@ mod test {
                 expiration_time_secs,
                 metadata.as_ptr(),
                 metadata.len(),
+                metadata_signature.as_ptr(),
+                metadata_signature.len(),
                 buf_ptr,
                 &mut len,
             )
@@ -498,6 +524,10 @@ mod test {
             }
             match &program.args()[3] {
                 TransactionArgument::U8Vector(val) => assert_eq!(val, &metadata),
+                _ => unreachable!(),
+            }
+            match &program.args()[4] {
+                TransactionArgument::U8Vector(val) => assert_eq!(val, &metadata_signature),
                 _ => unreachable!(),
             }
         }
@@ -525,6 +555,8 @@ mod test {
                 expiration_time_secs,
                 metadata.as_ptr(),
                 metadata.len(),
+                metadata_signature.as_ptr(),
+                metadata_signature.len(),
                 buf_ptr2,
                 &mut len2,
             )
@@ -573,6 +605,8 @@ mod test {
                 max_gas_amount,
                 gas_unit_price,
                 expiration_time_secs,
+                vec![].as_ptr(),
+                0,
                 vec![].as_ptr(),
                 0,
                 &mut buf_ptr,
@@ -642,6 +676,7 @@ mod test {
         let gas_unit_price = 1;
         let expiration_time_secs = 5;
         let metadata = vec![1, 2, 3];
+        let metadata_signature = [0x1; 64].to_vec();
         let signature = Ed25519Signature::try_from(&[1u8; Ed25519Signature::LENGTH][..]).unwrap();
 
         let program = encode_transfer_with_metadata_script(
@@ -650,6 +685,7 @@ mod test {
             receiver_auth_key.prefix().to_vec(),
             amount,
             metadata.clone(),
+            metadata_signature.clone(),
         );
         let signed_txn = SignedTransaction::new(
             RawTransaction::new_script(
@@ -715,6 +751,17 @@ mod test {
                 )
             };
             assert_eq!(metadata, txn_metadata);
+            let txn_metadata_signature = unsafe {
+                slice::from_raw_parts(
+                    libra_signed_txn
+                        .raw_txn
+                        .payload
+                        .args
+                        .metadata_signature_bytes,
+                    libra_signed_txn.raw_txn.payload.args.metadata_signature_len,
+                )
+            };
+            assert_eq!(metadata_signature, txn_metadata_signature);
         }
         assert_eq!(sender, AccountAddress::new(libra_signed_txn.raw_txn.sender));
         assert_eq!(sequence_number, libra_signed_txn.raw_txn.sequence_number);

@@ -143,6 +143,7 @@ impl TransactionGenerator {
                         receiver.auth_key_prefix(),
                         1, /* amount */
                         vec![],
+                        vec![],
                     ),
                 );
                 transactions.push(txn);

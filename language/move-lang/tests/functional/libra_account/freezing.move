@@ -71,10 +71,12 @@ fun main() {
 use 0x0::VASP;
 use 0x0::LCS;
 fun main() {
+    let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     VASP::apply_for_vasp_root_credential(
         LCS::to_bytes<address>(&0xAAA),
         LCS::to_bytes<address>(&0xBBB),
         LCS::to_bytes<address>(&0xCCC),
+        pubkey,
     );
 }
 // check: EXECUTED

@@ -163,6 +163,7 @@ fn get_transfer_transaction(
             recipient_auth_key.prefix().to_vec(),
             amount,
             vec![],
+            vec![],
         )),
     )
 }

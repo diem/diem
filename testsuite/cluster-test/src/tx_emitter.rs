@@ -532,6 +532,7 @@ fn gen_transfer_txn_request(
             receiver_auth_key_prefix,
             num_coins,
             vec![],
+            vec![],
         ),
         sender,
     )

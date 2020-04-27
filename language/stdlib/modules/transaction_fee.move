@@ -81,6 +81,7 @@ module TransactionFee {
                 &distribution_resource.fee_withdrawal_capability,
                 amount_to_distribute_per_validator,
                 x"",
+                x""
             );
            }
     }

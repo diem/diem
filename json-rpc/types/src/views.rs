@@ -274,6 +274,7 @@ pub enum ScriptView {
         auth_key_prefix: BytesView,
         amount: u64,
         metadata: BytesView,
+        metadata_signature: BytesView,
     },
     #[serde(rename = "mint_transaction")]
     Mint {
@@ -346,7 +347,7 @@ impl From<TransactionPayload> for ScriptView {
 
         let res = match code.as_str() {
             "peer_to_peer_with_metadata_transaction" => {
-                if let [TransactionArgument::Address(receiver), TransactionArgument::U8Vector(auth_key_prefix), TransactionArgument::U64(amount), TransactionArgument::U8Vector(metadata)] =
+                if let [TransactionArgument::Address(receiver), TransactionArgument::U8Vector(auth_key_prefix), TransactionArgument::U64(amount), TransactionArgument::U8Vector(metadata), TransactionArgument::U8Vector(metadata_signature)] =
                     &args[..]
                 {
                     Ok(ScriptView::PeerToPeer {
@@ -354,6 +355,7 @@ impl From<TransactionPayload> for ScriptView {
                         auth_key_prefix: BytesView::from(auth_key_prefix),
                         amount: *amount,
                         metadata: BytesView::from(metadata),
+                        metadata_signature: BytesView::from(metadata_signature),
                     })
                 } else {
                     Err(format_err!("Unable to parse PeerToPeer arguments"))

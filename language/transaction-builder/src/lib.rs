@@ -136,15 +136,19 @@ encode_txn_script! {
           `preburn_address`.  Fails if the sender does not have a published `MintCapability`."
 }
 
-/// Encode a program transferring `amount` coins from `sender` to `recipient` with associated
-/// metadata `metadata`. Fails if there is no account at the recipient address or if the sender's
-/// balance is lower than `amount`.
+/// Encode a program transferring `amount` coins from `sender` to `recipient` with (optional)
+/// associated metadata `metadata` and (optional) `signature` on the metadata.
+/// The `metadata` and `signature` parameters are only required if `amount` >= 1000 LBR and the
+/// sender and recipient of the funds are two distinct VASPs.
+/// Fails if there is no account at the recipient address or if the sender's balance is lower than
+/// `amount`.
 pub fn encode_transfer_with_metadata_script(
     type_: TypeTag,
     recipient: &AccountAddress,
     auth_key_prefix: Vec<u8>,
     amount: u64,
     metadata: Vec<u8>,
+    signature: Vec<u8>,
 ) -> Script {
     validate_auth_key_prefix(&auth_key_prefix);
     Script::new(
@@ -157,6 +161,7 @@ pub fn encode_transfer_with_metadata_script(
             TransactionArgument::U8Vector(auth_key_prefix),
             TransactionArgument::U64(amount),
             TransactionArgument::U8Vector(metadata),
+            TransactionArgument::U8Vector(signature),
         ],
     )
 }
