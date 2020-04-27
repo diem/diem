@@ -9,7 +9,7 @@ mod eliminate_locals;
 mod liveness;
 mod locals;
 mod remove_no_ops;
-pub(crate) mod translate;
+pub mod translate;
 
 use crate::{
     errors::Errors,
