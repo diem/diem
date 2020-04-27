@@ -47,4 +47,3 @@ language/tools/vm-genesis/genesis/vm_config.toml
 # output directories
 # e.g., move-build has a default out dir of output
 output/
-
