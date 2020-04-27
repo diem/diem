@@ -381,8 +381,8 @@ impl<'de> Deserialize<'de> for NetworkAddress {
         struct DeserializeWrapper(Vec<Protocol>);
 
         if deserializer.is_human_readable() {
-            let s = <&str>::deserialize(deserializer)?;
-            NetworkAddress::from_str(s).map_err(de::Error::custom)
+            let s = <String>::deserialize(deserializer)?;
+            NetworkAddress::from_str(s.as_str()).map_err(de::Error::custom)
         } else {
             let wrapper = DeserializeWrapper::deserialize(deserializer)?;
             let addr = NetworkAddress::try_from(wrapper.0).map_err(de::Error::custom)?;

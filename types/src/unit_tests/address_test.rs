@@ -75,6 +75,15 @@ fn test_address_from_proto_invalid_length() {
     assert!(AccountAddress::try_from(&bytes[..]).is_err());
 }
 
+#[test]
+fn test_deserialize_from_json_value() {
+    let address = AccountAddress::random();
+    let json_value = serde_json::to_value(address).expect("serde_json::to_value fail.");
+    let address2: AccountAddress =
+        serde_json::from_value(json_value).expect("serde_json::from_value fail.");
+    assert_eq!(address, address2)
+}
+
 proptest! {
     #[test]
     fn test_address_string_roundtrip(addr in any::<AccountAddress>()) {
