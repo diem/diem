@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+pub mod aws;
 pub mod cluster;
 pub mod cluster_swarm;
 pub mod experiments;
