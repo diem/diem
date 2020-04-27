@@ -50,6 +50,10 @@ use vm::{file_format::Bytecode, views::SignatureView, CompiledModule};
 /// A name we use to represent a script as a module.
 pub const SCRIPT_MODULE_NAME: &str = "<SELF>";
 
+/// Names used in the bytecode/AST to represent the main function of a script
+pub const SCRIPT_BYTECODE_FUN_NAME: &str = "<SELF>";
+pub const SCRIPT_AST_FUN_NAME: &str = "main";
+
 // =================================================================================================
 /// # Locations
 

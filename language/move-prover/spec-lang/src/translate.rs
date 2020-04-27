@@ -35,7 +35,7 @@ use crate::{
     },
     env::{
         FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleId, MoveIrLoc, NodeId, SpecFunId,
-        SpecVarId, StructData, StructId,
+        SpecVarId, StructData, StructId, SCRIPT_AST_FUN_NAME, SCRIPT_BYTECODE_FUN_NAME,
     },
     project_1st, project_2nd,
     symbol::{Symbol, SymbolPool},
@@ -2321,7 +2321,12 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 let handle_idx = module.function_def_at(def_idx).function;
                 let handle = module.function_handle_at(handle_idx);
                 let view = FunctionHandleView::new(&module, handle);
-                let name = self.symbol_pool().make(view.name().as_str());
+                let mut name_str = view.name().as_str();
+                // Script functions have different names in AST and bytecode; adjust.
+                if name_str == SCRIPT_BYTECODE_FUN_NAME {
+                    name_str = SCRIPT_AST_FUN_NAME;
+                }
+                let name = self.symbol_pool().make(name_str);
                 let fun_spec = self.fun_specs.remove(&name).unwrap_or_else(FunSpec::default);
                 if let Some(entry) = self.parent.fun_table.get(&self.qualified_by_module(name)) {
                     let arg_names = project_1st(&entry.params);
@@ -2336,9 +2341,12 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                         fun_spec,
                     )))
                 } else {
+                    let funs = self.parent.fun_table.iter().map(|(k, _)| {
+                        format!("{}", k.display_full(self.symbol_pool()))
+                    }).join(", ");
                     self.parent.error(
                         &self.parent.env.internal_loc(),
-                        &format!("[internal] bytecode does not match AST: `{}` in bytecode but not in AST", name.display(self.symbol_pool())));
+                        &format!("[internal] bytecode does not match AST: `{}` in bytecode but not in AST (available in AST: {})", name.display(self.symbol_pool()), funs));
                     None
                 }
             })
