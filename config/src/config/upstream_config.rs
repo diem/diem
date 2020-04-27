@@ -24,16 +24,12 @@ pub struct UpstreamConfig {
 
 impl UpstreamConfig {
     /// Determines whether a node `peer_id` in network `network_id` is an upstream peer of a node with this NodeConfig.
-    pub fn is_upstream_peer(&self, network_id: NetworkId, peer_id: PeerId) -> bool {
-        self.is_primary_upstream_peer(network_id, peer_id)
-            || self.fallback_networks.contains(&network_id)
+    pub fn is_upstream_peer(&self, peer: PeerNetworkId) -> bool {
+        self.is_primary_upstream_peer(peer) || self.fallback_networks.contains(&peer.network_id())
     }
 
-    pub fn is_primary_upstream_peer(&self, network_id: NetworkId, peer_id: PeerId) -> bool {
-        self.primary_networks.contains(&network_id)
-            || self
-                .upstream_peers
-                .contains(&PeerNetworkId(network_id, peer_id))
+    pub fn is_primary_upstream_peer(&self, peer: PeerNetworkId) -> bool {
+        self.primary_networks.contains(&peer.network_id()) || self.upstream_peers.contains(&peer)
     }
 }
 

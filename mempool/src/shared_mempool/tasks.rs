@@ -16,6 +16,7 @@ use crate::{
 };
 use anyhow::{ensure, format_err, Result};
 use futures::channel::oneshot;
+use libra_config::config::PeerNetworkId;
 use libra_logger::prelude::*;
 use libra_types::{
     mempool_status::{MempoolStatus, MempoolStatusCode},
@@ -50,7 +51,7 @@ pub(crate) async fn sync_with_peers<'a>(
     let peers = peer_manager.pick_peers();
     let mut state_updates = vec![];
 
-    for (peer_id, peer_state) in peers.into_iter() {
+    for (peer, peer_state) in peers.into_iter() {
         if peer_state.is_alive {
             let timeline_id = peer_state.timeline_id;
             let (transactions, new_timeline_id) = mempool
@@ -62,7 +63,7 @@ pub(crate) async fn sync_with_peers<'a>(
                 counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST.inc_by(transactions.len() as i64);
 
                 let network_sender = network_senders
-                    .get_mut(&peer_state.network_id)
+                    .get_mut(&peer.network_id())
                     .expect("[shared mempool] missign network sender")
                     .clone();
 
@@ -72,16 +73,16 @@ pub(crate) async fn sync_with_peers<'a>(
                         request_id,
                         transactions,
                     },
-                    peer_id,
+                    peer.peer_id(),
                     network_sender,
                 ) {
                     error!(
-                        "[shared mempool] error broadcasting transations to peer {}: {}",
-                        peer_id, e
+                        "[shared mempool] error broadcasting transations to peer {:?}: {}",
+                        peer, e
                     );
                 } else {
                     // only update state for successful sends
-                    state_updates.push((peer_id, new_timeline_id));
+                    state_updates.push((peer, new_timeline_id));
                 }
             }
         }
@@ -143,27 +144,26 @@ pub(crate) async fn process_transaction_broadcast<V>(
     transactions: Vec<SignedTransaction>,
     request_id: String,
     timeline_state: TimelineState,
-    peer_id: PeerId,
-    network_id: PeerId,
+    peer: PeerNetworkId,
 ) where
     V: TransactionValidation,
 {
     let network_sender = smp
         .network_senders
-        .get_mut(&network_id)
+        .get_mut(&peer.network_id())
         .expect("[shared mempool] missing network sender")
         .clone();
     let results = process_incoming_transactions(smp, transactions, timeline_state).await;
-    log_txn_process_results(results, Some(peer_id));
+    log_txn_process_results(results, Some(peer.peer_id()));
     // send back ACK
     if let Err(e) = send_mempool_sync_msg(
         MempoolSyncMsg::BroadcastTransactionsResponse { request_id },
-        peer_id,
+        peer.peer_id(),
         network_sender,
     ) {
         error!(
-            "[shared mempool] failed to send ACK back to peer {}: {}",
-            peer_id, e
+            "[shared mempool] failed to send ACK back to peer {:?}: {}",
+            peer, e
         );
     }
 }
@@ -258,6 +258,7 @@ where
     statuses
 }
 
+// TODO update counters to ID peers using PeerNetworkId
 fn log_txn_process_results(results: Vec<SubmissionStatus>, sender: Option<PeerId>) {
     let sender = match sender {
         Some(peer) => peer.to_string(),
