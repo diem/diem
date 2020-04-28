@@ -37,7 +37,7 @@ pub struct Options {
     )]
     pub sender: Option<Address>,
 
-    /// The directory for outputing move bytecode
+    /// The move bytecode output directory
     #[structopt(
         name = "PATH_TO_OUTPUT_DIRECTORY",
         short = cli::OUT_DIR_SHORT,

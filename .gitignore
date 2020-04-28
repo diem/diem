@@ -40,3 +40,6 @@ language/tools/vm-genesis/genesis/vm_config.toml
 
 # Terraform
 .terraform/
+
+# Move Build Output
+move_build_output/
