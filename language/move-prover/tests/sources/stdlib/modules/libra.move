@@ -1,10 +1,5 @@
 address 0x0:
 
-// global spec ideas
-// SPEC TODO: total value global spec
-// SPEC TODO: Number of coins global spec.
-// SPEC TODO: who/what functions can mint.
-
 module Libra {
     use 0x0::Transaction;
     use 0x0::Vector;
@@ -15,26 +10,11 @@ module Libra {
         value: u64,
     }
 
-    // A singleton resource that grants access to `Libra::mint`. Only the Association has one.
-    resource struct MintCapability<Token> { }
-
-    // Specification helpers to work with MintCapability
-    spec module {
-        define exists_sender_mint_capability<Token>(): bool { exists<MintCapability<Token>>(sender()) }
-    }
-
     resource struct Info<Token> {
         // The sum of the values of all Libra::T resources in the system
         total_value: u128,
         // Value of funds that are in the process of being burned
         preburn_value: u64,
-    }
-
-    // Specifications helpers for working with Info<Token> at association address.
-    spec module {
-       define association_address(): address { 0xA550C18 }
-       define exists_info<Token>(): bool { exists<Info<Token>>(association_address()) }
-       define info<Token>(): Info<Token> { global<Info<Token>>(association_address()) }
     }
 
     // A holding area where funds that will subsequently be burned wait while their underyling
@@ -63,9 +43,9 @@ module Libra {
     spec fun register {
         aborts_if sender() != association_address();
         aborts_if exists_sender_mint_capability<Token>();
-        aborts_if exists_info<Token>();
+        aborts_if token_is_registered<Token>();
         ensures exists_sender_mint_capability<Token>();
-        ensures exists_info<Token>();
+        ensures token_is_registered<Token>();
         ensures info<Token>().total_value == 0;
         ensures info<Token>().preburn_value == 0;
     }
@@ -74,7 +54,7 @@ module Libra {
         Transaction::assert(exists<Info<Token>>(0xA550C18), 12);
     }
     spec fun assert_is_registered {
-        aborts_if !exists_info<Token>();
+        aborts_if !token_is_registered<Token>();
     }
 
     // Return `amount` coins.
@@ -84,7 +64,7 @@ module Libra {
     }
     spec schema MintAbortsIf<Token> {
         amount: u64;
-        aborts_if !exists_info<Token>();
+        aborts_if !token_is_registered<Token>();
         aborts_if amount > 1000000000 * 1000000;
         aborts_if info<Token>().total_value + amount > max_u128();
     }
@@ -115,7 +95,7 @@ module Libra {
         preburn_address: address;
         aborts_if !exists<Preburn<Token>>(preburn_address);
         aborts_if len(global<Preburn<Token>>(preburn_address).requests) == 0;
-        aborts_if !exists_info<Token>();
+        aborts_if !token_is_registered<Token>();
         aborts_if info<Token>().preburn_value < global<Preburn<Token>>(preburn_address).requests[0].value;
     }
     spec schema BurnAbortsIf<Token> {
@@ -172,7 +152,7 @@ module Libra {
         Preburn<Token> { requests: Vector::empty(), is_approved: false, }
     }
     spec fun new_preburn {
-        aborts_if !exists_info<Token>();
+        aborts_if !token_is_registered<Token>();
         ensures len(result.requests) == 0;
         ensures result.is_approved == false;
     }
@@ -220,7 +200,7 @@ module Libra {
     spec schema PreburnAbortsIf<Token> {
         coin: T<Token>;
         // aborts_if !preburn_ref.is_approved; // TODO: bring this back once we can automate approvals in testnet
-        aborts_if !exists_info<Token>();
+        aborts_if !token_is_registered<Token>();
         aborts_if info<Token>().preburn_value + coin.value > max_u64();
     }
     spec schema PreburnEnsures<Token> {
@@ -348,7 +328,7 @@ module Libra {
         borrow_global<Info<Token>>(0xA550C18).total_value
     }
     spec fun market_cap {
-        aborts_if !exists_info<Token>();
+        aborts_if !token_is_registered<Token>();
         ensures result == info<Token>().total_value;
     }
 
@@ -357,7 +337,7 @@ module Libra {
         borrow_global<Info<Token>>(0xA550C18).preburn_value
     }
     spec fun preburn_value {
-        aborts_if !exists_info<Token>();
+        aborts_if !token_is_registered<Token>();
         ensures result == info<Token>().preburn_value;
     }
 
@@ -368,7 +348,7 @@ module Libra {
         T { value: 0 }
     }
     spec fun zero {
-        aborts_if !exists_info<Token>();
+        aborts_if !token_is_registered<Token>();
         ensures result.value == 0;
     }
 
@@ -443,4 +423,85 @@ module Libra {
     spec fun destroy_zero {
         aborts_if coin.value > 0;
     }
+
+// **************** SPECIFICATIONS ****************
+
+    // A singleton resource that grants access to `Libra::mint`. Only the Association has one.
+    resource struct MintCapability<Token> { }
+
+    // Specifications helpers for working with Info<Token> at association address.
+    spec module {
+       define association_address(): address { 0xA550C18 }
+       define token_is_registered<Token>(): bool { exists<Info<Token>>(association_address()) }
+       define info<Token>(): Info<Token> { global<Info<Token>>(association_address()) }
+    }
+
+    // Once registered, a token stays registered forever.
+    spec schema RegistrationPersists<Token> {
+         ensures old(token_is_registered<Token>()) ==> token_is_registered<Token>();
+    }
+    spec module {
+        // Can't actually burn anything the way this module is written.
+        apply RegistrationPersists<Token> to public *<Token> except mint*<Token>, burn*<Token>;
+    }
+
+    // Specification helpers to work with MintCapability
+    spec module {
+        define exists_sender_mint_capability<Token>(): bool { exists<MintCapability<Token>>(sender()) }
+    }
+
+    // Setup for module invariant
+    spec module {
+         global sum_of_token_values<Token>: num;
+    }
+
+    spec schema SumOfTokenValuesInvariant<Token> {
+         // SPEC: MarketCap == Sum of all the instances of a particular token.
+
+         requires !token_is_registered<Token>() ==> sum_of_token_values<Token> == 0;
+         requires token_is_registered<Token>()
+                     ==> sum_of_token_values<Token> == global<Info<Token>>(0xA550C18).total_value;
+
+         ensures !token_is_registered<Token>() ==> sum_of_token_values<Token> == 0;
+         ensures token_is_registered<Token>()
+                     ==> sum_of_token_values<Token> == global<Info<Token>>(0xA550C18).total_value;
+    }
+
+    spec module {
+        apply SumOfTokenValuesInvariant<Token> to public *<Token>;
+    }
+
+    spec struct T {
+        // SPEC maintain true sum_of_token_values<Token>
+        invariant pack sum_of_token_values<Token> = sum_of_token_values<Token> + value;
+        invariant unpack sum_of_token_values<Token> = sum_of_token_values<Token> - value;
+        invariant update sum_of_token_values<Token> = sum_of_token_values<Token> - old(value) + value;
+    }
+
+    spec schema SumRemainsSame<Token> {
+         // DD: Only mint/burn & with capability versions can change the total amount of currency.
+         // skip mint, burn, mint_with_capability, burn_with_capability.
+         ensures sum_of_token_values<Token> == old(sum_of_token_values<Token>);
+    }
+    spec module {
+        // Can't actually burn anything the way this module is written, so it works
+        // even if you remove burn (burn always aborts)
+        apply SumRemainsSame<Token> to public *<Token> except mint*<Token>, burn*<Token>;
+    }
+
+    spec module {
+         // SPEC: Number of MintCapabilities per token
+         global mint_capability_count<Token>: num;
+    }
+
+    // At most one MintCapability exists
+    spec schema MintCapabilityCountInvariant<Token> {
+         requires !token_is_registered<Token>() ==> mint_capability_count<Token> == 0;
+         requires token_is_registered<Token>() ==> mint_capability_count<Token> == 1;
+
+         ensures !token_is_registered<Token>() ==> mint_capability_count<Token> == 0;
+         ensures token_is_registered<Token>() ==> mint_capability_count<Token> == 1;
+    }
+
+
 }
