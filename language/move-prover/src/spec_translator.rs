@@ -540,16 +540,21 @@ impl<'env> SpecTranslator<'env> {
 
         // Emit call to before update invariant procedure for all fields which have one by their own.
         for fe in struct_env.get_fields() {
-            if let Some((nested_struct_env, _)) =
+            if let Some((nested_struct_env, ty_args)) =
                 fe.get_type().get_struct(struct_env.module_env.env)
             {
                 if Self::has_before_update_invariant(&nested_struct_env) {
                     let field_name = boogie_field_name(&fe);
+                    let args = ty_args
+                        .iter()
+                        .map(|ty| boogie_type_value(struct_env.module_env.env, ty))
+                        .chain(vec![format!("$SelectField($before, {})", field_name)].into_iter())
+                        .join(", ");
                     emitln!(
                         self.writer,
-                        "call {}_before_update_inv($SelectField($before, {}));",
+                        "call {}_before_update_inv({});",
                         boogie_struct_name(&nested_struct_env),
-                        field_name,
+                        args,
                     );
                 }
             }
@@ -602,16 +607,27 @@ impl<'env> SpecTranslator<'env> {
 
         // Emit call to after update invariant procedure for all fields which have one by their own.
         for fe in struct_env.get_fields() {
-            if let Some((nested_struct_env, _)) =
+            if let Some((nested_struct_env, ty_args)) =
                 fe.get_type().get_struct(struct_env.module_env.env)
             {
                 if Self::has_after_update_invariant(&nested_struct_env) {
                     let field_name = boogie_field_name(&fe);
+                    let args = ty_args
+                        .iter()
+                        .map(|ty| boogie_type_value(struct_env.module_env.env, ty))
+                        .chain(
+                            vec![format!(
+                                "$SelectField($before, {}), $SelectField($after, {})",
+                                field_name, field_name
+                            )]
+                            .into_iter(),
+                        )
+                        .join(", ");
                     emitln!(
                         self.writer,
-                        "call {}_after_update_inv($SelectField($before, {}), $SelectField($after, {}));",
+                        "call {}_after_update_inv({});",
                         boogie_struct_name(&nested_struct_env),
-                        field_name, field_name,
+                        args
                     );
                 }
             }
