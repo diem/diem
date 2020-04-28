@@ -1,19 +1,9 @@
-FROM debian:buster AS toolchain
 
-# To use http/https proxy while building, use:
-# docker build --build-arg https_proxy=http://fwdproxy:8080 --build-arg http_proxy=http://fwdproxy:8080
-
-RUN apt-get update && apt-get install -y cmake curl clang git
-
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
-ENV PATH "$PATH:/root/.cargo/bin"
+### Build layer
+ARG TOOLCHAIN_TAG
+FROM toolchain_rust:$TOOLCHAIN_TAG AS builder
 
 WORKDIR /libra
-COPY rust-toolchain /libra/rust-toolchain
-RUN rustup install $(cat rust-toolchain)
-
-FROM toolchain AS builder
-
 COPY . /libra
 
 RUN cargo build --release -p libra-node -p cli -p config-builder -p safety-rules && cd target/release && rm -r build deps incremental
@@ -22,8 +12,16 @@ RUN cargo build --release -p libra-node -p cli -p config-builder -p safety-rules
 FROM debian:buster AS pre-test
 
 # TODO: Unsure which of these are needed exactly for client
-RUN apt-get update && apt-get install -y python3-pip nano net-tools tcpdump iproute2 netcat \
-    && apt-get clean && rm -r /var/lib/apt/lists/*
+RUN apt-get update \
+    && apt-get install -y \
+        iproute2=4.20.0-2 \
+        nano=3.2-3 \
+        net-tools=1.60+git20180626.aebd88e-1 \
+        netcat=1.10-41.1 \
+        python3-pip=18.1-5 \
+        tcpdump=4.9.3-1~deb10u1 \
+    && apt-get clean \
+    && rm -r /var/lib/apt/lists/*
 
 # RUN apt-get install python3
 COPY docker/mint/requirements.txt /libra/docker/mint/requirements.txt
@@ -40,7 +38,10 @@ COPY docker/mint/docker-run.sh /opt/libra/bin
 FROM pre-test AS test
 
 #install needed tools
-RUN apt-get update && apt-get install -y procps
+RUN apt-get update \
+    && apt-get install -y procps=2:3.3.15-2 \
+    && apt-get clean \
+    && rm -r /var/lib/apt/lists/*
 
 # TEST docker-run.sh
 #   GIVEN necessary environment arguments to run docker-run.sh

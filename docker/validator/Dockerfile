@@ -1,19 +1,8 @@
-FROM debian:buster AS toolchain
-
-# To use http/https proxy while building, use:
-# docker build --build-arg https_proxy=http://fwdproxy:8080 --build-arg http_proxy=http://fwdproxy:8080
-
-RUN apt-get update && apt-get install -y cmake curl clang git
-
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
-ENV PATH "$PATH:/root/.cargo/bin"
+### Build layer
+ARG TOOLCHAIN_TAG
+FROM toolchain_rust:$TOOLCHAIN_TAG AS builder
 
 WORKDIR /libra
-COPY rust-toolchain /libra/rust-toolchain
-RUN rustup install $(cat rust-toolchain)
-
-FROM toolchain AS builder
-
 COPY . /libra
 
 RUN cargo build --release -p libra-node -p cli -p config-builder -p safety-rules && cd target/release && rm -r build deps incremental
