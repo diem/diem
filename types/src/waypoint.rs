@@ -1,7 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{epoch_info::EpochInfo, ledger_info::LedgerInfo, transaction::Version};
+use crate::{
+    epoch_change::Verifier,
+    epoch_info::EpochInfo,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    transaction::Version,
+};
 use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
 use libra_crypto_derive::CryptoHasher;
@@ -68,6 +73,20 @@ impl Waypoint {
             )
         );
         Ok(())
+    }
+}
+
+impl Verifier for Waypoint {
+    fn verify(&self, ledger_info: &LedgerInfoWithSignatures) -> Result<()> {
+        self.verify(ledger_info.ledger_info())
+    }
+
+    fn epoch_change_verification_required(&self, _epoch: u64) -> bool {
+        true
+    }
+
+    fn is_ledger_info_stale(&self, ledger_info: &LedgerInfo) -> bool {
+        ledger_info.version() < self.version()
     }
 }
 

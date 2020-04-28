@@ -21,7 +21,7 @@ use libra_logger::prelude::*;
 use libra_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
 use libra_types::{
     contract_event::ContractEvent,
-    epoch_change::VerifierType,
+    epoch_change::Verifier,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{Transaction, TransactionListWithProof, Version},
     waypoint::Waypoint,
@@ -718,8 +718,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             self.local_state.epoch()
         };
         self.send_chunk_request(new_version, new_epoch)?;
-        let verifier = VerifierType::TrustedEpoch(self.local_state.trusted_epoch.clone());
-        verifier.verify(&response_li)?;
+        self.local_state.trusted_epoch.verify(&response_li)?;
         self.validate_and_store_chunk(txn_list_with_proof, response_li, None)
     }
 

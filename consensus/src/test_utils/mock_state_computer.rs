@@ -11,7 +11,7 @@ use executor_types::StateComputeResult;
 use futures::channel::mpsc;
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, HashValue};
 use libra_logger::prelude::*;
-use libra_types::{epoch_change::EpochChangeProof, ledger_info::LedgerInfoWithSignatures};
+use libra_types::ledger_info::LedgerInfoWithSignatures;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},

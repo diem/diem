@@ -5,7 +5,7 @@ use anyhow::Result;
 use consensus_types::block::Block;
 use executor_types::StateComputeResult;
 use libra_crypto::HashValue;
-use libra_types::{epoch_change::EpochChangeProof, ledger_info::LedgerInfoWithSignatures};
+use libra_types::ledger_info::LedgerInfoWithSignatures;
 
 /// Retrieves and updates the status of transactions on demand (e.g., via talking with Mempool)
 #[async_trait::async_trait]
