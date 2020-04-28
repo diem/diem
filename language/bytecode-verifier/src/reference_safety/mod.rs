@@ -10,10 +10,7 @@
 mod abstract_state;
 
 use crate::{
-    absint::{
-        AbstractInterpreter, BlockInvariant, BlockPostcondition, BlockPrecondition,
-        TransferFunctions,
-    },
+    absint::{AbstractInterpreter, BlockInvariant, BlockPostcondition, TransferFunctions},
     control_flow_graph::VMControlFlowGraph,
 };
 use abstract_state::{AbstractState, AbstractValue};
@@ -21,7 +18,7 @@ use libra_types::vm_error::{StatusCode, VMStatus};
 use mirai_annotations::*;
 use vm::{
     access::ModuleAccess,
-    errors::{err_at_offset, VMResult},
+    errors::VMResult,
     file_format::{
         Bytecode, CompiledModule, FunctionDefinition, FunctionHandle, SignatureToken,
         StructDefinition, StructFieldInformation,
@@ -62,22 +59,11 @@ pub fn verify(
     let function_definition_view = FunctionDefinitionView::new(module, function_definition);
     let inv_map = verifier.analyze_function(initial_state, &function_definition_view, cfg);
     // Report all the join failures
-    for (block_id, BlockInvariant { pre, post }) in inv_map {
-        match pre {
-            BlockPrecondition::JoinFailure => {
-                return Err(err_at_offset(StatusCode::JOIN_FAILURE, block_id as usize))
-            }
-            BlockPrecondition::State(_) => (),
-        }
+    for (_block_id, BlockInvariant { post, .. }) in inv_map {
         match post {
             BlockPostcondition::Error(err) => return Err(err),
-            BlockPostcondition::Unprocessed => {
-                return Err(err_at_offset(
-                    StatusCode::VERIFIER_INVARIANT_VIOLATION,
-                    block_id as usize,
-                ))
-            }
-            BlockPostcondition::Success => (),
+            // Block might be unprocessed if all predecessors had an error
+            BlockPostcondition::Unprocessed | BlockPostcondition::Success => (),
         }
     }
     Ok(())
