@@ -10,7 +10,6 @@ use libra_types::{
     account_config::association_address,
     account_state::AccountState,
     contract_event::ContractEvent,
-    epoch_change::EpochChangeProof,
     ledger_info::LedgerInfoWithSignatures,
     move_resource::MoveStorage,
     on_chain_config::{OnChainConfigPayload, ON_CHAIN_CONFIG_REGISTRY},
@@ -42,8 +41,8 @@ pub trait ExecutorProxyTrait: Send {
         target_version: u64,
     ) -> Result<TransactionListWithProof>;
 
-    /// Get the epoch change ledger info for [start_epoch, end_epoch) so that we can move to end_epoch.
-    fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<EpochChangeProof>;
+    /// Get the epoch change ledger info for epoch so that we can move to next epoch.
+    fn get_epoch_proof(&self, epoch: u64) -> Result<LedgerInfoWithSignatures>;
 
     /// Tries to find a LedgerInfo for a given version.
     fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures>;
@@ -167,11 +166,14 @@ impl ExecutorProxyTrait for ExecutorProxy {
             .get_transactions(known_version + 1, limit, target_version, false)
     }
 
-    fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<EpochChangeProof> {
-        let epoch_change_proof = self
+    fn get_epoch_proof(&self, epoch: u64) -> Result<LedgerInfoWithSignatures> {
+        let epoch_change_li = self
             .storage
-            .get_epoch_change_ledger_infos(start_epoch, end_epoch)?;
-        Ok(epoch_change_proof)
+            .get_epoch_change_ledger_infos(epoch, epoch + 1)?
+            .ledger_info_with_sigs
+            .pop()
+            .ok_or_else(|| format_err!("Empty EpochChangeProof"))?;
+        Ok(epoch_change_li)
     }
 
     fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {

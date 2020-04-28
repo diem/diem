@@ -27,14 +27,14 @@ pub struct EpochChangeProof {
 /// client: could be either a waypoint (upon startup) or a known validator verifier.
 pub enum VerifierType {
     Waypoint(Waypoint),
-    TrustedVerifier(EpochInfo),
+    TrustedEpoch(EpochInfo),
 }
 
 impl VerifierType {
     pub fn verify(&self, ledger_info: &LedgerInfoWithSignatures) -> Result<()> {
         match self {
             VerifierType::Waypoint(w) => w.verify(ledger_info.ledger_info()),
-            VerifierType::TrustedVerifier(epoch_info) => {
+            VerifierType::TrustedEpoch(epoch_info) => {
                 ensure!(
                     epoch_info.epoch == ledger_info.ledger_info().epoch(),
                     "LedgerInfo has unexpected epoch {}, expected {}",
@@ -52,7 +52,7 @@ impl VerifierType {
     pub fn epoch_change_verification_required(&self, epoch: u64) -> bool {
         match self {
             VerifierType::Waypoint(_) => true,
-            VerifierType::TrustedVerifier(epoch_info) => epoch_info.epoch < epoch,
+            VerifierType::TrustedEpoch(epoch_info) => epoch_info.epoch < epoch,
         }
     }
 
@@ -68,7 +68,7 @@ impl VerifierType {
     pub fn is_ledger_info_stale(&self, ledger_info: &LedgerInfo) -> bool {
         match self {
             VerifierType::Waypoint(waypoint) => ledger_info.version() < waypoint.version(),
-            VerifierType::TrustedVerifier(epoch_info) => ledger_info.epoch() < epoch_info.epoch,
+            VerifierType::TrustedEpoch(epoch_info) => ledger_info.epoch() < epoch_info.epoch,
         }
     }
 }
@@ -144,7 +144,7 @@ impl EpochChangeProof {
                     .ledger_info()
                     .next_epoch_info()
                     .cloned()
-                    .map(VerifierType::TrustedVerifier)
+                    .map(VerifierType::TrustedEpoch)
                     .ok_or_else(|| format_err!("LedgerInfo doesn't carry a ValidatorSet"))
             })?;
 
@@ -247,7 +247,7 @@ mod tests {
         // Test well-formed proof will succeed
         let proof_1 = EpochChangeProof::new(valid_ledger_info.clone(), /* more = */ false);
         assert!(proof_1
-            .verify(&VerifierType::TrustedVerifier(EpochInfo {
+            .verify(&VerifierType::TrustedEpoch(EpochInfo {
                 epoch: all_epoch[0],
                 verifier: validator_verifier[0].clone(),
             }))
@@ -256,7 +256,7 @@ mod tests {
         let proof_2 =
             EpochChangeProof::new(valid_ledger_info[2..5].to_vec(), /* more = */ false);
         assert!(proof_2
-            .verify(&VerifierType::TrustedVerifier(EpochInfo {
+            .verify(&VerifierType::TrustedEpoch(EpochInfo {
                 epoch: all_epoch[2],
                 verifier: validator_verifier[2].clone()
             }))
@@ -264,7 +264,7 @@ mod tests {
 
         // Test proof with stale prefix will verify
         assert!(proof_1
-            .verify(&VerifierType::TrustedVerifier(EpochInfo {
+            .verify(&VerifierType::TrustedEpoch(EpochInfo {
                 epoch: all_epoch[4],
                 verifier: validator_verifier[4].clone()
             }))
@@ -273,7 +273,7 @@ mod tests {
         // Test empty proof will fail verification
         let proof_3 = EpochChangeProof::new(vec![], /* more = */ false);
         assert!(proof_3
-            .verify(&VerifierType::TrustedVerifier(EpochInfo {
+            .verify(&VerifierType::TrustedEpoch(EpochInfo {
                 epoch: all_epoch[0],
                 verifier: validator_verifier[0].clone()
             }))
@@ -284,7 +284,7 @@ mod tests {
         list.extend_from_slice(&valid_ledger_info[8..9]);
         let proof_4 = EpochChangeProof::new(list, /* more = */ false);
         assert!(proof_4
-            .verify(&VerifierType::TrustedVerifier(EpochInfo {
+            .verify(&VerifierType::TrustedEpoch(EpochInfo {
                 epoch: all_epoch[3],
                 verifier: validator_verifier[3].clone()
             }))
@@ -295,7 +295,7 @@ mod tests {
         list.reverse();
         let proof_5 = EpochChangeProof::new(list, /* more = */ false);
         assert!(proof_5
-            .verify(&VerifierType::TrustedVerifier(EpochInfo {
+            .verify(&VerifierType::TrustedEpoch(EpochInfo {
                 epoch: all_epoch[9],
                 verifier: validator_verifier[9].clone()
             }))
@@ -310,7 +310,7 @@ mod tests {
             /* more = */ false,
         );
         assert!(proof_6
-            .verify(&VerifierType::TrustedVerifier(EpochInfo {
+            .verify(&VerifierType::TrustedEpoch(EpochInfo {
                 epoch: all_epoch[0],
                 verifier: validator_verifier[0].clone()
             }))

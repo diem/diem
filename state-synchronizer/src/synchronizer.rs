@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 use crate::{
-    coordinator::{CoordinatorMessage, EpochRetrievalRequest, SyncCoordinator, SyncRequest},
+    coordinator::{CoordinatorMessage, SyncCoordinator, SyncRequest},
     executor_proxy::{ExecutorProxy, ExecutorProxyTrait},
     network::{StateSynchronizerEvents, StateSynchronizerSender},
     SynchronizerState,
@@ -16,8 +16,8 @@ use futures::{
 use libra_config::config::{NodeConfig, RoleType, StateSyncConfig, UpstreamConfig};
 use libra_mempool::{CommitNotification, CommitResponse};
 use libra_types::{
-    contract_event::ContractEvent, epoch_change::EpochChangeProof,
-    ledger_info::LedgerInfoWithSignatures, transaction::Transaction, waypoint::Waypoint, PeerId,
+    contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
+    waypoint::Waypoint, PeerId,
 };
 use std::{boxed::Box, collections::HashMap, sync::Arc, time::Duration};
 use storage_interface::DbReader;
@@ -183,26 +183,6 @@ impl StateSyncClient {
             sender.send(CoordinatorMessage::GetState(cb_sender)).await?;
             let info = cb_receiver.await?;
             Ok(info)
-        }
-    }
-
-    pub fn get_epoch_proof(
-        &self,
-        start_epoch: u64,
-        end_epoch: u64,
-    ) -> impl Future<Output = Result<EpochChangeProof>> {
-        let mut sender = self.coordinator_sender.clone();
-        let (cb_sender, cb_receiver) = oneshot::channel();
-        let request = EpochRetrievalRequest {
-            start_epoch,
-            end_epoch,
-            callback: cb_sender,
-        };
-        async move {
-            sender
-                .send(CoordinatorMessage::GetEpochProof(request))
-                .await?;
-            cb_receiver.await?
         }
     }
 }

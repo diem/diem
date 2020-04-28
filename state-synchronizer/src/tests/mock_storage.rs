@@ -9,7 +9,6 @@ use libra_types::{
     account_address::AccountAddress,
     account_config::lbr_type_tag,
     block_info::BlockInfo,
-    epoch_change::EpochChangeProof,
     epoch_info::EpochInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::ValidatorSet,
@@ -94,12 +93,8 @@ impl MockStorage {
         )
     }
 
-    pub fn get_epoch_changes(&self, known_epoch: u64) -> EpochChangeProof {
-        let mut epoch_change_lis = vec![];
-        for epoch_num in known_epoch..self.epoch_num() {
-            epoch_change_lis.push(self.ledger_infos.get(&epoch_num).unwrap().clone());
-        }
-        EpochChangeProof::new(epoch_change_lis, /* more = */ false)
+    pub fn get_epoch_changes(&self, known_epoch: u64) -> LedgerInfoWithSignatures {
+        self.ledger_infos.get(&known_epoch).unwrap().clone()
     }
 
     pub fn get_chunk(

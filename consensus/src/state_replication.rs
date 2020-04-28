@@ -72,7 +72,4 @@ pub trait StateComputer: Send + Sync {
     /// In case of failure (`Result::Error`) the LI of storage remains unchanged, and the validator
     /// can assume there were no modifications to the storage made.
     async fn sync_to(&self, target: LedgerInfoWithSignatures) -> Result<()>;
-
-    /// Generate the epoch change proof from start_epoch to the latest epoch.
-    async fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<EpochChangeProof>;
 }

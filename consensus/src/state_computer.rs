@@ -132,10 +132,4 @@ impl StateComputer for ExecutionProxy {
         self.executor.lock().unwrap().reset()?;
         res
     }
-
-    async fn get_epoch_proof(&self, start_epoch: u64, end_epoch: u64) -> Result<EpochChangeProof> {
-        self.synchronizer
-            .get_epoch_proof(start_epoch, end_epoch)
-            .await
-    }
 }
