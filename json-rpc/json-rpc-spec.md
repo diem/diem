@@ -573,9 +573,9 @@ A Libra account.
   <tr>
    <td>balance
    </td>
-   <td>integer
+   <td><a href="#amount---type">Amount</a>
    </td>
-   <td>Balance of given account in microlibra
+   <td>Balance of given account
    </td>
   </tr>
   <tr>
@@ -597,6 +597,43 @@ A Libra account.
 </table>
 
 
+##
+
+---
+
+
+
+## Amount - type
+
+### Attributes
+
+<table>
+  <tr>
+   <td><strong>Name</strong>
+   </td>
+   <td><strong>Type</strong>
+   </td>
+   <td><strong>Description</strong>
+   </td>
+  </tr>
+  <tr>
+   <td>amount
+   </td>
+   <td>u64
+   </td>
+   <td>
+    amount in currency microunits
+   </td>
+  </tr>
+  <tr>
+   <td>currency
+   </td>
+   <td>string
+   </td>
+   <td>currency string identifier
+   </td>
+  </tr>
+</table>
 
 ##
 
@@ -1169,7 +1206,7 @@ Event emitted when an account received a payment.
   <tr>
    <td><strong>amount</strong>
    </td>
-   <td>u64
+   <td><a href="#amount---type">Amount</a>
    </td>
    <td>Amount received from the sender of the transaction
    </td>
@@ -1231,7 +1268,7 @@ Event emitted when an account sends a payment.
   <tr>
    <td><strong>amount</strong>
    </td>
-   <td>integer
+   <td><a href="#amount---type">Amount</a>
    </td>
    <td>Amount transferred in a transaction
    </td>
