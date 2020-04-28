@@ -44,7 +44,7 @@ libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0"
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 
 futures = "0.3.0"
-tokio = { version = "0.2.13", features = ["full"] }
+tokio = { version = "0.2.19", features = ["full"] }
 async-trait = "0.1.30"
 
 kube = "0.32.0"

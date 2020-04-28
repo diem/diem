@@ -11,4 +11,4 @@ edition = "2018"
 
 [dependencies]
 libra-workspace-hack = { path = "..//workspace-hack", version = "0.1.0" }
-tokio = { version = "0.2.13", features = ["time"] }
+tokio = { version = "0.2.19", features = ["time"] }

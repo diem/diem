@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 futures = { version = "0.3.0"  }
 parity-multiaddr = { version = "0.8.0", default-features = false }
-tokio = { version = "0.2.13", features = ["full"] }
+tokio = { version = "0.2.19", features = ["full"] }
 tokio-util = { version = "0.3", features = ["codec"] }
 
 rand = "0.7.3"
