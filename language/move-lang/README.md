@@ -97,7 +97,7 @@ FLAGS:
 OPTIONS:
     -s, --sender <address>                             The sender address for modules and scripts
     -d, --dependencies <path-to-dependency-file>...    The library files needed as dependencies
-    -o, --out-dir <path-to-output-directory>           The move bytecode output directory [default: move_build_output]
+    -o, --out-dir <path-to-output-directory>           The Move Bytecode output directory [default: move_build_output]
     -f, --source-files <path-to-source-file>...        The source files to check and compile
 ```
 
