@@ -9,8 +9,8 @@ use crate::{
 use anyhow::{bail, ensure, format_err};
 use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash, HashValue};
 use libra_types::{
-    block_info::BlockInfo, block_metadata::BlockMetadata, ledger_info::LedgerInfo,
-    on_chain_config::ValidatorSet, transaction::Version, validator_signer::ValidatorSigner,
+    block_info::BlockInfo, block_metadata::BlockMetadata, epoch_info::EpochInfo,
+    ledger_info::LedgerInfo, transaction::Version, validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
 };
 use mirai_annotations::debug_checked_verify_eq;
@@ -107,7 +107,7 @@ impl<T> Block<T> {
         &self,
         executed_state_id: HashValue,
         version: Version,
-        next_validator_set: Option<ValidatorSet>,
+        next_epoch_info: Option<EpochInfo>,
     ) -> BlockInfo {
         BlockInfo::new(
             self.epoch(),
@@ -116,7 +116,7 @@ impl<T> Block<T> {
             executed_state_id,
             version,
             self.timestamp_usecs(),
-            next_validator_set,
+            next_epoch_info,
         )
     }
 }

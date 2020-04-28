@@ -760,7 +760,7 @@ impl<T: Payload> EventProcessor<T> {
                     .clone(),
             ),
             block.clone(),
-            executed_block.compute_result().validators().clone(),
+            executed_block.compute_result().epoch_info().clone(),
         );
 
         let vote = self
@@ -916,7 +916,7 @@ impl<T: Payload> EventProcessor<T> {
             }
         }
 
-        if finality_proof.ledger_info().next_validator_set().is_some() {
+        if finality_proof.ledger_info().next_epoch_info().is_some() {
             self.network
                 .broadcast_epoch_change(EpochChangeProof::new(
                     vec![finality_proof],

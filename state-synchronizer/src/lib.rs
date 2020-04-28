@@ -12,7 +12,6 @@ use libra_types::{
     account_address::AccountAddress, epoch_info::EpochInfo, ledger_info::LedgerInfoWithSignatures,
     validator_verifier::ValidatorVerifier,
 };
-use std::sync::Arc;
 pub use synchronizer::{StateSyncClient, StateSynchronizer};
 
 mod chunk_request;
@@ -46,19 +45,13 @@ impl SynchronizerState {
     pub fn new(
         highest_local_li: LedgerInfoWithSignatures,
         synced_trees: ExecutedTrees,
-        current_verifier: ValidatorVerifier,
+        current_epoch_info: EpochInfo,
     ) -> Self {
-        let current_epoch = highest_local_li.ledger_info().epoch();
-        let trusted_epoch = match highest_local_li.ledger_info().next_validator_set() {
-            Some(validator_set) => EpochInfo {
-                epoch: current_epoch + 1,
-                verifier: Arc::new(validator_set.into()),
-            },
-            None => EpochInfo {
-                epoch: current_epoch,
-                verifier: Arc::new(current_verifier),
-            },
-        };
+        let trusted_epoch = highest_local_li
+            .ledger_info()
+            .next_epoch_info()
+            .cloned()
+            .unwrap_or(current_epoch_info);
         SynchronizerState {
             highest_local_li,
             synced_trees,

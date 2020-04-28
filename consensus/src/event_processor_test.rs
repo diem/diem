@@ -63,7 +63,7 @@ pub struct NodeSetup {
     storage: Arc<MockStorage<TestPayload>>,
     signer: ValidatorSigner,
     proposer_author: Author,
-    validators: Arc<ValidatorVerifier>,
+    validators: ValidatorVerifier,
     safety_rules_manager: SafetyRulesManager<TestPayload>,
     all_events:
         Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg<TestPayload>>>> + Send + Unpin>,
@@ -130,7 +130,7 @@ impl NodeSetup {
     ) -> Self {
         let epoch_info = EpochInfo {
             epoch: 1,
-            verifier: Arc::new(storage.get_validator_set().into()),
+            verifier: storage.get_validator_set().into(),
         };
         let validators = epoch_info.verifier.clone();
         let (network_reqs_tx, network_reqs_rx) =
@@ -413,7 +413,7 @@ fn sync_info_carried_on_timeout_vote() {
             block_0.gen_block_info(
                 parent_block_info.executed_state_id(),
                 parent_block_info.version(),
-                parent_block_info.next_validator_set().cloned(),
+                parent_block_info.next_epoch_info().cloned(),
             ),
             parent_block_info.clone(),
             None,
@@ -726,7 +726,7 @@ fn sync_info_sent_on_stale_sync_info() {
         block_0.gen_block_info(
             parent_block_info.executed_state_id(),
             parent_block_info.version(),
-            parent_block_info.next_validator_set().cloned(),
+            parent_block_info.next_epoch_info().cloned(),
         ),
         parent_block_info.clone(),
         None,

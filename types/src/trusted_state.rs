@@ -3,13 +3,12 @@
 
 use crate::{
     epoch_change::{EpochChangeProof, VerifierType},
-    epoch_info::EpochInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::Version,
     waypoint::Waypoint,
 };
 use anyhow::{ensure, format_err, Result};
-use std::{convert::TryFrom, sync::Arc};
+use std::convert::TryFrom;
 
 /// `TrustedState` keeps track of our latest trusted state, including the latest
 /// verified version and the latest verified validator set.
@@ -85,19 +84,15 @@ impl TrustedState {
         {
             // Verify the EpochChangeProof to move us into the latest epoch.
             let epoch_change_li = epoch_change_proof.verify(&self.verifier)?;
-            let new_validator_set = epoch_change_li
+            let new_epoch_info = epoch_change_li
                 .ledger_info()
-                .next_validator_set()
+                .next_epoch_info()
+                .cloned()
                 .ok_or_else(|| {
                     format_err!(
                         "A valid EpochChangeProof will never return a non-epoch change ledger info"
                     )
                 })?;
-            let new_validator_verifier = Arc::new(new_validator_set.into());
-            let new_epoch_info = EpochInfo {
-                epoch: epoch_change_li.ledger_info().epoch() + 1,
-                verifier: new_validator_verifier,
-            };
 
             // Verify the latest ledger info inside the latest epoch.
             let new_verifier = VerifierType::TrustedVerifier(new_epoch_info);
@@ -163,20 +158,13 @@ impl TryFrom<&LedgerInfo> for TrustedState {
     type Error = anyhow::Error;
 
     fn try_from(ledger_info: &LedgerInfo) -> Result<Self> {
-        let validator_set = ledger_info.next_validator_set().ok_or_else(|| {
-            format_err!("No ValidatorSet in LedgerInfo; it must not be on an epoch boundary")
+        let epoch_info = ledger_info.next_epoch_info().cloned().ok_or_else(|| {
+            format_err!("No EpochInfo in LedgerInfo; it must not be on an epoch boundary")
         })?;
-
-        // Generate the EpochInfo from the new validator set.
-        let epoch_info = EpochInfo {
-            epoch: ledger_info.next_block_epoch(),
-            verifier: Arc::new(validator_set.into()),
-        };
-        let verifier = VerifierType::TrustedVerifier(epoch_info);
 
         Ok(Self {
             verified_state: Waypoint::new_epoch_boundary(ledger_info)?,
-            verifier,
+            verifier: VerifierType::TrustedVerifier(epoch_info),
         })
     }
 }

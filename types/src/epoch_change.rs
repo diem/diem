@@ -12,10 +12,7 @@ use anyhow::{ensure, format_err, Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::{collection::vec, prelude::*};
 use serde::{Deserialize, Serialize};
-use std::{
-    convert::{TryFrom, TryInto},
-    sync::Arc,
-};
+use std::convert::{TryFrom, TryInto};
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 /// A vector of LedgerInfo with contiguous increasing epoch numbers to prove a sequence of
@@ -44,7 +41,7 @@ impl VerifierType {
                     ledger_info.ledger_info().epoch(),
                     epoch_info.epoch
                 );
-                ledger_info.verify_signatures(epoch_info.verifier.as_ref())?;
+                ledger_info.verify_signatures(&epoch_info.verifier)?;
                 Ok(())
             }
         }
@@ -145,13 +142,9 @@ impl EpochChangeProof {
                 // trusted) validator sets.
                 ledger_info_with_sigs
                     .ledger_info()
-                    .next_validator_set()
-                    .map(|v| {
-                        VerifierType::TrustedVerifier(EpochInfo {
-                            epoch: ledger_info_with_sigs.ledger_info().epoch() + 1,
-                            verifier: Arc::new(v.into()),
-                        })
-                    })
+                    .next_epoch_info()
+                    .cloned()
+                    .map(VerifierType::TrustedVerifier)
                     .ok_or_else(|| format_err!("LedgerInfo doesn't carry a ValidatorSet"))
             })?;
 
@@ -218,14 +211,17 @@ mod tests {
         let mut validator_verifier = vec![];
 
         // We generate end-epoch ledger info for epoch 1 to 10, each signed by the current
-        // validator set and carrying the next validator set.
+        // validator set and carrying the next epoch info.
         let (mut current_signers, mut current_verifier) = random_validator_verifier(1, None, true);
         let mut current_version = 123;
         for epoch in &all_epoch {
             validator_verifier.push(current_verifier.clone());
             let (next_signers, next_verifier) =
                 random_validator_verifier((*epoch + 1) as usize, None, true);
-            let validator_set = Some((&next_verifier).into());
+            let epoch_info = EpochInfo {
+                epoch: *epoch + 1,
+                verifier: next_verifier.clone(),
+            };
             let ledger_info = LedgerInfo::new(
                 BlockInfo::new(
                     *epoch,
@@ -234,7 +230,7 @@ mod tests {
                     HashValue::zero(),
                     current_version,
                     0,
-                    validator_set,
+                    Some(epoch_info),
                 ),
                 HashValue::zero(),
             );
@@ -253,7 +249,7 @@ mod tests {
         assert!(proof_1
             .verify(&VerifierType::TrustedVerifier(EpochInfo {
                 epoch: all_epoch[0],
-                verifier: Arc::new(validator_verifier[0].clone())
+                verifier: validator_verifier[0].clone(),
             }))
             .is_ok());
 
@@ -262,7 +258,7 @@ mod tests {
         assert!(proof_2
             .verify(&VerifierType::TrustedVerifier(EpochInfo {
                 epoch: all_epoch[2],
-                verifier: Arc::new(validator_verifier[2].clone())
+                verifier: validator_verifier[2].clone()
             }))
             .is_ok());
 
@@ -270,7 +266,7 @@ mod tests {
         assert!(proof_1
             .verify(&VerifierType::TrustedVerifier(EpochInfo {
                 epoch: all_epoch[4],
-                verifier: Arc::new(validator_verifier[4].clone())
+                verifier: validator_verifier[4].clone()
             }))
             .is_ok());
 
@@ -279,7 +275,7 @@ mod tests {
         assert!(proof_3
             .verify(&VerifierType::TrustedVerifier(EpochInfo {
                 epoch: all_epoch[0],
-                verifier: Arc::new(validator_verifier[0].clone())
+                verifier: validator_verifier[0].clone()
             }))
             .is_err());
 
@@ -290,7 +286,7 @@ mod tests {
         assert!(proof_4
             .verify(&VerifierType::TrustedVerifier(EpochInfo {
                 epoch: all_epoch[3],
-                verifier: Arc::new(validator_verifier[3].clone())
+                verifier: validator_verifier[3].clone()
             }))
             .is_err());
 
@@ -301,7 +297,7 @@ mod tests {
         assert!(proof_5
             .verify(&VerifierType::TrustedVerifier(EpochInfo {
                 epoch: all_epoch[9],
-                verifier: Arc::new(validator_verifier[9].clone())
+                verifier: validator_verifier[9].clone()
             }))
             .is_err());
 
@@ -316,7 +312,7 @@ mod tests {
         assert!(proof_6
             .verify(&VerifierType::TrustedVerifier(EpochInfo {
                 epoch: all_epoch[0],
-                verifier: Arc::new(validator_verifier[0].clone())
+                verifier: validator_verifier[0].clone()
             }))
             .is_err());
 

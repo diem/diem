@@ -57,12 +57,7 @@ fn print_head(db: &LibraDB) -> Result<()> {
 
     info!("Signatures: {:?}", si.latest_ledger_info.signatures());
 
-    info!(
-        "Current Validator Set: {}",
-        si.latest_validator_set
-            .as_ref()
-            .expect("Unable to determine validator set, DB incorrect")
-    );
+    info!("Current EpochInfo: {}", si.get_epoch_info());
 
     let backup = db.get_backup_handler();
     let iter = backup.get_account_iter(version)?;

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{ledger_info::LedgerInfo, on_chain_config::ValidatorSet, transaction::Version};
+use crate::{epoch_info::EpochInfo, ledger_info::LedgerInfo, transaction::Version};
 use anyhow::{ensure, format_err, Error, Result};
 use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue};
 use libra_crypto_derive::CryptoHasher;
@@ -38,10 +38,7 @@ impl Waypoint {
 
     /// Generates a new waypoint given the epoch change LedgerInfo.
     pub fn new_epoch_boundary(ledger_info: &LedgerInfo) -> Result<Self> {
-        ensure!(
-            ledger_info.next_validator_set().is_some(),
-            "No validator set"
-        );
+        ensure!(ledger_info.next_epoch_info().is_some(), "No validator set");
         Ok(Self::new_any(ledger_info))
     }
 
@@ -113,7 +110,7 @@ struct Ledger2WaypointConverter {
     root_hash: HashValue,
     version: Version,
     timestamp_usecs: u64,
-    next_validator_set: Option<ValidatorSet>,
+    next_epoch_info: Option<EpochInfo>,
 }
 
 impl Ledger2WaypointConverter {
@@ -123,7 +120,7 @@ impl Ledger2WaypointConverter {
             root_hash: ledger_info.transaction_accumulator_hash(),
             version: ledger_info.version(),
             timestamp_usecs: ledger_info.timestamp_usecs(),
-            next_validator_set: ledger_info.next_validator_set().cloned(),
+            next_epoch_info: ledger_info.next_epoch_info().cloned(),
         }
     }
 }
@@ -168,7 +165,7 @@ mod test {
                 HashValue::random(),
                 123,
                 1000,
-                Some(ValidatorSet::new(vec![])),
+                Some(EpochInfo::empty()),
             ),
             HashValue::zero(),
         );

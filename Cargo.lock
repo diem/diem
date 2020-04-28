@@ -4994,6 +4994,7 @@ name = "storage-proto"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.28 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-canonical-serialization 0.1.0",
  "libra-crypto 0.1.0",
  "libra-prost-ext 0.1.0",
  "libra-types 0.1.0",

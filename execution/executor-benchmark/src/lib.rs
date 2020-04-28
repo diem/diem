@@ -221,7 +221,7 @@ impl TransactionExecutor {
                 output.root_hash(),
                 version,
                 0,    /* timestamp_usecs, doesn't matter */
-                None, /* next_validator_set */
+                None, /* next_epoch_info */
             );
             let ledger_info = LedgerInfo::new(
                 block_info,

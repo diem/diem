@@ -369,7 +369,6 @@ mod tests {
         let mut nodes = Vec::new();
         let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
         let peers: Vec<_> = signers.iter().map(|signer| signer.author()).collect();
-        let validators = Arc::new(validator_verifier);
         for peer in &peers {
             let (network_reqs_tx, network_reqs_rx) =
                 libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
@@ -388,8 +387,12 @@ mod tests {
 
             playground.add_node(*peer, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
             let (self_sender, self_receiver) = channel::new_test(8);
-            let node =
-                NetworkSender::new(*peer, network_sender, self_sender, Arc::clone(&validators));
+            let node = NetworkSender::new(
+                *peer,
+                network_sender,
+                self_sender,
+                validator_verifier.clone(),
+            );
             let (task, receiver) = NetworkTask::new(network_events, self_receiver);
             receivers.push(receiver);
             runtime.handle().spawn(task.start());
@@ -446,7 +449,6 @@ mod tests {
         let mut playground = NetworkPlayground::new(runtime.handle().clone());
         let mut nodes = Vec::new();
         let (signers, validator_verifier) = random_validator_verifier(num_nodes, None, false);
-        let validators = Arc::new(validator_verifier);
         let peers: Vec<_> = signers.iter().map(|signer| signer.author()).collect();
         for peer in peers.iter() {
             let (network_reqs_tx, network_reqs_rx) =
@@ -470,7 +472,7 @@ mod tests {
                 *peer,
                 network_sender.clone(),
                 self_sender,
-                Arc::clone(&validators),
+                validator_verifier.clone(),
             );
             let (task, receiver) = NetworkTask::new(network_events, self_receiver);
             senders.push(network_sender);

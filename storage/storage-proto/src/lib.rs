@@ -32,6 +32,7 @@ use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
+    epoch_info::EpochInfo,
     ledger_info::LedgerInfoWithSignatures,
     proof::{SparseMerkleProof, SparseMerkleRangeProof},
     transaction::{
@@ -535,10 +536,7 @@ impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
             .latest_ledger_info
             .ok_or_else(|| format_err!("Missing latest_ledger_info"))?
             .try_into()?;
-        let latest_validator_set = proto
-            .latest_validator_set
-            .map(TryInto::try_into)
-            .transpose()?;
+        let latest_epoch_info: Option<EpochInfo> = lcs::from_bytes(&proto.latest_epoch_info)?;
         let committed_tree_state = proto
             .committed_tree_state
             .ok_or_else(|| format_err!("Missing committed_tree_state"))?
@@ -546,17 +544,14 @@ impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
         let synced_tree_state = proto.synced_tree_state.map(TryInto::try_into).transpose()?;
 
         ensure!(
-            latest_ledger_info
-                .ledger_info()
-                .next_validator_set()
-                .is_some()
-                != latest_validator_set.is_some(),
+            latest_ledger_info.ledger_info().next_epoch_info().is_some()
+                != latest_epoch_info.is_some(),
             "Only one validator set should exist.",
         );
 
         Ok(Self {
             latest_ledger_info,
-            latest_validator_set,
+            latest_epoch_info,
             committed_tree_state,
             synced_tree_state,
         })
@@ -566,13 +561,14 @@ impl TryFrom<crate::proto::storage::StartupInfo> for StartupInfo {
 impl From<StartupInfo> for crate::proto::storage::StartupInfo {
     fn from(info: StartupInfo) -> Self {
         let latest_ledger_info = Some(info.latest_ledger_info.into());
-        let latest_validator_set = info.latest_validator_set.map(Into::into);
+        let latest_epoch_info =
+            lcs::to_bytes(&info.latest_epoch_info).expect("failed to serialize EpochInfo");
         let committed_tree_state = Some(info.committed_tree_state.into());
         let synced_tree_state = info.synced_tree_state.map(Into::into);
 
         Self {
             latest_ledger_info,
-            latest_validator_set,
+            latest_epoch_info,
             committed_tree_state,
             synced_tree_state,
         }

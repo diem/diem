@@ -18,9 +18,9 @@ use debug_interface::prelude::*;
 use executor_types::StateComputeResult;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
-use libra_types::ledger_info::LedgerInfoWithSignatures;
 #[cfg(any(test, feature = "fuzzing"))]
-use libra_types::on_chain_config::ValidatorSet;
+use libra_types::epoch_info::EpochInfo;
+use libra_types::ledger_info::LedgerInfoWithSignatures;
 use std::{
     collections::{vec_deque::VecDeque, HashMap},
     sync::{Arc, RwLock},
@@ -275,7 +275,7 @@ impl<T: Payload> BlockStore<T> {
                 parent_block.compute_result().root_hash(),
                 parent_block.compute_result().frozen_subtree_roots().clone(),
                 parent_block.compute_result().num_leaves(),
-                parent_block.compute_result().validators().clone(),
+                parent_block.compute_result().epoch_info().clone(),
                 vec![], /* compute_status */
                 vec![], /* transaction_info_hashes */
             )
@@ -447,7 +447,7 @@ impl<T: Payload> BlockStore<T> {
                     compute_result.root_hash(),
                     compute_result.frozen_subtree_roots().clone(),
                     compute_result.num_leaves(),
-                    Some(ValidatorSet::new(vec![])),
+                    Some(EpochInfo::empty()),
                     compute_result.compute_status().clone(),
                     compute_result.transaction_info_hashes().clone(),
                 ),

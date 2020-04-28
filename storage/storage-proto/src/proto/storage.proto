@@ -157,10 +157,9 @@ message StartupInfo {
   // incomplete start up sync.
   types.LedgerInfoWithSignatures latest_ledger_info = 1;
 
-  // If the above LedgerInfo doesn't carry a validator set (which is normally
-  // the case unless the above is on an epoch boundary), the latest validator
-  // set.
-  types.ValidatorSet latest_validator_set = 2;
+  // If the above LedgerInfo doesn't carry a epoch info (which is normally
+  // the case unless the above is on an epoch boundary), the latest epoch info.
+  bytes latest_epoch_info = 2;
 
   // The latest committed tree state matching the ledger info above.
   TreeState committed_tree_state = 3;

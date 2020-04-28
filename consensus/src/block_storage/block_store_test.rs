@@ -267,7 +267,7 @@ fn test_insert_vote() {
                 block.block().gen_block_info(
                     block.compute_result().root_hash(),
                     block.compute_result().version(),
-                    block.compute_result().validators().clone(),
+                    block.compute_result().epoch_info().clone(),
                 ),
                 block.quorum_cert().certified_block().clone(),
             ),
@@ -295,7 +295,7 @@ fn test_insert_vote() {
             block.block().gen_block_info(
                 block.compute_result().root_hash(),
                 block.compute_result().version(),
-                block.compute_result().validators().clone(),
+                block.compute_result().epoch_info().clone(),
             ),
             block.quorum_cert().certified_block().clone(),
         ),
