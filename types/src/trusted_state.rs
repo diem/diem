@@ -95,7 +95,7 @@ impl TrustedState {
                 })?;
 
             // Verify the latest ledger info inside the latest epoch.
-            let new_verifier = VerifierType::TrustedVerifier(new_epoch_info);
+            let new_verifier = VerifierType::TrustedEpoch(new_epoch_info);
 
             // If these are the same, then we do not have a LI for the next Epoch and hence there
             // is nothing to verify.
@@ -164,7 +164,7 @@ impl TryFrom<&LedgerInfo> for TrustedState {
 
         Ok(Self {
             verified_state: Waypoint::new_epoch_boundary(ledger_info)?,
-            verifier: VerifierType::TrustedVerifier(epoch_info),
+            verifier: VerifierType::TrustedEpoch(epoch_info),
         })
     }
 }

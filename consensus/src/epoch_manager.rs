@@ -187,9 +187,9 @@ impl<T: Payload> EpochManager<T> {
         peer_id: AccountAddress,
     ) {
         let proof = match self
-            .state_computer
-            .get_epoch_proof(request.start_epoch, request.end_epoch)
-            .await
+            .storage
+            .libra_db()
+            .get_epoch_change_ledger_infos(request.start_epoch, request.end_epoch)
         {
             Ok(proof) => proof,
             Err(e) => {
@@ -240,7 +240,7 @@ impl<T: Payload> EpochManager<T> {
     }
 
     async fn start_new_epoch(&mut self, proof: EpochChangeProof) {
-        let verifier = VerifierType::TrustedVerifier(self.epoch_info().clone());
+        let verifier = VerifierType::TrustedEpoch(self.epoch_info().clone());
         let ledger_info = match proof.verify(&verifier) {
             Ok(ledger_info) => ledger_info,
             Err(e) => {

@@ -213,8 +213,7 @@ impl LibraClient {
                 latest_epoch_change_li,
             } => {
                 info!(
-                    "Verified epoch change to epoch: {}, validator set: [{}]",
-                    latest_epoch_change_li.ledger_info().epoch(),
+                    "Verified epoch change to {}",
                     latest_epoch_change_li
                         .ledger_info()
                         .next_epoch_info()

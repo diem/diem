@@ -106,16 +106,6 @@ impl StateComputer for MockStateComputer {
             .expect("Fail to notify about sync");
         Ok(())
     }
-
-    async fn get_epoch_proof(
-        &self,
-        _start_epoch: u64,
-        _end_epoch: u64,
-    ) -> Result<EpochChangeProof> {
-        Err(format_err!(
-            "epoch proof not supported in mock state computer"
-        ))
-    }
 }
 
 pub struct EmptyStateComputer;
@@ -149,15 +139,5 @@ impl StateComputer for EmptyStateComputer {
 
     async fn sync_to(&self, _commit: LedgerInfoWithSignatures) -> Result<()> {
         Ok(())
-    }
-
-    async fn get_epoch_proof(
-        &self,
-        _start_epoch: u64,
-        _end_epoch: u64,
-    ) -> Result<EpochChangeProof> {
-        Err(format_err!(
-            "epoch proof not supported in empty state computer"
-        ))
     }
 }

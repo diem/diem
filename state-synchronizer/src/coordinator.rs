@@ -21,7 +21,7 @@ use libra_logger::prelude::*;
 use libra_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
 use libra_types::{
     contract_event::ContractEvent,
-    epoch_change::{EpochChangeProof, VerifierType},
+    epoch_change::VerifierType,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{Transaction, TransactionListWithProof, Version},
     waypoint::Waypoint,
@@ -40,12 +40,6 @@ pub(crate) struct SyncRequest {
     pub target: LedgerInfoWithSignatures,
 }
 
-pub(crate) struct EpochRetrievalRequest {
-    pub start_epoch: u64,
-    pub end_epoch: u64,
-    pub callback: oneshot::Sender<Result<EpochChangeProof>>,
-}
-
 /// message used by StateSyncClient for communication with Coordinator
 pub(crate) enum CoordinatorMessage {
     // used to initiate new sync
@@ -60,8 +54,6 @@ pub(crate) enum CoordinatorMessage {
         oneshot::Sender<Result<CommitResponse>>,
     ),
     GetState(oneshot::Sender<SynchronizerState>),
-    // used to generate epoch proof
-    GetEpochProof(EpochRetrievalRequest),
     // Receive a notification via a given channel when coordinator is initialized.
     WaitInitialize(oneshot::Sender<Result<()>>),
 }
@@ -181,9 +173,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                         }
                         CoordinatorMessage::GetState(callback) => {
                             self.get_state(callback);
-                        }
-                        CoordinatorMessage::GetEpochProof(request) => {
-                            self.get_epoch_proof(request);
                         }
                         CoordinatorMessage::WaitInitialize(cb_sender) => {
                             self.set_initialization_listener(cb_sender);
@@ -553,19 +542,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         // Txns are up to the end of request epoch with the proofs relative to the waypoint LI.
         let end_of_epoch_li = if waypoint_li.ledger_info().epoch() > request.current_epoch {
-            Some(
-                self.executor_proxy
-                    .get_epoch_proof(request.current_epoch, request.current_epoch + 1)?
-                    .ledger_info_with_sigs
-                    .first()
-                    .ok_or_else(|| {
-                        format_err!(
-                            "No end of epoch LedgerInfo found for epoch {}",
-                            request.current_epoch
-                        )
-                    })?
-                    .clone(),
-            )
+            Some(self.executor_proxy.get_epoch_proof(request.current_epoch)?)
         } else {
             None
         };
@@ -623,18 +600,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     ) -> Result<LedgerInfoWithSignatures> {
         let mut target_li = target.unwrap_or_else(|| self.local_state.highest_local_li.clone());
         if target_li.ledger_info().epoch() > request_epoch {
-            let end_of_epoch_li = self
-                .executor_proxy
-                .get_epoch_proof(request_epoch, request_epoch + 1)?
-                .ledger_info_with_sigs
-                .first()
-                .ok_or_else(|| {
-                    format_err!(
-                        "[state sync] Fail to retrieve end of epoch LI for epoch {}",
-                        request_epoch
-                    )
-                })?
-                .clone();
+            let end_of_epoch_li = self.executor_proxy.get_epoch_proof(request_epoch)?;
             debug!("[state sync] Chunk response for known_version = {} is limited to the last txn of epoch {} at version {}", known_version, request_epoch, end_of_epoch_li.ledger_info().version());
             target_li = end_of_epoch_li;
         }
@@ -752,7 +718,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             self.local_state.epoch()
         };
         self.send_chunk_request(new_version, new_epoch)?;
-        let verifier = VerifierType::TrustedVerifier(self.local_state.trusted_epoch.clone());
+        let verifier = VerifierType::TrustedEpoch(self.local_state.trusted_epoch.clone());
         verifier.verify(&response_li)?;
         self.validate_and_store_chunk(txn_list_with_proof, response_li, None)
     }
@@ -953,18 +919,5 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 error!("[state sync] failed to notify subscriber {}", err);
             }
         });
-    }
-
-    fn get_epoch_proof(&self, request: EpochRetrievalRequest) {
-        if request
-            .callback
-            .send(
-                self.executor_proxy
-                    .get_epoch_proof(request.start_epoch, request.end_epoch),
-            )
-            .is_err()
-        {
-            error!("[state sync] coordinator failed to send back epoch proof");
-        }
     }
 }
