@@ -226,6 +226,10 @@ fn create_and_initialize_main_accounts(
     let mut txn_data = TransactionMetadata::default();
     txn_data.sender = association_addr;
 
+    let burn_account_address = account_config::burn_account_address();
+    let mut burn_txn_data = TransactionMetadata::default();
+    burn_txn_data.sender = burn_account_address;
+
     {
         // Association module setup
         move_vm
@@ -273,6 +277,34 @@ fn create_and_initialize_main_accounts(
     }
 
     {
+        // Initialize burn account
+
+        move_vm
+            .execute_function(
+                &module("Association"),
+                &name("apply_for_association"),
+                gas_schedule,
+                interpreter_context,
+                &burn_txn_data,
+                vec![],
+                vec![],
+            )
+            .expect("Unable to create burn account - apply_for_association failed in genesis");
+
+        move_vm
+            .execute_function(
+                &module("Association"),
+                &name("grant_association_address"),
+                gas_schedule,
+                interpreter_context,
+                &txn_data,
+                vec![],
+                vec![Value::address(burn_account_address)],
+            )
+            .expect("Unable to create burn account - grant_association_address failed in genesis");
+    }
+
+    {
         // Initialize currencies
         move_vm
             .execute_function(
@@ -311,6 +343,27 @@ fn create_and_initialize_main_accounts(
                     vec![],
                 )
                 .unwrap_or_else(|e| panic!("Failure initializing currency {}: {}", currency, e));
+
+            let currency_type = TypeTag::Struct(StructTag {
+                address: account_config::CORE_CODE_ADDRESS,
+                module: name(currency),
+                name: name("T"),
+                type_params: vec![],
+            });
+
+            move_vm
+                .execute_function(
+                    &module("Libra"),
+                    &name("grant_burn_capability_for_sender"),
+                    gas_schedule,
+                    interpreter_context,
+                    &burn_txn_data,
+                    vec![currency_type],
+                    vec![],
+                )
+                .expect(
+                    "Unable to create burn account - grant_burn_capability_for_sender failed in genesis",
+                );
         }
     }
 
@@ -415,6 +468,27 @@ fn create_and_initialize_main_accounts(
             panic!(
                 "Failure creating association account {:?}: {}",
                 association_addr, e
+            )
+        });
+
+    // create burn account
+    move_vm
+        .execute_function(
+            &account_config::ACCOUNT_MODULE,
+            &CREATE_ACCOUNT_NAME,
+            gas_schedule,
+            interpreter_context,
+            &txn_data,
+            vec![lbr_ty.clone()],
+            vec![
+                Value::address(burn_account_address),
+                Value::vector_u8(burn_account_address.to_vec()),
+            ],
+        )
+        .unwrap_or_else(|e| {
+            panic!(
+                "Failure creating burn account {:?}: {}",
+                burn_account_address, e
             )
         });
 
@@ -585,6 +659,19 @@ fn create_and_initialize_main_accounts(
             vec![Value::vector_u8(genesis_auth_key)],
         )
         .expect("Failure rotating association key");
+
+    let genesis_auth_key = AuthenticationKey::ed25519(public_key).to_vec();
+    move_vm
+        .execute_function(
+            &account_config::ACCOUNT_MODULE,
+            &ROTATE_AUTHENTICATION_KEY,
+            &gas_schedule,
+            interpreter_context,
+            &burn_txn_data,
+            vec![],
+            vec![Value::vector_u8(genesis_auth_key)],
+        )
+        .expect("Failure rotating burn account key");
 
     // Bump the sequence number for the Association account. If we don't do this and a
     // subsequent transaction (e.g., minting) is sent from the Assocation account, a problem

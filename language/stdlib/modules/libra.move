@@ -147,6 +147,11 @@ module Libra {
         BurnCapability<CoinType> { }
     }
 
+    public fun grant_burn_capability_for_sender<CoinType>() {
+        Transaction::assert(Transaction::sender() == 0xD1E, 0);
+        move_to_sender(grant_burn_capability<CoinType>());
+    }
+
     // Return `amount` coins.
     // Fails if the sender does not have a published MintCapability.
     public fun mint<Token>(amount: u64): T<Token> acquires CurrencyInfo, MintCapability {
