@@ -24,6 +24,7 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey,
 };
+use libra_logger::info;
 use libra_secure_storage::Storage;
 use libra_secure_time::TimeService;
 use libra_types::{
@@ -73,7 +74,7 @@ pub enum Error {
         "The libra_timestamp value on-chain isn't increasing. Last value: {0}, Current value: {0}:"
     )]
     LivenessError(u64, u64),
-    #[error("Internal storage error")]
+    #[error("Internal storage error: {0}")]
     SecureStorageError(#[from] libra_secure_storage::Error),
     #[error("ValidatorInfo not found in ValidatorConfig: {0}")]
     ValidatorInfoNotFound(AccountAddress),
@@ -115,8 +116,12 @@ where
     /// initiate a key rotation when required. If something goes wrong, an error will be returned
     /// by this method, upon which the key manager will flag the error and stop execution.
     pub fn execute(&mut self) -> Result<(), Error> {
+        info!("The key manager has been created and is starting execution.");
         loop {
+            info!("Checking the status of the keys.");
             self.execute_once()?;
+
+            info!("Going to sleep for {} seconds.", SLEEP_PERIOD_SECS);
             self.time_service.sleep(SLEEP_PERIOD_SECS);
         }
     }
@@ -126,7 +131,10 @@ where
     pub fn execute_once(&mut self) -> Result<(), Error> {
         let status = self.evaluate_status()?;
         if status != Action::NoAction {
+            info!("The following actions need to be performed: {:?}.", status);
             self.perform_action(status)?;
+        } else {
+            info!("No actions need to be performed.");
         }
         Ok(())
     }
@@ -176,6 +184,7 @@ where
 
     pub fn rotate_consensus_key(&mut self) -> Result<Ed25519PublicKey, Error> {
         let new_key = self.storage.rotate_key(CONSENSUS_KEY)?;
+        info!("Successfully rotated the consensus key in secure storage.");
         self.submit_key_rotation_transaction(new_key)
     }
 
@@ -189,6 +198,8 @@ where
         let txn =
             build_rotation_transaction(self.account, seq_id, &account_prikey, &new_key, expiration);
         self.libra.submit_transaction(txn)?;
+
+        info!("Submitted the rotation transaction to the blockchain.");
         Ok(new_key)
     }
 

@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use std::net::SocketAddr;
+use std::{net::SocketAddr, path::PathBuf};
 
-const DEFAULT_JSON_RPC_ADDR :&str = "127.0.0.1";
+const DEFAULT_JSON_RPC_ADDR: &str = "127.0.0.1";
 const DEFAULT_JSON_RPC_PORT: u16 = 8080;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -17,7 +16,7 @@ pub struct SecureConfig {
 impl Default for SecureConfig {
     fn default() -> Self {
         Self {
-            key_manager : KeyManagerConfig::default(),
+            key_manager: KeyManagerConfig::default(),
         }
     }
 }
@@ -35,7 +34,7 @@ impl Default for KeyManagerConfig {
             json_rpc_address: format!("{}:{}", DEFAULT_JSON_RPC_ADDR, DEFAULT_JSON_RPC_PORT)
                 .parse()
                 .unwrap(),
-            secure_backend : SecureBackend::InMemoryStorage,
+            secure_backend: SecureBackend::InMemoryStorage,
         }
     }
 }
