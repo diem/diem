@@ -9,7 +9,6 @@ use executor_types::StateComputeResult;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
-    epoch_change::EpochChangeProof,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{SignedTransaction, Transaction},
 };

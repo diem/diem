@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    epoch_change::{EpochChangeProof, VerifierType},
+    epoch_change::{EpochChangeProof, Verifier},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::Version,
     waypoint::Waypoint,
 };
 use anyhow::{ensure, format_err, Result};
-use std::convert::TryFrom;
+use std::{convert::TryFrom, sync::Arc};
 
 /// `TrustedState` keeps track of our latest trusted state, including the latest
 /// verified version and the latest verified validator set.
@@ -20,7 +20,7 @@ pub struct TrustedState {
     /// The current verifier. If we're starting up fresh, this is probably a
     /// waypoint from our config. Otherwise, this is generated from the validator
     /// set in the last known epoch change ledger info.
-    verifier: VerifierType,
+    verifier: Arc<dyn Verifier>,
 }
 
 /// `TrustedStateChange` is the result of attempting to ratchet to a new trusted
@@ -83,7 +83,7 @@ impl TrustedState {
             .epoch_change_verification_required(latest_li.ledger_info().next_block_epoch())
         {
             // Verify the EpochChangeProof to move us into the latest epoch.
-            let epoch_change_li = epoch_change_proof.verify(&self.verifier)?;
+            let epoch_change_li = epoch_change_proof.verify(self.verifier.as_ref())?;
             let new_epoch_info = epoch_change_li
                 .ledger_info()
                 .next_epoch_info()
@@ -95,7 +95,7 @@ impl TrustedState {
                 })?;
 
             // Verify the latest ledger info inside the latest epoch.
-            let new_verifier = VerifierType::TrustedEpoch(new_epoch_info);
+            let new_verifier = Arc::new(new_epoch_info);
 
             // If these are the same, then we do not have a LI for the next Epoch and hence there
             // is nothing to verify.
@@ -139,17 +139,13 @@ impl TrustedState {
     pub fn latest_version(&self) -> Version {
         self.verified_state.version()
     }
-
-    pub fn verifier(&self) -> &VerifierType {
-        &self.verifier
-    }
 }
 
 impl From<Waypoint> for TrustedState {
     fn from(waypoint: Waypoint) -> Self {
         Self {
             verified_state: waypoint,
-            verifier: VerifierType::Waypoint(waypoint),
+            verifier: Arc::new(waypoint),
         }
     }
 }
@@ -164,7 +160,7 @@ impl TryFrom<&LedgerInfo> for TrustedState {
 
         Ok(Self {
             verified_state: Waypoint::new_epoch_boundary(ledger_info)?,
-            verifier: VerifierType::TrustedEpoch(epoch_info),
+            verifier: Arc::new(epoch_info),
         })
     }
 }

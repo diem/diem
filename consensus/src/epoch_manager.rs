@@ -30,7 +30,7 @@ use libra_config::config::{ConsensusConfig, ConsensusProposerType, NodeConfig};
 use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
-    epoch_change::{EpochChangeProof, VerifierType},
+    epoch_change::EpochChangeProof,
     epoch_info::EpochInfo,
     on_chain_config::{OnChainConfigPayload, ValidatorSet},
 };
@@ -240,8 +240,7 @@ impl<T: Payload> EpochManager<T> {
     }
 
     async fn start_new_epoch(&mut self, proof: EpochChangeProof) {
-        let verifier = VerifierType::TrustedEpoch(self.epoch_info().clone());
-        let ledger_info = match proof.verify(&verifier) {
+        let ledger_info = match proof.verify(self.epoch_info()) {
             Ok(ledger_info) => ledger_info,
             Err(e) => {
                 error!("Invalid EpochChangeProof: {:?}", e);
