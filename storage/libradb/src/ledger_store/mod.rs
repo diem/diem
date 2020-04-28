@@ -22,8 +22,8 @@ use libra_crypto::{
     HashValue,
 };
 use libra_types::{
+    epoch_info::EpochInfo,
     ledger_info::LedgerInfoWithSignatures,
-    on_chain_config::ValidatorSet,
     proof::{
         definition::LeafCount, position::Position, AccumulatorConsistencyProof,
         TransactionAccumulatorProof, TransactionAccumulatorRangeProof,
@@ -122,9 +122,9 @@ impl LedgerStore {
             ensure!(
                 ledger_info_with_sigs
                     .ledger_info()
-                    .next_validator_set()
+                    .next_epoch_info()
                     .is_some(),
-                "DB corruption: the last ledger info of epoch {} is missing next validator set",
+                "DB corruption: the last ledger info of epoch {} is missing next epoch info",
                 epoch,
             );
             results.push(ledger_info_with_sigs);
@@ -149,8 +149,8 @@ impl LedgerStore {
             .store(Arc::new(Some(ledger_info_with_sigs)));
     }
 
-    fn get_validator_set(&self, epoch: u64) -> Result<ValidatorSet> {
-        ensure!(epoch > 0, "ValidatorSet only queryable for epoch >= 1.",);
+    fn get_epoch_info(&self, epoch: u64) -> Result<EpochInfo> {
+        ensure!(epoch > 0, "EpochInfo only queryable for epoch >= 1.",);
 
         let ledger_info_with_sigs =
             self.db
@@ -158,14 +158,12 @@ impl LedgerStore {
                 .ok_or_else(|| {
                     LibraDbError::NotFound(format!("Last LedgerInfo of epoch {}", epoch - 1))
                 })?;
-        let latest_validator_set = ledger_info_with_sigs
+        let latest_epoch_info = ledger_info_with_sigs
             .ledger_info()
-            .next_validator_set()
-            .ok_or_else(|| {
-                format_err!("Last LedgerInfo in epoch must carry next_validator_set.")
-            })?;
+            .next_epoch_info()
+            .ok_or_else(|| format_err!("Last LedgerInfo in epoch must carry next_epoch_info."))?;
 
-        Ok(latest_validator_set.clone())
+        Ok(latest_epoch_info.clone())
     }
 
     pub fn get_tree_state(
@@ -186,12 +184,12 @@ impl LedgerStore {
             Some(x) => x,
             None => return Ok(None),
         };
-        let latest_validator_set_if_not_in_li =
-            match latest_ledger_info.ledger_info().next_validator_set() {
+        let latest_epoch_info_if_not_in_li =
+            match latest_ledger_info.ledger_info().next_epoch_info() {
                 Some(_) => None,
                 // If the latest LedgerInfo doesn't carry a validator set, we look for the previous
                 // LedgerInfo which should always carry a validator set.
-                None => Some(self.get_validator_set(latest_ledger_info.ledger_info().epoch())?),
+                None => Some(self.get_epoch_info(latest_ledger_info.ledger_info().epoch())?),
             };
 
         let li_version = latest_ledger_info.ledger_info().version();
@@ -212,7 +210,7 @@ impl LedgerStore {
 
         Ok(Some(StartupInfo::new(
             latest_ledger_info,
-            latest_validator_set_if_not_in_li,
+            latest_epoch_info_if_not_in_li,
             commited_tree_state,
             synced_tree_state,
         )))
@@ -343,7 +341,7 @@ impl LedgerStore {
     ) -> Result<()> {
         let ledger_info = ledger_info_with_sigs.ledger_info();
 
-        if ledger_info.next_validator_set().is_some() {
+        if ledger_info.next_epoch_info().is_some() {
             // This is the last version of the current epoch, update the epoch by version index.
             cs.batch
                 .put::<EpochByVersionSchema>(&ledger_info.version(), &ledger_info.epoch())?;

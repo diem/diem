@@ -2,21 +2,25 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::validator_verifier::ValidatorVerifier;
-use std::{collections::BTreeMap, fmt, sync::Arc};
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest_derive::Arbitrary;
+use serde::{Deserialize, Serialize};
+use std::{collections::BTreeMap, fmt};
 
-#[derive(Clone, Debug)]
 /// EpochInfo represents a trusted validator set to validate messages from the specific epoch,
 /// it could be updated with EpochChangeProof.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct EpochInfo {
     pub epoch: u64,
-    pub verifier: Arc<ValidatorVerifier>,
+    pub verifier: ValidatorVerifier,
 }
 
 impl EpochInfo {
     pub fn empty() -> Self {
         Self {
             epoch: 0,
-            verifier: Arc::new(ValidatorVerifier::new(BTreeMap::new())),
+            verifier: ValidatorVerifier::new(BTreeMap::new()),
         }
     }
 }

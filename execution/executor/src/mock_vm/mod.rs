@@ -9,12 +9,12 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config,
-    account_config::validator_set_address,
+    account_config::{association_address, validator_set_address},
     contract_event::ContractEvent,
     event::EventKey,
     language_storage::TypeTag,
-    on_chain_config::{new_epoch_event_key, OnChainConfig, ValidatorSet},
+    move_resource::MoveResource,
+    on_chain_config::{new_epoch_event_key, ConfigurationResource, OnChainConfig, ValidatorSet},
     transaction::{
         RawTransaction, Script, SignedTransaction, Transaction, TransactionArgument,
         TransactionOutput, TransactionPayload, TransactionStatus,
@@ -143,9 +143,8 @@ impl VMExecutor for MockVM {
                     ));
                 }
                 MockVMTransaction::Reconfiguration => {
-                    let account = account_config::validator_set_address();
-                    let balance_access_path = balance_ap(account);
-                    read_balance_from_storage(state_view, &balance_access_path);
+                    read_balance_from_storage(state_view, &balance_ap(validator_set_address()));
+                    read_balance_from_storage(state_view, &balance_ap(association_address()));
                     outputs.push(TransactionOutput::new(
                         // WriteSet cannot be empty so use genesis writeset only for testing.
                         gen_genesis_writeset(),
@@ -222,13 +221,17 @@ fn seqnum_ap(account: AccountAddress) -> AccessPath {
 
 fn gen_genesis_writeset() -> WriteSet {
     let mut write_set = WriteSetMut::default();
-    let path = ValidatorSet::CONFIG_ID.access_path();
+    let validator_set_ap = ValidatorSet::CONFIG_ID.access_path();
     write_set.push((
-        AccessPath {
-            address: validator_set_address(),
-            path: path.path,
-        },
+        validator_set_ap,
         WriteOp::Value(lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
+    ));
+    write_set.push((
+        AccessPath::new(
+            association_address(),
+            ConfigurationResource::resource_path(),
+        ),
+        WriteOp::Value(lcs::to_bytes(&ConfigurationResource::default()).unwrap()),
     ));
     write_set
         .freeze()

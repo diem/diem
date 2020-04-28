@@ -374,7 +374,7 @@ impl<T: Payload> EpochManager<T> {
             .expect("failed to get ValidatorSet from payload");
         let epoch_info = EpochInfo {
             epoch: payload.epoch(),
-            verifier: Arc::new((&validator_set).into()),
+            verifier: (&validator_set).into(),
         };
         let validator_keys = validator_set.payload().to_vec();
         info!("Update Network about new validators");

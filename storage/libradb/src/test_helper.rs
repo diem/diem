@@ -66,7 +66,7 @@ fn to_blocks_to_commit(
                 cur_txn_accu_hash,
                 partial_ledger_info.version(),
                 partial_ledger_info.timestamp_usecs(),
-                partial_ledger_info.next_validator_set().cloned(),
+                partial_ledger_info.next_epoch_info().cloned(),
             );
             let ledger_info =
                 LedgerInfo::new(block_info, partial_ledger_info.consensus_data_hash());

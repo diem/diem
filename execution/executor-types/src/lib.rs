@@ -11,7 +11,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
-    on_chain_config::ValidatorSet,
+    epoch_info::EpochInfo,
     proof::{accumulator::InMemoryAccumulator, SparseMerkleProof},
     transaction::{TransactionStatus, Version},
 };
@@ -37,9 +37,8 @@ pub struct StateComputeResult {
     /// The number of leaves of the transaction accumulator after executing a proposed block.
     /// This state must be persisted to ensure that on restart that the version is calculated correctly.
     num_leaves: u64,
-    /// If set, this is the validator set that should be changed to if this block is committed.
-    /// TODO [Reconfiguration] the validators are currently ignored, no reconfiguration yet.
-    validators: Option<ValidatorSet>,
+    /// If set, this is the new epoch info that should be changed to if this block is committed.
+    epoch_info: Option<EpochInfo>,
     /// The compute status (success/failure) of the given payload. The specific details are opaque
     /// for StateMachineReplication, which is merely passing it between StateComputer and
     /// TxnManager.
@@ -53,7 +52,7 @@ impl StateComputeResult {
         root_hash: HashValue,
         frozen_subtree_roots: Vec<HashValue>,
         num_leaves: u64,
-        validators: Option<ValidatorSet>,
+        epoch_info: Option<EpochInfo>,
         compute_status: Vec<TransactionStatus>,
         transaction_info_hashes: Vec<HashValue>,
     ) -> Self {
@@ -61,7 +60,7 @@ impl StateComputeResult {
             root_hash,
             frozen_subtree_roots,
             num_leaves,
-            validators,
+            epoch_info,
             compute_status,
             transaction_info_hashes,
         }
@@ -81,8 +80,8 @@ impl StateComputeResult {
         &self.compute_status
     }
 
-    pub fn validators(&self) -> &Option<ValidatorSet> {
-        &self.validators
+    pub fn epoch_info(&self) -> &Option<EpochInfo> {
+        &self.epoch_info
     }
 
     pub fn transaction_info_hashes(&self) -> &Vec<HashValue> {
@@ -98,7 +97,7 @@ impl StateComputeResult {
     }
 
     pub fn has_reconfiguration(&self) -> bool {
-        self.validators.is_some()
+        self.epoch_info.is_some()
     }
 }
 
@@ -198,21 +197,20 @@ pub struct ProcessedVMOutput {
     /// transactions in this set.
     executed_trees: ExecutedTrees,
 
-    /// If set, this is the validator set that should be changed to if this block is committed.
-    /// TODO [Reconfiguration] the validators are currently ignored, no reconfiguration yet.
-    validators: Option<ValidatorSet>,
+    /// If set, this is the new epoch info that should be changed to if this block is committed.
+    epoch_info: Option<EpochInfo>,
 }
 
 impl ProcessedVMOutput {
     pub fn new(
         transaction_data: Vec<TransactionData>,
         executed_trees: ExecutedTrees,
-        validators: Option<ValidatorSet>,
+        epoch_info: Option<EpochInfo>,
     ) -> Self {
         ProcessedVMOutput {
             transaction_data,
             executed_trees,
-            validators,
+            epoch_info,
         }
     }
 
@@ -232,8 +230,8 @@ impl ProcessedVMOutput {
         self.executed_trees().version()
     }
 
-    pub fn validators(&self) -> &Option<ValidatorSet> {
-        &self.validators
+    pub fn epoch_info(&self) -> &Option<EpochInfo> {
+        &self.epoch_info
     }
 
     pub fn state_compute_result(&self) -> StateComputeResult {
@@ -245,7 +243,7 @@ impl ProcessedVMOutput {
             // next epoch that is part of a block execution.
             root_hash: self.accu_root(),
             num_leaves: txn_accu.num_leaves(),
-            validators: self.validators.clone(),
+            epoch_info: self.epoch_info.clone(),
             frozen_subtree_roots: txn_accu.frozen_subtree_roots().clone(),
             compute_status: self
                 .transaction_data()

@@ -8,6 +8,9 @@ use libra_crypto::{
     HashValue, VerifyingKey,
 };
 use mirai_annotations::*;
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest_derive::Arbitrary;
+use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt};
 use thiserror::Error;
 
@@ -41,7 +44,8 @@ pub enum VerifyError {
 }
 
 /// Helper struct to manage validator information for validation
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct ValidatorConsensusInfo {
     public_key: Ed25519PublicKey,
     voting_power: u64,
@@ -67,7 +71,8 @@ impl ValidatorConsensusInfo {
 /// Supports validation of signatures for known authors with individual voting powers. This struct
 /// can be used for all signature verification operations including block and network signature
 /// verification, respectively.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct ValidatorVerifier {
     /// An ordered map of each validator's on-chain account address to its pubkeys
     /// and voting power.

@@ -108,8 +108,8 @@ impl<T: Payload> SafetyRules<T> {
     /// @TODO if public key does not match private key in validator set, access persistent storage
     /// to identify new key
     fn start_new_epoch(&mut self, ledger_info: &LedgerInfo) -> Result<(), Error> {
-        let validator_set = ledger_info.next_validator_set();
-        self.validator_verifier = Some(validator_set.ok_or(Error::InvalidLedgerInfo)?.into());
+        let epoch_info = ledger_info.next_epoch_info().cloned();
+        self.validator_verifier = Some(epoch_info.ok_or(Error::InvalidLedgerInfo)?.verifier);
 
         let current_epoch = self.persistent_storage.epoch()?;
         let next_epoch = ledger_info.epoch() + 1;
@@ -212,7 +212,7 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
                 proposed_block.gen_block_info(
                     new_tree.root_hash(),
                     new_tree.version(),
-                    vote_proposal.next_validator_set().cloned(),
+                    vote_proposal.next_epoch_info().cloned(),
                 ),
                 proposed_block.quorum_cert().certified_block().clone(),
             ),

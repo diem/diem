@@ -180,6 +180,17 @@ impl ConfigurationResource {
     }
 }
 
+#[cfg(feature = "fuzzing")]
+impl Default for ConfigurationResource {
+    fn default() -> Self {
+        Self {
+            epoch: 0,
+            last_reconfiguration_time: 0,
+            events: EventHandle::new_from_address(&association_address(), 16),
+        }
+    }
+}
+
 impl MoveResource for ConfigurationResource {
     const MODULE_NAME: &'static str = "LibraConfig";
     const STRUCT_NAME: &'static str = "Configuration";

@@ -98,7 +98,7 @@ impl<T: LibraInterface> Node<T> {
                 output.root_hash(),
                 output.version(),
                 0,
-                output.validators().clone(),
+                output.epoch_info().clone(),
             ),
             HashValue::zero(),
         );

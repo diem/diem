@@ -27,7 +27,6 @@ use std::{
     marker::PhantomData,
     mem::{discriminant, Discriminant},
     num::NonZeroUsize,
-    sync::Arc,
     time::{Duration, Instant},
 };
 
@@ -59,7 +58,7 @@ pub struct NetworkSender<T> {
     // (self sending is not supported by the networking API).
     // Note that we do not support self rpc requests as it might cause infinite recursive calls.
     self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
-    validators: Arc<ValidatorVerifier>,
+    validators: ValidatorVerifier,
     marker: PhantomData<T>,
 }
 
@@ -68,7 +67,7 @@ impl<T: Payload> NetworkSender<T> {
         author: Author,
         network_sender: ConsensusNetworkSender<T>,
         self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg<T>>>>,
-        validators: Arc<ValidatorVerifier>,
+        validators: ValidatorVerifier,
     ) -> Self {
         NetworkSender {
             author,

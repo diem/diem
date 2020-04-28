@@ -102,7 +102,7 @@ fn create_node_for_fuzzing() -> EventProcessor<TestPayload> {
 
     let epoch_info = EpochInfo {
         epoch: 1,
-        verifier: Arc::new(storage.get_validator_set().into()),
+        verifier: storage.get_validator_set().into(),
     };
     let network = NetworkSender::new(
         signer.author(),

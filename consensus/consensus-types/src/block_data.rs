@@ -130,7 +130,7 @@ where
     T: Default + Serialize,
 {
     pub fn new_genesis_from_ledger_info(ledger_info: &LedgerInfo) -> Self {
-        assert!(ledger_info.next_validator_set().is_some());
+        assert!(ledger_info.next_epoch_info().is_some());
         let ancestor = BlockInfo::new(
             ledger_info.epoch(),
             0,                 /* round */

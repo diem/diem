@@ -127,7 +127,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
             .get_startup_info()?
             .ok_or_else(|| format_err!("[state sync] Failed to access storage info"))?;
 
-        let current_verifier = storage_info.get_validator_set().into();
+        let current_epoch_info = storage_info.get_epoch_info().clone();
 
         let synced_trees = if let Some(synced_tree_state) = storage_info.synced_tree_state {
             ExecutedTrees::from(synced_tree_state)
@@ -138,7 +138,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
         Ok(SynchronizerState::new(
             storage_info.latest_ledger_info,
             synced_trees,
-            current_verifier,
+            current_epoch_info,
         ))
     }
 

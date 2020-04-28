@@ -217,7 +217,7 @@ impl LibraClient {
                     latest_epoch_change_li.ledger_info().epoch(),
                     latest_epoch_change_li
                         .ledger_info()
-                        .next_validator_set()
+                        .next_epoch_info()
                         .expect("no validator set in epoch change ledger info"),
                 );
                 // Update client state

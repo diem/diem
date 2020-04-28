@@ -27,6 +27,7 @@ use libra_types::{
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
+    epoch_info::EpochInfo,
     ledger_info::LedgerInfoWithSignatures,
     on_chain_config,
     proof::{accumulator::InMemoryAccumulator, definition::LeafCount, SparseMerkleProof},
@@ -176,18 +177,17 @@ where
                 "Version of a given epoch LI does not match local computation."
             );
             ensure!(
-                epoch_change_li.ledger_info().next_validator_set().is_some(),
+                epoch_change_li.ledger_info().next_epoch_info().is_some(),
                 "Epoch change LI does not carry validator set"
             );
             ensure!(
-                epoch_change_li.ledger_info().next_validator_set()
-                    == new_output.validators().as_ref(),
+                epoch_change_li.ledger_info().next_epoch_info() == new_output.epoch_info().as_ref(),
                 "New validator set of a given epoch LI does not match local computation"
             );
             return Ok(Some(epoch_change_li));
         }
         ensure!(
-            new_output.validators().is_none(),
+            new_output.epoch_info().is_none(),
             "End of epoch chunk based on local computation but no EoE LedgerInfo provided."
         );
         Ok(None)
@@ -244,12 +244,12 @@ where
         // transactions that will be discarded, since they do not go into the transaction
         // accumulator.
         let mut txn_info_hashes = vec![];
-        let mut next_validator_set = None;
+        let mut next_epoch_info = None;
 
         let proof_reader = ProofReader::new(account_to_proof);
         let new_epoch_event_key = on_chain_config::new_epoch_event_key();
         for (vm_output, txn) in itertools::zip_eq(vm_outputs.into_iter(), transactions.iter()) {
-            if next_validator_set.is_some() {
+            if next_epoch_info.is_some() {
                 txn_data.push(TransactionData::new(
                     HashMap::new(),
                     vec![],
@@ -321,21 +321,34 @@ where
             current_state_tree = state_tree;
 
             // check for change in validator set
-            next_validator_set = vm_output
+            next_epoch_info = if vm_output
                 .events()
                 .iter()
-                .find(|event| *event.key() == new_epoch_event_key)
-                .map(|_| {
-                    account_to_state
-                        .get(&account_config::validator_set_address())
-                        .map(|state| {
-                            state
-                                .get_validator_set()?
-                                .ok_or_else(|| format_err!("ValidatorSet does not exist"))
-                        })
+                .any(|event| *event.key() == new_epoch_event_key)
+            {
+                let validator_set = account_to_state
+                    .get(&account_config::validator_set_address())
+                    .map(|state| {
+                        state
+                            .get_validator_set()?
+                            .ok_or_else(|| format_err!("ValidatorSet does not exist"))
+                    })
+                    .ok_or_else(|| format_err!("ValidatorSet account does not exist"))??;
+                let configuration = account_to_state
+                    .get(&account_config::association_address())
+                    .map(|state| {
+                        state
+                            .get_configuration_resource()?
+                            .ok_or_else(|| format_err!("Configuration does not exist"))
+                    })
+                    .ok_or_else(|| format_err!("Association account does not exist"))??;
+                Some(EpochInfo {
+                    epoch: configuration.epoch(),
+                    verifier: (&validator_set).into(),
                 })
-                .flatten()
-                .transpose()?;
+            } else {
+                None
+            }
         }
 
         let current_transaction_accumulator =
@@ -346,7 +359,7 @@ where
                 current_state_tree,
                 Arc::new(current_transaction_accumulator),
             ),
-            next_validator_set,
+            next_epoch_info,
         ))
     }
 

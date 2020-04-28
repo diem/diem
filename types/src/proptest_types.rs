@@ -11,6 +11,7 @@ use crate::{
     contract_event::ContractEvent,
     discovery_info::DiscoveryInfo,
     epoch_change::EpochChangeProof,
+    epoch_info::EpochInfo,
     event::{EventHandle, EventKey},
     get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
     language_storage::{StructTag, TypeTag},
@@ -990,10 +991,13 @@ impl BlockInfoGen {
 
         let current_epoch = universe.get_epoch();
         // The first LedgerInfo should always carry a validator set.
-        let (epoch, next_validator_set) = if current_epoch == 0 || self.new_epoch {
+        let (epoch, next_epoch_info) = if current_epoch == 0 || self.new_epoch {
             (
                 universe.get_and_bump_epoch(),
-                Some(ValidatorSet::new(Vec::new())),
+                Some(EpochInfo {
+                    epoch: current_epoch + 1,
+                    verifier: (&ValidatorSet::empty()).into(),
+                }),
             )
         } else {
             (universe.get_epoch(), None)
@@ -1006,7 +1010,7 @@ impl BlockInfoGen {
             self.executed_state_id,
             universe.bump_and_get_version(block_size),
             self.timestamp_usecs,
-            next_validator_set,
+            next_epoch_info,
         )
     }
 }

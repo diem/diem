@@ -36,7 +36,7 @@ pub fn gen_ledger_info_with_sigs(
             output.root_hash(),
             output.version(),
             0, /* timestamp */
-            output.validators().clone(),
+            output.epoch_info().clone(),
         ),
         HashValue::zero(),
     );

@@ -3,7 +3,7 @@
 
 use crate::{accumulator_extension_proof::AccumulatorExtensionProof, block::Block};
 use libra_crypto::hash::TransactionAccumulatorHasher;
-use libra_types::on_chain_config::ValidatorSet;
+use libra_types::epoch_info::EpochInfo;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
@@ -17,20 +17,20 @@ pub struct VoteProposal<T> {
     /// The block / proposal to evaluate
     #[serde(bound(deserialize = "Block<T>: Deserialize<'de>"))]
     block: Block<T>,
-    /// An optional field containing the set of validators for the start of the next epoch
-    next_validator_set: Option<ValidatorSet>,
+    /// An optional field containing the next epoch info.
+    next_epoch_info: Option<EpochInfo>,
 }
 
 impl<T> VoteProposal<T> {
     pub fn new(
         accumulator_extension_proof: AccumulatorExtensionProof<TransactionAccumulatorHasher>,
         block: Block<T>,
-        next_validator_set: Option<ValidatorSet>,
+        next_epoch_info: Option<EpochInfo>,
     ) -> Self {
         Self {
             accumulator_extension_proof,
             block,
-            next_validator_set,
+            next_epoch_info,
         }
     }
 
@@ -44,8 +44,8 @@ impl<T> VoteProposal<T> {
         &self.block
     }
 
-    pub fn next_validator_set(&self) -> Option<&ValidatorSet> {
-        self.next_validator_set.as_ref()
+    pub fn next_epoch_info(&self) -> Option<&EpochInfo> {
+        self.next_epoch_info.as_ref()
     }
 }
 

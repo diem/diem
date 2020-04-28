@@ -742,7 +742,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let new_version =
             self.local_state.highest_version_in_local_storage() + txn_list_with_proof.len() as u64;
         let new_epoch = if response_li.ledger_info().version() == new_version
-            && response_li.ledger_info().next_validator_set().is_some()
+            && response_li.ledger_info().next_epoch_info().is_some()
         {
             // This chunk is going to finish the current epoch, optimistically request a chunk
             // from the next epoch.
