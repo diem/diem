@@ -6,11 +6,8 @@ use anyhow::{bail, ensure, Result};
 use libra_json_rpc_client::{
     errors::JsonRpcError,
     get_response_from_batch,
-    views::{
-        AccountView, BlockMetadata, BytesView, EventView, ResponseAsView, StateProofView,
-        TransactionView,
-    },
-    JsonRpcBatch, JsonRpcClient, JsonRpcResponse,
+    views::{AccountView, BlockMetadata, BytesView, EventView, StateProofView, TransactionView},
+    JsonRpcBatch, JsonRpcClient, JsonRpcResponse, ResponseAsView,
 };
 use libra_logger::prelude::*;
 use libra_types::{

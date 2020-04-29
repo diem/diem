@@ -47,6 +47,7 @@ members = [
     "execution/executor-types",
     "execution/executor-utils",
     "json-rpc",
+    "json-rpc/types",
     "language/move-lang",
     "language/benchmarks",
     "language/borrow-graph",

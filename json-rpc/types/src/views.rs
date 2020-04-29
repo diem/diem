@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::client::JsonRpcResponse;
 use anyhow::{format_err, Error, Result};
 use libra_crypto::HashValue;
 use libra_types::{
@@ -23,26 +22,6 @@ use move_core_types::identifier::IdentStr;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use transaction_builder::get_transaction_name;
-
-/// For JSON RPC views that are returned as part of a `JsonRpcResponse` instance, this trait
-/// can be used to extract the view from a `JsonRpcResponse` instance when applicable
-pub trait ResponseAsView: Sized {
-    fn unexpected_response_error<T>(response: JsonRpcResponse) -> Result<T> {
-        Err(format_err!("did not receive expected view: {:?}", response))
-    }
-
-    fn from_response(_response: JsonRpcResponse) -> Result<Self> {
-        unimplemented!()
-    }
-
-    fn optional_from_response(_response: JsonRpcResponse) -> Result<Option<Self>> {
-        unimplemented!()
-    }
-
-    fn vec_from_response(_response: JsonRpcResponse) -> Result<Vec<Self>> {
-        unimplemented!()
-    }
-}
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct AmountView {
@@ -84,32 +63,12 @@ impl AccountView {
     }
 }
 
-impl ResponseAsView for AccountView {
-    fn optional_from_response(response: JsonRpcResponse) -> Result<Option<Self>> {
-        if let JsonRpcResponse::AccountResponse(view) = response {
-            Ok(view)
-        } else {
-            Self::unexpected_response_error::<Option<Self>>(response)
-        }
-    }
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct EventView {
     pub key: BytesView,
     pub sequence_number: u64,
     pub transaction_version: u64,
     pub data: EventDataView,
-}
-
-impl ResponseAsView for EventView {
-    fn vec_from_response(response: JsonRpcResponse) -> Result<Vec<Self>> {
-        if let JsonRpcResponse::EventsResponse(events) = response {
-            Ok(events)
-        } else {
-            Self::unexpected_response_error::<Vec<Self>>(response)
-        }
-    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -240,16 +199,6 @@ pub struct BlockMetadata {
     pub timestamp: u64,
 }
 
-impl ResponseAsView for BlockMetadata {
-    fn from_response(response: JsonRpcResponse) -> Result<Self> {
-        if let JsonRpcResponse::BlockMetadataResponse(metadata) = response {
-            Ok(metadata)
-        } else {
-            Self::unexpected_response_error::<Self>(response)
-        }
-    }
-}
-
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct BytesView(pub String);
 
@@ -311,24 +260,6 @@ impl TransactionView {
             script.get_name()
         } else {
             "".to_string()
-        }
-    }
-}
-
-impl ResponseAsView for TransactionView {
-    fn optional_from_response(response: JsonRpcResponse) -> Result<Option<Self>> {
-        if let JsonRpcResponse::AccountTransactionResponse(view) = response {
-            Ok(view)
-        } else {
-            Self::unexpected_response_error::<Option<Self>>(response)
-        }
-    }
-
-    fn vec_from_response(response: JsonRpcResponse) -> Result<Vec<Self>> {
-        if let JsonRpcResponse::TransactionsResponse(txns) = response {
-            Ok(txns)
-        } else {
-            Self::unexpected_response_error::<Vec<Self>>(response)
         }
     }
 }
@@ -497,31 +428,11 @@ impl
     }
 }
 
-impl ResponseAsView for StateProofView {
-    fn from_response(response: JsonRpcResponse) -> Result<Self> {
-        if let JsonRpcResponse::StateProofResponse(view) = response {
-            Ok(view)
-        } else {
-            Self::unexpected_response_error::<Self>(response)
-        }
-    }
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct AccountStateWithProofView {
     pub version: u64,
     pub blob: Option<BytesView>,
     pub proof: AccountStateProofView,
-}
-
-impl ResponseAsView for AccountStateWithProofView {
-    fn from_response(response: JsonRpcResponse) -> Result<Self> {
-        if let JsonRpcResponse::AccountStateWithProofResponse(resp) = response {
-            Ok(resp)
-        } else {
-            Self::unexpected_response_error::<Self>(response)
-        }
-    }
 }
 
 impl TryFrom<AccountStateWithProof> for AccountStateWithProofView {

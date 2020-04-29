@@ -35,7 +35,7 @@ use rand::{
 use tokio::runtime::{Handle, Runtime};
 
 use futures::{executor::block_on, future::FutureExt};
-use libra_json_rpc::JsonRpcAsyncClient;
+use libra_json_rpc_client::JsonRpcAsyncClient;
 use libra_types::transaction::SignedTransaction;
 use reqwest::{Client, Url};
 use std::{

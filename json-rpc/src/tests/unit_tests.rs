@@ -5,15 +5,17 @@ use crate::{
     errors::{JsonRpcError, ServerCode},
     runtime::bootstrap,
     tests::mock_db::MockLibraDB,
-    views::{
-        AccountStateWithProofView, AccountView, BlockMetadata, BytesView, EventView,
-        ResponseAsView, StateProofView, TransactionDataView, TransactionView,
-    },
-    JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse,
 };
 use futures::{channel::mpsc::channel, StreamExt};
 use libra_config::utils;
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
+use libra_json_rpc_client::{
+    views::{
+        AccountStateWithProofView, AccountView, BlockMetadata, BytesView, EventView,
+        StateProofView, TransactionDataView, TransactionView,
+    },
+    JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse, ResponseAsView,
+};
 use libra_proptest_helpers::ValueGenerator;
 use libra_types::{
     account_address::AccountAddress,
