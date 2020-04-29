@@ -13,7 +13,6 @@ edition = "2018"
 anyhow = "1.0"
 async-trait = "0.1"
 futures = "0.3.0"
-serde = "1.0"
 tonic = "0.2"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
