@@ -1,3 +1,4 @@
+script {
 use 0x0::LibraSystem;
 use 0x0::Vector;
 // rotate vivian's network address
@@ -15,4 +16,5 @@ fun main() {
     addr = (LibraSystem::get_discovery_address(&info_2));
 
     0x0::Transaction::assert(LibraSystem::get_discovery_index(&info, move addr) == 2, 98)
+}
 }

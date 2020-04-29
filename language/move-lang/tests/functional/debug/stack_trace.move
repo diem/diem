@@ -33,6 +33,7 @@ module N {
 
 //! new-transaction
 //! sender: alice
+script {
 use {{bob}}::N;
 use 0x0::Vector;
 use 0x0::Debug;
@@ -46,5 +47,6 @@ fun main() {
     let x = N::foo<bool, LibraAccount::T>();
     Debug::print(&x);
     _ = r;
+}
 }
 // check: EXECUTED

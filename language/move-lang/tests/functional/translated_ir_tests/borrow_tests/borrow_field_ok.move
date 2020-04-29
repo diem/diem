@@ -19,6 +19,7 @@ module A {
 
 //! new-transaction
 
+script {
 use {{default}}::A;
 
 fun main() {
@@ -26,4 +27,5 @@ fun main() {
     let y = A::new_K(x);
     let z = A::value(&y);
     0x0::Transaction::assert(z == 2, 42);
+}
 }

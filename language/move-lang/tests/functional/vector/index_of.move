@@ -1,3 +1,4 @@
+script {
 use 0x0::Vector;
 use 0x0::Transaction;
 fun main() {
@@ -21,4 +22,5 @@ fun main() {
     let (has, index) = Vector::index_of(&vec, &true);
     Transaction::assert(has, 6);
     Transaction::assert(index == 1, 7);
+}
 }

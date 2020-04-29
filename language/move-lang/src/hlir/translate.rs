@@ -11,7 +11,7 @@ use crate::{
     typing::ast as T,
 };
 use move_ir_types::location::*;
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 //**************************************************************************************************
 // Vars
@@ -154,11 +154,9 @@ impl Context {
 pub fn program(prog: T::Program) -> (H::Program, Errors) {
     let mut context = Context::new(vec![]);
     let modules = modules(&mut context, prog.modules);
-    let main = prog
-        .main
-        .map(|(addr, n, fdef)| (addr, n.clone(), function(&mut context, n, fdef)));
+    let scripts = scripts(&mut context, prog.scripts);
 
-    (H::Program { modules, main }, context.get_errors())
+    (H::Program { modules, scripts }, context.get_errors())
 }
 
 fn modules(
@@ -194,6 +192,30 @@ fn module(
             functions,
         },
     )
+}
+
+fn scripts(
+    context: &mut Context,
+    tscripts: BTreeMap<String, T::Script>,
+) -> BTreeMap<String, H::Script> {
+    tscripts
+        .into_iter()
+        .map(|(n, s)| (n, script(context, s)))
+        .collect()
+}
+
+fn script(context: &mut Context, tscript: T::Script) -> H::Script {
+    let T::Script {
+        loc,
+        function_name,
+        function: tfunction,
+    } = tscript;
+    let function = function(context, function_name.clone(), tfunction);
+    H::Script {
+        loc,
+        function_name,
+        function,
+    }
 }
 
 //**************************************************************************************************

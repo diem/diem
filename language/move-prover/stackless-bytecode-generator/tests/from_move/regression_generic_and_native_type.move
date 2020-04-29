@@ -3,7 +3,7 @@
 
 // Regression test for a bug in handling generic mutual borrow, as well as parameter types of native functions.
 
-address 0x0:
+address 0x0 {
 
 module Libra {
     use 0x0::Transaction;
@@ -56,5 +56,7 @@ module Libra {
     public fun value<Token>(coin_ref: &T<Token>): u64 {
         coin_ref.value
     }
+
+}
 
 }

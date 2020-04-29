@@ -29,6 +29,7 @@ module X {
 
 //! new-transaction
 //! sender: association
+script {
 use 0x0::Unhosted;
 use 0x0::Transaction;
 use 0x0::AccountType;
@@ -36,21 +37,25 @@ use 0x0::AccountType;
 fun main() {
     Transaction::assert(AccountType::is_a<Unhosted::T>(Transaction::sender()), 1);
 }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: association
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 
 fun main() {
     AccountType::apply_for(X::a(), {{bob}});
 }
+}
 // check: ABORTED
 // check: 3
 
 //! new-transaction
 //! sender: association
+script {
 use {{default}}::X;
 use 0x0::Transaction;
 use 0x0::AccountType;
@@ -61,6 +66,7 @@ fun main() {
     AccountType::register<X::A>();
     AccountType::register<X::B>();
 }
+}
 // check: EXECUTED
 
 ///////////////////////////////////////////////////////////////////////////
@@ -70,50 +76,59 @@ fun main() {
 //! new-transaction
 //! sender: alice
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 
 fun main() {
     AccountType::apply_for_granting_capability<X::A>()
+}
 }
 // check: EXECUTED
 
 //! new-transaction
 //! sender: alex
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 
 fun main() {
     AccountType::apply_for_granting_capability<X::A>()
 }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: vivian
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 
 fun main() {
     AccountType::apply_for_granting_capability<X::B>()
 }
-// check: EXECUTED
-
-//! new-transaction
-//! sender: bob
-//! gas-price: 0
-use {{default}}::X;
-use 0x0::AccountType;
-
-fun main() {
-    AccountType::apply_for_granting_capability<X::B>()
 }
 // check: EXECUTED
 
 //! new-transaction
 //! sender: bob
 //! gas-price: 0
+script {
+use {{default}}::X;
+use 0x0::AccountType;
+
+fun main() {
+    AccountType::apply_for_granting_capability<X::B>()
+}
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: bob
+//! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 
@@ -121,16 +136,19 @@ fun main() {
     AccountType::apply_for_transition_capability<X::A>({{alice}});
     AccountType::apply_for_transition_capability<X::B>({{vivian}})
 }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: alice
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 
 fun main() {
     AccountType::apply_for_transition_capability<X::A>({{alex}});
+}
 }
 // check: EXECUTED
 
@@ -141,17 +159,20 @@ fun main() {
 //! new-transaction
 //! sender: ta
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 
 fun main() {
     AccountType::apply_for(X::a(), {{alice}});
 }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: txa
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 
@@ -159,22 +180,26 @@ fun main() {
     // give the wrong address for granting authority
     AccountType::apply_for(X::a(), {{vivian}});
 }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: tb
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 
 fun main() {
     AccountType::apply_for(X::b(), {{vivian}});
 }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: txb
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 
@@ -182,15 +207,18 @@ fun main() {
     // give the wrong address for granting authority
     AccountType::apply_for(X::b(), {{alice}});
 }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: bobby
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 fun main() {
     AccountType::apply_for(X::b(), {{vivian}});
+}
 }
 // check: EXECUTED
 
@@ -201,11 +229,13 @@ fun main() {
 //! new-transaction
 //! sender: bob
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 
 fun main() {
     AccountType::transition<X::A>({{ta}});
+}
 }
 // check: ABORTED
 // check: 2000
@@ -218,11 +248,13 @@ fun main() {
 //! new-transaction
 //! sender: vivian
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 
 fun main() {
     AccountType::grant_transition_capability<X::B>({{bob}});
+}
 }
 // check: ABORTED
 // check: 2001
@@ -233,6 +265,7 @@ fun main() {
 
 //! new-transaction
 //! sender: association
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 
@@ -242,38 +275,45 @@ fun main() {
     AccountType::certify_granting_capability<X::B>({{vivian}});
     AccountType::certify_granting_capability<X::B>({{bob}});
 }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: alice
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 
 fun main() {
     AccountType::grant_transition_capability<X::A>({{bob}});
 }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: vivian
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 
 fun main() {
     AccountType::grant_transition_capability<X::B>({{bob}});
 }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: alex
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 
 fun main() {
     AccountType::grant_transition_capability<X::A>({{alice}});
+}
 }
 // check: EXECUTED
 
@@ -284,6 +324,7 @@ fun main() {
 //! new-transaction
 //! sender: bob
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 use 0x0::Transaction;
@@ -295,15 +336,18 @@ fun main() {
     Transaction::assert(!AccountType::is_a<X::A>({{tb}}), 5);
     Transaction::assert(AccountType::is_a<X::B>({{tb}}), 6);
 }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: bob
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 fun main() {
     AccountType::transition<X::B>({{bobby}});
+}
 }
 // check: ABORTED
 // check: 2004
@@ -311,11 +355,13 @@ fun main() {
 //! new-transaction
 //! sender: bob
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 // Invalid transition of an account.
 fun main() {
     AccountType::transition<X::A>({{txa}});
+}
 }
 // check: ABORTED
 // check: 2001
@@ -327,6 +373,7 @@ fun main() {
 //! new-transaction
 //! sender: bob
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 use 0x0::Transaction;
@@ -338,11 +385,13 @@ fun main() {
     let root_addr = AccountType::root_address<X::B>({{tb}});
     Transaction::assert(root_addr == {{vivian}}, 8);
 }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: bob
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 use 0x0::Transaction;
@@ -358,6 +407,7 @@ fun main() {
     Transaction::assert(!AccountType::has_granting_cap<X::A>({{bob}}), 16);
     Transaction::assert(!AccountType::has_granting_cap<X::B>({{alice}}), 17);
 }
+}
 // check: EXECUTED
 
 ///////////////////////////////////////////////////////////////////////////
@@ -368,6 +418,7 @@ fun main() {
 //! new-transaction
 //! sender: bob
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 use 0x0::Transaction;
@@ -383,11 +434,13 @@ fun main() {
     let account_metadata = AccountType::account_metadata<X::A>({{ta}});
     Transaction::assert(X::flipper_a(&account_metadata), 20);
 }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: alice
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 // Invalid update
@@ -398,12 +451,14 @@ fun main() {
     let account_metadata = AccountType::account_metadata<X::A>({{ta}});
     AccountType::update<X::A>({{ta}}, account_metadata);
 }
+}
 // check: ABORTED
 // check: 2001
 
 //! new-transaction
 //! sender: vivian
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 // Invalid update
@@ -414,12 +469,14 @@ fun main() {
     let account_metadata = AccountType::account_metadata<X::A>({{ta}});
     AccountType::update<X::A>({{ta}}, account_metadata);
 }
+}
 // check: ABORTED
 // check: 2005
 
 //! new-transaction
 //! sender: alice
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 // Invalid update
@@ -428,12 +485,14 @@ fun main() {
     let account_metadata = AccountType::account_metadata<X::A>({{ta}});
     AccountType::update<X::A>({{txa}}, account_metadata);
 }
+}
 // check: ABORTED
 // check: 2004
 
 //! new-transaction
 //! sender: alice
 //! gas-price: 0
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 // Invalid account info access
@@ -441,16 +500,19 @@ use 0x0::AccountType;
 fun main() {
     AccountType::account_metadata<X::A>({{txa}});
 }
+}
 // check: ABORTED
 // check: 2004
 
 //! new-transaction
 //! sender: association
+script {
 use {{default}}::X;
 use 0x0::AccountType;
 // valid revocation
 // alice has the right granting cap: GrantingCapability<X::A>
 fun main() {
     AccountType::remove_granting_capability<X::B>({{vivian}});
+}
 }
 // check: EXECUTED

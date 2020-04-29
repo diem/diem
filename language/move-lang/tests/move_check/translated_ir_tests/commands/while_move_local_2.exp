@@ -1,22 +1,22 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/commands/while_move_local_2.move:7:17 ───
+   ┌── tests/move_check/translated_ir_tests/commands/while_move_local_2.move:8:17 ───
    │
- 7 │             y = move x;
+ 8 │             y = move x;
    │                 ^^^^^^ Invalid usage of local 'x'
    ·
- 7 │             y = move x;
+ 8 │             y = move x;
    │                 ------ The local might not have a value due to this position. The local must be assigned a value before being used
    │
 
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/commands/while_move_local_2.move:9:17 ───
-   │
- 9 │             x = move y;
-   │                 ^^^^^^ Invalid usage of local 'y'
-   ·
- 9 │             x = move y;
-   │                 ------ The local might not have a value due to this position. The local must be assigned a value before being used
-   │
+    ┌── tests/move_check/translated_ir_tests/commands/while_move_local_2.move:10:17 ───
+    │
+ 10 │             x = move y;
+    │                 ^^^^^^ Invalid usage of local 'y'
+    ·
+ 10 │             x = move y;
+    │                 ------ The local might not have a value due to this position. The local must be assigned a value before being used
+    │
 

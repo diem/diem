@@ -1,4 +1,5 @@
 // Tests for the non-aborting behavior of Option functions
+script {
 use 0x0::Option;
 use 0x0::Transaction;
 
@@ -48,6 +49,7 @@ fun main() {
 
     // letting an Option<u64> go out of scope is also ok
     let _ = Option::some(7);
+}
 }
 
 // check: EXECUTED

@@ -1,5 +1,6 @@
 //! new-transaction
 //! sender: association
+script {
 use 0x0::Libra;
 use 0x0::Coin1;
 use 0x0::Coin2;
@@ -37,5 +38,6 @@ fun main() {
     Libra::burn<Coin2::T>(Transaction::sender());
     Libra::destroy_zero(Libra::zero<Coin1::T>());
     Libra::destroy_zero(Libra::zero<Coin2::T>());
+}
 }
 // check: EXECUTED

@@ -7,12 +7,14 @@
 //! sender: association
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::LibraAccount;
 fun main() {
     let coin = Libra::mint<Coin1::T>(100);
     LibraAccount::deposit({{preburner}}, coin);
+}
 }
 
 // check: MintEvent
@@ -23,10 +25,12 @@ fun main() {
 //! sender: preburner
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::Coin1;
 use 0x0::Libra;
 fun main() {
     Libra::publish_preburn(Libra::new_preburn<Coin1::T>())
+}
 }
 
 // check: EXECUTED
@@ -36,6 +40,7 @@ fun main() {
 //! sender: preburner
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::LibraAccount;
@@ -49,6 +54,7 @@ fun main() {
     Transaction::assert(Libra::market_cap<Coin1::T>() == old_market_cap, 8002);
     Transaction::assert(Libra::preburn_value<Coin1::T>() == 100, 8003);
 }
+}
 
 // check: PreburnEvent
 // check: EXECUTED
@@ -58,6 +64,7 @@ fun main() {
 //! sender: association
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
@@ -67,6 +74,7 @@ fun main() {
     Libra::burn<Coin1::T>({{preburner}});
     Transaction::assert(Libra::market_cap<Coin1::T>() == old_market_cap - 100, 8004);
     Transaction::assert(Libra::preburn_value<Coin1::T>() == 0, 8005);
+}
 }
 
 // check: BurnEvent

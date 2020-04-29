@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 // The gas schedule keeps two separate schedules for the gas:
 // * The instruction_schedule: This holds the gas for each bytecode instruction.
@@ -44,4 +44,5 @@ module GasSchedule {
         let native_table_len = Vector::length(&table.native_schedule);
         native_table_len
     }
+}
 }

@@ -14,6 +14,7 @@ module M {
 
 //! new-transaction
 
+script {
 use {{default}}::M;
 
 fun main() {
@@ -21,4 +22,5 @@ fun main() {
     let x_ref = &x;
     let y = M::value(x_ref);
     0x0::Transaction::assert(y == 5, 42);
+}
 }

@@ -6,7 +6,7 @@
 // `TransitionCapability`s hold the `root_address` field--this is the root
 // authority they are acting for--they can then create child accounts of
 // the given account type.
-address 0x0:
+address 0x0 {
 
 module AccountType {
     use 0x0::Association;
@@ -308,4 +308,6 @@ module AccountType {
     fun assert_is_registered<Type: copyable>() {
         Transaction::assert(exists<Registered<Type>>(singleton_addr()), 2003);
     }
+}
+
 }

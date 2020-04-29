@@ -1,4 +1,4 @@
-address 0x1:
+address 0x1 {
 
 module Container {
     struct T<V> {}
@@ -44,4 +44,6 @@ module M {
         Container::put(&mut v, Box { f1: *&f1, f2 });
         f1
     }
+}
+
 }

@@ -1,3 +1,4 @@
+script {
 fun main() {
     let x = 0;
     let y = 0;
@@ -11,7 +12,7 @@ fun main() {
         b = false;
     }
 }
-
+}
 // TODO: fix verifier remove identical errors
 // check: MOVELOC_UNAVAILABLE_ERROR
 // check: MOVELOC_UNAVAILABLE_ERROR

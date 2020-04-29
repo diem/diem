@@ -8,10 +8,12 @@
 
 //! new-transaction
 // Reconfiguration can only be invoked by association.
+script {
 use 0x0::LibraConfig;
 
 fun main() {
     LibraConfig::reconfigure()
+}
 }
 
 // check: ABORT
@@ -19,10 +21,12 @@ fun main() {
 
 //! new-transaction
 //! sender: association
+script {
 use 0x0::LibraConfig;
 
 fun main() {
     LibraConfig::reconfigure()
+}
 }
 
 // check: NewEpochEvent
@@ -31,10 +35,12 @@ fun main() {
 //! new-transaction
 //! sender: association
 // Cannot trigger two reconfiguration within the same block.
+script {
 use 0x0::LibraConfig;
 
 fun main() {
     LibraConfig::reconfigure()
+}
 }
 
 // check: ABORT
@@ -46,10 +52,12 @@ fun main() {
 
 //! new-transaction
 //! sender: association
+script {
 use 0x0::LibraConfig;
 
 fun main() {
     LibraConfig::reconfigure()
+}
 }
 
 // check: NewEpochEvent

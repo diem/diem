@@ -6,7 +6,7 @@
 // is compiled with the latest compiler and stdlib, but it runs with
 // the staged stdlib.
 
-address {{sender}}:
+address {{sender}} {
 
 module MyModule {
     use 0x0::Libra;
@@ -16,4 +16,6 @@ module MyModule {
     public fun id(c: Libra::T<LBR::T>): Libra::T<LBR::T> {
         c
     }
+}
+
 }

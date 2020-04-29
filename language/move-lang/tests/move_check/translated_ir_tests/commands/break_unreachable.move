@@ -1,3 +1,4 @@
+script {
 fun main() {
     let x;
     while (true) {
@@ -8,4 +9,5 @@ fun main() {
         x;
         break
     };
+}
 }

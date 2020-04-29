@@ -1,3 +1,4 @@
+script {
 fun main(
     _a: address,
     _x8: u8,
@@ -7,4 +8,5 @@ fun main(
     _ba: vector<u8>,
 ) {
 
+}
 }

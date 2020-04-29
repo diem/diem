@@ -1,3 +1,4 @@
+script {
 fun main() {
     let x = 0;
     while (true) {
@@ -5,4 +6,5 @@ fun main() {
         break
     };
     0x0::Transaction::assert(x == 1, 42);
+}
 }

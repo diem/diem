@@ -1,4 +1,4 @@
-address 0x1:
+address 0x1 {
 
 module X {}
 
@@ -12,4 +12,6 @@ module M {
 
         X::S { 0 } = 0;
     }
+}
+
 }

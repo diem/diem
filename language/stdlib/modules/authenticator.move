@@ -2,7 +2,7 @@
 // - Ed25519 (single-sig)
 // - MultiEd25519 (K-of-N multisig)
 
-address 0x0:
+address 0x0 {
 module Authenticator {
     use 0x0::Hash;
     use 0x0::LCS;
@@ -74,4 +74,5 @@ module Authenticator {
         *&k.threshold
     }
 
+}
 }

@@ -1,5 +1,5 @@
 
-address 0x0:
+address 0x0 {
 
 module Map {
     native struct T<K, V>;
@@ -16,7 +16,9 @@ module Map {
     native public fun remove<K, V>(m: &T<K, V>, k: &K): V;
 }
 
-address 0x1:
+}
+
+address 0x1 {
 
 module Token {
     use 0x0::Transaction;
@@ -64,7 +66,9 @@ module Token {
 
 }
 
-address 0x2:
+}
+
+address 0x2 {
 
 module OneToOneMarket {
     use 0x0::Transaction;
@@ -202,7 +206,9 @@ module OneToOneMarket {
     }
 }
 
-address 0x70DD:
+}
+
+address 0x70DD {
 
 module ToddNickles {
     use 0x1::Token;
@@ -227,5 +233,7 @@ module ToddNickles {
     public fun destroy(c: Token::Coin<T>) acquires Wallet {
         Token::deposit(&mut borrow_global_mut<Wallet>(0x70DD).nickles, c)
     }
+
+}
 
 }

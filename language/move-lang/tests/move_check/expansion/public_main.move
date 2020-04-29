@@ -1,2 +1,4 @@
+script {
 public fun main() {
+}
 }

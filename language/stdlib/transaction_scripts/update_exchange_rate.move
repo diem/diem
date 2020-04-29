@@ -1,3 +1,4 @@
+script {
 use 0x0::Libra;
 use 0x0::FixedPoint32;
 fun main<Currency>(new_exchange_rate_denominator: u64, new_exchange_rate_numerator: u64) {
@@ -6,4 +7,5 @@ fun main<Currency>(new_exchange_rate_denominator: u64, new_exchange_rate_numerat
         new_exchange_rate_numerator,
     );
     Libra::update_lbr_exchange_rate<Currency>(rate);
+}
 }

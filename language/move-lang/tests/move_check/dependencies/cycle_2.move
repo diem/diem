@@ -1,4 +1,4 @@
-address 0x1:
+address 0x1 {
 
 module A {
     public fun foo() {
@@ -10,4 +10,6 @@ module B {
     public fun foo() {
         0x1::A::foo()
     }
+}
+
 }

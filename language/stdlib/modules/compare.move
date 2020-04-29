@@ -5,7 +5,7 @@
 // const LESS_THAN = 1u8
 // const GREATER_THAN = 2u8
 
-address 0x0:
+address 0x0 {
 module Compare {
     use 0x0::Vector;
 
@@ -67,5 +67,7 @@ module Compare {
         else if (i1 < i2) 1
         else 2
     }
+
+}
 
 }

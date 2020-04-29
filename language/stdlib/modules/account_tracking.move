@@ -24,7 +24,7 @@
 // 3002 -> ATTEMPTED_OPERATION_ON_EMPTY_ACCOUNT_TYPE
 // 3003 -> ATTEMPTED_OPERATION_ON_VASP_ACCOUNT_TYPE
 
-address 0x0:
+address 0x0 {
 
 module AccountTrack {
     use 0x0::Transaction;
@@ -159,4 +159,6 @@ module AccountTrack {
     fun singleton_addr(): address {
         0xA550C18
     }
+}
+
 }

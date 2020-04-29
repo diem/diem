@@ -1,14 +1,14 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/commands/assign_wrong_type.move:5:5 ───
+   ┌── tests/move_check/translated_ir_tests/commands/assign_wrong_type.move:6:5 ───
    │
- 5 │     x = false
+ 6 │     x = false
    │     ^ Invalid assignment to local 'x'
    ·
- 5 │     x = false
+ 6 │     x = false
    │         ----- The type: 'bool'
    ·
- 4 │     let x: u64;
+ 5 │     let x: u64;
    │            --- Is not compatible with: 'u64'
    │
 

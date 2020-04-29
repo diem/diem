@@ -4,6 +4,7 @@
 
 // Minting from a privileged account should work
 //! sender: association
+script {
 use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::LibraAccount;
@@ -18,18 +19,21 @@ fun main() {
     // get rid of the coin
     LibraAccount::deposit({{alice}}, coin);
 }
+}
 
 // check: MintEvent
 // check: EXECUTED
 
 //! new-transaction
 // Minting from a non-privileged account should not work
+script {
 use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::LibraAccount;
 fun main() {
     let coin = Libra::mint<Coin1::T>(100);
     LibraAccount::deposit_to_sender<Coin1::T>(coin)
+}
 }
 
 // will fail with MISSING_DATA because sender doesn't have the mint capability

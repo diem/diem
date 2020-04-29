@@ -1,3 +1,4 @@
+script {
 fun main() {
     if (true) {
         return ()
@@ -5,4 +6,5 @@ fun main() {
         0x0::Transaction::assert(false, 42);
     };
     0x0::Transaction::assert(false, 43);
+}
 }

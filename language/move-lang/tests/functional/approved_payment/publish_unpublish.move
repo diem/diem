@@ -3,6 +3,7 @@
 //! account: alice
 
 //! sender: alice
+script {
 use 0x0::ApprovedPayment;
 use 0x0::Transaction;
 fun main() {
@@ -13,5 +14,5 @@ fun main() {
     ApprovedPayment::unpublish_from_sender();
     Transaction::assert(!ApprovedPayment::exists({{alice}}), 6003);
 }
-
+}
 // check: EXECUTED

@@ -8,6 +8,7 @@
 //! sender: association
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::LibraAccount;
@@ -15,16 +16,19 @@ fun main() {
     let coin = Libra::mint<Coin1::T>(600);
     LibraAccount::deposit({{preburner}}, coin);
 }
+}
 
 // register the sender as a preburn entity
 //! new-transaction
 //! sender: preburner
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::Coin1;
 use 0x0::Libra;
 fun main() {
     Libra::publish_preburn(Libra::new_preburn<Coin1::T>())
+}
 }
 
 // check: EXECUTED
@@ -34,6 +38,7 @@ fun main() {
 //! sender: preburner
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::LibraAccount;
 use 0x0::Coin1;
 use 0x0::Libra;
@@ -47,6 +52,7 @@ fun main() {
     Libra::preburn_to_sender<Coin1::T>(coin300);
     Transaction::assert(Libra::preburn_value<Coin1::T>() == 600, 8001)
 }
+}
 
 // check: PreburnEvent
 // check: PreburnEvent
@@ -58,6 +64,7 @@ fun main() {
 //! sender: association
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
@@ -69,6 +76,7 @@ fun main() {
     Transaction::assert(Libra::preburn_value<Coin1::T>() == 300, 8003);
     Libra::burn<Coin1::T>(burn_address);
     Transaction::assert(Libra::preburn_value<Coin1::T>() == 0, 8004)
+}
 }
 
 // check: BurnEvent

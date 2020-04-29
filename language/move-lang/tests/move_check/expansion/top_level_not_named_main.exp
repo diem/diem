@@ -1,8 +1,0 @@
-error: 
-
-   ┌── tests/move_check/expansion/top_level_not_named_main.move:1:5 ───
-   │
- 1 │ fun foo() {
-   │     ^^^ Invalid top level function. Found a function named 'foo', but all top level functions must be named 'main'
-   │
-

@@ -655,7 +655,7 @@ impl ClientProxy {
     }
 
     /// Compile Move program
-    pub fn compile_program(&mut self, space_delim_strings: &[&str]) -> Result<String> {
+    pub fn compile_program(&mut self, space_delim_strings: &[&str]) -> Result<Vec<String>> {
         ensure!(
             space_delim_strings[0] == "compile",
             "inconsistent command '{}' for compile_program",
@@ -689,21 +689,24 @@ impl ClientProxy {
             return Err(format_err!("compilation failed"));
         }
 
-        let mut output_files: Vec<_> = fs::read_dir(tmp_output_path)?.collect();
-        match output_files.pop() {
-            None => Err(format_err!("compiler failed to produce an output file")),
-            Some(file) => {
-                if !output_files.is_empty() {
-                    Err(format_err!("compiler output has more than one file"))
-                } else {
-                    Ok(file?
-                        .path()
-                        .to_str()
-                        .expect("compiler output file path cannot be converted to a string")
-                        .to_string())
-                }
-            }
+        let output_files = walkdir::WalkDir::new(tmp_output_path)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                let path = e.path();
+                e.file_type().is_file()
+                    && path
+                        .extension()
+                        .and_then(|s| s.to_str())
+                        .map(|ext| ext == "mv")
+                        .unwrap_or(false)
+            })
+            .filter_map(|e| e.path().to_str().map(|s| s.to_string()))
+            .collect::<Vec<_>>();
+        if output_files.is_empty() {
+            bail!("compiler failed to produce an output file")
         }
+        Ok(output_files)
     }
 
     /// Submit a transaction to the network given the unsigned raw transaction, sender public key

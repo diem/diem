@@ -46,6 +46,7 @@ pub enum CompiledUnit {
     },
     Script {
         loc: Loc,
+        key: String,
         script: F::CompiledScript,
         source_map: SourceMap<Loc>,
         function_info: FunctionInfo,
@@ -55,8 +56,8 @@ pub enum CompiledUnit {
 impl CompiledUnit {
     pub fn name(&self) -> String {
         match self {
-            CompiledUnit::Module { ident, .. } => format!("module_{}", &ident.0.value.name),
-            CompiledUnit::Script { .. } => "script".into(),
+            CompiledUnit::Module { ident, .. } => format!("{}", &ident.0.value.name),
+            CompiledUnit::Script { key, .. } => key.to_owned(),
         }
     }
 
@@ -104,6 +105,7 @@ impl CompiledUnit {
             }
             CompiledUnit::Script {
                 loc,
+                key,
                 script,
                 source_map,
                 function_info,
@@ -111,6 +113,7 @@ impl CompiledUnit {
                 let (script, errors) = verify_script(loc, script);
                 let verified = CompiledUnit::Script {
                     loc,
+                    key,
                     script,
                     source_map,
                     function_info,

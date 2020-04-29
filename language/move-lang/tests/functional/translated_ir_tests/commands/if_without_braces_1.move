@@ -1,3 +1,4 @@
+script {
 fun main() {
     let x;
     if (true)
@@ -5,4 +6,5 @@ fun main() {
     else
         x = 5;
     x;
+}
 }

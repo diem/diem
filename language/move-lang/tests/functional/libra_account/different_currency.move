@@ -3,6 +3,8 @@
 //! new-transaction
 //! sender: bob
 //! gas-price: 0
+script {
 fun main() {
+}
 }
 // check: EXECUTED

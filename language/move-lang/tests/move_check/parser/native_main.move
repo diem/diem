@@ -1,1 +1,3 @@
+script {
 native fun main();
+}

@@ -3,6 +3,7 @@
 //! sender: alice
 //! gas-price: 1
 
+script {
 use 0x0::LibraAccount;
 use 0x0::LBR;
 use 0x0::Transaction;
@@ -17,10 +18,12 @@ fun main() {
         x = x - 1;
     }
 }
+}
 //! check: EXECUTED
 
 //! new-transaction
 //! sender: alice
+script {
 use 0x0::LibraAccount;
 use 0x0::LBR;
 use 0x0::Transaction;
@@ -34,5 +37,6 @@ fun main() {
     let transaction_fee_pot_amount = LibraAccount::balance<LBR::T>(0xFEE);
     // Assert that the transaction fees collected are equal to the transaction fees paid
     Transaction::assert(transaction_fee_paid == transaction_fee_pot_amount, 2);
+}
 }
 //! check: EXECUTED

@@ -36,30 +36,36 @@ module MultiCurrencyAccount {
 
 //! new-transaction
 //! sender: bob
+script {
 use {{default}}::MultiCurrencyAccount;
 // Setup bob's account as a multi-currency account.
 fun main() {
     MultiCurrencyAccount::init();
+}
 }
 // check: EXECUTED
 
 //! new-transaction
 //! sender: alice
 //! gas-price: 0
+script {
 use {{default}}::MultiCurrencyAccount;
 // Now add coin1 (alice's) account to the multi currency account in bob's
 fun main() {
     MultiCurrencyAccount::add_cap({{bob}});
+}
 }
 // check: EXECUTED
 
 //! new-transaction
 //! sender: cody
 //! gas-price: 0
+script {
 use {{default}}::MultiCurrencyAccount;
 // Now add coin1 (alice's) account to the multi currency account in bob's
 fun main() {
     MultiCurrencyAccount::add_cap({{bob}});
+}
 }
 // check: EXECUTED
 
@@ -67,6 +73,7 @@ fun main() {
 //! new-transaction
 //! sender: bob
 //! gas-price: 0
+script {
 use 0x0::Coin1;
 use 0x0::Coin2;
 use 0x0::LBR;
@@ -89,12 +96,14 @@ fun main() {
     LibraAccount::deposit({{alice}}, coin1);
     LibraAccount::deposit({{cody}}, coin2);
 }
+}
 // check: EXECUTED
 
 // Now unpack from the LBR into the constituent coins
 //! new-transaction
 //! sender: bob
 //! gas-price: 0
+script {
 use 0x0::LBR;
 use 0x0::LibraAccount;
 use 0x0::Transaction;
@@ -108,6 +117,7 @@ fun main() {
     LibraAccount::deposit({{alice}}, coin1);
     LibraAccount::deposit({{cody}}, coin2);
 }
+}
 // not: PreburnEvent
 // not: BurnEvent
 // check: EXECUTED
@@ -116,6 +126,7 @@ fun main() {
 //! new-transaction
 //! sender: bob
 //! gas-price: 0
+script {
 use 0x0::Coin1;
 use 0x0::Coin2;
 use 0x0::LBR;
@@ -136,6 +147,7 @@ fun main() {
     Libra::destroy_zero(lbr);
     LibraAccount::deposit({{alice}}, coin1);
     LibraAccount::deposit({{cody}}, coin2);
+}
 }
 // not: MintEvent
 // check: EXECUTED

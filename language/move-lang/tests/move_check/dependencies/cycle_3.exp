@@ -1,11 +1,11 @@
 error: 
 
-    ┌── tests/move_check/dependencies/cycle_3.move:93:16 ───
+    ┌── tests/move_check/dependencies/cycle_3.move:95:16 ───
     │
- 93 │     fun foo(): 0x3::C::S {
+ 95 │     fun foo(): 0x3::C::S {
     │                ^^^^^^^^^ Invalid use of module '0x3::C' in module '0x3::B'.
     ·
- 93 │     fun foo(): 0x3::C::S {
+ 95 │     fun foo(): 0x3::C::S {
     │                --------- Using this module creates a dependency cycle: '0x3::C' uses '0x3::A' uses '0x3::B' uses '0x3::C'
     │
 

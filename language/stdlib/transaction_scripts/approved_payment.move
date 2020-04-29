@@ -1,3 +1,4 @@
+script {
 use 0x0::ApprovedPayment;
 
 // Deposit `amount` `Token`s in `payee`'s account if the `signature` on the payment metadata matches
@@ -11,4 +12,5 @@ fun main<Token>(
     signature: vector<u8>
 ) {
     ApprovedPayment::deposit_to_payee<Token>(payee, amount, metadata, signature)
+}
 }

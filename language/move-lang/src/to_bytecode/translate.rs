@@ -79,8 +79,13 @@ pub fn program(prog: G::Program) -> Result<Vec<CompiledUnit>, Errors> {
             Err(err) => errors.push(err),
         }
     }
-    if let Some((addr, n, fdef)) = prog.main {
-        match main(addr, n, fdef, &orderings, &sdecls, &fdecls) {
+    for (key, s) in prog.scripts {
+        let G::Script {
+            loc: _,
+            function_name,
+            function,
+        } = s;
+        match script(key, function_name, function, &orderings, &sdecls, &fdecls) {
             Ok(unit) => units.push(unit),
             Err(err) => errors.push(err),
         }
@@ -144,9 +149,9 @@ fn module(
     })
 }
 
-fn main(
-    addr: Address,
-    main_name: FunctionName,
+fn script(
+    key: String,
+    name: FunctionName,
     fdef: G::Function,
     dependency_orderings: &HashMap<ModuleIdent, usize>,
     struct_declarations: &HashMap<(ModuleIdent, StructName), (bool, Vec<(IR::TypeVar, IR::Kind)>)>,
@@ -155,10 +160,10 @@ fn main(
         (BTreeSet<(ModuleIdent, StructName)>, IR::FunctionSignature),
     >,
 ) -> Result<CompiledUnit, Error> {
-    let loc = main_name.loc();
+    let loc = name.loc();
     let mut context = Context::new(None);
 
-    let ((_, main), info) = function(&mut context, None, main_name, fdef);
+    let ((_, main), info) = function(&mut context, None, name, fdef);
 
     let (imports, explicit_dependency_declarations) = context.materialize(
         dependency_orderings,
@@ -170,13 +175,13 @@ fn main(
         explicit_dependency_declarations,
         main,
     };
-    let addr = LibraAddress::new(addr.to_u8());
     let deps: Vec<&F::CompiledModule> = vec![];
-    let (script, source_map) = ir_to_bytecode::compiler::compile_script(addr, ir_script, deps)
+    let (script, source_map) = ir_to_bytecode::compiler::compile_script(None, ir_script, deps)
         .map_err(|e| vec![(loc, format!("IR ERROR: {}", e))])?;
     let function_info = main_function_info(&source_map, info);
     Ok(CompiledUnit::Script {
         loc,
+        key,
         script,
         source_map,
         function_info,

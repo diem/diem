@@ -1,11 +1,11 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/commands/if_moves_else_doesnt.move:5:30 ───
+   ┌── tests/move_check/translated_ir_tests/commands/if_moves_else_doesnt.move:6:30 ───
    │
- 5 │     0x0::Transaction::assert(x == 0, 42);
+ 6 │     0x0::Transaction::assert(x == 0, 42);
    │                              ^ Invalid usage of local 'x'
    ·
- 3 │     let y = if (true) move x else 0;
+ 4 │     let y = if (true) move x else 0;
    │                       ------ The local might not have a value due to this position. The local must be assigned a value before being used
    │
 

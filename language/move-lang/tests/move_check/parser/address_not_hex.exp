@@ -2,10 +2,10 @@ error:
 
    ┌── tests/move_check/parser/address_not_hex.move:1:9 ───
    │
- 1 │ address 1:
+ 1 │ address 1 {
    │         ^ Unexpected '1'
    ·
- 1 │ address 1:
+ 1 │ address 1 {
    │         - Expected an account address value
    │
 

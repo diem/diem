@@ -5,6 +5,7 @@
 //! account: valentina, 1000000, 0, validator
 //! sender: vivian
 
+script {
 use 0x0::LibraSystem;
 use 0x0::LibraAccount;
 use 0x0::LBR;
@@ -17,6 +18,7 @@ fun main() {
 
   let lib_coin = LibraAccount::withdraw_from_sender<LBR::T>(number_of_validators);
   LibraAccount::deposit<LBR::T>(0xFEE, lib_coin);
+}
 }
 //! check: EXECUTED
 

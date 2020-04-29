@@ -1,3 +1,4 @@
+script {
 use 0x0::FixedPoint32;
 
 fun main() {
@@ -8,5 +9,5 @@ fun main() {
     // is never even tested.
     0x0::Transaction::assert(fail == 999, 1);
 }
-
+}
 // check: ARITHMETIC_ERROR

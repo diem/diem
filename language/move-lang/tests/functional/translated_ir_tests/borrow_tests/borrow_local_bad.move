@@ -12,9 +12,11 @@ module A {
 
 //! new-transaction
 
+script {
 use {{default}}::A;
 fun main() {
     let x = A::new(5);
     let x_ref = A::value(x);
     0x0::Transaction::assert(x_ref == 5, 42);
+}
 }

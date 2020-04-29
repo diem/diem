@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 // global spec ideas
 // SPEC TODO: total value global spec
@@ -443,4 +443,5 @@ module Libra {
     spec fun destroy_zero {
         aborts_if coin.value > 0;
     }
+}
 }

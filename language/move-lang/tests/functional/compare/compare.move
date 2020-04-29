@@ -1,5 +1,5 @@
 // Tests for polymorphic comparison in Move
-
+script {
 use 0x0::Compare;
 use 0x0::LCS;
 use 0x0::Transaction;
@@ -56,5 +56,5 @@ fun main() {
     Transaction::assert(Compare::cmp_lcs_bytes(&LCS::to_bytes(&x"01"), &LCS::to_bytes(&x"000")) == GREATER_THAN, 8033); // sensible
     Transaction::assert(Compare::cmp_lcs_bytes(&LCS::to_bytes(&x"001"), &LCS::to_bytes(&x"100")) == GREATER_THAN, 8034); // potentially confusing
 }
-
+}
 // check: EXECUTED

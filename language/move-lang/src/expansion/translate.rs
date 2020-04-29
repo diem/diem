@@ -122,100 +122,86 @@ impl Context {
 pub fn program(prog: P::Program, sender: Option<Address>) -> (E::Program, Errors) {
     let mut context = Context::new();
     let mut module_map = UniqueMap::new();
-    let mut main_opt = None;
-    // TODO figure out how to use lib definitions
-    // Ignore any main?
+    let mut scripts = vec![];
     for def in prog.lib_definitions {
         match def {
-            P::FileDefinition::Modules(m_or_a_vec) => {
-                modules_and_addresses(&mut context, sender, false, &mut module_map, m_or_a_vec)
+            P::Definition::Module(m) => module(&mut context, sender, false, &mut module_map, m),
+            P::Definition::Address(_, addr, ms) => {
+                for m in ms {
+                    module(&mut context, Some(addr), false, &mut module_map, m)
+                }
             }
-            P::FileDefinition::Main(f) => context.error(vec![(
-                f.function.name.loc(),
-                format!(
-                    "Invalid dependency. '{}' files cannot be depedencies",
-                    FunctionName::MAIN_NAME
-                ),
-            )]),
+            P::Definition::Script(_) => (),
         }
     }
     for def in prog.source_definitions {
         match def {
-            P::FileDefinition::Modules(m_or_a_vec) => {
-                modules_and_addresses(&mut context, sender, true, &mut module_map, m_or_a_vec)
+            P::Definition::Module(m) => module(&mut context, sender, true, &mut module_map, m),
+            P::Definition::Address(_, addr, ms) => {
+                for m in ms {
+                    module(&mut context, Some(addr), true, &mut module_map, m)
+                }
             }
-            P::FileDefinition::Main(f) => {
-                context.address = None;
-                let addr = match sender {
-                    Some(addr) => addr,
-                    None => {
-                        let loc = f.function.name.loc();
-                        let msg = format!(
-                            "Invalid '{}'. No sender address was given as a command line \
-                             argument. Add one using --{}",
-                            FunctionName::MAIN_NAME,
-                            crate::command_line::SENDER
-                        );
-                        context.error(vec![(loc, msg)]);
-                        Address::LIBRA_CORE
-                    }
-                };
-                main(&mut context, &mut main_opt, addr, f)
-            }
+            P::Definition::Script(s) => script(&mut context, &mut scripts, s),
         }
     }
-    (
-        E::Program {
-            modules: module_map,
-            main: main_opt,
-        },
-        context.get_errors(),
-    )
-}
-
-fn modules_and_addresses(
-    context: &mut Context,
-    sender: Option<Address>,
-    is_source_module: bool,
-    module_map: &mut UniqueMap<ModuleIdent, E::ModuleDefinition>,
-    m_or_a_vec: Vec<P::ModuleOrAddress>,
-) {
-    let mut addr_directive = None;
-    for m_or_a in m_or_a_vec {
-        match m_or_a {
-            P::ModuleOrAddress::Address(loc, a) => addr_directive = Some((loc, a)),
-            P::ModuleOrAddress::Module(module_def) => {
-                let (mident, mod_) = module(
-                    context,
-                    is_source_module,
-                    sender,
-                    addr_directive,
-                    module_def,
-                );
-                if let Err((old_loc, _)) = module_map.add(mident.clone(), mod_) {
-                    context.error(vec![
-                        (
-                            mident.loc(),
-                            format!("Duplicate definition for module '{}'", mident),
-                        ),
-                        (old_loc, "Previously defined here".into()),
-                    ]);
+    let scripts = {
+        let mut collected: BTreeMap<String, Vec<E::Script>> = BTreeMap::new();
+        for s in scripts {
+            collected
+                .entry(s.function_name.value().to_owned())
+                .or_insert_with(Vec::new)
+                .push(s)
+        }
+        let mut keyed: BTreeMap<String, E::Script> = BTreeMap::new();
+        for (n, mut ss) in collected {
+            match ss.len() {
+                0 => unreachable!(),
+                1 => assert!(
+                    keyed.insert(n, ss.pop().unwrap()).is_none(),
+                    "ICE duplicate script key"
+                ),
+                _ => {
+                    for (i, s) in ss.into_iter().enumerate() {
+                        let k = format!("{}_{}", n, i);
+                        assert!(keyed.insert(k, s).is_none(), "ICE duplicate script key")
+                    }
                 }
             }
         }
-    }
+        keyed
+    };
+    let prog = E::Program {
+        modules: module_map,
+        scripts,
+    };
+    (prog, context.get_errors())
 }
 
-fn address_directive(
+fn module(
     context: &mut Context,
-    sender: Option<Address>,
-    loc: Loc,
-    addr_directive: Option<(Loc, Address)>,
+    address: Option<Address>,
+    is_source_module: bool,
+    module_map: &mut UniqueMap<ModuleIdent, E::ModuleDefinition>,
+    module_def: P::ModuleDefinition,
 ) {
-    let addr = match (addr_directive, sender) {
-        (Some((_, addr)), _) => addr,
-        (None, Some(addr)) => addr,
-        (None, None) => {
+    assert!(context.address == None);
+    set_sender_address(context, module_def.loc, address);
+    let (mident, mod_) = module_(context, is_source_module, module_def);
+    if let Err((old_loc, _)) = module_map.add(mident.clone(), mod_) {
+        let mmsg = format!("Duplicate definition for module '{}'", mident);
+        context.error(vec![
+            (mident.loc(), mmsg),
+            (old_loc, "Previously defined here".into()),
+        ]);
+    }
+    context.address = None
+}
+
+fn set_sender_address(context: &mut Context, loc: Loc, sender: Option<Address>) {
+    context.address = Some(match sender {
+        Some(addr) => addr,
+        None => {
             let msg = format!(
                 "Invalid module declaration. No sender address was given as a command line \
                  argument. Add one using --{}. Or set the address at the top of the file using \
@@ -225,15 +211,12 @@ fn address_directive(
             context.error(vec![(loc, msg)]);
             Address::LIBRA_CORE
         }
-    };
-    context.address = Some(addr);
+    })
 }
 
-fn module(
+fn module_(
     context: &mut Context,
     is_source_module: bool,
-    sender: Option<Address>,
-    addr_directive: Option<(Loc, Address)>,
     mdef: P::ModuleDefinition,
 ) -> (ModuleIdent, E::ModuleDefinition) {
     assert!(context.aliases.is_empty());
@@ -250,13 +233,12 @@ fn module(
         context.restricted_self_error("module", &name.0);
     }
 
-    address_directive(context, sender, name_loc, addr_directive);
-
     let mident_ = ModuleIdent_ {
         address: context.cur_address(),
         name: name.clone(),
     };
     let current_module = ModuleIdent(sp(name_loc, mident_));
+    let is_source_module = is_source_module && !fake_natives::is_fake_native(&current_module);
     let self_aliases = module_self_aliases(&current_module);
     context.set_and_shadow_aliases(self_aliases);
     let alias_map = aliases(context, uses);
@@ -274,7 +256,6 @@ fn module(
     let specs = specs(context, pspecs);
     let used_aliases = context.clear_aliases();
     let (uses, unused_aliases) = check_aliases(context, is_source_module, used_aliases, alias_map);
-    let is_source_module = is_source_module && !fake_natives::is_fake_native(&current_module);
     let def = E::ModuleDefinition {
         loc,
         uses,
@@ -287,42 +268,25 @@ fn module(
     (current_module, def)
 }
 
-fn main(
-    context: &mut Context,
-    main_opt: &mut Option<(
-        Vec<ModuleIdent>,
-        Address,
-        FunctionName,
-        E::Function,
-        Vec<E::SpecBlock>,
-    )>,
-    addr: Address,
-    main_def: P::Main,
-) {
+fn script(context: &mut Context, scripts: &mut Vec<E::Script>, pscript: P::Script) {
+    scripts.push(script_(context, pscript))
+}
+
+fn script_(context: &mut Context, pscript: P::Script) -> E::Script {
+    assert!(context.address == None);
     assert!(context.aliases.is_empty());
-    let P::Main {
+    let P::Script {
+        loc,
         uses,
         function: pfunction,
         specs: pspecs,
-    } = main_def;
+    } = pscript;
     let alias_map = aliases(context, uses);
     context.set_and_shadow_aliases(alias_map.clone());
-    let (fname, function) = function_def(context, pfunction);
-    if fname.value() != FunctionName::MAIN_NAME {
-        let msg = format!(
-            "Invalid top level function. Found a function named '{}', \
-             but all top level functions must be named '{}'",
-            fname.value(),
-            FunctionName::MAIN_NAME
-        );
-        context.error(vec![(fname.loc(), msg)]);
-    }
-    match &function.visibility {
-        FunctionVisibility::Internal => (),
-        FunctionVisibility::Public(loc) => context.error(vec![(
-            *loc,
-            "Extraneous 'public' modifier. This top-level function is assumed to be public",
-        )]),
+    let (function_name, function) = function_def(context, pfunction);
+    if let FunctionVisibility::Public(loc) = &function.visibility {
+        let msg = "Extraneous 'public' modifier. Script functions are always public";
+        context.error(vec![(*loc, msg)]);
     }
     match &function.body {
         sp!(_, E::FunctionBody_::Defined(_)) => (),
@@ -331,23 +295,21 @@ fn main(
             "Invalid 'native' function. This top-level function must have a defined body",
         )]),
     }
-    let especs = specs(context, pspecs);
+    let specs = specs(context, pspecs);
     let used_aliases = context.clear_aliases();
-    let (_uses, unused_aliases) = check_aliases(
+    let (uses, unused_aliases) = check_aliases(
         context,
         /* not a dependency */ true,
         used_aliases,
         alias_map,
     );
-    match main_opt {
-        None => *main_opt = Some((unused_aliases, addr, fname, function, especs)),
-        Some((_, _, old_name, _, _)) => context.error(vec![
-            (
-                fname.loc(),
-                format!("Duplicate definition of '{}'", FunctionName::MAIN_NAME),
-            ),
-            (old_name.loc(), "Previously defined here".into()),
-        ]),
+    E::Script {
+        loc,
+        unused_aliases,
+        uses,
+        function_name,
+        function,
+        specs,
     }
 }
 

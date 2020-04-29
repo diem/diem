@@ -1,3 +1,4 @@
+script {
 fun main() {
     let x;
     let y;
@@ -8,6 +9,7 @@ fun main() {
         x;
     };
     0x0::Transaction::assert(y == 0, 42);
+}
 }
 
 // check: COPYLOC_UNAVAILABLE_ERROR

@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module LibraWriteSetManager {
     use 0x0::LibraAccount;
@@ -54,4 +54,6 @@ module LibraWriteSetManager {
         );
         LibraConfig::reconfigure();
     }
+}
+
 }

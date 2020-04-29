@@ -1,6 +1,8 @@
+script {
 fun main() {
     // no return needed
     abort 0
+}
 }
 
 // not: VerificationFailure

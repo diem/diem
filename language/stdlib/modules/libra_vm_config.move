@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module LibraVMConfig {
     use 0x0::LibraConfig;
@@ -93,4 +93,6 @@ module LibraVMConfig {
         current_config.publishing_option = publishing_option;
         LibraConfig::set<Self::T>(Transaction::sender(), current_config )
     }
+}
+
 }

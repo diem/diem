@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 module Option {
     use 0x0::Vector;
 
@@ -105,5 +105,7 @@ module Option {
         let T { vec } = t;
         Vector::destroy_empty(vec)
     }
+
+}
 
 }

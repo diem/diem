@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module Libra {
     use 0x0::Association;
@@ -579,4 +579,6 @@ module Libra {
     fun assert_is_coin<CoinType>() {
         Transaction::assert(is_currency<CoinType>(), 1);
     }
+}
+
 }

@@ -253,7 +253,12 @@ fn test_execute_custom_module_and_script() {
 
     // Compile and publish that module.
     let module_params = &["compile", "0", unwrapped_module_path, unwrapped_stdlib_dir];
-    let module_compiled_path = client_proxy.compile_program(module_params).unwrap();
+    let mut module_compiled_paths = client_proxy.compile_program(module_params).unwrap();
+    let module_compiled_path = if module_compiled_paths.len() != 1 {
+        panic!("compiler output has more than one file")
+    } else {
+        module_compiled_paths.pop().unwrap()
+    };
     client_proxy
         .publish_module(&["publish", "0", &module_compiled_path[..]])
         .unwrap();
@@ -272,7 +277,12 @@ fn test_execute_custom_module_and_script() {
         unwrapped_module_path,
         unwrapped_stdlib_dir,
     ];
-    let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
+    let mut script_compiled_paths = client_proxy.compile_program(script_params).unwrap();
+    let script_compiled_path = if script_compiled_paths.len() != 1 {
+        panic!("compiler output has more than one file")
+    } else {
+        script_compiled_paths.pop().unwrap()
+    };
     let formatted_recipient_address = format!("0x{}", recipient_address);
     client_proxy
         .execute_script(&[
@@ -981,7 +991,12 @@ fn test_e2e_modify_publishing_option() {
     let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/modules");
     let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
     let script_params = &["compile", "0", unwrapped_script_path, unwrapped_stdlib_dir];
-    let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
+    let mut script_compiled_paths = client_proxy.compile_program(script_params).unwrap();
+    let script_compiled_path = if script_compiled_paths.len() != 1 {
+        panic!("compiler output has more than one file")
+    } else {
+        script_compiled_paths.pop().unwrap()
+    };
 
     // Initially publishing option was set to CustomScript, this transaction should be executed.
     client_proxy
@@ -1106,7 +1121,12 @@ fn test_malformed_script() {
     let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/modules");
     let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
     let script_params = &["compile", "0", unwrapped_script_path, unwrapped_stdlib_dir];
-    let script_compiled_path = client_proxy.compile_program(script_params).unwrap();
+    let mut script_compiled_paths = client_proxy.compile_program(script_params).unwrap();
+    let script_compiled_path = if script_compiled_paths.len() != 1 {
+        panic!("compiler output has more than one file")
+    } else {
+        script_compiled_paths.pop().unwrap()
+    };
 
     // the script expects two arguments. Passing only one in the test, which will cause a failure.
     client_proxy

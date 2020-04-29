@@ -19,6 +19,7 @@ module FooConfig {
 //! new-transaction
 //! sender: association
 // Publish a new config item.
+script {
 use 0x0::LibraConfig;
 use {{alice}}::FooConfig;
 fun main() {
@@ -26,6 +27,7 @@ fun main() {
 
     config = FooConfig::new(0);
     LibraConfig::publish_new_config<FooConfig::T>(move config)
+}
 }
 // check: EXECUTED
 
@@ -36,6 +38,7 @@ fun main() {
 //! new-transaction
 //! sender: association
 // Update the value.
+script {
 use 0x0::LibraConfig;
 use {{alice}}::FooConfig;
 fun main() {
@@ -43,6 +46,7 @@ fun main() {
 
     config = FooConfig::new(0);
     LibraConfig::set<FooConfig::T>(0x0::Transaction::sender(), move config)
+}
 }
 // Should trigger a reconfiguration
 // check: NewEpochEvent

@@ -53,7 +53,12 @@ impl Command for DevCommandCompile {
         }
         println!(">> Compiling program");
         match client.compile_program(params) {
-            Ok(path) => println!("Successfully compiled a program at {}", path),
+            Ok(paths) => {
+                println!("Successfully compiled a program at:");
+                for p in paths {
+                    println!("  {}", p);
+                }
+            }
             Err(e) => println!("{}", e),
         }
     }

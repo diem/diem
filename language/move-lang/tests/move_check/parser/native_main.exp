@@ -1,8 +1,8 @@
 error: 
 
-   ┌── tests/move_check/parser/native_main.move:1:1 ───
+   ┌── tests/move_check/parser/native_main.move:2:1 ───
    │
- 1 │ native fun main();
+ 2 │ native fun main();
    │ ^^^^^^ Native functions can only be declared inside a module
    │
 

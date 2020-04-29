@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module LBR {
     use 0x0::Coin1;
@@ -132,4 +132,6 @@ module LBR {
         // times the value of the currency on which the ratio is defined.
         FixedPoint32::multiply_u64(coin1_value, *&reserve.coin1.ratio)
     }
+}
+
 }

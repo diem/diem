@@ -24,7 +24,7 @@ use std::{
 use vm::{
     access::ModuleAccess,
     file_format::{
-        self, Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledModuleMut, CompiledScript,
+        Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledModuleMut, CompiledScript,
         CompiledScriptMut, Constant, FieldDefinition, FunctionDefinition, FunctionSignature, Kind,
         Signature, SignatureToken, StructDefinition, StructDefinitionIndex, StructFieldInformation,
         StructHandleIndex, TableIndex, TypeParameterIndex, TypeSignature,
@@ -393,15 +393,11 @@ impl FunctionFrame {
 
 /// Compile a transaction script.
 pub fn compile_script<'a, T: 'a + ModuleAccess>(
-    address: AccountAddress,
+    address: Option<AccountAddress>,
     script: Script,
     dependencies: impl IntoIterator<Item = &'a T>,
 ) -> Result<(CompiledScript, SourceMap<Loc>)> {
-    let current_module = QualifiedModuleIdent {
-        address,
-        name: ModuleName::new(file_format::self_module_name().to_string()),
-    };
-    let mut context = Context::new(dependencies, current_module)?;
+    let mut context = Context::new(dependencies, None)?;
 
     compile_imports(&mut context, address, script.imports)?;
     compile_explicit_dependency_declarations(
@@ -460,10 +456,10 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
         address,
         name: module.name,
     };
-    let mut context = Context::new(dependencies, current_module)?;
+    let mut context = Context::new(dependencies, Some(current_module))?;
     let self_name = ModuleName::new(ModuleName::self_name().into());
     // Explicitly declare all imports as they will be included even if not used
-    compile_imports(&mut context, address, module.imports)?;
+    compile_imports(&mut context, Some(address), module.imports)?;
 
     // Explicitly declare all structs as they will be included even if not used
     for s in &module.structs {
@@ -560,13 +556,19 @@ fn compile_explicit_dependency_declarations(
 
 fn compile_imports(
     context: &mut Context,
-    address: AccountAddress,
+    address_opt: Option<AccountAddress>,
     imports: Vec<ImportDefinition>,
 ) -> Result<()> {
     for import in imports {
-        let ident = match import.ident {
-            ModuleIdent::Transaction(name) => QualifiedModuleIdent { address, name },
-            ModuleIdent::Qualified(id) => id,
+        let ident = match (address_opt, import.ident) {
+            (Some(address), ModuleIdent::Transaction(name)) => {
+                QualifiedModuleIdent { address, name }
+            }
+            (None, ModuleIdent::Transaction(name)) => bail!(
+                "Invalid import '{}'. No address specified for script so cannot resolve import",
+                name
+            ),
+            (_, ModuleIdent::Qualified(id)) => id,
         };
         context.declare_import(ident, import.alias)?;
     }

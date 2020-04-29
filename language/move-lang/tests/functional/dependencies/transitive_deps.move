@@ -18,9 +18,10 @@ module Y {
 
 
 //! new-transaction
-
+script {
 use {{default}}::Y;
 
 fun main() {
     Y::foo();
+}
 }

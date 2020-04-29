@@ -1,4 +1,4 @@
-address 0x42:
+address 0x42 {
 
 module M {
     struct Box<T> {}
@@ -30,4 +30,6 @@ module N {
     public fun t<T>() {
         M::t0<M::Box<T>>()
     }
+}
+
 }

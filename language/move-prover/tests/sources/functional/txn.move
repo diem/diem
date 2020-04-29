@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module TestTransaction {
     use 0x0::Transaction;
@@ -20,4 +20,6 @@ module TestTransaction {
     spec fun check_sender2 {
         aborts_if !exists<T>(sender());
     }
+}
+
 }

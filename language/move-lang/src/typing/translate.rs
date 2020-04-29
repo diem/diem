@@ -14,7 +14,7 @@ use crate::{
     typing::ast as T,
 };
 use move_ir_types::location::*;
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 //**************************************************************************************************
 // Entry
@@ -23,13 +23,13 @@ use std::collections::{BTreeSet, VecDeque};
 pub fn program(prog: N::Program, errors: Errors) -> (T::Program, Errors) {
     let mut context = Context::new(&prog, errors);
     let modules = modules(&mut context, prog.modules);
-    let main = main_function(&mut context, prog.main);
+    let scripts = scripts(&mut context, prog.scripts);
 
     assert!(context.constraints.is_empty());
     let mut errors = context.get_errors();
     recursive_structs::modules(&mut errors, &modules);
     infinite_instantiations::modules(&mut errors, &modules);
-    (T::Program { modules, main }, errors)
+    (T::Program { modules, scripts }, errors)
 }
 
 fn modules(
@@ -65,15 +65,32 @@ fn module(
     }
 }
 
-fn main_function(
+fn scripts(
     context: &mut Context,
-    main: Option<(Address, FunctionName, N::Function)>,
-) -> Option<(Address, FunctionName, T::Function)> {
-    context.current_module = None;
-    main.map(|(addr, name, f)| (addr, name.clone(), function(context, name, f, true)))
+    nscripts: BTreeMap<String, N::Script>,
+) -> BTreeMap<String, T::Script> {
+    nscripts
+        .into_iter()
+        .map(|(n, s)| (n, script(context, s)))
+        .collect()
 }
 
-fn check_primitive_main_arg(context: &mut Context, mloc: Loc, ty: &Type) {
+fn script(context: &mut Context, nscript: N::Script) -> T::Script {
+    context.current_module = None;
+    let N::Script {
+        loc,
+        function_name,
+        function: nfunction,
+    } = nscript;
+    let function = function(context, function_name.clone(), nfunction, true);
+    T::Script {
+        loc,
+        function_name,
+        function,
+    }
+}
+
+fn check_primitive_script_arg(context: &mut Context, mloc: Loc, ty: &Type) {
     use BuiltinTypeName_ as BT;
 
     let sp!(loc, ty_) = ty;
@@ -89,7 +106,10 @@ fn check_primitive_main_arg(context: &mut Context, mloc: Loc, ty: &Type) {
         }
     }
 
-    let mmsg = format!("Invalid parameter for '{}'", FunctionName::MAIN_NAME);
+    let mmsg = format!(
+        "Invalid parameter for script function '{}'",
+        context.current_function.as_ref().unwrap()
+    );
     let tmsg = format!(
         "Found: {}. But expected: {}",
         core::error_format(ty, &Subst::empty()),
@@ -106,7 +126,7 @@ fn function(
     context: &mut Context,
     name: FunctionName,
     f: N::Function,
-    is_main: bool,
+    is_script: bool,
 ) -> T::Function {
     let loc = name.loc();
     context.current_function = Some(name);
@@ -120,9 +140,9 @@ fn function(
     context.reset_for_module_item();
 
     function_signature(context, &signature);
-    if is_main {
+    if is_script {
         for (_, param_ty) in &signature.parameters {
-            check_primitive_main_arg(context, loc, param_ty);
+            check_primitive_script_arg(context, loc, param_ty);
         }
         subtype(
             context,

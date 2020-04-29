@@ -1,4 +1,4 @@
-address 0x42:
+address 0x42 {
 
 module X {
     struct Box<T> {}
@@ -68,4 +68,6 @@ module Z {
     public fun bl<BL>() {
         tl<BL>()
     }
+}
+
 }

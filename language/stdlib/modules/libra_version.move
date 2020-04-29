@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module LibraVersion {
     use 0x0::LibraConfig;
@@ -25,4 +25,6 @@ module LibraVersion {
 
         LibraConfig::set<Self::T>(Transaction::sender(), T { major } )
     }
+}
+
 }

@@ -84,7 +84,7 @@ impl Compiler {
     ) -> Result<(CompiledScript, SourceMap<Loc>, Vec<VerifiedModule>)> {
         let parsed_script = parse_script(file_name, code)?;
         let deps = self.deps();
-        let (compiled_script, source_map) = compile_script(self.address, parsed_script, &deps)?;
+        let (compiled_script, source_map) = compile_script(None, parsed_script, &deps)?;
         Ok((compiled_script, source_map, deps))
     }
 

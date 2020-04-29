@@ -1,4 +1,4 @@
-address 0x1:
+address 0x1 {
 
 module M {
     resource struct S {}
@@ -8,5 +8,7 @@ module M {
         let s: S = s;
         s
     }
+
+}
 
 }

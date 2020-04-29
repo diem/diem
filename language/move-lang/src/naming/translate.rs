@@ -284,9 +284,9 @@ impl Context {
 pub fn program(prog: E::Program, errors: Errors) -> (N::Program, Errors) {
     let mut context = Context::new(&prog, errors);
     let mut modules = modules(&mut context, prog.modules);
-    let main = main_function(&mut context, prog.main);
+    let scripts = scripts(&mut context, prog.scripts);
     super::uses::verify(&mut context.errors, &mut modules);
-    (N::Program { modules, main }, context.get_errors())
+    (N::Program { modules, scripts }, context.get_errors())
 }
 
 fn modules(
@@ -345,22 +345,31 @@ fn check_unused_aliases(context: &mut Context, unused_aliases: Vec<ModuleIdent>)
     }
 }
 
-fn main_function(
+fn scripts(
     context: &mut Context,
-    main: Option<(
-        Vec<ModuleIdent>,
-        Address,
-        FunctionName,
-        E::Function,
-        Vec<E::SpecBlock>,
-    )>,
-) -> Option<(Address, FunctionName, N::Function)> {
-    match main {
-        None => None,
-        Some((unused_aliases, addr, name, f, _)) => {
-            check_unused_aliases(context, unused_aliases);
-            Some((addr, name.clone(), function(context, name, f)))
-        }
+    escripts: BTreeMap<String, E::Script>,
+) -> BTreeMap<String, N::Script> {
+    escripts
+        .into_iter()
+        .map(|(n, s)| (n, script(context, s)))
+        .collect()
+}
+
+fn script(context: &mut Context, escript: E::Script) -> N::Script {
+    let E::Script {
+        loc,
+        unused_aliases,
+        uses: _uses,
+        function_name,
+        function: efunction,
+        specs: _specs,
+    } = escript;
+    check_unused_aliases(context, unused_aliases);
+    let function = function(context, function_name.clone(), efunction);
+    N::Script {
+        loc,
+        function_name,
+        function,
     }
 }
 

@@ -10,8 +10,10 @@ module M {
 }
 
 //! new-transaction
+script {
 use {{default}}::M;
 
 fun main() {
     M::foobar(true)
+}
 }

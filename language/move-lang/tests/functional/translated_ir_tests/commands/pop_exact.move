@@ -10,8 +10,10 @@ module A {
 
 //! new-transaction
 
+script {
 use {{default}}::A;
 
 fun main() {
     A::pop();
+}
 }

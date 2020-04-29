@@ -1,3 +1,4 @@
+script {
 fun main() {
     let x;
     if (true) {
@@ -6,4 +7,5 @@ fun main() {
         x = 0;
     };
     0x0::Transaction::assert(x == 5, 42);
+}
 }

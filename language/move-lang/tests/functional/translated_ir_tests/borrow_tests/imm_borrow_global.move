@@ -47,8 +47,10 @@ module Tester {
 
 //! new-transaction
 //! sender: bob
+script {
 use {{bob}}::Tester;
 
 fun main() {
     Tester::test();
+}
 }
