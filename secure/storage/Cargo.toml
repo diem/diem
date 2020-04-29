@@ -12,6 +12,7 @@ edition = "2018"
 [dependencies]
 chrono = "0.4.9"
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-config = { path = "../../config", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-secure-time = { path = "../time", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
@@ -24,7 +25,6 @@ thiserror = "1.0"
 toml = { version = "0.5.3", default-features = false }
 
 [dev-dependencies]
-libra-config = { path = "../../config", version = "0.1.0" }
 rand = "0.7.3"
 
 [features]

@@ -13,6 +13,7 @@ edition = "2018"
 structopt = "0.3.14"
 thiserror = "1.0"
 
+libra-config = { path = "..", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-network-address = { path = "../../network/network-address", version = "0.1.0" }
 libra-secure-storage = { path = "../../secure/storage", version = "0.1.0" }

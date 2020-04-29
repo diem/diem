@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 mod error;
+mod secure_backend;
 
 use crate::error::Error;
 use libra_crypto::{ed25519::Ed25519PublicKey, hash::CryptoHash, x25519, ValidCryptoMaterial};

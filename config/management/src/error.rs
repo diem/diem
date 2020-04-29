@@ -5,6 +5,12 @@ use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum Error {
+    #[error("Invalid key value found in backend: {0}")]
+    BackendInvalidKeyValue(String),
+    #[error("Backend is missing the backend key")]
+    BackendMissingBackendKey,
+    #[error("Backend parsing error: {0}")]
+    BackendParsingError(String),
     #[error("Local storage unavailable, please check your configuration")]
     LocalStorageUnavailable,
     #[error("Failed to read local storage: {0}")]
