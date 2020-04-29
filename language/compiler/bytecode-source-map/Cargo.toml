@@ -15,7 +15,7 @@ move-ir-types = { path = "../../move-ir/types", version = "0.1.0" }
 vm = { path = "../../vm", version = "0.1.0" }
 lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 codespan = "0.8.0"
-codespan-reporting = "0.8.0"
+codespan-reporting = "0.9.3"
 serde = { version = "1.0.106", default-features = false }
 
 [features]

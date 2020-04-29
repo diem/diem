@@ -484,7 +484,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "codespan-reporting 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan-reporting 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
@@ -774,10 +774,9 @@ dependencies = [
 
 [[package]]
 name = "codespan-reporting"
-version = "0.8.0"
+version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "termcolor 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "unicode-width 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1922,7 +1921,7 @@ dependencies = [
  "anyhow 1.0.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytecode-source-map 0.1.0",
  "codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "codespan-reporting 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan-reporting 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "ir-to-bytecode-syntax 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
@@ -3075,7 +3074,7 @@ dependencies = [
  "bytecode-source-map 0.1.0",
  "bytecode-verifier 0.1.0",
  "codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "codespan-reporting 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan-reporting 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "datatest-stable 0.1.0",
  "difference 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "functional-tests 0.1.0",
@@ -3102,7 +3101,7 @@ dependencies = [
  "bytecode-source-map 0.1.0",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "codespan-reporting 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan-reporting 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "datatest-stable 0.1.0",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-temppath 0.1.0",
@@ -4840,7 +4839,7 @@ dependencies = [
  "bytecode-source-map 0.1.0",
  "bytecode-verifier 0.1.0",
  "codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "codespan-reporting 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan-reporting 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "datatest-stable 0.1.0",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-types 0.1.0",
@@ -4868,7 +4867,7 @@ dependencies = [
  "anyhow 1.0.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytecode-verifier 0.1.0",
  "codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "codespan-reporting 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan-reporting 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "datatest-stable 0.1.0",
  "ir-to-bytecode 0.1.0",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6401,7 +6400,7 @@ dependencies = [
 "checksum clear_on_drop 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "97276801e127ffb46b66ce23f35cc96bd454fa311294bced4bbace7baa8b1d17"
 "checksum cloudabi 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)" = "ddfc5b9aa5d4507acaf872de71051dfd0e309860e88966e1051e462a077aac4f"
 "checksum codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "52899426b69706219a1aaee2e95868fd01a0bd8006bb163f069578a0af5b5bb2"
-"checksum codespan-reporting 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "600c3317d4705222ff820139aaa76a3a208024ffc41f894da565a4c3b949d4c9"
+"checksum codespan-reporting 0.9.3 (registry+https://github.com/rust-lang/crates.io-index)" = "d5680df8512a0e825b9edc41b619ec88b367644d394b4d862a04b4d6387c65da"
 "checksum constant_time_eq 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 "checksum cookie 0.13.3 (registry+https://github.com/rust-lang/crates.io-index)" = "0c60ef6d0bbf56ad2674249b6bb74f2c6aeb98b98dd57b5d3e37cace33011d69"
 "checksum core-foundation 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "57d24c7a13c43e870e37c1556b74555437870a04514f7685f5b354e090567171"
