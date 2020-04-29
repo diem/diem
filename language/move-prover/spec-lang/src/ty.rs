@@ -130,7 +130,11 @@ impl Type {
 
     /// Instantiates type parameters in this type.
     pub fn instantiate(&self, params: &[Type]) -> Type {
-        self.replace(Some(params), None)
+        if params.is_empty() {
+            self.clone()
+        } else {
+            self.replace(Some(params), None)
+        }
     }
 
     /// A helper function to do replacement of type parameters and/or type variables.

@@ -80,18 +80,18 @@ impl ConditionKind {
     }
 
     /// Returns true if this condition is allowed on a function declaration.
-    pub fn allowed_on_fun_decl(&self) -> bool {
+    pub fn allowed_on_public_fun_decl(&self) -> bool {
         use ConditionKind::*;
         matches!(
             self,
-            Requires
-                | RequiresModule
-                | Invariant
-                | InvariantModule
-                | AbortsIf
-                | Ensures
-                | VarUpdate(..)
+            Requires | RequiresModule | AbortsIf | Ensures | VarUpdate(..)
         )
+    }
+
+    /// Returns true if this condition is allowed on a private function declaration.
+    pub fn allowed_on_private_fun_decl(&self) -> bool {
+        use ConditionKind::*;
+        matches!(self, Requires | AbortsIf | Ensures | VarUpdate(..))
     }
 
     /// Returns true if this condition is allowed in a function body.
@@ -112,11 +112,32 @@ impl ConditionKind {
     /// Returns true if this condition is allowed on a module.
     pub fn allowed_on_module(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Invariant | InvariantModule)
+        matches!(self, Invariant)
     }
 }
 
-#[derive(Debug)]
+impl std::fmt::Display for ConditionKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        use ConditionKind::*;
+        match self {
+            Assert => write!(f, "assert"),
+            Assume => write!(f, "assume"),
+            Decreases => write!(f, "decreases"),
+            AbortsIf => write!(f, "aborts_if"),
+            Ensures => write!(f, "ensures"),
+            Requires => write!(f, "requires"),
+            RequiresModule => write!(f, "requires module"),
+            Invariant => write!(f, "invariant"),
+            InvariantModule => write!(f, "invariant module"),
+            InvariantUpdate => write!(f, "invariant update"),
+            VarUpdate(..) => write!(f, "invariant update assign"),
+            VarPack(..) => write!(f, "invariant pack assign"),
+            VarUnpack(..) => write!(f, "invariant unpack assign"),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Condition {
     pub loc: Loc,
     pub kind: ConditionKind,
@@ -130,7 +151,7 @@ pub struct Condition {
 pub type PropertyBag = BTreeMap<Symbol, Value>;
 
 /// Specification and properties associated with a language item.
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Spec {
     // The set of conditions associated with this item.
     pub conditions: Vec<Condition>,

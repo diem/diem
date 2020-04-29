@@ -12,6 +12,8 @@ use itertools::Itertools;
 use num::{BigUint, FromPrimitive, Num};
 
 use bytecode_source_map::source_map::SourceMap;
+#[allow(unused_imports)]
+use log::{debug, info, warn};
 use move_lang::{
     compiled_unit::{FunctionInfo, SpecInfo},
     expansion::ast::{self as EA},
@@ -1083,10 +1085,17 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             }
         }
 
-        // Finally perform post analyzes of spec var usage in spec functions.
+        // Perform post analyzes of spec var usage in spec functions.
         self.compute_spec_var_usage();
-    }
 
+        // Perform post reduction of module invariants.
+        self.reduce_module_invariants();
+    }
+}
+
+/// ## Struct Definition Analysis
+
+impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     fn def_ana_struct(&mut self, name: &PA::StructName, def: &EA::StructDefinition) {
         let qsym = self.qualified_by_module_from_name(&name.0);
         let type_params = self
@@ -1119,7 +1128,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             .expect("struct invalid")
             .fields = fields;
     }
+}
 
+/// ## Spec Block Definition Analysis
+
+impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     fn def_ana_spec_block(&mut self, context: &SpecBlockContext<'_>, block: &EA::SpecBlock) {
         use EA::SpecBlockMember_::*;
         for member in &block.value.members {
@@ -1165,7 +1178,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             }
         }
     }
+}
 
+/// ## Pragma Definition Analysis
+
+impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     /// Definition analysis for a pragma.
     fn def_ana_pragma(
         &mut self,
@@ -1193,8 +1210,12 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             });
         }
     }
+}
 
-    /// Returns a mutable reference to the spec of the given spec block context.
+/// ## General Helpers for Definition Analysis
+
+impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
+    /// Updates the Spec of a given context via an update function.
     fn update_spec<F>(&mut self, context: &SpecBlockContext, update: F)
     where
         F: FnOnce(&mut Spec),
@@ -1231,95 +1252,6 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     .or_insert_with(Spec::default),
             ),
             Module => update(&mut self.module_spec),
-        }
-    }
-
-    /// Check whether the condition is allowed in the given context. Return true if so, otherwise
-    /// report an error and return false.
-    fn check_condition_is_valid(
-        &mut self,
-        context: &SpecBlockContext,
-        loc: &Loc,
-        kind: &ConditionKind,
-        error_msg: &str,
-    ) -> bool {
-        use SpecBlockContext::*;
-        let ok = match context {
-            Module => kind.allowed_on_module(),
-            Struct(_) => kind.allowed_on_struct(),
-            Function(_) => kind.allowed_on_fun_decl(),
-            FunctionCode(_, _) => kind.allowed_on_fun_impl(),
-            Schema(_) => true,
-        };
-        if !ok {
-            self.parent.error(loc, error_msg);
-        }
-        ok
-    }
-
-    /// Add the given conditions to the context, after checking whether they are valid in the
-    /// context. Reports errors for invalid conditions.
-    fn add_conditions_to_context(
-        &mut self,
-        context: &SpecBlockContext,
-        loc: &Loc,
-        conditions: Vec<Condition>,
-        error_msg: &str,
-    ) {
-        for cond in conditions {
-            if self.check_condition_is_valid(context, loc, &cond.kind, error_msg) {
-                self.update_spec(context, |spec| spec.conditions.push(cond));
-            }
-        }
-    }
-
-    /// Definition analysis for a condition.
-    fn def_ana_condition(
-        &mut self,
-        loc: &Loc,
-        context: &SpecBlockContext,
-        kind: ConditionKind,
-        exp: &EA::Exp,
-    ) {
-        if kind == ConditionKind::Decreases {
-            self.parent
-                .error(loc, "decreases specification not supported currently");
-            return;
-        }
-        let expected_type = self.expected_type_for_condition(&kind);
-        let mut et = self.exp_translator_for_context(loc, context, Some(&kind));
-        let translated = et.translate_exp(exp, &expected_type);
-        et.finalize_types();
-        self.add_conditions_to_context(
-            context,
-            loc,
-            vec![Condition {
-                loc: loc.clone(),
-                kind,
-                exp: translated,
-            }],
-            "condition not allowed in this context",
-        );
-    }
-
-    /// Compute the expected type for the expression in a condition.
-    fn expected_type_for_condition(&mut self, kind: &ConditionKind) -> Type {
-        if let Some((mid, vid, ty_args)) = kind.get_spec_var_target() {
-            if mid == self.module_id {
-                self.spec_vars[vid.as_usize()]
-                    .type_
-                    .clone()
-                    .instantiate(&ty_args)
-            } else {
-                let module_env = self.parent.env.get_module(mid);
-                module_env
-                    .get_spec_var(vid)
-                    .type_
-                    .clone()
-                    .instantiate(&ty_args)
-            }
-        } else {
-            BOOL_TYPE.clone()
         }
     }
 
@@ -1460,6 +1392,141 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             }
         }
     }
+}
+
+/// ## Condition Definition Analysis
+
+impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
+    /// Check whether the condition is allowed in the given context. Return true if so, otherwise
+    /// report an error and return false.
+    fn check_condition_is_valid(
+        &mut self,
+        context: &SpecBlockContext,
+        loc: &Loc,
+        kind: &ConditionKind,
+        error_msg: &str,
+    ) -> bool {
+        use SpecBlockContext::*;
+        let ok = match context {
+            Module => kind.allowed_on_module(),
+            Struct(_) => kind.allowed_on_struct(),
+            Function(name) => {
+                let entry = self.parent.fun_table.get(name).expect("function defined");
+                if entry.is_public {
+                    kind.allowed_on_public_fun_decl()
+                } else {
+                    kind.allowed_on_private_fun_decl()
+                }
+            }
+            FunctionCode(_, _) => kind.allowed_on_fun_impl(),
+            Schema(_) => true,
+        };
+        if !ok {
+            self.parent.error(loc, &format!("`{}` {}", kind, error_msg));
+        }
+        ok
+    }
+
+    /// Add the given conditions to the context, after checking whether they are valid in the
+    /// context. Reports errors for invalid conditions.
+    fn add_conditions_to_context(
+        &mut self,
+        context: &SpecBlockContext,
+        loc: &Loc,
+        conditions: Vec<Condition>,
+        error_msg: &str,
+    ) {
+        for cond in conditions {
+            // If this is an invariant on a function decl, transform it into a pair of
+            // requires and ensures.
+            let derived_conds = match cond {
+                Condition {
+                    loc,
+                    kind: kind @ ConditionKind::Invariant,
+                    exp,
+                }
+                | Condition {
+                    loc,
+                    kind: kind @ ConditionKind::InvariantModule,
+                    exp,
+                } if matches!(context, SpecBlockContext::Function(..)) => {
+                    let requires_kind = if kind == ConditionKind::InvariantModule {
+                        ConditionKind::RequiresModule
+                    } else {
+                        ConditionKind::Requires
+                    };
+                    vec![
+                        Condition {
+                            loc: loc.clone(),
+                            kind: requires_kind,
+                            exp: exp.clone(),
+                        },
+                        Condition {
+                            loc,
+                            kind: ConditionKind::Ensures,
+                            exp,
+                        },
+                    ]
+                }
+                _ => vec![cond],
+            };
+            for derived_cond in derived_conds {
+                if self.check_condition_is_valid(context, loc, &derived_cond.kind, error_msg) {
+                    self.update_spec(context, |spec| spec.conditions.push(derived_cond));
+                }
+            }
+        }
+    }
+
+    /// Definition analysis for a condition.
+    fn def_ana_condition(
+        &mut self,
+        loc: &Loc,
+        context: &SpecBlockContext,
+        kind: ConditionKind,
+        exp: &EA::Exp,
+    ) {
+        if kind == ConditionKind::Decreases {
+            self.parent
+                .error(loc, "decreases specification not supported currently");
+            return;
+        }
+        let expected_type = self.expected_type_for_condition(&kind);
+        let mut et = self.exp_translator_for_context(loc, context, Some(&kind));
+        let translated = et.translate_exp(exp, &expected_type);
+        et.finalize_types();
+        self.add_conditions_to_context(
+            context,
+            loc,
+            vec![Condition {
+                loc: loc.clone(),
+                kind,
+                exp: translated,
+            }],
+            "not allowed in this context",
+        );
+    }
+
+    /// Compute the expected type for the expression in a condition.
+    fn expected_type_for_condition(&mut self, kind: &ConditionKind) -> Type {
+        if let Some((mid, vid, ty_args)) = kind.get_spec_var_target() {
+            if mid == self.module_id {
+                self.spec_vars[vid.as_usize()]
+                    .type_
+                    .clone()
+                    .instantiate(&ty_args)
+            } else {
+                let module_env = self.parent.env.get_module(mid);
+                module_env
+                    .get_spec_var(vid)
+                    .type_
+                    .clone()
+                    .instantiate(&ty_args)
+            }
+        } else {
+            BOOL_TYPE.clone()
+        }
+    }
 
     /// Extracts a condition kind based on the parsed kind and the associated expression. This
     /// identifies a spec var assignment expression and moves the var to the SpecConditionKind enum
@@ -1558,7 +1625,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             None
         }
     }
+}
 
+/// ## Spec Function Definition Analysis
+
+impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     /// Definition analysis for a specification helper function.
     fn def_ana_spec_fun(&mut self, _signature: &EA::FunctionSignature, body: &EA::FunctionBody) {
         if let EA::FunctionBody_::Defined(seq) = &body.value {
@@ -1581,7 +1652,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         }
         self.spec_fun_index += 1;
     }
+}
 
+/// ## Schema Definition Analysis
+
+impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     /// Definition analysis for a schema. This proceeds in two steps: first we ensure recursively
     /// that all included schemas are analyzed, checking for cycles. Then we actually analyze this
     /// schema's content.
@@ -1979,7 +2054,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             context,
             loc,
             spec.conditions,
-            "schema includes condition which is not allowed in this context",
+            "(included from schema) not allowed in this context",
         );
     }
 
@@ -2086,7 +2161,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         .expect("regex valid");
         rex.is_match(self.symbol_pool().string(name).as_str())
     }
+}
 
+/// ## Spec Var Usage Analysis
+
+impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     /// Compute spec var usage of spec funs.
     fn compute_spec_var_usage(&mut self) {
         let mut visited = BTreeSet::new();
@@ -2176,6 +2255,41 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         fun_decl.body = Some(body);
         fun_decl.used_spec_vars = used_spec_vars;
         fun_decl.is_pure = is_pure;
+    }
+}
+
+/// ## Module Invariant Reduction
+
+impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
+    /// Reduce module invariants by making them requires/ensures on each function.
+    fn reduce_module_invariants(&mut self) {
+        for mut cond in self.module_spec.conditions.iter().cloned().collect_vec() {
+            assert_eq!(cond.kind, ConditionKind::Invariant);
+            // An Invariant on module level becomes an InvariantModule on function level
+            // (which is then further reduced to a pair of RequiresModule and Ensures).
+            // Only public functions receive it.
+            cond.kind = ConditionKind::InvariantModule;
+            for qname in self
+                .parent
+                .fun_table
+                .keys()
+                .filter(|qn| qn.module_name == self.module_name)
+                .cloned()
+                .collect_vec()
+            {
+                let entry = self.parent.fun_table.get(&qname).unwrap();
+                if entry.is_public {
+                    let context = SpecBlockContext::Function(qname);
+                    // The below should not generate an error because of the above assert.
+                    self.add_conditions_to_context(
+                        &context,
+                        &cond.loc.clone(),
+                        vec![cond.clone()],
+                        "[internal] (included via module level invariant) not allowed in this context",
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -3524,11 +3638,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
 /// Rewriter for expressions, allowing to substitute locals by expressions as well as instantiate
 /// types. Currently used to rewrite conditions and invariants included from schemas.
-struct ExpRewriter<'env, 'translator, 'rewriter>
-where
-    'env: 'rewriter,
-    'translator: 'rewriter,
-{
+struct ExpRewriter<'env, 'translator, 'rewriter> {
     parent: &'rewriter mut ModuleTranslator<'env, 'translator>,
     argument_map: &'rewriter BTreeMap<Symbol, Exp>,
     type_args: &'rewriter [Type],

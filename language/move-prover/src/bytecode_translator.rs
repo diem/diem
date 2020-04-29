@@ -1013,9 +1013,10 @@ impl<'env> ModuleTranslator<'env> {
                             && callee_env.module_env.get_spec().has_conditions()
                         {
                             let spec_translator =
-                                SpecTranslator::new(self.writer, &callee_env.module_env, false);
+                                SpecTranslator::new(self.writer, &callee_env.module_env, false)
+                                    .set_type_args(type_actuals.clone());
                             spec_translator
-                                .assume_module_invariants(&self.targets.get_target(&callee_env));
+                                .assume_module_preconditions(&self.targets.get_target(&callee_env));
                         }
                         // If this is a call to a public function within the same module,
                         // and it has parameters which are mutated currently, we end mutating now,
