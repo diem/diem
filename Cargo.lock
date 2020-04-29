@@ -1307,7 +1307,6 @@ dependencies = [
 name = "executor-benchmark"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "config-builder 0.1.0",
  "executor 0.1.0",
  "executor-types 0.1.0",
