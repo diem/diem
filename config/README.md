@@ -4,32 +4,32 @@ The Libra Configuration describes the operational details for a Libra Node
 (Validator or Full node) and provides the Libra Clients information on how to
 connect to the blockchain and derive trust.
 
-A Validator performs the BFT protocol and hosts the source of truth for the
+Validators perform the BFT protocol and host the source of truth for the
 blockchain.
 
-A Full node offers replication services for a Validator and provides an
-additional entry point for Libra Clients to submit read requests (i.e.,
-queries about the state of the blockchain). This reduces the operational
-burden on Validators.
+Fullnodes offer replication services for the Libra blockchain as the primary
+entry point for Libra Clients to submit read requests (i.e., queries about the
+state of the blockchain). In turn, Validators focus on optimizing transaction
+throughput.
 
 Clients are any service interested in learning about the state of the
 blockchain or performing transactions.
 
-For a more detailed summary of the differences between a Validator and a Full
-node, see this [blog post](https://developers.libra.org/blog/2020/01/23/full-node-basics).
+For a more detailed summary of the differences between a Validator and a
+Fullnode, see this [blog
+post](https://developers.libra.org/blog/2020/01/23/full-node-basics).
 
 ## Organization
 
 Libra Configuration is broken up into many utilities:
 - `src/config` hosts the core configuration file structure
 - `src/generator.rs` assists in building sets of configurations for a Validator
-  or Full node set
-- `src/keys.rs` specifies means for storing and accessing keys from within
-  configurations
+  or Fullnode set
+- `src/keys.rs` wraps keys within the configuration files for testing purposes
 - `config-builder` extends `src/generator.rs` with a command-line utility
   and also provides support for generating genesis
-- `generate-keypair` generates Ed25519 key pairs in Libra Canonical
-  Serialization (LCS) format
+- `generate-key` generates an Ed25519 private key in Libra Canonical
+  Serialization (LCS) format. This is used by the mint.
 
 The separation of the `config-builder` into its own crate was dictated by the
 need for `config-builder` to be able to generate genesis. Genesis requires the
@@ -38,18 +38,19 @@ configuration from many of the services.
 
 ## Building a Test Network (TestNet)
 
-`config-builder` builds a single node's configuration within a network or swarm
-of nodes. This can be used to create a Libra TestNet or to add a Full node to an
-existing network. In addition, it enables generation of a mint/faucet client
+`config-builder` builds an entire network's or swarm's configuration including the
+genesis blob. It takes as one of its input parameters an index that selects, which
+of these configs to return. This can be used to create a Libra TestNet by specifying
+distinct indices for each validator. Similarly the tool can be used to add Fullnodes
+to an existing network.  Finally, it enables generation of a mint/faucet client
 capable of performing mint transactions/creating accounts.
 
 ## Generating a new TestNet
 
-The only requirements for generating a TestNet configuration are: (i) having a
-list of IP addresses and ports to host each Libra Node; (ii) a pre-agreed upon
-shared secret; and (iii) a fixed ordering for each Node in the network. Full
-node networks can either be added to existing configs or generate completely
-new configs.
+The only requirements for generating a TestNet configuration are: (i) having IP
+addresses and ports for each Libra node; (ii) a pre-agreed upon shared secret;
+and (iii) a fixed ordering for each Node in the network. Full node networks can
+either be added to existing configs or generate completely new configs.
 
 Each peer, `I`, can then generate their own configurations by:
 
@@ -81,15 +82,16 @@ To create a mint service's key:
         -o /opt/libra/etc \
         -s 0123456789abcdef101112131415161718191a1b1c1d1e1f2021222324252627
 
-Adding a Full node network is similar to instantiating a Validator config.
+Adding a Fullnode network is similar to instantiating a Validator config.
 Though there are three possible routes: (i) creating a new node config; (ii)
-extending an existing Full node with another network; and (iii) extending a
-Validator with a Full node network. The input is similar for all three cases
+extending an existing Fullnode with another network; and (iii) extending a
+Validator with a Fullnode network. The input is similar for all three cases
 with only the command (create vs. extend) differing between them. When
-extending a Validator, `config-builder` assumes that there are n + 1 Full
-nodes and gives the n + 1 identity to the Validator. This is also the same
-peer id set in state sychronization for pure Full nodes. Note: currently, the
-tool does not support the creation of trees of Full node networks.
+extending a Validator, `config-builder` assumes that there are `n + 1`
+Fullnodes and gives the `n + 1` identity to the Validator. The `n + 1` peer id
+is also used to define the upstream peer for state sychronization and mempool.
+Note: currently, the tool does not support the creation of trees of Fullnode
+networks.
 
     config-builder full-node (create | extend) \
         -a $PUBLIC_MULTIADDR_FOR_NODE_I \
@@ -155,11 +157,6 @@ and other network configuration parameters
   set of peers that provide the data
 - StorageConfig - Where the LibraDB is stored and its gRPC service endpoints
 
-### Client Configuration
-
-- ConsensusPeersConfig - The clients source of truth for the set of Libra
-  nodes (Validators and Full nodes derive this from genesis / blockchain).
-
 ### Shared Configuration
 
 - TestConfig - Used during tests to hold account keys and temporary paths for
@@ -183,9 +180,5 @@ The test configs currently live in `src/config/test_data`.
 
 - Add the ability to turn off services that are optional (e.g., debug
   interface, AC gRPC)
-- Eliminate ConsensusPeersConfig from ConsensusConfig and make it top level.
-- Is the execution gRPC interface being deprecated? Cleanup configs.
-- LoggerConfig should allow specifying the severity.
-- Eliminate generate-keypair
 - Generating public networks is broken
 - Make SafetyRule use on disk by default and remove from config generator
