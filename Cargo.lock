@@ -5220,7 +5220,6 @@ dependencies = [
  "move-vm-types 0.1.0",
  "num_cpus 1.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "stdlib 0.1.0",
  "structopt 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "utils 0.1.0",
  "vm 0.1.0",
