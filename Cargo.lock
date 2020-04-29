@@ -2406,6 +2406,7 @@ dependencies = [
 name = "libra-management"
 version = "0.1.0"
 dependencies = [
+ "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-network-address 0.1.0",
  "libra-secure-storage 0.1.0",
