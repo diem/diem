@@ -6,6 +6,6 @@ error:
    │            ^^^^^^^^ Unexpected 'resource'
    ·
  3 │     struct resource S { }
-   │            -------- Expected a name value
+   │            -------- Expected an identifier
    │
 

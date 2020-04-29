@@ -13,7 +13,7 @@ pub enum Tok {
     U64Value,
     U128Value,
     ByteStringValue,
-    NameValue,
+    IdentifierValue,
     Exclaim,
     ExclaimEqual,
     Percent,
@@ -87,7 +87,7 @@ impl fmt::Display for Tok {
             U64Value => "[U64]",
             U128Value => "[U128]",
             ByteStringValue => "[ByteString]",
-            NameValue => "[Name]",
+            IdentifierValue => "[Identifier]",
             Exclaim => "!",
             ExclaimEqual => "!=",
             Percent => "%",
@@ -419,6 +419,6 @@ fn get_name_token(name: &str) -> Tok {
         "true" => Tok::True,
         "use" => Tok::Use,
         "while" => Tok::While,
-        _ => Tok::NameValue,
+        _ => Tok::IdentifierValue,
     }
 }
