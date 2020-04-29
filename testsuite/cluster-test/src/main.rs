@@ -394,7 +394,7 @@ impl ClusterUtil {
                 &asg_name,
             )
             .await
-            .expect("kush-k8s-testnet-validators scaling failed");
+            .unwrap_or_else(|_| panic!("{} scaling failed", asg_name));
             cluster_swarm
                 .create_validator_and_fullnode_set(
                     args.k8s_num_validators,
