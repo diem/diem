@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{interpreter::Interpreter, interpreter_context::InterpreterContext, loader::Loader};
+use crate::{interpreter::Interpreter, loader::Loader};
 use bytecode_verifier::VerifiedModule;
 use libra_logger::prelude::*;
 use libra_types::{
@@ -9,7 +9,7 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use move_core_types::{gas_schedule::CostTable, identifier::IdentStr};
-use move_vm_types::values::Value;
+use move_vm_types::{interpreter_context::InterpreterContext, values::Value};
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, vm_error, Location, VMResult},

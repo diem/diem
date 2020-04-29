@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::interpreter_context::InterpreterContext;
 use bytecode_verifier::{
     verifier::{verify_dependencies, verify_script_dependency_map},
     VerifiedModule, VerifiedScript,
@@ -14,9 +13,12 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use move_core_types::identifier::{IdentStr, Identifier};
-use move_vm_types::loaded_data::{
-    runtime_types::{StructType, Type, TypeConverter},
-    types::{FatStructType, FatType},
+use move_vm_types::{
+    interpreter_context::InterpreterContext,
+    loaded_data::{
+        runtime_types::{StructType, Type, TypeConverter},
+        types::{FatStructType, FatType},
+    },
 };
 use std::{
     collections::{BTreeMap, HashMap},

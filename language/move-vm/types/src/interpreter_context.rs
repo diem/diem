@@ -1,6 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::{
+    chain_state::ChainState,
+    loaded_data::types::FatStructType,
+    values::{GlobalValue, Struct, Value},
+};
 use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
@@ -9,11 +14,6 @@ use libra_types::{
     vm_error::{sub_status, StatusCode},
 };
 use move_core_types::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits};
-use move_vm_types::{
-    chain_state::ChainState,
-    loaded_data::types::FatStructType,
-    values::{GlobalValue, Struct, Value},
-};
 use vm::errors::*;
 
 /// The `InterpreterContext` context trait specifies the mutations that are allowed to the

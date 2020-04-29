@@ -2,21 +2,26 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    loaded_data::types::FatType,
-    native_functions::dispatch::{native_gas, NativeResult},
+    loaded_data::runtime_types::Type,
+    native_functions::{
+        context::NativeContext,
+        dispatch::{native_gas, NativeResult},
+    },
     values::{values_impl::Reference, Value},
 };
 use libra_types::vm_error::{sub_status::NFE_LCS_SERIALIZATION_FAILURE, StatusCode, VMStatus};
-use move_core_types::gas_schedule::{CostTable, NativeCostIndex};
+use move_core_types::gas_schedule::NativeCostIndex;
 use std::collections::VecDeque;
 use vm::errors::VMResult;
 
 /// Rust implementation of Move's `native public fun to_bytes<T>(&T): vector<u8>`
 pub fn native_to_bytes(
-    mut ty_args: Vec<FatType>,
+    context: &mut impl NativeContext,
+    ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
-    cost_table: &CostTable,
 ) -> VMResult<NativeResult> {
+    let mut ty_args = context.convert_to_fat_types(ty_args)?;
+
     if ty_args.len() != 1 {
         let msg = format!(
             "Wrong number of type arguments for serialize. Expected 1, but found {}",
@@ -44,7 +49,7 @@ pub fn native_to_bytes(
         })?;
     // cost is proportional to the size of the serialized value
     let cost = native_gas(
-        cost_table,
+        context.cost_table(),
         NativeCostIndex::LCS_TO_BYTES,
         serialized_value.len(),
     );
