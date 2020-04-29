@@ -23,11 +23,13 @@ def create_client():
         ac_host = random.choice(ac_hosts)
         ac_port = os.environ['AC_PORT']
         url = "http://{}:{}".format(ac_host, ac_port)
+        waypoint = open("/opt/libra/etc/waypoint.txt", "r").readline()
 
         print("Connecting to ac on: {}".format(url))
-        cmd = "/opt/libra/bin/cli --url {} -m {}".format(
+        cmd = "/opt/libra/bin/cli --url {} -m {} --waypoint {}".format(
             url,
-            "/opt/libra/etc/mint.key")
+            "/opt/libra/etc/mint.key",
+            waypoint)
 
         application.client = pexpect.spawn(cmd)
         application.client.delaybeforesend = 0.1
