@@ -21,6 +21,7 @@ libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+libra-network-address = { path = "../../../network/network-address", version = "0.1.0" }
 move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 move-vm-runtime = { path = "../../move-vm/runtime", version = "0.1.0"}
 move-vm-state = { path = "../../move-vm/state", version = "0.1.0"}

@@ -2390,11 +2390,11 @@ name = "libra-management"
 version = "0.1.0"
 dependencies = [
  "libra-crypto 0.1.0",
+ "libra-network-address 0.1.0",
  "libra-secure-storage 0.1.0",
  "libra-secure-time 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
- "parity-multiaddr 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
  "vm-genesis 0.1.0",
@@ -5917,6 +5917,7 @@ dependencies = [
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
+ "libra-network-address 0.1.0",
  "libra-proptest-helpers 0.1.0",
  "libra-state-view 0.1.0",
  "libra-types 0.1.0",

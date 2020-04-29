@@ -12,7 +12,6 @@ use crate::{
     utils,
 };
 use rand::{rngs::StdRng, SeedableRng};
-use std::convert::TryFrom;
 
 pub struct ValidatorSwarm {
     pub nodes: Vec<NodeConfig>,
