@@ -19,7 +19,7 @@ libra-vault-client = { path = "vault", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 rand = "0.7.3"
 serde = { version = "1.0.106", features = ["rc"], default-features = false }
-serde_json = "1.0.51"
+serde_json = "1.0.52"
 thiserror = "1.0"
 toml = { version = "0.5.3", default-features = false }
 
