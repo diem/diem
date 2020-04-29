@@ -3,32 +3,24 @@
 
 use crate::{
     gas,
-    interpreter_context::InterpreterContext,
     loader::{Function, Loader, Resolver},
+    native_context::FunctionContext,
 };
 use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::{self, AccountResource, BalanceResource},
-    contract_event::ContractEvent,
-    event::EventKey,
-    language_storage::ModuleId,
-    move_resource::MoveResource,
     transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
     vm_error::{StatusCode, StatusType, VMStatus},
 };
-use move_core_types::{
-    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, NativeCostIndex},
-    identifier::{IdentStr, Identifier},
-};
+use move_core_types::gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier};
 use move_vm_types::{
+    interpreter_context::InterpreterContext,
     loaded_data::{runtime_types::Type, types::FatStructType},
-    native_functions::dispatch::NativeFunction,
+    native_functions::dispatch::{Function as NativeFunction, FunctionResolver},
     values::{self, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value},
 };
-use once_cell::sync::Lazy;
-use std::{cmp::min, collections::VecDeque, convert::TryFrom, fmt::Write, sync::Arc};
+use std::{cmp::min, collections::VecDeque, fmt::Write, sync::Arc};
 use vm::{
     errors::*,
     file_format::{
@@ -56,15 +48,6 @@ macro_rules! debug_writeln {
         )
     };
 }
-
-pub(crate) static EMIT_EVENT_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("write_to_event_store").unwrap());
-
-pub(crate) static SAVE_ACCOUNT_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("save_account").unwrap());
-
-pub(crate) static PRINT_STACK_TRACE_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("print_stack_trace").unwrap());
 
 /// `Interpreter` instances can execute Move functions.
 ///
@@ -123,6 +106,10 @@ impl<'txn> Interpreter<'txn> {
             gas_schedule,
             txn_data,
         }
+    }
+
+    pub(crate) fn gas_schedule(&self) -> &CostTable {
+        self.gas_schedule
     }
 
     /// Internal execution entry point.
@@ -253,149 +240,25 @@ impl<'txn> Interpreter<'txn> {
             .expect("Module must exist on native function");
         let function_name = function.name();
         let native_function =
-            NativeFunction::resolve(module_id, function_name).ok_or_else(|| {
+            FunctionResolver::resolve(module_id, function_name).ok_or_else(|| {
                 VMStatus::new(StatusCode::LINKER_ERROR)
                     .with_message(format!("Cannot find native function {}", function_name))
             })?;
-        if module_id == &*account_config::EVENT_MODULE && function_name == EMIT_EVENT_NAME.as_str()
-        {
-            self.call_emit_event(resolver, context, ty_args)
-        } else if module_id == &*account_config::ACCOUNT_MODULE
-            && function_name == SAVE_ACCOUNT_NAME.as_str()
-        {
-            self.call_save_account(resolver, context, ty_args)
-        } else if module_id == &*account_config::DEBUG_MODULE
-            && function_name == PRINT_STACK_TRACE_NAME.as_str()
-        {
-            self.call_print_stack_trace(resolver, context, ty_args)
-        } else {
-            let mut arguments = VecDeque::new();
-            let expected_args = native_function.num_args();
-            for _ in 0..expected_args {
-                arguments.push_front(self.operand_stack.pop()?);
+
+        let mut arguments = VecDeque::new();
+        let expected_args = native_function.num_args();
+        for _ in 0..expected_args {
+            arguments.push_front(self.operand_stack.pop()?);
+        }
+        let mut native_context = FunctionContext::new(self, context, resolver);
+        let result = native_function.dispatch(&mut native_context, ty_args, arguments)?;
+        gas!(consume: context, result.cost)?;
+        result.result.and_then(|values| {
+            for value in values {
+                self.operand_stack.push(value)?;
             }
-            let result =
-                native_function.dispatch(ty_args, arguments, self.gas_schedule, resolver)?;
-            gas!(consume: context, result.cost)?;
-            result.result.and_then(|values| {
-                for value in values {
-                    self.operand_stack.push(value)?;
-                }
-                Ok(())
-            })
-        }
-    }
-
-    #[allow(unused_variables)]
-    fn call_print_stack_trace(
-        &mut self,
-        resolver: &Resolver,
-        context: &mut dyn InterpreterContext,
-        ty_args: Vec<Type>,
-    ) -> VMResult<()> {
-        if !ty_args.is_empty() {
-            return Err(
-                VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(format!(
-                    "print_stack_trace expects no type arguments got {}.",
-                    ty_args.len()
-                )),
-            );
-        }
-
-        #[cfg(feature = "debug_module")]
-        {
-            let mut s = String::new();
-            self.debug_print_stack_trace(&mut s, resolver)?;
-            println!("{}", s);
-        }
-
-        Ok(())
-    }
-
-    /// Emit an event if the native function was `write_to_event_store`.
-    fn call_emit_event(
-        &mut self,
-        resolver: &Resolver,
-        context: &mut dyn InterpreterContext,
-        mut ty_args: Vec<Type>,
-    ) -> VMResult<()> {
-        if ty_args.len() != 1 {
-            return Err(
-                VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(format!(
-                    "write_to_event_storage expects 1 type argument got {}.",
-                    ty_args.len()
-                )),
-            );
-        }
-
-        let ty = resolver.type_to_fat_type(&ty_args.pop().unwrap())?;
-
-        let msg = self
-            .operand_stack
-            .pop()?
-            .simple_serialize(&ty)
-            .ok_or_else(|| VMStatus::new(StatusCode::DATA_FORMAT_ERROR))?;
-        let count = self.operand_stack.pop_as::<u64>()?;
-        let key = self.operand_stack.pop_as::<Vec<u8>>()?;
-        let guid = EventKey::try_from(key.as_slice())
-            .map_err(|_| VMStatus::new(StatusCode::EVENT_KEY_MISMATCH))?;
-        context.push_event(ContractEvent::new(guid, count, ty.type_tag()?, msg));
-        Ok(())
-    }
-
-    /// Save an account into the data store.
-    fn call_save_account(
-        &mut self,
-        resolver: &Resolver,
-        context: &mut dyn InterpreterContext,
-        ty_args: Vec<Type>,
-    ) -> VMResult<()> {
-        gas!(
-            consume: context,
-            self.gas_schedule
-                .native_cost(NativeCostIndex::SAVE_ACCOUNT)
-                .total()
-        )?;
-        let address = self.operand_stack.pop_as::<AccountAddress>()?;
-        if address == account_config::CORE_CODE_ADDRESS {
-            return Err(VMStatus::new(StatusCode::CREATE_NULL_ACCOUNT));
-        }
-        Self::save_under_address(
-            resolver,
-            context,
-            &[],
-            &account_config::EVENT_MODULE,
-            account_config::event_handle_generator_struct_name(),
-            self.operand_stack.pop_as::<Struct>()?,
-            address,
-        )?;
-        Self::save_under_address(
-            resolver,
-            context,
-            &[],
-            &account_config::ACCOUNT_MODULE,
-            &AccountResource::struct_identifier(),
-            self.operand_stack.pop_as::<Struct>()?,
-            address,
-        )?;
-        Self::save_under_address(
-            resolver,
-            context,
-            &[ty_args[0].clone()],
-            &account_config::ACCOUNT_MODULE,
-            &BalanceResource::struct_identifier(),
-            self.operand_stack.pop_as::<Struct>()?,
-            address,
-        )?;
-        Self::save_under_address(
-            resolver,
-            context,
-            &[ty_args[1].clone()],
-            &account_config::ACCOUNT_TYPE_MODULE,
-            account_config::account_type_struct_name(),
-            self.operand_stack.pop_as::<Struct>()?,
-            address,
-        )
+            Ok(())
+        })
     }
 
     /// Perform a binary operation to two values at the top of the stack.
@@ -548,21 +411,6 @@ impl<'txn> Interpreter<'txn> {
         Ok(size)
     }
 
-    // Save a resource under the address specified by `account_address`
-    fn save_under_address(
-        resolver: &Resolver,
-        context: &mut dyn InterpreterContext,
-        ty_args: &[Type],
-        module_id: &ModuleId,
-        struct_name: &IdentStr,
-        resource_to_save: Struct,
-        account_address: AccountAddress,
-    ) -> VMResult<()> {
-        let libra_type = resolver.get_libra_type_info(module_id, struct_name, ty_args, context)?;
-        let ap = AccessPath::new(account_address, libra_type.resource_key().to_vec());
-        context.move_resource_to(&ap, libra_type.fat_type(), resource_to_save)
-    }
-
     //
     // Debugging and logging helpers.
     //
@@ -656,7 +504,11 @@ impl<'txn> Interpreter<'txn> {
     }
 
     #[allow(dead_code)]
-    fn debug_print_stack_trace<B: Write>(&self, buf: &mut B, resolver: &Resolver) -> VMResult<()> {
+    pub(crate) fn debug_print_stack_trace<B: Write>(
+        &self,
+        buf: &mut B,
+        resolver: &Resolver,
+    ) -> VMResult<()> {
         debug_writeln!(buf, "Call Stack:")?;
         for (i, frame) in self.call_stack.0.iter().enumerate() {
             self.debug_print_frame(buf, resolver, i, frame)?;

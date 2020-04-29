@@ -3165,6 +3165,7 @@ dependencies = [
  "bit-vec 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-crypto 0.1.0",
+ "libra-logger 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "move-core-types 0.1.0",
