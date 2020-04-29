@@ -3089,7 +3089,6 @@ name = "move-prover"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.28 (registry+https://github.com/rust-lang/crates.io-index)",
- "backtrace 0.3.46 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytecode-source-map 0.1.0",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "codespan 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
