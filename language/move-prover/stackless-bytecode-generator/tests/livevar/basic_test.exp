@@ -38,14 +38,15 @@ fun TestLiveVars::test2(b: bool): u64 {
     $t8 := borrow_local(r1)
     r_ref := $t8
     $t9 := copy(b)
-    if ($t9) goto L0
-    goto L1
+    if ($t9) goto L0 else goto L1
+    L1:
+    goto L2
     L0:
     $t10 := move(r_ref)
     destroy($t10)
     $t11 := borrow_local(r2)
     r_ref := $t11
-    L1:
+    L2:
     $t12 := move(r_ref)
     $t13 := TestLiveVars::test1($t12)
     return $t13
@@ -81,12 +82,13 @@ fun TestLiveVars::test3(n: u64, r_ref: &TestLiveVars::R): u64 {
     $t6 := 4
     $t7 := pack TestLiveVars::R($t6)
     r2 := $t7
-    L5:
+    L7:
     $t8 := 0
     $t9 := copy(n)
     $t10 := <($t8, $t9)
-    if ($t10) goto L0
-    goto L1
+    if ($t10) goto L0 else goto L1
+    L1:
+    goto L2
     L0:
     $t11 := move(r_ref)
     destroy($t11)
@@ -95,22 +97,23 @@ fun TestLiveVars::test3(n: u64, r_ref: &TestLiveVars::R): u64 {
     $t14 := /($t12, $t13)
     $t15 := 0
     $t16 := ==($t14, $t15)
-    if ($t16) goto L2
-    goto L3
-    L2:
+    if ($t16) goto L3 else goto L4
+    L4:
+    goto L5
+    L3:
     $t17 := borrow_local(r1)
     r_ref := $t17
-    goto L4
-    L3:
+    goto L6
+    L5:
     $t18 := borrow_local(r2)
     r_ref := $t18
-    L4:
+    L6:
     $t19 := copy(n)
     $t20 := 1
     $t21 := -($t19, $t20)
     n := $t21
-    goto L5
-    L1:
+    goto L7
+    L2:
     $t22 := move(r_ref)
     $t23 := TestLiveVars::test1($t22)
     return $t23
@@ -172,21 +175,23 @@ fun TestLiveVars::test2(b: bool): u64 {
     // live vars: b, r2, r_ref
     $t9 := copy(b)
     // live vars: r2, r_ref, $t9
-    if ($t9) goto L0
+    if ($t9) goto L0 else goto L1
     // live vars: r_ref
-    goto L1
-    // live vars: r2
+    L1:
+    // live vars: r_ref
+    goto L2
+    // live vars: r2, r_ref
     L0:
-    // live vars: r2
+    // live vars: r2, r_ref
     $t10 := move(r_ref)
-    // live vars: r2
+    // live vars: r2, $t10
     destroy($t10)
     // live vars: r2
     $t11 := borrow_local(r2)
     // live vars: $t11
     r_ref := $t11
     // live vars: r_ref
-    L1:
+    L2:
     // live vars: r_ref
     $t12 := move(r_ref)
     // live vars: $t12
@@ -232,7 +237,7 @@ fun TestLiveVars::test3(n: u64, r_ref: &TestLiveVars::R): u64 {
     // live vars: n, r_ref, r1, $t7
     r2 := $t7
     // live vars: n, r_ref, r1, r2
-    L5:
+    L7:
     // live vars: n, r_ref, r1, r2
     $t8 := 0
     // live vars: n, r_ref, r1, r2, $t8
@@ -240,14 +245,16 @@ fun TestLiveVars::test3(n: u64, r_ref: &TestLiveVars::R): u64 {
     // live vars: n, r_ref, r1, r2, $t8, $t9
     $t10 := <($t8, $t9)
     // live vars: n, r_ref, r1, r2, $t10
-    if ($t10) goto L0
+    if ($t10) goto L0 else goto L1
     // live vars: r_ref
-    goto L1
-    // live vars: n, r1, r2
+    L1:
+    // live vars: r_ref
+    goto L2
+    // live vars: n, r_ref, r1, r2
     L0:
-    // live vars: n, r1, r2
+    // live vars: n, r_ref, r1, r2
     $t11 := move(r_ref)
-    // live vars: n, r1, r2
+    // live vars: n, r1, r2, $t11
     destroy($t11)
     // live vars: n, r1, r2
     $t12 := copy(n)
@@ -260,25 +267,27 @@ fun TestLiveVars::test3(n: u64, r_ref: &TestLiveVars::R): u64 {
     // live vars: n, r1, r2, $t14, $t15
     $t16 := ==($t14, $t15)
     // live vars: n, r1, r2, $t16
-    if ($t16) goto L2
+    if ($t16) goto L3 else goto L4
     // live vars: n, r1, r2
-    goto L3
+    L4:
     // live vars: n, r1, r2
-    L2:
+    goto L5
+    // live vars: n, r1, r2
+    L3:
     // live vars: n, r1, r2
     $t17 := borrow_local(r1)
     // live vars: n, r1, r2, $t17
     r_ref := $t17
     // live vars: n, r_ref, r1, r2
-    goto L4
+    goto L6
     // live vars: n, r1, r2
-    L3:
+    L5:
     // live vars: n, r1, r2
     $t18 := borrow_local(r2)
     // live vars: n, r1, r2, $t18
     r_ref := $t18
     // live vars: n, r_ref, r1, r2
-    L4:
+    L6:
     // live vars: n, r_ref, r1, r2
     $t19 := copy(n)
     // live vars: r_ref, r1, r2, $t19
@@ -288,9 +297,9 @@ fun TestLiveVars::test3(n: u64, r_ref: &TestLiveVars::R): u64 {
     // live vars: r_ref, r1, r2, $t21
     n := $t21
     // live vars: n, r_ref, r1, r2
-    goto L5
+    goto L7
     // live vars: r_ref
-    L1:
+    L2:
     // live vars: r_ref
     $t22 := move(r_ref)
     // live vars: $t22

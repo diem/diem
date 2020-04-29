@@ -12,19 +12,20 @@ pub fun Vector::append<$tv0>(lhs: &mut vector<#0>, other: vector<#0>) {
     var $t10: vector<#0>
     $t2 := borrow_local(other)
     Vector::reverse<#0>($t2)
-    L2:
+    L3:
     $t3 := borrow_local(other)
     $t4 := Vector::is_empty<#0>($t3)
     $t5 := !($t4)
-    if ($t5) goto L0
-    goto L1
+    if ($t5) goto L0 else goto L1
+    L1:
+    goto L2
     L0:
     $t6 := copy(lhs)
     $t7 := borrow_local(other)
     $t8 := Vector::pop_back<#0>($t7)
     Vector::push_back<#0>($t6, $t8)
-    goto L2
-    L1:
+    goto L3
+    L2:
     $t9 := move(lhs)
     destroy($t9)
     $t10 := move(other)
@@ -69,34 +70,36 @@ pub fun Vector::contains<$tv0>(v: &vector<#0>, e: &#0): bool {
     $t5 := copy(v)
     $t6 := Vector::length<#0>($t5)
     len := $t6
-    L4:
+    L6:
     $t7 := copy(i)
     $t8 := copy(len)
     $t9 := <($t7, $t8)
-    if ($t9) goto L0
-    goto L1
+    if ($t9) goto L0 else goto L1
+    L1:
+    goto L2
     L0:
     $t10 := copy(v)
     $t11 := copy(i)
     $t12 := Vector::borrow<#0>($t10, $t11)
     $t13 := copy(e)
     $t14 := ==($t12, $t13)
-    if ($t14) goto L2
-    goto L3
-    L2:
+    if ($t14) goto L3 else goto L4
+    L4:
+    goto L5
+    L3:
     $t15 := move(v)
     destroy($t15)
     $t16 := move(e)
     destroy($t16)
     $t17 := true
     return $t17
-    L3:
+    L5:
     $t18 := copy(i)
     $t19 := 1
     $t20 := +($t18, $t19)
     i := $t20
-    goto L4
-    L1:
+    goto L6
+    L2:
     $t21 := move(v)
     destroy($t21)
     $t22 := move(e)
@@ -174,25 +177,27 @@ pub fun Vector::remove<$tv0>(v: &mut vector<#0>, i: u64): #0 {
     $t8 := copy(i)
     $t9 := copy(len)
     $t10 := >=($t8, $t9)
-    if ($t10) goto L0
-    goto L1
+    if ($t10) goto L0 else goto L1
+    L1:
+    goto L2
     L0:
     $t11 := move(v)
     destroy($t11)
     $t12 := 10
     abort($t12)
-    L1:
+    L2:
     $t13 := copy(len)
     $t14 := 1
     $t15 := -($t13, $t14)
     len := $t15
-    L4:
+    L6:
     $t16 := copy(i)
     $t17 := copy(len)
     $t18 := <($t16, $t17)
-    if ($t18) goto L2
-    goto L3
-    L2:
+    if ($t18) goto L3 else goto L4
+    L4:
+    goto L5
+    L3:
     $t19 := copy(v)
     $t4 := $t19
     $t20 := copy(i)
@@ -205,8 +210,8 @@ pub fun Vector::remove<$tv0>(v: &mut vector<#0>, i: u64): #0 {
     $t25 := move($t3)
     $t26 := copy(i)
     Vector::swap<#0>($t24, $t25, $t26)
-    goto L4
-    L3:
+    goto L6
+    L5:
     $t27 := move(v)
     $t28 := Vector::pop_back<#0>($t27)
     return $t28
@@ -248,26 +253,28 @@ pub fun Vector::reverse<$tv0>(v: &mut vector<#0>) {
     $t7 := copy(len)
     $t8 := 0
     $t9 := ==($t7, $t8)
-    if ($t9) goto L0
-    goto L1
+    if ($t9) goto L0 else goto L1
+    L1:
+    goto L2
     L0:
     $t10 := move(v)
     destroy($t10)
     return ()
-    L1:
+    L2:
     $t11 := 0
     front_index := $t11
     $t12 := copy(len)
     $t13 := 1
     $t14 := -($t12, $t13)
     back_index := $t14
-    L4:
+    L6:
     $t15 := copy(front_index)
     $t16 := copy(back_index)
     $t17 := <($t15, $t16)
-    if ($t17) goto L2
-    goto L3
-    L2:
+    if ($t17) goto L3 else goto L4
+    L4:
+    goto L5
+    L3:
     $t18 := copy(v)
     $t19 := copy(front_index)
     $t20 := copy(back_index)
@@ -280,8 +287,8 @@ pub fun Vector::reverse<$tv0>(v: &mut vector<#0>) {
     $t25 := 1
     $t26 := -($t24, $t25)
     back_index := $t26
-    goto L4
-    L3:
+    goto L6
+    L5:
     $t27 := move(v)
     destroy($t27)
     return ()
@@ -367,7 +374,7 @@ pub fun Libra::preburn<$tv0>(preburn_ref: &mut Libra::Preburn<#0>, coin: Libra::
     $t15 := +($t13, $t14)
     $t16 := move(market_cap)
     $t17 := borrow_field<Libra::Info<#0>>.preburn_value($t16)
-    $t17 := write_ref($t15)
+    write_ref($t17, $t15)
     return ()
 }
 

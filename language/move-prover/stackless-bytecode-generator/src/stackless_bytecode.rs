@@ -140,14 +140,6 @@ pub enum Operation {
     Neq,
 }
 
-/// A branch condition.
-#[derive(Debug, Clone, PartialEq, Eq, Copy)]
-pub enum BranchCond {
-    Always,
-    True(TempIndex),
-    False(TempIndex),
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Bytecode {
     SpecBlock(AttrId, SpecBlockId),
@@ -158,7 +150,8 @@ pub enum Bytecode {
     Ret(AttrId, Vec<TempIndex>),
 
     Load(AttrId, TempIndex, Constant),
-    Branch(AttrId, Label, BranchCond),
+    Branch(AttrId, Label, Label, TempIndex),
+    Jump(AttrId, Label),
     Label(AttrId, Label),
     Nop(AttrId),
 }
@@ -173,6 +166,7 @@ impl Bytecode {
             | Ret(id, ..)
             | Load(id, ..)
             | Branch(id, ..)
+            | Jump(id, ..)
             | Label(id, ..)
             | Nop(id) => *id,
         }
@@ -183,28 +177,23 @@ impl Bytecode {
     }
 
     pub fn is_unconditional_branch(&self) -> bool {
-        matches!(
-            self,
-            Bytecode::Ret(..) | Bytecode::Branch(_, _, BranchCond::Always)
-        )
+        matches!(self, Bytecode::Ret(..) | Bytecode::Jump(..))
     }
 
     pub fn is_conditional_branch(&self) -> bool {
-        matches!(
-            self,
-            Bytecode::Branch(_, _, BranchCond::False(_)) | Bytecode::Branch(_, _, BranchCond::True(_))
-        )
+        matches!(self, Bytecode::Branch(..))
     }
 
     pub fn is_branch(&self) -> bool {
         self.is_conditional_branch() || self.is_unconditional_branch()
     }
 
-    /// Return the destination of branching if self is a branching instruction
-    pub fn branch_dest(&self) -> Option<Label> {
+    /// Return the destination(s) if self is a branch/jump instruction
+    pub fn branch_dests(&self) -> Vec<Label> {
         match self {
-            Bytecode::Branch(_, label, _) => Some(*label),
-            _ => None,
+            Bytecode::Branch(_, then_label, else_label, _) => vec![*then_label, *else_label],
+            Bytecode::Jump(_, label) => vec![*label],
+            _ => vec![],
         }
     }
 
@@ -229,7 +218,7 @@ impl Bytecode {
         let bytecode = &code[pc as usize];
         let mut v = vec![];
 
-        if let Some(label) = bytecode.branch_dest() {
+        for label in bytecode.branch_dests() {
             v.push(*label_offsets.get(&label).expect("label defined"));
         }
 
@@ -309,17 +298,16 @@ impl<'env> fmt::Display for BytecodeDisplay<'env> {
             Load(_, dst, cons) => {
                 write!(f, "{} := {}", self.lstr(*dst), cons)?;
             }
-            Branch(_, label, cond) => {
-                use BranchCond::*;
-                match cond {
-                    True(src) => {
-                        write!(f, "if ({}) ", self.lstr(*src))?;
-                    }
-                    False(src) => {
-                        write!(f, "if (!{}) ", self.lstr(*src))?;
-                    }
-                    _ => {}
-                }
+            Branch(_, then_label, else_label, src) => {
+                write!(
+                    f,
+                    "if ({}) goto L{} else goto L{}",
+                    self.lstr(*src),
+                    then_label.as_usize(),
+                    else_label.as_usize()
+                )?;
+            }
+            Jump(_, label) => {
                 write!(f, "goto L{}", label.as_usize())?;
             }
             Label(_, label) => {

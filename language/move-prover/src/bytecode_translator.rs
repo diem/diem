@@ -19,7 +19,7 @@ use stackless_bytecode_generator::{
     function_target_pipeline::FunctionTargetsHolder,
     lifetime_analysis::LifetimeAnnotation,
     stackless_bytecode::{
-        AssignKind, BranchCond,
+        AssignKind,
         Bytecode::{self, *},
         Constant, Operation, SpecBlockId,
     },
@@ -865,31 +865,22 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, "L{}:", label.as_usize());
                 self.writer.indent();
             }
-            Branch(_, target, BranchCond::Always) => {
+            Jump(_, target) => {
                 // In contrast to other instructions, we need to evaluate invariants BEFORE
                 // the branch.
                 self.enforce_invariants_for_dead_refs(func_target, ctx, offset);
                 invariants_evaluated = true;
                 emitln!(self.writer, "goto L{};", target.as_usize())
             }
-            Branch(_, target, BranchCond::True(idx)) => {
+            Branch(_, then_target, else_target, idx) => {
                 self.enforce_invariants_for_dead_refs(func_target, ctx, offset);
                 invariants_evaluated = true;
                 emitln!(
                     self.writer,
-                    "$tmp := $GetLocal($m, $frame + {});\nif (b#Boolean($tmp)) {{ goto L{}; }}",
+                    "$tmp := $GetLocal($m, $frame + {});\nif (b#Boolean($tmp)) {{ goto L{}; }} else {{ goto L{}; }}",
                     idx,
-                    target.as_usize()
-                )
-            }
-            Branch(_, target, BranchCond::False(idx)) => {
-                self.enforce_invariants_for_dead_refs(func_target, ctx, offset);
-                invariants_evaluated = true;
-                emitln!(
-                    self.writer,
-                    "$tmp := $GetLocal($m, $frame + {});\nif (!b#Boolean($tmp)) {{ goto L{}; }}",
-                    idx,
-                    target.as_usize()
+                    then_target.as_usize(),
+                    else_target.as_usize(),
                 )
             }
             Assign(_, dest, src, _) => {
@@ -983,13 +974,13 @@ impl<'env> ModuleTranslator<'env> {
                         emitln!(self.writer, &update_and_track_local(dest, "$tmp"));
                     }
                     WriteRef => {
-                        let src = srcs[0];
-                        let dest = dests[0];
+                        let reference = srcs[0];
+                        let value = srcs[1];
                         emitln!(
                             self.writer,
                             "call $WriteRef({}, $GetLocal($m, $frame + {}));",
-                            str_local(dest),
-                            src,
+                            str_local(reference),
+                            value,
                         );
                         track_mutable_refs(ctx);
                     }

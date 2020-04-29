@@ -378,8 +378,8 @@ impl<'a> LifetimeAnalysis<'a> {
                         after_state.borrow_graph.move_local(src);
                     }
                     WriteRef => {
-                        let dst = dsts[0];
-                        after_state.borrow_graph.move_local(dst);
+                        let src = srcs[0];
+                        after_state.borrow_graph.move_local(src);
                     }
                     ReadRef => {
                         let src = srcs[0];
