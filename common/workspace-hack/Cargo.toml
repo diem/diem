@@ -11,7 +11,6 @@ edition = "2018"
 
 [dependencies]
 num-traits = { version = "0.2.11", features = ["std"] }
-petgraph = { version = "0.5.0", features = ["graphmap", "matrix_graph", "stable_graph"] }
 serde = { version = "1.0.96", features = ["derive", "rc"] }
 sha-1 = { version = "0.8.2", features = ["std"] }
 subtle = { version = "2.2.2", features = ["i128", "std"] }
