@@ -167,6 +167,8 @@ pub fn main() {
             &runner.cluster,
         ));
         runner.cleanup();
+        runner.teardown();
+
         result.unwrap();
         info!(
             "{}Experiment Result: {}{}",
@@ -392,6 +394,7 @@ impl ClusterUtil {
                     as i64,
                 5.0,
                 &asg_name,
+                true,
             )
             .await
             .unwrap_or_else(|_| panic!("{} scaling failed", asg_name));
@@ -476,6 +479,17 @@ impl ClusterUtil {
 }
 
 impl ClusterTestRunner {
+    pub fn teardown(&mut self) {
+        let workspace = self
+            .runtime
+            .block_on(self.cluster_swarm.get_workspace())
+            .expect("Failed to get workspace");
+        let asg_name = format!("{}-k8s-testnet-validators", workspace);
+        self.runtime
+            .block_on(aws::set_asg_size(0, 0.0, &asg_name, false))
+            .unwrap_or_else(|_| panic!("{} scaling failed", asg_name));
+    }
+
     /// Discovers cluster, setup log, etc
     pub fn setup(args: &Args) -> Self {
         let util = ClusterUtil::setup(args);
@@ -599,10 +613,13 @@ impl ClusterTestRunner {
         let suite_started = Instant::now();
         for experiment in suite.experiments {
             let experiment_name = format!("{}", experiment);
-            self.run_single_experiment(experiment, None)
-                .map_err(move |e| {
-                    format_err!("Experiment `{}` failed: `{}`", experiment_name, e)
-                })?;
+            let result = self
+                .run_single_experiment(experiment, None)
+                .map_err(move |e| format_err!("Experiment `{}` failed: `{}`", experiment_name, e));
+            if result.is_err() {
+                self.teardown();
+                return result;
+            }
             thread::sleep(self.experiment_interval);
         }
         info!(
@@ -610,6 +627,7 @@ impl ClusterTestRunner {
             Instant::now().duration_since(suite_started)
         );
         self.print_report();
+        self.teardown();
         Ok(())
     }
 

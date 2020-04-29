@@ -17,6 +17,7 @@ pub async fn set_asg_size(
     min_desired_capacity: i64,
     buffer_percent: f64,
     asg_name: &str,
+    wait_for_completion: bool,
 ) -> Result<()> {
     let buffer = ((min_desired_capacity as f64 * buffer_percent) / 100_f64).ceil() as i64;
     info!(
@@ -35,6 +36,9 @@ pub async fn set_asg_size(
     asc.set_desired_capacity(set_desired_capacity_type)
         .await
         .map_err(|e| format_err!("set_desired_capacity failed: {:?}", e))?;
+    if !wait_for_completion {
+        return Ok(());
+    }
     retry::retry_async(retry::fixed_retry_strategy(10_000, 30), || {
         let asc_clone = asc.clone();
         Box::pin(async move {
