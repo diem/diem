@@ -197,6 +197,10 @@ impl<'env> ModuleTranslator<'env> {
             .enumerate()
             .map(|(i, _)| format!("$tv{}: TypeValue", i))
             .join(", ");
+        let mut type_args_for_ctor = String::from("EmptyTypeValueArray");
+        for i in 0..struct_env.get_type_parameters().len() {
+            type_args_for_ctor = format!("ExtendTypeValueArray({}, $tv{})", type_args_for_ctor, i);
+        }
         let mut field_types = String::from("EmptyTypeValueArray");
         for field_env in struct_env.get_fields() {
             field_types = format!(
@@ -205,7 +209,10 @@ impl<'env> ModuleTranslator<'env> {
                 boogie_type_value(self.module_env.env, &field_env.get_type())
             );
         }
-        let type_value = format!("StructType({}, {})", struct_name, field_types);
+        let type_value = format!(
+            "StructType({}, {}, {})",
+            struct_name, type_args_for_ctor, field_types
+        );
         if struct_name == "$LibraAccount_T" {
             // Special treatment of well-known resource LibraAccount_T. The type_value
             // function is forward-declared in the prelude, here we only add an axiom for it.

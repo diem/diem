@@ -65,7 +65,7 @@ fn get_flags(path: &Path) -> anyhow::Result<(Vec<String>, PathBuf)> {
     let path_str = path.to_string_lossy();
     let base_flags = if path_str.contains("/new_stdlib/") {
         NEW_STDLIB_FLAGS
-    } else if path_str.contains("/functional/") {
+    } else if path_str.contains("/functional/") || path_str.contains("/regression/") {
         FUNCTIONAL_FLAGS
     } else if path_str.contains("/stdlib/") {
         STDLIB_FLAGS
