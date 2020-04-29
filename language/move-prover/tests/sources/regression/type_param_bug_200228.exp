@@ -1,0 +1,46 @@
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/regression/type_param_bug_200228.move:16:5 ───
+    │
+ 16 │     ensures old(exists<Balance<Tok_1>>(addr)) ==> old(exists<EventHandle<Tok_2>>(addr));
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/regression/type_param_bug_200228.move:6:3: type_param_bug (entry)
+    =     at tests/sources/regression/type_param_bug_200228.move:7:5: type_param_bug
+    =         addr = <redacted>,
+    =         result = <redacted>
+    =     at tests/sources/regression/type_param_bug_200228.move:6:3: type_param_bug (exit)
+
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/regression/type_param_bug_200228.move:15:5 ───
+    │
+ 15 │     ensures old(exists<Balance<Tok_1>>(addr)) ==> old(exists<Balance<Tok_2>>(addr));
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/regression/type_param_bug_200228.move:6:3: type_param_bug (entry)
+    =     at tests/sources/regression/type_param_bug_200228.move:7:5: type_param_bug
+    =     at tests/sources/regression/type_param_bug_200228.move:6:3: type_param_bug (exit)
+
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/regression/type_param_bug_200228.move:14:5 ───
+    │
+ 14 │     ensures old(exists<Balance<Tok_1>>(addr)) ==> old(exists<Tok_1>(addr));
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/regression/type_param_bug_200228.move:6:3: type_param_bug (entry)
+    =     at tests/sources/regression/type_param_bug_200228.move:7:5: type_param_bug
+    =     at tests/sources/regression/type_param_bug_200228.move:6:3: type_param_bug (exit)
+
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/regression/type_param_bug_200228.move:13:5 ───
+    │
+ 13 │     ensures old(exists<Balance<Tok_1>>(addr)) ==> old(exists<EventHandle<Tok_1>>(addr));
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/regression/type_param_bug_200228.move:6:3: type_param_bug (entry)
+    =     at tests/sources/regression/type_param_bug_200228.move:7:5: type_param_bug
+    =     at tests/sources/regression/type_param_bug_200228.move:6:3: type_param_bug (exit)
