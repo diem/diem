@@ -6,6 +6,6 @@ error:
    │                     ^^^^^ Unexpected 'false'
    ·
  4 │         let s = S { false };
-   │                     ----- Expected a name value
+   │                     ----- Expected an identifier
    │
 

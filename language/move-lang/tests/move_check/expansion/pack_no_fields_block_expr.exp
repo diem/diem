@@ -6,6 +6,6 @@ error:
    │                     ^^^ Unexpected 'let'
    ·
  4 │         let s = S { let x = 0; x };
-   │                     --- Expected a name value
+   │                     --- Expected an identifier
    │
 
