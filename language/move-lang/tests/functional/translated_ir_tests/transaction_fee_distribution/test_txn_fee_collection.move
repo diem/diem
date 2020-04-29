@@ -5,14 +5,12 @@
 
 use 0x0::LibraAccount;
 use 0x0::LBR;
-use 0x0::TransactionFeeAccounts;
 use 0x0::Transaction;
 
 fun main() {
     let x = 10;
     // Make sure that the pot is empty to start with
-    let fee_addr = TransactionFeeAccounts::transaction_fee_address<LBR::T>();
-    let transaction_fee_pot_amount = LibraAccount::balance<LBR::T>(fee_addr);
+    let transaction_fee_pot_amount = LibraAccount::balance<LBR::T>(0xFEE);
     Transaction::assert(transaction_fee_pot_amount == 0, 0);
     // Do some work
     while (x > 0) {
@@ -25,7 +23,6 @@ fun main() {
 //! sender: alice
 use 0x0::LibraAccount;
 use 0x0::LBR;
-use 0x0::TransactionFeeAccounts;
 use 0x0::Transaction;
 
 fun main() {
@@ -34,8 +31,7 @@ fun main() {
     Transaction::assert(previous_balance > current_balance, 1);
     // Calculate the transaction fee paid
     let transaction_fee_paid = previous_balance - current_balance;
-    let fee_addr = TransactionFeeAccounts::transaction_fee_address<LBR::T>();
-    let transaction_fee_pot_amount = LibraAccount::balance<LBR::T>(move fee_addr);
+    let transaction_fee_pot_amount = LibraAccount::balance<LBR::T>(0xFEE);
     // Assert that the transaction fees collected are equal to the transaction fees paid
     Transaction::assert(transaction_fee_paid == transaction_fee_pot_amount, 2);
 }

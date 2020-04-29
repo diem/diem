@@ -29,7 +29,6 @@ use 0x0::LibraSystem;
 use 0x0::LibraAccount;
 use 0x0::LBR;
 use 0x0::Vector;
-use 0x0::TransactionFeeAccounts;
 use 0x0::Transaction;
 use {{vivian}}::BalanceHolder;
 
@@ -54,8 +53,7 @@ fun main() {
       );
   };
 
-  let fee_addr = TransactionFeeAccounts::transaction_fee_address<LBR::T>();
-  LibraAccount::deposit<LBR::T>(fee_addr, lib_coin);
+  LibraAccount::deposit<LBR::T>(0xFEE, lib_coin);
   BalanceHolder::publish(balances);
 }
 //! check: EXECUTED
@@ -69,7 +67,6 @@ fun main() {
 use 0x0::LibraSystem;
 use 0x0::LibraAccount;
 use 0x0::LBR;
-use 0x0::TransactionFeeAccounts;
 use 0x0::Transaction;
 use {{vivian}}::BalanceHolder;
 
@@ -86,9 +83,8 @@ fun main() {
   };
 
   // The remainder in the transaction fee balance must be less than the number of validators.
-  let fee_addr = TransactionFeeAccounts::transaction_fee_address<LBR::T>();
-  Transaction::assert(LibraAccount::balance<LBR::T>(fee_addr) < number_of_validators, 2);
+  Transaction::assert(LibraAccount::balance<LBR::T>(0xFEE) < number_of_validators, 2);
   // And in this particular case, must be exactly equal to 1.
-  Transaction::assert(LibraAccount::balance<LBR::T>(fee_addr) == 1, 3);
+  Transaction::assert(LibraAccount::balance<LBR::T>(0xFEE) == 1, 3);
 }
 //! check: EXECUTED
