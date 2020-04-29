@@ -1,13 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    errors::JsonRpcError,
-    views::{
-        AccountStateWithProofView, AccountView, BlockMetadata, EventView, StateProofView,
-        TransactionView,
-    },
-};
+use crate::{errors::JsonRpcError, views::AccountView, JsonRpcResponse};
 use anyhow::{ensure, format_err, Error, Result};
 use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 use reqwest::{Client, Url};
@@ -195,80 +189,6 @@ impl JsonRpcAsyncClient {
 impl fmt::Debug for JsonRpcAsyncClient {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.address)
-    }
-}
-
-#[allow(clippy::large_enum_variant)]
-#[derive(Clone, PartialEq, Debug)]
-pub enum JsonRpcResponse {
-    SubmissionResponse,
-    AccountResponse(Option<AccountView>),
-    StateProofResponse(StateProofView),
-    AccountTransactionResponse(Option<TransactionView>),
-    TransactionsResponse(Vec<TransactionView>),
-    EventsResponse(Vec<EventView>),
-    BlockMetadataResponse(BlockMetadata),
-    AccountStateWithProofResponse(AccountStateWithProofView),
-    UnknownResponse(Value),
-}
-
-impl TryFrom<(String, Value)> for JsonRpcResponse {
-    type Error = Error;
-
-    fn try_from((method, value): (String, Value)) -> Result<JsonRpcResponse> {
-        match method.as_str() {
-            "submit" => {
-                ensure!(
-                    value == Value::Null,
-                    "received unexpected payload for submit: {}",
-                    value
-                );
-                Ok(JsonRpcResponse::SubmissionResponse)
-            }
-            "get_account_state" => {
-                let account = match value {
-                    Value::Null => None,
-                    _ => {
-                        let account: AccountView = serde_json::from_value(value)?;
-                        Some(account)
-                    }
-                };
-                Ok(JsonRpcResponse::AccountResponse(account))
-            }
-            "get_events" => {
-                let events: Vec<EventView> = serde_json::from_value(value)?;
-                Ok(JsonRpcResponse::EventsResponse(events))
-            }
-            "get_metadata" => {
-                let metadata: BlockMetadata = serde_json::from_value(value)?;
-                Ok(JsonRpcResponse::BlockMetadataResponse(metadata))
-            }
-            "get_account_state_with_proof" => {
-                let account_with_proof: AccountStateWithProofView = serde_json::from_value(value)?;
-                Ok(JsonRpcResponse::AccountStateWithProofResponse(
-                    account_with_proof,
-                ))
-            }
-            "get_state_proof" => {
-                let state_proof: StateProofView = serde_json::from_value(value)?;
-                Ok(JsonRpcResponse::StateProofResponse(state_proof))
-            }
-            "get_account_transaction" => {
-                let txn = match value {
-                    Value::Null => None,
-                    _ => {
-                        let txn: TransactionView = serde_json::from_value(value)?;
-                        Some(txn)
-                    }
-                };
-                Ok(JsonRpcResponse::AccountTransactionResponse(txn))
-            }
-            "get_transactions" => {
-                let txns: Vec<TransactionView> = serde_json::from_value(value)?;
-                Ok(JsonRpcResponse::TransactionsResponse(txns))
-            }
-            _ => Ok(JsonRpcResponse::UnknownResponse(value)),
-        }
     }
 }
 

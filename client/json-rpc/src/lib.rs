@@ -3,12 +3,11 @@
 
 mod blocking;
 mod client;
-
-pub mod errors;
-pub mod views;
+mod response;
 
 pub use blocking::JsonRpcClient;
 pub use client::{
     get_response_from_batch, process_batch_response, JsonRpcAsyncClient, JsonRpcBatch,
-    JsonRpcResponse,
 };
+pub use libra_json_rpc_types::{errors, views};
+pub use response::{JsonRpcResponse, ResponseAsView};

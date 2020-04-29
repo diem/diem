@@ -20,12 +20,8 @@ mod counters;
 mod methods;
 mod runtime;
 
-pub use client::{errors, views};
+pub use libra_json_rpc_types::{errors, views};
 
-pub use client::{
-    get_response_from_batch, process_batch_response, JsonRpcAsyncClient, JsonRpcBatch,
-    JsonRpcResponse,
-};
 pub use runtime::{bootstrap, bootstrap_from_config};
 
 #[cfg(any(feature = "fuzzing", test))]
