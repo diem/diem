@@ -8,6 +8,8 @@ use serde_reflection::Registry;
 use std::str::FromStr;
 use structopt::{clap::arg_enum, StructOpt};
 
+/// consensus types.
+mod consensus;
 /// Libra transactions.
 mod libra;
 
@@ -16,6 +18,7 @@ arg_enum! {
 /// A corpus of Rust types to trace, and optionally record on disk.
 pub enum Corpus {
     Libra,
+    Consensus,
 }
 }
 
@@ -32,6 +35,7 @@ impl Corpus {
     pub fn get_registry(self, skip_deserialize: bool) -> Registry {
         match self {
             Corpus::Libra => libra::get_registry(self.to_string(), skip_deserialize),
+            Corpus::Consensus => consensus::get_registry().unwrap(),
         }
     }
 
@@ -39,6 +43,7 @@ impl Corpus {
     pub fn output_file(self) -> Option<&'static str> {
         match self {
             Corpus::Libra => libra::output_file(),
+            Corpus::Consensus => consensus::output_file(),
         }
     }
 }

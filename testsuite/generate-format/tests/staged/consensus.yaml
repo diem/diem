@@ -1,0 +1,217 @@
+---
+AccountAddress:
+  NEWTYPESTRUCT:
+    TUPLEARRAY:
+      CONTENT: U8
+      SIZE: 16
+Block:
+  STRUCT:
+    - block_data:
+        TYPENAME: BlockData
+    - signature:
+        OPTION:
+          TYPENAME: Ed25519Signature
+BlockData:
+  STRUCT:
+    - epoch: U64
+    - round: U64
+    - timestamp_usecs: U64
+    - quorum_cert:
+        TYPENAME: QuorumCert
+    - block_type:
+        TYPENAME: BlockType
+BlockInfo:
+  STRUCT:
+    - epoch: U64
+    - round: U64
+    - id:
+        TYPENAME: HashValue
+    - executed_state_id:
+        TYPENAME: HashValue
+    - version: U64
+    - timestamp_usecs: U64
+    - next_epoch_info:
+        OPTION:
+          TYPENAME: EpochInfo
+BlockRetrievalRequest:
+  STRUCT:
+    - block_id:
+        TYPENAME: HashValue
+    - num_blocks: U64
+BlockRetrievalResponse:
+  STRUCT:
+    - status:
+        TYPENAME: BlockRetrievalStatus
+    - blocks:
+        SEQ:
+          TYPENAME: Block
+BlockRetrievalStatus:
+  ENUM:
+    0:
+      Succeeded: UNIT
+    1:
+      IdNotFound: UNIT
+    2:
+      NotEnoughBlocks: UNIT
+BlockType:
+  ENUM:
+    0:
+      Proposal:
+        STRUCT:
+          - payload:
+              TYPENAME: Payload
+          - author:
+              TYPENAME: AccountAddress
+    1:
+      NilBlock: UNIT
+    2:
+      Genesis: UNIT
+ConsensusMsg:
+  ENUM:
+    0:
+      BlockRetrievalRequest:
+        NEWTYPE:
+          TYPENAME: BlockRetrievalRequest
+    1:
+      BlockRetrievalResponse:
+        NEWTYPE:
+          TYPENAME: BlockRetrievalResponse
+    2:
+      EpochRetrievalRequest:
+        NEWTYPE:
+          TYPENAME: EpochRetrievalRequest
+    3:
+      ProposalMsg:
+        NEWTYPE:
+          TYPENAME: ProposalMsg
+    4:
+      SyncInfo:
+        NEWTYPE:
+          TYPENAME: SyncInfo
+    5:
+      EpochChangeProof:
+        NEWTYPE:
+          TYPENAME: EpochChangeProof
+    6:
+      VoteMsg:
+        NEWTYPE:
+          TYPENAME: VoteMsg
+Ed25519PublicKey:
+  NEWTYPESTRUCT: BYTES
+Ed25519Signature:
+  NEWTYPESTRUCT: BYTES
+EpochChangeProof:
+  STRUCT:
+    - ledger_info_with_sigs:
+        SEQ:
+          TYPENAME: LedgerInfoWithSignatures
+    - more: BOOL
+EpochInfo:
+  STRUCT:
+    - epoch: U64
+    - verifier:
+        TYPENAME: ValidatorVerifier
+EpochRetrievalRequest:
+  STRUCT:
+    - start_epoch: U64
+    - end_epoch: U64
+HashValue:
+  NEWTYPESTRUCT: BYTES
+LedgerInfo:
+  STRUCT:
+    - commit_info:
+        TYPENAME: BlockInfo
+    - consensus_data_hash:
+        TYPENAME: HashValue
+LedgerInfoWithSignatures:
+  ENUM:
+    0:
+      V0:
+        NEWTYPE:
+          TYPENAME: LedgerInfoWithV0
+LedgerInfoWithV0:
+  STRUCT:
+    - ledger_info:
+        TYPENAME: LedgerInfo
+    - signatures:
+        MAP:
+          KEY:
+            TYPENAME: AccountAddress
+          VALUE:
+            TYPENAME: Ed25519Signature
+Payload: UNITSTRUCT
+ProposalMsg:
+  STRUCT:
+    - proposal:
+        TYPENAME: Block
+    - sync_info:
+        TYPENAME: SyncInfo
+QuorumCert:
+  STRUCT:
+    - vote_data:
+        TYPENAME: VoteData
+    - signed_ledger_info:
+        TYPENAME: LedgerInfoWithSignatures
+SyncInfo:
+  STRUCT:
+    - highest_quorum_cert:
+        TYPENAME: QuorumCert
+    - highest_commit_cert:
+        TYPENAME: QuorumCert
+    - highest_timeout_cert:
+        OPTION:
+          TYPENAME: TimeoutCertificate
+Timeout:
+  STRUCT:
+    - epoch: U64
+    - round: U64
+TimeoutCertificate:
+  STRUCT:
+    - timeout:
+        TYPENAME: Timeout
+    - signatures:
+        MAP:
+          KEY:
+            TYPENAME: AccountAddress
+          VALUE:
+            TYPENAME: Ed25519Signature
+ValidatorConsensusInfo:
+  STRUCT:
+    - public_key:
+        TYPENAME: Ed25519PublicKey
+    - voting_power: U64
+ValidatorVerifier:
+  STRUCT:
+    - address_to_validator_info:
+        MAP:
+          KEY:
+            TYPENAME: AccountAddress
+          VALUE:
+            TYPENAME: ValidatorConsensusInfo
+    - quorum_voting_power: U64
+    - total_voting_power: U64
+Vote:
+  STRUCT:
+    - vote_data:
+        TYPENAME: VoteData
+    - author:
+        TYPENAME: AccountAddress
+    - ledger_info:
+        TYPENAME: LedgerInfo
+    - signature:
+        TYPENAME: Ed25519Signature
+    - timeout_signature:
+        OPTION:
+          TYPENAME: Ed25519Signature
+VoteData:
+  STRUCT:
+    - proposed:
+        TYPENAME: BlockInfo
+    - parent:
+        TYPENAME: BlockInfo
+VoteMsg:
+  STRUCT:
+    - vote:
+        TYPENAME: Vote
+    - sync_info:
+        TYPENAME: SyncInfo

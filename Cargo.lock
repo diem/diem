@@ -1550,10 +1550,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "generate-format"
 version = "0.1.0"
 dependencies = [
+ "consensus 0.1.0",
+ "consensus-types 0.1.0",
  "libra-canonical-serialization 0.1.0",
+ "libra-crypto 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "proptest 0.9.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde-reflection 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_yaml 0.8.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
