@@ -9,7 +9,10 @@ use crate::{
     network::{MempoolNetworkEvents, MempoolSyncMsg},
     shared_mempool::{
         tasks,
-        types::{notify_subscribers, IntervalStream, SharedMempool, SharedMempoolNotification},
+        types::{
+            notify_subscribers, IntervalStream, ScheduledBroadcast, SharedMempool,
+            SharedMempoolNotification,
+        },
     },
     CommitNotification, ConsensusRequest, SubmissionStatus,
 };
@@ -20,53 +23,80 @@ use channel::libra_channel;
 use debug_interface::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},
-    stream::select_all,
+    stream::{select_all, FuturesUnordered},
     StreamExt,
 };
-use libra_config::config::{NodeConfig, PeerNetworkId};
+use libra_config::config::{NetworkId, NodeConfig, PeerNetworkId};
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
-use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction, PeerId};
+use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
 use std::{
     ops::Deref,
     sync::{Arc, Mutex},
-    time::Duration,
+    time::{Duration, Instant},
 };
 use tokio::{runtime::Handle, time::interval};
 use vm_validator::vm_validator::TransactionValidation;
 
 /// Coordinator that handles [`SyncEvent`], which is periodically emitted for us to
 /// broadcast ready to go transactions to peers.
-pub(crate) async fn broadcast_coordinator<V>(smp: SharedMempool<V>, mut interval: IntervalStream)
-where
+pub(crate) async fn broadcast_coordinator<V>(
+    smp: SharedMempool<V>,
+    mut schedule_broadcast_rx: libra_channel::Receiver<PeerNetworkId, PeerNetworkId>,
+    executor: Handle,
+    // A stream that controls the broadcast loop. If provided, a single broadcast will happen when one event is emitted
+    // by `broadcast_ticker`. Should only be used for testing purposes to coordinate broadcast events
+    mut broadcast_ticker: Option<IntervalStream>,
+) where
     V: TransactionValidation,
 {
     let peer_manager = smp.peer_manager;
     let mempool = smp.mempool;
-    let network_senders = smp.network_senders;
+    let mut network_senders = smp.network_senders;
     let batch_size = smp.config.shared_mempool_batch_size;
-    let subscribers = smp.subscribers;
+    let mut scheduled_broadcasts = FuturesUnordered::new();
+    let interval_ms = smp.config.shared_mempool_tick_interval_ms;
 
-    while let Some(sync_event) = interval.next().await {
-        trace!("SyncEvent: {:?}", sync_event);
-        tasks::sync_with_peers(
-            peer_manager.clone(),
-            &mempool,
-            network_senders.clone(),
-            batch_size,
-        )
-        .await;
-        notify_subscribers(SharedMempoolNotification::Sync, &subscribers);
+    loop {
+        tick(&mut broadcast_ticker).await;
+
+        ::futures::select! {
+            new_peer = schedule_broadcast_rx.select_next_some() => {
+                tasks::broadcast_single_peer(new_peer, &peer_manager, &mempool, &mut network_senders, batch_size);
+                schedule_next_broadcast(new_peer, &mut scheduled_broadcasts, interval_ms, executor.clone());
+            }
+            peer = scheduled_broadcasts.select_next_some() => {
+                tasks::broadcast_single_peer(peer, &peer_manager, &mempool, &mut network_senders, batch_size);
+                schedule_next_broadcast(peer, &mut scheduled_broadcasts, interval_ms, executor.clone());
+            }
+        }
     }
+}
 
-    crit!("SharedMempool outbound_sync_task terminated");
+async fn tick(broadcast_ticker: &mut Option<IntervalStream>) {
+    if let Some(ref mut ticker) = broadcast_ticker {
+        while let None = ticker.next().await {}
+    }
+}
+
+fn schedule_next_broadcast(
+    peer: PeerNetworkId,
+    scheduled_broadcasts: &mut FuturesUnordered<ScheduledBroadcast>,
+    interval_ms: u64,
+    executor: Handle,
+) {
+    scheduled_broadcasts.push(ScheduledBroadcast::new(
+        Instant::now() + Duration::from_millis(interval_ms),
+        peer,
+        executor,
+    ))
 }
 
 /// Coordinator that handles inbound network events.
 pub(crate) async fn request_coordinator<V>(
     smp: SharedMempool<V>,
     executor: Handle,
-    network_events: Vec<(PeerId, MempoolNetworkEvents)>,
+    network_events: Vec<(NetworkId, MempoolNetworkEvents)>,
     mut client_events: mpsc::Receiver<(
         SignedTransaction,
         oneshot::Sender<Result<SubmissionStatus>>,
@@ -74,6 +104,7 @@ pub(crate) async fn request_coordinator<V>(
     mut consensus_requests: mpsc::Receiver<ConsensusRequest>,
     mut state_sync_requests: mpsc::Receiver<CommitNotification>,
     mut mempool_reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
+    mut schedule_broadcast_tx: libra_channel::Sender<PeerNetworkId, PeerNetworkId>,
     node_config: NodeConfig,
 ) where
     V: TransactionValidation,
@@ -123,7 +154,14 @@ pub(crate) async fn request_coordinator<V>(
                                 counters::SHARED_MEMPOOL_EVENTS
                                     .with_label_values(&["new_peer".to_string().deref()])
                                     .inc();
-                                peer_manager.add_peer(PeerNetworkId(network_id, peer_id));
+                                let peer = PeerNetworkId(network_id, peer_id);
+                                let is_new_peer = peer_manager.add_peer(peer);
+                                if is_new_peer && peer_manager.is_upstream_peer(peer) {
+                                    // schedule broadcast
+                                    if let Err(e) = schedule_broadcast_tx.push(peer, peer) {
+                                        error!("failed to schedule broadcast for new peer: {}", e);
+                                    }
+                                }
                                 notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                             }
                             Event::LostPeer(peer_id) => {
@@ -144,7 +182,9 @@ pub(crate) async fn request_coordinator<V>(
                                             .inc_by(transactions.len() as i64);
                                         let smp_clone = smp.clone();
                                         let peer = PeerNetworkId(network_id, peer_id);
-                                        let timeline_state = match peer_manager.is_upstream_peer(peer) {
+                                        let timeline_state = match peer_manager
+                                            .is_upstream_peer(peer)
+                                        {
                                             true => TimelineState::NonQualified,
                                             false => TimelineState::NotReady,
                                         };

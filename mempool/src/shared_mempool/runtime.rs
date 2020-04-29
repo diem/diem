@@ -8,33 +8,27 @@ use crate::{
         coordinator::{broadcast_coordinator, gc_coordinator, request_coordinator},
         peer_manager::PeerManager,
         types::{
-            IntervalStream, SharedMempool, SharedMempoolNotification, SyncEvent,
+            IntervalStream, SharedMempool, SharedMempoolNotification,
             DEFAULT_MIN_BROADCAST_RECIPIENT_COUNT,
         },
     },
     CommitNotification, ConsensusRequest, SubmissionStatus,
 };
 use anyhow::Result;
-use channel::libra_channel;
-use futures::{
-    channel::{
-        mpsc::{self, Receiver, UnboundedSender},
-        oneshot,
-    },
-    StreamExt,
+use channel::{libra_channel, message_queues::QueueStyle};
+use futures::channel::{
+    mpsc::{self, Receiver, UnboundedSender},
+    oneshot,
 };
 use libra_config::config::NodeConfig;
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction, PeerId};
 use std::{
     collections::HashMap,
+    num::NonZeroUsize,
     sync::{Arc, Mutex, RwLock},
-    time::Duration,
 };
 use storage_interface::DbReader;
-use tokio::{
-    runtime::{Builder, Handle, Runtime},
-    time::interval,
-};
+use tokio::runtime::{Builder, Handle, Runtime};
 use vm_validator::vm_validator::{TransactionValidation, VMValidator};
 
 /// bootstrap of SharedMempool
@@ -56,7 +50,7 @@ pub(crate) fn start_shared_mempool<V>(
     db: Arc<dyn DbReader>,
     validator: Arc<RwLock<V>>,
     subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
-    timer: Option<IntervalStream>,
+    broadcast_ticker: Option<IntervalStream>,
 ) where
     V: TransactionValidation + 'static,
 {
@@ -87,14 +81,18 @@ pub(crate) fn start_shared_mempool<V>(
         subscribers,
     };
 
-    let interval_ms = config.mempool.shared_mempool_tick_interval_ms;
     let smp_outbound = smp.clone();
-    let f = async move {
-        let interval = timer.unwrap_or_else(|| default_timer(interval_ms));
-        broadcast_coordinator(smp_outbound, interval).await
-    };
-
-    executor.spawn(f);
+    let (schedule_broadcast_tx, schedule_broadcast_rx) = libra_channel::new(
+        QueueStyle::LIFO,
+        NonZeroUsize::new(1).expect("failed to set libra-channel size"),
+        None,
+    );
+    executor.spawn(broadcast_coordinator(
+        smp_outbound,
+        schedule_broadcast_rx,
+        executor.clone(),
+        broadcast_ticker,
+    ));
 
     executor.spawn(request_coordinator(
         smp,
@@ -104,6 +102,7 @@ pub(crate) fn start_shared_mempool<V>(
         consensus_requests,
         state_sync_requests,
         mempool_reconfig_events,
+        schedule_broadcast_tx,
         config_clone,
     ));
 
@@ -111,12 +110,6 @@ pub(crate) fn start_shared_mempool<V>(
         mempool,
         config.mempool.system_transaction_gc_interval_ms,
     ));
-}
-
-fn default_timer(tick_ms: u64) -> IntervalStream {
-    interval(Duration::from_millis(tick_ms))
-        .map(|_| SyncEvent)
-        .boxed()
 }
 
 /// method used to bootstrap shared mempool for a node
