@@ -1589,35 +1589,36 @@ fn parse_condition<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember
 }
 
 // Parse an invariant:
-//     Invariant = "invariant" ( "update" | "pack" | "unpack" )? <Exp> ";"
+//     Invariant = "invariant" ( "update" | "pack" | "unpack" | "module" )? <Exp> ";"
 fn parse_invariant<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
     let start_loc = tokens.start_loc();
     consume_token(tokens, Tok::Invariant)?;
-    let kind = if Tok::NameValue == tokens.peek() {
-        // The update/pack/unpack modifiers are 'weak' keywords. They are reserved
-        // only when following an "invariant" token. One can use "invariant (update ...)" to
-        // force interpretation as identifiers in expressions.
-        match tokens.content() {
-            "update" => {
-                tokens.advance()?;
-                SpecConditionKind::InvariantUpdate
+    let kind = match tokens.peek() {
+        Tok::NameValue => {
+            // The update/pack/unpack modifiers are 'weak' keywords. They are reserved
+            // only when following an "invariant" token. One can use "invariant (update ...)" to
+            // force interpretation as identifiers in expressions.
+            match tokens.content() {
+                "update" => {
+                    tokens.advance()?;
+                    SpecConditionKind::InvariantUpdate
+                }
+                "pack" => {
+                    tokens.advance()?;
+                    SpecConditionKind::InvariantPack
+                }
+                "unpack" => {
+                    tokens.advance()?;
+                    SpecConditionKind::InvariantUnpack
+                }
+                _ => SpecConditionKind::Invariant,
             }
-            "pack" => {
-                tokens.advance()?;
-                SpecConditionKind::InvariantPack
-            }
-            "unpack" => {
-                tokens.advance()?;
-                SpecConditionKind::InvariantUnpack
-            }
-            "module" => {
-                tokens.advance()?;
-                SpecConditionKind::InvariantModule
-            }
-            _ => SpecConditionKind::Invariant,
         }
-    } else {
-        SpecConditionKind::Invariant
+        Tok::Module => {
+            tokens.advance()?;
+            SpecConditionKind::InvariantModule
+        }
+        _ => SpecConditionKind::Invariant,
     };
     let exp = parse_exp(tokens)?;
     consume_token(tokens, Tok::Semicolon)?;

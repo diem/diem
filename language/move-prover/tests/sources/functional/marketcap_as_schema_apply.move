@@ -8,8 +8,7 @@ module TestMarketCapWithSchemas {
     }
 
     spec schema SumOfCoinsModuleInvariant<X> {
-        requires global<MarketCap>(0xA550C18).total_value == sum_of_coins<X>;
-        ensures global<MarketCap>(0xA550C18).total_value == sum_of_coins<X>;
+        invariant module global<MarketCap>(0xA550C18).total_value == sum_of_coins<X>;
     }
 
     spec module {

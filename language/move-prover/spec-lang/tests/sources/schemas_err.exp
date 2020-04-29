@@ -78,7 +78,7 @@ error: `y` cannot be matched to an existing name in inclusion context
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
 
-error: schema includes condition which is not allowed in this context
+error: `requires` (included from schema) not allowed in this context
 
     ┌── tests/sources/schemas_err.move:70:9 ───
     │

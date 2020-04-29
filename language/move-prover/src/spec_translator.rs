@@ -49,6 +49,8 @@ pub struct SpecTranslator<'env> {
     fresh_var_count: RefCell<u64>,
     /// Local variable name to local index in bytecode
     name_to_idx_map: BTreeMap<Symbol, usize>,
+    // If we are translating in the context of a type instantiation, the type arguments.
+    type_args_opt: Option<Vec<Type>>,
 }
 
 impl<'env> SpecTranslator<'env> {
@@ -87,6 +89,7 @@ impl<'env> SpecTranslator<'env> {
             invariant_target: RefCell::new(("".to_string(), "".to_string())),
             fresh_var_count: RefCell::new(0),
             name_to_idx_map: BTreeMap::new(),
+            type_args_opt: None,
         }
     }
 
@@ -106,9 +109,17 @@ impl<'env> SpecTranslator<'env> {
             name_to_idx_map: (0..func_target.get_local_count())
                 .map(|idx| (func_target.get_local_name(idx), idx))
                 .collect(),
+            type_args_opt: None,
         }
     }
 
+    /// Sets type arguments in which context this translator works.
+    pub fn set_type_args(mut self, type_args: Vec<Type>) -> Self {
+        self.type_args_opt = Some(type_args);
+        self
+    }
+
+    /// Emits a translation error.
     pub fn error(&self, loc: &Loc, msg: &str) {
         self.module_env()
             .env
@@ -304,7 +315,14 @@ impl<'env> SpecTranslator<'env> {
         emitln!(self.writer, "requires $ExistsTxnSenderAccount($m, $txn);");
 
         // Generate requires.
-        let requires = spec.filter_kind(ConditionKind::Requires).collect_vec();
+        let requires = spec
+            .filter(|c| {
+                matches!(
+                    c.kind,
+                    ConditionKind::Requires | ConditionKind::RequiresModule
+                )
+            })
+            .collect_vec();
         if !requires.is_empty() {
             self.translate_seq(requires.iter(), "\n", |cond| {
                 self.writer.set_location(&cond.loc);
@@ -341,38 +359,20 @@ impl<'env> SpecTranslator<'env> {
             });
             emitln!(self.writer);
         }
-
-        // Generate implicit requires/ensures from module invariants if this is a public function.
-        if func_target.is_public() {
-            let invariants = &func_target.func_env.module_env.get_spec().conditions;
-            if !invariants.is_empty() {
-                self.translate_seq(invariants.iter(), "\n", |inv| {
-                    self.writer.set_location(&inv.loc);
-                    emit!(self.writer, "requires b#Boolean(");
-                    self.translate_exp(&inv.exp);
-                    emit!(self.writer, ");")
-                });
-                emitln!(self.writer);
-                self.translate_seq(invariants.iter(), "\n", |inv| {
-                    self.writer.set_location(&inv.loc);
-                    emit!(self.writer, "ensures !$abort_flag ==> (b#Boolean(");
-                    self.translate_exp(&inv.exp);
-                    emit!(self.writer, "));")
-                });
-                emitln!(self.writer);
-            }
-        }
     }
 
-    /// Assumes preconditions for function.
+    /// Assumes preconditions for function. This is used for the top-level verification
+    /// entry point of a function.
     pub fn assume_preconditions(&self) {
         emitln!(self.writer, "assume $ExistsTxnSenderAccount($m, $txn);");
-
-        // Explicit pre-conditions.
         let func_target = self.function_target();
         let requires = func_target
             .get_spec()
-            .filter_kind(ConditionKind::Requires)
+            .filter(|c| match c.kind {
+                ConditionKind::Requires => true,
+                ConditionKind::RequiresModule => func_target.is_public(),
+                _ => false,
+            })
             .collect_vec();
         if !requires.is_empty() {
             self.translate_seq(requires.iter(), "\n", |cond| {
@@ -383,20 +383,21 @@ impl<'env> SpecTranslator<'env> {
             });
             emitln!(self.writer);
         }
-
-        // Implict module invariants.
-        self.assume_module_invariants(func_target);
     }
 
-    /// Assume module invariants of function.
-    pub fn assume_module_invariants(&self, func_target: &FunctionTarget<'_>) {
+    /// Assume module requires of a function. This is used when the function is called from
+    /// outside of a module.
+    pub fn assume_module_preconditions(&self, func_target: &FunctionTarget<'_>) {
         if func_target.is_public() {
-            let invariants = &func_target.func_env.module_env.get_spec().conditions;
-            if !invariants.is_empty() {
-                self.translate_seq(invariants.iter(), "\n", |inv| {
-                    self.writer.set_location(&inv.loc);
+            let requires = func_target
+                .get_spec()
+                .filter(|c| matches!(c.kind, ConditionKind::RequiresModule))
+                .collect_vec();
+            if !requires.is_empty() {
+                self.translate_seq(requires.iter(), "\n", |cond| {
+                    self.writer.set_location(&cond.loc);
                     emit!(self.writer, "assume b#Boolean(");
-                    self.translate_exp(&inv.exp);
+                    self.translate_exp(&cond.exp);
                     emit!(self.writer, ");")
                 });
                 emitln!(self.writer);
@@ -530,7 +531,7 @@ impl<'env> SpecTranslator<'env> {
                     let field_name = boogie_field_name(&fe);
                     let args = ty_args
                         .iter()
-                        .map(|ty| boogie_type_value(struct_env.module_env.env, ty))
+                        .map(|ty| self.translate_type(ty))
                         .chain(vec![format!("$SelectField($before, {})", field_name)].into_iter())
                         .join(", ");
                     emitln!(
@@ -602,7 +603,7 @@ impl<'env> SpecTranslator<'env> {
                     let field_name = boogie_field_name(&fe);
                     let args = ty_args
                         .iter()
-                        .map(|ty| boogie_type_value(struct_env.module_env.env, ty))
+                        .map(|ty| self.translate_type(ty))
                         .chain(
                             vec![format!(
                                 "$SelectField($before, {}), $SelectField($after, {})",
@@ -723,9 +724,7 @@ impl<'env> SpecTranslator<'env> {
                         "{} := {}[{} := ",
                         var_name,
                         var_name,
-                        tys.iter()
-                            .map(|ty| boogie_type_value(self.module_env().env, ty))
-                            .join(", ")
+                        tys.iter().map(|ty| self.translate_type(ty)).join(", ")
                     );
                 } else {
                     emit!(self.writer, "{} := ", var_name);
@@ -737,6 +736,21 @@ impl<'env> SpecTranslator<'env> {
                     emitln!(self.writer, ";")
                 }
             }
+        }
+    }
+}
+
+// Types
+// ===========
+
+impl<'env> SpecTranslator<'env> {
+    /// Translates a type into a string in boogie. If the translator works with a type
+    /// instantiation, this will be used to instantiate the type.
+    fn translate_type(&self, ty: &Type) -> String {
+        if let Some(ty_args) = &self.type_args_opt {
+            boogie_type_value(self.module_env().env, &ty.instantiate(ty_args))
+        } else {
+            boogie_type_value(self.module_env().env, ty)
         }
     }
 }
@@ -767,7 +781,7 @@ impl<'env> SpecTranslator<'env> {
                         "[{}]",
                         instantiation
                             .iter()
-                            .map(|ty| boogie_type_value(self.module_env().env, ty))
+                            .map(|ty| self.translate_type(ty))
                             .join(", ")
                     )
                 };
@@ -985,7 +999,7 @@ impl<'env> SpecTranslator<'env> {
         }
         for ty in instantiation.iter() {
             maybe_comma();
-            emit!(self.writer, &boogie_type_value(self.module_env().env, ty));
+            emit!(self.writer, &self.translate_type(ty));
         }
         for exp in args {
             maybe_comma();
@@ -1017,7 +1031,7 @@ impl<'env> SpecTranslator<'env> {
 
     fn translate_resource_access(&self, node_id: NodeId, args: &[Exp]) {
         let rty = &self.module_env().get_node_instantiation(node_id)[0];
-        let type_value = boogie_type_value(self.module_env().env, rty);
+        let type_value = self.translate_type(rty);
         emit!(self.writer, "$ResourceValue($m, {}, ", type_value);
         self.translate_exp(&args[0]);
         emit!(self.writer, ")");
@@ -1025,7 +1039,7 @@ impl<'env> SpecTranslator<'env> {
 
     fn translate_resource_exists(&self, node_id: NodeId, args: &[Exp]) {
         let rty = &self.module_env().get_node_instantiation(node_id)[0];
-        let type_value = boogie_type_value(self.module_env().env, rty);
+        let type_value = self.translate_type(rty);
         emit!(self.writer, "$ResourceExists($m, {}, ", type_value);
         self.translate_exp(&args[0]);
         emit!(self.writer, ")");
