@@ -15,6 +15,11 @@ resource "aws_elasticsearch_domain" "logging" {
   snapshot_options {
     automated_snapshot_start_hour = 23
   }
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 data "aws_iam_policy_document" "logging" {

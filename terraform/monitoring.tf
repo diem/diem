@@ -43,6 +43,7 @@ resource "aws_instance" "monitoring" {
   tags = {
     Name      = "${terraform.workspace}-monitoring"
     Role      = "monitoring"
+    Terraform = "testnet"
     Workspace = terraform.workspace
   }
 
@@ -71,6 +72,7 @@ resource "aws_ebs_volume" "monitoring" {
 
   tags = {
     Name      = "${terraform.workspace}-monitoring"
+    Terraform = "testnet"
     Workspace = terraform.workspace
     Role      = "monitoring"
   }
@@ -240,6 +242,7 @@ resource "aws_ecs_task_definition" "monitoring" {
 
   tags = {
     Role      = "monitoring"
+    Terraform = "testnet"
     Workspace = terraform.workspace
   }
 }
@@ -254,6 +257,7 @@ resource "aws_ecs_service" "monitoring" {
 
   tags = {
     Role      = "monitoring"
+    Terraform = "testnet"
     Workspace = terraform.workspace
   }
 }

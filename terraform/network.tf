@@ -4,7 +4,9 @@ resource "aws_vpc" "testnet" {
   enable_dns_hostnames             = true
 
   tags = {
-    Name = terraform.workspace
+    Name      = terraform.workspace
+    Terraform = "testnet"
+    Workspace = terraform.workspace
   }
 }
 
@@ -18,7 +20,9 @@ resource "aws_subnet" "testnet" {
   map_public_ip_on_launch         = true
 
   tags = {
-    Name = "${terraform.workspace}-${data.aws_availability_zones.available.names[count.index]}"
+    Name      = "${terraform.workspace}-${data.aws_availability_zones.available.names[count.index]}"
+    Terraform = "testnet"
+    Workspace = terraform.workspace
   }
 }
 
@@ -26,7 +30,9 @@ resource "aws_internet_gateway" "testnet" {
   vpc_id = aws_vpc.testnet.id
 
   tags = {
-    Name = terraform.workspace
+    Name      = terraform.workspace
+    Terraform = "testnet"
+    Workspace = terraform.workspace
   }
 }
 
@@ -44,7 +50,9 @@ resource "aws_route_table" "testnet" {
   }
 
   tags = {
-    Name = terraform.workspace
+    Name      = terraform.workspace
+    Terraform = "testnet"
+    Workspace = terraform.workspace
   }
 }
 
@@ -57,6 +65,11 @@ resource "aws_security_group" "monitoring" {
   name        = "${terraform.workspace}-monitoring"
   description = "Monitoring services"
   vpc_id      = aws_vpc.testnet.id
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_security_group_rule" "monitoring-ssh" {
@@ -102,6 +115,11 @@ resource "aws_security_group" "validator" {
   name        = "${terraform.workspace}-validator"
   description = "Validator node"
   vpc_id      = aws_vpc.testnet.id
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_security_group_rule" "validator-ssh" {
@@ -146,6 +164,11 @@ resource "aws_security_group" "jsonrpc-lb" {
   name        = "${terraform.workspace}-jsonrpc-lb"
   description = "jsonrpc-lb"
   vpc_id      = aws_vpc.testnet.id
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_security_group_rule" "json-rpc" {
@@ -201,6 +224,11 @@ resource "aws_security_group" "faucet-host" {
   name        = "${terraform.workspace}-faucet-host"
   description = "faucet-host"
   vpc_id      = aws_vpc.testnet.id
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_security_group_rule" "faucet-host-egress" {
@@ -245,6 +273,11 @@ resource "aws_security_group" "faucet-lb" {
   name        = "${terraform.workspace}-faucet-lb"
   description = "faucet-lb"
   vpc_id      = aws_vpc.testnet.id
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_security_group_rule" "faucet-lb-egress" {
@@ -270,6 +303,11 @@ resource "aws_security_group" "vault" {
   name        = "${terraform.workspace}-vault"
   description = "Vault secrets manager"
   vpc_id      = aws_vpc.testnet.id
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_security_group_rule" "vault-validator" {

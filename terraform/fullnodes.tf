@@ -31,6 +31,7 @@ resource "aws_instance" "fullnode" {
   tags = {
     Name          = "${terraform.workspace}-fullnode-${count.index}"
     Role          = "fullnode"
+    Terraform     = "testnet"
     Workspace     = terraform.workspace
     FullnodeIndex = count.index
   }
@@ -90,6 +91,7 @@ resource "aws_ecs_task_definition" "fullnode" {
   tags = {
     FullnodeId = count.index
     Role       = "fullnode"
+    Terraform  = "testnet"
     Workspace  = terraform.workspace
   }
 }
@@ -105,6 +107,7 @@ resource "aws_ecs_service" "fullnode" {
   tags = {
     FullnodeId = count.index
     Role       = "fullnode"
+    Terraform  = "testnet"
     Workspace  = terraform.workspace
   }
 }
