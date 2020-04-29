@@ -18,6 +18,7 @@ resource "aws_instance" "faucet" {
   tags = {
     Name      = "${terraform.workspace}-faucet"
     Role      = "faucet"
+    Terraform = "testnet"
     Workspace = terraform.workspace
   }
 }
@@ -51,6 +52,7 @@ resource "aws_ecs_task_definition" "faucet" {
 
   tags = {
     Role      = "faucet"
+    Terraform = "testnet"
     Workspace = terraform.workspace
   }
 }
@@ -65,6 +67,7 @@ resource "aws_ecs_service" "faucet" {
 
   tags = {
     Role      = "faucet"
+    Terraform = "testnet"
     Workspace = terraform.workspace
   }
 }

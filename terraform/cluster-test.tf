@@ -8,6 +8,11 @@ resource "aws_iam_role" "cluster-test-runner" {
   path                 = var.iam_path
   assume_role_policy   = data.aws_iam_policy_document.instance-assume-role.json
   permissions_boundary = var.permissions_boundary_policy
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 data "aws_caller_identity" "current" {}
@@ -57,6 +62,7 @@ resource "aws_instance" "cluster-test-runner" {
   tags = {
     Name      = "${terraform.workspace}-cluster-test-runner"
     Role      = "cluster-test-runner"
+    Terraform = "testnet"
     Workspace = terraform.workspace
   }
   iam_instance_profile = aws_iam_instance_profile.cluster-test-runner.name
@@ -71,6 +77,11 @@ resource "aws_security_group" "cluster-test-host" {
   name        = "${terraform.workspace}-cluster-test-host"
   description = "Benchmarker host"
   vpc_id      = aws_vpc.testnet.id
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_security_group_rule" "validator-svc-debug" {

@@ -14,6 +14,11 @@ resource "aws_iam_role" "ecsInstanceRole" {
   path                 = var.iam_path
   assume_role_policy   = data.aws_iam_policy_document.instance-assume-role.json
   permissions_boundary = var.permissions_boundary_policy
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "ecsInstanceRole_" {
@@ -62,6 +67,11 @@ resource "aws_iam_role" "ecsTaskExecutionRole" {
   path                 = var.iam_path
   assume_role_policy   = data.aws_iam_policy_document.task-assume-role.json
   permissions_boundary = var.permissions_boundary_policy
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "ecsTaskExecutionRole_" {

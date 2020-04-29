@@ -82,6 +82,11 @@ locals {
 resource "aws_cloudwatch_log_group" "testnet" {
   name              = terraform.workspace
   retention_in_days = 7
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_cloudwatch_log_metric_filter" "log_metric_filter" {
@@ -104,6 +109,11 @@ resource "random_id" "bucket" {
 resource "aws_s3_bucket" "config" {
   bucket = "libra-${terraform.workspace}-${random_id.bucket.hex}"
   region = var.region
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "config" {
@@ -119,18 +129,18 @@ data "template_file" "user_data" {
   template = file("templates/ec2_user_data.sh")
 
   vars = {
-    persistent       = var.persist_libra_data
-    ecs_cluster      = aws_ecs_cluster.testnet.name
-    host_log_path    = "/data/libra/libra.log"
-    host_structlog_path   = "/data/libra/libra_structlog.log"
-    enable_logrotate = var.log_to_file || var.enable_logstash
+    persistent          = var.persist_libra_data
+    ecs_cluster         = aws_ecs_cluster.testnet.name
+    host_log_path       = "/data/libra/libra.log"
+    host_structlog_path = "/data/libra/libra_structlog.log"
+    enable_logrotate    = var.log_to_file || var.enable_logstash
   }
 }
 
 locals {
   image_repo                 = var.image_repo
   image_version              = substr(var.image_tag, 0, 6) == "sha256" ? "@${var.image_tag}" : ":${var.image_tag}"
-  override_image_versions    = [for img in var.override_image_tags: substr(img, 0, 6) == "sha256" ? "@${img}" : ":${img}"]
+  override_image_versions    = [for img in var.override_image_tags : substr(img, 0, 6) == "sha256" ? "@${img}" : ":${img}"]
   safety_rules_image_repo    = var.safety_rules_image_repo
   safety_rules_image_version = substr(var.safety_rules_image_tag, 0, 6) == "sha256" ? "@${var.safety_rules_image_tag}" : ":${var.safety_rules_image_tag}"
   instance_public_ip         = true
@@ -139,10 +149,12 @@ locals {
 
 resource "aws_ebs_snapshot" "restore_snapshot" {
   count     = length(var.restore_vol_ids) == 0 ? 0 : var.num_validators
-  volume_id   = length(var.restore_vol_ids) == 0 ? "" : var.restore_vol_ids[count.index]
+  volume_id = length(var.restore_vol_ids) == 0 ? "" : var.restore_vol_ids[count.index]
 
   tags = {
-    Name = "${terraform.workspace}-validator-${count.index}-restore-snap"
+    Name      = "${terraform.workspace}-validator-${count.index}-restore-snap"
+    Terraform = "testnet"
+    Workspace = terraform.workspace
   }
 }
 
@@ -176,6 +188,7 @@ resource "aws_instance" "validator" {
   tags = {
     Name      = "${terraform.workspace}-validator-${count.index}"
     Role      = "validator"
+    Terraform = "testnet"
     Workspace = terraform.workspace
     NodeIndex = count.index
   }
@@ -200,7 +213,7 @@ data "template_file" "ecs_task_definition" {
     cfg_listen_addr               = var.validator_use_public_ip == true ? element(aws_instance.validator.*.public_ip, count.index) : element(aws_instance.validator.*.private_ip, count.index)
     cfg_node_index                = count.index
     cfg_num_validators            = var.cfg_num_validators_override == 0 ? var.num_validators : var.cfg_num_validators_override
-    cfg_num_validators_in_genesis = var.num_validators_in_genesis == 0? var.num_validators : var.num_validators_in_genesis
+    cfg_num_validators_in_genesis = var.num_validators_in_genesis == 0 ? var.num_validators : var.num_validators_in_genesis
     cfg_seed                      = var.config_seed
     cfg_seed_peer_ip              = local.seed_peer_ip
 
@@ -250,12 +263,18 @@ resource "aws_ecs_task_definition" "validator" {
   tags = {
     NodeIndex = count.index
     Role      = "validator"
+    Terraform = "testnet"
     Workspace = terraform.workspace
   }
 }
 
 resource "aws_ecs_cluster" "testnet" {
   name = terraform.workspace
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_ecs_service" "validator" {
@@ -269,6 +288,7 @@ resource "aws_ecs_service" "validator" {
   tags = {
     NodeIndex = count.index
     Role      = "validator"
+    Terraform = "testnet"
     Workspace = terraform.workspace
   }
 }

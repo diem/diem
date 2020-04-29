@@ -3,7 +3,9 @@ resource "aws_kms_key" "vault" {
   deletion_window_in_days = 7
 
   tags = {
-    Name = "${terraform.workspace}-vault"
+    Name      = "${terraform.workspace}-vault"
+    Terraform = "testnet"
+    Workspace = terraform.workspace
   }
 }
 
@@ -21,6 +23,7 @@ resource "aws_instance" "vault" {
   tags = {
     Name      = "${terraform.workspace}-vault"
     Role      = "vault"
+    Terraform = "testnet"
     Workspace = terraform.workspace
   }
 }
@@ -93,6 +96,7 @@ resource "aws_ecs_task_definition" "vault" {
 
   tags = {
     Role      = "vault"
+    Terraform = "testnet"
     Workspace = terraform.workspace
   }
 }
@@ -106,6 +110,7 @@ resource "aws_ecs_service" "vault" {
 
   tags = {
     Role      = "vault"
+    Terraform = "testnet"
     Workspace = terraform.workspace
   }
 }

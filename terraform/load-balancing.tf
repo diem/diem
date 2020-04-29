@@ -17,6 +17,11 @@ resource "aws_lb" "validator-ac" {
   load_balancer_type               = "network"
   enable_cross_zone_load_balancing = true
   subnets                          = aws_subnet.testnet.*.id
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_lb_target_group" "validator-ac" {
@@ -24,6 +29,11 @@ resource "aws_lb_target_group" "validator-ac" {
   protocol = "TCP"
   port     = 8000
   vpc_id   = aws_vpc.testnet.id
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_lb_target_group_attachment" "validator-ac" {
@@ -50,6 +60,11 @@ resource "aws_lb" "json-rpc" {
   enable_cross_zone_load_balancing = true
   subnets                          = aws_subnet.testnet.*.id
   security_groups                  = [aws_security_group.jsonrpc-lb.id]
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_lb_target_group" "json-rpc" {
@@ -57,6 +72,11 @@ resource "aws_lb_target_group" "json-rpc" {
   protocol = "HTTP"
   port     = 8080
   vpc_id   = aws_vpc.testnet.id
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_lb_target_group_attachment" "json-rpc" {
@@ -94,6 +114,11 @@ resource "aws_lb_target_group" "fullnode-ac" {
   protocol = "TCP"
   port     = 8000
   vpc_id   = aws_vpc.testnet.id
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_lb_target_group_attachment" "fullnode-ac" {
@@ -161,7 +186,13 @@ resource "aws_acm_certificate" "json-rpc" {
   lifecycle {
     create_before_destroy = true
   }
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
+
 resource "aws_route53_record" "json-rpc-cert-validation" {
   count = local.zone_id == "" ? 0 : 1
 
@@ -187,6 +218,11 @@ resource "aws_lb" "faucet" {
   enable_cross_zone_load_balancing = true
   subnets                          = aws_subnet.testnet.*.id
   security_groups                  = [aws_security_group.faucet-lb.id]
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_lb_target_group" "faucet" {
@@ -194,6 +230,11 @@ resource "aws_lb_target_group" "faucet" {
   protocol = "HTTP"
   port     = 8000
   vpc_id   = aws_vpc.testnet.id
+
+  tags = {
+    Terraform = "testnet"
+    Workspace = terraform.workspace
+  }
 }
 
 resource "aws_lb_target_group_attachment" "faucet" {
