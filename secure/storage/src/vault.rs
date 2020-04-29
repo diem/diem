@@ -235,7 +235,9 @@ impl KVStorage for VaultStorage {
         }
 
         self.set_secret(&key, value)?;
-        self.set_policies(key, &VaultEngine::KVSecrets, policy)?;
+        if !policy.is_default() {
+            self.set_policies(key, &VaultEngine::KVSecrets, policy)?;
+        }
         Ok(())
     }
 
@@ -266,7 +268,9 @@ impl CryptoStorage for VaultStorage {
         }
 
         self.client.create_ed25519_key(&ns_name, true)?;
-        self.set_policies(&ns_name, &VaultEngine::Transit, policy)?;
+        if !policy.is_default() {
+            self.set_policies(&ns_name, &VaultEngine::Transit, policy)?;
+        }
         self.get_public_key(name).map(|v| v.public_key)
     }
 
