@@ -699,7 +699,6 @@ dependencies = [
  "num-traits 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-multiaddr 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.10.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rust_decimal 1.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustyline 6.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
