@@ -164,7 +164,7 @@ pub fn output_compiled_units(
 // Translations
 //**************************************************************************************************
 
-fn check_program(
+pub fn check_program(
     prog: Result<parser::ast::Program, Errors>,
     sender_opt: Option<Address>,
 ) -> Result<cfgir::ast::Program, Errors> {
