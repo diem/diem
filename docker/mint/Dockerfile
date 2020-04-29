@@ -47,6 +47,7 @@ RUN apt-get update && apt-get install -y procps
 ARG AC_PORT="8080"
 ARG AC_HOST="172.18.0.13"
 ARG LOG_LEVEL="info"
+ARG CFG_NUM_VALIDATORS=5
 
 #   WHEN we execute docker-run.sh
 #   THEN a gunicorn process is started
