@@ -10,9 +10,11 @@ use crate::{
 use anyhow::Result;
 use futures::{
     channel::{mpsc, mpsc::UnboundedSender, oneshot},
+    future::Future,
+    task::{Context, Poll},
     Stream,
 };
-use libra_config::config::MempoolConfig;
+use libra_config::config::{MempoolConfig, PeerNetworkId};
 use libra_types::{
     account_address::AccountAddress,
     mempool_status::MempoolStatus,
@@ -25,8 +27,11 @@ use std::{
     collections::HashMap,
     pin::Pin,
     sync::{Arc, Mutex, RwLock},
+    task::Waker,
+    time::Instant,
 };
 use storage_interface::DbReader;
+use tokio::runtime::Handle;
 use vm_validator::vm_validator::TransactionValidation;
 
 pub(crate) const DEFAULT_MIN_BROADCAST_RECIPIENT_COUNT: usize = 0;
@@ -48,7 +53,6 @@ where
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SharedMempoolNotification {
-    Sync,
     PeerStateChange,
     NewTransactions,
     ACK,
@@ -65,6 +69,56 @@ pub(crate) fn notify_subscribers(
 ) {
     for subscriber in subscribers {
         let _ = subscriber.unbounded_send(event);
+    }
+}
+
+/// A future that represents a scheduled mempool txn broadcast
+pub(crate) struct ScheduledBroadcast {
+    /// time of scheduled broadcast
+    deadline: Instant,
+    /// broadcast recipient
+    peer: PeerNetworkId,
+    /// the waker that will be used to notify the executor when the broadcast is ready
+    waker: Arc<Mutex<Option<Waker>>>,
+}
+
+impl ScheduledBroadcast {
+    pub fn new(deadline: Instant, peer: PeerNetworkId, executor: Handle) -> Self {
+        let waker: Arc<Mutex<Option<Waker>>> = Arc::new(Mutex::new(None));
+        let waker_clone = waker.clone();
+
+        if deadline > Instant::now() {
+            let tokio_instant = tokio::time::Instant::from_std(deadline);
+            executor.spawn(async move {
+                tokio::time::delay_until(tokio_instant).await;
+                let mut waker = waker_clone.lock().expect("failed to acquire waker lock");
+                if let Some(waker) = waker.take() {
+                    waker.wake()
+                }
+            });
+        }
+
+        Self {
+            deadline,
+            peer,
+            waker,
+        }
+    }
+}
+
+impl Future for ScheduledBroadcast {
+    type Output = PeerNetworkId;
+
+    fn poll(self: Pin<&mut Self>, context: &mut Context) -> Poll<Self::Output> {
+        if Instant::now() < self.deadline {
+            let waker_clone = context.waker().clone();
+            let mut waker = self.waker.lock().expect("failed to acquire waker lock");
+            *waker = Some(waker_clone);
+
+            Poll::Pending
+        } else {
+            Poll::Ready(self.peer)
+        }
     }
 }
 
