@@ -264,6 +264,7 @@ impl<'de, T: DeserializeOwned + Serialize> Deserialize<'de> for Block<T> {
         D: Deserializer<'de>,
     {
         #[derive(Deserialize)]
+        #[serde(rename = "Block")]
         struct BlockWithoutId<T> {
             #[serde(bound(deserialize = "BlockData<T>: Deserialize<'de>"))]
             block_data: BlockData<T>,
