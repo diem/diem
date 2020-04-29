@@ -6,7 +6,7 @@
 use config_builder::{FullNodeConfig, ValidatorConfig};
 use libra_config::config::NodeConfig;
 use libra_network_address::NetworkAddress;
-use std::{convert::TryInto, fs, net::SocketAddr, path::PathBuf};
+use std::{convert::TryInto, fs, fs::File, io::Write, net::SocketAddr, path::PathBuf};
 use structopt::StructOpt;
 
 const NODE_CONFIG: &str = "node.config.toml";
@@ -33,6 +33,9 @@ struct FaucetArgs {
     #[structopt(short = "s", long)]
     /// Use the provided seed for generating keys for each of the validators
     seed: Option<String>,
+    #[structopt(short = "n", long)]
+    /// Specify the number of nodes coded in genesis blob to produce waypoint.
+    nodes_in_genesis: usize,
 }
 
 #[derive(Debug, StructOpt)]
@@ -170,16 +173,25 @@ fn main() {
 
 fn build_faucet(args: FaucetArgs) {
     let mut config_builder = ValidatorConfig::new();
+    config_builder.nodes(args.nodes_in_genesis);
 
     if let Some(seed) = args.seed.as_ref() {
         let seed = hex::decode(seed).expect("Invalid hex in seed.");
         config_builder.seed(seed[..32].try_into().expect("Invalid seed"));
     }
 
-    let faucet_key = config_builder.build_faucet_client();
+    let (faucet_key, waypoint) = config_builder
+        .build_faucet_client()
+        .expect("Unable to build faucet");
     let key_path = args.output_dir.join("mint.key");
     fs::create_dir_all(&args.output_dir).expect("Unable to create output directory");
     generate_key::save_key(faucet_key, key_path);
+
+    let waypoint_path = args.output_dir.join("waypoint.txt");
+    let mut file =
+        File::create(waypoint_path).expect("Unable to create/truncate file at specified path");
+    file.write_all(waypoint.to_string().as_bytes())
+        .expect("Unable to write waypoint to file at specified path");
 }
 
 fn build_full_node(command: FullNodeCommand) {

@@ -14,6 +14,7 @@ use libra_config::{
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_network_address::NetworkAddress;
 use libra_temppath::TempPath;
+use libra_types::waypoint::Waypoint;
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use rand::{rngs::StdRng, Rng, SeedableRng};
@@ -168,9 +169,15 @@ impl ValidatorConfig {
         Ok(configs)
     }
 
-    pub fn build_faucet_client(&self) -> Ed25519PrivateKey {
-        let (faucet_key, _) = self.build_faucet();
-        faucet_key
+    pub fn build_faucet_client(&self) -> Result<(Ed25519PrivateKey, Waypoint)> {
+        let (configs, faucet_key) = self.build_common(false, false)?;
+        Ok((
+            faucet_key,
+            configs[0]
+                .base
+                .waypoint
+                .ok_or_else(|| format_err!("Waypoint not generated"))?,
+        ))
     }
 
     pub fn build_common(
@@ -187,7 +194,7 @@ impl ValidatorConfig {
             }
         );
 
-        let (faucet_key, config_seed) = self.build_faucet();
+        let (faucet_key, config_seed) = self.build_faucet_key();
         let generator::ValidatorSwarm { mut nodes, .. } = generator::validator_swarm(
             &self.template,
             self.nodes,
@@ -237,7 +244,7 @@ impl ValidatorConfig {
         Ok((nodes, faucet_key))
     }
 
-    fn build_faucet(&self) -> (Ed25519PrivateKey, [u8; 32]) {
+    pub fn build_faucet_key(&self) -> (Ed25519PrivateKey, [u8; 32]) {
         let mut faucet_rng = StdRng::from_seed(self.seed);
         let faucet_key = Ed25519PrivateKey::generate(&mut faucet_rng);
         let config_seed: [u8; 32] = faucet_rng.gen();
