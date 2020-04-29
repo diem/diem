@@ -5,7 +5,7 @@ use crate::{
     annotations::Annotations,
     function_target::FunctionTargetData,
     stackless_bytecode::{
-        AssignKind, AttrId, BranchCond,
+        AssignKind, AttrId,
         Bytecode::{self},
         Constant, Label, Operation, SpecBlockId, TempIndex,
     },
@@ -57,7 +57,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
         let mut label_map = BTreeMap::new();
 
         // Generate labels.
-        for bytecode in original_code {
+        for (pos, bytecode) in original_code.iter().enumerate() {
             if let MoveBytecode::BrTrue(code_offset)
             | MoveBytecode::BrFalse(code_offset)
             | MoveBytecode::Branch(code_offset) = bytecode
@@ -65,6 +65,10 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let label = Label::new(label_map.len());
                 label_map.insert(*code_offset as CodeOffset, label);
             }
+            if let MoveBytecode::BrTrue(_) | MoveBytecode::BrFalse(_) = bytecode {
+                let fall_through_label = Label::new(label_map.len());
+                label_map.insert((pos + 1) as CodeOffset, fall_through_label);
+            };
         }
         // Generate bytecode.
         let mut given_spec_blocks = BTreeMap::new();
@@ -162,7 +166,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 self.code.push(Bytecode::Branch(
                     attr_id,
                     *label_map.get(target).unwrap(),
-                    BranchCond::True(temp_index),
+                    *label_map.get(&(code_offset + 1)).unwrap(),
+                    temp_index,
                 ));
             }
 
@@ -170,8 +175,9 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 let temp_index = self.temp_stack.pop().unwrap();
                 self.code.push(Bytecode::Branch(
                     attr_id,
+                    *label_map.get(&(code_offset + 1)).unwrap(),
                     *label_map.get(target).unwrap(),
-                    BranchCond::False(temp_index),
+                    temp_index,
                 ));
             }
 
@@ -202,11 +208,8 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             }
 
             MoveBytecode::Branch(target) => {
-                self.code.push(Bytecode::Branch(
-                    attr_id,
-                    *label_map.get(target).unwrap(),
-                    BranchCond::Always,
-                ));
+                self.code
+                    .push(Bytecode::Jump(attr_id, *label_map.get(target).unwrap()));
             }
 
             MoveBytecode::FreezeRef => {
@@ -618,10 +621,10 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             MoveBytecode::WriteRef => {
                 let ref_operand_index = self.temp_stack.pop().unwrap();
                 let val_operand_index = self.temp_stack.pop().unwrap();
-                self.code.push(mk_unary(
+                self.code.push(mk_call(
                     Operation::WriteRef,
-                    ref_operand_index,
-                    val_operand_index,
+                    vec![],
+                    vec![ref_operand_index, val_operand_index],
                 ));
             }
 

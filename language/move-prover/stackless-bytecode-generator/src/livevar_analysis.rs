@@ -7,7 +7,7 @@ use crate::{
     },
     function_target::{FunctionTarget, FunctionTargetData},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    stackless_bytecode::{BranchCond, Bytecode, Operation, TempIndex},
+    stackless_bytecode::{Bytecode, Operation, TempIndex},
     stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
 };
 use itertools::Itertools;
@@ -124,26 +124,21 @@ impl LiveVarAnalysis {
             }
             Call(_, dsts, op, srcs) => {
                 use Operation::*;
-                let removed = match op {
+                match op {
                     Abort => {
                         post.reset();
-                        true
                     }
-                    _ => post.remove(dsts),
+                    _ => {
+                        post.remove(dsts);
+                    }
                 };
-                if removed {
-                    post.insert(srcs.clone());
-                }
+                post.insert(srcs.clone());
             }
             Ret(_, srcs) => {
                 post.insert(srcs.clone());
             }
-            Branch(_, _, cond) => {
-                use BranchCond::*;
-                match cond {
-                    True(src) | False(src) => post.insert(vec![*src]),
-                    Always => {}
-                }
+            Branch(_, _, _, src) => {
+                post.insert(vec![*src]);
             }
             _ => {}
         }

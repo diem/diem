@@ -118,7 +118,7 @@ impl StacklessControlFlowGraph {
     ) {
         let bytecode = &code[pc as usize];
 
-        if let Some(label) = bytecode.branch_dest() {
+        for label in bytecode.branch_dests() {
             block_ids.insert(*label_offsets.get(&label).unwrap());
         }
 

@@ -22,7 +22,7 @@ fun TestEliminateImmRefs::test1(): TestEliminateImmRefs::R {
     x_ref := $t7
     $t8 := 0
     $t9 := move(x_ref)
-    $t9 := write_ref($t8)
+    write_ref($t9, $t8)
     $t10 := move(r)
     return $t10
 }
@@ -110,7 +110,7 @@ fun TestEliminateImmRefs::test1(): TestEliminateImmRefs::R {
     x_ref := $t7
     $t8 := 0
     $t9 := move(x_ref)
-    $t9 := write_ref($t8)
+    write_ref($t9, $t8)
     $t10 := move(r)
     return $t10
 }

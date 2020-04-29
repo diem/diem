@@ -9,20 +9,21 @@ fun TestSpecBlock::looping(x: u64): u64 {
     var $t6: u64
     var $t7: u64
     spec at 592..616
-    L2:
+    L3:
     $t1 := copy(x)
     $t2 := 10
     $t3 := <($t1, $t2)
-    if ($t3) goto L0
-    goto L1
+    if ($t3) goto L0 else goto L1
+    L1:
+    goto L2
     L0:
     spec at 653..676
     $t4 := copy(x)
     $t5 := 1
     $t6 := +($t4, $t5)
     x := $t6
-    goto L2
-    L1:
+    goto L3
+    L2:
     spec at 718..742
     $t7 := copy(x)
     return $t7
@@ -39,12 +40,13 @@ fun TestSpecBlock::simple1(x: u64, y: u64) {
     $t3 := copy(y)
     $t4 := >($t2, $t3)
     $t5 := !($t4)
-    if ($t5) goto L0
-    goto L1
+    if ($t5) goto L0 else goto L1
+    L1:
+    goto L2
     L0:
     $t6 := 1
     abort($t6)
-    L1:
+    L2:
     spec at 97..139
     return ()
 }
