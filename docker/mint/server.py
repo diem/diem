@@ -25,9 +25,10 @@ def create_client():
         url = "http://{}:{}".format(ac_host, ac_port)
 
         print("Connecting to ac on: {}".format(url))
-        cmd = "/opt/libra/bin/cli --url {} -m {}".format(
+        cmd = "/opt/libra/bin/cli --url {} -m {} --waypoint {}".format(
             url,
-            "/opt/libra/etc/mint.key")
+            "/opt/libra/etc/mint.key",
+            "0:d58f389d4b2568f07515faf71b63e59018f37f82c5993ae186091a0b6b47e99f")
 
         application.client = pexpect.spawn(cmd)
         application.client.delaybeforesend = 0.1
