@@ -15,6 +15,10 @@ pub trait KVStorage: Send + Sync {
     /// Creates a new value in storage and fails if it already exists
     fn create(&mut self, key: &str, value: Value, policy: &Policy) -> Result<(), Error>;
 
+    fn create_with_default_policy(&mut self, key: &str, value: Value) -> Result<(), Error> {
+        self.create(key, value, &Policy::default())
+    }
+
     /// Creates a new value if it does not exist fails only if there is some other issue.
     fn create_if_not_exists(
         &mut self,

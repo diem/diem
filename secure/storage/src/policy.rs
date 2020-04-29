@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Dictates a set of permissions
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct Policy {
     pub permissions: Vec<Permission>,
 }
@@ -12,6 +12,10 @@ pub struct Policy {
 impl Policy {
     pub fn new(permissions: Vec<Permission>) -> Self {
         Self { permissions }
+    }
+
+    pub fn is_default(&self) -> bool {
+        Self::default() == *self
     }
 
     pub fn public() -> Self {
@@ -23,7 +27,7 @@ impl Policy {
 }
 
 /// Maps an identity to a set of capabilities
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Permission {
     pub id: Identity,
     pub capabilities: Vec<Capability>,
@@ -40,7 +44,7 @@ impl Permission {
 /// verifiable material. For example, the process running safety_rules may have a token that is
 /// intended for only safety_rules to own. The specifics are left to the implementation of the
 /// storage backend interface layer.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub enum Identity {
     User(String),
     Anyone,
@@ -48,7 +52,7 @@ pub enum Identity {
 }
 
 /// Represents actions
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub enum Capability {
     Export,
     Read,
