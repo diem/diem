@@ -35,7 +35,6 @@ storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
 vm-validator = { path = "../vm-validator", version = "0.1.0" }
 
 libra-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
-proptest = { version = "0.9.6", optional = true }
 
 storage-service = { path = "../storage/storage-service", version = "0.1.0", optional = true }
 
