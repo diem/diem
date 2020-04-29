@@ -30,7 +30,6 @@ use 0x0::LibraSystem;
 use 0x0::LibraAccount;
 use 0x0::LBR;
 use 0x0::Vector;
-use 0x0::TransactionFeeAccounts;
 use {{vivian}}::BalanceHolder;
 
 fun main() {
@@ -52,8 +51,7 @@ fun main() {
   };
 
   BalanceHolder::publish(balances);
-  let fee_addr = TransactionFeeAccounts::transaction_fee_address<LBR::T>();
-  LibraAccount::deposit<LBR::T>(fee_addr, lib_coin);
+  LibraAccount::deposit<LBR::T>(0xFEE, lib_coin);
 }
 //! check: EXECUTED
 
@@ -66,7 +64,6 @@ fun main() {
 use 0x0::LibraSystem;
 use 0x0::LibraAccount;
 use 0x0::LBR;
-use 0x0::TransactionFeeAccounts;
 use 0x0::Transaction;
 use {{vivian}}::BalanceHolder;
 
@@ -82,7 +79,6 @@ fun main() {
      Transaction::assert(new_balance == (old_balance + 10), 77);
   };
 
-  let fee_addr = TransactionFeeAccounts::transaction_fee_address<LBR::T>();
-  Transaction::assert(LibraAccount::balance<LBR::T>(fee_addr) == 0, 10000);
+  Transaction::assert(LibraAccount::balance<LBR::T>(0xFEE) == 0, 10000);
 }
 //! check: EXECUTED

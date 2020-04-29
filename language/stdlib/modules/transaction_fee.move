@@ -4,7 +4,6 @@ module TransactionFee {
     use 0x0::LibraAccount;
     use 0x0::LibraSystem;
     use 0x0::Transaction;
-    use 0x0::TransactionFeeAccounts;
 
     ///////////////////////////////////////////////////////////////////////////
     // Transaction Fee Distribution
@@ -40,8 +39,7 @@ module TransactionFee {
       Transaction::assert(Transaction::sender() == 0x0, 33);
 
       let num_validators = LibraSystem::validator_set_size();
-      let fee_addr = TransactionFeeAccounts::transaction_fee_address<Token>();
-      let amount_collected = LibraAccount::balance<Token>(fee_addr);
+      let amount_collected = LibraAccount::balance<Token>(0xFEE);
 
       // If amount_collected == 0, this will also return early
       if (amount_collected < num_validators) return ();
@@ -56,7 +54,6 @@ module TransactionFee {
       distribute_transaction_fees_internal<Token>(
           amount_to_distribute_per_validator,
           num_validators,
-          fee_addr,
       );
     }
 
@@ -68,9 +65,8 @@ module TransactionFee {
     fun distribute_transaction_fees_internal<Token>(
         amount_to_distribute_per_validator: u64,
         num_validators: u64,
-        fee_addr: address,
     ) acquires TransactionFees {
-        let distribution_resource = borrow_global<TransactionFees>(fee_addr);
+        let distribution_resource = borrow_global<TransactionFees>(0xFEE);
         let index = 0;
 
         while (index < num_validators) {
