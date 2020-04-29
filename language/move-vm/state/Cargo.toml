@@ -12,7 +12,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 # TODO: Move may want to have its own logger infra independent of libra_logger
 libra-logger = { path = "../../../common/logger", version = "0.1.0" }
 libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }

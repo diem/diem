@@ -3135,7 +3135,6 @@ dependencies = [
 name = "move-vm-state"
 version = "0.1.0"
 dependencies = [
- "libra-canonical-serialization 0.1.0",
  "libra-logger 0.1.0",
  "libra-state-view 0.1.0",
  "libra-types 0.1.0",
