@@ -87,11 +87,13 @@ fn main() {
 
     let faucet_key_file_path = &validator_swarm.config.faucet_key_path;
     let validator_config = NodeConfig::load(&validator_swarm.config.config_files[0]).unwrap();
+    let waypoint = validator_config.base.waypoint.unwrap();
     println!("To run the Libra CLI client in a separate process and connect to the validator nodes you just spawned, use this command:");
     println!(
-        "\tcargo run --bin cli -- -u {} -m {:?}",
+        "\tcargo run --bin cli -- -u {} -m {:?} --waypoint {}",
         format!("http://localhost:{}", validator_config.rpc.address.port()),
         faucet_key_file_path,
+        waypoint,
     );
     let node_address_list = validator_swarm
         .config
@@ -112,9 +114,10 @@ fn main() {
         let full_node_config = NodeConfig::load(&swarm.config.config_files[0]).unwrap();
         println!("To connect to the full nodes you just spawned, use this command:");
         println!(
-            "\tcargo run --bin cli -- -u {} -m {:?}",
+            "\tcargo run --bin cli -- -u {} -m {:?} --waypoint {}",
             format!("http://localhost:{}", full_node_config.rpc.address.port()),
             faucet_key_file_path,
+            waypoint,
         );
     }
 
@@ -126,6 +129,7 @@ fn main() {
             port,
             Path::new(&faucet_key_file_path),
             &tmp_mnemonic_file.path(),
+            waypoint,
         );
         println!("Loading client...");
         let _output = client.output().expect("Failed to wait on child");
