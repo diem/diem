@@ -12,5 +12,4 @@ edition = "2018"
 [dependencies]
 num-traits = { version = "0.2.11", features = ["std"] }
 sha-1 = { version = "0.8.2", features = ["std"] }
-subtle = { version = "2.2.2", features = ["i128", "std"] }
 syn = { version = "1.0.18", features = ["clone-impls", "derive", "extra-traits", "fold", "full", "parsing", "printing", "proc-macro", "quote", "visit", "visit-mut"] }
