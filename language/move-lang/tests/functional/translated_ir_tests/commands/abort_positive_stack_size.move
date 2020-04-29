@@ -8,11 +8,13 @@ module M {
 
 //! new-transaction
 
+script {
 use {{default}}::M;
 
 fun main() {
     M::foo();
     abort 0
+}
 }
 
 // not: VerificationFailure

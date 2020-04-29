@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 // TODO: add optional timeout for reclaiming by original publisher once we have implemented time
 module Offer {
@@ -34,4 +34,6 @@ module Offer {
   public fun address_of<Offered>(offer_address: address): address acquires T {
     borrow_global<T<Offered>>(offer_address).for
   }
+}
+
 }

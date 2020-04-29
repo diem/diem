@@ -13,9 +13,11 @@ module B {
 
 //! new-transaction
 
+script {
 use {{default}}::B;
 
 fun main() {
     let x = B::new(5);
     B::t(&x);
+}
 }

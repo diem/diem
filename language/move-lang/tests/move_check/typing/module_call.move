@@ -1,4 +1,4 @@
-address 0x1:
+address 0x1 {
 
 module X {
     public fun foo(): u64 { 0 }
@@ -54,5 +54,7 @@ module M {
         let () = bing (baz (0x0, 1));
         let () = bing (false, 0x0, 1);
     }
+
+}
 
 }

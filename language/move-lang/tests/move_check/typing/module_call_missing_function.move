@@ -1,4 +1,4 @@
-address 0x1:
+address 0x1 {
 
 module X {
     public fun foo(): u64 { 0 }
@@ -14,4 +14,6 @@ module M {
         foooo();
         X::foooooo();
     }
+}
+
 }

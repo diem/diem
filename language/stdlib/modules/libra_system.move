@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 // These modules only change resources stored under the three addresses:
 // LibraAssociation's account address: 0xA550C18
@@ -352,4 +352,6 @@ module LibraSystem {
 
         abort 99
     }
+}
+
 }

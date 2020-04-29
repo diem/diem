@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module ValidatorConfig {
     use 0x0::LibraAccount;
@@ -168,4 +168,5 @@ module ValidatorConfig {
         let t_ref = borrow_global_mut<T>(validator_account);
         t_ref.discovery_config.validator_network_address = validator_network_address;
     }
+}
 }

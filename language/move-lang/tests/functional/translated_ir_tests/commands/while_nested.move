@@ -1,3 +1,4 @@
+script {
 fun main() {
     let x = 0;
     let z = 0;
@@ -11,4 +12,5 @@ fun main() {
         }
     };
     0x0::Transaction::assert(z == 21, 42)
+}
 }

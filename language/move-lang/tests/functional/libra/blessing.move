@@ -1,5 +1,6 @@
 //! new-transaction
 //! sender: association
+script {
 use 0x0::Libra;
 use 0x0::Coin1;
 use 0x0::Coin2;
@@ -12,5 +13,6 @@ fun main() {
     Transaction::assert(!Libra::is_synthetic_currency<Coin2::T>(), 3);
     Transaction::assert(Libra::market_cap<Coin1::T>() == 0, 4);
     Transaction::assert(Libra::market_cap<Coin2::T>() == 0, 5);
+}
 }
 // check: EXECUTED

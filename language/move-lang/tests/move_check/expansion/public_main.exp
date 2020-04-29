@@ -1,8 +1,8 @@
 error: 
 
-   ┌── tests/move_check/expansion/public_main.move:1:1 ───
+   ┌── tests/move_check/expansion/public_main.move:2:1 ───
    │
- 1 │ public fun main() {
-   │ ^^^^^^ Extraneous 'public' modifier. This top-level function is assumed to be public
+ 2 │ public fun main() {
+   │ ^^^^^^ Extraneous 'public' modifier. Script functions are always public
    │
 

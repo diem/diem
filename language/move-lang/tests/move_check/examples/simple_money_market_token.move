@@ -1,4 +1,4 @@
-address 0x1:
+address 0x1 {
 
 module Token {
     use 0x0::Transaction;
@@ -46,7 +46,9 @@ module Token {
 
 }
 
-address 0xB055:
+}
+
+address 0xB055 {
 
 module OneToOneMarket {
     use 0x0::Transaction;
@@ -167,7 +169,9 @@ module OneToOneMarket {
     }
 }
 
-address 0x70DD:
+}
+
+address 0x70DD {
 
 module ToddNickles {
     use 0x1::Token;
@@ -192,5 +196,7 @@ module ToddNickles {
     public fun destroy(c: Token::Coin<T>) acquires Wallet {
         Token::deposit(&mut borrow_global_mut<Wallet>(0x70DD).nickles, c)
     }
+
+}
 
 }

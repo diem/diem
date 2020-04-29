@@ -23,6 +23,7 @@ module Test {
 
 //! new-transaction
 
+script {
 use {{default}}::Test;
 
 fun main() {
@@ -30,4 +31,5 @@ fun main() {
     let t = Test::new_t(x);
     let (_, x, _) = Test::destroy_t(t);
     Test::destroy_x(x);
+}
 }

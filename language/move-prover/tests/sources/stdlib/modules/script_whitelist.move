@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module ScriptWhitelist {
     use 0x0::LibraConfig;
@@ -16,4 +16,5 @@ module ScriptWhitelist {
     public fun set(payload: vector<u8>) {
         LibraConfig::set<Self::T>(T { payload } )
     }
+}
 }

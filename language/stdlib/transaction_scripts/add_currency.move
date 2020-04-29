@@ -1,3 +1,4 @@
+script {
 use 0x0::FixedPoint32;
 use 0x0::Libra;
 
@@ -20,4 +21,5 @@ fun main<NewCurrency>(
         fractional_part,
         currency_code,
     );
+}
 }

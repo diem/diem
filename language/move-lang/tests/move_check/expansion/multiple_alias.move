@@ -1,4 +1,4 @@
-address 0x1:
+address 0x1 {
 
 module M {
     use 0x1::X;
@@ -21,4 +21,6 @@ module M {
 module X {
     struct S {}
     public fun foo(): S { S{} }
+}
+
 }

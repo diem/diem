@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module LibraSystem {
     use 0x0::LibraAccount;
@@ -475,4 +475,5 @@ module LibraSystem {
               ValidatorConfig::fullnodes_network_address(&config),
       }
    }
+}
 }

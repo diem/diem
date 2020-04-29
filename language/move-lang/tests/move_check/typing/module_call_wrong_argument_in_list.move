@@ -1,4 +1,4 @@
-address 0x1:
+address 0x1 {
 
 module X {
     struct S {}
@@ -33,5 +33,7 @@ module M {
         X::foo(false, 0, S{});
         X::foo(false, false, X::s());
     }
+
+}
 
 }

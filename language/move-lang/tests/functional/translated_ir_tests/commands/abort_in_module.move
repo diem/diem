@@ -5,10 +5,12 @@ module M {
 }
 
 //! new-transaction
+script {
 use {{default}}::M;
 
 fun main() {
     M::foo()
+}
 }
 
 // check: ABORTED

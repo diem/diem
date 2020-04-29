@@ -1,3 +1,4 @@
+script {
 fun foo() {
-
+}
 }

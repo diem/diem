@@ -6,7 +6,7 @@
 // Note: approved payments are an accounting convenience/a courtesy mechansim for the payee, *not*
 // a hurdle that must be cleared for all payments to the payee. In addition, approved payments do
 // not have replay protection.
-address 0x0:
+address 0x0 {
 module ApprovedPayment {
     use 0x0::Libra;
     use 0x0::LibraAccount;
@@ -93,5 +93,7 @@ module ApprovedPayment {
     public fun exists(addr: address): bool {
         ::exists<T>(addr)
     }
+
+}
 
 }

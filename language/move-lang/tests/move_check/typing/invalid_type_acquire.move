@@ -1,4 +1,4 @@
-address 0x1:
+address 0x1 {
 
 module X {
     resource struct R{}
@@ -57,4 +57,6 @@ module M {
         move_to_sender<X::R>(any());
         move_to_sender<S>(any());
     }
+}
+
 }

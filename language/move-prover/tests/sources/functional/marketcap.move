@@ -1,5 +1,5 @@
 // A minimized version of the MarketCap verification problem.
-address 0x0:
+address 0x0 {
 
 module TestMarketCap {
 
@@ -49,4 +49,6 @@ module TestMarketCap {
          aborts_if coin_ref.value + check.value / 2 > max_u64();
          ensures coin_ref.value == old(coin_ref.value) + check.value / 2;
      }
+}
+
 }

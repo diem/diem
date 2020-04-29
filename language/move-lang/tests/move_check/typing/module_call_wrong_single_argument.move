@@ -1,4 +1,4 @@
-address 0x1:
+address 0x1 {
 
 module X {
     struct S {}
@@ -32,5 +32,7 @@ module M {
         X::bar(S{});
         X::bar(false);
     }
+
+}
 
 }

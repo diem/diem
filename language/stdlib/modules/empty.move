@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module Empty {
     // An empty account cannot hold money, nor can it send or receive
@@ -9,4 +9,6 @@ module Empty {
     public fun create(): T {
         T { }
     }
+}
+
 }

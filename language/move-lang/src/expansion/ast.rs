@@ -22,13 +22,21 @@ use std::{
 #[derive(Debug)]
 pub struct Program {
     pub modules: UniqueMap<ModuleIdent, ModuleDefinition>,
-    pub main: Option<(
-        Vec<ModuleIdent>,
-        Address,
-        FunctionName,
-        Function,
-        Vec<SpecBlock>,
-    )>,
+    pub scripts: BTreeMap<String, Script>,
+}
+
+//**************************************************************************************************
+// Scripts
+//**************************************************************************************************
+
+#[derive(Debug)]
+pub struct Script {
+    pub loc: Loc,
+    pub uses: BTreeMap<ModuleIdent, Loc>,
+    pub unused_aliases: Vec<ModuleIdent>,
+    pub function_name: FunctionName,
+    pub function: Function,
+    pub specs: Vec<SpecBlock>,
 }
 
 //**************************************************************************************************
@@ -311,29 +319,53 @@ impl fmt::Display for SpecId {
 
 impl AstDebug for Program {
     fn ast_debug(&self, w: &mut AstWriter) {
-        let Program { modules, main } = self;
+        let Program { modules, scripts } = self;
         for (m, mdef) in modules {
             w.write(&format!("module {}", m));
             w.block(|w| mdef.ast_debug(w));
             w.new_line();
         }
 
-        if let Some((unused_aliases, addr, n, fdef, specs)) = main {
-            w.writeln(&format!("address {}:", addr));
-            if !unused_aliases.is_empty() {
-                w.writeln("unused_aliases: ");
-                w.indent(2, |w| {
-                    w.list(unused_aliases, ",", |w, m| {
-                        w.write(&format!("{}", m));
-                        true
-                    })
-                });
-            }
-            (n.clone(), fdef).ast_debug(w);
-            for spec in specs {
-                spec.ast_debug(w);
-                w.new_line();
-            }
+        for (n, s) in scripts {
+            w.write(&format!("script {}", n));
+            w.block(|w| s.ast_debug(w));
+            w.new_line()
+        }
+    }
+}
+
+impl AstDebug for Script {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let Script {
+            loc: _loc,
+            uses,
+            unused_aliases,
+            function_name,
+            function,
+            specs,
+        } = self;
+        if !uses.is_empty() {
+            w.writeln("uses: ");
+            w.indent(2, |w| {
+                w.list(uses, ",", |w, (m, _)| {
+                    w.write(&format!("{}", m));
+                    true
+                })
+            });
+        }
+        if !unused_aliases.is_empty() {
+            w.writeln("unused_aliases: ");
+            w.indent(2, |w| {
+                w.list(unused_aliases, ",", |w, m| {
+                    w.write(&format!("{}", m));
+                    true
+                })
+            });
+        }
+        (function_name.clone(), function).ast_debug(w);
+        for spec in specs {
+            spec.ast_debug(w);
+            w.new_line();
         }
     }
 }

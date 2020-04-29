@@ -1,3 +1,4 @@
+script {
 use 0x0::Coin1;
 use 0x0::Coin2;
 use 0x0::LBR;
@@ -13,4 +14,5 @@ fun main(amount_lbr: u64) {
     LibraAccount::deposit(sender, lbr);
     LibraAccount::deposit(sender, coin1);
     LibraAccount::deposit(sender, coin2);
+}
 }

@@ -33,9 +33,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const MOVE_EXTENSION: &str = "move";
-const MOVE_COMPILED_EXTENSION: &str = "mv";
-const SOURCE_MAP_EXTENSION: &str = "mvsm";
+pub const MOVE_EXTENSION: &str = "move";
+pub const MOVE_COMPILED_EXTENSION: &str = "mv";
+pub const SOURCE_MAP_EXTENSION: &str = "mvsm";
 
 //**************************************************************************************************
 // Entry
@@ -136,24 +136,68 @@ pub fn output_compiled_units(
     compiled_units: Vec<CompiledUnit>,
     out_dir: &str,
 ) -> io::Result<()> {
-    std::fs::create_dir_all(out_dir)?;
-    let (compiled_units, ice_errors) = compiled_unit::verify_units(compiled_units);
-    for (idx, compiled_unit) in compiled_units.into_iter().enumerate() {
-        let mut path = PathBuf::from(format!(
-            "{}/transaction_{}_{}",
-            out_dir,
-            idx,
-            compiled_unit.name(),
-        ));
+    const SCRIPT_SUB_DIR: &str = "scripts";
+    const MODULE_SUB_DIR: &str = "modules";
 
-        if emit_source_maps {
-            path.set_extension(SOURCE_MAP_EXTENSION);
-            File::create(path.as_path())?.write_all(&compiled_unit.serialize_source_map())?;
-        }
+    macro_rules! emit_unit {
+        ($path:ident, $unit:ident) => {{
+            if emit_source_maps {
+                $path.set_extension(SOURCE_MAP_EXTENSION);
+                File::create($path.as_path())?.write_all(&$unit.serialize_source_map())?;
+            }
 
-        path.set_extension(MOVE_COMPILED_EXTENSION);
-        File::create(path.as_path())?.write_all(&compiled_unit.serialize())?;
+            $path.set_extension(MOVE_COMPILED_EXTENSION);
+            File::create($path.as_path())?.write_all(&$unit.serialize())?
+        }};
     }
+
+    let (compiled_units, ice_errors) = compiled_unit::verify_units(compiled_units);
+    let (modules, scripts): (Vec<_>, Vec<_>) = compiled_units
+        .into_iter()
+        .partition(|u| matches!(u, CompiledUnit::Module { .. }));
+
+    // modules
+    if !modules.is_empty() {
+        std::fs::create_dir_all(format!("{}/{}", out_dir, MODULE_SUB_DIR))?;
+    }
+    for (idx, unit) in modules.into_iter().enumerate() {
+        let mut path = PathBuf::from(format!(
+            "{}/{}/{}_{}",
+            out_dir,
+            MODULE_SUB_DIR,
+            idx,
+            unit.name(),
+        ));
+        emit_unit!(path, unit);
+    }
+
+    // scripts
+    if !scripts.is_empty() {
+        std::fs::create_dir_all(format!("{}/{}", out_dir, SCRIPT_SUB_DIR))?;
+    }
+    for unit in scripts {
+        let mut path = PathBuf::from(format!("{}/{}/{}", out_dir, SCRIPT_SUB_DIR, unit.name()));
+        emit_unit!(path, unit);
+    }
+    // let script_map = {
+    //     let mut m: BTreeMap<String, Vec<CompiledUnit>> = BTreeMap::new();
+    //     for u in scripts {
+    //         m.entry(u.name()).or_insert_with(Vec::new).push(u)
+    //     }
+    //     m
+    // };
+    // for (n, units) in script_map {
+    //     let num_units = units.len();
+    //     for (idx, unit) in units.into_iter().enumerate() {
+    //         let file_name = if num_units == 1 {
+    //             format!("{}", n)
+    //         } else {
+    //             format!("{}_{}", n, idx)
+    //         };
+    //         let mut path = PathBuf::from(format!("{}/{}/{}", out_dir, SCRIPT_SUB_DIR, file_name));
+    //         emit_unit!(path, unit);
+    //     }
+    // }
     if !ice_errors.is_empty() {
         errors::report_errors(files, ice_errors)
     }
@@ -202,18 +246,14 @@ fn parse_program(
     let mut errors: Errors = Vec::new();
 
     for fname in targets {
-        let (def_opt, mut es) = parse_file(&mut files, fname)?;
-        if let Some(def) = def_opt {
-            source_definitions.push(def);
-        }
+        let (defs, mut es) = parse_file(&mut files, fname)?;
+        source_definitions.extend(defs);
         errors.append(&mut es);
     }
 
     for fname in deps {
-        let (def_opt, mut es) = parse_file(&mut files, fname)?;
-        if let Some(def) = def_opt {
-            lib_definitions.push(def);
-        }
+        let (defs, mut es) = parse_file(&mut files, fname)?;
+        lib_definitions.extend(defs);
         errors.append(&mut es);
     }
 
@@ -281,7 +321,7 @@ fn leak_str(s: &str) -> &'static str {
 fn parse_file(
     files: &mut FilesSourceText,
     fname: &'static str,
-) -> io::Result<(Option<parser::ast::FileDefinition>, Errors)> {
+) -> io::Result<(Vec<parser::ast::Definition>, Errors)> {
     let mut errors: Errors = Vec::new();
     let mut f = File::open(fname)
         .map_err(|err| std::io::Error::new(err.kind(), format!("{}: {}", err, fname)))?;
@@ -291,19 +331,19 @@ fn parse_file(
         Err(err) => {
             errors.push(err);
             files.insert(fname, source_buffer);
-            return Ok((None, errors));
+            return Ok((vec![], errors));
         }
         Ok(no_comments_buffer) => no_comments_buffer,
     };
-    let def_opt = match parse_file_string(fname, &no_comments_buffer) {
-        Ok(def) => Some(def),
+    let defs = match parse_file_string(fname, &no_comments_buffer) {
+        Ok(defs) => defs,
         Err(err) => {
             errors.push(err);
-            None
+            vec![]
         }
     };
     files.insert(fname, no_comments_buffer);
-    Ok((def_opt, errors))
+    Ok((defs, errors))
 }
 
 //**************************************************************************************************

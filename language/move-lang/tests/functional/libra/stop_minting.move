@@ -1,5 +1,6 @@
 //! new-transaction
 //! sender: association
+script {
 use 0x0::Libra;
 use 0x0::Coin1;
 use 0x0::Coin2;
@@ -37,6 +38,7 @@ fun main() {
     Libra::preburn_to_sender(
             Libra::mint<Coin1::T>(10)
     )
+}
 }
 // check: ABORTED
 // check: 4

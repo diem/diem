@@ -685,6 +685,7 @@ dependencies = [
  "tonic 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
  "ureq 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "walkdir 2.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

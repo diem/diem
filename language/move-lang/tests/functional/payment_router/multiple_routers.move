@@ -8,6 +8,7 @@
 //! sender: bob
 //! gas-price: 0
 //! max-gas: 100000
+script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
 fun main() {
@@ -17,11 +18,13 @@ fun main() {
     PaymentRouter::allow_account_address({{nope}});
     PaymentRouter::allow_currency<Coin1::T>();
 }
+}
 
 //! new-transaction
 //! sender: alice
 //! gas-price: 0
 //! max-gas: 100000
+script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
 fun main() {
@@ -32,51 +35,61 @@ fun main() {
     PaymentRouter::allow_account_address({{nope}});
     PaymentRouter::allow_currency<Coin1::T>();
 }
+}
 
 //! new-transaction
 //! sender: gary
 //! gas-price: 0
 //! max-gas: 100000
+script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
 fun main() {
     PaymentRouter::add_account_to<Coin1::T>({{bob}});
+}
 }
 
 //! new-transaction
 //! sender: bob
 //! gas-price: 0
 //! max-gas: 100000
+script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
 fun main() {
     PaymentRouter::add_account_to<Coin1::T>({{bob}});
+}
 }
 
 //! new-transaction
 //! sender: alice
 //! gas-price: 0
 //! max-gas: 100000
+script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
 fun main() {
     PaymentRouter::add_account_to<Coin1::T>({{alice}});
+}
 }
 
 //! new-transaction
 //! sender: vivian
 //! gas-price: 0
 //! max-gas: 100000
+script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
 fun main() {
     PaymentRouter::add_account_to<Coin1::T>({{alice}});
+}
 }
 
 //! new-transaction
 //! sender: gary
 //! gas-price: 0
 //! max-gas: 1000000
+script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
 // Try to have gary withdraw through bob's payment router. But this doesn't
@@ -85,6 +98,7 @@ fun main() {
     let x_coins = PaymentRouter::withdraw_through<Coin1::T>(10);
     PaymentRouter::deposit<Coin1::T>({{bob}}, x_coins);
 }
+}
 // check: ABORTED
 // check: 2
 
@@ -92,6 +106,7 @@ fun main() {
 //! sender: vivian
 //! gas-price: 0
 //! max-gas: 1000000
+script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
 // vivan can withdraw through alice's payment router since alice has set
@@ -100,11 +115,13 @@ fun main() {
     let x_coins = PaymentRouter::withdraw_through<Coin1::T>(10);
     PaymentRouter::deposit<Coin1::T>({{alice}}, x_coins);
 }
+}
 
 //! new-transaction
 //! sender: vivian
 //! gas-price: 0
 //! max-gas: 1000000
+script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
 use 0x0::Transaction;
@@ -120,27 +137,32 @@ fun main() {
     Transaction::assert(PaymentRouter::router_address<Coin1::T>({{alice}}) == {{alice}}, 2);
     Transaction::assert(PaymentRouter::router_address<Coin1::T>({{vivian}}) == {{alice}}, 2);
 }
-
-//! new-transaction
-//! sender: nope
-//! gas-price: 0
-//! max-gas: 100000
-use 0x0::PaymentRouter;
-use 0x0::Coin1;
-fun main() {
-    PaymentRouter::add_account_to<Coin1::T>({{alice}});
 }
 
 //! new-transaction
 //! sender: nope
 //! gas-price: 0
 //! max-gas: 100000
+script {
+use 0x0::PaymentRouter;
+use 0x0::Coin1;
+fun main() {
+    PaymentRouter::add_account_to<Coin1::T>({{alice}});
+}
+}
+
+//! new-transaction
+//! sender: nope
+//! gas-price: 0
+//! max-gas: 100000
+script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
 // an account can't belong to multiple routers. This fails since nope is
 // already routed by the payment router at alice.
 fun main() {
     PaymentRouter::add_account_to<Coin1::T>({{bob}});
+}
 }
 // check: ABORTED
 // check: 11
@@ -149,6 +171,7 @@ fun main() {
 //! sender: nope
 //! gas-price: 0
 //! max-gas: 100000
+script {
 use 0x0::PaymentRouter;
 use 0x0::Coin1;
 use 0x0::Vector;
@@ -160,4 +183,5 @@ fun main() {
     // alices addresses for Coin1 should have nope, but bob's should not
     Transaction::assert(!Vector::contains(&bobs, &{{nope}}), 3);
     Transaction::assert(Vector::contains(&alices, &{{nope}}), 4);
+}
 }

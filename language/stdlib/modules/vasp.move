@@ -4,7 +4,7 @@
 // 7002 -> INVALID_CHILD_VASP_ACCOUNT
 // 7003 -> CHILD_ACCOUNT_STILL_PARENT
 // 7004 -> INVALID_PUBLIC_KEY
-address 0x0:
+address 0x0 {
 
 module VASP {
     use 0x0::AccountType;
@@ -356,4 +356,6 @@ module VASP {
     fun cert_lifetime(): u64 {
         31540000000000
     }
+}
+
 }

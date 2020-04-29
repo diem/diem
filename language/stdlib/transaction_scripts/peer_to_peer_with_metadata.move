@@ -1,3 +1,4 @@
+script {
 use 0x0::LibraAccount;
 
 fun main<Token>(
@@ -11,4 +12,5 @@ fun main<Token>(
       LibraAccount::create_unhosted_account<Token>(payee, auth_key_prefix);
   };
   LibraAccount::pay_from_sender_with_metadata<Token>(payee, amount, metadata, metadata_signature)
+}
 }

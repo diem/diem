@@ -10,6 +10,7 @@ module M {
 
 //! new-transaction
 
+script {
 use {{default}}::M;
 
 fun main(
@@ -19,6 +20,7 @@ fun main(
     no4: M::Cup<M::S>,
 ) {
 
+}
 }
 
 // check: error

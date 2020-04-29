@@ -9,26 +9,31 @@
 
 // payer applies to be a VASP
 //! sender: payer
+script {
 use 0x0::VASP;
 fun main() {
     let pubkey = x"0000000d7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     VASP::apply_for_vasp_root_credential(x"AAA", x"BBB", x"CCC", pubkey);
+}
 }
 // check: EXECUTED
 
 // payee applies to be a VASP
 //! new-transaction
 //! sender: payee
+script {
 use 0x0::VASP;
 fun main() {
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     VASP::apply_for_vasp_root_credential(x"DDD", x"EEE", x"FFF", pubkey);
+}
 }
 // check: EXECUTED
 
 // Association approves both
 //! new-transaction
 //! sender: association
+script {
 use 0x0::Association;
 use 0x0::VASP;
 fun main() {
@@ -36,6 +41,7 @@ fun main() {
     Association::grant_privilege<VASP::CreationPrivilege>({{association}});
     VASP::grant_vasp({{payer}});
     VASP::grant_vasp({{payee}});
+}
 }
 // check: EXECUTED
 
@@ -46,6 +52,7 @@ fun main() {
 // transaction >= 1000 threshold goes through signature verification with valid signature, passes
 //! new-transaction
 //! sender: payer
+script {
 use 0x0::LBR;
 use 0x0::LibraAccount;
 fun main() {
@@ -54,11 +61,13 @@ fun main() {
 
     LibraAccount::pay_from_sender_with_metadata<LBR::T>({{payee}}, 1000, payment_id, signature);
 }
+}
 // check: EXECUTED
 
 // transaction >= 1000 threshold goes through signature verification with invalid signature, aborts
 //! new-transaction
 //! sender: payer
+script {
 use 0x0::LBR;
 use 0x0::LibraAccount;
 fun main() {
@@ -67,12 +76,14 @@ fun main() {
 
     LibraAccount::pay_from_sender_with_metadata<LBR::T>({{payee}}, 1000, payment_id, signature);
 }
+}
 // check: ABORTED
 // check: 9002
 
 // similar, but with empty payment ID (make sure signature is still invalid!)
 //! new-transaction
 //! sender: payer
+script {
 use 0x0::LBR;
 use 0x0::LibraAccount;
 fun main() {
@@ -81,12 +92,14 @@ fun main() {
 
     LibraAccount::pay_from_sender_with_metadata<LBR::T>({{payee}}, 1000, payment_id, signature);
 }
+}
 // check: ABORTED
 // check: 9002
 
 // transaction < 1000 threshold not subject to travel rule, goes through with any signature
 //! new-transaction
 //! sender: payer
+script {
 use 0x0::LBR;
 use 0x0::LibraAccount;
 fun main() {
@@ -94,6 +107,7 @@ fun main() {
     let signature = x"";
 
     LibraAccount::pay_from_sender_with_metadata<LBR::T>({{payee}}, 999, payment_id, signature);
+}
 }
 // check: EXECUTED
 
@@ -103,33 +117,40 @@ fun main() {
 // payer allows child accounts
 //! new-transaction
 //! sender: payer
+script {
 use 0x0::VASP;
 fun main() {
     VASP::allow_child_accounts();
+}
 }
 // check: EXECUTED
 
 // apply to be child of payer
 //! new-transaction
 //! sender: child
+script {
 use 0x0::VASP;
 fun main() {
     VASP::apply_for_child_vasp_credential({{payer}});
+}
 }
 // check: EXECUTED
 
 // payer allows child accounts
 //! new-transaction
 //! sender: payer
+script {
 use 0x0::VASP;
 fun main() {
     VASP::grant_child_account({{child}});
+}
 }
 // check: EXECUTED
 
 // intra-VASP transaction >= 1000 threshold, should go throug with any signature
 //! new-transaction
 //! sender: payer
+script {
 use 0x0::LBR;
 use 0x0::LibraAccount;
 fun main() {
@@ -138,11 +159,13 @@ fun main() {
 
     LibraAccount::pay_from_sender_with_metadata<LBR::T>({{child}}, 1001, payment_id, signature);
 }
+}
 // check: EXECUTED
 
 // same thing, but from child -> parent
 //! new-transaction
 //! sender: child
+script {
 use 0x0::LBR;
 use 0x0::LibraAccount;
 fun main() {
@@ -150,6 +173,7 @@ fun main() {
     let signature = x"";
 
     LibraAccount::pay_from_sender_with_metadata<LBR::T>({{payer}}, 1001, payment_id, signature);
+}
 }
 // check: EXECUTED
 
@@ -159,6 +183,7 @@ fun main() {
 // VASP -> wallet direction
 //! new-transaction
 //! sender: payer
+script {
 use 0x0::LBR;
 use 0x0::LibraAccount;
 fun main() {
@@ -167,11 +192,13 @@ fun main() {
 
     LibraAccount::pay_from_sender_with_metadata<LBR::T>({{alice}}, 1001, payment_id, signature);
 }
+}
 // check: EXECUTED
 
 // wallet -> VASP direction
 //! new-transaction
 //! sender: alice
+script {
 use 0x0::LBR;
 use 0x0::LibraAccount;
 fun main() {
@@ -180,6 +207,7 @@ fun main() {
 
     LibraAccount::pay_from_sender_with_metadata<LBR::T>({{payer}}, 1001, payment_id, signature);
 }
+}
 // check: EXECUTED
 
 // finally, check that unhosted <-> unhosted transactions are not subject to the travel rule
@@ -187,6 +215,7 @@ fun main() {
 // wallet -> VASP direction
 //! new-transaction
 //! sender: alice
+script {
 use 0x0::LBR;
 use 0x0::LibraAccount;
 fun main() {
@@ -194,5 +223,6 @@ fun main() {
     let signature = x"";
 
     LibraAccount::pay_from_sender_with_metadata<LBR::T>({{bob}}, 1001, payment_id, signature);
+}
 }
 // check: EXECUTED

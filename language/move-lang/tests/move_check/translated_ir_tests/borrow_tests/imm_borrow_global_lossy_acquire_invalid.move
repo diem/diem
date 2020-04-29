@@ -1,4 +1,4 @@
-address 0x42:
+address 0x42 {
 
 module A {
     resource struct Coin { u: u64 }
@@ -40,3 +40,5 @@ module Tester {
 }
 
 // check: GLOBAL_REFERENCE_ERROR
+
+}

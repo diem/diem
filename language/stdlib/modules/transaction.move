@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module Transaction {
     native public fun gas_unit_price(): u64;
@@ -12,4 +12,5 @@ module Transaction {
     public fun assert(check: bool, code: u64) {
         if (check) () else abort code
     }
+}
 }

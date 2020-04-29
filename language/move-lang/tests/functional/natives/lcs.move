@@ -1,5 +1,6 @@
 // Test for LCS serialization in Move
 
+script {
 use 0x0::LCS;
 use 0x0::Transaction;
 
@@ -33,4 +34,5 @@ fun main() {
     let v = x"0f";
     let expected_output = x"010f";
     Transaction::assert(LCS::to_bytes(&v) == expected_output, 8006);
+}
 }

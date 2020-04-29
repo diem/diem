@@ -1,5 +1,5 @@
 // A module providing functionality to the script*.move tests
-address 0x0:
+address 0x0 {
 
 module ScriptProvider {
     use 0x0::Transaction;
@@ -18,4 +18,6 @@ module ScriptProvider {
     spec fun register {
         include RegisterConditions<T>;
     }
+}
+
 }

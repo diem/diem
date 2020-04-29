@@ -101,11 +101,9 @@ impl Context {
 pub fn program(errors: Errors, prog: H::Program) -> (G::Program, Errors) {
     let mut context = Context::new(&prog, errors);
     let modules = modules(&mut context, prog.modules);
-    let main = prog
-        .main
-        .map(|(addr, n, fdef)| (addr, n.clone(), function(&mut context, n, fdef)));
+    let scripts = scripts(&mut context, prog.scripts);
 
-    (G::Program { modules, main }, context.get_errors())
+    (G::Program { modules, scripts }, context.get_errors())
 }
 
 fn modules(
@@ -136,6 +134,30 @@ fn module(
             functions,
         },
     )
+}
+
+fn scripts(
+    context: &mut Context,
+    hscripts: BTreeMap<String, H::Script>,
+) -> BTreeMap<String, G::Script> {
+    hscripts
+        .into_iter()
+        .map(|(n, s)| (n, script(context, s)))
+        .collect()
+}
+
+fn script(context: &mut Context, hscript: H::Script) -> G::Script {
+    let H::Script {
+        loc,
+        function_name,
+        function: hfunction,
+    } = hscript;
+    let function = function(context, function_name.clone(), hfunction);
+    G::Script {
+        loc,
+        function_name,
+        function,
+    }
 }
 
 //**************************************************************************************************

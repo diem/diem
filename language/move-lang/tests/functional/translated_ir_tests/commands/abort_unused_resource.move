@@ -6,6 +6,7 @@ module M {
 }
 
 //! new-transaction
+script {
 use {{default}}::M;
 
 fun main() {
@@ -13,6 +14,7 @@ fun main() {
     &t;
     // z is allowed to be unused
     abort 0
+}
 }
 
 // not: VerificationFailure

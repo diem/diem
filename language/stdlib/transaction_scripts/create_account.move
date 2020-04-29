@@ -1,3 +1,4 @@
+script {
 use 0x0::LibraAccount;
 
 // TODO: remove initial_amount?
@@ -7,4 +8,5 @@ fun main<Token>(fresh_address: address, auth_key_prefix: vector<u8>, initial_amo
         fresh_address,
         LibraAccount::withdraw_from_sender<Token>(initial_amount)
      );
+}
 }

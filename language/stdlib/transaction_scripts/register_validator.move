@@ -1,3 +1,4 @@
+script {
 use 0x0::ValidatorConfig;
 // Register the sender as a candidate validator by publishing a ValidatorConfig.T resource with the
 // given keys under their account
@@ -18,4 +19,5 @@ fun main(
       fullnodes_network_identity_pubkey,
       fullnodes_network_address
   )
+}
 }

@@ -1,4 +1,4 @@
-address 0x1:
+address 0x1 {
 module TestModuleInvariants {
 
     // Some structure.
@@ -75,4 +75,5 @@ module TestModuleInvariantsExternal {
         let x = TestModuleInvariants::new_S();
         TestModuleInvariants::delete_S(x);
     }
+}
 }

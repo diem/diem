@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module ValidatorConfig {
 
@@ -116,4 +116,6 @@ module ValidatorConfig {
         let key_ref = &mut t_ref.config.validator_network_address;
         *key_ref = validator_network_address;
     }
+}
+
 }

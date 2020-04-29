@@ -1,4 +1,4 @@
-address 0x1:
+address 0x1 {
 
 module A {
     use 0x1::B;
@@ -36,7 +36,9 @@ module C {
     }
 }
 
-address 0x2:
+}
+
+address 0x2 {
 
 module A {
 
@@ -71,9 +73,9 @@ module B {
     }
 }
 
+}
 
-
-address 0x3:
+address 0x3 {
 
 module C {
     struct S{}
@@ -104,4 +106,6 @@ module A {
     fun foo(): 0x3::B::S {
         0x3::B::s()
     }
+}
+
 }

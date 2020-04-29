@@ -1,4 +1,4 @@
-address 0x1:
+address 0x1 {
 
 module X {
     resource struct R {}
@@ -30,5 +30,7 @@ module M {
         let () = loop { break };
         let () = loop { if (false) break };
     }
+
+}
 
 }

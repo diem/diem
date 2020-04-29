@@ -5,17 +5,24 @@ use anyhow::{bail, format_err, Result};
 use bytecode_source_map::source_map::SourceMap;
 use libra_types::account_address::AccountAddress;
 use move_core_types::identifier::{IdentStr, Identifier};
-use move_ir_types::{ast::*, location::*};
+use move_ir_types::{
+    ast::{
+        BlockLabel, Field_, FunctionName, ModuleName, QualifiedModuleIdent, QualifiedStructIdent,
+        StructName,
+    },
+    location::*,
+};
 use std::{clone::Clone, collections::HashMap, hash::Hash};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressIdentifierIndex, CodeOffset, Constant, ConstantPoolIndex, FieldHandle,
-        FieldHandleIndex, FieldInstantiation, FieldInstantiationIndex, FunctionDefinitionIndex,
-        FunctionHandle, FunctionHandleIndex, FunctionInstantiation, FunctionInstantiationIndex,
-        FunctionSignature, IdentifierIndex, Kind, ModuleHandle, ModuleHandleIndex, Signature,
-        SignatureIndex, SignatureToken, StructDefInstantiation, StructDefInstantiationIndex,
-        StructDefinitionIndex, StructHandle, StructHandleIndex, TableIndex,
+        self, AddressIdentifierIndex, CodeOffset, CompiledModule, Constant, ConstantPoolIndex,
+        FieldHandle, FieldHandleIndex, FieldInstantiation, FieldInstantiationIndex,
+        FunctionDefinitionIndex, FunctionHandle, FunctionHandleIndex, FunctionInstantiation,
+        FunctionInstantiationIndex, FunctionSignature, IdentifierIndex, Kind, ModuleHandle,
+        ModuleHandleIndex, Signature, SignatureIndex, SignatureToken, StructDefInstantiation,
+        StructDefInstantiationIndex, StructDefinitionIndex, StructHandle, StructHandleIndex,
+        TableIndex,
     },
 };
 
@@ -221,7 +228,7 @@ impl<'a> Context<'a> {
     /// It initializes an "import" of `Self` as the alias for the current_module.
     pub fn new<T: 'a + ModuleAccess>(
         dependencies_iter: impl IntoIterator<Item = &'a T>,
-        current_module: QualifiedModuleIdent,
+        current_module_opt: Option<QualifiedModuleIdent>,
     ) -> Result<Self> {
         let dependencies = dependencies_iter
             .into_iter()
@@ -254,10 +261,22 @@ impl<'a> Context<'a> {
             address_identifiers: HashMap::new(),
             constant_pool: HashMap::new(),
             current_function_index: FunctionDefinitionIndex::new(0),
-            source_map: SourceMap::new(current_module.clone()),
+            source_map: SourceMap::new(current_module_opt.clone()),
         };
-        let self_name = ModuleName::new(ModuleName::self_name().into());
-        context.declare_import(current_module, self_name)?;
+        match current_module_opt {
+            Some(current_module) => {
+                let self_name = ModuleName::new(ModuleName::self_name().into());
+                context.declare_import(current_module, self_name)?;
+            }
+            None => {
+                // TODO needed due to the existence of  CompiledModule::IMPLEMENTED_MODULE_INDEX
+                // warning to clean this up when module indexes get cleane dup
+                let _ = CompiledModule::IMPLEMENTED_MODULE_INDEX;
+                let address = context.address_index(AccountAddress::DEFAULT)?;
+                let name = context.identifier_index(file_format::self_module_name().as_str())?;
+                get_or_add_item(&mut context.module_handles, ModuleHandle { address, name })?;
+            }
+        }
 
         Ok(context)
     }
@@ -714,7 +733,7 @@ impl<'a> Context<'a> {
             .map(|t| self.reindex_signature_token(dep, t))
             .collect::<Result<_>>()?;
         let type_parameters = orig.type_parameters;
-        Ok(vm::file_format::FunctionSignature {
+        Ok(FunctionSignature {
             return_,
             parameters,
             type_parameters,

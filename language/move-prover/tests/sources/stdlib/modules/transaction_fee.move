@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module TransactionFee {
     use 0x0::LibraAccount;
@@ -101,4 +101,5 @@ module TransactionFee {
         Transaction::assert(validator_payout * num_validators <= amount_collected, 1);
         validator_payout
     }
+}
 }

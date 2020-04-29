@@ -26,6 +26,7 @@ module BalanceHolder {
 //! sender: alice
 //! gas-price: 0
 
+script {
 use 0x0::LibraSystem;
 use 0x0::LibraAccount;
 use 0x0::LBR;
@@ -53,6 +54,7 @@ fun main() {
   BalanceHolder::publish(balances);
   LibraAccount::deposit<LBR::T>(0xFEE, lib_coin);
 }
+}
 //! check: EXECUTED
 
 //! block-prologue
@@ -61,6 +63,7 @@ fun main() {
 
 //! new-transaction
 //! sender: alice
+script {
 use 0x0::LibraSystem;
 use 0x0::LibraAccount;
 use 0x0::LBR;
@@ -80,5 +83,6 @@ fun main() {
   };
 
   Transaction::assert(LibraAccount::balance<LBR::T>(0xFEE) == 0, 10000);
+}
 }
 //! check: EXECUTED

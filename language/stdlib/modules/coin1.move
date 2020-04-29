@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module Coin1 {
     use 0x0::Libra;
@@ -18,4 +18,6 @@ module Coin1 {
             x"436F696E31", // UTF8 encoding of "Coin1" in hex
         );
     }
+}
+
 }

@@ -1,1 +1,3 @@
+script {
 fun main() { }
+}

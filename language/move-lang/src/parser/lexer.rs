@@ -74,6 +74,7 @@ pub enum Tok {
     PipePipe,
     RBrace,
     Fun,
+    Script,
 }
 
 impl fmt::Display for Tok {
@@ -148,6 +149,7 @@ impl fmt::Display for Tok {
             PipePipe => "||",
             RBrace => "}",
             Fun => "fun",
+            Script => "script",
         };
         fmt::Display::fmt(s, formatter)
     }
@@ -414,6 +416,7 @@ fn get_name_token(name: &str) -> Tok {
         "public" => Tok::Public,
         "resource" => Tok::Resource,
         "return" => Tok::Return,
+        "script" => Tok::Script,
         "spec" => Tok::Spec,
         "struct" => Tok::Struct,
         "true" => Tok::True,

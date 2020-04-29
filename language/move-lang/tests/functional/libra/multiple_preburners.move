@@ -10,6 +10,7 @@
 //! sender: association
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::LibraAccount;
@@ -17,6 +18,7 @@ fun main() {
     LibraAccount::deposit({{alice}}, Libra::mint<Coin1::T>(200));
     LibraAccount::deposit({{bob}}, Libra::mint<Coin1::T>(200));
     LibraAccount::deposit({{carol}}, Libra::mint<Coin1::T>(200));
+}
 }
 
 // check: EXECUTED
@@ -26,10 +28,12 @@ fun main() {
 //! sender: alice
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::Coin1;
 use 0x0::Libra;
 fun main() {
     Libra::publish_preburn(Libra::new_preburn<Coin1::T>())
+}
 }
 
 // check: EXECUTED
@@ -39,6 +43,7 @@ fun main() {
 //! sender: alice
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::LibraAccount;
 use 0x0::Coin1;
 use 0x0::Libra;
@@ -47,6 +52,7 @@ fun main() {
     let coin = LibraAccount::withdraw_from_sender<Coin1::T>(100);
     Libra::preburn_to_sender<Coin1::T>(coin);
     Transaction::assert(Libra::preburn_value<Coin1::T>() == 100, 8001)
+}
 }
 
 // check: PreburnEvent
@@ -57,10 +63,12 @@ fun main() {
 //! sender: bob
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::Coin1;
 use 0x0::Libra;
 fun main() {
     Libra::publish_preburn(Libra::new_preburn<Coin1::T>())
+}
 }
 
 // check: EXECUTED
@@ -70,6 +78,7 @@ fun main() {
 //! sender: bob
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::LibraAccount;
 use 0x0::Coin1;
 use 0x0::Libra;
@@ -78,6 +87,7 @@ fun main() {
     let coin = LibraAccount::withdraw_from_sender<Coin1::T>(200);
     Libra::preburn_to_sender<Coin1::T>(coin);
     Transaction::assert(Libra::preburn_value<Coin1::T>() == 300, 8002)
+}
 }
 
 // check: PreburnEvent
@@ -89,12 +99,14 @@ fun main() {
 //! sender: carol
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::LibraAccount;
 use 0x0::Coin1;
 use 0x0::Libra;
 fun main() {
     let coin = LibraAccount::withdraw_from_sender<Coin1::T>(200);
     Libra::preburn_to_sender<Coin1::T>(coin);
+}
 }
 
 // check: Keep
@@ -106,10 +118,12 @@ fun main() {
 //! sender: carol
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::Coin1;
 use 0x0::Libra;
 fun main() {
     Libra::burn<Coin1::T>({{bob}})
+}
 }
 
 // check: Keep
@@ -120,10 +134,12 @@ fun main() {
 //! sender: bob
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::Coin1;
 use 0x0::Libra;
 fun main() {
     Libra::burn<Coin1::T>({{bob}})
+}
 }
 
 // check: Keep
@@ -134,6 +150,7 @@ fun main() {
 //! sender: association
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
@@ -142,6 +159,7 @@ fun main() {
     Transaction::assert(Libra::preburn_value<Coin1::T>() == 100, 8003);
     Libra::burn<Coin1::T>({{alice}});
     Transaction::assert(Libra::preburn_value<Coin1::T>() == 0, 8004)
+}
 }
 
 // check: BurnEvent
@@ -152,6 +170,7 @@ fun main() {
 //! sender: alice
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::LibraAccount;
 use 0x0::Coin1;
 use 0x0::Libra;
@@ -161,6 +180,7 @@ fun main() {
     Libra::preburn_to_sender<Coin1::T>(coin);
     Transaction::assert(Libra::preburn_value<Coin1::T>() == 100, 8005)
 }
+}
 
 // check: EXECUTED
 
@@ -169,6 +189,7 @@ fun main() {
 //! sender: association
 //! max-gas: 1000000
 //! gas-price: 0
+script {
 use 0x0::LibraAccount;
 use 0x0::Coin1;
 use 0x0::Libra;
@@ -178,6 +199,7 @@ fun main() {
     LibraAccount::cancel_burn<Coin1::T>({{alice}});
     Transaction::assert(Libra::preburn_value<Coin1::T>() == 0, 8006);
     Transaction::assert(LibraAccount::balance<Coin1::T>({{alice}}) == old_balance + 100, 8007)
+}
 }
 
 // check: CancelBurnEvent

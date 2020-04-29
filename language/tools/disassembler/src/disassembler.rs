@@ -877,11 +877,12 @@ impl<Location: Clone + Eq> Disassembler<Location> {
     }
 
     pub fn disassemble(&self) -> Result<String> {
-        let name = format!(
-            "{}.{}",
-            self.source_mapper.source_map.module_name.0.short_str(),
-            self.source_mapper.source_map.module_name.1.to_string()
-        );
+        let name_opt = self.source_mapper.source_map.module_name_opt.as_ref();
+        let name = name_opt.map(|(addr, n)| format!("{}.{}", addr.short_str(), n.to_string()));
+        let header = match name {
+            Some(s) => format!("module {}", s),
+            None => "script".to_owned(),
+        };
 
         let struct_defs: Vec<String> = (0..self.source_mapper.bytecode.struct_defs().len())
             .map(|i| self.disassemble_struct_def(StructDefinitionIndex(i as TableIndex)))
@@ -892,8 +893,8 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             .collect::<Result<Vec<String>>>()?;
 
         Ok(format!(
-            "module {name} {{\n{struct_defs}\n\n{function_defs}\n}}",
-            name = name,
+            "{header} {{\n{struct_defs}\n\n{function_defs}\n}}",
+            header = header,
             struct_defs = &struct_defs.join("\n"),
             function_defs = &function_defs.join("\n")
         ))

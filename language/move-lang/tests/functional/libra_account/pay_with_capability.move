@@ -33,15 +33,18 @@ module AlicePays {
 
 //! new-transaction
 //! sender: alice
+script {
 use {{alice}}::AlicePays;
 fun main() {
     AlicePays::create()
+}
 }
 
 // check: EXECUTED
 
 //! new-transaction
 //! sender: bob
+script {
 use {{alice}}::AlicePays;
 use 0x0::LBR;
 use 0x0::LibraAccount;
@@ -53,6 +56,7 @@ fun main() {
     AlicePays::pay({{carol}}, 10);
     Transaction::assert(carol_prev_balance + 10 == LibraAccount::balance<LBR::T>({{carol}}), 0);
     Transaction::assert(alice_prev_balance - 10 == LibraAccount::balance<LBR::T>({{alice}}), 1);
+}
 }
 
 // check: EXECUTED

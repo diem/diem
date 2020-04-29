@@ -1,11 +1,11 @@
 error: 
 
-   ┌── tests/move_check/translated_ir_tests/commands/abort_negative_stack_size.move:5:1 ───
+   ┌── tests/move_check/translated_ir_tests/commands/abort_negative_stack_size.move:6:1 ───
    │
- 5 │ }
+ 6 │ }
    │ ^ Unexpected '}'
    ·
- 5 │ }
+ 6 │ }
    │ - Expected an expression term
    │
 

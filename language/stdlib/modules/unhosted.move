@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module Unhosted {
     use 0x0::AccountLimits;
@@ -38,4 +38,5 @@ module Unhosted {
     public fun limits_addr(): address {
         0xA550C18
     }
+}
 }

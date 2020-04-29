@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 // The module for the account resource that governs every Libra account
 module LibraAccount {
@@ -613,4 +613,6 @@ module LibraAccount {
             );
         }
     }
+}
+
 }

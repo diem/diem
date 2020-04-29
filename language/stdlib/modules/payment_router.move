@@ -3,7 +3,7 @@
 // 1 -> CURRENCY_NOT_HELD
 // 2 -> NON_EXCLUSIVE_WITHDRAWALS_NOT_PERMITTED
 // 3 -> ADDRESS_IS_NOT_ROUTED
-address 0x0:
+address 0x0 {
 module PaymentRouter {
     use 0x0::LibraAccount;
     use 0x0::Transaction;
@@ -153,4 +153,6 @@ module PaymentRouter {
         Transaction::assert(is_routed<Token>(addr), 3);
         *&borrow_global<RoutedAccount<Token>>(addr).router_account_addr
     }
+}
+
 }

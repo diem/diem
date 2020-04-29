@@ -1,4 +1,4 @@
-address 0x1:
+address 0x1 {
 
 module X {
     struct S { f: u64 }
@@ -14,4 +14,6 @@ module M {
         let s = &X::s();
         (&s.f: &u64);
     }
+}
+
 }

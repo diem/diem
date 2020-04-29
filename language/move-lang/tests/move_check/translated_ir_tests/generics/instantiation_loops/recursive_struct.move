@@ -1,4 +1,4 @@
-address 0x42:
+address 0x42 {
 
 module M0 {
     struct Foo { f: Foo }
@@ -45,5 +45,7 @@ module M3 {
     struct B { c: C }
     struct C { d: vector<D> }
     struct D { x: M1::Cup<M1::Cup<M1::Cup<A>>> }
+
+}
 
 }

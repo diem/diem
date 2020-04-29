@@ -1,3 +1,4 @@
+script {
 fun main() {
   let x: u64;
 
@@ -8,6 +9,7 @@ fun main() {
   };
   x = 7;
   x;
+}
 }
 
 // OLD check: INVALID_FALL_THROUGH

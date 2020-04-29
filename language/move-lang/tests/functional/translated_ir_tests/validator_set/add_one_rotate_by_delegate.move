@@ -6,17 +6,20 @@
 //! account: carrol, 1000000, 0, validator
 
 //! sender: bob
+script {
 use 0x0::ValidatorConfig;
 fun main() {
     ValidatorConfig::register_candidate_validator(x"beefbeef", x"10", x"20", x"30", x"40", x"50");
     // register alice as bob's delegate
     ValidatorConfig::set_delegated_account({{alice}});
 }
+}
 
 // check: EXECUTED
 
 //! new-transaction
 //! sender: alice
+script {
 use 0x0::ValidatorConfig;
 // test alice can rotate bob's consensus public key
 fun main() {
@@ -27,11 +30,13 @@ fun main() {
     let config = ValidatorConfig::get_config({{bob}});
     0x0::Transaction::assert(ValidatorConfig::get_consensus_pubkey(&config) == x"20", 99);
 }
+}
 
 // check: EXECUTED
 
 //! new-transaction
 //! sender: bob
+script {
 use 0x0::ValidatorConfig;
 // test bob can not rotate his public key because it delegated
 fun main() {
@@ -40,6 +45,7 @@ fun main() {
     0x0::Transaction::assert(ValidatorConfig::get_consensus_pubkey(&config) == x"20", 99);
 
     ValidatorConfig::rotate_consensus_pubkey_of_sender(x"30");
+}
 }
 
 // check: ABORTED
@@ -52,10 +58,12 @@ fun main() {
 
 //! new-transaction
 //! sender: association
+script {
 use 0x0::LibraSystem;
 fun main() {
     // add validator
     LibraSystem::add_validator({{bob}});
+}
 }
 
 // check: EXECUTED
@@ -74,6 +82,7 @@ fun main() {
 // rate limits, 24hr = 86_400_000_000us
 // to test that the block-time is set to 24hr + 10us and the expiration time
 // of the transaction is made sufficiently large
+script {
 use 0x0::ValidatorConfig;
 use 0x0::LibraSystem;
 // test alice can invoke reconfiguration upon successful rotation of bob's consensus public key
@@ -92,6 +101,7 @@ fun main() {
     validator_info = LibraSystem::get_validator_info({{bob}});
     validator_config = LibraSystem::get_validator_config(&validator_info);
     0x0::Transaction::assert(ValidatorConfig::get_consensus_pubkey(validator_config) == x"30", 99);
+}
 }
 
 // check: EXECUTED

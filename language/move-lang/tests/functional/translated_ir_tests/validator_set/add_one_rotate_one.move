@@ -7,10 +7,12 @@
 //! account: bob, 1000000, 0, validator
 
 //! sender: bob
+script {
 use 0x0::ValidatorConfig;
 fun main() {
     // test bob is a validator
     0x0::Transaction::assert(ValidatorConfig::has({{bob}}) == true, 98);
+}
 }
 
 // check: EXECUTED
@@ -25,6 +27,7 @@ fun main() {
 //! sender: bob
 //! expiration-time: 864000000000
 // rotate bob's key with reconfiguration
+script {
 use 0x0::ValidatorConfig;
 use 0x0::LibraSystem;
 fun main() {
@@ -42,6 +45,7 @@ fun main() {
     let validator_info = LibraSystem::get_validator_info({{bob}});
     let validator_config = LibraSystem::get_validator_config(&validator_info);
     0x0::Transaction::assert(ValidatorConfig::get_consensus_pubkey(validator_config) == x"30", 99);
+}
 }
 
 // check: EXECUTED

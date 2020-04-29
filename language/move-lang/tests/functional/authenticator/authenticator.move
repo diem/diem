@@ -1,4 +1,5 @@
 // Create some valid multisig policies and compute their auth keys
+script {
 use 0x0::Authenticator;
 use 0x0::Transaction;
 use 0x0::Vector;
@@ -39,16 +40,19 @@ fun main() {
     Transaction::assert(Authenticator::threshold(&t) == 3, 3013);
     Transaction::assert(Authenticator::public_keys(&t) == &keys, 3014);
 }
+}
 
 // check: EXECUTED
 
 // empty policy should  be rejected
 //! new-transaction
+script {
 use 0x0::Authenticator;
 use 0x0::Vector;
 fun main() {
     let keys = Vector::empty<vector<u8>>();
     Authenticator::create_multi_ed25519(keys, 0);
+}
 }
 
 // check: ABORTED
@@ -56,11 +60,13 @@ fun main() {
 
 // bad threshold should be rejected (threshold 1 for empty keys)
 //! new-transaction
+script {
 use 0x0::Authenticator;
 use 0x0::Vector;
 fun main() {
     let keys = Vector::empty<vector<u8>>();
     Authenticator::create_multi_ed25519(keys, 1);
+}
 }
 
 // check: ABORTED
@@ -68,6 +74,7 @@ fun main() {
 
 // bad threshold should be rejected (threshold 2 for 1 key)
 //! new-transaction
+script {
 use 0x0::Authenticator;
 use 0x0::Vector;
 fun main() {
@@ -78,12 +85,14 @@ fun main() {
     );
     Authenticator::create_multi_ed25519(keys, 2);
 }
+}
 
 // check: ABORTED
 // check: 7002
 
 // bad threshold should be rejected (threshold 0 for 1 address)
 //! new-transaction
+script {
 use 0x0::Authenticator;
 use 0x0::Vector;
 fun main() {
@@ -94,12 +103,14 @@ fun main() {
     );
     Authenticator::create_multi_ed25519(keys, 0);
 }
+}
 
 // check: ABORTED
 // check: 7001
 
 // 1-of-1 multi-ed25519 should have a different auth key than ed25519 with the same public key
 //! new-transaction
+script {
 use 0x0::Authenticator;
 use 0x0::Transaction;
 use 0x0::Vector;
@@ -123,6 +134,7 @@ fun main() {
         Authenticator::ed25519_authentication_key(pubkey),
         3012
     );
+}
 }
 
 // check: EXECUTED

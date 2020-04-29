@@ -75,6 +75,7 @@ module Set {
 }
 
 //! new-transaction
+script {
 use {{default}}::Set;
 use 0x0::Transaction;
 fun main() {
@@ -86,12 +87,14 @@ fun main() {
 
     Set::insert(&mut s, 7) // will abort with 999
 }
+}
 
 // check: ABORTED
 // check: 999
 
 //! new-transaction
 //! gas-price: 0
+script {
 use {{default}}::Set;
 use 0x0::Transaction;
 fun main() {
@@ -115,5 +118,5 @@ fun main() {
         i = i + 1
     }
 }
-
+}
 // check: EXECUTED

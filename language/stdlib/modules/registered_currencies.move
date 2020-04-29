@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module RegisteredCurrencies {
     use 0x0::Vector;
@@ -37,4 +37,6 @@ module RegisteredCurrencies {
     fun singleton_address(): address {
         0xA550C18
     }
+}
+
 }

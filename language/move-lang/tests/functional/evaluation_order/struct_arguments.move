@@ -53,49 +53,63 @@ module M {
 
 //! new-transaction
 // check: ARITHMETIC_ERROR
+script {
 use {{default}}::M;
 fun main() {
   M::t0()
 }
+}
 
 //! new-transaction
 // check: ARITHMETIC_ERROR
+script {
 use {{default}}::M;
 fun main() {
   M::t1()
 }
+}
 
 //! new-transaction
 // check: ARITHMETIC_ERROR
+script {
 use {{default}}::M;
 fun main() {
   M::t2()
 }
+}
 
 //! new-transaction
 // check: ARITHMETIC_ERROR
+script {
 use {{default}}::M;
 fun main() {
   M::t3()
 }
+}
 
 //! new-transaction
 // check: ARITHMETIC_ERROR
+script {
 use {{default}}::M;
 fun main() {
   M::t4()
 }
+}
 
 //! new-transaction
 // check: MISSING_DATA
+script {
 use {{default}}::M;
 fun main() {
   M::t5()
 }
+}
 
 //! new-transaction
 // check: CANNOT_WRITE_EXISTING_RESOURCE
+script {
 use {{default}}::M;
 fun main() {
   M::t6()
+}
 }

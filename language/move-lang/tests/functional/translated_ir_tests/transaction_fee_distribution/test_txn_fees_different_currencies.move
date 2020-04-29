@@ -5,17 +5,23 @@
 //! new-transaction
 //! sender: bob
 //! gas-price: 1
+script {
 fun main() { }
+}
 //! check: EXECUTED
 
 //! new-transaction
 //! sender: alice
 //! gas-price: 1
+script {
 fun main() { }
+}
 //! check: EXECUTED
 
 //! new-transaction
 //! sender: gary
 //! gas-price: 1
+script {
 fun main() { }
+}
 //! check: EXECUTED

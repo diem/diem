@@ -1,5 +1,5 @@
 
-address 0x1:
+address 0x1 {
 
 module X {
     public fun foo(): u64 { 0 }
@@ -42,5 +42,7 @@ module M {
         baz<u64, u64>(1);
         baz(1, 2, 3);
     }
+
+}
 
 }

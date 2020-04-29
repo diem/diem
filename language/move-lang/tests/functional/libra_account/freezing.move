@@ -4,26 +4,31 @@
 
 //! new-transaction
 //! sender: bob
+script {
 use 0x0::Transaction;
 use 0x0::LibraAccount;
 // not frozen
 fun main() {
     Transaction::assert(!LibraAccount::account_is_frozen({{bob}}), 0);
 }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: association
+script {
 use 0x0::LibraAccount;
 // A special association privilege is needed for freezing an account
 fun main() {
     LibraAccount::freeze_account({{bob}});
+}
 }
 // check: ABORTED
 // check: 13
 
 //! new-transaction
 //! sender: association
+script {
 use 0x0::LibraAccount;
 use 0x0::Association;
 use 0x0::Transaction;
@@ -37,30 +42,39 @@ fun main() {
     Transaction::assert(!LibraAccount::account_is_frozen({{bob}}), 2);
     LibraAccount::freeze_account({{bob}});
 }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: bob
+script {
 fun main() { }
+}
 // check: SENDING_ACCOUNT_FROZEN
 
 //! new-transaction
 //! sender: association
+script {
 use 0x0::LibraAccount;
 fun main() {
     LibraAccount::unfreeze_account({{bob}});
 }
+}
 
 //! new-transaction
 //! sender: bob
+script {
 fun main() { }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: association
+script {
 use 0x0::LibraAccount;
 fun main() {
     LibraAccount::freeze_account({{association}})
+}
 }
 // check: ABORTED
 // check: 14
@@ -68,6 +82,7 @@ fun main() {
 //! new-transaction
 //! sender: vasp
 //! gas-price: 0
+script {
 use 0x0::VASP;
 use 0x0::LCS;
 fun main() {
@@ -79,10 +94,12 @@ fun main() {
         pubkey,
     );
 }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: association
+script {
 use 0x0::VASP;
 use 0x0::Association;
 fun main() {
@@ -90,34 +107,42 @@ fun main() {
     Association::grant_privilege<VASP::CreationPrivilege>({{association}});
     VASP::grant_vasp({{vasp}});
 }
+}
 // check: EXECUTED
 
 //! new-transaction
 //! sender: vasp
 //! gas-price: 0
+script {
 fun main() {
     0x0::VASP::allow_child_accounts();
+}
 }
 // check: EXECUTED
 
 //! new-transaction
 //! sender: childvasp
 //! gas-price: 0
+script {
 fun main() {
     0x0::VASP::apply_for_child_vasp_credential({{vasp}});
+}
 }
 // check: EXECUTED
 
 //! new-transaction
 //! sender: vasp
 //! gas-price: 0
+script {
 fun main() {
     0x0::VASP::grant_child_account({{childvasp}});
+}
 }
 // check: EXECUTED
 
 //! new-transaction
 //! sender: association
+script {
 use 0x0::LibraAccount;
 use 0x0::Transaction;
 // Freezing a child account doesn't freeze the root, freezing the root
@@ -133,5 +158,6 @@ fun main() {
     Transaction::assert(!LibraAccount::account_is_frozen({{childvasp}}), 7);
     LibraAccount::unfreeze_account({{vasp}});
     Transaction::assert(!LibraAccount::account_is_frozen({{vasp}}), 8);
+}
 }
 // check: EXECUTED

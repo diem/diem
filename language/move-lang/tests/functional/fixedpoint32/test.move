@@ -1,3 +1,4 @@
+script {
 use 0x0::FixedPoint32;
 
 fun main() {
@@ -22,4 +23,5 @@ fun main() {
     let f4 = FixedPoint32::create_from_rational(18446744073709551615, 18446744073709551615);
     let one = FixedPoint32::get_raw_value(copy f4);
     0x0::Transaction::assert(one == 4294967296, 4); // 0x1.00000000
+}
 }

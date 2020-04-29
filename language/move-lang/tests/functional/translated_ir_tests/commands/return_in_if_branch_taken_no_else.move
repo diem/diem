@@ -7,8 +7,10 @@ module Test {
 
 //! new-transaction
 
+script {
 use {{default}}::Test;
 
 fun main() {
     0x0::Transaction::assert(Test::t() == 100, 42);
+}
 }

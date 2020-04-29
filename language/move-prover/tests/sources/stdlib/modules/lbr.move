@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module LBR {
     use 0x0::Transaction;
@@ -10,4 +10,5 @@ module LBR {
         Transaction::assert(Transaction::sender() == 0xA550C18, 0);
         Libra::register<T>();
     }
+}
 }

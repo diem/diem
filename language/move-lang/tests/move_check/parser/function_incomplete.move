@@ -1,2 +1,4 @@
+script {
 fun main() {
 // }
+//}

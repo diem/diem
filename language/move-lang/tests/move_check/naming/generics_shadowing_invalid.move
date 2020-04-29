@@ -1,4 +1,4 @@
-address 0x1:
+address 0x1 {
 
 module M {
     struct S {}
@@ -11,4 +11,6 @@ module M {
     }
 
     fun bar(s: S) {}
+}
+
 }

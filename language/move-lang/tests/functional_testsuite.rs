@@ -80,7 +80,7 @@ impl Compiler for MoveSourceCompiler {
         Ok(match unit {
             CompiledUnit::Script { script, .. } => ScriptOrModule::Script(script),
             CompiledUnit::Module { module, .. } => {
-                let input = format!("address {}:\n{}", sender_addr, input);
+                let input = format!("address {} {{\n{}\n}}", sender_addr, input);
                 cur_file.reopen()?.write_all(input.as_bytes())?;
                 self.temp_files.push(cur_file);
                 self.deps.push(cur_path);

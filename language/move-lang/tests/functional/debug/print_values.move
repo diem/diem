@@ -29,9 +29,11 @@ module M {
 // check: EXECUTED
 
 //! new-transaction
+script {
 use {{default}}::M;
 
 fun main() {
     M::test();
+}
 }
 // check: EXECUTED

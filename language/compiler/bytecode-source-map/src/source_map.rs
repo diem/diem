@@ -59,8 +59,9 @@ pub struct FunctionSourceMap<Location: Clone + Eq> {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SourceMap<Location: Clone + Eq> {
-    /// The name <address.module_name> for module/script that this source map is for
-    pub module_name: (AccountAddress, Identifier),
+    /// The name <address.module_name> for module that this source map is for
+    /// None if it is a script
+    pub module_name_opt: Option<(AccountAddress, Identifier)>,
 
     // A mapping of StructDefinitionIndex to source map for each struct/resource
     struct_map: BTreeMap<TableIndex, StructSourceMap<Location>>,
@@ -287,10 +288,13 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
 }
 
 impl<Location: Clone + Eq> SourceMap<Location> {
-    pub fn new(module_name: QualifiedModuleIdent) -> Self {
-        let ident = Identifier::new(module_name.name.into_inner()).unwrap();
+    pub fn new(module_name_opt: Option<QualifiedModuleIdent>) -> Self {
+        let module_name_opt = module_name_opt.map(|module_name| {
+            let ident = Identifier::new(module_name.name.into_inner()).unwrap();
+            (module_name.address, ident)
+        });
         Self {
-            module_name: (module_name.address, ident),
+            module_name_opt,
             struct_map: BTreeMap::new(),
             function_map: BTreeMap::new(),
         }
@@ -480,7 +484,7 @@ impl<Location: Clone + Eq> SourceMap<Location> {
         let address = *module.address_identifier_at(module_handle.address);
         let module_ident = QualifiedModuleIdent::new(module_name, address);
 
-        let mut empty_source_map = Self::new(module_ident);
+        let mut empty_source_map = Self::new(Some(module_ident));
 
         for (function_idx, function_def) in module.function_defs().iter().enumerate() {
             empty_source_map.add_top_level_function_mapping(
@@ -518,7 +522,7 @@ impl<Location: Clone + Eq> SourceMap<Location> {
         f: &mut impl FnMut(Location) -> Other,
     ) -> SourceMap<Other> {
         let SourceMap {
-            module_name,
+            module_name_opt,
             struct_map,
             function_map,
         } = self;
@@ -531,7 +535,7 @@ impl<Location: Clone + Eq> SourceMap<Location> {
             .map(|(n, m)| (n, m.remap_locations(f)))
             .collect();
         SourceMap {
-            module_name,
+            module_name_opt,
             struct_map,
             function_map,
         }

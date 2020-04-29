@@ -1,4 +1,4 @@
-address 0x1:
+address 0x1 {
 
 module A {
     struct S {}
@@ -33,4 +33,6 @@ module E {
 module F {
     struct S {}
     fun d(): 0x1::D::S { abort 0 }
+}
+
 }

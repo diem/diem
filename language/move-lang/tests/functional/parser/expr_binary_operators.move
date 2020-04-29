@@ -1,3 +1,4 @@
+script {
 use 0x0::Transaction;
 
 fun main() {
@@ -18,4 +19,5 @@ fun main() {
     Transaction::assert((2 * 3) == 6, 115);
     Transaction::assert((9 / 3) == 3, 116);
     Transaction::assert((8 % 3) == 2, 117);
+}
 }

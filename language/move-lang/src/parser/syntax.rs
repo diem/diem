@@ -1361,6 +1361,52 @@ fn parse_field_annot<'input>(tokens: &mut Lexer<'input>) -> Result<(Field, Type)
 }
 
 //**************************************************************************************************
+// AddressBlock
+//**************************************************************************************************
+
+// Parse an address block:
+//      AddressBlock =
+//          "address" <Address> "{"
+//              <Module>*
+//          "}"
+//
+// Note that "address" is not a token.
+fn parse_address_block<'input>(
+    tokens: &mut Lexer<'input>,
+) -> Result<(Loc, Address, Vec<ModuleDefinition>), Error> {
+    const UNEXPECTED_TOKEN: &str = "Invalid code unit. Expected 'address', 'module', or 'script'";
+    if tokens.peek() != Tok::IdentifierValue {
+        let start = tokens.start_loc();
+        let end = start + tokens.content().len();
+        let loc = make_loc(tokens.file_name(), start, end);
+        return Err(vec![(
+            loc,
+            format!("{}. Got '{}'", UNEXPECTED_TOKEN, tokens.content()),
+        )]);
+    }
+    let addr_name = parse_identifier(tokens)?;
+    if addr_name.value != "address" {
+        return Err(vec![(
+            addr_name.loc,
+            format!("{}. Got '{}'", UNEXPECTED_TOKEN, addr_name.value),
+        )]);
+    }
+    let start_loc = tokens.start_loc();
+    let addr = parse_address(tokens)?;
+    let end_loc = tokens.previous_end_loc();
+    let loc = make_loc(tokens.file_name(), start_loc, end_loc);
+
+    consume_token(tokens, Tok::LBrace)?;
+    let mut modules = vec![];
+    while tokens.peek() != Tok::RBrace {
+        modules.push(parse_module(tokens)?);
+    }
+    consume_token(tokens, Tok::RBrace)?;
+
+    Ok((loc, addr, modules))
+}
+
+//**************************************************************************************************
 // Modules
 //**************************************************************************************************
 
@@ -1432,6 +1478,49 @@ fn parse_module<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleDefinition, 
     })
 }
 
+//**************************************************************************************************
+// Scripts
+//**************************************************************************************************
+
+// Parse a script:
+//      Script =
+//          "script" "{"
+//              <UseDecl>*
+//              <MoveFunctionDecl>
+//          "}"
+fn parse_script<'input>(tokens: &mut Lexer<'input>) -> Result<Script, Error> {
+    let start_loc = tokens.start_loc();
+
+    consume_token(tokens, Tok::Script)?;
+    consume_token(tokens, Tok::LBrace)?;
+
+    let mut uses = vec![];
+    while tokens.peek() == Tok::Use {
+        uses.push(parse_use_decl(tokens)?);
+    }
+    let function = parse_function_decl(tokens, /* allow_native */ false)?;
+    let mut specs = vec![];
+    while tokens.peek() == Tok::Spec {
+        specs.push(parse_spec_block(tokens)?)
+    }
+
+    if tokens.peek() != Tok::RBrace {
+        let loc = current_token_loc(tokens);
+        return Err(vec![(
+            loc,
+            "Unexpected characters after end of 'script' function".to_string(),
+        )]);
+    }
+    consume_token(tokens, Tok::RBrace)?;
+
+    let loc = make_loc(tokens.file_name(), start_loc, tokens.previous_end_loc());
+    Ok(Script {
+        loc,
+        uses,
+        function,
+        specs,
+    })
+}
 //**************************************************************************************************
 // Specification Blocks
 //**************************************************************************************************
@@ -1887,70 +1976,26 @@ fn parse_spec_pragma_property<'input>(tokens: &mut Lexer<'input>) -> Result<Prag
 
 // Parse a file:
 //      File =
-//          (("address" <Address> ":") | <Module>)*
-//          | <UseDecl>* <MoveFunctionDecl>
-//
-// Note that "address" is not a token.
-fn parse_file<'input>(tokens: &mut Lexer<'input>) -> Result<FileDefinition, Error> {
-    let f = if tokens.peek() == Tok::EOF
-        || tokens.peek() == Tok::Module
-        || tokens.peek() == Tok::IdentifierValue
-    {
-        let mut v = vec![];
-        while tokens.peek() != Tok::EOF {
-            let m = if tokens.peek() == Tok::Module {
-                ModuleOrAddress::Module(parse_module(tokens)?)
-            } else {
-                let addr_name = parse_identifier(tokens)?;
-                if addr_name.value != "address" {
-                    return Err(vec![(
-                        addr_name.loc,
-                        format!(
-                            "Invalid address directive. Expected 'address' got '{}'",
-                            addr_name.value
-                        ),
-                    )]);
-                }
-                let start_loc = tokens.start_loc();
-                let addr = parse_address(tokens)?;
-                let end_loc = tokens.previous_end_loc();
-                consume_token(tokens, Tok::Colon)?;
-                let loc = make_loc(tokens.file_name(), start_loc, end_loc);
-                ModuleOrAddress::Address(loc, addr)
-            };
-            v.push(m);
-        }
-        FileDefinition::Modules(v)
-    } else {
-        let mut uses = vec![];
-        while tokens.peek() == Tok::Use {
-            uses.push(parse_use_decl(tokens)?);
-        }
-        let function = parse_function_decl(tokens, /* allow_native */ false)?;
-        let mut specs = vec![];
-        while tokens.peek() == Tok::Spec {
-            specs.push(parse_spec_block(tokens)?)
-        }
-        if tokens.peek() != Tok::EOF {
-            let loc = current_token_loc(tokens);
-            return Err(vec![(
-                loc,
-                "Unexpected characters after end of main function".to_string(),
-            )]);
-        }
-        FileDefinition::Main(Main {
-            uses,
-            function,
-            specs,
+//          (<AddressBlock> | <Module> | <Script>)*
+fn parse_file<'input>(tokens: &mut Lexer<'input>) -> Result<Vec<Definition>, Error> {
+    let mut defs = vec![];
+    while tokens.peek() != Tok::EOF {
+        defs.push(match tokens.peek() {
+            Tok::Module => Definition::Module(parse_module(tokens)?),
+            Tok::Script => Definition::Script(parse_script(tokens)?),
+            _ => {
+                let (loc, addr, modules) = parse_address_block(tokens)?;
+                Definition::Address(loc, addr, modules)
+            }
         })
-    };
-    Ok(f)
+    }
+    Ok(defs)
 }
 
 /// Parse the `input` string as a file of Move source code and return the
 /// result as either a FileDefinition value or an Error. The `file` name
 /// is used to identify source locations in error messages.
-pub fn parse_file_string(file: &'static str, input: &str) -> Result<FileDefinition, Error> {
+pub fn parse_file_string(file: &'static str, input: &str) -> Result<Vec<Definition>, Error> {
     let mut tokens = Lexer::new(input, file);
     tokens.advance()?;
     parse_file(&mut tokens)

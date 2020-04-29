@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 // A variable-sized container that can hold both unrestricted types and resources.
 module Vector {
@@ -132,4 +132,6 @@ module Vector {
     spec fun swap_remove {
         pragma intrinsic = true;
     }
+}
+
 }

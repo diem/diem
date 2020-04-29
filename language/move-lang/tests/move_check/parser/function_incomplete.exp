@@ -1,11 +1,11 @@
 error: 
 
-   ┌── tests/move_check/parser/function_incomplete.move:3:1 ───
+   ┌── tests/move_check/parser/function_incomplete.move:5:1 ───
    │
- 3 │ 
+ 5 │ 
    │ ^ Unexpected end-of-file
    ·
- 3 │ 
+ 5 │ 
    │ - Expected an expression term
    │
 

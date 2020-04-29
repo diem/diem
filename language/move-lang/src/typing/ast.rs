@@ -8,7 +8,7 @@ use crate::{
         BinOp, Field, FunctionName, FunctionVisibility, ModuleIdent, StructName, UnaryOp, Value,
         Var,
     },
-    shared::{ast_debug::*, unique_map::UniqueMap, *},
+    shared::{ast_debug::*, unique_map::UniqueMap},
 };
 use move_ir_types::location::*;
 use std::{
@@ -23,7 +23,18 @@ use std::{
 #[derive(Debug)]
 pub struct Program {
     pub modules: UniqueMap<ModuleIdent, ModuleDefinition>,
-    pub main: Option<(Address, FunctionName, Function)>,
+    pub scripts: BTreeMap<String, Script>,
+}
+
+//**************************************************************************************************
+// Scripts
+//**************************************************************************************************
+
+#[derive(Debug)]
+pub struct Script {
+    pub loc: Loc,
+    pub function_name: FunctionName,
+    pub function: Function,
 }
 
 //**************************************************************************************************
@@ -214,17 +225,29 @@ impl fmt::Display for BuiltinFunction_ {
 
 impl AstDebug for Program {
     fn ast_debug(&self, w: &mut AstWriter) {
-        let Program { modules, main } = self;
+        let Program { modules, scripts } = self;
         for (m, mdef) in modules {
             w.write(&format!("module {}", m));
             w.block(|w| mdef.ast_debug(w));
             w.new_line();
         }
 
-        if let Some((addr, n, fdef)) = main {
-            w.writeln(&format!("address {}:", addr));
-            (n.clone(), fdef).ast_debug(w);
+        for (n, s) in scripts {
+            w.write(&format!("script {}", n));
+            w.block(|w| s.ast_debug(w));
+            w.new_line()
         }
+    }
+}
+
+impl AstDebug for Script {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let Script {
+            loc: _loc,
+            function_name,
+            function,
+        } = self;
+        (function_name.clone(), function).ast_debug(w);
     }
 }
 

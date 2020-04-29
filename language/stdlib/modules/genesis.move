@@ -2,7 +2,7 @@
 // are executed, and the order in which they are executed in genesis. Note
 // however, that there are certain calls that remain in Rust code in
 // genesis (for now).
-address 0x0:
+address 0x0 {
 module Genesis {
     use 0x0::AccountTrack;
     use 0x0::AccountType;
@@ -90,4 +90,5 @@ module Genesis {
         LibraAccount::rotate_authentication_key(auth_key);
     }
 
+}
 }

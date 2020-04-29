@@ -1,4 +1,4 @@
-address 0x0:
+address 0x0 {
 
 module LibraBlock {
     use 0x0::LBR;
@@ -90,4 +90,5 @@ module LibraBlock {
     public fun get_current_block_height(): u64 acquires BlockMetadata {
       borrow_global<BlockMetadata>(0xA550C18).height
     }
+}
 }
