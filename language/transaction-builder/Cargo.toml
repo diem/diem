@@ -13,7 +13,7 @@ mirai-annotations = "1.7.0"
 
 libra-config = { path = "../../config", version = "0.1.0" }
 stdlib = { path = "../stdlib", version = "0.1.0" }
-libra-types = { path = "../../types", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0", default_features = false, features = ["std", "fiat_u64_backend"] }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 vm = { path = "../vm", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }

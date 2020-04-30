@@ -46,7 +46,7 @@ libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0
 libra-prost-ext = { path = "../common/prost-ext", version = "0.1.0" }
 
 [features]
-default = ["std", "fiat_u64_backend", "batch"]
+default = ["std", "fiat_u64_backend"]
 std = ["libra-crypto/std", "libra-network-address/std"]
 fiat_u64_backend = ["libra-crypto/fiat_u64_backend", "libra-network-address/fiat_u64_backend"]
 u64_backend = ["libra-crypto/u64_backend"]

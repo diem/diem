@@ -21,12 +21,12 @@ thiserror = "1.0"
 toml = { version = "0.5.3", default-features = false }
 
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
-libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0", default_features = false, features = ["std", "fiat_u64_backend"] }
 libra-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
-libra-network-address = { path = "../network/network-address", version = "0.1.0" }
+libra-network-address = { path = "../network/network-address", version = "0.1.0", default_features = false, features = ["std", "fiat_u64_backend"] }
 libra-temppath = { path = "../common/temppath", version = "0.1.0" }
-libra-types = { path = "../types", version = "0.1.0" }
+libra-types = { path = "../types", version = "0.1.0", default_features = false, features = ["std", "fiat_u64_backend"] }
 libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 
 [features]
