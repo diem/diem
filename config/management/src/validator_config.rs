@@ -3,10 +3,10 @@
 
 #![forbid(unsafe_code)]
 
-use crate::{constants, error::Error, SingleBackend};
+use crate::{constants, error::Error, SecureBackends};
 use libra_crypto::{hash::CryptoHash, x25519, ValidCryptoMaterial};
 use libra_network_address::{NetworkAddress, RawNetworkAddress};
-use libra_secure_storage::Storage;
+use libra_secure_storage::{Storage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_types::{
     account_address::AccountAddress,
@@ -28,25 +28,25 @@ pub struct ValidatorConfig {
     #[structopt(long)]
     fullnode_address: NetworkAddress,
     #[structopt(flatten)]
-    backend: SingleBackend,
+    backends: SecureBackends,
 }
 
 impl ValidatorConfig {
     pub fn execute(self) -> Result<Transaction, Error> {
-        let mut storage: Box<dyn Storage> = self.backend.backend.try_into()?;
-        if !storage.available() {
+        let mut local: Box<dyn Storage> = self.backends.local.try_into()?;
+        if !local.available() {
             return Err(Error::LocalStorageUnavailable);
         }
 
-        let consensus_key = storage
+        let consensus_key = local
             .get_public_key(constants::CONSENSUS_KEY)
             .map_err(|e| Error::LocalStorageReadError(e.to_string()))?
             .public_key;
-        let fullnode_network_key = storage
+        let fullnode_network_key = local
             .get_public_key(constants::FULLNODE_NETWORK_KEY)
             .map_err(|e| Error::LocalStorageReadError(e.to_string()))?
             .public_key;
-        let validator_network_key = storage
+        let validator_network_key = local
             .get_public_key(constants::VALIDATOR_NETWORK_KEY)
             .map_err(|e| Error::LocalStorageReadError(e.to_string()))?
             .public_key;
@@ -68,7 +68,7 @@ impl ValidatorConfig {
             .try_into()
             .expect("Unable to decode x25519 from validator_network_key");
 
-        let owner_key = storage
+        let owner_key = local
             .get_public_key(constants::OWNER_KEY)
             .map_err(|e| Error::LocalStorageReadError(e.to_string()))?
             .public_key;
@@ -97,10 +97,24 @@ impl ValidatorConfig {
             constants::GAS_UNIT_PRICE,
             Duration::from_secs(expiration_time),
         );
-        let signature = storage
+        let signature = local
             .sign_message(constants::OWNER_KEY, &raw_transaction.hash())
             .map_err(|e| Error::LocalStorageSigningError(e.to_string()))?;
         let signed_txn = SignedTransaction::new(raw_transaction, owner_key, signature);
-        Ok(Transaction::UserTransaction(signed_txn))
+        let txn = Transaction::UserTransaction(signed_txn);
+
+        if let Some(remote) = self.backends.remote {
+            let mut remote: Box<dyn Storage> = remote.try_into()?;
+            if !remote.available() {
+                return Err(Error::RemoteStorageUnavailable);
+            }
+
+            let txn = Value::Transaction(txn.clone());
+            remote
+                .create_with_default_policy(constants::VALIDATOR_CONFIG, txn)
+                .map_err(|e| Error::RemoteStorageWriteError(e.to_string()))?;
+        }
+
+        Ok(txn)
     }
 }
