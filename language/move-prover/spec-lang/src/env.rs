@@ -1341,7 +1341,10 @@ impl<'env> FunctionEnv<'env> {
             .function_def_at(self.get_def_idx());
         let function_definition_view =
             FunctionDefinitionView::new(&self.module_env.data.module, function_definition);
-        &function_definition_view.code().code
+        match function_definition_view.code() {
+            Some(code) => &code.code,
+            None => &[],
+        }
     }
 
     /// Returns true if this function is native.
@@ -1444,23 +1447,20 @@ impl<'env> FunctionEnv<'env> {
     /// Note we may have more anonymous locals generated e.g by the 'stackless' transformation.
     pub fn get_local_count(&self) -> usize {
         let view = self.definition_view();
-        let signature = if view.is_native() {
-            SignatureView::new(&self.module_env.data.module, view.parameters())
-        } else {
-            view.locals_signature()
-        };
-        signature.len()
+        match view.locals_signature() {
+            Some(view) => view.len(),
+            None => view.parameters().len(),
+        }
     }
 
     /// Gets the type of the local at index. This must use an index in the range as determined by
     /// `get_local_count`.
     pub fn get_local_type(&self, idx: usize) -> Type {
         let view = self.definition_view();
-        let signature = if view.is_native() {
-            SignatureView::new(&self.module_env.data.module, view.parameters())
-        } else {
-            view.locals_signature()
-        };
+        let signature = view
+            .locals_signature()
+            .unwrap_or_else(|| SignatureView::new(&self.module_env.data.module, view.parameters()));
+
         self.module_env
             .globalize_signature(signature.token_at(idx as u8).signature_token())
     }

@@ -170,15 +170,17 @@ impl<'a> InstantiationLoopChecker<'a> {
         caller_idx: FunctionDefinitionIndex,
         caller_def: &FunctionDefinition,
     ) {
-        for instr in &caller_def.code.code {
-            if let Bytecode::CallGeneric(callee_inst_idx) = instr {
-                // Get the id of the definition of the function being called.
-                // Skip if the function is not defined in the current module, as we do not
-                // have mutual recursions across module boundaries.
-                let callee_si = self.module.function_instantiation_at(*callee_inst_idx);
-                if let Some(callee_idx) = self.func_handle_def_map.get(&callee_si.handle) {
-                    let callee_idx = *callee_idx;
-                    self.build_graph_call(caller_idx, callee_idx, callee_si.type_parameters)
+        if let Some(code) = &caller_def.code {
+            for instr in &code.code {
+                if let Bytecode::CallGeneric(callee_inst_idx) = instr {
+                    // Get the id of the definition of the function being called.
+                    // Skip if the function is not defined in the current module, as we do not
+                    // have mutual recursions across module boundaries.
+                    let callee_si = self.module.function_instantiation_at(*callee_inst_idx);
+                    if let Some(callee_idx) = self.func_handle_def_map.get(&callee_si.handle) {
+                        let callee_idx = *callee_idx;
+                        self.build_graph_call(caller_idx, callee_idx, callee_si.type_parameters)
+                    }
                 }
             }
         }

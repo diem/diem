@@ -4,7 +4,7 @@
 use crate::control_flow_graph::{BlockId, ControlFlowGraph};
 use std::collections::HashMap;
 use vm::{
-    file_format::{Bytecode, CompiledModule},
+    file_format::{Bytecode, CodeUnit, CompiledModule},
     views::FunctionDefinitionView,
 };
 
@@ -96,7 +96,14 @@ pub trait AbstractInterpreter: TransferFunctions {
             };
 
             let pre_state = &block_invariant.pre;
-            let post_state = match self.execute_block(block_id, pre_state, &function_view, cfg) {
+            let post_state = match self.execute_block(
+                block_id,
+                pre_state,
+                &function_view
+                    .code()
+                    .expect("Abstract interpreter should only run on non-native functions"),
+                cfg,
+            ) {
                 Err(e) => {
                     block_invariant.post = BlockPostcondition::Error(e);
                     continue;
@@ -149,13 +156,13 @@ pub trait AbstractInterpreter: TransferFunctions {
         &mut self,
         block_id: BlockId,
         pre_state: &Self::State,
-        function_view: &FunctionDefinitionView<CompiledModule>,
+        code: &CodeUnit,
         cfg: &dyn ControlFlowGraph,
     ) -> Result<Self::State, Self::AnalysisError> {
         let mut state_acc = pre_state.clone();
         let block_end = cfg.block_end(block_id);
         for offset in cfg.instr_indexes(block_id) {
-            let instr = &function_view.code().code[offset as usize];
+            let instr = &code.code[offset as usize];
             self.execute(&mut state_acc, instr, offset as usize, block_end as usize)?
         }
         Ok(state_acc)

@@ -102,21 +102,21 @@ fn no_verify_locals_good() {
         function_defs: vec![
             FunctionDefinition {
                 function: FunctionHandleIndex(0),
-                flags: 1,
+                is_public: true,
                 acquires_global_resources: vec![],
-                code: CodeUnit {
+                code: Some(CodeUnit {
                     locals: SignatureIndex(0),
                     code: vec![Ret],
-                },
+                }),
             },
             FunctionDefinition {
                 function: FunctionHandleIndex(1),
-                flags: 0,
+                is_public: true,
                 acquires_global_resources: vec![],
-                code: CodeUnit {
+                code: Some(CodeUnit {
                     locals: SignatureIndex(1),
                     code: vec![Ret],
-                },
+                }),
             },
         ],
     };
@@ -149,12 +149,12 @@ fn no_verify_locals_bad1() {
         }],
         function_defs: vec![FunctionDefinition {
             function: FunctionHandleIndex(0),
-            flags: 1,
+            is_public: true,
             acquires_global_resources: vec![],
-            code: CodeUnit {
+            code: Some(CodeUnit {
                 locals: SignatureIndex(0),
                 code: vec![Ret],
-            },
+            }),
         }],
         field_handles: vec![],
         struct_def_instantiations: vec![],
@@ -192,12 +192,12 @@ fn no_verify_locals_bad2() {
         }],
         function_defs: vec![FunctionDefinition {
             function: FunctionHandleIndex(0),
-            flags: 1,
+            is_public: true,
             acquires_global_resources: vec![],
-            code: CodeUnit {
+            code: Some(CodeUnit {
                 locals: SignatureIndex(0),
                 code: vec![Ret],
-            },
+            }),
         }],
         field_handles: vec![],
         struct_def_instantiations: vec![],
@@ -251,12 +251,12 @@ fn no_verify_locals_bad3() {
         struct_defs: vec![],
         function_defs: vec![FunctionDefinition {
             function: FunctionHandleIndex(0),
-            flags: 1,
+            is_public: true,
             acquires_global_resources: vec![],
-            code: CodeUnit {
+            code: Some(CodeUnit {
                 locals: SignatureIndex(0),
                 code: vec![Ret],
-            },
+            }),
         }],
     };
     assert!(VerifiedModule::new(compiled_module_bad1.freeze().unwrap()).is_err());
@@ -299,12 +299,12 @@ fn no_verify_locals_bad4() {
         struct_defs: vec![],
         function_defs: vec![FunctionDefinition {
             function: FunctionHandleIndex(0),
-            flags: 1,
+            is_public: true,
             acquires_global_resources: vec![],
-            code: CodeUnit {
+            code: Some(CodeUnit {
                 locals: SignatureIndex(0),
                 code: vec![Ret],
-            },
+            }),
         }],
     };
     assert!(VerifiedModule::new(compiled_module_bad1.freeze().unwrap()).is_err());

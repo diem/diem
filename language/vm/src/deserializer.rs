@@ -945,11 +945,16 @@ fn load_function_def(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<FunctionD
     let flags = cursor.read_u8().map_err(|_| {
         VMStatus::new(StatusCode::MALFORMED).with_message("Unexpected EOF".to_string())
     })?;
+    let is_public = (flags & FunctionDefinition::PUBLIC) != 0;
     let acquires_global_resources = load_struct_definition_indices(cursor)?;
-    let code_unit = load_code_unit(cursor)?;
+    let code_unit = if (flags & FunctionDefinition::NATIVE) != 0 {
+        None
+    } else {
+        Some(load_code_unit(cursor)?)
+    };
     Ok(FunctionDefinition {
         function: FunctionHandleIndex(function),
-        flags,
+        is_public,
         acquires_global_resources,
         code: code_unit,
     })

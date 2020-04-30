@@ -404,9 +404,24 @@ fn serialize_function_definition(
     function_definition: &FunctionDefinition,
 ) -> Result<()> {
     write_u16_as_uleb128(binary, function_definition.function.0)?;
-    binary.push(function_definition.flags)?;
+
+    let is_public = if function_definition.is_public() {
+        FunctionDefinition::PUBLIC
+    } else {
+        0
+    };
+    let is_native = if function_definition.is_native() {
+        FunctionDefinition::NATIVE
+    } else {
+        0
+    };
+    binary.push(is_public | is_native)?;
+
     serialize_acquires(binary, &function_definition.acquires_global_resources)?;
-    serialize_code_unit(binary, &function_definition.code)
+    if let Some(code) = &function_definition.code {
+        serialize_code_unit(binary, code)?;
+    }
+    Ok(())
 }
 
 fn serialize_field_handle(binary: &mut BinaryData, field_handle: &FieldHandle) -> Result<()> {

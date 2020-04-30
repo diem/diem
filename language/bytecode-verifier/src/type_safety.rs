@@ -48,6 +48,7 @@ impl<'a> TypeSafetyChecker<'a> {
     fn local_signature(&self, i: LocalIndex) -> &SignatureToken {
         self.function_definition_view
             .locals_signature()
+            .unwrap()
             .token_at(i)
             .as_inner()
     }
@@ -60,7 +61,10 @@ pub fn verify(
 ) -> VMResult<()> {
     let verifier = &mut TypeSafetyChecker::new(module, function_definition);
 
-    let locals_signature_view = verifier.function_definition_view.locals_signature();
+    let locals_signature_view = verifier
+        .function_definition_view
+        .locals_signature()
+        .unwrap();
     // TODO: this check should probably be elsewhere
     if verifier.function_definition_view.arg_count() > locals_signature_view.len() {
         return Err(VMStatus::new(StatusCode::RANGE_OUT_OF_BOUNDS)
@@ -83,7 +87,12 @@ pub fn verify(
 
     for block_id in cfg.blocks() {
         for offset in cfg.instr_indexes(block_id) {
-            let instr = &verifier.function_definition_view.code().code[offset as usize];
+            let instr = &verifier
+                .function_definition_view
+                .code()
+                .as_ref()
+                .unwrap()
+                .code[offset as usize];
             verify_instr(verifier, instr, offset as usize)?
         }
     }

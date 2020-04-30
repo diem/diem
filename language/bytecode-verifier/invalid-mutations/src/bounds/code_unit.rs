@@ -151,15 +151,11 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
 
     fn apply_one(&mut self, idx: usize, mutations: Vec<CodeUnitBoundsMutation>) -> Vec<VMStatus> {
         // For this function def, find all the places where a bounds mutation can be applied.
-        let (code_len, locals_len) = {
-            let code = &mut self.module.function_defs[idx].code;
-            (
-                code.code.len(),
-                self.module.signatures[code.locals.into_index()].len(),
-            )
-        };
+        let code = self.module.function_defs[idx].code.as_mut().unwrap();
+        let locals_len = self.module.signatures[code.locals.into_index()].len();
+        let code = &mut code.code;
+        let code_len = code.len();
 
-        let code = &mut self.module.function_defs[idx].code.code;
         let interesting_offsets: Vec<usize> = (0..code.len())
             .filter(|bytecode_idx| is_interesting(&code[*bytecode_idx]))
             .collect();

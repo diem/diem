@@ -27,12 +27,12 @@ impl<'a> UnusedEntryChecker<'a> {
         use Bytecode::*;
 
         for func_def in self.module.function_defs() {
-            if func_def.is_native() {
-                continue;
-            }
-            self.signatures[func_def.code.locals.0 as usize] = true;
+            let code = match &func_def.code {
+                Some(code) => code,
+                None => continue,
+            };
 
-            for bytecode in &func_def.code.code {
+            for bytecode in &code.code {
                 match bytecode {
                     CallGeneric(idx) => {
                         let func_inst = self.module.function_instantiation_at(*idx);

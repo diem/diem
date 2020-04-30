@@ -35,7 +35,15 @@ pub struct AbstractState {
 impl AbstractState {
     /// create a new abstract state
     pub fn new(module: &CompiledModule, function_definition: &FunctionDefinition) -> Self {
-        let local_types = &module.signature_at(function_definition.code.locals).0;
+        let local_types = &module
+            .signature_at(
+                function_definition
+                    .code
+                    .as_ref()
+                    .expect("Abstract interpreter should only run on non-native functions")
+                    .locals,
+            )
+            .0;
         let func_handle = module.function_handle_at(function_definition.function);
 
         let num_args = module.signature_at(func_handle.parameters).0.len();

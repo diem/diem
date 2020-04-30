@@ -45,7 +45,13 @@ impl<'a> AcquiresVerifier<'a> {
         };
 
         let function_definition_view = FunctionDefinitionView::new(module, function_definition);
-        for (offset, instruction) in function_definition_view.code().code.iter().enumerate() {
+        for (offset, instruction) in function_definition_view
+            .code()
+            .unwrap()
+            .code
+            .iter()
+            .enumerate()
+        {
             verifier.verify_instruction(instruction, offset)?
         }
 

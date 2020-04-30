@@ -1050,10 +1050,13 @@ impl Function {
             None
         };
         let scope = Scope::Module(module_id);
-        let code = def.code.code.clone();
+        // Native functions do not have a code unit
+        let (code, locals) = match &def.code {
+            Some(code) => (code.code.clone(), module.signature_at(code.locals).clone()),
+            None => (vec![], Signature(vec![])),
+        };
         let parameters = module.signature_at(handle.parameters).clone();
         let return_ = module.signature_at(handle.return_).clone();
-        let locals = module.signature_at(def.code.locals).clone();
         let type_parameters = handle.type_parameters.clone();
         Self {
             code,

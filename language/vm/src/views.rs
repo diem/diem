@@ -419,9 +419,11 @@ impl<'a, T: ModuleAccess> FunctionDefinitionView<'a, T> {
         self.function_def.is_native()
     }
 
-    pub fn locals_signature(&self) -> SignatureView<'a, T> {
-        let locals_signature = self.module.signature_at(self.function_def.code.locals);
-        SignatureView::new(self.module, locals_signature)
+    pub fn locals_signature(&self) -> Option<SignatureView<'a, T>> {
+        self.code().map(|code| {
+            let locals_signature = self.module.signature_at(code.locals);
+            SignatureView::new(self.module, locals_signature)
+        })
     }
 
     pub fn name(&self) -> &'a IdentStr {
@@ -456,8 +458,8 @@ impl<'a, T: ModuleAccess> FunctionDefinitionView<'a, T> {
         self.function_handle_view.arg_count()
     }
 
-    pub fn code(&self) -> &'a CodeUnit {
-        &self.function_def.code
+    pub fn code(&self) -> Option<&'a CodeUnit> {
+        self.function_def.code.as_ref()
     }
 }
 

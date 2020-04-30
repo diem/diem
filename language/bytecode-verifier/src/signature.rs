@@ -93,10 +93,10 @@ impl<'a> SignatureChecker<'a> {
     fn verify_code_units(&mut self) -> VMResult<()> {
         use Bytecode::*;
         for (func_def_idx, func_def) in self.module.function_defs().iter().enumerate() {
-            // Nothing to check for native functions so skipping.
-            if func_def.is_native() {
-                continue;
-            }
+            let code = match &func_def.code {
+                Some(code) => code,
+                None => continue,
+            };
 
             // Check if the types of the locals are well defined.
             let func_handle = self.module.function_handle_at(func_def.function);
@@ -104,14 +104,13 @@ impl<'a> SignatureChecker<'a> {
             // Update the type parameter kinds to the function being checked
             self.signature_context = Some(type_parameters.clone());
 
-            self.check_signature(func_def.code.locals).map_err(|err| {
-                let err =
-                    append_err_info(err, IndexKind::Signature, func_def.code.locals.0 as usize);
+            self.check_signature(code.locals).map_err(|err| {
+                let err = append_err_info(err, IndexKind::Signature, code.locals.0 as usize);
                 append_err_info(err, IndexKind::FunctionDefinition, func_def_idx)
             })?;
 
             // Check if the type actuals in certain bytecode instructions are well defined.
-            for (offset, instr) in func_def.code.code.iter().enumerate() {
+            for (offset, instr) in code.code.iter().enumerate() {
                 let result = match instr {
                     CallGeneric(idx) => {
                         let func_inst = self.module.function_instantiation_at(*idx);

@@ -855,22 +855,24 @@ impl<'a> BytecodeGenerator<'a> {
         let mut fdefs = module.function_defs.clone();
         let mut call_graph = CallGraph::new(module.function_handles.len());
         for fdef in fdefs.iter_mut() {
-            let f_handle = &module.function_handles[fdef.function.0 as usize].clone();
-            let locals_sigs = module.signatures[fdef.code.locals.0 as usize].0.clone();
-            let mut fn_context = FunctionGenerationContext::new(
-                fdef.function,
-                call_graph.max_calling_depth(fdef.function),
-                locals_sigs.len(),
-                0,
-            );
-            fdef.code.code = self.generate(
-                &mut fn_context,
-                &locals_sigs,
-                &f_handle,
-                &fdef.acquires_global_resources,
-                &mut module,
-                &mut call_graph,
-            )?;
+            if let Some(code) = &mut fdef.code {
+                let f_handle = &module.function_handles[fdef.function.0 as usize].clone();
+                let locals_sigs = module.signatures[code.locals.0 as usize].0.clone();
+                let mut fn_context = FunctionGenerationContext::new(
+                    fdef.function,
+                    call_graph.max_calling_depth(fdef.function),
+                    locals_sigs.len(),
+                    0,
+                );
+                code.code = self.generate(
+                    &mut fn_context,
+                    &locals_sigs,
+                    &f_handle,
+                    &fdef.acquires_global_resources,
+                    &mut module,
+                    &mut call_graph,
+                )?;
+            }
         }
         module.function_defs = fdefs;
         Some(module)

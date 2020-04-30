@@ -54,13 +54,15 @@ impl Pad {
 
     fn pad_function_bodies(&mut self, module: &mut CompiledModuleMut) {
         for fdef in module.function_defs.iter_mut() {
-            fdef.code.code = vec![
-                Bytecode::LdTrue,
-                Bytecode::LdTrue,
-                Bytecode::Pop,
-                Bytecode::Pop,
-                Bytecode::Ret,
-            ];
+            if let Some(code) = &mut fdef.code {
+                code.code = vec![
+                    Bytecode::LdTrue,
+                    Bytecode::LdTrue,
+                    Bytecode::Pop,
+                    Bytecode::Pop,
+                    Bytecode::Ret,
+                ]
+            }
         }
     }
 
