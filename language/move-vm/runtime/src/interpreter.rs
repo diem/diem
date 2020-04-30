@@ -17,7 +17,6 @@ use move_core_types::gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, G
 use move_vm_types::{
     interpreter_context::InterpreterContext,
     loaded_data::{runtime_types::Type, types::FatStructType},
-    native_functions::dispatch::{Function as NativeFunction, FunctionResolver},
     values::{self, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value},
 };
 use std::{cmp::min, collections::VecDeque, fmt::Write, sync::Arc};
@@ -235,22 +234,13 @@ impl<'txn> Interpreter<'txn> {
         function: Arc<Function>,
         ty_args: Vec<Type>,
     ) -> VMResult<()> {
-        let module_id = function
-            .module_id()
-            .expect("Module must exist on native function");
-        let function_name = function.name();
-        let native_function =
-            FunctionResolver::resolve(module_id, function_name).ok_or_else(|| {
-                VMStatus::new(StatusCode::LINKER_ERROR)
-                    .with_message(format!("Cannot find native function {}", function_name))
-            })?;
-
         let mut arguments = VecDeque::new();
-        let expected_args = native_function.num_args();
+        let expected_args = function.arg_count();
         for _ in 0..expected_args {
             arguments.push_front(self.operand_stack.pop()?);
         }
         let mut native_context = FunctionContext::new(self, context, resolver);
+        let native_function = function.get_native()?;
         let result = native_function.dispatch(&mut native_context, ty_args, arguments)?;
         gas!(consume: context, result.cost)?;
         result.result.and_then(|values| {

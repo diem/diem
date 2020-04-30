@@ -42,7 +42,7 @@ pub fn native_emit_event(
     let key = pop_arg!(arguments, Vec<u8>);
     let guid = EventKey::try_from(key.as_slice())
         .map_err(|_| VMStatus::new(StatusCode::EVENT_KEY_MISMATCH))?;
-    context.save_event(ContractEvent::new(guid, count, ty.type_tag()?, msg));
+    context.save_event(ContractEvent::new(guid, count, ty.type_tag()?, msg))?;
 
     Ok(NativeResult::ok(ZERO_GAS_UNITS, vec![]))
 }

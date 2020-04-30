@@ -28,7 +28,7 @@ pub trait NativeContext {
         account_address: AccountAddress,
     ) -> VMResult<()>;
     /// Saves contract event.
-    fn save_event(&mut self, event: ContractEvent);
+    fn save_event(&mut self, event: ContractEvent) -> VMResult<()>;
     /// Converts types to fet types.
     fn convert_to_fat_types(&self, types: Vec<Type>) -> VMResult<Vec<FatType>>;
 }
