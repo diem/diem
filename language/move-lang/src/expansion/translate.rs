@@ -633,44 +633,18 @@ fn spec_member(
                 type_: t,
             }
         }
-        PM::Include {
-            name: pn,
-            type_arguments: ptys_opt,
-            arguments: parguments,
-        } => {
-            let name = module_access(context, pn)?;
-            let type_arguments = optional_types(context, ptys_opt);
-            let arguments = parguments
-                .into_iter()
-                .map(|(n, e)| (n, *exp(context, e)))
-                .collect();
-            EM::Include {
-                name,
-                type_arguments,
-                arguments,
-            }
-        }
+        PM::Include { exp: pexp } => EM::Include {
+            exp: exp_(context, pexp),
+        },
         PM::Apply {
-            name: pn,
-            type_arguments: ptys_opt,
-            arguments: parguments,
+            exp: pexp,
             patterns,
             exclusion_patterns,
-        } => {
-            let name = module_access(context, pn)?;
-            let type_arguments = optional_types(context, ptys_opt);
-            let arguments = parguments
-                .into_iter()
-                .map(|(n, e)| (n, exp_(context, e)))
-                .collect();
-            EM::Apply {
-                name,
-                type_arguments,
-                arguments,
-                patterns,
-                exclusion_patterns,
-            }
-        }
+        } => EM::Apply {
+            exp: exp_(context, pexp),
+            patterns,
+            exclusion_patterns,
+        },
         PM::Pragma { properties } => EM::Pragma { properties },
     };
     Some(sp(loc, em))

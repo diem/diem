@@ -43,6 +43,7 @@ use crate::{
     ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, BOOL_TYPE},
 };
 use move_ir_types::location::Spanned;
+use move_lang::parser::ast::BinOp_;
 use regex::Regex;
 
 // =================================================================================================
@@ -723,6 +724,14 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         node_id
     }
 
+    /// Creates a new node id and assigns type and location to it.
+    fn new_node_id_with_type_loc(&mut self, ty: &Type, loc: &Loc) -> NodeId {
+        let id = self.new_node_id();
+        self.loc_map.insert(id, loc.clone());
+        self.type_map.insert(id, ty.clone());
+        id
+    }
+
     /// Qualifies the given symbol by the current module.
     fn qualified_by_module(&self, sym: Symbol) -> QualifiedSymbol {
         QualifiedSymbol {
@@ -1146,33 +1155,14 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 Function {
                     signature, body, ..
                 } => self.def_ana_spec_fun(signature, body),
-                Include {
-                    name,
-                    type_arguments,
-                    arguments,
-                } => self.def_ana_schema_inclusion_outside_schema(
-                    loc,
-                    context,
-                    None,
-                    name,
-                    type_arguments.as_deref(),
-                    arguments,
-                ),
+                Include { exp } => {
+                    self.def_ana_schema_inclusion_outside_schema(loc, context, None, exp)
+                }
                 Apply {
-                    name,
-                    type_arguments,
-                    arguments,
+                    exp,
                     patterns,
                     exclusion_patterns,
-                } => self.def_ana_schema_apply(
-                    loc,
-                    context,
-                    name,
-                    type_arguments.as_deref(),
-                    arguments,
-                    patterns,
-                    exclusion_patterns,
-                ),
+                } => self.def_ana_schema_apply(loc, context, exp, patterns, exclusion_patterns),
                 Pragma { properties } => self.def_ana_pragma(loc, context, properties),
                 Variable { .. } => { /* nothing to do right now */ }
             }
@@ -1675,15 +1665,23 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         visiting.push(name.clone());
 
         // First recursively visit all schema includes and ensure they are analyzed.
-        for (include_loc, included_name, ..) in self.iter_schema_includes(&block.value.members) {
-            let include_loc = self.parent.env.to_loc(include_loc);
+        for included_name in self
+            .iter_schema_includes(&block.value.members)
+            .map(|(_, exp)| {
+                let mut res = vec![];
+                extract_schema_access(exp, &mut res);
+                res
+            })
+            .flatten()
+        {
+            let included_loc = self.parent.env.to_loc(&included_name.loc);
             let included_name = self.module_access_to_qualified(included_name);
             if included_name.module_name == self.module_name {
                 // A schema in the module we are currently analyzing. We need to check
                 // for cycles before recursively analyzing it.
                 if visiting.contains(&included_name) {
                     self.parent.error(
-                        &include_loc,
+                        &included_loc,
                         &format!(
                             "cyclic schema dependency: {} -> {}",
                             visiting
@@ -1741,20 +1739,13 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             })
             .collect();
         let mut included_spec = Spec::default();
-        for (include_loc, include_name, type_arguments, arguments) in
-            self.iter_schema_includes(&block.value.members)
-        {
-            let include_loc = self.parent.env.to_loc(include_loc);
-            let include_name = self.module_access_to_qualified(include_name);
-            self.def_ana_schema_inclusion(
+        for (_, included_exp) in self.iter_schema_includes(&block.value.members) {
+            self.def_ana_schema_exp(
                 &type_params,
                 &mut all_vars,
                 &mut included_spec,
                 true,
-                &include_loc,
-                include_name,
-                type_arguments,
-                arguments,
+                included_exp,
             );
         }
         // Store the results back to the schema entry.
@@ -1795,49 +1786,174 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     fn iter_schema_includes<'a>(
         &self,
         members: &'a [EA::SpecBlockMember],
-    ) -> impl Iterator<
-        Item = (
-            &'a MoveIrLoc,
-            &'a EA::ModuleAccess,
-            Option<&'a [EA::Type]>,
-            &'a [(Name, EA::Exp)],
-        ),
-    > {
+    ) -> impl Iterator<Item = (&'a MoveIrLoc, &'a EA::Exp)> {
         members.iter().filter_map(|m| {
-            if let EA::SpecBlockMember_::Include {
-                name,
-                type_arguments,
-                arguments,
-            } = &m.value
-            {
-                Some((
-                    &m.loc,
-                    name,
-                    type_arguments.as_deref(),
-                    arguments.as_slice(),
-                ))
+            if let EA::SpecBlockMember_::Include { exp } = &m.value {
+                Some((&m.loc, exp))
             } else {
                 None
             }
         })
     }
 
-    /// Analyzes a schema inclusion. Depending on whether `allow_new_vars` is true, this will
-    /// add new variables to `vars`, and match types of existing ones. All conditions and invariants
-    /// from the schema are rewritten for the inclusion context and added to the provided vectors.
-    fn def_ana_schema_inclusion(
+    /// Analyzes a schema expression. Depending on whether `allow_new_vars` is true, this will
+    /// add new variables to `vars` and match types of existing ones. All conditions
+    /// from the schema are rewritten for the inclusion context and added to the provided spec.
+    ///
+    /// We accept a very restricted set of Move expressions for schemas:
+    ///
+    /// - `P ==> SchemaExp`: all conditions in the schema will be prefixed with `P ==> ..`.
+    ///   Conditions which are not based on boolean expressions (as VarUpdate et. al) will
+    ///   be rejected.
+    /// - `if (P) SchemaExp else SchemaExp`: this is treated similar as one include for
+    ///   `P ==> SchemaExp` and one for `!P ==> SchemaExp`.
+    /// - `SchemaExp1 && SchemaExp2`: this is treated as two includes for the both expressions.
+    /// - `SchemaExp1 || SchemaExp2`: this could be treated as
+    ///   `exists b: bool :: if (b) SchemaExp1 else SchemaExp2` (but as we do not have the
+    ///   existential quantifier yet in the spec language, it is actually not supported..)
+    ///
+    /// The implementation works via a recursive function which accumulates a path condition
+    /// leading to a Move "pack" expression which is interpreted as a schema reference.
+    fn def_ana_schema_exp(
         &mut self,
         context_type_params: &[(Symbol, Type)],
         vars: &mut BTreeMap<Symbol, LocalVarEntry>,
         spec: &mut Spec,
         allow_new_vars: bool,
-        loc: &Loc,
-        schema_name: QualifiedSymbol,
-        type_arguments: Option<&[EA::Type]>,
-        arguments: &[(Name, EA::Exp)],
+        exp: &EA::Exp,
     ) {
+        self.def_ana_schema_exp_oper(context_type_params, vars, spec, allow_new_vars, None, exp)
+    }
+
+    /// Analyzes operations in schema expressions. This extends the path condition as needed
+    /// and continues recursively.
+    fn def_ana_schema_exp_oper(
+        &mut self,
+        context_type_params: &[(Symbol, Type)],
+        vars: &mut BTreeMap<Symbol, LocalVarEntry>,
+        spec: &mut Spec,
+        allow_new_vars: bool,
+        path_cond: Option<Exp>,
+        exp: &EA::Exp,
+    ) {
+        let loc = self.parent.to_loc(&exp.loc);
+        match &exp.value {
+            EA::Exp_::BinopExp(
+                lhs,
+                Spanned {
+                    value: BinOp_::Implies,
+                    ..
+                },
+                rhs,
+            ) => {
+                let lhs_exp = self
+                    .exp_translator_for_schema(&loc, context_type_params, vars)
+                    .translate_exp(lhs, &BOOL_TYPE);
+                let path_cond = self.extend_path_condition(&loc, path_cond, lhs_exp);
+                self.def_ana_schema_exp_oper(
+                    context_type_params,
+                    vars,
+                    spec,
+                    allow_new_vars,
+                    path_cond,
+                    rhs,
+                );
+            }
+            EA::Exp_::BinopExp(
+                lhs,
+                Spanned {
+                    value: BinOp_::And, ..
+                },
+                rhs,
+            ) => {
+                self.def_ana_schema_exp_oper(
+                    context_type_params,
+                    vars,
+                    spec,
+                    allow_new_vars,
+                    path_cond.clone(),
+                    lhs,
+                );
+                self.def_ana_schema_exp_oper(
+                    context_type_params,
+                    vars,
+                    spec,
+                    allow_new_vars,
+                    path_cond,
+                    rhs,
+                );
+            }
+            EA::Exp_::IfElse(c, t, e) => {
+                let c_exp = self
+                    .exp_translator_for_schema(&loc, context_type_params, vars)
+                    .translate_exp(c, &BOOL_TYPE);
+                let t_path_cond =
+                    self.extend_path_condition(&loc, path_cond.clone(), c_exp.clone());
+                self.def_ana_schema_exp_oper(
+                    context_type_params,
+                    vars,
+                    spec,
+                    allow_new_vars,
+                    t_path_cond,
+                    t,
+                );
+                let node_id = self.new_node_id_with_type_loc(&BOOL_TYPE, &loc);
+                let not_c_exp = Exp::Call(node_id, Operation::Not, vec![c_exp]);
+                let e_path_cond = self.extend_path_condition(&loc, path_cond, not_c_exp);
+                self.def_ana_schema_exp_oper(
+                    context_type_params,
+                    vars,
+                    spec,
+                    allow_new_vars,
+                    e_path_cond,
+                    e,
+                );
+            }
+            EA::Exp_::Name(maccess, type_args_opt) => self.def_ana_schema_exp_leaf(
+                context_type_params,
+                vars,
+                spec,
+                allow_new_vars,
+                path_cond,
+                &loc,
+                maccess,
+                type_args_opt,
+                None,
+            ),
+            EA::Exp_::Pack(maccess, type_args_opt, fields) => self.def_ana_schema_exp_leaf(
+                context_type_params,
+                vars,
+                spec,
+                allow_new_vars,
+                path_cond,
+                &loc,
+                maccess,
+                type_args_opt,
+                Some(fields),
+            ),
+            _ => self
+                .parent
+                .error(&loc, "expression construct not supported for schemas"),
+        }
+    }
+
+    /// Analyzes a schema leaf expression.
+    fn def_ana_schema_exp_leaf(
+        &mut self,
+        context_type_params: &[(Symbol, Type)],
+        vars: &mut BTreeMap<Symbol, LocalVarEntry>,
+        spec: &mut Spec,
+        allow_new_vars: bool,
+        path_cond: Option<Exp>,
+        loc: &Loc,
+        maccess: &EA::ModuleAccess,
+        type_args_opt: &Option<Vec<EA::Type>>,
+        args_opt: Option<&EA::Fields<EA::Exp>>,
+    ) {
+        let schema_name = self.module_access_to_qualified(maccess);
+
         // We need to temporarily detach the schema entry from the parent table because of
-        // borrowing problems, as we need to traverse it while at the same type mutate self.
+        // borrowing problems, as we need to traverse it while at the same time mutate self.
         let schema_entry = if let Some(e) = self.parent.spec_schema_table.remove(&schema_name) {
             e
         } else {
@@ -1850,11 +1966,10 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             );
             return;
         };
-        let mut et = ExpTranslator::new(self);
-        for (n, ty) in context_type_params {
-            et.define_type_param(loc, *n, ty.clone())
-        }
-        let type_arguments = &et.translate_types_opt(type_arguments);
+
+        // Translate type arguments
+        let mut et = self.exp_translator_for_schema(&loc, context_type_params, vars);
+        let type_arguments = &et.translate_types_opt(type_args_opt);
         if schema_entry.type_params.len() != type_arguments.len() {
             self.parent.error(
                 loc,
@@ -1870,44 +1985,35 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 .insert(schema_name, schema_entry);
             return;
         }
-        // Define locals as we need them for checking schema arguments.
-        et.enter_scope();
-        for (
-            n,
-            LocalVarEntry {
-                loc,
-                type_,
-                operation,
-            },
-        ) in vars.iter()
-        {
-            et.define_local(loc, *n, type_.clone(), operation.clone());
-        }
 
-        let mut argument_map: BTreeMap<Symbol, Exp> = arguments
-            .iter()
-            .map(|(schema_var, exp)| {
-                let pool = et.symbol_pool();
-                let schema_sym = pool.make(&schema_var.value);
-                let schema_type = if let Some(LocalVarEntry { type_, .. }) =
-                    schema_entry.all_vars.get(&schema_sym)
-                {
-                    type_.instantiate(type_arguments)
-                } else {
-                    et.error(
-                        &et.to_loc(&schema_var.loc),
-                        &format!("`{}` not declared in schema", schema_sym.display(pool)),
-                    );
-                    Type::Error
-                };
-                // Check the expression in the argument list.
-                // Note we currently only use the vars defined so far in this context. Variables
-                // which are introduced by schemas after the inclusion of this one are not in scope.
-                let exp = et.translate_exp(exp, &schema_type);
-                et.finalize_types();
-                (schema_sym, exp)
+        // Translate schema arguments.
+        let mut argument_map: BTreeMap<Symbol, Exp> = args_opt
+            .map(|args| {
+                args.iter()
+                    .map(|(ref schema_var, (_, exp))| {
+                        let pool = et.symbol_pool();
+                        let schema_sym = pool.make(&schema_var.0.value);
+                        let schema_type = if let Some(LocalVarEntry { type_, .. }) =
+                            schema_entry.all_vars.get(&schema_sym)
+                        {
+                            type_.instantiate(type_arguments)
+                        } else {
+                            et.error(
+                                &et.to_loc(&schema_var.0.loc),
+                                &format!("`{}` not declared in schema", schema_sym.display(pool)),
+                            );
+                            Type::Error
+                        };
+                        // Check the expression in the argument list.
+                        // Note we currently only use the vars defined so far in this context. Variables
+                        // which are introduced by schemas after the inclusion of this one are not in scope.
+                        let exp = et.translate_exp(exp, &schema_type);
+                        et.finalize_types();
+                        (schema_sym, exp)
+                    })
+                    .collect()
             })
-            .collect();
+            .unwrap_or_else(BTreeMap::new);
 
         // Go over all variables in the schema which are not in the argument map and either match
         // them against existing one or declare new, if allowed.
@@ -1916,28 +2022,20 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 continue;
             }
             let ty = type_.instantiate(type_arguments);
-            let pool = self.symbol_pool();
+            let pool = et.symbol_pool();
             if let Some(entry) = vars.get(name) {
                 // Name already exists in inclusion context, check its type.
-                let mut subs = Substitution::new();
-                let tctx = &TypeDisplayContext::WithEnv {
-                    env: self.parent.env,
-                };
-                let compatible = subs.unify(&tctx, &entry.type_, &ty).is_ok();
-                if !compatible {
-                    self.parent.error(
-                        loc,
-                        &format!(
-                            "incompatible type of included `{}`; type in schema: `{}`, type in inclusion context: `{}`",
-                            name.display(pool),
-                            ty.display(tctx),
-                            entry.type_.display(tctx),
-                        ));
-                }
+                et.check_type(
+                    loc,
+                    &ty,
+                    &entry.type_,
+                    &format!(
+                        "for `{}` included from schema",
+                        name.display(et.symbol_pool())
+                    ),
+                );
                 // Put into argument map.
-                let node_id = self.new_node_id();
-                self.type_map.insert(node_id, entry.type_.clone());
-                self.loc_map.insert(node_id, entry.loc.clone());
+                let node_id = et.new_node_id_with_type_loc(&entry.type_, loc);
                 let exp = if let Some(oper) = &entry.operation {
                     Exp::Call(node_id, oper.clone(), vec![])
                 } else {
@@ -1956,7 +2054,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     },
                 );
             } else {
-                self.parent.error(
+                et.error(
                     loc,
                     &format!(
                         "`{}` cannot be matched to an existing name in inclusion context",
@@ -1965,6 +2063,8 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 );
             }
         }
+        // Done with expression translator; ensure all types are inferred correctly.
+        et.finalize_types();
 
         // Go over all conditions in the schema, rewrite them, and add to the inclusion conditions.
         for Condition { loc, kind, exp } in schema_entry
@@ -1975,10 +2075,33 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         {
             let mut rewriter =
                 ExpRewriter::new(self, schema_entry.module_id, &argument_map, type_arguments);
+            let mut exp = rewriter.rewrite(exp);
+            if let Some(cond) = &path_cond {
+                // There is a path condition to be added. This is only possible for proper
+                // boolean conditions.
+                if kind.get_spec_var_target().is_some() {
+                    self.parent
+                        .error(loc, &format!("`{}` cannot be included conditionally", kind));
+                } else {
+                    let path_cond_loc = self.loc_map.get(&cond.node_id()).unwrap_or(loc).clone();
+                    let node_id = self.new_node_id_with_type_loc(&BOOL_TYPE, &path_cond_loc);
+                    // In case of AbortsIf, the path condition is combined with the predicate using
+                    // &&, otherwise ==>.
+                    exp = Exp::Call(
+                        node_id,
+                        if kind == &ConditionKind::AbortsIf {
+                            Operation::And
+                        } else {
+                            Operation::Implies
+                        },
+                        vec![cond.clone(), exp],
+                    );
+                }
+            }
             spec.conditions.push(Condition {
                 loc: loc.clone(),
                 kind: kind.clone(),
-                exp: rewriter.rewrite(exp),
+                exp,
             });
         }
 
@@ -1986,6 +2109,40 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         self.parent
             .spec_schema_table
             .insert(schema_name, schema_entry);
+    }
+
+    /// Creates an expression translator for use in schema expression. This defines the context
+    /// type parameters and the variables.
+    fn exp_translator_for_schema<'module_translator>(
+        &'module_translator mut self,
+        loc: &Loc,
+        context_type_params: &[(Symbol, Type)],
+        vars: &mut BTreeMap<Symbol, LocalVarEntry>,
+    ) -> ExpTranslator<'env, 'translator, 'module_translator> {
+        let mut et = ExpTranslator::new(self);
+        for (n, ty) in context_type_params {
+            et.define_type_param(loc, *n, ty.clone())
+        }
+        et.enter_scope();
+        for (n, entry) in vars.iter() {
+            et.define_local(&entry.loc, *n, entry.type_.clone(), entry.operation.clone());
+        }
+        et
+    }
+
+    /// Extends a path condition for schema expression analysis.
+    fn extend_path_condition(
+        &mut self,
+        loc: &Loc,
+        path_cond: Option<Exp>,
+        exp: Exp,
+    ) -> Option<Exp> {
+        if let Some(cond) = path_cond {
+            let node_id = self.new_node_id_with_type_loc(&BOOL_TYPE, loc);
+            Some(Exp::Call(node_id, Operation::And, vec![cond, exp]))
+        } else {
+            Some(exp)
+        }
     }
 
     /// Analyze schema inclusion in the spec block for a function, struct or module. This
@@ -2000,15 +2157,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         loc: &Loc,
         context: &SpecBlockContext,
         alt_context_type_params: Option<&[(Symbol, Type)]>,
-        name: &EA::ModuleAccess,
-        type_arguments: Option<&[EA::Type]>,
-        arguments: &[(Name, EA::Exp)],
+        exp: &EA::Exp,
     ) {
-        let name = self.module_access_to_qualified(name);
-
         // Compute the type parameters and variables this spec block uses. We do this by constructing
         // an expression translator and immediately extracting  from it. Depending on whether in
-        // function or struct context, we use a condition/invariant kind which defines the maximum
+        // function or struct context, we use a condition kind which defines the maximum
         // of available symbols. We need to potentially revise this to only declare variables which
         // have a proper use in a condition/invariant, depending on what is actually included in
         // the block.
@@ -2033,7 +2186,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 
         // Analyze the schema inclusion. This will instantiate conditions for
         // this block.
-        self.def_ana_schema_inclusion(
+        self.def_ana_schema_exp(
             if let Some(type_params) = alt_context_type_params {
                 type_params
             } else {
@@ -2042,10 +2195,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             &mut vars,
             &mut spec,
             false,
-            loc,
-            name,
-            type_arguments,
-            arguments,
+            exp,
         );
 
         // Write the conditions to the context item.
@@ -2058,13 +2208,12 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         );
     }
 
+    /// Analyzes a schema apply weaving operator.
     fn def_ana_schema_apply(
         &mut self,
         loc: &Loc,
         context: &SpecBlockContext,
-        name: &EA::ModuleAccess,
-        type_arguments: Option<&[EA::Type]>,
-        arguments: &[(Name, EA::Exp)],
+        exp: &EA::Exp,
         patterns: &[PA::SpecApplyPattern],
         exclusion_patterns: &[PA::SpecApplyPattern],
     ) {
@@ -2105,9 +2254,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     loc,
                     &SpecBlockContext::Function(fun_name),
                     Some(&type_params),
-                    name,
-                    type_arguments,
-                    arguments,
+                    exp,
                 );
             }
         }
@@ -2497,17 +2644,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         var
     }
 
-    /// Creates a new node id.
-    fn new_node_id(&mut self) -> NodeId {
-        self.parent.new_node_id()
-    }
-
     /// Creates a new node id and assigns type and location to it.
     fn new_node_id_with_type_loc(&mut self, ty: &Type, loc: &Loc) -> NodeId {
-        let id = self.new_node_id();
-        self.parent.loc_map.insert(id, loc.clone());
-        self.parent.type_map.insert(id, ty.clone());
-        id
+        self.parent.new_node_id_with_type_loc(ty, loc)
     }
 
     /// Sets instantiation for the given node id.
@@ -2852,8 +2991,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     }
 
     /// Translates option a slice of single types.
-    fn translate_types_opt(&mut self, tys_opt: Option<&[EA::Type]>) -> Vec<Type> {
+    fn translate_types_opt(&mut self, tys_opt: &Option<Vec<EA::Type>>) -> Vec<Type> {
         tys_opt
+            .as_deref()
             .map(|tys| self.translate_types(tys))
             .unwrap_or_else(|| vec![])
     }
@@ -2866,7 +3006,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     fn translate_exp(&mut self, exp: &EA::Exp, expected_type: &Type) -> Exp {
         let loc = self.to_loc(&exp.loc);
         let make_value = |et: &mut ExpTranslator, val: Value, ty: Type| {
-            let rty = et.check_type(&loc, &ty, expected_type);
+            let rty = et.check_type(&loc, &ty, expected_type, "in expression");
             let id = et.new_node_id_with_type_loc(&rty, &loc);
             Exp::Value(id, val)
         };
@@ -2944,12 +3084,22 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         exp
                     })
                     .collect_vec();
-                let ty = self.check_type(&loc, &Type::Tuple(types), expected_type);
+                let ty = self.check_type(
+                    &loc,
+                    &Type::Tuple(types),
+                    expected_type,
+                    "in expression list",
+                );
                 let id = self.new_node_id_with_type_loc(&ty, &loc);
                 Exp::Call(id, Operation::Tuple, exps)
             }
             EA::Exp_::Unit => {
-                let ty = self.check_type(&loc, &Type::Tuple(vec![]), expected_type);
+                let ty = self.check_type(
+                    &loc,
+                    &Type::Tuple(vec![]),
+                    expected_type,
+                    "in unit expression",
+                );
                 let id = self.new_node_id_with_type_loc(&ty, &loc);
                 Exp::Call(id, Operation::Tuple, vec![])
             }
@@ -3018,7 +3168,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 let sym_ty = entry.type_.clone();
                 let (arg_types, args) = self.translate_exp_list(args);
                 let fun_t = Type::Fun(arg_types, Box::new(expected_type.clone()));
-                let sym_ty = self.check_type(&loc, &sym_ty, &fun_t);
+                let sym_ty = self.check_type(&loc, &sym_ty, &fun_t, "in expression");
                 let local_id = self.new_node_id_with_type_loc(&sym_ty, &self.to_loc(&n.loc));
                 let local_var = Exp::LocalVar(local_id, sym);
                 let id = self.new_node_id_with_type_loc(expected_type, &loc);
@@ -3151,7 +3301,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 if let Some(entry) = self.lookup_local(sym) {
                     let oper_opt = entry.operation.clone();
                     let ty = entry.type_.clone();
-                    let ty = self.check_type(loc, &ty, expected_type);
+                    let ty = self.check_type(loc, &ty, expected_type, "in name expression");
                     let id = self.new_node_id_with_type_loc(&ty, loc);
                     if let Some(oper) = oper_opt {
                         return Exp::Call(id, oper, vec![]);
@@ -3181,7 +3331,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             let var_id = entry.var_id;
             let instantiation = self.translate_types(type_args);
             let ty = ty.instantiate(&instantiation);
-            let ty = self.check_type(loc, &ty, expected_type);
+            let ty = self.check_type(loc, &ty, expected_type, "in spec var expression");
             let id = self.new_node_id_with_type_loc(&ty, loc);
             // Remember the instantiation as an attribute on the expression node.
             self.set_instantiation(id, instantiation);
@@ -3217,10 +3367,15 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             (vector_ty, Operation::Slice)
         } else {
             // If this is not (known to be) a range, assume its an index.
-            self.check_type(&loc, &index_ty, &Type::new_prim(PrimitiveType::Num));
+            self.check_type(
+                &loc,
+                &index_ty,
+                &Type::new_prim(PrimitiveType::Num),
+                "in index expression",
+            );
             (elem_ty, Operation::Index)
         };
-        let result_t = self.check_type(loc, &result_t, expected_type);
+        let result_t = self.check_type(loc, &result_t, expected_type, "in index expression");
         let id = self.new_node_id_with_type_loc(&result_t, &loc);
         Exp::Call(id, oper, vec![vector_exp, ie])
     }
@@ -3263,7 +3418,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                         if let Some((_, field_ty)) = fields.get(&field_name) {
                             // We must instantiate the field type by the provided type args.
                             let field_ty = field_ty.instantiate(targs);
-                            self.check_type(&loc, &field_ty, expected_type);
+                            self.check_type(&loc, &field_ty, expected_type, "in field selection");
                             let id = self.new_node_id_with_type_loc(&field_ty, &loc);
                             Exp::Call(
                                 id,
@@ -3415,8 +3570,8 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     loc,
                     &cand.result_type.instantiate(&instantiation),
                     expected_type,
+                    "in expression",
                 );
-                // Check pure requirement.
                 // Construct result.
                 let id = self.new_node_id_with_type_loc(&ty, loc);
                 self.set_instantiation(id, instantiation);
@@ -3540,7 +3695,8 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     self.new_error_exp()
                 } else {
                     let struct_ty = Type::Struct(entry.module_id, entry.struct_id, instantiation);
-                    let struct_ty = self.check_type(loc, &struct_ty, expected_type);
+                    let struct_ty =
+                        self.check_type(loc, &struct_ty, expected_type, "in pack expression");
                     let args = args
                         .into_iter()
                         .sorted_by_key(|(i, _)| *i)
@@ -3612,12 +3768,17 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         let ty = self.fresh_type_var();
         let rbody = self.translate_exp(body, &ty);
         // Check types and construct result.
-        let rty = self.check_type(loc, &Type::Fun(arg_types, Box::new(ty)), expected_type);
+        let rty = self.check_type(
+            loc,
+            &Type::Fun(arg_types, Box::new(ty)),
+            expected_type,
+            "in lambda body",
+        );
         let id = self.new_node_id_with_type_loc(&rty, loc);
         Exp::Lambda(id, decls, Box::new(rbody))
     }
 
-    fn check_type(&mut self, loc: &Loc, ty: &Type, expected: &Type) -> Type {
+    fn check_type(&mut self, loc: &Loc, ty: &Type, expected: &Type, context_msg: &str) -> Type {
         // Because of Rust borrow semantics, we must temporarily detach the substitution from
         // the translator. This is because we also need to inherently borrow self via the
         // type_display_context which is passed into unification.
@@ -3625,7 +3786,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         let result = match subs.unify(&self.type_display_context(), ty, expected) {
             Ok(t) => t,
             Err(err) => {
-                self.error(&loc, &err.message);
+                self.error(&loc, &format!("{} {}", err.message, context_msg));
                 Type::Error
             }
         };
@@ -3778,5 +3939,18 @@ impl<'env, 'translator, 'rewriter> ExpRewriter<'env, 'translator, 'rewriter> {
                 .insert(new_node_id, instantiation);
         }
         new_node_id
+    }
+}
+
+/// Extract all accesses of a schema from a schema expression.
+fn extract_schema_access<'a>(exp: &'a EA::Exp, res: &mut Vec<&'a EA::ModuleAccess>) {
+    match &exp.value {
+        EA::Exp_::Name(maccess, _) => res.push(maccess),
+        EA::Exp_::BinopExp(_, _, rhs) => extract_schema_access(rhs, res),
+        EA::Exp_::IfElse(_, t, e) => {
+            extract_schema_access(t, res);
+            extract_schema_access(e, res);
+        }
+        _ => {}
     }
 }

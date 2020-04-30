@@ -1703,67 +1703,27 @@ fn parse_spec_variable<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMe
 }
 
 // Parse a specification schema include.
-//    SpecInclude = "include" <ModuleAccess> <OptionalTypeArgs>
-//                  ( "{" Comma(<Identifier> ":" <Exp>) "}" )? ";"
+//    SpecInclude = "include" <Exp>
 fn parse_spec_include<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
     let start_loc = tokens.start_loc();
     consume_identifier(tokens, "include")?;
-    let name = parse_module_access(tokens, || "a schema name".to_string())?;
-    let type_arguments = parse_optional_type_args(tokens)?;
-    let arguments = if tokens.peek() == Tok::LBrace {
-        parse_comma_list(
-            tokens,
-            Tok::LBrace,
-            Tok::RBrace,
-            |tokens| {
-                let left = parse_identifier(tokens)?;
-                consume_token(tokens, Tok::Colon)?;
-                let right = parse_exp(tokens)?;
-                Ok((left, right))
-            },
-            "a schema argument",
-        )?
-    } else {
-        vec![]
-    };
+    let exp = parse_exp(tokens)?;
     consume_token(tokens, Tok::Semicolon)?;
     Ok(spanned(
         tokens.file_name(),
         start_loc,
         tokens.previous_end_loc(),
-        SpecBlockMember_::Include {
-            name,
-            type_arguments,
-            arguments,
-        },
+        SpecBlockMember_::Include { exp },
     ))
 }
 
 // Parse a specification schema apply.
-//    SpecApply = "apply" <ModuleAccess> <OptionalTypeArgs>
-//                 "to" Comma<SpecApplyPattern>
-//                 ( "except" Comma<SpecApplyPattern> )? ";"
+//    SpecApply = "apply" <Exp> "to" Comma<SpecApplyPattern>
+//                                   ( "except" Comma<SpecApplyPattern> )? ";"
 fn parse_spec_apply<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
     let start_loc = tokens.start_loc();
     consume_identifier(tokens, "apply")?;
-    let name = parse_module_access(tokens, || "a schema name".to_string())?;
-    let type_arguments = parse_optional_type_args(tokens)?;
-    let arguments = if tokens.peek() == Tok::LBrace {
-        parse_comma_list(
-            tokens,
-            Tok::LBrace,
-            Tok::RBrace,
-            |tokens| {
-                let left = parse_identifier(tokens)?;
-                consume_token(tokens, Tok::Colon)?;
-                let right = parse_exp(tokens)?;
-                Ok((left, right))
-            },
-            "a schema argument",
-        )?
-    } else {
-        vec![]
-    };
+    let exp = parse_exp(tokens)?;
     consume_identifier(tokens, "to")?;
     let parse_patterns = |tokens: &mut Lexer<'input>| {
         parse_list(
@@ -1793,9 +1753,7 @@ fn parse_spec_apply<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMembe
         start_loc,
         tokens.previous_end_loc(),
         SpecBlockMember_::Apply {
-            name,
-            type_arguments,
-            arguments,
+            exp,
             patterns,
             exclusion_patterns,
         },

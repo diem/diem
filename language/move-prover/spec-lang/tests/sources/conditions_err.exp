@@ -1,4 +1,4 @@
-error: expected `bool` but found `u64`
+error: expected `bool` but found `u64` in name expression
 
    ┌── tests/sources/conditions_err.move:7:15 ───
    │
@@ -6,7 +6,7 @@ error: expected `bool` but found `u64`
    │               ^
    │
 
-error: expected `bool` but found `num`
+error: expected `bool` but found `num` in expression
 
    ┌── tests/sources/conditions_err.move:8:13 ───
    │

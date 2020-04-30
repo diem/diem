@@ -130,14 +130,10 @@ pub enum SpecBlockMember_ {
         type_: Type,
     },
     Include {
-        name: ModuleAccess,
-        type_arguments: Option<Vec<Type>>,
-        arguments: Vec<(Name, Exp)>,
+        exp: Exp,
     },
     Apply {
-        name: ModuleAccess,
-        type_arguments: Option<Vec<Type>>,
-        arguments: Vec<(Name, Exp)>,
+        exp: Exp,
         patterns: Vec<SpecApplyPattern>,
         exclusion_patterns: Vec<SpecApplyPattern>,
     },
@@ -472,51 +468,17 @@ impl AstDebug for SpecBlockMember_ {
                 w.write(": ");
                 type_.ast_debug(w);
             }
-            SpecBlockMember_::Include {
-                name,
-                type_arguments,
-                arguments,
-            } => {
-                w.write(&format!("include {}", name));
-                if let Some(ty_args) = type_arguments {
-                    w.write("<");
-                    ty_args.ast_debug(w);
-                    w.write(">");
-                }
-                if !arguments.is_empty() {
-                    w.write("{");
-                    w.list(arguments, ", ", |w, (l, r)| {
-                        w.write(&l.value);
-                        w.write(" : ");
-                        r.ast_debug(w);
-                        true
-                    });
-                    w.write("}");
-                }
+            SpecBlockMember_::Include { exp } => {
+                w.write("include ");
+                exp.ast_debug(w);
             }
             SpecBlockMember_::Apply {
-                name,
-                type_arguments,
-                arguments,
+                exp,
                 patterns,
                 exclusion_patterns,
             } => {
-                w.write(&format!("apply {}", name));
-                if let Some(ty_args) = type_arguments {
-                    w.write("<");
-                    ty_args.ast_debug(w);
-                    w.write(">");
-                }
-                if !arguments.is_empty() {
-                    w.write("{");
-                    w.list(arguments, ", ", |w, (l, r)| {
-                        w.write(&l.value);
-                        w.write(" : ");
-                        r.ast_debug(w);
-                        true
-                    });
-                    w.write("}");
-                }
+                w.write("apply ");
+                exp.ast_debug(w);
                 w.write(" to ");
                 w.list(patterns, ", ", |w, p| {
                     p.ast_debug(w);

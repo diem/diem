@@ -1,4 +1,4 @@
-error: expected `bool` but found `num`
+error: expected `bool` but found `num` in expression
 
    ┌── tests/sources/invariants_err.move:9:15 ───
    │

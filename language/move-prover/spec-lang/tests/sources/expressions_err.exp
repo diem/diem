@@ -14,7 +14,7 @@ error: no function named `not_declared` found
     │       ^^^^^^^^^^^^^^
     │
 
-error: expected `num` but found `bool`
+error: expected `num` but found `bool` in expression
 
     ┌── tests/sources/expressions_err.move:22:7 ───
     │
@@ -31,7 +31,7 @@ error: no matching declaration of `>`
     │
     = outruled candidate `>(num, num): bool` (expected `num` but found `vector<num>` for argument 1)
 
-error: expected `(num, bool)` but found `bool`
+error: expected `(num, bool)` but found `bool` in expression
 
     ┌── tests/sources/expressions_err.move:32:7 ───
     │

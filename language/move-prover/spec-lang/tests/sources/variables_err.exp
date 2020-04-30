@@ -14,7 +14,7 @@ error: assignment only allowed in spec var updates
     │                      ^^^^^^^^^^^^^^^^
     │
 
-error: expected `num` but found `bool`
+error: expected `num` but found `bool` in expression
 
     ┌── tests/sources/variables_err.move:14:29 ───
     │

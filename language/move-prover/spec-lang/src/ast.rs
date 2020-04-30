@@ -45,7 +45,7 @@ pub struct SpecFunDecl {
 // =================================================================================================
 /// # Conditions
 
-#[derive(Debug, PartialEq, Eq, Clone, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ConditionKind {
     Assert,
     Assume,
@@ -79,7 +79,7 @@ impl ConditionKind {
         matches!(self, Ensures | AbortsIf | InvariantUpdate | VarUpdate(..))
     }
 
-    /// Returns true if this condition is allowed on a function declaration.
+    /// Returns true if this condition is allowed on a public function declaration.
     pub fn allowed_on_public_fun_decl(&self) -> bool {
         use ConditionKind::*;
         matches!(
@@ -192,7 +192,7 @@ impl Spec {
 // =================================================================================================
 /// # Expressions
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Exp {
     Error(NodeId),
     Value(NodeId, Value),
@@ -302,7 +302,7 @@ pub enum Operation {
     MaxU128,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct LocalVarDecl {
     pub id: NodeId,
     pub name: Symbol,

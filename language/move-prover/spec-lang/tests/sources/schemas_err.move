@@ -79,4 +79,10 @@ module M {
     spec schema Cycle3 {
         include Cycle1;
     }
+
+    spec schema SchemaExp {
+        include 22 ==> Condition;
+        include true ==> 23;
+        include Condition || Condition;
+    }
 }
