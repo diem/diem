@@ -357,10 +357,10 @@ where
             ConnectionNotification::NewConnection(conn) => {
                 info!("New connection established: {:?}", conn,);
                 // Update libra_network_peer counter.
+                self.add_peer(conn);
                 counters::LIBRA_NETWORK_PEERS
                     .with_label_values(&[self.role.as_str(), "connected"])
-                    .inc();
-                self.add_peer(conn);
+                    .set(self.active_peers.len() as i64);
             }
             ConnectionNotification::Disconnected(lost_conn_metadata, reason) => {
                 // See: https://github.com/libra/libra/issues/3128#issuecomment-605351504 for
@@ -369,10 +369,6 @@ where
                     "Connection {:?} closed due to {:?}",
                     lost_conn_metadata, reason,
                 );
-                // Update libra_network_peer counter.
-                counters::LIBRA_NETWORK_PEERS
-                    .with_label_values(&[self.role.as_str(), "connected"])
-                    .dec();
                 let peer_id = lost_conn_metadata.peer_id();
                 // If the active connection with the peer is lost, remove it from `active_peers`.
                 if let Entry::Occupied(entry) = self.active_peers.entry(peer_id) {
@@ -382,6 +378,9 @@ where
                         entry.remove();
                     }
                 }
+                counters::LIBRA_NETWORK_PEERS
+                    .with_label_values(&[self.role.as_str(), "connected"])
+                    .set(self.active_peers.len() as i64);
 
                 // If the connection was explicitly closed by an upstream client, send an ACK.
                 if let Some(oneshot_tx) = self
