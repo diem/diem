@@ -27,6 +27,11 @@ commands:
           command: |
             rustup default stable
             rustup update stable
+  rust_powerpc_setup:
+    description: Add PowerPC toolchain
+    steps:
+      - run:
+          command: rustup target add powerpc-unknown-linux-gnu
   print_versions:
     description: Version Info
     steps:
@@ -227,6 +232,22 @@ jobs:
       - run:
           name: Build release
           command: RUST_BACKTRACE=1 cargo build -j 16 --release
+      - build_teardown
+  build-powerpc:
+    executor: build-executor
+    description: Cross-platform PowerPC Build
+    steps:
+      - build_setup
+      - rust_powerpc_setup
+      - restore_cargo_package_cache
+      - run:
+          command: RUST_BACKTRACE=1 cargo build --target=powerpc-unknown-linux-gnu -p libra-types
+      - run:
+          command: RUST_BACKTRACE=1 cargo build --target=powerpc-unknown-linux-gnu -p lcs
+      - run:
+          command: RUST_BACKTRACE=1 cargo build --target=powerpc-unknown-linux-gnu -p libra-crypto
+      - run:
+          command: RUST_BACKTRACE=1 cargo build --target=powerpc-unknown-linux-gnu -p transaction-builder
       - build_teardown
   build-e2e-test:
     executor: build-executor
