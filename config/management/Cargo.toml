@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 structopt = "0.3.14"
+thiserror = "1.0"
 
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-network-address = { path = "../../network/network-address", version = "0.1.0" }

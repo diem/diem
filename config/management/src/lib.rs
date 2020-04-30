@@ -3,6 +3,9 @@
 
 #![forbid(unsafe_code)]
 
+mod error;
+
+use crate::error::Error;
 use libra_crypto::{ed25519::Ed25519PublicKey, hash::CryptoHash, x25519, ValidCryptoMaterial};
 use libra_network_address::{NetworkAddress, RawNetworkAddress};
 use libra_secure_storage::{Storage, VaultStorage};
@@ -50,54 +53,100 @@ pub enum Command {
     Verify(SecureBackend),
 }
 
+pub enum CommandName {
+    OperatorKey,
+    OwnerKey,
+    ValidatorConfig,
+    Verify,
+}
+
+impl From<&Command> for CommandName {
+    fn from(command: &Command) -> Self {
+        match command {
+            Command::OperatorKey(_) => CommandName::OperatorKey,
+            Command::OwnerKey(_) => CommandName::OwnerKey,
+            Command::ValidatorConfig(_) => CommandName::ValidatorConfig,
+            Command::Verify(_) => CommandName::Verify,
+        }
+    }
+}
+
+impl std::fmt::Display for CommandName {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let name = match self {
+            CommandName::OperatorKey => "operator-key",
+            CommandName::OwnerKey => "owner-key",
+            CommandName::ValidatorConfig => "validator-config",
+            CommandName::Verify => "verify",
+        };
+        write!(f, "{}", name)
+    }
+}
+
 impl Command {
     pub fn execute(self) -> String {
         match &self {
-            Command::OperatorKey(_) => self.operator_key().to_string(),
-            Command::OwnerKey(_) => self.owner_key().to_string(),
-            Command::ValidatorConfig(_) => format!("{:?}", self.validator_config()),
-            Command::Verify(_) => self.verify(),
+            Command::OperatorKey(_) => self.operator_key().unwrap().to_string(),
+            Command::OwnerKey(_) => self.owner_key().unwrap().to_string(),
+            Command::ValidatorConfig(_) => format!("{:?}", self.validator_config().unwrap()),
+            Command::Verify(_) => self.verify().unwrap(),
         }
     }
 
-    pub fn operator_key(self) -> Ed25519PublicKey {
+    pub fn operator_key(self) -> Result<Ed25519PublicKey, Error> {
         if let Command::OperatorKey(secure_backend) = self {
             let storage = secure_storage(secure_backend);
+            if !storage.available() {
+                return Err(Error::LocalStorageUnavailable);
+            }
+
             storage
                 .get_public_key(constants::OPERATOR_KEY)
-                .unwrap()
-                .public_key
+                .map_err(|e| Error::LocalStorageReadError(e.to_string()))
+                .and_then(|v| Ok(v.public_key))
         } else {
-            panic!("Expected Command::OperatorKey");
+            let expected = CommandName::OperatorKey.to_string();
+            let actual = CommandName::from(&self).to_string();
+            Err(Error::UnexpectedCommand(expected, actual))
         }
     }
 
-    pub fn owner_key(self) -> Ed25519PublicKey {
+    pub fn owner_key(self) -> Result<Ed25519PublicKey, Error> {
         if let Command::OwnerKey(secure_backend) = self {
             let storage = secure_storage(secure_backend);
+            if !storage.available() {
+                return Err(Error::LocalStorageUnavailable);
+            }
+
             storage
                 .get_public_key(constants::OWNER_KEY)
-                .unwrap()
-                .public_key
+                .map_err(|e| Error::LocalStorageReadError(e.to_string()))
+                .and_then(|v| Ok(v.public_key))
         } else {
-            panic!("Expected Command::OwnerKey");
+            let expected = CommandName::OwnerKey.to_string();
+            let actual = CommandName::from(&self).to_string();
+            Err(Error::UnexpectedCommand(expected, actual))
         }
     }
 
-    pub fn validator_config(self) -> Transaction {
+    pub fn validator_config(self) -> Result<Transaction, Error> {
         if let Command::ValidatorConfig(config) = self {
             let mut storage = secure_storage(config.secure_backend);
+            if !storage.available() {
+                return Err(Error::LocalStorageUnavailable);
+            }
+
             let consensus_key = storage
                 .get_public_key(constants::CONSENSUS_KEY)
-                .expect("Unable to retrieve consensus key from storage")
+                .map_err(|e| Error::LocalStorageReadError(e.to_string()))?
                 .public_key;
             let fullnode_network_key = storage
                 .get_public_key(constants::FULLNODE_NETWORK_KEY)
-                .expect("Unable to retrieve fullnode network key from storage")
+                .map_err(|e| Error::LocalStorageReadError(e.to_string()))?
                 .public_key;
             let validator_network_key = storage
                 .get_public_key(constants::VALIDATOR_NETWORK_KEY)
-                .expect("Unable to retrieve validator network key from storage")
+                .map_err(|e| Error::LocalStorageReadError(e.to_string()))?
                 .public_key;
 
             let fullnode_address = RawNetworkAddress::try_from(&config.fullnode_address)
@@ -119,7 +168,7 @@ impl Command {
 
             let owner_key = storage
                 .get_public_key(constants::OWNER_KEY)
-                .expect("Unable to retrieve owner key from storage")
+                .map_err(|e| Error::LocalStorageReadError(e.to_string()))?
                 .public_key;
 
             // TODO(davidiw): The signing key, parameter 2, will be deleted soon, so this is a
@@ -148,20 +197,23 @@ impl Command {
             );
             let signature = storage
                 .sign_message(constants::OWNER_KEY, &raw_transaction.hash())
-                .expect("Unable to sign transaction hash");
+                .map_err(|e| Error::LocalStorageSigningError(e.to_string()))?;
             let signed_txn = SignedTransaction::new(raw_transaction, owner_key, signature);
-            Transaction::UserTransaction(signed_txn)
+            Ok(Transaction::UserTransaction(signed_txn))
         } else {
-            panic!("Expected Command::SignValidatorConfig");
+            let expected = CommandName::ValidatorConfig.to_string();
+            let actual = CommandName::from(&self).to_string();
+            Err(Error::UnexpectedCommand(expected, actual))
         }
     }
 
-    pub fn verify(self) -> String {
+    pub fn verify(self) -> Result<String, Error> {
         if let Command::Verify(secure_backend) = self {
             let storage = secure_storage(secure_backend);
             if !storage.available() {
-                return "Unable to access secure storage, check credentials and try again".into();
+                return Err(Error::LocalStorageUnavailable);
             }
+
             let mut buffer = String::new();
 
             writeln!(buffer, "Data stored in SecureStorage:").unwrap();
@@ -194,7 +246,7 @@ impl Command {
 
             writeln!(buffer, "=================================================").unwrap();
 
-            buffer
+            Ok(buffer)
         } else {
             panic!("Expected Command::Verify");
         }
@@ -303,6 +355,7 @@ pub mod tests {
             namespace,
         );
 
+        let validator_txn = validator_txn.unwrap();
         let validator_txn = validator_txn.as_signed_user_txn().unwrap().payload();
         let validator_txn = if let TransactionPayload::Script(script) = validator_txn {
             script.clone()
@@ -328,7 +381,8 @@ pub mod tests {
             "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
             "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
             namespace,
-        );
+        )
+        .unwrap();
     }
 
     #[test]
@@ -339,58 +393,46 @@ pub mod tests {
         let mut storage = secure_storage(default_secure_backend(namespace.into()));
         storage.reset_and_clear().unwrap();
 
-        let output = verify(namespace).split("KeyNotSet").count();
+        let output = verify(namespace).unwrap().split("KeyNotSet").count();
         assert_eq!(output, 10); // 9 KeyNotSet results in 9 splits
 
         initialize_storage(default_secure_backend(namespace.into()));
 
-        let output = verify(namespace).split("KeyNotSet").count();
+        let output = verify(namespace).unwrap().split("KeyNotSet").count();
         assert_eq!(output, 1); // 0 KeyNotSet results in 1 split
     }
 
     #[test]
-    #[should_panic]
     #[ignore]
-    fn test_owner_key_invalid() {
+    fn test_owner_key() {
         let namespace = "owner_key";
         let mut storage = secure_storage(default_secure_backend(namespace.into()));
         storage.reset_and_clear().unwrap();
-        owner_key(namespace);
-    }
+        owner_key(namespace).unwrap_err();
 
-    #[test]
-    #[ignore]
-    fn test_owner_key_valid() {
-        let namespace = "owner_key";
         let storage = initialize_storage(default_secure_backend(namespace.into()));
         let key = storage
             .get_public_key(constants::OWNER_KEY)
             .unwrap()
             .public_key;
-        let okey = owner_key(namespace);
+        let okey = owner_key(namespace).unwrap();
         assert_eq!(key, okey);
-    }
-
-    #[test]
-    #[should_panic]
-    #[ignore]
-    fn test_operator_key_invalid() {
-        let namespace = "operator_key";
-        let mut storage = secure_storage(default_secure_backend(namespace.into()));
-        storage.reset_and_clear().unwrap();
-        operator_key(namespace);
     }
 
     #[test]
     #[ignore]
     fn test_operator_key_valid() {
         let namespace = "operator_key";
+        let mut storage = secure_storage(default_secure_backend(namespace.into()));
+        storage.reset_and_clear().unwrap();
+        operator_key(namespace).unwrap_err();
+
         let storage = initialize_storage(default_secure_backend(namespace.into()));
         let key = storage
             .get_public_key(constants::OPERATOR_KEY)
             .unwrap()
             .public_key;
-        let okey = operator_key(namespace);
+        let okey = operator_key(namespace).unwrap();
         assert_eq!(key, okey);
     }
 
@@ -440,7 +482,7 @@ pub mod tests {
         storage
     }
 
-    fn operator_key(namespace: &str) -> Ed25519PublicKey {
+    fn operator_key(namespace: &str) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
                 management
@@ -458,7 +500,7 @@ pub mod tests {
         command.operator_key()
     }
 
-    fn owner_key(namespace: &str) -> Ed25519PublicKey {
+    fn owner_key(namespace: &str) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
                 management
@@ -481,7 +523,7 @@ pub mod tests {
         validator_address: NetworkAddress,
         fullnode_address: NetworkAddress,
         namespace: &str,
-    ) -> Transaction {
+    ) -> Result<Transaction, Error> {
         let args = format!(
             "
                 management
@@ -505,7 +547,7 @@ pub mod tests {
         command.validator_config()
     }
 
-    fn verify(namespace: &str) -> String {
+    fn verify(namespace: &str) -> Result<String, Error> {
         let args = format!(
             "
                 validator_config
