@@ -17,6 +17,10 @@ pub enum Error {
     LocalStorageReadError(String),
     #[error("Failed to sign data using local storage: {0}")]
     LocalStorageSigningError(String),
+    #[error("Failed to read remote storage: {0}")]
+    RemoteStorageReadError(String),
+    #[error("Remote storage unavailable, please check your configuration")]
+    RemoteStorageUnavailable,
     #[error("Unexpected command, expected {0}, found {1}")]
     UnexpectedCommand(String, String),
 }

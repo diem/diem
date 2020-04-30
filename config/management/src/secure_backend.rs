@@ -3,10 +3,12 @@
 
 use crate::error::Error;
 use libra_config::config::{self, OnDiskStorageConfig, VaultConfig};
+use libra_secure_storage::Storage;
 use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
     path::PathBuf,
+    str::FromStr,
 };
 
 /// SecureBackend is a parameter that is stored as set of semi-colon separated key/value pairs. The
@@ -15,13 +17,22 @@ use std::{
 /// config::SecureBackend type to parse.
 ///
 /// Example: backend=vault;server=http://127.0.0.1:8080;token=123456
-struct SecureBackend {
+#[derive(Debug)]
+pub struct SecureBackend {
     backend: String,
     parameters: HashMap<String, String>,
 }
 
 impl SecureBackend {
     const BACKEND: &'static str = "backend";
+}
+
+impl FromStr for SecureBackend {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        SecureBackend::try_from(s)
+    }
 }
 
 impl TryFrom<&str> for SecureBackend {
@@ -92,10 +103,19 @@ impl TryInto<config::SecureBackend> for SecureBackend {
     }
 }
 
+impl TryInto<Box<dyn Storage>> for SecureBackend {
+    type Error = Error;
+
+    fn try_into(self) -> Result<Box<dyn Storage>, Error> {
+        let config: config::SecureBackend = self.try_into()?;
+        Ok((&config).into())
+    }
+}
+
+#[allow(dead_code)]
 #[cfg(test)]
 mod tests {
     use super::*;
-    use libra_secure_storage::Storage;
 
     #[test]
     fn test_memory() {
@@ -129,7 +149,6 @@ mod tests {
 
     fn storage(s: &str) -> Result<Box<dyn Storage>, Error> {
         let management_backend: SecureBackend = s.try_into()?;
-        let config: config::SecureBackend = management_backend.try_into()?;
-        Ok((&config).into())
+        management_backend.try_into()
     }
 }
