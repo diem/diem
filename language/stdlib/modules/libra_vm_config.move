@@ -2,7 +2,7 @@ address 0x0:
 
 module LibraVMConfig {
     use 0x0::LibraConfig;
-    use 0x0::Transaction;
+    use 0x0::Sender;
 
     // The struct to hold all config data needed to operate the LibraVM.
     // * publishing_option: Defines Scripts/Modules that are allowed to execute in the current configruation.
@@ -64,7 +64,8 @@ module LibraVMConfig {
     public fun initialize(
         publishing_option: vector<u8>,
         instruction_schedule: vector<u8>,
-        native_schedule: vector<u8>
+        native_schedule: vector<u8>,
+        sender: &Sender::T
     ) {
         let gas_constants = GasConstants {
             global_memory_per_byte_cost: 8,
@@ -78,19 +79,23 @@ module LibraVMConfig {
             max_transaction_size_in_bytes: 4096,
         };
 
-        LibraConfig::publish_new_config<Self::T>(T {
-            publishing_option,
-            gas_schedule: GasSchedule {
-                instruction_schedule,
-                native_schedule,
-                gas_constants,
+        LibraConfig::publish_new_config<Self::T>(
+            T {
+                publishing_option,
+                gas_schedule: GasSchedule {
+                    instruction_schedule,
+                    native_schedule,
+                    gas_constants,
+                },
             },
-        })
+            sender
+        )
     }
 
-    public fun set_publishing_option(publishing_option: vector<u8>) {
-        let current_config = LibraConfig::get<Self::T>(Transaction::sender());
+    public fun set_publishing_option(publishing_option: vector<u8>, sender: &Sender::T) {
+        let sender_address = Sender::address_(sender);
+        let current_config = LibraConfig::get<Self::T>(sender_address);
         current_config.publishing_option = publishing_option;
-        LibraConfig::set<Self::T>(Transaction::sender(), current_config )
+        LibraConfig::set<Self::T>(sender_address, current_config)
     }
 }

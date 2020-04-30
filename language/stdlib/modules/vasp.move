@@ -10,6 +10,7 @@ module VASP {
     use 0x0::Transaction;
     use 0x0::LibraTimestamp;
     use 0x0::AccountType;
+    use 0x0::Sender;
 
     // A RootVASP is held only by the root VASP account and holds the
     // VASP-related metadata for the account. It is subject to a time
@@ -38,21 +39,21 @@ module VASP {
 
     // Initialize the VASP association singleton resource. Must be called
     // before  any VASPs are allowed in the system.
-    public fun initialize() {
-        Association::assert_sender_is_association();
-        let sender = Transaction::sender();
-        Transaction::assert(sender == singleton_addr(), 7000);
-        AccountType::register<ChildVASP>();
-        AccountType::register<RootVASP>();
+    public fun initialize(sender: &Sender::T) {
+        let sender_address = Sender::address_(sender);
+        Association::assert_sender_is_association(sender);
+        Transaction::assert(sender_address == singleton_addr(), 7000);
+        AccountType::register<ChildVASP>(sender);
+        AccountType::register<RootVASP>(sender);
         // Now publish and certify this account to allow granting of root
         // VASP accounts. We can perform all of these operations at once
         // since the singleton_addr() == sender, and singleton_addr() must
         // be an association address.
-        AccountType::apply_for_granting_capability<RootVASP>();
-        AccountType::certify_granting_capability<RootVASP>(sender);
+        AccountType::apply_for_granting_capability<RootVASP>(sender);
+        AccountType::certify_granting_capability<RootVASP>(sender_address, sender);
         // Apply and certify that this account can transition Empty::T => RootVASP
-        AccountType::apply_for_transition_capability<RootVASP>(sender);
-        AccountType::grant_transition_capability<RootVASP>(sender);
+        AccountType::apply_for_transition_capability<RootVASP>(sender_address, sender);
+        AccountType::grant_transition_capability<RootVASP>(sender_address, sender);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -60,9 +61,9 @@ module VASP {
     ///////////////////////////////////////////////////////////////////////////
 
     // Recertifies that the account at `addr` is the root account for a VASP.
-    public fun recertify_vasp(addr: address) {
+    public fun recertify_vasp(addr: address, sender: &Sender::T) {
         // Verify that the sender is a correctly privileged association account
-        assert_sender_is_assoc_vasp_privileged();
+        assert_sender_is_assoc_vasp_privileged(sender);
         // Verify that the account in question is still a valid root VASP account
         // But, it's cert might have expired. That's why we don't use
         // `is_root_vasp` here, but instead make sure `addr` is a RootVASP
@@ -71,39 +72,39 @@ module VASP {
         let root_vasp = AccountType::account_metadata<RootVASP>(addr);
         root_vasp.expiration_date = LibraTimestamp::now_microseconds() + cert_lifetime();
         // The sending account must have a TransitionCapability<RootVASP>.
-        AccountType::update<RootVASP>(addr, root_vasp);
+        AccountType::update<RootVASP>(addr, root_vasp, sender);
     }
 
     // A certification of a VASP with its root account at `addr` can only
     // happen if there is an uncertified RootVASP account type published
     // under the address.
-    public fun grant_vasp(addr: address) {
-        assert_sender_is_assoc_vasp_privileged();
+    public fun grant_vasp(addr: address, sender: &Sender::T) {
+        assert_sender_is_assoc_vasp_privileged(sender);
         // The sending account must have a TransitionCapability<RootVASP> capability
-        AccountType::transition<RootVASP>(addr);
-        AccountType::certify_granting_capability<ChildVASP>(addr);
+        AccountType::transition<RootVASP>(addr, sender);
+        AccountType::certify_granting_capability<ChildVASP>(addr, sender);
     }
 
     // Non-destructively decertify the root vasp at `addr`. Can be
     // recertified later on via `recertify_vasp`.
-    public fun decertify_vasp(addr: address) {
-        assert_sender_is_assoc_vasp_privileged();
+    public fun decertify_vasp(addr: address, sender: &Sender::T) {
+        assert_sender_is_assoc_vasp_privileged(sender);
         Transaction::assert(is_root_vasp(addr), 7001);
         let root_vasp = AccountType::account_metadata<RootVASP>(addr);
         // Expire the root credential.
         root_vasp.expiration_date = 0;
         // Updat the root vasp metadata for the account with the new root vasp
         // credential.
-        AccountType::update<RootVASP>(addr, root_vasp);
+        AccountType::update<RootVASP>(addr, root_vasp, sender);
     }
 
     // Update the CA certificate of the root VASP at `root_vasp_addr` with
     // the new `ca_cert`. Must be sent from an association account.
-    public fun update_ca_cert(root_vasp_addr: address, ca_cert: vector<u8>) {
+    public fun update_ca_cert(root_vasp_addr: address, ca_cert: vector<u8>, sender: &Sender::T) {
         Transaction::assert(is_root_vasp(root_vasp_addr), 7001);
         let root_vasp = AccountType::account_metadata<RootVASP>(root_vasp_addr);
         root_vasp.ca_cert = ca_cert;
-        AccountType::update<RootVASP>(root_vasp_addr, root_vasp);
+        AccountType::update<RootVASP>(root_vasp_addr, root_vasp, sender);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -118,6 +119,7 @@ module VASP {
         human_name: vector<u8>,
         base_url: vector<u8>,
         ca_cert: vector<u8>,
+        sender: &Sender::T
     ) {
         let current_time = LibraTimestamp::now_microseconds();
         AccountType::apply_for<RootVASP>(RootVASP {
@@ -125,17 +127,17 @@ module VASP {
             human_name,
             base_url,
             ca_cert,
-        }, singleton_addr());
-        AccountType::apply_for_granting_capability<ChildVASP>();
+        }, singleton_addr(), sender);
+        AccountType::apply_for_granting_capability<ChildVASP>(sender);
     }
 
     // Child accounts for VASPs are not allowed by default. Calling this
     // function from the root VASP account allows child accounts to be
     // created for the calling VASP account.
-    public fun allow_child_accounts() {
-        let sender = Transaction::sender();
-        AccountType::apply_for_transition_capability<ChildVASP>(sender);
-        AccountType::grant_transition_capability<ChildVASP>(sender);
+    public fun allow_child_accounts(sender: &Sender::T) {
+        let sender_address = Sender::address_(sender);
+        AccountType::apply_for_transition_capability<ChildVASP>(sender_address, sender);
+        AccountType::grant_transition_capability<ChildVASP>(sender_address, sender);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -144,26 +146,26 @@ module VASP {
 
     // Publishes a (to-be-certified) transition under the sending address,
     // with the root authority being at `root_vasp_addr`.
-    public fun apply_for_parent_capability() {
-        let sender = Transaction::sender();
-        Transaction::assert(is_child_vasp(sender), 7002);
-        let root_vasp_addr = root_vasp_address(sender);
+    public fun apply_for_parent_capability(sender: &Sender::T) {
+        let sender_address = Sender::address_(sender);
+        Transaction::assert(is_child_vasp(sender_address), 7002);
+        let root_vasp_addr = root_vasp_address(sender_address);
         // Apply for the ability to transition Empty::T => VASP::ChildVASP
         // accounts with the root authority address being at `root_vasp_addr`
-        AccountType::apply_for_transition_capability<ChildVASP>(root_vasp_addr);
+        AccountType::apply_for_transition_capability<ChildVASP>(root_vasp_addr, sender);
     }
 
     // Certifies the transition capability at `for_address`. The caller
     // must be the root VASP account.
-    public fun grant_parent_capability(for_address: address) {
-        AccountType::grant_transition_capability<ChildVASP>(for_address);
+    public fun grant_parent_capability(for_address: address, sender: &Sender::T) {
+        AccountType::grant_transition_capability<ChildVASP>(for_address, sender);
     }
 
     // Removes the ability for the account at `addr` to create additional
     // accounts on behalf of the root VASP (which must be the sender). Must
     // be called by the root VASP account.
-    public fun remove_parent_capability(addr: address) {
-        AccountType::remove_transition_capability<ChildVASP>(addr);
+    public fun remove_parent_capability(addr: address, sender: &Sender::T) {
+        AccountType::remove_transition_capability<ChildVASP>(addr, sender);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -175,37 +177,40 @@ module VASP {
     // account limit restrictions since only an Empty::T account type can
     // be transitioned--therefore its balance must be 0 in order for
     // certification to succeed.
-    public fun grant_child_account(addr: address) {
-        let root_account_addr = AccountType::transition_cap_root_addr<ChildVASP>(Transaction::sender());
+    public fun grant_child_account(addr: address, sender: &Sender::T) {
+        let root_account_addr =
+            AccountType::transition_cap_root_addr<ChildVASP>(Sender::address_(sender));
         Transaction::assert(is_root_vasp(root_account_addr), 7001);
         // Transition the child account: Empty::T => VASP::ChildVASP.
         // The ChildVASP account type must be published under the child, but not yet certified
-        AccountType::transition<ChildVASP>(addr);
+        AccountType::transition<ChildVASP>(addr, sender);
         let child_vasp = AccountType::account_metadata<ChildVASP>(addr);
         // Now mark this account as certified
         child_vasp.is_certified = true;
-        AccountType::update<ChildVASP>(addr, child_vasp);
+        AccountType::update<ChildVASP>(addr, child_vasp, sender);
     }
 
     // Decertify the child VASP account at `addr`. Caller must be the root
     // VASP account.
-    public fun decertify_child_account(addr: address) {
+    public fun decertify_child_account(addr: address, sender: &Sender::T) {
         Transaction::assert(!is_parent_vasp(addr), 7003);
-        let root_account_addr = AccountType::transition_cap_root_addr<ChildVASP>(Transaction::sender());
+        let root_account_addr =
+            AccountType::transition_cap_root_addr<ChildVASP>(Sender::address_(sender));
         Transaction::assert(is_root_vasp(root_account_addr), 7001);
         let child_vasp = AccountType::account_metadata<ChildVASP>(addr);
         child_vasp.is_certified = false;
-        AccountType::update<ChildVASP>(addr, child_vasp);
+        AccountType::update<ChildVASP>(addr, child_vasp, sender);
     }
 
     // Recertifies a child account that has been previously uncertified.
-    public fun recertify_child_account(addr: address) {
-        let root_account_addr = AccountType::transition_cap_root_addr<ChildVASP>(Transaction::sender());
+    public fun recertify_child_account(addr: address, sender: &Sender::T) {
+        let root_account_addr =
+            AccountType::transition_cap_root_addr<ChildVASP>(Sender::address_(sender));
         Transaction::assert(is_root_vasp(root_account_addr), 7001);
         // Child cert must be published under the child, but not yet certified
         let child_vasp = AccountType::account_metadata<ChildVASP>(addr);
         child_vasp.is_certified = true;
-        AccountType::update<ChildVASP>(addr, child_vasp);
+        AccountType::update<ChildVASP>(addr, child_vasp, sender);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -215,12 +220,11 @@ module VASP {
     // Publish the child VASP resource under the sending account. It can
     // only be certified by the root account or a parent account under the
     // same root VASP.
-    public fun apply_for_child_vasp_credential(root_vasp_addr: address) {
-        let sender = Transaction::sender();
-        Transaction::assert(!is_vasp(sender), 7002);
+    public fun apply_for_child_vasp_credential(root_vasp_addr: address, sender: &Sender::T) {
+        Transaction::assert(!is_vasp(Sender::address_(sender)), 7002);
         Transaction::assert(is_root_vasp(root_vasp_addr), 7001);
         AccountType::assert_has_transition_cap<ChildVASP>(root_vasp_addr);
-        AccountType::apply_for<ChildVASP>(ChildVASP{ is_certified: false }, root_vasp_addr);
+        AccountType::apply_for<ChildVASP>(ChildVASP{ is_certified: false }, root_vasp_addr, sender);
     }
 
     // The account at address `addr` is a root VASP if the account at that
@@ -324,8 +328,10 @@ module VASP {
         root_credential.expiration_date < LibraTimestamp::now_microseconds()
     }
 
-    fun assert_sender_is_assoc_vasp_privileged() {
-        Transaction::assert(Association::has_privilege<CreationPrivilege>(Transaction::sender()), 7000);
+    fun assert_sender_is_assoc_vasp_privileged(sender: &Sender::T) {
+        Transaction::assert(
+            Association::has_privilege<CreationPrivilege>(Sender::address_(sender)), 7000
+        );
     }
 
     fun singleton_addr(): address {

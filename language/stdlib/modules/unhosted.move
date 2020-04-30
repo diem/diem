@@ -2,6 +2,7 @@ address 0x0:
 
 module Unhosted {
     use 0x0::AccountLimits;
+    use 0x0::Sender;
     use 0x0::Transaction;
 
     // An unhosted account is subject to account holding/velocity limits.
@@ -12,12 +13,12 @@ module Unhosted {
     }
 
     // This is _not_ meant to be called in genesis. Once this
-    public fun publish_global_limits_definition() {
+    public fun publish_global_limits_definition(sender: &Sender::T) {
         // TODO: error code
-        Transaction::assert(Transaction::sender() == limits_addr(), 0);
+        Transaction::assert(Sender::address_(sender) == limits_addr(), 0);
         // These are limits for testnet _only_.
-        AccountLimits::publish_unrestricted_limits();
-        AccountLimits::certify_limits_definition(limits_addr());
+        AccountLimits::publish_unrestricted_limits(sender);
+        AccountLimits::certify_limits_definition(limits_addr(), sender);
     }
 
     public fun create(): T {

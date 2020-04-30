@@ -1,8 +1,7 @@
 address 0x0:
 
 module ValidatorConfig {
-
-    use 0x0::Transaction;
+    use 0x0::Sender;
     // TODO(philiphayes): We should probably enforce a max length for these fields
 
     struct Config {
@@ -71,8 +70,11 @@ module ValidatorConfig {
         validator_network_identity_pubkey: vector<u8>,
         validator_network_address: vector<u8>,
         fullnodes_network_identity_pubkey: vector<u8>,
-        fullnodes_network_address: vector<u8>) {
+        fullnodes_network_address: vector<u8>,
+        sender: &Sender::T
+    ) {
 
+        Sender::move_to(sender);
         move_to_sender<T>(
             T {
                 config: Config {
@@ -89,8 +91,11 @@ module ValidatorConfig {
 
     // Rotate a validator candidate's consensus public key. The change will not take effect until
     // the next reconfiguration.
-    public fun rotate_consensus_pubkey(consensus_pubkey: vector<u8>) acquires T {
-        let t_ref = borrow_global_mut<T>(Transaction::sender());
+    public fun rotate_consensus_pubkey(
+        consensus_pubkey: vector<u8>,
+        sender: &Sender::T
+    ) acquires T {
+        let t_ref = borrow_global_mut<T>(Sender::address_(sender));
         let key_ref = &mut t_ref.config.consensus_pubkey;
         *key_ref = consensus_pubkey;
     }
@@ -100,9 +105,10 @@ module ValidatorConfig {
     // Rotate the network public key for validator discovery. This change will be
     // committed in the next reconfiguration.
     public fun rotate_validator_network_identity_pubkey(
-        validator_network_identity_pubkey: vector<u8>
+        validator_network_identity_pubkey: vector<u8>,
+        sender: &Sender::T
     ) acquires T {
-        let t_ref = borrow_global_mut<T>(Transaction::sender());
+        let t_ref = borrow_global_mut<T>(Sender::address_(sender));
         let key_ref = &mut t_ref.config.validator_network_identity_pubkey;
         *key_ref = validator_network_identity_pubkey;
     }
@@ -110,9 +116,10 @@ module ValidatorConfig {
     // Rotate the network address for validator discovery. This change will be
     // committed in the next reconfiguration.
     public fun rotate_validator_network_address(
-        validator_network_address: vector<u8>
+        validator_network_address: vector<u8>,
+        sender: &Sender::T
     ) acquires T {
-        let t_ref = borrow_global_mut<T>(Transaction::sender());
+        let t_ref = borrow_global_mut<T>(Sender::address_(sender));
         let key_ref = &mut t_ref.config.validator_network_address;
         *key_ref = validator_network_address;
     }

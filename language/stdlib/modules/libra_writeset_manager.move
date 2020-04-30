@@ -6,6 +6,7 @@ module LibraWriteSetManager {
     use 0x0::Hash;
     use 0x0::Transaction;
     use 0x0::LibraConfig;
+    use 0x0::Sender;
 
     resource struct T {
         sequence_number: u64,
@@ -16,23 +17,24 @@ module LibraWriteSetManager {
         writeset_payload: vector<u8>,
     }
 
-    public fun initialize() {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 1);
-
+    public fun initialize(sender: &Sender::T) {
+        Transaction::assert(Sender::address_(sender) == 0xA550C18, 1);
+        Sender::move_to(sender);
         move_to_sender<T>(T {
             sequence_number: 0,
-            upgrade_events: Event::new_event_handle<Self::UpgradeEvent>(),
+            upgrade_events: Event::new_event_handle<Self::UpgradeEvent>(sender),
         });
     }
 
     fun prologue(
         writeset_sequence_number: u64,
         writeset_public_key: vector<u8>,
+        sender: &Sender::T,
     ) acquires T {
-        let sender = Transaction::sender();
-        Transaction::assert(sender == 0xA550C18, 33);
+        let sender_address = Sender::address_(sender);
+        Transaction::assert(sender_address == 0xA550C18, 33);
 
-        let association_auth_key = LibraAccount::authentication_key(sender);
+        let association_auth_key = LibraAccount::authentication_key(sender_address);
 
         let t_ref = borrow_global<T>(0xA550C18);
         Transaction::assert(writeset_sequence_number >= t_ref.sequence_number, 3);
@@ -44,7 +46,7 @@ module LibraWriteSetManager {
         );
     }
 
-    fun epilogue(writeset_payload: vector<u8>) acquires T {
+    fun epilogue(writeset_payload: vector<u8>, sender: &Sender::T) acquires T {
         let t_ref = borrow_global_mut<T>(0xA550C18);
         t_ref.sequence_number = t_ref.sequence_number + 1;
 
@@ -52,6 +54,6 @@ module LibraWriteSetManager {
             &mut t_ref.upgrade_events,
             UpgradeEvent { writeset_payload },
         );
-        LibraConfig::reconfigure();
+        LibraConfig::reconfigure(sender);
     }
 }

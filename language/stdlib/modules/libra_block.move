@@ -5,6 +5,7 @@ module LibraBlock {
     use 0x0::Event;
     use 0x0::LibraSystem;
     use 0x0::LibraTimestamp;
+    use 0x0::Sender;
     use 0x0::Transaction;
     use 0x0::TransactionFee;
 
@@ -27,13 +28,14 @@ module LibraBlock {
 
     // This can only be invoked by the Association address, and only a single time.
     // Currently, it is invoked in the genesis transaction
-    public fun initialize_block_metadata() {
+    public fun initialize_block_metadata(sender: &Sender::T) {
       // Only callable by the Association address
-      Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+      Transaction::assert(Sender::address_(sender) == 0xA550C18, 1);
 
+      Sender::move_to(sender);
       move_to_sender<BlockMetadata>(BlockMetadata {
         height: 0,
-        new_block_events: Event::new_event_handle<Self::NewBlockEvent>(),
+        new_block_events: Event::new_event_handle<Self::NewBlockEvent>(sender),
       });
     }
 
@@ -46,18 +48,19 @@ module LibraBlock {
         round: u64,
         timestamp: u64,
         previous_block_votes: vector<address>,
-        proposer: address
+        proposer: address,
+        sender: &Sender::T,
     ) acquires BlockMetadata {
         // Can only be invoked by LibraVM privilege.
-        Transaction::assert(Transaction::sender() == 0x0, 33);
+        Transaction::assert(Sender::address_(sender) == 0x0, 33);
 
-        process_block_prologue(round, timestamp, previous_block_votes, proposer);
+        process_block_prologue(round, timestamp, previous_block_votes, proposer, sender);
 
         // Currently distribute once per-block.
         // TODO: Once we have a better on-chain representation of epochs we will make this per-epoch.
         // TODO: Need to update this to allow per-currency transaction fee
         // distribution
-        TransactionFee::distribute_transaction_fees<LBR::T>();
+        TransactionFee::distribute_transaction_fees<LBR::T>(sender);
 
         // TODO(valerini): call regular reconfiguration here LibraSystem2::update_all_validator_info()
     }
@@ -67,13 +70,14 @@ module LibraBlock {
         round: u64,
         timestamp: u64,
         previous_block_votes: vector<address>,
-        proposer: address
+        proposer: address,
+        sender: &Sender::T,
     ) acquires BlockMetadata {
         let block_metadata_ref = borrow_global_mut<BlockMetadata>(0xA550C18);
 
         // TODO: Figure out a story for errors in the system transactions.
         if(proposer != 0x0) Transaction::assert(LibraSystem::is_validator(proposer), 5002);
-        LibraTimestamp::update_global_time(proposer, timestamp);
+        LibraTimestamp::update_global_time(proposer, timestamp, sender);
         block_metadata_ref.height = block_metadata_ref.height + 1;
         Event::emit_event<NewBlockEvent>(
           &mut block_metadata_ref.new_block_events,

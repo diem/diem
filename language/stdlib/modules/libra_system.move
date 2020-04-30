@@ -4,6 +4,7 @@ module LibraSystem {
     use 0x0::Event;
     use 0x0::LibraConfig;
     use 0x0::LibraSystem2;
+    use 0x0::Sender;
     use 0x0::Transaction;
     use 0x0::ValidatorConfig;
     use 0x0::Vector;
@@ -44,15 +45,18 @@ module LibraSystem {
 
     // This can only be invoked by the Association address, and only a single time.
     // Currently, it is invoked in the genesis transaction
-    public fun initialize_validator_set() {
+    public fun initialize_validator_set(sender: &Sender::T) {
         // Only callable by the validator set address
-        Transaction::assert(Transaction::sender() == 0x1D8, 1);
+        Transaction::assert(Sender::address_(sender) == 0x1D8, 1);
 
-        LibraConfig::publish_new_config<T>(T {
-            scheme: 0,
-            validators: Vector::empty(),
-        });
-        LibraSystem2::initialize_validator_set();
+        LibraConfig::publish_new_config<T>(
+            T {
+                scheme: 0,
+                validators: Vector::empty(),
+            },
+            sender
+        );
+        LibraSystem2::initialize_validator_set(sender);
     }
 
     // This returns a copy of the current validator set.
@@ -60,13 +64,14 @@ module LibraSystem {
         LibraConfig::get<T>(0x1D8)
     }
 
-    public fun initialize_discovery_set() {
+    public fun initialize_discovery_set(sender: &Sender::T) {
         // Only callable by the discovery set address
-        Transaction::assert(Transaction::sender() == 0xD15C0, 1);
+        Transaction::assert(Sender::address_(sender) == 0xD15C0, 1);
 
+        Sender::move_to(sender);
         move_to_sender<DiscoverySet>(DiscoverySet {
             discovery_set: Vector::empty(),
-            change_events: Event::new_event_handle<DiscoverySetChangeEvent>(),
+            change_events: Event::new_event_handle<DiscoverySetChangeEvent>(sender),
         });
     }
 
@@ -206,14 +211,14 @@ module LibraSystem {
     // Fails if `account_address` is already a validator or has already been added to the addition
     // buffer.
     // Only callable by the Association address
-    public fun add_validator(account_address: address) acquires DiscoverySet {
-        add_validator_(account_address);
+    public fun add_validator(account_address: address, sender: &Sender::T) acquires DiscoverySet {
+        add_validator_(account_address, sender);
         emit_discovery_set_change();
     }
 
-   fun add_validator_(account_address: address) acquires DiscoverySet {
+   fun add_validator_(account_address: address, sender: &Sender::T) acquires DiscoverySet {
        // Only the Association can add new validators
-       Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+       Transaction::assert(Sender::address_(sender) == 0xA550C18, 1);
        // A prospective validator must have a validator config resource
        Transaction::assert(ValidatorConfig::has(account_address), 17);
 
@@ -237,9 +242,9 @@ module LibraSystem {
        set_validator_set(validator_set);
    }
 
-   public fun remove_validator(account_address: address) acquires DiscoverySet {
+   public fun remove_validator(account_address: address, sender: &Sender::T) acquires DiscoverySet {
        // Only the Association can remove validators
-       Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+       Transaction::assert(Sender::address_(sender) == 0xA550C18, 1);
 
        let validator_set = get_validator_set();
        let discovery_set_ref = borrow_global_mut<DiscoverySet>(0xD15C0);
@@ -268,21 +273,21 @@ module LibraSystem {
        emit_discovery_set_change();
    }
 
-   public fun rotate_consensus_pubkey(consensus_pubkey: vector<u8>) {
+   public fun rotate_consensus_pubkey(consensus_pubkey: vector<u8>, sender: &Sender::T) {
+       let sender_address = Sender::address_(sender);
        let validator_set = get_validator_set();
-       let account_address = Transaction::sender();
 
        // Ensure that this address is already a validator
        Transaction::assert(
-           is_validator_(&account_address, &validator_set.validators),
+           is_validator_(&sender_address, &validator_set.validators),
            21
        );
 
-       ValidatorConfig::rotate_consensus_pubkey(consensus_pubkey);
+       ValidatorConfig::rotate_consensus_pubkey(consensus_pubkey, sender);
 
        let validator_index = get_validator_index(
            &validator_set.validators,
-           account_address
+           sender_address
        );
 
        if (copy_validator_info(Vector::borrow_mut(&mut validator_set.validators, validator_index))) {
@@ -291,16 +296,19 @@ module LibraSystem {
    }
 
    public fun rotate_validator_network_identity_pubkey(
-       validator_network_identity_pubkey: vector<u8>
+       validator_network_identity_pubkey: vector<u8>,
+       sender: &Sender::T
    ) acquires DiscoverySet {
        let discovery_set_ref = borrow_global_mut<DiscoverySet>(0xD15C0);
-       let account_address = Transaction::sender();
 
-       ValidatorConfig::rotate_validator_network_identity_pubkey(validator_network_identity_pubkey);
+       ValidatorConfig::rotate_validator_network_identity_pubkey(
+           validator_network_identity_pubkey,
+           sender
+       );
 
        let validator_index = get_discovery_index(
            &discovery_set_ref.discovery_set,
-           account_address
+           Sender::address_(sender)
        );
 
        if(copy_discovery_info(Vector::borrow_mut(&mut discovery_set_ref.discovery_set, validator_index))) {
@@ -309,16 +317,16 @@ module LibraSystem {
    }
 
    public fun rotate_validator_network_address(
-       validator_network_address: vector<u8>
+       validator_network_address: vector<u8>,
+       sender: &Sender::T
    ) acquires DiscoverySet {
        let discovery_set_ref = borrow_global_mut<DiscoverySet>(0xD15C0);
-       let account_address = Transaction::sender();
 
-       ValidatorConfig::rotate_validator_network_address(validator_network_address);
+       ValidatorConfig::rotate_validator_network_address(validator_network_address, sender);
 
        let validator_index = get_discovery_index(
            &discovery_set_ref.discovery_set,
-           account_address
+           Sender::address_(sender)
        );
 
        if(copy_discovery_info(Vector::borrow_mut(&mut discovery_set_ref.discovery_set, validator_index))) {

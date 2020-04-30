@@ -12,6 +12,7 @@ module AccountType {
     use 0x0::Association;
     use 0x0::Transaction;
     use 0x0::Empty;
+    use 0x0::Sender;
 
     // A resource to represent the account type. Multiple of these (of
     // different `AccountType`'s) can be published under the same account.
@@ -71,9 +72,9 @@ module AccountType {
     // Account limits accounting information is held within the
     // `account_metadata` field. Until this function is called account-limit
     // tracking cannot work.
-    public fun grant_account_tracking(): UpdateCapability {
+    public fun grant_account_tracking(sender: &Sender::T): UpdateCapability {
         // This needs to match the singleton_addr in AccountTrack
-        Transaction::assert(Transaction::sender() == 0xA550C18, 2006);
+        Transaction::assert(Sender::address_(sender) == 0xA550C18, 2006);
         UpdateCapability{}
     }
 
@@ -98,8 +99,13 @@ module AccountType {
 
     // Publishes a non-certified T<Type> resource under the
     // sending account address.
-    public fun apply_for<Type: copyable>(account_metadata: Type, root_address: address) {
+    public fun apply_for<Type: copyable>(
+        account_metadata: Type,
+        root_address: address,
+        sender: &Sender::T
+    ) {
         assert_is_registered<Type>();
+        Sender::move_to(sender);
         move_to_sender(T<Type> {
             is_certified: false,
             account_metadata,
@@ -116,12 +122,12 @@ module AccountType {
     // the published `T<To>` resource under `addr`.
     // Once the account is transitioned to a non-Empty account type, that
     // account type cannot be transitioned any further.
-    public fun transition<To: copyable>(addr: address)
+    public fun transition<To: copyable>(addr: address, sender: &Sender::T)
     acquires TransitionCapability, T {
         // Make sure the account is an empty account
         assert_is_a<Empty::T>(addr);
         // Get the transition capability held under the sender
-        let transition_cap = borrow_global<TransitionCapability<To>>(Transaction::sender());
+        let transition_cap = borrow_global<TransitionCapability<To>>(Sender::address_(sender));
         // Make sure it's certified
         Transaction::assert(transition_cap.is_certified, 2000);
         let T{ is_certified: _, account_metadata: _, root_address: _ } = move_from<T<Empty::T>>(addr);
@@ -182,14 +188,14 @@ module AccountType {
     // Only TransitionCapability's with the same `root_address` as
     // specified in the account types `root_address` can update
     // this field.
-    public fun update<Type: copyable>(addr: address, new_account_metadata: Type)
+    public fun update<Type: copyable>(addr: address, new_account_metadata: Type, sender: &Sender::T)
     acquires T, TransitionCapability {
-        let sender = Transaction::sender();
+        let sender_address = Sender::address_(sender);
         assert_is_a<Type>(addr);
         // Make sure that the sender has a transition capability.
-        assert_has_transition_cap<Type>(sender);
+        assert_has_transition_cap<Type>(sender_address);
         let account_type = borrow_global_mut<T<Type>>(addr);
-        let transition_cap = borrow_global<TransitionCapability<Type>>(sender);
+        let transition_cap = borrow_global<TransitionCapability<Type>>(sender_address);
         // Make sure that the transition capability and the account at
         // `addr` have the same root of authority.
         Transaction::assert(account_type.root_address == transition_cap.root_address, 2001);
@@ -216,8 +222,12 @@ module AccountType {
 
     // Publish an uncertified `TransitionCapability<To>` under the
     // sending account with the given `root_address`.
-    public fun apply_for_transition_capability<To: copyable>(root_address: address) {
+    public fun apply_for_transition_capability<To: copyable>(
+        root_address: address,
+        sender: &Sender::T
+    ) {
         assert_is_registered<To>();
+        Sender::move_to(sender);
         move_to_sender(TransitionCapability<To> {
             is_certified: false,
             root_address
@@ -226,8 +236,9 @@ module AccountType {
 
     // Publish an uncertified `GrantingCapability<To>` under the
     // sending account.
-    public fun apply_for_granting_capability<To: copyable>() {
+    public fun apply_for_granting_capability<To: copyable>(sender: &Sender::T) {
         assert_is_registered<To>();
+        Sender::move_to(sender);
         move_to_sender(GrantingCapability<To> { is_certified: false });
     }
 
@@ -235,27 +246,27 @@ module AccountType {
     // `TransitionCapability<To>`s as long as the `root_address` in
     // the TransitionCapability matches the address where the
     // `GrantingCapability` is stored.
-    public fun grant_transition_capability<To: copyable>(addr: address)
+    public fun grant_transition_capability<To: copyable>(addr: address, sender: &Sender::T)
     acquires GrantingCapability, TransitionCapability {
-        let can_grant = borrow_global<GrantingCapability<To>>(Transaction::sender()).is_certified;
+        let can_grant =
+            borrow_global<GrantingCapability<To>>(Sender::address_(sender)).is_certified;
         Transaction::assert(can_grant, 2001);
         borrow_global_mut<TransitionCapability<To>>(addr).is_certified = true;
     }
 
     // Only an association account can certify a GrantingCapability (of any
     // type).
-    public fun certify_granting_capability<To: copyable>(addr: address)
+    public fun certify_granting_capability<To: copyable>(addr: address, sender: &Sender::T)
     acquires GrantingCapability {
-        Association::assert_sender_is_association();
+        Association::assert_sender_is_association(sender);
         borrow_global_mut<GrantingCapability<To>>(addr).is_certified = true;
     }
 
     // Remove the transition capability from the account at `addr`. The
     // sender must have the correct GrantingCapability published under it.
-    public fun remove_transition_capability<To: copyable>(addr: address)
+    public fun remove_transition_capability<To: copyable>(addr: address, sender: &Sender::T)
     acquires TransitionCapability, GrantingCapability {
-        let sender = Transaction::sender();
-        let granting_cap = borrow_global<GrantingCapability<To>>(sender);
+        let granting_cap = borrow_global<GrantingCapability<To>>(Sender::address_(sender));
         TransitionCapability { is_certified: _, root_address: _ } = move_from<TransitionCapability<To>>(addr);
         Transaction::assert(granting_cap.is_certified, 2000);
     }
@@ -264,24 +275,27 @@ module AccountType {
     // This unpublishes it. It is important to note that this _does not_
     // invalidate any child accounts with a `root_address` pointing at
     // this account.
-    public fun remove_granting_capability_from_sender<To: copyable>()
+    public fun remove_granting_capability_from_sender<To: copyable>(sender: &Sender::T)
     acquires GrantingCapability {
-        GrantingCapability { is_certified: _ } = move_from<GrantingCapability<To>>(Transaction::sender());
+        GrantingCapability { is_certified: _ } = move_from<GrantingCapability<To>>(
+            Sender::address_(sender)
+        );
     }
 
     // Remove the `GrantingCapability` from the account at `addr`. Must be
     // called by an association account.
     // It is important to note that this _does not_ invalidate any child
     // accounts with a `root_address` pointing at this account.
-    public fun remove_granting_capability<To: copyable>(addr: address)
+    public fun remove_granting_capability<To: copyable>(addr: address, sender: &Sender::T)
     acquires GrantingCapability {
-        Association::assert_sender_is_association();
+        Association::assert_sender_is_association(sender);
         GrantingCapability { is_certified: _ } = move_from<GrantingCapability<To>>(addr);
     }
 
     // Register `Type` as a valid account type.
-    public fun register<Type: copyable>() {
-        Transaction::assert(Transaction::sender() == singleton_addr(), 2001);
+    public fun register<Type: copyable>(sender: &Sender::T) {
+        Transaction::assert(Sender::address_(sender) == singleton_addr(), 2001);
+        Sender::move_to(sender);
         move_to_sender(Registered<Type>{});
     }
 

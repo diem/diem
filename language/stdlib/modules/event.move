@@ -3,6 +3,7 @@ address 0x0:
 module Event {
     use 0x0::LCS;
     use 0x0::LibraTimestamp;
+    use 0x0::Sender;
     use 0x0::Vector;
     use 0x0::Transaction;
 
@@ -28,19 +29,23 @@ module Event {
         guid: vector<u8>,
     }
 
-    public fun grant_event_handle_creation_operation(): EventHandleGeneratorCreationCapability {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 0);
+    public fun grant_event_handle_creation_operation(
+        sender: &Sender::T
+    ): EventHandleGeneratorCreationCapability {
+        Transaction::assert(Sender::address_(sender) == 0xA550C18, 0);
         EventHandleGeneratorCreationCapability{}
     }
 
-    public fun initialize() {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 0);
+    public fun initialize(sender: &Sender::T) {
+        Transaction::assert(Sender::address_(sender) == 0xA550C18, 0);
+        Sender::move_to(sender);
         move_to_sender(EventHandleGenerator { counter: 0, addr: 0xA550C18 })
     }
 
     public fun new_event_generator(
         addr: address,
-        _cap: &EventHandleGeneratorCreationCapability
+        _cap: &EventHandleGeneratorCreationCapability,
+        sender: &Sender::T
     ): EventHandleGenerator acquires EventHandleGenerator {
         if (::exists<EventHandleGenerator>(addr) && LibraTimestamp::is_genesis()) {
             // if the account already has an event handle generator, return it instead of creating
@@ -49,7 +54,7 @@ module Event {
             // this should only happen during genesis bootstrapping, and only for the association
             // account.
             // TODO: see if we can eliminate this hack + the initialize() function
-            Transaction::assert(Transaction::sender() == 0xA550C18, 0);
+            Transaction::assert(Sender::address_(sender) == 0xA550C18, 0);
             Transaction::assert(addr == 0xA550C18, 0);
             move_from<EventHandleGenerator>(addr)
         } else {
@@ -80,9 +85,9 @@ module Event {
 
 
     // Use EventHandleGenerator to generate a unique event handle that one can emit an event to.
-    public fun new_event_handle<T: copyable>(): EventHandle<T>
+    public fun new_event_handle<T: copyable>(sender: &Sender::T): EventHandle<T>
     acquires EventHandleGenerator {
-        let event_generator = borrow_global_mut<EventHandleGenerator>(Transaction::sender());
+        let event_generator = borrow_global_mut<EventHandleGenerator>(Sender::address_(sender));
         new_event_handle_from_generator(event_generator)
     }
 

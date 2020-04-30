@@ -12,6 +12,7 @@ module LibraSystem2 {
     use 0x0::Transaction;
     use 0x0::ValidatorConfig2;
     use 0x0::Vector;
+    use 0x0::Sender;
 
     struct ValidatorInfo {
         addr: address,
@@ -56,19 +57,20 @@ module LibraSystem2 {
 
     // This can only be invoked by the ValidatorSet address to instantiate the resource under that address.
     // It can only be called a single time. Currently, it is invoked in the genesis transaction.
-    public fun initialize_validator_set() {
-        Transaction::assert(Transaction::sender() == 0x1D8, 1);
+    public fun initialize_validator_set(sender: &Sender::T) {
+        Transaction::assert(Sender::address_(sender) == 0x1D8, 1);
+        Sender::move_to(sender);
         move_to_sender<ValidatorSet>(ValidatorSet {
             validators: Vector::empty(),
             last_reconfiguration_time: 0,
-            change_events: Event::new_event_handle<ValidatorSetChangeEvent>(),
+            change_events: Event::new_event_handle<ValidatorSetChangeEvent>(sender),
         });
     }
 
     // Adds a new validator, only callable by the LibraAssociation address
     // TODO(valerini): allow the Association to add multiple validators in a single block
-    public fun add_validator(account_address: &address) acquires ValidatorSet {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+    public fun add_validator(account_address: &address, sender: &Sender::T) acquires ValidatorSet {
+        Transaction::assert(Sender::address_(sender) == 0xA550C18, 1);
         // A prospective validator must have a validator config resource
         Transaction::assert(ValidatorConfig2::has(*account_address), 17);
 
@@ -89,8 +91,11 @@ module LibraSystem2 {
     }
 
     // Removes a validator, only callable by the LibraAssociation address
-    public fun remove_validator(account_address: &address) acquires ValidatorSet {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+    public fun remove_validator(
+        account_address: &address,
+        sender: &Sender::T
+    ) acquires ValidatorSet {
+        Transaction::assert(Sender::address_(sender) == 0xA550C18, 1);
         let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
         let size = Vector::length(&validator_set_ref.validators);
         // Make sure the size of validator set does not go beyond 4, which is the minimum safe number of validators
@@ -108,8 +113,8 @@ module LibraSystem2 {
     // Copies validator's config to ValidatorSet
     // Callable by the LibraAssociation address only.
     // Aborts if there are no changes to the config.
-    public fun update_validator_info(addr: &address) acquires ValidatorSet {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+    public fun update_validator_info(addr: &address, sender: &Sender::T) acquires ValidatorSet {
+        Transaction::assert(Sender::address_(sender) == 0xA550C18, 1);
         let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
 
         let validator_index_vec = get_validator_index_(&validator_set_ref.validators, addr);
@@ -121,9 +126,16 @@ module LibraSystem2 {
     // This function can be called by the validator's operator,
     // which is either the validator itself or the validator's delegate account.
     // Aborts if there are no changes to the config.
-    public fun force_update_validator_info(validator_address: &address) acquires ValidatorSet {
+    public fun force_update_validator_info(
+        validator_address: &address,
+        sender: &Sender::T
+    ) acquires ValidatorSet {
+        let sender_address = Sender::address_(sender);
         // Check the sender
-        Transaction::assert(ValidatorConfig2::get_validator_operator_account(*validator_address) == Transaction::sender(), 1);
+        Transaction::assert(
+            ValidatorConfig2::get_validator_operator_account(*validator_address) == sender_address,
+            1,
+        );
 
         let validator_vec_ref = borrow_global_mut<ValidatorSet>(0x1D8);
         let validator_index_vec = get_validator_index_(&validator_vec_ref.validators, validator_address);
@@ -149,8 +161,9 @@ module LibraSystem2 {
     // block_prologue to facilitate reconfigurations at regular intervals.
     // Here for all of the validators the information from ValidatorConfig2 will get copied into the ValidatorSet,
     // if any components of the configs have changed, appropriate events will be fired.
-    public fun update_all_validator_info() acquires ValidatorSet {
-        Transaction::assert(Transaction::sender() == 0xA550C18 || Transaction::sender() == 0x0, 1);
+    public fun update_all_validator_info(sender: &Sender::T) acquires ValidatorSet {
+        let sender_address = Sender::address_(sender);
+        Transaction::assert(sender_address == 0xA550C18 || sender_address == 0x0, 1);
         let validators = &mut borrow_global_mut<ValidatorSet>(0x1D8).validators;
 
         let size = Vector::length(validators);

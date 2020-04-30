@@ -3,8 +3,8 @@ address 0x0:
 module TransactionFee {
     use 0x0::LibraAccount;
     use 0x0::LibraSystem;
+    use 0x0::Sender;
     use 0x0::Transaction;
-    use 0x0::TransactionFeeAccounts;
 
     ///////////////////////////////////////////////////////////////////////////
     // Transaction Fee Distribution
@@ -29,18 +29,19 @@ module TransactionFee {
     // height in order to ensure that we don't try to pay more than once per-block. We also
     // encapsulate the withdrawal capability to the transaction fee account so that we can withdraw
     // the fees from this account from block metadata transactions.
-    fun initialize_transaction_fees() {
+    fun initialize_transaction_fees(sender: &Sender::T) {
+        Sender::move_to(sender);
         move_to_sender<TransactionFees>(TransactionFees {
-            fee_withdrawal_capability: LibraAccount::extract_sender_withdrawal_capability(),
+            fee_withdrawal_capability: LibraAccount::extract_sender_withdrawal_capability(sender),
         });
     }
 
-    public fun distribute_transaction_fees<Token>() acquires TransactionFees {
+    public fun distribute_transaction_fees<Token>(sender: &Sender::T) acquires TransactionFees {
       // Can only be invoked by LibraVM privilege.
-      Transaction::assert(Transaction::sender() == 0x0, 33);
+      Transaction::assert(Sender::address_(sender) == 0x0, 33);
 
       let num_validators = LibraSystem::validator_set_size();
-      let fee_addr = TransactionFeeAccounts::transaction_fee_address<Token>();
+      let fee_addr = 0xFEE;
       let amount_collected = LibraAccount::balance<Token>(fee_addr);
 
       // If amount_collected == 0, this will also return early

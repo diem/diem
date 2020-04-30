@@ -2,6 +2,7 @@ address 0x0:
 
 module ValidatorConfig2 {
     use 0x0::LibraAccount;
+    use 0x0::Sender;
     use 0x0::Transaction;
 
     struct Config {
@@ -50,8 +51,10 @@ module ValidatorConfig2 {
     // Register the transaction sender as a candidate validator by creating a ValidatorConfig
     // resource under their account. Note that only one such resource can be instantiated under an account.
     public fun initialize(
-        consensus_pubkey: vector<u8>,) {
-
+        consensus_pubkey: vector<u8>,
+        sender: &Sender::T
+    ) {
+        Sender::move_to(sender);
         move_to_sender<T>(
             T {
                 config: Config {
@@ -65,19 +68,20 @@ module ValidatorConfig2 {
 
     // If the sender of the transaction has a ValidatorConfig::T resource,
     // this function will delegate management of the ValidatorConfig::T resource to a delegated_account.
-    public fun set_delegated_account(delegated_account: address) acquires T {
+    public fun set_delegated_account(delegated_account: address, sender: &Sender::T) acquires T {
+        let sender_address = Sender::address_(sender);
         Transaction::assert(LibraAccount::exists(delegated_account), 5);
         // check delegated address is different from transaction's sender
-        Transaction::assert(delegated_account != Transaction::sender(), 6);
-        let t_ref = borrow_global_mut<T>(Transaction::sender());
+        Transaction::assert(delegated_account != sender_address, 6);
+        let t_ref = borrow_global_mut<T>(sender_address);
         *(&mut t_ref.delegation_enabled) = true;
         *(&mut t_ref.delegated_account) = delegated_account;
     }
 
     // If the sender of the transaction has a ValidatorConfig::T resource,
     // this function will revoke management capabilities from the delegated_account account.
-    public fun remove_delegated_account() acquires T {
-        let t_ref = borrow_global_mut<T>(Transaction::sender());
+    public fun remove_delegated_account(sender: &Sender::T) acquires T {
+        let t_ref = borrow_global_mut<T>(Sender::address_(sender));
         *(&mut t_ref.delegation_enabled) = false;
         *(&mut t_ref.delegated_account) = 0x0;
     }
@@ -87,10 +91,11 @@ module ValidatorConfig2 {
     public fun rotate_consensus_pubkey(
         validator_account: address,
         new_consensus_pubkey: vector<u8>,
-        _proof: vector<u8>
+        _proof: vector<u8>,
+        sender: &Sender::T
     ) acquires T {
         let addr = get_validator_operator_account(validator_account);
-        Transaction::assert(Transaction::sender() == addr, 1);
+        Transaction::assert(Sender::address_(sender) == addr, 1);
 
         // TODO(valerini): verify the proof of posession of new_consensus_secretkey
 
@@ -103,7 +108,11 @@ module ValidatorConfig2 {
     }
 
     // Simplified arguments when the sender is the validators itself
-    public fun rotate_consensus_pubkey_of_sender(new_consensus_pubkey: vector<u8>, proof: vector<u8>) acquires T {
-        rotate_consensus_pubkey(Transaction::sender(), new_consensus_pubkey, proof);
+    public fun rotate_consensus_pubkey_of_sender(
+        new_consensus_pubkey: vector<u8>,
+        proof: vector<u8>,
+        sender: &Sender::T
+    ) acquires T {
+        rotate_consensus_pubkey(Sender::address_(sender), new_consensus_pubkey, proof, sender);
     }
 }

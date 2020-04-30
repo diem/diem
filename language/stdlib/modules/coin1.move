@@ -4,11 +4,12 @@ module Coin1 {
     use 0x0::Libra;
     use 0x0::Association;
     use 0x0::FixedPoint32;
+    use 0x0::Sender;
 
     struct T { }
 
-    public fun initialize() {
-        Association::assert_sender_is_association();
+    public fun initialize(sender: &Sender::T) {
+        Association::assert_sender_is_association(sender);
         // Register the LBR currency.
         Libra::register_currency<T>(
             FixedPoint32::create_from_rational(1, 2), // exchange rate to LBR
@@ -16,6 +17,7 @@ module Coin1 {
             1000000, // scaling_factor = 10^6
             100,     // fractional_part = 10^2
             x"436F696E31", // UTF8 encoding of "Coin1" in hex
+            sender
         );
     }
 }

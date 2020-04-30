@@ -33,6 +33,7 @@ module AccountTrack {
     use 0x0::Empty;
     use 0x0::AccountType;
     use 0x0::AccountLimits;
+    use 0x0::Sender;
 
     // An `AccountLimitsCapability` holds the capabilities needed in order
     // to call other privileged functions in other modules.
@@ -51,10 +52,11 @@ module AccountTrack {
 
     // Publishes a singleton `AccountLimitsCapability` under the account at
     // `singleton_addr()`.
-    public fun initialize() {
-        Transaction::assert(Transaction::sender() == singleton_addr(), 3000);
-        let account_limits_cap = AccountLimits::grant_account_tracking();
-        let update_cap = AccountType::grant_account_tracking();
+    public fun initialize(sender: &Sender::T) {
+        Transaction::assert(Sender::address_(sender) == singleton_addr(), 3000);
+        let account_limits_cap = AccountLimits::grant_account_tracking(sender);
+        let update_cap = AccountType::grant_account_tracking(sender);
+        Sender::move_to(sender);
         move_to_sender(AccountLimitsCapability {
             account_limits_cap, update_cap
         });
@@ -62,8 +64,8 @@ module AccountTrack {
 
     // Grant a capability to call this module. This does not necessarily
     // need to be a unique capability.
-    public fun grant_calling_capability(): CallingCapability {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 3000);
+    public fun grant_calling_capability(sender: &Sender::T): CallingCapability {
+        Transaction::assert(Sender::address_(sender) == 0xA550C18, 3000);
         CallingCapability{}
     }
 

@@ -5,7 +5,7 @@ module LBR {
     use 0x0::Coin2;
     use 0x0::FixedPoint32;
     use 0x0::Libra;
-    use 0x0::Transaction;
+    use 0x0::Sender;
 
     // The type tag for this coin type.
     resource struct T { }
@@ -36,17 +36,18 @@ module LBR {
     // already be registered in order for this to succeed. The sender must
     // both be the correct address and have the correct permissions. These
     // restrictions are enforced in the Libra::register_currency function.
-    public fun initialize() {
+    public fun initialize(sender: &Sender::T) {
         // Register the LBR currency.
         Libra::register_currency<T>(
             FixedPoint32::create_from_rational(1, 1), // exchange rate to LBR
             true,    // is_synthetic
             1000000, // scaling_factor = 10^6
             1000,    // fractional_part = 10^3
-            x"4C4252" // UTF8-encoded "LBR" as a hex string
+            x"4C4252", // UTF8-encoded "LBR" as a hex string
+            sender
         );
-        let mint_cap = Libra::grant_mint_capability();
-        let burn_cap = Libra::grant_burn_capability();
+        let mint_cap = Libra::grant_mint_capability(sender);
+        let burn_cap = Libra::grant_burn_capability(sender);
         let preburn_cap = Libra::new_preburn_with_capability(&burn_cap);
         let coin1 = ReserveComponent<Coin1::T> {
             ratio: FixedPoint32::create_from_rational(1, 2),
@@ -56,6 +57,7 @@ module LBR {
             ratio: FixedPoint32::create_from_rational(1, 2),
             backing: Libra::zero<Coin2::T>(),
         };
+        Sender::move_to(sender);
         move_to_sender(Reserve{ mint_cap, burn_cap, preburn_cap, coin1, coin2});
     }
 
@@ -102,13 +104,16 @@ module LBR {
 
     // Unpack a LBR coin and return the backing currencies (in the correct
     // amounts).
-    public fun unpack(coin: Libra::T<T>): (Libra::T<Coin1::T>, Libra::T<Coin2::T>)
+    public fun unpack(
+        coin: Libra::T<T>,
+        sender: &Sender::T
+    ): (Libra::T<Coin1::T>, Libra::T<Coin2::T>)
     acquires Reserve {
+        let sender_address = Sender::address_(sender);
         let reserve = borrow_global_mut<Reserve>(0xA550C18);
         let ratio_multiplier = Libra::value(&coin);
-        let sender = Transaction::sender();
-        Libra::preburn_with_resource(coin, &mut reserve.preburn_cap, sender);
-        Libra::burn_with_resource_cap(&mut reserve.preburn_cap, sender, &reserve.burn_cap);
+        Libra::preburn_with_resource(coin, &mut reserve.preburn_cap, sender_address);
+        Libra::burn_with_resource_cap(&mut reserve.preburn_cap, sender_address, &reserve.burn_cap);
         let coin1_amount = FixedPoint32::multiply_u64(ratio_multiplier, *&reserve.coin1.ratio);
         let coin2_amount = FixedPoint32::multiply_u64(ratio_multiplier, *&reserve.coin2.ratio);
         let coin1 = Libra::withdraw(&mut reserve.coin1.backing, coin1_amount);

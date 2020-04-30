@@ -6,6 +6,7 @@ module Libra {
     use 0x0::FixedPoint32;
     use 0x0::LibraConfig;
     use 0x0::RegisteredCurrencies;
+    use 0x0::Sender;
     use 0x0::Transaction;
     use 0x0::Vector;
 
@@ -124,54 +125,60 @@ module Libra {
 
     // This can only be invoked by the Association address, and only a single time.
     // Currently, it is invoked in the genesis transaction
-    public fun initialize() {
-        Association::assert_sender_is_association();
-        Transaction::assert(Transaction::sender() == currency_addr(), 0);
-        LibraConfig::publish_new_config(RegisteredCurrencies::empty());
+    public fun initialize(sender: &Sender::T) {
+        Association::assert_sender_is_association(sender);
+        Transaction::assert(Sender::address_(sender) == currency_addr(), 0);
+        LibraConfig::publish_new_config(RegisteredCurrencies::empty(), sender);
+        Sender::move_to(sender);
         move_to_sender(CurrencyRegistrationCapability{
-            cap: RegisteredCurrencies::grant_registration_capability(),
+            cap: RegisteredCurrencies::grant_registration_capability(sender),
         })
     }
 
     // Returns a MintCapability for the `CoinType` currency. `CoinType`
     // must be a registered currency type.
-    public fun grant_mint_capability<CoinType>(): MintCapability<CoinType> {
-        assert_assoc_and_currency<CoinType>();
+    public fun grant_mint_capability<CoinType>(sender: &Sender::T): MintCapability<CoinType> {
+        assert_assoc_and_currency<CoinType>(sender);
         MintCapability<CoinType> { }
     }
 
     // Returns a `BurnCapability` for the `CoinType` currency. `CoinType`
     // must be a registered currency type.
-    public fun grant_burn_capability<CoinType>(): BurnCapability<CoinType> {
-        assert_assoc_and_currency<CoinType>();
+    public fun grant_burn_capability<CoinType>(sender: &Sender::T): BurnCapability<CoinType> {
+        assert_assoc_and_currency<CoinType>(sender);
         BurnCapability<CoinType> { }
     }
 
     // Return `amount` coins.
     // Fails if the sender does not have a published MintCapability.
-    public fun mint<Token>(amount: u64): T<Token> acquires CurrencyInfo, MintCapability {
-        mint_with_capability(amount, borrow_global<MintCapability<Token>>(Transaction::sender()))
+    public fun mint<Token>(
+        amount: u64,
+        sender: &Sender::T
+    ): T<Token> acquires CurrencyInfo, MintCapability {
+        mint_with_capability(amount, borrow_global<MintCapability<Token>>(Sender::address_(sender)))
     }
 
     // Burn the coins currently held in the preburn holding area under `preburn_address`.
     // Fails if the sender does not have a published `BurnCapability`.
     public fun burn<Token>(
-        preburn_address: address
+        preburn_address: address,
+        sender: &Sender::T,
     ) acquires BurnCapability, CurrencyInfo, Preburn {
         burn_with_capability(
             preburn_address,
-            borrow_global<BurnCapability<Token>>(Transaction::sender())
+            borrow_global<BurnCapability<Token>>(Sender::address_(sender))
         )
     }
 
     // Cancel the oldest burn request from `preburn_address`
     // Fails if the sender does not have a published `BurnCapability`.
     public fun cancel_burn<Token>(
-        preburn_address: address
+        preburn_address: address,
+        sender: &Sender::T,
     ): T<Token> acquires BurnCapability, CurrencyInfo, Preburn {
         cancel_burn_with_capability(
             preburn_address,
-            borrow_global<BurnCapability<Token>>(Transaction::sender())
+            borrow_global<BurnCapability<Token>>(Sender::address_(sender))
         )
     }
 
@@ -251,9 +258,16 @@ module Libra {
 
     // Send coin to the preburn holding area, where it will wait to be burned.
     // Fails if the sender does not have a published Preburn resource
-    public fun preburn_to_sender<Token>(coin: T<Token>) acquires CurrencyInfo, Preburn {
-        let sender = Transaction::sender();
-        preburn_with_resource(coin, borrow_global_mut<Preburn<Token>>(sender), sender);
+    public fun preburn_to_sender<Token>(
+        coin: T<Token>,
+        sender: &Sender::T
+    ) acquires CurrencyInfo, Preburn {
+        let sender_address = Sender::address_(sender);
+        preburn_with_resource(
+            coin,
+            borrow_global_mut<Preburn<Token>>(sender_address),
+            sender_address
+        );
     }
 
     // Permanently remove the coins held in the `Preburn` resource stored at `preburn_address` and
@@ -337,18 +351,24 @@ module Libra {
     }
 
     // Publish `preburn` under the sender's account
-    public fun publish_preburn<Token>(preburn: Preburn<Token>) {
+    public fun publish_preburn<Token>(preburn: Preburn<Token>, sender: &Sender::T) {
+        Sender::move_to(sender);
         move_to_sender(preburn)
     }
 
     // Publish `capability` under the sender's account
-    public fun publish_mint_capability<Token>(capability: MintCapability<Token>) {
+    public fun publish_mint_capability<Token>(
+        capability: MintCapability<Token>,
+        sender: &Sender::T
+    ) {
+        Sender::move_to(sender);
         move_to_sender(capability)
     }
 
     // Remove and return the `Preburn` resource under the sender's account
-    public fun remove_preburn<Token>(): Preburn<Token> acquires Preburn {
-        move_from<Preburn<Token>>(Transaction::sender())
+    public fun remove_preburn<Token>(sender: &Sender::T): Preburn<Token> acquires Preburn {
+        Sender::move_to(sender);
+        move_from<Preburn<Token>>(Sender::address_(sender))
     }
 
     // Destroys the given preburn resource.
@@ -360,14 +380,17 @@ module Libra {
 
     // Remove and return the MintCapability from the sender's account. Fails if the sender does
     // not have a published MintCapability
-    public fun remove_mint_capability<Token>(): MintCapability<Token> acquires MintCapability {
-        move_from<MintCapability<Token>>(Transaction::sender())
+    public fun remove_mint_capability<Token>(
+        sender: &Sender::T
+    ): MintCapability<Token> acquires MintCapability {
+        move_from<MintCapability<Token>>(Sender::address_(sender))
     }
 
     // Remove and return the BurnCapability from the sender's account. Fails if the sender does
     // not have a published BurnCapability
-    public fun remove_burn_capability<Token>(): BurnCapability<Token> acquires BurnCapability {
-        move_from<BurnCapability<Token>>(Transaction::sender())
+    public fun remove_burn_capability<Token>(sender: &Sender::T): BurnCapability<Token>
+    acquires BurnCapability {
+        move_from<BurnCapability<Token>>(Sender::address_(sender))
     }
 
     // Return the total value of Libra to be burned
@@ -440,11 +463,15 @@ module Libra {
         scaling_factor: u64,
         fractional_part: u64,
         currency_code: vector<u8>,
+        sender: &Sender::T,
     ) acquires CurrencyRegistrationCapability {
         // And only callable by the designated currency address.
-        assert_is_currency_sender();
+        assert_is_currency_sender(sender);
+        Sender::move_to(sender);
         move_to_sender(MintCapability<CoinType>{});
+        Sender::move_to(sender);
         move_to_sender(BurnCapability<CoinType>{});
+        Sender::move_to(sender);
         move_to_sender(CurrencyInfo<CoinType> {
             total_value: 0,
             preburn_value: 0,
@@ -454,15 +481,15 @@ module Libra {
             fractional_part,
             currency_code: copy currency_code,
             can_mint: true,
-            mint_events: Event::new_event_handle<MintEvent>(),
-            burn_events: Event::new_event_handle<BurnEvent>(),
-            preburn_events: Event::new_event_handle<PreburnEvent>(),
-            cancel_burn_events: Event::new_event_handle<CancelBurnEvent>()
+            mint_events: Event::new_event_handle<MintEvent>(sender),
+            burn_events: Event::new_event_handle<BurnEvent>(sender),
+            preburn_events: Event::new_event_handle<PreburnEvent>(sender),
+            cancel_burn_events: Event::new_event_handle<CancelBurnEvent>(sender)
         });
         RegisteredCurrencies::add_currency_code(
             currency_code,
-            &borrow_global<CurrencyRegistrationCapability>(currency_addr()).cap
-
+            &borrow_global<CurrencyRegistrationCapability>(currency_addr()).cap,
+            sender
         )
     }
 
@@ -522,9 +549,10 @@ module Libra {
     }
 
     // Updates the exchange rate for `FromCoinType` to LBR exchange rate held on chain.
-    public fun update_lbr_exchange_rate<FromCoinType>(lbr_exchange_rate: FixedPoint32::T)
-    acquires CurrencyInfo {
-        assert_assoc_and_currency<FromCoinType>();
+    public fun update_lbr_exchange_rate<FromCoinType>(
+        lbr_exchange_rate: FixedPoint32::T, sender: &Sender::T
+    ) acquires CurrencyInfo {
+        assert_assoc_and_currency<FromCoinType>(sender);
         let currency_info = borrow_global_mut<CurrencyInfo<FromCoinType>>(currency_addr());
         currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
     }
@@ -539,10 +567,10 @@ module Libra {
     // coins in the system without removing the currency. This function
     // allows the association to control whether or not further coins of
     // `CoinType` can be minted or not.
-    public fun update_minting_ability<CoinType>(can_mint: bool)
+    public fun update_minting_ability<CoinType>(can_mint: bool, sender: &Sender::T)
     acquires CurrencyInfo {
-        assert_assoc_and_currency<CoinType>();
-        let currency_info = borrow_global_mut<CurrencyInfo<CoinType>>(Transaction::sender());
+        assert_assoc_and_currency<CoinType>(sender);
+        let currency_info = borrow_global_mut<CurrencyInfo<CoinType>>(Sender::address_(sender));
         currency_info.can_mint = can_mint;
     }
 
@@ -557,16 +585,16 @@ module Libra {
     }
 
     // Assert that the sending address is the `currency_addr()`
-    fun assert_is_currency_sender() {
-        let sender = Transaction::sender();
-        Transaction::assert(sender == currency_addr(), 7);
-        Transaction::assert(Association::has_privilege<AddCurrency>(sender), 8);
+    fun assert_is_currency_sender(sender: &Sender::T) {
+        let sender_address = Sender::address_(sender);
+        Transaction::assert(sender_address == currency_addr(), 7);
+        Transaction::assert(Association::has_privilege<AddCurrency>(sender_address), 8);
     }
 
     // Assert that the sender is an association account, and that
     // `CoinType` is a regstered currency type.
-    fun assert_assoc_and_currency<CoinType>() {
-        Association::assert_sender_is_association();
+    fun assert_assoc_and_currency<CoinType>(sender: &Sender::T) {
+        Association::assert_sender_is_association(sender);
         assert_is_coin<CoinType>();
     }
 
