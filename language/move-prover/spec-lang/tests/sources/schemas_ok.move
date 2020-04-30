@@ -64,4 +64,12 @@ module M {
         requires _x > _y;
     }
 
+    spec schema SchemaExp<T> {
+        x: bool;
+        include x ==> InvariantIsEqual<bool>;
+        include !x ==> InvariantIsEqual<bool>;
+        include InvariantIsEqual<bool> && InvariantIsEqual<bool>;
+        include if (x) InvariantIsEqual<bool> else InvariantIsEqual<bool>;
+    }
+
 }
