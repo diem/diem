@@ -23,6 +23,7 @@ pub mod constants {
     pub const OWNER_KEY: &str = "owner";
     pub const OPERATOR_KEY: &str = "operator";
     pub const PREFERRED_ROUND: &str = "preferred_round";
+    pub const VALIDATOR_CONFIG: &str = "validator_config";
     pub const VALIDATOR_NETWORK_KEY: &str = "validator_network";
     pub const WAYPOINT: &str = "waypoint";
 
@@ -217,7 +218,7 @@ impl Command {
 
             remote
                 .create_with_default_policy(key_name, key)
-                .map_err(|e| Error::LocalStorageReadError(e.to_string()))?;
+                .map_err(|e| Error::RemoteStorageWriteError(e.to_string()))?;
         }
 
         Ok(key)
@@ -226,16 +227,17 @@ impl Command {
 
 #[derive(Debug, StructOpt)]
 pub struct SecureBackends {
-    /// The local secure backend. Secure backends are represented as a
-    /// semi-colon deliminted key value pair: "k0=v0;k1=v1;...".
-    /// The current supported formats are:
+    /// The local secure backend, this is the source of data. Secure
+    /// backends are represented as a semi-colon deliminted key value
+    /// pair: "k0=v0;k1=v1;...".  The current supported formats are:
     ///     Vault: "backend=vault;server=URL;token=TOKEN"
     ///         vault has an optional namespace: "namespace=NAMESPACE"
     ///     InMemory: "backend=memory"
     ///     OnDisk: "backend=disk;path=LOCAL_PATH"
     #[structopt(long, verbatim_doc_comment)]
     local: SecureBackend,
-    /// The remote secure backend. See the comments for the local backend.
+    /// The remote secure backend, this is where data is stored. See
+    /// the comments for the local backend for usage.
     #[structopt(long)]
     remote: Option<SecureBackend>,
 }
@@ -271,9 +273,14 @@ pub mod tests {
     #[test]
     #[ignore]
     fn test_end_to_end() {
-        let namespace = "end_to_end";
-        let mut storage = default_storage(namespace.into());
+        let alice_ns = "alice";
+        let shared_ns = "shared";
+        let mut storage = default_storage(alice_ns.into());
         initialize_storage(storage.as_mut());
+
+        let mut remote = default_storage(shared_ns.into());
+        remote.reset_and_clear().unwrap();
+
         let association_key = storage
             .get_public_key(constants::ASSOCIATION_KEY)
             .unwrap()
@@ -284,14 +291,17 @@ pub mod tests {
             .unwrap()
             .public_key;
 
-        let validator_txn = validator_config(
+        validator_config(
             AccountAddress::random(),
             "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
             "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
-            namespace,
-        );
+            alice_ns,
+            shared_ns,
+        )
+        .unwrap();
 
-        let validator_txn = validator_txn.unwrap();
+        let validator_txn = remote.get(constants::VALIDATOR_CONFIG).unwrap().value;
+        let validator_txn = validator_txn.transaction().unwrap();
         let validator_txn = validator_txn.as_signed_user_txn().unwrap().payload();
         let validator_txn = if let TransactionPayload::Script(script) = validator_txn {
             script.clone()
@@ -309,17 +319,27 @@ pub mod tests {
     #[test]
     #[ignore]
     fn test_validator_config() {
-        let namespace = "validator_config";
-        let mut storage = default_storage(namespace.into());
-        initialize_storage(storage.as_mut());
+        let local_ns = "local_validator_config";
+        let remote_ns = "remote_validator_config";
+        let mut local = default_storage(local_ns.into());
+        initialize_storage(local.as_mut());
 
-        validator_config(
+        let mut remote = default_storage(remote_ns.into());
+        remote.reset_and_clear().unwrap();
+
+        let local_txn = validator_config(
             AccountAddress::random(),
             "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
             "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
-            namespace,
+            local_ns,
+            remote_ns,
         )
         .unwrap();
+
+        let remote_txn = remote.get(constants::VALIDATOR_CONFIG).unwrap().value;
+        let remote_txn = remote_txn.transaction().unwrap();
+
+        assert_eq!(local_txn, remote_txn);
     }
 
     #[test]
@@ -474,7 +494,8 @@ pub mod tests {
         owner_address: AccountAddress,
         validator_address: NetworkAddress,
         fullnode_address: NetworkAddress,
-        namespace: &str,
+        local_ns: &str,
+        remote_ns: &str,
     ) -> Result<Transaction, Error> {
         let args = format!(
             "
@@ -483,10 +504,14 @@ pub mod tests {
                 --owner-address {owner_address}
                 --validator-address {validator_address}
                 --fullnode-address {fullnode_address}
-                --backend backend={backend};\
+                --local backend={backend};\
                     server={server};\
                     token={token};\
-                    namespace={ns}
+                    namespace={local_ns}
+                --remote backend={backend};\
+                    server={server};\
+                    token={token};\
+                    namespace={remote_ns}\
             ",
             owner_address = owner_address,
             validator_address = validator_address,
@@ -494,7 +519,8 @@ pub mod tests {
             backend = crate::secure_backend::VAULT,
             server = VAULT_HOST,
             token = VAULT_ROOT_TOKEN,
-            ns = namespace,
+            local_ns = local_ns,
+            remote_ns = remote_ns,
         );
 
         let command = Command::from_iter(args.split_whitespace());

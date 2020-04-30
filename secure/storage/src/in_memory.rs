@@ -73,6 +73,7 @@ impl<T: Send + Sync + TimeService> KVStorage for InMemoryStorageInternal<T> {
             Value::HashValue(value) => Value::HashValue(*value),
             Value::String(value) => Value::String(value.clone()),
             Value::U64(value) => Value::U64(*value),
+            Value::Transaction(value) => Value::Transaction(value.clone()),
         };
 
         let last_update = response.last_update;

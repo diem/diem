@@ -13,12 +13,14 @@ pub enum Error {
     BackendParsingError(String),
     #[error("Local storage unavailable, please check your configuration")]
     LocalStorageUnavailable,
-    #[error("Failed to read local storage: {0}")]
+    #[error("Failed to read from local storage: {0}")]
     LocalStorageReadError(String),
     #[error("Failed to sign data using local storage: {0}")]
     LocalStorageSigningError(String),
-    #[error("Failed to read remote storage: {0}")]
+    #[error("Failed to read from remote storage: {0}")]
     RemoteStorageReadError(String),
+    #[error("Failed to write to remote storage: {0}")]
+    RemoteStorageWriteError(String),
     #[error("Remote storage unavailable, please check your configuration")]
     RemoteStorageUnavailable,
     #[error("Unexpected command, expected {0}, found {1}")]

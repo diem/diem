@@ -2585,6 +2585,7 @@ dependencies = [
  "libra-crypto 0.1.0",
  "libra-secure-time 0.1.0",
  "libra-temppath 0.1.0",
+ "libra-types 0.1.0",
  "libra-vault-client 0.1.0",
  "libra-workspace-hack 0.1.0",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
