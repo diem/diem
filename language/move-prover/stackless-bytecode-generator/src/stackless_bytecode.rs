@@ -107,7 +107,6 @@ pub enum Operation {
     GetGlobal(ModuleId, StructId, Vec<Type>),
 
     // Builtins
-    Abort,
     Destroy,
     ReadRef,
     WriteRef,
@@ -153,6 +152,7 @@ pub enum Bytecode {
     Branch(AttrId, Label, Label, TempIndex),
     Jump(AttrId, Label),
     Label(AttrId, Label),
+    Abort(AttrId, TempIndex),
     Nop(AttrId),
 }
 
@@ -168,6 +168,7 @@ impl Bytecode {
             | Branch(id, ..)
             | Jump(id, ..)
             | Label(id, ..)
+            | Abort(id, ..)
             | Nop(id) => *id,
         }
     }
@@ -177,7 +178,10 @@ impl Bytecode {
     }
 
     pub fn is_unconditional_branch(&self) -> bool {
-        matches!(self, Bytecode::Ret(..) | Bytecode::Jump(..))
+        matches!(
+            self,
+            Bytecode::Ret(..) | Bytecode::Jump(..) | Bytecode::Abort(..)
+        )
     }
 
     pub fn is_conditional_branch(&self) -> bool {
@@ -312,6 +316,9 @@ impl<'env> fmt::Display for BytecodeDisplay<'env> {
             }
             Label(_, label) => {
                 write!(f, "L{}:", label.as_usize(),)?;
+            }
+            Abort(_, src) => {
+                write!(f, "abort({})", self.lstr(*src))?;
             }
             Nop(_) => {
                 write!(f, "nop")?;
@@ -451,9 +458,6 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             }
 
             // Builtins
-            Abort => {
-                write!(f, "abort")?;
-            }
             Destroy => {
                 write!(f, "destroy")?;
             }

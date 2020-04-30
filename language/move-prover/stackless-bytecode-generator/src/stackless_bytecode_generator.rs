@@ -183,8 +183,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
 
             MoveBytecode::Abort => {
                 let error_code_index = self.temp_stack.pop().unwrap();
-                self.code
-                    .push(mk_call(Operation::Abort, vec![], vec![error_code_index]));
+                self.code.push(Bytecode::Abort(attr_id, error_code_index));
             }
 
             MoveBytecode::StLoc(idx) => {
