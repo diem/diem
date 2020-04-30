@@ -1616,23 +1616,23 @@ impl<'env> ModuleTranslator<'env> {
                             bytecode
                         );
                     }
-                    Abort => {
-                        // Below we introduce a dummy `if` for $DebugTrackAbort to ensure boogie creates
-                        // a execution trace entry for this statement.
-                        emitln!(
-                            self.writer,
-                            "if (true) {{ assume $DebugTrackAbort({}, {}); }}",
-                            func_target
-                                .func_env
-                                .module_env
-                                .env
-                                .file_id_to_idx(loc.file_id()),
-                            loc.span().start(),
-                        );
-                        emitln!(self.writer, "goto Abort;")
-                    }
                     Destroy => {}
                 }
+            }
+            Abort(..) => {
+                // Below we introduce a dummy `if` for $DebugTrackAbort to ensure boogie creates
+                // a execution trace entry for this statement.
+                emitln!(
+                    self.writer,
+                    "if (true) {{ assume $DebugTrackAbort({}, {}); }}",
+                    func_target
+                        .func_env
+                        .module_env
+                        .env
+                        .file_id_to_idx(loc.file_id()),
+                    loc.span().start(),
+                );
+                emitln!(self.writer, "goto Abort;")
             }
             Nop(..) => {}
         }

@@ -7,7 +7,7 @@ use crate::{
     },
     function_target::{FunctionTarget, FunctionTargetData},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    stackless_bytecode::{Bytecode, Operation, TempIndex},
+    stackless_bytecode::{Bytecode, TempIndex},
     stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
 };
 use itertools::Itertools;
@@ -73,10 +73,6 @@ impl LiveVarState {
             self.livevars.insert(v);
         }
     }
-
-    fn reset(&mut self) {
-        self.livevars = BTreeSet::new();
-    }
 }
 
 impl LiveVarAnalysis {
@@ -122,22 +118,14 @@ impl LiveVarAnalysis {
             Load(_, dst, _) => {
                 post.remove(&[*dst]);
             }
-            Call(_, dsts, op, srcs) => {
-                use Operation::*;
-                match op {
-                    Abort => {
-                        post.reset();
-                    }
-                    _ => {
-                        post.remove(dsts);
-                    }
-                };
+            Call(_, dsts, _, srcs) => {
+                post.remove(dsts);
                 post.insert(srcs.clone());
             }
             Ret(_, srcs) => {
                 post.insert(srcs.clone());
             }
-            Branch(_, _, _, src) => {
+            Abort(_, src) | Branch(_, _, _, src) => {
                 post.insert(vec![*src]);
             }
             _ => {}
