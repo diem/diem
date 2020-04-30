@@ -11,6 +11,10 @@ use std::{
     str::FromStr,
 };
 
+pub const DISK: &str = "disk";
+pub const MEMORY: &str = "memory";
+pub const VAULT: &str = "vault";
+
 /// SecureBackend is a parameter that is stored as set of semi-colon separated key/value pairs. The
 /// only expected key is backend which defines which of the SecureBackends the parameters refer to.
 /// Some backends require parameters others do not, so that requires a conversion into the
@@ -63,7 +67,7 @@ impl TryInto<config::SecureBackend> for SecureBackend {
 
     fn try_into(mut self) -> Result<config::SecureBackend, Error> {
         let backend = match self.backend.as_ref() {
-            "disk" => {
+            DISK => {
                 let mut config = OnDiskStorageConfig::default();
                 config.set_data_dir(PathBuf::from(""));
                 let path = self
@@ -73,8 +77,8 @@ impl TryInto<config::SecureBackend> for SecureBackend {
                 config.path = PathBuf::from(path);
                 config::SecureBackend::OnDiskStorage(config)
             }
-            "memory" => config::SecureBackend::InMemoryStorage,
-            "vault" => {
+            MEMORY => config::SecureBackend::InMemoryStorage,
+            VAULT => {
                 let server = self
                     .parameters
                     .remove("server")

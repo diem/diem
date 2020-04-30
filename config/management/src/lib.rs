@@ -524,7 +524,7 @@ pub mod tests {
                     token={token};\
                     namespace={remote_ns}\
             ",
-            backend = "vault",
+            backend = crate::secure_backend::VAULT,
             server = VAULT_HOST,
             token = VAULT_ROOT_TOKEN,
             local_ns = local_ns,
@@ -549,7 +549,7 @@ pub mod tests {
                     token={token};\
                     namespace={remote_ns}\
             ",
-            backend = "vault",
+            backend = crate::secure_backend::VAULT,
             server = VAULT_HOST,
             token = VAULT_ROOT_TOKEN,
             local_ns = local_ns,
@@ -581,7 +581,7 @@ pub mod tests {
             owner_address = owner_address,
             validator_address = validator_address,
             fullnode_address = fullnode_address,
-            backend = "vault",
+            backend = crate::secure_backend::VAULT,
             server = VAULT_HOST,
             token = VAULT_ROOT_TOKEN,
             ns = namespace,
@@ -601,7 +601,7 @@ pub mod tests {
                     token={token};\
                     namespace={ns}
             ",
-            backend = "vault",
+            backend = crate::secure_backend::VAULT,
             server = VAULT_HOST,
             token = VAULT_ROOT_TOKEN,
             ns = namespace,
