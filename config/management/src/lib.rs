@@ -6,10 +6,10 @@
 mod error;
 mod secure_backend;
 
-use crate::error::Error;
+use crate::{error::Error, secure_backend::SecureBackend};
 use libra_crypto::{ed25519::Ed25519PublicKey, hash::CryptoHash, x25519, ValidCryptoMaterial};
 use libra_network_address::{NetworkAddress, RawNetworkAddress};
-use libra_secure_storage::{Storage, VaultStorage};
+use libra_secure_storage::{Storage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_types::{
     account_address::AccountAddress,
@@ -31,7 +31,7 @@ pub mod constants {
     pub const FULLNODE_NETWORK_KEY: &str = "fullnode_network";
     pub const LAST_VOTED_ROUND: &str = "last_voted_round";
     pub const OWNER_KEY: &str = "owner";
-    pub const OPERATOR_KEY: &str = "validator";
+    pub const OPERATOR_KEY: &str = "operator";
     pub const PREFERRED_ROUND: &str = "preferred_round";
     pub const VALIDATOR_NETWORK_KEY: &str = "validator_network";
     pub const WAYPOINT: &str = "waypoint";
@@ -44,14 +44,14 @@ pub mod constants {
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Tool used to manage Libra Validators")]
 pub enum Command {
-    #[structopt(about = "Produces an LCS Ed25519PublicKey for the operator")]
-    OperatorKey(SecureBackend),
-    #[structopt(about = "Produces an LCS Ed25519PublicKey for the owner")]
-    OwnerKey(SecureBackend),
+    #[structopt(about = "Submits an Ed25519PublicKey for the operator")]
+    OperatorKey(SecureBackends),
+    #[structopt(about = "Submits an Ed25519PublicKey for the owner")]
+    OwnerKey(SecureBackends),
     #[structopt(about = "Constructs and signs a ValidatorConfig")]
     ValidatorConfig(ValidatorConfig),
     #[structopt(about = "Verifies and prints the current configuration state")]
-    Verify(SecureBackend),
+    Verify(SingleBackend),
 }
 
 pub enum CommandName {
@@ -95,16 +95,8 @@ impl Command {
     }
 
     pub fn operator_key(self) -> Result<Ed25519PublicKey, Error> {
-        if let Command::OperatorKey(secure_backend) = self {
-            let storage = secure_storage(secure_backend);
-            if !storage.available() {
-                return Err(Error::LocalStorageUnavailable);
-            }
-
-            storage
-                .get_public_key(constants::OPERATOR_KEY)
-                .map_err(|e| Error::LocalStorageReadError(e.to_string()))
-                .and_then(|v| Ok(v.public_key))
+        if let Command::OperatorKey(secure_backends) = self {
+            Self::submit_key(constants::OPERATOR_KEY, secure_backends)
         } else {
             let expected = CommandName::OperatorKey.to_string();
             let actual = CommandName::from(&self).to_string();
@@ -113,16 +105,8 @@ impl Command {
     }
 
     pub fn owner_key(self) -> Result<Ed25519PublicKey, Error> {
-        if let Command::OwnerKey(secure_backend) = self {
-            let storage = secure_storage(secure_backend);
-            if !storage.available() {
-                return Err(Error::LocalStorageUnavailable);
-            }
-
-            storage
-                .get_public_key(constants::OWNER_KEY)
-                .map_err(|e| Error::LocalStorageReadError(e.to_string()))
-                .and_then(|v| Ok(v.public_key))
+        if let Command::OwnerKey(secure_backends) = self {
+            Self::submit_key(constants::OWNER_KEY, secure_backends)
         } else {
             let expected = CommandName::OwnerKey.to_string();
             let actual = CommandName::from(&self).to_string();
@@ -132,7 +116,7 @@ impl Command {
 
     pub fn validator_config(self) -> Result<Transaction, Error> {
         if let Command::ValidatorConfig(config) = self {
-            let mut storage = secure_storage(config.secure_backend);
+            let mut storage: Box<dyn Storage> = config.backend.backend.try_into()?;
             if !storage.available() {
                 return Err(Error::LocalStorageUnavailable);
             }
@@ -209,8 +193,8 @@ impl Command {
     }
 
     pub fn verify(self) -> Result<String, Error> {
-        if let Command::Verify(secure_backend) = self {
-            let storage = secure_storage(secure_backend);
+        if let Command::Verify(backend) = self {
+            let storage: Box<dyn Storage> = backend.backend.try_into()?;
             if !storage.available() {
                 return Err(Error::LocalStorageUnavailable);
             }
@@ -287,16 +271,64 @@ impl Command {
 
         writeln!(buffer, "{} - {}", key, value).unwrap();
     }
+
+    fn submit_key(
+        key_name: &str,
+        secure_backends: SecureBackends,
+    ) -> Result<Ed25519PublicKey, Error> {
+        let local: Box<dyn Storage> = secure_backends.local.try_into()?;
+        if !local.available() {
+            return Err(Error::LocalStorageUnavailable);
+        }
+
+        let key = local
+            .get_public_key(key_name)
+            .map_err(|e| Error::LocalStorageReadError(e.to_string()))?
+            .public_key;
+
+        if let Some(remote) = secure_backends.remote {
+            let key = Value::Ed25519PublicKey(key.clone());
+            let mut remote: Box<dyn Storage> = remote.try_into()?;
+            if !remote.available() {
+                return Err(Error::RemoteStorageUnavailable);
+            }
+
+            remote
+                .create_with_default_policy(key_name, key)
+                .map_err(|e| Error::LocalStorageReadError(e.to_string()))?;
+        }
+
+        Ok(key)
+    }
 }
 
 #[derive(Debug, StructOpt)]
-pub struct SecureBackend {
+pub struct SecureBackends {
+    /// The local secure backend. Secure backends are represented as a
+    /// semi-colon deliminted key value pair: "k0=v0;k1=v1;...".
+    /// The current supported formats are:
+    ///     Vault: "backend=vault;server=URL;token=TOKEN"
+    ///         vault has an optional namespace: "namespace=NAMESPACE"
+    ///     InMemory: "backend=memory"
+    ///     OnDisk: "backend=disk;path=LOCAL_PATH"
+    #[structopt(long, verbatim_doc_comment)]
+    local: SecureBackend,
+    /// The remote secure backend. See the comments for the local backend.
     #[structopt(long)]
-    host: String,
-    #[structopt(long)]
-    token: String,
-    #[structopt(long)]
-    namespace: Option<String>,
+    remote: Option<SecureBackend>,
+}
+
+#[derive(Debug, StructOpt)]
+pub struct SingleBackend {
+    /// The secure backend. Secure backends are represented as a semi-colon
+    /// deliminted key value pair: "k0=v0;k1=v1;...".
+    /// The current supported formats are:
+    ///     Vault: "backend=vault;server=URL;token=TOKEN"
+    ///         vault has an optional namespace: "namespace=NAMESPACE"
+    ///     InMemory: "backend=memory"
+    ///     OnDisk: "backend=disk;path=LOCAL_PATH"
+    #[structopt(long, verbatim_doc_comment)]
+    backend: SecureBackend,
 }
 
 // TODO(davidiw) add operator_address, since that will eventually be the identity producing this.
@@ -309,15 +341,7 @@ pub struct ValidatorConfig {
     #[structopt(long)]
     fullnode_address: NetworkAddress,
     #[structopt(flatten)]
-    secure_backend: SecureBackend,
-}
-
-fn secure_storage(config: SecureBackend) -> Box<dyn Storage> {
-    Box::new(VaultStorage::new(
-        config.host,
-        config.token,
-        config.namespace,
-    ))
+    backend: SingleBackend,
 }
 
 /// These tests depends on running Vault, which can be done by using the provided docker run script
@@ -328,7 +352,7 @@ fn secure_storage(config: SecureBackend) -> Box<dyn Storage> {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use libra_secure_storage::{Policy, Value};
+    use libra_secure_storage::{Policy, Value, VaultStorage};
     use libra_types::transaction::TransactionPayload;
 
     const VAULT_HOST: &str = "http://localhost:8200";
@@ -338,7 +362,8 @@ pub mod tests {
     #[ignore]
     fn test_end_to_end() {
         let namespace = "end_to_end";
-        let storage = initialize_storage(default_secure_backend(namespace.into()));
+        let mut storage = default_storage(namespace.into());
+        initialize_storage(storage.as_mut());
         let association_key = storage
             .get_public_key(constants::ASSOCIATION_KEY)
             .unwrap()
@@ -375,7 +400,8 @@ pub mod tests {
     #[ignore]
     fn test_validator_config() {
         let namespace = "validator_config";
-        initialize_storage(default_secure_backend(namespace.into()));
+        let mut storage = default_storage(namespace.into());
+        initialize_storage(storage.as_mut());
 
         validator_config(
             AccountAddress::random(),
@@ -391,13 +417,13 @@ pub mod tests {
     fn test_verify() {
         let namespace = "verify";
 
-        let mut storage = secure_storage(default_secure_backend(namespace.into()));
+        let mut storage = default_storage(namespace.into());
         storage.reset_and_clear().unwrap();
 
         let output = verify(namespace).unwrap().split("KeyNotSet").count();
         assert_eq!(output, 10); // 9 KeyNotSet results in 9 splits
 
-        initialize_storage(default_secure_backend(namespace.into()));
+        initialize_storage(storage.as_mut());
 
         let output = verify(namespace).unwrap().split("KeyNotSet").count();
         assert_eq!(output, 1); // 0 KeyNotSet results in 1 split
@@ -406,47 +432,50 @@ pub mod tests {
     #[test]
     #[ignore]
     fn test_owner_key() {
-        let namespace = "owner_key";
-        let mut storage = secure_storage(default_secure_backend(namespace.into()));
-        storage.reset_and_clear().unwrap();
-        owner_key(namespace).unwrap_err();
-
-        let storage = initialize_storage(default_secure_backend(namespace.into()));
-        let key = storage
-            .get_public_key(constants::OWNER_KEY)
-            .unwrap()
-            .public_key;
-        let okey = owner_key(namespace).unwrap();
-        assert_eq!(key, okey);
+        test_key(constants::OWNER_KEY, owner_key);
     }
 
     #[test]
     #[ignore]
-    fn test_operator_key_valid() {
-        let namespace = "operator_key";
-        let mut storage = secure_storage(default_secure_backend(namespace.into()));
-        storage.reset_and_clear().unwrap();
-        operator_key(namespace).unwrap_err();
+    fn test_operator_key() {
+        test_key(constants::OPERATOR_KEY, operator_key);
+    }
 
-        let storage = initialize_storage(default_secure_backend(namespace.into()));
-        let key = storage
-            .get_public_key(constants::OPERATOR_KEY)
+    fn test_key(key_name: &str, op: fn(&str, &str) -> Result<Ed25519PublicKey, Error>) {
+        let local_ns = format!("local_{}_key", key_name);
+        let remote_ns = format!("remote_{}_key", key_name);
+
+        let mut local = default_storage(local_ns.clone());
+        local.reset_and_clear().unwrap();
+        op(&local_ns, &remote_ns).unwrap_err();
+
+        initialize_storage(local.as_mut());
+        let local_key = local.get_public_key(key_name).unwrap().public_key;
+
+        let mut remote = default_storage(remote_ns.clone());
+        remote.reset_and_clear().unwrap();
+
+        let output_key = op(&local_ns, &remote_ns).unwrap();
+        let remote_key = remote
+            .get(key_name)
             .unwrap()
-            .public_key;
-        let okey = operator_key(namespace).unwrap();
-        assert_eq!(key, okey);
+            .value
+            .ed25519_public_key()
+            .unwrap();
+
+        assert_eq!(local_key, output_key);
+        assert_eq!(local_key, remote_key);
     }
 
-    fn default_secure_backend(namespace: String) -> SecureBackend {
-        SecureBackend {
-            host: VAULT_HOST.into(),
-            token: VAULT_ROOT_TOKEN.into(),
-            namespace: Some(namespace),
-        }
+    fn default_storage(namespace: String) -> Box<dyn Storage> {
+        Box::new(VaultStorage::new(
+            VAULT_HOST.into(),
+            VAULT_ROOT_TOKEN.into(),
+            Some(namespace),
+        ))
     }
 
-    fn initialize_storage(config: SecureBackend) -> Box<dyn Storage> {
-        let mut storage = secure_storage(config);
+    fn initialize_storage(storage: &mut dyn Storage) {
         let policy = Policy::public();
         storage.reset_and_clear().unwrap();
 
@@ -479,40 +508,52 @@ pub mod tests {
         storage
             .create(constants::WAYPOINT, Value::String("".into()), &policy)
             .unwrap();
-
-        storage
     }
 
-    fn operator_key(namespace: &str) -> Result<Ed25519PublicKey, Error> {
+    fn operator_key(local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
                 management
                 operator-key
-                --host {secure_host}
-                --token {secure_token}
-                --namespace {secure_namespace}
+                --local backend={backend};\
+                    server={server};\
+                    token={token};\
+                    namespace={local_ns}
+                --remote backend={backend};\
+                    server={server};\
+                    token={token};\
+                    namespace={remote_ns}\
             ",
-            secure_host = VAULT_HOST,
-            secure_token = VAULT_ROOT_TOKEN,
-            secure_namespace = namespace,
+            backend = "vault",
+            server = VAULT_HOST,
+            token = VAULT_ROOT_TOKEN,
+            local_ns = local_ns,
+            remote_ns = remote_ns,
         );
 
         let command = Command::from_iter(args.split_whitespace());
         command.operator_key()
     }
 
-    fn owner_key(namespace: &str) -> Result<Ed25519PublicKey, Error> {
+    fn owner_key(local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
                 management
                 owner-key
-                --host {secure_host}
-                --token {secure_token}
-                --namespace {secure_namespace}
+                --local backend={backend};\
+                    server={server};\
+                    token={token};\
+                    namespace={local_ns}
+                --remote backend={backend};\
+                    server={server};\
+                    token={token};\
+                    namespace={remote_ns}\
             ",
-            secure_host = VAULT_HOST,
-            secure_token = VAULT_ROOT_TOKEN,
-            secure_namespace = namespace,
+            backend = "vault",
+            server = VAULT_HOST,
+            token = VAULT_ROOT_TOKEN,
+            local_ns = local_ns,
+            remote_ns = remote_ns,
         );
 
         let command = Command::from_iter(args.split_whitespace());
@@ -532,16 +573,18 @@ pub mod tests {
                 --owner-address {owner_address}
                 --validator-address {validator_address}
                 --fullnode-address {fullnode_address}
-                --host {secure_host}
-                --token {secure_token}
-                --namespace {secure_namespace}
+                --backend backend={backend};\
+                    server={server};\
+                    token={token};\
+                    namespace={ns}
             ",
             owner_address = owner_address,
             validator_address = validator_address,
             fullnode_address = fullnode_address,
-            secure_host = VAULT_HOST,
-            secure_token = VAULT_ROOT_TOKEN,
-            secure_namespace = namespace,
+            backend = "vault",
+            server = VAULT_HOST,
+            token = VAULT_ROOT_TOKEN,
+            ns = namespace,
         );
 
         let command = Command::from_iter(args.split_whitespace());
@@ -553,13 +596,15 @@ pub mod tests {
             "
                 validator_config
                 verify
-                --host {secure_host}
-                --token {secure_token}
-                --namespace {secure_namespace}
+                --backend backend={backend};\
+                    server={server};\
+                    token={token};\
+                    namespace={ns}
             ",
-            secure_host = VAULT_HOST,
-            secure_token = VAULT_ROOT_TOKEN,
-            secure_namespace = namespace,
+            backend = "vault",
+            server = VAULT_HOST,
+            token = VAULT_ROOT_TOKEN,
+            ns = namespace,
         );
 
         let command = Command::from_iter(args.split_whitespace());
