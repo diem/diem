@@ -14,7 +14,7 @@ use libra_crypto::{
     PrivateKey, Uniform,
 };
 use libra_mempool::mocks::MockSharedMempool;
-use libra_network_address::NetworkAddress;
+use libra_network_address::{NetworkAddress, RawNetworkAddress};
 use libra_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures,
     on_chain_config::ValidatorSet, proof::TransactionListProof,
@@ -29,6 +29,7 @@ use network::{
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::HashMap,
+    convert::TryFrom,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc, RwLock,
@@ -147,12 +148,14 @@ impl SynchronizerEnv {
         // The voting power of peer 0 is enough to generate an LI that passes validation.
         for (idx, signer) in signers.iter().enumerate() {
             let voting_power = if idx == 0 { 1000 } else { 1 };
+            let addr = "/memory/0".parse::<NetworkAddress>().unwrap();
             let validator_info = ValidatorInfo::new(
                 signer.author(),
                 voting_power,
                 signer.public_key(),
                 signing_private_keys[idx].public_key(),
                 identity_private_keys[idx].public_key(),
+                RawNetworkAddress::try_from(&addr).unwrap(),
             );
             validators_keys.push(validator_info);
         }
@@ -165,6 +168,7 @@ impl SynchronizerEnv {
     pub fn move_to_next_epoch(&self) {
         let num_peers = self.public_keys.len();
         let (signers, _verifier) = random_validator_verifier(num_peers, None, true);
+        let addr = "/memory/0".parse::<NetworkAddress>().unwrap();
         let new_keys = self
             .public_keys
             .iter()
@@ -176,6 +180,7 @@ impl SynchronizerEnv {
                     signers[idx].public_key(),
                     validator_keys.network_signing_public_key().clone(),
                     validator_keys.network_identity_public_key(),
+                    RawNetworkAddress::try_from(&addr).unwrap(),
                 )
             })
             .collect::<Vec<ValidatorInfo>>();

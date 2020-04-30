@@ -17,4 +17,6 @@ message ValidatorInfo {
   bytes network_signing_public_key = 4;
   /// Network identity publick key
   bytes network_identity_public_key = 5;
+  /// Network address
+  bytes network_address = 6;
 }

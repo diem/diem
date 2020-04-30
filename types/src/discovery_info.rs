@@ -24,11 +24,6 @@ pub struct DiscoveryInfo {
     // The validator's account address.
     pub account_address: AccountAddress,
     // This static pubkey is used in the connection handshake to authenticate
-    // this particular validator.
-    pub validator_network_identity_pubkey: x25519::PublicKey,
-    // Other validators can dial this validator at this multiaddress.
-    pub validator_network_address: RawNetworkAddress,
-    // This static pubkey is used in the connection handshake to authenticate
     // this validator's full nodes.
     pub fullnodes_network_identity_pubkey: x25519::PublicKey,
     // Other full nodes and clients can dial this validator's full nodes at this

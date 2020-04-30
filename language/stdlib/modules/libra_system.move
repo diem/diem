@@ -29,18 +29,17 @@ module LibraSystem {
         validators: vector<ValidatorInfo>,
     }
 
-    // DiscoveryInfo stores discovery config.
-    // It describes how other validators can establish a network
-    // connection with this validator.
-    // It also describes how other full-nodes and clients can establish
+    // DiscoveryInfo describes how other full-nodes and clients can establish
     // a network connection with this full node.
+    // TODO(valerini): rename DiscoveryInfo -> FullNodeInfo, DiscoverySet -> FullNodeSet, etc.
     struct DiscoveryInfo {
         addr: address,
-        discovery_config: ValidatorConfig::DiscoveryConfig,
+        discovery_config: ValidatorConfig::FullNodeConfig,
     }
 
     struct DiscoverySetChangeEvent {
         new_discovery_set: vector<DiscoveryInfo>,
+        new_validator_set: T,
     }
 
     resource struct DiscoverySet {
@@ -48,23 +47,6 @@ module LibraSystem {
         discovery_set: vector<DiscoveryInfo>,
         // Handle where discovery set change events are emitted
         change_events: Event::EventHandle<DiscoverySetChangeEvent>,
-    }
-
-    // ValidatorInfo public accessors
-
-    // Get validator's address from ValidatorInfo
-    public fun get_validator_address(v: &ValidatorInfo): address {
-        v.addr
-    }
-
-    // Get validator's config from ValidatorInfo
-    public fun get_validator_config(v: &ValidatorInfo): &ValidatorConfig::Config {
-        &v.config
-    }
-
-    // Get validator's voting power from ValidatorInfo
-    public fun get_validator_voting_power(v: &ValidatorInfo): u64 {
-        v.consensus_voting_power
     }
 
     // This can only be invoked by the ValidatorSet address to instantiate
@@ -119,7 +101,7 @@ module LibraSystem {
             consensus_voting_power: 1,
         });
 
-        let discovery_config = ValidatorConfig::get_discovery_config(account_address);
+        let discovery_config = ValidatorConfig::get_full_node_config(account_address);
         let discovery_set_ref = &mut borrow_global_mut<DiscoverySet>(0xD15C0).discovery_set;
         Vector::push_back(
             discovery_set_ref, DiscoveryInfo {
@@ -151,6 +133,9 @@ module LibraSystem {
 
         // Remove corresponding DiscoveryInfo from the discovery set, the indices should match
         let discovery_set_ref = &mut borrow_global_mut<DiscoverySet>(0xD15C0).discovery_set;
+        // Make sure the fullnode address at to_remove_index is correct
+        Transaction::assert(Vector::borrow(discovery_set_ref, to_remove_index).addr == account_address, 24);
+        // Remove corresponding DiscoveryInfo from the discovery set
         _  = Vector::swap_remove(discovery_set_ref, to_remove_index);
 
         set_validator_set(validator_set);
@@ -178,21 +163,19 @@ module LibraSystem {
 
         let i = 0;
         let configs_changed = false;
-        let discovery_configs_changed = false;
         while (i < size) {
             let validator_info_update = update_ith_validator_info_(validators, i);
-            let discovery_info_update = update_ith_discovery_info_(discoveries, i);
+            update_ith_discovery_info_(discoveries, i);
 
             configs_changed = configs_changed || validator_info_update;
-            discovery_configs_changed = discovery_configs_changed || discovery_info_update;
             i = i + 1;
         };
         if (configs_changed) {
             set_validator_set(validator_set);
         };
-        if (discovery_configs_changed) {
-            emit_discovery_set_change();
-        };
+        // Discovery event is always fired on the reconfiguration
+        // TODO(valerini): only fire this event on full-node config components update
+        emit_discovery_set_change();
     }
 
     // Public getters
@@ -200,16 +183,6 @@ module LibraSystem {
     // Return true if addr is a current validator
     public fun is_validator(addr: address): bool {
         is_validator_(addr, &get_validator_set().validators)
-    }
-
-    // Returns validator info
-    // If the address is not a validator, abort
-    public fun get_validator_info(addr: address): ValidatorInfo {
-        let validator_set = get_validator_set();
-        let validator_index_vec = get_validator_index_(&validator_set.validators, addr);
-        Transaction::assert(!Vector::is_empty(&validator_index_vec), 19);
-
-        *Vector::borrow(&validator_set.validators, *Vector::borrow(&validator_index_vec, 0))
     }
 
     // Return the size of the current validator set
@@ -276,7 +249,7 @@ module LibraSystem {
         };
         let validator_info = Vector::borrow_mut(validators, i);
 
-        let new_discovery_config = ValidatorConfig::get_discovery_config(validator_info.addr);
+        let new_discovery_config = ValidatorConfig::get_full_node_config(validator_info.addr);
         let discovery_config_ref = &mut Vector::borrow_mut(validators, i).discovery_config;
 
         if (discovery_config_ref == &new_discovery_config) {
@@ -310,46 +283,35 @@ module LibraSystem {
         !Vector::is_empty(&get_validator_index_(validators_vec_ref, addr))
     }
 
-    // Discovery methods
-
     fun emit_discovery_set_change() acquires DiscoverySet {
         let discovery_set_ref = borrow_global_mut<DiscoverySet>(0xD15C0);
         Event::emit_event<DiscoverySetChangeEvent>(
             &mut discovery_set_ref.change_events,
             DiscoverySetChangeEvent {
                 new_discovery_set: *&discovery_set_ref.discovery_set,
+                new_validator_set: get_validator_set(),
             },
         );
     }
 
-    public fun get_discovery_address(d: &DiscoveryInfo): address {
-        d.addr
+    // Functions for testing
+
+    // This getter is only used in tests
+    public fun get_validator_config(addr: address): ValidatorConfig::Config {
+        let validator_set = get_validator_set();
+        let validator_index_vec = get_validator_index_(&validator_set.validators, addr);
+        *&(*Vector::borrow(&validator_set.validators, *Vector::borrow(&validator_index_vec, 0))).config
     }
 
-    public fun get_discovery_config(d: &DiscoveryInfo): &ValidatorConfig::DiscoveryConfig {
-        &d.discovery_config
-    }
-
-    // Get the DiscoveryInfo for the ith validator
-    public fun get_ith_discovery_info(i: u64): DiscoveryInfo acquires DiscoverySet {
-        let discovery_vec_ref = &borrow_global<DiscoverySet>(0xD15C0).discovery_set;
-        *Vector::borrow(discovery_vec_ref, i)
-    }
-
-    // Get the index of the discovery info with address `addr` in `discovery_set`.
-    // Aborts if `addr` is not in discovery set.
-    public fun get_discovery_index(discovery_set: &vector<DiscoveryInfo>, addr: address): u64 {
-        let len = Vector::length(discovery_set);
-        let i = 0;
-        loop {
-            if (get_discovery_address(Vector::borrow(discovery_set, i)) == addr) {
-                return i
-            };
-
-            i = i + 1;
-            if (i >= len) { break };
-        };
-
-        abort 99
+    // This getter is only used in tests
+    public fun get_full_node_config(addr: address): ValidatorConfig::FullNodeConfig acquires DiscoverySet {
+        // To simplify the code, we use the fact that at the moment fullnode config is stored at
+        // the same index in the vector of fullnode configs as in the vector of validator configs
+        let discovery_set_ref = &borrow_global<DiscoverySet>(0xD15C0).discovery_set;
+        let validator_index_vec = get_validator_index_(&get_validator_set().validators, addr);
+        let validator_index = *Vector::borrow(&validator_index_vec, 0);
+        // Make sure the fullnode address at to_remove_index is correct
+        Transaction::assert(Vector::borrow(discovery_set_ref, validator_index).addr == addr, 25);
+        *&(*Vector::borrow(discovery_set_ref, validator_index)).discovery_config
     }
 }

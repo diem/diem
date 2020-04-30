@@ -39,9 +39,8 @@ fun main() {
     LibraSystem::update_and_reconfigure();
 
     // check bob's public key
-    let validator_info = LibraSystem::get_validator_info({{bob}});
-    let validator_config = LibraSystem::get_validator_config(&validator_info);
-    0x0::Transaction::assert(ValidatorConfig::get_consensus_pubkey(validator_config) == x"30", 99);
+    let validator_config = LibraSystem::get_validator_config({{bob}});
+    0x0::Transaction::assert(ValidatorConfig::get_consensus_pubkey(&validator_config) == x"30", 99);
 }
 
 // check: EXECUTED

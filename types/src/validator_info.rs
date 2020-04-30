@@ -4,8 +4,13 @@
 use crate::account_address::AccountAddress;
 use anyhow::{Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
+use core::str::FromStr;
+#[cfg(any(test, feature = "fuzzing"))]
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_crypto::{ed25519::Ed25519PublicKey, traits::ValidCryptoMaterial, x25519};
+#[cfg(any(test, feature = "fuzzing"))]
+use libra_network_address::NetworkAddress;
+use libra_network_address::RawNetworkAddress;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -22,16 +27,18 @@ pub struct ValidatorInfo {
     // The validator's account address. AccountAddresses are initially derived from the account
     // auth pubkey; however, the auth key can be rotated, so one should not rely on this
     // initial property.
-    account_address: AccountAddress,
+    pub account_address: AccountAddress,
     // Voting power of this validator
-    consensus_voting_power: u64,
+    pub consensus_voting_power: u64,
     // This key can validate messages sent from this validator
-    consensus_public_key: Ed25519PublicKey,
+    pub consensus_public_key: Ed25519PublicKey,
     // This key can validate signed messages at the network layer
-    network_signing_public_key: Ed25519PublicKey,
+    pub network_signing_public_key: Ed25519PublicKey,
     // This key establishes the corresponding PrivateKey holder's eligibility to join the p2p
     // network
-    network_identity_public_key: x25519::PublicKey,
+    pub network_identity_public_key: x25519::PublicKey,
+    // Other validators can dial this validator at this multiaddress.
+    pub network_address: RawNetworkAddress,
 }
 
 impl fmt::Display for ValidatorInfo {
@@ -47,6 +54,7 @@ impl ValidatorInfo {
         consensus_public_key: Ed25519PublicKey,
         network_signing_public_key: Ed25519PublicKey,
         network_identity_public_key: x25519::PublicKey,
+        network_address: RawNetworkAddress,
     ) -> Self {
         ValidatorInfo {
             account_address,
@@ -54,6 +62,7 @@ impl ValidatorInfo {
             consensus_public_key,
             network_signing_public_key,
             network_identity_public_key,
+            network_address,
         }
     }
 
@@ -66,6 +75,8 @@ impl ValidatorInfo {
         let network_signing_public_key = Ed25519PrivateKey::generate_for_testing().public_key();
         let private_key = x25519::PrivateKey::generate_for_testing();
         let network_identity_public_key = private_key.public_key();
+        let network_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
+        let network_address = RawNetworkAddress::try_from(&network_address).unwrap();
 
         Self {
             account_address,
@@ -73,6 +84,7 @@ impl ValidatorInfo {
             consensus_public_key,
             network_signing_public_key,
             network_identity_public_key,
+            network_address,
         }
     }
 
@@ -101,6 +113,11 @@ impl ValidatorInfo {
     pub fn network_identity_public_key(&self) -> x25519::PublicKey {
         self.network_identity_public_key
     }
+
+    /// Returns the network address in the p2p network
+    pub fn network_address(&self) -> &RawNetworkAddress {
+        &self.network_address
+    }
 }
 
 impl TryFrom<crate::proto::types::ValidatorInfo> for ValidatorInfo {
@@ -114,12 +131,14 @@ impl TryFrom<crate::proto::types::ValidatorInfo> for ValidatorInfo {
             Ed25519PublicKey::try_from(&proto.network_signing_public_key[..])?;
         let network_identity_public_key =
             x25519::PublicKey::try_from(&proto.network_identity_public_key[..])?;
+        let network_address = lcs::from_bytes(&proto.network_address)?;
         Ok(Self::new(
             account_address,
             consensus_voting_power,
             consensus_public_key,
             network_signing_public_key,
             network_identity_public_key,
+            network_address,
         ))
     }
 }
@@ -132,6 +151,8 @@ impl From<ValidatorInfo> for crate::proto::types::ValidatorInfo {
             consensus_public_key: keys.consensus_public_key.to_bytes().to_vec(),
             network_signing_public_key: keys.network_signing_public_key.to_bytes().to_vec(),
             network_identity_public_key: keys.network_identity_public_key.to_bytes(),
+            network_address: lcs::to_bytes(&keys.network_address)
+                .expect("failed to serialize RawNetworkAddress"),
         }
     }
 }

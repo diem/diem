@@ -16,7 +16,10 @@ use futures::{channel::oneshot, sink::SinkExt, stream::StreamExt};
 use libra_config::config::{NodeConfig, RoleType};
 use libra_network_address::NetworkAddress;
 use libra_types::{
-    account_config, account_state::AccountState, discovery_set::DiscoverySet, waypoint::Waypoint,
+    account_config,
+    account_state::AccountState,
+    discovery_set::{DiscoveryInfoFull, DiscoverySetFull},
+    waypoint::Waypoint,
     PeerId,
 };
 use libra_vm::LibraVM;
@@ -486,15 +489,35 @@ fn queries_peers_on_tick() {
     rt.block_on(f_server_service).unwrap();
 }
 
-async fn get_discovery_set(storage: &Arc<dyn StorageRead>) -> DiscoverySet {
+async fn get_discovery_set(storage: &Arc<dyn StorageRead>) -> DiscoverySetFull {
+    // Here we zip FullNodeSet and ValidatorSet into DiscoverySet
+    // TODO(valerini or phlip9): read different addresses from storage based on role
+    //                           to take advantage of the optimization
     let account_state = storage
         .get_latest_account_state(account_config::discovery_set_address())
         .await;
     let account_state = AccountState::try_from(&account_state.unwrap().unwrap()).unwrap();
-    account_state
-        .get_discovery_set_resource()
-        .unwrap()
-        .unwrap()
-        .discovery_set()
-        .clone()
+    let discovery_set = account_state.get_discovery_set_resource().unwrap().unwrap();
+    let discovery_set = discovery_set.discovery_set().clone();
+
+    let account_state = storage
+        .get_latest_account_state(account_config::validator_set_address())
+        .await;
+    let account_state = AccountState::try_from(&account_state.unwrap().unwrap()).unwrap();
+    let validator_set = account_state.get_validator_set().unwrap().unwrap();
+    let validator_set = &(*validator_set.payload());
+
+    let mut discovery_set_vec = Vec::<DiscoveryInfoFull>::new();
+    // zipping together two vectors into a discovery set
+    for it in discovery_set.into_iter().zip(validator_set.iter()) {
+        let (discovery_info, validator_info) = it;
+        discovery_set_vec.push(DiscoveryInfoFull {
+            account_address: validator_info.account_address,
+            validator_network_identity_pubkey: validator_info.network_identity_public_key,
+            validator_network_address: validator_info.network_address.clone(),
+            fullnodes_network_identity_pubkey: discovery_info.fullnodes_network_identity_pubkey,
+            fullnodes_network_address: discovery_info.fullnodes_network_address.clone(),
+        });
+    }
+    DiscoverySetFull::new(discovery_set_vec)
 }

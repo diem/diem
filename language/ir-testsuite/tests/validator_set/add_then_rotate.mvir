@@ -7,9 +7,7 @@
 // register Alice as a validator candidate
 import 0x0.ValidatorConfig;
 main() {
-    let config: ValidatorConfig.Config;
     ValidatorConfig.register_candidate_validator(h"10", h"20", h"30", h"40", h"50", h"60");
-
     return;
 }
 
@@ -24,7 +22,6 @@ main() {
 import 0x0.LibraSystem;
 main() {
     LibraSystem.add_validator({{alice}});
-
     return;
 }
 
@@ -44,7 +41,6 @@ import 0x0.ValidatorConfig;
 main() {
     ValidatorConfig.rotate_consensus_pubkey_of_sender(h"beefbeef");
     LibraSystem.update_and_reconfigure();
-
     return;
 }
 // check: NewEpochEvent
@@ -56,13 +52,10 @@ main() {
 import 0x0.LibraSystem;
 import 0x0.ValidatorConfig;
 main() {
-    let info: LibraSystem.ValidatorInfo;
-
+    let config: ValidatorConfig.Config;
     assert(LibraSystem.is_validator({{alice}}), 70);
-
-    info = LibraSystem.get_validator_info({{alice}});
-    assert(ValidatorConfig.get_consensus_pubkey(LibraSystem.get_validator_config(&info)) == h"beefbeef", 72);
-
+    config = LibraSystem.get_validator_config({{alice}});
+    assert(ValidatorConfig.get_consensus_pubkey(&config) == h"beefbeef", 72);
     return;
 }
 

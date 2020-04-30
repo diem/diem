@@ -7,9 +7,9 @@ use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
 use libra_types::{
-    discovery_info::DiscoveryInfo,
     discovery_set::{
-        DiscoverySet, DiscoverySetChangeEvent, GLOBAL_DISCOVERY_SET_CHANGE_EVENT_PATH,
+        DiscoveryInfoFull, DiscoverySetChangeEvent, DiscoverySetFull,
+        GLOBAL_DISCOVERY_SET_CHANGE_EVENT_PATH,
     },
     get_with_proof::{
         RequestItem, ResponseItem, UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse,
@@ -131,7 +131,7 @@ impl TryFrom<QueryDiscoverySetResponse> for QueryDiscoverySetResponseWithEvent {
 pub struct DiscoverySetInternal(pub HashMap<PeerId, DiscoveryInfoInternal>);
 
 impl DiscoverySetInternal {
-    pub fn from_discovery_set(role_filter: RoleType, discovery_set: DiscoverySet) -> Self {
+    pub fn from_discovery_set(role_filter: RoleType, discovery_set: DiscoverySetFull) -> Self {
         Self(
             discovery_set
                 .into_iter()
@@ -175,7 +175,7 @@ pub struct DiscoveryInfoInternal(pub x25519::PublicKey, pub Vec<NetworkAddress>)
 impl DiscoveryInfoInternal {
     pub fn try_from_discovery_info(
         role_filter: RoleType,
-        discovery_info: DiscoveryInfo,
+        discovery_info: DiscoveryInfoFull,
     ) -> Result<Self> {
         let info = match role_filter {
             RoleType::Validator => Self(
