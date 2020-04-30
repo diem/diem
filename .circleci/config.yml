@@ -4,7 +4,7 @@ executors:
   build-executor:
     docker:
       - image: circleci/rust:buster
-    resource_class: 2xlarge+
+    resource_class: 2xlarge
   test-executor:
     docker:
       - image: circleci/rust:buster
@@ -12,7 +12,7 @@ executors:
   audit-executor:
     docker:
       - image: circleci/rust:buster
-    resource_class: xlarge
+    resource_class: medium
   terraform-executor:
     docker:
       - image: hashicorp/terraform
@@ -161,7 +161,7 @@ commands:
 
 jobs:
   prefetch-crates:
-    executor: test-executor
+    executor: audit-executor
     description: Prefetch cargo crates for subsequent jobs.
     steps:
       - build_setup
@@ -219,17 +219,17 @@ jobs:
           command: RUST_BACKTRACE=1 cargo build -j 16 -p test-generation
       - build_teardown
   build-release:
-    executor: build-executor
+    executor: test-executor
     description: Release Build
     steps:
       - build_setup
       - restore_cargo_package_cache
       - run:
           name: Build release
-          command: RUST_BACKTRACE=1 cargo build -j 16 --release
+          command: RUST_BACKTRACE=1 cargo build -j 8 --release
       - build_teardown
   build-e2e-test:
-    executor: build-executor
+    executor: test-executor
     description: Generate a list of E2E test targets to be distributed.
     steps:
       - build_setup
@@ -248,7 +248,7 @@ jobs:
             - e2e_tests
             - target/debug/deps/libratest*
   run-e2e-test:
-    executor: build-executor
+    executor: test-executor
     parallelism: 8
     description: Run E2E tests in parallel. Each container runs a subset of
       test targets.
@@ -322,7 +322,7 @@ jobs:
           command: |
             RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --unit
   run-crypto-unit-test:
-    executor: test-executor
+    executor: audit-executor
     description: Run crypto unit tests without formally verified crypto, to insulate against a curve25519 "default" backend regression
     steps:
       - build_setup
@@ -347,7 +347,7 @@ jobs:
             ./scripts/run_quarantined.sh -c <your package here> -r 3 -f
   validate-cluster-test-dockerfile:
     description: Validate that committed docker files for cluster test are up to date
-    executor: build-executor
+    executor: audit-executor
     steps:
       - build_setup
       - run:
@@ -359,6 +359,7 @@ jobs:
     executor: audit-executor
     steps:
       - build_setup
+      - restore_cargo_package_cache
       - run:
           name: Install Cargo Audit
           command: |
@@ -375,7 +376,7 @@ jobs:
       - build_teardown
   code-coverage:
     description: Run code coverage
-    executor: build-executor
+    executor: test-executor
     steps:
       - build_setup
       - install_code_coverage_deps
