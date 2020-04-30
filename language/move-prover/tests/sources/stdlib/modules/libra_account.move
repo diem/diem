@@ -11,7 +11,7 @@ module LibraAccount {
     use 0x0::Vector;
 
     spec module {
-        pragma verify = false;
+        pragma verify=false;
     }
 
     // Every Libra account has a LibraAccount::T resource
@@ -222,6 +222,88 @@ module LibraAccount {
         deposit(payee, Libra::mint<LBR::T>(amount));
     }
 
+    // This function is created to demonstrate a schema inclusion bug.
+    // TODO: remove this function when not needed.
+    public fun mint_LBR(amount: u64): Libra::T<LBR::T> {
+        Libra::mint<LBR::T>(amount)
+    }
+    spec fun mint_LBR {
+        pragma verify=false; // FIXME: this function should be verified.
+        // include Libra::MintAbortsIf<LBR::T>; // TODO: uncomment this to reveal the bug
+        aborts_if !Libra::exists_sender_mint_capability<LBR::T>();
+    }
+
+    // This function is created to work around the type parameter issue.
+    public fun modified_mint_to_address(
+        payee: address,
+        auth_key_prefix: vector<u8>,
+        amount: u64
+    ) acquires T, Balance {
+        // Create an account if it does not exist
+        if (!exists(payee)) {
+            create_account(payee, auth_key_prefix);
+            let _ = borrow_global<T>(Transaction::sender()).sent_events.counter; // added to workaround the issue
+            // Mint and deposit the coin
+            deposit(payee, Libra::mint<LBR::T>(amount));
+        }
+        else if (exists(payee)) {
+            let _ = borrow_global<T>(Transaction::sender()).sent_events.counter; // added to workaround the issue
+            // Mint and deposit the coin
+            deposit(payee, Libra::mint<LBR::T>(amount));
+        }
+    }
+    spec fun modified_mint_to_address {
+        // derived from create_account
+        aborts_if !exists<T>(payee) && len(LCS::serialize(payee)) + len(auth_key_prefix) != 32; // modified
+        aborts_if !exists<T>(payee) && exists<Balance<LBR::T>>(payee); // modified
+//        aborts_if !exists<T>(payee) && exists<T>(payee); // removed because it's obviously false
+        aborts_if !exists<T>(payee) && !exists<Libra::Info<LBR::T>>(0xA550C18); // modified
+
+        // derived from Libra::mint
+        aborts_if !Libra::exists_info<LBR::T>();
+        aborts_if amount > 1000000000 * 1000000;
+        aborts_if Libra::info<LBR::T>().total_value + amount > max_u128();
+        //include Libra::MintAbortsIf<LBR::T>; //FIXME: uncomment this so that a schema inclusion bug manifests. The bug is in the instantiation of the type variable
+        aborts_if !Libra::exists_sender_mint_capability<LBR::T>();
+
+        // derived from deposit
+        aborts_if amount == 0;
+        aborts_if sender() != payee && !exists<T>(sender());
+        aborts_if exists<T>(payee) && exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64();
+        aborts_if !exists<T>(payee) && sender() == payee && exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64(); // reduces to false
+        aborts_if !exists<T>(payee) && sender() != payee && exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64(); // FIXME: This is not verified for the original ("unmodified" version of) function
+//        aborts_if exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64(); // this should be able to simply replace the three lines above
+
+//        aborts_if !exists<T>(payee); // removed because it's guaranteed to exist.
+        aborts_if exists<T>(payee) && !exists<Balance<LBR::T>>(payee);
+        aborts_if exists<Balance<LBR::T>>(payee) && global<Balance<LBR::T>>(payee).coin.value + amount > max_u64(); // does not need "sender() != payee" like pay_from_sender_with_metadata because this is minting instead of withdrawing
+        aborts_if exists<T>(payee) && global<T>(payee).received_events.counter + 1 > max_u64();
+
+        // derived from create_account
+        ensures old(!exists<T>(payee)) ==> exists<Balance<LBR::T>>(payee);
+        ensures old(!exists<T>(payee)) ==> global<Balance<LBR::T>>(payee).coin.value == amount;
+        ensures old(!exists<T>(payee)) ==> exists<T>(payee);
+        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).authentication_key, auth_key_prefix, LCS::serialize(payee));
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_key_rotation_capability == false;
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_withdrawal_capability == false;
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).sequence_number == 0;
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).event_generator.counter == 2;
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).received_events.counter == 1;
+        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).received_events.guid, LCS::serialize(0), LCS::serialize(payee));
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).sent_events.counter == 0;
+        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).sent_events.guid, LCS::serialize(1), LCS::serialize(payee));
+
+        // derived from Libra::mint
+        ensures Libra::info<LBR::T>().total_value == old(Libra::info<LBR::T>().total_value) + amount;
+
+        // derived from deposit
+        ensures global<T>(sender()).sent_events.counter == old(global<T>(sender()).sent_events.counter) + 1;
+        ensures old(exists<T>(payee)) ==> global<T>(payee).received_events.counter == old(global<T>(payee).received_events.counter) + 1;
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).received_events.counter == 1;
+        ensures old(exists<T>(payee)) ==> global<Balance<LBR::T>>(payee).coin.value == old(global<Balance<LBR::T>>(payee).coin.value) + amount;
+        ensures old(!exists<T>(payee)) ==> global<Balance<LBR::T>>(payee).coin.value == amount;
+    }
+
     spec module {
         define to_return<Token>(preburn_address: address): Libra::T<Token> {
             global<Libra::Preburn<Token>>(preburn_address).requests[0]
@@ -359,6 +441,110 @@ module LibraAccount {
         );
     }
 
+    // This function is removed to work around the type parameter issue.
+    public fun modified_pay_from_capability(
+        payee: address,
+        auth_key_prefix: vector<u8>,
+        cap: &WithdrawalCapability,
+        amount: u64,
+        metadata: vector<u8>
+    ) acquires T, Balance {
+        if (!exists(payee)) {
+            create_account(payee, auth_key_prefix);
+            let _ = borrow_global<T>(cap.account_address).sent_events.counter;
+            let _ = Libra::value(&borrow_global<Balance<LBR::T>>(cap.account_address).coin);
+            //let _ = cap.account_address;
+            deposit_with_sender_and_metadata<LBR::T>(
+                payee,
+                cap.account_address, //*&cap.account_address,
+                withdraw_with_capability(cap, amount),
+                metadata,
+            );
+        }
+        else if(exists(payee)) {
+            let _ = borrow_global<T>(cap.account_address).sent_events.counter;
+            let _ = Libra::value(&borrow_global<Balance<LBR::T>>(cap.account_address).coin);
+            //let _ = cap.account_address;
+            deposit_with_sender_and_metadata<LBR::T>(
+                payee,
+                cap.account_address, //*&cap.account_address,
+                withdraw_with_capability(cap, amount),
+                metadata,
+            );
+        }
+    }
+    spec fun modified_pay_from_capability {
+        pragma verify=false; // 20 seconds to verify the empty spec
+
+        // derived from create_account
+        aborts_if !exists<T>(payee) && len(LCS::serialize(payee)) + len(auth_key_prefix) != 32;
+        aborts_if !exists<T>(payee) && exists<Balance<LBR::T>>(payee);
+        //aborts_if !exists<T>(payee) && exists<T>(payee); // obviously false
+        aborts_if !exists<T>(payee) && !exists<Libra::Info<LBR::T>>(0xA550C18);
+
+        // derived from withdraw_with_capability
+        aborts_if payee == cap.account_address && exists<T>(payee) && !exists<Balance<LBR::T>>(cap.account_address);
+        aborts_if !exists<Balance<LBR::T>>(cap.account_address) && amount > 0;
+        aborts_if !exists<Balance<LBR::T>>(cap.account_address) && amount == 0 && exists<T>(payee);
+        aborts_if !exists<Balance<LBR::T>>(cap.account_address) && amount == 0 && !exists<T>(payee) && payee != cap.account_address;
+        aborts_if exists<T>(payee) && exists<Balance<LBR::T>>(cap.account_address) && global<Balance<LBR::T>>(cap.account_address).coin.value < amount; // verified
+        aborts_if !exists<T>(payee) && payee == cap.account_address && exists<Balance<LBR::T>>(cap.account_address) && global<Balance<LBR::T>>(cap.account_address).coin.value < amount; // verified
+        aborts_if !exists<T>(payee) && exists<Balance<LBR::T>>(payee) && payee != cap.account_address && exists<Balance<LBR::T>>(cap.account_address) && global<Balance<LBR::T>>(cap.account_address).coin.value < amount; //  verified
+        //aborts_if !exists<T>(payee) && !exists<Balance<LBR::T>>(payee) && payee != cap.account_address && exists<Balance<LBR::T>>(cap.account_address) && global<Balance<LBR::T>>(cap.account_address).coin.value < amount; //  not verified. Is this false?
+
+        // derived from deposit_with_sender_and_metadata
+        aborts_if amount == 0;
+        aborts_if payee != cap.account_address && !exists<T>(cap.account_address); // modified // not verified if "let _ = ..." is enabled
+        aborts_if exists<T>(cap.account_address) && global<T>(cap.account_address).sent_events.counter + 1 > max_u64(); // FIXME: should be verified // not verified if "let _ = ..." is enabled
+//            aborts_if !exists<T>(payee) && exists<T>(cap.account_address) && global<T>(cap.account_address).sent_events.counter + 1 > max_u64(); // verified
+//            aborts_if exists<T>(payee) && exists<T>(cap.account_address) && global<T>(cap.account_address).sent_events.counter + 1 > max_u64(); // verified
+//        aborts_if !exists<T>(payee); // deleted because not relevant here
+        aborts_if exists<T>(payee) && !exists<Balance<LBR::T>>(payee);
+        aborts_if cap.account_address != payee && exists<T>(payee) && global<Balance<LBR::T>>(payee).coin.value + amount > max_u64(); // modified
+        aborts_if exists<T>(payee) && global<T>(payee).received_events.counter + 1 > max_u64(); // modified
+    }
+
+// FIXME: This function is not verified, but should be.
+// It's verified if the  line (i.e., "let _ = ...") in the function is commented out (and removing `T` from the acquires clause).
+// There are two issues:
+// (1) The line/bug makes Prover much slower
+// (2) The line/bug cause Prover to fail with the following message:
+//  bug:  A precondition for this call might not hold.
+//
+//       |--- output.bpl:717:2 ---
+//       |
+//   717 | requires is#Integer(src1) && is#Integer(src2);
+//       |  ^
+//       |
+fun simplified_pay_from_capability(
+    payee: address,
+    auth_key_prefix: vector<u8>,
+    cap: &WithdrawalCapability,
+    amount: u64,
+    ) acquires T, Balance {
+    if (!exists(payee)) {
+        create_account(payee, auth_key_prefix)
+    };
+    let _ = borrow_global<T>(cap.account_address).sent_events.counter; // It's verified if this line is commented out (and removing `T` from the acquires clause).
+    let val = Libra::value(&borrow_global<Balance<LBR::T>>(cap.account_address).coin);
+    if(val < amount) {
+        abort 1
+    };
+}
+spec fun simplified_pay_from_capability {
+    pragma verify=false;
+    // derived from create_account
+    aborts_if !exists<T>(payee) && len(LCS::serialize(payee)) + len(auth_key_prefix) != 32;
+    aborts_if !exists<T>(payee) && exists<Balance<LBR::T>>(payee);
+    //aborts_if !exists<T>(payee) && exists<T>(payee); // obviously false
+    aborts_if !exists<T>(payee) && !exists<Libra::Info<LBR::T>>(0xA550C18);
+
+    aborts_if !exists<Balance<LBR::T>>(cap.account_address) && amount > 0;
+    aborts_if !exists<Balance<LBR::T>>(cap.account_address) && amount == 0 && exists<T>(payee);
+    aborts_if !exists<Balance<LBR::T>>(cap.account_address) && amount == 0 && !exists<T>(payee) && payee != cap.account_address;
+    aborts_if exists<Balance<LBR::T>>(cap.account_address) && global<Balance<LBR::T>>(cap.account_address).coin.value < amount;
+}
+
     // Withdraw `amount` Libra::T<Token> from the transaction sender's
     // account balance and send the coin to the `payee` address with the
     // attached `metadata` Creates the `payee` account if it does not exist
@@ -378,6 +564,70 @@ module LibraAccount {
         );
     }
 
+    // This function is created and verified to work around the type parameter issue
+    public fun modified_pay_from_sender_with_metadata(
+        payee: address,
+        auth_key_prefix: vector<u8>,
+        amount: u64,
+        metadata: vector<u8>
+    ) acquires T, Balance {
+        if (!exists(payee)) {
+            create_account(payee, auth_key_prefix);
+        };
+        deposit_with_metadata<LBR::T>(
+            payee,
+            withdraw_from_sender<LBR::T>(amount),
+            metadata
+        );
+    }
+    spec fun modified_pay_from_sender_with_metadata {
+        // derived from create_account
+        aborts_if !exists<T>(payee) && len(LCS::serialize(payee)) + len(auth_key_prefix) != 32; // modified
+        aborts_if !exists<T>(payee) && exists<Balance<LBR::T>>(payee); // modified
+//        aborts_if !exists<T>(payee) && exists<T>(payee); // removed because it's obviously false
+        aborts_if !exists<T>(payee) && !exists<Libra::Info<LBR::T>>(0xA550C18); // modified
+
+        // derived from withdraw_from_sender
+        aborts_if sender() != payee && !exists<T>(sender()); // modified
+        aborts_if sender() != payee && !exists<Balance<LBR::T>>(sender()); // modified
+        aborts_if sender() == payee && exists<T>(payee) && !exists<Balance<LBR::T>>(sender()); // modified
+        aborts_if exists<T>(sender()) && global<T>(sender()).delegated_withdrawal_capability; // modified
+        aborts_if sender() == payee && !exists<T>(payee); // added. If this holds, delegated_withdrawal_capability is false. // TODO: Record this in the finding list. However, this line is not crucial because this function can be verified without this line.
+        aborts_if exists<Balance<LBR::T>>(sender()) && global<Balance<LBR::T>>(sender()).coin.value < amount; // modified
+
+        // derived from deposit_with_metadata
+        aborts_if amount == 0;
+//        aborts_if sender() != payee && !exists<T>(sender()); // removed because it's redundant
+        aborts_if exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64(); // modified // FIXME: this line makes Prover slow time to time "non-deterministically"
+//        aborts_if !exists<T>(payee); // removed not relevant
+        aborts_if exists<T>(payee) && !exists<Balance<LBR::T>>(payee); // modified
+        aborts_if sender() != payee && exists<Balance<LBR::T>>(payee) && global<Balance<LBR::T>>(payee).coin.value + amount > max_u64(); // modified
+        aborts_if exists<T>(payee) && global<T>(payee).received_events.counter + 1 > max_u64();
+
+        // derived from create_account
+        ensures old(!exists<T>(payee)) ==> exists<Balance<LBR::T>>(payee);
+        ensures old(!exists<T>(payee)) ==> global<Balance<LBR::T>>(payee).coin.value == amount;
+        ensures old(!exists<T>(payee)) ==> exists<T>(payee);
+        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).authentication_key, auth_key_prefix, LCS::serialize(payee));
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_key_rotation_capability == false;
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_withdrawal_capability == false;
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).sequence_number == 0;
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).event_generator.counter == 2;
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).received_events.counter == 1;
+        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).received_events.guid, LCS::serialize(0), LCS::serialize(payee));
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).sent_events.counter == 0;
+        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).sent_events.guid, LCS::serialize(1), LCS::serialize(payee));
+
+        // derived from withdraw_from_sender
+        ensures payee != sender() ==> global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value) - amount;
+        //ensures result.value == amount; // removed because not relevant
+
+        // derived from deposit_with_metadata
+        ensures global<T>(sender()).sent_events.counter == old(global<T>(sender()).sent_events.counter) + 1;
+        ensures old(exists<T>(payee)) ==> global<T>(payee).received_events.counter == old(global<T>(payee).received_events.counter) + 1;
+        ensures old(exists<T>(payee)) && payee != sender() ==> global<Balance<LBR::T>>(payee).coin.value == old(global<Balance<LBR::T>>(payee).coin.value) + amount;
+    }
+
     // Withdraw `amount` Libra::T<Token> from the transaction sender's
     // account balance  and send the coin to the `payee` address
     // Creates the `payee` account if it does not exist
@@ -388,6 +638,63 @@ module LibraAccount {
     ) acquires T, Balance {
         pay_from_sender_with_metadata<Token>(payee, auth_key_prefix, amount, x"");
     }
+
+    // This function is created and verified to work around the type parameter issue.
+    public fun modified_pay_from_sender(
+        payee: address,
+        auth_key_prefix: vector<u8>,
+        amount: u64
+    ) acquires T, Balance {
+        modified_pay_from_sender_with_metadata(payee, auth_key_prefix, amount, x"");
+    }
+    spec fun modified_pay_from_sender {
+        // derived from create_account
+        aborts_if !exists<T>(payee) && len(LCS::serialize(payee)) + len(auth_key_prefix) != 32; // modified
+        aborts_if !exists<T>(payee) && exists<Balance<LBR::T>>(payee); // modified
+        //aborts_if !exists<T>(payee) && exists<T>(payee); // removed because it's obviously false
+        aborts_if !exists<T>(payee) && !exists<Libra::Info<LBR::T>>(0xA550C18); // modified
+
+        // derived from withdraw_from_sender
+        aborts_if sender() != payee && !exists<T>(sender()); // modified
+        aborts_if sender() != payee && !exists<Balance<LBR::T>>(sender()); // modified
+        aborts_if sender() == payee && exists<T>(payee) && !exists<Balance<LBR::T>>(sender()); // modified
+        aborts_if exists<T>(sender()) && global<T>(sender()).delegated_withdrawal_capability; // modified
+        aborts_if sender() == payee && !exists<T>(payee); // added. If this holds, delegated_withdrawal_capability is false.
+        aborts_if exists<Balance<LBR::T>>(sender()) && global<Balance<LBR::T>>(sender()).coin.value < amount; // modified
+
+        // derived from deposit_with_metadata
+        aborts_if amount == 0;
+//        aborts_if sender() != payee && !exists<T>(sender()); // removed because it's redundant
+        aborts_if exists<T>(sender()) && global<T>(sender()).sent_events.counter + 1 > max_u64(); // modified // FIXME: slow sometimes non-deterministically
+//        aborts_if !exists<T>(payee); // removed not relevant
+        aborts_if exists<T>(payee) && !exists<Balance<LBR::T>>(payee); // modified
+        aborts_if sender() != payee && exists<Balance<LBR::T>>(payee) && global<Balance<LBR::T>>(payee).coin.value + amount > max_u64(); // modified
+        aborts_if exists<T>(payee) && global<T>(payee).received_events.counter + 1 > max_u64();
+
+        // derived from create_account
+        ensures old(!exists<T>(payee)) ==> exists<Balance<LBR::T>>(payee);
+        ensures old(!exists<T>(payee)) ==> global<Balance<LBR::T>>(payee).coin.value == amount;
+        ensures old(!exists<T>(payee)) ==> exists<T>(payee);
+        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).authentication_key, auth_key_prefix, LCS::serialize(payee));
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_key_rotation_capability == false;
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).delegated_withdrawal_capability == false;
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).sequence_number == 0;
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).event_generator.counter == 2;
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).received_events.counter == 1;
+        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).received_events.guid, LCS::serialize(0), LCS::serialize(payee));
+        ensures old(!exists<T>(payee)) ==> global<T>(payee).sent_events.counter == 0;
+        ensures old(!exists<T>(payee)) ==> Vector::eq_append(global<T>(payee).sent_events.guid, LCS::serialize(1), LCS::serialize(payee));
+
+        // derived from withdraw_from_sender
+        ensures payee != sender() ==> global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value) - amount;
+        //ensures result.value == amount; // removed because not relevant
+
+        // derived from deposit_with_metadata
+        ensures global<T>(sender()).sent_events.counter == old(global<T>(sender()).sent_events.counter) + 1;
+        ensures old(exists<T>(payee)) ==> global<T>(payee).received_events.counter == old(global<T>(payee).received_events.counter) + 1;
+        ensures old(exists<T>(payee)) && payee != sender() ==> global<Balance<LBR::T>>(payee).coin.value == old(global<Balance<LBR::T>>(payee).coin.value) + amount;
+    }
+
 
     fun rotate_authentication_key_for_account(account: &mut T, new_authentication_key: vector<u8>) {
       // Don't allow rotating to clearly invalid key
@@ -504,11 +811,12 @@ module LibraAccount {
         ensures global<T>(fresh_address).delegated_withdrawal_capability == false;
         ensures global<T>(fresh_address).sequence_number == 0;
         ensures global<T>(fresh_address).event_generator.counter == 2;
-        ensures global<T>(fresh_address).event_generator == EventHandleGenerator {counter: 2}; // redundant to the previous line
         ensures global<T>(fresh_address).received_events.counter == 0;
-        //ensures Vector::eq_append(global<T>(fresh_address).received_events.guid, LCS::serialize(EventHandleGenerator {counter: 0}), LCS::serialize(fresh_address)); // FIXME: Z3 will hang
+        ensures Vector::eq_append(global<T>(fresh_address).received_events.guid, LCS::serialize(0), LCS::serialize(fresh_address));
         ensures global<T>(fresh_address).sent_events.counter == 0;
-        //ensures Vector::eq_append(global<T>(fresh_address).sent_events.guid, LCS::serialize(EventHandleGenerator {counter: 1}), LCS::serialize(fresh_address)); // FIXME: Z3 will hang
+        ensures Vector::eq_append(global<T>(fresh_address).sent_events.guid, LCS::serialize(1), LCS::serialize(fresh_address));
+        //ensures Vector::eq_append(global<T>(fresh_address).received_events.guid, LCS::serialize(EventHandleGenerator {counter: 0}), LCS::serialize(fresh_address)); // FIXME: This line is wrong, so should not be verified. Z3 will hang if one uncomments this.
+        //ensures Vector::eq_append(global<T>(fresh_address).sent_events.guid, LCS::serialize(EventHandleGenerator {counter: 1}), LCS::serialize(fresh_address)); // FIXME: This line is wrong, so should not be verified. Z3 will hang if one uncomments this.
     }
 
     // Creates a new account at `fresh_address` with the `initial_balance` deducted from the
@@ -526,6 +834,111 @@ module LibraAccount {
                 Vector::empty(),
             );
         }
+    }
+
+    // This function is created and verified to work around the type parameter issue
+    public fun modified_create_new_account(
+        fresh_address: address,
+        auth_key_prefix: vector<u8>,
+        initial_balance: u64
+    ) acquires T, Balance {
+        create_account(fresh_address, auth_key_prefix);
+        if (initial_balance > 0) {
+            deposit_with_metadata(
+                fresh_address,
+                withdraw_from_sender<LBR::T>(initial_balance),
+                Vector::empty(),
+            );
+        }
+    }
+
+    spec fun modified_create_new_account {
+        // derived from create_account (this could be done using a schema)
+        aborts_if len(LCS::serialize(fresh_address)) + len(auth_key_prefix) != 32;
+        aborts_if exists<Balance<LBR::T>>(fresh_address);
+        aborts_if exists<T>(fresh_address);
+        aborts_if !exists<Libra::Info<LBR::T>>(0xA550C18);
+
+        // derived from withdraw_from_sender
+        aborts_if initial_balance > 0 && !exists<T>(sender()); // modified
+        aborts_if initial_balance > 0 && !exists<Balance<LBR::T>>(sender()); // modified
+        aborts_if initial_balance > 0 && global<T>(sender()).delegated_withdrawal_capability; // modified
+        aborts_if initial_balance > 0 && global<Balance<LBR::T>>(sender()).coin.value < initial_balance; // modified
+
+        // derived from deposit_with_metadata
+        aborts_if initial_balance > 0 && initial_balance == 0; // modified
+        aborts_if initial_balance > 0 && fresh_address != sender() && !exists<T>(sender()); // modified
+        aborts_if initial_balance > 0 && global<T>(sender()).sent_events.counter + 1 > max_u64(); // modified
+        //aborts_if initial_balance > 0 && !exists<T>(fresh_address); // deleted because not relevant here
+        //aborts_if initial_balance > 0 && !exists<Balance<Token>>(fresh_address); // deleted because not relevant here
+        //aborts_if initial_balance > 0 && fresh_address != sender() && global<Balance<Token>>(fresh_address).coin.value + initial_balance > max_u64(); // deleted because not relevant here
+        //aborts_if initial_balance > 0 && global<T>(fresh_address).received_events.counter + 1 > max_u64(); // deleted because not relevant here
+
+        // derived from create_account
+        ensures exists<Balance<LBR::T>>(fresh_address);
+        ensures global<Balance<LBR::T>>(fresh_address).coin.value == initial_balance; // modified
+        ensures exists<T>(fresh_address);
+        ensures Vector::eq_append(global<T>(fresh_address).authentication_key, auth_key_prefix, LCS::serialize(fresh_address));
+        ensures global<T>(fresh_address).delegated_key_rotation_capability == false;
+        ensures global<T>(fresh_address).delegated_withdrawal_capability == false;
+        ensures global<T>(fresh_address).sequence_number == 0;
+        ensures global<T>(fresh_address).event_generator.counter == 2;
+        ensures initial_balance > 0 ==> global<T>(fresh_address).received_events.counter == 1; // modified
+        ensures Vector::eq_append(global<T>(fresh_address).received_events.guid, LCS::serialize(0), LCS::serialize(fresh_address));
+        ensures global<T>(fresh_address).sent_events.counter == 0;
+        ensures Vector::eq_append(global<T>(fresh_address).sent_events.guid, LCS::serialize(1), LCS::serialize(fresh_address));
+
+        // derived from withdraw_from_sender
+        ensures initial_balance > 0 ==> global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value) - initial_balance;
+        //ensures initial_balance == 0 ==> global<Balance<Token>>(sender()).coin.value == old(global<Balance<Token>>(sender()).coin.value) - initial_balance; // FIXME: true, but not verified (due to the issue of partial assumption)
+        //ensures global<Balance<LBR::T>>(sender()).coin.value == old(global<Balance<LBR::T>>(sender()).coin.value) - initial_balance; //FIXME: true, but not verified (due to the issue of partial assumption)
+
+        // derived from deposit_with_metadata
+        ensures initial_balance > 0 ==> global<T>(sender()).sent_events.counter == old(global<T>(sender()).sent_events.counter) + 1; // modified
+        //ensures global<T>(fresh_address).received_events.counter == old(global<T>(fresh_address).received_events.counter) + 1; // deleted because it is already handled above
+        //ensures global<Balance<Token>>(fresh_address).coin.value == old(global<Balance<Token>>(fresh_address).coin.value) + initial_balance; // deleted because it is already handled above
+    }
+
+
+    // This function is created for an exercise for verifying modified_create_new_account.
+    // TODO: this function can be removed later.
+    public fun simplified_create_new_account<Token>(
+        fresh_address: address,
+        _auth_key_prefix: vector<u8>,
+        initial_balance: u64
+    ) acquires T, Balance {
+        //create_account(fresh_address, auth_key_prefix);
+        if (initial_balance > 0) {
+            deposit_with_metadata(
+                fresh_address,
+                withdraw_from_sender<Token>(initial_balance),
+                Vector::empty(),
+            );
+        }
+    }
+    spec fun simplified_create_new_account {
+//        aborts_if fresh_address == sender();
+
+        // derived from create_account
+//        aborts_if len(LCS::serialize(fresh_address)) + len(auth_key_prefix) != 32;
+//        aborts_if exists<Balance<LBR::T>>(fresh_address);
+//        aborts_if exists<T>(fresh_address);
+//        aborts_if !exists<Libra::Info<LBR::T>>(0xA550C18);
+
+        // derived from withdraw_from_sender
+        aborts_if initial_balance > 0 && !exists<T>(sender());
+        aborts_if initial_balance > 0 && !exists<Balance<Token>>(sender());
+        aborts_if initial_balance > 0 && global<T>(sender()).delegated_withdrawal_capability;
+        aborts_if initial_balance > 0 && global<Balance<Token>>(sender()).coin.value < initial_balance;
+
+        // derived from deposit_with_metadata
+        aborts_if initial_balance > 0 && initial_balance == 0;
+        aborts_if initial_balance > 0 && !exists<T>(sender());
+        aborts_if initial_balance > 0 && global<T>(sender()).sent_events.counter + 1 > max_u64();
+        aborts_if initial_balance > 0 && !exists<T>(fresh_address);
+        aborts_if initial_balance > 0 && !exists<Balance<Token>>(fresh_address);
+        aborts_if initial_balance > 0 && fresh_address != sender() && global<Balance<Token>>(fresh_address).coin.value + initial_balance > max_u64();
+        aborts_if initial_balance > 0 && global<T>(fresh_address).received_events.counter + 1 > max_u64();
     }
 
     // Save an account to a given address if the address does not have account resources yet
