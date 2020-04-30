@@ -14,7 +14,10 @@ use vm::{
 };
 
 pub fn verify(_module: &CompiledModule, function_definition: &FunctionDefinition) -> VMResult<()> {
-    let code = &function_definition.code.code;
+    let code = match &function_definition.code {
+        Some(code) => &code.code,
+        None => return Ok(()),
+    };
 
     // check fall trhough
     // Check to make sure that the bytecode vector ends with a branching instruction.

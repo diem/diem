@@ -69,7 +69,15 @@ pub struct AbstractState {
 impl AbstractState {
     /// create a new abstract state
     pub fn new(module: &CompiledModule, function_definition: &FunctionDefinition) -> Self {
-        let num_locals = module.signature_at(function_definition.code.locals).len();
+        let num_locals = module
+            .signature_at(
+                function_definition
+                    .code
+                    .as_ref()
+                    .expect("Abstract interpreter should only run on non-native functions")
+                    .locals,
+            )
+            .len();
         // ids in [0, num_locals) are reserved for constructing canonical state
         // id at num_locals is reserved for the frame root
         let next_id = num_locals + 1;

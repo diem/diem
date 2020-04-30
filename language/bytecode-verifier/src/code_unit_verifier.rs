@@ -32,11 +32,10 @@ impl<'a> CodeUnitVerifier<'a> {
     }
 
     fn verify_function(&self, function_definition: &FunctionDefinition) -> VMResult<()> {
-        if function_definition.is_native() {
-            return Ok(());
-        }
-
-        let code = &function_definition.code.code;
+        let code = match &function_definition.code {
+            Some(code) => &code.code,
+            None => return Ok(()),
+        };
 
         // Check to make sure that the bytecode vector ends with a branching instruction.
         match code.last() {

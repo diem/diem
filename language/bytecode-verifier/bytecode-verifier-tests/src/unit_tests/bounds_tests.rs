@@ -100,7 +100,7 @@ fn invalid_locals_id_in_call() {
         type_parameters: SignatureIndex::new(1),
     });
     let func_inst_idx = FunctionInstantiationIndex(m.function_instantiations.len() as u16 - 1);
-    m.function_defs[0].code.code = vec![CallGeneric(func_inst_idx)];
+    m.function_defs[0].code.as_mut().unwrap().code = vec![CallGeneric(func_inst_idx)];
     m.freeze().unwrap_err();
 }
 
@@ -116,7 +116,7 @@ fn invalid_type_param_in_call() {
         type_parameters: SignatureIndex::new(1),
     });
     let func_inst_idx = FunctionInstantiationIndex(m.function_instantiations.len() as u16 - 1);
-    m.function_defs[0].code.code = vec![CallGeneric(func_inst_idx)];
+    m.function_defs[0].code.as_mut().unwrap().code = vec![CallGeneric(func_inst_idx)];
     m.freeze().unwrap_err();
 }
 
@@ -133,7 +133,7 @@ fn invalid_struct_as_type_actual_in_exists() {
         type_parameters: SignatureIndex::new(1),
     });
     let func_inst_idx = FunctionInstantiationIndex(m.function_instantiations.len() as u16 - 1);
-    m.function_defs[0].code.code = vec![CallGeneric(func_inst_idx)];
+    m.function_defs[0].code.as_mut().unwrap().code = vec![CallGeneric(func_inst_idx)];
     m.freeze().unwrap_err();
 }
 

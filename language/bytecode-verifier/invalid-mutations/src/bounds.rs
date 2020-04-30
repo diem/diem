@@ -294,7 +294,11 @@ impl ApplyOutOfBoundsContext {
                 self.module.function_defs[src_idx].function = FunctionHandleIndex(new_idx)
             }
             (FunctionDefinition, Signature) => {
-                self.module.function_defs[src_idx].code.locals = SignatureIndex(new_idx)
+                self.module.function_defs[src_idx]
+                    .code
+                    .as_mut()
+                    .unwrap()
+                    .locals = SignatureIndex(new_idx)
             }
             (Signature, StructHandle) => {
                 let (actual_src_idx, arg_idx) = self.sig_structs[src_idx];

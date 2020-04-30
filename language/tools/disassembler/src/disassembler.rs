@@ -12,8 +12,8 @@ use vm::{
     access::ModuleAccess,
     file_format::{
         Bytecode, FieldHandleIndex, FunctionDefinition, FunctionDefinitionIndex, Kind, Signature,
-        SignatureToken, StructDefinition, StructDefinitionIndex, StructFieldInformation,
-        TableIndex, TypeSignature,
+        SignatureIndex, SignatureToken, StructDefinition, StructDefinitionIndex,
+        StructFieldInformation, TableIndex, TypeSignature,
     },
 };
 
@@ -631,18 +631,19 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         }
 
         let function_def = self.get_function_def(function_definition_index)?;
-        let locals_sigs = self
-            .source_mapper
-            .bytecode
-            .signature_at(function_def.code.locals);
+        let code = match &function_def.code {
+            Some(code) => code,
+            None => return Ok(vec!["".to_string()]),
+        };
+
+        let locals_sigs = self.source_mapper.bytecode.signature_at(code.locals);
         let function_source_map = self
             .source_mapper
             .source_map
             .get_function_source_map(function_definition_index)?;
 
         let decl_location = &function_source_map.decl_location;
-        let instrs: Vec<String> = function_def
-            .code
+        let instrs: Vec<String> = code
             .code
             .iter()
             .map(|instruction| {
@@ -662,7 +663,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             .collect();
 
         if self.options.print_basic_blocks {
-            let cfg = VMControlFlowGraph::new(&function_def.code.code);
+            let cfg = VMControlFlowGraph::new(&code.code);
             for (block_number, block_id) in cfg.blocks().iter().enumerate() {
                 instrs.insert(
                     *block_id as usize + block_number,
@@ -689,28 +690,25 @@ impl<Location: Clone + Eq> Disassembler<Location> {
     fn disassemble_locals(
         &self,
         function_source_map: &FunctionSourceMap<Location>,
-        function_definition: &FunctionDefinition,
-        parameters: &Signature,
-    ) -> Result<(Vec<String>, Vec<String>)> {
-        let signature = self
-            .source_mapper
-            .bytecode
-            .signature_at(function_definition.code.locals);
-        let mut locals_names_tys = function_source_map
+        locals_idx: SignatureIndex,
+        parameters_len: usize,
+    ) -> Result<Vec<String>> {
+        if !self.options.print_locals {
+            return Ok(vec![]);
+        }
+
+        let signature = self.source_mapper.bytecode.signature_at(locals_idx);
+        let locals_names_tys = function_source_map
             .locals
             .iter()
+            .skip(parameters_len)
             .enumerate()
             .map(|(local_idx, (name, _))| {
                 let ty = self.type_for_local(local_idx as u64, signature, function_source_map)?;
                 Ok(format!("{}: {}", name.to_string(), ty))
             })
             .collect::<Result<Vec<String>>>()?;
-        let mut locals = locals_names_tys.split_off(parameters.len());
-        let args = locals_names_tys;
-        if !self.options.print_locals {
-            locals = vec![];
-        }
-        Ok((args, locals))
+        Ok(locals_names_tys)
     }
 
     pub fn disassemble_function_def(
@@ -766,18 +764,36 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         let parameters = self
             .source_mapper
             .bytecode
-            .signature_at(function_handle.parameters);
-        let (args, locals) =
-            self.disassemble_locals(function_source_map, function_definition, parameters)?;
-        let bytecode = self.disassemble_bytecode(function_definition_index)?;
+            .signature_at(function_handle.parameters)
+            .0
+            .iter()
+            .zip(function_source_map.locals.iter())
+            .map(|(tok, (name, _))| {
+                Ok(format!(
+                    "{}: {}",
+                    name,
+                    self.disassemble_sig_tok(tok.clone(), &function_source_map.type_parameters)?
+                ))
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        let body = match &function_definition.code {
+            Some(code) => {
+                let locals =
+                    self.disassemble_locals(function_source_map, code.locals, parameters.len())?;
+                let bytecode = self.disassemble_bytecode(function_definition_index)?;
+                Self::format_function_body(locals, bytecode)
+            }
+            None => "".to_string(),
+        };
         Ok(format!(
-            "{visibility_modifier}{name}{ty_params}({args}){ret_type}{body}",
+            "{visibility_modifier}{name}{ty_params}({params}){ret_type}{body}",
             visibility_modifier = visibility_modifier,
             name = name,
             ty_params = ty_params,
-            args = &args.join(", "),
+            params = &parameters.join(", "),
             ret_type = Self::format_ret_type(&ret_type),
-            body = Self::format_function_body(locals, bytecode),
+            body = body,
         ))
     }
 

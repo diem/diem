@@ -414,7 +414,7 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
     let parameters_sig_idx = context.signature_index(Signature(sig.parameters))?;
 
     record_src_loc!(function_decl: context, function.loc, 0);
-    let code = compile_function_body_impl(&mut context, function.value)?;
+    let code = compile_function_body_impl(&mut context, function.value)?.unwrap();
 
     let (
         MaterializedPools {
@@ -752,28 +752,37 @@ fn compile_functions(
         .collect()
 }
 
-fn compile_function_body_impl(context: &mut Context, ast_function: Function_) -> Result<CodeUnit> {
+fn compile_function_body_impl(
+    context: &mut Context,
+    ast_function: Function_,
+) -> Result<Option<CodeUnit>> {
     Ok(match ast_function.body {
         FunctionBody::Move { locals, code } => {
             let m = type_parameter_indexes(&ast_function.signature.type_formals)?;
-            compile_function_body(context, m, ast_function.signature.formals, locals, code)?
-        }
-        FunctionBody::Bytecode { locals, code } => {
-            let m = type_parameter_indexes(&ast_function.signature.type_formals)?;
-            compile_function_body_bytecode(
+            Some(compile_function_body(
                 context,
                 m,
                 ast_function.signature.formals,
                 locals,
                 code,
-            )?
+            )?)
+        }
+        FunctionBody::Bytecode { locals, code } => {
+            let m = type_parameter_indexes(&ast_function.signature.type_formals)?;
+            Some(compile_function_body_bytecode(
+                context,
+                m,
+                ast_function.signature.formals,
+                locals,
+                code,
+            )?)
         }
 
         FunctionBody::Native => {
             for (var, _) in ast_function.signature.formals.into_iter() {
                 record_src_loc!(local: context, var)
             }
-            CodeUnit::default()
+            None
         }
     })
 }
@@ -794,13 +803,9 @@ fn compile_function(
 
     let ast_function = ast_function.value;
 
-    let flags = match ast_function.visibility {
-        FunctionVisibility::Internal => 0,
-        FunctionVisibility::Public => CodeUnit::PUBLIC,
-    } | match &ast_function.body {
-        FunctionBody::Move { .. } => 0,
-        FunctionBody::Bytecode { .. } => 0,
-        FunctionBody::Native => CodeUnit::NATIVE,
+    let is_public = match ast_function.visibility {
+        FunctionVisibility::Internal => false,
+        FunctionVisibility::Public => true,
     };
     let acquires_global_resources = ast_function
         .acquires
@@ -812,7 +817,7 @@ fn compile_function(
 
     Ok(FunctionDefinition {
         function: fh_idx,
-        flags,
+        is_public,
         acquires_global_resources,
         code,
     })

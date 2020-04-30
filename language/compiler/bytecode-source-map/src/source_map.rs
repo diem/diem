@@ -233,7 +233,6 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
         default_loc: Location,
     ) -> Result<()> {
         let function_handle = module.function_handle_at(function_def.function);
-        let function_code = &function_def.code;
 
         // Generate names for each type parameter
         for i in 0..function_handle.type_parameters.len() {
@@ -241,8 +240,8 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
             self.add_type_parameter((name, default_loc.clone()))
         }
 
-        if !function_def.is_native() {
-            let locals = module.signature_at(function_code.locals);
+        if let Some(code) = &function_def.code {
+            let locals = module.signature_at(code.locals);
             for i in 0..locals.0.len() {
                 let name = format!("loc{}", i);
                 self.add_local_mapping((name, default_loc.clone()))

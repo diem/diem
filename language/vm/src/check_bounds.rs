@@ -191,10 +191,10 @@ impl<'a> BoundsChecker<'a> {
     }
 
     fn check_code(&self, function_def: &FunctionDefinition) -> VMResult<()> {
-        if function_def.is_native() {
-            return Ok(());
-        }
-        let code_unit = &function_def.code;
+        let code_unit = match &function_def.code {
+            Some(code) => code,
+            None => return Ok(()),
+        };
         check_bounds_impl(&self.module.signatures, code_unit.locals)?;
 
         let type_param_count = match self

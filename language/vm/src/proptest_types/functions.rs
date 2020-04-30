@@ -357,16 +357,12 @@ impl FunctionDefinitionGen {
             ));
         }
         let acquires_global_resources = acquires_set.into_iter().collect();
+        // TODO: consider generating native functions?
         Some(FunctionDefinition {
             function: function_handle,
-            flags: if self.is_public {
-                CodeUnit::PUBLIC
-            } else {
-                // No qualifiers.
-                0
-            },
+            is_public: self.is_public,
             acquires_global_resources,
-            code: self.code.materialize(state),
+            code: Some(self.code.materialize(state)),
         })
     }
 }

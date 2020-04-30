@@ -373,14 +373,15 @@ pub struct FieldDefinition {
 
 /// A `FunctionDefinition` is the implementation of a function. It defines
 /// the *prototype* of the function and the function body.
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(params = "usize"))]
 pub struct FunctionDefinition {
     /// The prototype of the function (module, name, signature).
     pub function: FunctionHandleIndex,
-    /// Flags for this function (private, public, native, etc.)
-    pub flags: u8,
+    /// Flag to indicate if this function is public.
+    pub is_public: bool,
     /// List of nominal resources (declared in this module) that the procedure might access
     /// Either through: BorrowGlobal, MoveFrom, or transitively through another procedure
     /// This list of acquires grants the borrow checker the ability to statically verify the safety
@@ -394,20 +395,25 @@ pub struct FunctionDefinition {
     /// Code for this function.
     #[cfg_attr(
         any(test, feature = "fuzzing"),
-        proptest(strategy = "any_with::<CodeUnit>(params)")
+        proptest(strategy = "any_with::<CodeUnit>(params).prop_map(Some)")
     )]
-    pub code: CodeUnit,
+    pub code: Option<CodeUnit>,
 }
 
 impl FunctionDefinition {
     /// Returns whether the FunctionDefinition is public.
     pub fn is_public(&self) -> bool {
-        self.flags & CodeUnit::PUBLIC != 0
+        self.is_public
     }
     /// Returns whether the FunctionDefinition is native.
     pub fn is_native(&self) -> bool {
-        self.flags & CodeUnit::NATIVE != 0
+        self.code.is_none()
     }
+
+    /// Function can be invoked outside of its declaring module.
+    pub const PUBLIC: u8 = 0x1;
+    /// A native function implemented in Rust.
+    pub const NATIVE: u8 = 0x2;
 }
 
 // Signature
@@ -749,14 +755,6 @@ pub struct CodeUnit {
         proptest(strategy = "vec(any::<Bytecode>(), 0..=params)")
     )]
     pub code: Vec<Bytecode>,
-}
-
-/// Flags for `FunctionDeclaration`.
-impl CodeUnit {
-    /// Function can be invoked outside of its declaring module.
-    pub const PUBLIC: u8 = 0x1;
-    /// A native function implemented in Rust.
-    pub const NATIVE: u8 = 0x2;
 }
 
 /// `Bytecode` is a VM instruction of variable size. The type of the bytecode (opcode) defines
@@ -1517,9 +1515,9 @@ impl CompiledScriptMut {
         // Create a function definition for the main function.
         let main_def = FunctionDefinition {
             function: main_handle_idx,
-            flags: CodeUnit::PUBLIC,
+            is_public: true,
             acquires_global_resources: vec![],
-            code: self.code,
+            code: Some(self.code),
         };
 
         let info = ScriptConversionInfo {
@@ -1819,7 +1817,7 @@ impl CompiledModule {
 
             type_parameters: main_handle.type_parameters,
             parameters: main_handle.parameters,
-            code: main.code,
+            code: main.code.unwrap(),
         })
     }
 }
@@ -1868,12 +1866,12 @@ pub fn basic_test_module() -> CompiledModuleMut {
 
     m.function_defs.push(FunctionDefinition {
         function: FunctionHandleIndex(0),
-        flags: 0,
+        is_public: false,
         acquires_global_resources: vec![],
-        code: CodeUnit {
+        code: Some(CodeUnit {
             locals: SignatureIndex(0),
             code: vec![],
-        },
+        }),
     });
 
     m.struct_handles.push(StructHandle {
@@ -1904,7 +1902,7 @@ pub fn dummy_procedure_module(code: Vec<Bytecode>) -> CompiledModule {
     let mut code_unit = CodeUnit::default();
     code_unit.code = code;
     let mut fun_def = FunctionDefinition::default();
-    fun_def.code = code_unit;
+    fun_def.code = Some(code_unit);
 
     let fun_handle = FunctionHandle {
         module: ModuleHandleIndex(0),
