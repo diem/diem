@@ -20,7 +20,7 @@ use libra_metrics::metric_server;
 use libra_types::{on_chain_config::ON_CHAIN_CONFIG_REGISTRY, waypoint::Waypoint, PeerId};
 use libra_vm::LibraVM;
 use network::validator_network::network_builder::{NetworkBuilder, TransportType};
-use onchain_discovery::{service::OnchainDiscoveryService, OnchainDiscovery};
+use onchain_discovery::{client::OnchainDiscovery, service::OnchainDiscoveryService};
 use simple_storage_client::SimpleStorageClient;
 use state_synchronizer::StateSynchronizer;
 use std::{

@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::{
+    client::OnchainDiscovery,
     network_interface::OnchainDiscoveryNetworkSender,
     service::OnchainDiscoveryService,
     types::{
         DiscoveryInfoInternal, DiscoverySetInternal, OnchainDiscoveryMsg, QueryDiscoverySetRequest,
         QueryDiscoverySetResponseWithEvent,
     },
-    OnchainDiscovery,
 };
 use channel::{libra_channel, message_queues::QueueStyle};
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
