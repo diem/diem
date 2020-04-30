@@ -90,7 +90,8 @@ pub fn native_ed25519_signature_verification(
     let return_values = vec![Value::bool(bool_value)];
     Ok(NativeResult::ok(cost, return_values))
 }
-
+// TODO: activate the batch feature in the import of libra-crypto in the
+// present crate, once https://github.com/libra/libra/issues/3567 is fixed
 /// Batch verify a collection of signatures using a bitmap for matching signatures to keys.
 pub fn native_ed25519_threshold_signature_verification(
     context: &impl NativeContext,
