@@ -13,7 +13,6 @@ use libra_types::{
     language_storage::ModuleId,
     vm_error::{StatusCode, VMStatus},
 };
-use move_vm_types::native_functions::dispatch::{Function, FunctionResolver};
 use std::collections::BTreeMap;
 use vm::{
     access::{ModuleAccess, ScriptAccess},
@@ -208,9 +207,7 @@ pub fn verify_dependencies(
     let module_view = ModuleView::new(module);
     verify_struct_kind(&module_view, &dependency_map)?;
     verify_function_visibility_and_type(&module_view, &dependency_map)?;
-    verify_all_dependencies_provided(&module_view, &dependency_map)?;
-    verify_native_functions(&module_view)?;
-    verify_native_structs(&module_view)
+    verify_all_dependencies_provided(&module_view, &dependency_map)
 }
 
 /// Verifying the dependencies of a script follows the same recipe as `VerifiedScript::new`
@@ -232,105 +229,6 @@ pub fn verify_script_dependency_map(
 ) -> VMResult<()> {
     let (_, fake_module) = script.clone().into_module();
     verify_dependencies(&fake_module, dependency_map)
-}
-
-fn verify_native_functions(module_view: &ModuleView<VerifiedModule>) -> VMResult<()> {
-    let module_id = module_view.id();
-    for (idx, native_function_definition_view) in module_view
-        .functions()
-        .enumerate()
-        .filter(|fdv| fdv.1.is_native())
-    {
-        let function_name = native_function_definition_view.name();
-        match FunctionResolver::resolve(&module_id, function_name.as_str()) {
-            None => {
-                return Err(verification_error(
-                    IndexKind::FunctionHandle,
-                    idx,
-                    StatusCode::MISSING_DEPENDENCY,
-                ))
-            }
-            Some(vm_native_function) => {
-                // check parameters
-                let def_params = native_function_definition_view.parameters();
-                let native_params = match vm_native_function.parameters(Some(module_view))? {
-                    None => {
-                        return Err(verification_error(
-                            IndexKind::FunctionHandle,
-                            idx,
-                            StatusCode::TYPE_MISMATCH,
-                        ))
-                    }
-                    Some(sig) => sig,
-                };
-                if def_params != &native_params {
-                    return Err(verification_error(
-                        IndexKind::FunctionHandle,
-                        idx,
-                        StatusCode::TYPE_MISMATCH,
-                    ));
-                }
-
-                // check return_
-                let def_return_ = native_function_definition_view.return_();
-                let native_return_ = match vm_native_function.return_(Some(module_view))? {
-                    None => {
-                        return Err(verification_error(
-                            IndexKind::FunctionHandle,
-                            idx,
-                            StatusCode::TYPE_MISMATCH,
-                        ))
-                    }
-                    Some(sig) => sig,
-                };
-                if def_return_ != &native_return_ {
-                    return Err(verification_error(
-                        IndexKind::FunctionHandle,
-                        idx,
-                        StatusCode::TYPE_MISMATCH,
-                    ));
-                }
-
-                // check type parameters
-                let def_type_parameters = native_function_definition_view.type_parameters();
-                let native_type_parameters =
-                    match vm_native_function.type_parameters(Some(module_view))? {
-                        None => {
-                            return Err(verification_error(
-                                IndexKind::FunctionHandle,
-                                idx,
-                                StatusCode::TYPE_MISMATCH,
-                            ))
-                        }
-                        Some(t_params) => t_params,
-                    };
-                if def_type_parameters != &native_type_parameters {
-                    return Err(verification_error(
-                        IndexKind::FunctionHandle,
-                        idx,
-                        StatusCode::TYPE_MISMATCH,
-                    ));
-                }
-            }
-        }
-    }
-    Ok(())
-}
-
-// TODO: native structs have been partially removed. Revisit.
-fn verify_native_structs(module_view: &ModuleView<VerifiedModule>) -> VMResult<()> {
-    match module_view
-        .structs()
-        .enumerate()
-        .find(|(_, sd)| sd.is_native())
-    {
-        Some((idx, _)) => Err(verification_error(
-            IndexKind::StructHandle,
-            idx,
-            StatusCode::MISSING_DEPENDENCY,
-        )),
-        None => Ok(()),
-    }
 }
 
 fn verify_all_dependencies_provided(

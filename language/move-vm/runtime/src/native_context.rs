@@ -65,8 +65,8 @@ impl<'a, 'txn> NativeContext for FunctionContext<'a, 'txn> {
             .move_resource_to(&ap, libra_type.fat_type(), resource_to_save)
     }
 
-    fn save_event(&mut self, event: ContractEvent) {
-        self.interpreter_context.push_event(event)
+    fn save_event(&mut self, event: ContractEvent) -> VMResult<()> {
+        Ok(self.interpreter_context.push_event(event))
     }
 
     fn convert_to_fat_types(&self, types: Vec<Type>) -> VMResult<Vec<FatType>> {

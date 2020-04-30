@@ -65,7 +65,8 @@ impl VMRuntime {
             ));
         };
 
-        VerifiedModule::new(compiled_module).map_err(|(_, e)| e)?;
+        let verified_module = VerifiedModule::new(compiled_module).map_err(|(_, e)| e)?;
+        Loader::check_natives(&verified_module)?;
         context.publish_module(module_id, module)
     }
 
