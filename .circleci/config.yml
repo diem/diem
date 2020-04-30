@@ -54,7 +54,7 @@ commands:
           name: Install Dependencies
           command: |
             sudo apt-get update
-            sudo apt-get install -y cmake curl clang llvm
+            sudo apt-get install -y cmake curl clang llvm gcc-powerpc-linux-gnu
             rustup component add clippy rustfmt
   install_code_coverage_deps:
     steps:
@@ -219,6 +219,10 @@ jobs:
           command: RUST_BACKTRACE=1 cargo build -j 16 -p language-benchmarks
       - run:
           command: RUST_BACKTRACE=1 cargo build -j 16 -p test-generation
+      - run:
+          command: |
+            rustup target add powerpc-unknown-linux-gnu
+            RUST_BACKTRACE=1 cargo build -j 16 -p transaction-builder --target powerpc-unknown-linux-gnu
       - build_teardown
   build-release:
     executor: test-executor
