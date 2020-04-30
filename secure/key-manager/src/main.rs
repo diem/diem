@@ -6,14 +6,16 @@
 #![forbid(unsafe_code)]
 
 use libra_config::config::{KeyManagerConfig, NetworkConfig, NodeConfig};
-use libra_key_manager::{libra_interface::JsonRpcLibraInterface, Error, KeyManager};
+use libra_key_manager::{
+    counters::COUNTERS, libra_interface::JsonRpcLibraInterface, Error, KeyManager,
+};
 use libra_logger::info;
 use libra_secure_json_rpc::JsonRpcClient;
+use libra_secure_push_metrics::MetricsPusher;
 use libra_secure_storage::{BoxStorage, Storage};
 use libra_secure_time::RealTimeService;
 use std::{convert::TryInto, env, net::SocketAddr, process};
 
-// TODO(joshlind): initialize the metrics components for the key manager!
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -42,6 +44,7 @@ fn main() {
         .is_async(config.logger.is_async)
         .level(config.logger.level)
         .init();
+    MetricsPusher::new(COUNTERS.clone()).start();
 
     create_and_execute_key_manager(network_config, key_manager_config).unwrap_or_else(|e| {
         eprintln!("Error! The Key Manager has failed during execution: {}", e);

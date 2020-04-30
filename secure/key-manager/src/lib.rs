@@ -19,7 +19,7 @@
 //! KeyManager talks to its own storage through the `LibraSecureStorage::Storage trait.
 #![forbid(unsafe_code)]
 
-use crate::libra_interface::LibraInterface;
+use crate::{counters::COUNTERS, libra_interface::LibraInterface};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey,
@@ -34,6 +34,7 @@ use libra_types::{
 use std::time::Duration;
 use thiserror::Error;
 
+pub mod counters;
 pub mod libra_interface;
 
 #[cfg(test)]
@@ -62,8 +63,6 @@ pub enum Action {
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Error, PartialEq)]
 pub enum Error {
-    #[error("Unknown error: {0}")]
-    UnknownError(String),
     #[error("Key mismatch, config: {0}, info: {0}")]
     ConfigInfoKeyMismatch(Ed25519PublicKey, Ed25519PublicKey),
     #[error("Key mismatch, config: {0}, storage: {0}")]
@@ -78,6 +77,8 @@ pub enum Error {
     SecureStorageError(#[from] libra_secure_storage::Error),
     #[error("ValidatorInfo not found in ValidatorConfig: {0}")]
     ValidatorInfoNotFound(AccountAddress),
+    #[error("Unknown error: {0}")]
+    UnknownError(String),
 }
 
 #[cfg(test)]
@@ -122,6 +123,7 @@ where
             self.execute_once()?;
 
             info!("Going to sleep for {} seconds.", SLEEP_PERIOD_SECS);
+            COUNTERS.sleeps.inc();
             self.time_service.sleep(SLEEP_PERIOD_SECS);
         }
     }
@@ -129,14 +131,8 @@ where
     /// Checks the current state of the validator keys and performs any actions that might be
     /// required (e.g., performing a key rotation).
     pub fn execute_once(&mut self) -> Result<(), Error> {
-        let status = self.evaluate_status()?;
-        if status != Action::NoAction {
-            info!("The following actions need to be performed: {:?}.", status);
-            self.perform_action(status)?;
-        } else {
-            info!("No actions need to be performed.");
-        }
-        Ok(())
+        let action = self.evaluate_status()?;
+        self.perform_action(action)
     }
 
     pub fn compare_storage_to_config(&self) -> Result<(), Error> {
@@ -178,6 +174,7 @@ where
 
     pub fn resubmit_consensus_key_transaction(&self) -> Result<(), Error> {
         let storage_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
+        COUNTERS.consensus_rotation_tx_resubmissions.inc();
         self.submit_key_rotation_transaction(storage_key)
             .map(|_| ())
     }
@@ -185,6 +182,7 @@ where
     pub fn rotate_consensus_key(&mut self) -> Result<Ed25519PublicKey, Error> {
         let new_key = self.storage.rotate_key(CONSENSUS_KEY)?;
         info!("Successfully rotated the consensus key in secure storage.");
+        COUNTERS.completed_consensus_key_rotations.inc();
         self.submit_key_rotation_transaction(new_key)
     }
 
@@ -230,6 +228,7 @@ where
 
         // If this is inconsistent, then we are waiting on a reconfiguration...
         if let Err(Error::ConfigInfoKeyMismatch(..)) = self.compare_info_to_config() {
+            COUNTERS.waiting_on_consensus_reconfiguration.inc();
             return Ok(Action::NoAction);
         }
 
@@ -253,9 +252,19 @@ where
 
     pub fn perform_action(&mut self, action: Action) -> Result<(), Error> {
         match action {
-            Action::FullKeyRotation => self.rotate_consensus_key().map(|_| ()),
-            Action::SubmitKeyRotationTransaction => self.resubmit_consensus_key_transaction(),
-            Action::NoAction => Ok(()),
+            Action::FullKeyRotation => {
+                info!("A full consensus key rotation needs to be performed.");
+                self.rotate_consensus_key().map(|_| ())
+            }
+            Action::SubmitKeyRotationTransaction => {
+                info!("The consensus key rotation transaction needs to be resubmitted");
+                self.resubmit_consensus_key_transaction()
+            }
+            Action::NoAction => {
+                info!("No actions need to be performed.");
+                COUNTERS.no_actions_required.inc();
+                Ok(())
+            }
         }
     }
 }
