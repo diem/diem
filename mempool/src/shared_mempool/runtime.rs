@@ -17,7 +17,7 @@ use crate::{
 use anyhow::Result;
 use channel::{libra_channel, message_queues::QueueStyle};
 use futures::channel::{
-    mpsc::{self, Receiver, UnboundedSender},
+    mpsc::{self, Receiver},
     oneshot,
 };
 use libra_config::config::NodeConfig;
@@ -49,7 +49,7 @@ pub(crate) fn start_shared_mempool<V>(
     mempool_reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
     db: Arc<dyn DbReader>,
     validator: Arc<RwLock<V>>,
-    subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
+    subscribers: Vec<libra_channel::Sender<(), SharedMempoolNotification>>,
     broadcast_ticker: Option<IntervalStream>,
 ) where
     V: TransactionValidation + 'static,
