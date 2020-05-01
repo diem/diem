@@ -164,15 +164,19 @@ where
 /// [`Schema`]s.
 #[derive(Debug)]
 pub struct DB {
+    name: &'static str, // for logging
     inner: rocksdb::DB,
-
     column_families: Vec<ColumnFamilyName>,
 }
 
 impl DB {
     /// Create db with all the column families provided if it doesn't exist at `path`; Otherwise,
     /// try to open it with all the column families.
-    pub fn open(path: impl AsRef<Path>, column_families: Vec<ColumnFamilyName>) -> Result<Self> {
+    pub fn open(
+        path: impl AsRef<Path>,
+        name: &'static str,
+        column_families: Vec<ColumnFamilyName>,
+    ) -> Result<Self> {
         {
             let cfs_set: HashSet<_> = column_families.iter().collect();
             ensure!(
@@ -193,22 +197,24 @@ impl DB {
         // families are updated at non-uniform frequencies.
         db_opts.set_max_total_wal_size(1 << 30);
 
-        let db = DB::open_cf(&db_opts, path, column_families)?;
+        let db = DB::open_cf(&db_opts, path, name, column_families)?;
         Ok(db)
     }
 
     /// Open db in readonly mode
     pub fn open_readonly(
         path: impl AsRef<Path>,
+        name: &'static str,
         column_families: Vec<ColumnFamilyName>,
     ) -> Result<Self> {
         let db_opts = rocksdb::Options::default();
-        DB::open_cf_readonly(&db_opts, path, column_families)
+        DB::open_cf_readonly(&db_opts, path, name, column_families)
     }
 
     fn open_cf(
         opts: &rocksdb::Options,
         path: impl AsRef<Path>,
+        name: &'static str,
         column_families: Vec<ColumnFamilyName>,
     ) -> Result<DB> {
         let inner = rocksdb::DB::open_cf_descriptors(
@@ -221,6 +227,7 @@ impl DB {
             }),
         )?;
         Ok(DB {
+            name,
             inner,
             column_families,
         })
@@ -229,6 +236,7 @@ impl DB {
     fn open_cf_readonly(
         opts: &rocksdb::Options,
         path: impl AsRef<Path>,
+        name: &'static str,
         column_families: Vec<ColumnFamilyName>,
     ) -> Result<DB> {
         let error_if_log_file_exists = false;
@@ -240,6 +248,7 @@ impl DB {
         )?;
 
         Ok(DB {
+            name,
             inner,
             column_families,
         })
@@ -260,13 +269,11 @@ impl DB {
 
     /// Writes single record.
     pub fn put<S: Schema>(&self, key: &S::Key, value: &S::Value) -> Result<()> {
-        let k = <S::Key as KeyCodec<S>>::encode_key(&key)?;
-        let v = <S::Value as ValueCodec<S>>::encode_value(&value)?;
-        let cf_handle = self.get_cf_handle(S::COLUMN_FAMILY_NAME)?;
-
-        self.inner
-            .put_cf_opt(cf_handle, &k, &v, &default_write_options())?;
-        Ok(())
+        // Not necessary to use a batch, but we'd like a central place to bump OP_COUNTERS.
+        // Used in tests only anyway.
+        let mut batch = SchemaBatch::new();
+        batch.put::<S>(key, value)?;
+        self.write_schemas(batch)
     }
 
     /// Delete all keys in range [begin, end).
@@ -307,6 +314,7 @@ impl DB {
                 }
             }
         }
+        let serialized_size = db_batch.size_in_bytes();
 
         self.inner.write_opt(db_batch, &default_write_options())?;
 
@@ -322,6 +330,10 @@ impl DB {
                 }
             }
         }
+        OP_COUNTER.observe(
+            &format!("db_batch_commit_bytes_{}", self.name),
+            serialized_size as f64,
+        );
 
         Ok(())
     }

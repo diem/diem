@@ -36,7 +36,7 @@ impl ConsensusDB {
 
         let path = db_root_path.as_ref().join("consensusdb");
         let instant = Instant::now();
-        let db = DB::open(path.clone(), column_families)
+        let db = DB::open(path.clone(), "consensus", column_families)
             .expect("ConsensusDB open failed; unable to continue");
 
         info!(

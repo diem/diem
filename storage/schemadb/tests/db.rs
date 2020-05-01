@@ -80,11 +80,11 @@ fn get_column_families() -> Vec<ColumnFamilyName> {
 }
 
 fn open_db(dir: &libra_temppath::TempPath) -> DB {
-    DB::open(&dir.path(), get_column_families()).expect("Failed to open DB.")
+    DB::open(&dir.path(), "test", get_column_families()).expect("Failed to open DB.")
 }
 
 fn open_db_read_only(dir: &libra_temppath::TempPath) -> DB {
-    DB::open_readonly(&dir.path(), get_column_families()).expect("Failed to open DB.")
+    DB::open_readonly(&dir.path(), "test", get_column_families()).expect("Failed to open DB.")
 }
 
 struct TestDB {

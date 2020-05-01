@@ -79,7 +79,7 @@ impl TestDB {
     fn new() -> Self {
         let tmpdir = libra_temppath::TempPath::new();
         let column_families = vec![DEFAULT_CF_NAME, TestSchema::COLUMN_FAMILY_NAME];
-        let db = DB::open(&tmpdir.path(), column_families).unwrap();
+        let db = DB::open(&tmpdir.path(), "test", column_families).unwrap();
 
         db.put::<TestSchema>(&TestKey(1, 0, 0), &TestValue(100))
             .unwrap();
