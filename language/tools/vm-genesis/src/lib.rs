@@ -24,11 +24,11 @@ use libra_types::{
     on_chain_config::{new_epoch_event_key, VMPublishingOption},
     transaction::{authenticator::AuthenticationKey, ChangeSet, Script, Transaction},
 };
-use move_vm_state::{data_cache::BlockDataCache, execution_context::ExecutionContext};
-use move_vm_types::{chain_state::ChainState, values::Value};
+use move_vm_state::data_cache::BlockDataCache;
+use move_vm_types::{chain_state::ChainState, loaded_data::types::FatStructType, values::Value};
 use once_cell::sync::Lazy;
 use rand::prelude::*;
-use std::convert::TryFrom;
+use std::{collections::btree_map::BTreeMap, convert::TryFrom};
 use stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use vm::access::ModuleAccess;
 
@@ -68,7 +68,7 @@ pub fn encode_genesis_change_set(
     validators: &[ValidatorRegistration],
     stdlib_modules: &[VerifiedModule],
     vm_publishing_option: VMPublishingOption,
-) -> ChangeSet {
+) -> (ChangeSet, BTreeMap<Vec<u8>, FatStructType>) {
     // create a data view for move_vm
     let mut state_view = GenesisStateView::new();
     for module in stdlib_modules {
@@ -97,11 +97,14 @@ pub fn encode_genesis_change_set(
     publish_stdlib(&mut interpreter_context, stdlib_modules);
 
     verify_genesis_write_set(interpreter_context.events());
-    ChangeSet::new(
-        interpreter_context
-            .make_write_set()
-            .expect("Genesis WriteSet failure"),
-        interpreter_context.events().to_vec(),
+    (
+        ChangeSet::new(
+            interpreter_context
+                .make_write_set()
+                .expect("Genesis WriteSet failure"),
+            interpreter_context.events().to_vec(),
+        ),
+        interpreter_context.get_type_map(),
     )
 }
 
@@ -111,12 +114,15 @@ pub fn encode_genesis_transaction(
     stdlib_modules: &[VerifiedModule],
     vm_publishing_option: VMPublishingOption,
 ) -> Transaction {
-    Transaction::WaypointWriteSet(encode_genesis_change_set(
-        &public_key,
-        validators,
-        stdlib_modules,
-        vm_publishing_option,
-    ))
+    Transaction::WaypointWriteSet(
+        encode_genesis_change_set(
+            &public_key,
+            validators,
+            stdlib_modules,
+            vm_publishing_option,
+        )
+        .0,
+    )
 }
 
 /// Create an initialize Association, Transaction Fee and Core Code accounts.
@@ -370,6 +376,21 @@ pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) ->
         stdlib_modules,
         VMPublishingOption::Open,
     )
+    .0
+}
+
+/// Generate an artificial genesis `ChangeSet` for testing
+pub fn generate_genesis_type_mapping() -> BTreeMap<Vec<u8>, FatStructType> {
+    let stdlib_modules = stdlib_modules(StdLibOptions::Staged);
+    let swarm = libra_config::generator::validator_swarm_for_testing(10);
+
+    encode_genesis_change_set(
+        &GENESIS_KEYPAIR.1,
+        &validator_registrations(&swarm.nodes),
+        stdlib_modules,
+        VMPublishingOption::Open,
+    )
+    .1
 }
 
 pub fn validator_registrations(node_configs: &[NodeConfig]) -> Vec<ValidatorRegistration> {

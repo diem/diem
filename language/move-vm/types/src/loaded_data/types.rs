@@ -12,12 +12,11 @@ use std::fmt::Write;
 use vm::errors::VMResult;
 
 use libra_types::access_path::{AccessPath, Accesses};
-#[cfg(feature = "fuzzing")]
 use serde::{Deserialize, Serialize};
 
 /// VM representation of a struct type in Move.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "fuzzing", derive(Serialize, Deserialize, Eq, PartialEq))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "fuzzing", derive(Eq, PartialEq))]
 pub struct FatStructType {
     pub address: AccountAddress,
     pub module: Identifier,
@@ -34,8 +33,8 @@ pub struct FatStructType {
 /// should NOT be serialized in any form. Currently we still derive `Serialize` and
 /// `Deserialize`, but this is a hack for fuzzing and should be guarded behind the
 /// "fuzzing" feature flag. We should look into ways to get rid of this.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "fuzzing", derive(Serialize, Deserialize, Eq, PartialEq))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "fuzzing", derive(Eq, PartialEq))]
 pub enum FatType {
     Bool,
     U8,

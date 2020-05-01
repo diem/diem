@@ -10,32 +10,43 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
+    contract_event::ContractEvent,
     language_storage::{ModuleId, TypeTag},
     transaction::{Script, TransactionArgument},
+    write_set::WriteSet,
 };
 use move_core_types::{
-    gas_schedule::{CostTable, GasAlgebra, GasUnits},
+    gas_schedule::{CostTable, GasAlgebra, GasCarrier, GasUnits},
     identifier::Identifier,
 };
 use move_vm_runtime::MoveVM;
-use move_vm_state::{data_cache::BlockDataCache, execution_context::TransactionExecutionContext};
-use move_vm_types::{gas_schedule::zero_cost_schedule, values::Value};
-use std::collections::HashMap;
+use std::collections::{btree_map::BTreeMap, HashMap};
 use vm::transaction_metadata::TransactionMetadata;
+
+use move_vm_state::{
+    data_cache::{BlockDataCache, RemoteCache},
+    execution_context::{ExecutionContext, TransactionExecutionContext},
+};
+use move_vm_types::{
+    chain_state::ChainState,
+    gas_schedule::zero_cost_schedule,
+    loaded_data::types::FatStructType,
+    values::{GlobalValue, Value},
+};
+use vm::errors::VMResult;
 
 /// A context that holds state for generating the genesis write set
 pub(crate) struct GenesisContext<'a> {
     vm: MoveVM,
     gas_schedule: CostTable,
-    interpreter_context: TransactionExecutionContext<'a>,
+    interpreter_context: GenesisExecutionContext<'a>,
     txn_data: TransactionMetadata,
 }
 
 impl<'a> GenesisContext<'a> {
     pub fn new(data_cache: &'a BlockDataCache<'a>, stdlib_modules: &[VerifiedModule]) -> Self {
         let vm = MoveVM::new();
-        let mut interpreter_context =
-            TransactionExecutionContext::new(GasUnits::new(100_000_000), data_cache);
+        let mut interpreter_context = GenesisExecutionContext::new(data_cache);
         for module in stdlib_modules {
             vm.cache_module(module.clone(), &mut interpreter_context)
                 .expect("Failure loading stdlib");
@@ -109,7 +120,7 @@ impl<'a> GenesisContext<'a> {
         self.txn_data.sender = sender;
     }
 
-    pub fn into_interpreter_context(self) -> TransactionExecutionContext<'a> {
+    pub fn into_interpreter_context(self) -> GenesisExecutionContext<'a> {
         self.interpreter_context
     }
 }
@@ -147,5 +158,82 @@ impl StateView for GenesisStateView {
 
     fn is_genesis(&self) -> bool {
         true
+    }
+}
+
+pub struct GenesisExecutionContext<'txn> {
+    ctx: TransactionExecutionContext<'txn>,
+    type_map: BTreeMap<Vec<u8>, FatStructType>,
+}
+
+impl<'txn> GenesisExecutionContext<'txn> {
+    pub fn new(cache: &'txn dyn RemoteCache) -> Self {
+        Self {
+            ctx: TransactionExecutionContext::new(GasUnits::new(100_000_000), cache),
+            type_map: BTreeMap::new(),
+        }
+    }
+
+    pub fn get_type_map(&self) -> BTreeMap<Vec<u8>, FatStructType> {
+        self.type_map.clone()
+    }
+
+    pub fn events(&self) -> &[ContractEvent] {
+        self.ctx.events()
+    }
+
+    pub fn make_write_set(&mut self) -> VMResult<WriteSet> {
+        self.ctx.make_write_set()
+    }
+}
+
+impl<'txn> ChainState for GenesisExecutionContext<'txn> {
+    fn deduct_gas(&mut self, amount: GasUnits<GasCarrier>) -> VMResult<()> {
+        self.ctx.deduct_gas(amount)
+    }
+
+    fn publish_resource(
+        &mut self,
+        ap: &AccessPath,
+        g: (FatStructType, GlobalValue),
+    ) -> VMResult<()> {
+        self.type_map.insert(ap.path.clone(), g.0.clone());
+        self.ctx.publish_resource(ap, g)
+    }
+
+    fn remaining_gas(&self) -> GasUnits<GasCarrier> {
+        self.ctx.remaining_gas()
+    }
+
+    fn borrow_resource(
+        &mut self,
+        ap: &AccessPath,
+        ty: &FatStructType,
+    ) -> VMResult<Option<&GlobalValue>> {
+        self.ctx.borrow_resource(ap, ty)
+    }
+
+    fn move_resource_from(
+        &mut self,
+        ap: &AccessPath,
+        ty: &FatStructType,
+    ) -> VMResult<Option<GlobalValue>> {
+        self.ctx.move_resource_from(ap, ty)
+    }
+
+    fn load_module(&self, module: &ModuleId) -> VMResult<Vec<u8>> {
+        self.ctx.load_module(module)
+    }
+
+    fn exists_module(&self, key: &ModuleId) -> bool {
+        self.ctx.exists_module(key)
+    }
+
+    fn publish_module(&mut self, module_id: ModuleId, module: Vec<u8>) -> VMResult<()> {
+        self.ctx.publish_module(module_id, module)
+    }
+
+    fn emit_event(&mut self, event: ContractEvent) {
+        self.ctx.emit_event(event)
     }
 }

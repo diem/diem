@@ -126,6 +126,10 @@ impl AccountState {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
+
+    pub fn iter(&self) -> impl std::iter::Iterator<Item = (&Vec<u8>, &Vec<u8>)> {
+        self.0.iter()
+    }
 }
 
 impl fmt::Debug for AccountState {

@@ -106,6 +106,7 @@ impl FakeExecutor {
                 &genesis_modules,
                 publishing_options,
             )
+            .0
         };
         Self::from_genesis(genesis_change_set.write_set())
     }
