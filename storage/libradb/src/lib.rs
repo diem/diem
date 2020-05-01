@@ -155,9 +155,9 @@ impl LibraDB {
         let instant = Instant::now();
 
         let db = Arc::new(if readonly {
-            DB::open_readonly(path.clone(), column_families)?
+            DB::open_readonly(path.clone(), "libradb_ro", column_families)?
         } else {
-            DB::open(path.clone(), column_families)?
+            DB::open(path.clone(), "libradb", column_families)?
         });
 
         info!(
