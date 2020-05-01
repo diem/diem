@@ -32,9 +32,9 @@ impl Corpus {
     }
 
     /// Compute the registry of formats.
-    pub fn get_registry(self, skip_deserialize: bool) -> Registry {
+    pub fn get_registry(self) -> Registry {
         match self {
-            Corpus::Libra => libra::get_registry(self.to_string(), skip_deserialize),
+            Corpus::Libra => libra::get_registry().unwrap(),
             Corpus::Consensus => consensus::get_registry().unwrap(),
         }
     }
