@@ -60,12 +60,14 @@ pub struct MempoolNetworkSender {
 /// Receiver (Events) that explicitly returns only said ProtocolId.
 pub fn add_to_network(
     network: &mut NetworkBuilder,
+    max_broadcasts_per_peer: usize,
 ) -> (MempoolNetworkSender, MempoolNetworkEvents) {
     let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
         .add_protocol_handler(
             vec![],
             vec![ProtocolId::MempoolDirectSend],
-            QueueStyle::LIFO,
+            QueueStyle::KLAST,
+            max_broadcasts_per_peer,
             Some(&counters::PENDING_MEMPOOL_NETWORK_EVENTS),
         );
     (

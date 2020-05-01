@@ -279,8 +279,10 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             state_synchronizer::network::add_to_network(&mut network_builder);
         state_sync_network_handles.push((network.peer_id, state_sync_sender, state_sync_events));
 
-        let (mempool_sender, mempool_events) =
-            libra_mempool::network::add_to_network(&mut network_builder);
+        let (mempool_sender, mempool_events) = libra_mempool::network::add_to_network(
+            &mut network_builder,
+            node_config.mempool.max_broadcasts_per_peer,
+        );
         mempool_network_handles.push((network.peer_id, mempool_sender, mempool_events));
         validator_network_provider = Some((network.peer_id, runtime, network_builder));
     }
@@ -301,8 +303,10 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             state_sync_sender,
             state_sync_events,
         ));
-        let (mempool_sender, mempool_events) =
-            libra_mempool::network::add_to_network(&mut network_builder);
+        let (mempool_sender, mempool_events) = libra_mempool::network::add_to_network(
+            &mut network_builder,
+            node_config.mempool.max_broadcasts_per_peer,
+        );
         mempool_network_handles.push((full_node_network.peer_id, mempool_sender, mempool_events));
 
         // Start the network provider.

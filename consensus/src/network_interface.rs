@@ -24,7 +24,7 @@ use network::{
         network::{NetworkEvents, NetworkSender},
         rpc::error::RpcError,
     },
-    validator_network::network_builder::NetworkBuilder,
+    validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
     ProtocolId,
 };
 use serde::{Deserialize, Serialize};
@@ -87,6 +87,7 @@ pub fn add_to_network<T: Payload>(
             vec![ProtocolId::ConsensusRpc],
             vec![ProtocolId::ConsensusDirectSend],
             QueueStyle::LIFO,
+            NETWORK_CHANNEL_SIZE,
             Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
         );
     (
