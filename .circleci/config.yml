@@ -249,7 +249,7 @@ jobs:
             - target/debug/deps/libratest*
   run-e2e-test:
     executor: test-executor
-    parallelism: 8
+    parallelism: 4
     description: Run E2E tests in parallel. Each container runs a subset of
       test targets.
     environment:
