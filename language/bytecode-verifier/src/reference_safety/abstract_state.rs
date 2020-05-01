@@ -57,6 +57,17 @@ pub enum Label {
     Field(FieldHandleIndex),
 }
 
+// Needed for debugging with the borrow graph
+impl std::fmt::Display for Label {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Label::Local(i) => write!(f, "local#{}", i),
+            Label::Global(i) => write!(f, "resource@{}", i),
+            Label::Field(i) => write!(f, "field#{}", i),
+        }
+    }
+}
+
 /// AbstractState is the analysis state over which abstract interpretation is performed.
 #[derive(Clone, Debug, PartialEq)]
 pub struct AbstractState {
@@ -508,7 +519,6 @@ impl AbstractState {
         for id in all_references_to_borrow_from {
             self.release(id)
         }
-
         Ok(return_values)
     }
 
@@ -525,7 +535,7 @@ impl AbstractState {
         // Check that no local or global is borrowed
         if !self.is_frame_safe_to_destroy() {
             return Err(err_at_offset(
-                StatusCode::RET_UNSAFE_TO_DESTROY_ERROR,
+                StatusCode::UNSAFE_RET_LOCAL_OR_RESOURCE_STILL_BORROWED,
                 offset,
             ));
         }

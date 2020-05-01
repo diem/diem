@@ -33,7 +33,7 @@ module M {
         return 0;
     }
 }
-// check: RET_UNSAFE_TO_DESTROY_ERROR
+// check: UNSAFE_RET_UNUSED_RESOURCES
 
 //! new-transaction
 module M2 {
@@ -45,4 +45,4 @@ module M2 {
         return move(r);
     }
 }
-// check: RET_UNSAFE_TO_DESTROY_ERROR
+// check: UNSAFE_RET_LOCAL_OR_RESOURCE_STILL_BORROWED

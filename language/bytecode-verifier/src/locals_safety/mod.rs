@@ -98,7 +98,7 @@ fn execute_inner(state: &mut AbstractState, bytecode: &Bytecode, offset: usize) 
                     | (LocalState::Available, Kind::Resource)
                     | (LocalState::Available, Kind::All) => {
                         return Err(err_at_offset(
-                            StatusCode::RET_UNSAFE_TO_DESTROY_ERROR,
+                            StatusCode::UNSAFE_RET_UNUSED_RESOURCES,
                             offset,
                         ))
                     }

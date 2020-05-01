@@ -157,11 +157,8 @@ module LibraSystem {
     }
 
     // Return true if addr is a current validator
-    public fun is_validator(_addr: address): bool { // acquires ValidatorSet {
-        // NOTE: this function currently does not pass bytecode verification. Its unclear why. As those sources
-        // are being retired soon anyway, we just comment it out.
-        false
-        //   is_validator_(&addr, &borrow_global<ValidatorSet>(0x1D8).validators)
+    public fun is_validator(addr: address): bool acquires ValidatorSet {
+        is_validator_(&addr, &borrow_global<ValidatorSet>(0x1D8).validators)
     }
 
     // Get the ValidatorInfo for the ith validator
