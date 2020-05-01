@@ -1,8 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
-
 use crate::{constants, error::Error, SecureBackends};
 use libra_crypto::{hash::CryptoHash, x25519, ValidCryptoMaterial};
 use libra_network_address::{NetworkAddress, RawNetworkAddress};
