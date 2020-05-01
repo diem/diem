@@ -106,7 +106,6 @@ fn thread(n: u64) {
 fn process(n: u64) {
     let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
     let mut config = OnDiskStorageConfig::default();
-    config.default = true;
     config.path = file_path;
     let backend = SecureBackend::OnDiskStorage(config);
     let client_wrapper = ProcessClientWrapper::new(backend);

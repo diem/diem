@@ -265,7 +265,6 @@ impl ValidatorConfig {
                 "in-memory" => SecureBackend::InMemoryStorage,
                 "on-disk" => safety_rules_config.backend.clone(),
                 "vault" => SecureBackend::Vault(VaultConfig {
-                    default: true,
                     namespace: self.safety_rules_namespace.clone(),
                     server: self
                         .safety_rules_host

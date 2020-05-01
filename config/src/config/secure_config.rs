@@ -42,9 +42,6 @@ pub enum SecureBackend {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct VaultConfig {
-    /// In testing scenarios this will install baseline data if it is not specified. Note: this can
-    /// only be used if the token provided has root or sudo access.
-    pub default: bool,
     /// A namespace is an optional portion of the path to a key stored within Vault. For example,
     /// a secret, S, without a namespace would be available in secret/data/S, with a namespace, N, it
     /// would be in secret/data/N/S.
@@ -57,9 +54,6 @@ pub struct VaultConfig {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct OnDiskStorageConfig {
-    // In testing scenarios this implies that the default state is okay if
-    // a state is not specified.
-    pub default: bool,
     // Required path for on disk storage
     pub path: PathBuf,
     #[serde(skip)]
@@ -69,7 +63,6 @@ pub struct OnDiskStorageConfig {
 impl Default for OnDiskStorageConfig {
     fn default() -> Self {
         Self {
-            default: false,
             path: PathBuf::from("safety_rules.toml"),
             data_dir: PathBuf::from("/opt/libra/data/common"),
         }

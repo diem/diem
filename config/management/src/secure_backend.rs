@@ -88,7 +88,6 @@ impl TryInto<config::SecureBackend> for SecureBackend {
                     .remove("token")
                     .ok_or_else(|| Error::BackendParsingError("missing token".into()))?;
                 config::SecureBackend::Vault(VaultConfig {
-                    default: false,
                     namespace: self.parameters.remove("namespace"),
                     server,
                     // TODO(davidiw) Make this a path to a file

@@ -12,12 +12,9 @@ use crate::{
     SafetyRules, TSafetyRules,
 };
 use consensus_types::common::{Author, Payload};
-use libra_config::config::{NodeConfig, SafetyRulesService, SecureBackend};
-use libra_secure_storage::{InMemoryStorage, OnDiskStorage, Storage, VaultStorage};
-use std::{
-    net::SocketAddr,
-    sync::{Arc, RwLock},
-};
+use libra_config::config::{NodeConfig, SafetyRulesService};
+use libra_secure_storage::Storage;
+use std::{convert::TryInto, net::SocketAddr, sync::{Arc, RwLock}};
 
 pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSafetyStorage) {
     let author = config
@@ -27,23 +24,9 @@ pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSaf
         .peer_id;
 
     let backend = &config.consensus.safety_rules.backend;
-    let (initialize, internal_storage): (bool, Box<dyn Storage>) = match backend {
-        SecureBackend::InMemoryStorage => (true, InMemoryStorage::new_storage()),
-        SecureBackend::OnDiskStorage(config) => {
-            (config.default, OnDiskStorage::new_storage(config.path()))
-        }
-        SecureBackend::Vault(config) => (
-            config.default,
-            VaultStorage::new_storage(
-                config.server.clone(),
-                config.token.clone(),
-                config.namespace.clone(),
-            ),
-        ),
-    };
+    let internal_storage: Box<dyn Storage> = backend.try_into().expect("Unable to initialize storage");
 
-    let storage = if initialize {
-        let test_config = config.test.as_mut().expect("Missing test config");
+    let storage = if let Some(test_config) = config.test.as_mut() {
         let private_key = test_config
             .consensus_keypair
             .as_mut()

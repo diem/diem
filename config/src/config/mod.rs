@@ -261,6 +261,7 @@ impl NodeConfig {
         let mut test = TestConfig::new_with_temp_dir();
 
         if self.base.role == RoleType::Validator {
+            test.initialize_storage = true;
             test.random_account_key(rng);
             let peer_id =
                 PeerId::from_public_key(&test.account_keypair.as_ref().unwrap().public_key());
