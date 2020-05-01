@@ -295,47 +295,114 @@ pub mod tests {
     #[test]
     #[ignore]
     fn test_end_to_end() {
+        // Each identity works in their own namespace
+        // Alice, Bob, and Carol are an operators, implicitly mapped 1:1 with Owner.
+        // Dave is the association.
+        // Each user will upload their contents to *_ns + "shared"
+        // Common is used by the technical staff for coordination.
         let alice_ns = "alice";
-        let shared_ns = "shared";
-        let mut storage = default_storage(alice_ns.into());
-        initialize_storage(storage.as_mut());
+        let bob_ns = "bob";
+        let carol_ns = "carol";
+        let dave_ns = "dave";
+        let common_ns = "common";
+        let shared = "_shared";
 
-        let mut remote = default_storage(shared_ns.into());
-        remote.reset_and_clear().unwrap();
+        // Step 1) Define and upload the layout specifying which identities have which roles. This
+        // is uplaoded to the common namespace.
 
-        let association_key = storage
+        let mut common = default_storage(common_ns.into());
+        common.reset_and_clear().unwrap();
+
+        // Note: owners are irrelevant currently
+        let layout_text = "\
+            operators = [\"alice_shared\", \"bob_shared\", \"carol_shared\"]\n\
+            owners = []\n\
+            association = [\"dave_shared\"]\n\
+        ";
+
+        let temppath = libra_temppath::TempPath::new();
+        temppath.create_as_file().unwrap();
+        let mut file = File::create(temppath.path()).unwrap();
+        file.write_all(&layout_text.to_string().into_bytes())
+            .unwrap();
+        file.sync_all().unwrap();
+
+        set_layout(temppath.path().to_str().unwrap(), common_ns).unwrap();
+
+        // Step 2) Upload the association key:
+
+        let mut association = default_storage(dave_ns.into());
+        initialize_storage(association.as_mut());
+
+        let mut association_shared = default_storage(dave_ns.to_string() + shared);
+        association_shared.reset_and_clear().unwrap();
+
+        // TODO add set_association
+
+        // Step 3) Upload each operators key and then a signed transaction:
+
+        for ns in [alice_ns, bob_ns, carol_ns].iter() {
+            let mut local = default_storage((*ns).to_string());
+            initialize_storage(local.as_mut());
+
+            let mut remote = default_storage((*ns).to_string() + shared);
+            remote.reset_and_clear().unwrap();
+
+            operator_key(ns, &((*ns).to_string() + shared)).unwrap();
+            println!("{} {}", ns, &((*ns).to_string() + shared));
+
+            validator_config(
+                AccountAddress::random(),
+                "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
+                "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
+                ns,
+                &((*ns).to_string() + shared),
+            )
+            .unwrap();
+        }
+
+        // Step 4) Produce genesis
+
+        let layout = common
+            .get(constants::LAYOUT)
+            .unwrap()
+            .value
+            .string()
+            .unwrap();
+        let layout = crate::layout::Layout::parse(&layout).unwrap();
+
+        // TODO add set_association
+        // let association_key = association_shared.get(constants::ASSOCIATION_KEY).unwrap();
+        // let association_key = association_key.value.ed25519_public_key().unwrap();
+        let association_key = association
             .get_public_key(constants::ASSOCIATION_KEY)
             .unwrap()
             .public_key;
 
-        let validator_key = storage
-            .get_public_key(constants::OWNER_KEY)
-            .unwrap()
-            .public_key;
+        let validators = layout
+            .operators
+            .iter()
+            .map(|o| {
+                println!("{}", o);
+                let remote = default_storage(o.into());
 
-        validator_config(
-            AccountAddress::random(),
-            "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
-            "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
-            alice_ns,
-            shared_ns,
-        )
-        .unwrap();
+                let key = remote.get(constants::OPERATOR_KEY).unwrap();
+                let key = key.value.ed25519_public_key().unwrap();
 
-        let validator_txn = remote.get(constants::VALIDATOR_CONFIG).unwrap().value;
-        let validator_txn = validator_txn.transaction().unwrap();
-        let validator_txn = validator_txn.as_signed_user_txn().unwrap().payload();
-        let validator_txn = if let TransactionPayload::Script(script) = validator_txn {
-            script.clone()
-        } else {
-            panic!("Expected TransactionPayload::Script(_)");
-        };
+                let txn = remote.get(constants::VALIDATOR_CONFIG).unwrap().value;
+                let txn = txn.transaction().unwrap();
+                let txn = txn.as_signed_user_txn().unwrap().payload();
+                let txn = if let TransactionPayload::Script(script) = txn {
+                    script.clone()
+                } else {
+                    panic!("Expected TransactionPayload::Script(_)");
+                };
 
-        vm_genesis::encode_genesis_transaction_with_validator(
-            association_key,
-            &[(validator_key, validator_txn)],
-            None,
-        );
+                (key, txn)
+            })
+            .collect::<Vec<_>>();
+
+        vm_genesis::encode_genesis_transaction_with_validator(association_key, &validators, None);
     }
 
     #[test]
