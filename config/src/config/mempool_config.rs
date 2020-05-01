@@ -11,6 +11,7 @@ pub struct MempoolConfig {
     pub shared_mempool_batch_size: usize,
     pub shared_mempool_max_concurrent_inbound_syncs: usize,
     pub shared_mempool_min_broadcast_recipient_count: Option<usize>,
+    pub max_broadcasts_per_peer: usize,
     pub capacity: usize,
     // max number of transactions per user in Mempool
     pub capacity_per_user: usize,
@@ -26,6 +27,7 @@ impl Default for MempoolConfig {
             shared_mempool_batch_size: 100,
             shared_mempool_max_concurrent_inbound_syncs: 100,
             shared_mempool_min_broadcast_recipient_count: None,
+            max_broadcasts_per_peer: 25,
             capacity: 1_000_000,
             capacity_per_user: 100,
             system_transaction_timeout_secs: 86400,

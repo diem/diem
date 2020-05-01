@@ -10,7 +10,7 @@ use crate::{
         network::{Event, NetworkEvents, NetworkSender},
         rpc::error::RpcError,
     },
-    validator_network::network_builder::{NetworkBuilder, TransportType},
+    validator_network::network_builder::{NetworkBuilder, TransportType, NETWORK_CHANNEL_SIZE},
     NetworkPublicKeys, ProtocolId,
 };
 use channel::message_queues::QueueStyle;
@@ -38,6 +38,7 @@ fn add_to_network(network: &mut NetworkBuilder) -> (DummyNetworkSender, DummyNet
             vec![TEST_RPC_PROTOCOL],
             vec![TEST_DIRECT_SEND_PROTOCOL],
             QueueStyle::LIFO,
+            NETWORK_CHANNEL_SIZE,
             None,
         );
     (

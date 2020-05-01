@@ -11,13 +11,15 @@ use std::{
 
 /// QueueStyle is an enum which can be used as a configuration option for
 /// PerValidatorQueue. Since the queue per key is going to be bounded,
-/// QueueStyle also determines the policy for dropping messages.
+/// QueueStyle also determines the policy for dropping and retrieving messages.
 /// With LIFO, oldest messages are dropped.
 /// With FIFO, newest messages are dropped.
+/// With KLAST, oldest messages are dropped, but remaining are retrieved in FIFO order
 #[derive(Clone, Copy, Debug)]
 pub enum QueueStyle {
     LIFO,
     FIFO,
+    KLAST,
 }
 
 /// PerKeyQueue maintains a queue of messages per key. It
@@ -82,7 +84,7 @@ impl<K: Eq + Hash + Clone, T> PerKeyQueue<K, T> {
         if let Some(q) = self.per_key_queue.get_mut(key) {
             // Extract message from the key's queue
             let retval = match self.queue_style {
-                QueueStyle::FIFO => q.pop_front(),
+                QueueStyle::FIFO | QueueStyle::KLAST => q.pop_front(),
                 QueueStyle::LIFO => q.pop_back(),
             };
             (retval, q.is_empty())
@@ -116,7 +118,7 @@ impl<K: Eq + Hash + Clone, T> PerKeyQueue<K, T> {
                 // Drop the newest message for FIFO
                 QueueStyle::FIFO => Some(message),
                 // Drop the oldest message for LIFO
-                QueueStyle::LIFO => {
+                QueueStyle::LIFO | QueueStyle::KLAST => {
                     let oldest = key_message_queue.pop_front();
                     key_message_queue.push_back(message);
                     oldest

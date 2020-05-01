@@ -311,6 +311,7 @@ impl NetworkBuilder {
         rpc_protocols: Vec<ProtocolId>,
         direct_send_protocols: Vec<ProtocolId>,
         queue_preference: QueueStyle,
+        max_queue_size_per_peer: usize,
         counter: Option<&'static IntCounterVec>,
     ) -> (
         PeerManagerRequestSender,
@@ -323,7 +324,7 @@ impl NetworkBuilder {
         self.rpc_protocols.extend(rpc_protocols.clone());
         let (network_notifs_tx, network_notifs_rx) = libra_channel::new(
             queue_preference,
-            NonZeroUsize::new(self.channel_size).unwrap(),
+            NonZeroUsize::new(max_queue_size_per_peer).unwrap(),
             counter,
         );
         for protocol in rpc_protocols

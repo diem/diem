@@ -10,7 +10,7 @@ use network::{
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NetworkEvents, NetworkSender},
-    validator_network::network_builder::NetworkBuilder,
+    validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
     ProtocolId,
 };
 use serde::{Deserialize, Serialize};
@@ -51,6 +51,7 @@ pub fn add_to_network(
             vec![],
             vec![ProtocolId::StateSynchronizerDirectSend],
             QueueStyle::FIFO,
+            NETWORK_CHANNEL_SIZE,
             Some(&counters::PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS),
         );
     (

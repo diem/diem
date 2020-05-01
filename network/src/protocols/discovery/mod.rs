@@ -37,7 +37,7 @@ use crate::{
     error::{NetworkError, NetworkErrorKind},
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{Event, NetworkEvents, NetworkSender},
-    validator_network::network_builder::NetworkBuilder,
+    validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
     NetworkPublicKeys, ProtocolId,
 };
 use bytes::Bytes;
@@ -100,6 +100,7 @@ pub fn add_to_network(
             vec![],
             vec![ProtocolId::DiscoveryDirectSend],
             QueueStyle::LIFO,
+            NETWORK_CHANNEL_SIZE,
             Some(&counters::PENDING_DISCOVERY_NETWORK_EVENTS),
         );
     (

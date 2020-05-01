@@ -15,7 +15,7 @@ use network::{
         PeerManagerRequestSender,
     },
     protocols::{network::NetworkSender, rpc::error::RpcError},
-    validator_network::network_builder::NetworkBuilder,
+    validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
     ProtocolId,
 };
 use std::{convert::TryFrom, time::Duration};
@@ -86,6 +86,7 @@ pub fn add_to_network(
             vec![ProtocolId::OnchainDiscoveryRpc],
             vec![],
             QueueStyle::LIFO,
+            NETWORK_CHANNEL_SIZE,
             // Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
             // TODO(philiphayes): add a counter for onchain discovery
             None,

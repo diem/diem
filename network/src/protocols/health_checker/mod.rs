@@ -25,7 +25,7 @@ use crate::{
         network::{Event, NetworkEvents, NetworkSender},
         rpc::error::RpcError,
     },
-    validator_network::network_builder::NetworkBuilder,
+    validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
     ProtocolId,
 };
 use bytes::Bytes;
@@ -73,6 +73,7 @@ pub fn add_to_network(
             vec![ProtocolId::HealthCheckerRpc],
             vec![],
             QueueStyle::LIFO,
+            NETWORK_CHANNEL_SIZE,
             Some(&counters::PENDING_HEALTH_CHECKER_NETWORK_EVENTS),
         );
     (
