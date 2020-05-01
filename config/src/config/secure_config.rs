@@ -7,18 +7,10 @@ use std::{net::SocketAddr, path::PathBuf};
 const DEFAULT_JSON_RPC_ADDR: &str = "127.0.0.1";
 const DEFAULT_JSON_RPC_PORT: u16 = 8080;
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct SecureConfig {
     pub key_manager: KeyManagerConfig,
-}
-
-impl Default for SecureConfig {
-    fn default() -> Self {
-        Self {
-            key_manager: KeyManagerConfig::default(),
-        }
-    }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
