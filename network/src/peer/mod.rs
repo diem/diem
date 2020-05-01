@@ -124,7 +124,7 @@ where
         let reader = FramedRead::new(reader, LengthDelimitedCodec::new()).fuse();
         // Create a rate-limited stream of inbound messages.
         let mut reader = reader
-            .ratelimit(MESSAGE_RATE_LIMIT_WINDOW, MESSAGE_RATE_LIMIT_COUNT)
+            .into_rate_limited(MESSAGE_RATE_LIMIT_WINDOW, MESSAGE_RATE_LIMIT_COUNT)
             .fuse();
         // Convert WriteHalf to Sink of length-delimited messages.
         let writer = FramedWrite::new(writer, LengthDelimitedCodec::new());

@@ -30,7 +30,7 @@ use tokio::time::{interval, Interval};
 /// `capacity`: Max elements allowed in an interval.
 /// `interval`: Granular duration within which control flow is desired.
 pub trait RateLimit: Stream {
-    fn ratelimit(self, refill_interval: Duration, capacity: usize) -> RateLimiter<Self>
+    fn into_rate_limited(self, refill_interval: Duration, capacity: usize) -> RateLimiter<Self>
     where
         Self: Sized,
     {
@@ -40,7 +40,7 @@ pub trait RateLimit: Stream {
 
 impl<T: ?Sized> RateLimit for T where T: Stream {}
 
-/// Stream for the [`RateLimit::ratelimit`](ratelimit) function.
+/// Stream for the [`RateLimit::into_rate_limited`](into_rate_limited) function.
 #[pin_project]
 #[must_use = "streams do nothing unless polled"]
 pub struct RateLimiter<T: Stream> {
@@ -130,7 +130,7 @@ mod test {
             let s = stream::repeat(());
 
             // Rate-limit the stream to produce only 10 values in 100ms.
-            let mut rs = s.ratelimit(Duration::from_millis(100), 10).fuse();
+            let mut rs = s.into_rate_limited(Duration::from_millis(100), 10).fuse();
 
             // Poll the stream `rs` for 50ms and count the number of elements received.
             let mut timeout = delay_for(Duration::from_millis(50)).fuse();
@@ -155,7 +155,7 @@ mod test {
             let s = stream::repeat(());
 
             // Rate-limit the stream to produce 100 values in 10ms.
-            let mut rs = s.ratelimit(Duration::from_millis(10), 100).fuse();
+            let mut rs = s.into_rate_limited(Duration::from_millis(10), 100).fuse();
 
             // Poll the stream `rs` for 50ms and count the number of elements received.
             let mut timeout = delay_for(Duration::from_millis(5)).fuse();
