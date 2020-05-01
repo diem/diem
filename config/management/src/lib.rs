@@ -4,14 +4,12 @@
 #![forbid(unsafe_code)]
 
 mod error;
+mod genesis;
 mod layout;
 mod secure_backend;
 mod validator_config;
 
-use crate::{
-    error::Error, layout::SetLayout, secure_backend::SecureBackend,
-    validator_config::ValidatorConfig,
-};
+use crate::{error::Error, layout::SetLayout, secure_backend::SecureBackend};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_secure_storage::{Storage, Value};
 use libra_types::{transaction::Transaction, waypoint::Waypoint};
@@ -20,6 +18,7 @@ use structopt::StructOpt;
 
 pub mod constants {
     pub const ASSOCIATION_KEY: &str = "association";
+    pub const COMMON_NS: &str = "common";
     pub const CONSENSUS_KEY: &str = "consensus";
     pub const EPOCH: &str = "epoch";
     pub const FULLNODE_NETWORK_KEY: &str = "fullnode_network";
@@ -42,6 +41,8 @@ pub mod constants {
 pub enum Command {
     #[structopt(about = "Submits an Ed25519PublicKey for the association")]
     AssociationKey(SecureBackends),
+    #[structopt(about = "Retrieves data from a store to produce genesis")]
+    Genesis(crate::genesis::Genesis),
     #[structopt(about = "Submits an Ed25519PublicKey for the operator")]
     OperatorKey(SecureBackends),
     #[structopt(about = "Submits an Ed25519PublicKey for the owner")]
@@ -49,13 +50,14 @@ pub enum Command {
     #[structopt(about = "Submits a Layout doc to a shared storage")]
     SetLayout(SetLayout),
     #[structopt(about = "Constructs and signs a ValidatorConfig")]
-    ValidatorConfig(ValidatorConfig),
+    ValidatorConfig(crate::validator_config::ValidatorConfig),
     #[structopt(about = "Verifies and prints the current configuration state")]
     Verify(SingleBackend),
 }
 
 pub enum CommandName {
     AssociationKey,
+    Genesis,
     OperatorKey,
     OwnerKey,
     SetLayout,
@@ -67,6 +69,7 @@ impl From<&Command> for CommandName {
     fn from(command: &Command) -> Self {
         match command {
             Command::AssociationKey(_) => CommandName::AssociationKey,
+            Command::Genesis(_) => CommandName::Genesis,
             Command::OperatorKey(_) => CommandName::OperatorKey,
             Command::OwnerKey(_) => CommandName::OwnerKey,
             Command::SetLayout(_) => CommandName::SetLayout,
@@ -80,6 +83,7 @@ impl std::fmt::Display for CommandName {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let name = match self {
             CommandName::AssociationKey => "association-key",
+            CommandName::Genesis => "genesis",
             CommandName::OperatorKey => "operator-key",
             CommandName::OwnerKey => "owner-key",
             CommandName::SetLayout => "set-layout",
@@ -94,6 +98,7 @@ impl Command {
     pub fn execute(self) -> String {
         match &self {
             Command::AssociationKey(_) => self.association_key().unwrap().to_string(),
+            Command::Genesis(_) => format!("{:?}", self.genesis().unwrap()),
             Command::OperatorKey(_) => self.operator_key().unwrap().to_string(),
             Command::OwnerKey(_) => self.owner_key().unwrap().to_string(),
             Command::SetLayout(_) => self.set_layout().unwrap().to_string(),
@@ -107,6 +112,16 @@ impl Command {
             Self::submit_key(constants::ASSOCIATION_KEY, secure_backends)
         } else {
             let expected = CommandName::AssociationKey.to_string();
+            let actual = CommandName::from(&self).to_string();
+            Err(Error::UnexpectedCommand(expected, actual))
+        }
+    }
+
+    pub fn genesis(self) -> Result<Transaction, Error> {
+        if let Command::Genesis(genesis) = self {
+            genesis.execute()
+        } else {
+            let expected = CommandName::Genesis.to_string();
             let actual = CommandName::from(&self).to_string();
             Err(Error::UnexpectedCommand(expected, actual))
         }
@@ -302,7 +317,7 @@ pub mod tests {
     use super::*;
     use libra_network_address::NetworkAddress;
     use libra_secure_storage::{Policy, Value, VaultStorage};
-    use libra_types::{account_address::AccountAddress, transaction::TransactionPayload};
+    use libra_types::account_address::AccountAddress;
     use std::{fs::File, io::Write};
 
     const VAULT_HOST: &str = "http://localhost:8200";
@@ -312,7 +327,7 @@ pub mod tests {
     #[ignore]
     fn test_end_to_end() {
         // Each identity works in their own namespace
-        // Alice, Bob, and Carol are an operators, implicitly mapped 1:1 with Owner.
+        // Alice, Bob, and Carol are operators, implicitly mapped 1:1 with owners.
         // Dave is the association.
         // Each user will upload their contents to *_ns + "shared"
         // Common is used by the technical staff for coordination.
@@ -320,13 +335,12 @@ pub mod tests {
         let bob_ns = "bob";
         let carol_ns = "carol";
         let dave_ns = "dave";
-        let common_ns = "common";
         let shared = "_shared";
 
         // Step 1) Define and upload the layout specifying which identities have which roles. This
         // is uplaoded to the common namespace.
 
-        let mut common = default_storage(common_ns.into());
+        let mut common = default_storage(constants::COMMON_NS.into());
         common.reset_and_clear().unwrap();
 
         // Note: owners are irrelevant currently
@@ -343,7 +357,7 @@ pub mod tests {
             .unwrap();
         file.sync_all().unwrap();
 
-        set_layout(temppath.path().to_str().unwrap(), common_ns).unwrap();
+        set_layout(temppath.path().to_str().unwrap(), constants::COMMON_NS).unwrap();
 
         // Step 2) Upload the association key:
 
@@ -378,40 +392,7 @@ pub mod tests {
 
         // Step 4) Produce genesis
 
-        let layout = common
-            .get(constants::LAYOUT)
-            .unwrap()
-            .value
-            .string()
-            .unwrap();
-        let layout = crate::layout::Layout::parse(&layout).unwrap();
-
-        let association_key = association_shared.get(constants::ASSOCIATION_KEY).unwrap();
-        let association_key = association_key.value.ed25519_public_key().unwrap();
-
-        let validators = layout
-            .operators
-            .iter()
-            .map(|o| {
-                let remote = default_storage(o.into());
-
-                let key = remote.get(constants::OPERATOR_KEY).unwrap();
-                let key = key.value.ed25519_public_key().unwrap();
-
-                let txn = remote.get(constants::VALIDATOR_CONFIG).unwrap().value;
-                let txn = txn.transaction().unwrap();
-                let txn = txn.as_signed_user_txn().unwrap().payload();
-                let txn = if let TransactionPayload::Script(script) = txn {
-                    script.clone()
-                } else {
-                    panic!("Expected TransactionPayload::Script(_)");
-                };
-
-                (key, txn)
-            })
-            .collect::<Vec<_>>();
-
-        vm_genesis::encode_genesis_transaction_with_validator(association_key, &validators, None);
+        genesis().unwrap();
     }
 
     #[test]
@@ -592,6 +573,24 @@ pub mod tests {
 
         let command = Command::from_iter(args.split_whitespace());
         command.association_key()
+    }
+
+    fn genesis() -> Result<Transaction, Error> {
+        let args = format!(
+            "
+                management
+                genesis
+                --backend backend={backend};\
+                    server={server};\
+                    token={token}
+            ",
+            backend = crate::secure_backend::VAULT,
+            server = VAULT_HOST,
+            token = VAULT_ROOT_TOKEN,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.genesis()
     }
 
     fn operator_key(local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {
