@@ -7,10 +7,11 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
+    access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
     account_config,
     block_metadata::BlockMetadata,
-    language_storage::TypeTag,
+    language_storage::{ResourceKey, StructTag, TypeTag},
     move_resource::MoveResource,
     on_chain_config::{LibraVersion, OnChainConfig, VMConfig},
     transaction::{
@@ -30,7 +31,7 @@ use move_vm_state::{
     data_cache::{BlockDataCache, RemoteCache, RemoteStorage},
     execution_context::{ExecutionContext, SystemExecutionContext, TransactionExecutionContext},
 };
-use move_vm_types::{chain_state::ChainState, identifier::create_access_path, values::Value};
+use move_vm_types::{chain_state::ChainState, values::Value};
 use rayon::prelude::*;
 use std::{collections::HashSet, convert::TryFrom, sync::Arc};
 use vm::{
@@ -1045,6 +1046,12 @@ fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
             TransactionArgument::U8Vector(v) => Value::vector_u8(v.clone()),
         })
         .collect()
+}
+
+/// Get the AccessPath to a resource stored under `address` with type name `tag`
+fn create_access_path(address: AccountAddress, tag: StructTag) -> AccessPath {
+    let resource_tag = ResourceKey::new(address, tag);
+    AccessPath::resource_access_path(&resource_tag, &Accesses::empty())
 }
 
 fn get_transaction_output(

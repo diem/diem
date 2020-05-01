@@ -3112,6 +3112,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-vm-natives"
+version = "0.1.0"
+dependencies = [
+ "bit-vec 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-crypto 0.1.0",
+ "libra-logger 0.1.0",
+ "libra-types 0.1.0",
+ "libra-workspace-hack 0.1.0",
+ "mirai-annotations 1.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "move-core-types 0.1.0",
+ "move-vm-types 0.1.0",
+ "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sha2 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vm 0.1.0",
+]
+
+[[package]]
 name = "move-vm-runtime"
 version = "0.1.0"
 dependencies = [
@@ -3126,6 +3143,7 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "mirai-annotations 1.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "move-core-types 0.1.0",
+ "move-vm-natives 0.1.0",
  "move-vm-state 0.1.0",
  "move-vm-types 0.1.0",
  "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
