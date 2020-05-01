@@ -8,7 +8,7 @@ use serde_reflection::RegistryOwned;
 fn test_that_recorded_formats_did_not_change() {
     for corpus in Corpus::values() {
         let registry: RegistryOwned = corpus
-            .get_registry(/* skip_deserialization */ false)
+            .get_registry()
             .into_iter()
             .map(|(k, v)| (k.to_string(), v))
             .collect();
