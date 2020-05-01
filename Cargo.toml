@@ -22,7 +22,6 @@ members = [
     "common/proptest-helpers",
     "common/prost-ext",
     "common/security-logger",
-    "common/serde-reflection",
     "common/stream-ratelimiter",
     "common/subscription-service",
     "common/temppath",
