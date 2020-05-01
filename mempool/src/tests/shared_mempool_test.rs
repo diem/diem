@@ -52,7 +52,7 @@ struct SharedMempoolNetwork {
         HashMap<PeerId, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     network_conn_event_notifs_txs: HashMap<PeerId, conn_status_channel::Sender>,
     runtimes: HashMap<PeerId, Runtime>,
-    subscribers: HashMap<PeerId, UnboundedReceiver<SharedMempoolNotification>>,
+    subscribers: HashMap<PeerId, libra_channel::Receiver<(), SharedMempoolNotification>>,
     timers: HashMap<PeerId, UnboundedSender<SyncEvent>>,
     peer_ids: HashMap<PeerId, PeerId>,
 }
@@ -73,7 +73,8 @@ fn init_single_shared_mempool(smp: &mut SharedMempoolNetwork, peer_id: PeerId, c
         ConnectionRequestSender::new(connection_reqs_tx),
     );
     let network_events = MempoolNetworkEvents::new(network_notifs_rx, conn_status_rx);
-    let (sender, subscriber) = unbounded();
+//    let (sender, subscriber) = unbounded();
+    let (sender, subscriber) = libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let (timer_sender, timer_receiver) = unbounded();
     let (_ac_endpoint_sender, ac_endpoint_receiver) = mpsc::channel(1_024);
     let network_handles = vec![(peer_id, network_sender, network_events)];
@@ -143,7 +144,7 @@ fn init_smp_multiple_networks(
             .insert(*peer_id, conn_status_tx);
     }
 
-    let (sender, subscriber) = unbounded();
+    let (sender, subscriber) = libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let (timer_sender, timer_receiver) = unbounded();
     let (_ac_endpoint_sender, ac_endpoint_receiver) = mpsc::channel(1_024);
     let (_consensus_sender, consensus_events) = mpsc::channel(1_024);
@@ -264,20 +265,32 @@ impl SharedMempoolNetwork {
     fn wait_for_event(&mut self, peer_id: &PeerId, event: SharedMempoolNotification) {
         let main_peer_id = self.peer_ids.get(peer_id).unwrap_or(peer_id);
         let subscriber = self.subscribers.get_mut(main_peer_id).unwrap();
-        while block_on(subscriber.next()).unwrap() != event {
-            continue;
-        }
+//        while block_on(subscriber.next()).unwrap() != event {
+//            continue;
+//        }
+        let blah = block_on(subscriber.next()).unwrap();
+        println!("event {:?}", blah);
+    }
+
+    fn check_no_events(&mut self, peer_id: &PeerId) {
+        let main_peer_id = self.peer_ids.get(peer_id).unwrap_or(peer_id);
+        let subscriber = self.subscribers.get_mut(main_peer_id).unwrap();
+
+//        assert!(block_on(subscriber.next()).is_none());
+        assert!(subscriber.select_next_some().now_or_never().is_none());
     }
 
     // checks that a node has no pending messages to send
     fn assert_no_message_sent(&mut self, peer: &PeerId) {
         let main_peer_id = self.peer_ids.get(peer).unwrap_or(peer);
         // emulate timer tick
-        self.timers
-            .get(main_peer_id)
-            .unwrap()
-            .unbounded_send(SyncEvent)
-            .unwrap();
+//        self.timers
+//            .get(main_peer_id)
+//            .unwrap()
+//            .unbounded_send(SyncEvent)
+//            .unwrap();
+        self.check_no_events(peer);
+//        self.wait_for_event(&main_peer_id.clone(), SharedMempoolNotification::Broadcast);
 
         // await next message from node
         let network_reqs_rx = self.network_reqs_rxs.get_mut(peer).unwrap();
@@ -290,15 +303,19 @@ impl SharedMempoolNetwork {
         peer: &PeerId,
         num_messages: usize,
     ) -> (Vec<SignedTransaction>, PeerId) {
-        let main_peer_id = self.peer_ids.get(peer).unwrap_or(peer);
+        let main_peer_id = self.peer_ids.get(peer).unwrap_or(peer).clone();
         // emulate timer tick
         for _ in 0..num_messages {
-            self.timers
-                .get(main_peer_id)
-                .unwrap()
-                .unbounded_send(SyncEvent)
-                .unwrap();
+            println!("waiting");
+//            self.timers
+//                .get(main_peer_id)
+//                .unwrap()
+//                .unbounded_send(SyncEvent)
+//                .unwrap();
+            self.wait_for_event(&main_peer_id, SharedMempoolNotification::Broadcast);
         }
+
+        println!("finished waiting");
 
         // await next message from node
         let network_reqs_rx = self.network_reqs_rxs.get_mut(peer).unwrap();
@@ -328,6 +345,7 @@ impl SharedMempoolNetwork {
 
                 // deliver ACK for this request
                 self.deliver_response(&peer_id);
+                println!("q?");
                 (transactions, peer_id)
             } else {
                 panic!("did not receive expected BroadcastTransactionsRequest");
@@ -455,6 +473,7 @@ fn test_interruption_in_sync() {
         ConnectionStatusNotification::NewPeer(*peer_c, NetworkAddress::mock()),
     );
 
+    println!("first");
     // make sure it delivered first transaction to both nodes
     let mut peers = vec![
         smp.deliver_message(&peer_a, 1).1,
@@ -464,6 +483,8 @@ fn test_interruption_in_sync() {
     let mut expected_peers = vec![*peer_b, *peer_c];
     expected_peers.sort();
     assert_eq!(peers, expected_peers);
+
+    println!("pls");
 
     // A loses connection to B
     smp.send_connection_event(
@@ -475,16 +496,21 @@ fn test_interruption_in_sync() {
         ),
     );
 
+    println!("here");
     // only C receives following transactions
     smp.add_txns(&peer_a, vec![TestTransaction::new(1, 1, 1)]);
-    let (txn, peer_id) = smp.deliver_message(&peer_a, 2);
+    let (txn, peer_id) = smp.deliver_message(&peer_a, 1);
     assert_eq!(peer_id, *peer_c);
     assert_eq!(txn.get(0).unwrap().sequence_number(), 1);
 
+    println!("next");
+
     smp.add_txns(&peer_a, vec![TestTransaction::new(1, 2, 1)]);
-    let (txn, peer_id) = smp.deliver_message(&peer_a, 2);
+    let (txn, peer_id) = smp.deliver_message(&peer_a, 1);
     assert_eq!(peer_id, *peer_c);
     assert_eq!(txn.get(0).unwrap().sequence_number(), 2);
+
+    println!("yay");
 
     // A reconnects to B
     smp.send_connection_event(
@@ -493,7 +519,7 @@ fn test_interruption_in_sync() {
     );
 
     // B should receive transaction 2
-    let (txn, peer_id) = smp.deliver_message(&peer_a, 2);
+    let (txn, peer_id) = smp.deliver_message(&peer_a, 1);
     assert_eq!(peer_id, *peer_b);
     assert_eq!(txn.get(0).unwrap().sequence_number(), 1);
 }
@@ -851,10 +877,12 @@ fn test_k_policy_broadcast_no_fallback() {
     // add txn to fn_0
     smp.add_txns(&fn_0, vec![TestTransaction::new(1, 0, 1)]);
 
+    println!("delivering");
     // make sure it delivers txn to primary peer
-    let peers = vec![smp.deliver_message(&fn_0, 2).1];
+    let peers = vec![smp.deliver_message(&fn_0, 1).1];
     assert_eq!(peers[0], v_0);
     // check that no messages have been sent to fallback upstream peer
+    println!("YO");
     smp.assert_no_message_sent(&fn_0_fallback_network_id);
 }
 
@@ -899,5 +927,6 @@ fn test_k_policy_broadcast_not_enough_fallbacks() {
     let peers = vec![smp.deliver_message(&fn_0, 1).1];
     assert_eq!(peers[0], v_0);
     // check that no messages have been sent to fallback upstream peer
+    println!("yo");
     smp.assert_no_message_sent(&fn_0_fallback_network_id);
 }

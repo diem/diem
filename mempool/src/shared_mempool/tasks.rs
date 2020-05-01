@@ -15,7 +15,9 @@ use crate::{
     SubmissionStatus,
 };
 use anyhow::{ensure, format_err, Result};
+use channel::libra_channel;
 use futures::channel::oneshot;
+//use futures::channel::mpsc::UnboundedSender;
 use libra_config::config::{NetworkId, PeerNetworkId};
 use libra_logger::prelude::*;
 use libra_types::{
@@ -49,6 +51,7 @@ pub(crate) fn broadcast_single_peer(
     mempool: &Mutex<CoreMempool>,
     network_senders: &mut HashMap<NetworkId, MempoolNetworkSender>,
     batch_size: usize,
+    subscribers: &mut [libra_channel::Sender<(), SharedMempoolNotification>],
 ) {
     let timeline_id = if peer_manager.is_picked_peer(peer) {
         let state = peer_manager.get_peer_state(peer);
@@ -91,6 +94,9 @@ pub(crate) fn broadcast_single_peer(
     } else {
         counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST.inc_by(txns_ct as i64);
         peer_manager.update_peer_broadcast(peer, new_timeline_id);
+        println!("in broadcast task");
+        notify_subscribers(SharedMempoolNotification::Broadcast, subscribers);
+        println!("notified subscribers");
     }
 }
 
@@ -115,14 +121,14 @@ fn send_mempool_sync_msg(
 
 /// processes transactions directly submitted by client
 pub(crate) async fn process_client_transaction_submission<V>(
-    smp: SharedMempool<V>,
+    mut smp: SharedMempool<V>,
     transaction: SignedTransaction,
     callback: oneshot::Sender<Result<SubmissionStatus>>,
 ) where
     V: TransactionValidation,
 {
     let mut statuses =
-        process_incoming_transactions(&smp, vec![transaction], TimelineState::NotReady).await;
+        process_incoming_transactions(&mut smp, vec![transaction], TimelineState::NotReady).await;
     log_txn_process_results(statuses.clone(), None);
     let status;
     if statuses.is_empty() {
@@ -150,7 +156,7 @@ pub(crate) async fn process_transaction_broadcast<V>(
 ) where
     V: TransactionValidation,
 {
-    let results = process_incoming_transactions(&smp, transactions, timeline_state).await;
+    let results = process_incoming_transactions(&mut smp, transactions, timeline_state).await;
     log_txn_process_results(results, Some(peer.peer_id()));
     // send back ACK
     let mut network_sender = smp
@@ -172,7 +178,7 @@ pub(crate) async fn process_transaction_broadcast<V>(
 /// submits a list of SignedTransaction to the local mempool
 /// and returns a vector containing AdmissionControlStatus
 async fn process_incoming_transactions<V>(
-    smp: &SharedMempool<V>,
+    smp: &mut SharedMempool<V>,
     transactions: Vec<SignedTransaction>,
     timeline_state: TimelineState,
 ) -> Vec<SubmissionStatus>
@@ -255,7 +261,7 @@ where
             }
         }
     }
-    notify_subscribers(SharedMempoolNotification::NewTransactions, &smp.subscribers);
+    notify_subscribers(SharedMempoolNotification::NewTransactions, &mut smp.subscribers);
     statuses
 }
 
