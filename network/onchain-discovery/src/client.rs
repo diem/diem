@@ -8,7 +8,6 @@ use crate::{
         DiscoveryInfoInternal, DiscoverySetInternal, QueryDiscoverySetRequest,
         QueryDiscoverySetResponseWithEvent,
     },
-    OptionFuture,
 };
 use anyhow::{Context as _, Result};
 use futures::{
@@ -27,6 +26,7 @@ use network::{
     connectivity_manager::{ConnectivityRequest, DiscoverySource},
     peer_manager::{conn_status_channel, ConnectionStatusNotification},
 };
+use option_future::OptionFuture;
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 use std::{collections::HashSet, mem, sync::Arc, time::Duration};
 use storage_client::StorageRead;
