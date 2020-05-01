@@ -1,23 +1,28 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::{account_address::AccountAddress, account_config::CORE_CODE_ADDRESS};
-use move_vm_types::{
-    loaded_data::runtime_types::Type,
-    native_functions::{
-        account, context::NativeContext, dispatch::NativeResult, event, hash, lcs, signature,
-    },
-    values::{debug, vector, Value},
+use crate::{interpreter::Interpreter, loader::Resolver};
+use libra_types::{
+    access_path::AccessPath, account_address::AccountAddress, account_config::CORE_CODE_ADDRESS,
+    contract_event::ContractEvent, language_storage::ModuleId,
 };
-use std::collections::VecDeque;
+use move_core_types::{gas_schedule::CostTable, identifier::IdentStr};
+use move_vm_natives::{account, event, hash, lcs, signature};
+use move_vm_types::{
+    interpreter_context::InterpreterContext,
+    loaded_data::{runtime_types::Type, types::FatType},
+    natives::function::{NativeContext, NativeResult},
+    values::{debug, vector, Struct, Value},
+};
+use std::{collections::VecDeque, fmt::Write};
 use vm::errors::VMResult;
 
-/// The set of native functions the VM supports.
-/// The functions can leave in any crate linked in but the VM declares them here.
-/// 2 functions have to be implemented for a `NativeFunction`:
-/// - `resolve` which given a function unique name ModuleAddress::ModuleName::FunctionName
-/// returns a `NativeFunction`
-/// - `dispatch` which given a `NativeFunction` invokes the native
+// The set of native functions the VM supports.
+// The functions can line in any crate linked in but the VM declares them here.
+// 2 functions have to be implemented for a `NativeFunction`:
+// - `resolve` which given a function unique name ModuleAddress::ModuleName::FunctionName
+// returns a `NativeFunction`
+// - `dispatch` which given a `NativeFunction` invokes the native
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum NativeFunction {
     HashSha2_256,
@@ -39,11 +44,8 @@ pub(crate) enum NativeFunction {
     DebugPrintStackTrace,
 }
 
-// TODO: maybe we should go back to the single NativeFunction impl
-pub(crate) struct FunctionResolver();
-
-impl FunctionResolver {
-    pub fn resolve(
+impl NativeFunction {
+    pub(crate) fn resolve(
         module_address: &AccountAddress,
         module_name: &str,
         function_name: &str,
@@ -74,9 +76,7 @@ impl FunctionResolver {
             _ => return None,
         })
     }
-}
 
-impl NativeFunction {
     /// Given the vector of aguments, it executes the native function.
     pub(crate) fn dispatch(
         self,
@@ -99,11 +99,73 @@ impl NativeFunction {
             Self::VectorPopBack => vector::native_pop(ctx, t, v),
             Self::VectorDestroyEmpty => vector::native_destroy_empty(ctx, t, v),
             Self::VectorSwap => vector::native_swap(ctx, t, v),
+            // natives that need the full API of `NativeContext`
             Self::AccountWriteEvent => event::native_emit_event(ctx, t, v),
             Self::AccountSaveAccount => account::native_save_account(ctx, t, v),
             Self::LCSToBytes => lcs::native_to_bytes(ctx, t, v),
             Self::DebugPrint => debug::native_print(ctx, t, v),
             Self::DebugPrintStackTrace => debug::native_print_stack_trace(ctx, t, v),
         }
+    }
+}
+
+pub(crate) struct FunctionContext<'a, 'txn> {
+    interpreter: &'a mut Interpreter<'txn>,
+    interpreter_context: &'a mut dyn InterpreterContext,
+    resolver: &'a Resolver<'a>,
+}
+
+impl<'a, 'txn> FunctionContext<'a, 'txn> {
+    pub(crate) fn new(
+        interpreter: &'a mut Interpreter<'txn>,
+        context: &'a mut dyn InterpreterContext,
+        resolver: &'a Resolver<'a>,
+    ) -> FunctionContext<'a, 'txn> {
+        FunctionContext {
+            interpreter,
+            interpreter_context: context,
+            resolver,
+        }
+    }
+}
+
+impl<'a, 'txn> NativeContext for FunctionContext<'a, 'txn> {
+    fn print_stack_trace<B: Write>(&self, buf: &mut B) -> VMResult<()> {
+        self.interpreter
+            .debug_print_stack_trace(buf, &self.resolver)
+    }
+
+    fn cost_table(&self) -> &CostTable {
+        self.interpreter.gas_schedule()
+    }
+
+    fn save_under_address(
+        &mut self,
+        ty_args: &[Type],
+        module_id: &ModuleId,
+        struct_name: &IdentStr,
+        resource_to_save: Struct,
+        account_address: AccountAddress,
+    ) -> VMResult<()> {
+        let libra_type = self.resolver.get_libra_type_info(
+            module_id,
+            struct_name,
+            ty_args,
+            self.interpreter_context,
+        )?;
+        let ap = AccessPath::new(account_address, libra_type.resource_key().to_vec());
+        self.interpreter_context
+            .move_resource_to(&ap, libra_type.fat_type(), resource_to_save)
+    }
+
+    fn save_event(&mut self, event: ContractEvent) -> VMResult<()> {
+        Ok(self.interpreter_context.push_event(event))
+    }
+
+    fn convert_to_fat_types(&self, types: Vec<Type>) -> VMResult<Vec<FatType>> {
+        types
+            .iter()
+            .map(|ty| self.resolver.type_to_fat_type(ty))
+            .collect()
     }
 }

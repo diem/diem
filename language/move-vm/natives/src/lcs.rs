@@ -1,16 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    loaded_data::runtime_types::Type,
-    native_functions::{
-        context::NativeContext,
-        dispatch::{native_gas, NativeResult},
-    },
-    values::{values_impl::Reference, Value},
-};
 use libra_types::vm_error::{sub_status::NFE_LCS_SERIALIZATION_FAILURE, StatusCode, VMStatus};
 use move_core_types::gas_schedule::NativeCostIndex;
+use move_vm_types::{
+    loaded_data::runtime_types::Type,
+    natives::function::{native_gas, NativeContext, NativeResult},
+    values::{values_impl::Reference, Value},
+};
 use std::collections::VecDeque;
 use vm::errors::VMResult;
 
@@ -20,26 +17,14 @@ pub fn native_to_bytes(
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> VMResult<NativeResult> {
+    debug_assert!(ty_args.len() == 1);
+    debug_assert!(args.len() == 1);
+
+    let ref_to_val = pop_arg!(args, Reference);
+
     let mut ty_args = context.convert_to_fat_types(ty_args)?;
-
-    if ty_args.len() != 1 {
-        let msg = format!(
-            "Wrong number of type arguments for serialize. Expected 1, but found {}",
-            ty_args.len()
-        );
-        return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(msg));
-    }
-    if args.len() != 1 {
-        let msg = format!(
-            "Wrong number of arguments for serialize. Expected 1, but found {}",
-            args.len()
-        );
-        return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(msg));
-    }
-
     let arg_type = ty_args.pop().unwrap();
     // delegate to the LCS serialization for `Value`
-    let ref_to_val = pop_arg!(args, Reference);
     let serialized_value = ref_to_val
         .read_ref()?
         .simple_serialize(&arg_type)

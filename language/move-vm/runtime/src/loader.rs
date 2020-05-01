@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::native_functions::{FunctionResolver, NativeFunction};
+use crate::native_functions::NativeFunction;
 use bytecode_verifier::{
     verifier::{verify_dependencies, verify_script_dependency_map},
     VerifiedModule, VerifiedScript,
@@ -438,7 +438,7 @@ impl Loader {
         {
             let fh = module.function_handle_at(native_function.function);
             let mh = module.module_handle_at(fh.module);
-            FunctionResolver::resolve(
+            NativeFunction::resolve(
                 module.address_identifier_at(mh.address),
                 module.identifier_at(mh.name).as_str(),
                 module.identifier_at(fh.name).as_str(),
@@ -1041,7 +1041,7 @@ impl Function {
         let name = module.identifier_at(handle.name).to_owned();
         let module_id = module.self_id();
         let native = if def.is_native() {
-            FunctionResolver::resolve(
+            NativeFunction::resolve(
                 module_id.address(),
                 module_id.name().as_str(),
                 name.as_str(),

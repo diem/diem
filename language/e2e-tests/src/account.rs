@@ -6,14 +6,14 @@
 use crate::{gas_costs, keygen::KeyGen};
 use libra_crypto::ed25519::*;
 use libra_types::{
-    access_path::AccessPath,
+    access_path::{AccessPath, Accesses},
     account_address::AccountAddress,
     account_config::{
         self, from_currency_code_string, type_tag_for_currency_code, AccountResource,
         BalanceResource, ReceivedPaymentEvent, SentPaymentEvent, LBR_NAME,
     },
     event::EventHandle,
-    language_storage::{StructTag, TypeTag},
+    language_storage::{ResourceKey, StructTag, TypeTag},
     move_resource::MoveResource,
     transaction::{
         authenticator::AuthenticationKey, RawTransaction, Script, SignedTransaction,
@@ -23,7 +23,6 @@ use libra_types::{
 };
 use move_core_types::identifier::{IdentStr, Identifier};
 use move_vm_types::{
-    identifier::create_access_path,
     loaded_data::types::{FatStructType, FatType},
     values::{Struct, Value},
 };
@@ -137,7 +136,8 @@ impl Account {
     // TODO: plug in the account type
     fn make_access_path(&self, tag: StructTag) -> AccessPath {
         // TODO: we need a way to get the type (FatStructType) of the Account in place
-        create_access_path(self.addr, tag)
+        let resource_tag = ResourceKey::new(self.addr, tag);
+        AccessPath::resource_access_path(&resource_tag, &Accesses::empty())
     }
 
     /// Changes the keys for this account to the provided ones.

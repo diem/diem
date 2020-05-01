@@ -1,14 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    loaded_data::runtime_types::Type,
-    native_functions::{
-        context::NativeContext,
-        dispatch::{native_gas, NativeResult},
-    },
-    values::Value,
-};
 use bit_vec::BitVec;
 use libra_crypto::{
     ed25519::{self, Ed25519PublicKey, Ed25519Signature},
@@ -17,6 +9,11 @@ use libra_crypto::{
 };
 use libra_types::vm_error::{StatusCode, VMStatus};
 use move_core_types::gas_schedule::{CostTable, NativeCostIndex};
+use move_vm_types::{
+    loaded_data::runtime_types::Type,
+    natives::function::{native_gas, NativeContext, NativeResult},
+    values::Value,
+};
 use std::{collections::VecDeque, convert::TryFrom};
 use vm::errors::VMResult;
 
@@ -48,13 +45,9 @@ pub fn native_ed25519_signature_verification(
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> VMResult<NativeResult> {
-    if arguments.len() != 3 {
-        let msg = format!(
-            "wrong number of arguments for ed25519_signature_verification expected 3 found {}",
-            arguments.len()
-        );
-        return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(msg));
-    }
+    debug_assert!(_ty_args.is_empty());
+    debug_assert!(arguments.len() == 3);
+
     let msg = pop_arg!(arguments, Vec<u8>);
     let pubkey = pop_arg!(arguments, Vec<u8>);
     let signature = pop_arg!(arguments, Vec<u8>);
@@ -98,13 +91,9 @@ pub fn native_ed25519_threshold_signature_verification(
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
 ) -> VMResult<NativeResult> {
-    if arguments.len() != 4 {
-        let msg = format!(
-            "wrong number of arguments for ed25519_threshold_signature_verification expected 4 found {}",
-            arguments.len()
-        );
-        return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(msg));
-    }
+    debug_assert!(_ty_args.is_empty());
+    debug_assert!(arguments.len() == 4);
+
     let message = pop_arg!(arguments, Vec<u8>);
     let public_keys = pop_arg!(arguments, Vec<u8>);
     let signatures = pop_arg!(arguments, Vec<u8>);

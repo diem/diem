@@ -3,7 +3,7 @@
 
 use crate::{
     loaded_data::types::{FatStructType, FatType},
-    native_functions::dispatch::{native_gas, NativeResult},
+    natives::function::{native_gas, NativeResult},
 };
 use libra_types::{
     account_address::AccountAddress,
@@ -1356,26 +1356,9 @@ impl IntegerValue {
 *
 **************************************************************************************/
 
-macro_rules! ensure_len {
-    ($v: expr, $expected_len: expr, $type: expr, $fn: expr) => {{
-        let actual_len = $v.len();
-        let expected_len = $expected_len;
-        if actual_len != expected_len {
-            let msg = format!(
-                "wrong number of {} for {} expected {} found {}",
-                ($type),
-                ($fn),
-                expected_len,
-                actual_len,
-            );
-            return Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(msg));
-        }
-    }};
-}
-
 pub mod vector {
     use super::*;
-    use crate::{loaded_data::runtime_types::Type, native_functions::context::NativeContext};
+    use crate::{loaded_data::runtime_types::Type, natives::function::NativeContext};
 
     pub const INDEX_OUT_OF_BOUNDS: u64 = NFE_VECTOR_ERROR_BASE + 1;
     pub const POP_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 2;
@@ -1425,10 +1408,11 @@ pub mod vector {
         ty_args: Vec<Type>,
         args: VecDeque<Value>,
     ) -> VMResult<NativeResult> {
-        ensure_len!(ty_args, 1, "type arguments", "empty");
-        ensure_len!(args, 0, "arguments", "empty");
+        debug_assert!(ty_args.len() == 1);
+        debug_assert!(args.is_empty());
 
         let cost = native_gas(context.cost_table(), NativeCostIndex::EMPTY, 1);
+
         let container = match &ty_args[0] {
             Type::U8 => Container::U8(vec![]),
             Type::U64 => Container::U64(vec![]),
@@ -1456,15 +1440,15 @@ pub mod vector {
         ty_args: Vec<Type>,
         mut args: VecDeque<Value>,
     ) -> VMResult<NativeResult> {
-        ensure_len!(ty_args, 1, "type arguments", "length");
-        ensure_len!(args, 1, "arguments", "length");
+        debug_assert!(ty_args.len() == 1);
+        debug_assert!(args.len() == 1);
+
+        let r = pop_arg_front!(args, ContainerRef);
 
         let cost = native_gas(context.cost_table(), NativeCostIndex::LENGTH, 1);
-        let r = pop_arg_front!(args, ContainerRef);
+
         let v = r.borrow();
-
         check_elem_layout(&ty_args[0], &*v)?;
-
         let len = match &*v {
             Container::U8(v) => v.len(),
             Container::U64(v) => v.len(),
@@ -1481,11 +1465,10 @@ pub mod vector {
         ty_args: Vec<Type>,
         mut args: VecDeque<Value>,
     ) -> VMResult<NativeResult> {
-        ensure_len!(ty_args, 1, "type arguments", "push back");
-        ensure_len!(args, 2, "arguments", "push back");
+        debug_assert!(ty_args.len() == 1);
+        debug_assert!(args.len() == 2);
 
         let r = pop_arg_front!(args, ContainerRef);
-        let mut v = r.borrow_mut();
         let e = args.pop_front().unwrap();
 
         let cost = context
@@ -1494,8 +1477,8 @@ pub mod vector {
             .total()
             .mul(e.size());
 
+        let mut v = r.borrow_mut();
         check_elem_layout(&ty_args[0], &*v)?;
-
         match &mut *v {
             Container::U8(v) => v.push(e.value_as()?),
             Container::U64(v) => v.push(e.value_as()?),
@@ -1512,16 +1495,16 @@ pub mod vector {
         ty_args: Vec<Type>,
         mut args: VecDeque<Value>,
     ) -> VMResult<NativeResult> {
-        ensure_len!(ty_args, 1, "type arguments", "borrow");
-        ensure_len!(args, 2, "arguments", "borrow");
+        debug_assert!(ty_args.len() == 1);
+        debug_assert!(args.len() == 2);
 
-        let cost = native_gas(context.cost_table(), NativeCostIndex::BORROW, 1);
         let r = pop_arg_front!(args, ContainerRef);
-        let v = r.borrow();
         let idx = pop_arg_front!(args, u64) as usize;
 
-        check_elem_layout(&ty_args[0], &*v)?;
+        let cost = native_gas(context.cost_table(), NativeCostIndex::BORROW, 1);
 
+        let v = r.borrow();
+        check_elem_layout(&ty_args[0], &*v)?;
         if idx >= v.len() {
             return Ok(NativeResult::err(
                 cost,
@@ -1539,13 +1522,14 @@ pub mod vector {
         ty_args: Vec<Type>,
         mut args: VecDeque<Value>,
     ) -> VMResult<NativeResult> {
-        ensure_len!(ty_args, 1, "type arguments", "pop");
-        ensure_len!(args, 1, "arguments", "pop");
+        debug_assert!(ty_args.len() == 1);
+        debug_assert!(args.len() == 1);
+
+        let r = pop_arg_front!(args, ContainerRef);
 
         let cost = native_gas(context.cost_table(), NativeCostIndex::POP_BACK, 1);
-        let r = pop_arg_front!(args, ContainerRef);
-        let mut v = r.borrow_mut();
 
+        let mut v = r.borrow_mut();
         check_elem_layout(&ty_args[0], &*v)?;
 
         macro_rules! err_pop_empty_vec {
@@ -1589,11 +1573,11 @@ pub mod vector {
         ty_args: Vec<Type>,
         mut args: VecDeque<Value>,
     ) -> VMResult<NativeResult> {
-        ensure_len!(ty_args, 1, "type arguments", "destroy empty");
-        ensure_len!(args, 1, "arguments", "destroy empty");
+        debug_assert!(ty_args.len() == 1);
+        debug_assert!(args.len() == 1);
+        let v = args.pop_front().unwrap().value_as::<Container>()?;
 
         let cost = native_gas(context.cost_table(), NativeCostIndex::DESTROY_EMPTY, 1);
-        let v = args.pop_front().unwrap().value_as::<Container>()?;
 
         check_elem_layout(&ty_args[0], &v)?;
 
@@ -1622,15 +1606,15 @@ pub mod vector {
         ty_args: Vec<Type>,
         mut args: VecDeque<Value>,
     ) -> VMResult<NativeResult> {
-        ensure_len!(ty_args, 1, "type arguments", "swap");
-        ensure_len!(args, 3, "arguments", "swap");
-
-        let cost = native_gas(context.cost_table(), NativeCostIndex::SWAP, 1);
+        debug_assert!(ty_args.len() == 1);
+        debug_assert!(args.len() == 3);
         let r = pop_arg_front!(args, ContainerRef);
-        let mut v = r.borrow_mut();
         let idx1 = pop_arg_front!(args, u64) as usize;
         let idx2 = pop_arg_front!(args, u64) as usize;
 
+        let cost = native_gas(context.cost_table(), NativeCostIndex::SWAP, 1);
+
+        let mut v = r.borrow_mut();
         check_elem_layout(&ty_args[0], &*v)?;
 
         macro_rules! swap {
@@ -1924,7 +1908,7 @@ impl Display for Locals {
 #[allow(dead_code)]
 pub mod debug {
     use super::*;
-    use crate::{loaded_data::runtime_types::Type, native_functions::context::NativeContext};
+    use crate::{loaded_data::runtime_types::Type, natives::function::NativeContext};
     use move_core_types::gas_schedule::ZERO_GAS_UNITS;
     use std::fmt::Write;
 
@@ -2139,8 +2123,8 @@ pub mod debug {
         ty_args: Vec<Type>,
         mut args: VecDeque<Value>,
     ) -> VMResult<NativeResult> {
-        ensure_len!(ty_args, 1, "type arguments", "print");
-        ensure_len!(args, 1, "arguments", "print");
+        debug_assert!(ty_args.len() == 1);
+        debug_assert!(args.len() == 1);
 
         // No-op if the feature flag is not present.
         #[cfg(feature = "debug_module")]
@@ -2163,14 +2147,7 @@ pub mod debug {
         ty_args: Vec<Type>,
         mut _arguments: VecDeque<Value>,
     ) -> VMResult<NativeResult> {
-        if !ty_args.is_empty() {
-            return Err(
-                VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(format!(
-                    "print_stack_trace expects no type arguments got {}.",
-                    ty_args.len()
-                )),
-            );
-        }
+        debug_assert!(ty_args.is_empty());
 
         #[cfg(feature = "debug_module")]
         {

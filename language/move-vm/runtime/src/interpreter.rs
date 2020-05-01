@@ -4,7 +4,7 @@
 use crate::{
     gas,
     loader::{Function, Loader, Resolver},
-    native_context::FunctionContext,
+    native_functions::FunctionContext,
 };
 use libra_logger::prelude::*;
 use libra_types::{

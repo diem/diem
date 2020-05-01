@@ -15,13 +15,13 @@ proptest = { version = "0.9.6", optional = true }
 sha2 = "0.8.0"
 serde = { version = "1.0", features = ["derive", "rc"] }
 
-libra-types = { path = "../../../types", version = "0.1.0" }
-libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
-vm = { path = "../../vm", version = "0.1.0" }
 lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0"}
-move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 libra-logger = { path = "../../../common/logger", version = "0.1.0" }
+libra-types = { path = "../../../types", version = "0.1.0" }
+libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+move-core-types = { path = "../../move-core/types", version = "0.1.0" }
+vm = { path = "../../vm", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = "0.9.6"
