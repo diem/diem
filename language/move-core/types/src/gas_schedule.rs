@@ -223,7 +223,7 @@ impl CostTable {
     #[inline]
     pub fn native_cost(&self, native_index: NativeCostIndex) -> &GasCost {
         precondition!(
-            native_index as u8 > 0 && native_index as u8 <= (self.instruction_table.len() as u8)
+            native_index as u8 > 0 && native_index as u8 <= (self.native_table.len() as u8)
         );
         &self.native_table[native_index as usize]
     }
