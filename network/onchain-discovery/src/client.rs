@@ -29,7 +29,7 @@ use network::{
 use option_future::OptionFuture;
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 use std::{collections::HashSet, mem, sync::Arc, time::Duration};
-use storage_client::StorageRead;
+use storage_interface::DbReader;
 
 /// Actor for querying various sources (remote peers, local storage) for the
 /// latest discovery set and notifying the `ConnectivityManager` of updates.
@@ -55,8 +55,7 @@ pub struct OnchainDiscovery<TTicker> {
     /// A channel to receive connection updates from the network.
     conn_notifs_rx: conn_status_channel::Receiver,
     /// internal gRPC client to send read requests to Libra Storage.
-    // TODO(philiphayes): use the new storage DbReader interface.
-    storage_read_client: Arc<dyn StorageRead>,
+    libra_db: Arc<dyn DbReader>,
     /// Ticker to periodically query our peers for the latest discovery set.
     // TODO(philiphayes): once we do a bunch of initial queries on startup, we
     // can probably reduce the frequency.
@@ -85,7 +84,7 @@ where
         waypoint: Waypoint,
         network_tx: OnchainDiscoveryNetworkSender,
         conn_notifs_rx: conn_status_channel::Receiver,
-        storage_read_client: Arc<dyn StorageRead>,
+        libra_db: Arc<dyn DbReader>,
         peer_query_ticker: TTicker,
         storage_query_ticker: TTicker,
         outbound_rpc_timeout: Duration,
@@ -101,7 +100,7 @@ where
             connected_peers: HashSet::new(),
             network_tx,
             conn_notifs_rx,
-            storage_read_client,
+            libra_db,
             peer_query_ticker,
             storage_query_ticker,
             outbound_rpc_timeout,
@@ -251,7 +250,7 @@ where
             client_known_seq_num: self.latest_event_seq_num,
         };
         let self_peer_id = self.peer_id;
-        storage_query_discovery_set(self.storage_read_client.clone(), req_msg)
+        storage_query_discovery_set(Arc::clone(&self.libra_db), req_msg)
             .map(move |res| res.map(move |(req_msg, res_msg)| (self_peer_id, req_msg, res_msg)))
     }
 

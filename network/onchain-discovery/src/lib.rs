@@ -53,7 +53,7 @@ use crate::types::{
 use anyhow::{Context as AnyhowContext, Result};
 use libra_types::get_with_proof::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
 use std::{convert::TryFrom, sync::Arc};
-use storage_client::StorageRead;
+use storage_interface::DbReader;
 
 #[cfg(test)]
 mod test;
@@ -65,17 +65,17 @@ pub mod types;
 
 /// Query our own storage for the latest discovery set and epoch change proof.
 async fn storage_query_discovery_set(
-    storage_read_client: Arc<dyn StorageRead>,
+    libra_db: Arc<dyn DbReader>,
     req_msg: QueryDiscoverySetRequest,
 ) -> Result<(QueryDiscoverySetRequest, QueryDiscoverySetResponseWithEvent)> {
     let storage_req_msg = Into::<UpdateToLatestLedgerRequest>::into(req_msg.clone());
 
-    let res_msg = storage_read_client
+    let res_msg = libra_db
         .update_to_latest_ledger(
             storage_req_msg.client_known_version,
             storage_req_msg.requested_items,
         )
-        .await
+        // .await
         .with_context(|| {
             format!(
                 "error forwarding discovery query to storage: client version: {}",
