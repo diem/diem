@@ -104,4 +104,32 @@ module Vector {
         swap(v, i, last_idx);
         pop_back(v)
     }
+
+    // ------------------------------------------------------------------------
+    // Intrinsics
+    // ------------------------------------------------------------------------
+
+    spec fun reverse {
+        pragma intrinsic = true;
+    }
+
+    spec fun append {
+        pragma intrinsic = true;
+    }
+
+    spec fun is_empty {
+        pragma intrinsic = true;
+    }
+
+    spec fun contains {
+        pragma intrinsic = true;
+    }
+
+    spec fun remove {
+        pragma intrinsic = true;
+    }
+
+    spec fun swap_remove {
+        pragma intrinsic = true;
+    }
 }

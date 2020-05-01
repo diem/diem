@@ -11,12 +11,9 @@ use libra_temppath::TempPath;
 use move_prover::{cli::Options, run_move_prover};
 use test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives, read_env_var};
 
-const FUNCTIONAL_FLAGS: &[&str] = &["--search_path=tests/sources/stdlib/modules", "--verify=all"];
-const STDLIB_FLAGS: &[&str] = &["--search_path=tests/sources/stdlib/modules", "--verify=all"];
-const NEW_STDLIB_FLAGS: &[&str] = &[
-    "--search_path=tests/sources/new_stdlib/modules",
-    "--verify=none",
-];
+const STDLIB_FLAGS: &[&str] = &["--search_path=../stdlib/modules"];
+const STDLIB_FLAGS_UNVERIFIED: &[&str] = &["--search_path=../stdlib/modules", "--verify=none"];
+const LEGACY_STDLIB_FLAGS: &[&str] = &["--search_path=tests/sources/stdlib/modules"];
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let no_boogie = read_env_var("BOOGIE_EXE").is_empty() || read_env_var("Z3_EXE").is_empty();
@@ -54,21 +51,38 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
         Err(err) => format!("Move prover returns: {}\n", err),
     };
     if baseline_valid {
-        diags += &String::from_utf8_lossy(&error_writer.into_inner()).to_string();
-        verify_or_update_baseline(baseline_path.as_path(), &diags)?;
+        if let Some(path) = baseline_path {
+            diags += &String::from_utf8_lossy(&error_writer.into_inner()).to_string();
+            verify_or_update_baseline(path.as_path(), &diags)?
+        } else if !diags.is_empty() {
+            return Err(anyhow!(
+                "Unexpected prover output (expected none): {}{}",
+                diags,
+                String::from_utf8_lossy(&error_writer.into_inner())
+            )
+            .into());
+        }
     }
     Ok(())
 }
 
-fn get_flags(path: &Path) -> anyhow::Result<(Vec<String>, PathBuf)> {
+fn test_runner_stdlib(path: &Path) -> datatest_stable::Result<()> {
+    // Gives the standard test runner a different name in test output, which is useful because
+    // the datatest infrastructure drops `..` in test file paths.
+    test_runner(path)
+}
+
+fn get_flags(path: &Path) -> anyhow::Result<(Vec<String>, Option<PathBuf>)> {
     // Determine the way how to configure tests based on directory of the path.
     let path_str = path.to_string_lossy();
-    let base_flags = if path_str.contains("/new_stdlib/") {
-        NEW_STDLIB_FLAGS
-    } else if path_str.contains("/functional/") || path_str.contains("/regression/") {
-        FUNCTIONAL_FLAGS
-    } else if path_str.contains("/stdlib/") {
-        STDLIB_FLAGS
+    let (base_flags, baseline_path) = if path_str.contains("../stdlib/") {
+        (STDLIB_FLAGS_UNVERIFIED, None)
+    } else if path_str.contains("tests/sources/functional/")
+        || path_str.contains("tests/sources/regression/")
+    {
+        (STDLIB_FLAGS, Some(path.with_extension("exp")))
+    } else if path_str.contains("tests/sources/stdlib/") {
+        (LEGACY_STDLIB_FLAGS, Some(path.with_extension("exp")))
     } else {
         return Err(anyhow!(
             "do not know how to run tests for `{}` because its directory is not configured",
@@ -78,8 +92,16 @@ fn get_flags(path: &Path) -> anyhow::Result<(Vec<String>, PathBuf)> {
     let mut flags = base_flags.iter().map(|s| (*s).to_string()).collect_vec();
     // Add any flags specified in the source.
     flags.extend(extract_test_directives(path, "// flag:")?);
-    let baseline_path = path.with_extension("exp");
     Ok((flags, baseline_path))
 }
 
-datatest_stable::harness!(test_runner, "tests/sources", r".*\.move");
+datatest_stable::harness!(
+    // Run tests for the content of our tests directory.
+    test_runner,
+    "tests/sources",
+    r".*\.move",
+    // Run tests for the content of the stdlib directory.
+    test_runner_stdlib,
+    "../stdlib",
+    r".*\.move"
+);
