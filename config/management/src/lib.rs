@@ -4,10 +4,14 @@
 #![forbid(unsafe_code)]
 
 mod error;
+mod layout;
 mod secure_backend;
 mod validator_config;
 
-use crate::{error::Error, secure_backend::SecureBackend, validator_config::ValidatorConfig};
+use crate::{
+    error::Error, layout::SetLayout, secure_backend::SecureBackend,
+    validator_config::ValidatorConfig,
+};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_secure_storage::{Storage, Value};
 use libra_types::{transaction::Transaction, waypoint::Waypoint};
@@ -20,6 +24,7 @@ pub mod constants {
     pub const EPOCH: &str = "epoch";
     pub const FULLNODE_NETWORK_KEY: &str = "fullnode_network";
     pub const LAST_VOTED_ROUND: &str = "last_voted_round";
+    pub const LAYOUT: &str = "layout";
     pub const OWNER_KEY: &str = "owner";
     pub const OPERATOR_KEY: &str = "operator";
     pub const PREFERRED_ROUND: &str = "preferred_round";
@@ -39,6 +44,8 @@ pub enum Command {
     OperatorKey(SecureBackends),
     #[structopt(about = "Submits an Ed25519PublicKey for the owner")]
     OwnerKey(SecureBackends),
+    #[structopt(about = "Submits a Layout doc to a shared storage")]
+    SetLayout(SetLayout),
     #[structopt(about = "Constructs and signs a ValidatorConfig")]
     ValidatorConfig(ValidatorConfig),
     #[structopt(about = "Verifies and prints the current configuration state")]
@@ -48,6 +55,7 @@ pub enum Command {
 pub enum CommandName {
     OperatorKey,
     OwnerKey,
+    SetLayout,
     ValidatorConfig,
     Verify,
 }
@@ -57,6 +65,7 @@ impl From<&Command> for CommandName {
         match command {
             Command::OperatorKey(_) => CommandName::OperatorKey,
             Command::OwnerKey(_) => CommandName::OwnerKey,
+            Command::SetLayout(_) => CommandName::SetLayout,
             Command::ValidatorConfig(_) => CommandName::ValidatorConfig,
             Command::Verify(_) => CommandName::Verify,
         }
@@ -68,6 +77,7 @@ impl std::fmt::Display for CommandName {
         let name = match self {
             CommandName::OperatorKey => "operator-key",
             CommandName::OwnerKey => "owner-key",
+            CommandName::SetLayout => "set-layout",
             CommandName::ValidatorConfig => "validator-config",
             CommandName::Verify => "verify",
         };
@@ -80,6 +90,7 @@ impl Command {
         match &self {
             Command::OperatorKey(_) => self.operator_key().unwrap().to_string(),
             Command::OwnerKey(_) => self.owner_key().unwrap().to_string(),
+            Command::SetLayout(_) => self.set_layout().unwrap().to_string(),
             Command::ValidatorConfig(_) => format!("{:?}", self.validator_config().unwrap()),
             Command::Verify(_) => self.verify().unwrap(),
         }
@@ -100,6 +111,16 @@ impl Command {
             Self::submit_key(constants::OWNER_KEY, secure_backends)
         } else {
             let expected = CommandName::OwnerKey.to_string();
+            let actual = CommandName::from(&self).to_string();
+            Err(Error::UnexpectedCommand(expected, actual))
+        }
+    }
+
+    pub fn set_layout(self) -> Result<crate::layout::Layout, Error> {
+        if let Command::SetLayout(set_layout) = self {
+            set_layout.execute()
+        } else {
+            let expected = CommandName::SetLayout.to_string();
             let actual = CommandName::from(&self).to_string();
             Err(Error::UnexpectedCommand(expected, actual))
         }
@@ -266,6 +287,7 @@ pub mod tests {
     use libra_network_address::NetworkAddress;
     use libra_secure_storage::{Policy, Value, VaultStorage};
     use libra_types::{account_address::AccountAddress, transaction::TransactionPayload};
+    use std::{fs::File, io::Write};
 
     const VAULT_HOST: &str = "http://localhost:8200";
     const VAULT_ROOT_TOKEN: &str = "root_token";
@@ -314,6 +336,37 @@ pub mod tests {
             &[(validator_key, validator_txn)],
             None,
         );
+    }
+
+    #[test]
+    #[ignore]
+    fn test_set_layout() {
+        let namespace = "set_layout";
+
+        let mut storage = default_storage(namespace.into());
+        storage.reset_and_clear().unwrap();
+
+        let temppath = libra_temppath::TempPath::new();
+        set_layout(temppath.path().to_str().unwrap(), namespace).unwrap_err();
+
+        temppath.create_as_file().unwrap();
+        let mut file = File::create(temppath.path()).unwrap();
+        let layout_text = "\
+            operators = [\"alice\", \"bob\"]\n\
+            owners = [\"carol\"]\n\
+            association = [\"dave\"]\n\
+        ";
+        file.write_all(&layout_text.to_string().into_bytes())
+            .unwrap();
+        file.sync_all().unwrap();
+        set_layout(temppath.path().to_str().unwrap(), namespace).unwrap();
+        let stored_layout = storage
+            .get(constants::LAYOUT)
+            .unwrap()
+            .value
+            .string()
+            .unwrap();
+        assert_eq!(layout_text, stored_layout);
     }
 
     #[test]
@@ -488,6 +541,28 @@ pub mod tests {
 
         let command = Command::from_iter(args.split_whitespace());
         command.owner_key()
+    }
+
+    fn set_layout(path: &str, namespace: &str) -> Result<crate::layout::Layout, Error> {
+        let args = format!(
+            "
+                validator_config
+                set-layout
+                --path {path}
+                --backend backend={backend};\
+                    server={server};\
+                    token={token};\
+                    namespace={ns}
+            ",
+            path = path,
+            backend = crate::secure_backend::VAULT,
+            server = VAULT_HOST,
+            token = VAULT_ROOT_TOKEN,
+            ns = namespace,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.set_layout()
     }
 
     fn validator_config(
