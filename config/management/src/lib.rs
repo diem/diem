@@ -40,6 +40,8 @@ pub mod constants {
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Tool used to manage Libra Validators")]
 pub enum Command {
+    #[structopt(about = "Submits an Ed25519PublicKey for the association")]
+    AssociationKey(SecureBackends),
     #[structopt(about = "Submits an Ed25519PublicKey for the operator")]
     OperatorKey(SecureBackends),
     #[structopt(about = "Submits an Ed25519PublicKey for the owner")]
@@ -53,6 +55,7 @@ pub enum Command {
 }
 
 pub enum CommandName {
+    AssociationKey,
     OperatorKey,
     OwnerKey,
     SetLayout,
@@ -63,6 +66,7 @@ pub enum CommandName {
 impl From<&Command> for CommandName {
     fn from(command: &Command) -> Self {
         match command {
+            Command::AssociationKey(_) => CommandName::AssociationKey,
             Command::OperatorKey(_) => CommandName::OperatorKey,
             Command::OwnerKey(_) => CommandName::OwnerKey,
             Command::SetLayout(_) => CommandName::SetLayout,
@@ -75,6 +79,7 @@ impl From<&Command> for CommandName {
 impl std::fmt::Display for CommandName {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let name = match self {
+            CommandName::AssociationKey => "association-key",
             CommandName::OperatorKey => "operator-key",
             CommandName::OwnerKey => "owner-key",
             CommandName::SetLayout => "set-layout",
@@ -88,11 +93,22 @@ impl std::fmt::Display for CommandName {
 impl Command {
     pub fn execute(self) -> String {
         match &self {
+            Command::AssociationKey(_) => self.association_key().unwrap().to_string(),
             Command::OperatorKey(_) => self.operator_key().unwrap().to_string(),
             Command::OwnerKey(_) => self.owner_key().unwrap().to_string(),
             Command::SetLayout(_) => self.set_layout().unwrap().to_string(),
             Command::ValidatorConfig(_) => format!("{:?}", self.validator_config().unwrap()),
             Command::Verify(_) => self.verify().unwrap(),
+        }
+    }
+
+    pub fn association_key(self) -> Result<Ed25519PublicKey, Error> {
+        if let Command::AssociationKey(secure_backends) = self {
+            Self::submit_key(constants::ASSOCIATION_KEY, secure_backends)
+        } else {
+            let expected = CommandName::AssociationKey.to_string();
+            let actual = CommandName::from(&self).to_string();
+            Err(Error::UnexpectedCommand(expected, actual))
         }
     }
 
@@ -337,7 +353,7 @@ pub mod tests {
         let mut association_shared = default_storage(dave_ns.to_string() + shared);
         association_shared.reset_and_clear().unwrap();
 
-        // TODO add set_association
+        association_key(dave_ns, &(dave_ns.to_string() + shared)).unwrap();
 
         // Step 3) Upload each operators key and then a signed transaction:
 
@@ -349,7 +365,6 @@ pub mod tests {
             remote.reset_and_clear().unwrap();
 
             operator_key(ns, &((*ns).to_string() + shared)).unwrap();
-            println!("{} {}", ns, &((*ns).to_string() + shared));
 
             validator_config(
                 AccountAddress::random(),
@@ -371,19 +386,13 @@ pub mod tests {
             .unwrap();
         let layout = crate::layout::Layout::parse(&layout).unwrap();
 
-        // TODO add set_association
-        // let association_key = association_shared.get(constants::ASSOCIATION_KEY).unwrap();
-        // let association_key = association_key.value.ed25519_public_key().unwrap();
-        let association_key = association
-            .get_public_key(constants::ASSOCIATION_KEY)
-            .unwrap()
-            .public_key;
+        let association_key = association_shared.get(constants::ASSOCIATION_KEY).unwrap();
+        let association_key = association_key.value.ed25519_public_key().unwrap();
 
         let validators = layout
             .operators
             .iter()
             .map(|o| {
-                println!("{}", o);
                 let remote = default_storage(o.into());
 
                 let key = remote.get(constants::OPERATOR_KEY).unwrap();
@@ -558,6 +567,31 @@ pub mod tests {
         storage
             .create(constants::WAYPOINT, Value::String("".into()), &policy)
             .unwrap();
+    }
+
+    fn association_key(local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {
+        let args = format!(
+            "
+                management
+                association-key
+                --local backend={backend};\
+                    server={server};\
+                    token={token};\
+                    namespace={local_ns}
+                --remote backend={backend};\
+                    server={server};\
+                    token={token};\
+                    namespace={remote_ns}\
+            ",
+            backend = crate::secure_backend::VAULT,
+            server = VAULT_HOST,
+            token = VAULT_ROOT_TOKEN,
+            local_ns = local_ns,
+            remote_ns = remote_ns,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.association_key()
     }
 
     fn operator_key(local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {
