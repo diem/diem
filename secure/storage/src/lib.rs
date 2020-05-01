@@ -27,7 +27,7 @@ pub use crate::{
     namespaced_storage::NamespacedStorage,
     on_disk::{OnDiskStorage, OnDiskStorageInternal},
     policy::{Capability, Identity, Permission, Policy},
-    storage::Storage,
+    storage::{BoxStorage, Storage},
     value::Value,
     vault::VaultStorage,
 };

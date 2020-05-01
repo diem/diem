@@ -5,13 +5,13 @@
 
 #![forbid(unsafe_code)]
 
-use libra_config::config::{KeyManagerConfig, NetworkConfig, NodeConfig, SecureBackend};
+use libra_config::config::{KeyManagerConfig, NetworkConfig, NodeConfig};
 use libra_key_manager::{libra_interface::JsonRpcLibraInterface, Error, KeyManager};
 use libra_logger::info;
 use libra_secure_json_rpc::JsonRpcClient;
-use libra_secure_storage::VaultStorage;
+use libra_secure_storage::{BoxStorage, Storage};
 use libra_secure_time::RealTimeService;
-use std::{env, net::SocketAddr, process};
+use std::{convert::TryInto, env, net::SocketAddr, process};
 
 // TODO(joshlind): initialize the metrics components for the key manager!
 fn main() {
@@ -57,21 +57,10 @@ fn create_and_execute_key_manager(
     let libra_interface = create_libra_interface(key_manager_config.json_rpc_address);
     let time_service = RealTimeService::new();
 
-    match key_manager_config.secure_backend {
-        SecureBackend::Vault(config) => {
-            let storage = VaultStorage::new(
-                config.server.clone(),
-                config.token.clone(),
-                config.namespace.clone(),
-            );
-            info!("Creating a key manager with vault secure storage. Vault server: {:?}, token: {:?}, namespace: {:?}.",
-                  config.server,
-                  config.token,
-                  config.namespace);
-            KeyManager::new(account, libra_interface, storage, time_service).execute()
-        }
-        _ => panic!("Unable to create a key manager with a secure backend that is not Vault!"),
-    }
+    let storage: Box<dyn Storage> = (&key_manager_config.secure_backend)
+        .try_into()
+        .expect("Unable to initialize storage");
+    KeyManager::new(account, libra_interface, BoxStorage(storage), time_service).execute()
 }
 
 fn create_libra_interface(json_rpc_address: SocketAddr) -> JsonRpcLibraInterface {

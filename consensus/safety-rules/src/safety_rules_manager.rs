@@ -14,7 +14,11 @@ use crate::{
 use consensus_types::common::{Author, Payload};
 use libra_config::config::{NodeConfig, SafetyRulesService};
 use libra_secure_storage::Storage;
-use std::{convert::TryInto, net::SocketAddr, sync::{Arc, RwLock}};
+use std::{
+    convert::TryInto,
+    net::SocketAddr,
+    sync::{Arc, RwLock},
+};
 
 pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSafetyStorage) {
     let author = config
@@ -24,7 +28,8 @@ pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSaf
         .peer_id;
 
     let backend = &config.consensus.safety_rules.backend;
-    let internal_storage: Box<dyn Storage> = backend.try_into().expect("Unable to initialize storage");
+    let internal_storage: Box<dyn Storage> =
+        backend.try_into().expect("Unable to initialize storage");
 
     let storage = if let Some(test_config) = config.test.as_mut() {
         let private_key = test_config
