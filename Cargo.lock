@@ -5014,6 +5014,7 @@ version = "0.1.0"
 dependencies = [
  "futures 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-semaphore 0.1.0",
+ "libra-logger 0.1.0",
  "libra-workspace-hack 0.1.0",
  "pin-project 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",

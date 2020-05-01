@@ -22,6 +22,7 @@ use futures::{
     stream::{Fuse, Stream, StreamExt},
 };
 use futures_semaphore::Semaphore;
+use libra_logger::warn;
 use pin_project::pin_project;
 use std::{mem::ManuallyDrop, pin::Pin, task, task::Poll, time::Duration};
 use tokio::time::{interval, Interval};
@@ -74,6 +75,12 @@ impl<T: Stream> Stream for RateLimiter<T> {
     type Item = T::Item;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Option<Self::Item>> {
+        if self.permits.available_permits() == 0 {
+            warn!(
+                "Message rate exceeding the limit of {} per {:?}",
+                self.capacity, self.interval
+            );
+        }
         // If the interval is ready, add permits. This is safe to do in all calls to poll_next().
         if let Poll::Ready(Some(_)) = self.as_mut().project().interval.poll_next(cx) {
             self.permits
