@@ -2398,10 +2398,13 @@ dependencies = [
  "libra-network-address 0.1.0",
  "libra-secure-storage 0.1.0",
  "libra-secure-time 0.1.0",
+ "libra-temppath 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
+ "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.16 (registry+https://github.com/rust-lang/crates.io-index)",
+ "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
  "vm-genesis 0.1.0",
 ]

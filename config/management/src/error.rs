@@ -25,4 +25,6 @@ pub enum Error {
     RemoteStorageUnavailable,
     #[error("Unexpected command, expected {0}, found {1}")]
     UnexpectedCommand(String, String),
+    #[error("Unexpected error: {0}")]
+    UnexpectedError(String),
 }
