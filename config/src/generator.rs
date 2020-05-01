@@ -5,10 +5,7 @@
 //! genesis.blob.
 
 use crate::{
-    config::{
-        NodeConfig, OnDiskStorageConfig, SafetyRulesService, SecureBackend, SeedPeersConfig,
-        TestConfig,
-    },
+    config::{NodeConfig, SeedPeersConfig, TestConfig},
     utils,
 };
 use rand::{rngs::StdRng, SeedableRng};
@@ -32,11 +29,6 @@ pub fn validator_swarm(
         if randomize_service_ports {
             node.randomize_ports();
         }
-
-        let mut storage_config = OnDiskStorageConfig::default();
-        storage_config.default = true;
-        node.consensus.safety_rules.service = SafetyRulesService::Thread;
-        node.consensus.safety_rules.backend = SecureBackend::OnDiskStorage(storage_config);
 
         let network = node.validator_network.as_mut().unwrap();
         if randomize_libranet_ports {

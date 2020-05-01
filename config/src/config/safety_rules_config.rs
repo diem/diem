@@ -16,7 +16,7 @@ impl Default for SafetyRulesConfig {
     fn default() -> Self {
         Self {
             backend: SecureBackend::InMemoryStorage,
-            service: SafetyRulesService::Local,
+            service: SafetyRulesService::Thread,
         }
     }
 }
