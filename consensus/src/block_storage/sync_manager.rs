@@ -214,15 +214,13 @@ impl<T: Payload> BlockStore<T> {
 /// BlockRetriever is used internally to retrieve blocks
 pub struct BlockRetriever<T> {
     network: NetworkSender<T>,
-    deadline: Instant,
     preferred_peer: Author,
 }
 
 impl<T: Payload> BlockRetriever<T> {
-    pub fn new(network: NetworkSender<T>, deadline: Instant, preferred_peer: Author) -> Self {
+    pub fn new(network: NetworkSender<T>, preferred_peer: Author) -> Self {
         Self {
             network,
-            deadline,
             preferred_peer,
         }
     }
@@ -231,8 +229,7 @@ impl<T: Payload> BlockRetriever<T> {
     /// Returns Result with Vec that has a guaranteed size of num_blocks
     /// This guarantee is based on BlockRetrievalResponse::verify that ensures that number of
     /// blocks in response is equal to number of blocks requested.  This method will
-    /// continue until either the round deadline is reached or the quorum certificate members all
-    /// fail to return the missing chain.
+    /// continue until the quorum certificate members all fail to return the missing chain.
     ///
     /// The first attempt of block retrieval will always be sent to preferred_peer to allow the
     /// leader to drive quorum certificate creation The other peers from the quorum certificate
@@ -257,10 +254,6 @@ impl<T: Payload> BlockRetriever<T> {
             let peer = self.pick_peer(attempt, &mut peers);
             attempt += 1;
 
-            let timeout = retrieval_timeout(&self.deadline, attempt);
-            let timeout = timeout.ok_or_else(|| {
-                format_err!("Failed to fetch block {} from {}, attempt {}: round deadline was reached, won't make more attempts", block_id, peer, attempt)
-            })?;
             debug!(
                 "Fetching {} from {}, attempt {}",
                 block_id,
@@ -272,31 +265,24 @@ impl<T: Payload> BlockRetriever<T> {
                 .request_block(
                     BlockRetrievalRequest::new(block_id, num_blocks),
                     peer,
-                    timeout,
+                    retrieval_timeout(attempt),
                 )
                 .await;
-            let response = match response {
-                Err(e) => {
-                    warn!(
-                        "Failed to fetch block {} from {}: {:?}, trying another peer",
-                        block_id,
-                        peer.short_str(),
-                        e
-                    );
-                    continue;
+            match response.and_then(|result| {
+                if result.status() == BlockRetrievalStatus::Succeeded {
+                    Ok(result.blocks().clone())
+                } else {
+                    Err(format_err!("{:?}", result.status()))
                 }
-                Ok(response) => response,
-            };
-            if response.status() != BlockRetrievalStatus::Succeeded {
-                warn!(
+            }) {
+                result @ Ok(_) => return result,
+                Err(e) => warn!(
                     "Failed to fetch block {} from {}: {:?}, trying another peer",
                     block_id,
                     peer.short_str(),
-                    response.status()
-                );
-                continue;
+                    e,
+                ),
             }
-            return Ok(response.blocks().clone());
         }
     }
 
@@ -321,21 +307,14 @@ impl<T: Payload> BlockRetriever<T> {
 }
 
 // Max timeout is 16s=RETRIEVAL_INITIAL_TIMEOUT*(2^RETRIEVAL_MAX_EXP)
-const RETRIEVAL_INITIAL_TIMEOUT: Duration = Duration::from_secs(1);
+const RETRIEVAL_INITIAL_TIMEOUT: Duration = Duration::from_millis(200);
 const RETRIEVAL_MAX_EXP: u32 = 4;
 
 /// Returns exponentially increasing timeout with
 /// limit of RETRIEVAL_INITIAL_TIMEOUT*(2^RETRIEVAL_MAX_EXP)
 #[allow(clippy::trivially_copy_pass_by_ref)]
-fn retrieval_timeout(deadline: &Instant, attempt: u32) -> Option<Duration> {
+fn retrieval_timeout(attempt: u32) -> Duration {
     assert!(attempt > 0, "retrieval_timeout attempt can't be 0");
     let exp = RETRIEVAL_MAX_EXP.min(attempt - 1); // [0..RETRIEVAL_MAX_EXP]
-    let request_timeout = RETRIEVAL_INITIAL_TIMEOUT * 2_u32.pow(exp);
-    let now = Instant::now();
-    let deadline_timeout = if *deadline >= now {
-        Some(deadline.duration_since(now))
-    } else {
-        None
-    };
-    deadline_timeout.map(|delay| request_timeout.min(delay))
+    RETRIEVAL_INITIAL_TIMEOUT * 2_u32.pow(exp)
 }

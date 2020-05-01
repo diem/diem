@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{sync::Arc, time::Duration};
 
 use anyhow::{ensure, format_err, Context, Result};
 use termion::color::*;
@@ -162,12 +159,7 @@ impl<T: Payload> SyncProcessor<T> {
             sync_info.epoch() == self.epoch_info.epoch,
             "Received sync info is in different epoch than committed block"
         );
-        let mut retriever = BlockRetriever::new(
-            self.network.clone(),
-            // Give a timeout of 5 sec per attempt try to fetch block from peer
-            Instant::now() + Duration::new(5, 0),
-            peer,
-        );
+        let mut retriever = BlockRetriever::new(self.network.clone(), peer);
         let recovery_data = BlockStore::fast_forward_sync(
             &sync_info.highest_commit_cert(),
             &mut retriever,
@@ -243,8 +235,8 @@ impl<T: Payload> EventProcessor<T> {
         }
     }
 
-    fn create_block_retriever(&self, deadline: Instant, author: Author) -> BlockRetriever<T> {
-        BlockRetriever::new(self.network.clone(), deadline, author)
+    fn create_block_retriever(&self, author: Author) -> BlockRetriever<T> {
+        BlockRetriever::new(self.network.clone(), author)
     }
 
     /// Leader:
@@ -441,24 +433,13 @@ impl<T: Payload> EventProcessor<T> {
             e
         })?;
 
-        let deadline = self.pacemaker.current_round_deadline();
-        let now = Instant::now();
-        let deadline_repr = if deadline.gt(&now) {
-            deadline
-                .checked_duration_since(now)
-                .map_or("0 ms".to_string(), |v| format!("{:?}", v))
-        } else {
-            now.checked_duration_since(deadline)
-                .map_or("0 ms".to_string(), |v| format!("Already late by {:?}", v))
-        };
         debug!(
-            "Starting sync: current_hqc_round = {}, sync_info_hqc_round = {}, deadline = {:?}",
+            "Starting sync: current_hqc_round = {}, sync_info_hqc_round = {}",
             current_hqc_round,
             sync_info.hqc_round(),
-            deadline_repr,
         );
         self.block_store
-            .sync_to(&sync_info, self.create_block_retriever(deadline, author))
+            .sync_to(&sync_info, self.create_block_retriever(author))
             .await
             .map_err(|e| {
                 warn!(
@@ -863,7 +844,6 @@ impl<T: Payload> EventProcessor<T> {
         qc: Arc<QuorumCert>,
         preferred_peer: Author,
     ) -> anyhow::Result<()> {
-        let deadline = self.pacemaker.current_round_deadline();
         // Process local highest commit cert should be no-op, this will sync us to the QC
         self.block_store
             .sync_to(
@@ -872,7 +852,7 @@ impl<T: Payload> EventProcessor<T> {
                     self.block_store.highest_commit_cert().as_ref().clone(),
                     None,
                 ),
-                self.create_block_retriever(deadline, preferred_peer),
+                self.create_block_retriever(preferred_peer),
             )
             .await
             .context("Failed to process a newly aggregated QC")?;
