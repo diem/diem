@@ -185,6 +185,13 @@ impl<'env> FunctionTarget<'env> {
         }
     }
 
+    /// Returns the value of a boolean pragma for this function. This first looks up a
+    /// pragma in this function, then the enclosing module, and finally uses the provided default.
+    /// property
+    pub fn is_pragma_true(&self, name: &str, default: impl FnOnce() -> bool) -> bool {
+        self.func_env.is_pragma_true(name, default)
+    }
+
     /// Gets the bytecode.
     pub fn get_bytecode(&self) -> &[Bytecode] {
         &self.data.code

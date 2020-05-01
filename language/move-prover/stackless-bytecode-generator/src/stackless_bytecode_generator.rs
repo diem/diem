@@ -62,12 +62,18 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             | MoveBytecode::BrFalse(code_offset)
             | MoveBytecode::Branch(code_offset) = bytecode
             {
-                let label = Label::new(label_map.len());
-                label_map.insert(*code_offset as CodeOffset, label);
+                let offs = *code_offset as CodeOffset;
+                if label_map.get(&offs).is_none() {
+                    let label = Label::new(label_map.len());
+                    label_map.insert(offs, label);
+                }
             }
             if let MoveBytecode::BrTrue(_) | MoveBytecode::BrFalse(_) = bytecode {
-                let fall_through_label = Label::new(label_map.len());
-                label_map.insert((pos + 1) as CodeOffset, fall_through_label);
+                let next_offs = (pos + 1) as CodeOffset;
+                if label_map.get(&next_offs).is_none() {
+                    let fall_through_label = Label::new(label_map.len());
+                    label_map.insert(next_offs, fall_through_label);
+                }
             };
         }
         // Generate bytecode.

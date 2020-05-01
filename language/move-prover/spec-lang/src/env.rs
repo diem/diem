@@ -34,7 +34,7 @@ use vm::{
 };
 
 use crate::{
-    ast::{ModuleName, PropertyBag, Spec, SpecFunDecl, SpecVarDecl},
+    ast::{ModuleName, PropertyBag, Spec, SpecFunDecl, SpecVarDecl, Value},
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type},
 };
@@ -1347,10 +1347,25 @@ impl<'env> FunctionEnv<'env> {
         }
     }
 
-    /// Returns true if this function is native.
+    /// Returns the value of a boolean pragma for this function. This first looks up a
+    /// pragma in this function, then the enclosing module, and finally uses the provided default.
+    /// value
+    pub fn is_pragma_true(&self, name: &str, default: impl FnOnce() -> bool) -> bool {
+        let name = &self.symbol_pool().make(name);
+        if let Some(Value::Bool(b)) = self.get_spec().properties.get(name) {
+            return *b;
+        }
+        if let Some(Value::Bool(b)) = self.module_env.get_spec().properties.get(name) {
+            return *b;
+        }
+        default()
+    }
+
+    /// Returns true if this function is native. The function is also marked as native
+    /// if it has the pragma intrinsic set to true.
     pub fn is_native(&self) -> bool {
         let view = self.definition_view();
-        view.is_native()
+        view.is_native() || self.is_pragma_true("intrinsic", || false)
     }
 
     /// Returns true if this function is public.
