@@ -78,6 +78,7 @@ members = [
     "language/move-vm/runtime",
     "language/move-vm/state",
     "language/move-vm/types",
+    "language/resource-viewer",
     "language/stdlib",
     "language/vm",
     "language/vm/serializer-tests",

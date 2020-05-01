@@ -8,6 +8,7 @@ use move_core_types::identifier::{IdentStr, Identifier};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, PartialOrd, Ord)]
 pub enum TypeTag {
@@ -104,5 +105,40 @@ impl CryptoHash for StructTag {
         let mut state = Self::Hasher::default();
         state.write(&lcs::to_bytes(self).unwrap());
         state.finish()
+    }
+}
+
+impl Display for StructTag {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "{}::{}::{}",
+            self.address.short_str(),
+            self.module,
+            self.name
+        )?;
+        if let Some(first_ty) = self.type_params.first() {
+            write!(f, "<")?;
+            write!(f, "{}", first_ty)?;
+            for ty in self.type_params.iter().skip(1) {
+                write!(f, ", {}", ty)?;
+            }
+            write!(f, ">")?;
+        }
+        Ok(())
+    }
+}
+
+impl Display for TypeTag {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self {
+            TypeTag::Struct(s) => write!(f, "{}", s),
+            TypeTag::Vector(ty) => write!(f, "Vector<{}>", ty),
+            TypeTag::U8 => write!(f, "U8"),
+            TypeTag::U64 => write!(f, "U64"),
+            TypeTag::U128 => write!(f, "U128"),
+            TypeTag::Address => write!(f, "Address"),
+            TypeTag::Bool => write!(f, "Bool"),
+        }
     }
 }

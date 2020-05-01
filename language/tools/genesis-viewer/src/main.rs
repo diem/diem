@@ -4,15 +4,12 @@
 use libra_types::{
     access_path::AccessPath,
     contract_event::ContractEvent,
-    transaction::{ChangeSet, Transaction, TransactionPayload},
+    transaction::ChangeSet,
     write_set::{WriteOp, WriteSet},
 };
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fs::File,
-    io::prelude::*,
-    path::PathBuf,
-};
+use resource_viewer::{MoveValueAnnotator, NullStateView};
+use std::collections::{BTreeMap, BTreeSet};
+use stdlib::StdLibOptions;
 use structopt::StructOpt;
 use vm::CompiledModule;
 
@@ -32,8 +29,6 @@ use vm::CompiledModule;
 /// Printing can be done by the different types of data in a genesis blob. As far as this
 /// tool is concerned the different data types are: Modules, Resources and Events.
 pub struct Args {
-    #[structopt(short = "f", long, parse(from_os_str))]
-    genesis_file: PathBuf,
     #[structopt(
         short = "a",
         long,
@@ -75,50 +70,38 @@ pub fn main() {
     // we default to `all`
     let arg_count = std::env::args().len();
     let args = Args::from_args();
-    let mut f = File::open(args.genesis_file.clone())
-        .unwrap_or_else(|_| panic!("Cannot open file {:?}", args.genesis_file));
-    let mut bytes = vec![];
-    f.read_to_end(&mut bytes)
-        .expect("genesis file cannot be read");
-    let txn =
-        lcs::from_bytes(&bytes).expect("genesis blob did not deserialize correctly (lcs error)");
-    if let Transaction::UserTransaction(txn) = txn {
-        if let TransactionPayload::WriteSet(ws) = txn.payload() {
-            if args.all || arg_count == 3 {
-                print_all(ws);
-            } else {
-                if args.event_raw {
-                    print_events_raw(ws.events());
-                }
-                if args.event_keys {
-                    print_events_key(ws.events());
-                }
-                if args.type_events {
-                    print_events(ws.events());
-                }
-                if args.type_modules {
-                    print_modules(ws.write_set());
-                }
-                if args.type_resources {
-                    print_resources(ws.write_set());
-                }
-                if args.write_set {
-                    print_write_set_raw(ws.write_set());
-                }
-                if args.ws_by_type {
-                    print_write_set_by_type(ws.write_set());
-                }
-                if args.ws_keys {
-                    print_keys(ws.write_set());
-                }
-                if args.ws_sorted_keys {
-                    print_keys_sorted(ws.write_set());
-                }
-            }
-            return;
+    let ws = vm_genesis::generate_genesis_change_set_for_testing(StdLibOptions::Staged);
+    if args.all || arg_count == 3 {
+        print_all(&ws);
+    } else {
+        if args.event_raw {
+            print_events_raw(ws.events());
+        }
+        if args.event_keys {
+            print_events_key(ws.events());
+        }
+        if args.type_events {
+            print_events(ws.events());
+        }
+        if args.type_modules {
+            print_modules(ws.write_set());
+        }
+        if args.type_resources {
+            print_resources(ws.write_set());
+        }
+        if args.write_set {
+            print_write_set_raw(ws.write_set());
+        }
+        if args.ws_by_type {
+            print_write_set_by_type(ws.write_set());
+        }
+        if args.ws_keys {
+            print_keys(ws.write_set());
+        }
+        if args.ws_sorted_keys {
+            print_keys_sorted(ws.write_set());
         }
     }
-    panic!("error parsing genesis transaction, WriteSet not found");
 }
 
 fn print_all(cs: &ChangeSet) {
@@ -165,11 +148,17 @@ fn print_write_set_by_type(ws: &WriteSet) {
 }
 
 fn print_events(events: &[ContractEvent]) {
+    let view = NullStateView::default();
+    let annotator = MoveValueAnnotator::new(&view);
+
     for event in events {
         println!("+ {:?}", event.key());
-        println!("\tType: {:?}", event.type_tag());
-        println!("\tSeq. Num.: {}", event.sequence_number());
-        println!("\tData: {:?}", event.event_data());
+        println!("Type: {:?}", event.type_tag());
+        println!("Seq. Num.: {}", event.sequence_number());
+        match annotator.view_contract_event(event) {
+            Ok(v) => println!("Data: {}", v),
+            Err(e) => println!("Unable to parse event: {:?}", e),
+        }
     }
 }
 
@@ -208,8 +197,14 @@ fn print_resources(ws: &WriteSet) {
             }
         }
     }
+    let view = NullStateView::default();
+    let annotator = MoveValueAnnotator::new(&view);
     for (k, v) in &resources {
-        println!("+ Key: {:?}", k);
-        println!("Data: {:?}", v);
+        println!("AccessPath: {:?}", k);
+        match annotator.view_access_path(k.clone(), v.as_ref()) {
+            Ok(v) => println!("Data: {}", v),
+            Err(e) => println!("Unable To parse blobs: {:?}", e),
+        };
+        println!("RawData: {:?}", v);
     }
 }
