@@ -31,7 +31,6 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
-use storage_client::StorageReadServiceClient;
 use storage_interface::{DbReader, DbReaderWriter};
 use storage_service::{
     init_libra_db, start_simple_storage_service_with_db, start_storage_service_with_db,
@@ -88,7 +87,7 @@ pub fn setup_onchain_discovery(
     network: &mut NetworkBuilder,
     peer_id: PeerId,
     role: RoleType,
-    storage_read_client: Arc<StorageReadServiceClient>,
+    libra_db: Arc<dyn DbReader>,
     waypoint: Waypoint,
     executor: &Handle,
 ) {
@@ -100,7 +99,7 @@ pub fn setup_onchain_discovery(
     let onchain_discovery_service = OnchainDiscoveryService::new(
         executor.clone(),
         peer_mgr_notifs_rx,
-        storage_read_client.clone(),
+        Arc::clone(&libra_db),
         max_concurrent_inbound_queries,
     );
     executor.spawn(onchain_discovery_service.start());
@@ -115,7 +114,7 @@ pub fn setup_onchain_discovery(
             waypoint,
             network_tx,
             conn_notifs_rx,
-            storage_read_client,
+            libra_db,
             peer_query_ticker,
             storage_query_ticker,
             outbound_rpc_timeout,
@@ -128,7 +127,7 @@ pub fn setup_onchain_discovery(
 pub fn setup_network(
     config: &mut NetworkConfig,
     role: RoleType,
-    storage_read: Arc<StorageReadServiceClient>,
+    libra_db: Arc<dyn DbReader>,
     waypoint: Waypoint,
 ) -> (Runtime, NetworkBuilder) {
     let runtime = Builder::new()
@@ -209,7 +208,7 @@ pub fn setup_network(
                 &mut network_builder,
                 config.peer_id,
                 role,
-                storage_read,
+                libra_db,
                 waypoint,
                 runtime.handle(),
             );
@@ -265,13 +264,11 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         ReconfigSubscription::subscribe(ON_CHAIN_CONFIG_REGISTRY);
     reconfig_subscriptions.push(consensus_reconfig_subscription);
 
-    let storage_read = Arc::new(StorageReadServiceClient::new(&node_config.storage.address));
-
     if let Some(network) = node_config.validator_network.as_mut() {
         let (runtime, mut network_builder) = setup_network(
             network,
             RoleType::Validator,
-            Arc::clone(&storage_read),
+            Arc::clone(&libra_db) as Arc<dyn DbReader>,
             node_config.base.waypoint.expect("No waypoint in config"),
         );
 
@@ -291,7 +288,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         let (runtime, mut network_builder) = setup_network(
             &mut full_node_network,
             RoleType::FullNode,
-            Arc::clone(&storage_read),
+            Arc::clone(&libra_db) as Arc<dyn DbReader>,
             node_config.base.waypoint.expect("No waypoint in config"),
         );
 
