@@ -19,6 +19,7 @@ members = [
     "common/metrics",
     "common/nibble",
     "common/num-variants",
+    "common/option-future",
     "common/proptest-helpers",
     "common/prost-ext",
     "common/security-logger",

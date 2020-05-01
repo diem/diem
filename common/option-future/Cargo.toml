@@ -1,0 +1,14 @@
+[package]
+name = "option-future"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra Onchain Discovery Protocol"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+futures = "0.3.4"
+libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
