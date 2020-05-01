@@ -9,7 +9,7 @@ module M1 {
     }
 }
 
-// check: RET_UNSAFE_TO_DESTROY_ERROR
+// check: UNSAFE_RET_UNUSED_RESOURCES
 
 //! new-transaction
 module M2 {

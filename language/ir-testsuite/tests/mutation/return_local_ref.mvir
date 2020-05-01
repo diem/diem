@@ -8,4 +8,4 @@ module Tester {
     }
 
 }
-// check: RET_UNSAFE_TO_DESTROY_ERROR
+// check: UNSAFE_RET_LOCAL_OR_RESOURCE_STILL_BORROWED

@@ -204,28 +204,34 @@ fn execute_inner(
         }
 
         Bytecode::MutBorrowGlobal(idx) => {
+            checked_verify!(verifier.stack.pop().unwrap().is_value());
             let value = state.borrow_global(offset, true, *idx)?;
             verifier.stack.push(value)
         }
         Bytecode::MutBorrowGlobalGeneric(idx) => {
+            checked_verify!(verifier.stack.pop().unwrap().is_value());
             let struct_inst = verifier.module().struct_instantiation_at(*idx);
             let value = state.borrow_global(offset, true, struct_inst.def)?;
             verifier.stack.push(value)
         }
         Bytecode::ImmBorrowGlobal(idx) => {
+            checked_verify!(verifier.stack.pop().unwrap().is_value());
             let value = state.borrow_global(offset, false, *idx)?;
             verifier.stack.push(value)
         }
         Bytecode::ImmBorrowGlobalGeneric(idx) => {
+            checked_verify!(verifier.stack.pop().unwrap().is_value());
             let struct_inst = verifier.module().struct_instantiation_at(*idx);
             let value = state.borrow_global(offset, false, struct_inst.def)?;
             verifier.stack.push(value)
         }
         Bytecode::MoveFrom(idx) => {
+            checked_verify!(verifier.stack.pop().unwrap().is_value());
             let value = state.move_from(offset, *idx)?;
             verifier.stack.push(value)
         }
         Bytecode::MoveFromGeneric(idx) => {
+            checked_verify!(verifier.stack.pop().unwrap().is_value());
             let struct_inst = verifier.module().struct_instantiation_at(*idx);
             let value = state.move_from(offset, struct_inst.def)?;
             verifier.stack.push(value)
@@ -256,17 +262,19 @@ fn execute_inner(
         | Bytecode::CastU8
         | Bytecode::CastU64
         | Bytecode::CastU128
-        | Bytecode::Not => (),
+        | Bytecode::Not
+        | Bytecode::Exists(_)
+        | Bytecode::ExistsGeneric(_) => (),
 
         Bytecode::BrTrue(_)
         | Bytecode::BrFalse(_)
         | Bytecode::Abort
         | Bytecode::MoveToSender(_)
         | Bytecode::MoveToSenderGeneric(_) => {
-            verifier.stack.pop().unwrap();
+            checked_verify!(verifier.stack.pop().unwrap().is_value());
         }
 
-        Bytecode::LdTrue | Bytecode::LdFalse | Bytecode::Exists(_) | Bytecode::ExistsGeneric(_) => {
+        Bytecode::LdTrue | Bytecode::LdFalse => {
             verifier.stack.push(state.value_for(&SignatureToken::Bool))
         }
         Bytecode::LdU8(_) => verifier.stack.push(state.value_for(&SignatureToken::U8)),
@@ -350,6 +358,7 @@ impl<'a> TransferFunctions for ReferenceSafetyAnalysis<'a> {
     ) -> Result<(), Self::AnalysisError> {
         execute_inner(self, state, bytecode, index)?;
         if index == last_index {
+            checked_verify!(self.stack.is_empty());
             *state = state.construct_canonical_state()
         }
         Ok(())

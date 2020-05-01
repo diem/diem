@@ -1,4 +1,4 @@
-// check: RET_UNSAFE_TO_DESTROY_ERROR
+// check: UNSAFE_RET_UNUSED_RESOURCES
 
 module A {
 import 0x0.LBR;

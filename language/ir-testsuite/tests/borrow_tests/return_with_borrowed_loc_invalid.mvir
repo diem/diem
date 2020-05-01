@@ -10,7 +10,7 @@ module M {
         return move(y);
     }
 }
-// check: RET_UNSAFE_TO_DESTROY_ERROR
+// check: UNSAFE_RET_LOCAL_OR_RESOURCE_STILL_BORROWED
 
 //! new-transaction
 module M2 {
@@ -24,7 +24,7 @@ module M2 {
         return copy(y);
     }
 }
-// check: RET_UNSAFE_TO_DESTROY_ERROR
+// check: UNSAFE_RET_LOCAL_OR_RESOURCE_STILL_BORROWED
 
 //! new-transaction
 module M3 {
@@ -42,7 +42,7 @@ module M3 {
         return move(u);
     }
 }
-// check: RET_UNSAFE_TO_DESTROY_ERROR
+// check: UNSAFE_RET_LOCAL_OR_RESOURCE_STILL_BORROWED
 
 //! new-transaction
 module M4 {
@@ -60,4 +60,4 @@ module M4 {
         return copy(u);
     }
 }
-// check: RET_UNSAFE_TO_DESTROY_ERROR
+// check: UNSAFE_RET_LOCAL_OR_RESOURCE_STILL_BORROWED

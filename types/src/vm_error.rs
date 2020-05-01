@@ -337,7 +337,7 @@ pub enum StatusCode {
     ABORT_TYPE_MISMATCH_ERROR = 1026,
     STLOC_TYPE_MISMATCH_ERROR = 1027,
     STLOC_UNSAFE_TO_DESTROY_ERROR = 1028,
-    RET_UNSAFE_TO_DESTROY_ERROR = 1029,
+    UNSAFE_RET_LOCAL_OR_RESOURCE_STILL_BORROWED = 1029,
     RET_TYPE_MISMATCH_ERROR = 1030,
     RET_BORROWED_MUTABLE_REFERENCE_ERROR = 1031,
     FREEZEREF_TYPE_MISMATCH_ERROR = 1032,
@@ -400,6 +400,7 @@ pub enum StatusCode {
     INVALID_LOOP_SPLIT = 1085,
     INVALID_LOOP_BREAK = 1086,
     INVALID_LOOP_CONTINUE = 1087,
+    UNSAFE_RET_UNUSED_RESOURCES = 1088,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.
@@ -569,7 +570,7 @@ impl TryFrom<u64> for StatusCode {
             1026 => Ok(StatusCode::ABORT_TYPE_MISMATCH_ERROR),
             1027 => Ok(StatusCode::STLOC_TYPE_MISMATCH_ERROR),
             1028 => Ok(StatusCode::STLOC_UNSAFE_TO_DESTROY_ERROR),
-            1029 => Ok(StatusCode::RET_UNSAFE_TO_DESTROY_ERROR),
+            1029 => Ok(StatusCode::UNSAFE_RET_LOCAL_OR_RESOURCE_STILL_BORROWED),
             1030 => Ok(StatusCode::RET_TYPE_MISMATCH_ERROR),
             1031 => Ok(StatusCode::RET_BORROWED_MUTABLE_REFERENCE_ERROR),
             1032 => Ok(StatusCode::FREEZEREF_TYPE_MISMATCH_ERROR),
