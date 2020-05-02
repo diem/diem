@@ -2,68 +2,25 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    access_path::{AccessPath, Accesses},
     account_config,
-    contract_event::ContractEvent,
+    account_state::AccountState,
+    account_state_blob::AccountStateBlob,
     discovery_info::DiscoveryInfo,
     event::{EventHandle, EventKey},
-    language_storage::{StructTag, TypeTag},
     move_resource::MoveResource,
 };
-use anyhow::{ensure, Error, Result};
-use move_core_types::identifier::Identifier;
+use anyhow::{format_err, Error, Result};
 use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, iter::IntoIterator, ops::Deref, vec};
 
-pub static DISCOVERY_SET_MODULE_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("LibraSystem").unwrap());
-
-pub static DISCOVERY_SET_STRUCT_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("DiscoverySet").unwrap());
-
-pub static DISCOVERY_SET_CHANGE_EVENT_STRUCT_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("DiscoverySetChangeEvent").unwrap());
-
-pub static DISCOVERY_SET_STRUCT_TAG: Lazy<StructTag> = Lazy::new(|| StructTag {
-    name: DISCOVERY_SET_STRUCT_NAME.clone(),
-    address: account_config::CORE_CODE_ADDRESS,
-    module: DISCOVERY_SET_MODULE_NAME.clone(),
-    type_params: vec![],
-});
-
-pub static DISCOVERY_SET_CHANGE_EVENT_STRUCT_TAG: Lazy<StructTag> = Lazy::new(|| StructTag {
-    name: DISCOVERY_SET_CHANGE_EVENT_STRUCT_NAME.clone(),
-    address: account_config::CORE_CODE_ADDRESS,
-    module: DISCOVERY_SET_MODULE_NAME.clone(),
-    type_params: vec![],
-});
-
-pub static DISCOVERY_SET_TYPE_TAG: Lazy<TypeTag> =
-    Lazy::new(|| TypeTag::Struct(DISCOVERY_SET_STRUCT_TAG.clone()));
-
-pub static DISCOVERY_SET_CHANGE_EVENT_TYPE_TAG: Lazy<TypeTag> =
-    Lazy::new(|| TypeTag::Struct(DISCOVERY_SET_CHANGE_EVENT_STRUCT_TAG.clone()));
-
-/// Path to the DiscoverySet resource.
-pub static DISCOVERY_SET_RESOURCE_PATH: Lazy<Vec<u8>> =
-    Lazy::new(|| AccessPath::resource_access_vec(&*DISCOVERY_SET_STRUCT_TAG, &Accesses::empty()));
-
 /// The path to the discovery set change event handle under a DiscoverSetResource.
 pub static DISCOVERY_SET_CHANGE_EVENT_PATH: Lazy<Vec<u8>> = Lazy::new(|| {
     let mut path = DiscoverySetResource::resource_path();
     path.extend_from_slice(b"/change_events_count/");
     path
-});
-
-/// The AccessPath pointing to the discovery set change event handle under the system discovery set address.
-pub static GLOBAL_DISCOVERY_SET_CHANGE_EVENT_PATH: Lazy<AccessPath> = Lazy::new(|| {
-    AccessPath::new(
-        account_config::discovery_set_address(),
-        DISCOVERY_SET_CHANGE_EVENT_PATH.to_vec(),
-    )
 });
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -89,6 +46,16 @@ impl MoveResource for DiscoverySetResource {
     const STRUCT_NAME: &'static str = "DiscoverySet";
 }
 
+impl TryFrom<&AccountStateBlob> for DiscoverySetResource {
+    type Error = Error;
+
+    fn try_from(blob: &AccountStateBlob) -> Result<DiscoverySetResource> {
+        AccountState::try_from(blob)?
+            .get_discovery_set_resource()?
+            .ok_or_else(|| format_err!("discovery set resource cannot be missing"))
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct DiscoverySet(Vec<DiscoveryInfo>);
@@ -107,6 +74,12 @@ impl DiscoverySet {
     }
 }
 
+impl From<DiscoverySetResource> for DiscoverySet {
+    fn from(resource: DiscoverySetResource) -> Self {
+        resource.discovery_set
+    }
+}
+
 impl Deref for DiscoverySet {
     type Target = [DiscoveryInfo];
 
@@ -121,34 +94,6 @@ impl IntoIterator for DiscoverySet {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct DiscoverySetChangeEvent {
-    pub event_seq_num: u64,
-    pub discovery_set: DiscoverySet,
-}
-
-impl TryFrom<&ContractEvent> for DiscoverySetChangeEvent {
-    type Error = Error;
-
-    fn try_from(contract_event: &ContractEvent) -> Result<Self> {
-        let event_seq_num = contract_event.sequence_number();
-
-        ensure!(
-            &*DISCOVERY_SET_CHANGE_EVENT_TYPE_TAG == contract_event.type_tag(),
-            "Failed to deserialize DiscoverySetChangeEvent, unexpected type tag: {:?}, expected: {:?}",
-            contract_event.type_tag(),
-            &*DISCOVERY_SET_CHANGE_EVENT_TYPE_TAG,
-        );
-
-        let discovery_set = DiscoverySet::from_bytes(contract_event.event_data())?;
-
-        Ok(DiscoverySetChangeEvent {
-            event_seq_num,
-            discovery_set,
-        })
     }
 }
 

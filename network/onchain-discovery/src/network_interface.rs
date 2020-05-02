@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Protobuf based interface between OnchainDiscovery and Network layers.
-use crate::types::{
-    OnchainDiscoveryMsg, QueryDiscoverySetRequest, QueryDiscoverySetResponseWithEvent,
-};
+use crate::types::{OnchainDiscoveryMsg, QueryDiscoverySetRequest, QueryDiscoverySetResponse};
 use channel::{libra_channel, message_queues::QueueStyle};
 use futures::{channel::mpsc, sink::SinkExt};
 use libra_types::PeerId;
@@ -18,7 +16,7 @@ use network::{
     validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
     ProtocolId,
 };
-use std::{convert::TryFrom, time::Duration};
+use std::time::Duration;
 
 /// The interface from OnchainDiscovery to Networking layer.
 #[derive(Clone)]
@@ -44,7 +42,7 @@ impl OnchainDiscoveryNetworkSender {
         recipient: PeerId,
         req_msg: QueryDiscoverySetRequest,
         timeout: Duration,
-    ) -> Result<QueryDiscoverySetResponseWithEvent, RpcError> {
+    ) -> Result<Box<QueryDiscoverySetResponse>, RpcError> {
         let protocol = ProtocolId::OnchainDiscoveryRpc;
         let req_msg_enum = OnchainDiscoveryMsg::QueryDiscoverySetRequest(req_msg);
 
@@ -59,8 +57,6 @@ impl OnchainDiscoveryNetworkSender {
                 return Err(RpcError::InvalidRpcResponse);
             }
         };
-        let res_msg = QueryDiscoverySetResponseWithEvent::try_from(res_msg)
-            .map_err(RpcError::ApplicationError)?;
         Ok(res_msg)
     }
 

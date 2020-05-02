@@ -3,7 +3,7 @@
 
 use crate::{
     storage_query_discovery_set,
-    types::{OnchainDiscoveryMsg, QueryDiscoverySetRequest, QueryDiscoverySetResponse},
+    types::{OnchainDiscoveryMsg, QueryDiscoverySetRequest},
 };
 use anyhow::{bail, ensure, format_err, Context as _};
 use bounded_executor::BoundedExecutor;
@@ -19,7 +19,7 @@ use libra_types::PeerId;
 use network::{peer_manager::PeerManagerNotification, protocols::rpc::error::RpcError, ProtocolId};
 use std::{sync::Arc, task::Context};
 use storage_interface::DbReader;
-use tokio::runtime::Handle;
+use tokio::{runtime::Handle, task};
 
 /// A LibraNet service for handling [`QueryDiscoverySetRequest`] rpc's.
 ///
@@ -104,11 +104,9 @@ impl OnchainDiscoveryService {
         };
 
         debug!(
-            "recevied query discovery set request: peer: {}, \
-             version: {}, seq_num: {}",
+            "recevied query discovery set request: peer: {}, version: {}",
             peer_id.short_str(),
-            req_msg.client_known_version,
-            req_msg.client_known_seq_num,
+            req_msg.known_version,
         );
 
         self.inbound_rpc_executor
@@ -131,13 +129,21 @@ async fn handle_query_discovery_set_request(
     req_msg: QueryDiscoverySetRequest,
     mut res_tx: oneshot::Sender<Result<Bytes, RpcError>>,
 ) {
+    let mut f_query_storage =
+        task::spawn_blocking(move || storage_query_discovery_set(libra_db, req_msg)).fuse();
     let mut f_rpc_cancel = future::poll_fn(|cx: &mut Context<'_>| res_tx.poll_canceled(cx)).fuse();
     let peer_id_short = peer_id.short_str();
 
-    // cancel the internal storage rpc request early if the external rpc request
-    // is canceled.
     futures::select! {
-        res = storage_query_discovery_set(libra_db, req_msg).fuse() => {
+        res = f_query_storage => {
+            let res = match res {
+                Ok(res) => res,
+                Err(err) => {
+                    warn!("error query storage task panicked or canceled: peer: {}, err: {:?}", peer_id_short, err);
+                    return;
+                }
+            };
+
             let (_req_msg, res_msg) = match res {
                 Ok(res) => res,
                 Err(err) => {
@@ -146,7 +152,6 @@ async fn handle_query_discovery_set_request(
                 },
             };
 
-            let res_msg = QueryDiscoverySetResponse::from(res_msg);
             let res_msg = OnchainDiscoveryMsg::QueryDiscoverySetResponse(res_msg);
             let res_bytes = match lcs::to_bytes(&res_msg) {
                 Ok(res_bytes) => res_bytes,

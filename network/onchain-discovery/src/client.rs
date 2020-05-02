@@ -6,7 +6,7 @@ use crate::{
     storage_query_discovery_set,
     types::{
         DiscoveryInfoInternal, DiscoverySetInternal, QueryDiscoverySetRequest,
-        QueryDiscoverySetResponseWithEvent,
+        QueryDiscoverySetResponse,
     },
 };
 use anyhow::{Context as _, Result};
@@ -17,7 +17,7 @@ use futures::{
 use libra_config::config::RoleType;
 use libra_logger::prelude::*;
 use libra_types::{
-    discovery_set::DiscoverySetChangeEvent,
+    discovery_set::DiscoverySet,
     trusted_state::{TrustedState, TrustedStateChange},
     waypoint::Waypoint,
     PeerId,
@@ -30,6 +30,7 @@ use option_future::OptionFuture;
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 use std::{collections::HashSet, mem, sync::Arc, time::Duration};
 use storage_interface::DbReader;
+use tokio::task;
 
 /// Actor for querying various sources (remote peers, local storage) for the
 /// latest discovery set and notifying the `ConnectivityManager` of updates.
@@ -43,9 +44,6 @@ pub struct OnchainDiscovery<TTicker> {
     /// components (e.g., state sync) since we only rely on syncing epoch change
     /// LedgerInfo's and don't need to do tx replay.
     trusted_state: TrustedState,
-    /// The sequence number of the most recent discovery set change event we've
-    /// processed.
-    latest_event_seq_num: u64,
     /// An internal representation of the most recent discovery set.
     latest_discovery_set: DiscoverySetInternal,
     /// The set of peers we're connected to.
@@ -95,7 +93,6 @@ where
             peer_id: self_peer_id,
             role,
             trusted_state,
-            latest_event_seq_num: 0,
             latest_discovery_set: DiscoverySetInternal::empty(),
             connected_peers: HashSet::new(),
             network_tx,
@@ -178,14 +175,13 @@ where
             Output = Result<(
                 PeerId,
                 QueryDiscoverySetRequest,
-                QueryDiscoverySetResponseWithEvent,
+                Box<QueryDiscoverySetResponse>,
             )>,
         >,
     > {
         self.sample_peer().map(|peer_id| {
             let req_msg = QueryDiscoverySetRequest {
-                client_known_version: self.trusted_state.latest_version(),
-                client_known_seq_num: 0,
+                known_version: self.trusted_state.latest_version(),
             };
 
             let peer_id_short = peer_id.short_str();
@@ -193,7 +189,7 @@ where
             trace!(
                 "handle_peer_query_tick: querying peer: {}, trusted version: {}",
                 peer_id_short,
-                req_msg.client_known_version
+                req_msg.known_version,
             );
 
             peer_query_discovery_set(
@@ -210,7 +206,7 @@ where
         query_res: Result<(
             PeerId,
             QueryDiscoverySetRequest,
-            QueryDiscoverySetResponseWithEvent,
+            Box<QueryDiscoverySetResponse>,
         )>,
     ) {
         match query_res {
@@ -218,12 +214,7 @@ where
                 debug!(
                     "received query response: peer: {}, their version: {}",
                     peer_id.short_str(),
-                    res_msg
-                        .query_res
-                        .update_to_latest_ledger_response
-                        .ledger_info_with_sigs
-                        .ledger_info()
-                        .version(),
+                    res_msg.latest_li.ledger_info().version(),
                 );
                 self.handle_query_response(peer_id, req_msg, res_msg).await;
             }
@@ -237,7 +228,7 @@ where
         Output = Result<(
             PeerId,
             QueryDiscoverySetRequest,
-            QueryDiscoverySetResponseWithEvent,
+            Box<QueryDiscoverySetResponse>,
         )>,
     > {
         let trusted_version = self.trusted_state.latest_version();
@@ -246,38 +237,39 @@ where
             trusted_version,
         );
         let req_msg = QueryDiscoverySetRequest {
-            client_known_version: trusted_version,
-            client_known_seq_num: self.latest_event_seq_num,
+            known_version: trusted_version,
         };
         let self_peer_id = self.peer_id;
-        storage_query_discovery_set(Arc::clone(&self.libra_db), req_msg)
-            .map(move |res| res.map(move |(req_msg, res_msg)| (self_peer_id, req_msg, res_msg)))
+        let libra_db = Arc::clone(&self.libra_db);
+        let f_query_storage =
+            task::spawn_blocking(move || storage_query_discovery_set(libra_db, req_msg));
+        f_query_storage.map(move |res| {
+            // flatten errors and add peer_id context
+            res.map_err(anyhow::Error::from)
+                .and_then(|res| res)
+                .map(|(req_msg, res_msg)| (self_peer_id, req_msg, res_msg))
+        })
     }
 
     async fn handle_query_response(
         &mut self,
         peer_id: PeerId,
         req_msg: QueryDiscoverySetRequest,
-        res_msg: QueryDiscoverySetResponseWithEvent,
+        res_msg: Box<QueryDiscoverySetResponse>,
     ) {
-        let latest_version = self.trusted_state.latest_version();
-
-        let trusted_state_change = match res_msg
-            .query_res
-            .update_to_latest_ledger_response
-            .verify(&self.trusted_state, &req_msg.into())
-        {
-            Ok(trusted_state_change) => trusted_state_change,
-            Err(err) => {
-                warn!(
-                    "invalid query response: failed to ratchet state: \
-                     peer: {}, err: {:?}",
-                    peer_id.short_str(),
-                    err
-                );
-                return;
-            }
-        };
+        let (trusted_state_change, opt_discovery_set) =
+            match res_msg.verify_and_ratchet(&req_msg, &self.trusted_state) {
+                Ok(res) => res,
+                Err(err) => {
+                    warn!(
+                        "invalid query response: peer: {}, request_version: {}, err: {:?}",
+                        peer_id.short_str(),
+                        req_msg.known_version,
+                        err
+                    );
+                    return;
+                }
+            };
 
         match trusted_state_change {
             TrustedStateChange::Epoch {
@@ -292,6 +284,11 @@ where
                     new_state.latest_version(),
                 );
                 self.trusted_state = new_state;
+
+                let discovery_set = opt_discovery_set.expect(
+                    "We're guaranteed Some(DiscoverySet) from QueryDiscoverySetResponse::verify_and_ratchet"
+                );
+                self.handle_new_discovery_set_event(discovery_set).await;
             }
             TrustedStateChange::Version { new_state } => {
                 debug!(
@@ -304,62 +301,15 @@ where
             }
             TrustedStateChange::NoChange => (),
         };
-
-        if let Some(discovery_set_event) = res_msg.event {
-            self.handle_new_discovery_set_event(discovery_set_event)
-                .await;
-        } else {
-            debug!(
-                "no new discovery set event since latest version, peer: {}, latest_version: {}",
-                peer_id.short_str(),
-                latest_version,
-            );
-        }
     }
 
-    async fn handle_new_discovery_set_event(
-        &mut self,
-        discovery_set_event: DiscoverySetChangeEvent,
-    ) {
-        let our_seq_num = self.latest_event_seq_num;
-        let new_seq_num = discovery_set_event.event_seq_num;
-
-        debug!(
-            "handle_new_discovery_set_event: our_seq_num: {}, new_seq_num: {}",
-            our_seq_num, new_seq_num
-        );
-
-        assert!(
-            new_seq_num >= our_seq_num,
-            "somehow we successfully ratcheted to a new trusted state (fresher \
-             version) but the discovery set event seqnum is older! This should \
-             never happen.",
-        );
-
-        // We should update if there is a newer discovery set event or we're just
-        // starting up.
-        let should_update = new_seq_num > our_seq_num || self.latest_discovery_set.is_empty();
-        if !should_update {
-            debug!("no new discovery set event; ignoring response");
-            return;
-        }
-
-        // event is actually newer; update connectivity manager about any
-        // modified peer infos.
-
-        info!(
-            "observed newer discovery set; updating connectivity manager: \
-             our seq num: {}, new seq num: {}",
-            our_seq_num, new_seq_num
-        );
-
+    async fn handle_new_discovery_set_event(&mut self, discovery_set: DiscoverySet) {
+        // update connectivity manager about any modified peer infos.
         let latest_discovery_set =
-            DiscoverySetInternal::from_discovery_set(self.role, discovery_set_event.discovery_set);
+            DiscoverySetInternal::from_discovery_set(self.role, discovery_set);
 
         let mut prev_discovery_set =
             mem::replace(&mut self.latest_discovery_set, latest_discovery_set.clone());
-
-        // TODO(philiphayes): send UpdateEligibleNodes if identity pubkeys change
 
         // TODO(philiphayes): ConnectivityManager supports multiple identity pubkeys per
         // peer (will accept connections from any in set, and do { pubkeys } x { addrs }
@@ -421,8 +371,6 @@ where
                 .await
                 .unwrap();
         }
-
-        // TODO(philiphayes): check for updated list of accepted (id key + sign key)
     }
 
     /// Sample iid a PeerId of one of the connected peers.
@@ -449,9 +397,9 @@ async fn peer_query_discovery_set(
 ) -> Result<(
     PeerId,
     QueryDiscoverySetRequest,
-    QueryDiscoverySetResponseWithEvent,
+    Box<QueryDiscoverySetResponse>,
 )> {
-    let our_latest_version = req_msg.client_known_version;
+    let our_latest_version = req_msg.known_version;
     let res_msg = network_tx
         .query_discovery_set(peer_id, req_msg.clone(), outbound_rpc_timeout)
         .await
