@@ -70,6 +70,7 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 label_map.insert((pos + 1) as CodeOffset, fall_through_label);
             };
         }
+
         // Generate bytecode.
         let mut given_spec_blocks = BTreeMap::new();
         for (code_offset, bytecode) in original_code.iter().enumerate() {
@@ -79,6 +80,17 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 &label_map,
                 &mut given_spec_blocks,
             );
+        }
+
+        // Eliminate fall-through for non-branching instructions
+        let code = std::mem::replace(&mut self.code, vec![]);
+        for bytecode in code.into_iter() {
+            if let Bytecode::Label(attr_id, label) = bytecode {
+                if !self.code.is_empty() && !self.code[self.code.len() - 1].is_branch() {
+                    self.code.push(Bytecode::Jump(attr_id, label));
+                }
+            }
+            self.code.push(bytecode);
         }
 
         FunctionTargetData {

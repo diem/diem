@@ -9,6 +9,7 @@ fun TestSpecBlock::looping(x: u64): u64 {
     var $t6: u64
     var $t7: u64
     spec at 592..616
+    goto L3
     L3:
     $t1 := copy(x)
     $t2 := 10

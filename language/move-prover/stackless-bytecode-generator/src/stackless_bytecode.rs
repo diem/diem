@@ -220,27 +220,15 @@ impl Bytecode {
         label_offsets: &BTreeMap<Label, CodeOffset>,
     ) -> Vec<CodeOffset> {
         let bytecode = &code[pc as usize];
+        assert!(bytecode.is_branch());
         let mut v = vec![];
-
         for label in bytecode.branch_dests() {
             v.push(*label_offsets.get(&label).expect("label defined"));
         }
-
-        let next_pc = pc + 1;
-        if next_pc >= code.len() as CodeOffset {
-            return v;
-        }
-
-        if !bytecode.is_unconditional_branch() && !v.contains(&next_pc) {
-            // avoid duplicates
-            v.push(next_pc);
-        }
-
         // always give successors in ascending order
         if v.len() > 1 && v[0] > v[1] {
             v.swap(0, 1);
         }
-
         v
     }
 }
