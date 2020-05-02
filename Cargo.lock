@@ -4805,7 +4805,6 @@ dependencies = [
  "move-vm-types 0.1.0",
  "num 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "stdlib 0.1.0",
  "test-utils 0.1.0",
  "vm 0.1.0",
 ]
