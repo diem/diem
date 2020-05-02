@@ -1279,7 +1279,6 @@ dependencies = [
 name = "executor-benchmark"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "config-builder 0.1.0",
  "executor 0.1.0",
  "executor-types 0.1.0",
@@ -1295,7 +1294,6 @@ dependencies = [
  "rayon 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
  "structopt 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
- "tokio 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
 ]
 
