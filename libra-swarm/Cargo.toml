@@ -14,8 +14,6 @@ anyhow = "1.0"
 ctrlc = { version = "3.1.4", default-features = false }
 structopt = "0.3.14"
 thiserror = "1.0"
-
-cli = { path = "../client/cli", version = "0.1.0" }
 config-builder = { path = "../config/config-builder", version = "0.1.0" }
 libra-config = { path = "../config", version = "0.1.0", features = ["fuzzing"] }
 debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
