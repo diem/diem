@@ -3097,7 +3097,6 @@ dependencies = [
  "simplelog 0.7.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "spec-lang 0.0.1",
  "stackless-bytecode-generator 0.1.0",
- "stdlib 0.1.0",
  "test-utils 0.1.0",
  "vm 0.1.0",
 ]
