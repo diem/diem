@@ -831,7 +831,6 @@ dependencies = [
  "libra-types 0.1.0",
  "libra-vm 0.1.0",
  "libra-workspace-hack 0.1.0",
- "libradb 0.1.0",
  "mirai-annotations 1.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "network 0.1.0",
  "num-derive 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
