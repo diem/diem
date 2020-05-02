@@ -247,16 +247,27 @@ impl ClientProxy {
     }
 
     /// Get balance from validator for the account specified.
-    pub fn get_balance(&mut self, space_delim_strings: &[&str]) -> Result<String> {
+    pub fn get_balances(&mut self, space_delim_strings: &[&str]) -> Result<Vec<String>> {
         ensure!(
             space_delim_strings.len() == 2,
-            "Invalid number of arguments for getting balance"
+            "Invalid number of arguments for getting balances"
         );
         let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
         self.get_account_resource_and_update(address).map(|res| {
-            let whole_num = res.balance.amount / 1_000_000;
-            let remainder = res.balance.amount % 1_000_000;
-            format!("{}.{:0>6}", whole_num.to_string(), remainder.to_string())
+            res.balances
+                .iter()
+                .map(|amt_view| {
+                    // TODO: Need to get these numbers from CurrencyInfoView for the specific currency
+                    let whole_num = amt_view.amount / 1_000_000;
+                    let remainder = amt_view.amount % 1_000_000;
+                    format!(
+                        "{}.{:0>6}{}",
+                        whole_num.to_string(),
+                        remainder.to_string(),
+                        amt_view.currency
+                    )
+                })
+                .collect()
         })
     }
 

@@ -40,7 +40,7 @@ impl AmountView {
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct AccountView {
-    pub balance: AmountView,
+    pub balances: Vec<AmountView>,
     pub sequence_number: u64,
     pub authentication_key: BytesView,
     pub sent_events_key: BytesView,
@@ -50,9 +50,12 @@ pub struct AccountView {
 }
 
 impl AccountView {
-    pub fn new(account: &AccountResource, balance: &BalanceResource) -> Self {
+    pub fn new(account: &AccountResource, balances: &[BalanceResource]) -> Self {
         Self {
-            balance: AmountView::new(balance.coin(), account.balance_currency_code()),
+            balances: balances
+                .iter()
+                .map(|balance| AmountView::new(balance.coin(), account.balance_currency_code()))
+                .collect(),
             sequence_number: account.sequence_number(),
             authentication_key: BytesView::from(account.authentication_key()),
             sent_events_key: BytesView::from(account.sent_events().key().as_bytes()),

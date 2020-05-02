@@ -5,7 +5,9 @@ use crate::{
     error::*,
 };
 use libra_crypto::ed25519::ED25519_PUBLIC_KEY_LENGTH;
-use libra_types::{account_state::AccountState, account_state_blob::AccountStateBlob};
+use libra_types::{
+    account_config, account_state::AccountState, account_state_blob::AccountStateBlob,
+};
 use std::{convert::TryFrom, slice};
 
 pub fn libra_LibraAccountResource_from_safe(
@@ -14,30 +16,37 @@ pub fn libra_LibraAccountResource_from_safe(
     clear_error();
     if let Ok(account_state) = AccountState::try_from(&blob) {
         if let Ok(Some(account_resource)) = account_state.get_account_resource() {
-            if let Ok(Some(balance_resource)) = account_state.get_balance_resource() {
-                let mut authentication_key = [0u8; ED25519_PUBLIC_KEY_LENGTH];
-                authentication_key.copy_from_slice(account_resource.authentication_key());
+            // TODO/XXX: Need to get all of the currencies held by this account here.
+            let lbr_currency_code =
+                account_config::from_currency_code_string(account_config::LBR_NAME).unwrap();
+            if let Ok(mut balance_resources) =
+                account_state.get_balance_resources(&[lbr_currency_code])
+            {
+                if let Some(balance_resource) = balance_resources.pop() {
+                    let mut authentication_key = [0u8; ED25519_PUBLIC_KEY_LENGTH];
+                    authentication_key.copy_from_slice(account_resource.authentication_key());
 
-                let sent_events = LibraEventHandle {
-                    count: account_resource.sent_events().count(),
-                    key: account_resource.sent_events().key().into(),
-                };
-                let received_events = LibraEventHandle {
-                    count: account_resource.received_events().count(),
-                    key: account_resource.received_events().key().into(),
-                };
+                    let sent_events = LibraEventHandle {
+                        count: account_resource.sent_events().count(),
+                        key: account_resource.sent_events().key().into(),
+                    };
+                    let received_events = LibraEventHandle {
+                        count: account_resource.received_events().count(),
+                        key: account_resource.received_events().key().into(),
+                    };
 
-                return Ok(LibraAccountResource {
-                    balance: balance_resource.coin(),
-                    sequence: account_resource.sequence_number(),
-                    delegated_key_rotation_capability: account_resource
-                        .delegated_key_rotation_capability(),
-                    delegated_withdrawal_capability: account_resource
-                        .delegated_withdrawal_capability(),
-                    sent_events,
-                    received_events,
-                    authentication_key,
-                });
+                    return Ok(LibraAccountResource {
+                        balance: balance_resource.coin(),
+                        sequence: account_resource.sequence_number(),
+                        delegated_key_rotation_capability: account_resource
+                            .delegated_key_rotation_capability(),
+                        delegated_withdrawal_capability: account_resource
+                            .delegated_withdrawal_capability(),
+                        sent_events,
+                        received_events,
+                        authentication_key,
+                    });
+                }
             }
         }
     }

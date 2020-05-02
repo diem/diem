@@ -10,7 +10,10 @@ use executor_utils::test_helpers::{
 use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey, Uniform};
 use libra_types::{
-    account_config::{association_address, discovery_set_address, lbr_type_tag},
+    account_config::{
+        association_address, discovery_set_address, from_currency_code_string, lbr_type_tag,
+        LBR_NAME,
+    },
     account_state::AccountState,
     account_state_blob::AccountStateWithProof,
     discovery_set::DISCOVERY_SET_CHANGE_EVENT_PATH,
@@ -929,7 +932,8 @@ where
 {
     let balance = if let Some(blob) = &account_state_with_proof.blob {
         AccountState::try_from(blob)?
-            .get_balance_resource()?
+            .get_balance_resources(&[from_currency_code_string(LBR_NAME).unwrap()])?
+            .last()
             .map(|b| b.coin())
             .unwrap_or(0)
     } else {

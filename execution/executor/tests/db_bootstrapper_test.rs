@@ -20,7 +20,9 @@ use libra_temppath::TempPath;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::{association_address, lbr_type_tag, BalanceResource},
+    account_config::{
+        association_address, from_currency_code_string, lbr_type_tag, BalanceResource, LBR_NAME,
+    },
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
@@ -176,8 +178,9 @@ fn get_balance(account: &AccountAddress, db: &DbReaderWriter) -> u64 {
         .unwrap();
     let account_state = AccountState::try_from(&account_state_blob).unwrap();
     account_state
-        .get_balance_resource()
+        .get_balance_resources(&[from_currency_code_string(LBR_NAME).unwrap()])
         .unwrap()
+        .last()
         .unwrap()
         .coin()
 }
