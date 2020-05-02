@@ -55,6 +55,7 @@ fun TestLifetime::lifetime_(cond: bool): (TestLifetime::T, TestLifetime::S) {
     $t18 := move(b_ref)
     $t19 := borrow_field<TestLifetime::S>.y($t18)
     $t5 := $t19
+    goto L3
     L3:
     $t20 := move($t5)
     x_ref := $t20
@@ -71,6 +72,7 @@ fun TestLifetime::lifetime_(cond: bool): (TestLifetime::T, TestLifetime::S) {
     $t24 := 0
     $t25 := move(x_ref)
     write_ref($t25, $t24)
+    goto L7
     L7:
     $t26 := move(a)
     $t27 := move(b)
@@ -223,6 +225,7 @@ fun TestLifetime::lifetime_(cond: bool): (TestLifetime::T, TestLifetime::S) {
     $t18 := move(b_ref)
     $t19 := borrow_field<TestLifetime::S>.y($t18)
     $t5 := $t19
+    goto L3
     L3:
     $t20 := move($t5)
     x_ref := $t20
@@ -241,6 +244,7 @@ fun TestLifetime::lifetime_(cond: bool): (TestLifetime::T, TestLifetime::S) {
     $t25 := move(x_ref)
     // mut ends: $t15, $t18, $t25
     write_ref($t25, $t24)
+    goto L7
     L7:
     $t26 := move(a)
     $t27 := move(b)

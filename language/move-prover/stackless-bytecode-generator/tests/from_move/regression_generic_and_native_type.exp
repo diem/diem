@@ -12,6 +12,7 @@ pub fun Vector::append<$tv0>(lhs: &mut vector<#0>, other: vector<#0>) {
     var $t10: vector<#0>
     $t2 := borrow_local(other)
     Vector::reverse<#0>($t2)
+    goto L3
     L3:
     $t3 := borrow_local(other)
     $t4 := Vector::is_empty<#0>($t3)
@@ -70,6 +71,7 @@ pub fun Vector::contains<$tv0>(v: &vector<#0>, e: &#0): bool {
     $t5 := copy(v)
     $t6 := Vector::length<#0>($t5)
     len := $t6
+    goto L6
     L6:
     $t7 := copy(i)
     $t8 := copy(len)
@@ -190,6 +192,7 @@ pub fun Vector::remove<$tv0>(v: &mut vector<#0>, i: u64): #0 {
     $t14 := 1
     $t15 := -($t13, $t14)
     len := $t15
+    goto L6
     L6:
     $t16 := copy(i)
     $t17 := copy(len)
@@ -267,6 +270,7 @@ pub fun Vector::reverse<$tv0>(v: &mut vector<#0>) {
     $t13 := 1
     $t14 := -($t12, $t13)
     back_index := $t14
+    goto L6
     L6:
     $t15 := copy(front_index)
     $t16 := copy(back_index)

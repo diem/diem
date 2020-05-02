@@ -46,6 +46,7 @@ fun TestLiveVars::test2(b: bool): u64 {
     destroy($t10)
     $t11 := borrow_local(r2)
     r_ref := $t11
+    goto L2
     L2:
     $t12 := move(r_ref)
     $t13 := TestLiveVars::test1($t12)
@@ -82,6 +83,7 @@ fun TestLiveVars::test3(n: u64, r_ref: &TestLiveVars::R): u64 {
     $t6 := 4
     $t7 := pack TestLiveVars::R($t6)
     r2 := $t7
+    goto L7
     L7:
     $t8 := 0
     $t9 := copy(n)
@@ -107,6 +109,7 @@ fun TestLiveVars::test3(n: u64, r_ref: &TestLiveVars::R): u64 {
     L5:
     $t18 := borrow_local(r2)
     r_ref := $t18
+    goto L6
     L6:
     $t19 := copy(n)
     $t20 := 1
@@ -191,6 +194,8 @@ fun TestLiveVars::test2(b: bool): u64 {
     // live vars: $t11
     r_ref := $t11
     // live vars: r_ref
+    goto L2
+    // live vars: r_ref
     L2:
     // live vars: r_ref
     $t12 := move(r_ref)
@@ -236,6 +241,8 @@ fun TestLiveVars::test3(n: u64, r_ref: &TestLiveVars::R): u64 {
     $t7 := pack TestLiveVars::R($t6)
     // live vars: n, r_ref, r1, $t7
     r2 := $t7
+    // live vars: n, r_ref, r1, r2
+    goto L7
     // live vars: n, r_ref, r1, r2
     L7:
     // live vars: n, r_ref, r1, r2
@@ -286,6 +293,8 @@ fun TestLiveVars::test3(n: u64, r_ref: &TestLiveVars::R): u64 {
     $t18 := borrow_local(r2)
     // live vars: n, r1, r2, $t18
     r_ref := $t18
+    // live vars: n, r_ref, r1, r2
+    goto L6
     // live vars: n, r_ref, r1, r2
     L6:
     // live vars: n, r_ref, r1, r2
