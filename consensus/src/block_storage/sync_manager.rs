@@ -73,23 +73,48 @@ impl<T: Payload> BlockStore<T> {
     /// Fetches dependencies for given sync_info.quorum_cert
     /// If gap is large, performs state sync using process_highest_commit_cert
     /// Inserts sync_info.quorum_cert into block store as the last step
-    pub async fn sync_to(
+    pub async fn add_certs(
         &self,
         sync_info: &SyncInfo,
         mut retriever: BlockRetriever<T>,
     ) -> anyhow::Result<()> {
-        self.process_highest_commit_cert(sync_info.highest_commit_cert().clone(), &mut retriever)
+        self.sync_to_highest_commit_cert(sync_info.highest_commit_cert().clone(), &mut retriever)
             .await?;
 
-        match self.need_fetch_for_quorum_cert(sync_info.highest_quorum_cert()) {
-            NeedFetchResult::NeedFetch => {
-                self.fetch_quorum_cert(sync_info.highest_quorum_cert().clone(), retriever)
-                    .await?
-            }
-            NeedFetchResult::QCBlockExist => {
-                self.insert_single_quorum_cert(sync_info.highest_quorum_cert().clone())?
-            }
+        self.insert_quorum_cert(sync_info.highest_commit_cert(), &mut retriever)
+            .await?;
+
+        self.insert_quorum_cert(sync_info.highest_quorum_cert(), &mut retriever)
+            .await?;
+
+        if let Some(tc) = sync_info.highest_timeout_certificate() {
+            self.insert_timeout_certificate(Arc::new(tc.clone()))?;
+        }
+        Ok(())
+    }
+
+    pub async fn insert_quorum_cert(
+        &self,
+        qc: &QuorumCert,
+        retriever: &mut BlockRetriever<T>,
+    ) -> anyhow::Result<()> {
+        match self.need_fetch_for_quorum_cert(&qc) {
+            NeedFetchResult::NeedFetch => self.fetch_quorum_cert(qc.clone(), retriever).await?,
+            NeedFetchResult::QCBlockExist => self.insert_single_quorum_cert(qc.clone())?,
             _ => (),
+        }
+        if self.root().round() < qc.commit_info().round() {
+            let finality_proof = qc.ledger_info();
+            self.commit(finality_proof.clone()).await?;
+            if qc.ends_epoch() {
+                retriever
+                    .network
+                    .broadcast_epoch_change(EpochChangeProof::new(
+                        vec![finality_proof.clone()],
+                        /* more = */ false,
+                    ))
+                    .await;
+            }
         }
         Ok(())
     }
@@ -101,7 +126,7 @@ impl<T: Payload> BlockStore<T> {
     async fn fetch_quorum_cert(
         &self,
         qc: QuorumCert,
-        mut retriever: BlockRetriever<T>,
+        retriever: &mut BlockRetriever<T>,
     ) -> anyhow::Result<()> {
         let mut pending = vec![];
         let mut retrieve_qc = qc.clone();
@@ -132,7 +157,7 @@ impl<T: Payload> BlockStore<T> {
     /// 2. We persist the 3-chain to storage before start sync to ensure we could restart if we
     /// crash in the middle of the sync.
     /// 3. We prune the old tree and replace with a new tree built with the 3-chain.
-    async fn process_highest_commit_cert(
+    async fn sync_to_highest_commit_cert(
         &self,
         highest_commit_cert: QuorumCert,
         retriever: &mut BlockRetriever<T>,

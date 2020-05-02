@@ -63,18 +63,22 @@ impl SyncInfo {
         self.highest_timeout_cert.as_ref()
     }
 
-    pub fn hqc_round(&self) -> Round {
+    pub fn highest_certified_round(&self) -> Round {
         self.highest_quorum_cert.certified_block().round()
     }
 
-    pub fn htc_round(&self) -> Round {
+    pub fn highest_timeout_round(&self) -> Round {
         self.highest_timeout_certificate()
             .map_or(0, |tc| tc.round())
     }
 
+    pub fn highest_commit_round(&self) -> Round {
+        self.highest_commit_cert().commit_info().round()
+    }
+
     /// The highest round the SyncInfo carries.
     pub fn highest_round(&self) -> Round {
-        std::cmp::max(self.hqc_round(), self.htc_round())
+        std::cmp::max(self.highest_certified_round(), self.highest_timeout_round())
     }
 
     pub fn verify(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {
@@ -111,5 +115,10 @@ impl SyncInfo {
 
     pub fn epoch(&self) -> u64 {
         self.highest_quorum_cert.certified_block().epoch()
+    }
+
+    pub fn is_stale(&self, other: &SyncInfo) -> bool {
+        self.highest_round() < other.highest_round()
+            || self.highest_commit_round() < other.highest_commit_round()
     }
 }

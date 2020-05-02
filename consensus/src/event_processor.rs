@@ -11,7 +11,6 @@ use consensus_types::{
     block::Block,
     block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus},
     common::{Author, Payload, Round},
-    executed_block::ExecutedBlock,
     proposal_msg::ProposalMsg,
     quorum_cert::QuorumCert,
     sync_info::SyncInfo,
@@ -24,10 +23,7 @@ use debug_interface::prelude::*;
 use libra_crypto::hash::TransactionAccumulatorHasher;
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
-use libra_types::{
-    epoch_change::EpochChangeProof, epoch_info::EpochInfo, ledger_info::LedgerInfoWithSignatures,
-    transaction::TransactionStatus, validator_verifier::ValidatorVerifier,
-};
+use libra_types::{epoch_info::EpochInfo, validator_verifier::ValidatorVerifier};
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;
@@ -358,34 +354,6 @@ impl<T: Payload> EventProcessor<T> {
             .process_proposal(proposal_msg.take_proposal())
     }
 
-    /// In case some peer's round or HQC is stale, send a SyncInfo message to that peer.
-    fn help_remote_if_stale(&self, peer: Author, remote_round: Round, remote_hqc_round: Round) {
-        if self.proposal_generator.author() == peer {
-            return;
-        }
-        // pacemaker's round is sync_info.highest_round() + 1
-        if remote_round + 1 < self.pacemaker.current_round()
-            || remote_hqc_round
-                < self
-                    .block_store
-                    .highest_quorum_cert()
-                    .certified_block()
-                    .round()
-        {
-            let sync_info = self.gen_sync_info();
-
-            debug!(
-                "Peer {} is at round {} with hqc round {}, sending it {}",
-                peer.short_str(),
-                remote_round,
-                remote_hqc_round,
-                sync_info,
-            );
-            counters::SYNC_INFO_MSGS_SENT_COUNT.inc();
-            self.network.send_sync_info(sync_info, peer);
-        }
-    }
-
     /// The function makes sure that it brings the missing dependencies from the QC and LedgerInfo
     /// of the given sync info and update the pacemaker with the certificates if succeed.
     /// Returns Error in case sync mgr failed to bring the missing dependencies.
@@ -396,63 +364,48 @@ impl<T: Payload> EventProcessor<T> {
         author: Author,
         help_remote: bool,
     ) -> anyhow::Result<()> {
-        if help_remote {
-            self.help_remote_if_stale(author, sync_info.highest_round(), sync_info.hqc_round());
-        }
-
-        let current_hqc_round = self
-            .block_store
-            .highest_quorum_cert()
-            .certified_block()
-            .round();
-
-        let current_htc_round = self
-            .block_store
-            .highest_timeout_cert()
-            .map_or(0, |tc| tc.round());
-
-        if current_hqc_round >= sync_info.hqc_round()
-            && current_htc_round >= sync_info.htc_round()
-            && self.block_store.root().round()
-                >= sync_info.highest_commit_cert().commit_info().round()
-        {
+        let local_sync_info = self.gen_sync_info();
+        if sync_info.is_stale(&local_sync_info) {
+            if help_remote {
+                counters::SYNC_INFO_MSGS_SENT_COUNT.inc();
+                debug!(
+                    "Peer {} has stale state {}, send it back {}",
+                    author.short_str(),
+                    sync_info,
+                    local_sync_info,
+                );
+                self.network.send_sync_info(local_sync_info, author);
+            }
             return Ok(());
         }
-
-        // Some information in SyncInfo is ahead of what we have locally.
-        // First verify the SyncInfo (didn't verify it in the yet).
-        sync_info.verify(&self.epoch_info().verifier).map_err(|e| {
-            security_log(SecurityEvent::InvalidSyncInfoMsg)
-                .error(&e)
-                .data(&sync_info)
-                .log();
-            e
-        })?;
-
-        debug!(
-            "Starting sync: current_hqc_round = {}, sync_info_hqc_round = {}",
-            current_hqc_round,
-            sync_info.hqc_round(),
-        );
-        self.block_store
-            .sync_to(&sync_info, self.create_block_retriever(author))
-            .await
-            .map_err(|e| {
-                warn!(
-                    "Fail to sync up to HQC @ round {}: {}",
-                    sync_info.hqc_round(),
-                    e
-                );
+        if local_sync_info.is_stale(&sync_info) {
+            debug!(
+                "Local state {} is stale than peer {} remote state {}",
+                local_sync_info,
+                author.short_str(),
+                sync_info
+            );
+            // Some information in SyncInfo is ahead of what we have locally.
+            // First verify the SyncInfo (didn't verify it in the yet).
+            sync_info.verify(&self.epoch_info().verifier).map_err(|e| {
+                security_log(SecurityEvent::InvalidSyncInfoMsg)
+                    .error(&e)
+                    .data(&sync_info)
+                    .log();
                 e
             })?;
-        debug!("Caught up to HQC at round {}", sync_info.hqc_round());
+            self.block_store
+                .add_certs(&sync_info, self.create_block_retriever(author))
+                .await
+                .map_err(|e| {
+                    warn!("Fail to sync up to {}: {:?}", sync_info, e);
+                    e
+                })?;
 
-        // Update the block store and potentially start a new round.
-        self.process_certificates(
-            sync_info.highest_quorum_cert(),
-            sync_info.highest_timeout_certificate(),
-        )
-        .await
+            // Update safety rules and pacemaker and potentially start a new round.
+            self.process_certificates().await?;
+        }
+        Ok(())
     }
 
     /// Process the SyncInfo sent by peers to catch up to latest state.
@@ -540,37 +493,21 @@ impl<T: Payload> EventProcessor<T> {
     }
 
     /// This function is called only after all the dependencies of the given QC have been retrieved.
-    async fn process_certificates(
-        &mut self,
-        qc: &QuorumCert,
-        tc: Option<&TimeoutCertificate>,
-    ) -> anyhow::Result<()> {
-        self.safety_rules.update(qc)?;
+    async fn process_certificates(&mut self) -> anyhow::Result<()> {
+        let sync_info = self.gen_sync_info();
+        self.safety_rules.update(sync_info.highest_quorum_cert())?;
         let consensus_state = self.safety_rules.consensus_state()?;
         counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_round() as i64);
 
-        let mut highest_committed_proposal_round = None;
-        if let Some(block) = self.block_store.get_block(qc.commit_info().id()) {
-            if block.round() > self.block_store.root().round() {
-                // We don't want to use NIL commits for pacemaker round interval calculations.
-                if !block.is_nil_block() {
-                    highest_committed_proposal_round = Some(block.round());
-                }
-                let finality_proof = qc.ledger_info().clone();
-                self.process_commit(finality_proof).await;
-            }
-        }
-        let mut tc_round = None;
-        if let Some(timeout_cert) = tc {
-            tc_round = Some(timeout_cert.round());
-            self.block_store
-                .insert_timeout_certificate(Arc::new(timeout_cert.clone()))
-                .context("Failed to process TC")?;
-        }
+        let root = self.block_store.root();
         if let Some(new_round_event) = self.pacemaker.process_certificates(
-            Some(qc.certified_block().round()),
-            tc_round,
-            highest_committed_proposal_round,
+            Some(sync_info.highest_quorum_cert().certified_block().round()),
+            sync_info.highest_timeout_certificate().map(|tc| tc.round()),
+            if root.is_nil_block() {
+                None
+            } else {
+                Some(root.round())
+            },
         ) {
             self.process_new_round_event(new_round_event).await;
         }
@@ -703,6 +640,13 @@ impl<T: Payload> EventProcessor<T> {
             .block_store
             .execute_and_insert_block(proposed_block)
             .context("Failed to execute_and_insert the block")?;
+        // notify mempool about failed txn
+        if let Some(payload) = executed_block.payload() {
+            let compute_result = executed_block.compute_result();
+            if let Err(e) = self.txn_manager.commit_txns(payload, &compute_result).await {
+                error!("Failed to notify mempool of rejected txns: {:?}", e);
+            }
+        }
         let block = executed_block.block();
 
         // Checking pacemaker round again, because multiple proposed_block can now race
@@ -835,19 +779,11 @@ impl<T: Payload> EventProcessor<T> {
         qc: Arc<QuorumCert>,
         preferred_peer: Author,
     ) -> anyhow::Result<()> {
-        // Process local highest commit cert should be no-op, this will sync us to the QC
         self.block_store
-            .sync_to(
-                &SyncInfo::new(
-                    qc.as_ref().clone(),
-                    self.block_store.highest_commit_cert().as_ref().clone(),
-                    None,
-                ),
-                self.create_block_retriever(preferred_peer),
-            )
+            .insert_quorum_cert(&qc, &mut self.create_block_retriever(preferred_peer))
             .await
             .context("Failed to process a newly aggregated QC")?;
-        self.process_certificates(qc.as_ref(), None).await
+        self.process_certificates().await
     }
 
     async fn new_tc_aggregated(&mut self, tc: Arc<TimeoutCertificate>) -> anyhow::Result<()> {
@@ -856,75 +792,7 @@ impl<T: Payload> EventProcessor<T> {
             .context("Failed to process a newly aggregated TC")?;
 
         // Process local highest qc should be no-op
-        self.process_certificates(
-            self.block_store.highest_quorum_cert().as_ref(),
-            Some(tc.as_ref()),
-        )
-        .await
-    }
-
-    /// Upon (potentially) new commit, commit the blocks via block store.
-    async fn process_commit(&mut self, finality_proof: LedgerInfoWithSignatures) {
-        let blocks_to_commit = match self.block_store.commit(finality_proof.clone()).await {
-            Ok(blocks) => blocks,
-            Err(e) => {
-                error!("{:?}", e);
-                return;
-            }
-        };
-        for block in blocks_to_commit.iter() {
-            end_trace!("commit", {"block", block.id()});
-        }
-        Self::update_counters_for_committed_blocks(blocks_to_commit.clone());
-
-        // notify mempool of rejected txns via txn_manager
-        for committed in blocks_to_commit {
-            if let Some(payload) = committed.payload() {
-                let compute_result = committed.compute_result();
-                if let Err(e) = self.txn_manager.commit_txns(payload, &compute_result).await {
-                    error!("Failed to notify mempool of rejected txns: {:?}", e);
-                }
-            }
-        }
-
-        if finality_proof.ledger_info().next_epoch_info().is_some() {
-            self.network
-                .broadcast_epoch_change(EpochChangeProof::new(
-                    vec![finality_proof],
-                    /* more = */ false,
-                ))
-                .await
-        }
-    }
-
-    fn update_counters_for_committed_blocks(blocks_to_commit: Vec<Arc<ExecutedBlock<T>>>) {
-        for block in blocks_to_commit {
-            if let Some(time_to_commit) =
-                duration_since_epoch().checked_sub(Duration::from_micros(block.timestamp_usecs()))
-            {
-                counters::CREATION_TO_COMMIT_S.observe_duration(time_to_commit);
-            }
-            counters::COMMITTED_BLOCKS_COUNT.inc();
-            let txn_status = block.compute_result().compute_status();
-            counters::NUM_TXNS_PER_BLOCK.observe(txn_status.len() as f64);
-
-            for status in txn_status.iter() {
-                match status {
-                    TransactionStatus::Keep(_) => {
-                        counters::COMMITTED_TXNS_COUNT
-                            .with_label_values(&["success"])
-                            .inc();
-                    }
-                    TransactionStatus::Discard(_) => {
-                        counters::COMMITTED_TXNS_COUNT
-                            .with_label_values(&["failed"])
-                            .inc();
-                    }
-                    // TODO(zekunli): add counter
-                    TransactionStatus::Retry => (),
-                }
-            }
-        }
+        self.process_certificates().await
     }
 
     /// Retrieve a n chained blocks from the block store starting from

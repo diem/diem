@@ -40,7 +40,7 @@ use futures::{
     stream::select,
     Stream, StreamExt, TryStreamExt,
 };
-use libra_crypto::HashValue;
+use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
     epoch_info::EpochInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -528,15 +528,13 @@ fn response_on_block_retrieval() {
         .unwrap();
 
     let genesis_qc = certificate_for_genesis();
-    let block = Block::new_proposal(vec![1], 1, 1, genesis_qc, &node.signer);
+    let block = Block::new_proposal(vec![1], 1, 1, genesis_qc.clone(), &node.signer);
     let block_id = block.id();
+    let proposal =
+        ProposalMsg::<TestPayload>::new(block, SyncInfo::new(genesis_qc.clone(), genesis_qc, None));
 
     timed_block_on(&mut runtime, async {
-        node.event_processor
-            .process_certificates(block.quorum_cert(), None)
-            .await
-            .expect("Failed to process certificates");
-        node.event_processor.process_proposed_block(block).await;
+        node.event_processor.process_proposal_msg(proposal).await;
 
         // first verify that we can retrieve the block if it's in the tree
         let (tx1, rx1) = oneshot::channel();
@@ -616,28 +614,35 @@ fn recover_on_restart() {
     let mut node = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1)
         .pop()
         .unwrap();
-    let mut inserter = TreeInserter::new_with_store(node.signer.clone(), node.block_store.clone());
+    let inserter = TreeInserter::new_with_store(node.signer.clone(), node.block_store.clone());
 
-    let genesis = node.block_store.root();
-    let mut proposals = Vec::new();
+    let genesis_qc = certificate_for_genesis();
+    let mut data = Vec::new();
     let num_proposals = 100;
     // insert a few successful proposals
-    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
-    proposals.push(a1);
-    for i in 2..=num_proposals {
-        let parent = proposals.last().unwrap();
-        let proposal = inserter.insert_block(&parent, i, None);
-        proposals.push(proposal);
+    for i in 1..=num_proposals {
+        let proposal = inserter.create_block_with_qc(genesis_qc.clone(), i, i, vec![]);
+        let timeout = Timeout::new(1, i - 1);
+        let mut tc = TimeoutCertificate::new(timeout.clone());
+        tc.add_signature(
+            inserter.signer().author(),
+            inserter.signer().sign_message(timeout.hash()),
+        );
+        data.push((proposal, tc));
     }
 
     timed_block_on(&mut runtime, async {
-        for proposal in &proposals {
+        for (proposal, tc) in &data {
+            let proposal_msg = ProposalMsg::<TestPayload>::new(
+                proposal.clone(),
+                SyncInfo::new(
+                    proposal.quorum_cert().clone(),
+                    genesis_qc.clone(),
+                    Some(tc.clone()),
+                ),
+            );
             node.event_processor
-                .process_certificates(proposal.quorum_cert(), None)
-                .await
-                .expect("Failed to process certificates");
-            node.event_processor
-                .process_proposed_block(proposal.block().clone())
+                .process_proposal_msg(proposal_msg)
                 .await;
         }
     });
@@ -648,9 +653,9 @@ fn recover_on_restart() {
     let waypoint = consensus_state.waypoint();
     assert_eq!(
         consensus_state,
-        ConsensusState::new(1, num_proposals, num_proposals - 2, waypoint)
+        ConsensusState::new(1, num_proposals, 0, waypoint)
     );
-    for block in proposals {
+    for (block, _) in data {
         assert_eq!(node.block_store.block_exists(block.id()), true);
     }
 }
