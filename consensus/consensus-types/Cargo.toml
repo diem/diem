@@ -8,7 +8,6 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-hex = "0.4.2"
 mirai-annotations = { version = "1.7.0", default-features = false }
 proptest = { version = "0.9.6", optional = true }
 serde = { version = "1.0.106", default-features = false }
