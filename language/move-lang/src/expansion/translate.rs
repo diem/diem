@@ -124,7 +124,6 @@ pub fn program(prog: P::Program, sender: Option<Address>) -> (E::Program, Errors
     let mut module_map = UniqueMap::new();
     let mut main_opt = None;
     // TODO figure out how to use lib definitions
-    // Mark the functions as native?
     // Ignore any main?
     for def in prog.lib_definitions {
         match def {
@@ -242,8 +241,8 @@ fn module(
         loc,
         uses,
         name,
-        structs: pstructs,
-        functions: pfunctions,
+        structs: mut pstructs,
+        functions: mut pfunctions,
         specs: pspecs,
     } = mdef;
     let name_loc = name.loc();
@@ -262,11 +261,19 @@ fn module(
     context.set_and_shadow_aliases(self_aliases);
     let alias_map = aliases(context, uses);
     context.set_and_shadow_aliases(alias_map.clone());
+    if !is_source_module {
+        for pstruct in pstructs.iter_mut() {
+            pstruct.fields = P::StructFields::Native(pstruct.loc)
+        }
+        for pfunction in pfunctions.iter_mut() {
+            pfunction.body.value = P::FunctionBody_::Native
+        }
+    }
     let structs = structs(context, &name, pstructs);
     let functions = functions(context, &name, pfunctions);
     let specs = specs(context, pspecs);
     let used_aliases = context.clear_aliases();
-    let (uses, unused_aliases) = check_aliases(context, used_aliases, alias_map);
+    let (uses, unused_aliases) = check_aliases(context, is_source_module, used_aliases, alias_map);
     let is_source_module = is_source_module && !fake_natives::is_fake_native(&current_module);
     let def = E::ModuleDefinition {
         loc,
@@ -326,7 +333,12 @@ fn main(
     }
     let especs = specs(context, pspecs);
     let used_aliases = context.clear_aliases();
-    let (_uses, unused_aliases) = check_aliases(context, used_aliases, alias_map);
+    let (_uses, unused_aliases) = check_aliases(
+        context,
+        /* not a dependency */ true,
+        used_aliases,
+        alias_map,
+    );
     match main_opt {
         None => *main_opt = Some((unused_aliases, addr, fname, function, especs)),
         Some((_, _, old_name, _, _)) => context.error(vec![
@@ -371,13 +383,14 @@ fn aliases(context: &mut Context, uses: Vec<(ModuleIdent, Option<ModuleName>)>) 
 
 fn check_aliases(
     context: &mut Context,
+    is_source_module: bool,
     used_aliases: BTreeSet<Name>,
     declared_aliases: AliasMap,
 ) -> (BTreeMap<ModuleIdent, Loc>, Vec<ModuleIdent>) {
     let mut uses = BTreeMap::new();
     let mut unused = Vec::new();
     for (alias, mident) in declared_aliases {
-        if used_aliases.contains(&alias) {
+        if !is_source_module || used_aliases.contains(&alias) {
             uses.insert(mident, alias.loc);
         } else {
             unused.push(mident);

@@ -24,7 +24,7 @@ pub fn function_body_(
 ) {
     let mut seen = Seen::new();
     match b_ {
-        T::FunctionBody_::Native => (),
+        T::FunctionBody_::Native => return,
         T::FunctionBody_::Defined(es) => sequence(context, annotated_acquires, &mut seen, es),
     }
 
