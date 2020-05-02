@@ -18,9 +18,6 @@ use schema::{BLOCK_CF_NAME, QC_CF_NAME, SINGLE_ENTRY_CF_NAME};
 use schemadb::{ReadOptions, SchemaBatch, DB, DEFAULT_CF_NAME};
 use std::{collections::HashMap, iter::Iterator, path::Path, time::Instant};
 
-type HighestTimeoutCertificate = Vec<u8>;
-type VoteMsgData = Vec<u8>;
-
 pub struct ConsensusDB {
     db: DB,
 }
@@ -51,12 +48,12 @@ impl ConsensusDB {
     pub fn get_data<T: Payload>(
         &self,
     ) -> Result<(
-        Option<VoteMsgData>,
-        Option<HighestTimeoutCertificate>,
+        Option<Vec<u8>>,
+        Option<Vec<u8>>,
         Vec<Block<T>>,
         Vec<QuorumCert>,
     )> {
-        let last_vote_msg_data = self.get_last_vote_msg_data()?;
+        let last_vote = self.get_last_vote()?;
         let highest_timeout_certificate = self.get_highest_timeout_certificate()?;
         let consensus_blocks = self
             .get_blocks()?
@@ -69,7 +66,7 @@ impl ConsensusDB {
             .map(|(_block_hash, qc)| qc)
             .collect::<Vec<_>>();
         Ok((
-            last_vote_msg_data,
+            last_vote,
             highest_timeout_certificate,
             consensus_blocks,
             consensus_qcs,
@@ -78,7 +75,7 @@ impl ConsensusDB {
 
     pub fn save_highest_timeout_certificate(
         &self,
-        highest_timeout_certificate: HighestTimeoutCertificate,
+        highest_timeout_certificate: Vec<u8>,
     ) -> Result<()> {
         let mut batch = SchemaBatch::new();
         batch.put::<SingleEntrySchema>(
@@ -88,7 +85,7 @@ impl ConsensusDB {
         self.commit(batch)
     }
 
-    pub fn save_state(&self, last_vote: VoteMsgData) -> Result<()> {
+    pub fn save_vote(&self, last_vote: Vec<u8>) -> Result<()> {
         let mut batch = SchemaBatch::new();
         batch.put::<SingleEntrySchema>(&SingleEntryKey::LastVoteMsg, &last_vote)?;
         self.commit(batch)
@@ -155,8 +152,8 @@ impl ConsensusDB {
         self.commit(batch)
     }
 
-    /// Get latest vote message data (if available)
-    fn get_last_vote_msg_data(&self) -> Result<Option<Vec<u8>>> {
+    /// Get serialized latest vote (if available)
+    fn get_last_vote(&self) -> Result<Option<Vec<u8>>> {
         self.db
             .get::<SingleEntrySchema>(&SingleEntryKey::LastVoteMsg)
     }

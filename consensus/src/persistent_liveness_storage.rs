@@ -32,7 +32,7 @@ pub trait PersistentLivenessStorage<T>: Send + Sync {
     fn prune_tree(&self, block_ids: Vec<HashValue>) -> Result<()>;
 
     /// Persist consensus' state
-    fn save_state(&self, vote: &Vote) -> Result<()>;
+    fn save_vote(&self, vote: &Vote) -> Result<()>;
 
     /// Construct data that can be recovered from ledger
     fn recover_from_ledger(&self) -> LedgerRecoveryData;
@@ -303,8 +303,8 @@ impl<T: Payload> PersistentLivenessStorage<T> for StorageWriteProxy {
         Ok(())
     }
 
-    fn save_state(&self, vote: &Vote) -> Result<()> {
-        self.db.save_state(lcs::to_bytes(vote)?)
+    fn save_vote(&self, vote: &Vote) -> Result<()> {
+        self.db.save_vote(lcs::to_bytes(vote)?)
     }
 
     fn recover_from_ledger(&self) -> LedgerRecoveryData {

@@ -194,14 +194,14 @@ pub struct EventProcessor<T> {
     storage: Arc<dyn PersistentLivenessStorage<T>>,
     time_service: Arc<dyn TimeService>,
     // Cache of the last sent vote message.
-    last_vote_sent: Option<(Vote, Round)>,
+    last_vote_sent: Option<Vote>,
 }
 
 impl<T: Payload> EventProcessor<T> {
     pub fn new(
         epoch_info: EpochInfo,
         block_store: Arc<BlockStore<T>>,
-        last_vote: Option<Vote>,
+        last_vote_sent: Option<Vote>,
         pacemaker: Pacemaker,
         proposer_election: Box<dyn ProposerElection<T> + Send + Sync>,
         proposal_generator: ProposalGenerator<T>,
@@ -213,10 +213,6 @@ impl<T: Payload> EventProcessor<T> {
     ) -> Self {
         counters::BLOCK_RETRIEVAL_COUNT.get();
         counters::STATE_SYNC_COUNT.get();
-        let last_vote_sent = last_vote.map(|v| {
-            let round = v.vote_data().proposed().round();
-            (v, round)
-        });
         let pending_votes = PendingVotes::new();
 
         Self {
@@ -482,10 +478,19 @@ impl<T: Payload> EventProcessor<T> {
             return;
         }
 
-        let use_last_vote = if let Some((_, last_voted_round)) = self.last_vote_sent {
-            last_voted_round == round
-        } else {
-            false
+        let (use_last_vote, mut timeout_vote) = match self.last_vote_sent.take() {
+            Some(vote) if vote.vote_data().proposed().round() == round => (true, vote),
+            _ => {
+                // Didn't vote in this round yet, generate a backup vote
+                let backup_vote_res = self.gen_backup_vote(round).await;
+                match backup_vote_res {
+                    Ok(backup_vote) => (false, backup_vote),
+                    Err(e) => {
+                        error!("Failed to generate a backup vote: {:?}", e);
+                        return;
+                    }
+                }
+            }
         };
 
         warn!(
@@ -494,21 +499,6 @@ impl<T: Payload> EventProcessor<T> {
             if use_last_vote { "already executed and voted at this round" } else { "will try to generate a backup vote" },
             self.proposer_election.get_valid_proposers(round).iter().map(|p| p.short_str()).collect::<Vec<String>>(),
         );
-
-        let mut timeout_vote = match self.last_vote_sent.as_ref() {
-            Some((vote, vote_round)) if (*vote_round == round) => vote.clone(),
-            _ => {
-                // Didn't vote in this round yet, generate a backup vote
-                let backup_vote_res = self.gen_backup_vote(round).await;
-                match backup_vote_res {
-                    Ok(backup_vote) => backup_vote,
-                    Err(e) => {
-                        error!("Failed to generate a backup vote: {:?}", e);
-                        return;
-                    }
-                }
-            }
-        };
 
         if !timeout_vote.is_timeout() {
             let timeout = timeout_vote.timeout();
@@ -522,6 +512,7 @@ impl<T: Payload> EventProcessor<T> {
             }
         }
 
+        self.last_vote_sent.replace(timeout_vote.clone());
         let timeout_vote_msg = VoteMsg::new(timeout_vote, self.gen_sync_info());
         self.network.broadcast_vote(timeout_vote_msg).await
     }
@@ -615,6 +606,7 @@ impl<T: Payload> EventProcessor<T> {
             .get_valid_proposers(proposal_round + 1);
         debug!("{}Voted: {} {}", Fg(Green), Fg(Reset), vote);
 
+        self.last_vote_sent.replace(vote.clone());
         let vote_msg = VoteMsg::new(vote, self.gen_sync_info());
         self.network.send_vote(vote_msg, recipients).await;
     }
@@ -751,11 +743,10 @@ impl<T: Payload> EventProcessor<T> {
 
         let consensus_state = self.safety_rules.consensus_state()?;
         counters::LAST_VOTE_ROUND.set(consensus_state.last_voted_round() as i64);
-
         self.storage
-            .save_state(&vote)
-            .context("Fail to persist consensus state")?;
-        self.last_vote_sent.replace((vote.clone(), block.round()));
+            .save_vote(&vote)
+            .context("Fail to persist last vote")?;
+
         Ok(vote)
     }
 

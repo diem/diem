@@ -214,7 +214,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for MockStorage<T> {
         Ok(())
     }
 
-    fn save_state(&self, last_vote: &Vote) -> Result<()> {
+    fn save_vote(&self, last_vote: &Vote) -> Result<()> {
         self.shared_storage
             .last_vote
             .lock()
@@ -293,7 +293,7 @@ impl<T: Payload> PersistentLivenessStorage<T> for EmptyStorage<T> {
         Ok(())
     }
 
-    fn save_state(&self, _: &Vote) -> Result<()> {
+    fn save_vote(&self, _: &Vote) -> Result<()> {
         Ok(())
     }
 
