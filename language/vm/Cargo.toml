@@ -12,15 +12,11 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 byteorder = "1.3.2"
-hex = "0.4.2"
 once_cell = "1.3.1"
 mirai-annotations = "1.7.0"
 proptest = { version = "0.9.6", optional = true }
 proptest-derive = { version = "0.1.2", optional = true }
 ref-cast = "1.0"
-serde = { version = "1", features = ["derive"] }
-
-lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0", optional = true }
 libra-types = { path = "../../types", version = "0.1.0" }
