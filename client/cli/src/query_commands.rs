@@ -41,16 +41,18 @@ impl Command for QueryCommandGetBalance {
         "<account_ref_id>|<account_address>"
     }
     fn get_description(&self) -> &'static str {
-        "Get the current balance of an account"
+        "Get the current balances of an account"
     }
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
         if params.len() != 2 {
             println!("Invalid number of arguments for balance query");
             return;
         }
-        match client.get_balance(&params) {
-            Ok(balance) => println!("Balance is: {}", balance),
-            Err(e) => report_error("Failed to get balance", e),
+        match client.get_balances(&params) {
+            Ok(balances) => balances
+                .iter()
+                .for_each(|balance| println!("Balance is: {}", balance)),
+            Err(e) => report_error("Failed to get balances", e),
         }
     }
 }

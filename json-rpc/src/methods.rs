@@ -16,7 +16,7 @@ use futures::{channel::oneshot, SinkExt};
 use libra_mempool::MempoolClientSender;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::CurrencyInfoResource,
+    account_config::{from_currency_code_string, CurrencyInfoResource},
     account_state::AccountState,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
@@ -100,12 +100,16 @@ async fn get_account_state(
         .db
         .get_account_state_with_proof_by_version(account_address, request.version())?
         .0;
+    let currency_info = currencies_info(service, request).await?;
+    let currencies: Vec<_> = currency_info
+        .into_iter()
+        .map(|info| from_currency_code_string(&info.code).unwrap())
+        .collect();
     if let Some(blob) = response {
         let account_state = AccountState::try_from(&blob)?;
         if let Some(account) = account_state.get_account_resource()? {
-            if let Some(balance) = account_state.get_balance_resource()? {
-                return Ok(Some(AccountView::new(&account, &balance)));
-            }
+            let balance = account_state.get_balance_resources(&currencies)?;
+            return Ok(Some(AccountView::new(&account, &balance)));
         }
     }
     Ok(None)

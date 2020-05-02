@@ -34,16 +34,20 @@ impl AccountState {
         self.get_resource(&AccountResource::resource_path())
     }
 
-    pub fn get_balance_resource(&self) -> Result<Option<BalanceResource>> {
-        if let Some(account_resource) = self.get_account_resource()? {
-            let balance_currency_code = account_resource.balance_currency_code();
-            let currency_type_tag = type_tag_for_currency_code(balance_currency_code.to_owned());
-            // TODO: update this to use BalanceResource::resource_path once that takes type
-            // parameters
-            self.get_resource(&BalanceResource::access_path_for(currency_type_tag))
-        } else {
-            Ok(None)
-        }
+    pub fn get_balance_resources(
+        &self,
+        currency_codes: &[Identifier],
+    ) -> Result<Vec<BalanceResource>> {
+        currency_codes
+            .iter()
+            .filter_map(|currency_code| {
+                let currency_type_tag = type_tag_for_currency_code(currency_code.to_owned());
+                // TODO: update this to use BalanceResource::resource_path once that takes type
+                // parameters
+                self.get_resource(&BalanceResource::access_path_for(currency_type_tag))
+                    .transpose()
+            })
+            .collect()
     }
 
     pub fn get_configuration_resource(&self) -> Result<Option<ConfigurationResource>> {
