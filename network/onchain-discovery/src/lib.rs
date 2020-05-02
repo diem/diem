@@ -47,13 +47,13 @@
 //! 4. notifies the connectivity_manager with updated network info whenever we
 //!    detect a newer discovery set
 
-use crate::types::{
-    QueryDiscoverySetRequest, QueryDiscoverySetResponse, QueryDiscoverySetResponseWithEvent,
-};
+use crate::types::{QueryDiscoverySetRequest, QueryDiscoverySetResponse};
 use anyhow::{Context as AnyhowContext, Result};
-use libra_types::get_with_proof::{UpdateToLatestLedgerRequest, UpdateToLatestLedgerResponse};
-use std::{convert::TryFrom, sync::Arc};
+use futures::future::{Future, FutureExt};
+use libra_types::account_config;
+use std::sync::Arc;
 use storage_interface::DbReader;
+use tokio::task;
 
 #[cfg(test)]
 mod test;
@@ -64,41 +64,57 @@ pub mod service;
 pub mod types;
 
 /// Query our own storage for the latest discovery set and epoch change proof.
-async fn storage_query_discovery_set(
+fn storage_query_discovery_set(
     libra_db: Arc<dyn DbReader>,
     req_msg: QueryDiscoverySetRequest,
-) -> Result<(QueryDiscoverySetRequest, QueryDiscoverySetResponseWithEvent)> {
-    let storage_req_msg = Into::<UpdateToLatestLedgerRequest>::into(req_msg.clone());
-
-    let res_msg = libra_db
-        .update_to_latest_ledger(
-            storage_req_msg.client_known_version,
-            storage_req_msg.requested_items,
-        )
-        // .await
+) -> Result<(QueryDiscoverySetRequest, Box<QueryDiscoverySetResponse>)> {
+    // TODO(philiphayes): how to deal with partial epoch change proof?
+    let (latest_li, epoch_change_proof, accumulator_proof) = libra_db
+        .get_state_proof(req_msg.known_version)
         .with_context(|| {
             format!(
-                "error forwarding discovery query to storage: client version: {}",
-                req_msg.client_known_version,
+                "error getting state proof from storage: request version: {}",
+                req_msg.known_version,
             )
         })?;
 
-    let (response_items, ledger_info_with_sigs, epoch_change_proof, ledger_consistency_proof) =
-        res_msg;
-
-    let res_msg = UpdateToLatestLedgerResponse::new(
-        response_items,
-        ledger_info_with_sigs,
-        epoch_change_proof,
-        ledger_consistency_proof,
-    );
-    let res_msg = QueryDiscoverySetResponse::from(res_msg);
-    let res_msg = QueryDiscoverySetResponseWithEvent::try_from(res_msg).with_context(|| {
-        format!(
-            "failed to verify storage's response: client version: {}",
-            req_msg.client_known_version
+    // Only return the discovery set account if the requestor is not in the most
+    // recent epoch.
+    let account_state = if epoch_change_proof.ledger_info_with_sigs.is_empty() {
+        None
+    } else {
+        Some(
+            libra_db.get_account_state_with_proof(
+                account_config::discovery_set_address(), req_msg.known_version, latest_li.ledger_info().version()
+            ).with_context(|| {
+                format!("error getting discovery account state with proof from storage: request version: {}, ledger info version: {}",
+                    req_msg.known_version, latest_li.ledger_info().version(),
+                )
+            })?
         )
-    })?;
+    };
+
+    let res_msg = Box::new(QueryDiscoverySetResponse {
+        latest_li,
+        epoch_change_proof,
+        accumulator_proof,
+        account_state,
+    });
 
     Ok((req_msg, res_msg))
+}
+
+/// Query storage but async and wrapped in a [`task::spawn_blocking`](tokio::task::spawn_blocking),
+/// which runs the task on a special-purpose threadpool for blocking tasks.
+///
+/// If you are querying in an async context, it's preferable to use this method
+/// over the blocking `storage_query_discovery_set`.
+fn storage_query_discovery_set_async(
+    libra_db: Arc<dyn DbReader>,
+    req_msg: QueryDiscoverySetRequest,
+) -> impl Future<Output = Result<(QueryDiscoverySetRequest, Box<QueryDiscoverySetResponse>)>> {
+    task::spawn_blocking(move || storage_query_discovery_set(libra_db, req_msg)).map(|res| {
+        // flatten errors
+        res.map_err(anyhow::Error::from).and_then(|res| res)
+    })
 }
