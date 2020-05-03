@@ -1,4 +1,17 @@
 // ================================================================================
+//
+// This file is used when the --no-array-theory flag is set.  The main difference from the
+// ordinary prelude is that it uses IsEqual to compare Values. IsEqual defined as a stratified
+// recursive function.
+// This prelude relies on Boogie's default array reasoning, which ignores the builtin array theory and
+// axiomatizes store and select.  There is no axiom for extensionality.  Instead, IsEquals
+// has axioms for extensionality.
+//
+// The prelude will probably diverge pretty quickly because I'm hoping that we can deal with
+// the hashing and serialization models more efficiently by exploiting the array theory. I'm hoping
+// that the new version of the prelude is sufficiently reliable that we can retire this version soon.
+//
+// ================================================================================
 // Domains
 
 // Debug tracking
@@ -40,7 +53,6 @@ type Edge = int; // both FieldName and vector index are mapped to int
 
 type {:datatype} Path;
 function {:constructor} Path(p: [int]Edge, size: int): Path;
-
 const EmptyPath: Path;
 axiom size#Path(EmptyPath) == 0;
 
@@ -179,10 +191,34 @@ function {:inline} IsEmpty(a: ValueArray): bool {
 const StratificationDepth: int;
 axiom StratificationDepth == 4;
 
-// IsEqual can now be ==, because of $normalizeMap.  Prover still generates IsEqual,
-// so this is for compatibility until we change bytecode and spec translation.
-function {:inline} IsEqual(v1: Value, v2: Value): bool {
+function {:inline} IsEqual4(v1: Value, v2: Value): bool {
     v1 == v2
+}
+
+// Do not inline the next three functions: it complicates things for the SMT solver and we have termination issues.
+function IsEqual3(v1: Value, v2: Value): bool {
+    (v1 == v2) ||
+    (is#Vector(v1) &&
+     is#Vector(v2) &&
+     $vlen(v1) == $vlen(v2) &&
+     (forall i: int :: 0 <= i && i < $vlen(v1) ==> IsEqual4($vmap(v1)[i], $vmap(v2)[i])))
+}
+function IsEqual2(v1: Value, v2: Value): bool {
+    (v1 == v2) ||
+    (is#Vector(v1) &&
+     is#Vector(v2) &&
+     $vlen(v1) == $vlen(v2) &&
+     (forall i: int :: 0 <= i && i < $vlen(v1) ==> IsEqual3($vmap(v1)[i], $vmap(v2)[i])))
+}
+function IsEqual1(v1: Value, v2: Value): bool {
+    (v1 == v2) ||
+    (is#Vector(v1) &&
+     is#Vector(v2) &&
+     $vlen(v1) == $vlen(v2) &&
+     (forall i: int :: 0 <= i && i < $vlen(v1) ==> IsEqual2($vmap(v1)[i], $vmap(v2)[i])))
+}
+function {:inline} IsEqual(v1: Value, v2: Value): bool {
+    IsEqual1(v1, v2)
 }
 
 function {:inline} $ReadValue4(p: Path, v: Value): Value {
@@ -250,15 +286,10 @@ function {:inline} UpdateValue(p: Path, v: Value, new_v: Value): Value {
 // Vector related functions on values
 // ----------------------------------
 
-// Normalized maps have default value for all invalid entries.  This enables
-// the use of == on vectors.
-function {:inline} $normalizeMap(va: [int]Value, len: int): [int]Value {
-    (lambda i:int :: if 0 <= i && i < len then va[i] else DefaultValue)
-}
-
 function {:inline} $vmap(v: Value): [int]Value {
     v#ValueArray(v#Vector(v))
 }
+
 function {:inline} $vlen(v: Value): int {
     l#ValueArray(v#Vector(v))
 }
@@ -735,9 +766,7 @@ function {:constructor} Transaction(
   gas_unit_price: int, max_gas_units: int, public_key: Value,
   sender: int, sequence_number: int, gas_remaining: int) : Transaction;
 
-
 const some_key: Value;
-
 
 // ==================================================================================
 // Native Vector Type
@@ -936,11 +965,6 @@ procedure {:inline 1} $Vector_index_of(ta: TypeValue, v: Value, e: Value) return
 // (arbitrary length vectors) than the co-domain (vectors of length 32).  But it is
 // common to assume in code there are no hash collisions in practice.  Fortunately,
 // Boogie is not smart enough to recognized that there is an inconsistency.
-// FIXME: We are now using a reliable extensional theory of arrays,
-// so we might be able to avoid so many quantified formulas by
-// using a sha2_inverse function in the ensures conditions of Hash_sha2_256 to
-// assert that sha2/3 are injections without using global quantified axioms.
-
 
 function {:inline} $Hash_sha2($m: Memory, $txn: Transaction, val: Value): Value {
     $Hash_sha2_core(val)

@@ -11,9 +11,24 @@ use libra_temppath::TempPath;
 use move_prover::{cli::Options, run_move_prover};
 use test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives, read_env_var};
 
-const STDLIB_FLAGS: &[&str] = &["--search_path=../stdlib/modules"];
-const STDLIB_FLAGS_UNVERIFIED: &[&str] = &["--search_path=../stdlib/modules", "--verify=none"];
-const LEGACY_STDLIB_FLAGS: &[&str] = &["--search_path=tests/sources/stdlib/modules"];
+// commented out lines below are to run without array theory. Unfortunately, there
+// seem to be some problems that prevent these from working with cargo test.
+const STDLIB_FLAGS: &[&str] = &[
+    "--search_path=../stdlib/modules",
+    // "--no-array-theory",
+    // "-p src/no_array_theory_prelude.bpl",
+];
+const STDLIB_FLAGS_UNVERIFIED: &[&str] = &[
+    "--search_path=../stdlib/modules",
+    "--verify=none",
+    // "--no-array-theory",
+    // "-p src/no_array_theory_prelude.bpl",
+];
+const LEGACY_STDLIB_FLAGS: &[&str] = &[
+    "--search_path=tests/sources/stdlib/modules",
+    // "--no-array-theory",
+    // "-p src/no_array_theory_prelude.bpl"
+];
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let no_boogie = read_env_var("BOOGIE_EXE").is_empty() || read_env_var("Z3_EXE").is_empty();

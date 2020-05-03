@@ -79,7 +79,7 @@ pub struct Options {
     /// Whether to omit debug information in generated model.
     pub omit_model_debug: bool,
     /// Whether to use native array theory.
-    pub use_array_theory: bool,
+    pub no_array_theory: bool,
     /// Whether output for e.g. diagnosis shall be stable/redacted so it can be used in test
     /// output.
     pub stable_test_output: bool,
@@ -106,7 +106,7 @@ impl Default for Options {
             native_stubs: false,
             minimize_execution_trace: true,
             omit_model_debug: false,
-            use_array_theory: false,
+            no_array_theory: false,
             stable_test_output: false,
             verify_scope: VerificationScope::Public,
         }
@@ -211,8 +211,8 @@ impl Options {
                     .help("path to the cvc4 executable"),
             )
             .arg(
-                Arg::with_name("use-array-theory")
-                    .long("use-array-theory")
+                Arg::with_name("no-array-theory")
+                    .long("no-array-theory")
                     .help("whether to use native array theory"),
             )
             .arg(
@@ -296,7 +296,7 @@ impl Options {
         self.move_sources = get_vec("sources");
         self.move_deps = get_vec("dependencies");
         self.search_path = get_vec("search_path");
-        self.use_array_theory = matches.is_present("use-array-theory");
+        self.no_array_theory = matches.is_present("no-array-theory");
         self.stable_test_output = matches.is_present("stable-test-output");
         self.verify_scope = match get_with_default("verify").as_str() {
             "public" => VerificationScope::Public,
@@ -344,10 +344,10 @@ impl Options {
         } else {
             add(&[&format!("-proverOpt:PROVER_PATH={}", &self.z3_exe)]);
         }
-        if self.use_array_theory {
-            add(&["-useArrayTheory"]);
-        } else {
+        if self.no_array_theory {
             add(&["-proverOpt:O:smt.QI.EAGER_THRESHOLD=100"]);
+        } else {
+            add(&["-useArrayTheory"]);
         }
         for f in &self.boogie_flags {
             add(&[f.as_str()]);

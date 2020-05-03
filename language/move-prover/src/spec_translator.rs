@@ -422,11 +422,11 @@ impl<'env> SpecTranslator<'env> {
 
     /// Generates functions which assumes the struct to be well-formed. The first function
     /// only checks type assumptions and is called to ensure well-formedness while the struct is
-    /// mutated. The second function checks both types and data invariants and is used while
+    /// mutated.  The second function checks both types and data invariants and is used while
     /// the struct is not mutated.
     fn translate_assume_well_formed(&self, struct_env: &StructEnv<'env>) {
         let emit_field_checks = |mode: WellFormedMode| {
-            emitln!(self.writer, "is#Vector($this)");
+            emitln!(self.writer, "$Vector_is_well_formed($this)");
             emitln!(
                 self.writer,
                 "  && $vlen($this) == {}",
