@@ -2,10 +2,10 @@ error:
 
    ┌── tests/move_check/parser/let_binding_missing_paren.move:3:21 ───
    │
- 3 │         let (x1, x2 = (1, 2);
+ 3 │         let (x1, x2 = (1, 2); // Test a missing right parenthesis
    │                     ^ Expected ')'
    ·
- 3 │         let (x1, x2 = (1, 2);
+ 3 │         let (x1, x2 = (1, 2); // Test a missing right parenthesis
    │             - To match this '('
    │
 

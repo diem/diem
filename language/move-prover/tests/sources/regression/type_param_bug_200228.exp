@@ -3,7 +3,7 @@ error:  A postcondition might not hold on this return path.
 
     ┌── tests/sources/regression/type_param_bug_200228.move:12:5 ───
     │
- 12 │     ensures old(exists<Balance<Tok_1>>(addr)) ==> old(exists<Balance<Tok_2>>(addr));
+ 12 │     ensures old(exists<Balance<Tok_1>>(addr)) ==> old(exists<Balance<Tok_2>>(addr)); // original bug: proved by Prover, but should not be.
     │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/regression/type_param_bug_200228.move:6:3: type_param_bug (entry)

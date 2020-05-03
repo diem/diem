@@ -2,10 +2,10 @@ error:
 
    ┌── tests/move_check/parser/let_binding_missing_type.move:3:17 ───
    │
- 3 │         let x : = 0;
+ 3 │         let x : = 0; // Test a missing let type (but with a colon)
    │                 ^ Unexpected '='
    ·
- 3 │         let x : = 0;
+ 3 │         let x : = 0; // Test a missing let type (but with a colon)
    │                 - Expected a type name
    │
 

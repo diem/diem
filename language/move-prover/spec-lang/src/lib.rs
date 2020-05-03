@@ -72,7 +72,7 @@ pub fn run_spec_lang_compiler(
                 // AST clonable and tee it somehow out of the regular compile chain.
                 let (_, eprog_or_errors) =
                     move_compile_to_expansion_no_report(&all_sources, &[], address_opt)?;
-                let eprog = eprog_or_errors.expect("no compilation errors");
+                let eprog = eprog_or_errors.expect("no compilation errors").0;
                 // Run the spec checker on verified units plus expanded AST. This will
                 // populate the environment including any errors.
                 run_spec_checker(&mut env, verified_units, eprog)?;

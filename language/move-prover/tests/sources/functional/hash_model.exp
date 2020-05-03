@@ -3,7 +3,7 @@ error:  A postcondition might not hold on this return path.
 
     ┌── tests/sources/functional/hash_model.move:44:9 ───
     │
- 44 │         ensures len(result_1) > 0 ==> result_1[0] < max_u8();
+ 44 │         ensures len(result_1) > 0 ==> result_1[0] < max_u8(); // should be <=
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/hash_model.move:35:5: hash_test1_incorrect (entry)

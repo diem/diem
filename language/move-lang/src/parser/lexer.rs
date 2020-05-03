@@ -1,8 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{errors::*, parser::syntax::make_loc};
-use std::fmt;
+use crate::{errors::*, parser::syntax::make_loc, FileCommentMap, MatchedFileCommentMap};
+use codespan::{ByteIndex, Span};
+use move_ir_types::location::Loc;
+use std::{collections::BTreeMap, fmt};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Tok {
@@ -158,6 +160,8 @@ impl fmt::Display for Tok {
 pub struct Lexer<'input> {
     text: &'input str,
     file: &'static str,
+    doc_comments: FileCommentMap,
+    matched_doc_comments: MatchedFileCommentMap,
     prev_end: usize,
     cur_start: usize,
     cur_end: usize,
@@ -165,10 +169,16 @@ pub struct Lexer<'input> {
 }
 
 impl<'input> Lexer<'input> {
-    pub fn new(s: &'input str, f: &'static str) -> Lexer<'input> {
+    pub fn new(
+        text: &'input str,
+        file: &'static str,
+        doc_comments: BTreeMap<Span, String>,
+    ) -> Lexer<'input> {
         Lexer {
-            text: s,
-            file: f,
+            text,
+            file,
+            doc_comments,
+            matched_doc_comments: BTreeMap::new(),
             prev_end: 0,
             cur_start: 0,
             cur_end: 0,
@@ -203,6 +213,54 @@ impl<'input> Lexer<'input> {
         let offset = self.text.len() - text.len();
         let (tok, _) = find_token(self.file, text, offset)?;
         Ok(tok)
+    }
+
+    // Matches the doc comments after the last token (or the beginning of the file) to the position
+    // of the current token. This moves the comments out of `doc_comments` and
+    // into `matched_doc_comments`. At the end of parsing, if `doc_comments` is not empty, errors
+    // for stale doc comments will be produced.
+    //
+    // Calling this function during parsing effectively marks a valid point for documentation
+    // comments. The documentation comments are not stored in the AST, but can be retrieved by
+    // using the start position of an item as an index into `matched_doc_comments`.
+    pub fn match_doc_comments(&mut self) {
+        let start = self.previous_end_loc() as u32;
+        let end = self.cur_start as u32;
+        let mut matched = vec![];
+        let merged = self
+            .doc_comments
+            .range(Span::new(start, start)..Span::new(end, end))
+            .map(|(span, s)| {
+                matched.push(*span);
+                s.clone()
+            })
+            .collect::<Vec<String>>()
+            .join("\n");
+        for span in matched {
+            self.doc_comments.remove(&span);
+        }
+        self.matched_doc_comments.insert(ByteIndex(end), merged);
+    }
+
+    // At the end of parsing, checks whether there are any unmatched documentation comments,
+    // producing errors if so. Otherwise returns a map from file position to associated
+    // documentation.
+    pub fn check_and_get_doc_comments(&mut self) -> Result<MatchedFileCommentMap, Errors> {
+        let errors = self
+            .doc_comments
+            .iter()
+            .map(|(span, _)| {
+                vec![(
+                    Loc::new(self.file, *span),
+                    "documentation comment cannot be matched to a language item".to_string(),
+                )]
+            })
+            .collect::<Errors>();
+        if errors.is_empty() {
+            Ok(std::mem::take(&mut self.matched_doc_comments))
+        } else {
+            Err(errors)
+        }
     }
 
     pub fn advance(&mut self) -> Result<(), Error> {

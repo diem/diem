@@ -27,10 +27,12 @@ use move_ir_types::location::*;
 use parser::syntax::parse_file_string;
 use shared::Address;
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     fs::File,
     io::{self, ErrorKind, Read, Write},
+    iter::Peekable,
     path::{Path, PathBuf},
+    str::Chars,
 };
 
 pub const MOVE_EXTENSION: &str = "move";
@@ -64,7 +66,8 @@ pub fn move_check_no_report(
     deps: &[String],
     sender_opt: Option<Address>,
 ) -> io::Result<(FilesSourceText, Errors)> {
-    let (files, pprog_res) = parse_program(targets, deps)?;
+    let (files, pprog_and_comments_res) = parse_program(targets, deps)?;
+    let pprog_res = pprog_and_comments_res.map(|(pprog, _)| pprog);
     match check_program(pprog_res, sender_opt) {
         Err(errors) => Ok((files, errors)),
         Ok(_) => Ok((files, vec![])),
@@ -81,7 +84,8 @@ pub fn move_compile(
     deps: &[String],
     sender_opt: Option<Address>,
 ) -> io::Result<(FilesSourceText, Vec<CompiledUnit>)> {
-    let (files, pprog_res) = parse_program(targets, deps)?;
+    let (files, pprog_and_comments_res) = parse_program(targets, deps)?;
+    let pprog_res = pprog_and_comments_res.map(|(pprog, _)| pprog);
     match compile_program(pprog_res, sender_opt) {
         Err(errors) => errors::report_errors(files, errors),
         Ok(compiled_units) => Ok((files, compiled_units)),
@@ -94,24 +98,30 @@ pub fn move_compile_no_report(
     deps: &[String],
     sender_opt: Option<Address>,
 ) -> io::Result<(FilesSourceText, Result<Vec<CompiledUnit>, Errors>)> {
-    let (files, pprog_res) = parse_program(targets, deps)?;
+    let (files, pprog_and_comments_res) = parse_program(targets, deps)?;
+    let pprog_res = pprog_and_comments_res.map(|(pprog, _)| pprog);
     Ok(match compile_program(pprog_res, sender_opt) {
         Err(errors) => (files, Err(errors)),
         Ok(units) => (files, Ok(units)),
     })
 }
 
-/// Move compile up to expansion phase, returning errors instead of reporting them to stderr
+/// Move compile up to expansion phase, returning errors instead of reporting them to stderr.
+///
+/// This also returns a map containing documentation comments for each source in `targets`.
 pub fn move_compile_to_expansion_no_report(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
-) -> io::Result<(FilesSourceText, Result<expansion::ast::Program, Errors>)> {
-    let (files, pprog_res) = parse_program(targets, deps)?;
-    let res = pprog_res.and_then(|pprog| {
+) -> io::Result<(
+    FilesSourceText,
+    Result<(expansion::ast::Program, CommentMap), Errors>,
+)> {
+    let (files, pprog_and_comments_res) = parse_program(targets, deps)?;
+    let res = pprog_and_comments_res.and_then(|(pprog, comment_map)| {
         let (eprog, errors) = expansion::translate::program(pprog, sender_opt);
         check_errors(errors)?;
-        Ok(eprog)
+        Ok((eprog, comment_map))
     });
     Ok((files, res))
 }
@@ -237,31 +247,39 @@ fn compile_program(
 fn parse_program(
     targets: &[String],
     deps: &[String],
-) -> io::Result<(FilesSourceText, Result<parser::ast::Program, Errors>)> {
+) -> io::Result<(
+    FilesSourceText,
+    Result<(parser::ast::Program, CommentMap), Errors>,
+)> {
     let targets = find_and_intern_move_filenames(targets)?;
     let deps = find_and_intern_move_filenames(deps)?;
     let mut files: FilesSourceText = HashMap::new();
     let mut source_definitions = Vec::new();
+    let mut source_comments = CommentMap::new();
     let mut lib_definitions = Vec::new();
     let mut errors: Errors = Vec::new();
 
     for fname in targets {
-        let (defs, mut es) = parse_file(&mut files, fname)?;
+        let (defs, comments, mut es) = parse_file(&mut files, fname)?;
         source_definitions.extend(defs);
+        source_comments.insert(fname, comments);
         errors.append(&mut es);
     }
 
     for fname in deps {
-        let (defs, mut es) = parse_file(&mut files, fname)?;
+        let (defs, _, mut es) = parse_file(&mut files, fname)?;
         lib_definitions.extend(defs);
         errors.append(&mut es);
     }
 
     let res = if errors.is_empty() {
-        Ok(parser::ast::Program {
-            source_definitions,
-            lib_definitions,
-        })
+        Ok((
+            parser::ast::Program {
+                source_definitions,
+                lib_definitions,
+            },
+            source_comments,
+        ))
     } else {
         Err(errors)
     };
@@ -321,29 +339,29 @@ fn leak_str(s: &str) -> &'static str {
 fn parse_file(
     files: &mut FilesSourceText,
     fname: &'static str,
-) -> io::Result<(Vec<parser::ast::Definition>, Errors)> {
+) -> io::Result<(Vec<parser::ast::Definition>, MatchedFileCommentMap, Errors)> {
     let mut errors: Errors = Vec::new();
     let mut f = File::open(fname)
         .map_err(|err| std::io::Error::new(err.kind(), format!("{}: {}", err, fname)))?;
     let mut source_buffer = String::new();
     f.read_to_string(&mut source_buffer)?;
-    let no_comments_buffer = match strip_comments_and_verify(fname, &source_buffer) {
-        Err(err) => {
-            errors.push(err);
+    let (no_comments_buffer, comment_map) = match strip_comments_and_verify(fname, &source_buffer) {
+        Err(errs) => {
+            errors.extend(errs.into_iter());
             files.insert(fname, source_buffer);
-            return Ok((vec![], errors));
+            return Ok((vec![], MatchedFileCommentMap::new(), errors));
         }
-        Ok(no_comments_buffer) => no_comments_buffer,
+        Ok(result) => result,
     };
-    let defs = match parse_file_string(fname, &no_comments_buffer) {
-        Ok(defs) => defs,
-        Err(err) => {
-            errors.push(err);
-            vec![]
+    let (defs, comments) = match parse_file_string(fname, &no_comments_buffer, comment_map) {
+        Ok(defs_and_comments) => defs_and_comments,
+        Err(errs) => {
+            errors.extend(errs);
+            (vec![], MatchedFileCommentMap::new())
         }
     };
-    files.insert(fname, no_comments_buffer);
-    Ok((defs, errors))
+    files.insert(fname, source_buffer);
+    Ok((defs, comments, errors))
 }
 
 //**************************************************************************************************
@@ -378,7 +396,7 @@ pub fn is_permitted_char(c: char) -> bool {
     is_permitted_printable_char(c) || is_permitted_newline_char(c)
 }
 
-fn verify_string(fname: &'static str, string: &str) -> Result<(), Error> {
+fn verify_string(fname: &'static str, string: &str) -> Result<(), Errors> {
     match string
         .chars()
         .enumerate()
@@ -394,33 +412,170 @@ fn verify_string(fname: &'static str, string: &str) -> Result<(), Error> {
                  are permitted.",
                 chr
             );
-            Err(vec![(loc, msg)])
+            Err(vec![vec![(loc, msg)]])
         }
     }
 }
 
-fn strip_comments(source: &str) -> String {
+/// Types to represent comments.
+pub type CommentMap = BTreeMap<&'static str, MatchedFileCommentMap>;
+pub type MatchedFileCommentMap = BTreeMap<ByteIndex, String>;
+pub type FileCommentMap = BTreeMap<Span, String>;
+
+/// Strips line and block comments from input source, and collects documentation comments,
+/// putting them into a map indexed by the span of the comment region. Comments in the original
+/// source will be replaced by spaces, such that positions of source items stay unchanged.
+/// Block comments can be nested.
+///
+/// Documentation comments are comments which start with
+/// `///` or `/**`, but not `////` or `/***`. The actually comment delimiters
+/// (`/// .. <newline>` and `/** .. */`) will be not included in extracted comment string. The
+/// span in the returned map, however, covers the whole region of the comment, including the
+/// delimiters.
+fn strip_comments(fname: &'static str, input: &str) -> Result<(String, FileCommentMap), Errors> {
     const SLASH: char = '/';
     const SPACE: char = ' ';
+    const STAR: char = '*';
 
-    let mut in_comment = false;
-    let mut acc = String::with_capacity(source.len());
-    let mut char_iter = source.chars().peekable();
-
-    while let Some(chr) = char_iter.next() {
-        let at_newline = is_permitted_newline_char(chr);
-        let at_or_after_slash_slash =
-            in_comment || (chr == SLASH && char_iter.peek().map(|c| *c == SLASH).unwrap_or(false));
-        in_comment = !at_newline && at_or_after_slash_slash;
-        acc.push(if in_comment { SPACE } else { chr });
+    enum State {
+        Source,
+        LineComment,
+        BlockComment,
     }
 
-    acc
+    let mut source = String::with_capacity(input.len());
+    let mut comment_map = FileCommentMap::new();
+
+    let mut state = State::Source;
+    let mut pos = 0;
+    let mut comment_start_pos = 0;
+    let mut comment = String::new();
+    let mut block_nest = 0;
+
+    let next_is =
+        |peekable: &mut Peekable<Chars>, chr| peekable.peek().map(|c| *c == chr).unwrap_or(false);
+
+    let mut commit_comment = |state, start_pos, end_pos, content: String| match state {
+        State::BlockComment if !content.starts_with('*') || content.starts_with("**") => {}
+        State::LineComment if !content.starts_with('/') || content.starts_with("//") => {}
+        _ => {
+            comment_map.insert(Span::new(start_pos, end_pos), content[1..].to_string());
+        }
+    };
+
+    let mut char_iter = input.chars().peekable();
+    while let Some(chr) = char_iter.next() {
+        match state {
+            // Line comments
+            State::Source if chr == SLASH && next_is(&mut char_iter, SLASH) => {
+                // Starting line comment. We do not capture the `//` in the comment.
+                char_iter.next();
+                source.push(SPACE);
+                source.push(SPACE);
+                comment_start_pos = pos;
+                pos += 2;
+                state = State::LineComment;
+            }
+            State::LineComment if is_permitted_newline_char(chr) => {
+                // Ending line comment. The newline will be added to the source.
+                commit_comment(state, comment_start_pos, pos, std::mem::take(&mut comment));
+                source.push(chr);
+                pos += 1;
+                state = State::Source;
+            }
+            State::LineComment => {
+                // Continuing line comment.
+                source.push(SPACE);
+                comment.push(chr);
+                pos += 1;
+            }
+
+            // Block comments.
+            State::Source if chr == SLASH && next_is(&mut char_iter, STAR) => {
+                // Starting block comment. We do not capture the `/*` in the comment.
+                char_iter.next();
+                source.push(SPACE);
+                source.push(SPACE);
+                comment_start_pos = pos;
+                pos += 2;
+                state = State::BlockComment;
+            }
+            State::BlockComment if chr == SLASH && next_is(&mut char_iter, STAR) => {
+                // Starting nested block comment.
+                char_iter.next();
+                source.push(SPACE);
+                comment.push(chr);
+                pos += 1;
+                block_nest += 1;
+            }
+            State::BlockComment
+                if block_nest > 0 && chr == STAR && next_is(&mut char_iter, SLASH) =>
+            {
+                // Ending nested block comment.
+                char_iter.next();
+                source.push(SPACE);
+                comment.push(chr);
+                pos -= 1;
+                block_nest -= 1;
+            }
+            State::BlockComment
+                if block_nest == 0 && chr == STAR && next_is(&mut char_iter, SLASH) =>
+            {
+                // Ending block comment. The `*/` will not be captured and also not part of the
+                // source.
+                char_iter.next();
+                source.push(SPACE);
+                source.push(SPACE);
+                pos += 2;
+                commit_comment(state, comment_start_pos, pos, std::mem::take(&mut comment));
+                state = State::Source;
+            }
+            State::BlockComment => {
+                // Continuing block comment.
+                source.push(SPACE);
+                comment.push(chr);
+                pos += 1;
+            }
+            State::Source => {
+                // Continuing regular source.
+                source.push(chr);
+                pos += 1;
+            }
+        }
+    }
+    match state {
+        State::LineComment => {
+            // We allow the last line to have no line terminator
+            commit_comment(state, comment_start_pos, pos, std::mem::take(&mut comment));
+        }
+        State::BlockComment => {
+            if pos > 0 {
+                // try to point to last real character
+                pos -= 1;
+            }
+            return Err(vec![vec![
+                (
+                    Loc::new(fname, Span::new(pos, pos)),
+                    "unclosed block comment".to_string(),
+                ),
+                (
+                    Loc::new(fname, Span::new(comment_start_pos, comment_start_pos + 2)),
+                    "begin of unclosed block comment".to_string(),
+                ),
+            ]]);
+        }
+        State::Source => {}
+    }
+
+    Ok((source, comment_map))
 }
 
 // We restrict strings to only ascii visual characters (0x20 <= c <= 0x7E) or a permitted newline
 // character--\n--or a tab--\t.
-fn strip_comments_and_verify(fname: &'static str, string: &str) -> Result<String, Error> {
+fn strip_comments_and_verify(
+    fname: &'static str,
+    string: &str,
+) -> Result<(String, FileCommentMap), Errors> {
     verify_string(fname, string)?;
-    Ok(strip_comments(string))
+    strip_comments(fname, string)
 }

@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/comments_unbalanced.move:5:2 ───
+   │
+ 5 │ }
+   │  ^ unclosed block comment
+   ·
+ 3 │     /** This comment must be closed.
+   │     -- begin of unclosed block comment
+   │
+
