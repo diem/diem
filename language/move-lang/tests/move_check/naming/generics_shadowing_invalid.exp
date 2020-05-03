@@ -16,7 +16,7 @@ error:
 
    ┌── tests/move_check/naming/generics_shadowing_invalid.move:8:20 ───
    │
- 8 │         let s: S = S {};
+ 8 │         let s: S = S {}; // TODO error? should this try to construct the generic ?
    │                    ^ Invalid construction. Expected a struct name
    ·
  6 │     fun foo<S>(s1: S, s2: S): S {

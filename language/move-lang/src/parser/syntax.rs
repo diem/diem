@@ -10,6 +10,7 @@ use crate::{
     parser::{ast::*, lexer::*},
     shared::*,
 };
+use std::collections::BTreeMap;
 
 // In the informal grammar comments in this file, Comma<T> is shorthand for:
 //      (<T> ",")* <T>?
@@ -1174,13 +1175,13 @@ fn parse_optional_type_parameters<'input>(
 //          <NativeFunctionDecl>
 //          | <MoveFunctionDecl>
 //      NativeFunctionDecl =
-//          "native" ( "public" )? "fun"
+//          <DocComments> "native" ( "public" )? "fun"
 //          <FunctionDefName> "(" Comma<Parameter> ")"
 //          (":" <Type>)?
 //          ("acquires" <ModuleAccess> ("," <ModuleAccess>)*)?
 //          ";"
 //      MoveFunctionDecl =
-//          ( "public" )? "fun"
+//          <DocComments> ( "public" )? "fun"
 //          <FunctionDefName> "(" Comma<Parameter> ")"
 //          (":" <Type>)?
 //          ("acquires" <ModuleAccess> ("," <ModuleAccess>)*)?
@@ -1194,6 +1195,7 @@ fn parse_function_decl<'input>(
     tokens: &mut Lexer<'input>,
     allow_native: bool,
 ) -> Result<Function, Error> {
+    tokens.match_doc_comments();
     let start_loc = tokens.start_loc();
     // Record the source location of the "native" keyword (if there is one).
     let native_opt = if allow_native {
@@ -1305,11 +1307,12 @@ fn parse_parameter<'input>(tokens: &mut Lexer<'input>) -> Result<(Var, Type), Er
 
 // Parse a struct definition:
 //      StructDefinition =
-//          "resource"? "struct" <StructDefName> "{" Comma<FieldAnnot> "}"
-//          | "native" "resource"? "struct" <StructDefName> ";"
+//          <DocComments> "resource"? "struct" <StructDefName> "{" Comma<FieldAnnot> "}"
+//          | <DocComments> "native" "resource"? "struct" <StructDefName> ";"
 //      StructDefName =
 //          <Identifier> <OptionalTypeParameters>
 fn parse_struct_definition<'input>(tokens: &mut Lexer<'input>) -> Result<StructDefinition, Error> {
+    tokens.match_doc_comments();
     let start_loc = tokens.start_loc();
 
     // Record the source location of the "native" keyword (if there is one).
@@ -1352,8 +1355,9 @@ fn parse_struct_definition<'input>(tokens: &mut Lexer<'input>) -> Result<StructD
 }
 
 // Parse a field annotated with a type:
-//      FieldAnnot = <Field> ":" <Type>
+//      FieldAnnot = <DocComments> <Field> ":" <Type>
 fn parse_field_annot<'input>(tokens: &mut Lexer<'input>) -> Result<(Field, Type), Error> {
+    tokens.match_doc_comments();
     let f = parse_field(tokens)?;
     consume_token(tokens, Tok::Colon)?;
     let st = parse_type(tokens)?;
@@ -1437,11 +1441,12 @@ fn is_struct_definition<'input>(tokens: &mut Lexer<'input>) -> Result<bool, Erro
 
 // Parse a module:
 //      Module =
-//          "module" <ModuleName> "{"
+//          <DocComments> "module" <ModuleName> "{"
 //              <UseDecl>*
 //              ( <StructDefinition> | <FunctionDecl> | <Spec> )*
 //          "}"
 fn parse_module<'input>(tokens: &mut Lexer<'input>) -> Result<ModuleDefinition, Error> {
+    tokens.match_doc_comments();
     let start_loc = tokens.start_loc();
 
     consume_token(tokens, Tok::Module)?;
@@ -1532,8 +1537,9 @@ fn parse_script<'input>(tokens: &mut Lexer<'input>) -> Result<Script, Error> {
 //        | "module"
 //        | "schema" <Identifier> <OptionalTypeParameters>
 //        | <empty>
-//     SpecBlock = "spec" <SpecBlockTarget> "{" SpecBlockMember* "}"
+//     SpecBlock = <DocComments> "spec" <SpecBlockTarget> "{" SpecBlockMember* "}"
 fn parse_spec_block<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlock, Error> {
+    tokens.match_doc_comments();
     let start_loc = tokens.start_loc();
     consume_token(tokens, Tok::Spec)?;
     let target_start_loc = tokens.start_loc();
@@ -1599,9 +1605,10 @@ fn parse_spec_block<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlock, Err
 }
 
 // Parse a spec block member:
-//    SpecBlockMember = <Invariant> | <Condition> | <SpecFunction> | <SpecVariable>
-//                    | <SpecInclude> | <SpecApply> | <SpecPragma>
+//    SpecBlockMember = <DocComments ( <Invariant> | <Condition> | <SpecFunction> | <SpecVariable>
+//                                   | <SpecInclude> | <SpecApply> | <SpecPragma> )
 fn parse_spec_block_member<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
+    tokens.match_doc_comments();
     match tokens.peek() {
         Tok::Invariant => parse_invariant(tokens),
         Tok::Define | Tok::Native => parse_spec_function(tokens),
@@ -1993,10 +2000,23 @@ fn parse_file<'input>(tokens: &mut Lexer<'input>) -> Result<Vec<Definition>, Err
 }
 
 /// Parse the `input` string as a file of Move source code and return the
-/// result as either a FileDefinition value or an Error. The `file` name
+/// result as either a pair of FileDefinition and doc comments or some Errors. The `file` name
 /// is used to identify source locations in error messages.
-pub fn parse_file_string(file: &'static str, input: &str) -> Result<Vec<Definition>, Error> {
-    let mut tokens = Lexer::new(input, file);
-    tokens.advance()?;
-    parse_file(&mut tokens)
+pub fn parse_file_string(
+    file: &'static str,
+    input: &str,
+    comment_map: BTreeMap<Span, String>,
+) -> Result<(Vec<Definition>, BTreeMap<ByteIndex, String>), Errors> {
+    let mut tokens = Lexer::new(input, file, comment_map);
+    match tokens.advance() {
+        Err(err) => Err(vec![err]),
+        Ok(..) => Ok(()),
+    }?;
+    match parse_file(&mut tokens) {
+        Err(err) => Err(vec![err]),
+        Ok(def) => {
+            let doc_comments = tokens.check_and_get_doc_comments()?;
+            Ok((def, doc_comments))
+        }
+    }
 }

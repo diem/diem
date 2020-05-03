@@ -5,7 +5,7 @@ error:
  3 │     fun f() {}
    │     ^ Expected '}'
    ·
- 2 │     struct S { f: u64
+ 2 │     struct S { f: u64 // }
    │              - To match this '{'
    │
 
