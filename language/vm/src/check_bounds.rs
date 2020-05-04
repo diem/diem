@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    errors::{bounds_error, bytecode_offset_err, verification_error, VMResult},
+    errors::{append_err_info, bounds_error, bytecode_offset_err, verification_error, VMResult},
     file_format::{
         Bytecode, CompiledModuleMut, Constant, FieldHandle, FieldInstantiation, FunctionDefinition,
         FunctionHandle, FunctionInstantiation, ModuleHandle, Signature, SignatureToken,
@@ -12,6 +12,7 @@ use crate::{
     IndexKind,
 };
 use libra_types::vm_error::{StatusCode, VMStatus};
+use std::u8;
 
 pub struct BoundsChecker<'a> {
     module: &'a CompiledModuleMut,
@@ -61,8 +62,8 @@ impl<'a> BoundsChecker<'a> {
         for struct_def in &self.module.struct_defs {
             self.check_struct_def(struct_def)?
         }
-        for function_def in &self.module.function_defs {
-            self.check_function_def(function_def)?
+        for (function_def_idx, function_def) in self.module.function_defs.iter().enumerate() {
+            self.check_function_def(function_def_idx, function_def)?
         }
         Ok(())
     }
@@ -182,30 +183,36 @@ impl<'a> BoundsChecker<'a> {
         Ok(())
     }
 
-    fn check_function_def(&self, function_def: &FunctionDefinition) -> VMResult<()> {
+    fn check_function_def(
+        &self,
+        function_def_idx: usize,
+        function_def: &FunctionDefinition,
+    ) -> VMResult<()> {
         check_bounds_impl(&self.module.function_handles, function_def.function)?;
         for ty in &function_def.acquires_global_resources {
             check_bounds_impl(&self.module.struct_defs, *ty)?;
         }
-        self.check_code(function_def)
+        self.check_code(function_def_idx, function_def)
     }
 
-    fn check_code(&self, function_def: &FunctionDefinition) -> VMResult<()> {
+    fn check_code(
+        &self,
+        function_def_idx: usize,
+        function_def: &FunctionDefinition,
+    ) -> VMResult<()> {
         let code_unit = match &function_def.code {
             Some(code) => code,
             None => return Ok(()),
         };
         check_bounds_impl(&self.module.signatures, code_unit.locals)?;
 
-        let type_param_count = match self
-            .module
-            .function_handles
-            .get(function_def.function.into_index())
-        {
-            Some(fh) => fh.type_parameters.len(),
-            None => 0,
-        };
-        // if there are locals check that the type parameters in local signature are in bounds.
+        debug_assert!(function_def.function.into_index() < self.module.function_handles.len());
+        let function_handle = &self.module.function_handles[function_def.function.into_index()];
+        let type_param_count = function_handle.type_parameters.len();
+
+        debug_assert!(function_handle.parameters.into_index() < self.module.signatures.len());
+        let parameters = &self.module.signatures[function_handle.parameters.into_index()];
+
         let locals = &self
             .module
             .signatures
@@ -213,7 +220,19 @@ impl<'a> BoundsChecker<'a> {
             .as_ref()
             .unwrap()
             .0;
-        let locals_count = locals.len();
+
+        // check if the number of parameters + locals is less than u8::MAX
+        let locals_count = locals.len() + parameters.len();
+
+        if locals_count > (u8::MAX as usize) + 1 {
+            return Err(append_err_info(
+                VMStatus::new(StatusCode::TOO_MANY_LOCALS),
+                IndexKind::FunctionDefinition,
+                function_def_idx,
+            ));
+        }
+
+        // if there are locals check that the type parameters in local signature are in bounds.
         for local in locals {
             self.check_type_parameter(local, type_param_count)?
         }

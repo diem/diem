@@ -80,7 +80,9 @@ pub struct AbstractState {
 impl AbstractState {
     /// create a new abstract state
     pub fn new(module: &CompiledModule, function_definition: &FunctionDefinition) -> Self {
-        let num_locals = module
+        let func_handle = module.function_handle_at(function_definition.function);
+        let parameter_types = &module.signature_at(func_handle.parameters).0;
+        let additional_local_types = &module
             .signature_at(
                 function_definition
                     .code
@@ -88,7 +90,10 @@ impl AbstractState {
                     .expect("Abstract interpreter should only run on non-native functions")
                     .locals,
             )
-            .len();
+            .0;
+
+        let num_locals = parameter_types.len() + additional_local_types.len();
+
         // ids in [0, num_locals) are reserved for constructing canonical state
         // id at num_locals is reserved for the frame root
         let next_id = num_locals + 1;
@@ -99,16 +104,14 @@ impl AbstractState {
             next_id,
         };
 
-        let func_handle = module.function_handle_at(function_definition.function);
-        let arguments = module.signature_at(func_handle.parameters);
-        for (arg_idx, argument) in arguments.0.iter().enumerate() {
-            let value = if argument.is_reference() {
-                let id = state.new_ref(argument.is_mutable_reference());
+        for (param_idx, param_ty) in parameter_types.iter().enumerate() {
+            let value = if param_ty.is_reference() {
+                let id = state.new_ref(param_ty.is_mutable_reference());
                 AbstractValue::Reference(id)
             } else {
                 AbstractValue::NonReference
             };
-            state.locals.insert(arg_idx as LocalIndex, value);
+            state.locals.insert(param_idx as LocalIndex, value);
         }
         state.borrow_graph.new_ref(state.frame_root(), true);
         state

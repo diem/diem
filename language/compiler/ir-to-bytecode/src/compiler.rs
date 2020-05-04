@@ -38,6 +38,12 @@ macro_rules! record_src_loc {
             .source_map
             .add_local_mapping($context.current_function_definition_index(), source_name)?;
     }};
+    (parameter: $context:expr, $var:expr) => {{
+        let source_name = ($var.value.clone().into_inner(), $var.loc);
+        $context
+            .source_map
+            .add_parameter_mapping($context.current_function_definition_index(), source_name)?;
+    }};
     (field: $context:expr, $idx: expr, $field:expr) => {{
         $context
             .source_map
@@ -782,7 +788,7 @@ fn compile_function_body_impl(
 
         FunctionBody::Native => {
             for (var, _) in ast_function.signature.formals.into_iter() {
-                record_src_loc!(local: context, var)
+                record_src_loc!(parameter: context, var)
             }
             None
         }
@@ -837,9 +843,9 @@ fn compile_function_body(
     for (var, t) in formals {
         let sig = compile_type(context, function_frame.type_parameters(), &t)?;
         function_frame.define_local(&var.value, sig.clone())?;
-        locals_signature.0.push(sig);
-        record_src_loc!(local: context, var);
+        record_src_loc!(parameter: context, var);
     }
+
     for (var_, t) in locals {
         let sig = compile_type(context, function_frame.type_parameters(), &t)?;
         function_frame.define_local(&var_.value, sig.clone())?;
@@ -1631,8 +1637,7 @@ fn compile_function_body_bytecode(
     for (var, t) in formals {
         let sig = compile_type(context, function_frame.type_parameters(), &t)?;
         function_frame.define_local(&var.value, sig.clone())?;
-        locals_signature.0.push(sig);
-        record_src_loc!(local: context, var);
+        record_src_loc!(parameter: context, var);
     }
     for (var_, t) in locals {
         let sig = compile_type(context, function_frame.type_parameters(), &t)?;

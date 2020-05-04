@@ -401,6 +401,7 @@ pub enum StatusCode {
     INVALID_LOOP_BREAK = 1086,
     INVALID_LOOP_CONTINUE = 1087,
     UNSAFE_RET_UNUSED_RESOURCES = 1088,
+    TOO_MANY_LOCALS = 1089,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

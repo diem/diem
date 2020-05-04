@@ -84,21 +84,3 @@ fn compile_script_with_large_frame() {
     let compiled_module_res = compile_module_string(&code);
     assert!(compiled_module_res.is_ok());
 }
-
-#[test]
-fn compile_script_with_invalid_large_frame() {
-    let mut code = String::from(
-        "
-        module Foobar {
-            resource FooCoin { value: u64 }
-        ",
-    );
-
-    // Max number of locals (formals + local variables) is u8::max_value().
-    code.push_str(&generate_function("foo_func", 128, 128));
-
-    code.push_str("}");
-
-    let compiled_module_res = compile_module_string(&code);
-    assert!(compiled_module_res.is_err());
-}

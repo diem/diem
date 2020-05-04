@@ -61,30 +61,6 @@ pub fn verify(
 ) -> VMResult<()> {
     let verifier = &mut TypeSafetyChecker::new(module, function_definition);
 
-    let locals_signature_view = verifier
-        .function_definition_view
-        .locals_signature()
-        .unwrap();
-    // TODO: this check should probably be elsewhere
-    if verifier.function_definition_view.arg_count() > locals_signature_view.len() {
-        return Err(VMStatus::new(StatusCode::RANGE_OUT_OF_BOUNDS)
-            .with_message("Fewer locals than parameters".to_string()));
-    }
-    for (arg_idx, parameter_view) in verifier.function_definition_view.arg_tokens().enumerate() {
-        let arg_token = parameter_view.as_inner();
-        let local_token = locals_signature_view
-            .token_at(arg_idx as LocalIndex)
-            .as_inner();
-        if arg_token != local_token {
-            return Err(
-                VMStatus::new(StatusCode::TYPE_MISMATCH).with_message(format!(
-                    "Type mismatch at index {} between parameter and local",
-                    arg_idx
-                )),
-            );
-        }
-    }
-
     for block_id in cfg.blocks() {
         for offset in cfg.instr_indexes(block_id) {
             let instr = &verifier

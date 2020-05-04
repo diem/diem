@@ -39,7 +39,7 @@ use crate::{
     ty::{PrimitiveType, Type},
 };
 use std::collections::{BTreeMap, BTreeSet};
-use vm::{file_format::Bytecode, views::SignatureView, CompiledModule};
+use vm::{file_format::Bytecode, CompiledModule};
 
 // =================================================================================================
 /// # Constants
@@ -1446,7 +1446,7 @@ impl<'env> FunctionEnv<'env> {
             .source_map
             .get_function_source_map(self.data.def_idx)
         {
-            if let Some((ident, _)) = fmap.get_local_name(idx as u64) {
+            if let Some((ident, _)) = fmap.get_parameter_or_local_name(idx as u64) {
                 // The move compiler produces temporay names of the form `<foo>%#<num>`.
                 // Ignore those names and use the idx-based repr instead.
                 if !ident.contains("%#") {
@@ -1463,7 +1463,7 @@ impl<'env> FunctionEnv<'env> {
     pub fn get_local_count(&self) -> usize {
         let view = self.definition_view();
         match view.locals_signature() {
-            Some(view) => view.len(),
+            Some(locals_view) => locals_view.len(),
             None => view.parameters().len(),
         }
     }
@@ -1472,12 +1472,19 @@ impl<'env> FunctionEnv<'env> {
     /// `get_local_count`.
     pub fn get_local_type(&self, idx: usize) -> Type {
         let view = self.definition_view();
-        let signature = view
-            .locals_signature()
-            .unwrap_or_else(|| SignatureView::new(&self.module_env.data.module, view.parameters()));
 
-        self.module_env
-            .globalize_signature(signature.token_at(idx as u8).signature_token())
+        let parameters = view.parameters();
+
+        if idx < parameters.len() {
+            self.module_env.globalize_signature(&parameters.0[idx])
+        } else {
+            self.module_env.globalize_signature(
+                view.locals_signature()
+                    .unwrap()
+                    .token_at(idx as u8)
+                    .signature_token(),
+            )
+        }
     }
 
     /// Returns associated specification.
