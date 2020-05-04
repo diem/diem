@@ -9,7 +9,7 @@ use crate::{
     network::{MempoolNetworkEvents, MempoolSyncMsg},
     shared_mempool::{
         tasks,
-        types::{notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification},
+        types::{notify_subscribers, SharedMempool, SharedMempoolNotification},
     },
     CommitNotification, ConsensusRequest, SubmissionStatus,
 };
@@ -30,27 +30,14 @@ use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTran
 use std::{
     ops::Deref,
     sync::{Arc, Mutex},
-    time::{Duration, Instant},
+    time::Duration,
 };
 use tokio::{runtime::Handle, time::interval};
 use vm_validator::vm_validator::TransactionValidation;
 
-fn schedule_next_broadcast(
-    peer: PeerNetworkId,
-    scheduled_broadcasts: &mut FuturesUnordered<ScheduledBroadcast>,
-    interval_ms: u64,
-    executor: Handle,
-) {
-    scheduled_broadcasts.push(ScheduledBroadcast::new(
-        Instant::now() + Duration::from_millis(interval_ms),
-        peer,
-        executor,
-    ))
-}
-
-/// Coordinator that handles inbound network events.
-pub(crate) async fn request_coordinator<V>(
-    smp: SharedMempool<V>,
+/// Coordinator that handles inbound network events and outbound txn broadcasts.
+pub(crate) async fn coordinator<V>(
+    mut smp: SharedMempool<V>,
     executor: Handle,
     network_events: Vec<(NetworkId, MempoolNetworkEvents)>,
     mut client_events: mpsc::Receiver<(
@@ -64,7 +51,6 @@ pub(crate) async fn request_coordinator<V>(
 ) where
     V: TransactionValidation,
 {
-    let peer_manager = smp.peer_manager.clone();
     let smp_events: Vec<_> = network_events
         .into_iter()
         .map(|(network_id, events)| events.map(move |e| (network_id, e)))
@@ -72,11 +58,9 @@ pub(crate) async fn request_coordinator<V>(
     let mut events = select_all(smp_events).fuse();
     let is_validator = node_config.base.role.is_validator();
     let mempool = smp.mempool.clone();
-    let mut network_senders = smp.network_senders.clone();
+    let peer_manager = smp.peer_manager.clone();
     let subscribers = &mut smp.subscribers.clone();
-    let batch_size = smp.config.shared_mempool_batch_size;
     let mut scheduled_broadcasts = FuturesUnordered::new();
-    let interval_ms = smp.config.shared_mempool_tick_interval_ms;
 
     // Use a BoundedExecutor to restrict only `workers_available` concurrent
     // worker tasks that can process incoming transactions.
@@ -96,10 +80,10 @@ pub(crate) async fn request_coordinator<V>(
                 .await;
             },
             msg = consensus_requests.select_next_some() => {
-                tasks::process_consensus_request(smp.clone(), msg).await;
+                tasks::process_consensus_request(&mempool, msg).await;
             }
             msg = state_sync_requests.select_next_some() => {
-                tokio::spawn(tasks::process_state_sync_request(smp.clone(), msg));
+                tokio::spawn(tasks::process_state_sync_request(mempool.clone(), msg));
             }
             config_update = mempool_reconfig_events.select_next_some() => {
                 bounded_executor
@@ -107,8 +91,7 @@ pub(crate) async fn request_coordinator<V>(
                 .await;
             },
             peer = scheduled_broadcasts.select_next_some() => {
-                tasks::broadcast_single_peer(peer, &peer_manager, &mempool, &mut network_senders, batch_size, subscribers);
-                schedule_next_broadcast(peer, &mut scheduled_broadcasts, interval_ms, executor.clone());
+                tasks::execute_broadcast(peer, &mut smp, &mut scheduled_broadcasts, executor.clone());
             },
             (network_id, event) = events.select_next_some() => {
                 match event {
@@ -122,8 +105,7 @@ pub(crate) async fn request_coordinator<V>(
                                 let is_new_peer = peer_manager.add_peer(peer);
                                 notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
                                 if is_new_peer && peer_manager.is_upstream_peer(peer) {
-                                    tasks::broadcast_single_peer(peer, &peer_manager, &mempool, &mut network_senders, batch_size, subscribers);
-                                    schedule_next_broadcast(peer, &mut scheduled_broadcasts, interval_ms, executor.clone());
+                                    tasks::execute_broadcast(peer, &mut smp, &mut scheduled_broadcasts, executor.clone());
                                 }
                             }
                             Event::LostPeer(peer_id) => {

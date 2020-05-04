@@ -5,7 +5,7 @@ use crate::{
     core_mempool::CoreMempool,
     network::{MempoolNetworkEvents, MempoolNetworkSender},
     shared_mempool::{
-        coordinator::{gc_coordinator, request_coordinator},
+        coordinator::{coordinator, gc_coordinator},
         peer_manager::PeerManager,
         types::{SharedMempool, SharedMempoolNotification, DEFAULT_MIN_BROADCAST_RECIPIENT_COUNT},
     },
@@ -76,7 +76,7 @@ pub(crate) fn start_shared_mempool<V>(
         subscribers,
     };
 
-    executor.spawn(request_coordinator(
+    executor.spawn(coordinator(
         smp,
         executor.clone(),
         all_network_events,

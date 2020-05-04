@@ -7,16 +7,15 @@ use crate::{
     core_mempool::{CoreMempool, TimelineState, TxnPointer},
     counters,
     network::{MempoolNetworkSender, MempoolSyncMsg},
-    shared_mempool::{
-        peer_manager::PeerManager,
-        types::{notify_subscribers, SharedMempool, SharedMempoolNotification},
+    shared_mempool::types::{
+        notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification,
     },
     CommitNotification, CommitResponse, CommittedTransaction, ConsensusRequest, ConsensusResponse,
     SubmissionStatus,
 };
 use anyhow::{ensure, format_err, Result};
-use futures::channel::{mpsc::UnboundedSender, oneshot};
-use libra_config::config::{NetworkId, PeerNetworkId};
+use futures::{channel::oneshot, stream::FuturesUnordered};
+use libra_config::config::PeerNetworkId;
 use libra_logger::prelude::*;
 use libra_types::{
     mempool_status::{MempoolStatus, MempoolStatusCode},
@@ -30,27 +29,43 @@ use libra_types::{
 };
 use std::{
     cmp,
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     ops::Deref,
     sync::{Arc, Mutex, RwLock},
-    time::Duration,
+    time::{Duration, Instant},
 };
+use tokio::runtime::Handle;
 use vm_validator::vm_validator::{get_account_sequence_number, TransactionValidation};
 
 // ============================== //
 //  broadcast_coordinator tasks  //
 // ============================== //
 
-/// broadcasts txns to `peer` if alive
-/// returns whether the next broadcast should be scheduled
-pub(crate) fn broadcast_single_peer(
+/// attempts broadcast to `peer` and schedules the next broadcast
+pub(crate) fn execute_broadcast<V>(
     peer: PeerNetworkId,
-    peer_manager: &PeerManager,
-    mempool: &Mutex<CoreMempool>,
-    network_senders: &mut HashMap<NetworkId, MempoolNetworkSender>,
-    batch_size: usize,
-    subscribers: &mut [UnboundedSender<SharedMempoolNotification>],
-) {
+    smp: &mut SharedMempool<V>,
+    scheduled_broadcasts: &mut FuturesUnordered<ScheduledBroadcast>,
+    executor: Handle,
+) where
+    V: TransactionValidation,
+{
+    broadcast_single_peer(peer, smp);
+
+    let interval_ms = smp.config.shared_mempool_tick_interval_ms;
+    scheduled_broadcasts.push(ScheduledBroadcast::new(
+        Instant::now() + Duration::from_millis(interval_ms),
+        peer,
+        executor,
+    ))
+}
+
+/// broadcasts txns to `peer` if alive
+fn broadcast_single_peer<V>(peer: PeerNetworkId, smp: &mut SharedMempool<V>)
+where
+    V: TransactionValidation,
+{
+    let peer_manager = &smp.peer_manager;
     let timeline_id = if peer_manager.is_picked_peer(peer) {
         let state = peer_manager.get_peer_state(peer);
         if state.is_alive {
@@ -62,16 +77,18 @@ pub(crate) fn broadcast_single_peer(
         return;
     };
 
-    let (transactions, new_timeline_id) = mempool
+    let (transactions, new_timeline_id) = smp
+        .mempool
         .lock()
         .expect("[shared mempool] failed to acquire mempool lock")
-        .read_timeline(timeline_id, batch_size);
+        .read_timeline(timeline_id, smp.config.shared_mempool_batch_size);
 
     if transactions.is_empty() {
         return;
     }
 
-    let mut network_sender = network_senders
+    let mut network_sender = smp
+        .network_senders
         .get_mut(&peer.network_id())
         .expect("[shared mempool] missing network sender");
 
@@ -92,7 +109,7 @@ pub(crate) fn broadcast_single_peer(
     } else {
         counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST.inc_by(txns_ct as i64);
         peer_manager.update_peer_broadcast(peer, new_timeline_id);
-        notify_subscribers(SharedMempoolNotification::Broadcast, subscribers);
+        notify_subscribers(SharedMempoolNotification::Broadcast, &smp.subscribers);
     }
 }
 
@@ -117,14 +134,14 @@ fn send_mempool_sync_msg(
 
 /// processes transactions directly submitted by client
 pub(crate) async fn process_client_transaction_submission<V>(
-    mut smp: SharedMempool<V>,
+    smp: SharedMempool<V>,
     transaction: SignedTransaction,
     callback: oneshot::Sender<Result<SubmissionStatus>>,
 ) where
     V: TransactionValidation,
 {
     let mut statuses =
-        process_incoming_transactions(&mut smp, vec![transaction], TimelineState::NotReady).await;
+        process_incoming_transactions(&smp, vec![transaction], TimelineState::NotReady).await;
     log_txn_process_results(statuses.clone(), None);
     let status;
     if statuses.is_empty() {
@@ -152,7 +169,7 @@ pub(crate) async fn process_transaction_broadcast<V>(
 ) where
     V: TransactionValidation,
 {
-    let results = process_incoming_transactions(&mut smp, transactions, timeline_state).await;
+    let results = process_incoming_transactions(&smp, transactions, timeline_state).await;
     log_txn_process_results(results, Some(peer.peer_id()));
     // send back ACK
     let mut network_sender = smp
@@ -174,7 +191,7 @@ pub(crate) async fn process_transaction_broadcast<V>(
 /// submits a list of SignedTransaction to the local mempool
 /// and returns a vector containing AdmissionControlStatus
 async fn process_incoming_transactions<V>(
-    smp: &mut SharedMempool<V>,
+    smp: &SharedMempool<V>,
     transactions: Vec<SignedTransaction>,
     timeline_state: TimelineState,
 ) -> Vec<SubmissionStatus>
@@ -317,11 +334,11 @@ pub(crate) fn process_broadcast_ack(
 // ================================= //
 // intra-node communication handlers //
 // ================================= //
-pub(crate) async fn process_state_sync_request<V>(smp: SharedMempool<V>, req: CommitNotification)
-where
-    V: TransactionValidation,
-{
-    commit_txns(smp, req.transactions, req.block_timestamp_usecs, false).await;
+pub(crate) async fn process_state_sync_request(
+    mempool: Arc<Mutex<CoreMempool>>,
+    req: CommitNotification,
+) {
+    commit_txns(&mempool, req.transactions, req.block_timestamp_usecs, false).await;
     // send back to callback
     if let Err(e) = req
         .callback
@@ -339,10 +356,7 @@ where
     }
 }
 
-pub(crate) async fn process_consensus_request<V>(smp: SharedMempool<V>, req: ConsensusRequest)
-where
-    V: TransactionValidation,
-{
+pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req: ConsensusRequest) {
     let (resp, callback) = match req {
         ConsensusRequest::GetBlockRequest(max_block_size, transactions, callback) => {
             let block_size = cmp::max(max_block_size, 1);
@@ -354,8 +368,7 @@ where
                 .iter()
                 .map(|txn| (txn.sender, txn.sequence_number))
                 .collect();
-            let mut txns = smp
-                .mempool
+            let mut txns = mempool
                 .lock()
                 .expect("[get_block] acquire mempool lock")
                 .get_block(block_size, exclude_transactions);
@@ -365,7 +378,7 @@ where
         }
         ConsensusRequest::RejectNotification(transactions, callback) => {
             // handle rejected txns
-            commit_txns(smp, transactions, 0, true).await;
+            commit_txns(mempool, transactions, 0, true).await;
             (ConsensusResponse::CommitResponse(), callback)
         }
     };
@@ -380,16 +393,13 @@ where
     }
 }
 
-async fn commit_txns<V>(
-    smp: SharedMempool<V>,
+async fn commit_txns(
+    mempool: &Mutex<CoreMempool>,
     transactions: Vec<CommittedTransaction>,
     block_timestamp_usecs: u64,
     is_rejected: bool,
-) where
-    V: TransactionValidation,
-{
-    let mut pool = smp
-        .mempool
+) {
+    let mut pool = mempool
         .lock()
         .expect("[shared mempool] failed to get mempool lock");
 
