@@ -99,7 +99,7 @@ else
             echo
         fi
     else
-        echo "Record and replay cancelled"
+        echo "Record and replay canceled"
         exit 1
     fi
 fi

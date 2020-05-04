@@ -136,7 +136,7 @@ async fn handle_query_discovery_set_request(
     let peer_id_short = peer_id.short_str();
 
     // cancel the internal storage rpc request early if the external rpc request
-    // is cancelled.
+    // is canceled.
     futures::select! {
         res = storage_query_discovery_set(storage_read_client, req_msg).fuse() => {
             let (_req_msg, res_msg) = match res {

@@ -17,7 +17,7 @@ pub struct CancelBurnEvent {
 }
 
 impl CancelBurnEvent {
-    /// Get the amount cancelled
+    /// Get the amount canceled
     pub fn amount(&self) -> u64 {
         self.amount
     }

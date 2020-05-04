@@ -737,7 +737,7 @@
           "refId": "A"
         },
         {
-          "expr": "irate(libra_network_rpc_messages{type=\"request\",state=\"cancelled\"}[1m])",
+          "expr": "irate(libra_network_rpc_messages{type=\"request\",state=\"canceled\"}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",

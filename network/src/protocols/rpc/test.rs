@@ -8,6 +8,7 @@
 
 use super::{error::RpcError, *};
 use crate::{
+    counters::{CANCELED_LABEL, FAILED_LABEL, REQUEST_LABEL, RESPONSE_LABEL},
     peer::{PeerNotification, PeerRequest},
     peer_manager::PeerManagerError,
 };
@@ -355,11 +356,11 @@ fn outbound_cancellation_before_send() {
             .await
             .unwrap();
 
-        // drop res_rx to cancel the rpc request and wait for request to be cancelled.
+        // drop res_rx to cancel the rpc request and wait for request to be canceled.
         drop(res_rx);
 
         while counters::LIBRA_NETWORK_RPC_MESSAGES
-            .with_label_values(&["request", "cancelled"])
+            .with_label_values(&[REQUEST_LABEL, CANCELED_LABEL])
             .get() as u64
             != 1
         {
@@ -369,7 +370,7 @@ fn outbound_cancellation_before_send() {
     rt.block_on(f_send_rpc);
 }
 
-// Test that outbound rpcs can be cancelled before receiving response.
+// Test that outbound rpcs can be canceled before receiving response.
 #[test]
 #[serial]
 fn outbound_cancellation_before_recv() {
@@ -401,11 +402,11 @@ fn outbound_cancellation_before_recv() {
         // mock sending to remote peer.
         expect_successful_send(&mut peer_reqs_rx, protocol_id, request).await;
 
-        // drop res_rx to cancel the rpc request and wait for request to be cancelled.
+        // drop res_rx to cancel the rpc request and wait for request to be canceled.
         drop(res_rx);
 
         while counters::LIBRA_NETWORK_RPC_MESSAGES
-            .with_label_values(&["request", "cancelled"])
+            .with_label_values(&[REQUEST_LABEL, CANCELED_LABEL])
             .get() as u64
             != 1
         {
@@ -601,7 +602,7 @@ fn inbound_rpc_timeout() {
         tokio::time::delay_for(Duration::from_millis(1500)).await;
         assert_eq!(
             counters::LIBRA_NETWORK_RPC_MESSAGES
-                .with_label_values(&["response", "failed"])
+                .with_label_values(&[RESPONSE_LABEL, FAILED_LABEL])
                 .get() as u64,
             1
         );
@@ -650,7 +651,7 @@ fn inbound_rpc_failed_response_delivery() {
         .await;
         // Failure counter should increase.
         while counters::LIBRA_NETWORK_RPC_MESSAGES
-            .with_label_values(&["response", "failed"])
+            .with_label_values(&[RESPONSE_LABEL, FAILED_LABEL])
             .get() as u64
             != 1
         {
@@ -688,7 +689,7 @@ fn inbound_rpc_failed_upstream_delivery() {
             .unwrap();
         // Failure counter should increase.
         while counters::LIBRA_NETWORK_RPC_MESSAGES
-            .with_label_values(&["response", "failed"])
+            .with_label_values(&[RESPONSE_LABEL, FAILED_LABEL])
             .get() as u64
             != 1
         {
