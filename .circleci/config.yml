@@ -284,7 +284,7 @@ jobs:
               status=1
               failed_tests=
               while [[ $status != 0 && $retry < ${E2E_RETRIES} ]]; do
-                RUST_BACKTRACE=1 timeout --kill-after=370 --preserve-status 360 \
+                RUST_BACKTRACE=full timeout --kill-after=370 --preserve-status 360 \
                   $libratest $target --test-threads 1 --exact --nocapture
                 status=$?
                 retry=$((retry + 1))
