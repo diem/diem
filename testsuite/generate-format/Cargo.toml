@@ -23,6 +23,8 @@ lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0", features=["fuzzing"] }
 libra-types = { path = "../../types", version = "0.1.0", features=["fuzzing"] }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+network = { path = "../../network", version = "0.1.0" }
+libra-network-address = { path = "../../network/network-address", version = "0.1.0", features=["fuzzing"] }
 
 [[bin]]
 name = "compute"

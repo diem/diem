@@ -1,0 +1,142 @@
+---
+DirectSendMsg:
+  STRUCT:
+    - protocol_id:
+        TYPENAME: ProtocolId
+    - priority: U8
+    - raw_msg: BYTES
+DnsName:
+  NEWTYPESTRUCT: STR
+ErrorCode:
+  ENUM:
+    0:
+      TimedOut: UNIT
+    1:
+      ParsingError:
+        TUPLE:
+          - TYPENAME: MessagingProtocolVersion
+          - TYPENAME: NetworkMessage
+    2:
+      NotSupported:
+        NEWTYPE:
+          TYPENAME: ProtocolId
+HandshakeMsg:
+  STRUCT:
+    - supported_protocols:
+        MAP:
+          KEY:
+            TYPENAME: MessagingProtocolVersion
+          VALUE:
+            TYPENAME: SupportedProtocols
+MessagingProtocolVersion:
+  ENUM:
+    0:
+      V1: UNIT
+NetworkAddress:
+  NEWTYPESTRUCT:
+    SEQ:
+      TYPENAME: Protocol
+NetworkMessage:
+  ENUM:
+    0:
+      Error:
+        NEWTYPE:
+          TYPENAME: ErrorCode
+    1:
+      Ping:
+        NEWTYPE:
+          TYPENAME: Nonce
+    2:
+      Pong:
+        NEWTYPE:
+          TYPENAME: Nonce
+    3:
+      RpcRequest:
+        NEWTYPE:
+          TYPENAME: RpcRequest
+    4:
+      RpcResponse:
+        NEWTYPE:
+          TYPENAME: RpcResponse
+    5:
+      DirectSendMsg:
+        NEWTYPE:
+          TYPENAME: DirectSendMsg
+Nonce:
+  NEWTYPESTRUCT: U32
+Protocol:
+  ENUM:
+    0:
+      Ip4:
+        NEWTYPE:
+          TUPLEARRAY:
+            CONTENT: U8
+            SIZE: 4
+    1:
+      Ip6:
+        NEWTYPE:
+          TUPLEARRAY:
+            CONTENT: U8
+            SIZE: 16
+    2:
+      Dns:
+        NEWTYPE:
+          TYPENAME: DnsName
+    3:
+      Dns4:
+        NEWTYPE:
+          TYPENAME: DnsName
+    4:
+      Dns6:
+        NEWTYPE:
+          TYPENAME: DnsName
+    5:
+      Tcp:
+        NEWTYPE: U16
+    6:
+      Memory:
+        NEWTYPE: U16
+    7:
+      NoiseIk:
+        NEWTYPE:
+          TYPENAME: PublicKey
+    8:
+      Handshake:
+        NEWTYPE: U8
+ProtocolId:
+  ENUM:
+    0:
+      ConsensusRpc: UNIT
+    1:
+      ConsensusDirectSend: UNIT
+    2:
+      MempoolDirectSend: UNIT
+    3:
+      StateSynchronizerDirectSend: UNIT
+    4:
+      DiscoveryDirectSend: UNIT
+    5:
+      HealthCheckerRpc: UNIT
+    6:
+      IdentityDirectSend: UNIT
+    7:
+      OnchainDiscoveryRpc: UNIT
+PublicKey:
+  NEWTYPESTRUCT: BYTES
+RawNetworkAddress:
+  NEWTYPESTRUCT: BYTES
+RpcRequest:
+  STRUCT:
+    - request_id: U32
+    - protocol_id:
+        TYPENAME: ProtocolId
+    - priority: U8
+    - raw_request: BYTES
+RpcResponse:
+  STRUCT:
+    - request_id: U32
+    - priority: U8
+    - raw_response: BYTES
+SupportedProtocols:
+  NEWTYPESTRUCT:
+    SEQ: U8
