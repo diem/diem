@@ -23,7 +23,7 @@ debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
 cli = { path = "../client/cli", version = "0.1.0", features = ["fuzzing"] }
 generate-key = { path = "../config/generate-key", version = "0.1.0" }
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
-libra-swarm = { path = "../libra-swarm", version = "0.1.0" }
+libra-swarm = { path = "libra-swarm", version = "0.1.0" }
 libra-json-rpc = { path = "../json-rpc", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-config = { path = "../config", version = "0.1.0" }
