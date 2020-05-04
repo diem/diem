@@ -2,4 +2,4 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // v1 of the LibraNet handshake protocol.
-pub(crate) mod v1;
+pub mod v1;

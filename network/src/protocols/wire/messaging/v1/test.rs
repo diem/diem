@@ -14,7 +14,7 @@ fn protocol_id_serialization() -> lcs::Result<()> {
 #[test]
 fn error_code() -> lcs::Result<()> {
     let error_code = ErrorCode::TimedOut;
-    assert_eq!(lcs::to_bytes(&error_code)?, vec![0x01]);
+    assert_eq!(lcs::to_bytes(&error_code)?, vec![0x00]);
     Ok(())
 }
 

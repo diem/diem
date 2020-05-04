@@ -158,8 +158,7 @@ pub enum Protocol {
 /// is a valid unicode string. We do this because '/' characters are already our
 /// protocol delimiter and Rust's [`::std::net::ToSocketAddr`] API requires a
 /// `&str`.
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
-#[serde(try_from = "String", into = "String")]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct DnsName(String);
 
 /// Possible errors when parsing a human-readable [`NetworkAddress`].
@@ -520,6 +519,21 @@ impl FromStr for DnsName {
 impl fmt::Display for DnsName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+impl<'de> Deserialize<'de> for DnsName {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(rename = "DnsName")]
+        struct DeserializeWrapper(String);
+
+        let wrapper = DeserializeWrapper::deserialize(deserializer)?;
+        let name = DnsName::try_from(wrapper.0).map_err(de::Error::custom)?;
+        Ok(name)
     }
 }
 

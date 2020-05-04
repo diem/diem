@@ -26,10 +26,10 @@ pub enum NetworkMessage {
 /// New variants cannot be added without bumping up the MessagingProtocolVersion.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum ErrorCode {
-    /// Failed to parse NetworkMessage when interpreting according to provided protocol version.
-    ParsingError(MessagingProtocolVersion, Box<NetworkMessage>),
     /// Ping timed out.
     TimedOut,
+    /// Failed to parse NetworkMessage when interpreting according to provided protocol version.
+    ParsingError(MessagingProtocolVersion, Box<NetworkMessage>),
     /// A message was received for a protocol that is not supported over this connection.
     NotSupported(ProtocolId),
 }

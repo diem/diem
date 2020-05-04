@@ -8,10 +8,12 @@ use serde_reflection::Registry;
 use std::str::FromStr;
 use structopt::{clap::arg_enum, StructOpt};
 
-/// consensus types.
+/// Consensus messages.
 mod consensus;
 /// Libra transactions.
 mod libra;
+/// Network messages.
+mod network;
 
 arg_enum! {
 #[derive(Debug, StructOpt, Clone, Copy)]
@@ -19,6 +21,7 @@ arg_enum! {
 pub enum Corpus {
     Libra,
     Consensus,
+    Network,
 }
 }
 
@@ -36,6 +39,7 @@ impl Corpus {
         match self {
             Corpus::Libra => libra::get_registry().unwrap(),
             Corpus::Consensus => consensus::get_registry().unwrap(),
+            Corpus::Network => network::get_registry().unwrap(),
         }
     }
 
@@ -44,6 +48,7 @@ impl Corpus {
         match self {
             Corpus::Libra => libra::output_file(),
             Corpus::Consensus => consensus::output_file(),
+            Corpus::Network => network::output_file(),
         }
     }
 }
