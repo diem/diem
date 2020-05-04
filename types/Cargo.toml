@@ -23,7 +23,7 @@ prost = "0.6"
 radix_trie = { version = "0.1.4", default-features = false }
 rand = "0.7.3"
 serde = { version = "1.0.106", default-features = false }
-serde_bytes = "0.11.3"
+serde_bytes = "0.11.4"
 thiserror = "1.0"
 tiny-keccak = { version = "2.0.2", default-features = false, features = ["sha3"] }
 

@@ -13,7 +13,7 @@ edition = "2018"
 proptest = { version = "0.9.6", optional = true }
 proptest-derive = { version = "0.1.2", optional = true }
 serde = { version = "1.0.106", default-features = false }
-serde_bytes = "0.11.3"
+serde_bytes = "0.11.4"
 thiserror = "1.0"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
