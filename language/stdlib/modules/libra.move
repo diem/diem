@@ -93,7 +93,7 @@ module Libra {
         burn_events: Event::EventHandle<BurnEvent>,
         // event stream for preburn requests
         preburn_events: Event::EventHandle<PreburnEvent>,
-        // event stream for cancelled prebunr requests
+        // event stream for canceled prebunr requests
         cancel_burn_events: Event::EventHandle<CancelBurnEvent>,
     }
 

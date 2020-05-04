@@ -11,7 +11,7 @@
 //! intersecting messaging protocol version and use that for the remainder of the session.
 
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, convert::TryInto, iter::Iterator};
+use std::{collections::BTreeMap, convert::TryInto, fmt, iter::Iterator};
 
 #[cfg(test)]
 mod test;
@@ -29,6 +29,28 @@ pub enum ProtocolId {
     HealthCheckerRpc = 5,
     IdentityDirectSend = 6,
     OnchainDiscoveryRpc = 7,
+}
+
+impl ProtocolId {
+    pub fn as_str(self) -> &'static str {
+        use ProtocolId::*;
+        match self {
+            ConsensusRpc => "ConsensusRpc",
+            ConsensusDirectSend => "ConsensusDirectSend",
+            MempoolDirectSend => "MempoolDirectSend",
+            StateSynchronizerDirectSend => "StateSynchronizerDirectSend",
+            DiscoveryDirectSend => "DiscoveryDirectSend",
+            HealthCheckerRpc => "HealthCheckerRpc",
+            IdentityDirectSend => "IdentityDirectSend",
+            OnchainDiscoveryRpc => "OnchainDiscoveryRpc",
+        }
+    }
+}
+
+impl fmt::Display for ProtocolId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]

@@ -68,7 +68,7 @@ pub struct ConnectivityManager<TTicker, TBackoff> {
     connection_notifs_rx: conn_status_channel::Receiver,
     /// Channel over which we receive requests from other actors.
     requests_rx: channel::Receiver<ConnectivityRequest>,
-    /// Peers queued to be dialed, potentially with some delay. The dial can be cancelled by
+    /// Peers queued to be dialed, potentially with some delay. The dial can be canceled by
     /// sending over (or dropping) the associated oneshot sender.
     dial_queue: HashMap<PeerId, oneshot::Sender<()>>,
     /// The state of any currently executing dials. Used to keep track of what
@@ -331,7 +331,7 @@ where
                         .deadline()
                         .duration_since(tokio::time::Instant::from_std(now))
                 );
-                // We dial after a delay. The dial can be cancelled by sending to or dropping
+                // We dial after a delay. The dial can be canceled by sending to or dropping
                 // `cancel_rx`.
                 let dial_result = ::futures::select! {
                     _ = f_delay.fuse() => {

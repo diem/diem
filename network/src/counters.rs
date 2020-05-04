@@ -2,10 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_metrics::{
-    register_histogram, register_histogram_vec, register_int_counter_vec, register_int_gauge_vec,
-    Histogram, HistogramVec, IntCounterVec, IntGauge, IntGaugeVec, OpMetrics,
+    register_histogram_vec, register_int_counter_vec, register_int_gauge_vec, HistogramVec,
+    IntCounterVec, IntGauge, IntGaugeVec, OpMetrics,
 };
 use once_cell::sync::Lazy;
+
+// some type labels
+pub const REQUEST_LABEL: &str = "request";
+pub const RESPONSE_LABEL: &str = "response";
+
+// some state labels
+pub const CANCELED_LABEL: &str = "canceled";
+pub const DECLINED_LABEL: &str = "declined";
+pub const FAILED_LABEL: &str = "failed";
+pub const RECEIVED_LABEL: &str = "received";
+pub const SENT_LABEL: &str = "sent";
 
 pub static LIBRA_NETWORK_PEERS: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
@@ -49,10 +60,11 @@ pub static LIBRA_NETWORK_RPC_BYTES: Lazy<HistogramVec> = Lazy::new(|| {
     .unwrap()
 });
 
-pub static LIBRA_NETWORK_RPC_LATENCY: Lazy<Histogram> = Lazy::new(|| {
-    register_histogram!(
+pub static LIBRA_NETWORK_RPC_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
         "libra_network_rpc_latency_seconds",
-        "Libra network rpc latency histogram"
+        "Libra network rpc latency histogram",
+        &["type", "protocol_id", "peer_id"]
     )
     .unwrap()
 });

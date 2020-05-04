@@ -44,6 +44,10 @@
 
 use crate::{
     counters,
+    counters::{
+        CANCELED_LABEL, DECLINED_LABEL, FAILED_LABEL, RECEIVED_LABEL, REQUEST_LABEL,
+        RESPONSE_LABEL, SENT_LABEL,
+    },
     peer::{PeerHandle, PeerNotification},
     protocols::wire::messaging::v1::{
         NetworkMessage, Priority, RequestId, RpcRequest, RpcResponse,
@@ -317,7 +321,7 @@ impl Rpc {
         if inbound_rpc_tasks.len() as u32 == self.max_concurrent_inbound_rpcs {
             // Increase counter of declined responses and log warning.
             counters::LIBRA_NETWORK_RPC_MESSAGES
-                .with_label_values(&["response", "declined"])
+                .with_label_values(&[RESPONSE_LABEL, DECLINED_LABEL])
                 .inc();
             warn!(
                 "Pending inbound RPCs are at limit ({}). Not processing new inbound rpc requests",
@@ -338,7 +342,7 @@ impl Rpc {
             {
                 // Log any errors.
                 counters::LIBRA_NETWORK_RPC_MESSAGES
-                    .with_label_values(&["response", "failed"])
+                    .with_label_values(&[RESPONSE_LABEL, FAILED_LABEL])
                     .inc();
                 warn!(
                     "Error handling inbound rpc request from {}: {:?}",
@@ -353,7 +357,7 @@ impl Rpc {
     ///
     /// Cancellation is done by the client dropping the receiver side of the [`req.res_tx`]
     /// oneshot channel. If the request is canceled, the rpc future is dropped and the request is
-    /// cancelled. Currently, we don't send a cancellation message to the remote peer.
+    /// canceled. Currently, we don't send a cancellation message to the remote peer.
     ///
     /// [`req.res_tx`]: OutboundRpcRequest::res_tx
     async fn handle_outbound_rpc(
@@ -417,7 +421,7 @@ impl Rpc {
                     // Log any errors.
                     if let Err(ref err) = res {
                         counters::LIBRA_NETWORK_RPC_MESSAGES
-                            .with_label_values(&["request", "failed"])
+                            .with_label_values(&[REQUEST_LABEL, FAILED_LABEL])
                             .inc();
                         warn!(
                             "Error making outbound rpc request with request_id {} to {}: {:?}",
@@ -427,7 +431,7 @@ impl Rpc {
                     // Propagate the results to the rpc client layer.
                     if res_tx.send(res).is_err() {
                         counters::LIBRA_NETWORK_RPC_MESSAGES
-                            .with_label_values(&["request", "cancelled"])
+                            .with_label_values(&[REQUEST_LABEL, CANCELED_LABEL])
                             .inc();
                         info!("Rpc client canceled outbound rpc call to {}", peer_id_str);
                     }
@@ -435,7 +439,7 @@ impl Rpc {
                 // The rpc client canceled the request
                 cancel = f_rpc_cancel => {
                     counters::LIBRA_NETWORK_RPC_MESSAGES
-                        .with_label_values(&["request", "cancelled"])
+                        .with_label_values(&[REQUEST_LABEL, CANCELED_LABEL])
                         .inc();
                     info!("Rpc client canceled outbound rpc call to {}", peer_id_str);
                 },
@@ -456,6 +460,7 @@ async fn handle_outbound_rpc_inner(
 ) -> Result<Bytes, RpcError> {
     let req_len = req_data.len();
     let peer_id = peer_handle.peer_id();
+    let peer_id_str = peer_id.to_string();
 
     // Create NetworkMessage to be sent over the wire.
     let request = NetworkMessage::RpcRequest(RpcRequest {
@@ -466,45 +471,52 @@ async fn handle_outbound_rpc_inner(
         raw_request: Vec::from(req_data.as_ref()),
     });
 
-    // Start timer to collect RPC latency.
-    let _timer = counters::LIBRA_NETWORK_RPC_LATENCY.start_timer();
-
     // Send outbound request to peer_handle.
     trace!(
         "Sending outbound rpc request with request_id {} to peer: {:?}",
         request_id,
-        peer_id.short_str()
+        peer_id_str
     );
+    let prototol_id_descriptor = protocol.as_str();
+    // Start timer to collect RPC latency.
+    let timer = counters::LIBRA_NETWORK_RPC_LATENCY
+        .with_label_values(&[REQUEST_LABEL, prototol_id_descriptor, &peer_id_str])
+        .start_timer();
+
     peer_handle.send_message(request, protocol).await?;
 
     // Collect counters for requests sent.
     counters::LIBRA_NETWORK_RPC_MESSAGES
-        .with_label_values(&["request", "sent"])
+        .with_label_values(&[REQUEST_LABEL, SENT_LABEL])
         .inc();
     counters::LIBRA_NETWORK_RPC_BYTES
-        .with_label_values(&["request", "sent"])
+        .with_label_values(&[REQUEST_LABEL, SENT_LABEL])
         .observe(req_len as f64);
 
     // Wait for listener's response.
     trace!(
         "Waiting to receive response for request_id {} from peer: {:?}",
         request_id,
-        peer_id.short_str()
+        peer_id_str
     );
     let response = response_rx.await?;
+    let latency = timer.stop_and_record();
     trace!(
-        "Received response for request_id {} from peer: {:?}",
+        "Received response for request_id {} from peer: {:?} \
+        with {:.6} seconds of latency. Request protocol_id: {}",
         request_id,
-        peer_id.short_str()
+        peer_id_str,
+        latency,
+        prototol_id_descriptor
     );
 
     // Collect counters for received response.
     let res_data = response.raw_response;
     counters::LIBRA_NETWORK_RPC_MESSAGES
-        .with_label_values(&["response", "received"])
+        .with_label_values(&[RESPONSE_LABEL, RECEIVED_LABEL])
         .inc();
     counters::LIBRA_NETWORK_RPC_BYTES
-        .with_label_values(&["response", "received"])
+        .with_label_values(&[RESPONSE_LABEL, RECEIVED_LABEL])
         .observe(res_data.len() as f64);
     Ok(Bytes::from(res_data))
 }
@@ -525,10 +537,10 @@ async fn handle_inbound_request_inner(
     );
     // Collect counters for received request.
     counters::LIBRA_NETWORK_RPC_MESSAGES
-        .with_label_values(&["request", "received"])
+        .with_label_values(&[REQUEST_LABEL, RECEIVED_LABEL])
         .inc();
     counters::LIBRA_NETWORK_RPC_BYTES
-        .with_label_values(&["request", "received"])
+        .with_label_values(&[REQUEST_LABEL, RECEIVED_LABEL])
         .observe(req_data.len() as f64);
 
     // Forward request to upper layer.
@@ -566,10 +578,10 @@ async fn handle_inbound_request_inner(
 
     // Collect counters for sent response.
     counters::LIBRA_NETWORK_RPC_MESSAGES
-        .with_label_values(&["response", "sent"])
+        .with_label_values(&[RESPONSE_LABEL, SENT_LABEL])
         .inc();
     counters::LIBRA_NETWORK_RPC_BYTES
-        .with_label_values(&["response", "sent"])
+        .with_label_values(&[RESPONSE_LABEL, SENT_LABEL])
         .observe(res_len as f64);
     Ok(())
 }
