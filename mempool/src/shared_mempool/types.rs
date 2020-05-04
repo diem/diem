@@ -8,12 +8,10 @@ use crate::{
     shared_mempool::{network::MempoolNetworkSender, peer_manager::PeerManager},
 };
 use anyhow::Result;
-use channel::libra_channel;
 use futures::{
-    channel::{mpsc, oneshot},
+    channel::{mpsc, mpsc::UnboundedSender, oneshot},
     future::Future,
     task::{Context, Poll},
-    Stream,
 };
 use libra_config::config::{MempoolConfig, PeerNetworkId};
 use libra_types::{
@@ -49,7 +47,7 @@ where
     pub db: Arc<dyn DbReader>,
     pub validator: Arc<RwLock<V>>,
     pub peer_manager: Arc<PeerManager>,
-    pub subscribers: Vec<libra_channel::Sender<(), SharedMempoolNotification>>,
+    pub subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
 }
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
@@ -60,18 +58,12 @@ pub enum SharedMempoolNotification {
     Broadcast,
 }
 
-#[derive(Debug)]
-pub(crate) struct SyncEvent;
-
-pub(crate) type IntervalStream = Pin<Box<dyn Stream<Item = SyncEvent> + Send + 'static>>;
-
 pub(crate) fn notify_subscribers(
     event: SharedMempoolNotification,
-    subscribers: &mut [libra_channel::Sender<(), SharedMempoolNotification>],
+    subscribers: &[UnboundedSender<SharedMempoolNotification>],
 ) {
     for subscriber in subscribers {
-//        let _ = subscriber.unbounded_send(event);
-        let _ = subscriber.push((), event);
+        let _ = subscriber.unbounded_send(event);
     }
 }
 

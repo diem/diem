@@ -5,26 +5,22 @@ use crate::{
     core_mempool::CoreMempool,
     network::{MempoolNetworkEvents, MempoolNetworkSender},
     shared_mempool::{
-        coordinator::{broadcast_coordinator, gc_coordinator, request_coordinator},
+        coordinator::{gc_coordinator, request_coordinator},
         peer_manager::PeerManager,
-        types::{
-            IntervalStream, SharedMempool, SharedMempoolNotification,
-            DEFAULT_MIN_BROADCAST_RECIPIENT_COUNT,
-        },
+        types::{SharedMempool, SharedMempoolNotification, DEFAULT_MIN_BROADCAST_RECIPIENT_COUNT},
     },
     CommitNotification, ConsensusRequest, SubmissionStatus,
 };
 use anyhow::Result;
-use channel::{libra_channel, message_queues::QueueStyle};
+use channel::libra_channel;
 use futures::channel::{
-    mpsc::{self, Receiver},
+    mpsc::{self, Receiver, UnboundedSender},
     oneshot,
 };
 use libra_config::config::NodeConfig;
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction, PeerId};
 use std::{
     collections::HashMap,
-    num::NonZeroUsize,
     sync::{Arc, Mutex, RwLock},
 };
 use storage_interface::DbReader;
@@ -49,8 +45,7 @@ pub(crate) fn start_shared_mempool<V>(
     mempool_reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
     db: Arc<dyn DbReader>,
     validator: Arc<RwLock<V>>,
-    subscribers: Vec<libra_channel::Sender<(), SharedMempoolNotification>>,
-    broadcast_ticker: Option<IntervalStream>,
+    subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
 ) where
     V: TransactionValidation + 'static,
 {
@@ -81,19 +76,6 @@ pub(crate) fn start_shared_mempool<V>(
         subscribers,
     };
 
-    let smp_outbound = smp.clone();
-    let (schedule_broadcast_tx, schedule_broadcast_rx) = libra_channel::new(
-        QueueStyle::LIFO,
-        NonZeroUsize::new(1).expect("failed to set libra-channel size"),
-        None,
-    );
-    executor.spawn(broadcast_coordinator(
-        smp_outbound,
-        schedule_broadcast_rx,
-        executor.clone(),
-        broadcast_ticker,
-    ));
-
     executor.spawn(request_coordinator(
         smp,
         executor.clone(),
@@ -102,7 +84,6 @@ pub(crate) fn start_shared_mempool<V>(
         consensus_requests,
         state_sync_requests,
         mempool_reconfig_events,
-        schedule_broadcast_tx,
         config_clone,
     ));
 
@@ -144,7 +125,6 @@ pub fn bootstrap(
         db,
         vm_validator,
         vec![],
-        None,
     );
     runtime
 }
