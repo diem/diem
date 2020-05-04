@@ -977,7 +977,14 @@ impl Script {
         let code: Vec<Bytecode> = compiled_script.code.code.clone();
         let parameters = script.signature_at(compiled_script.parameters).clone();
         let return_ = Signature(vec![]);
-        let locals = script.signature_at(compiled_script.code.locals).clone();
+        let locals = Signature(
+            parameters
+                .0
+                .iter()
+                .chain(script.signature_at(compiled_script.code.locals).0.iter())
+                .cloned()
+                .collect(),
+        );
         let type_parameters = compiled_script.type_parameters.clone();
         // TODO: main does not have a name. Revisit.
         let name = Identifier::new("main").unwrap();
@@ -1050,12 +1057,22 @@ impl Function {
             None
         };
         let scope = Scope::Module(module_id);
+        let parameters = module.signature_at(handle.parameters).clone();
         // Native functions do not have a code unit
         let (code, locals) = match &def.code {
-            Some(code) => (code.code.clone(), module.signature_at(code.locals).clone()),
+            Some(code) => (
+                code.code.clone(),
+                Signature(
+                    parameters
+                        .0
+                        .iter()
+                        .chain(module.signature_at(code.locals).0.iter())
+                        .cloned()
+                        .collect(),
+                ),
+            ),
             None => (vec![], Signature(vec![])),
         };
-        let parameters = module.signature_at(handle.parameters).clone();
         let return_ = module.signature_at(handle.return_).clone();
         let type_parameters = handle.type_parameters.clone();
         Self {

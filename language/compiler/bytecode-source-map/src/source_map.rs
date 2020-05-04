@@ -45,6 +45,9 @@ pub struct FunctionSourceMap<Location: Clone + Eq> {
     /// Note that type parameters need to be added in the order of their declaration
     pub type_parameters: Vec<SourceName<Location>>,
 
+    pub parameters: Vec<SourceName<Location>>,
+
+    // pub parameters: Vec<SourceName<Location>>,
     /// The index into the vector is the locals index. The corresponding `(Identifier, Location)` tuple
     /// is the name and location of the local.
     pub locals: Vec<SourceName<Location>>,
@@ -161,6 +164,7 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
         Self {
             decl_location,
             type_parameters: Vec::new(),
+            parameters: Vec::new(),
             locals: Vec::new(),
             code_map: BTreeMap::new(),
             nops: BTreeMap::new(),
@@ -205,6 +209,10 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
         self.locals.push(name);
     }
 
+    pub fn add_parameter_mapping(&mut self, name: SourceName<Location>) {
+        self.parameters.push(name)
+    }
+
     /// Recall that we are using a segment tree. We therefore lookup the location for the code
     /// offset by performing a range query for the largest number less than or equal to the code
     /// offset passed in.
@@ -215,13 +223,19 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
             .map(|(_, vl)| vl.clone())
     }
 
-    pub fn get_local_name(&self, local_index: u64) -> Option<SourceName<Location>> {
-        self.locals.get(local_index as usize).cloned()
+    pub fn get_parameter_or_local_name(&self, idx: u64) -> Option<SourceName<Location>> {
+        let idx = idx as usize;
+        if idx < self.parameters.len() {
+            self.parameters.get(idx).cloned()
+        } else {
+            self.locals.get(idx - self.parameters.len()).cloned()
+        }
     }
 
     pub fn make_local_name_to_index_map(&self) -> BTreeMap<&String, LocalIndex> {
         self.locals
             .iter()
+            .chain(self.parameters.iter())
             .enumerate()
             .map(|(i, (n, _))| (n, i as LocalIndex))
             .collect()
@@ -263,12 +277,17 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
         let FunctionSourceMap {
             decl_location,
             type_parameters,
+            parameters,
             locals,
             code_map,
             nops,
         } = self;
         let decl_location = f(decl_location);
         let type_parameters = type_parameters
+            .into_iter()
+            .map(|n| remap_locations_source_name(n, f))
+            .collect();
+        let parameters = parameters
             .into_iter()
             .map(|n| remap_locations_source_name(n, f))
             .collect();
@@ -280,6 +299,7 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
         FunctionSourceMap {
             decl_location,
             type_parameters,
+            parameters,
             locals,
             code_map,
             nops,
@@ -389,14 +409,26 @@ impl<Location: Clone + Eq> SourceMap<Location> {
         Ok(())
     }
 
-    pub fn get_local_name(
+    pub fn add_parameter_mapping(
+        &mut self,
+        fdef_idx: FunctionDefinitionIndex,
+        name: SourceName<Location>,
+    ) -> Result<()> {
+        let func_entry = self.function_map.get_mut(&fdef_idx.0).ok_or_else(|| {
+            format_err!("Tried to add parameter mapping to undefined function index")
+        })?;
+        func_entry.add_parameter_mapping(name);
+        Ok(())
+    }
+
+    pub fn get_parameter_or_local_name(
         &self,
         fdef_idx: FunctionDefinitionIndex,
         index: u64,
     ) -> Result<SourceName<Location>> {
         self.function_map
             .get(&fdef_idx.0)
-            .and_then(|function_source_map| function_source_map.get_local_name(index))
+            .and_then(|function_source_map| function_source_map.get_parameter_or_local_name(index))
             .ok_or_else(|| format_err!("Tried to get local name at undefined function index"))
     }
 

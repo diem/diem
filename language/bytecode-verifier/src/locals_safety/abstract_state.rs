@@ -35,7 +35,9 @@ pub struct AbstractState {
 impl AbstractState {
     /// create a new abstract state
     pub fn new(module: &CompiledModule, function_definition: &FunctionDefinition) -> Self {
-        let local_types = &module
+        let func_handle = module.function_handle_at(function_definition.function);
+        let parameter_types = &module.signature_at(func_handle.parameters).0;
+        let additional_local_types = &module
             .signature_at(
                 function_definition
                     .code
@@ -44,15 +46,16 @@ impl AbstractState {
                     .locals,
             )
             .0;
-        let func_handle = module.function_handle_at(function_definition.function);
+        let num_locals = parameter_types.len() + additional_local_types.len();
 
         let num_args = module.signature_at(func_handle.parameters).0.len();
-        let local_states = (0..local_types.len())
+        let local_states = (0..num_locals)
             .map(|i| if i < num_args { Available } else { Unavailable })
             .collect();
 
-        let local_kinds = local_types
+        let local_kinds = parameter_types
             .iter()
+            .chain(additional_local_types.iter())
             .map(|st| kind(module, st, &func_handle.type_parameters))
             .collect();
 

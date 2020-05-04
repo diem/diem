@@ -755,6 +755,7 @@ impl Frame {
                     Bytecode::MoveLoc(idx) => {
                         let local = self.locals.move_loc(*idx as usize)?;
                         gas!(instr: context, interpreter, Opcodes::MOVE_LOC, local.size())?;
+
                         interpreter.operand_stack.push(local)?;
                     }
                     Bytecode::StLoc(idx) => {

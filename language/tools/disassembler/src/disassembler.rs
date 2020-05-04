@@ -177,13 +177,13 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         Ok((name, Self::format_type_params(&type_arguments)))
     }
 
-    fn name_for_local(
+    fn name_for_parameter_or_local(
         &self,
-        local_idx: u64,
+        local_idx: usize,
         function_source_map: &FunctionSourceMap<Location>,
     ) -> Result<String> {
         let name = function_source_map
-                .get_local_name(local_idx)
+                .get_parameter_or_local_name(local_idx as u64)
                 .ok_or_else(|| {
                     format_err!(
                         "Unable to get local name at index {} while disassembling location-based instruction", local_idx
@@ -193,13 +193,30 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         Ok(name)
     }
 
-    fn type_for_local(
+    fn type_for_parameter_or_local(
         &self,
-        local_idx: u64,
-        locals_sigs: &Signature,
+        idx: usize,
+        parameters: &Signature,
+        locals: &Signature,
         function_source_map: &FunctionSourceMap<Location>,
     ) -> Result<String> {
-        let sig_tok = locals_sigs
+        let sig_tok = if idx < parameters.len() {
+            &parameters.0[idx]
+        } else if idx < parameters.len() + locals.len() {
+            &locals.0[idx - parameters.len()]
+        } else {
+            bail!("Unable to get type for parameter or local at index {}", idx)
+        };
+        self.disassemble_sig_tok(sig_tok.clone(), &function_source_map.type_parameters)
+    }
+
+    fn type_for_local(
+        &self,
+        local_idx: usize,
+        locals: &Signature,
+        function_source_map: &FunctionSourceMap<Location>,
+    ) -> Result<String> {
+        let sig_tok = locals
             .0
             .get(local_idx as usize)
             .ok_or_else(|| format_err!("Unable to get type for local at index {}", local_idx))?;
@@ -308,6 +325,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
 
     fn disassemble_instruction(
         &self,
+        parameters: &Signature,
         instruction: &Bytecode,
         locals_sigs: &Signature,
         function_source_map: &FunctionSourceMap<Location>,
@@ -322,33 +340,58 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                 ))
             }
             Bytecode::CopyLoc(local_idx) => {
-                let name = self.name_for_local(u64::from(*local_idx), function_source_map)?;
-                let ty =
-                    self.type_for_local(u64::from(*local_idx), locals_sigs, function_source_map)?;
+                let name =
+                    self.name_for_parameter_or_local(usize::from(*local_idx), function_source_map)?;
+                let ty = self.type_for_parameter_or_local(
+                    usize::from(*local_idx),
+                    parameters,
+                    locals_sigs,
+                    function_source_map,
+                )?;
                 Ok(format!("CopyLoc[{}]({}: {})", local_idx, name, ty))
             }
             Bytecode::MoveLoc(local_idx) => {
-                let name = self.name_for_local(u64::from(*local_idx), function_source_map)?;
-                let ty =
-                    self.type_for_local(u64::from(*local_idx), locals_sigs, function_source_map)?;
+                let name =
+                    self.name_for_parameter_or_local(usize::from(*local_idx), function_source_map)?;
+                let ty = self.type_for_parameter_or_local(
+                    usize::from(*local_idx),
+                    parameters,
+                    locals_sigs,
+                    function_source_map,
+                )?;
                 Ok(format!("MoveLoc[{}]({}: {})", local_idx, name, ty))
             }
             Bytecode::StLoc(local_idx) => {
-                let name = self.name_for_local(u64::from(*local_idx), function_source_map)?;
-                let ty =
-                    self.type_for_local(u64::from(*local_idx), locals_sigs, function_source_map)?;
+                let name =
+                    self.name_for_parameter_or_local(usize::from(*local_idx), function_source_map)?;
+                let ty = self.type_for_parameter_or_local(
+                    usize::from(*local_idx),
+                    parameters,
+                    locals_sigs,
+                    function_source_map,
+                )?;
                 Ok(format!("StLoc[{}]({}: {})", local_idx, name, ty))
             }
             Bytecode::MutBorrowLoc(local_idx) => {
-                let name = self.name_for_local(u64::from(*local_idx), function_source_map)?;
-                let ty =
-                    self.type_for_local(u64::from(*local_idx), locals_sigs, function_source_map)?;
+                let name =
+                    self.name_for_parameter_or_local(usize::from(*local_idx), function_source_map)?;
+                let ty = self.type_for_parameter_or_local(
+                    usize::from(*local_idx),
+                    parameters,
+                    locals_sigs,
+                    function_source_map,
+                )?;
                 Ok(format!("MutBorrowLoc[{}]({}: {})", local_idx, name, ty))
             }
             Bytecode::ImmBorrowLoc(local_idx) => {
-                let name = self.name_for_local(u64::from(*local_idx), function_source_map)?;
-                let ty =
-                    self.type_for_local(u64::from(*local_idx), locals_sigs, function_source_map)?;
+                let name =
+                    self.name_for_parameter_or_local(usize::from(*local_idx), function_source_map)?;
+                let ty = self.type_for_parameter_or_local(
+                    usize::from(*local_idx),
+                    parameters,
+                    locals_sigs,
+                    function_source_map,
+                )?;
                 Ok(format!("ImmBorrowLoc[{}]({}: {})", local_idx, name, ty))
             }
             Bytecode::MutBorrowField(field_idx) => {
@@ -631,11 +674,20 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         }
 
         let function_def = self.get_function_def(function_definition_index)?;
+        let function_handle = self
+            .source_mapper
+            .bytecode
+            .function_handle_at(function_def.function);
+
         let code = match &function_def.code {
             Some(code) => code,
             None => return Ok(vec!["".to_string()]),
         };
 
+        let parameters = self
+            .source_mapper
+            .bytecode
+            .signature_at(function_handle.parameters);
         let locals_sigs = self.source_mapper.bytecode.signature_at(code.locals);
         let function_source_map = self
             .source_mapper
@@ -648,6 +700,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             .iter()
             .map(|instruction| {
                 self.disassemble_instruction(
+                    parameters,
                     instruction,
                     locals_sigs,
                     function_source_map,
@@ -691,7 +744,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         &self,
         function_source_map: &FunctionSourceMap<Location>,
         locals_idx: SignatureIndex,
-        parameters_len: usize,
+        parameter_len: usize,
     ) -> Result<Vec<String>> {
         if !self.options.print_locals {
             return Ok(vec![]);
@@ -701,10 +754,11 @@ impl<Location: Clone + Eq> Disassembler<Location> {
         let locals_names_tys = function_source_map
             .locals
             .iter()
-            .skip(parameters_len)
+            .skip(parameter_len)
             .enumerate()
             .map(|(local_idx, (name, _))| {
-                let ty = self.type_for_local(local_idx as u64, signature, function_source_map)?;
+                let ty =
+                    self.type_for_local(parameter_len + local_idx, signature, function_source_map)?;
                 Ok(format!("{}: {}", name.to_string(), ty))
             })
             .collect::<Result<Vec<String>>>()?;
@@ -761,10 +815,11 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                 Ok(sig_tok_str)
             })
             .collect::<Result<Vec<String>>>()?;
-        let parameters = self
+        let parameters_sig = &self
             .source_mapper
             .bytecode
-            .signature_at(function_handle.parameters)
+            .signature_at(function_handle.parameters);
+        let parameters = parameters_sig
             .0
             .iter()
             .zip(function_source_map.locals.iter())
