@@ -278,10 +278,9 @@ impl SharedMempoolNetwork {
         peer: &PeerId,
         num_messages: usize,
     ) -> (Vec<SignedTransaction>, PeerId) {
-        let main_peer_id = self.peer_ids.get(peer).unwrap_or(peer).clone();
-        // emulate timer tick
+        // await broadcast notification
         for _ in 0..num_messages {
-            self.wait_for_event(&main_peer_id, SharedMempoolNotification::Broadcast);
+            self.wait_for_event(peer, SharedMempoolNotification::Broadcast);
         }
 
         // await next message from node
