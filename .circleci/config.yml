@@ -377,6 +377,8 @@ jobs:
   code-coverage:
     description: Run code coverage
     executor: test-executor
+    environment:
+      MESSAGE_PAYLOAD_FILE: "/tmp/message_payload"
     steps:
       - build_setup
       - install_code_coverage_deps
@@ -386,10 +388,15 @@ jobs:
           command: echo "export CODECOV_OUTPUT=codecov" >> $BASH_ENV
       - run:
           name: Run code coverage
-          command: ./scripts/coverage_report.sh . $CODECOV_OUTPUT --batch
+          command: |
+            ./scripts/coverage_report.sh . $CODECOV_OUTPUT --batch --failed_crate_file ${MESSAGE_PAYLOAD_FILE}
       - run:
           name: Upload result to codecov.io
           command: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcov.info;
+      #- send_message:
+      #    payload_file: "${MESSAGE_PAYLOAD_FILE}"
+      #    build_url: "${CIRCLE_BUILD_URL}#tests/containers/${CIRCLE_NODE_INDEX}"
+      #    webhook: "${WEBHOOK_FLAKY_TESTS}"
   terraform:
     executor: terraform-executor
     steps:
@@ -464,6 +471,7 @@ workflows:
       - run-crypto-unit-test:
           requires:
             - prefetch-crates
+      - code-coverage
       #- run-flaky-unit-test:
       #    requires:
       #      - prefetch-crates

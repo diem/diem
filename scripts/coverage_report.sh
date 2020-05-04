@@ -5,18 +5,27 @@
 # Check that the test directory and report path arguments are provided
 if [ $# -lt 2 ] || ! [ -d "$1" ]
 then
-        echo "Usage: $0 <testdir> <outdir> [--batch]"
+        echo "Usage: $0 <testdir> <outdir> [--batch [ --failed_crate_file <path> ]]"
         echo "All tests in <testdir> and its subdirectories will be run to measure coverage."
         echo "The resulting coverage report will be stored in <outdir>."
         echo "--batch will skip all prompts."
+        echo "--failed_crate_file followed by a file to append all crates that fail to execute under coverage."
         exit 1
 fi
 
 # User prompts will be skipped if '--batch' is given as the third argument
 SKIP_PROMPTS=0
-if [ $# -eq 3 ] && [ "$3" == "--batch" ]
+if [ $# -gt 2 ] && [ "$3" == "--batch" ]
 then
         SKIP_PROMPTS=1
+fi
+
+FAILED_CRATE_FILE=
+if [ $# -gt 4 ] && [ "$4" == "--failed_crate_file" ]
+then
+        echo "making file $5"
+        FAILED_CRATE_FILE=$5
+        touch $FAILED_CRATE_FILE || ( echo "file not writeable ${FAILED_CRATE_FILE}" && exit -1 )
 fi
 
 # Set the directory containing the tests to run (includes subdirectories)
@@ -80,13 +89,16 @@ export CARGO_INCREMENTAL=0
 echo "Cleaning project..."
 (cd "$TEST_DIR"; cargo clean)
 
+#track failed crates
+FAILED_CRATES=""
 # Run tests
 echo "Running tests..."
 while read -r line; do
-        dirline=$(realpath $(dirname "$line"));
+        subdir=$(dirname "$line");
+        dirline=$(realpath "$subdir");
         # Don't fail out of the loop here. We just want to run the test binary
-        # to collect its profile data.
-        (cd "$dirline" && pwd && cargo xtest || true)
+        # to collect its profile data.  Also note which crates fail under coverage.
+        ( cd "$dirline" && pwd && cargo xtest ) || FAILED_CRATES="${FAILED_CRATES}:${subdir}" && echo "Failed crate: ${subdir}"
 done < <(find "$TEST_DIR" -name 'Cargo.toml')
 
 # Make the coverage directory if it doesn't exist
@@ -104,3 +116,9 @@ echo "Generating report at ${COVERAGE_DIR}..."
 genhtml -o "$COVERAGE_DIR" --show-details --highlight --ignore-errors source --legend "$COVERAGE_DIR/lcov.info"
 
 echo "Done. Please view report at ${COVERAGE_DIR}/index.html"
+
+if [ -e ${FAILED_CRATE_FILE} ] && [ ${FAILED_CRATES} ]; then
+        msg="Found crates that could not run under coverage:\n"$(echo ${FAILED_CRATES} | sed 's/:/\\n/g' )
+        echo -e $msg
+        echo -e $msg > ${FAILED_CRATE_FILE}
+fi
