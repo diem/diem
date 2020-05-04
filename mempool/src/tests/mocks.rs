@@ -9,10 +9,7 @@ use crate::{
 };
 use anyhow::{format_err, Result};
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use futures::channel::{
-    mpsc,
-    oneshot,
-};
+use futures::channel::{mpsc, oneshot};
 use libra_config::config::{NetworkConfig, NodeConfig};
 use libra_types::{mempool_status::MempoolStatusCode, transaction::SignedTransaction, PeerId};
 use network::peer_manager::{
@@ -70,7 +67,6 @@ impl MockSharedMempool {
             ConnectionRequestSender::new(connection_reqs_tx),
         );
         let network_events = MempoolNetworkEvents::new(network_notifs_rx, conn_notifs_rx);
-//        let (sender, _subscriber) = unbounded();
         let (ac_client, client_events) = mpsc::channel(1_024);
         let (consensus_sender, consensus_events) = mpsc::channel(1_024);
         let (state_sync_sender, state_sync_events) = match state_sync {
@@ -96,7 +92,6 @@ impl MockSharedMempool {
             Arc::new(MockDbReader),
             Arc::new(RwLock::new(MockVMValidator)),
             vec![],
-            None,
         );
 
         Self {

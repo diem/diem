@@ -15,9 +15,7 @@ use crate::{
     SubmissionStatus,
 };
 use anyhow::{ensure, format_err, Result};
-use channel::libra_channel;
-use futures::channel::oneshot;
-//use futures::channel::mpsc::UnboundedSender;
+use futures::channel::{mpsc::UnboundedSender, oneshot};
 use libra_config::config::{NetworkId, PeerNetworkId};
 use libra_logger::prelude::*;
 use libra_types::{
@@ -51,7 +49,7 @@ pub(crate) fn broadcast_single_peer(
     mempool: &Mutex<CoreMempool>,
     network_senders: &mut HashMap<NetworkId, MempoolNetworkSender>,
     batch_size: usize,
-    subscribers: &mut [libra_channel::Sender<(), SharedMempoolNotification>],
+    subscribers: &mut [UnboundedSender<SharedMempoolNotification>],
 ) {
     let timeline_id = if peer_manager.is_picked_peer(peer) {
         let state = peer_manager.get_peer_state(peer);
@@ -94,9 +92,7 @@ pub(crate) fn broadcast_single_peer(
     } else {
         counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST.inc_by(txns_ct as i64);
         peer_manager.update_peer_broadcast(peer, new_timeline_id);
-        println!("in broadcast task");
         notify_subscribers(SharedMempoolNotification::Broadcast, subscribers);
-        println!("notified subscribers");
     }
 }
 
@@ -261,7 +257,7 @@ where
             }
         }
     }
-    notify_subscribers(SharedMempoolNotification::NewTransactions, &mut smp.subscribers);
+    notify_subscribers(SharedMempoolNotification::NewTransactions, &smp.subscribers);
     statuses
 }
 
@@ -295,21 +291,18 @@ fn log_txn_process_results(results: Vec<SubmissionStatus>, sender: Option<PeerId
 }
 
 /// processes ACK from peer node regarding txn submission to that node
-pub(crate) fn process_broadcast_ack<V>(
-    smp: SharedMempool<V>,
+pub(crate) fn process_broadcast_ack(
+    mempool: &Mutex<CoreMempool>,
     request_id: String,
     is_validator: bool, // whether this node is a validator or not
-) where
-    V: TransactionValidation,
-{
+) {
     if is_validator {
         return;
     }
 
     match parse_request_id(request_id) {
         Ok((start_id, end_id)) => {
-            let mut mempool = smp
-                .mempool
+            let mut mempool = mempool
                 .lock()
                 .expect("[shared mempool] failed to acquire mempool lock");
 
