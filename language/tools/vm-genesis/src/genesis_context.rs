@@ -19,9 +19,9 @@ use move_core_types::{
 };
 use move_vm_runtime::MoveVM;
 use move_vm_state::{data_cache::BlockDataCache, execution_context::TransactionExecutionContext};
-use move_vm_types::values::Value;
+use move_vm_types::{gas_schedule::zero_cost_schedule, values::Value};
 use std::collections::HashMap;
-use vm::{gas_schedule::zero_cost_schedule, transaction_metadata::TransactionMetadata};
+use vm::transaction_metadata::TransactionMetadata;
 
 /// A context that holds state for generating the genesis write set
 pub(crate) struct GenesisContext<'a> {

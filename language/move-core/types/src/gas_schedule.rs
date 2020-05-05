@@ -176,7 +176,7 @@ pub struct GasConstants {
     /// 1 nanosecond should equal one unit of computational gas. We bound the maximum
     /// computational time of any given transaction at 10 milliseconds. We want this number and
     /// `MAX_PRICE_PER_GAS_UNIT` to always satisfy the inequality that
-    ///         MAXIMUM_NUMBER_OF_GAS_UNITS * MAX_PRICE_PER_GAS_UNIT < min(u64::MAX, GasUnits<GasCarrier>::MAX)
+    /// MAXIMUM_NUMBER_OF_GAS_UNITS * MAX_PRICE_PER_GAS_UNIT < min(u64::MAX, GasUnits<GasCarrier>::MAX)
     pub maximum_number_of_gas_units: GasUnits<GasCarrier>,
 
     /// The minimum gas price that a transaction can be submitted with.
@@ -221,10 +221,8 @@ impl CostTable {
     }
 
     #[inline]
-    pub fn native_cost(&self, native_index: NativeCostIndex) -> &GasCost {
-        precondition!(
-            native_index as u8 > 0 && native_index as u8 <= (self.native_table.len() as u8)
-        );
+    pub fn native_cost(&self, native_index: u8) -> &GasCost {
+        precondition!(native_index as u8 > 0 && native_index <= (self.native_table.len() as u8));
         &self.native_table[native_index as usize]
     }
 }
@@ -267,24 +265,4 @@ pub fn words_in(size: AbstractMemorySize<GasCarrier>) -> AbstractMemorySize<GasC
         assume!(size <= u64::max_value() - word_size);
         (size + (word_size - 1)) / word_size
     })
-}
-
-#[allow(non_camel_case_types)]
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-#[repr(u8)]
-pub enum NativeCostIndex {
-    SHA2_256 = 0,
-    SHA3_256 = 1,
-    ED25519_VERIFY = 2,
-    ED25519_THRESHOLD_VERIFY = 3,
-    LCS_TO_BYTES = 4,
-    LENGTH = 5,
-    EMPTY = 6,
-    BORROW = 7,
-    BORROW_MUT = 8,
-    PUSH_BACK = 9,
-    POP_BACK = 10,
-    DESTROY_EMPTY = 11,
-    SWAP = 12,
-    SAVE_ACCOUNT = 13,
 }

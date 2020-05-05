@@ -15,6 +15,7 @@ use libra_types::{
 };
 use move_core_types::gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier};
 use move_vm_types::{
+    gas_schedule::calculate_intrinsic_gas,
     interpreter_context::InterpreterContext,
     loaded_data::{runtime_types::Type, types::FatStructType},
     values::{self, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value},
@@ -26,7 +27,7 @@ use vm::{
         Bytecode, FunctionHandleIndex, FunctionInstantiationIndex, StructDefInstantiationIndex,
         StructDefinitionIndex,
     },
-    gas_schedule::{calculate_intrinsic_gas, Opcodes},
+    file_format_common::Opcodes,
     transaction_metadata::TransactionMetadata,
 };
 

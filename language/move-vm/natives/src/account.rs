@@ -8,8 +8,8 @@ use libra_types::{
     move_resource::MoveResource,
     vm_error::{StatusCode, VMStatus},
 };
-use move_core_types::gas_schedule::NativeCostIndex;
 use move_vm_types::{
+    gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
     natives::function::{native_gas, NativeContext, NativeResult},
     values::{Struct, Value},

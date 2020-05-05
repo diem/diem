@@ -22,6 +22,7 @@ macro_rules! debug_writeln {
 }
 
 pub mod chain_state;
+pub mod gas_schedule;
 pub mod interpreter_context;
 pub mod loaded_data;
 pub mod natives;

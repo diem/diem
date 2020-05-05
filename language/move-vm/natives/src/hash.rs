@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_crypto::HashValue;
-use move_core_types::gas_schedule::NativeCostIndex;
 use move_vm_types::{
+    gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
     natives::function::{native_gas, NativeContext, NativeResult},
     values::Value,

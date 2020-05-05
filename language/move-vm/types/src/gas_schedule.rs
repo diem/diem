@@ -6,102 +6,20 @@
 //! It is important to note that the cost schedule defined in this file does not track hashing
 //! operations or other native operations; the cost of each native operation will be returned by the
 //! native function itself.
-use crate::file_format::{
-    Bytecode, ConstantPoolIndex, FieldHandleIndex, FieldInstantiationIndex, FunctionHandleIndex,
-    FunctionInstantiationIndex, StructDefInstantiationIndex, StructDefinitionIndex,
-    NUMBER_OF_NATIVE_FUNCTIONS,
-};
-pub use crate::file_format_common::Opcodes;
 use libra_types::transaction::MAX_TRANSACTION_SIZE_IN_BYTES;
-use move_core_types::{
-    gas_schedule::{
-        words_in, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasConstants, GasCost,
-        GasUnits,
-    },
-    identifier::Identifier,
+use mirai_annotations::*;
+use move_core_types::gas_schedule::{
+    words_in, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasConstants, GasCost,
+    GasUnits,
 };
-use once_cell::sync::Lazy;
-use std::ops::Mul;
-
-pub static GAS_SCHEDULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("T").unwrap());
-
-/// The encoding of the instruction is the serialized form of it, but disregarding the
-/// serialization of the instruction's argument(s).
-pub fn instruction_key(instruction: &Bytecode) -> u8 {
-    use Bytecode::*;
-    let opcode = match instruction {
-        Pop => Opcodes::POP,
-        Ret => Opcodes::RET,
-        BrTrue(_) => Opcodes::BR_TRUE,
-        BrFalse(_) => Opcodes::BR_FALSE,
-        Branch(_) => Opcodes::BRANCH,
-        LdU8(_) => Opcodes::LD_U8,
-        LdU64(_) => Opcodes::LD_U64,
-        LdU128(_) => Opcodes::LD_U128,
-        CastU8 => Opcodes::CAST_U8,
-        CastU64 => Opcodes::CAST_U64,
-        CastU128 => Opcodes::CAST_U128,
-        LdConst(_) => Opcodes::LD_CONST,
-        LdTrue => Opcodes::LD_TRUE,
-        LdFalse => Opcodes::LD_FALSE,
-        CopyLoc(_) => Opcodes::COPY_LOC,
-        MoveLoc(_) => Opcodes::MOVE_LOC,
-        StLoc(_) => Opcodes::ST_LOC,
-        Call(_) => Opcodes::CALL,
-        CallGeneric(_) => Opcodes::CALL_GENERIC,
-        Pack(_) => Opcodes::PACK,
-        PackGeneric(_) => Opcodes::PACK_GENERIC,
-        Unpack(_) => Opcodes::UNPACK,
-        UnpackGeneric(_) => Opcodes::UNPACK_GENERIC,
-        ReadRef => Opcodes::READ_REF,
-        WriteRef => Opcodes::WRITE_REF,
-        FreezeRef => Opcodes::FREEZE_REF,
-        MutBorrowLoc(_) => Opcodes::MUT_BORROW_LOC,
-        ImmBorrowLoc(_) => Opcodes::IMM_BORROW_LOC,
-        MutBorrowField(_) => Opcodes::MUT_BORROW_FIELD,
-        MutBorrowFieldGeneric(_) => Opcodes::MUT_BORROW_FIELD_GENERIC,
-        ImmBorrowField(_) => Opcodes::IMM_BORROW_FIELD,
-        ImmBorrowFieldGeneric(_) => Opcodes::IMM_BORROW_FIELD_GENERIC,
-        MutBorrowGlobal(_) => Opcodes::MUT_BORROW_GLOBAL,
-        MutBorrowGlobalGeneric(_) => Opcodes::MUT_BORROW_GLOBAL_GENERIC,
-        ImmBorrowGlobal(_) => Opcodes::IMM_BORROW_GLOBAL,
-        ImmBorrowGlobalGeneric(_) => Opcodes::IMM_BORROW_GLOBAL_GENERIC,
-        Add => Opcodes::ADD,
-        Sub => Opcodes::SUB,
-        Mul => Opcodes::MUL,
-        Mod => Opcodes::MOD,
-        Div => Opcodes::DIV,
-        BitOr => Opcodes::BIT_OR,
-        BitAnd => Opcodes::BIT_AND,
-        Xor => Opcodes::XOR,
-        Shl => Opcodes::SHL,
-        Shr => Opcodes::SHR,
-        Or => Opcodes::OR,
-        And => Opcodes::AND,
-        Not => Opcodes::NOT,
-        Eq => Opcodes::EQ,
-        Neq => Opcodes::NEQ,
-        Lt => Opcodes::LT,
-        Gt => Opcodes::GT,
-        Le => Opcodes::LE,
-        Ge => Opcodes::GE,
-        Abort => Opcodes::ABORT,
-        GetTxnGasUnitPrice => Opcodes::GET_TXN_GAS_UNIT_PRICE,
-        GetTxnMaxGasUnits => Opcodes::GET_TXN_MAX_GAS_UNITS,
-        GetGasRemaining => Opcodes::GET_GAS_REMAINING,
-        GetTxnSenderAddress => Opcodes::GET_TXN_SENDER,
-        Exists(_) => Opcodes::EXISTS,
-        ExistsGeneric(_) => Opcodes::EXISTS_GENERIC,
-        MoveFrom(_) => Opcodes::MOVE_FROM,
-        MoveFromGeneric(_) => Opcodes::MOVE_FROM_GENERIC,
-        MoveToSender(_) => Opcodes::MOVE_TO,
-        MoveToSenderGeneric(_) => Opcodes::MOVE_TO_GENERIC,
-        GetTxnSequenceNumber => Opcodes::GET_TXN_SEQUENCE_NUMBER,
-        GetTxnPublicKey => Opcodes::GET_TXN_PUBLIC_KEY,
-        Nop => Opcodes::NOP,
-    };
-    opcode as u8
-}
+use vm::{
+    file_format::{
+        Bytecode, ConstantPoolIndex, FieldHandleIndex, FieldInstantiationIndex,
+        FunctionHandleIndex, FunctionInstantiationIndex, StructDefInstantiationIndex,
+        StructDefinitionIndex, NUMBER_OF_NATIVE_FUNCTIONS,
+    },
+    file_format_common::instruction_key,
+};
 
 pub fn new_from_instructions(
     mut instrs: Vec<(Bytecode, GasCost)>,
@@ -130,23 +48,6 @@ pub fn new_from_instructions(
         instruction_table,
         native_table,
         gas_constants: GasConstants::default(),
-    }
-}
-
-pub fn get_gas(
-    table: &CostTable,
-    instr: &Bytecode,
-    size_provider: AbstractMemorySize<GasCarrier>,
-) -> GasCost {
-    // NB: instruction keys are 1-indexed. This means that their location in the cost array
-    // will be the key - 1.
-    let key = instruction_key(instr);
-    let cost = table.instruction_table.get((key - 1) as usize);
-    assume!(cost.is_some());
-    let good_cost = cost.unwrap();
-    GasCost {
-        instruction_gas: good_cost.instruction_gas.map2(size_provider, Mul::mul),
-        memory_gas: good_cost.memory_gas.map2(size_provider, Mul::mul),
     }
 }
 
@@ -288,4 +189,24 @@ pub fn calculate_intrinsic_gas(
     } else {
         min_transaction_fee.unitary_cast()
     }
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[repr(u8)]
+pub enum NativeCostIndex {
+    SHA2_256 = 0,
+    SHA3_256 = 1,
+    ED25519_VERIFY = 2,
+    ED25519_THRESHOLD_VERIFY = 3,
+    LCS_TO_BYTES = 4,
+    LENGTH = 5,
+    EMPTY = 6,
+    BORROW = 7,
+    BORROW_MUT = 8,
+    PUSH_BACK = 9,
+    POP_BACK = 10,
+    DESTROY_EMPTY = 11,
+    SWAP = 12,
+    SAVE_ACCOUNT = 13,
 }

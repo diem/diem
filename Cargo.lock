@@ -2050,6 +2050,7 @@ dependencies = [
  "move-lang 0.0.1",
  "move-vm-runtime 0.1.0",
  "move-vm-state 0.1.0",
+ "move-vm-types 0.1.0",
  "proptest 0.9.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
 ]
@@ -3151,7 +3152,9 @@ dependencies = [
  "libra-logger 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
+ "mirai-annotations 1.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "move-core-types 0.1.0",
+ "once_cell 1.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.9.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha2 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",

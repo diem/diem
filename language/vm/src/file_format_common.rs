@@ -10,6 +10,7 @@
 //! We use LEB128 for integer compression. LEB128 is a representation from the DWARF3 spec,
 //! http://dwarfstd.org/Dwarf3Std.php or https://en.wikipedia.org/wiki/LEB128.
 //! It's used to compress mostly indexes into the main binary tables.
+use crate::file_format::Bytecode;
 use anyhow::{bail, Result};
 use byteorder::ReadBytesExt;
 use std::{io::Cursor, mem::size_of};
@@ -346,4 +347,82 @@ pub fn read_uleb128_as_u32(cursor: &mut Cursor<&[u8]>) -> Result<u32> {
         }
     }
     bail!("invalid ULEB128 representation for u32")
+}
+
+/// The encoding of the instruction is the serialized form of it, but disregarding the
+/// serialization of the instruction's argument(s).
+pub fn instruction_key(instruction: &Bytecode) -> u8 {
+    use Bytecode::*;
+    let opcode = match instruction {
+        Pop => Opcodes::POP,
+        Ret => Opcodes::RET,
+        BrTrue(_) => Opcodes::BR_TRUE,
+        BrFalse(_) => Opcodes::BR_FALSE,
+        Branch(_) => Opcodes::BRANCH,
+        LdU8(_) => Opcodes::LD_U8,
+        LdU64(_) => Opcodes::LD_U64,
+        LdU128(_) => Opcodes::LD_U128,
+        CastU8 => Opcodes::CAST_U8,
+        CastU64 => Opcodes::CAST_U64,
+        CastU128 => Opcodes::CAST_U128,
+        LdConst(_) => Opcodes::LD_CONST,
+        LdTrue => Opcodes::LD_TRUE,
+        LdFalse => Opcodes::LD_FALSE,
+        CopyLoc(_) => Opcodes::COPY_LOC,
+        MoveLoc(_) => Opcodes::MOVE_LOC,
+        StLoc(_) => Opcodes::ST_LOC,
+        Call(_) => Opcodes::CALL,
+        CallGeneric(_) => Opcodes::CALL_GENERIC,
+        Pack(_) => Opcodes::PACK,
+        PackGeneric(_) => Opcodes::PACK_GENERIC,
+        Unpack(_) => Opcodes::UNPACK,
+        UnpackGeneric(_) => Opcodes::UNPACK_GENERIC,
+        ReadRef => Opcodes::READ_REF,
+        WriteRef => Opcodes::WRITE_REF,
+        FreezeRef => Opcodes::FREEZE_REF,
+        MutBorrowLoc(_) => Opcodes::MUT_BORROW_LOC,
+        ImmBorrowLoc(_) => Opcodes::IMM_BORROW_LOC,
+        MutBorrowField(_) => Opcodes::MUT_BORROW_FIELD,
+        MutBorrowFieldGeneric(_) => Opcodes::MUT_BORROW_FIELD_GENERIC,
+        ImmBorrowField(_) => Opcodes::IMM_BORROW_FIELD,
+        ImmBorrowFieldGeneric(_) => Opcodes::IMM_BORROW_FIELD_GENERIC,
+        MutBorrowGlobal(_) => Opcodes::MUT_BORROW_GLOBAL,
+        MutBorrowGlobalGeneric(_) => Opcodes::MUT_BORROW_GLOBAL_GENERIC,
+        ImmBorrowGlobal(_) => Opcodes::IMM_BORROW_GLOBAL,
+        ImmBorrowGlobalGeneric(_) => Opcodes::IMM_BORROW_GLOBAL_GENERIC,
+        Add => Opcodes::ADD,
+        Sub => Opcodes::SUB,
+        Mul => Opcodes::MUL,
+        Mod => Opcodes::MOD,
+        Div => Opcodes::DIV,
+        BitOr => Opcodes::BIT_OR,
+        BitAnd => Opcodes::BIT_AND,
+        Xor => Opcodes::XOR,
+        Shl => Opcodes::SHL,
+        Shr => Opcodes::SHR,
+        Or => Opcodes::OR,
+        And => Opcodes::AND,
+        Not => Opcodes::NOT,
+        Eq => Opcodes::EQ,
+        Neq => Opcodes::NEQ,
+        Lt => Opcodes::LT,
+        Gt => Opcodes::GT,
+        Le => Opcodes::LE,
+        Ge => Opcodes::GE,
+        Abort => Opcodes::ABORT,
+        GetTxnGasUnitPrice => Opcodes::GET_TXN_GAS_UNIT_PRICE,
+        GetTxnMaxGasUnits => Opcodes::GET_TXN_MAX_GAS_UNITS,
+        GetGasRemaining => Opcodes::GET_GAS_REMAINING,
+        GetTxnSenderAddress => Opcodes::GET_TXN_SENDER,
+        Exists(_) => Opcodes::EXISTS,
+        ExistsGeneric(_) => Opcodes::EXISTS_GENERIC,
+        MoveFrom(_) => Opcodes::MOVE_FROM,
+        MoveFromGeneric(_) => Opcodes::MOVE_FROM_GENERIC,
+        MoveToSender(_) => Opcodes::MOVE_TO,
+        MoveToSenderGeneric(_) => Opcodes::MOVE_TO_GENERIC,
+        GetTxnSequenceNumber => Opcodes::GET_TXN_SEQUENCE_NUMBER,
+        GetTxnPublicKey => Opcodes::GET_TXN_PUBLIC_KEY,
+        Nop => Opcodes::NOP,
+    };
+    opcode as u8
 }
