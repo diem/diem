@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{constants, error::Error, SecureBackends};
-use libra_crypto::{hash::CryptoHash, x25519, ValidCryptoMaterial};
+use libra_crypto::{ed25519::Ed25519PublicKey, hash::CryptoHash, x25519, ValidCryptoMaterial};
 use libra_network_address::{NetworkAddress, RawNetworkAddress};
 use libra_secure_storage::{Storage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
@@ -36,40 +36,20 @@ impl ValidatorConfig {
             return Err(Error::LocalStorageUnavailable);
         }
 
-        let consensus_key = local
-            .get_public_key(constants::CONSENSUS_KEY)
-            .map_err(|e| Error::LocalStorageReadError(e.to_string()))?
-            .public_key;
-        let fullnode_network_key = local
-            .get_public_key(constants::FULLNODE_NETWORK_KEY)
-            .map_err(|e| Error::LocalStorageReadError(e.to_string()))?
-            .public_key;
-        let validator_network_key = local
-            .get_public_key(constants::VALIDATOR_NETWORK_KEY)
-            .map_err(|e| Error::LocalStorageReadError(e.to_string()))?
-            .public_key;
+        // Step 1) Retrieve keys from local storage
+        let consensus_key = ed25519_from_storage(constants::CONSENSUS_KEY, local.as_mut())?;
+        let fullnode_network_key =
+            x25519_from_storage(constants::FULLNODE_NETWORK_KEY, local.as_mut())?;
+        let validator_network_key =
+            x25519_from_storage(constants::VALIDATOR_NETWORK_KEY, local.as_mut())?;
+        let owner_key = ed25519_from_storage(constants::OWNER_KEY, local.as_mut())?;
 
         let fullnode_address = RawNetworkAddress::try_from(&self.fullnode_address)
-            .expect("Unable to serialize fullnode network address from config");
+            .map_err(|e| Error::UnexpectedError(format!("(fullnode_address) {}", e)))?;
         let validator_address = RawNetworkAddress::try_from(&self.validator_address)
-            .expect("Unable to serialize validator network address from config");
+            .map_err(|e| Error::UnexpectedError(format!("(validator_address) {}", e)))?;
 
-        let fullnode_network_key = fullnode_network_key.to_bytes();
-        let fullnode_network_key: x25519::PublicKey = fullnode_network_key
-            .as_ref()
-            .try_into()
-            .expect("Unable to decode x25519 from fullnode_network_key");
-
-        let validator_network_key = validator_network_key.to_bytes();
-        let validator_network_key: x25519::PublicKey = validator_network_key
-            .as_ref()
-            .try_into()
-            .expect("Unable to decode x25519 from validator_network_key");
-
-        let owner_key = local
-            .get_public_key(constants::OWNER_KEY)
-            .map_err(|e| Error::LocalStorageReadError(e.to_string()))?
-            .public_key;
+        // Step 2) Generate transaction
 
         // TODO(davidiw): The signing key, parameter 2, will be deleted soon, so this is a
         // temporary hack to reduce over-engineering.
@@ -101,6 +81,8 @@ impl ValidatorConfig {
         let signed_txn = SignedTransaction::new(raw_transaction, owner_key, signature);
         let txn = Transaction::UserTransaction(signed_txn);
 
+        // Step 3) Submit to remote storage
+
         if let Some(remote) = self.backends.remote {
             let mut remote: Box<dyn Storage> = remote.try_into()?;
             if !remote.available() {
@@ -115,4 +97,25 @@ impl ValidatorConfig {
 
         Ok(txn)
     }
+}
+
+fn ed25519_from_storage(
+    key_name: &str,
+    storage: &mut dyn Storage,
+) -> Result<Ed25519PublicKey, Error> {
+    Ok(storage
+        .get_public_key(key_name)
+        .map_err(|e| Error::LocalStorageReadError(e.to_string()))?
+        .public_key)
+}
+
+fn x25519_from_storage(
+    key_name: &str,
+    storage: &mut dyn Storage,
+) -> Result<x25519::PublicKey, Error> {
+    let edkey = ed25519_from_storage(key_name, storage)?.to_bytes();
+    edkey
+        .as_ref()
+        .try_into()
+        .map_err(|e| Error::UnexpectedError(format!("({}) {}", key_name, e)))
 }
