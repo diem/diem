@@ -159,7 +159,7 @@ fn read_discovery_set(libra_db: &Arc<dyn DbReader>) -> DiscoverySet {
 
 fn gen_configs(count: usize) -> Vec<NodeConfig> {
     config_builder::ValidatorConfig::new()
-        .nodes(count)
+        .validators(count)
         .build_common(true, false)
         .unwrap()
         .0
