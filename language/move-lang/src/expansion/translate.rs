@@ -6,7 +6,7 @@ use crate::{
     expansion::ast::{self as E, Fields, SpecId},
     parser::ast::{
         self as P, Field, FunctionName, FunctionVisibility, Kind, ModuleIdent, ModuleIdent_,
-        ModuleName, StructName,
+        ModuleName, StructName, Var,
     },
     shared::{remembering_unique_map::RememberingUniqueMap, unique_map::UniqueMap, *},
 };
@@ -413,6 +413,7 @@ fn struct_def(
         type_parameters,
         fields,
     };
+    check_valid_struct_name(context, &name);
     (name, sdef)
 }
 
@@ -514,7 +515,10 @@ fn function_signature(
     let parameters = pparams
         .into_iter()
         .map(|(v, t)| (v, type_(context, t)))
-        .collect();
+        .collect::<Vec<_>>();
+    for (v, _) in &parameters {
+        check_valid_local_name(context, v)
+    }
     let return_type = type_(context, pret_ty);
     E::FunctionSignature {
         type_parameters,
@@ -1025,7 +1029,10 @@ fn bind(context: &mut Context, sp!(loc, pb_): P::Bind) -> Option<E::LValue> {
     use E::LValue_ as EL;
     use P::Bind_ as PB;
     let b_ = match pb_ {
-        PB::Var(v) => EL::Var(sp(loc, E::ModuleAccess_::Name(v.0)), None),
+        PB::Var(v) => {
+            check_valid_local_name(context, &v);
+            EL::Var(sp(loc, E::ModuleAccess_::Name(v.0)), None)
+        }
         PB::Unpack(ptn, ptys_opt, pfields) => {
             let tn = module_access(context, ptn)?;
             let tys_opt = optional_types(context, ptys_opt);
@@ -1287,5 +1294,36 @@ fn unbound_names_dotted(unbound: &mut BTreeSet<Name>, sp!(_, edot_): &E::ExpDott
     match edot_ {
         ED::Exp(e) => unbound_names_exp(unbound, e),
         ED::Dot(d, _) => unbound_names_dotted(unbound, d),
+    }
+}
+
+fn check_valid_local_name(context: &mut Context, v: &Var) {
+    fn is_valid(s: &str) -> bool {
+        s.starts_with('_') || s.starts_with(|c| matches!(c, 'a'..='z'))
+    }
+    if !is_valid(v.value()) {
+        let msg = format!(
+            "Invalid local name '{}'. Local names must start with 'a'..'z' (or '_')",
+            v,
+        );
+        context.error(vec![(v.loc(), msg)])
+    }
+}
+
+fn check_valid_struct_name(context: &mut Context, n: &StructName) {
+    check_valid_struct_or_constant_name(context, &n.0, "struct", "Struct")
+}
+
+fn check_valid_struct_or_constant_name(context: &mut Context, n: &Name, lcase: &str, ucase: &str) {
+    fn is_valid(s: &str) -> bool {
+        s.starts_with(|c| matches!(c, 'A'..='Z'))
+    }
+
+    if !is_valid(&n.value) {
+        let msg = format!(
+            "Invalid {} name '{}'. {} names must start with 'A'..'Z'",
+            lcase, n, ucase,
+        );
+        context.error(vec![(n.loc, msg)])
     }
 }

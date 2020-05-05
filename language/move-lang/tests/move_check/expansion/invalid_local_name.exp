@@ -1,0 +1,24 @@
+error: 
+
+   ┌── tests/move_check/expansion/invalid_local_name.move:4:11 ───
+   │
+ 4 │     fun t(No: u64) {
+   │           ^^ Invalid local name 'No'. Local names must start with 'a'..'z' (or '_')
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/invalid_local_name.move:9:13 ───
+   │
+ 9 │         let No;
+   │             ^^ Invalid local name 'No'. Local names must start with 'a'..'z' (or '_')
+   │
+
+error: 
+
+    ┌── tests/move_check/expansion/invalid_local_name.move:14:13 ───
+    │
+ 14 │         let No = 100;
+    │             ^^ Invalid local name 'No'. Local names must start with 'a'..'z' (or '_')
+    │
+
