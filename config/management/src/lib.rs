@@ -55,6 +55,7 @@ pub enum Command {
     Verify(SingleBackend),
 }
 
+#[derive(Debug, PartialEq)]
 pub enum CommandName {
     AssociationKey,
     Genesis,
@@ -111,9 +112,10 @@ impl Command {
         if let Command::AssociationKey(secure_backends) = self {
             Self::submit_key(constants::ASSOCIATION_KEY, secure_backends)
         } else {
-            let expected = CommandName::AssociationKey.to_string();
-            let actual = CommandName::from(&self).to_string();
-            Err(Error::UnexpectedCommand(expected, actual))
+            Err(Error::UnexpectedCommand(
+                CommandName::AssociationKey,
+                CommandName::from(&self),
+            ))
         }
     }
 
@@ -121,9 +123,10 @@ impl Command {
         if let Command::Genesis(genesis) = self {
             genesis.execute()
         } else {
-            let expected = CommandName::Genesis.to_string();
-            let actual = CommandName::from(&self).to_string();
-            Err(Error::UnexpectedCommand(expected, actual))
+            Err(Error::UnexpectedCommand(
+                CommandName::Genesis,
+                CommandName::from(&self),
+            ))
         }
     }
 
@@ -131,9 +134,10 @@ impl Command {
         if let Command::OperatorKey(secure_backends) = self {
             Self::submit_key(constants::OPERATOR_KEY, secure_backends)
         } else {
-            let expected = CommandName::OperatorKey.to_string();
-            let actual = CommandName::from(&self).to_string();
-            Err(Error::UnexpectedCommand(expected, actual))
+            Err(Error::UnexpectedCommand(
+                CommandName::OperatorKey,
+                CommandName::from(&self),
+            ))
         }
     }
 
@@ -141,9 +145,10 @@ impl Command {
         if let Command::OwnerKey(secure_backends) = self {
             Self::submit_key(constants::OWNER_KEY, secure_backends)
         } else {
-            let expected = CommandName::OwnerKey.to_string();
-            let actual = CommandName::from(&self).to_string();
-            Err(Error::UnexpectedCommand(expected, actual))
+            Err(Error::UnexpectedCommand(
+                CommandName::OwnerKey,
+                CommandName::from(&self),
+            ))
         }
     }
 
@@ -151,9 +156,10 @@ impl Command {
         if let Command::SetLayout(set_layout) = self {
             set_layout.execute()
         } else {
-            let expected = CommandName::SetLayout.to_string();
-            let actual = CommandName::from(&self).to_string();
-            Err(Error::UnexpectedCommand(expected, actual))
+            Err(Error::UnexpectedCommand(
+                CommandName::SetLayout,
+                CommandName::from(&self),
+            ))
         }
     }
 
@@ -161,9 +167,10 @@ impl Command {
         if let Command::ValidatorConfig(config) = self {
             config.execute()
         } else {
-            let expected = CommandName::ValidatorConfig.to_string();
-            let actual = CommandName::from(&self).to_string();
-            Err(Error::UnexpectedCommand(expected, actual))
+            Err(Error::UnexpectedCommand(
+                CommandName::ValidatorConfig,
+                CommandName::from(&self),
+            ))
         }
     }
 
