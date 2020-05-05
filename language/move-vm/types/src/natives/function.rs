@@ -17,6 +17,7 @@
 //! function.
 
 use crate::{
+    gas_schedule::NativeCostIndex,
     loaded_data::{runtime_types::Type, types::FatType},
     values::{Struct, Value},
 };
@@ -25,9 +26,7 @@ use libra_types::{
     vm_error::VMStatus,
 };
 use move_core_types::{
-    gas_schedule::{
-        AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits, NativeCostIndex,
-    },
+    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
     identifier::IdentStr,
 };
 use std::fmt::Write;
@@ -97,7 +96,7 @@ impl NativeResult {
 /// Return the native gas entry in `CostTable` for the given key.
 /// The key is the specific native function index known to `CostTable`.
 pub fn native_gas(table: &CostTable, key: NativeCostIndex, size: usize) -> GasUnits<GasCarrier> {
-    let gas_amt = table.native_cost(key);
+    let gas_amt = table.native_cost(key as u8);
     let memory_size = AbstractMemorySize::new(size as GasCarrier);
     gas_amt.total().mul(memory_size)
 }

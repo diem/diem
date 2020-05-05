@@ -11,7 +11,7 @@ use vm::{
         FunctionHandleIndex, FunctionInstantiationIndex, StructDefInstantiationIndex,
         StructDefinitionIndex, NUMBER_OF_NATIVE_FUNCTIONS,
     },
-    gas_schedule::instruction_key,
+    file_format_common::instruction_key,
 };
 
 pub(crate) static INITIAL_GAS_SCHEDULE: Lazy<(Vec<u8>, Vec<u8>)> = Lazy::new(|| {

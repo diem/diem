@@ -8,8 +8,9 @@ use libra_crypto::{
     HashValue,
 };
 use libra_types::vm_error::{StatusCode, VMStatus};
-use move_core_types::gas_schedule::{CostTable, NativeCostIndex};
+use move_core_types::gas_schedule::CostTable;
 use move_vm_types::{
+    gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
     natives::function::{native_gas, NativeContext, NativeResult},
     values::Value,

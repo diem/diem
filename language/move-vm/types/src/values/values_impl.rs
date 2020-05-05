@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    gas_schedule::NativeCostIndex,
     loaded_data::types::{FatStructType, FatType},
     natives::function::{native_gas, NativeResult},
 };
@@ -10,8 +11,7 @@ use libra_types::{
     vm_error::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode, VMStatus},
 };
 use move_core_types::gas_schedule::{
-    words_in, AbstractMemorySize, GasAlgebra, GasCarrier, NativeCostIndex, CONST_SIZE,
-    REFERENCE_SIZE, STRUCT_SIZE,
+    words_in, AbstractMemorySize, GasAlgebra, GasCarrier, CONST_SIZE, REFERENCE_SIZE, STRUCT_SIZE,
 };
 use std::{
     cell::{Ref, RefCell, RefMut},
@@ -1471,11 +1471,11 @@ pub mod vector {
         let r = pop_arg_front!(args, ContainerRef);
         let e = args.pop_front().unwrap();
 
-        let cost = context
-            .cost_table()
-            .native_cost(NativeCostIndex::PUSH_BACK)
-            .total()
-            .mul(e.size());
+        let cost = native_gas(
+            context.cost_table(),
+            NativeCostIndex::PUSH_BACK,
+            e.size().get() as usize,
+        );
 
         let mut v = r.borrow_mut();
         check_elem_layout(&ty_args[0], &*v)?;

@@ -31,12 +31,15 @@ use move_vm_state::{
     data_cache::{BlockDataCache, RemoteCache, RemoteStorage},
     execution_context::{ExecutionContext, SystemExecutionContext, TransactionExecutionContext},
 };
-use move_vm_types::{chain_state::ChainState, values::Value};
+use move_vm_types::{
+    chain_state::ChainState,
+    gas_schedule::{calculate_intrinsic_gas, zero_cost_schedule},
+    values::Value,
+};
 use rayon::prelude::*;
 use std::{collections::HashSet, convert::TryFrom, sync::Arc};
 use vm::{
     errors::{convert_prologue_runtime_error, VMResult},
-    gas_schedule::{calculate_intrinsic_gas, zero_cost_schedule},
     transaction_metadata::TransactionMetadata,
 };
 

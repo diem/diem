@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_types::vm_error::{sub_status::NFE_LCS_SERIALIZATION_FAILURE, StatusCode, VMStatus};
-use move_core_types::gas_schedule::NativeCostIndex;
 use move_vm_types::{
+    gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
     natives::function::{native_gas, NativeContext, NativeResult},
     values::{values_impl::Reference, Value},
