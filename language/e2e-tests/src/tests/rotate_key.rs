@@ -127,3 +127,7 @@ fn rotate_ed25519_multisig_key() {
         &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
     );
 }
+
+#[test]
+
+fn rotate_shared_ed25519_public_key() {}

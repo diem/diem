@@ -102,7 +102,7 @@ encode_txn_script! {
     args: [new_validator: Address],
     script: AddValidator,
     doc: "Encode a program adding `new_validator` to the pending validator set. Fails if the\
-          `new_validator` address is already in the validator set, already in the pending valdiator set,\
+          `new_validator` address is already in the validator set, already in the pending validator set,\
           or does not have a `ValidatorConfig` resource stored at the address"
 }
 
@@ -231,6 +231,17 @@ pub fn encode_create_account_script(
 }
 
 encode_txn_script! {
+    name: encode_publish_shared_ed25519_public_key_script,
+    args: [public_key: Bytes],
+    script: PublishSharedEd2551PublicKey,
+    doc: "(1) Rotate the authentication key of the sender to `public_key`\
+          (2) Publish a resource containing a 32-byte ed25519 public key and the rotation capability\
+          of the sender under the sender's address.\
+          Aborts if the sender already has a `SharedEd25519PublicKey` resource.\
+          Aborts if the length of `new_public_key` is not 32."
+}
+
+encode_txn_script! {
     name: encode_register_approved_payment_script,
     args: [public_key: Bytes],
     script: RegisterApprovedPayment,
@@ -285,6 +296,18 @@ encode_txn_script! {
     script: RotateAuthenticationKey,
     doc: "Encode a program that rotates the sender's authentication key to `new_key`. `new_key`\
           should be a 256 bit sha3 hash of an ed25519 public key."
+}
+
+encode_txn_script! {
+    name: encode_rotate_shared_ed25519_public_key_script,
+    args: [new_public_key: Bytes],
+    script: RotateSharedEd2551PublicKey,
+    doc: "(1) rotate the public key stored in the sender's `SharedEd25519PublicKey` resource to\
+          `new_public_key`\
+          (2) rotate the authentication key using the capability stored in the sender's\
+          `SharedEd25519PublicKey` to a new value derived from `new_public_key`\
+          Aborts if the sender does not have a `SharedEd25519PublicKey` resource.\
+          Aborts if the length of `new_public_key` is not 32."
 }
 
 // TODO: this should go away once we are no longer using it in tests
