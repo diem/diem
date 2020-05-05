@@ -98,7 +98,7 @@ while read -r line; do
         dirline=$(realpath "$subdir");
         # Don't fail out of the loop here. We just want to run the test binary
         # to collect its profile data.  Also note which crates fail under coverage.
-        ( cd "$dirline" && pwd && cargo xtest ) || FAILED_CRATES="${FAILED_CRATES}:${subdir}" && echo "Failed crate: ${subdir}"
+        ( cd "$dirline" && pwd && cargo xtest ) || FAILED_CRATES="${FAILED_CRATES}:${subdir}"
 done < <(find "$TEST_DIR" -name 'Cargo.toml')
 
 # Make the coverage directory if it doesn't exist

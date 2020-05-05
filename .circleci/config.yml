@@ -393,10 +393,10 @@ jobs:
       - run:
           name: Upload result to codecov.io
           command: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcov.info;
-      #- send_message:
-      #    payload_file: "${MESSAGE_PAYLOAD_FILE}"
-      #    build_url: "${CIRCLE_BUILD_URL}#tests/containers/${CIRCLE_NODE_INDEX}"
-      #    webhook: "${WEBHOOK_FLAKY_TESTS}"
+      - send_message:
+          payload_file: "${MESSAGE_PAYLOAD_FILE}"
+          build_url: "${CIRCLE_BUILD_URL}#tests/containers/${CIRCLE_NODE_INDEX}"
+          webhook: "${WEBHOOK_FLAKY_TESTS}"
   terraform:
     executor: terraform-executor
     steps:
@@ -471,7 +471,6 @@ workflows:
       - run-crypto-unit-test:
           requires:
             - prefetch-crates
-      - code-coverage
       #- run-flaky-unit-test:
       #    requires:
       #      - prefetch-crates
