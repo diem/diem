@@ -1,0 +1,13 @@
+version: 1
+update_configs:
+  - package_manager: "rust:cargo"
+    directory: "/"
+    update_schedule: "daily"
+    target_branch: "master"
+    ignored_updates:
+      - match:
+          dependency_name: "codespan*"
+    allowed_updates:
+      - match:
+          dependency_type: "security"
+          dependency_type: "direct"
