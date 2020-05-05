@@ -12,7 +12,7 @@ use crate::{
     util::time_service::ClockTimeService,
 };
 use channel::libra_channel;
-use executor::BlockExecutor;
+use executor_types::BlockExecutor;
 use futures::channel::mpsc;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;

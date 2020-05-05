@@ -3,7 +3,8 @@
 
 use crate::{libra_interface::JsonRpcLibraInterface, Action, Error, KeyManager, LibraInterface};
 use anyhow::Result;
-use executor::{db_bootstrapper, BlockExecutor, Executor};
+use executor::{db_bootstrapper, Executor};
+use executor_types::BlockExecutor;
 use futures::{channel::mpsc::channel, StreamExt};
 use libra_config::{config::NodeConfig, utils, utils::get_genesis_txn};
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};

@@ -1,7 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use executor::{BlockExecutor, Executor};
+use executor::Executor;
+use executor_types::BlockExecutor;
 use executor_utils::create_storage_service_and_executor;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},

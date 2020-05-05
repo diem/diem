@@ -18,7 +18,7 @@ pub fn create_storage_service_and_executor(
     let (db, db_rw) = init_libra_db(config);
     bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(config).unwrap()).unwrap();
 
-    let _handble = start_simple_storage_service_with_db(config, db.clone());
+    let _handle = start_simple_storage_service_with_db(config, db.clone());
     let executor = Executor::new(SimpleStorageClient::new(&config.storage.simple_address).into());
 
     (db, executor)

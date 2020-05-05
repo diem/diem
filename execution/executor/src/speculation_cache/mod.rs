@@ -19,7 +19,7 @@ mod test;
 
 use anyhow::{format_err, Result};
 use consensus_types::block::Block;
-use executor_types::{ExecutedTrees, ProcessedVMOutput};
+use executor_types::{Error, ExecutedTrees, ProcessedVMOutput};
 use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
 use libra_logger::prelude::*;
 use libra_types::{ledger_info::LedgerInfo, transaction::Transaction};
@@ -194,7 +194,7 @@ impl SpeculationCache {
             Vec<Transaction>,  /* block transactions */
             ProcessedVMOutput, /* block execution output */
         ),
-    ) -> Result<()> {
+    ) -> Result<(), Error> {
         // 0. Check existence first
         let (block_id, txns, output) = block;
         if self.block_map.lock().unwrap().contains_key(&block_id) {
@@ -225,7 +225,7 @@ impl SpeculationCache {
         Ok(())
     }
 
-    pub fn prune(&mut self, committed_ledger_info: &LedgerInfo) -> Result<()> {
+    pub fn prune(&mut self, committed_ledger_info: &LedgerInfo) -> Result<(), Error> {
         let arc_latest_committed_block =
             self.get_block(&committed_ledger_info.consensus_block_id())?;
         let latest_committed_block = arc_latest_committed_block.lock().unwrap();
@@ -238,20 +238,19 @@ impl SpeculationCache {
     }
 
     // This function is intended to be called internally.
-    pub fn get_block(&self, block_id: &HashValue) -> Result<Arc<Mutex<SpeculationBlock>>> {
-        self.block_map
+    pub fn get_block(&self, block_id: &HashValue) -> Result<Arc<Mutex<SpeculationBlock>>, Error> {
+        Ok(self
+            .block_map
             .lock()
             .unwrap()
             .get(&block_id)
-            .ok_or_else(|| {
-                format_err!("Cannot find speculation result for block id {:x}", block_id)
-            })?
+            .ok_or(Error::BlockNotFound(block_id.clone()))?
             .upgrade()
             .ok_or_else(|| {
                 format_err!(
                     "block {:x} has been deallocated. Something went wrong.",
                     block_id
                 )
-            })
+            })?)
     }
 }

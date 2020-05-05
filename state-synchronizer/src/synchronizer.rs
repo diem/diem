@@ -7,7 +7,7 @@ use crate::{
     SynchronizerState,
 };
 use anyhow::{format_err, Result};
-use executor::ChunkExecutor;
+use executor_types::ChunkExecutor;
 use futures::{
     channel::{mpsc, oneshot},
     future::Future,

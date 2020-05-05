@@ -3,8 +3,9 @@
 
 #![forbid(unsafe_code)]
 
-use crate::{BlockExecutor, Executor};
+use crate::Executor;
 use anyhow::{ensure, format_err, Result};
+use executor_types::BlockExecutor;
 use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
 use libra_logger::prelude::*;
 use libra_state_view::StateView;

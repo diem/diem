@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::executor_proxy::{ExecutorProxy, ExecutorProxyTrait};
-use executor::{db_bootstrapper::bootstrap_db_if_empty, BlockExecutor, Executor};
+use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
+use executor_types::BlockExecutor;
 use executor_utils::test_helpers::{
     gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
 };
