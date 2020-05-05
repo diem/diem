@@ -260,7 +260,7 @@ impl TxEmitter {
         let libra_per_seed =
             (LIBRA_PER_NEW_ACCOUNT * num_accounts as u64) / req.instances.len() as u64;
         // Create seed accounts with which we can create actual accounts concurrently
-        let seed_accounts = create_new_accounts(
+        let seed_accounts = mint_to_new_accounts(
             &mut faucet_account,
             req.instances.len(),
             libra_per_seed,
@@ -553,6 +553,23 @@ fn gen_transfer_txn_request(
     )
 }
 
+fn gen_mint_txn_request(
+    sender: &mut AccountData,
+    receiver: &AccountAddress,
+    receiver_auth_key_prefix: Vec<u8>,
+    num_coins: u64,
+) -> SignedTransaction {
+    gen_submit_transaction_request(
+        transaction_builder::encode_mint_script(
+            lbr_type_tag(),
+            receiver,
+            receiver_auth_key_prefix,
+            num_coins,
+        ),
+        sender,
+    )
+}
+
 fn gen_random_account(rng: &mut StdRng) -> AccountData {
     let key_pair = KeyPair::generate(rng);
     AccountData {
@@ -580,6 +597,24 @@ fn gen_transfer_txn_requests(
         .map(|account| {
             gen_transfer_txn_request(
                 source_account,
+                &account.address,
+                account.auth_key_prefix(),
+                amount,
+            )
+        })
+        .collect()
+}
+
+fn gen_mint_txn_requests(
+    sending_account: &mut AccountData,
+    accounts: &[AccountData],
+    amount: u64,
+) -> Vec<SignedTransaction> {
+    accounts
+        .iter()
+        .map(|account| {
+            gen_mint_txn_request(
+                sending_account,
                 &account.address,
                 account.auth_key_prefix(),
                 amount,
@@ -643,6 +678,29 @@ async fn create_new_accounts(
             min(MAX_TXN_BATCH_SIZE, num_new_accounts - i),
         ));
         let requests = gen_transfer_txn_requests(source_account, &batch, libra_per_new_account);
+        execute_and_wait_transactions(&mut client, source_account, requests).await?;
+        i += batch.len();
+        accounts.append(&mut batch);
+    }
+    Ok(accounts)
+}
+
+/// Create `num_new_accounts` by minting libra. Return Vec of created accounts
+async fn mint_to_new_accounts(
+    source_account: &mut AccountData,
+    num_new_accounts: usize,
+    libra_per_new_account: u64,
+    max_num_accounts_per_batch: u64,
+    mut client: JsonRpcAsyncClient,
+) -> Result<Vec<AccountData>> {
+    let mut i = 0;
+    let mut accounts = vec![];
+    while i < num_new_accounts {
+        let mut batch = gen_random_accounts(min(
+            max_num_accounts_per_batch as usize,
+            min(MAX_TXN_BATCH_SIZE, num_new_accounts - i),
+        ));
+        let requests = gen_mint_txn_requests(source_account, &batch, libra_per_new_account);
         execute_and_wait_transactions(&mut client, source_account, requests).await?;
         i += batch.len();
         accounts.append(&mut batch);

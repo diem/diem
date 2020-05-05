@@ -10,6 +10,7 @@
 
 use crate::{
     account::{Account, AccountData},
+    common_transactions::mint_txn,
     executor::FakeExecutor,
     keygen::KeyGen,
 };
@@ -26,10 +27,15 @@ fn register_preburn_burn() {
 
     // account to initiate preburning
     let preburner = {
-        let data = AccountData::new(1_000_000, 0);
+        let data = AccountData::new(0, 0);
         executor.add_account_data(&data);
         data.into_account()
     };
+
+    // We need to mint in order to bump the market cap
+    let txn = mint_txn(&association, &preburner, 1, 1_000_000);
+    let output = executor.execute_transaction(txn);
+    executor.apply_write_set(output.write_set());
 
     // Register preburner
     executor.execute_and_apply(preburner.signed_script_txn(
@@ -50,12 +56,12 @@ fn register_preburn_burn() {
     // Complete the first request by burning
     executor.execute_and_apply(association.signed_script_txn(
         encode_burn_script(account_config::lbr_type_tag(), *preburner.address()),
-        1,
+        2,
     ));
     // Complete the second request by cancelling
     executor.execute_and_apply(association.signed_script_txn(
         encode_cancel_burn_script(account_config::lbr_type_tag(), *preburner.address()),
-        2,
+        3,
     ));
 }
 

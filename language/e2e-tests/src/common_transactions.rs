@@ -26,7 +26,7 @@ pub fn add_validator_txn(
         args,
         seq_num,
         gas_costs::TXN_RESERVED * 2,
-        1,
+        0,
     )
 }
 
@@ -101,7 +101,7 @@ pub fn register_validator_txn(
         args,
         seq_num,
         gas_costs::TXN_RESERVED,
-        1,
+        0,
     )
 }
 
@@ -178,6 +178,6 @@ pub fn mint_txn(
         args,
         seq_num,
         gas_costs::TXN_RESERVED, // this is a default for gas
-        1,                       // this is a default for gas
+        0,                       // this is a default for gas
     )
 }

@@ -1,6 +1,6 @@
 //! account: bob
-//! account: vasp, 0, 0,true
-//! account: childvasp, 0, 0, true
+//! account: vasp, 0, 0, empty
+//! account: childvasp, 0, 0, empty
 
 //! new-transaction
 //! sender: bob

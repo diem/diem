@@ -4,6 +4,7 @@
 //! Test infrastructure for modeling Libra accounts.
 
 use crate::{gas_costs, keygen::KeyGen};
+use anyhow::{Error, Result};
 use libra_crypto::ed25519::*;
 use libra_types::{
     access_path::{AccessPath, Accesses},
@@ -26,7 +27,7 @@ use move_vm_types::{
     loaded_data::types::{FatStructType, FatType},
     values::{Struct, Value},
 };
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 use vm_genesis::GENESIS_KEYPAIR;
 
 // TTL is 86400s. Initial time was set to 0.
@@ -129,8 +130,16 @@ impl Account {
     /// Returns the AccessPath that describes the Account type resource instance.
     ///
     /// Use this to retrieve or publish the Account AccountType blob.
-    pub fn make_account_type_access_path(&self, is_empty_account: bool) -> AccessPath {
-        self.make_access_path(account_config::account_type_struct_tag(is_empty_account))
+    pub fn make_account_type_access_path(
+        &self,
+        account_specifier: AccountTypeSpecifier,
+    ) -> AccessPath {
+        let struct_tag = match account_specifier {
+            AccountTypeSpecifier::Empty => account_config::empty_account_type_struct_tag(),
+            AccountTypeSpecifier::Vasp => account_config::vasp_account_type_struct_tag(),
+            AccountTypeSpecifier::Unhosted => account_config::unhosted_account_type_struct_tag(),
+        };
+        self.make_access_path(struct_tag)
     }
 
     // TODO: plug in the account type
@@ -405,6 +414,38 @@ impl Balance {
 }
 
 //---------------------------------------------------------------------------
+// Account type represenation
+//---------------------------------------------------------------------------
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum AccountTypeSpecifier {
+    Empty,
+    Vasp,
+    Unhosted,
+}
+
+impl FromStr for AccountTypeSpecifier {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "empty" => Ok(AccountTypeSpecifier::Empty),
+            "unhosted" => Ok(AccountTypeSpecifier::Unhosted),
+            "vasp" => Ok(AccountTypeSpecifier::Vasp),
+            other => Err(Error::msg(format!(
+                "Unrecognized account type specifier {} found.",
+                other
+            ))),
+        }
+    }
+}
+
+impl Default for AccountTypeSpecifier {
+    fn default() -> Self {
+        AccountTypeSpecifier::Vasp
+    }
+}
+
+//---------------------------------------------------------------------------
 // Account type resource represenation
 //---------------------------------------------------------------------------
 
@@ -412,77 +453,20 @@ impl Balance {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AccountType {
     self_address: AccountAddress,
-    is_empty_account: bool,
+    account_specifier: AccountTypeSpecifier,
 }
 
 impl AccountType {
     /// Create a new AccountType testing account.
-    pub fn new(self_address: AccountAddress, is_empty_account: bool) -> Self {
+    pub fn new(self_address: AccountAddress, account_specifier: AccountTypeSpecifier) -> Self {
         Self {
             self_address,
-            is_empty_account,
+            account_specifier,
         }
     }
 
-    pub fn make_unhosted(&mut self) {
-        self.is_empty_account = false;
-    }
-
-    /// Return if the account type is an empty account type or not
-    pub fn is_empty_account_type(&self) -> bool {
-        self.is_empty_account
-    }
-
-    fn account_limit_type() -> FatStructType {
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: account_config::account_limits_module_name().to_owned(),
-            name: account_config::account_limits_window_struct_name().to_owned(),
-            is_resource: false,
-            ty_args: vec![],
-            layout: vec![FatType::U64, FatType::U64, FatType::U64, FatType::U64],
-        }
-    }
-
-    /// Returns the Move Value representation of the AccountType.
-    pub fn to_value(&self) -> Value {
-        let inner_type_structure = if self.is_empty_account {
-            Struct::pack(vec![Value::bool(false)])
-        } else {
-            Struct::pack(vec![Value::struct_(Struct::pack(vec![
-                Value::u64(0),
-                Value::u64(0),
-                Value::u64(0),
-                Value::u64(0),
-            ]))])
-        };
-        Value::struct_(Struct::pack(vec![
-            Value::bool(true),
-            Value::struct_(inner_type_structure),
-            Value::address(self.self_address),
-        ]))
-    }
-
-    pub fn type_(is_empty_account: bool) -> FatStructType {
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: account_config::account_type_module_name().to_owned(),
-            name: account_config::account_type_struct_name().to_owned(),
-            is_resource: true,
-            ty_args: vec![],
-            layout: Self::type_layout(is_empty_account),
-        }
-    }
-
-    fn unhosted_account_type() -> FatStructType {
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: account_config::unhosted_type_module_name().to_owned(),
-            name: account_config::unhosted_type_struct_name().to_owned(),
-            is_resource: false,
-            ty_args: vec![],
-            layout: vec![FatType::Struct(Box::new(Self::account_limit_type()))],
-        }
+    pub fn account_specifier(&self) -> AccountTypeSpecifier {
+        self.account_specifier
     }
 
     fn empty_account_type() -> FatStructType {
@@ -496,17 +480,99 @@ impl AccountType {
         }
     }
 
-    fn type_layout(is_empty_account: bool) -> Vec<FatType> {
-        let inner_type = if is_empty_account {
-            Self::empty_account_type()
-        } else {
-            Self::unhosted_account_type()
+    fn unhosted_type() -> FatStructType {
+        let inner_account_limits = FatStructType {
+            address: account_config::CORE_CODE_ADDRESS,
+            module: account_config::account_limits_module_name().to_owned(),
+            name: account_config::account_limits_window_struct_name().to_owned(),
+            is_resource: false,
+            ty_args: vec![],
+            layout: vec![FatType::U64, FatType::U64, FatType::U64, FatType::U64],
+        };
+        FatStructType {
+            address: account_config::CORE_CODE_ADDRESS,
+            module: account_config::unhosted_type_module_name().to_owned(),
+            name: account_config::unhosted_type_struct_name().to_owned(),
+            is_resource: false,
+            ty_args: vec![],
+            layout: vec![FatType::Struct(Box::new(inner_account_limits))],
+        }
+    }
+
+    fn vasp_account_type() -> FatStructType {
+        let root_vasp_metadata = FatStructType {
+            address: account_config::CORE_CODE_ADDRESS,
+            module: account_config::vasp_type_module_name().to_owned(),
+            name: account_config::root_vasp_type_struct_name().to_owned(),
+            is_resource: false,
+            ty_args: vec![],
+            layout: vec![
+                FatType::Vector(Box::new(FatType::U8)),
+                FatType::Vector(Box::new(FatType::U8)),
+                FatType::U64,
+                FatType::Vector(Box::new(FatType::U8)),
+                FatType::Vector(Box::new(FatType::U8)),
+            ],
+        };
+        FatStructType {
+            address: account_config::CORE_CODE_ADDRESS,
+            module: account_config::vasp_type_module_name().to_owned(),
+            name: account_config::root_vasp_type_struct_name().to_owned(),
+            is_resource: false,
+            ty_args: vec![],
+            layout: vec![FatType::Struct(Box::new(root_vasp_metadata))],
+        }
+    }
+
+    fn type_layout(account_specifier: AccountTypeSpecifier) -> Vec<FatType> {
+        let inner_type = match account_specifier {
+            AccountTypeSpecifier::Empty => Self::empty_account_type(),
+            AccountTypeSpecifier::Vasp => Self::vasp_account_type(),
+            AccountTypeSpecifier::Unhosted => Self::unhosted_type(),
         };
         vec![
             FatType::Bool,
             FatType::Struct(Box::new(inner_type)),
             FatType::Address,
         ]
+    }
+
+    /// Returns the Move Value representation of the AccountType.
+    pub fn to_value(&self) -> Value {
+        let inner_type_structure = match self.account_specifier {
+            AccountTypeSpecifier::Empty => Struct::pack(vec![Value::bool(false)]),
+            AccountTypeSpecifier::Vasp => Struct::pack(vec![Value::struct_(Struct::pack(vec![
+                Value::vector_u8(vec![]),
+                Value::vector_u8(vec![]),
+                Value::u64(u64::MAX),
+                Value::vector_u8(vec![]),
+                Value::vector_u8(vec![0u8; 16]),
+            ]))]),
+            AccountTypeSpecifier::Unhosted => {
+                Struct::pack(vec![Value::struct_(Struct::pack(vec![
+                    Value::u64(0),
+                    Value::u64(0),
+                    Value::u64(0),
+                    Value::u64(0),
+                ]))])
+            }
+        };
+        Value::struct_(Struct::pack(vec![
+            Value::bool(true),
+            Value::struct_(inner_type_structure),
+            Value::address(self.self_address),
+        ]))
+    }
+
+    pub fn type_(account_specifier: AccountTypeSpecifier) -> FatStructType {
+        FatStructType {
+            address: account_config::CORE_CODE_ADDRESS,
+            module: account_config::account_type_module_name().to_owned(),
+            name: account_config::account_type_struct_name().to_owned(),
+            is_resource: true,
+            ty_args: vec![],
+            layout: Self::type_layout(account_specifier),
+        }
     }
 }
 
@@ -583,12 +649,18 @@ impl AccountData {
             balance,
             lbr_currency_code(),
             sequence_number,
-            false,
+            AccountTypeSpecifier::Vasp,
         )
     }
 
     pub fn new_empty() -> Self {
-        Self::with_account(Account::new(), 0, lbr_currency_code(), 0, true)
+        Self::with_account(
+            Account::new(),
+            0,
+            lbr_currency_code(),
+            0,
+            AccountTypeSpecifier::Vasp,
+        )
     }
 
     /// Creates a new `AccountData` with the provided account.
@@ -597,7 +669,7 @@ impl AccountData {
         balance: u64,
         balance_currency_code: Identifier,
         sequence_number: u64,
-        is_empty_account: bool,
+        account_specifier: AccountTypeSpecifier,
     ) -> Self {
         Self::with_account_and_event_counts(
             account,
@@ -608,7 +680,7 @@ impl AccountData {
             0,
             false,
             false,
-            is_empty_account,
+            account_specifier,
             false,
         )
     }
@@ -620,7 +692,7 @@ impl AccountData {
         balance: u64,
         balance_currency_code: Identifier,
         sequence_number: u64,
-        is_empty_account: bool,
+        account_specifier: AccountTypeSpecifier,
     ) -> Self {
         let account = Account::with_keypair(privkey, pubkey);
         Self::with_account(
@@ -628,7 +700,7 @@ impl AccountData {
             balance,
             balance_currency_code,
             sequence_number,
-            is_empty_account,
+            account_specifier,
         )
     }
 
@@ -642,11 +714,11 @@ impl AccountData {
         received_events_count: u64,
         delegated_key_rotation_capability: bool,
         delegated_withdrawal_capability: bool,
-        is_empty_account: bool,
+        account_specifier: AccountTypeSpecifier,
         is_frozen: bool,
     ) -> Self {
         Self {
-            account_type: AccountType::new(*account.address(), is_empty_account),
+            account_type: AccountType::new(*account.address(), account_specifier),
             event_generator: EventHandleGenerator::new_with_event_count(*account.address(), 2),
             account,
             balance: Balance::new(balance),
@@ -711,10 +783,6 @@ impl AccountData {
         }
     }
 
-    pub fn make_unhosted(&mut self) {
-        self.account_type.make_unhosted();
-    }
-
     /// Returns the (Move value) layout of the LibraAccount::T struct
     pub fn type_() -> FatStructType {
         FatStructType {
@@ -741,8 +809,8 @@ impl AccountData {
     }
 
     /// Returns whether the underlying account is an an empty account type or not.
-    pub fn is_empty_account_type(&self) -> bool {
-        self.account_type.is_empty_account_type()
+    pub fn account_type(&self) -> AccountTypeSpecifier {
+        self.account_type.account_specifier()
     }
 
     /// Creates and returns the top-level resources to be published under the account
@@ -797,14 +865,18 @@ impl AccountData {
     /// Returns the AccessPath that describes the Account balance resource instance.
     ///
     /// Use this to retrieve or publish the Account blob.
-    pub fn make_account_type_access_path(&self, is_empty_account: bool) -> AccessPath {
-        self.account.make_account_type_access_path(is_empty_account)
+    pub fn make_account_type_access_path(
+        &self,
+        account_specifier: AccountTypeSpecifier,
+    ) -> AccessPath {
+        self.account
+            .make_account_type_access_path(account_specifier)
     }
 
     /// Creates a writeset that contains the account data and can be patched to the storage
     /// directly.
     pub fn to_writeset(&self) -> WriteSet {
-        let is_empty_account_type = self.is_empty_account_type();
+        let account_type_specifier = self.account_type();
         let (account_blob, balance_blob, account_type_blob, event_generator_blob) = self.to_value();
         let account = account_blob
             .value_as::<Struct>()
@@ -819,7 +891,7 @@ impl AccountData {
         let account_type = account_type_blob
             .value_as::<Struct>()
             .unwrap()
-            .simple_serialize(&AccountType::type_(is_empty_account_type))
+            .simple_serialize(&AccountType::type_(account_type_specifier))
             .unwrap();
         let event_generator = event_generator_blob
             .value_as::<Struct>()
@@ -834,7 +906,7 @@ impl AccountData {
             ),
             (self.make_balance_access_path(), WriteOp::Value(balance)),
             (
-                self.make_account_type_access_path(is_empty_account_type),
+                self.make_account_type_access_path(account_type_specifier),
                 WriteOp::Value(account_type),
             ),
         ])

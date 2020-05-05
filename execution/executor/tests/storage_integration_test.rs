@@ -32,7 +32,7 @@ use std::convert::TryFrom;
 use stdlib::transaction_scripts::StdlibScript;
 use storage_interface::DbReaderWriter;
 use transaction_builder::{
-    encode_block_prologue_script, encode_create_account_script, encode_publishing_option_script,
+    encode_block_prologue_script, encode_mint_script, encode_publishing_option_script,
     encode_rotate_consensus_pubkey_script, encode_transfer_with_metadata_script,
 };
 
@@ -590,7 +590,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_create_account_script(
+        Some(encode_mint_script(
             lbr_type_tag(),
             &account1,
             account1_auth_key.prefix().to_vec(),
@@ -604,7 +604,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 2,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_create_account_script(
+        Some(encode_mint_script(
             lbr_type_tag(),
             &account2,
             account2_auth_key.prefix().to_vec(),
@@ -618,7 +618,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 3,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_create_account_script(
+        Some(encode_mint_script(
             lbr_type_tag(),
             &account3,
             account3_auth_key.prefix().to_vec(),
