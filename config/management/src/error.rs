@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::CommandName;
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq)]
@@ -24,7 +25,7 @@ pub enum Error {
     #[error("Remote storage unavailable, please check your configuration")]
     RemoteStorageUnavailable,
     #[error("Unexpected command, expected {0}, found {1}")]
-    UnexpectedCommand(String, String),
+    UnexpectedCommand(CommandName, CommandName),
     #[error("Unexpected error: {0}")]
     UnexpectedError(String),
 }
