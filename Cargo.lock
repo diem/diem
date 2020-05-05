@@ -1256,6 +1256,7 @@ dependencies = [
  "libra-crypto 0.1.0",
  "libra-logger 0.1.0",
  "libra-metrics 0.1.0",
+ "libra-secure-net 0.1.0",
  "libra-state-view 0.1.0",
  "libra-temppath 0.1.0",
  "libra-types 0.1.0",
@@ -1299,12 +1300,16 @@ dependencies = [
 name = "executor-types"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.28 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-canonical-serialization 0.1.0",
  "libra-crypto 0.1.0",
+ "libra-secure-net 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "scratchpad 0.1.0",
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
+ "thiserror 1.0.16 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2478,6 +2483,7 @@ dependencies = [
  "crash-handler 0.1.0",
  "debug-interface 0.1.0",
  "executor 0.1.0",
+ "executor-types 0.1.0",
  "futures 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "jemallocator 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",

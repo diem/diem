@@ -7,8 +7,9 @@ use anyhow::Result;
 use config_builder::test_config;
 use executor::{
     db_bootstrapper::{bootstrap_db_if_empty, calculate_genesis},
-    BlockExecutor, Executor,
+    Executor,
 };
+use executor_types::BlockExecutor;
 use executor_utils::test_helpers::{
     extract_signer, gen_ledger_info_with_sigs, get_test_signed_transaction,
 };

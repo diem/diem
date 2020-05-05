@@ -3,8 +3,7 @@
 
 use crate::SynchronizerState;
 use anyhow::{ensure, format_err, Result};
-use executor::ChunkExecutor;
-use executor_types::ExecutedTrees;
+use executor_types::{ChunkExecutor, ExecutedTrees};
 use itertools::Itertools;
 use libra_types::{
     account_state::AccountState,

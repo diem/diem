@@ -3,6 +3,10 @@
 
 #![forbid(unsafe_code)]
 
+mod error;
+pub use error::Error;
+
+use anyhow::Result;
 use libra_crypto::{
     hash::{EventAccumulatorHasher, TransactionAccumulatorHasher, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
@@ -12,12 +16,63 @@ use libra_types::{
     account_state_blob::AccountStateBlob,
     contract_event::ContractEvent,
     epoch_info::EpochInfo,
+    ledger_info::LedgerInfoWithSignatures,
     proof::{accumulator::InMemoryAccumulator, SparseMerkleProof},
-    transaction::{TransactionStatus, Version},
+    transaction::{Transaction, TransactionListWithProof, TransactionStatus, Version},
 };
 use scratchpad::{ProofRead, SparseMerkleTree};
+use serde::{Deserialize, Serialize};
 use std::{cmp::max, collections::HashMap, sync::Arc};
 use storage_interface::TreeState;
+
+pub trait ChunkExecutor: Send {
+    /// Verifies the transactions based on the provided proofs and ledger info. If the transactions
+    /// are valid, executes them and commits immediately if execution results match the proofs.
+    /// Returns a vector of reconfiguration events in the chunk
+    fn execute_and_commit_chunk(
+        &mut self,
+        txn_list_with_proof: TransactionListWithProof,
+        // Target LI that has been verified independently: the proofs are relative to this version.
+        verified_target_li: LedgerInfoWithSignatures,
+        // An optional end of epoch LedgerInfo. We do not allow chunks that end epoch without
+        // carrying any epoch change LI.
+        epoch_change_li: Option<LedgerInfoWithSignatures>,
+    ) -> Result<Vec<ContractEvent>>;
+}
+
+pub trait BlockExecutor: Send {
+    /// Get the latest committed block id
+    fn committed_block_id(&mut self) -> Result<HashValue, Error>;
+
+    /// Reset the internal state including cache with newly fetched latest committed block from storage.
+    fn reset(&mut self) -> Result<(), Error>;
+
+    /// Executes a block.
+    fn execute_block(
+        &mut self,
+        block: (HashValue, Vec<Transaction>),
+        parent_block_id: HashValue,
+    ) -> Result<StateComputeResult, Error>;
+
+    /// Saves eligible blocks to persistent storage.
+    /// If we have multiple blocks and not all of them have signatures, we may send them to storage
+    /// in a few batches. For example, if we have
+    /// ```text
+    /// A <- B <- C <- D <- E
+    /// ```
+    /// and only `C` and `E` have signatures, we will send `A`, `B` and `C` in the first batch,
+    /// then `D` and `E` later in the another batch.
+    /// Commits a block and all its ancestors in a batch manner.
+    ///
+    /// Returns `Ok(Result<Vec<Transaction>, Vec<ContractEvents>)` if successful,
+    /// where Vec<Transaction> is a vector of transactions that were kept from the submitted blocks, and
+    /// Vec<ContractEvents> is a vector of reconfiguration events in the submitted blocks
+    fn commit_blocks(
+        &mut self,
+        block_ids: Vec<HashValue>,
+        ledger_info_with_sigs: LedgerInfoWithSignatures,
+    ) -> Result<(Vec<Transaction>, Vec<ContractEvent>), Error>;
+}
 
 /// A structure that summarizes the result of the execution needed for consensus to agree on.
 /// The execution is responsible for generating the ID of the new state, which is returned in the
@@ -27,7 +82,7 @@ use storage_interface::TreeState;
 /// of success / failure of the transactions.
 /// Note that the specific details of compute_status are opaque to StateMachineReplication,
 /// which is going to simply pass the results between StateComputer and TxnManager.
-#[derive(Debug, Default, PartialEq, Eq, Clone)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct StateComputeResult {
     /// transaction accumulator root hash is identified as `state_id` in Consensus.
     root_hash: HashValue,

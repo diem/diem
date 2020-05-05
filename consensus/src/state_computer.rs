@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{counters, state_replication::StateComputer};
-use anyhow::{ensure, Result};
+use anyhow::{ensure, Error, Result};
 use consensus_types::block::Block;
-use executor::BlockExecutor;
-use executor_types::StateComputeResult;
+use executor_types::{BlockExecutor, StateComputeResult};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
@@ -73,6 +72,7 @@ impl StateComputer for ExecutionProxy {
                 (block.id(), Self::transactions_from_block(block)),
                 parent_block_id,
             )
+            .map_err(Error::from)
             .and_then(|result| {
                 let execution_duration = pre_execution_instant.elapsed();
                 let num_txns = result.transaction_info_hashes().len();

@@ -7,7 +7,8 @@ use debug_interface::{
     node_debug_service::NodeDebugService,
     proto::node_debug_interface_server::NodeDebugInterfaceServer,
 };
-use executor::{db_bootstrapper::bootstrap_db_if_empty, BlockExecutor, ChunkExecutor, Executor};
+use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
+use executor_types::{BlockExecutor, ChunkExecutor};
 use futures::{channel::mpsc::channel, executor::block_on, stream::StreamExt};
 use libra_config::{
     config::{DiscoveryMethod, NetworkConfig, NodeConfig, RoleType},
