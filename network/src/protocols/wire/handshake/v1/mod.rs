@@ -36,7 +36,7 @@ pub struct SupportedProtocols(bitvec::BitVec);
 
 /// The HandshakeMsg contains a mapping from MessagingProtocolVersion suppported by the node to a
 /// bit-vector specifying application-level protocols supported over that version.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, Default)]
 pub struct HandshakeMsg {
     pub supported_protocols: BTreeMap<MessagingProtocolVersion, SupportedProtocols>,
 }
@@ -83,9 +83,7 @@ impl SupportedProtocols {
 
 impl HandshakeMsg {
     pub fn new() -> Self {
-        HandshakeMsg {
-            supported_protocols: BTreeMap::default(),
-        }
+        Self::default()
     }
 
     pub fn add(
