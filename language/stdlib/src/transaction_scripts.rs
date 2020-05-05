@@ -46,6 +46,7 @@ pub enum StdlibScript {
     PeerToPeer,
     PeerToPeerWithMetadata,
     Preburn,
+    PublishSharedEd2551PublicKey,
     RecertifyChildAccount,
     RegisterApprovedPayment,
     RegisterPreburner,
@@ -57,6 +58,7 @@ pub enum StdlibScript {
     RemoveValidator,
     RotateAuthenticationKey,
     RotateConsensusPubkey,
+    RotateSharedEd2551PublicKey,
     UnmintLbr,
     UpdateLibraVersion,
     UpdateExchangeRate,
@@ -94,6 +96,7 @@ impl StdlibScript {
             PeerToPeer,
             PeerToPeerWithMetadata,
             Preburn,
+            PublishSharedEd2551PublicKey,
             RecertifyChildAccount,
             RegisterApprovedPayment,
             RegisterPreburner,
@@ -105,6 +108,7 @@ impl StdlibScript {
             RemoveValidator,
             RotateAuthenticationKey,
             RotateConsensusPubkey,
+            RotateSharedEd2551PublicKey,
             UnmintLbr,
             UpdateLibraVersion,
             UpdateExchangeRate,
@@ -220,6 +224,7 @@ impl fmt::Display for StdlibScript {
                 PeerToPeer => "peer_to_peer",
                 PeerToPeerWithMetadata => "peer_to_peer_with_metadata",
                 Preburn => "preburn",
+                PublishSharedEd2551PublicKey => "publish_shared_ed25519_public_key",
                 RecertifyChildAccount => "recertify_child_account",
                 RegisterApprovedPayment => "register_approved_payment",
                 RegisterPreburner => "register_preburner",
@@ -231,6 +236,7 @@ impl fmt::Display for StdlibScript {
                 RemoveValidator => "remove_validator",
                 RotateAuthenticationKey => "rotate_authentication_key",
                 RotateConsensusPubkey => "rotate_consensus_pubkey",
+                RotateSharedEd2551PublicKey => "rotate_shared_ed25519_public_key",
                 UnmintLbr => "unmint_lbr",
                 UpdateLibraVersion => "update_libra_version",
                 UpdateExchangeRate => "update_exchange_rate",
@@ -250,6 +256,13 @@ mod test {
         // StdlibScript::all() (and vice versa)
         let files = STAGED_TXN_SCRIPTS_DIR.files();
         let scripts = StdlibScript::all();
+        for file in files {
+            assert!(
+                StdlibScript::is(file.contents()),
+                "File {} missing from StdlibScript enum",
+                file.path().display()
+            )
+        }
         assert_eq!(
             files.len(),
             scripts.len(),
@@ -260,12 +273,5 @@ mod test {
                 "Did you forget to rebuild the standard library?"
             }
         );
-        for file in files {
-            assert!(
-                StdlibScript::is(file.contents()),
-                "File {} missing from StdlibScript enum",
-                file.path().display()
-            )
-        }
     }
 }
