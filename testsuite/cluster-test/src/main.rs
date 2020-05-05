@@ -25,7 +25,7 @@ use cluster_test::{
     slack::SlackClient,
     stats,
     suite::ExperimentSuite,
-    tx_emitter::{AccountData, EmitJobRequest, EmitThreadParams, TxEmitter},
+    tx_emitter::{AccountData, EmitJobRequest, EmitThreadParams, TxEmitter, TxStats},
     util::unix_timestamp_now,
 };
 use futures::{
@@ -39,6 +39,7 @@ use tokio::{
     runtime::{Builder, Runtime},
     time::{delay_for, delay_until, Instant as TokioInstant},
 };
+
 const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 
 #[derive(StructOpt, Debug)]
@@ -364,8 +365,19 @@ impl BasicSwarmUtil {
             })
             .await
             .expect("Failed to start emit job");
-        thread::sleep(duration);
-        emitter.stop_job(job);
+        let deadline = Instant::now() + duration;
+        let mut prev_stats: Option<TxStats> = None;
+        while Instant::now() < deadline {
+            let window = Duration::from_secs(10);
+            tokio::time::delay_for(window).await;
+            let stats = emitter.peek_job_stats(&job);
+            let delta = &stats - &prev_stats.unwrap_or_default();
+            prev_stats = Some(stats);
+            println!("{}", delta.rate(window));
+        }
+        let stats = emitter.stop_job(job);
+        println!("Total stats: {}", stats);
+        println!("Average rate: {}", stats.rate(duration));
     }
 }
 

@@ -20,7 +20,6 @@ use serde_json::Value;
 use std::{
     collections::HashSet,
     fmt::{Display, Error, Formatter},
-    sync::atomic::Ordering,
     time::Duration,
 };
 use structopt::StructOpt;
@@ -166,8 +165,8 @@ impl Experiment for PerformanceBenchmark {
             .map(|ic| context.cluster_swarm.upsert_node(ic.clone(), false))
             .collect();
         try_join_all(futures).await?;
-        let submitted_txn = stats.submitted.load(Ordering::Relaxed);
-        let expired_txn = stats.expired.load(Ordering::Relaxed);
+        let submitted_txn = stats.submitted;
+        let expired_txn = stats.expired;
         context
             .report
             .report_metric(&self, "submitted_txn", submitted_txn as f64);
