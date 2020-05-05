@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    storage_query_discovery_set,
+    storage_query_discovery_set_async,
     types::{OnchainDiscoveryMsg, QueryDiscoverySetRequest},
 };
 use anyhow::{bail, ensure, format_err, Context as _};
@@ -19,7 +19,7 @@ use libra_types::PeerId;
 use network::{peer_manager::PeerManagerNotification, protocols::rpc::error::RpcError, ProtocolId};
 use std::{sync::Arc, task::Context};
 use storage_interface::DbReader;
-use tokio::{runtime::Handle, task};
+use tokio::runtime::Handle;
 
 /// A LibraNet service for handling [`QueryDiscoverySetRequest`] rpc's.
 ///
@@ -129,21 +129,12 @@ async fn handle_query_discovery_set_request(
     req_msg: QueryDiscoverySetRequest,
     mut res_tx: oneshot::Sender<Result<Bytes, RpcError>>,
 ) {
-    let mut f_query_storage =
-        task::spawn_blocking(move || storage_query_discovery_set(libra_db, req_msg)).fuse();
+    let mut f_query_storage = storage_query_discovery_set_async(libra_db, req_msg).fuse();
     let mut f_rpc_cancel = future::poll_fn(|cx: &mut Context<'_>| res_tx.poll_canceled(cx)).fuse();
     let peer_id_short = peer_id.short_str();
 
     futures::select! {
         res = f_query_storage => {
-            let res = match res {
-                Ok(res) => res,
-                Err(err) => {
-                    warn!("error query storage task panicked or canceled: peer: {}, err: {:?}", peer_id_short, err);
-                    return;
-                }
-            };
-
             let (_req_msg, res_msg) = match res {
                 Ok(res) => res,
                 Err(err) => {

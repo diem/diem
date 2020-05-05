@@ -3,7 +3,7 @@
 
 use crate::{
     network_interface::OnchainDiscoveryNetworkSender,
-    storage_query_discovery_set,
+    storage_query_discovery_set_async,
     types::{
         DiscoveryInfoInternal, DiscoverySetInternal, QueryDiscoverySetRequest,
         QueryDiscoverySetResponse,
@@ -30,7 +30,6 @@ use option_future::OptionFuture;
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 use std::{collections::HashSet, mem, sync::Arc, time::Duration};
 use storage_interface::DbReader;
-use tokio::task;
 
 /// Actor for querying various sources (remote peers, local storage) for the
 /// latest discovery set and notifying the `ConnectivityManager` of updates.
@@ -241,13 +240,9 @@ where
         };
         let self_peer_id = self.peer_id;
         let libra_db = Arc::clone(&self.libra_db);
-        let f_query_storage =
-            task::spawn_blocking(move || storage_query_discovery_set(libra_db, req_msg));
-        f_query_storage.map(move |res| {
-            // flatten errors and add peer_id context
-            res.map_err(anyhow::Error::from)
-                .and_then(|res| res)
-                .map(|(req_msg, res_msg)| (self_peer_id, req_msg, res_msg))
+        storage_query_discovery_set_async(libra_db, req_msg).map(move |res| {
+            // add peer_id context
+            res.map(|(req_msg, res_msg)| (self_peer_id, req_msg, res_msg))
         })
     }
 
@@ -304,7 +299,6 @@ where
     }
 
     async fn handle_new_discovery_set_event(&mut self, discovery_set: DiscoverySet) {
-        // update connectivity manager about any modified peer infos.
         let latest_discovery_set =
             DiscoverySetInternal::from_discovery_set(self.role, discovery_set);
 
@@ -314,9 +308,6 @@ where
         // TODO(philiphayes): ConnectivityManager supports multiple identity pubkeys per
         // peer (will accept connections from any in set, and do { pubkeys } x { addrs }
         // when attempting to dial).
-
-        // TODO(philiphayes): consensus sends reconfig notification to on-chain
-        // discovery instead of network?
 
         // pull out here to satisfy borrow checker
         let self_peer_id = self.peer_id;

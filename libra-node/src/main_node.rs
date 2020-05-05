@@ -245,7 +245,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     );
 
     instant = Instant::now();
-    let chunk_executor = setup_chunk_executor(db_rw);
+    let chunk_executor = setup_chunk_executor(db_rw.clone());
     debug!(
         "ChunkExecutor setup in {} ms",
         instant.elapsed().as_millis()
@@ -268,7 +268,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         let (runtime, mut network_builder) = setup_network(
             network,
             RoleType::Validator,
-            Arc::clone(&libra_db) as Arc<dyn DbReader>,
+            Arc::clone(&db_rw.reader),
             node_config.base.waypoint.expect("No waypoint in config"),
         );
 
@@ -288,7 +288,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         let (runtime, mut network_builder) = setup_network(
             &mut full_node_network,
             RoleType::FullNode,
-            Arc::clone(&libra_db) as Arc<dyn DbReader>,
+            Arc::clone(&db_rw.reader),
             node_config.base.waypoint.expect("No waypoint in config"),
         );
 
@@ -320,7 +320,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let state_synchronizer = StateSynchronizer::bootstrap(
         state_sync_network_handles,
         state_sync_to_mempool_sender,
-        Arc::clone(&libra_db) as Arc<dyn DbReader>,
+        Arc::clone(&db_rw.reader),
         chunk_executor,
         &node_config,
         reconfig_subscriptions,
@@ -329,7 +329,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
     let admission_control_runtime = AdmissionControlService::bootstrap(
         &node_config,
-        Arc::clone(&libra_db) as Arc<dyn DbReader>,
+        Arc::clone(&db_rw.reader),
         mp_client_sender.clone(),
     );
     let rpc_runtime = bootstrap_rpc(&node_config, libra_db.clone(), mp_client_sender);
@@ -340,7 +340,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     instant = Instant::now();
     let mempool = libra_mempool::bootstrap(
         node_config,
-        Arc::clone(&libra_db) as Arc<dyn DbReader>,
+        Arc::clone(&db_rw.reader),
         mempool_network_handles,
         mp_client_events,
         consensus_requests,

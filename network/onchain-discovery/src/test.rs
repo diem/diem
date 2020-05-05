@@ -32,13 +32,12 @@ use network::{
     protocols::rpc::{InboundRpcRequest, OutboundRpcRequest},
     ProtocolId,
 };
-use simple_storage_client::SimpleStorageClient;
 use std::{
     collections::HashMap, convert::TryFrom, num::NonZeroUsize, str::FromStr, sync::Arc,
-    thread::JoinHandle as ThreadJoinHandle, time::Duration,
+    time::Duration,
 };
 use storage_interface::DbReader;
-use storage_service::{init_libra_db, start_simple_storage_service_with_db};
+use storage_service::init_libra_db;
 use tokio::{
     runtime::{Handle, Runtime},
     task::JoinHandle,
@@ -172,22 +171,16 @@ fn gen_configs(count: usize) -> Vec<NodeConfig> {
 
 fn setup_storage_service_and_executor(
     config: &NodeConfig,
-) -> (
-    ThreadJoinHandle<()>,
-    Arc<dyn DbReader>,
-    Executor<LibraVM>,
-    Waypoint,
-) {
+) -> (Arc<dyn DbReader>, Executor<LibraVM>, Waypoint) {
     let (db_r, db_rw) = init_libra_db(config);
     let genesis_tx = config.execution.genesis.as_ref().unwrap();
     let waypoint = bootstrap_db_if_empty::<LibraVM>(&db_rw, genesis_tx)
         .expect("Db-bootstrapper should not fail.")
         .unwrap();
 
-    let storage_thread = start_simple_storage_service_with_db(config, Arc::clone(&db_r));
-    let executor = Executor::new(SimpleStorageClient::new(&config.storage.simple_address).into());
+    let executor = Executor::new(db_rw);
 
-    (storage_thread, db_r, executor, waypoint)
+    (db_r, executor, waypoint)
 }
 
 fn setup_onchain_discovery(
@@ -268,8 +261,7 @@ fn service_handles_remote_query() {
     let self_peer_id = config.validator_network.as_ref().unwrap().peer_id;
     let role = config.base.role;
 
-    let (_storage_thread, libra_db, _executor, waypoint) =
-        setup_storage_service_and_executor(&config);
+    let (libra_db, _executor, waypoint) = setup_storage_service_and_executor(&config);
     let discovery_set = read_discovery_set(&libra_db);
     let expected_discovery_set = DiscoverySetInternal::from_discovery_set(role, discovery_set);
 
@@ -326,8 +318,7 @@ fn queries_storage_on_tick() {
     let self_peer_id = config.validator_network.as_ref().unwrap().peer_id;
     let role = config.base.role;
 
-    let (_storage_thread, libra_db, _executor, waypoint) =
-        setup_storage_service_and_executor(&config);
+    let (libra_db, _executor, waypoint) = setup_storage_service_and_executor(&config);
     let discovery_set = read_discovery_set(&libra_db);
 
     let (
@@ -390,7 +381,7 @@ fn queries_peers_on_tick() {
     let server_peer_id = server_config.validator_network.as_ref().unwrap().peer_id;
     let server_role = server_config.base.role;
 
-    let (_server_storage_thread, server_libra_db, _server_executor, waypoint) =
+    let (server_libra_db, _server_executor, waypoint) =
         setup_storage_service_and_executor(&server_config);
 
     let (
@@ -415,8 +406,7 @@ fn queries_peers_on_tick() {
     let client_peer_id = client_config.validator_network.as_ref().unwrap().peer_id;
     let client_role = client_config.base.role;
 
-    let (_storage_thread, libra_db, _executor, waypoint) =
-        setup_storage_service_and_executor(&client_config);
+    let (libra_db, _executor, waypoint) = setup_storage_service_and_executor(&client_config);
     let discovery_set = read_discovery_set(&libra_db);
 
     let (

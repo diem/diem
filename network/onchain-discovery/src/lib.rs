@@ -49,9 +49,11 @@
 
 use crate::types::{QueryDiscoverySetRequest, QueryDiscoverySetResponse};
 use anyhow::{Context as AnyhowContext, Result};
+use futures::future::{Future, FutureExt};
 use libra_types::account_config;
 use std::sync::Arc;
 use storage_interface::DbReader;
+use tokio::task;
 
 #[cfg(test)]
 mod test;
@@ -100,4 +102,19 @@ fn storage_query_discovery_set(
     });
 
     Ok((req_msg, res_msg))
+}
+
+/// Query storage but async and wrapped in a [`task::spawn_blocking`](tokio::task::spawn_blocking),
+/// which runs the task on a special-purpose threadpool for blocking tasks.
+///
+/// If you are querying in an async context, it's preferable to use this method
+/// over the blocking `storage_query_discovery_set`.
+fn storage_query_discovery_set_async(
+    libra_db: Arc<dyn DbReader>,
+    req_msg: QueryDiscoverySetRequest,
+) -> impl Future<Output = Result<(QueryDiscoverySetRequest, Box<QueryDiscoverySetResponse>)>> {
+    task::spawn_blocking(move || storage_query_discovery_set(libra_db, req_msg)).map(|res| {
+        // flatten errors
+        res.map_err(anyhow::Error::from).and_then(|res| res)
+    })
 }
