@@ -443,6 +443,46 @@ jobs:
               fi
             done
 
+  # build-docs and deploy-docs are adapted from
+  # https://circleci.com/blog/deploying-documentation-to-github-pages-with-continuous-integration/.
+  build-docs:
+    executor: build-executor
+    description: Documentation Build
+    steps:
+      - build_setup
+      - run:
+          name: Generate documentation
+          command: |
+            # Use `RUSTC_BOOTSTRAP` in order to use the `--enable-index-page` flag of rustdoc
+            # This is needed in order to generate a landing page `index.html` for workspaces
+            RUSTC_BOOTSTRAP=1 RUSTDOCFLAGS="-Z unstable-options --enable-index-page" cargo doc --no-deps --workspace --lib
+      - persist_to_workspace:
+          root: target
+          paths: doc
+  deploy-docs:
+    docker:
+      - image: node:8.10.0
+    steps:
+      - checkout
+      - attach_workspace:
+          at: target
+      - run:
+          name: Disable jekyll builds
+          command: touch target/doc/.nojekyll
+      - run:
+          name: Install and configure gh-pages
+          command: |
+            npm install -g --silent gh-pages@2.0.1
+            git config user.email "libra-doc-bot@users.noreply.github.com"
+            git config user.name "libra-doc-bot"
+      - add_ssh_keys:
+          fingerprints:
+            - "b4:01:8d:ee:cb:ee:84:c6:e3:25:a4:1e:af:cf:7b:f2"
+      - run:
+          name: Deploy to gh-pages branch
+          command: |
+            gh-pages --dotfiles --message "[skip ci] documentation update" --dist target/doc
+
 workflows:
   commit-workflow:
     jobs:
@@ -474,6 +514,18 @@ workflows:
       #- run-flaky-unit-test:
       #    requires:
       #      - prefetch-crates
+      - build-docs:
+          requires:
+            - lint
+          filters:
+            branches:
+              only: master
+      - deploy-docs:
+          requires:
+            - build-docs
+          filters:
+            branches:
+              only: master
 
   scheduled-workflow:
     triggers:
