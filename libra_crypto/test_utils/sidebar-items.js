@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["TEST_SEED","A deterministic seed for PRNGs related to keys"]],"fn":[["uniform_keypair_strategy","Produces a uniformly random keypair from a seed"]],"struct":[["KeyPair","A keypair consisting of a private and public key"]]});

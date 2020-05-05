@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["RecursiveStructDefChecker",""],["StructDefGraphBuilder","Given a module, build a graph of struct definitions. This is useful when figuring out whether the struct definitions in module form a cycle."]]});

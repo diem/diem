@@ -1,0 +1,1 @@
+initSidebarItems({"static":[["ACCOUNT_SENT_EVENT_PATH","The path to the sent event counter for an Account resource. It can be used to query the event DB for the given event."]],"struct":[["SentPaymentEvent","Struct that represents a SentPaymentEvent."]]});

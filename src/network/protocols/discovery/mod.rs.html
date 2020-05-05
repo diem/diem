@@ -1,0 +1,1229 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `network/src/protocols/discovery/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../../light.css" id="themeStyle"><script src="../../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../../noscript.css"></noscript><link rel="shortcut icon" href="../../../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../../network/index.html'><div class='logo-container'><img src='../../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../../../settings.html"><img src="../../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<span id="2">  2</span>
+<span id="3">  3</span>
+<span id="4">  4</span>
+<span id="5">  5</span>
+<span id="6">  6</span>
+<span id="7">  7</span>
+<span id="8">  8</span>
+<span id="9">  9</span>
+<span id="10"> 10</span>
+<span id="11"> 11</span>
+<span id="12"> 12</span>
+<span id="13"> 13</span>
+<span id="14"> 14</span>
+<span id="15"> 15</span>
+<span id="16"> 16</span>
+<span id="17"> 17</span>
+<span id="18"> 18</span>
+<span id="19"> 19</span>
+<span id="20"> 20</span>
+<span id="21"> 21</span>
+<span id="22"> 22</span>
+<span id="23"> 23</span>
+<span id="24"> 24</span>
+<span id="25"> 25</span>
+<span id="26"> 26</span>
+<span id="27"> 27</span>
+<span id="28"> 28</span>
+<span id="29"> 29</span>
+<span id="30"> 30</span>
+<span id="31"> 31</span>
+<span id="32"> 32</span>
+<span id="33"> 33</span>
+<span id="34"> 34</span>
+<span id="35"> 35</span>
+<span id="36"> 36</span>
+<span id="37"> 37</span>
+<span id="38"> 38</span>
+<span id="39"> 39</span>
+<span id="40"> 40</span>
+<span id="41"> 41</span>
+<span id="42"> 42</span>
+<span id="43"> 43</span>
+<span id="44"> 44</span>
+<span id="45"> 45</span>
+<span id="46"> 46</span>
+<span id="47"> 47</span>
+<span id="48"> 48</span>
+<span id="49"> 49</span>
+<span id="50"> 50</span>
+<span id="51"> 51</span>
+<span id="52"> 52</span>
+<span id="53"> 53</span>
+<span id="54"> 54</span>
+<span id="55"> 55</span>
+<span id="56"> 56</span>
+<span id="57"> 57</span>
+<span id="58"> 58</span>
+<span id="59"> 59</span>
+<span id="60"> 60</span>
+<span id="61"> 61</span>
+<span id="62"> 62</span>
+<span id="63"> 63</span>
+<span id="64"> 64</span>
+<span id="65"> 65</span>
+<span id="66"> 66</span>
+<span id="67"> 67</span>
+<span id="68"> 68</span>
+<span id="69"> 69</span>
+<span id="70"> 70</span>
+<span id="71"> 71</span>
+<span id="72"> 72</span>
+<span id="73"> 73</span>
+<span id="74"> 74</span>
+<span id="75"> 75</span>
+<span id="76"> 76</span>
+<span id="77"> 77</span>
+<span id="78"> 78</span>
+<span id="79"> 79</span>
+<span id="80"> 80</span>
+<span id="81"> 81</span>
+<span id="82"> 82</span>
+<span id="83"> 83</span>
+<span id="84"> 84</span>
+<span id="85"> 85</span>
+<span id="86"> 86</span>
+<span id="87"> 87</span>
+<span id="88"> 88</span>
+<span id="89"> 89</span>
+<span id="90"> 90</span>
+<span id="91"> 91</span>
+<span id="92"> 92</span>
+<span id="93"> 93</span>
+<span id="94"> 94</span>
+<span id="95"> 95</span>
+<span id="96"> 96</span>
+<span id="97"> 97</span>
+<span id="98"> 98</span>
+<span id="99"> 99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
+<span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
+<span id="562">562</span>
+<span id="563">563</span>
+<span id="564">564</span>
+<span id="565">565</span>
+<span id="566">566</span>
+<span id="567">567</span>
+<span id="568">568</span>
+<span id="569">569</span>
+<span id="570">570</span>
+<span id="571">571</span>
+<span id="572">572</span>
+<span id="573">573</span>
+<span id="574">574</span>
+<span id="575">575</span>
+<span id="576">576</span>
+<span id="577">577</span>
+<span id="578">578</span>
+<span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
+</pre><div class="example-wrap"><pre class="rust ">
+<span class="comment">// Copyright (c) The Libra Core Contributors</span>
+<span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
+
+<span class="doccomment">//! Protocol to discover network addresses of other peers on the Libra network</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ## Implementation</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! The discovery module is implemented as a stand-alone actor in the Network sub-system of the</span>
+<span class="doccomment">//! Libra stack. The actor participates in discovery by periodically sending its observed state of</span>
+<span class="doccomment">//! the network to a randomly chosen peer. Other peers are also expected to be running the same</span>
+<span class="doccomment">//! protocol. Therefore, in expectation, every peer expects to hear from 1 other peer in each</span>
+<span class="doccomment">//! round. On hearing from the remote peer, the local discovery module tries to reconcile its state</span>
+<span class="doccomment">//! to reflect any changes. In addition to updating its state, it also passes on new information to</span>
+<span class="doccomment">//! the [`ConnectivityManager`] module.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! For the initial bootstrap of a node, it sends the discovery message to a randomly chosen seed</span>
+<span class="doccomment">//! peer in each round. The message only contains the identity of this peer unless it learns more</span>
+<span class="doccomment">//! about the network membership from another peer.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! Currently we do not use this mechanism to detect peer failures - instead, we simply connect to</span>
+<span class="doccomment">//! all the peers in the network, and hope to learn about their failure on connection errors.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! TODO: We need to handle to case of peers who may no longer be a part of the network.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! ## Future work</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! - Currently, we do not try to detect/punish nodes which are just lurking (without contributing</span>
+<span class="doccomment">//! to the protocol), or actively trying to spread misinformation in the network. In the future, we</span>
+<span class="doccomment">//! plan to remedy this by introducing a module dedicated to detecting byzantine behavior, and by</span>
+<span class="doccomment">//! making the discovery protocol itself tolerant to byzantine faults.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! [`ConnectivityManager`]: ../../connectivity_manager</span>
+
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">connectivity_manager</span>::{<span class="ident">ConnectivityRequest</span>, <span class="ident">DiscoverySource</span>},
+    <span class="ident">counters</span>,
+    <span class="ident">error</span>::{<span class="ident">NetworkError</span>, <span class="ident">NetworkErrorKind</span>},
+    <span class="ident">peer_manager</span>::{<span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerRequestSender</span>},
+    <span class="ident">protocols</span>::<span class="ident">network</span>::{<span class="ident">Event</span>, <span class="ident">NetworkEvents</span>, <span class="ident">NetworkSender</span>},
+    <span class="ident">validator_network</span>::<span class="ident">network_builder</span>::{<span class="ident">NetworkBuilder</span>, <span class="ident">NETWORK_CHANNEL_SIZE</span>},
+    <span class="ident">NetworkPublicKeys</span>, <span class="ident">ProtocolId</span>,
+};
+<span class="kw">use</span> <span class="ident">bytes</span>::<span class="ident">Bytes</span>;
+<span class="kw">use</span> <span class="ident">channel</span>::<span class="ident">message_queues</span>::<span class="ident">QueueStyle</span>;
+<span class="kw">use</span> <span class="ident">futures</span>::{
+    <span class="ident">sink</span>::<span class="ident">SinkExt</span>,
+    <span class="ident">stream</span>::{<span class="ident">FusedStream</span>, <span class="ident">Stream</span>, <span class="ident">StreamExt</span>},
+};
+<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">RoleType</span>;
+<span class="kw">use</span> <span class="ident">libra_crypto</span>::{
+    <span class="ident">ed25519</span>::{<span class="ident">Ed25519PrivateKey</span>, <span class="ident">Ed25519PublicKey</span>, <span class="ident">Ed25519Signature</span>},
+    <span class="ident">hash</span>::{<span class="ident">CryptoHasher</span>, <span class="ident">DiscoveryMsgHasher</span>},
+    <span class="ident">HashValue</span>, <span class="ident">Signature</span>, <span class="ident">SigningKey</span>,
+};
+<span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
+<span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
+<span class="kw">use</span> <span class="ident">libra_security_logger</span>::{<span class="ident">security_log</span>, <span class="ident">SecurityEvent</span>};
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
+<span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">rngs</span>::<span class="ident">SmallRng</span>, <span class="ident">Rng</span>, <span class="ident">SeedableRng</span>};
+<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">cmp</span>::<span class="ident">max</span>,
+    <span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>},
+    <span class="ident">convert</span>::<span class="ident">TryInto</span>,
+    <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">RwLock</span>},
+    <span class="ident">time</span>::<span class="ident">SystemTime</span>,
+};
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">mod</span> <span class="ident">test</span>;
+
+<span class="doccomment">/// The interface from Network to Discovery module.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// `DiscoveryNetworkEvents` is a `Stream` of `PeerManagerNotification` where the</span>
+<span class="doccomment">/// raw `Bytes` rpc messages are deserialized into</span>
+<span class="doccomment">/// `DiscoveryMsg` types. `DiscoveryNetworkEvents` is a thin wrapper</span>
+<span class="doccomment">/// around a `channel::Receiver&lt;PeerManagerNotification&gt;`.</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">DiscoveryNetworkEvents</span> <span class="op">=</span> <span class="ident">NetworkEvents</span><span class="op">&lt;</span><span class="ident">DiscoveryMsg</span><span class="op">&gt;</span>;
+
+<span class="doccomment">/// The interface from Discovery to Networking layer.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// This is a thin wrapper around a `NetworkSender&lt;Discoverymsg&gt;`, so it is</span>
+<span class="doccomment">/// easy to clone and send off to a separate task. For example, the rpc requests</span>
+<span class="doccomment">/// return Futures that encapsulate the whole flow, from sending the request to</span>
+<span class="doccomment">/// remote, to finally receiving the response and deserializing. It therefore</span>
+<span class="doccomment">/// makes the most sense to make the rpc call on a separate async task, which</span>
+<span class="doccomment">/// requires the `DiscoveryNetworkSender` to be `Clone` and `Send`.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DiscoveryNetworkSender</span> {
+    <span class="ident">inner</span>: <span class="ident">NetworkSender</span><span class="op">&lt;</span><span class="ident">DiscoveryMsg</span><span class="op">&gt;</span>,
+}
+
+<span class="doccomment">/// Register the discovery sender and event handler with network and return interfaces for those</span>
+<span class="doccomment">/// actors.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_to_network</span>(
+    <span class="ident">network</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">NetworkBuilder</span>,
+) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">DiscoveryNetworkSender</span>, <span class="ident">DiscoveryNetworkEvents</span>) {
+    <span class="kw">let</span> (<span class="ident">sender</span>, <span class="ident">receiver</span>, <span class="ident">connection_reqs_tx</span>, <span class="ident">connection_notifs_rx</span>) <span class="op">=</span> <span class="ident">network</span>
+        .<span class="ident">add_protocol_handler</span>(
+            <span class="macro">vec</span><span class="macro">!</span>[],
+            <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">ProtocolId</span>::<span class="ident">DiscoveryDirectSend</span>],
+            <span class="ident">QueueStyle</span>::<span class="ident">LIFO</span>,
+            <span class="ident">NETWORK_CHANNEL_SIZE</span>,
+            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">counters</span>::<span class="ident">PENDING_DISCOVERY_NETWORK_EVENTS</span>),
+        );
+    (
+        <span class="ident">DiscoveryNetworkSender</span>::<span class="ident">new</span>(<span class="ident">sender</span>, <span class="ident">connection_reqs_tx</span>),
+        <span class="ident">DiscoveryNetworkEvents</span>::<span class="ident">new</span>(<span class="ident">receiver</span>, <span class="ident">connection_notifs_rx</span>),
+    )
+}
+
+<span class="kw">impl</span> <span class="ident">DiscoveryNetworkSender</span> {
+    <span class="doccomment">/// Create a new Discovery sender</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">peer_mgr_reqs_tx</span>: <span class="ident">PeerManagerRequestSender</span>,
+        <span class="ident">connection_reqs_tx</span>: <span class="ident">ConnectionRequestSender</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">inner</span>: <span class="ident">NetworkSender</span>::<span class="ident">new</span>(<span class="ident">peer_mgr_reqs_tx</span>, <span class="ident">connection_reqs_tx</span>),
+        }
+    }
+
+    <span class="doccomment">/// Send a DiscoveryMsg to a peer.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">send_to</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">peer</span>: <span class="ident">PeerId</span>, <span class="ident">msg</span>: <span class="ident">DiscoveryMsg</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">NetworkError</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">inner</span>
+            .<span class="ident">send_to</span>(<span class="ident">peer</span>, <span class="ident">ProtocolId</span>::<span class="ident">DiscoveryDirectSend</span>, <span class="ident">msg</span>)
+    }
+}
+
+<span class="doccomment">/// The actor running the discovery protocol.</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Discovery</span><span class="op">&lt;</span><span class="ident">TTicker</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Note for self, which is prefixed with an underscore as this is not used but is in</span>
+    <span class="doccomment">/// preparation for logic that changes the advertised Note while the validator is running.</span>
+    <span class="ident">note</span>: <span class="ident">VerifiedNote</span>,
+    <span class="doccomment">/// PeerId for self.</span>
+    <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
+    <span class="doccomment">/// Our node type.</span>
+    <span class="ident">role</span>: <span class="ident">RoleType</span>,
+    <span class="doccomment">/// The DNS domain name other public full nodes should query to get this</span>
+    <span class="doccomment">/// validator&#39;s list of full nodes.</span>
+    <span class="ident">dns_seed_addr</span>: <span class="ident">Bytes</span>,
+    <span class="doccomment">/// Validator for verifying signatures on messages.</span>
+    <span class="ident">trusted_peers</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">NetworkPublicKeys</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Ed25519PrivateKey for signing notes.</span>
+    <span class="ident">signer</span>: <span class="ident">Ed25519PrivateKey</span>,
+    <span class="doccomment">/// Current state, maintaining the most recent Note for each peer, alongside parsed PeerInfo.</span>
+    <span class="ident">known_peers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">VerifiedNote</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Currently connected peers.</span>
+    <span class="ident">connected_peers</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">PeerId</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Ticker to trigger state send to a random peer. In production, the ticker is likely to be</span>
+    <span class="doccomment">/// fixed duration interval timer.</span>
+    <span class="ident">ticker</span>: <span class="ident">TTicker</span>,
+    <span class="doccomment">/// Handle to send requests to Network.</span>
+    <span class="ident">network_reqs_tx</span>: <span class="ident">DiscoveryNetworkSender</span>,
+    <span class="doccomment">/// Handle to receive notifications from Network.</span>
+    <span class="ident">network_notifs_rx</span>: <span class="ident">DiscoveryNetworkEvents</span>,
+    <span class="doccomment">/// Channel to send requests to ConnectivityManager.</span>
+    <span class="ident">conn_mgr_reqs_tx</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">ConnectivityRequest</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Random-number generator.</span>
+    <span class="ident">rng</span>: <span class="ident">SmallRng</span>,
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">TTicker</span><span class="op">&gt;</span> <span class="ident">Discovery</span><span class="op">&lt;</span><span class="ident">TTicker</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">TTicker</span>: <span class="ident">Stream</span> <span class="op">+</span> <span class="ident">FusedStream</span> <span class="op">+</span> <span class="ident">Unpin</span>,
+{
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">self_peer_id</span>: <span class="ident">PeerId</span>,
+        <span class="ident">role</span>: <span class="ident">RoleType</span>,
+        <span class="ident">self_addrs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span>,
+        <span class="ident">signer</span>: <span class="ident">Ed25519PrivateKey</span>,
+        <span class="ident">trusted_peers</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">NetworkPublicKeys</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">ticker</span>: <span class="ident">TTicker</span>,
+        <span class="ident">network_reqs_tx</span>: <span class="ident">DiscoveryNetworkSender</span>,
+        <span class="ident">network_notifs_rx</span>: <span class="ident">DiscoveryNetworkEvents</span>,
+        <span class="ident">conn_mgr_reqs_tx</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">ConnectivityRequest</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="comment">// TODO(philiphayes): wire through config</span>
+        <span class="kw">let</span> <span class="ident">dns_seed_addr</span> <span class="op">=</span> <span class="string">b&quot;example.com&quot;</span>;
+
+        <span class="kw">let</span> <span class="ident">epoch</span> <span class="op">=</span> <span class="ident">get_unix_epoch</span>();
+        <span class="kw">let</span> <span class="ident">self_note</span> <span class="op">=</span> <span class="ident">Note</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">signer</span>, <span class="ident">self_peer_id</span>, <span class="ident">self_addrs</span>, <span class="ident">dns_seed_addr</span>, <span class="ident">epoch</span>);
+        <span class="kw">let</span> <span class="ident">self_verified_note</span> <span class="op">=</span> <span class="ident">VerifiedNote</span>(<span class="ident">self_note</span>);
+
+        <span class="kw">let</span> <span class="ident">known_peers</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">self_peer_id</span>, <span class="ident">self_verified_note</span>.<span class="ident">clone</span>())]
+            .<span class="ident">into_iter</span>()
+            .<span class="ident">collect</span>();
+
+        <span class="self">Self</span> {
+            <span class="ident">note</span>: <span class="ident">self_verified_note</span>,
+            <span class="ident">peer_id</span>: <span class="ident">self_peer_id</span>,
+            <span class="ident">role</span>,
+            <span class="ident">dns_seed_addr</span>: <span class="ident">Bytes</span>::<span class="ident">from_static</span>(<span class="ident">dns_seed_addr</span>),
+            <span class="ident">trusted_peers</span>,
+            <span class="ident">signer</span>,
+            <span class="ident">known_peers</span>,
+            <span class="ident">connected_peers</span>: <span class="ident">HashSet</span>::<span class="ident">new</span>(),
+            <span class="ident">ticker</span>,
+            <span class="ident">network_reqs_tx</span>,
+            <span class="ident">network_notifs_rx</span>,
+            <span class="ident">conn_mgr_reqs_tx</span>,
+            <span class="ident">rng</span>: <span class="ident">SmallRng</span>::<span class="ident">from_entropy</span>(),
+        }
+    }
+
+    <span class="comment">// Starts the main event loop for the discovery actor. We bootstrap by first dialing all the</span>
+    <span class="comment">// seed peers, and then entering the event handling loop. Messages are received from:</span>
+    <span class="comment">// - a ticker to trigger discovery message send to a random connected peer</span>
+    <span class="comment">// - an incoming message from a peer wishing to send its state</span>
+    <span class="comment">// - an internal task once it has processed incoming messages from a peer, and wishes for</span>
+    <span class="comment">// discovery actor to update its state.</span>
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="comment">// Ensure our metrics counter has an initial value.</span>
+        <span class="self">self</span>.<span class="ident">record_num_discovery_notes</span>();
+
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Starting Discovery actor event loop&quot;</span>);
+        <span class="kw">loop</span> {
+            <span class="ident">futures</span>::<span class="macro">select</span><span class="macro">!</span> {
+                <span class="ident">notif</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">network_notifs_rx</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="self">self</span>.<span class="ident">handle_network_event</span>(<span class="ident">notif</span>).<span class="kw">await</span>;
+                },
+                <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ticker</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="self">self</span>.<span class="ident">handle_tick</span>();
+                }
+                <span class="ident">complete</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="macro">crit</span><span class="macro">!</span>(<span class="string">&quot;Discovery actor terminated&quot;</span>);
+                    <span class="kw">break</span>;
+                }
+            }
+        }
+    }
+
+    <span class="comment">// Handles a clock &quot;tick&quot; by:</span>
+    <span class="comment">// 1. Selecting a random peer to send state to.</span>
+    <span class="comment">// 2. Compose the msg to send.</span>
+    <span class="comment">// 3. Spawn off a new task to push the msg to the peer.</span>
+    <span class="kw">fn</span> <span class="ident">handle_tick</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Discovery interval tick&quot;</span>);
+        <span class="comment">// On each tick, we choose a random neighbor and push our state to it.</span>
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">peer</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">choose_random_neighbor</span>() {
+            <span class="comment">// We clone `peer_mgr_reqs_tx` member of Self, since using `self` inside fut below</span>
+            <span class="comment">// triggers some lifetime errors.</span>
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sender</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">network_reqs_tx</span>.<span class="ident">clone</span>();
+            <span class="comment">// Compose discovery msg to send.</span>
+            <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">compose_discovery_msg</span>();
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">send_to</span>(<span class="ident">peer</span>, <span class="ident">msg</span>) {
+                <span class="macro">warn</span><span class="macro">!</span>(
+                    <span class="string">&quot;Failed to send discovery msg to {}; error: {:?}&quot;</span>,
+                    <span class="ident">peer</span>.<span class="ident">short_str</span>(),
+                    <span class="ident">err</span>
+                );
+            };
+        }
+    }
+
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_network_event</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">event</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&lt;</span><span class="ident">DiscoveryMsg</span><span class="op">&gt;</span>, <span class="ident">NetworkError</span><span class="op">&gt;</span>) {
+        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Network event::{:?}&quot;</span>, <span class="ident">event</span>);
+        <span class="kw">match</span> <span class="ident">event</span> {
+            <span class="prelude-val">Ok</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">match</span> <span class="ident">e</span> {
+                    <span class="ident">Event</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="comment">// Add peer to connected peer list.</span>
+                        <span class="self">self</span>.<span class="ident">connected_peers</span>.<span class="ident">insert</span>(<span class="ident">peer_id</span>);
+                    }
+                    <span class="ident">Event</span>::<span class="ident">LostPeer</span>(<span class="ident">peer_id</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="comment">// Remove peer from connected peer list.</span>
+                        <span class="self">self</span>.<span class="ident">connected_peers</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">peer_id</span>);
+                    }
+                    <span class="ident">Event</span>::<span class="ident">Message</span>((<span class="ident">peer_id</span>, <span class="ident">msg</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="kw">match</span> <span class="ident">handle_discovery_msg</span>(<span class="ident">msg</span>, <span class="self">self</span>.<span class="ident">trusted_peers</span>.<span class="ident">clone</span>(), <span class="ident">peer_id</span>) {
+                            <span class="prelude-val">Ok</span>(<span class="ident">verified_notes</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                                <span class="self">self</span>.<span class="ident">reconcile</span>(<span class="ident">peer_id</span>, <span class="ident">verified_notes</span>).<span class="kw">await</span>;
+                                <span class="self">self</span>.<span class="ident">record_num_discovery_notes</span>();
+                            }
+                            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                                <span class="macro">warn</span><span class="macro">!</span>(
+                                    <span class="string">&quot;Failure in processing stream from peer: {}. Error: {:?}&quot;</span>,
+                                    <span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
+                                    <span class="ident">e</span>
+                                );
+                            }
+                        }
+                    }
+                    <span class="ident">Event</span>::<span class="ident">RpcRequest</span>(<span class="ident">req</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Unexpected notification from network: {:?}&quot;</span>, <span class="ident">req</span>);
+                        <span class="macro">debug_assert</span><span class="macro">!</span>(<span class="bool-val">false</span>);
+                    }
+                }
+            }
+            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Received error: {}&quot;</span>, <span class="ident">err</span>);
+            }
+        }
+    }
+
+    <span class="comment">// Chooses a random connected neighbour.</span>
+    <span class="kw">fn</span> <span class="ident">choose_random_neighbor</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">PeerId</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">connected_peers</span>.<span class="ident">is_empty</span>() {
+            <span class="kw">let</span> <span class="ident">peers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">connected_peers</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">collect</span>();
+            <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">rng</span>.<span class="ident">gen_range</span>(<span class="number">0</span>, <span class="ident">peers</span>.<span class="ident">len</span>());
+            <span class="prelude-val">Some</span>(<span class="ident">peers</span>[<span class="ident">idx</span>])
+        } <span class="kw">else</span> {
+            <span class="prelude-val">None</span>
+        }
+    }
+
+    <span class="comment">// Creates DiscoveryMsg to be sent to some remote peer.</span>
+    <span class="kw">fn</span> <span class="ident">compose_discovery_msg</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">DiscoveryMsg</span> {
+        <span class="kw">let</span> <span class="ident">notes</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">known_peers</span>
+            .<span class="ident">values</span>()
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">note</span><span class="op">|</span> <span class="ident">note</span>.<span class="ident">as_note</span>())
+            .<span class="ident">cloned</span>()
+            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+        <span class="ident">DiscoveryMsg</span> { <span class="ident">notes</span> }
+    }
+
+    <span class="comment">// Updates local state by reconciling with notes received from some remote peer.</span>
+    <span class="comment">// Assumption: `remote_notes` have already been verified for signature validity and content.</span>
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">reconcile</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">remote_peer</span>: <span class="ident">PeerId</span>, <span class="ident">remote_notes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">VerifiedNote</span><span class="op">&gt;</span>) {
+        <span class="comment">// If a peer is previously unknown, or has a newer epoch number, we update its</span>
+        <span class="comment">// corresponding entry in the map.</span>
+        <span class="kw">for</span> <span class="kw-2">mut</span> <span class="ident">note</span> <span class="kw">in</span> <span class="ident">remote_notes</span>.<span class="ident">into_iter</span>() {
+            <span class="kw">match</span> <span class="self">self</span>.<span class="ident">known_peers</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">note</span>.<span class="ident">as_note</span>().<span class="ident">peer_id</span>) {
+                <span class="comment">// If we know about this peer, and receive the same or an older epoch, we do</span>
+                <span class="comment">// nothing.</span>
+                <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">curr_note</span>) <span class="kw">if</span> <span class="ident">note</span>.<span class="ident">as_note</span>().<span class="ident">epoch</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="ident">curr_note</span>.<span class="ident">as_note</span>().<span class="ident">epoch</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">if</span> <span class="ident">note</span>.<span class="ident">as_note</span>().<span class="ident">epoch</span>() <span class="op">&lt;</span> <span class="ident">curr_note</span>.<span class="ident">as_note</span>().<span class="ident">epoch</span>() {
+                        <span class="macro">debug</span><span class="macro">!</span>(
+                            <span class="string">&quot;Received stale note for peer: {} from peer: {}&quot;</span>,
+                            <span class="ident">note</span>.<span class="ident">as_note</span>().<span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
+                            <span class="ident">remote_peer</span>
+                        );
+                    }
+                    <span class="kw">continue</span>;
+                }
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="macro">info</span><span class="macro">!</span>(
+                        <span class="string">&quot;Received updated note for peer: {} from peer: {}&quot;</span>,
+                        <span class="ident">note</span>.<span class="ident">as_note</span>().<span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
+                        <span class="ident">remote_peer</span>.<span class="ident">short_str</span>()
+                    );
+                    <span class="comment">// It is unlikely that we receive a note with a higher epoch number on us than</span>
+                    <span class="comment">// what we ourselves have broadcasted. However, this can happen in case of</span>
+                    <span class="comment">// the clock being reset, or the validator process being restarted on a node</span>
+                    <span class="comment">// with clock behind the previous node. In such scenarios, it&#39;s best to issue a</span>
+                    <span class="comment">// newer note with an epoch number higher than what we observed (unless the</span>
+                    <span class="comment">// issued epoch number is u64::MAX).</span>
+                    <span class="kw">if</span> <span class="ident">note</span>.<span class="ident">as_note</span>().<span class="ident">peer_id</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">peer_id</span> {
+                        <span class="macro">info</span><span class="macro">!</span>(
+                            <span class="string">&quot;Received an older note for self, but with higher epoch. \
+                             Previous epoch: {}, current epoch: {}&quot;</span>,
+                            <span class="ident">note</span>.<span class="ident">as_note</span>().<span class="ident">epoch</span>(),
+                            <span class="self">self</span>.<span class="ident">note</span>.<span class="ident">as_note</span>().<span class="ident">epoch</span>()
+                        );
+                        <span class="kw">if</span> <span class="ident">note</span>.<span class="ident">as_note</span>().<span class="ident">epoch</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">std</span>::<span class="ident">u64</span>::<span class="ident">MAX</span> {
+                            <span class="ident">security_log</span>(<span class="ident">SecurityEvent</span>::<span class="ident">InvalidDiscoveryMsg</span>)
+                                .<span class="ident">data</span>(
+                                    <span class="string">&quot;Older note received for self has u64::MAX epoch. \
+                                     This likely means that the node&#39;s network signing key has \
+                                     been compromised.&quot;</span>,
+                                )
+                                .<span class="ident">log</span>();
+                            <span class="kw">continue</span>;
+                        }
+                        <span class="kw">let</span> <span class="ident">unverified_note</span> <span class="op">=</span> <span class="ident">Note</span>::<span class="ident">new</span>(
+                            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">signer</span>,
+                            <span class="self">self</span>.<span class="ident">peer_id</span>,
+                            <span class="self">self</span>.<span class="ident">note</span>.<span class="ident">as_note</span>().<span class="ident">addrs</span>().<span class="ident">clone</span>(),
+                            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">dns_seed_addr</span>,
+                            <span class="ident">max</span>(<span class="ident">note</span>.<span class="ident">as_note</span>().<span class="ident">epoch</span>() <span class="op">+</span> <span class="number">1</span>, <span class="ident">get_unix_epoch</span>()),
+                        );
+                        <span class="self">self</span>.<span class="ident">note</span> <span class="op">=</span> <span class="ident">VerifiedNote</span>(<span class="ident">unverified_note</span>);
+                        <span class="ident">note</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">note</span>.<span class="ident">clone</span>();
+                    } <span class="kw">else</span> {
+                        <span class="comment">// The network addresses in the peer&#39;s discovery Note.</span>
+                        <span class="kw">let</span> <span class="ident">peer_addrs</span> <span class="op">=</span> <span class="ident">note</span>.<span class="ident">as_note</span>().<span class="ident">addrs</span>().<span class="ident">clone</span>();
+
+                        <span class="self">self</span>.<span class="ident">conn_mgr_reqs_tx</span>
+                            .<span class="ident">send</span>(<span class="ident">ConnectivityRequest</span>::<span class="ident">UpdateAddresses</span>(
+                                <span class="ident">DiscoverySource</span>::<span class="ident">Gossip</span>,
+                                <span class="ident">note</span>.<span class="ident">as_note</span>().<span class="ident">peer_id</span>,
+                                <span class="ident">peer_addrs</span>,
+                            ))
+                            .<span class="kw">await</span>
+                            .<span class="ident">expect</span>(<span class="string">&quot;ConnectivityRequest::UpdateAddresses send&quot;</span>);
+                    }
+                    <span class="comment">// Update internal state of the peer with new Note.</span>
+                    <span class="self">self</span>.<span class="ident">known_peers</span>.<span class="ident">insert</span>(<span class="ident">note</span>.<span class="ident">as_note</span>().<span class="ident">peer_id</span>, <span class="ident">note</span>);
+                }
+            }
+        }
+    }
+
+    <span class="comment">// Record the number of verified discovery notes we have for _other_ peers</span>
+    <span class="comment">// (not including our own note). We exclude counting our own note to be</span>
+    <span class="comment">// consistent with the &quot;connected_peers&quot; metric.</span>
+    <span class="kw">fn</span> <span class="ident">record_num_discovery_notes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="kw">let</span> <span class="ident">num_other_notes</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">known_peers</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">filter</span>(<span class="op">|</span>(<span class="ident">peer_id</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="kw-2">*</span><span class="ident">peer_id</span> <span class="op">!</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">peer_id</span>)
+            .<span class="ident">count</span>();
+        <span class="kw">let</span> <span class="ident">num_other_notes</span>: <span class="ident">i64</span> <span class="op">=</span> <span class="ident">num_other_notes</span>.<span class="ident">try_into</span>().<span class="ident">unwrap_or</span>(<span class="number">0</span>);
+
+        <span class="ident">counters</span>::<span class="ident">LIBRA_NETWORK_DISCOVERY_NOTES</span>
+            .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="self">self</span>.<span class="ident">role</span>.<span class="ident">as_str</span>()])
+            .<span class="ident">set</span>(<span class="ident">num_other_notes</span>);
+    }
+}
+
+<span class="doccomment">/// A Discovery message contains notes collected from other peers within the system.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DiscoveryMsg</span> {
+    <span class="ident">notes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Note</span><span class="op">&gt;</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VerifiedNote</span>(<span class="ident">Note</span>);
+
+<span class="kw">impl</span> <span class="ident">VerifiedNote</span> {
+    <span class="doccomment">/// Give access to the internal note</span>
+    <span class="kw">fn</span> <span class="ident">as_note</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Note</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
+    }
+}
+
+<span class="doccomment">/// A `Note` contains a validator&#39;s signed `PeerInfo` as well as a signed</span>
+<span class="doccomment">/// `FullNodePayload`, which provides relevant discovery info for public full</span>
+<span class="doccomment">/// nodes and clients.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Note</span> {
+    <span class="doccomment">/// Id of the peer.</span>
+    <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
+    <span class="doccomment">/// The validator node&#39;s signed `PeerInfo`.</span>
+    <span class="ident">signed_peer_info</span>: <span class="ident">SignedPeerInfo</span>,
+    <span class="doccomment">/// The validator node&#39;s signed `FullNodePayload`.</span>
+    <span class="ident">signed_full_node_info</span>: <span class="ident">SignedFullNodeInfo</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Note</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">signer</span>: <span class="kw-2">&amp;</span><span class="ident">Ed25519PrivateKey</span>,
+        <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
+        <span class="ident">addrs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span>,
+        <span class="ident">dns_seed_addr</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+        <span class="ident">epoch</span>: <span class="ident">u64</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">peer_info</span> <span class="op">=</span> <span class="ident">PeerInfo</span> { <span class="ident">addrs</span>, <span class="ident">epoch</span> };
+        <span class="kw">let</span> <span class="ident">signed_peer_info</span> <span class="op">=</span> <span class="ident">peer_info</span>.<span class="ident">sign</span>(<span class="kw-2">&amp;</span><span class="ident">signer</span>);
+
+        <span class="kw">let</span> <span class="ident">full_node_info</span> <span class="op">=</span> <span class="ident">FullNodeInfo</span> {
+            <span class="ident">dns_seed_addr</span>: <span class="ident">dns_seed_addr</span>.<span class="ident">to_vec</span>(),
+            <span class="ident">epoch</span>,
+        };
+        <span class="kw">let</span> <span class="ident">signed_full_node_info</span> <span class="op">=</span> <span class="ident">full_node_info</span>.<span class="ident">sign</span>(<span class="kw-2">&amp;</span><span class="ident">signer</span>);
+
+        <span class="ident">Note</span> {
+            <span class="ident">peer_id</span>,
+            <span class="ident">signed_peer_info</span>,
+            <span class="ident">signed_full_node_info</span>,
+        }
+    }
+
+    <span class="doccomment">/// Verifies validity of notes. Most fields have already been verified during initial</span>
+    <span class="doccomment">/// deserialization, so this only verifies that the note contains properly signed infos.</span>
+    <span class="kw">fn</span> <span class="ident">verify</span>(<span class="self">self</span>, <span class="ident">pub_key</span>: <span class="kw-2">&amp;</span><span class="ident">Ed25519PublicKey</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VerifiedNote</span>, <span class="ident">NetworkError</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">signed_peer_info</span>.<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">pub_key</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">signed_full_node_info</span>.<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">pub_key</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="ident">VerifiedNote</span>(<span class="self">self</span>))
+    }
+
+    <span class="doccomment">/// Shortcut to the addrs embedded within the Note</span>
+    <span class="kw">fn</span> <span class="ident">addrs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">signed_peer_info</span>.<span class="ident">peer_info</span>.<span class="ident">addrs</span>
+    }
+
+    <span class="doccomment">/// The current implementation derives epoch from the PeerInfo.</span>
+    <span class="kw">fn</span> <span class="ident">epoch</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+        <span class="self">self</span>.<span class="ident">signed_peer_info</span>.<span class="ident">peer_info</span>.<span class="ident">epoch</span>
+    }
+}
+
+<span class="doccomment">/// A `PeerInfo` authenticated by the peer&#39;s root `network_signing_key` stored on-chain.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SignedPeerInfo</span> {
+    <span class="doccomment">/// A `PeerInfo` represents the network address(es) of a Peer.</span>
+    <span class="ident">peer_info</span>: <span class="ident">PeerInfo</span>,
+    <span class="doccomment">/// A signature over the above serialzed `PeerInfo`, signed by the validator&#39;s</span>
+    <span class="doccomment">/// `network_signing_key` referred to by the `peer_id` account address.</span>
+    <span class="ident">signature</span>: <span class="ident">Ed25519Signature</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">SignedPeerInfo</span> {
+    <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">pub_key</span>: <span class="kw-2">&amp;</span><span class="ident">Ed25519PublicKey</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">NetworkError</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">peer_info_bytes</span> <span class="op">=</span>
+            <span class="ident">lcs</span>::<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">peer_info</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">NetworkErrorKind</span>::<span class="ident">ParsingError</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">signature</span>
+            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">get_hash</span>(<span class="kw-2">&amp;</span><span class="ident">peer_info_bytes</span>), <span class="kw-2">&amp;</span><span class="ident">pub_key</span>)
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">NetworkErrorKind</span>::<span class="ident">SignatureError</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="doccomment">/// A `PeerInfo` represents the network address(es) of a Peer.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PeerInfo</span> {
+    <span class="doccomment">/// Network addresses this peer can be reached at.</span>
+    <span class="ident">addrs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Monotonically increasing incarnation number used to allow peers to issue</span>
+    <span class="doccomment">/// updates to their `PeerInfo` and prevent attackers from propagating old</span>
+    <span class="doccomment">/// `PeerInfo`s. This is usually a timestamp.</span>
+    <span class="ident">epoch</span>: <span class="ident">u64</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">PeerInfo</span> {
+    <span class="kw">fn</span> <span class="ident">sign</span>(<span class="self">self</span>, <span class="ident">signer</span>: <span class="kw-2">&amp;</span><span class="ident">Ed25519PrivateKey</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SignedPeerInfo</span> {
+        <span class="kw">let</span> <span class="ident">peer_info_bytes</span> <span class="op">=</span> <span class="ident">lcs</span>::<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>).<span class="ident">expect</span>(<span class="string">&quot;LCS serialization fails&quot;</span>);
+        <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">signer</span>.<span class="ident">sign_message</span>(<span class="kw-2">&amp;</span><span class="ident">get_hash</span>(<span class="kw-2">&amp;</span><span class="ident">peer_info_bytes</span>));
+        <span class="ident">SignedPeerInfo</span> {
+            <span class="ident">peer_info</span>: <span class="self">self</span>,
+            <span class="ident">signature</span>,
+        }
+    }
+}
+
+<span class="doccomment">/// A `FullNodeInfo` authenticated by the peer&#39;s root `network_signing_key` stored on-chain.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SignedFullNodeInfo</span> {
+    <span class="ident">full_node_info</span>: <span class="ident">FullNodeInfo</span>,
+    <span class="doccomment">/// A signature over the above serialzed `FullNodeInfo`, signed by the validator&#39;s</span>
+    <span class="doccomment">/// `network_signing_key` referred to by the `peer_id` account address.</span>
+    <span class="ident">signature</span>: <span class="ident">Ed25519Signature</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">SignedFullNodeInfo</span> {
+    <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">pub_key</span>: <span class="kw-2">&amp;</span><span class="ident">Ed25519PublicKey</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">NetworkError</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">full_node_info_bytes</span> <span class="op">=</span>
+            <span class="ident">lcs</span>::<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">full_node_info</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">NetworkErrorKind</span>::<span class="ident">ParsingError</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">signature</span>
+            .<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">get_hash</span>(<span class="kw-2">&amp;</span><span class="ident">full_node_info_bytes</span>), <span class="kw-2">&amp;</span><span class="ident">pub_key</span>)
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">NetworkErrorKind</span>::<span class="ident">SignatureError</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
+    }
+}
+
+<span class="doccomment">/// Discovery information relevant to public full nodes and clients.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FullNodeInfo</span> {
+    <span class="doccomment">/// The DNS domain name other public full nodes should query to get this</span>
+    <span class="doccomment">/// validator&#39;s list of full nodes.</span>
+    <span class="ident">dns_seed_addr</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Monotonically increasing incarnation number used to allow peers to issue</span>
+    <span class="doccomment">/// updates to their `FullNodePayload` and prevent attackers from propagating</span>
+    <span class="doccomment">/// old `FullNodePayload`s. This is usually a timestamp.</span>
+    <span class="ident">epoch</span>: <span class="ident">u64</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">FullNodeInfo</span> {
+    <span class="kw">fn</span> <span class="ident">sign</span>(<span class="self">self</span>, <span class="ident">signer</span>: <span class="kw-2">&amp;</span><span class="ident">Ed25519PrivateKey</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SignedFullNodeInfo</span> {
+        <span class="kw">let</span> <span class="ident">full_node_info_bytes</span> <span class="op">=</span> <span class="ident">lcs</span>::<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>).<span class="ident">expect</span>(<span class="string">&quot;LCS serialization failed&quot;</span>);
+        <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">signer</span>.<span class="ident">sign_message</span>(<span class="kw-2">&amp;</span><span class="ident">get_hash</span>(<span class="kw-2">&amp;</span><span class="ident">full_node_info_bytes</span>));
+        <span class="ident">SignedFullNodeInfo</span> {
+            <span class="ident">full_node_info</span>: <span class="self">self</span>,
+            <span class="ident">signature</span>,
+        }
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">get_unix_epoch</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+    <span class="comment">// TODO: Currently, SystemTime::now() in Rust is not guaranteed to use a monotonic clock.</span>
+    <span class="comment">// At the moment, it&#39;s unclear how to do this in a platform-agnostic way. For Linux, we</span>
+    <span class="comment">// could use something like the [timerfd trait](https://docs.rs/crate/timerfd/1.0.0).</span>
+    <span class="ident">SystemTime</span>::<span class="ident">now</span>()
+        .<span class="ident">duration_since</span>(<span class="ident">SystemTime</span>::<span class="ident">UNIX_EPOCH</span>)
+        .<span class="ident">expect</span>(<span class="string">&quot;System clock reset to before unix epoch&quot;</span>)
+        .<span class="ident">as_millis</span>() <span class="kw">as</span> <span class="ident">u64</span>
+}
+
+<span class="comment">// Handles an inbound message from a remote peer as follows:</span>
+<span class="comment">// Verifies signatures on all notes contained in the message.</span>
+<span class="kw">fn</span> <span class="ident">handle_discovery_msg</span>(
+    <span class="ident">msg</span>: <span class="ident">DiscoveryMsg</span>,
+    <span class="ident">trusted_peers</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">NetworkPublicKeys</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">VerifiedNote</span><span class="op">&gt;</span>, <span class="ident">NetworkError</span><span class="op">&gt;</span> {
+    <span class="comment">// Check that all received `Note`s are valid -- reject the whole message</span>
+    <span class="comment">// if any `Note` is invalid.</span>
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">verified_notes</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+    <span class="kw">for</span> <span class="ident">note</span> <span class="kw">in</span> <span class="ident">msg</span>.<span class="ident">notes</span>.<span class="ident">into_iter</span>() {
+        <span class="kw">let</span> <span class="ident">rlock</span> <span class="op">=</span> <span class="ident">trusted_peers</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">pub_key</span> <span class="op">=</span> <span class="ident">rlock</span>
+            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">note</span>.<span class="ident">peer_id</span>)
+            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">NetworkErrorKind</span>::<span class="ident">SignatureError</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">pub_key</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">pub_key</span>.<span class="ident">signing_public_key</span>;
+        <span class="kw">let</span> <span class="ident">verified_note</span> <span class="op">=</span> <span class="ident">note</span>.<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">pub_key</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
+            <span class="ident">security_log</span>(<span class="ident">SecurityEvent</span>::<span class="ident">InvalidDiscoveryMsg</span>)
+                .<span class="ident">error</span>(<span class="kw-2">&amp;</span><span class="ident">err</span>)
+                .<span class="ident">data</span>(<span class="kw-2">&amp;</span><span class="ident">peer_id</span>)
+                .<span class="ident">data</span>(<span class="kw-2">&amp;</span><span class="ident">trusted_peers</span>)
+                .<span class="ident">log</span>();
+            <span class="ident">err</span>
+        })<span class="question-mark">?</span>;
+        <span class="ident">verified_notes</span>.<span class="ident">push</span>(<span class="ident">verified_note</span>);
+    }
+    <span class="prelude-val">Ok</span>(<span class="ident">verified_notes</span>)
+}
+
+<span class="kw">fn</span> <span class="ident">get_hash</span>(<span class="ident">msg</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">HashValue</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">DiscoveryMsgHasher</span>::<span class="ident">default</span>();
+    <span class="ident">hasher</span>.<span class="ident">write</span>(<span class="ident">msg</span>);
+    <span class="ident">hasher</span>.<span class="ident">finish</span>()
+}
+</pre></div>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../../";window.currentCrate = "network";</script><script src="../../../../aliases.js"></script><script src="../../../../main.js"></script><script src="../../../../source-script.js"></script><script src="../../../../source-files.js"></script><script defer src="../../../../search-index.js"></script></body></html>

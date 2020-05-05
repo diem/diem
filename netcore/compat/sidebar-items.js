@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["IoCompat","`IoCompat` provides a compatibility shim between the `AsyncRead`/`AsyncWrite` traits provided by the `futures` library and those provided by the `tokio` library since they are different and incompatible with one another."]]});

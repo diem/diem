@@ -1,0 +1,44 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `rpc` mod in crate `network`."><meta name="keywords" content="rust, rustlang, rust-lang, rpc"><title>network::protocols::rpc - Rust</title><link rel="stylesheet" type="text/css" href="../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle"><script src="../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="shortcut icon" href="../../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../network/index.html'><div class='logo-container'><img src='../../../rust-logo.png' alt='logo'></div></a><p class='location'>Module rpc</p><div class="sidebar-elems"><div class="block items"><ul><li><a href="#modules">Modules</a></li><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li></ul></div><p class='location'><a href='../../index.html'>network</a>::<wbr><a href='../index.html'>protocols</a></p><script>window.sidebarCurrent = {name: 'rpc', ty: 'mod', relpath: '../'};</script><script defer src="../sidebar-items.js"></script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../../settings.html"><img src="../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class='fqn'><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../../../src/network/protocols/rpc/mod.rs.html#4-587' title='goto source code'>[src]</a></span><span class='in-band'>Module <a href='../../index.html'>network</a>::<wbr><a href='../index.html'>protocols</a>::<wbr><a class="mod" href=''>rpc</a></span></h1><div class='docblock'><p>Implementation of the RPC protocol as per Libra wire protocol v1.</p>
+<h2 id="design" class="section-header"><a href="#design">Design:</a></h2>
+<p>RPC receives OutboundRpcRequest messages from upstream actors. The OutboundRpcRequest contains
+the RPC protocol, raw request bytes, RPC timeout duration, and a channel over which the
+response bytes can be sent back to the upstream.
+For inbound RPC requests, RPC sends InboundRpcRequest notifications to upstream actors. The
+InboundRpcRequest contains the RPC protocol, raw request bytes, and a channel over which the
+upstream can send a response for the RPC.
+Internally, the RPC actor consists of a single event loop. The event loop processes 4 kinds of
+messages:
+(1) outbound RPC requests received from upstream,
+(2) notifications for inbound RpcRequest/RpcResponse from the Peer actor,
+(3) completion notification for tasks processing inbound RPC, and
+(4) completion notification for tasks processing outbound RPCs.
+The tasks for inbound and outbound RPCs are spawned onto the same runtime as the one driving
+the RPC event loop.</p>
+<h2 id="timeouts" class="section-header"><a href="#timeouts">Timeouts:</a></h2>
+<p>The tasks for inbound and outbound RPCs are also &quot;wrapped&quot; within timeouts to ensure that they
+are not running forever. The outbound RPC timeout is specified by the upstream client, where as
+the inbound RPC timeout is a configuration parameter for the RPC actor.</p>
+<h2 id="limits" class="section-header"><a href="#limits">Limits:</a></h2>
+<p>We limit the number of pending inbound RPC tasks to ensure that resource usage is bounded for
+inbound RPCs. For outbound RPCs, we log a warning when the limit is exceeded, but allow the RPC
+to proceed.</p>
+<h2 id="state" class="section-header"><a href="#state">State</a></h2>
+<ul>
+<li>For outbound RPCs, the RPC actors maintains a HashMap from the RequestId to a channel over
+which inbound responses can be delivered to the task driving the request. Entries are removed
+on completion of the task, which happens either on receipt of the response, or on
+failure/timeout.</li>
+<li>The RPC actor also maintains a RequestIdGenerator for generating request ids for outbound
+RPCs. The RequestIdGenerator increments the request id by 1 for each subsequent outbound RPC.</li>
+</ul>
+</div><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table><tr class='module-item'><td><a class="mod" href="error/index.html" title='network::protocols::rpc::error mod'>error</a></td><td class='docblock-short'><p>Rpc protocol errors</p>
+</td></tr><tr class='module-item'><td><a class="mod" href="fuzzing/index.html" title='network::protocols::rpc::fuzzing mod'>fuzzing</a></td><td class='docblock-short'><p>fuzzing module for the rpc protocol</p>
+</td></tr></table><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table><tr class='module-item'><td><a class="struct" href="struct.InboundRpcRequest.html" title='network::protocols::rpc::InboundRpcRequest struct'>InboundRpcRequest</a></td><td class='docblock-short'><p>A wrapper struct for an inbound rpc request and its associated context.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.OutboundRpcRequest.html" title='network::protocols::rpc::OutboundRpcRequest struct'>OutboundRpcRequest</a></td><td class='docblock-short'><p>A wrapper struct for an outbound rpc request and its associated context.</p>
+</td></tr><tr class='module-item'><td><a class="struct" href="struct.Rpc.html" title='network::protocols::rpc::Rpc struct'>Rpc</a></td><td class='docblock-short'><p>The rpc actor.</p>
+</td></tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table><tr class='module-item'><td><a class="enum" href="enum.RpcNotification.html" title='network::protocols::rpc::RpcNotification enum'>RpcNotification</a></td><td class='docblock-short'><p>Events sent from the <a href="../../../network/protocols/rpc/struct.Rpc.html" title="`Rpc`"><code>Rpc</code></a> actor to the
+<a href="../../../network/interface/struct.NetworkProvider.html"><code>NetworkProvider</code></a> actor.</p>
+</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "network";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script defer src="../../../search-index.js"></script></body></html>

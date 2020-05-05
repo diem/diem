@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["strip","Checks if `s` starts with `prefix`. If yes, returns a reference to the remaining part with the prefix stripped away."]],"struct":[["LineSp","Wrapper of an inner object with line, start and end source locations."],["Sp","Wrapper of an inner object with start and end source locations."]]});

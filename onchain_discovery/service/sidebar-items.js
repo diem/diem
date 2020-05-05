@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["OnchainDiscoveryService","A LibraNet service for handling [`QueryDiscoverySetRequest`] rpc's."]]});

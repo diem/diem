@@ -1,0 +1,214 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `libra_canonical_serialization` crate."><meta name="keywords" content="rust, rustlang, rust-lang, libra_canonical_serialization"><title>libra_canonical_serialization - Rust</title><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../dark.css"><link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle"><script src="../storage.js"></script><noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="shortcut icon" href="../favicon.ico"><style type="text/css">#crate-search{background-image:url("../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../libra_canonical_serialization/index.html'><div class='logo-container'><img src='../rust-logo.png' alt='logo'></div></a><p class='location'>Crate libra_canonical_serialization</p><div class="sidebar-elems"><a id='all-types' href='all.html'><p>See all libra_canonical_serialization's items</p></a><div class="block items"><ul><li><a href="#modules">Modules</a></li><li><a href="#enums">Enums</a></li><li><a href="#constants">Constants</a></li><li><a href="#functions">Functions</a></li><li><a href="#types">Type Definitions</a></li></ul></div><p class='location'></p><script>window.sidebarCurrent = {name: 'libra_canonical_serialization', ty: 'mod', relpath: '../'};</script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../settings.html"><img src="../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class='fqn'><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../src/libra_canonical_serialization/lib.rs.html#4-287' title='goto source code'>[src]</a></span><span class='in-band'>Crate <a class="mod" href=''>libra_canonical_serialization</a></span></h1><div class='docblock'><h1 id="libra-canonical-serialization-lcs" class="section-header"><a href="#libra-canonical-serialization-lcs">Libra Canonical Serialization (LCS)</a></h1>
+<p>LCS defines a deterministic means for translating a message or data structure into bytes
+irrespective of platform, architecture, or programming language.</p>
+<h2 id="background" class="section-header"><a href="#background">Background</a></h2>
+<p>In Libra, participants pass around messages or data structures that often times need to be
+signed by a prover and verified by one or more verifiers. Serialization in this context refers
+to the process of converting a message into a byte array. Many serialization approaches support
+loose standards such that two implementations can produce two different byte streams that would
+represent the same, identical message. While for many applications, non-deterministic
+serialization causes no issues, it does so for applications using serialization for
+cryptographic purposes. For example, given a signature and a message, a verifier may not unable
+to produce the same serialized byte array constructed by the prover when the prover signed the
+message resulting in a non-verifiable message. In other words, to ensure message verifiability
+when using non-deterministic serialization, participants must either retain the original
+serialized bytes or risk losing the ability to verify messages. This creates a burden requiring
+participants to maintain both a copy of the serialized bytes and the deserialized message often
+leading to confusion about safety and correctness. While there exist a handful of existing
+deterministic serialization formats, there is no obvious choice. To address this, we propose
+Libra Canonical Serialization that defines a deterministic means for translating a message into
+bytes and back again.</p>
+<h2 id="specification" class="section-header"><a href="#specification">Specification</a></h2>
+<p>LCS supports the following data types:</p>
+<ul>
+<li>Booleans</li>
+<li>Signed 8-bit, 16-bit, 32-bit, 64-bit, and 128-bit integers</li>
+<li>Unsigned 8-bit, 16-bit, 32-bit, 64-bit, and 128-bit integers</li>
+<li>Option</li>
+<li>Unit (an empty value)</li>
+<li>Fixed and variable length sequences</li>
+<li>UTF-8 Encoded Strings</li>
+<li>Tuples</li>
+<li>Structures</li>
+<li>Externally tagged enumerations</li>
+<li>Maps</li>
+</ul>
+<h2 id="general-structure" class="section-header"><a href="#general-structure">General structure</a></h2>
+<p>LCS is not a self-describing format and as such, in order to deserialize a message, one must
+know the message type and layout ahead of time.</p>
+<p>Unless specified, all numbers are stored in little endian, two's complement format.</p>
+<h3 id="booleans-and-integers" class="section-header"><a href="#booleans-and-integers">Booleans and Integers</a></h3><table><thead><tr><th>Type</th><th>Original data</th><th>Hex representation</th><th>Serialized format</th></tr></thead><tbody>
+<tr><td>Boolean</td><td>True / False</td><td>0x01 / 0x00</td><td>[01] / [00]</td></tr>
+<tr><td>8-bit signed integer</td><td>-1</td><td>0xFF</td><td>[FF]</td></tr>
+<tr><td>8-bit unsigned integer</td><td>1</td><td>0x01</td><td>[01]</td></tr>
+<tr><td>16-bit signed integer</td><td>-4660</td><td>0xEDCC</td><td>[CCED]</td></tr>
+<tr><td>16-bit unsigned integer</td><td>4660</td><td>0x1234</td><td>[3412]</td></tr>
+<tr><td>32-bit signed integer</td><td>-305419896</td><td>0xEDCBA988</td><td>[88A9CBED]</td></tr>
+<tr><td>32-bit unsigned integer</td><td>305419896</td><td>0x12345678</td><td>[78563412]</td></tr>
+<tr><td>64-bit signed integer</td><td>-1311768467750121216</td><td>0xEDCBA98754321100</td><td>[0011325487A9CBED]</td></tr>
+<tr><td>64-bit unsigned integer</td><td>1311768467750121216</td><td>0x12345678ABCDEF00</td><td>[00EFCDAB78563412]</td></tr>
+</tbody></table>
+<h3 id="uleb128-encoded-integers" class="section-header"><a href="#uleb128-encoded-integers">ULEB128-Encoded Integers</a></h3>
+<p>The LCS format also uses the <a href="https://en.wikipedia.org/wiki/LEB128">ULEB128 encoding</a> internally
+to represent unsigned 32-bit integers in two cases where small values are usually expected:
+(1) lengths of variable-length sequences and (2) tags of enum values (see the corresponding
+sections below).</p>
+<table><thead><tr><th>Type</th><th>Original data</th><th>Hex representation</th><th>Serialized format</th></tr></thead><tbody>
+<tr><td>ULEB128-encoded u32-integer</td><td>2^0 = 1</td><td>0x00000001</td><td>[01]</td></tr>
+<tr><td></td><td>2^7 = 128</td><td>0x00000080</td><td>[8001]</td></tr>
+<tr><td></td><td>2^14 = 16384</td><td>0x00004000</td><td>[808001]</td></tr>
+<tr><td></td><td>2^21 = 2097152</td><td>0x00200000</td><td>[80808001]</td></tr>
+<tr><td></td><td>2^28 = 268435456</td><td>0x10000000</td><td>[8080808001]</td></tr>
+<tr><td></td><td>9487</td><td>0x0000250f</td><td>[8f4a]</td></tr>
+</tbody></table>
+<p>In general, a ULEB128 encoding consists of a little-endian sequence of base-128 (7-bit)
+digits. Each digit is completed into a byte by setting the highest bit to 1, except for the
+last (highest-significance) digit whose highest bit is set to 0.</p>
+<p>In LCS, the result of decoding ULEB128 bytes is required to fit into a 32-bit unsigned
+integer and be in canonical form. For instance, the following values are rejected:</p>
+<ul>
+<li><code>[808080808001]</code> (2^36) is too large.</li>
+<li><code>[8080808010]</code> (2^33) is too large.</li>
+<li><code>[8000]</code> is not a minimal encoding of 0.</li>
+</ul>
+<h3 id="optional-data" class="section-header"><a href="#optional-data">Optional Data</a></h3>
+<p>Optional or nullable data either exists in its full representation or does not. LCS represents
+this as a single byte representing the presence <code>0x01</code> or absence <code>0x00</code> of data. If the data
+is present then the serialized form of that data follows. For example:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">let</span> <span class="ident">some_data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="number">8</span>);
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">some_data</span>)<span class="question-mark">?</span>, <span class="macro">vec</span><span class="macro">!</span>[<span class="number">1</span>, <span class="number">8</span>]);
+
+<span class="kw">let</span> <span class="ident">no_data</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">no_data</span>)<span class="question-mark">?</span>, <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0</span>]);</pre></div>
+<h3 id="fixed-and-variable-length-sequences" class="section-header"><a href="#fixed-and-variable-length-sequences">Fixed and Variable Length Sequences</a></h3>
+<p>Sequences can be made of up of any LCS supported types (even complex structures) but all
+elements in the sequence must be of the same type. If the length of a sequence is fixed and
+well known then LCS represents this as just the concatenation of the serialized form of each
+individual element in the sequence. If the length of the sequence can be variable, then the
+serialized sequence is length prefixed with a ULEB128-encoded unsigned integer indicating
+the number of elements in the sequence. All variable length sequences must be
+<code>MAX_SEQUENCE_LENGTH</code> elements long or less.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">let</span> <span class="ident">fixed</span>: [<span class="ident">u16</span>; <span class="number">3</span>] <span class="op">=</span> [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">fixed</span>)<span class="question-mark">?</span>, <span class="macro">vec</span><span class="macro">!</span>[<span class="number">1</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">0</span>, <span class="number">3</span>, <span class="number">0</span>]);
+
+<span class="kw">let</span> <span class="ident">variable</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">1</span>, <span class="number">2</span>];
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">variable</span>)<span class="question-mark">?</span>, <span class="macro">vec</span><span class="macro">!</span>[<span class="number">2</span>, <span class="number">1</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">0</span>]);
+
+<span class="kw">let</span> <span class="ident">large_variable_length</span>: <span class="ident">Vec</span><span class="op">&lt;</span>()<span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[(); <span class="number">9_487</span>];
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">large_variable_length</span>)<span class="question-mark">?</span>, <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0x8f</span>, <span class="number">0x4a</span>]);</pre></div>
+<h3 id="strings" class="section-header"><a href="#strings">Strings</a></h3>
+<p>Only valid UTF-8 Strings are supported. LCS serializes such strings as a variable length byte
+sequence, i.e. length prefixed with a ULEB128-encoded unsigned integer followed by the byte
+representation of the string.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="comment">// Note that this string has 10 characters but has a byte length of 24</span>
+<span class="kw">let</span> <span class="ident">utf8_str</span> <span class="op">=</span> <span class="string">&quot;çå∞≠¢õß∂ƒ∫&quot;</span>;
+<span class="kw">let</span> <span class="ident">expecting</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[
+    <span class="number">24</span>, <span class="number">0xc3</span>, <span class="number">0xa7</span>, <span class="number">0xc3</span>, <span class="number">0xa5</span>, <span class="number">0xe2</span>, <span class="number">0x88</span>, <span class="number">0x9e</span>, <span class="number">0xe2</span>, <span class="number">0x89</span>, <span class="number">0xa0</span>, <span class="number">0xc2</span>,
+    <span class="number">0xa2</span>, <span class="number">0xc3</span>, <span class="number">0xb5</span>, <span class="number">0xc3</span>, <span class="number">0x9f</span>, <span class="number">0xe2</span>, <span class="number">0x88</span>, <span class="number">0x82</span>, <span class="number">0xc6</span>, <span class="number">0x92</span>, <span class="number">0xe2</span>, <span class="number">0x88</span>, <span class="number">0xab</span>,
+];
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">utf8_str</span>)<span class="question-mark">?</span>, <span class="ident">expecting</span>);</pre></div>
+<h3 id="tuples" class="section-header"><a href="#tuples">Tuples</a></h3>
+<p>Tuples are typed composition of objects: <code>(Type0, Type1)</code></p>
+<p>Tuples are considered a fixed length sequence where each element in the sequence can be a
+different type supported by LCS. Each element of a tuple is serialized in the order it is
+defined within the tuple, i.e. [tuple.0, tuple.2].</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">let</span> <span class="ident">tuple</span> <span class="op">=</span> (<span class="op">-</span><span class="number">1i8</span>, <span class="string">&quot;libra&quot;</span>);
+<span class="kw">let</span> <span class="ident">expecting</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0xFF</span>, <span class="number">5</span>, <span class="string">b&#39;l&#39;</span>, <span class="string">b&#39;i&#39;</span>, <span class="string">b&#39;b&#39;</span>, <span class="string">b&#39;r&#39;</span>, <span class="string">b&#39;a&#39;</span>];
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">tuple</span>)<span class="question-mark">?</span>, <span class="ident">expecting</span>);</pre></div>
+<h3 id="structures" class="section-header"><a href="#structures">Structures</a></h3>
+<p>Structures are fixed length sequences consisting of fields with potentially different types.
+Each field within a struct is serialized in the order specified by the canonical structure
+definition. Structs can exist within other structs and as such, LCS recurses into each struct
+and serializes them in order. There are no labels in the serialized format, the struct ordering
+defines the organization within the serialization stream.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">struct</span> <span class="ident">MyStruct</span> {
+    <span class="ident">boolean</span>: <span class="ident">bool</span>,
+    <span class="ident">bytes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="ident">label</span>: <span class="ident">String</span>,
+}
+
+<span class="kw">struct</span> <span class="ident">Wrapper</span> {
+    <span class="ident">inner</span>: <span class="ident">MyStruct</span>,
+    <span class="ident">name</span>: <span class="ident">String</span>,
+}
+
+<span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">MyStruct</span> {
+    <span class="ident">boolean</span>: <span class="bool-val">true</span>,
+    <span class="ident">bytes</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0xC0</span>, <span class="number">0xDE</span>],
+    <span class="ident">label</span>: <span class="string">&quot;a&quot;</span>.<span class="ident">to_owned</span>(),
+};
+<span class="kw">let</span> <span class="ident">s_bytes</span> <span class="op">=</span> <span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">s</span>)<span class="question-mark">?</span>;
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expecting</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">0xC0</span>, <span class="number">0xDE</span>, <span class="number">1</span>, <span class="string">b&#39;a&#39;</span>];
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">s_bytes</span>, <span class="ident">expecting</span>);
+
+<span class="kw">let</span> <span class="ident">w</span> <span class="op">=</span> <span class="ident">Wrapper</span> {
+    <span class="ident">inner</span>: <span class="ident">s</span>,
+    <span class="ident">name</span>: <span class="string">&quot;b&quot;</span>.<span class="ident">to_owned</span>(),
+};
+<span class="kw">let</span> <span class="ident">w_bytes</span> <span class="op">=</span> <span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">w</span>)<span class="question-mark">?</span>;
+<span class="macro">assert</span><span class="macro">!</span>(<span class="ident">w_bytes</span>.<span class="ident">starts_with</span>(<span class="kw-2">&amp;</span><span class="ident">s_bytes</span>));
+
+<span class="ident">expecting</span>.<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="number">1</span>, <span class="string">b&#39;b&#39;</span>]);
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">w_bytes</span>, <span class="ident">expecting</span>);</pre></div>
+<h3 id="externally-tagged-enumerations" class="section-header"><a href="#externally-tagged-enumerations">Externally Tagged Enumerations</a></h3>
+<p>An enumeration is typically represented as a type that can take one of potentially many
+different variants. In LCS, each variant is mapped to a variant index, a ULEB128-encoded 32-bit unsigned
+integer, followed by serialized data if the type has an associated value. An
+associated type can be any LCS supported type. The variant index is determined based on the
+ordering of the variants in the canonical enum definition, where the first variant has an index
+of <code>0</code>, the second an index of <code>1</code>, etc.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">enum</span> <span class="ident">E</span> {
+    <span class="ident">Variant0</span>(<span class="ident">u16</span>),
+    <span class="ident">Variant1</span>(<span class="ident">u8</span>),
+    <span class="ident">Variant2</span>(<span class="ident">String</span>),
+}
+
+<span class="kw">let</span> <span class="ident">v0</span> <span class="op">=</span> <span class="ident">E</span>::<span class="ident">Variant0</span>(<span class="number">8000</span>);
+<span class="kw">let</span> <span class="ident">v1</span> <span class="op">=</span> <span class="ident">E</span>::<span class="ident">Variant1</span>(<span class="number">255</span>);
+<span class="kw">let</span> <span class="ident">v2</span> <span class="op">=</span> <span class="ident">E</span>::<span class="ident">Variant2</span>(<span class="string">&quot;e&quot;</span>.<span class="ident">to_owned</span>());
+
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">v0</span>)<span class="question-mark">?</span>, <span class="macro">vec</span><span class="macro">!</span>[<span class="number">0</span>, <span class="number">0x40</span>, <span class="number">0x1F</span>]);
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">v1</span>)<span class="question-mark">?</span>, <span class="macro">vec</span><span class="macro">!</span>[<span class="number">1</span>, <span class="number">0xFF</span>]);
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">v2</span>)<span class="question-mark">?</span>, <span class="macro">vec</span><span class="macro">!</span>[<span class="number">2</span>, <span class="number">1</span>, <span class="string">b&#39;e&#39;</span>]);</pre></div>
+<p>If you need to serialize a C-style enum, you should use a primitive integer type.</p>
+<h3 id="maps-key--value-stores" class="section-header"><a href="#maps-key--value-stores">Maps (Key / Value Stores)</a></h3>
+<p>Maps are represented as a variable-length, sorted sequence of (Key, Value) tuples. Keys must be
+unique and the tuples sorted by increasing lexicographical order on the LCS bytes of each key.
+The representation is otherwise similar to that of a variable-length sequence. In particular,
+it is preceded by the number of tuples, encoded in ULEB128.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">map</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
+<span class="ident">map</span>.<span class="ident">insert</span>(<span class="string">b&#39;e&#39;</span>, <span class="string">b&#39;f&#39;</span>);
+<span class="ident">map</span>.<span class="ident">insert</span>(<span class="string">b&#39;a&#39;</span>, <span class="string">b&#39;b&#39;</span>);
+<span class="ident">map</span>.<span class="ident">insert</span>(<span class="string">b&#39;c&#39;</span>, <span class="string">b&#39;d&#39;</span>);
+
+<span class="kw">let</span> <span class="ident">expecting</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[(<span class="string">b&#39;a&#39;</span>, <span class="string">b&#39;b&#39;</span>), (<span class="string">b&#39;c&#39;</span>, <span class="string">b&#39;d&#39;</span>), (<span class="string">b&#39;e&#39;</span>, <span class="string">b&#39;f&#39;</span>)];
+
+<span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">map</span>)<span class="question-mark">?</span>, <span class="ident">to_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">expecting</span>)<span class="question-mark">?</span>);</pre></div>
+<h2 id="backwards-compatibility" class="section-header"><a href="#backwards-compatibility">Backwards compatibility</a></h2>
+<p>Complex types dependent upon the specification in which they are used. LCS does not provide
+direct provisions for versioning or backwards / forwards compatibility. A change in an objects
+structure could prevent historical clients from understanding new clients and vice-versa.</p>
+</div><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table><tr class='module-item'><td><a class="mod" href="test_helpers/index.html" title='libra_canonical_serialization::test_helpers mod'>test_helpers</a></td><td class='docblock-short'></td></tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table><tr class='module-item'><td><a class="enum" href="enum.Error.html" title='libra_canonical_serialization::Error enum'>Error</a></td><td class='docblock-short'></td></tr></table><h2 id='constants' class='section-header'><a href="#constants">Constants</a></h2>
+<table><tr class='module-item'><td><a class="constant" href="constant.MAX_SEQUENCE_LENGTH.html" title='libra_canonical_serialization::MAX_SEQUENCE_LENGTH constant'>MAX_SEQUENCE_LENGTH</a></td><td class='docblock-short'><p>Variable length sequences in LCS are limited to max length of 2^31</p>
+</td></tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table><tr class='module-item'><td><a class="fn" href="fn.from_bytes.html" title='libra_canonical_serialization::from_bytes fn'>from_bytes</a></td><td class='docblock-short'><p>Deserializes a <code>&amp;[u8]</code> into a type.</p>
+</td></tr><tr class='module-item'><td><a class="fn" href="fn.from_bytes_seed.html" title='libra_canonical_serialization::from_bytes_seed fn'>from_bytes_seed</a></td><td class='docblock-short'><p>Perform a stateful deserialization from a <code>&amp;[u8]</code> using the provided <code>seed</code>.</p>
+</td></tr><tr class='module-item'><td><a class="fn" href="fn.is_human_readable.html" title='libra_canonical_serialization::is_human_readable fn'>is_human_readable</a></td><td class='docblock-short'></td></tr><tr class='module-item'><td><a class="fn" href="fn.to_bytes.html" title='libra_canonical_serialization::to_bytes fn'>to_bytes</a></td><td class='docblock-short'><p>Serialize the given data structure as a <code>Vec&lt;u8&gt;</code> of LCS.</p>
+</td></tr></table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
+<table><tr class='module-item'><td><a class="type" href="type.Result.html" title='libra_canonical_serialization::Result type'>Result</a></td><td class='docblock-short'></td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../";window.currentCrate = "libra_canonical_serialization";</script><script src="../aliases.js"></script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>

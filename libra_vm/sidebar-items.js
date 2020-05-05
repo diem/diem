@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["system_module_names","Names of modules, functions, and types used by Libra System."]],"struct":[["LibraVM","A wrapper to make VMRuntime standalone and thread safe."]],"trait":[["VMExecutor","This trait describes the VM's execution interface."],["VMValidator","This trait describes the VM's validation interfaces."]]});

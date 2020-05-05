@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["ProcessClientWrapper","This container exists only so that we can kill the spawned process after testing is complete. Otherwise the process will be killed at the end of the safety_rules function and the test will fail."]]});

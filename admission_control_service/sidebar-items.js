@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["admission_control_service","AC gRPC service. Admission Control (AC) is a module acting as the only public end point. It receives api requests from external clients (such as wallets) and performs necessary processing before sending them to next step."]]});

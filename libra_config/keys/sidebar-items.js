@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["KeyPair","A KeyPair has a private key that can only be taken once, and a public key that can be cloned ad infinitum."]]});

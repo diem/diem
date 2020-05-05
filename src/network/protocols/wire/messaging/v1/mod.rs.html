@@ -1,0 +1,165 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `network/src/protocols/wire/messaging/v1/mod.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mod.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../../../../../normalize.css"><link rel="stylesheet" type="text/css" href="../../../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../../../../../dark.css"><link rel="stylesheet" type="text/css" href="../../../../../../light.css" id="themeStyle"><script src="../../../../../../storage.js"></script><noscript><link rel="stylesheet" href="../../../../../../noscript.css"></noscript><link rel="shortcut icon" href="../../../../../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../../../../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../../../../../network/index.html'><div class='logo-container'><img src='../../../../../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../../../../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../../../../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../../../../../settings.html"><img src="../../../../../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1"> 1</span>
+<span id="2"> 2</span>
+<span id="3"> 3</span>
+<span id="4"> 4</span>
+<span id="5"> 5</span>
+<span id="6"> 6</span>
+<span id="7"> 7</span>
+<span id="8"> 8</span>
+<span id="9"> 9</span>
+<span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
+<span id="14">14</span>
+<span id="15">15</span>
+<span id="16">16</span>
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+</pre><div class="example-wrap"><pre class="rust ">
+<span class="comment">// Copyright (c) The Libra Core Contributors</span>
+<span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
+
+<span class="doccomment">//! This module defines the structs transported during the network messaging protocol v1.</span>
+<span class="doccomment">//! These should serialize as per [link](TODO: Add ref).</span>
+
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">protocols</span>::<span class="ident">wire</span>::<span class="ident">handshake</span>::<span class="ident">v1</span>::{<span class="ident">MessagingProtocolVersion</span>, <span class="ident">ProtocolId</span>};
+<span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">mod</span> <span class="ident">test</span>;
+
+<span class="doccomment">/// Message variants that are sent on the wire.</span>
+<span class="doccomment">/// New variants cannot be added without bumping up the MessagingProtocolVersion.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">NetworkMessage</span> {
+    <span class="ident">Error</span>(<span class="ident">ErrorCode</span>),
+    <span class="ident">Ping</span>(<span class="ident">Nonce</span>),
+    <span class="ident">Pong</span>(<span class="ident">Nonce</span>),
+    <span class="ident">RpcRequest</span>(<span class="ident">RpcRequest</span>),
+    <span class="ident">RpcResponse</span>(<span class="ident">RpcResponse</span>),
+    <span class="ident">DirectSendMsg</span>(<span class="ident">DirectSendMsg</span>),
+}
+
+<span class="doccomment">/// Enum representing various error codes that can be embedded in NetworkMessage.</span>
+<span class="doccomment">/// New variants cannot be added without bumping up the MessagingProtocolVersion.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ErrorCode</span> {
+    <span class="doccomment">/// Ping timed out.</span>
+    <span class="ident">TimedOut</span>,
+    <span class="doccomment">/// Failed to parse NetworkMessage when interpreting according to provided protocol version.</span>
+    <span class="ident">ParsingError</span>(<span class="ident">MessagingProtocolVersion</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">NetworkMessage</span><span class="op">&gt;</span>),
+    <span class="doccomment">/// A message was received for a protocol that is not supported over this connection.</span>
+    <span class="ident">NotSupported</span>(<span class="ident">ProtocolId</span>),
+}
+
+<span class="doccomment">/// Nonces used by Ping and Pong message types.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Nonce</span>(<span class="kw">pub</span> <span class="ident">u32</span>);
+
+<span class="doccomment">/// Create alias RequestId for u32.</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">RequestId</span> <span class="op">=</span> <span class="ident">u32</span>;
+
+<span class="doccomment">/// Create alias Priority for u8.</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Priority</span> <span class="op">=</span> <span class="ident">u8</span>;
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RpcRequest</span> {
+    <span class="doccomment">/// RequestId for the RPC Request.</span>
+    <span class="kw">pub</span> <span class="ident">request_id</span>: <span class="ident">RequestId</span>,
+    <span class="doccomment">/// `protocol_id` is a variant of the ProtocolId enum.</span>
+    <span class="kw">pub</span> <span class="ident">protocol_id</span>: <span class="ident">ProtocolId</span>,
+    <span class="doccomment">/// Request priority in the range 0..=255.</span>
+    <span class="kw">pub</span> <span class="ident">priority</span>: <span class="ident">Priority</span>,
+    <span class="doccomment">/// Request payload. This will be parsed by the application-level handler.</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;serde_bytes&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">raw_request</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RpcResponse</span> {
+    <span class="doccomment">/// RequestId for corresponding request. This is copied as is from the RpcRequest.</span>
+    <span class="kw">pub</span> <span class="ident">request_id</span>: <span class="ident">RequestId</span>,
+    <span class="doccomment">/// Response priority in the range 0..=255. This will likely be same as the priority of</span>
+    <span class="doccomment">/// corresponding request.</span>
+    <span class="kw">pub</span> <span class="ident">priority</span>: <span class="ident">Priority</span>,
+    <span class="doccomment">/// Response payload.</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;serde_bytes&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">raw_response</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DirectSendMsg</span> {
+    <span class="doccomment">/// `protocol_id` is a variant of the ProtocolId enum.</span>
+    <span class="kw">pub</span> <span class="ident">protocol_id</span>: <span class="ident">ProtocolId</span>,
+    <span class="doccomment">/// Message priority in the range 0..=255.</span>
+    <span class="kw">pub</span> <span class="ident">priority</span>: <span class="ident">Priority</span>,
+    <span class="doccomment">/// Message payload.</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">with</span> <span class="op">=</span> <span class="string">&quot;serde_bytes&quot;</span>)]</span>
+    <span class="kw">pub</span> <span class="ident">raw_msg</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+}
+</pre></div>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../../../../";window.currentCrate = "network";</script><script src="../../../../../../aliases.js"></script><script src="../../../../../../main.js"></script><script src="../../../../../../source-script.js"></script><script src="../../../../../../source-files.js"></script><script defer src="../../../../../../search-index.js"></script></body></html>

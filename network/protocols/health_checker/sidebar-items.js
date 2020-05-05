@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["HealthCheckerMsg",""]],"fn":[["add_to_network",""]],"struct":[["HealthChecker","The actor performing health checks by running the Ping protocol"],["HealthCheckerNetworkSender","The interface from HealthChecker to Networking layer."],["Ping",""],["Pong",""]],"type":[["HealthCheckerNetworkEvents","The interface from Network to HealthChecker layer."]]});

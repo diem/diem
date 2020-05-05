@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["native_gas","Return the native gas entry in `CostTable` for the given key. The key is the specific native function index known to `CostTable`."]],"struct":[["NativeResult","Result of a native function execution requires charges for execution cost."]],"trait":[["NativeContext","`NativeContext` - Native function context."]]});

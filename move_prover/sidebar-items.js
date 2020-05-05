@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["extract_matches","Extracts matches out of some text file. `pat` must be a regular expression with one anonymous group. The list of the content of this group is returned. Use as in in `extract_matches(file, \"use 0x0::([a-zA-Z_]+)\")`"],["run_move_prover",""]],"mod":[["cli","Functionality related to the command line interface of the move prover."]]});

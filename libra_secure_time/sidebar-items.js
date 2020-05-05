@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["MockTimeService","A mock-time TimeService"],["RealTimeService","A real-time TimeService"]],"trait":[["TimeService","A generic service for providing time related operations (e.g., returning the current time and sleeping)."]]});

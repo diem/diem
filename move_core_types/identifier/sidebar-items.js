@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["IdentStr","A borrowed identifier."],["Identifier","An owned identifier."]]});

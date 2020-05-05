@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["ErrorKind","Defines all errors in this crate."]],"macro":[["anyhow","Construct an ad-hoc error from a string."],["bail","Return early with an error."],["format_err","Construct an ad-hoc error from a string."]],"struct":[["Error","The `Error` type, a wrapper around a dynamic error type."]],"type":[["Result","`Result<T, Error>`"]]});

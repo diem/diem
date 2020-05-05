@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["node_debug_interface_client","Generated client implementations."],["node_debug_interface_server","Generated server implementations."]],"struct":[["Event",""],["GetEventsRequest",""],["GetEventsResponse",""],["GetNodeDetailsRequest",""],["GetNodeDetailsResponse",""]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["PRIVATE_KEY_SIZE","Size of a X25519 private key"],["PUBLIC_KEY_SIZE","Size of a X25519 public key"],["SHARED_SECRET_SIZE","Size of a X25519 shared secret"]],"struct":[["PrivateKey","This type should be used to deserialize a received private key"],["PublicKey","This type should be used to deserialize a received public key"]]});

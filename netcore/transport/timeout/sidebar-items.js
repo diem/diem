@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["TimeoutTransportError",""]],"struct":[["TimeoutFuture","Future which wraps an inner Future with a timeout."],["TimeoutStream","Listener stream returned by listen_on on a TimeoutTransport."],["TimeoutTransport","A [`TimeoutTransport`] is a transport which wraps another transport with a timeout on all inbound and outbound connection setup."]]});

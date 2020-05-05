@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["SecurityEvent",""]],"fn":[["security_log","Creates a `SecurityLog` struct that can be decorated with additional data."]],"struct":[["SecurityLog","The `SecurityLog` struct is used to log security-sensitive operations, for instance when an invalid signature is detected or when an unexpected event happens."]]});

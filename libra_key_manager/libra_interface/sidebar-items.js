@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["JsonRpcLibraInterface","This implements the LibraInterface by talking directly to the JSON RPC API."]],"trait":[["LibraInterface","This defines a generic trait used to interact with the Libra blockchain. In production, this will be talking to a JSON-RPC service. For tests, this may be an executor and storage directly."]]});

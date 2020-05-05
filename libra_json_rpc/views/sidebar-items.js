@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["EventDataView",""],["ScriptView",""],["TransactionDataView",""]],"struct":[["AccountStateProofView",""],["AccountStateWithProofView",""],["AccountView",""],["AmountView",""],["BlockMetadata",""],["BytesView",""],["CurrencyInfoView",""],["EventView",""],["StateProofView",""],["TransactionView",""]]});

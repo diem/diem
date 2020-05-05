@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["NetworkNotification","Notifications that [`NetworkProvider`] sends to consumers of its API. The [`NetworkProvider`] in turn receives these notifications from the PeerManager and other `protocols`."],["NetworkRequest","Requests [`NetworkProvider`] receives from the network interface."]],"struct":[["NetworkProvider",""]]});

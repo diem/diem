@@ -1,0 +1,289 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `language/stdlib/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="shortcut icon" href="../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../stdlib/index.html'><div class='logo-container'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
+<span id="2">  2</span>
+<span id="3">  3</span>
+<span id="4">  4</span>
+<span id="5">  5</span>
+<span id="6">  6</span>
+<span id="7">  7</span>
+<span id="8">  8</span>
+<span id="9">  9</span>
+<span id="10"> 10</span>
+<span id="11"> 11</span>
+<span id="12"> 12</span>
+<span id="13"> 13</span>
+<span id="14"> 14</span>
+<span id="15"> 15</span>
+<span id="16"> 16</span>
+<span id="17"> 17</span>
+<span id="18"> 18</span>
+<span id="19"> 19</span>
+<span id="20"> 20</span>
+<span id="21"> 21</span>
+<span id="22"> 22</span>
+<span id="23"> 23</span>
+<span id="24"> 24</span>
+<span id="25"> 25</span>
+<span id="26"> 26</span>
+<span id="27"> 27</span>
+<span id="28"> 28</span>
+<span id="29"> 29</span>
+<span id="30"> 30</span>
+<span id="31"> 31</span>
+<span id="32"> 32</span>
+<span id="33"> 33</span>
+<span id="34"> 34</span>
+<span id="35"> 35</span>
+<span id="36"> 36</span>
+<span id="37"> 37</span>
+<span id="38"> 38</span>
+<span id="39"> 39</span>
+<span id="40"> 40</span>
+<span id="41"> 41</span>
+<span id="42"> 42</span>
+<span id="43"> 43</span>
+<span id="44"> 44</span>
+<span id="45"> 45</span>
+<span id="46"> 46</span>
+<span id="47"> 47</span>
+<span id="48"> 48</span>
+<span id="49"> 49</span>
+<span id="50"> 50</span>
+<span id="51"> 51</span>
+<span id="52"> 52</span>
+<span id="53"> 53</span>
+<span id="54"> 54</span>
+<span id="55"> 55</span>
+<span id="56"> 56</span>
+<span id="57"> 57</span>
+<span id="58"> 58</span>
+<span id="59"> 59</span>
+<span id="60"> 60</span>
+<span id="61"> 61</span>
+<span id="62"> 62</span>
+<span id="63"> 63</span>
+<span id="64"> 64</span>
+<span id="65"> 65</span>
+<span id="66"> 66</span>
+<span id="67"> 67</span>
+<span id="68"> 68</span>
+<span id="69"> 69</span>
+<span id="70"> 70</span>
+<span id="71"> 71</span>
+<span id="72"> 72</span>
+<span id="73"> 73</span>
+<span id="74"> 74</span>
+<span id="75"> 75</span>
+<span id="76"> 76</span>
+<span id="77"> 77</span>
+<span id="78"> 78</span>
+<span id="79"> 79</span>
+<span id="80"> 80</span>
+<span id="81"> 81</span>
+<span id="82"> 82</span>
+<span id="83"> 83</span>
+<span id="84"> 84</span>
+<span id="85"> 85</span>
+<span id="86"> 86</span>
+<span id="87"> 87</span>
+<span id="88"> 88</span>
+<span id="89"> 89</span>
+<span id="90"> 90</span>
+<span id="91"> 91</span>
+<span id="92"> 92</span>
+<span id="93"> 93</span>
+<span id="94"> 94</span>
+<span id="95"> 95</span>
+<span id="96"> 96</span>
+<span id="97"> 97</span>
+<span id="98"> 98</span>
+<span id="99"> 99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+</pre><div class="example-wrap"><pre class="rust ">
+<span class="comment">// Copyright (c) The Libra Core Contributors</span>
+<span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
+
+<span class="attribute">#![<span class="ident">forbid</span>(<span class="ident">unsafe_code</span>)]</span>
+
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">transaction_scripts</span>;
+
+<span class="kw">use</span> <span class="ident">bytecode_verifier</span>::{<span class="ident">batch_verify_modules</span>, <span class="ident">VerifiedModule</span>};
+<span class="kw">use</span> <span class="ident">move_lang</span>::{<span class="ident">compiled_unit</span>::<span class="ident">CompiledUnit</span>, <span class="ident">move_compile</span>, <span class="ident">shared</span>::<span class="ident">Address</span>};
+<span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">path</span>::<span class="ident">PathBuf</span>;
+<span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">file_format</span>::<span class="ident">CompiledModule</span>;
+
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">STD_LIB_DIR</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;modules&quot;</span>;
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MOVE_EXTENSION</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;move&quot;</span>;
+
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NO_USE_STAGED</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;MOVE_NO_USE_STAGED&quot;</span>;
+
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">TRANSACTION_SCRIPTS</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;transaction_scripts&quot;</span>;
+<span class="doccomment">/// The output path under which staged files will be put</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">STAGED_OUTPUT_PATH</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;staged&quot;</span>;
+<span class="doccomment">/// The file name for the staged stdlib</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">STAGED_STDLIB_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;stdlib&quot;</span>;
+<span class="doccomment">/// The extension for staged files</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">STAGED_EXTENSION</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;mv&quot;</span>;
+<span class="doccomment">/// The file name of the debug module</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">DEBUG_MODULE_FILE_NAME</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;debug.move&quot;</span>;
+
+<span class="comment">// The current stdlib that is freshly built. This will never be used in deployment so we don&#39;t need</span>
+<span class="comment">// to pull the same trick here in order to include this in the Rust binary.</span>
+<span class="kw">static</span> <span class="ident">FRESH_MOVELANG_STDLIB</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">VerifiedModule</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="ident">build_stdlib</span>);
+
+<span class="comment">// This needs to be a string literal due to restrictions imposed by include_bytes.</span>
+<span class="doccomment">/// The staged library needs to be included in the Rust binary due to Docker deployment issues.</span>
+<span class="doccomment">/// This is why we include it here.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">STAGED_STDLIB_BYTES</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] <span class="op">=</span> <span class="ident">std</span>::<span class="macro">include_bytes</span><span class="macro">!</span>(<span class="string">&quot;../staged/stdlib.mv&quot;</span>);
+
+<span class="comment">// The staged version of the Move standard library.</span>
+<span class="comment">// Similarly to genesis, we keep a compiled version of the standard library and scripts around, and</span>
+<span class="comment">// only periodically update these. This has the effect of decoupling the current leading edge of</span>
+<span class="comment">// compiler development from the current stdlib used in genesis/scripts.  In particular, changes in</span>
+<span class="comment">// the compiler will not affect the script hashes or stdlib until we have tested the changes to our</span>
+<span class="comment">// satisfaction. Then we can generate a new staged version of the stdlib/scripts (and will need to</span>
+<span class="comment">// regenerate genesis). The staged version of the stdlib/scripts are used unless otherwise</span>
+<span class="comment">// specified either by the MOVE_NO_USE_STAGED env var, or by passing the &quot;StdLibOptions::Fresh&quot;</span>
+<span class="comment">// option to `stdlib_modules`.</span>
+<span class="kw">static</span> <span class="ident">STAGED_MOVELANG_STDLIB</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">VerifiedModule</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
+    <span class="kw">let</span> <span class="ident">modules</span> <span class="op">=</span> <span class="ident">lcs</span>::<span class="ident">from_bytes</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">STAGED_STDLIB_BYTES</span>)
+        .<span class="ident">unwrap</span>()
+        .<span class="ident">into_iter</span>()
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">bytes</span><span class="op">|</span> <span class="ident">CompiledModule</span>::<span class="ident">deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>).<span class="ident">unwrap</span>())
+        .<span class="ident">collect</span>();
+    <span class="ident">batch_verify_modules</span>(<span class="ident">modules</span>)
+});
+
+<span class="doccomment">/// An enum specifying whether the staged stdlib/scripts should be used or freshly built versions</span>
+<span class="doccomment">/// should be used.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">StdLibOptions</span> {
+    <span class="ident">Staged</span>,
+    <span class="ident">Fresh</span>,
+}
+
+<span class="doccomment">/// Returns a reference to the standard library. Depending upon the `option` flag passed in</span>
+<span class="doccomment">/// either a staged version of the standard library will be returned or a new freshly built stdlib</span>
+<span class="doccomment">/// will be used.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stdlib_modules</span>(<span class="ident">option</span>: <span class="ident">StdLibOptions</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [<span class="ident">VerifiedModule</span>] {
+    <span class="kw">match</span> <span class="ident">option</span> {
+        <span class="ident">StdLibOptions</span>::<span class="ident">Staged</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">STAGED_MOVELANG_STDLIB</span>,
+        <span class="ident">StdLibOptions</span>::<span class="ident">Fresh</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">FRESH_MOVELANG_STDLIB</span>,
+    }
+}
+
+<span class="doccomment">/// Returns a reference to the standard library built by move-lang compiler, compiled with the</span>
+<span class="doccomment">/// [default address](account_config::core_code_address).</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// The order the modules are presented in is important: later modules depend on earlier ones.</span>
+<span class="doccomment">/// The defualt is to return a staged version of the stdlib unless it is otherwise specified by the</span>
+<span class="doccomment">/// `MOVE_NO_USE_STAGED` environment variable.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">env_stdlib_modules</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [<span class="ident">VerifiedModule</span>] {
+    <span class="kw">let</span> <span class="ident">option</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">use_staged</span>() {
+        <span class="ident">StdLibOptions</span>::<span class="ident">Staged</span>
+    } <span class="kw">else</span> {
+        <span class="ident">StdLibOptions</span>::<span class="ident">Fresh</span>
+    };
+    <span class="ident">stdlib_modules</span>(<span class="ident">option</span>)
+}
+
+<span class="doccomment">/// A predicate detailing whether the staged versions of scripts and the stdlib should be used or</span>
+<span class="doccomment">/// not. The default is that the staged versions of the stdlib and transaction scripts should be</span>
+<span class="doccomment">/// used.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">use_staged</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    <span class="ident">std</span>::<span class="ident">env</span>::<span class="ident">var</span>(<span class="ident">NO_USE_STAGED</span>).<span class="ident">is_err</span>()
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">filter_move_files</span>(<span class="ident">dir_iter</span>: <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">PathBuf</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">PathBuf</span><span class="op">&gt;</span> {
+    <span class="ident">dir_iter</span>.<span class="ident">flat_map</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> {
+        <span class="kw">if</span> <span class="ident">path</span>.<span class="ident">extension</span>()<span class="question-mark">?</span>.<span class="ident">to_str</span>()<span class="question-mark">?</span> <span class="op">=</span><span class="op">=</span> <span class="ident">MOVE_EXTENSION</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">path</span>)
+        } <span class="kw">else</span> {
+            <span class="prelude-val">None</span>
+        }
+    })
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stdlib_files</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="macro">env</span><span class="macro">!</span>(<span class="string">&quot;CARGO_MANIFEST_DIR&quot;</span>));
+    <span class="ident">path</span>.<span class="ident">push</span>(<span class="ident">STD_LIB_DIR</span>);
+    <span class="kw">let</span> <span class="ident">dirfiles</span> <span class="op">=</span> <span class="ident">datatest_stable</span>::<span class="ident">utils</span>::<span class="ident">iterate_directory</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>);
+    <span class="ident">filter_move_files</span>(<span class="ident">dirfiles</span>)
+        .<span class="ident">flat_map</span>(<span class="op">|</span><span class="ident">path</span><span class="op">|</span> <span class="ident">path</span>.<span class="ident">into_os_string</span>().<span class="ident">into_string</span>())
+        .<span class="ident">collect</span>()
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build_stdlib</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">VerifiedModule</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">compiled_units</span>) <span class="op">=</span>
+        <span class="ident">move_compile</span>(<span class="kw-2">&amp;</span><span class="ident">stdlib_files</span>(), <span class="kw-2">&amp;</span>[], <span class="prelude-val">Some</span>(<span class="ident">Address</span>::<span class="ident">LIBRA_CORE</span>)).<span class="ident">unwrap</span>();
+    <span class="ident">batch_verify_modules</span>(
+        <span class="ident">compiled_units</span>
+            .<span class="ident">into_iter</span>()
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">compiled_unit</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">compiled_unit</span> {
+                <span class="ident">CompiledUnit</span>::<span class="ident">Module</span> { <span class="ident">module</span>, .. } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">module</span>,
+                <span class="ident">CompiledUnit</span>::<span class="ident">Script</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Unexpected Script in stdlib&quot;</span>),
+            })
+            .<span class="ident">collect</span>(),
+    )
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compile_script</span>(<span class="ident">source_file_str</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> (<span class="kw">_</span>, <span class="kw-2">mut</span> <span class="ident">compiled_program</span>) <span class="op">=</span> <span class="ident">move_compile</span>(
+        <span class="kw-2">&amp;</span>[<span class="ident">source_file_str</span>],
+        <span class="kw-2">&amp;</span><span class="ident">stdlib_files</span>(),
+        <span class="prelude-val">Some</span>(<span class="ident">Address</span>::<span class="ident">LIBRA_CORE</span>),
+    )
+    .<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">script_bytes</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">compiled_program</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">1</span>);
+    <span class="kw">match</span> <span class="ident">compiled_program</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>() {
+        <span class="ident">CompiledUnit</span>::<span class="ident">Module</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Unexpected module when compiling script&quot;</span>),
+        <span class="ident">CompiledUnit</span>::<span class="ident">Script</span> { <span class="ident">script</span>, .. } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">script</span>.<span class="ident">serialize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">script_bytes</span>).<span class="ident">unwrap</span>(),
+    };
+    <span class="ident">script_bytes</span>
+}
+</pre></div>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "stdlib";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

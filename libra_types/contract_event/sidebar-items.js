@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["ContractEvent","Support versioning of the data structure."]],"struct":[["ContractEventHasher",""],["ContractEventV0","Entry produced via a call to the `emit_event` builtin."],["ContractEventV0Hasher",""],["EventWithProof",""]]});

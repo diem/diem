@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["compile_module_with_address","Compile the provided Move code into a blob which can be used as the code to be published (a Module)."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Access",""]],"struct":[["AccessPath",""],["Accesses","Non-empty sequence of field accesses"],["Field",""]]});

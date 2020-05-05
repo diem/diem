@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["StateSynchronizerMsg","StateSynchronizer network messages"]],"fn":[["add_to_network",""]],"struct":[["StateSynchronizerSender","The interface from StateSynchronizer to Networking layer."]],"type":[["StateSynchronizerEvents","The interface from Network to StateSynchronizer layer."]]});

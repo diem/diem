@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Status","The status of a transaction submission can either be a VM status, or some other admission control/mempool specific status e.g. Blacklisted."]]});

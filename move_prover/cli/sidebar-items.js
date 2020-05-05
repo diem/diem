@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["INLINE_PRELUDE","Represents the virtual path to the boogie prelude which is inlined into the binary."]],"enum":[["VerificationScope","Default for what functions to verify."]],"struct":[["Options","Represents options provided to the tool."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["DiscoveryInfo","A validator's discovery information, which describes how to dial the validator's node and full nodes."]]});

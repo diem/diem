@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["v1","This module defines the structs transported during the network messaging protocol v1. These should serialize as per [link](TODO: Add ref)."]]});

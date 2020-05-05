@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["account_limits_module_name",""],["account_limits_window_struct_name",""]],"static":[["ACCOUNT_LIMITS_MODULE",""],["ACCOUNT_LIMITS_WINDOW_STRUCT_NAME",""]]});

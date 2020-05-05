@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["add_to_network","Construct OnchainDiscoveryNetworkSender/Events and register them with the given network builder."]],"struct":[["OnchainDiscoveryNetworkSender","The interface from OnchainDiscovery to Networking layer."]]});

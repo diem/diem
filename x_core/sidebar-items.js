@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["XCoreContext","Core context shared across all of x."]]});

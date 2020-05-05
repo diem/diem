@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["ServerCode","Custom JSON RPC server error codes Ranges from -32000 to -32099 - see `https://www.jsonrpc.org/specification#error_object` for details"]],"struct":[["JsonRpcError",""]]});

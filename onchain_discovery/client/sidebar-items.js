@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["OnchainDiscovery","Actor for querying various sources (remote peers, local storage) for the latest discovery set and notifying the `ConnectivityManager` of updates."]]});

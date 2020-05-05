@@ -1,0 +1,1 @@
+initSidebarItems({"trait":[["ChainState","Trait that describes what Move bytecode runtime expects from the Libra blockchain."]]});

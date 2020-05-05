@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["LocalStorage","A storage backend that stores everything in a local directory."]]});

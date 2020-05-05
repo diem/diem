@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["AdmissionControlStatus","AC response status of submit_transaction to clients."]],"mod":[["proto",""]],"struct":[["SubmitTransactionResponse","Rust structure for SubmitTransactionResponse protobuf definition."]]});

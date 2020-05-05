@@ -1,0 +1,1 @@
+initSidebarItems({"trait":[["InterpreterContext","The `InterpreterContext` context trait specifies the mutations that are allowed to the `TransactionExecutionContext` within the interpreter."]]});

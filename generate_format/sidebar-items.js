@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Corpus","A corpus of Rust types to trace, and optionally record on disk."]]});

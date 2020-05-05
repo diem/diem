@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["VoteProposal","This structure contains all the information needed by safety rules to evaluate a proposal / block for correctness / safety and to produce a Vote."]]});

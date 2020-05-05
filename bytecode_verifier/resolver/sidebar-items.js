@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Resolver","Resolution context for importing types"]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"static":[["ACCOUNT_RECEIVED_EVENT_PATH","Returns the path to the received event counter for an Account resource. It can be used to query the event DB for the given event."]],"struct":[["ReceivedPaymentEvent","Struct that represents a ReceivedPaymentEvent."]]});
