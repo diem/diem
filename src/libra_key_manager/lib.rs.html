@@ -283,6 +283,15 @@
 <span id="283">283</span>
 <span id="284">284</span>
 <span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -305,7 +314,7 @@
 <span class="doccomment">//! KeyManager talks to its own storage through the `LibraSecureStorage::Storage trait.</span>
 <span class="attribute">#![<span class="ident">forbid</span>(<span class="ident">unsafe_code</span>)]</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">libra_interface</span>::<span class="ident">LibraInterface</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">counters</span>::<span class="ident">COUNTERS</span>, <span class="ident">libra_interface</span>::<span class="ident">LibraInterface</span>};
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::{
     <span class="ident">ed25519</span>::{<span class="ident">Ed25519PrivateKey</span>, <span class="ident">Ed25519PublicKey</span>},
     <span class="ident">PrivateKey</span>,
@@ -320,6 +329,7 @@
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>;
 <span class="kw">use</span> <span class="ident">thiserror</span>::<span class="ident">Error</span>;
 
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">counters</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">libra_interface</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
@@ -348,8 +358,6 @@
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">large_enum_variant</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Error</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Error</span> {
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Unknown error: {0}&quot;</span>)]</span>
-    <span class="ident">UnknownError</span>(<span class="ident">String</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Key mismatch, config: {0}, info: {0}&quot;</span>)]</span>
     <span class="ident">ConfigInfoKeyMismatch</span>(<span class="ident">Ed25519PublicKey</span>, <span class="ident">Ed25519PublicKey</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Key mismatch, config: {0}, storage: {0}&quot;</span>)]</span>
@@ -364,6 +372,8 @@
     <span class="ident">SecureStorageError</span>(<span class="attribute">#[<span class="ident">from</span>]</span> <span class="ident">libra_secure_storage</span>::<span class="ident">Error</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;ValidatorInfo not found in ValidatorConfig: {0}&quot;</span>)]</span>
     <span class="ident">ValidatorInfoNotFound</span>(<span class="ident">AccountAddress</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Unknown error: {0}&quot;</span>)]</span>
+    <span class="ident">UnknownError</span>(<span class="ident">String</span>),
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
@@ -408,6 +418,7 @@
             <span class="self">self</span>.<span class="ident">execute_once</span>()<span class="question-mark">?</span>;
 
             <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Going to sleep for {} seconds.&quot;</span>, <span class="ident">SLEEP_PERIOD_SECS</span>);
+            <span class="ident">COUNTERS</span>.<span class="ident">sleeps</span>.<span class="ident">inc</span>();
             <span class="self">self</span>.<span class="ident">time_service</span>.<span class="ident">sleep</span>(<span class="ident">SLEEP_PERIOD_SECS</span>);
         }
     }
@@ -415,14 +426,8 @@
     <span class="doccomment">/// Checks the current state of the validator keys and performs any actions that might be</span>
     <span class="doccomment">/// required (e.g., performing a key rotation).</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute_once</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">evaluate_status</span>()<span class="question-mark">?</span>;
-        <span class="kw">if</span> <span class="ident">status</span> <span class="op">!</span><span class="op">=</span> <span class="ident">Action</span>::<span class="ident">NoAction</span> {
-            <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;The following actions need to be performed: {:?}.&quot;</span>, <span class="ident">status</span>);
-            <span class="self">self</span>.<span class="ident">perform_action</span>(<span class="ident">status</span>)<span class="question-mark">?</span>;
-        } <span class="kw">else</span> {
-            <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;No actions need to be performed.&quot;</span>);
-        }
-        <span class="prelude-val">Ok</span>(())
+        <span class="kw">let</span> <span class="ident">action</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">evaluate_status</span>()<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">perform_action</span>(<span class="ident">action</span>)
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compare_storage_to_config</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
@@ -464,6 +469,7 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">resubmit_consensus_key_transaction</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">storage_key</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">storage</span>.<span class="ident">get_public_key</span>(<span class="ident">CONSENSUS_KEY</span>)<span class="question-mark">?</span>.<span class="ident">public_key</span>;
+        <span class="ident">COUNTERS</span>.<span class="ident">consensus_rotation_tx_resubmissions</span>.<span class="ident">inc</span>();
         <span class="self">self</span>.<span class="ident">submit_key_rotation_transaction</span>(<span class="ident">storage_key</span>)
             .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
     }
@@ -471,6 +477,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">rotate_consensus_key</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ed25519PublicKey</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">new_key</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">storage</span>.<span class="ident">rotate_key</span>(<span class="ident">CONSENSUS_KEY</span>)<span class="question-mark">?</span>;
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Successfully rotated the consensus key in secure storage.&quot;</span>);
+        <span class="ident">COUNTERS</span>.<span class="ident">completed_consensus_key_rotations</span>.<span class="ident">inc</span>();
         <span class="self">self</span>.<span class="ident">submit_key_rotation_transaction</span>(<span class="ident">new_key</span>)
     }
 
@@ -516,6 +523,7 @@
 
         <span class="comment">// If this is inconsistent, then we are waiting on a reconfiguration...</span>
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">ConfigInfoKeyMismatch</span>(..)) <span class="op">=</span> <span class="self">self</span>.<span class="ident">compare_info_to_config</span>() {
+            <span class="ident">COUNTERS</span>.<span class="ident">waiting_on_consensus_reconfiguration</span>.<span class="ident">inc</span>();
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">Action</span>::<span class="ident">NoAction</span>);
         }
 
@@ -539,9 +547,19 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">perform_action</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">action</span>: <span class="ident">Action</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="ident">action</span> {
-            <span class="ident">Action</span>::<span class="ident">FullKeyRotation</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">rotate_consensus_key</span>().<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ()),
-            <span class="ident">Action</span>::<span class="ident">SubmitKeyRotationTransaction</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">resubmit_consensus_key_transaction</span>(),
-            <span class="ident">Action</span>::<span class="ident">NoAction</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(()),
+            <span class="ident">Action</span>::<span class="ident">FullKeyRotation</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;A full consensus key rotation needs to be performed.&quot;</span>);
+                <span class="self">self</span>.<span class="ident">rotate_consensus_key</span>().<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
+            }
+            <span class="ident">Action</span>::<span class="ident">SubmitKeyRotationTransaction</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;The consensus key rotation transaction needs to be resubmitted&quot;</span>);
+                <span class="self">self</span>.<span class="ident">resubmit_consensus_key_transaction</span>()
+            }
+            <span class="ident">Action</span>::<span class="ident">NoAction</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;No actions need to be performed.&quot;</span>);
+                <span class="ident">COUNTERS</span>.<span class="ident">no_actions_required</span>.<span class="ident">inc</span>();
+                <span class="prelude-val">Ok</span>(())
+            }
         }
     }
 }
