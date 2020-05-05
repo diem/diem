@@ -1,0 +1,39 @@
+[package]
+name = "execution-correctness"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+rand = { version = "0.7.3", default-features = false }
+
+executor = { path = "../executor", version = "0.1.0" }
+executor-types = { path = "../executor-types", version = "0.1.0" }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-config = { path = "../../config", version = "0.1.0" }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+libra-logger = { path = "../../common/logger", version = "0.1.0" }
+libra-secure-net = { path = "../../secure/net", version = "0.1.0" }
+libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
+libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+serde = { version = "1.0.106", default-features = false }
+simple-storage-client = { path = "../../storage/simple-storage-client", version = "0.1.0" }
+thiserror = "1.0"
+
+[dev-dependencies]
+config-builder = { path = "../../config/config-builder", version = "0.1.0" }
+executor-utils = { path = "../executor-utils", version = "0.1.0" }
+storage-service = { path = "../../storage/storage-service", version = "0.1.0" }
+tempfile = "3.1.0"
+transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
+workspace-builder = { path = "../../common/workspace-builder", version = "0.1.0" }
+
+[features]
+default = []
+fuzzing = ["libra-config/fuzzing"]
+testing = ["executor-utils/testing"]

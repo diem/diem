@@ -1240,6 +1240,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "execution-correctness"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.28 (registry+https://github.com/rust-lang/crates.io-index)",
+ "config-builder 0.1.0",
+ "executor 0.1.0",
+ "executor-types 0.1.0",
+ "executor-utils 0.1.0",
+ "libra-canonical-serialization 0.1.0",
+ "libra-config 0.1.0",
+ "libra-crypto 0.1.0",
+ "libra-logger 0.1.0",
+ "libra-secure-net 0.1.0",
+ "libra-temppath 0.1.0",
+ "libra-types 0.1.0",
+ "libra-vm 0.1.0",
+ "libra-workspace-hack 0.1.0",
+ "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
+ "simple-storage-client 0.1.0",
+ "storage-service 0.1.0",
+ "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.16 (registry+https://github.com/rust-lang/crates.io-index)",
+ "transaction-builder 0.1.0",
+ "workspace-builder 0.1.0",
+]
+
+[[package]]
 name = "executor"
 version = "0.1.0"
 dependencies = [
