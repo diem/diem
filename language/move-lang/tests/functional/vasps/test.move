@@ -1,9 +1,9 @@
 //! account: validatorvivian, 1000000, 0, validator
-//! account: root, 10000000, 0, true
-//! account: child1, 10000000, 0, true
-//! account: child2, 10000000, 0, true
-//! account: child3, 10000000, 0, true
-//! account: child4, 10000000, 0, true
+//! account: root, 10000000, 0, empty
+//! account: child1, 10000000, 0, empty
+//! account: child2, 10000000, 0, empty
+//! account: child3, 10000000, 0, empty
+//! account: child4, 10000000, 0, empty
 
 //! new-transaction
 //! sender: root

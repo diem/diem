@@ -10,6 +10,7 @@ module VASP {
     use 0x0::AccountType;
     use 0x0::Association;
     use 0x0::LibraTimestamp;
+    use 0x0::Testnet;
     use 0x0::Transaction;
     use 0x0::Vector;
 
@@ -76,7 +77,7 @@ module VASP {
         // account type.
         Transaction::assert(AccountType::is_a<RootVASP>(addr), 7001);
         let root_vasp = AccountType::account_metadata<RootVASP>(addr);
-        root_vasp.expiration_date = LibraTimestamp::now_microseconds() + cert_lifetime();
+        root_vasp.expiration_date = current_time() + cert_lifetime();
         // The sending account must have a TransitionCapability<RootVASP>.
         AccountType::update<RootVASP>(addr, root_vasp);
     }
@@ -118,6 +119,24 @@ module VASP {
     // To-be root-vasp called functions
     ///////////////////////////////////////////////////////////////////////////
 
+    public fun create_root_vasp_credential(
+        human_name: vector<u8>,
+        base_url: vector<u8>,
+        ca_cert: vector<u8>,
+        travel_rule_public_key: vector<u8>
+    ): RootVASP {
+        // NOTE: Only callable in testnet
+        Transaction::assert(Testnet::is_testnet(), 10041);
+        RootVASP {
+           // For testnet, so it should never expire. So set to u64::MAX
+           expiration_date: 18446744073709551615,
+           human_name,
+           base_url,
+           ca_cert,
+           travel_rule_public_key,
+        }
+    }
+
     // An account that wishes to become a root VASP account publishes an
     // `AccountType<RootVASP>` resource under their account. However, they
     // are not a root VASP until the association certifies this account
@@ -128,11 +147,10 @@ module VASP {
         ca_cert: vector<u8>,
         travel_rule_public_key: vector<u8>
     ) {
-        let current_time = LibraTimestamp::now_microseconds();
         // Sanity check for key validity
         Transaction::assert(Vector::length(&travel_rule_public_key) == 32, 7004);
         AccountType::apply_for<RootVASP>(RootVASP {
-            expiration_date: current_time + cert_lifetime(),
+            expiration_date: current_time() + cert_lifetime(),
             human_name,
             base_url,
             ca_cert,
@@ -341,7 +359,7 @@ module VASP {
     }
 
     fun root_credential_expired(root_credential: &RootVASP): bool {
-        root_credential.expiration_date < LibraTimestamp::now_microseconds()
+        root_credential.expiration_date < current_time()
     }
 
     fun assert_sender_is_assoc_vasp_privileged() {
@@ -355,6 +373,10 @@ module VASP {
     // A year in microseconds
     fun cert_lifetime(): u64 {
         31540000000000
+    }
+
+    fun current_time(): u64 {
+        if (LibraTimestamp::is_genesis()) 0 else LibraTimestamp::now_microseconds()
     }
 }
 

@@ -12,8 +12,8 @@ module LibraAccount {
     use 0x0::Libra;
     use 0x0::LibraTransactionTimeout;
     use 0x0::Signature;
+    use 0x0::Testnet;
     use 0x0::Transaction;
-    use 0x0::Unhosted;
     use 0x0::VASP;
     use 0x0::Vector;
 
@@ -147,7 +147,11 @@ module LibraAccount {
             Libra::approx_lbr_for_value<Token>(deposit_value) >= travel_rule_limit;
         // travel rule only applies if the sender and recipient are both VASPs
         let both_vasps = VASP::is_vasp(sender) && VASP::is_vasp(payee);
-        if (above_threshold &&
+        // Don't check the travel rule if we're on testnet and sender
+        // doesn't specify a metadata signature
+        let is_testnet_transfer = Testnet::is_testnet() && Vector::is_empty(&metadata_signature);
+        if (!is_testnet_transfer &&
+            above_threshold &&
             both_vasps &&
             // travel rule does not apply for intra-VASP transactions
             VASP::root_vasp_address(sender) != VASP::root_vasp_address(payee)
@@ -384,15 +388,29 @@ module LibraAccount {
         account.delegated_key_rotation_capability = false;
     }
 
-    // Creates a new account at `fresh_address` with an initial balance of zero and authentication
-    // key `auth_key_prefix` | `fresh_address`
-    // Creating an account at address 0x0 will cause runtime failure as it is a
+    // Creates a new testnet account at `fresh_address` with a balance of
+    // zero `Token` type coins, and authentication key `auth_key_prefix` | `fresh_address`.
+    // Trying to create an account at address 0x0 will cause runtime failure as it is a
     // reserved address for the MoveVM.
-    public fun create_unhosted_account<Token>(fresh_address: address, auth_key_prefix: vector<u8>)
+    public fun create_testnet_account<Token>(fresh_address: address, auth_key_prefix: vector<u8>)
     acquires AccountOperationsCapability {
-        make_account<Token, Unhosted::T>(fresh_address, auth_key_prefix, Unhosted::create())
+        Transaction::assert(Testnet::is_testnet(), 10042);
+         let vasp_credential = VASP::create_root_vasp_credential(
+              // "testnet"
+              x"746573746E6574",
+              // "https://libra.org"
+              x"68747470733A2F2F6C696272612E6F72672F",
+              x"",
+              // An empty travel-rule key
+              x"00000000000000000000000000000000",
+         );
+         make_account<Token, VASP::RootVASP>(fresh_address, auth_key_prefix, vasp_credential);
     }
 
+    // Creates a new `Empty` account at `fresh_address` with a balance of zero and authentication
+    // key `auth_key_prefix` | `fresh_address`.
+    // Creating an account at address 0x0 will cause runtime failure as it is a
+    // reserved address for the MoveVM.
     public fun create_account<Token>(fresh_address: address, auth_key_prefix: vector<u8>)
     acquires AccountOperationsCapability {
         make_account<Token, Empty::T>(fresh_address, auth_key_prefix, Empty::create())

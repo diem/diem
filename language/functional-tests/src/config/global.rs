@@ -6,7 +6,7 @@
 
 use crate::{common::strip, errors::*, genesis_accounts::make_genesis_accounts};
 use language_e2e_tests::{
-    account::{Account, AccountData},
+    account::{Account, AccountData, AccountTypeSpecifier},
     keygen::KeyGen,
 };
 use libra_config::generator;
@@ -70,8 +70,8 @@ pub struct AccountDefinition {
     pub sequence_number: Option<u64>,
     /// Special role this account has in the system (if any)
     pub role: Option<Role>,
-    /// Specifier on whether this account is an empty account or not
-    pub is_empty_account_type: Option<bool>,
+    /// Specifier on what type of account this is. Default is VASP.
+    pub account_type_specifier: Option<AccountTypeSpecifier>,
 }
 
 impl FromStr for Role {
@@ -128,13 +128,15 @@ impl FromStr for Entry {
             let sequence_number = v.get(2).and_then(|s| s.parse::<u64>().ok());
             let role = v.get(3).and_then(|s| s.parse::<Role>().ok());
             // These two are mutually exclusive, so we can double-use the third position
-            let is_empty_account_type = v.get(3).and_then(|s| s.parse::<bool>().ok());
+            let account_type_specifier = v
+                .get(3)
+                .and_then(|s| s.parse::<AccountTypeSpecifier>().ok());
             return Ok(Entry::AccountDefinition(AccountDefinition {
                 name: v[0].to_string(),
                 balance,
                 sequence_number,
                 role,
-                is_empty_account_type,
+                account_type_specifier,
             }));
         }
         Err(ErrorKind::Other(format!("failed to parse '{}' as global config entry", s)).into())
@@ -194,7 +196,7 @@ impl Config {
                             balance.amount,
                             balance.currency_code,
                             def.sequence_number.unwrap_or(0),
-                            def.is_empty_account_type.unwrap_or(false),
+                            def.account_type_specifier.unwrap_or_default(),
                         )
                     } else {
                         let (privkey, pubkey) = keygen.generate_keypair();
@@ -204,7 +206,7 @@ impl Config {
                             balance.amount,
                             balance.currency_code,
                             def.sequence_number.unwrap_or(0),
-                            def.is_empty_account_type.unwrap_or(false),
+                            def.account_type_specifier.unwrap_or_default(),
                         )
                     };
                     let name = def.name.to_ascii_lowercase();
@@ -234,7 +236,7 @@ impl Config {
                 DEFAULT_BALANCE.currency_code.clone(),
                 /* sequence_number */
                 0,
-                /* is_empty_account_type */ false,
+                /* is_empty_account_type */ AccountTypeSpecifier::default(),
             ));
         }
         Ok(Config {

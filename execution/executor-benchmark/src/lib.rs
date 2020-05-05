@@ -22,7 +22,7 @@ use libra_vm::LibraVM;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::BTreeMap, convert::TryFrom, path::PathBuf, sync::mpsc};
 use storage_interface::DbReader;
-use transaction_builder::{encode_create_account_script, encode_transfer_with_metadata_script};
+use transaction_builder::{encode_mint_script, encode_transfer_with_metadata_script};
 
 struct AccountData {
     private_key: Ed25519PrivateKey,
@@ -103,7 +103,7 @@ impl TransactionGenerator {
                     (i * block_size + j + 1) as u64,
                     &self.genesis_key,
                     self.genesis_key.public_key(),
-                    encode_create_account_script(
+                    encode_mint_script(
                         lbr_type_tag(),
                         &account.address,
                         account.auth_key_prefix(),
@@ -314,7 +314,7 @@ fn create_transaction(
         sequence_number,
         program,
         1_000_000, /* max_gas_amount */
-        1,         /* gas_unit_price */
+        0,         /* gas_unit_price */
         expiration_time,
     );
 

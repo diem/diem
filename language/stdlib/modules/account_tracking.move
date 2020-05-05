@@ -77,6 +77,7 @@ module AccountTrack {
         _cap: &CallingCapability,
     ): bool acquires AccountLimitsCapability {
         if (is_unlimited_account(receiving_addr)) return true;
+        Transaction::assert(0x0::Testnet::is_testnet(), 10043);
         let (receiving_limit_addr, receiving_info) = tracking_info(receiving_addr);
         let can_send = AccountLimits::update_deposit_limits<CoinType>(
             amount,
@@ -97,6 +98,7 @@ module AccountTrack {
         _cap: &CallingCapability,
     ): bool acquires AccountLimitsCapability {
         if (is_unlimited_account(addr)) return true;
+        Transaction::assert(0x0::Testnet::is_testnet(), 10044);
         let (limits_addr, account_metadata) = tracking_info(addr);
         let can_withdraw = AccountLimits::update_withdrawal_limits<CoinType>(
             amount,
@@ -119,6 +121,7 @@ module AccountTrack {
     // unhosted account.
     fun update_info(addr: address, info: AccountLimits::Window)
     acquires AccountLimitsCapability {
+        Transaction::assert(0x0::Testnet::is_testnet(), 10045);
         if (AccountType::is_a<Unhosted::T>(addr)) {
             let unhosted_info = Unhosted::update_account_limits(info);
             AccountType::update_with_capability<Unhosted::T>(
@@ -138,6 +141,7 @@ module AccountTrack {
     // Returns the appropriate account limits window along with the address
     // for the limits definition that should be used for `addr`.
     fun tracking_info(addr: address): (address, AccountLimits::Window) {
+        Transaction::assert(0x0::Testnet::is_testnet(), 10046);
         if (AccountType::is_a<Unhosted::T>(addr)) {
             (
                 Unhosted::limits_addr(),

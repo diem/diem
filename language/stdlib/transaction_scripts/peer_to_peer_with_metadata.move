@@ -9,7 +9,7 @@ fun main<Token>(
     metadata_signature: vector<u8>
 ) {
   if (!LibraAccount::exists(payee)) {
-      LibraAccount::create_unhosted_account<Token>(payee, auth_key_prefix);
+      LibraAccount::create_testnet_account<Token>(payee, auth_key_prefix);
   };
   LibraAccount::pay_from_sender_with_metadata<Token>(payee, amount, metadata, metadata_signature)
 }

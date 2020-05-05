@@ -21,6 +21,7 @@ module Genesis {
     use 0x0::TransactionFee;
     use 0x0::Unhosted;
     use 0x0::VASP;
+    use 0x0::Testnet;
 
     fun initialize_association(association_root_addr: address) {
         // Association/cap setup
@@ -32,10 +33,12 @@ module Genesis {
     fun initialize_accounts(
         association_root_addr: address,
         burn_addr: address,
-        assoc_init_balance: u64,
         genesis_auth_key: vector<u8>,
     ) {
         let dummy_auth_key = x"00000000000000000000000000000000";
+
+        // Set that this is testnet
+        Testnet::initialize();
 
         // Event and currency setup
         Event::grant_event_generator();
@@ -53,24 +56,24 @@ module Genesis {
         AccountTrack::initialize();
         LibraAccount::initialize();
         Unhosted::publish_global_limits_definition();
-        LibraAccount::create_unhosted_account<LBR::T>(
+        LibraAccount::create_account<LBR::T>(
             association_root_addr,
             copy dummy_auth_key,
         );
 
         // Create the burn account
-        LibraAccount::create_unhosted_account<LBR::T>(burn_addr, copy dummy_auth_key);
+        LibraAccount::create_account<LBR::T>(burn_addr, copy dummy_auth_key);
 
-        //// Register transaction fee accounts
-        LibraAccount::create_unhosted_account<LBR::T>(0xFEE, copy dummy_auth_key);
+        // Register transaction fee accounts
+        // TODO: Need to convert this to a different account type than unhosted.
+        LibraAccount::create_testnet_account<LBR::T>(0xFEE, copy dummy_auth_key);
 
         // Create the config account
-        LibraAccount::create_unhosted_account<LBR::T>(LibraConfig::default_config_address(), dummy_auth_key);
+        LibraAccount::create_account<LBR::T>(LibraConfig::default_config_address(), dummy_auth_key);
 
         LibraTransactionTimeout::initialize();
         LibraBlock::initialize_block_metadata();
         LibraWriteSetManager::initialize();
-        LibraAccount::mint_to_address<LBR::T>(association_root_addr, assoc_init_balance);
         LibraAccount::rotate_authentication_key(genesis_auth_key);
     }
 

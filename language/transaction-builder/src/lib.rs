@@ -230,6 +230,24 @@ pub fn encode_create_account_script(
     )
 }
 
+/// Encode a program creating a fresh empty account at `account_address`. No (non-zero) balance can
+/// be held by this account. Fails if there is already an account at `account_address`.
+pub fn encode_create_empty_account_script(
+    token: TypeTag,
+    account_address: &AccountAddress,
+    auth_key_prefix: Vec<u8>,
+) -> Script {
+    validate_auth_key_prefix(&auth_key_prefix);
+    Script::new(
+        StdlibScript::CreateEmptyAccount.compiled_bytes().into_vec(),
+        vec![token],
+        vec![
+            TransactionArgument::Address(*account_address),
+            TransactionArgument::U8Vector(auth_key_prefix),
+        ],
+    )
+}
+
 encode_txn_script! {
     name: encode_publish_shared_ed25519_public_key_script,
     args: [public_key: Bytes],

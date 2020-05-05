@@ -16,7 +16,7 @@ main() {
     assert(!move(account_exists), 83);
 
     ten_coins = LibraAccount.withdraw_from_sender<LBR.T>(10);
-    LibraAccount.create_unhosted_account<LBR.T>(copy(addr), LCS.to_bytes<address>(&addr));
+    LibraAccount.create_testnet_account<LBR.T>(copy(addr), LCS.to_bytes<address>(&addr));
     LibraAccount.deposit<LBR.T>(copy(addr), move(ten_coins));
 
     account_exists_now = LibraAccount.exists(copy(addr));

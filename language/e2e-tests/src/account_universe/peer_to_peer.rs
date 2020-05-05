@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account::{lbr_currency_code, Account, AccountData},
+    account::{lbr_currency_code, Account, AccountData, AccountTypeSpecifier},
     account_universe::{
         txn_one_account_result, AUTransactionGen, AccountPair, AccountPairGen, AccountUniverse,
     },
@@ -147,7 +147,7 @@ impl AUTransactionGen for P2PNewReceiverGen {
                 self.amount,
                 lbr_currency_code(),
                 0,
-                false,
+                AccountTypeSpecifier::default(),
             ));
         } else {
             gas_cost = 0;

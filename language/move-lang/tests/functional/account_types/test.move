@@ -1,11 +1,11 @@
-//! account: ta, 1000000, 0, true
-//! account: tb, 1000000, 0, true
-//! account: txa, 1000000, 0, true
-//! account: txb, 1000000, 0, true
-//! account: alice, 1000000, 0, true
-//! account: vivian, 1000000, 0, true
-//! account: bob, 1000000, 0, true
-//! account: alex, 1000000, 0, true
+//! account: ta, 1000000, 0, empty
+//! account: tb, 1000000, 0, empty
+//! account: txa, 1000000, 0, empty
+//! account: txb, 1000000, 0, empty
+//! account: alice, 1000000, 0, empty
+//! account: vivian, 1000000, 0, empty
+//! account: bob, 1000000, 0, empty
+//! account: alex, 1000000, 0, empty
 //! account: bobby
 
 module X {
@@ -30,12 +30,12 @@ module X {
 //! new-transaction
 //! sender: association
 script {
-use 0x0::Unhosted;
+use 0x0::Empty;
 use 0x0::Transaction;
 use 0x0::AccountType;
 
 fun main() {
-    Transaction::assert(AccountType::is_a<Unhosted::T>(Transaction::sender()), 1);
+    Transaction::assert(AccountType::is_a<Empty::T>(Transaction::sender()), 1);
 }
 }
 // check: EXECUTED

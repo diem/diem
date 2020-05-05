@@ -1,11 +1,11 @@
 // Register a sender and recipient VASP, check that applicable payments go through the travel rule
 // amount and signature checks
 
-//! account: payer, 10000000, 0, true
-//! account: child, 10000000, 0, true
-//! account: payee, 10000000, 0, true
-//! account: alice
-//! account: bob
+//! account: payer, 10000000, 0, empty
+//! account: child, 10000000, 0, empty
+//! account: payee, 10000000, 0, empty
+//! account: alice, 10000000, 0, unhosted
+//! account: bob,   10000000, 0, unhosted
 
 // payer applies to be a VASP
 //! sender: payer

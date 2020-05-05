@@ -43,7 +43,7 @@ use libradb::LibraDB;
 use rand::SeedableRng;
 use std::convert::TryFrom;
 use storage_interface::{DbReader, DbReaderWriter};
-use transaction_builder::{encode_create_account_script, encode_transfer_with_metadata_script};
+use transaction_builder::{encode_mint_script, encode_transfer_with_metadata_script};
 
 #[test]
 fn test_empty_db() {
@@ -136,7 +136,7 @@ fn get_mint_transaction(
         /* sequence_number = */ association_seq_num,
         association_key.clone(),
         association_key.public_key(),
-        Some(encode_create_account_script(
+        Some(encode_mint_script(
             lbr_type_tag(),
             &account,
             account_auth_key.prefix().to_vec(),
