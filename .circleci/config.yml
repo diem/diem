@@ -104,7 +104,7 @@ commands:
             ls -all /usr/local/cargo
             du -ssh /usr/local/cargo
   send_message:
-    description: Send message to the specified webhook.
+    description: Send message to the specified webhook, if no webhook is set simply return.
     parameters:
       payload_file:
         description: File containing the message payload
@@ -142,8 +142,15 @@ commands:
                   ]
                 }' > /tmp/payload
               cat /tmp/payload
-              curl -X POST -H 'Content-type: application/json' -d @/tmp/payload \
+              if [ <<parameters.webhook>> ]; then
+                curl -X POST -H 'Content-type: application/json' -d @/tmp/payload \
                 <<parameters.webhook>>
+              else
+                echo "Not sending messages as no webhook url is set."
+                echo "Chances are you are not building on master or circle is misconfigured."
+                echo "webhook is <<parameters.webhook>>"
+                exit 0
+              fi
             fi
           when: always
   build_setup:
