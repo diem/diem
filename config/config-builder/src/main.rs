@@ -35,7 +35,7 @@ struct FaucetArgs {
     seed: Option<String>,
     #[structopt(short = "n", long)]
     /// Specify the number of validators coded in genesis blob to produce waypoint.
-    nodes_in_genesis: usize,
+    validators_in_genesis: usize,
 }
 
 #[derive(Debug, StructOpt)]
@@ -51,7 +51,7 @@ struct FullNodeArgs {
     // Describe the validator networrk
     #[structopt(short = "n", long, default_value = "1")]
     /// Specify the number of Validators to configure in the genesis blob.
-    nodes: usize,
+    validators: usize,
     #[structopt(short = "s", long)]
     /// Use the provided seed for generating keys for each of the validators.
     seed: Option<String>,
@@ -74,7 +74,7 @@ struct FullNodeArgs {
     full_nodes: usize,
     #[structopt(short = "i", long, default_value = "0")]
     /// Specify the index of the FullNode being configured.  Must be in the range 0..f-1.
-    index: usize,
+    full_node_index: usize,
     #[structopt(short = "l", long, parse(from_str = parse_addr))]
     /// Listening address for this node.
     listen: NetworkAddress,
@@ -118,17 +118,17 @@ struct ValidatorCommonArgs {
     data_dir: PathBuf,
     #[structopt(short = "i", long, default_value = "0")]
     /// Specify the index of the Validator being configured.  Must be in the range 0..n-1.
-    index: usize,
+    validator_index: usize,
     #[structopt(short = "o", long, parse(from_os_str))]
     /// The output directory.
     output_dir: PathBuf,
     #[structopt(short = "n", long, default_value = "1")]
     /// Specify the potential number of Validators to configure in the genesis blob.
-    nodes: usize,
+    validators: usize,
     #[structopt(short = "g", long)]
     /// Specify the number of Validators coded in genesis blob, will use all validators if
     /// unspecified.  Must be in the range 0..n-1.
-    nodes_in_genesis: Option<usize>,
+    validators_in_genesis: Option<usize>,
     #[structopt(long, parse(from_str = parse_socket_addr))]
     /// Specify the IP:Port for Safety rules. If this is not defined, SafetyRules will run in its
     /// default configuration.
@@ -174,7 +174,7 @@ fn main() {
 
 fn build_faucet(args: FaucetArgs) {
     let mut config_builder = ValidatorConfig::new();
-    config_builder.nodes(args.nodes_in_genesis);
+    config_builder.validators(args.validators_in_genesis);
 
     if let Some(seed) = args.seed.as_ref() {
         let seed = hex::decode(seed).expect("Invalid hex in seed.");
@@ -239,10 +239,10 @@ fn build_full_node_config_builder(args: &FullNodeArgs) -> FullNodeConfig {
     config_builder
         .advertised(args.advertised.clone())
         .bootstrap(args.bootstrap.clone())
-        .full_node_index(args.index)
+        .full_node_index(args.full_node_index)
         .full_nodes(args.full_nodes)
         .listen(args.listen.clone())
-        .nodes(args.nodes)
+        .validators(args.validators)
         .template(load_template(args.template.as_ref()));
 
     if let Some(fn_seed) = args.full_node_seed.as_ref() {
@@ -282,10 +282,10 @@ fn build_validator(args: ValidatorArgs) {
     config_builder
         .advertised(args.advertised)
         .bootstrap(args.bootstrap)
-        .index(args.validator_common.index)
+        .validator_index(args.validator_common.validator_index)
         .listen(args.listen)
-        .nodes(args.validator_common.nodes)
-        .nodes_in_genesis(args.validator_common.nodes_in_genesis);
+        .validators(args.validator_common.validators)
+        .validators_in_genesis(args.validator_common.validators_in_genesis);
 
     if let Some(seed) = args.validator_common.seed.as_ref() {
         config_builder.seed(parse_seed(seed));
@@ -300,8 +300,8 @@ fn safety_rules_common(args: &ValidatorCommonArgs) -> ValidatorConfig {
     let mut config_builder = ValidatorConfig::new();
 
     config_builder
-        .index(args.index)
-        .nodes(args.nodes)
+        .validator_index(args.validator_index)
+        .validators(args.validators)
         .safety_rules_addr(args.safety_rules_addr.clone())
         .safety_rules_backend(args.safety_rules_backend.clone())
         .safety_rules_host(args.safety_rules_host.clone())

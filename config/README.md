@@ -38,33 +38,34 @@ configuration from many of the services.
 
 ## Building a Test Network (TestNet)
 
-`config-builder` builds an entire network's or swarm's configuration including the
-genesis blob. It takes as one of its input parameters an index that selects, which
-of these configs to return. This can be used to create a Libra TestNet by specifying
-distinct indices for each validator. Similarly the tool can be used to add Fullnodes
-to an existing network.  Finally, it enables generation of a mint/faucet client
-capable of performing mint transactions/creating accounts.
+`config-builder` builds an entire configuration for a Validator or FullNode,
+including the genesis blob. It takes as one of its input parameters an index that
+specifies the specific node config to return. This can be used to create a Libra
+TestNet by constructing compatible configurations for the full set of Validators.
+Similarly the tool can be used to add Fullnodes to an existing network.  Finally,
+it enables generation of a mint/faucet client capable of performing mint
+transactions/creating accounts.
 
 ## Generating a new TestNet
 
-The only requirements for generating a TestNet configuration are: (i) having IP
-addresses and ports for each Libra node; (ii) a pre-agreed upon shared secret;
-and (iii) a fixed ordering for each Node in the network. Full node networks can
-either be added to existing configs or generate completely new configs.
+The only requirements for generating the configuration for a full TestNet are: (i)
+having IP addresses and ports for each Validator; (ii) a pre-agreed upon shared secret
+for the Validator network; and (iii) a fixed ordering for the Validators in the
+network. FullNode configs can either be newly generated added to existing configs.
 
-Each peer, `I`, can then generate their own configurations by:
+The configuration for validator `I`, can be produced by:
 
     config-builder validator \
-        -a $PUBLIC_MULTIADDR_FOR_NODE_I \
-        -b $PUBLIC_MULTIADDR_FOR_NODE_0 \
+        -a $PUBLIC_MULTIADDR_FOR_VALIDATOR_I \
+        -b $PUBLIC_MULTIADDR_FOR_VALIDATOR_0 \
         -d /opt/libra/data \
         -i $I \
-        -l $ANY_MULTIADDR_FOR_NODE_I \
-        -n $TOTAL_NUMBER_OF_NODES \
+        -l $ANY_MULTIADDR_FOR_VALIDATOR_I \
+        -n $TOTAL_NUMBER_OF_VALIDATORS \
         -o /opt/libra/etc \
         -s $SHARED_SECRET
 
-As an example, this is the 2nd node (offset 1) in a set of 4:
+As an example, this is the 2nd Validator (offset 1) in a 4 Validator TestNet:
 
     config-builder validator \
         -a "/ip4/1.1.1.2/tcp/7000" \
@@ -82,7 +83,7 @@ To create a mint service's key:
         -o /opt/libra/etc \
         -s 0123456789abcdef101112131415161718191a1b1c1d1e1f2021222324252627
 
-Adding a Fullnode network is similar to instantiating a Validator config.
+Instantiating a FullNode config is similar to instantiating a Validator config.
 Though there are three possible routes: (i) creating a new node config; (ii)
 extending an existing Fullnode with another network; and (iii) extending a
 Validator with a Fullnode network. The input is similar for all three cases
@@ -94,27 +95,42 @@ Note: currently, the tool does not support the creation of trees of Fullnode
 networks.
 
     config-builder full-node (create | extend) \
-        -a $PUBLIC_MULTIADDR_FOR_NODE_I \
-        -b $PUBLIC_MULTIADDR_FOR_NODE_0 \
+        -a $PUBLIC_MULTIADDR_FOR_FULL_NODE_I \
+        -b $PUBLIC_MULTIADDR_FOR_FULL_NODE_0 \
         -d /opt/libra/data \
-        -l $ANY_MULTIADDR_FOR_NODE_I \
-        -n $TOTAL_NUMBER_OF_NODES \
+        -l $ANY_MULTIADDR_FOR_FULL_NODE_I \
+        -n $TOTAL_NUMBER_OF_VALIDATORS \
         -o /opt/libra/etc \
-        -s $SHARED_SECRET \
+        -s $VALIDATOR_SHARED_SECRET \
         [ -i $I -f $TOTAL_NUMBER_OF_FULL_NODES -c $FULL_NODE_SHARED_SECRET | -p ]
 
-Here's an example of adding a 4 membered and authenticated network connecting to the
-node above:
+Here an example of extending the Validator configuration above with a FullNode
+configuration.
+
+    config-builder full-node extend \
+        -a "/ip4/1.1.1.2/tcp/7100" \
+        -b "/ip4/1.1.1.2/tcp/7100" \
+        -d /opt/libra/data \
+        -l "/ip4/0.0.0.0/tcp/7100" \
+        -n 4 \
+        -o /opt/libra/etc \
+        -s 0123456789abcdef101112131415161718191a1b1c1d1e1f2021222324252627 \
+        -i 0 \
+        -f 4 \
+        -c 28292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f4041424344454547
+
+Here is an example of creating a new FullNode that will connect to the
+Validator/FullNode hybrid configured above.
 
     config-builder full-node create \
-        -a "/ip4/1.1.1.2/tcp/7100" \
+        -a "/ip4/1.1.1.3/tcp/7100" \
         -b "/ip4/1.1.1.2/tcp/7100" \
         -d /opt/libra/fn/data \
         -l "/ip4/0.0.0.0/tcp/7100" \
         -n 4 \
         -o /opt/libra/fn/etc \
         -s 0123456789abcdef101112131415161718191a1b1c1d1e1f2021222324252627 \
-        -i 0 \
+        -i 1 \
         -f 4 \
         -c 28292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f4041424344454547
 
@@ -170,7 +186,7 @@ Configuration tests serve several purposes:
 - Verifying that default filename assumptions are maintained
 
 Several of the defaults in the configurations, in particular paths and
-addresses, have dependecies outside the Libra code base. These tests serve as
+addresses, have dependencies outside the Libra code base. These tests serve as
 a reminder that there may be rammifications from breaking these tests, which
 may impact production deployments.
 

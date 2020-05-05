@@ -83,7 +83,7 @@ impl ValidatorConfig {
         self
     }
 
-    pub fn index(&mut self, index: usize) -> &mut Self {
+    pub fn validator_index(&mut self, index: usize) -> &mut Self {
         self.index = index;
         self
     }
@@ -93,12 +93,12 @@ impl ValidatorConfig {
         self
     }
 
-    pub fn nodes(&mut self, nodes: usize) -> &mut Self {
+    pub fn validators(&mut self, nodes: usize) -> &mut Self {
         self.nodes = nodes;
         self
     }
 
-    pub fn nodes_in_genesis(&mut self, nodes_in_genesis: Option<usize>) -> &mut Self {
+    pub fn validators_in_genesis(&mut self, nodes_in_genesis: Option<usize>) -> &mut Self {
         self.nodes_in_genesis = nodes_in_genesis;
         self
     }
@@ -304,7 +304,11 @@ mod test {
     #[test]
     fn verify_correctness() {
         let mut validator_config = ValidatorConfig::new();
-        let config = validator_config.nodes(2).index(1).build().unwrap();
+        let config = validator_config
+            .validators(2)
+            .validator_index(1)
+            .build()
+            .unwrap();
         let network = config.validator_network.as_ref().unwrap();
         let (seed_peer_id, seed_peer_ips) = network.seed_peers.seed_peers.iter().next().unwrap();
         assert!(&network.peer_id != seed_peer_id);
@@ -323,11 +327,15 @@ mod test {
 
     #[test]
     fn verify_same_genesis() {
-        let config1 = ValidatorConfig::new().nodes(10).index(1).build().unwrap();
+        let config1 = ValidatorConfig::new()
+            .validators(10)
+            .validator_index(1)
+            .build()
+            .unwrap();
         let config2 = ValidatorConfig::new()
-            .nodes(13)
-            .index(12)
-            .nodes_in_genesis(Some(10))
+            .validators(13)
+            .validator_index(12)
+            .validators_in_genesis(Some(10))
             .build()
             .unwrap();
 
