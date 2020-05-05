@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
     io::{Read, Write},
+    net::SocketAddr,
     path::PathBuf,
 };
 
@@ -19,6 +20,7 @@ pub struct ExecutionConfig {
     #[serde(skip)]
     pub genesis: Option<Transaction>,
     pub genesis_file_location: PathBuf,
+    pub service: ExecutionCorrectnessService,
 }
 
 impl std::fmt::Debug for ExecutionConfig {
@@ -33,7 +35,8 @@ impl std::fmt::Debug for ExecutionConfig {
             f,
             ", genesis_file_location: {:?} }}",
             self.genesis_file_location
-        )
+        )?;
+        self.service.fmt(f)
     }
 }
 
@@ -42,6 +45,7 @@ impl Default for ExecutionConfig {
         ExecutionConfig {
             genesis: None,
             genesis_file_location: PathBuf::new(),
+            service: ExecutionCorrectnessService::Local,
         }
     }
 }
@@ -70,6 +74,29 @@ impl ExecutionConfig {
         }
         Ok(())
     }
+}
+
+/// Defines how execution correctness should be run
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ExecutionCorrectnessService {
+    /// This runs execution correctness in the same thread as event processor.
+    Local,
+    /// This is the production, separate service approach
+    Process(RemoteExecutionService),
+    /// This runs safety rules in the same thread as event processor but data is passed through the
+    /// light weight RPC (serializer)
+    Serializer,
+    /// This instructs Consensus that this is an test model, where Consensus should take the
+    /// existing config, create a new process, and pass to it the config
+    SpawnedProcess(RemoteExecutionService),
+    /// This creates a separate thread to run execution correctness, it is similar to a fork / exec style
+    Thread,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct RemoteExecutionService {
+    pub server_address: SocketAddr,
 }
 
 #[cfg(test)]

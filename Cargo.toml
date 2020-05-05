@@ -42,6 +42,7 @@ members = [
     "devtools/x-core",
     "devtools/x-lint",
     "execution/db-bootstrapper",
+    "execution/execution-correctness",
     "execution/executor",
     "execution/executor-benchmark",
     "execution/executor-types",

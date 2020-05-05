@@ -244,7 +244,7 @@ impl SpeculationCache {
             .lock()
             .unwrap()
             .get(&block_id)
-            .ok_or(Error::BlockNotFound(block_id.clone()))?
+            .ok_or_else(|| Error::BlockNotFound(*block_id))?
             .upgrade()
             .ok_or_else(|| {
                 format_err!(
