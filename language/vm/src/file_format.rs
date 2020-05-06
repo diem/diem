@@ -1220,7 +1220,7 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::CastU8 => write!(f, "CastU8"),
             Bytecode::CastU64 => write!(f, "CastU64"),
             Bytecode::CastU128 => write!(f, "CastU128"),
-            Bytecode::LdConst(a) => write!(f, "LdAddr({})", a),
+            Bytecode::LdConst(a) => write!(f, "LdConst({})", a),
             Bytecode::LdTrue => write!(f, "LdTrue"),
             Bytecode::LdFalse => write!(f, "LdFalse"),
             Bytecode::CopyLoc(a) => write!(f, "CopyLoc({})", a),
