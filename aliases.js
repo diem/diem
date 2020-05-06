@@ -85,6 +85,7 @@ ALIASES["noise"] = {};
 ALIASES["num_variants"] = {};
 ALIASES["onchain_discovery"] = {};
 ALIASES["option_future"] = {};
+ALIASES["resource_viewer"] = {};
 ALIASES["safety_rules"] = {};
 ALIASES["schemadb"] = {};
 ALIASES["scratchpad"] = {};

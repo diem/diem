@@ -85,6 +85,7 @@ sourcesIndex["noise"] = {"name":"","files":["lib.rs","noise_fuzzing.rs","socket.
 sourcesIndex["num_variants"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["onchain_discovery"] = {"name":"","files":["client.rs","lib.rs","network_interface.rs","service.rs","types.rs"]};
 sourcesIndex["option_future"] = {"name":"","files":["lib.rs"]};
+sourcesIndex["resource_viewer"] = {"name":"","files":["cached_access_path_table.rs","lib.rs","module_cache.rs","resolver.rs","value.rs"]};
 sourcesIndex["safety_rules"] = {"name":"","files":["consensus_state.rs","counters.rs","error.rs","lib.rs","local_client.rs","persistent_safety_storage.rs","process.rs","process_client_wrapper.rs","remote_service.rs","safety_rules.rs","safety_rules_manager.rs","serializer.rs","spawned_process.rs","t_safety_rules.rs","test_utils.rs","thread.rs"]};
 sourcesIndex["schemadb"] = {"name":"","files":["lib.rs","schema.rs"]};
 sourcesIndex["scratchpad"] = {"name":"","dirs":[{"name":"sparse_merkle","files":["mod.rs","node.rs"]}],"files":["lib.rs"]};

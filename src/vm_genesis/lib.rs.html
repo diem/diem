@@ -415,6 +415,27 @@
 <span id="415">415</span>
 <span id="416">416</span>
 <span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -442,11 +463,11 @@
     <span class="ident">on_chain_config</span>::{<span class="ident">config_address</span>, <span class="ident">new_epoch_event_key</span>, <span class="ident">VMPublishingOption</span>},
     <span class="ident">transaction</span>::{<span class="ident">authenticator</span>::<span class="ident">AuthenticationKey</span>, <span class="ident">ChangeSet</span>, <span class="ident">Script</span>, <span class="ident">Transaction</span>},
 };
-<span class="kw">use</span> <span class="ident">move_vm_state</span>::{<span class="ident">data_cache</span>::<span class="ident">BlockDataCache</span>, <span class="ident">execution_context</span>::<span class="ident">ExecutionContext</span>};
-<span class="kw">use</span> <span class="ident">move_vm_types</span>::{<span class="ident">chain_state</span>::<span class="ident">ChainState</span>, <span class="ident">values</span>::<span class="ident">Value</span>};
+<span class="kw">use</span> <span class="ident">move_vm_state</span>::<span class="ident">data_cache</span>::<span class="ident">BlockDataCache</span>;
+<span class="kw">use</span> <span class="ident">move_vm_types</span>::{<span class="ident">chain_state</span>::<span class="ident">ChainState</span>, <span class="ident">loaded_data</span>::<span class="ident">types</span>::<span class="ident">FatStructType</span>, <span class="ident">values</span>::<span class="ident">Value</span>};
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">convert</span>::<span class="ident">TryFrom</span>;
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">btree_map</span>::<span class="ident">BTreeMap</span>, <span class="ident">convert</span>::<span class="ident">TryFrom</span>};
 <span class="kw">use</span> <span class="ident">stdlib</span>::{<span class="ident">stdlib_modules</span>, <span class="ident">transaction_scripts</span>::<span class="ident">StdlibScript</span>, <span class="ident">StdLibOptions</span>};
 <span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">access</span>::<span class="ident">ModuleAccess</span>;
 
@@ -486,7 +507,7 @@
     <span class="ident">validators</span>: <span class="kw-2">&amp;</span>[<span class="ident">ValidatorRegistration</span>],
     <span class="ident">stdlib_modules</span>: <span class="kw-2">&amp;</span>[<span class="ident">VerifiedModule</span>],
     <span class="ident">vm_publishing_option</span>: <span class="ident">VMPublishingOption</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ChangeSet</span> {
+) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">ChangeSet</span>, <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">FatStructType</span><span class="op">&gt;</span>) {
     <span class="comment">// create a data view for move_vm</span>
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state_view</span> <span class="op">=</span> <span class="ident">GenesisStateView</span>::<span class="ident">new</span>();
     <span class="kw">for</span> <span class="ident">module</span> <span class="kw">in</span> <span class="ident">stdlib_modules</span> {
@@ -515,11 +536,14 @@
     <span class="ident">publish_stdlib</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">interpreter_context</span>, <span class="ident">stdlib_modules</span>);
 
     <span class="ident">verify_genesis_write_set</span>(<span class="ident">interpreter_context</span>.<span class="ident">events</span>());
-    <span class="ident">ChangeSet</span>::<span class="ident">new</span>(
-        <span class="ident">interpreter_context</span>
-            .<span class="ident">make_write_set</span>()
-            .<span class="ident">expect</span>(<span class="string">&quot;Genesis WriteSet failure&quot;</span>),
-        <span class="ident">interpreter_context</span>.<span class="ident">events</span>().<span class="ident">to_vec</span>(),
+    (
+        <span class="ident">ChangeSet</span>::<span class="ident">new</span>(
+            <span class="ident">interpreter_context</span>
+                .<span class="ident">make_write_set</span>()
+                .<span class="ident">expect</span>(<span class="string">&quot;Genesis WriteSet failure&quot;</span>),
+            <span class="ident">interpreter_context</span>.<span class="ident">events</span>().<span class="ident">to_vec</span>(),
+        ),
+        <span class="ident">interpreter_context</span>.<span class="ident">get_type_map</span>(),
     )
 }
 
@@ -529,12 +553,15 @@
     <span class="ident">stdlib_modules</span>: <span class="kw-2">&amp;</span>[<span class="ident">VerifiedModule</span>],
     <span class="ident">vm_publishing_option</span>: <span class="ident">VMPublishingOption</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Transaction</span> {
-    <span class="ident">Transaction</span>::<span class="ident">WaypointWriteSet</span>(<span class="ident">encode_genesis_change_set</span>(
-        <span class="kw-2">&amp;</span><span class="ident">public_key</span>,
-        <span class="ident">validators</span>,
-        <span class="ident">stdlib_modules</span>,
-        <span class="ident">vm_publishing_option</span>,
-    ))
+    <span class="ident">Transaction</span>::<span class="ident">WaypointWriteSet</span>(
+        <span class="ident">encode_genesis_change_set</span>(
+            <span class="kw-2">&amp;</span><span class="ident">public_key</span>,
+            <span class="ident">validators</span>,
+            <span class="ident">stdlib_modules</span>,
+            <span class="ident">vm_publishing_option</span>,
+        )
+        .<span class="number">0</span>,
+    )
 }
 
 <span class="doccomment">/// Create an initialize Association, Transaction Fee and Core Code accounts.</span>
@@ -806,6 +833,21 @@
         <span class="ident">stdlib_modules</span>,
         <span class="ident">VMPublishingOption</span>::<span class="ident">Open</span>,
     )
+    .<span class="number">0</span>
+}
+
+<span class="doccomment">/// Generate an artificial genesis `ChangeSet` for testing</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">generate_genesis_type_mapping</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">FatStructType</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">stdlib_modules</span> <span class="op">=</span> <span class="ident">stdlib_modules</span>(<span class="ident">StdLibOptions</span>::<span class="ident">Staged</span>);
+    <span class="kw">let</span> <span class="ident">swarm</span> <span class="op">=</span> <span class="ident">libra_config</span>::<span class="ident">generator</span>::<span class="ident">validator_swarm_for_testing</span>(<span class="number">10</span>);
+
+    <span class="ident">encode_genesis_change_set</span>(
+        <span class="kw-2">&amp;</span><span class="ident">GENESIS_KEYPAIR</span>.<span class="number">1</span>,
+        <span class="kw-2">&amp;</span><span class="ident">validator_registrations</span>(<span class="kw-2">&amp;</span><span class="ident">swarm</span>.<span class="ident">nodes</span>),
+        <span class="ident">stdlib_modules</span>,
+        <span class="ident">VMPublishingOption</span>::<span class="ident">Open</span>,
+    )
+    .<span class="number">1</span>
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">validator_registrations</span>(<span class="ident">node_configs</span>: <span class="kw-2">&amp;</span>[<span class="ident">NodeConfig</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ValidatorRegistration</span><span class="op">&gt;</span> {

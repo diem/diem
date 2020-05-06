@@ -275,6 +275,7 @@
 <span id="275">275</span>
 <span id="276">276</span>
 <span id="277">277</span>
+<span id="278">278</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -384,6 +385,7 @@
                 <span class="kw-2">&amp;</span><span class="ident">genesis_modules</span>,
                 <span class="ident">publishing_options</span>,
             )
+            .<span class="number">0</span>
         };
         <span class="self">Self</span>::<span class="ident">from_genesis</span>(<span class="ident">genesis_change_set</span>.<span class="ident">write_set</span>())
     }

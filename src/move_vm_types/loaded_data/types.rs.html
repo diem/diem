@@ -265,7 +265,6 @@
 <span id="265">265</span>
 <span id="266">266</span>
 <span id="267">267</span>
-<span id="268">268</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -281,12 +280,11 @@
 <span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">errors</span>::<span class="ident">VMResult</span>;
 
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">access_path</span>::{<span class="ident">AccessPath</span>, <span class="ident">Accesses</span>};
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
 <span class="doccomment">/// VM representation of a struct type in Move.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
-<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>, <span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>))]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>, <span class="ident">derive</span>(<span class="ident">Eq</span>, <span class="ident">PartialEq</span>))]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FatStructType</span> {
     <span class="kw">pub</span> <span class="ident">address</span>: <span class="ident">AccountAddress</span>,
     <span class="kw">pub</span> <span class="ident">module</span>: <span class="ident">Identifier</span>,
@@ -303,8 +301,8 @@
 <span class="doccomment">/// should NOT be serialized in any form. Currently we still derive `Serialize` and</span>
 <span class="doccomment">/// `Deserialize`, but this is a hack for fuzzing and should be guarded behind the</span>
 <span class="doccomment">/// &quot;fuzzing&quot; feature flag. We should look into ways to get rid of this.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
-<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>, <span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>))]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>, <span class="ident">derive</span>(<span class="ident">Eq</span>, <span class="ident">PartialEq</span>))]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">FatType</span> {
     <span class="ident">Bool</span>,
     <span class="ident">U8</span>,
