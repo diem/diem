@@ -9,7 +9,7 @@ use bytecode_verifier::{
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
-    access_path::{AccessPath, Accesses},
+    access_path::AccessPath,
     language_storage::{ModuleId, StructTag, TypeTag},
     vm_error::{StatusCode, VMStatus},
 };
@@ -1275,7 +1275,7 @@ impl LibraType {
             name: fat_type.name.clone(),
             type_params,
         };
-        let resource_key = AccessPath::resource_access_vec(&tag, &Accesses::empty());
+        let resource_key = AccessPath::resource_access_vec(&tag);
         Ok(Self {
             fat_type,
             resource_key,

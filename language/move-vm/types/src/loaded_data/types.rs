@@ -11,7 +11,7 @@ use move_core_types::identifier::Identifier;
 use std::fmt::Write;
 use vm::errors::VMResult;
 
-use libra_types::access_path::{AccessPath, Accesses};
+use libra_types::access_path::AccessPath;
 use serde::{Deserialize, Serialize};
 
 /// VM representation of a struct type in Move.
@@ -50,10 +50,7 @@ pub enum FatType {
 
 impl FatStructType {
     pub fn resource_path(&self) -> VMResult<Vec<u8>> {
-        Ok(AccessPath::resource_access_vec(
-            &self.struct_tag()?,
-            &Accesses::empty(),
-        ))
+        Ok(AccessPath::resource_access_vec(&self.struct_tag()?))
     }
 
     pub fn subst(&self, ty_args: &[FatType]) -> VMResult<FatStructType> {

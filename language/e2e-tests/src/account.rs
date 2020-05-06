@@ -6,7 +6,7 @@
 use crate::{gas_costs, keygen::KeyGen};
 use libra_crypto::ed25519::*;
 use libra_types::{
-    access_path::{AccessPath, Accesses},
+    access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{
         self, from_currency_code_string, type_tag_for_currency_code, AccountResource,
@@ -137,7 +137,7 @@ impl Account {
     fn make_access_path(&self, tag: StructTag) -> AccessPath {
         // TODO: we need a way to get the type (FatStructType) of the Account in place
         let resource_tag = ResourceKey::new(self.addr, tag);
-        AccessPath::resource_access_path(&resource_tag, &Accesses::empty())
+        AccessPath::resource_access_path(&resource_tag)
     }
 
     /// Changes the keys for this account to the provided ones.

@@ -7,7 +7,7 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
-    access_path::{AccessPath, Accesses},
+    access_path::AccessPath,
     account_address::AccountAddress,
     account_config,
     block_metadata::BlockMetadata,
@@ -1054,7 +1054,7 @@ fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
 /// Get the AccessPath to a resource stored under `address` with type name `tag`
 fn create_access_path(address: AccountAddress, tag: StructTag) -> AccessPath {
     let resource_tag = ResourceKey::new(address, tag);
-    AccessPath::resource_access_path(&resource_tag, &Accesses::empty())
+    AccessPath::resource_access_path(&resource_tag)
 }
 
 fn get_transaction_output(

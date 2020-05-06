@@ -43,154 +43,13 @@ use crate::{
 };
 use anyhow::{Error, Result};
 use libra_crypto::hash::{CryptoHash, HashValue};
-use mirai_annotations::*;
-use move_core_types::identifier::{IdentStr, Identifier};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
-use radix_trie::TrieKey;
 use serde::{Deserialize, Serialize};
 use std::{
     convert::{TryFrom, TryInto},
     fmt,
-    slice::Iter,
 };
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Hash, Eq, Clone, Ord, PartialOrd)]
-pub struct Field(Identifier);
-
-impl Field {
-    pub fn new(name: Identifier) -> Field {
-        Field(name)
-    }
-
-    pub fn name(&self) -> &IdentStr {
-        &self.0
-    }
-}
-
-impl fmt::Display for Field {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-#[derive(Eq, Hash, Serialize, Deserialize, Debug, Clone, PartialEq, Ord, PartialOrd)]
-pub enum Access {
-    Field(Field),
-    Index(u64),
-}
-
-impl Access {
-    pub fn new(name: Identifier) -> Self {
-        Access::Field(Field::new(name))
-    }
-}
-
-impl fmt::Display for Access {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Access::Field(field) => write!(f, "\"{}\"", field),
-            Access::Index(i) => write!(f, "{}", i),
-        }
-    }
-}
-
-/// Non-empty sequence of field accesses
-#[derive(Eq, Hash, Serialize, Deserialize, Debug, Clone, PartialEq, Ord, PartialOrd)]
-pub struct Accesses(Vec<Access>);
-// invariant self.0.len() == 1
-
-/// SEPARATOR is used as a delimiter between fields. It should not be a legal part of any identifier
-/// in the language
-const SEPARATOR: char = '/';
-
-impl Accesses {
-    pub fn empty() -> Self {
-        Accesses(vec![])
-    }
-
-    pub fn new(field: Field) -> Self {
-        Accesses(vec![Access::Field(field)])
-    }
-
-    /// Add a field to the end of the sequence
-    pub fn add_field_to_back(&mut self, field: Field) {
-        self.0.push(Access::Field(field))
-    }
-
-    /// Add an index to the end of the sequence
-    pub fn add_index_to_back(&mut self, idx: u64) {
-        self.0.push(Access::Index(idx))
-    }
-
-    pub fn append(&mut self, accesses: &mut Accesses) {
-        self.0.append(&mut accesses.0)
-    }
-
-    /// Returns the first field in the sequence and reference to the remaining fields
-    pub fn split_first(&self) -> (&Access, &[Access]) {
-        self.0.split_first().unwrap()
-    }
-
-    /// Return the last access in the sequence
-    pub fn last(&self) -> &Access {
-        assume!(self.0.last().is_some()); // follows from invariant
-        self.0.last().unwrap() // guaranteed not to fail because sequence is non-empty
-    }
-
-    pub fn iter(&self) -> Iter<'_, Access> {
-        self.0.iter()
-    }
-
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    pub fn as_separated_string(&self) -> String {
-        let mut path = String::new();
-        for access in self.0.iter() {
-            match access {
-                Access::Field(s) => {
-                    let access_str = s.name().as_str();
-                    assert!(access_str != "");
-                    path.push_str(access_str)
-                }
-                Access::Index(i) => path.push_str(i.to_string().as_ref()),
-            };
-            path.push(SEPARATOR);
-        }
-        path
-    }
-
-    pub fn take_nth(&self, new_len: usize) -> Accesses {
-        assert!(self.0.len() >= new_len);
-        Accesses(self.0.clone().into_iter().take(new_len).collect())
-    }
-}
-
-impl<'a> IntoIterator for &'a Accesses {
-    type Item = &'a Access;
-    type IntoIter = Iter<'a, Access>;
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.iter()
-    }
-}
-
-impl From<Vec<Access>> for Accesses {
-    fn from(accesses: Vec<Access>) -> Accesses {
-        Accesses(accesses)
-    }
-}
-
-impl TrieKey for Accesses {
-    fn encode_bytes(&self) -> Vec<u8> {
-        self.as_separated_string().into_bytes()
-    }
-}
 
 #[derive(Clone, Eq, PartialEq, Default, Hash, Serialize, Deserialize, Ord, PartialOrd)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
@@ -231,22 +90,18 @@ impl AccessPath {
         Self::new(address, ACCOUNT_RECEIVED_EVENT_PATH.to_vec())
     }
 
-    pub fn resource_access_vec(tag: &StructTag, accesses: &Accesses) -> Vec<u8> {
+    pub fn resource_access_vec(tag: &StructTag) -> Vec<u8> {
         let mut key = vec![];
         key.push(Self::RESOURCE_TAG);
 
         key.append(&mut tag.hash().to_vec());
-
-        // We don't need accesses in production right now. Accesses are appended here just for
-        // passing the old tests.
-        key.append(&mut accesses.as_separated_string().into_bytes());
         key
     }
 
     /// Convert Accesses into a byte offset which would be used by the storage layer to resolve
     /// where fields are stored.
-    pub fn resource_access_path(key: &ResourceKey, accesses: &Accesses) -> AccessPath {
-        let path = AccessPath::resource_access_vec(&key.type_(), accesses);
+    pub fn resource_access_path(key: &ResourceKey) -> AccessPath {
+        let path = AccessPath::resource_access_vec(&key.type_());
         AccessPath {
             address: key.address().to_owned(),
             path,
