@@ -212,16 +212,20 @@ echo "Using cluster : ${WORKSPACE}"
 context=${K8S_CONTEXT_PATTERN/CLUSTERNAME/${WORKSPACE}}
 kubectl --context=${context} apply -f ${specfile} || (echo "Failed to create cluster-test pod"; exit 1)
 kube_wait_pod ${pod_name} ${context}
+START_UTC=$(TZ=UTC date +"%Y-%m-%dT%H:%M:%SZ")
+START_TS_MS=$(date +%s)000
 echo "**********"
-echo "${BLUE}Dashboard:${RESTORE} http://grafana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/"
-echo "${BLUE}'val-0' Logs:${RESTORE} http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))&_a=(columns:!(log,kubernetes.pod_name),filters:!(('\$state':(store:appState),meta:(alias:!n,disabled:!f,key:kubernetes.pod_name,negate:!f,params:(query:val-0),type:phrase),query:(match:(kubernetes.pod_name:(query:val-0,type:phrase))))),interval:auto,query:(language:kuery,query:''),sort:!(!('@timestamp',desc)))"
-echo
-echo "${BLUE}'fn-0-0' Logs:${RESTORE} http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))&_a=(columns:!(log,kubernetes.pod_name),filters:!(('\$state':(store:appState),meta:(alias:!n,disabled:!f,key:kubernetes.pod_name,negate:!f,params:(query:fn-0-0),type:phrase),query:(match:(kubernetes.pod_name:(query:fn-0-0,type:phrase))))),interval:auto,query:(language:kuery,query:''),sort:!(!('@timestamp',desc)))"
-echo
-echo "${BLUE}Note:${RESTORE} Because of log volume, logs for only some of the validators and fullnodes are streamed to Kibana."
+echo "${BLUE}Auto refresh Dashboard:${RESTORE} http://grafana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/d/2XqUIhnWz/performance?from=${START_TS_MS}&to=now&refresh=5s"
+echo "${BLUE}Tail logs:${RESTORE} http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(refreshInterval:(pause:!f,value:10000),time:(from:'$START_UTC',to:now))"
 echo "**********"
 kubectl --context=${context} logs -f "${pod_name}" | tee $OUTPUT_TEE
 pod_status=$(kubectl --context=${context} get pods "${pod_name}" -o jsonpath="{.status.phase}")
+END_UTC=$(TZ=UTC date +"%Y-%m-%dT%H:%M:%SZ")
+END_TS_MS=$(date +%s)000
+echo "**********"
+echo "${BLUE}Logs snapshot:${RESTORE} http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(time:(from:'$START_UTC',to:'$END_UTC'))"
+echo "${BLUE}Dashboard snapshot:${RESTORE} http://grafana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/d/2XqUIhnWz/performance?from=${START_TS_MS}&to=${END_TS_MS}"
+echo "**********"
 if [[ "${pod_status}" != "Succeeded" ]]; then
   echo "${pod_name} status: ${pod_status}"
   EXIT_CODE=1
