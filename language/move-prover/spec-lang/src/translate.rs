@@ -3909,11 +3909,7 @@ impl<'env, 'translator, 'rewriter> ExpRewriter<'env, 'translator, 'rewriter> {
                 .get(&node_id)
                 .expect("type defined")
                 .instantiate(self.type_args);
-            let instantiation_opt = self.parent.instantiation_map.get(&node_id).map(|tys| {
-                tys.iter()
-                    .map(|ty| ty.instantiate(self.type_args))
-                    .collect_vec()
-            });
+            let instantiation_opt = self.parent.instantiation_map.get(&node_id).cloned();
             (loc, ty, instantiation_opt)
         } else {
             let module_env = self.parent.parent.env.get_module(self.originating_module);
@@ -3930,6 +3926,11 @@ impl<'env, 'translator, 'rewriter> ExpRewriter<'env, 'translator, 'rewriter> {
                 },
             )
         };
+        let instantiation_opt = instantiation_opt.map(|tys| {
+            tys.into_iter()
+                .map(|ty| ty.instantiate(self.type_args))
+                .collect_vec()
+        });
         let new_node_id = self.parent.new_node_id();
         self.parent.loc_map.insert(new_node_id, loc);
         self.parent.type_map.insert(new_node_id, ty);

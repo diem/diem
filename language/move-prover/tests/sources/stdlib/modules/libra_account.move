@@ -229,7 +229,7 @@ module LibraAccount {
     }
     spec fun mint_LBR {
         pragma verify=false; // FIXME: this function should be verified.
-        // include Libra::MintAbortsIf<LBR::T>; // TODO: uncomment this to reveal the bug
+        include Libra::MintAbortsIf<LBR::T>; // TODO: uncomment this to reveal the bug
         aborts_if !Libra::exists_sender_mint_capability<LBR::T>();
     }
 
@@ -260,7 +260,7 @@ module LibraAccount {
         aborts_if !exists<T>(payee) && !exists<Libra::Info<LBR::T>>(0xA550C18); // modified
 
         // derived from Libra::mint
-        aborts_if !Libra::exists_info<LBR::T>();
+        aborts_if !Libra::token_is_registered<LBR::T>();
         aborts_if amount > 1000000000 * 1000000;
         aborts_if Libra::info<LBR::T>().total_value + amount > max_u128();
         //include Libra::MintAbortsIf<LBR::T>; //FIXME: uncomment this so that a schema inclusion bug manifests. The bug is in the instantiation of the type variable
