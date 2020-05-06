@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["cluster_test"] = [{"text":"impl&lt;'_&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/ops/arith/trait.Sub.html\" title=\"trait core::ops::arith::Sub\">Sub</a>&lt;&amp;'_ <a class=\"struct\" href=\"cluster_test/tx_emitter/struct.TxStats.html\" title=\"struct cluster_test::tx_emitter::TxStats\">TxStats</a>&gt; for &amp;'_ <a class=\"struct\" href=\"cluster_test/tx_emitter/struct.TxStats.html\" title=\"struct cluster_test::tx_emitter::TxStats\">TxStats</a>","synthetic":false,"types":["cluster_test::tx_emitter::TxStats"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

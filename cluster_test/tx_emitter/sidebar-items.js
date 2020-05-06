@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["AccountData",""],["EmitJob",""],["EmitJobRequest",""],["EmitThreadParams",""],["TxEmitter",""],["TxStats",""]]});
+initSidebarItems({"struct":[["AccountData",""],["EmitJob",""],["EmitJobRequest",""],["EmitThreadParams",""],["TxEmitter",""],["TxStats",""],["TxStatsRate",""]]});
