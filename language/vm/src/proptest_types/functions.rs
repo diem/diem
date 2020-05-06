@@ -3,10 +3,10 @@
 
 use crate::{
     file_format::{
-        Bytecode, CodeOffset, CodeUnit, FieldHandle, FieldHandleIndex, FieldInstantiation,
-        FunctionDefinition, FunctionHandle, FunctionHandleIndex, FunctionInstantiation,
-        IdentifierIndex, LocalIndex, ModuleHandleIndex, Signature, SignatureIndex,
-        StructDefInstantiation, StructDefinitionIndex, TableIndex,
+        Bytecode, CodeOffset, CodeUnit, ConstantPoolIndex, FieldHandle, FieldHandleIndex,
+        FieldInstantiation, FunctionDefinition, FunctionHandle, FunctionHandleIndex,
+        FunctionInstantiation, IdentifierIndex, LocalIndex, ModuleHandleIndex, Signature,
+        SignatureIndex, StructDefInstantiation, StructDefinitionIndex, TableIndex,
     },
     proptest_types::{
         signature::{SignatureGen, SignatureTokenGen},
@@ -497,9 +497,13 @@ impl BytecodeGen {
     ) -> Option<Bytecode> {
         let bytecode = match self {
             BytecodeGen::Simple(bytecode) => bytecode,
-            BytecodeGen::LdConst(_idx) => {
-                // TODO constant generation
-                return None;
+            BytecodeGen::LdConst(idx) => {
+                if state.constant_pool_len == 0 {
+                    return None;
+                }
+                Bytecode::LdConst(ConstantPoolIndex(
+                    idx.index(state.constant_pool_len) as TableIndex
+                ))
             }
             BytecodeGen::MutBorrowField((def, field)) => {
                 let def_idx = def.index(state.struct_defs_len);
