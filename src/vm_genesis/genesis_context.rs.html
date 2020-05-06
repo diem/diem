@@ -171,9 +171,9 @@
 };
 <span class="kw">use</span> <span class="ident">move_vm_runtime</span>::<span class="ident">MoveVM</span>;
 <span class="kw">use</span> <span class="ident">move_vm_state</span>::{<span class="ident">data_cache</span>::<span class="ident">BlockDataCache</span>, <span class="ident">execution_context</span>::<span class="ident">TransactionExecutionContext</span>};
-<span class="kw">use</span> <span class="ident">move_vm_types</span>::<span class="ident">values</span>::<span class="ident">Value</span>;
+<span class="kw">use</span> <span class="ident">move_vm_types</span>::{<span class="ident">gas_schedule</span>::<span class="ident">zero_cost_schedule</span>, <span class="ident">values</span>::<span class="ident">Value</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
-<span class="kw">use</span> <span class="ident">vm</span>::{<span class="ident">gas_schedule</span>::<span class="ident">zero_cost_schedule</span>, <span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>};
+<span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>;
 
 <span class="doccomment">/// A context that holds state for generating the genesis write set</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">GenesisContext</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {

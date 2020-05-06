@@ -1184,6 +1184,7 @@
 <span id="1184">1184</span>
 <span id="1185">1185</span>
 <span id="1186">1186</span>
+<span id="1187">1187</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1202,6 +1203,7 @@
 };
 <span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">gas_schedule</span>::{<span class="ident">AbstractMemorySize</span>, <span class="ident">CostTable</span>, <span class="ident">GasAlgebra</span>, <span class="ident">GasCarrier</span>};
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::{
+    <span class="ident">gas_schedule</span>::<span class="ident">calculate_intrinsic_gas</span>,
     <span class="ident">interpreter_context</span>::<span class="ident">InterpreterContext</span>,
     <span class="ident">loaded_data</span>::{<span class="ident">runtime_types</span>::<span class="ident">Type</span>, <span class="ident">types</span>::<span class="ident">FatStructType</span>},
     <span class="ident">values</span>::{<span class="self">self</span>, <span class="ident">IntegerValue</span>, <span class="ident">Locals</span>, <span class="ident">Reference</span>, <span class="ident">Struct</span>, <span class="ident">StructRef</span>, <span class="ident">VMValueCast</span>, <span class="ident">Value</span>},
@@ -1213,7 +1215,7 @@
         <span class="ident">Bytecode</span>, <span class="ident">FunctionHandleIndex</span>, <span class="ident">FunctionInstantiationIndex</span>, <span class="ident">StructDefInstantiationIndex</span>,
         <span class="ident">StructDefinitionIndex</span>,
     },
-    <span class="ident">gas_schedule</span>::{<span class="ident">calculate_intrinsic_gas</span>, <span class="ident">Opcodes</span>},
+    <span class="ident">file_format_common</span>::<span class="ident">Opcodes</span>,
     <span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>,
 };
 

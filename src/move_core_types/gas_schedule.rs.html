@@ -266,28 +266,6 @@
 <span id="266">266</span>
 <span id="267">267</span>
 <span id="268">268</span>
-<span id="269">269</span>
-<span id="270">270</span>
-<span id="271">271</span>
-<span id="272">272</span>
-<span id="273">273</span>
-<span id="274">274</span>
-<span id="275">275</span>
-<span id="276">276</span>
-<span id="277">277</span>
-<span id="278">278</span>
-<span id="279">279</span>
-<span id="280">280</span>
-<span id="281">281</span>
-<span id="282">282</span>
-<span id="283">283</span>
-<span id="284">284</span>
-<span id="285">285</span>
-<span id="286">286</span>
-<span id="287">287</span>
-<span id="288">288</span>
-<span id="289">289</span>
-<span id="290">290</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -467,7 +445,7 @@
     <span class="doccomment">/// 1 nanosecond should equal one unit of computational gas. We bound the maximum</span>
     <span class="doccomment">/// computational time of any given transaction at 10 milliseconds. We want this number and</span>
     <span class="doccomment">/// `MAX_PRICE_PER_GAS_UNIT` to always satisfy the inequality that</span>
-    <span class="doccomment">///         MAXIMUM_NUMBER_OF_GAS_UNITS * MAX_PRICE_PER_GAS_UNIT &lt; min(u64::MAX, GasUnits&lt;GasCarrier&gt;::MAX)</span>
+    <span class="doccomment">/// MAXIMUM_NUMBER_OF_GAS_UNITS * MAX_PRICE_PER_GAS_UNIT &lt; min(u64::MAX, GasUnits&lt;GasCarrier&gt;::MAX)</span>
     <span class="kw">pub</span> <span class="ident">maximum_number_of_gas_units</span>: <span class="ident">GasUnits</span><span class="op">&lt;</span><span class="ident">GasCarrier</span><span class="op">&gt;</span>,
 
     <span class="doccomment">/// The minimum gas price that a transaction can be submitted with.</span>
@@ -512,10 +490,8 @@
     }
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">native_cost</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">native_index</span>: <span class="ident">NativeCostIndex</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">GasCost</span> {
-        <span class="macro">precondition</span><span class="macro">!</span>(
-            <span class="ident">native_index</span> <span class="kw">as</span> <span class="ident">u8</span> <span class="op">&gt;</span> <span class="number">0</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="ident">native_index</span> <span class="kw">as</span> <span class="ident">u8</span> <span class="op">&lt;</span><span class="op">=</span> (<span class="self">self</span>.<span class="ident">native_table</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u8</span>)
-        );
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">native_cost</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">native_index</span>: <span class="ident">u8</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">GasCost</span> {
+        <span class="macro">precondition</span><span class="macro">!</span>(<span class="ident">native_index</span> <span class="kw">as</span> <span class="ident">u8</span> <span class="op">&gt;</span> <span class="number">0</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="ident">native_index</span> <span class="op">&lt;</span><span class="op">=</span> (<span class="self">self</span>.<span class="ident">native_table</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u8</span>));
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">native_table</span>[<span class="ident">native_index</span> <span class="kw">as</span> <span class="ident">usize</span>]
     }
 }
@@ -558,26 +534,6 @@
         <span class="macro">assume</span><span class="macro">!</span>(<span class="ident">size</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">u64</span>::<span class="ident">max_value</span>() <span class="op">-</span> <span class="ident">word_size</span>);
         (<span class="ident">size</span> <span class="op">+</span> (<span class="ident">word_size</span> <span class="op">-</span> <span class="number">1</span>)) <span class="op">/</span> <span class="ident">word_size</span>
     })
-}
-
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_camel_case_types</span>)]</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">PartialEq</span>, <span class="ident">PartialOrd</span>, <span class="ident">Ord</span>)]</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">u8</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">NativeCostIndex</span> {
-    <span class="ident">SHA2_256</span> <span class="op">=</span> <span class="number">0</span>,
-    <span class="ident">SHA3_256</span> <span class="op">=</span> <span class="number">1</span>,
-    <span class="ident">ED25519_VERIFY</span> <span class="op">=</span> <span class="number">2</span>,
-    <span class="ident">ED25519_THRESHOLD_VERIFY</span> <span class="op">=</span> <span class="number">3</span>,
-    <span class="ident">LCS_TO_BYTES</span> <span class="op">=</span> <span class="number">4</span>,
-    <span class="ident">LENGTH</span> <span class="op">=</span> <span class="number">5</span>,
-    <span class="ident">EMPTY</span> <span class="op">=</span> <span class="number">6</span>,
-    <span class="ident">BORROW</span> <span class="op">=</span> <span class="number">7</span>,
-    <span class="ident">BORROW_MUT</span> <span class="op">=</span> <span class="number">8</span>,
-    <span class="ident">PUSH_BACK</span> <span class="op">=</span> <span class="number">9</span>,
-    <span class="ident">POP_BACK</span> <span class="op">=</span> <span class="number">10</span>,
-    <span class="ident">DESTROY_EMPTY</span> <span class="op">=</span> <span class="number">11</span>,
-    <span class="ident">SWAP</span> <span class="op">=</span> <span class="number">12</span>,
-    <span class="ident">SAVE_ACCOUNT</span> <span class="op">=</span> <span class="number">13</span>,
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "move_core_types";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

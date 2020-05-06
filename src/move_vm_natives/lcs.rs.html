@@ -49,8 +49,8 @@
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">vm_error</span>::{<span class="ident">sub_status</span>::<span class="ident">NFE_LCS_SERIALIZATION_FAILURE</span>, <span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>};
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">gas_schedule</span>::<span class="ident">NativeCostIndex</span>;
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::{
+    <span class="ident">gas_schedule</span>::<span class="ident">NativeCostIndex</span>,
     <span class="ident">loaded_data</span>::<span class="ident">runtime_types</span>::<span class="ident">Type</span>,
     <span class="ident">natives</span>::<span class="ident">function</span>::{<span class="ident">native_gas</span>, <span class="ident">NativeContext</span>, <span class="ident">NativeResult</span>},
     <span class="ident">values</span>::{<span class="ident">values_impl</span>::<span class="ident">Reference</span>, <span class="ident">Value</span>},

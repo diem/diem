@@ -1084,6 +1084,9 @@
 <span id="1084">1084</span>
 <span id="1085">1085</span>
 <span id="1086">1086</span>
+<span id="1087">1087</span>
+<span id="1088">1088</span>
+<span id="1089">1089</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1118,12 +1121,15 @@
     <span class="ident">data_cache</span>::{<span class="ident">BlockDataCache</span>, <span class="ident">RemoteCache</span>, <span class="ident">RemoteStorage</span>},
     <span class="ident">execution_context</span>::{<span class="ident">ExecutionContext</span>, <span class="ident">SystemExecutionContext</span>, <span class="ident">TransactionExecutionContext</span>},
 };
-<span class="kw">use</span> <span class="ident">move_vm_types</span>::{<span class="ident">chain_state</span>::<span class="ident">ChainState</span>, <span class="ident">values</span>::<span class="ident">Value</span>};
+<span class="kw">use</span> <span class="ident">move_vm_types</span>::{
+    <span class="ident">chain_state</span>::<span class="ident">ChainState</span>,
+    <span class="ident">gas_schedule</span>::{<span class="ident">calculate_intrinsic_gas</span>, <span class="ident">zero_cost_schedule</span>},
+    <span class="ident">values</span>::<span class="ident">Value</span>,
+};
 <span class="kw">use</span> <span class="ident">rayon</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashSet</span>, <span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
 <span class="kw">use</span> <span class="ident">vm</span>::{
     <span class="ident">errors</span>::{<span class="ident">convert_prologue_runtime_error</span>, <span class="ident">VMResult</span>},
-    <span class="ident">gas_schedule</span>::{<span class="ident">calculate_intrinsic_gas</span>, <span class="ident">zero_cost_schedule</span>},
     <span class="ident">transaction_metadata</span>::<span class="ident">TransactionMetadata</span>,
 };
 
