@@ -4,9 +4,9 @@
 use crate::{errors::JsonRpcError, views::AccountView, JsonRpcResponse};
 use anyhow::{ensure, format_err, Error, Result};
 use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
-use reqwest::{Client, Url};
+use reqwest::{Client, ClientBuilder, Url};
 use serde_json::{json, Value};
-use std::{collections::HashSet, convert::TryFrom, fmt};
+use std::{collections::HashSet, convert::TryFrom, fmt, time::Duration};
 
 #[derive(Clone, Default)]
 pub struct JsonRpcBatch {
@@ -118,7 +118,10 @@ impl JsonRpcAsyncClient {
     pub fn new(url: Url) -> Self {
         Self {
             address: url.to_string(),
-            client: Client::new(),
+            client: ClientBuilder::new()
+                .timeout(Duration::from_secs(30))
+                .build()
+                .expect("Unable to build Client."),
         }
     }
 
