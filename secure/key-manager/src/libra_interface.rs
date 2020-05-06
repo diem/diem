@@ -57,8 +57,10 @@ pub struct JsonRpcLibraInterface {
 }
 
 impl JsonRpcLibraInterface {
-    pub fn new(client: JsonRpcClient) -> Self {
-        Self { client }
+    pub fn new(json_rpc_endpoint: String) -> Self {
+        Self {
+            client: JsonRpcClient::new(json_rpc_endpoint),
+        }
     }
 }
 

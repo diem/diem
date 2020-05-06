@@ -10,11 +10,10 @@ use libra_key_manager::{
     counters::COUNTERS, libra_interface::JsonRpcLibraInterface, Error, KeyManager,
 };
 use libra_logger::info;
-use libra_secure_json_rpc::JsonRpcClient;
 use libra_secure_push_metrics::MetricsPusher;
 use libra_secure_storage::{BoxStorage, Storage};
 use libra_secure_time::RealTimeService;
-use std::{convert::TryInto, env, net::SocketAddr, process};
+use std::{convert::TryInto, env, process};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -57,7 +56,7 @@ fn create_and_execute_key_manager(
     key_manager_config: KeyManagerConfig,
 ) -> Result<(), Error> {
     let account = network_config.peer_id;
-    let libra_interface = create_libra_interface(key_manager_config.json_rpc_address);
+    let libra_interface = create_libra_interface(key_manager_config.json_rpc_endpoint);
     let storage: Box<dyn Storage> = (&key_manager_config.secure_backend)
         .try_into()
         .expect("Unable to initialize storage");
@@ -75,12 +74,10 @@ fn create_and_execute_key_manager(
     .execute()
 }
 
-fn create_libra_interface(json_rpc_address: SocketAddr) -> JsonRpcLibraInterface {
-    let json_rpc_url = format!("https://{}", json_rpc_address.to_string());
+fn create_libra_interface(json_rpc_endpoint: String) -> JsonRpcLibraInterface {
     info!(
         "Creating a libra interface that talks to the JSON RPC endpoint at: {:?}.",
-        json_rpc_url.clone()
+        json_rpc_endpoint.clone()
     );
-    let json_rpc_client = JsonRpcClient::new(json_rpc_url);
-    JsonRpcLibraInterface::new(json_rpc_client)
+    JsonRpcLibraInterface::new(json_rpc_endpoint)
 }
